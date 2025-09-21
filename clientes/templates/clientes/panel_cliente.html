@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inicio Fitness+</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+          margin: 0;
+          padding: 2rem;
+          background: linear-gradient(to bottom right, #0f1117, #101828);
+          font-family: 'Inter', sans-serif;
+          color: white;
+        }
+        .container {
+          max-width: 480px;
+          margin: 0 auto;
+        }
+        .joi-header {
+          position: relative;
+          background: #161d2a;
+          border-radius: 1.5rem;
+          padding: 2rem;
+          margin-bottom: 2rem;
+        }
+        .joi-header h1 {
+          font-size: 2rem;
+          font-weight: 600;
+          margin: 0 0 0.5rem;
+        }
+        .joi-dialog {
+          color: #00ffff;
+          font-size: 1rem;
+          font-style: italic;
+          margin-bottom: 1rem;
+        }
+        .joi-avatar {
+          position: absolute;
+          top: 1.5rem;
+          right: 1.5rem;
+          width: 80px;
+          height: 80px;
+          border-radius: 50%;
+          object-fit: cover;
+          box-shadow: 0 0 12px rgba(0,255,255,0.5);
+          border: 2px solid #00ffff;
+        }
+        .quote-box {
+          background: linear-gradient(to right, #4b0082, #6a0dad);
+          border-radius: 1rem;
+          padding: 1rem;
+          margin-bottom: 2rem;
+        }
+        .metrics {
+          display: flex;
+          justify-content: space-between;
+          margin-bottom: 2rem;
+        }
+        .metric-box {
+          background: #1a1a1a;
+          padding: 1rem;
+          border-radius: 1rem;
+          text-align: center;
+          flex: 1;
+          margin: 0 0.5rem;
+        }
+        .metric-box h2 {
+          margin: 0;
+          font-size: 1.5rem;
+          font-weight: 600;
+        }
+        .metric-box p {
+          margin: 0;
+          font-size: 0.8rem;
+          color: #aaa;
+        }
+        .emotion-box {
+          background: #1f1f1f;
+          border-radius: 1rem;
+          padding: 1rem;
+          text-align: center;
+          margin-bottom: 2rem;
+        }
+        .emojis button {
+          font-size: 1.8rem;
+          margin: 0.2rem;
+          background: none;
+          border: none;
+          cursor: pointer;
+          transition: transform 0.2s ease;
+        }
+        .emojis button:hover {
+          transform: scale(1.2);
+        }
+        .timeline {
+          background: #151515;
+          padding: 1rem;
+          border-radius: 1rem;
+          margin-bottom: 2rem;
+        }
+        .timeline h3 {
+          margin-top: 0;
+          font-size: 1rem;
+          color: #32FF00;
+        }
+        .timeline ul {
+          padding-left: 0;
+          list-style: none;
+        }
+        .timeline li {
+          display: flex;
+          justify-content: space-between;
+          font-size: 0.9rem;
+          padding: 0.3rem 0;
+          border-bottom: 1px solid #2a2a2a;
+        }
+        .badges {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 0.5rem;
+        }
+        .badge {
+          background: rgba(255, 255, 255, 0.1);
+          padding: 0.3rem 0.7rem;
+          border-radius: 9999px;
+          font-size: 0.8rem;
+          color: #32FF00;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="joi-header">
+        <h1>Hola, K</h1>
+        <p class="joi-dialog">Corres como si algo te persiguiera... ¿qué es?</p>
+        <img src="joi_mock.png" alt="Joi" class="joi-avatar">
+    </div>
+
+    <div class="quote-box">
+        <p><strong>Recuerdo del día</strong></p>
+        <p>La desmotivación es la sombra de un objetivo mal iluminado.</p>
+    </div>
+
+    <div class="metrics">
+        <div class="metric-box">
+            <h2>4</h2>
+            <p>Entrenos</p>
+        </div>
+        <div class="metric-box">
+            <h2>12.800kg</h2>
+            <p>Carga total</p>
+        </div>
+        <div class="metric-box">
+            <h2>82</h2>
+            <p>Consistencia</p>
+        </div>
+    </div>
+
+    <div class="emotion-box">
+        <h3>¿Cómo te sientes hoy?</h3>
+        <div class="emojis">
+            <button>😊</button>
+            <button>😐</button>
+            <button>😟</button>
+            <button>😣</button>
+            <button>🥀</button>
+            <button>🕳</button>
+        </div>
+        <a href="{% url 'registrar_bitacora' %}" class="btn-fucsia">Registrar bitácora de hoy</a>
+
+    </div>
+
+    <div class="timeline">
+        <h3>Últimos entrenos</h3>
+        <ul>
+            <li><span>Cardio</span><span>Apr 21</span></li>
+            <li><span>Pull</span><span>Apr 19</span></li>
+            <li><span>Piernas</span><span>Apr 18</span></li>
+        </ul>
+    </div>
+
+    <div class="timeline">
+        <h3>Logros desbloqueados</h3>
+        <div class="badges">
+            <span class="badge">Primer entreno</span>
+            <span class="badge">5 días seguidos</span>
+            <span class="badge">+10k kg</span>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,637 @@
+{% extends 'estoico/base_estoico.html' %}
+{% load static %}
+
+{% block title %}Búsqueda - Diario Estoico{% endblock %}
+
+{% block extra_css %}
+<style>
+    .search-container {
+        max-width: 1000px;
+        margin: 0 auto;
+    }
+
+    .search-header {
+        background: linear-gradient(135deg, var(--info-color) 0%, #5dade2 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: var(--border-radius);
+        margin-bottom: 2rem;
+        text-align: center;
+    }
+
+    .search-form {
+        background: white;
+        padding: 2rem;
+        border-radius: var(--border-radius);
+        box-shadow: var(--box-shadow);
+        margin-bottom: 2rem;
+    }
+
+    .search-input-group {
+        position: relative;
+        margin-bottom: 1.5rem;
+    }
+
+    .search-input {
+        width: 100%;
+        padding: 1rem 1rem 1rem 3rem;
+        border: 2px solid #e9ecef;
+        border-radius: var(--border-radius);
+        font-size: 1.1rem;
+        transition: var(--transition);
+    }
+
+    .search-input:focus {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 0.2rem rgba(44, 62, 80, 0.25);
+        outline: none;
+    }
+
+    .search-icon {
+        position: absolute;
+        left: 1rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #6c757d;
+        font-size: 1.2rem;
+    }
+
+    .filters-section {
+        border-top: 1px solid #e9ecef;
+        padding-top: 1.5rem;
+        margin-top: 1.5rem;
+    }
+
+    .filter-group {
+        margin-bottom: 1rem;
+    }
+
+    .filter-label {
+        font-weight: 600;
+        color: var(--primary-color);
+        margin-bottom: 0.5rem;
+        display: block;
+    }
+
+    .filter-options {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .filter-option {
+        padding: 0.5rem 1rem;
+        border: 1px solid #dee2e6;
+        border-radius: 20px;
+        background: white;
+        cursor: pointer;
+        transition: var(--transition);
+        font-size: 0.9rem;
+    }
+
+    .filter-option:hover {
+        border-color: var(--primary-color);
+        background: rgba(44, 62, 80, 0.05);
+    }
+
+    .filter-option.active {
+        background: var(--primary-color);
+        color: white;
+        border-color: var(--primary-color);
+    }
+
+    .date-range {
+        display: grid;
+        grid-template-columns: 1fr auto 1fr;
+        gap: 1rem;
+        align-items: center;
+    }
+
+    .search-results {
+        background: white;
+        border-radius: var(--border-radius);
+        box-shadow: var(--box-shadow);
+        overflow: hidden;
+    }
+
+    .results-header {
+        padding: 1.5rem;
+        border-bottom: 1px solid #e9ecef;
+        background: #f8f9fa;
+    }
+
+    .results-count {
+        font-weight: 600;
+        color: var(--primary-color);
+    }
+
+    .result-item {
+        padding: 1.5rem;
+        border-bottom: 1px solid #e9ecef;
+        transition: var(--transition);
+    }
+
+    .result-item:hover {
+        background: #f8f9fa;
+    }
+
+    .result-item:last-child {
+        border-bottom: none;
+    }
+
+    .result-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: start;
+        margin-bottom: 1rem;
+    }
+
+    .result-date {
+        font-weight: 600;
+        color: var(--primary-color);
+        font-size: 1.1rem;
+    }
+
+    .result-meta {
+        display: flex;
+        gap: 1rem;
+        font-size: 0.9rem;
+        color: #6c757d;
+    }
+
+    .result-quote {
+        background: #f8f9fa;
+        padding: 1rem;
+        border-left: 4px solid var(--accent-color);
+        border-radius: 0 var(--border-radius) var(--border-radius) 0;
+        margin-bottom: 1rem;
+        font-style: italic;
+    }
+
+    .result-author {
+        text-align: right;
+        font-weight: 600;
+        color: var(--primary-color);
+        margin-top: 0.5rem;
+    }
+
+    .result-reflection {
+        color: #495057;
+        line-height: 1.6;
+        margin-bottom: 1rem;
+    }
+
+    .result-actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .result-tag {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        background: rgba(44, 62, 80, 0.1);
+        color: var(--primary-color);
+        border-radius: 15px;
+        font-size: 0.8rem;
+        font-weight: 500;
+    }
+
+    .highlight {
+        background: rgba(243, 156, 18, 0.3);
+        padding: 0.1rem 0.2rem;
+        border-radius: 3px;
+    }
+
+    .no-results {
+        text-align: center;
+        padding: 3rem;
+        color: #6c757d;
+    }
+
+    .no-results i {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        opacity: 0.5;
+    }
+
+    .quick-searches {
+        margin-bottom: 2rem;
+    }
+
+    .quick-search-item {
+        display: inline-block;
+        padding: 0.5rem 1rem;
+        background: white;
+        border: 1px solid #dee2e6;
+        border-radius: 20px;
+        margin: 0.25rem;
+        cursor: pointer;
+        transition: var(--transition);
+        text-decoration: none;
+        color: #495057;
+    }
+
+    .quick-search-item:hover {
+        background: var(--primary-color);
+        color: white;
+        border-color: var(--primary-color);
+        text-decoration: none;
+    }
+
+    .pagination-container {
+        padding: 1.5rem;
+        text-align: center;
+        background: #f8f9fa;
+    }
+
+    @media (max-width: 768px) {
+        .filter-options {
+            flex-direction: column;
+        }
+
+        .filter-option {
+            text-align: center;
+        }
+
+        .date-range {
+            grid-template-columns: 1fr;
+            gap: 0.5rem;
+        }
+
+        .result-header {
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .result-meta {
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="search-container">
+    <!-- Header de Búsqueda -->
+    <div class="search-header">
+        <h2 class="mb-3">
+            <i class="fas fa-search me-2"></i>
+            Buscar en tu Diario
+        </h2>
+        <p class="mb-0 opacity-75">
+            Encuentra sabiduría en tus reflexiones pasadas
+        </p>
+    </div>
+
+    <!-- Búsquedas Rápidas -->
+    <div class="quick-searches">
+        <h6 class="mb-3">
+            <i class="fas fa-bolt me-2"></i>
+            Búsquedas Populares
+        </h6>
+        <a href="?q=gratitud" class="quick-search-item">Gratitud</a>
+        <a href="?q=adversidad" class="quick-search-item">Adversidad</a>
+        <a href="?q=virtud" class="quick-search-item">Virtud</a>
+        <a href="?q=sabiduría" class="quick-search-item">Sabiduría</a>
+        <a href="?q=presente" class="quick-search-item">Presente</a>
+        <a href="?filosofo=marco_aurelio" class="quick-search-item">Marco Aurelio</a>
+        <a href="?filosofo=seneca" class="quick-search-item">Séneca</a>
+        <a href="?filosofo=epicteto" class="quick-search-item">Epicteto</a>
+        <a href="?calificacion=5" class="quick-search-item">5 Estrellas</a>
+        <a href="?favorito=true" class="quick-search-item">Favoritos</a>
+    </div>
+
+    <!-- Formulario de Búsqueda -->
+    <form method="GET" class="search-form" id="searchForm">
+        <div class="search-input-group">
+            <i class="fas fa-search search-icon"></i>
+            <input type="text"
+                   name="q"
+                   class="search-input"
+                   placeholder="Buscar en citas, reflexiones o preguntas..."
+                   value="{{ request.GET.q }}"
+                   autocomplete="off">
+        </div>
+
+        <div class="filters-section">
+            <h6 class="mb-3">
+                <i class="fas fa-filter me-2"></i>
+                Filtros Avanzados
+            </h6>
+
+            <!-- Filtro por Filósofo -->
+            <div class="filter-group">
+                <label class="filter-label">Filósofo</label>
+                <div class="filter-options">
+                    <div class="filter-option {% if not request.GET.filosofo %}active{% endif %}"
+                         data-filter="filosofo" data-value="">
+                        Todos
+                    </div>
+                    <div class="filter-option {% if request.GET.filosofo == 'marco_aurelio' %}active{% endif %}"
+                         data-filter="filosofo" data-value="marco_aurelio">
+                        Marco Aurelio
+                    </div>
+                    <div class="filter-option {% if request.GET.filosofo == 'seneca' %}active{% endif %}"
+                         data-filter="filosofo" data-value="seneca">
+                        Séneca
+                    </div>
+                    <div class="filter-option {% if request.GET.filosofo == 'epicteto' %}active{% endif %}"
+                         data-filter="filosofo" data-value="epicteto">
+                        Epicteto
+                    </div>
+                    <div class="filter-option {% if request.GET.filosofo == 'otros' %}active{% endif %}"
+                         data-filter="filosofo" data-value="otros">
+                        Otros
+                    </div>
+                </div>
+                <input type="hidden" name="filosofo" value="{{ request.GET.filosofo }}">
+            </div>
+
+            <!-- Filtro por Calificación -->
+            <div class="filter-group">
+                <label class="filter-label">Calificación</label>
+                <div class="filter-options">
+                    <div class="filter-option {% if not request.GET.calificacion %}active{% endif %}"
+                         data-filter="calificacion" data-value="">
+                        Todas
+                    </div>
+                    {% for i in "12345" %}
+                    <div class="filter-option {% if request.GET.calificacion == forloop.counter|stringformat:'s' %}active{% endif %}"
+                         data-filter="calificacion" data-value="{{ forloop.counter }}">
+                        {% for j in "12345" %}
+                        {% if forloop.counter <= forloop.parentloop.counter %}
+                        <i class="fas fa-star"></i>
+                        {% else %}
+                        <i class="far fa-star"></i>
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+                    {% endfor %}
+                </div>
+                <input type="hidden" name="calificacion" value="{{ request.GET.calificacion }}">
+            </div>
+
+            <!-- Filtro por Tipo -->
+            <div class="filter-group">
+                <label class="filter-label">Tipo de Contenido</label>
+                <div class="filter-options">
+                    <div class="filter-option {% if not request.GET.tipo %}active{% endif %}"
+                         data-filter="tipo" data-value="">
+                        Todo
+                    </div>
+                    <div class="filter-option {% if request.GET.tipo == 'favoritos' %}active{% endif %}"
+                         data-filter="tipo" data-value="favoritos">
+                        <i class="fas fa-heart me-1"></i>Favoritos
+                    </div>
+                    <div class="filter-option {% if request.GET.tipo == 'completados' %}active{% endif %}"
+                         data-filter="tipo" data-value="completados">
+                        <i class="fas fa-check me-1"></i>Completados
+                    </div>
+                    <div class="filter-option {% if request.GET.tipo == 'pendientes' %}active{% endif %}"
+                         data-filter="tipo" data-value="pendientes">
+                        <i class="fas fa-clock me-1"></i>Pendientes
+                    </div>
+                </div>
+                <input type="hidden" name="tipo" value="{{ request.GET.tipo }}">
+            </div>
+
+            <!-- Filtro por Fecha -->
+            <div class="filter-group">
+                <label class="filter-label">Rango de Fechas</label>
+                <div class="date-range">
+                    <input type="date"
+                           name="fecha_desde"
+                           class="form-control"
+                           value="{{ request.GET.fecha_desde }}">
+                    <span class="text-muted">hasta</span>
+                    <input type="date"
+                           name="fecha_hasta"
+                           class="form-control"
+                           value="{{ request.GET.fecha_hasta }}">
+                </div>
+            </div>
+
+            <div class="text-center mt-3">
+                <button type="submit" class="btn btn-primary me-2">
+                    <i class="fas fa-search me-2"></i>Buscar
+                </button>
+                <a href="{% url 'estoico:buscar' %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-times me-2"></i>Limpiar
+                </a>
+            </div>
+        </div>
+    </form>
+
+    <!-- Resultados de Búsqueda -->
+    {% if resultados %}
+    <div class="search-results">
+        <div class="results-header">
+            <div class="results-count">
+                <i class="fas fa-list me-2"></i>
+                {{ resultados|length }} resultado{{ resultados|length|pluralize }} encontrado{{ resultados|length|pluralize }}
+                {% if request.GET.q %}para "{{ request.GET.q }}"{% endif %}
+            </div>
+        </div>
+
+        {% for resultado in resultados %}
+        <div class="result-item">
+            <div class="result-header">
+                <div class="result-date">
+                    <i class="fas fa-calendar me-2"></i>
+                    Día {{ resultado.contenido.dia_año }} - {{ resultado.fecha|date:"d M Y" }}
+                </div>
+                <div class="result-meta">
+                            <span>
+                                <i class="fas fa-user me-1"></i>
+                                {{ resultado.contenido.autor }}
+                            </span>
+                    {% if resultado.calificacion_dia %}
+                    <span>
+                                    {% for i in "12345" %}
+                                        {% if forloop.counter <= resultado.calificacion_dia %}
+                                            <i class="fas fa-star text-warning"></i>
+                                        {% else %}
+                                            <i class="far fa-star text-warning"></i>
+                                        {% endif %}
+                                    {% endfor %}
+                                </span>
+                    {% endif %}
+                    {% if resultado.marcado_favorito %}
+                    <span class="text-danger">
+                                    <i class="fas fa-heart"></i>
+                                </span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="result-quote">
+                "{{ resultado.contenido.cita|safe }}"
+                <div class="result-author">— {{ resultado.contenido.autor }}</div>
+            </div>
+
+            {% if resultado.reflexion_personal %}
+            <div class="result-reflection">
+                <strong>Tu reflexión:</strong><br>
+                {{ resultado.reflexion_personal|safe|truncatewords:50 }}
+            </div>
+            {% endif %}
+
+            <div class="result-actions">
+                <span class="result-tag">{{ resultado.contenido.tema }}</span>
+                <a href="{% url 'estoico:diario_dia' resultado.contenido.dia_año %}"
+                   class="btn btn-sm btn-outline-primary">
+                    <i class="fas fa-eye me-1"></i>Ver Completo
+                </a>
+                {% if not resultado.reflexion_personal %}
+                <a href="{% url 'estoico:diario_dia' resultado.contenido.dia_año %}"
+                   class="btn btn-sm btn-outline-success">
+                    <i class="fas fa-pen me-1"></i>Reflexionar
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+
+        <!-- Paginación -->
+        {% if is_paginated %}
+        <div class="pagination-container">
+            <nav aria-label="Navegación de resultados">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?{{ request.GET.urlencode }}&page={{ page_obj.previous_page_number }}">
+                            <i class="fas fa-chevron-left"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+
+                    {% for num in page_obj.paginator.page_range %}
+                    {% if page_obj.number == num %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ num }}</span>
+                    </li>
+                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                    <li class="page-item">
+                        <a class="page-link" href="?{{ request.GET.urlencode }}&page={{ num }}">{{ num }}</a>
+                    </li>
+                    {% endif %}
+                    {% endfor %}
+
+                    {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?{{ request.GET.urlencode }}&page={{ page_obj.next_page_number }}">
+                            <i class="fas fa-chevron-right"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
+    </div>
+    {% elif request.GET.q or request.GET.filosofo or request.GET.calificacion %}
+    <div class="search-results">
+        <div class="no-results">
+            <i class="fas fa-search"></i>
+            <h5>No se encontraron resultados</h5>
+            <p>Intenta con otros términos de búsqueda o ajusta los filtros</p>
+            <a href="{% url 'estoico:buscar' %}" class="btn btn-outline-primary">
+                <i class="fas fa-refresh me-2"></i>Nueva Búsqueda
+            </a>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Manejo de filtros
+        document.querySelectorAll('.filter-option').forEach(option => {
+            option.addEventListener('click', function() {
+                const filterType = this.getAttribute('data-filter');
+                const filterValue = this.getAttribute('data-value');
+
+                // Remover active de otros elementos del mismo grupo
+                this.parentElement.querySelectorAll('.filter-option').forEach(opt => {
+                    opt.classList.remove('active');
+                });
+
+                // Agregar active al elemento clickeado
+                this.classList.add('active');
+
+                // Actualizar el input hidden correspondiente
+                const hiddenInput = document.querySelector(`input[name="${filterType}"]`);
+                if (hiddenInput) {
+                    hiddenInput.value = filterValue;
+                }
+            });
+        });
+
+        // Auto-submit en cambios de fecha
+        document.querySelectorAll('input[type="date"]').forEach(input => {
+            input.addEventListener('change', function() {
+                // Auto-submit después de un pequeño delay
+                setTimeout(() => {
+                    document.getElementById('searchForm').submit();
+                }, 500);
+            });
+        });
+
+        // Resaltar términos de búsqueda
+        const searchTerm = '{{ request.GET.q|escapejs }}';
+        if (searchTerm) {
+            highlightSearchTerms(searchTerm);
+        }
+
+        // Atajos de teclado
+        document.addEventListener('keydown', function(e) {
+            // Ctrl/Cmd + K para enfocar búsqueda
+            if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+                e.preventDefault();
+                document.querySelector('.search-input').focus();
+            }
+        });
+    });
+
+    function highlightSearchTerms(term) {
+        if (!term || term.length < 2) return;
+
+        const regex = new RegExp(`(${term})`, 'gi');
+        const elements = document.querySelectorAll('.result-quote, .result-reflection');
+
+        elements.forEach(element => {
+            const html = element.innerHTML;
+            const highlightedHtml = html.replace(regex, '<span class="highlight">$1</span>');
+            element.innerHTML = highlightedHtml;
+        });
+    }
+
+    // Función para limpiar todos los filtros
+    function clearAllFilters() {
+        document.querySelectorAll('input[type="hidden"]').forEach(input => {
+            input.value = '';
+        });
+        document.querySelectorAll('input[type="date"]').forEach(input => {
+            input.value = '';
+        });
+        document.querySelector('.search-input').value = '';
+
+        // Resetear filtros visuales
+        document.querySelectorAll('.filter-option').forEach(option => {
+            option.classList.remove('active');
+        });
+
+        // Activar "Todos" en cada grupo
+        document.querySelectorAll('.filter-options').forEach(group => {
+            const firstOption = group.querySelector('.filter-option');
+            if (firstOption) {
+                firstOption.classList.add('active');
+            }
+        });
+    }
+</script>
+{% endblock %}
+

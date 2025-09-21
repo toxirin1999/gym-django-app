@@ -1,0 +1,101 @@
+{% extends 'base.html' %}
+
+{% block title %}Historial de Entrenos{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto p-4">
+
+    <h1 class="text-3xl font-bold mb-4 text-white">Historial de Entrenamientos</h1>
+
+    <form method="get" class="bg-gray-900 p-6 rounded-2xl shadow-xl max-w-xl mx-auto space-y-4">
+        <div class="row g-2 align-items-end">
+            <div class="col-md-6">
+                {{ form.cliente.label_tag }} {{ form.cliente }}
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary">Filtrar</button>
+            </div>
+            {% if cliente %}
+            <div class="col-md-2">
+                <a href="{% url 'historial_entrenos' %}" class="btn btn-outline-secondary">Limpiar</a>
+            </div>
+            {% endif %}
+        </div>
+    </form>
+
+    {% if cliente %}
+    <h5 class="mb-3 text-white">Mostrando entrenos de: {{ cliente.nombre }}</h5>
+    {% endif %}
+
+    {% for entreno in entrenos %}
+    <div class="bg-[#1a1a1a] text-white rounded-2xl p-6 mb-6 shadow-lg space-y-4">
+        <div class="flex justify-between items-start">
+            <div class="space-y-1">
+                <h2 class="text-xl font-bold">{{ entreno.cliente.nombre }} – {{ entreno.rutina.nombre }}</h2>
+                <p class="text-sm text-gray-400">📅 {{ entreno.fecha_formateada }}</p>
+
+
+                {% if entreno.perfecto %}
+                <span class="inline-flex items-center bg-[#32FF00] text-black font-semibold px-3 py-1 rounded-full text-sm">
+                🎯 Entreno perfecto
+               </span>
+                {% endif %}
+            </div>
+
+        </div>
+
+        {% regroup entreno.series.all by ejercicio as series_por_ejercicio %}
+        <ul class="space-y-2">
+            {% with volumen_total_entreno=0 %}
+            {% for grupo in series_por_ejercicio %}
+            <li>
+                <p class="text-[#FF00F7] font-medium">{{ grupo.grouper.nombre }}</p>
+                {% with total_volumen=0 %}
+                <div class="flex flex-wrap gap-2">
+                    {% for serie in grupo.list %}
+                    <span class="bg-[#2a2a2a] px-3 py-1 rounded text-sm">
+          Serie {{ serie.serie_numero }} — {{ serie.repeticiones }} reps @ {{ serie.peso_kg }} kg
+        </span>
+                    {% with volumen_total_entreno=volumen_total_entreno|add:serie.repeticiones %}
+                    {% endwith %}
+                    {% endfor %}
+                </div>
+                {% endwith %}
+            </li>
+            {% empty %}
+            <li class="text-gray-500">No hay series.</li>
+            {% endfor %}
+
+            <li class="mt-2 text-sm font-medium">
+                {% if volumen_total_entreno > 15000 %}
+                <span class="text-red-400">🔴 Volumen total del entreno: {{ volumen_total_entreno }} reps</span>
+                {% elif volumen_total_entreno > 8000 %}
+                <span class="text-yellow-400">🟡 Volumen total del entreno: {{ volumen_total_entreno }} reps</span>
+                {% else %}
+                <span class="text-[#32FF00]">🟢 Volumen total del entreno: {{ volumen_total_entreno }} reps</span>
+                {% endif %}
+            </li>
+
+            <div class="w-full bg-gray-800 rounded h-4 mt-1 overflow-hidden">
+                <div class="h-4 bg-[#32FF00] text-black text-xs font-semibold flex items-center justify-center"
+                     style="width: {{ volumen_total_entreno|floatformat:0|divisibleby:200 }}%">
+                    {{ volumen_total_entreno }} reps
+                </div>
+            </div>
+            {% endwith %}
+        </ul>
+
+        <div class="text-right">
+            <a href="{% url 'entrenos:resumen_entreno' pk=entreno.id %}"
+               class="bg-[#32FF00] hover:bg-lime-400 text-black font-bold px-4 py-2 rounded-lg text-sm">
+                Ver resumen
+            </a>
+        </div>
+    </div>
+    {% empty %}
+    <p class="text-white">No hay entrenamientos registrados.</p>
+    {% endfor %}
+
+
+</div>
+{% endblock %}

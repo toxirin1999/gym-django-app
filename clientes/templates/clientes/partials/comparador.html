@@ -1,0 +1,13 @@
+{% if revision is not None and inicial is not None %}
+{% if revision < inicial %}
+<strong class="text-success">{{ revision }}</strong> <i class="bi bi-arrow-down text-success"></i>
+{% elif revision > inicial %}
+<strong class="text-danger">{{ revision }}</strong> <i class="bi bi-arrow-up text-danger"></i>
+{% else %}
+<strong>{{ revision }}</strong> <i class="bi bi-dash text-muted"></i>
+{% endif %}
+{% elif revision is not None %}
+<strong>{{ revision }}</strong>
+{% else %}
+—
+{% endif %}

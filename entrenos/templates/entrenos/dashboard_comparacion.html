@@ -1,0 +1,309 @@
+<!-- templates/dashboard_comparacion.html -->
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Comparación de Planificadores - {{ cliente.nombre }}{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.css" rel="stylesheet">
+<style>
+    .comparison-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 15px;
+        padding: 30px;
+        margin-bottom: 30px;
+    }
+
+    .planificador-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        padding: 25px;
+        margin-bottom: 20px;
+        border-top: 4px solid;
+    }
+
+    .planificador-helms {
+        border-top-color: #667eea;
+    }
+
+    .planificador-actual {
+        border-top-color: #28a745;
+    }
+
+    .metric-comparison {
+        display: grid;
+        grid-template-columns: 1fr auto 1fr;
+        gap: 20px;
+        align-items: center;
+        padding: 15px;
+        background: #f8f9fa;
+        border-radius: 8px;
+        margin: 10px 0;
+    }
+
+    .metric-value {
+        font-size: 1.5em;
+        font-weight: bold;
+        text-align: center;
+    }
+
+    .metric-helms {
+        color: #667eea;
+    }
+
+    .metric-actual {
+        color: #28a745;
+    }
+
+    .metric-vs {
+        font-size: 1.2em;
+        font-weight: bold;
+        color: #6c757d;
+    }
+
+    .chart-container {
+        position: relative;
+        height: 300px;
+        margin: 20px 0;
+    }
+
+    .advantage-badge {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 15px;
+        font-size: 0.8em;
+        font-weight: 500;
+        margin-left: 10px;
+    }
+
+    .advantage-helms {
+        background: rgba(102, 126, 234, 0.1);
+        color: #667eea;
+    }
+
+    .advantage-actual {
+        background: rgba(40, 167, 69, 0.1);
+        color: #28a745;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="comparison-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h2><i class="fas fa-balance-scale"></i> Comparación de Planificadores</h2>
+                <p class="mb-0">Análisis detallado: Planificador Helms vs Sistema Actual</p>
+            </div>
+            <div class="col-md-4 text-right">
+                <h4>{{ cliente.nombre }}</h4>
+                <span class="badge badge-light">{{ cliente.get_nivel_experiencia|title }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Comparación de Métricas -->
+    <div class="row">
+        <div class="col-12">
+            <h3><i class="fas fa-chart-bar"></i> Métricas Comparativas</h3>
+
+            <div class="metric-comparison">
+                <div class="metric-value metric-helms">
+                    {{ comparacion.volumen_total.helms }}
+                    <div style="font-size: 0.6em; color: #6c757d;">series/semana</div>
+                </div>
+                <div class="metric-vs">VS</div>
+                <div class="metric-value metric-actual">
+                    {{ comparacion.volumen_total.actual }}
+                    <div style="font-size: 0.6em; color: #6c757d;">series/semana</div>
+                </div>
+            </div>
+            <h5 class="text-center">
+                Volumen Total Semanal
+                {% if comparacion.volumen_total.helms > comparacion.volumen_total.actual %}
+                <span class="advantage-badge advantage-helms">Helms +{{ comparacion.volumen_total.helms|sub:comparacion.volumen_total.actual }}</span>
+                {% else %}
+                <span class="advantage-badge advantage-actual">Actual +{{ comparacion.volumen_total.actual|sub:comparacion.volumen_total.helms }}</span>
+                {% endif %}
+            </h5>
+
+            <div class="metric-comparison">
+                <div class="metric-value metric-helms">
+                    {{ comparacion.ejercicios_por_semana.helms }}
+                    <div style="font-size: 0.6em; color: #6c757d;">ejercicios</div>
+                </div>
+                <div class="metric-vs">VS</div>
+                <div class="metric-value metric-actual">
+                    {{ comparacion.ejercicios_por_semana.actual }}
+                    <div style="font-size: 0.6em; color: #6c757d;">ejercicios</div>
+                </div>
+            </div>
+            <h5 class="text-center">Ejercicios por Semana</h5>
+
+            <div class="metric-comparison">
+                <div class="metric-value metric-helms">
+                    {{ comparacion.tiempo_estimado.helms }}
+                    <div style="font-size: 0.6em; color: #6c757d;">min/día</div>
+                </div>
+                <div class="metric-vs">VS</div>
+                <div class="metric-value metric-actual">
+                    {{ comparacion.tiempo_estimado.actual }}
+                    <div style="font-size: 0.6em; color: #6c757d;">min/día</div>
+                </div>
+            </div>
+            <h5 class="text-center">Tiempo Estimado por Día</h5>
+        </div>
+    </div>
+
+    <!-- Gráfico de Comparación -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <h5><i class="fas fa-chart-line"></i> Análisis Visual</h5>
+                    <div class="chart-container">
+                        <canvas id="comparisonChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Detalles de cada planificador -->
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="planificador-card planificador-helms">
+                <h4><i class="fas fa-certificate"></i> Planificador Helms</h4>
+                <div class="mb-3">
+                    <strong>Características:</strong>
+                    <ul class="mt-2">
+                        <li>RPE para autorregulación</li>
+                        <li>Tiempos de descanso optimizados</li>
+                        <li>Tempo específico por ejercicio</li>
+                        <li>Volumen basado en experiencia</li>
+                        <li>Adherencia como prioridad</li>
+                    </ul>
+                </div>
+
+                {% if plan_helms.metadata.adherencia_score %}
+                <div class="alert alert-info">
+                    <strong>Score de Adherencia:</strong> {{ plan_helms.metadata.adherencia_score }}/10
+                </div>
+                {% endif %}
+
+                <button class="btn btn-primary btn-block" onclick="seleccionarPlanificador('helms')">
+                    <i class="fas fa-check"></i> Usar Planificador Helms
+                </button>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="planificador-card planificador-actual">
+                <h4><i class="fas fa-cog"></i> Planificador Actual</h4>
+                <div class="mb-3">
+                    <strong>Características:</strong>
+                    <ul class="mt-2">
+                        <li>Sistema probado y estable</li>
+                        <li>Interfaz familiar</li>
+                        <li>Configuración existente</li>
+                        <li>Historial de uso</li>
+                        <li>Personalización manual</li>
+                    </ul>
+                </div>
+
+                <div class="alert alert-success">
+                    <strong>Estado:</strong> Funcionando correctamente
+                </div>
+
+                <button class="btn btn-success btn-block" onclick="seleccionarPlanificador('actual')">
+                    <i class="fas fa-check"></i> Mantener Actual
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recomendación -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="alert alert-warning">
+                <h5><i class="fas fa-lightbulb"></i> Recomendación</h5>
+                <p>
+                    Basado en tu perfil ({{ cliente.get_nivel_experiencia|title }}, {{ cliente.objetivo_principal|title }}),
+                    recomendamos usar el <strong>Planificador Helms</strong> porque:
+                </p>
+                <ul>
+                    <li>Está diseñado específicamente para tu nivel de experiencia</li>
+                    <li>Incluye autorregulación para mejor adherencia</li>
+                    <li>Optimiza el volumen según evidencia científica</li>
+                    <li>Proporciona educación sobre principios de entrenamiento</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Crear gráfico de comparación
+        const ctx = document.getElementById('comparisonChart').getContext('2d');
+
+        new Chart(ctx, {
+            type: 'radar',
+            data: {
+                labels: ['Volumen', 'Ejercicios', 'Tiempo', 'Personalización', 'Educación', 'Adherencia'],
+                datasets: [{
+                    label: 'Planificador Helms',
+                    data: [
+                        {{ comparacion.volumen_total.helms }},
+                        {{ comparacion.ejercicios_por_semana.helms }},
+                        {{ comparacion.tiempo_estimado.helms }},
+                        9, // Personalización alta
+                        10, // Educación máxima
+                        9 // Adherencia alta
+                    ],
+                    backgroundColor: 'rgba(102, 126, 234, 0.2)',
+                    borderColor: '#667eea',
+                    borderWidth: 2
+                }, {
+                    label: 'Planificador Actual',
+                    data: [
+                        {{ comparacion.volumen_total.actual }},
+                        {{ comparacion.ejercicios_por_semana.actual }},
+                        {{ comparacion.tiempo_estimado.actual }},
+                        7, // Personalización media
+                        5, // Educación básica
+                        6 // Adherencia media
+                    ],
+                    backgroundColor: 'rgba(40, 167, 69, 0.2)',
+                    borderColor: '#28a745',
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    r: {
+                        beginAtZero: true,
+                        max: 10
+                    }
+                }
+            }
+        });
+    });
+
+    function seleccionarPlanificador(tipo) {
+        if (confirm(`¿Estás seguro de que quieres ${tipo === 'helms' ? 'cambiar al Planificador Helms' : 'mantener el planificador actual'}?`)) {
+            // Redirigir con parámetro
+            window.location.href = `{% url 'vista_plan_calendario' cliente.id %}?planificador=${tipo}`;
+        }
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,459 @@
+<!-- 🔮 SISTEMA DE PREDICCIONES -->
+<!-- Archivo: templates/analytics/predicciones.html -->
+
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Predicciones - {{ cliente.nombre }}{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.min.css" rel="stylesheet">
+<style>
+    :root {
+        --primary-color: #3b82f6;
+        --secondary-color: #1e40af;
+        --accent-color: #06b6d4;
+        --success-color: #10b981;
+        --warning-color: #f59e0b;
+        --danger-color: #ef4444;
+        --dark-bg: #0f172a;
+        --card-bg: #1e293b;
+        --text-primary: #f8fafc;
+        --text-secondary: #cbd5e1;
+        --border-color: #334155;
+    }
+
+    body {
+        background: linear-gradient(135deg, var(--dark-bg) 0%, #1e293b 100%);
+        color: var(--text-primary);
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        min-height: 100vh;
+    }
+
+    .analytics-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 2rem;
+    }
+
+    .analytics-header {
+        background: linear-gradient(135deg, #8b5cf6, var(--accent-color));
+        border-radius: 1rem;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        text-align: center;
+    }
+
+    .exercise-selector {
+        background: var(--card-bg);
+        border-radius: 1rem;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        border: 1px solid var(--border-color);
+    }
+
+    .exercise-selector select {
+        width: 100%;
+        padding: 1rem;
+        background: var(--dark-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 0.5rem;
+        color: var(--text-primary);
+        font-size: 1rem;
+    }
+
+    .predictions-grid {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 2rem;
+        margin-bottom: 2rem;
+    }
+
+    .chart-card {
+        background: var(--card-bg);
+        border-radius: 1rem;
+        padding: 1.5rem;
+        border: 1px solid var(--border-color);
+    }
+
+    .chart-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .predictions-list {
+        background: var(--card-bg);
+        border-radius: 1rem;
+        padding: 1.5rem;
+        border: 1px solid var(--border-color);
+    }
+
+    .prediction-item {
+        background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(6, 182, 212, 0.1));
+        border-radius: 0.75rem;
+        padding: 1.25rem;
+        margin-bottom: 1rem;
+        border: 1px solid rgba(139, 92, 246, 0.3);
+        position: relative;
+    }
+
+    .prediction-item:last-child {
+        margin-bottom: 0;
+    }
+
+    .prediction-timeframe {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        background: rgba(139, 92, 246, 0.2);
+        color: #8b5cf6;
+        padding: 0.25rem 0.75rem;
+        border-radius: 1rem;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+
+    .prediction-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin-bottom: 0.5rem;
+    }
+
+    .prediction-details {
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .prediction-confidence {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.8rem;
+    }
+
+    .confidence-bar {
+        flex: 1;
+        height: 6px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 3px;
+        overflow: hidden;
+    }
+
+    .confidence-fill {
+        height: 100%;
+        background: linear-gradient(90deg, var(--danger-color), var(--warning-color), var(--success-color));
+        border-radius: 3px;
+        transition: width 0.3s ease;
+    }
+
+    .historical-predictions {
+        background: var(--card-bg);
+        border-radius: 1rem;
+        padding: 1.5rem;
+        border: 1px solid var(--border-color);
+        margin-bottom: 2rem;
+    }
+
+    .historical-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem 0;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .historical-item:last-child {
+        border-bottom: none;
+    }
+
+    .historical-info {
+        flex: 1;
+    }
+
+    .historical-exercise {
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 0.25rem;
+    }
+
+    .historical-date {
+        font-size: 0.8rem;
+        color: var(--text-secondary);
+    }
+
+    .historical-prediction {
+        text-align: center;
+        margin: 0 1rem;
+    }
+
+    .historical-prediction-value {
+        font-weight: 600;
+        color: #8b5cf6;
+    }
+
+    .historical-prediction-label {
+        font-size: 0.7rem;
+        color: var(--text-secondary);
+    }
+
+    .historical-status {
+        text-align: center;
+    }
+
+    .status-badge {
+        padding: 0.25rem 0.75rem;
+        border-radius: 1rem;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+
+    .status-active {
+        background: rgba(16, 185, 129, 0.2);
+        color: var(--success-color);
+    }
+
+    .status-expired {
+        background: rgba(107, 114, 128, 0.2);
+        color: var(--text-secondary);
+    }
+
+    @media (max-width: 768px) {
+        .predictions-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .historical-item {
+            flex-direction: column;
+            gap: 1rem;
+            text-align: center;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="analytics-container">
+    <!-- Header -->
+    <div class="analytics-header">
+        <h1>🔮 Predicciones de Rendimiento</h1>
+        <p>Proyecciones inteligentes basadas en tu progreso actual</p>
+    </div>
+
+    <!-- Selector de Ejercicio -->
+    <div class="exercise-selector">
+        <!-- DEBUG -->
+
+
+        <label for="ejercicio-select" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">
+            Seleccionar Ejercicio para Predicción:
+        </label>
+        <select id="ejercicio-select" onchange="cambiarEjercicio()">
+            {% for ejercicio in ejercicios %}
+            <option value="{{ ejercicio }}" {% if ejercicio == ejercicio_seleccionado %}selected{% endif %}>
+                {{ ejercicio }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    {% if ejercicio_seleccionado and predicciones_data %}
+    <!-- Predicciones Actuales -->
+    <div class="predictions-grid">
+        <div class="chart-card">
+            <div class="chart-title">
+                📊 Proyección de Progreso - {{ ejercicio_seleccionado }}
+            </div>
+            <div style="position:relative;height:300px;">
+                <canvas id="predictionsChart"></canvas>
+            </div>
+        </div>
+
+        <div class="predictions-list">
+            <div class="chart-title">
+                🎯 Predicciones Calculadas
+            </div>
+            {% for pred in predicciones_data %}
+            <div class="prediction-item">
+                <div class="prediction-timeframe">{{ pred.meses }} mes{{ pred.meses|pluralize:"es" }}</div>
+
+                <div class="prediction-value">{{ pred.peso_predicho|floatformat:1 }} kg</div>
+
+                <div class="prediction-details">
+                    Incremento esperado: +{{ pred.incremento_esperado|floatformat:1 }} kg
+                    <br>
+                    Fecha objetivo: {{ pred.fecha_prediccion|date:"d/m/Y" }}
+                </div>
+
+                <div class="prediction-confidence">
+                    <span>Confianza:</span>
+                    <div class="confidence-bar">
+                        <div class="confidence-fill" style="width: {{ pred.confianza }}%"></div>
+                    </div>
+                    <span>{{ pred.confianza }}%</span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    {% elif ejercicio_seleccionado %}
+    <div style="text-align: center; padding: 4rem; color: var(--text-secondary);">
+        <h3>📊 Datos Insuficientes</h3>
+        <p>Se necesitan al menos 3 registros del ejercicio "{{ ejercicio_seleccionado }}" para generar predicciones precisas.</p>
+        <p><small>Continúa entrenando para obtener predicciones personalizadas.</small></p>
+    </div>
+
+    {% else %}
+    <div style="text-align: center; padding: 4rem; color: var(--text-secondary);">
+        <h3>🏋️‍♂️ No hay ejercicios disponibles</h3>
+        <p>Realiza algunos entrenamientos para ver predicciones de rendimiento.</p>
+    </div>
+    {% endif %}
+
+    <!-- Predicciones Históricas -->
+    {% if predicciones_bd %}
+    <div class="historical-predictions">
+        <div class="chart-title">
+            📈 Historial de Predicciones
+        </div>
+        {% for pred in predicciones_bd %}
+        <div class="historical-item">
+            <div class="historical-info">
+                <div class="historical-exercise">{{ pred.nombre_ejercicio }}</div>
+                <div class="historical-date">Creada: {{ pred.fecha_prediccion|date:"d/m/Y" }}</div>
+            </div>
+
+            <div class="historical-prediction">
+                <div class="historical-prediction-value">{{ pred.peso_estimado }} kg</div>
+                <div class="historical-prediction-label">Predicción</div>
+            </div>
+
+            <div class="historical-status">
+                <div class="status-badge {% if pred.activa %}status-active{% else %}status-expired{% endif %}">
+                    {% if pred.activa %}Activa{% else %}Expirada{% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Navegación -->
+    <div style="text-align: center; margin-top: 2rem;">
+        <a href="{% url 'analytics:dashboard_cliente' cliente.id %}"
+           style="background: var(--primary-color); color: white; padding: 1rem 2rem; border-radius: 0.5rem; text-decoration: none; font-weight: 600;">
+            ← Volver al Dashboard
+        </a>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+
+<script>
+    function cambiarEjercicio() {
+        const select = document.getElementById('ejercicio-select');
+        const ejercicio = select.value;
+        if (ejercicio) {
+            window.location.href = `?ejercicio=${encodeURIComponent(ejercicio)}`;
+        }
+    }
+
+    window.addEventListener('load', function () {
+        try {
+            {% if predicciones_data and predicciones_data|length > 0 %}
+            const prediccionesData = {{ predicciones_data|safe }};
+        console.log("📊 prediccionesData:", prediccionesData);
+        if (prediccionesData.length > 0) {
+            console.log("📅 Fechas:", prediccionesData.map(p => p.fecha_prediccion));
+            console.log("📈 Pesos predichos:", prediccionesData.map(p => p.peso_predicho));
+            console.log("🎯 Peso actual:", prediccionesData[0].peso_actual);
+        } else {
+            console.warn("⚠️ No hay predicciones disponibles para graficar.");
+        }
+            console.log("🎯 Datos predicción:", prediccionesData);
+
+            const canvas = document.getElementById('predictionsChart');
+            if (!canvas) {
+                console.warn("⛔ No se encontró el canvas #predictionsChart");
+                return;
+            }
+            const ctx = canvas.getContext('2d');
+
+            if (window.predictionChartInstance) {
+                window.predictionChartInstance.destroy();
+            }
+
+            const labels = ['Actual'].concat(prediccionesData.map(p => `${p.meses} mes${p.meses > 1 ? 'es' : ''}`));
+            const valores = [prediccionesData[0].peso_actual].concat(prediccionesData.map(p => p.peso_predicho));
+            const colores = ['#10b981'].concat(prediccionesData.map(() => '#8b5cf6'));
+
+            console.log("🪪 Labels:", labels);
+        console.log("📦 Valores:", valores);
+        console.log("🎨 Colores:", colores);
+        window.predictionChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Peso (kg)',
+                        data: valores,
+                        borderColor: '#8b5cf6',
+                        backgroundColor: 'rgba(139, 92, 246, 0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4,
+                        pointBackgroundColor: colores,
+                        pointBorderColor: colores,
+                        pointRadius: 6,
+                        pointHoverRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: { color: '#f8fafc' }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                afterLabel: function(context) {
+                                    if (context.dataIndex === 0) {
+                                        return 'Peso actual';
+                                    } else {
+                                        const pred = prediccionesData[context.dataIndex - 1];
+                                        return `Confianza: ${pred.confianza}%`;
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            ticks: { color: '#cbd5e1' },
+                            grid: { color: '#334155' }
+                        },
+                        x: {
+                            ticks: { color: '#cbd5e1' },
+                            grid: { color: '#334155' }
+                        }
+                    }
+                }
+            });
+            {% endif %}
+        } catch (e) {
+            console.error("❌ Error generando gráfica de predicción:", e);
+        }
+    });
+</script>
+
+{% endblock %}

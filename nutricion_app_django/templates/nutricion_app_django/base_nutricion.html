@@ -1,0 +1,350 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<style>
+    /* Estilos específicos para la aplicación de nutrición */
+    .piramide-container {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 15px;
+        padding: 2rem;
+        margin: 2rem 0;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    }
+    
+    .nivel-card {
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin: 1rem 0;
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+    
+    .nivel-card:hover {
+        background: rgba(255, 255, 255, 0.15);
+        transform: translateY(-3px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+    }
+    
+    .nivel-card.completado {
+        background: rgba(46, 204, 113, 0.2);
+        border-color: rgba(46, 204, 113, 0.4);
+    }
+    
+    .nivel-card.bloqueado {
+        background: rgba(149, 165, 166, 0.1);
+        border-color: rgba(149, 165, 166, 0.3);
+        cursor: not-allowed;
+        opacity: 0.6;
+    }
+    
+    .nivel-numero {
+        font-size: 2rem;
+        font-weight: bold;
+        color: #fff;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+    }
+    
+    .nivel-titulo {
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: #fff;
+        margin: 0.5rem 0;
+    }
+    
+    .nivel-descripcion {
+        color: rgba(255, 255, 255, 0.8);
+        font-size: 0.9rem;
+    }
+    
+    .progreso-badge {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        padding: 0.25rem 0.5rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+    
+    .badge-completado {
+        background: rgba(46, 204, 113, 0.9);
+        color: white;
+    }
+    
+    .badge-pendiente {
+        background: rgba(241, 196, 15, 0.9);
+        color: white;
+    }
+    
+    .badge-bloqueado {
+        background: rgba(149, 165, 166, 0.9);
+        color: white;
+    }
+    
+    .info-usuario {
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin: 1rem 0;
+    }
+    
+    .info-usuario h5 {
+        color: #fff;
+        font-weight: 600;
+        margin-bottom: 1rem;
+    }
+    
+    .info-usuario p {
+        color: rgba(255, 255, 255, 0.8);
+        margin: 0.5rem 0;
+    }
+    
+    .form-glass {
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 12px;
+        padding: 2rem;
+        margin: 1rem 0;
+    }
+    
+    .form-glass .form-control {
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        color: #fff;
+        border-radius: 8px;
+    }
+    
+    .form-glass .form-control:focus {
+        background: rgba(255, 255, 255, 0.15);
+        border-color: rgba(255, 255, 255, 0.5);
+        box-shadow: 0 0 0 0.2rem rgba(255, 255, 255, 0.25);
+        color: #fff;
+    }
+    
+    .form-glass .form-control::placeholder {
+        color: rgba(255, 255, 255, 0.6);
+    }
+    
+    .form-glass label {
+        color: #fff;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+    }
+    
+    .form-glass .form-text {
+        color: rgba(255, 255, 255, 0.7);
+    }
+    
+    .btn-nutricion {
+        background: linear-gradient(45deg, #667eea, #764ba2);
+        border: none;
+        color: white;
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-nutricion:hover {
+        background: linear-gradient(45deg, #764ba2, #667eea);
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        color: white;
+    }
+    
+    .resultados-container {
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 12px;
+        padding: 2rem;
+        margin: 2rem 0;
+    }
+    
+    .resultado-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .resultado-item:last-child {
+        border-bottom: none;
+    }
+    
+    .resultado-label {
+        color: rgba(255, 255, 255, 0.8);
+        font-weight: 500;
+    }
+    
+    .resultado-valor {
+        color: #fff;
+        font-weight: 600;
+        font-size: 1.1rem;
+    }
+    
+    .recomendaciones {
+        background: rgba(46, 204, 113, 0.1);
+        border: 1px solid rgba(46, 204, 113, 0.3);
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin: 1rem 0;
+    }
+    
+    .recomendaciones h6 {
+        color: #2ecc71;
+        font-weight: 600;
+        margin-bottom: 1rem;
+    }
+    
+    .recomendaciones ul {
+        color: rgba(255, 255, 255, 0.8);
+        margin: 0;
+        padding-left: 1.5rem;
+    }
+    
+    .recomendaciones li {
+        margin: 0.5rem 0;
+    }
+    
+    /* Responsive */
+    @media (max-width: 768px) {
+        .piramide-container {
+            padding: 1rem;
+            margin: 1rem 0;
+        }
+        
+        .nivel-card {
+            padding: 1rem;
+        }
+        
+        .nivel-numero {
+            font-size: 1.5rem;
+        }
+        
+        .nivel-titulo {
+            font-size: 1rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="piramide-container">
+                <div class="text-center mb-4">
+                    <h1 class="text-white mb-2">THE MUSCLE & STRENGTH PYRAMID</h1>
+                    <h2 class="text-white-50">NUTRICIÓN</h2>
+                    <p class="text-white-50">Basado en el libro de Eric Helms, Andrea Valdez y Andy Morgan</p>
+                </div>
+                
+                {% block piramide_content %}
+                {% endblock %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // JavaScript específico para la aplicación de nutrición
+    document.addEventListener('DOMContentLoaded', function() {
+        // Animaciones suaves para las tarjetas de nivel
+        const nivelCards = document.querySelectorAll('.nivel-card');
+        nivelCards.forEach(card => {
+            card.addEventListener('mouseenter', function() {
+                if (!this.classList.contains('bloqueado')) {
+                    this.style.transform = 'translateY(-5px) scale(1.02)';
+                }
+            });
+            
+            card.addEventListener('mouseleave', function() {
+                this.style.transform = 'translateY(0) scale(1)';
+            });
+        });
+        
+        // Validación de formularios en tiempo real
+        const formControls = document.querySelectorAll('.form-control');
+        formControls.forEach(control => {
+            control.addEventListener('input', function() {
+                if (this.checkValidity()) {
+                    this.classList.remove('is-invalid');
+                    this.classList.add('is-valid');
+                } else {
+                    this.classList.remove('is-valid');
+                    this.classList.add('is-invalid');
+                }
+            });
+        });
+    });
+    
+    // Función para mostrar tooltips informativos
+    function showTooltip(element, message) {
+        // Implementar tooltip personalizado si es necesario
+        element.title = message;
+    }
+    
+    // Función para calcular preview de macronutrientes (AJAX)
+    function calcularPreview() {
+        const proteinaGramosKg = document.getElementById('proteina_gramos_kg_input')?.value;
+        const grasaPorcentaje = document.getElementById('grasa_porcentaje_input')?.value;
+        
+        if (proteinaGramosKg && grasaPorcentaje) {
+            fetch('{% url "nutricion_app_django:ajax_calcular_preview" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                },
+                body: `proteina_gramos_kg=${proteinaGramosKg}&grasa_porcentaje=${grasaPorcentaje}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Actualizar preview de macronutrientes
+                    updateMacrosPreview(data.macros);
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        }
+    }
+    
+    function updateMacrosPreview(macros) {
+        // Actualizar elementos del DOM con los nuevos valores
+        const previewContainer = document.getElementById('macros-preview');
+        if (previewContainer) {
+            previewContainer.innerHTML = `
+                <div class="row">
+                    <div class="col-md-4 text-center">
+                        <h5 class="text-white">Proteína</h5>
+                        <p class="text-white-50">${macros.proteina_gramos}g (${macros.proteina_porcentaje}%)</p>
+                        <p class="text-white-50">${macros.proteina_calorias} kcal</p>
+                    </div>
+                    <div class="col-md-4 text-center">
+                        <h5 class="text-white">Grasa</h5>
+                        <p class="text-white-50">${macros.grasa_gramos}g (${macros.grasa_porcentaje}%)</p>
+                        <p class="text-white-50">${macros.grasa_calorias} kcal</p>
+                    </div>
+                    <div class="col-md-4 text-center">
+                        <h5 class="text-white">Carbohidratos</h5>
+                        <p class="text-white-50">${macros.carbohidratos_gramos}g (${macros.carbohidratos_porcentaje}%)</p>
+                        <p class="text-white-50">${macros.carbohidratos_calorias} kcal</p>
+                    </div>
+                </div>
+            `;
+        }
+    }
+</script>
+{% endblock %}
+

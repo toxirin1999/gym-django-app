@@ -1,0 +1,272 @@
+{% extends 'estoico/base_estoico.html' %}
+{% load static %}
+
+{% block title %}Dashboard - Diario Estoico{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Columna Principal -->
+    <div class="col-lg-8">
+        <!-- Contenido del Día -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-sun me-2"></i>
+                    Día {{ dia_actual }} - {{ contenido_hoy.tema }}
+                </h5>
+                <span class="badge bg-light text-dark">{{ contenido_hoy.mes }}</span>
+            </div>
+            <div class="card-body">
+                <!-- Cita del Día -->
+                <blockquote class="blockquote text-center mb-4">
+                    <p class="mb-3 fs-5 text-muted fst-italic">
+                        "{{ contenido_hoy.cita }}"
+                    </p>
+                    <footer class="blockquote-footer">
+                        <strong>{{ contenido_hoy.autor }}</strong>
+                    </footer>
+                </blockquote>
+
+                <!-- Reflexión -->
+                <div class="mb-4">
+                    <h6 class="fw-bold text-primary mb-3">
+                        <i class="fas fa-lightbulb me-2"></i>Reflexión
+                    </h6>
+                    <p class="text-muted lh-lg">{{ contenido_hoy.reflexion }}</p>
+                </div>
+
+                <!-- Pregunta del Día -->
+                <div class="mb-4">
+                    <h6 class="fw-bold text-primary mb-3">
+                        <i class="fas fa-question-circle me-2"></i>Pregunta para Reflexionar
+                    </h6>
+                    <p class="text-dark fw-medium">{{ contenido_hoy.pregunta }}</p>
+                </div>
+
+                <!-- Estado de Reflexión -->
+                <div class="d-flex justify-content-between align-items-center">
+                    {% if reflexion_hoy %}
+                    <div class="d-flex align-items-center text-success">
+                        <i class="fas fa-check-circle me-2"></i>
+                        <span>Ya reflexionaste hoy</span>
+                        {% if reflexion_hoy.calificacion_dia %}
+                        <div class="ms-3">
+                            {% for i in "12345" %}
+                            {% if forloop.counter <= reflexion_hoy.calificacion_dia %}
+                            <i class="fas fa-star text-warning"></i>
+                            {% else %}
+                            <i class="far fa-star text-muted"></i>
+                            {% endif %}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    <a href="{% url 'estoico:diario_dia' dia_actual %}" class="btn btn-outline-primary">
+                        <i class="fas fa-edit me-2"></i>Editar Reflexión
+                    </a>
+                    {% else %}
+                    <div class="d-flex align-items-center text-muted">
+                        <i class="fas fa-clock me-2"></i>
+                        <span>Pendiente de reflexión</span>
+                    </div>
+                    <a href="{% url 'estoico:diario_dia' dia_actual %}" class="btn btn-primary">
+                        <i class="fas fa-pen me-2"></i>Reflexionar Ahora
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Reflexiones Recientes -->
+        <div class="card shadow-sm">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="mb-0">
+                    <i class="fas fa-history me-2"></i>Reflexiones Recientes
+                </h6>
+                <a href="{% url 'estoico:calendario' %}" class="btn btn-sm btn-outline-primary">
+                    Ver Todas
+                </a>
+            </div>
+            <div class="card-body">
+                {% if reflexiones_recientes %}
+                {% for reflexion in reflexiones_recientes %}
+                <div class="d-flex align-items-start mb-3 {% if not forloop.last %}border-bottom pb-3{% endif %}">
+                    <div class="flex-shrink-0 me-3">
+                        <div class="avatar-circle bg-primary text-white">
+                            {{ reflexion.fecha.day }}
+                        </div>
+                    </div>
+                    <div class="flex-grow-1">
+                        <div class="d-flex justify-content-between align-items-start mb-1">
+                            <h6 class="mb-1">{{ reflexion.contenido_dia.tema }}</h6>
+                            <small class="text-muted">{{ reflexion.fecha|date:"d M" }}</small>
+                        </div>
+                        <p class="text-muted small mb-1">
+                            {{ reflexion.reflexion_personal|truncatewords:15 }}
+                        </p>
+                        <div class="d-flex align-items-center">
+                            {% if reflexion.calificacion_dia %}
+                            <div class="me-3">
+                                {% for i in "12345" %}
+                                {% if forloop.counter <= reflexion.calificacion_dia %}
+                                <i class="fas fa-star text-warning small"></i>
+                                {% else %}
+                                <i class="far fa-star text-muted small"></i>
+                                {% endif %}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                            {% if reflexion.marcado_favorito %}
+                            <i class="fas fa-heart text-danger small"></i>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+                {% else %}
+                <div class="text-center text-muted py-4">
+                    <i class="fas fa-book-open fa-3x mb-3 opacity-50"></i>
+                    <p>Aún no tienes reflexiones. ¡Comienza hoy!</p>
+                    <a href="{% url 'estoico:diario_hoy' %}" class="btn btn-primary">
+                        Escribir Primera Reflexión
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+        <!-- Estadísticas Rápidas -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-chart-bar me-2"></i>Tu Progreso
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6 mb-3">
+                        <div class="stat-item">
+                            <div class="stat-number text-primary">{{ estadisticas.racha_actual }}</div>
+                            <div class="stat-label text-muted small">Racha Actual</div>
+                        </div>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <div class="stat-item">
+                            <div class="stat-number text-success">{{ estadisticas.dias_activos }}</div>
+                            <div class="stat-label text-muted small">Días Activos</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="stat-item">
+                            <div class="stat-number text-warning">{{ estadisticas.racha_maxima }}</div>
+                            <div class="stat-label text-muted small">Mejor Racha</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="stat-item">
+                            <div class="stat-number text-info">{{ estadisticas.promedio_calificacion|floatformat:1 }}</div>
+                            <div class="stat-label text-muted small">Promedio</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <a href="{% url 'estoico:progreso' %}" class="btn btn-outline-primary btn-sm w-100">
+                        Ver Estadísticas Completas
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Logros Recientes -->
+        {% if logros_recientes %}
+        <div class="card shadow-sm mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="mb-0">
+                    <i class="fas fa-trophy me-2"></i>Logros Recientes
+                </h6>
+                <span class="badge bg-warning text-dark">{{ logros_recientes|length }}</span>
+            </div>
+            <div class="card-body">
+                {% for logro_usuario in logros_recientes %}
+                <div class="d-flex align-items-center mb-3 {% if not forloop.last %}border-bottom pb-3{% endif %}">
+                    <div class="flex-shrink-0 me-3">
+                        <div class="achievement-icon">{{ logro_usuario.logro.icono }}</div>
+                    </div>
+                    <div class="flex-grow-1">
+                        <h6 class="mb-1">{{ logro_usuario.logro.nombre }}</h6>
+                        <p class="text-muted small mb-0">{{ logro_usuario.logro.descripcion }}</p>
+                        <small class="text-success">
+                            <i class="fas fa-check me-1"></i>
+                            {{ logro_usuario.fecha_obtenido|date:"d M Y" }}
+                        </small>
+                    </div>
+                    {% if not logro_usuario.visto %}
+                    <button class="btn btn-sm btn-outline-primary mark-seen"
+                            data-logro-id="{{ logro_usuario.logro.id }}">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Navegación Rápida -->
+        <div class="card shadow-sm">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-compass me-2"></i>Navegación Rápida
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{% url 'estoico:diario_hoy' %}" class="btn btn-outline-primary">
+                        <i class="fas fa-pen me-2"></i>Reflexión de Hoy
+                    </a>
+                    <a href="{% url 'estoico:calendario' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-calendar me-2"></i>Ver Calendario
+                    </a>
+                    <a href="{% url 'estoico:buscar' %}" class="btn btn-outline-info">
+                        <i class="fas fa-search me-2"></i>Buscar Contenido
+                    </a>
+                    <a href="{% url 'estoico:configuracion' %}" class="btn btn-outline-dark">
+                        <i class="fas fa-cog me-2"></i>Configuración
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Marcar logros como vistos
+        document.querySelectorAll('.mark-seen').forEach(button => {
+            button.addEventListener('click', function() {
+                const logroId = this.dataset.logroId;
+
+                fetch(`{% url 'estoico:marcar_logro_visto' 0 %}`.replace('0', logroId), {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                        'Content-Type': 'application/json',
+                    },
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        this.style.display = 'none';
+                    }
+                });
+            });
+        });
+    });
+</script>
+{% endblock %}
+

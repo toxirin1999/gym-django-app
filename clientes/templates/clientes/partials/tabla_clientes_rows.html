@@ -1,0 +1,41 @@
+<!-- Archivo: clientes/templates/clientes/partials/tabla_clientes_rows.html -->
+
+{% for item in lista_clientes %}
+<tr class="border-b border-gray-700 hover:bg-gray-800/50">
+    <td class="p-2 font-bold">{{ item.cliente.nombre }}</td>
+    <td class="p-2 text-gray-400">
+        {% if item.ultimo_entreno_fecha %}
+        {{ item.ultimo_entreno_fecha|date:"d M, Y" }}
+        {% else %}
+        <span class="text-red-400">Sin registros</span>
+        {% endif %}
+    </td>
+    <td class="p-2">
+        <span class="px-2 py-1 text-xs font-semibold rounded-full
+            {% if item.estado_fatiga == 'Bajo' %}bg-green-500/20 text-green-400
+            {% elif item.estado_fatiga == 'Moderada' %}bg-yellow-500/20 text-yellow-400
+            {% elif item.estado_fatiga == 'N/A' %}bg-gray-500/20 text-gray-400
+            {% else %}bg-red-500/20 text-red-400{% endif %}">
+            {{ item.estado_fatiga }}
+        </span>
+    </td>
+    <!-- NUEVA COLUMNA: PROGRESO -->
+    <td class="p-2 font-semibold {{ item.progreso_color }}">
+        {{ item.progreso_reciente }}
+    </td>
+    <!-- NUEVA COLUMNA: CONSISTENCIA -->
+    <td class="p-2">
+        <div class="w-full bg-gray-600 rounded-full h-2.5">
+            <div class="bg-indigo-500 h-2.5 rounded-full" style="width: {{ item.consistencia }}%"></div>
+        </div>
+    </td>
+    <td class="p-2"><a href="{% url 'clientes:detalle_cliente' item.cliente.id %}" class="text-indigo-400 font-semibold hover:underline">Ver</a></td>
+</tr>
+{% empty %}
+<tr>
+    <td colspan="6" class="text-center p-8 text-gray-500">
+        <p class="font-semibold">No se encontraron clientes.</p>
+        <p class="text-sm">Prueba a cambiar los filtros o el término de búsqueda.</p>
+    </td>
+</tr>
+{% endfor %}

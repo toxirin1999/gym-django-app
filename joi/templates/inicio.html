@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="min-h-screen bg-[#0b0b0b] text-white flex flex-col items-center justify-center px-6 relative">
+
+    <!-- Joi flotante -->
+    <div class="absolute top-10 right-10">
+        {% include 'partials/joi_flotante.html' %}
+    </div>
+
+    <!-- Frase principal -->
+    <h1 class="text-3xl md:text-4xl text-center text-purple-300 font-semibold mb-8 fade-in">
+        ¿Cómo estás hoy... <span class="italic">de verdad</span>?
+    </h1>
+
+    <!-- Formulario -->
+    <form method="post" class="bg-[#1a1a1a] rounded-xl p-6 w-full max-w-md shadow-lg space-y-4 border border-purple-900 backdrop-blur">
+        {% csrf_token %}
+        <select name="emocion" class="w-full p-3 bg-[#2b2b2b] text-white rounded-md">
+            <option value="">Selecciona una emoción</option>
+            <option value="feliz">😊 Feliz</option>
+            <option value="motivado">🚀 Motivado</option>
+            <option value="neutro">😐 Neutro</option>
+            <option value="estresado">😣 Estresado</option>
+            <option value="agotado">😴 Agotado</option>
+            <option value="triste">🥀 Triste</option>
+            <option value="glitch">🕳 Glitch</option>
+        </select>
+        <button type="submit" class="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold py-2 rounded-lg transition">
+            Guardar emoción
+        </button>
+    </form>
+</div>
+
+<style>
+    .fade-in {
+      animation: fadeIn 1.4s ease-in-out;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+</style>
+{% endblock %}

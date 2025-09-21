@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% load static %}
+{% load widget_tweaks %}
+
+{% block title %}Agregar Cliente{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="fw-bold mb-3">Agregar Cliente</h2>
+
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="row">
+            <!-- Columna izquierda: formulario -->
+            <div class="col-md-6">
+                {% for field in form %}
+                {% if field.name == "proximo_registro_peso" %}
+                <div class="mb-3">
+                    <label for="{{ field.id_for_label }}" class="form-label">Próximo registro de peso</label>
+                    {{ field|add_class:"form-control" }}
+                </div>
+                {% else %}
+                <div class="mb-3">
+                    {{ field.label_tag }}
+                    {{ field }}
+                    {% if field.errors %}
+                    <div class="text-danger small">{{ field.errors|striptags }}</div>
+                    {% endif %}
+                </div>
+                {% endif %}
+                {% endfor %}
+
+
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="bi bi-check-circle"></i> Guardar Cliente
+                </button>
+
+                <a href="{% url 'clientes:lista_clientes' %}" class="btn btn-secondary w-100 mt-2">
+                    <i class="bi bi-arrow-left"></i> Cancelar
+                </a>
+            </div>
+
+            <!-- Columna derecha: imagen del cuerpo -->
+            <div class="col-md-6 text-center">
+                <h4 class="fw-bold mb-3">Referencia de Medidas Corporales</h4>
+                <img src="{% static 'img/cuerpo_humano.png' %}" alt="Cuerpo humano" class="img-fluid"
+                     style="max-width: 100%; height: auto;">
+                <p class="text-muted small mt-2">
+                    Usa esta imagen como referencia para ingresar las medidas corporales del cliente.
+                </p>
+            </div>
+            <hr>
+            <h5 class="fw-bold">Acceso del cliente</h5>
+
+            <div class="mb-3">
+                <label for="id_username" class="form-label">Usuario (para login)</label>
+                <input type="text" name="username" class="form-control" required>
+            </div>
+
+            <div class="mb-3">
+                <label for="id_password" class="form-label">Contraseña</label>
+                <input type="password" name="password" class="form-control" required>
+            </div>
+
+        </div>
+    </form>
+</div>
+{% endblock %}

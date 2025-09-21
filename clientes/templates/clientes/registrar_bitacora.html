@@ -1,0 +1,635 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load widget_tweaks %}
+
+{% block extra_css %}
+<style>
+    /* Base Body - Fondo cyberpunk igual que la página principal */
+    body {
+      background: url("{% static 'images/fondo_cyberpunk.png' %}") no-repeat center center fixed !important;
+      background-size: cover !important;
+      background-color: #000000 !important;
+      min-height: 100vh !important;
+      filter: brightness(0.9);
+      overflow-x: hidden;
+    }
+.form-field {
+    color: #000 !important;
+}
+.form-field::placeholder {
+    color: #555 !important;
+}
+
+
+    /* Reset de estilos para asegurar que no haya interferencias */
+    * {
+        box-sizing: border-box;
+    }
+
+    /* Contenedor principal que ocupe toda la pantalla */
+    .full-screen-container {
+        width: 100vw !important;
+        min-height: 100vh !important;
+        padding: 20px !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: flex-start !important;
+        margin: 0 !important;
+        position: relative !important;
+    }
+
+    /* Contenedor del formulario más amplio */
+    .form-wrapper {
+        width: 100% !important;
+        max-width: 1000px !important;
+        margin: 0 auto !important;
+        padding: 0 20px !important;
+    }
+
+    /* Header principal centrado */
+    .page-header {
+        text-align: center !important;
+        margin-bottom: 40px !important;
+        padding: 30px 0 !important;
+        width: 100% !important;
+    }
+
+    .page-title {
+        font-size: 3rem !important;
+        font-weight: bold !important;
+        background: linear-gradient(90deg, #00ffff, #ff00ff, #00ff00);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        animation: titleGlow 4s ease-in-out infinite alternate;
+        margin-bottom: 15px !important;
+    }
+
+    @keyframes titleGlow {
+        0%, 100% { text-shadow: 0 0 30px rgba(0, 255, 255, 0.5) !important; }
+        50% { text-shadow: 0 0 60px rgba(0, 255, 255, 0.8), 0 0 40px rgba(255, 0, 255, 0.6) !important; }
+    }
+
+    .page-subtitle {
+        color: rgba(255, 255, 255, 0.8) !important;
+        font-size: 1.3rem !important;
+        text-shadow: 0 0 10px rgba(0, 255, 255, 0.3) !important;
+    }
+
+    /* Icono del header */
+    .icon-container {
+        background: linear-gradient(135deg, #00ffff, #ff00ff) !important;
+        border-radius: 12px !important;
+        padding: 15px !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        box-shadow: 0 0 15px rgba(0, 255, 255, 0.4) !important;
+        margin-bottom: 20px !important;
+        width: 80px !important;
+        height: 80px !important;
+    }
+
+    /* Contenedor del formulario */
+    .form-container {
+        background: rgba(0, 0, 0, 0.7) !important;
+        backdrop-filter: blur(20px) saturate(180%) !important;
+        -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+        border: 1px solid rgba(0, 255, 255, 0.3) !important;
+        box-shadow: 0 0 30px rgba(0, 255, 255, 0.2), inset 0 0 15px rgba(0, 255, 255, 0.1) !important;
+        border-radius: 20px !important;
+        padding: 50px !important;
+        margin: 0 auto !important;
+        width: 100% !important;
+        max-width: 900px !important;
+    }
+
+    /* Secciones del formulario */
+    .form-section {
+        margin-bottom: 50px !important;
+        padding: 40px !important;
+        background: rgba(0, 0, 0, 0.4) !important;
+        border: 1px solid rgba(0, 255, 255, 0.2) !important;
+        border-radius: 15px !important;
+        backdrop-filter: blur(10px) !important;
+        width: 100% !important;
+    }
+
+    .section-title {
+        display: flex !important;
+        align-items: center !important;
+        margin-bottom: 30px !important;
+    }
+
+    .section-header {
+        background: linear-gradient(90deg, #00ffff, #ff00ff, #00ff00);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        animation: titleGlow 4s ease-in-out infinite alternate;
+        font-size: 2rem !important;
+        margin-bottom: 0 !important;
+        margin-left: 15px !important;
+    }
+
+    .section-icon {
+        background: linear-gradient(135deg, #00ffff, #ff00ff) !important;
+        border-radius: 10px !important;
+        padding: 10px !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        box-shadow: 0 0 15px rgba(0, 255, 255, 0.4) !important;
+        width: 50px !important;
+        height: 50px !important;
+    }
+
+    /* Grid para campos */
+    .form-grid {
+        display: grid !important;
+        gap: 30px !important;
+        grid-template-columns: 1fr !important;
+        width: 100% !important;
+    }
+
+    @media (min-width: 768px) {
+        .form-grid {
+            grid-template-columns: 1fr 1fr !important;
+        }
+    }
+
+    .form-group {
+        margin-bottom: 25px !important;
+        width: 100% !important;
+    }
+
+    /* Labels cyberpunk */
+    .field-label {
+        color: #00ffff !important;
+        font-weight: bold !important;
+        font-size: 1.2rem !important;
+        margin-bottom: 10px !important;
+        display: block !important;
+        text-shadow: 0 0 10px rgba(0, 255, 255, 0.5) !important;
+    }
+
+    /* Campos de formulario cyberpunk */
+    .form-field {
+        background: rgba(0, 0, 0, 0.6) !important;
+        border: 1px solid rgba(0, 255, 255, 0.4) !important;
+        border-radius: 10px !important;
+        padding: 18px !important;
+        color: #ffffff !important;
+        font-size: 1.1rem !important;
+        transition: all 0.3s ease-in-out;
+        backdrop-filter: blur(10px) !important;
+        box-shadow: 0 0 10px rgba(0, 255, 255, 0.1) !important;
+        width: 100% !important;
+        min-height: 50px !important;
+    }
+
+    .form-field:focus {
+        outline: none !important;
+        border-color: #00ffff !important;
+        box-shadow: 0 0 20px rgba(0, 255, 255, 0.4), inset 0 0 10px rgba(0, 255, 255, 0.1) !important;
+        transform: translateY(-2px);
+    }
+
+    .form-field::placeholder {
+        color: rgba(255, 255, 255, 0.6) !important;
+    }
+
+    /* Textarea específico */
+    textarea.form-field {
+        min-height: 120px !important;
+        resize: vertical !important;
+    }
+
+    /* Botón de envío cyberpunk */
+    .submit-btn {
+        background: linear-gradient(45deg, #00ffff, #ff00ff) !important;
+        color: #000000 !important;
+        font-weight: bold !important;
+        font-size: 1.3rem !important;
+        padding: 20px 40px !important;
+        border: none !important;
+        border-radius: 15px !important;
+        cursor: pointer !important;
+        transition: all 0.3s ease !important;
+        box-shadow: 0 0 20px rgba(0, 255, 255, 0.5) !important;
+        width: 100% !important;
+        margin-top: 40px !important;
+        min-height: 60px !important;
+    }
+
+    .submit-btn:hover {
+        background: linear-gradient(45deg, #ff00ff, #00ff00) !important;
+        box-shadow: 0 0 30px rgba(255, 0, 255, 0.7), 0 0 15px rgba(0, 255, 255, 0.7) !important;
+        transform: translateY(-3px) scale(1.02) !important;
+    }
+
+    /* Animaciones */
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .animate-fade-in {
+        animation: fadeInUp 0.8s ease-out;
+    }
+
+    /* Estados de validación cyberpunk */
+    .field-error {
+        border-color: #ff0040 !important;
+        box-shadow: 0 0 15px rgba(255, 0, 64, 0.4) !important;
+    }
+
+    .field-success {
+        border-color: #00ff00 !important;
+        box-shadow: 0 0 15px rgba(0, 255, 0, 0.4) !important;
+    }
+
+    /* Mensajes de error */
+    .error-message {
+        background: rgba(255, 0, 64, 0.1) !important;
+        border: 1px solid rgba(255, 0, 64, 0.3) !important;
+        border-radius: 10px !important;
+        padding: 20px !important;
+        margin-bottom: 30px !important;
+        color: #ff4080 !important;
+        width: 100% !important;
+    }
+
+    /* Efectos atmosféricos */
+    .atmosphere-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        z-index: -1;
+        background: radial-gradient(circle at 20% 50%, rgba(0, 255, 255, 0.1) 0%, transparent 50%),
+                    radial-gradient(circle at 80% 20%, rgba(255, 0, 255, 0.1) 0%, transparent 50%),
+                    radial-gradient(circle at 40% 80%, rgba(0, 255, 0, 0.1) 0%, transparent 50%);
+    }
+
+    /* Indicador de progreso */
+    .progress-indicator {
+        text-align: center !important;
+        margin-top: 30px !important;
+        color: rgba(255, 255, 255, 0.6) !important;
+        font-size: 0.9rem !important;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .full-screen-container {
+            padding: 15px !important;
+        }
+
+        .form-container {
+            padding: 30px !important;
+        }
+
+        .form-section {
+            padding: 25px !important;
+        }
+
+        .page-title {
+            font-size: 2.2rem !important;
+        }
+
+        .page-subtitle {
+            font-size: 1.1rem !important;
+        }
+
+        .form-grid {
+            grid-template-columns: 1fr !important;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .form-container {
+            padding: 20px !important;
+        }
+
+        .form-section {
+            padding: 20px !important;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Efectos atmosféricos -->
+<div class="atmosphere-overlay"></div>
+
+<div class="full-screen-container">
+    <div class="form-wrapper">
+        {% if respuesta_joi %}
+        <div class="form-section animate-fade-in" style="margin-bottom: 30px;">
+            <h2 class="section-header">🧠 Joi hoy te dice:</h2>
+            <p style="color: #00ffff; font-size: 1.1rem; font-style: italic;">
+                {{ respuesta_joi }}
+            </p>
+        </div>
+        {% endif %}
+
+        <!-- Header mejorado -->
+        <div class="page-header animate-fade-in">
+            <div class="form-section animate-fade-in" style="display: flex; align-items: center; justify-content: space-between;">
+                <div style="flex: 1;">
+                    <h2 class="section-header">👁 Joi está contigo</h2>
+                    <p style="color: #ccc; font-style: italic; max-width: 400px;">
+                        Estoy aquí para guiarte... Hoy no solo es un registro, es una oportunidad para conocerte más.
+                    </p>
+                </div>
+                <div style="flex-shrink: 0; margin-left: 20px;">
+                    <img src="{% static 'images/4f.png' %}" alt="Joi" style="width: 80px; height: auto; border-radius: 16px; box-shadow: 0 0 20px #00ffff;">
+                </div>
+            </div>
+            <div class="form-section animate-fade-in">
+                <div class="section-title">
+                    <div class="section-icon">
+                        <svg class="w-6 h-6 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 17l4 4 4-4m0-5l-4-4-4 4"></path>
+                        </svg>
+                    </div>
+                    <h2 class="section-header">📅 Evento especial</h2>
+                </div>
+                <div class="form-group">
+                    <label class="field-label">¿Algo que quieras recordar hoy?</label>
+                    <textarea name="evento_especial" class="form-field" placeholder="Ej. Me sentí muy fuerte en el entreno, o tuve una conversación importante..."></textarea>
+                </div>
+            </div>
+            <div class="form-section animate-fade-in" style="text-align: center;">
+                <button onclick="alert('Esta funcionalidad está en desarrollo 🤖')" class="submit-btn" style="max-width: 300px;">
+                    🧠 Generar rutina recomendada
+                </button>
+            </div>
+
+            <div class="icon-container">
+                <svg class="w-12 h-12 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                </svg>
+            </div>
+            <h1 class="page-title">
+                {% if form.instance.pk %}Editar bitácora de hoy{% else %}Bitácora diaria con Joi{% endif %}
+            </h1>
+            <p class="page-subtitle">Reflexiona sobre tu día y planifica tu crecimiento</p>
+        </div>
+
+        <!-- Formulario mejorado -->
+        <div class="form-container animate-fade-in">
+            <form method="post" id="bitacora-form">
+                {% csrf_token %}
+
+                <!-- Manejo de errores mejorado -->
+                {% if form.non_field_errors %}
+                <div class="error-message">
+                    <div style="display: flex; align-items: center;">
+                        <svg style="width: 20px; height: 20px; margin-right: 10px; color: #ff4080;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        <div>
+                            {{ form.non_field_errors }}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Sección Mañana -->
+                <div class="form-section">
+                    <div class="section-title">
+                        <div class="section-icon">
+                            <svg class="w-6 h-6 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
+                            </svg>
+                        </div>
+                        <h2 class="section-header">Mañana</h2>
+                    </div>
+
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="{{ form.quien_quiero_ser.id_for_label }}" class="field-label">
+                                <svg style="width: 20px; height: 20px; display: inline; margin-right: 8px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                                </svg>
+                                Quien quiero ser
+                            </label>
+                            {{ form.quien_quiero_ser|add_class:"form-field" }}
+                            {% if form.quien_quiero_ser.help_text %}
+                            <p style="font-size: 0.9rem; color: rgba(255, 255, 255, 0.6); margin-top: 5px;">{{ form.quien_quiero_ser.help_text }}</p>
+                            {% endif %}
+                        </div>
+
+                        <div class="form-group">
+                            <label for="{{ form.tareas_dia.id_for_label }}" class="field-label">
+                                <svg style="width: 20px; height: 20px; display: inline; margin-right: 8px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                                </svg>
+                                Tareas del día
+                            </label>
+                            {{ form.tareas_dia|add_class:"form-field" }}
+                            {% if form.tareas_dia.help_text %}
+                            <p style="font-size: 0.9rem; color: rgba(255, 255, 255, 0.6); margin-top: 5px;">{{ form.tareas_dia.help_text }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sección Estado del día -->
+                <div class="form-section">
+                    <div class="section-title">
+                        <div class="section-icon">
+                            <svg class="w-6 h-6 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+                            </svg>
+                        </div>
+                        <h2 class="section-header">Estado del día</h2>
+                    </div>
+
+                    <div class="form-grid">
+                        {% for field in form.visible_fields %}
+                        {% if field.name not in 'quien_quiero_ser,tareas_dia,que_puedo_mejorar,reflexion_diaria' %}
+                        <div class="form-group">
+                            <label for="{{ field.id_for_label }}" class="field-label">
+                                <svg style="width: 20px; height: 20px; display: inline; margin-right: 8px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                                </svg>
+                                {{ field.label }}
+                            </label>
+                            {{ field|add_class:"form-field" }}
+                            {% if field.help_text %}
+                            <p style="font-size: 0.9rem; color: rgba(255, 255, 255, 0.6); margin-top: 5px;">{{ field.help_text }}</p>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Sección Noche -->
+                <div class="form-section">
+                    <div class="section-title">
+                        <div class="section-icon">
+                            <svg class="w-6 h-6 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
+                            </svg>
+                        </div>
+                        <h2 class="section-header">Noche</h2>
+                    </div>
+
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="{{ form.que_puedo_mejorar.id_for_label }}" class="field-label">
+                                <svg style="width: 20px; height: 20px; display: inline; margin-right: 8px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                                </svg>
+                                Qué puedo mejorar
+                            </label>
+                            {{ form.que_puedo_mejorar|add_class:"form-field" }}
+                            {% if form.que_puedo_mejorar.help_text %}
+                            <p style="font-size: 0.9rem; color: rgba(255, 255, 255, 0.6); margin-top: 5px;">{{ form.que_puedo_mejorar.help_text }}</p>
+                            {% endif %}
+                        </div>
+
+                        <div class="form-group">
+                            <label for="{{ form.reflexion_diaria.id_for_label }}" class="field-label">
+                                <svg style="width: 20px; height: 20px; display: inline; margin-right: 8px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+                                </svg>
+                                Reflexión diaria
+                            </label>
+                            {{ form.reflexion_diaria|add_class:"form-field" }}
+                            {% if form.reflexion_diaria.help_text %}
+                            <p style="font-size: 0.9rem; color: rgba(255, 255, 255, 0.6); margin-top: 5px;">{{ form.reflexion_diaria.help_text }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Botón de envío mejorado -->
+                <div style="text-align: center;">
+                    <button type="submit" class="submit-btn">
+                        <span style="display: flex; align-items: center; justify-content: center; gap: 12px;">
+                            <svg style="width: 24px; height: 24px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                            </svg>
+                            <span>{% if form.instance.pk %}Actualizar bitácora{% else %}Guardar bitácora{% endif %}</span>
+                        </span>
+                    </button>
+                </div>
+            </form>
+        </div>
+        <!-- Sección Mediciones -->
+        <div class="form-section">
+            <div class="section-title">
+                <div class="section-icon">
+                    <svg class="w-6 h-6 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                    </svg>
+                </div>
+                <h2 class="section-header">📏 Mediciones físicas</h2>
+            </div>
+
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="{{ form.peso_kg.id_for_label }}" class="field-label">Peso (kg)</label>
+                    {{ form.peso_kg }}
+                </div>
+                <div class="form-group">
+                    <label for="{{ form.circunferencia_biceps.id_for_label }}" class="field-label">Bíceps (cm)</label>
+                    {{ form.circunferencia_biceps }}
+                </div>
+            </div>
+        </div>
+
+        <!-- Indicador de progreso -->
+        <div class="progress-indicator">
+            <div style="display: inline-flex; align-items: center; gap: 8px;">
+                <svg style="width: 16px; height: 16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                <span>Tus datos se guardan de forma segura</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // JavaScript para mejorar la experiencia de usuario
+    document.addEventListener('DOMContentLoaded', function() {
+      const form = document.getElementById('bitacora-form');
+      const submitBtn = form.querySelector('button[type="submit"]');
+
+      // Validación en tiempo real
+      const fields = form.querySelectorAll('input, textarea, select');
+      fields.forEach(field => {
+        field.addEventListener('blur', function() {
+          validateField(this);
+        });
+
+        field.addEventListener('input', function() {
+          if (this.classList.contains('field-error')) {
+            validateField(this);
+          }
+        });
+      });
+
+      function validateField(field) {
+        const isValid = field.checkValidity();
+        field.classList.remove('field-error', 'field-success');
+
+        if (field.value.trim() !== '') {
+          field.classList.add(isValid ? 'field-success' : 'field-error');
+        }
+      }
+
+      // Mejorar el estado de envío
+      form.addEventListener('submit', function(e) {
+        submitBtn.innerHTML = `
+          <span style="display: flex; align-items: center; justify-content: center; gap: 12px;">
+            <svg style="width: 24px; height: 24px; animation: spin 1s linear infinite;" fill="none" viewBox="0 0 24 24">
+              <circle style="opacity: 0.25;" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path style="opacity: 0.75;" fill="currentColor" d="m4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span>Guardando...</span>
+          </span>
+        `;
+        submitBtn.disabled = true;
+      });
+
+      // Efectos de hover en las secciones
+      const sections = document.querySelectorAll('.form-section');
+      sections.forEach(section => {
+        section.addEventListener('mouseenter', function() {
+          this.style.transform = 'translateY(-2px)';
+          this.style.boxShadow = '0 0 40px rgba(0, 255, 255, 0.3)';
+        });
+
+        section.addEventListener('mouseleave', function() {
+          this.style.transform = 'translateY(0)';
+          this.style.boxShadow = '';
+        });
+      });
+    });
+</script>
+
+<style>
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+</style>
+{% endblock %}
+

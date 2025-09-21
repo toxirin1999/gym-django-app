@@ -1,0 +1,99 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Detalle de Logro: {{ logro.nombre }}{% endblock %}
+
+{% block extra_css %}
+{# Fuentes y estilos base #}
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+{# NUEVOS ESTILOS PARA LA PÁGINA DE DETALLE #}
+<link rel="stylesheet" href="{% static 'css/logro_detalle_dark.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="detail-page-layout">
+
+    <!-- Columna Izquierda: Contenido del Logro -->
+    <main class="detail-content-panel">
+        <header class="detail-header">
+            <div class="detail-icon-wrapper">
+                {% if logro.icono and logro.icono.url %}
+                <div class="detail-icon" style="background-image: url('{{ logro.icono.url }}' );"></div>
+                {% else %}
+                <div class="detail-icon-placeholder"><i class="bi bi-trophy"></i></div>
+                {% endif %}
+            </div>
+            <div class="detail-title-group">
+                <h1 class="detail-title">{{ logro.nombre }}</h1>
+                <p class="detail-subtitle">Logro de tipo {{ logro.tipo.get_categoria_display }}</p>
+            </div>
+        </header>
+
+        <section class="detail-section">
+            <h2 class="section-title">Descripción</h2>
+            <p>{{ logro.descripcion }}</p>
+        </section>
+
+        <section class="detail-section">
+            <h2 class="section-title">Cómo conseguirlo</h2>
+            <p>
+                {% if "tonelada" in logro.nombre|lower or "ton" in logro.nombre|lower %}
+                Levanta un total acumulado de {{ logro.meta_valor }} kg en cualquier ejercicio.
+                {% elif "entreno" in logro.nombre|lower or "entrenamiento" in logro.nombre|lower %}
+                Completa {{ logro.meta_valor }} entrenamientos.
+                {% elif "racha" in logro.nombre|lower or "consecutivo" in logro.nombre|lower %}
+                Entrena durante {{ logro.meta_valor }} días consecutivos.
+                {% elif "récord" in logro.nombre|lower or "record" in logro.nombre|lower %}
+                Supera tu récord personal en {{ logro.meta_valor }} ejercicios diferentes.
+                {% elif "perfecto" in logro.nombre|lower %}
+                Completa {{ logro.meta_valor }} entrenamientos sin fallar ninguna serie.
+                {% else %}
+                Alcanza un valor de {{ logro.meta_valor }} en la métrica asociada a este logro.
+                {% endif %}
+            </p>
+        </section>
+
+        <section class="detail-section">
+            <h2 class="section-title">Usuarios que han desbloqueado este logro</h2>
+            {% if usuarios_logro %}
+            <div class="user-list">
+                <div class="user-list-header">
+                    <span>Usuario</span>
+                    <span>Fecha</span>
+                </div>
+                {% for usuario_logro in usuarios_logro %}
+                <div class="user-list-row">
+                    <span>{{ usuario_logro.perfil.cliente.nombre }}</span>
+                    <span>{{ usuario_logro.fecha_desbloqueo|date:"d/m/Y" }}</span>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="text-muted">Nadie ha desbloqueado este logro aún. ¡Sé el primero!</p>
+            {% endif %}
+        </section>
+
+        <footer class="detail-footer">
+            <a href="{% url 'logros:lista_logros' %}" class="btn-back">
+                <i class="bi bi-arrow-left"></i> Volver a la lista de logros
+            </a>
+        </footer>
+    </main>
+
+    <!-- Columna Derecha: Imagen Decorativa -->
+    <aside class="detail-image-panel">
+        <div class="image-ad-card">
+            
+            <div class="image-ad-overlay">
+                <h3>{{ logro.nombre }}</h3>
+                <p>+{{ logro.puntos_recompensa }} XP</p>
+            </div>
+        </div>
+    </aside>
+</div>
+
+{# El menú lateral y su script pueden permanecer igual si lo sigues necesitando #}
+{# ... tu código del menú hamburguesa y el script ... #}
+{% endblock %}

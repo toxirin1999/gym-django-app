@@ -1,0 +1,181 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Equilibrio Muscular - {{ cliente.nombre }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Usaremos los mismos estilos base de tu dashboard principal para mantener la coherencia */
+    :root {
+        --neon-cyan: #00ffff;
+        --neon-magenta: #ff00ff;
+        --success-color: #10b981; /* Verde para óptimo */
+        --warning-color: #f59e0b; /* Naranja para bajo/alto */
+        --danger-color: #ef4444;  /* Rojo para incompleto */
+        --card-bg: rgba(15, 23, 42, 0.7);
+        --text-primary: #f8fafc;
+        --text-secondary: #cbd5e1;
+        --border-color: rgba(0, 255, 255, 0.3);
+    }
+    body {
+        background: url("{% static 'images/fondo_cyberpunk.png' %}") no-repeat center center fixed !important;
+        background-size: cover !important;
+        background-color: #000000 !important;
+        color: var(--text-primary);
+        font-family: 'Inter', sans-serif;
+    }
+    .container { max-width: 1200px; margin: 0 auto; padding: 2rem 1.5rem; }
+    .card {
+        background: var(--card-bg);
+        backdrop-filter: blur(15px);
+        border: 1px solid var(--border-color);
+        box-shadow: 0 0 15px rgba(0, 255, 255, 0.2);
+        border-radius: 1rem;
+        padding: 2rem;
+    }
+    .card-title {
+        font-size: 1.5rem; font-weight: 600; color: var(--neon-cyan);
+        text-shadow: 0 0 8px var(--neon-cyan); margin-bottom: 1.5rem;
+    }
+    /* Estilos para la tabla de análisis */
+    .analysis-table { width: 100%; border-collapse: collapse; }
+    .analysis-table th, .analysis-table td {
+        padding: 1rem; text-align: left;
+        border-bottom: 1px solid var(--border-color);
+    }
+    .analysis-table th { color: var(--neon-cyan); }
+    .status-badge {
+        display: inline-block; padding: 0.25rem 0.75rem;
+        border-radius: 9999px; font-size: 0.8rem; font-weight: 700;
+    }
+    .status-optimo { background-color: rgba(16, 185, 129, 0.2); color: var(--success-color); }
+    .status-bajo, .status-alto { background-color: rgba(245, 158, 11, 0.2); color: var(--warning-color); }
+    .status-incompleto { background-color: rgba(239, 68, 68, 0.2); color: var(--danger-color); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <header class="text-center mb-8">
+        <h1 class="text-4xl font-bold" style="color: var(--neon-cyan); text-shadow: 0 0 15px var(--neon-cyan);">
+            Dashboard de Equilibrio Muscular
+        </h1>
+        <p class="text-xl text-gray-300 mt-2">Análisis de simetría y ratios de fuerza para <strong class="text-white">{{ cliente.nombre }}</strong></p>
+    </header>
+
+    <div class="grid md:grid-cols-5 gap-8">
+        <!-- Columna del Gráfico Radar -->
+        <div class="md:col-span-3 card">
+            <h2 class="card-title">🕸️ Gráfico Radar de Ratios de Fuerza</h2>
+            <div style="height: 450px;">
+                <canvas id="radarChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Columna de la Tabla de Análisis -->
+        <div class="md:col-span-2 card">
+            <h2 class="card-title">📊 Análisis Detallado</h2>
+            <table class="analysis-table">
+                <thead>
+                <tr>
+                    <th>Ratio</th>
+                    <th>Actual</th>
+                    <th>Óptimo</th>
+                    <th>Estado</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for ratio in ratios %}
+                <tr>
+                    <td>
+                        <div class="font-semibold">{{ ratio.nombre }}</div>
+                        <div class="text-xs text-gray-400">{{ ratio.descripcion }}</div>
+                    </td>
+                    <td class="font-mono text-lg">{{ ratio.valor_actual|floatformat:2 }}</td>
+                    <td class="font-mono text-lg">{{ ratio.valor_optimo|floatformat:2 }}</td>
+                    <td><span class="status-badge status-{{ ratio.estado }}">{{ ratio.estado|title }}</span></td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="4" class="text-center text-gray-400 py-8">
+                        No hay suficientes datos de 1RM para calcular los ratios.
+
+                        Asegúrate de tener registros para Press Banca, Sentadilla, etc.
+                    </td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="text-center mt-8">
+        <a href="{% url 'analytics:dashboard_cliente' cliente.id %}" class="btn-rojo">
+            <i class="bi bi-arrow-left mr-2"></i> Volver al Dashboard Principal
+        </a>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function ( ) {
+        const radarData = JSON.parse('{{ datos_radar_json|escapejs }}');
+        const ctx = document.getElementById('radarChart');
+
+        if (ctx && radarData.labels.length > 0) {
+            new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: radarData.labels,
+                    datasets: [
+                        {
+                            label: 'Tu Ratio Actual',
+                            data: radarData.valores_actuales,
+                            backgroundColor: 'rgba(0, 255, 255, 0.2)',
+                            borderColor: 'rgba(0, 255, 255, 1)',
+                            pointBackgroundColor: 'rgba(0, 255, 255, 1)',
+                            pointBorderColor: '#fff',
+                            pointHoverBackgroundColor: '#fff',
+                            pointHoverBorderColor: 'rgba(0, 255, 255, 1)'
+                        },
+                        {
+                            label: 'Ratio Óptimo',
+                            data: radarData.valores_optimos,
+                            backgroundColor: 'rgba(255, 0, 255, 0.2)',
+                            borderColor: 'rgba(255, 0, 255, 1)',
+                            pointBackgroundColor: 'rgba(255, 0, 255, 1)',
+                            pointBorderColor: '#fff',
+                            pointHoverBackgroundColor: '#fff',
+                            pointHoverBorderColor: 'rgba(255, 0, 255, 1)'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        r: {
+                            angleLines: { color: 'rgba(255, 255, 255, 0.2)' },
+                            grid: { color: 'rgba(255, 255, 255, 0.2)' },
+                            pointLabels: {
+                                color: '#f8fafc',
+                                font: { size: 12 }
+                            },
+                            ticks: {
+                                color: '#f8fafc',
+                                backdropColor: 'rgba(0, 0, 0, 0.5)'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            labels: { color: '#f8fafc' }
+                        }
+                    }
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}

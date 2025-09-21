@@ -1,0 +1,310 @@
+{% load static %}
+
+
+{% block extra_css %}
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+    :root {
+        --bg-color: #0a0b14;
+        --text-color: #ffffff;
+        --primary-color: #32FF00;
+        --secondary-color: #4b0082;
+        --card-bg: rgba(16, 24, 40, 0.7);
+        --card-dark-bg: rgba(13, 19, 33, 0.7);
+        --metric-bg: rgba(13, 34, 49, 0.75);
+        --emotion-bg: rgba(15, 23, 41, 0.75);
+        --timeline-bg: rgba(15, 23, 41, 0.75);
+        --border-radius: 16px;
+        --chat-bubble-bg: rgba(13, 34, 49, 0.8);
+        --quote-bg: rgba(46, 26, 71, 0.85);
+        --glow-color: rgba(255, 255, 255, 0.1);
+        --border-glow: rgba(102, 204, 255, 0.3);
+        --border-glow-purple: rgba(138, 43, 226, 0.4);
+        --border-glow-green: rgba(50, 255, 0, 0.3);
+    }
+
+    body {
+        margin: 0;
+        padding: 1.5rem;
+        background-color: var(--bg-color);
+        background-image: radial-gradient(circle at top right, rgba(30, 41, 59, 0.4), rgba(10, 11, 20, 0.8));
+        font-family: 'Inter', sans-serif;
+        color: var(--text-color);
+        min-height: 100vh;
+    }
+
+    .container {
+        max-width: 480px;
+        margin: 0 auto;
+        position: relative;
+        z-index: 1;
+    }
+
+    /* Header */
+    .header-section {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 1.5rem;
+        position: relative;
+    }
+
+    .header-text {
+        flex: 1;
+    }
+
+    .header-text h1, .header-text h2 {
+        font-size: 2.5rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+        background: linear-gradient(to right, #ffffff, #a0a0ff);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    /* Form Panel */
+    .form-panel {
+        background: linear-gradient(to right, rgba(15, 23, 41, 0.9), rgba(15, 23, 41, 0.7));
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        border: 1px solid var(--border-glow);
+        box-shadow: 0 0 15px rgba(102, 204, 255, 0.15);
+        backdrop-filter: blur(5px);
+    }
+
+    /* Form Elements */
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+
+    label {
+        display: block;
+        margin-bottom: 0.5rem;
+        color: #a0a0ff;
+        text-shadow: 0 0 3px rgba(160, 160, 255, 0.3);
+        font-weight: 500;
+    }
+
+    input, select, textarea {
+        background: rgba(13, 19, 33, 0.7);
+        border: 1px solid rgba(102, 204, 255, 0.2);
+        border-radius: 8px;
+        padding: 0.8rem 1rem;
+        color: var(--text-color);
+        width: 100%;
+        margin-bottom: 0.5rem;
+        font-family: 'Inter', sans-serif;
+        box-shadow: 0 0 10px rgba(102, 204, 255, 0.1);
+        backdrop-filter: blur(5px);
+    }
+
+    input:focus, select:focus, textarea:focus {
+        outline: none;
+        border-color: rgba(102, 204, 255, 0.5);
+        box-shadow: 0 0 15px rgba(102, 204, 255, 0.3);
+    }
+
+    /* Buttons */
+    .btn {
+        padding: 0.6rem 1.2rem;
+        border-radius: 8px;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        font-family: 'Inter', sans-serif;
+        font-weight: 500;
+        margin-right: 0.5rem;
+    }
+
+    .btn-success {
+        background: linear-gradient(to right, rgba(50, 255, 0, 0.3), rgba(50, 255, 0, 0.1));
+        color: #32FF00;
+        border: 1px solid rgba(50, 255, 0, 0.3);
+        box-shadow: 0 0 10px rgba(50, 255, 0, 0.2);
+        text-shadow: 0 0 5px rgba(50, 255, 0, 0.5);
+    }
+
+    .btn-success:hover {
+        transform: scale(1.05);
+        box-shadow: 0 0 15px rgba(50, 255, 0, 0.4);
+    }
+
+    .btn-secondary {
+        background: linear-gradient(to right, rgba(102, 204, 255, 0.2), rgba(102, 204, 255, 0.1));
+        color: #a0a0ff;
+        border: 1px solid rgba(102, 204, 255, 0.2);
+        box-shadow: 0 0 10px rgba(102, 204, 255, 0.1);
+        text-shadow: 0 0 5px rgba(102, 204, 255, 0.3);
+    }
+
+    .btn-secondary:hover {
+        transform: scale(1.05);
+        box-shadow: 0 0 15px rgba(102, 204, 255, 0.3);
+    }
+
+    /* Background Image */
+    .background-image {
+        position: fixed;
+        top: 0;
+        right: 0;
+        width: 40%;
+        height: 100%;
+        opacity: 0.8;
+        pointer-events: none;
+        z-index: 0;
+    }
+
+    /* Error messages */
+    .errorlist {
+        list-style: none;
+        padding: 0;
+        margin: 0 0 0.5rem 0;
+        color: #ff6b6b;
+        text-shadow: 0 0 5px rgba(255, 107, 107, 0.5);
+        font-size: 0.9rem;
+    }
+
+    /* Help text */
+    .helptext {
+        display: block;
+        font-size: 0.85rem;
+        color: rgba(255, 255, 255, 0.7);
+        margin-bottom: 0.5rem;
+        text-shadow: 0 0 3px rgba(255, 255, 255, 0.2);
+    }
+
+    /* Custom form styling for Django forms */
+    form p {
+        margin-bottom: 1.5rem;
+    }
+
+    /* Hamburger Menu */
+    .hamburger-btn {
+        position: fixed;
+        top: 1rem;
+        left: 1rem;
+        z-index: 100;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 0.6rem 0.8rem;
+        border-radius: 8px;
+        cursor: pointer;
+        backdrop-filter: blur(6px);
+    }
+
+    .hamburger-btn span {
+        display: block;
+        width: 22px;
+        height: 2px;
+        margin: 4px 0;
+        background: #32FF00;
+    }
+
+    .side-menu {
+        position: fixed;
+        top: 0;
+        left: -100%;
+        width: 80%;
+        max-width: 300px;
+        height: 100%;
+        background: rgba(13, 19, 33, 0.98);
+        box-shadow: 2px 0 20px rgba(0,0,0,0.5);
+        z-index: 99;
+        transition: left 0.3s ease;
+        padding: 2rem 1.5rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1.2rem;
+    }
+
+    .side-menu.open {
+        left: 0;
+    }
+
+    .side-menu a {
+        color: #ffffff;
+        text-decoration: none;
+        font-size: 1.1rem;
+        border-bottom: 1px solid rgba(255,255,255,0.1);
+        padding-bottom: 0.5rem;
+    }
+
+    .side-menu a:hover {
+        color: #32FF00;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="background-image">
+    <img src="{% static 'images/joi.png' %}" alt="" style="width: 100%; height: 100%; object-fit: contain; object-position: right top;">
+</div>
+
+<div class="container">
+    <div class="header-section">
+        <div class="header-text">
+            <h2>{{ titulo }}</h2>
+        </div>
+    </div>
+
+    <div class="form-panel">
+        <form method="post">
+            {% csrf_token %}
+
+            {% for field in form %}
+            <div class="form-group">
+                {{ field.label_tag }}
+                {{ field }}
+                {% if field.help_text %}
+                <span class="helptext">{{ field.help_text }}</span>
+                {% endif %}
+                {% if field.errors %}
+                <ul class="errorlist">
+                    {% for error in field.errors %}
+                    <li>{{ error }}</li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
+            </div>
+            {% endfor %}
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-success"><i class="bi bi-save"></i> Guardar</button>
+                <a href="{% url 'lista_programas' %}" class="btn btn-secondary">Cancelar</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="hamburger-btn" onclick="toggleMenu()">
+    <span></span>
+    <span></span>
+    <span></span>
+</div>
+
+<div id="sideMenu" class="side-menu">
+    <a href="/mi-panel/">🏠 Inicio</a>
+    <a href="/clientes/">👥 Clientes</a>
+    <a href="/rutinas/">📋 Rutinas</a>
+
+    <a href="/entrenos/">🏋️‍♂️ Entrenos</a>
+    <a href="{% url 'logros:perfil_gamificacion' %}" class="menu-item">
+        <i class="bi bi-trophy"></i> Logros
+    </a>
+    <a href="/anuncios/">📢 Anuncios</a>
+    <a href="/joi/">🌌 Joi</a>
+    <a href="/panel/">📊 Panel entrenador</a>
+    <a href="/logout/">🚪 Cerrar sesión</a>
+</div>
+
+<script>
+    function toggleMenu() {
+        const menu = document.getElementById('sideMenu');
+        menu.classList.toggle('open');
+    }
+</script>
+{% endblock %}
+

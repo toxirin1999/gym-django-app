@@ -1,0 +1,171 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load tz %}
+{% block content %}
+{% now "Y-m-d" as hoy %}
+<div class="bg-[#0d1117] text-white rounded-2xl p-6 shadow-xl max-w-4xl mx-auto mt-8">
+  <h2 class="text-2xl font-bold text-cyan-400 mb-6">📈 Evolución: {{ nombre }}</h2>
+
+  {% if registros %}
+  <!-- 🥇 Mejor Marca -->
+  {% with mejor=registros|dictsortreversed:'peso_float'|first %}
+  {% with dias_sin_superar=mejor.fecha|timesince %}
+  {% with dias=dias_sin_superar|cut:' days'|cut:' day' %}
+  <div class="rounded-xl p-4 mb-6 shadow border-l-4
+              {% if dias|add:'0'|floatformat > 30 %}border-red-500 bg-[#2a1a1a]
+              {% elif dias|add:'0'|floatformat <= 7 %}border-green-500 bg-[#1a2a1a]
+              {% else %}border-yellow-400 bg-[#1e1e1e]{% endif %}">
+
+    <p class="text-lg font-semibold
+              {% if dias|add:'0'|floatformat > 30 %}text-red-400
+              {% elif dias|add:'0'|floatformat <= 7 %}text-green-400
+              {% else %}text-yellow-300{% endif %}">
+      🏆 Mejor marca: {{ mejor.peso }} kg el {{ mejor.fecha|date:"d/M/Y" }} {% if mejor.cliente %}por {{ mejor.cliente }}{% endif %}
+    </p>
+
+    {% if dias|add:'0'|floatformat > 30 %}
+    <p class="text-sm text-red-300 mt-1">Hace más de 30 días que no superas esta marca 💤</p>
+    <div class="mt-2 p-3 bg-[#3a1a1a] text-sm text-red-200 italic rounded">
+      🤖 Joi: "A veces el hierro espera... pero no perdona. ¿Hoy nos redimimos?"
+    </div>
+    {% elif dias|add:'0'|floatformat <= 7 %}
+    <p class="text-sm text-green-300 mt-1">Marca superada recientemente 🚀</p>
+    <div class="mt-2 p-3 bg-[#1f3a1f] text-sm text-green-200 italic rounded">
+      🤖 Joi: "Superaste tu mejor versión hace poco... sigue brillando."
+    </div>
+    {% endif %}
+  </div>
+  {% endwith %}
+  {% endwith %}
+  {% endwith %}
+
+  <!-- ✅ Tasa de éxito -->
+  {% with total=registros|length %}
+    {% with completados=0 %}
+      {% for r in registros %}
+        {% if r.completado %}
+          {% widthratio forloop.counter 1 1 as dummy %} {# usar widthratio para activar bloque #}
+          {% if forloop.first %}{% widthratio 1 1 1 as completados %}{% endif %}
+          {% widthratio forloop.counter 1 1 as completados %}
+        {% endif %}
+      {% endfor %}
+    <div class="bg-[#1a1a1a] rounded-xl p-4 mb-6 border-l-4 border-blue-500">
+      <p class="text-sm text-white">
+        ✅ Tasa de éxito: <strong>{{ completados }}/{{ total }}</strong> repeticiones completadas
+        {% if total > 0 %}
+          (<span class="text-green-400 font-semibold">{{ completados|divisibleby:total|floatformat:0 }}%</span>)
+        {% endif %}
+      </p>
+    </div>
+    {% endwith %}
+  {% endwith %}
+
+  <!-- 📉 Tendencia general -->
+  {% with ultimos=registros|slice:'-5:' %}
+  {% with primero=ultimos.0 %}
+    {% with ultimo=ultimos|last %}
+      {% if primero.peso_float and ultimo.peso_float %}
+      <div class="bg-[#1e1e1e] rounded-xl p-4 mb-6 border-l-4 {% if ultimo.peso_float > primero.peso_float %}border-green-500{% elif ultimo.peso_float < primero.peso_float %}border-red-500{% else %}border-yellow-400{% endif %}">
+        <p class="text-sm {% if ultimo.peso_float > primero.peso_float %}text-green-400{% elif ultimo.peso_float < primero.peso_float %}text-red-400{% else %}text-yellow-300{% endif %}">
+          {% if ultimo.peso_float > primero.peso_float %}
+            📈 Tendencia: Progreso estable
+          {% elif ultimo.peso_float < primero.peso_float %}
+            📉 Tendencia: Estancamiento detectado
+          {% else %}
+            ➖ Tendencia: Sin cambios
+          {% endif %}
+        </p>
+      </div>
+      {% endif %}
+    {% endwith %}
+  {% endwith %}
+{% endwith %}
+
+
+  <div class="bg-[#1a1a1a] rounded-xl p-4 shadow mb-6">
+    <canvas id="graficoEvolucion" height="200"></canvas>
+  </div>
+
+  <table class="min-w-full text-sm text-left text-gray-300 bg-[#1a1a1a] border border-gray-700">
+    <thead class="text-xs uppercase bg-[#2a2a2a] text-cyan-400">
+      <tr>
+        <th class="px-4 py-2">Fecha</th>
+        <th class="px-4 py-2">Peso</th>
+        <th class="px-4 py-2">Repeticiones</th>
+        <th class="px-4 py-2">Cliente</th>
+        <th class="px-4 py-2">Completado</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in registros %}
+      <tr class="border-b border-gray-700">
+        <td class="px-4 py-2">{{ r.fecha }}</td>
+        <td class="px-4 py-2">{{ r.peso }}</td>
+        <td class="px-4 py-2">{{ r.repeticiones }}</td>
+        <td class="px-4 py-2">{{ r.cliente }}</td>
+        <td class="px-4 py-2">{% if r.completado %}✅{% else %}❌{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="text-yellow-400">No hay registros para este ejercicio.</p>
+  {% endif %}
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  const ctx = document.getElementById('graficoEvolucion');
+  {% if registros %}
+  const pesos = [{% for r in registros %}{{ r.peso_float|default:0 }}{% if not forloop.last %}, {% endif %}{% endfor %}];
+  const suma = pesos.reduce((a, b) => a + b, 0);
+  const promedio = suma / pesos.length;
+
+  const data = {
+    labels: [{% for r in registros %}"{{ r.fecha }}"{% if not forloop.last %}, {% endif %}{% endfor %}],
+    datasets: [
+      {
+        label: 'Peso (kg)',
+        data: pesos,
+        borderColor: '#00ffff',
+        backgroundColor: 'rgba(0,255,255,0.2)',
+        pointBackgroundColor: [
+          {% for r in registros %}
+            {% if r.peso == mejor.peso and r.fecha == mejor.fecha %}'#00ff00'{% else %}'#00ffff'{% endif %}{% if not forloop.last %}, {% endif %}
+          {% endfor %}
+        ],
+        pointRadius: [
+          {% for r in registros %}
+            {% if r.peso == mejor.peso and r.fecha == mejor.fecha %}6{% else %}3{% endif %}{% if not forloop.last %}, {% endif %}
+          {% endfor %}
+        ],
+        tension: 0.3
+      },
+      {
+        label: 'Promedio',
+        data: Array(pesos.length).fill(promedio),
+        borderColor: 'rgba(255,255,255,0.3)',
+        borderDash: [6, 4],
+        pointRadius: 0,
+        fill: false,
+        tension: 0
+      }
+    ]
+  };
+  new Chart(ctx, {
+    type: 'line',
+    data: data,
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { labels: { color: 'white' } }
+      },
+      scales: {
+        x: { ticks: { color: 'white' }, grid: { color: '#333' } },
+        y: { ticks: { color: 'white' }, grid: { color: '#333' }, beginAtZero: true }
+      }
+    }
+  });
+  {% endif %}
+</script>
+{% endblock %}

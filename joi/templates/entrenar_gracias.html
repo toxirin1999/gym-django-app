@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Entreno completo</title>
+    <style>
+        body { background: #121212; color: white; font-family: Arial; padding: 2em; text-align: center; }
+        .card { background: #1e1e1e; padding: 2em; border-radius: 10px; margin: auto; width: 80%; }
+        .btn { background: #32FF00; color: black; padding: 1em 2em; border: none; border-radius: 10px; text-decoration: none; display: inline-block; margin-top: 1.5em; }
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+
+        .joi-feedback {
+           animation: fadeIn 0.8s ease-out;
+        }
+.popup-logro {
+  position: fixed;
+  top: 30px;
+  right: 30px;
+  background: #1e1e1e;
+  color: #32FF00;
+  padding: 1em 1.5em;
+  border-radius: 10px;
+  box-shadow: 0 0 15px #32FF00;
+  animation: fadeInOut 5s ease-in-out;
+  z-index: 999;
+  font-family: Arial;
+}
+
+@keyframes fadeInOut {
+  0%   { opacity: 0; transform: translateY(-10px); }
+  10%  { opacity: 1; transform: translateY(0); }
+  90%  { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(-10px); }
+}
+
+    </style>
+</head>
+<body>
+{% if logros_hoy %}
+<div class="popup-logro">
+    <h2>🎉 ¡Nuevo logro desbloqueado!</h2>
+    {% for icono, nombre in logros_hoy %}
+    <p style="font-size: 1.5em;">{{ icono }} <strong>{{ nombre }}</strong></p>
+    {% endfor %}
+</div>
+{% endif %}
+{% if frase_magica %}
+<div class="joi-msg" style="margin-top:2em; font-style: italic; background:#1e1e1e; padding:1.5em; border-left: 4px solid #FF9EAA; border-radius:10px;">
+    <strong>🌌 Joi:</strong><br>
+    {{ frase_magica }}
+</div>
+{% endif %}
+
+<div class="card">
+    <h1>✅ ¡Entreno guardado!</h1>
+    <p>{{ mensaje }}</p>
+    <p><strong>Tipo sugerido hoy:</strong><br>{{ tipo }}</p>
+    <a class="btn" href="/historial/">Ver historial</a>
+    <p class="joi-feedback" style="margin-top: 2em; font-size: 1.2em; color: #32FF00;">
+        🤖 <strong>Joi dice:</strong><br>
+        {{ feedback_final }}
+    </p>
+
+
+</div>
+{% if frase_magica %}
+<canvas id="fuegos" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;"></canvas>
+<script>
+    const canvas = document.getElementById('fuegos');
+    const ctx = canvas.getContext('2d');
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    const particles = [];
+
+    for (let i = 0; i < 40; i++) {
+      particles.push({
+        x: canvas.width / 2,
+        y: canvas.height / 2,
+        radius: Math.random() * 3 + 2,
+        color: `hsl(${Math.random() * 360}, 100%, 70%)`,
+        velocityX: (Math.random() - 0.5) * 8,
+        velocityY: (Math.random() - 0.5) * 8,
+        alpha: 1
+      });
+    }
+
+    function animate() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      particles.forEach(p => {
+        p.x += p.velocityX;
+        p.y += p.velocityY;
+        p.alpha -= 0.01;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+        ctx.fillStyle = p.color;
+        ctx.globalAlpha = p.alpha;
+        ctx.fill();
+      });
+      ctx.globalAlpha = 1;
+      requestAnimationFrame(animate);
+    }
+    animate();
+</script>
+{% endif %}
+
+</body>
+</html>

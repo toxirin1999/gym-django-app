@@ -1,0 +1,236 @@
+{% extends 'nutricion_app_django/base_nutricion.html' %}
+{% load static %}
+{% load widget_tweaks %}
+
+{% block title %}Seguimiento de Peso – Nueva Gym{% endblock %}
+
+{% block extra_css %}
+{# Reutilizamos el mismo CSS base del mockup #}
+<link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+<style>
+    /* ===== Fondo y atmósfera (igual que mockup) ===== */
+    body {
+      background: url("{% static 'images/fondo_cyberpunk.png' %}") no-repeat center center fixed !important;
+      background-size: cover !important;
+      background-color: #000000 !important;
+      min-height: 100vh !important;
+      filter: brightness(0.9);
+      overflow-x: hidden;
+    }
+
+    /* ===== Animaciones reutilizadas ===== */
+    @keyframes fadeSlide {
+      0% { opacity: 0; transform: translateY(10px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+    .animate-fadeSlide { animation: fadeSlide 0.8s ease-out; }
+
+    /* ===== Titular con halo tipo mockup ===== */
+    .title {
+      background: linear-gradient(90deg, #00ffff, #00ff00, #ff00ff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      color: transparent;
+      text-shadow: 0 0 30px rgba(0, 255, 255, 0.5) !important;
+    }
+
+    .header-halo {
+      background: radial-gradient(circle, rgba(0, 255, 255, 0.2) 0%, rgba(0, 255, 255, 0) 70%) !important;
+      backdrop-filter: blur(20px) saturate(180%) !important;
+      -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+      border: 1px solid rgba(77, 208, 225, 0.6) !important;
+      box-shadow: 0 0 15px rgba(77, 208, 225, 0.4), inset 0 0 8px rgba(77, 208, 225, 0.2) !important;
+      border-radius: 12px !important;
+    }
+
+    /* ===== Tarjetas y contenedores (copiando la línea visual) ===== */
+    .metric-card, .quote-box, .timeline-section {
+      background: rgba(0, 0, 0, 0.4) !important;
+      backdrop-filter: blur(15px) saturate(180%) !important;
+      -webkit-backdrop-filter: blur(15px) saturate(180%) !important;
+      border: 1px solid rgba(77, 208, 225, 0.6) !important;
+      box-shadow: 0 0 15px rgba(77, 208, 225, 0.4), inset 0 0 8px rgba(77, 208, 225, 0.2) !important;
+      border-radius: 12px !important;
+    }
+
+    .section-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: .75rem;
+      color: white;
+    }
+
+    /* ===== Inputs estilo vidrio oscuro ===== */
+    .form-control-glass {
+      width: 100%;
+      background: rgba(0, 0, 0, 0.25);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 10px;
+      padding: 12px 14px;
+      color: #e8fefe;
+      font-size: 1rem;
+      transition: border-color .2s, background .2s, box-shadow .2s;
+    }
+    .form-control-glass:focus {
+      outline: none;
+      border-color: #00ffff;
+      background: rgba(0, 0, 0, 0.35);
+      box-shadow: 0 0 12px rgba(0, 255, 255, 0.25);
+    }
+
+    .btn-primary-neon {
+      display: inline-block;
+      width: 100%;
+      background: linear-gradient(90deg, #06b6d4, #d946ef);
+      color: white;
+      text-align: center;
+      font-weight: 700;
+      padding: 12px 16px;
+      border-radius: 12px;
+      border: none;
+      cursor: pointer;
+      transition: transform .15s ease, box-shadow .2s ease, opacity .2s ease;
+    }
+    .btn-primary-neon:hover {
+      transform: scale(1.02);
+      box-shadow: 0 0 16px rgba(0, 255, 255, .35);
+    }
+
+    .table-cyber {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .table-cyber th, .table-cyber td {
+      padding: 12px 14px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .table-cyber th {
+      color: #86ffff;
+      font-size: .85rem;
+      text-transform: uppercase;
+      letter-spacing: .03em;
+      text-align: left;
+    }
+    .table-cyber tr:hover td {
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .badge-trend-up { color: #86efac; font-weight: 700; }
+    .badge-trend-down { color: #fca5a5; font-weight: 700; }
+</style>
+{% endblock %}
+
+{# Conservamos el bloque esperado por base_nutricion #}
+{% block piramide_content %}
+<div class="container mx-auto px-4 py-8">
+
+    <!-- Encabezado -->
+    <header class="mb-6 animate-fadeSlide">
+        <div class="header-halo p-5">
+            <div class="flex items-center gap-3">
+                <div class="text-2xl">⚖️</div>
+                <div>
+                    <h1 class="text-2xl md:text-3xl font-extrabold title">Seguimiento de Peso</h1>
+                    <p class="text-gray-300 text-sm mt-1">Registra tu peso y visualiza tu evolución reciente.</p>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Columna izquierda (Form) -->
+        <section class="lg:col-span-2 space-y-6">
+            <!-- Formulario -->
+            <div class="metric-card p-5 animate-fadeSlide">
+                <h3 class="section-title"><i class="fa-solid fa-weight-scale text-cyan-400 mr-2"></i>Nuevo registro</h3>
+
+                <form method="post" class="space-y-4" autocomplete="off">
+                    {% csrf_token %}
+
+                    <div>
+                        <label for="{{ form.peso.id_for_label }}" class="block text-gray-300 text-sm mb-1">Peso (kg)</label>
+                        {% render_field form.peso class="form-control-glass" placeholder="Ej: 82.5" inputmode="decimal" %}
+                    </div>
+
+                    <div>
+                        <label for="{{ form.notas.id_for_label }}" class="block text-gray-300 text-sm mb-1">Notas (opcional)</label>
+                        {% render_field form.notas class="form-control-glass" placeholder="Ej: Medición en ayunas" rows="3" %}
+                    </div>
+
+                    <button type="submit" class="btn-primary-neon">
+                        <i class="fa-solid fa-plus mr-2"></i>Registrar peso
+                    </button>
+                </form>
+            </div>
+
+            <!-- Historial -->
+            <div class="timeline-section p-5 animate-fadeSlide">
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="section-title"><i class="fa-solid fa-clock-rotate-left text-cyan-400 mr-2"></i>Historial de registros</h3>
+                    {% if historial_peso and historial_peso|length >= 2 %}
+                    {# Pequeño indicador de tendencia respecto al registro anterior #}
+                    {% with ultimo=historial_peso.0 penultimo=historial_peso.1 %}
+                    {% if ultimo.peso > penultimo.peso %}
+                    <span class="text-xs badge-trend-up">↗︎ +{{ ultimo.peso|floatformat:1|add:""|floatformat:1 }} kg (vs. prev.)</span>
+                    {% elif ultimo.peso < penultimo.peso %}
+                    <span class="text-xs badge-trend-down">↘︎ {{ ultimo.peso|floatformat:1|add:""|floatformat:1 }} kg (vs. prev.)</span>
+                    {% endif %}
+                    {% endwith %}
+                    {% endif %}
+                </div>
+
+                {% if historial_peso %}
+                <div class="overflow-x-auto">
+                    <table class="table-cyber text-sm text-white/90">
+                        <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Peso (kg)</th>
+                            <th>Notas</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {% for registro in historial_peso %}
+                        <tr>
+                            <td class="whitespace-nowrap">{{ registro.fecha_registro|date:"d/m/Y" }}</td>
+                            <td class="font-semibold">{{ registro.peso|floatformat:1 }}</td>
+                            <td class="text-gray-300">{{ registro.notas|default:"—" }}</td>
+                        </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-gray-400 text-center py-4">Aún no hay registros. ¡Empieza con el primero aquí arriba!</p>
+                {% endif %}
+            </div>
+        </section>
+
+        <!-- Columna derecha (Accesos y ayuda) -->
+        <aside class="space-y-6">
+            <div class="quote-box p-5 animate-fadeSlide">
+                <h3 class="section-title"><i class="fa-solid fa-bolt text-yellow-300 mr-2"></i>Acciones rápidas</h3>
+                <div class="grid grid-cols-1 gap-3">
+                    <a href="{% url 'nutricion_app_django:dashboard_completo' %}"
+                       class="block w-full bg-gradient-to-r from-cyan-500 to-fuchsia-500 text-white text-center font-semibold py-2 rounded-xl shadow-md hover:scale-105 transition">
+                        📊 Volver al dashboard de nutrición
+                    </a>
+                    <a href="{% url 'nutricion_app_django:piramide_principal' %}"
+                       class="block w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white text-center font-semibold py-2 rounded-xl shadow-md hover:scale-105 transition">
+                        🧱 Ver pirámide nutricional
+                    </a>
+                </div>
+            </div>
+
+            <div class="metric-card p-5 animate-fadeSlide">
+                <h3 class="section-title"><i class="fa-solid fa-lightbulb text-cyan-300 mr-2"></i>Consejo</h3>
+                <p class="text-gray-300 text-sm">
+                    Registra el peso a la misma hora (idealmente en ayunas) para obtener una tendencia fiable.
+                </p>
+            </div>
+        </aside>
+    </div>
+</div>
+{% endblock %}

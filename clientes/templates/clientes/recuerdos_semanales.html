@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+{% block title %}Memoria semanal – Joi{% endblock %}
+{% block content %}
+<div class="max-w-5xl mx-auto px-4 py-10">
+    <h1 class="text-3xl font-bold text-[#31cff4] mb-8 text-center">🧠 Memorias semanales con Joi</h1>
+
+    {% if estados %}
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {% for estado in estados %}
+        <div class="bg-[#101828] rounded-2xl p-6 shadow-md border border-cyan-900">
+            <div class="flex justify-between items-center mb-2">
+                <h2 class="text-xl font-semibold text-white">
+                    Semana del {{ estado.semana_inicio|date:"d M" }} al {{ estado.semana_fin|date:"d M" }}
+                </h2>
+                {% if estado.humor_dominante == 'verde' %}
+                <span class="text-3xl">😊</span>
+                {% elif estado.humor_dominante == 'amarillo' %}
+                <span class="text-3xl">😐</span>
+                {% else %}
+                <span class="text-3xl">😞</span>
+                {% endif %}
+            </div>
+
+            <div class="space-y-1 text-sm text-gray-300">
+                <p>💤 <strong>Sueño promedio:</strong> {{ estado.promedio_sueno }} h</p>
+                <p>🔥 <strong>RPE promedio:</strong> {{ estado.promedio_rpe }}/10</p>
+                <p>🧬 <strong>Estado emocional:</strong>
+                    {% if estado.humor_dominante == 'verde' %} Bien
+                    {% elif estado.humor_dominante == 'amarillo' %} Neutro
+                    {% else %} Bajo
+                    {% endif %}
+                </p>
+            </div>
+
+            <div class="mt-4 bg-[#1f2937] p-4 rounded-xl text-sm text-cyan-200 border border-cyan-800">
+                <p>{{ estado.mensaje_joi }}</p>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="text-center text-gray-400">Aún no hay semanas registradas.</p>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,1871 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% load clientes_filters %}
+
+{% block title %}Inicio – Nueva Gym{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+<style>
+    .hero-panel-widget {
+        position: relative;
+        border-radius: 15px;
+        overflow: hidden;
+        color: white;
+        min-height: 250px; /* Altura mínima para que luzca bien */
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end; /* Alinea todo el contenido hacia abajo */
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        border: 2px solid rgba(255, 215, 0, 0.5);
+        background-color: #1a1a2e; /* Color de fondo mientras carga la imagen */
+        background-size: cover;
+        background-position: center 20%;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    .hero-panel-widget:hover {
+        transform: scale(1.02);
+        box-shadow: 0 15px 40px rgba(0, 0, 0, 0.7);
+    }
+
+    .hero-panel-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(to top, rgba(15, 23, 42, 1) 20%, rgba(15, 23, 42, 0.5) 60%, rgba(15, 23, 42, 0) 100%);
+        z-index: 1;
+    }
+
+    .hero-panel-content {
+        position: relative;
+        z-index: 2;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .hero-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+    }
+
+    .hero-name {
+        font-size: 1.8rem;
+        font-weight: bold;
+        text-shadow: 0 2px 5px rgba(0, 0, 0, 0.8);
+        line-height: 1.2;
+        margin: 0;
+    }
+
+    .hero-level-badge {
+        background: #ffd700;
+        color: #1a1a2e;
+        padding: 5px 10px;
+        border-radius: 5px;
+        font-size: 0.8rem;
+        font-weight: bold;
+        flex-shrink: 0;
+    }
+
+    .hero-stats {
+        display: flex;
+        gap: 20px;
+    }
+
+    .hero-stat-item .hero-stat-value {
+        font-size: 1.5rem;
+        font-weight: bold;
+    }
+
+    .hero-stat-item .hero-stat-label {
+        font-size: 0.8rem;
+        opacity: 0.8;
+    }
+
+    .hero-actions {
+        display: flex;
+        gap: 10px;
+    }
+
+    .hero-btn {
+        padding: 10px 20px;
+        border-radius: 8px;
+        font-weight: bold;
+        text-decoration: none;
+        text-align: center;
+        transition: all 0.2s ease;
+    }
+
+    .hero-btn-primary {
+        background: #ffd700;
+        color: #1a1a2e;
+    }
+    .hero-btn-primary:hover {
+        background: #fff;
+        color: #1a1a2e;
+        transform: translateY(-2px);
+    }
+
+    .hero-btn-secondary {
+        background: rgba(255, 255, 255, 0.1);
+        color: white;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+    .hero-btn-secondary:hover {
+        background: rgba(255, 255, 255, 0.2);
+    }
+
+    .hero-progress-section {
+        position: relative;
+        z-index: 2;
+        padding: 0 20px 20px 20px;
+    }
+
+    .hero-progress-bar {
+        width: 100%;
+        height: 15px;
+        background: rgba(0, 0, 0, 0.5);
+        border-radius: 10px;
+        position: relative;
+        border: 1px solid rgba(255, 215, 0, 0.3);
+    }
+
+    .hero-progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #ff6b6b, #ffd700);
+        border-radius: 10px;
+        transition: width 0.8s ease;
+    }
+
+    .hero-progress-text {
+        position: absolute;
+        right: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 0.7rem;
+        font-weight: bold;
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+    }
+    /* Base Body */
+    body {
+      background: url("{% static 'images/fondo_cyberpunk.png' %}") no-repeat center center fixed !important;
+      background-size: cover !important;
+      background-color: #000000 !important;
+      min-height: 100vh !important;
+      filter: brightness(0.9);
+      overflow-x: hidden;
+    }
+
+    /* Base Animations */
+    @keyframes float {
+      0% { transform: translateY(0px); }
+      50% { transform: translateY(-5px); }
+      100% { transform: translateY(0px); }
+    }
+    .animate-float {
+      animation: float 6s ease-in-out infinite;
+    }
+
+    @keyframes fadeSlide {
+      0% { opacity: 0; transform: translateY(10px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+    .animate-fadeSlide {
+      animation: fadeSlide 0.8s ease-out;
+    }
+
+    /* Titles and Header */
+    .title {
+        background: linear-gradient(90deg, #00ffff, #00ff00, #ff00ff);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        color: transparent;
+        text-shadow: 0 0 30px rgba(0, 255, 255, 0.5) !important; /* Mantenemos !important aquí por el gradiente */
+        animation: titleGlow 4s ease-in-out infinite alternate;
+    }
+    @keyframes titleGlow {
+        0%, 100% { text-shadow: 0 0 30px rgba(0, 255, 255, 0.5) !important; }
+        50% { text-shadow: 0 0 60px rgba(0, 255, 255, 0.8), 0 0 40px rgba(255, 0, 255, 0.6) !important; }
+    }
+
+    .header-halo {
+        background: radial-gradient(circle, rgba(0, 255, 255, 0.2) 0%, rgba(0, 255, 255, 0) 70%) !important;
+        backdrop-filter: blur(20px) saturate(180%) !important;
+        -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+        border: 1px solid rgba(77, 208, 225, 0.6) !important;
+        box-shadow: 0 0 15px rgba(77, 208, 225, 0.4), inset 0 0 8px rgba(77, 208, 225, 0.2) !important;
+    }
+.section-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  color: white;
+}
+
+.section {
+  margin-top: 2rem;
+}
+
+
+    /* General Card/Box Styling */
+    .metric-card, .quote-box, .timeline-section, .chat-bubble {
+        background: rgba(0, 0, 0, 0.4) !important;
+        backdrop-filter: blur(15px) saturate(180%) !important;
+        -webkit-backdrop-filter: blur(15px) saturate(180%) !important;
+        border: 1px solid rgba(77, 208, 225, 0.6) !important;
+        box-shadow: 0 0 15px rgba(77, 208, 225, 0.4), inset 0 0 8px rgba(77, 208, 225, 0.2) !important;
+        border-radius: 10px !important;
+    }
+
+    /* Joi Specific - Imagen principal más grande y posicionada */
+    .joi-flotante {
+        width: 320px !important; /* Aumentado de 192px (w-48) a 320px */
+        height: auto !important;
+        margin-left: auto !important;
+        margin-right: -70px !important; /* Mover más a la derecha */
+        filter: drop-shadow(0 0 20px #00ffff)
+                drop-shadow(0 0 10px #ff00ff)
+                blur(0.5px) !important; /* Añadir difuminado sutil en los bordes */
+        transition: filter 0.3s ease-in-out, transform 0.3s ease-in-out;
+        border-radius: 15px !important; /* Bordes redondeados para suavizar */
+        mask: radial-gradient(ellipse at center, black 70%, transparent 100%) !important; /* Difuminado en los bordes */
+        -webkit-mask: radial-gradient(ellipse at center, black 70%, transparent 100%) !important;
+    }
+    .joi-flotante:hover {
+        filter: drop-shadow(0 0 30px #00ffff)
+                drop-shadow(0 0 15px #ff00ff)
+                brightness(1.2)
+                blur(0.3px) !important;
+        transform: scale(1.05);
+    }
+
+    /* Entity image en la burbuja de chat - también más grande */
+    .entity-image {
+        width: 120px !important; /* Aumentado de 80px a 120px */
+        height: 120px !important;
+        filter: drop-shadow(0 0 15px #00ffff)
+                drop-shadow(0 0 10px #ff00ff)
+                drop-shadow(0 0 5px #00ff00)
+                blur(0.3px) !important; /* Difuminado sutil */
+        transition: filter 0.5s ease-in-out, transform 0.3s ease-out;
+        border-radius: 10px !important; /* Bordes redondeados */
+        mask: radial-gradient(circle at center, black 75%, transparent 100%) !important; /* Difuminado en los bordes */
+        -webkit-mask: radial-gradient(circle at center, black 75%, transparent 100%) !important;
+    }
+    .entity-image:hover {
+        filter: drop-shadow(0 0 25px #00ffff)
+                drop-shadow(0 0 15px #ff00ff)
+                drop-shadow(0 0 8px #00ff00)
+                brightness(1.5)
+                saturate(1.5)
+                blur(0.2px) !important;
+        transform: scale(1.1);
+    }
+
+    /* Contenedor de la imagen de fondo ajustado */
+    .background-image {
+        display: flex;
+        justify-content: flex-end; /* Alinear a la derecha */
+        padding-right: 20px; /* Espacio desde el borde derecho */
+        margin-top: 20px;
+        margin-bottom: 20px;
+    }
+
+    /* Atmosphere Controls */
+    .atmosphere-control-btn {
+        background: linear-gradient(45deg, #00ffff, #ff00ff);
+        color: #000;
+        font-weight: bold;
+        border: none;
+        padding: 8px 15px;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+    }
+    .atmosphere-control-btn.active {
+        background: linear-gradient(45deg, #00ff00, #00ffff);
+        box-shadow: 0 0 15px rgba(0, 255, 0, 0.7);
+        transform: scale(1.05);
+    }
+    .atmosphere-control-btn:hover {
+        box-shadow: 0 0 20px rgba(255, 0, 255, 0.7), 0 0 10px rgba(0, 255, 255, 0.7);
+        transform: scale(1.02);
+    }
+
+    .status-indicator {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        margin-right: 5px;
+        animation: pulse 1.5s infinite alternate;
+    }
+    @keyframes pulse {
+        0% { transform: scale(1); opacity: 0.8; }
+        100% { transform: scale(1.2); opacity: 1; }
+    }
+
+
+    /* Chat Bubbles */
+    .chat-bubble.joi {
+        background: rgba(0, 128, 128, 0.4) !important; /* Verde azulado para Joi */
+        border: 1px solid rgba(0, 255, 255, 0.6) !important;
+        box-shadow: 0 0 10px rgba(0, 255, 255, 0.3), inset 0 0 5px rgba(0, 255, 255, 0.1) !important;
+    }
+    .chat-bubble.user {
+        background: rgba(128, 0, 128, 0.4) !important; /* Púrpura para usuario */
+        border: 1px solid rgba(255, 0, 255, 0.6) !important;
+        box-shadow: 0 0 10px rgba(255, 0, 255, 0.3), inset 0 0 5px rgba(255, 0, 255, 0.1) !important;
+    }
+
+    /* Floating Entity */
+    #floating-entity {
+        position: absolute;
+        transform: translate(-50%, -50%);
+        z-index: 10;
+        transition: opacity 1s ease-in-out; /* Smooth fade for visibility changes */
+    }
+
+    /* --- Mini-Glitch Text Effect (con !important para testear overrides) --- */
+    @keyframes textGlitch1 {
+        0% { transform: translate(0px, 0px) !important; text-shadow: 0 0 0px #0ff, 0 0 0px #f0f !important; }
+        5% { transform: translate(-1px, 0px) !important; text-shadow: 1px 0px 0px #0ff, -1px 0px 0px #f0f !important; }
+        10% { transform: translate(1px, 0px) !important; text-shadow: -1px 0px 0px #0ff, 1px 0px 0px #f0f !important; }
+        15% { transform: translate(-1px, 0px) !important; text-shadow: 1px 0px 0px #0ff, -1px 0px 0px #f0f !important; }
+        20% { transform: translate(0px, 0px) !important; text-shadow: 0 0 0px #0ff, 0 0 0px #f0f !important; }
+        100% { transform: translate(0px, 0px) !important; text-shadow: 0 0 0px #0ff, 0 0 0px #f0f !important; }
+    }
+
+    @keyframes textGlitch2 {
+        0% { transform: translate(0px, 0px) !important; text-shadow: 0 0 0px #0f0, 0 0 0px #f0f !important; }
+        5% { transform: translate(0px, 1px) !important; text-shadow: 0px 1px 0px #0f0, 0px -1px 0px #f0f !important; }
+        10% { transform: translate(0px, -1px) !important; text-shadow: 0px -1px 0px #0f0, 0px 1px 0px #f0f !important; }
+        15% { transform: translate(0px, 1px) !important; text-shadow: 0px 1px 0px #0f0, 0px -1px 0px #f0f !important; }
+        20% { transform: translate(0px, 0px) !important; text-shadow: 0 0 0px #0f0, 0 0 0px #f0f !important; }
+        100% { transform: translate(0px, 0px) !important; text-shadow: 0 0 0px #0f0, 0 0 0px #f0f !important; }
+    }
+
+    .glitch-text-subtle {
+        position: relative;
+        display: inline-block; /* Importante para que el transform y text-shadow funcionen bien */
+        animation: none; /* Se activará con JS */
+    }
+
+    /* --- Mini-Glitch Border Effect (con !important para testear overrides) --- */
+    @keyframes borderGlitch {
+        0% { border-color: rgba(77, 208, 225, 0.6) !important; }
+        5% { border-color: rgba(255, 0, 255, 0.8) !important; } /* Color glitch 1 */
+        10% { border-color: rgba(0, 255, 0, 0.8) !important; } /* Color glitch 2 */
+        15% { border-color: rgba(77, 208, 225, 0.6) !important; }
+        100% { border-color: rgba(77, 208, 225, 0.6) !important; }
+    }
+
+    .glitch-border-subtle {
+        animation: none; /* Se activará con JS */
+    }
+
+    /* --- Joi Thinking Effect --- */
+    @keyframes joiThinkingDots {
+        0%, 20% { content: "."; }
+        40% { content: ".."; }
+        60%, 100% { content: "..."; }
+    }
+
+    @keyframes joiThinkingLines {
+        0% { transform: scaleX(0); opacity: 0; }
+        50% { transform: scaleX(1); opacity: 1; }
+        100% { transform: scaleX(0); opacity: 0; }
+    }
+
+    .joi-thinking-container {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 30px; /* Ajusta la altura si es necesario */
+        overflow: hidden;
+        margin-top: 10px;
+    }
+
+    .joi-thinking-dots::after {
+        content: ""; /* Se llena con JS */
+        font-family: monospace;
+        font-size: 2em;
+        color: #00ffff; /* Cian */
+        animation: joiThinkingDots 1.5s steps(1, end) infinite;
+    }
+
+    .joi-thinking-lines {
+        width: 60px; /* Ancho de la línea */
+        height: 2px;
+        background: linear-gradient(to right, #00ffff, #ff00ff); /* Cian a magenta */
+        animation: joiThinkingLines 1.2s ease-in-out infinite;
+        transform-origin: left center;
+        opacity: 0;
+    }
+
+    /* Nuevos estilos y animaciones para el ente flotante */
+    .floating-entity {
+        position: fixed; /* O absolute, dependiendo del contenedor */
+        z-index: 100;
+        pointer-events: none; /* Para que no bloquee clics */
+        transition: transform 0.5s ease-out; /* Suavizar el movimiento */
+    }
+
+    /* Animaciones para las partículas del ente */
+    @keyframes particleFloat {
+        0% {
+            opacity: 1;
+            transform: translate(0, 0) scale(1);
+        }
+        100% {
+            opacity: 0;
+            transform: translate(var(--dx), var(--dy)) scale(0);
+        }
+    }
+    .entity-particle {
+        position: absolute;
+        width: 4px;
+        height: 4px;
+        background: rgba(255, 0, 128, 0.8);
+        border-radius: 50%;
+        pointer-events: none;
+        animation: particleFloat 3s ease-out forwards;
+    }
+
+    fondo_cyberpunk.png
+
+</style>
+{% endblock %}
+
+{% block content %}
+
+
+<!-- Efectos atmosféricos (se mantienen fuera de la estructura principal) -->
+<div class="blade-runner-atmosphere">
+    <div class="background-fog"></div>
+    <div class="ambient-glow"></div>
+    <div class="volumetric-light volumetric-light-1"></div>
+    <div class="volumetric-light volumetric-light-2"></div>
+    <div class="volumetric-light volumetric-light-3"></div>
+</div>
+
+<!-- Contenedor Principal -->
+<div class="container mx-auto px-4 py-8">
+
+    <!-- ================================================================== -->
+    <!-- ENCABEZADO (Ocupa todo el ancho) -->
+    <!-- ================================================================== -->
+
+        <header class="mb-8 animate-fadeSlide">
+    <div class="metric-card p-4">
+        <div class="flex items-center gap-4">
+            <!-- Avatar del Cliente -->
+            <div class="flex-shrink-0">
+                {% if cliente.foto %}
+                    <img src="{{ cliente.foto.url }}" alt="Avatar de {{ cliente.nombre }}" class="w-40 h-40 rounded-full border-2 border-cyan-400 object-cover">
+                {% else %}
+                    <div class="w-20 h-20 rounded-full bg-gray-700 flex items-center justify-center text-cyan-400 text-3xl font-bold">
+                        {{ cliente.nombre|first|upper }}
+                    </div>
+                {% endif %}
+
+            </div>
+
+            <!-- Información y Objetivo -->
+            <div class="flex-grow">
+                <h1 class="text-3xl font-bold text-white">Hola, {{ cliente.nombre }}</h1>
+                <p class="text-md text-cyan-300 mt-1">
+                    <i class="fas fa-bullseye"></i> Objetivo Actual: <strong>{{ cliente.get_objetivo_principal_display }}</strong>
+                </p>
+                <a href="{% url 'clientes:detalle_cliente' user.cliente_perfil.id %}" class="dropdown-item">
+                                <i class="fas fa-tachometer-alt mr-2"></i> Mi Panel
+                            </a>
+                            {% if estoico_disponible %}
+                        <a href="{% url 'estoico:dashboard' %}"
+                           class="text-yellow-400 hover:text-yellow-300 transition-colors">
+                            <i class="fas fa-brain mr-2"></i> Crecimiento Personal
+                        </a>
+                        {% endif %}
+            </div>
+
+            <!-- Botón para editar perfil/preferencias -->
+            <div>
+                <a href="{% url 'clientes:configurar_preferencias_helms' cliente.id %}" class="text-gray-400 hover:text-white transition-colors">
+                    <i class="fas fa-cog fa-lg"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    </header>
+{% if notificaciones %}
+<div class="space-y-3 mb-8 animate-fadeSlide" style="animation-delay: 0.1s;">
+    {% for notif in notificaciones %}
+    <div class="metric-card p-4 border-l-4 border-{{ notif.color }}-400">
+        <div class="flex items-center gap-4">
+            <div class="text-{{ notif.color }}-400 text-2xl">
+                <i class="fas {{ notif.icono }}"></i>
+            </div>
+            <div>
+                <h4 class="font-bold text-white">{{ notif.titulo }}</h4>
+                <p class="text-sm text-gray-300">{{ notif.mensaje }}</p>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+<div class="col-md-6">
+
+    </div>
+
+    <!-- ================================================================== -->
+    <!-- INICIO DEL LAYOUT DE 2 COLUMNAS -->
+    <!-- ================================================================== -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+
+        <!-- ============================================= -->
+        <!-- COLUMNA IZQUIERDA (Principal) -->
+        <!-- ============================================= -->
+        <div class="lg:col-span-2 space-y-8">
+
+
+            <!-- ================================================================== -->
+<!-- INICIO: Panel de la Cita Estoica del Día -->
+<!-- ================================================================== -->
+{% if estoico_disponible and contenido_hoy %}
+
+
+    <div class="quote-box p-5 text-center">
+        <blockquote class="blockquote mb-0">
+            <p class="text-lg font-semibold fst-italic text-white mb-3">
+                "{{ contenido_hoy.cita }}"
+            </p>
+            <footer class="blockquote-footer text-sm text-gray-400">
+                <strong>{{ contenido_hoy.autor }}</strong>
+            </footer>
+        </blockquote>
+    </div>
+
+
+{% endif %}
+<!-- ================================================================== -->
+<!-- FIN: Panel de la Cita Estoica del Día -->
+<!-- ================================================================== -->
+
+            <!-- 2. Acciones Rápidas -->
+            <div class="quote-box animate-fadeSlide" style="animation-delay: 0.1s;">
+                <h3 class="section-title text-center">Acciones Rápidas</h3>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <!-- Enlace corregido y dinámico -->
+                    <a href="{% url 'entrenos:dashboard_liftin' cliente.id %}" class="block w-full bg-gradient-to-r from-cyan-500 to-fuchsia-500 text-white text-center font-semibold py-3 rounded-xl shadow-md hover:scale-105 transition">💪 Registrar Entreno</a>
+
+
+                    <a href="/clientes/bitacora/registrar/" class="block w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white text-center font-semibold py-3 rounded-xl shadow-md hover:scale-105 transition">📓 Registrar Bitácora</a>
+
+                    <a href="{% url 'analytics:dashboard_ia_principal' cliente.id %}" class="block w-full bg-gradient-to-r from-gray-700 to-gray-800 text-white text-center font-semibold py-3 rounded-xl shadow-md hover:scale-105 transition">🤖 Ir al
+                        Dashboard IA</a>
+                </div>
+            </div>
+
+
+            <!-- 3. Entrenamientos Recientes -->
+            <div class="timeline-section animate-fadeSlide" style="animation-delay: 0.2s;">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="section-title"><i class="fas fa-history"></i> Entrenamientos Recientes</h3>
+                    <a href="{% url 'entrenos:lista_entrenamientos' %}" class="text-sm text-cyan-400 hover:text-cyan-300">Ver todos</a>
+                </div>
+                {% if entrenamientos_recientes %}
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm">
+                        <table style="width: 100%; color: white; font-size: 0.9rem; border-collapse: collapse;">
+                            <thead>
+                            <tr style="color: #00ffff; text-align: left;">
+                                <th style="padding: 8px;">👤 Cliente</th>
+                                <th style="padding: 8px;">🏋️ Rutina</th>
+                                <th style="padding: 8px;">📅 Fecha</th>
+                                <th style="padding: 8px;">⏱ Duración</th>
+                                <th style="padding: 8px;">📦 Volumen</th>
+                                <th style="padding: 8px;">🔥 Calorías</th>
+                                <th style="padding: 8px;">⚙️ Acciones</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {% for entrenamiento in entrenamientos_recientes %}
+                            <tr style="background-color: rgba(255,255,255,0.05); border-radius: 8px;">
+                                <td style="padding: 8px;">{{ entrenamiento.cliente.nombre }}</td>
+                                <td style="padding: 8px;">{{ entrenamiento.rutina.nombre }}</td>
+                                <td style="padding: 8px;">{{ entrenamiento.fecha|date:"d/m/Y" }}</td>
+                                <td style="padding: 8px;">{{ entrenamiento.duracion_minutos|default:"—" }} min</td>
+                                <td style="padding: 8px;">{{ entrenamiento.volumen_total_kg|default:"—" }} kg</td>
+                                <td style="padding: 8px;">{{ entrenamiento.calorias_quemadas|default:"—" }} kcal</td>
+                                <td style="padding: 8px;">
+                                    <a href="{% url 'entrenos:detalle_entrenamiento' entrenamiento.id %}" style="color: #00ffff; margin-right: 6px;" title="Ver detalles">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    {% if entrenamiento.fuente_datos == 'liftin' %}
+                                    <a href="{% url 'entrenos:editar_entrenamiento_liftin' entrenamiento.id %}" style="color: #ffaa00; margin-right: 6px;" title="Editar">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <a href="{% url 'entrenos:eliminar_entrenamiento_liftin' entrenamiento.id %}" onclick="return confirm('¿Eliminar este entrenamiento?')" style="color: #ff4444;" title="Eliminar">
+                                        <i class="fas fa-trash"></i>
+                                    </a>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-center text-gray-400 py-4">No hay entrenamientos recientes. ¡Es hora de empezar!</p>
+                {% endif %}
+            </div>
+
+
+
+        <!-- En tu template principal, dentro de la columna izquierda, debajo de las Acciones Rápidas -->
+
+<!-- En tu template principal, por ejemplo, en la columna derecha debajo de los logros -->
+
+<!-- ================================================================== -->
+<!-- SECCIÓN DE RECOMENDACIONES APLICADAS - PÉGALA AQUÍ -->
+<!-- ================================================================== -->
+{% if recomendaciones_aplicadas %}
+<div class="timeline-section animate-fadeSlide" style="animation-delay: 0.4s;">
+    <h3 class="section-title text-green-400"><i class="fas fa-check-circle"></i> Historial de Recomendaciones</h3>
+
+    <div class="space-y-3">
+        {% for rec in recomendaciones_aplicadas %}
+            <div class="p-4 rounded-lg border border-gray-700 bg-gray-900/50 opacity-80">
+
+                <!-- Título -->
+                <p class="font-bold text-white text-sm">{{ rec.titulo }}</p>
+
+                <!-- ✅ LÍNEA AÑADIDA: Párrafo para la descripción -->
+                <p class="text-sm text-gray-300 mt-2">{{ rec.descripcion }}</p>
+
+                <!-- Meta información (Tipo y Fecha) -->
+                <div class="flex justify-between items-center mt-3 text-xs text-gray-400">
+                    <span>Tipo: {{ rec.get_tipo_display }}</span>
+                    <span>Aplicada: {{ rec.fecha_aplicacion|date:"d/m/Y" }}</span>
+                </div>
+
+            </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+<!-- ================================================================== -->
+<!-- FIN DE LA SECCIÓN -->
+<!-- ================================================================== -->
+<!-- En tu template principal, por ejemplo, en la columna derecha -->
+
+<!-- ================================================================== -->
+<!-- SECCIÓN DE RATIOS DE FUERZA - PÉGALA AQUÍ -->
+<!-- ================================================================== -->
+
+<div class="timeline-section animate-fadeSlide" style="animation-delay: 0.5s;">
+    <div class="flex justify-between items-center mb-4">
+        <h3 class="section-title mb-0"><i class="fas fa-balance-scale text-cyan-400"></i> Balance de Fuerza</h3>
+        <a href="{% url 'analytics:progresion_avanzado' cliente.id %}" class="text-sm text-cyan-400 hover:text-cyan-300">Ver análisis completo</a>
+    </div>
+
+    <!-- Contenedor del Gráfico Radar -->
+    <div class="relative h-64 w-full mx-auto mb-6">
+        <canvas id="radarChartInicio"></canvas>
+    </div>
+
+    <!-- Lista de Ratios -->
+    <div class="space-y-3">
+        {% for ratio in ratios_fuerza.ratios|slice:":3" %} {# Mostramos solo los 3 primeros #}
+        <div class="p-3 rounded-lg border border-gray-700 bg-gray-900/50">
+            <div class="flex justify-between items-center">
+                <span class="font-bold text-white text-sm">{{ ratio.nombre }}</span>
+                <span class="text-lg font-bold px-2 py-1 rounded
+                    {% if ratio.estado == 'optimo' %} text-green-300
+                    {% elif ratio.estado == 'bajo' %} text-yellow-300
+                    {% else %} text-red-300
+                    {% endif %}">
+                    {{ ratio.valor }}
+                </span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+
+</div>
+<div class="timeline-section animate-fadeSlide" style="animation-delay: 0.3s;">
+    <h3 class="section-title text-yellow-400"><i class="fas fa-exclamation-triangle"></i> Puntos Débiles Identificados</h3>
+    <div class="p-4 rounded-lg border border-yellow-700 bg-yellow-900/50 space-y-2">
+        {% for punto in ratios_fuerza.puntos_debiles %}
+            <p class="text-sm text-yellow-200">{{ punto }}</p>
+        {% endfor %}
+    </div>
+    <div class="text-right mt-2">
+        <a href="{% url 'analytics:progresion_avanzado' cliente.id %}" class="text-xs text-cyan-400 hover:text-cyan-300">
+            Ver análisis completo →
+        </a>
+    </div>
+</div>
+    <section class="quote-box">
+        <div class="text-center mb-4">
+            <h2 class="text-3xl font-bold title">Empezar Sesión de Hoy</h2>
+            <p class="text-secondary">Tu portal para el entrenamiento diario: check-in, rutina ajustada y registro.</p>
+        </div>
+        <a href="{% url 'clientes:portal_sesion' cliente.id %}" class="block w-full bg-gradient-to-r from-cyan-500 to-fuchsia-500 text-white text-center font-semibold py-2 rounded-xl mt-6 shadow-md hover:scale-105 transition">
+        🚀 Iniciar Portal de Sesión
+    </a>
+    </section>
+<!--
+
+<div class="timeline-section animate-fadeSlide mb-6" style="animation-delay: 0.1s; border-left: 5px solid; border-color: {{ ajuste_del_dia.color }};">
+    <h3 class="section-title text-xl font-bold text-{{ ajuste_del_dia.color }}-400 mb-2">
+        <i class="fas fa-robot"></i> Recomendación de Joi para Hoy
+    </h3>
+    <p class="text-gray-300">{{ ajuste_del_dia.mensaje }}</p>
+        <div class="flex space-x-4 mt-2 text-sm">
+        <span>
+            Ajuste de RPE:
+            <strong class="text-white">
+                {% if ajuste_del_dia.modificacion_rpe > 0 %}
+                    +{{ ajuste_del_dia.modificacion_rpe }}
+                {% else %}
+                    {{ ajuste_del_dia.modificacion_rpe }}
+                {% endif %}
+                 puntos
+            </strong>
+        </span>
+        <span>
+            Ajuste de Volumen:
+            <strong class="text-white">
+                {{ ajuste_del_dia.modificacion_volumen|multiply:100|floatformat:0 }}% del planificado
+            </strong>
+        </span>
+    </div>
+</div>
+-->
+{% include 'clientes/includes/tarjeta_proximo_entrenamiento.html' %}
+
+
+
+<!-- 2.5. Dashboard de Adherencia -->
+            <div class="timeline-section animate-fadeSlide" style="animation-delay: 0.15s;">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="section-title"><i class="fas fa-chart-line text-cyan-400"></i> Dashboard de Adherencia</h3>
+
+                        <a href="{% url 'clientes:dashboard_adherencia' cliente.id %}" class="text-sm text-cyan-400 hover:text-cyan-300">Ver completo</a>
+
+                </div>
+
+                <!-- Métricas de Adherencia -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <div class="metric-card text-center p-4">
+                        <h3 class="text-lg font-semibold text-cyan-400 mb-2">Adherencia Semanal</h3>
+                        {% if reporte and reporte.metricas %}
+                            <p class="text-3xl font-bold text-white">{{ reporte.metricas.porcentaje_adherencia_semanal|floatformat:1 }}%</p>
+                            <div class="w-full bg-gray-700 rounded-full h-2 mt-2">
+                                <div class="bg-gradient-to-r from-cyan-400 to-green-400 h-2 rounded-full" style="width: {{ reporte.metricas.porcentaje_adherencia_semanal }}%"></div>
+                            </div>
+                        {% else %}
+                            <p class="text-3xl font-bold text-white">66.7%</p>
+                            <div class="w-full bg-gray-700 rounded-full h-2 mt-2">
+                                <div class="bg-gradient-to-r from-cyan-400 to-green-400 h-2 rounded-full" style="width: 66.7%"></div>
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="metric-card text-center p-4">
+                        <h3 class="text-lg font-semibold text-cyan-400 mb-2">Días Perdidos (Consec.)</h3>
+                        {% if reporte and reporte.metricas %}
+                            <p class="text-3xl font-bold text-white">{{ reporte.metricas.dias_consecutivos_perdidos }}</p>
+                        {% else %}
+                            <p class="text-3xl font-bold text-white">0</p>
+                        {% endif %}
+                        <p class="text-sm text-gray-400 mt-1">días seguidos</p>
+                    </div>
+                    <div class="metric-card text-center p-4">
+                        <h3 class="text-lg font-semibold text-cyan-400 mb-2">Tendencia</h3>
+                        {% if reporte and reporte.metricas and reporte.metricas.tendencia %}
+                            <p class="text-3xl font-bold
+                                {% if reporte.metricas.tendencia == 'mejorando' or reporte.metricas.tendencia == 'estable' %}
+                                    text-green-400
+                                {% else %}
+                                    text-yellow-400
+                                {% endif %}">
+                                {{ reporte.metricas.tendencia|capfirst }}
+                            </p>
+                            {% if reporte.metricas.tendencia == 'mejorando' %}
+                                <i class="fas fa-arrow-trend-up text-green-400 text-lg mt-1"></i>
+                            {% elif reporte.metricas.tendencia == 'estable' %}
+                                <i class="fas fa-minus text-yellow-400 text-lg mt-1"></i>
+                            {% else %}
+                                <i class="fas fa-arrow-trend-down text-red-400 text-lg mt-1"></i>
+                            {% endif %}
+                        {% else %}
+                            <p class="text-3xl font-bold text-yellow-400">Bajo</p>
+                            <i class="fas fa-arrow-trend-down text-red-400 text-lg mt-1"></i>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Alertas Activas -->
+                <div class="mt-4">
+                    <h4 class="text-lg font-bold mb-3 text-white">
+                        <i class="fas fa-exclamation-triangle text-yellow-400"></i> Alertas Activas
+                    </h4>
+                    {% if reporte and reporte.alertas_activas %}
+                        <div class="space-y-3">
+                            {% for alerta in reporte.alertas_activas %}
+                            <div class="bg-red-900/50 border border-red-500 p-4 rounded-lg animate-pulse">
+                                <h5 class="font-bold text-red-400 mb-2">
+                                    {{ alerta.tipo.value|capfirst }}
+                                    <span class="text-xs bg-red-600 text-white px-2 py-1 rounded ml-2">
+                                        Severidad: {{ alerta.severidad }}
+                                    </span>
+                                </h5>
+                                <p class="text-white mb-2">{{ alerta.mensaje }}</p>
+                                {% if alerta.recomendaciones %}
+                                <div class="mt-2">
+                                    <p class="text-sm font-semibold text-cyan-400 mb-1">Recomendaciones:</p>
+                                    <ul class="list-disc list-inside text-sm text-gray-300 space-y-1">
+                                        {% for rec in alerta.recomendaciones %}
+                                        <li>{{ rec }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                                {% endif %}
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <!-- Mostrar alerta de ejemplo si no hay datos reales -->
+                        {% if not reporte %}
+                            <div class="bg-red-900/50 border border-red-500 p-4 rounded-lg animate-pulse">
+                                <h5 class="font-bold text-red-400 mb-2">
+                                    Adherencia Baja
+                                    <span class="text-xs bg-red-600 text-white px-2 py-1 rounded ml-2">
+                                        Severidad: 3
+                                    </span>
+                                </h5>
+                                <p class="text-white mb-2">Adherencia semanal baja: 66.7%</p>
+                                <div class="mt-2">
+                                    <p class="text-sm font-semibold text-cyan-400 mb-1">Recomendaciones:</p>
+                                    <ul class="list-disc list-inside text-sm text-gray-300 space-y-1">
+                                        <li>Revisar si el programa es demasiado demandante.</li>
+                                        <li>Considerar reducir volumen temporalmente.</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        {% else %}
+                            <div class="bg-green-900/30 border border-green-500 p-4 rounded-lg">
+                                <div class="flex items-center gap-3">
+                                    <i class="fas fa-check-circle text-green-400 text-xl"></i>
+                                    <div>
+                                        <p class="text-green-400 font-semibold">¡Sin alertas!</p>
+                                        <p class="text-gray-300 text-sm">Todo en orden. Mantén el buen trabajo.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endif %}
+                    {% endif %}
+                </div>
+            </div>
+<!-- ================================================================== -->
+<!-- INICIO DE LA SECCIÓN -->
+<!-- ================================================================== -->
+
+
+<!-- ================================================================== -->
+<!-- 4. PANEL DE NUTRICIÓN COMPLETO (RÉPLICA DEL DISEÑO) -->
+<!-- ================================================================== -->
+{% if cliente.perfil_nutricion %}
+    {# Obtenemos los datos una sola vez para reutilizarlos en todo el bloque #}
+    {% with perfil_nutri=cliente.perfil_nutricion ultimo_nivel1=cliente.perfil_nutricion.get_ultimo_calculo_nivel1 ultimo_nivel2=cliente.perfil_nutricion.get_ultimo_calculo_nivel2 progreso_piramide=cliente.perfil_nutricion.get_progreso_piramide niveles_completados=cliente.perfil_nutricion.get_niveles_completados %}
+    <div class="timeline-section animate-fadeSlide" style="animation-delay: 0.3s;">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="section-title"><i class="fas fa-apple-alt text-green-400"></i> Resumen Nutricional</h3>
+            <a href="{% url 'nutricion_app_django:dashboard_completo' %}" class="text-sm text-cyan-400 hover:text-cyan-300">Ver dashboard completo</a>
+        </div>
+
+        <!-- Métricas Principales -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+            <div class="metric-card text-center p-3">
+                <div class="text-lg font-bold text-green-400">{{ perfil_nutri.peso|floatformat:1 }}</div>
+                <div class="text-xs text-gray-400">Peso (kg)</div>
+            </div>
+            <div class="metric-card text-center p-3">
+                <div class="text-lg font-bold text-blue-400">{{ ultimo_nivel1.calorias_objetivo|floatformat:0|default:"-" }}</div>
+                <div class="text-xs text-gray-400">Calorías</div>
+            </div>
+            <div class="metric-card text-center p-3">
+                <div class="text-lg font-bold text-red-400">{{ ultimo_nivel2.proteina_gramos|floatformat:0|default:"-" }}</div>
+                <div class="text-xs text-gray-400">Proteína (g)</div>
+            </div>
+            <div class="metric-card text-center p-3">
+                <div class="text-lg font-bold text-purple-400">{{ niveles_completados }}/5</div>
+                <div class="text-xs text-gray-400">Niveles</div>
+            </div>
+        </div>
+
+        <!-- Barra de Progreso de la Pirámide -->
+        <div class="mb-4">
+            <div class="flex justify-between items-center mb-2 text-sm">
+                <span class="text-gray-300">Progreso en la Pirámide</span>
+                <span class="text-cyan-400">{{ niveles_completados }}/5 completados</span>
+            </div>
+            <div class="w-full bg-gray-700 rounded-full h-2">
+                <div class="bg-gradient-to-r from-green-400 to-blue-500 h-2 rounded-full" style="width: {{ niveles_completados|multiply:20 }}%"></div>
+            </div>
+        </div>
+
+        <!-- Lista de Niveles de la Pirámide -->
+        <div class="space-y-2 mb-6">
+            {% for progreso in progreso_piramide %}
+            <div class="flex items-center justify-between p-2 rounded-lg {% if progreso.completado %}bg-green-900/30 border-green-500/30{% else %}bg-gray-800/30 border-gray-600/30{% endif %} border">
+                <div class="flex items-center gap-3">
+                    {% if progreso.completado %}
+                        <i class="fas fa-check-circle text-green-400"></i>
+                    {% else %}
+                        <i class="far fa-circle text-gray-500"></i>
+                    {% endif %}
+                    <span class="text-sm text-white">Nivel {{ progreso.nivel }}:
+                        {% if progreso.nivel == 1 %}Balance Energético{% endif %}
+                        {% if progreso.nivel == 2 %}Macronutrientes{% endif %}
+                        {% if progreso.nivel == 3 %}Micronutrientes{% endif %}
+                        {% if progreso.nivel == 4 %}Timing{% endif %}
+                        {% if progreso.nivel == 5 %}Suplementos{% endif %}
+                    </span>
+                </div>
+                {% if not progreso.completado %}
+                    {# Lógica para mostrar el botón "Completar" solo en el primer nivel no completado #}
+                    {% if forloop.counter0 == niveles_completados %}
+                    <a href="{% url 'nutricion_app_django:nivel1_balance' %}" class="text-xs text-cyan-400 hover:text-cyan-300">Completar</a>
+                    {% endif %}
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Próximo Paso -->
+        <div class="mb-6 p-3 bg-blue-900/20 rounded-lg border border-blue-500/30">
+            <div class="flex items-center gap-2">
+                <i class="fas fa-arrow-right text-blue-400"></i>
+                <span class="text-sm text-white font-semibold">Próximo paso:</span>
+            </div>
+            <p class="text-sm text-gray-300 mt-1">{{ perfil_nutri.get_proximo_paso }}</p>
+        </div>
+
+        <!-- Acciones Rápidas de Nutrición -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <a href="{% url 'nutricion_app_django:seguimiento_peso' %}" class="block w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white text-center font-semibold py-2 px-3 rounded-lg shadow-md hover:scale-105 transition text-sm">
+                <i class="fas fa-weight me-1"></i>Registrar Peso
+            </a>
+            <a href="{% url 'nutricion_app_django:piramide_principal' %}" class="block w-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-center font-semibold py-2 px-3 rounded-lg shadow-md hover:scale-105 transition text-sm">
+                <i class="fas fa-pyramid me-1"></i>Ver Pirámide
+            </a>
+        </div>
+    </div>
+    {% endwith %}
+{% else %}
+    {# El bloque para usuarios sin perfil se queda igual #}
+    <div class="timeline-section animate-fadeSlide" style="animation-delay: 0.3s;">
+        <div class="text-center p-6">
+            <h3 class="section-title"><i class="fas fa-apple-alt text-green-400"></i> Nutrición</h3>
+            <p class="text-gray-400 mb-4">Configura tu perfil nutricional para acceder a la pirámide de nutrición personalizada.</p>
+            <a href="{% url 'nutricion_app_django:configurar_perfil' %}" class="block w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white text-center font-semibold py-3 rounded-xl shadow-md hover:scale-105 transition">
+                <i class="fas fa-user-plus me-2"></i>Configurar Perfil Nutricional
+            </a>
+        </div>
+    </div>
+{% endif %}
+
+
+<!-- ================================================================== -->
+<!-- 4. PANEL RESUMEN DE NUTRICIÓN (VERSIÓN FINAL CON MÉTODOS) -->
+<!-- ================================================================== -->
+
+
+<!-- ================================================================== -->
+<!-- FIN DE LA SECCIÓN -->
+<!-- ================================================================== -->
+
+
+        </div>
+
+        <!-- ============================================= -->
+        <!-- COLUMNA DERECHA (Secundaria) -->
+        <!-- ============================================= -->
+        <div class="space-y-8">
+
+            <!-- 1. Métricas Rápidas -->
+            <div class="grid grid-cols-3 gap-4 animate-fadeSlide" style="animation-delay: 0.1s;">
+                <div class="metric-card text-center p-4">
+                    <h2 class="text-3xl font-bold">{{ entrenos_count }}</h2>
+                    <p class="text-xs text-gray-400">Entrenos</p>
+                </div>
+                <div class="metric-card text-center p-4">
+                    <h2 class="text-3xl font-bold">{{ carga_total|floatformat:0 }}</h2>
+                    <p class="text-xs text-gray-400">Carga Total (kg)</p>
+                </div>
+                <div class="metric-card text-center p-4">
+                    <h2 class="text-3xl font-bold">82</h2>
+                    <p class="text-xs text-gray-400">Consistencia</p>
+                </div>
+            </div>
+
+             <!-- Integración Fitness-Estoico -->
+
+            <div class="timeline-section animate-fadeSlide" style="animation-delay: 0.3s;">
+                <h3 class="integration-title">
+                    <i class="fas fa-yin-yang mr-2"></i>
+                    Equilibrio Mente-Cuerpo
+                </h3>
+
+                <div class="">
+                    <!-- Progreso físico -->
+                    <div class="text-center">
+                        <div class="text-cyan-400 text-3xl mb-2">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                        <h4 class="text-white font-semibold">Progreso Físico</h4>
+                        <p class="text-gray-300 text-sm">
+                            "El cuerpo es el templo del alma"
+                        </p>
+                        <div class="mt-2">
+                            <span class="text-cyan-400 font-bold">{{ progreso_fisico|default:50 }}%</span>
+                            <span class="text-gray-400 text-sm">hacia tu objetivo</span>
+                        </div>
+                    </div>
+
+                    <!-- Progreso mental -->
+                    <div class="text-center">
+                        <div class="text-yellow-400 text-3xl mb-2">
+                            <i class="fas fa-brain"></i>
+                        </div>
+                        <h4 class="text-white font-semibold">Crecimiento Mental</h4>
+                        <p class="text-gray-300 text-sm">
+                            "Una mente sana en un cuerpo sano"
+                        </p>
+                        <div class="mt-2">
+                            <span class="text-yellow-400 font-bold">{{ dias_reflexion|default:0 }}</span>
+
+                            <span class="text-gray-400 text-sm">días de reflexión</span>
+                        </div>
+                    </div>
+                    <div class="mt-4 text-center">
+
+                        <a href="{% url 'estoico:diario_hoy' %}" class="btn-estoico">
+                            <i class="fas fa-eye mr-2"></i>Ver Reflexión
+                        </a>
+
+                        <a href="{% url 'estoico:diario_hoy' %}" class="block w-full bg-gradient-to-r from-cyan-500 to-fuchsia-500 text-white text-center font-semibold py-2 rounded-xl mt-6 shadow-md hover:scale-105 transition">
+                            <i class="fas fa-pen mr-2"></i>Reflexionar Ahora
+                        </a>
+
+                </div>
+                </div>
+
+                <!-- Mensaje motivacional integrado -->
+                <div class="mt-4 p-3 bg-black bg-opacity-30 rounded-lg">
+                    <p class="text-center text-gray-200 italic">
+                        "{{ mensaje_integracion|default:'Mente sana en cuerpo sano - Los antiguos sabían que ambos van unidos.' }}"
+                    </p>
+                </div>
+            </div>
+
+            <!-- 2. Datos de Whoop -->
+            {% if registro_whoop %}
+            <div class="timeline-section animate-fadeSlide" style="animation-delay: 0.2s;">
+                <h3 class="section-title text-yellow-400"><i class="fas fa-heart-pulse"></i> Resumen Diario Whoop</h3>
+                <div class="timeline-section">
+              <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold text-blue-400">📊 WHOOP Diario</h3>
+                <a href="{% url 'entrenos:tarjeta_whoop' %}" class="text-sm text-gray-400 hover:text-blue-300">Ver completo</a>
+            </div>
+            <div class="flex flex-wrap justify-around items-center gap-6">
+
+                <!-- Strain -->
+                <div class="flex flex-col items-center text-center">
+                <div class="relative w-20 h-20">
+                    <svg class="absolute top-0 left-0 transform -rotate-90" width="80" height="80">
+                    <circle cx="40" cy="40" r="35" stroke="#2e2e2e" stroke-width="10" fill="none" />
+                    <circle cx="40" cy="40" r="35" stroke="#2563EB" stroke-width="10" fill="none"
+                            stroke-dasharray="220"
+                            stroke-dashoffset="{{ 220|floatformat:0|add:"-"|add:registro_whoop.strain|floatformat:0 }}" />
+                    </svg>
+                    <div class="absolute inset-0 flex items-center justify-center text-xl font-bold">
+                    {{ registro_whoop.strain|floatformat:1 }}
+                    </div>
+                </div>
+                <p class="mt-1 text-sm text-gray-300">Strain</p>
+                </div>
+
+    <!-- Recovery -->
+    <div class="flex flex-col items-center text-center">
+      <div class="relative w-20 h-20">
+        <svg class="absolute top-0 left-0 transform -rotate-90" width="80" height="80">
+          <circle cx="40" cy="40" r="35" stroke="#2e2e2e" stroke-width="10" fill="none" />
+          <circle cx="40" cy="40" r="35" stroke="#EAB308" stroke-width="10" fill="none"
+                  stroke-dasharray="220"
+                  stroke-dashoffset="{{ 220|floatformat:0|add:"-"|add:registro_whoop.recovery|floatformat:0 }}" />
+        </svg>
+        <div class="absolute inset-0 flex items-center justify-center text-xl font-bold">
+          {{ registro_whoop.recovery }}%
+        </div>
+      </div>
+      <p class="mt-1 text-sm text-gray-300">Recovery</p>
+    </div>
+
+    <!-- Sleep -->
+    <div class="text-center min-w-[160px]">
+      <p class="text-sm text-blue-400">Sleep Performance</p>
+      <p class="text-xl font-bold">{{ registro_whoop.sleep_performance }}%</p>
+      <div class="flex justify-between mt-2 text-sm text-gray-400">
+        <div>
+          <p class="font-semibold text-white">{{ tiempo_sueno }}</p>
+          <p class="text-xs">Dormido</p>
+        </div>
+        <div>
+          <p class="font-semibold text-white">{{ tiempo_sueno_necesario }}</p>
+          <p class="text-xs">Necesario</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+                <div class="mt-4 bg-[#1b1b1b] p-4 rounded-md border border-gray-700">
+                    <p class="text-sm text-white">{{ consejo_entreno }}</p>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- 3. Sistema de Logros
+            <div class="timeline-section animate-fadeSlide" style="animation-delay: 0.3s;">
+
+                <div class="section-header">
+        <h3 class="section-title text-xl font-bold text-yellow-300 mb-4">
+            🏆 Sistema de Logros
+            {% if datos_logros.perfil %}
+            <span class="nivel-badge bg-yellow-800 text-white px-2 py-1 text-xs rounded ml-2">
+                Nivel {{ datos_logros.nivel_actual.numero|default:"1" }} - {{ datos_logros.nivel_actual.nombre|default:"Principiante" }}
+            </span>
+            {% endif %}
+        </h3>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+        <div class="bg-[#1c1f26] p-4 rounded-xl shadow text-center">
+            <div class="text-4xl">🏆</div>
+            <div class="text-2xl font-bold">{{ datos_logros.puntos_totales|default:"0" }}</div>
+            <div class="text-sm text-gray-400">Puntos Totales</div>
+        </div>
+
+
+        <div class="bg-[#1c1f26] p-4 rounded-xl shadow text-center">
+            <div class="text-4xl">🎖️</div>
+            <div class="text-2xl font-bold">{{ datos_logros.total_logros|default:"0" }}</div>
+            <div class="text-sm text-gray-400">Logros Desbloqueados</div>
+        </div>
+
+
+        <div class="bg-[#1c1f26] p-4 rounded-xl shadow text-center">
+            <div class="text-4xl">🔥</div>
+            <div class="text-2xl font-bold">{{ datos_logros.racha_actual|default:"0" }}</div>
+            <div class="text-sm text-gray-400">Racha Actual</div>
+            <div class="text-xs text-gray-500">Máx: {{ datos_logros.racha_maxima|default:"0" }} días</div>
+        </div>
+    </div>
+
+    {% if datos_logros.logros_completados %}
+<div class="mt-6">
+    <h4 class="text-white text-sm font-semibold mb-2">🕒 Logros Recientes</h4>
+
+    <ul id="lista-logros" class="space-y-2">
+
+        {% for logro_usuario in datos_logros.logros_completados|slice:":3" %}
+        <li class="logro-item bg-[#2a2d3a] p-3 rounded-lg flex items-center justify-between">
+            <div>
+                <div class="text-sm font-bold text-green-400">{{ logro_usuario.logro.nombre }}</div>
+                <div class="text-xs text-gray-400">{{ logro_usuario.logro.descripcion }}</div>
+            </div>
+            <div class="text-xs text-yellow-300 font-semibold">
+                +{{ logro_usuario.logro.puntos_recompensa }} pts
+            </div>
+        </li>
+        {% endfor %}
+    </ul>
+
+    {% if datos_logros.logros_completados|length > 3 %}
+    <div class="text-center mt-4">
+        <button id="btn-ver-mas-logros" class="text-sm text-cyan-400 hover:text-cyan-300 transition">
+            Ver más
+        </button>
+    </div>
+    {% endif %}
+</div>
+{% endif %}
+
+
+            </div>
+           En tu template principal, por ejemplo, en la columna derecha -->
+
+<!-- ================================================================== -->
+<!-- SECCIÓN DE FATIGA ACUMULADA - PÉGALA AQUÍ -->
+<!-- ================================================================== -->
+<div class="metric-card animate-fadeSlide" style="animation-delay: 0.3s;">
+    <h3 class="section-title mb-0">⚡ Ratio ACWR Actual</h3>
+
+    {% if analisis_acwr and analisis_acwr.acwr_actual is not None %}
+        <div class="gauge-container {{ analisis_acwr.zona_riesgo }}">
+            <div class="gauge-value">{{ analisis_acwr.acwr_actual|floatformat:2 }}</div>
+            <div class="gauge-label">Zona de {{ analisis_acwr.zona_riesgo_display }}</div>
+            <p class="gauge-reco">{{ analisis_acwr.recomendacion }}</p>
+        </div>
+        <div class="text-center mt-4">
+            <a href="{% url 'analytics:dashboard_fatiga' cliente.id %}" class="text-sm text-cyan-400 hover:text-cyan-300">
+                Ver análisis completo →
+            </a>
+        </div>
+    {% else %}
+        <div class="text-center py-4">
+            <p class="text-gray-400">No hay suficientes datos para calcular el ratio ACWR.</p>
+            <p class="text-xs text-gray-500">Se necesita al menos una semana de entrenamientos registrados.</p>
+        </div>
+    {% endif %}
+</div>
+
+{% if fatiga_acumulada %}
+<div class="timeline-section animate-fadeSlide" style="animation-delay: 0.2s;">
+    <div class="flex justify-between items-center mb-4">
+        <h3 class="section-title mb-0"><i class="fas fa-bolt text-cyan-400"></i> Fatiga Acumulada</h3>
+        <a href="{% url 'analytics:intensidad_avanzado' cliente.id %}" class="text-sm text-cyan-400 hover:text-cyan-300">Ver detalles</a>
+    </div>
+
+    <div class="grid grid-cols-2 gap-4 items-center">
+        <!-- Medidor Gauge -->
+        <div class="relative w-32 h-32 mx-auto">
+            <canvas id="fatigaGaugeInicio"></canvas>
+            <div class="absolute inset-0 flex flex-col items-center justify-center">
+                <span class="text-2xl font-bold text-white">{{ fatiga_acumulada.fatiga_actual|floatformat:1 }}</span>
+                <span class="text-xs text-gray-400">Índice</span>
+            </div>
+        </div>
+
+        <!-- Información y Recomendación -->
+        <div class="text-center">
+            <p class="text-xl font-bold
+                {% if fatiga_acumulada.nivel == 'baja' %} text-green-400
+                {% elif fatiga_acumulada.nivel == 'moderada' %} text-yellow-400
+                {% else %} text-red-400
+                {% endif %}">
+                {{ fatiga_acumulada.nivel|capfirst }}
+            </p>
+            <p class="text-xs text-gray-400 mt-2">{{ fatiga_acumulada.recomendacion_descanso }}</p>
+        </div>
+    </div>
+</div>
+{% endif %}
+<!-- ================================================================== -->
+<!-- FIN DE LA SECCIÓN -->
+<!-- ================================================================== -->
+
+    <!-- En tu template principal, por ejemplo, en la columna derecha -->
+<div class="hero-panel-widget" id="hero-panel-widget">
+    <!-- La imagen de fondo se aplicará aquí con CSS -->
+    <div class="hero-panel-overlay"></div>
+
+    <div class="hero-panel-content">
+        <div class="hero-header">
+            <h3 class="hero-name" id="hero-character-name">El Puño de la Estrella del Norte</h3>
+            <div class="hero-level-badge" id="hero-level-badge">NIVEL 8</div>
+        </div>
+
+        <div class="hero-stats">
+            <div class="hero-stat-item">
+                <span class="hero-stat-value" id="hero-entrenamientos">0</span>
+                <span class="hero-stat-label">Entrenamientos</span>
+            </div>
+            <div class="hero-stat-item">
+                <span class="hero-stat-value" id="hero-racha">🔥 0</span>
+                <span class="hero-stat-label">Racha</span>
+            </div>
+        </div>
+
+        <div class="hero-actions">
+            <a href="{% url 'logros:ver_codice_completo' cliente.id %}"  class="hero-btn hero-btn-primary">Ver Códice</a>
+            <a href="/entrenos/cliente/{{ cliente.id }}/entrenamiento-activo/" class="hero-btn hero-btn-secondary">Entrenar</a>
+        </div>
+    </div>
+
+    <div class="hero-progress-section">
+        <div class="hero-progress-bar">
+            <div class="hero-progress-fill" id="hero-progress-fill" style="width: 0%;"></div>
+            <div class="hero-progress-text" id="hero-points-text">0 / 2250</div>
+        </div>
+    </div>
+</div>
+<!-- ================================================================== -->
+<!-- SECCIÓN DE MESOCICLO ACTUAL - PÉGALA AQUÍ -->
+<!-- ================================================================== -->
+{% if mesociclo_actual %}
+<div class="timeline-section animate-fadeSlide" style="animation-delay: 0.3s;">
+    <div class="flex justify-between items-center mb-4">
+        <h3 class="section-title mb-0"><i class="fas fa-calendar-check text-cyan-400"></i> Mesociclo Actual</h3>
+        <span class="text-xs font-bold px-3 py-1 rounded-full bg-cyan-500/50 text-white">
+            Ciclo {{ mesociclo_actual.numero }}
+        </span>
+    </div>
+
+    <p class="text-sm text-gray-400 mb-4">
+        {{ mesociclo_actual.fecha_inicio|date:"d/m" }} - {{ mesociclo_actual.fecha_fin|date:"d/m/Y" }}
+    </p>
+
+    <!-- Métricas del Mesociclo -->
+    <div class="grid grid-cols-2 gap-4 text-center mb-4">
+        <div>
+            <p class="text-2xl font-bold text-white">{{ mesociclo_actual.datos.carga_total|floatformat:0 }}</p>
+            <p class="text-xs text-gray-400">Carga Total (kg)</p>
+        </div>
+        <div>
+            <p class="text-2xl font-bold text-white">{{ mesociclo_actual.datos.sesiones }}</p>
+            <p class="text-xs text-gray-400">Sesiones</p>
+        </div>
+    </div>
+
+    <!-- Badge de Efectividad -->
+    <div class="text-center mb-4">
+        <span class="text-sm font-bold px-4 py-2 rounded-full
+            {% if mesociclo_actual.efectividad == 'alta' %} bg-green-500/30 text-green-300
+            {% elif mesociclo_actual.efectividad == 'media' %} bg-yellow-500/30 text-yellow-300
+            {% else %} bg-red-500/30 text-red-300
+            {% endif %}">
+            Efectividad: {{ mesociclo_actual.efectividad|capfirst }}
+        </span>
+    </div>
+
+    <!-- Recomendación del Mesociclo -->
+    {% if mesociclo_actual.recomendaciones %}
+    <div class="p-3 rounded-lg border border-gray-700 bg-gray-900/50 text-center">
+        <p class="text-sm text-gray-300">{{ mesociclo_actual.recomendaciones|first }}</p>
+    </div>
+    {% endif %}
+</div>
+{% endif %}
+<!-- en clientes/templates/clientes/mockup_demo.html -->
+
+{% if estancamientos %}
+<div class="timeline-section animate-fadeSlide mt-6" style="animation-delay: 0.2s;">
+    <h3 class="section-title text-xl font-bold text-yellow-400 mb-4">
+        <i class="fas fa-exclamation-triangle"></i> Alertas de Progresión
+    </h3>
+    <div class="space-y-3">
+        {% for ejercicio, info in estancamientos.items %}
+        <div class="bg-yellow-900/50 border border-yellow-500 p-4 rounded-lg">
+            <h4 class="font-bold text-yellow-300">{{ ejercicio }}</h4>
+            <p class="text-sm text-gray-300">
+                Detectado un estancamiento de **{{ info.dias_estancado }} días**.
+            </p>
+            <p class="mt-2 text-xs text-yellow-200"><i class="fas fa-lightbulb mr-1"></i> {{ info.recomendacion }}</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+{% if prediccion_riesgo %}
+<div class="timeline-section animate-fadeSlide" style="animation-delay: 0.4s;">
+    <h3 class="section-title text-{{ prediccion_riesgo.color }}-400">
+        <i class="fas fa-brain"></i> Predicción de Adherencia
+    </h3>
+    <div class="bg-gray-800/50 p-4 rounded-lg border border-{{ prediccion_riesgo.color }}-500/50">
+        <div class="flex justify-between items-center">
+            <span class="font-bold text-lg text-white">Riesgo {{ prediccion_riesgo.riesgo|capfirst }}</span>
+            <span class="text-sm font-mono text-{{ prediccion_riesgo.color }}-300">
+                {{ prediccion_riesgo.probabilidad|multiply:100|floatformat:0 }}% prob.
+            </span>
+        </div>
+        <p class="text-sm text-gray-300 mt-2">{{ prediccion_riesgo.mensaje }}</p>
+
+        {% if prediccion_riesgo.recomendaciones %}
+        <div class="mt-3 pt-3 border-t border-gray-700">
+            <h5 class="text-xs font-semibold text-cyan-400 mb-1">Acciones Sugeridas:</h5>
+            <ul class="list-disc list-inside text-xs text-gray-400 space-y-1">
+                {% for rec in prediccion_riesgo.recomendaciones %}
+                <li>{{ rec }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+<!-- ================================================================== -->
+<!-- FIN DE LA SECCIÓN -->
+<!-- ================================================================== -->
+
+
+
+
+        </div>
+
+    </div>
+</div>
+
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="{% static 'js/blade-runner-particles.js' %}"></script>
+
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+     const widget = document.getElementById('hero-panel-widget');
+    // Solo ejecutar si el widget existe en la página
+    if (widget) {
+        const clienteId = {{ cliente.id }}; // Asegúrate de que 'cliente.id' esté disponible
+
+        const cargarDatosHeroPanel = () => {
+            fetch(`/entrenos/gamificacion-resumen/${clienteId}/`)
+                .then(response => {
+                    if (!response.ok) throw new Error('Error en la respuesta de la API');
+                    return response.json();
+                })
+                .then(data => {
+                    actualizarHeroPanel(data);
+                })
+                .catch(error => {
+                    console.error('Error al cargar datos para Hero Panel:', error);
+                });
+        };
+
+        const actualizarHeroPanel = (data) => {
+            if (!data || !data.tiene_perfil) return;
+
+            // Aplicar la imagen de fondo
+            if (data.imagen_url) {
+                widget.style.backgroundImage = `url('${data.imagen_url}')`;
+            }
+
+            // Actualizar textos
+            document.getElementById('hero-character-name').textContent = data.nivel_actual || 'Aspirante';
+            document.getElementById('hero-level-badge').textContent = `NIVEL ${data.nivel_numero || 1}`;
+            document.getElementById('hero-entrenamientos').textContent = data.total_entrenamientos || 0;
+            document.getElementById('hero-racha').innerHTML = `🔥 ${data.racha_actual || 0}`;
+
+            // Barra de progreso
+            const porcentaje = data.porcentaje_progreso || 0;
+            document.getElementById('hero-progress-fill').style.width = `${porcentaje}%`;
+            document.getElementById('hero-points-text').textContent = `${data.puntos_actuales || 0} / ${data.puntos_siguiente || 0}`;
+        };
+
+        // Carga inicial y luego cada 30 segundos
+        cargarDatosHeroPanel();
+        setInterval(() => {
+            if (document.visibilityState === 'visible') {
+                cargarDatosHeroPanel();
+            }
+        }, 30000);
+    }
+    // ==================================================================
+    // GRÁFICOS DE CHART.JS
+    // ==================================================================
+
+    // --- Gráfico de Peso ---
+    const pesoCanvas = document.getElementById('graficoPeso');
+    if (pesoCanvas) {
+        const ctxPeso = pesoCanvas.getContext('2d');
+        new Chart(ctxPeso, {
+            type: 'line',
+            data: {
+                labels: [{% for punto in datos_peso %}"{{ punto.fecha|date:"D" }}"{% if not forloop.last %},{% endif %}{% endfor %}],
+                datasets: [{
+                    label: 'Peso Corporal (kg)',
+                    data: [{% for punto in datos_peso %}{{ punto.peso }}{% if not forloop.last %},{% endif %}{% endfor %}],
+                    borderColor: '#32FF00',
+                    backgroundColor: 'rgba(50, 255, 0, 0.1)',
+                    tension: 0.3,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { ticks: { color: '#aaa' }, grid: { color: '#333' } },
+                    y: { ticks: { color: '#aaa' }, grid: { color: '#333' } }
+                }
+            }
+        });
+    }
+
+    // --- Gráfico de Rendimiento ---
+    const rendimientoCanvas = document.getElementById('graficoRendimiento');
+    if (rendimientoCanvas) {
+        const ctxRendimiento = rendimientoCanvas.getContext('2d');
+        new Chart(ctxRendimiento, {
+            type: 'line',
+            data: {
+                labels: [{% for punto in datos_rendimiento %}"{{ punto.semana }}"{% if not forloop.last %},{% endif %}{% endfor %}],
+                datasets: [{
+                    label: 'Rendimiento',
+                    data: [{% for punto in datos_rendimiento %}{{ punto.valor }}{% if not forloop.last %},{% endif %}{% endfor %}],
+                    borderColor: '#31CFF4',
+                    backgroundColor: 'rgba(49, 207, 244, 0.1)',
+                    tension: 0.3,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { ticks: { color: '#aaa' }, grid: { color: '#333' } },
+                    y: { ticks: { color: '#aaa' }, grid: { color: '#333' } }
+                }
+            }
+        });
+    }
+
+    // --- Gráfico de Radar (Balance de Fuerza) ---
+    const ctxRadarInicio = document.getElementById('radarChartInicio');
+    const ratiosData = {{ ratios_fuerza.grafico_radar|safe|default:"null" }};
+    if (ctxRadarInicio && ratiosData && ratiosData.labels && ratiosData.labels.length > 0) {
+        new Chart(ctxRadarInicio, {
+            type: 'radar',
+            data: {
+                labels: ratiosData.labels,
+                datasets: [{
+                    label: 'Ratios Actuales',
+                    data: ratiosData.valores,
+                    borderColor: '#00ffff',
+                    backgroundColor: 'rgba(0, 255, 255, 0.2)',
+                    borderWidth: 2,
+                    pointBackgroundColor: '#00ffff'
+                }, {
+                    label: 'Ratios Óptimos',
+                    data: ratiosData.optimos,
+                    borderColor: '#ff00ff',
+                    backgroundColor: 'rgba(255, 0, 255, 0.1)',
+                    borderWidth: 2,
+                    borderDash: [5, 5],
+                    pointBackgroundColor: '#ff00ff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    r: {
+                        angleLines: { color: 'rgba(255, 255, 255, 0.2)' },
+                        grid: { color: 'rgba(255, 255, 255, 0.2)' },
+                        pointLabels: { color: '#e0e0e0', font: { size: 10 } },
+                        ticks: { color: '#aaa', backdropColor: 'transparent', stepSize: 0.2 }
+                    }
+                }
+            }
+        });
+    }
+
+    // --- Gráfico Gauge (Fatiga Acumulada) ---
+    const ctxFatigaInicio = document.getElementById('fatigaGaugeInicio');
+    {% if fatiga_acumulada %}
+    const fatigaValor = parseFloat("{{ fatiga_acumulada.fatiga_actual|floatformat:2 }}".replace(",", "."));
+    const fatigaMax = 150;
+    if (ctxFatigaInicio) {
+        let gaugeColor = '#10b981'; // Verde (Baja)
+        if (fatigaValor >= 100) {
+            gaugeColor = '#ef4444'; // Rojo (Alta)
+        } else if (fatigaValor >= 50) {
+            gaugeColor = '#f59e0b'; // Naranja (Moderada)
+        }
+        new Chart(ctxFatigaInicio, {
+            type: 'doughnut',
+            data: {
+                datasets: [{
+                    data: [fatigaValor, Math.max(0, fatigaMax - fatigaValor)],
+                    backgroundColor: [gaugeColor, 'rgba(255, 255, 255, 0.1)'],
+                    borderColor: 'transparent',
+                    borderWidth: 0,
+                    circumference: 270,
+                    rotation: 225
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '80%',
+                plugins: { legend: { display: false }, tooltip: { enabled: false } }
+            }
+        });
+    }
+    {% endif %}
+
+
+    // ==================================================================
+    // LÓGICA DEL BOTÓN "VER MÁS" PARA LOGROS (CORREGIDO)
+    // ==================================================================
+    const btnVerMasLogros = document.getElementById('btn-ver-mas-logros');
+    if (btnVerMasLogros) {
+        // Generamos el HTML de todos los logros en una variable.
+        // Se eliminó el filtro 'multiply' que causaba el error.
+        const todosLosLogrosHtml = `
+            {% for logro_usuario in datos_logros.logros_completados %}
+            <li class="logro-item bg-[#2a2d3a] p-3 rounded-lg flex items-center justify-between animate-fadeSlide">
+                <div>
+                    <div class="text-sm font-bold text-green-400">{{ logro_usuario.logro.nombre }}</div>
+                    <div class="text-xs text-gray-400">{{ logro_usuario.logro.descripcion|escapejs }}</div>
+                </div>
+                <div class="text-xs text-yellow-300 font-semibold">
+                    +{{ logro_usuario.logro.puntos_recompensa }} pts
+                </div>
+            </li>
+            {% endfor %}
+        `;
+
+        btnVerMasLogros.addEventListener('click', function() {
+            const listaLogros = document.getElementById('lista-logros');
+            if (listaLogros) {
+                listaLogros.innerHTML = todosLosLogrosHtml;
+            }
+            // Ocultamos el botón después de usarlo.
+            btnVerMasLogros.style.display = 'none';
+        });
+    }
+
+
+    // ==================================================================
+    // EFECTOS VISUALES Y ANIMACIONES
+    // ==================================================================
+
+    // --- Glitch Sutil Aleatorio ---
+    function applySubtleGlitch(element, type = 'text') {
+        const animationClass = type === 'text' ? (Math.random() > 0.5 ? 'textGlitch1' : 'textGlitch2') : 'borderGlitch';
+        const animationName = type === 'text' ? animationClass : 'borderGlitch';
+        if (element.style.animationName === animationName) return;
+        element.style.animation = `${animationName} 0.2s linear 1`;
+        setTimeout(() => { element.style.animation = ''; }, 200);
+    }
+
+    function initSubtleGlitches() {
+        const glitchableTexts = document.querySelectorAll('.glitch-text-subtle');
+        const glitchableBorders = document.querySelectorAll('.glitch-border-subtle');
+        glitchableTexts.forEach(el => {
+            setInterval(() => { if (Math.random() < 0.02) applySubtleGlitch(el, 'text'); }, Math.random() * 5000 + 3000);
+        });
+        glitchableBorders.forEach(el => {
+            setInterval(() => { if (Math.random() < 0.01) applySubtleGlitch(el, 'border'); }, Math.random() * 8000 + 5000);
+        });
+    }
+    initSubtleGlitches();
+
+    // --- Animación de Conteo para Métricas ---
+    function animateCountUp(element) {
+        const target = parseFloat(element.getAttribute('data-target'));
+        if (isNaN(target)) return;
+        const duration = 1500;
+        let start = 0;
+        const increment = target / (duration / 16);
+        function updateCount() {
+            start += increment;
+            if (start < target) {
+                element.textContent = Math.round(start);
+                requestAnimationFrame(updateCount);
+            } else {
+                element.textContent = target;
+            }
+        }
+        requestAnimationFrame(updateCount);
+    }
+    document.querySelectorAll('.count-up').forEach(animateCountUp);
+
+    // --- Joi Thinking Animation Control ---
+    function showJoiThinking(duration = 1500) {
+        const phraseDisplay = document.getElementById('joi-phrase-display');
+        const thinkingAnimation = document.getElementById('joi-thinking-animation');
+        if (!phraseDisplay || !thinkingAnimation) return;
+        phraseDisplay.classList.add('hidden');
+        thinkingAnimation.classList.remove('hidden');
+        setTimeout(() => {
+            thinkingAnimation.classList.add('hidden');
+            phraseDisplay.classList.remove('hidden');
+        }, duration);
+    }
+    showJoiThinking();
+
+    // --- Joi Image Enhancements ---
+    const joiImage = document.querySelector('.joi-flotante');
+    if (joiImage) {
+        joiImage.addEventListener('mouseenter', () => {
+            joiImage.style.filter = 'drop-shadow(0 0 30px #00ffff) drop-shadow(0 0 15px #ff00ff) brightness(1.2) saturate(1.5)';
+            joiImage.style.transform = 'scale(1.05)';
+        });
+        joiImage.addEventListener('mouseleave', () => {
+            joiImage.style.filter = 'drop-shadow(0 0 20px #00ffff) drop-shadow(0 0 10px #ff00ff)';
+            joiImage.style.transform = 'scale(1)';
+        });
+    }
+
+    // --- Lógica de botones (si existen) ---
+    const glitchButton = document.getElementById('glitchButton');
+    if (glitchButton) {
+        glitchButton.addEventListener('click', () => { /* Tu lógica de glitch aquí */ });
+    }
+    // ... y así para otros botones como particlesButton, emojiButton, etc.
+
+});
+class CodicePanelWidget {
+    constructor() {
+        this.clienteId = {{ cliente.id }};
+        this.inicializar();
+    }
+
+    inicializar() {
+        console.log('🎮 Inicializando widget del Códice en panel principal');
+        this.cargarDatos();
+
+        // Actualizar cada 30 segundos
+        setInterval(() => {
+            this.cargarDatos();
+        }, 30000);
+    }
+
+    async cargarDatos() {
+        try {
+            const response = await fetch(`/entrenos/gamificacion-resumen/${this.clienteId}/`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+            console.log('📊 Datos del Códice cargados:', data);
+
+            this.actualizarWidget(data);
+        } catch (error) {
+            console.error('❌ Error cargando datos del Códice:', error);
+            this.mostrarError();
+        }
+    }
+
+    actualizarWidget(data) {
+        if (!data.tiene_perfil) {
+            this.mostrarSinPerfil();
+            return;
+        }
+
+        // Actualizar información del personaje
+        const characterName = document.getElementById('codice-character-name');
+        const philosophy = document.getElementById('codice-philosophy');
+        const avatar = document.getElementById('codice-avatar');
+        const levelBadge = document.getElementById('codice-level-badge');
+
+        if (characterName) characterName.textContent = data.nivel_actual || 'Saitama - El Aspirante Calvo';
+        if (philosophy) philosophy.textContent = data.filosofia || '"Todo poder comienza con constancia y dedicación"';
+        if (avatar) avatar.textContent = data.icono || '🥊';
+        if (levelBadge) levelBadge.textContent = `Nivel ${data.nivel_numero || 1}`;
+
+        // Actualizar progreso
+        const points = document.getElementById('codice-points');
+        const nextLevel = document.getElementById('codice-next-level');
+        const progressFill = document.getElementById('codice-progress-fill');
+
+        if (points) points.textContent = `${data.puntos_actuales || 0} / ${data.puntos_siguiente || 250} puntos`;
+        if (nextLevel) nextLevel.textContent = `Próximo: ${data.siguiente_nivel || 'Rock Lee'}`;
+        if (progressFill) {
+            const porcentaje = data.porcentaje_progreso || 0;
+            progressFill.style.width = `${porcentaje}%`;
+        }
+
+        // Actualizar estadísticas
+        const entrenamientos = document.getElementById('codice-entrenamientos');
+        const racha = document.getElementById('codice-racha');
+
+        if (entrenamientos) entrenamientos.textContent = data.total_entrenamientos || 0;
+        if (racha) racha.textContent = data.racha_actual || 0;
+
+        // Efectos especiales para rachas altas
+        if (data.racha_actual >= 7) {
+            racha.classList.add('codice-fire-effect');
+        } else {
+            racha.classList.remove('codice-fire-effect');
+        }
+
+        console.log('✅ Widget del Códice actualizado');
+    }
+
+    mostrarSinPerfil() {
+        const widget = document.getElementById('codice-panel-widget');
+        if (widget) {
+            widget.innerHTML = `
+                <div class="codice-header">
+                    <div class="codice-title">⚔️ CÓDICE DE LAS LEYENDAS</div>
+                </div>
+                <div style="text-align: center; padding: 20px; color: #e0e0e0;">
+                    <p>🎮 ¡Tu aventura épica está por comenzar!</p>
+                    <p>Completa tu primer entrenamiento para despertar tu poder.</p>
+                    <a href="/entrenos/cliente/${this.clienteId}/entrenamiento-activo/" class="codice-btn codice-btn-primary" style="margin-top: 15px;">
+                        🚀 Comenzar Aventura
+                    </a>
+                </div>
+            `;
+        }
+    }
+
+    mostrarError() {
+        const widget = document.getElementById('codice-panel-widget');
+        if (widget) {
+            widget.style.opacity = '0.7';
+        }
+        console.log('⚠️ Error en widget del Códice - usando datos por defecto');
+    }
+}
+
+// Inicializar el widget cuando se carga la página
+document.addEventListener('DOMContentLoaded', function() {
+    if (typeof {{ cliente.id }} !== 'undefined') {
+        window.codicePanelWidget = new CodicePanelWidget();
+    }
+});
+
+// Función para testing
+function testCodicePanelWidget() {
+    console.log('🧪 Testing widget del Códice...');
+    const testData = {
+        tiene_perfil: true,
+        nivel_actual: 'Rock Lee - El Genio del Esfuerzo',
+        filosofia: '"La juventud arde con cada gota de sudor"',
+        icono: '💪',
+        nivel_numero: 2,
+        puntos_actuales: 750,
+        puntos_siguiente: 1000,
+        porcentaje_progreso: 75,
+        siguiente_nivel: 'Krillin',
+        total_entrenamientos: 15,
+        racha_actual: 8
+    };
+
+    if (window.codicePanelWidget) {
+        window.codicePanelWidget.actualizarWidget(testData);
+    }
+}
+
+console.log('🎮 Widget del Códice para panel principal cargado');
+console.log('🧪 Para probar: testCodicePanelWidget()');
+</script>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+{% endblock %}

@@ -1,0 +1,31 @@
+{% load i18n %}
+<table class="table table-striped align-middle">
+    <thead>
+    <tr>
+        <th>{% trans "Medida" %}</th>
+        <th>{% trans "Inicial" %}</th>
+        <th>{% trans "Última Revisión" %} ({{ ultima_revision.fecha|date:"d/m/Y" }})</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr>
+        <th>{% trans "Peso (kg)" %}</th>
+        <td>{{ cliente.peso_corporal }}</td>
+        <td>
+            {% with inicial=cliente.peso_corporal revision=ultima_revision.peso_corporal %}
+            {% include "clientes/partials/comparador.html" %}
+            {% endwith %}
+        </td>
+    </tr>
+    <tr>
+        <th>{% trans "Grasa corporal (%)" %}</th>
+        <td>{{ cliente.grasa_corporal }}</td>
+        <td>
+            {% with inicial=cliente.grasa_corporal revision=ultima_revision.grasa_corporal %}
+            {% include "clientes/partials/comparador.html" %}
+            {% endwith %}
+        </td>
+    </tr>
+    <!-- Repite para otras medidas -->
+    </tbody>
+</table>

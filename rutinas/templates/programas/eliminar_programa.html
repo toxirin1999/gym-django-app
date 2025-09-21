@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block title %}Eliminar Programa{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="fw-bold mb-3">Eliminar Programa</h2>
+    <p>¿Estás seguro de que deseas eliminar el programa <strong>{{ programa.nombre }}</strong>? Esta acción no se puede
+        deshacer.</p>
+
+    <form method="post">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger w-100">
+            <i class="bi bi-trash"></i> Sí, eliminar
+        </button>
+
+        <a href="{% url 'detalle_programa' programa.id %}" class="btn btn-secondary w-100 mt-2">
+            <i class="bi bi-arrow-left"></i> Cancelar
+        </a>
+    </form>
+</div>
+{% endblock %}

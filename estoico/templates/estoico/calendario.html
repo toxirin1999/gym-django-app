@@ -1,0 +1,429 @@
+{% extends 'estoico/base_estoico.html' %}
+{% load static %}
+
+{% block title %}Calendario - Diario Estoico{% endblock %}
+
+{% block extra_css %}
+<style>
+    .calendar-container {
+        max-width: 1000px;
+        margin: 0 auto;
+    }
+
+    .calendar-header {
+        background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: var(--border-radius);
+        margin-bottom: 2rem;
+    }
+
+    .calendar-navigation {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+
+    .calendar-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 1px;
+        background-color: #e9ecef;
+        border-radius: var(--border-radius);
+        overflow: hidden;
+        box-shadow: var(--box-shadow);
+    }
+
+    .calendar-day-header {
+        background-color: var(--primary-color);
+        color: white;
+        padding: 1rem;
+        text-align: center;
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+
+    .calendar-day {
+        background-color: white;
+        min-height: 120px;
+        padding: 0.5rem;
+        position: relative;
+        cursor: pointer;
+        transition: var(--transition);
+        border: 2px solid transparent;
+    }
+
+    .calendar-day:hover {
+        background-color: #f8f9fa;
+        border-color: var(--accent-color);
+    }
+
+    .calendar-day.other-month {
+        background-color: #f8f9fa;
+        color: #6c757d;
+    }
+
+    .calendar-day.today {
+        background-color: rgba(243, 156, 18, 0.1);
+        border-color: var(--accent-color);
+    }
+
+    .calendar-day.completed {
+        background-color: rgba(39, 174, 96, 0.1);
+        border-color: var(--success-color);
+    }
+
+    .calendar-day.completed::after {
+        content: '✓';
+        position: absolute;
+        top: 0.25rem;
+        right: 0.5rem;
+        color: var(--success-color);
+        font-weight: bold;
+        font-size: 1.2rem;
+    }
+
+    .day-number {
+        font-weight: 600;
+        font-size: 1.1rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .day-content {
+        font-size: 0.8rem;
+        color: #6c757d;
+    }
+
+    .reflection-indicator {
+        position: absolute;
+        bottom: 0.25rem;
+        left: 0.5rem;
+        display: flex;
+        gap: 2px;
+    }
+
+    .star-rating {
+        color: var(--warning-color);
+        font-size: 0.7rem;
+    }
+
+    .favorite-indicator {
+        position: absolute;
+        bottom: 0.25rem;
+        right: 0.5rem;
+        color: var(--danger-color);
+        font-size: 0.8rem;
+    }
+
+    .calendar-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+
+    .stat-card {
+        background: white;
+        padding: 1.5rem;
+        border-radius: var(--border-radius);
+        box-shadow: var(--box-shadow);
+        text-align: center;
+    }
+
+    .stat-value {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--primary-color);
+        margin-bottom: 0.5rem;
+    }
+
+    .stat-label {
+        color: #6c757d;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .legend {
+        display: flex;
+        justify-content: center;
+        gap: 2rem;
+        margin-top: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.9rem;
+    }
+
+    .legend-color {
+        width: 16px;
+        height: 16px;
+        border-radius: 4px;
+        border: 2px solid;
+    }
+
+    @media (max-width: 768px) {
+        .calendar-day {
+            min-height: 80px;
+            padding: 0.25rem;
+        }
+
+        .day-number {
+            font-size: 1rem;
+        }
+
+        .day-content {
+            font-size: 0.7rem;
+        }
+
+        .calendar-navigation {
+            flex-direction: column;
+            gap: 1rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="calendar-container">
+    <!-- Header del Calendario -->
+    <div class="calendar-header text-center">
+        <h2 class="mb-3">
+            <i class="fas fa-calendar-alt me-2"></i>
+            Tu Viaje Estoico
+        </h2>
+        <p class="mb-0 opacity-75">
+            Cada día es una oportunidad para crecer en sabiduría y virtud
+        </p>
+    </div>
+
+    <!-- Estadísticas del Mes -->
+    <div class="calendar-stats">
+        <div class="stat-card">
+            <div class="stat-value">{{ dias_completados }}</div>
+            <div class="stat-label">Días Completados</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">{{ porcentaje_mes }}%</div>
+            <div class="stat-label">Progreso del Mes</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">{{ racha_actual }}</div>
+            <div class="stat-label">Racha Actual</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">{{ promedio_calificacion|floatformat:1 }}</div>
+            <div class="stat-label">Promedio</div>
+        </div>
+    </div>
+
+    <!-- Navegación del Calendario -->
+    <div class="card shadow-sm">
+        <div class="card-header">
+            <div class="calendar-navigation">
+                <div>
+                    <a href="?año={{ año_anterior }}&mes={{ mes_anterior }}" class="btn btn-outline-primary">
+                        <i class="fas fa-chevron-left me-2"></i>Mes Anterior
+                    </a>
+                </div>
+
+                <div class="text-center">
+                    <h4 class="mb-0">{{ nombre_mes }} {{ año }}</h4>
+                </div>
+
+                <div>
+                    <a href="?año={{ año_siguiente }}&mes={{ mes_siguiente }}" class="btn btn-outline-primary">
+                        Mes Siguiente<i class="fas fa-chevron-right ms-2"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="card-body p-0">
+            <!-- Grid del Calendario -->
+            <div class="calendar-grid">
+                <!-- Headers de días de la semana -->
+                <div class="calendar-day-header">Dom</div>
+                <div class="calendar-day-header">Lun</div>
+                <div class="calendar-day-header">Mar</div>
+                <div class="calendar-day-header">Mié</div>
+                <div class="calendar-day-header">Jue</div>
+                <div class="calendar-day-header">Vie</div>
+                <div class="calendar-day-header">Sáb</div>
+
+                <!-- Días del calendario -->
+                {% for semana in calendario_datos %}
+                {% for dia_data in semana %}
+                <div class="calendar-day
+                                    {% if dia_data.es_hoy %}today{% endif %}
+                                    {% if dia_data.completado %}completed{% endif %}
+                                    {% if dia_data.otro_mes %}other-month{% endif %}"
+                     data-dia="{{ dia_data.dia_año }}"
+                     data-fecha="{{ dia_data.fecha|date:'Y-m-d' }}"
+                     onclick="navegarADia({{ dia_data.dia_año }})">
+
+                    <div class="day-number">{{ dia_data.dia }}</div>
+
+                    {% if dia_data.contenido %}
+                    <div class="day-content">
+                        {{ dia_data.contenido.tema|truncatewords:2 }}
+                    </div>
+                    {% endif %}
+
+                    {% if dia_data.reflexion %}
+                    <div class="reflection-indicator">
+                        {% if dia_data.reflexion.calificacion_dia %}
+                        <div class="star-rating">
+                            {% for i in "12345" %}
+                            {% if forloop.counter <= dia_data.reflexion.calificacion_dia %}
+                            <i class="fas fa-star"></i>
+                            {% else %}
+                            <i class="far fa-star"></i>
+                            {% endif %}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    {% if dia_data.reflexion.marcado_favorito %}
+                    <div class="favorite-indicator">
+                        <i class="fas fa-heart"></i>
+                    </div>
+                    {% endif %}
+                    {% endif %}
+                </div>
+                {% endfor %}
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Leyenda -->
+        <div class="card-footer">
+            <div class="legend">
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: rgba(243, 156, 18, 0.1); border-color: #f39c12;"></div>
+                    <span>Hoy</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: rgba(39, 174, 96, 0.1); border-color: #27ae60;"></div>
+                    <span>Completado</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: white; border-color: #dee2e6;"></div>
+                    <span>Pendiente</span>
+                </div>
+                <div class="legend-item">
+                    <i class="fas fa-heart text-danger me-1"></i>
+                    <span>Favorito</span>
+                </div>
+                <div class="legend-item">
+                    <i class="fas fa-star text-warning me-1"></i>
+                    <span>Calificación</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Acciones Rápidas -->
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-body text-center">
+                    <h6 class="card-title">
+                        <i class="fas fa-pen me-2 text-primary"></i>
+                        Reflexión de Hoy
+                    </h6>
+                    <p class="card-text text-muted">
+                        {% if reflexion_hoy %}
+                        Ya completaste tu reflexión de hoy
+                        {% else %}
+                        Aún no has reflexionado hoy
+                        {% endif %}
+                    </p>
+                    <a href="{% url 'estoico:diario_hoy' %}" class="btn btn-primary">
+                        {% if reflexion_hoy %}
+                        <i class="fas fa-edit me-2"></i>Editar Reflexión
+                        {% else %}
+                        <i class="fas fa-pen me-2"></i>Reflexionar Ahora
+                        {% endif %}
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-body text-center">
+                    <h6 class="card-title">
+                        <i class="fas fa-chart-line me-2 text-success"></i>
+                        Ver Progreso
+                    </h6>
+                    <p class="card-text text-muted">
+                        Analiza tu crecimiento y estadísticas detalladas
+                    </p>
+                    <a href="{% url 'estoico:progreso' %}" class="btn btn-success">
+                        <i class="fas fa-chart-bar me-2"></i>Ver Estadísticas
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function navegarADia(diaAño) {
+        if (diaAño) {
+            window.location.href = `/estoico/diario/${diaAño}/`;
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        // Tooltip para días con información adicional
+        document.querySelectorAll('.calendar-day[data-fecha]').forEach(day => {
+            const fecha = day.getAttribute('data-fecha');
+            const completado = day.classList.contains('completed');
+            const hoy = day.classList.contains('today');
+
+            let tooltipText = `Fecha: ${fecha}`;
+            if (hoy) tooltipText += ' (Hoy)';
+            if (completado) tooltipText += ' - Completado';
+
+            day.setAttribute('title', tooltipText);
+            day.setAttribute('data-bs-toggle', 'tooltip');
+        });
+
+        // Inicializar tooltips
+        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+
+        // Animación de entrada para las estadísticas
+        const statCards = document.querySelectorAll('.stat-card');
+        statCards.forEach((card, index) => {
+            card.style.opacity = '0';
+            card.style.transform = 'translateY(20px)';
+
+            setTimeout(() => {
+                card.style.transition = 'all 0.6s ease';
+                card.style.opacity = '1';
+                card.style.transform = 'translateY(0)';
+            }, index * 100);
+        });
+
+        // Resaltar día actual
+        const today = document.querySelector('.calendar-day.today');
+        if (today) {
+            today.classList.add('pulse');
+        }
+    });
+</script>
+{% endblock %}
+

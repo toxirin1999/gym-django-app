@@ -1,0 +1,615 @@
+<!-- templates/entrenos/vista_resumen_anual.html -->
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Resumen Anual para {{ cliente.nombre }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+<style>
+    /* === BASE BODY CYBERPUNK === */
+    body {
+        background: url("{% static 'images/fondo_cyberpunk.png' %}" ) no-repeat center center fixed !important;
+        background-size: cover !important;
+        background-color: #000000 !important;
+        min-height: 100vh !important;
+        filter: brightness(0.9);
+        overflow-x: hidden;
+    }
+
+    /* === ANIMACIONES BASE === */
+    @keyframes float {
+        0% { transform: translateY(0px); }
+        50% { transform: translateY(-5px); }
+        100% { transform: translateY(0px); }
+    }
+    .animate-float {
+        animation: float 6s ease-in-out infinite;
+    }
+
+    @keyframes fadeSlide {
+        0% { opacity: 0; transform: translateY(10px); }
+        100% { opacity: 1; transform: translateY(0); }
+    }
+    .animate-fadeSlide {
+        animation: fadeSlide 0.8s ease-out;
+    }
+
+    @keyframes titleGlow {
+        0%, 100% { text-shadow: 0 0 30px rgba(0, 255, 255, 0.5); }
+        50% { text-shadow: 0 0 60px rgba(0, 255, 255, 0.8), 0 0 40px rgba(255, 0, 255, 0.6); }
+    }
+
+    @keyframes timelineFlow {
+        0% { background-position: 0% 0%; }
+        100% { background-position: 0% 100%; }
+    }
+
+    @keyframes pulse-neon {
+        0%, 100% {
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.4), inset 0 0 8px rgba(0, 255, 255, 0.2);
+        }
+        50% {
+            box-shadow: 0 0 25px rgba(0, 255, 255, 0.6), inset 0 0 12px rgba(0, 255, 255, 0.3);
+        }
+    }
+
+    @keyframes dataFlow {
+        0% { transform: translateX(-100%); }
+        100% { transform: translateX(100%); }
+    }
+
+    @keyframes iconPulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.1); }
+    }
+
+    /* === EFECTOS ATMOSFÉRICOS === */
+    .blade-runner-atmosphere {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        z-index: -1;
+    }
+
+    .background-fog {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: radial-gradient(circle at 30% 20%, rgba(0, 255, 255, 0.1) 0%, transparent 50%),
+                    radial-gradient(circle at 70% 80%, rgba(255, 0, 255, 0.1) 0%, transparent 50%);
+        animation: float 8s ease-in-out infinite;
+    }
+
+    /* === CONTENEDOR PRINCIPAL === */
+    .cyberpunk-main-wrapper {
+        background: rgba(0, 0, 0, 0.4) !important;
+        backdrop-filter: blur(15px) saturate(180%) !important;
+        -webkit-backdrop-filter: blur(15px) saturate(180%) !important;
+        border: 1px solid rgba(77, 208, 225, 0.6) !important;
+        box-shadow: 0 0 15px rgba(77, 208, 225, 0.4), inset 0 0 8px rgba(77, 208, 225, 0.2) !important;
+        border-radius: 20px !important;
+        padding: 2rem;
+        margin: 2rem auto;
+        max-width: 900px;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .cyberpunk-main-wrapper::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: linear-gradient(90deg, #00ffff, #ff00ff, #00ff00);
+        animation: float 3s ease-in-out infinite;
+    }
+
+    /* === HEADER CYBERPUNK === */
+    .cyber-header {
+        text-align: center;
+        margin-bottom: 3rem;
+        padding: 2rem;
+        background: rgba(0, 0, 0, 0.6) !important;
+        backdrop-filter: blur(20px) saturate(180%) !important;
+        -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+        border: 1px solid rgba(0, 255, 255, 0.6) !important;
+        box-shadow: 0 0 25px rgba(0, 255, 255, 0.3), inset 0 0 15px rgba(0, 255, 255, 0.1) !important;
+        border-radius: 15px;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .cyber-header::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: linear-gradient(90deg, #00ffff, #ff00ff, #00ff00);
+        animation: float 3s ease-in-out infinite;
+    }
+
+    .cyber-header h1 {
+        font-size: 2.5rem;
+        font-weight: 700;
+        background: linear-gradient(90deg, #00ffff, #00ff00, #ff00ff);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        color: transparent;
+        text-shadow: 0 0 30px rgba(0, 255, 255, 0.5);
+        animation: titleGlow 4s ease-in-out infinite alternate;
+        margin-bottom: 1rem;
+    }
+
+    .cyber-header .lead {
+        color: #ffffff;
+        font-size: 1.2rem;
+        text-shadow: 0 0 5px rgba(255, 255, 255, 0.3);
+        margin-bottom: 1.5rem;
+    }
+
+    /* === BOTÓN DE NAVEGACIÓN === */
+    .cyber-nav-btn {
+        background: linear-gradient(45deg, rgba(0, 123, 255, 0.8), rgba(0, 150, 255, 0.6)) !important;
+        border: 1px solid rgba(0, 123, 255, 0.8) !important;
+        color: #ffffff !important;
+        padding: 0.75rem 1.5rem;
+        border-radius: 12px;
+        font-weight: 600;
+        text-decoration: none;
+        transition: all 0.3s ease;
+        backdrop-filter: blur(5px);
+        -webkit-backdrop-filter: blur(5px);
+        box-shadow: 0 0 15px rgba(0, 123, 255, 0.4);
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .cyber-nav-btn::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+        transition: left 0.5s ease;
+    }
+
+    .cyber-nav-btn:hover::before {
+        left: 100%;
+    }
+
+    .cyber-nav-btn:hover {
+        background: linear-gradient(45deg, rgba(0, 123, 255, 1), rgba(0, 150, 255, 0.8)) !important;
+        box-shadow: 0 0 25px rgba(0, 123, 255, 0.6);
+        transform: translateY(-2px);
+        color: #ffffff !important;
+    }
+
+    /* === TIMELINE CYBERPUNK === */
+    .cyber-timeline-container {
+        position: relative;
+        padding: 2rem 0;
+    }
+
+    .cyber-timeline-container::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 22px; /* Centrado con el icono */
+        height: 100%;
+        width: 6px;
+        background: linear-gradient(180deg, #00ffff, #ff00ff, #00ff00, #00ffff);
+        background-size: 100% 400%;
+        border-radius: 3px;
+        box-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
+        animation: timelineFlow 8s linear infinite;
+    }
+
+    .cyber-timeline-block {
+        position: relative;
+        margin-bottom: 2.5rem;
+        transition: all 0.3s ease;
+    }
+
+    .cyber-timeline-block:hover {
+        transform: translateX(10px);
+    }
+
+    .cyber-timeline-icon {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #000000;
+        font-size: 1.4rem;
+        z-index: 2;
+        font-weight: 900;
+        border: 3px solid rgba(255, 255, 255, 0.3);
+        backdrop-filter: blur(5px);
+        -webkit-backdrop-filter: blur(5px);
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+
+    .cyber-timeline-icon:hover {
+        transform: scale(1.1);
+        animation: iconPulse 1s ease-in-out infinite;
+        border-color: rgba(255, 255, 255, 0.6);
+    }
+
+    .cyber-timeline-content {
+        position: relative;
+        margin-left: 75px;
+        padding: 1.5rem;
+        border-radius: 15px;
+        color: #ffffff;
+        transition: all 0.3s ease;
+        background: rgba(0, 0, 0, 0.6) !important;
+        backdrop-filter: blur(15px) saturate(180%) !important;
+        -webkit-backdrop-filter: blur(15px) saturate(180%) !important;
+        border: 1px solid rgba(77, 208, 225, 0.4) !important;
+        box-shadow: 0 0 20px rgba(77, 208, 225, 0.2), inset 0 0 10px rgba(77, 208, 225, 0.1) !important;
+        overflow: hidden;
+        position: relative;
+    }
+
+    .cyber-timeline-content::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(0, 255, 255, 0.1), transparent);
+        transition: left 0.6s ease;
+    }
+
+    .cyber-timeline-content:hover::before {
+        left: 100%;
+    }
+
+    .cyber-timeline-content:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 0 30px rgba(77, 208, 225, 0.4), inset 0 0 15px rgba(77, 208, 225, 0.2) !important;
+        border-color: rgba(0, 255, 255, 0.6) !important;
+    }
+
+    .cyber-timeline-content h3 {
+        margin-top: 0;
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+        color: #00ffff;
+        text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+    }
+
+    .cyber-timeline-content .text-muted {
+        color: rgba(255, 255, 255, 0.8) !important;
+        font-size: 1rem;
+        margin-bottom: 1rem;
+        font-weight: 600;
+    }
+
+    .cyber-timeline-content strong {
+        color: #00ffff;
+        text-shadow: 0 0 5px rgba(0, 255, 255, 0.3);
+    }
+
+    /* === LISTA DE SEMANAS === */
+    .cyber-week-list {
+        list-style: none;
+        padding-left: 0;
+        color: rgba(255, 255, 255, 0.7);
+        font-size: 1rem;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .cyber-week-list li {
+        background: rgba(0, 255, 255, 0.1);
+        border: 1px solid rgba(0, 255, 255, 0.3);
+        border-radius: 6px;
+        padding: 0.25rem 0.5rem;
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: #00ffff;
+        text-shadow: 0 0 5px rgba(0, 255, 255, 0.3);
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+
+    .cyber-week-list li:hover {
+        background: rgba(0, 255, 255, 0.2);
+        border-color: rgba(0, 255, 255, 0.6);
+        transform: translateY(-1px);
+        box-shadow: 0 0 10px rgba(0, 255, 255, 0.4);
+    }
+
+    /* === COLORES POR OBJETIVO === */
+    .hipertrofia .cyber-timeline-icon {
+        background: linear-gradient(135deg, #0d6efd, #0096ff);
+        box-shadow: 0 0 20px rgba(13, 110, 253, 0.5);
+    }
+    .fuerza .cyber-timeline-icon {
+        background: linear-gradient(135deg, #dc3545, #ff0066);
+        box-shadow: 0 0 20px rgba(220, 53, 69, 0.5);
+    }
+    .potencia .cyber-timeline-icon {
+        background: linear-gradient(135deg, #fd7e14, #ffc107);
+        box-shadow: 0 0 20px rgba(253, 126, 20, 0.5);
+    }
+    .deload .cyber-timeline-icon {
+        background: linear-gradient(135deg, #198754, #00ff64);
+        box-shadow: 0 0 20px rgba(25, 135, 84, 0.5);
+    }
+
+    /* === EFECTOS ESPECÍFICOS POR OBJETIVO === */
+    .hipertrofia .cyber-timeline-content {
+        border-left: 4px solid #0096ff;
+    }
+    .fuerza .cyber-timeline-content {
+        border-left: 4px solid #ff0066;
+    }
+    .potencia .cyber-timeline-content {
+        border-left: 4px solid #ffc107;
+    }
+    .deload .cyber-timeline-content {
+        border-left: 4px solid #00ff64;
+    }
+
+    /* === RESPONSIVE === */
+    @media (max-width: 768px) {
+        .cyberpunk-main-wrapper {
+            padding: 1rem;
+            margin: 1rem;
+        }
+
+        .cyber-header {
+            padding: 1.5rem;
+        }
+
+        .cyber-header h1 {
+            font-size: 2rem;
+        }
+
+        .cyber-timeline-container::before {
+            left: 15px;
+        }
+
+        .cyber-timeline-icon {
+            width: 35px;
+            height: 35px;
+            font-size: 1rem;
+        }
+
+        .cyber-timeline-content {
+            margin-left: 55px;
+            padding: 1rem;
+        }
+
+        .cyber-timeline-content h3 {
+            font-size: 1.2rem;
+        }
+
+        .cyber-week-list {
+            font-size: 0.8rem;
+        }
+
+        .cyber-nav-btn {
+            padding: 0.5rem 1rem;
+            font-size: 0.9rem;
+        }
+    }
+
+    /* === EFECTOS ADICIONALES === */
+    .cyber-timeline-block:nth-child(odd) {
+        animation-delay: 0.1s;
+    }
+
+    .cyber-timeline-block:nth-child(even) {
+        animation-delay: 0.2s;
+    }
+
+    /* === LOADING EFFECTS === */
+    .loading-timeline {
+        position: relative;
+        overflow: hidden;
+    }
+
+    .loading-timeline::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(0, 255, 255, 0.2), transparent);
+        animation: dataFlow 2s ease-in-out infinite;
+    }
+
+    /* === EFECTOS DE PARTÍCULAS === */
+    .cyber-timeline-icon::after {
+        content: '';
+        position: absolute;
+        top: -2px;
+        left: -2px;
+        right: -2px;
+        bottom: -2px;
+        border-radius: 50%;
+        background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+
+    .cyber-timeline-icon:hover::after {
+        opacity: 1;
+        animation: dataFlow 1s ease-in-out infinite;
+    }
+
+    /* === EFECTOS DE BRILLO EN HOVER === */
+    .cyber-timeline-block:hover .cyber-timeline-icon {
+        box-shadow: 0 0 30px rgba(0, 255, 255, 0.8);
+    }
+
+    .hipertrofia:hover .cyber-timeline-icon {
+        box-shadow: 0 0 30px rgba(13, 110, 253, 0.8) !important;
+    }
+    .fuerza:hover .cyber-timeline-icon {
+        box-shadow: 0 0 30px rgba(220, 53, 69, 0.8) !important;
+    }
+    .potencia:hover .cyber-timeline-icon {
+        box-shadow: 0 0 30px rgba(253, 126, 20, 0.8) !important;
+    }
+    .deload:hover .cyber-timeline-icon {
+        box-shadow: 0 0 30px rgba(25, 135, 84, 0.8) !important;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="blade-runner-atmosphere">
+    <div class="background-fog"></div>
+</div>
+
+<div class="container mt-4">
+    <div class="cyberpunk-main-wrapper animate-fadeSlide">
+
+        <div class="cyber-header animate-fadeSlide" style="animation-delay: 0.2s;">
+            <h1><i class="fas fa-route"></i> Hoja de Ruta Anual</h1>
+            <p class="lead">Plan de {{ total_semanas }} semanas para {{ cliente.nombre }}</p>
+            <a href="{% url 'entrenos:vista_plan_anual' cliente.id %}" class="cyber-nav-btn">
+                <i class="fas fa-calendar-alt"></i> Ver Calendario Mensual
+            </a>
+        </div>
+
+        <div class="cyber-timeline-container">
+            {% for bloque in plan_por_bloques %}
+            <div class="cyber-timeline-block {{ bloque.objetivo }} animate-fadeSlide" style="animation-delay: {{ forloop.counter|add:2|floatformat:1 }}s;">
+                <div class="cyber-timeline-icon">
+                    {% if bloque.objetivo == 'fuerza' %}<i class="fas fa-dumbbell"></i>
+                    {% elif bloque.objetivo == 'hipertrofia' %}<i class="fas fa-male"></i>
+                    {% elif bloque.objetivo == 'potencia' %}<i class="fas fa-bolt"></i>
+                    {% else %}<i class="fas fa-coffee"></i>{% endif %}
+                </div>
+                <div class="cyber-timeline-content">
+                    <h3><i class="fas fa-bullseye"></i> {{ bloque.nombre }}</h3>
+                    <p class="text-muted">
+                        <strong>Objetivo:</strong> {{ bloque.objetivo|capfirst }} |
+                        <strong>Duración:</strong> {{ bloque.duracion }} semanas
+                    </p>
+                    <ul class="cyber-week-list">
+                        {% for semana in bloque.semanas %}
+                        <li>S{{ semana.semana_num_total }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Animaciones escalonadas para bloques de timeline
+        const timelineBlocks = document.querySelectorAll('.cyber-timeline-block');
+        timelineBlocks.forEach((block, index) => {
+            block.style.animationDelay = `${0.4 + (index * 0.2)}s`;
+            block.classList.add('animate-fadeSlide');
+        });
+
+        // Efectos adicionales de interactividad
+        timelineBlocks.forEach(block => {
+            block.addEventListener('mouseenter', function() {
+                this.style.transform = 'translateX(10px)';
+            });
+
+            block.addEventListener('mouseleave', function() {
+                this.style.transform = 'translateX(0)';
+            });
+        });
+
+        // Efectos para iconos de timeline
+        const timelineIcons = document.querySelectorAll('.cyber-timeline-icon');
+        timelineIcons.forEach(icon => {
+            icon.addEventListener('mouseenter', function() {
+                this.style.transform = 'scale(1.1)';
+                this.style.animation = 'iconPulse 1s ease-in-out infinite';
+            });
+
+            icon.addEventListener('mouseleave', function() {
+                this.style.transform = 'scale(1)';
+                this.style.animation = '';
+            });
+        });
+
+        // Efectos para contenido de timeline
+        const timelineContents = document.querySelectorAll('.cyber-timeline-content');
+        timelineContents.forEach(content => {
+            content.addEventListener('mouseenter', function() {
+                this.style.transform = 'translateY(-3px)';
+            });
+
+            content.addEventListener('mouseleave', function() {
+                this.style.transform = 'translateY(0)';
+            });
+        });
+
+        // Efectos para semanas individuales
+        const weekItems = document.querySelectorAll('.cyber-week-list li');
+        weekItems.forEach(item => {
+            item.addEventListener('mouseenter', function() {
+                this.style.transform = 'translateY(-1px)';
+            });
+
+            item.addEventListener('mouseleave', function() {
+                this.style.transform = 'translateY(0)';
+            });
+        });
+
+        // Efecto de carga inicial
+        const mainWrapper = document.querySelector('.cyberpunk-main-wrapper');
+        mainWrapper.classList.add('loading-timeline');
+
+        setTimeout(() => {
+            mainWrapper.classList.remove('loading-timeline');
+        }, 1000);
+
+        // Efectos de hover para el botón de navegación
+        const navBtn = document.querySelector('.cyber-nav-btn');
+        if (navBtn) {
+            navBtn.addEventListener('mouseenter', function() {
+                this.style.transform = 'translateY(-2px)';
+            });
+
+            navBtn.addEventListener('mouseleave', function() {
+                this.style.transform = 'translateY(0)';
+            });
+        }
+    });
+</script>
+{% endblock %}
+

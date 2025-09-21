@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+<!--#Agregar un nuevo rutina dentre de los detalle de una rutina-->
+{% block title %}Agregar Rutina{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="fw-bold mb-3">Agregar Rutina a {{ programa.nombre }}</h2>
+
+    <form method="post" class="mx-auto" style="max-width: 500px;">
+        {% csrf_token %}
+        <div class="mb-3">
+            {{ form.nombre.label_tag }}
+            {{ form.nombre }}
+            {% if form.nombre.errors %}
+            <div class="text-danger small">{{ form.nombre.errors|striptags }}</div>
+            {% endif %}
+        </div>
+
+        <button type="submit" class="btn btn-fucsia w-100">
+            <i class="bi bi-check-circle"></i> Guardar rutina
+        </button>
+
+        <a href="{% url 'detalle_programa' programa.id %}" class="btn btn-secondary w-100 mt-2">
+            <i class="bi bi-arrow-left"></i> Volver al programa
+        </a>
+    </form>
+</div>
+{% endblock %}

@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+{% block title %}Cuidado sugerido por Joi{% endblock %}
+{% block content %}
+
+<div class="max-w-md mx-auto mt-12 bg-[#121212] text-white p-6 rounded-2xl shadow-lg border border-red-600 space-y-6 text-center">
+
+    <h2 class="text-xl font-semibold text-red-400">🫧 Tu energía está baja</h2>
+
+    <p class="text-sm text-gray-300">
+        Joi ha notado una racha de baja energía. Aquí tienes una sugerencia suave para hoy:
+    </p>
+
+    <div class="bg-[#1f1f1f] p-4 rounded-xl border border-gray-700">
+        <p class="text-lg text-fuchsia-300 italic">“{{ sugerencia }}”</p>
+    </div>
+
+    <a href="{% url 'panel_cliente' %}" class="block w-full bg-red-500 hover:bg-red-400 text-white font-bold py-2 rounded-xl transition">
+        Volver al panel
+    </a>
+
+</div>
+
+{% endblock %}

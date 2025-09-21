@@ -1,0 +1,123 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Joi te acompaña</title>
+    <style>
+        body { background: #121212; color: white; font-family: Arial; text-align: center; padding: 2em; }
+        .joi-avatar { width: 200px; border-radius: 50%; margin: 1em auto; box-shadow: 0 0 20px #32FF00; }
+        .joi-msg { background: #1e1e1e; padding: 2em; border-radius: 15px; font-size: 1.5em; margin-top: 2em; color: #32FF00; }
+    </style>
+</head>
+<body>
+<h1>🤖 Joi te dice:</h1>
+<div class="joi-contenedor">
+    <img class="joi-avatar-float" src="{% static 'joi/avatars/' %}{{ avatar }}" alt="Joi">
+
+    <div class="joi-bocadillo">
+        {{ mensaje_joi }}
+    </div>
+</div>
+
+<style>
+    .joi-contenedor {
+        position: relative;
+        width: 100%;
+        max-width: 600px;
+        margin: 2em auto;
+        display: flex;
+        align-items: flex-start;
+        justify-content: center;
+        gap: 1.5em;
+    }
+
+    .joi-avatar-float {
+        width: 120px;
+        height: 120px;
+        border-radius: 50%;
+        object-fit: cover;
+        box-shadow: 0 0 25px #32FF00;
+        animation: flotar 3s ease-in-out infinite alternate;
+    }
+
+    .joi-bocadillo {
+        background: rgba(255, 255, 255, 0.05);
+        color: #32FF00;
+        border: 1px solid rgba(50, 255, 0, 0.2);
+        padding: 1.2em 1.5em;
+        border-radius: 20px 20px 20px 5px;
+        font-size: 1.3em;
+        max-width: 70%;
+        line-height: 1.6em;
+        box-shadow: 0 0 10px rgba(50, 255, 0, 0.3);
+        backdrop-filter: blur(8px);
+        text-align: left;
+    }
+
+    @keyframes flotar {
+        0% { transform: translateY(0); }
+        100% { transform: translateY(-10px); }
+    }
+</style>
+
+{% if respuesta_joi_ia %}
+<div class="joi-msg" style="margin-top: 2em; background:#1a1a1a; padding:1em; border-left: 4px solid #32FF00;">
+  <strong>🧠 Joi (IA real):</strong><br>
+  {{ respuesta_joi_ia }}
+</div>
+{% endif %}
+
+{% if respuesta_emocional %}
+<div class="joi-msg" style="margin-top: 2em; font-style: italic; opacity: 0.9;">
+  🧠 Joi te responde:<br>
+  "{{ respuesta_emocional }}"
+</div>
+{% endif %}
+<div class="joi-holograma">
+    <h2>✨ Joi generativa te susurra:</h2>
+    <div class="holo-msg">
+        {{ respuesta_joi_generativa }}
+    </div>
+</div>
+
+<style>
+    .joi-holograma {
+        background: rgba(50, 255, 255, 0.08);
+        border: 1px solid rgba(50, 255, 255, 0.3);
+        backdrop-filter: blur(8px);
+        box-shadow: 0 0 20px rgba(50, 255, 255, 0.4);
+        border-radius: 15px;
+        padding: 1.5em;
+        margin-top: 2em;
+        text-align: center;
+        color: #ccfaff;
+        font-family: 'Segoe UI', sans-serif;
+        animation: holoFadeIn 1.2s ease-out;
+    }
+
+    .holo-msg {
+        font-size: 1.2em;
+        font-style: italic;
+        opacity: 0.95;
+        line-height: 1.6em;
+        text-shadow: 0 0 6px #32ffff;
+    }
+
+    @keyframes holoFadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(20px) scale(0.98);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+    }
+</style>
+
+<br>
+<a href="{% url 'diario' %}" style="color: #32FF00;">Volver a registrar otro día</a>
+</body>
+</html>

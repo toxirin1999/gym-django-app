@@ -1,0 +1,554 @@
+{% extends 'logros/base_template.html' %}
+{% load static %}
+
+{% block title %}Códice de las Leyendas - {{ cliente.nombre }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'logros/gamificacion_styles.css' %}">
+<style>
+    .codice-container {
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+        min-height: 100vh;
+        padding: 2rem 0;
+    }
+
+    .arquetipo-card {
+        background: rgba(255, 255, 255, 0.05);
+        border: 2px solid rgba(255, 215, 0, 0.3);
+        border-radius: 15px;
+        margin-bottom: 2rem;
+        overflow: hidden;
+        transition: all 0.3s ease;
+        backdrop-filter: blur(10px);
+    }
+
+    .arquetipo-card.desbloqueado {
+        border-color: rgba(255, 215, 0, 0.6);
+        box-shadow: 0 0 20px rgba(255, 215, 0, 0.2);
+    }
+
+    .arquetipo-card.dominado {
+        border-color: rgba(255, 215, 0, 1);
+        box-shadow: 0 0 30px rgba(255, 215, 0, 0.4);
+        background: rgba(255, 215, 0, 0.1);
+    }
+
+    .arquetipo-card.bloqueado {
+        border-color: rgba(128, 128, 128, 0.3);
+        opacity: 0.6;
+    }
+
+    .arquetipo-header {
+        background: linear-gradient(90deg, rgba(255, 215, 0, 0.2), rgba(255, 215, 0, 0.05));
+        padding: 1.5rem;
+        border-bottom: 1px solid rgba(255, 215, 0, 0.3);
+    }
+
+    .arquetipo-nivel {
+        font-size: 1.2rem;
+        color: #ffd700;
+        font-weight: bold;
+        margin-bottom: 0.5rem;
+    }
+
+    .arquetipo-titulo {
+        font-size: 1.8rem;
+        color: #ffffff;
+        font-weight: bold;
+        margin-bottom: 0.5rem;
+    }
+
+    .arquetipo-personaje {
+        font-size: 1.1rem;
+        color: #ffd700;
+        font-style: italic;
+        margin-bottom: 1rem;
+    }
+
+    .arquetipo-filosofia {
+        color: #cccccc;
+        font-style: italic;
+        line-height: 1.6;
+    }
+
+    .pruebas-container {
+        padding: 1.5rem;
+    }
+
+    .prueba-item {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        transition: all 0.3s ease;
+    }
+
+    .prueba-item.completada {
+        border-color: rgba(0, 255, 0, 0.5);
+        background: rgba(0, 255, 0, 0.05);
+    }
+
+    .prueba-item.secreta {
+        border-color: rgba(128, 0, 128, 0.5);
+        background: rgba(128, 0, 128, 0.05);
+    }
+
+    .prueba-nombre {
+        font-weight: bold;
+        color: #ffffff;
+        margin-bottom: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .prueba-descripcion {
+        color: #cccccc;
+        font-size: 0.9rem;
+        margin-bottom: 1rem;
+    }
+
+    .progress-bar-container {
+        background: rgba(0, 0, 0, 0.3);
+        border-radius: 10px;
+        height: 20px;
+        overflow: hidden;
+        margin-bottom: 0.5rem;
+    }
+
+    .progress-bar {
+        height: 100%;
+        background: linear-gradient(90deg, #ffd700, #ffed4e);
+        border-radius: 10px;
+        transition: width 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #000;
+        font-weight: bold;
+        font-size: 0.8rem;
+    }
+
+    .progress-bar.completada {
+        background: linear-gradient(90deg, #00ff00, #32ff32);
+    }
+
+    .progreso-texto {
+        font-size: 0.8rem;
+        color: #aaaaaa;
+        text-align: right;
+    }
+
+    .perfil-header {
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 15px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        text-align: center;
+        border: 2px solid rgba(255, 215, 0, 0.3);
+    }
+
+    .cliente-nombre {
+        font-size: 2.5rem;
+        color: #ffd700;
+        font-weight: bold;
+        margin-bottom: 1rem;
+    }
+
+    .nivel-actual {
+        font-size: 1.5rem;
+        color: #ffffff;
+        margin-bottom: 0.5rem;
+    }
+
+    .puntos-totales {
+        font-size: 1.2rem;
+        color: #ffd700;
+        margin-bottom: 1rem;
+    }
+
+    .progreso-siguiente {
+        margin-top: 1rem;
+    }
+
+    .sidebar {
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 15px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .sidebar h3 {
+        color: #ffd700;
+        margin-bottom: 1rem;
+        font-size: 1.3rem;
+    }
+
+    .historial-item {
+        background: rgba(255, 255, 255, 0.03);
+        border-radius: 5px;
+        padding: 0.8rem;
+        margin-bottom: 0.5rem;
+        border-left: 3px solid #ffd700;
+    }
+
+    .historial-puntos {
+        color: #ffd700;
+        font-weight: bold;
+    }
+
+    .historial-descripcion {
+        color: #cccccc;
+        font-size: 0.9rem;
+    }
+
+    .historial-fecha {
+        color: #aaaaaa;
+        font-size: 0.8rem;
+    }
+
+    .notificacion-item {
+        background: rgba(255, 165, 0, 0.1);
+        border: 1px solid rgba(255, 165, 0, 0.3);
+        border-radius: 5px;
+        padding: 0.8rem;
+        margin-bottom: 0.5rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .notificacion-item:hover {
+        background: rgba(255, 165, 0, 0.2);
+    }
+
+    .notificacion-titulo {
+        color: #ffa500;
+        font-weight: bold;
+        margin-bottom: 0.3rem;
+    }
+
+    .notificacion-mensaje {
+        color: #cccccc;
+        font-size: 0.9rem;
+    }
+
+    .btn-codice {
+        background: linear-gradient(45deg, #ffd700, #ffed4e);
+        color: #000;
+        border: none;
+        padding: 0.8rem 1.5rem;
+        border-radius: 25px;
+        font-weight: bold;
+        text-decoration: none;
+        display: inline-block;
+        transition: all 0.3s ease;
+        margin: 0.5rem;
+    }
+
+    .btn-codice:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(255, 215, 0, 0.4);
+        color: #000;
+        text-decoration: none;
+    }
+
+    .icono-completada {
+        color: #00ff00;
+        font-size: 1.2rem;
+    }
+
+    .icono-secreta {
+        color: #800080;
+        font-size: 1.2rem;
+    }
+
+    .selector-cliente {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 215, 0, 0.3);
+        border-radius: 10px;
+        padding: 0.5rem 1rem;
+        color: #ffffff;
+        margin-bottom: 2rem;
+    }
+
+    .selector-cliente option {
+        background: #1a1a2e;
+        color: #ffffff;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="codice-container">
+    <div class="container-fluid">
+        <!-- Selector de Cliente -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <select class="form-control selector-cliente" onchange="cambiarCliente(this.value)">
+                    <option value="">Seleccionar Cliente</option>
+                    {% for c in todos_los_clientes %}
+                    <option value="{{ c.id }}" {% if c.id== cliente.id %}selected{% endif %}>
+                        {{ c.nombre }} {{ c.apellido }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- Columna Principal - Códice -->
+            <div class="col-lg-8">
+                <!-- Header del Perfil -->
+                <div class="perfil-header">
+                    <div class="cliente-nombre">{{ cliente.nombre }} {{ cliente.apellido }}</div>
+                    {% if perfil.nivel_actual %}
+                    <div class="nivel-actual">{{ perfil.nivel_actual.titulo_arquetipo }}</div>
+                    <div class="arquetipo-personaje">{{ perfil.nivel_actual.nombre_personaje }}</div>
+                    {% else %}
+                    <div class="nivel-actual">Aspirante</div>
+                    {% endif %}
+                    <div class="puntos-totales">{{ perfil.puntos_totales }} Puntos de Poder</div>
+
+                    {% if siguiente_arquetipo %}
+                    <div class="progreso-siguiente">
+                        <div class="mb-2">Progreso hacia {{ siguiente_arquetipo.titulo_arquetipo }}</div>
+                        <div class="progress-bar-container">
+                            <div class="progress-bar" style="width: {{ progreso_siguiente_nivel }}%;">
+                                {{ progreso_siguiente_nivel|floatformat:1 }}%
+                            </div>
+                        </div>
+                        <small class="text-muted">{{ puntos_necesarios }} puntos restantes</small>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Códice de las Leyendas -->
+                <h2 class="text-center mb-4" style="color: #ffd700; font-size: 2.5rem;">
+                    📜 Códice de las Leyendas 📜
+                </h2>
+
+                {% for capitulo in codice %}
+                <div class="arquetipo-card {% if capitulo.desbloqueado %}desbloqueado{% endif %} {% if capitulo.dominado %}dominado{% endif %} {% if not capitulo.desbloqueado %}bloqueado{% endif %}">
+                    <div class="arquetipo-header">
+                        <div class="arquetipo-nivel">
+                            Capítulo {{ capitulo.arquetipo.nivel }}
+                            {% if capitulo.dominado %}
+                            <span class="icono-completada">👑</span>
+                            {% elif not capitulo.desbloqueado %}
+                            <span style="color: #666;">🔒</span>
+                            {% endif %}
+                        </div>
+                        <div class="arquetipo-titulo">{{ capitulo.arquetipo.titulo_arquetipo }}</div>
+                        <div class="arquetipo-personaje">{{ capitulo.arquetipo.nombre_personaje }}</div>
+                        {% if capitulo.desbloqueado %}
+                        <div class="arquetipo-filosofia">"{{ capitulo.arquetipo.filosofia }}"</div>
+                        {% else %}
+                        <div class="arquetipo-filosofia">Este capítulo se desbloqueará al alcanzar {{ capitulo.arquetipo.puntos_requeridos }} puntos.</div>
+                        {% endif %}
+                    </div>
+
+                    {% if capitulo.desbloqueado and capitulo.pruebas %}
+                    <div class="pruebas-container">
+                        <h4 style="color: #ffd700; margin-bottom: 1rem;">Pruebas Legendarias</h4>
+
+                        <!-- Barra de progreso del capítulo -->
+                        <div class="mb-3">
+                            <div class="progress-bar-container">
+                                <div class="progress-bar {% if capitulo.dominado %}completada{% endif %}"
+                                     style="width: {{ capitulo.progreso_capitulo }}%;">
+                                    {{ capitulo.progreso_capitulo|floatformat:0 }}%
+                                </div>
+                            </div>
+                            <div class="progreso-texto">
+                                Progreso del Capítulo: {{ capitulo.progreso_capitulo|floatformat:1 }}%
+                            </div>
+                        </div>
+
+                        {% for prueba_data in capitulo.pruebas %}
+                        <div class="prueba-item {% if prueba_data.completada %}completada{% endif %} {% if prueba_data.es_secreta %}secreta{% endif %}">
+                            <div class="prueba-nombre">
+                                {% if prueba_data.es_secreta %}
+                                <span class="icono-secreta">🔮</span>
+                                Prueba Secreta
+                                {% else %}
+                                {{ prueba_data.prueba.nombre }}
+                                {% endif %}
+                                {% if prueba_data.completada %}
+                                <span class="icono-completada">✅</span>
+                                {% endif %}
+                            </div>
+
+                            {% if not prueba_data.es_secreta %}
+                            <div class="prueba-descripcion">{{ prueba_data.prueba.descripcion }}</div>
+                            {% else %}
+                            <div class="prueba-descripcion">Esta prueba permanece oculta hasta ser completada.</div>
+                            {% endif %}
+
+                            <div class="progress-bar-container">
+                                <div class="progress-bar {% if prueba_data.completada %}completada{% endif %}"
+                                     style="width: {{ prueba_data.porcentaje }}%;">
+                                    {% if prueba_data.porcentaje > 20 %}
+                                    {{ prueba_data.porcentaje|floatformat:0 }}%
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <div class="progreso-texto">
+                                {% if not prueba_data.es_secreta %}
+                                {{ prueba_data.progreso_actual|floatformat:1 }} / {{ prueba_data.prueba.meta_valor|floatformat:1 }}
+                                {% endif %}
+                                {% if prueba_data.completada %}
+                                <span style="color: #00ff00;">¡COMPLETADA!</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+
+                        {% if capitulo.dominado %}
+                        <div class="text-center mt-3">
+                            <div style="color: #ffd700; font-size: 1.2rem; font-weight: bold;">
+                                🏆 ¡CAPÍTULO DOMINADO! 🏆
+                            </div>
+                            <div style="color: #cccccc; font-style: italic;">
+                                Has demostrado tu maestría sobre el poder de {{ capitulo.arquetipo.nombre_personaje }}
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% elif capitulo.desbloqueado %}
+                    <div class="pruebas-container">
+                        <div class="text-center" style="color: #cccccc;">
+                            Este capítulo no tiene pruebas asignadas aún.
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- Sidebar -->
+            <div class="col-lg-4">
+                <!-- Notificaciones -->
+                {% if notificaciones_no_leidas %}
+                <div class="sidebar">
+                    <h3>🔔 Notificaciones</h3>
+                    {% for notif in notificaciones_no_leidas %}
+                    <div class="notificacion-item" onclick="marcarComoLeida({{ notif.id }})">
+                        <div class="notificacion-titulo">{{ notif.titulo }}</div>
+                        <div class="notificacion-mensaje">{{ notif.mensaje }}</div>
+                    </div>
+                    {% endfor %}
+                    <div class="text-center mt-2">
+                        <a href="{% url 'logros:listar_notificaciones' cliente.id %}" class="btn-codice">
+                            Ver Todas
+                        </a>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Historial Reciente -->
+                {% if historial_reciente %}
+                <div class="sidebar">
+                    <h3>📈 Actividad Reciente</h3>
+                    {% for item in historial_reciente %}
+                    <div class="historial-item">
+                        <div class="historial-puntos">+{{ item.puntos }} puntos</div>
+                        <div class="historial-descripcion">{{ item.descripcion }}</div>
+                        <div class="historial-fecha">{{ item.fecha|date:"d/m/Y H:i" }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                <!-- Quests Activas -->
+                {% if quests_activas %}
+                <div class="sidebar">
+                    <h3>⚔️ Misiones Activas</h3>
+                    {% for quest_usuario in quests_activas %}
+                    <div class="historial-item">
+                        <div class="historial-puntos">{{ quest_usuario.quest.nombre }}</div>
+                        <div class="historial-descripcion">{{ quest_usuario.quest.descripcion }}</div>
+                        <div class="progress-bar-container mt-2">
+                            {% with porcentaje=quest_usuario.progreso_actual|mul:100 %}
+                            <div class="progress-bar" style="width: {{ porcentaje }}%;">
+                                {{ porcentaje|floatformat:0 }}%
+                            </div>
+                            {% endwith %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                    <div class="text-center mt-2">
+                        <a href="{% url 'logros:lista_misiones' %}" class="btn-codice">
+                            Ver Todas las Misiones
+                        </a>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Enlaces Rápidos -->
+                <div class="sidebar">
+                    <h3>🔗 Enlaces Rápidos</h3>
+                    <div class="text-center">
+                        <a href="{% url 'logros:ranking_clientes' %}" class="btn-codice">
+                            🏆 Ranking
+                        </a>
+                        <a href="{% url 'logros:analisis_cliente' cliente.id %}" class="btn-codice">
+                            📊 Análisis
+                        </a>
+                        <a href="{% url 'logros:lista_arquetipos' %}" class="btn-codice">
+                            📚 Todos los Arquetipos
+                        </a>
+                        <a href="{% url 'logros:lista_pruebas_legendarias' %}" class="btn-codice">
+                            ⚔️ Todas las Pruebas
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function cambiarCliente(clienteId) {
+        if (clienteId) {
+            window.location.href = "{% url 'logros:perfil_gamificacion' 0 %}".replace('0', clienteId);
+        }
+    }
+
+    function marcarComoLeida(notificacionId) {
+        fetch(`/logros/notificacion/${notificacionId}/marcar-leida/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/json',
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Ocultar la notificación
+                event.target.closest('.notificacion-item').style.display = 'none';
+            }
+        });
+    }
+
+    // Efecto de aparición gradual para las cartas
+    document.addEventListener('DOMContentLoaded', function() {
+        const cards = document.querySelectorAll('.arquetipo-card');
+        cards.forEach((card, index) => {
+            card.style.opacity = '0';
+            card.style.transform = 'translateY(20px)';
+            setTimeout(() => {
+                card.style.transition = 'all 0.6s ease';
+                card.style.opacity = '1';
+                card.style.transform = 'translateY(0)';
+            }, index * 200);
+        });
+    });
+</script>
+
+{% csrf_token %}
+{% endblock %}
+

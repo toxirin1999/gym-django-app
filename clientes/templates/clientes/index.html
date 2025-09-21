@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Lista de Clientes{% endblock %}
+
+{% block content %}
+<div class="w-full flex justify-center">
+    <div class="main-wrapper space-y-6 max-w-6xl">
+
+        <div class="header-halo text-center py-6">
+            <h1 class="title">Lista de Clientes</h1>
+        </div>
+
+        {% if clientes %}
+        <div class="overflow-x-auto">
+            <table class="w-full table-auto text-sm text-left text-white shadow-lg rounded-xl overflow-hidden">
+                <thead class="bg-gradient-to-r from-[#31cff4] to-[#160f29] text-black uppercase text-xs tracking-wider">
+                <tr>
+                    <th class="px-4 py-3">Nombre</th>
+                    <th class="px-4 py-3">Contacto</th>
+                    <th class="px-4 py-3">Programa</th>
+                    <th class="px-4 py-3">Dieta</th>
+                    <th class="px-4 py-3 text-center">Acciones</th>
+                </tr>
+                </thead>
+                <tbody class="bg-[#121212] divide-y divide-gray-700">
+                {% for cliente in clientes %}
+                <tr class="hover:bg-[#1f1f1f] transition">
+                    <td class="px-4 py-3 font-bold text-white">
+                        {{ cliente.nombre }}
+                        {% if cliente.proximo_registro_peso %}
+                        {% if cliente.proximo_registro_peso <= today %}
+                        <i class="bi bi-calendar-x-fill text-red-500 ml-2" title="Peso atrasado para {{ cliente.proximo_registro_peso }}"></i>
+                        {% else %}
+                        <i class="bi bi-calendar-event-fill text-yellow-400 ml-2" title="Próximo peso: {{ cliente.proximo_registro_peso }}"></i>
+                        {% endif %}
+                        {% endif %}
+                        {% if cliente.ultima_revision and cliente.ultima_revision.check_alerts %}
+                        <i class="bi bi-exclamation-triangle-fill text-yellow-400 ml-2" title="{{ cliente.ultima_revision.check_alerts }}"></i>
+                        {% endif %}
+                    </td>
+                    <td class="px-4 py-3 text-cyan-400">{{ cliente.email }}<br>{{ cliente.telefono }}</td>
+                    <td class="px-4 py-3">
+                        {% if cliente.programa %}
+                        <span class="bg-blue-600 text-white px-3 py-1 rounded-full text-xs">{{ cliente.programa.nombre }}</span>
+                        {% else %}
+                        <span class="bg-gray-600 text-white px-3 py-1 rounded-full text-xs">Sin programa</span>
+                        {% endif %}
+                    </td>
+
+                    <td class="px-4 py-3 text-center">
+                        <a href="{% url 'clientes:detalle_cliente' cliente.id %}" class="px-4 py-3 font-bold text-green-400"><i class="bi bi-eye"></i> Ver</a>
+                        <a href="{% url 'clientes:editar_cliente' cliente.id %}" class="px-4 py-3 font-bold text-yellow-300"><i class="bi bi-pencil-square"></i> Editar</a>
+                        <a href="{% url 'clientes:eliminar_cliente' cliente.id %}" class="px-4 py-3 font-bold text-pink-400" onclick="return confirm('¿Estás seguro de eliminar este cliente?');"><i class="bi bi-trash"></i> Eliminar</a>
+                    </td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-center text-gray-400 italic">No hay clientes registrados.</p>
+        {% endif %}
+
+        <div class="text-end">
+            <a href="{% url 'clientes:agregar_cliente' %}" class="bg-gradient-to-r from-cyan-500 to-fuchsia-500 text-white font-semibold px-6 py-2 rounded-xl shadow-md hover:scale-105 transition">
+                <i class="bi bi-plus-circle"></i> Añadir nuevo cliente
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Script de filtrado por riesgo -->
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const toggleBtn = document.getElementById("toggle-alerts");
+        const alertaContador = document.getElementById("alerta-contador");
+        const clientes = document.querySelectorAll(".af-list-item");
+
+        let soloAlertas = false;
+
+        function actualizarContador() {
+            const total = clientes.length;
+            const conRiesgo = document.querySelectorAll(".cliente-riesgo").length;
+
+            let texto = `🟡 ${conRiesgo} cliente${conRiesgo !== 1 ? 's' : ''} en riesgo`;
+            texto += soloAlertas ? ` (mostrando solo alertas)` : ` (de ${total} en total)`;
+            alertaContador.textContent = texto;
+        }
+
+        toggleBtn.addEventListener("click", function () {
+            soloAlertas = !soloAlertas;
+
+            clientes.forEach(item => {
+                const esRiesgo = item.classList.contains("cliente-riesgo");
+                item.style.display = soloAlertas
+                    ? (esRiesgo ? "" : "none")
+                    : "";
+            });
+
+            toggleBtn.textContent = soloAlertas
+                ? "🔁 Mostrar todos los clientes"
+                : "👀 Mostrar solo clientes en riesgo";
+
+            actualizarContador();
+        });
+
+        actualizarContador();
+    });
+</script>
+{% endblock %}

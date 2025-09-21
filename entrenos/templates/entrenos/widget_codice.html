@@ -1,0 +1,232 @@
+<!-- ================================================================== -->
+<!-- WIDGET "CHARACTER SELECT" - VERSIÓN CON PRUEBAS MEJORADAS         -->
+<!-- ================================================================== -->
+
+<style>
+    /* --- Estilo "Character Select" --- */
+    @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap' );
+
+    .char-select-widget {
+        font-family: 'Press Start 2P', cursive;
+        background: #0d1117;
+        border: 4px solid #4a4a4a;
+        border-radius: 10px;
+        padding: 16px;
+        display: grid;
+        grid-template-columns: 1fr 1.5fr;
+        gap: 16px;
+        box-shadow: 0 0 20px rgba(0, 0, 0, 0.7);
+        margin: 20px 0;
+    }
+
+    /* --- Retrato del Personaje --- */
+    .char-portrait {
+        position: relative;
+        border: 4px solid #ffd700;
+        background: linear-gradient(45deg, #1a1a2e, #333);
+        overflow: hidden;
+        box-shadow: inset 0 0 15px rgba(0,0,0,0.8);
+    }
+    .char-portrait img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        filter: contrast(1.1) saturate(1.2);
+        opacity: 0.8;
+        transition: transform 0.3s ease;
+    }
+    .char-portrait:hover img { transform: scale(1.05); }
+
+    .char-name-plate {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: rgba(0, 0, 0, 0.8);
+        padding: 12px;
+        text-align: center;
+        border-top: 4px solid #ffd700;
+    }
+    .char-name-plate h3 {
+        color: #fff;
+        font-size: 14px;
+        margin: 0;
+        text-shadow: 2px 2px #ff0000;
+    }
+
+    /* --- Panel de Estadísticas --- */
+    .stats-panel { display: flex; flex-direction: column; justify-content: space-between; gap: 10px; }
+    .stat-bar-container { width: 100%; }
+    .stat-bar-label { color: #ffd700; font-size: 10px; margin-bottom: 5px; }
+    .progress-bar-outer { background: #333; border: 2px solid #4a4a4a; height: 25px; padding: 2px; }
+    .progress-bar-inner { background: linear-gradient(90deg, #ff4b2b, #ff8c00, #ffd700); height: 100%; transition: width 0.5s ease-out; }
+    .progress-value-text { color: #fff; font-size: 10px; text-align: right; margin-top: 4px; }
+    .stat-item { background: #161b22; border: 2px solid #30363d; padding: 10px; }
+    .stat-item .stat-label { color: #8b949e; font-size: 10px; }
+    .stat-item .stat-value { color: #58a6ff; font-size: 20px; margin-top: 5px; }
+    #racha-dias { color: #ff6b6b; }
+
+    /* --- INICIO: ESTILOS MEJORADOS PARA PRUEBAS ACTIVAS --- */
+    .pruebas-activas {
+        background: #161b22;
+        border: 2px solid #30363d;
+        padding: 15px;
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+    }
+    .pruebas-title {
+        color: #ffd700;
+        font-size: 10px;
+        margin-bottom: 10px;
+        text-align: center;
+        border-bottom: 2px solid #4a4a4a;
+        padding-bottom: 10px;
+    }
+    #pruebas-container {
+        display: flex;
+        flex-direction: column;
+        gap: 12px; /* Espacio entre pruebas */
+    }
+    .prueba-item {
+        font-family: Arial, sans-serif;
+    }
+    .prueba-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .prueba-nombre {
+        font-family: 'Press Start 2P', cursive; /* Fuente de videojuego */
+        color: #fff;
+        font-size: 10px; /* Tamaño ajustado para la fuente */
+    }
+    .prueba-recompensa {
+        font-family: 'Press Start 2P', cursive;
+        color: #ffd700; /* Dorado para la recompensa */
+        font-size: 10px;
+        white-space: nowrap; /* Evita que se parta en dos líneas */
+    }
+    .prueba-descripcion {
+        color: #8b949e;
+        font-size: 12px; /* Un poco más grande para legibilidad */
+        margin-top: 6px;
+    }
+    /* --- FIN: ESTILOS MEJORADOS PARA PRUEBAS ACTIVAS --- */
+
+    .next-level-plate { background: #c9513e; color: white; text-align: center; padding: 10px; border: 2px solid #ff8a78; }
+    .next-level-label { font-size: 8px; opacity: 0.8; }
+    .next-level-name { font-size: 14px; }
+
+    @media (max-width: 768px) {
+        .char-select-widget { grid-template-columns: 1fr; }
+        .char-portrait { height: 250px; }
+        .char-name-plate h3 { font-size: 12px; }
+    }
+</style>
+
+<!-- WIDGET DE SELECCIÓN DE ARQUETIPO -->
+<div class="char-select-widget">
+    <!-- Retrato del Personaje -->
+    <div class="char-portrait">
+        <img id="arquetipo-imagen" src="" alt="Arquetipo" style="display:none;">
+        <div class="char-name-plate">
+            <h3 id="nivel-actual">Cargando...</h3>
+        </div>
+    </div>
+
+    <!-- Panel de Estadísticas -->
+    <div class="stats-panel">
+        <div class="stat-bar-container">
+            <div class="stat-bar-label" id="progreso-label">PROGRESO 0%</div>
+            <div class="progress-bar-outer">
+                <div id="progreso-fill" class="progress-bar-inner" style="width: 0%;"></div>
+            </div>
+            <div id="progreso-text" class="progress-value-text">0 / 0</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-label">PUNTOS TOTALES</div>
+            <div class="stat-value" id="puntos-actuales">0</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-label">RACHA DE ENTRENOS</div>
+            <div class="stat-value" id="racha-dias">🔥 0 DÍA(S)</div>
+        </div>
+        <div class="pruebas-activas">
+            <div class="pruebas-title">⚔️ PRUEBAS LEGENDARIAS ACTIVAS</div>
+            <div id="pruebas-container">
+                <!-- Las pruebas se insertarán aquí dinámicamente -->
+            </div>
+        </div>
+        <div class="next-level-plate">
+            <div class="next-level-label">PRÓXIMO ARQUETIPO</div>
+            <div class="next-level-name" id="siguiente-nivel-text">Cargando...</div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        if (window.codiceWidgetInicializado) return;
+        window.codiceWidgetInicializado = true;
+
+        function cargarDatosCodeice() {
+            const clienteId = {{ cliente.id }};
+            fetch(`/entrenos/gamificacion-resumen/${clienteId}/`)
+                .then(response => response.json())
+                .then(data => {
+                    actualizarWidgetCharSelect(data);
+                })
+                .catch(error => console.error('Error:', error));
+        }
+
+        function actualizarWidgetCharSelect(data) {
+            // ... (código para actualizar imagen, nombre, progreso, etc. se mantiene igual) ...
+            const imgEl = document.getElementById('arquetipo-imagen');
+            if (data.imagen_url) { imgEl.src = data.imagen_url; imgEl.style.display = 'block'; }
+            document.getElementById('nivel-actual').textContent = data.nivel_actual || 'Aspirante';
+            const porcentaje = data.porcentaje_progreso || 0;
+            document.getElementById('progreso-label').textContent = `PROGRESO ${porcentaje}%`;
+            document.getElementById('progreso-fill').style.width = `${porcentaje}%`;
+            document.getElementById('progreso-text').textContent = `${data.puntos_actuales || 0} / ${data.puntos_siguiente || 0}`;
+            document.getElementById('puntos-actuales').textContent = data.puntos_actuales || 0;
+            document.getElementById('racha-dias').innerHTML = `🔥 ${data.racha_actual || 0} DÍA(S)`;
+            document.getElementById('siguiente-nivel-text').textContent = data.siguiente_nivel || '...';
+
+            // =======================================================
+            // INICIO DE LA CORRECCIÓN: LÓGICA PARA ACTUALIZAR PRUEBAS
+            // =======================================================
+            const pruebasContainer = document.getElementById('pruebas-container');
+            pruebasContainer.innerHTML = ''; // Limpiar el contenedor
+
+            if (data.pruebas_activas && data.pruebas_activas.length > 0) {
+                data.pruebas_activas.forEach(p => {
+                    const prueba = p.prueba;
+                    const pruebaElement = document.createElement('div');
+                    pruebaElement.className = 'prueba-item';
+                    // NUEVO: HTML con la recompensa de puntos
+                    pruebaElement.innerHTML = `
+                        <div class="prueba-header">
+                            <div class="prueba-nombre">${prueba.nombre}</div>
+                            <div class="prueba-recompensa">💰 ${prueba.puntos_recompensa || 100} PTS</div>
+                        </div>
+                        <div class="prueba-descripcion">${prueba.descripcion || 'Completa este desafío épico.'}</div>
+                    `;
+                    pruebasContainer.appendChild(pruebaElement);
+                });
+            } else {
+                pruebasContainer.innerHTML = `
+                    <div class="prueba-item">
+                        <div class="prueba-nombre" style="text-align: center; width: 100%;">🏆 ¡Todas las pruebas completadas!</div>
+                    </div>
+                `;
+            }
+            // =======================================================
+            // FIN DE LA CORRECCIÓN
+            // =======================================================
+        }
+
+        cargarDatosCodeice();
+        setInterval(cargarDatosCodeice, 30000);
+    });
+</script>

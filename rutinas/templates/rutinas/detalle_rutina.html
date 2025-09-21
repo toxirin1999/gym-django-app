@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Detalle de Rutina{% endblock %}
+
+{% block content %}
+<div class="main-wrapper space-y-6 max-w-6xl mx-auto">
+
+    <!-- ENCABEZADO -->
+    <div class="header-halo flex justify-between items-center bg-[#1E1E1E] p-6 rounded-2xl shadow-md">
+        <h2 class="title">{{ rutina.nombre }}</h2>
+        <a href="{% url 'agregar_ejercicio' rutina.id %}" class="bg-gradient-to-r from-green-400 to-lime-500 hover:scale-105 transition text-black font-semibold px-4 py-2 rounded-xl shadow-md">
+            <i class="bi bi-plus-lg"></i> Agregar Ejercicio
+        </a>
+    </div>
+
+    <!-- TABLA DE EJERCICIOS -->
+    {% if rutina.rutinaejercicio_set.all %}
+    <div class="overflow-x-auto">
+        <table class="w-full table-auto text-sm text-left text-white shadow-lg rounded-xl overflow-hidden">
+            <thead class="bg-gradient-to-r from-[#31cff4] to-[#160f29] text-black uppercase text-xs tracking-wider">
+            <tr>
+                <th class="px-4 py-3">Nombre</th>
+                <th class="px-4 py-3">Grupo Muscular</th>
+                <th class="px-4 py-3">Equipo</th>
+                <th class="px-4 py-3">Series</th>
+                <th class="px-4 py-3">Repeticiones</th>
+                <th class="px-4 py-3">Peso (kg)</th>
+                <th class="px-4 py-3 text-center">Acciones</th>
+            </tr>
+            </thead>
+            <tbody class="bg-[#121212] divide-y divide-gray-700">
+            {% for rutina_ejercicio in rutina.rutinaejercicio_set.all %}
+            <tr class="hover:bg-[#1f1f1f] transition">
+                <td class="px-4 py-3">{{ rutina_ejercicio.ejercicio.nombre }}</td>
+                <td class="px-4 py-3 text-cyan-400">{{ rutina_ejercicio.ejercicio.grupo_muscular }}</td>
+                <td class="px-4 py-3">{{ rutina_ejercicio.ejercicio.equipo }}</td>
+                <td class="px-4 py-3 font-bold text-green-400">{{ rutina_ejercicio.series }}</td>
+                <td class="px-4 py-3 font-bold text-yellow-300">{{ rutina_ejercicio.repeticiones }}</td>
+                <td class="px-4 py-3 font-bold text-pink-400">{{ rutina_ejercicio.peso_kg }}</td>
+                <td class="px-4 py-3 text-center">
+                    <a href="{% url 'editar_rutina_ejercicio' rutina_ejercicio.id %}" class="btn-fucsia text-xs">
+                        <i class="bi bi-pencil-square"></i> Editar
+                    </a>
+                    <a href="{% url 'eliminar_rutina_ejercicio' rutina_ejercicio.id %}" class="btn-rojo text-xs ml-2"
+                       onclick="return confirm('¿Estás seguro de eliminar este ejercicio?');">
+                        <i class="bi bi-trash"></i> Eliminar
+                    </a>
+                </td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="text-center text-gray-400 italic">Esta rutina no tiene ejercicios asignados.</div>
+    {% endif %}
+
+    <!-- VOLVER -->
+    <div class="text-center mt-6">
+        <a href="{% url 'detalle_programa' rutina.programa.id %}"
+           class="bg-gradient-to-r from-fuchsia-500 to-cyan-500 text-white font-semibold px-6 py-2 rounded-xl shadow-md hover:scale-105 transition">
+            <i class="bi bi-arrow-left"></i> Volver al Programa
+        </a>
+    </div>
+
+</div>
+{% endblock %}

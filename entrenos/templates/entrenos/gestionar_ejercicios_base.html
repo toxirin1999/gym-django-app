@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Biblioteca de Ejercicios{% endblock %}
+
+{% block content %}
+<div class="main-wrapper space-y-6 max-w-6xl mx-auto px-4 py-8">
+
+    <!-- ENCABEZADO -->
+    <div class="header-halo flex flex-col sm:flex-row justify-between items-center bg-[#1E1E1E] p-6 rounded-2xl shadow-md gap-4">
+        <div>
+            <h2 class="title text-2xl sm:text-3xl font-bold text-white">Biblioteca de Ejercicios</h2>
+            <p class="text-gray-400">Gestiona tu base de datos de ejercicios.</p>
+        </div>
+        <!-- Botón para abrir el modal de añadir ejercicio -->
+        <button onclick="document.getElementById('add-exercise-modal').classList.remove('hidden')" class="bg-gradient-to-r from-green-400 to-lime-500 hover:scale-105 transition text-black font-semibold px-4 py-2 rounded-xl shadow-md flex items-center gap-2 w-full sm:w-auto justify-center">
+            <i class="bi bi-plus-lg"></i> Añadir Nuevo Ejercicio
+        </button>
+    </div>
+
+
+    <!-- Formulario de Búsqueda y Acciones -->
+    <form method="POST" action="{% url 'entrenos:gestionar_ejercicios_base' %}" class="bg-[#1E1E1E] p-4 rounded-2xl shadow-md">
+        {% csrf_token %}
+        <div class="flex flex-col sm:flex-row gap-4 items-center">
+            <!-- Campo de búsqueda -->
+            <div class="flex-grow w-full">
+                <input type="text" name="buscar" placeholder="Buscar por nombre..." value="{{ query|default:'' }}"
+                       class="w-full bg-[#121212] border-2 border-gray-700 rounded-xl text-white p-3 placeholder-gray-500 focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/50 transition-all"
+                       onchange="this.form.submit()">
+            </div>
+            <!-- Botón de eliminar seleccionados -->
+            <button type="submit" name="delete_selected" class="btn-rojo w-full sm:w-auto justify-center" onclick="return confirm('¿Estás seguro de que quieres eliminar los ejercicios seleccionados?');">
+                <i class="bi bi-trash"></i> Eliminar Seleccionados
+            </button>
+        </div>
+
+
+        <!-- TABLA DE EJERCICIOS -->
+        <div class="overflow-x-auto mt-6">
+            <table class="w-full table-auto text-sm text-left text-white shadow-lg rounded-xl overflow-hidden">
+                <thead class="bg-gradient-to-r from-[#31cff4] to-[#160f29] text-black uppercase text-xs tracking-wider">
+                <tr>
+                    <th class="px-4 py-3"><input type="checkbox" id="select-all" class="bg-gray-700 border-gray-600 rounded text-cyan-500 focus:ring-cyan-500"></th>
+                    <th class="px-4 py-3">Nombre</th>
+                    <th class="px-4 py-3">Grupo Muscular</th>
+                    <th class="px-4 py-3">Equipo</th>
+                </tr>
+                </thead>
+                <tbody class="bg-[#121212] divide-y divide-gray-700">
+                {% for ejercicio in page_obj %}
+                <tr class="hover:bg-[#1f1f1f] transition">
+                    <td class="px-4 py-3"><input type="checkbox" name="ejercicio_ids" value="{{ ejercicio.id }}" class="ejercicio-checkbox bg-gray-700 border-gray-600 rounded text-cyan-500 focus:ring-cyan-500"></td>
+                    <td class="px-4 py-3 font-medium">{{ ejercicio.nombre }}</td>
+                    <td class="px-4 py-3 text-cyan-400">{{ ejercicio.grupo_muscular }}</td>
+                    <td class="px-4 py-3 text-gray-300">{{ ejercicio.equipo }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="4" class="text-center p-8 text-gray-400 italic">
+                        No se encontraron ejercicios. ¡Añade el primero desde el botón de arriba!
+                    </td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </form>
+
+    <!-- Paginación -->
+    {% if page_obj.has_other_pages %}
+    <div class="flex justify-center items-center gap-4 mt-6">
+        {% if page_obj.has_previous %}
+        <a href="?page={{ page_obj.previous_page_number }}{% if query %}&buscar={{ query }}{% endif %}" class="bg-gradient-to-r from-fuchsia-500 to-cyan-500 text-white font-semibold px-4 py-2 rounded-lg hover:scale-105 transition">Anterior</a>
+        {% endif %}
+        <span class="text-gray-300 font-medium">
+            Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
+        </span>
+        {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}{% if query %}&buscar={{ query }}{% endif %}" class="bg-gradient-to-r from-fuchsia-500 to-cyan-500 text-white font-semibold px-4 py-2 rounded-lg hover:scale-105 transition">Siguiente</a>
+        {% endif %}
+    </div>
+    {% endif %}
+
+</div>
+
+<!-- MODAL PARA AÑADIR NUEVO EJERCICIO -->
+<div id="add-exercise-modal" class="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center hidden z-50" onclick="event.target == this && this.classList.add('hidden')">
+    <div class="bg-[#1E1E1E] p-8 rounded-2xl shadow-2xl w-full max-w-md space-y-6 border border-gray-700">
+        <h3 class="title text-2xl text-white text-center">Añadir Nuevo Ejercicio</h3>
+        <form method="POST" action="{% url 'entrenos:gestionar_ejercicios_base' %}">
+            {% csrf_token %}
+            <div class="space-y-4">
+                <div>
+                    <label for="{{ form_para_anadir.nombre.id_for_label }}" class="block mb-2 text-sm font-medium text-cyan-400">Nombre del Ejercicio</label>
+                    {{ form_para_anadir.nombre }}
+                </div>
+                <div>
+                    <label for="{{ form_para_anadir.grupo_muscular.id_for_label }}" class="block mb-2 text-sm font-medium text-cyan-400">Grupo Muscular</label>
+                    {{ form_para_anadir.grupo_muscular }}
+                </div>
+                <div>
+                    <label for="{{ form_para_anadir.equipo.id_for_label }}" class="block mb-2 text-sm font-medium text-cyan-400">Equipo Necesario</label>
+                    {{ form_para_anadir.equipo }}
+                </div>
+            </div>
+            <div class="flex gap-4 mt-8">
+                <button type="button" onclick="document.getElementById('add-exercise-modal').classList.add('hidden')" class="btn-rojo w-full justify-center">
+                    Cancelar
+                </button>
+                <button type="submit" name="add_exercise" class="bg-gradient-to-r from-green-400 to-lime-500 hover:scale-105 transition text-black font-semibold px-4 py-2 rounded-xl shadow-md flex items-center gap-2 w-full justify-center">
+                    <i class="bi bi-check-lg"></i> Guardar Ejercicio
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+
+<script>
+    // Script para el checkbox "seleccionar todo"
+    document.getElementById('select-all').addEventListener('click', function(event) {
+        const checkboxes = document.querySelectorAll('.ejercicio-checkbox');
+        checkboxes.forEach(checkbox => {
+            checkbox.checked = event.target.checked;
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,167 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+<div class="bg-[#0d1117] text-white rounded-2xl p-6 shadow-xl max-w-6xl mx-auto mt-8 space-y-10">
+
+    <h2 class="text-2xl font-bold text-cyan-400">🏋️ Ejercicios Realizados</h2>
+
+    <!-- Tabla de ejercicios -->
+    <div class="overflow-x-auto rounded-xl shadow">
+        <table class="min-w-full text-sm text-left text-gray-300 bg-[#1a1a1a] border border-gray-700">
+            <thead class="text-xs uppercase bg-[#1f1f1f] text-cyan-300">
+            <tr>
+                <th class="px-4 py-2">Ejercicio</th>
+                <th class="px-4 py-2">Peso</th>
+                <th class="px-4 py-2">Repeticiones</th>
+                <th class="px-4 py-2">¿Completado?</th>
+                <th class="px-4 py-2">Fecha</th>
+                <th class="px-4 py-2">Cliente</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for e in ejercicios %}
+            <tr class="border-b border-gray-700 {% if e.completado %}bg-[#132e21]{% else %}bg-[#2e1b1b]{% endif %}">
+                <td class="px-4 py-2">{{ e.nombre }}</td>
+                <td class="px-4 py-2">{{ e.peso }}</td>
+                <td class="px-4 py-2">{{ e.repeticiones }}</td>
+                <td class="px-4 py-2 text-lg">{% if e.completado %}✔️{% else %}❌{% endif %}</td>
+                <td class="px-4 py-2">{{ e.fecha }}</td>
+                <td class="px-4 py-2">{{ e.cliente }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="6" class="text-center py-4 text-red-400">No hay ejercicios registrados</td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        {% if page_obj.has_other_pages %}
+        <div class="flex justify-center mt-6">
+            <div class="bg-[#1a1a1a] px-4 py-2 rounded-full shadow text-sm text-gray-300">
+                {% if page_obj.has_previous %}
+                <a href="?page={{ page_obj.previous_page_number }}{% if filtro %}&filtro={{ filtro }}{% endif %}" class="mr-4 text-cyan-400 hover:underline">← Anteriores</a>
+                {% endif %}
+                Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
+                {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}{% if filtro %}&filtro={{ filtro }}{% endif %}" class="ml-4 text-cyan-400 hover:underline">Siguientes →</a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+    </div>
+
+    <!-- Filtro activo -->
+    {% if filtro %}
+    <div class="text-yellow-400 text-sm">
+        Filtrando por: <strong>{{ filtro }}</strong> |
+        <a href="{% url 'entrenos:tabla_ejercicios' %}">Quitar filtro</a>
+
+    </div>
+    {% endif %}
+
+    <!-- Ranking -->
+    <div class="bg-[#1e1e1e] rounded-xl p-6 shadow-lg">
+        <h3 class="text-lg font-bold mb-4 text-white">🏆 Ranking de Ejercicios Más Realizados</h3>
+        <table class="min-w-full text-sm text-left text-gray-300">
+            <thead class="text-xs uppercase bg-[#2a2a2a] text-cyan-400">
+            <tr>
+                <th class="px-4 py-2">Ejercicio</th>
+                <th class="px-4 py-2">Veces</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for item in ejercicios_mas_realizados %}
+            <tr class="border-b border-gray-700">
+                <td class="px-4 py-2">
+                    <a href="?filtro={{ item.nombre }}" class="text-[#ffaa00] hover:underline">{{ item.nombre }}</a>
+                </td>
+                <td class="px-4 py-2">{{ item.veces }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="2" class="text-center py-4 text-red-500">No hay datos disponibles</td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Gráfico dinámico -->
+    <div class="bg-[#1e1e1e] rounded-xl p-6 shadow-lg">
+        <h3 class="text-lg font-bold mb-4 text-white">📊 Gráfico de Ejercicios Más Realizados</h3>
+        <canvas id="graficoEjercicios" height="220"></canvas>
+    </div>
+    <div class="bg-[#1e1e1e] rounded-xl p-6 shadow-lg mt-10">
+        <h3 class="text-lg font-bold mb-4 text-white">🏋️ Mayor Peso por Ejercicio</h3>
+        <table class="min-w-full text-sm text-left text-gray-300">
+            <thead class="text-xs uppercase bg-[#2a2a2a] text-cyan-400">
+            <tr>
+                <th class="px-4 py-2">Ejercicio</th>
+                <th class="px-4 py-2">Peso Máximo</th>
+                <th class="px-4 py-2">Repeticiones</th>
+                <th class="px-4 py-2">Fecha</th>
+                <th class="px-4 py-2">Cliente</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for e in mayores_por_ejercicio %}
+            <tr class="border-b border-gray-700">
+                <td class="px-4 py-2">
+                    <a href="{% url 'entrenos:detalle_ejercicio' e.nombre %}" class="text-[#00ffff] hover:underline">
+                        {{ e.nombre }}
+                    </a>
+                </td>
+                <td class="px-4 py-2 text-green-400 font-semibold">{{ e.peso }}</td>
+                <td class="px-4 py-2">{{ e.repeticiones }}</td>
+                <td class="px-4 py-2">{{ e.fecha }}</td>
+                <td class="px-4 py-2">{{ e.cliente }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="5" class="text-center py-4 text-red-400">No hay registros válidos.</td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+</div>
+
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    const ctx = document.getElementById('graficoEjercicios');
+    const data = {
+      labels: [{% for item in ejercicios_mas_realizados %}"{{ item.nombre }}"{% if not forloop.last %}, {% endif %}{% endfor %}],
+      datasets: [{
+        label: 'Veces realizado',
+        data: [{% for item in ejercicios_mas_realizados %}{{ item.veces }}{% if not forloop.last %}, {% endif %}{% endfor %}],
+        backgroundColor: 'rgba(0, 255, 255, 0.5)',
+        borderColor: 'rgba(0, 255, 255, 1)',
+        borderWidth: 1
+      }]
+    };
+    new Chart(ctx, {
+      type: 'bar',
+      data: data,
+      options: {
+        indexAxis: 'y',
+        scales: {
+          x: {
+            beginAtZero: true,
+            ticks: { color: '#ccc' },
+            grid: { color: '#333' }
+          },
+          y: {
+            ticks: { color: '#ccc' },
+            grid: { color: '#333' }
+          }
+        },
+        plugins: {
+          legend: { display: false }
+        }
+      }
+    });
+</script>
+{% endblock %}

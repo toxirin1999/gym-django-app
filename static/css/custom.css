@@ -1,0 +1,105 @@
+/* ===== Joi Fitness+ Main Styles ===== */
+
+body {
+  background-color: #000;
+  font-family: 'Inter', sans-serif;
+  color: white;
+  padding: 32px 16px;
+  margin: 0;
+}
+
+h1, h2, h3 {
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+
+.card, .af-card {
+  background: linear-gradient(135deg, #1a1a1a, #2b2b2b);
+  border-radius: 1rem;
+  box-shadow: 0 0 30px rgba(0, 0, 0, 0.5);
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.metric-box {
+  background-color: #111111;
+  border-radius: 1rem;
+  text-align: center;
+  padding: 1.5rem;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.4);
+}
+
+.metric-box h3 {
+  font-size: 2rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.metric-box p {
+  font-size: 0.85rem;
+  color: #888;
+}
+
+button.emoji-btn {
+  background: none;
+  border: none;
+  font-size: 2rem;
+  cursor: pointer;
+  padding: 0.5rem;
+  transition: transform 0.2s ease;
+}
+
+button.emoji-btn:hover {
+  transform: scale(1.2);
+}
+
+.joi-image {
+  border-radius: 9999px;
+  width: 6rem;
+  box-shadow: 0 0 30px rgba(0, 255, 255, 0.4);
+  border: 2px solid #00ffff;
+}
+
+.joi-dialogue {
+  background: rgba(0, 255, 255, 0.1);
+  border-radius: 0.75rem;
+  padding: 1rem;
+  font-style: italic;
+  margin-bottom: 2rem;
+}
+
+.remember-box {
+  background: linear-gradient(135deg, #4b0082, #6a0dad);
+  padding: 1.5rem;
+  border-radius: 1rem;
+  color: white;
+  box-shadow: 0 0 25px rgba(100, 0, 255, 0.2);
+  margin-bottom: 2rem;
+}
+
+.badge {
+  background: rgba(255, 255, 255, 0.1);
+  color: #32FF00;
+  font-size: 0.75rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 1rem;
+  margin: 0.25rem;
+  display: inline-block;
+}
+
+ul.timeline {
+  list-style: none;
+  padding: 0;
+}
+
+ul.timeline li {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #333;
+}
+
+ul.timeline li span {
+  color: #aaa;
+  font-size: 0.85rem;
+}

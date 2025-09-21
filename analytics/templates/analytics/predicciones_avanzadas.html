@@ -1,0 +1,729 @@
+<!-- 🔮 PREDICCIONES AVANZADAS CON IA - VERSIÓN FINAL CORREGIDA -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Predicciones Avanzadas - {{ cliente.nombre|default:"Usuario" }}</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <style>
+        /* Estilos mejorados con mejor responsividad */
+        :root {
+            --primary-color: #667eea;
+            --secondary-color: #764ba2;
+            --accent-color: #f093fb;
+            --success-color: #4facfe;
+            --warning-color: #43e97b;
+            --danger-color: #fa709a;
+            --error-color: #ff6b6b;
+            --info-color: #74b9ff;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        .header h1 {
+            margin: 0 0 10px 0;
+            color: var(--primary-color);
+            font-size: 2.5rem;
+            font-weight: 700;
+        }
+
+        .header p {
+            margin: 0;
+            color: #666;
+            font-size: 1.1rem;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        .card h2 {
+            margin: 0 0 20px 0;
+            color: var(--primary-color);
+            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr auto;
+            gap: 20px;
+            align-items: end;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group label {
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .form-group select,
+        .form-group input {
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .form-group select:focus,
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 180px;
+            justify-content: center;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .loading {
+            display: none;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .alert {
+            padding: 15px 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .alert-warning {
+            background: rgba(255, 193, 7, 0.1);
+            border: 1px solid rgba(255, 193, 7, 0.3);
+            color: #856404;
+        }
+
+        .alert-info {
+            background: rgba(13, 202, 240, 0.1);
+            border: 1px solid rgba(13, 202, 240, 0.3);
+            color: #055160;
+        }
+
+        .alert-success {
+            background: rgba(25, 135, 84, 0.1);
+            border: 1px solid rgba(25, 135, 84, 0.3);
+            color: #0f5132;
+        }
+
+        .prediccion-resultado {
+            display: none;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+            margin-top: 25px;
+
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 30px;
+
+        }
+
+        .prediccion-resultado.show {
+            display: grid;
+        }
+
+        .prediccion-grafico {
+            height: 400px;
+            position: relative;
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 15px;
+            padding: 15px;
+        }
+
+        .prediccion-detalles {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+            border-radius: 15px;
+            padding: 20px;
+        }
+
+        .prediccion-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        .prediccion-item:last-child {
+            border-bottom: none;
+        }
+
+        .prediccion-item span {
+            font-weight: 500;
+        }
+
+        .prediccion-item strong {
+            color: var(--primary-color);
+        }
+
+        .confianza-indicator {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .confianza-bar {
+            width: 100px;
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .confianza-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--danger-color), var(--warning-color), var(--success-color));
+            transition: width 0.3s ease;
+        }
+
+        .riesgo-card {
+            background: linear-gradient(135deg, rgba(116, 185, 255, 0.1), rgba(240, 147, 251, 0.1));
+            border-radius: 15px;
+            padding: 20px;
+        }
+
+        .riesgo-nivel {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 15px;
+        }
+
+        .riesgo-bajo {
+            background: rgba(25, 135, 84, 0.2);
+            color: #0f5132;
+        }
+
+        .riesgo-medio {
+            background: rgba(255, 193, 7, 0.2);
+            color: #856404;
+        }
+
+        .riesgo-alto {
+            background: rgba(220, 53, 69, 0.2);
+            color: #721c24;
+        }
+
+        .recomendaciones-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .recomendacion-item {
+            background: rgba(255, 255, 255, 0.7);
+            border-radius: 10px;
+            padding: 15px;
+            border-left: 4px solid var(--primary-color);
+        }
+
+        .recomendacion-item h4 {
+            margin: 0 0 10px 0;
+            color: var(--primary-color);
+        }
+
+        .recomendacion-item p {
+            margin: 0;
+            color: #666;
+            line-height: 1.5;
+        }
+
+        @media (max-width: 768px) {
+            .form-grid {
+                grid-template-columns: 1fr;
+                gap: 15px;
+            }
+
+            .prediccion-resultado {
+                grid-template-columns: 1fr;
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .card {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <!-- Header -->
+    <div class="header">
+        <h1>🔮 Predicciones Avanzadas con IA</h1>
+        <p>{{ cliente.nombre|default:"david" }} - Modelos predictivos de rendimiento</p>
+    </div>
+
+    <!-- Configuración de Predicción -->
+    <div class="card">
+        <h2>⚙️ Configurar Predicción</h2>
+
+        {% if ejercicios_disponibles %}
+        <form id="prediccionForm">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="ejercicio">Ejercicio:</label>
+                    <select id="ejercicio" name="ejercicio" required>
+                        <option value="">Seleccionar ejercicio...</option>
+                        {% for ejercicio in ejercicios_disponibles %}
+                        <option value="{{ ejercicio }}">{{ ejercicio }}</option>
+                        {% endfor %}
+
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="semanas">Semanas a predecir:</label>
+                    <input type="number" id="semanas" name="semanas" min="1" max="12" value="4" required>
+                </div>
+
+                <button type="submit" class="btn-primary" id="btnGenerar">
+                    <span class="loading">⟳</span>
+                    <span class="btn-text">Generar Predicción</span>
+                </button>
+            </div>
+        </form>
+        {% else %}
+        <div class="alert alert-warning">
+            ⚠️ <strong>No hay ejercicios disponibles para predicción</strong><br>
+            Necesitas al menos 2 registros del mismo ejercicio para generar predicciones.
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Resultados de Predicción -->
+    <div id="resultadosPrediccion" class="prediccion-resultado">
+        <div class="prediccion-grafico">
+            <canvas id="graficoPrediccion"></canvas>
+        </div>
+
+        <div class="prediccion-detalles">
+            <h3>📊 Detalles de la Predicción</h3>
+            <div id="detallesPrediccion">
+                <!-- Los detalles se cargarán aquí -->
+            </div>
+        </div>
+    </div>
+    <!-- Evaluación de Riesgo de Lesión -->
+    <div class="card">
+        <h2>🛡️ Evaluación de Riesgo de Lesión</h2>
+
+        <div class="riesgo-card">
+            <div class="riesgo-nivel riesgo-{{ riesgo_nivel|default:'bajo' }}">
+                Nivel de Riesgo: {{ riesgo_nivel|default:'Bajo' }} ({{ riesgo_puntuacion|default:'15' }}/100)
+            </div>
+
+            <div class="recomendaciones-grid">
+                {% if riesgo_mensaje_factores %}
+                <div class="recomendacion-item">
+                    <h4>🔍 Factores Detectados</h4>
+                    <p>{{ riesgo_mensaje_factores|safe }}</p>
+                </div>
+                {% endif %}
+
+                <div class="recomendacion-item">
+                    <h4>📈 Progresión</h4>
+                    <p>{{ riesgo_mensaje_progresion }}</p>
+                </div>
+
+                <div class="recomendacion-item">
+                    <h4>🛌 Recuperación</h4>
+                    <p>{{ riesgo_mensaje_recuperacion }}</p>
+                </div>
+
+                <div class="recomendacion-item">
+                    <h4>✅ Sugerencias</h4>
+                    <ul>
+                        {% for rec in riesgo_recomendaciones %}
+                        <li>{{ rec }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Optimización de Carga de Entrenamiento -->
+    
+    <div class="card">
+
+        <h2>⚡ Optimización de Carga de Entrenamiento</h2>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 20px;">
+            <div style="text-align: center; padding: 20px; background: rgba(102, 126, 234, 0.1); border-radius: 15px;">
+                <h3 style="margin: 0; color: var(--primary-color);">Volumen Óptimo</h3>
+                <p style="font-size: 1.5rem; font-weight: bold; margin: 10px 0; color: #333;">{{ volumen_optimo|default:'12-16' }}</p>
+                <p style="margin: 0; color: #666; font-size: 0.9rem;">Series por semana</p>
+            </div>
+
+            <div style="text-align: center; padding: 20px; background: rgba(118, 75, 162, 0.1); border-radius: 15px;">
+                <h3 style="margin: 0; color: var(--secondary-color);">Intensidad</h3>
+                <p style="font-size: 1.5rem; font-weight: bold; margin: 10px 0; color: #333;">{{ intensidad_optima|default:'75-85%' }}</p>
+                <p style="margin: 0; color: #666; font-size: 0.9rem;">1RM recomendado</p>
+            </div>
+
+            <div style="text-align: center; padding: 20px; background: rgba(240, 147, 251, 0.1); border-radius: 15px;">
+                <h3 style="margin: 0; color: var(--accent-color);">Frecuencia</h3>
+                <p style="font-size: 1.5rem; font-weight: bold; margin: 10px 0; color: #333;">{{ frecuencia_optima|default:'3-4' }}</p>
+                <p style="margin: 0; color: #666; font-size: 0.9rem;">Días por semana</p>
+            </div>
+        </div>
+
+        <div style="background: rgba(255, 255, 255, 0.7); border-radius: 15px; padding: 20px;">
+            <h4 style="margin: 0 0 15px 0; color: var(--primary-color);">📈 Recomendaciones de Optimización:</h4>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
+                {% for optimizacion in optimizaciones|default:optimizaciones_default %}
+                <div style="padding: 15px; background: rgba(102, 126, 234, 0.05); border-radius: 10px; border-left: 3px solid var(--primary-color);">
+                    <h5 style="margin: 0 0 8px 0; color: var(--primary-color);">{{ optimizacion.titulo|default:'Semana 1' }}</h5>
+                    <p style="margin: 0; color: #666; font-size: 0.9rem;">{{ optimizacion.descripcion|default:'Volumen moderado (12-14 series) | Intensidad 75-80% | Frecuencia 3 días' }}</p>
+                </div>
+                {% empty %}
+                <div style="padding: 15px; background: rgba(102, 126, 234, 0.05); border-radius: 10px; border-left: 3px solid var(--primary-color);">
+                    <h5 style="margin: 0 0 8px 0; color: var(--primary-color);">Semana 1-2</h5>
+                    <p style="margin: 0; color: #666; font-size: 0.9rem;">Volumen moderado (12-14 series) | Intensidad 75-80% | Frecuencia 3 días</p>
+                </div>
+                <div style="padding: 15px; background: rgba(118, 75, 162, 0.05); border-radius: 10px; border-left: 3px solid var(--secondary-color);">
+                    <h5 style="margin: 0 0 8px 0; color: var(--secondary-color);">Semana 3-4</h5>
+                    <p style="margin: 0; color: #666; font-size: 0.9rem;">Volumen alto (15-16 series) | Intensidad 80-85% | Frecuencia 4 días</p>
+                </div>
+                <div style="padding: 15px; background: rgba(240, 147, 251, 0.05); border-radius: 10px; border-left: 3px solid var(--accent-color);">
+                    <h5 style="margin: 0 0 8px 0; color: var(--accent-color);">Semana 5-6</h5>
+                    <p style="margin: 0; color: #666; font-size: 0.9rem;">Volumen reducido (10-12 series) | Intensidad 85-90% | Frecuencia 3 días</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let graficoPrediccion = null;
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.getElementById('prediccionForm');
+        const btnGenerar = document.getElementById('btnGenerar');
+        const loading = btnGenerar.querySelector('.loading');
+        const btnText = btnGenerar.querySelector('.btn-text');
+        const ejercicioSelect = document.getElementById('ejercicio');
+        const semanasInput = document.getElementById('semanas');
+        const resultadosDiv = document.getElementById('resultadosPrediccion');
+        const detallesDiv = document.getElementById('detallesPrediccion');
+
+        // Manejar envío del formulario
+        if (form) {
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                generarPrediccion();
+            });
+        }
+
+        // Validación del formulario
+        function validarFormulario() {
+            const ejercicio = ejercicioSelect.value;
+            const semanas = semanasInput.value;
+
+            if (ejercicio && semanas && semanas >= 1 && semanas <= 12) {
+                btnGenerar.disabled = false;
+            } else {
+                btnGenerar.disabled = true;
+            }
+        }
+
+        // Event listeners para validación
+        if (ejercicioSelect) ejercicioSelect.addEventListener('change', validarFormulario);
+        if (semanasInput) semanasInput.addEventListener('input', validarFormulario);
+
+        // Validación inicial
+        validarFormulario();
+
+        // Función para generar predicción
+        function generarPrediccion() {
+            const ejercicio = ejercicioSelect.value;
+            const semanas = parseInt(semanasInput.value);
+
+            if (!ejercicio || !semanas) {
+                alert('Por favor, selecciona un ejercicio y especifica las semanas.');
+                return;
+            }
+
+            // Mostrar estado de carga
+            btnGenerar.disabled = true;
+            loading.style.display = 'inline-block';
+            btnText.textContent = 'Generando...';
+
+            // Simular llamada a API (reemplazar con llamada real)
+            setTimeout(() => {
+                try {
+                    // Datos de ejemplo - reemplazar con datos reales de la API
+                    const prediccionData = generarDatosEjemplo(ejercicio, semanas);
+                    mostrarResultados(prediccionData);
+                } catch (error) {
+                    console.error('Error generando predicción:', error);
+                    alert('Error generando la predicción. Inténtalo de nuevo.');
+                } finally {
+                    // Restaurar estado del botón
+                    btnGenerar.disabled = false;
+                    loading.style.display = 'none';
+                    btnText.textContent = 'Generar Predicción';
+                }
+            }, 2000);
+        }
+
+        // Función para generar datos de ejemplo
+        function generarDatosEjemplo(ejercicio, semanas) {
+            const pesoActual = 50 + Math.random() * 50; // 50-100kg
+            const mejora = 1 + Math.random() * 4; // 1-5kg mejora
+            const confianza = 70 + Math.random() * 20; // 70-90% confianza
+
+            return {
+                ejercicio: ejercicio,
+                peso_actual: pesoActual,
+                peso_predicho: pesoActual + mejora,
+                mejora_estimada: mejora,
+                porcentaje_mejora: (mejora / pesoActual) * 100,
+                confianza: confianza,
+                semanas: semanas,
+                datos_historicos: generarDatosHistoricos(pesoActual, semanas),
+                recomendaciones: [
+                    'Mantén la progresión gradual actual',
+                    'Incluye ejercicios de apoyo',
+                    'Monitorea la técnica de ejecución'
+                ]
+            };
+        }
+
+        // Función para generar datos históricos
+        function generarDatosHistoricos(pesoBase, semanas) {
+            const datos = [];
+            const fechaInicio = new Date();
+            fechaInicio.setDate(fechaInicio.getDate() - (semanas * 7));
+
+            for (let i = 0; i <= semanas; i++) {
+                const fecha = new Date(fechaInicio);
+                fecha.setDate(fecha.getDate() + (i * 7));
+
+                let peso;
+                if (i < semanas) {
+                    // Datos históricos con variación
+                    peso = pesoBase + (Math.random() - 0.5) * 4;
+                } else {
+                    // Predicción futura
+                    peso = pesoBase + 1 + Math.random() * 4;
+                }
+
+                datos.push({
+                    fecha: fecha.toISOString().split('T')[0],
+                    peso: peso,
+                    tipo: i < semanas ? 'historico' : 'prediccion'
+                });
+            }
+
+            return datos;
+        }
+
+        // Función para mostrar resultados
+        function mostrarResultados(data) {
+            // Mostrar detalles
+            detallesDiv.innerHTML = `
+                <div class="prediccion-item">
+                    <span>Ejercicio:</span>
+                    <strong>${data.ejercicio}</strong>
+                </div>
+                <div class="prediccion-item">
+                    <span>Peso Actual:</span>
+                    <strong>${data.peso_actual.toFixed(1)} kg</strong>
+                </div>
+                <div class="prediccion-item">
+                    <span>Peso Predicho:</span>
+                    <strong>${data.peso_predicho.toFixed(1)} kg</strong>
+                </div>
+                <div class="prediccion-item">
+                    <span>Mejora Estimada:</span>
+                    <strong>+${data.mejora_estimada.toFixed(1)} kg (${data.porcentaje_mejora.toFixed(1)}%)</strong>
+                </div>
+                <div class="prediccion-item">
+                    <span>Período:</span>
+                    <strong>${data.semanas} semana(s)</strong>
+                </div>
+                <div class="prediccion-item">
+                    <span>Confianza:</span>
+                    <div class="confianza-indicator">
+                        <div class="confianza-bar">
+                            <div class="confianza-fill" style="width: ${data.confianza}%"></div>
+                        </div>
+                        <strong>${data.confianza.toFixed(1)}%</strong>
+                    </div>
+                </div>
+                <div style="margin-top: 20px;">
+                    <h4>💡 Recomendaciones:</h4>
+                    <ul style="margin: 10px 0; padding-left: 20px; color: #666;">
+                        ${data.recomendaciones.map(rec => `<li>${rec}</li>`).join('')}
+                    </ul>
+                </div>
+            `;
+
+            // Crear gráfico
+            crearGrafico(data.datos_historicos);
+
+            // Mostrar resultados
+            resultadosDiv.classList.add('show');
+            resultadosDiv.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Función para crear gráfico
+        function crearGrafico(datos) {
+            const ctx = document.getElementById('graficoPrediccion').getContext('2d');
+
+            // Destruir gráfico anterior si existe
+            if (graficoPrediccion) {
+                graficoPrediccion.destroy();
+            }
+
+            const labels = datos.map(d => d.fecha);
+            const datosHistoricos = datos.filter(d => d.tipo === 'historico').map(d => d.peso);
+            const datosPrediccion = datos.filter(d => d.tipo === 'prediccion').map(d => d.peso);
+
+            // Completar arrays para que tengan la misma longitud
+            const historicos = [...datosHistoricos, ...Array(datosPrediccion.length).fill(null)];
+            const predicciones = [...Array(datosHistoricos.length).fill(null), ...datosPrediccion];
+
+            graficoPrediccion = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Datos Históricos',
+                            data: historicos,
+                            borderColor: '#667eea',
+                            backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                            borderWidth: 3,
+                            fill: false,
+                            tension: 0.4
+                        },
+                        {
+                            label: 'Predicción',
+                            data: predicciones,
+                            borderColor: '#f093fb',
+                            backgroundColor: 'rgba(240, 147, 251, 0.1)',
+                            borderWidth: 3,
+                            borderDash: [5, 5],
+                            fill: false,
+                            tension: 0.4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        title: {
+                            display: true,
+                            text: 'Progresión y Predicción de Peso'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            title: {
+                                display: true,
+                                text: 'Peso (kg)'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Fecha'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    });
+</script>
+</body>
+</html>
+

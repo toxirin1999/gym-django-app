@@ -1,0 +1,257 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Análisis Global de Gamificación{% endblock %}
+
+{% block extra_css %}
+<style>
+    .card-dashboard {
+        margin-bottom: 20px;
+        border-radius: 10px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        background-color: #1a1a1a;
+        border: 1px solid #333;
+    }
+    
+    .card-header {
+        background-color: rgba(50, 255, 0, 0.1);
+        border-bottom: 1px solid #333;
+        padding: 15px;
+        border-radius: 10px 10px 0 0;
+    }
+    
+    .card-body {
+        padding: 20px;
+    }
+    
+    .stat-value {
+        font-size: 2rem;
+        font-weight: bold;
+        color: #32FF00;
+    }
+    
+    .stat-label {
+        font-size: 1rem;
+        color: #999;
+    }
+    
+    .chart-container {
+        height: 300px;
+        margin-bottom: 20px;
+    }
+    
+    .period-selector {
+        margin-bottom: 20px;
+    }
+    
+    .period-btn {
+        margin-right: 5px;
+    }
+    
+    .ranking-table th, .ranking-table td {
+        padding: 10px;
+    }
+    
+    .ranking-table tbody tr:hover {
+        background-color: rgba(255, 255, 255, 0.05);
+    }
+    
+    .ranking-position {
+        font-weight: bold;
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+    }
+    
+    .position-1 {
+        background-color: gold;
+        color: black;
+    }
+    
+    .position-2 {
+        background-color: silver;
+        color: black;
+    }
+    
+    .position-3 {
+        background-color: #cd7f32; /* bronze */
+        color: black;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Análisis Global de Gamificación</h1>
+    </div>
+
+    <!-- Selector de período -->
+    <div class="card-dashboard period-selector">
+        <div class="card-body">
+            <h5>Período de análisis</h5>
+            <div class="btn-group">
+                {% for periodo in periodos_disponibles %}
+                <a href="?periodo={{ periodo }}" class="btn btn-outline-primary period-btn {% if periodo == periodo_dias %}active{% endif %}">
+                    {{ periodo }} días
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    {% if analisis.error %}
+    <div class="alert alert-warning">
+        {{ analisis.error }}
+    </div>
+    {% else %}
+    <!-- Estadísticas generales -->
+    <div class="row">
+        <div class="col-md-3">
+            <div class="card-dashboard text-center">
+                <div class="card-body">
+                    <div class="stat-value">{{ analisis.total_clientes }}</div>
+                    <div class="stat-label">Clientes Activos</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card-dashboard text-center">
+                <div class="card-body">
+                    <div class="stat-value">{{ analisis.total_entrenos }}</div>
+                    <div class="stat-label">Entrenamientos</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card-dashboard text-center">
+                <div class="card-body">
+                    <div class="stat-value">{{ analisis.total_logros }}</div>
+                    <div class="stat-label">Logros Desbloqueados</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card-dashboard text-center">
+                <div class="card-body">
+                    <div class="stat-value">{{ analisis.total_misiones }}</div>
+                    <div class="stat-label">Misiones Completadas</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Gráficos -->
+    <div class="row mt-4">
+        <!-- Ranking de clientes -->
+        {% if analisis.graficos.ranking_puntos %}
+        <div class="col-md-6">
+            <div class="card-dashboard">
+                <div class="card-header">
+                    <h5>Top 10 Clientes por Puntos</h5>
+                </div>
+                <div class="card-body">
+                    <img src="{{ analisis.graficos.ranking_puntos }}" alt="Ranking de Clientes" class="img-fluid">
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Distribución de niveles -->
+        {% if analisis.graficos.distribucion_niveles %}
+        <div class="col-md-6">
+            <div class="card-dashboard">
+                <div class="card-header">
+                    <h5>Distribución de Niveles</h5>
+                </div>
+                <div class="card-body">
+                    <img src="{{ analisis.graficos.distribucion_niveles }}" alt="Distribución de Niveles" class="img-fluid">
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Clientes más activos -->
+        {% if analisis.graficos.clientes_activos %}
+        <div class="col-md-12">
+            <div class="card-dashboard">
+                <div class="card-header">
+                    <h5>Top 10 Clientes Más Activos</h5>
+                </div>
+                <div class="card-body">
+                    <img src="{{ analisis.graficos.clientes_activos }}" alt="Clientes Más Activos" class="img-fluid">
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Tendencia global -->
+        {% if analisis.graficos.tendencia_global %}
+        <div class="col-md-12">
+            <div class="card-dashboard">
+                <div class="card-header">
+                    <h5>Tendencia de Entrenamientos Global</h5>
+                </div>
+                <div class="card-body">
+                    <img src="{{ analisis.graficos.tendencia_global }}" alt="Tendencia Global" class="img-fluid">
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Ranking de clientes -->
+    <div class="card-dashboard mt-4">
+        <div class="card-header">
+            <h5>Ranking de Clientes</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-dark ranking-table">
+                    <thead>
+                    <tr>
+                        <th>Posición</th>
+                        <th>Cliente</th>
+                        <th>Nivel</th>
+                        <th>Puntos</th>
+                        <th>Entrenamientos</th>
+                        <th>Logros</th>
+                        <th>Misiones</th>
+                        <th>Acciones</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for cliente_data in analisis.clientes_data %}
+                    <tr>
+                        <td>
+                            <div class="ranking-position {% if forloop.counter == 1 %}position-1{% elif forloop.counter == 2 %}position-2{% elif forloop.counter == 3 %}position-3{% endif %}">
+                                {{ forloop.counter }}
+                            </div>
+                        </td>
+                        <td>{{ cliente_data.cliente.nombre }}</td>
+                        <td>{{ cliente_data.nivel }}</td>
+                        <td>{{ cliente_data.puntos }}</td>
+                        <td>{{ cliente_data.entrenos }}</td>
+                        <td>{{ cliente_data.logros }}</td>
+                        <td>{{ cliente_data.misiones }}</td>
+                        <td>
+                            <a href="{% url 'logros:analisis_cliente' cliente_data.cliente.id %}" class="btn btn-sm btn-primary">
+                                <i class="bi bi-graph-up"></i> Análisis
+                            </a>
+                            <a href="{% url 'logros:perfil_gamificacion' cliente_data.cliente.id %}" class="btn btn-sm btn-secondary">
+                                <i class="bi bi-trophy"></i> Perfil
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

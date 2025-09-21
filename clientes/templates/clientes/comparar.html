@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+{% block title %}Comparar Clientes{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">📈 Comparar Evolución de Clientes</h1>
+
+    <form class="mb-4 row g-3">
+        <div class="col-md-4">
+            <label for="clientesSelect" class="form-label">Selecciona clientes:</label>
+            <button type="button" class="btn btn-sm btn-secondary mb-2" id="seleccionarTodosBtn">
+                ✅ Seleccionar todos los clientes
+            </button>
+            <select id="clientesSelect" class="form-select" multiple size="6">
+                <button type="button" class="btn btn-sm btn-secondary mb-2" id="seleccionarTodosBtn">
+                    ✅ Seleccionar todos los clientes
+                </button>
+                {% for cliente in clientes %}
+                <option value="{{ cliente.id }}">{{ cliente.nombre }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="col-md-4">
+            <label for="medidaSelect" class="form-label">Medida a comparar:</label>
+            <select id="medidaSelect" class="form-select">
+                <option value="peso">Peso (kg)</option>
+                <option value="grasa">Grasa corporal (%)</option>
+                <option value="cintura">Cintura (cm)</option>
+            </select>
+        </div>
+
+        <div class="col-md-4">
+            <label for="objetivo" class="form-label">🎯 Línea objetivo (opcional):</label>
+            <input type="number" id="objetivo" class="form-control" placeholder="Ej. 75">
+        </div>
+
+        <div class="col-md-3">
+            <label for="fechaInicio" class="form-label">📆 Desde:</label>
+            <input type="date" id="fechaInicio" class="form-control">
+        </div>
+
+        <div class="col-md-3">
+            <label for="fechaFin" class="form-label">📆 Hasta:</label>
+            <input type="date" id="fechaFin" class="form-control">
+        </div>
+
+        <div class="col-md-3 align-self-end">
+            <button type="button" class="btn btn-primary w-100" id="compararBtn">Comparar</button>
+        </div>
+        <div class="form-check mt-2">
+            <input class="form-check-input" type="checkbox" value="" id="mostrarPromedio">
+            <label class="form-check-label" for="mostrarPromedio">
+                🟢 Mostrar línea de promedio
+            </label>
+        </div>
+    </form>
+
+
+    <canvas id="graficoComparacion" height="160"></canvas>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.getElementById('compararBtn').addEventListener('click', function () {
+        const ids = Array.from(document.getElementById('clientesSelect').selectedOptions).map(opt => opt.value);
+        const medida = document.getElementById('medidaSelect').value;
+        const objetivo = document.getElementById('objetivo').value;
+        const start = document.getElementById('fechaInicio').value;
+        const end = document.getElementById('fechaFin').value;
+        const mostrarPromedio = document.getElementById('mostrarPromedio').checked;
+
+        const params = new URLSearchParams();
+        ids.forEach(id => params.append('ids[]', id));
+        params.append('medida', medida);
+        if (start) params.append('start', start);
+        if (end) params.append('end', end);
+
+        fetch(`/clientes/comparar/datos/?${params.toString()}`)
+            .then(response => response.json())
+            .then(clientes => {
+                const ctx = document.getElementById('graficoComparacion').getContext('2d');
+                const colores = ['blue', 'red', 'green', 'orange', 'purple', 'brown', 'teal', 'gray'];
+
+                const datasets = clientes.map((cliente, index) => ({
+                    label: cliente.nombre,
+                    data: cliente.valores,
+                    borderColor: colores[index % colores.length],
+                    fill: false,
+                    tension: 0.2
+                }));
+
+                const fechas = clientes[0]?.fechas || [];
+
+                // 🎯 Línea de objetivo
+                if (objetivo) {
+                    datasets.push({
+                        label: '🎯 Objetivo',
+                        data: fechas.map(() => parseFloat(objetivo)),
+                        borderColor: 'black',
+                        borderDash: [5, 5],
+                        pointRadius: 0,
+                        tension: 0
+                    });
+                }
+
+                // 🟢 Línea de promedio
+                if (mostrarPromedio) {
+                    const puntos = fechas.length;
+                    const sumaPorFecha = Array(puntos).fill(0);
+                    const conteo = clientes.length;
+
+                    for (let i = 0; i < puntos; i++) {
+                        let total = 0;
+                        let count = 0;
+                        for (const cliente of clientes) {
+                            const val = cliente.valores[i];
+                            if (val !== null && val !== undefined) {
+                                total += val;
+                                count++;
+                            }
+                        }
+                        sumaPorFecha[i] = count ? (total / count).toFixed(2) : null;
+                    }
+
+                    datasets.push({
+                        label: '🟢 Promedio',
+                        data: sumaPorFecha,
+                        borderColor: 'green',
+                        borderDash: [4, 4],
+                        tension: 0.1,
+                        pointRadius: 0
+                    });
+                }
+
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: fechas,
+                        datasets: datasets
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: { position: 'bottom' },
+                            title: {
+                                display: true,
+                                text: `Comparación - ${medida.charAt(0).toUpperCase() + medida.slice(1)}`
+                            }
+                        }
+                    }
+                });
+            });
+    });
+
+</script>
+<script>
+    document.getElementById('seleccionarTodosBtn').addEventListener('click', function () {
+        const select = document.getElementById('clientesSelect');
+        for (let i = 0; i < select.options.length; i++) {
+            select.options[i].selected = true;
+        }
+    });
+</script>
+
+{% endblock %}

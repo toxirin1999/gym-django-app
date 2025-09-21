@@ -1,0 +1,436 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Control de Peso - {{ cliente.nombre }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .card-halo {
+        background-color: rgba(30, 30, 30, 0.7);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(77, 208, 225, 0.3);
+        border-radius: 1rem;
+        padding: 1.5rem;
+        box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    }
+    .form-control {
+        background-color: rgba(45, 45, 45, 0.8);
+        border: 1px solid rgba(77, 208, 225, 0.5);
+        color: #fff;
+        padding: 0.75rem 1rem;
+        border-radius: 0.5rem;
+    }
+    .form-control:focus {
+        border-color: #31cff4;
+        box-shadow: 0 0 0 0.25rem rgba(49, 207, 244, 0.25);
+        background-color: rgba(45, 45, 45, 0.9);
+        color: #fff;
+    }
+    .progress-ring__circle {
+    transition: stroke-dashoffset 0.5s ease-out;
+    transform: rotate(-90deg);
+    transform-origin: 50% 50%;
+}
+    .btn-primary {
+        background-image: linear-gradient(to right, #31cff4, #007bff);
+        border: none;
+        color: white;
+        padding: 0.75rem 1.5rem;
+        border-radius: 0.5rem;
+        font-weight: bold;
+        transition: all 0.3s ease;
+    }
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(49, 207, 244, 0.3);
+    }
+    .btn-secondary {
+        background-color: rgba(77, 208, 225, 0.2);
+        border: 1px solid rgba(77, 208, 225, 0.5);
+        color: #31cff4;
+        padding: 0.75rem 1.5rem;
+        border-radius: 0.5rem;
+        font-weight: bold;
+        transition: all 0.3s ease;
+    }
+    .btn-secondary:hover {
+        background-color: rgba(77, 208, 225, 0.3);
+        transform: translateY(-2px);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="main-wrapper space-y-6 max-w-7xl mx-auto px-4 py-8">
+
+    <div class="card-halo flex flex-col md:flex-row items-center gap-6">
+        <div class="flex-grow text-center md:text-left">
+            <h1 class="text-3xl font-bold text-white">Control de Peso para {{ cliente.nombre }}</h1>
+            <p class="text-cyan-400">Gestiona y visualiza tu progreso de peso.</p>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Columna Izquierda: Registro de Peso y Objetivo -->
+        <div class="space-y-6">
+            <!-- Métricas Motivacionales -->
+            {% if analytics.metricas_motivacionales %}
+            <div class="card-halo">
+                <h3 class="text-xl font-semibold text-white mb-4"><i class="fas fa-trophy mr-2 text-cyan-400"></i>Tu Progreso</h3>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="text-center">
+                        <p class="text-2xl font-bold text-green-400">{{ analytics.metricas_motivacionales.racha_dias }}</p>
+                        <p class="text-xs text-gray-400">Días consecutivos</p>
+                    </div>
+                    <div class="text-center">
+                        <p class="text-2xl font-bold text-blue-400">{{ analytics.metricas_motivacionales.total_registros }}</p>
+                        <p class="text-xs text-gray-400">Total registros</p>
+                    </div>
+                    <div class="text-center">
+                        <p class="text-2xl font-bold text-purple-400">{{ analytics.metricas_motivacionales.cambio_total|floatformat:1 }} kg</p>
+                        <p class="text-xs text-gray-400">Cambio total</p>
+                    </div>
+                    <div class="text-center">
+                        <p class="text-2xl font-bold text-yellow-400">{{ analytics.metricas_motivacionales.porcentaje_cambio_total|floatformat:1 }}%</p>
+                        <p class="text-xs text-gray-400">% de cambio</p>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Tendencias -->
+            {% if analytics.tendencia_semanal %}
+            <div class="card-halo">
+                <h3 class="text-xl font-semibold text-white mb-4"><i class="fas fa-chart-line mr-2 text-cyan-400"></i>Tendencias</h3>
+                <div class="space-y-3">
+                    <div class="flex justify-between items-center p-3 rounded-lg bg-[#121212]">
+                        <span class="text-gray-300">Última semana:</span>
+                        <span class="font-bold {% if analytics.tendencia_semanal.direccion == 'bajando' %}text-green-400{% elif analytics.tendencia_semanal.direccion == 'subiendo' %}text-red-400{% else %}text-yellow-400{% endif %}">
+                            {{ analytics.tendencia_semanal.cambio|floatformat:1 }} kg
+                            {% if analytics.tendencia_semanal.direccion == 'bajando' %}
+                                <i class="fas fa-arrow-down"></i>
+                            {% elif analytics.tendencia_semanal.direccion == 'subiendo' %}
+                                <i class="fas fa-arrow-up"></i>
+                            {% else %}
+                                <i class="fas fa-minus"></i>
+                            {% endif %}
+                        </span>
+                    </div>
+                    <div class="flex justify-between items-center p-3 rounded-lg bg-[#121212]">
+                        <span class="text-gray-300">Último mes:</span>
+                        <span class="font-bold {% if analytics.tendencia_mensual.direccion == 'bajando' %}text-green-400{% elif analytics.tendencia_mensual.direccion == 'subiendo' %}text-red-400{% else %}text-yellow-400{% endif %}">
+                            {{ analytics.tendencia_mensual.cambio|floatformat:1 }} kg
+                            {% if analytics.tendencia_mensual.direccion == 'bajando' %}
+                                <i class="fas fa-arrow-down"></i>
+                            {% elif analytics.tendencia_mensual.direccion == 'subiendo' %}
+                                <i class="fas fa-arrow-up"></i>
+                            {% else %}
+                                <i class="fas fa-minus"></i>
+                            {% endif %}
+                        </span>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="card-halo">
+                <h3 class="text-xl font-semibold text-white mb-4"><i class="fas fa-weight mr-2 text-cyan-400"></i>Registrar Peso Diario</h3>
+                <form method="post" action="{% url 'clientes:registrar_peso' cliente.id %}" class="space-y-4">
+                    {% csrf_token %}
+                    <div>
+                        <label for="id_peso_kg" class="block text-gray-300 text-sm font-bold mb-2">Peso (kg):</label>
+                        {{ peso_form.peso_kg }}
+                        {% if peso_form.peso_kg.errors %}
+                        <p class="text-red-500 text-xs italic">{{ peso_form.peso_kg.errors }}</p>
+                        {% endif %}
+                    </div>
+                    <button type="submit" class="btn-primary w-full">Guardar Peso</button>
+                </form>
+            </div>
+
+            <div class="card-halo">
+                <h3 class="text-xl font-semibold text-white mb-4"><i class="fas fa-bullseye mr-2 text-cyan-400"></i>Establecer Objetivo de Peso</h3>
+                <form method="post" action="{% url 'clientes:establecer_objetivo_peso' cliente.id %}" class="space-y-4">
+                    {% csrf_token %}
+                    <div>
+                        <label for="id_peso_objetivo_kg" class="block text-gray-300 text-sm font-bold mb-2">Peso Objetivo (kg):</label>
+                        {{ objetivo_form.peso_objetivo_kg }}
+                        {% if objetivo_form.peso_objetivo_kg.errors %}
+                        <p class="text-red-500 text-xs italic">{{ objetivo_form.peso_objetivo_kg.errors }}</p>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <label for="id_fecha_fin" class="block text-gray-300 text-sm font-bold mb-2">Fecha Límite (opcional):</label>
+                        {{ objetivo_form.fecha_fin }}
+                        {% if objetivo_form.fecha_fin.errors %}
+                        <p class="text-red-500 text-xs italic">{{ objetivo_form.fecha_fin.errors }}</p>
+                        {% endif %}
+                    </div>
+                    {% if analytics.prediccion_objetivo %}
+                    <div class="p-3 rounded-lg bg-blue-900/30 border border-blue-500/50">
+                        <p class="text-blue-300 text-sm">
+                            <i class="fas fa-crystal-ball mr-2"></i>
+                            Predicción: Podrías alcanzar tu objetivo el {{ analytics.prediccion_objetivo|date:"d/m/Y" }}
+                        </p>
+                    </div>
+                    {% endif %}
+                    <button type="submit" class="btn-primary w-full">Establecer Objetivo</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Columna Derecha: Historial y Gráfico -->
+        <!-- Columna Izquierda: Registro de Peso y Objetivo -->
+<div class="space-y-6">
+
+    {% if progreso_radial_data %}
+    <!-- INICIO: Nuevo Gráfico de Progreso Radial -->
+    <div class="card-halo text-white p-6 flex flex-col items-center text-center">
+        <h3 class="text-sm font-bold text-cyan-400 uppercase tracking-wider mb-4">Progreso hacia tu objetivo</h3>
+        
+        <div class="relative w-48 h-48">
+            <svg class="w-full h-full" viewBox="0 0 120 120">
+                <!-- Círculo de fondo -->
+                <circle class="stroke-current text-gray-700"
+                    stroke-width="10"
+                    fill="transparent"
+                    r="52"
+                    cx="60"
+                    cy="60" />
+                <!-- Círculo de progreso -->
+                <circle id="progress-circle"
+                    class="progress-ring__circle stroke-current text-green-400"
+                    stroke-width="10"
+                    stroke-linecap="round"
+                    fill="transparent"
+                    r="52"
+                    cx="60"
+                    cy="60" />
+            </svg>
+            <div class="absolute inset-0 flex flex-col items-center justify-center">
+                <span class="text-4xl font-bold tracking-tighter">{{ progreso_radial_data.peso_actual }}</span>
+                <span class="text-sm text-gray-400">kg Actual</span>
+            </div>
+        </div>
+
+        <div class="w-full mt-4">
+            <p class="text-lg">Objetivo: <span class="font-bold">{{ progreso_radial_data.peso_objetivo }} kg</span></p>
+            <div class="w-full bg-gray-700 rounded-full h-2.5 mt-2">
+                <div class="bg-green-400 h-2.5 rounded-full" style="width: {{ progreso_radial_data.porcentaje_progreso }}%"></div>
+            </div>
+            <p class="text-xs text-gray-400 mt-1">{{ progreso_radial_data.porcentaje_progreso }}% completado</p>
+        </div>
+    </div>
+    <!-- FIN: Nuevo Gráfico de Progreso Radial -->
+    {% endif %}
+
+    <!-- El resto de tus tarjetas (Métricas, Tendencias, Registrar Peso, etc.) -->
+    <!-- ... -->
+</div>
+
+        <div class="space-y-6">
+            <div class="card-halo">
+                <h3 class="text-xl font-semibold text-white mb-4"><i class="fas fa-chart-line mr-2 text-cyan-400"></i>Evolución del Peso</h3>
+                <div class="h-80">
+                    <canvas id="pesoChart"></canvas>
+                </div>
+            </div>
+
+            <div class="card-halo">
+                <h3 class="text-xl font-semibold text-white mb-4"><i class="fas fa-history mr-2 text-cyan-400"></i>Historial de Registros</h3>
+                {% if registros_peso %}
+                <ul class="space-y-2 text-sm">
+                    {% for registro in registros_peso %}
+                    <li class="flex justify-between items-center p-2 rounded-lg bg-[#121212]">
+                        <span>{{ registro.fecha|date:"d/m/Y" }}: <span class="font-bold text-green-400">{{ registro.peso_kg }} kg</span></span>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="text-gray-400 italic text-sm">No hay registros de peso aún.</p>
+                {% endif %}
+            </div>
+
+            <div class="card-halo">
+                <h3 class="text-xl font-semibold text-white mb-4"><i class="fas fa-flag-checkered mr-2 text-cyan-400"></i>Objetivos de Peso</h3>
+                {% if objetivos_peso %}
+                <ul class="space-y-2 text-sm">
+                    {% for objetivo in objetivos_peso %}
+                    <li class="flex justify-between items-center p-2 rounded-lg bg-[#121212]">
+                        <span>Objetivo: <span class="font-bold text-green-400">{{ objetivo.peso_objetivo_kg }} kg</span> {% if objetivo.fecha_fin %}(hasta {{ objetivo.fecha_fin|date:"d/m/Y" }}){% endif %}</span>
+                        {% if objetivo.alcanzado %}
+                        <span class="badge bg-success text-white">Alcanzado</span>
+                        {% else %}
+                        <span class="badge bg-info text-white">Activo</span>
+                        {% endif %}
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="text-gray-400 italic text-sm">No hay objetivos de peso establecidos.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+<script id="registros-data" type="application/json">
+    {{ registros_peso_json|safe }}
+</script>
+{% endblock %}
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function( ) {
+        const ctx = document.getElementById('pesoChart');
+        if (ctx) {
+            // 1. Leer los datos desde el script JSON que generó Django
+            const registrosData = JSON.parse(document.getElementById('registros-data').textContent);
+
+            // 2. Formatear los datos para que Chart.js los entienda
+            // El queryset de Django no siempre es un array, así que lo convertimos.
+            const registros = Object.values(registrosData).map(registro => ({
+                x: registro.fields.fecha, // Django lo formatea como 'YYYY-MM-DD'
+                y: parseFloat(registro.fields.peso_kg)
+            }));
+
+            // 3. Calcular el promedio móvil (esta parte ya estaba bien)
+            const promedioMovil = [];
+            for (let i = 0; i < registros.length; i++) {
+                let suma = 0;
+                let count = 0;
+
+                // Tomar hasta 7 días anteriores (incluyendo el actual)
+                for (let j = Math.max(0, i - 6); j <= i; j++) {
+                    // Asegurarse de que el registro exista antes de sumar
+                    if (registros[j] && typeof registros[j].y === 'number') {
+                        suma += registros[j].y;
+                        count++;
+                    }
+                }
+
+                if (count > 0) {
+                    promedioMovil.push({
+                        x: registros[i].x,
+                        y: suma / count
+                    });
+                }
+            }
+
+            // 4. Crear el gráfico (sin cambios aquí)
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    datasets: [
+                        {
+                            label: 'Peso Diario',
+                            data: registros,
+                            borderColor: '#31cff4',
+                            backgroundColor: 'rgba(49, 207, 244, 0.1)',
+                            pointBackgroundColor: '#31cff4',
+                            pointBorderColor: '#ffffff',
+                            pointBorderWidth: 2,
+                            pointRadius: 4,
+                            tension: 0.1,
+                            fill: false
+                        },
+                        {
+                            label: 'Tendencia (7 días)',
+                            data: promedioMovil,
+                            borderColor: '#34D399',
+                            backgroundColor: 'rgba(52, 211, 153, 0.1)',
+                            pointBackgroundColor: '#34D399',
+                            pointBorderColor: '#ffffff',
+                            pointBorderWidth: 2,
+                            pointRadius: 3,
+                            tension: 0.3,
+                            fill: false,
+                            borderWidth: 3
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        intersect: false,
+                        mode: 'index'
+                    },
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: '#ffffff',
+                                usePointStyle: true,
+                                padding: 20
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(30, 30, 30, 0.9)',
+                            titleColor: '#31cff4',
+                            bodyColor: '#ffffff',
+                            borderColor: '#31cff4',
+                            borderWidth: 1,
+                            cornerRadius: 8,
+                            callbacks: {
+                                label: function(context) {
+                                    return context.dataset.label + ': ' + context.parsed.y.toFixed(1) + ' kg';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            type: 'time',
+                            time: {
+                                unit: 'day',
+                                displayFormats: {
+                                    day: 'MMM dd'
+                                }
+                            },
+                            ticks: {
+                                color: '#9ca3af',
+                                maxTicksLimit: 10
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)',
+                                drawBorder: false
+                            }
+                        },
+                        y: {
+                            beginAtZero: false,
+                            ticks: {
+                                color: '#9ca3af',
+                                callback: function(value) {
+                                    return value.toFixed(1) + ' kg';
+                                }
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)',
+                                drawBorder: false
+                            }
+                        }
+                    },
+                    elements: {
+                        point: {
+                            hoverRadius: 8
+                        }
+                    }
+                }
+            });
+        }
+
+        // Animación de entrada para las tarjetas (sin cambios)
+        const cards = document.querySelectorAll('.card-halo');
+        cards.forEach((card, index) => {
+            card.style.opacity = '0';
+            card.style.transform = 'translateY(20px)';
+            setTimeout(() => {
+                card.style.transition = 'all 0.6s ease';
+                card.style.opacity = '1';
+                card.style.transform = 'translateY(0)';
+            }, index * 150);
+        });
+    });
+    
+</script>
+{% endblock %}

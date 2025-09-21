@@ -1,0 +1,20 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Registro</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-black text-white flex items-center justify-center h-screen">
+    <form method="post" class="bg-gray-900 p-8 rounded-xl shadow-xl w-full max-w-sm space-y-4">
+        {% csrf_token %}
+        <h2 class="text-2xl font-bold text-center text-green-400">Crea tu cuenta</h2>
+        {{ form.as_p }}
+        <button type="submit" class="w-full bg-green-600 hover:bg-green-500 text-white py-2 px-4 rounded">
+            Registrarse
+        </button>
+        <p class="text-sm text-center mt-4 text-gray-400">¿Ya tienes cuenta? <a href="/login/" class="text-green-300 underline">Inicia sesión</a></p>
+    </form>
+</body>
+</html>

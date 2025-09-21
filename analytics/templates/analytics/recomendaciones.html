@@ -1,0 +1,822 @@
+<!-- 💡 SISTEMA DE RECOMENDACIONES -->
+<!-- Archivo: templates/analytics/recomendaciones.html -->
+
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Recomendaciones - {{ cliente.nombre }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Estilo para los títulos de grupo de recomendaciones */
+    .recommendation-group-title {
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-top: 2rem;
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid var(--border-color);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    .recommendation-group-title:first-child {
+        margin-top: 0;
+    }
+
+    /* Animación para la eliminación optimista */
+    .recommendation-item.is-removing {
+        transition: all 0.4s ease;
+        transform: scale(0.95);
+        opacity: 0;
+        height: 0;
+        padding-top: 0;
+        padding-bottom: 0;
+        margin-bottom: 0;
+        border-width: 0;
+        overflow: hidden;
+    }
+
+    /* Estilo para el spinner dentro de los botones de acción */
+    .action-btn .spinner {
+        border: 2px solid transparent;
+        border-top-color: white;
+        border-right-color: white;
+        border-radius: 50%;
+        width: 0.8em;
+        height: 0.8em;
+        display: inline-block;
+        animation: spin .8s linear infinite;
+        vertical-align: -2px;
+        margin-right: .4rem;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    :root {
+        --primary-color: #3b82f6;
+        --secondary-color: #1e40af;
+        --accent-color: #06b6d4;
+        --success-color: #10b981;
+        --warning-color: #f59e0b;
+        --danger-color: #ef4444;
+        --dark-bg: #0f172a;
+        --card-bg: #1e293b;
+        --text-primary: #f8fafc;
+        --text-secondary: #cbd5e1;
+        --border-color: #334155;
+    }
+
+    body {
+        background: linear-gradient(135deg, var(--dark-bg) 0%, #1e293b 100%);
+        color: var(--text-primary);
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        min-height: 100vh;
+    }
+
+    .analytics-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 2rem;
+    }
+/* Loader inline en botón */
+.btn-loading {
+  position: relative;
+  pointer-events: none;
+  opacity: 0.85;
+}
+.btn-loading .spinner {
+  border: 2px solid transparent;
+  border-top-color: white;
+  border-right-color: white;
+  border-radius: 50%;
+  width: 1em;
+  height: 1em;
+  display: inline-block;
+  animation: spin .8s linear infinite;
+  vertical-align: -2px;
+  margin-right: .5rem;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+    .analytics-header {
+        background: linear-gradient(135deg, var(--warning-color), var(--primary-color));
+        border-radius: 1rem;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        text-align: center;
+    }
+
+    .generate-section {
+        background: var(--card-bg);
+        border-radius: 1rem;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        border: 1px solid var(--border-color);
+        text-align: center;
+    }
+
+    .generate-btn {
+        background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+        color: white;
+        border: none;
+        padding: 1rem 2rem;
+        border-radius: 0.5rem;
+        font-weight: 600;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: transform 0.2s ease;
+    }
+
+    .generate-btn:hover {
+        transform: translateY(-2px);
+    }
+
+    .recommendations-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 2rem;
+        margin-bottom: 2rem;
+    }
+
+    .recommendations-section {
+        background: var(--card-bg);
+        border-radius: 1rem;
+        padding: 1.5rem;
+        border: 1px solid var(--border-color);
+    }
+
+    .section-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin-bottom: 1.5rem;
+        color: var(--text-primary);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .recommendation-item {
+        background: rgba(59, 130, 246, 0.05);
+        border-radius: 0.75rem;
+        padding: 1.25rem;
+        margin-bottom: 1rem;
+        border: 1px solid var(--border-color);
+        transition: all 0.3s ease;
+        position: relative;
+    }
+
+    .recommendation-item:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    }
+
+    .recommendation-item:last-child {
+        margin-bottom: 0;
+    }
+
+    .recommendation-priority {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        padding: 0.25rem 0.75rem;
+        border-radius: 1rem;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+
+    .priority-alta {
+        background: rgba(239, 68, 68, 0.2);
+        color: var(--danger-color);
+    }
+
+    .priority-media {
+        background: rgba(245, 158, 11, 0.2);
+        color: var(--warning-color);
+    }
+
+    .priority-baja {
+        background: rgba(16, 185, 129, 0.2);
+        color: var(--success-color);
+    }
+
+    .recommendation-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin-bottom: 0.75rem;
+        color: var(--text-primary);
+        padding-right: 4rem;
+    }
+
+    .recommendation-description {
+        color: var(--text-secondary);
+        line-height: 1.5;
+        margin-bottom: 1rem;
+    }
+
+    .recommendation-meta {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 0.8rem;
+        color: var(--text-secondary);
+    }
+
+    .recommendation-actions {
+        display: flex;
+        gap: 0.5rem;
+        margin-top: 1rem;
+    }
+
+    .action-btn {
+        padding: 0.5rem 1rem;
+        border: none;
+        border-radius: 0.25rem;
+        font-size: 0.8rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .btn-apply {
+        background: var(--success-color);
+        color: white;
+    }
+
+    .btn-dismiss {
+        background: var(--danger-color);
+        color: white;
+    }
+
+    .btn-apply:hover,
+    .btn-dismiss:hover {
+        transform: translateY(-1px);
+    }
+
+    .automatic-recommendations {
+        background: var(--card-bg);
+        border-radius: 1rem;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        border: 1px solid var(--border-color);
+    }
+
+    .auto-rec-item {
+        background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(6, 182, 212, 0.1));
+        border-radius: 0.5rem;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        border-left: 4px solid var(--success-color);
+    }
+
+    .auto-rec-item:last-child {
+        margin-bottom: 0;
+    }
+
+    .message-success {
+        background: rgba(16, 185, 129, 0.2);
+        color: var(--success-color);
+        padding: 1rem;
+        border-radius: 0.5rem;
+        margin-bottom: 1rem;
+        text-align: center;
+        font-weight: 600;
+    }
+
+    @media (max-width: 768px) {
+        .recommendations-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .toast {
+  background: rgba(15, 23, 42, 0.9); /* dark semitransparente */
+  color: #f8fafc;
+  border: 1px solid var(--border-color);
+  border-left: 4px solid var(--success-color);
+  border-radius: .75rem;
+  padding: .75rem 1rem;
+  margin-bottom: .5rem;
+  min-width: 260px;
+  max-width: 420px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.25);
+  display: flex;
+  align-items: flex-start;
+  gap: .5rem;
+  transform: translateY(-6px);
+  opacity: 0;
+  animation: toast-in .25s ease forwards;
+}
+.toast--success { border-left-color: var(--success-color); }
+.toast--warning { border-left-color: var(--warning-color); }
+.toast--error   { border-left-color: var(--danger-color); }
+.toast__close {
+  background: transparent; border: 0; color: #cbd5e1; cursor: pointer; margin-left: auto;
+}
+@keyframes toast-in { to { transform: translateY(0); opacity: 1; } }
+
+/* --- 1. Mejora de Jerarquía y Contraste en Tarjetas --- */
+.recommendation-item {
+    /* Fondo ligeramente más claro para que destaque del contenedor */
+    background: #2a374a; /* Un azul-gris más claro que el fondo principal */
+    border: 1px solid var(--border-color);
+    /* Sombra sutil para dar efecto de "flotar" */
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    transition: all 0.3s ease;
+}
+
+.recommendation-item:hover {
+    transform: translateY(-4px); /* Un hover más pronunciado */
+    box-shadow: 0 8px 25px rgba(59, 130, 246, 0.15);
+    border-color: var(--primary-color);
+}
+
+/* --- 2. Más Espaciado (Aire) --- */
+.recommendations-section {
+    padding: 2rem; /* Más relleno en la tarjeta contenedora */
+}
+.recommendation-item {
+    padding: 1.5rem; /* Más relleno en la tarjeta de la recomendación */
+}
+
+/* --- 3. Mejora de Botones --- */
+.action-btn {
+    border-radius: 0.5rem; /* Bordes más redondeados, a juego con el resto */
+    font-weight: 600;
+    padding: 0.6rem 1.2rem;
+    border: 1px solid transparent;
+    background-color: transparent; /* Estilo "Ghost" por defecto */
+    transition: all 0.2s ease;
+}
+
+/* Botón Aplicar */
+.btn-apply {
+    color: var(--success-color);
+    border-color: var(--success-color);
+}
+.btn-apply:hover {
+    background-color: var(--success-color);
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(16, 185, 129, 0.2);
+}
+
+/* Botón Descartar */
+.btn-dismiss {
+    color: var(--danger-color);
+    border-color: var(--danger-color);
+}
+.btn-dismiss:hover {
+    background-color: var(--danger-color);
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(239, 68, 68, 0.2);
+}
+
+/* Botón principal "Analizar Ahora" más llamativo */
+.generate-btn {
+    box-shadow: 0 0 20px rgba(6, 182, 212, 0.3);
+}
+
+/* --- 4. Mejora de Tipografía y Alineación --- */
+.recommendation-title {
+    font-size: 1.2rem; /* Título más grande */
+    margin-bottom: 0.75rem;
+    color: var(--text-primary);
+}
+
+.recommendation-description {
+    color: var(--text-secondary); /* Color más suave para la descripción */
+    font-size: 0.95rem;
+    line-height: 1.6;
+    margin-bottom: 1.5rem; /* Más espacio antes de los meta-datos */
+}
+
+.recommendation-meta {
+    /* Reemplaza el CSS existente para este selector */
+    display: flex;
+    justify-content: space-between; /* Alineación perfecta */
+    align-items: center;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    padding-bottom: 1.25rem; /* Espacio antes de los botones */
+    border-bottom: 1px solid var(--border-color); /* Separador visual */
+    margin-bottom: 1.25rem;
+}
+
+.recommendation-actions {
+    margin-top: 0; /* Eliminamos el margen superior ya que el separador lo gestiona */
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div id="toast-root" aria-live="polite" aria-atomic="true"
+     style="position: fixed; top: 1rem; right: 1rem; z-index: 1000;"></div>
+
+<div class="analytics-container">
+    <!-- Header -->
+    <div class="analytics-header">
+        <h1>💡 Sistema de Recomendaciones</h1>
+        <p>Recomendaciones personalizadas para optimizar tu entrenamiento</p>
+    </div>
+
+    <!-- Generar Nuevas Recomendaciones -->
+    <div class="generate-section">
+        <h3 style="margin: 0 0 1rem 0;">🤖 Generar Análisis y Recomendaciones</h3>
+        <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">
+            Nuestro sistema analizará tus datos más recientes para encontrar oportunidades de mejora.
+        </p>
+        <form method="post" id="generate-form">
+            {% csrf_token %}
+            <button type="submit" name="generar" class="generate-btn">
+                🚀 Analizar Ahora
+            </button>
+        </form>
+    </div>
+
+    <!-- Recomendaciones Activas y Aplicadas -->
+    <div class="recommendations-grid">
+        <!-- Recomendaciones Activas -->
+        <div class="recommendations-section">
+            <div class="section-title">
+                <!-- Icono añadido -->
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="m3.5 12.5 2.5 2.5 5-5M3.5 5.5l2.5 2.5 5-5M14 6h7M14 12h7M14 18h7"/>
+                </svg>
+                <span>Recomendaciones Activas</span>
+            </div>
+
+            <div id="active-recommendations-list">
+                <!-- MEJORA: Agrupación por tipo de recomendación -->
+                {% for recomendacion in recomendaciones_activas %}
+                {% ifchanged recomendacion.get_tipo_display %}
+                <div class="recommendation-group-title">
+                    <!-- Iconos para cada tipo -->
+                    {% if recomendacion.tipo == 'progresion' %}
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="12" y1="20" x2="12" y2="4"></line>
+                        <polyline points="6 10 12 4 18 10"></polyline>
+                    </svg>
+                    {% elif recomendacion.tipo == 'consistencia' %}
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"></path>
+                        <path d="m9 12 2 2 4-4"></path>
+                    </svg>
+                    {% endif %}
+                    {{ recomendacion.get_tipo_display }}
+                </div>
+                {% endifchanged %}
+
+                <!-- El ID ahora es dinámico para poder seleccionarlo con JS -->
+                <div class="recommendation-item" id="rec-item-{{ recomendacion.id }}">
+                    <div class="recommendation-priority priority-{{ recomendacion.get_prioridad_display|lower }}" title="Prioridad: {{ recomendacion.get_prioridad_display }}">
+                        {{ recomendacion.get_prioridad_display }}
+                    </div>
+
+                    <div class="recommendation-title">
+                        {{ recomendacion.titulo }}
+                    </div>
+
+                    <div class="recommendation-description">
+                        {{ recomendacion.descripcion }}
+                    </div>
+
+                    <div class="recommendation-meta">
+                        <span>{{ recomendacion.get_tipo_display }}</span>
+                        <span title="Esta recomendación es válida hasta esta fecha">Expira: {{ recomendacion.expires_at|date:"d/m/Y" }}</span>
+                    </div>
+
+                    <div class="recommendation-actions">
+                        <!-- Los IDs de los botones también son dinámicos -->
+                        <button class="action-btn btn-apply" id="apply-btn-{{ recomendacion.id }}" onclick="handleRecommendationAction({{ recomendacion.id }}, 'aplicar' )">
+                            ✅ Aplicar
+                        </button>
+                        <button class="action-btn btn-dismiss" id="dismiss-btn-{{ recomendacion.id }}" onclick="handleRecommendationAction({{ recomendacion.id }}, 'descartar')">
+                            ❌ Descartar
+                        </button>
+                    </div>
+                </div>
+                {% empty %}
+                <div style="text-align: center; padding: 2rem; color: var(--text-secondary);">
+                    🎉 ¡Excelente! No hay recomendaciones pendientes.
+
+
+                    <small>Genera un nuevo análisis para obtener insights actualizados.</small>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Recomendaciones Aplicadas -->
+        <div class="recommendations-section">
+            <div class="section-title">
+                <!-- Icono añadido -->
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                    <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                </svg>
+                <span>Historial Reciente</span>
+            </div>
+            {% for recomendacion in recomendaciones_aplicadas %}
+            <div class="recommendation-item" style="opacity: 0.7;">
+                <div class="recommendation-title">
+                    {{ recomendacion.titulo }}
+                </div>
+                <div class="recommendation-description" style="font-size: 0.9rem;">
+                    {{ recomendacion.descripcion|truncatewords:15 }}
+                </div>
+                <div class="recommendation-meta">
+                    <span>{{ recomendacion.get_tipo_display }}</span>
+                    <span title="Fecha en que se marcó como aplicada">Aplicada: {{ recomendacion.fecha_aplicacion|date:"d/m/Y" }}</span>
+                </div>
+            </div>
+            {% empty %}
+            <div style="text-align: center; padding: 2rem; color: var(--text-secondary );">
+                📝 No hay recomendaciones aplicadas recientemente.
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Navegación -->
+    <div style="text-align: center; margin-top: 2rem;">
+        <a href="{% url 'analytics:dashboard_cliente' cliente.id %}"
+           style="background: var(--primary-color); color: white; padding: 1rem 2rem; border-radius: 0.5rem; text-decoration: none; font-weight: 600;">
+            ← Volver al Dashboard
+        </a>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    /* ===========================
+       Utils: CSRF + Toast System
+       =========================== */
+    (function () {
+      // --- CSRF helper (cookie + meta + hidden input fallback) ---
+      function getCsrfToken() {
+        // 1) Meta tag <meta name="csrf-token" content="...">
+        const meta = document.querySelector('meta[name="csrf-token"]');
+        if (meta && meta.content) return meta.content;
+
+        // 2) Hidden input from the first form with csrfmiddlewaretoken
+        const input = document.querySelector('[name=csrfmiddlewaretoken]');
+        if (input && input.value) return input.value;
+
+        // 3) Cookie csrftoken
+        const match = document.cookie.match(/(?:^|;\s*)csrftoken=([^;]+)/);
+        if (match) return decodeURIComponent(match[1]);
+
+        return null;
+      }
+
+      // --- Toast root (auto‑crea si falta) ---
+      let toastRoot = document.getElementById('toast-root');
+      if (!toastRoot) {
+        toastRoot = document.createElement('div');
+        toastRoot.id = 'toast-root';
+        toastRoot.setAttribute('aria-live', 'polite');
+        toastRoot.setAttribute('aria-atomic', 'true');
+        toastRoot.style.position = 'fixed';
+        toastRoot.style.top = '1rem';
+        toastRoot.style.right = '1rem';
+        toastRoot.style.zIndex = '1000';
+        document.body.appendChild(toastRoot);
+      }
+
+      // --- Toast factory ---
+      function showToast(message, type = 'success', timeout = 3500) {
+        if (!message) return;
+
+        const toast = document.createElement('div');
+        toast.className = `toast toast--${type}`;
+        toast.role = 'status';
+        toast.innerHTML = `
+          <div style="margin-top:2px;">${message}</div>
+          <button class="toast__close" aria-label="Cerrar notificación">✕</button>
+        `;
+
+        // estilos mínimos por si el CSS no cargó
+        toast.style.background = 'rgba(15,23,42,0.9)';
+        toast.style.color = '#f8fafc';
+        toast.style.border = '1px solid #334155';
+        toast.style.borderLeft = '4px solid ' + (type === 'error' ? '#ef4444' : type === 'warning' ? '#f59e0b' : '#10b981');
+        toast.style.borderRadius = '.75rem';
+        toast.style.padding = '.75rem 1rem';
+        toast.style.marginBottom = '.5rem';
+        toast.style.minWidth = '260px';
+        toast.style.maxWidth = '420px';
+        toast.style.boxShadow = '0 10px 30px rgba(0,0,0,.25)';
+        toast.style.display = 'flex';
+        toast.style.alignItems = 'flex-start';
+        toast.style.gap = '.5rem';
+        toast.style.transform = 'translateY(-6px)';
+        toast.style.opacity = '0';
+        toast.style.transition = 'transform .25s ease, opacity .25s ease';
+
+        toastRoot.appendChild(toast);
+        requestAnimationFrame(() => {
+          toast.style.opacity = '1';
+          toast.style.transform = 'translateY(0)';
+        });
+
+        const closeBtn = toast.querySelector('.toast__close');
+        const close = () => {
+          toast.style.opacity = '0';
+          toast.style.transform = 'translateY(-6px)';
+          setTimeout(() => toast.remove(), 180);
+        };
+        closeBtn.addEventListener('click', close);
+        if (timeout) setTimeout(close, timeout);
+
+        return toast;
+      }
+
+      // Exponer para otras funciones
+      window.__getCsrfToken = getCsrfToken;
+      window.showToast = showToast;
+    })();
+    async function handleRecommendationAction(id, action) {
+        const actionConfig = {
+            aplicar: {
+                url: `/analytics/recomendacion/${id}/aplicar/`,
+                confirmMsg: '¿Estás seguro de que quieres marcar esta recomendación como aplicada?',
+                successMsg: 'Recomendación aplicada ✅',
+                errorMsg: 'Error al aplicar la recomendación',
+                btnId: `apply-btn-${id}`
+            },
+            descartar: {
+                url: `/analytics/recomendacion/${id}/descartar/`,
+                confirmMsg: '¿Estás seguro de que quieres descartar esta recomendación?',
+                successMsg: 'Recomendación descartada 🗑️',
+                errorMsg: 'Error al descartar la recomendación',
+                btnId: `dismiss-btn-${id}`
+            }
+        };
+
+        const config = actionConfig[action];
+        if (!config) return;
+
+        if (!confirm(config.confirmMsg)) return;
+
+        const btn = document.getElementById(config.btnId);
+        const otherBtnId = action === 'aplicar' ? `dismiss-btn-${id}` : `apply-btn-${id}`;
+        const otherBtn = document.getElementById(otherBtnId);
+        const recItem = document.getElementById(`rec-item-${id}`);
+
+        // --- MEJORA: Estado de carga en el botón ---
+        const originalText = btn.innerHTML;
+        btn.innerHTML = `<span class="spinner"></span>Procesando...`;
+        btn.disabled = true;
+        if (otherBtn) otherBtn.disabled = true;
+
+        try {
+            const csrf = window.__getCsrfToken();
+            const res = await fetch(config.url, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrf || '',
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                },
+            });
+
+            const data = await res.json();
+
+            if (res.ok && data && data.success) {
+                // --- MEJORA: Eliminación optimista con animación ---
+                window.showToast(config.successMsg, 'success');
+                if (recItem) {
+                    recItem.classList.add('is-removing');
+                    // Esperamos a que la animación termine para recargar,
+                    // así el usuario ve el cambio y luego la página se actualiza.
+                    setTimeout(() => {
+                        // Opcional: podrías mover el item a la lista de "aplicadas"
+                        // dinámicamente en lugar de recargar.
+                        location.reload();
+                    }, 450);
+                } else {
+                    setTimeout(() => location.reload(), 650);
+                }
+            } else {
+                throw new Error((data && data.error) || config.errorMsg);
+            }
+        } catch (err) {
+            console.error(err);
+            window.showToast(err.message || config.errorMsg, 'error', 4500);
+            // Restaurar botón en caso de error
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+            if (otherBtn) otherBtn.disabled = false;
+        }
+    }
+    /* =====================================
+       Acciones: aplicar / descartar (fetch)
+       ===================================== */
+    async function aplicarRecomendacion(id) {
+      const ok = confirm('¿Estás seguro de que quieres marcar esta recomendación como aplicada?');
+      if (!ok) return;
+
+      const csrf = window.__getCsrfToken();
+      try {
+        const res = await fetch(`/analytics/recomendacion/${id}/aplicar/`, {
+          method: 'POST',
+          headers: {
+            'X-CSRFToken': csrf || '',
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+        });
+        const data = await res.json();
+        if (res.ok && data && data.success) {
+          window.showToast('Recomendación aplicada ✅', 'success');
+          setTimeout(() => location.reload(), 650);
+        } else {
+          throw new Error((data && data.error) || 'No se pudo aplicar la recomendación');
+        }
+      } catch (err) {
+        console.error(err);
+        window.showToast('Error al aplicar la recomendación', 'error', 4500);
+      }
+    }
+
+    async function descartarRecomendacion(id) {
+      const ok = confirm('¿Estás seguro de que quieres descartar esta recomendación?');
+      if (!ok) return;
+
+      const csrf = window.__getCsrfToken();
+      try {
+        const res = await fetch(`/analytics/recomendacion/${id}/descartar/`, {
+          method: 'POST',
+          headers: {
+            'X-CSRFToken': csrf || '',
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+        });
+        const data = await res.json();
+        if (res.ok && data && data.success) {
+          window.showToast('Recomendación descartada 🗑️', 'success');
+          setTimeout(() => location.reload(), 650);
+        } else {
+          throw new Error((data && data.error) || 'No se pudo descartar la recomendación');
+        }
+      } catch (err) {
+        console.error(err);
+        window.showToast('Error al descartar la recomendación', 'error', 4500);
+      }
+    }
+
+    /* =========================================
+       Loader + bloqueo en “Generar Recomendaciones”
+       ========================================= */
+    (function () {
+      const form = document.querySelector('form[method="post"]');
+      if (!form) return;
+
+      const submitBtn = form.querySelector('button[name="generar"]');
+      if (!submitBtn) return;
+
+      form.addEventListener('submit', () => {
+        if (submitBtn.classList.contains('btn-loading')) return; // evita doble click
+
+        submitBtn.dataset.originalText = submitBtn.textContent.trim();
+        submitBtn.classList.add('btn-loading');
+        submitBtn.innerHTML = `<span class="spinner" aria-hidden="true"></span>Generando...`;
+        submitBtn.setAttribute('aria-busy', 'true');
+        submitBtn.disabled = true;
+        // dejamos que el submit continúe (PRG recomendado en vista)
+      });
+
+      // Restaurar estado si el navegador vuelve del cache del historial
+      window.addEventListener('pageshow', (e) => {
+        if (e.persisted) {
+          submitBtn.classList.remove('btn-loading');
+          submitBtn.disabled = false;
+          submitBtn.removeAttribute('aria-busy');
+          if (submitBtn.dataset.originalText) submitBtn.textContent = submitBtn.dataset.originalText;
+        }
+      });
+    })();
+
+    /* =========================================
+       Toast desde variables de template (fallback)
+       ========================================= */
+    (function () {
+      try {
+        // Si usas contexto directo: mensaje = "..."
+        const mensaje = {{ mensaje|default:"null"|safe }};
+        if (typeof mensaje === 'string' && mensaje.length) {
+          window.showToast(mensaje, 'success');
+        }
+      } catch (e) {
+        // Nada: puede no existir la variable de template
+      }
+
+      // Si migras a django.contrib.messages, puedes iterar ahí y llamar a showToast por cada uno.
+    })();
+</script>
+
+{% endblock %}

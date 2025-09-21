@@ -1,0 +1,38 @@
+{% include 'partials/joi_flotante.html' %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Entreno con Joi</title>
+    <style>
+        body { background: #121212; color: white; font-family: Arial; padding: 2em; }
+        .card { background: #1e1e1e; padding: 2em; border-radius: 10px; margin-bottom: 1em; }
+        .input { width: 100%; padding: 0.5em; margin-top: 0.5em; background: #222; color: white; border: none; border-radius: 5px; }
+        .btn { background: #32FF00; color: black; padding: 1em; border: none; border-radius: 10px; cursor: pointer; width: 100%; margin-top: 1em; font-weight: bold; }
+    </style>
+</head>
+<body>
+<h1>🤖 Joi te acompaña en el entreno</h1>
+
+<div class="card">
+    <h2>💡 Recomendación del día:</h2>
+    <p>{{ tipo_recomendado }}</p>
+</div>
+
+<form method="post">
+    {% csrf_token %}
+    <div class="card">
+        <label for="duracion">⏱ Duración (minutos)</label>
+        <input class="input" type="number" name="duracion" required>
+
+        <label for="intensidad">🔥 Intensidad</label>
+        <input class="input" type="text" name="intensidad" placeholder="baja, media, alta" required>
+
+        <label for="nota">🧠 ¿Cómo te sentiste?</label>
+        <textarea class="input" name="nota" rows="3"></textarea>
+    </div>
+
+    <button class="btn" type="submit">Guardar entreno</button>
+</form>
+</body>
+</html>

@@ -1,0 +1,284 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load tiempo_extras %}
+{% block content %}
+<div class="bg-[#0d1117] text-white rounded-2xl p-6 shadow-xl max-w-5xl mx-auto mt-8 space-y-8">
+
+  <!-- Header -->
+  <div class="flex justify-between items-center flex-wrap gap-4">
+    <!-- Perfil -->
+    <div class="flex items-center space-x-4">
+      <img src="{{ cliente.foto.url }}" alt="Avatar"
+           class="w-20 h-20 rounded-full object-cover border-2 border-white shadow-lg">
+      <div>
+        <p class="text-xl font-semibold">{{ user.first_name }} {{ user.last_name }}</p>
+        <p class="text-sm text-gray-400">@{{ user.username }}</p>
+        <p class="text-xs mt-1 text-gray-500">Overview</p>
+      </div>
+    </div>
+
+    {% if registro %}
+    <!-- Animación SVG de carga -->
+    <svg class="animate-spin h-6 w-6 text-green-400" fill="none" viewBox="0 0 24 24">
+      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+      <path class="opacity-75" fill="currentColor"
+            d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8z"></path>
+    </svg>
+    {% endif %}
+  </div>
+
+  {% if registro %}
+  <!-- Datos -->
+  <div class="flex justify-around flex-wrap gap-6">
+
+    <!-- Strain -->
+    <div class="flex flex-col items-center text-center">
+      <div class="relative w-24 h-24">
+        <svg class="absolute top-0 left-0 transform -rotate-90" width="96" height="96">
+          <circle cx="48" cy="48" r="42" stroke="#2e2e2e" stroke-width="10" fill="none" />
+          <circle cx="48" cy="48" r="42" stroke="#2563EB" stroke-width="10" fill="none"
+                  stroke-dasharray="264"
+                  stroke-dashoffset="{{ 264|floatformat:0|add:"-"|add:registro.strain|floatformat:0 }}" />
+        </svg>
+        <div class="absolute inset-0 flex items-center justify-center text-xl font-bold">
+          {{ registro.strain|floatformat:1 }}
+        </div>
+      </div>
+      <p class="mt-2 text-sm text-gray-300">Strain</p>
+    </div>
+
+    <!-- Recovery -->
+    <div class="flex flex-col items-center text-center">
+      <div class="relative w-24 h-24">
+        <svg class="absolute top-0 left-0 transform -rotate-90" width="96" height="96">
+          <circle cx="48" cy="48" r="42" stroke="#2e2e2e" stroke-width="10" fill="none" />
+          <circle cx="48" cy="48" r="42" stroke="#EAB308" stroke-width="10" fill="none"
+                  stroke-dasharray="264"
+                  stroke-dashoffset="{{ 264|floatformat:0|add:"-"|add:registro.recovery|floatformat:0 }}" />
+        </svg>
+        <div class="absolute inset-0 flex items-center justify-center text-xl font-bold">
+          {{ registro.recovery }}%
+        </div>
+      </div>
+      <p class="mt-2 text-sm text-gray-300">Recovery</p>
+    </div>
+
+    <!-- Sleep -->
+    <div class="text-center min-w-[180px]">
+      <p class="text-sm text-blue-400">Sleep Performance</p>
+      <p class="text-3xl font-bold">{{ registro.sleep_performance }}%</p>
+      <div class="flex justify-between mt-2 text-sm text-gray-400">
+        <div>
+          <p class="font-semibold text-white">{{ registro.horas_sueno|duracion_a_horas_minutos }}</p>
+          <p class="text-xs">Hours</p>
+        </div>
+        <div>
+          <p class="font-semibold text-white">{{ registro.sueno_necesario|duracion_a_horas_minutos }}</p>
+          <p class="text-xs">Needed</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 📈 Tendencias -->
+  <div class="mt-10">
+    <h3 class="text-lg font-semibold mb-4 text-white">📈 Tendencia semanal</h3>
+    <canvas id="whoopTrendChart" height="120"></canvas>
+  </div>
+
+  {% else %}
+  <!-- Sin datos -->
+  <div class="text-center text-yellow-400">
+    <p class="text-lg font-semibold">📉 Aún no hay datos Whoop registrados</p>
+    <a href="{% url 'entrenos:registrar_whoop' %}" class="inline-block mt-2 bg-yellow-500 hover:bg-yellow-400 text-black px-4 py-2 rounded-full font-bold">
+      Registrar ahora
+    </a>
+  </div>
+  {% endif %}
+
+<div class="bg-[#222] text-white rounded-xl p-6 shadow-xl mt-6 border-l-4 border-{{ color_entreno|default:'gray' }}-400">
+    <h3 class="text-xl font-bold text-{{ color_entreno|default:'gray' }}-400 mb-2">
+        🧠 Análisis diario Whoop
+    </h3>
+    <p class="text-lg leading-relaxed text-white">
+        {{ consejo_entreno }}
+    </p>
+
+    <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm text-gray-300">
+        <div class="bg-[#1b1b1b] p-4 rounded-md border border-gray-700">
+            <span class="block font-semibold text-white mb-1">💓 FCR - Frecuencia Cardíaca en Reposo</span>
+            <span>Actual: <strong>{{ registro.rhr }} lpm</strong></span><br>
+            <span>
+                {% if registro.rhr > 60 %}
+                    🔴 Más alto de lo normal → fatiga, estrés o falta de sueño.
+                {% else %}
+                    🟢 En buen rango → buen estado físico.
+                {% endif %}
+            </span>
+        </div>
+        <div class="bg-[#1b1b1b] p-4 rounded-md border border-gray-700">
+            <span class="block font-semibold text-white mb-1">⚡ VFC - Variabilidad de Frecuencia Cardíaca</span>
+            <span>Actual: <strong>{{ registro.hrv }} ms</strong></span><br>
+            <span>
+                {% if registro.hrv > 69 %}
+                    🧠 Alta VFC → sistema nervioso relajado y listo.
+                {% else %}
+                    ⚠️ VFC baja → sistema exigido o estresado.
+                {% endif %}
+            </span>
+        </div>
+    </div>
+</div>
+
+  <!-- 📋 Tabla de registros Whoop -->
+<div class="mt-10">
+  <h3 class="text-lg font-semibold mb-4 text-white">📋 Registros recientes</h3>
+  <div class="overflow-x-auto">
+    <table class="min-w-full text-sm text-left text-gray-400 border border-gray-700 rounded-xl">
+      <thead class="text-xs uppercase bg-[#1c1c1c] text-gray-300">
+        <tr>
+          <th scope="col" class="px-4 py-2">Fecha</th>
+          <th scope="col" class="px-4 py-2">Strain</th>
+          <th scope="col" class="px-4 py-2">Recovery</th>
+          <th scope="col" class="px-4 py-2">Sleep %</th>
+          <th scope="col" class="px-4 py-2">Horas</th>
+          <th scope="col" class="px-4 py-2">Necesarias</th>
+          <th scope="col" class="px-4 py-2">FCR</th>
+          <th scope="col" class="px-4 py-2">VFC</th>
+          <th scope="col" class="px-4 py-2">Acciones</th>
+
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in registros_whoop %}
+        <tr class="bg-[#121212] border-b border-gray-700 hover:bg-[#1f1f1f]">
+          <td class="px-4 py-2">{{ r.fecha|date:"d/m/Y" }}</td>
+          <td class="px-4 py-2 font-semibold text-blue-400">{{ r.strain|floatformat:1 }}</td>
+          <td class="px-4 py-2 font-semibold text-yellow-400">{{ r.recovery }}%</td>
+          <td class="px-4 py-2 font-semibold text-cyan-400">{{ r.sleep_performance }}%</td>
+          <td class="px-4 py-2">{{ r.horas_sueno|duracion_a_horas_minutos }}</td>
+          <td class="px-4 py-2">{{ r.sueno_necesario|duracion_a_horas_minutos }}</td>
+          <td class="px-4 py-2">{{ r.rhr|default:"—" }}</td>
+          <td class="px-4 py-2">{{ r.hrv|default:"—" }}</td>
+          <td class="px-4 py-2">
+            <a href="{% url 'entrenos:editar_whoop' r.id %}"
+              class="bg-blue-500 hover:bg-blue-600 text-white text-xs px-3 py-1 rounded-full font-semibold shadow">
+              ✏️ Editar
+            </a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" class="text-center text-red-500 py-4">No hay registros aún.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+  </div>
+</div>
+<div class="mt-6 bg-[#1a1a1a] p-6 rounded-xl shadow-md border border-gray-700">
+  <h3 class="text-lg font-bold text-white mb-4">📊 Resumen semanal Whoop</h3>
+  <table class="w-full text-sm text-left text-gray-300">
+    <thead class="text-xs uppercase bg-[#2c2c2c] text-gray-400">
+      <tr>
+        <th class="px-4 py-2">Indicador</th>
+        <th class="px-4 py-2">Valor medio</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr class="border-b border-gray-700">
+        <td class="px-4 py-2">Strain medio</td>
+        <td class="px-4 py-2 font-semibold text-blue-400">{{ strain_medio|floatformat:1 }}</td>
+      </tr>
+      <tr class="border-b border-gray-700">
+        <td class="px-4 py-2">Recovery medio</td>
+        <td class="px-4 py-2 font-semibold text-yellow-400">{{ recovery_medio }}%</td>
+      </tr>
+      <tr>
+        <td class="px-4 py-2">Horas de sueño media</td>
+        <td class="px-4 py-2 font-semibold text-cyan-400">{{ horas_sueno_media|duracion_a_horas_minutos }}</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+<!-- 🤖 Análisis de Joi -->
+<div class="mt-6 bg-[#141414] p-6 rounded-xl shadow-lg border-l-4 border-blue-500">
+  <h3 class="text-lg font-bold text-white mb-4">🤖 Joi analiza tu semana</h3>
+  <div class="space-y-3 text-sm text-gray-300">
+    <p><span class="font-semibold text-white">Strain medio:</span> {{ analisis_strain }}</p>
+    <p><span class="font-semibold text-white">Recovery medio:</span> {{ analisis_recovery }}</p>
+    <p><span class="font-semibold text-white">Sueño medio:</span> {{ analisis_sueno }}</p>
+  </div>
+  <div class="mt-4 p-4 bg-[#1f1f1f] text-white rounded-lg shadow-inner">
+    <p class="text-base font-semibold text-blue-400">🧠 Conclusión de Joi:</p>
+    <p class="mt-2 text-white leading-relaxed">{{ conclusion_joi }}</p>
+  </div>
+</div>
+<!-- 💤 Análisis detallado de sueño -->
+<div class="mt-6 bg-[#1a1a1a] p-6 rounded-xl shadow-md border border-gray-700">
+  <h3 class="text-lg font-bold text-white mb-4">🛌 Calidad del sueño Semanal</h3>
+  <table class="w-full text-sm text-left text-gray-300">
+    <thead class="text-xs uppercase bg-[#2c2c2c] text-gray-400">
+      <tr>
+        <th class="px-4 py-2">Métrica</th>
+        <th class="px-4 py-2">Valor semanal</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td class="px-4 py-2">Horas vs necesidad</td><td class="px-4 py-2">{{ interpretaciones.horas_vs_necesidad }}</td></tr>
+      <tr><td class="px-4 py-2">Regularidad del sueño</td><td class="px-4 py-2">{{ interpretaciones.regularidad_sueno }}</td></tr>
+      <tr><td class="px-4 py-2">Eficiencia del sueño</td><td class="px-4 py-2">{{ interpretaciones.eficiencia_sueno }}</td></tr>
+    </tbody>
+  </table>
+</div>
+</div>
+<!-- 📊 Resumen semanal -->
+
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const ctx = document.getElementById('whoopTrendChart');
+  if (ctx) {
+    new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Hoy"],
+        datasets: [
+          {
+            label: 'Strain',
+            data: [8.2, 9.1, 10.4, 11.5, 9.8, 8.9, {{ registro.strain|default:10 }}],
+            borderColor: '#2563EB',
+            tension: 0.4,
+          },
+          {
+            label: 'Recovery',
+            data: [70, 65, 60, 58, 62, 66, {{ registro.recovery|default:60 }}],
+            borderColor: '#EAB308',
+            tension: 0.4,
+          },
+          {
+            label: 'Sleep',
+            data: [72, 68, 75, 78, 70, 73, {{ registro.sleep_performance|default:75 }}],
+            borderColor: '#60A5FA',
+            tension: 0.4,
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: {
+            labels: { color: 'white' }
+          }
+        },
+        scales: {
+          y: { ticks: { color: 'white' }, beginAtZero: true },
+          x: { ticks: { color: 'white' } }
+        }
+      }
+    });
+  }
+});
+</script>
+{% endblock %}

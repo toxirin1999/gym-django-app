@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block title %}Revisiones de {{ cliente.nombre }}{% endblock %}
+
+{% block content %}
+<h2>Revisiones de {{ cliente.nombre }}</h2>
+
+<form method="get" class="mb-3">
+    <label>Desde:</label> <input type="date" name="start">
+    <label>Hasta:</label> <input type="date" name="end">
+    <button type="submit">Filtrar</button>
+</form>
+
+{% if alerts %}
+<div class="alert alert-warning">
+    <ul>
+        {% for alert in alerts %}
+        <li>{{ alert }}</li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+
+<table class="table">
+    <thead>
+    <tr>
+        <th>Fecha</th>
+        <th>Peso (kg)</th>
+        <th>Grasa Corporal (%)</th>
+        <th>Acciones</th>
+
+    </tr>
+    </thead>
+    <tbody>
+    {% for r in revisiones %}
+    <tr>
+        <td>{{ r.fecha }}</td>
+        <td>{{ r.peso_corporal }}</td>
+        <td>{{ r.grasa_corporal }}</td>
+        <td>
+            <form method="post" action="{% url 'eliminar_revision' r.id %}"
+                  onsubmit="return confirm('¿Eliminar esta revisión?');">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-outline-danger">🗑 Eliminar</button>
+            </form>
+        </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<canvas id="graficoProgreso" width="400" height="200"></canvas>
+
+<script>
+    const ctx = document.getElementById('graficoProgreso').getContext('2d');
+    const data = {
+        labels: {{ fechas|safe }},
+        datasets: [
+            {
+                label: 'Peso Corporal (kg)',
+                data: {{ pesos|safe }},
+                fill: false,
+                borderColor: 'rgb(75, 192, 192)',
+                tension: 0.1
+            },
+            {
+                label: 'Grasa Corporal (%)',
+                data: {{ grasas|safe }},
+                fill: false,
+                borderColor: 'rgb(255, 99, 132)',
+                tension: 0.1
+            }
+        ]
+    };
+    new Chart(ctx, {
+        type: 'line',
+        data: data
+    });
+</script>
+
+<!-- Toasts de Bootstrap -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
+    {% for alert in alerts %}
+    <div class="toast align-items-center text-white bg-warning border-0 mb-2" role="alert" aria-live="assertive"
+         aria-atomic="true">
+        <div class="d-flex">
+            <div class="toast-body">
+                {{ alert }}
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"
+                    aria-label="Close"></button>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<script>
+    const toastElList = [].slice.call(document.querySelectorAll('.toast'))
+    toastElList.forEach(function (toastEl) {
+        const toast = new bootstrap.Toast(toastEl)
+        toast.show()
+    })
+</script>
+
+
+<a href="{% url 'agregar_revision' cliente.id %}" class="btn btn-primary mt-3">Añadir Nueva Revisión</a>
+<a href="{% url 'detalle_cliente' cliente.id %}" class="btn btn-secondary mt-3 ms-2">← Volver al detalle del cliente</a>
+{% endblock %}

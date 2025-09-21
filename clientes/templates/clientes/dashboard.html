@@ -1,0 +1,237 @@
+{% extends 'base.html' %}
+{% load static %}
+
+
+{% block title %}Dashboard Clientes{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">📊 Panel de Entrenamientos</h1>
+<div class="mb-4">
+    <h5>💪 Total de entrenamientos: <strong>{{ entr_total }}</strong></h5>
+    <h6 class="text-muted">📈 Promedio por semana: <strong>{{ prom_sem }}</strong></h6>
+</div>
+<div class="row mb-4 text-center">
+    <div class="col-md-2">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h6>Hoy</h6>
+                <p class="fs-4 mb-1">{{ entr_hoy }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h6>Esta semana</h6>
+                <p class="fs-4 mb-1">{{ entr_semana }}</p>
+                <small class="text-muted">Prom: {{ prom_sem }}</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h6>Este mes</h6>
+                <p class="fs-4 mb-1">{{ entr_mes }}</p>
+                <small class="text-muted">Prom: {{ prom_mes }}</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h6>Este año</h6>
+                <p class="fs-4 mb-1">{{ entr_anio }}</p>
+                <small class="text-muted">Prom: {{ prom_anio }}</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card shadow-sm bg-primary text-white">
+            <div class="card-body">
+                <h6>Total entrenos</h6>
+                <p class="fs-1 mb-0">{{ entr_total }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<div class="container">
+    <div id="joi-root"></div>
+    <script src="{% static 'frontend/JoiCard.js' %}"></script>
+
+    <h1 class="mb-4">📊 Panel de Control</h1>
+
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-bg-danger shadow">
+                <div class="card-body">
+                    <h5 class="card-title">Clientes en riesgo</h5>
+                    <p class="card-text fs-3">{{ total_alertas }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <h4 class="mt-5">⚠ Clientes con Alertas </h4>
+
+    {% if alertas_por_tipo %}
+    <ul class="list-group mb-4">
+        {% for tipo, clientes in alertas_por_tipo.items %}
+        <li class="list-group-item list-group-item-warning">
+            <strong>{{ tipo }}</strong>: {{ clientes|length }} cliente{{ clientes|length|pluralize }}
+            <ul class="mt-2">
+                {% for cliente, fecha in clientes %}
+                <li>
+                    {{ cliente }} — {{ fecha }}
+                    <a href="{% url 'detalle_cliente' cliente.id %}" class="btn btn-sm btn-outline-secondary ms-2">Ver
+                        detalle</a>
+                </li>
+                {% endfor %}
+            </ul>
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <div class="alert alert-success">No hay alertas activas.</div>
+    {% endif %}
+
+    <hr>
+
+
+</div>
+
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+        <h5 class="card-title">📈 Comparar Clientes</h5>
+        <p class="card-text">Accede a la herramienta para comparar la evolución de múltiples clientes en un solo
+            gráfico.</p>
+        <a href="{% url 'comparar_clientes' %}" class="btn btn-sm btn-primary">Ir a comparación</a>
+    </div>
+</div>
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+        <h5 class="card-title">📈 Gestionar Ejercicios</h5>
+        <p class="card-text">Accede a la herramienta para añadir ejercicios.</p>
+        <a href="{% url 'lista_ejercicios' %}" class="btn btn-info w-100 mb-3">Ir a los ejercicios</a>
+    </div>
+</div>
+
+<div class="container">
+
+
+    <h1 class="mb-4">Dashboard de Clientes</h1>
+
+    <div class="row text-center">
+        <div class="col-md-4">
+            <div class="card p-3 shadow">
+                <h4>Total Clientes</h4>
+                <p class="display-5">{{ total_clientes }}</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card p-3 shadow">
+                <h4>Promedio Peso (kg)</h4>
+                <p class="display-5">{{ promedio_peso|floatformat:1 }}</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card p-3 shadow">
+                <h4>Promedio Grasa (%)</h4>
+                <p class="display-5">{{ promedio_grasa|floatformat:1 }}</p>
+            </div>
+        </div>
+    </div>
+
+    <h4 class="mt-5">Distribución por Género</h4>
+    <canvas id="generoChart" height="100"></canvas>
+
+    <h4 class="mt-5">Peso Promedio por Género</h4>
+    <canvas id="pesoGeneroChart" height="100"></canvas>
+
+    <h4 class="mt-5">Clientes Registrados por Mes</h4>
+    <canvas id="registroMesChart" height="100"></canvas>
+
+    <h4 class="mt-5">Top 5 Clientes por Peso</h4>
+    <ul class="list-group">
+        {% for cliente in top_peso %}
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+            {{ cliente.nombre }}
+            <span class="badge bg-primary rounded-pill">{{ cliente.peso_corporal }} kg</span>
+        </li>
+        {% empty %}
+        <li class="list-group-item">No hay datos disponibles.</li>
+        {% endfor %}
+    </ul>
+</div>
+<div class="container mt-4">
+    <h2 class="fw-bold mb-4">Resumen de Clientes por Programa</h2>
+
+    <table class="table table-striped">
+        <thead>
+        <tr>
+            <th>Programa</th>
+            <th>Número de Clientes</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for item in resumen_programa %}
+        <tr>
+            <td>{{ item.programa__nombre }}</td>
+            <td>{{ item.count }}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+
+
+</div>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    const generoData = {{ genero_count|safe }};
+    const pesoGeneroData = {{ peso_por_genero|safe }};
+    const registroMesData = {{ registro_por_mes|safe }};
+
+    const generoLabels = generoData.map(item => {
+        if (item.genero === 'M') return 'Masculino';
+        if (item.genero === 'F') return 'Femenino';
+        if (item.genero === 'O') return 'Otro';
+        return 'Sin especificar';
+    });
+    const generoCounts = generoData.map(item => item.count);
+
+    new Chart(document.getElementById('generoChart'), {
+        type: 'pie',
+        data: { labels: generoLabels, datasets: [{ data: generoCounts, backgroundColor: ['#0d6efd', '#d63384', '#198754', '#6c757d'] }] },
+        options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+    });
+
+    const pesoGeneroLabels = pesoGeneroData.map(item => {
+        if (item.genero === 'M') return 'Masculino';
+        if (item.genero === 'F') return 'Femenino';
+        if (item.genero === 'O') return 'Otro';
+        return 'Sin especificar';
+    });
+    const pesoGeneroAvg = pesoGeneroData.map(item => item.avg_peso);
+
+    new Chart(document.getElementById('pesoGeneroChart'), {
+        type: 'bar',
+        data: { labels: pesoGeneroLabels, datasets: [{ label: 'Peso Promedio (kg)', data: pesoGeneroAvg, backgroundColor: '#0d6efd' }] },
+        options: { responsive: true, scales: { y: { beginAtZero: true } } }
+    });
+
+    const registroMesLabels = registroMesData.map(item => item.month);
+    const registroMesCounts = registroMesData.map(item => item.count);
+
+    new Chart(document.getElementById('registroMesChart'), {
+        type: 'line',
+        data: { labels: registroMesLabels, datasets: [{ label: 'Clientes por Mes', data: registroMesCounts, fill: false, borderColor: '#198754', tension: 0.1 }] },
+        options: { responsive: true, scales: { y: { beginAtZero: true } } }
+    });
+</script>
+<hr>
+<div id="joi-root"></div>
+<script src="{% static 'frontend/JoiCard.js' %}"></script>
+
+{% endblock %}

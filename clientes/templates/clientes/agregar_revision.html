@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Agregar Revisión{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h2 class="mb-4">Añadir Revisión a {{ cliente.nombre }}</h2>
+
+    <form method="post" novalidate>
+        {% csrf_token %}
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                {{ form.peso_corporal.label_tag }} {{ form.peso_corporal }}
+            </div>
+            <div class="col-md-6 mb-3">
+                {{ form.grasa_corporal.label_tag }} {{ form.grasa_corporal }}
+            </div>
+            <div class="col-md-6 mb-3">
+                {{ form.cintura.label_tag }} {{ form.cintura }}
+            </div>
+            <div class="col-md-6 mb-3">
+                {{ form.pecho.label_tag }} {{ form.pecho }}
+            </div>
+            <div class="col-md-6 mb-3">
+                {{ form.biceps.label_tag }} {{ form.biceps }}
+            </div>
+            <div class="col-md-6 mb-3">
+                {{ form.muslos.label_tag }} {{ form.muslos }}
+            </div>
+            <div class="col-md-6 mb-3">
+                {{ form.hombro.label_tag }} {{ form.hombro }}
+            </div>
+            <div class="col-md-6 mb-3">
+                {{ form.cuello.label_tag }} {{ form.cuello }}
+            </div>
+            <div class="col-md-6 mb-3">
+                {{ form.antebrazos.label_tag }} {{ form.antebrazos }}
+            </div>
+            <div class="col-md-6 mb-3">
+                {{ form.caderas.label_tag }} {{ form.caderas }}
+            </div>
+            <div class="col-md-6 mb-3">
+                {{ form.gemelos.label_tag }} {{ form.gemelos }}
+            </div>
+            <div class="col-12 mb-3">
+                {{ form.observaciones.label_tag }} {{ form.observaciones }}
+            </div>
+        </div>
+
+        <button type="submit" class="btn btn-success">💾 Guardar</button>
+        <a href="{% url 'lista_revisiones' cliente.id %}" class="btn btn-secondary">↩ Volver</a>
+    </form>
+</div>
+{% endblock %}

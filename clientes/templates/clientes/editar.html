@@ -1,0 +1,189 @@
+{% extends "base.html" %}
+{% load form_tags %}
+{% load static %}
+{% load widget_tweaks %}
+
+{% block title %}{{ cliente.id|default:"Agregar" }} Cliente{% endblock %}
+
+{% block content %}
+<div class="w-full flex justify-center py-8 px-4">
+    <form method="post" enctype="multipart/form-data" class="space-y-8 bg-[#121212] p-8 rounded-xl shadow-lg max-w-4xl w-full border border-gray-800">
+        {% csrf_token %}
+
+        <header>
+            <h2 class="text-2xl font-bold text-cyan-300 tracking-wide">{{ cliente.id|default:"Agregar" }} Cliente</h2>
+            <p class="text-gray-400 mt-1">Completa la información del cliente y sus medidas.</p>
+        </header>
+
+        <!-- SECCIÓN: DATOS PRINCIPALES -->
+        <fieldset class="space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Nombre -->
+                <div>
+                    <label for="{{ form.nombre.id_for_label }}" class="form-label">{{ form.nombre.label }}</label>
+                    {{ form.nombre|add_class:"af-input" }}
+                </div>
+                <!-- Programa -->
+                <div>
+                    <label for="{{ form.programa.id_for_label }}" class="form-label">{{ form.programa.label }}</label>
+                    {{ form.programa|add_class:"af-select" }}
+                </div>
+                <!-- Email -->
+                <div>
+                    <label for="{{ form.email.id_for_label }}" class="form-label">{{ form.email.label }}</label>
+                    {{ form.email|add_class:"af-input" }}
+                </div>
+                <!-- Teléfono -->
+                <div>
+                    <label for="{{ form.telefono.id_for_label }}" class="form-label">{{ form.telefono.label }}</label>
+                    {{ form.telefono|add_class:"af-input" }}
+                </div>
+                <!-- Fecha de Nacimiento -->
+                <div>
+                    <label for="{{ form.fecha_nacimiento.id_for_label }}" class="form-label">{{ form.fecha_nacimiento.label }}</label>
+                    {{ form.fecha_nacimiento|add_class:"af-input"|attr:"type:date" }}
+                </div>
+                <!-- Próximo Registro de Peso -->
+                <div>
+                    <label for="{{ form.proximo_registro_peso.id_for_label }}" class="form-label">{{ form.proximo_registro_peso.label }}</label>
+                    {{ form.proximo_registro_peso|add_class:"af-input"|attr:"type:date" }}
+                </div>
+                <!-- Dirección -->
+                <div class="md:col-span-2">
+                    <label for="{{ form.direccion.id_for_label }}" class="form-label">{{ form.direccion.label }}</label>
+                    {{ form.direccion|add_class:"af-input" }}
+                </div>
+                <!-- Género -->
+                <div>
+                    <label for="{{ form.genero.id_for_label }}" class="form-label">{{ form.genero.label }}</label>
+                    {{ form.genero|add_class:"af-select" }}
+                </div>
+                <!-- Fecha Vencimiento Membresía -->
+                <div>
+                    <label for="{{ form.fecha_vencimiento_membresia.id_for_label }}" class="form-label">{{ form.fecha_vencimiento_membresia.label }}</label>
+                    {{ form.fecha_vencimiento_membresia|add_class:"af-input"|attr:"type:date" }}
+                </div>
+                <!-- Membresía Activa -->
+                <div class="md:col-span-2 flex items-center gap-3 pt-4">
+                    {{ form.membresia_activa|add_class:"af-checkbox" }}
+                    <label for="{{ form.membresia_activa.id_for_label }}" class="text-sm font-medium text-gray-300">{{ form.membresia_activa.label }}</label>
+                </div>
+            </div>
+        </fieldset>
+
+        <!-- SECCIÓN: MEDIDAS CORPORALES -->
+        <fieldset>
+            <legend class="text-lg font-semibold text-purple-300 mb-4">📏 Medidas Corporales</legend>
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                <!-- Peso Corporal -->
+                <div>
+                    <label for="{{ form.peso_corporal.id_for_label }}" class="form-label">{{ form.peso_corporal.label }}</label>
+                    {{ form.peso_corporal|add_class:"af-input" }}
+                </div>
+                <!-- Grasa Corporal -->
+                <div>
+                    <label for="{{ form.grasa_corporal.id_for_label }}" class="form-label">{{ form.grasa_corporal.label }}</label>
+                    {{ form.grasa_corporal|add_class:"af-input" }}
+                </div>
+                <!-- Cintura -->
+                <div>
+                    <label for="{{ form.cintura.id_for_label }}" class="form-label">{{ form.cintura.label }}</label>
+                    {{ form.cintura|add_class:"af-input" }}
+                </div>
+                <!-- Pecho -->
+                <div>
+                    <label for="{{ form.pecho.id_for_label }}" class="form-label">{{ form.pecho.label }}</label>
+                    {{ form.pecho|add_class:"af-input" }}
+                </div>
+                <!-- Hombro -->
+                <div>
+                    <label for="{{ form.hombro.id_for_label }}" class="form-label">{{ form.hombro.label }}</label>
+                    {{ form.hombro|add_class:"af-input" }}
+                </div>
+                <!-- Cuello -->
+                <div>
+                    <label for="{{ form.cuello.id_for_label }}" class="form-label">{{ form.cuello.label }}</label>
+                    {{ form.cuello|add_class:"af-input" }}
+                </div>
+                <!-- Bíceps -->
+                <div>
+                    <label for="{{ form.biceps.id_for_label }}" class="form-label">{{ form.biceps.label }}</label>
+                    {{ form.biceps|add_class:"af-input" }}
+                </div>
+                <!-- Antebrazos -->
+                <div>
+                    <label for="{{ form.antebrazos.id_for_label }}" class="form-label">{{ form.antebrazos.label }}</label>
+                    {{ form.antebrazos|add_class:"af-input" }}
+                </div>
+                <!-- Caderas -->
+                <div>
+                    <label for="{{ form.caderas.id_for_label }}" class="form-label">{{ form.caderas.label }}</label>
+                    {{ form.caderas|add_class:"af-input" }}
+                </div>
+                <!-- Muslos -->
+                <div>
+                    <label for="{{ form.muslos.id_for_label }}" class="form-label">{{ form.muslos.label }}</label>
+                    {{ form.muslos|add_class:"af-input" }}
+                </div>
+                <!-- Gemelos -->
+                <div>
+                    <label for="{{ form.gemelos.id_for_label }}" class="form-label">{{ form.gemelos.label }}</label>
+                    {{ form.gemelos|add_class:"af-input" }}
+                </div>
+            </div>
+        </fieldset>
+
+        <!-- SECCIÓN: FOTO -->
+        <fieldset>
+            <legend class="text-lg font-semibold text-yellow-400 mb-4">📸 Foto de Perfil</legend>
+            <div>
+                <label for="{{ form.foto.id_for_label }}" class="form-label">{{ form.foto.label }}</label>
+                {{ form.foto|add_class:"af-input" }}
+            </div>
+        </fieldset>
+
+        <!-- SECCIÓN: USUARIO VINCULADO -->
+        <fieldset>
+            <legend class="text-lg font-semibold text-fuchsia-400 mb-4">🔐 Usuario Vinculado</legend>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {% if cliente.user %}
+                <div>
+                    <label for="username" class="form-label">Usuario actual</label>
+                    <input type="text" id="username" class="af-input" value="{{ cliente.user.username }}" name="username" required>
+                </div>
+                <div>
+                    <label for="password" class="form-label">Nueva contraseña (opcional)</label>
+                    <input type="password" id="password" class="af-input" name="password" placeholder="Déjalo vacío para no cambiarla">
+                </div>
+                {% else %}
+                <div>
+                    <label for="username" class="form-label">Crear nombre de usuario</label>
+                    <input type="text" id="username" class="af-input" name="username" required>
+                </div>
+                <div>
+                    <label for="password" class="form-label">Contraseña</label>
+                    <input type="password" id="password" class="af-input" name="password" required>
+                </div>
+                {% endif %}
+            </div>
+        </fieldset>
+
+        <!-- SECCIÓN: ACCIONES -->
+        <div class="flex flex-col sm:flex-row-reverse gap-4 pt-6">
+            <button type="submit" class="btn-verde w-full sm:w-auto"><i class="bi bi-check-circle mr-2"></i> Guardar Cliente</button>
+            <a href="{% url 'clientes:lista_clientes' %}" class="btn-rojo w-full sm:w-auto text-center"><i class="bi bi-arrow-left mr-2"></i> Cancelar</a>
+        </div>
+    </form>
+</div>
+
+<!-- Opcional: Agrega esto a tu CSS para estandarizar las etiquetas -->
+<style>
+    .form-label {
+        display: block;
+        margin-bottom: 0.5rem; /* 8px */
+        font-size: 0.875rem; /* 14px */
+        font-weight: 500;
+        color: #d1d5db; /* gray-300 */
+    }
+</style>
+{% endblock %}

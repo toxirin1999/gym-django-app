@@ -1,0 +1,343 @@
+{% extends 'nutricion_app_django/base_nutricion.html' %}
+{% load static %}
+{% load widget_tweaks %}
+
+{% block title %}{% if es_edicion %}Editar Perfil{% else %}Configurar Perfil{% endif %}{% endblock title %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+<style>
+    /* ===== Fondo y atmósfera ===== */
+    body{
+      background: url("{% static 'images/fondo_cyberpunk.png' %}") no-repeat center center fixed !important;
+      background-size: cover !important;
+      background-color:#000 !important;
+      min-height:100vh !important;
+      filter:brightness(0.9);
+      overflow-x:hidden;
+    }
+
+    @keyframes fadeSlide{0%{opacity:0;transform:translateY(10px)}100%{opacity:1;transform:translateY(0)}}
+    .animate-fadeSlide{animation:fadeSlide .8s ease-out}
+
+    /* Título con gradiente/halo */
+    .title{
+      background:linear-gradient(90deg,#00ffff,#00ff00,#ff00ff);
+      -webkit-background-clip:text;
+      -webkit-text-fill-color:transparent;
+      color:transparent;
+      text-shadow:0 0 30px rgba(0,255,255,.5)!important;
+    }
+    .header-halo{
+      background:radial-gradient(circle,rgba(0,255,255,.2) 0%, rgba(0,255,255,0) 70%) !important;
+      backdrop-filter:blur(20px) saturate(180%) !important;
+      -webkit-backdrop-filter:blur(20px) saturate(180%) !important;
+      border:1px solid rgba(77,208,225,.6) !important;
+      box-shadow:0 0 15px rgba(77,208,225,.4), inset 0 0 8px rgba(77,208,225,.2) !important;
+      border-radius:12px !important;
+    }
+
+    /* Tarjetas vidriadas */
+    .metric-card,.quote-box,.timeline-section{
+      background:rgba(0,0,0,.4) !important;
+      backdrop-filter:blur(15px) saturate(180%) !important;
+      -webkit-backdrop-filter:blur(15px) saturate(180%) !important;
+      border:1px solid rgba(77,208,225,.6) !important;
+      box-shadow:0 0 15px rgba(77,208,225,.4), inset 0 0 8px rgba(77,208,225,.2) !important;
+      border-radius:12px !important;
+    }
+    .section-title{font-size:1.1rem;font-weight:700;margin-bottom:.75rem;color:#fff}
+
+    /* Inputs */
+    .form-control-glass{
+      width:100%;
+      background:rgba(0,0,0,.25);
+      border:1px solid rgba(255,255,255,.12);
+      border-radius:10px;
+      padding:12px 14px;
+      color:#e8fefe;
+      font-size:1rem;
+      transition:border-color .2s, background .2s, box-shadow .2s;
+    }
+    .form-control-glass:focus{
+      outline:none;border-color:#00ffff;background:rgba(0,0,0,.35);
+      box-shadow:0 0 12px rgba(0,255,255,.25);
+    }
+
+    /* Botones */
+    .btn-primary-neon{
+      display:inline-block;width:100%;
+      background:linear-gradient(90deg,#06b6d4,#d946ef);
+      color:#fff;text-align:center;font-weight:700;
+      padding:12px 16px;border-radius:12px;border:none;cursor:pointer;
+      transition:transform .15s ease, box-shadow .2s ease, opacity .2s ease;
+    }
+    .btn-primary-neon:hover{transform:scale(1.02);box-shadow:0 0 16px rgba(0,255,255,.35)}
+    .btn-outline-ghost{
+      display:inline-flex;align-items:center;gap:.5rem;
+      border:1px solid rgba(255,255,255,.3); color:#e5e7eb;
+      padding:10px 14px;border-radius:10px; text-decoration:none;
+      transition:background .2s, border-color .2s, transform .15s;
+    }
+    .btn-outline-ghost:hover{background:rgba(255,255,255,.06);border-color:#00ffff;transform:translateY(-1px)}
+
+    /* Ayuda */
+    .help-box{background:rgba(255,255,255,.08);border-radius:8px;padding:.6rem}
+    label{color:#d1d5db;font-size:.9rem;margin-bottom:.25rem;display:block}
+    .error-inline{display:block;color:#fca5a5;font-size:.85rem;margin-top:.25rem}
+
+    /* ===== Widget IMC ===== */
+    .imc-widget .imc-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem}
+    .imc-value{font-weight:800}
+    .imc-status{font-weight:700}
+    .imc-status.normal{color:#86efac}
+    .imc-status.bajo{color:#60a5fa}
+    .imc-status.sobrepeso{color:#f59e0b}
+    .imc-status.obesidad{color:#ef4444}
+
+    .imc-track{
+      width:100%; height:40px; border-radius:10px;
+      background:linear-gradient(90deg,rgba(255,255,255,.06),rgba(255,255,255,.08));
+      overflow:hidden; position:relative;
+      box-shadow: inset 0 0 8px rgba(0,0,0,.35);
+    }
+    .imc-bar{
+      position:absolute; left:0; top:0; bottom:0; width:0%;
+      transition:width .35s ease;
+      background:linear-gradient(90deg,#60a5fa,#22d3ee,#34d399,#f59e0b,#ef4444);
+      opacity:.9;
+    }
+    .imc-overlay{
+      position:absolute; inset:0; display:flex; align-items:center; padding:0 12px;
+      color:#e5e7eb; font-weight:600; text-shadow:0 1px 2px rgba(0,0,0,.6);
+    }
+</style>
+{% endblock extra_css %}
+
+{% block piramide_content %}
+<div class="container mx-auto px-4 py-8">
+
+    <!-- Encabezado -->
+    <header class="mb-6 animate-fadeSlide">
+        <div class="header-halo p-5">
+            <div class="flex items-center gap-3">
+                <div class="text-2xl">🧬</div>
+                <div>
+                    <h1 class="text-2xl md:text-3xl font-extrabold title">
+                        {% if es_edicion %}Editar Perfil Nutricional{% else %}Configurar Perfil Nutricional{% endif %}
+                    </h1>
+                    <p class="text-gray-300 text-sm mt-1">
+                        {% if es_edicion %}Actualiza tu información personal para cálculos precisos{% else %}Completa tus datos para personalizar tus recomendaciones{% endif %}
+                    </p>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        <!-- Formulario principal -->
+        <section class="lg:col-span-2 space-y-6">
+            <form method="post" novalidate class="space-y-6">
+                {% csrf_token %}
+
+                <!-- Información básica -->
+                <div class="metric-card p-5 animate-fadeSlide">
+                    <h3 class="section-title"><i class="fas fa-info-circle text-cyan-400 mr-2"></i>Información Básica</h3>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="{{ form.edad.id_for_label }}">{{ form.edad.label }}</label>
+                            {% render_field form.edad class="form-control-glass" %}
+                            {% if form.edad.help_text %}<small class="text-gray-400">{{ form.edad.help_text }}</small>{% endif %}
+                            {% if form.edad.errors %}<span class="error-inline">{% for e in form.edad.errors %}{{ e }}{% endfor %}</span>{% endif %}
+                        </div>
+
+                        <div>
+                            <label for="{{ form.sexo.id_for_label }}">{{ form.sexo.label }}</label>
+                            {% render_field form.sexo class="form-control-glass" %}
+                            {% if form.sexo.help_text %}<small class="text-gray-400">{{ form.sexo.help_text }}</small>{% endif %}
+                            {% if form.sexo.errors %}<span class="error-inline">{% for e in form.sexo.errors %}{{ e }}{% endfor %}</span>{% endif %}
+                        </div>
+
+                        <div>
+                            <label for="{{ form.peso.id_for_label }}">{{ form.peso.label }}</label>
+                            {% render_field form.peso class="form-control-glass" inputmode="decimal" step="0.1" placeholder="Ej: 82,5" data-imc="peso" %}
+                            {% if form.peso.help_text %}<small class="text-gray-400">{{ form.peso.help_text }}</small>{% endif %}
+                            {% if form.peso.errors %}<span class="error-inline">{% for e in form.peso.errors %}{{ e }}{% endfor %}</span>{% endif %}
+                        </div>
+
+                        <div>
+                            <label for="{{ form.altura.id_for_label }}">{{ form.altura.label }}</label>
+                            {% render_field form.altura class="form-control-glass" inputmode="numeric" step="1" placeholder="Ej: 186" data-imc="altura" %}
+                            {% if form.altura.help_text %}<small class="text-gray-400">{{ form.altura.help_text }}</small>{% endif %}
+                            {% if form.altura.errors %}<span class="error-inline">{% for e in form.altura.errors %}{{ e }}{% endfor %}</span>{% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Objetivos y actividad -->
+                <div class="metric-card p-5 animate-fadeSlide">
+                    <h3 class="section-title"><i class="fas fa-target text-fuchsia-400 mr-2"></i>Objetivos y Actividad</h3>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="{{ form.nivel_actividad.id_for_label }}">{{ form.nivel_actividad.label }}</label>
+                            {% render_field form.nivel_actividad class="form-control-glass" %}
+                            {% if form.nivel_actividad.help_text %}<small class="text-gray-400">{{ form.nivel_actividad.help_text }}</small>{% endif %}
+                            {% if form.nivel_actividad.errors %}<span class="error-inline">{% for e in form.nivel_actividad.errors %}{{ e }}{% endfor %}</span>{% endif %}
+                            <div class="help-box mt-2 text-white/70 text-xs leading-5">
+                                <strong>Sedentario:</strong> oficina y poco movimiento<br>
+                                <strong>Ligeramente activo:</strong> caminar ocasional<br>
+                                <strong>Activo:</strong> ejercicio regular / trabajo físico<br>
+                                <strong>Muy activo:</strong> ejercicio intenso diario / trabajo físico pesado
+                            </div>
+                        </div>
+
+                        <div>
+                            <label for="{{ form.objetivo.id_for_label }}">{{ form.objetivo.label }}</label>
+                            {% render_field form.objetivo class="form-control-glass" %}
+                            {% if form.objetivo.help_text %}<small class="text-gray-400">{{ form.objetivo.help_text }}</small>{% endif %}
+                            {% if form.objetivo.errors %}<span class="error-inline">{% for e in form.objetivo.errors %}{{ e }}{% endfor %}</span>{% endif %}
+                        </div>
+
+                        <div class="md:col-span-2">
+                            <label for="{{ form.experiencia.id_for_label }}">{{ form.experiencia.label }}</label>
+                            {% render_field form.experiencia class="form-control-glass" %}
+                            {% if form.experiencia.help_text %}<small class="text-gray-400">{{ form.experiencia.help_text }}</small>{% endif %}
+                            {% if form.experiencia.errors %}<span class="error-inline">{% for e in form.experiencia.errors %}{{ e }}{% endfor %}</span>{% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Acciones -->
+                <div class="flex items-center justify-between gap-3">
+                    <a href="{% url 'nutricion_app_django:piramide_principal' %}" class="btn-outline-ghost">
+                        <i class="fas fa-arrow-left"></i> Cancelar
+                    </a>
+                    <button type="submit" class="btn-primary-neon">
+                        <i class="fas fa-save mr-2"></i>
+                        {% if es_edicion %}Actualizar Perfil{% else %}Crear Perfil{% endif %}
+                    </button>
+                </div>
+            </form>
+        </section>
+
+        <!-- Lateral -->
+        <aside class="space-y-6">
+            <!-- === WIDGET IMC === -->
+            <div class="metric-card p-5 animate-fadeSlide imc-widget" aria-live="polite">
+                <div class="imc-row">
+                    <h3 class="section-title"><i class="fas fa-heartbeat text-cyan-300 mr-2"></i>Tu IMC</h3>
+
+                </div>
+
+                <div class="imc-track" role="progressbar" aria-valuemin="15" aria-valuemax="40" aria-valuenow="0" aria-label="Progreso IMC">
+                    <div id="imc-bar" class="imc-bar"></div>
+                    <div class="imc-overlay">
+                        <span id="imc-label">IMC: —</span>&nbsp;–&nbsp;<span id="imc-status" class="imc-status">—</span>
+                    </div>
+                </div>
+
+                <small class="block mt-2 text-white/60">Usa peso (kg) y altura (cm). Rango visual 15–40.</small>
+            </div>
+
+            {% if not es_edicion %}
+            <div class="quote-box p-5 animate-fadeSlide">
+                <h3 class="section-title"><i class="fas fa-lightbulb text-yellow-300 mr-2"></i>¿Por qué pedimos estos datos?</h3>
+                <ul class="text-white/80 text-sm space-y-2">
+                    <li><strong>Edad y sexo:</strong> influyen en el metabolismo basal.</li>
+                    <li><strong>Peso y altura:</strong> necesarios para calorías de mantenimiento.</li>
+                    <li><strong>Nivel de actividad:</strong> determina el factor de actividad.</li>
+                    <li><strong>Objetivo:</strong> define déficit/superávit/mantenimiento.</li>
+                    <li><strong>Experiencia:</strong> personaliza las recomendaciones.</li>
+                </ul>
+            </div>
+            {% endif %}
+
+            <div class="timeline-section p-5 animate-fadeSlide">
+                <h3 class="section-title"><i class="fas fa-apple-alt text-green-400 mr-2"></i>Accesos rápidos</h3>
+                <div class="grid grid-cols-1 gap-3">
+                    <a href="{% url 'nutricion_app_django:dashboard_completo' %}" class="block w-full bg-gradient-to-r from-cyan-500 to-fuchsia-500 text-white text-center font-semibold py-2 rounded-xl shadow-md hover:scale-105 transition">
+                        📊 Ir al dashboard de nutrición
+                    </a>
+                    <a href="{% url 'nutricion_app_django:seguimiento_peso' %}" class="block w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white text-center font-semibold py-2 rounded-xl shadow-md hover:scale-105 transition">
+                        ⚖️ Registrar peso
+                    </a>
+                </div>
+            </div>
+        </aside>
+
+    </div>
+</div>
+{% endblock piramide_content %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+      const form = document.querySelector('form');
+
+      // Selección robusta de campos
+      const peso   = document.querySelector('[data-imc="peso"]')   || form?.querySelector('input[name="peso"]');
+      const altura = document.querySelector('[data-imc="altura"]') || form?.querySelector('input[name="altura"]');
+
+      // Elementos del widget
+      const imcBar   = document.getElementById('imc-bar');
+      const imcLabel = document.getElementById('imc-label');
+      const imcStatus= document.getElementById('imc-status');
+      const imcValue = document.getElementById('imc-value');
+      const imcTrack = document.querySelector('.imc-track');
+
+      function clamp(v, min, max){ return Math.max(min, Math.min(max, v)); }
+      function parseNum(v){
+        if (v == null) return NaN;
+        return parseFloat(String(v).trim().replace(/\s+/g,'').replace(',', '.'));
+      }
+
+      function actualizarIMC(){
+        const p = parseNum(peso?.value);
+        let a = parseNum(altura?.value); // puede venir en cm o en m
+
+        if (!p || !a) {
+          if(imcBar)   imcBar.style.width = '0%';
+          if(imcLabel) imcLabel.textContent = 'IMC: —';
+          if(imcStatus){ imcStatus.textContent = '—'; imcStatus.className = 'imc-status'; }
+          if(imcValue) imcValue.textContent = '—';
+          if(imcTrack) imcTrack.setAttribute('aria-valuenow','0');
+          return;
+        }
+
+        // Si altura > 3 asumimos centímetros; si <= 3 asumimos metros.
+        a = (a > 3) ? (a / 100) : a;
+
+        if (a <= 0) return;
+
+        const imc = p / (a * a);
+        let estado = '', clase = '';
+        if (imc < 18.5)       { estado = 'Bajo peso';   clase = 'bajo'; }
+        else if (imc < 25)    { estado = 'Peso normal'; clase = 'normal'; }
+        else if (imc < 30)    { estado = 'Sobrepeso';   clase = 'sobrepeso'; }
+        else                  { estado = 'Obesidad';    clase = 'obesidad'; }
+
+        const perc = clamp((imc - 15) / (40 - 15), 0, 1) * 100;
+
+        if(imcBar)   imcBar.style.width = perc.toFixed(1) + '%';
+        if(imcLabel) imcLabel.textContent = 'IMC: ' + imc.toFixed(1);
+        if(imcStatus){ imcStatus.textContent = estado; imcStatus.className = 'imc-status ' + clase; }
+        if(imcValue) imcValue.textContent = imc.toFixed(1);
+        if(imcTrack) imcTrack.setAttribute('aria-valuenow', imc.toFixed(1));
+      }
+
+      ['input','change'].forEach(evt=>{
+        peso?.addEventListener(evt, actualizarIMC);
+        altura?.addEventListener(evt, actualizarIMC);
+      });
+
+      actualizarIMC(); // inicial (por si vienen valores precargados)
+    });
+</script>
+
+{% endblock extra_js %}

@@ -1,0 +1,255 @@
+<!-- WIDGET DEL CÓDICE DE LAS LEYENDAS -->
+<!-- Para añadir al template entrenamiento_activo.html -->
+
+<style>
+    /* --- Estilo "Character Select" --- */
+    @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap' );
+
+    .char-select-widget {
+        font-family: 'Press Start 2P', cursive;
+        background: #0d1117;
+        border: 4px solid #4a4a4a;
+        border-radius: 10px;
+        padding: 16px;
+        display: grid;
+        grid-template-columns: 1fr 1.5fr; /* Columna para imagen, columna para stats */
+        gap: 16px;
+        box-shadow: 0 0 20px rgba(0, 0, 0, 0.7);
+        margin: 20px 0;
+    }
+
+    /* --- Retrato del Personaje --- */
+    .char-portrait {
+        position: relative;
+        border: 4px solid #ffd700;
+        background: linear-gradient(45deg, #1a1a2e, #333);
+        overflow: hidden;
+        box-shadow: inset 0 0 15px rgba(0,0,0,0.8);
+    }
+
+    .char-portrait img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        filter: contrast(1.1) saturate(1.2);
+        opacity: 0.8;
+        transition: transform 0.3s ease;
+    }
+    .char-portrait:hover img {
+        transform: scale(1.05);
+    }
+
+    .char-name-plate {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: rgba(0, 0, 0, 0.8);
+        padding: 12px;
+        text-align: center;
+        border-top: 4px solid #ffd700;
+    }
+
+    .char-name-plate h3 {
+        color: #fff;
+        font-size: 14px;
+        margin: 0;
+        text-shadow: 2px 2px #ff0000; /* Sombra roja estilo retro */
+    }
+
+    /* --- Panel de Estadísticas --- */
+    .stats-panel {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-around;
+        gap: 15px;
+    }
+
+    .stat-bar-container {
+        width: 100%;
+    }
+
+    .stat-bar-label {
+        color: #ffd700;
+        font-size: 10px;
+        margin-bottom: 5px;
+    }
+
+    .progress-bar-outer {
+        background: #333;
+        border: 2px solid #4a4a4a;
+        height: 25px;
+        padding: 2px;
+    }
+
+    .progress-bar-inner {
+        background: linear-gradient(90deg, #ff4b2b, #ff8c00, #ffd700);
+        height: 100%;
+        transition: width 0.5s ease-out;
+    }
+
+    .progress-value-text {
+        color: #fff;
+        font-size: 10px;
+        text-align: right;
+        margin-top: 4px;
+    }
+
+    .stat-item {
+        background: #161b22;
+        border: 2px solid #30363d;
+        padding: 10px;
+    }
+
+    .stat-item .stat-label {
+        color: #8b949e;
+        font-size: 10px;
+    }
+
+    .stat-item .stat-value {
+        color: #58a6ff;
+        font-size: 20px;
+        margin-top: 5px;
+    }
+
+    #racha-dias {
+        color: #ff6b6b; /* Rojo para la racha */
+    }
+
+    .next-level-plate {
+        background: #c9513e; /* Rojo de "Player 2" */
+        color: white;
+        text-align: center;
+        padding: 10px;
+        border: 2px solid #ff8a78;
+    }
+    .next-level-label {
+        font-size: 8px;
+        opacity: 0.8;
+    }
+    .next-level-name {
+        font-size: 14px;
+    }
+
+    /* --- Responsive --- */
+    @media (max-width: 768px) {
+        .char-select-widget {
+            grid-template-columns: 1fr; /* Apila verticalmente en móvil */
+        }
+        .char-portrait {
+            height: 250px; /* Altura fija para el retrato en móvil */
+        }
+        .char-name-plate h3 {
+            font-size: 12px;
+        }
+    }
+</style>
+
+
+<!-- Widget del Códice de las Leyendas -->
+<!-- Para añadir al template entrenamiento_activo.html -->
+
+<!-- WIDGET DE SELECCIÓN DE ARQUETIPO -->
+<div class="char-select-widget">
+
+    <!-- Retrato del Personaje -->
+    <div class="char-portrait">
+        <img id="arquetipo-imagen" src="https://viruete.com/wp-content/uploads/2015/05/Kenshiro.jpg" alt="Arquetipo">
+        <div class="char-name-plate">
+            <h3 id="nivel-actual">El Puño de la Estrella del Norte</h3>
+        </div>
+    </div>
+
+    <!-- Panel de Estadísticas -->
+    <div class="stats-panel">
+
+        <!-- Barra de Progreso (como barra de vida/poder ) -->
+        <div class="stat-bar-container">
+            <div class="stat-bar-label">PROGRESO {{ resumen_gamificacion.porcentaje_progreso }}%</div>
+            <div class="progress-bar-outer">
+                <div id="progreso-fill" class="progress-bar-inner" style="width: 75%;"></div>
+            </div>
+            <div id="progreso-text" class="progress-value-text">2215 / 2250</div>
+        </div>
+
+        <!-- Puntos Totales -->
+        <div class="stat-item">
+            <div class="stat-label">PUNTOS TOTALES</div>
+            <div class="stat-value" id="puntos-actuales">2215</div>
+        </div>
+
+        <!-- Racha -->
+        <div class="stat-item">
+            <div class="stat-label">RACHA DE ENTRENOS</div>
+            <div class="stat-value" id="racha-dias">🔥 1 DÍA</div>
+        </div>
+        <!-- Pruebas Legendarias Activas -->
+        <div class="pruebas-activas">
+            <div class="pruebas-title">⚔️ PRUEBAS LEGENDARIAS ACTIVAS</div>
+            <div id="pruebas-container">
+                <div class="prueba-item">
+                    <div class="prueba-nombre">Cargando pruebas...</div>
+                    <div class="prueba-descripcion">Preparando desafíos épicos...</div>
+                </div>
+            </div>
+        </div>
+        <!-- Próximo Nivel -->
+        <div class="next-level-plate">
+            <div class="next-level-label">PRÓXIMO ARQUETIPO</div>
+            <div class="next-level-name" id="siguiente-nivel-text">El Alquimista de Acero</div>
+        </div>
+    </div>
+</div>
+
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        cargarDatosCodeice();
+    });
+
+    function cargarDatosCodeice() {
+        const clienteId = {{ cliente.id }};
+        fetch(`/entrenos/gamificacion-resumen/${clienteId}/`)
+            .then(response => response.json())
+            .then(data => {
+                actualizarWidgetCharSelect(data);
+            })
+            .catch(error => console.error('Error:', error));
+    }
+
+    function actualizarWidgetCharSelect(data) {
+        // Imagen
+        const imgEl = document.getElementById('arquetipo-imagen');
+        if (data.imagen_url) {
+            imgEl.src = data.imagen_url;
+            imgEl.style.display = 'block';
+        } else {
+            imgEl.style.display = 'none';
+        }
+
+        // Nombre del Arquetipo
+        document.getElementById('nivel-actual').textContent = data.nivel_actual || 'Cargando...';
+
+        // Barra de Progreso
+        const porcentaje = data.porcentaje_progreso || 0;
+        document.getElementById('progreso-fill').style.width = `${porcentaje}%`;
+        document.getElementById('progreso-text').textContent = `${data.puntos_actuales} / ${data.puntos_siguiente}`;
+
+        // Puntos Totales
+        document.getElementById('puntos-actuales').textContent = data.puntos_actuales || 0;
+
+        // Racha
+        document.getElementById('racha-dias').innerHTML = `🔥 ${data.racha_actual || 0} DÍA(S)`;
+
+        // Próximo Nivel
+        document.getElementById('siguiente-nivel-text').textContent = data.siguiente_nivel || 'Cargando...';
+    }
+
+    // Actualizar cada 30 segundos
+    setInterval(function() {
+        if (document.visibilityState === 'visible') {
+            cargarDatosCodeice();
+        }
+    }, 30000);
+</script>
+

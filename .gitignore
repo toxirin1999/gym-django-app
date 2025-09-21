@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+*.so
+
+# Entornos virtuales
+env/
+venv/
+ENV/
+.venv/
+.Python
+
+# Django
+*.sqlite3
+db.sqlite3
+/media/
+media/
+*.log
+staticfiles/
+*.bak
+
+# Node.js / frontend
+node_modules/
+package-lock.json
+build/
+dist/
+
+# VSCode / PyCharm
+.vscode/
+.idea/
+
+# Archivos del sistema
+.DS_Store
+Thumbs.db

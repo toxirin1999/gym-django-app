@@ -1,0 +1,199 @@
+{% extends "base.html" %}  <!-- Asegúrate de que tu 'base.html' exista y tenga un bloque de contenido -->
+
+{% block content %}
+<style>
+    /* Estilos básicos para el chat */
+    body {
+        background-color: #f4f7f6;
+        font-family: sans-serif;
+    }
+    .chat-container {
+        max-width: 700px;
+        margin: 40px auto;
+        border: 1px solid #ddd;
+        border-radius: 10px;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        height: 80vh;
+        background-color: white;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    .chat-header {
+        background-color: #5D3FD3; /* Un color morado amigable */
+        color: white;
+        padding: 15px;
+        text-align: center;
+        font-size: 1.2em;
+    }
+    .chat-messages {
+        flex-grow: 1;
+        padding: 20px;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+    }
+    .message {
+        padding: 10px 15px;
+        border-radius: 20px;
+        margin-bottom: 10px;
+        max-width: 80%;
+        line-height: 1.4;
+    }
+    .user-message {
+        background-color: #007bff;
+        color: white;
+        align-self: flex-end;
+    }
+    .joi-message {
+        background-color: #e9e9eb;
+        color: #333;
+        align-self: flex-start;
+    }
+    .chat-input {
+        display: flex;
+        padding: 10px;
+        border-top: 1px solid #ddd;
+    }
+    #message-input {
+        flex-grow: 1;
+        border: 1px solid #ccc;
+        border-radius: 20px;
+        padding: 10px 15px;
+        font-size: 1em;
+        color: #333;
+    }
+    #send-button {
+        border: none;
+        background-color: #5D3FD3;
+        color: white;
+        padding: 10px 20px;
+        border-radius: 20px;
+        margin-left: 10px;
+        cursor: pointer;
+    }
+    /* Estilo para el indicador "escribiendo..." */
+    .typing-indicator {
+        display: none; /* Oculto por defecto */
+        align-self: flex-start;
+        margin-bottom: 10px;
+    }
+    .typing-indicator span {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background-color: #aaa;
+        margin: 0 2px;
+        animation: bounce 1.4s infinite ease-in-out both;
+    }
+    .typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
+    .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
+    @keyframes bounce {
+        0%, 80%, 100% { transform: scale(0); }
+        40% { transform: scale(1.0); }
+    }
+</style>
+
+<div class="chat-container">
+    <div class="chat-header">
+        Chat con Joi
+    </div>
+    <div class="chat-messages" id="chat-messages">
+        <!-- Mensaje de bienvenida de Joi -->
+        <div class="message joi-message">
+            ¡Hola, {{ nombre_cliente }}! Soy Joi, tu asistente de IA. ¿En qué puedo ayudarte hoy? Puedes preguntarme sobre tu progreso, tus entrenamientos o cómo te sientes.
+        </div>
+    </div>
+    <div class="chat-input">
+        <input type="text" id="message-input" placeholder="Escribe tu mensaje...">
+        <button id="send-button">Enviar</button>
+    </div>
+</div>
+
+<!-- Bloque de JavaScript al final -->
+<script>
+
+    // templates/clientes/chat_con_joi.html (dentro de la etiqueta <script>)
+
+    const chatMessages = document.getElementById('chat-messages');
+    const messageInput = document.getElementById('message-input');
+    const sendButton = document.getElementById('send-button');
+
+    // Función para añadir un mensaje a la ventana de chat
+    function addMessage(text, sender) {
+        const messageDiv = document.createElement('div');
+        messageDiv.classList.add('message', sender === 'user' ? 'user-message' : 'joi-message');
+        messageDiv.textContent = text;
+        chatMessages.appendChild(messageDiv);
+        // Hacer scroll hacia el último mensaje
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    // Función para mostrar/ocultar el indicador de "escribiendo..."
+    function showTypingIndicator(show) {
+        let indicator = document.getElementById('typing-indicator');
+        if (show && !indicator) {
+            indicator = document.createElement('div');
+            indicator.id = 'typing-indicator';
+            indicator.classList.add('typing-indicator');
+            indicator.innerHTML = '<span></span><span></span><span></span>';
+            chatMessages.appendChild(indicator);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        } else if (!show && indicator) {
+            indicator.remove();
+        }
+    }
+
+    // Función principal para enviar el mensaje al backend
+    async function sendMessage() {
+        const userMessage = messageInput.value.trim();
+        if (userMessage === '') return;
+
+        // 1. Añadir el mensaje del usuario a la interfaz
+        addMessage(userMessage, 'user');
+        messageInput.value = '';
+
+        // 2. Mostrar el indicador de que Joi está "escribiendo"
+        showTypingIndicator(true);
+
+        try {
+            // 3. Preparar y enviar la petición a la API de Django
+            const formData = new FormData();
+            formData.append('pregunta', userMessage);
+            // Necesitamos el token CSRF para peticiones POST en Django
+            formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+            const response = await fetch("{% url 'clientes:chat_con_joi_api' %}", {
+                method: 'POST',
+                body: formData,
+                // No es necesario 'headers' cuando se usa FormData, el navegador lo gestiona
+            });
+
+            if (!response.ok) {
+                throw new Error(`Error del servidor: ${response.status}`);
+            }
+
+            const data = await response.json();
+            const joiResponse = data.respuesta;
+
+            // 4. Ocultar el indicador y añadir la respuesta de Joi
+            showTypingIndicator(false);
+            addMessage(joiResponse, 'joi');
+
+        } catch (error) {
+            console.error('Error al contactar con Joi:', error);
+            showTypingIndicator(false);
+            addMessage('Lo siento, he tenido un problema para conectar con mis circuitos. Por favor, inténtalo de nuevo más tarde.', 'joi');
+        }
+    }
+
+    // Event Listeners para el botón y la tecla Enter
+    sendButton.addEventListener('click', sendMessage);
+    messageInput.addEventListener('keypress', function(event) {
+        if (event.key === 'Enter') {
+            sendMessage();
+        }
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,210 @@
+<!-- Navigation Component -->
+<nav class="navbar navbar-expand-lg navbar-custom">
+    <div class="container">
+        <a class="navbar-brand" href="{% url 'logros:perfil_gamificacion' %}">
+            <i class="fas fa-trophy"></i>
+            GameFit Pro
+        </a>
+        
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav me-auto">
+                <li class="nav-item">
+                    <a class="nav-link {% if request.resolver_match.url_name == 'perfil_gamificacion' %}active{% endif %}" 
+                       href="{% url 'logros:perfil_gamificacion' %}">
+                        <i class="fas fa-user-circle"></i>
+                        Perfil
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if request.resolver_match.url_name == 'lista_logros' %}active{% endif %}" 
+                       href="{% url 'logros:lista_logros' %}">
+                        <i class="fas fa-medal"></i>
+                        Logros
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if request.resolver_match.url_name == 'lista_misiones' %}active{% endif %}" 
+                       href="{% url 'logros:lista_misiones' %}">
+                        <i class="fas fa-tasks"></i>
+                        Misiones
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if request.resolver_match.url_name == 'ranking_clientes' %}active{% endif %}" 
+                       href="{% url 'logros:ranking_clientes' %}">
+                        <i class="fas fa-crown"></i>
+                        Ranking
+                    </a>
+                </li>
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
+                        <i class="fas fa-chart-line"></i>
+                        Análisis
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li>
+                            <a class="dropdown-item" href="{% url 'logros:analisis_global' %}">
+                                <i class="fas fa-globe me-2"></i>
+                                Análisis Global
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item" href="{% url 'logros:analisis_cliente' cliente_id=request.user.id %}">
+                                <i class="fas fa-user me-2"></i>
+                                Mi Análisis
+                            </a>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <a class="dropdown-item" href="{% url 'logros:exportar_analisis_cliente_pdf' cliente_id=request.user.id %}">
+                                <i class="fas fa-file-pdf me-2"></i>
+                                Exportar PDF
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+            </ul>
+            
+            <ul class="navbar-nav">
+                <li class="nav-item">
+                    <a class="nav-link position-relative" href="{% url 'logros:listar_notificaciones' cliente_id=request.user.id %}">
+                        <i class="fas fa-bell"></i>
+                        Notificaciones
+                        <span class="notification-badge" id="notification-count" style="display: none;">0</span>
+                    </a>
+                </li>
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
+                        <i class="fas fa-user"></i>
+                        {{ request.user.username|default:"Usuario" }}
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li>
+                            <a class="dropdown-item" href="{% url 'logros:perfil_gamificacion' %}">
+                                <i class="fas fa-user-circle me-2"></i>
+                                Mi Perfil
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item" href="{% url 'logros:analisis_cliente' cliente_id=request.user.id %}">
+                                <i class="fas fa-chart-bar me-2"></i>
+                                Mis Estadísticas
+                            </a>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <a class="dropdown-item" href="#" onclick="markAllNotificationsRead()">
+                                <i class="fas fa-check-double me-2"></i>
+                                Marcar todo como leído
+                            </a>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <a class="dropdown-item text-danger" href="/logout/">
+                                <i class="fas fa-sign-out-alt me-2"></i>
+                                Cerrar Sesión
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<style>
+    /* Dropdown Styles */
+    .dropdown-menu {
+        border: none;
+        box-shadow: var(--shadow-lg);
+        border-radius: 0.75rem;
+        padding: 0.5rem;
+        margin-top: 0.5rem;
+    }
+
+    .dropdown-item {
+        border-radius: 0.5rem;
+        padding: 0.75rem 1rem;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+    }
+
+    .dropdown-item:hover {
+        background-color: var(--primary-color);
+        color: white;
+        transform: translateX(5px);
+    }
+
+    .dropdown-item.text-danger:hover {
+        background-color: var(--danger-color);
+        color: white;
+    }
+
+    .dropdown-divider {
+        margin: 0.5rem 0;
+        opacity: 0.1;
+    }
+
+    .position-relative {
+        position: relative;
+    }
+</style>
+
+<script>
+    // Mark all notifications as read
+    function markAllNotificationsRead() {
+        const userId = {{ request.user.id|default:1 }};
+        fetch(`{% url 'logros:marcar_todas_notificaciones_leidas' cliente_id=1 %}`.replace('1', userId), {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/json',
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                updateNotificationCount();
+                // Show success message
+                showToast('Todas las notificaciones han sido marcadas como leídas', 'success');
+            }
+        })
+        .catch(error => console.log('Error:', error));
+    }
+
+    // Toast notification function
+    function showToast(message, type = 'info') {
+        const toast = document.createElement('div');
+        toast.className = `toast align-items-center text-white bg-${type} border-0`;
+        toast.setAttribute('role', 'alert');
+        toast.innerHTML = `
+            <div class="d-flex">
+                <div class="toast-body">${message}</div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        `;
+        
+        // Add to page
+        let toastContainer = document.querySelector('.toast-container');
+        if (!toastContainer) {
+            toastContainer = document.createElement('div');
+            toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3';
+            document.body.appendChild(toastContainer);
+        }
+        
+        toastContainer.appendChild(toast);
+        const bsToast = new bootstrap.Toast(toast);
+        bsToast.show();
+        
+        // Remove after hiding
+        toast.addEventListener('hidden.bs.toast', () => {
+            toast.remove();
+        });
+    }
+</script>
+

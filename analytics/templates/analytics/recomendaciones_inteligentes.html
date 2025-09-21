@@ -1,0 +1,671 @@
+<!-- recomendaciones_inteligentes.html - Template funcional para Django -->
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recomendaciones Inteligentes - {{ cliente.nombre }}</title>
+    <style>
+        :root {
+            --primary-color: #667eea;
+            --secondary-color: #764ba2;
+            --success-color: #4facfe;
+            --warning-color: #43e97b;
+            --danger-color: #fa709a;
+            --info-color: #74b9ff;
+            --accent-color: #32ff00;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 25px;
+            margin-bottom: 25px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+            border-left: 5px solid var(--accent-color);
+        }
+
+        .header {
+            text-align: center;
+            padding: 30px;
+            background: rgba(0, 0, 0, 0.1);
+            color: white;
+            border-left: none;
+        }
+
+        .header h1 {
+            margin: 0 0 10px 0;
+            font-size: 2.5rem;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .confianza-badge {
+            background: linear-gradient(45deg, var(--success-color), var(--warning-color));
+            color: white;
+            padding: 8px 20px;
+            border-radius: 25px;
+            font-size: 14px;
+            font-weight: bold;
+            display: inline-block;
+            margin-top: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .perfil-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 20px;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+            border-radius: 15px;
+            border: 2px solid rgba(102, 126, 234, 0.2);
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--primary-color);
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .categoria-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid rgba(102, 126, 234, 0.2);
+        }
+
+        .categoria-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 15px;
+            font-size: 20px;
+            color: white;
+            font-weight: bold;
+        }
+
+        .ejercicios-nuevos { background: linear-gradient(45deg, #e3f2fd, #1976d2); }
+        .progresion { background: linear-gradient(45deg, #f3e5f5, #7b1fa2); }
+        .equilibrio { background: linear-gradient(45deg, #e8f5e8, #388e3c); }
+        .periodizacion { background: linear-gradient(45deg, #fff3e0, #f57c00); }
+        .recuperacion { background: linear-gradient(45deg, #fce4ec, #c2185b); }
+        .nutricion { background: linear-gradient(45deg, #e0f2f1, #00695c); }
+        .objetivos { background: linear-gradient(45deg, #f3e5f5, #9c27b0); }
+
+        .recomendacion-item {
+            background: rgba(255, 255, 255, 0.7);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-left: 4px solid var(--accent-color);
+            transition: all 0.3s ease;
+        }
+
+        .recomendacion-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+        }
+
+        .prioridad-alta { border-left-color: var(--danger-color); }
+        .prioridad-media { border-left-color: #ffb300; }
+        .prioridad-baja { border-left-color: var(--success-color); }
+
+        .prioridad-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            color: white;
+            margin-left: 10px;
+        }
+
+        .prioridad-alta .prioridad-badge { background: var(--danger-color); }
+        .prioridad-media .prioridad-badge { background: #ffb300; }
+        .prioridad-baja .prioridad-badge { background: var(--success-color); }
+
+        .ejercicios-lista {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin: 10px 0;
+        }
+
+        .ejercicio-tag {
+            background: var(--primary-color);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        .progresion-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
+        }
+
+        .progresion-item {
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 10px;
+            padding: 15px;
+            border-left: 4px solid var(--secondary-color);
+        }
+
+        .ejercicio-nombre {
+            font-weight: bold;
+            color: var(--primary-color);
+            margin-bottom: 8px;
+        }
+
+        .sugerencia {
+            color: #555;
+            font-style: italic;
+            margin: 8px 0;
+        }
+
+        .peso-actual {
+            background: rgba(102, 126, 234, 0.1);
+            padding: 4px 8px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            display: inline-block;
+            margin-top: 5px;
+        }
+
+        .equilibrio-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+        }
+
+        .equilibrio-item {
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+        }
+
+        .porcentaje-actual {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--danger-color);
+            margin: 10px 0;
+        }
+
+        .info-section {
+            background: linear-gradient(135deg, rgba(116, 185, 255, 0.1), rgba(102, 126, 234, 0.1));
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+
+        .info-item {
+            background: rgba(255, 255, 255, 0.7);
+            border-radius: 10px;
+            padding: 15px;
+        }
+
+        .info-title {
+            font-weight: bold;
+            color: var(--primary-color);
+            margin-bottom: 8px;
+        }
+
+        .objetivos-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 15px;
+        }
+
+        .objetivo-item {
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 12px;
+            padding: 20px;
+            border-left: 4px solid var(--info-color);
+        }
+
+        .objetivo-categoria {
+            background: var(--info-color);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            display: inline-block;
+            margin-bottom: 10px;
+        }
+
+        .objetivo-texto {
+            font-weight: 600;
+            color: var(--primary-color);
+            margin-bottom: 8px;
+        }
+
+        .objetivo-detalles {
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .no-data {
+            text-align: center;
+            padding: 40px 20px;
+            color: #666;
+        }
+
+        .no-data h3 {
+            color: var(--primary-color);
+            margin-bottom: 15px;
+        }
+
+        .alert {
+            padding: 15px 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            font-weight: 500;
+        }
+
+        .alert-info {
+            background: rgba(116, 185, 255, 0.1);
+            border: 1px solid var(--info-color);
+            color: #0984e3;
+        }
+
+        .alert-warning {
+            background: rgba(255, 193, 7, 0.1);
+            border: 1px solid #ffc107;
+            color: #856404;
+        }
+
+        .estrategias-lista {
+            list-style: none;
+            padding: 0;
+        }
+
+        .estrategias-lista li {
+            background: rgba(255, 255, 255, 0.7);
+            margin: 8px 0;
+            padding: 10px 15px;
+            border-radius: 8px;
+            border-left: 3px solid var(--success-color);
+        }
+
+        .estrategias-lista li:before {
+            content: "✓";
+            color: var(--success-color);
+            font-weight: bold;
+            margin-right: 10px;
+        }
+
+        @media (max-width: 768px) {
+            .perfil-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .progresion-grid,
+            .equilibrio-grid,
+            .info-grid,
+            .objetivos-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .ejercicios-lista {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <!-- Header -->
+    <div class="card header">
+        <h1>🧠 Recomendaciones Inteligentes</h1>
+        <p>{{ cliente.nombre }} - Sistema de IA personalizado</p>
+        {% if recomendaciones.confianza_sistema %}
+        <div class="confianza-badge">
+            Confianza del Sistema: {{ recomendaciones.confianza_sistema }}%
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Mostrar mensajes de Django -->
+
+
+    <!-- Verificar si hay datos suficientes -->
+    {% if not recomendaciones.tiene_datos_suficientes %}
+    <div class="card">
+        <div class="alert alert-warning">
+            <h4>⚠️ Datos insuficientes para recomendaciones personalizadas</h4>
+            <p>Necesitas al menos 3 entrenamientos registrados para generar recomendaciones precisas. Las siguientes son recomendaciones generales para comenzar.</p>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Perfil del Usuario -->
+    {% if recomendaciones.perfil_usuario %}
+    <div class="card">
+        <h3>👤 Tu Perfil de Entrenamiento</h3>
+
+        <div class="perfil-grid">
+            <div class="stat-item">
+                <div class="stat-value">{{ recomendaciones.perfil_usuario.nivel_experiencia|title }}</div>
+                <div class="stat-label">Nivel</div>
+            </div>
+
+            <div class="stat-item">
+                <div class="stat-value">{{ recomendaciones.perfil_usuario.frecuencia_entrenamiento }}</div>
+                <div class="stat-label">Entrenamientos/Semana</div>
+            </div>
+
+            <div class="stat-item">
+                <div class="stat-value">{{ recomendaciones.perfil_usuario.consistencia|floatformat:0 }}%</div>
+                <div class="stat-label">Consistencia</div>
+            </div>
+
+            <div class="stat-item">
+                <div class="stat-value">{{ recomendaciones.perfil_usuario.intensidad_promedio|floatformat:0 }} min</div>
+                <div class="stat-label">Duración Promedio</div>
+            </div>
+
+            {% if recomendaciones.perfil_usuario.progreso_reciente.porcentaje_mejora != 0 %}
+            <div class="stat-item">
+                <div class="stat-value">{{ recomendaciones.perfil_usuario.progreso_reciente.porcentaje_mejora|floatformat:1 }}%</div>
+                <div class="stat-label">Progreso Reciente</div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Ejercicios Nuevos -->
+    {% if recomendaciones.recomendaciones.ejercicios_nuevos %}
+    <div class="card">
+        <div class="categoria-header">
+            <div class="categoria-icon ejercicios-nuevos">💪</div>
+            <h3>Ejercicios Nuevos Recomendados</h3>
+        </div>
+
+        {% for recomendacion in recomendaciones.recomendaciones.ejercicios_nuevos %}
+        <div class="recomendacion-item prioridad-{{ recomendacion.prioridad }}">
+            <h4>
+                {{ recomendacion.grupo_muscular }}
+                <span class="prioridad-badge">{{ recomendacion.prioridad|title }}</span>
+            </h4>
+            <p><strong>Razón:</strong> {{ recomendacion.razon }}</p>
+
+            <div class="ejercicios-lista">
+                {% for ejercicio in recomendacion.ejercicios_sugeridos %}
+                <span class="ejercicio-tag">{{ ejercicio }}</span>
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Progresión Inteligente -->
+    {% if recomendaciones.recomendaciones.progresion_inteligente %}
+    <div class="card">
+        <div class="categoria-header">
+            <div class="categoria-icon progresion">📈</div>
+            <h3>Progresión Inteligente</h3>
+        </div>
+
+        <div class="progresion-grid">
+            {% for progresion in recomendaciones.recomendaciones.progresion_inteligente %}
+            <div class="progresion-item">
+                <div class="ejercicio-nombre">{{ progresion.ejercicio }}</div>
+                <div><strong>Tipo:</strong> {{ progresion.tipo_progresion|title }}</div>
+                <div class="sugerencia">{{ progresion.sugerencia }}</div>
+                <div><strong>Razón:</strong> {{ progresion.razon }}</div>
+                {% if progresion.peso_actual %}
+                <div class="peso-actual">Peso actual: {{ progresion.peso_actual }} kg</div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Equilibrio Muscular -->
+    {% if recomendaciones.recomendaciones.equilibrio_muscular %}
+    <div class="card">
+        <div class="categoria-header">
+            <div class="categoria-icon equilibrio">⚖️</div>
+            <h3>Equilibrio Muscular</h3>
+        </div>
+
+        <div class="equilibrio-grid">
+            {% for equilibrio in recomendaciones.recomendaciones.equilibrio_muscular %}
+            <div class="equilibrio-item prioridad-{{ equilibrio.prioridad }}">
+                <h4>{{ equilibrio.grupo_muscular }}</h4>
+                <div class="porcentaje-actual">{{ equilibrio.porcentaje_actual }}%</div>
+                <div><strong>Recomendación:</strong> {{ equilibrio.recomendacion }}</div>
+                <div class="sugerencia">{{ equilibrio.sugerencia }}</div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Periodización -->
+    {% if recomendaciones.recomendaciones.periodizacion %}
+    <div class="card">
+        <div class="categoria-header">
+            <div class="categoria-icon periodizacion">📅</div>
+            <h3>Periodización Recomendada</h3>
+        </div>
+
+        <div class="info-section">
+            <div class="info-grid">
+                <div class="info-item">
+                    <div class="info-title">Tipo de Periodización</div>
+                    <div>{{ recomendaciones.recomendaciones.periodizacion.tipo|title }}</div>
+                </div>
+
+                <div class="info-item">
+                    <div class="info-title">Duración de Fase</div>
+                    <div>{{ recomendaciones.recomendaciones.periodizacion.duracion_fase }}</div>
+                </div>
+
+                <div class="info-item">
+                    <div class="info-title">Incrementos Sugeridos</div>
+                    <div>{{ recomendaciones.recomendaciones.periodizacion.incrementos }}</div>
+                </div>
+
+                <div class="info-item">
+                    <div class="info-title">Frecuencia de Deload</div>
+                    <div>{{ recomendaciones.recomendaciones.periodizacion.deload_frecuencia }}</div>
+                </div>
+            </div>
+
+            <div style="margin-top: 15px; padding: 15px; background: rgba(255, 255, 255, 0.7); border-radius: 10px;">
+                <strong>Enfoque:</strong> {{ recomendaciones.recomendaciones.periodizacion.enfoque }}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Recuperación -->
+    {% if recomendaciones.recomendaciones.recuperacion %}
+    <div class="card">
+        <div class="categoria-header">
+            <div class="categoria-icon recuperacion">😴</div>
+            <h3>Recuperación Optimizada</h3>
+        </div>
+
+        <div class="info-section">
+            <div style="margin-bottom: 20px;">
+                <strong>Nivel de Fatiga:</strong>
+                <span style="color: var(--primary-color); font-weight: bold;">
+                    {{ recomendaciones.recomendaciones.recuperacion.nivel_fatiga|title }}
+                </span>
+            </div>
+
+            <h4>Estrategias Recomendadas:</h4>
+            <ul class="estrategias-lista">
+                {% for estrategia in recomendaciones.recomendaciones.recuperacion.estrategias_recomendadas %}
+                <li>{{ estrategia }}</li>
+                {% endfor %}
+            </ul>
+
+            <div class="info-grid" style="margin-top: 20px;">
+                <div class="info-item">
+                    <div class="info-title">Frecuencia de Masajes</div>
+                    <div>{{ recomendaciones.recomendaciones.recuperacion.frecuencia_masajes|title }}</div>
+                </div>
+
+                <div class="info-item">
+                    <div class="info-title">Días de Descanso</div>
+                    <div>{{ recomendaciones.recomendaciones.recuperacion.dias_descanso_recomendados }} por semana</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Nutrición y Timing -->
+    {% if recomendaciones.recomendaciones.nutricion_timing %}
+    {% with nt=recomendaciones.recomendaciones.nutricion_timing %}
+    <div class="card
+    {% if nt.categoria_intensidad == 'alta' %} border-l-4 border-red-500
+    {% elif nt.categoria_intensidad == 'moderada' %} border-l-4 border-yellow-400
+    {% else %} border-l-4 border-green-400
+    {% endif %}">
+
+        <div class="categoria-header">
+            <div class="categoria-icon nutricion">🥗</div>
+            <h3>Nutrición y Timing</h3>
+        </div>
+
+        <p style="font-size: 0.9rem; color: #666;">
+            Duración promedio actual: <strong>{{ nt.duracion_promedio }} minutos</strong>
+            {% if nt.categoria_intensidad == 'alta' %}
+            <span style="color: red; font-weight: bold;">🔴 Entrenamientos largos</span>
+            {% elif nt.categoria_intensidad == 'moderada' %}
+            <span style="color: orange; font-weight: bold;">🟡 Entrenamientos moderados</span>
+            {% else %}
+            <span style="color: green; font-weight: bold;">🟢 Entrenamientos cortos</span>
+            {% endif %}
+        </p>
+
+        <p style="margin: 15px 0; color: #444; font-style: italic;">{{ nt.explicacion }}</p>
+        <div style="margin-top: 20px; color: #555; font-style: italic;">
+            {{ nt.tipo_entrenamiento_dia }}
+        </div>
+
+        <div class="info-grid">
+
+            <div class="info-item">
+                <div class="info-title">Pre-Entreno</div>
+                <div style="margin-bottom: 8px;">{{ nt.pre_entreno.timing }}</div>
+                <div style="font-style: italic; color: #666;">{{ nt.pre_entreno.ejemplo }}</div>
+            </div>
+
+            <div class="info-item">
+                <div class="info-title">Post-Entreno</div>
+                <div style="margin-bottom: 8px;">{{ nt.post_entreno.timing }}</div>
+                <div style="font-style: italic; color: #666;">{{ nt.post_entreno.ejemplo }}</div>
+            </div>
+        </div>
+    </div>
+    {% endwith %}
+    {% endif %}
+
+
+    <!-- Objetivos SMART -->
+    {% if recomendaciones.recomendaciones.objetivos_smart %}
+    <div class="card">
+        <div class="categoria-header">
+            <div class="categoria-icon objetivos">🎯</div>
+            <h3>Objetivos SMART Personalizados</h3>
+        </div>
+
+        <div class="objetivos-grid">
+            {% for objetivo in recomendaciones.recomendaciones.objetivos_smart %}
+            <div class="objetivo-item">
+                <div class="objetivo-categoria">{{ objetivo.categoria }}</div>
+                <div class="objetivo-texto">{{ objetivo.objetivo }}</div>
+                <div class="objetivo-detalles">
+                    <div><strong>Plazo:</strong> {{ objetivo.plazo }}</div>
+                    <div><strong>Medible:</strong> {{ objetivo.medible }}</div>
+                    {% if objetivo.alcanzable %}
+                    <div style="color: var(--success-color); font-weight: bold;">✓ Alcanzable</div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Mensaje para usuarios nuevos -->
+    {% if not recomendaciones.tiene_datos_suficientes %}
+    <div class="card">
+        <div class="no-data">
+            <h3>🚀 ¡Comienza tu viaje personalizado!</h3>
+            <p>Para generar recomendaciones más precisas y personalizadas:</p>
+            <div style="text-align: left; max-width: 500px; margin: 20px auto;">
+                <div style="margin: 10px 0;">• Registra al menos 3 entrenamientos completos</div>
+                <div style="margin: 10px 0;">• Incluye variedad de ejercicios y grupos musculares</div>
+                <div style="margin: 10px 0;">• Mantén consistencia en el registro de datos</div>
+                <div style="margin: 10px 0;">• Entrena regularmente durante 1-2 semanas</div>
+            </div>
+            <p style="margin-top: 20px; color: var(--primary-color); font-weight: 600;">
+                ¡Una vez que tengas más datos, las recomendaciones serán mucho más específicas y útiles!
+            </p>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Información adicional -->
+    <div class="card">
+        <div style="text-align: center; color: #666;">
+            <p><strong>💡 Consejo:</strong> Las recomendaciones se actualizan automáticamente conforme registras más entrenamientos.</p>
+            <p style="font-size: 0.9rem;">Última actualización: {{ "now"|date:"d/m/Y H:i" }}</p>
+        </div>
+    </div>
+</div>
+</body>
+</html>
+

@@ -1,0 +1,111 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Eliminar Entrenamiento{% endblock %}
+
+{% block extra_css %}
+<style>
+    .danger-container {
+        background: linear-gradient(135deg, rgba(220, 53, 69, 0.1), rgba(255, 0, 0, 0.05));
+        border: 2px solid rgba(220, 53, 69, 0.3);
+        border-radius: 15px;
+        padding: 30px;
+        margin: 30px auto;
+        max-width: 600px;
+    }
+    .danger-icon {
+        font-size: 4rem;
+        color: #dc3545;
+        text-align: center;
+        margin-bottom: 20px;
+    }
+    .danger-title {
+        color: #dc3545;
+        text-align: center;
+        margin-bottom: 20px;
+    }
+    .entrenamiento-info {
+        background: rgba(255, 255, 255, 0.9);
+        border-radius: 8px;
+        padding: 20px;
+        margin: 20px 0;
+        border-left: 4px solid #dc3545;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="danger-container">
+        <div class="danger-icon">
+            <i class="fas fa-exclamation-triangle"></i>
+        </div>
+
+        <h2 class="danger-title">¿Eliminar Entrenamiento?</h2>
+
+        <div class="text-center mb-4">
+            <p class="lead">Esta acción <strong>NO SE PUEDE DESHACER</strong>.</p>
+            <p>Se eliminará permanentemente el siguiente entrenamiento:</p>
+        </div>
+
+        <div class="entrenamiento-info">
+            <div class="row">
+                <div class="col-md-6">
+                    <strong>Cliente:</strong><br>
+                    {{ entrenamiento.cliente.nombre }}
+                </div>
+                <div class="col-md-6">
+                    <strong>Fecha:</strong><br>
+                    {{ entrenamiento.fecha|date:"d/m/Y" }}
+                </div>
+            </div>
+            <div class="row mt-3">
+                <div class="col-md-6">
+                    <strong>Rutina:</strong><br>
+                    {{ entrenamiento.rutina.nombre }}
+                </div>
+                <div class="col-md-6">
+                    <strong>Fuente:</strong><br>
+                    <span class="badge bg-primary">📱 Liftin</span>
+                </div>
+            </div>
+            {% if entrenamiento.duracion_minutos %}
+            <div class="row mt-3">
+                <div class="col-md-6">
+                    <strong>Duración:</strong><br>
+                    {{ entrenamiento.duracion_minutos }} minutos
+                </div>
+                <div class="col-md-6">
+                    <strong>Calorías:</strong><br>
+                    {{ entrenamiento.calorias_quemadas|default:"--" }} kcal
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="alert alert-danger">
+            <i class="fas fa-warning"></i>
+            <strong>Advertencia:</strong> Al eliminar este entrenamiento también se perderán:
+            <ul class="mb-0 mt-2">
+                <li>Todos los ejercicios registrados</li>
+                <li>Datos de salud asociados</li>
+                <li>Notas y observaciones</li>
+                <li>Historial de progreso</li>
+            </ul>
+        </div>
+
+        <form method="post" class="text-center">
+            {% csrf_token %}
+            <div class="d-flex justify-content-center gap-3">
+                <a href="{% url 'entrenos:detalle_entrenamiento' entrenamiento.id %}"
+                   class="btn btn-secondary btn-lg">
+                    <i class="fas fa-arrow-left"></i> Cancelar
+                </a>
+                <button type="submit" class="btn btn-danger btn-lg">
+                    <i class="fas fa-trash"></i> Sí, Eliminar Definitivamente
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

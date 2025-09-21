@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="max-w-xl mx-auto mt-8 text-white p-4 bg-[#1a1a1a] rounded-xl">
+    <h2 class="text-2xl font-semibold text-center mb-4">🔋 Mapa de energía (últimas 4 semanas)</h2>
+    <div class="grid grid-cols-7 gap-1 relative">
+        {% for dia in dias %}
+        <div class="group relative h-10 rounded-lg cursor-pointer text-xs flex items-center justify-center"
+             style="background-color:
+         {% if dia.valor == None %} #2c2c2c
+         {% elif dia.valor >= 0.8 %} #32FF00
+         {% elif dia.valor >= 0.6 %} #90ee90
+         {% elif dia.valor >= 0.4 %} #facc15
+         {% elif dia.valor >= 0.2 %} #f87171
+         {% else %} #dc2626
+         {% endif %};"
+        >
+            {{ dia.fecha.day }}
+
+            {% if dia.valor != None %}
+            <div class="absolute z-10 bottom-full mb-1 left-1/2 transform -translate-x-1/2
+                    px-2 py-1 text-xs text-white bg-black bg-opacity-80 rounded shadow-lg
+                    opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none whitespace-nowrap">
+                {{ dia.fecha|date:"d M" }} – Energía: {{ dia.valor|floatformat:0 }}%
+                <br>
+                {% if dia.valor >= 0.8 %}
+                "Estás radiante. ¿Lo sientes?"
+                {% elif dia.valor >= 0.6 %}
+                "Buen ritmo… Sigue así."
+                {% elif dia.valor >= 0.4 %}
+                "Quizá puedas dar un poco más..."
+                {% elif dia.valor >= 0.2 %}
+                "Parece que el cuerpo pide descanso."
+                {% else %}
+                "Te noto drenado… cuidémonos hoy."
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+
+    <p class="text-xs text-center text-gray-400 mt-4">
+        Verde = alta energía • Amarillo = media • Rojo = baja • Gris = sin dato
+    </p>
+</div>
+{% endblock %}

@@ -1,0 +1,334 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load widget_tweaks %}
+
+{% block title %}Nivel 2: Macronutrientes – {{ block.super }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+<style>
+    /* Estilos base del mockup (copiados para consistencia ) */
+    body {
+      background: url("{% static 'images/fondo_cyberpunk.png' %}") no-repeat center center fixed !important;
+      background-size: cover !important;
+      background-color: #000000 !important;
+      min-height: 100vh !important;
+      filter: brightness(0.9);
+      overflow-x: hidden;
+    }
+    .panel-card {
+        background: rgba(10, 15, 25, 0.5) !important;
+        backdrop-filter: blur(18px) saturate(150%) !important;
+        -webkit-backdrop-filter: blur(18px) saturate(150%) !important;
+        border: 1px solid rgba(77, 208, 225, 0.4) !important;
+        box-shadow: 0 0 20px rgba(0, 255, 255, 0.15), inset 0 0 10px rgba(77, 208, 225, 0.1) !important;
+        border-radius: 12px !important;
+        color: #fff;
+        padding: 1.5rem;
+    }
+    .section-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin-bottom: 1.5rem;
+      color: white;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .btn-gradient {
+        color: #fff;
+        font-weight: 600;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.6rem;
+    }
+    .btn-gradient.primary {
+        background: linear-gradient(90deg, #00A3FF, #9E00FF);
+        box-shadow: 0 0 15px rgba(0, 163, 255, 0.4);
+    }
+    .btn-gradient.primary:hover {
+        box-shadow: 0 0 25px rgba(158, 0, 255, 0.6);
+        transform: scale(1.03);
+    }
+    .btn-secondary-outline {
+        background: rgba(10, 15, 25, 0.3);
+        border: 1px solid rgba(77, 208, 225, 0.5);
+        color: #9ca3af;
+        padding: 10px 20px;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.6rem;
+    }
+    .btn-secondary-outline:hover {
+        background: rgba(77, 208, 225, 0.1);
+        color: #fff;
+        border-color: rgba(77, 208, 225, 0.8);
+    }
+    .animate-fadeSlide {
+      animation: fadeSlide 0.8s ease-out forwards;
+    }
+    @keyframes fadeSlide {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Estilos para el formulario */
+    .form-label { font-weight: 500; color: #cbd5e1; margin-bottom: 0.5rem; }
+    .form-range { accent-color: #00ffff; }
+    .form-check-input:checked { background-color: #00ffff; border-color: #00ffff; }
+    .form-check-label { color: #e5e7eb; }
+    .info-box { background: rgba(10, 15, 25, 0.7); border: 1px solid rgba(77, 208, 225, 0.2); border-radius: 8px; padding: 1rem; font-size: 0.875rem; color: #9ca3af; }
+    .macro-bar { height: 8px; border-radius: 999px; transition: width 0.3s ease-out; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+
+    <!-- Encabezado -->
+    <header class="mb-8 animate-fadeSlide">
+        <div class="flex flex-wrap items-center justify-between gap-4">
+            <div>
+                <h1 class="text-4xl font-bold text-white flex items-center gap-4">
+                    <span class="grid place-items-center w-12 h-12 rounded-lg bg-white text-black text-2xl font-bold">2</span>
+                    Macronutrientes
+                </h1>
+                <p class="text-lg text-cyan-300 mt-2">Distribuye tus calorías en Proteínas, Grasas y Carbohidratos.</p>
+            </div>
+            <a href="{% url 'nutricion_app_django:vista_lista_niveles' %}" class="btn-secondary-outline">
+                <i class="fas fa-arrow-left"></i> Volver a los Niveles
+            </a>
+        </div>
+    </header>
+
+    <div class="grid grid-cols-1 lg:grid-cols-5 gap-8">
+        <!-- Columna Izquierda: Formulario de Cálculo -->
+        <div class="lg:col-span-3">
+            <form method="post" id="nivel2-form" class="panel-card animate-fadeSlide" style="animation-delay: 0.2s;">
+                {% csrf_token %}
+                <h3 class="section-title"><i class="fas fa-balance-scale text-cyan-400"></i>Configura tus Macros</h3>
+
+                <!-- Configuración de Proteína -->
+                <!-- Configuración de Proteína (Mejorada) -->
+                <div class="mb-8">
+                    <label class="form-label text-lg">1. Proteína (g por kg de peso)</label>
+                    <div class="flex items-center gap-4 mt-2">
+                        <input type="range" class="form-range w-full" id="proteina-slider" min="1.6" max="2.6" step="0.1">
+                        <!-- El 'name' debe ser 'proteina_gramos_kg' -->
+                        <input type="hidden" name="proteina_gramos_kg" id="proteina_gramos_kg_input">
+                        <input type="text" id="proteina_display" class="bg-gray-900 border-gray-700 text-white font-bold text-center rounded-lg w-24 p-2" readonly>
+                    </div>
+                    <div class="info-box mt-3">
+                        <div id="proteina-description" class="text-cyan-300 font-semibold mb-2"></div>
+                        <ul class="space-y-1 text-xs text-gray-400">
+                            <li><strong class="text-gray-200">Pérdida de Grasa:</strong> Rango recomendado 2.2 - 2.6 g/kg.</li>
+                            <li><strong class="text-gray-200">Mantenimiento:</strong> Rango recomendado 1.8 - 2.2 g/kg.</li>
+                            <li><strong class="text-gray-200">Ganancia Muscular:</strong> Rango recomendado 1.6 - 2.2 g/kg.</li>
+                        </ul>
+                    </div>
+                </div>
+
+
+                <!-- Configuración de Grasa -->
+                <!-- Configuración de Grasa (Mejorada) -->
+                <div class="mb-8">
+                    <label class="form-label text-lg">2. Grasa (% del total de calorías)</label>
+                    <div class="flex items-center gap-4 mt-2">
+                        <input type="range" class="form-range w-full" id="grasa-slider" min="15" max="40" step="1">
+                        <!-- El 'name' debe ser 'grasa_porcentaje' -->
+                        <input type="hidden" name="grasa_porcentaje" id="grasa_porcentaje_input">
+                        <input type="text" id="grasa_display" class="bg-gray-900 border-gray-700 text-white font-bold text-center rounded-lg w-24 p-2" readonly>
+                    </div>
+                    <div class="info-box mt-3">
+                        <div id="grasa-description" class="text-cyan-300 font-semibold mb-2"></div>
+                        <ul class="space-y-1 text-xs text-gray-400">
+                            <li><strong class="text-gray-200">Mínimo Saludable:</strong> 15% (para función hormonal).</li>
+                            <li><strong class="text-gray-200">Rango Óptimo General:</strong> 20% - 30%.</li>
+                            <li><strong class="text-gray-200">Máximo Recomendado:</strong> 40%.</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Botón de Envío -->
+                <div class="text-center mt-6">
+                    <button type="submit" class="btn-gradient primary text-lg w-full md:w-auto">
+                        <i class="fas fa-bolt"></i> Calcular y Guardar Macros
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Columna Derecha: Vista Previa y Resultados -->
+        <div class="lg:col-span-2 space-y-8">
+            <!-- Vista Previa -->
+            <div class="panel-card animate-fadeSlide" style="animation-delay: 0.3s;">
+                <h3 class="section-title"><i class="fas fa-eye text-cyan-400"></i>Vista Previa</h3>
+                <div id="macros-preview" class="space-y-4">
+                    <!-- El contenido se genera con JavaScript -->
+                    <div class="text-center text-gray-400">Ajusta los sliders para ver la distribución.</div>
+                </div>
+            </div>
+
+            <!-- Resultados Anteriores -->
+            {% if ultimo_calculo_nivel2 %}
+            <div class="panel-card animate-fadeSlide" style="animation-delay: 0.4s;">
+                <h3 class="section-title"><i class="fas fa-history text-cyan-400"></i>Último Cálculo Guardado</h3>
+                <div class="space-y-3">
+                    <!-- Proteína -->
+                    <div>
+                        <div class="flex justify-between text-sm mb-1">
+                            <span class="font-semibold text-blue-300">Proteína</span>
+                            <span>{{ ultimo_calculo_nivel2.proteina_gramos|floatformat:0 }}g ({{ ultimo_calculo_nivel2.proteina_porcentaje|floatformat:0 }}%)</span>
+                        </div>
+                        <div class="w-full bg-gray-700 rounded-full">
+                            <div class="macro-bar bg-blue-400" style="width: {{ ultimo_calculo_nivel2.proteina_porcentaje }}%"></div>
+                        </div>
+                    </div>
+                    <!-- Grasa -->
+                    <div>
+                        <div class="flex justify-between text-sm mb-1">
+                            <span class="font-semibold text-yellow-300">Grasa</span>
+                            <span>{{ ultimo_calculo_nivel2.grasa_gramos|floatformat:0 }}g ({{ ultimo_calculo_nivel2.grasa_porcentaje|floatformat:0 }}%)</span>
+                        </div>
+                        <div class="w-full bg-gray-700 rounded-full">
+                            <div class="macro-bar bg-yellow-400" style="width: {{ ultimo_calculo_nivel2.grasa_porcentaje }}%"></div>
+                        </div>
+                    </div>
+                    <!-- Carbohidratos -->
+                    <div>
+                        <div class="flex justify-between text-sm mb-1">
+                            <span class="font-semibold text-green-300">Carbohidratos</span>
+                            <span>{{ ultimo_calculo_nivel2.carbohidratos_gramos|floatformat:0 }}g ({{ ultimo_calculo_nivel2.carbohidratos_porcentaje|floatformat:0 }}%)</span>
+                        </div>
+                        <div class="w-full bg-gray-700 rounded-full">
+                            <div class="macro-bar bg-green-400" style="width: {{ ultimo_calculo_nivel2.carbohidratos_porcentaje }}%"></div>
+                        </div>
+                    </div>
+                </div>
+                <p class="text-xs text-center text-gray-500 mt-4">Calculado el {{ ultimo_calculo_nivel2.fecha_calculo|date:"d/m/Y" }}</p>
+            </div>
+            {% endif %}
+            {% if ultimo_calculo_nivel2 %}
+            <div class="animate-fadeSlide" style="animation-delay: 0.5s;">
+                <a href="{% url 'nutricion_app_django:nivel3_micros' %}" class="block w-full bg-gradient-to-r from-cyan-500 to-fuchsia-500 text-white text-center font-semibold py-2 rounded-xl mt-6 shadow-md hover:scale-105 transition">
+                    Continuar al Nivel 3 <i class="fas fa-arrow-right ml-2"></i>
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // --- Selectores de Elementos ---
+        const proteinaSlider = document.getElementById('proteina-slider');
+        const proteinaDisplay = document.getElementById('proteina_display');
+        const proteinaHidden = document.getElementById('proteina_gramos_kg_input');
+        const proteinaDesc = document.getElementById('proteina-description');
+
+        const grasaSlider = document.getElementById('grasa-slider');
+        const grasaDisplay = document.getElementById('grasa_display');
+        const grasaHidden = document.getElementById('grasa_porcentaje_input');
+        const grasaDesc = document.getElementById('grasa-description');
+
+        const previewContainer = document.getElementById('macros-preview');
+
+        // --- Datos desde Django ---
+        const peso = parseFloat("{{ user_profile.peso|stringformat:'f' }}");
+        const caloriasObjetivo = parseFloat("{{ calculo_nivel1.calorias_objetivo|stringformat:'f' }}");
+        const objetivoUsuario = "{{ user_profile.objetivo }}";
+
+        // --- Valores Iniciales ---
+        const initialProteina = parseFloat("{{ initial_proteina|stringformat:'f' }}");
+        const initialGrasa = parseInt("{{ initial_grasa }}");
+
+        // --- Funciones de Sincronización y Cálculo ---
+        function syncProteina(value) {
+            const gramos = parseFloat(value);
+            proteinaDisplay.value = gramos.toFixed(1);
+            proteinaHidden.value = gramos.toFixed(1);
+
+            const totalProteina = peso * gramos;
+            let recomendacion = "";
+            if (objetivoUsuario === "Pérdida de grasa" && gramos >= 2.2) {
+                recomendacion = "Estás en el rango óptimo para preservar músculo en déficit.";
+            } else if (objetivoUsuario === "Ganancia muscular" && gramos >= 1.6 && gramos <= 2.2) {
+                recomendacion = "Buen punto para la construcción muscular.";
+            } else {
+                recomendacion = `Equivale a ${totalProteina.toFixed(0)}g de proteína total.`;
+            }
+            proteinaDesc.innerHTML = `<strong>${recomendacion}</strong>`;
+
+            calcularPreviewMacros();
+        }
+
+        function syncGrasa(value) {
+            const porcentaje = parseInt(value);
+            grasaDisplay.value = porcentaje;
+            grasaHidden.value = porcentaje;
+
+            const gramosGrasa = (caloriasObjetivo * (porcentaje / 100)) / 9;
+            grasaDesc.innerHTML = `Equivale a <strong>${gramosGrasa.toFixed(0)}g</strong> de grasa total.`;
+
+            calcularPreviewMacros();
+        }
+
+        function calcularPreviewMacros() {
+            // ... (la función de cálculo que ya tienes funciona bien) ...
+            const proteinaGramosKg = parseFloat(proteinaHidden.value);
+            const grasaPorcentaje = parseInt(grasaHidden.value);
+
+            if (isNaN(proteinaGramosKg) || isNaN(grasaPorcentaje)) return;
+
+            const proteinaGramos = peso * proteinaGramosKg;
+            const proteinaCalorias = proteinaGramos * 4;
+            const grasaCalorias = caloriasObjetivo * (grasaPorcentaje / 100);
+            const grasaGramos = grasaCalorias / 9;
+            const carbohidratosCalorias = caloriasObjetivo - proteinaCalorias - grasaCalorias;
+            const carbohidratosGramos = carbohidratosCalorias / 4;
+
+            const proteinaPct = (proteinaCalorias / caloriasObjetivo) * 100;
+            const grasaPct = (grasaCalorias / caloriasObjetivo) * 100;
+            const carbohidratosPct = (carbohidratosCalorias / caloriasObjetivo) * 100;
+
+            previewContainer.innerHTML = `
+                <div class="space-y-3">
+                    <div>
+                        <div class="flex justify-between text-sm mb-1"><span class="font-semibold text-blue-300">Proteína</span><span>${proteinaGramos.toFixed(0)}g (${proteinaPct.toFixed(0)}%)</span></div>
+                        <div class="w-full bg-gray-700 rounded-full"><div class="macro-bar bg-blue-400" style="width: ${proteinaPct}%"></div></div>
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-sm mb-1"><span class="font-semibold text-yellow-300">Grasa</span><span>${grasaGramos.toFixed(0)}g (${grasaPct.toFixed(0)}%)</span></div>
+                        <div class="w-full bg-gray-700 rounded-full"><div class="macro-bar bg-yellow-400" style="width: ${grasaPct}%"></div></div>
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-sm mb-1"><span class="font-semibold text-green-300">Carbohidratos</span><span>${carbohidratosGramos.toFixed(0)}g (${carbohidratosPct.toFixed(0)}%)</span></div>
+                        <div class="w-full bg-gray-700 rounded-full"><div class="macro-bar bg-green-400" style="width: ${carbohidratosPct}%"></div></div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // --- Inicialización y Event Listeners ---
+        proteinaSlider.value = initialProteina;
+        syncProteina(initialProteina);
+        proteinaSlider.addEventListener('input', (e) => syncProteina(e.target.value));
+
+        grasaSlider.value = initialGrasa;
+        syncGrasa(initialGrasa);
+        grasaSlider.addEventListener('input', (e) => syncGrasa(e.target.value));
+    });
+</script>
+{% endblock %}

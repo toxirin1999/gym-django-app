@@ -1,0 +1,244 @@
+/* --- Estilos Generales y Tema Oscuro --- */
+:root {
+    --background-color: #121212;
+    --header-bg: #1c1c1c;
+    --card-bg: #2a2a2a;
+    --primary-text: #ffffff;
+    --secondary-text: #b3b3b3;
+    --accent-color: #3a76f7; /* Azul brillante para el botón activo */
+    --reward-bg: #333333;
+    --reward-text: #ffc107; /* Amarillo/Dorado para XP */
+    --border-color: #3a3a3a;
+    --font-family: 'Inter', sans-serif;
+}
+
+body {
+    background-color: var(--background-color);
+    color: var(--primary-text);
+    font-family: var(--font-family);
+    /* Fondo con degradado sutil */
+    background-image: radial-gradient(circle at 100% 0%, rgba(128, 0, 128, 0.2), transparent 40%),
+                      radial-gradient(circle at 0% 100%, rgba(255, 255, 0, 0.15), transparent 40%);
+    background-attachment: fixed;
+}
+
+.achievements-page {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+/* --- Cabecera --- */
+.achievements-header {
+    background-color: var(--header-bg);
+    border-radius: 12px;
+    padding: 1.5rem 2rem;
+    margin-bottom: 2rem;
+    border: 1px solid var(--border-color);
+}
+
+.header-title {
+    font-size: 2rem;
+    font-weight: 700;
+    margin: 0 0 0.25rem 0;
+}
+
+.header-subtitle {
+    font-size: 1rem;
+    color: var(--secondary-text);
+    margin: 0;
+}
+
+/* --- Cuerpo Principal (Layout de 2 columnas) --- */
+.achievements-body {
+    display: flex;
+    gap: 2rem;
+}
+
+/* --- Navegación de Categorías (Izquierda) --- */
+.category-nav {
+    flex: 0 0 200px; /* No crece, no se encoge, base de 200px */
+}
+
+.category-nav .nav-pills {
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.category-nav .nav-link {
+    color: var(--secondary-text);
+    background-color: transparent;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    text-align: left;
+    padding: 0.75rem 1rem;
+    font-weight: 500;
+    transition: background-color 0.2s ease, color 0.2s ease;
+    width: 100%;
+}
+
+.category-nav .nav-link:hover {
+    background-color: var(--card-bg);
+    color: var(--primary-text);
+}
+
+.category-nav .nav-link.active {
+    background-color: var(--accent-color);
+    color: var(--primary-text);
+    border-color: var(--accent-color);
+    font-weight: 600;
+}
+
+/* --- Contenido de Logros (Derecha) --- */
+.achievements-content {
+    flex: 1; /* Ocupa el espacio restante */
+}
+
+.achievements-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 1.5rem;
+}
+
+/* --- Tarjeta de Logro --- */
+.achievement-card {
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    text-align: center;
+    transition: transform 0.2s ease, border-color 0.2s ease;
+    cursor: pointer;
+}
+
+.achievement-card:hover {
+    transform: translateY(-4px);
+    border-color: var(--accent-color);
+}
+
+.achievement-card__icon-wrapper {
+    margin-bottom: 1rem;
+}
+
+/* --- Estilos para los Iconos de Logros --- */
+
+/* 1. Contenedor del icono: lo hacemos un bloque centrado */
+.achievement-card__icon-wrapper {
+    margin-bottom: 1rem;
+    text-align: center; /* Centra el contenido */
+}
+
+/* 2. Estilo COMÚN para el círculo del icono (placeholder) */
+.achievement-card__icon-placeholder {
+    width: 48px;
+    height: 48px;
+    background-color: #3a3a3a;
+    border-radius: 50%;
+    display: inline-flex; /* Usa flex para centrar el trofeo DENTRO del círculo */
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    color: var(--secondary-text);
+}
+/* --- Footer y Botón de Volver --- */
+.achievements-footer {
+    text-align: center;
+    margin-top: 2.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.btn-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1.5rem;
+    background-color: var(--card-bg);
+    color: var(--primary-text);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.btn-back:hover {
+    background-color: var(--accent-color);
+    border-color: var(--accent-color);
+    color: white;
+}
+
+/* 3. Estilo para la IMAGEN personalizada */
+.achievement-card__icon {
+    width: 48px;         /* Mismo tamaño que el placeholder */
+    height: 48px;        /* Mismo tamaño que el placeholder */
+    border-radius: 50%;  /* Misma forma redonda */
+    object-fit: cover;   /* Asegura que la imagen llene el círculo */
+}
+
+
+.achievement-card__icon-placeholder {
+    width: 48px;
+    height: 48px;
+    background-color: #3a3a3a;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    color: var(--secondary-text);
+}
+
+.achievement-card__body {
+    flex-grow: 1;
+}
+
+.achievement-card__title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin: 0 0 0.5rem 0;
+}
+
+.achievement-card__description {
+    font-size: 0.9rem;
+    color: var(--secondary-text);
+    line-height: 1.5;
+    margin-bottom: 1rem;
+}
+
+.achievement-card__footer {
+    margin-top: auto;
+}
+
+.achievement-card__reward {
+    display: inline-block;
+    background-color: var(--reward-bg);
+    color: var(--reward-text);
+    padding: 0.4rem 0.8rem;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 0.85rem;
+}
+
+.achievement-card__reward .bi-star-fill {
+    margin-right: 5px;
+    vertical-align: -2px;
+}
+
+/* --- Responsividad --- */
+@media (max-width: 768px) {
+    .achievements-body {
+        flex-direction: column;
+    }
+    .category-nav {
+        flex-basis: auto; /* Resetea la base */
+        width: 100%;
+    }
+    .category-nav .nav-pills {
+        flex-direction: row; /* Vuelve a horizontal en móvil */
+        flex-wrap: wrap; /* Permite que los botones pasen a la siguiente línea */
+        justify-content: center;
+    }
+}

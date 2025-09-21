@@ -1,0 +1,1788 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="cache-control" content="no-cache">
+  <link rel="manifest" href="{% static 'manifest.json' %}">
+
+
+  <!-- Color de la barra de herramientas en Android -->
+  <meta name="theme-color" content="#1a1a2e">
+
+  <!-- Soporte para PWA en iOS -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="GymProject">
+
+  <!-- Icono para la pantalla de inicio de iOS -->
+  <link rel="apple-touch-icon" href="{% static 'images/joi_avatar.png' %}">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}Dashboard – Nueva Gym{% endblock %}</title>
+    <!-- En el <head> -->
+<link rel="stylesheet" href="{% static 'css/blade-runner-atmosphere.css' %}">
+  
+
+  <!-- Tailwind CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="{% static 'css/dashboard_bladestyle.css' %}">
+
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Bootstrap JS (necesario para tooltips, modals, etc.) -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+  <style>
+    /* ===== EFECTOS ATMOSFÉRICOS BLADE RUNNER - INTEGRACIÓN GLOBAL ===== */
+    .notificacion-epica {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 9999;
+        max-width: 400px;
+        min-width: 300px;
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+        border: 2px solid #ffd700;
+        border-radius: 15px;
+        padding: 20px;
+        box-shadow: 0 0 50px rgba(255, 215, 0, 0.5);
+        transform: translateX(450px);
+        transition: all 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        opacity: 0;
+        overflow: hidden;
+        position: relative;
+    }
+
+    .notificacion-epica.mostrar {
+        transform: translateX(0);
+        opacity: 1;
+    }
+
+    .notificacion-epica.ocultar {
+        transform: translateX(450px);
+        opacity: 0;
+    }
+
+    /* Efecto de brillo animado */
+    .notificacion-epica::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: linear-gradient(45deg, transparent, rgba(255, 215, 0, 0.2), transparent);
+        animation: shimmer-notif 2s infinite;
+        pointer-events: none;
+    }
+
+    @keyframes shimmer-notif {
+        0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
+        100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
+    }
+
+    /* Tipos de notificaciones */
+    .notificacion-epica.ascension {
+        border-color: #ff6b6b;
+        box-shadow: 0 0 50px rgba(255, 107, 107, 0.6);
+    }
+
+    .notificacion-epica.ascension::before {
+        background: linear-gradient(45deg, transparent, rgba(255, 107, 107, 0.3), transparent);
+    }
+
+    .notificacion-epica.prueba-completada {
+        border-color: #4ecdc4;
+        box-shadow: 0 0 50px rgba(78, 205, 196, 0.5);
+    }
+
+    .notificacion-epica.prueba-completada::before {
+        background: linear-gradient(45deg, transparent, rgba(78, 205, 196, 0.2), transparent);
+    }
+
+    .notificacion-epica.puntos-ganados {
+        border-color: #ffd700;
+        box-shadow: 0 0 50px rgba(255, 215, 0, 0.4);
+    }
+
+    /* Header de la notificación */
+    .notif-header {
+        display: flex;
+        align-items: center;
+        margin-bottom: 15px;
+        position: relative;
+        z-index: 2;
+    }
+
+    .notif-icono {
+        font-size: 32px;
+        margin-right: 15px;
+        animation: pulse-icon 2s infinite;
+    }
+
+    @keyframes pulse-icon {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.1); }
+    }
+
+    .notif-titulo {
+        color: #ffd700;
+        font-size: 18px;
+        font-weight: bold;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+        margin: 0;
+    }
+
+    .notif-subtitulo {
+        color: #a8dadc;
+        font-size: 14px;
+        margin: 0;
+    }
+
+    /* Contenido de la notificación */
+    .notif-contenido {
+        position: relative;
+        z-index: 2;
+        margin-bottom: 15px;
+    }
+
+    .notif-mensaje {
+        color: #ffffff;
+        font-size: 16px;
+        line-height: 1.4;
+        margin-bottom: 10px;
+        text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+    }
+
+    .notif-detalle {
+        color: #a8dadc;
+        font-size: 14px;
+        font-style: italic;
+    }
+
+    /* Barra de progreso en notificaciones */
+    .notif-progreso {
+        background: rgba(0, 0, 0, 0.5);
+        border-radius: 10px;
+        height: 8px;
+        overflow: hidden;
+        margin: 10px 0;
+        position: relative;
+        z-index: 2;
+    }
+
+    .notif-progreso-fill {
+        background: linear-gradient(90deg, #ff6b6b, #ffd700, #4ecdc4);
+        height: 100%;
+        border-radius: 10px;
+        transition: width 2s ease-in-out;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .notif-progreso-fill::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.6), transparent);
+        animation: progress-shine-notif 1.5s infinite;
+    }
+
+    @keyframes progress-shine-notif {
+        0% { left: -100%; }
+        100% { left: 100%; }
+    }
+
+    /* Botón de cerrar */
+    .notif-cerrar {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background: none;
+        border: none;
+        color: #a8dadc;
+        font-size: 20px;
+        cursor: pointer;
+        z-index: 3;
+        transition: color 0.3s ease;
+    }
+
+    .notif-cerrar:hover {
+        color: #ffd700;
+    }
+
+    /* Efectos de partículas para ascensiones */
+    .particulas {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        overflow: hidden;
+    }
+
+    .particula {
+        position: absolute;
+        width: 4px;
+        height: 4px;
+        background: #ffd700;
+        border-radius: 50%;
+        animation: flotar-particula 3s infinite;
+    }
+
+    @keyframes flotar-particula {
+        0% {
+            transform: translateY(100px) scale(0);
+            opacity: 0;
+        }
+        10% {
+            opacity: 1;
+        }
+        90% {
+            opacity: 1;
+        }
+        100% {
+            transform: translateY(-100px) scale(1);
+            opacity: 0;
+        }
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .notificacion-epica {
+            top: 10px;
+            right: 10px;
+            left: 10px;
+            max-width: none;
+            transform: translateY(-150px);
+        }
+
+        .notificacion-epica.mostrar {
+            transform: translateY(0);
+        }
+
+        .notificacion-epica.ocultar {
+            transform: translateY(-150px);
+        }
+    }
+
+    /* Sonido visual para notificaciones */
+    .notif-pulso {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 20px;
+        height: 20px;
+        border: 2px solid #ffd700;
+        border-radius: 50%;
+        transform: translate(-50%, -50%);
+        animation: pulso-sonoro 1s infinite;
+        pointer-events: none;
+    }
+
+    @keyframes pulso-sonoro {
+        0% {
+            transform: translate(-50%, -50%) scale(1);
+            opacity: 1;
+        }
+        100% {
+            transform: translate(-50%, -50%) scale(3);
+            opacity: 0;
+        }
+    }
+    /* Animaciones para humo - MUY VISIBLES */
+    @keyframes smokeFloat1 {
+        0% { transform: translateX(0) translateY(0) rotate(0deg) scale(1); opacity: 0; }
+        10% { opacity: 0.8; }
+        50% { transform: translateX(-50px) translateY(-200px) rotate(180deg) scale(1.5); opacity: 0.6; }
+        100% { transform: translateX(-100px) translateY(-400px) rotate(360deg) scale(0.8); opacity: 0; }
+    }
+
+    @keyframes smokeFloat2 {
+        0% { transform: translateX(0) translateY(0) rotate(0deg) scale(1); opacity: 0; }
+        15% { opacity: 0.7; }
+        50% { transform: translateX(30px) translateY(-180px) rotate(-180deg) scale(1.3); opacity: 0.5; }
+        100% { transform: translateX(60px) translateY(-360px) rotate(-360deg) scale(0.9); opacity: 0; }
+    }
+
+    @keyframes smokeFloat3 {
+        0% { transform: translateX(0) translateY(0) rotate(0deg) scale(1); opacity: 0; }
+        20% { opacity: 0.6; }
+        50% { transform: translateX(-20px) translateY(-220px) rotate(90deg) scale(1.4); opacity: 0.4; }
+        100% { transform: translateX(-40px) translateY(-440px) rotate(180deg) scale(0.7); opacity: 0; }
+    }
+
+    @keyframes smokeFloat4 {
+        0% { transform: translateX(0) translateY(0) rotate(0deg) scale(1); opacity: 0; }
+        25% { opacity: 0.5; }
+        50% { transform: translateX(40px) translateY(-160px) rotate(-90deg) scale(1.2); opacity: 0.3; }
+        100% { transform: translateX(80px) translateY(-320px) rotate(-180deg) scale(1); opacity: 0; }
+    }
+
+    /* Animaciones para luces volumétricas - MUY BRILLANTES */
+    @keyframes lightPulse1 {
+        0%, 100% { opacity: 0.3; transform: scaleY(1) scaleX(1); }
+        50% { opacity: 0.8; transform: scaleY(1.2) scaleX(0.9); }
+    }
+
+    @keyframes lightPulse2 {
+        0%, 100% { opacity: 0.2; transform: scaleY(1) scaleX(1); }
+        50% { opacity: 0.7; transform: scaleY(1.3) scaleX(0.8); }
+    }
+
+    @keyframes lightPulse3 {
+        0%, 100% { opacity: 0.25; transform: scaleY(1) scaleX(1); }
+        50% { opacity: 0.6; transform: scaleY(1.1) scaleX(0.95); }
+    }
+
+    /* Animación para niebla de fondo - MUY VISIBLE */
+    @keyframes fogMove {
+        0%, 100% { transform: translateX(0) translateY(0) scale(1); opacity: 0.4; }
+        25% { transform: translateX(-50px) translateY(-25px) scale(1.1); opacity: 0.6; }
+        50% { transform: translateX(30px) translateY(-50px) scale(0.9); opacity: 0.5; }
+        75% { transform: translateX(-20px) translateY(25px) scale(1.05); opacity: 0.7; }
+    }
+
+    /* Contenedor principal de efectos atmosféricos */
+    .blade-runner-atmosphere {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        z-index: 1;
+        overflow: hidden;
+    }
+
+    /* NIEBLA DE FONDO - ULTRA VISIBLE */
+    .background-fog {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background:
+            radial-gradient(ellipse at 20% 70%, rgba(0, 255, 255, 0.15) 0%, transparent 50%),
+            radial-gradient(ellipse at 80% 30%, rgba(255, 0, 128, 0.12) 0%, transparent 50%),
+            radial-gradient(ellipse at 50% 90%, rgba(255, 255, 0, 0.1) 0%, transparent 50%),
+            radial-gradient(ellipse at 10% 10%, rgba(128, 255, 0, 0.08) 0%, transparent 40%);
+        animation: fogMove 60s ease-in-out infinite;
+        z-index: 1;
+    }
+
+    /* RESPLANDOR AMBIENTAL - ULTRA VISIBLE */
+    .ambient-glow {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background:
+            radial-gradient(circle at 15% 25%, rgba(0, 255, 255, 0.12) 0%, transparent 35%),
+            radial-gradient(circle at 85% 75%, rgba(255, 0, 128, 0.1) 0%, transparent 35%),
+            radial-gradient(circle at 50% 50%, rgba(255, 255, 0, 0.08) 0%, transparent 40%),
+            radial-gradient(circle at 30% 80%, rgba(128, 255, 0, 0.09) 0%, transparent 30%);
+        animation: fogMove 45s ease-in-out infinite reverse;
+        z-index: 2;
+    }
+
+    /* CAPAS DE HUMO - ULTRA VISIBLES */
+    .smoke-layer {
+        position: absolute;
+        border-radius: 50%;
+        filter: blur(4px);
+        will-change: transform, opacity;
+        z-index: 3;
+    }
+
+    .smoke-layer-1 {
+        width: 500px;
+        height: 500px;
+        background: radial-gradient(ellipse at center,
+            rgba(200, 200, 220, 0.4) 0%,
+            rgba(150, 150, 170, 0.3) 25%,
+            rgba(100, 100, 120, 0.2) 50%,
+            rgba(80, 80, 100, 0.1) 75%,
+            transparent 100%);
+        animation: smokeFloat1 30s linear infinite;
+        top: 10%;
+        left: 0%;
+    }
+
+    .smoke-layer-2 {
+        width: 450px;
+        height: 450px;
+        background: radial-gradient(ellipse at center,
+            rgba(220, 150, 200, 0.35) 0%,
+            rgba(180, 120, 160, 0.25) 25%,
+            rgba(140, 90, 120, 0.15) 50%,
+            rgba(100, 70, 90, 0.08) 75%,
+            transparent 100%);
+        animation: smokeFloat2 35s linear infinite;
+        animation-delay: -10s;
+        top: 40%;
+        right: 10%;
+    }
+    /* Estilos para el medidor de ACWR */
+    .gauge-container { text-align: center; }
+    .gauge-value {
+        font-size: 4rem; font-weight: 700; line-height: 1;
+        text-shadow: 0 0 15px currentColor;
+    }
+    .gauge-label { font-size: 1rem; color: var(--text-secondary); margin-top: 0.5rem; }
+    .gauge-reco { margin-top: 1rem; font-style: italic; }
+    .smoke-layer-3 {
+        width: 600px;
+        height: 600px;
+        background: radial-gradient(ellipse at center,
+            rgba(150, 200, 220, 0.3) 0%,
+            rgba(120, 160, 180, 0.2) 25%,
+            rgba(90, 120, 140, 0.12) 50%,
+            rgba(70, 90, 110, 0.06) 75%,
+            transparent 100%);
+        animation: smokeFloat3 40s linear infinite;
+        animation-delay: -20s;
+        bottom: 0%;
+        left: 20%;
+    }
+
+    .smoke-layer-4 {
+        width: 400px;
+        height: 400px;
+        background: radial-gradient(ellipse at center,
+            rgba(200, 180, 150, 0.32) 0%,
+            rgba(160, 140, 120, 0.22) 25%,
+            rgba(120, 100, 90, 0.14) 50%,
+            rgba(90, 80, 70, 0.08) 75%,
+            transparent 100%);
+        animation: smokeFloat4 32s linear infinite;
+        animation-delay: -25s;
+        top: 60%;
+        right: 0%;
+    }
+
+    /* LUCES VOLUMÉTRICAS - ULTRA BRILLANTES */
+    .volumetric-light {
+        position: absolute;
+        filter: blur(3px);
+        will-change: transform, opacity;
+        z-index: 4;
+    }
+
+    .volumetric-light-1 {
+        top: -20%;
+        left: 5%;
+        width: 150px;
+        height: 140%;
+        background: linear-gradient(to bottom,
+            rgba(0, 255, 255, 0.4) 0%,
+            rgba(0, 255, 255, 0.6) 10%,
+            rgba(0, 255, 255, 0.5) 25%,
+            rgba(0, 255, 255, 0.3) 50%,
+            rgba(0, 255, 255, 0.15) 75%,
+            rgba(0, 255, 255, 0.05) 90%,
+            transparent 100%);
+        transform: rotate(-10deg);
+        animation: lightPulse1 4s ease-in-out infinite;
+    }
+
+    .volumetric-light-2 {
+        top: -20%;
+        right: 15%;
+        width: 130px;
+        height: 140%;
+        background: linear-gradient(to bottom,
+            rgba(255, 0, 128, 0.35) 0%,
+            rgba(255, 0, 128, 0.5) 15%,
+            rgba(255, 0, 128, 0.4) 30%,
+            rgba(255, 0, 128, 0.25) 55%,
+            rgba(255, 0, 128, 0.12) 80%,
+            transparent 100%);
+        transform: rotate(12deg);
+        animation: lightPulse2 5s ease-in-out infinite;
+        animation-delay: -1.5s;
+    }
+
+    .volumetric-light-3 {
+        top: -20%;
+        left: 50%;
+        width: 110px;
+        height: 140%;
+        background: linear-gradient(to bottom,
+            rgba(255, 255, 0, 0.3) 0%,
+            rgba(255, 255, 0, 0.45) 20%,
+            rgba(255, 255, 0, 0.35) 40%,
+            rgba(255, 255, 0, 0.2) 65%,
+            rgba(255, 255, 0, 0.1) 85%,
+            transparent 100%);
+        transform: rotate(2deg);
+        animation: lightPulse3 6s ease-in-out infinite;
+        animation-delay: -3s;
+    }
+
+    /* Controles de efectos atmosféricos */
+    .atmosphere-controls {
+        position: fixed;
+        top: 80px;
+        right: 20px;
+        z-index: 1000;
+        background: rgba(0, 0, 0, 0.95);
+        border: 3px solid #00ffff;
+        border-radius: 12px;
+        padding: 15px;
+        display: flex;
+        gap: 10px;
+        flex-direction: column;
+        backdrop-filter: blur(15px);
+        box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
+    }
+
+    .atmosphere-btn {
+        background: linear-gradient(135deg, #00ffff 0%, #0080ff 100%);
+        border: none;
+        border-radius: 8px;
+        color: #000000;
+        padding: 10px 15px;
+        font-size: 12px;
+        font-weight: 800;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        pointer-events: auto;
+    }
+
+    .atmosphere-btn:hover {
+        transform: scale(1.1);
+        box-shadow: 0 8px 25px rgba(0, 255, 255, 0.6);
+    }
+
+    .status-indicator {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        background: rgba(0, 0, 0, 0.95);
+        border: 3px solid #00ffff;
+        border-radius: 12px;
+        padding: 12px 18px;
+        font-size: 0.9rem;
+        z-index: 1000;
+        color: #00ff00;
+        backdrop-filter: blur(15px);
+        font-weight: 700;
+        box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
+    }
+
+    /* ===== ESTILOS ORIGINALES DEL BASE.HTML ===== */
+
+    .hamburger-btn {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, rgba(49, 207, 244, 0.3), rgba(0, 35, 48, 0.7));
+      border: 1px solid rgba(49, 207, 244, 0.25);
+      box-shadow: 0 0 15px rgba(49, 207, 244, 0.15);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+      z-index: 1000;
+      transition: all 0.3s ease;
+    }
+
+    .hamburger-btn:hover {
+      box-shadow: 0 0 20px rgba(49, 207, 244, 0.3);
+    }
+
+    .hamburger-btn span {
+      display: block;
+      width: 20px;
+      height: 2px;
+      background-color: #fff;
+      margin: 2px 0;
+      transition: all 0.3s ease;
+    }
+
+    .hamburger-btn.active span:nth-child(1) {
+      transform: rotate(45deg) translate(3px, 3px);
+    }
+    .hamburger-btn.active span:nth-child(2) {
+      opacity: 0;
+    }
+    .hamburger-btn.active span:nth-child(3) {
+      transform: rotate(-45deg) translate(3px, -3px);
+    }
+.ring-success {
+  border: 2px solid #32FF00; /* verde */
+}
+.ring-neutral {
+  border: 2px solid #00C3FF; /* azul */
+}
+.ring-failure {
+  border: 2px solid #FF4444; /* rojo */
+}
+
+    .side-menu {
+      position: fixed;
+      top: 0;
+      left: -280px;
+      width: 280px;
+      height: 100%;
+      background: linear-gradient(135deg, rgba(15, 23, 41, 0.95), rgba(15, 23, 41, 0.85));
+      backdrop-filter: blur(10px);
+      border-right: 1px solid rgba(49, 207, 244, 0.25);
+      box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+      z-index: 999;
+      transition: left 0.3s ease;
+      overflow-y: auto;
+      padding: 80px 0 30px;
+    }
+   .btn-accion {
+        display: flex !important;
+        flex-grow: 1 !important;
+        align-items: center !important;
+        justify-content: center !important;
+        padding: 0.5rem 1rem !important;
+        border-radius: 0.5rem !important;
+        color: white !important;
+        font-weight: 600 !important;
+        font-size: 0.875rem !important;
+        text-align: center !important;
+        transition: all 0.3s ease !important;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1) !important;
+        /* Forzamos la transparencia para que el degradado sea visible */
+        background-color: transparent !important;
+    }
+
+    .btn-accion:hover {
+        transform: scale(1.05) !important;
+    }
+
+    /* Degradados específicos para cada botón con !important para máxima prioridad */
+    .btn-iniciar {
+        background-image: linear-gradient(to right, #22c55e, #10b981) !important;
+    }
+    .btn-iniciar:hover {
+        background-image: linear-gradient(to right, #16a34a, #059669) !important;
+    }
+
+    .btn-plan {
+        background-image: linear-gradient(to right, #3b82f6, #0ea5e9) !important;
+    }
+    .btn-plan:hover {
+        background-image: linear-gradient(to right, #2563eb, #0284c7) !important;
+    }
+
+    .btn-detalles {
+        background-image: linear-gradient(to right, #a855f7, #6366f1) !important;
+    }
+    .btn-detalles:hover {
+        background-image: linear-gradient(to right, #9333ea, #4f46e5) !important;
+    }
+
+    .btn-entender {
+        background-image: linear-gradient(to right, #06b6d4, #d946ef) !important;
+    }
+    .btn-entender:hover {
+        background-image: linear-gradient(to right, #0891b2, #c026d3) !important;
+    }
+    .side-menu.open {
+      left: 0;
+    }
+
+    .side-menu a {
+      display: flex;
+      align-items: center;
+      padding: 15px 25px;
+      color: #fff;
+      text-decoration: none;
+      font-size: 1rem;
+      transition: all 0.2s ease;
+      border-left: 3px solid transparent;
+    }
+
+    .side-menu a:hover {
+      background: linear-gradient(to right, rgba(49, 207, 244, 0.1), transparent);
+      border-left: 3px solid #31cff4;
+    }
+
+    .side-menu a.active {
+      background: linear-gradient(to right, rgba(49, 207, 244, 0.2), transparent);
+      border-left: 3px solid #31cff4;
+    }
+
+    .menu-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
+      z-index: 998;
+      display: none;
+    }
+
+    .menu-overlay.open {
+      display: block;
+    }
+
+    @media (max-width: 768px) {
+      .hamburger-btn {
+        top: 15px;
+        left: 15px;
+        width: 35px;
+        height: 35px;
+      }
+
+      .side-menu {
+        width: 250px;
+        left: -250px;
+      }
+
+      .side-menu a {
+        padding: 12px 20px;
+        font-size: 0.95rem;
+      }
+
+      /* Optimizaciones móviles para efectos Blade Runner */
+      .smoke-layer {
+          animation-duration: 40s !important;
+          filter: blur(2px);
+      }
+
+      .volumetric-light {
+          width: 80px !important;
+      }
+
+      .atmosphere-controls {
+          top: 60px;
+          right: 10px;
+          padding: 10px;
+      }
+
+      .atmosphere-btn {
+          padding: 8px 10px;
+          font-size: 10px;
+      }
+    }
+
+    #tsparticles canvas {
+      position: fixed !important;
+      top: 0;
+      left: 0;
+      width: 100% !important;
+      height: 100% !important;
+      z-index: -10 !important;
+      pointer-events: none;
+    }
+    <!-- Estilos para el sistema de notificaciones -->
+  <style>
+    /* Estilos para el dropdown de notificaciones */
+    .notif-dropdown {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 1000;
+    }
+
+    .notif-btn {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, rgba(49, 207, 244, 0.3), rgba(0, 35, 48, 0.7));
+      border: 1px solid rgba(49, 207, 244, 0.25);
+      box-shadow: 0 0 15px rgba(49, 207, 244, 0.15);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .notif-btn:hover {
+      box-shadow: 0 0 20px rgba(49, 207, 244, 0.3);
+    }
+
+    .notif-icon {
+      color: #fff;
+      font-size: 1.2rem;
+    }
+
+    .notif-badge {
+      position: absolute;
+      top: -5px;
+      right: -5px;
+      background-color: #ff4d4d;
+      color: white;
+      border-radius: 50%;
+      width: 20px;
+      height: 20px;
+      font-size: 0.7rem;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .notif-content {
+      position: absolute;
+      top: 50px;
+      right: 0;
+      width: 300px;
+      max-height: 400px;
+      overflow-y: auto;
+      background: linear-gradient(135deg, rgba(15, 23, 41, 0.95), rgba(15, 23, 41, 0.85));
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(49, 207, 244, 0.25);
+      border-radius: 10px;
+      box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+      display: none;
+      z-index: 1001;
+    }
+
+    .notif-content.show {
+      display: block;
+    }
+
+    .notif-header {
+      padding: 15px;
+      border-bottom: 1px solid rgba(49, 207, 244, 0.25);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .notif-title {
+      font-weight: 600;
+      color: #fff;
+    }
+
+    .notif-list {
+      padding: 0;
+      margin: 0;
+      list-style: none;
+    }
+
+    .notif-item {
+      padding: 15px;
+      border-bottom: 1px solid rgba(49, 207, 244, 0.1);
+      transition: background-color 0.2s ease;
+    }
+
+    .notif-item:hover {
+      background-color: rgba(49, 207, 244, 0.1);
+    }
+
+    .notif-item-new {
+      border-left: 3px solid #31cff4;
+    }
+
+    .notif-item-title {
+      font-weight: 500;
+      margin-bottom: 5px;
+      display: flex;
+      align-items: center;
+    }
+
+    .notif-item-icon {
+      margin-right: 8px;
+      font-size: 1.2rem;
+    }
+
+    .notif-item-time {
+      font-size: 0.8rem;
+      color: #aaa;
+      margin-left: auto;
+    }
+
+    .notif-item-message {
+      font-size: 0.9rem;
+      color: #ddd;
+    }
+
+    .notif-footer {
+      padding: 10px 15px;
+      text-align: center;
+      border-top: 1px solid rgba(49, 207, 244, 0.25);
+    }
+
+    .notif-footer a {
+      color: #31cff4;
+      text-decoration: none;
+    }
+
+    .notif-empty {
+      padding: 20px;
+      text-align: center;
+      color: #aaa;
+    }
+
+    @media (max-width: 768px) {
+      .notif-dropdown {
+        top: 15px;
+        right: 15px;
+      }
+
+      .notif-content {
+        width: 280px;
+        right: -10px;
+      }
+    }
+
+    /* Animación de pulso para nuevas notificaciones */
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+      100% { transform: scale(1); }
+    }
+
+    .pulse {
+      animation: pulse 0.5s ease-in-out;
+    }
+  </style>
+
+  {% block extra_css %}{% endblock %}
+</head>
+
+
+<body class="min-h-screen text-slate-100 flex justify-center">
+
+  <!-- Contenedor de notificaciones -->
+  <div id="notificaciones-container"
+       role="alert"
+       aria-live="polite"
+       aria-label="Notificaciones del sistema"
+       style="position:fixed;top:20px;right:20px;z-index:9999;">
+  </div>
+
+  <!-- Mensajes de Django (ocultos para procesamiento) -->
+  {% if messages %}
+  <div id="django-messages" style="display: none;" aria-hidden="true">
+    {% for message in messages %}
+    <div class="django-message" data-level="{{ message.tags }}">{{ message.message }}</div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- Efectos atmosféricos Blade Runner -->
+  <div class="blade-runner-atmosphere"
+       id="bladeRunnerAtmosphere"
+       aria-hidden="true"
+       role="presentation">
+    <div class="background-fog"></div>
+    <div class="ambient-glow"></div>
+    <div class="smoke-layer smoke-layer-1"></div>
+    <div class="smoke-layer smoke-layer-2"></div>
+    <div class="smoke-layer smoke-layer-3"></div>
+    <div class="smoke-layer smoke-layer-4"></div>
+    <div class="volumetric-light volumetric-light-1"></div>
+    <div class="volumetric-light volumetric-light-2"></div>
+    <div class="volumetric-light volumetric-light-3"></div>
+  </div>
+
+  <!-- Partículas de fondo -->
+  <div id="tsparticles"
+       class="fixed inset-0 -z-10 pointer-events-none"
+       aria-hidden="true"
+       role="presentation">
+  </div>
+
+  <!-- Botón de menú hamburguesa -->
+  <button class="hamburger-btn"
+          id="hamburgerBtn"
+          aria-label="Abrir menú de navegación"
+          aria-expanded="false"
+          aria-controls="sideMenu">
+    <span aria-hidden="true"></span>
+    <span aria-hidden="true"></span>
+    <span aria-hidden="true"></span>
+  </button>
+
+  <!-- Menú lateral -->
+  <nav class="side-menu"
+       id="sideMenu"
+       role="navigation"
+       aria-label="Menú principal"
+       aria-hidden="true">
+
+    <a href="{% url 'home' %}" aria-label="Ir al inicio">
+      <span aria-hidden="true">🏠</span>
+      <span>Inicio</span>
+    </a>
+
+    <a href="/clientes/" aria-label="Gestionar clientes">
+      <span aria-hidden="true">👥</span>
+      <span>Clientes</span>
+    </a>
+
+    <a href="/rutinas/" aria-label="Ver programas de entrenamiento">
+      <span aria-hidden="true">📋</span>
+      <span>Programas de Entrenamiento</span>
+    </a>
+
+    <a href="{% url 'estoico:dashboard' %}" aria-label="Acceder a mindfulness">
+      <span aria-hidden="true">🧠</span>
+      <span>Mindfulness</span>
+    </a>
+
+    <div class="border-t border-cyan-400/20 my-3" role="separator"></div>
+
+    <a href="/entrenos/liftin/" aria-label="Dashboard de entrenamiento">
+      <span aria-hidden="true">💪</span>
+      <span>Dashboard Liftin</span>
+    </a>
+
+{% if user.is_authenticated %}
+<a href="{% url 'logros:ver_codice_completo' cliente.id %}" class="nav-link">
+    ⚔️ Mi Códice
+</a>
+{% endif %}
+    <div class="border-t border-cyan-400/20 my-3" role="separator"></div>
+
+    <a href="{% url 'nutricion_app_django:piramide_principal' %}" aria-label="Gestión nutricional">
+      <span aria-hidden="true">🔺</span>
+      <span>Nutrición</span>
+    </a>
+
+    <a href="/logros/" aria-label="Ver logros obtenidos">
+      <span aria-hidden="true">🏆</span>
+      <span>Logros</span>
+    </a>
+<a href="{% url 'logros:leaderboard' %}" aria-label="Ver el leaderboard competitivo">
+  <span aria-hidden="true">👑</span>
+  <span>Leaderboard</span>
+</a>
+    <div class="border-t border-cyan-400/20 my-3" role="separator"></div>
+
+    <!-- Formulario de cierre de sesión -->
+    <form method="post" action="{% url 'logout' %}" class="px-4">
+      {% csrf_token %}
+      <button type="submit"
+              class="w-full mt-4 bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 text-black font-bold py-2 px-4 rounded-full shadow-md hover:scale-105 transition-all duration-300"
+              aria-label="Cerrar sesión">
+        <span aria-hidden="true">🔓</span> Cerrar sesión
+      </button>
+    </form>
+  </nav>
+
+  <!-- Overlay del menú -->
+  <div class="menu-overlay"
+       id="menuOverlay"
+       aria-hidden="true"
+       role="presentation">
+  </div>
+
+  <!-- Contenido principal -->
+  <main style="position: relative; z-index: 10;" role="main">
+    {% block content %}{% endblock %}
+  </main>
+ <!-- REEMPLAZA TU SCRIPT PRINCIPAL POR ESTE -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  
+    // =================================================================
+    // CLASE DE PARTÍCULAS (Sin cambios, se mantiene igual)
+    // =================================================================
+    class BladeRunnerParticles {
+        // ... (todo el código de la clase BladeRunnerParticles va aquí, no necesita cambios)
+        constructor() {
+            this.particles = [];
+            this.maxParticles = 80;
+            this.isActive = true;
+            this.mouseX = window.innerWidth / 2;
+            this.mouseY = window.innerHeight / 2;
+            this.mouseInfluence = 100;
+
+            this.init();
+            this.animate();
+            this.setupEventListeners();
+        }
+
+        init() {
+            this.particleContainer = document.createElement('div');
+            this.particleContainer.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                pointer-events: none;
+                z-index: 5;
+                overflow: hidden;
+            `;
+
+            document.body.appendChild(this.particleContainer);
+
+            for (let i = 0; i < this.maxParticles; i++) {
+                this.createParticle();
+            }
+        }
+
+        createParticle() {
+            const particle = document.createElement('div');
+
+            const size = Math.random() * 6 + 3;
+            const opacity = Math.random() * 0.9 + 0.4;
+            const speed = Math.random() * 1.2 + 0.3;
+            const drift = Math.random() * 0.6 - 0.3;
+            const rotationSpeed = Math.random() * 3 - 1.5;
+
+            const x = Math.random() * window.innerWidth;
+            const y = window.innerHeight + 150;
+
+            particle.style.cssText = `
+                position: absolute;
+                width: ${size}px;
+                height: ${size}px;
+                background: radial-gradient(circle,
+                    rgba(255,255,255,${opacity}) 0%,
+                    rgba(200,255,255,${opacity * 0.8}) 30%,
+                    rgba(150,200,255,${opacity * 0.6}) 60%,
+                    transparent 90%);
+                border-radius: 50%;
+                left: ${x}px;
+                top: ${y}px;
+                pointer-events: none;
+                will-change: transform;
+                box-shadow: 0 0 ${size * 3}px rgba(255,255,255,${opacity * 0.7});
+            `;
+
+            particle.dataset.speed = speed;
+            particle.dataset.drift = drift;
+            particle.dataset.x = x;
+            particle.dataset.y = y;
+            particle.dataset.rotation = 0;
+            particle.dataset.rotationSpeed = rotationSpeed;
+            particle.dataset.originalSpeed = speed;
+
+            this.particleContainer.appendChild(particle);
+            this.particles.push(particle);
+
+            return particle;
+        }
+
+        updateParticles() {
+            this.particles.forEach((particle, index) => {
+                let speed = parseFloat(particle.dataset.speed);
+                const drift = parseFloat(particle.dataset.drift);
+                const rotationSpeed = parseFloat(particle.dataset.rotationSpeed);
+                const originalSpeed = parseFloat(particle.dataset.originalSpeed);
+                let x = parseFloat(particle.dataset.x);
+                let y = parseFloat(particle.dataset.y);
+                let rotation = parseFloat(particle.dataset.rotation);
+
+                // Movimiento base
+                y -= speed;
+                x += drift;
+                rotation += rotationSpeed;
+
+                // Turbulencia natural
+                const time = Date.now() * 0.001;
+                x += Math.sin(time + index * 0.2) * 0.5;
+                y += Math.cos(time * 0.8 + index * 0.25) * 0.3;
+
+                // Interacción con el mouse
+                const distanceToMouse = Math.sqrt(
+                    Math.pow(x - this.mouseX, 2) + Math.pow(y - this.mouseY, 2)
+                );
+
+                if (distanceToMouse < this.mouseInfluence) {
+                    const force = (this.mouseInfluence - distanceToMouse) / this.mouseInfluence;
+                    const angle = Math.atan2(y - this.mouseY, x - this.mouseX);
+
+                    const pushForce = force * 5;
+                    x += Math.cos(angle) * pushForce;
+                    y += Math.sin(angle) * pushForce;
+
+                    rotation += force * 10;
+                    speed = originalSpeed * (1 + force * 2);
+
+                    const interactionOpacity = 0.9 + force * 0.1;
+                    particle.style.background = `radial-gradient(circle,
+                        rgba(0,255,255,${interactionOpacity}) 0%,
+                        rgba(255,0,128,${interactionOpacity * 0.8}) 30%,
+                        rgba(255,255,0,${interactionOpacity * 0.6}) 60%,
+                        transparent 90%)`;
+                    particle.style.boxShadow = `0 0 ${15 + force * 20}px rgba(0,255,255,${interactionOpacity})`;
+                } else {
+                    const normalOpacity = 0.6;
+                    particle.style.background = `radial-gradient(circle,
+                        rgba(255,255,255,${normalOpacity}) 0%,
+                        rgba(200,255,255,${normalOpacity * 0.8}) 30%,
+                        rgba(150,200,255,${normalOpacity * 0.6}) 60%,
+                        transparent 90%)`;
+                    speed = originalSpeed;
+                }
+
+                // Resetear partícula si sale de la pantalla
+                if (y < -150 || x < -150 || x > window.innerWidth + 150) {
+                    y = window.innerHeight + 150;
+                    x = Math.random() * window.innerWidth;
+                    rotation = 0;
+                    speed = originalSpeed;
+                }
+
+                // Actualizar posición
+                particle.style.left = x + 'px';
+                particle.style.top = y + 'px';
+                particle.style.transform = `rotate(${rotation}deg) scale(${1 + Math.sin(time + index) * 0.1})`;
+                particle.dataset.x = x;
+                particle.dataset.y = y;
+                particle.dataset.rotation = rotation;
+                particle.dataset.speed = speed;
+            });
+        }
+
+        animate() {
+            if (!this.isActive) return;
+
+            this.updateParticles();
+            requestAnimationFrame(() => this.animate());
+        }
+
+        setupEventListeners() {
+            document.addEventListener('mousemove', (e) => {
+                this.mouseX = e.clientX;
+                this.mouseY = e.clientY;
+            });
+
+            document.addEventListener('click', (e) => {
+                this.createExplosion(e.clientX, e.clientY);
+            });
+
+            document.addEventListener('visibilitychange', () => {
+                this.isActive = !document.hidden;
+                if (this.isActive) {
+                    this.animate();
+                }
+            });
+
+            window.addEventListener('resize', () => {
+                this.handleResize();
+            });
+        }
+
+        createExplosion(x, y) {
+            for (let i = 0; i < 10; i++) {
+                const explosionParticle = document.createElement('div');
+                const size = Math.random() * 8 + 4;
+                const angle = (Math.PI * 2 * i) / 10;
+                const velocity = Math.random() * 100 + 50;
+
+                explosionParticle.style.cssText = `
+                    position: fixed;
+                    width: ${size}px;
+                    height: ${size}px;
+                    background: radial-gradient(circle, rgba(255,255,0,0.9) 0%, transparent 70%);
+                    border-radius: 50%;
+                    left: ${x}px;
+                    top: ${y}px;
+                    pointer-events: none;
+                    z-index: 1000;
+                    box-shadow: 0 0 ${size * 2}px rgba(255,255,0,0.8);
+                `;
+
+                document.body.appendChild(explosionParticle);
+
+                let startTime = Date.now();
+                const animate = () => {
+                    const elapsed = Date.now() - startTime;
+                    const progress = elapsed / 1000;
+
+                    if (progress >= 1) {
+                        explosionParticle.remove();
+                        return;
+                    }
+
+                    const currentX = x + Math.cos(angle) * velocity * progress;
+                    const currentY = y + Math.sin(angle) * velocity * progress;
+                    const opacity = 1 - progress;
+                    const scale = 1 + progress * 2;
+
+                    explosionParticle.style.left = currentX + 'px';
+                    explosionParticle.style.top = currentY + 'px';
+                    explosionParticle.style.opacity = opacity;
+                    explosionParticle.style.transform = `scale(${scale})`;
+
+                    requestAnimationFrame(animate);
+                };
+
+                requestAnimationFrame(animate);
+            }
+        }
+
+        handleResize() {
+            // Reposicionar partículas en resize
+            this.particles.forEach(particle => {
+                const x = Math.random() * window.innerWidth;
+                particle.dataset.x = x;
+                particle.style.left = x + 'px';
+            });
+        }
+
+        toggle() {
+            this.isActive = !this.isActive;
+            if (this.isActive) {
+                this.animate();
+                this.particleContainer.style.display = 'block';
+            } else {
+                this.particleContainer.style.display = 'none';
+            }
+            return this.isActive;
+        }
+    }
+
+    // =================================================================
+    // INICIALIZACIÓN Y MANEJO DE EVENTOS (VERSIÓN CORREGIDA)
+    // =================================================================
+
+    // --- Sistema de Partículas ---
+    const bladeRunnerParticles = new BladeRunnerParticles();
+
+    // --- Controles Atmosféricos (Protegido) ---
+    const atmosphereContainer = document.getElementById('bladeRunnerAtmosphere');
+    const statusIndicator = document.getElementById('statusIndicator');
+    const toggleAtmosphereBtn = document.getElementById('toggleAtmosphere');
+    const toggleParticlesBtn = document.getElementById('toggleParticles');
+    const toggleLightsBtn = document.getElementById('toggleLights');
+
+    let atmosphereActive = true;
+    let particlesActive = true;
+    let lightsActive = true;
+
+    if (toggleAtmosphereBtn) {
+        toggleAtmosphereBtn.addEventListener('click', function() {
+            atmosphereActive = !atmosphereActive;
+            if (atmosphereContainer) atmosphereContainer.style.display = atmosphereActive ? 'block' : 'none';
+            this.textContent = atmosphereActive ? 'Atmósfera ON' : 'Atmósfera OFF';
+            updateStatus();
+        });
+    }
+
+    if (toggleParticlesBtn) {
+        toggleParticlesBtn.addEventListener('click', function() {
+            particlesActive = bladeRunnerParticles.toggle();
+            this.textContent = particlesActive ? 'Partículas ON' : 'Partículas OFF';
+            updateStatus();
+        });
+    }
+
+    if (toggleLightsBtn) {
+        toggleLightsBtn.addEventListener('click', function() {
+            lightsActive = !lightsActive;
+            const lights = document.querySelectorAll('.volumetric-light');
+            lights.forEach(light => {
+                light.style.display = lightsActive ? 'block' : 'none';
+            });
+            this.textContent = lightsActive ? 'Luces ON' : 'Luces OFF';
+            updateStatus();
+        });
+    }
+
+    function updateStatus() {
+        if (!statusIndicator) return;
+        const activeEffects = [];
+        if (atmosphereActive) activeEffects.push('Atmósfera');
+        if (particlesActive) activeEffects.push('Partículas');
+        if (lightsActive) activeEffects.push('Luces');
+
+        if (activeEffects.length === 0) {
+            statusIndicator.textContent = 'Blade Runner: INACTIVO';
+            statusIndicator.style.color = '#ff4444';
+        } else {
+            statusIndicator.textContent = `Blade Runner: ${activeEffects.join(', ')}`;
+            statusIndicator.style.color = '#00ff00';
+        }
+    }
+
+    // --- Menú Hamburguesa (Protegido) ---
+    const hamburgerBtn = document.getElementById('hamburgerBtn');
+    const sideMenu = document.getElementById('sideMenu');
+    const menuOverlay = document.getElementById('menuOverlay');
+
+    if (hamburgerBtn && sideMenu && menuOverlay) {
+        function toggleMenu() {
+            hamburgerBtn.classList.toggle('active');
+            sideMenu.classList.toggle('open');
+            menuOverlay.classList.toggle('open');
+        }
+        hamburgerBtn.addEventListener('click', toggleMenu);
+        menuOverlay.addEventListener('click', toggleMenu);
+
+        const menuLinks = document.querySelectorAll('.side-menu a');
+        const currentPath = window.location.pathname;
+        menuLinks.forEach(link => {
+            link.addEventListener('click', function () {
+                if (window.innerWidth <= 768) toggleMenu();
+            });
+            const linkHref = link.getAttribute('href');
+            if (linkHref === currentPath || (linkHref !== '/' && currentPath.startsWith(linkHref))) {
+                link.classList.add('active');
+            }
+        });
+    }
+
+    // --- Sistema de Notificaciones (Protegido) ---
+    const notifDropdown = document.getElementById('notifDropdown');
+    if (notifDropdown) {
+        const notifBtn = document.getElementById('notifBtn');
+        const notifContent = document.getElementById('notifContent');
+        const notifBadge = document.getElementById('notifBadge');
+        const notifList = document.getElementById('notifList');
+        const notifEmpty = document.getElementById('notifEmpty');
+        const notifMarkAllRead = document.getElementById('notifMarkAllRead');
+        const clienteId = notifDropdown.dataset.clienteId;
+
+        if (clienteId && clienteId !== '0') {
+            // ... (Toda la lógica de las funciones cargarNotificaciones, marcarComoLeida, etc. va aquí dentro)
+            // ... (No necesita cambios, solo estar dentro de este if)
+        } else {
+            console.log('No hay cliente ID disponible para cargar notificaciones');
+        }
+    }
+});
+</script>
+
+  {% block extra_js %}{% endblock %}
+<!--<div id="joiHolograma" class="fixed top-6 right-6 z-50 w-28 h-28 sm:w-32 sm:h-32 opacity-90 animate-fadein">
+  <img src="{% static 'images/4f.png' %}" alt="Joi"
+    class="rounded-full border-2 border-cyan-400/40 shadow-xl backdrop-blur-sm transition-transform duration-700 hover:scale-105 hover:drop-shadow-cyan animate-glow" />
+  <p id="joiFrase" class="mt-2 text-sm text-cyan-200 italic drop-shadow-md text-center">
+    “Estoy aquí… pero más ligera que nunca.”
+  </p>
+</div>
+<audio id="vozJoi" src="{% static 'audio/hola2.mp3' %}" preload="auto"></audio>-->
+<script>
+document.addEventListener("click", () => {
+  const audio = document.getElementById("vozJoi");
+  if (audio) {
+    audio.volume = 0.85;
+    audio.play();
+  }
+}, { once: true });  // solo la primera vez
+ class NotificacionesCodeice {
+        constructor() {
+            this.container = document.getElementById('notificaciones-container');
+            this.notificacionesActivas = [];
+            this.sonidosHabilitados = true;
+        }
+
+        // Mostrar notificación de puntos ganados
+        mostrarPuntosGanados(puntos, desglose = null) {
+            const notificacion = {
+                tipo: 'puntos-ganados',
+                icono: '💰',
+                titulo: '¡Puntos Ganados!',
+                subtitulo: 'Recompensa de Entrenamiento',
+                mensaje: `+${puntos} puntos de poder`,
+                detalle: desglose ? `${desglose.base} base + ${desglose.bonus} bonus + ${desglose.pruebas} pruebas` : null,
+                duracion: 4000
+            };
+
+            this.mostrarNotificacion(notificacion);
+        }
+
+        // Mostrar notificación de prueba completada
+        mostrarPruebaCompletada(nombrePrueba, puntosRecompensa, descripcion = null) {
+            const notificacion = {
+                tipo: 'prueba-completada',
+                icono: '⚔️',
+                titulo: '¡Prueba Completada!',
+                subtitulo: nombrePrueba,
+                mensaje: `Has superado el desafío legendario`,
+                detalle: descripcion || `+${puntosRecompensa} puntos de recompensa`,
+                duracion: 6000,
+                efectos: true
+            };
+
+            this.mostrarNotificacion(notificacion);
+        }
+
+        // Mostrar notificación de ascensión
+        mostrarAscension(nivelAnterior, nivelNuevo, filosofia = null) {
+            const notificacion = {
+                tipo: 'ascension',
+                icono: '🔥',
+                titulo: '¡ASCENSIÓN!',
+                subtitulo: `${nivelAnterior} → ${nivelNuevo}`,
+                mensaje: `Has alcanzado un nuevo nivel de poder`,
+                detalle: filosofia ? `"${filosofia}"` : 'Tu leyenda continúa creciendo',
+                duracion: 8000,
+                efectos: true,
+                particulas: true
+            };
+
+            this.mostrarNotificacion(notificacion);
+        }
+
+        // Mostrar notificación de racha
+        mostrarRacha(dias) {
+            if (dias < 3) return; // Solo mostrar rachas significativas
+
+            const notificacion = {
+                tipo: 'puntos-ganados',
+                icono: '🔥',
+                titulo: '¡Racha de Fuego!',
+                subtitulo: `${dias} días consecutivos`,
+                mensaje: `Tu dedicación arde como una llama eterna`,
+                detalle: `Bonus de constancia: +${Math.min(15, dias)} puntos`,
+                duracion: 5000
+            };
+
+            this.mostrarNotificacion(notificacion);
+        }
+
+        // Función principal para mostrar notificaciones
+        mostrarNotificacion(config) {
+            const notifElement = this.crearElementoNotificacion(config);
+            this.container.appendChild(notifElement);
+            this.notificacionesActivas.push(notifElement);
+
+            // Mostrar con animación
+            setTimeout(() => {
+                notifElement.classList.add('mostrar');
+            }, 100);
+
+            // Añadir efectos especiales
+            if (config.efectos) {
+                this.añadirEfectosPulso(notifElement);
+            }
+
+            if (config.particulas) {
+                this.añadirParticulas(notifElement);
+            }
+
+            // Auto-ocultar después de la duración especificada
+            setTimeout(() => {
+                this.ocultarNotificacion(notifElement);
+            }, config.duracion);
+
+            // Reposicionar notificaciones existentes
+            this.reposicionarNotificaciones();
+        }
+
+        // Crear elemento HTML de la notificación
+        crearElementoNotificacion(config) {
+            const notif = document.createElement('div');
+            notif.className = `notificacion-epica ${config.tipo}`;
+
+            notif.innerHTML = `
+                <button class="notif-cerrar" onclick="notificacionesCodeice.ocultarNotificacion(this.parentElement)">&times;</button>
+
+                <div class="notif-header">
+                    <div class="notif-icono">${config.icono}</div>
+                    <div>
+                        <div class="notif-titulo">${config.titulo}</div>
+                        <div class="notif-subtitulo">${config.subtitulo}</div>
+                    </div>
+                </div>
+
+                <div class="notif-contenido">
+                    <div class="notif-mensaje">${config.mensaje}</div>
+                    ${config.detalle ? `<div class="notif-detalle">${config.detalle}</div>` : ''}
+                </div>
+            `;
+
+            return notif;
+        }
+
+        // Ocultar notificación
+        ocultarNotificacion(elemento) {
+            elemento.classList.add('ocultar');
+
+            setTimeout(() => {
+                if (elemento.parentNode) {
+                    elemento.parentNode.removeChild(elemento);
+                }
+
+                const index = this.notificacionesActivas.indexOf(elemento);
+                if (index > -1) {
+                    this.notificacionesActivas.splice(index, 1);
+                }
+
+                this.reposicionarNotificaciones();
+            }, 800);
+        }
+
+        // Reposicionar notificaciones para evitar solapamiento
+        reposicionarNotificaciones() {
+            let offset = 20;
+            this.notificacionesActivas.forEach((notif, index) => {
+                if (notif.classList.contains('mostrar') && !notif.classList.contains('ocultar')) {
+                    notif.style.top = `${offset}px`;
+                    offset += notif.offsetHeight + 15;
+                }
+            });
+        }
+
+        // Añadir efectos de pulso
+        añadirEfectosPulso(elemento) {
+            // Implementación opcional
+        }
+
+        // Añadir partículas para ascensiones
+        añadirParticulas(elemento) {
+            const particulasContainer = document.createElement('div');
+            particulasContainer.className = 'particulas';
+
+            for (let i = 0; i < 15; i++) {
+                const particula = document.createElement('div');
+                particula.className = 'particula';
+                particula.style.left = `${Math.random() * 100}%`;
+                particula.style.animationDelay = `${Math.random() * 2}s`;
+                particula.style.animationDuration = `${2 + Math.random() * 2}s`;
+                particulasContainer.appendChild(particula);
+            }
+
+            elemento.appendChild(particulasContainer);
+
+            setTimeout(() => {
+                if (particulasContainer.parentNode) {
+                    particulasContainer.parentNode.removeChild(particulasContainer);
+                }
+            }, 4000);
+        }
+
+        // Limpiar todas las notificaciones
+        limpiarTodas() {
+            this.notificacionesActivas.forEach(notif => {
+                this.ocultarNotificacion(notif);
+            });
+        }
+    }
+     window.notificacionesCodeice = new NotificacionesCodeice();
+  window.mostrarNotificacionPuntos   = (...args) => notificacionesCodeice.mostrarPuntosGanados(...args);
+  window.mostrarNotificacionPrueba   = (...args) => notificacionesCodeice.mostrarPruebaCompletada(...args);
+  window.mostrarNotificacionAscension= (...args) => notificacionesCodeice.mostrarAscension(...args);
+  window.mostrarNotificacionRacha    = (...args) => notificacionesCodeice.mostrarRacha(...args);
+  document.addEventListener('DOMContentLoaded', () => {
+  let delay = 800;
+
+  {% for message in messages %}
+    (function(){
+      const raw = "{{ message.message|escapejs }}";
+      // PUNTOS
+      if (raw.startsWith('CODICE_PUNTOS:')) {
+        try {
+          const d = JSON.parse(raw.slice('CODICE_PUNTOS:'.length));
+          setTimeout(() => {
+            mostrarNotificacionPuntos(d.puntos_totales ?? d.total ?? 0, {
+              base: d.puntos_base ?? d.base ?? 0,
+              bonus: d.puntos_bonus ?? d.bonus ?? 0,
+              pruebas: d.puntos_pruebas ?? d.pruebas ?? 0
+            });
+          }, delay); delay += 1200;
+        } catch(e){}
+      }
+      // PRUEBA
+      else if (raw.startsWith('CODICE_PRUEBA:')) {
+        try {
+          const p = JSON.parse(raw.slice('CODICE_PRUEBA:'.length));
+          setTimeout(() => { mostrarNotificacionPrueba(p.nombre, p.puntos, p.descripcion); }, delay);
+          delay += 1400;
+        } catch(e){}
+      }
+      // ASCENSIÓN
+      else if (raw.startsWith('CODICE_ASCENSION:')) {
+        try {
+          const a = JSON.parse(raw.slice('CODICE_ASCENSION:'.length));
+          setTimeout(() => { mostrarNotificacionAscension(a.anterior, a.nuevo, a.filosofia); }, delay);
+          delay += 1600;
+        } catch(e){}
+      }
+      // RACHA
+      else if (raw.startsWith('CODICE_RACHA:')) {
+        const dias = parseInt(raw.slice('CODICE_RACHA:'.length), 10) || 0;
+        setTimeout(() => { mostrarNotificacionRacha(dias); }, delay);
+        delay += 1000;
+      }
+      // MENSAJES NORMALES (success/warning/error/info) → una notificación simple
+      else {
+        const tag = "{{ message.tags|default:'info' }}";
+        const mapa = {success:'puntos-ganados', warning:'puntos-ganados', error:'ascension', info:'puntos-ganados'};
+        setTimeout(() => {
+          notificacionesCodeice.mostrarNotificacion?.({
+            tipo: mapa[tag] || 'puntos-ganados',
+            icono: tag==='error'?'⚠️':'✨',
+            titulo: tag==='error'?'Algo pasó':'Información',
+            subtitulo: '',
+            mensaje: raw,
+            duracion: tag==='error'?8000:4000
+          });
+        }, delay);
+        delay += 900;
+      }
+    })();
+  {% endfor %}
+});
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function() {
+      navigator.serviceWorker.register("{% static 'serviceworker.js' %}")
+        .then(function(registration) {
+          console.log('Service Worker registrado con éxito, scope: ', registration.scope);
+        })
+        .catch(function(err) {
+          console.log('Fallo en el registro del Service Worker: ', err);
+        });
+    });
+  }
+</script>
+
+
+
+
+<style>
+#joiCompanion {
+  animation: slideIn 1.2s ease-out forwards;
+  opacity: 0;
+}
+@keyframes slideIn {
+  0% {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(0%);
+    opacity: 1;
+  }
+}
+@keyframes fadein {
+  0% { opacity: 0; transform: scale(0.9); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes glitch {
+  0% { transform: translate(0); opacity: 0.95; }
+  20% { transform: translate(-1px, 1px); }
+  40% { transform: translate(1px, -1px); }
+  60% { transform: translate(-1px, 0); }
+  80% { transform: translate(1px, 1px); }
+  100% { transform: translate(0); opacity: 1; }
+}
+
+.animate-fadein {
+  animation: fadein 1s ease-out forwards;
+}
+
+.animate-glitch {
+  animation: glitch 1.2s infinite alternate ease-in-out;
+}
+
+</style>
+
+
+
+
+
+</body>
+</html>
+

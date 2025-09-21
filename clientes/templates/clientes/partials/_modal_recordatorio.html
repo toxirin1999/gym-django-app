@@ -1,0 +1,71 @@
+{% load i18n static %}
+
+<!-- Modal para editar recordatorio de peso -->
+<div class="modal fade" id="modalRecordatorioPeso" tabindex="-1" aria-labelledby="modalPesoLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" action="{% url 'actualizar_recordatorio_peso' cliente.id %}">
+                {% csrf_token %}
+
+                <div class="modal-header bg-light">
+                    <h5 class="modal-title" id="modalPesoLabel">
+                        <i class="bi bi-calendar-check me-2"></i>
+                        {% trans "Programar recordatorio de peso" %}
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"
+                            aria-label="{% trans 'Cerrar' %}"></button>
+                </div>
+
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="id_proximo_registro_peso" class="form-label">
+                            <i class="bi bi-calendar-date me-1"></i>
+                            {% trans "Nueva fecha para registro:" %}
+                        </label>
+                        <input type="date"
+                               name="proximo_registro_peso"
+                               id="id_proximo_registro_peso"
+                               class="form-control"
+                               value="{{ cliente.proximo_registro_peso|date:'Y-m-d' }}"
+                               min="{{ today|date:'Y-m-d' }}"
+                               required>
+                    </div>
+
+                    {% if cliente.proximo_registro_peso %}
+                    <div class="alert alert-info mt-3">
+                        <i class="bi bi-info-circle me-1"></i>
+                        {% trans "Recordatorio actual:" %}
+                        <strong>{{ cliente.proximo_registro_peso|date:"d/m/Y" }}</strong>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle me-1"></i>
+                        {% trans "Cancelar" %}
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-save me-1"></i>
+                        {% trans "Guardar cambios" %}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Script para inicializar el datepicker -->
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Establecer la fecha mínima como hoy
+        const fechaInput = document.getElementById('id_proximo_registro_peso');
+        if (!fechaInput.value) {
+            const hoy = new Date().toISOString().split('T')[0];
+            fechaInput.value = hoy;
+        }
+
+        // Opcional: Inicializar un datepicker más avanzado
+        // Si estás usando flatpickr o similar, puedes inicializarlo aquí
+    });
+</script>

@@ -1,0 +1,365 @@
+<!-- Archivo: templates/entrenos/estadisticas_liftin.html -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Estadísticas Liftin - Gym Project</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .stat-card {
+            border-radius: 15px;
+            transition: transform 0.3s ease;
+        }
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+        .stat-icon {
+            font-size: 2.5rem;
+            opacity: 0.8;
+        }
+        .progress-custom {
+            height: 8px;
+            border-radius: 10px;
+        }
+        .chart-container {
+            position: relative;
+            height: 300px;
+        }
+        .badge-liftin {
+            background-color: #007bff;
+        }
+        .badge-manual {
+            background-color: #28a745;
+        }
+        .comparison-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+    </style>
+</head>
+<body class="bg-light">
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container">
+        <a class="navbar-brand" href="{% url 'entrenos:dashboard_liftin' %}">
+            <i class="fas fa-dumbbell"></i> Gym Project
+        </a>
+        <div class="navbar-nav ms-auto">
+            <a class="nav-link" href="{% url 'entrenos:dashboard_liftin' %}">
+                <i class="fas fa-home"></i> Dashboard
+            </a>
+            <a class="nav-link" href="{% url 'entrenos:lista_entrenamientos' %}">
+                <i class="fas fa-list"></i> Entrenamientos
+            </a>
+            <a class="nav-link" href="/liftin/importar-completo/">
+                <i class="fas fa-plus"></i> Importar Liftin
+            </a>
+            <a class="nav-link active" href="{% url 'entrenos:estadisticas_liftin' %}">
+                <i class="fas fa-chart-bar"></i> Estadísticas
+            </a>
+        </div>
+    </div>
+</nav>
+
+<div class="container mt-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col">
+            <h1 class="h2">
+                <i class="fas fa-chart-bar text-primary"></i>
+                Estadísticas de Liftin
+            </h1>
+            <p class="text-muted">Análisis detallado de tus entrenamientos importados desde Liftin</p>
+        </div>
+        <div class="col-auto">
+            <div class="btn-group">
+                <a href="{% url 'entrenos:exportar_datos_liftin' %}" class="btn btn-outline-primary">
+                    <i class="fas fa-download"></i> Exportar
+                </a>
+                <a href="{% url 'entrenos:comparar_liftin_manual' %}" class="btn btn-outline-info">
+                    <i class="fas fa-balance-scale"></i> Comparar
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Estadísticas principales -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card stat-card text-center border-0 shadow-sm">
+                <div class="card-body">
+                    <i class="fas fa-mobile-alt stat-icon text-primary"></i>
+                    <h3 class="mt-2 mb-1">{{ stats.total_liftin }}</h3>
+                    <p class="text-muted mb-0">Entrenamientos Liftin</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stat-card text-center border-0 shadow-sm">
+                <div class="card-body">
+                    <i class="fas fa-weight-hanging stat-icon text-success"></i>
+                    <h3 class="mt-2 mb-1">{{ stats_liftin.volumen_total|floatformat:0|default:"0" }}</h3>
+                    <p class="text-muted mb-0">Volumen Total (kg)</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stat-card text-center border-0 shadow-sm">
+                <div class="card-body">
+                    <i class="fas fa-fire stat-icon text-danger"></i>
+                    <h3 class="mt-2 mb-1">{{ stats_liftin.calorias_total|floatformat:0|default:"0" }}</h3>
+                    <p class="text-muted mb-0">Calorías Quemadas</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stat-card text-center border-0 shadow-sm">
+                <div class="card-body">
+                    <i class="fas fa-clock stat-icon text-warning"></i>
+                    <h3 class="mt-2 mb-1">{{ stats_liftin.duracion_promedio|floatformat:0|default:"0" }}</h3>
+                    <p class="text-muted mb-0">Duración Promedio (min)</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Estadísticas detalladas -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card stat-card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <i class="fas fa-dumbbell stat-icon text-info"></i>
+                    <h4 class="mt-2">{{ stats_liftin.ejercicios_promedio|floatformat:1|default:"0" }}</h4>
+                    <p class="text-muted mb-0">Ejercicios por Sesión</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card stat-card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <i class="fas fa-heartbeat stat-icon text-danger"></i>
+                    <h4 class="mt-2">{{ stats_liftin.fc_promedio|floatformat:0|default:"--" }}</h4>
+                    <p class="text-muted mb-0">FC Promedio (BPM)</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card stat-card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <i class="fas fa-calendar-check stat-icon text-success"></i>
+                    <h4 class="mt-2">{{ stats.total_general }}</h4>
+                    <p class="text-muted mb-0">Total General</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Comparación Liftin vs Manual -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card comparison-card border-0 shadow">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="fas fa-balance-scale"></i>
+                        Comparación de Fuentes
+                    </h5>
+                    <div class="row text-center">
+                        <div class="col-6">
+                            <h3>{{ stats.total_liftin }}</h3>
+                            <p class="mb-0">📱 Liftin</p>
+                        </div>
+                        <div class="col-6">
+                            <h3>{{ stats.total_manual }}</h3>
+                            <p class="mb-0">✏️ Manual</p>
+                        </div>
+                    </div>
+                    <div class="progress progress-custom mt-3">
+                        {% widthratio stats.total_liftin stats.total_general 100 as liftin_percent %}
+                        <div class="progress-bar bg-light" style="width: {{ liftin_percent }}%"></div>
+                    </div>
+                    <small class="text-light">
+                        {{ liftin_percent }}% de entrenamientos son de Liftin
+                    </small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="fas fa-chart-pie"></i>
+                        Distribución por Fuente
+                    </h5>
+                    <div class="chart-container">
+                        <canvas id="chartDistribucion"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Gráficos de análisis -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-line"></i>
+                        Progreso de Entrenamientos (Últimos 30 días)
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="chartProgreso"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-trophy"></i>
+                        Top Clientes (Liftin)
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% for cliente in stats_por_cliente %}
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div>
+                            <strong>{{ cliente.cliente__nombre }}</strong>
+                            <br>
+                            <small class="text-muted">{{ cliente.volumen|floatformat:0 }} kg</small>
+                        </div>
+                        <span class="badge badge-liftin">{{ cliente.total }}</span>
+                    </div>
+                    {% empty %}
+                    <div class="text-center text-muted">
+                        <i class="fas fa-inbox fa-2x mb-2"></i>
+                        <p>No hay datos de clientes aún</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Entrenamientos recientes de Liftin -->
+    <div class="row">
+        <div class="col">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-history"></i>
+                        Entrenamientos Recientes de Liftin
+                    </h5>
+                    <a href="{% url 'entrenos:buscar_entrenamientos_liftin' %}?fuente_datos=liftin"
+                       class="btn btn-sm btn-outline-primary">
+                        Ver todos
+                    </a>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                            <tr>
+                                <th>Cliente</th>
+                                <th>Rutina</th>
+                                <th>Fecha</th>
+                                <th>Duración</th>
+                                <th>Volumen</th>
+                                <th>Calorías</th>
+                                <th>FC Prom.</th>
+                                <th>Acciones</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {% for entreno in entrenamientos_recientes %}
+                            <tr>
+                                <td>
+                                    <strong>{{ entreno.cliente.nombre }}</strong>
+                                </td>
+                                <td>
+                                    {% if entreno.nombre_rutina_liftin %}
+                                    {{ entreno.nombre_rutina_liftin }}
+                                    {% else %}
+                                    {{ entreno.rutina.nombre }}
+                                    {% endif %}
+                                </td>
+                                <td>{{ entreno.fecha|date:"d/m/Y" }}</td>
+                                <td>
+                                    {% if entreno.duracion_minutos %}
+                                    {{ entreno.duracion_formateada }}
+                                    {% else %}
+                                    <span class="text-muted">--</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if entreno.volumen_total_kg %}
+                                    {{ entreno.volumen_formateado }}
+                                    {% else %}
+                                    <span class="text-muted">--</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if entreno.calorias_quemadas %}
+                                    {{ entreno.calorias_quemadas }}
+                                    {% else %}
+                                    <span class="text-muted">--</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if entreno.frecuencia_cardiaca_promedio %}
+                                    {{ entreno.frecuencia_cardiaca_promedio }}
+                                    {% else %}
+                                    <span class="text-muted">--</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="{% url 'entrenos:detalle_entrenamiento' entreno.id %}"
+                                           class="btn btn-outline-info">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        {% if entreno.ejercicios_liftin.exists %}
+                                        <a href="{% url 'entrenos:detalle_ejercicios_liftin' entreno.id %}"
+                                           class="btn btn-outline-primary">
+                                            <i class="fas fa-dumbbell"></i>
+                                        </a>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="8" class="text-center text-muted py-4">
+                                    <i class="fas fa-inbox fa-2x mb-2"></i><br>
+                                    No hay entrenamientos de Liftin registrados aún.
+                                    <br>
+                                    <a href="/liftin/importar-completo/" class="btn btn-primary btn-sm mt-2">
+                                        Importar primer entrenamiento
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Gráfico de distribución por fuente
+        const ctx1 = document.getElementById('chartDistribucion').getContext('2d');
+        new Chart(ctx1, {
+            type: 'doughnut',
+            data: {
+
+(Content truncated due to size limit. Use line ranges to read in chunks)

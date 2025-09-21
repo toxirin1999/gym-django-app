@@ -1,0 +1,570 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Resumen de Entrenamiento - {{ entreno.rutina.nombre }}{% endblock %}
+
+{% block extra_css %}
+<!-- Estilos específicos para la página de resumen -->
+<style>
+    .stat-value { color: #00ffff; text-shadow: 0 0 8px rgba(0, 255, 255, 0.5); }
+    .medal-unlocked { border-left: 4px solid #ffd700; background-color: rgba(255, 215, 0, 0.05); }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Contenido principal de la página -->
+<div class="container mx-auto max-w-4xl p-4 md:p-6">
+
+    <div class="text-center mb-8">
+        <h1 class="text-4xl font-bold text-white">Entrenamiento Completado</h1>
+        <p class="text-cyan-400 text-lg mt-2">{{ entreno.rutina.nombre }} - {{ entreno.fecha|date:"d F, Y" }}</p>
+    </div>
+
+    <!-- El resto de tu contenido HTML para el resumen va aquí -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <div class="bg-gray-800 p-4 rounded-xl text-center card-glow">
+            <div class="text-gray-400 text-sm">Volumen Total</div>
+            <div class="text-3xl font-bold stat-value">{{ stats.volumen_total|default:"0" }} kg</div>
+        </div>
+        <div class="bg-gray-800 p-4 rounded-xl text-center card-glow">
+            <div class="text-gray-400 text-sm">Peso Máximo</div>
+            <div class="text-3xl font-bold stat-value">{{ stats.peso_maximo|default:"0" }} kg</div>
+        </div>
+        <div class="bg-gray-800 p-4 rounded-xl text-center card-glow">
+            <div class="text-gray-400 text-sm">Series</div>
+            <div class="text-3xl font-bold stat-value">{{ stats.series_completadas|default:"0" }}/{{ stats.total_series|default:"0" }}</div>
+        </div>
+        <div class="bg-gray-800 p-4 rounded-xl text-center card-glow">
+            <div class="text-gray-400 text-sm">Duración</div>
+            <div class="text-3xl font-bold stat-value">{{ entreno.duracion_minutos|default:"--" }} min</div>
+        </div>
+    </div>
+    <!-- ... etc ... -->
+
+    <div class="mt-8 text-center">
+        <a href="{% url 'home' %}" class="inline-block bg-cyan-500 text-white font-bold py-2 px-6 rounded-lg hover:bg-cyan-600 transition-colors">Volver al Inicio</a>
+    </div>
+</div>
+{% endblock content %}
+
+{% block extra_js %}
+<!-- El script de notificaciones y gráfico va aquí -->
+<script>
+    <script>
+
+        class NotificacionesCodeice {
+            constructor() {
+                this.container = document.getElementById('notificaciones-container');
+                this.notificacionesActivas = [];
+                this.sonidosHabilitados = true;
+            }
+
+            // Mostrar notificación de puntos ganados
+            mostrarPuntosGanados(puntos, desglose = null) {
+                const notificacion = {
+                    tipo: 'puntos-ganados',
+                    icono: '💰',
+                    titulo: '¡Puntos Ganados!',
+                    subtitulo: 'Recompensa de Entrenamiento',
+                    mensaje: `+${puntos} puntos de poder`,
+                    detalle: desglose ? `${desglose.base} base + ${desglose.bonus} bonus + ${desglose.pruebas} pruebas` : null,
+                    duracion: 4000
+                };
+
+                this.mostrarNotificacion(notificacion);
+            }
+
+            // Mostrar notificación de prueba completada
+            mostrarPruebaCompletada(nombrePrueba, puntosRecompensa, descripcion = null) {
+                const notificacion = {
+                    tipo: 'prueba-completada',
+                    icono: '⚔️',
+                    titulo: '¡Prueba Completada!',
+                    subtitulo: nombrePrueba,
+                    mensaje: `Has superado el desafío legendario`,
+                    detalle: descripcion || `+${puntosRecompensa} puntos de recompensa`,
+                    duracion: 6000,
+                    efectos: true
+                };
+
+                this.mostrarNotificacion(notificacion);
+            }
+
+            // Mostrar notificación de ascensión
+            mostrarAscension(nivelAnterior, nivelNuevo, filosofia = null) {
+                const notificacion = {
+                    tipo: 'ascension',
+                    icono: '🔥',
+                    titulo: '¡ASCENSIÓN!',
+                    subtitulo: `${nivelAnterior} → ${nivelNuevo}`,
+                    mensaje: `Has alcanzado un nuevo nivel de poder`,
+                    detalle: filosofia ? `"${filosofia}"` : 'Tu leyenda continúa creciendo',
+                    duracion: 8000,
+                    efectos: true,
+                    particulas: true
+                };
+
+                this.mostrarNotificacion(notificacion);
+            }
+
+            // Mostrar notificación de racha
+            mostrarRacha(dias) {
+                if (dias < 3) return; // Solo mostrar rachas significativas
+
+                const notificacion = {
+                    tipo: 'puntos-ganados',
+                    icono: '🔥',
+                    titulo: '¡Racha de Fuego!',
+                    subtitulo: `${dias} días consecutivos`,
+                    mensaje: `Tu dedicación arde como una llama eterna`,
+                    detalle: `Bonus de constancia: +${Math.min(15, dias)} puntos`,
+                    duracion: 5000
+                };
+
+                this.mostrarNotificacion(notificacion);
+            }
+
+            // Función principal para mostrar notificaciones
+            mostrarNotificacion(config) {
+                const notifElement = this.crearElementoNotificacion(config);
+                this.container.appendChild(notifElement);
+                this.notificacionesActivas.push(notifElement);
+
+                // Mostrar con animación
+                setTimeout(() => {
+                    notifElement.classList.add('mostrar');
+                }, 100);
+
+                // Añadir efectos especiales
+                if (config.efectos) {
+                    this.añadirEfectosPulso(notifElement);
+                }
+
+                if (config.particulas) {
+                    this.añadirParticulas(notifElement);
+                }
+
+                // Auto-ocultar después de la duración especificada
+                setTimeout(() => {
+                    this.ocultarNotificacion(notifElement);
+                }, config.duracion);
+
+                // Reposicionar notificaciones existentes
+                this.reposicionarNotificaciones();
+            }
+
+            // Crear elemento HTML de la notificación
+            crearElementoNotificacion(config) {
+                const notif = document.createElement('div');
+                notif.className = `notificacion-epica ${config.tipo}`;
+
+                notif.innerHTML = `
+                    <button class="notif-cerrar" onclick="notificacionesCodeice.ocultarNotificacion(this.parentElement)">&times;</button>
+
+                    <div class="notif-header">
+                        <div class="notif-icono">${config.icono}</div>
+                        <div>
+                            <div class="notif-titulo">${config.titulo}</div>
+                            <div class="notif-subtitulo">${config.subtitulo}</div>
+                        </div>
+                    </div>
+
+                    <div class="notif-contenido">
+                        <div class="notif-mensaje">${config.mensaje}</div>
+                        ${config.detalle ? `<div class="notif-detalle">${config.detalle}</div>` : ''}
+                    </div>
+                `;
+
+                return notif;
+            }
+
+            // Ocultar notificación
+            ocultarNotificacion(elemento) {
+                elemento.classList.add('ocultar');
+
+                setTimeout(() => {
+                    if (elemento.parentNode) {
+                        elemento.parentNode.removeChild(elemento);
+                    }
+
+                    const index = this.notificacionesActivas.indexOf(elemento);
+                    if (index > -1) {
+                        this.notificacionesActivas.splice(index, 1);
+                    }
+
+                    this.reposicionarNotificaciones();
+                }, 800);
+            }
+
+            // Reposicionar notificaciones para evitar solapamiento
+            reposicionarNotificaciones() {
+                let offset = 20;
+                this.notificacionesActivas.forEach((notif, index) => {
+                    if (notif.classList.contains('mostrar') && !notif.classList.contains('ocultar')) {
+                        notif.style.top = `${offset}px`;
+                        offset += notif.offsetHeight + 15;
+                    }
+                });
+            }
+
+            // Añadir efectos de pulso
+            añadirEfectosPulso(elemento) {
+                // Implementación opcional
+            }
+
+            // Añadir partículas para ascensiones
+            añadirParticulas(elemento) {
+                const particulasContainer = document.createElement('div');
+                particulasContainer.className = 'particulas';
+
+                for (let i = 0; i < 15; i++) {
+                    const particula = document.createElement('div');
+                    particula.className = 'particula';
+                    particula.style.left = `${Math.random() * 100}%`;
+                    particula.style.animationDelay = `${Math.random() * 2}s`;
+                    particula.style.animationDuration = `${2 + Math.random() * 2}s`;
+                    particulasContainer.appendChild(particula);
+                }
+
+                elemento.appendChild(particulasContainer);
+
+                setTimeout(() => {
+                    if (particulasContainer.parentNode) {
+                        particulasContainer.parentNode.removeChild(particulasContainer);
+                    }
+                }, 4000);
+            }
+
+            // Limpiar todas las notificaciones
+            limpiarTodas() {
+                this.notificacionesActivas.forEach(notif => {
+                    this.ocultarNotificacion(notif);
+                });
+            }
+        }
+
+        // Instancia global del sistema de notificaciones
+        const notificacionesCodeice = new NotificacionesCodeice();
+
+        // Funciones de conveniencia para usar desde otros scripts
+        function mostrarNotificacionPuntos(puntos, desglose = null) {
+            notificacionesCodeice.mostrarPuntosGanados(puntos, desglose);
+        }
+
+        function mostrarNotificacionPrueba(nombre, puntos, descripcion = null) {
+            notificacionesCodeice.mostrarPruebaCompletada(nombre, puntos, descripcion);
+        }
+
+        function mostrarNotificacionAscension(anterior, nuevo, filosofia = null) {
+            notificacionesCodeice.mostrarAscension(anterior, nuevo, filosofia);
+        }
+
+        function mostrarNotificacionRacha(dias) {
+            notificacionesCodeice.mostrarRacha(dias);
+        }
+
+        console.log('🎮 Sistema de notificaciones épicas cargado');
+
+            document.addEventListener('DOMContentLoaded', function() {
+                // Efectos adicionales de interactividad
+                const ejercicioCards = document.querySelectorAll('.cyber-ejercicio-card');
+                ejercicioCards.forEach(card => {
+                    card.addEventListener('mouseenter', function() {
+                        this.style.transform = 'translateY(-3px)';
+                    });
+
+                    card.addEventListener('mouseleave', function() {
+                        this.style.transform = 'translateY(0)';
+                    });
+                });
+
+                // Efectos para inputs
+                const inputs = document.querySelectorAll('.cyber-form-control, .cyber-textarea');
+                inputs.forEach(input => {
+                    input.addEventListener('focus', function() {
+                        this.parentNode.style.transform = 'scale(1.02)';
+                        this.parentNode.style.zIndex = '10';
+                    });
+
+                    input.addEventListener('blur', function() {
+                        this.parentNode.style.transform = 'scale(1)';
+                        this.parentNode.style.zIndex = '1';
+                    });
+                });
+
+                // Efectos para checkboxes
+                const checkboxes = document.querySelectorAll('.cyber-form-check-input');
+                checkboxes.forEach(checkbox => {
+                    checkbox.addEventListener('change', function() {
+                        const row = this.closest('tr');
+                        if (this.checked) {
+                            row.classList.add('serie-completada');
+                            // Efecto de completado
+                            row.style.background = 'rgba(0, 255, 100, 0.1)';
+                            row.style.borderLeft = '3px solid #00ff64';
+
+                            // Animación de éxito
+                            this.style.transform = 'scale(1.2)';
+                            setTimeout(() => {
+                                this.style.transform = 'scale(1)';
+                            }, 200);
+                        } else {
+                            row.classList.remove('serie-completada');
+                            row.style.background = '';
+                            row.style.borderLeft = '';
+                        }
+                    });
+
+                    checkbox.addEventListener('mouseenter', function() {
+                        this.style.transform = 'scale(1.1)';
+                    });
+
+                    checkbox.addEventListener('mouseleave', function() {
+                        if (!this.matches(':focus')) {
+                            this.style.transform = 'scale(1)';
+                        }
+                    });
+                });
+
+                // Efecto de progreso general
+                function updateProgress() {
+                    const totalCheckboxes = checkboxes.length;
+                    const checkedBoxes = document.querySelectorAll('.cyber-form-check-input:checked').length;
+                    const progress = (checkedBoxes / totalCheckboxes) * 100;
+
+                    // Actualizar color del botón según progreso
+                    const finalizarBtn = document.querySelector('.cyber-btn-finalizar');
+                    if (progress === 100) {
+                        finalizarBtn.style.background = 'linear-gradient(45deg, rgba(0, 255, 100, 0.8), rgba(0, 200, 50, 0.6))';
+                        finalizarBtn.style.boxShadow = '0 0 35px rgba(0, 255, 100, 0.6)';
+                    } else {
+                        finalizarBtn.style.background = 'linear-gradient(45deg, rgba(0, 255, 255, 0.8), rgba(0, 150, 255, 0.6))';
+                        finalizarBtn.style.boxShadow = '0 0 25px rgba(0, 255, 255, 0.4)';
+                    }
+                }
+
+                // Escuchar cambios en checkboxes para actualizar progreso
+                checkboxes.forEach(checkbox => {
+                    checkbox.addEventListener('change', updateProgress);
+                });
+
+                // Inicializar progreso
+                updateProgress();
+
+                // Efecto de envío del formulario
+                const form = document.querySelector('form');
+                form.addEventListener('submit', function(e) {
+                    const submitBtn = document.querySelector('.cyber-btn-finalizar');
+                    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
+                    submitBtn.disabled = true;
+
+                    // Efecto visual de envío
+                    submitBtn.style.background = 'linear-gradient(45deg, rgba(255, 165, 0, 0.8), rgba(255, 140, 0, 0.6))';
+                    submitBtn.style.boxShadow = '0 0 35px rgba(255, 165, 0, 0.6)';
+                });
+
+                // Validación mejorada
+                const requiredInputs = document.querySelectorAll('input[required], textarea[required]');
+                requiredInputs.forEach(input => {
+                    input.addEventListener('invalid', function() {
+                        this.style.borderColor = 'rgba(220, 53, 69, 0.8)';
+                        this.style.boxShadow = '0 0 15px rgba(220, 53, 69, 0.4)';
+                    });
+
+                    input.addEventListener('input', function() {
+                        if (this.validity.valid) {
+                            this.style.borderColor = 'rgba(0, 255, 255, 0.4)';
+                            this.style.boxShadow = '';
+                        }
+                    });
+                });
+
+                // Efecto de carga inicial
+                setTimeout(() => {
+                    document.body.classList.add('loaded');
+                }, 500);
+            });
+
+          document.addEventListener('DOMContentLoaded', function() {
+        console.log('🎮 Sistema de notificaciones del Códice iniciado');
+
+        // Verificar si hay mensajes de Django para procesar
+        {% if messages %}
+            let delay = 1000; // Delay inicial de 1 segundo
+            let messageCount = 0;
+
+            {% for message in messages %}
+                messageCount++;
+                // USAR LET EN LUGAR DE CONST PARA EVITAR CONFLICTOS
+                let currentMessage = "{{ message.message|escapejs }}";
+                console.log(`📨 Procesando mensaje ${messageCount}:`, currentMessage);
+
+                // PROCESAR PUNTOS GANADOS
+                if (currentMessage.startsWith('CODICE_PUNTOS:')) {
+                    try {
+                        const puntosData = JSON.parse(currentMessage.replace('CODICE_PUNTOS:', ''));
+                        console.log('💰 Datos de puntos:', puntosData);
+
+                        setTimeout(() => {
+                            mostrarNotificacionPuntos(puntosData.total, {
+                                base: puntosData.base,
+                                bonus: puntosData.bonus,
+                                pruebas: puntosData.pruebas
+                            });
+                        }, delay);
+
+                        delay += 1500;
+                    } catch (e) {
+                        console.error('Error procesando puntos:', e);
+                    }
+                }
+
+                // PROCESAR PRUEBAS COMPLETADAS
+                else if (currentMessage.startsWith('CODICE_PRUEBA:')) {
+                    try {
+                        const pruebaData = JSON.parse(currentMessage.replace('CODICE_PRUEBA:', ''));
+                        console.log('⚔️ Datos de prueba:', pruebaData);
+
+                        setTimeout(() => {
+                            mostrarNotificacionPrueba(
+                                pruebaData.nombre,
+                                pruebaData.puntos,
+                                pruebaData.descripcion
+                            );
+                        }, delay);
+
+                        delay += 2000;
+                    } catch (e) {
+                        console.error('Error procesando prueba:', e);
+                    }
+                }
+
+                // PROCESAR ASCENSIONES
+                else if (currentMessage.startsWith('CODICE_ASCENSION:')) {
+                    try {
+                        const ascensionData = JSON.parse(currentMessage.replace('CODICE_ASCENSION:', ''));
+                        console.log('🔥 Datos de ascensión:', ascensionData);
+
+                        setTimeout(() => {
+                            mostrarNotificacionAscension(
+                                ascensionData.anterior,
+                                ascensionData.nuevo,
+                                ascensionData.filosofia
+                            );
+                        }, delay);
+
+                        delay += 3000;
+                    } catch (e) {
+                        console.error('Error procesando ascensión:', e);
+                    }
+                }
+
+                // PROCESAR RACHAS
+                else if (currentMessage.startsWith('CODICE_RACHA:')) {
+                    try {
+                        const dias = parseInt(currentMessage.replace('CODICE_RACHA:', ''));
+                        console.log('🔥 Racha de días:', dias);
+
+                        setTimeout(() => {
+                            mostrarNotificacionRacha(dias);
+                        }, delay);
+
+                        delay += 1500;
+                    } catch (e) {
+                        console.error('Error procesando racha:', e);
+                    }
+                }
+
+                // MENSAJE NORMAL (no es del Códice)
+                else if (!currentMessage.startsWith('CODICE_')) {
+                    console.log('📝 Mensaje normal:', currentMessage);
+                }
+            {% endfor %}
+
+            console.log(`🎮 Procesamiento completado. ${messageCount} mensajes, delay total: ${delay}ms`);
+        {% else %}
+            console.log('📭 No hay mensajes para procesar');
+        {% endif %}
+    });
+
+    // FUNCIONES DE TESTING
+    function testNotificaciones() {
+        console.log('🧪 Iniciando test de notificaciones...');
+
+        setTimeout(() => {
+            mostrarNotificacionPuntos(47, {base: 25, bonus: 7, pruebas: 15});
+        }, 1000);
+
+        setTimeout(() => {
+            mostrarNotificacionPrueba("Las Puertas del Esfuerzo", 150, "7 días consecutivos completados");
+        }, 3000);
+
+        setTimeout(() => {
+            mostrarNotificacionAscension("Rock Lee", "Krillin - El Guerrero Humano", "Tu corazón valiente te hace fuerte");
+        }, 5000);
+
+        setTimeout(() => {
+            mostrarNotificacionRacha(5);
+        }, 7000);
+    }
+
+    // LIMPIAR MENSAJES DJANGO DESPUÉS DE PROCESARLOS
+    function limpiarMensajesDjango() {
+        const djangoMessages = document.querySelectorAll('.alert, .messages li, .message');
+        djangoMessages.forEach(msg => {
+            if (msg.textContent.includes('CODICE_')) {
+                msg.style.display = 'none';
+            }
+        });
+    }
+
+    setTimeout(limpiarMensajesDjango, 500);
+
+    console.log('🎮 Códice de las Leyendas - Sistema de notificaciones cargado');
+    console.log('🧪 Para probar notificaciones, ejecuta: testNotificaciones()');
+
+        // FUNCIONES DE CONVENIENCIA PARA TESTING
+        function testNotificaciones() {
+            console.log('🧪 Iniciando test de notificaciones...');
+
+            // Test puntos
+            setTimeout(() => {
+                mostrarNotificacionPuntos(47, {base: 25, bonus: 7, pruebas: 15});
+            }, 1000);
+
+            // Test prueba
+            setTimeout(() => {
+                mostrarNotificacionPrueba("Las Puertas del Esfuerzo", 150, "7 días consecutivos completados");
+            }, 3000);
+
+            // Test ascensión
+            setTimeout(() => {
+                mostrarNotificacionAscension("Rock Lee", "Krillin - El Guerrero Humano", "Tu corazón valiente te hace fuerte");
+            }, 5000);
+
+            // Test racha
+            setTimeout(() => {
+                mostrarNotificacionRacha(5);
+            }, 7000);
+        }
+
+        // FUNCIÓN PARA LIMPIAR MENSAJES DESPUÉS DE MOSTRAR NOTIFICACIONES
+        function limpiarMensajesDjango() {
+            // Opcional: ocultar los mensajes Django estándar después de procesarlos
+            const djangoMessages = document.querySelectorAll('.alert, .messages li, .message');
+            djangoMessages.forEach(msg => {
+                if (msg.textContent.includes('CODICE_')) {
+                    msg.style.display = 'none';
+                }
+            });
+        }
+
+        // Limpiar mensajes después de procesarlos
+        setTimeout(limpiarMensajesDjango, 500);
+
+        // DEBUGGING: Mostrar en consola cuando se carga la página
+        console.log('🎮 Códice de las Leyendas - Sistema de notificaciones cargado');
+        console.log('🧪 Para probar notificaciones, ejecuta: testNotificaciones()');
+
+</script>
+{% endblock extra_js %}

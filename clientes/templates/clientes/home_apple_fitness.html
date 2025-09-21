@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block title %}Inicio{% endblock %}
+
+{% block content %}
+<div class="text-center">
+    <h1 class="mb-4">Bienvenido al Sistema del Gimnasio</h1>
+    
+    <!-- Anillos de actividad decorativos -->
+    <div class="activity-rings-container mb-5">
+        <svg width="150" height="150" viewBox="0 0 100 100" class="activity-ring-svg">
+            <!-- Anillo rojo -->
+            <circle cx="50" cy="50" r="40" class="ring-background-circle"></circle>
+            <circle cx="50" cy="50" r="40" class="ring-progress-circle ring-progress-red" 
+                    stroke-width="10" stroke-dasharray="251.2" stroke-dashoffset="62.8"></circle>
+            
+            <!-- Anillo verde -->
+            <circle cx="50" cy="50" r="30" class="ring-background-circle"></circle>
+            <circle cx="50" cy="50" r="30" class="ring-progress-circle ring-progress-green" 
+                    stroke-width="10" stroke-dasharray="188.4" stroke-dashoffset="47.1"></circle>
+            
+            <!-- Anillo azul -->
+            <circle cx="50" cy="50" r="20" class="ring-background-circle"></circle>
+            <circle cx="50" cy="50" r="20" class="ring-progress-circle ring-progress-blue" 
+                    stroke-width="10" stroke-dasharray="125.6" stroke-dashoffset="31.4"></circle>
+        </svg>
+    </div>
+    
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <!-- Botones con estilo Apple Fitness -->
+            <a href="/clientes/" class="af-btn w-100 mb-4" style="background-color: var(--af-ring-blue);">
+                <i class="bi bi-people me-2"></i>Gestión de Clientes
+            </a>
+            
+            <a href="/rutinas/" class="af-btn w-100 mb-4" style="background-color: var(--af-ring-green);">
+                <i class="bi bi-calendar-check me-2"></i>Programas
+            </a>
+            
+            <a href="/dietas/" class="af-btn w-100 mb-4" style="background-color: var(--af-accent-yellow); color: #000;">
+                <i class="bi bi-egg-fried me-2"></i>Dietas
+            </a>
+            
+            <a href="/anuncios/" class="af-btn w-100 mb-4" style="background-color: var(--af-ring-red);">
+                <i class="bi bi-megaphone me-2"></i>Tablón de Anuncios
+            </a>
+            
+            <a href="/entrenos/hacer/" class="af-btn w-100 mb-4" style="background-color: var(--af-accent-purple);">
+                <i class="bi bi-activity me-2"></i>Hacer Entreno
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Script para animar los anillos -->
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        function setRingProgress(ringElement, percent) {
+            const circle = ringElement;
+            const radius = circle.r.baseVal.value;
+            const circumference = 2 * Math.PI * radius;
+            
+            circle.style.strokeDasharray = `${circumference} ${circumference}`;
+            const offset = circumference - (percent / 100) * circumference;
+            circle.style.strokeDashoffset = offset;
+        }
+        
+        // Configurar progreso de los anillos
+        const redRing = document.querySelector('.ring-progress-red');
+        const greenRing = document.querySelector('.ring-progress-green');
+        const blueRing = document.querySelector('.ring-progress-blue');
+        
+        setRingProgress(redRing, 75);    // 75% completado
+        setRingProgress(greenRing, 75);  // 75% completado
+        setRingProgress(blueRing, 75);   // 75% completado
+    });
+</script>
+{% endblock %}

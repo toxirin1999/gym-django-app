@@ -1,0 +1,248 @@
+/* --- Estilos para la Página de Detalle de Misión --- */
+:root {
+    --background-color: #121212;
+    --panel-bg: #1c1c1c;
+    --primary-text: #ffffff;
+    --secondary-text: #b3b3b3;
+    --accent-color: #6366f1; /* Tono violeta de las misiones */
+    --border-color: #3a3a3a;
+    --progress-bar-bg: #404040;
+    --font-family: 'Inter', sans-serif;
+}
+
+body {
+    background-color: var(--background-color);
+    color: var(--primary-text);
+    font-family: var(--font-family);
+    background-image: radial-gradient(circle at 100% 0%, rgba(99, 102, 241, 0.15), transparent 40%),
+                      radial-gradient(circle at 0% 100%, rgba(255, 255, 0, 0.1), transparent 40%);
+    background-attachment: fixed;
+    margin: 0;
+}
+
+/* --- Layout Principal de 2 Columnas --- */
+.detail-page-layout {
+    display: flex;
+    min-height: 100vh;
+}
+
+.detail-content-panel {
+    flex: 1;
+    max-width: 800px;
+    padding: 3rem 4rem;
+    background-color: var(--panel-bg);
+    border-right: 1px solid var(--border-color);
+}
+
+.detail-image-panel {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    position: relative;
+}
+
+/* --- Cabecera del Detalle --- */
+.detail-header {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.detail-icon, .detail-icon-placeholder {
+    width: 64px;
+    height: 64px;
+    border-radius: 12px; /* Cuadrado redondeado para misiones */
+    background-color: #3a3a3a;
+    flex-shrink: 0;
+}
+
+.detail-icon {
+    background-size: cover;
+    background-position: center;
+}
+
+.detail-icon-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    color: var(--secondary-text);
+}
+
+.detail-title {
+    font-size: 2.25rem;
+    font-weight: 700;
+    margin: 0;
+}
+
+.detail-subtitle {
+    font-size: 1rem;
+    color: var(--secondary-text);
+    margin: 0;
+}
+
+/* --- Sección de Progreso --- */
+.progress-section {
+    margin-bottom: 2.5rem;
+}
+
+.progress-info {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.progress-label {
+    color: var(--secondary-text);
+}
+
+.progress-value {
+    color: var(--primary-text);
+}
+
+.progress-bar-wrapper {
+    width: 100%;
+    height: 10px;
+    background-color: var(--progress-bar-bg);
+    border-radius: 5px;
+    overflow: hidden;
+}
+
+.progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent-color) 0%, #a78bfa 100%);
+    border-radius: 5px;
+    transition: width 0.5s ease-out;
+}
+
+/* --- Secciones de Contenido --- */
+.detail-section {
+    margin-bottom: 2rem;
+}
+
+.section-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--primary-text);
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.detail-section p {
+    font-size: 1rem;
+    line-height: 1.6;
+    color: var(--secondary-text);
+}
+
+/* --- Lista de Misiones en Serie --- */
+.series-list {
+    list-style: none;
+    padding-left: 0;
+    color: var(--secondary-text);
+}
+.series-list li {
+    padding: 0.25rem 0;
+}
+.series-list .bi {
+    color: var(--accent-color);
+}
+
+/* --- Lista de Usuarios --- */
+.user-list {
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.user-list-header, .user-list-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.75rem 1.25rem;
+}
+
+.user-list-header {
+    background-color: #2a2a2a;
+    font-weight: 600;
+}
+
+.user-list-row {
+    border-top: 1px solid var(--border-color);
+    color: var(--secondary-text);
+}
+
+/* --- Footer y Botón de Volver --- */
+.detail-footer {
+    margin-top: 3rem;
+}
+
+.btn-back {
+    display: inline-block;
+    padding: 0.75rem 1.5rem;
+    border: 1px solid var(--border-color);
+    color: var(--primary-text);
+    background-color: transparent;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.btn-back:hover {
+    background-color: var(--accent-color);
+    border-color: var(--accent-color);
+}
+
+/* --- Panel de Imagen (Derecha) --- */
+.image-ad-card {
+    position: relative;
+    text-align: center;
+}
+
+.image-ad-card img {
+    max-width: 400px;
+    opacity: 0.7;
+}
+
+.image-ad-overlay {
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: white;
+    text-shadow: 1px 1px 5px rgba(0,0,0,0.5);
+}
+
+.image-ad-overlay h3 {
+    font-size: 1.5rem;
+    font-weight: 600;
+}
+
+.image-ad-overlay p {
+    font-size: 1.2rem;
+    font-weight: 500;
+    background-color: rgba(255, 193, 7, 0.2);
+    color: #ffc107;
+    padding: 0.25rem 0.75rem;
+    border-radius: 15px;
+    display: inline-block;
+}
+
+/* --- Responsividad --- */
+@media (max-width: 992px) {
+    .detail-page-layout {
+        flex-direction: column;
+    }
+    .detail-content-panel {
+        border-right: none;
+        padding: 2rem;
+    }
+    .detail-image-panel {
+        display: none;
+    }
+}

@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ arquetipo.titulo_arquetipo }} - Códice de las Leyendas</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <!-- Librería para el gráfico de radar -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        :root {
+            --font-display: 'Cinzel', serif; /* Una fuente más elegante y épica */
+            --font-main: 'Roboto', sans-serif;
+            --color-gold: #e6c369;
+            --color-dark-bg: #10141d;
+            --color-panel-bg: #1a202c;
+            --color-border: rgba(230, 195, 105, 0.2 );
+            --color-glow: rgba(230, 195, 105, 0.4);
+            --color-text: #c5c8d1;
+            --color-text-header: #ffffff;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background-color: var(--color-dark-bg);
+            background-image: url('https://www.transparenttextures.com/patterns/dark-matter.png' );
+            color: var(--color-text);
+            font-family: var(--font-main);
+            overflow: hidden; /* Evita el scroll en la página principal */
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* --- Contenedor Principal de la Interfaz --- */
+        .codex-interface {
+            display: grid;
+            grid-template-columns: 40% 60%;
+            width: 90%;
+            max-width: 1400px;
+            height: 90vh;
+            max-height: 800px;
+            background: var(--color-panel-bg);
+            border: 1px solid var(--color-border);
+            border-radius: 10px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            animation: fadeInPanel 1s ease-out;
+        }
+
+        @keyframes fadeInPanel {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        /* --- Panel Izquierdo: El Personaje --- */
+        .character-panel {
+            position: relative;
+            overflow: hidden;
+            border-right: 1px solid var(--color-border);
+            border-radius: 10px 0 0 10px;
+        }
+        .character-background {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background-size: cover;
+            background-position: center;
+            opacity: 0.3;
+            filter: blur(3px);
+            transform: scale(1.1);
+        }
+        .character-content {
+            position: relative;
+            z-index: 2;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            background: linear-gradient(to top, rgba(26, 32, 44, 1) 20%, rgba(26, 32, 44, 0) 100%);
+        }
+        .character-header h1 {
+            font-family: var(--font-display);
+            font-size: 2.5rem;
+            color: var(--color-text-header);
+            text-shadow: 0 0 10px var(--color-glow);
+        }
+        .character-header p {
+            font-size: 1.1rem;
+            color: var(--color-gold);
+            margin-bottom: 1rem;
+        }
+        .character-philosophy {
+            font-style: italic;
+            color: var(--color-text);
+            border-left: 3px solid var(--color-gold);
+            padding-left: 1rem;
+            margin: 1rem 0;
+        }
+        .stats-radar {
+            flex-grow: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 200px; /* Asegura espacio para el gráfico */
+        }
+
+        /* --- Panel Derecho: El Lore --- */
+        .lore-panel {
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+        }
+        .lore-tabs {
+            display: flex;
+            border-bottom: 1px solid var(--color-border);
+            margin-bottom: 1.5rem;
+        }
+        .tab-btn {
+            font-family: var(--font-display);
+            font-size: 1.1rem;
+            background: none;
+            border: none;
+            color: var(--color-text);
+            padding: 0.8rem 1.5rem;
+            cursor: pointer;
+            position: relative;
+            transition: color 0.3s;
+        }
+        .tab-btn:hover { color: var(--color-gold); }
+        .tab-btn.active {
+            color: var(--color-gold);
+            font-weight: 700;
+        }
+        .tab-btn.active::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: var(--color-gold);
+            box-shadow: 0 0 8px var(--color-glow);
+        }
+        .lore-content {
+            flex-grow: 1;
+            overflow-y: auto; /* Scroll solo en esta área si es necesario */
+            padding-right: 1rem; /* Espacio para la barra de scroll */
+        }
+        .tab-pane {
+            display: none; /* Oculto por defecto */
+            animation: fadeInContent 0.5s;
+        }
+        .tab-pane.active { display: block; }
+        @keyframes fadeInContent { from { opacity: 0; } to { opacity: 1; } }
+
+        /* Estilos para el contenido de las pestañas */
+        .lore-content h3 {
+            font-family: var(--font-display);
+            color: var(--color-gold);
+            margin-bottom: 1rem;
+        }
+        .lore-content p { line-height: 1.7; margin-bottom: 1.5rem; }
+        .progress-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 1rem;
+        }
+        .progress-card {
+            background: rgba(0,0,0,0.2);
+            border: 1px solid var(--color-border);
+            border-radius: 8px;
+            padding: 1.5rem;
+            text-align: center;
+        }
+        .progress-card .icon { font-size: 2rem; color: var(--color-gold); margin-bottom: 0.5rem; }
+        .progress-card .value { font-size: 1.2rem; font-weight: 700; color: var(--color-text-header); }
+        .progress-card .label { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; }
+
+        /* --- Responsive Design --- */
+        @media (max-width: 1024px) {
+            body { overflow-y: auto; height: auto; }
+            .codex-interface {
+                grid-template-columns: 1fr; /* Apila los paneles */
+                width: 100%;
+                height: auto;
+                max-height: none;
+                border-radius: 0;
+            }
+            .character-panel { border-right: none; border-bottom: 1px solid var(--color-border); }
+        }
+    </style>
+</head>
+<body>
+
+<div class="codex-interface">
+    <!-- ================= PANEL IZQUIERDO ================= -->
+    <div class="character-panel">
+        <div class="character-background" style="background-image: url('{{ arquetipo.imagen_url }}');"></div>
+        <div class="character-content">
+            <div class="character-header">
+                <h1>{{ arquetipo.titulo_arquetipo }}</h1>
+                <p>Nivel {{ arquetipo.nivel }} del Códice</p>
+            </div>
+            <p class="character-philosophy">"{{ arquetipo.filosofia }}"</p>
+
+            <!-- Gráfico de Estadísticas -->
+            <div class="stats-radar">
+                <canvas id="statsRadarChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= PANEL DERECHO ================= -->
+    <div class="lore-panel">
+        <!-- Pestañas de Navegación -->
+        <div class="lore-tabs">
+            <button class="tab-btn active" onclick="showTab('historia')">Historia</button>
+            {% if es_desbloqueado %}
+            <button class="tab-btn" onclick="showTab('progreso')">Tu Progreso</button>
+            {% endif %}
+            <button class="tab-btn" onclick="showTab('pruebas')">Pruebas</button>
+        </div>
+
+        <!-- Contenido de las Pestañas -->
+        <div class="lore-content">
+            <!-- Pestaña 1: Historia -->
+            <div id="historia" class="tab-pane active">
+                <h3>🌟 Origen</h3>
+                <p>{{ arquetipo.historia_origen|default:"El origen de este arquetipo está envuelto en misterio, forjado en el crisol de desafíos ancestrales."|linebreaksbr }}</p>
+                <h3>⚡ Poderes y Habilidades</h3>
+                <p>{{ arquetipo.poderes|default:"Domina fuerzas que desafían la comprensión, combinando poder bruto con una técnica impecable."|linebreaksbr }}</p>
+            </div>
+
+            <!-- Pestaña 2: Progreso del Jugador -->
+            {% if es_desbloqueado %}
+            <div id="progreso" class="tab-pane">
+                <h3>📈 Tu Maestría</h3>
+                <div class="progress-grid">
+                    <div class="progress-card">
+                        <div class="icon"><i class="fas fa-calendar-check"></i></div>
+                        <div class="value">{{ fecha_desbloqueo|date:"d M Y"|default:"--" }}</div>
+                        <div class="label">Desbloqueado</div>
+                    </div>
+                    <div class="progress-card">
+                        <div class="icon"><i class="fas fa-clock"></i></div>
+                        <div class="value">{{ tiempo_en_nivel|default:"--" }}</div>
+                        <div class="label">Tiempo en Nivel</div>
+                    </div>
+                    <div class="progress-card">
+                        <div class="icon"><i class="fas fa-trophy"></i></div>
+                        <div class="value">{{ pruebas_completadas_nivel|default:"0" }}</div>
+                        <div class="label">Pruebas Superadas</div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Pestaña 3: Pruebas Legendarias -->
+            <div id="pruebas" class="tab-pane">
+                <h3>⚔️ Pruebas Legendarias</h3>
+                <!-- Aquí iría tu bucle de pruebas, similar al original -->
+                {% for prueba in pruebas_arquetipo %}
+                <div class="prueba-item" style="margin-bottom: 1rem; padding: 1rem; border-left: 3px solid {% if prueba.completada %}var(--color-green){% else %}var(--color-gold){% endif %}; background: rgba(0,0,0,0.2);">
+                    <div style="display: flex; justify-content: space-between; font-weight: bold;">
+                        <span>{{ prueba.nombre }}</span>
+                        <span>{% if prueba.completada %}✅ COMPLETADA{% else %}+{{ prueba.puntos_recompensa }} pts{% endif %}</span>
+                    </div>
+                    <p style="margin-top: 0.5rem; margin-bottom: 0; font-size: 0.9rem;">{{ prueba.descripcion }}</p>
+                </div>
+                {% empty %}
+                <p>Aún no se han revelado las pruebas para este arquetipo.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- Lógica de las Pestañas ---
+    function showTab(tabId) {
+        // Ocultar todos los paneles
+        document.querySelectorAll('.tab-pane').forEach(pane => {
+            pane.classList.remove('active');
+        });
+        // Desactivar todos los botones
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+
+        // Mostrar el panel y activar el botón seleccionados
+        document.getElementById(tabId).classList.add('active');
+        event.currentTarget.classList.add('active');
+    }
+
+    // --- Lógica del Gráfico de Radar ---
+    document.addEventListener('DOMContentLoaded', function() {
+        const ctx = document.getElementById('statsRadarChart');
+        if (ctx) {
+            new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: ['Fuerza', 'Velocidad', 'Técnica', 'Resistencia', 'Determinación', 'Poder Épico'],
+                    datasets: [{
+                        label: '{{ arquetipo.titulo_arquetipo }}',
+                        data: [
+                            {{ arquetipo.stat_fuerza|default:85 }},
+                            {{ arquetipo.stat_velocidad|default:80 }},
+                            {{ arquetipo.stat_tecnica|default:75 }},
+                            {{ arquetipo.stat_resistencia|default:90 }},
+                            {{ arquetipo.stat_determinacion|default:95 }},
+                            {{ arquetipo.stat_poder_epico|default:88 }}
+                        ],
+                        fill: true,
+                        backgroundColor: 'rgba(230, 195, 105, 0.2)',
+                        borderColor: 'rgb(230, 195, 105)',
+                        pointBackgroundColor: 'rgb(230, 195, 105)',
+                        pointBorderColor: '#fff',
+                        pointHoverBackgroundColor: '#fff',
+                        pointHoverBorderColor: 'rgb(230, 195, 105)'
+                    }]
+                },
+                options: {
+                    maintainAspectRatio: false,
+                    elements: {
+                        line: {
+                            borderWidth: 2
+                        }
+                    },
+                    scales: {
+                        r: {
+                            angleLines: { color: 'rgba(255, 255, 255, 0.2)' },
+                            grid: { color: 'rgba(255, 255, 255, 0.2)' },
+                            pointLabels: {
+                                font: { size: 12, family: "'Roboto', sans-serif" },
+                                color: '#c5c8d1'
+                            },
+                            ticks: {
+                                color: '#10141d',
+                                backdropColor: 'rgba(0, 0, 0, 0)',
+                                stepSize: 25
+                            },
+                            min: 0,
+                            max: 100
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false // Ocultamos la leyenda para un look más limpio
+                        }
+                    }
+                }
+            });
+        }
+    });
+</script>
+
+</body>
+</html>

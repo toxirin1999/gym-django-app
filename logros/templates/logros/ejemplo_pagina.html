@@ -1,0 +1,368 @@
+{% extends "base_template.html" %}
+
+{% block title %}Lista de Logros - Sistema de Gamificación{% endblock %}
+
+{% block extra_css %}
+<style>
+    .logro-card {
+        background: white;
+        border-radius: 1rem;
+        padding: 1.5rem;
+        box-shadow: var(--shadow);
+        border: 1px solid var(--border-color);
+        transition: all 0.3s ease;
+        margin-bottom: 1rem;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .logro-card:hover {
+        transform: translateY(-3px);
+        box-shadow: var(--shadow-lg);
+    }
+
+    .logro-card.completado {
+        border-left: 5px solid var(--success-color);
+        background: linear-gradient(135deg, rgba(16, 185, 129, 0.05) 0%, rgba(16, 185, 129, 0.02) 100%);
+    }
+
+    .logro-card.bloqueado {
+        opacity: 0.6;
+        border-left: 5px solid var(--text-secondary);
+    }
+
+    .logro-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        color: white;
+        margin-bottom: 1rem;
+    }
+
+    .logro-completado {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        background: var(--success-color);
+        color: white;
+        padding: 0.25rem 0.75rem;
+        border-radius: 1rem;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+
+    .progress-bar-custom {
+        height: 8px;
+        border-radius: 4px;
+        background-color: var(--border-color);
+        overflow: hidden;
+    }
+
+    .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+        border-radius: 4px;
+        transition: width 0.3s ease;
+    }
+
+    .filter-tabs {
+        background: white;
+        border-radius: 1rem;
+        padding: 0.5rem;
+        box-shadow: var(--shadow);
+        margin-bottom: 2rem;
+    }
+
+    .filter-tab {
+        padding: 0.75rem 1.5rem;
+        border: none;
+        background: transparent;
+        border-radius: 0.75rem;
+        font-weight: 500;
+        transition: all 0.3s ease;
+        color: var(--text-secondary);
+    }
+
+    .filter-tab.active {
+        background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+        color: white;
+        box-shadow: var(--shadow);
+    }
+
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+
+    .stat-card {
+        background: white;
+        border-radius: 1rem;
+        padding: 1.5rem;
+        text-align: center;
+        box-shadow: var(--shadow);
+        border: 1px solid var(--border-color);
+    }
+
+    .stat-number {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--primary-color);
+        margin-bottom: 0.5rem;
+    }
+
+    .stat-label {
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Page Header -->
+    <div class="page-header">
+        <div class="container">
+            <h1 class="page-title">
+                <i class="fas fa-medal me-3"></i>
+                Lista de Logros
+            </h1>
+            <p class="page-subtitle">Descubre y desbloquea todos los logros disponibles</p>
+        </div>
+    </div>
+
+    <!-- Statistics -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-number">{{ logros_completados|default:12 }}</div>
+            <div class="stat-label">Logros Completados</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">{{ total_logros|default:25 }}</div>
+            <div class="stat-label">Total de Logros</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">{{ puntos_totales|default:1250 }}</div>
+            <div class="stat-label">Puntos Ganados</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">{{ porcentaje_completado|default:48 }}%</div>
+            <div class="stat-label">Progreso Total</div>
+        </div>
+    </div>
+
+    <!-- Filter Tabs -->
+    <div class="filter-tabs">
+        <button class="filter-tab active" onclick="filterLogros('todos')">
+            <i class="fas fa-list me-2"></i>Todos
+        </button>
+        <button class="filter-tab" onclick="filterLogros('completados')">
+            <i class="fas fa-check-circle me-2"></i>Completados
+        </button>
+        <button class="filter-tab" onclick="filterLogros('pendientes')">
+            <i class="fas fa-clock me-2"></i>Pendientes
+        </button>
+        <button class="filter-tab" onclick="filterLogros('bloqueados')">
+            <i class="fas fa-lock me-2"></i>Bloqueados
+        </button>
+    </div>
+
+    <!-- Logros List -->
+    <div class="row" id="logros-container">
+        <!-- Ejemplo de logro completado -->
+        <div class="col-lg-6 mb-4 logro-item completado">
+            <div class="logro-card completado">
+                <div class="logro-completado">
+                    <i class="fas fa-check me-1"></i>Completado
+                </div>
+                <div class="d-flex align-items-start">
+                    <div class="logro-icon icon-success">
+                        <i class="fas fa-dumbbell"></i>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <h5 class="fw-bold mb-2">Primera Rutina</h5>
+                        <p class="text-muted mb-3">Completa tu primera rutina de entrenamiento</p>
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="text-success fw-bold">
+                                <i class="fas fa-trophy me-1"></i>100 puntos
+                            </span>
+                            <span class="text-success">100%</span>
+                        </div>
+                        <div class="progress-bar-custom">
+                            <div class="progress-fill" style="width: 100%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Ejemplo de logro en progreso -->
+        <div class="col-lg-6 mb-4 logro-item pendiente">
+            <div class="logro-card">
+                <div class="d-flex align-items-start">
+                    <div class="logro-icon icon-warning">
+                        <i class="fas fa-fire"></i>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <h5 class="fw-bold mb-2">Racha de Fuego</h5>
+                        <p class="text-muted mb-3">Entrena 7 días consecutivos</p>
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="text-warning fw-bold">
+                                <i class="fas fa-trophy me-1"></i>250 puntos
+                            </span>
+                            <span class="text-primary">4/7 días</span>
+                        </div>
+                        <div class="progress-bar-custom">
+                            <div class="progress-fill" style="width: 57%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Ejemplo de logro bloqueado -->
+        <div class="col-lg-6 mb-4 logro-item bloqueado">
+            <div class="logro-card bloqueado">
+                <div class="d-flex align-items-start">
+                    <div class="logro-icon" style="background-color: var(--text-secondary);">
+                        <i class="fas fa-crown"></i>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <h5 class="fw-bold mb-2">Maestro del Fitness</h5>
+                        <p class="text-muted mb-3">Completa 50 rutinas de entrenamiento</p>
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="text-muted fw-bold">
+                                <i class="fas fa-lock me-1"></i>500 puntos
+                            </span>
+                            <span class="text-muted">Bloqueado</span>
+                        </div>
+                        <div class="progress-bar-custom">
+                            <div class="progress-fill" style="width: 0%"></div>
+                        </div>
+                        <small class="text-muted">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Requiere completar "Primera Rutina"
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Más ejemplos de logros... -->
+        <div class="col-lg-6 mb-4 logro-item pendiente">
+            <div class="logro-card">
+                <div class="d-flex align-items-start">
+                    <div class="logro-icon icon-info">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <h5 class="fw-bold mb-2">Analista</h5>
+                        <p class="text-muted mb-3">Revisa tu progreso 5 veces</p>
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="text-info fw-bold">
+                                <i class="fas fa-trophy me-1"></i>150 puntos
+                            </span>
+                            <span class="text-primary">3/5 veces</span>
+                        </div>
+                        <div class="progress-bar-custom">
+                            <div class="progress-fill" style="width: 60%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load More Button -->
+    <div class="text-center mt-4">
+        <button class="btn btn-primary-custom btn-custom" onclick="loadMoreLogros()">
+            <i class="fas fa-plus me-2"></i>
+            Cargar Más Logros
+        </button>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Filter logros functionality
+    function filterLogros(tipo) {
+        const items = document.querySelectorAll('.logro-item');
+        const tabs = document.querySelectorAll('.filter-tab');
+        
+        // Update active tab
+        tabs.forEach(tab => tab.classList.remove('active'));
+        event.target.classList.add('active');
+        
+        // Filter items
+        items.forEach(item => {
+            const shouldShow = tipo === 'todos' || item.classList.contains(tipo);
+            item.style.display = shouldShow ? 'block' : 'none';
+            
+            if (shouldShow) {
+                item.style.animation = 'fadeInUp 0.5s ease-out';
+            }
+        });
+    }
+
+    // Load more logros
+    function loadMoreLogros() {
+        // Simulate loading more content
+        const container = document.getElementById('logros-container');
+        const button = event.target;
+        
+        button.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Cargando...';
+        button.disabled = true;
+        
+        setTimeout(() => {
+            // Add new logro example
+            const newLogro = document.createElement('div');
+            newLogro.className = 'col-lg-6 mb-4 logro-item pendiente';
+            newLogro.innerHTML = `
+                <div class="logro-card">
+                    <div class="d-flex align-items-start">
+                        <div class="logro-icon icon-primary">
+                            <i class="fas fa-star"></i>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h5 class="fw-bold mb-2">Estrella Naciente</h5>
+                            <p class="text-muted mb-3">Alcanza el nivel 5 en el sistema</p>
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="text-primary fw-bold">
+                                    <i class="fas fa-trophy me-1"></i>300 puntos
+                                </span>
+                                <span class="text-primary">Nivel 3/5</span>
+                            </div>
+                            <div class="progress-bar-custom">
+                                <div class="progress-fill" style="width: 60%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            container.appendChild(newLogro);
+            newLogro.style.animation = 'fadeInUp 0.5s ease-out';
+            
+            button.innerHTML = '<i class="fas fa-plus me-2"></i>Cargar Más Logros';
+            button.disabled = false;
+        }, 1000);
+    }
+
+    // Initialize page
+    document.addEventListener('DOMContentLoaded', function() {
+        // Add fade-in animation to existing items
+        const items = document.querySelectorAll('.logro-item');
+        items.forEach((item, index) => {
+            item.style.animationDelay = `${index * 0.1}s`;
+            item.classList.add('fade-in-up');
+        });
+    });
+</script>
+{% endblock %}
+

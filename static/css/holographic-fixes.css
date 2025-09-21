@@ -1,0 +1,114 @@
+/* ========================  CORRECCIONES PARA EFECTOS HOLOGRÁFICOS  ======================== */
+
+/* Aseguramos que el fondo holográfico esté visible y no sea tapado por otros elementos */
+.holographic-background {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  z-index: -10 !important; /* Aseguramos que esté detrás del contenido */
+  pointer-events: none !important;
+  overflow: hidden !important;
+}
+
+/* Aumentamos la visibilidad de los efectos de niebla */
+.holographic-fog,
+.holographic-fog-2 {
+  opacity: 0.8 !important;
+}
+
+/* Mejoramos la visibilidad de las partículas */
+.particle {
+  opacity: 0.8 !important;
+}
+
+.particle.small {
+  box-shadow: 0 0 8px rgba(160, 108, 254, 0.9) !important;
+}
+
+.particle.medium {
+  box-shadow: 0 0 12px rgba(0, 245, 160, 0.9) !important;
+}
+
+.particle.large {
+  box-shadow: 0 0 15px rgba(255, 204, 0, 0.9) !important;
+}
+
+/* Mejoramos la visibilidad de los gradientes */
+.shifting-gradients,
+.shifting-gradients-2 {
+  opacity: 0.9 !important;
+}
+
+/* Mejoramos la visibilidad de la línea de escaneo */
+.holographic-scan {
+  opacity: 0.8 !important;
+  height: 3px !important;
+  background: linear-gradient(90deg, 
+    transparent 0%, 
+    rgba(49, 207, 244, 0.9) 50%, 
+    transparent 100%) !important;
+}
+
+/* Mejoramos la visibilidad de los pulsos de energía */
+.energy-pulse {
+  opacity: 0.9 !important;
+}
+
+/* Aseguramos que las animaciones se ejecuten */
+@keyframes fogDrift {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+    opacity: 0.8;
+  }
+  25% {
+    transform: translate(-10px, -15px) scale(1.05);
+    opacity: 0.9;
+  }
+  50% {
+    transform: translate(15px, -10px) scale(0.95);
+    opacity: 0.8;
+  }
+  75% {
+    transform: translate(-5px, 10px) scale(1.02);
+    opacity: 0.9;
+  }
+}
+
+/* Aseguramos que las animaciones de partículas sean visibles */
+@keyframes floatUp1 {
+  0% {
+    transform: translateY(100vh) translateX(0px);
+    opacity: 0.5;
+  }
+  10% {
+    opacity: 0.9;
+  }
+  90% {
+    opacity: 0.9;
+  }
+  100% {
+    transform: translateY(-100px) translateX(50px);
+    opacity: 0;
+  }
+}
+
+/* Aseguramos que los efectos interactivos funcionen */
+.interactive-glow:hover {
+  box-shadow: 0 0 30px rgba(49, 207, 244, 0.5) !important;
+  transform: translateY(-5px) !important;
+  transition: all 0.3s ease !important;
+}
+
+/* Corregimos posibles conflictos con Tailwind */
+body {
+  overflow-x: hidden !important;
+  position: relative !important;
+}
+
+/* Aseguramos que el z-index sea correcto */
+main {
+  position: relative !important;
+  z-index: 1 !important;
+}

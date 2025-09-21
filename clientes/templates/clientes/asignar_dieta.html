@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'custom.css' %}">
+
+<div class="container d-flex justify-content-center mt-5">
+    <div class="col-md-8">
+        <div class="card shadow-sm p-4">
+            <h2 class="text-center fw-bold mb-4">Asignar dieta a {{ cliente.nombre }}</h2>
+            <form method="post">
+                {% csrf_token %}
+
+                {% for field in form %}
+                <div class="mb-3">
+                    {{ field.label_tag }}
+                    {{ field }}
+                    {% for error in field.errors %}
+                    <div class="text-danger small">{{ error }}</div>
+                    {% endfor %}
+                </div>
+                {% endfor %}
+
+                <div class="d-grid gap-2 mt-4">
+                    <button type="submit" class="btn btn-fucsia">
+                        <i class="bi bi-check-circle"></i> Asignar
+                    </button>
+                    <a href="{% url 'detalle_cliente' cliente.id %}" class="btn btn-secondary">
+                        Cancelar
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

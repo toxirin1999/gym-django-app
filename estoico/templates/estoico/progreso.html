@@ -1,0 +1,685 @@
+{% extends 'estoico/base_estoico.html' %}
+{% load static %}
+
+{% block title %}Progreso - Diario Estoico{% endblock %}
+
+{% block extra_css %}
+<style>
+.progress-container {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.progress-header {
+    background: linear-gradient(135deg, var(--success-color) 0%, #2ecc71 100%);
+    color: white;
+    padding: 2rem;
+    border-radius: var(--border-radius);
+    margin-bottom: 2rem;
+    text-align: center;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.stat-card {
+    background: white;
+    padding: 2rem;
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow);
+    text-align: center;
+    transition: var(--transition);
+    position: relative;
+    overflow: hidden;
+}
+
+.stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
+}
+
+.stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+}
+
+.stat-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1rem;
+    font-size: 1.5rem;
+    color: white;
+}
+
+.stat-icon.primary { background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)); }
+.stat-icon.success { background: linear-gradient(135deg, var(--success-color), #2ecc71); }
+.stat-icon.warning { background: linear-gradient(135deg, var(--warning-color), var(--accent-color)); }
+.stat-icon.info { background: linear-gradient(135deg, var(--info-color), #5dade2); }
+
+.stat-value {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: var(--primary-color);
+    margin-bottom: 0.5rem;
+    line-height: 1;
+}
+
+.stat-label {
+    color: #6c757d;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-size: 0.9rem;
+}
+
+.stat-change {
+    font-size: 0.8rem;
+    margin-top: 0.5rem;
+}
+
+.stat-change.positive { color: var(--success-color); }
+.stat-change.negative { color: var(--danger-color); }
+
+.chart-container {
+    background: white;
+    padding: 2rem;
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow);
+    margin-bottom: 2rem;
+}
+
+.chart-header {
+    display: flex;
+    justify-content: between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    border-bottom: 1px solid #e9ecef;
+    padding-bottom: 1rem;
+}
+
+.chart-title {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--primary-color);
+    margin: 0;
+}
+
+.chart-period {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.period-btn {
+    padding: 0.25rem 0.75rem;
+    border: 1px solid #dee2e6;
+    background: white;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.period-btn.active {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+}
+
+.achievements-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1rem;
+}
+
+.achievement-card {
+    background: white;
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow);
+    overflow: hidden;
+    transition: var(--transition);
+}
+
+.achievement-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.achievement-card.unlocked {
+    border-left: 4px solid var(--success-color);
+}
+
+.achievement-card.locked {
+    border-left: 4px solid #dee2e6;
+    opacity: 0.7;
+}
+
+.achievement-header {
+    padding: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.achievement-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    flex-shrink: 0;
+}
+
+.achievement-icon.unlocked {
+    background: linear-gradient(135deg, var(--accent-color), #e67e22);
+    color: white;
+}
+
+.achievement-icon.locked {
+    background: #f8f9fa;
+    color: #6c757d;
+}
+
+.achievement-info h6 {
+    margin: 0 0 0.25rem 0;
+    font-weight: 600;
+}
+
+.achievement-info p {
+    margin: 0;
+    font-size: 0.9rem;
+    color: #6c757d;
+}
+
+.achievement-progress {
+    padding: 0 1rem 1rem;
+}
+
+.progress-bar-container {
+    background: #e9ecef;
+    border-radius: 10px;
+    height: 8px;
+    overflow: hidden;
+    margin-bottom: 0.5rem;
+}
+
+.progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--success-color), #2ecc71);
+    border-radius: 10px;
+    transition: width 1s ease;
+}
+
+.progress-text {
+    font-size: 0.8rem;
+    color: #6c757d;
+    text-align: center;
+}
+
+.insights-section {
+    background: white;
+    padding: 2rem;
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow);
+}
+
+.insight-item {
+    display: flex;
+    align-items: start;
+    gap: 1rem;
+    padding: 1rem;
+    border-radius: var(--border-radius);
+    margin-bottom: 1rem;
+    background: #f8f9fa;
+}
+
+.insight-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--primary-color);
+    color: white;
+    flex-shrink: 0;
+}
+
+.insight-content h6 {
+    margin: 0 0 0.5rem 0;
+    color: var(--primary-color);
+}
+
+.insight-content p {
+    margin: 0;
+    color: #6c757d;
+    font-size: 0.9rem;
+}
+
+@media (max-width: 768px) {
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .stat-value {
+        font-size: 2rem;
+    }
+    
+    .achievements-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .chart-header {
+        flex-direction: column;
+        gap: 1rem;
+        align-items: start;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="progress-container">
+    <!-- Header de Progreso -->
+    <div class="progress-header">
+        <h2 class="mb-3">
+            <i class="fas fa-chart-line me-2"></i>
+            Tu Progreso Estoico
+        </h2>
+        <p class="mb-0 opacity-75">
+            "El progreso no es otra cosa que la filosofía puesta en práctica" - Epicteto
+        </p>
+    </div>
+
+    <!-- Estadísticas Principales -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon primary">
+                <i class="fas fa-fire"></i>
+            </div>
+            <div class="stat-value">{{ estadisticas.racha_actual }}</div>
+            <div class="stat-label">Racha Actual</div>
+            {% if racha_cambio %}
+                <div class="stat-change {{ racha_cambio.tipo }}">
+                    <i class="fas fa-arrow-{{ racha_cambio.direccion }} me-1"></i>
+                    {{ racha_cambio.valor }} desde ayer
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon success">
+                <i class="fas fa-calendar-check"></i>
+            </div>
+            <div class="stat-value">{{ estadisticas.dias_activos }}</div>
+            <div class="stat-label">Días Activos</div>
+            <div class="stat-change positive">
+                <i class="fas fa-arrow-up me-1"></i>
+                {{ porcentaje_actividad|floatformat:1 }}% del tiempo
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon warning">
+                <i class="fas fa-star"></i>
+            </div>
+            <div class="stat-value">{{ estadisticas.promedio_calificacion|floatformat:1 }}</div>
+            <div class="stat-label">Promedio</div>
+            <div class="stat-change positive">
+                <i class="fas fa-star me-1"></i>
+                De 5.0 estrellas
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon info">
+                <i class="fas fa-trophy"></i>
+            </div>
+            <div class="stat-value">{{ logros_obtenidos.count }}</div>
+            <div class="stat-label">Logros</div>
+            <div class="stat-change positive">
+                <i class="fas fa-percentage me-1"></i>
+                {{ porcentaje_logros|floatformat:0 }}% completado
+            </div>
+        </div>
+    </div>
+
+    <!-- Gráfico de Actividad -->
+    <div class="chart-container">
+        <div class="chart-header">
+            <h5 class="chart-title">
+                <i class="fas fa-chart-area me-2"></i>
+                Actividad de los Últimos 30 Días
+            </h5>
+            <div class="chart-period">
+                <button class="period-btn active" data-period="30">30 días</button>
+                <button class="period-btn" data-period="90">90 días</button>
+                <button class="period-btn" data-period="365">1 año</button>
+            </div>
+        </div>
+        <canvas id="activityChart" width="400" height="200"></canvas>
+    </div>
+
+    <!-- Gráfico de Calificaciones -->
+    <div class="chart-container">
+        <div class="chart-header">
+            <h5 class="chart-title">
+                <i class="fas fa-star me-2"></i>
+                Distribución de Calificaciones
+            </h5>
+        </div>
+        <canvas id="ratingsChart" width="400" height="200"></canvas>
+    </div>
+
+    <div class="row">
+        <!-- Logros -->
+        <div class="col-lg-8">
+            <div class="chart-container">
+                <div class="chart-header">
+                    <h5 class="chart-title">
+                        <i class="fas fa-trophy me-2"></i>
+                        Logros ({{ logros_obtenidos.count }}/{{ total_logros }})
+                    </h5>
+                </div>
+                
+                <div class="achievements-grid">
+                    {% for logro_usuario in logros_obtenidos %}
+                        <div class="achievement-card unlocked">
+                            <div class="achievement-header">
+                                <div class="achievement-icon unlocked">
+                                    {{ logro_usuario.logro.icono }}
+                                </div>
+                                <div class="achievement-info">
+                                    <h6>{{ logro_usuario.logro.nombre }}</h6>
+                                    <p>{{ logro_usuario.logro.descripcion }}</p>
+                                    <small class="text-success">
+                                        <i class="fas fa-check me-1"></i>
+                                        Desbloqueado el {{ logro_usuario.fecha_obtenido|date:"d M Y" }}
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                    
+                    {% for logro in logros_pendientes %}
+                        <div class="achievement-card locked">
+                            <div class="achievement-header">
+                                <div class="achievement-icon locked">
+                                    {{ logro.icono }}
+                                </div>
+                                <div class="achievement-info">
+                                    <h6>{{ logro.nombre }}</h6>
+                                    <p>{{ logro.descripcion }}</p>
+                                </div>
+                            </div>
+                            <div class="achievement-progress">
+                                <div class="progress-bar-container">
+                                    <div class="progress-bar-fill" style="width: {{ logro.progreso_actual }}%"></div>
+                                </div>
+                                <div class="progress-text">
+                                    {{ logro.valor_actual }}/{{ logro.criterio_valor }}
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Insights -->
+        <div class="col-lg-4">
+            <div class="insights-section">
+                <h5 class="mb-4">
+                    <i class="fas fa-lightbulb me-2"></i>
+                    Insights Personales
+                </h5>
+                
+                <div class="insight-item">
+                    <div class="insight-icon">
+                        <i class="fas fa-calendar-week"></i>
+                    </div>
+                    <div class="insight-content">
+                        <h6>Mejor Día de la Semana</h6>
+                        <p>{{ mejor_dia_semana }} es tu día más productivo para reflexionar</p>
+                    </div>
+                </div>
+
+                <div class="insight-item">
+                    <div class="insight-icon">
+                        <i class="fas fa-user-graduate"></i>
+                    </div>
+                    <div class="insight-content">
+                        <h6>Filósofo Favorito</h6>
+                        <p>Has reflexionado más con citas de {{ filosofo_favorito }}</p>
+                    </div>
+                </div>
+
+                <div class="insight-item">
+                    <div class="insight-icon">
+                        <i class="fas fa-heart"></i>
+                    </div>
+                    <div class="insight-content">
+                        <h6>Tema Preferido</h6>
+                        <p>{{ tema_favorito }} es el tema que más te inspira</p>
+                    </div>
+                </div>
+
+                <div class="insight-item">
+                    <div class="insight-icon">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <div class="insight-content">
+                        <h6>Tiempo de Reflexión</h6>
+                        <p>Promedio de {{ tiempo_promedio }} minutos por reflexión</p>
+                    </div>
+                </div>
+
+                <div class="insight-item">
+                    <div class="insight-icon">
+                        <i class="fas fa-target"></i>
+                    </div>
+                    <div class="insight-content">
+                        <h6>Próximo Objetivo</h6>
+                        <p>{{ proximo_logro.nombre }} - {{ proximo_logro.progreso }}% completado</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Acciones -->
+    <div class="row mt-4">
+        <div class="col-md-4">
+            <div class="card shadow-sm text-center">
+                <div class="card-body">
+                    <i class="fas fa-download fa-2x text-primary mb-3"></i>
+                    <h6>Exportar Datos</h6>
+                    <p class="text-muted small">Descarga todas tus reflexiones</p>
+                    <a href="{% url 'estoico:exportar_reflexiones' %}" class="btn btn-outline-primary btn-sm">
+                        Exportar JSON
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card shadow-sm text-center">
+                <div class="card-body">
+                    <i class="fas fa-share-alt fa-2x text-success mb-3"></i>
+                    <h6>Compartir Progreso</h6>
+                    <p class="text-muted small">Comparte tu crecimiento</p>
+                    <button class="btn btn-outline-success btn-sm" onclick="compartirProgreso()">
+                        Compartir
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card shadow-sm text-center">
+                <div class="card-body">
+                    <i class="fas fa-cog fa-2x text-warning mb-3"></i>
+                    <h6>Configuración</h6>
+                    <p class="text-muted small">Personaliza tu experiencia</p>
+                    <a href="{% url 'estoico:configuracion' %}" class="btn btn-outline-warning btn-sm">
+                        Configurar
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Datos de actividad
+    const activityData = {{ datos_actividad|safe }};
+    
+    // Gráfico de Actividad
+    const activityCtx = document.getElementById('activityChart').getContext('2d');
+    new Chart(activityCtx, {
+        type: 'line',
+        data: {
+            labels: activityData.map(d => new Date(d.fecha).toLocaleDateString('es-ES', {month: 'short', day: 'numeric'})),
+            datasets: [{
+                label: 'Actividad Diaria',
+                data: activityData.map(d => d.activo ? 1 : 0),
+                borderColor: '#2c3e50',
+                backgroundColor: 'rgba(44, 62, 80, 0.1)',
+                borderWidth: 2,
+                fill: true,
+                tension: 0.4
+            }, {
+                label: 'Calificación',
+                data: activityData.map(d => d.calificacion || 0),
+                borderColor: '#f39c12',
+                backgroundColor: 'rgba(243, 156, 18, 0.1)',
+                borderWidth: 2,
+                yAxisID: 'y1'
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'top',
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 1,
+                    ticks: {
+                        callback: function(value) {
+                            return value === 1 ? 'Activo' : 'Inactivo';
+                        }
+                    }
+                },
+                y1: {
+                    type: 'linear',
+                    display: true,
+                    position: 'right',
+                    min: 0,
+                    max: 5,
+                    grid: {
+                        drawOnChartArea: false,
+                    },
+                }
+            }
+        }
+    });
+
+    // Gráfico de Calificaciones
+    const ratingsCtx = document.getElementById('ratingsChart').getContext('2d');
+    const ratingsData = {{ distribucion_calificaciones|safe }};
+    
+    new Chart(ratingsCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['⭐ (1)', '⭐⭐ (2)', '⭐⭐⭐ (3)', '⭐⭐⭐⭐ (4)', '⭐⭐⭐⭐⭐ (5)'],
+            datasets: [{
+                data: ratingsData,
+                backgroundColor: [
+                    '#e74c3c',
+                    '#f39c12',
+                    '#f1c40f',
+                    '#27ae60',
+                    '#2ecc71'
+                ],
+                borderWidth: 2,
+                borderColor: '#fff'
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                }
+            }
+        }
+    });
+
+    // Animación de barras de progreso
+    document.querySelectorAll('.progress-bar-fill').forEach(bar => {
+        const width = bar.style.width;
+        bar.style.width = '0%';
+        
+        setTimeout(() => {
+            bar.style.width = width;
+        }, 500);
+    });
+
+    // Botones de período
+    document.querySelectorAll('.period-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            
+            const period = this.getAttribute('data-period');
+            // Aquí cargarías nuevos datos via AJAX
+            console.log('Cambiar período a:', period);
+        });
+    });
+});
+
+function compartirProgreso() {
+    if (navigator.share) {
+        navigator.share({
+            title: 'Mi Progreso Estoico',
+            text: `He completado {{ estadisticas.dias_activos }} días de reflexión estoica con una racha de {{ estadisticas.racha_actual }} días. ¡Únete a mi viaje de crecimiento personal!`,
+            url: window.location.origin + '/estoico/'
+        });
+    } else {
+        // Fallback para navegadores que no soportan Web Share API
+        const texto = `He completado {{ estadisticas.dias_activos }} días de reflexión estoica con una racha de {{ estadisticas.racha_actual }} días. ¡Únete a mi viaje de crecimiento personal! ${window.location.origin}/estoico/`;
+        
+        if (navigator.clipboard) {
+            navigator.clipboard.writeText(texto).then(() => {
+                alert('Texto copiado al portapapeles');
+            });
+        } else {
+            prompt('Copia este texto:', texto);
+        }
+    }
+}
+</script>
+{% endblock %}
+

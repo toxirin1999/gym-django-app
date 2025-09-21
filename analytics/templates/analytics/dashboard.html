@@ -1,0 +1,494 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Centro de Análisis - {{ cliente.nombre }}{% endblock %}
+
+{% block extra_css %}
+<!-- Librería para los tooltips interactivos -->
+<link rel="stylesheet" href="https://unpkg.com/tippy.js@6/dist/tippy.css"/>
+<link rel="stylesheet" href="https://unpkg.com/tippy.js@6/themes/light-border.css"/>
+
+<style>
+    /* =================================================================== */
+    /* 1. ESTILOS BASE Y FONDO (Tu base, ligeramente ajustada )
+    /* =================================================================== */
+    :root {
+        --neon-cyan: #00ffff;
+        --neon-magenta: #ff00ff;
+        --neon-green: #39ff14; /* Un verde neón más vibrante */
+        --success-color: #10b981;
+        --warning-color: #f59e0b;
+        --danger-color: #ef4444;
+        --dark-bg: #0a0a1a;
+        --card-bg: rgba(15, 23, 42, 0.6); /* Un poco más opaco para legibilidad */
+        --card-bg-hover: rgba(30, 41, 59, 0.75);
+        --text-primary: #f8fafc;
+        --text-secondary: #cbd5e1;
+        --border-color: rgba(0, 255, 255, 0.2); /* Borde cian sutil */
+        --border-color-hover: rgba(0, 255, 255, 0.6);
+    }
+
+    body {
+        background: url("{% static 'images/fondo_cyberpunk.png' %}") no-repeat center center fixed;
+        background-size: cover;
+        background-color: #000;
+        color: var(--text-primary);
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    .analytics-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 2rem;
+    }
+
+    /* Animación de entrada para los módulos */
+    .fade-in {
+        animation: fadeIn 0.6s ease-out forwards;
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* =================================================================== */
+    /* 2. HEADER Y FILTROS (Más limpios y centrados)
+    /* =================================================================== */
+    .analytics-header {
+        background: var(--card-bg);
+        backdrop-filter: blur(10px);
+        border: 1px solid var(--border-color);
+        border-radius: 1rem;
+        padding: 1.5rem 2rem;
+        margin-bottom: 2rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 1.5rem;
+    }
+
+    .client-info { display: flex; align-items: center; gap: 1.5rem; }
+    .client-avatar { width: 60px; height: 60px; border-radius: 50%; border: 2px solid var(--neon-cyan); object-fit: cover; box-shadow: 0 0 15px rgba(0, 255, 255, 0.5); }
+    .client-text h2 { font-size: 1.8rem; margin: 0; font-weight: 700; }
+    .client-text .client-goal { font-size: 0.9rem; color: var(--neon-cyan); text-transform: uppercase; letter-spacing: 1px; }
+
+    .date-filter-form { display: flex; align-items: center; gap: 1rem; }
+    .date-filter-form input[type="date"] { background-color: rgba(0,0,0,0.3); border: 1px solid var(--border-color); color: var(--text-primary); padding: 0.5rem; border-radius: 0.5rem; }
+    .btn-apply-filter { background: var(--neon-cyan); color: #000; border: none; padding: 0.6rem 1.2rem; border-radius: 0.5rem; font-weight: 700; cursor: pointer; transition: all 0.3s ease; }
+    .btn-apply-filter:hover { background: white; box-shadow: 0 0 15px white; }
+
+    /* =================================================================== */
+    /* 3. TARJETAS DE MÉTRICAS (KPIs) - ¡GRAN MEJORA!
+    /* =================================================================== */
+    .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
+    .metric-card {
+        background: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 1rem;
+        padding: 1.5rem;
+        text-align: center;
+        transition: all 0.3s ease;
+    }
+    .metric-card:hover {
+        transform: translateY(-5px);
+        background: var(--card-bg-hover);
+        border-color: var(--border-color-hover);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+    }
+    .metric-icon { font-size: 1.8rem; margin-bottom: 0.75rem; }
+    .metric-value {
+        font-size: 2.5rem; /* Valor mucho más grande */
+        font-weight: 800; /* Más grueso */
+        line-height: 1.1;
+        color: var(--text-primary);
+        margin-bottom: 0.25rem;
+    }
+    .metric-label { font-size: 0.85rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; }
+    /* El % de cambio ahora está oculto en el tooltip para un diseño más limpio */
+
+    /* =================================================================== */
+    /* 4. TARJETAS DE CONTENIDO (Gráficos, Listas, etc.)
+    /* =================================================================== */
+    .content-card {
+        background: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 1rem;
+        padding: 1.5rem 2rem;
+        margin-bottom: 2rem;
+        backdrop-filter: blur(10px);
+    }
+    .card-title { font-size: 1.3rem; font-weight: 600; color: var(--neon-cyan); margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.75rem; text-shadow: 0 0 8px var(--neon-cyan); }
+
+    /* =================================================================== */
+    /* 5. COMPONENTES ESPECÍFICOS (Pestañas, Listas, etc.)
+    /* =================================================================== */
+
+    /* Estado de Recuperación */
+    .athlete-status { border: 1px solid; border-radius: 0.75rem; padding: 1rem 1.5rem; display: flex; align-items: center; gap: 1rem; }
+    .status-baja { border-color: var(--success-color); background: rgba(16, 185, 129, 0.1); }
+    .status-moderada { border-color: var(--warning-color); background: rgba(245, 158, 11, 0.1); }
+    .status-alta, .status-critica { border-color: var(--danger-color); background: rgba(239, 68, 68, 0.1); }
+    .status-icon { font-size: 2rem; }
+    .status-text strong { font-weight: 700; }
+    .status-baja strong { color: var(--success-color); }
+    .status-moderada strong { color: var(--warning-color); }
+    .status-alta strong, .status-critica strong { color: var(--danger-color); }
+
+    /* Pestañas */
+    .tab-buttons { display: flex; border-bottom: 1px solid var(--border-color); margin-bottom: 1rem; }
+    .tab-btn { padding: 0.75rem 1rem; background: none; border: none; color: var(--text-secondary); font-weight: 600; cursor: pointer; border-bottom: 3px solid transparent; transition: all 0.3s ease; margin-bottom: -1px; }
+    .tab-btn.active { color: var(--neon-cyan); border-bottom-color: var(--neon-cyan); }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    /* Listas de Ejercicios y Entrenos */
+    .data-list-item { display: flex; justify-content: space-between; align-items: center; padding: 1rem; margin: 0 -1rem; border-radius: 0.5rem; transition: background-color 0.2s ease; text-decoration: none; color: var(--text-primary); }
+    .data-list-item:hover { background-color: rgba(0, 255, 255, 0.08); }
+    .item-main-text { font-weight: 600; }
+    .item-sub-text { font-size: 0.85rem; color: var(--text-secondary); }
+    .item-value { text-align: right; }
+    .progress-value.positive { color: var(--neon-green); }
+    .progress-value.negative { color: var(--warning-color); }
+
+    /* Tarjetas de Navegación Inferiores */
+    .dashboards-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; }
+    .dashboard-btn { display: flex; flex-direction: column; padding: 1.5rem; border-radius: 1rem; color: white; text-decoration: none; transition: all 0.3s ease; border: 1px solid rgba(255,255,255,0.2); }
+    .dashboard-btn:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.2); }
+    .dashboard-btn .icon { font-size: 1.8rem; margin-bottom: 0.75rem; }
+    .dashboard-btn .title { font-weight: 700; font-size: 1.1rem; margin-bottom: 0.5rem; }
+    .dashboard-btn ul { padding-left: 1rem; margin: 0; font-size: 0.85rem; opacity: 0.8; }
+    /* (Colores de fondo para las tarjetas de navegación) */
+    .from-blue { background: linear-gradient(135deg, #3b82f6, #06b6d4); } .from-green { background: linear-gradient(135deg, #10b981, #06b6d4); } .from-orange { background: linear-gradient(135deg, #f59e0b, #ef4444); } .from-purple { background: linear-gradient(135deg, #8b5cf6, #6366f1); } .from-yellow { background: linear-gradient(135deg, #facc15, #f59e0b); } .from-pink { background: linear-gradient(135deg, #ec4899, #f43f5e); } .from-cyan { background: linear-gradient(135deg, #0891b2, #06b6d4); }
+
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="analytics-container">
+
+    <!-- 1. HEADER -->
+    <header class="analytics-header fade-in">
+        <div class="client-info">
+            {% if cliente.foto %}
+            <img src="{{ cliente.foto.url }}" alt="Foto de {{ cliente.nombre }}" class="client-avatar">
+            {% endif %}
+            <div class="client-text">
+                <h2>Análisis de {{ cliente.nombre }}</h2>
+                <span class="client-goal">{{ cliente.get_objetivo_principal_display }}</span>
+            </div>
+        </div>
+        <form method="GET" action="{% url 'analytics:dashboard_cliente' cliente.id %}" class="date-filter-form">
+            <input type="date" id="fecha_inicio" name="fecha_inicio" value="{{ fecha_inicio }}" title="Fecha de inicio del período">
+            <input type="date" id="fecha_fin" name="fecha_fin" value="{{ fecha_fin }}" title="Fecha de fin del período">
+            <button type="submit" class="btn-apply-filter">Filtrar</button>
+        </form>
+    </header>
+
+    <!-- 2. ESTADO DE RECUPERACIÓN -->
+    {% if estado_atleta %}
+    <div class="athlete-status fade-in status-{{ estado_atleta.nivel }}" style="animation-delay: 0.1s; margin-bottom: 2rem;">
+        <div class="status-icon">
+            {% if estado_atleta.nivel == 'baja' %}🔋{% elif estado_atleta.nivel == 'moderada' %}⚡{% elif estado_atleta.nivel == 'alta' %}⚠️{% else %}🚨{% endif %}
+        </div>
+        <div class="status-text">
+            <p>Estado de Recuperación: <strong>{{ estado_atleta.nivel|title }}</strong></p>
+            <p style="opacity: 0.8; font-size: 0.9rem;">{{ estado_atleta.recomendacion_descanso }}</p>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 3. MÉTRICAS PRINCIPALES (KPIs) -->
+    <div class="metrics-grid fade-in" style="animation-delay: 0.2s;">
+        {% with comp=comparativas.volumen_total %}
+        <div class="metric-card" data-tippy-content="Anterior: {{ comp.anterior|floatformat:0 }} kg. Cambio: {{ comp.diferencia_pct|floatformat:1 }}%">
+            <div class="metric-icon">💪</div>
+            <div class="metric-value">{{ metricas_principales.volumen_total|floatformat:0 }}</div>
+            <div class="metric-label">Volumen (kg)</div>
+        </div>
+        {% endwith %}
+        {% with comp=comparativas.intensidad_promedio %}
+        <div class="metric-card" data-tippy-content="Anterior: {{ comp.anterior|floatformat:1 }} kg/min. Cambio: {{ comp.diferencia_pct|floatformat:1 }}%">
+            <div class="metric-icon">⚡</div>
+            <div class="metric-value">{{ metricas_principales.intensidad_promedio|floatformat:1 }}</div>
+            <div class="metric-label">Intensidad</div>
+        </div>
+        {% endwith %}
+        {% with comp=comparativas.calorias_totales %}
+        <div class="metric-card" data-tippy-content="Anterior: {{ comp.anterior|floatformat:0 }}. Cambio: {{ comp.diferencia_pct|floatformat:1 }}%">
+            <div class="metric-icon">🔥</div>
+            <div class="metric-value">{{ metricas_principales.calorias_totales|floatformat:0 }}</div>
+            <div class="metric-label">Calorías</div>
+        </div>
+        {% endwith %}
+        {% with comp=comparativas.frecuencia_semanal %}
+        <div class="metric-card" data-tippy-content="Anterior: {{ comp.anterior|floatformat:1 }}. Cambio: {{ comp.diferencia_pct|floatformat:1 }}%">
+            <div class="metric-icon">📅</div>
+            <div class="metric-value">{{ metricas_principales.frecuencia_semanal|floatformat:1 }}</div>
+            <div class="metric-label">Frecuencia/sem</div>
+        </div>
+        {% endwith %}
+        {% with comp=comparativas.duracion_promedio %}
+        <div class="metric-card" data-tippy-content="Anterior: {{ comp.anterior|floatformat:0 }} min. Cambio: {{ comp.diferencia_pct|floatformat:1 }}%">
+            <div class="metric-icon">⏱️</div>
+            <div class="metric-value">{{ metricas_principales.duracion_promedio|floatformat:0 }}</div>
+            <div class="metric-label">Duración (min)</div>
+        </div>
+        {% endwith %}
+        {% with comp=comparativas.consistencia %}
+        <div class="metric-card" data-tippy-content="Anterior: {{ comp.anterior|floatformat:0 }}%. Cambio: {{ comp.diferencia_pct|floatformat:1 }}%">
+            <div class="metric-icon">🎯</div>
+            <div class="metric-value">{{ metricas_principales.consistencia|floatformat:0 }}<span style="font-size: 1.5rem;">%</span></div>
+            <div class="metric-label">Consistencia</div>
+        </div>
+        {% endwith %}
+    </div>
+
+    <!-- 4. GRÁFICO DE VOLUMEN -->
+    <div class="content-card fade-in" style="animation-delay: 0.3s;">
+        <h3 class="card-title">📈 Evolución del Volumen</h3>
+        <div style="height: 280px;">
+            <canvas id="volumeChart"></canvas>
+        </div>
+    </div>
+
+    <!-- 5. GRID DE 2 COLUMNAS PARA ANÁLISIS Y ENTRENOS -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 2rem;">
+
+        <!-- Columna Izquierda: Análisis por Ejercicio -->
+        <div class="content-card fade-in" style="animation-delay: 0.4s;">
+            <h3 class="card-title">🏋️ Análisis por Ejercicio</h3>
+            <div class="tab-buttons">
+                <button class="tab-btn active" onclick="openTab(event, 'mejor-progresion')">🏆 Progresión</button>
+                <button class="tab-btn" onclick="openTab(event, 'estancados')">📉 Estancados</button>
+                <button class="tab-btn" onclick="openTab(event, 'mas-frecuentes')">🔄 Frecuentes</button>
+            </div>
+            <div id="mejor-progresion" class="tab-content active">
+                {% for ej in ejercicios_mejor_progresion %}<a href="{% url 'analytics:progresion' cliente.id %}?ejercicio={{ ej.nombre_ejercicio|urlencode }}" class="data-list-item">
+                <div class="item-main-text">{{ej.nombre_ejercicio}}</div>
+                <div class="item-value progress-value positive">+{{ej.progresion_peso|floatformat:1}}%</div>
+            </a>{% empty %}<p class="empty-tab">Sin datos de progresión.</p>{% endfor %}
+            </div>
+            <div id="estancados" class="tab-content">
+                {% for ej in ejercicios_estancados %}<a href="{% url 'analytics:progresion' cliente.id %}?ejercicio={{ ej.nombre_ejercicio|urlencode }}" class="data-list-item">
+                <div class="item-main-text">{{ej.nombre_ejercicio}}</div>
+                <div class="item-value progress-value negative">{{ej.progresion_peso|floatformat:1}}%</div>
+            </a>{% empty %}<p class="empty-tab">¡Genial! No hay ejercicios estancados.</p>{% endfor %}
+            </div>
+            <div id="mas-frecuentes" class="tab-content">
+                {% for ej in ejercicios_mas_frecuentes %}<a href="{% url 'analytics:progresion' cliente.id %}?ejercicio={{ ej.nombre_ejercicio|urlencode }}" class="data-list-item">
+                <div class="item-main-text">{{ej.nombre_ejercicio}}</div>
+                <div class="item-value item-sub-text">{{ej.sesiones}} sesiones</div>
+            </a>{% empty %}<p class="empty-tab">Sin datos de frecuencia.</p>{% endfor %}
+            </div>
+        </div>
+
+        <!-- Columna Derecha: Recomendaciones y Entrenos Recientes -->
+        <div class="fade-in" style="animation-delay: 0.4s;">
+            <div class="content-card">
+                <h3 class="card-title">💡 Recomendaciones Activas</h3>
+                {% for rec in recomendaciones|slice:":2" %}
+                <div class="data-list-item" style="display: block; margin-bottom: 1rem;">
+                    <div class="item-main-text">{{ rec.titulo }}</div>
+                    <div class="item-sub-text">{{ rec.descripcion|truncatewords:15 }}</div>
+                </div>
+                {% empty %}
+                <p class="empty-tab">🎉 ¡Excelente! No hay recomendaciones.</p>
+                {% endfor %}
+            </div>
+            <div class="content-card" style="margin-top: 2rem;">
+                <h3 class="card-title">🗓️ Entrenamientos Recientes</h3>
+                {% for entreno in entrenamientos_recientes|slice:":4" %}
+                <div class="data-list-item">
+                    <div>
+                        <div class="item-main-text">{{ entreno.fecha|date:"d M, Y" }}</div>
+                        <div class="item-sub-text">{{ entreno.nombre_rutina_liftin|default:"Entreno Manual" }}</div>
+                    </div>
+                    <div class="item-value">
+                        <div class="item-main-text">{{ entreno.volumen_total_kg|floatformat:0 }} kg</div>
+                        <div class="item-sub-text">{{ entreno.duracion_minutos }} min</div>
+                    </div>
+                </div>
+                {% empty %}
+                <p class="empty-tab">No hay entrenamientos recientes.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- 6. NAVEGACIÓN A OTROS DASHBOARDS -->
+    <div class="fade-in" style="animation-delay: 0.5s; margin-top: 2rem;">
+        <h3 class="card-title" style="padding-left: 1rem;">Explorar Análisis Detallados</h3>
+        <div class="dashboards-grid">
+            <a href="{% url 'analytics:progresion' cliente.id %}" class="dashboard-btn from-blue">
+                <div class="icon">📈</div>
+                <div class="title">Análisis de Progresión</div>
+                <ul>
+                    <li>Historial por ejercicio</li>
+                    <li>Tendencia de carga</li>
+                </ul>
+            </a>
+            <a href="{% url 'analytics:dashboard_equilibrio' cliente.id %}" class="dashboard-btn from-green">
+                <div class="icon">⚖️</div>
+                <div class="title">Equilibrio Muscular</div>
+                <ul>
+                    <li>Gráfico radar de fuerza</li>
+                    <li>Detección de desbalances</li>
+                </ul>
+            </a>
+            <a href="{% url 'analytics:dashboard_fatiga' cliente.id %}" class="dashboard-btn from-orange">
+                <div class="icon">🔋</div>
+                <div class="title">Gestión de Fatiga</div>
+                <ul>
+                    <li>Ratio Carga Aguda/Crónica</li>
+                    <li>Riesgo de lesión</li>
+                </ul>
+            </a>
+            <a href="{% url 'analytics:recomendaciones' cliente.id %}" class="dashboard-btn from-yellow">
+                <div class="icon">💡</div>
+                <div class="title">Centro de Recomendaciones</div>
+                <ul>
+                    <li>Sugerencias IA</li>
+                    <li>Historial completo</li>
+                </ul>
+            </a>
+            <a href="{% url 'analytics:comparativas' cliente.id %}" class="dashboard-btn from-purple">
+                <div class="icon">🔄</div>
+                <div class="title">Comparativas</div>
+                <ul>
+                    <li>• Comparación entre periodos</li>
+                    <li>• Volumen y consistencia</li>
+                    <li>• Métricas clave</li>
+                </ul>
+            </a>
+
+
+            <a href="{% url 'analytics:predicciones' cliente.id %}" class="dashboard-btn from-pink">
+                <div class="icon">🔮</div>
+                <div class="title">Predicciones</div>
+                <ul>
+                    <li>• Estimación futura de peso</li>
+                    <li>• Cálculo de incremento</li>
+                    <li>• Confianza del sistema</li>
+                </ul>
+            </a>
+            <a href="{% url 'analytics:progresion_avanzado' cliente.id %}" class="dashboard-btn from-green">
+                <div class="icon">📊</div>
+                <div class="title">Dashboard de Progresión</div>
+                <ul>
+                    <li>• Ratios de Fuerza</li>
+                    <li>• Gráfico radar</li>
+                    <li>• Estándares por edad/peso</li>
+                    <li>• Recomendaciones de equilibrio</li>
+                </ul>
+            </a>
+
+            <a href="{% url 'analytics:intensidad_avanzado' cliente.id %}" class="dashboard-btn from-orange">
+                <div class="icon">🔥</div>
+                <div class="title">Dashboard de Intensidad</div>
+                <ul>
+                    <li>• Zonas de Entrenamiento</li>
+                    <li>• Análisis de Carga</li>
+                    <li>• Fatiga acumulada</li>
+                    <li>• Recomendaciones de descanso</li>
+                </ul>
+            </a>
+            <a href="{% url 'analytics:dashboard_ia_principal' cliente.id %}" class="dashboard-btn from-cyan">
+                <div class="icon">🧠</div>
+                <div class="title">Dashboard de IA</div>
+                <ul>
+                    <li>• Análisis personalizado</li>
+                    <li>• Recomendaciones adaptativas</li>
+                    <li>• Riesgos y oportunidades</li>
+                </ul>
+            </a>
+        </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://unpkg.com/@popperjs/core@2"></script>
+<script src="https://unpkg.com/tippy.js@6"></script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function ( ) {
+        // Lógica para las pestañas
+        window.openTab = function(evt, tabName) {
+            const tabcontent = document.getElementsByClassName("tab-content");
+            for (let i = 0; i < tabcontent.length; i++) {
+                tabcontent[i].style.display = "none";
+            }
+            const tablinks = document.getElementsByClassName("tab-btn");
+            for (let i = 0; i < tablinks.length; i++) {
+                tablinks[i].className = tablinks[i].className.replace(" active", "");
+            }
+            document.getElementById(tabName).style.display = "block";
+            evt.currentTarget.className += " active";
+        }
+
+        // Inicializar tooltips
+        tippy('[data-tippy-content]', {
+            animation: 'scale-subtle',
+            theme: 'light-border',
+            placement: 'top',
+        });
+
+        // Lógica del Gráfico de Volumen
+        const volumeCanvas = document.getElementById('volumeChart');
+        if (volumeCanvas) {
+            const datosVolumen = {{ datos_volumen|safe }};
+            const ctx = volumeCanvas.getContext('2d');
+
+            // Crear gradiente para el fondo del gráfico
+            const gradient = ctx.createLinearGradient(0, 0, 0, 280);
+            gradient.addColorStop(0, 'rgba(0, 255, 255, 0.3)');
+            gradient.addColorStop(1, 'rgba(0, 255, 255, 0)');
+
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: datosVolumen.map(d => d.fecha),
+                    datasets: [{
+                        label: 'Volumen (kg)',
+                        data: datosVolumen.map(d => d.volumen_total),
+                        borderColor: 'var(--neon-cyan)',
+                        backgroundColor: gradient,
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4, // Líneas más curvas y suaves
+                        pointBackgroundColor: 'var(--neon-cyan)',
+                        pointBorderColor: '#fff',
+                        pointRadius: 4,
+                        pointHoverRadius: 7,
+                        pointHoverBorderWidth: 2,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: 'rgba(15, 23, 42, 0.8)',
+                            titleColor: 'var(--neon-cyan)',
+                            bodyColor: 'var(--text-primary)',
+                            borderColor: 'var(--border-color)',
+                            borderWidth: 1,
+                            padding: 10,
+                            cornerRadius: 8,
+                        }
+                    },
+                    scales: {
+                        x: { ticks: { color: 'var(--text-secondary)' }, grid: { color: 'rgba(255,255,0,0.1)' } },
+                        y: { ticks: { color: 'var(--text-secondary)' }, grid: { color: 'rgba(255,255,0,0.1)' } }
+                    }
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}

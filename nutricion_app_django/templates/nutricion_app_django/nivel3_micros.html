@@ -1,0 +1,227 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load widget_tweaks %}
+
+{% block title %}Nivel 3: Micronutrientes y Agua – {{ block.super }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+<style>
+    /* Estilos base del mockup (copiados para consistencia ) */
+    body {
+      background: url("{% static 'images/fondo_cyberpunk.png' %}") no-repeat center center fixed !important;
+      background-size: cover !important;
+      background-color: #000000 !important;
+      min-height: 100vh !important;
+      filter: brightness(0.9);
+      overflow-x: hidden;
+    }
+    .panel-card {
+        background: rgba(10, 15, 25, 0.5) !important;
+        backdrop-filter: blur(18px) saturate(150%) !important;
+        -webkit-backdrop-filter: blur(18px) saturate(150%) !important;
+        border: 1px solid rgba(77, 208, 225, 0.4) !important;
+        box-shadow: 0 0 20px rgba(0, 255, 255, 0.15), inset 0 0 10px rgba(77, 208, 225, 0.1) !important;
+        border-radius: 12px !important;
+        color: #fff;
+        padding: 1.5rem;
+    }
+    .section-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin-bottom: 1.5rem;
+      color: white;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .btn-gradient {
+        color: #fff;
+        font-weight: 600;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.6rem;
+    }
+    .btn-gradient.primary {
+        background: linear-gradient(90deg, #00A3FF, #9E00FF);
+        box-shadow: 0 0 15px rgba(0, 163, 255, 0.4);
+    }
+    .btn-gradient.primary:hover {
+        box-shadow: 0 0 25px rgba(158, 0, 255, 0.6);
+        transform: scale(1.03);
+    }
+    .btn-secondary-outline {
+        background: rgba(10, 15, 25, 0.3);
+        border: 1px solid rgba(77, 208, 225, 0.5);
+        color: #9ca3af;
+        padding: 10px 20px;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.6rem;
+    }
+    .btn-secondary-outline:hover {
+        background: rgba(77, 208, 225, 0.1);
+        color: #fff;
+        border-color: rgba(77, 208, 225, 0.8);
+    }
+    .animate-fadeSlide {
+      animation: fadeSlide 0.8s ease-out forwards;
+    }
+    @keyframes fadeSlide {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .info-box {
+        background: rgba(10, 15, 25, 0.7);
+        border: 1px solid rgba(77, 208, 225, 0.2);
+        border-radius: 8px;
+        padding: 1rem;
+        font-size: 0.875rem;
+        color: #9ca3af;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+
+    <!-- Encabezado -->
+    <header class="mb-8 animate-fadeSlide">
+        <div class="flex flex-wrap items-center justify-between gap-4">
+            <div>
+                <h1 class="text-4xl font-bold text-white flex items-center gap-4">
+                    <span class="grid place-items-center w-12 h-12 rounded-lg bg-white text-black text-2xl font-bold">3</span>
+                    Micronutrientes y Agua
+                </h1>
+                <p class="text-lg text-cyan-300 mt-2">La base de tu salud, rendimiento y bienestar general.</p>
+            </div>
+            <a href="{% url 'nutricion_app_django:vista_lista_niveles' %}" class="btn-secondary-outline">
+                <i class="fas fa-arrow-left"></i> Volver a los Niveles
+            </a>
+        </div>
+    </header>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <!-- Columna Izquierda: Información Principal -->
+        <div class="lg:col-span-2 space-y-8">
+
+            <!-- Tarjeta de Hidratación -->
+            <div class="panel-card animate-fadeSlide" style="animation-delay: 0.2s;">
+                <h3 class="section-title"><i class="fas fa-tint text-cyan-400"></i>Tu Objetivo de Hidratación</h3>
+                <div class="text-center">
+                    <p class="text-6xl font-bold text-white my-2">{{ agua_recomendada|floatformat:1 }} L</p>
+                    <p class="text-gray-400">Litros por día recomendados</p>
+                    <p class="info-box mt-4 text-sm">
+                        Esta es una guía base basada en tu peso. Aumenta la ingesta si haces ejercicio intenso, sudas mucho o en climas calurosos.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Tarjeta de Estrategias Clave -->
+            <div class="panel-card animate-fadeSlide" style="animation-delay: 0.3s;">
+                <h3 class="section-title"><i class="fas fa-lightbulb text-cyan-400"></i>Estrategias Clave</h3>
+                <div class="space-y-4">
+                    <div class="flex items-start gap-4">
+                        <i class="fas fa-rainbow text-2xl text-purple-400 mt-1"></i>
+                        <div>
+                            <h4 class="font-semibold text-white">Come el Arcoíris</h4>
+                            <p class="text-gray-400 text-sm">Varía los colores de tus frutas y verduras para asegurar una amplia gama de vitaminas y antioxidantes. Cada color aporta diferentes beneficios.</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-4">
+                        <i class="fas fa-leaf text-2xl text-green-400 mt-1"></i>
+                        <div>
+                            <h4 class="font-semibold text-white">Prioriza Alimentos Enteros</h4>
+                            <p class="text-gray-400 text-sm">La mejor fuente de micronutrientes son los alimentos poco procesados. Una manzana siempre será superior a un suplemento de vitamina C.</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-4">
+                        <i class="fas fa-plus-circle text-2xl text-blue-400 mt-1"></i>
+                        <div>
+                            <h4 class="font-semibold text-white">Mentalidad de Inclusión</h4>
+                            <p class="text-gray-400 text-sm">En lugar de pensar en qué "no comer", enfócate en "qué añadir": más verduras, una fruta extra, un puñado de frutos secos, etc.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Columna Derecha: Micronutrientes y Acción -->
+        <div class="space-y-8">
+            <div class="panel-card animate-fadeSlide" style="animation-delay: 0.4s;">
+                <h3 class="section-title"><i class="fas fa-pills text-cyan-400"></i>Micronutrientes a Priorizar</h3>
+                <ul class="space-y-3">
+                    <li class="flex items-center gap-3 text-sm">
+                        <i class="fas fa-sun text-yellow-400 w-5 text-center"></i>
+                        <span class="text-gray-300">Vitamina D (Exposición solar, pescado graso)</span>
+                    </li>
+                    <li class="flex items-center gap-3 text-sm">
+                        <i class="fas fa-heart text-red-400 w-5 text-center"></i>
+                        <span class="text-gray-300">Hierro (Carnes rojas, espinacas)</span>
+                    </li>
+                    <li class="flex items-center gap-3 text-sm">
+                        <i class="fas fa-bolt text-purple-400 w-5 text-center"></i>
+                        <span class="text-gray-300">Magnesio (Frutos secos, semillas)</span>
+                    </li>
+                    <li class="flex items-center gap-3 text-sm">
+                        <i class="fas fa-fish text-blue-400 w-5 text-center"></i>
+                        <span class="text-gray-300">Omega-3 (Pescado graso, nueces)</span>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="panel-card animate-fadeSlide" style="animation-delay: 0.5s;">
+                <h3 class="section-title"><i class="fas fa-exclamation-triangle text-yellow-400"></i>Recordatorio</h3>
+                <p class="text-sm text-gray-400">
+                    No te obsesiones. Una dieta variada y rica en alimentos enteros cubrirá la mayoría de tus necesidades. Los niveles 1 y 2 son mucho más importantes para tus resultados.
+                </p>
+            </div>
+
+            <div class="animate-fadeSlide" style="animation-delay: 0.6s;">
+                {% if configuracion_guardada %}
+                <!-- Si ya está completado, mostramos un mensaje y un botón para ir directamente -->
+                <div class="info-box text-center border-green-500/50">
+                    <p class="text-green-300 font-semibold">¡Nivel completado!</p>
+                    <p class="text-xs text-gray-400">Confirmado el {{ configuracion_guardada.fecha_actualizacion|date:"d/m/Y" }}.</p>
+                </div>
+                <a href="{% url 'nutricion_app_django:nivel4_timing' %}" class="block w-full bg-gradient-to-r from-cyan-500 to-fuchsia-500 text-white text-center font-semibold py-2 rounded-xl mt-6 shadow-md hover:scale-105 transition">
+                    Ir al Nivel 4 <i class="fas fa-arrow-right ml-2"></i>
+                </a>
+                {% else %}
+                <!-- Si no está completado, mostramos el formulario del checklist -->
+                <div class="panel-card">
+                    <h3 class="section-title"><i class="fas fa-tasks text-cyan-400"></i>Mi Compromiso</h3>
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="space-y-4">
+                            {% for field in form %}
+                            <div class="flex items-center">
+                                {{ field|add_class:"form-check-input h-5 w-5 text-cyan-400 bg-gray-700 border-gray-600 focus:ring-cyan-500 focus:ring-offset-gray-800" }}
+                                <label for="{{ field.id_for_label }}" class="ml-3 block text-sm font-medium text-gray-300">
+                                    {{ field.label }}
+                                </label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <button type="submit" class="btn-gradient primary w-full text-lg mt-6">
+                            <i class="fas fa-check-circle"></i>Confirmar y Continuar
+                        </button>
+                    </form>
+                </div>
+                {% endif %}
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}

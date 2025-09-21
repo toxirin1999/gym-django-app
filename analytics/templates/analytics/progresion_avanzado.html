@@ -1,0 +1,747 @@
+<!-- 📈 DASHBOARD DE PROGRESIÓN AVANZADO -->
+<!-- Archivo: templates/analytics/progresion_avanzado.html -->
+
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Dashboard de Progresión Avanzado - {{ cliente.nombre }}{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.min.css" rel="stylesheet">
+<style>
+    :root {
+        --primary-color: #3b82f6;
+        --secondary-color: #1e40af;
+        --accent-color: #06b6d4;
+        --success-color: #10b981;
+        --warning-color: #f59e0b;
+        --danger-color: #ef4444;
+        --dark-bg: #0f172a;
+        --card-bg: #1e293b;
+        --text-primary: #f8fafc;
+        --text-secondary: #cbd5e1;
+        --border-color: #334155;
+    }
+
+    body {
+        background: linear-gradient(135deg, var(--dark-bg) 0%, #1e293b 100%);
+        color: var(--text-primary);
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        min-height: 100vh;
+    }
+
+    .dashboard-container {
+        max-width: 1600px;
+        margin: 0 auto;
+        padding: 2rem;
+    }
+
+    .dashboard-header {
+        background: linear-gradient(135deg, var(--success-color), var(--accent-color));
+        border-radius: 1rem;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        text-align: center;
+    }
+
+    .dashboard-header h1 {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin: 0 0 0.5rem 0;
+    }
+
+    .controls-section {
+        background: var(--card-bg);
+        border-radius: 1rem;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        border: 1px solid var(--border-color);
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+    }
+
+    .control-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .control-group label {
+        font-weight: 600;
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+    }
+
+    .control-group select {
+        padding: 0.75rem;
+        background: var(--dark-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 0.5rem;
+        color: var(--text-primary);
+    }
+
+    /* Ratios de Fuerza */
+    .ratios-section {
+        background: var(--card-bg);
+        border-radius: 1rem;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        border: 1px solid var(--border-color);
+    }
+
+    .section-title {
+        font-size: 1.5rem;
+        font-weight: 600;
+        margin-bottom: 1.5rem;
+        color: var(--text-primary);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .ratios-grid {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 2rem;
+    }
+
+    .radar-chart-container {
+        position: relative;
+        height: 400px;
+    }
+
+    .ratios-list {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .ratio-item {
+        background: rgba(59, 130, 246, 0.05);
+        border-radius: 0.75rem;
+        padding: 1.25rem;
+        border: 1px solid var(--border-color);
+    }
+
+    .ratio-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.75rem;
+    }
+
+    .ratio-name {
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+
+    .ratio-value {
+        font-size: 1.25rem;
+        font-weight: 700;
+        padding: 0.25rem 0.75rem;
+        border-radius: 0.5rem;
+    }
+
+    .ratio-optimo {
+        background: rgba(16, 185, 129, 0.2);
+        color: var(--success-color);
+    }
+
+    .ratio-bajo {
+        background: rgba(245, 158, 11, 0.2);
+        color: var(--warning-color);
+    }
+
+    .ratio-alto {
+        background: rgba(239, 68, 68, 0.2);
+        color: var(--danger-color);
+    }
+
+    .ratio-recomendacion {
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+        line-height: 1.4;
+    }
+
+    /* Evolución Temporal */
+    .evolucion-section {
+        background: var(--card-bg);
+        border-radius: 1rem;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        border: 1px solid var(--border-color);
+    }
+
+    .evolucion-grid {
+        display: grid;
+        grid-template-columns: 3fr 1fr;
+        gap: 2rem;
+        margin-bottom: 2rem;
+    }
+
+    .chart-container {
+        position: relative;
+        height: 400px;
+    }
+
+    .stats-panel {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .stat-card {
+        background: rgba(59, 130, 246, 0.05);
+        border-radius: 0.5rem;
+        padding: 1rem;
+        border: 1px solid var(--border-color);
+    }
+
+    .stat-label {
+        font-size: 0.8rem;
+        color: var(--text-secondary);
+        margin-bottom: 0.25rem;
+    }
+
+    .stat-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--text-primary);
+    }
+
+    .stat-trend {
+        font-size: 0.8rem;
+        margin-top: 0.25rem;
+    }
+
+    .trend-positive {
+        color: var(--success-color);
+    }
+
+    .trend-negative {
+        color: var(--danger-color);
+    }
+
+    /* Hitos y Predicciones */
+    .hitos-predicciones {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 2rem;
+    }
+
+    .hitos-panel, .predicciones-panel {
+        background: rgba(59, 130, 246, 0.05);
+        border-radius: 0.75rem;
+        padding: 1.25rem;
+        border: 1px solid var(--border-color);
+    }
+
+    .panel-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        color: var(--text-primary);
+    }
+
+    .hito-item, .prediccion-item {
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 0.5rem;
+        padding: 1rem;
+        margin-bottom: 0.75rem;
+        border-left: 4px solid var(--primary-color);
+    }
+
+    .hito-item:last-child, .prediccion-item:last-child {
+        margin-bottom: 0;
+    }
+
+    .hito-fecha, .prediccion-fecha {
+        font-size: 0.8rem;
+        color: var(--text-secondary);
+        margin-bottom: 0.25rem;
+    }
+
+    .hito-descripcion, .prediccion-descripcion {
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+
+    /* Análisis de Mesociclos */
+    .mesociclos-section {
+        background: var(--card-bg);
+        border-radius: 1rem;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        border: 1px solid var(--border-color);
+    }
+
+    .mesociclos-timeline {
+        display: flex;
+        gap: 1rem;
+        overflow-x: auto;
+        padding: 1rem 0;
+    }
+
+    .mesociclo-card {
+        min-width: 250px;
+        background: rgba(59, 130, 246, 0.05);
+        border-radius: 0.75rem;
+        padding: 1.25rem;
+        border: 1px solid var(--border-color);
+        position: relative;
+    }
+
+    .mesociclo-numero {
+        position: absolute;
+        top: -10px;
+        left: 1rem;
+        background: var(--primary-color);
+        color: white;
+        padding: 0.25rem 0.75rem;
+        border-radius: 1rem;
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+
+    .mesociclo-fechas {
+        font-size: 0.8rem;
+        color: var(--text-secondary);
+        margin-bottom: 1rem;
+        margin-top: 0.5rem;
+    }
+
+    .mesociclo-metricas {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+    }
+
+    .mesociclo-metrica {
+        text-align: center;
+    }
+
+    .metrica-valor {
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+
+    .metrica-label {
+        font-size: 0.7rem;
+        color: var(--text-secondary);
+    }
+
+    .efectividad-badge {
+        padding: 0.25rem 0.75rem;
+        border-radius: 1rem;
+        font-size: 0.8rem;
+        font-weight: 600;
+        text-align: center;
+    }
+
+    .efectividad-alta {
+        background: rgba(16, 185, 129, 0.2);
+        color: var(--success-color);
+    }
+
+    .efectividad-media {
+        background: rgba(245, 158, 11, 0.2);
+        color: var(--warning-color);
+    }
+
+    .efectividad-baja {
+        background: rgba(239, 68, 68, 0.2);
+        color: var(--danger-color);
+    }
+
+    @media (max-width: 768px) {
+        .ratios-grid,
+        .evolucion-grid,
+        .hitos-predicciones {
+            grid-template-columns: 1fr;
+        }
+        
+        .mesociclos-timeline {
+            flex-direction: column;
+        }
+        
+        .mesociclo-card {
+            min-width: auto;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <!-- Header -->
+    <div class="dashboard-header">
+        <h1>📈 Dashboard de Progresión Avanzado</h1>
+        <p>Análisis completo de ratios de fuerza, evolución temporal y mesociclos</p>
+    </div>
+
+    <!-- Controles -->
+    <form method="get" class="controls-section">
+        <div class="control-group">
+            <label for="ejercicio">Ejercicio Principal:</label>
+            <select name="ejercicio" id="ejercicio" onchange="this.form.submit()">
+                <option value="">Todos los ejercicios</option>
+                {% for clave, nombre in ejercicios_disponibles %}
+                <option value="{{ clave }}" {% if clave == ejercicio_seleccionado %}selected{% endif %}>
+                    {{ nombre }}
+                </option>
+                {% endfor %}
+            </select>
+
+
+        </div>
+
+        <div class="control-group">
+            <label for="periodo">Período de Análisis:</label>
+            <select name="periodo" id="periodo" onchange="this.form.submit()">
+                <option value="30" {% if periodo == 30 %}selected{% endif %}>30 días</option>
+                <option value="60" {% if periodo == 60 %}selected{% endif %}>60 días</option>
+                <option value="90" {% if periodo == 90 %}selected{% endif %}>90 días</option>
+                <option value="180" {% if periodo == 180 %}selected{% endif %}>180 días</option>
+            </select>
+        </div>
+    </form>
+
+    <!-- Ratios de Fuerza -->
+    <div class="ratios-section">
+        <div class="section-title">
+            🎯 Ratios de Fuerza - Balance Muscular
+        </div>
+        <div style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 1rem;">
+            Este gráfico compara tu fuerza en distintos ejercicios principales. Cada eje representa un ratio como <strong>Peso Muerto / Sentadilla</strong>.
+            <br>
+            Los valores indican cuánto más fuerte (o más débil) eres en un ejercicio respecto al otro:
+            <ul style="margin-top: 0.5rem; margin-left: 1.5rem;">
+                <li><strong>1.0</strong> → Equilibrio ideal</li>
+                <li><strong>&gt; 1.0</strong> → Más fuerte en el numerador (por ejemplo, peso muerto)</li>
+                <li><strong>&lt; 1.0</strong> → Más fuerte en el denominador (por ejemplo, sentadilla)</li>
+            </ul>
+            <br>
+            <span style="color: #10b981;">🟢 Línea verde</span>: tus ratios actuales.
+            <br>
+            <span style="color: #3b82f6;">🔵 Línea azul punteada</span>: referencia de equilibrio óptimo.
+        </div>
+        {% if ratios_fuerza.ratios %}
+        <div class="ratios-grid">
+            <div class="relative h-[400px] w-full max-w-[500px] mx-auto">
+                <canvas id="radarChart"></canvas>
+            </div>
+
+
+            <div class="ratios-list">
+                {% for ratio in ratios_fuerza.ratios %}
+                <div class="ratio-item">
+                    <div class="ratio-header">
+                        <div class="ratio-name">{{ ratio.nombre }}</div>
+                        <div class="ratio-value ratio-{{ ratio.estado }}">
+                            {{ ratio.valor }}
+                        </div>
+                    </div>
+                    <div class="ratio-recomendacion">
+                        {{ ratio.recomendacion }}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        {% if ratios_fuerza.puntos_debiles %}
+        <div style="margin-top: 1.5rem; padding: 1rem; background: rgba(245, 158, 11, 0.1); border-radius: 0.5rem; border-left: 4px solid var(--warning-color);">
+            <strong>⚠️ Puntos Débiles Identificados:</strong>
+            <ul style="margin: 0.5rem 0 0 1rem;">
+                {% for punto in ratios_fuerza.puntos_debiles %}
+                <li>{{ punto }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+        {% else %}
+        <div style="text-align: center; padding: 2rem; color: var(--text-secondary);">
+            📊 Realiza entrenamientos con ejercicios principales para ver el análisis de ratios de fuerza.
+        </div>
+        {% endif %}
+    </div>
+
+<!-- Evolución Temporal -->
+{% if ejercicio_seleccionado and evolucion_temporal %}
+<div class="evolucion-section">
+    <div class="section-title">
+        📊 Evolución Temporal - {{ ejercicio_seleccionado }}
+    </div>
+
+    <div class="evolucion-grid">
+        <!-- Gráfico de Evolución -->
+        <div class="chart-container">
+            <canvas id="evolucionChart"></canvas>
+        </div>
+
+        <!-- Panel de estadísticas y análisis -->
+        <div class="stats-panel">
+            {% if datos_ejercicio %}
+                <div class="stat-card">
+                    {% if datos_ejercicio.tendencia %}
+                        <div class="stat-label">Tendencia Semanal</div>
+                        <div class="stat-value">{{ datos_ejercicio.tendencia.tendencia_semanal }}kg</div>
+                        <div class="stat-trend {% if datos_ejercicio.tendencia.tendencia_semanal > 0 %}trend-positive{% else %}trend-negative{% endif %}">
+                            {% if datos_ejercicio.tendencia.tendencia_semanal > 0 %}↗️{% else %}↘️{% endif %}
+                            {{ datos_ejercicio.tendencia.confianza }}% confianza
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-label">Datos Analizados</div>
+                    <div class="stat-value">{{ datos_ejercicio.datos|length }}</div>
+                    <div class="stat-trend">sesiones</div>
+                </div>
+
+                {% if datos_ejercicio.volumen_por_grupo %}
+                <div class="stat-card">
+                    <div class="stat-label">Volumen Total</div>
+                    <div class="stat-value">{{ datos_ejercicio.volumen_por_grupo|floatformat:0 }}</div>
+                    <div class="stat-trend">kg acumulados</div>
+                </div>
+                {% endif %}
+
+                <!-- Hitos Alcanzados -->
+                <div class="hitos-panel">
+                    <div class="panel-title">🏆 Hitos Alcanzados</div>
+                    {% for hito in datos_ejercicio.hitos %}
+                        <div class="hito-item">
+                            <div class="hito-fecha">{{ hito.fecha }}</div>
+                            <div class="hito-descripcion">{{ hito.descripcion }}</div>
+                        </div>
+                    {% empty %}
+                        <div style="text-align: center; color: var(--text-secondary); padding: 1rem;">
+                            No hay hitos registrados aún
+                        </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Predicciones -->
+                <div class="predicciones-panel">
+                    <div class="panel-title">🔮 Predicciones</div>
+                    {% for prediccion in datos_ejercicio.predicciones %}
+                        <div class="prediccion-item">
+                            <div class="prediccion-fecha">{{ prediccion.fecha }} ({{ prediccion.semanas }} semanas)</div>
+                            <div class="prediccion-descripcion">
+                                {{ prediccion.peso_estimado }}kg ({{ prediccion.confianza }}% confianza)
+                            </div>
+                        </div>
+                    {% empty %}
+                        <div style="text-align: center; color: var(--text-secondary); padding: 1rem;">
+                            Datos insuficientes para predicciones
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div style="text-align: center; color: var(--text-secondary); padding: 2rem;">
+                    Selecciona un ejercicio para ver la evolución temporal.
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Análisis de Mesociclos -->
+{% if analisis_mesociclos.mesociclos %}
+<div class="mesociclos-section">
+    <div class="section-title">
+        📅 Análisis de Mesociclos - Periodización
+    </div>
+    <!-- Leyenda de niveles de efectividad -->
+    <div style="margin-bottom: 1.5rem; font-size: 0.85rem; color: var(--text-secondary); background: rgba(255,255,255,0.03); padding: 1rem; border-left: 4px solid var(--primary-color); border-radius: 0.5rem;">
+    <strong>📘 Criterios de Efectividad:</strong><br>
+    🟢 <strong>Alta</strong>: ≥ 12 sesiones y carga promedio &gt; 1000 kg<br>
+    🟡 <strong>Media</strong>: ≥ 8 sesiones y carga promedio &gt; 500 kg<br>
+    🔴 <strong>Baja</strong>: menos de 8 sesiones o carga promedio insuficiente
+    </div>
+    <div class="mesociclos-timeline">
+        {% for mesociclo in analisis_mesociclos.mesociclos %}
+        <div class="mesociclo-card">
+            <div class="mesociclo-numero">Ciclo {{ mesociclo.numero }}</div>
+            <div class="mesociclo-fechas">
+                {{ mesociclo.fecha_inicio|date:"d/m" }} - {{ mesociclo.fecha_fin|date:"d/m/Y" }}
+            </div>
+
+            <div class="mesociclo-metricas">
+                <div class="mesociclo-metrica">
+                    <div class="metrica-valor">{{ mesociclo.datos.carga_total|floatformat:0 }}</div>
+                    <div class="metrica-label">Carga Total</div>
+                </div>
+                <div class="mesociclo-metrica">
+                    <div class="metrica-valor">{{ mesociclo.datos.sesiones }}</div>
+                    <div class="metrica-label">Sesiones</div>
+                </div>
+            </div>
+
+            <div class="efectividad-badge efectividad-{{ mesociclo.efectividad }}">
+                {{ mesociclo.efectividad|title }}
+            </div>
+
+            {% if mesociclo.recomendaciones %}
+            <div style="margin-top: 1rem; font-size: 0.8rem; color: var(--text-secondary);">
+                {{ mesociclo.recomendaciones|first }}
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+
+    {% if analisis_mesociclos.periodizacion_optima %}
+    <div style="margin-top: 1.5rem; padding: 1rem; background: rgba(16, 185, 129, 0.1); border-radius: 0.5rem; border-left: 4px solid var(--success-color);">
+        <strong>💡 Periodización Óptima Sugerida:</strong>
+        <p style="margin: 0.5rem 0 0 0;">{{ analisis_mesociclos.periodizacion_optima }}</p>
+    </div>
+    {% endif %}
+</div>
+{% endif %}
+
+<!-- Navegación -->
+<div style="text-align: center; margin-top: 2rem;">
+    <a href="{% url 'analytics:dashboard_cliente' cliente.id %}"
+       style="background: var(--primary-color); color: white; padding: 1rem 2rem; border-radius: 0.5rem; text-decoration: none; font-weight: 600; margin-right: 1rem;">
+        ← Dashboard Principal
+    </a>
+    <a href="{% url 'analytics:intensidad_avanzado' cliente.id %}"
+       style="background: var(--warning-color); color: white; padding: 1rem 2rem; border-radius: 0.5rem; text-decoration: none; font-weight: 600;">
+        Dashboard de Intensidad →
+    </a>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const datosGraficos = {{ datos_graficos|safe }};
+
+        // Gráfico Radar de Ratios
+        {% if ratios_fuerza.grafico_radar %}
+        const ctxRadar = document.getElementById('radarChart');
+        if (ctxRadar) {
+            new Chart(ctxRadar, {
+                type: 'radar',
+                data: {
+                    labels: {{ ratios_fuerza.grafico_radar.labels|safe }},
+                    datasets: [{
+                        label: 'Ratios Actuales',
+                        data: {{ ratios_fuerza.grafico_radar.valores|safe }},
+                        borderColor: '#10b981',
+                        backgroundColor: 'rgba(16, 185, 129, 0.2)',
+                        borderWidth: 2
+                    }, {
+                        label: 'Ratios Óptimos',
+                        data: {{ ratios_fuerza.grafico_radar.optimos|safe }},
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        borderWidth: 2,
+                        borderDash: [5, 5]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: { color: '#f8fafc' }
+                        }
+                    },
+                    scales: {
+                      r: {
+                            beginAtZero: true,
+                            ticks: {
+                                color: '#ffffff',
+                                backdropColor: 'transparent',
+                                font: { size: 12 }
+                            },
+                            grid: {
+                                color: '#475569' // más suave que '#334155'
+                            },
+                            pointLabels: {
+                                color: '#ffffff',
+                                font: {
+                                    size: 14,
+                                    weight: 'bold'
+                                }
+                            }
+                        }
+                    }
+
+                }
+            });
+        }
+        {% endif %}
+
+        // Gráfico de Evolución Temporal
+        {% if ejercicio_seleccionado and evolucion_temporal %}
+        const ctxEvolucion = document.getElementById('evolucionChart');
+        if (ctxEvolucion) {
+            const datosEvolucion = datosGraficos.evolucion['{{ ejercicio_seleccionado }}'];
+
+            new Chart(ctxEvolucion, {
+                type: 'line',
+                data: {
+                    labels: datosEvolucion.datos.map(d => d.fecha),
+                    datasets: [{
+                        label: 'Peso (kg)',
+                        data: datosEvolucion.datos.map(d => d.peso),
+                        borderColor: '#10b981',
+                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4
+                    }, {
+                        label: 'Volumen (kg)',
+                        data: datosEvolucion.datos.map(d => d.volumen),
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        borderWidth: 2,
+                        fill: false,
+                        yAxisID: 'y1'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: { color: '#f8fafc' }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            ticks: { color: '#cbd5e1' },
+                            grid: { color: '#334155' }
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            ticks: { color: '#cbd5e1' },
+                            grid: { drawOnChartArea: false }
+                        },
+                        x: {
+                            ticks: { color: '#cbd5e1' },
+                            grid: { color: '#334155' }
+                        }
+                    }
+                }
+            });
+        }
+        {% endif %}
+    });
+</script>
+{% endblock %}

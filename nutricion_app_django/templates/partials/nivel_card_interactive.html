@@ -1,0 +1,36 @@
+<!-- nutricion_app_django/templates/nutricion_app_django/partials/nivel_card_interactive.html -->
+
+<div class="nivel-card timeline-section {% if not es_desbloqueado %}is-locked{% endif %}"
+     role="button"
+     aria-label="Nivel {{ nivel }}"
+     {% if es_desbloqueado %}
+     {% if nivel== 1 %}onclick="window.location.href='{% url 'nutricion_app_django:nivel1_balance' %}'" {% endif %}
+     {% if nivel== 2 %}onclick="window.location.href='{% url 'nutricion_app_django:nivel2_macros' %}'" {% endif %}
+     {% if nivel== 3 %}onclick="window.location.href='{% url 'nutricion_app_django:nivel3_micros' %}'" {% endif %}
+     {% if nivel== 4 %}onclick="window.location.href='{% url 'nutricion_app_django:nivel4_timing' %}'" {% endif %}
+     {% if nivel== 5 %}onclick="window.location.href='{% url 'nutricion_app_django:nivel5_suplementos' %}'" {% endif %}
+     {% endif %}>
+
+    <div class="nivel-header">
+        <div class="nivel-index">{{ nivel }}</div>
+        <div class="flex-grow">
+            <h4 class="nivel-title">
+                {% if nivel == 5 %}Suplementos{% endif %}
+                {% if nivel == 4 %}Timing y Frecuencia{% endif %}
+                {% if nivel == 3 %}Micronutrientes y Agua{% endif %}
+                {% if nivel == 2 %}Macronutrientes{% endif %}
+                {% if nivel == 1 %}Balance Energético{% endif %}
+            </h4>
+            <p class="nivel-desc">
+                {% if nivel == 5 %}Solo tras optimizar los niveles 1–4. Basado en evidencia.{% endif %}
+                {% if nivel == 4 %}Cuándo comer y timing alrededor del entrenamiento.{% endif %}
+                {% if nivel == 3 %}Vitaminas, minerales e hidratación. Enfoque en inclusión.{% endif %}
+                {% if nivel == 2 %}Distribuye proteínas, grasas y carbohidratos según tu objetivo.{% endif %}
+                {% if nivel == 1 %}<strong>Base de la pirámide.</strong> Calcula mantenimiento y objetivo.{% endif %}
+            </p>
+        </div>
+        <span class="estado-pill {% if es_completado %}done{% elif es_desbloqueado %}open{% else %}locked{% endif %}">
+            {% if es_completado %}✓ Completado{% elif es_desbloqueado %}Disponible{% else %}Bloqueado{% endif %}
+        </span>
+    </div>
+</div>

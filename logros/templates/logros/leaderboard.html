@@ -1,0 +1,358 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🏆 Salón de los Héroes - Leaderboard</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <!-- Font Awesome para los iconos -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+    <style>
+        /* --- ESTILO "SALA DE HÉROES" --- */
+        :root {
+            --color-primary: #ffc700; /* Oro principal */
+            --color-secondary: #ff4b2b; /* Rojo neón */
+            --color-background: #0a0a14; /* Fondo muy oscuro */
+            --color-surface: #141428; /* Superficie de paneles */
+            --color-border: #4a4a5e; /* Borde sutil */
+            --color-text: #e0e0e0;
+            --font-pixel: 'Press Start 2P', cursive;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background-color: var(--color-background );
+            background-image: radial-gradient(circle at top, rgba(74, 74, 94, 0.3) 0%, transparent 50%);
+            color: var(--color-text);
+            font-family: 'Arial', sans-serif;
+            min-height: 100vh;
+        }
+
+        /* --- LAYOUT PRINCIPAL CON SIDEBAR --- */
+        .leaderboard-layout {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 30px 20px;
+            display: grid;
+            grid-template-columns: 1fr 320px; /* Columna principal y sidebar de 320px */
+            gap: 30px;
+        }
+
+        /* --- CABECERA Y TABS --- */
+        .leaderboard-header {
+            text-align: center;
+            margin-bottom: 40px;
+            grid-column: 1 / -1; /* Ocupa todas las columnas */
+        }
+        /* ... (resto de estilos de header sin cambios) ... */
+        .leaderboard-title { font-family: var(--font-pixel); font-size: 2.5rem; color: var(--color-primary); text-shadow: 0 0 15px var(--color-primary), 0 0 5px var(--color-secondary); margin-bottom: 10px; }
+        .leaderboard-subtitle { font-family: var(--font-pixel); font-size: 0.8rem; color: var(--color-secondary); letter-spacing: 2px; }
+        .ranking-nav { display: flex; justify-content: center; gap: 10px; margin-top: 30px; flex-wrap: wrap; }
+        .ranking-tab { font-family: var(--font-pixel); font-size: 0.7rem; background: transparent; border: 2px solid var(--color-border); color: var(--color-text); padding: 10px 15px; cursor: pointer; transition: all 0.2s ease; text-decoration: none; text-transform: uppercase; }
+        .ranking-tab:hover { background: var(--color-primary); color: var(--color-background); border-color: var(--color-primary); }
+        .ranking-tab.active { background: var(--color-secondary); color: white; border-color: var(--color-secondary); box-shadow: 0 0 10px var(--color-secondary); }
+
+        /* --- PODIO Y LISTA (COLUMNA PRINCIPAL) --- */
+        .main-content {
+            display: flex;
+            flex-direction: column;
+        }
+        /* ... (estilos de podium y player-card sin cambios) ... */
+        .podium-section { display: flex; justify-content: center; align-items: flex-end; gap: 15px; margin-bottom: 50px; min-height: 280px; }
+        .podium-place { text-align: center; width: 150px; transition: transform 0.3s ease; }
+        .podium-place:hover { transform: translateY(-10px); }
+        .podium-place .rank-number { font-family: var(--font-pixel); font-size: 2rem; margin-bottom: 10px; }
+        .podium-place.rank-1 .rank-number { color: #ffd700; }
+        .podium-place.rank-2 .rank-number { color: #c0c0c0; }
+        .podium-place.rank-3 .rank-number { color: #cd7f32; }
+        .podium-avatar { width: 100px; height: 100px; margin: 0 auto 10px; border-radius: 50%; background-size: cover; background-position: center; border: 4px solid; box-shadow: 0 0 20px; }
+        .podium-place.rank-1 .podium-avatar { border-color: #ffd700; box-shadow: 0 0 20px #ffd700; }
+        .podium-place.rank-2 .podium-avatar { border-color: #c0c0c0; box-shadow: 0 0 15px #c0c0c0; }
+        .podium-place.rank-3 .podium-avatar { border-color: #cd7f32; box-shadow: 0 0 10px #cd7f32; }
+        .podium-name { font-weight: bold; font-size: 1.1rem; color: white; }
+        .podium-level { font-size: 0.8rem; color: var(--color-text); opacity: 0.7; }
+        .podium-place.rank-1 { order: 2; transform: scale(1.1); }
+        .podium-place.rank-2 { order: 1; padding-top: 40px; }
+        .podium-place.rank-3 { order: 3; padding-top: 60px; }
+        .ranking-list { display: flex; flex-direction: column; gap: 8px; }
+        .player-card { display: grid; grid-template-columns: 50px 60px 1fr auto; align-items: center; gap: 15px; background: var(--color-surface); padding: 10px 15px; border: 2px solid var(--color-border); transition: all 0.2s ease; }
+        .player-card:hover { border-color: var(--color-primary); transform: scale(1.02); }
+        .player-card.highlight { border-color: var(--color-secondary); box-shadow: 0 0 15px var(--color-secondary); }
+        .player-rank { font-family: var(--font-pixel); font-size: 1.2rem; color: var(--color-text); text-align: center; }
+        .player-avatar { width: 50px; height: 50px; border-radius: 50%; background-size: cover; background-position: center; border: 2px solid var(--color-border); }
+        .player-info .player-name { font-weight: bold; color: white; font-size: 1rem; }
+        .player-info .player-level { font-size: 0.8rem; opacity: 0.7; }
+        .player-score { font-family: var(--font-pixel); font-size: 1rem; color: var(--color-primary); text-align: right; }
+
+        /* --- SIDEBAR --- */
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+
+        .sidebar-widget {
+            background: var(--color-surface);
+            border: 2px solid var(--color-border);
+            padding: 20px;
+            border-radius: 10px;
+        }
+
+        .sidebar-title {
+            font-family: var(--font-pixel);
+            font-size: 1rem;
+            color: var(--color-primary);
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* Widget de Ligas */
+        .leagues-list { display: flex; flex-direction: column; gap: 15px; }
+        .league-item { display: flex; align-items: center; gap: 15px; }
+        .league-icon { font-size: 1.5rem; width: 30px; text-align: center; }
+        .league-info .league-name { font-weight: bold; color: white; }
+        .league-info .league-points { font-size: 0.8rem; opacity: 0.7; }
+        .league-item.bronze .league-icon { color: #cd7f32; }
+        .league-item.silver .league-icon { color: #c0c0c0; }
+        .league-item.gold .league-icon { color: #ffd700; }
+        .league-item.platinum .league-icon { color: #e5e4e2; }
+        .league-item.diamond .league-icon { color: #b9f2ff; }
+        .league-item.master .league-icon { color: #c38cff; }
+        .league-item.legend .league-icon { color: #ff4b2b; }
+
+        /* Widget de Estadísticas */
+        .stats-list { display: flex; flex-direction: column; gap: 12px; }
+        .stat-item { display: flex; justify-content: space-between; align-items: baseline; font-size: 0.9rem; }
+        .stat-label { opacity: 0.8; }
+        .stat-value { font-weight: bold; color: white; }
+
+        /* Widget de Tu Posición */
+        .user-position-widget { text-align: center; }
+        .user-position-rank { font-family: var(--font-pixel); font-size: 3rem; color: var(--color-secondary); line-height: 1; }
+        .user-position-score { font-family: var(--font-pixel); font-size: 1rem; color: var(--color-primary); margin-top: 10px; }
+        .user-position-league { margin-top: 15px; font-size: 0.9rem; opacity: 0.8; }
+
+        /* --- RESPONSIVE --- */
+        @media (max-width: 1024px) {
+            .leaderboard-layout { grid-template-columns: 1fr; }
+            .sidebar { order: -1; /* Mueve el sidebar arriba en móvil */ }
+        }
+        @media (max-width: 768px) {
+            .leaderboard-title { font-size: 1.8rem; }
+            .podium-section { flex-direction: column; align-items: center; min-height: auto; }
+            .podium-place { order: 0 !important; transform: scale(1) !important; padding-top: 0 !important; margin-bottom: 20px; }
+            .player-card { grid-template-columns: 40px 50px 1fr; gap: 10px; }
+            .player-score { font-size: 0.8rem; }
+        }
+        .back-button {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--font-pixel);
+    font-size: 0.8rem;
+    color: var(--color-text);
+    text-decoration: none;
+    padding: 8px 12px;
+    background: var(--color-surface);
+    border: 2px solid var(--color-border);
+    transition: all 0.2s ease;
+}
+
+.back-button:hover {
+    background: var(--color-primary);
+    color: var(--color-background);
+    border-color: var(--color-primary);
+    transform: scale(1.05);
+}
+
+/* --- AJUSTE RESPONSIVE PARA EL BOTÓN --- */
+@media (max-width: 768px) {
+    .leaderboard-header {
+        position: relative; /* Necesario para que el position:absolute del botón funcione bien */
+        padding-top: 60px; /* Añadimos espacio arriba para que el título no choque con el botón */
+    }
+    .back-button {
+        top: 15px;
+        left: 50%;
+        transform: translateX(-50%); /* Centramos el botón en móvil */
+    }
+}
+
+/* --- AJUSTE RESPONSIVE PARA EL TÍTULO (para que no se monte sobre el botón) --- */
+@media (max-width: 1024px) {
+    .leaderboard-header {
+        padding-top: 20px;
+    }
+    </style>
+</head>
+<body>
+
+    <div class="leaderboard-layout">
+    
+        <!-- COLUMNA PRINCIPAL -->
+        <div class="main-content">
+            <!-- CABECERA -->
+            <header class="leaderboard-header">
+                <h1 class="leaderboard-title">Salón de los Héroes</h1>
+                <p class="leaderboard-subtitle">Clasificación de Leyendas</p>
+                <nav class="ranking-nav">
+                    <a href="?tipo=puntos_totales" class="ranking-tab {% if tipo_actual == 'puntos_totales' %}active{% endif %}">Puntos</a>
+                    <a href="?tipo=entrenamientos_mes" class="ranking-tab {% if tipo_actual == 'entrenamientos_mes' %}active{% endif %}">Entrenos</a>
+                    <a href="?tipo=racha_actual" class="ranking-tab {% if tipo_actual == 'racha_actual' %}active{% endif %}">Racha</a>
+                    <a href="?tipo=volumen_total" class="ranking-tab {% if tipo_actual == 'volumen_total' %}active{% endif %}">Volumen</a>
+                    <a href="?tipo=nivel_arquetipo" class="ranking-tab {% if tipo_actual == 'nivel_arquetipo' %}active{% endif %}">Nivel</a>
+                </nav>
+            </header>
+
+            <main>
+
+            <!-- PODIO (TOP 3) -->
+            {% if top_3 %}
+            <section class="podium-section">
+                <!-- Segundo Lugar -->
+                {% with entry=top_3|slice:"1:2"|first %}
+                {% if entry %}
+                <div class="podium-place rank-2">
+                    <div class="rank-number">#2</div>
+                    <div class="podium-avatar" style="background-image: url('{{ entry.perfil.nivel_actual.imagen_url }}');"></div>
+                    <div class="podium-name">{{ entry.perfil.cliente.nombre }}</div>
+                    <div class="podium-level">{{ entry.perfil.nivel_actual.titulo_arquetipo|default:"Principiante" }}</div>
+                </div>
+                {% endif %}
+                {% endwith %}
+
+                <!-- Primer Lugar -->
+                {% with entry=top_3|slice:"0:1"|first %}
+                {% if entry %}
+                <div class="podium-place rank-1">
+                    <div class="rank-number">#1 👑</div>
+                    <div class="podium-avatar" style="background-image: url('{{ entry.perfil.nivel_actual.imagen_url }}');"></div>
+                    <div class="podium-name">{{ entry.perfil.cliente.nombre }}</div>
+                    <div class="podium-level">{{ entry.perfil.nivel_actual.titulo_arquetipo|default:"Principiante" }}</div>
+                </div>
+                {% endif %}
+                {% endwith %}
+
+                <!-- Tercer Lugar -->
+                {% with entry=top_3|slice:"2:3"|first %}
+                {% if entry %}
+                <div class="podium-place rank-3">
+                    <div class="rank-number">#3</div>
+                    <div class="podium-avatar" style="background-image: url('{{ entry.perfil.nivel_actual.imagen_url }}');"></div>
+                    <div class="podium-name">{{ entry.perfil.cliente.nombre }}</div>
+                    <div class="podium-level">{{ entry.perfil.nivel_actual.titulo_arquetipo|default:"Principiante" }}</div>
+                </div>
+                {% endif %}
+                {% endwith %}
+            </section>
+            {% endif %}
+
+            <!-- LISTA DEL RESTO DE JUGADORES -->
+            <section class="ranking-list">
+                {% for entry in rankings %}
+                <div class="player-card {% if entry.perfil.cliente == request.user.cliente_perfil %}highlight{% endif %}">
+                    <div class="player-rank">#{{ entry.posicion }}</div>
+                    <div class="player-avatar" style="background-image: url('{{ entry.perfil.nivel_actual.imagen_url }}');"></div>
+                    <div class="player-info">
+                        <div class="player-name">{{ entry.perfil.cliente.nombre }}</div>
+                        <div class="player-level">{{ entry.perfil.nivel_actual.titulo_arquetipo|default:"Principiante" }}</div>
+                    </div>
+                    <div class="player-score">
+                        {% if tipo_actual == 'puntos_totales' %}{{ entry.valor|floatformat:0 }} PTS
+                        {% elif tipo_actual == 'entrenamientos_mes' %}{{ entry.valor|floatformat:0 }} WKO
+                        {% elif tipo_actual == 'racha_actual' %}{{ entry.valor|floatformat:0 }} 🔥
+                        {% elif tipo_actual == 'volumen_total' %}{{ entry.valor|floatformat:0 }} KG
+                        {% elif tipo_actual == 'nivel_arquetipo' %}LVL {{ entry.valor|floatformat:0 }}
+                        {% endif %}
+                    </div>
+                </div>
+                {% empty %}
+                <div class="player-card" style="justify-content: center;">
+                    <p>Aún no hay héroes en esta clasificación. ¡Sé el primero!</p>
+                </div>
+                {% endfor %}
+            </section>
+     
+            </main>
+        </div>
+
+        <!-- ======================= -->
+        <!--      SIDEBAR            -->
+        <!-- ======================= -->
+        <aside class="sidebar">
+            <!-- WIDGET DE TU POSICIÓN -->
+            {% if posicion_usuario %}
+            <div class="sidebar-widget user-position-widget">
+                <h3 class="sidebar-title"><i class="fas fa-user-astronaut"></i> Tu Rango</h3>
+                <div class="user-position-rank">#{{ posicion_usuario.posicion }}</div>
+                <div class="user-position-score">
+                    {{ posicion_usuario.valor|floatformat:0 }}
+                    {% if tipo_actual == 'puntos_totales' %}PTS
+                    {% elif tipo_actual == 'entrenamientos_mes' %}WKO
+                    {% elif tipo_actual == 'racha_actual' %}🔥
+                    {% elif tipo_actual == 'volumen_total' %}KG
+                    {% elif tipo_actual == 'nivel_arquetipo' %}LVL
+                    {% endif %}
+                </div>
+                <div class="user-position-league">
+                    Estás en la <strong>{{ liga_usuario.get_nombre_display }}</strong>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- WIDGET DE LIGAS -->
+            <div class="sidebar-widget">
+                <h3 class="sidebar-title"><i class="fas fa-trophy"></i> Ligas Competitivas</h3>
+                <div class="leagues-list">
+                    {% for liga in ligas %}
+                    <div class="league-item {{ liga.nombre }}">
+                        <div class="league-icon"><i class="{{ liga.icono }}"></i></div>
+                        <div class="league-info">
+                            <div class="league-name">{{ liga.get_nombre_display }}</div>
+                            <div class="league-points">{{ liga.puntos_minimos|floatformat:0 }}+ pts</div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- WIDGET DE ESTADÍSTICAS -->
+            <div class="sidebar-widget">
+                <h3 class="sidebar-title"><i class="fas fa-chart-bar"></i> Estadísticas Globales</h3>
+                <div class="stats-list">
+                    <div class="stat-item">
+                        <span class="stat-label">Participantes</span>
+                        <span class="stat-value">{{ total_participantes }}</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Entrenamientos Totales</span>
+                        <span class="stat-value">{{ total_entrenamientos }}</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Volumen Total</span>
+                        <span class="stat-value">{{ volumen_total|floatformat:0 }} kg</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Temporada</span>
+                        <span class="stat-value">{{ temporada.nombre }}</span>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+    </div>
+    <a href="{% url 'home' %}" class="back-button">
+                    <i class="fas fa-arrow-left"></i> VOLVER
+                </a>
+</body>
+</html>

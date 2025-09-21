@@ -1,0 +1,475 @@
+<!-- 📈 ANÁLISIS DE PROGRESIÓN -->
+<!-- Archivo: templates/analytics/progresion.html -->
+
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Análisis de Progresión - {{ cliente.nombre }}{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.min.css" rel="stylesheet">
+<style>
+    :root {
+        --primary-color: #3b82f6;
+        --secondary-color: #1e40af;
+        --accent-color: #06b6d4;
+        --success-color: #10b981;
+        --warning-color: #f59e0b;
+        --danger-color: #ef4444;
+        --dark-bg: #0f172a;
+        --card-bg: #1e293b;
+        --text-primary: #f8fafc;
+        --text-secondary: #cbd5e1;
+        --border-color: #334155;
+    }
+/* Archivo: templates/analytics/progresion.html */
+/* ... dentro del bloque <style> ... */
+
+/* --- Estilos para la Tabla de Historial --- */
+.history-table-section {
+    background: var(--card-bg);
+    border-radius: 1rem;
+    padding: 1.5rem;
+    border: 1px solid var(--border-color);
+    margin-bottom: 2rem;
+}
+
+.table-container {
+    max-height: 400px; /* Altura máxima, si hay muchas filas aparecerá un scroll */
+    overflow-y: auto; /* Habilita el scroll vertical si es necesario */
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+}
+
+.history-table-section table {
+    width: 100%;
+    border-collapse: collapse;
+    color: var(--text-secondary);
+}
+
+.history-table-section thead {
+    background-color: rgba(0, 0, 0, 0.2);
+    position: sticky; /* Encabezado fijo al hacer scroll */
+    top: 0;
+}
+
+.history-table-section th {
+    padding: 0.75rem 1rem;
+    text-align: left;
+    font-weight: 600;
+    color: var(--text-primary);
+    border-bottom: 2px solid var(--primary-color);
+}
+
+.history-table-section td {
+    padding: 0.75rem 1rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.history-table-section tbody tr:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+/* Alineación de columnas numéricas a la derecha */
+.history-table-section th:not(:first-child),
+.history-table-section td:not(:first-child) {
+    text-align: right;
+}
+
+    body {
+        background: linear-gradient(135deg, var(--dark-bg) 0%, #1e293b 100%);
+        color: var(--text-primary);
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        min-height: 100vh;
+    }
+
+    .analytics-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 2rem;
+    }
+
+    .analytics-header {
+        background: linear-gradient(135deg, var(--success-color), var(--accent-color));
+        border-radius: 1rem;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        text-align: center;
+    }
+
+    .analytics-header h1 {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin: 0 0 0.5rem 0;
+    }
+
+    .exercise-selector {
+        background: var(--card-bg);
+        border-radius: 1rem;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        border: 1px solid var(--border-color);
+    }
+
+    .exercise-selector select {
+        width: 100%;
+        padding: 1rem;
+        background: var(--dark-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 0.5rem;
+        color: var(--text-primary);
+        font-size: 1rem;
+    }
+
+    .progress-grid {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 2rem;
+        margin-bottom: 2rem;
+    }
+
+    .chart-card {
+        background: var(--card-bg);
+        border-radius: 1rem;
+        padding: 1.5rem;
+        border: 1px solid var(--border-color);
+    }
+
+    .chart-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .stats-card {
+        background: var(--card-bg);
+        border-radius: 1rem;
+        padding: 1.5rem;
+        border: 1px solid var(--border-color);
+    }
+
+    .stat-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem 0;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .stat-item:last-child {
+        border-bottom: none;
+    }
+
+    .stat-label {
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+    }
+
+    .stat-value {
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+
+    .predictions-section {
+        background: var(--card-bg);
+        border-radius: 1rem;
+        padding: 1.5rem;
+        border: 1px solid var(--border-color);
+        margin-bottom: 2rem;
+    }
+
+    .prediction-item {
+        background: rgba(59, 130, 246, 0.1);
+        border-radius: 0.5rem;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        border-left: 4px solid var(--primary-color);
+    }
+
+    .prediction-item:last-child {
+        margin-bottom: 0;
+    }
+
+    .prediction-date {
+        font-size: 0.8rem;
+        color: var(--text-secondary);
+        margin-bottom: 0.5rem;
+    }
+
+    .prediction-value {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--primary-color);
+    }
+
+    @media (max-width: 768px) {
+        .progress-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="analytics-container">
+    <!-- Header -->
+    <div class="analytics-header">
+        <h1>📈 Análisis de Progresión</h1>
+        <p>Seguimiento detallado del progreso en ejercicios específicos</p>
+        <div style="text-align: right; margin: 1rem 0 2rem 0;">
+            <form method="POST" action="{% url 'analytics:actualizar_tendencias' cliente.id %}">
+        {% csrf_token %}
+        <input type="hidden" name="ejercicio_actual" value="{{ ejercicio_seleccionado }}">
+        <button type="submit" style="..."> 🔁 Recalcular Tendencias
+        </button>
+    </form>
+        </div>
+    </div>
+
+    <!-- Selector de Ejercicio -->
+    <div class="exercise-selector">
+        <label for="ejercicio-select" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">
+            Seleccionar Ejercicio:
+        </label>
+        <select id="ejercicio-select" onchange="cambiarEjercicio()">
+            {% for ejercicio in ejercicios %}
+            <option value="{{ ejercicio }}" {% if ejercicio == ejercicio_seleccionado %}selected{% endif %}>
+                {{ ejercicio }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    {% if ejercicio_seleccionado %}
+    {% if tabla_1rm %}
+    <div class="predictions-section">
+        <div class="chart-title">📊 Estimación de 1RM</div>
+        <table style="width:100%; border-collapse: collapse; font-family: monospace;">
+            <thead style="background: var(--card-bg); color: var(--text-primary);">
+            <tr>
+                <th style="text-align: left; padding: 0.5rem;">EJERCICIO</th>
+                <th style="text-align: right; padding: 0.5rem;">1RM ACTUAL</th>
+                <th style="text-align: right; padding: 0.5rem;">1RM ANTERIOR</th>
+                <th style="text-align: right; padding: 0.5rem;">PROGRESO</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr style="border-top: 1px solid var(--border-color);">
+                <td style="padding: 0.5rem;">{{ tabla_1rm.nombre }}</td>
+                <td style="padding: 0.5rem; text-align: right;">{{ tabla_1rm.rm_actual }} kg</td>
+                <td style="padding: 0.5rem; text-align: right;">{{ tabla_1rm.rm_anterior }} kg</td>
+                <td style="padding: 0.5rem; text-align: right; color: {% if tabla_1rm.progreso >= 0 %}limegreen{% else %}tomato{% endif %}; font-weight: bold;">
+                    {% if tabla_1rm.progreso >= 0 %}+{% endif %}{{ tabla_1rm.progreso }}%
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
+    <!-- Gráfico de Progresión y Estadísticas -->
+    <div class="progress-grid">
+        <div class="chart-card">
+            <div class="chart-title">
+                🏋️‍♂️ Progresión de {{ ejercicio_seleccionado }}
+            </div>
+
+            <div style="position: relative; height: 300px;">
+                <canvas id="progressChart"></canvas>
+            </div>
+
+            <div id="noDataMessage" style="display: none; text-align: center; padding: 2rem; color: var(--text-secondary); font-style: italic;">
+                ⚠️ No hay datos suficientes para generar la gráfica.
+            </div>
+
+        </div>
+
+        <div class="stats-card">
+            <div class="chart-title">
+                📊 Estadísticas
+            </div>
+            {% if tendencia %}
+            <div class="stat-item">
+                <span class="stat-label">Tendencia General</span>
+                <span class="stat-value" style="color: {% if tendencia.tendencia_general > 0 %}var(--success-color){% else %}var(--danger-color){% endif %}">
+                    {% if tendencia.tendencia_general > 0 %}↗️{% else %}↘️{% endif %}
+                    {{ tendencia.tendencia_general|floatformat:1 }}%
+                </span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Peso Máximo</span>
+                <span class="stat-value">{{ tendencia.peso_maximo }} kg</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Sesiones Totales</span>
+                <span class="stat-value">{{ tendencia.sesiones_totales }}</span>
+            </div>
+            {% else %}
+            <div class="stat-item">
+                <span class="stat-label">Estado</span>
+                <span class="stat-value">Calculando tendencias...</span>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+ {% if historial_ejercicio %}
+    <div class="history-table-section">
+        <div class="chart-title">
+            <span class="title-icon">📜</span>
+            Historial de Sesiones
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Fecha</th>
+                        <th>Peso (kg)</th>
+                        <th>Series</th>
+                        <th>Repeticiones</th>
+                        <th>Volumen (kg)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for sesion in historial_ejercicio %}
+<tr>
+    <td>{{ sesion.fecha|date:"d/m/Y" }}</td>
+    <td>{{ sesion.peso|floatformat:2 }}</td>
+    <td>{{ sesion.series }}</td>
+    <td>{{ sesion.repeticiones }}</td>
+    
+    <!-- ✅ SOLUCIÓN: Mostrar el valor pre-calculado -->
+    <td>{{ sesion.volumen_calculado|floatformat:0 }}</td>
+</tr>
+{% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+    <!-- Predicciones -->
+    {% if predicciones %}
+    <div class="predictions-section">
+        <div class="chart-title">
+            🔮 Predicciones de Rendimiento
+        </div>
+        {% for prediccion in predicciones %}
+        <div class="prediction-item">
+            <div class="prediction-date">{{ prediccion.fecha_prediccion|date:"d/m/Y" }}</div>
+            <div class="prediction-value">
+                Peso estimado: {{ prediccion.peso_estimado }} kg
+                ({{ prediccion.confianza }}% confianza)
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div style="text-align: center; padding: 4rem; color: var(--text-secondary);">
+        <h3>No hay ejercicios disponibles para análisis</h3>
+        <p>Realiza algunos entrenamientos para ver el análisis de progresión.</p>
+    </div>
+    {% endif %}
+  
+    <!-- Navegación -->
+    <div style="text-align: center; margin-top: 2rem;">
+        <a href="{% url 'analytics:dashboard_cliente' cliente.id %}"
+           style="background: var(--primary-color); color: white; padding: 1rem 2rem; border-radius: 0.5rem; text-decoration: none; font-weight: 600;">
+            ← Volver al Dashboard
+        </a>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+
+
+<script>
+    window.addEventListener('load', function () {
+        const datosProgresion = {{ datos_progresion|safe }};
+        const canvas = document.getElementById('progressChart');
+        const mensaje = document.getElementById('noDataMessage');
+
+        if (typeof window.chartInstance !== 'undefined') {
+            window.chartInstance.destroy();
+        }
+
+        if (datosProgresion && datosProgresion.some(d => d.peso > 0 || d.volumen > 0)) {
+            canvas.style.display = 'block';
+            mensaje.style.display = 'none';
+
+            const ctx = canvas.getContext('2d');
+
+            window.chartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: datosProgresion.map(d => d.fecha),
+                    datasets: [{
+                        label: 'Peso (kg)',
+                        data: datosProgresion.map(d => d.peso),
+                        borderColor: '#10b981',
+                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4
+                    }, {
+                        label: 'Volumen (kg)',
+                        data: datosProgresion.map(d => d.volumen),
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        borderWidth: 2,
+                        fill: false,
+                        yAxisID: 'y1'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: { color: '#f8fafc' }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            ticks: { color: '#cbd5e1' },
+                            grid: { color: '#334155' }
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            ticks: { color: '#cbd5e1' },
+                            grid: { drawOnChartArea: false }
+                        },
+                        x: {
+                            ticks: { color: '#cbd5e1' },
+                            grid: { color: '#334155' }
+                        }
+                    }
+                }
+            });
+        } else {
+            canvas.style.display = 'none';
+            mensaje.style.display = 'block';
+        }
+    });
+</script>
+<script>
+    function cambiarEjercicio() {
+        const select = document.getElementById('ejercicio-select');
+        const ejercicio = select.value;
+        if (ejercicio) {
+            window.location.href = `?ejercicio=${encodeURIComponent(ejercicio)}`;
+        }
+    }
+</script>
+
+{% endblock %}

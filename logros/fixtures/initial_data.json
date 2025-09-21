@@ -1,0 +1,150 @@
+[
+  {
+    "model": "logros.nivel",
+    "pk": 1,
+    "fields": {
+      "nombre": "Principiante",
+      "puntos_requeridos": 0,
+      "descripcion": "Nivel inicial para todos los usuarios"
+    }
+  },
+  {
+    "model": "logros.nivel",
+    "pk": 2,
+    "fields": {
+      "nombre": "Novato",
+      "puntos_requeridos": 500,
+      "descripcion": "Has dado tus primeros pasos en el entrenamiento"
+    }
+  },
+  {
+    "model": "logros.nivel",
+    "pk": 3,
+    "fields": {
+      "nombre": "Aprendiz",
+      "puntos_requeridos": 1500,
+      "descripcion": "Estás aprendiendo las bases del entrenamiento"
+    }
+  },
+  {
+    "model": "logros.nivel",
+    "pk": 4,
+    "fields": {
+      "nombre": "Intermedio",
+      "puntos_requeridos": 3000,
+      "descripcion": "Has alcanzado un nivel intermedio de entrenamiento"
+    }
+  },
+  {
+    "model": "logros.nivel",
+    "pk": 5,
+    "fields": {
+      "nombre": "Avanzado",
+      "puntos_requeridos": 6000,
+      "descripcion": "Tienes un nivel avanzado de entrenamiento"
+    }
+  },
+  {
+    "model": "logros.nivel",
+    "pk": 6,
+    "fields": {
+      "nombre": "Experto",
+      "puntos_requeridos": 10000,
+      "descripcion": "Eres un experto en entrenamiento"
+    }
+  },
+  {
+    "model": "logros.nivel",
+    "pk": 7,
+    "fields": {
+      "nombre": "Maestro",
+      "puntos_requeridos": 15000,
+      "descripcion": "Has alcanzado el nivel de maestría"
+    }
+  },
+  {
+    "model": "logros.nivel",
+    "pk": 8,
+    "fields": {
+      "nombre": "Leyenda",
+      "puntos_requeridos": 25000,
+      "descripcion": "Eres una leyenda del entrenamiento"
+    }
+  },
+  {
+    "model": "logros.tipologro",
+    "pk": 1,
+    "fields": {
+      "nombre": "Hitos",
+      "categoria": "hito",
+      "descripcion": "Logros relacionados con hitos importantes"
+    }
+  },
+  {
+    "model": "logros.tipologro",
+    "pk": 2,
+    "fields": {
+      "nombre": "Consistencia",
+      "categoria": "consistencia",
+      "descripcion": "Logros relacionados con la consistencia en el entrenamiento"
+    }
+  },
+  {
+    "model": "logros.tipologro",
+    "pk": 3,
+    "fields": {
+      "nombre": "Superación",
+      "categoria": "superacion",
+      "descripcion": "Logros relacionados con la superación personal"
+    }
+  },
+  {
+    "model": "logros.tipologro",
+    "pk": 4,
+    "fields": {
+      "nombre": "Especiales",
+      "categoria": "especial",
+      "descripcion": "Logros especiales y únicos"
+    }
+  },
+  {
+    "model": "logros.tipoquest",
+    "pk": 1,
+    "fields": {
+      "nombre": "Diarias",
+      "periodo": "diaria",
+      "duracion_dias": 1,
+      "descripcion": "Misiones que se renuevan cada día"
+    }
+  },
+  {
+    "model": "logros.tipoquest",
+    "pk": 2,
+    "fields": {
+      "nombre": "Semanales",
+      "periodo": "semanal",
+      "duracion_dias": 7,
+      "descripcion": "Misiones que duran una semana"
+    }
+  },
+  {
+    "model": "logros.tipoquest",
+    "pk": 3,
+    "fields": {
+      "nombre": "Mensuales",
+      "periodo": "mensual",
+      "duracion_dias": 30,
+      "descripcion": "Misiones que duran un mes"
+    }
+  },
+  {
+    "model": "logros.tipoquest",
+    "pk": 4,
+    "fields": {
+      "nombre": "Progresivas",
+      "periodo": "progresiva",
+      "duracion_dias": 0,
+      "descripcion": "Misiones que forman parte de una serie progresiva"
+    }
+  }
+]

@@ -1,0 +1,37 @@
+<div class="p-6 bg-[#f5f5ff] rounded-xl shadow-md">
+    <h2 class="text-2xl font-bold text-purple-900 mb-6">🧠 Planificación Optimizada – 12 Semanas</h2>
+
+    {% for semana in plan_12_semanas %}
+    <details class="mb-4 bg-white rounded-md shadow-sm">
+        <summary class="cursor-pointer px-4 py-3 bg-purple-100 text-purple-800 font-semibold">
+            📅 Semana {{ semana.semana }} – Intensidad: {{ semana.intensidad }}% – Frecuencia: {{ semana.frecuencia }} días
+        </summary>
+        <div class="p-4">
+            <table class="w-full text-sm text-left text-gray-700">
+                <thead class="text-xs uppercase bg-purple-50 text-purple-800">
+                <tr>
+                    <th class="px-4 py-2">Día</th>
+                    <th class="px-4 py-2">Grupo</th>
+                    <th class="px-4 py-2">Ejercicio</th>
+                    <th class="px-4 py-2">Series × Reps</th>
+                    <th class="px-4 py-2">Peso</th>
+                    <th class="px-4 py-2">Volumen</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for item in semana.plan %}
+                <tr class="border-b">
+                    <td class="px-4 py-2">{{ item.dia }}</td>
+                    <td class="px-4 py-2">{{ item.grupo }}</td>
+                    <td class="px-4 py-2">{{ item.ejercicio }}</td>
+                    <td class="px-4 py-2">{{ item.series_reps }}</td>
+                    <td class="px-4 py-2">{{ item.peso }}</td>
+                    <td class="px-4 py-2">{{ item.volumen }}</td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </details>
+    {% endfor %}
+</div>

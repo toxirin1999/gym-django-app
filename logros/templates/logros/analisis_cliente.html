@@ -1,0 +1,263 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Análisis de Gamificación: {{ cliente.nombre }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .card-dashboard {
+        margin-bottom: 20px;
+        border-radius: 10px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        background-color: #1a1a1a;
+        border: 1px solid #333;
+    }
+    
+    .card-header {
+        background-color: rgba(50, 255, 0, 0.1);
+        border-bottom: 1px solid #333;
+        padding: 15px;
+        border-radius: 10px 10px 0 0;
+    }
+    
+    .card-body {
+        padding: 20px;
+    }
+    
+    .stat-value {
+        font-size: 2rem;
+        font-weight: bold;
+        color: #32FF00;
+    }
+    
+    .stat-label {
+        font-size: 1rem;
+        color: #999;
+    }
+    
+    .chart-container {
+        height: 300px;
+        margin-bottom: 20px;
+    }
+    
+    .recommendation-card {
+        background-color: rgba(66, 135, 245, 0.1);
+        border-left: 4px solid #4287f5;
+        padding: 15px;
+        margin-bottom: 10px;
+        border-radius: 5px;
+    }
+    
+    .recommendation-icon {
+        font-size: 1.5rem;
+        margin-right: 10px;
+    }
+    
+    .progress-exercise {
+        margin-bottom: 15px;
+        padding: 10px;
+        border-radius: 5px;
+        background-color: rgba(255, 255, 255, 0.05);
+    }
+    
+    .progress-positive {
+        border-left: 4px solid #32FF00;
+    }
+    
+    .progress-negative {
+        border-left: 4px solid #ff4d4d;
+    }
+    
+    .progress-neutral {
+        border-left: 4px solid #999;
+    }
+    
+    .period-selector {
+        margin-bottom: 20px;
+    }
+    
+    .period-btn {
+        margin-right: 5px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Análisis de Gamificación: {{ cliente.nombre }}</h1>
+        <div>
+            <a href="{% url 'logros:perfil_gamificacion' cliente.id %}" class="btn btn-primary">
+                <i class="bi bi-trophy"></i> Perfil de Gamificación
+            </a>
+            <a href="{% url 'logros:exportar_analisis_cliente_pdf' cliente.id %}?periodo={{ periodo_dias }}" class="btn btn-secondary">
+                <i class="bi bi-file-pdf"></i> Exportar PDF
+            </a>
+        </div>
+    </div>
+
+    <!-- Selector de período -->
+    <div class="card-dashboard period-selector">
+        <div class="card-body">
+            <h5>Período de análisis</h5>
+            <div class="btn-group">
+                {% for periodo in periodos_disponibles %}
+                <a href="?periodo={{ periodo }}" class="btn btn-outline-primary period-btn {% if periodo == periodo_dias %}active{% endif %}">
+                    {{ periodo }} días
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    {% if analisis.error %}
+    <div class="alert alert-warning">
+        {{ analisis.error }}
+    </div>
+    {% else %}
+    <!-- Estadísticas generales -->
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card-dashboard text-center">
+                <div class="card-body">
+                    <div class="stat-value">{{ analisis.entrenos_totales }}</div>
+                    <div class="stat-label">Entrenamientos</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card-dashboard text-center">
+                <div class="card-body">
+                    <div class="stat-value">{{ analisis.analisis_logros.logros_totales }}</div>
+                    <div class="stat-label">Logros Desbloqueados</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card-dashboard text-center">
+                <div class="card-body">
+                    <div class="stat-value">{{ analisis.analisis_logros.misiones_totales }}</div>
+                    <div class="stat-label">Misiones Completadas</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Gráficos -->
+    <div class="row mt-4">
+        <!-- Frecuencia de entrenamientos -->
+        {% if analisis.graficos.frecuencia_entrenos %}
+        <div class="col-md-6">
+            <div class="card-dashboard">
+                <div class="card-header">
+                    <h5>Frecuencia de Entrenamientos</h5>
+                </div>
+                <div class="card-body">
+                    <img src="{{ analisis.graficos.frecuencia_entrenos }}" alt="Frecuencia de Entrenamientos" class="img-fluid">
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Volumen de entrenamiento -->
+        {% if analisis.graficos.volumen_entrenos %}
+        <div class="col-md-6">
+            <div class="card-dashboard">
+                <div class="card-header">
+                    <h5>Volumen de Entrenamiento</h5>
+                </div>
+                <div class="card-body">
+                    <img src="{{ analisis.graficos.volumen_entrenos }}" alt="Volumen de Entrenamiento" class="img-fluid">
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Progreso por ejercicio -->
+        {% if analisis.graficos.progreso_ejercicios %}
+        <div class="col-md-12">
+            <div class="card-dashboard">
+                <div class="card-header">
+                    <h5>Progreso por Ejercicio</h5>
+                </div>
+                <div class="card-body">
+                    <img src="{{ analisis.graficos.progreso_ejercicios }}" alt="Progreso por Ejercicio" class="img-fluid">
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Evolución de puntos -->
+        {% if analisis.graficos.evolucion_puntos %}
+        <div class="col-md-12">
+            <div class="card-dashboard">
+                <div class="card-header">
+                    <h5>Evolución de Puntos</h5>
+                </div>
+                <div class="card-body">
+                    <img src="{{ analisis.graficos.evolucion_puntos }}" alt="Evolución de Puntos" class="img-fluid">
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Progreso detallado por ejercicio -->
+    {% if analisis.progreso_ejercicios %}
+    <div class="card-dashboard mt-4">
+        <div class="card-header">
+            <h5>Progreso Detallado por Ejercicio</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                {% for ejercicio in analisis.progreso_ejercicios %}
+                <div class="col-md-6">
+                    <div class="progress-exercise
+                            {% if ejercicio.cambio_porcentual > 5 %}progress-positive
+                            {% elif ejercicio.cambio_porcentual < -5 %}progress-negative
+                            {% else %}progress-neutral{% endif %}">
+                        <h6>{{ ejercicio.ejercicio }}</h6>
+                        <div class="d-flex justify-content-between">
+                                <span>Cambio: 
+                                    {% if ejercicio.cambio_porcentual > 0 %}
+                                    <span class="text-success">+{{ ejercicio.cambio_porcentual }}%</span>
+                                    {% elif ejercicio.cambio_porcentual < 0 %}
+                                    <span class="text-danger">{{ ejercicio.cambio_porcentual }}%</span>
+                                    {% else %}
+                                    <span class="text-muted">0%</span>
+                                    {% endif %}
+                                </span>
+                            <span>
+                                    Peso inicial: {{ ejercicio.progreso.0.peso }} kg →
+                                    Peso actual: {{ ejercicio.progreso|last.peso }} kg
+                                </span>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Recomendaciones -->
+    {% if analisis.recomendaciones %}
+    <div class="card-dashboard mt-4">
+        <div class="card-header">
+            <h5>Recomendaciones Personalizadas</h5>
+        </div>
+        <div class="card-body">
+            {% for recomendacion in analisis.recomendaciones %}
+            <div class="recommendation-card">
+                <div class="d-flex align-items-center">
+                    <span class="recommendation-icon">{{ recomendacion.icono }}</span>
+                    <div>{{ recomendacion.mensaje }}</div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+    {% endif %}
+</div>
+{% endblock %}

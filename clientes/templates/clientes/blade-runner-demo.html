@@ -1,0 +1,343 @@
+
+{% load static %}
+{% load custom_tags %}
+
+
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Demo - Efectos Blade Runner</title>
+    <link rel="stylesheet" href="{% static 'css/blade-runner-atmosphere.css' %}">
+
+    <style>
+        /* Estilos base para la demo */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #16213e 100%);
+            min-height: 100vh;
+            font-family: 'Arial', sans-serif;
+            color: #ffffff;
+            overflow-x: hidden;
+            position: relative;
+        }
+        
+        /* Contenido principal */
+        .main-content {
+            position: relative;
+            z-index: 10;
+            padding: 60px 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+            text-align: center;
+        }
+        
+        .title {
+            font-size: 3rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #00ffff 0%, #ff0080 50%, #ffff00 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: 0 0 30px rgba(0, 255, 255, 0.5);
+            margin-bottom: 20px;
+            animation: titleGlow 3s ease-in-out infinite alternate;
+        }
+        
+        @keyframes titleGlow {
+            0% {
+                text-shadow: 0 0 30px rgba(0, 255, 255, 0.5);
+            }
+            100% {
+                text-shadow: 0 0 50px rgba(0, 255, 255, 0.8), 0 0 80px rgba(255, 0, 128, 0.3);
+            }
+        }
+        
+        .subtitle {
+            font-size: 1.2rem;
+            color: #cccccc;
+            margin-bottom: 40px;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+        }
+        
+        .demo-panel {
+            background: linear-gradient(135deg, 
+                rgba(255, 255, 255, 0.1) 0%, 
+                rgba(255, 255, 255, 0.05) 100%);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            border-radius: 16px;
+            padding: 30px;
+            margin: 20px 0;
+            box-shadow: 
+                0 8px 32px rgba(0, 0, 0, 0.3),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2);
+            transition: all 0.3s ease;
+        }
+        
+        .demo-panel:hover {
+            transform: translateY(-5px);
+            border-color: rgba(0, 255, 255, 0.5);
+            box-shadow: 
+                0 15px 40px rgba(0, 0, 0, 0.4),
+                0 0 30px rgba(0, 255, 255, 0.2);
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin: 30px 0;
+        }
+        
+        .control-btn {
+            background: linear-gradient(135deg, #00ffff 0%, #0080ff 100%);
+            border: none;
+            border-radius: 8px;
+            color: #000000;
+            padding: 12px 24px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            box-shadow: 0 4px 15px rgba(0, 255, 255, 0.3);
+        }
+        
+        .control-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 255, 255, 0.4);
+            background: linear-gradient(135deg, #00ffff 0%, #ff0080 100%);
+        }
+        
+        .control-btn:active {
+            transform: translateY(0);
+        }
+        
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 40px 0;
+        }
+        
+        .info-card {
+            background: linear-gradient(135deg, 
+                rgba(255, 255, 255, 0.08) 0%, 
+                rgba(255, 255, 255, 0.03) 100%);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: left;
+        }
+        
+        .info-card h3 {
+            color: #00ffff;
+            margin-bottom: 10px;
+            font-size: 1.1rem;
+        }
+        
+        .info-card p {
+            color: #cccccc;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .title {
+                font-size: 2rem;
+            }
+            
+            .main-content {
+                padding: 40px 15px;
+            }
+            
+            .controls {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .control-btn {
+                width: 200px;
+            }
+        }
+        
+        /* Indicador de estado */
+        .status-indicator {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            border: 1px solid #00ffff;
+            border-radius: 8px;
+            padding: 10px 15px;
+            font-size: 0.8rem;
+            z-index: 100;
+        }
+        
+        .status-active {
+            color: #00ff00;
+        }
+        
+        .status-paused {
+            color: #ffff00;
+        }
+        
+        .status-low {
+            color: #ff8000;
+        }
+    </style>
+</head>
+<body>
+    <!-- Efectos atmosféricos Blade Runner -->
+    <div class="blade-runner-atmosphere">
+        <!-- Niebla de fondo -->
+        <div class="background-fog"></div>
+        
+        <!-- Resplandor ambiental -->
+        <div class="ambient-glow"></div>
+        
+        <!-- Luces volumétricas -->
+        <div class="volumetric-light volumetric-light-1"></div>
+        <div class="volumetric-light volumetric-light-2"></div>
+        <div class="volumetric-light volumetric-light-3"></div>
+    </div>
+    
+    <!-- Indicador de estado -->
+    <div class="status-indicator">
+        <span id="statusText" class="status-active">Efectos Activos</span>
+    </div>
+    
+    <!-- Contenido principal -->
+    <div class="main-content">
+        <h1 class="title">BLADE RUNNER ATMOSPHERE</h1>
+
+        <p class="subtitle">Efectos atmosféricos cinematográficos para tu aplicación web</p>
+        
+        <div class="demo-panel">
+            <h2 style="color: #00ffff; margin-bottom: 20px;">Sistema de Partículas Dinámico</h2>
+            <p style="color: #cccccc; margin-bottom: 20px;">
+                Experimenta con los controles para ajustar la intensidad de los efectos atmosféricos.
+                El sistema incluye partículas de polvo flotantes, capas de humo dinámicas y efectos de luz volumétrica.
+            </p>
+            
+            <div class="controls">
+                <button class="control-btn" onclick="setIntensity('low')">Baja Intensidad</button>
+                <button class="control-btn" onclick="setIntensity('medium')">Intensidad Media</button>
+                <button class="control-btn" onclick="setIntensity('high')">Alta Intensidad</button>
+                <button class="control-btn" onclick="toggleEffects()">Pausar/Reanudar</button>
+            </div>
+        </div>
+        
+        <div class="info-grid">
+            <div class="info-card">
+                <h3>🌫️ Humo Dinámico</h3>
+                <p>Múltiples capas de humo con movimiento orgánico y diferentes densidades que crean profundidad atmosférica.</p>
+            </div>
+            
+            <div class="info-card">
+                <h3>✨ Partículas Flotantes</h3>
+                <p>Sistema de partículas de polvo que responde al movimiento del mouse y simula corrientes de aire naturales.</p>
+            </div>
+            
+            <div class="info-card">
+                <h3>💡 Luz Volumétrica</h3>
+                <p>Efectos de luz que atraviesan el humo creando rayos volumétricos característicos del estilo Blade Runner.</p>
+            </div>
+            
+            <div class="info-card">
+                <h3>⚡ Optimizado</h3>
+                <p>Rendimiento optimizado con detección automática de dispositivos y ajustes de intensidad adaptativos.</p>
+            </div>
+        </div>
+        
+        <div class="demo-panel">
+            <h3 style="color: #ff0080; margin-bottom: 15px;">Características Técnicas</h3>
+            <ul style="color: #cccccc; text-align: left; max-width: 600px; margin: 0 auto;">
+                <li>✓ Animaciones CSS3 optimizadas para 60fps</li>
+                <li>✓ Sistema de partículas JavaScript dinámico</li>
+                <li>✓ Respuesta automática al movimiento del mouse</li>
+                <li>✓ Adaptación automática a dispositivos móviles</li>
+                <li>✓ Respeto por las preferencias de movimiento reducido</li>
+                <li>✓ Control de intensidad en tiempo real</li>
+                <li>✓ Pausa automática cuando la pestaña no está visible</li>
+            </ul>
+        </div>
+    </div>
+    
+    <script src="{% static 'js/blade-runner-particles.js' %}"></script>
+    <script>
+        let effectsActive = true;
+        let currentIntensity = 'medium';
+        
+        function setIntensity(level) {
+            if (window.bladeRunnerEffects) {
+                window.bladeRunnerEffects.setIntensity(level);
+                currentIntensity = level;
+                updateStatus();
+            }
+        }
+        
+        function toggleEffects() {
+            if (window.bladeRunnerEffects) {
+                if (effectsActive) {
+                    window.bladeRunnerEffects.pause();
+                    effectsActive = false;
+                } else {
+                    window.bladeRunnerEffects.resume();
+                    effectsActive = true;
+                }
+                updateStatus();
+            }
+        }
+        
+        function updateStatus() {
+            const statusText = document.getElementById('statusText');
+            const statusIndicator = document.querySelector('.status-indicator');
+            
+            if (!effectsActive) {
+                statusText.textContent = 'Efectos Pausados';
+                statusText.className = 'status-paused';
+            } else if (currentIntensity === 'low') {
+                statusText.textContent = 'Intensidad Baja';
+                statusText.className = 'status-low';
+            } else {
+                statusText.textContent = 'Efectos Activos';
+                statusText.className = 'status-active';
+            }
+        }
+        
+        // Inicialización
+        document.addEventListener('DOMContentLoaded', function() {
+            // Esperar a que el sistema de partículas se inicialice
+            setTimeout(() => {
+                if (window.bladeRunnerEffects) {
+                    console.log('Sistema de efectos Blade Runner inicializado correctamente');
+                    updateStatus();
+                }
+            }, 1000);
+        });
+        
+        // Efecto de interacción adicional para los paneles
+        document.querySelectorAll('.demo-panel, .info-card').forEach(panel => {
+            panel.addEventListener('mouseenter', function() {
+                this.style.transform = 'translateY(-5px) scale(1.02)';
+            });
+            
+            panel.addEventListener('mouseleave', function() {
+                this.style.transform = '';
+            });
+        });
+    </script>
+</body>
+</html>
+

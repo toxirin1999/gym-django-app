@@ -1,0 +1,245 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load widget_tweaks %}
+
+{% block title %}Nivel 5: Suplementos – {{ block.super }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+<style>
+    /* Estilos base del mockup (copiados para consistencia ) */
+    body {
+      background: url("{% static 'images/fondo_cyberpunk.png' %}") no-repeat center center fixed !important;
+      background-size: cover !important;
+      background-color: #000000 !important;
+      min-height: 100vh !important;
+      filter: brightness(0.9);
+      overflow-x: hidden;
+    }
+    .panel-card {
+        background: rgba(10, 15, 25, 0.5) !important;
+        backdrop-filter: blur(18px) saturate(150%) !important;
+        -webkit-backdrop-filter: blur(18px) saturate(150%) !important;
+        border: 1px solid rgba(77, 208, 225, 0.4) !important;
+        box-shadow: 0 0 20px rgba(0, 255, 255, 0.15), inset 0 0 10px rgba(77, 208, 225, 0.1) !important;
+        border-radius: 12px !important;
+        color: #fff;
+        padding: 1.5rem;
+    }
+    .section-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin-bottom: 1.5rem;
+      color: white;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .btn-gradient {
+        color: #fff;
+        font-weight: 600;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.6rem;
+    }
+    .btn-gradient.primary {
+        background: linear-gradient(90deg, #00A3FF, #9E00FF);
+        box-shadow: 0 0 15px rgba(0, 163, 255, 0.4);
+    }
+    .btn-gradient.primary:hover {
+        box-shadow: 0 0 25px rgba(158, 0, 255, 0.6);
+        transform: scale(1.03);
+    }
+    .btn-secondary-outline {
+        background: rgba(10, 15, 25, 0.3);
+        border: 1px solid rgba(77, 208, 225, 0.5);
+        color: #9ca3af;
+        padding: 10px 20px;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.6rem;
+    }
+    .btn-secondary-outline:hover {
+        background: rgba(77, 208, 225, 0.1);
+        color: #fff;
+        border-color: rgba(77, 208, 225, 0.8);
+    }
+    .animate-fadeSlide {
+      animation: fadeSlide 0.8s ease-out forwards;
+    }
+    @keyframes fadeSlide {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .info-box {
+        background: rgba(10, 15, 25, 0.7);
+        border: 1px solid rgba(220, 53, 69, 0.4); /* Borde rojo para advertencia */
+        border-radius: 8px;
+        padding: 1rem;
+        font-size: 0.875rem;
+        color: #e5e7eb;
+    }
+    .form-check-input {
+        width: 1.25rem;
+        height: 1.25rem;
+        flex-shrink: 0;
+    }
+    .form-check-input:checked {
+        background-color: #00ffff;
+        border-color: #00ffff;
+    }
+    .form-check-label {
+        color: #e5e7eb;
+        cursor: pointer;
+        font-weight: 500;
+    }
+    .suplemento-card {
+        transition: all 0.2s ease-in-out;
+        border: 1px solid rgba(77, 208, 225, 0.2);
+    }
+    .suplemento-card:has(input:checked) {
+        border-color: #00ffff;
+        background: rgba(0, 255, 255, 0.05);
+    }
+    .evidencia-badge {
+        font-size: 0.75rem;
+        padding: 0.2rem 0.6rem;
+        border-radius: 999px;
+        font-weight: 600;
+    }
+    .evidencia-alta { background-color: rgba(22, 163, 74, 0.8); color: #fff; }
+    .evidencia-media { background-color: rgba(234, 179, 8, 0.8); color: #000; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+
+    <!-- Encabezado -->
+    <header class="mb-8 animate-fadeSlide">
+        <div class="flex flex-wrap items-center justify-between gap-4">
+            <div>
+                <h1 class="text-4xl font-bold text-white flex items-center gap-4">
+                    <span class="grid place-items-center w-12 h-12 rounded-lg bg-white text-black text-2xl font-bold">5</span>
+                    Suplementos
+                </h1>
+                <p class="text-lg text-cyan-300 mt-2">La cima de la pirámide. El 5% final que puede optimizar tus resultados.</p>
+            </div>
+            <a href="{% url 'nutricion_app_django:vista_lista_niveles' %}" class="btn-secondary-outline">
+                <i class="fas fa-arrow-left"></i> Volver a los Niveles
+            </a>
+        </div>
+    </header>
+
+    <!-- Advertencia Importante -->
+    <div class="info-box mb-8 animate-fadeSlide" style="animation-delay: 0.1s;">
+        <div class="flex items-center gap-3">
+            <i class="fas fa-exclamation-triangle text-red-500 text-2xl"></i>
+            <div>
+                <h4 class="font-semibold text-white">¡Atención!</h4>
+                <p class="mb-0 text-gray-300">
+                    Los suplementos <strong>NO</strong> compensan una mala dieta o un mal entrenamiento. Asegúrate de tener los niveles 1-4 bien establecidos antes de considerar estos productos.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <form method="post">
+        {% csrf_token %}
+        <div class="space-y-8">
+            <!-- Sección de Suplementos con Evidencia Alta -->
+            <div class="panel-card animate-fadeSlide" style="animation-delay: 0.2s;">
+                <h3 class="section-title"><i class="fas fa-award text-cyan-400"></i>Suplementos con Evidencia Alta</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Creatina -->
+                    <div class="suplemento-card p-4">
+                        <div class="flex justify-between items-start">
+                            <div class="form-check flex items-center gap-3">
+                                {{ form.creatina|add_class:"form-check-input" }}
+                                <label for="{{ form.creatina.id_for_label }}" class="form-check-label">Creatina</label>
+                            </div>
+                            <span class="evidencia-badge evidencia-alta">Alta</span>
+                        </div>
+                        <p class="text-sm text-gray-400 mt-2 pl-8">Mejora la fuerza y el rendimiento. El suplemento más estudiado y efectivo. Dosis: 3-5g diarios.</p>
+                    </div>
+                    <!-- Proteína en Polvo -->
+                    <div class="suplemento-card p-4">
+                        <div class="flex justify-between items-start">
+                            <div class="form-check flex items-center gap-3">
+                                {{ form.proteina_polvo|add_class:"form-check-input" }}
+                                <label for="{{ form.proteina_polvo.id_for_label }}" class="form-check-label">Proteína en Polvo</label>
+                            </div>
+                            <span class="evidencia-badge evidencia-alta">Alta</span>
+                        </div>
+                        <p class="text-sm text-gray-400 mt-2 pl-8">Forma conveniente de alcanzar tus requerimientos de proteína. No es mágica, es comida en polvo.</p>
+                    </div>
+                    <!-- Vitamina D -->
+                    <div class="suplemento-card p-4">
+                        <div class="flex justify-between items-start">
+                            <div class="form-check flex items-center gap-3">
+                                {{ form.vitamina_d|add_class:"form-check-input" }}
+                                <label for="{{ form.vitamina_d.id_for_label }}" class="form-check-label">Vitamina D</label>
+                            </div>
+                            <span class="evidencia-badge evidencia-alta">Alta</span>
+                        </div>
+                        <p class="text-sm text-gray-400 mt-2 pl-8">Esencial para salud ósea e inmune. Recomendada si tienes poca exposición solar.</p>
+                    </div>
+                    <!-- Omega-3 -->
+                    <div class="suplemento-card p-4">
+                        <div class="flex justify-between items-start">
+                            <div class="form-check flex items-center gap-3">
+                                {{ form.omega3|add_class:"form-check-input" }}
+                                <label for="{{ form.omega3.id_for_label }}" class="form-check-label">Omega-3</label>
+                            </div>
+                            <span class="evidencia-badge evidencia-alta">Alta</span>
+                        </div>
+                        <p class="text-sm text-gray-400 mt-2 pl-8">Salud cardiovascular y cerebral. Útil si no consumes pescado graso 2-3 veces por semana.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sección de Suplementos Contextuales -->
+            <div class="panel-card animate-fadeSlide" style="animation-delay: 0.3s;">
+                <h3 class="section-title"><i class="fas fa-question-circle text-cyan-400"></i>Suplementos Contextuales</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Multivitamínico -->
+                    <div class="suplemento-card p-4">
+                        <div class="flex justify-between items-start">
+                            <div class="form-check flex items-center gap-3">
+                                {{ form.multivitaminico|add_class:"form-check-input" }}
+                                <label for="{{ form.multivitaminico.id_for_label }}" class="form-check-label">Multivitamínico</label>
+                            </div>
+                            <span class="evidencia-badge evidencia-media">Media</span>
+                        </div>
+                        <p class="text-sm text-gray-400 mt-2 pl-8">Puede actuar como un "seguro nutricional", especialmente en déficits calóricos estrictos.</p>
+                    </div>
+                    <!-- Otros Suplementos -->
+                    <div class="p-4">
+                        <label for="{{ form.otros_suplementos.id_for_label }}" class="form-label text-white font-semibold">Otros Suplementos</label>
+                        {% render_field form.otros_suplementos class="w-full bg-gray-900 border-gray-700 text-white rounded-lg p-2 mt-2" placeholder="Ej: Cafeína, Beta-Alanina..." %}
+                        <p class="text-xs text-gray-400 mt-2">Anota aquí otros suplementos que uses y que tengan buena evidencia para tus objetivos.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Botón de Finalizar -->
+            <div class="text-center mt-8 animate-fadeSlide" style="animation-delay: 0.4s;">
+                <button type="submit" class="btn-gradient primary text-lg">
+                    <i class="fas fa-trophy"></i>¡Finalizar Pirámide y Guardar!
+                </button>
+                <p class="text-sm text-gray-500 mt-3">¡Felicidades! Estás a punto de completar toda la pirámide nutricional.</p>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}

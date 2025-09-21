@@ -1,0 +1,325 @@
+<!-- Archivo: templates/entrenos/lista_entrenamientos.html -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lista de Entrenamientos - Gym Project</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .badge-liftin {
+            background-color: #007bff;
+        }
+        .badge-manual {
+            background-color: #28a745;
+        }
+        .filter-card {
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+        .entreno-card {
+            transition: transform 0.2s;
+        }
+        .entreno-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body class="bg-light">
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container">
+        <a class="navbar-brand" href="{% url 'entrenos:dashboard_liftin' %}">
+            <i class="fas fa-dumbbell"></i> Gym Project
+        </a>
+        <div class="navbar-nav ms-auto">
+            <a class="nav-link" href="{% url 'entrenos:dashboard_liftin' %}">
+                <i class="fas fa-home"></i> Dashboard
+            </a>
+            <a class="nav-link active" href="{% url 'entrenos:lista_entrenamientos' %}">
+                <i class="fas fa-list"></i> Entrenamientos
+            </a>
+            <a class="nav-link" href="/liftin/importar-completo/">
+                <i class="fas fa-plus"></i> Importar Liftin
+            </a>
+            <a class="nav-link" href="{% url 'entrenos:estadisticas_liftin' %}">
+                <i class="fas fa-chart-bar"></i> Estadísticas
+            </a>
+        </div>
+    </div>
+</nav>
+
+<div class="container mt-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col">
+            <h1 class="h2">
+                <i class="fas fa-list text-primary"></i>
+                Lista de Entrenamientos
+            </h1>
+            <p class="text-muted">Gestiona y busca todos tus entrenamientos</p>
+        </div>
+        <div class="col-auto">
+            <a href="/liftin/importar-completo/" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Nuevo Entrenamiento
+            </a>
+        </div>
+    </div>
+
+    <!-- Filtros -->
+    {% if form %}
+    <div class="card filter-card mb-4">
+        <div class="card-body">
+            <h5 class="card-title">
+                <i class="fas fa-filter"></i> Filtros de Búsqueda
+            </h5>
+            <form method="get" class="row g-3">
+                <div class="col-md-3">
+                    {{ form.cliente.label_tag }}
+                    {{ form.cliente }}
+                </div>
+                <div class="col-md-3">
+                    {{ form.fuente_datos.label_tag }}
+                    {{ form.fuente_datos }}
+                </div>
+                <div class="col-md-2">
+                    {{ form.fecha_desde.label_tag }}
+                    {{ form.fecha_desde }}
+                </div>
+                <div class="col-md-2">
+                    {{ form.fecha_hasta.label_tag }}
+                    {{ form.fecha_hasta }}
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary me-2">
+                        <i class="fas fa-search"></i> Buscar
+                    </button>
+                    <a href="{% url 'entrenos:lista_entrenamientos' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-times"></i>
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Estadísticas de búsqueda -->
+    {% if stats %}
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h4 class="text-primary">{{ stats.total }}</h4>
+                    <small class="text-muted">Total Encontrados</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h4 class="text-info">{{ stats.liftin }}</h4>
+                    <small class="text-muted">De Liftin</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h4 class="text-success">{{ stats.manual }}</h4>
+                    <small class="text-muted">Manuales</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h4 class="text-warning">{{ stats.volumen_total|floatformat:0 }}</h4>
+                    <small class="text-muted">Volumen Total (kg)</small>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Lista de entrenamientos -->
+    <div class="row">
+        {% for entreno in page_obj %}
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card entreno-card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <strong>{{ entreno.cliente.nombre }}</strong>
+                    {% if entreno.fuente_datos == 'liftin' %}
+                    <span class="badge badge-liftin">📱 Liftin</span>
+                    {% else %}
+                    <span class="badge badge-manual">✏️ Manual</span>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    <h6 class="card-title">
+                        {% if entreno.nombre_rutina_liftin %}
+                        {{ entreno.nombre_rutina_liftin }}
+                        {% else %}
+                        {{ entreno.rutina.nombre }}
+                        {% endif %}
+                    </h6>
+
+                    <div class="row text-center mb-3">
+                        <div class="col-4">
+                            <small class="text-muted d-block">Fecha</small>
+                            <strong>{{ entreno.fecha|date:"d/m" }}</strong>
+                        </div>
+                        {% if entreno.duracion_minutos %}
+                        <div class="col-4">
+                            <small class="text-muted d-block">Duración</small>
+                            <strong>{{ entreno.duracion_formateada }}</strong>
+                        </div>
+                        {% endif %}
+                        {% if entreno.numero_ejercicios %}
+                        <div class="col-4">
+                            <small class="text-muted d-block">Ejercicios</small>
+                            <strong>{{ entreno.numero_ejercicios }}</strong>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    {% if entreno.fuente_datos == 'liftin' %}
+                    <div class="row text-center mb-3">
+                        {% if entreno.volumen_total_kg %}
+                        <div class="col-6">
+                            <small class="text-muted d-block">Volumen</small>
+                            <strong>{{ entreno.volumen_formateado }}</strong>
+                        </div>
+                        {% endif %}
+                        {% if entreno.calorias_quemadas %}
+                        <div class="col-6">
+                            <small class="text-muted d-block">Calorías</small>
+                            <strong>{{ entreno.calorias_quemadas }}</strong>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    {% if entreno.horario_entrenamiento != "No especificado" %}
+                    <div class="text-center mb-2">
+                        <small class="text-muted">
+                            <i class="fas fa-clock"></i> {{ entreno.horario_entrenamiento }}
+                        </small>
+                    </div>
+                    {% endif %}
+                    {% endif %}
+                </div>
+                <div class="card-footer bg-transparent">
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'entrenos:detalle_entrenamiento' entreno.id %}"
+                           class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-eye"></i> Ver
+                        </a>
+                        {% if entreno.fuente_datos == 'liftin' and entreno.ejercicios_liftin.exists %}
+                        <a href="{% url 'entrenos:detalle_ejercicios_liftin' entreno.id %}"
+                           class="btn btn-sm btn-outline-info">
+                            <i class="fas fa-dumbbell"></i> Ejercicios
+                        </a>
+                        {% endif %}
+                        <small class="text-muted align-self-center">
+                            {{ entreno.fecha|date:"d/m/Y" }}
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body text-center py-5">
+                    <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                    <h4 class="text-muted">No se encontraron entrenamientos</h4>
+                    <p class="text-muted">
+                        {% if request.GET %}
+                        Intenta ajustar los filtros de búsqueda.
+                        {% else %}
+                        Comienza importando tu primer entrenamiento desde Liftin.
+                        {% endif %}
+                    </p>
+                    <a href="/liftin/importar-completo/" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Importar Entrenamiento
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Paginación -->
+    {% if page_obj.has_other_pages %}
+    <nav aria-label="Paginación de entrenamientos">
+        <ul class="pagination justify-content-center">
+            {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page=1{% if request.GET.cliente %}&cliente={{ request.GET.cliente }}{% endif %}{% if request.GET.fuente_datos %}&fuente_datos={{ request.GET.fuente_datos }}{% endif %}{% if request.GET.fecha_desde %}&fecha_desde={{ request.GET.fecha_desde }}{% endif %}{% if request.GET.fecha_hasta %}&fecha_hasta={{ request.GET.fecha_hasta }}{% endif %}">
+                    <i class="fas fa-angle-double-left"></i>
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.cliente %}&cliente={{ request.GET.cliente }}{% endif %}{% if request.GET.fuente_datos %}&fuente_datos={{ request.GET.fuente_datos }}{% endif %}{% if request.GET.fecha_desde %}&fecha_desde={{ request.GET.fecha_desde }}{% endif %}{% if request.GET.fecha_hasta %}&fecha_hasta={{ request.GET.fecha_hasta }}{% endif %}">
+                    <i class="fas fa-angle-left"></i>
+                </a>
+            </li>
+            {% endif %}
+
+            {% for num in page_obj.paginator.page_range %}
+            {% if page_obj.number == num %}
+            <li class="page-item active">
+                <span class="page-link">{{ num }}</span>
+            </li>
+            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ num }}{% if request.GET.cliente %}&cliente={{ request.GET.cliente }}{% endif %}{% if request.GET.fuente_datos %}&fuente_datos={{ request.GET.fuente_datos }}{% endif %}{% if request.GET.fecha_desde %}&fecha_desde={{ request.GET.fecha_desde }}{% endif %}{% if request.GET.fecha_hasta %}&fecha_hasta={{ request.GET.fecha_hasta }}{% endif %}">{{
+                    num }}</a>
+            </li>
+            {% endif %}
+            {% endfor %}
+
+            {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.cliente %}&cliente={{ request.GET.cliente }}{% endif %}{% if request.GET.fuente_datos %}&fuente_datos={{ request.GET.fuente_datos }}{% endif %}{% if request.GET.fecha_desde %}&fecha_desde={{ request.GET.fecha_desde }}{% endif %}{% if request.GET.fecha_hasta %}&fecha_hasta={{ request.GET.fecha_hasta }}{% endif %}">
+                    <i class="fas fa-angle-right"></i>
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.cliente %}&cliente={{ request.GET.cliente }}{% endif %}{% if request.GET.fuente_datos %}&fuente_datos={{ request.GET.fuente_datos }}{% endif %}{% if request.GET.fecha_desde %}&fecha_desde={{ request.GET.fecha_desde }}{% endif %}{% if request.GET.fecha_hasta %}&fecha_hasta={{ request.GET.fecha_hasta }}{% endif %}">
+                    <i class="fas fa-angle-double-right"></i>
+                </a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // Mejorar UX de los formularios
+    document.addEventListener('DOMContentLoaded', function() {
+        // Auto-submit en cambio de filtros
+        const filterForm = document.querySelector('form');
+        if (filterForm) {
+            const selects = filterForm.querySelectorAll('select');
+            selects.forEach(select => {
+                select.addEventListener('change', function() {
+                    // Opcional: auto-submit al cambiar filtros
+                    // filterForm.submit();
+                });
+            });
+        }
+
+        // Animaciones suaves para las cards
+        const cards = document.querySelectorAll('.entreno-card');
+        cards.forEach((card, index) => {
+            card.style.animationDelay = `${index * 0.1}s`;
+            card.classList.add('animate__animated', 'animate__fadeInUp');
+        });
+    });
+</script>
+</body>
+</html>
+

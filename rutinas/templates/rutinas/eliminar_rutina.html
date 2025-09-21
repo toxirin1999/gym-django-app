@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Eliminar Rutina{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="fw-bold mb-4">Eliminar Rutina</h2>
+    <p>¿Estás seguro de que quieres eliminar la rutina <strong>{{ rutina.nombre }}</strong>?</p>
+    <form method="post">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger">Sí, eliminar</button>
+        <a href="{% url 'detalle_programa' rutina.programa.id %}" class="btn btn-secondary">Cancelar</a>
+    </form>
+</div>
+{% endblock %}

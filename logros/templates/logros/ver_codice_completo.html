@@ -1,0 +1,998 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Códice de las Leyendas - {{ cliente.nombre }}</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+
+    <style>
+   .arquetipo-card.clickeable {
+        cursor: pointer;
+    }
+    .arquetipo-card.clickeable:hover {
+        /* Usamos los estilos de la clase 'actual' para el hover */
+        border-color: var(--color-orange);
+        box-shadow: 0 0 25px rgba(255, 140, 0, 0.5);
+        transform: translateY(-5px) scale(1.02);
+    }
+    .arquetipo-card.bloqueado {
+        cursor: not-allowed;
+    }
+
+    /* Indicador visual de "clickeable" */
+    .arquetipo-card.clickeable::after {
+        content: 'Explorar 👁️';
+        position: absolute;
+        bottom: 1.5rem; /* Alineado con el footer */
+        right: 1.5rem;
+        font-family: var(--font-pixel);
+        font-size: 0.6rem;
+        color: var(--color-gold);
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        pointer-events: none; /* Para que no interfiera con el click */
+    }
+    .arquetipo-card.clickeable:hover::after {
+        opacity: 1;
+    }
+
+    /* Efecto de enfoque por teclado */
+    .arquetipo-card.keyboard-focus {
+        outline: 3px solid var(--color-gold);
+        outline-offset: 3px;
+    }
+/* ================================================================== */
+/* NUEVO DISEÑO DE TARJETA DE ARQUETIPO (ESTILO JUEGO DE CARTAS)    */
+/* ================================================================== */
+
+/* Contenedor principal de la tarjeta */
+.arquetipo-card-v2 {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end; /* Alinea el contenido principal abajo */
+    height: 450px; /* Altura fija para un look de carta consistente */
+    border-radius: 15px; /* Bordes más redondeados como en la imagen */
+    overflow: hidden;
+    background-color: #2c3e50; /* Color de fondo por si la imagen no carga */
+    border: 3px solid transparent; /* Borde inicial transparente */
+    transition: all 0.3s ease;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+}
+
+/* La imagen del personaje, que es el fondo de la tarjeta */
+.arquetipo-card-v2 .card-background-image {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.4s ease;
+}
+
+/* Gradiente inferior para asegurar la legibilidad del texto */
+.arquetipo-card-v2::before {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 60%;
+    background: linear-gradient(to top, rgba(10, 13, 20, 0.95) 30%, transparent 100%);
+    z-index: 1;
+}
+
+/* Contenedor para todo el texto y datos superpuestos */
+.arquetipo-card-v2 .card-content {
+    position: relative;
+    z-index: 2;
+    padding: 1.5rem;
+    color: #fff;
+}
+
+/* Título y Nivel en la parte superior */
+.arquetipo-card-v2 .card-top-info {
+    position: absolute;
+    top: 1.5rem;
+    left: 1.5rem;
+    z-index: 2;
+}
+
+.arquetipo-card-v2 .card-title {
+    font-family: var(--font-pixel);
+    font-size: 1.2rem;
+    color: #fff;
+    text-shadow: 0 2px 5px rgba(0,0,0,0.7);
+    margin: 0;
+}
+
+.arquetipo-card-v2 .card-level {
+    font-size: 0.9rem;
+    color: var(--color-gold);
+    margin: 0;
+}
+
+/* Filosofía y Puntos en la parte inferior */
+.arquetipo-card-v2 .card-philosophy {
+    font-style: italic;
+    font-size: 0.9rem;
+    color: #bdc3c7;
+    margin-bottom: 1rem;
+}
+
+.arquetipo-card-v2 .card-points {
+    font-family: var(--font-pixel);
+    font-size: 1rem;
+    color: var(--color-gold);
+}
+
+/* --- ESTADOS DE LA TARJETA --- */
+
+/* Estado Interactivo (Desbloqueado) */
+.arquetipo-card-v2.clickeable {
+    cursor: pointer;
+}
+
+.arquetipo-card-v2.clickeable:hover {
+    transform: translateY(-10px) scale(1.03);
+    box-shadow: 0 15px 30px rgba(0,0,0,0.4);
+    border-color: var(--color-gold);
+}
+
+.arquetipo-card-v2.clickeable:hover .card-background-image {
+    transform: scale(1.05); /* Sutil zoom a la imagen */
+}
+
+/* Estado Actual */
+.arquetipo-card-v2.actual {
+    border-color: var(--color-orange);
+    box-shadow: 0 0 30px var(--color-glow);
+}
+
+/* Estado Bloqueado */
+.arquetipo-card-v2.bloqueado {
+    cursor: not-allowed;
+}
+
+.arquetipo-card-v2.bloqueado .card-background-image {
+    filter: grayscale(100%) brightness(0.5); /* Efecto visual de bloqueo */
+}
+
+.arquetipo-card-v2.bloqueado .card-content,
+.arquetipo-card-v2.bloqueado .card-top-info {
+    opacity: 0.6;
+}
+
+/* Icono de candado para tarjetas bloqueadas */
+.arquetipo-card-v2.bloqueado::after {
+    content: '\f023'; /* Icono de candado de Font Awesome */
+    font-family: 'Font Awesome 6 Free';
+    font-weight: 900;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 4rem;
+    color: rgba(255, 255, 255, 0.3);
+    z-index: 3;
+}
+
+/* Eliminamos los estilos de la tarjeta anterior para no tener conflictos */
+.item-card.arquetipo-card {
+    display: none;
+}
+
+/* --- ESTILO PARA EL NUEVO BOTÓN DE VOLVER --- */
+.back-button {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--font-pixel);
+    font-size: 0.8rem;
+    color: var(--color-text);
+    text-decoration: none;
+    padding: 8px 12px;
+    background: var(--color-surface);
+    border: 2px solid var(--color-border);
+    transition: all 0.2s ease;
+}
+
+.back-button:hover {
+    background: var(--color-primary);
+    color: var(--color-background);
+    border-color: var(--color-primary);
+    transform: scale(1.05);
+}
+
+/* --- AJUSTE RESPONSIVE PARA EL BOTÓN --- */
+@media (max-width: 768px) {
+    .leaderboard-header {
+        position: relative; /* Necesario para que el position:absolute del botón funcione bien */
+        padding-top: 60px; /* Añadimos espacio arriba para que el título no choque con el botón */
+    }
+    .back-button {
+        top: 15px;
+        left: 50%;
+        transform: translateX(-50%); /* Centramos el botón en móvil */
+    }
+}
+
+/* --- AJUSTE RESPONSIVE PARA EL TÍTULO (para que no se monte sobre el botón) --- */
+@media (max-width: 1024px) {
+    .leaderboard-header {
+        padding-top: 20px;
+    }
+}
+
+ /* --- Estilos específicos para las tarjetas de Pruebas --- */
+    .prueba-card.activa {
+        border-color: var(--color-orange);
+        box-shadow: 0 0 20px rgba(255, 140, 0, 0.4);
+    }
+    .prueba-card.secreta {
+        border-color: var(--color-purple);
+        background: rgba(155, 89, 182, 0.1);
+    }
+    .item-card.empty-state {
+        grid-column: 1 / -1; /* Ocupa todo el ancho si no hay pruebas */
+        text-align: center;
+        font-style: italic;
+        color: #7f8c8d;
+        min-height: 150px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* --- Barra de Progreso para Pruebas --- */
+    .prueba-progress-container {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-top: 1.5rem;
+    }
+    .prueba-progress-bar-outer {
+        flex-grow: 1;
+        background: #2c3e50;
+        border-radius: 5px;
+        height: 12px;
+        padding: 2px;
+    }
+    .prueba-progress-bar-inner {
+        background: linear-gradient(90deg, var(--color-orange), var(--color-gold));
+        height: 100%;
+        border-radius: 3px;
+        transition: width 0.5s ease-out;
+    }
+    .prueba-progress-text {
+        font-family: var(--font-pixel);
+        font-size: 0.7rem;
+        color: #bdc3c7;
+    }
+
+         .filtros-container {
+        display: flex;
+        justify-content: center;
+        gap: 1rem;
+        margin-bottom: 2rem;
+        flex-wrap: wrap;
+    }
+    .filtro-btn {
+        font-family: var(--font-pixel);
+        font-size: 0.7rem;
+        background: transparent;
+        border: 2px solid var(--color-border);
+        color: var(--color-gold);
+        padding: 0.6rem 1.2rem;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    .filtro-btn:hover, .filtro-btn.active {
+        background: var(--color-gold);
+        color: var(--color-dark-bg);
+        box-shadow: 0 0 15px var(--color-glow);
+    }
+
+    /* --- Tarjeta de Arquetipo Rediseñada --- */
+    .arquetipo-card {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        min-height: 320px; /* Altura mínima para consistencia */
+    }
+    .arquetipo-card-header {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+    .arquetipo-card-avatar {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        border: 3px solid var(--color-gold);
+        overflow: hidden;
+        flex-shrink: 0;
+    }
+    .arquetipo-card-avatar img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    .arquetipo-card-title h3 {
+        font-family: var(--font-pixel);
+        font-size: 1rem;
+        color: var(--color-gold);
+        margin: 0;
+    }
+    .arquetipo-card-title p {
+        font-size: 0.8rem;
+        color: var(--color-orange);
+        margin: 0;
+    }
+    .arquetipo-card-body {
+        flex-grow: 1;
+    }
+    .arquetipo-filosofia {
+        font-style: italic;
+        color: #bdc3c7;
+        font-size: 0.9rem;
+        border-left: 3px solid var(--color-border);
+        padding-left: 1rem;
+        margin: 0;
+    }
+    .arquetipo-card-footer {
+        margin-top: 1.5rem;
+        text-align: center;
+        font-family: var(--font-pixel);
+        font-size: 0.8rem;
+        color: var(--color-gold);
+        background: rgba(0,0,0,0.3);
+        padding: 0.5rem;
+        border-radius: 5px;
+    }
+        .arquetipo-avatar img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover; /* Asegura que la imagen cubra el círculo sin deformarse */
+        border-radius: 50%; /* Mantiene la forma circular de la imagen */
+    }
+
+        .sub-section-container {
+            margin-top: 2.5rem;
+        }
+        .sub-section-title {
+            font-family: var(--font-pixel);
+            font-size: 1.2rem;
+            color: var(--color-gold);
+            text-align: center;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+        }
+
+        /* --- Estilos para la lista de pruebas --- */
+        .pruebas-list-container {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        .prueba-card {
+            background: var(--color-card-bg);
+            border: 1px solid var(--color-border);
+            border-radius: 8px;
+            padding: 1.5rem;
+            position: relative;
+        }
+        .prueba-card.empty {
+            text-align: center;
+            color: #7f8c8d;
+            font-style: italic;
+        }
+        .prueba-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+        }
+        .prueba-title {
+            font-family: var(--font-pixel);
+            font-size: 1rem;
+            color: #ecf0f1;
+        }
+        .prueba-recompensa {
+            font-family: var(--font-pixel);
+            font-size: 0.7rem;
+            background: var(--color-gold);
+            color: var(--color-dark-bg);
+            padding: 0.3rem 0.6rem;
+            border-radius: 4px;
+        }
+        .prueba-descripcion {
+            color: #bdc3c7;
+            margin-bottom: 1.5rem;
+            font-size: 0.9rem;
+        }
+        .prueba-progress-bar-container {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        .prueba-progress-bar-outer {
+            flex-grow: 1;
+            background: #2c3e50;
+            border-radius: 5px;
+            height: 12px;
+            padding: 2px;
+        }
+        .prueba-progress-bar-inner {
+            background: linear-gradient(90deg, var(--color-orange), var(--color-gold));
+            height: 100%;
+            border-radius: 3px;
+            transition: width 0.5s ease-out;
+        }
+        .prueba-progress-text {
+            font-family: var(--font-pixel);
+            font-size: 0.7rem;
+            color: #bdc3c7;
+        }
+            /* ================================================================== */
+            /* ESTILOS ÉPICOS PARA EL CÓDICE - INTERFAZ RPG                     */
+            /* ================================================================== */
+            :root {
+                --font-pixel: 'Press Start 2P', cursive;
+                --font-main: 'Roboto', sans-serif;
+                --color-gold: #ffd700;
+                --color-orange: #ff8c00;
+                --color-dark-bg: #0a0d14;
+                --color-card-bg: rgba(20, 25, 40, 0.8 );
+                --color-border: rgba(255, 215, 0, 0.3);
+                --color-glow: rgba(255, 215, 0, 0.5);
+                --color-green: #2ecc71;
+                --color-purple: #9b59b6;
+            }
+
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+
+            body {
+                background-color: var(--color-dark-bg);
+                background-image: url('https://www.transparenttextures.com/patterns/dark-matter.png' );
+                color: #ecf0f1;
+                font-family: var(--font-main);
+                min-height: 100vh;
+            }
+
+            /* --- HEADER --- */
+            .codice-header {
+                text-align: center;
+                padding: 2rem;
+                background: linear-gradient(180deg, rgba(0,0,0,0.5) 0%, transparent 100%);
+                border-bottom: 4px solid var(--color-gold);
+                text-shadow: 0 0 15px var(--color-glow);
+            }
+            .codice-title {
+                font-family: var(--font-pixel);
+                font-size: 2.5rem;
+                color: var(--color-gold);
+                margin-bottom: 0.5rem;
+            }
+            .codice-subtitle {
+                font-family: var(--font-main);
+                font-size: 1.2rem;
+                color: #bdc3c7;
+            }
+
+            /* --- NAVEGACIÓN DE PESTAÑAS --- */
+            .codice-nav {
+                display: flex;
+                justify-content: center;
+                background: rgba(0,0,0,0.3);
+                padding: 1rem;
+                gap: 1rem;
+                position: sticky;
+                top: 0;
+                z-index: 100;
+                backdrop-filter: blur(5px);
+            }
+            .nav-btn {
+                font-family: var(--font-pixel);
+                font-size: 0.8rem;
+                background: transparent;
+                border: 2px solid var(--color-border);
+                color: var(--color-gold);
+                padding: 0.8rem 1.5rem;
+                border-radius: 5px;
+                cursor: pointer;
+                transition: all 0.3s ease;
+            }
+            .nav-btn:hover, .nav-btn.active {
+                background: var(--color-gold);
+                color: var(--color-dark-bg);
+                box-shadow: 0 0 20px var(--color-glow);
+                transform: translateY(-3px);
+            }
+
+            /* --- CONTENEDOR PRINCIPAL --- */
+            .codice-container {
+                max-width: 1200px;
+                margin: 2rem auto;
+                padding: 0 1rem;
+            }
+            .content-section { display: none; animation: fadeIn 0.5s ease-out; }
+            .content-section.active { display: block; }
+            @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+            /* --- TARJETA DE PERFIL --- */
+            .perfil-card {
+                display: grid;
+                grid-template-columns: 150px 1fr;
+                gap: 2rem;
+                background: var(--color-card-bg);
+                border: 1px solid var(--color-border);
+                border-radius: 10px;
+                padding: 2rem;
+                align-items: center;
+            }
+            .arquetipo-avatar {
+                width: 150px;
+                height: 150px;
+                border-radius: 50%;
+                border: 4px solid var(--color-gold);
+                box-shadow: 0 0 25px var(--color-glow);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 4rem;
+                background: linear-gradient(45deg, #34495e, #2c3e50);
+            }
+            .perfil-info h2 {
+                font-family: var(--font-pixel);
+                font-size: 1.5rem;
+                color: var(--color-gold);
+            }
+            .perfil-info .filosofia {
+                font-style: italic;
+                color: #bdc3c7;
+                margin: 0.5rem 0 1.5rem 0;
+            }
+            .stats-grid {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 1rem;
+            }
+            .stat-item { text-align: center; }
+            .stat-value { font-family: var(--font-pixel); font-size: 1.2rem; color: var(--color-gold); }
+            .stat-label { font-size: 0.8rem; color: #7f8c8d; text-transform: uppercase; }
+
+            /* --- BARRA DE PROGRESO --- */
+            .progress-bar-container { margin-top: 1rem; }
+            .progress-bar-outer { background: #2c3e50; border-radius: 5px; height: 20px; padding: 3px; }
+            .progress-bar-inner {
+                background: linear-gradient(90deg, var(--color-orange), var(--color-gold));
+                height: 100%;
+                border-radius: 3px;
+                transition: width 0.5s ease-out;
+            }
+            .progress-text { display: flex; justify-content: space-between; font-size: 0.8rem; margin-top: 0.5rem; }
+
+            /* --- TARJETAS DE ARQUETIPO Y PRUEBAS (ESTILO UNIFICADO) --- */
+            .section-title {
+                font-family: var(--font-pixel);
+                font-size: 1.8rem;
+                text-align: center;
+                margin-bottom: 2rem;
+                color: var(--color-gold);
+            }
+            .grid-container {
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+                gap: 1.5rem;
+            }
+            .item-card {
+                background: var(--color-card-bg);
+                border: 1px solid var(--color-border);
+                border-radius: 8px;
+                padding: 1.5rem;
+                transition: all 0.3s ease;
+                position: relative;
+            }
+            .item-card:hover {
+                transform: translateY(-5px);
+                box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+                border-color: var(--color-gold);
+            }
+            .item-card.bloqueado {
+                filter: grayscale(80%) brightness(0.6);
+                pointer-events: none;
+            }
+            .item-card.completada {
+                border-color: var(--color-green);
+                background: rgba(46, 204, 113, 0.1);
+            }
+            .item-card.actual {
+                border-color: var(--color-orange);
+                box-shadow: 0 0 25px rgba(255, 140, 0, 0.5);
+            }
+
+            .item-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: flex-start;
+                margin-bottom: 1rem;
+            }
+            .item-title {
+                font-family: var(--font-pixel);
+                font-size: 1rem;
+                color: var(--color-gold);
+            }
+            .item-subtitle { font-size: 0.8rem; color: #7f8c8d; }
+            .item-recompensa {
+                font-family: var(--font-pixel);
+                font-size: 0.8rem;
+                background: var(--color-gold);
+                color: var(--color-dark-bg);
+                padding: 0.3rem 0.6rem;
+                border-radius: 4px;
+            }
+            .item-descripcion { color: #bdc3c7; margin-bottom: 1rem; }
+
+            .item-status-badge {
+                position: absolute;
+                top: 1rem;
+                right: 1rem;
+                font-family: var(--font-pixel);
+                font-size: 0.7rem;
+                padding: 0.3rem 0.6rem;
+                border-radius: 4px;
+                color: #fff;
+            }
+            .badge-completado { background: var(--color-green); }
+            .badge-actual { background: var(--color-orange); }
+            .badge-secreta { background: var(--color-purple); }
+            .badge-bloqueado { background: #7f8c8d; }
+
+            /* --- RESPONSIVE --- */
+            @media (max-width: 768px) {
+                .codice-title { font-size: 1.8rem; }
+                .codice-nav { gap: 0.5rem; overflow-x: auto; }
+                .nav-btn { padding: 0.6rem 1rem; font-size: 0.7rem; }
+                .perfil-card { grid-template-columns: 1fr; text-align: center; }
+                .arquetipo-avatar { margin: 0 auto 1rem auto; }
+                .stats-grid { grid-template-columns: 1fr 1fr; }
+            }
+    </style>
+</head>
+<body>
+ <a href="{% url 'home' %}" class="back-button">
+                    <i class="fas fa-arrow-left"></i> VOLVER
+                </a>
+<header class="codice-header">
+    <h1 class="codice-title">Códice de las Leyendas</h1>
+    <p class="codice-subtitle">El Viaje de {{ cliente.nombre }}</p>
+</header>
+
+<nav class="codice-nav">
+    <button class="nav-btn active" onclick="mostrarSeccion('perfil', this)">Mi Progreso</button>
+    <button class="nav-btn" onclick="mostrarSeccion('arquetipos', this)">Arquetipos</button>
+    <button class="nav-btn" onclick="mostrarSeccion('pruebas', this)">Pruebas</button>
+    <a href="{% url 'logros:leaderboard' %}" class="nav-btn">Ranking</a>
+</nav>
+
+<div class="codice-container">
+
+    <!-- SECCIÓN: MI PROGRESO -->
+    <!-- ================================================================== -->
+<!-- SECCIÓN "MI PROGRESO" - VERSIÓN FINAL CON TODAS LAS BARRAS CORREGIDAS -->
+<!-- ================================================================== -->
+
+<section id="seccion-perfil" class="content-section active">
+
+    <!-- 1. TARJETA DE PERFIL PRINCIPAL -->
+    <div class="perfil-card">
+        <div class="arquetipo-avatar">
+            <img src="{{ perfil.nivel_actual.imagen_url }}" alt="{{ perfil.nivel_actual.titulo_arquetipo }}">
+        </div>
+        <div class="perfil-info">
+            <h2>{{ perfil.nivel_actual.titulo_arquetipo }}</h2>
+            <p class="filosofia">"{{ perfil.nivel_actual.filosofia }}"</p>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <div class="stat-value">{{ perfil.puntos_totales }}</div>
+                    <div class="stat-label">Puntos</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">{{ perfil.racha_actual }}</div>
+                    <div class="stat-label">Racha</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">{{ entrenamientos_totales }}</div>
+                    <div class="stat-label">Entrenos</div>
+                </div>
+            </div>
+            <div class="progress-bar-container">
+               <div class="progress-bar-outer">
+                    <!-- ======================================================= -->
+                    <!-- CORRECCIÓN: BARRA DE PROGRESO CON LÓGICA EN LA VISTA    -->
+                    <!-- ======================================================= -->
+                    <div class="progress-bar-inner" style="width: {% if puntos_totales_del_nivel > 0 %}{% widthratio puntos_ganados_en_nivel puntos_totales_del_nivel 100 %}{% else %}0{% endif %}%;"></div>
+                </div>
+                <div class="progress-text">
+                    <!-- Mostramos los puntos totales del perfil y los requeridos para el siguiente nivel -->
+                    <span>{{ perfil.puntos_totales }} / {{ siguiente_nivel.puntos_requeridos }}</span>
+                    <span>Hacia: {{ siguiente_nivel.titulo_arquetipo }}</span>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. PANEL "PRÓXIMO OBJETIVO" -->
+    {% if siguiente_nivel %}
+    <div class="sub-section-container">
+        <h3 class="sub-section-title"><i class="fas fa-bullseye"></i> Próximo Objetivo</h3>
+        <div class="item-card actual">
+            <div class="item-header">
+                <div>
+                    <h4 class="item-title">{{ siguiente_nivel.titulo_arquetipo }}</h4>
+                    <p class="item-subtitle">Nivel {{ siguiente_nivel.nivel }}</p>
+                </div>
+            </div>
+            <p class="item-descripcion">"{{ siguiente_nivel.filosofia }}"</p>
+            <div class="item-recompensa" style="background: none; color: var(--color-orange); font-size: 1rem; padding: 0;">
+                {{ puntos_faltantes }} puntos restantes
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 3. PANEL "PRUEBAS ACTIVAS" -->
+    <div class="sub-section-container">
+        <h3 class="sub-section-title"><i class="fas fa-scroll"></i> Pruebas Activas</h3>
+        <div class="pruebas-list-container">
+            {% for prueba in pruebas_activas %}
+            <div class="prueba-card">
+                <div class="prueba-header">
+                    <h5 class="prueba-title">{{ prueba.nombre }}</h5>
+                    <span class="prueba-recompensa">+{{ prueba.puntos_recompensa }} PTS</span>
+                </div>
+                <p class="prueba-descripcion">{{ prueba.descripcion }}</p>
+                <div class="prueba-progress-bar-container">
+                    <div class="prueba-progress-bar-outer">
+                        <!-- ======================================================= -->
+                        <!-- CORRECCIÓN 2: BARRA DE PROGRESO DE LA PRUEBA          -->
+                        <!-- ======================================================= -->
+                        <div class="prueba-progress-bar-inner" style="width: {% if prueba.meta_valor > 0 %}{% widthratio prueba.progreso_actual prueba.meta_valor 100 %}{% else %}0{% endif %}%;"></div>
+                    </div>
+                    <span class="prueba-progress-text">{{ prueba.progreso_actual|floatformat:0 }} / {{ prueba.meta_valor|floatformat:0 }}</span>
+                </div>
+                {% if prueba.es_secreta %}
+                <div class="item-status-badge badge-secreta">SECRETA</div>
+                {% endif %}
+            </div>
+            {% empty %}
+            <div class="prueba-card empty">
+                <p>¡No hay pruebas activas! Has completado todos los desafíos de tu nivel actual. ¡Prepárate para el siguiente arquetipo!</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+</section>
+
+    <!-- SECCIÓN: ARQUETIPOS -->
+<!-- SECCIÓN: ARQUETIPOS -->
+<section id="seccion-arquetipos" class="content-section">
+    <h2 class="section-title">Árbol de Arquetipos</h2>
+
+    <!-- Filtros (sin cambios) -->
+    <div class="filtros-container">
+        <button class="filtro-btn active" onclick="filtrarArquetipos('todos', this)">Todos</button>
+        <button class="filtro-btn" onclick="filtrarArquetipos('desbloqueado', this)">Desbloqueados</button>
+        <button class="filtro-btn" onclick="filtrarArquetipos('actual', this)">Actual</button>
+        <button class="filtro-btn" onclick="filtrarArquetipos('bloqueado', this)">Bloqueados</button>
+    </div>
+
+    <div class="grid-container">
+        {% for arquetipo in arquetipos %}
+        <!-- ================================================= -->
+        <!-- NUEVA ESTRUCTURA DE TARJETA DE ARQUETIPO          -->
+        <!-- ================================================= -->
+        <div class="arquetipo-card-v2
+            {% if arquetipo.nivel <= perfil.nivel_actual.nivel %}clickeable{% endif %}
+            {% if arquetipo.nivel == perfil.nivel_actual.nivel %}actual{% endif %}
+            {% if arquetipo.nivel > perfil.nivel_actual.nivel %}bloqueado{% endif %}"
+            data-status="{% if arquetipo.nivel < perfil.nivel_actual.nivel %}desbloqueado{% elif arquetipo.nivel == perfil.nivel_actual.nivel %}actual{% else %}bloqueado{% endif %}"
+            {% if arquetipo.nivel <= perfil.nivel_actual.nivel %}
+                onclick="navegarAArquetipo({{ arquetipo.nivel }})"
+                title="Explorar {{ arquetipo.titulo_arquetipo }}"
+            {% else %}
+                title="Bloqueado: Requiere {{ arquetipo.puntos_requeridos }} puntos"
+            {% endif %}>
+
+            <!-- Imagen de fondo -->
+            <img src="{{ arquetipo.imagen_url }}" alt="{{ arquetipo.titulo_arquetipo }}" class="card-background-image">
+
+            <!-- Info Superior (Título y Nivel) -->
+            <div class="card-top-info">
+                <h3 class="card-title">{{ arquetipo.titulo_arquetipo }}</h3>
+                <p class="card-level">Nivel {{ arquetipo.nivel }}</p>
+            </div>
+
+            <!-- Contenido Inferior (Filosofía y Puntos) -->
+            <div class="card-content">
+                <p class="card-philosophy">"{{ arquetipo.filosofia }}"</p>
+                <div class="card-points">
+                    <i class="fas fa-star"></i> {{ arquetipo.puntos_requeridos }} PTS
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+
+
+    <!-- SECCIÓN: PRUEBAS LEGENDARIAS -->
+   <section id="seccion-pruebas" class="content-section">
+    <h2 class="section-title">Libro de Pruebas</h2>
+
+    <!-- Filtros de Pruebas -->
+    <div class="filtros-container">
+        <button class="filtro-btn active" onclick="filtrarPruebas('todas', this)">Todas</button>
+        <button class="filtro-btn" onclick="filtrarPruebas('completada', this)">Completadas</button>
+        <button class="filtro-btn" onclick="filtrarPruebas('activa', this)">Activas</button>
+        <button class="filtro-btn" onclick="filtrarPruebas('secreta', this)">Secretas</button>
+    </div>
+
+    <div class="grid-container">
+        {% for prueba in todas_las_pruebas %}
+        <div class="item-card prueba-card
+            {% if not prueba.disponible %}bloqueado{% elif prueba.completada %}completada{% else %}activa{% endif %}"
+            data-status="{% if prueba.completada %}completada{% elif prueba.es_secreta %}secreta{% elif prueba.disponible %}activa{% endif %}">
+
+            <div class="item-header">
+                <div>
+                    <h3 class="item-title">{{ prueba.nombre }}</h3>
+                    <p class="item-subtitle">Del Arquetipo: {{ prueba.arquetipo.titulo_arquetipo }}</p>
+                </div>
+                <div class="item-recompensa">+{{ prueba.puntos_recompensa }} PTS</div>
+            </div>
+
+            <p class="item-descripcion">{{ prueba.descripcion }}</p>
+
+            {% if not prueba.completada and prueba.disponible %}
+<div class="prueba-progress-container">
+    <div class="prueba-progress-bar-outer">
+
+        <div class="prueba-progress-bar-inner" style="width: {% widthratio prueba.progreso_actual prueba.meta_valor 100 %}%;"></div>
+    </div>
+    <span class="prueba-progress-text">{{ prueba.progreso_actual|floatformat:0 }} / {{ prueba.meta_valor|floatformat:0 }}</span>
+</div>
+{% endif %}
+
+            {% if prueba.completada %}
+                <div class="item-status-badge badge-completado">COMPLETADA</div>
+            {% elif prueba.es_secreta and not prueba.disponible %}
+                <div class="item-status-badge badge-secreta">SECRETA</div>
+            {% elif not prueba.disponible %}
+                 <div class="item-status-badge badge-bloqueado">BLOQUEADA</div>
+            {% endif %}
+        </div>
+        {% empty %}
+        <div class="item-card empty-state">
+            <p>El Libro de Pruebas está en blanco. ¡Tu leyenda aún no ha comenzado!</p>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+
+</div>
+
+<script>
+    function mostrarSeccion(seccionId, btnElement) {
+        // Ocultar todas las secciones
+        document.querySelectorAll('.content-section').forEach(section => {
+            section.classList.remove('active');
+        });
+        // Mostrar la sección seleccionada
+        document.getElementById('seccion-' + seccionId).classList.add('active');
+
+        // Actualizar el estado activo de los botones
+        document.querySelectorAll('.nav-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        btnElement.classList.add('active');
+    }
+      function filtrarArquetipos(categoria, btnElement) {
+        const cards = document.querySelectorAll('#seccion-arquetipos .arquetipo-card');
+
+        cards.forEach(card => {
+            // Lógica de visibilidad
+            if (categoria === 'todos' || card.dataset.status.includes(categoria)) {
+                card.style.display = 'flex';
+            } else {
+                card.style.display = 'none';
+            }
+        });
+
+        // Actualizar el estado activo de los botones de filtro
+        document.querySelectorAll('#seccion-arquetipos .filtro-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        btnElement.classList.add('active');
+    }
+      function filtrarPruebas(categoria, btnElement) {
+        const cards = document.querySelectorAll('#seccion-pruebas .prueba-card');
+
+        cards.forEach(card => {
+            // Lógica de visibilidad
+            if (categoria === 'todas' || card.dataset.status.includes(categoria)) {
+                card.style.display = 'block';
+            } else {
+                card.style.display = 'none';
+            }
+        });
+
+        // Actualizar el estado activo de los botones de filtro
+        document.querySelectorAll('#seccion-pruebas .filtro-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        btnElement.classList.add('active');
+    }
+      function navegarAArquetipo(arquetipoNivel) {
+    const clienteId = {{ cliente.id }};
+    // AÑADIMOS "cliente/" PARA QUE COINCIDA CON LA URL REAL
+    const url = `/logros/cliente/${clienteId}/arquetipo/${arquetipoNivel}/`;
+
+    document.body.style.transition = 'opacity 0.3s ease-out';
+    document.body.style.opacity = '0.5';
+
+    setTimeout(() => {
+        window.location.href = url;
+    }, 300);
+    }
+
+    // --- Lógica para la navegación con teclado ---
+    document.addEventListener('keydown', function(e) {
+        const seccionArquetipos = document.getElementById('seccion-arquetipos');
+        if (seccionArquetipos && seccionArquetipos.classList.contains('active')) {
+            const arquetipos = Array.from(seccionArquetipos.querySelectorAll('.arquetipo-card.clickeable'));
+            if (arquetipos.length === 0) return;
+
+            let currentIndex = arquetipos.findIndex(card => card.classList.contains('keyboard-focus'));
+
+            if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                e.preventDefault();
+                currentIndex = (currentIndex + 1) % arquetipos.length;
+            } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                e.preventDefault();
+                currentIndex = currentIndex <= 0 ? arquetipos.length - 1 : currentIndex - 1;
+            } else if (e.key === 'Enter' && currentIndex !== -1) {
+                e.preventDefault();
+                arquetipos[currentIndex].click();
+                return;
+            } else {
+                return; // No hacer nada si no es una tecla de navegación
+            }
+
+            // Quitar foco anterior y poner el nuevo
+            arquetipos.forEach(card => card.classList.remove('keyboard-focus'));
+            const nextCard = arquetipos[currentIndex];
+            if (nextCard) {
+                nextCard.classList.add('keyboard-focus');
+                nextCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+    });
+</script>
+
+</body>
+</html>

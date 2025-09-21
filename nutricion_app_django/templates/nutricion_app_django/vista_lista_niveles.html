@@ -1,0 +1,85 @@
+<!-- nutricion_app_django/templates/nutricion_app_django/vista_lista_niveles.html -->
+
+{% extends 'base.html' %}
+{% load static %}
+{% load clientes_filters %}
+
+{% block title %}Niveles de la Pirámide – {{ block.super }}{% endblock %}
+
+{% block extra_css %}
+
+<style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body {
+          background: url("{% static 'images/fondo_cyberpunk.png' %}" ) no-repeat center center fixed !important;
+          background-size: cover !important;
+          background-color: #000000 !important;
+          min-height: 100vh !important;
+          filter: brightness(0.9);
+          overflow-x: hidden;
+        }
+        .timeline-section {
+            background: rgba(0, 0, 0, 0.4) !important;
+            backdrop-filter: blur(15px) saturate(180%) !important;
+            border: 1px solid rgba(77, 208, 225, 0.6) !important;
+            box-shadow: 0 0 15px rgba(77, 208, 225, 0.4), inset 0 0 8px rgba(77, 208, 225, 0.2) !important;
+            border-radius: 12px !important;
+            color: #fff;
+        }
+        /* ... (Pega el resto de los estilos del bloque <style> de la plantilla anterior aquí) ... */
+        .nivel-card { position: relative; padding: 1rem 1.25rem; margin-bottom: 1rem; cursor: pointer; overflow: hidden; transition: transform 0.2s ease-out, box-shadow 0.2s ease-out; }
+        .nivel-card:hover { transform: translateY(-3px); box-shadow: 0 0 25px rgba(77, 208, 225, 0.6), inset 0 0 10px rgba(77, 208, 225, 0.3) !important; }
+        .nivel-header { display: flex; align-items: center; gap: 1rem; }
+        .nivel-index { width: 40px; height: 40px; flex-shrink: 0; border-radius: 8px; display: grid; place-items: center; font-weight: 700; font-size: 1.2rem; color: #0a101a; background: #fff; }
+        .nivel-title { font-size: 1.1rem; font-weight: 600; margin: 0; color: #fff; }
+        .nivel-desc { font-size: 0.85rem; color: #a0b3d0; margin: 0; }
+        .estado-pill { margin-left: auto; font-size: 0.8rem; padding: 0.25rem 0.75rem; border-radius: 999px; font-weight: 500; white-space: nowrap; }
+        .estado-pill.done { background-color: rgba(22, 163, 74, 0.2); color: #4ade80; }
+        .estado-pill.open { background-color: rgba(234, 179, 8, 0.2); color: #facc15; }
+        .estado-pill.locked { background-color: rgba(127, 29, 29, 0.2); color: #f87171; }
+        .is-locked { opacity: 0.6; cursor: not-allowed; filter: grayscale(50%); }
+        .is-locked:hover { transform: none; box-shadow: 0 0 15px rgba(77, 208, 225, 0.4), inset 0 0 8px rgba(77, 208, 225, 0.2) !important; }
+        .btn-secondary-outline { background: rgba(10, 15, 25, 0.3); border: 1px solid rgba(77, 208, 225, 0.5); color: #9ca3af; padding: 10px 20px; border-radius: 8px; transition: all 0.3s ease; text-decoration: none; display: inline-flex; align-items: center; gap: 0.6rem; }
+        .btn-secondary-outline:hover { background: rgba(77, 208, 225, 0.1); color: #fff; border-color: rgba(77, 208, 225, 0.8); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <header class="mb-8">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-3xl font-bold text-white">Niveles de la Pirámide</h1>
+                <p class="text-md text-cyan-300 mt-1">Haz clic en un nivel disponible para configurarlo.</p>
+            </div>
+            <a href="{% url 'nutricion_app_django:piramide_principal' %}" class="btn-secondary-outline">
+                <i class="fas fa-arrow-left"></i> Volver al Panel
+            </a>
+        </div>
+    </header>
+
+    <!-- En nutricion_app_django/templates/nutricion_app_django/vista_lista_niveles.html -->
+
+<!-- En nutricion_app_django/templates/nutricion_app_django/vista_lista_niveles.html -->
+
+<div class="max-w-4xl mx-auto">
+    {% with progreso_piramide=user_profile.get_progreso_piramide niveles_completados=user_profile.get_niveles_completados %}
+        {% for progreso in progreso_piramide reversed %}
+
+            {# --- INICIO DE LA CORRECCIÓN DEFINITIVA --- #}
+
+            {% if forloop.revcounter0 <= niveles_completados %}
+                {# Los argumentos en 'with' se separan por ESPACIOS, no por comas. #}
+                {% include "nutricion_app_django/partials/nivel_card_interactive.html" with nivel=progreso.nivel es_completado=progreso.completado es_desbloqueado=True %}
+            {% else %}
+                {% include "nutricion_app_django/partials/nivel_card_interactive.html" with nivel=progreso.nivel es_completado=progreso.completado es_desbloqueado=False %}
+            {% endif %}
+
+            {# --- FIN DE LA CORRECCIÓN DEFINITIVA --- #}
+
+        {% endfor %}
+    {% endwith %}
+</div>
+
+{% endblock %}

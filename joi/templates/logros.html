@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Logros con Joi</title>
+    <style>
+        body { background: #121212; color: white; font-family: Arial; padding: 2em; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1.5em; }
+        .logro { background: #1e1e1e; padding: 1em; border-radius: 10px; text-align: center; }
+        .logro h3 { margin: 0.5em 0; color: #32FF00; }
+        .bloqueado { opacity: 0.3; filter: grayscale(1); }
+        .celebracion {
+  background: linear-gradient(90deg, #32FF00, #121212);
+  padding: 1.5em;
+  margin-bottom: 2em;
+  border-radius: 10px;
+  text-align: center;
+  box-shadow: 0 0 20px #32FF00;
+  animation: brillo 1.5s ease-in-out infinite alternate;
+}
+.nuevo-logro {
+  font-size: 1.3em;
+  margin-top: 0.5em;
+}
+.icono {
+  font-size: 2em;
+  margin-right: 0.3em;
+}
+.nombre {
+  font-weight: bold;
+}
+
+@keyframes brillo {
+  from { box-shadow: 0 0 10px #32FF00; }
+  to { box-shadow: 0 0 25px #32FF00; }
+}
+
+    </style>
+</head>
+<body>
+<h1>🏅 Logros desbloqueados con Joi</h1>
+{% if logros_nuevos %}
+<div class="celebracion">
+    <h2>🎉 ¡Nuevo logro desbloqueado!</h2>
+    {% for icono, nombre in logros_nuevos %}
+    <div class="nuevo-logro">
+        <span class="icono">{{ icono }}</span>
+        <span class="nombre">{{ nombre }}</span>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<div class="grid">
+    {% for icono, nombre, estado in logros %}
+    <div class="logro {% if not estado %}bloqueado{% endif %}">
+        <div style="font-size: 3em;">{{ icono }}</div>
+        <h3>{{ nombre }}</h3>
+        <p>{% if estado %}¡Desbloqueado!{% else %}Aún bloqueado{% endif %}</p>
+    </div>
+    {% endfor %}
+</div>
+<h2>📅 Últimos logros desbloqueados</h2>
+<ul>
+    {% for evento in eventos_recientes %}
+    <li>{{ evento.fecha }} — {{ evento.icono }} {{ evento.nombre_logro }}</li>
+    {% endfor %}
+</ul>
+
+</body>
+</html>

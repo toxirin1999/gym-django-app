@@ -1,0 +1,582 @@
+{% extends 'base.html' %}
+
+{% block title %}Empezar Entreno{% endblock %}
+
+{% block extra_js %}
+<script>
+    /**
+     * Cronómetros para la página de entrenamiento
+     * - Cronómetro total: mide la duración total del entrenamiento
+     * - Cronómetro de descanso: se reinicia cada vez que se registran repeticiones
+     */
+
+    // Variables globales para los cronómetros
+    let tiempoTotalInicio = null;
+    let tiempoTotalInterval = null;
+    let tiempoDescansoInicio = null;
+    let tiempoDescansoInterval = null;
+
+    /**
+     * Inicia el cronómetro total del entrenamiento
+     */
+    function iniciarCronometroTotal() {
+        // Si ya está iniciado, no hacer nada
+        if (tiempoTotalInicio !== null) return;
+
+        // Guardar tiempo de inicio
+        tiempoTotalInicio = new Date();
+
+        // Actualizar el cronómetro cada segundo
+        tiempoTotalInterval = setInterval(actualizarCronometroTotal, 1000);
+
+        // Actualización inicial
+        actualizarCronometroTotal();
+    }
+
+    /**
+     * Actualiza la visualización del cronómetro total
+     */
+    function actualizarCronometroTotal() {
+        const ahora = new Date();
+        const diferencia = ahora - tiempoTotalInicio;
+
+        // Convertir a formato hh:mm:ss
+        const horas = Math.floor(diferencia / 3600000);
+        const minutos = Math.floor((diferencia % 3600000) / 60000);
+        const segundos = Math.floor((diferencia % 60000) / 1000);
+
+        // Formatear con ceros a la izquierda
+        const horasStr = horas.toString().padStart(2, '0');
+        const minutosStr = minutos.toString().padStart(2, '0');
+        const segundosStr = segundos.toString().padStart(2, '0');
+
+        // Actualizar el elemento HTML
+        const cronometroTotal = document.getElementById('cronometro-total');
+        if (cronometroTotal) {
+            cronometroTotal.textContent = `${horasStr}:${minutosStr}:${segundosStr}`;
+        }
+    }
+
+    /**
+     * Detiene el cronómetro total
+     */
+    function detenerCronometroTotal() {
+        if (tiempoTotalInterval) {
+            clearInterval(tiempoTotalInterval);
+            tiempoTotalInterval = null;
+        }
+    }
+
+    /**
+     * Inicia o reinicia el cronómetro de descanso
+     */
+    function iniciarCronometroDescanso() {
+        // Detener el intervalo anterior si existe
+        if (tiempoDescansoInterval) {
+            clearInterval(tiempoDescansoInterval);
+        }
+
+        // Guardar tiempo de inicio
+        tiempoDescansoInicio = new Date();
+
+        // Actualizar el cronómetro cada segundo
+        tiempoDescansoInterval = setInterval(actualizarCronometroDescanso, 1000);
+
+        // Actualización inicial
+        actualizarCronometroDescanso();
+
+        // Añadir efecto visual
+        const cronometroDescanso = document.getElementById('cronometro-descanso');
+        if (cronometroDescanso) {
+            cronometroDescanso.classList.add('pulse-animation');
+            setTimeout(() => cronometroDescanso.classList.remove('pulse-animation'), 500);
+        }
+    }
+
+    /**
+     * Actualiza la visualización del cronómetro de descanso
+     */
+    function actualizarCronometroDescanso() {
+        const ahora = new Date();
+        const diferencia = ahora - tiempoDescansoInicio;
+
+        // Convertir a formato mm:ss
+        const minutos = Math.floor(diferencia / 60000);
+        const segundos = Math.floor((diferencia % 60000) / 1000);
+
+        // Formatear con ceros a la izquierda
+        const minutosStr = minutos.toString().padStart(2, '0');
+        const segundosStr = segundos.toString().padStart(2, '0');
+
+        // Actualizar el elemento HTML
+        const cronometroDescanso = document.getElementById('cronometro-descanso');
+        if (cronometroDescanso) {
+            cronometroDescanso.textContent = `${minutosStr}:${segundosStr}`;
+        }
+    }
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="apple-fitness-container">
+    <!-- Cabecera con efecto de cristal -->
+    <div class="header-glass mb-4">
+        <h2 class="display-6 fw-bold">{{ rutina.nombre }}</h2>
+        <div class="subtitle">Nuevo entreno</div>
+    </div>
+
+    <!-- Cronómetro total del entrenamiento -->
+    <div class="fitness-card mb-4">
+        <div class="fitness-card-body">
+            <div class="d-flex justify-content-between align-items-center">
+                <h5 class="fitness-card-title mb-0">
+                    <i class="bi bi-stopwatch"></i> Tiempo de entrenamiento
+                </h5>
+                <div id="cronometro-total" class="fitness-badge primary large">00:00:00</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cronómetro de descanso entre series -->
+    <div class="fitness-card mb-4">
+        <div class="fitness-card-body">
+            <div class="d-flex justify-content-between align-items-center">
+                <h5 class="fitness-card-title mb-0">
+                    <i class="bi bi-hourglass-split"></i> Tiempo de descanso
+                </h5>
+                <div id="cronometro-descanso" class="fitness-badge warning large">00:00</div>
+            </div>
+        </div>
+    </div>
+
+    <form method="post">
+        {% csrf_token %}
+
+        <div class="client-info mb-4">
+            <div class="client-avatar">
+                <i class="bi bi-person-circle"></i>
+            </div>
+            <div class="client-name">
+                <strong>{{ cliente_inicial.nombre }}</strong>
+            </div>
+        </div>
+        {{ cliente_form }}
+
+        {% for ejercicio, form in ejercicios_forms %}
+        <div class="fitness-card mb-4" id="ejercicio-{{ forloop.counter }}">
+            <div class="fitness-card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="fitness-card-title">{{ ejercicio.nombre }}</h5>
+                        {% if ejercicio.series_datos.0.fallos_consecutivos > 0 %}
+                        <span class="fitness-badge warning">
+                            {{ ejercicio.series_datos.0.fallos_consecutivos }} fallos consecutivos
+                        </span>
+                        {% endif %}
+                        {% if ejercicio.series_datos.0.fallo_anterior %}
+                        <span class="fitness-warning small">⚠️ Entreno anterior incompleto</span>
+                        {% endif %}
+
+                        <div class="fitness-subtitle">{{ ejercicio.grupo_muscular }} - {{ ejercicio.equipo }}</div>
+                        {% if ejercicio.series_datos.0.adaptado %}
+                        <span class="fitness-star small">⭐ Adaptado</span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="fitness-divider"></div>
+
+                <p class="fitness-section-title mb-3">Series de entrenamiento</p>
+
+                <div class="series-list">
+                    {% for serie in ejercicio.series_datos %}
+                    <div class="serie-item mb-3" data-numero="{{ serie.numero }}">
+                        <div class="fitness-ring me-3" data-original="{{ serie.repeticiones }}">
+                            <span class="rep-counter">{{ serie.repeticiones }}</span>
+                            <input type="hidden" name="{{ ejercicio.id }}_reps_{{ serie.numero }}"
+                                   id="{{ ejercicio.id }}_reps_{{ serie.numero }}"
+                                   value="{{ serie.repeticiones }}">
+                        </div>
+
+                        <div class="serie-info">
+                            <div class="serie-title">Serie {{ serie.numero }}</div>
+                            <input type="hidden" name="{{ ejercicio.id }}_peso_{{ serie.numero }}"
+                                   value="{{ serie.peso_kg }}">
+                            <input type="hidden" name="{{ ejercicio.id }}_completado_{{ serie.numero }}" value="0">
+
+                            <div class="serie-details">
+                                Última vez: {{ serie.repeticiones }} reps @ {{ serie.peso_kg }} kg
+                            </div>
+
+                            {% if serie.peso_adaptado %}
+                            <div class="mt-2">
+                                <span class="fitness-badge success">
+                                    💪 Peso adaptado: {{ serie.peso_kg }} kg (↑10%)
+                                </span>
+                            </div>
+                            {% endif %}
+
+                            {% if serie.adaptado %}
+                            <div class="fitness-star small">⭐ Adaptado del progreso anterior</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <button type="button" class="fitness-button outline small"
+                        onclick="agregarSerie(this, '{{ ejercicio.id }}')"
+                        data-reps="{{ form.initial.repeticiones }}"
+                        data-peso="{{ form.initial.peso_kg }}"
+                        data-original="{{ form.initial.repeticiones }}">
+                    <i class="bi bi-plus-circle"></i> Agregar serie
+                </button>
+            </div>
+        </div>
+        {% endfor %}
+
+        <button type="submit" id="btn-finalizar-entreno" class="fitness-button primary large w-100 mb-5">
+            <i class="bi bi-check-circle"></i> Guardar entrenamiento
+        </button>
+    </form>
+</div>
+
+<style>
+    /* Apple Fitness Style */
+    .apple-fitness-container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px 15px;
+        color: #f5f5f7;
+    }
+
+    .header-glass {
+        background: rgba(30, 30, 32, 0.8);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border-radius: 16px;
+        padding: 24px;
+        color: white;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .header-glass .subtitle {
+        color: rgba(255, 255, 255, 0.7);
+        font-size: 1rem;
+    }
+
+    .fitness-card {
+        background: rgba(30, 30, 32, 0.7);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border-radius: 16px;
+        overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        transition: all 0.3s ease;
+    }
+
+    .fitness-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+    }
+
+    .fitness-card-body {
+        padding: 20px;
+    }
+
+    .fitness-card-title {
+        font-weight: 600;
+        font-size: 1.25rem;
+        margin-bottom: 5px;
+        color: white;
+    }
+
+    .fitness-subtitle {
+        color: rgba(255, 255, 255, 0.6);
+        font-size: 0.9rem;
+        margin-top: 5px;
+    }
+
+    .fitness-divider {
+        height: 1px;
+        background: rgba(255, 255, 255, 0.1);
+        margin: 15px 0;
+    }
+
+    .fitness-section-title {
+        color: #0082fb;
+        font-weight: 600;
+        font-size: 1rem;
+    }
+
+    .fitness-badge {
+        display: inline-block;
+        padding: 4px 8px;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 500;
+    }
+
+    .fitness-badge.warning {
+        background: rgba(255, 204, 0, 0.2);
+        color: #ffcc00;
+    }
+
+    .fitness-badge.success {
+        background: rgba(40, 205, 65, 0.2);
+        color: #28cd41;
+    }
+
+    .fitness-badge.primary {
+        background: rgba(0, 130, 251, 0.2);
+        color: #0082fb;
+    }
+
+    .fitness-badge.large {
+        font-size: 1.2rem;
+        padding: 8px 15px;
+    }
+
+    .fitness-warning {
+        color: #ffcc00;
+    }
+
+    .fitness-star {
+        color: #ffcc00;
+    }
+
+    .fitness-ring {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-size: 1.2rem;
+        font-weight: bold;
+        cursor: pointer;
+        position: relative;
+        background: rgba(255, 255, 255, 0.05);
+        border: 2px solid #fc2d22;
+        color: white;
+        transition: all 0.2s ease;
+    }
+
+    .fitness-ring.selected {
+        background: rgba(252, 45, 34, 0.8);
+        box-shadow: 0 0 15px rgba(252, 45, 34, 0.5);
+    }
+
+    .serie-item {
+        display: flex;
+        align-items: center;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 12px;
+        padding: 15px;
+        transition: all 0.3s ease;
+    }
+
+    .serie-item:hover {
+        background: rgba(255, 255, 255, 0.08);
+    }
+
+    .serie-info {
+        flex-grow: 1;
+    }
+
+    .serie-title {
+        font-weight: 500;
+        color: white;
+        margin-bottom: 5px;
+    }
+
+    .serie-details {
+        color: rgba(255, 255, 255, 0.6);
+        font-size: 0.9rem;
+    }
+
+    .fitness-button {
+        border: none;
+        border-radius: 25px;
+        padding: 10px 20px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+    }
+
+    .fitness-button.primary {
+        background: linear-gradient(135deg, #0082fb, #0060d6);
+        color: white;
+    }
+
+    .fitness-button.primary:hover {
+        background: linear-gradient(135deg, #0060d6, #0082fb);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 130, 251, 0.3);
+    }
+
+    .fitness-button.outline {
+        background: transparent;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        color: #0082fb;
+    }
+
+    .fitness-button.outline:hover {
+        background: rgba(0, 130, 251, 0.1);
+        border-color: #0082fb;
+    }
+
+    .fitness-button.small {
+        font-size: 0.9rem;
+        padding: 8px 16px;
+    }
+
+    .fitness-button.large {
+        padding: 15px 25px;
+        font-size: 1.1rem;
+    }
+
+    .alert-fitness {
+        display: flex;
+        align-items: center;
+        background: rgba(0, 130, 251, 0.1);
+        border-left: 4px solid #0082fb;
+        border-radius: 8px;
+        padding: 15px;
+    }
+
+    .alert-icon {
+        font-size: 1.5rem;
+        color: #0082fb;
+        margin-right: 15px;
+    }
+
+    .client-info {
+        display: flex;
+        align-items: center;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 12px;
+        padding: 15px;
+    }
+
+    .client-avatar {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #0082fb, #0060d6);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        color: white;
+        margin-right: 15px;
+    }
+
+    .client-name {
+        font-size: 1.1rem;
+        color: white;
+    }
+
+    /* Animación para el cronómetro de descanso cuando se reinicia */
+    @keyframes pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+        100% { transform: scale(1); }
+    }
+
+    .pulse-animation {
+        animation: pulse 0.5s;
+    }
+</style>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        // Iniciar cronómetros al cargar la página
+        iniciarCronometroTotal();
+        iniciarCronometroDescanso();
+
+        function disminuirReps(ring) {
+            const span = ring.querySelector('.rep-counter');
+            const inputReps = ring.querySelector('input[type="hidden"]');
+            const original = parseInt(ring.dataset.original);
+            const parent = ring.closest('.serie-item');
+            const completadoInput = parent.querySelector('input[name$="_completado_' + parent.dataset.numero + '"]');
+
+            if (!ring.dataset.clicked) {
+                ring.dataset.clicked = "true";
+                ring.classList.add("selected");
+                if (completadoInput) completadoInput.value = "1";
+                return;
+            }
+
+            let valor = parseInt(span.textContent);
+            if (isNaN(valor)) valor = original;
+
+            valor = valor > 0 ? valor - 1 : original;
+
+            span.textContent = valor;
+            inputReps.value = valor;
+
+            // Reiniciar cronómetro de descanso al cambiar repeticiones
+            iniciarCronometroDescanso();
+
+            if (completadoInput) {
+                completadoInput.value = valor === original ? "1" : "0";
+            }
+        }
+
+        document.querySelectorAll('.fitness-ring').forEach(ring => {
+            ring.addEventListener('click', () => disminuirReps(ring));
+        });
+
+        // Detener cronómetro total al finalizar entrenamiento
+        const botonFinalizar = document.getElementById('btn-finalizar-entreno');
+        if (botonFinalizar) {
+            botonFinalizar.addEventListener('click', function() {
+                detenerCronometroTotal();
+            });
+        }
+    });
+
+    function agregarSerie(button, ejercicioId) {
+        const lista = button.closest('.fitness-card-body').querySelector('.series-list');
+        const count = lista.querySelectorAll('.serie-item').length + 1;
+        const repsPrevias = button.dataset.reps || '';
+        const pesoPrevio = button.dataset.peso || '';
+        const originalReps = button.dataset.original || repsPrevias;
+
+        const nuevaSerie = document.createElement('div');
+        nuevaSerie.className = "serie-item mb-3";
+        nuevaSerie.setAttribute("data-numero", count);
+
+        nuevaSerie.innerHTML = `
+            <div class="fitness-ring me-3" data-original="${originalReps}">
+                <span class="rep-counter">${repsPrevias}</span>
+                <input type="hidden" name="${ejercicioId}_reps_${count}"
+                       id="${ejercicioId}_reps_${count}" value="${repsPrevias}">
+            </div>
+            <div class="serie-info">
+                <div class="serie-title">Serie ${count}</div>
+                <input type="hidden" name="${ejercicioId}_peso_${count}" value="${pesoPrevio}">
+                <input type="hidden" name="${ejercicioId}_completado_${count}" value="0">
+                <div class="serie-details">Última vez: ${repsPrevias} reps @ ${pesoPrevio} kg</div>
+            </div>
+        `;
+
+        nuevaSerie.querySelector('.fitness-ring').addEventListener('click', function() {
+            disminuirReps(nuevaSerie.querySelector('.fitness-ring'));
+            // Reiniciar cronómetro de descanso al añadir nueva serie
+            iniciarCronometroDescanso();
+        });
+
+        lista.appendChild(nuevaSerie);
+
+        // Reiniciar cronómetro de descanso al añadir nueva serie
+        iniciarCronometroDescanso();
+    }
+</script>
+
+{% endblock %}

@@ -1,0 +1,285 @@
+{% extends 'base.html' %}
+{% load entreno_tags %}
+{% load static %}
+
+{% block title %}Entreno anterior – {{ cliente.nombre }}{% endblock %}
+
+{% block content %}
+
+<div class="contenedor-principal py-6 px-4">
+    <div class="demo-panel">
+        <div class="flex items-center gap-4">
+            {% if cliente.foto %}
+            <img src="{{ cliente.foto.url }}" alt="Foto de {{ cliente.nombre }}" class="w-16 h-16 rounded-full border-2 border-[#32FF00] object-cover">
+            {% endif %}
+            <div>
+                <h2>{{ cliente.nombre }}</h2>
+                <p class="title">{{ rutina.nombre }}</p>
+            </div>
+        </div>
+    </div>
+
+    {% if entreno %}
+    <div class="demo-panel">
+        <h3 class="text-xl font-bold text-[#32FF00] mb-4">📅 {{ entreno.fecha|date:"d M Y" }}</h3>
+
+        <h4 class="text-white text-lg font-semibold mb-2">Series realizadas</h4>
+        {% regroup series_procesadas by ejercicio as series_por_ejercicio %}
+        <div class="space-y-3">
+            {% for grupo in series_por_ejercicio %}
+            <div class="info-card p-4">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <h2 style="color: #00ffff; margin-bottom: 20px;">{{ grupo.grouper.nombre }}</h2>
+                        <div class="text-sm text-gray-300 flex flex-wrap gap-2 mt-1">
+                            {% for serie in grupo.list %}
+                            <span class="text-lime-400 font-bold text-lg animate-pulse">
+                                {{ serie.serie_numero }}: {{ serie.repeticiones }}×{{ serie.peso_kg }}kg
+                                <br>
+                    </span>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    {% if plan %}
+    <div class="bg-[#121212] p-4 rounded-xl mt-6 shadow-md border border-yellow-700 interactive-glow">
+        <h4 class="text-white text-lg font-semibold mb-4">📋 Plan próximo entreno</h4>
+        <div class="space-y-3">
+            {% for ejercicio in plan %}
+            <div class="info-card p-4">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h2 style="color: #00ffff; margin-bottom: 20px;">{{ ejercicio.nombre }}</h2>
+                        <p class="text-lime-400 font-bold text-lg animate-pulse">{{ ejercicio.series }}x{{ ejercicio.repeticiones }} @ {{ ejercicio.peso_kg }}kg</p>
+                    </div>
+                    {% if ejercicio.peso_adaptado %}
+                    <span class="text-lime-400 text-sm font-semibold">
+                    +10% ({{ ejercicio.peso_base }}kg → {{ ejercicio.peso_kg }}kg)
+                  </span>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+    {% else %}
+    <div class="bloque-panel glass-rojo text-center py-6">
+        <p class="text-white">Este cliente aún no ha realizado esta rutina.</p>
+    </div>
+    {% endif %}
+    <!-- 📊 Comparativa de progreso -->
+    <div class="bg-[#1f1f1f] p-4 rounded-xl mt-6 shadow-md border border-lime-400 interactive-glow">
+        <h4 class="text-white text-lg font-semibold mb-2">📊 Comparativa de progreso</h4>
+        <p class="text-lime-300">{{ mensaje_comparativa }}</p>
+        <p class="text-sm text-gray-400">
+            Último entreno: {{ volumen_anterior|floatformat:1 }} kg | Actual: {{ volumen_actual|floatformat:1 }} kg
+        </p>
+    </div>
+
+    <!-- Historial de Ejercicios Detallado -->
+    <div class="demo-panel mt-6">
+        <h3 class="text-xl font-bold text-[#32FF00] mb-4">🏋️ Historial de Ejercicios Detallado</h3>
+        <p class="text-gray-300 mb-4">Aquí puedes ver la progresión de tus ejercicios clave a lo largo del tiempo.</p>
+
+        <div class="overflow-x-auto">
+            <table class="min-w-full bg-[#1a1a1a] rounded-lg overflow-hidden">
+                <thead class="bg-[#2a2a2a] text-white uppercase text-sm leading-normal">
+                <tr>
+                    <th class="py-3 px-6 text-left">Fecha</th>
+                    <th class="py-3 px-6 text-left">Ejercicio</th>
+                    <th class="py-3 px-6 text-left">Series x Reps</th>
+                    <th class="py-3 px-6 text-left">Peso (kg)</th>
+                    <th class="py-3 px-6 text-left">1RM Estimado (kg)</th>
+                </tr>
+                </thead>
+                <tbody class="text-gray-300 text-sm font-light">
+                <tr class="border-b border-gray-700 hover:bg-[#222222]">
+                    <td class="py-3 px-6 text-left whitespace-nowrap">2025-06-10</td>
+                    <td class="py-3 px-6 text-left">Press de Banca</td>
+                    <td class="py-3 px-6 text-left">3x8</td>
+                    <td class="py-3 px-6 text-left">70</td>
+                    <td class="py-3 px-6 text-left">87.5</td>
+                </tr>
+                <tr class="border-b border-gray-700 hover:bg-[#222222]">
+                    <td class="py-3 px-6 text-left whitespace-nowrap">2025-06-03</td>
+                    <td class="py-3 px-6 text-left">Press de Banca</td>
+                    <td class="py-3 px-6 text-left">3x8</td>
+                    <td class="py-3 px-6 text-left">67.5</td>
+                    <td class="py-3 px-6 text-left">84.375</td>
+                </tr>
+                <tr class="border-b border-gray-700 hover:bg-[#222222]">
+                    <td class="py-3 px-6 text-left whitespace-nowrap">2025-05-27</td>
+                    <td class="py-3 px-6 text-left">Press de Banca</td>
+                    <td class="py-3 px-6 text-left">3x8</td>
+                    <td class="py-3 px-6 text-left">65</td>
+                    <td class="py-3 px-6 text-left">81.25</td>
+                </tr>
+                <tr class="border-b border-gray-700 hover:bg-[#222222]">
+                    <td class="py-3 px-6 text-left whitespace-nowrap">2025-06-08</td>
+                    <td class="py-3 px-6 text-left">Sentadilla</td>
+                    <td class="py-3 px-6 text-left">3x5</td>
+                    <td class="py-3 px-6 text-left">100</td>
+                    <td class="py-3 px-6 text-left">115</td>
+                </tr>
+                <tr class="border-b border-gray-700 hover:bg-[#222222]">
+                    <td class="py-3 px-6 text-left whitespace-nowrap">2025-06-01</td>
+                    <td class="py-3 px-6 text-left">Sentadilla</td>
+                    <td class="py-3 px-6 text-left">3x5</td>
+                    <td class="py-3 px-6 text-left">95</td>
+                    <td class="py-3 px-6 text-left">109.25</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+
+    <!-- 🛑 Estancamiento (si aplica) -->
+    {% if ejercicio_estancado %}
+    <div class="bg-[#181818] p-4 rounded-xl mt-4 shadow-md border border-red-500 interactive-glow">
+        <h4 class="text-white text-lg font-semibold mb-2">🛑 Ejercicio sin mejora</h4>
+        <p class="text-red-400">⚠️ {{ ejercicio_estancado }} no mostró avance de peso. Revisa técnica o fatiga.</p>
+    </div>
+    {% endif %}
+    <!-- 🧠 Mini-dashboard: Comparativa de ejercicios -->
+
+    {% if mejor_ejercicio %}
+    <div class="bg-[#181818] p-4 rounded-xl mt-4 shadow-md border border-cyan-400 interactive-glow">
+        <h4 class="text-white text-lg font-semibold mb-2">💪 Ejercicio analizado</h4>
+
+        {% if mejora_kg > 0 %}
+        <p class="text-cyan-300">📈 {{ mejor_ejercicio }}: +{{ mejora_kg|floatformat:1 }} kg respecto al entreno anterior.</p>
+        <p class="text-sm text-gray-400">Peso anterior: {{ peso_anterior_ej|floatformat:1 }} kg | Actual: {{ peso_actual_ej|floatformat:1 }} kg</p>
+        {% else %}
+        <p class="text-gray-300">😐 {{ mejor_ejercicio }} no ha cambiado desde el último entreno.</p>
+        {% endif %}
+
+        {% if ejercicio_estancado and ejercicio_estancado == mejor_ejercicio %}
+        <p class="text-red-400 mt-1">⚠️ {{ mejor_ejercicio }} está estancado. Revisa técnica o fatiga.</p>
+        {% endif %}
+    </div>
+    {% endif %}
+
+
+    {% if ejercicio_estancado %}
+    <div class="bg-[#181818] p-4 rounded-xl mt-4 shadow-md border border-red-500 interactive-glow">
+        <h4 class="text-white text-lg font-semibold mb-2">🛑 Ejercicio sin mejora</h4>
+        <p class="text-red-400">
+            ⚠️ {{ ejercicio_estancado }} no mostró avance desde el entreno anterior.
+        </p>
+    </div>
+    {% endif %}
+
+    <!-- 🏅 Logros recientes -->
+    <div class="bg-[#161616] p-4 rounded-xl mt-4 shadow-md border border-amber-400 interactive-glow">
+        <h4 class="text-white text-lg font-semibold mb-2">🏅 Logros recientes</h4>
+        {% if logros_recientes %}
+        <ul class="text-amber-300 text-sm space-y-1">
+            {% for logro in logros_recientes %}
+            <li>✨ <span class="font-medium">{{ logro.nombre }}</span> – {{ logro.descripcion }}</li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p class="text-gray-400">🔒 Aún no has desbloqueado logros recientes. ¡Sigue entrenando!</p>
+        {% endif %}
+    </div>
+
+
+    <div class="bg-[#1a1a1a] p-4 rounded-xl mt-6 shadow-md border border-cyan-800 interactive-glow">
+        <h4 class="text-white text-lg font-semibold mb-4">📈 Progreso semanal
+        </h4>
+        <canvas id="graficoProgreso" height="150"></canvas>
+    </div>
+
+    <div class="mt-6">
+        <a href="{% url 'empezar_entreno' rutina.id %}?cliente_id={{ cliente.id }}" class="block w-full bg-gradient-to-r from-cyan-500 to-fuchsia-500 text-white text-center font-semibold py-2 rounded-xl mt-6 shadow-md hover:scale-105 transition">
+            <i class="bi bi-play-circle"></i> Empezar nuevo entreno
+        </a>
+    </div>
+</div>
+
+<script>
+    // Función para calcular el 1RM estimado (Brzycki Formula)
+    function calculate1RM(weight, reps) {
+        if (reps === 0) return 0;
+        if (reps === 1) return weight;
+        return parseFloat((weight * (36 / (37 - reps))).toFixed(2));
+    }
+
+    // Función para encontrar y resaltar PRs
+    function highlightPRs() {
+        const table = document.querySelector('.improvement-table'); // Assuming this is the table for exercise history
+        if (!table) return;
+
+        const rows = table.querySelectorAll('tbody tr');
+        const prs = {}; // Almacena el 1RM máximo para cada ejercicio
+
+        rows.forEach(row => {
+            const exerciseName = row.children[1].textContent; // Columna de Ejercicio
+            const weight = parseFloat(row.children[3].textContent); // Columna de Peso (kg)
+            const repsText = row.children[2].textContent; // Columna de Series x Reps (ej. 3x8)
+
+            // Extraer solo las repeticiones del formato '3x8'
+            const repsMatch = repsText.match(/x(\d+)/);
+            const reps = repsMatch ? parseInt(repsMatch[1]) : 0;
+
+            const estimated1RM = calculate1RM(weight, reps);
+            row.children[4].textContent = estimated1RM.toFixed(2); // Actualizar 1RM Estimado
+
+            if (!prs[exerciseName] || estimated1RM > prs[exerciseName].value) {
+                prs[exerciseName] = { value: estimated1RM, element: row.children[4] };
+            }
+        });
+
+        // Resaltar los PRs
+        for (const exercise in prs) {
+            prs[exercise].element.classList.add('pr-highlight');
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        // Llamar a la función para calcular 1RM y resaltar PRs al cargar la página
+        highlightPRs();
+
+        const ctx = document.getElementById('graficoProgreso');
+        if (ctx) {
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: {{ progreso_fechas|safe }},
+                    datasets: [{
+                        label: 'Volumen total',
+                        data: {{ progreso_valores|safe }},
+                        borderColor: '#32FF00',
+                        tension: 0.3,
+                        fill: false
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { ticks: { color: '#aaa' }, grid: { color: '#333' } },
+                        y: { ticks: { color: '#aaa' }, grid: { color: '#333' } }
+                    }
+                }
+            });
+        }
+    });
+</script>
+<style>
+    .pr-highlight {
+        color: #00FFFF; /* Color cian brillante para PRs */
+        font-weight: bold;
+        text-shadow: 0 0 8px rgba(0, 255, 255, 0.6);
+    }
+</style>
+{% endblock %}
+

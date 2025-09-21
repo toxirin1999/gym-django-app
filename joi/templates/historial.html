@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Historial con Joi</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { background: #121212; color: white; font-family: Arial; padding: 2em; }
+        .card { background: #1e1e1e; padding: 1em; border-radius: 10px; margin-bottom: 2em; }
+        .title { color: #32FF00; font-size: 1.5em; margin-bottom: 0.5em; }
+        .list-item { margin-bottom: 0.5em; }
+    </style>
+</head>
+<body>
+
+<h1 class="title">📊 Tu semana con Joi</h1>
+
+<div class="card">
+    <h2>🧠 Estado emocional</h2>
+    <ul>
+        {% for e in emociones_raw %}
+        <li class="list-item">{{ e.fecha }} — <strong>{{ e.emocion }}</strong> {% if e.nota %} ({{ e.nota }}) {% endif %}</li>
+        {% endfor %}
+    </ul>
+</div>
+
+<div class="card">
+    <h2>🏋️‍♀️ Entrenos</h2>
+    <ul>
+        {% for e in entrenos_raw %}
+        <li class="list-item">{{ e.fecha }} — {{ e.tipo }} ({{ e.duracion }} min)</li>
+        {% endfor %}
+    </ul>
+    <li class="list-item">
+        {{ e.fecha }} — {{ e.tipo }} ({{ e.duracion }} min)
+        {% if e.recomendacion_joi %}
+        <br><em style="color:#32FF00">→ Joi sugirió: {{ e.recomendacion_joi }}</em>
+        {% endif %}
+    </li>
+
+</div>
+
+<div class="card">
+    <h2>📈 Gráfica de emociones</h2>
+    <canvas id="emocionChart"></canvas>
+</div>
+
+<div class="card">
+    <h2>📉 Carga de entrenamiento</h2>
+    <canvas id="entrenoChart"></canvas>
+</div>
+
+<script>
+    const labels = {{ dias|safe }};
+    const emociones = {{ emociones|safe }};
+    const duraciones = {{ duraciones|safe }};
+
+    // Convertimos emociones a números para gráfica (puedes mejorar esto después)
+    const emocionesNumericas = emociones.map(e => {
+      if (e.includes("triste")) return 1;
+      if (e.includes("estresado")) return 2;
+      if (e.includes("neutral") || e === '') return 3;
+      if (e.includes("motivado") || e.includes("feliz")) return 4;
+      return 3;
+    });
+
+    new Chart(document.getElementById('emocionChart'), {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: 'Estado emocional (1–4)',
+          data: emocionesNumericas,
+          borderColor: '#32FF00',
+          backgroundColor: '#32FF0080',
+          tension: 0.3
+        }]
+      },
+      options: {
+        scales: {
+          y: {
+            min: 1,
+            max: 4,
+            ticks: {
+              callback: function(value) {
+                return ['Triste', 'Estresado', 'Neutral', 'Motivado'][value - 1];
+              }
+            }
+          }
+        }
+      }
+    });
+
+    new Chart(document.getElementById('entrenoChart'), {
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: 'Minutos de entreno',
+          data: duraciones,
+          backgroundColor: '#32FF00'
+        }]
+      }
+    });
+</script>
+
+</body>
+</html>

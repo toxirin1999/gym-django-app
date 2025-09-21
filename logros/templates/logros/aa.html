@@ -1,0 +1,997 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title><!DOCTYPE html>
+        <html lang="es">
+        <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Códice de las Leyendas - {{ cliente.nombre }}</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --codice-gold: #FFD700;
+            --codice-orange: #FF6B35;
+            --codice-dark: #0f0f23;
+            --codice-dark-blue: #1a1a3a;
+            --codice-red: #ff4757;
+            --codice-green: #2ed573;
+            --codice-purple: #5352ed;
+            --animation-speed: 0.3s;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, var(--codice-dark) 0%, var(--codice-dark-blue) 100%);
+            color: white;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Header Épico */
+        .codice-header {
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.1) 0%, rgba(255, 107, 53, 0.1) 100%);
+            border-bottom: 2px solid var(--codice-gold);
+            padding: 2rem 0;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .codice-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 215, 0, 0.2), transparent);
+            animation: shine 3s infinite;
+        }
+
+        @keyframes shine {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+
+        .codice-title {
+            font-size: 3rem;
+            font-weight: bold;
+            background: linear-gradient(45deg, var(--codice-gold), var(--codice-orange));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.5rem;
+            text-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+        }
+
+        .codice-subtitle {
+            font-size: 1.2rem;
+            color: var(--codice-gold);
+            opacity: 0.9;
+        }
+
+        /* Navegación */
+        .codice-nav {
+            background: rgba(255, 215, 0, 0.1);
+            padding: 1rem 0;
+            margin-bottom: 2rem;
+        }
+
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            flex-wrap: wrap;
+            padding: 0 1rem;
+        }
+
+        .nav-btn {
+            background: linear-gradient(135deg, var(--codice-gold), var(--codice-orange));
+            color: var(--codice-dark);
+            padding: 0.8rem 1.5rem;
+            border: none;
+            border-radius: 25px;
+            font-weight: bold;
+            text-decoration: none;
+            transition: all var(--animation-speed);
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(255, 215, 0, 0.3);
+        }
+
+        .nav-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255, 215, 0, 0.5);
+        }
+
+        .nav-btn.active {
+            background: linear-gradient(135deg, var(--codice-orange), var(--codice-red));
+            color: white;
+        }
+
+        /* Container Principal */
+        .codice-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 1rem;
+        }
+
+        /* Perfil del Cliente */
+        .perfil-section {
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.1), rgba(255, 107, 53, 0.1));
+            border: 2px solid var(--codice-gold);
+            border-radius: 15px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .perfil-section::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255, 215, 0, 0.1) 0%, transparent 70%);
+            animation: rotate 20s linear infinite;
+        }
+
+        @keyframes rotate {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .perfil-content {
+            position: relative;
+            z-index: 2;
+            display: grid;
+            grid-template-columns: auto 1fr auto;
+            gap: 2rem;
+            align-items: center;
+        }
+
+        .arquetipo-avatar {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--codice-gold), var(--codice-orange));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            box-shadow: 0 0 30px rgba(255, 215, 0, 0.6);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .perfil-info h2 {
+            font-size: 2rem;
+            color: var(--codice-gold);
+            margin-bottom: 0.5rem;
+        }
+
+        .perfil-info .filosofia {
+            font-style: italic;
+            color: var(--codice-orange);
+            margin-bottom: 1rem;
+            font-size: 1.1rem;
+        }
+
+        .progreso-container {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            padding: 1rem;
+            margin-top: 1rem;
+        }
+
+        .progreso-bar {
+            background: rgba(255, 255, 255, 0.1);
+            height: 20px;
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .progreso-fill {
+            background: linear-gradient(90deg, var(--codice-gold), var(--codice-orange));
+            height: 100%;
+            border-radius: 10px;
+            position: relative;
+            transition: width 1s ease;
+        }
+
+        .progreso-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+            animation: progress-shine 2s infinite;
+        }
+
+        @keyframes progress-shine {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+
+        .progreso-text {
+            text-align: center;
+            margin-top: 0.5rem;
+            font-weight: bold;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .stat-item {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 1rem;
+            border-radius: 10px;
+            text-align: center;
+            border: 1px solid rgba(255, 215, 0, 0.3);
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--codice-gold);
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.8);
+            margin-top: 0.5rem;
+        }
+
+        /* Secciones de Contenido */
+        .content-section {
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.05), rgba(255, 107, 53, 0.05));
+            border: 1px solid rgba(255, 215, 0, 0.3);
+            border-radius: 15px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .section-title {
+            font-size: 2rem;
+            color: var(--codice-gold);
+            margin-bottom: 1.5rem;
+            text-align: center;
+            position: relative;
+        }
+
+        .section-title::after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100px;
+            height: 3px;
+            background: linear-gradient(90deg, var(--codice-gold), var(--codice-orange));
+            border-radius: 2px;
+        }
+
+        /* Grid de Arquetipos */
+        .arquetipos-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .arquetipo-card {
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.1), rgba(255, 107, 53, 0.1));
+            border: 2px solid transparent;
+            border-radius: 15px;
+            padding: 1.5rem;
+            transition: all var(--animation-speed);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .arquetipo-card.desbloqueado {
+            border-color: var(--codice-gold);
+            box-shadow: 0 5px 20px rgba(255, 215, 0, 0.3);
+        }
+
+        .arquetipo-card.actual {
+            border-color: var(--codice-orange);
+            box-shadow: 0 5px 30px rgba(255, 107, 53, 0.5);
+            transform: scale(1.02);
+        }
+
+        .arquetipo-card.bloqueado {
+            border-color: rgba(255, 255, 255, 0.2);
+            opacity: 0.6;
+        }
+
+        .arquetipo-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(255, 215, 0, 0.4);
+        }
+
+        .arquetipo-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .arquetipo-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--codice-gold), var(--codice-orange));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: var(--codice-dark);
+        }
+
+        .arquetipo-info h3 {
+            color: var(--codice-gold);
+            font-size: 1.2rem;
+            margin-bottom: 0.3rem;
+        }
+
+        .arquetipo-nivel {
+            color: var(--codice-orange);
+            font-weight: bold;
+        }
+
+        .arquetipo-filosofia {
+            font-style: italic;
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+        }
+
+        .arquetipo-puntos {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 0.8rem;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .puntos-requeridos {
+            color: var(--codice-gold);
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+
+        /* Pruebas Legendarias */
+        .pruebas-container {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .prueba-item {
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.1), rgba(255, 107, 53, 0.1));
+            border: 1px solid rgba(255, 215, 0, 0.3);
+            border-radius: 10px;
+            padding: 1.5rem;
+            position: relative;
+            transition: all var(--animation-speed);
+        }
+
+        .prueba-item.completada {
+            border-color: var(--codice-green);
+            background: linear-gradient(135deg, rgba(46, 213, 115, 0.1), rgba(46, 213, 115, 0.05));
+        }
+
+        .prueba-item.activa {
+            border-color: var(--codice-orange);
+            box-shadow: 0 5px 20px rgba(255, 107, 53, 0.3);
+        }
+
+        .prueba-item.secreta {
+            border-color: var(--codice-purple);
+            background: linear-gradient(135deg, rgba(83, 82, 237, 0.1), rgba(83, 82, 237, 0.05));
+        }
+
+        .prueba-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .prueba-nombre {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: var(--codice-gold);
+        }
+
+        .prueba-recompensa {
+            background: linear-gradient(135deg, var(--codice-gold), var(--codice-orange));
+            color: var(--codice-dark);
+            padding: 0.3rem 0.8rem;
+            border-radius: 15px;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+
+        .prueba-descripcion {
+            color: rgba(255, 255, 255, 0.9);
+            margin-bottom: 1rem;
+        }
+
+        .prueba-progreso {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            padding: 0.8rem;
+        }
+
+        .progreso-bar-small {
+            background: rgba(255, 255, 255, 0.1);
+            height: 8px;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 0.5rem;
+        }
+
+        .progreso-fill-small {
+            background: linear-gradient(90deg, var(--codice-gold), var(--codice-orange));
+            height: 100%;
+            border-radius: 4px;
+            transition: width 1s ease;
+        }
+
+        .progreso-text-small {
+            font-size: 0.9rem;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        /* Estados especiales */
+        .estado-completado {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: var(--codice-green);
+            color: white;
+            padding: 0.3rem 0.8rem;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+
+        .estado-secreta {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: var(--codice-purple);
+            color: white;
+            padding: 0.3rem 0.8rem;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+
+        /* Filtros */
+        .filtros-container {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .filtro-btn {
+            background: rgba(255, 215, 0, 0.1);
+            border: 1px solid var(--codice-gold);
+            color: var(--codice-gold);
+            padding: 0.8rem 1.5rem;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all var(--animation-speed);
+        }
+
+        .filtro-btn.active {
+            background: var(--codice-gold);
+            color: var(--codice-dark);
+        }
+
+        .filtro-btn:hover {
+            background: rgba(255, 215, 0, 0.2);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .codice-title {
+                font-size: 2rem;
+            }
+
+            .perfil-content {
+                grid-template-columns: 1fr;
+                text-align: center;
+            }
+
+            .arquetipos-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .nav-container {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        /* Animaciones de entrada */
+        .fade-in {
+            animation: fadeIn 0.6s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Efectos de partículas */
+        .particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .particle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: var(--codice-gold);
+            border-radius: 50%;
+            animation: float 6s infinite linear;
+            opacity: 0.7;
+        }
+
+        @keyframes float {
+            0% {
+                transform: translateY(100vh) rotate(0deg);
+                opacity: 0;
+            }
+            10% {
+                opacity: 0.7;
+            }
+            90% {
+                opacity: 0.7;
+            }
+            100% {
+                transform: translateY(-100px) rotate(360deg);
+                opacity: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+<!-- Partículas de fondo -->
+<div class="particles" id="particles"></div>
+
+<!-- Header -->
+<header class="codice-header">
+    <h1 class="codice-title">⚔️ CÓDICE DE LAS LEYENDAS ⚔️</h1>
+    <p class="codice-subtitle">El viaje épico de {{ cliente.nombre }} hacia la inmortalidad</p>
+</header>
+
+<!-- Navegación -->
+<nav class="codice-nav">
+    <div class="nav-container">
+        <button class="nav-btn active" onclick="mostrarSeccion('perfil')">
+            <i class="fas fa-user"></i> Mi Progreso
+        </button>
+        <button class="nav-btn" onclick="mostrarSeccion('arquetipos')">
+            <i class="fas fa-crown"></i> Arquetipos
+        </button>
+        <button class="nav-btn" onclick="mostrarSeccion('pruebas')">
+            <i class="fas fa-sword"></i> Pruebas Legendarias
+        </button>
+        <button class="nav-btn" onclick="mostrarSeccion('ranking')">
+            <i class="fas fa-trophy"></i> Ranking
+        </button>
+        <a href="{% url 'entrenos:entrenamiento_activo' cliente.id %}" class="nav-btn">
+            <i class="fas fa-dumbbell"></i> Entrenar
+        </a>
+    </div>
+</nav>
+
+<!-- Container Principal -->
+<div class="codice-container">
+
+    <!-- Sección: Mi Progreso -->
+    <section id="seccion-perfil" class="content-section fade-in">
+        <div class="perfil-section">
+            <div class="perfil-content">
+                <div class="arquetipo-avatar">
+                    <i class="{{ perfil.nivel_actual.icono }}"></i>
+                </div>
+                <div class="perfil-info">
+                    <h2>{{ perfil.nivel_actual.titulo_arquetipo }}</h2>
+                    <p class="filosofia">"{{ perfil.nivel_actual.filosofia }}"</p>
+                    <div class="progreso-container">
+                        <div class="progreso-bar">
+                            <div class="progreso-fill" style="width: {{ porcentaje_progreso }}%;"></div>
+                        </div>
+                        <div class="progreso-text">
+                            {{ perfil.puntos_totales }} / {{ siguiente_nivel.puntos_requeridos }} puntos
+                            ({{ porcentaje_progreso }}%)
+                        </div>
+                    </div>
+                </div>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-value">{{ perfil.puntos_totales }}</div>
+                        <div class="stat-label">💰 Puntos Totales</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">{{ perfil.nivel_actual.nivel }}</div>
+                        <div class="stat-label">⚔️ Nivel Actual</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">{{ perfil.racha_actual }}</div>
+                        <div class="stat-label">🔥 Racha Días</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">{{ entrenamientos_totales }}</div>
+                        <div class="stat-label">🏋️ Entrenamientos</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">{{ pruebas_completadas }}</div>
+                        <div class="stat-label">✅ Pruebas Completadas</div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <!-- Próximo Nivel -->
+        {% if siguiente_nivel %}
+        <div class="content-section">
+            <h3 class="section-title">🎯 Próximo Objetivo</h3>
+            <div class="arquetipo-card">
+                <div class="arquetipo-header">
+                    <div class="arquetipo-icon">
+                        <i class="{{ siguiente_nivel.icono }}"></i>
+                    </div>
+                    <div class="arquetipo-info">
+                        <h3>{{ siguiente_nivel.titulo_arquetipo }}</h3>
+                        <div class="arquetipo-nivel">Nivel {{ siguiente_nivel.nivel }}</div>
+                    </div>
+                </div>
+                <div class="arquetipo-filosofia">"{{ siguiente_nivel.filosofia }}"</div>
+                <div class="arquetipo-puntos">
+                    <div class="puntos-requeridos">
+                        {{ puntos_faltantes }} puntos restantes
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Pruebas Activas -->
+        <div class="content-section">
+            <h3 class="section-title">⚔️ Pruebas Activas</h3>
+            <div class="pruebas-container">
+                {% for prueba in pruebas_activas %}
+                <div class="prueba-item activa">
+                    <div class="prueba-header">
+                        <div class="prueba-nombre">{{ prueba.nombre }}</div>
+                        <div class="prueba-recompensa">+{{ prueba.puntos_recompensa }} pts</div>
+                    </div>
+                    <div class="prueba-descripcion">{{ prueba.descripcion }}</div>
+                    <div class="prueba-progreso">
+                        <div class="progreso-bar-small">
+                            <div class="progreso-fill-small" style="width: {{ prueba.progreso_porcentaje }}%;"></div>
+                        </div>
+                        <div class="progreso-text-small">
+                            {{ prueba.progreso_actual }} / {{ prueba.meta_valor }}
+                        </div>
+                    </div>
+                    {% if prueba.es_secreta %}
+                    <div class="estado-secreta">🔮 SECRETA</div>
+                    {% endif %}
+                </div>
+                {% empty %}
+                <div class="prueba-item">
+                    <div class="prueba-descripcion">
+                        ¡Todas las pruebas de tu nivel actual están completadas!
+                        Sigue entrenando para desbloquear el siguiente arquetipo.
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </section>
+
+    <!-- Sección: Arquetipos -->
+    <section id="seccion-arquetipos" class="content-section" style="display: none;">
+        <h2 class="section-title">👑 Arquetipos del Códice</h2>
+
+        <!-- Filtros -->
+        <div class="filtros-container">
+            <button class="filtro-btn active" onclick="filtrarArquetipos('todos')">Todos</button>
+            <button class="filtro-btn" onclick="filtrarArquetipos('desbloqueados')">Desbloqueados</button>
+            <button class="filtro-btn" onclick="filtrarArquetipos('actual')">Actual</button>
+            <button class="filtro-btn" onclick="filtrarArquetipos('siguientes')">Próximos</button>
+        </div>
+
+        <div class="arquetipos-grid" id="arquetipos-grid">
+            {% for arquetipo in arquetipos %}
+            <div class="arquetipo-card
+                    {% if arquetipo.nivel <= perfil.nivel_actual.nivel %}desbloqueado{% endif %}
+                    {% if arquetipo.nivel == perfil.nivel_actual.nivel %}actual{% endif %}
+                    {% if arquetipo.nivel > perfil.nivel_actual.nivel %}bloqueado{% endif %}"
+                 data-categoria="{% if arquetipo.nivel <= perfil.nivel_actual.nivel %}desbloqueados{% endif %}
+                                   {% if arquetipo.nivel == perfil.nivel_actual.nivel %}actual{% endif %}
+                                   {% if arquetipo.nivel > perfil.nivel_actual.nivel %}siguientes{% endif %}">
+
+                <div class="arquetipo-header">
+                    <div class="arquetipo-icon">
+                        <i class="{{ arquetipo.icono }}"></i>
+                    </div>
+                    <div class="arquetipo-info">
+                        <h3>{{ arquetipo.titulo_arquetipo }}</h3>
+                        <div class="arquetipo-nivel">Nivel {{ arquetipo.nivel }}</div>
+                    </div>
+                </div>
+
+                <div class="arquetipo-filosofia">"{{ arquetipo.filosofia }}"</div>
+
+                <div class="arquetipo-puntos">
+                    <div class="puntos-requeridos">
+                        {% if arquetipo.nivel <= perfil.nivel_actual.nivel %}
+                        ✅ DESBLOQUEADO
+                        {% else %}
+                        {{ arquetipo.puntos_requeridos }} puntos requeridos
+                        {% endif %}
+                    </div>
+                </div>
+
+                {% if arquetipo.nivel == perfil.nivel_actual.nivel %}
+                <div class="estado-completado">ACTUAL</div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+
+    <!-- Sección: Pruebas Legendarias -->
+    <section id="seccion-pruebas" class="content-section" style="display: none;">
+        <h2 class="section-title">⚔️ Pruebas Legendarias</h2>
+
+        <!-- Filtros de Pruebas -->
+        <div class="filtros-container">
+            <button class="filtro-btn active" onclick="filtrarPruebas('todas')">Todas</button>
+            <button class="filtro-btn" onclick="filtrarPruebas('completadas')">Completadas</button>
+            <button class="filtro-btn" onclick="filtrarPruebas('activas')">Activas</button>
+            <button class="filtro-btn" onclick="filtrarPruebas('secretas')">Secretas</button>
+        </div>
+
+        <div class="pruebas-container" id="pruebas-grid">
+            {% for prueba in todas_las_pruebas %}
+            <div class="prueba-item
+                    {% if prueba.completada %}completada{% endif %}
+                    {% if not prueba.completada and prueba.disponible %}activa{% endif %}
+                    {% if prueba.es_secreta %}secreta{% endif %}"
+                 data-categoria="{% if prueba.completada %}completadas{% endif %}
+                                   {% if not prueba.completada and prueba.disponible %}activas{% endif %}
+                                   {% if prueba.es_secreta %}secretas{% endif %}">
+
+                <div class="prueba-header">
+                    <div class="prueba-nombre">
+                        {{ prueba.nombre }}
+                        <small style="color: var(--codice-orange);">
+                            ({{ prueba.arquetipo.titulo_arquetipo }} - Nivel {{ prueba.arquetipo.nivel }})
+                        </small>
+                    </div>
+                    <div class="prueba-recompensa">+{{ prueba.puntos_recompensa }} pts</div>
+                </div>
+
+                <div class="prueba-descripcion">{{ prueba.descripcion }}</div>
+
+                {% if not prueba.completada and prueba.disponible %}
+                <div class="prueba-progreso">
+                    <div class="progreso-bar-small">
+                        <div class="progreso-fill-small" style="width: {{ prueba.progreso_porcentaje }}%;"></div>
+                    </div>
+                    <div class="progreso-text-small">
+                        {{ prueba.progreso_actual }} / {{ prueba.meta_valor }}
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if prueba.completada %}
+                <div class="estado-completado">✅ COMPLETADA</div>
+                {% elif prueba.es_secreta %}
+                <div class="estado-secreta">🔮 SECRETA</div>
+                {% endif %}
+            </div>
+            {% empty %}
+            <div class="prueba-item">
+                <div class="prueba-descripcion">
+                    No hay pruebas disponibles. ¡Sigue entrenando para desbloquear nuevos desafíos!
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+
+    <!-- Sección: Ranking -->
+    <section id="seccion-ranking" class="content-section" style="display: none;">
+        <h2 class="section-title">🏆 Ranking de Leyendas</h2>
+        <div style="text-align: center; padding: 2rem;">
+            <p style="color: var(--codice-gold); font-size: 1.2rem;">
+                <i class="fas fa-trophy"></i>
+                El sistema de ranking estará disponible próximamente
+            </p>
+            <p style="color: rgba(255, 255, 255, 0.8); margin-top: 1rem;">
+                Aquí podrás ver tu posición entre todos los guerreros del gimnasio
+            </p>
+            <a href="{% url 'logros:leaderboard' %}" class="nav-btn" style="margin-top: 1rem; display: inline-block;">
+                <i class="fas fa-external-link-alt"></i> Ver Leaderboard Completo
+            </a>
+        </div>
+    </section>
+
+</div>
+
+<script>
+    // Crear partículas de fondo
+    function crearParticulas() {
+        const particlesContainer = document.getElementById('particles');
+
+        for (let i = 0; i < 20; i++) {
+            const particle = document.createElement('div');
+            particle.className = 'particle';
+            particle.style.left = Math.random() * 100 + '%';
+            particle.style.animationDelay = Math.random() * 6 + 's';
+            particle.style.animationDuration = (Math.random() * 3 + 3) + 's';
+            particlesContainer.appendChild(particle);
+        }
+    }
+
+    // Navegación entre secciones
+    function mostrarSeccion(seccion) {
+        // Ocultar todas las secciones
+        document.querySelectorAll('.content-section').forEach(section => {
+            section.style.display = 'none';
+        });
+
+        // Mostrar la sección seleccionada
+        document.getElementById('seccion-' + seccion).style.display = 'block';
+
+        // Actualizar botones de navegación
+        document.querySelectorAll('.nav-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        event.target.classList.add('active');
+    }
+
+    // Filtrar arquetipos
+    function filtrarArquetipos(categoria) {
+        const cards = document.querySelectorAll('#arquetipos-grid .arquetipo-card');
+
+        cards.forEach(card => {
+            if (categoria === 'todos' || card.dataset.categoria.includes(categoria)) {
+                card.style.display = 'block';
+            } else {
+                card.style.display = 'none';
+            }
+        });
+
+        // Actualizar botones de filtro
+        document.querySelectorAll('.filtros-container .filtro-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        event.target.classList.add('active');
+    }
+
+    // Filtrar pruebas
+    function filtrarPruebas(categoria) {
+        const pruebas = document.querySelectorAll('#pruebas-grid .prueba-item');
+
+        pruebas.forEach(prueba => {
+            if (categoria === 'todas' || prueba.dataset.categoria.includes(categoria)) {
+                prueba.style.display = 'block';
+            } else {
+                prueba.style.display = 'none';
+            }
+        });
+
+        // Actualizar botones de filtro
+        document.querySelectorAll('.filtros-container .filtro-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        event.target.classList.add('active');
+    }
+
+    // Actualizar datos en tiempo real
+    function actualizarDatos() {
+        fetch(`/logros/gamificacion-resumen/${{ cliente.id }}/`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.tiene_perfil) {
+                    // Actualizar estadísticas
+                    document.querySelector('.stat-value').textContent = data.puntos_actuales;
+
+                    // Actualizar barra de progreso
+                    const progressBar = document.querySelector('.progreso-fill');
+                    if (progressBar) {
+                        progressBar.style.width = data.porcentaje_progreso + '%';
+                    }
+
+                    // Actualizar texto de progreso
+                    const progressText = document.querySelector('.progreso-text');
+                    if (progressText) {
+                        progressText.textContent = `${data.puntos_actuales} / ${data.puntos_siguiente} puntos (${data.porcentaje_progreso}%)`;
+                    }
+                }
+            })
+            .catch(error => {
+                console.log('Error actualizando datos:', error);
+            });
+    }
+
+    // Inicializar
+    document.addEventListener('DOMContentLoaded', function() {
+        crearParticulas();
+
+        // Actualizar datos cada 30 segundos
+        setInterval(actualizarDatos, 30000);
+
+        // Animaciones de entrada
+        document.querySelectorAll('.arquetipo-card, .prueba-item').forEach((element, index) => {
+            element.style.animationDelay = (index * 0.1) + 's';
+            element.classList.add('fade-in');
+        });
+    });
+
+    // Efectos de hover mejorados
+    document.addEventListener('mouseover', function(e) {
+        if (e.target.classList.contains('arquetipo-card') || e.target.closest('.arquetipo-card')) {
+            const card = e.target.classList.contains('arquetipo-card') ? e.target : e.target.closest('.arquetipo-card');
+            card.style.transform = 'translateY(-5px) scale(1.02)';
+        }
+    });
+
+    document.addEventListener('mouseout', function(e) {
+        if (e.target.classList.contains('arquetipo-card') || e.target.closest('.arquetipo-card')) {
+            const card = e.target.classList.contains('arquetipo-card') ? e.target : e.target.closest('.arquetipo-card');
+            if (card.classList.contains('actual')) {
+                card.style.transform = 'scale(1.02)';
+            } else {
+                card.style.transform = 'translateY(0) scale(1)';
+            }
+        }
+    });
+</script>
+</body>
+</html>

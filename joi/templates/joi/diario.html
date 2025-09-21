@@ -1,0 +1,56 @@
+{% include 'partials/joi_flotante.html' %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Tu día con Joi</title>
+    <style>
+        body { background: #121212; color: white; font-family: Arial; padding: 2em; }
+        .card { background: #1e1e1e; padding: 2em; border-radius: 10px; margin-bottom: 1em; }
+        .input, .textarea { width: 100%; padding: 0.5em; margin-top: 0.5em; background: #222; color: white; border: none; border-radius: 5px; }
+        .checkbox { transform: scale(1.5); margin-top: 1em; }
+        .btn { background: #32FF00; color: black; padding: 1em; border: none; border-radius: 10px; cursor: pointer; width: 100%; margin-top: 1em; }
+    </style>
+</head>
+<body>
+<h1>Hola, ¿cómo estás hoy?</h1>
+<div style="background:#1a1a1a; padding:1em; margin-bottom:2em; border-left: 5px solid #32FF00; border-radius:8px;">
+    <strong>🧠 Joi te dice:</strong><br>
+    {{ motivacion }}
+</div>
+{% if respuesta_joi_generativa %}
+<div class="joi-msg" style="margin-top: 2em; font-style: italic; opacity: 0.9;">
+    🤖 Joi (IA real) te dice:<br>
+    "{{ respuesta_joi_generativa }}"
+</div>
+{% endif %}
+
+<div class="card">
+    <h2>🔍 ¿Por qué entrenas hoy?</h2>
+    {{ motivo_form.as_p }}
+</div>
+{% if recuerdo_del_dia %}
+<div class="section">
+    <div class="title">📼 Recuerdo del día</div>
+    <p style="font-style: italic;">“{{ recuerdo_del_dia.contenido }}”</p>
+    <p style="font-size: 0.8em; color: #888;">Registrado el {{ recuerdo_del_dia.fecha|date:"d M Y" }}</p>
+</div>
+{% endif %}
+
+<form method="post">
+    {% csrf_token %}
+
+    <div class="card">
+        <h2>🧠 Estado emocional</h2>
+        {{ emocion_form.as_p }}
+    </div>
+
+    <div class="card">
+        <h2>🏋️‍♂️ Entrenamiento</h2>
+        {{ entreno_form.as_p }}
+    </div>
+
+    <button class="btn" type="submit">Guardar mi día con Joi</button>
+</form>
+</body>
+</html>

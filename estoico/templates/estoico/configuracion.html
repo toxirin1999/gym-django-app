@@ -1,0 +1,826 @@
+{% extends 'estoico/base_estoico.html' %}
+{% load static %}
+
+{% block title %}Configuración - Diario Estoico{% endblock %}
+
+{% block extra_css %}
+<style>
+.config-container {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.config-header {
+    background: linear-gradient(135deg, var(--warning-color) 0%, var(--accent-color) 100%);
+    color: white;
+    padding: 2rem;
+    border-radius: var(--border-radius);
+    margin-bottom: 2rem;
+    text-align: center;
+}
+
+.config-section {
+    background: white;
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow);
+    margin-bottom: 2rem;
+    overflow: hidden;
+}
+
+.section-header {
+    background: #f8f9fa;
+    padding: 1.5rem;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.section-title {
+    margin: 0;
+    color: var(--primary-color);
+    font-size: 1.2rem;
+    font-weight: 600;
+}
+
+.section-description {
+    margin: 0.5rem 0 0 0;
+    color: #6c757d;
+    font-size: 0.9rem;
+}
+
+.section-content {
+    padding: 2rem;
+}
+
+.config-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 0;
+    border-bottom: 1px solid #f8f9fa;
+}
+
+.config-item:last-child {
+    border-bottom: none;
+}
+
+.config-label {
+    flex: 1;
+}
+
+.config-label h6 {
+    margin: 0 0 0.25rem 0;
+    font-weight: 600;
+    color: var(--primary-color);
+}
+
+.config-label p {
+    margin: 0;
+    font-size: 0.9rem;
+    color: #6c757d;
+}
+
+.config-control {
+    flex-shrink: 0;
+    margin-left: 1rem;
+}
+
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+}
+
+input:checked + .slider {
+    background-color: var(--success-color);
+}
+
+input:checked + .slider:before {
+    transform: translateX(26px);
+}
+
+.time-picker {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.time-input {
+    padding: 0.5rem;
+    border: 1px solid #dee2e6;
+    border-radius: var(--border-radius);
+    font-size: 0.9rem;
+}
+
+.frequency-options {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.frequency-option {
+    padding: 0.5rem 1rem;
+    border: 1px solid #dee2e6;
+    border-radius: 20px;
+    background: white;
+    cursor: pointer;
+    transition: var(--transition);
+    font-size: 0.9rem;
+}
+
+.frequency-option:hover {
+    border-color: var(--primary-color);
+}
+
+.frequency-option.active {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+}
+
+.philosopher-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+}
+
+.philosopher-card {
+    text-align: center;
+    padding: 1rem;
+    border: 2px solid #e9ecef;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.philosopher-card:hover {
+    border-color: var(--primary-color);
+    background: rgba(44, 62, 80, 0.05);
+}
+
+.philosopher-card.selected {
+    border-color: var(--primary-color);
+    background: rgba(44, 62, 80, 0.1);
+}
+
+.philosopher-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: var(--primary-color);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 0.5rem;
+    font-size: 1.5rem;
+}
+
+.theme-options {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 1rem;
+}
+
+.theme-option {
+    text-align: center;
+    padding: 1rem;
+    border: 2px solid #e9ecef;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.theme-option:hover {
+    border-color: var(--primary-color);
+}
+
+.theme-option.active {
+    border-color: var(--primary-color);
+    background: rgba(44, 62, 80, 0.1);
+}
+
+.theme-preview {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    margin: 0 auto 0.5rem;
+}
+
+.theme-light { background: linear-gradient(135deg, #ffffff, #f8f9fa); }
+.theme-dark { background: linear-gradient(135deg, #2c3e50, #34495e); }
+.theme-sepia { background: linear-gradient(135deg, #f4f1e8, #e8dcc0); }
+
+.export-options {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.export-btn {
+    flex: 1;
+    min-width: 200px;
+}
+
+.danger-zone {
+    border: 2px solid var(--danger-color);
+    border-radius: var(--border-radius);
+    padding: 1.5rem;
+    background: rgba(231, 76, 60, 0.05);
+}
+
+.danger-zone h6 {
+    color: var(--danger-color);
+    margin-bottom: 1rem;
+}
+
+.save-section {
+    background: #f8f9fa;
+    padding: 2rem;
+    text-align: center;
+    border-top: 1px solid #e9ecef;
+}
+
+@media (max-width: 768px) {
+    .config-item {
+        flex-direction: column;
+        align-items: start;
+        gap: 1rem;
+    }
+    
+    .config-control {
+        margin-left: 0;
+        width: 100%;
+    }
+    
+    .frequency-options {
+        width: 100%;
+    }
+    
+    .frequency-option {
+        flex: 1;
+        text-align: center;
+    }
+    
+    .export-options {
+        flex-direction: column;
+    }
+    
+    .export-btn {
+        min-width: auto;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="config-container">
+    <!-- Header de Configuración -->
+    <div class="config-header">
+        <h2 class="mb-3">
+            <i class="fas fa-cog me-2"></i>
+            Configuración
+        </h2>
+        <p class="mb-0 opacity-75">
+            Personaliza tu experiencia de crecimiento estoico
+        </p>
+    </div>
+
+    <form method="POST" id="configForm">
+        {% csrf_token %}
+        
+        <!-- Notificaciones -->
+        <div class="config-section">
+            <div class="section-header">
+                <h5 class="section-title">
+                    <i class="fas fa-bell me-2"></i>
+                    Notificaciones
+                </h5>
+                <p class="section-description">
+                    Configura recordatorios para mantener tu práctica diaria
+                </p>
+            </div>
+            <div class="section-content">
+                <div class="config-item">
+                    <div class="config-label">
+                        <h6>Recordatorio Diario</h6>
+                        <p>Recibe una notificación para reflexionar cada día</p>
+                    </div>
+                    <div class="config-control">
+                        <label class="toggle-switch">
+                            <input type="checkbox" name="notificaciones_activas" 
+                                   {% if perfil.notificaciones_activas %}checked{% endif %}>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="config-item">
+                    <div class="config-label">
+                        <h6>Hora del Recordatorio</h6>
+                        <p>¿A qué hora prefieres reflexionar?</p>
+                    </div>
+                    <div class="config-control">
+                        <div class="time-picker">
+                            <input type="time" name="hora_notificacion" 
+                                   value="{{ perfil.hora_notificacion|time:'H:i' }}"
+                                   class="time-input">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="config-item">
+                    <div class="config-label">
+                        <h6>Frecuencia de Recordatorios</h6>
+                        <p>¿Con qué frecuencia quieres recibir recordatorios?</p>
+                    </div>
+                    <div class="config-control">
+                        <div class="frequency-options">
+                            <div class="frequency-option {% if perfil.frecuencia_notificacion == 'diario' %}active{% endif %}"
+                                 data-value="diario">
+                                Diario
+                            </div>
+                            <div class="frequency-option {% if perfil.frecuencia_notificacion == 'dias_laborales' %}active{% endif %}"
+                                 data-value="dias_laborales">
+                                Días Laborales
+                            </div>
+                            <div class="frequency-option {% if perfil.frecuencia_notificacion == 'personalizado' %}active{% endif %}"
+                                 data-value="personalizado">
+                                Personalizado
+                            </div>
+                        </div>
+                        <input type="hidden" name="frecuencia_notificacion" 
+                               value="{{ perfil.frecuencia_notificacion }}">
+                    </div>
+                </div>
+
+                <div class="config-item">
+                    <div class="config-label">
+                        <h6>Notificaciones de Logros</h6>
+                        <p>Recibe notificaciones cuando desbloquees logros</p>
+                    </div>
+                    <div class="config-control">
+                        <label class="toggle-switch">
+                            <input type="checkbox" name="notificaciones_logros" 
+                                   {% if perfil.notificaciones_logros %}checked{% endif %}>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Preferencias de Contenido -->
+        <div class="config-section">
+            <div class="section-header">
+                <h5 class="section-title">
+                    <i class="fas fa-book me-2"></i>
+                    Preferencias de Contenido
+                </h5>
+                <p class="section-description">
+                    Personaliza el tipo de contenido que más te inspira
+                </p>
+            </div>
+            <div class="section-content">
+                <div class="config-item">
+                    <div class="config-label">
+                        <h6>Filósofo Favorito</h6>
+                        <p>Selecciona tu filósofo estoico preferido</p>
+                    </div>
+                    <div class="config-control">
+                        <div class="philosopher-grid">
+                            <div class="philosopher-card {% if perfil.filosofo_favorito == 'marco_aurelio' %}selected{% endif %}"
+                                 data-philosopher="marco_aurelio">
+                                <div class="philosopher-icon">👑</div>
+                                <div>Marco Aurelio</div>
+                            </div>
+                            <div class="philosopher-card {% if perfil.filosofo_favorito == 'seneca' %}selected{% endif %}"
+                                 data-philosopher="seneca">
+                                <div class="philosopher-icon">📜</div>
+                                <div>Séneca</div>
+                            </div>
+                            <div class="philosopher-card {% if perfil.filosofo_favorito == 'epicteto' %}selected{% endif %}"
+                                 data-philosopher="epicteto">
+                                <div class="philosopher-icon">🕊️</div>
+                                <div>Epicteto</div>
+                            </div>
+                            <div class="philosopher-card {% if perfil.filosofo_favorito == 'todos' %}selected{% endif %}"
+                                 data-philosopher="todos">
+                                <div class="philosopher-icon">⚖️</div>
+                                <div>Todos</div>
+                            </div>
+                        </div>
+                        <input type="hidden" name="filosofo_favorito" 
+                               value="{{ perfil.filosofo_favorito }}">
+                    </div>
+                </div>
+
+                <div class="config-item">
+                    <div class="config-label">
+                        <h6>Mostrar Citas en Idioma Original</h6>
+                        <p>Ver citas en latín/griego cuando esté disponible</p>
+                    </div>
+                    <div class="config-control">
+                        <label class="toggle-switch">
+                            <input type="checkbox" name="mostrar_idioma_original" 
+                                   {% if perfil.mostrar_idioma_original %}checked{% endif %}>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="config-item">
+                    <div class="config-label">
+                        <h6>Nivel de Dificultad</h6>
+                        <p>Ajusta la complejidad de las reflexiones</p>
+                    </div>
+                    <div class="config-control">
+                        <select name="nivel_dificultad" class="form-select">
+                            <option value="principiante" {% if perfil.nivel_dificultad == 'principiante' %}selected{% endif %}>
+                                Principiante
+                            </option>
+                            <option value="intermedio" {% if perfil.nivel_dificultad == 'intermedio' %}selected{% endif %}>
+                                Intermedio
+                            </option>
+                            <option value="avanzado" {% if perfil.nivel_dificultad == 'avanzado' %}selected{% endif %}>
+                                Avanzado
+                            </option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Apariencia -->
+        <div class="config-section">
+            <div class="section-header">
+                <h5 class="section-title">
+                    <i class="fas fa-palette me-2"></i>
+                    Apariencia
+                </h5>
+                <p class="section-description">
+                    Personaliza la apariencia de la aplicación
+                </p>
+            </div>
+            <div class="section-content">
+                <div class="config-item">
+                    <div class="config-label">
+                        <h6>Tema</h6>
+                        <p>Selecciona el tema visual que prefieras</p>
+                    </div>
+                    <div class="config-control">
+                        <div class="theme-options">
+                            <div class="theme-option {% if perfil.tema == 'claro' %}active{% endif %}"
+                                 data-theme="claro">
+                                <div class="theme-preview theme-light"></div>
+                                <div>Claro</div>
+                            </div>
+                            <div class="theme-option {% if perfil.tema == 'oscuro' %}active{% endif %}"
+                                 data-theme="oscuro">
+                                <div class="theme-preview theme-dark"></div>
+                                <div>Oscuro</div>
+                            </div>
+                            <div class="theme-option {% if perfil.tema == 'sepia' %}active{% endif %}"
+                                 data-theme="sepia">
+                                <div class="theme-preview theme-sepia"></div>
+                                <div>Sepia</div>
+                            </div>
+                        </div>
+                        <input type="hidden" name="tema" value="{{ perfil.tema }}">
+                    </div>
+                </div>
+
+                <div class="config-item">
+                    <div class="config-label">
+                        <h6>Tamaño de Fuente</h6>
+                        <p>Ajusta el tamaño del texto para mejor lectura</p>
+                    </div>
+                    <div class="config-control">
+                        <select name="tamano_fuente" class="form-select">
+                            <option value="pequeno" {% if perfil.tamano_fuente == 'pequeno' %}selected{% endif %}>
+                                Pequeño
+                            </option>
+                            <option value="normal" {% if perfil.tamano_fuente == 'normal' %}selected{% endif %}>
+                                Normal
+                            </option>
+                            <option value="grande" {% if perfil.tamano_fuente == 'grande' %}selected{% endif %}>
+                                Grande
+                            </option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="config-item">
+                    <div class="config-label">
+                        <h6>Animaciones</h6>
+                        <p>Habilitar efectos visuales y transiciones</p>
+                    </div>
+                    <div class="config-control">
+                        <label class="toggle-switch">
+                            <input type="checkbox" name="animaciones_activas" 
+                                   {% if perfil.animaciones_activas %}checked{% endif %}>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Privacidad y Datos -->
+        <div class="config-section">
+            <div class="section-header">
+                <h5 class="section-title">
+                    <i class="fas fa-shield-alt me-2"></i>
+                    Privacidad y Datos
+                </h5>
+                <p class="section-description">
+                    Controla tus datos y privacidad
+                </p>
+            </div>
+            <div class="section-content">
+                <div class="config-item">
+                    <div class="config-label">
+                        <h6>Exportar Datos</h6>
+                        <p>Descarga todas tus reflexiones y progreso</p>
+                    </div>
+                    <div class="config-control">
+                        <div class="export-options">
+                            <a href="{% url 'estoico:exportar_reflexiones' %}" 
+                               class="btn btn-outline-primary export-btn">
+                                <i class="fas fa-download me-2"></i>Exportar JSON
+                            </a>
+                            <a href="{% url 'estoico:exportar_pdf' %}"
+                               class="btn btn-outline-secondary export-btn">
+                                <i class="fas fa-file-pdf me-2"></i>Exportar PDF
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="config-item">
+                    <div class="config-label">
+                        <h6>Copia de Seguridad Automática</h6>
+                        <p>Respaldar automáticamente tus datos</p>
+                    </div>
+                    <div class="config-control">
+                        <label class="toggle-switch">
+                            <input type="checkbox" name="backup_automatico" 
+                                   {% if perfil.backup_automatico %}checked{% endif %}>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="config-item">
+                    <div class="config-label">
+                        <h6>Análisis de Uso</h6>
+                        <p>Ayúdanos a mejorar compartiendo datos anónimos de uso</p>
+                    </div>
+                    <div class="config-control">
+                        <label class="toggle-switch">
+                            <input type="checkbox" name="analytics_activo" 
+                                   {% if perfil.analytics_activo %}checked{% endif %}>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Zona de Peligro -->
+        <div class="config-section">
+            <div class="section-header">
+                <h5 class="section-title">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Zona de Peligro
+                </h5>
+                <p class="section-description">
+                    Acciones irreversibles - procede con cuidado
+                </p>
+            </div>
+            <div class="section-content">
+                <div class="danger-zone">
+                    <h6>
+                        <i class="fas fa-trash me-2"></i>
+                        Eliminar Todos los Datos
+                    </h6>
+                    <p class="mb-3">
+                        Esta acción eliminará permanentemente todas tus reflexiones, 
+                        progreso y configuraciones. No se puede deshacer.
+                    </p>
+                    <button type="button" class="btn btn-danger" onclick="confirmarEliminacion()">
+                        <i class="fas fa-trash me-2"></i>Eliminar Todos los Datos
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Botones de Acción -->
+        <div class="save-section">
+            <button type="submit" class="btn btn-primary btn-lg me-3">
+                <i class="fas fa-save me-2"></i>Guardar Configuración
+            </button>
+            <a href="{% url 'estoico:dashboard' %}" class="btn btn-outline-secondary btn-lg">
+                <i class="fas fa-times me-2"></i>Cancelar
+            </a>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Manejo de opciones de frecuencia
+    document.querySelectorAll('.frequency-option').forEach(option => {
+        option.addEventListener('click', function() {
+            document.querySelectorAll('.frequency-option').forEach(opt => {
+                opt.classList.remove('active');
+            });
+            this.classList.add('active');
+            document.querySelector('input[name="frecuencia_notificacion"]').value = 
+                this.getAttribute('data-value');
+        });
+    });
+
+    // Manejo de selección de filósofo
+    document.querySelectorAll('.philosopher-card').forEach(card => {
+        card.addEventListener('click', function() {
+            document.querySelectorAll('.philosopher-card').forEach(c => {
+                c.classList.remove('selected');
+            });
+            this.classList.add('selected');
+            document.querySelector('input[name="filosofo_favorito"]').value = 
+                this.getAttribute('data-philosopher');
+        });
+    });
+
+    // Manejo de temas
+    document.querySelectorAll('.theme-option').forEach(option => {
+        option.addEventListener('click', function() {
+            document.querySelectorAll('.theme-option').forEach(opt => {
+                opt.classList.remove('active');
+            });
+            this.classList.add('active');
+            document.querySelector('input[name="tema"]').value = 
+                this.getAttribute('data-theme');
+            
+            // Aplicar tema inmediatamente
+            aplicarTema(this.getAttribute('data-theme'));
+        });
+    });
+
+    // Auto-save en cambios
+    const form = document.getElementById('configForm');
+    const inputs = form.querySelectorAll('input, select');
+    
+    inputs.forEach(input => {
+        input.addEventListener('change', function() {
+            // Mostrar indicador de guardado automático
+            mostrarAutoSave();
+        });
+    });
+});
+
+function aplicarTema(tema) {
+    document.body.className = document.body.className.replace(/theme-\w+/g, '');
+    document.body.classList.add(`theme-${tema}`);
+    
+    // Guardar en localStorage para persistencia
+    localStorage.setItem('tema-estoico', tema);
+}
+
+function mostrarAutoSave() {
+    // Crear o mostrar indicador de auto-save
+    let indicator = document.getElementById('auto-save-indicator');
+    if (!indicator) {
+        indicator = document.createElement('div');
+        indicator.id = 'auto-save-indicator';
+        indicator.className = 'position-fixed top-0 end-0 m-3 alert alert-success alert-dismissible';
+        indicator.innerHTML = `
+            <i class="fas fa-check me-2"></i>
+            Configuración guardada automáticamente
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        document.body.appendChild(indicator);
+    }
+    
+    // Auto-hide después de 3 segundos
+    setTimeout(() => {
+        if (indicator) {
+            indicator.remove();
+        }
+    }, 3000);
+}
+
+function confirmarEliminacion() {
+    const confirmacion = confirm(
+        '⚠️ ADVERTENCIA ⚠️\n\n' +
+        'Esta acción eliminará PERMANENTEMENTE:\n' +
+        '• Todas tus reflexiones\n' +
+        '• Todo tu progreso y estadísticas\n' +
+        '• Todos tus logros\n' +
+        '• Toda tu configuración\n\n' +
+        'Esta acción NO SE PUEDE DESHACER.\n\n' +
+        '¿Estás absolutamente seguro de que quieres continuar?'
+    );
+    
+    if (confirmacion) {
+        const segundaConfirmacion = prompt(
+            'Para confirmar, escribe "ELIMINAR TODO" (en mayúsculas):'
+        );
+        
+        if (segundaConfirmacion === 'ELIMINAR TODO') {
+            // Enviar solicitud de eliminación
+            fetch('{% url "estoico:eliminar_todos_datos" %}', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    confirmacion: 'ELIMINAR TODO'
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Todos los datos han sido eliminados.');
+                    window.location.href = '{% url "estoico:dashboard" %}';
+                } else {
+                    alert('Error al eliminar los datos: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error al procesar la solicitud');
+            });
+        } else {
+            alert('Eliminación cancelada. El texto no coincide.');
+        }
+    }
+}
+
+// Aplicar tema guardado al cargar la página
+document.addEventListener('DOMContentLoaded', function() {
+    const temaGuardado = localStorage.getItem('tema-estoico');
+    if (temaGuardado) {
+        aplicarTema(temaGuardado);
+    }
+});
+
+// Validación del formulario
+document.getElementById('configForm').addEventListener('submit', function(e) {
+    // Validaciones adicionales si es necesario
+    const horaNotificacion = document.querySelector('input[name="hora_notificacion"]').value;
+    
+    if (!horaNotificacion) {
+        e.preventDefault();
+        alert('Por favor, selecciona una hora para las notificaciones.');
+        return false;
+    }
+    
+    // Mostrar indicador de guardado
+    const submitBtn = this.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Guardando...';
+    submitBtn.disabled = true;
+    
+    // Restaurar botón después de un tiempo (en caso de error)
+    setTimeout(() => {
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+    }, 5000);
+});
+</script>
+{% endblock %}
+

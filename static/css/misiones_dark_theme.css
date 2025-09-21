@@ -1,0 +1,228 @@
+/* --- Estilos para la Página de Lista de Misiones --- */
+:root {
+    --background-color: #121212;
+    --header-bg: #1c1c1c;
+    --card-bg: #2a2a2a;
+    --primary-text: #ffffff;
+    --secondary-text: #b3b3b3;
+    --accent-color: #6366f1; /* Un tono violeta para diferenciar de logros */
+    --reward-text: #ffc107;
+    --border-color: #3a3a3a;
+    --progress-bar-bg: #404040;
+    --font-family: 'Inter', sans-serif;
+}
+
+body {
+    background-color: var(--background-color);
+    color: var(--primary-text);
+    font-family: var(--font-family);
+    background-image: radial-gradient(circle at 100% 0%, rgba(99, 102, 241, 0.15), transparent 40%),
+                      radial-gradient(circle at 0% 100%, rgba(255, 255, 0, 0.1), transparent 40%);
+    background-attachment: fixed;
+}
+
+.missions-page {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+/* --- Cabecera y Navegación (Reutilizando estilos de logros para consistencia) --- */
+.missions-header {
+    background-color: var(--header-bg);
+    border-radius: 12px;
+    padding: 1.5rem 2rem;
+    margin-bottom: 2rem;
+    border: 1px solid var(--border-color);
+}
+
+.header-title {
+    font-size: 2rem;
+    font-weight: 700;
+    margin: 0 0 0.25rem 0;
+}
+
+.header-subtitle {
+    font-size: 1rem;
+    color: var(--secondary-text);
+    margin: 0;
+}
+
+.category-nav {
+    margin-bottom: 2rem;
+}
+
+.category-nav .nav-pills {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.category-nav .nav-link {
+    color: var(--secondary-text);
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 0.5rem 1.25rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.category-nav .nav-link:hover {
+    border-color: var(--accent-color);
+    color: var(--primary-text);
+}
+
+.category-nav .nav-link.active {
+    background-color: var(--accent-color);
+    color: var(--primary-text);
+    border-color: var(--accent-color);
+    font-weight: 600;
+}
+
+/* --- Grid de Misiones --- */
+.missions-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1.5rem;
+}
+
+/* --- Tarjeta de Misión --- */
+.mission-card {
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.2s ease, border-color 0.2s ease;
+    cursor: pointer;
+}
+
+.mission-card:hover {
+    transform: translateY(-4px);
+    border-color: var(--accent-color);
+}
+
+.mission-card__header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.mission-card__icon, .mission-card__icon-placeholder {
+    width: 48px;
+    height: 48px;
+    border-radius: 8px; /* Cuadrado redondeado para diferenciar de logros */
+    background-color: #3a3a3a;
+    flex-shrink: 0;
+}
+
+.mission-card__icon {
+    background-size: cover;
+    background-position: center;
+}
+
+.mission-card__icon-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    color: var(--secondary-text);
+}
+
+.mission-card__title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin: 0 0 0.25rem 0;
+}
+
+.mission-card__reward {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--reward-text);
+}
+.mission-card__reward .bi-star-fill {
+    vertical-align: -2px;
+}
+
+.mission-card__body {
+    flex-grow: 1;
+}
+
+.mission-card__description {
+    font-size: 0.9rem;
+    color: var(--secondary-text);
+    line-height: 1.5;
+    margin: 0;
+}
+
+.mission-card__footer {
+    margin-top: 1.5rem;
+}
+
+/* --- Barra de Progreso --- */
+.progress-bar-wrapper {
+    width: 100%;
+    height: 8px;
+    background-color: var(--progress-bar-bg);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 0.5rem;
+}
+
+.progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent-color) 0%, #a78bfa 100%);
+    border-radius: 4px;
+    transition: width 0.5s ease-out;
+}
+
+.progress-text {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.8rem;
+    color: var(--secondary-text);
+}
+
+.mission-type {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+/* --- Footer y Botón de Volver --- */
+.missions-footer {
+    text-align: center;
+    margin-top: 2.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.btn-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1.5rem;
+    background-color: var(--card-bg);
+    color: var(--primary-text);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.btn-back:hover {
+    background-color: var(--accent-color);
+    border-color: var(--accent-color);
+    color: white;
+}
+/* Estilo para el icono gigante de placeholder en el panel derecho */
+.detail-icon-placeholder-large {
+    font-size: 15rem; /* Tamaño muy grande */
+    color: var(--border-color); /* Un color sutil */
+    opacity: 0.5;
+}

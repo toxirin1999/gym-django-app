@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Recuerdos de Joi</title>
+    <style>
+        body { background: #121212; color: white; font-family: Arial; padding: 2em; }
+        .recuerdo { background: #1e1e1e; padding: 1.2em; border-left: 5px solid #32FF00; border-radius: 10px; margin-bottom: 1.5em; }
+        .fecha { font-size: 0.9em; color: #aaa; }
+        .contenido { margin-top: 0.5em; font-style: italic; }
+        h1 { color: #32FF00; margin-bottom: 1em; }
+    </style>
+</head>
+<body>
+
+<h1>📓 Recuerdos de Joi</h1>
+
+{% if recuerdos %}
+{% for r in recuerdos %}
+<div class="recuerdo">
+    <div class="fecha">{{ r.fecha|date:"d M Y H:i" }} — <em>{{ r.contexto|default:"Sin contexto" }}</em></div>
+    <div class="contenido">“{{ r.contenido }}”</div>
+</div>
+{% endfor %}
+{% else %}
+<p>No hay recuerdos guardados todavía...</p>
+{% endif %}
+
+</body>
+</html>

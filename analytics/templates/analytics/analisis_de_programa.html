@@ -1,0 +1,75 @@
+<!-- analytics/analisis_de_programa.html -->
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="text-center mb-4">
+        <h1>Análisis IA del Programa de {{ cliente.nombre }}</h1>
+        <p class="lead">Programa: <strong>{{ programa_original.nombre }}</strong> | Objetivo del Cliente: <strong>{{ cliente.objetivo_principal|capfirst }}</strong></p>
+    </div>
+
+    <div class="row">
+        <!-- COLUMNA 1: PROGRAMA ORIGINAL -->
+        <div class="col-lg-4 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h4>Programa Original</h4>
+                </div>
+                <div class="card-body">
+                    {% for rutina in programa_original.rutina_set.all %}
+                    <h5>{{ rutina.nombre }}</h5>
+                    <ul class="list-unstyled">
+                        {% for re in rutina.rutinaejercicio_set.all %}
+                        <li>{{ re.ejercicio.nombre }}: {{ re.series }}x{{ re.repeticiones }}</li>
+                        {% endfor %}
+                    </ul>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- COLUMNA 2: SUGERENCIAS DE LA IA -->
+        <div class="col-lg-4 mb-4">
+            <div class="card h-100">
+                <div class="card-header bg-primary text-white">
+                    <h4>💡 Sugerencias de la IA</h4>
+                </div>
+                <div class="card-body">
+                    {% if not sugerencias %}
+                    <div class="alert alert-success">¡El programa parece bien estructurado para el objetivo del cliente!</div>
+                    {% else %}
+                    <ul class="list-group list-group-flush">
+                        {% for sug in sugerencias %}
+                        <li class="list-group-item">
+                            <strong>{{ sug.tipo }}:</strong> {{ sug.descripcion }}
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- COLUMNA 3: PROGRAMA MODIFICADO -->
+        <div class="col-lg-4 mb-4">
+            <div class="card h-100">
+                <div class="card-header bg-success text-white">
+                    <h4>✅ Programa Optimizado</h4>
+                </div>
+                <div class="card-body">
+                    {% for rutina in programa_modificado.rutinas %}
+                    <h5>{{ rutina.nombre }}</h5>
+                    <ul class="list-unstyled">
+                        {% for ejercicio in rutina.ejercicios %}
+                        <li>
+                            {{ ejercicio.nombre }}: <strong>{{ ejercicio.series }}x{{ ejercicio.repeticiones }}</strong>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

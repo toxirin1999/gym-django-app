@@ -1,0 +1,545 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Portal de Sesión - {{ cliente.nombre }}{% endblock %}
+
+{% block extra_css %}
+<!-- Reutiliza los estilos de tu plantilla de entrenamiento activo -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+<style>
+    /* En templates/clientes/portal_sesion.html, dentro de <style> */
+
+    :root {
+        --cyan-glow: rgba(0, 255, 255, 0.7);
+        --magenta-glow: rgba(255, 0, 255, 0.6);
+        --green-glow: rgba(50, 255, 150, 0.8);
+        --yellow-glow: rgba(245, 158, 11, 0.8);
+        --red-glow: rgba(239, 68, 68, 0.8);
+        --card-bg: rgba(15, 23, 42, 0.7);
+        --border-color: rgba(77, 208, 225, 0.3);
+        --text-primary: #f8fafc;
+        --text-secondary: #94a3b8;
+    }
+
+    body {
+        background: url("{% static 'images/fondo_cyberpunk.png' %}") no-repeat center center fixed !important;
+        background-size: cover !important;
+        background-color: #000 !important;
+        color: var(--text-primary);
+        font-family: 'Inter', sans-serif;
+    }
+
+    /* --- Animaciones --- */
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* --- Contenedor Principal --- */
+    .mission-container {
+        max-width: 800px;
+        margin: 2rem auto;
+        padding: 2rem;
+    }
+
+    /* --- Tarjeta de Fase --- */
+    .phase-card {
+        background: var(--card-bg);
+        backdrop-filter: blur(10px);
+        border: 1px solid var(--border-color);
+        border-radius: 1rem;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        animation: fadeInUp 0.6s ease-out forwards;
+    }
+
+    .phase-header {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        border-bottom: 1px solid var(--border-color);
+        padding-bottom: 1rem;
+        margin-bottom: 1.5rem;
+    }
+    .phase-icon {
+        font-size: 2rem;
+        color: var(--cyan-glow);
+        text-shadow: 0 0 10px var(--cyan-glow);
+    }
+    .phase-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--text-primary);
+    }
+    .phase-subtitle {
+        font-size: 1rem;
+        color: var(--text-secondary);
+    }
+
+    /* --- Estilos para el Formulario de Check-in --- */
+    .checkin-form .slider-group { margin-bottom: 1.5rem; }
+    .checkin-form .slider-label { display: flex; justify-content: space-between; font-weight: 600; margin-bottom: 0.75rem; }
+    .checkin-form .slider-label span:last-child { color: var(--cyan-glow); font-family: monospace; }
+    .checkin-form input[type="range"] { width: 100%; accent-color: var(--cyan-glow); }
+/* Añade esto a tu bloque <style> en portal_sesion.html */
+
+.detail-box {
+    background: rgba(0,0,0,0.2);
+    padding: 0.75rem;
+    border-radius: 0.5rem;
+}
+.detail-label {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.detail-value {
+    font-size: 1.25rem;
+    font-weight: 700;
+    font-family: monospace;
+    margin-top: 0.25rem;
+}
+.text-fuchsia-400 { color: #f0abfc; }
+.text-yellow-400 { color: #facc15; }
+.text-cyan-400 { color: #67e8f9; }
+
+    /* --- Tarjeta de Briefing (Recomendación) --- */
+    .briefing-card {
+        padding: 1.5rem;
+        border-radius: 0.75rem;
+        border-left: 4px solid;
+        margin-bottom: 2rem;
+        animation: fadeInUp 0.6s 0.2s ease-out forwards;
+        opacity: 0;
+    }
+    .briefing-title { font-size: 1.2rem; font-weight: 700; margin-bottom: 0.5rem; }
+    .briefing-card.readiness-green { border-color: var(--green-glow); background: rgba(50, 255, 150, 0.1); }
+    .briefing-card.readiness-cyan { border-color: var(--cyan-glow); background: rgba(0, 255, 255, 0.1); }
+    .briefing-card.readiness-yellow { border-color: var(--yellow-glow); background: rgba(245, 158, 11, 0.1); }
+    .briefing-card.readiness-red { border-color: var(--red-glow); background: rgba(239, 68, 68, 0.1); }
+
+    /* --- Tarjeta de Ejercicio --- */
+    .exercise-card {
+        background: rgba(0,0,0,0.3);
+        border-radius: 0.75rem;
+        margin-bottom: 1rem;
+        overflow: hidden;
+        border: 1px solid transparent;
+        transition: all 0.3s ease;
+    }
+    .exercise-card:hover {
+        border-color: var(--border-color);
+        transform: scale(1.02);
+    }
+    .exercise-card-header {
+        background: rgba(0,0,0,0.4);
+        padding: 1rem 1.5rem;
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: var(--cyan-glow);
+    }
+    .exercise-card-body { padding: 1.5rem; }
+    .exercise-table { width: 100%; }
+    .exercise-table th, .exercise-table td { padding: 0.5rem; text-align: center; }
+    .exercise-table th { color: var(--text-secondary); font-size: 0.8rem; text-transform: uppercase; }
+    .exercise-table input {
+        width: 100%;
+        background: var(--dark-bg, #0f172a);
+        border: 1px solid var(--border-color);
+        color: var(--text-primary);
+        text-align: center;
+        border-radius: 0.25rem;
+        padding: 0.5rem;
+    }
+/* En tu plantilla principal, dentro de <style> */
+
+/* --- Variables de Color y Base (Tu base es excelente) --- */
+:root {
+    --color-cyan: #00ffff;
+    --color-magenta: #ff00ff;
+    --color-green: #32ff00;
+    --color-yellow: #f59e0b;
+    --color-red: #ef4444;
+    --bg-dark: #0a0a1a;
+    --bg-card: rgba(15, 23, 42, 0.7);
+    --border-color: rgba(0, 255, 255, 0.3);
+    --text-primary: #f8fafc;
+    --text-secondary: #94a3b8;
+}
+body {
+    background: url("{% static 'images/fondo_cyberpunk.png' %}") no-repeat center center fixed !important;
+    background-size: cover !important;
+    background-color: #000 !important;
+    color: var(--text-primary);
+    font-family: 'Inter', sans-serif;
+}
+.container { max-width: 1400px; margin: auto; padding: 2rem; }
+
+/* --- Componente Base: Tarjeta de Módulo --- */
+.module-card {
+    background: var(--bg-card);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--border-color);
+    border-radius: 1rem;
+    padding: 1.5rem;
+    box-shadow: 0 0 20px rgba(0, 255, 255, 0.1);
+    animation: fadeInUp 0.6s ease-out forwards;
+}
+
+.module-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 1rem;
+}
+.module-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--color-cyan);
+    text-shadow: 0 0 8px var(--color-cyan);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+.module-link {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    text-decoration: none;
+    transition: color 0.3s;
+}
+.module-link:hover { color: var(--color-cyan); }
+
+/* --- Tarjeta de "Próximo Entrenamiento" (Destacada) --- */
+.next-workout-card {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 2rem;
+    align-items: center;
+}
+.workout-details h3 { font-size: 1.5rem; font-weight: 700; }
+.workout-details .tags span {
+    background: rgba(0, 255, 255, 0.1);
+    color: var(--color-cyan);
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+.workout-exercises { list-style: none; padding: 0; margin-top: 1rem; }
+.workout-exercises li { display: flex; justify-content: space-between; padding: 0.25rem 0; }
+
+.progress-annual .progress-bar {
+    background: rgba(255,255,255,0.1);
+    border-radius: 9999px;
+    height: 0.75rem;
+    overflow: hidden;
+}
+.progress-annual .progress-fill {
+    background: linear-gradient(90deg, var(--color-magenta), var(--color-cyan));
+    height: 100%;
+    border-radius: 9999px;
+}
+
+/* --- Botones de Acción --- */
+.action-buttons { display: flex; gap: 1rem; margin-top: 1.5rem; }
+.action-btn {
+    flex-grow: 1;
+    padding: 0.75rem;
+    border-radius: 0.5rem;
+    text-align: center;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.3s;
+    border: 1px solid transparent;
+}
+.btn-primary {
+    background: linear-gradient(45deg, var(--color-cyan), var(--color-magenta));
+    color: #000;
+    box-shadow: 0 0 15px rgba(0, 255, 255, 0.4);
+}
+.btn-secondary {
+    background: transparent;
+    color: var(--text-primary);
+    border-color: var(--border-color);
+}
+.action-btn:hover { transform: scale(1.05); }
+
+/* --- Tarjeta de Adherencia --- */
+.adherence-card { text-align: center; padding: 1rem; background: rgba(0,0,0,0.2); border-radius: 0.5rem; }
+.adherence-card .value { font-size: 2rem; font-weight: 700; }
+.adherence-card .label { font-size: 0.8rem; color: var(--text-secondary); }
+
+/* --- Alertas Activas --- */
+.alert-card {
+    padding: 1rem;
+    border-radius: 0.5rem;
+    border-left: 4px solid var(--color-red);
+    background: rgba(239, 68, 68, 0.1);
+}
+.alert-card .alert-title { font-weight: 700; color: var(--color-red); }
+
+    /* --- Botón Principal --- */
+    .mission-button {
+        display: block;
+        width: 100%;
+        padding: 1rem;
+        border: none;
+        border-radius: 0.5rem;
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #000;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-align: center;
+        background: linear-gradient(45deg, var(--cyan-glow), var(--magenta-glow));
+        box-shadow: 0 0 20px rgba(0, 255, 255, 0.4);
+    }
+    .mission-button:hover {
+        transform: scale(1.03);
+        box-shadow: 0 0 30px rgba(255, 0, 255, 0.5);
+    }
+
+</style>
+{% endblock %}
+{% block content %}
+<div class="mission-container" x-data="{
+    phase: '{{ checkin_realizado|yesno:"briefing,checkin" }}',
+    energia: '{{ checkin_form.energia_subjetiva.value|default:5 }}'.replace(',', '.'),
+    dolor: '{{ checkin_form.dolor_articular.value|default:0 }}'.replace(',', '.'),
+    sueno: '{{ checkin_form.horas_sueno.value|default:7 }}'.replace(',', '.')
+}">
+
+    <!-- ======================================================= -->
+    <!-- FASE 1: CHECK-IN DIARIO -->
+    <!-- ======================================================= -->
+    <div x-show="phase === 'checkin'" x-transition:enter="fadeInUp 0.5s">
+        <div class="phase-card">
+            <div class="phase-header">
+                <div class="phase-icon"><i class="fas fa-heart-pulse"></i></div>
+                <div>
+                    <h2 class="phase-title">Fase 1: Check-in de Estado</h2>
+                    <p class="phase-subtitle">Evalúa tu disposición para la misión de hoy.</p>
+                </div>
+            </div>
+            <form method="POST" class="checkin-form">
+                {% csrf_token %}
+                <div class="slider-group">
+                    <label for="id_energia_subjetiva" class="slider-label"><span>Nivel de Energía</span><span x-text="energia"></span>/10</label>
+                    <input type="range" id="id_energia_subjetiva" name="energia_subjetiva" min="1" max="10" x-model="energia">
+                </div>
+                <div class="slider-group">
+                    <label for="id_dolor_articular" class="slider-label"><span>Dolor Muscular</span><span x-text="dolor"></span>/10</label>
+                    <input type="range" id="id_dolor_articular" name="dolor_articular" min="0" max="10" x-model="dolor">
+                </div>
+                <div class="slider-group">
+                    <label for="id_horas_sueno" class="slider-label"><span>Horas de Sueño</span><span x-text="sueno"></span>h</label>
+                    <input type="range" id="id_horas_sueno" name="horas_sueno" min="1" max="10" step="0.5" x-model="sueno">
+                </div>
+                <button type="submit" class="mission-button mt-4">
+                    <i class="fas fa-robot"></i> Analizar y Preparar Sesión
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- ==================================================================== -->
+    <!-- FASE 2 y 3: BRIEFING Y EJECUCIÓN -->
+    <!-- ==================================================================== -->
+    <div x-show="phase === 'briefing'" x-transition:enter="fadeInUp 0.5s">
+        <!-- Fase 2: Briefing de la Misión -->
+        {% if ajuste_sesion %}
+        <div class="briefing-card readiness-{{ ajuste_sesion.color }}">
+            <h3 class="briefing-title"><i class="fas fa-brain"></i> Briefing de Joi para Hoy</h3>
+            <p>{{ ajuste_sesion.mensaje }}</p>
+        </div>
+        {% endif %}
+
+<div class="bg-[#121212] p-4 rounded-xl mt-6 shadow-md border border-yellow-700 interactive-glow">
+    <div class="cyber-ejercicio-header" style="border-bottom: none; margin-bottom: 0; padding-bottom: 0;">
+        <h4><i class="fas fa-brain" style="color: #ff00ff;"></i> Guía de Esfuerzo (RPE)</h4>
+        <small>
+            El RPE (Ratio de Esfuerzo Percibido) mide qué tan cerca del fallo muscular estás.
+            Usa esta guía para calibrar tu intensidad en la última serie de cada ejercicio.
+        </small>
+        <div class="mt-3 text-sm">
+            {% for rpe, desc in leyenda_rpe.items %}
+            {% if rpe == '10' or rpe == '9' or rpe == '8' or rpe == '7' or rpe == '6'%} <!-- Solo mostramos los más comunes para no saturar -->
+            <p class="mb-1">
+                <strong class="text-pink-400">RPE {{ rpe }}:</strong>
+                <span class="text-gray-300">{{ desc }}</span>
+            </p>
+            {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+        <!-- ======================================================= -->
+    <!-- INICIO: LEYENDA DE PROGRESIÓN INTELIGENTE -->
+    <!-- ======================================================= -->
+    <div class="cyber-ejercicio-card animate-fadeSlide" style="animation-delay: 0.4s; border-left: 5px solid #00ff64;">
+        <div class="cyber-ejercicio-header" style="border-bottom: none; margin-bottom: 0; padding-bottom: 0;">
+            <h4><i class="fas fa-cogs" style="color: #00ff64;"></i> Sistema de Progresión Automática</h4>
+            <small>
+                Tu plan no es estático, evoluciona contigo. Así es como te haces más fuerte:
+            </small>
+            <div class="mt-3 text-sm">
+                <p class="mb-2">
+                    <strong style="color: #00ff64;"><i class="fas fa-bullseye"></i> Tu Misión:</strong>
+                    <span class="text-gray-300">
+                    Los pesos y repeticiones que ves son tu <strong>punto de partida</strong>, calculados a partir de tu fuerza actual. Tu objetivo es intentar superar ligeramente esta recomendación.
+                </span>
+                </p>
+                <p class="mb-2">
+                    <strong style="color: #00ff64;"><i class="fas fa-arrow-up"></i> Cómo Progresar:</strong>
+                    <span class="text-gray-300">
+                    Para que el sistema detecte tu mejora y aumente tu 1RM estimado, tienes dos opciones en tus series:
+                </span>
+                </p>
+                <ul class="list-unstyled ps-3">
+                    <li class="mb-1">
+                        <span style="color: #00ffff;">1. Aumenta el Peso:</span> Levanta un poco más de los kilos recomendados manteniendo las repeticiones.
+                    </li>
+                    <li>
+                        <span style="color: #00ffff;">2. Aumenta las Reps:</span> Usa el peso recomendado pero haz más repeticiones de las que indica el rango.
+                    </li>
+                </ul>
+                <p class="mt-3 mb-1">
+                    <strong style="color: #00ff64;"><i class="fas fa-sync-alt"></i> El Ciclo de Mejora:</strong>
+                    <span class="text-gray-300">
+                    Al guardar un rendimiento superior, el sistema recalculará tu fuerza y te asignará pesos más desafiantes en futuros entrenamientos. ¡Así es como la progresión se hace realidad!
+                </span>
+                </p>
+            </div>
+        </div>
+    </div>
+    <!-- ======================================================= -->
+    <!-- FIN: LEYENDA DE PROGRESIÓN INTELIGENTE -->
+    <!-- ======================================================= -->
+
+</div>
+
+        <!-- Fase 3: Rutina Ajustada -->
+        {% if rutina_ajustada %}
+            <div class="phase-card">
+                <div class="phase-header">
+                    <div class="phase-icon"><i class="fas fa-dumbbell"></i></div>
+                    <div>
+                        <h2 class="phase-title">{{ rutina_ajustada.rutina_nombre }}</h2>
+                        <p class="phase-subtitle">Ejecuta el plan ajustado para hoy.</p>
+                    </div>
+                </div>
+
+                <form action="{% url 'clientes:guardar_entrenamiento_activo' cliente.id %}" method="POST">
+                    {% csrf_token %}
+                    <input type="hidden" name="fecha" value="{{ rutina_ajustada.fecha|date:'Y-m-d' }}">
+                    <input type="hidden" name="rutina_nombre" value="{{ rutina_ajustada.rutina_nombre }}">
+
+                    {% for ejercicio in rutina_ajustada.ejercicios %}
+                    <!-- CÓDIGO NUEVO (CORREGIDO Y COMPLETO) -->
+<div class="exercise-card">
+    <div class="exercise-card-header">
+        <span>{{ ejercicio.nombre|title }}</span>
+        <span class="text-sm text-secondary">{{ ejercicio.grupo_muscular|title }}</span>
+    </div>
+    <div class="exercise-card-body">
+         <input type="hidden" name="{{ ejercicio.form_id }}_nombre" value="{{ ejercicio.nombre }}">
+        <!-- ======================================================= -->
+        <!-- SECCIÓN DE DETALLES DE EJECUCIÓN (LA PARTE QUE FALTABA) -->
+        <!-- ======================================================= -->
+        <div class="grid grid-cols-3 gap-4 mb-6 text-center">
+            <div class="detail-box">
+                <div class="detail-label">RPE Objetivo</div>
+                <div class="detail-value text-fuchsia-400">{{ ejercicio.rpe_objetivo }}</div>
+            </div>
+            <div class="detail-box">
+                <div class="detail-label">Tempo</div>
+                <div class="detail-value text-yellow-400">{{ ejercicio.tempo }}</div>
+            </div>
+            <div class="detail-box">
+                <div class="detail-label">Descanso</div>
+                <div class="detail-value text-cyan-400">{{ ejercicio.descanso_minutos }} min</div>
+            </div>
+        </div>
+        <!-- ======================================================= -->
+        <!-- FIN DE LA SECCIÓN DE DETALLES -->
+        <!-- ======================================================= -->
+
+        <table class="exercise-table">
+            <thead>
+                <tr>
+                    <th class="w-1/4">Serie</th>
+                    <th class="w-1/3">Peso (kg)</th>
+                    <th class="w-1/3">Reps</th>
+                    <th class="w-1/4">Hecho</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for i in ""|center:ejercicio.series %}
+                {% with forloop.counter as serie_num %}
+                <tr>
+                    <td><strong>{{ serie_num }}</strong></td>
+                    <td><input type="number" step="0.5" name="{{ ejercicio.form_id }}_peso_{{ serie_num }}" value="{{ ejercicio.peso_recomendado_kg|stringformat:'.1f' }}"></td>
+                    <td><input type="number" name="{{ ejercicio.form_id }}_reps_{{ serie_num }}" value="{{ ejercicio.reps_objetivo }}"></td>
+                    <td><input type="checkbox" name="{{ ejercicio.form_id }}_completado_{{ serie_num }}" value="1" checked></td>
+                </tr>
+                {% endwith %}
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+                    {% endfor %}
+
+                    <!-- Resumen y Finalización -->
+                    <!-- ======================================================= -->
+<!-- SECCIÓN DE RESUMEN (LA PARTE QUE FALTABA) -->
+<!-- ======================================================= -->
+<div class="exercise-card mt-8">
+    <div class="exercise-card-header">
+        <i class="fas fa-clipboard-check mr-2"></i> Resumen de la Sesión
+    </div>
+    <div class="exercise-card-body">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+                <label for="duracion_minutos" class="font-semibold text-secondary mb-2 block">Duración Total (minutos)</label>
+                <input type="number" class="exercise-table input w-full" id="duracion_minutos" name="duracion_minutos" placeholder="Ej: 75">
+            </div>
+            <div>
+                <label for="calorias_quemadas" class="font-semibold text-secondary mb-2 block">Calorías Quemadas (opcional)</label>
+                <input type="number" class="exercise-table input w-full" id="calorias_quemadas" name="calorias_quemadas" placeholder="Ej: 550">
+            </div>
+        </div>
+        <div class="mt-6">
+            <label for="notas_liftin" class="font-semibold text-secondary mb-2 block">Notas y Sensaciones</label>
+            <textarea class="exercise-table input w-full" id="notas_liftin" name="notas_liftin" rows="3" placeholder="¿Cómo te sentiste? ¿Alguna molestia o récord personal?"></textarea>
+        </div>
+    </div>
+</div>
+
+<!-- Botón de Finalización -->
+<div class="mt-8">
+    <button type="submit" class="mission-button">
+        <i class="fas fa-save"></i> Finalizar Misión y Guardar Datos
+    </button>
+</div>
+
+                </form>
+            </div>
+        {% else %}
+            <div class="phase-card text-center">
+                <div class="phase-icon text-5xl mb-4"><i class="fas fa-bed"></i></div>
+                <h2 class="phase-title">Día de Descanso Programado</h2>
+                <p class="phase-subtitle">Tu plan indica que hoy es un día para recuperar. ¡Aprovéchalo!</p>
+            </div>
+        {% endif %}
+    </div>
+     <a href="{% url 'clientes:panel_cliente' %}" class="mission-button-secondary mt-3">
+        <i class="fas fa-arrow-left"></i> Volver al Panel Principal
+    </a>
+</div>
+
+{% endblock %}
+{% block extra_js %}
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+{% endblock %}

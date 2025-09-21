@@ -1,0 +1,278 @@
+{% extends 'estoico/base_estoico.html' %}
+{% load static %}
+{% load widget_tweaks %}
+
+{% block title %}Día {{ contenido_dia.dia }} - Diario Estoico{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <!-- Navegación entre días -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <a href="{% url 'estoico:diario_dia' dia_anterior %}" class="btn btn-outline-secondary">
+                <i class="fas fa-chevron-left me-2"></i>Día Anterior
+            </a>
+
+            <div class="text-center">
+                <h4 class="mb-1">Día {{ contenido_dia.dia }}</h4>
+                <span class="badge bg-primary">{{ contenido_dia.mes }}</span>
+            </div>
+
+            <a href="{% url 'estoico:diario_dia' dia_siguiente %}" class="btn btn-outline-secondary">
+                Día Siguiente<i class="fas fa-chevron-right ms-2"></i>
+            </a>
+        </div>
+
+        <!-- Contenido del Día -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-gradient-primary text-white">
+                <h5 class="mb-0 text-center">
+                    <i class="fas fa-quote-left me-2"></i>
+                    {{ contenido_dia.tema }}
+                </h5>
+            </div>
+            <div class="card-body">
+                <!-- Cita -->
+                <div class="text-center mb-4 py-4 bg-light rounded">
+                    <blockquote class="blockquote mb-0">
+                        <p class="fs-4 text-dark fst-italic mb-3">
+                            "{{ contenido_dia.cita }}"
+                        </p>
+                        <footer class="blockquote-footer fs-6">
+                            <strong>{{ contenido_dia.autor }}</strong>
+                        </footer>
+                    </blockquote>
+                </div>
+
+                <!-- Reflexión -->
+                <div class="mb-4">
+                    <h6 class="fw-bold text-primary mb-3 d-flex align-items-center">
+                        <i class="fas fa-lightbulb me-2"></i>
+                        Reflexión del Día
+                    </h6>
+                    <div class="p-3 bg-light rounded">
+                        <p class="mb-0 lh-lg text-muted">{{ contenido_dia.reflexion }}</p>
+                    </div>
+                </div>
+
+                <!-- Pregunta -->
+                <div class="mb-4">
+                    <h6 class="fw-bold text-primary mb-3 d-flex align-items-center">
+                        <i class="fas fa-question-circle me-2"></i>
+                        Pregunta para tu Reflexión Personal
+                    </h6>
+                    <div class="p-3 border-start border-primary border-4 bg-light">
+                        <p class="mb-0 fw-medium text-dark">{{ contenido_dia.pregunta }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Formulario de Reflexión Personal -->
+        <div class="card shadow-sm">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="mb-0">
+                    <i class="fas fa-pen me-2"></i>
+                    {% if reflexion_existente %}Editar tu Reflexión{% else %}Tu Reflexión Personal{% endif %}
+                </h6>
+                {% if reflexion_existente %}
+                <small class="text-muted">
+                    Última actualización: {{ reflexion_existente.fecha_actualizacion|date:"d M Y H:i" }}
+                </small>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                <form method="post" id="reflexion-form">
+                    {% csrf_token %}
+
+                    <!-- Campo de reflexión -->
+                    <div class="mb-4">
+                        <label for="{{ form.reflexion_personal.id_for_label }}" class="form-label fw-medium">
+                            {{ form.reflexion_personal.label }}
+                        </label>
+                        {{ form.reflexion_personal|add_class:"form-control" }}
+                        {% if form.reflexion_personal.help_text %}
+                        <div class="form-text">{{ form.reflexion_personal.help_text }}</div>
+                        {% endif %}
+                        {% if form.reflexion_personal.errors %}
+                        <div class="text-danger small mt-1">
+                            {% for error in form.reflexion_personal.errors %}
+                            <div>{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+
+                        <!-- Contador de palabras -->
+                        <div class="d-flex justify-content-between mt-2">
+                            <small class="text-muted">
+                                Mínimo 10 caracteres para una reflexión significativa
+                            </small>
+                            <small class="text-muted">
+                                <span id="char-count">0</span> caracteres
+                            </small>
+                        </div>
+                    </div>
+
+                    <!-- Calificación del día -->
+                    <div class="mb-4">
+                        <label for="{{ form.calificacion_dia.id_for_label }}" class="form-label fw-medium">
+                            {{ form.calificacion_dia.label }}
+                        </label>
+                        {{ form.calificacion_dia|add_class:"form-select" }}
+                        {% if form.calificacion_dia.help_text %}
+                        <div class="form-text">{{ form.calificacion_dia.help_text }}</div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Marcar como favorito -->
+                    <div class="mb-4">
+                        <div class="form-check">
+                            {{ form.marcado_favorito|add_class:"form-check-input" }}
+                            <label class="form-check-label" for="{{ form.marcado_favorito.id_for_label }}">
+                                <i class="fas fa-heart text-danger me-2"></i>
+                                {{ form.marcado_favorito.label }}
+                            </label>
+                            {% if form.marcado_favorito.help_text %}
+                            <div class="form-text">{{ form.marcado_favorito.help_text }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Botones de acción -->
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <button type="submit" class="btn btn-primary me-2">
+                                <i class="fas fa-save me-2"></i>
+                                {% if reflexion_existente %}Actualizar Reflexión{% else %}Guardar Reflexión{% endif %}
+                            </button>
+                            <a href="{% url 'estoico:dashboard' %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-times me-2"></i>Cancelar
+                            </a>
+                        </div>
+
+                        {% if reflexion_existente %}
+                        <div class="text-muted small">
+                            <i class="fas fa-clock me-1"></i>
+                            Creado: {{ reflexion_existente.fecha_creacion|date:"d M Y" }}
+                        </div>
+                        {% endif %}
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Consejos para una buena reflexión -->
+        <div class="card shadow-sm mt-4 border-info">
+            <div class="card-header bg-info text-white">
+                <h6 class="mb-0">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Consejos para una Reflexión Profunda
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="fas fa-check text-success me-2"></i>
+                                Sé honesto contigo mismo
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check text-success me-2"></i>
+                                Conecta la enseñanza con tu vida
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check text-success me-2"></i>
+                                Piensa en ejemplos concretos
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="fas fa-check text-success me-2"></i>
+                                Considera diferentes perspectivas
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check text-success me-2"></i>
+                                Identifica acciones específicas
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check text-success me-2"></i>
+                                Reflexiona sobre tu crecimiento
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const textarea = document.getElementById('{{ form.reflexion_personal.id_for_label }}');
+        const charCount = document.getElementById('char-count');
+
+        // Función para actualizar contador
+        function updateCharCount() {
+            const count = textarea.value.length;
+            charCount.textContent = count;
+
+            // Cambiar color según la longitud
+            if (count < 10) {
+                charCount.className = 'text-danger';
+            } else if (count < 50) {
+                charCount.className = 'text-warning';
+            } else {
+                charCount.className = 'text-success';
+            }
+        }
+
+        // Actualizar contador al escribir
+        textarea.addEventListener('input', updateCharCount);
+
+        // Actualizar contador inicial
+        updateCharCount();
+
+        // Auto-save cada 30 segundos (opcional)
+        let autoSaveTimer;
+        textarea.addEventListener('input', function() {
+            clearTimeout(autoSaveTimer);
+            autoSaveTimer = setTimeout(function() {
+                // Aquí podrías implementar auto-save via AJAX
+                console.log('Auto-save triggered');
+            }, 30000);
+        });
+
+        // Validación del formulario
+        document.getElementById('reflexion-form').addEventListener('submit', function(e) {
+            const reflexionText = textarea.value.trim();
+
+            if (reflexionText.length < 10) {
+                e.preventDefault();
+                alert('Por favor, escribe una reflexión más detallada (mínimo 10 caracteres).');
+                textarea.focus();
+                return false;
+            }
+        });
+
+        // Recordatorio de guardar si hay cambios
+        let originalContent = textarea.value;
+        window.addEventListener('beforeunload', function(e) {
+            if (textarea.value !== originalContent) {
+                e.preventDefault();
+                e.returnValue = '¿Estás seguro de que quieres salir? Los cambios no guardados se perderán.';
+            }
+        });
+
+        // Marcar como guardado cuando se envía el formulario
+        document.getElementById('reflexion-form').addEventListener('submit', function() {
+            originalContent = textarea.value;
+        });
+    });
+</script>
+{% endblock %}
+

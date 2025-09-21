@@ -1,0 +1,115 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load logros_tags %} {# Asegúrate de que este tag siga existiendo y funcione #}
+
+{% block title %}Misiones Disponibles{% endblock %}
+
+{% block extra_css %}
+{# Fuentes y estilos base #}
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+{# NUEVOS ESTILOS PARA LA PÁGINA DE MISIONES #}
+<link rel="stylesheet" href="{% static 'css/misiones_dark_theme.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="missions-page">
+
+    <header class="missions-header">
+        <h1 class="header-title">Misiones Disponibles</h1>
+        <p class="header-subtitle">Completa misiones para ganar puntos y mejorar tu entrenamiento.</p>
+    </header>
+
+    <div class="missions-body">
+        <!-- Navegación por Categorías -->
+        <nav class="category-nav">
+            <ul class="nav nav-pills" id="questCategories" role="tablist">
+                {% for categoria, _ in categorias.items %}
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link {% if forloop.first %}active{% endif %}"
+                            id="cat-{{ categoria|slugify }}-tab"
+                            data-bs-toggle="pill"
+                            data-bs-target="#cat-{{ categoria|slugify }}"
+                            type="button" role="tab"
+                            aria-controls="cat-{{ categoria|slugify }}"
+                            aria-selected="{% if forloop.first %}true{% else %}false{% endif %}">
+                        {{ categoria }}
+                    </button>
+                </li>
+                {% endfor %}
+            </ul>
+        </nav>
+
+        <!-- Contenido de Misiones -->
+        <main class="missions-content">
+            <div class="tab-content" id="questCategoriesContent">
+                {% for categoria, misiones in categorias.items %}
+                <div class="tab-pane fade {% if forloop.first %}show active{% endif %}"
+                     id="cat-{{ categoria|slugify }}"
+                     role="tabpanel"
+                     aria-labelledby="cat-{{ categoria|slugify }}-tab">
+
+                    <div class="missions-grid">
+                        {% for mision in misiones %}
+                        {% get_progreso_mision request.user.perfilgamificacion mision as progreso %}
+
+                        <div class="mission-card" onclick="location.href='{% url 'logros:detalle_mision' mision.id %}'">
+
+                            <!-- SECCIÓN DEL HEADER (ICONO, TÍTULO Y RECOMPENSA) -->
+                            <div class="mission-card__header">
+                                <div class="mission-card__icon-wrapper">
+                                    {% if mision.icono and mision.icono.url %}
+                                    <div class="mission-card__icon" style="background-image: url('{{ mision.icono.url }}');"></div>
+                                    {% else %}
+                                    <div class="mission-card__icon-placeholder"><i class="bi bi-flag-fill"></i></div>
+                                    {% endif %}
+                                </div>
+                                <div class="mission-card__title-group">
+                                    <h3 class="mission-card__title">{{ mision.nombre }}</h3>
+                                    <span class="mission-card__reward">
+                    <i class="bi bi-star-fill"></i> +{{ mision.puntos_recompensa }} XP
+                </span>
+                                </div>
+                            </div>
+
+                            <!-- SECCIÓN DEL BODY (DESCRIPCIÓN) -->
+                            <div class="mission-card__body">
+                                <p class="mission-card__description">{{ mision.descripcion|truncatewords:15 }}</p>
+                            </div>
+
+                            <!-- SECCIÓN DEL FOOTER (PROGRESO) -->
+                            <div class="mission-card__footer">
+                                <div class="progress-bar-wrapper">
+                                    <div class="progress-bar-fill" style="width: {{ progreso.porcentaje }}%;"></div>
+                                </div>
+                                <div class="progress-text">
+                                    <span>{{ progreso.valor_actual|default:0 }}/{{ mision.meta_valor }}</span>
+                                    {% if mision.tipo.periodo != 'permanente' and mision.tipo.periodo != 'progresiva' %}
+                                    <span class="mission-type">
+                    <i class="bi bi-clock"></i> {{ mision.tipo.get_periodo_display }}
+                </span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+
+
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </main>
+    </div>
+
+    <footer class="missions-footer">
+        <a href="{% url 'logros:dashboard_principal' %}" class="btn-back">
+            <i class="bi bi-house-door-fill"></i> Volver al Panel Principal
+        </a>
+    </footer>
+</div>
+
+{# El menú lateral y su script pueden permanecer igual si lo sigues necesitando #}
+{# ... tu código del menú hamburguesa y el script ... #}
+{% endblock %}

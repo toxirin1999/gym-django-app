@@ -1,0 +1,16 @@
+<!-- En entrenos/templates/entrenos/resumen_entreno.html -->
+
+{% extends 'base.html' %}
+
+{% block title %}Página de Resumen de Prueba{% endblock %}
+
+{% block content %}
+<div class="container mx-auto p-8">
+    <h1 class="text-4xl text-white">Si ves esto, la plantilla se ha renderizado correctamente.</h1>
+    <p class="text-cyan-400">El entrenamiento fue el {{ entreno.fecha }}.</p>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Sin JavaScript por ahora para aislar el problema -->
+{% endblock %}

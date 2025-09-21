@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% block title %}Calendario de Bitácoras{% endblock %}
+{% block content %}
+<div class="max-w-2xl mx-auto mt-8 text-white p-4 bg-[#1a1a1a] rounded-xl">
+    <h2 class="text-2xl font-semibold text-center mb-4">📅 Bitácoras de {{ mes }} {{ año }}</h2>
+    <div class="grid grid-cols-7 gap-2 text-sm text-center">
+        {% for dia in dias %}
+        <div onclick="verBitacora('{{ año }}-{{ mes|stringformat:'02d' }}-{{ dia.dia|stringformat:'02d' }}')" class="p-2 rounded-xl cursor-pointer text-white {% if dia.estado == 'verde' %} bg-green-600 {% elif dia.estado == 'amarillo' %} bg-yellow-500 {% elif dia.estado == 'rojo' %} bg-red-500 {% else %} bg-gray-800 {% endif %}">
+            {{ dia.dia }}
+
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="mt-4 text-sm text-gray-300 text-center space-x-4">
+        <span class="inline-block w-3 h-3 bg-green-600 rounded-full align-middle"></span> Buen humor
+        <span class="inline-block w-3 h-3 bg-yellow-500 rounded-full align-middle"></span> Neutro
+        <span class="inline-block w-3 h-3 bg-red-500 rounded-full align-middle"></span> Bajo
+        <div class="mt-8">
+            <h3 class="text-center text-[#32FF00] font-semibold mb-2">📊 Evolución física</h3>
+            <canvas id="graficoPesoBiceps" height="200"></canvas>
+        </div>
+
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <script>
+            const ctx = document.getElementById('graficoPesoBiceps').getContext('2d');
+            const grafico = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: {{ labels|safe }},
+                    datasets: [
+                        {
+                            label: 'Peso (kg)',
+                            data: {{ pesos|safe }},
+                            borderColor: '#32FF00',
+                            backgroundColor: 'transparent',
+                            tension: 0.3,
+                            pointRadius: 4
+                        },
+                        {
+                            label: 'Bíceps (cm)',
+                            data: {{ biceps|safe }},
+                            borderColor: '#00D1FF',
+                            backgroundColor: 'transparent',
+                            tension: 0.3,
+                            pointRadius: 4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            labels: { color: '#ffffff' }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: { color: '#aaa' }
+                        },
+                        y: {
+                            ticks: { color: '#aaa' }
+                        }
+                    }
+                }
+            });
+        </script>
+
+    </div>
+
+    <p class="text-xs text-gray-400 mt-4 text-center">🟢 = Bitácora registrada</p>
+    <div id="modalBitacora" class="fixed inset-0 bg-black/60 z-50 hidden justify-center items-center">
+        <div class="bg-[#1a1a1a] p-6 rounded-xl w-full max-w-md text-white shadow-xl">
+            <h3 id="modalFecha" class="text-xl font-bold text-cyan-400 mb-2"></h3>
+            <p><strong>😌 Emoción:</strong> <span id="modalEmocion"></span></p>
+            <p><strong>🧘 Mindfulness:</strong> <span id="modalMindfulness"></span></p>
+            <p><strong>✅ Cosas que funcionaron:</strong><br><span id="modalCosas"></span></p>
+            <p><strong>📘 Aprendizaje:</strong><br><span id="modalAprendizaje"></span></p>
+            <button onclick="cerrarModal()" class="mt-4 w-full bg-cyan-600 text-white py-1 rounded">Cerrar</button>
+        </div>
+    </div>
+
+</div>
+<script>
+    function verBitacora(fecha) {
+   fetch(`/clientes/bitacora/ajax/?fecha=${fecha}`)
+    .then(res => {
+      if (!res.ok) throw new Error("Sin datos");
+      return res.json();
+    })
+    .then(data => {
+      document.getElementById('modalFecha').innerText = data.fecha;
+      document.getElementById('modalEmocion').innerText = data.emocion || '—';
+      document.getElementById('modalMindfulness').innerText = data.mindfulness || '—';
+      document.getElementById('modalCosas').innerText = data.cosas || '—';
+      document.getElementById('modalAprendizaje').innerText = data.aprendizaje || '—';
+      document.getElementById('modalBitacora').classList.remove('hidden');
+      document.getElementById('modalBitacora').classList.add('flex');
+    })
+    .catch(() => {
+      document.getElementById('modalFecha').innerText = fecha.split('-').reverse().join('/');
+      document.getElementById('modalEmocion').innerText = '—';
+      document.getElementById('modalMindfulness').innerText = '—';
+      document.getElementById('modalCosas').innerText = 'Ese día no dejaste registro…';
+      document.getElementById('modalAprendizaje').innerText = 'Quizá hoy quieras recordar cómo te sentías.';
+      document.getElementById('modalBitacora').classList.remove('hidden');
+      document.getElementById('modalBitacora').classList.add('flex');
+    });
+}
+
+
+    function cerrarModal() {
+      document.getElementById('modalBitacora').classList.add('hidden');
+      document.getElementById('modalBitacora').classList.remove('flex');
+    }
+</script>
+
+{% endblock %}

@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+{% load static %}
+{% load ia_filters %}
+
+{% block title %}Revisar y Confirmar Optimización{% endblock %}
+
+{% block extra_css %}
+<!-- ================================================================= -->
+<!-- ### AÑADIMOS EL CSS DE BOOTSTRAP ### -->
+<!-- ================================================================= -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<!-- ================================================================= -->
+
+<style>
+    /* Tus estilos personalizados se mantienen igual */
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100% ); padding: 20px 0; }
+    .ia-container { max-width: 1200px; margin: 0 auto; background: rgba(255, 255, 255, 0.95); border-radius: 20px; padding: 30px; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1); color: #2c3e50; }
+    .ia-header h1 { color: #2c3e50; font-size: 2.5rem; margin-bottom: 10px; background: linear-gradient(45deg, #667eea, #764ba2); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700; }
+    .ia-card { background: white; border-radius: 15px; padding: 25px; margin-bottom: 25px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); height: 100%; }
+    .ia-card-header { display: flex; align-items: center; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid #ecf0f1; }
+    .ia-card-header .icon { font-size: 1.8rem; margin-right: 15px; }
+    .ia-card-header h5 { margin: 0; font-weight: bold; color: #2c3e50; }
+    .exercise-list { list-style: none; padding-left: 0; }
+    .exercise-list li { background-color: #f8f9fa; padding: 8px 12px; border-radius: 8px; margin-bottom: 8px; font-size: 0.9rem; }
+    .exercise-list .group { font-size: 0.8em; background-color: #34495e; color: white; padding: 3px 8px; border-radius: 10px; font-weight: bold; }
+    .btn-confirm { background: linear-gradient(135deg, #1abc9c, #16a085); color: white; font-weight: bold; border: none; padding: 12px 25px; font-size: 1.1rem; }
+    .btn-cancel { background: linear-gradient(135deg, #e74c3c, #c0392b); color: white; font-weight: bold; border: none; padding: 12px 25px; font-size: 1.1rem; }
+    .change-highlight { background-color: #fff3cd; border-left: 4px solid #ffeeba; font-weight: bold; }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- ================================================================= -->
+<!-- ### AÑADIMOS EL CONTENEDOR PRINCIPAL ### -->
+<!-- ================================================================= -->
+<div class="container-fluid ia-container">
+
+    <div class="ia-header text-center">
+        <h1>Revisar y Confirmar Optimización</h1>
+        <p class="lead">Programa para: {{ cliente.nombre }}</p>
+    </div>
+
+    <!-- La estructura de 'row' y 'col-md-6' ahora funcionará gracias a Bootstrap -->
+    <div class="row mt-4">
+        <!-- COLUMNA: PROGRAMA ORIGINAL -->
+        <div class="col-md-6">
+            <div class="ia-card" style="border-left-color: #e74c3c;">
+                <div class="ia-card-header">
+                    <span class="icon" style="color: #e74c3c;"><i class="fas fa-history"></i></span>
+                    <h5>Programa Original</h5>
+                </div>
+                {% for rutina in programa_original.rutinas %}
+                <h6 class="mt-3"><strong>{{ rutina.nombre }}</strong></h6>
+                <ul class="exercise-list">
+                    {% for ejercicio in rutina.ejercicios %}
+                    <li>{{ ejercicio.nombre }}: {{ ejercicio.series }}x{{ ejercicio.repeticiones }}</li>
+                    {% empty %}
+                    <li class="text-muted">Sin ejercicios.</li>
+                    {% endfor %}
+                </ul>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- COLUMNA: PROGRAMA OPTIMIZADO -->
+        <div class="col-md-6">
+            <div class="ia-card" style="border-left-color: #27ae60;">
+                <div class="ia-card-header">
+                    <span class="icon" style="color: #27ae60;"><i class="fas fa-magic"></i></span>
+                    <h5>Programa Optimizado</h5>
+                </div>
+                {% for rutina in programa_modificado.rutinas %}
+                <h6 class="mt-3"><strong>{{ rutina.nombre }}</strong></h6>
+                <ul class="exercise-list">
+                    {% for ejercicio in rutina.ejercicios %}
+                    <li class="{% if ejercicio.modificado %}change-highlight{% endif %}">
+                        {{ ejercicio.nombre }}: {{ ejercicio.series }}x{{ ejercicio.repeticiones }}
+                        {% if ejercicio.modificado %}
+                        <span class="group" style="background-color: #f39c12;">Modificado</span>
+                        {% endif %}
+                    </li>
+                    {% empty %}
+                    <li class="text-muted">Sin ejercicios.</li>
+                    {% endfor %}
+                </ul>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% if resumen_de_cambios %}
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="ia-card" style="border-left-color: #f39c12;">
+                <div class="ia-card-header">
+                    <span class="icon" style="color: #f39c12;"><i class="fas fa-list-check"></i></span>
+                    <h5>Resumen de Cambios Sugeridos</h5>
+                </div>
+                <ul class="list-group list-group-flush">
+                    {% for cambio in resumen_de_cambios %}
+                    <li class="list-group-item">{{ cambio|safe }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    <!-- SECCIÓN DE CONFIRMACIÓN FINAL -->
+    <div class="row mt-3">
+        <div class="col-12 text-center">
+            <div class="ia-card">
+                <h5>¿Estás seguro de que quieres guardar estos cambios?</h5>
+                <p>El programa optimizado reemplazará la asignación actual del cliente.</p>
+                <div class="mt-3">
+                    <a href="{% url 'analytics:vista_optimizacion_programa' cliente.id %}" class="btn btn-cancel btn-lg me-3">
+                        <i class="fas fa-times"></i> Cancelar
+                    </a>
+                    <form action="{% url 'analytics:guardar_programa_optimizado' cliente.id %}" method="post" style="display: inline;">
+                        {% csrf_token %}
+                        <input type="hidden" name="programa_modificado_json" value="{{ programa_modificado_json_escaped }}">
+                        <button type="submit" class="btn btn-confirm btn-lg">
+                            <i class="fas fa-check"></i> Confirmar y Guardar
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

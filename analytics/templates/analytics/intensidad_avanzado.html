@@ -1,0 +1,839 @@
+<!-- 🔥 DASHBOARD DE INTENSIDAD AVANZADO -->
+<!-- Archivo: templates/analytics/intensidad_avanzado.html -->
+
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Dashboard de Intensidad Avanzado - {{ cliente.nombre }}{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.min.css" rel="stylesheet">
+<style>
+    :root {
+        --primary-color: #3b82f6;
+        --secondary-color: #1e40af;
+        --accent-color: #06b6d4;
+        --success-color: #10b981;
+        --warning-color: #f59e0b;
+        --danger-color: #ef4444;
+        --dark-bg: #0f172a;
+        --card-bg: #1e293b;
+        --text-primary: #f8fafc;
+        --text-secondary: #cbd5e1;
+        --border-color: #334155;
+        --zona-recuperacion: #10b981;
+        --zona-aerobica: #3b82f6;
+        --zona-umbral: #f59e0b;
+        --zona-anaerobica: #ef4444;
+    }
+
+    body {
+        background: linear-gradient(135deg, var(--dark-bg) 0%, #1e293b 100%);
+        color: var(--text-primary);
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        min-height: 100vh;
+    }
+
+    .dashboard-container {
+        max-width: 1600px;
+        margin: 0 auto;
+        padding: 2rem;
+    }
+
+    .dashboard-header {
+        background: linear-gradient(135deg, var(--warning-color), var(--danger-color));
+        border-radius: 1rem;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        text-align: center;
+    }
+
+    .dashboard-header h1 {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin: 0 0 0.5rem 0;
+    }
+
+    /* Zonas de Entrenamiento */
+    .zonas-section {
+        background: var(--card-bg);
+        border-radius: 1rem;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        border: 1px solid var(--border-color);
+    }
+
+    .section-title {
+        font-size: 1.5rem;
+        font-weight: 600;
+        margin-bottom: 1.5rem;
+        color: var(--text-primary);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .zonas-grid {
+   display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+
+    .zonas-chart-container {
+  position: relative;
+  height: 300px;
+  min-height: 300px;
+  display: block;
+  z-index: 10;
+}
+#zonasChart {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+  background-color: transparent;
+  opacity: 1;
+  z-index: 10;
+}
+.zonas-chart-container canvas {
+    width: 100% !important;
+    height: 100% !important;
+    display: block;
+}
+
+    .zonas-table {
+        background: rgba(59, 130, 246, 0.05);
+        border-radius: 0.75rem;
+        padding: 1.25rem;
+        border: 1px solid var(--border-color);
+    }
+
+    .zona-row {
+        display: grid;
+        grid-template-columns: 2fr 1fr 1fr 1fr;
+        gap: 1rem;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid var(--border-color);
+        align-items: center;
+    }
+
+    .zona-row:last-child {
+        border-bottom: none;
+    }
+
+    .zona-row:first-child {
+        font-weight: 600;
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+    }
+
+    .zona-nombre {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .zona-color {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+    }
+
+    .zona-recuperacion { background: var(--zona-recuperacion); }
+    .zona-aerobica { background: var(--zona-aerobica); }
+    .zona-umbral { background: var(--zona-umbral); }
+    .zona-anaerobica { background: var(--zona-anaerobica); }
+
+    .zona-porcentaje {
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+
+    /* Análisis de Carga */
+    .carga-section {
+        background: var(--card-bg);
+        border-radius: 1rem;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        border: 1px solid var(--border-color);
+    }
+
+    .carga-grid {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 2rem;
+    }
+
+    .carga-chart-container {
+        position: relative;
+        height: 350px;
+    }
+
+    .carga-stats {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .carga-stat-card {
+        background: rgba(59, 130, 246, 0.05);
+        border-radius: 0.75rem;
+        padding: 1.25rem;
+        border: 1px solid var(--border-color);
+        text-align: center;
+    }
+
+    .stat-value-large {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin-bottom: 0.25rem;
+    }
+
+    .stat-label-large {
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+    }
+
+    .stat-trend {
+        margin-top: 0.5rem;
+        font-size: 0.8rem;
+    }
+
+    .trend-positive { color: var(--success-color); }
+    .trend-negative { color: var(--danger-color); }
+    .trend-neutral { color: var(--text-secondary); }
+
+    /* Fatiga Acumulada */
+    .fatiga-section {
+        background: var(--card-bg);
+        border-radius: 1rem;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        border: 1px solid var(--border-color);
+    }
+
+    .fatiga-grid {
+        display: grid;
+        grid-template-columns: 1fr 2fr;
+        gap: 2rem;
+    }
+
+    .fatiga-gauge {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .gauge-container {
+        position: relative;
+        width: 200px;
+        height: 200px;
+        margin-bottom: 1rem;
+    }
+
+    .fatiga-nivel {
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+    }
+
+    .fatiga-baja { color: var(--success-color); }
+    .fatiga-moderada { color: var(--warning-color); }
+    .fatiga-alta { color: var(--danger-color); }
+    .fatiga-critica { color: #dc2626; }
+
+    .fatiga-recomendacion {
+        background: rgba(59, 130, 246, 0.05);
+        border-radius: 0.75rem;
+        padding: 1.25rem;
+        border: 1px solid var(--border-color);
+    }
+
+    .recomendacion-title {
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 0.75rem;
+    }
+
+    .recomendacion-text {
+        color: var(--text-secondary);
+        line-height: 1.5;
+    }
+
+    /* Distribución de Intensidades */
+    .intensidades-section {
+        background: var(--card-bg);
+        border-radius: 1rem;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        border: 1px solid var(--border-color);
+    }
+
+    .intensidades-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 2rem;
+    }
+
+    .intensidades-chart-container {
+        position: relative;
+        height: 300px;
+    }
+
+    .intensidades-breakdown {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .intensidad-item {
+        background: rgba(59, 130, 246, 0.05);
+        border-radius: 0.5rem;
+        padding: 1rem;
+        border: 1px solid var(--border-color);
+    }
+
+    .intensidad-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.5rem;
+    }
+
+    .intensidad-nombre {
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+
+    .intensidad-porcentaje {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: var(--primary-color);
+    }
+
+    .intensidad-objetivo {
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+    }
+
+    .progress-bar {
+        width: 100%;
+        height: 6px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 3px;
+        overflow: hidden;
+        margin-top: 0.5rem;
+    }
+
+    .progress-fill {
+        height: 100%;
+        background: var(--primary-color);
+        border-radius: 3px;
+        transition: width 0.3s ease;
+    }
+
+    @media (max-width: 768px) {
+        .zonas-grid,
+        .carga-grid,
+        .fatiga-grid,
+        .intensidades-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .zona-row {
+            grid-template-columns: 1fr;
+            gap: 0.5rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <!-- Header -->
+    <div class="dashboard-header">
+        <h1>🔥 Dashboard de Intensidad Avanzado</h1>
+        <p>Análisis completo de zonas de entrenamiento, carga y fatiga acumulada</p>
+    </div>
+
+    <!-- Zonas de Entrenamiento -->
+    <div class="zonas-section">
+        <div class="section-title">
+            🎯 Zonas de Entrenamiento
+        </div>
+
+        <div class="zonas-grid">
+            <div class="zonas-chart-container">
+                <canvas id="zonasChart"></canvas>
+            </div>
+
+            <div class="zonas-table">
+                <div class="zona-row">
+                    <div>ZONA</div>
+                    <div>TIEMPO</div>
+                    <div>PORCENTAJE</div>
+                    <div>CALORÍAS</div>
+                </div>
+
+                {% for zona, datos in zonas_entrenamiento.distribucion.items %}
+                <div class="zona-row">
+                    <div class="zona-nombre">
+                        <div class="zona-color zona-{{ zona }}"></div>
+                        {{ zona|title }}
+                    </div>
+                    <div>{{ datos.tiempo }} min</div>
+                    <div class="zona-porcentaje">{{ datos.porcentaje }}%</div>
+                    <div>{{ datos.calorias }} kcal</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        {% if zonas_entrenamiento.recomendaciones_zonas %}
+        <div style="margin-top: 1.5rem; padding: 1rem; background: rgba(59, 130, 246, 0.1); border-radius: 0.5rem; border-left: 4px solid var(--primary-color);">
+            <strong>💡 Recomendaciones de Zonas:</strong>
+            <ul style="margin: 0.5rem 0 0 1rem;">
+                {% for recomendacion in zonas_entrenamiento.recomendaciones_zonas %}
+                <li>{{ recomendacion }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Análisis de Carga -->
+    <div class="carga-section">
+        <div class="section-title">
+            📊 Análisis de Carga de Entrenamiento
+        </div>
+
+        <div class="carga-grid">
+            <div class="carga-chart-container">
+                <canvas id="cargaChart"></canvas>
+            </div>
+
+            <div class="carga-stats">
+                <div class="carga-stat-card">
+                    <div class="stat-value-large">{{ analisis_carga.carga_promedio|floatformat:0 }}</div>
+                    <div class="stat-label-large">Carga Promedio Semanal</div>
+                    <div class="stat-trend {% if analisis_carga.tendencia.direccion == 'subiendo' %}trend-positive{% elif analisis_carga.tendencia.direccion == 'bajando' %}trend-negative{% else %}trend-neutral{% endif %}">
+                        {% if analisis_carga.tendencia.direccion == 'subiendo' %}↗️{% elif analisis_carga.tendencia.direccion == 'bajando' %}↘️{% else %}➡️{% endif %}
+                        {{ analisis_carga.tendencia.porcentaje }}%
+                    </div>
+                </div>
+
+                <div class="carga-stat-card">
+                    <div class="stat-value-large">{{ analisis_carga.sesiones_promedio|floatformat:1 }}</div>
+                    <div class="stat-label-large">Sesiones por Semana</div>
+                </div>
+
+                <div class="carga-stat-card">
+                    <div class="stat-value-large">{{ analisis_carga.duracion_promedio|floatformat:0 }}</div>
+                    <div class="stat-label-large">Duración Promedio (min)</div>
+                </div>
+            </div>
+        </div>
+
+        {% if debug_info.recomendaciones_generadas %}
+        <div style="margin-top: 1.5rem; padding: 1rem; background: rgba(59, 130, 246, 0.1); border-radius: 0.5rem; border-left: 4px solid var(--primary-color);">
+            <strong>💡 Recomendaciones de Carga:</strong>
+            <ul style="margin: 0.5rem 0 0 1rem; list-style: none; padding-left: 0;">
+                {% for recomendacion in debug_info.recomendaciones_generadas %}
+                <li>{{ recomendacion }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+        <div style="margin-bottom: 1.5rem; font-size: 0.9rem; color: var(--text-secondary); background: rgba(255,255,255,0.02); padding: 1rem; border-radius: 0.75rem; border-left: 4px solid var(--primary-color);">
+            <strong style="color: var(--text-primary);">📘 ¿Qué es la Carga de Entrenamiento?</strong><br><br>
+
+            <p style="margin-bottom: 0.75rem;">
+                La <strong>Carga de Entrenamiento</strong> es un índice que representa el estrés total que tu cuerpo ha soportado. No se trata solo de cuánto peso levantas, sino de una combinación de tres factores clave de cada sesión:
+            </p>
+
+            <ul style="list-style: none; padding-left: 0;">
+                <li style="margin-bottom: 0.75rem;">
+                    <span style="color: #f59e0b;"><strong>1. Volumen:</strong></span> La cantidad total de trabajo realizado (Peso × Series × Repeticiones).
+                </li>
+                <li style="margin-bottom: 0.75rem;">
+                    <span style="color: #f59e0b;"><strong>2. Intensidad:</strong></span> Qué tan pesado fue el trabajo en relación a tu fuerza máxima (tu % de 1RM).
+                </li>
+                <li>
+                    <span style="color: #f59e0b;"><strong>3. Duración:</strong></span> El tiempo total de la sesión de entrenamiento.
+                </li>
+            </ul>
+            <p style="margin-top: 1rem;">
+                Monitorizar esta carga a lo largo del tiempo es fundamental para asegurar una <strong>sobrecarga progresiva</strong> (aumentar gradualmente el estímulo) y evitar el sobreentrenamiento.
+            </p>
+        </div>
+    </div>
+
+    <!-- Fatiga Acumulada -->
+    <div class="fatiga-section">
+        <div class="section-title">
+            ⚡ Fatiga Acumulada
+        </div>
+        <div style="margin-top: 1.5rem; font-size: 0.9rem; color: var(--text-secondary); background: rgba(255,255,255,0.02); padding: 1rem; border-radius: 0.75rem; border-left: 4px solid var(--primary-color);">
+            <strong>📘 Leyenda de Fatiga Acumulada:</strong><br><br>
+
+            <p style="margin-bottom: 0.75rem;">
+                La <strong>fatiga acumulada</strong> se calcula combinando el <em>volumen total</em> (peso × repeticiones × series), la <em>intensidad estimada</em> (según repeticiones), y la <em>duración del entrenamiento</em>. Se aplica un modelo
+                exponencial que simula cómo se acumula la carga en el cuerpo día tras día, con un factor de recuperación del 15 % diario.
+            </p>
+
+            <ul style="list-style: none; padding-left: 0;">
+                <li style="margin-bottom: 0.75rem;">
+                    <span style="color: #10b981;"><strong>● Baja (0–50)</strong></span><br>
+                    <em>Tu sistema está recuperado.</em> Ideal para aumentar intensidad o cargas pesadas.
+                </li>
+                <li style="margin-bottom: 0.75rem;">
+                    <span style="color: #f59e0b;"><strong>● Moderada (51–100)</strong></span><br>
+                    <em>Fatiga leve presente.</em> Se recomienda moderar el esfuerzo o enfocar el trabajo en movilidad y técnica.
+                </li>
+                <li style="margin-bottom: 0.75rem;">
+                    <span style="color: #ef4444;"><strong>● Alta (101–150)</strong></span><br>
+                    <em>Fatiga acumulada significativa.</em> Es posible que aparezca estancamiento o mayor riesgo de lesión.
+                </li>
+                <li>
+                    <span style="color: #dc2626;"><strong>● Crítica (>150)</strong></span><br>
+                    <em>Fatiga severa.</em> Indica sobrecarga continua. Es recomendable tomar descanso total y revisar la planificación.
+                </li>
+            </ul>
+        </div>
+
+        <div class="fatiga-grid">
+            <div class="fatiga-gauge">
+                <div class="gauge-container">
+                    <canvas id="fatigaGauge"></canvas>
+                </div>
+                <div class="fatiga-nivel fatiga-{{ fatiga_acumulada.nivel }}">
+                    {{ fatiga_acumulada.nivel|title }}
+                </div>
+                <div style="color: var(--text-secondary); font-size: 0.9rem;">
+                    Índice: {{ fatiga_acumulada.fatiga_actual }}
+                </div>
+                {% if fatiga_acumulada.dias_recuperacion %}
+                <div style="margin-top: 1rem; color: var(--text-secondary); font-size: 0.8rem;">
+                    Recuperación estimada: {{ fatiga_acumulada.dias_recuperacion }} días
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="fatiga-recomendacion">
+                <div class="recomendacion-title">
+                    🎯 Recomendación de Recuperación
+                </div>
+                <div class="recomendacion-text">
+                    {{ fatiga_acumulada.recomendacion_descanso }}
+                </div>
+
+                {% if fatiga_acumulada.nivel == 'alta' or fatiga_acumulada.nivel == 'critica' %}
+                <div style="margin-top: 1rem; padding: 0.75rem; background: rgba(239, 68, 68, 0.1); border-radius: 0.5rem; border-left: 3px solid var(--danger-color);">
+                    <strong>🚨 Atención:</strong> Nivel de fatiga elevado. Considera reducir la intensidad o tomar días de descanso adicionales.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Distribución de Intensidades -->
+    <div class="intensidades-section">
+        <div class="section-title">
+            🏋️‍♂️ Distribución de Intensidades
+        </div>
+
+        <div class="intensidades-grid">
+            <div class="intensidades-chart-container">
+                <canvas id="intensidadesChart"></canvas>
+            </div>
+
+            <div class="intensidades-breakdown">
+                {% for zona, porcentaje in distribucion_intensidades.distribucion.items %}
+                <div class="intensidad-item">
+                    <div class="intensidad-header">
+                        <div class="intensidad-nombre">{{ zona|title }}</div>
+                        <div class="intensidad-porcentaje">{{ porcentaje }}%</div>
+                    </div>
+                    <div class="intensidad-objetivo">
+                        {% if zona == 'recuperacion' %}Recuperación activa
+                        {% elif zona == 'hipertrofia' %}Hipertrofia muscular
+                        {% elif zona == 'fuerza' %}Fuerza máxima
+                        {% elif zona == 'potencia' %}Potencia y velocidad
+                        {% endif %}
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: {{ porcentaje }}%"></div>
+                    </div>
+                </div>
+                {% endfor %}
+
+                <div style="margin-top: 1rem; padding: 1rem; background: rgba(16, 185, 129, 0.1); border-radius: 0.5rem; border-left: 4px solid var(--success-color);">
+                    <strong>✅ Efectividad de Rutina:</strong>
+                    <div style="margin-top: 0.5rem; color: var(--text-secondary);">
+                        {{ distribucion_intensidades.efectividad_rutina }}
+                    </div>
+                </div>
+            </div>
+
+        </div>
+        {% if distribucion_intensidades.recomendaciones_intensidad %}
+        <div style="margin-top: 1.5rem; padding: 1rem; background: rgba(59, 130, 246, 0.1); border-radius: 0.5rem; border-left: 4px solid var(--primary-color);">
+            <strong>💡 Recomendaciones de Intensidad:</strong>
+            <ul style="margin: 0.5rem 0 0 1rem;">
+                {% for recomendacion in distribucion_intensidades.recomendaciones_intensidad %}
+                <li>{{ recomendacion }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+        <div style="margin-bottom: 1.5rem; font-size: 0.9rem; color: var(--text-secondary); background: rgba(255,255,255,0.02); padding: 1rem; border-radius: 0.75rem; border-left: 4px solid var(--primary-color);">
+            <strong style="color: var(--text-primary);">📘 ¿Cómo se calcula la intensidad?</strong><br><br>
+
+            <p style="margin-bottom: 0.75rem;">
+                Analizamos cada serie que registras para estimar tu <strong>1RM</strong> (el peso máximo que podrías levantar para una sola repetición) en ese ejercicio. Luego, clasificamos la intensidad de esa serie según el porcentaje de tu 1RM que
+                estabas utilizando:
+            </p>
+
+            <ul style="list-style: none; padding-left: 0;">
+                <li style="margin-bottom: 0.75rem;">
+                    <span style="color: #3b82f6;"><strong>● Hipertrofia (60-80% del 1RM)</strong></span><br>
+                    <em>El rango ideal para estimular el crecimiento muscular. Típicamente, series de 6 a 12 repeticiones.</em>
+                </li>
+                <li style="margin-bottom: 0.75rem;">
+                    <span style="color: #f59e0b;"><strong>● Fuerza (80-90% del 1RM)</strong></span><br>
+                    <em>El rango óptimo para desarrollar fuerza máxima. Generalmente, series de 2 a 5 repeticiones.</em>
+                </li>
+                <li style="margin-bottom: 0.75rem;">
+                    <span style="color: #ef4444;"><strong>● Potencia (>90% del 1RM)</strong></span><br>
+                    <em>Trabajo de muy alta intensidad para mejorar la fuerza explosiva y el sistema nervioso. Series de 1 a 3 repeticiones.</em>
+                </li>
+                <li>
+                    <span style="color: #10b981;"><strong>● Recuperación (<60% del 1RM)</strong></span><br>
+                    <em>Cargas ligeras usadas para calentamiento, recuperación activa o trabajo técnico. Más de 12-15 repeticiones.</em>
+                </li>
+            </ul>
+        </div>
+
+
+    </div>
+
+
+    <!-- Navegación -->
+    <div style="text-align: center; margin-top: 2rem;">
+        <a href="{% url 'analytics:progresion_avanzado' cliente.id %}"
+           style="background: var(--success-color); color: white; padding: 1rem 2rem; border-radius: 0.5rem; text-decoration: none; font-weight: 600; margin-right: 1rem;">
+            ← Dashboard de Progresión
+        </a>
+        <a href="{% url 'analytics:dashboard_cliente' cliente.id %}"
+           style="background: var(--primary-color); color: white; padding: 1rem 2rem; border-radius: 0.5rem; text-decoration: none; font-weight: 600;">
+            Dashboard Principal →
+        </a>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const datosGraficos = {{ datos_graficos|safe }};
+
+        // Gráfico de Zonas de Entrenamiento
+        const ctxZonas = document.getElementById('zonasChart');
+        if (ctxZonas) {
+            const zonasData = datosGraficos.zonas;
+            new Chart(ctxZonas, {
+                type: 'doughnut',
+                data: {
+                    labels: zonasData.labels,
+                    datasets: [{
+                        data: zonasData.valores,
+                        backgroundColor: zonasData.colores,
+                        borderWidth: 2,
+                        borderColor: '#1e293b'
+                    }]
+                },
+
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { color: '#f8fafc' }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Gráfico de Carga Semanal
+        const ctxCarga = document.getElementById('cargaChart');
+        if (ctxCarga) {
+            const cargaData = datosGraficos.carga.carga_semanal;
+
+            new Chart(ctxCarga, {
+                type: 'line',
+                data: {
+                    labels: Object.keys(cargaData),
+                    datasets: [{
+                        label: 'Carga Semanal',
+                        data: Object.values(cargaData).map(d => d.carga_total),
+                        borderColor: '#f59e0b',
+                        backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: { color: '#f8fafc' }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            ticks: { color: '#cbd5e1' },
+                            grid: { color: '#334155' }
+                        },
+                        x: {
+                            ticks: { color: '#cbd5e1' },
+                            grid: { color: '#334155' }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Gauge de Fatiga
+        const ctxFatiga = document.getElementById('fatigaGauge');
+        if (ctxFatiga) {
+            const fatigaValor = parseFloat("{{ fatiga_acumulada.fatiga_actual|floatformat:2 }}".replace(",", "."));
+
+            const fatigaMax = 200; // Valor máximo para el gauge
+
+            new Chart(ctxFatiga, {
+                type: 'doughnut',
+                data: {
+                    datasets: [{
+                        data: [fatigaValor, fatigaMax - fatigaValor],
+                        backgroundColor: [
+                            fatigaValor < 50 ? '#10b981' :
+                            fatigaValor < 100 ? '#f59e0b' :
+                            fatigaValor < 150 ? '#ef4444' : '#dc2626',
+                            'rgba(255, 255, 255, 0.1)'
+                        ],
+                        borderWidth: 0,
+                        circumference: 180,
+                        rotation: 270
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '70%',
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: { enabled: false }
+                    }
+                }
+            });
+        }
+
+        // Gráfico de Distribución de Intensidades
+        const ctxIntensidades = document.getElementById('intensidadesChart');
+        if (ctxIntensidades) {
+            const intensidadesData = datosGraficos.intensidades.distribucion;
+
+            new Chart(ctxIntensidades, {
+                type: 'bar',
+                data: {
+                    labels: ['Recuperación', 'Hipertrofia', 'Fuerza', 'Potencia'],
+                    datasets: [{
+                        label: 'Porcentaje de Series',
+                        data: [
+                            intensidadesData.recuperacion,
+                            intensidadesData.hipertrofia,
+                            intensidadesData.fuerza,
+                            intensidadesData.potencia
+                        ],
+                        backgroundColor: ['#10b981', '#3b82f6', '#f59e0b', '#ef4444'],
+                        borderWidth: 1,
+                        borderColor: '#1e293b'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            ticks: {
+                                color: '#cbd5e1',
+                                callback: function(value) {
+                                    return value + '%';
+                                }
+                            },
+                            grid: { color: '#334155' }
+                        },
+                        x: {
+                            ticks: { color: '#cbd5e1' },
+                            grid: { color: '#334155' }
+                        }
+                    }
+                }
+            });
+        }
+    });
+    console.log("📊 Carga semanal:", datosGraficos.carga.carga_semanal);
+
+</script>
+{% endblock %}
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const datosGraficos = JSON.parse('{{ datos_graficos|escapejs }}');
+        const zonasData = datosGraficos.zonas;
+
+        const ctxZonas = document.getElementById('zonasChart');
+        if (ctxZonas && zonasData.valores.some(v => v > 0)) {
+            new Chart(ctxZonas, {
+                type: 'doughnut',
+                data: {
+                    labels: zonasData.labels,
+                    datasets: [{
+                        data: zonasData.valores,
+                        backgroundColor: zonasData.colores,
+                        borderWidth: 2,
+                        borderColor: '#1e293b'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                color: '#f8fafc'
+                            }
+                        }
+                    }
+                }
+            });
+        } else {
+            console.log("🛑 Gráfico de zonas no se pudo renderizar. Canvas o datos no válidos.");
+        }
+    });
+</script>

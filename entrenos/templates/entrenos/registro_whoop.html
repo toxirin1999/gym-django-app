@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto mt-10 bg-[#1a1a1a] p-8 rounded-2xl shadow-xl text-white">
+
+    <h2 class="text-2xl font-bold mb-6 text-center text-yellow-400">📈 Registrar datos Whoop</h2>
+
+    <form method="post" class="space-y-6">
+        {% csrf_token %}
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+                <label for="id_strain" class="block text-sm font-semibold mb-1">Strain</label>
+                {{ form.strain }}
+            </div>
+            <div>
+                <label for="id_recovery" class="block text-sm font-semibold mb-1">Recovery (%)</label>
+                {{ form.recovery }}
+            </div>
+            <div>
+                <label for="id_horas_sueno" class="block text-sm font-semibold mb-1">Horas de sueño</label>
+                {{ form.horas_sueno }}
+            </div>
+            <div>
+                <label for="id_sueno_necesario" class="block text-sm font-semibold mb-1">Sueño necesario</label>
+                {{ form.sueno_necesario }}
+            </div>
+            <div class="md:col-span-2">
+                <label for="id_sleep_performance" class="block text-sm font-semibold mb-1">Sleep performance (%)</label>
+                {{ form.sleep_performance }}
+            </div>
+            <div>
+                <label for="id_rhr" class="block text-sm font-semibold mb-1">FCR (lat/min)- Frecuencia Cardíaca en Reposo</label>
+                {{ form.rhr }}
+            </div>
+            <div>
+                <label for="id_hrv" class="block text-sm font-semibold mb-1">VFC (ms) - Variabilidad de Frecuencia Cardíaca</label>
+                {{ form.hrv }}
+            </div>
+
+        </div>
+
+        <div class="text-center">
+            <button type="submit" class="bg-yellow-500 hover:bg-yellow-400 text-black font-bold px-6 py-2 rounded-full transition shadow-lg">
+                Guardar Registro
+            </button>
+        </div>
+    </form>
+
+    {% if registro %}
+    <p class="text-center text-sm text-green-400 mt-4">Ya existe un registro para hoy. Puedes actualizarlo si lo deseas.</p>
+    {% endif %}
+</div>
+{% endblock %}

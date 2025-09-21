@@ -1,0 +1,16 @@
+<!-- Añadir este botón al header de la página de detalle del cliente -->
+<!-- En el div de botones de acción, junto a "Ver Plan Anual", "Preferencias" y "Editar" -->
+
+<a href="{% url 'clientes:control_peso_cliente' cliente.id %}" class="w-full sm:w-auto text-center bg-gradient-to-r from-green-500 to-emerald-600 hover:scale-105 transition text-white font-semibold px-4 py-2 rounded-xl shadow-md flex items-center justify-center gap-2">
+    <i class="fas fa-weight"></i> Control de Peso
+</a>
+
+<!-- También se puede añadir como una tarjeta en la sección de métricas -->
+<div class="card-halo text-center">
+    <a href="{% url 'clientes:control_peso_cliente' cliente.id %}" class="block hover:scale-105 transition">
+        <i class="fas fa-weight text-3xl text-green-400 mb-2"></i>
+        <p class="text-lg font-bold text-white">Control de Peso</p>
+        <p class="text-sm text-gray-400">Gestionar evolución</p>
+    </a>
+</div>
+

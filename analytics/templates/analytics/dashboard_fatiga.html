@@ -1,0 +1,244 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load analytics_extras %}
+{% block title %}Gestión de Fatiga - {{ cliente.nombre }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Reutilizamos los estilos base para consistencia */
+    :root {
+        --neon-cyan: #00ffff;
+        --card-bg: rgba(15, 23, 42, 0.7);
+        --text-primary: #f8fafc;
+        --border-color: rgba(0, 255, 255, 0.3);
+        /* Colores para las zonas de riesgo */
+        --zona-optima: #10b981;
+        --zona-cuidado: #f59e0b;
+        --zona-riesgo: #ef4444;
+        --zona-baja: #3b82f6;
+    }
+    body {
+        background: url("{% static 'images/fondo_cyberpunk.png' %}") no-repeat center center fixed !important;
+        background-size: cover !important; background-color: #000 !important;
+        color: var(--text-primary); font-family: 'Inter', sans-serif;
+    }
+    .container { max-width: 1200px; margin: 0 auto; padding: 2rem 1.5rem; }
+    .card {
+        background: var(--card-bg); backdrop-filter: blur(15px);
+        border: 1px solid var(--border-color); border-radius: 1rem; padding: 2rem;
+    }
+    .card-title {
+        font-size: 1.5rem; font-weight: 600; color: var(--neon-cyan);
+        margin-bottom: 1.5rem;
+    }
+      /* --- AÑADE ESTOS ESTILOS PARA LA LEYENDA --- */
+    .guide-content { border-top: 1px solid rgba(0, 255, 255, 0.2); padding-top: 1.5rem; }
+    .guide-section { margin-bottom: 1.5rem; }
+    .guide-subtitle {
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: var(--neon-cyan);
+        margin-bottom: 0.75rem;
+    }
+    .guide-list {
+        list-style-position: inside;
+        padding-left: 0.5rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    .guide-list li {
+        color: var(--text-secondary);
+    }
+    .guide-list strong {
+        color: var(--text-primary);
+    }
+    /* Estilos para el medidor de ACWR */
+    .gauge-container { text-align: center; }
+    .gauge-value {
+        font-size: 4rem; font-weight: 700; line-height: 1;
+        text-shadow: 0 0 15px currentColor;
+    }
+    .gauge-label { font-size: 1rem; color: var(--text-secondary); margin-top: 0.5rem; }
+    .gauge-reco { margin-top: 1rem; font-style: italic; }
+
+    /* Colores dinámicos para el medidor */
+    .zona-optima .gauge-value { color: var(--zona-optima); }
+    .zona-cuidado .gauge-value { color: var(--zona-cuidado); }
+    .zona-riesgo_alto .gauge-value { color: var(--zona-riesgo); }
+    .zona-baja_carga .gauge-value { color: var(--zona-baja); }
+    .zona-muy_baja .gauge-value { color: var(--text-secondary); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <header class="text-center mb-8">
+        <h1 class="text-4xl font-bold" style="color: var(--neon-cyan); text-shadow: 0 0 15px var(--neon-cyan);">
+            Dashboard de Gestión de Carga y Fatiga
+        </h1>
+        <p class="text-xl text-gray-300 mt-2">Análisis de Carga Aguda vs. Crónica (ACWR) para {{ cliente.nombre }}</p>
+    </header>
+
+    <div class="grid md:grid-cols-3 gap-8">
+        <!-- Columna del Medidor ACWR -->
+        <div class="md:col-span-1 card">
+            <h2 class="card-title">Ratio ACWR Actual</h2>
+            <div class="gauge-container {{ analisis_acwr.zona_riesgo }}">
+                <div class="gauge-value">{{ analisis_acwr.acwr_actual|floatformat:2 }}</div>
+                <div class="gauge-label">Zona de {{ analisis_acwr.zona_riesgo|replace:"_, "|title }}</div>
+                <p class="gauge-reco">{{ analisis_acwr.recomendacion }}</p>
+            </div>
+        </div>
+
+        <!-- Columna del Gráfico -->
+        <div class="md:col-span-2 card">
+            <h2 class="card-title">📈 Evolución de Carga y Ratio ACWR</h2>
+            <div style="height: 400px;">
+                <canvas id="acwrChart"></canvas>
+            </div>
+        </div>
+    </div>
+     <div class="card mt-8">
+        <div class="narrative-card">
+            <h2 class="card-title">{{ analisis_acwr.narrativa.titulo }}</h2>
+            <p class="narrative-summary">{{ analisis_acwr.narrativa.resumen }}</p>
+
+            {% if analisis_acwr.narrativa.puntos_clave %}
+                <ul class="narrative-points">
+                    {% for punto in analisis_acwr.narrativa.puntos_clave %}
+                    <li>
+                        <span class="emoji">{{ punto.emoji }}</span>
+                        <p>{{ punto.texto|safe }}</p> {# Usamos |safe para que el <strong> funcione #}
+                    </li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+        </div>
+    </div>
+
+      <div class="card mt-8" x-data="{ open: false }">
+        <h2 class="card-title flex justify-between items-center cursor-pointer" @click="open = !open">
+            <span>📖 Guía de Interpretación: ¿Qué significa todo esto?</span>
+            <span x-show="!open" class="text-2xl">⊕</span>
+            <span x-show="open" class="text-2xl">⊖</span>
+        </h2>
+
+        <div x-show="open" x-transition class="mt-6 space-y-6 guide-content">
+            <!-- Explicación del Medidor -->
+            <div class="guide-section">
+                <h3 class="guide-subtitle">🎯 Ratio ACWR Actual (Tu Indicador Clave)</h3>
+                <p>Este número es el más importante del dashboard. Mide la relación entre tu **fatiga de la última semana (aguda)** y tu **estado de forma de las últimas 4 semanas (crónica)**. En resumen, te dice si estás entrenando de forma inteligente.</p>
+                <ul class="guide-list">
+                    <li><strong class="text-green-400">Zona Óptima (0.8 - 1.3):</strong> ¡El punto dulce! Estás aplicando la carga justa para mejorar de forma segura.</li>
+                    <li><strong class="text-yellow-400">Zona de Cuidado (1.3 - 1.5):</strong> Estás aumentando la carga. Es una zona productiva pero debes vigilar tu recuperación.</li>
+                    <li><strong class="text-red-400">Zona de Riesgo (> 1.5):</strong> ¡Alerta! Tu fatiga reciente es muy alta para tu nivel de forma actual. El riesgo de lesión o sobreentrenamiento es elevado.</li>
+                    <li><strong class="text-blue-400">Zona de Baja Carga (< 0.8):</strong> Estás entrenando por debajo de tu capacidad. Perfecto para una semana de descarga, pero si se mantiene, puedes perder adaptaciones.</li>
+                </ul>
+            </div>
+
+            <!-- Explicación del Gráfico -->
+            <div class="guide-section">
+                <h3 class="guide-subtitle">📈 Gráfico de Evolución (La Historia de tu Entrenamiento)</h3>
+                <p>Este gráfico visualiza cómo tu esfuerzo y tu estado de forma han cambiado a lo largo del tiempo.</p>
+                <ul class="guide-list">
+                    <li><strong class="text-orange-400">🟠 Carga Aguda (Fatiga):</strong> Representa tu cansancio de los últimos 7 días. Sube rápido cuando entrenas duro y baja cuando descansas.</li>
+                    <li><strong class="text-cyan-400">🔵 Carga Crónica (Fitness):</strong> Representa tu estado de forma físico acumulado en el último mes. Quieres que esta línea suba de forma progresiva y constante a lo largo del tiempo. ¡Esta es la línea que construye campeones!</li>
+                    <li><strong class="text-fuchsia-400">🟣 Ratio ACWR (Barras):</strong> Es la versión histórica del medidor. Te permite ver en qué momentos del pasado estuviste en la zona óptima o en zona de riesgo.</li>
+                </ul>
+            </div>
+
+            <!-- Explicación de la Tarjeta de Análisis -->
+            <div class="guide-section">
+                <h3 class="guide-subtitle">📝 Tarjeta de Análisis Dinámico (Tu Entrenador Virtual)</h3>
+                <p>Esta sección traduce los datos del gráfico a un lenguaje humano. En lugar de interpretar las líneas, aquí te damos las conclusiones directamente:</p>
+                <ul class="guide-list">
+                    <li><strong>El Resumen:</strong> Te dice la tendencia general de tu estado de forma en el período analizado.</li>
+                    <li><strong>Los Puntos Clave:</strong> Resalta los eventos más importantes, como los momentos de mayor riesgo o los períodos de recuperación, para que aprendas de tu propio historial.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    <div class="text-center mt-8">
+        <a href="{% url 'analytics:dashboard_cliente' cliente.id %}" class="btn-rojo">
+            <i class="bi bi-arrow-left mr-2"></i> Volver al Dashboard Principal
+        </a>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function ( ) {
+        const chartData = JSON.parse('{{ analisis_acwr.dataframe_json|escapejs }}');
+        const ctx = document.getElementById('acwrChart');
+
+        if (ctx && chartData.length > 0) {
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: chartData.map(d => d.fecha),
+                    datasets: [
+                        {
+                            label: 'Carga Aguda (Fatiga)',
+                            data: chartData.map(d => d.carga_aguda),
+                            borderColor: 'rgba(245, 158, 11, 1)', // Naranja
+                            backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                            yAxisID: 'y',
+                            tension: 0.3,
+                            fill: true,
+                        },
+                        {
+                            label: 'Carga Crónica (Fitness)',
+                            data: chartData.map(d => d.carga_cronica),
+                            borderColor: 'rgba(0, 255, 255, 1)', // Cian
+                            backgroundColor: 'rgba(0, 255, 255, 0.1)',
+                            yAxisID: 'y',
+                            tension: 0.3,
+                            fill: true,
+                        },
+                        {
+                            label: 'Ratio ACWR',
+                            data: chartData.map(d => d.acwr),
+                            borderColor: 'rgba(255, 0, 255, 1)', // Magenta
+                            yAxisID: 'y1', // Usará el segundo eje Y
+                            type: 'bar', // Mostrar como barras para diferenciar
+                            backgroundColor: 'rgba(255, 0, 255, 0.3)',
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            type: 'time',
+                            time: { unit: 'week' },
+                            ticks: { color: '#cbd5e1' },
+                            grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                        },
+                        y: { // Eje para la carga
+                            position: 'left',
+                            ticks: { color: '#cbd5e1' },
+                            grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                            title: { display: true, text: 'Carga de Entrenamiento', color: '#cbd5e1' }
+                        },
+                        y1: { // Eje para el ratio ACWR
+                            position: 'right',
+                            ticks: { color: '#cbd5e1' },
+                            grid: { drawOnChartArea: false }, // No dibujar la rejilla para este eje
+                            title: { display: true, text: 'Ratio ACWR', color: '#cbd5e1' }
+                        }
+                    },
+                    plugins: {
+                        legend: { labels: { color: '#f8fafc' } }
+                    }
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}

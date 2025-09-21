@@ -1,0 +1,247 @@
+{% extends "base.html" %}
+{% load static %}
+{% load clientes_filters %}
+
+{% block title %}Detalle de {{ cliente.nombre }}{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+<style>
+    .card-halo {
+        background-color: rgba(30, 30, 30, 0.7 );
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(77, 208, 225, 0.3);
+        border-radius: 1rem;
+        padding: 1.5rem;
+        box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="main-wrapper space-y-6 max-w-7xl mx-auto px-4 py-8">
+
+    <!-- ================================================== -->
+    <!-- NUEVO HEADER COMPACTO Y FUNCIONAL -->
+    <!-- ================================================== -->
+
+    <!-- TARJETA DE PERFIL PRINCIPAL -->
+    <div class="card-halo flex flex-col md:flex-row items-center gap-6">
+        <!-- Foto o Avatar -->
+        {% if cliente.foto %}
+        <img src="{{ cliente.foto.url }}" alt="{{ cliente.nombre }}" class="w-32 h-32 rounded-full border-4 border-cyan-400 object-cover shadow-md">
+        {% else %}
+        <div class="w-32 h-32 rounded-full bg-gray-700 text-white flex items-center justify-center text-4xl shadow-md border-2 border-gray-600">
+            <i class="fas fa-user"></i>
+        </div>
+        {% endif %}
+
+        <!-- Información y Acciones -->
+        <div class="flex-grow text-center md:text-left">
+            <h1 class="title text-3xl font-bold text-white">{{ cliente.nombre }}</h1>
+            <p class="text-cyan-400">{{ cliente.email }}</p>
+
+            {% if cliente.perfil_gamificacion %}
+            <div class="mt-2 inline-block">
+                <span class="bg-blue-900/70 text-blue-300 px-3 py-1 rounded-full text-xs font-semibold">
+                    Nivel {{ cliente.perfil_gamificacion.nivel_actual.numero }} — {{ cliente.perfil_gamificacion.puntos_totales }} XP
+                </span>
+            </div>
+            {% endif %}
+            <div class="mt-2">
+                <span class="bg-blue-900/70 text-blue-300 px-3 py-1 rounded-full text-xs font-semibold">
+                    <i class="fas fa-bullseye"></i> Objetivo: {{ cliente.get_objetivo_principal_display }}
+                </span>
+            </div>
+        </div>
+        <div class="card-halo">
+            <h3 class="text-xl font-semibold text-white mb-4">
+                <i class="fas fa-sliders-h mr-2 text-cyan-400"></i>Ajustes y Preferencias
+            </h3>
+            <p class="text-gray-400 mb-4 text-sm">
+                Configura tus días disponibles, ejercicios preferidos y otros ajustes para personalizar al máximo tu plan de entrenamiento.
+            </p>
+            <a href="{% url 'clientes:configurar_preferencias_helms' cliente.id %}" class="w-full text-center bg-gradient-to-r from-purple-500 to-indigo-600 hover:scale-105 transition text-white font-semibold px-4 py-2 rounded-xl shadow-md flex items-center justify-center gap-2">
+                <i class="fas fa-cogs"></i> Configurar Preferencias
+            </a>
+        </div>
+        <!-- Botón de Editar -->
+        <div class="flex-shrink-0">
+            <a href="{% url 'clientes:editar_cliente' cliente.id %}" class="bg-gradient-to-r from-yellow-400 to-orange-500 hover:scale-105 transition text-black font-semibold px-4 py-2 rounded-xl shadow-md flex items-center gap-2">
+                <i class="fas fa-pencil-alt"></i> Editar Perfil
+            </a>
+            <a href="{% url 'entrenos:vista_plan_anual' cliente.id %}" class="block w-full bg-gradient-to-r from-cyan-500 to-fuchsia-500 text-white text-center font-semibold py-2 rounded-xl mt-6 shadow-md hover:scale-105 transition">
+                <i class="fas fa-calendar-alt"></i> Ver Plan Anual
+            </a>
+        </div>
+    </div>
+
+
+    <!-- ================================================== -->
+    <!-- NUEVAS MÉTRICAS DE RENDIMIENTO -->
+    <!-- ================================================== -->
+    <a href="{% url 'clientes:control_peso_cliente' cliente.id %}" class="w-full sm:w-auto text-center bg-gradient-to-r from-green-500 to-emerald-600 hover:scale-105 transition text-white font-semibold px-4 py-2 rounded-xl shadow-md flex items-center justify-center gap-2">
+        <i class="fas fa-weight"></i> Control de Peso
+    </a>
+
+    <!-- También se puede añadir como una tarjeta en la sección de métricas -->
+    <div class="card-halo text-center">
+        <a href="{% url 'clientes:control_peso_cliente' cliente.id %}" class="block hover:scale-105 transition">
+            <i class="fas fa-weight text-3xl text-green-400 mb-2"></i>
+            <p class="text-lg font-bold text-white">Control de Peso</p>
+            <p class="text-sm text-gray-400">Gestionar evolución</p>
+        </a>
+    </div>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div class="card-halo text-center">
+            <p class="text-3xl font-bold text-white">{{ total_entrenos }}</p>
+            <p class="text-sm text-gray-400">Entrenos Totales</p>
+        </div>
+        <div class="card-halo text-center">
+            <p class="text-3xl font-bold text-white">{{ promedio_semanal }}</p>
+            <p class="text-sm text-gray-400">Entrenos / Semana</p>
+        </div>
+        <div class="card-halo text-center">
+            <p class="text-3xl font-bold text-white">{{ ultima_revision.peso_corporal|default:"N/A" }}</p>
+            <p class="text-sm text-gray-400">Peso Actual (kg)</p>
+        </div>
+        <div class="card-halo text-center">
+            <p class="text-3xl font-bold text-white">{{ ultima_revision.grasa_corporal|default:"N/A" }}%</p>
+            <p class="text-sm text-gray-400">Grasa Corporal</p>
+        </div>
+    </div>
+
+    <!-- GRID DE 2 COLUMNAS (Contenido original reorganizado) -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Columna Izquierda -->
+        <div class="space-y-6">
+            <!-- DATOS PERSONALES (sin cambios) -->
+            <div class="card-halo">
+                <h3 class="text-xl font-semibold text-white mb-4"><i class="fas fa-id-card mr-2 text-cyan-400"></i>Datos Personales</h3>
+                <div class="text-sm space-y-2">
+                    <div class="flex justify-between"><span class="text-gray-400">Teléfono:</span> <span>{{ cliente.telefono }}</span></div>
+                    <div class="flex justify-between"><span class="text-gray-400">Fecha Nacimiento:</span> <span>{{ cliente.fecha_nacimiento|date:"d/m/Y" }}</span></div>
+                    <div class="flex justify-between"><span class="text-gray-400">Género:</span> <span>{{ cliente.get_genero_display }}</span></div>
+                    <div class="flex justify-between items-center"><span class="text-gray-400">Membresía:</span>
+                        {% if cliente.membresia_activa %}
+                        <span class="bg-green-600 text-white px-3 py-1 rounded-full text-xs">Activa</span>
+                        {% else %}
+                        <span class="bg-red-600 text-white px-3 py-1 rounded-full text-xs">Inactiva</span>
+                        {% endif %}
+                    </div>
+                    <div class="flex justify-between"><span class="text-gray-400">Vencimiento:</span> <span>{{ cliente.fecha_vencimiento_membresia|date:"d/m/Y" }}</span></div>
+                </div>
+            </div>
+
+            <!-- OBJETIVOS (sin cambios) -->
+            <div class="card-halo">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-semibold text-white"><i class="fas fa-bullseye mr-2 text-cyan-400"></i>Objetivos</h3>
+                    <a href="{% url 'clientes:definir_objetivo' cliente.id %}" class="bg-gradient-to-r from-green-400 to-lime-500 text-black text-xs font-semibold px-3 py-1 rounded-lg shadow-md hover:scale-105 transition">
+                        <i class="fas fa-plus"></i> Nuevo
+                    </a>
+                </div>
+                {% if objetivos %}
+                <ul class="space-y-2 text-sm">
+                    {% for obj in objetivos %}
+                    <li class="flex justify-between items-center p-2 rounded-lg bg-[#121212]">
+                        <span>{{ obj.get_medida_display }}: <span class="font-bold text-green-400">{{ obj.valor }}</span></span>
+                        <div class="flex gap-2">
+                            <a href="{% url 'clientes:editar_objetivo' obj.id %}" class="text-yellow-400 hover:text-yellow-300"><i class="fas fa-pencil-alt"></i></a>
+                            <a href="{% url 'clientes:eliminar_objetivo' obj.id %}" class="text-red-500 hover:text-red-400" onclick="return confirm('¿Eliminar este objetivo?');"><i class="fas fa-trash"></i></a>
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="text-gray-400 italic text-sm">No hay objetivos registrados.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Columna Derecha -->
+        <div class="space-y-6">
+            <!-- GRÁFICO DE EVOLUCIÓN (sin cambios) -->
+            <div class="card-halo">
+                <h3 class="text-xl font-semibold text-white mb-4"><i class="fas fa-chart-line mr-2 text-cyan-400"></i>Evolución de Métricas</h3>
+                <div class="h-80">
+                    <canvas id="progresoGrafico"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- HISTORIAL COMPLETO (sin cambios) -->
+    <div class="card-halo">
+        <h3 class="text-xl font-semibold text-white mb-4"><i class="fas fa-history mr-2 text-cyan-400"></i>Historial Completo</h3>
+        <div class="space-y-2">
+            {% for semana, entrenos_semana in historial_agrupado.items %}
+            <div class="semana-acordeon rounded-lg bg-[#121212] border border-gray-700">
+                <div class="semana-header p-3 cursor-pointer flex justify-between items-center">
+                    <h4 class="font-bold">Semana del {{ semana|date:"d \d\e F, Y" }}</h4>
+                    <span class="text-xs font-mono bg-blue-900/70 text-blue-300 px-2 py-1 rounded">{{ entrenos_semana|length }} entreno(s)</span>
+                </div>
+                <div class="semana-contenido p-4 border-t border-gray-700 space-y-2" style="display: none;">
+                    {% for entreno in entrenos_semana %}
+                    <div class="p-2 rounded-md bg-gray-800/50">
+                        <p class="font-semibold">{{ entreno.rutina.nombre }} - <span class="font-normal text-gray-400">{{ entreno.fecha|date:"l, d M" }}</span></p>
+                        <ul class="list-disc list-inside text-sm space-y-1 text-gray-300 pl-4 mt-1">
+                            {% for detalle in entreno.ejercicios_realizados.all %}
+                            <li><span class="font-semibold text-white">{{ detalle.nombre_ejercicio }}:</span> {{ detalle.series }}x{{ detalle.repeticiones }} @ {{ detalle.peso_kg }} kg</li>
+                            {% empty %}
+                            <li class="list-none italic">No hay detalles registrados.</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% empty %}
+            <p class="text-gray-400 italic text-sm">No hay historial de entrenamientos.</p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function( ) {
+        // Lógica del gráfico (sin cambios)
+        const ctx = document.getElementById('progresoGrafico');
+        if (ctx) {
+            const labels = {{ labels_grafico|safe }};
+            const pesosData = {{ pesos_grafico|safe }};
+            const grasasData = {{ grasas_grafico|safe }};
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        { label: 'Peso (kg)', data: pesosData, borderColor: '#31cff4', tension: 0.3, yAxisID: 'y' },
+                        { label: 'Grasa (%)', data: grasasData, borderColor: '#34D399', tension: 0.3, yAxisID: 'y1' }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { labels: { color: '#ffffff' } } },
+                    scales: {
+                        x: { ticks: { color: '#9ca3af' }, grid: { color: 'rgba(255, 255, 255, 0.1)' } },
+                        y: { type: 'linear', display: true, position: 'left', title: { display: true, text: 'Peso (kg)', color: '#31cff4' }, ticks: { color: '#9ca3af' }, grid: { color: 'rgba(255, 255, 255, 0.1)' } },
+                        y1: { type: 'linear', display: true, position: 'right', title: { display: true, text: 'Grasa (%)', color: '#34D399' }, ticks: { color: '#9ca3af' }, grid: { drawOnChartArea: false } }
+                    }
+                }
+            });
+        }
+
+        // Lógica del acordeón (sin cambios)
+        document.querySelectorAll('.semana-header').forEach(header => {
+            header.addEventListener('click', () => {
+                const contenido = header.nextElementSibling;
+                contenido.style.display = contenido.style.display === 'none' ? 'block' : 'none';
+            });
+        });
+    });
+</script>
+{% endblock %}

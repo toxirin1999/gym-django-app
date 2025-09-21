@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+<!--#Agregar un nuevo programa-->
+{% block title %}Agregar Rutina{% endblock %}
+
+{% block content %}
+<h2>Agregar Programa {{ programa.nombre }} a:</h2>
+
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit" class="btn btn-primary">Guardar</button>
+</form>
+<a href="{% url 'detalle_programa' programa.id %}" class="btn btn-secondary mt-2">Cancelar</a>
+{% endblock %}

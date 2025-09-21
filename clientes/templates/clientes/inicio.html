@@ -1,0 +1,80 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="text-white space-y-6 px-4 py-8 max-w-3xl mx-auto font-sans">
+
+    <!-- Encabezado con Joi -->
+    <div class="relative bg-gradient-to-br from-[#1a1a1a] to-[#2b2b2b] rounded-2xl p-6 shadow-xl">
+        <h1 class="text-4xl font-bold mb-2">Hola, {{ usuario.first_name|default:usuario.username }}</h1>
+        <p class="text-cyan-300 text-lg italic">Corres como si algo te persiguiera... <span class="not-italic">¿qué es?</span></p>
+        <img src="{% static 'frontend/joi.png' %}" alt="Joi" class="absolute top-4 right-4 w-28 rounded-full shadow-lg ring-2 ring-cyan-500">
+    </div>
+
+    <!-- Recuerdo del día -->
+    {% if recuerdo %}
+    <div class="bg-gradient-to-r from-purple-800 to-indigo-900 rounded-xl p-5 shadow-lg">
+        <h2 class="text-purple-300 text-lg font-semibold mb-2">Recuerdo del día</h2>
+        <p class="text-white text-md italic">“{{ recuerdo.texto }}”</p>
+        <p class="text-xs text-purple-200 mt-2 text-right">{{ recuerdo.fecha|date:"d M Y" }}</p>
+    </div>
+    {% endif %}
+
+    <!-- Métricas de resumen -->
+    <div class="grid grid-cols-3 gap-4 text-center">
+        <div class="rounded-xl bg-[#111111] p-4 shadow-md">
+            <h3 class="text-3xl text-cyan-300 font-bold">{{ entrenos_count }}</h3>
+            <p class="text-sm text-gray-400">Entrenos</p>
+        </div>
+        <div class="rounded-xl bg-[#111111] p-4 shadow-md">
+            <h3 class="text-3xl text-blue-400 font-bold">{{ carga_total }}<span class="text-sm">kg</span></h3>
+            <p class="text-sm text-gray-400">Carga total</p>
+        </div>
+        <div class="rounded-xl bg-[#111111] p-4 shadow-md">
+            <h3 class="text-3xl text-purple-400 font-bold">{{ consistencia }}%</h3>
+            <p class="text-sm text-gray-400">Consistencia</p>
+        </div>
+    </div>
+
+    <!-- Registro emocional -->
+    {% if not emocion_reciente %}
+    <div class="bg-[#1a1a1a] p-6 rounded-xl shadow-md">
+        <h2 class="text-lg font-semibold mb-4">¿Cómo te sientes hoy?</h2>
+        <form method="post" action="{% url 'registrar_emocion' %}" class="flex justify-between">
+            {% csrf_token %}
+            {% for emoji, value in emociones_lista %}
+            <button name="emocion" value="{{ value }}" class="text-3xl px-2 hover:scale-110 transition transform">{{ emoji }}</button>
+            {% endfor %}
+        </form>
+    </div>
+    {% endif %}
+
+    <!-- Últimos entrenos -->
+    <div class="bg-[#1a1a1a] p-6 rounded-xl shadow-md">
+        <h2 class="text-lg font-semibold mb-2">Últimos entrenos</h2>
+        <ul class="text-sm space-y-2">
+            {% for entreno in entrenos %}
+            <li class="flex justify-between border-b border-gray-700 pb-1">
+                <span class="text-green-400 font-semibold">{{ forloop.counter }}</span>
+                <span class="text-white">{{ entreno.descripcion|default:"Entreno sin título" }}</span>
+                <span class="text-gray-400">{{ entreno.fecha|date:"M d" }}</span>
+            </li>
+            {% empty %}
+            <li class="text-gray-500">No hay entrenos recientes.</li>
+            {% endfor %}
+        </ul>
+    </div>
+
+    <!-- Logros -->
+    <div class="bg-[#1a1a1a] p-6 rounded-xl shadow-md">
+        <h2 class="text-lg font-semibold mb-2">Logros desbloqueados</h2>
+        {% for logro in logros %}
+        <span class="inline-block bg-purple-700/20 border border-purple-500 text-purple-300 rounded-full px-3 py-1 text-xs font-semibold mr-2 mb-2">{{ logro.nombre }}</span>
+        {% empty %}
+        <p class="text-gray-500">Aún no hay logros registrados.</p>
+        {% endfor %}
+    </div>
+
+</div>
+{% include 'partials/joi_flotante.html' %}
+{% endblock %}

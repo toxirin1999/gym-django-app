@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+{% load form_filters %}
+
+{% block title %}Editar Ejercicio{% endblock %}
+
+{% block content %}
+<h2 class="mb-4">Editar ejercicio: {{ ejercicio.ejercicio.nombre }}</h2>
+
+{% if messages %}
+{% for message in messages %}
+<div class="alert alert-{{ message.tags }} auto-dismiss">{{ message }}</div>
+{% endfor %}
+{% endif %}
+
+{% if request.GET.cancelado %}
+<div class="alert alert-warning auto-dismiss">⚠️ Edición cancelada.</div>
+{% endif %}
+
+<form method="post" class="card shadow-sm p-4">
+    {% csrf_token %}
+
+    <h5 class="mb-4 text-primary">Configuración de la rutina</h5>
+
+    <div class="mb-3">
+        {{ form.ejercicio.label_tag }}
+        {{ form.ejercicio|add_class:"form-select" }}
+        <input type="hidden" name="ejercicio" value="{{ form.ejercicio.value }}">
+        {% if form.ejercicio.errors %}
+        <div class="text-danger small">{{ form.ejercicio.errors.0 }}</div>
+        {% endif %}
+    </div>
+
+    <div class="mb-3">
+        {{ form.series.label_tag }}
+        {{ form.series|add_class:"form-control" }}
+        {% if form.series.errors %}
+        <div class="text-danger small">{{ form.series.errors.0 }}</div>
+        {% endif %}
+    </div>
+
+    <div class="mb-3">
+        {{ form.repeticiones.label_tag }}
+        {{ form.repeticiones|add_class:"form-control" }}
+        {% if form.repeticiones.errors %}
+        <div class="text-danger small">{{ form.repeticiones.errors.0 }}</div>
+        {% endif %}
+    </div>
+
+    <div class="mb-3">
+        {{ form.peso_kg.label_tag }}
+        {{ form.peso_kg|add_class:"form-control" }}
+        {% if form.peso_kg.errors %}
+        <div class="text-danger small">{{ form.peso_kg.errors.0 }}</div>
+        {% endif %}
+    </div>
+
+    <div class="text-end">
+        <a href="{% url 'detalle_rutina' rutina_id=ejercicio.rutina.id %}?cancelado=1" class="btn btn-secondary">Cancelar</a>
+        <button type="submit" class="btn btn-primary">
+            <i class="bi bi-save me-1"></i> Guardar cambios
+        </button>
+    </div>
+</form>
+
+<script>
+    // Oculta automáticamente las alertas después de 4 segundos
+    setTimeout(() => {
+      document.querySelectorAll('.auto-dismiss').forEach(el => el.remove());
+    }, 4000);
+</script>
+{% endblock %}

@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block title %}Progreso{% endblock %}
+
+{% block content %}
+<h2 class="fw-bold mb-4">Progreso</h2>
+
+{% for medida in medidas %}
+<div class="card mb-2 d-flex flex-row justify-content-between align-items-center">
+    <div class="card-icon">-</div>
+    <div class="ms-2">{{ medida.nombre }}</div>
+    <div class="value">
+        {% if medida.valor %}
+        {{ medida.valor }} {{ medida.unidad }}
+        {% else %}
+        - / -
+        {% endif %}
+    </div>
+</div>
+{% empty %}
+<p class="text-center text-muted">No hay medidas registradas.</p>
+{% endfor %}
+
+<!-- Botón flotante para agregar medidas -->
+<a href="{% url 'agregar_medida' %}" class="btn-float">
+    <i class="bi bi-plus-lg"></i>
+</a>
+{% endblock %}

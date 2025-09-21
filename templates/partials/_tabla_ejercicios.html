@@ -1,0 +1,31 @@
+<h2 class="text-2xl font-bold text-cyan-400 mt-10">🏋️ Ejercicios Realizados</h2>
+<div class="overflow-x-auto rounded-xl shadow mt-4">
+    <table class="min-w-full text-sm text-left text-gray-300 bg-[#1a1a1a] border border-gray-700">
+        <thead class="text-xs uppercase bg-[#1f1f1f] text-cyan-300">
+        <tr>
+            <th class="px-4 py-2">Ejercicio</th>
+            <th class="px-4 py-2">Peso</th>
+            <th class="px-4 py-2">Repeticiones</th>
+            <th class="px-4 py-2">¿Completado?</th>
+            <th class="px-4 py-2">Fecha</th>
+            <th class="px-4 py-2">Cliente</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for e in ejercicios %}
+        <tr class="border-b border-gray-700 {% if e.completado %}bg-[#132e21]{% else %}bg-[#2e1b1b]{% endif %}">
+            <td class="px-4 py-2">{{ e.nombre }}</td>
+            <td class="px-4 py-2">{{ e.peso }}</td>
+            <td class="px-4 py-2">{{ e.repeticiones }}</td>
+            <td class="px-4 py-2 text-lg">{% if e.completado %}✔️{% else %}❌{% endif %}</td>
+            <td class="px-4 py-2">{{ e.fecha }}</td>
+            <td class="px-4 py-2">{{ e.cliente }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="6" class="text-center py-4 text-red-400">No hay ejercicios registrados</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>

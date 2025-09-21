@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block title %}Lista de Ejercicios{% endblock %}
+
+{% block content %}
+<h2 class="fw-bold mb-4">Ejercicios</h2>
+
+<ul class="list-group">
+    {% for ejercicio in ejercicios %}
+    <li class="list-group-item">
+        <span class="fw-bold">{{ ejercicio.nombre }}</span> - {{ ejercicio.grupo_muscular }} - {{ ejercicio.equipo }}
+    </li>
+    {% empty %}
+    <li class="list-group-item text-muted">No hay ejercicios registrados.</li>
+    {% endfor %}
+</ul>
+<div class="mt-4 text-end">
+    <a href="{% url 'agregar_ejercicio_general' %}" class="btn btn-fucsia"><i class="bi bi-plus-circle"></i>Agregar
+        nuevo
+        ejercicio</a>
+</div>
+{% endblock %}

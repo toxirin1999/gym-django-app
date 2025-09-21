@@ -1,0 +1,779 @@
+<!-- templates/configurar_preferencias_helms.html -->
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Configurar Preferencias - {{ cliente.nombre }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+<style>
+    /* === BASE BODY CYBERPUNK === */
+    body {
+        background: url("{% static 'images/fondo_cyberpunk.png' %}") no-repeat center center fixed !important;
+        background-size: cover !important;
+        background-color: #000000 !important;
+        min-height: 100vh !important;
+        filter: brightness(0.9);
+        overflow-x: hidden;
+    }
+
+    /* === ANIMACIONES BASE === */
+    @keyframes float {
+        0% { transform: translateY(0px); }
+        50% { transform: translateY(-5px); }
+        100% { transform: translateY(0px); }
+    }
+    .animate-float {
+        animation: float 6s ease-in-out infinite;
+    }
+
+    @keyframes fadeSlide {
+        0% { opacity: 0; transform: translateY(10px); }
+        100% { opacity: 1; transform: translateY(0); }
+    }
+    .animate-fadeSlide {
+        animation: fadeSlide 0.8s ease-out;
+    }
+
+    @keyframes pulse-neon {
+        0%, 100% {
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.4), inset 0 0 8px rgba(0, 255, 255, 0.2);
+        }
+        50% {
+            box-shadow: 0 0 25px rgba(0, 255, 255, 0.6), inset 0 0 12px rgba(0, 255, 255, 0.3);
+        }
+    }
+    .pulse-neon {
+        animation: pulse-neon 3s ease-in-out infinite;
+    }
+
+    @keyframes titleGlow {
+        0%, 100% { text-shadow: 0 0 30px rgba(0, 255, 255, 0.5); }
+        50% { text-shadow: 0 0 60px rgba(0, 255, 255, 0.8), 0 0 40px rgba(255, 0, 255, 0.6); }
+    }
+
+    @keyframes inputGlow {
+        0%, 100% { border-color: rgba(0, 255, 255, 0.5); }
+        50% { border-color: rgba(0, 255, 255, 0.8); }
+    }
+
+    /* === EFECTOS ATMOSFÉRICOS === */
+    .blade-runner-atmosphere {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        z-index: -1;
+    }
+
+    .background-fog {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: radial-gradient(circle at 30% 20%, rgba(0, 255, 255, 0.1) 0%, transparent 50%),
+                    radial-gradient(circle at 70% 80%, rgba(255, 0, 255, 0.1) 0%, transparent 50%);
+        animation: float 8s ease-in-out infinite;
+    }
+
+    /* === CONTENEDOR PRINCIPAL === */
+    .cyberpunk-main-wrapper {
+        background: rgba(0, 0, 0, 0.4) !important;
+        backdrop-filter: blur(15px) saturate(180%) !important;
+        -webkit-backdrop-filter: blur(15px) saturate(180%) !important;
+        border: 1px solid rgba(77, 208, 225, 0.6) !important;
+        box-shadow: 0 0 15px rgba(77, 208, 225, 0.4), inset 0 0 8px rgba(77, 208, 225, 0.2) !important;
+        border-radius: 20px !important;
+        padding: 2rem;
+        margin: 2rem 0;
+        min-height: 80vh;
+    }
+
+    /* === HEADER CYBERPUNK === */
+    .cyber-adherencia-info {
+        background: rgba(0, 0, 0, 0.7) !important;
+        backdrop-filter: blur(20px) saturate(180%) !important;
+        -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+        border: 1px solid rgba(0, 255, 255, 0.6) !important;
+        box-shadow: 0 0 25px rgba(0, 255, 255, 0.3), inset 0 0 15px rgba(0, 255, 255, 0.1) !important;
+        color: white;
+        border-radius: 15px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .cyber-adherencia-info::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: linear-gradient(90deg, #00ffff, #ff00ff, #00ff00);
+        animation: float 3s ease-in-out infinite;
+    }
+
+    .cyber-adherencia-info h2 {
+        font-size: 2.2rem;
+        font-weight: 700;
+        background: linear-gradient(90deg, #00ffff, #00ff00, #ff00ff);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        color: transparent;
+        text-shadow: 0 0 30px rgba(0, 255, 255, 0.5);
+        animation: titleGlow 4s ease-in-out infinite alternate;
+        margin-bottom: 1rem;
+    }
+
+    .cyber-adherencia-info p {
+        color: #ffffff;
+        font-size: 1.1rem;
+        text-shadow: 0 0 5px rgba(255, 255, 255, 0.3);
+    }
+
+    .cyber-adherencia-info strong {
+        color: #00ffff;
+        text-shadow: 0 0 5px rgba(0, 255, 255, 0.5);
+    }
+
+    /* === AVATAR CYBERPUNK === */
+    .cyber-avatar {
+        width: 80px !important;
+        height: 80px !important;
+        border: 3px solid rgba(0, 255, 255, 0.8) !important;
+        box-shadow: 0 0 20px rgba(0, 255, 255, 0.5) !important;
+        filter: drop-shadow(0 0 10px rgba(0, 255, 255, 0.3));
+        transition: all 0.3s ease;
+    }
+
+    .cyber-avatar:hover {
+        transform: scale(1.1);
+        box-shadow: 0 0 30px rgba(0, 255, 255, 0.7) !important;
+    }
+
+    /* === ALERT INFORMATIVO CYBERPUNK === */
+    .cyber-alert-info {
+        background: rgba(0, 0, 0, 0.6) !important;
+        backdrop-filter: blur(15px) saturate(180%) !important;
+        -webkit-backdrop-filter: blur(15px) saturate(180%) !important;
+        border: 1px solid rgba(0, 150, 255, 0.6) !important;
+        box-shadow: 0 0 20px rgba(0, 150, 255, 0.3), inset 0 0 10px rgba(0, 150, 255, 0.1) !important;
+        border-left: 5px solid #0096ff !important;
+        border-radius: 12px;
+        color: #ffffff;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .cyber-alert-info h5 {
+        color: #0096ff;
+        font-weight: 700;
+        text-shadow: 0 0 10px rgba(0, 150, 255, 0.5);
+        margin-bottom: 1rem;
+    }
+
+    .cyber-alert-info ul li {
+        margin-bottom: 0.5rem;
+        color: #ffffff;
+    }
+
+    .cyber-alert-info strong {
+        color: #00ffff;
+        text-shadow: 0 0 5px rgba(0, 255, 255, 0.3);
+    }
+
+    /* === FORMULARIO CYBERPUNK === */
+    .cyber-helms-card {
+        background: rgba(0, 0, 0, 0.5) !important;
+        backdrop-filter: blur(15px) saturate(180%) !important;
+        -webkit-backdrop-filter: blur(15px) saturate(180%) !important;
+        border: 1px solid rgba(77, 208, 225, 0.6) !important;
+        box-shadow: 0 0 20px rgba(77, 208, 225, 0.3), inset 0 0 10px rgba(77, 208, 225, 0.1) !important;
+        border-left: 5px solid #00ffff !important;
+        border-radius: 15px;
+        color: #ffffff;
+    }
+
+    .cyber-form-section {
+        background: rgba(0, 0, 0, 0.4) !important;
+        backdrop-filter: blur(10px) saturate(150%) !important;
+        -webkit-backdrop-filter: blur(10px) saturate(150%) !important;
+        border: 1px solid rgba(0, 255, 255, 0.3) !important;
+        box-shadow: 0 0 15px rgba(0, 255, 255, 0.2), inset 0 0 8px rgba(0, 255, 255, 0.1) !important;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .cyber-form-section::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(0, 255, 255, 0.1), transparent);
+        transition: left 0.6s ease;
+    }
+
+    .cyber-form-section:hover::before {
+        left: 100%;
+    }
+
+    .cyber-form-section:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 0 25px rgba(0, 255, 255, 0.4), inset 0 0 12px rgba(0, 255, 255, 0.2) !important;
+    }
+
+    .cyber-form-section h4 {
+        color: #00ffff;
+        font-weight: 700;
+        font-size: 1.4rem;
+        text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    /* === INPUTS CYBERPUNK === */
+    .form-control, .form-select {
+        background: rgba(0, 0, 0, 0.7) !important;
+        border: 2px solid rgba(0, 255, 255, 0.4) !important;
+        color: #ffffff !important;
+        border-radius: 8px;
+        padding: 0.75rem 1rem;
+        transition: all 0.3s ease;
+        backdrop-filter: blur(5px);
+        -webkit-backdrop-filter: blur(5px);
+    }
+
+    .form-control:focus, .form-select:focus {
+        background: rgba(0, 0, 0, 0.8) !important;
+        border-color: rgba(0, 255, 255, 0.8) !important;
+        box-shadow: 0 0 15px rgba(0, 255, 255, 0.4) !important;
+        color: #ffffff !important;
+        animation: inputGlow 2s ease-in-out infinite;
+    }
+
+    .form-control::placeholder {
+        color: rgba(255, 255, 255, 0.6) !important;
+    }
+
+    /* === LABELS CYBERPUNK === */
+    .form-label, label {
+        color: #00ffff !important;
+        font-weight: 600;
+        text-shadow: 0 0 5px rgba(0, 255, 255, 0.3);
+        margin-bottom: 0.5rem;
+    }
+
+    .form-text {
+        color: rgba(255, 255, 255, 0.7) !important;
+        font-size: 0.9rem;
+    }
+
+    /* === RADIO BUTTONS CYBERPUNK === */
+    .radio-group {
+        display: flex;
+        gap: 20px;
+        flex-wrap: wrap;
+        margin-top: 0.5rem;
+    }
+
+    .radio-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        background: rgba(0, 0, 0, 0.5);
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        border: 1px solid rgba(0, 255, 255, 0.3);
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+
+    .radio-item:hover {
+        background: rgba(0, 255, 255, 0.1);
+        border-color: rgba(0, 255, 255, 0.6);
+        transform: translateY(-2px);
+        box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
+    }
+
+    .radio-item input[type="radio"] {
+        accent-color: #00ffff;
+        transform: scale(1.2);
+    }
+
+    .radio-item label {
+        color: #ffffff !important;
+        margin-bottom: 0;
+        cursor: pointer;
+        text-shadow: none;
+    }
+
+    /* === CHECKBOXES CYBERPUNK === */
+    .form-check {
+        background: rgba(0, 0, 0, 0.5);
+        padding: 1rem;
+        border-radius: 8px;
+        border: 1px solid rgba(0, 255, 255, 0.3);
+        transition: all 0.3s ease;
+    }
+
+    .form-check:hover {
+        background: rgba(0, 255, 255, 0.1);
+        border-color: rgba(0, 255, 255, 0.6);
+    }
+
+    .form-check-input {
+        accent-color: #00ffff;
+        transform: scale(1.3);
+    }
+
+    .form-check-label {
+        color: #ffffff !important;
+        font-weight: 500;
+        margin-left: 0.5rem;
+    }
+
+    /* === BOTONES CYBERPUNK === */
+    .cyber-btn-primary {
+        background: linear-gradient(45deg, rgba(0, 255, 255, 0.8), rgba(0, 150, 255, 0.6)) !important;
+        border: 1px solid rgba(0, 255, 255, 0.8) !important;
+        color: #000000 !important;
+        padding: 1rem 2rem;
+        border-radius: 10px;
+        font-weight: 700;
+        font-size: 1.1rem;
+        text-decoration: none;
+        transition: all 0.3s ease;
+        backdrop-filter: blur(5px);
+        -webkit-backdrop-filter: blur(5px);
+        box-shadow: 0 0 20px rgba(0, 255, 255, 0.4);
+        display: inline-block;
+        text-align: center;
+    }
+
+    .cyber-btn-primary:hover {
+        background: linear-gradient(45deg, rgba(0, 255, 255, 1), rgba(0, 150, 255, 0.8)) !important;
+        box-shadow: 0 0 30px rgba(0, 255, 255, 0.6);
+        transform: translateY(-3px);
+        color: #000000 !important;
+    }
+
+    .cyber-btn-secondary {
+        background: linear-gradient(45deg, rgba(108, 117, 125, 0.8), rgba(150, 150, 150, 0.6)) !important;
+        border: 1px solid rgba(108, 117, 125, 0.8) !important;
+        color: #ffffff !important;
+        padding: 1rem 2rem;
+        border-radius: 10px;
+        font-weight: 600;
+        font-size: 1.1rem;
+        text-decoration: none;
+        transition: all 0.3s ease;
+        backdrop-filter: blur(5px);
+        -webkit-backdrop-filter: blur(5px);
+        box-shadow: 0 0 15px rgba(108, 117, 125, 0.4);
+        display: inline-block;
+        text-align: center;
+    }
+
+    .cyber-btn-secondary:hover {
+        background: linear-gradient(45deg, rgba(108, 117, 125, 1), rgba(150, 150, 150, 0.8)) !important;
+        box-shadow: 0 0 25px rgba(108, 117, 125, 0.6);
+        transform: translateY(-3px);
+        color: #ffffff !important;
+    }
+
+    /* === ALERT TIEMPO TOTAL === */
+    .cyber-alert-tiempo {
+        background: rgba(0, 0, 0, 0.6) !important;
+        backdrop-filter: blur(10px) saturate(150%) !important;
+        -webkit-backdrop-filter: blur(10px) saturate(150%) !important;
+        border: 1px solid rgba(0, 255, 100, 0.6) !important;
+        box-shadow: 0 0 15px rgba(0, 255, 100, 0.3), inset 0 0 8px rgba(0, 255, 100, 0.1) !important;
+        border-left: 4px solid #00ff64 !important;
+        border-radius: 8px;
+        color: #ffffff;
+        padding: 1rem;
+        margin-top: 0.5rem;
+    }
+
+    .cyber-alert-tiempo strong {
+        color: #00ff64;
+        text-shadow: 0 0 5px rgba(0, 255, 100, 0.5);
+    }
+
+    /* === RESPONSIVE === */
+    @media (max-width: 768px) {
+        .cyber-adherencia-info h2 {
+            font-size: 1.8rem;
+        }
+
+        .cyber-avatar {
+            width: 60px !important;
+            height: 60px !important;
+        }
+
+        .cyber-form-section {
+            padding: 1rem;
+        }
+
+        .radio-group {
+            gap: 10px;
+        }
+
+        .radio-item {
+            padding: 0.4rem 0.8rem;
+        }
+
+        .cyber-btn-primary, .cyber-btn-secondary {
+            padding: 0.8rem 1.5rem;
+            font-size: 1rem;
+            margin: 0.5rem 0;
+        }
+
+        .cyberpunk-main-wrapper {
+            padding: 1rem;
+            margin: 1rem 0;
+        }
+    }
+
+    /* === EFECTOS ADICIONALES === */
+    .cyber-form-section:nth-child(odd) {
+        animation-delay: 0.1s;
+    }
+
+    .cyber-form-section:nth-child(even) {
+        animation-delay: 0.2s;
+    }
+
+    /* Efecto de partículas en hover para secciones */
+    .cyber-form-section:hover::after {
+        content: '';
+        position: absolute;
+        top: 50%;
+        right: 20px;
+        width: 4px;
+        height: 4px;
+        background: #00ffff;
+        border-radius: 50%;
+        box-shadow:
+            0 0 0 0 rgba(0, 255, 255, 0.7),
+            0 0 0 10px rgba(0, 255, 255, 0.4),
+            0 0 0 20px rgba(0, 255, 255, 0.2);
+        animation: pulse-particle 1.5s ease-out infinite;
+    }
+
+    @keyframes pulse-particle {
+        0% {
+            transform: translate(-50%, -50%) scale(0);
+            opacity: 1;
+        }
+        100% {
+            transform: translate(-50%, -50%) scale(1);
+            opacity: 0;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Efectos atmosféricos cyberpunk -->
+<div class="blade-runner-atmosphere">
+    <div class="background-fog"></div>
+</div>
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="cyberpunk-main-wrapper animate-fadeSlide">
+
+                <!-- Header con información del cliente -->
+                <div class="cyber-adherencia-info animate-fadeSlide" style="animation-delay: 0.2s;">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <h2><i class="fas fa-cogs"></i> Configuración de Adherencia - {{ cliente.nombre }}</h2>
+                            <p class="mb-0">
+                                Nivel: <strong>{{ nivel_experiencia|title }}</strong> |
+                                Factor de recuperación: <strong>{{ factor_recuperacion|floatformat:1 }}</strong>
+                            </p>
+                        </div>
+                        <div class="col-md-4 text-right">
+                            {% if cliente.avatar %}
+                            <img src="{{ cliente.avatar.url }}" alt="{{ cliente.nombre }}"
+                                 class="rounded-circle cyber-avatar">
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Información educativa sobre Helms -->
+                <div class="cyber-alert-info animate-fadeSlide" style="animation-delay: 0.4s;">
+                    <h5><i class="fas fa-graduation-cap"></i> ¿Por qué es importante esta información?</h5>
+                    <p>
+                        El sistema de Eric Helms se basa en <strong>3 pilares de adherencia</strong>:
+                    </p>
+                    <ul>
+                        <li><strong>Realista:</strong> Tu programa debe adaptarse a tu tiempo real disponible</li>
+                        <li><strong>Agradable:</strong> Incluir ejercicios que disfrutas aumenta la consistencia</li>
+                        <li><strong>Flexible:</strong> Poder adaptarse cuando surgen imprevistos</li>
+                    </ul>
+                    <p class="mb-0">
+                        <em>Esta información nos permite crear un programa que realmente puedas seguir a largo plazo.</em>
+                    </p>
+                </div>
+
+                <!-- Formulario -->
+                <form method="post" class="cyber-helms-card card animate-fadeSlide" style="animation-delay: 0.6s;">
+                    <div class="card-body">
+                        {% csrf_token %}
+
+                        <!-- En configurar_preferencias_helms.html -->
+
+                        <!-- En configurar_preferencias_helms.html -->
+
+                        <!-- Sección 1: Perfil y Disponibilidad (VERSIÓN FINAL CORREGIDA) -->
+                        <div class="cyber-form-section animate-fadeSlide" style="animation-delay: 0.8s;">
+                            <h4><i class="fas fa-user-clock"></i> Perfil y Disponibilidad</h4>
+                            <div class="row">
+
+
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label for="{{ form.nivel_experiencia_selector.id_for_label }}" class="form-label">
+                                            {{ form.nivel_experiencia_selector.label }}
+                                        </label>
+                                        {{ form.nivel_experiencia_selector }}
+                                        <small class="form-text">
+                                            {{ form.nivel_experiencia_selector.help_text }}
+                                        </small>
+                                    </div>
+                                </div>
+
+
+                                <!-- Columna de Días Disponibles -->
+                                <div class="col-md-4"> <!--  <-- CORREGIDO -->
+                                    <div class="form-group">
+                                        <label for="{{ form.dias_disponibles.id_for_label }}" class="form-label">
+                                            {{ form.dias_disponibles.label }}
+                                        </label>
+                                        {{ form.dias_disponibles }}
+                                        <small class="form-text">
+                                            {{ form.dias_disponibles.help_text }}
+                                        </small>
+                                    </div>
+                                </div>
+
+                                <!-- Columna de Tiempo por Sesión -->
+                                <div class="col-md-4"> <!--  <-- CORREGIDO -->
+                                    <div class="form-group">
+                                        <label for="{{ form.tiempo_por_sesion.id_for_label }}" class="form-label">
+                                            {{ form.tiempo_por_sesion.label }}
+                                        </label>
+                                        {{ form.tiempo_por_sesion }}
+                                        <small class="form-text">
+                                            Incluye calentamiento y enfriamiento
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group mt-3">
+                                <div class="form-check">
+                                    {{ form.flexibilidad_horario }}
+                                    <label class="form-check-label" for="{{ form.flexibilidad_horario.id_for_label }}">
+                                        {{ form.flexibilidad_horario.label }}
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Sección 2: Preferencias de Ejercicios (VERSIÓN CORREGIDA) -->
+                        <div class="cyber-form-section animate-fadeSlide" style="animation-delay: 1.0s;">
+                            <h4><i class="fas fa-dumbbell"></i> Preferencias de Ejercicios</h4>
+                            <div class="row">
+                                <!-- Columna para Ejercicios Preferidos -->
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label class="form-label">{{ form.ejercicios_preferidos.label }}</label>
+                                        <div class="checkbox-container mt-2">
+                                            {% for checkbox in form.ejercicios_preferidos %}
+                                            <div class="form-check">
+                                                {{ checkbox.tag }}
+                                                <label for="{{ checkbox.id_for_label }}" class="form-check-label">
+                                                    {{ checkbox.choice_label }}
+                                                </label>
+                                            </div>
+                                            {% endfor %}
+                                        </div>
+                                        <small class="form-text mt-2">
+                                            {{ form.ejercicios_preferidos.help_text }}
+                                        </small>
+                                    </div>
+                                </div>
+
+                                <!-- Columna para Ejercicios a Evitar -->
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label class="form-label">{{ form.ejercicios_evitar.label }}</label>
+                                        <div class="checkbox-container mt-2">
+                                            {% for checkbox in form.ejercicios_evitar %}
+                                            <div class="form-check">
+                                                {{ checkbox.tag }}
+                                                <label for="{{ checkbox.id_for_label }}" class="form-check-label">
+                                                    {{ checkbox.choice_label }}
+                                                </label>
+                                            </div>
+                                            {% endfor %}
+                                        </div>
+                                        <small class="form-text mt-2">
+                                            Por lesiones, limitaciones o simplemente no te gustan
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+
+                        <!-- Sección 3: Autorregulación -->
+                        <div class="cyber-form-section animate-fadeSlide" style="animation-delay: 1.2s;">
+                            <h4><i class="fas fa-brain"></i> Autorregulación (Estado Actual)</h4>
+                            <p class="form-text" style="margin-bottom: 1.5rem;">
+                                Esta información nos ayuda a ajustar la intensidad de tu entrenamiento según tu estado actual.
+                            </p>
+
+                            <div class="form-group">
+                                <label>{{ form.nivel_estres.label }}</label>
+                                <div class="radio-group">
+                                    {% for choice in form.nivel_estres %}
+                                    <div class="radio-item">
+                                        {{ choice.tag }}
+                                        <label for="{{ choice.id_for_label }}">{{ choice.choice_label }}</label>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                <small class="form-text">{{ form.nivel_estres.help_text }}</small>
+                            </div>
+
+                            <div class="form-group">
+                                <label>{{ form.calidad_sueño.label }}</label>
+                                <div class="radio-group">
+                                    {% for choice in form.calidad_sueño %}
+                                    <div class="radio-item">
+                                        {{ choice.tag }}
+                                        <label for="{{ choice.id_for_label }}">{{ choice.choice_label }}</label>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                <small class="form-text">Promedio de la última semana</small>
+                            </div>
+
+                            <div class="form-group">
+                                <label>{{ form.nivel_energia.label }}</label>
+                                <div class="radio-group">
+                                    {% for choice in form.nivel_energia %}
+                                    <div class="radio-item">
+                                        {{ choice.tag }}
+                                        <label for="{{ choice.id_for_label }}">{{ choice.choice_label }}</label>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                <small class="form-text">Tu nivel de energía general para entrenar</small>
+                            </div>
+                        </div>
+
+                        <!-- Botones de acción -->
+                        <div class="text-center animate-fadeSlide" style="animation-delay: 1.4s;">
+                            <button type="submit" class="cyber-btn-primary">
+                                <i class="fas fa-save"></i> Guardar Preferencias
+                            </button>
+                            <a href="{% url 'entrenos:vista_plan_anual' cliente_id=cliente.id %}" class="cyber-btn-secondary ml-3">
+                                <i class="fas fa-arrow-left"></i> Volver al Plan
+                            </a>
+                        </div>
+                    </div>
+                </form>
+
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Mostrar información adicional al cambiar días disponibles
+        const diasSelect = document.getElementById('{{ form.dias_disponibles.id_for_label }}');
+        const tiempoSelect = document.getElementById('{{ form.tiempo_por_sesion.id_for_label }}');
+
+        function actualizarRecomendacion() {
+            const dias = parseInt(diasSelect.value);
+            const tiempo = parseInt(tiempoSelect.value);
+            const tiempoTotal = dias * tiempo;
+
+            // Mostrar tiempo total semanal
+            const infoDiv = document.getElementById('tiempo-total-info') || document.createElement('div');
+            infoDiv.id = 'tiempo-total-info';
+            infoDiv.className = 'cyber-alert-tiempo';
+            infoDiv.innerHTML = `
+                <i class="fas fa-calculator"></i> <strong>Tiempo total semanal:</strong> ${tiempoTotal} minutos (${Math.round(tiempoTotal/60)} horas)
+            `;
+
+            if (!document.getElementById('tiempo-total-info')) {
+                tiempoSelect.parentNode.appendChild(infoDiv);
+            }
+        }
+
+        diasSelect.addEventListener('change', actualizarRecomendacion);
+        tiempoSelect.addEventListener('change', actualizarRecomendacion);
+        actualizarRecomendacion(); // Ejecutar al cargar
+
+        // Efectos adicionales de interactividad
+        const formSections = document.querySelectorAll('.cyber-form-section');
+        formSections.forEach((section, index) => {
+            section.addEventListener('mouseenter', function() {
+                this.style.transform = 'translateY(-2px)';
+            });
+
+            section.addEventListener('mouseleave', function() {
+                this.style.transform = 'translateY(0)';
+            });
+        });
+
+        // Efectos para radio buttons
+        const radioItems = document.querySelectorAll('.radio-item');
+        radioItems.forEach(item => {
+            item.addEventListener('mouseenter', function() {
+                this.style.transform = 'translateY(-2px)';
+            });
+
+            item.addEventListener('mouseleave', function() {
+                this.style.transform = 'translateY(0)';
+            });
+        });
+
+        // Efecto de focus mejorado para inputs
+        const inputs = document.querySelectorAll('.form-control, .form-select');
+        inputs.forEach(input => {
+            input.addEventListener('focus', function() {
+                this.parentNode.style.transform = 'scale(1.02)';
+            });
+
+            input.addEventListener('blur', function() {
+                this.parentNode.style.transform = 'scale(1)';
+            });
+        });
+    });
+</script>
+{% endblock %}
+

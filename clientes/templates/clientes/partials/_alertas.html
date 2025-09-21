@@ -1,0 +1,25 @@
+{% load i18n %}
+{% if ultima_revision and ultima_revision.check_alerts %}
+<div class="alert alert-warning">
+    <strong>{% trans "Alertas detectadas" %}:</strong>
+    <ul class="mb-0">
+        {% for alerta in ultima_revision.check_alerts %}
+        <li>{{ alerta }}</li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+
+{% if cliente.proximo_registro_peso %}
+{% if cliente.proximo_registro_peso <= today %}
+<div class="alert alert-warning">
+    <i class="bi bi-exclamation-triangle"></i>
+    {% trans "¡Este cliente debería registrar su peso hoy o lo tiene atrasado!" %}
+</div>
+{% else %}
+<div class="alert alert-info">
+    <i class="bi bi-calendar-check"></i>
+    {% trans "Próximo registro de peso programado para:" %} {{ cliente.proximo_registro_peso|date:"d/m/Y" }}
+</div>
+{% endif %}
+{% endif %}

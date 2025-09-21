@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Definir Objetivo{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h2 class="mb-4">
+        {% if editar %}Editar{% else %}Definir{% endif %} Objetivo para {{ cliente.nombre }}
+    </h2>
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button class="btn btn-primary">
+            {% if editar %}Actualizar{% else %}Guardar{% endif %}
+        </button>
+        <a href="{% url 'detalle_cliente' cliente.id %}" class="btn btn-secondary">Cancelar</a>
+    </form>
+</div>
+{% endblock %}

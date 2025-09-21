@@ -1,0 +1,96 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Logros Disponibles{% endblock %}
+
+{% block extra_css %}
+{# Fuentes y estilos base #}
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+{# NUEVOS ESTILOS PARA EL TEMA OSCURO #}
+<link rel="stylesheet" href="{% static 'css/logros_dark_theme.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="achievements-page">
+
+    <header class="achievements-header">
+        <h1 class="header-title">Logros Disponibles</h1>
+        <p class="header-subtitle">Desbloquea logros para ganar puntos y subir de nivel.</p>
+    </header>
+
+    <div class="achievements-body">
+        <!-- Navegación por Categorías (Izquierda ) -->
+        <nav class="category-nav">
+            <ul class="nav nav-pills" id="achievementCategories" role="tablist" aria-orientation="vertical">
+                {% for categoria, _ in categorias.items %}
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link {% if forloop.first %}active{% endif %}"
+                            id="cat-{{ categoria|slugify }}-tab"
+                            data-bs-toggle="pill"
+                            data-bs-target="#cat-{{ categoria|slugify }}"
+                            type="button" role="tab"
+                            aria-controls="cat-{{ categoria|slugify }}"
+                            aria-selected="{% if forloop.first %}true{% else %}false{% endif %}">
+                        {{ categoria }}
+                    </button>
+                </li>
+                {% endfor %}
+            </ul>
+            {# --- INICIO DEL CÓDIGO A AÑADIR --- #}
+            <footer class="achievements-footer">
+                <a href="{% url 'logros:dashboard_principal' %}" class="btn-back">
+                    <i class="bi bi-house-door-fill"></i> Volver al Panel Principal
+                </a>
+            </footer>
+            {# --- FIN DEL CÓDIGO A AÑADIR --- #}
+        </nav>
+
+        <!-- Contenido de Logros (Derecha) -->
+        <main class="achievements-content">
+            <div class="tab-content" id="achievementCategoriesContent">
+                {% for categoria, logros in categorias.items %}
+                <div class="tab-pane fade {% if forloop.first %}show active{% endif %}"
+                     id="cat-{{ categoria|slugify }}"
+                     role="tabpanel"
+                     aria-labelledby="cat-{{ categoria|slugify }}-tab">
+
+                    <div class="achievements-grid">
+                        {% for logro in logros %}
+                        <div class="achievement-card" onclick="location.href='{% url 'logros:detalle_logro' logro.id %}'">
+                            <div class="achievement-card__icon-wrapper">
+                                {% if logro.icono and logro.icono.url %}
+                                {# Caso 1: Hay icono. Lo aplicamos como fondo del div. #}
+                                <div class="achievement-card__icon" style="background-image: url('{{ logro.icono.url }}');"></div>
+                                {% else %}
+                                {# Caso 2: No hay icono. Mostramos el placeholder con el trofeo. #}
+                                <div class="achievement-card__icon-placeholder">
+                                    <i class="bi bi-trophy"></i>
+                                </div>
+
+                            </div>
+
+                            <div class="achievement-card__body">
+                                <h3 class="achievement-card__title">{{ logro.nombre }}</h3>
+                                <p class="achievement-card__description">{{ logro.descripcion|truncatewords:10 }}</p>
+                            </div>
+                            <div class="achievement-card__footer">
+                                <span class="achievement-card__reward">
+                                    <i class="bi bi-star-fill"></i> +{{ logro.puntos_recompensa }} XP
+                                </span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </main>
+    </div>
+
+</div>
+
+{# El menú lateral y su script pueden permanecer igual si lo sigues necesitando #}
+{# ... tu código del menú hamburguesa y el script ... #}
+{% endblock %}

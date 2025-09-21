@@ -1,0 +1,164 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Diario Estoico{% endblock %} - MyGym</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Crimson+Text:ital,wght@0,400;0,600;1,400&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{% static 'estoico/css/estoico.css' %}">
+
+    {% block extra_css %}{% endblock %}
+</head>
+<body class="bg-light">
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
+        <div class="container">
+            <a class="navbar-brand d-flex align-items-center" href="{% url 'estoico:dashboard' %}">
+                <i class="fas fa-columns me-2 text-warning"></i>
+                <span class="fw-bold">Diario Estoico</span>
+            </a>
+
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}"
+                           href="{% url 'estoico:dashboard' %}">
+                            <i class="fas fa-home me-1"></i>Inicio
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if 'diario' in request.resolver_match.url_name %}active{% endif %}"
+                           href="{% url 'estoico:diario_hoy' %}">
+                            <i class="fas fa-book-open me-1"></i>Diario
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.resolver_match.url_name == 'calendario' %}active{% endif %}"
+                           href="{% url 'estoico:calendario' %}">
+                            <i class="fas fa-calendar-alt me-1"></i>Calendario
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.resolver_match.url_name == 'progreso' %}active{% endif %}"
+                           href="{% url 'estoico:progreso' %}">
+                            <i class="fas fa-chart-line me-1"></i>Progreso
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.resolver_match.url_name == 'buscar' %}active{% endif %}"
+                           href="{% url 'estoico:buscar' %}">
+                            <i class="fas fa-search me-1"></i>Buscar
+                        </a>
+                    </li>
+                </ul>
+
+                <ul class="navbar-nav">
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="navbarDropdown"
+                           role="button" data-bs-toggle="dropdown">
+                            <div class="avatar-circle me-2">
+                                <i class="fas fa-user"></i>
+                            </div>
+                            {{ user.username }}
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li>
+                                <a class="dropdown-item" href="{% url 'estoico:configuracion' %}">
+                                    <i class="fas fa-cog me-2"></i>Configuración
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="{% url 'estoico:exportar_reflexiones' %}">
+                                    <i class="fas fa-download me-2"></i>Exportar Datos
+                                </a>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <a class="dropdown-item" href="/">
+                                    <i class="fas fa-dumbbell me-2"></i>Volver a MyGym
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Messages -->
+
+
+    <!-- Main Content -->
+    <main class="container my-4">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-dark text-light py-4 mt-5">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-6">
+                    <h6 class="fw-bold mb-3">
+                        <i class="fas fa-columns me-2 text-warning"></i>
+                        Diario Estoico
+                    </h6>
+                    <p class="text-muted small">
+                        Desarrolla sabiduría y tranquilidad a través de la práctica diaria
+                        de la filosofía estoica.
+                    </p>
+                </div>
+                <div class="col-md-6">
+                    <h6 class="fw-bold mb-3">Filósofos Estoicos</h6>
+                    <div class="row text-muted small">
+                        <div class="col-6">
+                            <ul class="list-unstyled">
+                                <li>Marco Aurelio</li>
+                                <li>Séneca</li>
+                                <li>Epicteto</li>
+                            </ul>
+                        </div>
+                        <div class="col-6">
+                            <ul class="list-unstyled">
+                                <li>Musonio Rufo</li>
+                                <li>Zenón de Citio</li>
+                                <li>Crisipo</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <hr class="my-3">
+            <div class="text-center text-muted small">
+                <p class="mb-0">
+                    &copy; 2025 MyGym - Diario Estoico.
+                    <span class="text-warning">Memento mori, carpe diem.</span>
+                </p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Custom JS -->
+    <script src="{% static 'estoico/js/estoico.js' %}"></script>
+
+    {% block extra_js %}{% endblock %}
+</body>
+</html>
+

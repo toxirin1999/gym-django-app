@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Notificaciones{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>Notificaciones de {{ cliente.nombre }}</h1>
+
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Todas las notificaciones</h5>
+            <a href="{% url 'logros:perfil_gamificacion' cliente.id %}" class="btn btn-primary btn-sm">
+                Volver al Perfil
+            </a>
+        </div>
+        <div class="card-body">
+            {% if notificaciones %}
+            <div class="list-group">
+                {% for notif in notificaciones %}
+                <a href="{% url 'logros:marcar_notificacion_leida' notif.id %}"
+                   class="list-group-item list-group-item-action {% if not notif.leida %}list-group-item-primary{% endif %}">
+                    <div class="d-flex w-100 justify-content-between">
+                        <h5 class="mb-1">{{ notif.icono }} {{ notif.titulo }}</h5>
+                        <small>{{ notif.fecha|date:"d/m/Y H:i" }}</small>
+                    </div>
+                    <p class="mb-1">{{ notif.mensaje }}</p>
+                    <small>{{ notif.get_tipo_display }}</small>
+                    {% if not notif.leida %}
+                    <span class="badge badge-primary float-right">Nueva</span>
+                    {% endif %}
+                </a>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="alert alert-info">
+                No hay notificaciones disponibles.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

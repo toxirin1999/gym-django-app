@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}{{ titulo }}{% endblock %}
+{% block content %}
+<h2 class="mb-3">{{ titulo }}</h2>
+
+{% if entrenos %}
+<table class="table table-striped">
+    <thead>
+    <tr>
+        <th>Cliente</th>
+        <th>Rutina</th>
+        <th>Fecha</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for entreno in entrenos %}
+    <tr>
+        <td>{{ entreno.cliente.nombre }}</td>
+        <td>{{ entreno.rutina.nombre }}</td>
+        <td>{{ entreno.fecha }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p>No hay entrenamientos registrados en este período.</p>
+{% endif %}
+
+<a href="{% url 'dashboard' %}" class="btn btn-secondary mt-4">⬅ Volver al panel</a>
+{% endblock %}

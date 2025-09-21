@@ -1,0 +1,525 @@
+<!-- Archivo: templates/entrenos/detalle_ejercicios_liftin.html -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ejercicios Detallados - {{ entreno.nombre_rutina_liftin }} - Gym Project</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .ejercicio-card {
+            border-radius: 15px;
+            transition: all 0.3s ease;
+            margin-bottom: 1rem;
+        }
+        .ejercicio-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+        .ejercicio-completado {
+            border-left: 5px solid #28a745;
+            background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+        }
+        .ejercicio-fallado {
+            border-left: 5px solid #dc3545;
+            background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+        }
+        .ejercicio-nuevo {
+            border-left: 5px solid #17a2b8;
+            background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%);
+        }
+        .ejercicio-parcial {
+            border-left: 5px solid #ffc107;
+            background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+        }
+        .estado-badge {
+            font-size: 1.2rem;
+            padding: 0.5rem 1rem;
+            border-radius: 25px;
+        }
+        .peso-highlight {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #495057;
+        }
+        .reps-highlight {
+            font-size: 1.2rem;
+            color: #6c757d;
+        }
+        .volumen-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 15px;
+        }
+        .stats-card {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            border-radius: 15px;
+        }
+        .header-card {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            border-radius: 15px;
+            padding: 2rem;
+        }
+        .ejercicio-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: white;
+            margin-right: 1rem;
+        }
+        .completado-icon { background: #28a745; }
+        .fallado-icon { background: #dc3545; }
+        .nuevo-icon { background: #17a2b8; }
+        .parcial-icon { background: #ffc107; }
+        
+        .progress-ring {
+            width: 60px;
+            height: 60px;
+        }
+        .progress-ring-circle {
+            stroke: #e9ecef;
+            stroke-width: 4;
+            fill: transparent;
+            r: 26;
+            cx: 30;
+            cy: 30;
+        }
+        .progress-ring-progress {
+            stroke: #28a745;
+            stroke-width: 4;
+            stroke-linecap: round;
+            fill: transparent;
+            r: 26;
+            cx: 30;
+            cy: 30;
+            stroke-dasharray: 163.36;
+            stroke-dashoffset: 163.36;
+            transition: stroke-dashoffset 0.5s ease;
+        }
+    </style>
+</head>
+<body class="bg-light">
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container">
+        <a class="navbar-brand" href="{% url 'entrenos:dashboard_liftin' %}">
+            <i class="fas fa-dumbbell"></i> Gym Project
+        </a>
+        <div class="navbar-nav ms-auto">
+            <a class="nav-link" href="{% url 'entrenos:dashboard_liftin' %}">
+                <i class="fas fa-home"></i> Dashboard
+            </a>
+            <a class="nav-link" href="{% url 'entrenos:lista_entrenamientos' %}">
+                <i class="fas fa-list"></i> Entrenamientos
+            </a>
+            <a class="nav-link active" href="#">
+                <i class="fas fa-dumbbell"></i> Ejercicios Detallados
+            </a>
+        </div>
+    </div>
+</nav>
+
+<div class="container mt-4">
+    <!-- Header del entrenamiento -->
+    <div class="header-card mb-4">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1 class="h2 mb-2">
+                    <i class="fas fa-mobile-alt"></i>
+                    {{ entreno.nombre_rutina_liftin|default:entreno.rutina.nombre }}
+                </h1>
+                <div class="row">
+                    <div class="col-md-6">
+                        <p class="mb-1">
+                            <i class="fas fa-user"></i>
+                            <strong>Cliente:</strong> {{ entreno.cliente.nombre }}
+                        </p>
+                        <p class="mb-1">
+                            <i class="fas fa-calendar"></i>
+                            <strong>Fecha:</strong> {{ entreno.fecha|date:"d/m/Y" }}
+                        </p>
+                        <p class="mb-0">
+                            <i class="fas fa-clock"></i>
+                            <strong>Horario:</strong> {{ entreno.horario_entrenamiento }}
+                        </p>
+                    </div>
+                    <div class="col-md-6">
+                        <p class="mb-1">
+                            <i class="fas fa-stopwatch"></i>
+                            <strong>Duración:</strong> {{ entreno.duracion_formateada }}
+                        </p>
+                        <p class="mb-1">
+                            <i class="fas fa-weight-hanging"></i>
+                            <strong>Volumen:</strong> {{ entreno.volumen_formateado }}
+                        </p>
+                        <p class="mb-0">
+                            <i class="fas fa-fire"></i>
+                            <strong>Calorías:</strong> {{ entreno.calorias_quemadas|default:"No especificado" }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 text-center">
+                <div class="badge bg-primary fs-6 mb-2">
+                    <i class="fas fa-mobile-alt"></i> LIFTIN
+                </div>
+                <h3 class="mb-0">{{ ejercicios_liftin.count }} Ejercicios</h3>
+                <p class="mb-0">Detallados</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Estadísticas rápidas -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card volumen-card">
+                <div class="card-body text-center">
+                    <i class="fas fa-weight-hanging fa-2x mb-2"></i>
+                    <h4>{{ entreno.volumen_formateado }}</h4>
+                    <p class="mb-0">Volumen Total</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stats-card">
+                <div class="card-body text-center">
+                    <i class="fas fa-fire fa-2x mb-2"></i>
+                    <h4>{{ entreno.calorias_quemadas|default:"--" }}</h4>
+                    <p class="mb-0">Calorías</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body text-center">
+                    <i class="fas fa-check-circle fa-2x mb-2"></i>
+                    <h4 id="ejercicios-completados">0</h4>
+                    <p class="mb-0">Completados</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-white">
+                <div class="card-body text-center">
+                    <i class="fas fa-heart fa-2x mb-2"></i>
+                    <h4>{{ entreno.frecuencia_cardiaca_maxima|default:"--" }}</h4>
+                    <p class="mb-0">FC Máx (BPM)</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lista de ejercicios -->
+    <div class="row">
+        <div class="col-md-8">
+            <h3 class="mb-3">
+                <i class="fas fa-list"></i>
+                Ejercicios Realizados
+            </h3>
+            
+            {% if ejercicios_liftin %}
+                {% for ejercicio in ejercicios_liftin %}
+                <div class="card ejercicio-card ejercicio-{{ ejercicio.estado_liftin }}">
+                    <div class="card-body">
+                        <div class="row align-items-center">
+                            <div class="col-auto">
+                                <div class="ejercicio-icon {{ ejercicio.estado_liftin }}-icon">
+                                    {% if ejercicio.estado_liftin == 'completado' %}
+                                        <i class="fas fa-check"></i>
+                                    {% elif ejercicio.estado_liftin == 'fallado' %}
+                                        <i class="fas fa-times"></i>
+                                    {% elif ejercicio.estado_liftin == 'nuevo' %}
+                                        <i class="fas fa-star"></i>
+                                    {% else %}
+                                        <i class="fas fa-clock"></i>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <h5 class="mb-1">{{ ejercicio.nombre_ejercicio }}</h5>
+                                        <div class="peso-highlight">
+                                            <i class="fas fa-weight-hanging"></i>
+                                            {{ ejercicio.peso_formateado }}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="reps-highlight">
+                                            <i class="fas fa-redo"></i>
+                                            {{ ejercicio.repeticiones_formateado }}
+                                        </div>
+                                        <div class="mt-1">
+                                            <span class="estado-badge badge 
+                                                {% if ejercicio.estado_liftin == 'completado' %}bg-success
+                                                {% elif ejercicio.estado_liftin == 'fallado' %}bg-danger
+                                                {% elif ejercicio.estado_liftin == 'nuevo' %}bg-info
+                                                {% else %}bg-warning{% endif %}">
+                                                {% if ejercicio.estado_liftin == 'completado' %}✓ Completado
+                                                {% elif ejercicio.estado_liftin == 'fallado' %}✗ Fallado
+                                                {% elif ejercicio.estado_liftin == 'nuevo' %}N Nuevo
+                                                {% else %}~ Parcial{% endif %}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                {% if ejercicio.notas_ejercicio %}
+                                <div class="mt-2">
+                                    <small class="text-muted">
+                                        <i class="fas fa-sticky-note"></i>
+                                        {{ ejercicio.notas_ejercicio }}
+                                    </small>
+                                </div>
+                                {% endif %}
+                                
+                                <div class="mt-2">
+                                    <small class="text-muted">
+                                        <strong>Volumen estimado:</strong> 
+                                        {% if ejercicio.volumen_ejercicio %}
+                                            {{ ejercicio.volumen_ejercicio|floatformat:0 }} kg
+                                        {% else %}
+                                            No calculable
+                                        {% endif %}
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i>
+                    <strong>No hay ejercicios detallados para este entrenamiento.</strong>
+                    <p class="mb-0 mt-2">
+                        Este entrenamiento fue importado sin ejercicios específicos. 
+                        <a href="{% url 'entrenos:importar_liftin_completo' %}" class="alert-link">
+                            Importa un nuevo entrenamiento con ejercicios detallados
+                        </a>
+                    </p>
+                </div>
+            {% endif %}
+        </div>
+        
+        <div class="col-md-4">
+            <!-- Progreso del entrenamiento -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-pie"></i>
+                        Progreso del Entrenamiento
+                    </h5>
+                </div>
+                <div class="card-body text-center">
+                    <div class="progress-ring">
+                        <svg class="progress-ring">
+                            <circle class="progress-ring-circle"></circle>
+                            <circle class="progress-ring-progress" id="progress-circle"></circle>
+                        </svg>
+                    </div>
+                    <h4 class="mt-3" id="porcentaje-completado">0%</h4>
+                    <p class="text-muted">Ejercicios Completados</p>
+                </div>
+            </div>
+            
+            <!-- Datos de salud -->
+            {% if entreno.frecuencia_cardiaca_promedio or entreno.frecuencia_cardiaca_maxima %}
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-heartbeat"></i>
+                        Datos de Salud
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if entreno.frecuencia_cardiaca_promedio %}
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>FC Promedio:</span>
+                        <strong>{{ entreno.frecuencia_cardiaca_promedio }} BPM</strong>
+                    </div>
+                    {% endif %}
+                    {% if entreno.frecuencia_cardiaca_maxima %}
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>FC Máxima:</span>
+                        <strong>{{ entreno.frecuencia_cardiaca_maxima }} BPM</strong>
+                    </div>
+                    {% endif %}
+                    {% if entreno.calorias_quemadas %}
+                    <div class="d-flex justify-content-between">
+                        <span>Calorías:</span>
+                        <strong>{{ entreno.calorias_quemadas }} kcal</strong>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Logros desbloqueados -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-trophy"></i>
+                        Logros Desbloqueados
+                    </h5>
+                </div>
+                <div class="card-body" id="logros-container">
+                    <div class="text-center text-muted">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        Cargando logros...
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Botones de acción -->
+    <div class="row mt-4">
+        <div class="col text-center">
+            <a href="{% url 'entrenos:lista_entrenamientos' %}" class="btn btn-outline-primary me-2">
+                <i class="fas fa-arrow-left"></i> Volver a Lista
+            </a>
+            <a href="{% url 'entrenos:dashboard_liftin' %}" class="btn btn-primary me-2">
+                <i class="fas fa-home"></i> Dashboard Liftin
+            </a>
+            <button class="btn btn-success" onclick="exportarEjercicios()">
+                <i class="fas fa-download"></i> Exportar Ejercicios
+            </button>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    calcularEstadisticas();
+    cargarLogros();
+});
+
+function calcularEstadisticas() {
+    const ejercicios = document.querySelectorAll('.ejercicio-card');
+    const completados = document.querySelectorAll('.ejercicio-completado').length;
+    const total = ejercicios.length;
+    
+    // Actualizar contador
+    document.getElementById('ejercicios-completados').textContent = completados;
+    
+    // Calcular porcentaje
+    const porcentaje = total > 0 ? Math.round((completados / total) * 100) : 0;
+    document.getElementById('porcentaje-completado').textContent = porcentaje + '%';
+    
+    // Actualizar círculo de progreso
+    const circle = document.getElementById('progress-circle');
+    const circumference = 2 * Math.PI * 26; // r = 26
+    const offset = circumference - (porcentaje / 100) * circumference;
+    circle.style.strokeDashoffset = offset;
+}
+
+function cargarLogros() {
+    // Simular carga de logros (en implementación real, hacer llamada AJAX)
+    setTimeout(() => {
+        const logrosContainer = document.getElementById('logros-container');
+        
+        // Ejemplo de logros basados en los datos del entrenamiento
+        const logros = [];
+        
+        {% if entreno.calorias_quemadas %}
+            {% if entreno.calorias_quemadas >= 300 %}
+                logros.push({
+                    nombre: '300 Calorías',
+                    descripcion: 'Has quemado 300 calorías',
+                    icono: 'fas fa-fire',
+                    color: 'text-danger'
+                });
+            {% endif %}
+        {% endif %}
+        
+        {% if entreno.volumen_total_kg %}
+            {% if entreno.volumen_total_kg >= 10000 %}
+                logros.push({
+                    nombre: '10K de Volumen',
+                    descripcion: 'Has levantado 10,000 kg',
+                    icono: 'fas fa-weight-hanging',
+                    color: 'text-primary'
+                });
+            {% endif %}
+        {% endif %}
+        
+        {% if entreno.duracion_minutos %}
+            {% if entreno.duracion_minutos >= 60 %}
+                logros.push({
+                    nombre: '1 Hora de Entrenamiento',
+                    descripcion: 'Has entrenado durante 1 hora',
+                    icono: 'fas fa-clock',
+                    color: 'text-success'
+                });
+            {% endif %}
+        {% endif %}
+        
+        if (logros.length > 0) {
+            logrosContainer.innerHTML = logros.map(logro => `
+                <div class="d-flex align-items-center mb-2">
+                    <div class="me-2">
+                        <i class="${logro.icono} ${logro.color}"></i>
+                    </div>
+                    <div>
+                        <strong>${logro.nombre}</strong><br>
+                        <small class="text-muted">${logro.descripcion}</small>
+                    </div>
+                </div>
+            `).join('');
+        } else {
+            logrosContainer.innerHTML = `
+                <div class="text-center text-muted">
+                    <i class="fas fa-medal"></i>
+                    <p class="mb-0">No hay logros nuevos en este entrenamiento</p>
+                </div>
+            `;
+        }
+    }, 1000);
+}
+
+function exportarEjercicios() {
+    // Implementar exportación de ejercicios
+    const data = {
+        entrenamiento: '{{ entreno.nombre_rutina_liftin|default:entreno.rutina.nombre }}',
+        cliente: '{{ entreno.cliente.nombre }}',
+        fecha: '{{ entreno.fecha|date:"Y-m-d" }}',
+        ejercicios: []
+    };
+    
+    document.querySelectorAll('.ejercicio-card').forEach(card => {
+        const nombre = card.querySelector('h5').textContent;
+        const peso = card.querySelector('.peso-highlight').textContent.trim();
+        const reps = card.querySelector('.reps-highlight').textContent.trim();
+        const estado = card.querySelector('.estado-badge').textContent.trim();
+        
+        data.ejercicios.push({
+            nombre: nombre,
+            peso: peso,
+            repeticiones: reps,
+            estado: estado
+        });
+    });
+    
+    // Crear y descargar archivo JSON
+    const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `ejercicios_${data.cliente}_${data.fecha}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+</script>
+</body>
+</html>
+

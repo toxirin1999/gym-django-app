@@ -1,0 +1,36 @@
+{% load i18n %}
+<table class="table table-bordered">
+    <thead>
+    <tr>
+        <th>{% trans "Medida" %}</th>
+        <th>{% trans "Valor objetivo" %}</th>
+        <th>{% trans "Fecha de asignación" %}</th>
+        <th>{% trans "Acciones" %}</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for obj in objetivos %}
+    <tr>
+        <td>{{ obj.get_medida_display }}</td>
+        <td>{{ obj.valor }}</td>
+        <td>{{ obj.fecha|date:"d/m/Y" }}</td>
+        <td>
+            <a href="{% url 'editar_objetivo' obj.id %}" class="btn btn-sm btn-outline-primary"
+               aria-label="Editar objetivo">
+                ✏️
+            </a>
+            <a href="{% url 'eliminar_objetivo' obj.id %}" class="btn btn-sm btn-outline-danger"
+               onclick="return confirm('¿Eliminar este objetivo?');" aria-label="Eliminar objetivo">
+                🗑️
+            </a>
+        </td>
+    </tr>
+    {% empty %}
+    <tr>
+        <td colspan="4" class="text-muted text-center py-3">
+            {% trans "No hay objetivos registrados" %}
+        </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>

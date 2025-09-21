@@ -1,0 +1,572 @@
+<!-- SISTEMA DE NOTIFICACIONES ÉPICAS DEL CÓDICE -->
+<!-- Para mostrar notificaciones cuando se completan pruebas o se asciende de nivel -->
+
+<style>
+    /* Estilos para notificaciones épicas */
+    .notificacion-epica {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 9999;
+        max-width: 400px;
+        min-width: 300px;
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+        border: 2px solid #ffd700;
+        border-radius: 15px;
+        padding: 20px;
+        box-shadow: 0 0 50px rgba(255, 215, 0, 0.5);
+        transform: translateX(450px);
+        transition: all 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        opacity: 0;
+        overflow: hidden;
+        position: relative;
+    }
+
+    .notificacion-epica.mostrar {
+        transform: translateX(0);
+        opacity: 1;
+    }
+
+    .notificacion-epica.ocultar {
+        transform: translateX(450px);
+        opacity: 0;
+    }
+
+    /* Efecto de brillo animado */
+    .notificacion-epica::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: linear-gradient(45deg, transparent, rgba(255, 215, 0, 0.2), transparent);
+        animation: shimmer-notif 2s infinite;
+        pointer-events: none;
+    }
+
+    @keyframes shimmer-notif {
+        0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
+        100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
+    }
+
+    /* Tipos de notificaciones */
+    .notificacion-epica.ascension {
+        border-color: #ff6b6b;
+        box-shadow: 0 0 50px rgba(255, 107, 107, 0.6);
+    }
+
+    .notificacion-epica.ascension::before {
+        background: linear-gradient(45deg, transparent, rgba(255, 107, 107, 0.3), transparent);
+    }
+
+    .notificacion-epica.prueba-completada {
+        border-color: #4ecdc4;
+        box-shadow: 0 0 50px rgba(78, 205, 196, 0.5);
+    }
+
+    .notificacion-epica.prueba-completada::before {
+        background: linear-gradient(45deg, transparent, rgba(78, 205, 196, 0.2), transparent);
+    }
+
+    .notificacion-epica.puntos-ganados {
+        border-color: #ffd700;
+        box-shadow: 0 0 50px rgba(255, 215, 0, 0.4);
+    }
+
+    /* Header de la notificación */
+    .notif-header {
+        display: flex;
+        align-items: center;
+        margin-bottom: 15px;
+        position: relative;
+        z-index: 2;
+    }
+
+    .notif-icono {
+        font-size: 32px;
+        margin-right: 15px;
+        animation: pulse-icon 2s infinite;
+    }
+
+    @keyframes pulse-icon {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.1); }
+    }
+
+    .notif-titulo {
+        color: #ffd700;
+        font-size: 18px;
+        font-weight: bold;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+        margin: 0;
+    }
+
+    .notif-subtitulo {
+        color: #a8dadc;
+        font-size: 14px;
+        margin: 0;
+    }
+
+    /* Contenido de la notificación */
+    .notif-contenido {
+        position: relative;
+        z-index: 2;
+        margin-bottom: 15px;
+    }
+
+    .notif-mensaje {
+        color: #ffffff;
+        font-size: 16px;
+        line-height: 1.4;
+        margin-bottom: 10px;
+        text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+    }
+
+    .notif-detalle {
+        color: #a8dadc;
+        font-size: 14px;
+        font-style: italic;
+    }
+
+    /* Barra de progreso en notificaciones */
+    .notif-progreso {
+        background: rgba(0, 0, 0, 0.5);
+        border-radius: 10px;
+        height: 8px;
+        overflow: hidden;
+        margin: 10px 0;
+        position: relative;
+        z-index: 2;
+    }
+
+    .notif-progreso-fill {
+        background: linear-gradient(90deg, #ff6b6b, #ffd700, #4ecdc4);
+        height: 100%;
+        border-radius: 10px;
+        transition: width 2s ease-in-out;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .notif-progreso-fill::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.6), transparent);
+        animation: progress-shine-notif 1.5s infinite;
+    }
+
+    @keyframes progress-shine-notif {
+        0% { left: -100%; }
+        100% { left: 100%; }
+    }
+
+    /* Botón de cerrar */
+    .notif-cerrar {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background: none;
+        border: none;
+        color: #a8dadc;
+        font-size: 20px;
+        cursor: pointer;
+        z-index: 3;
+        transition: color 0.3s ease;
+    }
+
+    .notif-cerrar:hover {
+        color: #ffd700;
+    }
+
+    /* Efectos de partículas para ascensiones */
+    .particulas {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        overflow: hidden;
+    }
+
+    .particula {
+        position: absolute;
+        width: 4px;
+        height: 4px;
+        background: #ffd700;
+        border-radius: 50%;
+        animation: flotar-particula 3s infinite;
+    }
+
+    @keyframes flotar-particula {
+        0% {
+            transform: translateY(100px) scale(0);
+            opacity: 0;
+        }
+        10% {
+            opacity: 1;
+        }
+        90% {
+            opacity: 1;
+        }
+        100% {
+            transform: translateY(-100px) scale(1);
+            opacity: 0;
+        }
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .notificacion-epica {
+            top: 10px;
+            right: 10px;
+            left: 10px;
+            max-width: none;
+            transform: translateY(-150px);
+        }
+
+        .notificacion-epica.mostrar {
+            transform: translateY(0);
+        }
+
+        .notificacion-epica.ocultar {
+            transform: translateY(-150px);
+        }
+    }
+
+    /* Sonido visual para notificaciones */
+    .notif-pulso {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 20px;
+        height: 20px;
+        border: 2px solid #ffd700;
+        border-radius: 50%;
+        transform: translate(-50%, -50%);
+        animation: pulso-sonoro 1s infinite;
+        pointer-events: none;
+    }
+
+    @keyframes pulso-sonoro {
+        0% {
+            transform: translate(-50%, -50%) scale(1);
+            opacity: 1;
+        }
+        100% {
+            transform: translate(-50%, -50%) scale(3);
+            opacity: 0;
+        }
+    }
+</style>
+
+<!-- Container para notificaciones -->
+<div id="notificaciones-container"></div>
+
+<script>
+    // Sistema de Notificaciones Épicas del Códice
+    class NotificacionesCodeice {
+        constructor() {
+            this.container = document.getElementById('notificaciones-container');
+            this.notificacionesActivas = [];
+            this.sonidosHabilitados = true;
+        }
+
+        // Mostrar notificación de puntos ganados
+        mostrarPuntosGanados(puntos, desglose = null) {
+            const notificacion = {
+                tipo: 'puntos-ganados',
+                icono: '💰',
+                titulo: '¡Puntos Ganados!',
+                subtitulo: 'Recompensa de Entrenamiento',
+                mensaje: `+${puntos} puntos de poder`,
+                detalle: desglose ? `${desglose.base} base + ${desglose.bonus} bonus + ${desglose.pruebas} pruebas` : null,
+                duracion: 4000
+            };
+
+            this.mostrarNotificacion(notificacion);
+        }
+
+        // Mostrar notificación de prueba completada
+        mostrarPruebaCompletada(nombrePrueba, puntosRecompensa, descripcion = null) {
+            const notificacion = {
+                tipo: 'prueba-completada',
+                icono: '⚔️',
+                titulo: '¡Prueba Completada!',
+                subtitulo: nombrePrueba,
+                mensaje: `Has superado el desafío legendario`,
+                detalle: descripcion || `+${puntosRecompensa} puntos de recompensa`,
+                duracion: 6000,
+                efectos: true
+            };
+
+            this.mostrarNotificacion(notificacion);
+        }
+
+        // Mostrar notificación de ascensión
+        mostrarAscension(nivelAnterior, nivelNuevo, filosofia = null) {
+            const notificacion = {
+                tipo: 'ascension',
+                icono: '🔥',
+                titulo: '¡ASCENSIÓN!',
+                subtitulo: `${nivelAnterior} → ${nivelNuevo}`,
+                mensaje: `Has alcanzado un nuevo nivel de poder`,
+                detalle: filosofia ? `"${filosofia}"` : 'Tu leyenda continúa creciendo',
+                duracion: 8000,
+                efectos: true,
+                particulas: true
+            };
+
+            this.mostrarNotificacion(notificacion);
+            this.reproducirSonidoAscension();
+        }
+
+        // Mostrar notificación de racha
+        mostrarRacha(dias) {
+            if (dias < 3) return; // Solo mostrar rachas significativas
+
+            const notificacion = {
+                tipo: 'puntos-ganados',
+                icono: '🔥',
+                titulo: '¡Racha de Fuego!',
+                subtitulo: `${dias} días consecutivos`,
+                mensaje: `Tu dedicación arde como una llama eterna`,
+                detalle: `Bonus de constancia: +${Math.min(15, dias)} puntos`,
+                duracion: 5000
+            };
+
+            this.mostrarNotificacion(notificacion);
+        }
+
+        // Función principal para mostrar notificaciones
+        mostrarNotificacion(config) {
+            const notifElement = this.crearElementoNotificacion(config);
+            this.container.appendChild(notifElement);
+            this.notificacionesActivas.push(notifElement);
+
+            // Mostrar con animación
+            setTimeout(() => {
+                notifElement.classList.add('mostrar');
+            }, 100);
+
+            // Añadir efectos especiales
+            if (config.efectos) {
+                this.añadirEfectosPulso(notifElement);
+            }
+
+            if (config.particulas) {
+                this.añadirParticulas(notifElement);
+            }
+
+            // Auto-ocultar después de la duración especificada
+            setTimeout(() => {
+                this.ocultarNotificacion(notifElement);
+            }, config.duracion);
+
+            // Reposicionar notificaciones existentes
+            this.reposicionarNotificaciones();
+        }
+
+        // Crear elemento HTML de la notificación
+        crearElementoNotificacion(config) {
+            const notif = document.createElement('div');
+            notif.className = `notificacion-epica ${config.tipo}`;
+
+            notif.innerHTML = `
+                <button class="notif-cerrar" onclick="notificacionesCodeice.ocultarNotificacion(this.parentElement)">&times;</button>
+
+                <div class="notif-header">
+                    <div class="notif-icono">${config.icono}</div>
+                    <div>
+                        <div class="notif-titulo">${config.titulo}</div>
+                        <div class="notif-subtitulo">${config.subtitulo}</div>
+                    </div>
+                </div>
+
+                <div class="notif-contenido">
+                    <div class="notif-mensaje">${config.mensaje}</div>
+                    ${config.detalle ? `<div class="notif-detalle">${config.detalle}</div>` : ''}
+                </div>
+            `;
+
+            return notif;
+        }
+
+        // Ocultar notificación
+        ocultarNotificacion(elemento) {
+            elemento.classList.add('ocultar');
+
+            setTimeout(() => {
+                if (elemento.parentNode) {
+                    elemento.parentNode.removeChild(elemento);
+                }
+
+                const index = this.notificacionesActivas.indexOf(elemento);
+                if (index > -1) {
+                    this.notificacionesActivas.splice(index, 1);
+                }
+
+                this.reposicionarNotificaciones();
+            }, 800);
+        }
+
+        // Reposicionar notificaciones para evitar solapamiento
+        reposicionarNotificaciones() {
+            let offset = 20;
+            this.notificacionesActivas.forEach((notif, index) => {
+                if (notif.classList.contains('mostrar') && !notif.classList.contains('ocultar')) {
+                    notif.style.top = `${offset}px`;
+                    offset += notif.offsetHeight + 15;
+                }
+            });
+        }
+
+        // Añadir efectos de pulso
+        añadirEfectosPulso(elemento) {
+            const pulso = document.createElement('div');
+            pulso.className = 'notif-pulso';
+            elemento.appendChild(pulso);
+
+            setTimeout(() => {
+                if (pulso.parentNode) {
+                    pulso.parentNode.removeChild(pulso);
+                }
+            }, 1000);
+        }
+
+        // Añadir partículas para ascensiones
+        añadirParticulas(elemento) {
+            const particulasContainer = document.createElement('div');
+            particulasContainer.className = 'particulas';
+
+            for (let i = 0; i < 15; i++) {
+                const particula = document.createElement('div');
+                particula.className = 'particula';
+                particula.style.left = `${Math.random() * 100}%`;
+                particula.style.animationDelay = `${Math.random() * 2}s`;
+                particula.style.animationDuration = `${2 + Math.random() * 2}s`;
+                particulasContainer.appendChild(particula);
+            }
+
+            elemento.appendChild(particulasContainer);
+
+            setTimeout(() => {
+                if (particulasContainer.parentNode) {
+                    particulasContainer.parentNode.removeChild(particulasContainer);
+                }
+            }, 4000);
+        }
+
+        // Reproducir sonido de ascensión (si está habilitado)
+        reproducirSonidoAscension() {
+            if (!this.sonidosHabilitados) return;
+
+            // Crear un sonido sintético usando Web Audio API
+            try {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+
+                oscillator.frequency.setValueAtTime(440, audioContext.currentTime);
+                oscillator.frequency.exponentialRampToValueAtTime(880, audioContext.currentTime + 0.5);
+
+                gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.5);
+            } catch (e) {
+                console.log('Audio no disponible');
+            }
+        }
+
+        // Limpiar todas las notificaciones
+        limpiarTodas() {
+            this.notificacionesActivas.forEach(notif => {
+                this.ocultarNotificacion(notif);
+            });
+        }
+    }
+
+    // Instancia global del sistema de notificaciones
+    const notificacionesCodeice = new NotificacionesCodeice();
+
+    // Funciones de conveniencia para usar desde otros scripts
+    function mostrarNotificacionPuntos(puntos, desglose = null) {
+        notificacionesCodeice.mostrarPuntosGanados(puntos, desglose);
+    }
+
+    function mostrarNotificacionPrueba(nombre, puntos, descripcion = null) {
+        notificacionesCodeice.mostrarPruebaCompletada(nombre, puntos, descripcion);
+    }
+
+    function mostrarNotificacionAscension(anterior, nuevo, filosofia = null) {
+        notificacionesCodeice.mostrarAscension(anterior, nuevo, filosofia);
+    }
+
+    function mostrarNotificacionRacha(dias) {
+        notificacionesCodeice.mostrarRacha(dias);
+    }
+
+    // Ejemplo de uso:
+    // mostrarNotificacionPuntos(47, {base: 25, bonus: 7, pruebas: 15});
+    // mostrarNotificacionPrueba("Las Puertas del Esfuerzo", 150, "7 días consecutivos completados");
+    // mostrarNotificacionAscension("Rock Lee", "Krillin - El Guerrero Humano", "Tu corazón valiente te hace fuerte");
+    // mostrarNotificacionRacha(5);
+</script>
+
+<!-- INSTRUCCIONES DE INTEGRACIÓN -->
+<!--
+Para integrar las notificaciones épicas:
+
+1. Añadir este código HTML/CSS/JS a tu template base o al template de entrenamiento
+
+2. Modificar la función de guardado de entrenamiento para mostrar notificaciones:
+
+// En la función guardar_entrenamiento_activo, después de procesar gamificación:
+if (resultado_gamificacion.puntos_totales > 0) {
+    // Mostrar notificación de puntos
+    mostrarNotificacionPuntos(resultado_gamificacion.puntos_totales, {
+        base: resultado_gamificacion.puntos_base,
+        bonus: resultado_gamificacion.puntos_bonus,
+        pruebas: resultado_gamificacion.puntos_pruebas
+    });
+}
+
+// Mostrar notificaciones de pruebas completadas
+resultado_gamificacion.pruebas_completadas.forEach(prueba => {
+    mostrarNotificacionPrueba(prueba.nombre, prueba.puntos_recompensa);
+});
+
+// Mostrar notificación de ascensión
+if (resultado_gamificacion.ascension) {
+    mostrarNotificacionAscension(
+        resultado_gamificacion.nivel_anterior,
+        resultado_gamificacion.nivel_nuevo
+    );
+}
+
+3. Para mostrar notificaciones desde el backend, usar JavaScript en el template:
+<script>
+    {% if messages %}
+        {% for message in messages %}
+            {% if 'puntos ganados' in message.message %}
+                // Parsear y mostrar notificación de puntos
+            {% elif 'Prueba completada' in message.message %}
+                // Mostrar notificación de prueba
+            {% elif 'ASCENSIÓN' in message.message %}
+                // Mostrar notificación de ascensión
+            {% endif %}
+        {% endfor %}
+    {% endif %}
+</script>
+-->
+

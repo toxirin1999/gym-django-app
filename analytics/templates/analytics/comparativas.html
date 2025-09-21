@@ -1,0 +1,251 @@
+<!-- Archivo: templates/analytics/comparativas.html -->
+
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Análisis Comparativo - {{ cliente.nombre }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --primary-color: #3b82f6;
+        --secondary-color: #1e40af;
+        --accent-color: #06b6d4;
+        --success-color: #10b981;
+        --warning-color: #f59e0b;
+        --danger-color: #ef4444;
+        --dark-bg: #0f172a;
+        --card-bg: #1e293b;
+        --text-primary: #f8fafc;
+        --text-secondary: #cbd5e1;
+        --border-color: #334155;
+    }
+    /* Archivo: templates/analytics/comparativas.html */
+/* ... dentro del bloque <style> ... */
+
+/* Estilos para las tarjetas de lista (usadas por grupo muscular y ejercicio) */
+.list-card {
+    grid-column: 1 / -1; /* Ocupa todo el ancho */
+    background: var(--card-bg);
+    padding: 1.5rem;
+    border-radius: 1rem;
+    border: 1px solid var(--border-color);
+}
+.list-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--border-color);
+}
+.list-item:last-child { border-bottom: none; }
+.item-name { font-weight: 600; }
+.item-value { font-size: 1.1rem; color: var(--accent-color); }
+.no-data { text-align: center; padding: 2rem; color: var(--text-secondary); }
+
+/* Estilos específicos para la tabla de ejercicios */
+.table-responsive { overflow-x: auto; }
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1rem;
+}
+th, td {
+    padding: 0.75rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+}
+thead th {
+    background-color: rgba(0,0,0,0.2);
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+tbody tr:hover {
+    background-color: rgba(255,255,255,0.05);
+}
+td:not(:first-child) { text-align: right; }
+
+    body {
+        background: linear-gradient(135deg, var(--dark-bg) 0%, #1e293b 100%);
+        color: var(--text-primary);
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+    .analytics-container { max-width: 1400px; margin: 0 auto; padding: 2rem; }
+    .analytics-header {
+        background: linear-gradient(135deg, var(--warning-color), var(--accent-color));
+        border-radius: 1rem; padding: 2rem; margin-bottom: 2rem; text-align: center;
+    }
+    .filter-controls {
+        background: var(--card-bg); padding: 1.5rem; border-radius: 1rem;
+        margin-bottom: 1rem; border: 1px solid var(--border-color);
+    }
+    .filter-form { display: flex; align-items: flex-end; gap: 1.5rem; flex-wrap: wrap; }
+    .form-group { display: flex; flex-direction: column; gap: 0.5rem; }
+    .form-group label { font-size: 0.9rem; color: var(--text-secondary); }
+    .filter-form select {
+        padding: 0.75rem; background: var(--dark-bg); border: 1px solid var(--border-color);
+        border-radius: 0.5rem; color: var(--text-primary); font-size: 1rem;
+    }
+    .btn-update {
+        background: var(--primary-color); color: white; border: none; padding: 0.85rem 1.5rem;
+        border-radius: 0.5rem; font-weight: 600; cursor: pointer; transition: background-color 0.3s ease;
+    }
+    .btn-update:hover { background: var(--secondary-color); }
+    .period-info {
+        background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 0.5rem;
+        margin-bottom: 2rem; text-align: center; font-size: 0.9rem; color: var(--text-secondary);
+    }
+    .period-info p { margin: 0.25rem 0; }
+    .results-grid {
+        display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 1.5rem;
+    }
+    .metric-card { background: var(--card-bg); padding: 1.5rem; border-radius: 1rem; border: 1px solid var(--border-color); }
+    .metric-title {
+        font-size: 1.1rem; font-weight: 600; margin-bottom: 1rem;
+        border-bottom: 1px solid var(--border-color); padding-bottom: 0.75rem;
+    }
+    .comparison-row { display: flex; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; }
+    .period-value { text-align: center; }
+    .period-label { display: block; font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.25rem; }
+    .value { font-size: 1.8rem; font-weight: 700; }
+    .change-summary { text-align: center; padding: 0.5rem; border-radius: 0.5rem; font-weight: 600; }
+    .change-summary.positive { background: rgba(16, 185, 129, 0.1); color: var(--success-color); }
+    .change-summary.negative { background: rgba(239, 68, 68, 0.1); color: var(--danger-color); }
+    .abs-diff { font-size: 0.8rem; opacity: 0.7; }
+    .muscle-group-card {
+        grid-column: 1 / -1; background: var(--card-bg); padding: 1.5rem;
+        border-radius: 1rem; border: 1px solid var(--border-color);
+    }
+    .muscle-item { display: flex; justify-content: space-between; padding: 0.75rem 0; border-bottom: 1px solid var(--border-color); }
+    .muscle-item:last-child { border-bottom: none; }
+    .muscle-name { font-weight: 600; }
+    .muscle-volume { font-size: 1.1rem; color: var(--accent-color); }
+    .btn-back {
+        background: var(--primary-color); color: white; padding: 1rem 2rem;
+        border-radius: 0.5rem; text-decoration: none; font-weight: 600;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="analytics-container">
+    <!-- Header -->
+    <div class="analytics-header">
+        <h1>🔄 Análisis Comparativo</h1>
+        <p>Compara tu rendimiento en diferentes períodos y contextos</p>
+    </div>
+
+    <!-- Controles de Filtro -->
+    <div class="filter-controls">
+        <form method="GET" class="filter-form">
+            <div class="form-group">
+                <label for="tipo">Tipo de Comparativa:</label>
+                <select name="tipo" id="tipo">
+                    <option value="temporal" {% if tipo_comparativa == 'temporal' %}selected{% endif %}>
+                        Temporal (vs período anterior)
+                    </option>
+                    <option value="grupo_muscular" {% if tipo_comparativa == 'grupo_muscular' %}selected{% endif %}>
+                        Por Grupo Muscular
+                    </option>
+                    <!-- ✅ OPCIÓN REINTRODUCIDA -->
+                    <option value="ejercicio" {% if tipo_comparativa == 'ejercicio' %}selected{% endif %}>
+                        Por Ejercicio Individual
+                    </option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="periodo">Período (días):</label>
+                <select name="periodo" id="periodo">
+                    <option value="7" {% if periodo_seleccionado == 7 %}selected{% endif %}>Últimos 7 días</option>
+                    <option value="30" {% if periodo_seleccionado == 30 %}selected{% endif %}>Últimos 30 días</option>
+                    <option value="90" {% if periodo_seleccionado == 90 %}selected{% endif %}>Últimos 90 días</option>
+                </select>
+            </div>
+            <button type="submit" class="btn-update">Actualizar Análisis</button>
+        </form>
+    </div>
+
+    <!-- Información de Períodos -->
+    <div class="period-info">
+        <p><strong>Período de Análisis:</strong> {{ fecha_inicio_actual }} - {{ fecha_fin_actual }}</p>
+        {% if tipo_comparativa == 'temporal' %}
+            <p><strong>Período Anterior para Comparación:</strong> {{ fecha_inicio_anterior }} - {{ fecha_fin_anterior }}</p>
+        {% endif %}
+    </div>
+
+    <!-- Resultados de la Comparativa -->
+    <div class="results-container">
+        {% if tipo_comparativa == 'temporal' %}
+            <div class="results-grid">
+                {% for data in comparativas_data %}
+                    <div class="metric-card">
+                        <div class="metric-title">{{ data.etiqueta }}</div>
+                        <div class="comparison-row">
+                            <div class="period-value"><span class="period-label">Anterior</span><span class="value">{{ data.anterior|floatformat:1 }}</span></div>
+                            <div class="period-value"><span class="period-label">Actual</span><span class="value">{{ data.actual|floatformat:1 }}</span></div>
+                        </div>
+                        <div class="change-summary {% if data.diferencia_pct >= 0 %}positive{% else %}negative{% endif %}">
+                            {% if data.diferencia_pct >= 0 %}↗{% else %}↘{% endif %} {{ data.diferencia_pct|floatformat:1 }}%
+                            <span class="abs-diff">({{ data.diferencia_abs|floatformat:1 }})</span>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+
+        {% elif tipo_comparativa == 'grupo_muscular' %}
+            <div class="list-card">
+                <div class="metric-title">Volumen Total por Grupo Muscular</div>
+                {% for item in comparativas_data %}
+                    <div class="list-item">
+                        <span class="item-name">{{ item.grupo }}</span>
+                        <span class="item-value">{{ item.volumen|floatformat:0 }} kg</span>
+                    </div>
+                {% empty %}
+                    <p class="no-data">No hay datos de volumen para este período.</p>
+                {% endfor %}
+            </div>
+
+        {% elif tipo_comparativa == 'ejercicio' %}
+            <!-- ✅ TABLA PARA EJERCICIO INDIVIDUAL REINTRODUCIDA -->
+            <div class="list-card">
+                <div class="metric-title">Métricas por Ejercicio Individual</div>
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Ejercicio</th>
+                                <th>Sesiones</th>
+                                <th>Volumen Total</th>
+                                <th>Peso Máx.</th>
+                                <th>Peso Prom.</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for nombre, metricas in comparativas_data.items %}
+                                <tr>
+                                    <td>{{ nombre }}</td>
+                                    <td>{{ metricas.total_sesiones }}</td>
+                                    <td>{{ metricas.volumen_total|floatformat:0 }} kg</td>
+                                    <td>{{ metricas.peso_maximo|floatformat:1 }} kg</td>
+                                    <td>{{ metricas.peso_promedio|floatformat:1 }} kg</td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="5" class="no-data">No hay datos de ejercicios para este período.</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Navegación -->
+    <div style="text-align: center; margin-top: 2rem;">
+        <a href="{% url 'analytics:dashboard_cliente' cliente.id %}" class="btn-back">
+            ← Volver al Dashboard
+        </a>
+    </div>
+</div>
+{% endblock %}
