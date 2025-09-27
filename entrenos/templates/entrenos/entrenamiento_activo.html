@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% load static %}
-
+{% load custom_filters %}
 {% block title %}Entrenamiento Activo - {{ rutina_nombre }}{% endblock %}
 
 {% block extra_css %}
@@ -1355,28 +1355,61 @@
                 <div class="detail-value text-cyan-400">{{ ejercicio.descanso_minutos }} min</div>
             </div>
         </div>
-
         <table class="exercise-table">
             <thead>
             <tr>
                 <th class="w-1/6">Serie</th>
                 <th class="w-1/4">Peso (kg)</th>
                 <th class="w-1/4">Reps Realizadas</th>
-                <!-- ======================================================= -->
-                <!-- CAMBIO: Ancho aumentado para RPE Sentido -->
-                <!-- ======================================================= -->
                 <th class="w-1/3 text-center">RPE Sentido</th>
                 <th class="w-1/12">Hecho</th>
             </tr>
             </thead>
             <tbody>
             <!-- ======================================================= -->
-            <!-- INICIO DE LA CORRECCIÓN PRINCIPAL -->
+            <!-- INICIO: SERIES DE APROXIMACIÓN (VERSIÓN SIMPLIFICADA) -->
+            <!-- ======================================================= -->
+
+            {% if ejercicio.aproximaciones %}
+            <tr class="serie-aproximacion">
+                <td class="align-middle"><i>Aprox. 1</i></td>
+                <td>
+                    <input type="number" step="0.5" class="form-control cyber-form-control"
+                           value="{{ ejercicio.aproximaciones.peso1 }}">
+                </td>
+                <td><input type="number" class="form-control cyber-form-control" placeholder="5-8"></td>
+                <td><input type="number" step="0.5" class="form-control cyber-form-control text-center" placeholder="4-5"></td>
+                <td class="text-center align-middle"><input class="form-check-input cyber-form-check-input" type="checkbox" checked></td>
+            </tr>
+            <tr class="serie-aproximacion">
+                <td class="align-middle"><i>Aprox. 2</i></td>
+                <td>
+                    <input type="number" step="0.5" class="form-control cyber-form-control"
+                           value="{{ ejercicio.aproximaciones.peso2 }}">
+                </td>
+                <td><input type="number" class="form-control cyber-form-control" placeholder="3-5"></td>
+                <td><input type="number" step="0.5" class="form-control cyber-form-control text-center" placeholder="6-7"></td>
+                <td class="text-center align-middle"><input class="form-check-input cyber-form-check-input" type="checkbox" checked></td>
+            </tr>
+            <tr class="serie-aproximacion">
+                <td class="align-middle"><i>Aprox. 3</i></td>
+                <td>
+                    <input type="number" step="0.5" class="form-control cyber-form-control"
+                           value="{{ ejercicio.aproximaciones.peso3 }}">
+                </td>
+                <td><input type="number" class="form-control cyber-form-control" placeholder="1-2"></td>
+                <td><input type="number" step="0.5" class="form-control cyber-form-control text-center" placeholder="8"></td>
+                <td class="text-center align-middle"><input class="form-check-input cyber-form-check-input" type="checkbox" checked></td>
+            </tr>
+            {% endif %}
+
+            <!-- ======================================================= -->
+            <!-- INICIO: SERIES EFECTIVAS (CÓDIGO ORIGINAL) -->
             <!-- ======================================================= -->
             {% for i in ""|center:ejercicio.series %}
             {% with forloop.counter as serie_num %}
-            <tr>
-                <td class="align-middle"><strong>{{ serie_num }}</strong></td>
+            <tr class="serie-efectiva">
+                <td class="align-middle"><strong>Serie {{ serie_num }}</strong></td>
                 <td>
                     <input type="number" step="0.5" class="form-control cyber-form-control"
                            name="{{ ejercicio.form_id }}_peso_{{ serie_num }}"
@@ -1388,7 +1421,6 @@
                            value="{{ ejercicio.reps_objetivo }}">
                 </td>
                 <td>
-                    <!-- Input para el RPE Real -->
                     <input type="number" step="0.5" class="form-control cyber-form-control text-center"
                            name="{{ ejercicio.form_id }}_rpe_{{ serie_num }}"
                            value="{{ ejercicio.rpe_objetivo }}">
@@ -1403,6 +1435,8 @@
             {% endfor %}
             </tbody>
         </table>
+
+
     </div>
 
     {% endfor %}

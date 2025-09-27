@@ -1042,9 +1042,12 @@
     </a>
 
 {% if user.is_authenticated %}
-<a href="{% url 'logros:ver_codice_completo' cliente.id %}" class="nav-link">
-    ⚔️ Mi Códice
-</a>
+    {# Solo muestra el enlace si tenemos un cliente con un id válido en el contexto #}
+    {% if cliente.id %}
+        <a href="{% url 'logros:ver_codice_completo' cliente.id %}" class="nav-link">
+            ⚔️ Mi Códice
+        </a>
+    {% endif %}
 {% endif %}
     <div class="border-t border-cyan-400/20 my-3" role="separator"></div>
 

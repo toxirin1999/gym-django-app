@@ -541,10 +541,7 @@
 
     <!-- ⭐ BOTONES DE ACCIÓN MEJORADOS -->
     <div class="action-buttons">
-        <a href="{% url 'entrenos:dashboard_liftin' %}" class="btn-action">
-            <i class="fas fa-arrow-left"></i>
-            Volver al Dashboard
-        </a>
+        
 
         {% if entrenamiento.fuente_datos == 'liftin' %}
         <a href="{% url 'entrenos:editar_entrenamiento_liftin' entrenamiento.id %}" class="btn-action btn-edit">

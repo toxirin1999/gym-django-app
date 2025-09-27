@@ -3188,13 +3188,11 @@ from datetime import datetime  # Asegúrate de que este import esté presente
 
 
 # en entrenos/views.py
-
 @login_required
 def vista_entrenamiento_activo(request, cliente_id):
     """
-    Muestra el formulario interactivo para que el usuario registre
-    las series de su entrenamiento del día.
-    VERSIÓN MEJORADA para incluir el peso recomendado.
+    Muestra el formulario interactivo para que el usuario registre su entrenamiento.
+    VERSIÓN FINAL: Los cálculos de aproximación se hacen aquí.
     """
     cliente = get_object_or_404(Cliente, id=cliente_id)
 
@@ -3206,6 +3204,7 @@ def vista_entrenamiento_activo(request, cliente_id):
         rutina_nombre = request.GET.get('rutina_nombre')
         ejercicios_planificados_json = request.GET.get('ejercicios', '[]')
         ejercicios_planificados = json.loads(ejercicios_planificados_json)
+
         leyenda_rpe = {
             "10": "Máximo esfuerzo, no podrías hacer ni una repetición más.",
             "9": "Muy intenso, podrías hacer 1 repetición más como máximo.",
@@ -3213,24 +3212,49 @@ def vista_entrenamiento_activo(request, cliente_id):
             "7": "Moderado, podrías hacer 3-4 repeticiones más.",
             "6": "Fácil, podrías hacer muchas repeticiones más.",
         }
-        # --- INICIO DE LA CORRECCIÓN ---
-        # Preparamos los datos para la plantilla, asegurando que los valores existan
+
+        # --- INICIO DE LA MODIFICACIÓN CLAVE ---
         for i, ejercicio in enumerate(ejercicios_planificados):
             ejercicio['form_id'] = f'ejercicio_{i}'
 
-            # Obtener repeticiones objetivo (el valor más bajo del rango)
+            # --- Procesamiento de datos del ejercicio (como ya lo tenías) ---
             try:
                 reps_str = str(ejercicio.get('repeticiones', '8'))
                 ejercicio['reps_objetivo'] = int(reps_str.split('-')[0].strip())
             except:
-                ejercicio['reps_objetivo'] = 8  # Fallback
+                ejercicio['reps_objetivo'] = 8
 
-            # Obtener peso recomendado
-            # Usamos .get() para evitar errores si la clave no existe
             ejercicio['peso_recomendado_kg'] = ejercicio.get('peso_kg', 0.0)
             ejercicio['rpe_objetivo'] = ejercicio.get('rpe_objetivo', 8)
-            ejercicio['tempo'] = ejercicio.get('tempo', '2-0-X-0')  # Valor por defecto
-            ejercicio['descanso_minutos'] = ejercicio.get('descanso_minutos', 2)  # Valor por defecto
+            ejercicio['tempo'] = ejercicio.get('tempo', '2-0-X-0')
+            ejercicio['descanso_minutos'] = ejercicio.get('descanso_minutos', 2)
+
+            # --- CÁLCULO DE PESOS DE APROXIMACIÓN ---
+            try:
+                # 1. Convertir el peso a Decimal de forma segura
+                peso_final_str = str(ejercicio.get('peso_recomendado_kg', '0.0')).replace(',', '.')
+                peso_final = Decimal(peso_final_str)
+
+                # 2. Calcular los porcentajes y redondear a 1 decimal
+                if peso_final > 0:
+                    aprox_20 = (peso_final * Decimal('0.2')).quantize(Decimal('0.1'))
+                    aprox_60 = (peso_final * Decimal('0.6')).quantize(Decimal('0.1'))
+                    aprox_90 = (peso_final * Decimal('0.9')).quantize(Decimal('0.1'))
+
+                    # 3. Añadir los pesos calculados al diccionario del ejercicio
+                    ejercicio['aproximaciones'] = {
+                        'peso1': aprox_20,
+                        'peso2': aprox_60,
+                        'peso3': aprox_90,
+                    }
+                else:
+                    ejercicio['aproximaciones'] = None
+
+            except (InvalidOperation, TypeError, ValueError):
+                # Si algo falla, nos aseguramos de que no haya aproximaciones
+                ejercicio['aproximaciones'] = None
+        # --- FIN DE LA MODIFICACIÓN CLAVE ---
+
     except Exception as e:
         messages.error(request, f"Error al cargar los datos del entrenamiento: {e}")
         return redirect('entrenos:vista_plan_anual', cliente_id=cliente.id)
@@ -3242,6 +3266,8 @@ def vista_entrenamiento_activo(request, cliente_id):
         'ejercicios_planificados': ejercicios_planificados,
         'leyenda_rpe': leyenda_rpe,
     }
+
+    # Añadir contexto de gamificación (sin cambios)
     try:
         from .gamificacion_service import EntrenamientoGamificacionService
         resumen_gamificacion = EntrenamientoGamificacionService.obtener_resumen_gamificacion(cliente)
@@ -3249,6 +3275,7 @@ def vista_entrenamiento_activo(request, cliente_id):
     except Exception as e:
         print(f"Error obteniendo resumen gamificación: {e}")
         context['resumen_gamificacion'] = {'tiene_perfil': False}
+
     return render(request, 'entrenos/entrenamiento_activo.html', context)
 
 
