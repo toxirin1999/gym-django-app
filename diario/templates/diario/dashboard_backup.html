@@ -1,10 +1,252 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>$Title$</title>
-</head>
-<body>
-$END$
-</body>
-</html>
+{% extends 'diario/base_stoic.html' %}
+{% load static %}
+
+{% block title %}Dashboard - Diario Estoico{% endblock %}
+
+{% block extra_css %}
+<style>
+    .section-card .card-body {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+    }
+    .section-card .card-footer {
+        margin-top: auto; /* Empuja el footer hacia abajo */
+        background-color: transparent;
+        border-top: 1px solid rgba(0,0,0,0.05);
+    }
+    .philosopher-img {
+        max-height: 60px;
+        opacity: 0.6;
+        filter: grayscale(80%);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="fade-in-up">
+    <!-- Header del Dashboard -->
+    <div class="card shadow-soft mb-4">
+        <div class="card-body p-4">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h1 class="text-gradient mb-2">Diario Sic Parvis Magna</h1>
+                    <blockquote class="border-0 p-0 m-0 bg-transparent">
+                        <p class="lead mb-1">"De pequeños comienzos, vienen grandes cosas."</p>
+                        <footer>— Sir Francis Drake</footer>
+                    </blockquote>
+                </div>
+                <div class="col-md-4 text-center text-md-end mt-3 mt-md-0">
+                    <div class="stat-item p-3 rounded border">
+                        <div class="stat-number text-primary">{{ "now"|date:"d" }}</div>
+                        <div class="stat-label">{{ "now"|date:"F Y" }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Estadísticas Rápidas -->
+    <div class="row mb-4 g-3">
+        <div class="col">
+            <div class="stat-item card card-body">
+                <div class="stat-number">{% if prosoche_actual %}1{% else %}0{% endif %}</div>
+                <div class="stat-label">Prosoche Activo</div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="stat-item card card-body">
+                <div class="stat-number">{{ areas_eudaimonia }}</div>
+                <div class="stat-label">Áreas de Vida</div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="stat-item card card-body">
+                <div class="stat-number">{{ ejercicios_arete_completados }}</div>
+                <div class="stat-label">Ejercicios Areté</div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="stat-item card card-body">
+                <div class="stat-number">{{ contenido_gnosis }}</div>
+                <div class="stat-label">Contenido Gnosis</div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="stat-item card card-body">
+                <div class="stat-number">{{ eventos_hoy }}</div>
+                <div class="stat-label">Eventos Hoy</div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="stat-item card card-body">
+                <div class="stat-number fs-2">{% if seguimiento_vires_hoy %}<i class="fas fa-check-circle text-success"></i>{% else %}<i class="fas fa-times-circle text-danger"></i>{% endif %}</div>
+                <div class="stat-label">Vires Hoy</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Secciones del Diario -->
+    <div class="row row-cols-1 row-cols-md-2 g-4">
+
+        <!-- PROSOCHE -->
+        <div class="col">
+            <div class="card h-100 shadow-soft section-card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-3">
+                        <img src="{% static 'images/socrates-icon.png' %}" alt="Sócrates" class="philosopher-img me-3">
+                        <div>
+                            <h3 class="card-title mb-0"><i class="fas fa-journal-whills me-2 text-primary"></i>Prosoche</h3>
+                            <small class="text-muted">Diario Mensual y Autorreflexión</small>
+                        </div>
+                    </div>
+                    <blockquote class="font-serif fst-italic">"Una vida sin examen no merece ser vivida."</blockquote>
+                    <p class="text-muted small">Reflexiona sobre tu mes, establece objetivos y cultiva hábitos positivos a través de la introspección diaria.</p>
+                </div>
+                <div class="card-footer text-center">
+                    <a href="{% url 'diario:prosoche_dashboard' %}" class="btn btn-primary w-100">Acceder a Prosoche</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- EUDAIMONIA -->
+        <div class="col">
+            <div class="card h-100 shadow-soft section-card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-3">
+                        <img src="{% static 'images/marco-aurelio-icon.png' %}" alt="Marco Aurelio" class="philosopher-img me-3">
+                        <div>
+                            <h3 class="card-title mb-0"><i class="fas fa-balance-scale me-2 text-info"></i>Eudaimonia</h3>
+                            <small class="text-muted">Áreas de la Vida</small>
+                        </div>
+                    </div>
+                    <blockquote class="font-serif fst-italic">"El arte de la vida es más parecido a luchar que a bailar."</blockquote>
+                    <p class="text-muted small">Evalúa y mejora las diferentes áreas de tu vida: salud, relaciones, carrera, desarrollo personal y más.</p>
+                </div>
+                <div class="card-footer text-center">
+                    <a href="{% url 'diario:eudaimonia_dashboard' %}" class="btn btn-outline-secondary w-100">Acceder a Eudaimonia</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- ARETÉ -->
+        <div class="col">
+            <div class="card h-100 shadow-soft section-card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-3">
+                        <img src="{% static 'images/aristoteles-icon.png' %}" alt="Aristóteles" class="philosopher-img me-3">
+                        <div>
+                            <h3 class="card-title mb-0"><i class="fas fa-graduation-cap me-2 text-success"></i>Areté</h3>
+                            <small class="text-muted">Desarrollo Personal</small>
+                        </div>
+                    </div>
+                    <blockquote class="font-serif fst-italic">"Conocerse a uno mismo es el principio de la sabiduría."</blockquote>
+                    <p class="text-muted small">Completa ejercicios de autoconocimiento y desarrollo personal para alcanzar tu máximo potencial.</p>
+                </div>
+                <div class="card-footer text-center">
+                    <a href="{% url 'diario:arete_dashboard' %}" class="btn btn-outline-secondary w-100">Acceder a Areté</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- GNOSIS -->
+                <!-- GNOSIS -->
+        <div class="col">
+            <div class="card h-100 shadow-soft section-card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-3">
+                        <img src="{% static 'images/pitagoras-icon.png' %}" alt="Pitágoras" class="philosopher-img me-3">
+                        <div>
+                            <h3 class="card-title mb-0"><i class="fas fa-brain me-2 text-primary"></i>Gnosis</h3>
+                            <small class="text-muted">Gestión de Conocimiento</small>
+                        </div>
+                    </div>
+                    <blockquote class="font-serif fst-italic">"El comienzo de la sabiduría es el silencio."</blockquote>
+                    <p class="text-muted small">Organiza y gestiona todo tu conocimiento: libros, artículos, podcasts, vídeos y más.</p>
+                </div>
+                <div class="card-footer text-center">
+                    <a href="{% url 'diario:gnosis_dashboard' %}" class="btn btn-outline-secondary w-100">Acceder a Gnosis</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- VIRES -->
+        <div class="col">
+            <div class="card h-100 shadow-soft section-card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-3">
+                        <img src="{% static 'images/socrates-fitness-icon.png' %}" alt="Sócrates Fitness" class="philosopher-img me-3">
+                        <div>
+                            <h3 class="card-title mb-0"><i class="fas fa-dumbbell me-2 text-danger"></i>Vires</h3>
+                            <small class="text-muted">Salud y Deporte</small>
+                        </div>
+                    </div>
+                    <blockquote class="font-serif fst-italic">"Es una vergüenza envejecer sin ver la belleza y fuerza de la que tu cuerpo es capaz."</blockquote>
+                    <p class="text-muted small">Controla tus entrenamientos, dieta y composición corporal para mantener un cuerpo fuerte y saludable.</p>
+                </div>
+                <div class="card-footer text-center">
+                    <a href="{% url 'diario:vires_dashboard' %}" class="btn btn-outline-secondary w-100">Acceder a Vires</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- KAIROS -->
+        <div class="col">
+            <div class="card h-100 shadow-soft section-card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-3">
+                        <img src="{% static 'images/seneca-icon.png' %}" alt="Séneca" class="philosopher-img me-3">
+                        <div>
+                            <h3 class="card-title mb-0"><i class="fas fa-calendar-alt me-2 text-warning"></i>Kairos</h3>
+                            <small class="text-muted">Calendario y Eventos</small>
+                        </div>
+                    </div>
+                    <blockquote class="font-serif fst-italic">"No es que tengamos poco tiempo, sino que perdemos mucho."</blockquote>
+                    <p class="text-muted small">Gestiona tu tiempo de manera efectiva con un calendario inteligente y planificación diaria estructurada.</p>
+                </div>
+                <div class="card-footer text-center">
+                    <a href="{% url 'diario:kairos_dashboard' %}" class="btn btn-outline-secondary w-100">Acceder a Kairos</a>
+                </div>
+            </div>
+        </div>
+
+
+    <!-- Acciones Rápidas -->
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Efecto de hover en las tarjetas de sección
+        const sectionCards = document.querySelectorAll('.section-card');
+        sectionCards.forEach(card => {
+            card.addEventListener('mouseenter', function() {
+                this.style.transform = 'translateY(-10px) scale(1.02)';
+            });
+            card.addEventListener('mouseleave', function() {
+                this.style.transform = 'translateY(0) scale(1)';
+            });
+        });
+
+        // Animación de contadores
+        const statValues = document.querySelectorAll('.cyber-stat-value');
+        statValues.forEach(stat => {
+            const finalValue = stat.textContent;
+            if (!isNaN(finalValue) && finalValue !== '') {
+                let currentValue = 0;
+                const increment = Math.ceil(finalValue / 20);
+                const timer = setInterval(() => {
+                    currentValue += increment;
+                    if (currentValue >= finalValue) {
+                        currentValue = finalValue;
+                        clearInterval(timer);
+                    }
+                    stat.textContent = currentValue;
+                }, 50);
+            }
+        });
+    });
+</script>
+{% endblock %}

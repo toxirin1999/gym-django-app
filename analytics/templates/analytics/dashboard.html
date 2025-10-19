@@ -455,7 +455,7 @@
                     datasets: [{
                         label: 'Volumen (kg)',
                         data: datosVolumen.map(d => d.volumen_total),
-                        borderColor: 'var(--neon-cyan)',
+                        borderColor: '#FFFFFF',
                         backgroundColor: gradient,
                         borderWidth: 2,
                         fill: true,
@@ -483,9 +483,31 @@
                         }
                     },
                     scales: {
-                        x: { ticks: { color: 'var(--text-secondary)' }, grid: { color: 'rgba(255,255,0,0.1)' } },
-                        y: { ticks: { color: 'var(--text-secondary)' }, grid: { color: 'rgba(255,255,0,0.1)' } }
-                    }
+    x: { // Configuración para el eje X (las fechas)
+        ticks: {
+            color: '#94a3b8', // Un color gris-azulado claro, muy legible
+            font: {
+                size: 12, // Tamaño de fuente opcional
+                family: 'Inter, sans-serif' // Asegura la misma fuente
+            }
+        },
+        grid: {
+            color: 'rgba(0, 255, 255, 0.1)' // Líneas de la cuadrícula en cian tenue
+        }
+    },
+    y: { // Configuración para el eje Y (los números de volumen)
+        ticks: {
+            color: '#94a3b8', // El mismo color para consistencia
+            font: {
+                size: 12,
+                family: 'Inter, sans-serif'
+            }
+        },
+        grid: {
+            color: 'rgba(0, 255, 255, 0.1)'
+        }
+    }
+}
                 }
             });
         }

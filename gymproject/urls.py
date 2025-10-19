@@ -8,6 +8,7 @@ from django.contrib.auth import views as auth_views
 from clientes import views as clientes_views
 
 urlpatterns = [
+    path('diario/', include('diario.urls')),
     # --- Rutas Principales y de Autenticación ---
     path('admin/', admin.site.urls),
     path('', clientes_views.redirigir_usuario, name='home'),

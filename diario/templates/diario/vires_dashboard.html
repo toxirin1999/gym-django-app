@@ -1,0 +1,273 @@
+{% extends 'diario/base_stoic.html' %}
+{% load static %}
+{% load custom_filters %}
+
+{% block title %}Vires - Diario Estoico{% endblock %}
+
+{% block extra_css %}
+<style>
+    .habito-item .form-check-input {
+        transform: scale(1.3);
+        margin-top: 0;
+    }
+    .habito-item.completado {
+        text-decoration: line-through;
+        color: var(--muted-color);
+    }
+    .tipo-entrenamiento-tab.active {
+        background-color: var(--primary-color);
+        color: white;
+        border-color: var(--primary-color);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="fade-in-up">
+    <!-- Header de Vires -->
+    <div class="card shadow-soft mb-4">
+        <div class="card-body p-4">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h1 class="text-gradient mb-2"><i class="fas fa-dumbbell me-2"></i>Vires - Salud y Deporte</h1>
+                    <blockquote class="border-0 p-0 m-0 bg-transparent">
+                        <p class="lead mb-1">"Es una vergüenza envejecer sin ver la belleza y fuerza de la que tu cuerpo es capaz."</p>
+                        <footer>— Sócrates</footer>
+                    </blockquote>
+                </div>
+                <div class="col-md-4 text-center text-md-end mt-3 mt-md-0">
+                    <img src="{% static 'images/socrates-vires.png' %}" alt="Sócrates Fitness" class="img-fluid" style="max-height: 100px; opacity: 0.7; filter: grayscale(50%);">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Estadísticas Rápidas -->
+    <div class="row mb-4 g-3">
+        <div class="col">
+            <div class="stat-item card card-body">
+                <div class="stat-number fs-2">{% if seguimiento_hoy %}<i class="fas fa-check-circle text-success"></i>{% else %}<i class="fas fa-times-circle text-danger"></i>{% endif %}</div>
+                <div class="stat-label">Seguimiento Hoy</div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="stat-item card card-body">
+                <div class="stat-number">{{ seguimientos_recientes|length }}</div>
+                <div class="stat-label">Días Registrados (Últ. 7)</div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="stat-item card card-body">
+                <div class="stat-number">{{ entrenamientos_semana|length }}</div>
+                <div class="stat-label">Entrenamientos Semana</div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="stat-item card card-body">
+                <div class="stat-number">{% if seguimiento_hoy.peso %}{{ seguimiento_hoy.peso }}<small>kg</small>{% else %}--{% endif %}</div>
+                <div class="stat-label">Peso Actual</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Columna Principal -->
+        <div class="col-lg-8">
+            <!-- Seguimiento de Hoy -->
+            <div class="card shadow-soft mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-calendar-day me-2"></i>Seguimiento de Hoy - {{ fecha_hoy|date:"d/m/Y" }}</h5>
+                    <a href="{% url 'diario:vires_seguimiento_crear' %}" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-plus me-1"></i> {% if seguimiento_hoy %}Editar Seguimiento{% else %}Registrar Seguimiento{% endif %}
+                    </a>
+
+                </div>
+                <div class="card-body">
+                    {% if seguimiento_hoy %}
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6 class="text-muted">Medidas Corporales</h6>
+                            <ul class="list-group list-group-flush">
+                                <li class="list-group-item d-flex justify-content-between"><span><i class="fas fa-weight-hanging me-2"></i>Peso</span> <strong>{{ seguimiento_hoy.peso|default:"--" }} kg</strong></li>
+                                <li class="list-group-item d-flex justify-content-between"><span><i class="fas fa-percentage me-2"></i>Grasa</span> <strong>{{ seguimiento_hoy.grasa_corporal|default:"--" }}%</strong></li>
+                                <li class="list-group-item d-flex justify-content-between"><span><i class="fas fa-dumbbell me-2"></i>Músculo</span> <strong>{{ seguimiento_hoy.masa_muscular|default:"--" }}%</strong></li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="text-muted">Hábitos Saludables</h6>
+                            <ul class="list-group list-group-flush">
+                                <li class="list-group-item habito-item {% if seguimiento_hoy.entrenamiento_realizado %}completado{% endif %}">
+                                    <div class="form-check"><input class="form-check-input" type="checkbox" {% if seguimiento_hoy.entrenamiento_realizado %}checked{% endif %} onchange="updateHabito('entrenamiento_realizado', this.checked)">
+                                        <label class="form-check-label">Entrenamiento</label></div>
+                                </li>
+                                <li class="list-group-item habito-item {% if seguimiento_hoy.alimentacion_saludable %}completado{% endif %}">
+                                    <div class="form-check"><input class="form-check-input" type="checkbox" {% if seguimiento_hoy.alimentacion_saludable %}checked{% endif %} onchange="updateHabito('alimentacion_saludable', this.checked)">
+                                        <label class="form-check-label">Alimentación</label></div>
+                                </li>
+                                <li class="list-group-item habito-item {% if seguimiento_hoy.hidratacion_adecuada %}completado{% endif %}">
+                                    <div class="form-check"><input class="form-check-input" type="checkbox" {% if seguimiento_hoy.hidratacion_adecuada %}checked{% endif %} onchange="updateHabito('hidratacion_adecuada', this.checked)">
+                                        <label class="form-check-label">Hidratación</label></div>
+                                </li>
+                                <li class="list-group-item habito-item {% if seguimiento_hoy.descanso_suficiente %}completado{% endif %}">
+                                    <div class="form-check"><input class="form-check-input" type="checkbox" {% if seguimiento_hoy.descanso_suficiente %}checked{% endif %} onchange="updateHabito('descanso_suficiente', this.checked)">
+                                        <label class="form-check-label">Descanso</label></div>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="text-center p-4">
+                        <p class="text-muted">No has registrado tu seguimiento de hoy.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Entrenamientos de la Semana -->
+            <div class="card shadow-soft mb-4">
+                <div class="card-header"><h5 class="mb-0"><i class="fas fa-calendar-week me-2"></i>Plan de Entrenamiento Semanal</h5></div>
+                <div class="card-body">
+                    <div class="text-center mb-3">
+                        <div class="btn-group" role="group">
+                            <button class="btn btn-outline-secondary tipo-entrenamiento-tab active" onclick="mostrarTipoEntrenamiento('pesas')">Pesas</button>
+                            <button class="btn btn-outline-secondary tipo-entrenamiento-tab" onclick="mostrarTipoEntrenamiento('cardio')">Cardio</button>
+                            <button class="btn btn-outline-secondary tipo-entrenamiento-tab" onclick="mostrarTipoEntrenamiento('movilidad')">Movilidad</button>
+                        </div>
+                    </div>
+
+                    {% if entrenamientos_semana %}
+                    {% for entrenamiento in entrenamientos_semana %}
+                    <div class="entrenamiento-card" data-tipo="{{ entrenamiento.tipo }}" style="display: none;">
+                        <div class="row g-2 text-center">
+                            <div class="col"><small class="text-muted">L</small>
+                                <div class="p-2 border rounded">{{ entrenamiento.lunes|default:"-" }}</div>
+                            </div>
+                            <div class="col"><small class="text-muted">M</small>
+                                <div class="p-2 border rounded">{{ entrenamiento.martes|default:"-" }}</div>
+                            </div>
+                            <div class="col"><small class="text-muted">X</small>
+                                <div class="p-2 border rounded">{{ entrenamiento.miercoles|default:"-" }}</div>
+                            </div>
+                            <div class="col"><small class="text-muted">J</small>
+                                <div class="p-2 border rounded">{{ entrenamiento.jueves|default:"-" }}</div>
+                            </div>
+                            <div class="col"><small class="text-muted">V</small>
+                                <div class="p-2 border rounded">{{ entrenamiento.viernes|default:"-" }}</div>
+                            </div>
+                            <div class="col"><small class="text-muted">S</small>
+                                <div class="p-2 border rounded">{{ entrenamiento.sabado|default:"-" }}</div>
+                            </div>
+                            <div class="col"><small class="text-muted">D</small>
+                                <div class="p-2 border rounded">{{ entrenamiento.domingo|default:"-" }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% else %}
+                    <div class="text-center p-4"><p class="text-muted">No tienes entrenamientos planificados para esta semana.</p></div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <div class="card shadow-soft mb-4">
+                <div class="card-header"><h5 class="mb-0"><i class="fas fa-history me-2"></i>Historial de Peso (Últ. 7 Días)</h5></div>
+                <div class="card-body">
+                    <canvas id="graficoPeso" height="150"></canvas>
+                </div>
+            </div>
+
+            <div class="card shadow-soft">
+                <div class="card-header"><h5 class="mb-0"><i class="fas fa-lightbulb me-2"></i>Reflexión Socrática</h5></div>
+                <div class="card-body">
+                    <blockquote class="blockquote">
+                        <p class="font-serif">"Ningún ciudadano tiene derecho a ser un aficionado en el entrenamiento del cuerpo."</p>
+                        <footer class="blockquote-footer">Sócrates</footer>
+                    </blockquote>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    
+    function updateHabito(campo, valor) {
+        // Lógica para actualizar el hábito en tiempo real con fetch...
+        console.log(`Actualizando ${campo} a ${valor}`);
+        const habitoItem = event.target.closest('.habito-item');
+        if (valor) {
+            habitoItem.classList.add('completado');
+        } else {
+            habitoItem.classList.remove('completado');
+        }
+    }
+
+    function mostrarTipoEntrenamiento(tipo) {
+        document.querySelectorAll('.tipo-entrenamiento-tab').forEach(tab => tab.classList.remove('active'));
+        event.target.classList.add('active');
+
+        document.querySelectorAll('.entrenamiento-card').forEach(card => {
+            card.style.display = card.dataset.tipo === tipo ? 'block' : 'none';
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        mostrarTipoEntrenamiento('pesas'); // Mostrar el primer tab por defecto
+
+        // Gráfico de Peso
+        const ctx = document.getElementById('graficoPeso');
+        if (ctx) {
+            const seguimientos = {{ seguimientos_recientes_json|safe }};
+
+            new Chart(ctx.getContext('2d'), {
+                type: 'line',
+                data: {
+                    labels: seguimientos.map(s => new Date(s.fecha).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })),
+                    datasets: [{
+                        label: 'Peso (kg)',
+                        data: seguimientos.map(s => s.peso),
+                        borderColor: 'var(--primary-color)',
+                        backgroundColor: 'rgba(44, 62, 80, 0.1)',
+                        fill: true,
+                        tension: 0.3,
+                        pointBackgroundColor: 'var(--primary-color)',
+                        pointRadius: 4,
+                        pointHoverRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `Peso: ${context.parsed.y} kg`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: { display: false }
+                        },
+                        y: {
+                            beginAtZero: false,
+                            grid: { color: 'rgba(0,0,0,0.05)' }
+                        }
+                    }
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}

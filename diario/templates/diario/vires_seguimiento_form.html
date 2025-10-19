@@ -1,389 +1,88 @@
-{% extends 'diario/base.html' %}
+{% extends 'diario/base_stoic.html' %}
+{% load static %}
 
-{% block title %}Seguimiento Diario - Vires{% endblock %}
+{% block title %}Registro de Vires - Diario Estoico{% endblock %}
 
 {% block content %}
-<div class="row">
-    <div class="col-12">
-        <div class="cyber-card p-4 mb-4">
-            <div class="d-flex align-items-center">
-                <i class="fas fa-dumbbell fa-3x me-3" style="color: #f39c12;"></i>
-                <div>
-                    <h1 class="cyber-title mb-2">VIRES</h1>
-                    <p class="mb-0">Seguimiento Diario de Salud y Bienestar</p>
-                </div>
-            </div>
+<div class="fade-in-up">
+    <div class="card shadow-strong">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-plus me-2"></i>
+                {% if seguimiento %}Editar{% else %}Registrar{% endif %} Seguimiento - {{ fecha_hoy|date:"d/m/Y" }}
+            </h5>
         </div>
-    </div>
-</div>
-
-<div class="row">
-    <div class="col-md-8">
-        <div class="cyber-card p-4">
-            <form method="post" class="needs-validation" novalidate>
+        <div class="card-body">
+            <form method="post" action="{% url 'diario:vires_seguimiento_crear' %}">
                 {% csrf_token %}
-                
-                <div class="row">
-                    <div class="col-md-6 mb-4">
-                        <label for="fecha" class="cyber-form-label">
-                            <i class="fas fa-calendar me-2"></i>Fecha *
-                        </label>
-                        <input type="date" 
-                               class="form-control cyber-form-control" 
-                               id="fecha" 
-                               name="fecha" 
-                               value="{% now 'Y-m-d' %}"
-                               required>
-                        <div class="invalid-feedback">
-                            Por favor, selecciona una fecha.
-                        </div>
+                <input type="hidden" name="fecha" value="{{ fecha_hoy|date:'Y-m-d' }}">
+
+                <h6 class="text-muted">Métricas de Recuperación</h6>
+                <div class="row border rounded p-3 mb-4">
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label">Horas de Sueño</label>
+                        <input type="number" name="horas_sueno" class="form-control" step="0.25" placeholder="7.5" value="{{ seguimiento.horas_sueno|default:'' }}">
                     </div>
-                    
-                    <div class="col-md-6 mb-4">
-                        <label for="peso" class="cyber-form-label">
-                            <i class="fas fa-weight me-2"></i>Peso (kg)
-                        </label>
-                        <input type="number" 
-                               class="form-control cyber-form-control" 
-                               id="peso" 
-                               name="peso" 
-                               step="0.1" 
-                               min="30" 
-                               max="200"
-                               placeholder="70.5">
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label">Calidad Sueño (1-5)</label>
+                        <input type="number" name="calidad_sueno" class="form-control" min="1" max="5" placeholder="4" value="{{ seguimiento.calidad_sueno|default:'' }}">
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label">Nivel Energía (1-5)</label>
+                        <input type="number" name="nivel_energia" class="form-control" min="1" max="5" placeholder="4" value="{{ seguimiento.nivel_energia|default:'' }}">
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label">Nivel Estrés (1-5)</label>
+                        <input type="number" name="nivel_estres" class="form-control" min="1" max="5" placeholder="2" value="{{ seguimiento.nivel_estres|default:'' }}">
                     </div>
                 </div>
-                
-                <div class="row">
-                    <div class="col-md-6 mb-4">
-                        <label for="horas_sueno" class="cyber-form-label">
-                            <i class="fas fa-bed me-2"></i>Horas de Sueño *
-                        </label>
-                        <input type="number" 
-                               class="form-control cyber-form-control" 
-                               id="horas_sueno" 
-                               name="horas_sueno" 
-                               step="0.5" 
-                               min="0" 
-                               max="24"
-                               required
-                               placeholder="8.0">
-                        <div class="invalid-feedback">
-                            Por favor, ingresa las horas de sueño.
-                        </div>
+
+                <h6 class="text-muted">Medidas Corporales y Actividad</h6>
+                <div class="row border rounded p-3 mb-4">
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Peso (kg)</label>
+                        <input type="number" name="peso" class="form-control" step="0.1" placeholder="70.5" value="{{ seguimiento.peso|default:'' }}">
                     </div>
-                    
-                    <div class="col-md-6 mb-4">
-                        <label for="calidad_sueno" class="cyber-form-label">
-                            <i class="fas fa-moon me-2"></i>Calidad del Sueño
-                        </label>
-                        <select class="form-select cyber-form-control" id="calidad_sueno" name="calidad_sueno">
-                            <option value="excelente">😴 Excelente</option>
-                            <option value="buena" selected>😊 Buena</option>
-                            <option value="regular">😐 Regular</option>
-                            <option value="mala">😵 Mala</option>
-                        </select>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Grasa Corporal (%)</label>
+                        <input type="number" name="grasa_corporal" class="form-control" step="0.1" placeholder="15.2" value="{{ seguimiento.grasa_corporal|default:'' }}">
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Pasos del día</label>
+                        <input type="number" name="pasos" class="form-control" placeholder="10000" value="{{ seguimiento.pasos|default:'' }}">
                     </div>
                 </div>
-                
-                <div class="row">
-                    <div class="col-md-6 mb-4">
-                        <label for="nivel_energia" class="cyber-form-label">
-                            <i class="fas fa-bolt me-2"></i>Nivel de Energía (1-10) *
-                        </label>
-                        <input type="range" 
-                               class="form-range" 
-                               id="nivel_energia" 
-                               name="nivel_energia" 
-                               min="1" 
-                               max="10" 
-                               value="5"
-                               required
-                               oninput="document.getElementById('energia-valor').textContent = this.value">
-                        <div class="d-flex justify-content-between">
-                            <small>Muy Bajo</small>
-                            <span class="cyber-title" id="energia-valor">5</span>
-                            <small>Muy Alto</small>
-                        </div>
+
+                <h6 class="text-muted">Hábitos Saludables</h6>
+                <div class="p-3 border rounded mb-4">
+                    <div class="form-check form-switch mb-2">
+                        <input class="form-check-input" type="checkbox" name="entrenamiento_realizado" id="id_entrenamiento_realizado" {% if seguimiento.entrenamiento_realizado %}checked{% endif %}>
+                        <label class="form-check-label" for="id_entrenamiento_realizado">Entrenamiento realizado</label>
                     </div>
-                    
-                    <div class="col-md-6 mb-4">
-                        <label for="estado_animo" class="cyber-form-label">
-                            <i class="fas fa-smile me-2"></i>Estado de Ánimo (1-10) *
-                        </label>
-                        <input type="range" 
-                               class="form-range" 
-                               id="estado_animo" 
-                               name="estado_animo" 
-                               min="1" 
-                               max="10" 
-                               value="5"
-                               required
-                               oninput="document.getElementById('animo-valor').textContent = this.value">
-                        <div class="d-flex justify-content-between">
-                            <small>Muy Bajo</small>
-                            <span class="cyber-title" id="animo-valor">5</span>
-                            <small>Excelente</small>
-                        </div>
+                    <div class="form-check form-switch mb-2">
+                        <input class="form-check-input" type="checkbox" name="alimentacion_saludable" id="id_alimentacion_saludable" {% if seguimiento.alimentacion_saludable %}checked{% endif %}>
+                        <label class="form-check-label" for="id_alimentacion_saludable">Alimentación saludable</label>
+                    </div>
+                    <div class="form-check form-switch mb-2">
+                        <input class="form-check-input" type="checkbox" name="hidratacion_adecuada" id="id_hidratacion_adecuada" {% if seguimiento.hidratacion_adecuada %}checked{% endif %}>
+                        <label class="form-check-label" for="id_hidratacion_adecuada">Hidratación adecuada</label>
+                    </div>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" name="descanso_suficiente" id="id_descanso_suficiente" {% if seguimiento.descanso_suficiente %}checked{% endif %}>
+                        <label class="form-check-label" for="id_descanso_suficiente">Descanso suficiente</label>
                     </div>
                 </div>
-                
-                <div class="row">
-                    <div class="col-md-6 mb-4">
-                        <label for="vasos_agua" class="cyber-form-label">
-                            <i class="fas fa-tint me-2"></i>Vasos de Agua *
-                        </label>
-                        <input type="number" 
-                               class="form-control cyber-form-control" 
-                               id="vasos_agua" 
-                               name="vasos_agua" 
-                               min="0" 
-                               max="20"
-                               required
-                               placeholder="8">
-                        <small class="form-text text-muted">Recomendado: 8 vasos al día</small>
-                        <div class="invalid-feedback">
-                            Por favor, ingresa el número de vasos de agua.
-                        </div>
-                    </div>
-                    
-                    <div class="col-md-6 mb-4">
-                        <label for="ejercicio_realizado" class="cyber-form-label">
-                            <i class="fas fa-running me-2"></i>¿Hiciste Ejercicio?
-                        </label>
-                        <div class="form-check form-switch mt-2">
-                            <input class="form-check-input" 
-                                   type="checkbox" 
-                                   id="ejercicio_realizado" 
-                                   name="ejercicio_realizado"
-                                   onchange="toggleEjercicioDetails()">
-                            <label class="form-check-label" for="ejercicio_realizado">
-                                Sí, hice ejercicio hoy
-                            </label>
-                        </div>
-                    </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Notas Adicionales (opcional)</label>
+                    <textarea name="notas" class="form-control" rows="3" placeholder="Cualquier observación adicional sobre tu día">{{ seguimiento.notas|default:'' }}</textarea>
                 </div>
-                
-                <div id="ejercicio-details" class="d-none">
-                    <div class="row">
-                        <div class="col-md-6 mb-4">
-                            <label for="tipo_ejercicio" class="cyber-form-label">
-                                <i class="fas fa-heartbeat me-2"></i>Tipo de Ejercicio
-                            </label>
-                            <select class="form-select cyber-form-control" id="tipo_ejercicio" name="tipo_ejercicio">
-                                <option value="">Seleccionar...</option>
-                                <option value="cardio">🏃‍♂️ Cardio</option>
-                                <option value="fuerza">💪 Fuerza</option>
-                                <option value="flexibilidad">🧘‍♀️ Flexibilidad</option>
-                                <option value="deportes">⚽ Deportes</option>
-                                <option value="mixto">🔄 Mixto</option>
-                            </select>
-                        </div>
-                        
-                        <div class="col-md-6 mb-4">
-                            <label for="duracion_ejercicio" class="cyber-form-label">
-                                <i class="fas fa-clock me-2"></i>Duración (minutos)
-                            </label>
-                            <input type="number" 
-                                   class="form-control cyber-form-control" 
-                                   id="duracion_ejercicio" 
-                                   name="duracion_ejercicio" 
-                                   min="1" 
-                                   max="300"
-                                   placeholder="30">
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="mb-4">
-                    <label for="notas_salud" class="cyber-form-label">
-                        <i class="fas fa-notes-medical me-2"></i>Notas de Salud
-                    </label>
-                    <textarea class="form-control cyber-form-control" 
-                              id="notas_salud" 
-                              name="notas_salud" 
-                              rows="4" 
-                              placeholder="¿Cómo te sientes hoy? ¿Algún síntoma o observación importante?"></textarea>
-                </div>
-                
-                <div class="philosopher-quote mb-4">
-                    <i class="fas fa-quote-left me-2"></i>
-                    <em>"Mens sana in corpore sano" - Una mente sana en un cuerpo sano.</em>
-                    <small class="d-block mt-2 text-end">- Juvenal</small>
-                </div>
-                
-                <div class="d-flex justify-content-between">
-                    <a href="{% url 'vires_dashboard' %}" class="btn cyber-btn-secondary">
-                        <i class="fas fa-arrow-left me-2"></i>Cancelar
-                    </a>
-                    <button type="submit" class="btn cyber-btn">
-                        <i class="fas fa-save me-2"></i>Guardar Seguimiento
-                    </button>
+
+                <div class="d-flex gap-2 mt-4">
+                    <button type="submit" class="btn btn-success btn-lg"><i class="fas fa-save me-2"></i>Guardar Seguimiento</button>
+                    <a href="{% url 'diario:vires_dashboard' %}" class="btn btn-secondary">Cancelar</a>
                 </div>
             </form>
         </div>
     </div>
-    
-    <div class="col-md-4">
-        <div class="cyber-card p-4 mb-4">
-            <h4 class="cyber-title mb-3">
-                <i class="fas fa-target me-2"></i>Objetivos Diarios
-            </h4>
-            
-            <div class="objective-item mb-3">
-                <div class="d-flex justify-content-between align-items-center">
-                    <span><i class="fas fa-bed me-2"></i>Dormir 7-9 horas</span>
-                    <span class="badge bg-success">✓</span>
-                </div>
-            </div>
-            
-            <div class="objective-item mb-3">
-                <div class="d-flex justify-content-between align-items-center">
-                    <span><i class="fas fa-tint me-2"></i>8 vasos de agua</span>
-                    <span class="badge bg-warning">6/8</span>
-                </div>
-            </div>
-            
-            <div class="objective-item mb-3">
-                <div class="d-flex justify-content-between align-items-center">
-                    <span><i class="fas fa-running me-2"></i>30 min ejercicio</span>
-                    <span class="badge bg-secondary">Pendiente</span>
-                </div>
-            </div>
-            
-            <div class="objective-item mb-3">
-                <div class="d-flex justify-content-between align-items-center">
-                    <span><i class="fas fa-smile me-2"></i>Estado ánimo >7</span>
-                    <span class="badge bg-info">5/10</span>
-                </div>
-            </div>
-        </div>
-        
-        <div class="cyber-card p-4 mb-4">
-            <h4 class="cyber-title mb-3">
-                <i class="fas fa-chart-line me-2"></i>Progreso Semanal
-            </h4>
-            
-            <div class="mb-3">
-                <div class="d-flex justify-content-between mb-1">
-                    <small>Ejercicio</small>
-                    <small>4/7 días</small>
-                </div>
-                <div class="progress" style="height: 8px;">
-                    <div class="progress-bar bg-success" style="width: 57%"></div>
-                </div>
-            </div>
-            
-            <div class="mb-3">
-                <div class="d-flex justify-content-between mb-1">
-                    <small>Hidratación</small>
-                    <small>6/7 días</small>
-                </div>
-                <div class="progress" style="height: 8px;">
-                    <div class="progress-bar bg-info" style="width: 86%"></div>
-                </div>
-            </div>
-            
-            <div class="mb-3">
-                <div class="d-flex justify-content-between mb-1">
-                    <small>Sueño</small>
-                    <small>5/7 días</small>
-                </div>
-                <div class="progress" style="height: 8px;">
-                    <div class="progress-bar bg-warning" style="width: 71%"></div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="cyber-card p-4">
-            <h4 class="cyber-title mb-3">
-                <i class="fas fa-lightbulb me-2"></i>Consejos de Salud
-            </h4>
-            
-            <div class="tip-item mb-3">
-                <i class="fas fa-water text-info me-2"></i>
-                <small>Bebe un vaso de agua al despertar para activar tu metabolismo.</small>
-            </div>
-            
-            <div class="tip-item mb-3">
-                <i class="fas fa-moon text-primary me-2"></i>
-                <small>Evita pantallas 1 hora antes de dormir para mejor descanso.</small>
-            </div>
-            
-            <div class="tip-item mb-3">
-                <i class="fas fa-walking text-success me-2"></i>
-                <small>Camina 10 minutos después de cada comida para mejorar la digestión.</small>
-            </div>
-        </div>
-    </div>
 </div>
-
-<script>
-function toggleEjercicioDetails() {
-    const checkbox = document.getElementById('ejercicio_realizado');
-    const details = document.getElementById('ejercicio-details');
-    
-    if (checkbox.checked) {
-        details.classList.remove('d-none');
-    } else {
-        details.classList.add('d-none');
-    }
-}
-
-document.addEventListener('DOMContentLoaded', function() {
-    // Validación del formulario
-    const form = document.querySelector('.needs-validation');
-    form.addEventListener('submit', function(event) {
-        if (!form.checkValidity()) {
-            event.preventDefault();
-            event.stopPropagation();
-        }
-        form.classList.add('was-validated');
-    });
-    
-    // Efectos visuales para los sliders
-    const sliders = document.querySelectorAll('input[type="range"]');
-    sliders.forEach(slider => {
-        slider.addEventListener('input', function() {
-            const value = this.value;
-            const max = this.max;
-            const percentage = (value / max) * 100;
-            
-            // Cambiar color según el valor
-            let color = '#ff4757'; // Rojo para valores bajos
-            if (value >= 7) color = '#2ed573'; // Verde para valores altos
-            else if (value >= 4) color = '#ffa502'; // Naranja para valores medios
-            
-            this.style.background = `linear-gradient(to right, ${color} 0%, ${color} ${percentage}%, #ddd ${percentage}%, #ddd 100%)`;
-        });
-        
-        // Inicializar color
-        slider.dispatchEvent(new Event('input'));
-    });
-    
-    // Animación de entrada
-    document.querySelectorAll('.cyber-card').forEach((card, index) => {
-        card.style.opacity = '0';
-        card.style.transform = 'translateY(20px)';
-        setTimeout(() => {
-            card.style.transition = 'all 0.6s ease';
-            card.style.opacity = '1';
-            card.style.transform = 'translateY(0)';
-        }, index * 200);
-    });
-    
-    // Efectos de focus en los campos
-    document.querySelectorAll('.cyber-form-control').forEach(input => {
-        input.addEventListener('focus', function() {
-            this.style.borderColor = '#f39c12';
-            this.style.boxShadow = '0 0 15px rgba(243, 156, 18, 0.3)';
-        });
-        
-        input.addEventListener('blur', function() {
-            this.style.borderColor = 'rgba(0, 255, 255, 0.3)';
-            this.style.boxShadow = 'none';
-        });
-    });
-});
-</script>
 {% endblock %}

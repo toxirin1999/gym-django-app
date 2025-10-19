@@ -1,0 +1,1857 @@
+from django.shortcuts import render, get_object_or_404, redirect
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.http import JsonResponse
+from django.utils import timezone
+from django.db.models import Q, Count
+from datetime import datetime, timedelta
+import json
+from django.views.decorators.http import require_http_methods
+
+# Importar los modelos (asumiendo que están en models.py)
+from .models import (
+    ProsocheMes, ProsocheSemana, ProsocheDiario, ProsocheHabito, ProsocheHabitoDia,
+    AreaVida, Eudaimonia, TrimestreEudaimonia,
+    EjercicioArete, Gnosis, EntrenamientoSemanal,
+    SeguimientoVires, EventoKairos, PlanificacionDiaria
+)
+
+
+# ========================================
+# VISTA PRINCIPAL DEL DIARIO
+# ========================================
+
+# Reemplaza la función dashboard_diario en diario/views.py con esta:
+
+@login_required
+def dashboard_diario(request):
+    """Dashboard principal del diario con resumen de todas las secciones."""
+    context = {
+        'prosoche_actual': ProsocheMes.objects.filter(  # <-- CORREGIDO
+            usuario=request.user,
+            mes=timezone.now().strftime('%B'),
+            año=timezone.now().year
+        ).first(),
+        'areas_eudaimonia': Eudaimonia.objects.filter(usuario=request.user).count(),
+        'ejercicios_arete_completados': EjercicioArete.objects.filter(
+            usuario=request.user,
+            estado='completado'
+        ).count(),
+        'contenido_gnosis': Gnosis.objects.filter(usuario=request.user).count(),
+        'eventos_hoy': EventoKairos.objects.filter(
+            usuario=request.user,
+            fecha_inicio__date=timezone.now().date()
+        ).count(),
+        'seguimiento_vires_hoy': SeguimientoVires.objects.filter(
+            usuario=request.user,
+            fecha=timezone.now().date()
+        ).exists()
+    }
+    return render(request, 'diario/dashboard.html', context)
+
+
+from .models import ProsocheMes, ProsocheSemana, ProsocheDiario, ProsocheHabito, ProsocheHabitoDia
+
+
+@login_required
+def prosoche_dashboard(request):
+    """Dashboard principal de Prosoche con estructura de Notion"""
+    # Obtener mes y año actual
+    hoy = timezone.now()
+    mes_actual = hoy.strftime('%B')  # "March", "April", etc.
+    año_actual = hoy.year
+
+    # Obtener o crear el mes actual
+    prosoche_mes, created = ProsocheMes.objects.get_or_create(
+        usuario=request.user,
+        mes=mes_actual,
+        año=año_actual
+    )
+
+    # Crear semanas si no existen
+    for i in range(1, 6):  # Semanas 1-5
+        ProsocheSemana.objects.get_or_create(
+            prosoche_mes=prosoche_mes,
+            numero_semana=i
+        )
+
+    # Obtener datos para el dashboard
+    semanas = ProsocheSemana.objects.filter(prosoche_mes=prosoche_mes).order_by('numero_semana')
+    entradas_recientes = ProsocheDiario.objects.filter(prosoche_mes=prosoche_mes).order_by('-fecha')[:5]
+    habitos = ProsocheHabito.objects.filter(prosoche_mes=prosoche_mes)
+
+    # Obtener meses anteriores para el historial
+    meses_anteriores = ProsocheMes.objects.filter(
+        usuario=request.user
+    ).exclude(id=prosoche_mes.id).order_by('-año', '-mes')[:6]
+
+    # Generar días del mes para la tabla de hábitos
+    dias_mes = list(range(1, calendar.monthrange(año_actual, hoy.month)[1] + 1))
+
+    # Preparar datos de hábitos con seguimiento diario
+    habitos_con_dias = []
+    for habito in habitos:
+        dias_habito = []
+        for dia in dias_mes:
+            dia_obj, _ = ProsocheHabitoDia.objects.get_or_create(
+                habito=habito,
+                dia=dia
+            )
+            dias_habito.append(dia_obj)
+
+        habitos_con_dias.append({
+            'habito': habito,
+            'dias': dias_habito,
+            'completados': sum(1 for d in dias_habito if d.completado),
+            'porcentaje': round(
+                (sum(1 for d in dias_habito if d.completado) / len(dias_habito)) * 100) if dias_habito else 0
+        })
+
+    context = {
+        'prosoche_mes': prosoche_mes,
+        'semanas': semanas,
+        'entradas_recientes': entradas_recientes,
+        'habitos_con_dias': habitos_con_dias,
+        'dias_mes': dias_mes,
+        'meses_anteriores': meses_anteriores,
+        'mes_actual': mes_actual,
+        'año_actual': año_actual,
+        'dia_actual': hoy.day
+    }
+
+    return render(request, 'diario/prosoche_dashboard.html', context)
+
+
+@login_required
+def prosoche_actualizar_objetivos(request):
+    """Actualizar objetivos mensuales y semanales"""
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        prosoche_id = data.get('prosoche_id')
+        tipo = data.get('tipo')  # 'mensual' o 'semanal'
+
+        prosoche_mes = get_object_or_404(ProsocheMes, id=prosoche_id, usuario=request.user)
+
+        if tipo == 'mensual':
+            # Actualizar objetivos mensuales
+            prosoche_mes.objetivo_mes_1 = data.get('objetivo_1', '')
+            prosoche_mes.objetivo_mes_2 = data.get('objetivo_2', '')
+            prosoche_mes.objetivo_mes_3 = data.get('objetivo_3', '')
+            prosoche_mes.objetivo_mes_1_completado = data.get('objetivo_1_completado', False)
+            prosoche_mes.objetivo_mes_2_completado = data.get('objetivo_2_completado', False)
+            prosoche_mes.objetivo_mes_3_completado = data.get('objetivo_3_completado', False)
+            prosoche_mes.save()
+
+        elif tipo == 'semanal':
+            # Actualizar objetivos semanales
+            semana_num = data.get('semana')
+            semana = get_object_or_404(ProsocheSemana, prosoche_mes=prosoche_mes, numero_semana=semana_num)
+
+            semana.objetivo_1 = data.get('objetivo_1', '')
+            semana.objetivo_2 = data.get('objetivo_2', '')
+            semana.objetivo_3 = data.get('objetivo_3', '')
+            semana.objetivo_1_completado = data.get('objetivo_1_completado', False)
+            semana.objetivo_2_completado = data.get('objetivo_2_completado', False)
+            semana.objetivo_3_completado = data.get('objetivo_3_completado', False)
+            semana.save()
+
+        return JsonResponse({'success': True})
+
+    return JsonResponse({'error': 'Método no permitido'}, status=405)
+
+
+def prosoche_nueva_entrada(request):
+    """Crear nueva entrada del diario con todos los campos"""
+    # Obtener mes actual
+    hoy = timezone.now()
+    mes_actual = hoy.strftime('%B')
+    año_actual = hoy.year
+
+    # Obtener o crear el mes actual
+    prosoche_mes, created = ProsocheMes.objects.get_or_create(
+        usuario=request.user,
+        mes=mes_actual,
+        año=año_actual
+    )
+
+    if request.method == 'POST':
+        # Obtener fecha del formulario o usar hoy
+        fecha_str = request.POST.get('fecha')
+        if fecha_str:
+            try:
+                fecha = datetime.strptime(fecha_str, '%Y-%m-%d').date()
+            except:
+                fecha = hoy.date()
+        else:
+            fecha = hoy.date()
+
+        # Crear o actualizar entrada
+        entrada, created = ProsocheDiario.objects.get_or_create(
+            prosoche_mes=prosoche_mes,
+            fecha=fecha,
+            defaults={
+                'etiquetas': request.POST.get('etiquetas', ''),
+                'estado_animo': int(request.POST.get('estado_animo', 3)),
+                'persona_quiero_ser': request.POST.get('persona_quiero_ser', ''),
+                'gratitud_1': request.POST.get('gratitud_1', ''),
+                'gratitud_2': request.POST.get('gratitud_2', ''),
+                'gratitud_3': request.POST.get('gratitud_3', ''),
+                'gratitud_4': request.POST.get('gratitud_4', ''),
+                'gratitud_5': request.POST.get('gratitud_5', ''),
+                'podcast_libro_dia': request.POST.get('podcast_libro_dia', ''),
+                'felicidad': request.POST.get('felicidad', ''),
+                'que_ha_ido_bien': request.POST.get('que_ha_ido_bien', ''),
+                'que_puedo_mejorar': request.POST.get('que_puedo_mejorar', ''),
+                'reflexiones_dia': request.POST.get('reflexiones_dia', ''),
+                'tareas_dia': request.POST.get('tareas_dia', '[]')  # JSON string
+            }
+        )
+
+        if not created:
+            # Actualizar entrada existente
+            entrada.etiquetas = request.POST.get('etiquetas', '')
+            entrada.estado_animo = int(request.POST.get('estado_animo', 3))
+            entrada.persona_quiero_ser = request.POST.get('persona_quiero_ser', '')
+            entrada.gratitud_1 = request.POST.get('gratitud_1', '')
+            entrada.gratitud_2 = request.POST.get('gratitud_2', '')
+            entrada.gratitud_3 = request.POST.get('gratitud_3', '')
+            entrada.gratitud_4 = request.POST.get('gratitud_4', '')
+            entrada.gratitud_5 = request.POST.get('gratitud_5', '')
+            entrada.podcast_libro_dia = request.POST.get('podcast_libro_dia', '')
+            entrada.felicidad = request.POST.get('felicidad', '')
+            entrada.que_ha_ido_bien = request.POST.get('que_ha_ido_bien', '')
+            entrada.que_puedo_mejorar = request.POST.get('que_puedo_mejorar', '')
+            entrada.reflexiones_dia = request.POST.get('reflexiones_dia', '')
+            entrada.tareas_dia = request.POST.get('tareas_dia', '[]')
+            entrada.save()
+
+        messages.success(request, 'Entrada del diario guardada correctamente.')
+        return redirect('prosoche_dashboard')
+
+    else:
+        # GET request - mostrar formulario
+        fecha = request.GET.get('fecha', hoy.date())
+
+        # Buscar entrada existente para esta fecha
+        entrada_existente = ProsocheDiario.objects.filter(
+            prosoche_mes=prosoche_mes,
+            fecha=fecha
+        ).first()
+
+        context = {
+            'prosoche_mes': prosoche_mes,
+            'fecha': fecha,
+            'entrada_existente': entrada_existente
+        }
+
+        return render(request, 'diario/prosoche_entrada_form.html', context)
+
+
+@login_required
+def prosoche_editar_entrada(request, entrada_id):
+    """Vista para editar entrada existente del diario"""
+    entrada = get_object_or_404(ProsocheDiario, id=entrada_id, prosoche_mes__usuario=request.user)
+
+    # Redirigir a la vista de nueva entrada con la fecha específica
+    return redirect(f"{reverse('prosoche_nueva_entrada')}?fecha={entrada.fecha.strftime('%Y-%m-%d')}")
+
+
+@login_required
+@require_http_methods(["POST"])
+def prosoche_auto_save_entrada(request):
+    """Vista para auto-guardado de entrada (AJAX)"""
+    try:
+        data = json.loads(request.body)
+        fecha_str = data.get('fecha')
+        campo = data.get('campo')
+        valor = data.get('valor')
+
+        if not all([fecha_str, campo]):
+            return JsonResponse({'success': False, 'error': 'Datos incompletos'})
+
+        fecha = datetime.strptime(fecha_str, '%Y-%m-%d').date()
+
+        # Obtener o crear el mes de Prosoche
+        mes_nombre = fecha.strftime('%B')
+        año = fecha.year
+
+        prosoche_mes, created = ProsocheMes.objects.get_or_create(
+            usuario=request.user,
+            mes=mes_nombre,
+            año=año
+        )
+
+        # Obtener o crear la entrada
+        entrada, created = ProsocheDiario.objects.get_or_create(
+            prosoche_mes=prosoche_mes,
+            fecha=fecha,
+            defaults={'estado_animo': 3}
+        )
+
+        # Actualizar el campo específico
+        if hasattr(entrada, campo):
+            setattr(entrada, campo, valor)
+            entrada.save()
+
+            return JsonResponse({
+                'success': True,
+                'message': f'Campo {campo} guardado automáticamente'
+            })
+        else:
+            return JsonResponse({
+                'success': False,
+                'error': f'Campo {campo} no válido'
+            })
+
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        })
+
+
+@login_required
+def prosoche_entrada_detalle(request, entrada_id):
+    """Vista para mostrar detalle de una entrada específica"""
+    entrada = get_object_or_404(ProsocheDiario, id=entrada_id, prosoche_mes__usuario=request.user)
+
+    context = {
+        'entrada': entrada,
+        'prosoche_mes': entrada.prosoche_mes,
+        'tareas_completadas': entrada.get_tareas_completadas(),
+        'total_tareas': entrada.get_total_tareas(),
+        'gratitud_items': entrada.get_gratitud_items(),
+        'porcentaje_completado': entrada.get_porcentaje_completado(),
+    }
+
+    return render(request, 'diario/prosoche_entrada_detalle.html', context)
+
+
+@login_required
+@require_http_methods(["POST"])
+def prosoche_toggle_tarea(request):
+    """Vista para marcar/desmarcar tarea como completada (AJAX)"""
+    try:
+        data = json.loads(request.body)
+        entrada_id = data.get('entrada_id')
+        tarea_index = data.get('tarea_index')
+        completada = data.get('completada', False)
+
+        entrada = get_object_or_404(ProsocheDiario, id=entrada_id, prosoche_mes__usuario=request.user)
+
+        if 0 <= tarea_index < len(entrada.tareas_dia):
+            entrada.tareas_dia[tarea_index]['completada'] = completada
+            entrada.save()
+
+            return JsonResponse({
+                'success': True,
+                'tareas_completadas': entrada.get_tareas_completadas(),
+                'total_tareas': entrada.get_total_tareas()
+            })
+        else:
+            return JsonResponse({
+                'success': False,
+                'error': 'Índice de tarea no válido'
+            })
+
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        })
+
+
+@login_required
+def prosoche_entradas_mes(request, mes, año):
+    """Vista para mostrar todas las entradas de un mes específico"""
+    try:
+        prosoche_mes = get_object_or_404(
+            ProsocheMes,
+            usuario=request.user,
+            mes=mes,
+            año=año
+        )
+
+        entradas = ProsocheDiario.objects.filter(
+            prosoche_mes=prosoche_mes
+        ).order_by('-fecha')
+
+        context = {
+            'prosoche_mes': prosoche_mes,
+            'entradas': entradas,
+            'mes': mes,
+            'año': año,
+        }
+
+        return render(request, 'diario/prosoche_entradas_mes.html', context)
+
+    except ProsocheMes.DoesNotExist:
+        messages.error(request, f'No se encontraron datos para {mes} {año}')
+        return redirect('prosoche_dashboard')
+
+
+# Template filter personalizado para acceder a campos dinámicos
+from django import template
+
+register = template.Library()
+
+
+@register.filter
+def lookup(dictionary, key):
+    """Filtro para acceder a valores dinámicos en templates"""
+    if hasattr(dictionary, key):
+        return getattr(dictionary, key)
+    return dictionary.get(key, '')
+
+
+@register.filter
+def add(value, arg):
+    """Filtro para sumar valores"""
+    try:
+        return int(value) + int(arg)
+    except (ValueError, TypeError):
+        return value
+
+
+@login_required
+def prosoche_editar_entrada(request, entrada_id):
+    """Vista para editar entrada existente del diario"""
+    entrada = get_object_or_404(ProsocheDiario, id=entrada_id, prosoche_mes__usuario=request.user)
+
+    # Redirigir a la vista de nueva entrada con la fecha específica
+    return redirect(f"{reverse('prosoche_nueva_entrada')}?fecha={entrada.fecha.strftime('%Y-%m-%d')}")
+
+
+@login_required
+@require_http_methods(["POST"])
+def prosoche_auto_save_entrada(request):
+    """Vista para auto-guardado de entrada (AJAX)"""
+    try:
+        data = json.loads(request.body)
+        fecha_str = data.get('fecha')
+        campo = data.get('campo')
+        valor = data.get('valor')
+
+        if not all([fecha_str, campo]):
+            return JsonResponse({'success': False, 'error': 'Datos incompletos'})
+
+        fecha = datetime.strptime(fecha_str, '%Y-%m-%d').date()
+
+        # Obtener o crear el mes de Prosoche
+        mes_nombre = fecha.strftime('%B')
+        año = fecha.year
+
+        prosoche_mes, created = ProsocheMes.objects.get_or_create(
+            usuario=request.user,
+            mes=mes_nombre,
+            año=año
+        )
+
+        # Obtener o crear la entrada
+        entrada, created = ProsocheDiario.objects.get_or_create(
+            prosoche_mes=prosoche_mes,
+            fecha=fecha,
+            defaults={'estado_animo': 3}
+        )
+
+        # Actualizar el campo específico
+        if hasattr(entrada, campo):
+            setattr(entrada, campo, valor)
+            entrada.save()
+
+            return JsonResponse({
+                'success': True,
+                'message': f'Campo {campo} guardado automáticamente'
+            })
+        else:
+            return JsonResponse({
+                'success': False,
+                'error': f'Campo {campo} no válido'
+            })
+
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        })
+
+
+@login_required
+def prosoche_entrada_detalle(request, entrada_id):
+    """Vista para mostrar detalle de una entrada específica"""
+    entrada = get_object_or_404(ProsocheDiario, id=entrada_id, prosoche_mes__usuario=request.user)
+
+    context = {
+        'entrada': entrada,
+        'prosoche_mes': entrada.prosoche_mes,
+        'tareas_completadas': entrada.get_tareas_completadas(),
+        'total_tareas': entrada.get_total_tareas(),
+        'gratitud_items': entrada.get_gratitud_items(),
+        'porcentaje_completado': entrada.get_porcentaje_completado(),
+    }
+
+    return render(request, 'diario/prosoche_entrada_detalle.html', context)
+
+
+@login_required
+@require_http_methods(["POST"])
+def prosoche_toggle_tarea(request):
+    """Vista para marcar/desmarcar tarea como completada (AJAX)"""
+    try:
+        data = json.loads(request.body)
+        entrada_id = data.get('entrada_id')
+        tarea_index = data.get('tarea_index')
+        completada = data.get('completada', False)
+
+        entrada = get_object_or_404(ProsocheDiario, id=entrada_id, prosoche_mes__usuario=request.user)
+
+        if 0 <= tarea_index < len(entrada.tareas_dia):
+            entrada.tareas_dia[tarea_index]['completada'] = completada
+            entrada.save()
+
+            return JsonResponse({
+                'success': True,
+                'tareas_completadas': entrada.get_tareas_completadas(),
+                'total_tareas': entrada.get_total_tareas()
+            })
+        else:
+            return JsonResponse({
+                'success': False,
+                'error': 'Índice de tarea no válido'
+            })
+
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        })
+
+
+@login_required
+def prosoche_entradas_mes(request, mes, año):
+    """Vista para mostrar todas las entradas de un mes específico"""
+    try:
+        prosoche_mes = get_object_or_404(
+            ProsocheMes,
+            usuario=request.user,
+            mes=mes,
+            año=año
+        )
+
+        entradas = ProsocheDiario.objects.filter(
+            prosoche_mes=prosoche_mes
+        ).order_by('-fecha')
+
+        context = {
+            'prosoche_mes': prosoche_mes,
+            'entradas': entradas,
+            'mes': mes,
+            'año': año,
+        }
+
+        return render(request, 'diario/prosoche_entradas_mes.html', context)
+
+    except ProsocheMes.DoesNotExist:
+        messages.error(request, f'No se encontraron datos para {mes} {año}')
+        return redirect('prosoche_dashboard')
+
+
+# Template filter personalizado para acceder a campos dinámicos
+from django import template
+
+register = template.Library()
+
+
+@register.filter
+def lookup(dictionary, key):
+    """Filtro para acceder a valores dinámicos en templates"""
+    if hasattr(dictionary, key):
+        return getattr(dictionary, key)
+    return dictionary.get(key, '')
+
+
+@register.filter
+def add(value, arg):
+    """Filtro para sumar valores"""
+    try:
+        return int(value) + int(arg)
+    except (ValueError, TypeError):
+        return value
+
+
+@login_required
+def prosoche_editar_entrada(request, entrada_id):
+    """Vista para editar entrada existente del diario"""
+    entrada = get_object_or_404(ProsocheDiario, id=entrada_id, prosoche_mes__usuario=request.user)
+
+    # Redirigir a la vista de nueva entrada con la fecha específica
+    return redirect(f"{reverse('prosoche_nueva_entrada')}?fecha={entrada.fecha.strftime('%Y-%m-%d')}")
+
+
+@login_required
+@require_http_methods(["POST"])
+def prosoche_auto_save_entrada(request):
+    """Vista para auto-guardado de entrada (AJAX)"""
+    try:
+        data = json.loads(request.body)
+        fecha_str = data.get('fecha')
+        campo = data.get('campo')
+        valor = data.get('valor')
+
+        if not all([fecha_str, campo]):
+            return JsonResponse({'success': False, 'error': 'Datos incompletos'})
+
+        fecha = datetime.strptime(fecha_str, '%Y-%m-%d').date()
+
+        # Obtener o crear el mes de Prosoche
+        mes_nombre = fecha.strftime('%B')
+        año = fecha.year
+
+        prosoche_mes, created = ProsocheMes.objects.get_or_create(
+            usuario=request.user,
+            mes=mes_nombre,
+            año=año
+        )
+
+        # Obtener o crear la entrada
+        entrada, created = ProsocheDiario.objects.get_or_create(
+            prosoche_mes=prosoche_mes,
+            fecha=fecha,
+            defaults={'estado_animo': 3}
+        )
+
+        # Actualizar el campo específico
+        if hasattr(entrada, campo):
+            setattr(entrada, campo, valor)
+            entrada.save()
+
+            return JsonResponse({
+                'success': True,
+                'message': f'Campo {campo} guardado automáticamente'
+            })
+        else:
+            return JsonResponse({
+                'success': False,
+                'error': f'Campo {campo} no válido'
+            })
+
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        })
+
+
+@login_required
+def prosoche_entrada_detalle(request, entrada_id):
+    """Vista para mostrar detalle de una entrada específica"""
+    entrada = get_object_or_404(ProsocheDiario, id=entrada_id, prosoche_mes__usuario=request.user)
+
+    context = {
+        'entrada': entrada,
+        'prosoche_mes': entrada.prosoche_mes,
+        'tareas_completadas': entrada.get_tareas_completadas(),
+        'total_tareas': entrada.get_total_tareas(),
+        'gratitud_items': entrada.get_gratitud_items(),
+        'porcentaje_completado': entrada.get_porcentaje_completado(),
+    }
+
+    return render(request, 'diario/prosoche_entrada_detalle.html', context)
+
+
+@login_required
+@require_http_methods(["POST"])
+def prosoche_toggle_tarea(request):
+    """Vista para marcar/desmarcar tarea como completada (AJAX)"""
+    try:
+        data = json.loads(request.body)
+        entrada_id = data.get('entrada_id')
+        tarea_index = data.get('tarea_index')
+        completada = data.get('completada', False)
+
+        entrada = get_object_or_404(ProsocheDiario, id=entrada_id, prosoche_mes__usuario=request.user)
+
+        if 0 <= tarea_index < len(entrada.tareas_dia):
+            entrada.tareas_dia[tarea_index]['completada'] = completada
+            entrada.save()
+
+            return JsonResponse({
+                'success': True,
+                'tareas_completadas': entrada.get_tareas_completadas(),
+                'total_tareas': entrada.get_total_tareas()
+            })
+        else:
+            return JsonResponse({
+                'success': False,
+                'error': 'Índice de tarea no válido'
+            })
+
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        })
+
+
+@login_required
+def prosoche_entradas_mes(request, mes, año):
+    """Vista para mostrar todas las entradas de un mes específico"""
+    try:
+        prosoche_mes = get_object_or_404(
+            ProsocheMes,
+            usuario=request.user,
+            mes=mes,
+            año=año
+        )
+
+        entradas = ProsocheDiario.objects.filter(
+            prosoche_mes=prosoche_mes
+        ).order_by('-fecha')
+
+        context = {
+            'prosoche_mes': prosoche_mes,
+            'entradas': entradas,
+            'mes': mes,
+            'año': año,
+        }
+
+        return render(request, 'diario/prosoche_entradas_mes.html', context)
+
+    except ProsocheMes.DoesNotExist:
+        messages.error(request, f'No se encontraron datos para {mes} {año}')
+        return redirect('prosoche_dashboard')
+
+
+# Template filter personalizado para acceder a campos dinámicos
+from django import template
+
+register = template.Library()
+
+
+@register.filter
+def lookup(dictionary, key):
+    """Filtro para acceder a valores dinámicos en templates"""
+    if hasattr(dictionary, key):
+        return getattr(dictionary, key)
+    return dictionary.get(key, '')
+
+
+@register.filter
+def add(value, arg):
+    """Filtro para sumar valores"""
+    try:
+        return int(value) + int(arg)
+    except (ValueError, TypeError):
+        return value
+
+
+@login_required
+def prosoche_crear_habito(request):
+    """Crear nuevo hábito"""
+    if request.method == 'POST':
+        prosoche_id = request.POST.get('prosoche_id')
+        prosoche_mes = get_object_or_404(ProsocheMes, id=prosoche_id, usuario=request.user)
+
+        nombre = request.POST.get('nombre')
+        if nombre:
+            habito, created = ProsocheHabito.objects.get_or_create(
+                prosoche_mes=prosoche_mes,
+                nombre=nombre,
+                defaults={
+                    'descripcion': request.POST.get('descripcion', ''),
+                    'color': request.POST.get('color', '#00ffff')
+                }
+            )
+
+            if created:
+                messages.success(request, f'Hábito "{nombre}" creado correctamente.')
+            else:
+                messages.info(request, f'El hábito "{nombre}" ya existe.')
+
+        return redirect('prosoche_dashboard')
+
+    return JsonResponse({'error': 'Método no permitido'}, status=405)
+
+
+@login_required
+def prosoche_toggle_habito(request):
+    """Marcar/desmarcar hábito para un día específico"""
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        habito_id = data.get('habito_id')
+        dia = data.get('dia')
+
+        habito = get_object_or_404(ProsocheHabito, id=habito_id, prosoche_mes__usuario=request.user)
+
+        dia_habito, created = ProsocheHabitoDia.objects.get_or_create(
+            habito=habito,
+            dia=dia
+        )
+
+        dia_habito.completado = not dia_habito.completado
+        dia_habito.save()
+
+        return JsonResponse({
+            'success': True,
+            'completado': dia_habito.completado
+        })
+
+    return JsonResponse({'error': 'Método no permitido'}, status=405)
+
+
+@login_required
+def prosoche_revision_mes(request):
+    """Actualizar revisión del mes"""
+    if request.method == 'POST':
+        prosoche_id = request.POST.get('prosoche_id')
+        prosoche_mes = get_object_or_404(ProsocheMes, id=prosoche_id, usuario=request.user)
+
+        prosoche_mes.logro_principal = request.POST.get('logro_principal', '')
+        prosoche_mes.obstaculo_principal = request.POST.get('obstaculo_principal', '')
+        prosoche_mes.aprendizaje_principal = request.POST.get('aprendizaje_principal', '')
+        prosoche_mes.momento_felicidad = request.POST.get('momento_felicidad', '')
+        prosoche_mes.save()
+
+        messages.success(request, 'Revisión del mes guardada correctamente.')
+        return redirect('prosoche_dashboard')
+
+    return JsonResponse({'error': 'Método no permitido'}, status=405)
+
+
+@login_required
+def prosoche_mes_anterior(request, mes, año):
+    """Ver mes anterior específico"""
+    prosoche_mes = get_object_or_404(
+        ProsocheMes,
+        usuario=request.user,
+        mes=mes,
+        año=año
+    )
+
+    semanas = ProsocheSemana.objects.filter(prosoche_mes=prosoche_mes).order_by('numero_semana')
+    entradas = ProsocheDiario.objects.filter(prosoche_mes=prosoche_mes).order_by('fecha')
+    habitos = ProsocheHabito.objects.filter(prosoche_mes=prosoche_mes)
+
+    # Preparar datos de hábitos con seguimiento
+    dias_mes = list(range(1, 32))  # Máximo 31 días
+    habitos_con_dias = []
+
+    for habito in habitos:
+        dias_habito = []
+        for dia in dias_mes:
+            try:
+                dia_obj = ProsocheHabitoDia.objects.get(habito=habito, dia=dia)
+                dias_habito.append(dia_obj)
+            except ProsocheHabitoDia.DoesNotExist:
+                dias_habito.append(None)
+
+        habitos_con_dias.append({
+            'habito': habito,
+            'dias': dias_habito
+        })
+
+    context = {
+        'prosoche_mes': prosoche_mes,
+        'semanas': semanas,
+        'entradas': entradas,
+        'habitos_con_dias': habitos_con_dias,
+        'dias_mes': dias_mes,
+        'es_mes_anterior': True
+    }
+
+    return render(request, 'diario/prosoche_mes_anterior.html', context)  # ========================================
+
+
+# EUDAIMONIA - ÁREAS DE LA VIDA
+# ========================================
+
+@login_required
+def eudaimonia_dashboard(request):
+    """Dashboard de la sección Eudaimonia."""
+    areas_usuario = Eudaimonia.objects.filter(usuario=request.user).select_related('area')
+
+    # Organizar por prioridad
+    areas_alta = areas_usuario.filter(prioridad='alta')
+    areas_media = areas_usuario.filter(prioridad='media')
+    areas_baja = areas_usuario.filter(prioridad='baja')
+
+    context = {
+        'areas_alta': areas_alta,
+        'areas_media': areas_media,
+        'areas_baja': areas_baja,
+        'total_areas': areas_usuario.count()
+    }
+    return render(request, 'diario/eudaimonia_dashboard.html', context)
+
+
+@login_required
+def eudaimonia_area_detalle(request, area_id):
+    """Detalle de un área de vida específica."""
+    eudaimonia = get_object_or_404(Eudaimonia, id=area_id, usuario=request.user)
+    trimestres = TrimestreEudaimonia.objects.filter(eudaimonia=eudaimonia).order_by('-año', '-trimestre')
+
+    context = {
+        'eudaimonia': eudaimonia,
+        'trimestres': trimestres
+    }
+    return render(request, 'diario/eudaimonia_detalle.html', context)
+
+
+@login_required
+def eudaimonia_actualizar(request):
+    """Actualizar puntuación y prioridad de un área de vida."""
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        eudaimonia = get_object_or_404(Eudaimonia, id=data['area_id'], usuario=request.user)
+
+        if 'puntuacion' in data:
+            eudaimonia.puntuacion = data['puntuacion']
+        if 'prioridad' in data:
+            eudaimonia.prioridad = data['prioridad']
+
+        eudaimonia.save()
+        return JsonResponse({'success': True})
+
+    return JsonResponse({'error': 'Método no permitido'}, status=405)
+
+
+# ========================================
+# ARETÉ - DESARROLLO PERSONAL
+# ========================================
+
+# diario/views.py
+
+# REEMPLAZA tu vista arete_dashboard con esta versión completa
+
+# REEMPLAZA tu vista arete_dashboard con esta versión final y completa
+
+@login_required
+def arete_dashboard(request):
+    """Dashboard de la sección Areté."""
+    # Obtener todos los ejercicios del usuario para los cálculos totales
+    todos_los_ejercicios = EjercicioArete.objects.filter(usuario=request.user).order_by('numero_orden')
+    total_ejercicios = todos_los_ejercicios.count()
+    completados = todos_los_ejercicios.filter(estado='completado').count()
+    a_repetir_count = todos_los_ejercicios.filter(estado='a_repetir').count()
+
+    # Calcular el número de ejercicios pendientes
+    pendientes = total_ejercicios - completados - a_repetir_count
+
+    # Calcular el ángulo para el círculo de progreso en grados
+    progreso_deg = 0
+    if total_ejercicios > 0:
+        progreso_deg = int((completados * 360) / total_ejercicios)
+
+    # Calcular el porcentaje de completitud
+    porcentaje_completado = 0
+    if total_ejercicios > 0:
+        porcentaje_completado = int((completados * 100) / total_ejercicios)
+
+    # --- INICIO DE LA NUEVA MODIFICACIÓN ---
+    # Encontrar el próximo ejercicio pendiente
+    proximo_ejercicio = todos_los_ejercicios.filter(estado='sin_completar').first()
+    # --- FIN DE LA NUEVA MODIFICACIÓN ---
+
+    # Aplicar filtros para la lista que se muestra en la página
+    ejercicios_filtrados = todos_los_ejercicios
+    filtro = request.GET.get('filtro', 'todos')
+    if filtro == 'completados':
+        ejercicios_filtrados = ejercicios_filtrados.filter(estado='completado')
+    elif filtro == 'a_repetir':
+        ejercicios_filtrados = ejercicios_filtrados.filter(estado='a_repetir')
+    elif filtro == 'sin_completar':
+        ejercicios_filtrados = ejercicios_filtrados.filter(estado='sin_completar')
+
+    context = {
+        'ejercicios': ejercicios_filtrados,
+        'filtro_actual': filtro,
+        'total_ejercicios': total_ejercicios,
+        'completados': completados,
+        'pendientes': pendientes,
+        'a_repetir_count': a_repetir_count,
+        'progreso_deg': progreso_deg,
+        'porcentaje_completado': porcentaje_completado,
+        'proximo_ejercicio': proximo_ejercicio,  # <-- Pasamos el próximo ejercicio a la plantilla
+    }
+    return render(request, 'diario/arete_dashboard.html', context)
+
+
+@login_required
+def arete_ejercicio_actualizar(request, ejercicio_id):
+    """Actualizar estado de un ejercicio Areté."""
+    ejercicio = get_object_or_404(EjercicioArete, id=ejercicio_id, usuario=request.user)
+
+    if request.method == 'POST':
+        data = request.POST
+        ejercicio.estado = data.get('estado')
+        if data.get('reflexiones'):
+            ejercicio.reflexiones = data.get('reflexiones')
+
+        if ejercicio.estado == 'completado' and not ejercicio.fecha_completado:
+            ejercicio.fecha_completado = timezone.now()
+
+        ejercicio.save()
+        messages.success(request, 'Ejercicio actualizado correctamente.')
+        return redirect('arete_dashboard')
+
+    context = {'ejercicio': ejercicio}
+    return render(request, 'diario/arete_ejercicio_detalle.html', context)
+
+
+# ========================================
+# GNOSIS - GESTIÓN DE CONOCIMIENTO
+# ========================================
+
+@login_required
+def gnosis_dashboard(request):
+    """Dashboard de la sección Gnosis."""
+    contenido = Gnosis.objects.filter(usuario=request.user)
+
+    # Filtros
+    categoria = request.GET.get('categoria', 'todos')
+    if categoria != 'todos':
+        contenido = contenido.filter(categoria=categoria)
+
+    # Búsqueda
+    busqueda = request.GET.get('busqueda', '')
+    if busqueda:
+        contenido = contenido.filter(
+            Q(titulo__icontains=busqueda) |
+            Q(autor__icontains=busqueda) |
+            Q(tematica__icontains=busqueda)
+        )
+
+    context = {
+        'contenido': contenido.order_by('-fecha_creacion'),
+        'categoria_actual': categoria,
+        'busqueda_actual': busqueda,
+        'categorias': Gnosis.CATEGORIA_CHOICES,
+        'total_contenido': Gnosis.objects.filter(usuario=request.user).count()
+    }
+    return render(request, 'diario/gnosis_dashboard.html', context)
+
+
+@login_required
+def gnosis_crear(request):
+    """Crear nuevo contenido en Gnosis."""
+    if request.method == 'POST':
+        data = request.POST
+        Gnosis.objects.create(
+            usuario=request.user,
+            titulo=data.get('titulo'),
+            categoria=data.get('categoria'),
+            estado=data.get('estado', 'no_empezado'),
+            tematica=data.get('tematica', ''),
+            autor=data.get('autor', ''),
+            url=data.get('url', ''),
+            notas=data.get('notas', '')
+        )
+        messages.success(request, 'Contenido agregado correctamente.')
+        return redirect('gnosis_dashboard')
+
+    context = {
+        'categorias': Gnosis.CATEGORIA_CHOICES,
+        'estados': Gnosis.ESTADO_CHOICES,
+        'puntuaciones': Gnosis.PUNTUACION_CHOICES
+    }
+    return render(request, 'diario/gnosis_crear.html', context)
+
+
+# ========================================
+# VIRES - SALUD Y DEPORTE
+# ========================================
+
+@login_required
+def vires_dashboard(request):
+    """Dashboard de la sección Vires."""
+    fecha_hoy = timezone.now().date()
+    seguimiento_hoy = SeguimientoVires.objects.filter(
+        usuario=request.user,
+        fecha=fecha_hoy
+    ).first()
+
+    # Entrenamientos de la semana actual
+    inicio_semana = fecha_hoy - timedelta(days=fecha_hoy.weekday())
+    entrenamientos_semana = EntrenamientoSemanal.objects.filter(
+        usuario=request.user,
+        semana_inicio=inicio_semana
+    )
+
+    # Últimos seguimientos
+    seguimientos_recientes = SeguimientoVires.objects.filter(
+        usuario=request.user
+    ).order_by('-fecha')[:7]
+
+    context = {
+        'seguimiento_hoy': seguimiento_hoy,
+        'entrenamientos_semana': entrenamientos_semana,
+        'seguimientos_recientes': seguimientos_recientes,
+        'fecha_hoy': fecha_hoy
+    }
+    return render(request, 'diario/vires_dashboard.html', context)
+
+
+@login_required
+def vires_seguimiento_crear(request):
+    """Crear seguimiento diario de Vires."""
+    if request.method == 'POST':
+        data = request.POST
+        fecha = data.get('fecha', timezone.now().date())
+
+        seguimiento, created = SeguimientoVires.objects.get_or_create(
+            usuario=request.user,
+            fecha=fecha,
+            defaults={
+                'peso': data.get('peso') if data.get('peso') else None,
+                'grasa_corporal': data.get('grasa_corporal') if data.get('grasa_corporal') else None,
+                'masa_muscular': data.get('masa_muscular') if data.get('masa_muscular') else None,
+                'entrenamiento_realizado': data.get('entrenamiento_realizado') == 'on',
+                'alimentacion_saludable': data.get('alimentacion_saludable') == 'on',
+                'hidratacion_adecuada': data.get('hidratacion_adecuada') == 'on',
+                'descanso_suficiente': data.get('descanso_suficiente') == 'on',
+                'notas': data.get('notas', '')
+            }
+        )
+
+        if not created:
+            # Actualizar si ya existe
+            seguimiento.peso = data.get('peso') if data.get('peso') else seguimiento.peso
+            seguimiento.grasa_corporal = data.get('grasa_corporal') if data.get(
+                'grasa_corporal') else seguimiento.grasa_corporal
+            seguimiento.masa_muscular = data.get('masa_muscular') if data.get(
+                'masa_muscular') else seguimiento.masa_muscular
+            seguimiento.entrenamiento_realizado = data.get('entrenamiento_realizado') == 'on'
+            seguimiento.alimentacion_saludable = data.get('alimentacion_saludable') == 'on'
+            seguimiento.hidratacion_adecuada = data.get('hidratacion_adecuada') == 'on'
+            seguimiento.descanso_suficiente = data.get('descanso_suficiente') == 'on'
+            seguimiento.notas = data.get('notas', '')
+            seguimiento.save()
+
+        messages.success(request, 'Seguimiento guardado correctamente.')
+        return redirect('vires_dashboard')
+
+    return render(request, 'diario/vires_seguimiento_form.html')
+
+
+# ========================================
+# KAIROS - CALENDARIO Y EVENTOS
+# ========================================
+
+@login_required
+def kairos_dashboard(request):
+    """Dashboard de la sección Kairos - Calendario."""
+    fecha_actual = timezone.now().date()
+    mes_actual = request.GET.get('mes', fecha_actual.month)
+    año_actual = request.GET.get('año', fecha_actual.year)
+
+    # Eventos del mes
+    eventos_mes = EventoKairos.objects.filter(
+        usuario=request.user,
+        fecha_inicio__month=mes_actual,
+        fecha_inicio__year=año_actual
+    ).order_by('fecha_inicio')
+
+    # Eventos de hoy
+    eventos_hoy = EventoKairos.objects.filter(
+        usuario=request.user,
+        fecha_inicio__date=fecha_actual
+    ).order_by('fecha_inicio')
+
+    context = {
+        'eventos_mes': eventos_mes,
+        'eventos_hoy': eventos_hoy,
+        'mes_actual': int(mes_actual),
+        'año_actual': int(año_actual),
+        'fecha_actual': fecha_actual
+    }
+    return render(request, 'diario/kairos_dashboard.html', context)
+
+
+@login_required
+def kairos_evento_crear(request):
+    """Crear nuevo evento en Kairos."""
+    if request.method == 'POST':
+        data = request.POST
+        EventoKairos.objects.create(
+            usuario=request.user,
+            titulo=data.get('titulo'),
+            descripcion=data.get('descripcion', ''),
+            tipo=data.get('tipo', 'personal'),
+            fecha_inicio=data.get('fecha_inicio'),
+            fecha_fin=data.get('fecha_fin') if data.get('fecha_fin') else None,
+            todo_el_dia=data.get('todo_el_dia') == 'on',
+            recordatorio=data.get('recordatorio') == 'on',
+            color=data.get('color', '#00ffff')
+        )
+        messages.success(request, 'Evento creado correctamente.')
+        return redirect('kairos_dashboard')
+
+    context = {
+        'tipos_evento': EventoKairos.TIPO_CHOICES
+    }
+    return render(request, 'diario/kairos_evento_form.html', context)
+
+
+@login_required
+def kairos_eventos_api(request):
+    """API para obtener eventos en formato JSON para el calendario."""
+    eventos = EventoKairos.objects.filter(usuario=request.user)
+
+    eventos_json = []
+    for evento in eventos:
+        eventos_json.append({
+            'id': evento.id,
+            'title': evento.titulo,
+            'start': evento.fecha_inicio.isoformat(),
+            'end': evento.fecha_fin.isoformat() if evento.fecha_fin else None,
+            'color': evento.color,
+            'allDay': evento.todo_el_dia,
+            'description': evento.descripcion
+        })
+
+    return JsonResponse(eventos_json, safe=False)
+
+
+# Pega esto en la sección PROSOCHE de tu views.py
+
+@login_required
+def habito_prosoche_crear(request):
+    """Crea un nuevo hábito para un diario Prosoche existente."""
+    if request.method == 'POST':
+        data = request.POST
+        prosoche_id = data.get('prosoche_id')
+        nombre_habito = data.get('nombre')
+        descripcion_habito = data.get('descripcion', '')
+
+        if not prosoche_id or not nombre_habito:
+            messages.error(request, 'Faltan datos para crear el hábito.')
+            return redirect('prosoche_dashboard')
+
+        prosoche = get_object_or_404(Prosoche, id=prosoche_id, usuario=request.user)
+
+        HabitoProsoche.objects.create(
+            prosoche=prosoche,
+            nombre=nombre_habito,
+            descripcion=descripcion_habito
+        )
+
+        messages.success(request, f'Hábito "{nombre_habito}" creado correctamente.')
+        return redirect('prosoche_dashboard')
+
+    return redirect('prosoche_dashboard')
+
+
+# Pega esto en la sección EUDAIMONIA de tu views.py
+
+@login_required
+def eudaimonia_crear_area(request):
+    """Crea una nueva área de vida (Eudaimonia) para el usuario."""
+    if request.method == 'POST':
+        data = request.POST
+        area_vida_id = data.get('area_vida')
+        puntuacion = data.get('puntuacion', 5)
+        prioridad = data.get('prioridad', 'media')
+
+        if not area_vida_id:
+            messages.error(request, 'Debes seleccionar un área de vida.')
+            return redirect('eudaimonia_dashboard')
+
+        area_vida = get_object_or_404(AreaVida, id=area_vida_id)
+
+        # Verificar si el usuario ya tiene esta área
+        if Eudaimonia.objects.filter(usuario=request.user, area=area_vida).exists():
+            messages.warning(request, f'Ya tienes el área "{area_vida.nombre}" en tu dashboard.')
+            return redirect('eudaimonia_dashboard')
+
+        Eudaimonia.objects.create(
+            usuario=request.user,
+            area=area_vida,
+            puntuacion=puntuacion,
+            prioridad=prioridad
+        )
+        messages.success(request, f'Área "{area_vida.nombre}" añadida a tu dashboard.')
+        return redirect('eudaimonia_dashboard')
+
+    # Si se accede por GET, mostrar el formulario de creación
+    # Necesitarás pasar las áreas de vida que aún no han sido añadidas por el usuario.
+    areas_asignadas_ids = Eudaimonia.objects.filter(usuario=request.user).values_list('area_id', flat=True)
+    areas_disponibles = AreaVida.objects.exclude(id__in=areas_asignadas_ids)
+
+    context = {
+        'areas_disponibles': areas_disponibles
+    }
+    # Asegúrate de tener una plantilla llamada 'eudaimonia_crear_area.html'
+    return render(request, 'diario/eudaimonia/crear_area.html', context)
+
+
+# ========================================
+# VISTAS PROSOCHE ACTUALIZADAS - Basadas en Notion
+# ========================================
+
+from django.shortcuts import render, get_object_or_404, redirect
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.http import JsonResponse
+from django.utils import timezone
+from django.db.models import Count, Q
+from datetime import datetime, timedelta
+import json
+import calendar
+
+from .models import ProsocheMes, ProsocheSemana, ProsocheDiario, ProsocheHabito, ProsocheHabitoDia
+
+
+@login_required
+def prosoche_dashboard(request):
+    """Dashboard principal de Prosoche con estructura de Notion"""
+    # Obtener mes y año actual
+    hoy = timezone.now()
+    mes_actual = hoy.strftime('%B')  # "March", "April", etc.
+    año_actual = hoy.year
+
+    # Obtener o crear el mes actual
+    prosoche_mes, created = ProsocheMes.objects.get_or_create(
+        usuario=request.user,
+        mes=mes_actual,
+        año=año_actual
+    )
+
+    # Crear semanas si no existen
+    for i in range(1, 6):  # Semanas 1-5
+        ProsocheSemana.objects.get_or_create(
+            prosoche_mes=prosoche_mes,
+            numero_semana=i
+        )
+
+    # Obtener datos para el dashboard
+    semanas = ProsocheSemana.objects.filter(prosoche_mes=prosoche_mes).order_by('numero_semana')
+    entradas_recientes = ProsocheDiario.objects.filter(prosoche_mes=prosoche_mes).order_by('-fecha')[:5]
+    habitos = ProsocheHabito.objects.filter(prosoche_mes=prosoche_mes)
+
+    # Obtener meses anteriores para el historial
+    meses_anteriores = ProsocheMes.objects.filter(
+        usuario=request.user
+    ).exclude(id=prosoche_mes.id).order_by('-año', '-mes')[:6]
+
+    # Generar días del mes para la tabla de hábitos
+    dias_mes = list(range(1, calendar.monthrange(año_actual, hoy.month)[1] + 1))
+
+    # Preparar datos de hábitos con seguimiento diario
+    habitos_con_dias = []
+    for habito in habitos:
+        dias_habito = []
+        for dia in dias_mes:
+            dia_obj, _ = ProsocheHabitoDia.objects.get_or_create(
+                habito=habito,
+                dia=dia
+            )
+            dias_habito.append(dia_obj)
+
+        habitos_con_dias.append({
+            'habito': habito,
+            'dias': dias_habito,
+            'completados': sum(1 for d in dias_habito if d.completado),
+            'porcentaje': round(
+                (sum(1 for d in dias_habito if d.completado) / len(dias_habito)) * 100) if dias_habito else 0
+        })
+
+    context = {
+        'prosoche_mes': prosoche_mes,
+        'semanas': semanas,
+        'entradas_recientes': entradas_recientes,
+        'habitos_con_dias': habitos_con_dias,
+        'dias_mes': dias_mes,
+        'meses_anteriores': meses_anteriores,
+        'mes_actual': mes_actual,
+        'año_actual': año_actual,
+        'dia_actual': hoy.day
+    }
+
+    return render(request, 'diario/prosoche_dashboard.html', context)
+
+
+@login_required
+def prosoche_actualizar_objetivos(request):
+    """Actualizar objetivos mensuales y semanales"""
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        prosoche_id = data.get('prosoche_id')
+        tipo = data.get('tipo')  # 'mensual' o 'semanal'
+
+        prosoche_mes = get_object_or_404(ProsocheMes, id=prosoche_id, usuario=request.user)
+
+        if tipo == 'mensual':
+            # Actualizar objetivos mensuales
+            prosoche_mes.objetivo_mes_1 = data.get('objetivo_1', '')
+            prosoche_mes.objetivo_mes_2 = data.get('objetivo_2', '')
+            prosoche_mes.objetivo_mes_3 = data.get('objetivo_3', '')
+            prosoche_mes.objetivo_mes_1_completado = data.get('objetivo_1_completado', False)
+            prosoche_mes.objetivo_mes_2_completado = data.get('objetivo_2_completado', False)
+            prosoche_mes.objetivo_mes_3_completado = data.get('objetivo_3_completado', False)
+            prosoche_mes.save()
+
+        elif tipo == 'semanal':
+            # Actualizar objetivos semanales
+            semana_num = data.get('semana')
+            semana = get_object_or_404(ProsocheSemana, prosoche_mes=prosoche_mes, numero_semana=semana_num)
+
+            semana.objetivo_1 = data.get('objetivo_1', '')
+            semana.objetivo_2 = data.get('objetivo_2', '')
+            semana.objetivo_3 = data.get('objetivo_3', '')
+            semana.objetivo_1_completado = data.get('objetivo_1_completado', False)
+            semana.objetivo_2_completado = data.get('objetivo_2_completado', False)
+            semana.objetivo_3_completado = data.get('objetivo_3_completado', False)
+            semana.save()
+
+        return JsonResponse({'success': True})
+
+    return JsonResponse({'error': 'Método no permitido'}, status=405)
+
+
+@login_required
+def prosoche_nueva_entrada(request):
+    """Crear nueva entrada del diario"""
+    if request.method == 'POST':
+        prosoche_id = request.POST.get('prosoche_id')
+        prosoche_mes = get_object_or_404(ProsocheMes, id=prosoche_id, usuario=request.user)
+
+        fecha_str = request.POST.get('fecha')
+        fecha = datetime.strptime(fecha_str, '%Y-%m-%d').date()
+
+        entrada, created = ProsocheDiario.objects.get_or_create(
+            prosoche_mes=prosoche_mes,
+            fecha=fecha,
+            defaults={
+                'entrada': request.POST.get('entrada', ''),
+                'estado_animo': int(request.POST.get('estado_animo', 3)),
+                'etiquetas': request.POST.get('etiquetas', '')
+            }
+        )
+
+        if not created:
+            entrada.entrada = request.POST.get('entrada', '')
+            entrada.estado_animo = int(request.POST.get('estado_animo', 3))
+            entrada.etiquetas = request.POST.get('etiquetas', '')
+            entrada.save()
+
+        messages.success(request, 'Entrada del diario guardada correctamente.')
+        return redirect('prosoche_dashboard')
+
+    return JsonResponse({'error': 'Método no permitido'}, status=405)
+
+
+@login_required
+def prosoche_crear_habito(request):
+    """Crear nuevo hábito"""
+    if request.method == 'POST':
+        prosoche_id = request.POST.get('prosoche_id')
+        prosoche_mes = get_object_or_404(ProsocheMes, id=prosoche_id, usuario=request.user)
+
+        nombre = request.POST.get('nombre')
+        if nombre:
+            habito, created = ProsocheHabito.objects.get_or_create(
+                prosoche_mes=prosoche_mes,
+                nombre=nombre,
+                defaults={
+                    'descripcion': request.POST.get('descripcion', ''),
+                    'color': request.POST.get('color', '#00ffff')
+                }
+            )
+
+            if created:
+                messages.success(request, f'Hábito "{nombre}" creado correctamente.')
+            else:
+                messages.info(request, f'El hábito "{nombre}" ya existe.')
+
+        return redirect('prosoche_dashboard')
+
+    return JsonResponse({'error': 'Método no permitido'}, status=405)
+
+
+@login_required
+def prosoche_toggle_habito(request):
+    """Marcar/desmarcar hábito para un día específico"""
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        habito_id = data.get('habito_id')
+        dia = data.get('dia')
+
+        habito = get_object_or_404(ProsocheHabito, id=habito_id, prosoche_mes__usuario=request.user)
+
+        dia_habito, created = ProsocheHabitoDia.objects.get_or_create(
+            habito=habito,
+            dia=dia
+        )
+
+        dia_habito.completado = not dia_habito.completado
+        dia_habito.save()
+
+        return JsonResponse({
+            'success': True,
+            'completado': dia_habito.completado
+        })
+
+    return JsonResponse({'error': 'Método no permitido'}, status=405)
+
+
+@login_required
+def prosoche_revision_mes(request):
+    """Actualizar revisión del mes"""
+    if request.method == 'POST':
+        prosoche_id = request.POST.get('prosoche_id')
+        prosoche_mes = get_object_or_404(ProsocheMes, id=prosoche_id, usuario=request.user)
+
+        prosoche_mes.logro_principal = request.POST.get('logro_principal', '')
+        prosoche_mes.obstaculo_principal = request.POST.get('obstaculo_principal', '')
+        prosoche_mes.aprendizaje_principal = request.POST.get('aprendizaje_principal', '')
+        prosoche_mes.momento_felicidad = request.POST.get('momento_felicidad', '')
+        prosoche_mes.save()
+
+        messages.success(request, 'Revisión del mes guardada correctamente.')
+        return redirect('prosoche_dashboard')
+
+    return JsonResponse({'error': 'Método no permitido'}, status=405)
+
+
+@login_required
+def prosoche_mes_anterior(request, mes, año):
+    """Ver mes anterior específico"""
+    prosoche_mes = get_object_or_404(
+        ProsocheMes,
+        usuario=request.user,
+        mes=mes,
+        año=año
+    )
+
+    semanas = ProsocheSemana.objects.filter(prosoche_mes=prosoche_mes).order_by('numero_semana')
+    entradas = ProsocheDiario.objects.filter(prosoche_mes=prosoche_mes).order_by('fecha')
+    habitos = ProsocheHabito.objects.filter(prosoche_mes=prosoche_mes)
+
+    # Preparar datos de hábitos con seguimiento
+    dias_mes = list(range(1, 32))  # Máximo 31 días
+    habitos_con_dias = []
+
+    for habito in habitos:
+        dias_habito = []
+        for dia in dias_mes:
+            try:
+                dia_obj = ProsocheHabitoDia.objects.get(habito=habito, dia=dia)
+                dias_habito.append(dia_obj)
+            except ProsocheHabitoDia.DoesNotExist:
+                dias_habito.append(None)
+
+        habitos_con_dias.append({
+            'habito': habito,
+            'dias': dias_habito
+        })
+
+    context = {
+        'prosoche_mes': prosoche_mes,
+        'semanas': semanas,
+        'entradas': entradas,
+        'habitos_con_dias': habitos_con_dias,
+        'dias_mes': dias_mes,
+        'es_mes_anterior': True
+    }
+
+    return render(request, 'diario/prosoche_mes_anterior.html', context)
+
+
+# ========================================
+# VISTAS PROSOCHE ACTUALIZADAS - Basadas en Notion
+# ========================================
+
+from django.shortcuts import render, get_object_or_404, redirect
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.http import JsonResponse
+from django.utils import timezone
+from django.db.models import Count, Q
+from datetime import datetime, timedelta
+import json
+import calendar
+
+from .models import ProsocheMes, ProsocheSemana, ProsocheDiario, ProsocheHabito, ProsocheHabitoDia
+from datetime import datetime, date
+from django.urls import reverse
+
+
+@login_required
+def prosoche_dashboard(request):
+    """Dashboard principal de Prosoche con estructura de Notion"""
+    # Obtener mes y año actual
+    hoy = timezone.now()
+    mes_actual = hoy.strftime('%B')  # "March", "April", etc.
+    año_actual = hoy.year
+
+    # Obtener o crear el mes actual
+    prosoche_mes, created = ProsocheMes.objects.get_or_create(
+        usuario=request.user,
+        mes=mes_actual,
+        año=año_actual
+    )
+
+    # Crear semanas si no existen
+    for i in range(1, 6):  # Semanas 1-5
+        ProsocheSemana.objects.get_or_create(
+            prosoche_mes=prosoche_mes,
+            numero_semana=i
+        )
+
+    # Obtener datos para el dashboard
+    semanas = ProsocheSemana.objects.filter(prosoche_mes=prosoche_mes).order_by('numero_semana')
+    entradas_recientes = ProsocheDiario.objects.filter(prosoche_mes=prosoche_mes).order_by('-fecha')[:5]
+    habitos = ProsocheHabito.objects.filter(prosoche_mes=prosoche_mes)
+
+    # Obtener meses anteriores para el historial
+    meses_anteriores = ProsocheMes.objects.filter(
+        usuario=request.user
+    ).exclude(id=prosoche_mes.id).order_by('-año', '-mes')[:6]
+
+    # Generar días del mes para la tabla de hábitos
+    dias_mes = list(range(1, calendar.monthrange(año_actual, hoy.month)[1] + 1))
+
+    # Preparar datos de hábitos con seguimiento diario
+    habitos_con_dias = []
+    for habito in habitos:
+        dias_habito = []
+        for dia in dias_mes:
+            dia_obj, _ = ProsocheHabitoDia.objects.get_or_create(
+                habito=habito,
+                dia=dia
+            )
+            dias_habito.append(dia_obj)
+
+        habitos_con_dias.append({
+            'habito': habito,
+            'dias': dias_habito,
+            'completados': sum(1 for d in dias_habito if d.completado),
+            'porcentaje': round(
+                (sum(1 for d in dias_habito if d.completado) / len(dias_habito)) * 100) if dias_habito else 0
+        })
+
+    context = {
+        'prosoche_mes': prosoche_mes,
+        'semanas': semanas,
+        'entradas_recientes': entradas_recientes,
+        'habitos_con_dias': habitos_con_dias,
+        'dias_mes': dias_mes,
+        'meses_anteriores': meses_anteriores,
+        'mes_actual': mes_actual,
+        'año_actual': año_actual,
+        'dia_actual': hoy.day
+    }
+
+    return render(request, 'diario/prosoche_dashboard.html', context)
+
+
+@login_required
+def prosoche_actualizar_objetivos(request):
+    """Actualizar objetivos mensuales y semanales"""
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        prosoche_id = data.get('prosoche_id')
+        tipo = data.get('tipo')  # 'mensual' o 'semanal'
+
+        prosoche_mes = get_object_or_404(ProsocheMes, id=prosoche_id, usuario=request.user)
+
+        if tipo == 'mensual':
+            # Actualizar objetivos mensuales
+            prosoche_mes.objetivo_mes_1 = data.get('objetivo_1', '')
+            prosoche_mes.objetivo_mes_2 = data.get('objetivo_2', '')
+            prosoche_mes.objetivo_mes_3 = data.get('objetivo_3', '')
+            prosoche_mes.objetivo_mes_1_completado = data.get('objetivo_1_completado', False)
+            prosoche_mes.objetivo_mes_2_completado = data.get('objetivo_2_completado', False)
+            prosoche_mes.objetivo_mes_3_completado = data.get('objetivo_3_completado', False)
+            prosoche_mes.save()
+
+        elif tipo == 'semanal':
+            # Actualizar objetivos semanales
+            semana_num = data.get('semana')
+            semana = get_object_or_404(ProsocheSemana, prosoche_mes=prosoche_mes, numero_semana=semana_num)
+
+            semana.objetivo_1 = data.get('objetivo_1', '')
+            semana.objetivo_2 = data.get('objetivo_2', '')
+            semana.objetivo_3 = data.get('objetivo_3', '')
+            semana.objetivo_1_completado = data.get('objetivo_1_completado', False)
+            semana.objetivo_2_completado = data.get('objetivo_2_completado', False)
+            semana.objetivo_3_completado = data.get('objetivo_3_completado', False)
+            semana.save()
+
+        return JsonResponse({'success': True})
+
+    return JsonResponse({'error': 'Método no permitido'}, status=405)
+
+
+@login_required
+def prosoche_nueva_entrada(request):
+    """Crear nueva entrada del diario con todos los campos"""
+    # Obtener mes actual
+    hoy = timezone.now()
+    mes_actual = hoy.strftime('%B')
+    año_actual = hoy.year
+    
+    # Obtener o crear el mes actual
+    prosoche_mes, created = ProsocheMes.objects.get_or_create(
+        usuario=request.user,
+        mes=mes_actual,
+        año=año_actual
+    )
+    
+    if request.method == 'POST':
+        # Obtener fecha del formulario o usar hoy
+        fecha_str = request.POST.get('fecha')
+        if fecha_str:
+            try:
+                fecha = datetime.strptime(fecha_str, '%Y-%m-%d').date()
+            except:
+                fecha = hoy.date()
+        else:
+            fecha = hoy.date()
+
+        # Crear o actualizar entrada
+        entrada, created = ProsocheDiario.objects.get_or_create(
+            prosoche_mes=prosoche_mes,
+            fecha=fecha,
+            defaults={
+                'etiquetas': request.POST.get('etiquetas', ''),
+                'estado_animo': int(request.POST.get('estado_animo', 3)),
+                'persona_quiero_ser': request.POST.get('persona_quiero_ser', ''),
+                'gratitud_1': request.POST.get('gratitud_1', ''),
+                'gratitud_2': request.POST.get('gratitud_2', ''),
+                'gratitud_3': request.POST.get('gratitud_3', ''),
+                'gratitud_4': request.POST.get('gratitud_4', ''),
+                'gratitud_5': request.POST.get('gratitud_5', ''),
+                'podcast_libro_dia': request.POST.get('podcast_libro_dia', ''),
+                'felicidad': request.POST.get('felicidad', ''),
+                'que_ha_ido_bien': request.POST.get('que_ha_ido_bien', ''),
+                'que_puedo_mejorar': request.POST.get('que_puedo_mejorar', ''),
+                'reflexiones_dia': request.POST.get('reflexiones_dia', ''),
+                'tareas_dia': request.POST.get('tareas_dia', '[]')  # JSON string
+            }
+        )
+
+        if not created:
+            # Actualizar entrada existente
+            entrada.etiquetas = request.POST.get('etiquetas', '')
+            entrada.estado_animo = int(request.POST.get('estado_animo', 3))
+            entrada.persona_quiero_ser = request.POST.get('persona_quiero_ser', '')
+            entrada.gratitud_1 = request.POST.get('gratitud_1', '')
+            entrada.gratitud_2 = request.POST.get('gratitud_2', '')
+            entrada.gratitud_3 = request.POST.get('gratitud_3', '')
+            entrada.gratitud_4 = request.POST.get('gratitud_4', '')
+            entrada.gratitud_5 = request.POST.get('gratitud_5', '')
+            entrada.podcast_libro_dia = request.POST.get('podcast_libro_dia', '')
+            entrada.felicidad = request.POST.get('felicidad', '')
+            entrada.que_ha_ido_bien = request.POST.get('que_ha_ido_bien', '')
+            entrada.que_puedo_mejorar = request.POST.get('que_puedo_mejorar', '')
+            entrada.reflexiones_dia = request.POST.get('reflexiones_dia', '')
+            entrada.tareas_dia = request.POST.get('tareas_dia', '[]')
+            entrada.save()
+
+        messages.success(request, 'Entrada del diario guardada correctamente.')
+        return redirect('prosoche_dashboard')
+    
+    else:
+        # GET request - mostrar formulario
+        fecha = request.GET.get('fecha', hoy.date())
+        
+        # Buscar entrada existente para esta fecha
+        entrada_existente = ProsocheDiario.objects.filter(
+            prosoche_mes=prosoche_mes,
+            fecha=fecha
+        ).first()
+        
+        context = {
+            'prosoche_mes': prosoche_mes,
+            'fecha': fecha,
+            'entrada_existente': entrada_existente
+        }
+        
+        return render(request, 'diario/prosoche_entrada_form.html', context)@login_required
+def prosoche_toggle_habito(request):
+    """Marcar/desmarcar hábito para un día específico"""
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        habito_id = data.get('habito_id')
+        dia = data.get('dia')
+
+        habito = get_object_or_404(ProsocheHabito, id=habito_id, prosoche_mes__usuario=request.user)
+
+        dia_habito, created = ProsocheHabitoDia.objects.get_or_create(
+            habito=habito,
+            dia=dia
+        )
+
+        dia_habito.completado = not dia_habito.completado
+        dia_habito.save()
+
+        return JsonResponse({
+            'success': True,
+            'completado': dia_habito.completado
+        })
+
+    return JsonResponse({'error': 'Método no permitido'}, status=405)
+
+
+@login_required
+def prosoche_revision_mes(request):
+    """Actualizar revisión del mes"""
+    if request.method == 'POST':
+        prosoche_id = request.POST.get('prosoche_id')
+        prosoche_mes = get_object_or_404(ProsocheMes, id=prosoche_id, usuario=request.user)
+
+        prosoche_mes.logro_principal = request.POST.get('logro_principal', '')
+        prosoche_mes.obstaculo_principal = request.POST.get('obstaculo_principal', '')
+        prosoche_mes.aprendizaje_principal = request.POST.get('aprendizaje_principal', '')
+        prosoche_mes.momento_felicidad = request.POST.get('momento_felicidad', '')
+        prosoche_mes.save()
+
+        messages.success(request, 'Revisión del mes guardada correctamente.')
+        return redirect('prosoche_dashboard')
+
+    return JsonResponse({'error': 'Método no permitido'}, status=405)
+
+
+@login_required
+def prosoche_mes_anterior(request, mes, año):
+    """Ver mes anterior específico"""
+    prosoche_mes = get_object_or_404(
+        ProsocheMes,
+        usuario=request.user,
+        mes=mes,
+        año=año
+    )
+
+    semanas = ProsocheSemana.objects.filter(prosoche_mes=prosoche_mes).order_by('numero_semana')
+    entradas = ProsocheDiario.objects.filter(prosoche_mes=prosoche_mes).order_by('fecha')
+    habitos = ProsocheHabito.objects.filter(prosoche_mes=prosoche_mes)
+
+    # Preparar datos de hábitos con seguimiento
+    dias_mes = list(range(1, 32))  # Máximo 31 días
+    habitos_con_dias = []
+
+    for habito in habitos:
+        dias_habito = []
+        for dia in dias_mes:
+            try:
+                dia_obj = ProsocheHabitoDia.objects.get(habito=habito, dia=dia)
+                dias_habito.append(dia_obj)
+            except ProsocheHabitoDia.DoesNotExist:
+                dias_habito.append(None)
+
+        habitos_con_dias.append({
+            'habito': habito,
+            'dias': dias_habito
+        })
+
+    context = {
+        'prosoche_mes': prosoche_mes,
+        'semanas': semanas,
+        'entradas': entradas,
+        'habitos_con_dias': habitos_con_dias,
+        'dias_mes': dias_mes,
+        'es_mes_anterior': True
+    }
+
+    return render(request, 'diario/prosoche_mes_anterior.html', context)

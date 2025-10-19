@@ -1,0 +1,337 @@
+{% extends 'diario/base_stoic.html' %}
+{% load static %}
+
+{% block title %}Gnosis - Diario Estoico{% endblock %}
+
+{% block extra_css %}
+<style>
+    .filtro-btn.active {
+        background-color: var(--primary-color);
+        color: white;
+        border-color: var(--primary-color);
+    }
+    .contenido-card {
+        display: flex;
+        flex-direction: column;
+    }
+    .contenido-card .card-footer {
+        margin-top: auto;
+        background: transparent;
+        border-top: 1px solid rgba(0,0,0,0.05);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="fade-in-up">
+    <!-- Header de Gnosis -->
+    <div class="card shadow-soft mb-4">
+        <div class="card-body p-4">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h1 class="text-gradient mb-2"><i class="fas fa-brain me-2"></i>Gnosis - Gestión de Conocimiento</h1>
+                    <blockquote class="border-0 p-0 m-0 bg-transparent">
+                        <p class="lead mb-1">"El comienzo de la sabiduría es el silencio."</p>
+                        <footer>— Pitágoras</footer>
+                    </blockquote>
+                </div>
+                <div class="col-md-4 text-center text-md-end mt-3 mt-md-0">
+                    <img src="{% static 'images/pitagoras-gnosis.png' %}" alt="Pitágoras" class="img-fluid" style="max-height: 100px; opacity: 0.7; filter: grayscale(50%);">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Estadísticas -->
+    <div class="row mb-4 g-3">
+        <div class="col">
+            <div class="stat-item card card-body">
+                <div class="stat-number">{{ total_contenido }}</div>
+                <div class="stat-label">Total Contenido</div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="stat-item card card-body">
+                <div class="stat-number text-success">{{ finalizados_count|default:0 }}</div>
+                <div class="stat-label">Finalizados</div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="stat-item card card-body">
+                <div class="stat-number text-warning">{{ en_progreso_count|default:0 }}</div>
+                <div class="stat-label">En Progreso</div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="stat-item card card-body">
+                <div class="stat-number text-danger">{{ legendarios_count|default:0 }}</div>
+                <div class="stat-label">Legendarios</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtros y Búsqueda -->
+    <div class="card shadow-soft mb-4">
+        <div class="card-body">
+            <div class="row g-3 align-items-center">
+                <div class="col-lg-8">
+                    <div class="btn-group w-100" role="group">
+                        <button class="btn btn-outline-secondary filtro-btn {% if categoria_actual == 'todos' %}active{% endif %}" onclick="filtrarCategoria('todos')">Todos</button>
+                        <button class="btn btn-outline-secondary filtro-btn {% if categoria_actual == 'libro' %}active{% endif %}" onclick="filtrarCategoria('libro')">📚</button>
+                        <button class="btn btn-outline-secondary filtro-btn {% if categoria_actual == 'articulo' %}active{% endif %}" onclick="filtrarCategoria('articulo')">📰</button>
+                        <button class="btn btn-outline-secondary filtro-btn {% if categoria_actual == 'podcast' %}active{% endif %}" onclick="filtrarCategoria('podcast')">🎧</button>
+                        <button class="btn btn-outline-secondary filtro-btn {% if categoria_actual == 'video' %}active{% endif %}" onclick="filtrarCategoria('video')">🎥</button>
+                        <button class="btn btn-outline-secondary filtro-btn {% if categoria_actual == 'receta' %}active{% endif %}" onclick="filtrarCategoria('receta')">🍳</button>
+                    </div>
+                </div>
+                <div class="col-lg-4">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-search"></i></span>
+                        <input type="text" class="form-control" placeholder="Buscar..." value="{{ busqueda_actual }}" onkeyup="buscarContenido(this.value)">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Botón para agregar contenido -->
+    <div class="text-center mb-4">
+        <button class="btn btn-primary" onclick="showNuevoContenidoForm()"><i class="fas fa-plus me-2"></i>Agregar Nuevo Contenido</button>
+    </div>
+
+    <!-- Contenedor principal para la lista y la sidebar -->
+    <div class="row">
+        <!-- Columna de la Lista de Contenido -->
+        <div class="col-lg-9">
+            <div class="row row-cols-1 row-cols-md-2 g-4">
+                {% for item in contenido %}
+                <div class="col">
+                    <div class="card h-100 shadow-sm contenido-card">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <h5 class="card-title mb-0">{{ item.titulo }}</h5>
+                                <span class="badge rounded-pill
+                                    {% if item.categoria == 'libro' %}bg-warning text-dark
+                                    {% elif item.categoria == 'articulo' %}bg-info
+                                    {% elif item.categoria == 'podcast' %}bg-danger
+                                    {% elif item.categoria == 'video' %}bg-primary
+                                    {% elif item.categoria == 'receta' %}bg-success
+                                    {% else %}bg-secondary{% endif %}">
+                                    {{ item.get_categoria_display }}
+                                </span>
+                            </div>
+                            {% if item.autor %}<h6 class="card-subtitle mb-2 text-muted">{{ item.autor }}</h6>{% endif %}
+
+                            <div class="d-flex gap-2 align-items-center mb-2">
+                                <span class="badge small
+                                    {% if item.estado == 'finalizado' %}bg-light text-success border border-success
+                                    {% elif item.estado == 'en_progreso' %}bg-light text-warning border border-warning
+                                    {% else %}bg-light text-muted border{% endif %}">
+                                    {{ item.get_estado_display }}
+                                </span>
+                                {% if item.puntuacion %}
+                                <span class="star-rating small">
+                                    {% if item.puntuacion == 'legendario' %}<i class="fas fa-crown text-danger"></i>
+                                    {% elif item.puntuacion == 'muy_bueno' %}★★★★★
+                                    {% elif item.puntuacion == 'bueno' %}★★★★
+                                    {% elif item.puntuacion == 'regular' %}★★★
+                                    {% elif item.puntuacion == 'malo' %}★★{% endif %}
+                                </span>
+                                {% endif %}
+                            </div>
+
+                            {% if item.notas %}
+                            <p class="card-text small text-muted fst-italic">"{{ item.notas|truncatewords:15 }}"</p>
+                            {% endif %}
+                        </div>
+                        <div class="card-footer d-flex justify-content-between">
+                            {% if item.url %}<a href="{{ item.url }}" target="_blank" class="btn btn-sm btn-outline-primary">Abrir</a>{% endif %}
+                            <button class="btn btn-sm btn-outline-secondary" onclick="editarContenido({{ item.id }})">Editar</button>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="col-12">
+                    <div class="card text-center p-5">
+                        <i class="fas fa-brain fa-3x text-muted mb-3"></i>
+                        <h4 class="text-muted">Tu biblioteca está vacía</h4>
+                        <p>Comienza agregando libros, artículos o podcasts que quieras recordar y organizar.</p>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Columna de la Sidebar -->
+        <div class="col-lg-3">
+            <!-- Resumen por Estado -->
+            <div class="card shadow-soft mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-chart-pie me-2"></i>Estado del Contenido</h5>
+                </div>
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        Finalizados
+                        <span class="badge bg-success rounded-pill">{{ finalizados_count|default:0 }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        En Progreso
+                        <span class="badge bg-warning text-dark rounded-pill">{{ en_progreso_count|default:0 }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        Por Empezar
+                        <span class="badge bg-secondary rounded-pill">{{ no_empezado_count|default:0 }}</span>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Reflexión Pitagórica -->
+            <div class="card shadow-soft">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-lightbulb me-2"></i>Sabiduría Pitagórica</h5>
+                </div>
+                <div class="card-body">
+                    <blockquote class="blockquote">
+                        <p class="font-serif">"Educad a los niños y no será necesario castigar a los hombres."</p>
+                        <footer class="blockquote-footer">Pitágoras</footer>
+                    </blockquote>
+                </div>
+            </div>
+        </div>
+    </div> <!-- Fin del row principal -->
+
+    <!-- Formulario Nuevo Contenido (oculto) -->
+    <div id="nuevoContenidoForm" class="mt-4" style="display: none;">
+        <div class="card shadow-strong">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-plus me-2"></i>Agregar Nuevo Contenido</h5>
+            </div>
+            <div class="card-body">
+                <form method="post" action="{% url 'diario:gnosis_crear' %}">
+                    {% csrf_token %}
+                    <div class="row">
+                        <div class="col-md-8 mb-3">
+                            <label for="titulo" class="form-label">Título</label>
+                            <input id="titulo" type="text" name="titulo" class="form-control" placeholder="Título del contenido" required>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="categoria" class="form-label">Categoría</label>
+                            <select id="categoria" name="categoria" class="form-select" required>
+                                <option value="libro">📚 Libro</option>
+                                <option value="articulo">📰 Artículo</option>
+                                <option value="podcast">🎧 Podcast</option>
+                                <option value="video">🎥 Vídeo</option>
+                                <option value="receta">🍳 Receta</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="autor" class="form-label">Autor (opcional)</label>
+                            <input id="autor" type="text" name="autor" class="form-control" placeholder="Nombre del autor">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="tematica" class="form-label">Temática (opcional)</label>
+                            <input id="tematica" type="text" name="tematica" class="form-control" placeholder="Ej: Desarrollo personal">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="estado" class="form-label">Estado</label>
+                            <select id="estado" name="estado" class="form-select">
+                                <option value="no_empezado">No empezado</option>
+                                <option value="en_progreso">En progreso</option>
+                                <option value="finalizado">Finalizado</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="puntuacion" class="form-label">Puntuación (opcional)</label>
+                            <select id="puntuacion" name="puntuacion" class="form-select">
+                                <option value="">Sin puntuar</option>
+                                <option value="legendario">👑 Legendario</option>
+                                <option value="muy_bueno">⭐⭐⭐⭐⭐ Muy bueno</option>
+                                <option value="bueno">⭐⭐⭐⭐ Bueno</option>
+                                <option value="regular">⭐⭐⭐ Regular</option>
+                                <option value="malo">⭐⭐ Malo</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="url" class="form-label">URL (opcional)</label>
+                        <input id="url" type="url" name="url" class="form-control" placeholder="https://...">
+                    </div>
+                    <div class="mb-3">
+                        <label for="notas" class="form-label">Notas (opcional )</label>
+                        <textarea id="notas" name="notas" class="form-control" rows="4" placeholder="Tus notas, reflexiones o resumen del contenido"></textarea>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-success"><i class="fas fa-save me-2"></i>Guardar Contenido</button>
+                        <button type="button" class="btn btn-secondary" onclick="hideNuevoContenidoForm()">Cancelar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+    function filtrarCategoria(categoria) {
+        // Actualizar botones activos
+        document.querySelectorAll('.filtro-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        event.target.classList.add('active');
+
+        // Redirigir con filtro
+        const url = new URL(window.location);
+        url.searchParams.set('categoria', categoria);
+        window.location.href = url.toString();
+    }
+
+    function buscarContenido(termino) {
+        // Implementar búsqueda en tiempo real
+        clearTimeout(window.busquedaTimeout);
+        window.busquedaTimeout = setTimeout(() => {
+            const url = new URL(window.location);
+            if (termino.trim()) {
+                url.searchParams.set('busqueda', termino);
+            } else {
+                url.searchParams.delete('busqueda');
+            }
+            window.location.href = url.toString();
+        }, 500);
+    }
+
+    function showNuevoContenidoForm() {
+        document.getElementById('nuevoContenidoForm').style.display = 'block';
+        document.getElementById('nuevoContenidoForm').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function hideNuevoContenidoForm() {
+        document.getElementById('nuevoContenidoForm').style.display = 'none';
+    }
+
+    function editarContenido(contenidoId) {
+        // Implementar edición de contenido
+        diario.showNotification('Función de edición en desarrollo', 'info');
+    }
+
+    // Animaciones al cargar
+    document.addEventListener('DOMContentLoaded', function() {
+        // Animar tarjetas de contenido
+        const contenidoCards = document.querySelectorAll('.contenido-card');
+        contenidoCards.forEach((card, index) => {
+            card.style.animationDelay = `${index * 0.1}s`;
+            card.classList.add('animate-fade-in');
+        });
+
+        // Animar estadísticas
+        const estadisticas = document.querySelectorAll('.estadistica-item');
+        estadisticas.forEach((stat, index) => {
+            stat.style.animationDelay = `${index * 0.2}s`;
+            stat.classList.add('animate-fade-in');
+        });
+    });
+</script>
+{% endblock %}

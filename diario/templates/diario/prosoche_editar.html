@@ -22,29 +22,29 @@
         <div class="cyber-card p-4">
             <form method="post" class="needs-validation" novalidate>
                 {% csrf_token %}
-                
+
                 <div class="row">
                     <div class="col-md-6 mb-4">
                         <label for="mes" class="cyber-form-label">
                             <i class="fas fa-calendar-alt me-2"></i>Mes
                         </label>
-                        <input type="text" 
-                               class="form-control cyber-form-control" 
-                               id="mes" 
-                               name="mes" 
-                               value="{{ diario.mes|default:mes_actual }}" 
+                        <input type="text"
+                               class="form-control cyber-form-control"
+                               id="mes"
+                               name="mes"
+                               value="{{ diario.mes|default:mes_actual }}"
                                readonly>
                     </div>
-                    
+
                     <div class="col-md-6 mb-4">
                         <label for="año" class="cyber-form-label">
                             <i class="fas fa-calendar me-2"></i>Año
                         </label>
-                        <input type="number" 
-                               class="form-control cyber-form-control" 
-                               id="año" 
-                               name="año" 
-                               value="{{ diario.año|default:año_actual }}" 
+                        <input type="number"
+                               class="form-control cyber-form-control"
+                               id="año"
+                               name="año"
+                               value="{{ diario.año|default:año_actual }}"
                                readonly>
                     </div>
                 </div>
@@ -53,10 +53,10 @@
                     <label for="logro_principal" class="cyber-form-label">
                         <i class="fas fa-trophy me-2"></i>Principal Logro del Mes
                     </label>
-                    <textarea class="form-control cyber-form-control" 
-                              id="logro_principal" 
-                              name="logro_principal" 
-                              rows="3" 
+                    <textarea class="form-control cyber-form-control"
+                              id="logro_principal"
+                              name="logro_principal"
+                              rows="3"
                               placeholder="¿Cuál fue tu mayor logro este mes?">{{ diario.logro_principal|default:'' }}</textarea>
                 </div>
 
@@ -64,10 +64,10 @@
                     <label for="celebracion_logro" class="cyber-form-label">
                         <i class="fas fa-party-horn me-2"></i>Cómo lo Celebraste
                     </label>
-                    <textarea class="form-control cyber-form-control" 
-                              id="celebracion_logro" 
-                              name="celebracion_logro" 
-                              rows="3" 
+                    <textarea class="form-control cyber-form-control"
+                              id="celebracion_logro"
+                              name="celebracion_logro"
+                              rows="3"
                               placeholder="¿Cómo celebraste este logro?">{{ diario.celebracion_logro|default:'' }}</textarea>
                 </div>
 
@@ -75,10 +75,10 @@
                     <label for="obstaculo_principal" class="cyber-form-label">
                         <i class="fas fa-mountain me-2"></i>Principal Obstáculo del Mes
                     </label>
-                    <textarea class="form-control cyber-form-control" 
-                              id="obstaculo_principal" 
-                              name="obstaculo_principal" 
-                              rows="3" 
+                    <textarea class="form-control cyber-form-control"
+                              id="obstaculo_principal"
+                              name="obstaculo_principal"
+                              rows="3"
                               placeholder="¿Cuál fue el mayor obstáculo que enfrentaste?">{{ diario.obstaculo_principal|default:'' }}</textarea>
                 </div>
 
@@ -86,10 +86,10 @@
                     <label for="gestion_obstaculo" class="cyber-form-label">
                         <i class="fas fa-tools me-2"></i>Cómo lo Gestionaste
                     </label>
-                    <textarea class="form-control cyber-form-control" 
-                              id="gestion_obstaculo" 
-                              name="gestion_obstaculo" 
-                              rows="3" 
+                    <textarea class="form-control cyber-form-control"
+                              id="gestion_obstaculo"
+                              name="gestion_obstaculo"
+                              rows="3"
                               placeholder="¿Cómo superaste o gestionaste este obstáculo?">{{ diario.gestion_obstaculo|default:'' }}</textarea>
                 </div>
 
@@ -97,10 +97,10 @@
                     <label for="aprendizaje_principal" class="cyber-form-label">
                         <i class="fas fa-lightbulb me-2"></i>Principal Aprendizaje del Mes
                     </label>
-                    <textarea class="form-control cyber-form-control" 
-                              id="aprendizaje_principal" 
-                              name="aprendizaje_principal" 
-                              rows="3" 
+                    <textarea class="form-control cyber-form-control"
+                              id="aprendizaje_principal"
+                              name="aprendizaje_principal"
+                              rows="3"
                               placeholder="¿Qué fue lo más importante que aprendiste?">{{ diario.aprendizaje_principal|default:'' }}</textarea>
                 </div>
 
@@ -108,10 +108,10 @@
                     <label for="momento_felicidad" class="cyber-form-label">
                         <i class="fas fa-smile me-2"></i>Principal Momento de Felicidad
                     </label>
-                    <textarea class="form-control cyber-form-control" 
-                              id="momento_felicidad" 
-                              name="momento_felicidad" 
-                              rows="3" 
+                    <textarea class="form-control cyber-form-control"
+                              id="momento_felicidad"
+                              name="momento_felicidad"
+                              rows="3"
                               placeholder="¿Cuál fue tu momento más feliz del mes?">{{ diario.momento_felicidad|default:'' }}</textarea>
                 </div>
 
@@ -122,7 +122,7 @@
                 </div>
 
                 <div class="d-flex justify-content-between">
-                    <a href="{% url 'prosoche_dashboard' %}" class="btn cyber-btn-secondary">
+                    <a href="{% url 'diario:prosoche_dashboard' %}" class="btn cyber-btn-secondary">
                         <i class="fas fa-arrow-left me-2"></i>Cancelar
                     </a>
                     <button type="submit" class="btn cyber-btn">
@@ -135,30 +135,30 @@
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Animación de entrada
-    document.querySelectorAll('.cyber-card').forEach((card, index) => {
-        card.style.opacity = '0';
-        card.style.transform = 'translateY(20px)';
-        setTimeout(() => {
-            card.style.transition = 'all 0.6s ease';
-            card.style.opacity = '1';
-            card.style.transform = 'translateY(0)';
-        }, index * 200);
-    });
+    document.addEventListener('DOMContentLoaded', function() {
+        // Animación de entrada
+        document.querySelectorAll('.cyber-card').forEach((card, index) => {
+            card.style.opacity = '0';
+            card.style.transform = 'translateY(20px)';
+            setTimeout(() => {
+                card.style.transition = 'all 0.6s ease';
+                card.style.opacity = '1';
+                card.style.transform = 'translateY(0)';
+            }, index * 200);
+        });
 
-    // Efectos de focus en los campos
-    document.querySelectorAll('.cyber-form-control').forEach(input => {
-        input.addEventListener('focus', function() {
-            this.style.borderColor = '#00ffff';
-            this.style.boxShadow = '0 0 15px rgba(0, 255, 255, 0.3)';
-        });
-        
-        input.addEventListener('blur', function() {
-            this.style.borderColor = 'rgba(0, 255, 255, 0.3)';
-            this.style.boxShadow = 'none';
+        // Efectos de focus en los campos
+        document.querySelectorAll('.cyber-form-control').forEach(input => {
+            input.addEventListener('focus', function() {
+                this.style.borderColor = '#00ffff';
+                this.style.boxShadow = '0 0 15px rgba(0, 255, 255, 0.3)';
+            });
+
+            input.addEventListener('blur', function() {
+                this.style.borderColor = 'rgba(0, 255, 255, 0.3)';
+                this.style.boxShadow = 'none';
+            });
         });
     });
-});
 </script>
 {% endblock %}

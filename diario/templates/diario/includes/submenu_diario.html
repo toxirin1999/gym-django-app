@@ -21,6 +21,11 @@
             </a>
         </li>
         <li class="nav-item">
+            <a class="nav-link mb-0 px-0 py-1 {% if 'simbiosis' in request.path %}active{% endif %}" href="{% url 'diario:simbiosis_dashboard' %}">
+                <i class="fas fa-users me-2"></i>Simbiosis
+            </a>
+        </li>
+        <li class="nav-item">
             <a class="nav-link mb-0 px-0 py-1 {% if 'analiticas' in request.path %}active{% endif %}" href="{% url 'diario:analiticas_personales' %}">
                 <i class="fas fa-chart-line me-2"></i>Analíticas
             </a>

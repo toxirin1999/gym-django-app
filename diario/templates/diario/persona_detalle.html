@@ -1,10 +1,65 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>$Title$</title>
-</head>
-<body>
-$END$
-</body>
-</html>
+{% extends 'diario/base_stoic.html' %}
+{% load custom_filters %}
+{% block title %}Perfil de {{ persona.nombre }}{% endblock %}
+
+{% block content %}
+<div class="fade-in-up">
+    <!-- Encabezado del Perfil -->
+    <div class="card shadow-soft mb-4">
+        <div class="card-body p-4">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <h1 class="text-gradient mb-1">{{ persona.nombre }}</h1>
+                    <span class="badge bg-primary">{{ persona.get_tipo_relacion_display }}</span>
+                </div>
+                <a href="{% url 'diario:persona_editar' persona.id %}" class="btn btn-sm btn-outline-secondary">
+                    <i class="fas fa-edit me-1"></i> Editar Persona
+                </a>
+            </div>
+            <hr>
+            <div class="row">
+                <div class="col-md-6">
+                    <h6 class="text-muted">Salud de la Relación</h6>
+                    <div class="progress" style="height: 10px;">
+                        <div class="progress-bar" role="progressbar" style="width: {{ persona.salud_relacion|mul:20 }}%;" aria-valuenow="{{ persona.salud_relacion }}"></div>
+                    </div>
+                    <p class="small text-muted mt-1">
+                        {{ persona.salud_relacion }}/5 -
+                        {% for i in persona.salud_relacion|get_range %}⭐{% endfor %}
+                    </p>
+
+                </div>
+                <div class="col-md-6">
+                    <h6 class="text-muted">Notas</h6>
+                    <p class="small fst-italic">{{ persona.notas|default:"Sin notas." }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Historial de Interacciones -->
+    <div class="card shadow-sm">
+        <div class="card-header">
+            <h5 class="mb-0">Historial de Interacciones con {{ persona.nombre }}</h5>
+        </div>
+        <div class="card-body">
+            {% if interacciones %}
+            {% for interaccion in interacciones %}
+            <div class="card mb-3">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <h6 class="card-title">{{ interaccion.titulo }}</h6>
+                        <small class="text-muted">{{ interaccion.fecha|date:"d M, Y" }}</small>
+                    </div>
+                    <p class="card-text small">{{ interaccion.descripcion }}</p>
+                    <a href="{% url 'diario:interaccion_editar' interaccion.id %}" class="btn btn-sm btn-outline-primary">Ver/Editar Reflexión</a>
+                </div>
+            </div>
+            {% endfor %}
+            {% else %}
+            <p class="text-muted text-center">Aún no has registrado interacciones con {{ persona.nombre }}.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

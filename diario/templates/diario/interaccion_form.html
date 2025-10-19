@@ -1,10 +1,71 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>$Title$</title>
-</head>
-<body>
-$END$
-</body>
-</html>
+{% extends 'diario/base_stoic.html' %}
+
+{% block title %}
+{% if instance %}Editar Interacción{% else %}Registrar Interacción{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="fade-in-up">
+    <div class="card shadow-strong">
+        <div class="card-header">
+            <h5 class="mb-0">
+                <i class="fas fa-handshake me-2"></i>
+                {% if instance %}
+                Editando Interacción: {{ instance.titulo }}
+                {% else %}
+                Registrar Nueva Interacción
+                {% endif %}
+            </h5>
+        </div>
+        <div class="card-body">
+            <form method="post">
+                {% csrf_token %}
+
+                <div class="row">
+                    <div class="col-md-8 mb-3">
+                        <label for="{{ form.titulo.id_for_label }}" class="form-label">Título</label>
+                        {{ form.titulo }}
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label for="{{ form.fecha.id_for_label }}" class="form-label">Fecha de la Interacción</label>
+                        {{ form.fecha }}
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="{{ form.personas.id_for_label }}" class="form-label">Persona(s) Involucrada(s)</label>
+                        {{ form.personas }}
+                        <small class="form-text text-muted">Puedes seleccionar varias personas manteniendo pulsada la tecla Ctrl (o Cmd en Mac).</small>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="{{ form.tipo_interaccion.id_for_label }}" class="form-label">Tipo de Interacción</label>
+                        {{ form.tipo_interaccion }}
+                    </div>
+                </div>
+
+                <hr class="my-4">
+                <h6 class="text-muted">Reflexión sobre la Interacción</h6>
+
+                <div class="mb-3">
+                    <label for="{{ form.descripcion.id_for_label }}" class="form-label">Descripción</label>
+                    {{ form.descripcion }}
+                </div>
+                <div class="mb-3">
+                    <label for="{{ form.mi_sentir.id_for_label }}" class="form-label">Mi Sentir</label>
+                    {{ form.mi_sentir }}
+                </div>
+                <div class="mb-3">
+                    <label for="{{ form.aprendizaje.id_for_label }}" class="form-label">Aprendizaje</label>
+                    {{ form.aprendizaje }}
+                </div>
+
+                <div class="d-flex gap-2 mt-4">
+                    <button type="submit" class="btn btn-success"><i class="fas fa-save me-2"></i>Guardar Interacción</button>
+                    <a href="{% url 'diario:simbiosis_dashboard' %}" class="btn btn-secondary">Cancelar</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

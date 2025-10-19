@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     'estoico',
     'django_celery_beat',
     'nutricion_app_django',
+    'diario',
 ]
 # Configuración de Celery (para notificaciones)
 CELERY_BROKER_URL = 'redis://localhost:6379/0'
@@ -264,8 +265,8 @@ LOGGING = {
 }
 
 # Mensaje de confirmación
-print("✅ Configuración de logging para gamificación cargada")
-print(f"📁 Logs se guardarán en: {LOGS_DIR}")
+# print("✅ Configuración de logging para gamificación cargada")
+# print(f"📁 Logs se guardarán en: {LOGS_DIR}")
 
 # ============================================================================
 # CONFIGURACIÓN ADICIONAL PARA GAMIFICACIÓN

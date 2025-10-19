@@ -21,10 +21,10 @@ class LogrosConfig(AppConfig):
             logger.info("🚀 Sistema de gamificación iniciado correctamente")
             logger.info("✅ Signals automáticos registrados")
 
-            print("🎮 Sistema de gamificación listo - Signals automáticos activos")
+            # print("🎮 Sistema de gamificación listo - Signals automáticos activos")
 
         except ImportError as e:
-            print(f"❌ Error importando signals de gamificación: {e}")
+            logger.error(f"Error inicializando sistema de gamificación: {e}")
 
         except Exception as e:
-            print(f"❌ Error inicializando sistema de gamificación: {e}")
+            logger.error(f"Error inicializando sistema de gamificación: {e}")

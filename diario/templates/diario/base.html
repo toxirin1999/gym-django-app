@@ -1,0 +1,569 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Diario Sic Parvis Magna{% endblock %}</title>
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        /* ========================================
+           VARIABLES CSS Y CONFIGURACIÓN BASE
+        ======================================== */
+        :root {
+            --cyber-primary: #00ffff;
+            --cyber-secondary: #ff00ff;
+            --cyber-accent: #00ff00;
+            --cyber-warning: #ffff00;
+            --cyber-danger: #ff0040;
+            --cyber-dark: #0a0a0f;
+            --cyber-darker: #050508;
+            --cyber-light: #1a1a2e;
+            --cyber-glass: rgba(0, 255, 255, 0.1);
+            --cyber-glass-hover: rgba(0, 255, 255, 0.2);
+            --cyber-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
+            --cyber-glow: 0 0 30px rgba(0, 255, 255, 0.5);
+            --font-primary: 'Orbitron', monospace;
+            --font-secondary: 'Rajdhani', sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font-secondary);
+            background: linear-gradient(135deg, var(--cyber-darker) 0%, var(--cyber-dark) 50%, #1a1a2e 100%);
+            color: #ffffff;
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Fondo animado cyberpunk */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background:
+                radial-gradient(circle at 20% 30%, rgba(0, 255, 255, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 70%, rgba(255, 0, 255, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 50% 50%, rgba(0, 255, 0, 0.05) 0%, transparent 50%);
+            animation: backgroundPulse 8s ease-in-out infinite;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        @keyframes backgroundPulse {
+            0%, 100% { opacity: 0.8; }
+            50% { opacity: 1; }
+        }
+
+        /* ========================================
+           NAVEGACIÓN CYBERPUNK
+        ======================================== */
+        .cyber-navbar {
+            background: rgba(0, 0, 0, 0.9) !important;
+            backdrop-filter: blur(20px);
+            border-bottom: 2px solid var(--cyber-primary);
+            box-shadow: var(--cyber-shadow);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .cyber-navbar .navbar-brand {
+            font-family: var(--font-primary);
+            font-weight: 900;
+            font-size: 1.5rem;
+            color: var(--cyber-primary) !important;
+            text-shadow: var(--cyber-glow);
+        }
+
+        .cyber-navbar .nav-link {
+            color: #ffffff !important;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s ease;
+            position: relative;
+            padding: 0.5rem 1rem !important;
+        }
+
+        .cyber-navbar .nav-link::before {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            width: 0;
+            height: 2px;
+            background: var(--cyber-primary);
+            transition: all 0.3s ease;
+            transform: translateX(-50%);
+        }
+
+        .cyber-navbar .nav-link:hover::before,
+        .cyber-navbar .nav-link.active::before {
+            width: 80%;
+        }
+
+        .cyber-navbar .nav-link:hover {
+            color: var(--cyber-primary) !important;
+            text-shadow: 0 0 10px var(--cyber-primary);
+        }
+
+        /* ========================================
+           CONTENEDOR PRINCIPAL
+        ======================================== */
+        .cyber-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        /* ========================================
+           TARJETAS CYBERPUNK
+        ======================================== */
+        .cyber-card {
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            border-radius: 15px;
+            box-shadow: var(--cyber-shadow);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .cyber-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(0, 255, 255, 0.1), transparent);
+            transition: left 0.6s ease;
+        }
+
+        .cyber-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 0 40px rgba(0, 255, 255, 0.4);
+            border-color: var(--cyber-primary);
+        }
+
+        .cyber-card:hover::before {
+            left: 100%;
+        }
+
+        .cyber-card-header {
+            background: rgba(0, 255, 255, 0.1);
+            border-bottom: 1px solid rgba(0, 255, 255, 0.3);
+            padding: 1.5rem;
+            position: relative;
+            z-index: 2;
+        }
+
+        .cyber-card-title {
+            font-family: var(--font-primary);
+            font-weight: 700;
+            font-size: 1.4rem;
+            color: var(--cyber-primary);
+            text-shadow: 0 0 10px var(--cyber-primary);
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .cyber-card-body {
+            padding: 1.5rem;
+            position: relative;
+            z-index: 2;
+        }
+
+        /* ========================================
+           BOTONES CYBERPUNK
+        ======================================== */
+        .cyber-btn {
+            background: linear-gradient(45deg, rgba(0, 255, 255, 0.8), rgba(0, 150, 255, 0.6));
+            border: 1px solid var(--cyber-primary);
+            color: #000000;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(5px);
+            box-shadow: var(--cyber-shadow);
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .cyber-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .cyber-btn:hover::before {
+            left: 100%;
+        }
+
+        .cyber-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0 35px rgba(0, 255, 255, 0.6);
+            color: #000000;
+        }
+
+        .cyber-btn-secondary {
+            background: linear-gradient(45deg, rgba(255, 0, 255, 0.8), rgba(150, 0, 255, 0.6));
+            border-color: var(--cyber-secondary);
+        }
+
+        .cyber-btn-success {
+            background: linear-gradient(45deg, rgba(0, 255, 0, 0.8), rgba(0, 150, 0, 0.6));
+            border-color: var(--cyber-accent);
+        }
+
+        .cyber-btn-danger {
+            background: linear-gradient(45deg, rgba(255, 0, 64, 0.8), rgba(200, 0, 50, 0.6));
+            border-color: var(--cyber-danger);
+        }
+
+        /* ========================================
+           FORMULARIOS CYBERPUNK
+        ======================================== */
+        .cyber-form-control {
+            background: rgba(0, 0, 0, 0.8);
+            border: 2px solid rgba(0, 255, 255, 0.4);
+            color: #ffffff;
+            border-radius: 8px;
+            padding: 0.75rem;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(5px);
+            font-weight: 500;
+        }
+
+        .cyber-form-control:focus {
+            background: rgba(0, 0, 0, 0.9);
+            border-color: var(--cyber-primary);
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.4);
+            color: #ffffff;
+            outline: none;
+        }
+
+        .cyber-form-control::placeholder {
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .cyber-form-label {
+            color: var(--cyber-primary);
+            font-weight: 600;
+            text-shadow: 0 0 5px rgba(0, 255, 255, 0.3);
+            margin-bottom: 0.5rem;
+            display: block;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-size: 0.9rem;
+        }
+
+        /* ========================================
+           GRID CYBERPUNK
+        ======================================== */
+        .cyber-grid {
+            display: grid;
+            gap: 2rem;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        }
+
+        .cyber-grid-2 {
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+        }
+
+        .cyber-grid-3 {
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+        }
+
+        /* ========================================
+           ESTADÍSTICAS CYBERPUNK
+        ======================================== */
+        .cyber-stat {
+            text-align: center;
+            padding: 1.5rem;
+            background: rgba(0, 255, 255, 0.1);
+            border-radius: 10px;
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .cyber-stat:hover {
+            background: rgba(0, 255, 255, 0.2);
+            transform: translateY(-3px);
+        }
+
+        .cyber-stat-value {
+            font-family: var(--font-primary);
+            font-size: 2.5rem;
+            font-weight: 900;
+            color: var(--cyber-primary);
+            text-shadow: var(--cyber-glow);
+            display: block;
+        }
+
+        .cyber-stat-label {
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.8);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 0.5rem;
+        }
+
+        /* ========================================
+           ANIMACIONES
+        ======================================== */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes glowPulse {
+            0%, 100% {
+                text-shadow: 0 0 10px var(--cyber-primary);
+            }
+            50% {
+                text-shadow: 0 0 20px var(--cyber-primary), 0 0 30px var(--cyber-primary);
+            }
+        }
+
+        .animate-fade-in {
+            animation: fadeInUp 0.8s ease-out;
+        }
+
+        .animate-glow {
+            animation: glowPulse 2s ease-in-out infinite;
+        }
+
+        /* ========================================
+           RESPONSIVE
+        ======================================== */
+        @media (max-width: 768px) {
+            .cyber-container {
+                padding: 1rem;
+            }
+
+            .cyber-grid {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+
+            .cyber-card-title {
+                font-size: 1.2rem;
+            }
+
+            .cyber-stat-value {
+                font-size: 2rem;
+            }
+        }
+
+        /* ========================================
+           UTILIDADES ADICIONALES
+        ======================================== */
+        .text-cyber-primary { color: var(--cyber-primary) !important; }
+        .text-cyber-secondary { color: var(--cyber-secondary) !important; }
+        .text-cyber-accent { color: var(--cyber-accent) !important; }
+
+        .bg-cyber-glass {
+            background: var(--cyber-glass) !important;
+            backdrop-filter: blur(10px);
+        }
+
+        .border-cyber {
+            border: 1px solid rgba(0, 255, 255, 0.3) !important;
+        }
+
+        .shadow-cyber {
+            box-shadow: var(--cyber-shadow) !important;
+        }
+
+        /* ========================================
+           SECCIONES ESPECÍFICAS DEL DIARIO
+        ======================================== */
+        .section-prosoche { --section-color: #4dd0e1; }
+        .section-eudaimonia { --section-color: #ff6b9d; }
+        .section-arete { --section-color: #66bb6a; }
+        .section-gnosis { --section-color: #7986cb; }
+        .section-vires { --section-color: #ffb74d; }
+        .section-kairos { --section-color: #ba68c8; }
+
+        .section-card {
+            border-color: var(--section-color);
+            background: linear-gradient(135deg, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.6) 100%);
+        }
+
+        .section-card:hover {
+            box-shadow: 0 0 30px var(--section-color);
+        }
+
+        .section-title {
+            color: var(--section-color);
+            text-shadow: 0 0 10px var(--section-color);
+        }
+    </style>
+
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Navegación -->
+    <nav class="navbar navbar-expand-lg cyber-navbar">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="{% url 'diario:dashboard_diario' %}">
+                <i class="fas fa-book-open"></i> Sic Parvis Magna
+            </a>
+
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'diario:dashboard_diario' %}">
+                            <i class="fas fa-home"></i> Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'diario:prosoche_dashboard' %}">
+                            <i class="fas fa-journal-whills"></i> Prosoche
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'diario:eudaimonia_dashboard' %}">
+                            <i class="fas fa-balance-scale"></i> Eudaimonia
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'diario:arete_dashboard' %}">
+                            <i class="fas fa-graduation-cap"></i> Areté
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'diario:gnosis_dashboard' %}">
+                            <i class="fas fa-brain"></i> Gnosis
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'diario:vires_dashboard' %}">
+                            <i class="fas fa-dumbbell"></i> Vires
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'diario:kairos_dashboard' %}">
+                            <i class="fas fa-calendar-alt"></i> Kairos
+                        </a>
+                    </li>
+
+                    </ul>
+                
+                <ul class="navbar-nav">
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-user-circle"></i> {{ user.username }}
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="#"><i class="fas fa-cog"></i> Configuración</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{% url 'logout' %}"><i class="fas fa-sign-out-alt"></i> Cerrar Sesión</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Contenido Principal -->
+    <main class="cyber-container">
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show animate-fade-in" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- JavaScript personalizado -->
+    <script>
+        // Efectos de animación al cargar
+        document.addEventListener('DOMContentLoaded', function() {
+            // Animar elementos al aparecer
+            const animateElements = document.querySelectorAll('.cyber-card, .cyber-stat');
+            animateElements.forEach((el, index) => {
+                el.style.animationDelay = `${index * 0.1}s`;
+                el.classList.add('animate-fade-in');
+            });
+
+            // Efecto de escritura en títulos
+            const titles = document.querySelectorAll('.cyber-card-title');
+            titles.forEach(title => {
+                title.addEventListener('mouseenter', function() {
+                    this.classList.add('animate-glow');
+                });
+                title.addEventListener('mouseleave', function() {
+                    this.classList.remove('animate-glow');
+                });
+            });
+        });
+
+        // Función para mostrar notificaciones cyberpunk
+        function showCyberNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `alert alert-${type} position-fixed top-0 end-0 m-3 animate-fade-in`;
+            notification.style.zIndex = '9999';
+            notification.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" onclick="this.parentElement.remove()"></button>
+            `;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.remove();
+            }, 5000);
+        }
+    </script>
+
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

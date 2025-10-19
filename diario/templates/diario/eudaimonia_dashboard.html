@@ -1,0 +1,270 @@
+{% extends 'diario/base_stoic.html' %}
+{% load static %}
+
+{% block title %}Eudaimonia - Diario Estoico{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Estilos para el slider de puntuación */
+    .puntuacion-slider {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 100%;
+        height: 8px;
+        background: var(--light-color);
+        outline: none;
+        border-radius: 4px;
+        transition: opacity .2s;
+    }
+    .puntuacion-slider::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 20px;
+        height: 20px;
+        background: var(--primary-color);
+        cursor: pointer;
+        border-radius: 50%;
+    }
+    .puntuacion-slider::-moz-range-thumb {
+        width: 20px;
+        height: 20px;
+        background: var(--primary-color);
+        cursor: pointer;
+        border-radius: 50%;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="fade-in-up">
+    <!-- Header de Eudaimonia -->
+    <div class="card shadow-soft mb-4">
+        <div class="card-body p-4">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h1 class="text-gradient mb-2"><i class="fas fa-balance-scale me-2"></i>Eudaimonia - Áreas de la Vida</h1>
+                    <blockquote class="border-0 p-0 m-0 bg-transparent">
+                        <p class="lead mb-1">"El arte de la vida es más parecido a luchar que a bailar."</p>
+                        <footer>— Marco Aurelio</footer>
+                    </blockquote>
+                </div>
+                <div class="col-md-4 text-center text-md-end mt-3 mt-md-0">
+                    <img src="{% static 'images/marco-aurelio-eudaimonia.png' %}" alt="Marco Aurelio" class="img-fluid" style="max-height: 100px; opacity: 0.7; filter: grayscale(50%);">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Estadísticas Generales -->
+    <div class="row mb-4 g-3">
+        {% with total_areas=areas_alta|length|add:areas_media|length|add:areas_baja|length %}
+        <div class="col">
+            <div class="stat-item card card-body">
+                <div class="stat-number">{{ total_areas }}</div>
+                <div class="stat-label">Áreas Totales</div>
+            </div>
+        </div>
+        {% endwith %}
+        <div class="col">
+            <div class="stat-item card card-body">
+                <div class="stat-number text-danger">{{ areas_alta|length }}</div>
+                <div class="stat-label">Prioridad Alta</div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="stat-item card card-body">
+                <div class="stat-number text-warning">{{ areas_media|length }}</div>
+                <div class="stat-label">Prioridad Media</div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="stat-item card card-body">
+                <div class="stat-number text-success">{{ areas_baja|length }}</div>
+                <div class="stat-label">Prioridad Baja</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Columna Principal de Áreas -->
+        <div class="col-lg-8">
+            {% for eudaimonia in areas_alta %}
+            <div class="card mb-3 shadow-soft border-start border-5 border-danger">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <h5 class="card-title">{{ eudaimonia.area.nombre }}</h5>
+                        <span class="badge bg-danger">Alta</span>
+                    </div>
+                    <div class="row align-items-center my-2">
+                        <div class="col-md-9">
+                            <input type="range" class="puntuacion-slider" min="1" max="10" value="{{ eudaimonia.puntuacion }}" onchange="updatePuntuacion(this, {{ eudaimonia.id }})">
+                        </div>
+                        <div class="col-md-3 text-center">
+                            <h3 class="puntuacion-display mb-0">{{ eudaimonia.puntuacion }}/10</h3>
+                        </div>
+                    </div>
+                    <div class="progress" style="height: 6px;">
+                        <div class="progress-bar bg-danger" role="progressbar" style="width: {{ eudaimonia.puntuacion }}0%;" aria-valuenow="{{ eudaimonia.puntuacion }}" aria-valuemin="0" aria-valuemax="10"></div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+
+            {% for eudaimonia in areas_media %}
+            <div class="card mb-3 shadow-soft border-start border-5 border-warning">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <h5 class="card-title">{{ eudaimonia.area.nombre }}</h5>
+                        <span class="badge bg-warning text-dark">Media</span>
+                    </div>
+                    <div class="row align-items-center my-2">
+                        <div class="col-md-9">
+                            <input type="range" class="puntuacion-slider" min="1" max="10" value="{{ eudaimonia.puntuacion }}" onchange="updatePuntuacion(this, {{ eudaimonia.id }})">
+                        </div>
+                        <div class="col-md-3 text-center">
+                            <h3 class="puntuacion-display mb-0">{{ eudaimonia.puntuacion }}/10</h3>
+                        </div>
+                    </div>
+                    <div class="progress" style="height: 6px;">
+                        <div class="progress-bar bg-warning" role="progressbar" style="width: {{ eudaimonia.puntuacion }}0%;"></div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+
+            {% for eudaimonia in areas_baja %}
+            <div class="card mb-3 shadow-soft border-start border-5 border-success">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <h5 class="card-title">{{ eudaimonia.area.nombre }}</h5>
+                        <span class="badge bg-success">Baja</span>
+                    </div>
+                    <div class="row align-items-center my-2">
+                        <div class="col-md-9">
+                            <input type="range" class="puntuacion-slider" min="1" max="10" value="{{ eudaimonia.puntuacion }}" onchange="updatePuntuacion(this, {{ eudaimonia.id }})">
+                        </div>
+                        <div class="col-md-3 text-center">
+                            <h3 class="puntuacion-display mb-0">{{ eudaimonia.puntuacion }}/10</h3>
+                        </div>
+                    </div>
+                    <div class="progress" style="height: 6px;">
+                        <div class="progress-bar bg-success" role="progressbar" style="width: {{ eudaimonia.puntuacion }}0%;"></div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+
+            {% if not areas_alta and not areas_media and not areas_baja %}
+            <div class="card text-center p-5">
+                <i class="fas fa-plus-circle fa-3x text-muted mb-3"></i>
+                <h4 class="text-muted">No tienes áreas de vida configuradas</h4>
+                <p>Comienza definiendo las áreas importantes de tu vida para poder evaluarlas y mejorarlas.</p>
+                <div class="mt-3">
+                    <button class="btn btn-primary" onclick="showNuevaAreaForm()">Crear Primera Área</button>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Sidebar de Acciones -->
+        <div class="col-lg-4">
+            <div class="card shadow-soft mb-4">
+                <div class="card-header"><h5 class="mb-0"><i class="fas fa-bolt me-2"></i>Acciones Rápidas</h5></div>
+                <div class="card-body d-grid gap-2">
+                    <button class="btn btn-primary" onclick="showNuevaAreaForm()"><i class="fas fa-plus me-2"></i>Nueva Área de Vida</button>
+                    <button class="btn btn-outline-secondary" onclick="exportarEudaimonia()"><i class="fas fa-download me-2"></i>Exportar Evaluación</button>
+                    <button class="btn btn-outline-secondary" onclick="generarReporte()"><i class="fas fa-chart-line me-2"></i>Generar Reporte</button>
+                </div>
+            </div>
+
+            <div class="card shadow-soft mb-4">
+                <div class="card-header"><h5 class="mb-0"><i class="fas fa-chart-pie me-2"></i>Progreso General</h5></div>
+                <div class="card-body text-center">
+                    <h6 class="text-muted">Puntuación Promedio</h6>
+                    <h1 class="display-4 fw-bold">{% if total_areas > 0 %}{{ promedio_puntuacion|floatformat:1 }}{% else %}0{% endif %}</h1>
+                    <div class="progress" style="height: 8px;">
+                        <div class="progress-bar" role="progressbar" style="width: {% if total_areas > 0 %}{{ promedio_puntuacion }}0{% else %}0{% endif %}%"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card shadow-soft">
+                <div class="card-header"><h5 class="mb-0"><i class="fas fa-lightbulb me-2"></i>Reflexión Estoica</h5></div>
+                <div class="card-body">
+                    <blockquote class="blockquote">
+                        <p class="font-serif">"La felicidad no consiste en adquirir y gozar, sino en no desear nada, pues consiste en ser libre."</p>
+                        <footer class="blockquote-footer">Epicteto</footer>
+                    </blockquote>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Formulario Nueva Área (Oculto) -->
+    <div id="nuevaAreaForm" class="mt-4" style="display: none;">
+        <div class="card shadow-strong">
+            <div class="card-header"><h5 class="mb-0"><i class="fas fa-plus me-2"></i>Crear Nueva Área de Vida</h5></div>
+            <div class="card-body">
+                <form method="post" action="{% url 'diario:eudaimonia_crear_area' %}">
+                    {% csrf_token %}
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="nombre" class="form-label">Nombre del Área</label>
+                            <input id="nombre" type="text" name="nombre" class="form-control" placeholder="Ej: Salud Física" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="prioridad" class="form-label">Prioridad</label>
+                            <select id="prioridad" name="prioridad" class="form-select" required>
+                                <option value="alta">Alta</option>
+                                <option value="media" selected>Media</option>
+                                <option value="baja">Baja</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="puntuacion" class="form-label">Puntuación Inicial: <span id="puntuacionDisplay" class="fw-bold">5</span>/10</label>
+                        <input id="puntuacion" type="range" name="puntuacion" class="form-range" min="1" max="10" value="5" oninput="document.getElementById('puntuacionDisplay').textContent = this.value">
+                    </div>
+                    <div class="mb-3">
+                        <label for="descripcion" class="form-label">Descripción (opcional)</label>
+                        <textarea id="descripcion" name="descripcion" class="form-control" rows="3" placeholder="Describe qué incluye esta área de tu vida"></textarea>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-success"><i class="fas fa-save me-2"></i>Crear Área</button>
+                        <button type="button" class="btn btn-secondary" onclick="hideNuevaAreaForm()">Cancelar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function updatePuntuacion(sliderElement, areaId) {
+        const nuevaPuntuacion = sliderElement.value;
+        const card = sliderElement.closest('.card');
+        const display = card.querySelector('.puntuacion-display');
+        const progressBar = card.querySelector('.progress-bar');
+
+        display.textContent = `${nuevaPuntuacion}/10`;
+        progressBar.style.width = `${nuevaPuntuacion * 10}%`;
+
+        // Aquí iría la lógica para enviar la actualización al servidor (fetch)
+        console.log(`Actualizando Área ID ${areaId} a puntuación ${nuevaPuntuacion}`);
+    }
+
+    function showNuevaAreaForm() {
+        const formDiv = document.getElementById('nuevaAreaForm');
+        formDiv.style.display = 'block';
+        formDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function hideNuevaAreaForm() {
+        document.getElementById('nuevaAreaForm').style.display = 'none';
+    }
+
+
+</script>
+{% endblock %}

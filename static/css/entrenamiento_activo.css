@@ -1,0 +1,1175 @@
+
+
+    .notificacion-epica {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 9999;
+        max-width: 400px;
+        min-width: 300px;
+        border: 2px solid #ffd700;
+        border-radius: 15px;
+        padding: 20px;
+        box-shadow: 0 0 50px rgba(255, 215, 0, 0.5);
+        transform: translateX(450px);
+        transition: all 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        opacity: 0;
+        overflow: hidden;
+        position: relative;
+    }
+
+    .notificacion-epica.mostrar {
+        transform: translateX(0);
+        opacity: 1;
+    }
+
+    .notificacion-epica.ocultar {
+        transform: translateX(450px);
+        opacity: 0;
+    }
+/* =================================================================== */
+/* === NUEVOS ESTILOS PARA LA LISTA/TABLA DE SERIES RESPONSIVA === */
+/* =================================================================== */
+
+/* --- Estilos por Defecto (Mobile First) --- */
+.series-container {
+    width: 100%;
+}
+
+.series-header {
+    display: none; /* Ocultamos los encabezados en móvil */
+}
+
+.serie-row {
+    display: block; /* Cada fila es un bloque */
+    border: 1px solid rgba(0, 255, 255, 0.2);
+    border-radius: 8px;
+    padding: 0.75rem;
+    margin-bottom: 1rem;
+    background: rgba(0, 0, 0, 0.3);
+}
+
+.serie-cell {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid rgba(0, 255, 255, 0.1);
+}
+
+.serie-row .serie-cell:last-child {
+    border-bottom: none;
+}
+
+.serie-cell::before {
+    content: attr(data-label); /* Usamos el data-label para la etiqueta */
+    font-weight: 600;
+    color: #00ffff; /* Color cian para la etiqueta */
+    text-align: left;
+}
+
+.serie-cell strong {
+    font-size: 1.1rem;
+    color: #ff00ff; /* Color magenta para destacar el número de serie */
+}
+
+/* La primera celda (Serie X) la centramos y le damos más importancia */
+.serie-cell[data-label="Serie"] {
+    justify-content: center;
+    padding-bottom: 0.75rem;
+    margin-bottom: 0.5rem;
+    border-bottom: 1px solid rgba(0, 255, 255, 0.3);
+}
+.serie-cell[data-label="Serie"]::before {
+    display: none; /* Ocultamos el "data-label" para la celda del título */
+}
+
+.serie-cell .cyber-form-control {
+    max-width: 120px; /* Ancho máximo para los inputs */
+}
+
+/* --- Estilos para Escritorio (a partir de 768px) --- */
+@media (min-width: 768px) {
+    .series-container {
+        display: table; /* Se comporta como una tabla */
+        border-collapse: collapse;
+    }
+
+    .series-header {
+        display: table-header-group; /* Se comporta como un thead */
+        background: rgba(0, 255, 255, 0.1);
+    }
+
+    .header-item {
+        display: table-cell; /* Se comporta como un th */
+        padding: 1rem 0.75rem;
+        font-weight: 600;
+        color: #00ffff;
+        text-shadow: 0 0 5px rgba(0, 255, 255, 0.3);
+        text-transform: uppercase;
+        font-size: 0.9rem;
+        letter-spacing: 0.5px;
+        border-bottom: 2px solid rgba(0, 255, 255, 0.3);
+        text-align: center;
+    }
+
+    .serie-row {
+        display: table-row; /* Se comporta como un tr */
+        margin-bottom: 0;
+        border: none;
+        padding: 0;
+        background: transparent;
+    }
+
+    .serie-row:hover {
+        background: rgba(0, 255, 255, 0.05); /* Efecto hover sutil en escritorio */
+    }
+
+    .serie-cell {
+        display: table-cell; /* Se comporta como un td */
+        padding: 0.75rem;
+        border-bottom: 1px solid rgba(0, 255, 255, 0.2);
+        vertical-align: middle;
+        text-align: center;
+    }
+
+    .serie-cell::before {
+        display: none; /* Ocultamos las etiquetas de data-label en escritorio */
+    }
+
+    /* La primera celda la alineamos a la izquierda en escritorio */
+    .serie-cell[data-label="Serie"] {
+        text-align: left;
+        border-bottom: 1px solid rgba(0, 255, 255, 0.2);
+    }
+}
+
+    /* Efecto de brillo animado */
+    .notificacion-epica::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        animation: shimmer-notif 2s infinite;
+        pointer-events: none;
+    }
+
+    @keyframes shimmer-notif {
+        0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
+        100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
+    }
+
+    /* Tipos de notificaciones */
+    .notificacion-epica.ascension {
+        border-color: #ff6b6b;
+        box-shadow: 0 0 50px rgba(255, 107, 107, 0.6);
+    }
+
+
+
+    .notificacion-epica.prueba-completada {
+        border-color: #4ecdc4;
+        box-shadow: 0 0 50px rgba(78, 205, 196, 0.5);
+    }
+
+    .notificacion-epica.prueba-completada::before {
+
+    }
+
+    .notificacion-epica.puntos-ganados {
+        border-color: #ffd700;
+        box-shadow: 0 0 50px rgba(255, 215, 0, 0.4);
+    }
+
+    /* Header de la notificación */
+    .notif-header {
+        display: flex;
+        align-items: center;
+        margin-bottom: 15px;
+        position: relative;
+        z-index: 2;
+    }
+
+    .notif-icono {
+        font-size: 32px;
+        margin-right: 15px;
+        animation: pulse-icon 2s infinite;
+    }
+
+    @keyframes pulse-icon {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.1); }
+    }
+
+    .notif-titulo {
+        color: #ffd700;
+        font-size: 18px;
+        font-weight: bold;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+        margin: 0;
+    }
+
+    .notif-subtitulo {
+        color: #a8dadc;
+        font-size: 14px;
+        margin: 0;
+    }
+
+    /* Contenido de la notificación */
+    .notif-contenido {
+        position: relative;
+        z-index: 2;
+        margin-bottom: 15px;
+    }
+
+    .notif-mensaje {
+        color: #ffffff;
+        font-size: 16px;
+        line-height: 1.4;
+        margin-bottom: 10px;
+        text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+    }
+
+    .notif-detalle {
+        color: #a8dadc;
+        font-size: 14px;
+        font-style: italic;
+    }
+
+    /* Botón de cerrar */
+    .notif-cerrar {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background: none;
+        border: none;
+        color: #a8dadc;
+        font-size: 20px;
+        cursor: pointer;
+        z-index: 3;
+        transition: color 0.3s ease;
+    }
+
+    .notif-cerrar:hover {
+        color: #ffd700;
+    }
+
+    /* Efectos de partículas para ascensiones */
+    .particulas {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        overflow: hidden;
+    }
+
+    .particula {
+        position: absolute;
+        width: 4px;
+        height: 4px;
+        background: #ffd700;
+        border-radius: 50%;
+        animation: flotar-particula 3s infinite;
+    }
+
+    @keyframes flotar-particula {
+        0% {
+            transform: translateY(100px) scale(0);
+            opacity: 0;
+        }
+        10% {
+            opacity: 1;
+        }
+        90% {
+            opacity: 1;
+        }
+        100% {
+            transform: translateY(-100px) scale(1);
+            opacity: 0;
+        }
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .notificacion-epica {
+            top: 10px;
+            right: 10px;
+            left: 10px;
+            max-width: none;
+            transform: translateY(-150px);
+        }
+
+        .notificacion-epica.mostrar {
+            transform: translateY(0);
+        }
+
+        .notificacion-epica.ocultar {
+            transform: translateY(-150px);
+        }
+    }
+        .detail-box {
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+        }
+
+        .detail-box:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 255, 255, 0.2);
+        }
+
+        .detail-label {
+            font-size: 0.85em;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+            opacity: 0.9;
+        }
+
+        .detail-value {
+            font-size: 1.3em;
+            font-weight: bold;
+            text-shadow: 0 0 10px currentColor;
+        }
+
+        .progress-bar {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .progress-bar::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+
+            animation: shimmer 2s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+
+            /* === ANIMACIONES BASE === */
+            @keyframes float {
+                0% { transform: translateY(0px); }
+                50% { transform: translateY(-5px); }
+                100% { transform: translateY(0px); }
+            }
+            .animate-float {
+                animation: float 6s ease-in-out infinite;
+            }
+
+            @keyframes fadeSlide {
+                0% { opacity: 0; transform: translateY(10px); }
+                100% { opacity: 1; transform: translateY(0); }
+            }
+            .animate-fadeSlide {
+                animation: fadeSlide 0.8s ease-out;
+            }
+
+            @keyframes pulse-neon {
+                0%, 100% {
+                    box-shadow: 0 0 15px rgba(0, 255, 255, 0.4), inset 0 0 8px rgba(0, 255, 255, 0.2);
+                }
+                50% {
+                    box-shadow: 0 0 25px rgba(0, 255, 255, 0.6), inset 0 0 12px rgba(0, 255, 255, 0.3);
+                }
+            }
+            .pulse-neon {
+                animation: pulse-neon 3s ease-in-out infinite;
+            }
+
+            @keyframes titleGlow {
+                0%, 100% { text-shadow: 0 0 30px rgba(0, 255, 255, 0.5); }
+                50% { text-shadow: 0 0 60px rgba(0, 255, 255, 0.8), 0 0 40px rgba(255, 0, 255, 0.6); }
+            }
+
+            @keyframes inputGlow {
+                0%, 100% { border-color: rgba(0, 255, 255, 0.5); }
+                50% { border-color: rgba(0, 255, 255, 0.8); }
+            }
+
+            @keyframes dataFlow {
+                0% { transform: translateX(-100%); }
+                100% { transform: translateX(100%); }
+            }
+
+            /* === EFECTOS ATMOSFÉRICOS === */
+            .blade-runner-atmosphere {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                pointer-events: none;
+                z-index: -1;
+            }
+
+            .background-fog {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: radial-gradient(circle at 30% 20%, rgba(0, 255, 255, 0.1) 0%, transparent 50%),
+                            radial-gradient(circle at 70% 80%, rgba(255, 0, 255, 0.1) 0%, transparent 50%);
+                animation: float 8s ease-in-out infinite;
+            }
+
+            /* === CONTENEDOR PRINCIPAL === */
+            .cyber-entreno-container {
+                max-width: 900px;
+                margin: auto;
+                background: rgba(0, 0, 0, 0.4) !important;
+                backdrop-filter: blur(15px) saturate(180%) !important;
+                -webkit-backdrop-filter: blur(15px) saturate(180%) !important;
+                border: 1px solid rgba(77, 208, 225, 0.6) !important;
+                box-shadow: 0 0 15px rgba(77, 208, 225, 0.4), inset 0 0 8px rgba(77, 208, 225, 0.2) !important;
+                border-radius: 20px !important;
+                padding: 2rem;
+                margin-top: 2rem;
+                margin-bottom: 2rem;
+                min-height: 80vh;
+            }
+
+            /* === HEADER CYBERPUNK === */
+            .cyber-entreno-header {
+                text-align: center;
+                margin-bottom: 2rem;
+                padding: 1.5rem;
+                background: rgba(0, 0, 0, 0.6) !important;
+                backdrop-filter: blur(20px) saturate(180%) !important;
+                -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+                border: 1px solid rgba(0, 255, 255, 0.6) !important;
+                box-shadow: 0 0 25px rgba(0, 255, 255, 0.3), inset 0 0 15px rgba(0, 255, 255, 0.1) !important;
+                border-radius: 15px;
+                position: relative;
+                overflow: hidden;
+            }
+
+            .cyber-entreno-header::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                height: 3px;
+
+                animation: float 3s ease-in-out infinite;
+            }
+
+            .cyber-entreno-header h2 {
+                font-size: 2.2rem;
+                font-weight: 700;
+
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+                color: transparent;
+                text-shadow: 0 0 30px rgba(0, 255, 255, 0.5);
+                animation: titleGlow 4s ease-in-out infinite alternate;
+                margin-bottom: 0.5rem;
+            }
+
+            .cyber-entreno-header .lead {
+                color: #ffffff;
+                font-size: 1.1rem;
+                text-shadow: 0 0 5px rgba(255, 255, 255, 0.3);
+                margin-bottom: 0;
+            }
+
+            /* === EJERCICIO CARDS CYBERPUNK === */
+            .cyber-ejercicio-card {
+                background: rgba(0, 0, 0, 0.6) !important;
+                backdrop-filter: blur(15px) saturate(180%) !important;
+                -webkit-backdrop-filter: blur(15px) saturate(180%) !important;
+                border: 1px solid rgba(77, 208, 225, 0.4) !important;
+                box-shadow: 0 0 20px rgba(77, 208, 225, 0.2), inset 0 0 10px rgba(77, 208, 225, 0.1) !important;
+                border-radius: 15px;
+                padding: 1.5rem;
+                margin-bottom: 1.5rem;
+                transition: all 0.3s ease;
+                position: relative;
+                overflow: hidden;
+            }
+
+            .cyber-ejercicio-card::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: -100%;
+                width: 100%;
+                height: 100%;
+
+                transition: left 0.6s ease;
+            }
+
+            .cyber-ejercicio-card:hover::before {
+                left: 100%;
+            }
+
+            .cyber-ejercicio-card:hover {
+                transform: translateY(-3px);
+                box-shadow: 0 0 30px rgba(77, 208, 225, 0.4), inset 0 0 15px rgba(77, 208, 225, 0.2) !important;
+                border-color: rgba(0, 255, 255, 0.6) !important;
+            }
+
+            /* === EJERCICIO HEADER === */
+            .cyber-ejercicio-header {
+                border-bottom: 1px solid rgba(0, 255, 255, 0.3) !important;
+                padding-bottom: 1rem;
+                margin-bottom: 1rem;
+            }
+
+            .cyber-ejercicio-header h4 {
+                margin: 0;
+                color: #00ffff !important;
+                font-weight: 700;
+                font-size: 1.4rem;
+                text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            }
+
+            .cyber-ejercicio-header small {
+                color: rgba(255, 255, 255, 0.8) !important;
+                font-size: 0.9rem;
+                margin-top: 0.5rem;
+                display: block;
+            }
+
+            /* === TABLA CYBERPUNK === */
+            .cyber-series-table {
+                background: transparent;
+                color: #ffffff;
+                margin-bottom: 0;
+            }
+
+            .cyber-series-table th {
+                font-weight: 600;
+                color: #00ffff !important;
+                border-bottom: 2px solid rgba(0, 255, 255, 0.3) !important;
+                background: rgba(0, 255, 255, 0.1);
+                text-shadow: 0 0 5px rgba(0, 255, 255, 0.3);
+                padding: 1rem 0.75rem;
+                font-size: 0.9rem;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+            }
+
+            .cyber-series-table td {
+                border-bottom: 1px solid rgba(0, 255, 255, 0.2) !important;
+                background: rgba(0, 0, 0, 0.3);
+                padding: 0.75rem;
+                vertical-align: middle;
+            }
+
+            .cyber-series-table td strong {
+                color: #00ffff;
+                font-size: 1.1em;
+                text-shadow: 0 0 5px rgba(0, 255, 255, 0.3);
+            }
+
+            /* === INPUTS CYBERPUNK === */
+            .cyber-form-control {
+                background: rgba(0, 0, 0, 0.8) !important;
+                border: 2px solid rgba(0, 255, 255, 0.4) !important;
+                color: #ffffff !important;
+                border-radius: 8px;
+                padding: 0.5rem 0.75rem;
+                transition: all 0.3s ease;
+                backdrop-filter: blur(5px);
+                -webkit-backdrop-filter: blur(5px);
+                font-weight: 500;
+            }
+
+            .cyber-form-control:focus {
+                background: rgba(0, 0, 0, 0.9) !important;
+                border-color: rgba(0, 255, 255, 0.8) !important;
+                box-shadow: 0 0 15px rgba(0, 255, 255, 0.4) !important;
+                color: #ffffff !important;
+                animation: inputGlow 2s ease-in-out infinite;
+                outline: none;
+            }
+
+            .cyber-form-control::placeholder {
+                color: rgba(255, 255, 255, 0.6) !important;
+            }
+
+            /* === CHECKBOX CYBERPUNK === */
+            .cyber-form-check-input {
+                width: 1.5em;
+                height: 1.5em;
+                background: rgba(0, 0, 0, 0.8) !important;
+                border: 2px solid rgba(0, 255, 255, 0.4) !important;
+                border-radius: 4px;
+                transition: all 0.3s ease;
+                cursor: pointer;
+            }
+
+            .cyber-form-check-input:checked {
+
+                border-color: rgba(0, 255, 255, 0.8) !important;
+                box-shadow: 0 0 15px rgba(0, 255, 255, 0.4) !important;
+            }
+
+            .cyber-form-check-input:focus {
+                box-shadow: 0 0 10px rgba(0, 255, 255, 0.5) !important;
+                outline: none;
+            }
+
+            .cyber-form-check-input:hover {
+                border-color: rgba(0, 255, 255, 0.6) !important;
+                transform: scale(1.1);
+            }
+
+            /* === LABELS CYBERPUNK === */
+            .cyber-form-label {
+                color: #00ffff !important;
+                font-weight: 600;
+                text-shadow: 0 0 5px rgba(0, 255, 255, 0.3);
+                margin-bottom: 0.5rem;
+                display: block;
+            }
+
+            /* === TEXTAREA CYBERPUNK === */
+            .cyber-textarea {
+                background: rgba(0, 0, 0, 0.8) !important;
+                border: 2px solid rgba(0, 255, 255, 0.4) !important;
+                color: #ffffff !important;
+                border-radius: 8px;
+                padding: 0.75rem;
+                transition: all 0.3s ease;
+                backdrop-filter: blur(5px);
+                -webkit-backdrop-filter: blur(5px);
+                resize: vertical;
+                min-height: 100px;
+            }
+
+            .cyber-textarea:focus {
+                background: rgba(0, 0, 0, 0.9) !important;
+                border-color: rgba(0, 255, 255, 0.8) !important;
+                box-shadow: 0 0 15px rgba(0, 255, 255, 0.4) !important;
+                color: #ffffff !important;
+                outline: none;
+            }
+
+            .cyber-textarea::placeholder {
+                color: rgba(255, 255, 255, 0.6) !important;
+            }
+
+            /* === BOTÓN FINALIZAR CYBERPUNK === */
+            .cyber-btn-finalizar {
+
+                border: 1px solid rgba(0, 255, 255, 0.8) !important;
+                color: #000000 !important;
+                padding: 1rem 2.5rem;
+                border-radius: 12px;
+                font-weight: 700;
+                font-size: 1.2rem;
+                text-decoration: none;
+                transition: all 0.3s ease;
+                backdrop-filter: blur(5px);
+                -webkit-backdrop-filter: blur(5px);
+                box-shadow: 0 0 25px rgba(0, 255, 255, 0.4);
+                display: inline-block;
+                text-align: center;
+                position: relative;
+                overflow: hidden;
+            }
+
+            .cyber-btn-finalizar::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: -100%;
+                width: 100%;
+                height: 100%;
+
+                transition: left 0.5s ease;
+            }
+
+            .cyber-btn-finalizar:hover::before {
+                left: 100%;
+            }
+
+            .cyber-btn-finalizar:hover {
+
+                box-shadow: 0 0 35px rgba(0, 255, 255, 0.6);
+                transform: translateY(-3px) scale(1.05);
+                color: #000000 !important;
+            }
+
+            .cyber-btn-finalizar:active {
+                transform: translateY(-1px) scale(1.02);
+            }
+
+            /* === RESUMEN SECTION === */
+            .cyber-resumen-section {
+                background: rgba(0, 0, 0, 0.7) !important;
+                backdrop-filter: blur(20px) saturate(180%) !important;
+                -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+                border: 1px solid rgba(0, 150, 255, 0.6) !important;
+                box-shadow: 0 0 25px rgba(0, 150, 255, 0.3), inset 0 0 15px rgba(0, 150, 255, 0.1) !important;
+                border-left: 5px solid #0096ff !important;
+                border-radius: 15px;
+                padding: 1.5rem;
+                margin-bottom: 1.5rem;
+            }
+
+            .cyber-resumen-section .cyber-ejercicio-header h4 {
+                color: #0096ff !important;
+                text-shadow: 0 0 10px rgba(0, 150, 255, 0.5);
+            }
+
+            /* === GRID RESPONSIVE === */
+            .cyber-row {
+                display: flex;
+                flex-wrap: wrap;
+                margin: -0.5rem;
+            }
+
+            .cyber-col-md-6 {
+                flex: 0 0 50%;
+                max-width: 50%;
+                padding: 0.5rem;
+            }
+
+            .cyber-col-12 {
+                flex: 0 0 100%;
+                max-width: 100%;
+                padding: 0.5rem;
+            }
+
+            /* === EFECTOS ADICIONALES === */
+            .cyber-ejercicio-card:nth-child(odd) {
+                animation-delay: 0.1s;
+            }
+
+            .cyber-ejercicio-card:nth-child(even) {
+                animation-delay: 0.2s;
+            }
+
+            /* Efecto de progreso en las series completadas */
+            .cyber-series-table tr:has(.cyber-form-check-input:checked) {
+                background: rgba(0, 255, 100, 0.1) !important;
+                border-left: 3px solid #00ff64;
+            }
+
+            .cyber-series-table tr:has(.cyber-form-check-input:checked) td {
+                color: #00ff64;
+                text-shadow: 0 0 5px rgba(0, 255, 100, 0.3);
+            }
+
+            /* === RESPONSIVE === */
+            @media (max-width: 768px) {
+                .cyber-entreno-container {
+                    padding: 1rem;
+                    margin: 1rem;
+                }
+
+                .cyber-entreno-header h2 {
+                    font-size: 1.8rem;
+                }
+
+                .cyber-ejercicio-card {
+                    margin-bottom: 2.5rem;
+                    padding: 1rem;
+                }
+
+                .cyber-series-table th,
+                .cyber-series-table td {
+                    padding: 0.5rem 0.25rem;
+                    font-size: 0.85rem;
+                }
+
+                .cyber-col-md-6 {
+                    flex: 0 0 100%;
+                    max-width: 100%;
+                }
+
+                .cyber-btn-finalizar {
+                    padding: 0.8rem 2rem;
+                    font-size: 1.1rem;
+                }
+            }
+
+            /* === EFECTOS DE CARGA === */
+            .loading-effect {
+                position: relative;
+                overflow: hidden;
+            }
+
+            .loading-effect::after {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: -100%;
+                width: 100%;
+                height: 100%;
+
+                animation: dataFlow 2s ease-in-out infinite;
+            }
+
+            /* === INDICADORES DE ESTADO === */
+            .serie-completada {
+                position: relative;
+            }
+
+            .serie-completada::after {
+                content: '✓';
+                position: absolute;
+                right: -25px;
+                top: 50%;
+                transform: translateY(-50%);
+                color: #00ff64;
+                font-weight: bold;
+                font-size: 1.2em;
+                text-shadow: 0 0 10px rgba(0, 255, 100, 0.5);
+            }
+
+            /* === EFECTOS DE FOCUS MEJORADOS === */
+            .cyber-form-control:focus,
+            .cyber-textarea:focus {
+                transform: scale(1.02);
+                z-index: 10;
+                position: relative;
+            }
+            /* En templates/clientes/portal_sesion.html, dentro de <style> */
+
+            :root {
+                --cyan-glow: rgba(0, 255, 255, 0.7);
+                --magenta-glow: rgba(255, 0, 255, 0.6);
+                --green-glow: rgba(50, 255, 150, 0.8);
+                --yellow-glow: rgba(245, 158, 11, 0.8);
+                --red-glow: rgba(239, 68, 68, 0.8);
+                --card-bg: rgba(15, 23, 42, 0.7);
+                --border-color: rgba(77, 208, 225, 0.3);
+                --text-primary: #f8fafc;
+                --text-secondary: #94a3b8;
+            }
+
+
+            /* --- Animaciones --- */
+            @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+            @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+            /* --- Contenedor Principal --- */
+            .mission-container {
+                max-width: 800px;
+                margin: 2rem auto;
+                padding: 2rem;
+            }
+
+            /* --- Tarjeta de Fase --- */
+            .phase-card {
+                background: var(--card-bg);
+                backdrop-filter: blur(10px);
+                border: 1px solid var(--border-color);
+                border-radius: 1rem;
+                padding: 2rem;
+                margin-bottom: 2rem;
+                animation: fadeInUp 0.6s ease-out forwards;
+            }
+
+            .phase-header {
+                display: flex;
+                align-items: center;
+                gap: 1rem;
+                border-bottom: 1px solid var(--border-color);
+                padding-bottom: 1rem;
+                margin-bottom: 1.5rem;
+            }
+            .phase-icon {
+                font-size: 2rem;
+                color: var(--cyan-glow);
+                text-shadow: 0 0 10px var(--cyan-glow);
+            }
+            .phase-title {
+                font-size: 1.5rem;
+                font-weight: 700;
+                color: var(--text-primary);
+            }
+            .phase-subtitle {
+                font-size: 1rem;
+                color: var(--text-secondary);
+            }
+
+            /* --- Estilos para el Formulario de Check-in --- */
+            .checkin-form .slider-group { margin-bottom: 1.5rem; }
+            .checkin-form .slider-label { display: flex; justify-content: space-between; font-weight: 600; margin-bottom: 0.75rem; }
+            .checkin-form .slider-label span:last-child { color: var(--cyan-glow); font-family: monospace; }
+            .checkin-form input[type="range"] { width: 100%; accent-color: var(--cyan-glow); }
+        /* Añade esto a tu bloque <style> en portal_sesion.html */
+
+        .detail-box {
+            background: rgba(0,0,0,0.2);
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+        }
+        .detail-label {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .detail-value {
+            font-size: 1.25rem;
+            font-weight: 700;
+            font-family: monospace;
+            margin-top: 0.25rem;
+        }
+        .text-fuchsia-400 { color: #f0abfc; }
+        .text-yellow-400 { color: #facc15; }
+        .text-cyan-400 { color: #67e8f9; }
+
+            /* --- Tarjeta de Briefing (Recomendación) --- */
+            .briefing-card {
+                padding: 1.5rem;
+                border-radius: 0.75rem;
+                border-left: 4px solid;
+                margin-bottom: 2rem;
+                animation: fadeInUp 0.6s 0.2s ease-out forwards;
+                opacity: 0;
+            }
+            .briefing-title { font-size: 1.2rem; font-weight: 700; margin-bottom: 0.5rem; }
+            .briefing-card.readiness-green { border-color: var(--green-glow); background: rgba(50, 255, 150, 0.1); }
+            .briefing-card.readiness-cyan { border-color: var(--cyan-glow); background: rgba(0, 255, 255, 0.1); }
+            .briefing-card.readiness-yellow { border-color: var(--yellow-glow); background: rgba(245, 158, 11, 0.1); }
+            .briefing-card.readiness-red { border-color: var(--red-glow); background: rgba(239, 68, 68, 0.1); }
+
+            /* --- Tarjeta de Ejercicio --- */
+            .exercise-card {
+                background: rgba(0,0,0,0.3);
+                border-radius: 0.75rem;
+                margin-bottom: 1rem;
+                overflow: hidden;
+                border: 1px solid transparent;
+                transition: all 0.3s ease;
+            }
+            .exercise-card:hover {
+                border-color: var(--border-color);
+                transform: scale(1.02);
+            }
+            .exercise-card-header {
+                background: rgba(0,0,0,0.4);
+                padding: 1rem 1.5rem;
+                font-size: 1.2rem;
+                font-weight: 600;
+                color: var(--cyan-glow);
+            }
+            .exercise-card-body { padding: 1.5rem; }
+            .exercise-table { width: 100%; }
+            .exercise-table th, .exercise-table td { padding: 0.5rem; text-align: center; }
+            .exercise-table th { color: var(--text-secondary); font-size: 0.8rem; text-transform: uppercase; }
+            .exercise-table input {
+                width: 100%;
+                background: var(--dark-bg, #0f172a);
+                border: 1px solid var(--border-color);
+                color: var(--text-primary);
+                text-align: center;
+                border-radius: 0.25rem;
+                padding: 0.5rem;
+            }
+        /* En tu plantilla principal, dentro de <style> */
+
+        /* --- Variables de Color y Base (Tu base es excelente) --- */
+        :root {
+            --color-cyan: #00ffff;
+            --color-magenta: #ff00ff;
+            --color-green: #32ff00;
+            --color-yellow: #f59e0b;
+            --color-red: #ef4444;
+            --bg-dark: #0a0a1a;
+            --bg-card: rgba(15, 23, 42, 0.7);
+            --border-color: rgba(0, 255, 255, 0.3);
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+        }
+
+        .container { max-width: 1400px; margin: auto; padding: 2rem; }
+
+        /* --- Componente Base: Tarjeta de Módulo --- */
+        .module-card {
+            background: var(--bg-card);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border-color);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.1);
+            animation: fadeInUp 0.6s ease-out forwards;
+        }
+
+        .module-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 1rem;
+        }
+        .module-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--color-cyan);
+            text-shadow: 0 0 8px var(--color-cyan);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        .module-link {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+        .module-link:hover { color: var(--color-cyan); }
+
+        /* --- Tarjeta de "Próximo Entrenamiento" (Destacada) --- */
+        .next-workout-card {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 2rem;
+            align-items: center;
+        }
+        .workout-details h3 { font-size: 1.5rem; font-weight: 700; }
+        .workout-details .tags span {
+            background: rgba(0, 255, 255, 0.1);
+            color: var(--color-cyan);
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .workout-exercises { list-style: none; padding: 0; margin-top: 1rem; }
+        .workout-exercises li { display: flex; justify-content: space-between; padding: 0.25rem 0; }
+
+        .progress-annual .progress-bar {
+            background: rgba(255,255,255,0.1);
+            border-radius: 9999px;
+            height: 0.75rem;
+            overflow: hidden;
+        }
+        .progress-annual .progress-fill {
+
+            height: 100%;
+            border-radius: 9999px;
+        }
+
+        /* --- Botones de Acción --- */
+        .action-buttons { display: flex; gap: 1rem; margin-top: 1.5rem; }
+        .action-btn {
+            flex-grow: 1;
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            text-align: center;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.3s;
+            border: 1px solid transparent;
+        }
+        .btn-primary {
+
+            color: #000;
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.4);
+        }
+        .btn-secondary {
+            background: transparent;
+            color: var(--text-primary);
+            border-color: var(--border-color);
+        }
+        .action-btn:hover { transform: scale(1.05); }
+
+        /* --- Tarjeta de Adherencia --- */
+        .adherence-card { text-align: center; padding: 1rem; background: rgba(0,0,0,0.2); border-radius: 0.5rem; }
+        .adherence-card .value { font-size: 2rem; font-weight: 700; }
+        .adherence-card .label { font-size: 0.8rem; color: var(--text-secondary); }
+
+        /* --- Alertas Activas --- */
+        .alert-card {
+            padding: 1rem;
+            border-radius: 0.5rem;
+            border-left: 4px solid var(--color-red);
+            background: rgba(239, 68, 68, 0.1);
+        }
+        .alert-card .alert-title { font-weight: 700; color: var(--color-red); }
+
+            /* --- Botón Principal --- */
+            .mission-button {
+                display: block;
+                width: 100%;
+                padding: 1rem;
+                border: none;
+                border-radius: 0.5rem;
+                font-size: 1.1rem;
+                font-weight: 700;
+                color: #000;
+                cursor: pointer;
+                transition: all 0.3s ease;
+                text-align: center;
+
+                box-shadow: 0 0 20px rgba(0, 255, 255, 0.4);
+            }
+            .mission-button:hover {
+                transform: scale(1.03);
+                box-shadow: 0 0 30px rgba(255, 0, 255, 0.5);
+            }
+
+            /* === ANIMACIÓN DE ENTRADA PARA INPUTS === */
+            .cyber-form-control,
+            .cyber-textarea,
+            .cyber-form-check-input {
+                animation: fadeSlide 0.6s ease-out;
+            }
+
+            /* === AJUSTE FINAL PARA SERIES DE APROXIMACIÓN === */
+.serie-row.serie-aproximacion {
+    border-color: rgba(255, 255, 255, 0.15); /* Borde más tenue */
+    background: rgba(0, 0, 0, 0.1);
+}
+
+.serie-row.serie-aproximacion .serie-cell::before {
+    color: #94a3b8; /* Etiqueta en color gris secundario */
+}
+
+.serie-row.serie-aproximacion i {
+    color: #94a3b8; /* Texto "Aprox. X" en gris */
+    font-style: italic;
+}
+/* === MEJORAS DE JERARQUÍA VISUAL EN TARJETAS DE SERIE (MÓVIL) === */
+@media (max-width: 768px) {
+    /* Destacar Peso y Reps */
+    .serie-cell[data-label="Peso (kg)"]::before,
+    .serie-cell[data-label="Reps Realizadas"]::before {
+        color: #f8fafc; /* Blanco principal */
+        font-weight: 700; /* Un poco más de grosor */
+    }
+
+    /* Hacer RPE y Hecho un poco más sutiles */
+    .serie-cell[data-label="RPE Sentido"]::before,
+    .serie-cell[data-label="Hecho"]::before {
+        color: #94a3b8; /* Color de texto secundario */
+        font-weight: 500;
+    }
+}
+/* === MEJORA DE FEEDBACK AL COMPLETAR SERIE (MÓVIL) === */
+@media (max-width: 768px) {
+    .serie-row.completada {
+        opacity: 0.7;
+        border-color: #00ff64; /* Borde verde de éxito */
+        transition: opacity 0.5s ease, border-color 0.5s ease;
+    }
+}
+

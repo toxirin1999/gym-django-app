@@ -51,7 +51,7 @@
     }
 </style>
 
-<!-- Tarjeta del Próximo Entrenamiento -->
+<!-- Tarjeta del Próximo Entrenamiento (CON LÓGICA DE DESCANSO) -->
 <div class="timeline-section animate-fadeSlide" style="animation-delay: 0.15s;">
     <div class="flex justify-between items-center mb-4">
         <h3 class="section-title text-xl font-bold text-cyan-400">
@@ -62,6 +62,12 @@
             <i class="fas fa-external-link-alt"></i> Ver plan completo
         </a>
     </div>
+
+    {% comment %}
+    AQUÍ EMPIEZA LA LÓGICA PRINCIPAL:
+    Comprobamos si 'proximo_entrenamiento' existe y no es un día de descanso.
+    {% endcomment %}
+    {% if proximo_entrenamiento and not proximo_entrenamiento.es_descanso %}
 
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <!-- Información del Próximo Entrenamiento -->
@@ -167,7 +173,34 @@
             </div>
         </div>
     </div>
+    {% else %}
 
+    <!-- ========================================================== -->
+    <!-- === NUEVA TARJETA DE DÍA DE DESCANSO (SI NO HAY ENTRENO) === -->
+    <!-- ========================================================== -->
+    <div class="grid grid-cols-1">
+        <div class="bg-gradient-to-br from-gray-800/50 to-gray-900/50 p-6 rounded-lg border border-gray-700/50 flex flex-col items-center justify-center text-center">
+            <div class="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mb-4">
+                <i class="fas fa-battery-full text-green-400 text-3xl"></i>
+            </div>
+            <h4 class="text-xl font-bold text-white">Día de Descanso y Recuperación</h4>
+            <p class="text-gray-300 mt-2 max-w-md">
+                Hoy tu plan marca un día para descansar. La recuperación es tan importante como el entrenamiento. ¡Aprovecha para recargar energías!
+            </p>
+            <div class="mt-6 flex flex-wrap items-stretch gap-3">
+                <a href="{% url 'estoico:dashboard' %}" class="btn-accion btn-mindfulness" style="background-image: linear-gradient(to right, #4f46e5, #7c3aed);">
+                    <i class="fas fa-brain mr-2"></i>
+                    Mindfulness
+                </a>
+                <a href="#" class="btn-accion btn-progreso" style="background-image: linear-gradient(to right, #166534, #15803d);">
+                    <i class="fas fa-walking mr-2"></i>
+                    Recuperación Activa
+                </a>
+            </div>
+        </div>
+    </div>
+
+    {% endif %}
     <!-- Acciones rápidas y unificadas (AHORA USAN LAS NUEVAS CLASES CSS) -->
     <div class="mt-4 flex flex-wrap items-stretch gap-2">
         <!-- Botón Iniciar Entrenamiento -->

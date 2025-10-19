@@ -1,0 +1,291 @@
+{% extends 'diario/base_stoic.html' %}
+{% load static %}
+
+{% block title %}Areté - Diario Estoico{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Estilos para los botones de filtro */
+    .filtro-btn.active {
+        background-color: var(--primary-color);
+        color: white;
+        border-color: var(--primary-color);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="fade-in-up">
+    <!-- Header de Areté -->
+    <div class="card shadow-soft mb-4">
+        <div class="card-body p-4">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h1 class="text-gradient mb-2"><i class="fas fa-graduation-cap me-2"></i>Areté - Desarrollo Personal</h1>
+                    <blockquote class="border-0 p-0 m-0 bg-transparent">
+                        <p class="lead mb-1">"Conocerse a uno mismo es el principio de la sabiduría."</p>
+                        <footer>— Aristóteles</footer>
+                    </blockquote>
+                </div>
+                <div class="col-md-4 text-center text-md-end mt-3 mt-md-0">
+                    <div class="progress" style="height: 20px;">
+                        <div class="progress-bar" role="progressbar" style="width: {{ porcentaje_completado }}%;" aria-valuenow="{{ porcentaje_completado }}" aria-valuemin="0" aria-valuemax="100">
+                            {{ porcentaje_completado }}%
+                        </div>
+                    </div>
+                    <small class="text-muted mt-2 d-block">Progreso General</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Estadísticas -->
+    <div class="row mb-4 g-3">
+        <div class="col">
+            <div class="stat-item card card-body">
+                <div class="stat-number">{{ total_ejercicios }}</div>
+                <div class="stat-label">Total Ejercicios</div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="stat-item card card-body">
+                <div class="stat-number text-success">{{ completados }}</div>
+                <div class="stat-label">Completados</div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="stat-item card card-body">
+                <div class="stat-number text-primary">{{ pendientes }}</div>
+                <div class="stat-label">Pendientes</div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="stat-item card card-body">
+                <div class="stat-number text-warning">{{ a_repetir_count|default:0 }}</div>
+                <div class="stat-label">A Repetir</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="card shadow-soft mb-4">
+        <div class="card-body text-center">
+            <h6 class="text-muted mb-3"><i class="fas fa-filter me-2"></i>Filtrar Ejercicios</h6>
+            <div class="btn-group" role="group">
+                <button class="btn btn-outline-secondary filtro-btn {% if filtro_actual == 'todos' %}active{% endif %}" onclick="filtrarEjercicios('todos')">Todos</button>
+                <button class="btn btn-outline-secondary filtro-btn {% if filtro_actual == 'sin_completar' %}active{% endif %}" onclick="filtrarEjercicios('sin_completar')">Pendientes</button>
+                <button class="btn btn-outline-secondary filtro-btn {% if filtro_actual == 'completados' %}active{% endif %}" onclick="filtrarEjercicios('completados')">Completados</button>
+                <button class="btn btn-outline-secondary filtro-btn {% if filtro_actual == 'a_repetir' %}active{% endif %}" onclick="filtrarEjercicios('a_repetir')">A Repetir</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Lista de Ejercicios -->
+        <div class="col-lg-8">
+            {% if ejercicios %}
+            {% for ejercicio in ejercicios %}
+            <div class="card mb-3 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h5 class="card-title mb-1">{{ ejercicio.numero_orden }}. {{ ejercicio.nombre }}</h5>
+                            <p class="card-text text-muted">{{ ejercicio.descripcion|truncatewords:25 }}</p>
+                        </div>
+                        <span class="badge
+                                {% if ejercicio.estado == 'completado' %}bg-success
+                                {% elif ejercicio.estado == 'a_repetir' %}bg-warning text-dark
+                                {% else %}bg-secondary{% endif %}">
+                                {{ ejercicio.get_estado_display }}
+                            </span>
+                    </div>
+                    <div class="d-flex gap-2 mt-3">
+                        <button class="btn btn-sm btn-primary" onclick="verEjercicio({{ ejercicio.id }})">
+                            <i class="fas fa-eye me-1"></i>Ver Detalles
+                        </button>
+                        {% if ejercicio.estado != 'completado' %}
+                        <button class="btn btn-sm btn-success" onclick="completarEjercicio({{ ejercicio.id }})">
+                            <i class="fas fa-check me-1"></i>Completar
+                        </button>
+                        {% else %}
+                        <button class="btn btn-sm btn-warning text-dark" onclick="marcarRepetir({{ ejercicio.id }})">
+                            <i class="fas fa-redo me-1"></i>Repetir
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+            {% else %}
+            <div class="card text-center p-5">
+                <i class="fas fa-graduation-cap fa-3x text-muted mb-3"></i>
+                <h4 class="text-muted">No hay ejercicios para este filtro</h4>
+                <p>Prueba a seleccionar otro filtro o espera a que se generen nuevos ejercicios.</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            {% if proximo_ejercicio %}
+            <div class="card shadow-soft mb-4">
+                <div class="card-header"><h5 class="mb-0"><i class="fas fa-arrow-right me-2"></i>Próximo Ejercicio</h5></div>
+                <div class="card-body">
+                    <h5 class="card-title">{{ proximo_ejercicio.nombre }}</h5>
+                    <p class="text-muted small">{{ proximo_ejercicio.descripcion|truncatewords:20 }}</p>
+                    <button class="btn btn-primary w-100" onclick="verEjercicio({{ proximo_ejercicio.id }})">
+                        <i class="fas fa-play me-2"></i>Comenzar
+                    </button>
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="card shadow-soft">
+                <div class="card-header"><h5 class="mb-0"><i class="fas fa-lightbulb me-2"></i>Reflexión Aristotélica</h5></div>
+                <div class="card-body">
+                    <blockquote class="blockquote">
+                        <p class="font-serif">"Somos lo que hacemos repetidamente. La excelencia, entonces, no es un acto, sino un hábito."</p>
+                        <footer class="blockquote-footer">Aristóteles</footer>
+                    </blockquote>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Ejercicio -->
+<div class="modal fade" id="ejercicioModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title font-serif" id="modalTitulo">Ejercicio de Areté</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="modalContenido">
+                <!-- Contenido del ejercicio se carga aquí vía fetch -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                <button type="button" class="btn btn-success" id="btnCompletarModal"><i class="fas fa-check me-2"></i>Marcar como Completado</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let ejercicioActual = null;
+
+    function filtrarEjercicios(filtro) {
+        // Actualizar botones activos
+        document.querySelectorAll('.filtro-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        event.target.classList.add('active');
+
+        // Redirigir con filtro
+        window.location.href = `{% url 'diario:arete_dashboard' %}?filtro=${filtro}`;
+    }
+
+    function verEjercicio(ejercicioId) {
+        ejercicioActual = ejercicioId;
+
+        // Cargar datos del ejercicio
+        fetch(`/diario/arete/ejercicio/${ejercicioId}/`)
+            .then(response => response.text())
+            .then(html => {
+                document.getElementById('modalContenido').innerHTML = html;
+
+                // Mostrar modal
+                const modal = new bootstrap.Modal(document.getElementById('ejercicioModal'));
+                modal.show();
+            })
+            .catch(error => {
+                console.error('Error al cargar ejercicio:', error);
+                diario.showNotification('Error al cargar el ejercicio', 'error');
+            });
+    }
+
+    function completarEjercicio(ejercicioId) {
+        if (confirm('¿Estás seguro de que has completado este ejercicio?')) {
+            const formData = new FormData();
+            formData.append('estado', 'completado');
+            formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+
+            fetch(`/diario/arete/ejercicio/${ejercicioId}/`, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    diario.showNotification('¡Ejercicio completado! Excelente trabajo.', 'success');
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    diario.showNotification('Error al completar el ejercicio', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                diario.showNotification('Error de conexión', 'error');
+            });
+        }
+    }
+
+    function marcarRepetir(ejercicioId) {
+        if (confirm('¿Quieres marcar este ejercicio para repetir?')) {
+            const formData = new FormData();
+            formData.append('estado', 'a_repetir');
+            formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+
+            fetch(`/diario/arete/ejercicio/${ejercicioId}/`, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    diario.showNotification('Ejercicio marcado para repetir', 'info');
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    diario.showNotification('Error al actualizar el ejercicio', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                diario.showNotification('Error de conexión', 'error');
+            });
+        }
+    }
+
+    // Event listener para el botón del modal
+    document.getElementById('btnCompletarModal').addEventListener('click', function() {
+        if (ejercicioActual) {
+            completarEjercicio(ejercicioActual);
+            bootstrap.Modal.getInstance(document.getElementById('ejercicioModal')).hide();
+        }
+    });
+
+    // Animaciones al cargar
+    document.addEventListener('DOMContentLoaded', function() {
+        // Animar tarjetas de ejercicios
+        const ejercicioCards = document.querySelectorAll('.ejercicio-card');
+        ejercicioCards.forEach((card, index) => {
+            card.style.animationDelay = `${index * 0.1}s`;
+            card.classList.add('animate-fade-in');
+        });
+
+        // Animar círculo de progreso
+        const progressCircle = document.querySelector('.progreso-circle');
+        if (progressCircle) {
+            const currentDeg = progressCircle.style.getPropertyValue('--progress-deg');
+            progressCircle.style.setProperty('--progress-deg', '0deg');
+
+            setTimeout(() => {
+                progressCircle.style.setProperty('--progress-deg', currentDeg);
+            }, 500);
+        }
+    });
+</script>
+{% endblock %}

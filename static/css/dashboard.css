@@ -56,21 +56,47 @@
 .glitch-border-subtle {
     animation: none; /* Se activará con JS */
 }
-
 body {
-  font-family: 'Inter', sans-serif !important;
-  color: #ffffff !important;
-  background: url("/static/images/fondo_cyberpunk.pmg") no-repeat center center fixed !important;
-  background-size: cover !important;
-  background-color: #000000 !important;
-  min-height: 100vh !important;
-  overflow-x: hidden !important;
-  padding: 1.5rem !important;
-  display: flex !important;
-  justify-content: center !important;
-  filter: brightness(0.9);
+    font-family: 'Inter', sans-serif;
+    color: #ffffff;
+    min-height: 100vh;
+    overflow-x: hidden;
+    padding: 1.5rem;
+    display: flex;
+    justify-content: center;
+    filter: brightness(0.9);
+
+    /* --- Propiedades del fondo separadas para mayor control --- */
+
+    /* 1. Imagen de fondo (la original, vertical) */
+    background-image: url('/static/images/fondo_cyberpunk.png'); /* ¡Corregido a .png! */
+
+    /* 2. Color de respaldo mientras carga la imagen */
+    background-color: #000000;
+
+    /* 3. La imagen no se repite */
+    background-repeat: no-repeat;
+
+    /* 4. La imagen se centra */
+    background-position: center center;
+
+    /* 5. La imagen se queda fija (efecto parallax) */
+    background-attachment: fixed;
+
+    /* 6. ¡LA MÁS IMPORTANTE! La imagen cubre todo el espacio sin deformarse */
+    background-size: cover;
 }
 
+/* --- Estilos para pantallas de 768px de ancho o menos (móviles) --- */
+@media (max-width: 768px) {
+    body {
+        /* 1. Cambiamos a la imagen optimizada para móvil (horizontal) */
+        background-image: url('/static/images/fondo_cyberpunk_mobile.png'); /* <-- ¡Asegúrate de crear y subir esta imagen! */
+
+        /* 2. En móviles, 'scroll' es más seguro y eficiente que 'fixed' */
+        background-attachment: scroll;
+    }
+}
 
 /* ---------- 1 · RESET ----------------------------------------------------- */
 *, *::before, *::after {

@@ -1,10 +1,157 @@
+{% load static %}
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <title>$Title$</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Diario Estoico{% endblock %}</title>
+
+    <!-- Bootstrap CSS (Necesario para la estructura) -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Font Awesome (Para los iconos ) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Google Fonts para el estilo Estoico (Inter y Crimson Text ) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Crimson+Text:ital,wght@0,400;0,600;1,400&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- TU HOJA DE ESTILOS ESTOICA -->
+    <link rel="stylesheet" href="{% static 'css/stoic_styles.css' %}">
+
+    {# Bloque para añadir CSS extra desde las plantillas hijas si es necesario #}
+    {% block extra_css %}{% endblock %}
 </head>
 <body>
-$END$
+    <!-- Navegación -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-light border-bottom sticky-top">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="{% url 'diario:dashboard_diario' %}">
+                <i class="fas fa-book-open me-2"></i> Sic Parvis Magna
+            </a>
+
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.path == '/' %}active{% endif %}" href="{% url 'diario:dashboard_diario' %}">
+                            <i class="fas fa-home me-1"></i> Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if 'prosoche' in request.path %}active{% endif %}" href="{% url 'diario:prosoche_dashboard' %}">
+                            <i class="fas fa-journal-whills me-1"></i> Prosoche
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'diario:eudaimonia_dashboard' %}">
+                            <i class="fas fa-balance-scale me-1"></i> Eudaimonia
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'diario:arete_dashboard' %}">
+                           <i class="fas fa-mountain me-1"></i> Areté
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'diario:gnosis_dashboard' %}">
+                           <i class="fas fa-brain me-1"></i> Gnosis
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'diario:vires_dashboard' %}">
+                            <i class="fas fa-dumbbell"></i> Vires
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'diario:kairos_dashboard' %}">
+                            <i class="fas fa-calendar-alt"></i> Kairos
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'diario:simbiosis_dashboard' %}">
+                            <i class="fas fa-users me-2"></i>Simbiosis
+                        </a>
+                    </li>
+                </ul>
+                
+                <ul class="navbar-nav">
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-user-circle me-1"></i> {{ user.username }}
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="#"><i class="fas fa-cog me-2"></i> Configuración</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{% url 'logout' %}"><i class="fas fa-sign-out-alt me-2"></i> Cerrar Sesión</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Contenido Principal -->
+    <main class="container-fluid my-4">
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- JavaScript personalizado -->
+    <script>
+        // Efectos de animación al cargar
+        document.addEventListener('DOMContentLoaded', function() {
+            // Animar elementos al aparecer
+            const animateElements = document.querySelectorAll('.cyber-card, .cyber-stat');
+            animateElements.forEach((el, index) => {
+                el.style.animationDelay = `${index * 0.1}s`;
+                el.classList.add('animate-fade-in');
+            });
+
+            // Efecto de escritura en títulos
+            const titles = document.querySelectorAll('.cyber-card-title');
+            titles.forEach(title => {
+                title.addEventListener('mouseenter', function() {
+                    this.classList.add('animate-glow');
+                });
+                title.addEventListener('mouseleave', function() {
+                    this.classList.remove('animate-glow');
+                });
+            });
+        });
+
+        // Función para mostrar notificaciones cyberpunk
+        function showCyberNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `alert alert-${type} position-fixed top-0 end-0 m-3 animate-fade-in`;
+            notification.style.zIndex = '9999';
+            notification.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" onclick="this.parentElement.remove()"></button>
+            `;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.remove();
+            }, 5000);
+        }
+    </script>
+
+    {% block extra_js %}{% endblock %}
 </body>
 </html>

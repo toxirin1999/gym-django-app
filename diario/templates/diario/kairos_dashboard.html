@@ -1,0 +1,937 @@
+{% extends 'diario/base.html' %}
+{% load static %}
+
+{% block title %}Kairos - Diario Sic Parvis Magna{% endblock %}
+
+{% block extra_css %}
+<style>
+    .kairos-header {
+        background: linear-gradient(135deg, rgba(156, 39, 176, 0.2) 0%, rgba(0, 0, 0, 0.8) 100%);
+        border: 2px solid #9c27b0;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .kairos-header::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: linear-gradient(90deg, #9c27b0, #e91e63, #9c27b0);
+        animation: shimmer 3s ease-in-out infinite;
+    }
+
+    .calendario-container {
+        background: rgba(0, 0, 0, 0.7);
+        border: 1px solid rgba(156, 39, 176, 0.3);
+        border-radius: 15px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+    }
+
+    .calendario-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid rgba(156, 39, 176, 0.3);
+    }
+
+    .mes-navegacion {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .mes-btn {
+        background: transparent;
+        border: 1px solid rgba(156, 39, 176, 0.5);
+        color: #9c27b0;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s ease;
+    }
+
+    .mes-btn:hover {
+        background: rgba(156, 39, 176, 0.8);
+        color: #000000;
+        box-shadow: 0 0 15px rgba(156, 39, 176, 0.5);
+    }
+
+    .mes-actual {
+        font-family: var(--font-primary);
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #9c27b0;
+        text-shadow: 0 0 10px rgba(156, 39, 176, 0.3);
+        min-width: 200px;
+        text-align: center;
+    }
+
+    .calendario-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 0.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .dia-header {
+        text-align: center;
+        font-weight: 600;
+        color: #9c27b0;
+        padding: 0.75rem;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .dia-celda {
+        aspect-ratio: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-start;
+        border: 1px solid rgba(156, 39, 176, 0.2);
+        border-radius: 8px;
+        padding: 0.5rem;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        position: relative;
+        min-height: 80px;
+    }
+
+    .dia-celda:hover {
+        border-color: #9c27b0;
+        background: rgba(156, 39, 176, 0.1);
+    }
+
+    .dia-celda.hoy {
+        background: rgba(156, 39, 176, 0.8);
+        color: #000000;
+        font-weight: 700;
+        border-color: #9c27b0;
+    }
+
+    .dia-celda.otro-mes {
+        opacity: 0.3;
+        color: rgba(255, 255, 255, 0.5);
+    }
+
+    .dia-numero {
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+    }
+
+    .evento-mini {
+        width: 100%;
+        background: rgba(156, 39, 176, 0.6);
+        color: #ffffff;
+        font-size: 0.7rem;
+        padding: 0.125rem 0.25rem;
+        border-radius: 3px;
+        margin-bottom: 0.125rem;
+        text-overflow: ellipsis;
+        overflow: hidden;
+        white-space: nowrap;
+    }
+
+    .evento-mini.trabajo {
+        background: rgba(255, 193, 7, 0.8);
+        color: #000000;
+    }
+
+    .evento-mini.personal {
+        background: rgba(76, 175, 80, 0.8);
+        color: #ffffff;
+    }
+
+    .evento-mini.salud {
+        background: rgba(244, 67, 54, 0.8);
+        color: #ffffff;
+    }
+
+    .evento-card {
+        background: rgba(0, 0, 0, 0.7);
+        border: 1px solid rgba(156, 39, 176, 0.3);
+        border-radius: 15px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        transition: all 0.3s ease;
+        position: relative;
+    }
+
+    .evento-card:hover {
+        border-color: #9c27b0;
+        box-shadow: 0 0 25px rgba(156, 39, 176, 0.4);
+        transform: translateY(-3px);
+    }
+
+    .evento-fecha {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        background: rgba(156, 39, 176, 0.8);
+        color: #ffffff;
+        padding: 0.25rem 0.75rem;
+        border-radius: 15px;
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+
+    .evento-titulo {
+        color: #9c27b0;
+        font-weight: 700;
+        font-size: 1.2rem;
+        margin-bottom: 0.5rem;
+        text-shadow: 0 0 10px rgba(156, 39, 176, 0.3);
+    }
+
+    .evento-descripcion {
+        color: #ffffff;
+        margin-bottom: 1rem;
+        line-height: 1.5;
+    }
+
+    .evento-categoria {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        border-radius: 15px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 1rem;
+    }
+
+    .categoria-trabajo {
+        background: rgba(255, 193, 7, 0.2);
+        color: #ffc107;
+        border: 1px solid #ffc107;
+    }
+
+    .categoria-personal {
+        background: rgba(76, 175, 80, 0.2);
+        color: #4caf50;
+        border: 1px solid #4caf50;
+    }
+
+    .categoria-salud {
+        background: rgba(244, 67, 54, 0.2);
+        color: #f44336;
+        border: 1px solid #f44336;
+    }
+
+    .categoria-estudio {
+        background: rgba(33, 150, 243, 0.2);
+        color: #2196f3;
+        border: 1px solid #2196f3;
+    }
+
+    .vista-toggle {
+        display: flex;
+        background: rgba(156, 39, 176, 0.1);
+        border: 1px solid rgba(156, 39, 176, 0.3);
+        border-radius: 25px;
+        overflow: hidden;
+    }
+
+    .vista-btn {
+        background: transparent;
+        border: none;
+        color: #9c27b0;
+        padding: 0.5rem 1rem;
+        transition: all 0.3s ease;
+        flex: 1;
+    }
+
+    .vista-btn.active {
+        background: rgba(156, 39, 176, 0.8);
+        color: #000000;
+    }
+
+    .nuevo-evento-form {
+        background: rgba(0, 0, 0, 0.8);
+        border: 1px solid rgba(156, 39, 176, 0.4);
+        border-radius: 15px;
+        padding: 1.5rem;
+        margin-top: 1rem;
+    }
+
+    .proximos-eventos {
+        max-height: 400px;
+        overflow-y: auto;
+    }
+
+    .evento-proximo {
+        background: rgba(156, 39, 176, 0.1);
+        border: 1px solid rgba(156, 39, 176, 0.3);
+        border-radius: 10px;
+        padding: 1rem;
+        margin-bottom: 0.75rem;
+        transition: all 0.3s ease;
+    }
+
+    .evento-proximo:hover {
+        background: rgba(156, 39, 176, 0.2);
+        border-color: #9c27b0;
+    }
+
+    .evento-tiempo {
+        font-family: var(--font-primary);
+        font-weight: 700;
+        color: #9c27b0;
+        font-size: 0.9rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .filtros-eventos {
+        background: rgba(156, 39, 176, 0.1);
+        border: 1px solid rgba(156, 39, 176, 0.3);
+        border-radius: 10px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .filtro-categoria {
+        background: transparent;
+        border: 1px solid rgba(156, 39, 176, 0.5);
+        color: #9c27b0;
+        padding: 0.25rem 0.75rem;
+        border-radius: 15px;
+        margin: 0.25rem;
+        transition: all 0.3s ease;
+        font-size: 0.8rem;
+    }
+
+    .filtro-categoria:hover,
+    .filtro-categoria.active {
+        background: rgba(156, 39, 176, 0.8);
+        color: #000000;
+        box-shadow: 0 0 10px rgba(156, 39, 176, 0.5);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="animate-fade-in">
+    <!-- Header de Kairos -->
+    <div class="cyber-card kairos-header mb-4">
+        <div class="cyber-card-body">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h1 class="cyber-card-title mb-3" style="color: #9c27b0;">
+                        <i class="fas fa-clock"></i>
+                        Kairos - Gestión del Tiempo
+                    </h1>
+                    <div class="philosopher-quote" style="background: rgba(156, 39, 176, 0.1); border-left: 4px solid #9c27b0;">
+                        <p class="mb-2">
+                            <strong>Séneca:</strong> "No es que tengamos poco tiempo, sino que perdemos mucho"
+                        </p>
+                        <small class="text-muted">
+                            Kairos es el momento oportuno, el tiempo cualitativo que aprovechamos con sabiduría y propósito.
+                        </small>
+                    </div>
+                </div>
+                <div class="col-md-4 text-center">
+                    <img src="{% static 'images/seneca-kairos.png' %}" alt="Séneca Tiempo"
+                         class="img-fluid" style="max-height: 120px; opacity: 0.8;">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Estadísticas Rápidas -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="cyber-stat">
+                <span class="cyber-stat-value">{{ eventos_hoy|length }}</span>
+                <div class="cyber-stat-label">Eventos Hoy</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="cyber-stat">
+                <span class="cyber-stat-value">{{ eventos_semana|length }}</span>
+                <div class="cyber-stat-label">Esta Semana</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="cyber-stat">
+                <span class="cyber-stat-value">{{ eventos_mes|length }}</span>
+                <div class="cyber-stat-label">Este Mes</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="cyber-stat">
+                <span class="cyber-stat-value">{{ total_eventos }}</span>
+                <div class="cyber-stat-label">Total Eventos</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Controles de Vista -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="vista-toggle">
+                <button class="vista-btn active" onclick="cambiarVista('calendario')">
+                    <i class="fas fa-calendar"></i> Calendario
+                </button>
+                <button class="vista-btn" onclick="cambiarVista('lista')">
+                    <i class="fas fa-list"></i> Lista
+                </button>
+                <button class="vista-btn" onclick="cambiarVista('agenda')">
+                    <i class="fas fa-clock"></i> Agenda
+                </button>
+            </div>
+        </div>
+        <div class="col-md-6 text-end">
+            <button class="cyber-btn cyber-btn-success" onclick="showNuevoEventoForm()">
+                <i class="fas fa-plus"></i>
+                Nuevo Evento
+            </button>
+            <button class="cyber-btn cyber-btn-secondary" onclick="exportarCalendario()">
+                <i class="fas fa-download"></i>
+                Exportar
+            </button>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Vista Principal -->
+        <div class="col-lg-8">
+            <!-- Vista Calendario -->
+            <div id="vista-calendario" class="vista-content">
+                <div class="calendario-container">
+                    <div class="calendario-header">
+                        <div class="mes-navegacion">
+                            <button class="mes-btn" onclick="cambiarMes(-1)">
+                                <i class="fas fa-chevron-left"></i>
+                            </button>
+                            <div class="mes-actual" id="mesActual">
+                                {{ mes_actual|date:"F Y" }}
+                            </div>
+                            <button class="mes-btn" onclick="cambiarMes(1)">
+                                <i class="fas fa-chevron-right"></i>
+                            </button>
+                        </div>
+                        <div class="vista-toggle">
+                            <button class="vista-btn active" onclick="cambiarVistaCalendario('mes')">Mes</button>
+                            <button class="vista-btn" onclick="cambiarVistaCalendario('semana')">Semana</button>
+                        </div>
+                    </div>
+
+                    <div class="calendario-grid" id="calendarioGrid">
+                        <!-- Headers de días -->
+                        <div class="dia-header">Dom</div>
+                        <div class="dia-header">Lun</div>
+                        <div class="dia-header">Mar</div>
+                        <div class="dia-header">Mié</div>
+                        <div class="dia-header">Jue</div>
+                        <div class="dia-header">Vie</div>
+                        <div class="dia-header">Sáb</div>
+
+                        <!-- Días del mes se generan con JavaScript -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Vista Lista -->
+            <div id="vista-lista" class="vista-content" style="display: none;">
+                <div class="cyber-card">
+                    <div class="cyber-card-header">
+                        <h3 class="cyber-card-title">
+                            <i class="fas fa-list"></i>
+                            Lista de Eventos
+                        </h3>
+                    </div>
+                    <div class="cyber-card-body">
+                        <!-- Filtros -->
+                        <div class="filtros-eventos">
+                            <h6 class="text-cyber-primary mb-3">
+                                <i class="fas fa-filter"></i>
+                                Filtrar por Categoría
+                            </h6>
+                            <div class="text-center">
+                                <button class="filtro-categoria active" onclick="filtrarEventos('todos')">
+                                    Todos
+                                </button>
+                                <button class="filtro-categoria" onclick="filtrarEventos('trabajo')">
+                                    <i class="fas fa-briefcase"></i> Trabajo
+                                </button>
+                                <button class="filtro-categoria" onclick="filtrarEventos('personal')">
+                                    <i class="fas fa-user"></i> Personal
+                                </button>
+                                <button class="filtro-categoria" onclick="filtrarEventos('salud')">
+                                    <i class="fas fa-heart"></i> Salud
+                                </button>
+                                <button class="filtro-categoria" onclick="filtrarEventos('estudio')">
+                                    <i class="fas fa-graduation-cap"></i> Estudio
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Lista de eventos -->
+                        {% if eventos %}
+                        {% for evento in eventos %}
+                        <div class="evento-card" data-categoria="{{ evento.categoria }}">
+                            <div class="evento-fecha">
+                                {{ evento.fecha_inicio|date:"d/m" }}
+                                {% if evento.hora_inicio %}
+                                - {{ evento.hora_inicio|time:"H:i" }}
+                                {% endif %}
+                            </div>
+
+                            <h4 class="evento-titulo">{{ evento.titulo }}</h4>
+
+                            <div class="evento-categoria categoria-{{ evento.categoria }}">
+                                {% if evento.categoria == 'trabajo' %}
+                                <i class="fas fa-briefcase"></i> Trabajo
+                                {% elif evento.categoria == 'personal' %}
+                                <i class="fas fa-user"></i> Personal
+                                {% elif evento.categoria == 'salud' %}
+                                <i class="fas fa-heart"></i> Salud
+                                {% elif evento.categoria == 'estudio' %}
+                                <i class="fas fa-graduation-cap"></i> Estudio
+                                {% endif %}
+                            </div>
+
+                            {% if evento.descripcion %}
+                            <p class="evento-descripcion">{{ evento.descripcion }}</p>
+                            {% endif %}
+
+                            <div class="d-flex gap-2 mt-3">
+                                <button class="cyber-btn cyber-btn-secondary" onclick="editarEvento({{ evento.id }})">
+                                    <i class="fas fa-edit"></i>
+                                    Editar
+                                </button>
+                                <button class="cyber-btn cyber-btn-danger" onclick="eliminarEvento({{ evento.id }})">
+                                    <i class="fas fa-trash"></i>
+                                    Eliminar
+                                </button>
+                            </div>
+                        </div>
+                        {% endfor %}
+                        {% else %}
+                        <div class="text-center">
+                            <i class="fas fa-calendar-times fa-4x mb-4 opacity-50"></i>
+                            <h4 class="text-muted mb-3">No tienes eventos programados</h4>
+                            <p class="text-muted mb-4">
+                                Comienza agregando eventos para organizar mejor tu tiempo.
+                            </p>
+                            <button class="cyber-btn" onclick="showNuevoEventoForm()">
+                                <i class="fas fa-plus"></i>
+                                Crear Primer Evento
+                            </button>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Vista Agenda -->
+            <div id="vista-agenda" class="vista-content" style="display: none;">
+                <div class="cyber-card">
+                    <div class="cyber-card-header">
+                        <h3 class="cyber-card-title">
+                            <i class="fas fa-clock"></i>
+                            Agenda del Día - {{ fecha_hoy|date:"d/m/Y" }}
+                        </h3>
+                    </div>
+                    <div class="cyber-card-body">
+                        {% if eventos_hoy %}
+                        {% for evento in eventos_hoy %}
+                        <div class="evento-proximo">
+                            <div class="evento-tiempo">
+                                {% if evento.hora_inicio %}
+                                {{ evento.hora_inicio|time:"H:i" }}
+                                {% if evento.hora_fin %}
+                                - {{ evento.hora_fin|time:"H:i" }}
+                                {% endif %}
+                                {% else %}
+                                Todo el día
+                                {% endif %}
+                            </div>
+                            <h5 class="text-cyber-primary">{{ evento.titulo }}</h5>
+                            {% if evento.descripcion %}
+                            <p class="text-muted mb-2">{{ evento.descripcion|truncatewords:15 }}</p>
+                            {% endif %}
+                            <div class="evento-categoria categoria-{{ evento.categoria }}">
+                                {{ evento.get_categoria_display }}
+                            </div>
+                        </div>
+                        {% endfor %}
+                        {% else %}
+                        <div class="text-center">
+                            <i class="fas fa-sun fa-3x mb-3 opacity-50"></i>
+                            <h5 class="text-muted mb-3">No tienes eventos programados para hoy</h5>
+                            <p class="text-muted">
+                                ¡Perfecto día para relajarte o planificar actividades espontáneas!
+                            </p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Próximos Eventos -->
+            <div class="cyber-card mb-4">
+                <div class="cyber-card-header">
+                    <h3 class="cyber-card-title">
+                        <i class="fas fa-arrow-right"></i>
+                        Próximos Eventos
+                    </h3>
+                </div>
+                <div class="cyber-card-body">
+                    <div class="proximos-eventos">
+                        {% if eventos_proximos %}
+                        {% for evento in eventos_proximos|slice:":5" %}
+                        <div class="evento-proximo">
+                            <div class="evento-tiempo">
+                                {{ evento.fecha_inicio|date:"d/m" }}
+                                {% if evento.hora_inicio %}
+                                - {{ evento.hora_inicio|time:"H:i" }}
+                                {% endif %}
+                            </div>
+                            <h6 class="text-cyber-primary mb-1">{{ evento.titulo }}</h6>
+                            <div class="evento-categoria categoria-{{ evento.categoria }}">
+                                {{ evento.get_categoria_display }}
+                            </div>
+                        </div>
+                        {% endfor %}
+                        {% else %}
+                        <div class="text-center">
+                            <i class="fas fa-calendar-check fa-2x mb-3 opacity-50"></i>
+                            <p class="text-muted">No hay eventos próximos</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Resumen por Categoría -->
+            <div class="cyber-card mb-4">
+                <div class="cyber-card-header">
+                    <h3 class="cyber-card-title">
+                        <i class="fas fa-chart-pie"></i>
+                        Eventos por Categoría
+                    </h3>
+                </div>
+                <div class="cyber-card-body">
+                    <div class="cyber-stat mb-3">
+                        <span class="cyber-stat-value text-warning">
+                            {% for evento in eventos %}
+                                {% if evento.categoria == 'trabajo' %}1{% endif %}
+                            {% empty %}0{% endfor %}
+                        </span>
+                        <div class="cyber-stat-label">Trabajo</div>
+                    </div>
+                    <div class="cyber-stat mb-3">
+                        <span class="cyber-stat-value text-success">
+                            {% for evento in eventos %}
+                                {% if evento.categoria == 'personal' %}1{% endif %}
+                            {% empty %}0{% endfor %}
+                        </span>
+                        <div class="cyber-stat-label">Personal</div>
+                    </div>
+                    <div class="cyber-stat mb-3">
+                        <span class="cyber-stat-value text-danger">
+                            {% for evento in eventos %}
+                                {% if evento.categoria == 'salud' %}1{% endif %}
+                            {% empty %}0{% endfor %}
+                        </span>
+                        <div class="cyber-stat-label">Salud</div>
+                    </div>
+                    <div class="cyber-stat">
+                        <span class="cyber-stat-value text-info">
+                            {% for evento in eventos %}
+                                {% if evento.categoria == 'estudio' %}1{% endif %}
+                            {% empty %}0{% endfor %}
+                        </span>
+                        <div class="cyber-stat-label">Estudio</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Reflexión Estoica -->
+            <div class="cyber-card">
+                <div class="cyber-card-header">
+                    <h3 class="cyber-card-title">
+                        <i class="fas fa-lightbulb"></i>
+                        Sabiduría de Séneca
+                    </h3>
+                </div>
+                <div class="cyber-card-body">
+                    <blockquote class="philosopher-quote" style="background: rgba(156, 39, 176, 0.1); border-left: 4px solid #9c27b0;">
+                        <p class="mb-2">
+                            "La vida es larga si sabes cómo usarla. Pero uno la malgasta en vana ostentación,
+                            otro en trabajos sin objeto."
+                        </p>
+                        <footer class="text-muted">— Séneca</footer>
+                    </blockquote>
+
+                    <div class="mt-3">
+                        <small class="text-muted">
+                            El tiempo no se puede recuperar, pero sí se puede aprovechar.
+                            Cada momento es una oportunidad para actuar con propósito y sabiduría.
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Formulario Nuevo Evento (oculto) -->
+    <div id="nuevoEventoForm" class="nuevo-evento-form" style="display: none;">
+        <h5 class="text-cyber-primary mb-3">
+            <i class="fas fa-plus"></i>
+            Nuevo Evento
+        </h5>
+        <form method="post" action="{% url 'diario:kairos_evento_crear' %}">
+            {% csrf_token %}
+            <div class="row">
+                <div class="col-md-8 mb-3">
+                    <label class="cyber-form-label">Título del Evento</label>
+                    <input type="text" name="titulo" class="cyber-form-control"
+                           placeholder="Ej: Reunión de equipo" required>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label class="cyber-form-label">Categoría</label>
+                    <select name="categoria" class="cyber-form-control" required>
+                        <option value="trabajo">💼 Trabajo</option>
+                        <option value="personal">👤 Personal</option>
+                        <option value="salud">❤️ Salud</option>
+                        <option value="estudio">🎓 Estudio</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label class="cyber-form-label">Fecha</label>
+                    <input type="date" name="fecha_inicio" class="cyber-form-control"
+                           value="{{ fecha_hoy|date:'Y-m-d' }}" required>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label class="cyber-form-label">Hora Inicio</label>
+                    <input type="time" name="hora_inicio" class="cyber-form-control">
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label class="cyber-form-label">Hora Fin</label>
+                    <input type="time" name="hora_fin" class="cyber-form-control">
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label class="cyber-form-label">Descripción</label>
+                <textarea name="descripcion" class="cyber-form-control" rows="3"
+                          placeholder="Detalles adicionales del evento"></textarea>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="cyber-form-label">Ubicación</label>
+                    <input type="text" name="ubicacion" class="cyber-form-control"
+                           placeholder="Lugar del evento">
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="cyber-form-label">Recordatorio</label>
+                    <select name="recordatorio" class="cyber-form-control">
+                        <option value="">Sin recordatorio</option>
+                        <option value="15">15 minutos antes</option>
+                        <option value="30">30 minutos antes</option>
+                        <option value="60">1 hora antes</option>
+                        <option value="1440">1 día antes</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="d-flex gap-2">
+                <button type="submit" class="cyber-btn cyber-btn-success">
+                    <i class="fas fa-save"></i>
+                    Crear Evento
+                </button>
+                <button type="button" class="cyber-btn cyber-btn-secondary"
+                        onclick="hideNuevoEventoForm()">
+                    Cancelar
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let mesActual = new Date();
+    let vistaActual = 'calendario';
+
+    function cambiarVista(vista) {
+        // Actualizar botones activos
+        document.querySelectorAll('.vista-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        event.target.classList.add('active');
+
+        // Ocultar todas las vistas
+        document.querySelectorAll('.vista-content').forEach(content => {
+            content.style.display = 'none';
+        });
+
+        // Mostrar vista seleccionada
+        document.getElementById(`vista-${vista}`).style.display = 'block';
+        vistaActual = vista;
+
+        if (vista === 'calendario') {
+            generarCalendario();
+        }
+    }
+
+    function cambiarMes(direccion) {
+        mesActual.setMonth(mesActual.getMonth() + direccion);
+        document.getElementById('mesActual').textContent =
+            mesActual.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
+        generarCalendario();
+    }
+
+    function generarCalendario() {
+        const grid = document.getElementById('calendarioGrid');
+
+        // Limpiar días existentes (mantener headers)
+        const diasExistentes = grid.querySelectorAll('.dia-celda');
+        diasExistentes.forEach(dia => dia.remove());
+
+        const primerDia = new Date(mesActual.getFullYear(), mesActual.getMonth(), 1);
+        const ultimoDia = new Date(mesActual.getFullYear(), mesActual.getMonth() + 1, 0);
+        const hoy = new Date();
+
+        // Días del mes anterior para completar la primera semana
+        const diasAnteriores = primerDia.getDay();
+        for (let i = diasAnteriores - 1; i >= 0; i--) {
+            const fecha = new Date(primerDia);
+            fecha.setDate(fecha.getDate() - i - 1);
+            crearDiaCelda(fecha, true);
+        }
+
+        // Días del mes actual
+        for (let dia = 1; dia <= ultimoDia.getDate(); dia++) {
+            const fecha = new Date(mesActual.getFullYear(), mesActual.getMonth(), dia);
+            const esHoy = fecha.toDateString() === hoy.toDateString();
+            crearDiaCelda(fecha, false, esHoy);
+        }
+
+        // Días del mes siguiente para completar la última semana
+        const diasRestantes = 42 - (diasAnteriores + ultimoDia.getDate());
+        for (let dia = 1; dia <= diasRestantes; dia++) {
+            const fecha = new Date(mesActual.getFullYear(), mesActual.getMonth() + 1, dia);
+            crearDiaCelda(fecha, true);
+        }
+    }
+
+    function crearDiaCelda(fecha, otroMes = false, esHoy = false) {
+        const celda = document.createElement('div');
+        celda.className = `dia-celda ${otroMes ? 'otro-mes' : ''} ${esHoy ? 'hoy' : ''}`;
+        celda.onclick = () => seleccionarDia(fecha);
+
+        const numero = document.createElement('div');
+        numero.className = 'dia-numero';
+        numero.textContent = fecha.getDate();
+        celda.appendChild(numero);
+
+        // Aquí se agregarían los eventos del día
+        // Por ahora, eventos de ejemplo
+        if (!otroMes && Math.random() > 0.7) {
+            const evento = document.createElement('div');
+            evento.className = 'evento-mini trabajo';
+            evento.textContent = 'Reunión';
+            celda.appendChild(evento);
+        }
+
+        document.getElementById('calendarioGrid').appendChild(celda);
+    }
+
+    function seleccionarDia(fecha) {
+        diario.showNotification(`Día seleccionado: ${fecha.toLocaleDateString('es-ES')}`, 'info');
+        // Aquí se podría abrir un modal con los eventos del día
+    }
+
+    function cambiarVistaCalendario(vista) {
+        // Actualizar botones activos
+        event.target.parentElement.querySelectorAll('.vista-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        event.target.classList.add('active');
+
+        if (vista === 'semana') {
+            // Implementar vista semanal
+            diario.showNotification('Vista semanal en desarrollo', 'info');
+        } else {
+            generarCalendario();
+        }
+    }
+
+    function filtrarEventos(categoria) {
+        // Actualizar botones activos
+        document.querySelectorAll('.filtro-categoria').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        event.target.classList.add('active');
+
+        // Filtrar eventos
+        document.querySelectorAll('.evento-card').forEach(card => {
+            if (categoria === 'todos' || card.dataset.categoria === categoria) {
+                card.style.display = 'block';
+            } else {
+                card.style.display = 'none';
+            }
+        });
+    }
+
+    function showNuevoEventoForm() {
+        document.getElementById('nuevoEventoForm').style.display = 'block';
+        document.getElementById('nuevoEventoForm').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function hideNuevoEventoForm() {
+        document.getElementById('nuevoEventoForm').style.display = 'none';
+    }
+
+    function editarEvento(eventoId) {
+        // Implementar edición de evento
+        diario.showNotification('Función de edición en desarrollo', 'info');
+    }
+
+    function eliminarEvento(eventoId) {
+        if (confirm('¿Estás seguro de que quieres eliminar este evento?')) {
+            // Implementar eliminación
+            diario.showNotification('Función de eliminación en desarrollo', 'info');
+        }
+    }
+
+    function exportarCalendario() {
+        // Implementar exportación
+        diario.showNotification('Función de exportación en desarrollo', 'info');
+    }
+
+    // Inicialización
+    document.addEventListener('DOMContentLoaded', function() {
+        // Generar calendario inicial
+        generarCalendario();
+
+        // Animar elementos
+        const elementos = document.querySelectorAll('.evento-card, .evento-proximo, .cyber-stat');
+        elementos.forEach((elemento, index) => {
+            elemento.style.animationDelay = `${index * 0.1}s`;
+            elemento.classList.add('animate-fade-in');
+        });
+    });
+</script>
+{% endblock %}
