@@ -1,0 +1,319 @@
+{% extends 'diario/base.html' %}
+
+{% block title %}Crear Contenido - Gnosis{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="cyber-card p-4 mb-4">
+            <div class="d-flex align-items-center">
+                <i class="fas fa-brain fa-3x me-3" style="color: #9b59b6;"></i>
+                <div>
+                    <h1 class="cyber-title mb-2">GNOSIS</h1>
+                    <p class="mb-0">Agregar Nuevo Contenido de Conocimiento</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="cyber-card p-4">
+            <form method="post" class="needs-validation" novalidate>
+                {% csrf_token %}
+                
+                <div class="row">
+                    <div class="col-md-8 mb-4">
+                        <label for="titulo" class="cyber-form-label">
+                            <i class="fas fa-heading me-2"></i>Título *
+                        </label>
+                        <input type="text" 
+                               class="form-control cyber-form-control" 
+                               id="titulo" 
+                               name="titulo" 
+                               required
+                               placeholder="Nombre del libro, artículo, podcast, etc.">
+                        <div class="invalid-feedback">
+                            Por favor, ingresa un título.
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4 mb-4">
+                        <label for="categoria" class="cyber-form-label">
+                            <i class="fas fa-tag me-2"></i>Categoría *
+                        </label>
+                        <select class="form-select cyber-form-control" id="categoria" name="categoria" required>
+                            <option value="">Seleccionar...</option>
+                            <option value="libro">📚 Libro</option>
+                            <option value="articulo">📄 Artículo</option>
+                            <option value="podcast">🎧 Podcast</option>
+                            <option value="video">🎥 Vídeo</option>
+                            <option value="receta">🍳 Receta</option>
+                        </select>
+                        <div class="invalid-feedback">
+                            Por favor, selecciona una categoría.
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6 mb-4">
+                        <label for="autor" class="cyber-form-label">
+                            <i class="fas fa-user-edit me-2"></i>Autor/Creador
+                        </label>
+                        <input type="text" 
+                               class="form-control cyber-form-control" 
+                               id="autor" 
+                               name="autor" 
+                               placeholder="Nombre del autor o creador">
+                    </div>
+                    
+                    <div class="col-md-6 mb-4">
+                        <label for="tematica" class="cyber-form-label">
+                            <i class="fas fa-hashtag me-2"></i>Temática
+                        </label>
+                        <input type="text" 
+                               class="form-control cyber-form-control" 
+                               id="tematica" 
+                               name="tematica" 
+                               placeholder="Filosofía, Tecnología, Historia, etc.">
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6 mb-4">
+                        <label for="estado" class="cyber-form-label">
+                            <i class="fas fa-flag me-2"></i>Estado Actual
+                        </label>
+                        <select class="form-select cyber-form-control" id="estado" name="estado">
+                            <option value="no_empezado">🔴 No Empezado</option>
+                            <option value="en_progreso">🟡 En Progreso</option>
+                            <option value="finalizado">🟢 Finalizado</option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-6 mb-4">
+                        <label for="puntuacion" class="cyber-form-label">
+                            <i class="fas fa-star me-2"></i>Puntuación (opcional)
+                        </label>
+                        <select class="form-select cyber-form-control" id="puntuacion" name="puntuacion">
+                            <option value="">Sin puntuar</option>
+                            <option value="legendario">⭐⭐⭐⭐⭐ Legendario</option>
+                            <option value="muy_bueno">⭐⭐⭐⭐ Muy Bueno</option>
+                            <option value="bueno">⭐⭐⭐ Bueno</option>
+                            <option value="regular">⭐⭐ Regular</option>
+                            <option value="malo">⭐ Malo</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="mb-4">
+                    <label for="url" class="cyber-form-label">
+                        <i class="fas fa-link me-2"></i>URL/Enlace (opcional)
+                    </label>
+                    <input type="url" 
+                           class="form-control cyber-form-control" 
+                           id="url" 
+                           name="url" 
+                           placeholder="https://ejemplo.com">
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6 mb-4">
+                        <label for="fecha_inicio" class="cyber-form-label">
+                            <i class="fas fa-play me-2"></i>Fecha de Inicio
+                        </label>
+                        <input type="date" 
+                               class="form-control cyber-form-control" 
+                               id="fecha_inicio" 
+                               name="fecha_inicio">
+                    </div>
+                    
+                    <div class="col-md-6 mb-4">
+                        <label for="fecha_fin" class="cyber-form-label">
+                            <i class="fas fa-stop me-2"></i>Fecha de Finalización
+                        </label>
+                        <input type="date" 
+                               class="form-control cyber-form-control" 
+                               id="fecha_fin" 
+                               name="fecha_fin">
+                    </div>
+                </div>
+                
+                <div class="mb-4">
+                    <label for="notas" class="cyber-form-label">
+                        <i class="fas fa-sticky-note me-2"></i>Notas y Reflexiones
+                    </label>
+                    <textarea class="form-control cyber-form-control" 
+                              id="notas" 
+                              name="notas" 
+                              rows="6" 
+                              placeholder="Comparte tus notas, reflexiones, citas importantes, etc."></textarea>
+                    <small class="form-text text-muted mt-2">
+                        Puedes incluir citas, ideas principales, reflexiones personales, etc.
+                    </small>
+                </div>
+                
+                <div class="philosopher-quote mb-4">
+                    <i class="fas fa-quote-left me-2"></i>
+                    <em>"Solo sé que no sé nada, y al saber que no sé nada, algo sé."</em>
+                    <small class="d-block mt-2 text-end">- Sócrates</small>
+                </div>
+                
+                <div class="d-flex justify-content-between">
+                    <a href="{% url 'gnosis_dashboard' %}" class="btn cyber-btn-secondary">
+                        <i class="fas fa-times me-2"></i>Cancelar
+                    </a>
+                    <button type="submit" class="btn cyber-btn">
+                        <i class="fas fa-save me-2"></i>Guardar Contenido
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="cyber-card p-4 mb-4">
+            <h4 class="cyber-title mb-3">
+                <i class="fas fa-lightbulb me-2"></i>Consejos
+            </h4>
+            
+            <div class="mb-3">
+                <h6 class="text-cyber-primary">📚 Para Libros:</h6>
+                <p class="small text-muted">Incluye autor, género y tus citas favoritas en las notas.</p>
+            </div>
+            
+            <div class="mb-3">
+                <h6 class="text-cyber-primary">🎧 Para Podcasts:</h6>
+                <p class="small text-muted">Anota el episodio específico y los puntos clave discutidos.</p>
+            </div>
+            
+            <div class="mb-3">
+                <h6 class="text-cyber-primary">📄 Para Artículos:</h6>
+                <p class="small text-muted">Guarda el enlace y resume las ideas principales.</p>
+            </div>
+            
+            <div class="mb-3">
+                <h6 class="text-cyber-primary">🎥 Para Videos:</h6>
+                <p class="small text-muted">Incluye la duración y los timestamps importantes.</p>
+            </div>
+        </div>
+        
+        <div class="cyber-card p-4 mb-4">
+            <h4 class="cyber-title mb-3">
+                <i class="fas fa-chart-bar me-2"></i>Mi Biblioteca
+            </h4>
+            
+            <div class="row text-center">
+                <div class="col-6 mb-3">
+                    <div class="cyber-stat">
+                        <span class="cyber-stat-value">{{ total_contenidos|default:0 }}</span>
+                        <div class="cyber-stat-label">Total</div>
+                    </div>
+                </div>
+                <div class="col-6 mb-3">
+                    <div class="cyber-stat">
+                        <span class="cyber-stat-value">{{ finalizados|default:0 }}</span>
+                        <div class="cyber-stat-label">Finalizados</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="cyber-card p-4">
+            <h4 class="cyber-title mb-3">
+                <i class="fas fa-tags me-2"></i>Temáticas Populares
+            </h4>
+            
+            <div class="d-flex flex-wrap gap-2">
+                <span class="badge bg-primary">Filosofía</span>
+                <span class="badge bg-success">Tecnología</span>
+                <span class="badge bg-warning">Historia</span>
+                <span class="badge bg-info">Ciencia</span>
+                <span class="badge bg-danger">Arte</span>
+                <span class="badge bg-secondary">Literatura</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Validación del formulario
+    const form = document.querySelector('.needs-validation');
+    form.addEventListener('submit', function(event) {
+        if (!form.checkValidity()) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+        form.classList.add('was-validated');
+    });
+    
+    // Auto-completar fecha de inicio con hoy
+    const fechaInicio = document.getElementById('fecha_inicio');
+    const estadoSelect = document.getElementById('estado');
+    
+    estadoSelect.addEventListener('change', function() {
+        if (this.value === 'en_progreso' && !fechaInicio.value) {
+            fechaInicio.value = new Date().toISOString().split('T')[0];
+        }
+    });
+    
+    // Auto-completar fecha de fin cuando se marca como finalizado
+    const fechaFin = document.getElementById('fecha_fin');
+    estadoSelect.addEventListener('change', function() {
+        if (this.value === 'finalizado' && !fechaFin.value) {
+            fechaFin.value = new Date().toISOString().split('T')[0];
+        }
+    });
+    
+    // Contador de caracteres para notas
+    const notasTextarea = document.getElementById('notas');
+    const charCount = document.createElement('small');
+    charCount.className = 'text-muted float-end';
+    notasTextarea.parentNode.appendChild(charCount);
+    
+    function updateCharCount() {
+        const count = notasTextarea.value.length;
+        charCount.textContent = `${count} caracteres`;
+    }
+    
+    notasTextarea.addEventListener('input', updateCharCount);
+    updateCharCount();
+    
+    // Efectos visuales según la categoría
+    const categoriaSelect = document.getElementById('categoria');
+    categoriaSelect.addEventListener('change', function() {
+        const card = document.querySelector('.cyber-card');
+        const value = this.value;
+        
+        // Cambiar color del borde según la categoría
+        const colors = {
+            'libro': '#e74c3c',
+            'articulo': '#3498db',
+            'podcast': '#9b59b6',
+            'video': '#e67e22',
+            'receta': '#27ae60'
+        };
+        
+        if (colors[value]) {
+            card.style.borderColor = colors[value];
+        } else {
+            card.style.borderColor = 'rgba(0, 255, 255, 0.3)';
+        }
+    });
+    
+    // Animación de entrada
+    document.querySelectorAll('.cyber-card').forEach((card, index) => {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(20px)';
+        setTimeout(() => {
+            card.style.transition = 'all 0.6s ease';
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+        }, index * 200);
+    });
+});
+</script>
+{% endblock %}

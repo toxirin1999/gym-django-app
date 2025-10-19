@@ -1,0 +1,465 @@
+{% extends 'diario/base.html' %}
+
+{% block title %}Crear Evento - Kairos{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="cyber-card p-4 mb-4">
+            <div class="d-flex align-items-center">
+                <i class="fas fa-clock fa-3x me-3" style="color: #8e44ad;"></i>
+                <div>
+                    <h1 class="cyber-title mb-2">KAIROS</h1>
+                    <p class="mb-0">Crear Nuevo Evento en el Calendario</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="cyber-card p-4">
+            <form method="post" class="needs-validation" novalidate>
+                {% csrf_token %}
+                
+                <div class="mb-4">
+                    <label for="titulo" class="cyber-form-label">
+                        <i class="fas fa-heading me-2"></i>Título del Evento *
+                    </label>
+                    <input type="text" 
+                           class="form-control cyber-form-control" 
+                           id="titulo" 
+                           name="titulo" 
+                           required
+                           placeholder="Reunión importante, Cita médica, Entrenamiento...">
+                    <div class="invalid-feedback">
+                        Por favor, ingresa un título para el evento.
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6 mb-4">
+                        <label for="fecha_inicio" class="cyber-form-label">
+                            <i class="fas fa-calendar me-2"></i>Fecha de Inicio *
+                        </label>
+                        <input type="date" 
+                               class="form-control cyber-form-control" 
+                               id="fecha_inicio" 
+                               name="fecha_inicio" 
+                               required>
+                        <div class="invalid-feedback">
+                            Por favor, selecciona la fecha de inicio.
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6 mb-4">
+                        <label for="hora_inicio" class="cyber-form-label">
+                            <i class="fas fa-clock me-2"></i>Hora de Inicio *
+                        </label>
+                        <input type="time" 
+                               class="form-control cyber-form-control" 
+                               id="hora_inicio" 
+                               name="hora_inicio" 
+                               required>
+                        <div class="invalid-feedback">
+                            Por favor, selecciona la hora de inicio.
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6 mb-4">
+                        <label for="fecha_fin" class="cyber-form-label">
+                            <i class="fas fa-calendar-check me-2"></i>Fecha de Fin
+                        </label>
+                        <input type="date" 
+                               class="form-control cyber-form-control" 
+                               id="fecha_fin" 
+                               name="fecha_fin">
+                        <small class="form-text text-muted">Opcional para eventos de un día</small>
+                    </div>
+                    
+                    <div class="col-md-6 mb-4">
+                        <label for="hora_fin" class="cyber-form-label">
+                            <i class="fas fa-clock me-2"></i>Hora de Fin
+                        </label>
+                        <input type="time" 
+                               class="form-control cyber-form-control" 
+                               id="hora_fin" 
+                               name="hora_fin">
+                        <small class="form-text text-muted">Opcional</small>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6 mb-4">
+                        <label for="categoria" class="cyber-form-label">
+                            <i class="fas fa-tag me-2"></i>Categoría *
+                        </label>
+                        <select class="form-select cyber-form-control" id="categoria" name="categoria" required>
+                            <option value="">Seleccionar categoría...</option>
+                            <option value="trabajo">💼 Trabajo</option>
+                            <option value="personal">👤 Personal</option>
+                            <option value="salud">🏥 Salud</option>
+                            <option value="ejercicio">💪 Ejercicio</option>
+                            <option value="estudio">📚 Estudio</option>
+                            <option value="social">👥 Social</option>
+                            <option value="viaje">✈️ Viaje</option>
+                            <option value="otro">🔹 Otro</option>
+                        </select>
+                        <div class="invalid-feedback">
+                            Por favor, selecciona una categoría.
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6 mb-4">
+                        <label for="prioridad" class="cyber-form-label">
+                            <i class="fas fa-flag me-2"></i>Prioridad
+                        </label>
+                        <select class="form-select cyber-form-control" id="prioridad" name="prioridad">
+                            <option value="baja">🟢 Baja</option>
+                            <option value="media" selected>🟡 Media</option>
+                            <option value="alta">🔴 Alta</option>
+                            <option value="critica">🚨 Crítica</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="mb-4">
+                    <label for="ubicacion" class="cyber-form-label">
+                        <i class="fas fa-map-marker-alt me-2"></i>Ubicación
+                    </label>
+                    <input type="text" 
+                           class="form-control cyber-form-control" 
+                           id="ubicacion" 
+                           name="ubicacion" 
+                           placeholder="Oficina, Casa, Gimnasio, Online...">
+                </div>
+                
+                <div class="mb-4">
+                    <label for="descripcion" class="cyber-form-label">
+                        <i class="fas fa-align-left me-2"></i>Descripción
+                    </label>
+                    <textarea class="form-control cyber-form-control" 
+                              id="descripcion" 
+                              name="descripcion" 
+                              rows="4" 
+                              placeholder="Detalles adicionales sobre el evento..."></textarea>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6 mb-4">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" 
+                                   type="checkbox" 
+                                   id="todo_dia" 
+                                   name="todo_dia"
+                                   onchange="toggleTodoDia()">
+                            <label class="form-check-label" for="todo_dia">
+                                <i class="fas fa-sun me-2"></i>Evento de todo el día
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6 mb-4">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" 
+                                   type="checkbox" 
+                                   id="recordatorio" 
+                                   name="recordatorio" 
+                                   checked>
+                            <label class="form-check-label" for="recordatorio">
+                                <i class="fas fa-bell me-2"></i>Activar recordatorio
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="recordatorio-options" class="mb-4">
+                    <label for="tiempo_recordatorio" class="cyber-form-label">
+                        <i class="fas fa-alarm-clock me-2"></i>Recordar con anticipación
+                    </label>
+                    <select class="form-select cyber-form-control" id="tiempo_recordatorio" name="tiempo_recordatorio">
+                        <option value="5">5 minutos antes</option>
+                        <option value="15" selected>15 minutos antes</option>
+                        <option value="30">30 minutos antes</option>
+                        <option value="60">1 hora antes</option>
+                        <option value="1440">1 día antes</option>
+                        <option value="10080">1 semana antes</option>
+                    </select>
+                </div>
+                
+                <div class="philosopher-quote mb-4">
+                    <i class="fas fa-quote-left me-2"></i>
+                    <em>"El tiempo es lo más valioso que tenemos, porque es lo único que no podemos recuperar."</em>
+                    <small class="d-block mt-2 text-end">- Marco Aurelio</small>
+                </div>
+                
+                <div class="d-flex justify-content-between">
+                    <a href="{% url 'kairos_dashboard' %}" class="btn cyber-btn-secondary">
+                        <i class="fas fa-times me-2"></i>Cancelar
+                    </a>
+                    <div>
+                        <button type="button" class="btn cyber-btn-outline me-2" onclick="guardarBorrador()">
+                            <i class="fas fa-save me-2"></i>Guardar Borrador
+                        </button>
+                        <button type="submit" class="btn cyber-btn">
+                            <i class="fas fa-calendar-plus me-2"></i>Crear Evento
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="cyber-card p-4 mb-4">
+            <h4 class="cyber-title mb-3">
+                <i class="fas fa-calendar-week me-2"></i>Vista Previa
+            </h4>
+            
+            <div id="evento-preview" class="p-3" style="border: 1px solid rgba(142, 68, 173, 0.3); border-radius: 10px; background: rgba(142, 68, 173, 0.1);">
+                <div class="d-flex align-items-center mb-2">
+                    <i class="fas fa-circle me-2" style="color: #8e44ad; font-size: 0.8rem;"></i>
+                    <strong id="preview-titulo">Nuevo Evento</strong>
+                </div>
+                <div class="small text-muted mb-1">
+                    <i class="fas fa-calendar me-1"></i>
+                    <span id="preview-fecha">Selecciona una fecha</span>
+                </div>
+                <div class="small text-muted mb-1">
+                    <i class="fas fa-clock me-1"></i>
+                    <span id="preview-hora">Selecciona una hora</span>
+                </div>
+                <div class="small text-muted">
+                    <i class="fas fa-tag me-1"></i>
+                    <span id="preview-categoria">Sin categoría</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="cyber-card p-4 mb-4">
+            <h4 class="cyber-title mb-3">
+                <i class="fas fa-chart-bar me-2"></i>Estadísticas
+            </h4>
+            
+            <div class="row text-center">
+                <div class="col-6 mb-3">
+                    <div class="cyber-stat">
+                        <span class="cyber-stat-value">{{ eventos_mes|default:0 }}</span>
+                        <div class="cyber-stat-label">Este Mes</div>
+                    </div>
+                </div>
+                <div class="col-6 mb-3">
+                    <div class="cyber-stat">
+                        <span class="cyber-stat-value">{{ eventos_semana|default:0 }}</span>
+                        <div class="cyber-stat-label">Esta Semana</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="cyber-card p-4 mb-4">
+            <h4 class="cyber-title mb-3">
+                <i class="fas fa-palette me-2"></i>Colores por Categoría
+            </h4>
+            
+            <div class="category-colors">
+                <div class="d-flex align-items-center mb-2">
+                    <div class="color-dot me-2" style="background: #3498db;"></div>
+                    <small>Trabajo</small>
+                </div>
+                <div class="d-flex align-items-center mb-2">
+                    <div class="color-dot me-2" style="background: #e74c3c;"></div>
+                    <small>Personal</small>
+                </div>
+                <div class="d-flex align-items-center mb-2">
+                    <div class="color-dot me-2" style="background: #27ae60;"></div>
+                    <small>Salud</small>
+                </div>
+                <div class="d-flex align-items-center mb-2">
+                    <div class="color-dot me-2" style="background: #f39c12;"></div>
+                    <small>Ejercicio</small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="cyber-card p-4">
+            <h4 class="cyber-title mb-3">
+                <i class="fas fa-lightbulb me-2"></i>Consejos
+            </h4>
+            
+            <div class="tip-item mb-3">
+                <i class="fas fa-clock text-warning me-2"></i>
+                <small>Programa bloques de tiempo para el trabajo profundo.</small>
+            </div>
+            
+            <div class="tip-item mb-3">
+                <i class="fas fa-battery-half text-info me-2"></i>
+                <small>Incluye descansos entre reuniones largas.</small>
+            </div>
+            
+            <div class="tip-item mb-3">
+                <i class="fas fa-bell text-success me-2"></i>
+                <small>Usa recordatorios para eventos importantes.</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function toggleTodoDia() {
+    const checkbox = document.getElementById('todo_dia');
+    const horaInicio = document.getElementById('hora_inicio');
+    const horaFin = document.getElementById('hora_fin');
+    
+    if (checkbox.checked) {
+        horaInicio.disabled = true;
+        horaFin.disabled = true;
+        horaInicio.value = '';
+        horaFin.value = '';
+    } else {
+        horaInicio.disabled = false;
+        horaFin.disabled = false;
+    }
+    updatePreview();
+}
+
+function toggleRecordatorio() {
+    const checkbox = document.getElementById('recordatorio');
+    const options = document.getElementById('recordatorio-options');
+    
+    if (checkbox.checked) {
+        options.style.display = 'block';
+    } else {
+        options.style.display = 'none';
+    }
+}
+
+function updatePreview() {
+    const titulo = document.getElementById('titulo').value || 'Nuevo Evento';
+    const fechaInicio = document.getElementById('fecha_inicio').value;
+    const horaInicio = document.getElementById('hora_inicio').value;
+    const categoria = document.getElementById('categoria').value;
+    const todoDia = document.getElementById('todo_dia').checked;
+    
+    document.getElementById('preview-titulo').textContent = titulo;
+    
+    if (fechaInicio) {
+        const fecha = new Date(fechaInicio);
+        document.getElementById('preview-fecha').textContent = fecha.toLocaleDateString('es-ES');
+    } else {
+        document.getElementById('preview-fecha').textContent = 'Selecciona una fecha';
+    }
+    
+    if (todoDia) {
+        document.getElementById('preview-hora').textContent = 'Todo el día';
+    } else if (horaInicio) {
+        document.getElementById('preview-hora').textContent = horaInicio;
+    } else {
+        document.getElementById('preview-hora').textContent = 'Selecciona una hora';
+    }
+    
+    const categorias = {
+        'trabajo': '💼 Trabajo',
+        'personal': '👤 Personal',
+        'salud': '🏥 Salud',
+        'ejercicio': '💪 Ejercicio',
+        'estudio': '📚 Estudio',
+        'social': '👥 Social',
+        'viaje': '✈️ Viaje',
+        'otro': '🔹 Otro'
+    };
+    
+    document.getElementById('preview-categoria').textContent = categorias[categoria] || 'Sin categoría';
+}
+
+function guardarBorrador() {
+    // Aquí iría la lógica para guardar como borrador
+    alert('Borrador guardado exitosamente');
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Validación del formulario
+    const form = document.querySelector('.needs-validation');
+    form.addEventListener('submit', function(event) {
+        if (!form.checkValidity()) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+        form.classList.add('was-validated');
+    });
+    
+    // Auto-completar fecha de fin cuando se selecciona fecha de inicio
+    const fechaInicio = document.getElementById('fecha_inicio');
+    const fechaFin = document.getElementById('fecha_fin');
+    
+    fechaInicio.addEventListener('change', function() {
+        if (!fechaFin.value) {
+            fechaFin.value = this.value;
+        }
+        updatePreview();
+    });
+    
+    // Actualizar vista previa en tiempo real
+    document.getElementById('titulo').addEventListener('input', updatePreview);
+    document.getElementById('hora_inicio').addEventListener('change', updatePreview);
+    document.getElementById('categoria').addEventListener('change', updatePreview);
+    document.getElementById('todo_dia').addEventListener('change', updatePreview);
+    
+    // Inicializar vista previa
+    updatePreview();
+    
+    // Establecer fecha mínima como hoy
+    const today = new Date().toISOString().split('T')[0];
+    fechaInicio.min = today;
+    fechaFin.min = today;
+    
+    // Animación de entrada
+    document.querySelectorAll('.cyber-card').forEach((card, index) => {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(20px)';
+        setTimeout(() => {
+            card.style.transition = 'all 0.6s ease';
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+        }, index * 200);
+    });
+});
+</script>
+
+<style>
+.color-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.cyber-stat {
+    text-align: center;
+}
+
+.cyber-stat-value {
+    display: block;
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #8e44ad;
+}
+
+.cyber-stat-label {
+    font-size: 0.8rem;
+    color: #6c757d;
+}
+
+.tip-item {
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(142, 68, 173, 0.1);
+}
+
+.tip-item:last-child {
+    border-bottom: none;
+}
+</style>
+{% endblock %}

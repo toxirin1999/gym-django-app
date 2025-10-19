@@ -1,0 +1,587 @@
+#!/usr/bin/env python3
+"""
+Script para forzar la actualización del template de entrada con el formulario completo
+"""
+
+import os
+import shutil
+
+def crear_template_completo():
+    """Crear template completo del formulario de entrada"""
+    
+    template_content = '''{% extends 'diario/base.html' %}
+{% load static %}
+{% load diario_filters %}
+
+{% block title %}Nueva Entrada - Prosoche{% endblock %}
+
+{% block extra_css %}
+<style>
+    .entrada-form {
+        background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #16213e 100%);
+        border: 1px solid #00ffff;
+        border-radius: 15px;
+        padding: 30px;
+        margin: 20px 0;
+        box-shadow: 0 0 30px rgba(0, 255, 255, 0.3);
+    }
+    
+    .seccion-form {
+        background: rgba(0, 255, 255, 0.05);
+        border: 1px solid rgba(0, 255, 255, 0.3);
+        border-radius: 10px;
+        padding: 20px;
+        margin: 20px 0;
+        position: relative;
+    }
+    
+    .seccion-form::before {
+        content: '';
+        position: absolute;
+        top: -1px;
+        left: -1px;
+        right: -1px;
+        bottom: -1px;
+        background: linear-gradient(45deg, #00ffff, #ff00ff, #ffff00, #00ffff);
+        border-radius: 10px;
+        z-index: -1;
+        opacity: 0.3;
+    }
+    
+    .seccion-titulo {
+        color: #00ffff;
+        font-size: 1.4rem;
+        font-weight: bold;
+        margin-bottom: 15px;
+        text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    .form-control, .form-select {
+        background: rgba(0, 0, 0, 0.7);
+        border: 1px solid #00ffff;
+        color: #ffffff;
+        border-radius: 8px;
+        padding: 12px;
+        transition: all 0.3s ease;
+    }
+    
+    .form-control:focus, .form-select:focus {
+        background: rgba(0, 0, 0, 0.9);
+        border-color: #ff00ff;
+        box-shadow: 0 0 15px rgba(255, 0, 255, 0.5);
+        color: #ffffff;
+    }
+    
+    .form-control::placeholder {
+        color: rgba(255, 255, 255, 0.6);
+    }
+    
+    .btn-estado-animo {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        border: 2px solid #00ffff;
+        background: rgba(0, 0, 0, 0.7);
+        color: #ffffff;
+        font-size: 1.5rem;
+        margin: 0 5px;
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+    
+    .btn-estado-animo:hover {
+        transform: scale(1.1);
+        box-shadow: 0 0 15px rgba(0, 255, 255, 0.7);
+    }
+    
+    .btn-estado-animo.active {
+        background: linear-gradient(45deg, #00ffff, #ff00ff);
+        border-color: #ffffff;
+        transform: scale(1.2);
+    }
+    
+    .tarea-item {
+        background: rgba(0, 255, 255, 0.1);
+        border: 1px solid rgba(0, 255, 255, 0.3);
+        border-radius: 8px;
+        padding: 10px;
+        margin: 5px 0;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    .tarea-checkbox {
+        width: 20px;
+        height: 20px;
+        accent-color: #00ffff;
+    }
+    
+    .tarea-texto {
+        flex: 1;
+        background: transparent;
+        border: none;
+        color: #ffffff;
+        outline: none;
+    }
+    
+    .btn-eliminar-tarea {
+        background: #ff0066;
+        border: none;
+        color: white;
+        width: 25px;
+        height: 25px;
+        border-radius: 50%;
+        cursor: pointer;
+        font-size: 12px;
+    }
+    
+    .btn-agregar-tarea {
+        background: linear-gradient(45deg, #00ffff, #0066ff);
+        border: none;
+        color: white;
+        padding: 8px 15px;
+        border-radius: 20px;
+        cursor: pointer;
+        margin-top: 10px;
+    }
+    
+    .gratitud-item {
+        margin: 10px 0;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    .gratitud-numero {
+        background: linear-gradient(45deg, #00ffff, #ff00ff);
+        color: white;
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        flex-shrink: 0;
+    }
+    
+    .btn-cyberpunk {
+        background: linear-gradient(45deg, #00ffff, #ff00ff);
+        border: none;
+        color: white;
+        padding: 12px 30px;
+        border-radius: 25px;
+        font-weight: bold;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
+    }
+    
+    .btn-cyberpunk:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 25px rgba(255, 0, 255, 0.7);
+    }
+    
+    .btn-secondary-cyberpunk {
+        background: linear-gradient(45deg, #666666, #999999);
+        border: 1px solid #00ffff;
+        color: white;
+        padding: 12px 30px;
+        border-radius: 25px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-secondary-cyberpunk:hover {
+        background: linear-gradient(45deg, #999999, #cccccc);
+        box-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
+    }
+    
+    .icono-seccion {
+        font-size: 1.5rem;
+        color: #00ffff;
+        text-shadow: 0 0 10px rgba(0, 255, 255, 0.7);
+    }
+    
+    .form-label {
+        color: #00ffff;
+        font-weight: bold;
+        margin-bottom: 8px;
+        display: block;
+    }
+    
+    .texto-ayuda {
+        color: rgba(255, 255, 255, 0.7);
+        font-size: 0.9rem;
+        margin-top: 5px;
+        font-style: italic;
+    }
+    
+    @media (max-width: 768px) {
+        .entrada-form {
+            padding: 20px;
+            margin: 10px;
+        }
+        
+        .seccion-form {
+            padding: 15px;
+        }
+        
+        .btn-estado-animo {
+            width: 40px;
+            height: 40px;
+            font-size: 1.2rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-12 col-lg-10">
+            <div class="entrada-form">
+                <!-- Header -->
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2 class="text-white mb-0">
+                        <i class="fas fa-sun icono-seccion"></i>
+                        {% if es_edicion %}Editar Entrada{% else %}Nueva Entrada{% endif %}
+                    </h2>
+                    <div class="text-muted">
+                        {{ fecha|date:"d/m/Y" }}
+                    </div>
+                </div>
+
+                <form method="post" id="entradaForm">
+                    {% csrf_token %}
+                    
+                    <!-- Información Básica -->
+                    <div class="seccion-form">
+                        <h3 class="seccion-titulo">
+                            <i class="fas fa-info-circle icono-seccion"></i>
+                            Información Básica
+                        </h3>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Etiquetas</label>
+                                <input type="text" class="form-control" name="etiquetas" 
+                                       value="{{ form.etiquetas|default:'' }}"
+                                       placeholder="trabajo, familia, deporte...">
+                                <div class="texto-ayuda">Separa las etiquetas con comas</div>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Estado de Ánimo (1-5)</label>
+                                <div class="d-flex justify-content-center">
+                                    {% for i in "12345" %}
+                                    <button type="button" class="btn-estado-animo" 
+                                            data-valor="{{ i }}"
+                                            {% if form.estado_animo == i|add:0 %}active{% endif %}>
+                                        {% if i == "1" %}😢{% elif i == "2" %}😕{% elif i == "3" %}😐{% elif i == "4" %}😊{% else %}😄{% endif %}
+                                    </button>
+                                    {% endfor %}
+                                </div>
+                                <input type="hidden" name="estado_animo" id="estado_animo" 
+                                       value="{{ form.estado_animo|default:3 }}">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Journaling Mañana -->
+                    <div class="seccion-form">
+                        <h3 class="seccion-titulo">
+                            <i class="fas fa-sunrise icono-seccion"></i>
+                            Journaling Mañana
+                        </h3>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">¿Qué clase de persona quiero ser hoy?</label>
+                            <textarea class="form-control" name="persona_quiero_ser" rows="4"
+                                      placeholder="Reflexiona sobre el tipo de persona que quieres ser hoy...">{{ form.persona_quiero_ser|default:'' }}</textarea>
+                            <div class="texto-ayuda">Tómate un momento para reflexionar sobre tus intenciones para el día</div>
+                        </div>
+                    </div>
+
+                    <!-- Tareas del Día -->
+                    <div class="seccion-form">
+                        <h3 class="seccion-titulo">
+                            <i class="fas fa-tasks icono-seccion"></i>
+                            Tareas del Día
+                        </h3>
+                        
+                        <div id="tareas-container">
+                            <!-- Las tareas se cargarán aquí dinámicamente -->
+                        </div>
+                        
+                        <button type="button" class="btn-agregar-tarea" onclick="agregarTarea()">
+                            <i class="fas fa-plus"></i> Agregar Tarea
+                        </button>
+                        
+                        <input type="hidden" name="tareas_dia" id="tareas_dia" 
+                               value="{{ form.tareas_dia|default:'[]' }}">
+                    </div>
+
+                    <!-- Gratitud -->
+                    <div class="seccion-form">
+                        <h3 class="seccion-titulo">
+                            <i class="fas fa-heart icono-seccion"></i>
+                            Gratitud
+                        </h3>
+                        
+                        <p class="texto-ayuda mb-3">¿De qué estoy agradecido hoy?</p>
+                        
+                        {% for i in "12345" %}
+                        <div class="gratitud-item">
+                            <div class="gratitud-numero">{{ i }}</div>
+                            <input type="text" class="form-control" name="gratitud_{{ i }}" 
+                                   value="{{ form|lookup:'gratitud_'|add:i|default:'' }}"
+                                   placeholder="Algo por lo que estoy agradecido...">
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Journaling Noche -->
+                    <div class="seccion-form">
+                        <h3 class="seccion-titulo">
+                            <i class="fas fa-moon icono-seccion"></i>
+                            Journaling Noche
+                        </h3>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Podcast o libro del día</label>
+                                <textarea class="form-control" name="podcast_libro_dia" rows="3"
+                                          placeholder="¿Qué podcast escuchaste o libro leíste hoy?">{{ form.podcast_libro_dia|default:'' }}</textarea>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Felicidad</label>
+                                <textarea class="form-control" name="felicidad" rows="3"
+                                          placeholder="¿Qué te ha hecho feliz hoy?">{{ form.felicidad|default:'' }}</textarea>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">¿Qué ha ido bien?</label>
+                                <textarea class="form-control" name="que_ha_ido_bien" rows="3"
+                                          placeholder="Reflexiona sobre los aspectos positivos del día...">{{ form.que_ha_ido_bien|default:'' }}</textarea>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">¿Qué puedo mejorar?</label>
+                                <textarea class="form-control" name="que_puedo_mejorar" rows="3"
+                                          placeholder="¿Qué aspectos puedes mejorar mañana?">{{ form.que_puedo_mejorar|default:'' }}</textarea>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Reflexiones del día</label>
+                            <textarea class="form-control" name="reflexiones_dia" rows="4"
+                                      placeholder="Reflexiones generales sobre el día...">{{ form.reflexiones_dia|default:'' }}</textarea>
+                        </div>
+                    </div>
+
+                    <!-- Botones -->
+                    <div class="d-flex justify-content-between mt-4">
+                        <a href="{% url 'prosoche_dashboard' %}" class="btn-secondary-cyberpunk">
+                            <i class="fas fa-arrow-left"></i> Volver
+                        </a>
+                        
+                        <button type="submit" class="btn-cyberpunk">
+                            <i class="fas fa-save"></i> 
+                            {% if es_edicion %}Actualizar Entrada{% else %}Guardar Entrada{% endif %}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Inicializar tareas
+    cargarTareas();
+    
+    // Manejar botones de estado de ánimo
+    document.querySelectorAll('.btn-estado-animo').forEach(btn => {
+        btn.addEventListener('click', function() {
+            // Remover active de todos
+            document.querySelectorAll('.btn-estado-animo').forEach(b => b.classList.remove('active'));
+            // Agregar active al clickeado
+            this.classList.add('active');
+            // Actualizar input hidden
+            document.getElementById('estado_animo').value = this.dataset.valor;
+        });
+    });
+    
+    // Auto-guardar cada 30 segundos (opcional)
+    // setInterval(autoGuardar, 30000);
+});
+
+function cargarTareas() {
+    const tareasData = document.getElementById('tareas_dia').value;
+    let tareas = [];
+    
+    try {
+        tareas = JSON.parse(tareasData);
+    } catch (e) {
+        tareas = [];
+    }
+    
+    const container = document.getElementById('tareas-container');
+    container.innerHTML = '';
+    
+    if (tareas.length === 0) {
+        agregarTarea();
+    } else {
+        tareas.forEach((tarea, index) => {
+            crearElementoTarea(tarea.texto, tarea.completada, index);
+        });
+    }
+}
+
+function agregarTarea() {
+    const container = document.getElementById('tareas-container');
+    const index = container.children.length;
+    crearElementoTarea('', false, index);
+}
+
+function crearElementoTarea(texto = '', completada = false, index = 0) {
+    const container = document.getElementById('tareas-container');
+    
+    const tareaDiv = document.createElement('div');
+    tareaDiv.className = 'tarea-item';
+    tareaDiv.innerHTML = `
+        <input type="checkbox" class="tarea-checkbox" ${completada ? 'checked' : ''} 
+               onchange="actualizarTareas()">
+        <input type="text" class="tarea-texto" value="${texto}" 
+               placeholder="Escribe una tarea..." onchange="actualizarTareas()">
+        <button type="button" class="btn-eliminar-tarea" onclick="eliminarTarea(this)">
+            <i class="fas fa-times"></i>
+        </button>
+    `;
+    
+    container.appendChild(tareaDiv);
+}
+
+function eliminarTarea(btn) {
+    btn.closest('.tarea-item').remove();
+    actualizarTareas();
+}
+
+function actualizarTareas() {
+    const tareas = [];
+    document.querySelectorAll('.tarea-item').forEach(item => {
+        const checkbox = item.querySelector('.tarea-checkbox');
+        const texto = item.querySelector('.tarea-texto');
+        
+        if (texto.value.trim()) {
+            tareas.push({
+                texto: texto.value.trim(),
+                completada: checkbox.checked
+            });
+        }
+    });
+    
+    document.getElementById('tareas_dia').value = JSON.stringify(tareas);
+}
+
+function autoGuardar() {
+    // Implementar auto-guardado si es necesario
+    console.log('Auto-guardado...');
+}
+</script>
+{% endblock %}'''
+    
+    return template_content
+
+def main():
+    """Función principal para forzar la actualización del template"""
+    print("🚀 FORZANDO ACTUALIZACIÓN DEL TEMPLATE COMPLETO")
+    print("=" * 70)
+    
+    # Verificar que estamos en el directorio correcto
+    if not os.path.exists('manage.py'):
+        print("❌ Error: No se encontró manage.py. Ejecuta desde el directorio raíz del proyecto.")
+        return
+    
+    try:
+        # Crear directorio de templates si no existe
+        template_dir = 'diario/templates/diario'
+        os.makedirs(template_dir, exist_ok=True)
+        
+        # Crear template completo
+        template_content = crear_template_completo()
+        template_path = os.path.join(template_dir, 'prosoche_entrada_form.html')
+        
+        # Hacer backup del template actual si existe
+        if os.path.exists(template_path):
+            backup_path = template_path + '.backup'
+            shutil.copy(template_path, backup_path)
+            print(f"✅ Backup creado: {backup_path}")
+        
+        # Escribir nuevo template
+        with open(template_path, 'w', encoding='utf-8') as f:
+            f.write(template_content)
+        
+        print(f"✅ Template completo creado: {template_path}")
+        
+        # Verificar que el template tiene todos los campos
+        campos_verificar = [
+            'persona_quiero_ser',
+            'gratitud_1', 'gratitud_2', 'gratitud_3', 'gratitud_4', 'gratitud_5',
+            'tareas_dia',
+            'podcast_libro_dia',
+            'felicidad',
+            'que_ha_ido_bien',
+            'que_puedo_mejorar',
+            'reflexiones_dia'
+        ]
+        
+        campos_encontrados = []
+        for campo in campos_verificar:
+            if campo in template_content:
+                campos_encontrados.append(campo)
+        
+        print(f"\n✅ CAMPOS VERIFICADOS: {len(campos_encontrados)}/{len(campos_verificar)}")
+        for campo in campos_encontrados:
+            print(f"   ✓ {campo}")
+        
+        if len(campos_encontrados) == len(campos_verificar):
+            print("\n🎉 ¡TEMPLATE COMPLETO INSTALADO EXITOSAMENTE!")
+            print("=" * 70)
+            print("\n🎯 CARACTERÍSTICAS DEL FORMULARIO:")
+            print("- 📝 Información básica (etiquetas, estado de ánimo)")
+            print("- 🌅 Journaling mañana (¿Qué persona quiero ser hoy?)")
+            print("- ✅ Tareas del día (dinámicas con checkboxes)")
+            print("- 🙏 Gratitud (5 puntos de agradecimiento)")
+            print("- 🌙 Journaling noche (podcast, felicidad, reflexiones)")
+            print("- 🎨 Diseño cyberpunk completo")
+            print("- 📱 Responsive para móviles")
+            print("- ⚡ JavaScript interactivo")
+            print("\n🚀 PARA PROBAR:")
+            print("1. python manage.py runserver")
+            print("2. Ir a /diario/prosoche/")
+            print("3. Hacer clic en 'Nueva Entrada'")
+            print("4. ¡Disfrutar del formulario completo!")
+            print("\n💡 NOTA: Si no ves los cambios, presiona Ctrl+F5 para limpiar caché")
+        else:
+            print(f"\n⚠️ Faltan algunos campos: {set(campos_verificar) - set(campos_encontrados)}")
+        
+    except Exception as e:
+        print(f"❌ Error al crear template: {e}")
+
+if __name__ == "__main__":
+    main()

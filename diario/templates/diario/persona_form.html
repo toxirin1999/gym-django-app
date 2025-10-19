@@ -1,0 +1,53 @@
+{% extends 'diario/base_stoic.html' %}
+
+{% block title %}
+{% if instance %}Editar a {{ instance.nombre }}{% else %}Añadir Persona{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="fade-in-up">
+    <div class="card shadow-strong">
+        <div class="card-header">
+            <h5 class="mb-0">
+                <i class="fas fa-user-plus me-2"></i>
+                {% if instance %}
+                Editando a: {{ instance.nombre }}
+                {% else %}
+                Añadir Nueva Persona al Círculo
+                {% endif %}
+            </h5>
+        </div>
+        <div class="card-body">
+            <form method="post">
+                {% csrf_token %}
+
+                <div class="mb-3">
+                    {{ form.nombre.label_tag }}
+                    {{ form.nombre }}
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        {{ form.tipo_relacion.label_tag }}
+                        {{ form.tipo_relacion }}
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="{{ form.salud_relacion.id_for_label }}" class="form-label">{{ form.salud_relacion.label }}</label>
+                        {{ form.salud_relacion }}
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    {{ form.notas.label_tag }}
+                    {{ form.notas }}
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-success"><i class="fas fa-save me-2"></i>Guardar</button>
+                    <a href="{% url 'diario:simbiosis_dashboard' %}" class="btn btn-secondary">Cancelar</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

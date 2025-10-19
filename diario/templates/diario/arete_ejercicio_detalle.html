@@ -1,0 +1,260 @@
+{% extends 'diario/base.html' %}
+
+{% block title %}{{ ejercicio.nombre }} - Areté{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="cyber-card p-4 mb-4">
+            <div class="d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-mountain fa-3x me-3" style="color: #27ae60;"></i>
+                    <div>
+                        <h1 class="cyber-title mb-2">{{ ejercicio.nombre|upper }}</h1>
+                        <p class="mb-0">Ejercicio #{{ ejercicio.numero_orden }} - Desarrollo Personal</p>
+                    </div>
+                </div>
+                <div class="text-end">
+                    {% if ejercicio.estado == 'completado' %}
+                        <span class="badge bg-success fs-5">
+                            <i class="fas fa-check-circle me-1"></i>Completado
+                        </span>
+                    {% elif ejercicio.estado == 'a_repetir' %}
+                        <span class="badge bg-warning fs-5">
+                            <i class="fas fa-redo me-1"></i>A Repetir
+                        </span>
+                    {% else %}
+                        <span class="badge bg-secondary fs-5">
+                            <i class="fas fa-clock me-1"></i>Pendiente
+                        </span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="cyber-card p-4 mb-4">
+            <h3 class="cyber-title mb-4">
+                <i class="fas fa-scroll me-2"></i>Descripción del Ejercicio
+            </h3>
+            
+            <div class="mb-4">
+                <p class="lead">{{ ejercicio.descripcion }}</p>
+            </div>
+            
+            {% if ejercicio.instrucciones %}
+                <h4 class="cyber-title mb-3">
+                    <i class="fas fa-list-ol me-2"></i>Instrucciones
+                </h4>
+                <div class="mb-4 p-3" style="background: rgba(0, 255, 255, 0.1); border-radius: 10px; border-left: 4px solid #00ffff;">
+                    {{ ejercicio.instrucciones|linebreaks }}
+                </div>
+            {% endif %}
+            
+            {% if ejercicio.reflexiones %}
+                <h4 class="cyber-title mb-3">
+                    <i class="fas fa-thought-bubble me-2"></i>Mis Reflexiones
+                </h4>
+                <div class="mb-4 p-3" style="background: rgba(39, 174, 96, 0.1); border-radius: 10px; border-left: 4px solid #27ae60;">
+                    {{ ejercicio.reflexiones|linebreaks }}
+                </div>
+            {% endif %}
+        </div>
+        
+        <div class="cyber-card p-4">
+            <h3 class="cyber-title mb-4">
+                <i class="fas fa-edit me-2"></i>Actualizar Progreso
+            </h3>
+            
+            <form method="post">
+                {% csrf_token %}
+                
+                <div class="mb-4">
+                    <label for="estado" class="cyber-form-label">
+                        <i class="fas fa-flag me-2"></i>Estado del Ejercicio
+                    </label>
+                    <select class="form-select cyber-form-control" id="estado" name="estado">
+                        <option value="sin_completar" {% if ejercicio.estado == 'sin_completar' %}selected{% endif %}>
+                            Sin Completar
+                        </option>
+                        <option value="completado" {% if ejercicio.estado == 'completado' %}selected{% endif %}>
+                            Completado
+                        </option>
+                        <option value="a_repetir" {% if ejercicio.estado == 'a_repetir' %}selected{% endif %}>
+                            A Repetir
+                        </option>
+                    </select>
+                </div>
+                
+                <div class="mb-4">
+                    <label for="reflexiones" class="cyber-form-label">
+                        <i class="fas fa-brain me-2"></i>Reflexiones y Aprendizajes
+                    </label>
+                    <textarea class="form-control cyber-form-control" 
+                              id="reflexiones" 
+                              name="reflexiones" 
+                              rows="6" 
+                              placeholder="Comparte tus reflexiones sobre este ejercicio...">{{ ejercicio.reflexiones|default:'' }}</textarea>
+                    <small class="form-text text-muted mt-2">
+                        ¿Qué aprendiste? ¿Cómo te hizo sentir? ¿Qué insights obtuviste?
+                    </small>
+                </div>
+                
+                <div class="d-flex justify-content-between">
+                    <a href="{% url 'arete_dashboard' %}" class="btn cyber-btn-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Volver a Areté
+                    </a>
+                    <button type="submit" class="btn cyber-btn">
+                        <i class="fas fa-save me-2"></i>Guardar Progreso
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="cyber-card p-4 mb-4">
+            <h4 class="cyber-title mb-3">
+                <i class="fas fa-chart-pie me-2"></i>Mi Progreso
+            </h4>
+            
+            <div class="text-center mb-4">
+                <div class="position-relative d-inline-block">
+                    <svg width="120" height="120" class="progress-ring">
+                        <circle cx="60" cy="60" r="50" fill="transparent" 
+                                stroke="rgba(0, 255, 255, 0.2)" stroke-width="8"/>
+                        <circle cx="60" cy="60" r="50" fill="transparent" 
+                                stroke="#00ffff" stroke-width="8" 
+                                stroke-dasharray="314" 
+                                stroke-dashoffset="{% widthratio ejercicio.numero_orden 100 314 %}"
+                                class="progress-ring-circle"/>
+                    </svg>
+                    <div class="position-absolute top-50 start-50 translate-middle text-center">
+                        <div class="cyber-title fs-4">{{ ejercicio.numero_orden }}</div>
+                        <small>de 100</small>
+                    </div>
+                </div>
+            </div>
+            
+            {% if ejercicio.fecha_completado %}
+                <div class="text-center mb-3">
+                    <small class="text-success">
+                        <i class="fas fa-check-circle me-1"></i>
+                        Completado el {{ ejercicio.fecha_completado|date:"d/m/Y" }}
+                    </small>
+                </div>
+            {% endif %}
+            
+            <div class="d-grid gap-2">
+                {% if ejercicio.numero_orden > 1 %}
+                    <button class="btn cyber-btn-secondary btn-sm">
+                        <i class="fas fa-chevron-left me-2"></i>Ejercicio Anterior
+                    </button>
+                {% endif %}
+                
+                {% if ejercicio.numero_orden < 100 %}
+                    <button class="btn cyber-btn btn-sm">
+                        <i class="fas fa-chevron-right me-2"></i>Siguiente Ejercicio
+                    </button>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="cyber-card p-4 mb-4">
+            <h4 class="cyber-title mb-3">
+                <i class="fas fa-users me-2"></i>Virtudes Relacionadas
+            </h4>
+            
+            <div class="d-flex flex-wrap gap-2">
+                <span class="badge bg-primary">Sabiduría</span>
+                <span class="badge bg-success">Coraje</span>
+                <span class="badge bg-warning">Templanza</span>
+                <span class="badge bg-info">Justicia</span>
+            </div>
+        </div>
+        
+        <div class="cyber-card p-4">
+            <h4 class="cyber-title mb-3">
+                <i class="fas fa-quote-left me-2"></i>Inspiración Estoica
+            </h4>
+            
+            <div class="philosopher-quote">
+                <em>"No es lo que te sucede, sino cómo reaccionas a ello lo que importa."</em>
+                <small class="d-block mt-2 text-end">- Epicteto</small>
+            </div>
+            
+            <div class="mt-3">
+                <p class="small text-muted">
+                    Cada ejercicio de Areté es una oportunidad para desarrollar virtudes y fortalecer el carácter.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Animación del círculo de progreso
+    const progressCircle = document.querySelector('.progress-ring-circle');
+    if (progressCircle) {
+        const progress = {{ ejercicio.numero_orden }};
+        const circumference = 2 * Math.PI * 50;
+        const offset = circumference - (progress / 100) * circumference;
+        
+        progressCircle.style.strokeDashoffset = circumference;
+        setTimeout(() => {
+            progressCircle.style.transition = 'stroke-dashoffset 2s ease-in-out';
+            progressCircle.style.strokeDashoffset = offset;
+        }, 500);
+    }
+    
+    // Efecto de cambio de estado
+    const estadoSelect = document.getElementById('estado');
+    if (estadoSelect) {
+        estadoSelect.addEventListener('change', function() {
+            const badge = document.querySelector('.badge');
+            const value = this.value;
+            
+            badge.className = 'badge fs-5';
+            if (value === 'completado') {
+                badge.classList.add('bg-success');
+                badge.innerHTML = '<i class="fas fa-check-circle me-1"></i>Completado';
+            } else if (value === 'a_repetir') {
+                badge.classList.add('bg-warning');
+                badge.innerHTML = '<i class="fas fa-redo me-1"></i>A Repetir';
+            } else {
+                badge.classList.add('bg-secondary');
+                badge.innerHTML = '<i class="fas fa-clock me-1"></i>Pendiente';
+            }
+        });
+    }
+    
+    // Contador de caracteres para reflexiones
+    const reflexionesTextarea = document.getElementById('reflexiones');
+    if (reflexionesTextarea) {
+        const charCount = document.createElement('small');
+        charCount.className = 'text-muted float-end';
+        reflexionesTextarea.parentNode.appendChild(charCount);
+        
+        function updateCharCount() {
+            const count = reflexionesTextarea.value.length;
+            charCount.textContent = `${count} caracteres`;
+        }
+        
+        reflexionesTextarea.addEventListener('input', updateCharCount);
+        updateCharCount();
+    }
+});
+</script>
+
+<style>
+.progress-ring-circle {
+    transition: stroke-dashoffset 0.35s;
+    transform: rotate(-90deg);
+    transform-origin: 50% 50%;
+}
+</style>
+{% endblock %}
