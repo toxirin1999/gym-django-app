@@ -1,0 +1,236 @@
+{% extends 'diario/base_stoic.html' %}
+{% load static %}
+{% load custom_filters %}
+
+{% block title %}Dashboard del Día - Diario Estoico{% endblock %}
+
+{% block content %}
+<div class="fade-in-up">
+    <!-- Encabezado con la fecha -->
+    <div class="card shadow-soft mb-4">
+        <div class="card-body text-center p-4">
+            <h1 class="text-gradient">Dashboard del Día</h1>
+            <p class="lead text-muted">{{ hoy|date:"l, d \d\e F \d\e Y" }}</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Columna Principal (70%) -->
+        <div class="col-lg-8">
+            <!-- ========== WIDGET DE PROSOCHE (Foco del Día) ========== -->
+            <!-- ========== WIDGET DE PRÓXIMO PASO (CON CALL TO ACTION DINÁMICO) ========== -->
+            <div class="card shadow-soft mb-4">
+                <div class="card-header d-flex align-items-center">
+                    <i class="fas fa-compass fa-2x text-primary me-3"></i>
+                    <div>
+                        <h5 class="mb-0">Tu Próximo Paso</h5>
+                        <small class="text-muted">Tu acción más importante ahora</small>
+                    </div>
+                </div>
+                <div class="card-body text-center p-4">
+                    {% if not entrada_hoy %}
+                    <!-- PRIORIDAD 1: Hacer la entrada de hoy -->
+                    <i class="fas fa-pen-nib fa-3x text-muted mb-3"></i>
+                    <h4>¿Cuál es tu propósito para hoy?</h4>
+                    <p class="text-muted mb-4">"Una vida sin examen no merece ser vivida." Dedica un momento a la reflexión.</p>
+                    <a href="{% url 'diario:prosoche_nueva_entrada' %}" class="btn btn-primary btn-lg">
+                        Crear Entrada de Hoy
+                    </a>
+
+                    {% elif hoy.weekday == 6 or hoy.weekday == 0 %}
+                    <!-- PRIORIDAD 2: Hacer la revisión semanal (si es Domingo o Lunes) -->
+                    <i class="fas fa-calendar-check fa-3x text-muted mb-3"></i>
+                    <h4>Es hora de reflexionar y planificar.</h4>
+                    <p class="text-muted mb-4">Revisa tus avances de la semana pasada y establece tus objetivos para la que comienza.</p>
+                    <a href="{% url 'diario:prosoche_revision_semanal' %}" class="btn btn-primary btn-lg">
+                        Hacer Revisión Semanal
+                    </a>
+
+                    {% else %}
+                    <!-- POR DEFECTO: Recordatorio de foco -->
+                    <div class="mb-3" style="font-size: 4rem;">
+                        {% if entrada_hoy.estado_animo == 5 %}😄
+                        {% elif entrada_hoy.estado_animo == 4 %}😊
+                        {% elif entrada_hoy.estado_animo == 3 %}😐
+                        {% elif entrada_hoy.estado_animo == 2 %}😕
+                        {% else %}😞
+                        {% endif %}
+                    </div>
+                    <h4>Día en marcha. Tu ánimo de hoy: {{ entrada_hoy.estado_animo }}/5</h4>
+                    <p class="text-muted mb-2">Recuerda tu foco principal:</p>
+                    <blockquote class="blockquote bg-light p-3 rounded">
+                        <p class="font-serif fs-5 mb-0">"{{ entrada_hoy.persona_quiero_ser|default:"Mantener el rumbo." }}"</p>
+                    </blockquote>
+
+                    <a href="{% url 'diario:prosoche_editar_entrada' entrada_hoy.id %}" class="btn btn-sm btn-outline-secondary mt-3">
+                        Ver Entrada de Hoy
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+            <!-- WIDGET DE SIMBIOSIS (NUEVO) -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header"><h5 class="mb-0"><i class="fas fa-users text-info me-2"></i>Simbiosis</h5></div>
+                <div class="card-body">
+                    {% if interaccion_sin_reflexion %}
+                    <p class="small text-muted mb-1">Reflexión pendiente:</p>
+                    <h6 class="mb-2">"{{ interaccion_sin_reflexion.titulo }}"</h6>
+                    <a href="{% url 'diario:interaccion_editar' interaccion_sin_reflexion.id %}" class="btn btn-sm btn-outline-info w-100">Añadir Aprendizaje</a>
+                    {% elif relacion_a_mejorar %}
+                    <p class="small text-muted mb-1">Relación que necesita atención:</p>
+                    <h6 class="mb-2">{{ relacion_a_mejorar.nombre }} (Salud: {{ relacion_a_mejorar.salud_relacion }}/5)</h6>
+                    <a href="{% url 'diario:persona_detalle' relacion_a_mejorar.id %}" class="btn btn-sm btn-outline-info w-100">Revisar Relación</a>
+                    {% else %}
+                    <p class="small text-muted text-center">Tus relaciones parecen estar en equilibrio. ¡Buen trabajo!</p>
+                    {% endif %}
+                </div>
+            </div>
+            <!-- ========== WIDGET DE INSIGHTS DEL ORÁCULO ========== -->
+            {% if insight_principal %}
+            <div class="alert alert-info shadow-sm fade-in-up" role="alert">
+                <div class="d-flex">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-brain fa-2x"></i>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <h4 class="alert-heading font-serif">{{ insight_principal.titulo }}</h4>
+                        <p>{{ insight_principal.mensaje }}</p>
+                        <hr>
+                        <a href="{% url 'diario:oraculo_insights' %}" class="alert-link small">Ver más insights...</a>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- ========== WIDGET DE KAIROS (Eventos) ========== -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header d-flex align-items-center">
+                    <i class="fas fa-calendar-alt fa-2x text-info me-3"></i>
+                    <div>
+                        <h5 class="mb-0">Agenda de Hoy (Kairos)</h5>
+                        <small class="text-muted">Tus compromisos y eventos</small>
+                    </div>
+                </div>
+                <div class="card-body">
+                    {% if eventos_hoy %}
+                    <ul class="list-group list-group-flush">
+                        {% for evento in eventos_hoy %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <span class="badge rounded-pill me-2" style="background-color: {{ evento.color|default:'#6c757d' }};">&nbsp;</span>
+                                {{ evento.titulo }}
+                            </div>
+                            <small class="text-muted">
+                                {% if evento.todo_el_dia %}Todo el día{% else %}{{ evento.fecha_inicio|date:"H:i" }}{% endif %}
+                            </small>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <p class="text-muted text-center p-3">No hay eventos programados para hoy.</p>
+                    {% endif %}
+                </div>
+                <div class="card-footer text-center">
+                    <a href="{% url 'diario:kairos_dashboard' %}" class="btn btn-sm btn-outline-secondary">
+                        <i class="fas fa-calendar-plus me-2"></i>Gestionar Calendario
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Columna Secundaria (30%) -->
+        <div class="col-lg-4">
+            <!-- ========== WIDGET DE VIRES (Salud) ========== -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header"><h5 class="mb-0"><i class="fas fa-dumbbell me-2 text-danger"></i>Vires</h5></div>
+                <div class="card-body">
+                    {% if seguimiento_vires_hoy %}
+                    <p class="text-success mb-2"><i class="fas fa-check-circle me-1"></i>Seguimiento registrado.</p>
+                    {% if seguimiento_vires_hoy.peso %}<p class="mb-1 small"><strong>Peso:</strong> {{ seguimiento_vires_hoy.peso }} kg</p>{% endif %}
+                    <div class="mt-2">
+                        <span class="badge {% if seguimiento_vires_hoy.entrenamiento_realizado %}bg-success{% else %}bg-light text-dark border{% endif %}">Entrenamiento</span>
+                        <span class="badge {% if seguimiento_vires_hoy.alimentacion_saludable %}bg-success{% else %}bg-light text-dark border{% endif %}">Dieta</span>
+                    </div>
+                    {% else %}
+                    <p class="text-muted small">Aún no has registrado tu seguimiento de salud de hoy.</p>
+                    <a href="{% url 'diario:vires_dashboard' %}" class="btn btn-sm btn-outline-primary w-100 mt-2">
+                        <i class="fas fa-plus me-1"></i>Registrar Ahora
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- ========== WIDGET DE EUDAIMONIA (Foco) ========== -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header"><h5 class="mb-0"><i class="fas fa-balance-scale me-2 text-primary"></i>Eudaimonia</h5></div>
+                <div class="card-body">
+                    {% if area_prioritaria %}
+                    <p class="text-muted small mb-1">Área de enfoque principal:</p>
+                    <h6 class="mb-2">{{ area_prioritaria.area.nombre }}</h6>
+                    <div class="progress" style="height: 8px;">
+                        <div class="progress-bar" role="progressbar" style="width: {{ area_prioritaria.puntuacion|mul:10 }}%;" aria-valuenow="{{ area_prioritaria.puntuacion }}" aria-valuemin="0" aria-valuemax="10"></div>
+                    </div>
+                    <small class="text-muted">Puntuación: {{ area_prioritaria.puntuacion }}/10</small>
+                    {% else %}
+                    <p class="text-muted small">Define tus áreas de vida para encontrar tu foco.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- ========== WIDGET DE ARETÉ (Próxima Tarea) ========== -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header"><h5 class="mb-0"><i class="fas fa-graduation-cap me-2 text-success"></i>Areté</h5></div>
+                <div class="card-body">
+                    {% if proximo_arete %}
+                    <p class="text-muted small mb-1">Próximo ejercicio:</p>
+                    <h6 class="mb-2">{{ proximo_arete.titulo }}</h6>
+                    <a href="{% url 'diario:arete_dashboard' %}" class="btn btn-sm btn-outline-primary w-100 mt-2">
+                        <i class="fas fa-arrow-right me-1"></i>Empezar
+                    </a>
+                    {% else %}
+                    <p class="text-success small"><i class="fas fa-check-circle me-1"></i>¡Felicidades! Has completado todos los ejercicios de Areté.</p>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="card shadow-soft mb-4 text-center">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-brain me-2 text-primary"></i>
+                        Oráculo
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted small">
+                        Obtén reflexiones personalizadas basadas en tus datos de la última semana.
+                    </p>
+                    <a href="{% url 'diario:oraculo_insights' %}" class="btn btn-primary w-100 mt-2">
+                        <i class="fas fa-eye me-2"></i>
+                        Consultar al Oráculo
+                    </a>
+                </div>
+            </div>
+
+
+            <!-- ========== WIDGET DE ANALÍTICAS ========== -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-line me-2 text-success"></i>
+                        Analíticas
+                    </h5>
+                </div>
+                <div class="card-body text-center">
+                    <p class="text-muted small">
+                        Visualiza tu progreso y descubre tendencias a lo largo del tiempo.
+                    </p>
+                    <a href="{% url 'diario:analiticas_personales' %}" class="btn btn-sm btn-outline-secondary w-100 mt-2">
+                        <i class="fas fa-search-plus me-2"></i>
+                        Explorar Mis Datos
+                    </a>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}

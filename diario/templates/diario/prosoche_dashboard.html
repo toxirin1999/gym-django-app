@@ -1,0 +1,394 @@
+{% extends 'diario/base_stoic.html' %}
+{% load static %}
+{% load custom_filters %}
+
+{% block title %}Prosoche - Diario Estoico{% endblock %}
+
+{% block extra_css %}
+    {# Estilos específicos para esta página que complementan el archivo principal #}
+    <style>
+        .habito-check { transform: scale(1.2); cursor: pointer; }
+        .color-indicator { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+        .clickable-row { cursor: pointer; }
+        .clickable-row:hover { background-color: rgba(0,0,0,0.03); }
+    </style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid fade-in-up">
+    <!-- Encabezado de la Página -->
+    <div class="card shadow-soft mb-4">
+        <div class="card-body p-4">
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-moon fa-3x me-4 text-primary"></i>
+                    <div>
+                        <h1 class="card-title text-gradient mb-1">PROSOCHE</h1>
+                        <p class="text-muted mb-0">{{ mes_actual }} {{ año_actual }}</p>
+                    </div>
+                </div>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-outline-secondary" onclick="toggleHistorialMeses()"><i class="fas fa-history me-2"></i>Meses Anteriores</button>
+                    <a href="{% url 'diario:prosoche_revision_semanal' %}" class="btn btn-primary"><i class="fas fa-calendar-check me-2"></i>Hacer Revisión Semanal</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Panel Explicativo -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-light">
+            <h5 class="mb-0"><i class="fas fa-sitemap me-2 text-primary"></i>La Jerarquía de la Planificación</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-lg-6 border-end">
+                    <h6 class="text-gradient">🎯 Objetivos Mensuales (La Visión)</h6>
+                    <p class="text-muted small">Responden a: <em>"¿Qué quiero haber logrado cuando termine este mes?"</em>. Son tu Norte Estratégico.</p>
+                    <ul class="list-unstyled">
+                                <li><small>Ej: "Perder 2kg"</small></li>
+                                <li><small>Ej: "Leer un libro completo"</small></li>
+                            </ul>
+                </div>
+                <div class="col-lg-6">
+                    <h6 class="text-gradient">🎯 Objetivos Semanales (La Táctica)</h6>
+                    <p class="text-muted small">Responden a: <em>"¿Qué 3 cosas importantes debo hacer **esta semana** para acercarme a mis metas?"</em>. Son tus Pasos Concretos.</p>
+                    <ul class="list-unstyled">
+                                <li><small>Ej: "Hacer ejercicio 3 veces"</small></li>
+                                <li><small>Ej: "Leer 50 páginas"</small></li>
+                            </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Panel de Objetivos del Mes -->
+    <div class="card shadow-soft mb-4">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-target me-2 text-primary"></i>Objetivos del Mes</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                {% for i in "123" %}
+                <div class="col-md-4 mb-3 mb-md-0">
+                    <div class="p-3 border rounded h-100">
+                        <div class="form-check mb-2">
+                            <input type="checkbox" class="form-check-input" id="objetivo_mes_{{ i }}"
+                                   {% if i == '1' and prosoche_mes.objetivo_mes_1_completado %}checked{% endif %}
+                                   {% if i == '2' and prosoche_mes.objetivo_mes_2_completado %}checked{% endif %}
+                                   {% if i == '3' and prosoche_mes.objetivo_mes_3_completado %}checked{% endif %}
+                                   onchange="actualizarObjetivoMensual({{ i }}, this.checked)">
+                            <label class="form-check-label fw-bold" for="objetivo_mes_{{ i }}">Objetivo {{ i }}</label>
+                        </div>
+                        <textarea class="form-control" rows="3" placeholder="Escribe tu objetivo..."
+                                  onblur="guardarObjetivoMensual({{ i }}, this.value)">{% if i == '1' %}{{ prosoche_mes.objetivo_mes_1 }}{% elif i == '2' %}{{ prosoche_mes.objetivo_mes_2 }}{% else %}{{ prosoche_mes.objetivo_mes_3 }}{% endif %}</textarea>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Foco de la Semana -->
+    {% if semana_actual and semana_actual.objetivo_1 or semana_actual.objetivo_2 or semana_actual.objetivo_3 %}
+    <div class="card shadow-soft mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="fas fa-calendar-week me-2 text-info"></i>Foco de la Semana</h5>
+            <a href="{% url 'diario:prosoche_revision_semanal' %}" class="btn btn-sm btn-outline-secondary">Editar</a>
+        </div>
+        <ul class="list-group list-group-flush">
+            {% if semana_actual.objetivo_1 %}<li class="list-group-item">🎯 {{ semana_actual.objetivo_1 }}</li>{% endif %}
+            {% if semana_actual.objetivo_2 %}<li class="list-group-item">🎯 {{ semana_actual.objetivo_2 }}</li>{% endif %}
+            {% if semana_actual.objetivo_3 %}<li class="list-group-item">🎯 {{ semana_actual.objetivo_3 }}</li>{% endif %}
+        </ul>
+    </div>
+    {% endif %}
+
+    <!-- Panel del Diario Mensual -->
+    <div class="card shadow-soft mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="fas fa-book me-2 text-primary"></i>Diario Mensual</h5>
+            <a href="{% url 'diario:prosoche_nueva_entrada' %}" class="btn btn-sm btn-primary"><i class="fas fa-plus me-1"></i>Nueva Entrada</a>
+        </div>
+        <div class="card-body p-0">
+            {% if entradas_del_mes %}
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th class="ps-4">Entrada</th><th>Estado Ánimo</th><th>Etiquetas</th><th class="text-end">Fecha</th><th class="pe-4"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for entrada in entradas_del_mes %}
+                        <tr class="clickable-row" data-href="{% url 'diario:prosoche_editar_entrada' entrada.id %}">
+                            <td class="ps-4"><strong class="font-serif">{{ entrada.get_titulo_display }}</strong></td>
+                            <td><span style="font-size: 1.5rem;">{{ entrada.get_estado_animo_emoji }}</span></td>
+                            <td>
+                                {% for etiqueta in entrada.etiquetas|split:"," %}
+                                    {% if etiqueta %}<span class="badge bg-secondary me-1">{{ etiqueta|trim }}</span>{% endif %}
+                                {% endfor %}
+                            </td>
+                            <td class="text-end"><small class="text-muted">{{ entrada.fecha|date:"d M Y" }}</small></td>
+                            <td class="pe-4 text-end">
+                                <form method="post" action="{% url 'diario:prosoche_eliminar_entrada' entrada.id %}" onsubmit="event.stopPropagation(); return confirm('¿Estás seguro?');">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-sm btn-outline-danger border-0"><i class="fas fa-trash-alt"></i></button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5"><i class="fas fa-journal-whills fa-3x mb-3 text-muted"></i><p class="text-muted">No hay entradas para este mes.</p></div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Panel de Hábitos -->
+    <div class="card shadow-soft mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="fas fa-tasks me-2 text-primary"></i>Hábitos</h5>
+            <button class="btn btn-sm btn-outline-primary" onclick="mostrarFormularioHabito()"><i class="fas fa-plus me-1"></i>Nuevo Hábito</button>
+        </div>
+        <div class="card-body">
+            <div id="formulario-habito" class="p-3 border rounded mb-4 d-none">
+                <form method="post" action="{% url 'diario:prosoche_crear_habito' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="prosoche_id" value="{{ prosoche_mes.id }}">
+                    <div class="row g-2 align-items-end">
+                        <div class="col-md-6"><label class="form-label small">Nombre</label><input type="text" class="form-control" name="nombre" required></div>
+                        <div class="col-md-2"><label class="form-label small">Color</label><input type="color" class="form-control form-control-color" name="color" value="#f39c12"></div>
+                        <div class="col-md-4 d-flex gap-2"><button type="submit" class="btn btn-success">Crear</button><button type="button" class="btn btn-secondary" onclick="ocultarFormularioHabito()">Cancelar</button></div>
+                    </div>
+                </form>
+            </div>
+            {% if habitos_con_dias %}
+            <div class="table-responsive">
+                <table class="table table-borderless table-sm text-center">
+                    <thead><tr><th class="text-start">Hábito</th>{% for dia in dias_mes %}<th style="width: 30px;">{{ dia }}</th>{% endfor %}<th style="width: 50px;">%</th></tr></thead>
+                    <tbody>
+                        {% for habito_data in habitos_con_dias %}
+                        <tr>
+                            <td class="text-start"><div class="d-flex align-items-center"><div class="color-indicator me-2" style="background: {{ habito_data.habito.color }};"></div><strong>{{ habito_data.habito.nombre }}</strong></div></td>
+                            {% for dia_data in habito_data.dias %}<td><!-- En la tabla de hábitos, dentro del bucle -->
+<!-- En la tabla de hábitos, dentro del bucle -->
+<input type="checkbox" class="form-check-input habito-check"
+       {% if dia_data.completado %}checked{% endif %}
+       onchange="toggleHabito({{ habito_data.habito.id }}, {{ dia_data.dia }}, this)">
+</td>{% endfor %}
+                            <td><span class="badge bg-{% if habito_data.porcentaje >= 80 %}success{% elif habito_data.porcentaje >= 50 %}warning{% else %}danger{% endif %}">{{ habito_data.porcentaje }}%</span></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-4"><i class="fas fa-plus-circle fa-3x mb-3 text-muted"></i><p class="text-muted">Aún no has definido hábitos para este mes.</p></div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Panel de Revisión del Mes -->
+    <div class="card shadow-soft mb-4">
+        <div class="card-header"><h5 class="mb-0"><i class="fas fa-clipboard-check me-2 text-primary"></i>Revisión del Mes</h5></div>
+        <div class="card-body">
+            <form method="post" action="{% url 'diario:prosoche_revision_mes' %}">
+                {% csrf_token %}
+                <input type="hidden" name="prosoche_id" value="{{ prosoche_mes.id }}">
+                <div class="row">
+                    <div class="col-md-6 mb-3"><div class="alert alert-success h-100"><label class="form-label fw-bold"><i class="fas fa-trophy me-2"></i>Logro Principal</label><textarea class="form-control mt-2" name="logro_principal" rows="3">{{ prosoche_mes.logro_principal }}</textarea></div></div>
+                    <div class="col-md-6 mb-3"><div class="alert alert-warning h-100"><label class="form-label fw-bold"><i class="fas fa-mountain me-2"></i>Obstáculo Principal</label><textarea class="form-control mt-2" name="obstaculo_principal" rows="3">{{ prosoche_mes.obstaculo_principal }}</textarea></div></div>
+                    <div class="col-md-6 mb-3"><div class="alert alert-info h-100"><label class="form-label fw-bold"><i class="fas fa-lightbulb me-2"></i>Aprendizaje Principal</label><textarea class="form-control mt-2" name="aprendizaje_principal" rows="3">{{ prosoche_mes.aprendizaje_principal }}</textarea></div></div>
+                    <div class="col-md-6 mb-3"><div class="alert alert-danger h-100"><label class="form-label fw-bold"><i class="fas fa-heart me-2"></i>Momento de Felicidad</label><textarea class="form-control mt-2" name="momento_felicidad" rows="3">{{ prosoche_mes.momento_felicidad }}</textarea></div></div>
+                </div>
+                <div class="text-center mt-3"><button type="submit" class="btn btn-primary"><i class="fas fa-save me-2"></i>Guardar Revisión</button></div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Panel de Meses Anteriores (Oculto) -->
+    <div id="historial-meses" class="card shadow-soft mb-4 d-none">
+        <div class="card-header"><h5 class="mb-0"><i class="fas fa-history me-2 text-primary"></i>Meses Anteriores</h5></div>
+        <div class="card-body">
+            {% if meses_anteriores %}
+            <div class="row">
+                {% for mes in meses_anteriores %}<div class="col-md-4 col-lg-3 mb-3"><a href="{% url 'diario:prosoche_mes_anterior' mes.mes mes.año %}" class="text-decoration-none"><div class="p-3 text-center stat-item border rounded"><h6 class="mb-1">{{ mes.mes }} {{ mes.año }}</h6></div></a></div>{% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center py-4"><p class="text-muted">No hay meses anteriores registrados.</p></div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+
+
+<script>
+        // ==================================================
+    // FUNCIÓN DE AYUDA PARA EL TOKEN CSRF
+    // ==================================================
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    // ==================================================
+    // VARIABLES GLOBALES
+    // ==================================================
+    const csrftoken = getCookie('csrftoken');
+    const prosocheId = {{ prosoche_mes.id }};
+
+    // ==================================================
+    // FUNCIONES DE INTERACCIÓN
+    // ==================================================
+
+    function mostrarFormularioHabito() {
+        document.getElementById('formulario-habito').classList.remove('d-none');
+    }
+
+    function ocultarFormularioHabito() {
+        document.getElementById('formulario-habito').classList.add('d-none');
+    }
+
+    function toggleHistorialMeses() {
+        document.getElementById('historial-meses').classList.toggle('d-none');
+    }
+
+    function showSaveFeedback(element) {
+        if (!element) return;
+        element.style.transition = 'none';
+        element.style.borderColor = '#28a745';
+        setTimeout(() => {
+            element.style.transition = 'border-color 0.5s ease-out';
+            element.style.borderColor = '';
+        }, 1500);
+    }
+
+    // --- ¡¡¡FUNCIONES CORREGIDAS!!! ---
+
+    function guardarObjetivoMensual(numero, valor, element) {
+        console.log(`Guardando objetivo ${numero}: ${valor}`);
+
+        // CONSTRUCCIÓN CORRECTA DEL OBJETO 'data'
+        const data = {
+            prosoche_id: prosocheId,
+            tipo: 'mensual',
+            [`objetivo_mes_${numero}`]: valor
+        };
+
+        fetch("{% url 'diario:prosoche_actualizar_objetivos' %}", {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                console.log('¡Guardado con éxito!');
+                showSaveFeedback(element);
+            } else {
+                console.error('El servidor devolvió un error:', result.error);
+            }
+        })
+        .catch(error => console.error('Error en la petición fetch:', error));
+    }
+
+    function actualizarObjetivoMensual(numero, completado, element) {
+        console.log(`Actualizando estado del objetivo ${numero}: ${completado}`);
+
+        // CONSTRUCCIÓN CORRECTA DEL OBJETO 'data'
+        const data = {
+            prosoche_id: prosocheId,
+            tipo: 'mensual',
+            [`objetivo_${numero}_completado`]: completado
+        };
+
+        fetch("{% url 'diario:prosoche_actualizar_objetivos' %}", {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                console.log('¡Estado actualizado con éxito!');
+                showSaveFeedback(element.closest('.border.rounded'));
+            } else {
+                console.error('El servidor devolvió un error:', result.error);
+            }
+        })
+        .catch(error => console.error('Error en la petición fetch:', error));
+    }
+
+    function toggleHabito(habitoId, dia) {
+        // ... (esta función ya era correcta)
+        const data = { habito_id: habitoId, dia: dia };
+        fetch('{% url "diario:prosoche_toggle_habito" %}', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            }
+        })
+        .catch(error => console.error('Error en la petición fetch de hábito:', error));
+    }
+
+    // ==================================================
+    // CÓDIGO QUE SE EJECUTA AL CARGAR LA PÁGINA
+    // ==================================================
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log("El DOM está cargado. El script está listo.");
+
+        // Lógica para filas clicables
+        document.querySelectorAll('.clickable-row').forEach(row => {
+            row.addEventListener('click', function(event) {
+                if (event.target.closest('form')) return;
+                const href = this.dataset.href;
+                if (href) window.location.href = href;
+            });
+        });
+
+        // Animaciones y efectos visuales
+        document.querySelectorAll('.card.shadow-soft').forEach((card, index) => {
+            card.style.opacity = '0';
+            card.style.transform = 'translateY(20px)';
+            setTimeout(() => {
+                card.style.transition = 'opacity 0.5s ease-out, transform 0.5s ease-out';
+                card.style.opacity = '1';
+                card.style.transform = 'translateY(0)';
+            }, index * 100);
+        });
+
+        document.querySelectorAll('.stat-item.border.rounded').forEach(card => {
+            card.addEventListener('mouseenter', () => {
+                card.style.transform = 'translateY(-3px)';
+                card.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)';
+                card.style.transition = 'transform 0.2s ease-out, box-shadow 0.2s ease-out';
+            });
+            card.addEventListener('mouseleave', () => {
+                card.style.transform = 'translateY(0)';
+                card.style.boxShadow = 'none';
+            });
+        });
+    });
+</script>
+{% endblock %}

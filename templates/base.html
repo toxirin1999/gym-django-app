@@ -1,6 +1,7 @@
 {% load static %}
 <!DOCTYPE html>
 <html lang="es">
+<!-- En base.html -->
 <head>
   <meta charset="UTF-8" />
   <meta http-equiv="cache-control" content="no-cache">
@@ -21,7 +22,7 @@
   <title>{% block title %}Dashboard – Nueva Gym{% endblock %}</title>
     <!-- En el <head> -->
 <link rel="stylesheet" href="{% static 'css/blade-runner-atmosphere.css' %}">
-  
+
 
   <!-- Tailwind CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -34,6 +35,9 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
   <style>
+  html {
+    height: 100%;
+}
     /* ===== EFECTOS ATMOSFÉRICOS BLADE RUNNER - INTEGRACIÓN GLOBAL ===== */
     .notificacion-epica {
         position: fixed;
@@ -234,6 +238,19 @@
         border-radius: 50%;
         animation: flotar-particula 3s infinite;
     }
+body {
+            background: url("{% static 'images/fondo_cyberpunk.png' %}" ) no-repeat center center fixed !important;
+            background-size: cover !important;
+            background-color: #000000 !important;
+            min-height: 100vh;
+            color: #f8fafc;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .page-wrapper {
+            width: 100%;
+            overflow-x: hidden; /* Previene el desbordamiento horizontal */
+        }
 
     @keyframes flotar-particula {
         0% {
@@ -350,32 +367,23 @@
 
     /* Contenedor principal de efectos atmosféricos */
     .blade-runner-atmosphere {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        pointer-events: none;
-        z-index: 1;
-        overflow: hidden;
-    }
-
-    /* NIEBLA DE FONDO - ULTRA VISIBLE */
-    .background-fog {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background:
-            radial-gradient(ellipse at 20% 70%, rgba(0, 255, 255, 0.15) 0%, transparent 50%),
-            radial-gradient(ellipse at 80% 30%, rgba(255, 0, 128, 0.12) 0%, transparent 50%),
-            radial-gradient(ellipse at 50% 90%, rgba(255, 255, 0, 0.1) 0%, transparent 50%),
-            radial-gradient(ellipse at 10% 10%, rgba(128, 255, 0, 0.08) 0%, transparent 40%);
-        animation: fogMove 60s ease-in-out infinite;
-        z-index: 1;
-    }
-
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: -1; /* Detrás de todo */
+        }
+        .background-fog {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at 30% 20%, rgba(0, 255, 255, 0.1) 0%, transparent 50%),
+                        radial-gradient(circle at 70% 80%, rgba(255, 0, 255, 0.1) 0%, transparent 50%);
+        }
     /* RESPLANDOR AMBIENTAL - ULTRA VISIBLE */
     .ambient-glow {
         position: absolute;
@@ -954,7 +962,9 @@
 </head>
 
 
-<body class="min-h-screen text-slate-100 flex justify-center">
+
+<body class="min-h-screen text-slate-100">
+
 
   <!-- Contenedor de notificaciones -->
   <div id="notificaciones-container"

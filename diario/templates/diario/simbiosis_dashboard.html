@@ -1,10 +1,104 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>$Title$</title>
-</head>
-<body>
-$END$
-</body>
-</html>
+{% extends 'diario/base_stoic.html' %}
+{% load static %}
+{% load custom_filters %}
+{% block title %}Simbiosis - Relaciones{% endblock %}
+
+{% block content %}
+<div class="fade-in-up">
+    <!-- Encabezado -->
+    <div class="card shadow-soft mb-4">
+        <div class="card-body p-4">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h1 class="text-gradient mb-2"><i class="fas fa-users me-2"></i>Simbiosis - Mis Relaciones</h1>
+                    <blockquote class="border-0 p-0 m-0 bg-transparent">
+                        <p class="lead mb-1">"Nacimos para la comunidad. Nuestra sociedad es una bóveda de piedras que se derrumbaría si las piedras no se sostuvieran mutuamente."</p>
+                        <footer>— Séneca</footer>
+                    </blockquote>
+                </div>
+                <div class="col-md-4 text-center text-md-end mt-3 mt-md-0">
+                    <i class="fas fa-people-arrows fa-3x text-muted opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Columna Izquierda: Personas Importantes -->
+        <div class="col-lg-5 mb-4 mb-lg-0">
+            <div class="card shadow-sm h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Mi Círculo</h5>
+                    <a href="{% url 'diario:persona_crear' %}" class="btn btn-sm btn-primary">
+                        <i class="fas fa-plus me-1"></i> Añadir Persona
+                    </a>
+
+                </div>
+                <div class="card-body">
+                    {% if personas %}
+                    <ul class="list-group list-group-flush">
+                        {% for persona in personas %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-0">
+                                    <a href="{% url 'diario:persona_detalle' persona.id %}" class="text-dark stretched-link">{{ persona.nombre }}</a>
+                                </h6>
+
+                                <small class="text-muted">{{ persona.get_tipo_relacion_display }}</small>
+                            </div>
+                            <div class="d-flex align-items-center">
+                                <div class="progress me-3" style="width: 80px; height: 8px;">
+                                    <div class="progress-bar" role="progressbar" style="width: {{ persona.salud_relacion|mul:20 }}%;" aria-valuenow="{{ persona.salud_relacion }}"></div>
+                                </div>
+                                <a href="#" class="btn btn-sm btn-outline-secondary border-0 disabled"><i class="fas fa-edit"></i></a>
+                            </div>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <div class="text-center p-4">
+                        <p class="text-muted">Aún no has añadido a nadie a tu círculo.</p>
+                        <p class="text-muted small">Empieza por añadir a las personas importantes de tu vida.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Columna Derecha: Interacciones Recientes -->
+        <div class="col-lg-7">
+            <div class="card shadow-sm h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Interacciones Recientes</h5>
+                    <a href="{% url 'diario:interaccion_crear' %}" class="btn btn-sm btn-primary">
+                        <i class="fas fa-plus me-1"></i> Registrar Interacción
+                    </a>
+
+                </div>
+                <div class="card-body">
+                    {% if ultimas_interacciones %}
+                    {% for interaccion in ultimas_interacciones %}
+                    <div class="d-flex position-relative mb-3">
+                        <i class="fas fa-quote-left fa-2x text-muted opacity-25 me-3"></i>
+                        <div>
+                            <h6 class="mb-1">
+                                <a href="{% url 'diario:interaccion_editar' interaccion.id %}" class="text-dark stretched-link">{{ interaccion.titulo }}</a>
+
+                            </h6>
+                            <p class="mb-1 small text-muted">{{ interaccion.descripcion|truncatewords:20 }}</p>
+                            <small class="text-muted">{{ interaccion.fecha|date:"d M Y" }}</small>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% else %}
+                    <div class="text-center p-4">
+                        <p class="text-muted">No has registrado ninguna interacción.</p>
+                        <p class="text-muted small">Anota las conversaciones o momentos importantes para poder reflexionar sobre ellos.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

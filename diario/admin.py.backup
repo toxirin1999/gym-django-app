@@ -1,0 +1,265 @@
+from django.contrib import admin
+from .models import (
+    ProsocheMes, ProsocheSemana, ProsocheDiario, ProsocheHabito, ProsocheHabitoDia,
+    AreaVida, Eudaimonia, TrimestreEudaimonia,
+    EjercicioArete, Gnosis, EntrenamientoSemanal,
+    SeguimientoVires, EventoKairos, PlanificacionDiaria
+)
+
+
+# ========================================
+# PROSOCHE - ADMINISTRACIÓN
+# ========================================
+
+class ProsocheSemanaInline(admin.TabularInline):
+    """Inline para semanas dentro del mes de Prosoche"""
+    model = ProsocheSemana
+    extra = 0
+    fields = ('numero_semana', 'objetivo_1', 'objetivo_2', 'objetivo_3',
+              'objetivo_1_completado', 'objetivo_2_completado', 'objetivo_3_completado')
+
+
+class ProsocheDiarioInline(admin.TabularInline):
+    """Inline para entradas del diario"""
+    model = ProsocheDiario
+    extra = 0
+    fields = ('fecha', 'entrada', 'estado_animo', 'etiquetas')
+    readonly_fields = ('fecha_creacion',)
+
+
+class ProsocheHabitoInline(admin.TabularInline):
+    """Inline para hábitos del mes"""
+    model = ProsocheHabito
+    extra = 0
+    fields = ('nombre', 'descripcion', 'color')
+
+
+@admin.register(ProsocheMes)
+class ProsocheMesAdmin(admin.ModelAdmin):
+    """Administración para ProsocheMes"""
+    list_display = ('usuario', 'mes', 'año', 'fecha_creacion', 'objetivos_completados')
+    list_filter = ('año', 'mes', 'fecha_creacion')
+    search_fields = ('usuario__username', 'mes')
+    readonly_fields = ('fecha_creacion', 'fecha_actualizacion')
+
+    fieldsets = (
+        ('Información General', {
+            'fields': ('usuario', 'mes', 'año')
+        }),
+        ('Objetivos del Mes', {
+            'fields': (
+                ('objetivo_mes_1', 'objetivo_mes_1_completado'),
+                ('objetivo_mes_2', 'objetivo_mes_2_completado'),
+                ('objetivo_mes_3', 'objetivo_mes_3_completado'),
+            )
+        }),
+        ('Revisión del Mes', {
+            'fields': ('logro_principal', 'obstaculo_principal',
+                       'aprendizaje_principal', 'momento_felicidad'),
+            'classes': ('collapse',)
+        }),
+        ('Fechas', {
+            'fields': ('fecha_creacion', 'fecha_actualizacion'),
+            'classes': ('collapse',)
+        })
+    )
+
+    inlines = [ProsocheSemanaInline, ProsocheDiarioInline, ProsocheHabitoInline]
+
+    def objetivos_completados(self, obj):
+        """Mostrar cuántos objetivos mensuales están completados"""
+        completados = sum([
+            obj.objetivo_mes_1_completado,
+            obj.objetivo_mes_2_completado,
+            obj.objetivo_mes_3_completado
+        ])
+        return f"{completados}/3"
+
+    objetivos_completados.short_description = "Objetivos Completados"
+
+
+@admin.register(ProsocheSemana)
+class ProsocheSemanaAdmin(admin.ModelAdmin):
+    """Administración para ProsocheSemana"""
+    list_display = ('prosoche_mes', 'numero_semana', 'objetivos_completados')
+    list_filter = ('numero_semana', 'prosoche_mes__año', 'prosoche_mes__mes')
+    search_fields = ('prosoche_mes__usuario__username',)
+
+    def objetivos_completados(self, obj):
+        """Mostrar cuántos objetivos semanales están completados"""
+        completados = sum([
+            obj.objetivo_1_completado,
+            obj.objetivo_2_completado,
+            obj.objetivo_3_completado
+        ])
+        return f"{completados}/3"
+
+    objetivos_completados.short_description = "Objetivos Completados"
+
+
+@admin.register(ProsocheDiario)
+class ProsocheDiarioAdmin(admin.ModelAdmin):
+    """Administración para ProsocheDiario"""
+    list_display = ('prosoche_mes', 'fecha', 'estado_animo', 'etiquetas_display')
+    list_filter = ('estado_animo', 'fecha', 'prosoche_mes__año', 'prosoche_mes__mes')
+    search_fields = ('prosoche_mes__usuario__username', 'entrada', 'etiquetas')
+    date_hierarchy = 'fecha'
+    readonly_fields = ('fecha_creacion',)
+
+    def etiquetas_display(self, obj):
+        """Mostrar etiquetas de forma más limpia"""
+        if obj.etiquetas:
+            return ', '.join(obj.etiquetas.split(',')[:3])  # Mostrar solo las primeras 3
+        return '-'
+
+    etiquetas_display.short_description = "Etiquetas"
+
+
+class ProsocheHabitoDiaInline(admin.TabularInline):
+    """Inline para días de hábitos"""
+    model = ProsocheHabitoDia
+    extra = 0
+    fields = ('dia', 'completado', 'notas')
+
+
+@admin.register(ProsocheHabito)
+class ProsocheHabitoAdmin(admin.ModelAdmin):
+    """Administración para ProsocheHabito"""
+    list_display = ('nombre', 'prosoche_mes', 'color', 'dias_completados', 'porcentaje_completado')
+    list_filter = ('prosoche_mes__año', 'prosoche_mes__mes')
+    search_fields = ('nombre', 'prosoche_mes__usuario__username')
+    readonly_fields = ('fecha_creacion',)
+
+    inlines = [ProsocheHabitoDiaInline]
+
+    def dias_completados(self, obj):
+        """Mostrar cuántos días están completados"""
+        return obj.dias.filter(completado=True).count()
+
+    dias_completados.short_description = "Días Completados"
+
+    def porcentaje_completado(self, obj):
+        """Mostrar porcentaje de días completados"""
+        total_dias = obj.dias.count()
+        if total_dias == 0:
+            return "0%"
+        completados = obj.dias.filter(completado=True).count()
+        porcentaje = round((completados / total_dias) * 100)
+        return f"{porcentaje}%"
+
+    porcentaje_completado.short_description = "% Completado"
+
+
+@admin.register(ProsocheHabitoDia)
+class ProsocheHabitoDiaAdmin(admin.ModelAdmin):
+    """Administración para ProsocheHabitoDia"""
+    list_display = ('habito', 'dia', 'completado', 'fecha_actualizacion')
+    list_filter = ('completado', 'dia', 'habito__prosoche_mes__año')
+    search_fields = ('habito__nombre', 'habito__prosoche_mes__usuario__username')
+    readonly_fields = ('fecha_actualizacion',)
+
+
+# ========================================
+# EUDAIMONIA - ADMINISTRACIÓN
+# ========================================
+
+@admin.register(AreaVida)
+class AreaVidaAdmin(admin.ModelAdmin):
+    """Administración para AreaVida"""
+    list_display = ('nombre', 'descripcion_corta', 'color', 'icono')
+    search_fields = ('nombre', 'descripcion')
+
+    def descripcion_corta(self, obj):
+        """Mostrar descripción truncada"""
+        if obj.descripcion:
+            return obj.descripcion[:50] + "..." if len(obj.descripcion) > 50 else obj.descripcion
+        return '-'
+
+    descripcion_corta.short_description = "Descripción"
+
+
+@admin.register(Eudaimonia)
+class EudaimoniaAdmin(admin.ModelAdmin):
+    """Administración para Eudaimonia"""
+    list_display = ('usuario', 'area', 'puntuacion', 'prioridad', 'fecha_actualizacion')
+    list_filter = ('prioridad', 'puntuacion', 'area')
+    search_fields = ('usuario__username', 'area__nombre')
+    readonly_fields = ('fecha_creacion', 'fecha_actualizacion')
+
+
+@admin.register(TrimestreEudaimonia)
+class TrimestreEudaimoniaAdmin(admin.ModelAdmin):
+    """Administración para TrimestreEudaimonia"""
+    list_display = ('eudaimonia', 'trimestre', 'año', 'puntuacion_inicial', 'puntuacion_final')
+    list_filter = ('trimestre', 'año')
+    search_fields = ('eudaimonia__usuario__username', 'eudaimonia__area__nombre')
+
+
+# ========================================
+# ARETÉ - ADMINISTRACIÓN
+# ========================================
+
+@admin.register(EjercicioArete)
+class EjercicioAreteAdmin(admin.ModelAdmin):
+    """Administración para EjercicioArete"""
+    list_display = ('titulo', 'usuario', 'estado', 'numero_orden', 'fecha_completado')
+    list_filter = ('estado', 'virtudes')
+    search_fields = ('titulo', 'usuario__username', 'descripcion')
+    readonly_fields = ('fecha_creacion',)
+
+
+# ========================================
+# GNOSIS - ADMINISTRACIÓN
+# ========================================
+
+@admin.register(Gnosis)
+class GnosisAdmin(admin.ModelAdmin):
+    """Administración para Gnosis"""
+    list_display = ('titulo', 'usuario', 'categoria', 'estado', 'puntuacion', 'fecha_creacion')
+    list_filter = ('categoria', 'estado', 'puntuacion')
+    search_fields = ('titulo', 'autor', 'usuario__username', 'tematica')
+    readonly_fields = ('fecha_creacion',)
+
+
+# ========================================
+# VIRES - ADMINISTRACIÓN
+# ========================================
+
+@admin.register(EntrenamientoSemanal)
+class EntrenamientoSemanalAdmin(admin.ModelAdmin):
+    """Administración para EntrenamientoSemanal"""
+    list_display = ('usuario', 'semana_inicio', 'objetivo_semanal', 'completado')
+    list_filter = ('completado', 'semana_inicio')
+    search_fields = ('usuario__username', 'objetivo_semanal')
+    date_hierarchy = 'semana_inicio'
+
+
+@admin.register(SeguimientoVires)
+class SeguimientoViresAdmin(admin.ModelAdmin):
+    """Administración para SeguimientoVires"""
+    list_display = ('usuario', 'fecha', 'peso', 'entrenamiento_realizado', 'alimentacion_saludable')
+    list_filter = ('entrenamiento_realizado', 'alimentacion_saludable', 'hidratacion_adecuada', 'descanso_suficiente')
+    search_fields = ('usuario__username',)
+    date_hierarchy = 'fecha'
+
+
+# ========================================
+# KAIROS - ADMINISTRACIÓN
+# ========================================
+
+@admin.register(EventoKairos)
+class EventoKairosAdmin(admin.ModelAdmin):
+    """Administración para EventoKairos"""
+    list_display = ('titulo', 'usuario', 'tipo', 'fecha_inicio', 'todo_el_dia', 'recordatorio')
+    list_filter = ('tipo', 'todo_el_dia', 'recordatorio')
+    search_fields = ('titulo', 'usuario__username', 'descripcion')
+    date_hierarchy = 'fecha_inicio'
+
+
+@admin.register(PlanificacionDiaria)
+class PlanificacionDiariaAdmin(admin.ModelAdmin):
+    """Administración para PlanificacionDiaria"""
+    list_display = ('usuario', 'fecha', 'energia_matutina', 'productividad_general')
+    list_filter = ('energia_matutina', 'productividad_general')
+    search_fields = ('usuario__username',)
+    date_hierarchy = 'fecha'

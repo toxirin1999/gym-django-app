@@ -1,0 +1,401 @@
+{% extends 'diario/base.html' %}
+{% load static %}
+
+{% block title %}Dashboard - Diario Sic Parvis Magna{% endblock %}
+
+{% block content %}
+<div class="animate-fade-in">
+    <!-- Header del Dashboard -->
+    <div class="cyber-card mb-4">
+        <div class="cyber-card-header text-center">
+            <h1 class="cyber-card-title justify-content-center">
+                <i class="fas fa-compass"></i>
+                Diario Sic Parvis Magna
+            </h1>
+            <p class="mb-0 text-muted">
+                "De pequeños comienzos vienen grandes cosas" - Sir Francis Drake
+            </p>
+        </div>
+        <div class="cyber-card-body">
+            <div class="row">
+                <div class="col-md-8">
+                    <p class="lead">
+                        Bienvenido a tu diario digital basado en la filosofía estoica y el desarrollo personal. 
+                        Aquí encontrarás las herramientas para reflexionar, crecer y alcanzar tus objetivos.
+                    </p>
+                </div>
+                <div class="col-md-4 text-center">
+                    <div class="cyber-stat">
+                        <span class="cyber-stat-value">{{ "now"|date:"d" }}</span>
+                        <div class="cyber-stat-label">{{ "now"|date:"F Y" }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Estadísticas Rápidas -->
+    <div class="row mb-4">
+        <div class="col-md-2">
+            <div class="cyber-stat">
+                <span class="cyber-stat-value">
+                    {% if prosoche_actual %}1{% else %}0{% endif %}
+                </span>
+                <div class="cyber-stat-label">Prosoche Activo</div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="cyber-stat">
+                <span class="cyber-stat-value">{{ areas_eudaimonia }}</span>
+                <div class="cyber-stat-label">Áreas de Vida</div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="cyber-stat">
+                <span class="cyber-stat-value">{{ ejercicios_arete_completados }}</span>
+                <div class="cyber-stat-label">Ejercicios Areté</div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="cyber-stat">
+                <span class="cyber-stat-value">{{ contenido_gnosis }}</span>
+                <div class="cyber-stat-label">Contenido Gnosis</div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="cyber-stat">
+                <span class="cyber-stat-value">{{ eventos_hoy }}</span>
+                <div class="cyber-stat-label">Eventos Hoy</div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="cyber-stat">
+                <span class="cyber-stat-value">
+                    {% if seguimiento_vires_hoy %}✓{% else %}✗{% endif %}
+                </span>
+                <div class="cyber-stat-label">Vires Hoy</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Secciones del Diario -->
+    <div class="cyber-grid cyber-grid-2">
+        
+        <!-- PROSOCHE -->
+        <div class="cyber-card section-card section-prosoche">
+            <div class="cyber-card-header">
+                <h3 class="cyber-card-title section-title">
+                    <i class="fas fa-journal-whills"></i>
+                    Prosoche
+                </h3>
+                <small class="text-muted">Diario Mensual y Autorreflexión</small>
+            </div>
+            <div class="cyber-card-body">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <p class="mb-3">
+                            <strong>Sócrates:</strong> "Una vida sin examen no merece ser vivida"
+                        </p>
+                        <p class="text-muted mb-3">
+                            Reflexiona sobre tu mes, establece objetivos y cultiva hábitos positivos 
+                            a través de la introspección diaria.
+                        </p>
+                        {% if prosoche_actual %}
+                            <div class="alert alert-success">
+                                <i class="fas fa-check-circle"></i>
+                                Tienes un diario activo para {{ prosoche_actual.mes }}
+                            </div>
+                        {% else %}
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                No tienes un diario activo para este mes
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-4 text-center">
+                        <img src="{% static 'images/socrates-icon.png' %}" alt="Sócrates" 
+                             class="img-fluid mb-3" style="max-height: 80px; opacity: 0.7;">
+                    </div>
+                </div>
+                <div class="text-center">
+                    <a href="{% url 'prosoche_dashboard' %}" class="cyber-btn">
+                        <i class="fas fa-arrow-right"></i>
+                        Acceder a Prosoche
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- EUDAIMONIA -->
+        <div class="cyber-card section-card section-eudaimonia">
+            <div class="cyber-card-header">
+                <h3 class="cyber-card-title section-title">
+                    <i class="fas fa-balance-scale"></i>
+                    Eudaimonia
+                </h3>
+                <small class="text-muted">Áreas de la Vida</small>
+            </div>
+            <div class="cyber-card-body">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <p class="mb-3">
+                            <strong>Marco Aurelio:</strong> "El arte de la vida es más parecido a luchar que a bailar"
+                        </p>
+                        <p class="text-muted mb-3">
+                            Evalúa y mejora las diferentes áreas de tu vida: salud, relaciones, 
+                            carrera, desarrollo personal y más.
+                        </p>
+                        <div class="alert alert-info">
+                            <i class="fas fa-chart-pie"></i>
+                            Tienes {{ areas_eudaimonia }} áreas de vida configuradas
+                        </div>
+                    </div>
+                    <div class="col-md-4 text-center">
+                        <img src="{% static 'images/marco-aurelio-icon.png' %}" alt="Marco Aurelio" 
+                             class="img-fluid mb-3" style="max-height: 80px; opacity: 0.7;">
+                    </div>
+                </div>
+                <div class="text-center">
+                    <a href="{% url 'eudaimonia_dashboard' %}" class="cyber-btn cyber-btn-secondary">
+                        <i class="fas fa-arrow-right"></i>
+                        Acceder a Eudaimonia
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- ARETÉ -->
+        <div class="cyber-card section-card section-arete">
+            <div class="cyber-card-header">
+                <h3 class="cyber-card-title section-title">
+                    <i class="fas fa-graduation-cap"></i>
+                    Areté
+                </h3>
+                <small class="text-muted">Desarrollo Personal</small>
+            </div>
+            <div class="cyber-card-body">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <p class="mb-3">
+                            <strong>Aristóteles:</strong> "Conocerse a uno mismo es el principio de la sabiduría"
+                        </p>
+                        <p class="text-muted mb-3">
+                            Completa ejercicios de autoconocimiento y desarrollo personal 
+                            para alcanzar tu máximo potencial.
+                        </p>
+                        <div class="alert alert-success">
+                            <i class="fas fa-trophy"></i>
+                            Has completado {{ ejercicios_arete_completados }} ejercicios
+                        </div>
+                    </div>
+                    <div class="col-md-4 text-center">
+                        <img src="{% static 'images/aristoteles-icon.png' %}" alt="Aristóteles" 
+                             class="img-fluid mb-3" style="max-height: 80px; opacity: 0.7;">
+                    </div>
+                </div>
+                <div class="text-center">
+                    <a href="{% url 'arete_dashboard' %}" class="cyber-btn cyber-btn-success">
+                        <i class="fas fa-arrow-right"></i>
+                        Acceder a Areté
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- GNOSIS -->
+        <div class="cyber-card section-card section-gnosis">
+            <div class="cyber-card-header">
+                <h3 class="cyber-card-title section-title">
+                    <i class="fas fa-brain"></i>
+                    Gnosis
+                </h3>
+                <small class="text-muted">Gestión de Conocimiento</small>
+            </div>
+            <div class="cyber-card-body">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <p class="mb-3">
+                            <strong>Pitágoras:</strong> "El comienzo de la sabiduría es el silencio"
+                        </p>
+                        <p class="text-muted mb-3">
+                            Organiza y gestiona todo tu conocimiento: libros, artículos, 
+                            podcasts, vídeos y más.
+                        </p>
+                        <div class="alert alert-info">
+                            <i class="fas fa-database"></i>
+                            Tienes {{ contenido_gnosis }} elementos en tu biblioteca
+                        </div>
+                    </div>
+                    <div class="col-md-4 text-center">
+                        <img src="{% static 'images/pitagoras-icon.png' %}" alt="Pitágoras" 
+                             class="img-fluid mb-3" style="max-height: 80px; opacity: 0.7;">
+                    </div>
+                </div>
+                <div class="text-center">
+                    <a href="{% url 'gnosis_dashboard' %}" class="cyber-btn">
+                        <i class="fas fa-arrow-right"></i>
+                        Acceder a Gnosis
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- VIRES -->
+        <div class="cyber-card section-card section-vires">
+            <div class="cyber-card-header">
+                <h3 class="cyber-card-title section-title">
+                    <i class="fas fa-dumbbell"></i>
+                    Vires
+                </h3>
+                <small class="text-muted">Salud y Deporte</small>
+            </div>
+            <div class="cyber-card-body">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <p class="mb-3">
+                            <strong>Sócrates:</strong> "Es una vergüenza embejecer sin ver la belleza y fuerza 
+                            de la que tu cuerpo es capaz"
+                        </p>
+                        <p class="text-muted mb-3">
+                            Controla tus entrenamientos, dieta y composición corporal 
+                            para mantener un cuerpo fuerte y saludable.
+                        </p>
+                        {% if seguimiento_vires_hoy %}
+                            <div class="alert alert-success">
+                                <i class="fas fa-check-circle"></i>
+                                Has registrado tu seguimiento de hoy
+                            </div>
+                        {% else %}
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                No has registrado tu seguimiento de hoy
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-4 text-center">
+                        <img src="{% static 'images/socrates-fitness-icon.png' %}" alt="Sócrates Fitness" 
+                             class="img-fluid mb-3" style="max-height: 80px; opacity: 0.7;">
+                    </div>
+                </div>
+                <div class="text-center">
+                    <a href="{% url 'vires_dashboard' %}" class="cyber-btn">
+                        <i class="fas fa-arrow-right"></i>
+                        Acceder a Vires
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- KAIROS -->
+        <div class="cyber-card section-card section-kairos">
+            <div class="cyber-card-header">
+                <h3 class="cyber-card-title section-title">
+                    <i class="fas fa-calendar-alt"></i>
+                    Kairos
+                </h3>
+                <small class="text-muted">Calendario y Eventos</small>
+            </div>
+            <div class="cyber-card-body">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <p class="mb-3">
+                            <strong>Séneca:</strong> "No es que tengamos poco tiempo, sino que perdemos mucho"
+                        </p>
+                        <p class="text-muted mb-3">
+                            Gestiona tu tiempo de manera efectiva con un calendario inteligente 
+                            y planificación diaria estructurada.
+                        </p>
+                        <div class="alert alert-info">
+                            <i class="fas fa-calendar-day"></i>
+                            Tienes {{ eventos_hoy }} eventos programados para hoy
+                        </div>
+                    </div>
+                    <div class="col-md-4 text-center">
+                        <img src="{% static 'images/seneca-icon.png' %}" alt="Séneca" 
+                             class="img-fluid mb-3" style="max-height: 80px; opacity: 0.7;">
+                    </div>
+                </div>
+                <div class="text-center">
+                    <a href="{% url 'kairos_dashboard' %}" class="cyber-btn">
+                        <i class="fas fa-arrow-right"></i>
+                        Acceder a Kairos
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Acciones Rápidas -->
+    <div class="cyber-card mt-4">
+        <div class="cyber-card-header">
+            <h3 class="cyber-card-title">
+                <i class="fas fa-bolt"></i>
+                Acciones Rápidas
+            </h3>
+        </div>
+        <div class="cyber-card-body">
+            <div class="row">
+                <div class="col-md-3 mb-3">
+                    <a href="{% url 'prosoche_crear' %}" class="cyber-btn w-100">
+                        <i class="fas fa-plus"></i>
+                        Nueva Entrada Prosoche
+                    </a>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <a href="{% url 'gnosis_crear' %}" class="cyber-btn cyber-btn-secondary w-100">
+                        <i class="fas fa-plus"></i>
+                        Agregar Contenido
+                    </a>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <a href="{% url 'vires_seguimiento_crear' %}" class="cyber-btn cyber-btn-success w-100">
+                        <i class="fas fa-plus"></i>
+                        Registrar Vires
+                    </a>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <a href="{% url 'kairos_evento_crear' %}" class="cyber-btn cyber-btn-danger w-100">
+                        <i class="fas fa-plus"></i>
+                        Crear Evento
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Efecto de hover en las tarjetas de sección
+    const sectionCards = document.querySelectorAll('.section-card');
+    sectionCards.forEach(card => {
+        card.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-10px) scale(1.02)';
+        });
+        card.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0) scale(1)';
+        });
+    });
+
+    // Animación de contadores
+    const statValues = document.querySelectorAll('.cyber-stat-value');
+    statValues.forEach(stat => {
+        const finalValue = stat.textContent;
+        if (!isNaN(finalValue) && finalValue !== '') {
+            let currentValue = 0;
+            const increment = Math.ceil(finalValue / 20);
+            const timer = setInterval(() => {
+                currentValue += increment;
+                if (currentValue >= finalValue) {
+                    currentValue = finalValue;
+                    clearInterval(timer);
+                }
+                stat.textContent = currentValue;
+            }, 50);
+        }
+    });
+});
+</script>
+{% endblock %}

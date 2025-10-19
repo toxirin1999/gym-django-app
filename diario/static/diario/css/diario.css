@@ -1,0 +1,214 @@
+/* Diario Sic Parvis Magna - Estilos Cyberpunk */
+
+:root {
+    --cyber-primary: #00ffff;
+    --cyber-secondary: #ff00ff;
+    --cyber-success: #00ff00;
+    --cyber-warning: #ffff00;
+    --cyber-danger: #ff0040;
+    --cyber-dark: #0a0a0a;
+    --cyber-light: #ffffff;
+    --font-primary: 'Orbitron', 'Courier New', monospace;
+    --font-secondary: 'Rajdhani', 'Arial', sans-serif;
+}
+
+body {
+    background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #16213e 100%);
+    color: var(--cyber-light);
+    font-family: var(--font-secondary);
+    min-height: 100vh;
+}
+
+/* Efectos de animación */
+@keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+
+@keyframes glow {
+    0%, 100% { box-shadow: 0 0 5px var(--cyber-primary); }
+    50% { box-shadow: 0 0 20px var(--cyber-primary), 0 0 30px var(--cyber-primary); }
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+    animation: fadeIn 0.6s ease-out forwards;
+}
+
+/* Componentes base */
+.cyber-card {
+    background: rgba(0, 0, 0, 0.8);
+    border: 1px solid rgba(0, 255, 255, 0.3);
+    border-radius: 15px;
+    backdrop-filter: blur(10px);
+    transition: all 0.3s ease;
+}
+
+.cyber-card:hover {
+    border-color: var(--cyber-primary);
+    box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
+}
+
+.cyber-card-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid rgba(0, 255, 255, 0.2);
+}
+
+.cyber-card-body {
+    padding: 1.5rem;
+}
+
+.cyber-card-title {
+    color: var(--cyber-primary);
+    font-family: var(--font-primary);
+    font-weight: 700;
+    text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+    margin-bottom: 0;
+}
+
+.cyber-btn {
+    background: linear-gradient(45deg, rgba(0, 255, 255, 0.1), rgba(0, 255, 255, 0.3));
+    border: 2px solid var(--cyber-primary);
+    color: var(--cyber-primary);
+    padding: 0.75rem 1.5rem;
+    border-radius: 25px;
+    font-family: var(--font-primary);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.cyber-btn:hover {
+    background: var(--cyber-primary);
+    color: var(--cyber-dark);
+    box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
+    transform: translateY(-2px);
+}
+
+.cyber-btn-success {
+    border-color: var(--cyber-success);
+    color: var(--cyber-success);
+}
+
+.cyber-btn-success:hover {
+    background: var(--cyber-success);
+    color: var(--cyber-dark);
+    box-shadow: 0 0 20px rgba(0, 255, 0, 0.5);
+}
+
+.cyber-btn-secondary {
+    border-color: #666;
+    color: #666;
+}
+
+.cyber-btn-secondary:hover {
+    background: #666;
+    color: var(--cyber-light);
+}
+
+.cyber-btn-danger {
+    border-color: var(--cyber-danger);
+    color: var(--cyber-danger);
+}
+
+.cyber-btn-danger:hover {
+    background: var(--cyber-danger);
+    color: var(--cyber-light);
+    box-shadow: 0 0 20px rgba(255, 0, 64, 0.5);
+}
+
+.cyber-form-control {
+    background: rgba(0, 0, 0, 0.8);
+    border: 2px solid rgba(0, 255, 255, 0.3);
+    border-radius: 10px;
+    color: var(--cyber-light);
+    padding: 0.75rem 1rem;
+    font-family: var(--font-secondary);
+    transition: all 0.3s ease;
+}
+
+.cyber-form-control:focus {
+    border-color: var(--cyber-primary);
+    box-shadow: 0 0 15px rgba(0, 255, 255, 0.3);
+    outline: none;
+    background: rgba(0, 0, 0, 0.9);
+}
+
+.cyber-form-label {
+    color: var(--cyber-primary);
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    display: block;
+}
+
+.cyber-stat {
+    text-align: center;
+    padding: 1rem;
+}
+
+.cyber-stat-value {
+    font-family: var(--font-primary);
+    font-size: 2.5rem;
+    font-weight: 900;
+    color: var(--cyber-primary);
+    text-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
+    display: block;
+    line-height: 1;
+}
+
+.cyber-stat-label {
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.8);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 0.5rem;
+}
+
+.philosopher-quote {
+    background: rgba(0, 255, 255, 0.1);
+    border-left: 4px solid var(--cyber-primary);
+    padding: 1rem;
+    border-radius: 0 10px 10px 0;
+    margin: 1rem 0;
+    font-style: italic;
+}
+
+.text-cyber-primary {
+    color: var(--cyber-primary) !important;
+}
+
+.text-cyber-success {
+    color: var(--cyber-success) !important;
+}
+
+.text-cyber-warning {
+    color: var(--cyber-warning) !important;
+}
+
+.text-cyber-danger {
+    color: var(--cyber-danger) !important;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .cyber-card-body {
+        padding: 1rem;
+    }
+    
+    .cyber-stat-value {
+        font-size: 2rem;
+    }
+    
+    .cyber-btn {
+        padding: 0.5rem 1rem;
+        font-size: 0.9rem;
+    }
+}

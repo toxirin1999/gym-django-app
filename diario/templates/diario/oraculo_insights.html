@@ -1,10 +1,83 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>$Title$</title>
-</head>
-<body>
-$END$
-</body>
-</html>
+{% extends 'diario/base_stoic.html' %}
+{% load static %}
+{% load custom_filters %}
+
+{% block title %}El Oráculo del Diario - Diario Estoico{% endblock %}
+
+{% block extra_css %}
+<style>
+    .alert {
+        transition: all 0.3s ease;
+    }
+    .alert:hover {
+        transform: translateY(-3px);
+        box-shadow: var(--shadow-soft);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="fade-in-up">
+    <!-- Encabezado -->
+    <div class="card shadow-soft mb-4 text-center">
+        <div class="card-body p-4">
+            <i class="fas fa-brain fa-3x text-primary mb-3"></i>
+            <h1 class="text-gradient">El Oráculo del Autoconocimiento</h1>
+            <blockquote class="blockquote mb-0">
+                <p class="font-serif fs-5">"Conócete a ti mismo."</p>
+                <footer class="blockquote-footer">Inscripción en el Templo de Apolo en Delfos</footer>
+            </blockquote>
+            <p class="text-muted mt-2">Hemos analizado tus registros de la última semana para ofrecerte estas reflexiones.</p>
+        </div>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-9">
+            {% if insights %}
+            {% for insight in insights %}
+            <div class="alert alert-{{ insight.tipo|default:'info' }} fade-in-up" role="alert" style="animation-delay: {{ forloop.counter0|mul:0.1 }}s;">
+                <div class="d-flex">
+                    <div class="flex-shrink-0">
+                        {% if insight.tipo == 'positivo' %}<i class="fas fa-chart-line fa-2x"></i>
+                        {% elif insight.tipo == 'observacion' %}<i class="fas fa-search fa-2x"></i>
+                        {% elif insight.tipo == 'reflexion' %}<i class="fas fa-lightbulb fa-2x"></i>
+                        {% elif insight.tipo == 'motivacional' %}<i class="fas fa-quote-left fa-2x"></i>
+                        {% else %}<i class="fas fa-info-circle fa-2x"></i>
+                        {% endif %}
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <h4 class="alert-heading font-serif">{{ insight.titulo }}</h4>
+                        <p>{{ insight.mensaje }}</p>
+                    </div>
+                    <!-- ============================================= -->
+                    <!-- INICIO: BOTÓN DE ACCIÓN (NUEVO) -->
+                    <!-- ============================================= -->
+                    {% if insight.sugerencia_accion %}
+                    <hr>
+                    <a href="{{ insight.sugerencia_accion.url }}" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-arrow-right me-2"></i>{{ insight.sugerencia_accion.texto }}
+                    </a>
+                    {% endif %}
+                    <!-- ============================================= -->
+                    <!-- FIN: BOTÓN DE ACCIÓN -->
+                    <!-- ============================================= -->
+                </div>
+            </div>
+            {% endfor %}
+            {% else %}
+            <div class="card text-center p-5">
+                <i class="fas fa-folder-open fa-3x text-muted mb-3"></i>
+                <h4 class="text-muted">El Oráculo está en silencio.</h4>
+                <p>No hemos encontrado suficientes datos de la última semana para generar reflexiones. ¡Sigue registrando tu viaje!</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="text-center mt-4">
+        <a href="{% url 'diario:dashboard_diario' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Volver al Dashboard
+        </a>
+    </div>
+</div>
+{% endblock %}

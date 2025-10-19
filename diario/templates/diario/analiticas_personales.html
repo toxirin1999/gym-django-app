@@ -1,10 +1,219 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>$Title$</title>
-</head>
-<body>
-$END$
-</body>
-</html>
+{% extends 'diario/base_stoic.html' %}
+{% load static %}
+
+{% block title %}Analíticas Personales - Diario Estoico{% endblock %}
+
+{% block extra_css %}
+<style>
+    .chart-container {
+        position: relative;
+        height: 40vh;
+        width: 100%;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="fade-in-up">
+    <!-- Encabezado -->
+    <div class="card shadow-soft mb-4">
+        <div class="card-body p-4 d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="text-gradient mb-1">Panel de Analíticas</h1>
+                <p class="text-muted mb-0">Observa tus patrones y tendencias a lo largo del tiempo.</p>
+            </div>
+            <!-- Filtro de Periodo -->
+            <div class="btn-group" role="group">
+                <a href="?periodo=7" class="btn btn-outline-secondary {% if periodo_actual == 7 %}active{% endif %}">7d</a>
+                <a href="?periodo=30" class="btn btn-outline-secondary {% if periodo_actual == 30 %}active{% endif %}">30d</a>
+                <a href="?periodo=90" class="btn btn-outline-secondary {% if periodo_actual == 90 %}active{% endif %}">90d</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Gráfico de Estado de Ánimo -->
+        <div class="col-lg-6 mb-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-heart-pulse me-2 text-info"></i>Evolución del Estado de Ánimo</h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="animoChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Gráfico de Peso -->
+        <div class="col-lg-6 mb-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-weight me-2 text-danger"></i>Evolución del Peso Corporal</h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="pesoChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="cyber-card mb-4">
+            <div class="cyber-card-header">
+                <h4 class="cyber-card-title"><i class="fas fa-battery-half text-warning"></i> Evolución de la Recuperación</h4>
+            </div>
+            <div class="cyber-card-body">
+                <div class="chart-container">
+                    <canvas id="recuperacionChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Incluir Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function( ) {
+        const chartData = JSON.parse('{{ chart_data|safe }}');
+        
+        // Colores y fuentes de nuestro tema
+        const primaryColor = getComputedStyle(document.documentElement).getPropertyValue('--primary-color').trim();
+        const infoColor = getComputedStyle(document.documentElement).getPropertyValue('--info-color').trim();
+        const dangerColor = getComputedStyle(document.documentElement).getPropertyValue('--danger-color').trim();
+        const mutedColor = getComputedStyle(document.documentElement).getPropertyValue('--muted-color').trim();
+        const fontFamily = getComputedStyle(document.documentElement).getPropertyValue('--font-primary').trim();
+
+        Chart.defaults.font.family = fontFamily;
+        Chart.defaults.color = mutedColor;
+
+        // --- Configuración del Gráfico de Estado de Ánimo ---
+        const ctxAnimo = document.getElementById('animoChart').getContext('2d');
+        if (ctxAnimo) {
+            new Chart(ctxAnimo, {
+                type: 'line',
+                data: {
+                    labels: chartData.labels,
+                    datasets: [{
+                        label: 'Estado de Ánimo (1-5)',
+                        data: chartData.animo_data,
+                        borderColor: infoColor,
+                        backgroundColor: 'rgba(52, 152, 219, 0.1)', // Usamos el color info con opacidad
+                        fill: true,
+                        tension: 0.4,
+                        pointBackgroundColor: infoColor,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 5.5,
+                            grid: { color: 'rgba(0,0,0,0.05)' }
+                        },
+                        x: { grid: { display: false } }
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        // --- Configuración del Gráfico de Peso ---
+        const ctxPeso = document.getElementById('pesoChart').getContext('2d');
+        if (ctxPeso) {
+            new Chart(ctxPeso, {
+                type: 'line',
+                data: {
+                    labels: chartData.labels,
+                    datasets: [{
+                        label: 'Peso (kg)',
+                        data: chartData.peso_data,
+                        borderColor: dangerColor,
+                        backgroundColor: 'rgba(231, 76, 60, 0.1)', // Usamos el color danger con opacidad
+                        fill: true,
+                        tension: 0.4,
+                        pointBackgroundColor: dangerColor,
+                        spanGaps: true,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            grid: { color: 'rgba(0,0,0,0.05)' }
+                        },
+                        x: { grid: { display: false } }
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+    });
+      const ctxRecuperacion = document.getElementById('recuperacionChart').getContext('2d');
+    new Chart(ctxRecuperacion, {
+        type: 'line',
+        data: {
+            labels: chartData.labels,
+            datasets: [
+                {
+                    label: 'Horas de Sueño',
+                    data: chartData.sueno_data,
+                    borderColor: 'rgba(87, 123, 255, 0.8)',
+                    yAxisID: 'yHoras', // Asignar a un eje Y específico
+                    tension: 0.3,
+                },
+                {
+                    label: 'Energía (1-5)',
+                    data: chartData.energia_data,
+                    borderColor: 'rgba(46, 204, 113, 0.8)',
+                    yAxisID: 'yNivel', // Asignar al otro eje Y
+                    tension: 0.3,
+                },
+                {
+                    label: 'Estrés (1-5)',
+                    data: chartData.estres_data,
+                    borderColor: 'rgba(231, 76, 60, 0.8)',
+                    yAxisID: 'yNivel', // Asignar al otro eje Y
+                    tension: 0.3,
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            scales: {
+                x: { ticks: { color: '#aaa' } },
+                // Eje Y para Horas de Sueño
+                yHoras: {
+                    type: 'linear',
+                    position: 'left',
+                    beginAtZero: true,
+                    max: 12,
+                    grid: { drawOnChartArea: false }, // Solo mostrar la rejilla principal
+                    ticks: { color: 'rgba(87, 123, 255, 1)' }
+                },
+                // Eje Y para Energía y Estrés (1-5)
+                yNivel: {
+                    type: 'linear',
+                    position: 'right',
+                    beginAtZero: true,
+                    max: 5.5,
+                    ticks: { color: '#aaa' }
+                }
+            },
+            plugins: { legend: { position: 'top' } }
+        }
+    });
+</script>
+{% endblock %}
