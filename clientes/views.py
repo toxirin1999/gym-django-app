@@ -11,7 +11,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.timezone import now
 from django.views.decorators.http import require_GET, require_POST
-from analytics.views import AnalizadorCargaYFatiga
+from analytics.views import AnalizadorCargaYFatiga, CalculadoraEjerciciosTabla
 from django.shortcuts import render, get_object_or_404
 from logros.models import PerfilGamificacion, PruebaLegendaria, PruebaUsuario
 import json
@@ -31,10 +31,9 @@ from analytics.sistema_educacion_helms import NivelEducativo, SistemaEducacionHe
 from analytics.sistema_progresion_avanzada import (RegistroEjercicio,
                                                    RegistroSerie,
                                                    SistemaProgresionAvanzada)
-from analytics.views import CalculadoraEjerciciosTabla
 from entrenos.models import (DetalleEjercicioRealizado, EntrenoRealizado,
                              EstadoEmocional as EntrenoEstadoEmocional, LogroDesbloqueado,
-                             SerieRealizada)
+                             SerieRealizada, RecordPersonal)
 
 from joi.models import (Entrenamiento, EstadoEmocional, MotivacionUsuario,
                         RecuerdoEmocional)
@@ -553,14 +552,44 @@ from analytics.models import RecomendacionEntrenamiento
 from analytics.analisis_progresion import AnalisisProgresionAvanzado
 
 
-@login_required
-def panel_cliente(request):
+
+def calcular_top_1rm(cliente):
+    """
+    Obtiene los mejores levantamientos (1RM estimado o Peso Máximo)
+    para el dashboard del cliente de forma optimizada.
+    """
+    try:
+        # Obtenemos los últimos récords no superados de diversos tipos
+        records = (
+            RecordPersonal.objects.filter(cliente=cliente, superado=False)
+            .filter(tipo_record__in=['one_rep_max', 'peso_maximo', 'volumen_total'])
+            .order_by('ejercicio_nombre', '-valor', '-fecha_logrado')
+        )
+        
+        # Agrupamos por ejercicio para evitar duplicados en el top
+        mejores_por_ejercicio = {}
+        for r in records:
+            if r.ejercicio_nombre not in mejores_por_ejercicio:
+                mejores_por_ejercicio[r.ejercicio_nombre] = r
+            else:
+                # Prioridad: one_rep_max > peso_maximo > otros
+                existente = mejores_por_ejercicio[r.ejercicio_nombre]
+                if r.tipo_record == 'one_rep_max':
+                    mejores_por_ejercicio[r.ejercicio_nombre] = r
+                elif r.tipo_record == 'peso_maximo' and existente.tipo_record != 'one_rep_max':
+                    mejores_por_ejercicio[r.ejercicio_nombre] = r
+        
+        # Devolvemos los 4 mejores levantamientos ordenados por valor relativo (o simplemente los 4 primeros)
+        # Nota: el 'valor' puede variar mucho entre ejercicios, pero suele ser un buen indicador de 'top'
+        top_list = sorted(mejores_por_ejercicio.values(), key=lambda x: float(x.valor), reverse=True)
+        return top_list[:4]
+    except Exception as e:
+        logger.error(f"Error en calcular_top_1rm: {e}")
+        return []
+
+
+def _get_dashboard_context_data(request, cliente):
     usuario = request.user
-    cliente = get_object_or_404(
-        Cliente.objects.select_related('perfil_nutricion')
-        .prefetch_related('perfil_nutricion__progresonivel_set'),
-        user=usuario
-    )
     hoy = timezone.now().date()
     generar_retos_semanales(cliente)
     lunes = obtener_lunes_actual()
@@ -581,37 +610,25 @@ def panel_cliente(request):
             completada=True
         ).select_related('prueba', 'prueba__arquetipo')
 
-        # --- INICIO DE LA CORRECCIÓN ---
-        # El campo se llama 'nivel_actual', no 'arquetipo_actual'
         if perfil_gamificacion.nivel_actual:
             pruebas_pendientes_ids = PruebaUsuario.objects.filter(
                 perfil=perfil_gamificacion,
                 completada=True
             ).values_list('prueba_id', flat=True)
 
-            # Aquí también usamos 'nivel_actual' para filtrar
             pruebas_activas = PruebaLegendaria.objects.filter(
                 arquetipo=perfil_gamificacion.nivel_actual
             ).exclude(id__in=pruebas_pendientes_ids)[:3]
     try:
-        # 2. Usamos un nombre de variable diferente ('perfil')
         perfil = PerfilGamificacion.objects.get(cliente=cliente)
-
-        # 3. Usamos la nueva variable para filtrar
         logros_completados = PruebaUsuario.objects.filter(
-            perfil=perfil,  # <-- Usamos la nueva variable
+            perfil=perfil,
             completada=True
         ).select_related('prueba', 'prueba__arquetipo')
-
-    # 4. Ahora el 'except' no tiene conflicto de nombres y funciona correctamente
     except PerfilGamificacion.DoesNotExist:
-        # El cliente no tiene perfil de gamificación, no hacemos nada.
-        # 'logros_completados' seguirá siendo una lista vacía.
         pass
-    # --- FIN DE LA CORRECCIÓN ---
 
     datos_logros = obtener_datos_logros(cliente)
-
     estado_joi = obtener_estado_joi(usuario)
     frase_forma_joi = frase_cambio_forma_joi(estado_joi)
     frase_extra_joi = "Estoy observando tu progreso emocional..."
@@ -631,7 +648,6 @@ def panel_cliente(request):
     ]
 
     # Rendimiento por semana
-    hoy = now().date()
     labels = []
     rendimiento = []
     for i in range(4):
@@ -658,12 +674,19 @@ def panel_cliente(request):
 
     alerta_fatiga = detectar_fatiga_semanal(obtener_energia_semanal(cliente))
     peso_actual, datos_peso, cambios_peso = analizar_tendencia_peso(cliente)
-    print("DATOS PESO:", datos_peso)
-    print("CAMBIOS:", cambios_peso)
     orden_peso = ['7d', '30d', '90d', 'inicio']
     ultimos_dias = BitacoraDiaria.objects.filter(cliente=cliente).order_by('-fecha')[:7]
     dias_emocionales = []
     comentario_joi = ""
+    
+    for b in reversed(ultimos_dias):
+        dias_emocionales.append({
+            'fecha': b.fecha.strftime("%A"),
+            'autoconciencia': b.autoconciencia or 0,
+            'humor': b.get_humor_display() if b.humor else "—",
+            'rumiacion_baja': b.rumiacion_baja if b.rumiacion_baja is not None else False
+        })
+    
     dias_claros = sum(1 for d in dias_emocionales if d['autoconciencia'] >= 7)
     dias_rumia = sum(1 for d in dias_emocionales if d['rumiacion_baja'] is False)
     humores_tristes = sum(1 for d in dias_emocionales if "triste" in d['humor'].lower())
@@ -677,18 +700,9 @@ def panel_cliente(request):
     else:
         comentario_joi = "Gracias por compartir tus emociones esta semana. Estoy aquí para leerlas contigo."
 
-    for b in reversed(ultimos_dias):
-        dias_emocionales.append({
-            'fecha': b.fecha.strftime("%A"),
-            'autoconciencia': b.autoconciencia or 0,
-            'humor': b.get_humor_display() if b.humor else "—",
-            'rumiacion_baja': b.rumiacion_baja if b.rumiacion_baja is not None else False
-        })
-
-    hace_7_dias = date.today() - timedelta(days=7)
+    hace_7_dias = hoy - timedelta(days=7)
     bitacoras_semana = BitacoraDiaria.objects.filter(cliente=cliente, fecha__gte=hace_7_dias)
     biceps_actual, datos_biceps, cambios_biceps = analizar_tendencia_biceps(cliente)
-    print("CAMBIOS BICEPS:", cambios_biceps)
 
     promedios = bitacoras_semana.aggregate(
         horas_sueno=Avg('horas_sueno'),
@@ -700,7 +714,7 @@ def panel_cliente(request):
     reflexion_destacada = (
         bitacoras_semana
         .exclude(reflexion_diaria__isnull=True)
-        .annotate(longitud=Max('id'))  # solo para que ordene
+        .annotate(longitud=Max('id'))
         .order_by('-longitud')
         .values_list('reflexion_diaria', flat=True)
         .first()
@@ -715,79 +729,21 @@ def panel_cliente(request):
     )
     emocion_texto = emocion_frecuente['emocion_dia'] if emocion_frecuente else "—"
 
-    def convertir_a_horas_y_minutos(valor):
-        try:
-            if hasattr(valor, 'total_seconds'):
-                total_minutos = int(valor.total_seconds() // 60)
-            else:
-                total_minutos = int(float(valor) * 60)
-            horas = total_minutos // 60
-            minutos = total_minutos % 60
-            return f"{horas}:{minutos:02d}"
-        except Exception:
-            return "–:–"
-
-    from entrenos.utils.utils import parse_reps_and_series
-
-    def calcular_top_1rm(cliente):
-        calculadora = CalculadoraEjerciciosTabla(cliente)
-        ejercicios = calculadora.obtener_ejercicios_tabla()
-
-        ejercicios_por_nombre = {}
-        for e in ejercicios:
-            nombre = e['nombre'].strip().lower()
-            if nombre not in ejercicios_por_nombre:
-                ejercicios_por_nombre[nombre] = []
-            ejercicios_por_nombre[nombre].append(e)
-
-        resumen = []
-        for nombre, lista in ejercicios_por_nombre.items():
-            nombre_mostrado = lista[0]['nombre'].strip().title()
-            entrenos_validos = []
-            for e in lista:
-                try:
-                    peso = float(e['peso']) if e['peso'] != 'PC' else 0
-                    series, reps = parse_reps(e.get('repeticiones'))
-                    if peso > 0 and reps > 0:
-                        rm = round(peso * (1 + reps / 30), 2)
-                        entrenos_validos.append({'fecha': e['fecha'], '1rm': rm})
-                except:
-                    continue
-
-            entrenos_validos = sorted(entrenos_validos, key=lambda x: x['fecha'])
-
-            if len(entrenos_validos) >= 2:
-                rm_actual = entrenos_validos[-1]['1rm']
-                rm_anterior = entrenos_validos[-2]['1rm']
-                progreso = round(((rm_actual - rm_anterior) / rm_anterior) * 100, 2)
-                resumen.append({
-                    'nombre': nombre_mostrado,
-                    'rm': rm_actual,
-                    'progreso': progreso
-                })
-
-        top = sorted(resumen, key=lambda x: x['progreso'], reverse=True)[:5]
-        return top
-
     analizador_ia = AnalisisIntensidadAvanzado(cliente)
-
-    # --- BLOQUE MEJORADO Y A PRUEBA DE ERRORES ---
-    if sugerencia_carga_joi:
-        # Forzamos la conversión a una cadena de texto limpia y eliminamos espacios extra.
-        texto_limpio = str(sugerencia_carga_joi).strip()
-
+    recomendaciones_principales = []
+    sug_carga = sugerencia_carga_joi(cliente)
+    if sug_carga:
         recomendaciones_principales = [{
             'titulo': 'Sugerencia de Carga Semanal',
-            'descripcion': texto_limpio,
+            'descripcion': str(sug_carga).strip(),
             'prioridad': 'media'
         }]
-    else:
-        recomendaciones_principales = []
-    # Dentro de la función panel_cliente, después de obtener el cliente
+    
     recomendaciones_aplicadas = RecomendacionEntrenamiento.objects.filter(
         cliente=cliente,
         aplicada=True
-    ).order_by('-fecha_aplicacion')[:3]  # Obtenemos las 3 más recientes
+    ).order_by('-fecha_aplicacion')[:3]
+    
     analizador_progresion = AnalisisProgresionAvanzado(cliente)
     ratios_fuerza = analizador_progresion.calcular_ratios_fuerza()
     analizador_intensidad = AnalisisIntensidadAvanzado(cliente)
@@ -795,7 +751,6 @@ def panel_cliente(request):
     analisis_mesociclos = analizador_progresion.analisis_mesociclos()
     mesociclo_actual = None
     if analisis_mesociclos and analisis_mesociclos.get('mesociclos'):
-        # El mesociclo actual es el último de la lista
         mesociclo_actual = analisis_mesociclos['mesociclos'][-1]
 
     informe_joi = {
@@ -804,114 +759,87 @@ def panel_cliente(request):
         'emocion_frecuente': emocion_texto,
         'frase': "Esta semana cultivaste conciencia y resiliencia. Incluso los días bajos cuentan como práctica. 🌒"
     }
+    
     sistema_progresion = SistemaProgresionAvanzada(cliente_id=cliente.id)
-
-    # Obtener todas las series realizadas por el cliente, ordenadas por fecha
-    series_historial = SerieRealizada.objects.filter(entreno__cliente=cliente).order_by('entreno__fecha',
-                                                                                        'entreno__id').select_related(
-        'entreno', 'ejercicio')
-
-    # Agrupar series por entreno y por ejercicio
+    series_historial = SerieRealizada.objects.filter(entreno__cliente=cliente).order_by('entreno__fecha', 'entreno__id').select_related('entreno', 'ejercicio')
     sesiones_agrupadas = defaultdict(lambda: defaultdict(list))
     for serie in series_historial:
-        sesion_id = serie.entreno.id
-        ejercicio_nombre = serie.ejercicio.nombre
-        sesiones_agrupadas[sesion_id][ejercicio_nombre].append(
+        sesiones_agrupadas[serie.entreno.id][serie.ejercicio.nombre].append(
             RegistroSerie(peso=float(serie.peso_kg), repeticiones=serie.repeticiones)
         )
 
-    # Alimentar el sistema de progresión con los datos estructurados
     for entreno_id, ejercicios in sesiones_agrupadas.items():
-        entreno_obj = EntrenoRealizado.objects.get(id=entreno_id)
-        for nombre_ejercicio, series_registradas in ejercicios.items():
-            # Creamos el objeto RegistroEjercicio que el sistema espera
-            registro_ejercicio = RegistroEjercicio(
-                fecha=timezone.make_aware(datetime.combine(entreno_obj.fecha, datetime.min.time())),
-                ejercicio=nombre_ejercicio,
-                series=series_registradas,
-                # Simplificación: Usamos valores por defecto para los datos que no tenemos
-                repeticiones_planificadas=8,
-                rpe_planificado=8,
-                rpe_real=8,
-                tiempo_descanso=120
-            )
-            sistema_progresion.registrar_sesion(registro_ejercicio)
+        entreno_obj = next((s.entreno for s in series_historial if s.entreno.id == entreno_id), None)
+        if entreno_obj:
+            for nombre_ejercicio, series_registradas in ejercicios.items():
+                registro_ejercicio = RegistroEjercicio(
+                    fecha=timezone.make_aware(datetime.combine(entreno_obj.fecha, datetime.min.time())),
+                    ejercicio=nombre_ejercicio,
+                    series=series_registradas,
+                    repeticiones_planificadas=8,
+                    rpe_planificado=8,
+                    rpe_real=8,
+                    tiempo_descanso=120
+                )
+                sistema_progresion.registrar_sesion(registro_ejercicio)
 
     estancamientos_detectados = sistema_progresion.detectar_estancamientos()
-    print(f"🔎 Estancamientos detectados: {estancamientos_detectados}")
     proximo_entrenamiento = obtener_proximo_entrenamiento_simplificado(cliente)
+
+    hyrox_objetivo = None
+    hyrox_proxima_sesion = None
+    try:
+        from hyrox.models import HyroxObjective, HyroxSession
+        hyrox_objetivo = HyroxObjective.objects.filter(cliente=cliente, estado='active').first() or HyroxObjective.objects.filter(cliente=cliente, estado='activo').first()
+        if hyrox_objetivo:
+            hyrox_proxima_sesion = HyroxSession.objects.filter(
+                objective=hyrox_objetivo,
+                estado='planificado',
+                fecha__gte=hoy
+            ).order_by('fecha').prefetch_related('activities').first()
+    except Exception: pass
+
+    bio_readiness = {}
+    try:
+        from core.bio_context import BioContextProvider
+        bio_readiness = BioContextProvider.get_readiness_score(cliente)
+    except Exception: pass
+
+    sesion_pendiente = None
+    restricciones_bio = {}
+    try:
+        from core.bio_context import BioContextProvider as _BCP
+        restricciones_bio = _BCP.get_current_restrictions(cliente)
+        pierna_bloqueada = '__aguda_tren_inferior' in restricciones_bio.get('tags', set())
+
+        if not proximo_entrenamiento or not proximo_entrenamiento.get('ejercicios'):
+            perfil_p = crear_perfil_desde_cliente(cliente)
+            perfil_p.maximos_actuales = cliente.one_rm_data or {}
+            planificador_p = PlanificadorHelms(perfil_p)
+            inicio_semana = hoy - timedelta(days=hoy.weekday())
+
+            for dia_offset in range(0, hoy.weekday()):
+                fecha_check = inicio_semana + timedelta(days=dia_offset)
+                if not EntrenoRealizado.objects.filter(cliente=cliente, fecha=fecha_check).exists():
+                    plan_dia = planificador_p.generar_entrenamiento_para_fecha(fecha_check)
+                    if plan_dia and plan_dia.get('ejercicios'):
+                        es_pierna = any(any(kw in ej.get('nombre', '').lower() for kw in ['pierna', 'quad', 'sentadilla', 'prensa']) for ej in plan_dia.get('ejercicios', []))
+                        sesion_pendiente = {
+                            'fecha': fecha_check,
+                            'entrenamiento': plan_dia,
+                            'es_pierna': es_pierna,
+                            'sugerir_torso': es_pierna and pierna_bloqueada,
+                        }
+                        break
+    except Exception: pass
+
     estadisticas_plan = obtener_estadisticas_plan_anual(cliente)
-
-    checkin_form = CheckinDiarioForm()
-    ajuste_del_dia = None
-
-    if request.method == 'POST' and 'submit_checkin' in request.POST:
-        checkin_form = CheckinDiarioForm(request.POST)
-        if checkin_form.is_valid():
-            bitacora, created = BitacoraDiaria.objects.get_or_create(
-                cliente=cliente, fecha=now().date()
-            )
-            bitacora.energia_subjetiva = checkin_form.cleaned_data['energia_subjetiva']
-            bitacora.dolor_articular = checkin_form.cleaned_data['dolor_articular']
-            # --- CORRECCIÓN ---
-            bitacora.horas_sueno = checkin_form.cleaned_data['horas_sueno']
-            bitacora.save()
-
-            # Calculamos el ajuste para la sesión de hoy
-            ajuste_del_dia = calcular_ajuste_sesion(
-                bitacora.energia_subjetiva,
-                bitacora.dolor_articular,
-                # --- CORRECCIÓN ---
-                # Pasamos el valor de horas_sueno, pero lo normalizamos a una escala de 1-10
-                # para que la función de cálculo funcione como se esperaba.
-                # Asumimos que 8 horas es un 10/10.
-                (bitacora.horas_sueno / 8) * 10 if bitacora.horas_sueno else 5
-            )
-            messages.success(request, "Check-in registrado. ¡Recomendación generada!")
-
-    # --- INICIO DEL NUEVO BLOQUE: ANALYTICS PREDICTIVOS ---
-    # Recopilar datos de adherencia semanal para la predicción
-    historial_semanal = defaultdict(lambda: {'completados': 0, 'planificados': 0})
-
-    # Usamos el historial de series que ya consultamos
-    for serie in series_historial:
-        # Agrupamos por el lunes de la semana
-        lunes_semana = serie.entreno.fecha - timedelta(days=serie.entreno.fecha.weekday())
-        # Usamos un set para contar cada entreno solo una vez por día
-        if 'entrenos_contados' not in historial_semanal[lunes_semana]:
-            historial_semanal[lunes_semana]['entrenos_contados'] = set()
-
-        if serie.entreno.id not in historial_semanal[lunes_semana]['entrenos_contados']:
-            historial_semanal[lunes_semana]['planificados'] += 1  # Asumimos 1 entreno planificado
-            if serie.entreno.ejercicios_realizados.exists():  # O alguna otra lógica de completado
-                historial_semanal[lunes_semana]['completados'] += 1
-            historial_semanal[lunes_semana]['entrenos_contados'].add(serie.entreno.id)
-
-    # Calcular el porcentaje de adherencia para cada semana
-    adherencia_semanal_lista = []
-    for semana in sorted(historial_semanal.keys()):
-        datos_semana = historial_semanal[semana]
-        if datos_semana['planificados'] > 0:
-            porcentaje = (datos_semana['completados'] / datos_semana['planificados']) * 100
-            adherencia_semanal_lista.append(porcentaje)
-
-    historial_adherencia = obtener_historial_adherencia_semanal(cliente,
-                                                                num_semanas=8)  # Analizamos las últimas 8 semanas
-
-    # Pasa el historial a la función de predicción
+    
+    historial_adherencia = obtener_historial_adherencia_semanal(cliente, num_semanas=8)
     prediccion = predecir_riesgo_abandono(historial_adherencia)
-    print(f"🔮 Historial para predicción: {historial_adherencia}")
-    print(f"🔮 Predicción de riesgo generada: {prediccion.riesgo}")
-
     reporte_adherencia = calcular_reporte_adherencia_cliente(cliente)
-    print(f"📈 Reporte de adherencia para el panel principal: {reporte_adherencia}")
-    # --- FIN DEL NUEVO BLOQUE ---
-    notificaciones = generar_notificaciones_contextuales(cliente, entrenamientos_recientes)
-    # ================================================================
-    # INTEGRACIÓN ESTOICA DINÁMICA (CORREGIDA)
-    # ================================================================
+    notificaciones = generar_notificaciones_contextuales(cliente, entrenos)
 
-    # Inicializar valores por defecto
     estoico_disponible = False
     contenido_hoy = None
     reflexion_hoy = None
@@ -921,163 +849,107 @@ def panel_cliente(request):
     logros_estoicos = 0
     dias_reflexion = 0
 
-    # Intentar cargar datos estoicos
     try:
         from estoico.models import ContenidoDiario, ReflexionDiaria
-        try:
-            from estoico.models import LogroUsuario as LogroEstoico
-        except ImportError:
-            # Si no existe LogroUsuario en estoico, usar None
-            LogroEstoico = None
-
+        try: from estoico.models import LogroUsuario as LogroEstoico
+        except ImportError: LogroEstoico = None
+        
         estoico_disponible = True
-        print(f"🏛️ App estoica disponible - Usuario: {request.user}")
-
-        # Contenido del día
         dia_año = hoy.timetuple().tm_yday
         contenido_hoy = ContenidoDiario.objects.filter(dia=dia_año).first()
-        print(f"📚 Contenido del día {dia_año}: {contenido_hoy}")
-
-        # Reflexión de hoy del usuario específico
-        reflexion_hoy = ReflexionDiaria.objects.filter(
-            usuario=request.user,
-            fecha=hoy
-        ).first()
-        print(f"🤔 Reflexión de hoy: {reflexion_hoy}")
-
+        reflexion_hoy = ReflexionDiaria.objects.filter(usuario=request.user, fecha=hoy).first()
         reflexion_pendiente = not reflexion_hoy
-
-        # Total de reflexiones del usuario
-        total_reflexiones = ReflexionDiaria.objects.filter(
-            usuario=request.user
-        ).count()
-        print(f"📊 Total reflexiones del usuario: {total_reflexiones}")
-
-        # Calcular racha de reflexión del usuario
+        total_reflexiones = ReflexionDiaria.objects.filter(usuario=request.user).count()
+        
         racha_reflexion = 0
         fecha_actual = hoy
-        while True:
-            reflexion = ReflexionDiaria.objects.filter(
-                usuario=request.user,
-                fecha=fecha_actual
-            ).first()
-
-            if reflexion:
+        for _ in range(365):
+            if ReflexionDiaria.objects.filter(usuario=request.user, fecha=fecha_actual).exists():
                 racha_reflexion += 1
                 fecha_actual -= timedelta(days=1)
-            else:
-                break
-
-            if racha_reflexion > 365:  # Límite de seguridad
-                break
-
-        print(f"🔥 Racha de reflexión: {racha_reflexion}")
-
-        # Logros estoicos del usuario
+            else: break
+        
         if LogroEstoico:
-            try:
-                logros_estoicos = LogroEstoico.objects.filter(
-                    usuario=request.user
-                ).count()
-                print(f"🏆 Logros estoicos: {logros_estoicos}")
-            except Exception as e:
-                print(f"⚠️ Error cargando logros estoicos: {e}")
-                logros_estoicos = 0
-
-        # Días de reflexión = total de reflexiones
+            logros_estoicos = LogroEstoico.objects.filter(usuario=request.user).count()
         dias_reflexion = total_reflexiones
+    except Exception: pass
 
-    except ImportError as e:
-        print(f"⚠️ App estoica no disponible: {e}")
-        estoico_disponible = False
-    except Exception as e:
-        print(f"❌ Error cargando datos estoicos: {e}")
-        estoico_disponible = False
-
-    # ================================================================
-    # MENSAJES MOTIVACIONALES INTEGRADOS
-    # ================================================================
-
-    mensajes_integracion = [
-        "Tu disciplina física refleja tu fortaleza mental. Los estoicos estarían orgullosos.",
-        "Un cuerpo entrenado es el hogar de una mente disciplinada.",
-        "Como decía Marco Aurelio: 'La mente que no se ejercita se debilita'.",
-        "Cada entreno es un acto de autodisciplina. Continúa construyendo tu fortaleza.",
-        "El cuerpo y la mente se fortalecen juntos. Sigue adelante.",
-        "La disciplina comienza con un solo paso. Tu cuerpo y mente te esperan.",
-        "Como enseñaba Epicteto: 'Ningún gran descubrimiento se hizo sin un acto audaz'.",
-        "Tu constancia en la reflexión fortalece tanto tu mente como tu determinación física.",
-        "La sabiduría diaria nutre el alma que habita en tu cuerpo entrenado.",
-        "Un momento de reflexión puede darte la claridad para tu próximo entreno.",
-        "La mente clara toma mejores decisiones sobre el cuidado del cuerpo.",
-        "Mente sana en cuerpo sano - Los antiguos sabían que ambos van unidos."
-    ]
-
-    import random
+    mensajes_integracion = ["Tu disciplina física refleja tu fortaleza mental.", "Un cuerpo entrenado es el hogar de una mente disciplinada."]
     mensaje_integracion = random.choice(mensajes_integracion)
 
-    # ================================================================
-    # INICIO DEL NUEVO BLOQUE: CÁLCULO DEL ACWR
-    # ================================================================
-
     analizador_carga = AnalizadorCargaYFatiga(cliente)
+    analis_acwr = analizador_carga.analizar_acwr()
 
-    # 2. Ejecutamos la función que devuelve todos los datos necesarios.
-    #    El método se llama analizar_acwr() según el código que me proporcionaste.
-    analisis_acwr_completo = analizador_carga.analizar_acwr()
-
-    # Imprimimos en la consola para depurar y asegurarnos de que funciona (opcional)
-    print(f"🔥 Análisis ACWR para {cliente.nombre}: Ratio={analisis_acwr_completo.get('acwr_actual', 'N/A')}")
-
-    # ================================================================
-    # FIN DEL NUEVO BLOQUE
-    # ================================================================
-    # ================================================================
-    # NOTIFICACIONES CONTEXTUALES
-    # ================================================================
-    # ================================================================
-    # INTEGRACIÓN ESTOICA DINÁMICA (CORREGIDA)
-    # ================================================================
-
-    estoico_disponible = False
-    contenido_hoy = None
-
+    tags_prohibidos = set()
     try:
-        # ¡AÑADE ESTA IMPORTACIÓN DENTRO DEL TRY PARA MAYOR SEGURIDAD!
-        from estoico.models import ContenidoDiario, ReflexionDiaria
+        from core.bio_context import BioContextProvider
+        restricciones = BioContextProvider.get_current_restrictions(cliente)
+        tags_prohibidos = restricciones.get('tags', set())
+    except Exception: pass
 
-        # ... (código existente para cargar LogroEstoico, etc.)
+    def procesar_ejercicios(ejercicios_list, is_model=False):
+        for ej in ejercicios_list:
+            nombre = ej.nombre_ejercicio if is_model else ej.get('nombre', '')
+            # ... simplificando por brevedad, se puede expandir si es necesario
+            if is_model: ej.fa_icon = 'fa-dumbbell'
+            else: ej['fa_icon'] = 'fa-dumbbell'
 
-        estoico_disponible = True
+    if proximo_entrenamiento and 'ejercicios' in proximo_entrenamiento:
+        procesar_ejercicios(proximo_entrenamiento['ejercicios'])
+    if hyrox_proxima_sesion:
+        activities = list(hyrox_proxima_sesion.activities.all())
+        procesar_ejercicios(activities, is_model=True)
+        hyrox_proxima_sesion.processed_activities = activities
 
-        # --- ESTA ES LA LÓGICA QUE YA TIENES Y FUNCIONA ---
-        dia_año = hoy.timetuple().tm_yday
-        contenido_hoy = ContenidoDiario.objects.filter(dia=dia_año).first()
-
-        # ... (resto de tu lógica para reflexiones, rachas, etc.)
-
-    except ImportError as e:
-        print(f"⚠️ App estoica no disponible: {e}")
-        estoico_disponible = False
+    # --- CÁLCULO DE MÉTRICAS PARA EL RADAR Y FOCUS STATS ---
+    try:
+        # Usamos un periodo de 30 días para las métricas del dashboard
+        fecha_fin_radar = timezone.now().date()
+        fecha_inicio_radar = fecha_fin_radar - timedelta(days=30)
+        
+        calculadora_stats = CalculadoraEjerciciosTabla(cliente)
+        stats_principales = calculadora_stats.calcular_metricas_principales(
+            fecha_inicio=fecha_inicio_radar, 
+            fecha_fin=fecha_fin_radar
+        )
+        
+        # Mapeamos a lo que el template blade_runner.html espera
+        metricas_radar = {
+            'asistencia': stats_principales.get('entrenamientos_unicos', 0),
+            'volumen': (stats_principales.get('volumen_total', 0) / 1000.0), # Convertimos a Toneladas
+            'frecuencia_semanal': stats_principales.get('frecuencia_semanal', 0.0),
+            'intensidad': stats_principales.get('intensidad_promedio', 0.0),
+        }
     except Exception as e:
-        print(f"❌ Error cargando datos estoicos: {e}")
-        estoico_disponible = False
+        logger.error(f"Error calculando métricas radar: {e}")
+        metricas_radar = {
+            'asistencia': EntrenoRealizado.objects.filter(cliente=cliente).count(),
+            'volumen': round(carga_total / 1000.0, 1),
+            'frecuencia_semanal': 0.0,
+            'intensidad': 0.0,
+        }
 
-    return render(request, 'clientes/mockup_demo.html', {
+    # Aseguramos que analisis_acwr tenga la clave 'acwr' (el template usa {{ analisis_acwr.acwr }})
+    if analis_acwr and 'acwr' not in analis_acwr:
+        analis_acwr['acwr'] = analis_acwr.get('acwr_actual', 0.0)
+
+    import urllib.parse
+    
+    return {
         'usuario': usuario,
         'cliente': cliente,
         'entrenos': entrenos,
-        'analisis_acwr': analisis_acwr_completo,
+        'analisis_acwr': analis_acwr,
+        'metricas_radar': metricas_radar,
         'emociones': emociones,
         'emociones_lista': emociones_lista,
         'recuerdo': recuerdo,
-        'perfil_gamificacion': perfil_gamificacion,  # Pasamos el perfil al template
-        'pruebas_activas': pruebas_activas,  # Pasamos las pruebas activas
+        'perfil_gamificacion': perfil_gamificacion,
+        'pruebas_activas': pruebas_activas,
         'logros': logros_completados,
         'reporte': reporte_adherencia,
         'top_ejercicios': calcular_top_1rm(cliente),
         'datos_logros': datos_logros,
-        'frase_bitacora': request._messages._queued_messages[0].message if request._messages._queued_messages else None,
         'estado_joi': estado_joi,
         'frase_forma_joi': frase_forma_joi,
         'frase_extra_joi': frase_extra_joi,
@@ -1090,8 +962,7 @@ def panel_cliente(request):
         'consistencia': 80,
         'grafico_labels': json.dumps(labels),
         'grafico_datos': json.dumps(rendimiento),
-        'mini_retos': MiniReto.objects.filter(cliente=cliente, semana_inicio=lunes).order_by('id'),
-        'recomendacion_carga': sugerencia_carga_joi(cliente),
+        'recomendacion_carga': sug_carga,
         'energia_dias': obtener_energia_semanal(cliente),
         'alerta_fatiga': alerta_fatiga,
         'peso_actual': peso_actual,
@@ -1110,10 +981,9 @@ def panel_cliente(request):
         'mesociclo_actual': mesociclo_actual,
         'fatiga_acumulada': fatiga_acumulada,
         'proximo_entrenamiento': proximo_entrenamiento,
+        'proximo_entrenamiento_json': json.dumps(proximo_entrenamiento.get("ejercicios", [])) if proximo_entrenamiento else "[]",
         'estadisticas_plan': estadisticas_plan,
         'estancamientos': estancamientos_detectados,
-        'checkin_form': checkin_form,
-        'ajuste_del_dia': ajuste_del_dia,
         'notificaciones': notificaciones,
         'mensaje_integracion': mensaje_integracion,
         'reflexion_hoy': reflexion_hoy,
@@ -1124,7 +994,30 @@ def panel_cliente(request):
         'dias_reflexion': dias_reflexion,
         'contenido_hoy': contenido_hoy,
         'estoico_disponible': estoico_disponible,
-    })
+        'hyrox_objetivo': hyrox_objetivo,
+        'hyrox_proxima_sesion': hyrox_proxima_sesion,
+        'bio_readiness': bio_readiness,
+        'sesion_pendiente': sesion_pendiente,
+        'restricciones_bio': restricciones_bio,
+        'hoy': timezone.now().date(),
+    }
+
+
+@login_required
+def panel_cliente(request):
+    usuario = request.user
+    cliente = get_object_or_404(Cliente, user=usuario)
+    context = _get_dashboard_context_data(request, cliente)
+    return render(request, 'clientes/mockup_demo.html', context)
+
+
+@login_required
+def blade_runner_dashboard(request):
+    usuario = request.user
+    cliente = get_object_or_404(Cliente, user=usuario)
+    context = _get_dashboard_context_data(request, cliente)
+    return render(request, 'clientes/blade_runner.html', context)
+
 
 
 def analizar_tendencia_peso(cliente):
@@ -1944,19 +1837,57 @@ def dashboard(request):
     mensaje_integracion = random.choice(mensajes_integracion)
 
     # ================================================================
-    # NOTIFICACIONES CONTEXTUALES
+    # NOTIFICACIONES CONTEXTUALES Y DE CICATRIZACIÓN
     # ================================================================
 
     notificaciones = []
 
-    # Notificaciones fitness
-    if entrenos_semana_cliente == 0:
-        notificaciones.append({
-            'titulo': 'Tu cuerpo te extraña',
-            'mensaje': 'Han pasado varios días desde tu último entreno',
-            'icono': 'fa-dumbbell',
-            'color': 'cyan'
-        })
+    # Comprobar restricciones biológicas (lesiones)
+    try:
+        from core.bio_context import BioContextProvider
+        from hyrox.models import UserInjury, HyroxObjective
+        
+        bio_data = BioContextProvider.get_current_restrictions(cliente)
+        has_active_injury = bio_data.get('has_restrictions', False)
+        
+        if has_active_injury and entrenos_semana_cliente == 0:
+            # En lugar del nudge de inactividad, mostramos el Estatus de Cicatrización
+            lesiones = UserInjury.objects.filter(cliente=cliente, activa=True).order_by('-fecha_inicio')
+            if lesiones.exists():
+                lesion_principal = lesiones.first()
+                dias_lesion = (hoy - lesion_principal.fecha_inicio).days
+                
+                # Buscar próximo evento Hyrox
+                obj_hyrox = HyroxObjective.objects.filter(cliente=cliente, estado='activo').first()
+                dias_evento_str = ""
+                if obj_hyrox and obj_hyrox.fecha_evento:
+                    dias_evento = (obj_hyrox.fecha_evento - hoy).days
+                    if dias_evento > 0:
+                        dias_evento_str = f" Faltan {dias_evento} días para el test."
+                
+                notificaciones.append({
+                    'titulo': 'Estatus de Cicatrización',
+                    'mensaje': f'Llevas {dias_lesion} días recuperando tu {lesion_principal.zona_afectada} (Fase {lesion_principal.fase}).{dias_evento_str}',
+                    'icono': 'fa-heartbeat',
+                    'color': 'warning'
+                })
+        elif entrenos_semana_cliente == 0:
+            # Notificación normal de inactividad si NO hay lesión
+            notificaciones.append({
+                'titulo': 'Tu cuerpo te extraña',
+                'mensaje': 'Han pasado varios días desde tu último entreno',
+                'icono': 'fa-dumbbell',
+                'color': 'cyan'
+            })
+    except Exception as e:
+        # Fallback en caso de error
+        if entrenos_semana_cliente == 0:
+            notificaciones.append({
+                'titulo': 'Tu cuerpo te extraña',
+                'mensaje': 'Han pasado varios días desde tu último entreno',
+                'icono': 'fa-dumbbell',
+                'color': 'cyan'
+            })
 
     if progreso_fisico > 80:
         notificaciones.append({
@@ -2131,7 +2062,24 @@ def detalle_cliente(request, cliente_id):
 
     # Obtenemos todos los entrenamientos de una vez para reutilizarlos
     historial_completo = EntrenoRealizado.objects.filter(cliente=cliente).prefetch_related(
-        'detalles_ejercicio').order_by('-fecha')
+        'detalles_ejercicio', 'ejercicios_realizados').order_by('-fecha')
+
+    # --- 1b. CÁLCULO DE EDAD Y RECORDS ---
+    edad = None
+    if cliente.fecha_nacimiento:
+        hoy = date.today()
+        edad = hoy.year - cliente.fecha_nacimiento.year - ((hoy.month, hoy.day) < (cliente.fecha_nacimiento.month, cliente.fecha_nacimiento.day))
+
+    # Mejores marcas históricas (PRs) - Agrupamos por ejercicio y tomamos el máximo
+    records_brutos = RecordPersonal.objects.filter(cliente=cliente, superado=False).order_by('ejercicio_nombre', '-valor')
+    
+    # Aseguramos un record único por ejercicio (el más reciente o mayor)
+    records_prs = {}
+    for r in records_brutos:
+        if r.ejercicio_nombre not in records_prs:
+            records_prs[r.ejercicio_nombre] = r
+    
+    records_list = list(records_prs.values())
 
     # --- 2. LÓGICA PARA GRÁFICOS Y MÉTRICAS SEMANALES ---
     historial_semanal = defaultdict(list)
@@ -2244,6 +2192,8 @@ def detalle_cliente(request, cliente_id):
         'historial_agrupado': dict(sorted(historial_semanal.items(), reverse=True)),
         'todos_los_programas': todos_los_programas,
         'todas_las_rutinas': todas_las_rutinas,
+        'edad': edad,
+        'records_prs': records_list,
     }
 
     return render(request, 'clientes/detalle.html', context)
@@ -2610,18 +2560,16 @@ from analytics.views import CalculadoraEjerciciosTabla
 from decimal import Decimal, InvalidOperation
 
 
-# en clientes/views.py
-
-# ... (importaciones) ...
+# En clientes/views.py, reemplaza la función obtener_proximo_entrenamiento por esta versión v3
 
 def obtener_proximo_entrenamiento(cliente):
     """
-    Obtiene el próximo entrenamiento basándose en el plan generado por PlanificadorHelms.
-    VERSIÓN FINAL CON LÓGICA DE BÚSQUEDA SIMPLIFICADA.
+    Obtiene el próximo entrenamiento.
+    VERSIÓN 3 (SIMPLIFICADA): Se centra en encontrar la próxima fecha válida
+    y deriva toda la información de esa fecha para evitar desincronización.
     """
     try:
-        # --- PASO 1: Generar el plan anual completo (esto ya funciona) ---
-        # (La lógica para generar el plan es la misma, no la repetimos aquí por brevedad)
+        # --- PASO 1: Generar el plan anual completo (sin cambios) ---
         maximos_actuales = {}
         try:
             calculadora_rm = CalculadoraEjerciciosTabla(cliente)
@@ -2647,79 +2595,81 @@ def obtener_proximo_entrenamiento(cliente):
         perfil.maximos_actuales = maximos_actuales
         planificador = PlanificadorHelms(perfil)
         plan_completo = planificador.generar_plan_anual()
+        # --- INICIO DEL BLOQUE DE DEPURACIÓN ---
+        print("\n" + "=" * 50)
+        print("🕵️  INICIANDO DEPURACIÓN DEL PLANIFICADOR 🕵️")
+        print(f"Fecha actual (hoy): {hoy}")
+        print(f"Semana del año (ISO): {hoy.isocalendar()[1]}")
 
-        # --- PASO 2: Encontrar el próximo entrenamiento (LÓGICA NUEVA Y SIMPLE) ---
+        print("\n--- Estructura del Plan Generado ---")
+        if 'plan_por_bloques' in plan_completo:
+            for i, bloque in enumerate(plan_completo['plan_por_bloques']):
+                nombre_bloque = bloque.get('nombre', 'N/A')
+                semanas_bloque = [s['semana_num_total'] for s in bloque.get('semanas', [])]
+                print(f"Bloque {i + 1}: '{nombre_bloque}' -> Semanas: {semanas_bloque}")
+        else:
+            print("ERROR: No se encontraron 'plan_por_bloques' en el plan.")
+
+        print("\n" + "=" * 50 + "\n")
+        # --- FIN DEL BLOQUE DE DEPURACIÓN ---
+        # --- PASO 2: Encontrar el próximo entrenamiento (LÓGICA MEJORADA) ---
         hoy = date.today()
         entrenos_por_fecha = plan_completo.get('entrenos_por_fecha', {})
 
-        # Ordenamos las fechas para buscar la próxima
-        fechas_ordenadas = sorted(entrenos_por_fecha.keys())
+        # Filtra las fechas del plan que son hoy o en el futuro
+        fechas_futuras = sorted([f for f in entrenos_por_fecha.keys() if date.fromisoformat(f) >= hoy])
 
-        for fecha_str in fechas_ordenadas:
-            fecha_entrenamiento = date.fromisoformat(fecha_str)
+        if not fechas_futuras:
+            # Si no hay fechas futuras, significa que el plan terminó o no se generó.
+            return {'es_descanso': True, 'rutina_nombre': 'Plan Finalizado'}
 
-            if fecha_entrenamiento >= hoy:
-                # ¡Encontramos el próximo entrenamiento!
-                entrenamiento = entrenos_por_fecha[fecha_str]
+        # La próxima fecha de entrenamiento es la primera de la lista.
+        fecha_proximo_entrenamiento_str = fechas_futuras[0]
+        fecha_proximo_entrenamiento = date.fromisoformat(fecha_proximo_entrenamiento_str)
+        entrenamiento_data = entrenos_por_fecha[fecha_proximo_entrenamiento_str]
 
-                # Ahora, buscamos a qué bloque pertenece esta fecha
-                bloque_info = {}
-                for bloque in plan_completo.get('plan_por_bloques', []):
-                    # Un bloque contiene una lista de diccionarios de semanas
-                    # Verificamos si alguna de las semanas de este bloque contiene la fecha
-                    # (Esto es una simplificación, asumimos que podemos encontrar el bloque por la fecha)
-                    # Una forma más robusta sería calcular la semana del año de la fecha_entrenamiento
-                    semana_del_año = fecha_entrenamiento.isocalendar()[1]
+        # --- PASO 3: Encontrar el bloque y semana correctos para ESA fecha ---
+        bloque_info = {}
+        semana_del_año_entrenamiento = fecha_proximo_entrenamiento.isocalendar()[1]
 
-                    # Buscamos si el número de semana está en este bloque
-                    for semana_data in bloque.get('semanas', []):
-                        if semana_data['semana_num_total'] == semana_del_año:
-                            bloque_info = {
-                                'bloque_actual': bloque.get('nombre', 'N/A'),
-                                'objetivo': bloque.get('objetivo', 'N/A'),
-                                'semana_bloque': semana_del_año - bloque['semanas'][0]['semana_num_total'] + 1
-                            }
-                            break
-                    if bloque_info:
-                        break
-
-                dias_semana_nombres = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]
-
-                return {
-                    'dia': dias_semana_nombres[fecha_entrenamiento.weekday()],
-                    'fecha': fecha_entrenamiento,
-                    'dias_hasta': (fecha_entrenamiento - hoy).days,
-                    'rutina_nombre': entrenamiento['nombre_rutina'],
-                    'ejercicios': entrenamiento['ejercicios'][:3],
-                    'total_ejercicios': len(entrenamiento['ejercicios']),
-                    'bloque_actual': bloque_info.get('bloque_actual', 'Bloque Desconocido'),
-                    'objetivo': bloque_info.get('objetivo', 'N/A'),
-                    'semana_bloque': bloque_info.get('semana_bloque', 0),
-                    'error': None
+        for bloque in plan_completo.get('plan_por_bloques', []):
+            semanas_del_bloque = [s['semana_num_total'] for s in bloque.get('semanas', [])]
+            if semana_del_año_entrenamiento in semanas_del_bloque:
+                semana_inicio_bloque = semanas_del_bloque[0]
+                bloque_info = {
+                    'bloque_actual': bloque.get('nombre', 'N/A'),
+                    'objetivo': bloque.get('objetivo', 'N/A'),
+                    'semana_bloque': semana_del_año_entrenamiento - semana_inicio_bloque + 1
                 }
+                break
 
-        # Si el bucle termina, no hay más entrenamientos en el plan
-        raise ValueError("Plan anual finalizado.")
+        dias_semana_nombres = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]
+
+        # Devolvemos el diccionario completo para el template
+        return {
+            'dia': dias_semana_nombres[fecha_proximo_entrenamiento.weekday()],
+            'fecha': fecha_proximo_entrenamiento,
+            'dias_hasta': (fecha_proximo_entrenamiento - hoy).days,
+            'rutina_nombre': entrenamiento_data['nombre_rutina'],
+            'ejercicios': entrenamiento_data['ejercicios'][:3],
+            'total_ejercicios': len(entrenamiento_data['ejercicios']),
+            'bloque_actual': bloque_info.get('bloque_actual', 'Bloque Desconocido'),
+            'objetivo': bloque_info.get('objetivo', 'N/A'),
+            'semana_bloque': bloque_info.get('semana_bloque', 0),
+            'es_descanso': False,
+            'error': None
+        }
 
     except Exception as e:
-        # Si algo falla, devolvemos un diccionario de error claro
+        # Si algo falla, devolvemos un diccionario que indica un día de descanso
         return {
-            'error': str(e),
-            'rutina_nombre': 'Plan Finalizado o Error',
-            'dia': 'N/A',
-            'fecha': None,
-            'dias_hasta': 0,
-            'ejercicios': [],
-            'total_ejercicios': 0,
-            'bloque_actual': '-',
-            'objetivo': '-',
-            'semana_bloque': '-'
+            'error': str(e), 'es_descanso': True,
+            'rutina_nombre': 'Error al Planificar', 'dia': 'N/A', 'fecha': None,
+            'dias_hasta': 0, 'ejercicios': [], 'total_ejercicios': 0,
+            'bloque_actual': '-', 'objetivo': '-', 'semana_bloque': '-'
         }
 
 
-# en clientes/views.py
-
-# ... (asegúrate de tener estas importaciones al principio del archivo)
 from analytics.planificador_helms_completo import PlanificadorHelms, crear_perfil_desde_cliente
 from analytics.views import CalculadoraEjerciciosTabla
 from decimal import Decimal, InvalidOperation
@@ -2798,7 +2748,7 @@ def obtener_estadisticas_plan_anual(cliente):
 
     except Exception as e:
 
-        print(f"❌ ERROR en obtener_estadisticas_plan_anual: {e}")
+        # print(f"❌ ERROR en obtener_estadisticas_plan_anual: {e}")
 
         return {
 
@@ -3186,7 +3136,7 @@ def guardar_entrenamiento_activo(request, cliente_id):
     - Pasa los argumentos correctos al crear el objeto.
     """
     cliente = get_object_or_404(Cliente, id=cliente_id)
-    print(f"\n--- [VISTA FINAL v3] Iniciando guardado para {cliente.nombre} ---")
+    # print(f"\n--- [VISTA FINAL v3] Iniciando guardado para {cliente.nombre} ---")
 
     try:
         # 1. Crear el objeto EntrenoRealizado principal (esto ya funciona bien)
@@ -3204,7 +3154,7 @@ def guardar_entrenamiento_activo(request, cliente_id):
             calorias_quemadas=request.POST.get('calorias_quemadas') or None,
             notas_liftin=request.POST.get('notas_liftin', '').strip()
         )
-        print(f"-> Creado EntrenoRealizado ID: {entreno.id}")
+        # print(f"-> Creado EntrenoRealizado ID: {entreno.id}")
 
         # 2. Procesar cada ejercicio realizado
         volumen_total_entreno = Decimal('0.0')
@@ -3250,7 +3200,7 @@ def guardar_entrenamiento_activo(request, cliente_id):
                     fuente_datos='manual'  # Asumiendo que este campo existe
                 )
                 # ==================================================================
-                print(f"   -> Creado EjercicioRealizado para: {ejercicio_nombre}")
+                # print(f"   -> Creado EjercicioRealizado para: {ejercicio_nombre}")
                 volumen_total_entreno += volumen_ejercicio
                 ejercicios_procesados_count += 1
 
@@ -3258,13 +3208,13 @@ def guardar_entrenamiento_activo(request, cliente_id):
         entreno.volumen_total_kg = volumen_total_entreno
         entreno.numero_ejercicios = ejercicios_procesados_count
         entreno.save(update_fields=['volumen_total_kg', 'numero_ejercicios'])
-        print(f"-> Entrenamiento ID {entreno.id} finalizado. Volumen: {volumen_total_entreno} kg.")
+        # print(f"-> Entrenamiento ID {entreno.id} finalizado. Volumen: {volumen_total_entreno} kg.")
 
         messages.success(request, "¡Entrenamiento guardado con éxito! Tu progreso ha sido analizado.")
         return redirect('clientes:panel_cliente')
 
     except Exception as e:
-        print(f"\n--- ❌ ERROR CRÍTICO DURANTE EL GUARDADO: {e} ---")
+        # print(f"\n--- ❌ ERROR CRÍTICO DURANTE EL GUARDADO: {e} ---")
         import traceback
         traceback.print_exc()
         messages.error(request, f"Hubo un error crítico al guardar el entrenamiento: {e}")
@@ -3457,6 +3407,12 @@ def obtener_proximo_entrenamiento_simplificado(cliente):
 
         if not entrenamiento_hoy or not entrenamiento_hoy.get("ejercicios"):
             return None  # Es un día de descanso
+
+        # Normalización de claves para evitar VariableDoesNotExist en templates estrictos
+        r_nombre = entrenamiento_hoy.get("rutina_nombre") or entrenamiento_hoy.get("nombre_rutina")
+        if r_nombre:
+            entrenamiento_hoy["rutina_nombre"] = r_nombre
+            entrenamiento_hoy["nombre_rutina"] = r_nombre
 
         return entrenamiento_hoy
 

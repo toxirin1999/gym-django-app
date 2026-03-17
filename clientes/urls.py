@@ -56,6 +56,7 @@ urlpatterns = [
     # Paneles
     path('panel/', clientes_views.dashboard, name='dashboard'),
     path('mi-panel/', panel_cliente, name='panel_cliente'),
+    path('mi-panel/blade-runner/', views.blade_runner_dashboard, name='blade_runner_dashboard'),
 
     # Nutrición
     path('nutricion/calcular/', views.calcular_plan_nutricional, name='calcular_plan_nutricional'),
@@ -68,7 +69,7 @@ urlpatterns = [
     path('datos-graficas/<int:cliente_id>/', views.datos_graficas, name='datos_graficas'),
     path('medidas/', views.lista_medidas, name='lista_medidas'),
     path('medidas/agregar/', views.agregar_medida, name='agregar_medida'),
-    # path('mockup-demo/', views.mockup_demo, name='mockup_demo'),
+    path('mockup-demo/', views.panel_cliente, name='mockup_demo'),
     path('responder-sugerencia/', views.responder_sugerencia, name='responder_sugerencia'),
 
     # Historial

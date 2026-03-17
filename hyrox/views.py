@@ -1,0 +1,962 @@
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.utils import timezone
+from django.utils.safestring import mark_safe
+from .forms import HyroxObjectiveForm, HyroxSessionNotesForm, UserInjuryForm, DailyRecoveryEntryForm
+from .services import HyroxParserService, HyroxCoachService
+from .training_engine import HyroxTrainingEngine
+from .models import HyroxObjective, HyroxSession, UserInjury, DailyRecoveryEntry
+
+@login_required
+def hyrox_dashboard(request):
+    cliente = getattr(request.user, 'cliente_perfil', None)
+    if not cliente:
+        # Si no tiene perfil de cliente, redirigimos (o manejamos el error)
+        messages.error(request, "Necesitas configurar tu perfil de cliente primero.")
+        return redirect('/') # O_AQUI redirigir a donde sea adecuado
+        
+    objetivo_activo = HyroxObjective.objects.filter(cliente=cliente, estado='activo').first()
+    
+    sesiones_completadas = []
+    sesiones_planificadas = []
+    stats_semana = {
+        'fuerza_completadas': 0, 'fuerza_planificadas': 0,
+        'carrera_completadas': 0, 'carrera_planificadas': 0,
+        'espe_completadas': 0, 'espe_planificadas': 0,
+    }
+    
+    resumen_semanal = None
+    readiness_svg_points = None
+    
+    if objetivo_activo:
+        from .models import HyroxReadinessLog
+        hoy = timezone.now().date()
+        
+        # Phase 6: Registrar/Actualizar el score de Race Readiness de hoy
+        current_score = objetivo_activo.get_race_readiness_score()
+        HyroxReadinessLog.objects.update_or_create(
+            objective=objetivo_activo,
+            fecha=hoy,
+            defaults={'score': current_score}
+        )
+        
+        # Generar puntos SVG para el mini-gráfico (ancho=100, alto=30)
+        logs = HyroxReadinessLog.objects.filter(objective=objetivo_activo).order_by('fecha')
+        svg_points = []
+        if logs.count() > 1:
+            step_x = 100 / (logs.count() - 1)
+            for i, log in enumerate(logs):
+                x = i * step_x
+                y = 30 - (log.score * 0.3) # 100% -> y=0, 0% -> y=30
+                svg_points.append(f"{x},{y}")
+        readiness_svg_points = " ".join(svg_points)
+
+        # Auto-ajuste de calendario (reprogramar sesiones perdidas críticas)
+        HyroxTrainingEngine.auto_adjust(objetivo_activo)
+        
+        sesiones_completadas = HyroxSession.objects.filter(objective=objetivo_activo, estado='completado').order_by('-fecha')
+        # Traer planes desde hoy en adelante
+        hoy = timezone.now().date()
+        sesiones_planificadas = HyroxSession.objects.filter(objective=objetivo_activo, estado='planificado', fecha__gte=hoy).order_by('fecha')[:3]
+        
+        # Desglose de la semana actual
+        start_of_week = hoy - timezone.timedelta(days=hoy.weekday())
+        end_of_week = start_of_week + timezone.timedelta(days=7)
+        sesiones_semana = HyroxSession.objects.filter(
+            objective=objetivo_activo,
+            fecha__gte=start_of_week,
+            fecha__lt=end_of_week
+        ).prefetch_related('activities')
+        
+        for s in sesiones_semana:
+            tipos = [a.tipo_actividad for a in s.activities.all()]
+            
+            is_fuerza = 'fuerza' in tipos
+            is_carrera = 'carrera' in tipos
+            is_espe = any(t in ['hyrox_station', 'ergometro'] for t in tipos)
+            
+            # Casos bordes: si hay títulos explícitos en caso de que las acties no esten claras
+            if not tipos:
+                titulo_lower = (s.titulo or '').lower()
+                if 'fuerza' in titulo_lower: is_fuerza = True
+                if 'carrera' in titulo_lower or 'aeróbico' in titulo_lower: is_carrera = True
+                if 'estacion' in titulo_lower or 'específicas' in titulo_lower: is_espe = True
+                if 'simulación' in titulo_lower:
+                    is_carrera = True
+                    is_espe = True
+
+            if is_fuerza:
+                stats_semana['fuerza_planificadas'] += 1
+                if s.estado == 'completado': stats_semana['fuerza_completadas'] += 1
+            if is_carrera:
+                stats_semana['carrera_planificadas'] += 1
+                if s.estado == 'completado': stats_semana['carrera_completadas'] += 1
+            if is_espe:
+                stats_semana['espe_planificadas'] += 1
+                if s.estado == 'completado': stats_semana['espe_completadas'] += 1
+
+        stats_semana['total_planificadas'] = stats_semana['fuerza_planificadas'] + stats_semana['carrera_planificadas'] + stats_semana['espe_planificadas']
+        stats_semana['total_completadas'] = stats_semana['fuerza_completadas'] + stats_semana['carrera_completadas'] + stats_semana['espe_completadas']
+
+        # Phase 6: Resumen Semanal Flash Card (Solo Domingos)
+        resumen_semanal = None
+        if hoy.weekday() == 6 and stats_semana['total_completadas'] > 0:
+            total_rpe = 0
+            rpe_count = 0
+            volumen_kg = 0
+            distancia_km = 0
+            
+            for s in sesiones_semana:
+                if s.estado == 'completado':
+                    if s.rpe_global:
+                        total_rpe += s.rpe_global
+                        rpe_count += 1
+                        
+                    for act in s.activities.all():
+                        if act.tipo_actividad == 'fuerza' and 'series' in act.data_metricas:
+                            for serie in act.data_metricas['series']:
+                                reps = serie.get('reps', 0)
+                                peso = serie.get('peso_kg', 0)
+                                if reps and peso:
+                                    volumen_kg += (int(reps) * float(peso))
+                        elif act.tipo_actividad == 'carrera' and 'distancia_km' in act.data_metricas:
+                            try:
+                                distancia_km += float(act.data_metricas['distancia_km'])
+                            except ValueError:
+                                pass
+            
+            resumen_semanal = {
+                'rpe_medio': round(total_rpe / rpe_count, 1) if rpe_count > 0 else 0,
+                'volumen_kg': round(volumen_kg),
+                'distancia_km': round(distancia_km, 2)
+            }
+
+        # Phase 10: Enfoque Mental y Equilibrio Estratégico
+        mental_focus = None
+        if hoy.weekday() == 0: # Lunes
+            mental_focus = "David, esta semana el entrenamiento es tu ancla de disciplina. No es solo fitness, es el orden que estás construyendo."
+            
+        strength_balance = objetivo_activo.get_strength_balance()
+        readiness_breakdown = objetivo_activo.get_readiness_breakdown()
+        
+        pace_prediction = None
+        if objetivo_activo.tiempo_5k_base:
+            pace_prediction = f"Basado en tu test de {objetivo_activo.tiempo_5k_base}, proyección recta: recortar 15 seg/km por semana para el sub-25:00."
+
+        # Phase 11: Identidad Consciente y Smart Alerts
+        morning_briefing = None
+        # Idealmente sería usando la zona horaria del usuario, asumimos hora del servidor por ahora
+        if timezone.now().hour <= 11:
+            morning_briefing = "Hoy no entrenas para demostrar nada a nadie, entrenas para construir al David que tú quieres ser."
+            
+        daily_push = objetivo_activo.get_daily_push()
+        
+        smart_alerts = []
+        last_session = objetivo_activo.sessions.filter(estado='completado').order_by('-fecha').first()
+        if last_session:
+            # Alerta Recuperación (fatiga alta ayer o hoy)
+            if last_session.muscle_fatigue_index == 'Alta' and (hoy - last_session.fecha).days <= 1:
+                smart_alerts.append("Buen esfuerzo en la sesión pasada. No olvides hidratarte bien hoy para que tus cuádriceps recuperen para lo próximo.")
+            
+            # Alerta Consistencia (>48h)
+            if (hoy - last_session.fecha).days >= 2:
+                smart_alerts.append("David, cada sesión es un paso hacia tu nueva identidad y tu casa propia. ¿Ajustamos el entreno de hoy para que encaje en tu tarde?")
+        else:
+            smart_alerts.append("Es el momento perfecto para arrancar tu primer bloque. La constancia es la clave.")
+
+    competition_progress = None
+    macro_data = None
+    lesion_activa = None
+    ultimo_reporte = None
+    
+    if objetivo_activo:
+        from .services import CompetitionStandardsService, HyroxMacrocycleEngine
+        from .models import UserInjury, DailyRecoveryEntry
+        competition_progress = CompetitionStandardsService.get_user_standards_progress(request.user.id)
+        macro_data = HyroxMacrocycleEngine.get_current_phase(objetivo_activo, return_metadata=True)
+        lesion_activa = UserInjury.objects.filter(cliente=cliente, activa=True).first()
+        
+        sustituciones_activas = []
+        sustituciones_dict = {} # <-- Añadimos un diccionario para pasarlo al template de forma fácil
+        sustituciones_seen = set()  # Para evitar duplicados
+        # PHASE 16: BIO-SAFE UNIFICATION (Dynamic Substitution)
+        from analytics.planificador_helms.ejercicios.selector import SelectorEjercicios
+        from analytics.planificador_helms.database.ejercicios import EJERCICIOS_DATABASE
+        from core.bio_context import BioContextProvider
+
+        bio_data = BioContextProvider.get_current_restrictions(cliente)
+        restricted_tags = bio_data.get('tags', set())
+
+        if restricted_tags:
+            # Find phase name for SelectorEjercicios
+            fase_nombre_temp = 'hipertrofia'
+            if objetivo_activo:
+                try:
+                    # Attempt to extract phase from macrocycle
+                    from hyrox.services import HyroxMacrocycleEngine
+                    fase_data = HyroxMacrocycleEngine.get_current_phase(objetivo_activo)
+                    fase_nombre_temp = fase_data.get('fase', 'hipertrofia').lower()
+                except: pass
+
+            safe_replacements_cache = {}
+
+            for plan in sesiones_planificadas:
+                plan.is_blocked_by_injury = False
+                # We'll use this to show adapted title
+                plan.titulo_sustituido = plan.titulo
+                
+                for act in plan.activities.all():
+                    act.display_name = act.nombre_ejercicio # Default
+                    ej_name = act.nombre_ejercicio.lower()
+                    # 1. Identify risk tags for THIS exercise
+                    ej_tags = set()
+                    # Generic lookup (very basic, similar to entrenos/views.py)
+                    for g_name, g_tipos in EJERCICIOS_DATABASE.items():
+                        for cat in ['compuesto_principal', 'compuesto_secundario', 'aislamiento']:
+                            for e in g_tipos.get(cat, []):
+                                if isinstance(e, dict) and e.get('nombre', '').lower() in ej_name:
+                                    ej_tags.update(e.get('risk_tags', []))
+                                    ej_grupo = g_name
+                                    break
+                            if ej_tags: break
+                        if ej_tags: break
+                    
+                    # 2. Check if blocked
+                    if ej_tags.intersection(restricted_tags):
+                        plan.is_blocked_by_injury = True
+                        act.is_substituted = True
+                        
+                        # 3. Find replacement
+                        if ej_grupo not in safe_replacements_cache:
+                            safe_groups = SelectorEjercicios.seleccionar_ejercicios_para_bloque(
+                                numero_bloque=1,
+                                fase=fase_nombre_temp,
+                                cliente=cliente
+                            )
+                            safe_replacements_cache[ej_grupo] = safe_groups.get(ej_grupo, [])
+                        
+                        safe_opts = safe_replacements_cache.get(ej_grupo, [])
+                        if safe_opts:
+                            substitute = safe_opts[0]
+                            act.sustituto = substitute.get('nombre', 'Ejercicio Seguro')
+                            act.display_name = act.sustituto # Override for template
+                            # Mapping icon from mapping if available
+                            act.sustituto_icon = 'fa-shield-alt'
+                            plan.titulo_sustituido = f"🛡️ Sesión Adaptada: {act.sustituto}"
+                    else:
+                        act.display_name = act.nombre_ejercicio
+
+    context = {
+        'competition_progress': competition_progress,
+        'macro_data': macro_data,
+        'cliente': cliente,
+        'objetivo_activo': objetivo_activo,
+        'sesiones': sesiones_completadas,
+        'proximas_sesiones': sesiones_planificadas,
+        'stats_semana': stats_semana,
+        'resumen_semanal': resumen_semanal,
+        'readiness_svg_points': readiness_svg_points,
+        'mental_focus': mental_focus if objetivo_activo else None,
+        'strength_balance': strength_balance if objetivo_activo else None,
+        'readiness_breakdown': readiness_breakdown if objetivo_activo else None,
+        'pace_prediction': pace_prediction if objetivo_activo else None,
+        'morning_briefing': morning_briefing if objetivo_activo else None,
+        'daily_push': daily_push if objetivo_activo else None,
+        'smart_alerts': smart_alerts if objetivo_activo else [],
+        'lesion_activa': lesion_activa,
+        'ultimo_reporte': ultimo_reporte,
+        'sustituciones_activas': sustituciones_activas if 'sustituciones_activas' in locals() else [],
+        'sustituciones_dict': sustituciones_dict if 'sustituciones_dict' in locals() else {},
+    }
+    return render(request, 'hyrox/dashboard.html', context)
+
+@login_required
+def crear_objetivo(request):
+    cliente = getattr(request.user, 'cliente_perfil', None)
+    
+    if request.method == 'POST':
+        form = HyroxObjectiveForm(request.POST)
+        if form.is_valid():
+            objetivo = form.save(commit=False)
+            objetivo.cliente = cliente
+            # Desactivar cualquier objetivo activo previo
+            HyroxObjective.objects.filter(cliente=cliente, estado='activo').update(estado='cancelado')
+            objetivo.save()
+            
+            # ¡Generar el plan inteligente de Hyrox!
+            HyroxTrainingEngine.generate_training_plan(objetivo)
+            
+            messages.success(request, "Objetivo Hyrox creado y plan de entrenamiento generado correctamente. ¡A por todas!")
+            return redirect('hyrox:dashboard')
+    else:
+        # Pre-rellenar con los datos que ya tenemos del cliente o del objetivo activo si los hay
+        initial_data = {}
+        if cliente:
+            objetivo_actual = HyroxObjective.objects.filter(cliente=cliente, estado='activo').first()
+            if objetivo_actual:
+                initial_data = {
+                    'categoria': objetivo_actual.categoria,
+                    'fecha_evento': objetivo_actual.fecha_evento,
+                    'rm_peso_muerto': objetivo_actual.rm_peso_muerto,
+                    'rm_sentadilla': objetivo_actual.rm_sentadilla,
+                    'tiempo_5k_base': objetivo_actual.tiempo_5k_base,
+                    'nivel_experiencia': objetivo_actual.nivel_experiencia,
+                    'lesiones_previas': objetivo_actual.lesiones_previas,
+                    'material_disponible': objetivo_actual.material_disponible,
+                    'dias_preferidos': objetivo_actual.dias_preferidos
+                }
+        form = HyroxObjectiveForm(initial=initial_data)
+        
+    return render(request, 'hyrox/crear_objetivo.html', {'form': form})
+
+@login_required
+def cancelar_objetivo(request, objective_id):
+    """
+    Permite al usuario borrar su objetivo actual y todos los entrenamientos asociados para empezar de cero.
+    """
+    objetivo = get_object_or_404(HyroxObjective, id=objective_id, cliente=getattr(request.user, 'cliente_perfil', None))
+    # Un borrado físico limpia completamente la DB para este usuario (On delete cascade borra sesiones/actividades)
+    objetivo.delete()
+    messages.success(request, "Entrenamientos y objetivo reseteados correctamente. ¡Pizarra limpia para empezar de cero!")
+    return redirect('hyrox:dashboard')
+
+@login_required
+def registrar_entrenamiento(request, objective_id):
+    objetivo = get_object_or_404(HyroxObjective, id=objective_id, cliente=request.user.cliente_perfil)
+    hoy = timezone.now().date()
+    sesion_planificada = HyroxSession.objects.filter(
+        objective=objetivo,
+        fecha=hoy,
+        estado='planificado'
+    ).first()
+
+    if request.method == 'POST':
+        form = HyroxSessionNotesForm(request.POST)
+        if form.is_valid():
+            sesion = form.save(commit=False)
+            sesion.objective = objetivo
+            sesion.estado = 'planificado' # temporal hasta procesar IA
+            sesion.save()
+
+            # Procesamiento de la IA
+            if sesion.notas_raw:
+                sustituir_material = form.cleaned_data.get('sustituir_material', False)
+                parsed_data = HyroxParserService.parse_workout_text(sesion.notas_raw, sustituir_material=sustituir_material)
+                if parsed_data:
+                    resultados_save = HyroxParserService.save_parsed_session(sesion, parsed_data)
+                    actividades = resultados_save.get('activities', []) if isinstance(resultados_save, dict) else []
+                    new_records = resultados_save.get('new_records', []) if isinstance(resultados_save, dict) else []
+                    
+                    feedback_str = parsed_data.get('feedback', parsed_data.get('Feedback', ''))
+                    
+                    if actividades:
+                        messages.success(request, f"Se han extraído mágicamente {len(actividades)} bloques de tu entrenamiento.")
+                        
+                        if new_records:
+                            for record in new_records:
+                                messages.success(request, f"🚀 PB Roto: {record['ejercicio']} estimado ahora es {record['new']}kg.")
+
+                        # Phase 5 & 8: Dynamic UI Feedback Flash Generation
+                        if sustituir_material and feedback_str:
+                             messages.info(request, f"🤖 Auto-Ajuste de Equivalencia: {feedback_str}")
+                        elif feedback_str:
+                             messages.info(request, f"🧠 Entrenador IA: {feedback_str}")
+
+                    else:
+                        if getattr(sesion, 'parsed_by_ia', False):
+                             messages.success(request, "Sesión evaluada por la IA. Se ha calculado tu fatiga y rendimiento global.")
+                             if feedback_str:
+                                 messages.info(request, f"🧠 Entrenador IA: {feedback_str}")
+                        else:
+                             messages.warning(request, "Se guardó la sesión, pero o no incluiste ejercicios detectables o Gemini no devolvió la estructura esperada.")
+                else:
+                    messages.error(request, "Atención: No se pudo conectar con la API de Gemini para procesar el texto.")
+            else:
+                messages.success(request, "Datos de la sesión guardados sin procesamiento IA.")
+                actividades = sesion.activities.all()
+
+            # --- CHECK BIO-SAFETY: VALIDACIÓN DE LESIONES ---
+            # UserInjury ya está importado al inicio de la función
+            bloqueado_por_bio_safety = False
+            
+            if lesion_activa and lesion_activa.tags_restringidos and actividades:
+                nombres_ejercicios_raw = [a.nombre_ejercicio.lower() for a in actividades]
+                mapping_inverso = {
+                    'carrera': 'impacto_vertical', 'run': 'impacto_vertical', 'running': 'impacto_vertical',
+                    'prensa': 'estabilidad_gemelo', 'squat': 'estabilidad_gemelo', 'hack squat': 'estabilidad_gemelo', 'sentadilla': 'estabilidad_gemelo',
+                    'wall ball': 'flexion_rodilla_profunda', 'wall balls': 'flexion_rodilla_profunda',
+                    'sled push': 'empuje_pierna', 'empuje trineo': 'empuje_pierna',
+                    'salto': 'flexion_plantar', 'saltos': 'flexion_plantar', 'box jump': 'flexion_plantar', 'broad jumps': 'flexion_plantar',
+                    'burpee': 'empuje_hombro', 'burpees': 'empuje_hombro', 'press': 'empuje_hombro',
+                    'dominada': 'traccion_superior', 'pull-up': 'traccion_superior', 'muscle up': 'traccion_superior',
+                    'flexion': 'empuje_horizontal', 'push up': 'empuje_horizontal', 'push-ups': 'empuje_horizontal',
+                    'peso muerto': 'lumbar_carga', 'deadlift': 'lumbar_carga',
+                    'sandbag lunge': 'rotacion_tronco', 'lunges': 'rotacion_tronco'
+                }
+                
+                tags_detectados = set()
+                for nombre in nombres_ejercicios_raw:
+                    for key, tag in mapping_inverso.items():
+                        if key in nombre:
+                            tags_detectados.add(tag)
+                            
+                tags_violados = [tag for tag in tags_detectados if tag in lesion_activa.tags_restringidos]
+                
+                if tags_violados:
+                    if lesion_activa.fase == 'AGUDA':
+                        msg = f"⚠️ Cuidado David, este movimiento compromete tu recuperación. Has realizado ejercicios incompatibles con tu lesión en fase AGUDA ({', '.join(tags_violados)})."
+                    else:
+                        msg = f"🛑 Check-in bloqueado por seguridad biológica. Has realizado ejercicios incompatibles con tu lesión en fase {lesion_activa.get_fase_display()} ({', '.join(tags_violados)})."
+                    
+                    bloqueado_por_bio_safety = True
+                    sesion.estado = 'planificado' # Revert check-in
+                    sesion.save()
+                    messages.error(request, msg)
+
+            if not bloqueado_por_bio_safety:
+                sesion.estado = 'completado'
+                sesion.save()
+                
+                # Phase 8 & 9 & 14: Bucle de Feedback Continuo Post-Procesamiento.
+                # 1. Ajuste de volumen inmediato por Energía Pre-Entreno
+                HyroxTrainingEngine.scale_volume_by_energy(sesion)
+                
+                # 2. Evaluamos la sesión completada (RPE, Volumen) y ajustamos la(s) siguiente(s)
+                alertas = HyroxTrainingEngine.apply_continuous_adaptation(sesion)
+                if alertas:
+                     for alerta in alertas:
+                          messages.info(request, f"⚡ {alerta}")
+                
+            return redirect('hyrox:dashboard')
+    else:
+        # Phase 16: Bio-Safe Dynamic Substitution for Registration
+        from analytics.planificador_helms.ejercicios.selector import SelectorEjercicios
+        from analytics.planificador_helms.database.ejercicios import EJERCICIOS_DATABASE
+        from core.bio_context import BioContextProvider
+
+        cliente = request.user.cliente_perfil
+        bio_data = BioContextProvider.get_current_restrictions(cliente)
+        restricted_tags = bio_data.get('tags', set())
+
+        initial_notes = ""
+        if sesion_planificada:
+            lines = []
+            safe_replacements_cache = {}
+            fase_nombre_temp = 'hipertrofia'
+            try:
+                from hyrox.services import HyroxMacrocycleEngine
+                fase_data = HyroxMacrocycleEngine.get_current_phase(objetivo)
+                fase_nombre_temp = fase_data.get('fase', 'hipertrofia').lower()
+            except: pass
+
+            # Prepare activities for the context to preserve display_name and is_substituted
+            actividades_planificadas = list(sesion_planificada.activities.all())
+            for act in actividades_planificadas:
+                act.display_name = act.nombre_ejercicio # Default
+                
+                # Check for Bio-Safe issues
+                ej_name = act.nombre_ejercicio.lower()
+                ej_tags = set()
+                ej_grupo = None
+                for g_name, g_tipos in EJERCICIOS_DATABASE.items():
+                    for cat in ['compuesto_principal', 'compuesto_secundario', 'aislamiento']:
+                        for e in g_tipos.get(cat, []):
+                            if isinstance(e, dict) and e.get('nombre', '').lower() in ej_name:
+                                ej_tags.update(e.get('risk_tags', []))
+                                ej_grupo = g_name
+                                break
+                        if ej_tags: break
+                    if ej_tags: break
+                
+                if ej_tags.intersection(restricted_tags) and ej_grupo:
+                    if ej_grupo not in safe_replacements_cache:
+                        safe_groups = SelectorEjercicios.seleccionar_ejercicios_para_bloque(
+                            numero_bloque=1,
+                            fase=fase_nombre_temp,
+                            cliente=cliente
+                        )
+                        safe_replacements_cache[ej_grupo] = safe_groups.get(ej_grupo, [])
+                    
+                    safe_opts = safe_replacements_cache.get(ej_grupo, [])
+                    if safe_opts:
+                        act.display_name = safe_opts[0].get('nombre', act.nombre_ejercicio)
+                        act.is_substituted = True
+
+                # Build notes
+                metrics = act.data_metricas
+                line = f"- {act.display_name}: "
+                if 'series' in metrics:
+                    s_parts = []
+                    for s in metrics['series']:
+                        sp = f"{s.get('reps', 'X')} reps"
+                        if 'peso_kg' in s: sp += f" @ {s['peso_kg']}kg"
+                        s_parts.append(sp)
+                    line += ", ".join(s_parts)
+                elif 'distancia_km' in metrics:
+                    line += f"{metrics['distancia_km']}km"
+                elif 'distancia_m' in metrics:
+                    line += f"{metrics['distancia_m']}m"
+                    if 'peso_kg' in metrics: line += f" @ {metrics['peso_kg']}kg"
+                
+                lines.append(line)
+            initial_notes = "\n".join(lines)
+            
+        form = HyroxSessionNotesForm(initial={'notas_raw': initial_notes, 'titulo': sesion_planificada.titulo if sesion_planificada else ""})
+        
+    # Info de lesiones para el UI alert
+    from .models import UserInjury
+    lesion_activa = UserInjury.objects.filter(cliente=request.user.cliente_perfil, activa=True).first()
+        
+    return render(request, 'hyrox/registrar_entrenamiento.html', {
+        'form': form, 
+        'objetivo': objetivo,
+        'sesion_planificada': sesion_planificada,
+        'actividades_planificadas': actividades_planificadas if 'actividades_planificadas' in locals() else sesion_planificada.activities.all() if sesion_planificada else [],
+        'lesion_activa': lesion_activa
+    })
+
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+
+@login_required
+def registrar_entrenamiento_ia(request, session_id):
+    """
+    Endpoint AJAX para procesar el log en texto plano usando la IA sin recargar la página.
+    """
+    if request.method == 'POST':
+        sesion = get_object_or_404(HyroxSession, id=session_id, objective__cliente=getattr(request.user, 'cliente_perfil', None))
+        texto_usuario = request.POST.get('notas_raw')
+        usa_equivalencias = request.POST.get('sustituir_material') == 'true' or request.POST.get('sustituir_material') == 'on'
+
+        # Guardamos el raw text
+        sesion.notas_raw = texto_usuario
+        sesion.save()
+
+        # 1. Llamamos al servicio de Gemini
+        parsed_data = HyroxParserService.parse_workout_text(texto_usuario, usa_equivalencias)
+        
+        if parsed_data:
+            # Vaciamos actividades viejas si existieran para evitar duplicados en reprocesos
+            sesion.activities.all().delete()
+            
+            # 2. Creamos las actividades y se guarda el feedback (eso lo hace el parser / create_activities)
+            HyroxParserService.create_activities_from_parsed_data(sesion, parsed_data)
+            
+            # --- CHECK BIO-SAFETY: VALIDACIÓN DE LESIONES ---
+            from .models import UserInjury
+            lesion_activa = UserInjury.objects.filter(cliente=getattr(request.user, 'cliente_perfil', None), activa=True).first()
+            actividades = sesion.activities.all()
+            bloqueado_por_bio_safety = False
+            
+            if lesion_activa and lesion_activa.tags_restringidos and actividades:
+                nombres_ejercicios_raw = [a.nombre_ejercicio.lower() for a in actividades]
+                mapping_inverso = {
+                    'carrera': 'impacto_vertical', 'run': 'impacto_vertical', 'running': 'impacto_vertical',
+                    'prensa': 'estabilidad_gemelo', 'squat': 'estabilidad_gemelo', 'hack squat': 'estabilidad_gemelo', 'sentadilla': 'estabilidad_gemelo',
+                    'wall ball': 'flexion_rodilla_profunda', 'wall balls': 'flexion_rodilla_profunda',
+                    'sled push': 'empuje_pierna', 'empuje trineo': 'empuje_pierna',
+                    'salto': 'flexion_plantar', 'saltos': 'flexion_plantar', 'box jump': 'flexion_plantar', 'broad jumps': 'flexion_plantar',
+                    'burpee': 'empuje_hombro', 'burpees': 'empuje_hombro', 'press': 'empuje_hombro',
+                    'dominada': 'traccion_superior', 'pull-up': 'traccion_superior', 'muscle up': 'traccion_superior',
+                    'flexion': 'empuje_horizontal', 'push up': 'empuje_horizontal', 'push-ups': 'empuje_horizontal',
+                    'peso muerto': 'lumbar_carga', 'deadlift': 'lumbar_carga',
+                    'sandbag lunge': 'rotacion_tronco', 'lunges': 'rotacion_tronco'
+                }
+                
+                tags_detectados = set()
+                for nombre in nombres_ejercicios_raw:
+                    for key, tag in mapping_inverso.items():
+                        if key in nombre:
+                            tags_detectados.add(tag)
+                            
+                tags_violados = [tag for tag in tags_detectados if tag in lesion_activa.tags_restringidos]
+                
+                if tags_violados:
+                    bloqueado_por_bio_safety = True
+                    sesion.estado = 'planificado' # Revert check-in
+                    sesion.save()
+                    return JsonResponse({
+                        'status': 'error',
+                        'message': f"🛑 Check-in bloqueado por seguridad biológica. Has realizado ejercicios incompatibles con tu lesión en fase {lesion_activa.get_fase_display()}. Realiza la alternativa adaptada."
+                    })
+
+            sesion.estado = 'completado'
+            # Save final to trigger any post_save signals (like the one we just made)
+            sesion.save()
+            
+            # Formatear la respuesta JSON
+            feedback = sesion.feedback_ia if sesion.feedback_ia else parsed_data.get('feedback', '')
+            score = sesion.ai_evaluation_score if sesion.ai_evaluation_score else parsed_data.get('ai_evaluation_score', None)
+            
+            # 3. Lógica de Visualización Estratégica
+            obj = sesion.objective
+            
+            return JsonResponse({
+                'status': 'success',
+                'feedback': feedback,
+                'score': score,
+                'objective_data': {
+                    'strength_balance': obj.get_strength_balance(),
+                    'readiness_breakdown': obj.get_readiness_breakdown()
+                }
+            })
+            
+    return JsonResponse({'status': 'error', 'message': 'Invalid request'}, status=400)
+
+@login_required
+def procesar_con_ia(request, session_id):
+    """Procesa retroactivamente las notas_raw de una sesión con Gemini."""
+    from .models import HyroxSession
+    from .services import HyroxParserService
+    from django.shortcuts import get_object_or_404, redirect
+    from django.contrib import messages
+    
+    if request.method == 'POST':
+        session = get_object_or_404(
+            HyroxSession,
+            id=session_id,
+            objective__cliente__user=request.user
+        )
+        
+        if not session.notas_raw:
+            messages.warning(request, "Esta sesión no tiene texto en bruto para procesar.")
+            return redirect('hyrox:dashboard')
+        
+        parsed_data = HyroxParserService.parse_workout_text(session.notas_raw)
+        
+        if parsed_data:
+            result = HyroxParserService.save_parsed_session(session, parsed_data)
+            if result and result.get('activities'):
+                session.parsed_by_ia = True
+                session.save()
+                count = len(result.get('activities', []))
+                messages.success(request, f"✅ ¡Procesado con IA! Se han encontrado {count} actividades en este entrenamiento.")
+            else:
+                messages.warning(request, "La IA procesó el texto pero no encontró actividades para guardar. Revisa que el texto incluya ejercicios.")
+        else:
+            messages.error(request, "No se pudo conectar con la API de Gemini. Espera un minuto e inténtalo de nuevo.")
+    
+    return redirect('hyrox:dashboard')
+
+@login_required
+def borrar_entrenamiento(request, session_id):
+    if request.method == 'POST':
+        from .models import HyroxSession
+        from django.shortcuts import get_object_or_404, redirect
+        from django.contrib import messages
+        
+        # Obtenemos la sesión verificando que pertenezca al usuario activo
+        session = get_object_or_404(
+            HyroxSession, 
+            id=session_id, 
+            objective__cliente__user=request.user
+        )
+        session.delete()
+        messages.success(request, "Entrenamiento eliminado correctamente.")
+        
+    return redirect('hyrox:dashboard')
+
+import json
+from django.views import View
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import csrf_exempt
+
+@method_decorator(csrf_exempt, name='dispatch')
+@method_decorator(login_required, name='dispatch')
+class CoachInteractionView(View):
+    """
+    Punto de entrada único para el chat del dashboard.
+    Contacta al HyroxCoachService para decidir si es registro o charla.
+    """
+    def post(self, request, *args, **kwargs):
+        try:
+            # Parsear datos de entrada (Soporta JSON o form-data)
+            if request.content_type == 'application/json':
+                data = json.loads(request.body)
+                session_id = data.get('session_id')
+                user_input = data.get('user_input')
+            else:
+                session_id = request.POST.get('session_id')
+                user_input = request.POST.get('user_input')
+
+            if not user_input:
+                return JsonResponse({'status': 'error', 'message': 'No se proporcionó ningún texto.'}, status=400)
+
+            # Obtener sesión actual (Si session_id es proporcionado)
+            session = None
+            if session_id:
+                session = get_object_or_404(
+                    HyroxSession, 
+                    id=session_id, 
+                    objective__cliente__user=request.user
+                )
+
+            # Llamada al nuevo HyroxCoachService
+            from .services import HyroxCoachService
+            
+            # Phase Z: Extraer contexto e identificar intención primero para ver si necesitamos sesión ad-hoc
+            contexto = HyroxCoachService._obtener_contexto_atleta(request.user.id)
+            if not contexto:
+                return JsonResponse({'status': 'error', 'message': "No tienes un objetivo Hyrox activo."}, status=400)
+                
+            intencion = HyroxCoachService._clasificar_intencion(user_input, contexto)
+            
+            # Si quiere registrar entreno pero no mandó sesión, buscamos la de hoy o la creamos
+            if intencion == "registro" and not session:
+                from django.utils import timezone
+                from .models import HyroxObjective
+                hoy = timezone.now().date()
+                objetivo_activo = HyroxObjective.objects.filter(cliente__user=request.user, estado='activo').first()
+                if objetivo_activo:
+                    # Buscar la planificada de hoy si existe
+                    session = HyroxSession.objects.filter(objective=objetivo_activo, fecha=hoy, estado='planificado').first()
+                    if not session:
+                        # Crear Ad Hoc
+                        session = HyroxSession.objects.create(
+                            objective=objetivo_activo,
+                            titulo='Entrenamiento Libre IA',
+                            fecha=hoy,
+                            estado='planificado', # temporal, se completará abajo
+                            tipo_fase='hibrido',
+                            score_dificultad=5
+                        )
+
+            resultado = HyroxCoachService.procesar_mensaje(
+                user_id=request.user.id,
+                texto_usuario=user_input,
+                session=session
+            )
+
+            if resultado.get("tipo") == "error":
+                return JsonResponse({'status': 'error', 'message': resultado.get("mensaje")}, status=400)
+
+            # Formar respuesta base
+            response_data = {
+                'status': 'success',
+                'tipo': resultado.get('tipo'),
+                'coach_message': resultado.get('mensaje'),
+            }
+
+            # Si es registro y tenemos una sesión, actualizamos estados y extraemos datos enriquecidos
+            if resultado.get('tipo') == 'registro' and session:
+                # Marcar sesión como completada y guardar notas brutas
+                session.estado = 'completado'
+                session.notas_raw = user_input
+                
+                # El servicio guarda feedback_ia y score internamente en la sesión
+                # Aseguramos el guardado
+                session.save()
+                
+                # Recopilar métricas actualizadas del objetivo para enriquecer la UI
+                objetivo = session.objective
+                response_data['new_readiness_score'] = objetivo.get_race_readiness_score()
+                response_data['strength_balance'] = objetivo.get_strength_balance()
+                
+                # Devolver la lista de actividades recién creadas
+                actividades = session.activities.all()
+                actividades_lista = []
+                for act in actividades:
+                    actividades_lista.append({
+                        'tipo': act.get_tipo_actividad_display(),
+                        'nombre': act.nombre_ejercicio,
+                        'metricas': act.data_metricas
+                    })
+                response_data['updated_activities'] = actividades_lista
+                
+            return JsonResponse(response_data)
+            
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+class GetGreetingView(View):
+    """
+    Endpoint de carga inicial para el chatbot del dashboard.
+    Devuelve un saludo proactivo y el estado actual de los indicadores.
+    """
+    def get(self, request, *args, **kwargs):
+        try:
+            from .services import HyroxCoachService
+            mensaje = HyroxCoachService.get_proactive_greeting(request.user.id)
+            
+            # Recuperar KPIs para inicializar el UI si es necesario
+            objetivo = HyroxObjective.objects.filter(cliente__user=request.user, estado='activo').first()
+            
+            readiness = objetivo.get_race_readiness_score() if objetivo else 0
+            balance = objetivo.get_strength_balance() if objetivo else None
+            
+            return JsonResponse({
+                'status': 'success',
+                'greeting': mensaje,
+                'readiness_score': readiness,
+                'strength_balance': balance
+            })
+            
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+@login_required
+def reportar_lesion(request):
+    cliente = getattr(request.user, 'cliente_perfil', None)
+    if not cliente:
+        messages.error(request, "Necesitas un perfil de cliente para reportar una lesión.")
+        return redirect('hyrox:dashboard')
+        
+    if request.method == 'POST':
+        form = UserInjuryForm(request.POST)
+        if form.is_valid():
+            lesion = form.save(commit=False)
+            lesion.cliente = cliente
+            lesion.activa = True
+            
+            # La fase se recoge del formulario ahora ('AGUDA' por defecto)
+            lesion.fase = form.cleaned_data.get('fase', 'AGUDA')
+            lesion.tags_restringidos = form.cleaned_data.get('tags_seleccionados', [])
+            lesion.save()
+            
+            # Bio-Purge: Limpiar sesiones futuras para forzar re-evaluación
+            from core.bio_context import BioContextProvider
+            BioContextProvider.force_clean_future_workouts(cliente)
+            
+            bloqueos_str = ""
+            if lesion.tags_restringidos:
+                bloqueos = []
+                mapping = {
+                    'impacto_vertical': '🏃 Carrera ➡️ <b>SkiErg</b>',
+                    'carga_distal_pierna': '🦵 Prensa ➡️ <b>Tren Superior (Press/Remo)</b>',
+                    'estabilidad_gemelo': '🦵 Prensa ➡️ <b>Tren Superior (Press/Remo)</b>',
+                    'flexion_rodilla_profunda': '🎯 Wall Balls ➡️ <b>Press Hombro Sentado</b>',
+                    'empuje_pierna': '🛷 Sled Push ➡️ <b>Assault Bike (Solo brazos)</b>',
+                    'flexion_plantar': '🦘 Saltos ➡️ <b>Remo</b>',
+                    'empuje_hombro': '🏋️ Burpees/Press ➡️ <b>Sled Pull</b>',
+                    'traccion_superior': '🧗 Dominadas ➡️ <b>Peso Muerto (Carga ligera)</b>',
+                    'empuje_horizontal': '💪 Flexiones ➡️ <b>Plancha Isométrica</b>',
+                    'lumbar_carga': '🏋️‍♂️ Peso Muerto ➡️ <b>Hip Thrust</b>',
+                    'rotacion_tronco': '🎒 Sandbag Lunges ➡️ <b>Sentadilla Búlgara</b>',
+                }
+                for tag in lesion.tags_restringidos:
+                    if tag in mapping:
+                        bloqueos.append(mapping[tag])
+                
+                if bloqueos:
+                    bloqueos_str = "<br><br><b>❌ Protección Activa en Hyrox Engine:</b><br>" + "<br>".join(bloqueos[:3])
+            
+            messages.success(request, mark_safe(f"Lesión registrada en fase {lesion.get_fase_display()}. Hemos inyectado las restricciones.{bloqueos_str}"))
+            return redirect('hyrox:dashboard')
+    else:
+        form = UserInjuryForm()
+        
+    return render(request, 'hyrox/reportar_lesion.html', {'form': form})
+
+@login_required
+def reportar_recuperacion(request, lesion_id):
+    from .models import UserInjury
+    lesion = get_object_or_404(UserInjury, id=lesion_id, cliente=request.user.cliente_perfil)
+    
+    if request.method == 'POST':
+        form = DailyRecoveryEntryForm(request.POST)
+        if form.is_valid():
+            entry = form.save(commit=False)
+            entry.lesion = lesion
+            entry.save()
+            
+            # Evaluar si hay cambio de fase (InjuryPhaseManager)
+            from .services import InjuryPhaseManager
+            InjuryPhaseManager.evaluate_phase_transition(lesion)
+            
+            # Bio-Purge: Limpiar sesiones futuras para adaptar a la nueva recuperación/fase
+            from core.bio_context import BioContextProvider
+            BioContextProvider.force_clean_future_workouts(lesion.cliente)
+            
+            messages.success(request, "Reporte diario guardado. El Coach ha actualizado tus restricciones.")
+            return redirect('hyrox:dashboard')
+    else:
+        # Pre-poblar la fecha con hoy
+        from django.utils import timezone
+        form = DailyRecoveryEntryForm(initial={'fecha': timezone.now().date()})
+        
+    return render(request, 'hyrox/reportar_recuperacion.html', {'form': form, 'lesion': lesion})
+
+@login_required
+def marcar_lesion_recuperada(request, lesion_id):
+    from .models import UserInjury
+    lesion = get_object_or_404(UserInjury, id=lesion_id, cliente=request.user.cliente_perfil)
+    
+    if request.method == 'POST':
+        from django.utils import timezone
+        lesion.fase = UserInjury.Fase.RECUPERADO
+        lesion.activa = False
+        lesion.fecha_resolucion = timezone.now().date()
+        lesion.save()
+        
+        # Bio-Purge: Limpiar sesiones futuras para eliminar restricciones
+        from core.bio_context import BioContextProvider
+        BioContextProvider.force_clean_future_workouts(lesion.cliente)
+        
+        messages.success(request, "¡Enhorabuena! Has marcado la lesión como recuperada. Ya no hay restricciones.")
+        
+    return redirect('hyrox:dashboard')
+
+
+# Phase 12: Return to Play - Recovery Test
+@login_required
+def test_recuperacion(request, lesion_id):
+    from .models import UserInjury
+    from .forms import RecoveryTestForm
+    from core.bio_context import BioContextProvider
+
+    lesion = get_object_or_404(UserInjury, id=lesion_id, cliente=request.user.cliente_perfil)
+
+    # ── Phase 14: 48h block on failed test due to pain (dolor_movimiento > 1) ──
+    from django.utils import timezone
+    from datetime import timedelta
+    
+    ultimo_test_fallido = lesion.recovery_tests.filter(
+        es_apto=False, 
+        dolor_movimiento__gt=1
+    ).order_by('-fecha').first()
+    
+    if ultimo_test_fallido:
+        tiempo_desde_test = timezone.now() - ultimo_test_fallido.fecha
+        if tiempo_desde_test < timedelta(hours=48):
+            horas_restantes = 48 - (tiempo_desde_test.total_seconds() // 3600)
+            messages.error(
+                request, 
+                f"Acceso denegado: Detectamos dolor al movimiento en tu último test. Por seguridad biomecánica, debes esperar {int(horas_restantes)} horas antes de volver a intentarlo."
+            )
+            return redirect('hyrox:dashboard')
+
+    if request.method == 'POST':
+        form = RecoveryTestForm(request.POST)
+        if form.is_valid():
+            test_log = form.save(commit=False)
+            test_log.lesion = lesion
+            test_log.save() # self.evaluate() is called in save()
+
+            if test_log.es_apto:
+                # 1. Update injury to RECUPERADO
+                from django.utils import timezone
+                lesion.fase = UserInjury.Fase.RECUPERADO
+                lesion.activa = False
+                lesion.fecha_resolucion = timezone.now().date()
+                lesion.save()
+
+                # 2. Force bio-purge of future restricted sessions
+                BioContextProvider.force_clean_future_workouts(lesion.cliente)
+
+                # 3. Inject successful test into session for UI Feedback
+                request.session['recovery_test_passed'] = True
+                
+                messages.success(request, "🛡️ Validación superada. Tu planificador ha restaurado los ejercicios de fuerza máxima (Sentadillas/Prensa) en tu rutina.")
+                return redirect('hyrox:dashboard')
+            else:
+                if test_log.dolor_movimiento > 1:
+                    messages.error(request, "Las métricas de dolor superan el límite de seguridad (Dolor al movimiento > 1). El sistema deniega el acceso a los ejercicios de Cadena Cerrada por otras 48 horas.")
+                else:
+                    messages.error(request, "Las métricas no alcanzan el umbral de seguridad (Confianza < 8 o Inflamación > 0). El sistema mantiene las restricciones por precaución.")
+                return redirect('hyrox:dashboard')
+    else:
+        form = RecoveryTestForm()
+
+    return render(request, 'hyrox/test_recuperacion.html', {'form': form, 'lesion': lesion})
+

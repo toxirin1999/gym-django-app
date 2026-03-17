@@ -1,0 +1,3 @@
+Client: diego (ID: 1) | SQ: 52.25 | PM: 58.67
+Client: david (ID: 2) | SQ: 300.0 | PM: 202.67
+Client: antonio (ID: 4) | SQ: 0 | PM: 0

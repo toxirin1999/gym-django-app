@@ -1,0 +1,589 @@
+{% extends 'diario/base_stoic.html' %}
+{% load static %}
+
+{% block title %}Diseña tu Hábito - Las 4 Leyes{% endblock %}
+
+{% block extra_css %}
+<link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@300;400;500;600;700;800&display=swap"
+    rel="stylesheet">
+<style>
+    :root {
+        /* Paleta matching dashboard */
+        --bg-primary: #F8F5F1;
+        --bg-secondary: #FFFFFF;
+        --bg-card: #FFFFFF;
+        --text-primary: #2D3436;
+        --text-secondary: #636E72;
+        --text-muted: #95A5A6;
+        --accent-orange: #F49459;
+        --accent-green: #00B894;
+        --accent-blue: #74B9FF;
+        --border-color: #E8E4DF;
+        --shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.04);
+        --radius-sm: 8px;
+        --radius-md: 12px;
+        --radius-lg: 16px;
+    }
+
+    body {
+        font-family: 'Urbanist', sans-serif;
+        background: var(--bg-primary);
+        color: var(--text-primary);
+        min-height: 100vh;
+    }
+
+    .wizard-container {
+        max-width: 800px;
+        margin: 2rem auto;
+        padding: 0 1.5rem;
+    }
+
+    .wizard-header {
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+
+    .wizard-header h1 {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin-bottom: 0.5rem;
+    }
+
+    .wizard-header p {
+        color: var(--text-secondary);
+        font-size: 1.1rem;
+        font-weight: 400;
+    }
+
+    .progress-bar-container {
+        background: var(--border-color);
+        height: 8px;
+        border-radius: 999px;
+        margin: 2rem 0;
+        overflow: hidden;
+    }
+
+    .progress-bar-fill {
+        background: linear-gradient(90deg, var(--accent-orange) 0%, var(--accent-green) 100%);
+        height: 100%;
+        transition: width 0.3s ease;
+    }
+
+    .step-card {
+        background: var(--bg-card);
+        border-radius: var(--radius-lg);
+        padding: 2.5rem;
+        margin-bottom: 2rem;
+        box-shadow: var(--shadow-soft);
+        border: 1px solid var(--border-color);
+        display: none;
+    }
+
+    .step-card.active {
+        display: block;
+        animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .step-number {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 3rem;
+        height: 3rem;
+        background: linear-gradient(135deg, var(--accent-orange) 0%, #E67E22 100%);
+        border-radius: 50%;
+        font-size: 1.5rem;
+        margin-bottom: 1rem;
+    }
+
+    .step-title {
+        font-size: 1.75rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+        color: var(--text-primary);
+    }
+
+    .step-description {
+        color: var(--text-secondary);
+        margin-bottom: 1.5rem;
+        line-height: 1.6;
+        font-size: 1rem;
+    }
+
+    .examples-box {
+        background: #FFF9F5;
+        border-left: 3px solid var(--accent-orange);
+        padding: 1.25rem;
+        border-radius: var(--radius-md);
+        margin: 1.5rem 0;
+    }
+
+    .examples-title {
+        font-weight: 600;
+        margin-bottom: 0.75rem;
+        color: var(--accent-orange);
+        font-size: 0.95rem;
+    }
+
+    .example-item {
+        padding: 0.5rem 0;
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+    }
+
+    .form-label {
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 0.5rem;
+        display: block;
+        font-size: 0.95rem;
+    }
+
+    .form-control {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border-color);
+        color: var(--text-primary);
+        padding: 0.875rem;
+        border-radius: var(--radius-md);
+        width: 100%;
+        font-size: 0.95rem;
+        font-family: 'Urbanist', sans-serif;
+        transition: all 0.2s;
+    }
+
+    .form-control:focus {
+        outline: none;
+        border-color: var(--accent-orange);
+        box-shadow: 0 0 0 3px rgba(244, 148, 89, 0.1);
+    }
+
+    textarea.form-control {
+        min-height: 120px;
+        resize: vertical;
+    }
+
+    .wizard-buttons {
+        display: flex;
+        gap: 1rem;
+        margin-top: 2rem;
+    }
+
+    .btn {
+        padding: 0.875rem 2rem;
+        border-radius: var(--radius-md);
+        font-weight: 600;
+        border: none;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-family: 'Urbanist', sans-serif;
+        font-size: 0.95rem;
+    }
+
+    .btn-primary {
+        background: linear-gradient(135deg, var(--accent-orange) 0%, #E67E22 100%);
+        color: white;
+        flex: 1;
+    }
+
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(244, 148, 89, 0.3);
+    }
+
+    .btn-secondary {
+        background: var(--bg-secondary);
+        color: var(--text-secondary);
+        border: 1px solid var(--border-color);
+    }
+
+    .btn-secondary:hover {
+        background: var(--bg-primary);
+        color: var(--text-primary);
+    }
+
+    .completion-card {
+        text-align: center;
+        padding: 3rem 2rem;
+    }
+
+    .completion-icon {
+        font-size: 4rem;
+        margin-bottom: 1rem;
+    }
+
+    .habit-summary {
+        background: #F0FDF4;
+        border-radius: var(--radius-lg);
+        padding: 1.5rem;
+        margin: 2rem 0;
+        text-align: left;
+        border: 1px solid #D1FAE5;
+    }
+
+    .habit-summary h3 {
+        color: var(--accent-green);
+        margin-bottom: 1rem;
+        font-size: 1.25rem;
+    }
+
+    .summary-item {
+        margin: 1rem 0;
+        padding: 1rem;
+        background: white;
+        border-radius: var(--radius-md);
+        border: 1px solid #E5E7EB;
+    }
+
+    .summary-label {
+        font-weight: 600;
+        color: var(--accent-green);
+        margin-bottom: 0.5rem;
+        font-size: 0.9rem;
+    }
+
+    .mb-3 {
+        margin-bottom: 1rem;
+    }
+
+    .mb-3 strong {
+        color: var(--text-primary);
+        font-weight: 600;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="wizard-container">
+    <div class="wizard-header">
+        <h1>🎯 Diseña tu Hábito</h1>
+        <p>Usa las 4 Leyes de Atomic Habits para hacer tu hábito inevitable</p>
+    </div>
+
+    <div class="progress-bar-container">
+        <div class="progress-bar-fill" id="progressBar" style="width: 0%"></div>
+    </div>
+
+    <form id="wizardForm" method="post">
+        {% csrf_token %}
+
+        <!-- Paso 0: Información Básica -->
+        <div class="step-card active" data-step="0">
+            <div class="step-number">📋</div>
+            <h2 class="step-title">Información del Hábito</h2>
+            <p class="step-description">
+                Primero, cuéntanos sobre el hábito que quieres {{ habito.get_tipo_habito_display|lower }}.
+            </p>
+
+            <div class="mb-3">
+                <strong>Hábito:</strong> {{ habito.nombre }}
+            </div>
+            <div class="mb-3">
+                <strong>Tipo:</strong> {{ habito.get_tipo_habito_display }}
+            </div>
+            <div class="mb-3">
+                <strong>Objetivo:</strong> {{ habito.objetivo_dias }} días
+            </div>
+
+            <div class="examples-box">
+                <div class="examples-title">💡 ¿Por qué las 4 Leyes?</div>
+                <p>Las 4 Leyes de Atomic Habits son un framework científico para diseñar hábitos que se mantengan. Cada
+                    ley aborda un aspecto clave del comportamiento humano.</p>
+            </div>
+        </div>
+
+        <!-- Paso 1: Ley 1 -->
+        <div class="step-card" data-step="1">
+            <div class="step-number">1️⃣</div>
+            <h2 class="step-title">
+                {% if habito.tipo_habito == 'positivo' %}
+                Hacerlo Obvio
+                {% else %}
+                Hacerlo Invisible
+                {% endif %}
+            </h2>
+            <p class="step-description">
+                {% if habito.tipo_habito == 'positivo' %}
+                Un hábito que no ves, no existe. Diseña tu entorno para que la señal sea imposible de ignorar.
+                {% else %}
+                Fuera de vista, fuera de mente. Elimina las señales que disparan este hábito.
+                {% endif %}
+            </p>
+
+            <div class="examples-box">
+                <div class="examples-title">💡 Ejemplos:</div>
+                {% if habito.tipo_habito == 'positivo' %}
+                <div class="example-item">🏃 Ejercicio: Deja tu ropa deportiva lista la noche anterior</div>
+                <div class="example-item">📚 Leer: Coloca un libro en tu almohada cada mañana</div>
+                <div class="example-item">💧 Beber agua: Ten una botella siempre visible en tu escritorio</div>
+                {% else %}
+                <div class="example-item">🚬 Fumar: Esconde los cigarrillos en un lugar difícil de alcanzar</div>
+                <div class="example-item">📱 Redes sociales: Desinstala las apps de tu teléfono</div>
+                <div class="example-item">🍪 Comer mal: No compres snacks poco saludables</div>
+                {% endif %}
+            </div>
+
+            <label class="form-label">¿Cómo lo harás?</label>
+            <textarea name="ley_1_obvio" class="form-control"
+                placeholder="Describe tu estrategia...">{{ habito.ley_1_obvio }}</textarea>
+        </div>
+
+        <!-- Paso 2: Ley 2 -->
+        <div class="step-card" data-step="2">
+            <div class="step-number">2️⃣</div>
+            <h2 class="step-title">
+                {% if habito.tipo_habito == 'positivo' %}
+                Hacerlo Atractivo
+                {% else %}
+                Hacerlo No Atractivo
+                {% endif %}
+            </h2>
+            <p class="step-description">
+                {% if habito.tipo_habito == 'positivo' %}
+                Asocia el hábito con algo que ya disfrutas. Usa el "temptation bundling" a tu favor.
+                {% else %}
+                Resalta las consecuencias negativas. Haz que el hábito pierda su atractivo.
+                {% endif %}
+            </p>
+
+            <div class="examples-box">
+                <div class="examples-title">💡 Ejemplos:</div>
+                {% if habito.tipo_habito == 'positivo' %}
+                <div class="example-item">🏃 Ejercicio: Escucha tu podcast favorito solo mientras corres</div>
+                <div class="example-item">📚 Leer: Lee en tu café favorito con un buen café</div>
+                <div class="example-item">🥗 Comer sano: Cocina con tu música favorita</div>
+                {% else %}
+                <div class="example-item">🚬 Fumar: Visualiza tus pulmones negros cada vez que sientes el impulso</div>
+                <div class="example-item">📱 Procrastinar: Calcula cuánto dinero pierdes por hora perdida</div>
+                <div class="example-item">🍔 Comida basura: Mira documentales sobre procesamiento de alimentos</div>
+                {% endif %}
+            </div>
+
+            <label class="form-label">¿Cómo lo harás?</label>
+            <textarea name="ley_2_atractivo" class="form-control"
+                placeholder="Describe tu estrategia...">{{ habito.ley_2_atractivo }}</textarea>
+        </div>
+
+        <!-- Paso 3: Ley 3 -->
+        <div class="step-card" data-step="3">
+            <div class="step-number">3️⃣</div>
+            <h2 class="step-title">
+                {% if habito.tipo_habito == 'positivo' %}
+                Hacerlo Fácil
+                {% else %}
+                Hacerlo Difícil
+                {% endif %}
+            </h2>
+            <p class="step-description">
+                {% if habito.tipo_habito == 'positivo' %}
+                Reduce la fricción. Aplica la regla de los 2 minutos: empieza con la versión más simple.
+                {% else %}
+                Aumenta la fricción. Añade pasos extra entre tú y el hábito negativo.
+                {% endif %}
+            </p>
+
+            <div class="examples-box">
+                <div class="examples-title">💡 Ejemplos:</div>
+                {% if habito.tipo_habito == 'positivo' %}
+                <div class="example-item">🏃 Ejercicio: "Solo me pongo las zapatillas" (regla 2 min)</div>
+                <div class="example-item">📚 Leer: "Solo leo una página"</div>
+                <div class="example-item">🧘 Meditar: "Solo respiro 3 veces profundamente"</div>
+                {% else %}
+                <div class="example-item">🚬 Fumar: Guarda los cigarrillos en el sótano, no en el bolsillo</div>
+                <div class="example-item">📱 Redes sociales: Usa apps que bloqueen el acceso durante horas de trabajo
+                </div>
+                <div class="example-item">🎮 Videojuegos: Desenchufa la consola después de cada sesión</div>
+                {% endif %}
+            </div>
+
+            <label class="form-label">¿Cómo lo harás?</label>
+            <textarea name="ley_3_facil" class="form-control"
+                placeholder="Describe tu estrategia...">{{ habito.ley_3_facil }}</textarea>
+        </div>
+
+        <!-- Paso 4: Ley 4 -->
+        <div class="step-card" data-step="4">
+            <div class="step-number">4️⃣</div>
+            <h2 class="step-title">
+                {% if habito.tipo_habito == 'positivo' %}
+                Hacerlo Satisfactorio
+                {% else %}
+                Hacerlo Insatisfactorio
+                {% endif %}
+            </h2>
+            <p class="step-description">
+                {% if habito.tipo_habito == 'positivo' %}
+                Recompénsate inmediatamente. Lo que se recompensa, se repite.
+                {% else %}
+                Crea consecuencias inmediatas. El dolor debe ser instantáneo.
+                {% endif %}
+            </p>
+
+            <div class="examples-box">
+                <div class="examples-title">💡 Ejemplos:</div>
+                {% if habito.tipo_habito == 'positivo' %}
+                <div class="example-item">🏃 Ejercicio: Marca un ✓ en un calendario visible</div>
+                <div class="example-item">📚 Leer: Mueve una canica a un frasco por cada página</div>
+                <div class="example-item">💰 Ahorrar: Transfiere $1 a tu cuenta de ahorros cada día que lo logres</div>
+                {% else %}
+                <div class="example-item">🚬 Fumar: Dona $10 a una causa que odias cada vez que recaigas</div>
+                <div class="example-item">📱 Procrastinar: Haz 10 burpees cada vez que abras redes sociales</div>
+                <div class="example-item">🍔 Comida basura: Comparte públicamente cada recaída en redes</div>
+                {% endif %}
+            </div>
+
+            <label class="form-label">¿Cómo lo harás?</label>
+            <textarea name="ley_4_satisfactorio" class="form-control"
+                placeholder="Describe tu estrategia...">{{ habito.ley_4_satisfactorio }}</textarea>
+        </div>
+
+        <!-- Paso 5: Habit Loop -->
+        <div class="step-card" data-step="5">
+            <div class="step-number">🔄</div>
+            <h2 class="step-title">El Bucle del Hábito</h2>
+            <p class="step-description">
+                Todo hábito sigue un patrón: Señal → Anhelo → Respuesta → Recompensa. Identifica cada parte.
+            </p>
+
+            <div class="mb-3">
+                <label class="form-label">🎯 Señal (Cue): ¿Qué dispara este hábito?</label>
+                <input type="text" name="senal_cue" class="form-control"
+                    placeholder="Ej: 'Después de despertarme', 'Cuando veo mi teléfono'" value="{{ habito.senal_cue }}">
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">💭 Anhelo (Craving): ¿Qué deseas obtener?</label>
+                <input type="text" name="anhelo_craving" class="form-control"
+                    placeholder="Ej: 'Sentirme energizado', 'Reducir ansiedad'" value="{{ habito.anhelo_craving }}">
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">🎁 Recompensa (Reward): ¿Qué obtienes realmente?</label>
+                <input type="text" name="recompensa_reward" class="form-control"
+                    placeholder="Ej: 'Endorfinas', 'Sensación de logro'" value="{{ habito.recompensa_reward }}">
+            </div>
+        </div>
+
+        <!-- Paso 6: Identidad -->
+        <div class="step-card" data-step="6">
+            <div class="step-number">👤</div>
+            <h2 class="step-title">Tu Nueva Identidad</h2>
+            <p class="step-description">
+                Los mejores hábitos no se tratan de lo que haces, sino de quién eres. Define tu identidad objetivo.
+            </p>
+
+            <div class="examples-box">
+                <div class="examples-title">💡 Cambia tu lenguaje:</div>
+                <div class="example-item">❌ "Quiero correr" → ✅ "Soy un corredor"</div>
+                <div class="example-item">❌ "Quiero dejar de fumar" → ✅ "Soy un no fumador"</div>
+                <div class="example-item">❌ "Quiero leer más" → ✅ "Soy un lector"</div>
+            </div>
+
+            <label class="form-label">¿Qué tipo de persona quieres ser?</label>
+            <input type="text" name="identidad_objetivo" class="form-control"
+                placeholder="Ej: 'Soy una persona que cuida su salud'" value="{{ habito.identidad_objetivo }}">
+        </div>
+
+        <!-- Paso 7: Resumen -->
+        <div class="step-card" data-step="7">
+            <div class="completion-card">
+                <div class="completion-icon">🎉</div>
+                <h2 class="step-title">¡Hábito Diseñado!</h2>
+                <p class="step-description">
+                    Has completado el diseño científico de tu hábito. Ahora es inevitable que lo logres.
+                </p>
+
+                <div class="habit-summary">
+                    <h3>{{ habito.nombre }}</h3>
+                    <div class="summary-item">
+                        <div class="summary-label">Tu Identidad:</div>
+                        <div id="summary-identidad"></div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-label">Señal → Recompensa:</div>
+                        <div id="summary-loop"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Botones de navegación -->
+        <div class="wizard-buttons">
+            <button type="button" class="btn btn-secondary" id="prevBtn" onclick="changeStep(-1)"
+                style="display: none;">
+                ← Anterior
+            </button>
+            <button type="button" class="btn btn-primary" id="nextBtn" onclick="changeStep(1)">
+                Siguiente →
+            </button>
+            <button type="submit" class="btn btn-primary" id="submitBtn" style="display: none;">
+                💾 Guardar Hábito
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+    let currentStep = 0;
+    const totalSteps = 7;
+
+    function updateProgress() {
+        const progress = (currentStep / totalSteps) * 100;
+        document.getElementById('progressBar').style.width = progress + '%';
+    }
+
+    function showStep(step) {
+        const steps = document.querySelectorAll('.step-card');
+        steps.forEach((card, index) => {
+            card.classList.remove('active');
+            if (index === step) {
+                card.classList.add('active');
+            }
+        });
+
+        // Actualizar botones
+        document.getElementById('prevBtn').style.display = step === 0 ? 'none' : 'block';
+        document.getElementById('nextBtn').style.display = step === totalSteps ? 'none' : 'block';
+        document.getElementById('submitBtn').style.display = step === totalSteps ? 'block' : 'none';
+
+        // Actualizar resumen en el último paso
+        if (step === totalSteps) {
+            updateSummary();
+        }
+
+        updateProgress();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function changeStep(direction) {
+        currentStep += direction;
+        if (currentStep < 0) currentStep = 0;
+        if (currentStep > totalSteps) currentStep = totalSteps;
+        showStep(currentStep);
+    }
+
+    function updateSummary() {
+        const identidad = document.querySelector('[name="identidad_objetivo"]').value || 'No definida';
+        const senal = document.querySelector('[name="senal_cue"]').value || '?';
+        const recompensa = document.querySelector('[name="recompensa_reward"]').value || '?';
+
+        document.getElementById('summary-identidad').textContent = identidad;
+        document.getElementById('summary-loop').textContent = `${senal} → ${recompensa}`;
+    }
+
+    // Inicializar
+    showStep(0);
+</script>
+{% endblock %}

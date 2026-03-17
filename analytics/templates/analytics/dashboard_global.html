@@ -1,0 +1,2110 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Dashboard de Rendimiento - {{ cliente.nombre }}{% endblock %}
+
+{% block extra_css %}
+<!-- Google Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+<style>
+    /* ============================================
+       DASHBOARD CYBERPUNK REFINED
+       Fusión de estadísticas con estética neón
+       ============================================ */
+/* === Row 2 columnas (como captura) === */
+.stats-row-2col{
+  display:grid;
+  grid-template-columns: 1.65fr 1fr;
+  gap: 1.25rem;
+  margin: 1.25rem 0 1.5rem;
+}
+
+@media (max-width: 1100px){
+  .stats-row-2col{ grid-template-columns: 1fr; }
+}
+
+/* Panel base */
+.glass-panel{
+  background: rgba(8, 10, 18, .55);
+  border: 1px solid rgba(255,255,255,.10);
+  border-radius: 22px;
+  overflow: hidden;
+  backdrop-filter: blur(18px);
+  box-shadow: 0 16px 40px rgba(0,0,0,.35);
+  min-height: 260px;
+}
+
+.panel-head{
+  padding: 16px 18px;
+  border-bottom: 1px solid rgba(255,255,255,.06);
+}
+
+.panel-title{
+  display:flex;
+  align-items:center;
+  gap:.75rem;
+}
+
+.panel-title h3{
+  margin:0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: rgba(255,255,255,.92);
+}
+
+.panel-ico{
+  font-size: 1.05rem;
+  opacity: .95;
+}
+
+.panel-ico.cyan{ color: #00d4ff; text-shadow: 0 0 12px rgba(0,212,255,.35); }
+
+.panel-body{
+  padding: 18px;
+}
+
+/* Chart */
+.chart-wrap{
+  height: 200px;
+  display:flex;
+  align-items:center;
+}
+
+/* Fases */
+.phase-list{
+  display:flex;
+  flex-direction: column;
+  gap: 18px;
+  padding-top: 4px;
+}
+
+.phase-item{
+  display:grid;
+  grid-template-columns: 120px 1fr 48px;
+  align-items:center;
+  gap: 12px;
+}
+
+.phase-left{
+  display:flex;
+  align-items:center;
+  gap: 10px;
+}
+
+.phase-dot{
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  display:inline-block;
+}
+
+.phase-name{
+  font-size: .92rem;
+  color: rgba(255,255,255,.85);
+  font-weight: 600;
+}
+
+.phase-bar{
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.08);
+  overflow:hidden;
+}
+
+.phase-bar-fill{
+  height: 100%;
+  border-radius: 999px;
+  box-shadow: 0 0 14px rgba(0,0,0,.25);
+}
+
+.phase-pct{
+  text-align:right;
+  font-size: .9rem;
+  color: rgba(255,255,255,.55);
+  font-weight: 600;
+}
+
+/* Colores */
+.phase-dot.cyan, .phase-bar-fill.cyan{ background:#00d4ff; }
+.phase-dot.pink, .phase-bar-fill.pink{ background:#ff2d92; }
+.phase-dot.yellow, .phase-bar-fill.yellow{ background:#ffcc00; }
+.phase-dot.green, .phase-bar-fill.green{ background:#00ff88; }
+
+    :root {
+        /* Colores de Texto */
+        --text-bright: #FFFFFF;
+        --text-cloud: #E4E4E7;
+        --text-fog: #A1A1AA;
+        --text-muted: #71717A;
+
+        /* Colores de Fase/Estado */
+        --color-cyan: #00D4FF;
+        --color-cyan-glow: rgba(0, 212, 255, 0.5);
+        --color-pink: #FF2D92;
+        --color-pink-glow: rgba(255, 45, 146, 0.5);
+        --color-yellow: #FFB800;
+        --color-yellow-glow: rgba(255, 184, 0, 0.5);
+        --color-green: #00FF88;
+        --color-green-glow: rgba(0, 255, 136, 0.5);
+        --color-purple: #A855F7;
+        --color-purple-glow: rgba(168, 85, 247, 0.5);
+
+        /* Estados */
+        --success-color: #00FF88;
+        --warning-color: #FFB800;
+        --danger-color: #FF4757;
+
+        /* Tipografía */
+        --font-display: 'Space Grotesk', sans-serif;
+        --font-body: 'Inter', sans-serif;
+        --font-mono: 'JetBrains Mono', monospace;
+
+        /* Efectos Glassmorphism */
+        --glass-bg: rgba(10, 15, 25, 0.4);
+        --glass-bg-strong: rgba(10, 15, 25, 0.6);
+        --glass-border: rgba(255, 255, 255, 0.08);
+        --blur-amount: 20px;
+        --border-radius-lg: 24px;
+        --border-radius-md: 16px;
+        --border-radius-sm: 12px;
+    }
+
+    * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+    }
+
+    /* FONDO ESPACIAL */
+    body {
+        min-height: 100vh;
+        font-family: var(--font-body);
+        color: var(--text-cloud);
+        background:
+            radial-gradient(ellipse at 10% 10%, rgba(0, 212, 255, 0.15) 0%, transparent 40%),
+            radial-gradient(ellipse at 90% 20%, rgba(139, 92, 246, 0.12) 0%, transparent 40%),
+            radial-gradient(ellipse at 80% 80%, rgba(255, 45, 146, 0.15) 0%, transparent 40%),
+            radial-gradient(ellipse at 20% 90%, rgba(0, 255, 136, 0.08) 0%, transparent 40%),
+            linear-gradient(160deg, #0a0a18 0%, #0d1020 25%, #0f0a1a 50%, #120818 75%, #0a0a18 100%) !important;
+        background-attachment: fixed !important;
+    }
+
+    .container {
+        width: 100%;
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 1.5rem;
+    }
+
+    /* === HEADER HERO === */
+    .page-header {
+        background: var(--glass-bg);
+        backdrop-filter: blur(var(--blur-amount));
+        border: 1px solid var(--glass-border);
+        border-radius: var(--border-radius-lg);
+        padding: 2rem;
+        margin-bottom: 2rem;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .page-header::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: linear-gradient(90deg, var(--color-cyan), var(--color-pink), var(--color-purple));
+    }
+
+    .header-content {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 1.5rem;
+    }
+
+    .header-title h1 {
+        font-family: var(--font-display);
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--text-bright);
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .header-title h1 i {
+        color: var(--color-cyan);
+        text-shadow: 0 0 20px var(--color-cyan-glow);
+    }
+
+    .header-title p {
+        color: var(--text-fog);
+        font-size: 1rem;
+    }
+
+    .header-stats {
+        display: flex;
+        gap: 2rem;
+        flex-wrap: wrap;
+    }
+
+    .header-stat {
+        text-align: center;
+        padding: 1rem 1.5rem;
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: var(--border-radius-sm);
+        border: 1px solid var(--glass-border);
+    }
+
+    .header-stat-value {
+        font-family: var(--font-mono);
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: var(--color-cyan);
+        text-shadow: 0 0 15px var(--color-cyan-glow);
+    }
+
+    .header-stat-label {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-top: 0.25rem;
+    }
+
+    .nav-btn {
+        width: 48px;
+        height: 48px;
+        border-radius: var(--border-radius-sm);
+        background: var(--glass-bg);
+        backdrop-filter: blur(var(--blur-amount));
+        border: 1px solid var(--glass-border);
+        color: var(--text-fog);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        font-size: 1.2rem;
+    }
+
+    .nav-btn:hover {
+        background: rgba(0, 212, 255, 0.15);
+        border-color: var(--color-cyan);
+        color: var(--color-cyan);
+        box-shadow: 0 0 25px var(--color-cyan-glow);
+    }
+
+    /* === HERO STATS GRID === */
+    .hero-stats {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+
+    .hero-stat {
+        background: var(--glass-bg);
+        backdrop-filter: blur(var(--blur-amount));
+        border: 1px solid var(--glass-border);
+        border-radius: var(--border-radius-lg);
+        padding: 1.5rem;
+        text-align: center;
+        position: relative;
+        overflow: hidden;
+        transition: all 0.3s ease;
+    }
+
+    .hero-stat:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    }
+
+    .hero-stat::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        border-radius: 3px 3px 0 0;
+    }
+
+    .hero-stat.cyan::before { background: var(--color-cyan); box-shadow: 0 0 15px var(--color-cyan-glow); }
+    .hero-stat.pink::before { background: var(--color-pink); box-shadow: 0 0 15px var(--color-pink-glow); }
+    .hero-stat.yellow::before { background: var(--color-yellow); box-shadow: 0 0 15px var(--color-yellow-glow); }
+    .hero-stat.green::before { background: var(--color-green); box-shadow: 0 0 15px var(--color-green-glow); }
+    .hero-stat.purple::before { background: var(--color-purple); box-shadow: 0 0 15px var(--color-purple-glow); }
+
+    .hero-stat-icon {
+        font-size: 1.5rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .hero-stat.cyan .hero-stat-icon { color: var(--color-cyan); text-shadow: 0 0 15px var(--color-cyan-glow); }
+    .hero-stat.pink .hero-stat-icon { color: var(--color-pink); text-shadow: 0 0 15px var(--color-pink-glow); }
+    .hero-stat.yellow .hero-stat-icon { color: var(--color-yellow); text-shadow: 0 0 15px var(--color-yellow-glow); }
+    .hero-stat.green .hero-stat-icon { color: var(--color-green); text-shadow: 0 0 15px var(--color-green-glow); }
+    .hero-stat.purple .hero-stat-icon { color: var(--color-purple); text-shadow: 0 0 15px var(--color-purple-glow); }
+
+    .hero-stat-value {
+        font-family: var(--font-mono);
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--text-bright);
+        line-height: 1;
+        margin-bottom: 0.5rem;
+    }
+
+    .hero-stat-label {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .hero-stat-change {
+        font-size: 0.7rem;
+        margin-top: 0.5rem;
+        padding: 0.25rem 0.5rem;
+        border-radius: 20px;
+        display: inline-block;
+    }
+
+    .hero-stat-change.positive {
+        background: rgba(0, 255, 136, 0.2);
+        color: var(--color-green);
+    }
+
+    .hero-stat-change.neutral {
+        background: rgba(255, 255, 255, 0.1);
+        color: var(--text-fog);
+    }
+
+    /* === CARDS === */
+    .card {
+        background: var(--glass-bg);
+        backdrop-filter: blur(var(--blur-amount));
+        border: 1px solid var(--glass-border);
+        border-radius: var(--border-radius-lg);
+        overflow: visible;
+        margin-bottom: 1.5rem;
+        position: relative;
+    }
+
+    .card-body {
+        padding: 1.5rem;
+        overflow: hidden;
+        border-radius: 0 0 var(--border-radius-lg) var(--border-radius-lg);
+    }
+
+    .card-header {
+        padding: 1.25rem 1.5rem;
+        border-bottom: 1px solid var(--glass-border);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .card-title {
+        font-family: var(--font-display);
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--text-bright);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .card-title i {
+        color: var(--color-cyan);
+        text-shadow: 0 0 10px var(--color-cyan-glow);
+    }
+
+    /* card-body ya definido arriba */
+
+    /* === GRID LAYOUTS === */
+    .grid-2 {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 1.5rem;
+    }
+
+    .grid-equal {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.5rem;
+    }
+
+    /* === ACWR SECTION === */
+    .acwr-container {
+        display: grid;
+        grid-template-columns: 1fr 1.5fr;
+        gap: 2rem;
+    }
+
+    .acwr-left {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+    }
+
+    .acwr-value-display {
+        margin-bottom: 1.5rem;
+    }
+
+    .acwr-big-value {
+        font-family: var(--font-mono);
+        font-size: 4rem;
+        font-weight: 900;
+        line-height: 1;
+        background: linear-gradient(135deg, var(--color-cyan), var(--color-green));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        text-shadow: 0 0 40px var(--color-cyan-glow);
+    }
+
+    .acwr-big-value.optima {
+        background: linear-gradient(135deg, var(--color-green), var(--color-cyan));
+        -webkit-background-clip: text;
+        background-clip: text;
+    }
+
+    .acwr-big-value.cuidado {
+        background: linear-gradient(135deg, var(--color-yellow), #FF8C00);
+        -webkit-background-clip: text;
+        background-clip: text;
+    }
+
+    .acwr-big-value.riesgo_alto {
+        background: linear-gradient(135deg, var(--danger-color), var(--color-pink));
+        -webkit-background-clip: text;
+        background-clip: text;
+    }
+
+    .acwr-big-value.baja_carga {
+        background: linear-gradient(135deg, var(--color-purple), var(--color-cyan));
+        -webkit-background-clip: text;
+        background-clip: text;
+    }
+
+    .acwr-label {
+        font-size: 0.85rem;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        margin-top: 0.5rem;
+    }
+
+    .acwr-status-badge {
+        padding: 0.75rem 1.5rem;
+        border-radius: var(--border-radius-sm);
+        font-weight: 600;
+        font-size: 0.9rem;
+        margin-bottom: 1rem;
+    }
+
+    .acwr-status-badge.optima {
+        background: rgba(0, 255, 136, 0.15);
+        color: var(--color-green);
+        border: 1px solid rgba(0, 255, 136, 0.3);
+        box-shadow: 0 0 15px var(--color-green-glow);
+    }
+
+    .acwr-status-badge.cuidado {
+        background: rgba(255, 184, 0, 0.15);
+        color: var(--color-yellow);
+        border: 1px solid rgba(255, 184, 0, 0.3);
+        box-shadow: 0 0 15px var(--color-yellow-glow);
+    }
+
+    .acwr-status-badge.riesgo_alto {
+        background: rgba(255, 71, 87, 0.15);
+        color: var(--danger-color);
+        border: 1px solid rgba(255, 71, 87, 0.3);
+        box-shadow: 0 0 15px rgba(255, 71, 87, 0.5);
+    }
+
+    .acwr-status-badge.baja_carga {
+        background: rgba(168, 85, 247, 0.15);
+        color: var(--color-purple);
+        border: 1px solid rgba(168, 85, 247, 0.3);
+        box-shadow: 0 0 15px var(--color-purple-glow);
+    }
+
+    .acwr-recommendation {
+        font-size: 0.9rem;
+        color: var(--text-fog);
+        line-height: 1.6;
+        max-width: 280px;
+    }
+
+    .acwr-right {
+        position: relative;
+    }
+
+    .chart-container {
+        position: relative;
+        height: 280px;
+    }
+
+    /* === GAUGE === */
+    .gauge-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        margin: 1.5rem 0;
+    }
+
+    .gauge-svg {
+        width: 180px;
+        height: auto;
+        filter: drop-shadow(0 4px 15px rgba(0, 212, 255, 0.3));
+    }
+
+    .gauge-labels {
+        display: flex;
+        justify-content: space-between;
+        width: 180px;
+        font-size: 0.65rem;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-top: 0.5rem;
+    }
+
+    /* === ZONE LEGEND === */
+    .zone-legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid var(--glass-border);
+    }
+
+    .zone-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.75rem;
+        color: var(--text-fog);
+    }
+
+    .zone-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+    }
+
+    .zone-dot.danger { background: var(--danger-color); box-shadow: 0 0 8px rgba(255, 71, 87, 0.5); }
+    .zone-dot.warning { background: var(--color-yellow); box-shadow: 0 0 8px var(--color-yellow-glow); }
+    .zone-dot.success { background: var(--color-green); box-shadow: 0 0 8px var(--color-green-glow); }
+    .zone-dot.info { background: var(--color-purple); box-shadow: 0 0 8px var(--color-purple-glow); }
+
+    /* === BALANCE TABLE === */
+    .balance-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .balance-table thead {
+        background: rgba(0, 0, 0, 0.3);
+    }
+
+    .balance-table th {
+        padding: 1rem 0.75rem;
+        text-align: left;
+        font-weight: 600;
+        color: var(--text-cloud);
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        border-bottom: 1px solid var(--color-cyan);
+    }
+
+    .balance-table td {
+        padding: 1rem 0.75rem;
+        border-bottom: 1px solid var(--glass-border);
+        color: var(--text-cloud);
+    }
+
+    .balance-table tbody tr {
+        transition: background 0.2s ease;
+    }
+
+    .balance-table tbody tr:hover {
+        background: rgba(0, 212, 255, 0.05);
+    }
+
+    .ratio-badge {
+        display: inline-block;
+        padding: 0.4rem 0.75rem;
+        border-radius: 20px;
+        font-family: var(--font-mono);
+        font-size: 0.85rem;
+        font-weight: 600;
+        background: rgba(0, 212, 255, 0.2);
+        color: var(--color-cyan);
+        box-shadow: 0 0 10px var(--color-cyan-glow);
+    }
+
+    .details {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        margin-top: 0.25rem;
+    }
+
+    /* === MUSCLE GRID === */
+    .muscle-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0.75rem;
+    }
+
+    .muscle-item {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 1rem;
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: var(--border-radius-sm);
+        border: 1px solid var(--glass-border);
+        transition: all 0.3s ease;
+    }
+
+    .muscle-item:hover {
+        background: rgba(0, 212, 255, 0.05);
+        border-color: rgba(0, 212, 255, 0.2);
+    }
+
+    .muscle-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1rem;
+    }
+
+    .muscle-icon.pecho { background: rgba(0, 212, 255, 0.2); color: var(--color-cyan); }
+    .muscle-icon.espalda { background: rgba(168, 85, 247, 0.2); color: var(--color-purple); }
+    .muscle-icon.piernas { background: rgba(255, 45, 146, 0.2); color: var(--color-pink); }
+    .muscle-icon.hombros { background: rgba(255, 184, 0, 0.2); color: var(--color-yellow); }
+    .muscle-icon.brazos { background: rgba(0, 255, 136, 0.2); color: var(--color-green); }
+    .muscle-icon.core { background: rgba(255, 255, 255, 0.1); color: var(--text-fog); }
+
+    .muscle-info {
+        flex: 1;
+    }
+
+    .muscle-name {
+        font-size: 0.85rem;
+        color: var(--text-cloud);
+        font-weight: 500;
+    }
+
+    .muscle-value {
+        font-family: var(--font-mono);
+        font-size: 0.8rem;
+        color: var(--text-muted);
+    }
+
+    /* === PROGRESS TABLE === */
+    .progress-table-container {
+        overflow-x: auto;
+        border-radius: var(--border-radius-md);
+    }
+
+    .progress-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.9rem;
+    }
+
+    .progress-table thead {
+        background: rgba(0, 0, 0, 0.3);
+    }
+
+    .progress-table th {
+        padding: 1rem 0.75rem;
+        text-align: center;
+        font-weight: 600;
+        color: var(--text-cloud);
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        border-bottom: 1px solid var(--color-cyan);
+    }
+
+    .progress-table th:first-child {
+        text-align: left;
+    }
+
+    .progress-table td {
+        padding: 1rem 0.75rem;
+        border-bottom: 1px solid var(--glass-border);
+        text-align: center;
+        color: var(--text-cloud);
+    }
+
+    .progress-table td:first-child {
+        text-align: left;
+        font-weight: 500;
+    }
+
+    .progress-table tbody tr {
+        transition: background 0.2s ease;
+    }
+
+    .progress-table tbody tr:hover {
+        background: rgba(0, 212, 255, 0.05);
+    }
+
+    .progress-positive {
+        color: var(--color-green) !important;
+        font-weight: 600;
+    }
+
+    .progress-negative {
+        color: var(--danger-color) !important;
+        font-weight: 600;
+    }
+
+    .progress-neutral {
+        color: var(--text-muted);
+    }
+
+    .progress-indicator {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        margin-right: 0.5rem;
+    }
+
+    .progress-indicator.positive {
+        background: var(--color-green);
+        box-shadow: 0 0 10px var(--color-green-glow);
+    }
+
+    .progress-indicator.negative {
+        background: var(--danger-color);
+        box-shadow: 0 0 10px rgba(255, 71, 87, 0.5);
+    }
+
+    .exercise-date {
+        font-size: 0.7rem;
+        color: var(--text-muted);
+        display: block;
+        margin-top: 0.25rem;
+    }
+
+    /* === HEATMAP === */
+    .heatmap-container {
+        overflow-x: auto;
+        padding: 0.5rem 0;
+    }
+
+    .heatmap {
+        display: flex;
+        gap: 3px;
+    }
+
+    .heatmap-week {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+    }
+
+    .heatmap-day {
+        width: 12px;
+        height: 12px;
+        min-width: 12px;
+        min-height: 12px;
+        border-radius: 2px;
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.03);
+    }
+
+    .heatmap-day.level-1 { background: rgba(0, 212, 255, 0.2); }
+    .heatmap-day.level-2 { background: rgba(0, 212, 255, 0.4); }
+    .heatmap-day.level-3 { background: rgba(0, 212, 255, 0.6); }
+    .heatmap-day.level-4 { background: var(--color-cyan); box-shadow: 0 0 5px var(--color-cyan-glow); }
+
+    .heatmap-months {
+        display: flex;
+        gap: 3px;
+        margin-bottom: 0.5rem;
+    }
+
+    .heatmap-month {
+        font-size: 0.6rem;
+        color: var(--text-muted);
+        width: 48px;
+    }
+
+    .heatmap-legend {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-top: 1rem;
+        justify-content: flex-end;
+    }
+
+    .heatmap-legend span {
+        font-size: 0.65rem;
+        color: var(--text-muted);
+    }
+
+    .heatmap-legend-item {
+        width: 12px;
+        height: 12px;
+        border-radius: 2px;
+    }
+
+    /* === PR LIST === */
+    .pr-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .pr-item {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 1rem;
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: var(--border-radius-sm);
+        border: 1px solid var(--glass-border);
+        transition: all 0.3s ease;
+    }
+
+    .pr-item:hover {
+        background: rgba(0, 212, 255, 0.05);
+    }
+
+    .pr-rank {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: var(--font-mono);
+        font-size: 0.9rem;
+        font-weight: 700;
+    }
+
+    .pr-rank.gold { background: linear-gradient(145deg, #FFB800, #FF8C00); color: #0a0a18; }
+    .pr-rank.silver { background: linear-gradient(145deg, #C0C0C0, #A0A0A0); color: #0a0a18; }
+    .pr-rank.bronze { background: linear-gradient(145deg, #CD7F32, #8B4513); color: #0a0a18; }
+
+    .pr-info {
+        flex: 1;
+    }
+
+    .pr-exercise {
+        font-size: 0.9rem;
+        color: var(--text-cloud);
+        font-weight: 500;
+    }
+
+    .pr-date {
+        font-size: 0.7rem;
+        color: var(--text-muted);
+    }
+
+    .pr-value {
+        font-family: var(--font-mono);
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: var(--color-cyan);
+        text-shadow: 0 0 10px var(--color-cyan-glow);
+    }
+
+    /* === TOOLTIPS === */
+    .info-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: rgba(0, 212, 255, 0.2);
+        color: var(--color-cyan);
+        font-size: 0.7rem;
+        font-weight: bold;
+        cursor: help;
+        margin-left: 0.5rem;
+        transition: all 0.3s ease;
+        position: relative;
+        z-index: 10;
+    }
+
+    .info-icon:hover {
+        background: rgba(0, 212, 255, 0.4);
+        box-shadow: 0 0 15px var(--color-cyan-glow);
+    }
+
+    .tooltip {
+        position: absolute;
+        bottom: 150%;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(10, 15, 30, 0.95);
+        backdrop-filter: blur(var(--blur-amount));
+        color: var(--text-cloud);
+        padding: 0.75rem 1rem;
+        border-radius: var(--border-radius-sm);
+        font-size: 0.8rem;
+        white-space: nowrap;
+        pointer-events: none;
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.3s ease;
+        z-index: 99999;
+        border: 1px solid var(--color-cyan);
+        box-shadow: 0 4px 30px rgba(0, 212, 255, 0.4), 0 0 20px rgba(0, 0, 0, 0.8);
+    }
+
+    .tooltip::after {
+        content: '';
+        position: absolute;
+        top: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        border: 6px solid transparent;
+        border-top-color: var(--color-cyan);
+    }
+
+    .info-icon:hover .tooltip {
+        opacity: 1;
+        visibility: visible;
+    }
+
+    /* === EXPLANATION PANEL === */
+    .explanation-panel {
+        background: rgba(0, 212, 255, 0.05);
+        border-left: 3px solid var(--color-cyan);
+        padding: 1rem 1.25rem;
+        border-radius: 0 var(--border-radius-sm) var(--border-radius-sm) 0;
+        margin-top: 1rem;
+        font-size: 0.85rem;
+        color: var(--text-fog);
+        line-height: 1.6;
+    }
+
+    .explanation-title {
+        font-weight: 600;
+        color: var(--color-cyan);
+        margin-bottom: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .metric-range {
+        background: rgba(0, 0, 0, 0.2);
+        padding: 0.75rem;
+        border-radius: var(--border-radius-sm);
+        margin-top: 0.75rem;
+        font-family: var(--font-mono);
+        font-size: 0.8rem;
+    }
+
+    .metric-range-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 0.35rem;
+    }
+
+    .metric-range-item:last-child {
+        margin-bottom: 0;
+    }
+
+    .range-color {
+        display: inline-block;
+        width: 12px;
+        height: 12px;
+        border-radius: 3px;
+    }
+
+    /* === RESPONSIVE === */
+    @media (max-width: 1200px) {
+        .hero-stats {
+            grid-template-columns: repeat(3, 1fr);
+        }
+
+        .grid-2,
+        .grid-equal {
+            grid-template-columns: 1fr;
+        }
+
+        .acwr-container {
+            grid-template-columns: 1fr;
+        }
+
+        .muscle-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+
+    @media (max-width: 768px) {
+        .container {
+            padding: 1rem;
+        }
+
+        .hero-stats {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .header-content {
+            flex-direction: column;
+            text-align: center;
+        }
+
+        .header-stats {
+            justify-content: center;
+        }
+
+        .muscle-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .progress-table {
+            font-size: 0.8rem;
+        }
+
+        .progress-table th,
+        .progress-table td {
+            padding: 0.75rem 0.5rem;
+        }
+    }
+
+    /* === ANIMATIONS === */
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .card {
+        animation: fadeInUp 0.5s ease-out;
+    }
+
+    .hero-stat {
+        animation: fadeInUp 0.5s ease-out;
+    }
+
+    .hero-stat:nth-child(1) { animation-delay: 0.05s; }
+    .hero-stat:nth-child(2) { animation-delay: 0.1s; }
+    .hero-stat:nth-child(3) { animation-delay: 0.15s; }
+    .hero-stat:nth-child(4) { animation-delay: 0.2s; }
+    .hero-stat:nth-child(5) { animation-delay: 0.25s; }/* ===== Layout tipo capturas ===== */
+.topbar{
+  display:grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items:center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.topbar-title{
+  display:flex;
+  align-items:center;
+  gap:.6rem;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.4rem;
+  color: var(--text-bright);
+}
+
+.topbar-title i{
+  color: var(--color-cyan);
+  text-shadow: 0 0 18px var(--color-cyan-glow);
+}
+
+.icon-btn{
+  width:42px;height:42px;
+  display:flex;align-items:center;justify-content:center;
+  border-radius: 12px;
+  background: rgba(0,0,0,.25);
+  border: 1px solid var(--glass-border);
+  color: var(--text-fog);
+  transition: .2s ease;
+  justify-self:end;
+  text-decoration:none;
+}
+.icon-btn:hover{
+  border-color: rgba(255,255,255,.16);
+  box-shadow: 0 0 18px rgba(0,0,0,.35);
+  color: var(--text-bright);
+}
+
+/* Segmented control */
+.segmented{
+  background: rgba(0,0,0,.25);
+  border: 1px solid var(--glass-border);
+  border-radius: 14px;
+  padding: 4px;
+  display:flex;
+  gap:4px;
+  min-width: 320px;
+  justify-content: center;
+}
+.segmented-btn{
+  flex:1;
+  border:0;
+  background: transparent;
+  color: var(--text-muted);
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-weight: 600;
+  cursor:pointer;
+  transition: .2s ease;
+}
+.segmented-btn.active{
+  color: var(--text-bright);
+  background: linear-gradient(90deg, rgba(255,45,146,.35), rgba(0,212,255,.25));
+  box-shadow: 0 0 20px rgba(0,212,255,.10);
+}
+
+/* KPI cards */
+.kpi-grid{
+  display:grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.2rem;
+  margin-bottom: 1.5rem;
+}
+
+.kpi-card{
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--blur-amount));
+  border: 1px solid var(--glass-border);
+  border-radius: 22px;
+  padding: 1.3rem 1.4rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.kpi-card::before{
+  content:'';
+  position:absolute;
+  left:0; right:0; top:0;
+  height: 3px;
+}
+
+.kpi-cyan::before{ background: var(--color-cyan); box-shadow: 0 0 14px var(--color-cyan-glow); }
+.kpi-pink::before{ background: var(--color-pink); box-shadow: 0 0 14px var(--color-pink-glow); }
+.kpi-yellow::before{ background: var(--color-yellow); box-shadow: 0 0 14px var(--color-yellow-glow); }
+.kpi-green::before{ background: var(--color-green); box-shadow: 0 0 14px var(--color-green-glow); }
+
+.kpi-icon{
+  font-size: 1.15rem;
+  margin-bottom: .75rem;
+  opacity: .95;
+}
+.kpi-cyan .kpi-icon{ color: var(--color-cyan); }
+.kpi-pink .kpi-icon{ color: var(--color-pink); }
+.kpi-yellow .kpi-icon{ color: var(--color-yellow); }
+.kpi-green .kpi-icon{ color: var(--color-green); }
+
+.kpi-value{
+  font-family: var(--font-mono);
+  font-size: 2.2rem;
+  font-weight: 800;
+  color: var(--text-bright);
+  line-height: 1;
+}
+
+.kpi-label{
+  margin-top: .5rem;
+  font-size: .72rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+
+.kpi-badge{
+  display:inline-flex;
+  align-items:center;
+  gap:.4rem;
+  margin-top: .85rem;
+  padding: .28rem .7rem;
+  border-radius: 999px;
+  font-size: .72rem;
+  font-weight: 700;
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(0,0,0,.18);
+  color: var(--text-fog);
+}
+.kpi-badge-positive{
+  border-color: rgba(0,255,136,.18);
+  background: rgba(0,255,136,.10);
+  color: var(--color-green);
+}
+.kpi-badge-negative{
+  border-color: rgba(255,71,87,.18);
+  background: rgba(255,71,87,.10);
+  color: var(--danger-color);
+}
+
+@media (max-width: 1200px){
+  .kpi-grid{ grid-template-columns: repeat(2, 1fr); }
+  .topbar{ grid-template-columns: 1fr; }
+  .topbar-right{ justify-self: start; }
+  .segmented{ min-width: 100%; }
+}
+
+
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- HEADER -->
+
+
+    <!-- TOP BAR (formato capturas) -->
+    <div class="topbar">
+        <div class="topbar-left">
+            <div class="topbar-title">
+                <i class="fas fa-chart-line"></i>
+                <span>Estadísticas</span>
+            </div>
+        </div>
+
+        <div class="topbar-center">
+            <div class="segmented" role="tablist" aria-label="Periodo">
+                <button class="segmented-btn active" type="button" data-period="mensual">Mensual</button>
+                <button class="segmented-btn" type="button" data-period="anual">Anual</button>
+            </div>
+        </div>
+
+        <div class="topbar-right">
+            <a href="{% url 'entrenos:vista_plan_anual' cliente.id %}" class="icon-btn" title="Calendario">
+                <i class="fas fa-calendar-alt"></i>
+            </a>
+        </div>
+    </div>
+
+    <!-- HERO STATS -->
+    <!-- KPIs (formato capturas) -->
+    <div class="kpi-grid">
+        <div class="kpi-card kpi-cyan">
+            <div class="kpi-icon"><i class="fas fa-dumbbell"></i></div>
+            <div class="kpi-value" data-format="int">{{ metricas_principales.entrenamientos_unicos }}</div>
+            <div class="kpi-label">ENTRENOS</div>
+            <div class="kpi-badge kpi-badge-positive">Acumulado</div>
+        </div>
+
+        <div class="kpi-card kpi-pink">
+            <div class="kpi-icon"><i class="fas fa-layer-group"></i></div>
+            <div class="kpi-value" data-format="int">{{ metricas_principales.series_totales }}</div>
+            <div class="kpi-label">SERIES TOTALES</div>
+            <div class="kpi-badge kpi-badge-positive">Total</div>
+        </div>
+
+        <div class="kpi-card kpi-yellow">
+            <div class="kpi-icon"><i class="fas fa-weight-hanging"></i></div>
+            <div class="kpi-value" data-format="k">{{ metricas_principales.volumen_total|floatformat:0 }}</div>
+            <div class="kpi-label">TONELAJE (KG)</div>
+            <div class="kpi-badge kpi-badge-positive">Total</div>
+        </div>
+
+        <div class="kpi-card kpi-green">
+            <div class="kpi-icon"><i class="fas fa-percent"></i></div>
+            <div class="kpi-value" data-format="pct">{{ metricas_principales.consistencia|floatformat:0 }}</div>
+            <div class="kpi-label">ADHERENCIA</div>
+            <div class="kpi-badge kpi-badge-negative">Global</div>
+        </div>
+    </div>
+    <!-- ROW: Volumen semanal + Distribución de fases -->
+    <div class="stats-row-2col">
+
+        <!-- Volumen Semanal -->
+        <section class="glass-panel">
+            <div class="panel-head">
+                <div class="panel-title">
+                    <i class="fas fa-chart-area panel-ico cyan"></i>
+                    <h3>Volumen Semanal</h3>
+                </div>
+            </div>
+
+            <div class="panel-body chart-wrap">
+                <canvas id="chartVolumenSemanal" height="120"></canvas>
+            </div>
+        </section>
+
+        <!-- Distribución de fases -->
+        <section class="glass-panel">
+            <div class="panel-head">
+                <div class="panel-title">
+                    <i class="fas fa-chart-pie panel-ico cyan"></i>
+                    <h3>Distribución de Fases</h3>
+                </div>
+            </div>
+
+            <div class="panel-body">
+                <div class="phase-list">
+
+                    <div class="phase-item">
+                        <div class="phase-left">
+                            <span class="phase-dot cyan"></span>
+                            <span class="phase-name">Hipertrofia</span>
+                        </div>
+                        <div class="phase-bar">
+                            <div class="phase-bar-fill cyan" style="width:45%"></div>
+                        </div>
+                        <div class="phase-pct">45%</div>
+                    </div>
+
+                    <div class="phase-item">
+                        <div class="phase-left">
+                            <span class="phase-dot pink"></span>
+                            <span class="phase-name">Fuerza</span>
+                        </div>
+                        <div class="phase-bar">
+                            <div class="phase-bar-fill pink" style="width:30%"></div>
+                        </div>
+                        <div class="phase-pct">30%</div>
+                    </div>
+
+                    <div class="phase-item">
+                        <div class="phase-left">
+                            <span class="phase-dot yellow"></span>
+                            <span class="phase-name">Potencia</span>
+                        </div>
+                        <div class="phase-bar">
+                            <div class="phase-bar-fill yellow" style="width:15%"></div>
+                        </div>
+                        <div class="phase-pct">15%</div>
+                    </div>
+
+                    <div class="phase-item">
+                        <div class="phase-left">
+                            <span class="phase-dot green"></span>
+                            <span class="phase-name">Descarga</span>
+                        </div>
+                        <div class="phase-bar">
+                            <div class="phase-bar-fill green" style="width:10%"></div>
+                        </div>
+                        <div class="phase-pct">10%</div>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+
+    </div>
+
+
+    <!-- ACWR SECTION -->
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title">
+                <i class="fas fa-heartbeat"></i>
+                Training Load & Recovery (ACWR)
+                <div class="info-icon">
+                    ?
+                    <div class="tooltip">Relación entre carga aguda y crónica</div>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="acwr-container">
+                <div class="acwr-left">
+                    <div class="acwr-value-display">
+                        <div class="acwr-big-value {{ analisis_acwr.zona_riesgo }}">{{ analisis_acwr.acwr_actual }}</div>
+                        <div class="acwr-label">ACWR Ratio</div>
+                    </div>
+
+                    <!-- Gauge -->
+                    <div class="gauge-container">
+                        <svg class="gauge-svg" viewBox="0 0 120 70" id="acwrGauge">
+                            <!-- Fondo del arco -->
+                            <path d="M 15 55 A 45 45 0 0 1 105 55" stroke="rgba(255,255,255,0.08)" stroke-width="8" fill="none" stroke-linecap="round"/>
+
+                            <!-- Zona Riesgo Bajo (< 0.8) - Rojo - 0° a 45° -->
+                            <path d="M 15 55 A 45 45 0 0 1 32.2 22.8" stroke="#FF4757" stroke-width="8" fill="none" stroke-linecap="round" opacity="0.85"/>
+
+                            <!-- Zona Cuidado Bajo (0.8-1.0) - Amarillo - 45° a 72° -->
+                            <path d="M 32.2 22.8 A 45 45 0 0 1 50 12" stroke="#FFB800" stroke-width="8" fill="none" stroke-linecap="round" opacity="0.85"/>
+
+                            <!-- Zona Óptima (1.0-1.3) - Verde - 72° a 108° -->
+                            <path d="M 50 12 A 45 45 0 0 1 87.8 22.8" stroke="#00FF88" stroke-width="8" fill="none" stroke-linecap="round" opacity="0.95"/>
+
+                            <!-- Zona Cuidado Alto (1.3-1.5) - Amarillo - 108° a 135° -->
+                            <path d="M 87.8 22.8 A 45 45 0 0 1 98 38" stroke="#FFB800" stroke-width="8" fill="none" stroke-linecap="round" opacity="0.85"/>
+
+                            <!-- Zona Riesgo Alto (> 1.5) - Morado/Rojo - 135° a 180° -->
+                            <path d="M 98 38 A 45 45 0 0 1 105 55" stroke="#A855F7" stroke-width="8" fill="none" stroke-linecap="round" opacity="0.85"/>
+
+                            <!-- Aguja dinámica -->
+                            <line id="gaugeNeedle" x1="60" y1="55" x2="60" y2="18" stroke="#00D4FF" stroke-width="3" stroke-linecap="round" style="filter: drop-shadow(0 0 4px rgba(0, 212, 255, 0.8));"/>
+
+                            <!-- Centro de la aguja -->
+                            <circle cx="60" cy="55" r="6" fill="#0a0a18" stroke="#00D4FF" stroke-width="2"/>
+                            <circle cx="60" cy="55" r="3" fill="#00D4FF" style="filter: drop-shadow(0 0 6px rgba(0, 212, 255, 0.9));"/>
+                        </svg>
+                        <div class="gauge-labels">
+                            <span>Bajo</span>
+                            <span>Óptimo</span>
+                            <span>Alto</span>
+                        </div>
+                    </div>
+
+                    <div class="acwr-status-badge {{ analisis_acwr.zona_riesgo }}">
+                        {% if analisis_acwr.zona_riesgo == 'optima' %}
+                        ✅ Zona Óptima
+                        {% elif analisis_acwr.zona_riesgo == 'cuidado' %}
+                        ⚠️ Zona de Cuidado
+                        {% elif analisis_acwr.zona_riesgo == 'riesgo_alto' %}
+                        🚨 Riesgo Alto
+                        {% else %}
+                        ℹ️ Baja Carga
+                        {% endif %}
+                    </div>
+
+                    <p class="acwr-recommendation">{{ analisis_acwr.recomendacion }}</p>
+                </div>
+
+                <div class="acwr-right">
+                    <div class="chart-container">
+                        <div class="metric-card bg-[var(--lol-bg-alt)] border border-[var(--lol-border-subtle)] p-4 rounded-sm shadow-xl relative overflow-hidden transition-all hover:border-[rgba(200,170,110,0.3)] hover:shadow-[0_0_15px_var(--lol-glow-gold)]">
+    <h4 class="font-display text-[0.65rem] text-[var(--lol-gold-mid)] uppercase tracking-wider mb-3">◆ ACWR</h4>
+    <canvas id="acwrChart"></canvas>
+</div>
+                    </div>
+
+                    <div class="zone-legend">
+                        <div class="zone-item">
+                            <div class="zone-dot danger"></div>
+                            <span>&lt; 0.8 Riesgo</span>
+                        </div>
+                        <div class="zone-item">
+                            <div class="zone-dot success"></div>
+                            <span>0.8-1.3 Óptimo</span>
+                        </div>
+                        <div class="zone-item">
+                            <div class="zone-dot warning"></div>
+                            <span>1.3-1.5 Cuidado</span>
+                        </div>
+                        <div class="zone-item">
+                            <div class="zone-dot danger"></div>
+                            <span>&gt; 1.5 Alto Riesgo</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- BALANCE & RADAR -->
+    <div class="grid-2">
+        <!-- Balance Table -->
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">
+                    <i class="fas fa-balance-scale"></i>
+                    Equilibrio Muscular
+                    <div class="info-icon">
+                        ?
+                        <div class="tooltip">Ratios de fuerza entre grupos musculares</div>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <table class="balance-table">
+                    <thead>
+                    <tr>
+                        <th>Ratio de Fuerza</th>
+                        <th>Valor</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for ratio in equilibrio_muscular.tabla_ratios %}
+                    <tr>
+                        <td>
+                            {{ ratio.nombre }}
+                            <div class="details">{{ ratio.ejercicio_numerador }} / {{ ratio.ejercicio_denominador }}</div>
+                        </td>
+                        <td><span class="ratio-badge">{{ ratio.ratio }}</span></td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="2" style="text-align: center; color: var(--text-muted);">
+                            No hay datos suficientes
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Radar Chart -->
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">
+                    <i class="fas fa-spider"></i>
+                    Radar de Equilibrio
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <div class="metric-card bg-[var(--lol-bg-alt)] border border-[var(--lol-border-subtle)] p-4 rounded-sm shadow-xl relative overflow-hidden transition-all hover:border-[rgba(200,170,110,0.3)] hover:shadow-[0_0_15px_var(--lol-glow-gold)]">
+    <h4 class="font-display text-[0.65rem] text-[var(--lol-gold-mid)] uppercase tracking-wider mb-3">◆ BALANCERADAR</h4>
+    <canvas id="balanceRadarChart"></canvas>
+</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- VOLUME DISTRIBUTION -->
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title">
+                <i class="fas fa-chart-bar"></i>
+                Distribución de Volumen por Grupo Muscular
+                <div class="info-icon">
+                    ?
+                    <div class="tooltip">Volumen total levantado por cada grupo muscular</div>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="chart-container" style="height: 300px;">
+                <div class="metric-card bg-[var(--lol-bg-alt)] border border-[var(--lol-border-subtle)] p-4 rounded-sm shadow-xl relative overflow-hidden transition-all hover:border-[rgba(200,170,110,0.3)] hover:shadow-[0_0_15px_var(--lol-glow-gold)]">
+    <h4 class="font-display text-[0.65rem] text-[var(--lol-gold-mid)] uppercase tracking-wider mb-3">◆ VOLUME</h4>
+    <canvas id="volumeChart"></canvas>
+</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ACTIVITY HEATMAP -->
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title">
+                <i class="fas fa-fire"></i>
+                Actividad Anual
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="heatmap-months">
+                <span class="heatmap-month">Ene</span>
+                <span class="heatmap-month">Feb</span>
+                <span class="heatmap-month">Mar</span>
+                <span class="heatmap-month">Abr</span>
+                <span class="heatmap-month">May</span>
+                <span class="heatmap-month">Jun</span>
+                <span class="heatmap-month">Jul</span>
+                <span class="heatmap-month">Ago</span>
+                <span class="heatmap-month">Sep</span>
+                <span class="heatmap-month">Oct</span>
+                <span class="heatmap-month">Nov</span>
+                <span class="heatmap-month">Dic</span>
+            </div>
+            <div class="heatmap-container">
+                <div class="heatmap" id="heatmap"></div>
+            </div>
+            <div class="heatmap-legend">
+                <span>Menos</span>
+                <div class="heatmap-legend-item" style="background: rgba(255,255,255,0.05)"></div>
+                <div class="heatmap-legend-item" style="background: rgba(0, 212, 255, 0.2)"></div>
+                <div class="heatmap-legend-item" style="background: rgba(0, 212, 255, 0.4)"></div>
+                <div class="heatmap-legend-item" style="background: rgba(0, 212, 255, 0.6)"></div>
+                <div class="heatmap-legend-item" style="background: #00D4FF"></div>
+                <span>Más</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- PROGRESS TABLE -->
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title">
+                <i class="fas fa-rocket"></i>
+                Progresión de Ejercicios
+                <div class="info-icon">
+                    ?
+                    <div class="tooltip">Tu evolución en cada ejercicio</div>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            {% if progresion_ejercicios %}
+            <div class="progress-table-container">
+                <table class="progress-table">
+                    <thead>
+                    <tr>
+                        <th>Ejercicio</th>
+                        <th>Sesiones</th>
+                        <th>Peso Inicial</th>
+                        <th>Peso Final</th>
+                        <th>Cambio</th>
+                        <th>Progresión %</th>
+                        <th>1RM Inicial</th>
+                        <th>1RM Final</th>
+                        <th>Cambio 1RM</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for ejercicio in progresion_ejercicios %}
+                    <tr>
+                        <td>
+                            {{ ejercicio.nombre_ejercicio }}
+                            <span class="exercise-date">{{ ejercicio.fecha_inicio|date:"d/m/Y" }} → {{ ejercicio.fecha_fin|date:"d/m/Y" }}</span>
+                        </td>
+                        <td>{{ ejercicio.sesiones }}</td>
+                        <td>{{ ejercicio.peso_inicial }} kg</td>
+                        <td><strong>{{ ejercicio.peso_final }} kg</strong></td>
+                        <td>
+                            {% if ejercicio.cambio_peso > 0 %}
+                            <span class="progress-positive">
+                                    <span class="progress-indicator positive"></span>+{{ ejercicio.cambio_peso }} kg
+                                </span>
+                            {% elif ejercicio.cambio_peso < 0 %}
+                            <span class="progress-negative">
+                                    <span class="progress-indicator negative"></span>{{ ejercicio.cambio_peso }} kg
+                                </span>
+                            {% else %}
+                            <span class="progress-neutral">0 kg</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if ejercicio.progresion_peso > 0 %}
+                            <span class="progress-positive">+{{ ejercicio.progresion_peso }}%</span>
+                            {% elif ejercicio.progresion_peso < 0 %}
+                            <span class="progress-negative">{{ ejercicio.progresion_peso }}%</span>
+                            {% else %}
+                            <span class="progress-neutral">0%</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ ejercicio.1rm_inicial }} kg</td>
+                        <td><strong>{{ ejercicio.1rm_final }} kg</strong></td>
+                        <td>
+                            {% if ejercicio.cambio_1rm > 0 %}
+                            <span class="progress-positive">+{{ ejercicio.cambio_1rm }} kg</span>
+                            {% elif ejercicio.cambio_1rm < 0 %}
+                            <span class="progress-negative">{{ ejercicio.cambio_1rm }} kg</span>
+                            {% else %}
+                            <span class="progress-neutral">0 kg</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p style="text-align: center; color: var(--text-muted); padding: 2rem;">
+                No hay datos suficientes para calcular la progresión. Necesitas al menos 2 sesiones de cada ejercicio.
+            </p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+
+    window.addEventListener('load', function() {
+        // Colores Cyberpunk
+        const colors = {
+            cyan: '#00D4FF',
+            cyanGlow: 'rgba(0, 212, 255, 0.5)',
+            pink: '#FF2D92',
+            pinkGlow: 'rgba(255, 45, 146, 0.5)',
+            yellow: '#FFB800',
+            green: '#00FF88',
+            purple: '#A855F7',
+            danger: '#FF4757',
+            textPrimary: '#f8fafc',
+            textSecondary: '#a1a1aa',
+            gridColor: 'rgba(255, 255, 255, 0.06)'
+        };
+
+        // === ACWR CHART ===
+        const acwrData = JSON.parse('{{ acwr_data_json|safe }}');
+        if (Array.isArray(acwrData) && acwrData.length > 0) {
+            const labels = acwrData.map(d => d.fecha);
+            const cargaAguda = acwrData.map(d => d.carga_aguda);
+            const cargaCronica = acwrData.map(d => d.carga_cronica);
+            const acwrRatio = acwrData.map(d => d.acwr);
+
+            const acwrCtx = document.getElementById('acwrChart');
+            if (acwrCtx) {
+                new Chart(acwrCtx.getContext('2d'), {
+                    type: 'line',
+                    data: {
+                        labels,
+                        datasets: [
+                            {
+                                label: 'Carga Aguda',
+                                data: cargaAguda,
+                                borderColor: colors.cyan,
+                                backgroundColor: 'rgba(0, 212, 255, 0.1)',
+                                borderWidth: 2,
+                                tension: 0.4,
+                                pointRadius: 0,
+                                fill: true,
+                                yAxisID: 'yLoad'
+                            },
+                            {
+                                label: 'Carga Crónica',
+                                data: cargaCronica,
+                                borderColor: colors.pink,
+                                backgroundColor: 'rgba(255, 45, 146, 0.1)',
+                                borderWidth: 2,
+                                tension: 0.4,
+                                pointRadius: 0,
+                                borderDash: [5, 5],
+                                fill: true,
+                                yAxisID: 'yLoad'
+                            },
+                            {
+                                label: 'ACWR',
+                                data: acwrRatio,
+                                borderColor: colors.green,
+                                backgroundColor: 'transparent',
+                                borderWidth: 3,
+                                tension: 0.3,
+                                pointRadius: 2,
+                                pointHoverRadius: 5,
+                                pointBackgroundColor: colors.green,
+                                yAxisID: 'yAcwr'
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: { mode: 'index', intersect: false },
+                        plugins: {
+                            legend: {
+                                position: 'top',
+                                labels: {
+                                    usePointStyle: true,
+                                    boxWidth: 8,
+                                    color: colors.textSecondary,
+                                    font: { size: 11 }
+                                }
+                            },
+                            tooltip: {
+                                backgroundColor: 'rgba(10, 15, 25, 0.9)',
+                                borderColor: colors.cyan,
+                                borderWidth: 1,
+                                padding: 12,
+                                titleColor: colors.textPrimary,
+                                bodyColor: colors.textSecondary
+                            }
+                        },
+                        scales: {
+                            x: {
+                                grid: { color: colors.gridColor },
+                                ticks: { color: colors.textSecondary, maxRotation: 45, font: { size: 10 } }
+                            },
+                            yLoad: {
+                                position: 'left',
+                                grid: { color: colors.gridColor },
+                                ticks: { color: colors.textSecondary }
+                            },
+                            yAcwr: {
+                                position: 'right',
+                                grid: { drawOnChartArea: false },
+                                ticks: { color: colors.textSecondary },
+                                min: 0,
+                                max: 3
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        // === RADAR CHART ===
+        const radarData = JSON.parse('{{ equilibrio_radar_json|safe }}');
+        if (radarData && radarData.labels && radarData.labels.length > 0) {
+            const radarCtx = document.getElementById('balanceRadarChart');
+            if (radarCtx) {
+                new Chart(radarCtx.getContext('2d'), {
+                    type: 'radar',
+                    data: {
+                        labels: radarData.labels,
+                        datasets: [{
+                            label: 'Ratio Actual',
+                            data: radarData.valores,
+                            backgroundColor: 'rgba(0, 212, 255, 0.2)',
+                            borderColor: colors.cyan,
+                            pointBackgroundColor: colors.cyan,
+                            pointBorderColor: colors.cyan,
+                            borderWidth: 2,
+                            pointRadius: 4,
+                            pointHoverRadius: 6
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false }
+                        },
+                        scales: {
+                            r: {
+                                angleLines: { color: colors.gridColor },
+                                grid: { color: colors.gridColor },
+                                pointLabels: { color: colors.textSecondary, font: { size: 11 } },
+                                ticks: { display: false }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        // === VOLUME CHART ===
+        const volumeData = JSON.parse('{{ volumen_grupo_json|safe }}');
+        if (volumeData && volumeData.labels && volumeData.labels.length > 0) {
+            const volumeCtx = document.getElementById('volumeChart');
+            if (volumeCtx) {
+                const ctx = volumeCtx.getContext('2d');
+                const barColors = [
+                    colors.cyan,
+                    colors.pink,
+                    colors.yellow,
+                    colors.green,
+                    colors.purple,
+                    '#FF8C00'
+                ];
+
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: volumeData.labels,
+                        datasets: [{
+                            label: 'Volumen (kg)',
+                            data: volumeData.valores,
+                            backgroundColor: volumeData.labels.map((_, i) => barColors[i % barColors.length] + '80'),
+                            borderColor: volumeData.labels.map((_, i) => barColors[i % barColors.length]),
+                            borderWidth: 2,
+                            borderRadius: 8
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false }
+                        },
+                        scales: {
+                            x: {
+                                grid: { display: false },
+                                ticks: { color: colors.textSecondary }
+                            },
+                            y: {
+                                grid: { color: colors.gridColor },
+                                ticks: { color: colors.textSecondary }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        // === GAUGE NEEDLE (Aguja dinámica del ACWR) ===
+        const acwrValue = parseFloat('{{ analisis_acwr.acwr_actual|default:1.0 }}') || 1.0;
+        const needle = document.getElementById('gaugeNeedle');
+        if (needle) {
+            // El gauge va de 0 (izquierda) a 2 (derecha)
+            // Zona óptima es 0.8-1.3, centro visual en ~1.05
+            // Ángulo: 180° (izquierda, ACWR=0) a 0° (derecha, ACWR=2)
+
+            var clampedAcwr = Math.max(0, Math.min(2, acwrValue));
+            // Convertir ACWR a ángulo: 0 -> 180°, 1 -> 90°, 2 -> 0°
+            var angleDegrees = 180 - (clampedAcwr * 90);
+
+            // Calcular posición final de la aguja
+            var centerX = 60;
+            var centerY = 55;
+            var needleLength = 37;
+            var radians = angleDegrees * Math.PI / 180;
+            var endX = centerX + needleLength * Math.cos(radians);
+            var endY = centerY - needleLength * Math.sin(radians); // Negativo porque Y crece hacia abajo en SVG
+
+            needle.setAttribute('x2', endX.toFixed(1));
+            needle.setAttribute('y2', endY.toFixed(1));
+
+            console.log('ACWR:', acwrValue, 'Angle:', angleDegrees, 'EndX:', endX, 'EndY:', endY);
+        }
+
+        // === HEATMAP CON DATOS REALES ===
+        const heatmap = document.getElementById('heatmap');
+        if (heatmap) {
+            // Datos de entrenamientos del backend (fechas con entrenamientos)
+            var entrenamientosDataRaw = '{{ heatmap_data_json|escapejs|default:"{}" }}';
+            var entrenamientosData = {};
+            try {
+                entrenamientosData = JSON.parse(entrenamientosDataRaw);
+            } catch(e) {
+                console.error('Error parsing heatmap data:', e);
+            }
+
+            console.log('Heatmap data:', entrenamientosData);
+
+            // Obtener fecha actual
+            var today = new Date();
+            var currentYear = today.getFullYear();
+
+            // Calcular el primer día del año
+            var firstDayOfYear = new Date(currentYear, 0, 1);
+            // Retroceder al domingo de esa semana
+            var startDate = new Date(firstDayOfYear);
+            startDate.setDate(firstDayOfYear.getDate() - firstDayOfYear.getDay());
+
+            // Generar 52 semanas
+            for (var week = 0; week < 52; week++) {
+                var weekDiv = document.createElement('div');
+                weekDiv.className = 'heatmap-week';
+
+                for (var day = 0; day < 7; day++) {
+                    var dayDiv = document.createElement('div');
+                    dayDiv.className = 'heatmap-day';
+
+                    // Calcular la fecha de este día
+                    var daysFromStart = (week * 7) + day;
+                    var currentDate = new Date(startDate.getTime() + (daysFromStart * 24 * 60 * 60 * 1000));
+
+                    // Formato YYYY-MM-DD
+                    var year = currentDate.getFullYear();
+                    var month = String(currentDate.getMonth() + 1).padStart(2, '0');
+                    var dayNum = String(currentDate.getDate()).padStart(2, '0');
+                    var dateStr = year + '-' + month + '-' + dayNum;
+
+                    // Verificar si es día pasado, presente o futuro
+                    var isPast = currentDate < today;
+                    var isToday = dateStr === (today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0'));
+                    var isFuture = currentDate > today && !isToday;
+
+                    if (isPast || isToday) {
+                        // Verificar si hay entrenamiento en esta fecha
+                        if (entrenamientosData && entrenamientosData[dateStr]) {
+                            var intensity = entrenamientosData[dateStr];
+                            if (intensity >= 4) dayDiv.classList.add('level-4');
+                            else if (intensity >= 3) dayDiv.classList.add('level-3');
+                            else if (intensity >= 2) dayDiv.classList.add('level-2');
+                            else dayDiv.classList.add('level-1');
+                        }
+                        // Días sin entrenamiento quedan con el color base
+                    }
+
+                    if (isFuture) {
+                        // Días futuros: muy tenues
+                        dayDiv.style.opacity = '0.15';
+                        dayDiv.style.background = 'rgba(255, 255, 255, 0.02)';
+                    }
+
+                    // Tooltip con la fecha
+                    dayDiv.title = currentDate.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' });
+                    weekDiv.appendChild(dayDiv);
+                }
+                heatmap.appendChild(weekDiv);
+            }
+
+            console.log('Heatmap generado con', Object.keys(entrenamientosData).length, 'entrenamientos');
+        }
+    });
+    document.querySelectorAll('.segmented-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.segmented-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    });
+  });
+
+  // Formatters: 42500 -> 42.5k, porcentajes, etc.
+  function formatK(n){
+    const num = Number(n);
+    if (Number.isNaN(num)) return n;
+    if (num >= 1000) return (num/1000).toFixed(1).replace('.0','') + 'k';
+    return String(Math.round(num));
+  }
+
+  document.querySelectorAll('.kpi-value').forEach(el => {
+    const fmt = el.dataset.format;
+    const raw = el.textContent.trim().replace('%','');
+    if (fmt === 'k') el.textContent = formatK(raw);
+    if (fmt === 'pct') el.textContent = Math.round(Number(raw)) + '%';
+  });
+  (function(){
+  const el = document.getElementById('chartVolumenSemanal');
+  if (!el || typeof Chart === "undefined") return;
+
+  const ctx = el.getContext('2d');
+
+  // Ejemplo: Sem 1..4 (cámbialo por tus datos reales)
+  const labels = ["Sem 1","Sem 2","Sem 3","Sem 4"];
+  const data = [98, 124, 142, 122];
+
+  new Chart(ctx, {
+    type: "line",
+    data: {
+      labels,
+      datasets: [{
+        label: "Volumen",
+        data,
+        borderWidth: 3,
+        tension: .35,
+        pointRadius: 4,
+        pointHoverRadius: 5,
+        fill: true
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { enabled: true }
+      },
+      scales: {
+        x: {
+          grid: { color: "rgba(255,255,255,.06)" },
+          ticks: { color: "rgba(255,255,255,.45)" }
+        },
+        y: {
+          grid: { color: "rgba(255,255,255,.06)" },
+          ticks: { color: "rgba(255,255,255,.45)" }
+        }
+      }
+    }
+  });
+})();
+</script>
+{% endblock %}

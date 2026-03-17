@@ -1,0 +1,449 @@
+/* =====================================================
+   PANEL DE ESTIRAMIENTOS - ESTILOS
+   ===================================================== */
+
+:root {
+    --color-primary: #00ffff;
+    --color-secondary: #f0abfc;
+    --color-pink: #f472b6;
+    --color-green: #34d399;
+    --color-blue: #60a5fa;
+
+    --bg-dark: rgba(15, 23, 42, 0.9);
+    --bg-darker: rgba(10, 15, 30, 0.95);
+    --border-light: rgba(255, 255, 255, 0.1);
+
+    --text-primary: #f8fafc;
+    --text-secondary: rgba(255, 255, 255, 0.7);
+    --text-muted: rgba(255, 255, 255, 0.5);
+
+    --transition-fast: 0.2s ease;
+    --transition-normal: 0.3s ease;
+}
+
+.stretch-container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+/* =====================================================
+   HEADER
+   ===================================================== */
+.stretch-header {
+    text-align: center;
+    margin-bottom: 2rem;
+    padding: 2rem;
+    background: linear-gradient(135deg, rgba(0, 255, 255, 0.1), rgba(255, 0, 255, 0.1));
+    border-radius: 20px;
+    border: 1px solid rgba(0, 255, 255, 0.2);
+}
+
+.stretch-header h1 {
+    color: var(--color-primary);
+    font-size: 2rem;
+    font-weight: 800;
+    text-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+}
+
+.stretch-header p {
+    color: var(--text-secondary);
+    font-size: 1rem;
+    margin: 0;
+}
+
+/* =====================================================
+   FILTROS Y BÚSQUEDA (NUEVO)
+   ===================================================== */
+.filters-section {
+    margin-bottom: 1.5rem;
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.search-box {
+    flex: 1;
+    min-width: 200px;
+    position: relative;
+}
+
+.search-box input {
+    width: 100%;
+    padding: 12px 16px 12px 40px;
+    background: var(--bg-dark);
+    border: 1px solid var(--border-light);
+    border-radius: 12px;
+    color: var(--text-primary);
+    font-size: 0.95rem;
+    transition: all var(--transition-fast);
+}
+
+.search-box input:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(0, 255, 255, 0.1);
+}
+
+.search-box i {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+    pointer-events: none;
+}
+
+.filter-buttons {
+    display: flex;
+    gap: 8px;
+}
+
+.filter-btn {
+    padding: 10px 16px;
+    background: var(--bg-dark);
+    border: 1px solid var(--border-light);
+    border-radius: 10px;
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.filter-btn:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--color-primary);
+    border-color: var(--color-primary);
+}
+
+.filter-btn.active {
+    background: rgba(0, 255, 255, 0.15);
+    color: var(--color-primary);
+    border-color: var(--color-primary);
+}
+
+/* =====================================================
+   GRID DE PLANES
+   ===================================================== */
+.plans-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+    margin-top: 1.5rem;
+}
+
+.plan-card {
+    background: linear-gradient(145deg, var(--bg-dark), var(--bg-darker));
+    border: 1px solid var(--border-light);
+    border-radius: 16px;
+    padding: 1.5rem;
+    text-decoration: none;
+    transition: all var(--transition-normal);
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+}
+
+.plan-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--card-color), transparent);
+    opacity: 0.8;
+}
+
+.plan-card::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: radial-gradient(circle at top right, var(--card-glow), transparent 60%);
+    opacity: 0;
+    transition: opacity var(--transition-normal);
+    pointer-events: none;
+}
+
+.plan-card:hover {
+    transform: translateY(-5px);
+    border-color: var(--card-color);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3), 0 0 30px var(--card-glow);
+}
+
+.plan-card:hover::after {
+    opacity: 0.3;
+}
+
+.plan-card.superior {
+    --card-color: var(--color-pink);
+    --card-glow: rgba(244, 114, 182, 0.2);
+}
+
+.plan-card.inferior {
+    --card-color: var(--color-green);
+    --card-glow: rgba(52, 211, 153, 0.2);
+}
+
+.plan-card.completo {
+    --card-color: var(--color-blue);
+    --card-glow: rgba(96, 165, 250, 0.2);
+}
+
+/* =====================================================
+   CONTENIDO DE LA TARJETA
+   ===================================================== */
+.plan-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.8rem;
+    margin-bottom: 1rem;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--border-light);
+    transition: all var(--transition-fast);
+}
+
+.plan-card:hover .plan-icon {
+    transform: scale(1.1) rotate(5deg);
+}
+
+.plan-card.superior .plan-icon {
+    color: var(--color-pink);
+    box-shadow: 0 0 20px rgba(244, 114, 182, 0.2);
+}
+
+.plan-card.inferior .plan-icon {
+    color: var(--color-green);
+    box-shadow: 0 0 20px rgba(52, 211, 153, 0.2);
+}
+
+.plan-card.completo .plan-icon {
+    color: var(--color-blue);
+    box-shadow: 0 0 20px rgba(96, 165, 250, 0.2);
+}
+
+.plan-title {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+}
+
+.plan-description {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
+    line-height: 1.4;
+}
+
+.plan-stats {
+    display: flex;
+    gap: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-light);
+    flex-wrap: wrap;
+}
+
+.plan-stat {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.plan-stat i {
+    color: var(--card-color);
+    font-size: 0.9rem;
+}
+
+.plan-badge {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    background: rgba(0, 255, 255, 0.15);
+    color: var(--color-primary);
+    border: 1px solid rgba(0, 255, 255, 0.3);
+    opacity: 0;
+    transform: translateX(10px);
+    transition: all var(--transition-fast);
+}
+
+.plan-card:hover .plan-badge {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+/* =====================================================
+   HINTS Y MENSAJES
+   ===================================================== */
+.start-hint {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 1rem;
+    padding: 10px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 10px;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+}
+
+.start-hint i {
+    color: var(--color-primary);
+}
+
+.no-plans {
+    text-align: center;
+    padding: 3rem;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 16px;
+    border: 1px dashed var(--border-light);
+}
+
+.no-plans i {
+    font-size: 3rem;
+    color: rgba(255, 255, 255, 0.3);
+    margin-bottom: 1rem;
+}
+
+.no-plans p {
+    color: var(--text-muted);
+}
+
+/* =====================================================
+   ANIMACIONES
+   ===================================================== */
+.plan-card {
+    animation: fadeSlideUp 0.5s ease forwards;
+    opacity: 0;
+}
+
+.plan-card:nth-child(1) {
+    animation-delay: 0.1s;
+}
+
+.plan-card:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.plan-card:nth-child(3) {
+    animation-delay: 0.3s;
+}
+
+.plan-card:nth-child(4) {
+    animation-delay: 0.4s;
+}
+
+.plan-card:nth-child(5) {
+    animation-delay: 0.5s;
+}
+
+.plan-card:nth-child(6) {
+    animation-delay: 0.6s;
+}
+
+@keyframes fadeSlideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Animación de pulso para el badge */
+@keyframes pulse {
+
+    0%,
+    100% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.05);
+    }
+}
+
+.plan-card:hover .plan-badge {
+    animation: pulse 2s ease infinite;
+}
+
+/* =====================================================
+   RESPONSIVE
+   ===================================================== */
+@media (max-width: 640px) {
+    .stretch-header h1 {
+        font-size: 1.5rem;
+    }
+
+    .plans-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .filters-section {
+        flex-direction: column;
+    }
+
+    .search-box {
+        width: 100%;
+    }
+
+    .filter-buttons {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+/* =====================================================
+   ESTADOS VACÍOS Y DE CARGA
+   ===================================================== */
+.loading-skeleton {
+    background: linear-gradient(90deg,
+            rgba(255, 255, 255, 0.05) 25%,
+            rgba(255, 255, 255, 0.1) 50%,
+            rgba(255, 255, 255, 0.05) 75%);
+    background-size: 200% 100%;
+    animation: loading 1.5s ease infinite;
+    border-radius: 8px;
+}
+
+@keyframes loading {
+    0% {
+        background-position: 200% 0;
+    }
+
+    100% {
+        background-position: -200% 0;
+    }
+}
+
+.hidden {
+    display: none !important;
+}

@@ -1,1928 +1,894 @@
-{% extends "base.html" %}
 {% load static %}
 {% load custom_filters %}
-{% block title %}Entrenamiento Activo - {{ rutina_nombre }}{% endblock %}
-
-{% block extra_css %}
+{% load sum_volumen_filtros %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>{{ rutina_nombre }}</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 <style>
-    html {
-                height: 100%;
-            }
-            body {
-                background: url("{% static 'images/fondo_cyberpunk.png' %}" ) no-repeat center center fixed !important;
-                background-size: cover !important;
-                background-color: #000000 !important;
-                min-height: 100%;
-                color: #f8fafc;
-                font-family: 'Inter', sans-serif;
-            }
-
-            /* === LA SOLUCIÓN DEFINITIVA === */
-            .page-wrapper {
-                width: 100%;
-                overflow-x: hidden; /* Previene el desbordamiento horizontal */
-            }
-        .notificacion-epica {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            z-index: 9999;
-            max-width: 400px;
-            min-width: 300px;
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
-            border: 2px solid #ffd700;
-            border-radius: 15px;
-            padding: 20px;
-            box-shadow: 0 0 50px rgba(255, 215, 0, 0.5);
-            transform: translateX(450px);
-            transition: all 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-            opacity: 0;
-            overflow: hidden;
-            position: relative;
-        }
-
-        .notificacion-epica.mostrar {
-            transform: translateX(0);
-            opacity: 1;
-        }
-
-        .notificacion-epica.ocultar {
-            transform: translateX(450px);
-            opacity: 0;
-        }
-    /* =================================================================== */
-    /* === NUEVOS ESTILOS PARA LA LISTA/TABLA DE SERIES RESPONSIVA === */
-    /* =================================================================== */
-
-    /* --- Estilos por Defecto (Mobile First) --- */
-    .series-container {
-        width: 100%;
-    }
-
-    .series-header {
-        display: none; /* Ocultamos los encabezados en móvil */
-    }
-
-    .serie-row {
-        display: block; /* Cada fila es un bloque */
-        border: 1px solid rgba(0, 255, 255, 0.2);
-        border-radius: 8px;
-        padding: 0.75rem;
-        margin-bottom: 1rem;
-        background: rgba(0, 0, 0, 0.3);
-    }
-
-    .serie-cell {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 0.5rem 0;
-        border-bottom: 1px solid rgba(0, 255, 255, 0.1);
-    }
-
-    .serie-row .serie-cell:last-child {
-        border-bottom: none;
-    }
-
-    .serie-cell::before {
-        content: attr(data-label); /* Usamos el data-label para la etiqueta */
-        font-weight: 600;
-        color: #00ffff; /* Color cian para la etiqueta */
-        text-align: left;
-    }
-
-    .serie-cell strong {
-        font-size: 1.1rem;
-        color: #ff00ff; /* Color magenta para destacar el número de serie */
-    }
-
-    /* La primera celda (Serie X) la centramos y le damos más importancia */
-    .serie-cell[data-label="Serie"] {
-        justify-content: center;
-        padding-bottom: 0.75rem;
-        margin-bottom: 0.5rem;
-        border-bottom: 1px solid rgba(0, 255, 255, 0.3);
-    }
-    .serie-cell[data-label="Serie"]::before {
-        display: none; /* Ocultamos el "data-label" para la celda del título */
-    }
-
-    .serie-cell .cyber-form-control {
-        max-width: 120px; /* Ancho máximo para los inputs */
-    }
-
-    /* --- Estilos para Escritorio (a partir de 768px) --- */
-    @media (min-width: 768px) {
-        .series-container {
-            display: table; /* Se comporta como una tabla */
-            border-collapse: collapse;
-        }
-
-        .series-header {
-            display: table-header-group; /* Se comporta como un thead */
-            background: rgba(0, 255, 255, 0.1);
-        }
-
-        .header-item {
-            display: table-cell; /* Se comporta como un th */
-            padding: 1rem 0.75rem;
-            font-weight: 600;
-            color: #00ffff;
-            text-shadow: 0 0 5px rgba(0, 255, 255, 0.3);
-            text-transform: uppercase;
-            font-size: 0.9rem;
-            letter-spacing: 0.5px;
-            border-bottom: 2px solid rgba(0, 255, 255, 0.3);
-            text-align: center;
-        }
-
-        .serie-row {
-            display: table-row; /* Se comporta como un tr */
-            margin-bottom: 0;
-            border: none;
-            padding: 0;
-            background: transparent;
-        }
-
-        .serie-row:hover {
-            background: rgba(0, 255, 255, 0.05); /* Efecto hover sutil en escritorio */
-        }
-
-        .serie-cell {
-            display: table-cell; /* Se comporta como un td */
-            padding: 0.75rem;
-            border-bottom: 1px solid rgba(0, 255, 255, 0.2);
-            vertical-align: middle;
-            text-align: center;
-        }
-
-        .serie-cell::before {
-            display: none; /* Ocultamos las etiquetas de data-label en escritorio */
-        }
-
-        /* La primera celda la alineamos a la izquierda en escritorio */
-        .serie-cell[data-label="Serie"] {
-            text-align: left;
-            border-bottom: 1px solid rgba(0, 255, 255, 0.2);
-        }
-    }
-
-        /* Efecto de brillo animado */
-        .notificacion-epica::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: linear-gradient(45deg, transparent, rgba(255, 215, 0, 0.2), transparent);
-            animation: shimmer-notif 2s infinite;
-            pointer-events: none;
-        }
-
-        @keyframes shimmer-notif {
-            0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
-            100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
-        }
-
-        /* Tipos de notificaciones */
-        .notificacion-epica.ascension {
-            border-color: #ff6b6b;
-            box-shadow: 0 0 50px rgba(255, 107, 107, 0.6);
-        }
-
-        .notificacion-epica.ascension::before {
-            background: linear-gradient(45deg, transparent, rgba(255, 107, 107, 0.3), transparent);
-        }
-
-        .notificacion-epica.prueba-completada {
-            border-color: #4ecdc4;
-            box-shadow: 0 0 50px rgba(78, 205, 196, 0.5);
-        }
-
-        .notificacion-epica.prueba-completada::before {
-            background: linear-gradient(45deg, transparent, rgba(78, 205, 196, 0.2), transparent);
-        }
-
-        .notificacion-epica.puntos-ganados {
-            border-color: #ffd700;
-            box-shadow: 0 0 50px rgba(255, 215, 0, 0.4);
-        }
-
-        /* Header de la notificación */
-        .notif-header {
-            display: flex;
-            align-items: center;
-            margin-bottom: 15px;
-            position: relative;
-            z-index: 2;
-        }
-
-        .notif-icono {
-            font-size: 32px;
-            margin-right: 15px;
-            animation: pulse-icon 2s infinite;
-        }
-
-        @keyframes pulse-icon {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.1); }
-        }
-
-        .notif-titulo {
-            color: #ffd700;
-            font-size: 18px;
-            font-weight: bold;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
-            margin: 0;
-        }
-
-        .notif-subtitulo {
-            color: #a8dadc;
-            font-size: 14px;
-            margin: 0;
-        }
-
-        /* Contenido de la notificación */
-        .notif-contenido {
-            position: relative;
-            z-index: 2;
-            margin-bottom: 15px;
-        }
-
-        .notif-mensaje {
-            color: #ffffff;
-            font-size: 16px;
-            line-height: 1.4;
-            margin-bottom: 10px;
-            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
-        }
-
-        .notif-detalle {
-            color: #a8dadc;
-            font-size: 14px;
-            font-style: italic;
-        }
-
-        /* Botón de cerrar */
-        .notif-cerrar {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            background: none;
-            border: none;
-            color: #a8dadc;
-            font-size: 20px;
-            cursor: pointer;
-            z-index: 3;
-            transition: color 0.3s ease;
-        }
-
-        .notif-cerrar:hover {
-            color: #ffd700;
-        }
-
-        /* Efectos de partículas para ascensiones */
-        .particulas {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            overflow: hidden;
-        }
-
-        .particula {
-            position: absolute;
-            width: 4px;
-            height: 4px;
-            background: #ffd700;
-            border-radius: 50%;
-            animation: flotar-particula 3s infinite;
-        }
-
-        @keyframes flotar-particula {
-            0% {
-                transform: translateY(100px) scale(0);
-                opacity: 0;
-            }
-            10% {
-                opacity: 1;
-            }
-            90% {
-                opacity: 1;
-            }
-            100% {
-                transform: translateY(-100px) scale(1);
-                opacity: 0;
-            }
-        }
-
-        /* Responsive */
-        @media (max-width: 768px) {
-            .notificacion-epica {
-                top: 10px;
-                right: 10px;
-                left: 10px;
-                max-width: none;
-                transform: translateY(-150px);
-            }
-
-            .notificacion-epica.mostrar {
-                transform: translateY(0);
-            }
-
-            .notificacion-epica.ocultar {
-                transform: translateY(-150px);
-            }
-        }
-            .detail-box {
-                padding: 15px;
-                border-radius: 8px;
-                text-align: center;
-                transition: all 0.3s ease;
-                backdrop-filter: blur(5px);
-                -webkit-backdrop-filter: blur(5px);
-            }
-
-            .detail-box:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 5px 15px rgba(0, 255, 255, 0.2);
-            }
-
-            .detail-label {
-                font-size: 0.85em;
-                font-weight: 600;
-                text-transform: uppercase;
-                letter-spacing: 0.5px;
-                margin-bottom: 8px;
-                opacity: 0.9;
-            }
-
-            .detail-value {
-                font-size: 1.3em;
-                font-weight: bold;
-                text-shadow: 0 0 10px currentColor;
-            }
-
-            .progress-bar {
-                position: relative;
-                overflow: hidden;
-            }
-
-            .progress-bar::after {
-                content: '';
-                position: absolute;
-                top: 0;
-                left: -100%;
-                width: 100%;
-                height: 100%;
-                background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
-                animation: shimmer 2s infinite;
-            }
-
-            @keyframes shimmer {
-                0% { left: -100%; }
-                100% { left: 100%; }
-            }
-
-                /* === ANIMACIONES BASE === */
-                @keyframes float {
-                    0% { transform: translateY(0px); }
-                    50% { transform: translateY(-5px); }
-                    100% { transform: translateY(0px); }
-                }
-                .animate-float {
-                    animation: float 6s ease-in-out infinite;
-                }
-
-                @keyframes fadeSlide {
-                    0% { opacity: 0; transform: translateY(10px); }
-                    100% { opacity: 1; transform: translateY(0); }
-                }
-                .animate-fadeSlide {
-                    animation: fadeSlide 0.8s ease-out;
-                }
-
-                @keyframes pulse-neon {
-                    0%, 100% {
-                        box-shadow: 0 0 15px rgba(0, 255, 255, 0.4), inset 0 0 8px rgba(0, 255, 255, 0.2);
-                    }
-                    50% {
-                        box-shadow: 0 0 25px rgba(0, 255, 255, 0.6), inset 0 0 12px rgba(0, 255, 255, 0.3);
-                    }
-                }
-                .pulse-neon {
-                    animation: pulse-neon 3s ease-in-out infinite;
-                }
-
-                @keyframes titleGlow {
-                    0%, 100% { text-shadow: 0 0 30px rgba(0, 255, 255, 0.5); }
-                    50% { text-shadow: 0 0 60px rgba(0, 255, 255, 0.8), 0 0 40px rgba(255, 0, 255, 0.6); }
-                }
-
-                @keyframes inputGlow {
-                    0%, 100% { border-color: rgba(0, 255, 255, 0.5); }
-                    50% { border-color: rgba(0, 255, 255, 0.8); }
-                }
-
-                @keyframes dataFlow {
-                    0% { transform: translateX(-100%); }
-                    100% { transform: translateX(100%); }
-                }
-
-                /* === EFECTOS ATMOSFÉRICOS === */
-                .blade-runner-atmosphere {
-                    position: fixed;
-                    top: 0;
-                    left: 0;
-                    width: 100%;
-                    height: 100%;
-                    pointer-events: none;
-                    z-index: -1;
-                }
-
-                .background-fog {
-                    position: absolute;
-                    top: 0;
-                    left: 0;
-                    width: 100%;
-                    height: 100%;
-                    background: radial-gradient(circle at 30% 20%, rgba(0, 255, 255, 0.1) 0%, transparent 50%),
-                                radial-gradient(circle at 70% 80%, rgba(255, 0, 255, 0.1) 0%, transparent 50%);
-                    animation: float 8s ease-in-out infinite;
-                }
-
-                /* === CONTENEDOR PRINCIPAL === */
-                .cyber-entreno-container {
-                    max-width: 900px;
-                    margin: 1rem auto;
-                    padding: 1rem;
-                    background: rgba(0, 0, 0, 0.4) !important;
-                    backdrop-filter: blur(15px) saturate(180%) !important;
-                    -webkit-backdrop-filter: blur(15px) saturate(180%) !important;
-                    border: 1px solid rgba(77, 208, 225, 0.6) !important;
-                    box-shadow: 0 0 15px rgba(77, 208, 225, 0.4), inset 0 0 8px rgba(77, 208, 225, 0.2) !important;
-                    border-radius: 20px !important;
-                    padding: 2rem;
-                    margin-top: 2rem;
-                    margin-bottom: 2rem;
-                    min-height: 80vh;
-                }
-
-                /* === HEADER CYBERPUNK === */
-                .cyber-entreno-header {
-                    text-align: center;
-                    margin-bottom: 2rem;
-                    padding: 1.5rem;
-                    background: rgba(0, 0, 0, 0.6) !important;
-                    backdrop-filter: blur(20px) saturate(180%) !important;
-                    -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
-                    border: 1px solid rgba(0, 255, 255, 0.6) !important;
-                    box-shadow: 0 0 25px rgba(0, 255, 255, 0.3), inset 0 0 15px rgba(0, 255, 255, 0.1) !important;
-                    border-radius: 15px;
-                    position: relative;
-                    overflow: hidden;
-                }
-
-                .cyber-entreno-header::before {
-                    content: '';
-                    position: absolute;
-                    top: 0;
-                    left: 0;
-                    right: 0;
-                    height: 3px;
-                    background: linear-gradient(90deg, #00ffff, #ff00ff, #00ff00);
-                    animation: float 3s ease-in-out infinite;
-                }
-
-                .cyber-entreno-header h2 {
-                    font-size: 2.2rem;
-                    font-weight: 700;
-                    background: linear-gradient(90deg, #00ffff, #00ff00, #ff00ff);
-                    -webkit-background-clip: text;
-                    -webkit-text-fill-color: transparent;
-                    color: transparent;
-                    text-shadow: 0 0 30px rgba(0, 255, 255, 0.5);
-                    animation: titleGlow 4s ease-in-out infinite alternate;
-                    margin-bottom: 0.5rem;
-                }
-
-                .cyber-entreno-header .lead {
-                    color: #ffffff;
-                    font-size: 1.1rem;
-                    text-shadow: 0 0 5px rgba(255, 255, 255, 0.3);
-                    margin-bottom: 0;
-                }
-
-                /* === EJERCICIO CARDS CYBERPUNK === */
-                .cyber-ejercicio-card {
-                    background: rgba(0, 0, 0, 0.6) !important;
-                    backdrop-filter: blur(15px) saturate(180%) !important;
-                    -webkit-backdrop-filter: blur(15px) saturate(180%) !important;
-                    border: 1px solid rgba(77, 208, 225, 0.4) !important;
-                    box-shadow: 0 0 20px rgba(77, 208, 225, 0.2), inset 0 0 10px rgba(77, 208, 225, 0.1) !important;
-                    border-radius: 15px;
-                    padding: 1.5rem;
-                    margin-bottom: 1.5rem;
-                    transition: all 0.3s ease;
-                    position: relative;
-                    overflow: hidden;
-                }
-
-                .cyber-ejercicio-card::before {
-                    content: '';
-                    position: absolute;
-                    top: 0;
-                    left: -100%;
-                    width: 100%;
-                    height: 100%;
-                    background: linear-gradient(90deg, transparent, rgba(0, 255, 255, 0.1), transparent);
-                    transition: left 0.6s ease;
-                }
-
-                .cyber-ejercicio-card:hover::before {
-                    left: 100%;
-                }
-
-                .cyber-ejercicio-card:hover {
-                    transform: translateY(-3px);
-                    box-shadow: 0 0 30px rgba(77, 208, 225, 0.4), inset 0 0 15px rgba(77, 208, 225, 0.2) !important;
-                    border-color: rgba(0, 255, 255, 0.6) !important;
-                }
-
-                /* === EJERCICIO HEADER === */
-                .cyber-ejercicio-header {
-                    border-bottom: 1px solid rgba(0, 255, 255, 0.3) !important;
-                    padding-bottom: 1rem;
-                    margin-bottom: 1rem;
-                }
-
-                .cyber-ejercicio-header h4 {
-                    margin: 0;
-                    color: #00ffff !important;
-                    font-weight: 700;
-                    font-size: 1.4rem;
-                    text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
-                    display: flex;
-                    align-items: center;
-                    gap: 10px;
-                }
-
-                .cyber-ejercicio-header small {
-                    color: rgba(255, 255, 255, 0.8) !important;
-                    font-size: 0.9rem;
-                    margin-top: 0.5rem;
-                    display: block;
-                }
-
-                /* === TABLA CYBERPUNK === */
-                .cyber-series-table {
-                    background: transparent;
-                    color: #ffffff;
-                    margin-bottom: 0;
-                }
-
-                .cyber-series-table th {
-                    font-weight: 600;
-                    color: #00ffff !important;
-                    border-bottom: 2px solid rgba(0, 255, 255, 0.3) !important;
-                    background: rgba(0, 255, 255, 0.1);
-                    text-shadow: 0 0 5px rgba(0, 255, 255, 0.3);
-                    padding: 1rem 0.75rem;
-                    font-size: 0.9rem;
-                    text-transform: uppercase;
-                    letter-spacing: 0.5px;
-                }
-
-                .cyber-series-table td {
-                    border-bottom: 1px solid rgba(0, 255, 255, 0.2) !important;
-                    background: rgba(0, 0, 0, 0.3);
-                    padding: 0.75rem;
-                    vertical-align: middle;
-                }
-
-                .cyber-series-table td strong {
-                    color: #00ffff;
-                    font-size: 1.1em;
-                    text-shadow: 0 0 5px rgba(0, 255, 255, 0.3);
-                }
-
-                /* === INPUTS CYBERPUNK === */
-                .cyber-form-control {
-                    background: rgba(0, 0, 0, 0.8) !important;
-                    border: 2px solid rgba(0, 255, 255, 0.4) !important;
-                    color: #ffffff !important;
-                    border-radius: 8px;
-                    padding: 0.5rem 0.75rem;
-                    transition: all 0.3s ease;
-                    backdrop-filter: blur(5px);
-                    -webkit-backdrop-filter: blur(5px);
-                    font-weight: 500;
-                }
-
-                .cyber-form-control:focus {
-                    background: rgba(0, 0, 0, 0.9) !important;
-                    border-color: rgba(0, 255, 255, 0.8) !important;
-                    box-shadow: 0 0 15px rgba(0, 255, 255, 0.4) !important;
-                    color: #ffffff !important;
-                    animation: inputGlow 2s ease-in-out infinite;
-                    outline: none;
-                }
-
-                .cyber-form-control::placeholder {
-                    color: rgba(255, 255, 255, 0.6) !important;
-                }
-
-                /* === CHECKBOX CYBERPUNK === */
-                .cyber-form-check-input {
-                    width: 1.5em;
-                    height: 1.5em;
-                    background: rgba(0, 0, 0, 0.8) !important;
-                    border: 2px solid rgba(0, 255, 255, 0.4) !important;
-                    border-radius: 4px;
-                    transition: all 0.3s ease;
-                    cursor: pointer;
-                }
-
-                .cyber-form-check-input:checked {
-                    background: linear-gradient(45deg, rgba(0, 255, 255, 0.8), rgba(0, 150, 255, 0.6)) !important;
-                    border-color: rgba(0, 255, 255, 0.8) !important;
-                    box-shadow: 0 0 15px rgba(0, 255, 255, 0.4) !important;
-                }
-
-                .cyber-form-check-input:focus {
-                    box-shadow: 0 0 10px rgba(0, 255, 255, 0.5) !important;
-                    outline: none;
-                }
-
-                .cyber-form-check-input:hover {
-                    border-color: rgba(0, 255, 255, 0.6) !important;
-                    transform: scale(1.1);
-                }
-
-                /* === LABELS CYBERPUNK === */
-                .cyber-form-label {
-                    color: #00ffff !important;
-                    font-weight: 600;
-                    text-shadow: 0 0 5px rgba(0, 255, 255, 0.3);
-                    margin-bottom: 0.5rem;
-                    display: block;
-                }
-
-                /* === TEXTAREA CYBERPUNK === */
-                .cyber-textarea {
-                    background: rgba(0, 0, 0, 0.8) !important;
-                    border: 2px solid rgba(0, 255, 255, 0.4) !important;
-                    color: #ffffff !important;
-                    border-radius: 8px;
-                    padding: 0.75rem;
-                    transition: all 0.3s ease;
-                    backdrop-filter: blur(5px);
-                    -webkit-backdrop-filter: blur(5px);
-                    resize: vertical;
-                    min-height: 100px;
-                }
-
-                .cyber-textarea:focus {
-                    background: rgba(0, 0, 0, 0.9) !important;
-                    border-color: rgba(0, 255, 255, 0.8) !important;
-                    box-shadow: 0 0 15px rgba(0, 255, 255, 0.4) !important;
-                    color: #ffffff !important;
-                    outline: none;
-                }
-
-                .cyber-textarea::placeholder {
-                    color: rgba(255, 255, 255, 0.6) !important;
-                }
-
-                /* === BOTÓN FINALIZAR CYBERPUNK === */
-                .cyber-btn-finalizar {
-                    background: linear-gradient(45deg, rgba(0, 255, 255, 0.8), rgba(0, 150, 255, 0.6)) !important;
-                    border: 1px solid rgba(0, 255, 255, 0.8) !important;
-                    color: #000000 !important;
-                    padding: 1rem 2.5rem;
-                    border-radius: 12px;
-                    font-weight: 700;
-                    font-size: 1.2rem;
-                    text-decoration: none;
-                    transition: all 0.3s ease;
-                    backdrop-filter: blur(5px);
-                    -webkit-backdrop-filter: blur(5px);
-                    box-shadow: 0 0 25px rgba(0, 255, 255, 0.4);
-                    display: inline-block;
-                    text-align: center;
-                    position: relative;
-                    overflow: hidden;
-                }
-
-                .cyber-btn-finalizar::before {
-                    content: '';
-                    position: absolute;
-                    top: 0;
-                    left: -100%;
-                    width: 100%;
-                    height: 100%;
-                    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
-                    transition: left 0.5s ease;
-                }
-
-                .cyber-btn-finalizar:hover::before {
-                    left: 100%;
-                }
-
-                .cyber-btn-finalizar:hover {
-                    background: linear-gradient(45deg, rgba(0, 255, 255, 1), rgba(0, 150, 255, 0.8)) !important;
-                    box-shadow: 0 0 35px rgba(0, 255, 255, 0.6);
-                    transform: translateY(-3px) scale(1.05);
-                    color: #000000 !important;
-                }
-
-                .cyber-btn-finalizar:active {
-                    transform: translateY(-1px) scale(1.02);
-                }
-
-                /* === RESUMEN SECTION === */
-                .cyber-resumen-section {
-                    background: rgba(0, 0, 0, 0.7) !important;
-                    backdrop-filter: blur(20px) saturate(180%) !important;
-                    -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
-                    border: 1px solid rgba(0, 150, 255, 0.6) !important;
-                    box-shadow: 0 0 25px rgba(0, 150, 255, 0.3), inset 0 0 15px rgba(0, 150, 255, 0.1) !important;
-                    border-left: 5px solid #0096ff !important;
-                    border-radius: 15px;
-                    padding: 1.5rem;
-                    margin-bottom: 1.5rem;
-                }
-
-                .cyber-resumen-section .cyber-ejercicio-header h4 {
-                    color: #0096ff !important;
-                    text-shadow: 0 0 10px rgba(0, 150, 255, 0.5);
-                }
-
-                /* === GRID RESPONSIVE === */
-                .cyber-row {
-                    display: flex;
-                    flex-wrap: wrap;
-                    margin: -0.5rem;
-                }
-
-                .cyber-col-md-6 {
-                    flex: 0 0 50%;
-                    max-width: 50%;
-                    padding: 0.5rem;
-                }
-
-                .cyber-col-12 {
-                    flex: 0 0 100%;
-                    max-width: 100%;
-                    padding: 0.5rem;
-                }
-
-                /* === EFECTOS ADICIONALES === */
-                .cyber-ejercicio-card:nth-child(odd) {
-                    animation-delay: 0.1s;
-                }
-
-                .cyber-ejercicio-card:nth-child(even) {
-                    animation-delay: 0.2s;
-                }
-
-                /* Efecto de progreso en las series completadas */
-                .cyber-series-table tr:has(.cyber-form-check-input:checked) {
-                    background: rgba(0, 255, 100, 0.1) !important;
-                    border-left: 3px solid #00ff64;
-                }
-
-                .cyber-series-table tr:has(.cyber-form-check-input:checked) td {
-                    color: #00ff64;
-                    text-shadow: 0 0 5px rgba(0, 255, 100, 0.3);
-                }
-
-                /* === RESPONSIVE === */
-                @media (max-width: 768px) {
-                    .cyber-entreno-container {
-                        padding: 1rem;
-                        margin: 1rem;
-                    }
-
-                    .cyber-entreno-header h2 {
-                        font-size: 1.8rem;
-                    }
-
-                    .cyber-ejercicio-card {
-                        margin-bottom: 2.5rem;
-                        padding: 1rem;
-                    }
-
-                    .cyber-series-table th,
-                    .cyber-series-table td {
-                        padding: 0.5rem 0.25rem;
-                        font-size: 0.85rem;
-                    }
-
-                    .cyber-col-md-6 {
-                        flex: 0 0 100%;
-                        max-width: 100%;
-                    }
-
-                    .cyber-btn-finalizar {
-                        padding: 0.8rem 2rem;
-                        font-size: 1.1rem;
-                    }
-                }
-
-                /* === EFECTOS DE CARGA === */
-                .loading-effect {
-                    position: relative;
-                    overflow: hidden;
-                }
-
-                .loading-effect::after {
-                    content: '';
-                    position: absolute;
-                    top: 0;
-                    left: -100%;
-                    width: 100%;
-                    height: 100%;
-                    background: linear-gradient(90deg, transparent, rgba(0, 255, 255, 0.2), transparent);
-                    animation: dataFlow 2s ease-in-out infinite;
-                }
-
-                /* === INDICADORES DE ESTADO === */
-                .serie-completada {
-                    position: relative;
-                }
-
-                .serie-completada::after {
-                    content: '✓';
-                    position: absolute;
-                    right: -25px;
-                    top: 50%;
-                    transform: translateY(-50%);
-                    color: #00ff64;
-                    font-weight: bold;
-                    font-size: 1.2em;
-                    text-shadow: 0 0 10px rgba(0, 255, 100, 0.5);
-                }
-
-                /* === EFECTOS DE FOCUS MEJORADOS === */
-                .cyber-form-control:focus,
-                .cyber-textarea:focus {
-                    transform: scale(1.02);
-                    z-index: 10;
-                    position: relative;
-                }
-                /* En templates/clientes/portal_sesion.html, dentro de <style> */
-
-                :root {
-                    --cyan-glow: rgba(0, 255, 255, 0.7);
-                    --magenta-glow: rgba(255, 0, 255, 0.6);
-                    --green-glow: rgba(50, 255, 150, 0.8);
-                    --yellow-glow: rgba(245, 158, 11, 0.8);
-                    --red-glow: rgba(239, 68, 68, 0.8);
-                    --card-bg: rgba(15, 23, 42, 0.7);
-                    --border-color: rgba(77, 208, 225, 0.3);
-                    --text-primary: #f8fafc;
-                    --text-secondary: #94a3b8;
-                }
-
-
-                /* --- Animaciones --- */
-                @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-                @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-
-                /* --- Contenedor Principal --- */
-                .mission-container {
-                    max-width: 800px;
-                    margin: 2rem auto;
-                    padding: 2rem;
-                }
-
-                /* --- Tarjeta de Fase --- */
-                .phase-card {
-                    background: var(--card-bg);
-                    backdrop-filter: blur(10px);
-                    border: 1px solid var(--border-color);
-                    border-radius: 1rem;
-                    padding: 2rem;
-                    margin-bottom: 2rem;
-                    animation: fadeInUp 0.6s ease-out forwards;
-                }
-
-                .phase-header {
-                    display: flex;
-                    align-items: center;
-                    gap: 1rem;
-                    border-bottom: 1px solid var(--border-color);
-                    padding-bottom: 1rem;
-                    margin-bottom: 1.5rem;
-                }
-                .phase-icon {
-                    font-size: 2rem;
-                    color: var(--cyan-glow);
-                    text-shadow: 0 0 10px var(--cyan-glow);
-                }
-                .phase-title {
-                    font-size: 1.5rem;
-                    font-weight: 700;
-                    color: var(--text-primary);
-                }
-                .phase-subtitle {
-                    font-size: 1rem;
-                    color: var(--text-secondary);
-                }
-
-                /* --- Estilos para el Formulario de Check-in --- */
-                .checkin-form .slider-group { margin-bottom: 1.5rem; }
-                .checkin-form .slider-label { display: flex; justify-content: space-between; font-weight: 600; margin-bottom: 0.75rem; }
-                .checkin-form .slider-label span:last-child { color: var(--cyan-glow); font-family: monospace; }
-                .checkin-form input[type="range"] { width: 100%; accent-color: var(--cyan-glow); }
-            /* Añade esto a tu bloque <style> en portal_sesion.html */
-
-            .detail-box {
-                background: rgba(0,0,0,0.2);
-                padding: 0.75rem;
-                border-radius: 0.5rem;
-            }
-            .detail-label {
-                font-size: 0.8rem;
-                color: var(--text-secondary);
-                text-transform: uppercase;
-                letter-spacing: 0.5px;
-            }
-            .detail-value {
-                font-size: 1.25rem;
-                font-weight: 700;
-                font-family: monospace;
-                margin-top: 0.25rem;
-            }
-            .text-fuchsia-400 { color: #f0abfc; }
-            .text-yellow-400 { color: #facc15; }
-            .text-cyan-400 { color: #67e8f9; }
-
-                /* --- Tarjeta de Briefing (Recomendación) --- */
-                .briefing-card {
-                    padding: 1.5rem;
-                    border-radius: 0.75rem;
-                    border-left: 4px solid;
-                    margin-bottom: 2rem;
-                    animation: fadeInUp 0.6s 0.2s ease-out forwards;
-                    opacity: 0;
-                }
-                .briefing-title { font-size: 1.2rem; font-weight: 700; margin-bottom: 0.5rem; }
-                .briefing-card.readiness-green { border-color: var(--green-glow); background: rgba(50, 255, 150, 0.1); }
-                .briefing-card.readiness-cyan { border-color: var(--cyan-glow); background: rgba(0, 255, 255, 0.1); }
-                .briefing-card.readiness-yellow { border-color: var(--yellow-glow); background: rgba(245, 158, 11, 0.1); }
-                .briefing-card.readiness-red { border-color: var(--red-glow); background: rgba(239, 68, 68, 0.1); }
-
-                /* --- Tarjeta de Ejercicio --- */
-                .exercise-card {
-                    background: rgba(0,0,0,0.3);
-                    border-radius: 0.75rem;
-                    margin-bottom: 1rem;
-                    overflow: hidden;
-                    border: 1px solid transparent;
-                    transition: all 0.3s ease;
-                }
-                .exercise-card:hover {
-                    border-color: var(--border-color);
-                    transform: scale(1.02);
-                }
-                .exercise-card-header {
-                    background: rgba(0,0,0,0.4);
-                    padding: 1rem 1.5rem;
-                    font-size: 1.2rem;
-                    font-weight: 600;
-                    color: var(--cyan-glow);
-                }
-                .exercise-card-body { padding: 1.5rem; }
-                .exercise-table { width: 100%; }
-                .exercise-table th, .exercise-table td { padding: 0.5rem; text-align: center; }
-                .exercise-table th { color: var(--text-secondary); font-size: 0.8rem; text-transform: uppercase; }
-                .exercise-table input {
-                    width: 100%;
-                    background: var(--dark-bg, #0f172a);
-                    border: 1px solid var(--border-color);
-                    color: var(--text-primary);
-                    text-align: center;
-                    border-radius: 0.25rem;
-                    padding: 0.5rem;
-                }
-            /* En tu plantilla principal, dentro de <style> */
-
-            /* --- Variables de Color y Base (Tu base es excelente) --- */
-            :root {
-                --color-cyan: #00ffff;
-                --color-magenta: #ff00ff;
-                --color-green: #32ff00;
-                --color-yellow: #f59e0b;
-                --color-red: #ef4444;
-                --bg-dark: #0a0a1a;
-                --bg-card: rgba(15, 23, 42, 0.7);
-                --border-color: rgba(0, 255, 255, 0.3);
-                --text-primary: #f8fafc;
-                --text-secondary: #94a3b8;
-            }
-
-            .container { max-width: 1400px; margin: auto; padding: 2rem; }
-
-            /* --- Componente Base: Tarjeta de Módulo --- */
-            .module-card {
-                background: var(--bg-card);
-                backdrop-filter: blur(12px);
-                border: 1px solid var(--border-color);
-                border-radius: 1rem;
-                padding: 1.5rem;
-                box-shadow: 0 0 20px rgba(0, 255, 255, 0.1);
-                animation: fadeInUp 0.6s ease-out forwards;
-            }
-
-            .module-header {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                margin-bottom: 1.5rem;
-                border-bottom: 1px solid var(--border-color);
-                padding-bottom: 1rem;
-            }
-            .module-title {
-                font-size: 1.25rem;
-                font-weight: 700;
-                color: var(--color-cyan);
-                text-shadow: 0 0 8px var(--color-cyan);
-                display: flex;
-                align-items: center;
-                gap: 0.75rem;
-            }
-            .module-link {
-                font-size: 0.875rem;
-                color: var(--text-secondary);
-                text-decoration: none;
-                transition: color 0.3s;
-            }
-            .module-link:hover { color: var(--color-cyan); }
-
-            /* --- Tarjeta de "Próximo Entrenamiento" (Destacada) --- */
-            .next-workout-card {
-                display: grid;
-                grid-template-columns: 2fr 1fr;
-                gap: 2rem;
-                align-items: center;
-            }
-            .workout-details h3 { font-size: 1.5rem; font-weight: 700; }
-            .workout-details .tags span {
-                background: rgba(0, 255, 255, 0.1);
-                color: var(--color-cyan);
-                padding: 0.25rem 0.75rem;
-                border-radius: 9999px;
-                font-size: 0.75rem;
-                font-weight: 600;
-            }
-            .workout-exercises { list-style: none; padding: 0; margin-top: 1rem; }
-            .workout-exercises li { display: flex; justify-content: space-between; padding: 0.25rem 0; }
-
-            .progress-annual .progress-bar {
-                background: rgba(255,255,255,0.1);
-                border-radius: 9999px;
-                height: 0.75rem;
-                overflow: hidden;
-            }
-            .progress-annual .progress-fill {
-                background: linear-gradient(90deg, var(--color-magenta), var(--color-cyan));
-                height: 100%;
-                border-radius: 9999px;
-            }
-
-            /* --- Botones de Acción --- */
-            .action-buttons { display: flex; gap: 1rem; margin-top: 1.5rem; }
-            .action-btn {
-                flex-grow: 1;
-                padding: 0.75rem;
-                border-radius: 0.5rem;
-                text-align: center;
-                font-weight: 600;
-                text-decoration: none;
-                transition: all 0.3s;
-                border: 1px solid transparent;
-            }
-            .btn-primary {
-                background: linear-gradient(45deg, var(--color-cyan), var(--color-magenta));
-                color: #000;
-                box-shadow: 0 0 15px rgba(0, 255, 255, 0.4);
-            }
-            .btn-secondary {
-                background: transparent;
-                color: var(--text-primary);
-                border-color: var(--border-color);
-            }
-            .action-btn:hover { transform: scale(1.05); }
-
-            /* --- Tarjeta de Adherencia --- */
-            .adherence-card { text-align: center; padding: 1rem; background: rgba(0,0,0,0.2); border-radius: 0.5rem; }
-            .adherence-card .value { font-size: 2rem; font-weight: 700; }
-            .adherence-card .label { font-size: 0.8rem; color: var(--text-secondary); }
-
-            /* --- Alertas Activas --- */
-            .alert-card {
-                padding: 1rem;
-                border-radius: 0.5rem;
-                border-left: 4px solid var(--color-red);
-                background: rgba(239, 68, 68, 0.1);
-            }
-            .alert-card .alert-title { font-weight: 700; color: var(--color-red); }
-
-                /* --- Botón Principal --- */
-                .mission-button {
-                    display: block;
-                    width: 100%;
-                    padding: 1rem;
-                    border: none;
-                    border-radius: 0.5rem;
-                    font-size: 1.1rem;
-                    font-weight: 700;
-                    color: #000;
-                    cursor: pointer;
-                    transition: all 0.3s ease;
-                    text-align: center;
-                    background: linear-gradient(45deg, var(--cyan-glow), var(--magenta-glow));
-                    box-shadow: 0 0 20px rgba(0, 255, 255, 0.4);
-                }
-                .mission-button:hover {
-                    transform: scale(1.03);
-                    box-shadow: 0 0 30px rgba(255, 0, 255, 0.5);
-                }
-
-                /* === ANIMACIÓN DE ENTRADA PARA INPUTS === */
-                .cyber-form-control,
-                .cyber-textarea,
-                .cyber-form-check-input {
-                    animation: fadeSlide 0.6s ease-out;
-                }
-
-                /* === AJUSTE FINAL PARA SERIES DE APROXIMACIÓN === */
-    .serie-row.serie-aproximacion {
-        border-color: rgba(255, 255, 255, 0.15); /* Borde más tenue */
-        background: rgba(0, 0, 0, 0.1);
-    }
-
-    .serie-row.serie-aproximacion .serie-cell::before {
-        color: #94a3b8; /* Etiqueta en color gris secundario */
-    }
-
-    .serie-row.serie-aproximacion i {
-        color: #94a3b8; /* Texto "Aprox. X" en gris */
-        font-style: italic;
-    }
-    /* === MEJORAS DE JERARQUÍA VISUAL EN TARJETAS DE SERIE (MÓVIL) === */
-    @media (max-width: 768px) {
-        /* Destacar Peso y Reps */
-        .serie-cell[data-label="Peso (kg)"]::before,
-        .serie-cell[data-label="Reps Realizadas"]::before {
-            color: #f8fafc; /* Blanco principal */
-            font-weight: 700; /* Un poco más de grosor */
-        }
-
-        /* Hacer RPE y Hecho un poco más sutiles */
-        .serie-cell[data-label="RPE Sentido"]::before,
-        .serie-cell[data-label="Hecho"]::before {
-            color: #94a3b8; /* Color de texto secundario */
-            font-weight: 500;
-        }
-    }
-    /* === MEJORA DE FEEDBACK AL COMPLETAR SERIE (MÓVIL) === */
-    @media (max-width: 768px) {
-        .serie-row.completada {
-            opacity: 0.7;
-            border-color: #00ff64; /* Borde verde de éxito */
-            transition: opacity 0.5s ease, border-color 0.5s ease;
-        }
-    }
-
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap');
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+:root{
+  /* LoL palette exacta del proyecto */
+  --void:   #010A13;
+  --deep:   #0A1628;
+  --panel:  #071020;
+  --g:      #C8AA6E;   /* gold-mid — principal */
+  --gb:     #F0E6D3;   /* gold-bright — texto títulos */
+  --gd:     #785A28;   /* gold-dark — bordes */
+  --gdim:   #A08C5B;   /* gold-dim — hover */
+  --r:      #C84B31;   /* red */
+  --rl:     rgba(200,75,49,0.7);
+  --rb:     rgba(200,75,49,0.08);
+  --blue:   #0BC4E3;
+  --ok:     #4ade80;
+  --t:      #C8C8C8;   /* text-primary */
+  --tb:     #F0E6D3;   /* text-bright */
+  --td:     rgba(200,200,200,0.45); /* text-dim */
+  --tm:     rgba(200,200,200,0.25); /* text-muted */
+  --bd:     rgba(200,170,110,0.12); /* border-subtle */
+  --bdm:    rgba(200,170,110,0.25); /* border-mid */
+  --bdb:    rgba(200,170,110,0.55); /* border-bright */
+  --fd:     'Cinzel',serif;
+  --fu:     'Rajdhani',sans-serif;
+  --fm:     'Share Tech Mono',monospace;
+  --shadow: 0 4px 24px rgba(0,0,0,0.6), 0 1px 0 rgba(200,170,110,0.05) inset;
+}
+html,body{height:100%;background-color:var(--void);color:var(--t);font-family:var(--fu);font-size:16px;-webkit-text-size-adjust:100%;}
+body{
+  padding-bottom:0;overscroll-behavior:none;
+  background-image:
+    radial-gradient(ellipse 80% 50% at 50% 100%, rgba(10,22,40,0.8) 0%, transparent 60%),
+    repeating-linear-gradient(45deg,transparent,transparent 60px,rgba(200,170,110,0.008) 60px,rgba(200,170,110,0.008) 61px);
+}
+button{font-family:var(--fu);cursor:pointer;-webkit-tap-highlight-color:transparent;}
+button:focus,button:focus-visible{outline:none!important;}
+input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0;}
+input[type=number]{-moz-appearance:textfield;}
+input[type=range]{accent-color:var(--g);cursor:pointer;}
+input{background:transparent!important;border:none!important;outline:none!important;}
+
+/* ── TOPBAR ── */
+.topbar{
+  background:var(--void);padding:10px 16px;
+  display:flex;justify-content:space-between;align-items:center;
+  border-bottom:1px solid var(--bdm);
+  position:sticky;top:0;z-index:50;
+}
+.topbar::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--g),transparent);opacity:0.3;}
+.tb-left{font-family:var(--fm);font-size:10px;color:var(--td);letter-spacing:2px;text-transform:uppercase;}
+.tb-right{display:flex;align-items:center;gap:8px;}
+.tb-track{width:80px;height:3px;background:rgba(200,170,110,0.1);border-radius:99px;overflow:hidden;}
+.tb-fill{height:100%;background:linear-gradient(90deg,var(--gd),var(--g));border-radius:99px;transition:width .5s ease;}
+.tb-pct{font-family:var(--fm);font-size:11px;color:var(--g);font-weight:700;}
+
+/* ── NOMBRE EJERCICIO ── */
+.exname{background:var(--deep);padding:12px 16px 10px;border-bottom:1px solid var(--bd);}
+.exname h2{font-family:var(--fd);font-size:1.1rem;font-weight:700;color:var(--gb);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:6px;}
+.exname-meta{display:flex;gap:6px;flex-wrap:wrap;}
+.exname-chip{font-family:var(--fm);font-size:9px;padding:3px 8px;border-radius:2px;border:1px solid;display:inline-flex;align-items:center;gap:3px;letter-spacing:0.5px;}
+.chip-g{background:rgba(200,170,110,0.08);border-color:var(--bdm);color:var(--g);}
+.chip-b{background:rgba(11,196,227,0.06);border-color:rgba(11,196,227,0.25);color:var(--blue);}
+.chip-n{background:rgba(200,200,200,0.04);border-color:var(--bd);color:var(--td);}
+.nav-ej{display:flex;align-items:center;justify-content:space-between;padding:6px 16px;background:var(--panel);border-bottom:1px solid var(--bd);}
+.nav-btn{font-family:var(--fm);font-size:10px;color:var(--td);background:transparent;border:1px solid var(--bd);padding:4px 12px;border-radius:2px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;}
+.nav-btn:active,.nav-btn:hover{border-color:var(--bdm);color:var(--g);}
+.nav-centro{font-family:var(--fm);font-size:10px;color:var(--td);letter-spacing:2px;}
+
+/* ── SERIES LOG ── */
+.series-log{background:var(--deep);border-bottom:1px solid var(--bd);}
+.serie-done{display:flex;align-items:center;gap:10px;padding:9px 16px;border-bottom:1px solid var(--bd);}
+.serie-done:last-child{border-bottom:none;}
+.sd-check{width:22px;height:22px;border-radius:50%;background:rgba(74,222,128,0.08);border:1px solid rgba(74,222,128,0.35);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:10px;color:var(--ok);}
+.sd-info{flex:1;font-family:var(--fu);font-size:13px;color:var(--td);}
+.sd-info strong{color:var(--gb);font-weight:700;}
+.sd-rpe{font-family:var(--fm);font-size:10px;color:var(--td);background:var(--panel);padding:2px 8px;border-radius:2px;border:1px solid var(--bd);}
+
+/* ── SERIE ACTIVA ── */
+.serie-activa{margin:10px 16px;background:var(--deep);border:1px solid var(--bdm);position:relative;}
+.serie-activa::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--g),transparent);opacity:0.4;}
+.sa-header{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--panel);border-bottom:1px solid var(--bd);}
+.sa-num{font-family:var(--fm);font-size:10px;color:var(--g);letter-spacing:2px;text-transform:uppercase;}
+.sa-obj{font-family:var(--fm);font-size:10px;color:var(--td);}
+
+/* PESO */
+.peso-zona{padding:14px 14px 10px;}
+.peso-label{font-family:var(--fm);font-size:9px;color:var(--td);letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;}
+.peso-ctrl{display:flex;align-items:center;justify-content:center;gap:0;}
+.peso-btn{width:56px;height:60px;border:none;font-size:28px;font-weight:700;display:flex;align-items:center;justify-content:center;transition:all .12s;flex-shrink:0;font-family:var(--fu);}
+.peso-btn.menos{background:rgba(200,75,49,0.12);color:var(--rl);border:1px solid rgba(200,75,49,0.3);border-right:none;}
+.peso-btn.mas{background:rgba(200,170,110,0.1);color:var(--g);border:1px solid var(--bdm);border-left:none;}
+.peso-btn:active{filter:brightness(1.4);}
+.peso-num-wrap{display:flex;align-items:baseline;background:var(--panel);border:1px solid var(--bdm);padding:0 20px;}
+.peso-input{font-family:var(--fm)!important;font-size:54px!important;font-weight:700!important;color:var(--g)!important;text-align:center!important;width:140px!important;line-height:1!important;padding:8px 0!important;caret-color:transparent!important;background:transparent!important;}
+.peso-kg{font-family:var(--fm);font-size:16px;color:var(--td);align-self:flex-end;padding-bottom:10px;margin-left:4px;}
+.peso-lado{font-family:var(--fm);font-size:10px;color:var(--td);text-align:center;margin-top:6px;min-height:16px;}
+
+/* SLIDERS */
+.sliders-zona{padding:10px 14px 14px;display:flex;flex-direction:column;gap:12px;}
+.slider-row{display:flex;align-items:center;gap:10px;}
+.sl-label{font-family:var(--fm);font-size:9px;color:var(--td);text-transform:uppercase;letter-spacing:1.5px;min-width:36px;}
+.sl-track{flex:1;}
+.sl-val{font-family:var(--fm);font-size:20px;font-weight:700;min-width:36px;text-align:right;color:var(--gb);}
+.sl-val.rpe-v{color:var(--g);}
+.sl-unit{font-family:var(--fm);font-size:9px;color:var(--td);min-width:26px;}
+.hidden-reps,.hidden-rpe{display:none;}
+
+/* HISTORIAL */
+.historial-zona{margin:0 14px 12px;padding:8px 12px;background:var(--panel);border:1px solid var(--bd);font-family:var(--fm);font-size:11px;color:var(--tm);}
+.historial-zona span{color:var(--td);}
+
+/* BTN GUARDAR */
+.btn-guardar{
+  width:calc(100% - 32px);margin:0 16px 16px;height:52px;
+  background:linear-gradient(135deg,var(--gd),var(--g));
+  border:none;color:var(--void);
+  font-family:var(--fd);font-size:13px;font-weight:700;
+  letter-spacing:2px;text-transform:uppercase;
+  clip-path:polygon(8px 0%,100% 0%,calc(100% - 8px) 100%,0% 100%);
+  transition:all .15s;
+}
+.btn-guardar:active{filter:brightness(0.9);}
+
+/* ── PANTALLA DESCANSO ── */
+.pantalla-descanso{display:none;flex-direction:column;}
+.pd-header{background:var(--panel);padding:10px 16px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--bd);}
+.pd-ej{font-family:var(--fu);font-size:12px;color:var(--td);}
+.pd-ej strong{color:var(--gb);font-family:var(--fd);letter-spacing:0.5px;}
+.pd-timer-zona{background:var(--void);padding:20px 16px 16px;text-align:center;}
+.pd-label{font-family:var(--fm);font-size:9px;color:var(--td);letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;}
+.pd-ring-wrap{position:relative;width:200px;height:200px;margin:0 auto 12px;}
+.pd-ring-wrap svg{position:absolute;top:0;left:0;width:100%;height:100%;transform:rotate(-90deg);}
+.pd-ring-inner{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+.pd-tiempo{font-family:var(--fm);font-size:68px;font-weight:700;color:var(--g);line-height:1;letter-spacing:2px;}
+.pd-de{font-family:var(--fm);font-size:9px;color:var(--td);margin-top:4px;letter-spacing:1px;}
+
+.pd-proxima{background:var(--deep);margin:0 16px 8px;padding:10px 14px;border:1px solid var(--bd);}
+.pd-prox-lbl{font-family:var(--fm);font-size:9px;color:var(--td);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:4px;}
+.pd-prox-info{font-family:var(--fu);font-size:14px;font-weight:700;color:var(--gb);}
+.pd-prox-kg{color:var(--g);}
+
+.pd-calc{background:var(--deep);margin:0 16px 8px;padding:10px 14px;border:1px solid var(--bd);}
+.pd-calc-lbl{font-family:var(--fm);font-size:9px;color:var(--td);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px;}
+.discos-visual{display:flex;align-items:center;gap:2px;margin-bottom:6px;flex-wrap:wrap;}
+.barra{width:40px;height:8px;background:#333;border-radius:1px;}
+.disco{height:28px;border-radius:2px;display:flex;align-items:center;justify-content:center;font-family:var(--fm);font-size:8px;font-weight:700;}
+.d20{width:14px;background:var(--g);color:var(--void);}
+.d15{width:12px;background:var(--gdim);color:var(--void);}
+.d10{width:11px;background:#888;color:#111;}
+.d5{width:9px;background:var(--r);color:#111;}
+.d25{width:8px;background:var(--blue);color:#111;}
+.d1{width:7px;background:#555;color:#ccc;}
+.pd-calc-txt{font-family:var(--fm);font-size:11px;color:var(--td);}
+.pd-calc-txt strong{color:var(--t);}
+
+.pd-controles{display:flex;gap:8px;margin:0 16px 8px;}
+.pd-ctrl-btn{flex:1;height:40px;background:var(--deep);border:1px solid var(--bd);font-family:var(--fm);font-size:12px;font-weight:700;color:var(--td);cursor:pointer;letter-spacing:1px;text-transform:uppercase;}
+.pd-ctrl-btn.mas{color:var(--g);border-color:var(--bdm);}
+.pd-ctrl-btn:active{background:var(--panel);}
+
+.pd-notas{margin:0 16px 8px;}
+.pd-notas textarea{width:100%;background:var(--deep)!important;border:1px solid var(--bd)!important;color:var(--t)!important;font-size:13px;padding:10px;resize:none;height:58px;font-family:var(--fu);outline:none!important;}
+.pd-notas textarea::placeholder{color:var(--tm);}
+
+.btn-saltar{
+  width:calc(100% - 32px);margin:0 16px 16px;height:44px;
+  background:transparent;border:1px solid var(--bd);
+  color:var(--td);font-family:var(--fm);font-size:11px;font-weight:700;
+  letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;
+}
+.btn-saltar:active{background:var(--panel);}
+
+/* ── MODAL ── */
+.modal-ov{position:fixed;inset:0;background:rgba(1,10,19,0.92);z-index:100;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s;padding:16px;}
+.modal-ov.active{opacity:1;pointer-events:all;}
+.modal{background:var(--deep);border:1px solid var(--bdm);box-shadow:var(--shadow);width:100%;max-width:440px;max-height:85vh;overflow-y:auto;position:relative;}
+.modal::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--g),transparent);}
+.modal-top{text-align:center;padding:24px 20px 16px;}
+.modal-top h2{font-family:var(--fd);color:var(--g);font-size:1.2rem;letter-spacing:3px;margin-top:8px;text-transform:uppercase;}
+.modal-top p{font-size:12px;color:var(--td);margin-top:4px;font-family:var(--fm);}
+.modal-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:0 16px 16px;}
+.mstat{background:var(--panel);border:1px solid var(--bd);padding:14px;text-align:center;}
+.mstat-val{display:block;font-family:var(--fm);font-size:1.3rem;font-weight:700;color:var(--g);}
+.mstat-lbl{display:block;font-family:var(--fm);font-size:9px;color:var(--td);text-transform:uppercase;letter-spacing:1px;margin-top:2px;}
+.modal-desglose{padding:0 16px 12px;}
+.modal-desglose h3{font-family:var(--fd);font-size:11px;color:var(--g);letter-spacing:2px;margin-bottom:8px;text-transform:uppercase;}
+.modal-ej{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--bd);font-size:12px;}
+.modal-ej:last-child{border:none;}
+.modal-ej-nombre{flex:1;color:var(--gb);font-weight:600;font-family:var(--fu);}
+.modal-ej-stats{text-align:right;color:var(--td);font-family:var(--fm);font-size:11px;}
+.modal-actions{display:flex;gap:8px;padding:0 16px 20px;}
+.mbtn{flex:1;height:46px;font-size:13px;font-weight:700;cursor:pointer;transition:all .15s;letter-spacing:1.5px;text-transform:uppercase;}
+.mbtn-ok{background:linear-gradient(135deg,var(--gd),var(--g));border:none;color:var(--void);font-family:var(--fd);}
+.mbtn-back{background:transparent;border:1px solid var(--bd);color:var(--td);font-family:var(--fm);}
+.mbtn-back:hover{border-color:var(--bdm);color:var(--g);}
+
+/* ── STICKY BOTTOM ── */
+.sticky{
+  position:fixed;bottom:0;left:0;right:0;
+  background:rgba(1,10,19,0.97);
+  border-top:1px solid var(--bdm);
+  backdrop-filter:blur(10px);z-index:40;
+  display:flex;align-items:stretch;height:58px;
+}
+.sticky::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--g),transparent);opacity:0.3;}
+.sticky-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;border-right:1px solid var(--bd);}
+.sticky-item:last-child{border:none;}
+.sticky-val{font-family:var(--fm);font-size:13px;font-weight:700;color:var(--g);line-height:1;}
+.sticky-lbl{font-family:var(--fm);font-size:8px;color:var(--tm);text-transform:uppercase;letter-spacing:1.5px;}
+
+/* ── LAYOUT ── */
+.wrap{max-width:480px;margin:0 auto;padding-bottom:70px;}
+
+/* ── APROXIMACIONES ── */
+.aprox-toggle-btn{
+  width:calc(100% - 32px);margin:8px 16px 0;height:36px;
+  background:var(--panel);border:1px solid var(--bd);
+  color:var(--td);font-family:var(--fm);font-size:11px;letter-spacing:1px;text-transform:uppercase;
+  display:flex;align-items:center;justify-content:space-between;padding:0 12px;cursor:pointer;
+}
+.aprox-toggle-btn:hover{border-color:var(--bdm);color:var(--g);}
+.aprox-body{margin:4px 16px 0;border:1px solid var(--bd);overflow:hidden;display:none;}
+.aprox-body.open{display:block;}
+.aprox-row{display:grid;grid-template-columns:52px 1fr 52px 42px 32px;gap:6px;align-items:center;padding:7px 10px;border-bottom:1px solid var(--bd);font-family:var(--fm);font-size:11px;color:var(--td);}
+.aprox-row:last-child{border:none;}
+.aprox-inp{background:var(--panel)!important;border:1px solid var(--bd)!important;color:var(--td)!important;text-align:center;padding:3px;font-family:var(--fm);font-size:11px;}
+
+/* BTN FINALIZAR */
+.btn-finalizar-wrap{padding:16px;}
+.btn-final{
+  width:100%;height:52px;
+  background:linear-gradient(135deg,var(--gd),var(--g));
+  border:none;color:var(--void);
+  font-family:var(--fd);font-size:13px;font-weight:700;
+  letter-spacing:2px;text-transform:uppercase;
+  clip-path:polygon(8px 0%,100% 0%,calc(100% - 8px) 100%,0% 100%);
+  transition:all .2s;cursor:pointer;
+  box-shadow:0 0 20px rgba(200,170,110,0.15);
+}
+.btn-final:active{filter:brightness(0.85);}
 </style>
-{% endblock %}
-{% include 'entrenos/notificaciones_epicas.html' %}
-{% block content %}
-<div id="notificaciones-container"></div>
-<div class="blade-runner-atmosphere">
-    <div class="background-fog"></div>
+</head>
+<body>
+
+{% include 'entrenos/notificaciones_epicas_sistema.html' %}
+<div id="notif-container" style="position:fixed;top:70px;right:12px;z-index:300;display:flex;flex-direction:column;gap:8px;pointer-events:none;"></div>
+
+<div class="wrap">
+
+<!-- FORMULARIO — envuelve todo para que los inputs se envíen -->
+<form action="{% url 'entrenos:guardar_entrenamiento_activo' cliente.id %}" method="POST" id="workout-form">
+{% csrf_token %}
+<input type="hidden" name="fecha" value="{{ fecha }}">
+<input type="hidden" name="rutina_nombre" value="{{ rutina_nombre }}">
+<input type="hidden" name="duracion_minutos_real" id="hid-duracion">
+<input type="hidden" name="series_completadas" id="hid-series-comp">
+<input type="hidden" name="series_totales" id="hid-series-tot">
+<input type="hidden" name="ejercicios_completados" id="hid-ej-comp">
+<input type="hidden" name="ejercicios_totales" id="hid-ej-tot">
+<input type="hidden" name="volumen_total_sesion" id="hid-volumen">
+<input type="hidden" name="rpe_medio_sesion" id="hid-rpe-medio">
+
+<!-- ══ TOPBAR ══ -->
+<div class="topbar">
+  <span class="tb-left">{{ rutina_nombre|truncatechars:30 }}</span>
+  <div class="tb-right">
+    <div class="tb-track"><div class="tb-fill" id="tb-fill" style="width:0%"></div></div>
+    <span class="tb-pct" id="tb-pct">0%</span>
+  </div>
 </div>
 
+<!-- ══ EJERCICIOS ══ -->
+{% for ejercicio in ejercicios_planificados %}
+<div class="cyber-ejercicio-card" id="card-{{ ejercicio.form_id }}"
+     data-form-id="{{ ejercicio.form_id }}"
+     data-rpe-target="{{ ejercicio.rpe_objetivo|default:8 }}"
+     data-reps-min="{{ ejercicio.reps_min|default:ejercicio.reps_objetivo|default:8 }}"
+     data-reps-max="{{ ejercicio.reps_max|default:ejercicio.reps_objetivo|default:12 }}"
+     data-inc-kg="{{ ejercicio.incremento_kg|default:2.5 }}"
+     data-total-sets="{{ ejercicio.series }}"
+     data-descanso="{{ ejercicio.descanso_minutos|default:3 }}"
+     style="display:{% if forloop.first %}block{% else %}none{% endif %};">
 
-<div class="cyber-entreno-header animate-fadeSlide" style="animation-delay: 0.2s;">
-    <h2><i class="fas fa-dumbbell"></i> {{ rutina_nombre }}</h2>
-    <p class="lead">Entrenamiento del {{ fecha }} para {{ cliente.nombre }}</p>
+  <input type="hidden" name="{{ ejercicio.form_id }}_nombre" value="{{ ejercicio.nombre }}">
+  <input type="hidden" class="ejercicio-historial"
+         data-ejercicio-id="{{ ejercicio.form_id }}"
+         data-peso-anterior="{{ ejercicio.peso_anterior_kg|default:0 }}"
+         data-volumen-anterior="{{ ejercicio.volumen_anterior|default:0 }}"
+         data-pr-peso="{{ ejercicio.pr_peso|default:0 }}"
+         data-pr-reps="{{ ejercicio.pr_reps|default:0 }}">
+
+  <!-- NOMBRE -->
+  <div class="exname">
+    <h2 class="cyber-ejercicio-nombre">{{ ejercicio.nombre|title }}</h2>
+    <div class="exname-meta">
+      <span class="exname-chip chip-g"><i class="fas fa-layer-group" style="font-size:8px;"></i>{{ ejercicio.series }} series · RPE {{ ejercicio.rpe_objetivo }}</span>
+      <span class="exname-chip chip-n"><i class="fas fa-redo" style="font-size:8px;"></i>{{ ejercicio.repeticiones }} reps</span>
+      {% if ejercicio.peso_anterior_kg > 0 %}
+      <span class="exname-chip chip-g"><i class="fas fa-history" style="font-size:8px;"></i>Última: {{ ejercicio.peso_anterior_kg }}kg</span>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- NAVEGACIÓN -->
+  <div class="nav-ej">
+    <button type="button" class="nav-btn btn-ej-prev" onclick="navEjercicio(-1)">← Anterior</button>
+    <span class="nav-centro">{{ forloop.counter }} / {{ ejercicios_planificados|length }}</span>
+    <button type="button" class="nav-btn btn-ej-next" onclick="navEjercicio(1)">Siguiente →</button>
+  </div>
+
+  <!-- APROXIMACIONES -->
+  {% if ejercicio.aproximaciones %}
+  <button type="button" class="aprox-toggle-btn" onclick="this.nextElementSibling.classList.toggle('open');this.querySelector('span:last-child').textContent=this.nextElementSibling.classList.contains('open')?'▴':'▾'">
+    <span>Aproximaciones</span><span>▾</span>
+  </button>
+  <div class="aprox-body" data-aprox>
+    <div class="aprox-row serie-row serie-aproximacion"><span>Aprox 1</span><input class="aprox-inp" value="{{ ejercicio.aproximaciones.peso1|stringformat:'.1f' }}" readonly><input class="aprox-inp" value="5-8" readonly><input class="aprox-inp" value="4-5" readonly><input type="checkbox" disabled></div>
+    <div class="aprox-row serie-row serie-aproximacion"><span>Aprox 2</span><input class="aprox-inp" value="{{ ejercicio.aproximaciones.peso2|stringformat:'.1f' }}" readonly><input class="aprox-inp" value="3-5" readonly><input class="aprox-inp" value="6-7" readonly><input type="checkbox" disabled></div>
+    <div class="aprox-row serie-row serie-aproximacion"><span>Aprox 3</span><input class="aprox-inp" value="{{ ejercicio.aproximaciones.peso3|stringformat:'.1f' }}" readonly><input class="aprox-inp" value="1-2" readonly><input class="aprox-inp" value="8" readonly><input type="checkbox" disabled></div>
+  </div>
+  {% endif %}
+
+  <!-- LOG DE SERIES COMPLETADAS -->
+  <div class="series-log" id="log-{{ ejercicio.form_id }}"></div>
+
+  <!-- PANTALLA REGISTRO (serie activa) -->
+  <div class="pantalla-registro" id="reg-{{ ejercicio.form_id }}">
+
+    <!-- Serie activa header -->
+    <div class="serie-activa" id="sa-{{ ejercicio.form_id }}">
+      <div class="sa-header">
+        <span class="sa-num" id="sa-num-{{ ejercicio.form_id }}">SERIE 1 DE {{ ejercicio.series }}</span>
+        <span class="sa-obj">Obj: {% if ejercicio.peso_por_mancuerna_kg %}{{ ejercicio.peso_por_mancuerna_kg }}{% else %}{{ ejercicio.peso_recomendado_kg }}{% endif %}kg × {{ ejercicio.reps_objetivo }} reps</span>
+      </div>
+
+      <!-- PESO -->
+      <div class="peso-zona">
+        <div class="peso-label">Peso de trabajo</div>
+        <div class="serie-cell peso-ctrl" data-label="Peso de trabajo" style="display:flex;align-items:center;justify-content:center;padding:0;">
+          <button type="button" class="peso-btn menos quick-btn quick-minus">−</button>
+          <div class="peso-num-wrap">
+            <input type="number" step="0.5" readonly
+                   class="peso-input weight-input"
+                   id="peso-act-{{ ejercicio.form_id }}"
+                   name="{{ ejercicio.form_id }}_peso_1"
+                   value="{{ ejercicio.peso_recomendado_kg|stringformat:'.1f' }}"
+                   data-set="1"
+                   data-rec-weight="{{ ejercicio.peso_recomendado_kg|stringformat:'.1f' }}"
+                   data-eq-name="{{ ejercicio.nombre|lower }}">
+            <span class="peso-kg">kg</span>
+          </div>
+          <button type="button" class="peso-btn mas quick-btn quick-plus">+</button>
+        </div>
+        <div class="peso-lado weight-per-side-display" data-set="1" id="lado-{{ ejercicio.form_id }}"></div>
+      </div>
+
+      <!-- SLIDERS REPS + RPE -->
+      <div class="sliders-zona">
+        <div class="slider-row">
+          <span class="sl-label">Reps</span>
+          <input type="range" class="sl-track" min="1" max="20" value="{{ ejercicio.reps_objetivo }}" step="1"
+                 id="sl-reps-{{ ejercicio.form_id }}"
+                 oninput="syncSlider(this,'reps','disp-reps-{{ ejercicio.form_id }}','hid-reps-{{ ejercicio.form_id }}')">
+          <span class="sl-val reps-v" id="disp-reps-{{ ejercicio.form_id }}">{{ ejercicio.reps_objetivo }}</span>
+          <span class="sl-unit">reps</span>
+        </div>
+        <div class="slider-row">
+          <span class="sl-label">RPE</span>
+          <input type="range" class="sl-track" min="5" max="10" value="{{ ejercicio.rpe_objetivo }}" step="0.5"
+                 id="sl-rpe-{{ ejercicio.form_id }}"
+                 oninput="syncSlider(this,'rpe','disp-rpe-{{ ejercicio.form_id }}','hid-rpe-{{ ejercicio.form_id }}')">
+          <span class="sl-val rpe-v" id="disp-rpe-{{ ejercicio.form_id }}">{{ ejercicio.rpe_objetivo }}</span>
+          <span class="sl-unit"></span>
+        </div>
+        <!-- Hidden inputs que se envían al form con el nombre correcto -->
+        <input type="number" class="hidden-reps reps-input"
+               id="hid-reps-{{ ejercicio.form_id }}"
+               name="{{ ejercicio.form_id }}_reps_1"
+               value="{{ ejercicio.reps_objetivo }}" data-set="1">
+        <input type="number" class="hidden-rpe rpe-input"
+               id="hid-rpe-{{ ejercicio.form_id }}"
+               name="{{ ejercicio.form_id }}_rpe_1"
+               value="{{ ejercicio.rpe_objetivo }}" data-set="1">
+        <input type="hidden" name="{{ ejercicio.form_id }}_rpe_obj_1" value="{{ ejercicio.rpe_objetivo }}">
+      </div>
+
+      <!-- HISTORIAL -->
+      {% if ejercicio.peso_anterior_kg > 0 %}
+      <div class="historial-zona">
+        Última vez ({{ ejercicio.fecha_anterior|date:"d/m" }}): <span>{{ ejercicio.peso_anterior_kg }}kg × {{ ejercicio.repeticiones_anterior }} reps @ {{ ejercicio.series_anterior }} series</span>
+      </div>
+      {% endif %}
+    </div><!-- /serie-activa -->
+
+    <button type="button" class="btn-guardar" id="btn-guardar-{{ ejercicio.form_id }}"
+            onclick="guardarSerie('{{ ejercicio.form_id }}')">
+      GUARDAR SERIE
+    </button>
+
+  </div><!-- /pantalla-registro -->
+
+  <!-- PANTALLA DESCANSO -->
+  <div class="pantalla-descanso" id="desc-{{ ejercicio.form_id }}">
+    <div class="pd-header">
+      <div style="width:8px;height:8px;border-radius:50%;background:var(--y);flex-shrink:0;"></div>
+      <div class="pd-ej"><strong>{{ ejercicio.nombre|title }}</strong> — serie guardada</div>
+    </div>
+    <div class="pd-timer-zona">
+      <div class="pd-label">Descansando</div>
+      <div class="pd-ring-wrap">
+        <svg viewBox="0 0 180 180">
+          <circle cx="90" cy="90" r="80" fill="none" stroke="#2a2a2a" stroke-width="8"/>
+          <circle cx="90" cy="90" r="80" fill="none" stroke="#e5c100" stroke-width="8"
+                  stroke-dasharray="502" stroke-dashoffset="502" stroke-linecap="round"
+                  id="ring-{{ ejercicio.form_id }}"/>
+        </svg>
+        <div class="pd-ring-inner">
+          <div class="pd-tiempo" id="pd-tiempo-{{ ejercicio.form_id }}">3:00</div>
+          <div class="pd-de" id="pd-de-{{ ejercicio.form_id }}">DE 3:00</div>
+        </div>
+      </div>
+    </div>
+    <div class="pd-proxima">
+      <div class="pd-prox-lbl">Próxima serie</div>
+      <div class="pd-prox-info" id="pd-prox-{{ ejercicio.form_id }}">—</div>
+    </div>
+    <div class="pd-calc">
+      <div class="pd-calc-lbl">Calculadora de discos</div>
+      <div class="discos-visual" id="discos-{{ ejercicio.form_id }}"></div>
+      <div class="pd-calc-txt" id="calc-txt-{{ ejercicio.form_id }}"></div>
+    </div>
+    <div class="pd-controles">
+      <button type="button" class="pd-ctrl-btn" onclick="ajustarTimer('{{ ejercicio.form_id }}',-30)">−30s</button>
+      <button type="button" class="pd-ctrl-btn mas" onclick="ajustarTimer('{{ ejercicio.form_id }}',30)">+30s</button>
+    </div>
+    <div class="pd-notas">
+      <textarea placeholder="Notas de técnica..."></textarea>
+    </div>
+    <button type="button" class="btn-saltar" id="btn-saltar-{{ ejercicio.form_id }}"
+            onclick="saltarDescanso('{{ ejercicio.form_id }}')">
+      SALTAR DESCANSO
+    </button>
+    <!-- checkboxes ocultos — se marcan al guardar la serie -->
+    <div id="checks-{{ ejercicio.form_id }}" style="display:none;"></div>
+  </div><!-- /pantalla-descanso -->
+
+</div><!-- /cyber-ejercicio-card -->
+{% endfor %}
+
+<!-- BOTÓN FINALIZAR -->
+<div class="btn-finalizar-wrap">
+  <button type="button" id="btn-mostrar-resumen"
+          class="btn-final">
+    <i class="fas fa-flag-checkered"></i> Finalizar y Guardar
+  </button>
 </div>
-<div class="cyber-ejercicio-card animate-fadeSlide" style="animation-delay: 0.3s; border-left: 5px solid #ff00ff;">
-    <div class="cyber-ejercicio-header" style="border-bottom: none; margin-bottom: 0; padding-bottom: 0;">
-        <h4><i class="fas fa-brain" style="color: #ff00ff;"></i> Guía de Esfuerzo (RPE)</h4>
-        <small>
-            El RPE (Ratio de Esfuerzo Percibido) mide qué tan cerca del fallo muscular estás.
-            Usa esta guía para calibrar tu intensidad en la última serie de cada ejercicio.
-        </small>
-        <div class="mt-3 text-sm">
-            {% for rpe, desc in leyenda_rpe.items %}
-            {% if rpe == '10' or rpe == '9' or rpe == '8' or rpe == '7' or rpe == '6'%} <!-- Solo mostramos los más comunes para no saturar -->
-            <p class="mb-1">
-                <strong class="text-pink-400">RPE {{ rpe }}:</strong>
-                <span class="text-gray-300">{{ desc }}</span>
-            </p>
-            {% endif %}
-            {% endfor %}
-        </div>
+
+</form><!-- /workout-form -->
+
+<!-- MODAL RESUMEN -->
+<div class="modal-ov" id="modal-resumen-overlay">
+  <div class="modal">
+    <div class="modal-top">
+      <div style="font-size:2rem;">🏆</div>
+      <h2>¡Entrenamiento Completado!</h2>
+      <p>Resumen de tu sesión</p>
     </div>
-
-    <!-- ======================================================= -->
-    <!-- INICIO: LEYENDA DE PROGRESIÓN INTELIGENTE -->
-    <!-- ======================================================= -->
-
-    <!-- ======================================================= -->
-    <!-- FIN: LEYENDA DE PROGRESIÓN INTELIGENTE -->
-    <!-- ======================================================= -->
-
+    <div class="modal-stats">
+      <div class="mstat"><span class="mstat-val" id="modal-tiempo">00:00</span><span class="mstat-lbl">Duración</span></div>
+      <div class="mstat"><span class="mstat-val" id="modal-series">0/0</span><span class="mstat-lbl">Series</span></div>
+      <div class="mstat"><span class="mstat-val" id="modal-volumen">0 kg</span><span class="mstat-lbl">Volumen</span></div>
+      <div class="mstat"><span class="mstat-val" id="modal-ejercicios">0/0</span><span class="mstat-lbl">Ejercicios</span></div>
+    </div>
+    <div class="modal-desglose">
+      <h3>Desglose</h3>
+      <div id="modal-ejercicios-lista"></div>
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="mbtn mbtn-back" id="btn-volver-editar">Editar</button>
+      <button type="button" class="mbtn mbtn-ok" id="btn-confirmar-guardar">Guardar</button>
+    </div>
+  </div>
 </div>
-<div class="cyber-ejercicio-card animate-fadeSlide" style="animation-delay: 0.3s; border-left: 5px solid #00ff64;">
-    <div class="cyber-ejercicio-header" style="border-bottom: none; margin-bottom: 0; padding-bottom: 0;">
-        <h4><i class="fas fa-bullseye" style="color: #00ff64;"></i> Tu Misión de Hoy</h4>
-        <small>
-            Entiende la filosofía detrás de los números para maximizar tu progreso.
-        </small>
-        <div class="mt-4 text-gray-300 space-y-3">
-            <p>
-                Tu objetivo principal hoy no es simplemente "hacer 8 repeticiones". Es usar el peso recomendado para alcanzar un nivel de esfuerzo específico (RPE).
-            </p>
 
-            <div class="bg-gray-900/50 p-3 rounded-lg border border-gray-700">
-                <p>
-                    <strong class="text-cyan-400">El Peso es tu Herramienta:</strong> Te hemos asignado un peso calculado para tu fuerza actual.
-                </p>
-                <p class="mt-2">
-                    <strong class="text-pink-400">El RPE es tu Límite:</strong> Tu verdadera meta es terminar la última serie sintiendo el <strong class="font-bold">RPE Objetivo</strong>. Esto significa que deberías sentir que te quedan en
-                    recámara el número de repeticiones que indica la guía de abajo.
-                </p>
-                <p class="mt-2">
-                    <strong class="text-yellow-400">Las Reps son tu Puntuación:</strong> El rango de repeticiones es donde esperamos que aterrices.
-                </p>
-                <ul class="list-disc list-inside pl-4 mt-2 text-sm">
-                    <li>Si haces **más repeticiones** de las esperadas para ese RPE, ¡genial! Tu fuerza ha aumentado y lo registraremos.</li>
-                    <li>Si haces **menos repeticiones**, no pasa nada. Significa que el peso fue un gran desafío hoy. También lo registraremos.</li>
-                </ul>
-            </div>
-
-            <p class="font-semibold text-white">
-                En resumen: Usa el peso, apunta al RPE y registra honestamente las repeticiones que consigas. ¡Ahí está la clave de tu progreso!
-            </p>
-        </div>
-    </div>
+<!-- STICKY BOTTOM -->
+<div class="sticky">
+  <div class="sticky-item">
+    <span class="sticky-val" id="tiempo-transcurrido">00:00</span>
+    <span class="sticky-lbl">Tiempo</span>
+  </div>
+  <div class="sticky-item">
+    <span class="sticky-val" id="series-completadas-sticky">0/0</span>
+    <span class="sticky-lbl">Series</span>
+  </div>
+  <div class="sticky-item">
+    <span class="sticky-val" id="volumen-acumulado">0 kg</span>
+    <span class="sticky-lbl">Volumen</span>
+  </div>
+  <div class="sticky-item" style="flex:1.3;">
+    <span class="sticky-val" id="ejercicio-actual" style="font-size:11px;max-width:110px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">--</span>
+    <span class="sticky-lbl">Actual</span>
+  </div>
 </div>
-<!-- WIDGET DE GAMIFICACIÓN -->
-<!-- Widget de Gamificación para entrenamiento_activo.html -->
-<!-- Añadir DESPUÉS de la sección de "Guía de Esfuerzo (RPE)" y ANTES del formulario -->
-{% include 'entrenos/widget_codice.html' %}
 
-
-<form action="{% url 'entrenos:guardar_entrenamiento_activo' cliente.id %}" method="POST">
-    {% csrf_token %}
-    <input type="hidden" name="fecha" value="{{ fecha }}">
-    <input type="hidden" name="rutina_nombre" value="{{ rutina_nombre }}">
-
-    {% for ejercicio in ejercicios_planificados %}
-
-    <div class="cyber-ejercicio-header">
-        <h4><i class="fas fa-robot"></i> {{ ejercicio.nombre|title }}</h4>
-        <small>
-            <strong class="text-pink-400">Misión:</strong> {{ ejercicio.series }} series a <strong>RPE {{ ejercicio.rpe_objetivo }}</strong> con <strong>{{ ejercicio.peso_recomendado_kg }} kg</strong>.
-
-
-            <span class="text-gray-400">Rango de reps esperado: {{ ejercicio.repeticiones }}. ¡Intenta superarlo!</span>
-        </small>
-        <input type="hidden" name="{{ ejercicio.form_id }}_nombre" value="{{ ejercicio.nombre }}">
-    </div>
-
-    <div class="detail-box">
-        <div class="detail-label">RPE Objetivo</div>
-        <div class="detail-value text-fuchsia-400">{{ ejercicio.rpe_objetivo }}</div>
-    </div>
-    <div class="detail-box">
-        <div class="detail-label">Tempo</div>
-        <div class="detail-value text-yellow-400">{{ ejercicio.tempo }}</div>
-    </div>
-    <div class="detail-box">
-        <div class="detail-label">Descanso</div>
-        <div class="detail-value text-cyan-400">{{ ejercicio.descanso_minutos }} min</div>
-    </div>
-
-
-    <!-- Encabezados (solo visibles en escritorio) -->
-    <div class="series-header">
-        <div class="header-item">Serie</div>
-        <div class="header-item">Peso (kg)</div>
-        <div class="header-item">Reps Realizadas</div>
-        <div class="header-item">RPE Sentido</div>
-        <div class="header-item">Hecho</div>
-    </div>
-
-    <!-- Bucle de Series (Aproximación) -->
-    {% if ejercicio.aproximaciones %}
-    <div class="serie-row serie-aproximacion">
-        <div class="serie-cell" data-label="Serie"><i>Aprox. 1</i></div>
-        <div class="serie-cell" data-label="Peso (kg)"><input type="number" step="0.5" class="form-control cyber-form-control" value="{{ ejercicio.aproximaciones.peso1|stringformat:'.1f' }}"></div>
-        <div class="serie-cell" data-label="Reps Realizadas"><input type="number" class="form-control cyber-form-control" placeholder="5-8"></div>
-        <div class="serie-cell" data-label="RPE Sentido"><input type="number" step="0.5" class="form-control cyber-form-control text-center" placeholder="4-5"></div>
-        <div class="serie-cell" data-label="Hecho"><input class="form-check-input cyber-form-check-input" type="checkbox"></div>
-    </div>
-    <div class="serie-row serie-aproximacion">
-        <div class="serie-cell" data-label="Serie"><i>Aprox. 2</i></div>
-        <div class="serie-cell" data-label="Peso (kg)"><input type="number" step="0.5" class="form-control cyber-form-control" value="{{ ejercicio.aproximaciones.peso2|stringformat:'.1f' }}"></div>
-        <div class="serie-cell" data-label="Reps Realizadas"><input type="number" class="form-control cyber-form-control" placeholder="3-5"></div>
-        <div class="serie-cell" data-label="RPE Sentido"><input type="number" step="0.5" class="form-control cyber-form-control text-center" placeholder="6-7"></div>
-        <div class="serie-cell" data-label="Hecho"><input class="form-check-input cyber-form-check-input" type="checkbox"></div>
-    </div>
-    <div class="serie-row serie-aproximacion">
-        <div class="serie-cell" data-label="Serie"><i>Aprox. 3</i></div>
-        <div class="serie-cell" data-label="Peso (kg)"><input type="number" step="0.5" class="form-control cyber-form-control" value="{{ ejercicio.aproximaciones.peso3|stringformat:'.1f' }}"></div>
-        <div class="serie-cell" data-label="Reps Realizadas"><input type="number" class="form-control cyber-form-control" placeholder="1-2"></div>
-        <div class="serie-cell" data-label="RPE Sentido"><input type="number" step="0.5" class="form-control cyber-form-control text-center" placeholder="8"></div>
-        <div class="serie-cell" data-label="Hecho"><input class="form-check-input cyber-form-check-input" type="checkbox"></div>
-    </div>
-    {% endif %}
-
-    <!-- ======================================================= -->
-    <!-- INICIO: SERIES EFECTIVAS (CÓDIGO ORIGINAL) -->
-    <!-- ======================================================= -->{% for i in ""|center:ejercicio.series %}
-    {% with forloop.counter as serie_num %}
-    <div class="serie-row">
-        <div class="serie-cell" data-label="Serie"><strong>Serie {{ serie_num }}</strong></div>
-        <div class="serie-cell" data-label="Peso (kg)"><input type="number" step="0.5" class="form-control cyber-form-control" name="{{ ejercicio.form_id }}_peso_{{ serie_num }}" value="{{ ejercicio.peso_recomendado_kg|stringformat:'.1f' }}"></div>
-        <div class="serie-cell" data-label="Reps Realizadas"><input type="number" class="form-control cyber-form-control" name="{{ ejercicio.form_id }}_reps_{{ serie_num }}" value="{{ ejercicio.reps_objetivo }}"></div>
-        <div class="serie-cell" data-label="RPE Sentido"><input type="number" step="0.5" class="form-control cyber-form-control text-center" name="{{ ejercicio.form_id }}_rpe_{{ serie_num }}" value="{{ ejercicio.rpe_objetivo }}"></div>
-        <div class="serie-cell" data-label="Hecho"><input class="form-check-input cyber-form-check-input" type="checkbox" name="{{ ejercicio.form_id }}_completado_{{ serie_num }}" value="1"></div>
-    </div>
-    {% endwith %}
-    {% endfor %}
-
-
-    {% endfor %}
-
-    <!-- Sección de resumen y botón (sin cambios) -->
-
-    <div class="cyber-ejercicio-card cyber-resumen-section animate-fadeSlide" style="animation-delay: {{ ejercicios_planificados|length|add:3|floatformat:1 }}s;">
-        <div class="cyber-ejercicio-header">
-            <h4><i class="fas fa-chart-line"></i> Resumen del Entrenamiento</h4>
-            <small>Datos generales de la sesión</small>
-        </div>
-        <div class="cyber-row">
-            <div class="cyber-col-md-6">
-                <label for="duracion_minutos" class="cyber-form-label">Duración Total (minutos)</label>
-                <input type="number" class="form-control cyber-form-control" id="duracion_minutos"
-                       name="duracion_minutos" placeholder="Ej: 75">
-            </div>
-            <div class="cyber-col-md-6">
-                <label for="calorias_quemadas" class="cyber-form-label">Calorías Quemadas (opcional)</label>
-                <input type="number" class="form-control cyber-form-control" id="calorias_quemadas"
-                       name="calorias_quemadas" placeholder="Ej: 550">
-            </div>
-            <div class="cyber-col-12">
-                <label for="notas_liftin" class="cyber-form-label">Notas Generales</label>
-                <textarea class="form-control cyber-textarea" id="notas_liftin" name="notas_liftin"
-                          rows="3" placeholder="¿Cómo te sentiste? ¿Alguna molestia?"></textarea>
-            </div>
-        </div>
-    </div>
-
-    <div class="bg-[#121212] p-4 rounded-xl mt-6 shadow-md border border-yellow-700 interactive-glow">
-        <button type="submit" class="btn cyber-btn-finalizar">
-            <i class="fas fa-save"></i> Finalizar y Guardar Entrenamiento
-        </button>
-
-        <a href="{% url 'analytics:dashboard_cliente' cliente.id %}" class="block w-full bg-gradient-to-r from-cyan-500 to-fuchsia-500 text-white text-center font-semibold py-2 rounded-xl mt-6 shadow-md hover:scale-105 transition">📊 Ver Dashboard
-            Completo
-        </a>
-    </div>
-</form>
-
-
-{% endblock %}
-
-{% block extra_js %}
+<script src="{% static 'entrenos/js/entrenamiento_activo.js' %}"></script>
 <script>
-
-    class NotificacionesCodeice {
-        constructor() {
-            this.container = document.getElementById('notificaciones-container');
-            this.notificacionesActivas = [];
-            this.sonidosHabilitados = true;
-        }
-
-        // Mostrar notificación de puntos ganados
-        mostrarPuntosGanados(puntos, desglose = null) {
-            const notificacion = {
-                tipo: 'puntos-ganados',
-                icono: '💰',
-                titulo: '¡Puntos Ganados!',
-                subtitulo: 'Recompensa de Entrenamiento',
-                mensaje: `+${puntos} puntos de poder`,
-                detalle: desglose ? `${desglose.base} base + ${desglose.bonus} bonus + ${desglose.pruebas} pruebas` : null,
-                duracion: 4000
-            };
-
-            this.mostrarNotificacion(notificacion);
-        }
-
-        // Mostrar notificación de prueba completada
-        mostrarPruebaCompletada(nombrePrueba, puntosRecompensa, descripcion = null) {
-            const notificacion = {
-                tipo: 'prueba-completada',
-                icono: '⚔️',
-                titulo: '¡Prueba Completada!',
-                subtitulo: nombrePrueba,
-                mensaje: `Has superado el desafío legendario`,
-                detalle: descripcion || `+${puntosRecompensa} puntos de recompensa`,
-                duracion: 6000,
-                efectos: true
-            };
-
-            this.mostrarNotificacion(notificacion);
-        }
-
-        // Mostrar notificación de ascensión
-        mostrarAscension(nivelAnterior, nivelNuevo, filosofia = null) {
-            const notificacion = {
-                tipo: 'ascension',
-                icono: '🔥',
-                titulo: '¡ASCENSIÓN!',
-                subtitulo: `${nivelAnterior} → ${nivelNuevo}`,
-                mensaje: `Has alcanzado un nuevo nivel de poder`,
-                detalle: filosofia ? `"${filosofia}"` : 'Tu leyenda continúa creciendo',
-                duracion: 8000,
-                efectos: true,
-                particulas: true
-            };
-
-            this.mostrarNotificacion(notificacion);
-        }
-
-        // Mostrar notificación de racha
-        mostrarRacha(dias) {
-            if (dias < 3) return; // Solo mostrar rachas significativas
-
-            const notificacion = {
-                tipo: 'puntos-ganados',
-                icono: '🔥',
-                titulo: '¡Racha de Fuego!',
-                subtitulo: `${dias} días consecutivos`,
-                mensaje: `Tu dedicación arde como una llama eterna`,
-                detalle: `Bonus de constancia: +${Math.min(15, dias)} puntos`,
-                duracion: 5000
-            };
-
-            this.mostrarNotificacion(notificacion);
-        }
-
-        // Función principal para mostrar notificaciones
-        mostrarNotificacion(config) {
-            const notifElement = this.crearElementoNotificacion(config);
-            this.container.appendChild(notifElement);
-            this.notificacionesActivas.push(notifElement);
-
-            // Mostrar con animación
-            setTimeout(() => {
-                notifElement.classList.add('mostrar');
-            }, 100);
-
-            // Añadir efectos especiales
-            if (config.efectos) {
-                this.añadirEfectosPulso(notifElement);
-            }
-
-            if (config.particulas) {
-                this.añadirParticulas(notifElement);
-            }
-
-            // Auto-ocultar después de la duración especificada
-            setTimeout(() => {
-                this.ocultarNotificacion(notifElement);
-            }, config.duracion);
-
-            // Reposicionar notificaciones existentes
-            this.reposicionarNotificaciones();
-        }
-
-        // Crear elemento HTML de la notificación
-        crearElementoNotificacion(config) {
-            const notif = document.createElement('div');
-            notif.className = `notificacion-epica ${config.tipo}`;
-
-            notif.innerHTML = `
-                <button class="notif-cerrar" onclick="notificacionesCodeice.ocultarNotificacion(this.parentElement)">&times;</button>
-
-                <div class="notif-header">
-                    <div class="notif-icono">${config.icono}</div>
-                    <div>
-                        <div class="notif-titulo">${config.titulo}</div>
-                        <div class="notif-subtitulo">${config.subtitulo}</div>
-                    </div>
-                </div>
-
-                <div class="notif-contenido">
-                    <div class="notif-mensaje">${config.mensaje}</div>
-                    ${config.detalle ? `<div class="notif-detalle">${config.detalle}</div>` : ''}
-                </div>
-            `;
-
-            return notif;
-        }
-
-        // Ocultar notificación
-        ocultarNotificacion(elemento) {
-            elemento.classList.add('ocultar');
-
-            setTimeout(() => {
-                if (elemento.parentNode) {
-                    elemento.parentNode.removeChild(elemento);
-                }
-
-                const index = this.notificacionesActivas.indexOf(elemento);
-                if (index > -1) {
-                    this.notificacionesActivas.splice(index, 1);
-                }
-
-                this.reposicionarNotificaciones();
-            }, 800);
-        }
-
-        // Reposicionar notificaciones para evitar solapamiento
-        reposicionarNotificaciones() {
-            let offset = 20;
-            this.notificacionesActivas.forEach((notif, index) => {
-                if (notif.classList.contains('mostrar') && !notif.classList.contains('ocultar')) {
-                    notif.style.top = `${offset}px`;
-                    offset += notif.offsetHeight + 15;
-                }
-            });
-        }
-
-        // Añadir efectos de pulso
-        añadirEfectosPulso(elemento) {
-            // Implementación opcional
-        }
-
-        // Añadir partículas para ascensiones
-        añadirParticulas(elemento) {
-            const particulasContainer = document.createElement('div');
-            particulasContainer.className = 'particulas';
-
-            for (let i = 0; i < 15; i++) {
-                const particula = document.createElement('div');
-                particula.className = 'particula';
-                particula.style.left = `${Math.random() * 100}%`;
-                particula.style.animationDelay = `${Math.random() * 2}s`;
-                particula.style.animationDuration = `${2 + Math.random() * 2}s`;
-                particulasContainer.appendChild(particula);
-            }
-
-            elemento.appendChild(particulasContainer);
-
-            setTimeout(() => {
-                if (particulasContainer.parentNode) {
-                    particulasContainer.parentNode.removeChild(particulasContainer);
-                }
-            }, 4000);
-        }
-
-        // Limpiar todas las notificaciones
-        limpiarTodas() {
-            this.notificacionesActivas.forEach(notif => {
-                this.ocultarNotificacion(notif);
-            });
-        }
-    }
-
-    // Instancia global del sistema de notificaciones
-    const notificacionesCodeice = new NotificacionesCodeice();
-
-    // Funciones de conveniencia para usar desde otros scripts
-    function mostrarNotificacionPuntos(puntos, desglose = null) {
-        notificacionesCodeice.mostrarPuntosGanados(puntos, desglose);
-    }
-
-    function mostrarNotificacionPrueba(nombre, puntos, descripcion = null) {
-        notificacionesCodeice.mostrarPruebaCompletada(nombre, puntos, descripcion);
-    }
-
-    function mostrarNotificacionAscension(anterior, nuevo, filosofia = null) {
-        notificacionesCodeice.mostrarAscension(anterior, nuevo, filosofia);
-    }
-
-    function mostrarNotificacionRacha(dias) {
-        notificacionesCodeice.mostrarRacha(dias);
-    }
-
-    console.log('🎮 Sistema de notificaciones épicas cargado');
-
-        document.addEventListener('DOMContentLoaded', function() {
-            // Efectos adicionales de interactividad
-            const ejercicioCards = document.querySelectorAll('.cyber-ejercicio-card');
-            ejercicioCards.forEach(card => {
-                card.addEventListener('mouseenter', function() {
-                    this.style.transform = 'translateY(-3px)';
-                });
-
-                card.addEventListener('mouseleave', function() {
-                    this.style.transform = 'translateY(0)';
-                });
-            });
-
-            // Efectos para inputs
-            const inputs = document.querySelectorAll('.cyber-form-control, .cyber-textarea');
-            inputs.forEach(input => {
-                input.addEventListener('focus', function() {
-                    this.parentNode.style.transform = 'scale(1.02)';
-                    this.parentNode.style.zIndex = '10';
-                });
-
-                input.addEventListener('blur', function() {
-                    this.parentNode.style.transform = 'scale(1)';
-                    this.parentNode.style.zIndex = '1';
-                });
-            });
-
-            // Efectos para checkboxes
-            const checkboxes = document.querySelectorAll('.cyber-form-check-input');
-            checkboxes.forEach(checkbox => {
-                checkbox.addEventListener('change', function() {
-                    const row = this.closest('tr');
-                    if (this.checked) {
-                        row.classList.add('serie-completada');
-                        // Efecto de completado
-                        row.style.background = 'rgba(0, 255, 100, 0.1)';
-                        row.style.borderLeft = '3px solid #00ff64';
-
-                        // Animación de éxito
-                        this.style.transform = 'scale(1.2)';
-                        setTimeout(() => {
-                            this.style.transform = 'scale(1)';
-                        }, 200);
-                    } else {
-                        row.classList.remove('serie-completada');
-                        row.style.background = '';
-                        row.style.borderLeft = '';
-                    }
-                });
-
-                checkbox.addEventListener('mouseenter', function() {
-                    this.style.transform = 'scale(1.1)';
-                });
-
-                checkbox.addEventListener('mouseleave', function() {
-                    if (!this.matches(':focus')) {
-                        this.style.transform = 'scale(1)';
-                    }
-                });
-            });
-
-            // Efecto de progreso general
-            function updateProgress() {
-                const totalCheckboxes = checkboxes.length;
-                const checkedBoxes = document.querySelectorAll('.cyber-form-check-input:checked').length;
-                const progress = (checkedBoxes / totalCheckboxes) * 100;
-
-                // Actualizar color del botón según progreso
-                const finalizarBtn = document.querySelector('.cyber-btn-finalizar');
-                if (progress === 100) {
-                    finalizarBtn.style.background = 'linear-gradient(45deg, rgba(0, 255, 100, 0.8), rgba(0, 200, 50, 0.6))';
-                    finalizarBtn.style.boxShadow = '0 0 35px rgba(0, 255, 100, 0.6)';
-                } else {
-                    finalizarBtn.style.background = 'linear-gradient(45deg, rgba(0, 255, 255, 0.8), rgba(0, 150, 255, 0.6))';
-                    finalizarBtn.style.boxShadow = '0 0 25px rgba(0, 255, 255, 0.4)';
-                }
-            }
-
-            // Escuchar cambios en checkboxes para actualizar progreso
-            checkboxes.forEach(checkbox => {
-                checkbox.addEventListener('change', updateProgress);
-            });
-
-            // Inicializar progreso
-            updateProgress();
-
-            // Efecto de envío del formulario
-            const form = document.querySelector('form');
-            form.addEventListener('submit', function(e) {
-                const submitBtn = document.querySelector('.cyber-btn-finalizar');
-                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
-                submitBtn.disabled = true;
-
-                // Efecto visual de envío
-                submitBtn.style.background = 'linear-gradient(45deg, rgba(255, 165, 0, 0.8), rgba(255, 140, 0, 0.6))';
-                submitBtn.style.boxShadow = '0 0 35px rgba(255, 165, 0, 0.6)';
-            });
-
-            // Validación mejorada
-            const requiredInputs = document.querySelectorAll('input[required], textarea[required]');
-            requiredInputs.forEach(input => {
-                input.addEventListener('invalid', function() {
-                    this.style.borderColor = 'rgba(220, 53, 69, 0.8)';
-                    this.style.boxShadow = '0 0 15px rgba(220, 53, 69, 0.4)';
-                });
-
-                input.addEventListener('input', function() {
-                    if (this.validity.valid) {
-                        this.style.borderColor = 'rgba(0, 255, 255, 0.4)';
-                        this.style.boxShadow = '';
-                    }
-                });
-            });
-
-            // Efecto de carga inicial
-            setTimeout(() => {
-                document.body.classList.add('loaded');
-            }, 500);
-        });
-
-      document.addEventListener('DOMContentLoaded', function() {
-    console.log('🎮 Sistema de notificaciones del Códice iniciado');
-
-    // Verificar si hay mensajes de Django para procesar
-    {% if messages %}
-        let delay = 1000; // Delay inicial de 1 segundo
-        let messageCount = 0;
-
-        {% for message in messages %}
-            messageCount++;
-            // USAR LET EN LUGAR DE CONST PARA EVITAR CONFLICTOS
-            let currentMessage = "{{ message.message|escapejs }}";
-            console.log(`📨 Procesando mensaje ${messageCount}:`, currentMessage);
-
-            // PROCESAR PUNTOS GANADOS
-            if (currentMessage.startsWith('CODICE_PUNTOS:')) {
-                try {
-                    const puntosData = JSON.parse(currentMessage.replace('CODICE_PUNTOS:', ''));
-                    console.log('💰 Datos de puntos:', puntosData);
-
-                    setTimeout(() => {
-                        mostrarNotificacionPuntos(puntosData.total, {
-                            base: puntosData.base,
-                            bonus: puntosData.bonus,
-                            pruebas: puntosData.pruebas
-                        });
-                    }, delay);
-
-                    delay += 1500;
-                } catch (e) {
-                    console.error('Error procesando puntos:', e);
-                }
-            }
-
-            // PROCESAR PRUEBAS COMPLETADAS
-            else if (currentMessage.startsWith('CODICE_PRUEBA:')) {
-                try {
-                    const pruebaData = JSON.parse(currentMessage.replace('CODICE_PRUEBA:', ''));
-                    console.log('⚔️ Datos de prueba:', pruebaData);
-
-                    setTimeout(() => {
-                        mostrarNotificacionPrueba(
-                            pruebaData.nombre,
-                            pruebaData.puntos,
-                            pruebaData.descripcion
-                        );
-                    }, delay);
-
-                    delay += 2000;
-                } catch (e) {
-                    console.error('Error procesando prueba:', e);
-                }
-            }
-
-            // PROCESAR ASCENSIONES
-            else if (currentMessage.startsWith('CODICE_ASCENSION:')) {
-                try {
-                    const ascensionData = JSON.parse(currentMessage.replace('CODICE_ASCENSION:', ''));
-                    console.log('🔥 Datos de ascensión:', ascensionData);
-
-                    setTimeout(() => {
-                        mostrarNotificacionAscension(
-                            ascensionData.anterior,
-                            ascensionData.nuevo,
-                            ascensionData.filosofia
-                        );
-                    }, delay);
-
-                    delay += 3000;
-                } catch (e) {
-                    console.error('Error procesando ascensión:', e);
-                }
-            }
-
-            // PROCESAR RACHAS
-            else if (currentMessage.startsWith('CODICE_RACHA:')) {
-                try {
-                    const dias = parseInt(currentMessage.replace('CODICE_RACHA:', ''));
-                    console.log('🔥 Racha de días:', dias);
-
-                    setTimeout(() => {
-                        mostrarNotificacionRacha(dias);
-                    }, delay);
-
-                    delay += 1500;
-                } catch (e) {
-                    console.error('Error procesando racha:', e);
-                }
-            }
-
-            // MENSAJE NORMAL (no es del Códice)
-            else if (!currentMessage.startsWith('CODICE_')) {
-                console.log('📝 Mensaje normal:', currentMessage);
-            }
-        {% endfor %}
-
-        console.log(`🎮 Procesamiento completado. ${messageCount} mensajes, delay total: ${delay}ms`);
-    {% else %}
-        console.log('📭 No hay mensajes para procesar');
-    {% endif %}
+// ═══════════════════════════════════════════════════════
+// IRON PROTOCOL — lógica de nuevo diseño
+// ═══════════════════════════════════════════════════════
+
+// Estado global
+const STATE = {
+  ejActual: 0,
+  serieActual: {}, // formId → número de serie actual (1-based)
+  seriesCompletadas: {}, // formId → [datos por serie]
+  timers: {}, // formId → {interval, seg, total}
+  tiempoInicio: Date.now(),
+};
+
+// Inicializar estado por ejercicio
+document.querySelectorAll('.cyber-ejercicio-card').forEach(card => {
+  const fid = card.dataset.formId;
+  STATE.serieActual[fid] = 1;
+  STATE.seriesCompletadas[fid] = [];
 });
 
-// FUNCIONES DE TESTING
-function testNotificaciones() {
-    console.log('🧪 Iniciando test de notificaciones...');
-
-    setTimeout(() => {
-        mostrarNotificacionPuntos(47, {base: 25, bonus: 7, pruebas: 15});
-    }, 1000);
-
-    setTimeout(() => {
-        mostrarNotificacionPrueba("Las Puertas del Esfuerzo", 150, "7 días consecutivos completados");
-    }, 3000);
-
-    setTimeout(() => {
-        mostrarNotificacionAscension("Rock Lee", "Krillin - El Guerrero Humano", "Tu corazón valiente te hace fuerte");
-    }, 5000);
-
-    setTimeout(() => {
-        mostrarNotificacionRacha(5);
-    }, 7000);
+// ── SYNC SLIDERS ──────────────────────────────────────
+function syncSlider(el, tipo, dispId, hidId) {
+  const v = parseFloat(el.value);
+  const disp = document.getElementById(dispId);
+  const hid = document.getElementById(hidId);
+  if (tipo === 'rpe') {
+    disp.textContent = v % 1 === 0 ? v.toFixed(1) : v.toFixed(1);
+  } else {
+    disp.textContent = Math.round(v);
+  }
+  if (hid) hid.value = v;
 }
 
-// LIMPIAR MENSAJES DJANGO DESPUÉS DE PROCESARLOS
-function limpiarMensajesDjango() {
-    const djangoMessages = document.querySelectorAll('.alert, .messages li, .message');
-    djangoMessages.forEach(msg => {
-        if (msg.textContent.includes('CODICE_')) {
-            msg.style.display = 'none';
-        }
-    });
+// ── NAVEGACIÓN ENTRE EJERCICIOS ──────────────────────
+const cards = Array.from(document.querySelectorAll('.cyber-ejercicio-card'));
+function navEjercicio(delta) {
+  const nuevo = Math.max(0, Math.min(cards.length - 1, STATE.ejActual + delta));
+  if (nuevo === STATE.ejActual) return;
+  cards[STATE.ejActual].style.display = 'none';
+  STATE.ejActual = nuevo;
+  cards[nuevo].style.display = 'block';
+  actualizarSticky();
 }
 
-setTimeout(limpiarMensajesDjango, 500);
+// ── GUARDAR SERIE ─────────────────────────────────────
+function guardarSerie(fid) {
+  const card = document.getElementById('card-' + fid);
+  const sn = STATE.serieActual[fid];
+  const total = parseInt(card.dataset.totalSets);
+  const descansoMin = parseFloat(card.dataset.descanso) || 3;
+  const descansoSeg = Math.round(descansoMin * 60);
 
-console.log('🎮 Códice de las Leyendas - Sistema de notificaciones cargado');
-console.log('🧪 Para probar notificaciones, ejecuta: testNotificaciones()');
+  // Leer peso y reps/rpe del slider
+  const pesoInput = card.querySelector('.weight-input');
+  const hidReps = document.getElementById('hid-reps-' + fid);
+  const hidRpe = document.getElementById('hid-rpe-' + fid);
+  const peso = parseFloat(pesoInput?.value || 0);
+  const reps = parseInt(hidReps?.value || 0);
+  const rpe = parseFloat(hidRpe?.value || 8);
 
-    // FUNCIONES DE CONVENIENCIA PARA TESTING
-    function testNotificaciones() {
-        console.log('🧪 Iniciando test de notificaciones...');
+  // Guardar en estado
+  STATE.seriesCompletadas[fid].push({ peso, reps, rpe });
 
-        // Test puntos
-        setTimeout(() => {
-            mostrarNotificacionPuntos(47, {base: 25, bonus: 7, pruebas: 15});
-        }, 1000);
+  // Añadir checkbox marcado (para que el form lo envíe)
+  const checksDiv = document.getElementById('checks-' + fid);
+  checksDiv.innerHTML += `<input type="checkbox" name="${fid}_completado_${sn}" value="1" checked style="display:none;">`;
 
-        // Test prueba
-        setTimeout(() => {
-            mostrarNotificacionPrueba("Las Puertas del Esfuerzo", 150, "7 días consecutivos completados");
-        }, 3000);
+  // Añadir al log visual
+  añadirAlLog(fid, sn, peso, reps, rpe);
 
-        // Test ascensión
-        setTimeout(() => {
-            mostrarNotificacionAscension("Rock Lee", "Krillin - El Guerrero Humano", "Tu corazón valiente te hace fuerte");
-        }, 5000);
+  // Vibración
+  if (navigator.vibrate) navigator.vibrate(40);
 
-        // Test racha
-        setTimeout(() => {
-            mostrarNotificacionRacha(5);
-        }, 7000);
+  // Mostrar pantalla descanso
+  document.getElementById('reg-' + fid).style.display = 'none';
+  const pdesc = document.getElementById('desc-' + fid);
+  pdesc.style.display = 'flex';
+  pdesc.style.flexDirection = 'column';
+
+  // Info próxima serie
+  const esUltima = sn >= total;
+  const proxEl = document.getElementById('pd-prox-' + fid);
+  if (esUltima) {
+    proxEl.innerHTML = '<span style="color:var(--ok)">✓ Ejercicio completado</span>';
+  } else {
+    proxEl.innerHTML = `Serie <span class="pd-prox-kg">${sn + 1}</span> de ${total} — <span class="pd-prox-kg">${peso}kg</span> × ${reps} reps`;
+  }
+
+  // Calculadora discos
+  calcularDiscos(fid, peso);
+
+  // Iniciar timer
+  iniciarDescanso(fid, descansoSeg);
+
+  actualizarProgreso();
+  actualizarSticky();
+}
+
+// ── LOG VISUAL ────────────────────────────────────────
+function añadirAlLog(fid, sn, peso, reps, rpe) {
+  const log = document.getElementById('log-' + fid);
+  const div = document.createElement('div');
+  div.className = 'serie-done serie-row';
+  div.dataset.serieNum = sn;
+  div.innerHTML = `
+    <div class="sd-check">✓</div>
+    <div class="sd-info">Serie ${sn} — <strong>${peso}kg × ${reps} reps</strong></div>
+    <div class="sd-rpe">RPE ${parseFloat(rpe).toFixed(1)}</div>`;
+  log.appendChild(div);
+}
+
+// ── TIMER DE DESCANSO ─────────────────────────────────
+function iniciarDescanso(fid, totalSeg) {
+  if (STATE.timers[fid]) clearInterval(STATE.timers[fid].interval);
+  STATE.timers[fid] = { seg: totalSeg, total: totalSeg, interval: null };
+  actualizarTimerUI(fid);
+
+  STATE.timers[fid].interval = setInterval(() => {
+    STATE.timers[fid].seg = Math.max(0, STATE.timers[fid].seg - 1);
+    actualizarTimerUI(fid);
+    if (STATE.timers[fid].seg === 0) {
+      clearInterval(STATE.timers[fid].interval);
+      if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+      setTimeout(() => saltarDescanso(fid), 800);
     }
+  }, 1000);
+}
 
-    // FUNCIÓN PARA LIMPIAR MENSAJES DESPUÉS DE MOSTRAR NOTIFICACIONES
-    function limpiarMensajesDjango() {
-        // Opcional: ocultar los mensajes Django estándar después de procesarlos
-        const djangoMessages = document.querySelectorAll('.alert, .messages li, .message');
-        djangoMessages.forEach(msg => {
-            if (msg.textContent.includes('CODICE_')) {
-                msg.style.display = 'none';
-            }
-        });
-    }
+function actualizarTimerUI(fid) {
+  const t = STATE.timers[fid];
+  if (!t) return;
+  const m = Math.floor(t.seg / 60);
+  const s = t.seg % 60;
+  const display = m + ':' + String(s).padStart(2, '0');
+  const tiempoEl = document.getElementById('pd-tiempo-' + fid);
+  const saltarEl = document.getElementById('btn-saltar-' + fid);
+  if (tiempoEl) tiempoEl.textContent = display;
+  if (saltarEl) saltarEl.textContent = `SALTAR DESCANSO (${display})`;
+  // Anillo SVG
+  const ring = document.getElementById('ring-' + fid);
+  if (ring) {
+    const pct = t.seg / t.total;
+    ring.style.strokeDashoffset = (502 * (1 - pct)).toFixed(1);
+  }
+}
 
-    // Limpiar mensajes después de procesarlos
-    setTimeout(limpiarMensajesDjango, 500);
+function ajustarTimer(fid, delta) {
+  if (!STATE.timers[fid]) return;
+  STATE.timers[fid].seg = Math.max(0, Math.min(600, STATE.timers[fid].seg + delta));
+  STATE.timers[fid].total = Math.max(STATE.timers[fid].total, STATE.timers[fid].seg);
+  actualizarTimerUI(fid);
+}
 
-    // DEBUGGING: Mostrar en consola cuando se carga la página
-    console.log('🎮 Códice de las Leyendas - Sistema de notificaciones cargado');
-    console.log('🧪 Para probar notificaciones, ejecuta: testNotificaciones()');
+function saltarDescanso(fid) {
+  if (STATE.timers[fid]) clearInterval(STATE.timers[fid].interval);
+  document.getElementById('desc-' + fid).style.display = 'none';
+
+  const card   = document.getElementById('card-' + fid);
+  const total  = parseInt(card.dataset.totalSets);
+  const hechas = STATE.seriesCompletadas[fid].length; // fuente de verdad
+
+  if (hechas >= total) {
+    document.getElementById('reg-' + fid).style.display = 'none';
+    const div = document.createElement('div');
+    div.style.cssText = 'padding:20px 16px;text-align:center;border-top:1px solid var(--bd);';
+    div.innerHTML = '<div style="font-size:2rem;margin-bottom:8px;color:var(--ok);">✓</div>'
+      + '<div style="font-family:var(--fd);font-size:14px;font-weight:700;color:var(--gb);letter-spacing:2px;text-transform:uppercase;">Ejercicio completado</div>'
+      + '<div style="font-family:var(--fm);font-size:11px;color:var(--td);margin-top:6px;">' + hechas + ' series · ' + calcVolumenEj(fid) + ' kg vol</div>';
+    card.appendChild(div);
+    if (STATE.ejActual + 1 < cards.length) setTimeout(() => navEjercicio(1), 1500);
+  } else {
+    STATE.serieActual[fid] = hechas + 1;
+    prepararSiguienteSerie(fid);
+    document.getElementById('reg-' + fid).style.display = 'block';
+  }
+  actualizarProgreso();
+  actualizarSticky();
+}
+
+// ── PREPARAR SIGUIENTE SERIE ──────────────────────────
+function prepararSiguienteSerie(fid) {
+  const card = document.getElementById('card-' + fid);
+  const sn = STATE.serieActual[fid];
+  const total = parseInt(card.dataset.totalSets);
+
+  // Actualizar header
+  const saNum = document.getElementById('sa-num-' + fid);
+  if (saNum) saNum.textContent = `SERIE ${sn} DE ${total}`;
+
+  // Renombrar inputs para el número de serie correcto
+  const pesoInput = card.querySelector('.weight-input');
+  const hidReps = document.getElementById('hid-reps-' + fid);
+  const hidRpe = document.getElementById('hid-rpe-' + fid);
+  const slReps = document.getElementById('sl-reps-' + fid);
+  const slRpe = document.getElementById('sl-rpe-' + fid);
+  const dispReps = document.getElementById('disp-reps-' + fid);
+  const dispRpe = document.getElementById('disp-rpe-' + fid);
+
+  if (pesoInput) pesoInput.name = `${fid}_peso_${sn}`;
+  if (hidReps) hidReps.name = `${fid}_reps_${sn}`;
+  if (hidRpe) hidRpe.name = `${fid}_rpe_${sn}`;
+
+  // Ocultar hidden anterior y añadir rpe_obj
+  card.querySelectorAll(`input[name="${fid}_rpe_obj_${sn}"]`).forEach(e => e.remove());
+  const rpeObjHid = document.createElement('input');
+  rpeObjHid.type = 'hidden';
+  rpeObjHid.name = `${fid}_rpe_obj_${sn}`;
+  rpeObjHid.value = card.dataset.rpeTarget;
+  card.appendChild(rpeObjHid);
+
+  // Copiar peso de la serie anterior
+  const ultima = STATE.seriesCompletadas[fid].slice(-1)[0];
+  if (ultima && pesoInput) {
+    pesoInput.value = ultima.peso % 1 === 0 ? ultima.peso : ultima.peso.toFixed(1);
+    actualizarPesoPorLado(pesoInput);
+  }
+
+  // Resetear sliders
+  if (slReps) { slReps.value = card.dataset.repsMin || 8; dispReps.textContent = slReps.value; hidReps.value = slReps.value; }
+  if (slRpe) { slRpe.value = card.dataset.rpeTarget || 8; dispRpe.textContent = parseFloat(slRpe.value).toFixed(1); hidRpe.value = slRpe.value; }
+}
+
+// ── CALCULADORA DE DISCOS ─────────────────────────────
+function calcularDiscos(fid, pesoTotal) {
+  const contenedor = document.getElementById('discos-' + fid);
+  const txt = document.getElementById('calc-txt-' + fid);
+  if (!contenedor) return;
+  const barraKg = 20;
+  let porLado = (pesoTotal - barraKg) / 2;
+  if (porLado < 0) porLado = 0;
+  const tamaños = [20, 15, 10, 5, 2.5, 1];
+  const clases = { 20: 'd20', 15: 'd15', 10: 'd10', 5: 'd5', 2.5: 'd25', 1: 'd1' };
+  const discosLado = [];
+  let resto = porLado;
+  for (const t of tamaños) {
+    while (resto >= t) { discosLado.push(t); resto = Math.round((resto - t) * 100) / 100; }
+  }
+  let html = '';
+  discosLado.forEach(d => html += `<div class="disco ${clases[d]}">${d}</div>`);
+  html += `<div class="barra"></div>`;
+  discosLado.slice().reverse().forEach(d => html += `<div class="disco ${clases[d]}">${d}</div>`);
+  contenedor.innerHTML = html;
+  const resumen = discosLado.map(d => d + 'kg').join(' + ');
+  txt.innerHTML = `Barra ${barraKg}kg + <strong>${resumen || 'sin discos'} por lado</strong> = ${pesoTotal}kg`;
+}
+
+function calcVolumenEj(fid) {
+  return STATE.seriesCompletadas[fid].reduce((acc, s) => acc + s.peso * s.reps, 0).toFixed(0);
+}
+
+// ── PROGRESO ──────────────────────────────────────────
+function actualizarProgreso() {
+  let comp = 0, total = 0;
+  document.querySelectorAll('.cyber-ejercicio-card').forEach(card => {
+    const fid = card.dataset.formId;
+    const t = parseInt(card.dataset.totalSets) || 0;
+    total += t;
+    comp += (STATE.seriesCompletadas[fid] || []).length;
+  });
+  const pct = total > 0 ? Math.round(comp / total * 100) : 0;
+  const fill = document.getElementById('tb-fill');
+  const pctEl = document.getElementById('tb-pct');
+  if (fill) fill.style.width = pct + '%';
+  if (pctEl) pctEl.textContent = pct + '%';
+}
+
+// ── STICKY ────────────────────────────────────────────
+function actualizarSticky() {
+  let comp = 0, total = 0, volumen = 0;
+  document.querySelectorAll('.cyber-ejercicio-card').forEach(card => {
+    const fid = card.dataset.formId;
+    total += parseInt(card.dataset.totalSets) || 0;
+    const scs = STATE.seriesCompletadas[fid] || [];
+    comp += scs.length;
+    volumen += scs.reduce((a, s) => a + s.peso * s.reps, 0);
+  });
+  const elSeries = document.getElementById('series-completadas-sticky');
+  const elVol = document.getElementById('volumen-acumulado');
+  const elEj = document.getElementById('ejercicio-actual');
+  if (elSeries) elSeries.textContent = comp + '/' + total;
+  if (elVol) elVol.textContent = Math.round(volumen) + ' kg';
+  const cardActual = cards[STATE.ejActual];
+  if (elEj && cardActual) {
+    const nombre = cardActual.querySelector('.cyber-ejercicio-nombre')?.textContent || '--';
+    elEj.textContent = nombre;
+  }
+}
+
+// ── TIMER SESIÓN ──────────────────────────────────────
+const t0 = Date.now();
+setInterval(() => {
+  const seg = Math.floor((Date.now() - t0) / 1000);
+  const m = Math.floor(seg / 60), s = seg % 60;
+  const el = document.getElementById('tiempo-transcurrido');
+  if (el) el.textContent = String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+  const hid = document.getElementById('hid-duracion');
+  if (hid) hid.value = Math.floor(seg / 60);
+}, 1000);
+
+// ── PESO POR LADO (reutiliza función del JS externo) ──
+document.querySelectorAll('.weight-input').forEach(inp => {
+  inp.addEventListener('change', () => { if (typeof actualizarPesoPorLado === 'function') actualizarPesoPorLado(inp); });
+  inp.addEventListener('focus', function() { this.blur(); });
+  inp.addEventListener('touchstart', function(e) { e.preventDefault(); this.blur(); }, { passive: false });
+  if (typeof actualizarPesoPorLado === 'function') actualizarPesoPorLado(inp);
+});
+
+// ── MODAL FINALIZAR ───────────────────────────────────
+document.getElementById('btn-mostrar-resumen').addEventListener('click', () => {
+  // Rellenar métricas hidden
+  let comp = 0, total = 0, volumen = 0, rpes = [];
+  let ejComp = 0, ejTot = 0;
+  document.querySelectorAll('.cyber-ejercicio-card').forEach(card => {
+    const fid = card.dataset.formId;
+    const t = parseInt(card.dataset.totalSets) || 0;
+    total += t; ejTot++;
+    const scs = STATE.seriesCompletadas[fid] || [];
+    comp += scs.length;
+    if (scs.length >= t) ejComp++;
+    scs.forEach(s => { volumen += s.peso * s.reps; if (s.rpe) rpes.push(s.rpe); });
+  });
+  document.getElementById('hid-series-comp').value = comp;
+  document.getElementById('hid-series-tot').value = total;
+  document.getElementById('hid-ej-comp').value = ejComp;
+  document.getElementById('hid-ej-tot').value = ejTot;
+  document.getElementById('hid-volumen').value = Math.round(volumen);
+  document.getElementById('hid-rpe-medio').value = rpes.length ? (rpes.reduce((a,b)=>a+b,0)/rpes.length).toFixed(1) : '';
+  // Mostrar modal
+  const seg = Math.floor((Date.now() - t0) / 1000);
+  document.getElementById('modal-tiempo').textContent = String(Math.floor(seg/60)).padStart(2,'0') + ':' + String(seg%60).padStart(2,'0');
+  document.getElementById('modal-series').textContent = comp + '/' + total;
+  document.getElementById('modal-volumen').textContent = Math.round(volumen) + ' kg';
+  document.getElementById('modal-ejercicios').textContent = ejComp + '/' + ejTot;
+  // Lista
+  let listaHTML = '';
+  document.querySelectorAll('.cyber-ejercicio-card').forEach(card => {
+    const fid = card.dataset.formId;
+    const nombre = card.querySelector('.cyber-ejercicio-nombre')?.textContent || '';
+    const scs = STATE.seriesCompletadas[fid] || [];
+    const vol = scs.reduce((a, s) => a + s.peso * s.reps, 0);
+    listaHTML += `<div class="modal-ej"><span class="modal-ej-nombre">${nombre}</span><span class="modal-ej-stats">${scs.length} series · ${Math.round(vol)}kg</span></div>`;
+  });
+  document.getElementById('modal-ejercicios-lista').innerHTML = listaHTML;
+  document.getElementById('modal-resumen-overlay').classList.add('active');
+});
+
+document.getElementById('btn-volver-editar').addEventListener('click', () => {
+  document.getElementById('modal-resumen-overlay').classList.remove('active');
+});
+
+document.getElementById('btn-confirmar-guardar').addEventListener('click', () => {
+  document.getElementById('workout-form').submit();
+});
+
+// ── NOTIFICACIONES DJANGO ──────────────────────────────
+document.addEventListener('DOMContentLoaded', function() {
+  actualizarProgreso();
+  actualizarSticky();
+  {% if messages %}
+  let delay = 800;
+  {% for message in messages %}
+  (function() {
+    const msg = "{{ message.message|escapejs }}";
+    if (msg.startsWith('CODICE_PUNTOS:')) { try { const d = JSON.parse(msg.replace('CODICE_PUNTOS:', '')); setTimeout(() => mostrarNotificacionPuntos(d.total, d), delay); delay += 1500; } catch(e) {} }
+    else if (msg.startsWith('CODICE_PRUEBA:')) { try { const d = JSON.parse(msg.replace('CODICE_PRUEBA:', '')); setTimeout(() => mostrarNotificacionPrueba(d.nombre, d.puntos, d.descripcion), delay); delay += 2000; } catch(e) {} }
+    else if (msg.startsWith('CODICE_ASCENSION:')) { try { const d = JSON.parse(msg.replace('CODICE_ASCENSION:', '')); setTimeout(() => mostrarNotificacionAscension(d.anterior, d.nuevo, d.filosofia), delay); delay += 3000; } catch(e) {} }
+    else if (msg.startsWith('CODICE_RACHA:')) { try { const dias = parseInt(msg.replace('CODICE_RACHA:', '')); setTimeout(() => mostrarNotificacionRacha(dias), delay); delay += 1500; } catch(e) {} }
+  })();
+  {% endfor %}
+  {% endif %}
+});
 </script>
-
-{% endblock %}
-
+</body>
+</html>

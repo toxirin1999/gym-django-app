@@ -16,6 +16,7 @@ urlpatterns = [
     path('register/', clientes_views.register_view, name='register'),
     path('login/', auth_views.LoginView.as_view(template_name='registration/login.html'), name='login'),
     path('logout/', auth_views.LogoutView.as_view(next_page='/login/'), name='logout'),
+    path("estiramientos/", include("estiramientos.urls")),
 
     # --- Inclusión de Aplicaciones ---
     path('clientes/', include('clientes.urls')),
@@ -29,6 +30,7 @@ urlpatterns = [
     path('estoico/', include('estoico.urls')),
     path('analytics/', include('analytics.urls')),
     path('nutricion/', include('nutricion_app_django.urls')),
+    path('hyrox/', include('hyrox.urls')), # <-- Módulo Hyrox
 
     # --- APIs ---
     path('api/liftin/', include('entrenos.urls_api')),

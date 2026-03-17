@@ -301,26 +301,15 @@ class ChartManager {
             scales: {
                 y: {
                     beginAtZero: true,
-                    grid: {
-                        color: 'rgba(0, 0, 0, 0.1)',
-                        drawBorder: false
-                    },
-                    ticks: {
-                        color: '#64748b',
-                        font: {
-                            size: 12
-                        }
+                    /* grid from defaults */,
+                    /* ticks from defaults */
                     }
                 },
                 x: {
                     grid: {
                         display: false
                     },
-                    ticks: {
-                        color: '#64748b',
-                        font: {
-                            size: 12
-                        }
+                    /* ticks from defaults */
                     }
                 }
             },

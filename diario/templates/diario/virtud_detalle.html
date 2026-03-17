@@ -1,0 +1,270 @@
+{% extends 'diario/base_stoic.html' %}
+{% load static %}
+
+{% block title %}{{ virtud.get_tipo_display }} - Virtudes{% endblock %}
+
+{% block content %}
+<div class="fade-in-up">
+    <!-- Encabezado -->
+    <div class="card shadow-soft mb-4">
+        <div class="card-body text-center p-4">
+            {% if virtud.tipo == 'sabiduria' %}
+                <i class="fas fa-brain fa-4x text-primary mb-3"></i>
+                <h1 class="text-gradient">Sabiduría</h1>
+                <p class="lead text-muted">Sophia (σοφία)</p>
+            {% elif virtud.tipo == 'coraje' %}
+                <i class="fas fa-shield-alt fa-4x text-danger mb-3"></i>
+                <h1 class="text-gradient">Coraje</h1>
+                <p class="lead text-muted">Andreia (ἀνδρεία)</p>
+            {% elif virtud.tipo == 'justicia' %}
+                <i class="fas fa-balance-scale fa-4x text-info mb-3"></i>
+                <h1 class="text-gradient">Justicia</h1>
+                <p class="lead text-muted">Dikaiosyne (δικαιοσύνη)</p>
+            {% elif virtud.tipo == 'templanza' %}
+                <i class="fas fa-yin-yang fa-4x text-success mb-3"></i>
+                <h1 class="text-gradient">Templanza</h1>
+                <p class="lead text-muted">Sophrosyne (σωφροσύνη)</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Columna Principal -->
+        <div class="col-lg-8">
+            
+            <!-- Progreso Actual -->
+            <div class="card shadow-soft mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i>Tu Progreso</h5>
+                </div>
+                <div class="card-body">
+                    <div class="text-center mb-4">
+                        <h2 class="display-3 mb-0">{{ virtud.puntos }}</h2>
+                        <p class="text-muted">puntos acumulados</p>
+                        <span class="badge 
+                            {% if virtud.nivel == 'aprendiz' %}bg-secondary
+                            {% elif virtud.nivel == 'practicante' %}bg-primary
+                            {% elif virtud.nivel == 'adepto' %}bg-info
+                            {% elif virtud.nivel == 'maestro' %}bg-warning
+                            {% elif virtud.nivel == 'sabio' %}bg-success
+                            {% endif %} fs-5">
+                            {{ virtud.get_nivel_display }}
+                        </span>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Progreso al siguiente nivel</span>
+                            <strong>{{ virtud.porcentaje_progreso }}%</strong>
+                        </div>
+                        <div class="progress" style="height: 20px;">
+                            <div class="progress-bar 
+                                {% if virtud.tipo == 'sabiduria' %}bg-primary
+                                {% elif virtud.tipo == 'coraje' %}bg-danger
+                                {% elif virtud.tipo == 'justicia' %}bg-info
+                                {% elif virtud.tipo == 'templanza' %}bg-success
+                                {% endif %}" 
+                                role="progressbar" 
+                                style="width: {{ virtud.porcentaje_progreso }}%">
+                            </div>
+                        </div>
+                    </div>
+
+                    <p class="text-muted small mb-0">
+                        <i class="far fa-calendar me-1"></i>
+                        Alcanzaste el nivel "{{ virtud.get_nivel_display }}" el {{ virtud.fecha_ultimo_nivel|date:"d \d\e F \d\e Y" }}
+                    </p>
+                </div>
+            </div>
+
+            <!-- Descripción Filosófica -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-book-open me-2"></i>Sobre esta Virtud</h5>
+                </div>
+                <div class="card-body">
+                    {% if virtud.tipo == 'sabiduria' %}
+                        <p>La <strong>Sabiduría (Sophia)</strong> es la primera de las virtudes cardinales estoicas. No se trata simplemente de acumular conocimiento, sino de comprender profundamente qué es verdaderamente bueno, malo o indiferente.</p>
+                        
+                        <blockquote class="blockquote bg-light p-3 rounded fst-italic">
+                            <p>"No es que tengamos poco tiempo, sino que perdemos mucho. La vida es suficientemente larga para quien sabe usarla."</p>
+                            <footer class="blockquote-footer">Séneca</footer>
+                        </blockquote>
+
+                        <p>La sabiduría se cultiva mediante:</p>
+                        <ul>
+                            <li>La reflexión diaria sobre nuestras acciones y pensamientos</li>
+                            <li>El estudio de la filosofía y el aprendizaje continuo</li>
+                            <li>La práctica de ejercicios mentales (Areté)</li>
+                            <li>El autoexamen honesto y sin juicios</li>
+                        </ul>
+
+                    {% elif virtud.tipo == 'coraje' %}
+                        <p>El <strong>Coraje (Andreia)</strong> no es la ausencia de miedo, sino la capacidad de actuar correctamente a pesar de él. Es la virtud que nos permite perseverar en nuestros principios incluso cuando es difícil.</p>
+                        
+                        <blockquote class="blockquote bg-light p-3 rounded fst-italic">
+                            <p>"No puedes controlar lo que sucede, pero puedes controlar cómo respondes."</p>
+                            <footer class="blockquote-footer">Epicteto</footer>
+                        </blockquote>
+
+                        <p>El coraje se fortalece mediante:</p>
+                        <ul>
+                            <li>La consistencia en la práctica diaria, incluso en días difíciles</li>
+                            <li>Enfrentar nuestros miedos a través de la reflexión</li>
+                            <li>Mantener nuestros compromisos cuando es incómodo</li>
+                            <li>Volver a intentarlo después de fallar</li>
+                        </ul>
+
+                    {% elif virtud.tipo == 'justicia' %}
+                        <p>La <strong>Justicia (Dikaiosyne)</strong> es dar a cada uno lo que le corresponde. Es la virtud social por excelencia, que nos conecta con los demás y nos recuerda que somos parte de una comunidad más amplia.</p>
+                        
+                        <blockquote class="blockquote bg-light p-3 rounded fst-italic">
+                            <p>"Lo que no es bueno para la colmena, no puede ser bueno para la abeja."</p>
+                            <footer class="blockquote-footer">Marco Aurelio</footer>
+                        </blockquote>
+
+                        <p>La justicia se manifiesta mediante:</p>
+                        <ul>
+                            <li>El cultivo de relaciones significativas y saludables</li>
+                            <li>La empatía y comprensión hacia los demás</li>
+                            <li>El servicio a nuestra comunidad</li>
+                            <li>La reflexión sobre causas sociales importantes</li>
+                        </ul>
+
+                    {% elif virtud.tipo == 'templanza' %}
+                        <p>La <strong>Templanza (Sophrosyne)</strong> es el equilibrio y la moderación en todas las cosas. Es la virtud que nos protege de los extremos y nos ayuda a vivir en armonía con la naturaleza.</p>
+                        
+                        <blockquote class="blockquote bg-light p-3 rounded fst-italic">
+                            <p>"La virtud está en el punto medio entre dos extremos."</p>
+                            <footer class="blockquote-footer">Aristóteles</footer>
+                        </blockquote>
+
+                        <p>La templanza se desarrolla mediante:</p>
+                        <ul>
+                            <li>El balance en los 6 pilares de la vida</li>
+                            <li>El cuidado consistente de nuestra salud física</li>
+                            <li>La moderación en nuestros deseos y aversiones</li>
+                            <li>La disciplina en nuestros hábitos diarios</li>
+                        </ul>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Insignias Relacionadas -->
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-trophy me-2"></i>Insignias de {{ virtud.get_tipo_display }}</h5>
+                </div>
+                <div class="card-body">
+                    {% if insignias_relacionadas %}
+                    <div class="row">
+                        {% for insignia in insignias_relacionadas %}
+                        <div class="col-md-6 mb-3">
+                            <div class="card {% if insignia.id in insignias_desbloqueadas_ids %}border-success{% else %}border-secondary{% endif %}">
+                                <div class="card-body text-center">
+                                    <i class="{{ insignia.icono }} fa-3x mb-2" 
+                                       style="color: {% if insignia.id in insignias_desbloqueadas_ids %}{{ insignia.color }}{% else %}#ccc{% endif %};"></i>
+                                    <h6>{{ insignia.nombre }}</h6>
+                                    <p class="small text-muted mb-2">{{ insignia.descripcion }}</p>
+                                    {% if insignia.id in insignias_desbloqueadas_ids %}
+                                        <span class="badge bg-success"><i class="fas fa-check me-1"></i>Desbloqueada</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary"><i class="fas fa-lock me-1"></i>Bloqueada</span>
+                                        <p class="small text-muted mt-2 mb-0">{{ insignia.criterio_logro }}</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted text-center mb-0">No hay insignias específicas para esta virtud todavía.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Columna Lateral -->
+        <div class="col-lg-4">
+            
+            <!-- Niveles de Progreso -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="fas fa-layer-group me-2"></i>Niveles</h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3 {% if virtud.nivel == 'sabio' %}text-success{% endif %}">
+                        <div class="d-flex justify-content-between">
+                            <strong>Sabio</strong>
+                            <span>500+</span>
+                        </div>
+                        {% if virtud.nivel == 'sabio' %}
+                        <small class="text-success"><i class="fas fa-check-circle me-1"></i>Nivel actual</small>
+                        {% endif %}
+                    </div>
+                    <div class="mb-3 {% if virtud.nivel == 'maestro' %}text-warning{% endif %}">
+                        <div class="d-flex justify-content-between">
+                            <strong>Maestro</strong>
+                            <span>300-499</span>
+                        </div>
+                        {% if virtud.nivel == 'maestro' %}
+                        <small class="text-warning"><i class="fas fa-check-circle me-1"></i>Nivel actual</small>
+                        {% endif %}
+                    </div>
+                    <div class="mb-3 {% if virtud.nivel == 'adepto' %}text-info{% endif %}">
+                        <div class="d-flex justify-content-between">
+                            <strong>Adepto</strong>
+                            <span>150-299</span>
+                        </div>
+                        {% if virtud.nivel == 'adepto' %}
+                        <small class="text-info"><i class="fas fa-check-circle me-1"></i>Nivel actual</small>
+                        {% endif %}
+                    </div>
+                    <div class="mb-3 {% if virtud.nivel == 'practicante' %}text-primary{% endif %}">
+                        <div class="d-flex justify-content-between">
+                            <strong>Practicante</strong>
+                            <span>50-149</span>
+                        </div>
+                        {% if virtud.nivel == 'practicante' %}
+                        <small class="text-primary"><i class="fas fa-check-circle me-1"></i>Nivel actual</small>
+                        {% endif %}
+                    </div>
+                    <div class="mb-0 {% if virtud.nivel == 'aprendiz' %}text-secondary{% endif %}">
+                        <div class="d-flex justify-content-between">
+                            <strong>Aprendiz</strong>
+                            <span>0-49</span>
+                        </div>
+                        {% if virtud.nivel == 'aprendiz' %}
+                        <small class="text-secondary"><i class="fas fa-check-circle me-1"></i>Nivel actual</small>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Consejos para Mejorar -->
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="fas fa-lightbulb me-2"></i>Cómo Mejorar</h6>
+                </div>
+                <div class="card-body">
+                    <ul class="small mb-0">
+                        {% for consejo in consejos %}
+                        <li class="mb-2">{{ consejo }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Botón de Regreso -->
+    <div class="text-center mt-4">
+        <a href="{% url 'diario:virtudes_dashboard' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Volver a Virtudes
+        </a>
+    </div>
+</div>
+{% endblock %}
+

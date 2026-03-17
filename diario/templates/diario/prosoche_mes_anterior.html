@@ -1,0 +1,868 @@
+{% extends 'diario/base_stoic.html' %}
+{% load static %}
+{% load custom_filters %}
+
+{% block title %}Prosoche - {{ prosoche_mes.mes }} {{ prosoche_mes.año }}{% endblock %}
+
+{% block extra_css %}
+<link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+    :root {
+        /* Paleta inspirada en freud v2 */
+        --bg-primary: #F8F5F1;
+        --bg-secondary: #FFFFFF;
+        --bg-card: #FFFFFF;
+        --bg-accent: #FFF9F5;
+
+        --text-primary: #2D3436;
+        --text-secondary: #636E72;
+        --text-muted: #B2BEC3;
+
+        --accent-orange: #F49459;
+        --accent-orange-dark: #E67E22;
+        --accent-green: #00B894;
+        --accent-green-light: #E8F8F5;
+        --accent-blue: #74B9FF;
+        --accent-purple: #A29BFE;
+        --accent-red: #FF7675;
+        --accent-yellow: #FDCB6E;
+
+        --border-color: #E8E4E0;
+        --shadow-soft: 0 2px 20px rgba(0, 0, 0, 0.05);
+        --shadow-medium: 0 4px 30px rgba(0, 0, 0, 0.08);
+
+        --radius-sm: 12px;
+        --radius-md: 16px;
+        --radius-lg: 24px;
+        --radius-xl: 32px;
+    }
+
+    body {
+        font-family: 'Urbanist', -apple-system, BlinkMacSystemFont, sans-serif !important;
+        background: var(--bg-primary) !important;
+        color: var(--text-primary);
+    }
+
+    .prosoche-container{
+        max-width: 980px;
+        margin: 0 auto;
+        padding: 1rem;
+        padding-bottom: 2rem;
+    }
+
+    /* === ANIMATIONS === */
+    @keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(18px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .fade-in { animation: fadeInUp 0.55s ease forwards; }
+    .delay-1 { animation-delay: .06s; opacity: 0; }
+    .delay-2 { animation-delay: .12s; opacity: 0; }
+    .delay-3 { animation-delay: .18s; opacity: 0; }
+    .delay-4 { animation-delay: .24s; opacity: 0; }
+    .delay-5 { animation-delay: .30s; opacity: 0; }
+
+    /* === HEADER (igual estilo Prosoche) === */
+    .prosoche-header { padding: 1.25rem 0; margin-bottom: 1.25rem; }
+    .header-top { display:flex; justify-content:space-between; align-items:center; gap: 1rem; flex-wrap: wrap; }
+    .header-title { display:flex; align-items:center; gap: 1rem; }
+    .header-icon {
+        width: 56px; height: 56px;
+        background: linear-gradient(135deg, var(--accent-purple) 0%, #8B7CF6 100%);
+        border-radius: var(--radius-md);
+        display:flex; align-items:center; justify-content:center;
+        color:white; font-size: 1.45rem;
+        box-shadow: var(--shadow-soft);
+    }
+    .header-text h1 { font-size: 1.75rem; font-weight: 800; margin: 0; letter-spacing: -0.6px; }
+    .header-text p { margin: 0; color: var(--text-muted); font-size: .95rem; }
+    .header-actions { display:flex; gap:.6rem; flex-wrap: wrap; }
+
+    /* === BUTTONS (freud) === */
+    .btn-freud{
+        border: 1px solid var(--border-color);
+        background: var(--bg-secondary);
+        padding: .75rem 1rem;
+        border-radius: 14px;
+        color: var(--text-primary);
+        font-weight: 700;
+        font-size: .9rem;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: .55rem;
+        box-shadow: var(--shadow-soft);
+        transition: all .2s ease;
+        cursor: pointer;
+    }
+    .btn-freud:hover{ transform: translateY(-2px); box-shadow: var(--shadow-medium); color: var(--text-primary); }
+    .btn-freud-primary{
+        background: linear-gradient(135deg, var(--accent-orange) 0%, var(--accent-orange-dark) 100%);
+        border-color: transparent;
+        color: #fff;
+    }
+    .btn-freud-primary:hover{ color: #fff; }
+    .btn-freud-secondary{
+        background: var(--bg-secondary);
+    }
+
+    /* === CARDS (freud) === */
+    .freud-card{
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-xl);
+        padding: 1.1rem;
+        box-shadow: var(--shadow-soft);
+        margin-bottom: 1rem;
+        overflow: hidden;
+    }
+    .card-header-freud{
+        display:flex;
+        justify-content:space-between;
+        align-items:center;
+        gap: 1rem;
+        margin-bottom: 1rem;
+        flex-wrap: wrap;
+    }
+    .card-title-freud{ display:flex; align-items:center; gap: .75rem; }
+    .card-title-freud h3{ margin: 0; font-size: 1.05rem; font-weight: 800; letter-spacing: -.2px; }
+    .card-icon{
+        width: 42px; height: 42px;
+        border-radius: 14px;
+        display:flex; align-items:center; justify-content:center;
+        color: white;
+        box-shadow: var(--shadow-soft);
+        flex-shrink: 0;
+    }
+    .card-icon.purple{ background: linear-gradient(135deg, var(--accent-purple) 0%, #8B7CF6 100%); }
+    .card-icon.green{ background: linear-gradient(135deg, var(--accent-green) 0%, #00A884 100%); }
+    .card-icon.blue{ background: linear-gradient(135deg, var(--accent-blue) 0%, #4FA3FF 100%); }
+    .card-icon.orange{ background: linear-gradient(135deg, var(--accent-orange) 0%, var(--accent-orange-dark) 100%); }
+    .card-icon.red{ background: linear-gradient(135deg, var(--accent-red) 0%, #FF5A5A 100%); }
+    .card-icon.yellow{ background: linear-gradient(135deg, var(--accent-yellow) 0%, #F5B041 100%); }
+
+    .tag{
+        font-size: .78rem;
+        font-weight: 800;
+        padding: .35rem .65rem;
+        border-radius: 999px;
+        background: rgba(162,155,254,.12);
+        color: #5B4FD8;
+        border: 1px solid rgba(162,155,254,.22);
+    }
+    .tag.readonly{
+        background: rgba(116,185,255,.12);
+        color: #1D6FDB;
+        border-color: rgba(116,185,255,.25);
+    }
+
+    /* === INFO BANNER === */
+    .info-banner{
+        display:flex;
+        gap:.75rem;
+        align-items:flex-start;
+        padding: .9rem 1rem;
+        border-radius: 18px;
+        background: linear-gradient(135deg, rgba(116,185,255,.16), rgba(116,185,255,.05));
+        border: 1px solid rgba(116,185,255,.28);
+        margin-bottom: 1rem;
+    }
+    .info-banner i{ color: #1D6FDB; font-size: 1.15rem; margin-top: .15rem; }
+    .info-banner strong{ font-weight: 900; }
+
+    /* === KPI GRID === */
+    .kpi-grid{
+        display:grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: .9rem;
+    }
+    @media (max-width: 992px){ .kpi-grid{ grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 520px){ .kpi-grid{ grid-template-columns: 1fr; } }
+
+    .kpi{
+        background: var(--bg-primary);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-lg);
+        padding: 1rem;
+        transition: transform .2s ease;
+    }
+    .kpi:hover{ transform: translateY(-3px); }
+    .kpi-top{ display:flex; align-items:center; justify-content:space-between; gap: .75rem; margin-bottom: .75rem; }
+    .kpi-ico{
+        width: 40px; height: 40px; border-radius: 14px;
+        display:flex; align-items:center; justify-content:center;
+        color: #fff;
+    }
+    .kpi-ico.blue{ background: linear-gradient(135deg, var(--accent-blue), #4FA3FF); }
+    .kpi-ico.yellow{ background: linear-gradient(135deg, var(--accent-yellow), #F5B041); }
+    .kpi-ico.green{ background: linear-gradient(135deg, var(--accent-green), #00A884); }
+    .kpi-ico.red{ background: linear-gradient(135deg, var(--accent-red), #FF5A5A); }
+
+    .kpi-value{ font-size: 1.7rem; font-weight: 900; letter-spacing: -.5px; margin: 0; }
+    .kpi-label{ margin: 0; color: var(--text-muted); font-weight: 700; font-size: .85rem; }
+    .kpi-sub{ margin: .35rem 0 0 0; font-size: .85rem; color: var(--text-secondary); }
+
+    /* === LIST / ROWS === */
+    .rows{
+        display:flex;
+        flex-direction: column;
+        gap: .65rem;
+    }
+    .row-item{
+        display:flex;
+        align-items:center;
+        gap:.75rem;
+        padding: .85rem .9rem;
+        border-radius: 18px;
+        border: 1px solid var(--border-color);
+        background: var(--bg-secondary);
+        transition: transform .18s ease, box-shadow .18s ease;
+    }
+    .row-item:hover{ transform: translateY(-2px); box-shadow: var(--shadow-soft); }
+    .row-left{ flex: 1; min-width: 0; }
+    .row-title{ font-weight: 900; margin: 0; }
+    .row-meta{ margin: .15rem 0 0 0; color: var(--text-muted); font-size: .85rem; }
+    .row-right{ display:flex; align-items:center; gap:.5rem; flex-wrap: wrap; justify-content:flex-end; }
+
+    .badge-pill{
+        display:inline-flex;
+        align-items:center;
+        gap:.35rem;
+        padding:.35rem .65rem;
+        border-radius: 999px;
+        font-weight: 800;
+        font-size: .78rem;
+        border: 1px solid var(--border-color);
+        background: var(--bg-primary);
+        color: var(--text-secondary);
+    }
+    .badge-pill.success{ background: rgba(0,184,148,.12); border-color: rgba(0,184,148,.25); color: #007E67; }
+    .badge-pill.warn{ background: rgba(253,203,110,.16); border-color: rgba(253,203,110,.3); color: #9A6B00; }
+    .badge-pill.danger{ background: rgba(255,118,117,.12); border-color: rgba(255,118,117,.25); color: #B23B3A; }
+    .badge-pill.info{ background: rgba(116,185,255,.14); border-color: rgba(116,185,255,.28); color: #1D6FDB; }
+
+    /* === HABITS === */
+    .habit{
+        padding: 1rem;
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-lg);
+        background: var(--bg-secondary);
+        margin-bottom: .9rem;
+    }
+    .habit-top{ display:flex; justify-content:space-between; align-items:center; gap: 1rem; flex-wrap: wrap; }
+    .habit-left{ display:flex; align-items:center; gap: .7rem; min-width: 0; }
+    .dot{ width: 14px; height: 14px; border-radius: 999px; flex-shrink: 0; }
+    .habit-name{ font-weight: 900; margin: 0; }
+    .habit-sub{ margin: .15rem 0 0 0; font-size: .85rem; color: var(--text-muted); }
+
+    .progress-wrap{
+        margin-top: .8rem;
+        background: var(--bg-primary);
+        border: 1px solid var(--border-color);
+        border-radius: 14px;
+        overflow:hidden;
+        height: 18px;
+    }
+    .progress-bar{
+        height: 100%;
+        width: 0%;
+    }
+
+    .days{
+        display:flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-top: .7rem;
+    }
+    .day-dot{
+        width: 9px;
+        height: 9px;
+        border-radius: 999px;
+    }
+
+    /* === INSIGHT === */
+    .insight{
+        padding: 1rem;
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--border-color);
+        background: linear-gradient(135deg, rgba(116,185,255,.12), rgba(116,185,255,.04));
+    }
+    .insight-top{ display:flex; gap: .8rem; align-items:flex-start; }
+    .insight-ico{ font-size: 1.2rem; color: #1D6FDB; margin-top: .1rem; }
+    .insight h4{ margin: 0; font-size: 1rem; font-weight: 900; }
+    .insight p{ margin: .25rem 0 0 0; color: var(--text-secondary); }
+
+    /* === Objectives (read-only) === */
+    .objetivos-grid{
+        display:grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: .9rem;
+    }
+    @media (max-width: 992px){ .objetivos-grid{ grid-template-columns: 1fr; } }
+
+    .objetivo-box{
+        background: var(--bg-secondary);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-lg);
+        padding: 1rem;
+    }
+    .objetivo-head{
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        gap: .75rem;
+        margin-bottom: .55rem;
+    }
+    .objetivo-title{
+        display:flex;
+        align-items:center;
+        gap:.55rem;
+        font-weight: 900;
+        margin: 0;
+        font-size: .95rem;
+    }
+    .objetivo-text{ margin: 0; color: var(--text-secondary); line-height: 1.45; }
+    .muted-empty{
+        text-align:center;
+        color: var(--text-muted);
+        padding: 1.2rem .5rem;
+    }
+
+    /* === Entries list clickable === */
+    .entry-link{
+        text-decoration:none;
+        color: inherit;
+        width: 100%;
+        display:flex;
+        align-items:center;
+        gap:.85rem;
+    }
+    .entry-emoji{ font-size: 1.5rem; }
+    .entry-tags{ display:flex; gap:.35rem; flex-wrap: wrap; justify-content:flex-end; }
+
+    /* === REVISION BOXES === */
+    .revision-grid{
+        display:grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: .9rem;
+    }
+    @media (max-width: 768px){ .revision-grid{ grid-template-columns: 1fr; } }
+
+    .revision-box{
+        padding: 1.2rem;
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--border-color);
+        background: var(--bg-secondary);
+    }
+    .revision-box.logro{ background: var(--accent-green-light); border-color: rgba(0,184,148,.25); }
+    .revision-box.obstaculo{ background: #FFF8E8; border-color: rgba(253,203,110,.3); }
+    .revision-box.aprendizaje{ background: #EBF5FF; border-color: rgba(116,185,255,.28); }
+    .revision-box.felicidad{ background: #FFE8E8; border-color: rgba(255,118,117,.25); }
+
+    .revision-head{ display:flex; align-items:center; gap: .6rem; margin-bottom: .5rem; }
+    .revision-head i{ font-size: 1.1rem; }
+    .revision-head h4{ margin: 0; font-size: .95rem; font-weight: 900; }
+    .revision-text{ margin: 0; color: var(--text-secondary); line-height: 1.45; }
+
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="prosoche-container">
+
+    <!-- HEADER -->
+    <header class="prosoche-header fade-in">
+        <div class="header-top">
+            <div class="header-title">
+                <div class="header-icon">
+                    <i class="fas fa-history"></i>
+                </div>
+                <div class="header-text">
+                    <h1>Revisión Mensual</h1>
+                    <p>{{ prosoche_mes.mes }} {{ prosoche_mes.año }} <span class="tag readonly" style="margin-left:.5rem;"><i class="fas fa-archive"></i> Mes anterior</span></p>
+                </div>
+            </div>
+
+            <div class="header-actions">
+                <a href="{% url 'diario:prosoche_dashboard' %}" class="btn-freud btn-freud-secondary">
+                    <i class="fas fa-arrow-left"></i>
+                    <span>Volver al Mes Actual</span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- INFO SOLO LECTURA -->
+    <div class="info-banner fade-in delay-1">
+        <i class="fas fa-info-circle"></i>
+        <div>
+            <div><strong>Vista de solo lectura</strong></div>
+            <div style="color: var(--text-secondary); margin-top:.15rem;">
+                Estás viendo un mes anterior. Aquí no se editan datos; solo análisis y consulta.
+            </div>
+        </div>
+    </div>
+
+    <!-- REVISIÓN DEL MES -->
+    <div class="freud-card fade-in delay-1">
+        <div class="card-header-freud">
+            <div class="card-title-freud">
+                <div class="card-icon yellow"><i class="fas fa-clipboard-check"></i></div>
+                <h3>Revisión del Mes</h3>
+            </div>
+            <span class="tag readonly">Reflexión</span>
+        </div>
+
+        <div class="revision-grid">
+            <div class="revision-box logro">
+                <div class="revision-head" style="color: var(--accent-green);">
+                    <i class="fas fa-trophy"></i>
+                    <h4>Logro Principal</h4>
+                </div>
+                <p class="revision-text">{{ prosoche_mes.logro_principal|default:"No se registró logro principal." }}</p>
+            </div>
+            <div class="revision-box obstaculo">
+                <div class="revision-head" style="color: var(--accent-yellow);">
+                    <i class="fas fa-mountain"></i>
+                    <h4>Obstáculo Principal</h4>
+                </div>
+                <p class="revision-text">{{ prosoche_mes.obstaculo_principal|default:"No se registró obstáculo principal." }}</p>
+            </div>
+            <div class="revision-box aprendizaje">
+                <div class="revision-head" style="color: var(--accent-blue);">
+                    <i class="fas fa-lightbulb"></i>
+                    <h4>Aprendizaje Principal</h4>
+                </div>
+                <p class="revision-text">{{ prosoche_mes.aprendizaje_principal|default:"No se registró aprendizaje principal." }}</p>
+            </div>
+            <div class="revision-box felicidad">
+                <div class="revision-head" style="color: var(--accent-red);">
+                    <i class="fas fa-heart"></i>
+                    <h4>Momento de Felicidad</h4>
+                </div>
+                <p class="revision-text">{{ prosoche_mes.momento_felicidad|default:"No se registró momento de felicidad." }}</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- RESUMEN EJECUTIVO -->
+    <div class="freud-card fade-in delay-2">
+        <div class="card-header-freud">
+            <div class="card-title-freud">
+                <div class="card-icon blue"><i class="fas fa-chart-line"></i></div>
+                <h3>Resumen Ejecutivo del Mes</h3>
+            </div>
+            <span class="tag readonly">Analytics</span>
+        </div>
+
+        <div class="kpi-grid">
+            <div class="kpi">
+                <div class="kpi-top">
+                    <div class="kpi-ico blue"><i class="fas fa-book"></i></div>
+                    <div class="badge-pill info"><i class="fas fa-calendar"></i> Mes</div>
+                </div>
+                <p class="kpi-value">{{ estadisticas.total_entradas }}</p>
+                <p class="kpi-label">Entradas escritas</p>
+                <p class="kpi-sub">Presencia: {{ estadisticas.porcentaje_dias_con_entrada|floatformat:0 }}% de los días</p>
+            </div>
+
+            <div class="kpi">
+                <div class="kpi-top">
+                    <div class="kpi-ico yellow"><i class="fas fa-smile"></i></div>
+                    <div class="badge-pill {% if estadisticas.tendencia_animo == 'mejorando' %}success{% elif estadisticas.tendencia_animo == 'empeorando' %}danger{% else %}info{% endif %}">
+                        {% if estadisticas.tendencia_animo == 'mejorando' %}<i class="fas fa-arrow-up"></i> Mejorando
+                        {% elif estadisticas.tendencia_animo == 'empeorando' %}<i class="fas fa-arrow-down"></i> Bajando
+                        {% else %}<i class="fas fa-minus"></i> Estable{% endif %}
+                    </div>
+                </div>
+                <p class="kpi-value">{{ estadisticas.estado_animo_promedio|floatformat:1 }}/5</p>
+                <p class="kpi-label">Ánimo promedio</p>
+                <p class="kpi-sub">Tendencia: {{ estadisticas.tendencia_animo|default:"-" }}</p>
+            </div>
+
+            <div class="kpi">
+                <div class="kpi-top">
+                    <div class="kpi-ico green"><i class="fas fa-check-double"></i></div>
+                    <div class="badge-pill success"><i class="fas fa-leaf"></i> Hábitos</div>
+                </div>
+                <p class="kpi-value">{{ estadisticas.promedio_habitos|floatformat:0 }}%</p>
+                <p class="kpi-label">Éxito en hábitos</p>
+                <p class="kpi-sub">{{ estadisticas.total_habitos }} hábitos seguidos</p>
+            </div>
+
+            <div class="kpi">
+                <div class="kpi-top">
+                    <div class="kpi-ico red"><i class="fas fa-fire"></i></div>
+                    <div class="badge-pill warn"><i class="fas fa-bolt"></i> Racha</div>
+                </div>
+                <p class="kpi-value">{{ estadisticas.racha_mas_larga }}</p>
+                <p class="kpi-label">Racha más larga</p>
+                <p class="kpi-sub">Días consecutivos</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ANÁLISIS DE HÁBITOS -->
+    {% if habitos_con_dias %}
+    <div class="freud-card fade-in delay-3">
+        <div class="card-header-freud">
+            <div class="card-title-freud">
+                <div class="card-icon green"><i class="fas fa-chart-bar"></i></div>
+                <h3>Análisis de Hábitos</h3>
+            </div>
+            <span class="tag readonly">Detalle</span>
+        </div>
+
+        {% for habito_data in habitos_con_dias %}
+        <div class="habit">
+            <div class="habit-top">
+                <div class="habit-left">
+                    <span class="dot" style="background: {{ habito_data.habito.color }};"></span>
+                    <div style="min-width:0;">
+                        <p class="habit-name">{{ habito_data.habito.nombre }}</p>
+                        <p class="habit-sub">{{ habito_data.estadisticas.dias_completados }} de {{ habito_data.estadisticas.dias_totales }} días</p>
+                    </div>
+                </div>
+
+                <div style="display:flex; gap:.5rem; align-items:center; flex-wrap:wrap;">
+                    {% if habito_data.estadisticas.porcentaje >= 80 %}
+                    <span class="badge-pill success">{{ habito_data.estadisticas.porcentaje|floatformat:0 }}%</span>
+                    {% elif habito_data.estadisticas.porcentaje >= 50 %}
+                    <span class="badge-pill warn">{{ habito_data.estadisticas.porcentaje|floatformat:0 }}%</span>
+                    {% else %}
+                    <span class="badge-pill danger">{{ habito_data.estadisticas.porcentaje|floatformat:0 }}%</span>
+                    {% endif %}
+
+                    {% if habito_data.estadisticas.racha_actual > 0 %}
+                    <span class="badge-pill info"><i class="fas fa-fire"></i> {{ habito_data.estadisticas.racha_actual }} días</span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="progress-wrap" aria-label="Progreso">
+                <div class="progress-bar" style="width: {{ habito_data.estadisticas.porcentaje }}%; background: {{ habito_data.habito.color }};"></div>
+            </div>
+
+            <div class="days" title="Días del mes">
+                {% for dia_data in habito_data.dias %}
+                {% if dia_data %}
+                <span class="day-dot" style="background: {% if dia_data.completado %}{{ habito_data.habito.color }}{% else %}#E6E1DD{% endif %};"></span>
+                {% endif %}
+                {% endfor %}
+            </div>
+
+            <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:.6rem; margin-top:.85rem;">
+                <div>
+                    <div class="kpi-label">Racha más larga</div>
+                    <div style="font-weight:900;">{{ habito_data.estadisticas.racha_mas_larga }} días</div>
+                </div>
+                <div>
+                    <div class="kpi-label">Racha actual</div>
+                    <div style="font-weight:900;">{{ habito_data.estadisticas.racha_actual }} días</div>
+                </div>
+                <div>
+                    <div class="kpi-label">Consistencia</div>
+                    <div style="font-weight:900;">{{ habito_data.estadisticas.consistencia|floatformat:0 }}%</div>
+                </div>
+                <div>
+                    <div class="kpi-label">Mejor semana</div>
+                    <div style="font-weight:900;">Semana {{ habito_data.estadisticas.mejor_semana }}</div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+
+        <!-- Ranking -->
+        <div style="margin-top: .6rem;">
+            <div style="display:flex; align-items:center; justify-content:space-between; gap: .8rem; flex-wrap:wrap; margin-bottom:.6rem;">
+                <div style="font-weight:900;"><i class="fas fa-trophy" style="color: var(--accent-yellow); margin-right:.35rem;"></i>Ranking de hábitos</div>
+                <div class="kpi-label">Ordenado por % de cumplimiento</div>
+            </div>
+
+            <div class="rows">
+                {% for habito_data in habitos_con_dias|dictsort:"estadisticas.porcentaje" reversed %}
+                <div class="row-item">
+                    <div class="row-left" style="display:flex; align-items:center; gap:.7rem;">
+                        <div style="width: 24px; text-align:center; font-weight:900; color: var(--text-muted);">
+                            {{ forloop.counter }}.
+                        </div>
+                        <span class="dot" style="background: {{ habito_data.habito.color }};"></span>
+                        <div style="min-width:0;">
+                            <p class="row-title">{{ habito_data.habito.nombre }}</p>
+                            <p class="row-meta">Consistencia {{ habito_data.estadisticas.consistencia|floatformat:0 }}%</p>
+                        </div>
+                    </div>
+                    <div class="row-right">
+                        <span class="badge-pill info">{{ habito_data.estadisticas.porcentaje|floatformat:0 }}%</span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- INSIGHTS -->
+    {% if insights %}
+    <div class="freud-card fade-in delay-4">
+        <div class="card-header-freud">
+            <div class="card-title-freud">
+                <div class="card-icon yellow"><i class="fas fa-lightbulb"></i></div>
+                <h3>Insights del Mes</h3>
+            </div>
+            <span class="tag readonly">Patrones</span>
+        </div>
+
+        <div class="rows">
+            {% for insight in insights %}
+            <div class="insight">
+                <div class="insight-top">
+                    <div class="insight-ico"><i class="fas {{ insight.icono }}"></i></div>
+                    <div style="flex:1; min-width:0;">
+                        <h4>{{ insight.titulo }}</h4>
+                        <p>{{ insight.descripcion }}</p>
+                        {% if insight.sugerencia %}
+                        <p style="margin-top:.45rem; font-weight:800; color: #007E67;">
+                            <i class="fas fa-arrow-right"></i> {{ insight.sugerencia }}
+                        </p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ÁNIMO -->
+    {% if entradas %}
+    <div class="freud-card fade-in delay-4">
+        <div class="card-header-freud">
+            <div class="card-title-freud">
+                <div class="card-icon red"><i class="fas fa-heart"></i></div>
+                <h3>Estado de Ánimo</h3>
+            </div>
+            <span class="tag readonly">Distribución</span>
+        </div>
+
+        <div style="display:grid; grid-template-columns: 1.2fr .8fr; gap: 1rem;">
+            <div>
+                <div class="kpi-label" style="margin-bottom:.5rem;">Distribución</div>
+                <div class="rows">
+                    {% for estado in estadisticas.distribucion_animo %}
+                    <div class="row-item" style="align-items:flex-start;">
+                        <div class="row-left">
+                            <p class="row-title">{{ estado.emoji }} {{ estado.nombre }}</p>
+                            <p class="row-meta">{{ estado.cantidad }} días ({{ estado.porcentaje|floatformat:0 }}%)</p>
+                            <div class="progress-wrap" style="height: 12px; margin-top:.55rem;">
+                                <div class="progress-bar" style="width: {{ estado.porcentaje }}%; background: {{ estado.color }};"></div>
+                            </div>
+                        </div>
+                        <div class="row-right">
+                            <span class="badge-pill info">{{ estado.porcentaje|floatformat:0 }}%</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div>
+                <div class="kpi-label" style="margin-bottom:.5rem;">Días destacados</div>
+                <div class="rows">
+                    {% if estadisticas.mejor_dia %}
+                    <div class="row-item">
+                        <div class="row-left">
+                            <p class="row-title"><i class="fas fa-smile" style="color: var(--accent-green);"></i> Mejor día</p>
+                            <p class="row-meta">{{ estadisticas.mejor_dia.fecha|date:"d M" }} · {{ estadisticas.mejor_dia.persona_quiero_ser|truncatewords:10 }}</p>
+                        </div>
+                        <div class="row-right"><span class="badge-pill success">Top</span></div>
+                    </div>
+                    {% endif %}
+
+                    {% if estadisticas.dia_mas_productivo %}
+                    <div class="row-item">
+                        <div class="row-left">
+                            <p class="row-title"><i class="fas fa-check-circle" style="color: var(--accent-blue);"></i> Más productivo</p>
+                            <p class="row-meta">{{ estadisticas.dia_mas_productivo.fecha|date:"d M" }} · {{ estadisticas.dia_mas_productivo.tareas_dia|length }} tareas</p>
+                        </div>
+                        <div class="row-right"><span class="badge-pill info">Focus</span></div>
+                    </div>
+                    {% endif %}
+
+                    {% if estadisticas.etiquetas_frecuentes %}
+                    <div class="row-item" style="align-items:flex-start;">
+                        <div class="row-left">
+                            <p class="row-title"><i class="fas fa-tags" style="color: var(--accent-purple);"></i> Etiquetas frecuentes</p>
+                            <div class="entry-tags" style="justify-content:flex-start; margin-top:.45rem;">
+                                {% for etiqueta in estadisticas.etiquetas_frecuentes %}
+                                <span class="badge-pill">{{ etiqueta.nombre }} ({{ etiqueta.count }})</span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- OBJETIVOS DEL MES (read-only) -->
+    <div class="freud-card fade-in delay-5">
+        <div class="card-header-freud">
+            <div class="card-title-freud">
+                <div class="card-icon purple"><i class="fas fa-bullseye"></i></div>
+                <h3>Objetivos del Mes</h3>
+            </div>
+            <span class="tag readonly">La Visión</span>
+        </div>
+
+        <div class="objetivos-grid">
+            {% if prosoche_mes.objetivo_mes_1 %}
+            <div class="objetivo-box">
+                <div class="objetivo-head">
+                    <p class="objetivo-title">
+                        {% if prosoche_mes.objetivo_mes_1_completado %}
+                        <i class="fas fa-check-circle" style="color: var(--accent-green);"></i> Objetivo 1 (Completado)
+                        {% else %}
+                        <i class="far fa-circle" style="color: var(--text-muted);"></i> Objetivo 1
+                        {% endif %}
+                    </p>
+                    <span class="badge-pill {% if prosoche_mes.objetivo_mes_1_completado %}success{% else %}info{% endif %}">
+                        {% if prosoche_mes.objetivo_mes_1_completado %}OK{% else %}Pendiente{% endif %}
+                    </span>
+                </div>
+                <p class="objetivo-text">{{ prosoche_mes.objetivo_mes_1 }}</p>
+            </div>
+            {% endif %}
+
+            {% if prosoche_mes.objetivo_mes_2 %}
+            <div class="objetivo-box">
+                <div class="objetivo-head">
+                    <p class="objetivo-title">
+                        {% if prosoche_mes.objetivo_mes_2_completado %}
+                        <i class="fas fa-check-circle" style="color: var(--accent-green);"></i> Objetivo 2 (Completado)
+                        {% else %}
+                        <i class="far fa-circle" style="color: var(--text-muted);"></i> Objetivo 2
+                        {% endif %}
+                    </p>
+                    <span class="badge-pill {% if prosoche_mes.objetivo_mes_2_completado %}success{% else %}info{% endif %}">
+                        {% if prosoche_mes.objetivo_mes_2_completado %}OK{% else %}Pendiente{% endif %}
+                    </span>
+                </div>
+                <p class="objetivo-text">{{ prosoche_mes.objetivo_mes_2 }}</p>
+            </div>
+            {% endif %}
+
+            {% if prosoche_mes.objetivo_mes_3 %}
+            <div class="objetivo-box">
+                <div class="objetivo-head">
+                    <p class="objetivo-title">
+                        {% if prosoche_mes.objetivo_mes_3_completado %}
+                        <i class="fas fa-check-circle" style="color: var(--accent-green);"></i> Objetivo 3 (Completado)
+                        {% else %}
+                        <i class="far fa-circle" style="color: var(--text-muted);"></i> Objetivo 3
+                        {% endif %}
+                    </p>
+                    <span class="badge-pill {% if prosoche_mes.objetivo_mes_3_completado %}success{% else %}info{% endif %}">
+                        {% if prosoche_mes.objetivo_mes_3_completado %}OK{% else %}Pendiente{% endif %}
+                    </span>
+                </div>
+                <p class="objetivo-text">{{ prosoche_mes.objetivo_mes_3 }}</p>
+            </div>
+            {% endif %}
+        </div>
+
+        {% if not prosoche_mes.objetivo_mes_1 and not prosoche_mes.objetivo_mes_2 and not prosoche_mes.objetivo_mes_3 %}
+        <div class="muted-empty">
+            <i class="fas fa-inbox" style="font-size:1.6rem; margin-bottom:.35rem;"></i>
+            <div>No se establecieron objetivos para este mes.</div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- OBJETIVOS SEMANALES -->
+    {% if semanas %}
+    <div class="freud-card fade-in delay-5">
+        <div class="card-header-freud">
+            <div class="card-title-freud">
+                <div class="card-icon blue"><i class="fas fa-calendar-week"></i></div>
+                <h3>Objetivos Semanales</h3>
+            </div>
+            <span class="tag readonly">La Táctica</span>
+        </div>
+
+        <div class="rows">
+            {% for semana in semanas %}
+            <div class="row-item" style="align-items:flex-start;">
+                <div class="row-left">
+                    <p class="row-title"><i class="fas fa-calendar-alt" style="color: var(--accent-blue);"></i> Semana {{ semana.numero_semana }}</p>
+                    <div style="margin-top:.5rem; display:flex; flex-direction:column; gap:.35rem;">
+                        {% if semana.objetivo_1 %}
+                        <div style="color: var(--text-secondary);"><i class="fas fa-flag" style="color: var(--accent-orange);"></i> {{ semana.objetivo_1 }}</div>
+                        {% endif %}
+                        {% if semana.objetivo_2 %}
+                        <div style="color: var(--text-secondary);"><i class="fas fa-flag" style="color: var(--accent-orange);"></i> {{ semana.objetivo_2 }}</div>
+                        {% endif %}
+                        {% if semana.objetivo_3 %}
+                        <div style="color: var(--text-secondary);"><i class="fas fa-flag" style="color: var(--accent-orange);"></i> {{ semana.objetivo_3 }}</div>
+                        {% endif %}
+                        {% if not semana.objetivo_1 and not semana.objetivo_2 and not semana.objetivo_3 %}
+                        <div style="color: var(--text-muted);"><em>Sin objetivos definidos</em></div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="row-right">
+                    <span class="badge-pill info">Semana</span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ENTRADAS DEL DIARIO (solo lectura, pero navega a detalle/editar si quieres) -->
+    <div class="freud-card fade-in delay-5">
+        <div class="card-header-freud">
+            <div class="card-title-freud">
+                <div class="card-icon orange"><i class="fas fa-book"></i></div>
+                <h3>Entradas del Diario</h3>
+            </div>
+            <span class="tag readonly">Listado</span>
+        </div>
+
+        {% if entradas %}
+        <div class="rows">
+            {% for entrada in entradas %}
+            <div class="row-item" style="cursor:pointer;" onclick="window.location='{% url 'diario:prosoche_editar_entrada' entrada.id %}'">
+                <div class="row-left">
+                    <div class="entry-link">
+                        <span class="entry-emoji">{{ entrada.get_estado_animo_emoji }}</span>
+                        <div style="min-width:0;">
+                            <p class="row-title">{{ entrada.get_titulo_display }}</p>
+                            <p class="row-meta">{{ entrada.fecha|date:"d M Y" }}</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="row-right">
+                    <div class="entry-tags">
+                        {% for etiqueta in entrada.etiquetas|split:"," %}
+                        {% if etiqueta %}
+                        <span class="badge-pill">{{ etiqueta|trim }}</span>
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="muted-empty">
+            <i class="fas fa-journal-whills" style="font-size:1.8rem; margin-bottom:.35rem;"></i>
+            <div>No hay entradas para este mes.</div>
+        </div>
+        {% endif %}
+    </div>
+
+</div>
+{% endblock %}

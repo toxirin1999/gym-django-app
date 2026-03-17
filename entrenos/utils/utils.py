@@ -52,6 +52,10 @@ def parsear_ejercicios_de_notas(notas):
     return ejercicios
 
 
+# Alias para compatibilidad legacy
+parsear_ejercicios = parsear_ejercicios_de_notas
+
+
 def parse_reps_and_series(rep_str):
     """
     ✅ NUEVA FUNCIÓN ROBUSTA

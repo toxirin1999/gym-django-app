@@ -1,0 +1,1728 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% load clientes_filters %}
+
+{% block title %}Inicio – Nueva Gym{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/variables-base.css' %}">
+<link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+<style>
+    /* ===== CONTENEDOR DE TARJETAS ===== */
+    .entrenos-cards-container {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    /* ===== TARJETA DE ENTRENAMIENTO ===== */
+    .entreno-card {
+        display: flex;
+        align-items: stretch;
+        background: linear-gradient(135deg, rgba(15, 23, 42, 0.8), rgba(15, 23, 42, 0.6));
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        overflow: hidden;
+        text-decoration: none;
+        transition: all 0.3s ease;
+        position: relative;
+    }
+
+    .entreno-card:hover {
+        border-color: var(--color-cyan);
+        background: linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(15, 23, 42, 0.7));
+        transform: translateX(4px);
+        box-shadow:
+            0 4px 20px rgba(0, 0, 0, 0.3),
+            0 0 20px var(--lol-blue-glow);
+    }
+
+    /* Indicador lateral */
+    .entreno-card-indicator {
+        width: 4px;
+        background: linear-gradient(180deg, var(--lol-blue), var(--lol-blue-dim));
+        flex-shrink: 0;
+    }
+
+    .entreno-card:nth-child(2) .entreno-card-indicator {
+        background: linear-gradient(180deg, #a855f7, #7c3aed); /* Mantengo púrpuras para variedad */
+    }
+
+    .entreno-card:nth-child(3) .entreno-card-indicator {
+        background: linear-gradient(180deg, #f472b6, #ec4899); /* Mantengo rosas para variedad */
+    }
+
+    /* Contenido */
+    .entreno-card-content {
+        flex-grow: 1;
+        padding: 14px 16px;
+        min-width: 0;
+    }
+
+    .entreno-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 12px;
+        margin-bottom: 8px;
+    }
+
+    .entreno-card-title {
+        font-size: 0.95rem;
+        font-weight: 700;
+        color: #f8fafc;
+        margin: 0;
+        line-height: 1.3;
+        /* Truncar texto largo */
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+    }
+
+    .entreno-card:hover .entreno-card-title {
+        color: #00ffff;
+    }
+
+    /* Badge de fecha */
+    .entreno-card-date-badge {
+        flex-shrink: 0;
+        font-size: 0.65rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        padding: 4px 8px;
+        border-radius: 6px;
+        background: var(--lol-blue-glow);
+        color: var(--lol-blue);
+        border: 1px solid var(--lol-border-bright);
+    }
+
+    /* Stats */
+    .entreno-card-stats {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+
+    .entreno-stat {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 0.8rem;
+        color: rgba(255, 255, 255, 0.6);
+    }
+
+    .entreno-stat i {
+        font-size: 0.7rem;
+        color: rgba(255, 255, 255, 0.4);
+    }
+
+    .entreno-card:hover .entreno-stat {
+        color: rgba(255, 255, 255, 0.8);
+    }
+
+    .entreno-card:hover .entreno-stat i {
+        color: rgba(0, 255, 255, 0.6);
+    }
+
+    /* Flecha */
+    .entreno-card-arrow {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0 16px;
+        color: rgba(255, 255, 255, 0.2);
+        transition: all 0.3s ease;
+    }
+
+    .entreno-card:hover .entreno-card-arrow {
+        color: var(--lol-blue);
+        transform: translateX(4px);
+    }
+
+    /* ===== ESTADO VACÍO ===== */
+    .entrenos-empty {
+        text-align: center;
+        padding: 32px 20px;
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: 12px;
+        border: 1px dashed rgba(255, 255, 255, 0.15);
+    }
+
+    .entrenos-empty-icon {
+        font-size: 2.5rem;
+        color: rgba(255, 255, 255, 0.2);
+        margin-bottom: 12px;
+    }
+
+    .entrenos-empty-text {
+        font-size: 1rem;
+        font-weight: 600;
+        color: rgba(255, 255, 255, 0.6);
+        margin: 0 0 4px 0;
+    }
+
+    .entrenos-empty-subtext {
+        font-size: 0.85rem;
+        color: rgba(255, 255, 255, 0.4);
+        margin: 0 0 16px 0;
+    }
+
+    .entrenos-empty-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 20px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #000;
+        background: linear-gradient(135deg, var(--lol-blue), var(--lol-blue-dim));
+        border-radius: 8px;
+        text-decoration: none;
+        transition: all 0.3s ease;
+    }
+
+    .entrenos-empty-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(0, 255, 255, 0.4);
+    }
+
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 480px) {
+        .entreno-card-content {
+            padding: 12px 14px;
+        }
+
+        .entreno-card-title {
+            font-size: 0.9rem;
+        }
+
+        .entreno-card-stats {
+            gap: 8px;
+        }
+
+        .entreno-stat {
+            font-size: 0.75rem;
+        }
+
+        .entreno-card-arrow {
+            padding: 0 12px;
+        }
+    }
+
+    .hero-panel-widget {
+        position: relative;
+        border-radius: 15px;
+        overflow: hidden;
+        color: white;
+        min-height: 250px;
+        /* Altura mínima para que luzca bien */
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+        /* Alinea todo el contenido hacia abajo */
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        border: 2px solid rgba(255, 215, 0, 0.5);
+        background-color: #1a1a2e;
+        /* Color de fondo mientras carga la imagen */
+        background-size: cover;
+        background-position: center 20%;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .hero-panel-widget:hover {
+        transform: scale(1.02);
+        box-shadow: 0 15px 40px rgba(0, 0, 0, 0.7);
+    }
+
+    .hero-panel-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(to top, rgba(15, 23, 42, 1) 20%, rgba(15, 23, 42, 0.5) 60%, rgba(15, 23, 42, 0) 100%);
+        z-index: 1;
+    }
+
+    .hero-panel-content {
+        position: relative;
+        z-index: 2;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .hero-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+    }
+
+    .hero-name {
+        font-size: 1.8rem;
+        font-weight: bold;
+        text-shadow: 0 2px 5px rgba(0, 0, 0, 0.8);
+        line-height: 1.2;
+        margin: 0;
+    }
+
+    .hero-level-badge {
+        background: #ffd700;
+        color: #1a1a2e;
+        padding: 5px 10px;
+        border-radius: 5px;
+        font-size: 0.8rem;
+        font-weight: bold;
+        flex-shrink: 0;
+    }
+
+    .hero-stats {
+        display: flex;
+        gap: 20px;
+    }
+
+    .hero-stat-item .hero-stat-value {
+        font-size: 1.5rem;
+        font-weight: bold;
+    }
+
+    .hero-stat-item .hero-stat-label {
+        font-size: 0.8rem;
+        opacity: 0.8;
+    }
+
+    .hero-actions {
+        display: flex;
+        gap: 10px;
+    }
+
+    .hero-btn {
+        padding: 10px 20px;
+        border-radius: 8px;
+        font-weight: bold;
+        text-decoration: none;
+        text-align: center;
+        transition: all 0.2s ease;
+    }
+
+    .hero-btn-primary {
+        background: #ffd700;
+        color: #1a1a2e;
+    }
+
+    .hero-btn-primary:hover {
+        background: #fff;
+        color: #1a1a2e;
+        transform: translateY(-2px);
+    }
+
+    .hero-btn-secondary {
+        background: rgba(255, 255, 255, 0.1);
+        color: white;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+
+    .hero-btn-secondary:hover {
+        background: rgba(255, 255, 255, 0.2);
+    }
+
+    .hero-progress-section {
+        position: relative;
+        z-index: 2;
+        padding: 0 20px 20px 20px;
+    }
+
+    .hero-progress-bar {
+        width: 100%;
+        height: 15px;
+        background: rgba(0, 0, 0, 0.5);
+        border-radius: 10px;
+        position: relative;
+        border: 1px solid rgba(255, 215, 0, 0.3);
+    }
+
+    .hero-progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #ff6b6b, #ffd700);
+        border-radius: 10px;
+        transition: width 0.8s ease;
+    }
+
+    .hero-progress-text {
+        position: absolute;
+        right: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 0.7rem;
+        font-weight: bold;
+        text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+    }
+
+    .avatar-ring {
+        padding: 3px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, var(--lol-blue), var(--lol-red), var(--lol-blue));
+        background-size: 200% 200%;
+        animation: avatarRingGlow 3s ease infinite;
+    }
+
+    @keyframes avatarRingGlow {
+
+        0%,
+        100% {
+            background-position: 0% 50%;
+        }
+
+        50% {
+            background-position: 100% 50%;
+        }
+    }
+
+    /* Botones de acción del header */
+    .header-action-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 14px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: rgba(255, 255, 255, 0.8);
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 8px;
+        text-decoration: none;
+        transition: all 0.2s ease;
+    }
+
+    .header-action-btn:hover {
+        color: var(--lol-blue);
+        background: var(--lol-blue-glow);
+        border-color: var(--lol-border-bright);
+        transform: translateY(-1px);
+    }
+
+    .header-action-btn i {
+        font-size: 0.85rem;
+        opacity: 0.8;
+    }
+
+    .header-action-btn:hover i {
+        opacity: 1;
+    }
+
+    /* Botón solo icono */
+    .header-action-btn-icon {
+        padding: 8px 10px;
+    }
+
+    .header-action-btn-icon span {
+        display: none;
+    }
+
+    /* Responsive */
+    @media (max-width: 640px) {
+        .header-action-btn span {
+            display: none;
+        }
+
+        .header-action-btn {
+            padding: 10px 12px;
+        }
+
+        .header-action-btn i {
+            font-size: 1rem;
+        }
+    }
+
+    /* Base Animations */
+    @keyframes float {
+        0% {
+            transform: translateY(0px);
+        }
+
+        50% {
+            transform: translateY(-5px);
+        }
+
+        100% {
+            transform: translateY(0px);
+        }
+    }
+
+    .animate-float {
+        animation: float 6s ease-in-out infinite;
+    }
+
+    @keyframes fadeSlide {
+        0% {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        100% {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .animate-fadeSlide {
+        animation: fadeSlide 0.8s ease-out;
+    }
+
+    /* Titles and Header */
+    .title {
+        background: linear-gradient(90deg, var(--lol-blue), var(--lol-gold-mid), var(--lol-red));
+        -webkit-backdrop-filter: blur(20px) saturate(180%);
+        border: 1px solid var(--lol-border-bright);
+        box-shadow: 0 0 15px var(--lol-blue-glow), inset 0 0 8px var(--lol-blue-glow);
+    }
+
+    .section-title {
+        font-size: 1.25rem;
+        font-weight: 700;
+        margin-bottom: 1rem;
+        color: white;
+    }
+
+    .section {
+        margin-top: 2rem;
+    }
+
+
+    /* General Card/Box Styling */
+    .metric-card,
+    .quote-box,
+    .timeline-section,
+    .chat-bubble {
+        background: rgba(0, 0, 0, 0.4) !important;
+        backdrop-filter: blur(15px) saturate(180%) !important;
+        -webkit-backdrop-filter: blur(15px) saturate(180%) !important;
+        border: 1px solid rgba(77, 208, 225, 0.6) !important;
+        box-shadow: 0 0 15px rgba(77, 208, 225, 0.4), inset 0 0 8px rgba(77, 208, 225, 0.2) !important;
+        border-radius: 10px !important;
+    }
+
+    /* Joi Specific - Imagen principal más grande y posicionada */
+    .joi-flotante {
+        width: 320px !important;
+        /* Aumentado de 192px (w-48) a 320px */
+        height: auto !important;
+        margin-left: auto !important;
+        margin-right: -70px !important;
+        /* Mover más a la derecha */
+        filter: drop-shadow(0 0 20px #00ffff) drop-shadow(0 0 10px #ff00ff) blur(0.5px) !important;
+        /* Añadir difuminado sutil en los bordes */
+        transition: filter 0.3s ease-in-out, transform 0.3s ease-in-out;
+        border-radius: 15px !important;
+        /* Bordes redondeados para suavizar */
+        mask: radial-gradient(ellipse at center, black 70%, transparent 100%) !important;
+        /* Difuminado en los bordes */
+        -webkit-mask: radial-gradient(ellipse at center, black 70%, transparent 100%) !important;
+    }
+
+    .joi-flotante:hover {
+        filter: drop-shadow(0 0 30px #00ffff) drop-shadow(0 0 15px #ff00ff) brightness(1.2) blur(0.3px) !important;
+        transform: scale(1.05);
+    }
+
+    /* Entity image en la burbuja de chat - también más grande */
+    .entity-image {
+        width: 120px !important;
+        /* Aumentado de 80px a 120px */
+        height: 120px !important;
+        filter: drop-shadow(0 0 15px #00ffff) drop-shadow(0 0 10px #ff00ff) drop-shadow(0 0 5px #00ff00) blur(0.3px) !important;
+        /* Difuminado sutil */
+        transition: filter 0.5s ease-in-out, transform 0.3s ease-out;
+        border-radius: 10px !important;
+        /* Bordes redondeados */
+        mask: radial-gradient(circle at center, black 75%, transparent 100%) !important;
+        /* Difuminado en los bordes */
+        -webkit-mask: radial-gradient(circle at center, black 75%, transparent 100%) !important;
+    }
+
+    .entity-image:hover {
+        filter: drop-shadow(0 0 25px #00ffff) drop-shadow(0 0 15px #ff00ff) drop-shadow(0 0 8px #00ff00) brightness(1.5) saturate(1.5) blur(0.2px) !important;
+        transform: scale(1.1);
+    }
+
+    /* Contenedor de la imagen de fondo ajustado */
+    .background-image {
+        display: flex;
+        justify-content: flex-end;
+        /* Alinear a la derecha */
+        padding-right: 20px;
+        /* Espacio desde el borde derecho */
+        margin-top: 20px;
+        margin-bottom: 20px;
+    }
+
+    /* Atmosphere Controls */
+    .atmosphere-control-btn {
+        background: linear-gradient(45deg, #00ffff, #ff00ff);
+        color: #000;
+        font-weight: bold;
+        border: none;
+        padding: 8px 15px;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+    }
+
+    .atmosphere-control-btn.active {
+        background: linear-gradient(45deg, #00ff00, #00ffff);
+        box-shadow: 0 0 15px rgba(0, 255, 0, 0.7);
+        transform: scale(1.05);
+    }
+
+    .atmosphere-control-btn:hover {
+        box-shadow: 0 0 20px rgba(255, 0, 255, 0.7), 0 0 10px rgba(0, 255, 255, 0.7);
+        transform: scale(1.02);
+    }
+
+    .status-indicator {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        margin-right: 5px;
+        animation: pulse 1.5s infinite alternate;
+    }
+
+    @keyframes pulse {
+        0% {
+            transform: scale(1);
+            opacity: 0.8;
+        }
+
+        100% {
+            transform: scale(1.2);
+            opacity: 1;
+        }
+    }
+
+
+    /* Chat Bubbles */
+    .chat-bubble.joi {
+        background: rgba(0, 128, 128, 0.2);
+        border: 1px solid var(--lol-blue);
+        box-shadow: 0 0 10px var(--lol-blue-glow);
+    }
+
+    .chat-bubble.user {
+        background: rgba(128, 0, 128, 0.2);
+        border: 1px solid var(--lol-red);
+        box-shadow: 0 0 10px var(--lol-red-glow);
+    }
+
+    /* Floating Entity */
+    #floating-entity {
+        position: absolute;
+        transform: translate(-50%, -50%);
+        z-index: 10;
+        transition: opacity 1s ease-in-out;
+        /* Smooth fade for visibility changes */
+    }
+
+    /* --- Mini-Glitch Text Effect (con !important para testear overrides) --- */
+    @keyframes textGlitch1 {
+        0% {
+            transform: translate(0px, 0px);
+            text-shadow: 2px 0 0 var(--lol-blue), -2px 0 0 var(--lol-red);
+        }
+        5% {
+            transform: translate(-1px, 0px);
+            text-shadow: 1px 0 0 var(--lol-blue), -1px 0 0 var(--lol-red);
+        }
+        10% {
+            transform: translate(1px, 0px);
+            text-shadow: -1px 0 0 var(--lol-blue), 1px 0 0 var(--lol-red);
+        }
+        15% {
+            transform: translate(-1px, 0px);
+            text-shadow: 1px 0 0 var(--lol-blue), -1px 0 0 var(--lol-red);
+        }
+        20%, 100% {
+            transform: translate(0px, 0px);
+            text-shadow: 0 0 0 var(--lol-blue), 0 0 0 var(--lol-red);
+        }
+    }
+
+    @keyframes textGlitch2 {
+        0% {
+            transform: translate(0px, 0px) !important;
+            text-shadow: 0 0 0px #0f0, 0 0 0px #f0f !important;
+        }
+
+        5% {
+            transform: translate(0px, 1px) !important;
+            text-shadow: 0px 1px 0px #0f0, 0px -1px 0px #f0f !important;
+        }
+
+        10% {
+            transform: translate(0px, -1px) !important;
+            text-shadow: 0px -1px 0px #0f0, 0px 1px 0px #f0f !important;
+        }
+
+        15% {
+            transform: translate(0px, 1px) !important;
+            text-shadow: 0px 1px 0px #0f0, 0px -1px 0px #f0f !important;
+        }
+
+        20% {
+            transform: translate(0px, 0px) !important;
+            text-shadow: 0 0 0px #0f0, 0 0 0px #f0f !important;
+        }
+
+        100% {
+            transform: translate(0px, 0px) !important;
+            text-shadow: 0 0 0px #0f0, 0 0 0px #f0f !important;
+        }
+    }
+
+    .glitch-text-subtle {
+        position: relative;
+        display: inline-block;
+        /* Importante para que el transform y text-shadow funcionen bien */
+        animation: none;
+        /* Se activará con JS */
+    }
+
+    /* --- Mini-Glitch Border Effect (con !important para testear overrides) --- */
+    @keyframes borderGlitch {
+        0% {
+            border-color: rgba(77, 208, 225, 0.6) !important;
+        }
+
+        5% {
+            border-color: rgba(255, 0, 255, 0.8) !important;
+        }
+
+        /* Color glitch 1 */
+        10% {
+            border-color: rgba(0, 255, 0, 0.8) !important;
+        }
+
+        /* Color glitch 2 */
+        15% {
+            border-color: rgba(77, 208, 225, 0.6) !important;
+        }
+
+        100% {
+            border-color: rgba(77, 208, 225, 0.6) !important;
+        }
+    }
+
+    .glitch-border-subtle {
+        animation: none;
+        /* Se activará con JS */
+    }
+
+    /* --- Joi Thinking Effect --- */
+    @keyframes joiThinkingDots {
+
+        0%,
+        20% {
+            content: ".";
+        }
+
+        40% {
+            content: "..";
+        }
+
+        60%,
+        100% {
+            content: "...";
+        }
+    }
+
+    @keyframes joiThinkingLines {
+        0% {
+            transform: scaleX(0);
+            opacity: 0;
+        }
+
+        50% {
+            transform: scaleX(1);
+            opacity: 1;
+        }
+
+        100% {
+            transform: scaleX(0);
+            opacity: 0;
+        }
+    }
+
+    .joi-thinking-container {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 30px;
+        /* Ajusta la altura si es necesario */
+        overflow: hidden;
+        margin-top: 10px;
+    }
+
+    .joi-thinking-dots::after {
+        content: "";
+        /* Se llena con JS */
+        font-family: monospace;
+        font-size: 2em;
+        color: #00ffff;
+        /* Cian */
+        animation: joiThinkingDots 1.5s steps(1, end) infinite;
+    }
+
+    .joi-thinking-lines {
+        width: 60px;
+        /* Ancho de la línea */
+        height: 2px;
+        background: linear-gradient(to right, #00ffff, #ff00ff);
+        /* Cian a magenta */
+        animation: joiThinkingLines 1.2s ease-in-out infinite;
+        transform-origin: left center;
+        opacity: 0;
+    }
+
+    /* Nuevos estilos y animaciones para el ente flotante */
+    .floating-entity {
+        position: fixed;
+        /* O absolute, dependiendo del contenedor */
+        z-index: 100;
+        pointer-events: none;
+        /* Para que no bloquee clics */
+        transition: transform 0.5s ease-out;
+        /* Suavizar el movimiento */
+    }
+
+    /* Animaciones para las partículas del ente */
+    @keyframes particleFloat {
+        0% {
+            opacity: 1;
+            transform: translate(0, 0) scale(1);
+        }
+
+        100% {
+            opacity: 0;
+            transform: translate(var(--dx), var(--dy)) scale(0);
+        }
+    }
+
+    .entity-particle {
+        position: absolute;
+        width: 4px;
+        height: 4px;
+        background: rgba(255, 0, 128, 0.8);
+        border-radius: 50%;
+        pointer-events: none;
+        animation: particleFloat 3s ease-out forwards;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+{% block global_bio_banner %}{% endblock %}
+
+<!-- Efectos atmosféricos -->
+<div class="blade-runner-atmosphere">
+    <div class="background-fog"></div>
+    <div class="ambient-glow"></div>
+    <div class="volumetric-light volumetric-light-1"></div>
+    <div class="volumetric-light volumetric-light-2"></div>
+    <div class="volumetric-light volumetric-light-3"></div>
+</div>
+
+<!-- ================================================================== -->
+<!-- FOCUS MODE — LoL Redesign                                           -->
+<!-- ================================================================== -->
+<div id="focus-mode-container" class="flex flex-col h-screen w-full overflow-hidden fixed inset-0 z-[100] transition-opacity duration-500"
+     style="display: none; pointer-events: auto; background: #010A13;">
+
+    <!-- STATUS BAR -->
+    <div style="height: 50px; flex-shrink: 0; display: flex; justify-content: space-between; align-items: center; padding: 0 1.5rem; background: rgba(10,22,40,0.95); border-bottom: 1px solid rgba(200,170,110,0.12);">
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <i class="fas fa-robot" style="color: #C8AA6E; font-size: 0.8rem;"></i>
+            <span style="font-family: 'Share Tech Mono', monospace; font-size: 0.72rem; color: rgba(200,200,200,0.5);">
+                COACH_IA · Readiness: <strong style="color: #C8AA6E;">{% widthratio bio_readiness.score|default:0.85 1 100 %}%</strong> · Vol ×{{ ajuste_volumen|default:"1.0" }} · {{ modo_recuperacion|default:"Protocolo Estándar" }}
+            </span>
+        </div>
+        <div>
+            {% widthratio bio_readiness.score|default:0.85 1 100 as readiness_pct %}
+            {% if readiness_pct|add:0 >= 80 %}
+                <span style="padding: 2px 12px; background: rgba(74,222,128,0.1); color: #4ade80; border: 1px solid rgba(74,222,128,0.25); font-family: 'Share Tech Mono', monospace; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.15em;">● ÓPTIMO</span>
+            {% elif readiness_pct|add:0 >= 60 %}
+                <span style="padding: 2px 12px; background: rgba(200,75,49,0.15); color: #C84B31; border: 1px solid rgba(200,75,49,0.3); font-family: 'Share Tech Mono', monospace; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.15em;">● PRECAUCIÓN</span>
+            {% else %}
+                <span style="padding: 2px 12px; background: rgba(239,68,68,0.15); color: #ef4444; border: 1px solid rgba(239,68,68,0.3); font-family: 'Share Tech Mono', monospace; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.15em;">● RIESGO</span>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- DIVISOR -->
+    <div style="display: flex; align-items: center; gap: 12px; padding: 10px 1.5rem; flex-shrink: 0;">
+        <div style="flex: 1; height: 1px; background: linear-gradient(to right, transparent, rgba(200,170,110,0.3));"></div>
+        <span style="font-family: 'Share Tech Mono', monospace; font-size: 0.6rem; color: #785A28; letter-spacing: 0.3em; text-transform: uppercase;">◆ PROTOCOLO DE COMBATE ◆</span>
+        <div style="flex: 1; height: 1px; background: linear-gradient(to left, transparent, rgba(200,170,110,0.3));"></div>
+    </div>
+
+    <!-- HERO -->
+    <div style="flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 0 1rem; text-align: center; min-height: 0; overflow: hidden;">
+
+        <p style="font-family: 'Share Tech Mono', monospace; font-size: 0.6rem; color: #785A28; letter-spacing: 0.25em; text-transform: uppercase; margin-bottom: 8px;">
+            {{ proximo_entrenamiento.objetivo|default:"HIPERTROFIA"|upper }} · SEMANA {{ semana_actual|default:"1" }} · DÍA {{ dia_actual|default:"1" }}
+        </p>
+
+        <h1 style="font-family: 'Cinzel', serif; font-size: clamp(2rem, 5vw, 3.2rem); font-weight: 700; color: #F0E6D3; text-transform: uppercase; margin: 0 0 12px 0; line-height: 1.1; drop-shadow: 0 0 40px rgba(200,170,110,0.2);">
+            {{ proximo_entrenamiento.nombre|default:"ENTRENAMIENTO NO DISPONIBLE"|upper }}
+        </h1>
+
+        <div style="display: inline-flex; align-items: center; gap: 8px; padding: 5px 16px; background: rgba(200,170,110,0.07); border: 1px solid rgba(200,170,110,0.2); margin-bottom: 1.5rem;">
+            <span style="font-family: 'Share Tech Mono', monospace; font-size: 0.7rem; color: #C8AA6E; letter-spacing: 0.15em;">▶ VOL {{ volumen_sugerido|default:"100" }}%</span>
+        </div>
+
+        <!-- Lista ejercicios -->
+        <div style="width: 100%; max-width: 600px; margin: 0 auto 1.5rem auto;">
+            {% if proximo_entrenamiento and proximo_entrenamiento.ejercicios %}
+                {% for ej in proximo_entrenamiento.ejercicios|slice:":3" %}
+                <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; background: rgba(200,170,110,0.04); border: 1px solid rgba(200,170,110,0.1); border-left: 2px solid rgba(200,170,110,0.35); margin-bottom: 3px; clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <span style="font-family: 'Share Tech Mono', monospace; font-size: 0.6rem; color: rgba(200,170,110,0.3);">{{ forloop.counter|stringformat:"02d" }}</span>
+                        <span style="font-family: 'Rajdhani', sans-serif; font-size: 0.95rem; color: rgba(240,230,210,0.75); font-weight: 600;">{{ ej.nombre_ejercicio }}</span>
+                    </div>
+                    <span style="font-family: 'Share Tech Mono', monospace; font-size: 0.85rem; color: #C8AA6E; letter-spacing: 0.1em;">{{ ej.series }}×{{ ej.repeticiones }}</span>
+                </div>
+                {% endfor %}
+                {% if proximo_entrenamiento.ejercicios|length > 3 %}
+                <p style="font-family: 'Share Tech Mono', monospace; font-size: 0.65rem; color: #785A28; text-align: center; margin-top: 8px; letter-spacing: 0.15em;">
+                    // +{{ proximo_entrenamiento.ejercicios|length|add:"-3" }} EJERCICIOS · ACCEDE AL PROTOCOLO COMPLETO
+                </p>
+                {% endif %}
+            {% else %}
+                <p style="font-family: 'Share Tech Mono', monospace; font-size: 0.65rem; color: #785A28; text-align: center; letter-spacing: 0.15em;">// ANÁLISIS BIO-TÁCTICO PENDIENTE</p>
+            {% endif %}
+        </div>
+
+        <!-- CTA -->
+        {% if cliente and proximo_entrenamiento and proximo_entrenamiento.ejercicios %}
+            <a href="{% url 'entrenos:entrenamiento_activo' cliente.id %}?fecha={{ hoy|date:'Y-m-d' }}&rutina_nombre={{ proximo_entrenamiento.rutina_nombre|urlencode }}&ejercicios={{ proximo_entrenamiento_json|urlencode }}"
+               class="blade-btn-primary">
+                <i class="fas fa-play-circle"></i> EJECUTAR PROTOCOLO
+            </a>
+        {% else %}
+        <button class="btn-empezar-gym" style="display: flex; align-items: center; justify-content: center; width: 100%; max-width: 500px; height: 60px; font-family: 'Cinzel', serif; font-size: 1rem; font-weight: 700; letter-spacing: 0.2em; opacity: 0.5; cursor: not-allowed; margin-bottom: 12px; border: none;">
+            ⚔ EJECUTAR PROTOCOLO
+        </button>
+        {% endif %}
+
+        <div style="display: flex; justify-content: center; gap: 10px;">
+            <a href="{% url 'entrenos:vista_plan_anual' cliente.id %}" style="padding: 8px 20px; background: transparent; border: 1px solid rgba(200,170,110,0.2); color: #A08C5B; font-family: 'Cinzel', serif; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; text-decoration: none; transition: all 0.2s;">↺ CAMBIAR RUTINA</a>
+            <button id="btn-toggle-dashboard-full" style="padding: 8px 20px; background: transparent; border: 1px solid rgba(200,170,110,0.3); color: #C8AA6E; font-family: 'Cinzel', serif; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; cursor: pointer; transition: all 0.2s;">⚡ BLADE RUNNER</button>
+        </div>
+    </div>
+
+    <!-- STATS FOOTER -->
+    <div style="height: 60px; flex-shrink: 0; border-top: 1px solid rgba(200,170,110,0.1); background: rgba(10,22,40,0.95); display: grid; grid-template-columns: repeat(5, 1fr); divide-x: rgba(200,170,110,0.08);">
+        {% for stat in focus_stats %}
+        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; border-right: 1px solid rgba(200,170,110,0.08);">
+            <span style="font-family: 'Share Tech Mono', monospace; font-size: 0.5rem; color: #785A28; letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 2px;">{{ stat.label }}</span>
+            <span style="font-family: 'Share Tech Mono', monospace; font-size: 1.1rem; color: #C8AA6E; line-height: 1;">{{ stat.value }}</span>
+        </div>
+        {% empty %}
+        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; border-right: 1px solid rgba(200,170,110,0.08);">
+            <span style="font-family: 'Share Tech Mono', monospace; font-size: 0.5rem; color: #785A28; letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 2px;">SESIONES</span>
+            <span style="font-family: 'Share Tech Mono', monospace; font-size: 1.1rem; color: #C8AA6E; line-height: 1;">{{ metricas_radar.asistencia|floatformat:"0"|default:"0" }}</span>
+        </div>
+        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; border-right: 1px solid rgba(200,170,110,0.08);">
+            <span style="font-family: 'Share Tech Mono', monospace; font-size: 0.5rem; color: #785A28; letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 2px;">CARGA TOTAL</span>
+            <span style="font-family: 'Share Tech Mono', monospace; font-size: 1.1rem; color: #C8AA6E; line-height: 1;">{{ metricas_radar.volumen|floatformat:"0"|default:"0" }}T</span>
+        </div>
+        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; border-right: 1px solid rgba(200,170,110,0.08);">
+            <span style="font-family: 'Share Tech Mono', monospace; font-size: 0.5rem; color: #785A28; letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 2px;">CONSISTENCIA</span>
+            <span style="font-family: 'Share Tech Mono', monospace; font-size: 1.1rem; color: #C8AA6E; line-height: 1;">{{ metricas_radar.frecuencia_semanal|floatformat:1|default:"0.0" }}</span>
+        </div>
+        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; border-right: 1px solid rgba(200,170,110,0.08);">
+            <span style="font-family: 'Share Tech Mono', monospace; font-size: 0.5rem; color: #785A28; letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 2px;">ACWR</span>
+            <span style="font-family: 'Share Tech Mono', monospace; font-size: 1.1rem; color: #C8AA6E; line-height: 1;">{{ analisis_acwr.acwr|floatformat:2|default:"0.00" }}</span>
+        </div>
+        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
+            <span style="font-family: 'Share Tech Mono', monospace; font-size: 0.5rem; color: #785A28; letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 2px;">CICLO</span>
+            <span style="font-family: 'Share Tech Mono', monospace; font-size: 1.1rem; color: #C8AA6E; line-height: 1;">{{ mesociclo_actual.numero|default:"1" }}</span>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- ================================================================== -->
+<!-- FULL DASHBOARD — LoL Redesign                                       -->
+<!-- ================================================================== -->
+<div id="full-dashboard-container" style="min-height: 100vh; background: #010A13; padding: 0 0 3rem 0;">
+<div style="max-width: 1100px; margin: 0 auto; padding: 0 1rem;">
+
+    <!-- ── HEADER ────────────────────────────────────────────────────── -->
+    <header style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; padding: 1.25rem 0 1.25rem 0; border-bottom: 1px solid rgba(200,170,110,0.1); margin-bottom: 1.5rem; gap: 1rem;">
+        <div>
+            <p style="font-family: 'Share Tech Mono', monospace; font-size: 0.6rem; color: #785A28; letter-spacing: 0.3em; text-transform: uppercase; margin-bottom: 4px;">
+                OPERATIVO {{ cliente.id }} · {% if cliente.localizacion %}{{ cliente.localizacion }}{% else %}SECTOR 7G{% endif %}
+            </p>
+            <h1 style="font-family: 'Cinzel', serif; font-size: clamp(1.6rem, 4vw, 2.2rem); font-weight: 700; color: #F0E6D3; margin: 0 0 12px 0; letter-spacing: 0.05em; text-transform: uppercase;">
+                {{ cliente.nombre|upper }}
+            </h1>
+            <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                <a href="{% url 'clientes:detalle_cliente' cliente.id %}" style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; background: transparent; border: 1px solid rgba(200,170,110,0.2); color: #785A28; font-family: 'Cinzel', serif; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.1em; text-decoration: none; text-transform: uppercase;">
+                    <i class="fas fa-user" style="font-size: 0.7rem;"></i> Mi Perfil
+                </a>
+                <a href="{% url 'clientes:configurar_preferencias_helms' cliente.id %}" style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; background: transparent; border: 1px solid rgba(200,170,110,0.2); color: #785A28; font-family: 'Cinzel', serif; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.1em; text-decoration: none; text-transform: uppercase;">
+                    <i class="fas fa-sliders-h" style="font-size: 0.7rem;"></i> Config. Entreno
+                </a>
+                <a href="{% url 'hyrox:dashboard' %}" style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; background: transparent; border: 1px solid rgba(200,75,49,0.3); color: #C84B31; font-family: 'Cinzel', serif; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.1em; text-decoration: none; text-transform: uppercase;">
+                    <i class="fas fa-running" style="font-size: 0.7rem;"></i> Hyrox
+                </a>
+                <button id="btn-toggle-focus" style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; background: transparent; border: 1px solid rgba(200,170,110,0.4); color: #C8AA6E; font-family: 'Cinzel', serif; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer;">
+                    <i class="fas fa-crosshairs" style="font-size: 0.7rem;"></i> FOCUS
+                </button>
+                <a href="{% url 'clientes:panel_cliente' %}" style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; background: transparent; border: 1px solid rgba(200,170,110,0.15); color: #785A28; font-family: 'Cinzel', serif; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.1em; text-decoration: none; text-transform: uppercase;">
+                    <i class="fas fa-arrow-left" style="font-size: 0.7rem;"></i> Volver
+                </a>
+            </div>
+        </div>
+        {% if estoico_disponible and contenido_hoy %}
+        <div style="border-left: 2px solid rgba(200,170,110,0.2); padding-left: 1rem; max-width: 320px;">
+            <p style="font-family: 'Share Tech Mono', monospace; font-size: 0.55rem; color: #785A28; letter-spacing: 0.3em; text-transform: uppercase; margin-bottom: 6px;">DIARIO ESTOICO</p>
+            <p style="font-family: 'Rajdhani', sans-serif; font-size: 0.85rem; color: rgba(200,170,110,0.45); font-style: italic; line-height: 1.5; margin: 0;">
+                "{{ contenido_hoy.cita }}"
+            </p>
+        </div>
+        {% endif %}
+    </header>
+
+    <!-- ── COACH IA ───────────────────────────────────────────────────── -->
+    {% if bio_readiness.score is not None %}
+    <div style="background: #0A1628; border: 1px solid rgba(200,170,110,0.15); border-left: 3px solid #C8AA6E; padding: 1.25rem 1.5rem; margin-bottom: 1.5rem;">
+        <div style="height: 2px; background: linear-gradient(90deg, #C8AA6E, #785A28, transparent); margin: -1.25rem -1.5rem 1rem -1.5rem;"></div>
+        <p style="font-family: 'Share Tech Mono', monospace; font-size: 0.6rem; color: #785A28; letter-spacing: 0.3em; text-transform: uppercase; margin-bottom: 10px;">◆ NÚCLEO COACH_IA</p>
+        <p style="font-family: 'Rajdhani', sans-serif; font-size: 0.9rem; color: rgba(200,200,200,0.75); line-height: 1.6; margin-bottom: 12px;">
+            {% if bio_readiness.score < 0.4 %}
+            David, tu capacidad de recuperación está al <strong style="color: #ef4444;">{% widthratio bio_readiness.score 1 100 %}%</strong> — <strong style="color: #ef4444;">modo supervivencia</strong>. He reducido el volumen al 50% para proteger tu recuperación.
+            {% elif bio_readiness.score < 0.8 %}
+            David, hoy tu capacidad de recuperación es del <strong style="color: #C8AA6E;">{% widthratio bio_readiness.score 1 100 %}%</strong>. He ajustado el volumen de pesas para asegurar que llegues sano. Tu plan ha sido adaptado para proteger tu recuperación.
+            {% else %}
+            David, tu readiness está al <strong style="color: #4ade80;">{% widthratio bio_readiness.score 1 100 %}%</strong> — <strong style="color: #4ade80;">Full Send</strong> 🚀 Tu cuerpo está listo. Volumen al 100%, sin restricciones.
+            {% endif %}
+        </p>
+        {% if bio_banner.tags %}
+        <div style="display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 10px;">
+            <span style="font-family: 'Share Tech Mono', monospace; font-size: 0.6rem; color: #785A28; letter-spacing: 0.1em; text-transform: uppercase;">
+                <i class="fas fa-ban" style="margin-right: 4px;"></i>Bloqueados:
+            </span>
+            {% for tag in bio_banner.tags %}
+            <span style="padding: 3px 10px; background: rgba(200,75,49,0.1); border: 1px solid rgba(200,75,49,0.25); color: #C84B31; font-family: 'Share Tech Mono', monospace; font-size: 0.65rem; letter-spacing: 0.08em;">
+                {{ tag|cut:"__"|title }}
+            </span>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% if bio_banner.injuries %}
+        <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+            {% for inj in bio_banner.injuries %}
+            <a href="{% url 'hyrox:test_recuperacion' inj.id %}" style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; background: transparent; border: 1px solid rgba(200,170,110,0.25); color: #C8AA6E; font-family: 'Cinzel', serif; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.1em; text-decoration: none; text-transform: uppercase;">
+                <i class="fas fa-stethoscope"></i> Test Recuperación ({{ inj.zona|title }})
+            </a>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- ── MÉTRICAS ───────────────────────────────────────────────────── -->
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: rgba(200,170,110,0.08); border: 1px solid rgba(200,170,110,0.08); margin-bottom: 1.5rem;">
+        <div style="background: #0A1628; padding: 1.25rem; text-align: center;">
+            <div style="font-family: 'Share Tech Mono', monospace; font-size: 2rem; color: #C8AA6E; font-weight: 700; line-height: 1; margin-bottom: 4px;">{{ total_entrenamientos|default:"0" }}</div>
+            <div style="font-family: 'Share Tech Mono', monospace; font-size: 0.55rem; color: #785A28; letter-spacing: 0.2em; text-transform: uppercase;">ENTRENOS</div>
+        </div>
+        <div style="background: #0A1628; padding: 1.25rem; text-align: center;">
+            <div style="font-family: 'Share Tech Mono', monospace; font-size: 2rem; color: #C8AA6E; font-weight: 700; line-height: 1; margin-bottom: 4px;">{{ metricas_radar.volumen|floatformat:"0"|default:"0" }}T</div>
+            <div style="font-family: 'Share Tech Mono', monospace; font-size: 0.55rem; color: #785A28; letter-spacing: 0.2em; text-transform: uppercase;">CARGA TOTAL</div>
+        </div>
+        <div style="background: #0A1628; padding: 1.25rem; text-align: center;">
+            <div style="font-family: 'Share Tech Mono', monospace; font-size: 2rem; color: #C8AA6E; font-weight: 700; line-height: 1; margin-bottom: 4px;">{{ metricas_radar.frecuencia_semanal|floatformat:1|default:"0.0" }}</div>
+            <div style="font-family: 'Share Tech Mono', monospace; font-size: 0.55rem; color: #785A28; letter-spacing: 0.2em; text-transform: uppercase;">CONSISTENCIA</div>
+        </div>
+    </div>
+
+    <!-- ── LAYOUT 2 COLUMNAS ─────────────────────────────────────────── -->
+    <div style="display: grid; grid-template-columns: 1fr 380px; gap: 1.5rem;" class="blade-grid">
+
+        <!-- COLUMNA IZQUIERDA -->
+        <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+
+            <!-- ACCIONES RÁPIDAS -->
+            <div style="background: #0A1628; border: 1px solid rgba(200,170,110,0.12); padding: 1.25rem 1.5rem;">
+                <div style="height: 2px; background: linear-gradient(90deg, #C8AA6E, #785A28, transparent); margin: -1.25rem -1.5rem 1rem -1.5rem;"></div>
+                <p style="font-family: 'Share Tech Mono', monospace; font-size: 0.6rem; color: #785A28; letter-spacing: 0.3em; text-transform: uppercase; margin-bottom: 1rem;">◆ ACCIONES RÁPIDAS</p>
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;">
+                    <a href="{% url 'analytics:dashboard_cliente' cliente.id %}" style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px; background: rgba(200,170,110,0.05); border: 1px solid rgba(200,170,110,0.15); color: #C8AA6E; font-family: 'Cinzel', serif; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.1em; text-decoration: none; text-transform: uppercase; transition: all 0.2s;">
+                        <i class="fas fa-dumbbell"></i> Panel Entrenos
+                    </a>
+                    <a href="{% url 'estiramientos:panel' %}" style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px; background: rgba(200,170,110,0.05); border: 1px solid rgba(200,170,110,0.15); color: #C8AA6E; font-family: 'Cinzel', serif; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.1em; text-decoration: none; text-transform: uppercase; transition: all 0.2s;">
+                        <i class="fas fa-person-rays"></i> Estiramientos
+                    </a>
+                    <a href="{% url 'analytics:dashboard_ia_principal' cliente.id %}" style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px; background: rgba(200,170,110,0.05); border: 1px solid rgba(200,170,110,0.15); color: #C8AA6E; font-family: 'Cinzel', serif; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.1em; text-decoration: none; text-transform: uppercase; transition: all 0.2s;">
+                        <i class="fas fa-robot"></i> Dashboard IA
+                    </a>
+                    <a href="{% url 'diario:dashboard_diario' %}" style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px; background: rgba(200,170,110,0.05); border: 1px solid rgba(200,170,110,0.15); color: #C8AA6E; font-family: 'Cinzel', serif; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.1em; text-decoration: none; text-transform: uppercase; transition: all 0.2s;">
+                        <i class="fas fa-book"></i> Diario
+                    </a>
+                    <a href="{% url 'analytics:dashboard_global' cliente.id %}" style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px; background: rgba(200,170,110,0.05); border: 1px solid rgba(200,170,110,0.15); color: #C8AA6E; font-family: 'Cinzel', serif; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.1em; text-decoration: none; text-transform: uppercase; transition: all 0.2s;">
+                        <i class="fas fa-globe"></i> Dashboard Global
+                    </a>
+                    <a href="{% url 'entrenos:dashboard_evolucion' cliente.id %}" style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px; background: rgba(200,170,110,0.05); border: 1px solid rgba(200,170,110,0.15); color: #C8AA6E; font-family: 'Cinzel', serif; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.1em; text-decoration: none; text-transform: uppercase; transition: all 0.2s;">
+                        <i class="fas fa-chart-line"></i> Evolución Deportiva
+                    </a>
+                </div>
+            </div>
+
+            <!-- PRÓXIMO ENTRENAMIENTO -->
+            {% include 'clientes/includes/tarjeta_proximo_entrenamiento.html' %}
+
+            <!-- REGISTROS DE CAMPO -->
+            <div style="background: #0A1628; border: 1px solid rgba(200,170,110,0.12); padding: 1.25rem 1.5rem;">
+                <div style="height: 2px; background: linear-gradient(90deg, #C8AA6E, #785A28, transparent); margin: -1.25rem -1.5rem 1rem -1.5rem;"></div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <p style="font-family: 'Share Tech Mono', monospace; font-size: 0.6rem; color: #785A28; letter-spacing: 0.3em; text-transform: uppercase; margin: 0;">◆ REGISTROS DE CAMPO</p>
+                    <a href="{% url 'entrenos:lista_entrenamientos' %}" style="font-family: 'Share Tech Mono', monospace; font-size: 0.6rem; color: #785A28; letter-spacing: 0.15em; text-transform: uppercase; text-decoration: none; transition: color 0.2s;">VER ARCHIVO →</a>
+                </div>
+                {% if entrenamientos_recientes %}
+                <div style="display: flex; flex-direction: column; gap: 2px;">
+                    {% for entrenamiento in entrenamientos_recientes %}
+                    <a href="{% url 'entrenos:detalle_entrenamiento' entrenamiento.id %}" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 14px; background: rgba(1,10,19,0.5); border-left: 2px solid {% if forloop.first %}rgba(200,170,110,0.4){% else %}rgba(200,170,110,0.12){% endif %}; text-decoration: none; transition: all 0.2s;">
+                        <div>
+                            <h4 style="font-family: 'Rajdhani', sans-serif; font-size: 0.95rem; color: #C8C8C8; font-weight: 600; margin: 0 0 4px 0;">{{ entrenamiento.rutina.nombre|default:"Operación Táctica" }}</h4>
+                            <div style="font-family: 'Share Tech Mono', monospace; font-size: 0.65rem; color: #785A28; display: flex; gap: 12px;">
+                                <span>{{ entrenamiento.fecha|date:"d M y"|upper }}</span>
+                                {% if entrenamiento.volumen_total_kg %}<span>· {{ entrenamiento.volumen_total_kg|floatformat:0 }}kg</span>{% endif %}
+                                {% if entrenamiento.duracion_minutos %}<span>· {{ entrenamiento.duracion_minutos }}m</span>{% endif %}
+                            </div>
+                        </div>
+                        <i class="fas fa-chevron-right" style="color: #785A28; font-size: 0.7rem;"></i>
+                    </a>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p style="font-family: 'Share Tech Mono', monospace; font-size: 0.7rem; color: #785A28; text-align: center; padding: 1.5rem; letter-spacing: 0.15em;">Sin registros en el sistema central.</p>
+                {% endif %}
+            </div>
+
+            <!-- BALANCE DE FUERZA -->
+            <div style="background: #0A1628; border: 1px solid rgba(200,170,110,0.12); padding: 1.25rem 1.5rem;">
+                <div style="height: 2px; background: linear-gradient(90deg, #C8AA6E, #785A28, transparent); margin: -1.25rem -1.5rem 1rem -1.5rem;"></div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <p style="font-family: 'Share Tech Mono', monospace; font-size: 0.6rem; color: #785A28; letter-spacing: 0.3em; text-transform: uppercase; margin: 0;">◆ BALANCE DE FUERZA</p>
+                    <a href="{% url 'analytics:progresion_avanzado' cliente.id %}" style="font-family: 'Share Tech Mono', monospace; font-size: 0.6rem; color: #785A28; letter-spacing: 0.15em; text-transform: uppercase; text-decoration: none;">VER ANÁLISIS →</a>
+                </div>
+                <div style="position: relative; height: 220px; margin-bottom: 1rem;">
+                    <canvas id="radarChartInicio"></canvas>
+                </div>
+                {% if ratios_fuerza.ratios %}
+                <div style="display: flex; flex-direction: column; gap: 2px;">
+                    {% for ratio in ratios_fuerza.ratios|slice:":3" %}
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: rgba(1,10,19,0.5); border-left: 2px solid rgba(200,170,110,0.15);">
+                        <span style="font-family: 'Rajdhani', sans-serif; font-size: 0.85rem; color: #C8C8C8; font-weight: 600;">{{ ratio.nombre }}</span>
+                        <span style="font-family: 'Share Tech Mono', monospace; font-size: 0.85rem; font-weight: 700;
+                            {% if ratio.estado == 'optimo' %}color: #4ade80;
+                            {% elif ratio.estado == 'bajo' %}color: #C8AA6E;
+                            {% else %}color: #C84B31;{% endif %}">
+                            {{ ratio.valor }}
+                        </span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+
+        </div>
+
+        <!-- COLUMNA DERECHA -->
+        <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+
+            <!-- GAMIFICACIÓN (hero panel) -->
+            <div class="hero-panel-widget" id="hero-panel-widget">
+                <div class="hero-panel-overlay"></div>
+                <div class="hero-panel-content">
+                    <div class="hero-header">
+                        <h3 class="hero-name" id="hero-character-name">Cargando...</h3>
+                        <div class="hero-level-badge" id="hero-level-badge">NIVEL —</div>
+                    </div>
+                    <div class="hero-stats">
+                        <div class="hero-stat-item">
+                            <span class="hero-stat-value" id="hero-entrenamientos">0</span>
+                            <span class="hero-stat-label">Entrenamientos</span>
+                        </div>
+                        <div class="hero-stat-item">
+                            <span class="hero-stat-value" id="hero-racha">🔥 0</span>
+                            <span class="hero-stat-label">Racha</span>
+                        </div>
+                    </div>
+                    <div class="hero-actions">
+                        <a href="{% url 'logros:ver_codice_completo' cliente.id %}" class="hero-btn hero-btn-primary">Ver Códice</a>
+                        <a href="/entrenos/cliente/{{ cliente.id }}/entrenamiento-activo/" class="hero-btn hero-btn-secondary">Entrenar</a>
+                    </div>
+                </div>
+                <div class="hero-progress-section">
+                    <div class="hero-progress-bar">
+                        <div class="hero-progress-fill" id="hero-progress-fill" style="width: 0%;"></div>
+                        <div class="hero-progress-text" id="hero-points-text">0 / 2250</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MESOCICLO ACTUAL -->
+            {% if mesociclo_actual %}
+            <div style="background: #0A1628; border: 1px solid rgba(200,170,110,0.12); padding: 1.25rem 1.5rem;">
+                <div style="height: 2px; background: linear-gradient(90deg, #C8AA6E, #785A28, transparent); margin: -1.25rem -1.5rem 1rem -1.5rem;"></div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <p style="font-family: 'Share Tech Mono', monospace; font-size: 0.6rem; color: #785A28; letter-spacing: 0.3em; text-transform: uppercase; margin: 0;">◆ MESOCICLO ACTUAL</p>
+                    <span style="font-family: 'Share Tech Mono', monospace; font-size: 0.6rem; color: #C8AA6E; padding: 2px 10px; border: 1px solid rgba(200,170,110,0.3);">Ciclo {{ mesociclo_actual.numero }}</span>
+                </div>
+                <p style="font-family: 'Share Tech Mono', monospace; font-size: 0.65rem; color: #785A28; margin-bottom: 12px;">
+                    {{ mesociclo_actual.fecha_inicio|date:"d/m" }} — {{ mesociclo_actual.fecha_fin|date:"d/m/Y" }}
+                </p>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px;">
+                    <div style="text-align: center; padding: 10px; background: rgba(1,10,19,0.5); border: 1px solid rgba(200,170,110,0.08);">
+                        <div style="font-family: 'Share Tech Mono', monospace; font-size: 1.4rem; color: #C8AA6E; font-weight: 700;">{{ mesociclo_actual.datos.carga_total|floatformat:0 }}</div>
+                        <div style="font-family: 'Share Tech Mono', monospace; font-size: 0.5rem; color: #785A28; letter-spacing: 0.15em; text-transform: uppercase; margin-top: 2px;">Carga Total (kg)</div>
+                    </div>
+                    <div style="text-align: center; padding: 10px; background: rgba(1,10,19,0.5); border: 1px solid rgba(200,170,110,0.08);">
+                        <div style="font-family: 'Share Tech Mono', monospace; font-size: 1.4rem; color: #C8AA6E; font-weight: 700;">{{ mesociclo_actual.datos.sesiones }}</div>
+                        <div style="font-family: 'Share Tech Mono', monospace; font-size: 0.5rem; color: #785A28; letter-spacing: 0.15em; text-transform: uppercase; margin-top: 2px;">Sesiones</div>
+                    </div>
+                </div>
+                <div style="text-align: center; margin-bottom: 8px;">
+                    <span style="font-family: 'Share Tech Mono', monospace; font-size: 0.7rem; font-weight: 700; padding: 4px 14px;
+                        {% if mesociclo_actual.efectividad == 'alta' %}background: rgba(74,222,128,0.1); color: #4ade80; border: 1px solid rgba(74,222,128,0.25);
+                        {% elif mesociclo_actual.efectividad == 'media' %}background: rgba(200,170,110,0.1); color: #C8AA6E; border: 1px solid rgba(200,170,110,0.25);
+                        {% else %}background: rgba(200,75,49,0.1); color: #C84B31; border: 1px solid rgba(200,75,49,0.25);{% endif %}">
+                        Efectividad: {{ mesociclo_actual.efectividad|capfirst }}
+                    </span>
+                </div>
+                {% if mesociclo_actual.recomendaciones %}
+                <p style="font-family: 'Rajdhani', sans-serif; font-size: 0.8rem; color: rgba(200,200,200,0.5); text-align: center; border-top: 1px solid rgba(200,170,110,0.08); padding-top: 10px; margin-top: 6px;">
+                    {{ mesociclo_actual.recomendaciones|first }}
+                </p>
+                {% endif %}
+            </div>
+            {% endif %}
+
+        </div>
+    </div>
+
+</div><!-- max-width -->
+</div><!-- full-dashboard-container -->
+
+{% endblock %}
+
+<style>
+@media (max-width: 900px) {
+    .blade-grid {
+        grid-template-columns: 1fr !important;
+    }
+}
+</style>
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="{% static 'js/blade-runner-particles.js' %}"></script>
+
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Focus Mode Toggle Logic
+    const btnToggleFocus = document.getElementById('btn-toggle-focus');
+    const btnToggleFull = document.getElementById('btn-toggle-dashboard-full');
+    const focusModeContainer = document.getElementById('focus-mode-container');
+    const fullDashboardContainer = document.getElementById('full-dashboard-container');
+
+    if (btnToggleFocus && btnToggleFull && focusModeContainer && fullDashboardContainer) {
+        btnToggleFocus.addEventListener('click', () => {
+            fullDashboardContainer.style.opacity = '0';
+            setTimeout(() => {
+                fullDashboardContainer.style.display = 'none';
+                focusModeContainer.style.display = 'flex';
+                // Trigger reflow
+                focusModeContainer.offsetHeight;
+                focusModeContainer.style.opacity = '1';
+                localStorage.setItem('bladeRunnerModePreference', 'focus');
+            }, 300);
+        });
+
+        btnToggleFull.addEventListener('click', () => {
+            focusModeContainer.style.opacity = '0';
+            setTimeout(() => {
+                focusModeContainer.style.display = 'none';
+                fullDashboardContainer.style.display = 'block';
+                // Trigger reflow
+                fullDashboardContainer.offsetHeight;
+                fullDashboardContainer.style.opacity = '1';
+                localStorage.setItem('bladeRunnerModePreference', 'full');
+            }, 500); // 500ms for focus mode transition-duration
+        });
+
+        // Initialize from preference
+        const preference = localStorage.getItem('bladeRunnerModePreference');
+        if (preference === 'focus') {
+            fullDashboardContainer.style.display = 'none';
+            fullDashboardContainer.style.opacity = '0';
+            focusModeContainer.style.display = 'flex';
+            focusModeContainer.style.opacity = '1';
+        } else {
+            // Default to full
+            focusModeContainer.style.display = 'none';
+            focusModeContainer.style.opacity = '0';
+            fullDashboardContainer.style.display = 'block';
+            fullDashboardContainer.style.opacity = '1';
+        }
+    }
+
+     const widget = document.getElementById('hero-panel-widget');
+    // Solo ejecutar si el widget existe en la página
+    if (widget) {
+        const clienteId = {{ cliente.id }}; // Asegúrate de que 'cliente.id' esté disponible
+
+        const cargarDatosHeroPanel = () => {
+            fetch(`/entrenos/gamificacion-resumen/${clienteId}/`)
+                .then(response => {
+                    if (!response.ok) throw new Error('Error en la respuesta de la API');
+                    return response.json();
+                })
+                .then(data => {
+                    actualizarHeroPanel(data);
+                })
+                .catch(error => {
+                    console.error('Error al cargar datos para Hero Panel:', error);
+                });
+        };
+
+        const actualizarHeroPanel = (data) => {
+            if (!data || !data.tiene_perfil) return;
+
+            // Aplicar la imagen de fondo
+            if (data.imagen_url) {
+                widget.style.backgroundImage = `url('${data.imagen_url}')`;
+            }
+
+            // Actualizar textos
+            document.getElementById('hero-character-name').textContent = data.nivel_actual || 'Aspirante';
+            document.getElementById('hero-level-badge').textContent = `NIVEL ${data.nivel_numero || 1}`;
+            document.getElementById('hero-entrenamientos').textContent = data.total_entrenamientos || 0;
+            document.getElementById('hero-racha').innerHTML = `🔥 ${data.racha_actual || 0}`;
+
+            // Barra de progreso
+            const porcentaje = data.porcentaje_progreso || 0;
+            document.getElementById('hero-progress-fill').style.width = `${porcentaje}%`;
+            document.getElementById('hero-points-text').textContent = `${data.puntos_actuales || 0} / ${data.puntos_siguiente || 0}`;
+        };
+
+        // Carga inicial y luego cada 30 segundos
+        cargarDatosHeroPanel();
+        setInterval(() => {
+            if (document.visibilityState === 'visible') {
+                cargarDatosHeroPanel();
+            }
+        }, 30000);
+    }
+    // ==================================================================
+    // GRÁFICOS DE CHART.JS
+    // ==================================================================
+
+    // --- Gráfico de Peso ---
+    const pesoCanvas = document.getElementById('graficoPeso');
+    if (pesoCanvas) {
+        const ctxPeso = pesoCanvas.getContext('2d');
+        new Chart(ctxPeso, {
+            type: 'line',
+            data: {
+                labels: [{% for punto in datos_peso %}"{{ punto.fecha|date:"D" }}"{% if not forloop.last %},{% endif %}{% endfor %}],
+                datasets: [{
+                    label: 'Peso Corporal (kg)',
+                    data: [{% for punto in datos_peso %}{{ punto.peso }}{% if not forloop.last %},{% endif %}{% endfor %}],
+                    borderColor: '#32FF00',
+                    backgroundColor: 'rgba(50, 255, 0, 0.1)',
+                    tension: 0.3,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { ticks: { color: '#aaa' }, grid: { color: '#333' } },
+                    y: { ticks: { color: '#aaa' }, grid: { color: '#333' } }
+                }
+            }
+        });
+    }
+
+    // --- Gráfico de Rendimiento ---
+    const rendimientoCanvas = document.getElementById('graficoRendimiento');
+    if (rendimientoCanvas) {
+        const ctxRendimiento = rendimientoCanvas.getContext('2d');
+        new Chart(ctxRendimiento, {
+            type: 'line',
+            data: {
+                labels: [{% for punto in datos_rendimiento %}"{{ punto.semana }}"{% if not forloop.last %},{% endif %}{% endfor %}],
+                datasets: [{
+                    label: 'Rendimiento',
+                    data: [{% for punto in datos_rendimiento %}{{ punto.valor }}{% if not forloop.last %},{% endif %}{% endfor %}],
+                    borderColor: '#31CFF4',
+                    backgroundColor: 'rgba(49, 207, 244, 0.1)',
+                    tension: 0.3,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { ticks: { color: '#aaa' }, grid: { color: '#333' } },
+                    y: { ticks: { color: '#aaa' }, grid: { color: '#333' } }
+                }
+            }
+        });
+    }
+
+    // --- Gráfico de Radar (Balance de Fuerza) ---
+    const ctxRadarInicio = document.getElementById('radarChartInicio');
+    const ratiosData = {{ ratios_fuerza.grafico_radar|safe|default:"null" }};
+    if (ctxRadarInicio && ratiosData && ratiosData.labels && ratiosData.labels.length > 0) {
+        new Chart(ctxRadarInicio, {
+            type: 'radar',
+            data: {
+                labels: ratiosData.labels,
+                datasets: [{
+                    label: 'Ratios Actuales',
+                    data: ratiosData.valores,
+                    borderColor: '#00ffff',
+                    backgroundColor: 'rgba(0, 255, 255, 0.2)',
+                    borderWidth: 2,
+                    pointBackgroundColor: '#00ffff'
+                }, {
+                    label: 'Ratios Óptimos',
+                    data: ratiosData.optimos,
+                    borderColor: '#ff00ff',
+                    backgroundColor: 'rgba(255, 0, 255, 0.1)',
+                    borderWidth: 2,
+                    borderDash: [5, 5],
+                    pointBackgroundColor: '#ff00ff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    r: {
+                        angleLines: { color: 'rgba(255, 255, 255, 0.2)' },
+                        grid: { color: 'rgba(255, 255, 255, 0.2)' },
+                        pointLabels: { color: '#e0e0e0', font: { size: 10 } },
+                        ticks: { color: '#aaa', backdropColor: 'transparent', stepSize: 0.2 }
+                    }
+                }
+            }
+        });
+    }
+
+    // --- Gráfico Gauge (Fatiga Acumulada) ---
+    const ctxFatigaInicio = document.getElementById('fatigaGaugeInicio');
+    {% if fatiga_acumulada %}
+    const fatigaValor = parseFloat("{{ fatiga_acumulada.fatiga_actual|floatformat:2 }}".replace(",", "."));
+    const fatigaMax = 150;
+    if (ctxFatigaInicio) {
+        let gaugeColor = '#10b981'; // Verde (Baja)
+        if (fatigaValor >= 100) {
+            gaugeColor = '#ef4444'; // Rojo (Alta)
+        } else if (fatigaValor >= 50) {
+            gaugeColor = '#f59e0b'; // Naranja (Moderada)
+        }
+        new Chart(ctxFatigaInicio, {
+            type: 'doughnut',
+            data: {
+                datasets: [{
+                    data: [fatigaValor, Math.max(0, fatigaMax - fatigaValor)],
+                    backgroundColor: [gaugeColor, 'rgba(255, 255, 255, 0.1)'],
+                    borderColor: 'transparent',
+                    borderWidth: 0,
+                    circumference: 270,
+                    rotation: 225
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '80%',
+                plugins: { legend: { display: false }, tooltip: { enabled: false } }
+            }
+        });
+    }
+    {% endif %}
+
+
+    // ==================================================================
+    // LÓGICA DEL BOTÓN "VER MÁS" PARA LOGROS (CORREGIDO)
+    // ==================================================================
+    const btnVerMasLogros = document.getElementById('btn-ver-mas-logros');
+    if (btnVerMasLogros) {
+        // Generamos el HTML de todos los logros en una variable.
+        // Se eliminó el filtro 'multiply' que causaba el error.
+        const todosLosLogrosHtml = `
+            {% for logro_usuario in datos_logros.logros_completados %}
+            <li class="logro-item bg-[#2a2d3a] p-3 rounded-lg flex items-center justify-between animate-fadeSlide">
+                <div>
+                    <div class="text-sm font-bold text-green-400">{{ logro_usuario.logro.nombre }}</div>
+                    <div class="text-xs text-gray-400">{{ logro_usuario.logro.descripcion|escapejs }}</div>
+                </div>
+                <div class="text-xs text-yellow-300 font-semibold">
+                    +{{ logro_usuario.logro.puntos_recompensa }} pts
+                </div>
+            </li>
+            {% endfor %}
+        `;
+
+        btnVerMasLogros.addEventListener('click', function() {
+            const listaLogros = document.getElementById('lista-logros');
+            if (listaLogros) {
+                listaLogros.innerHTML = todosLosLogrosHtml;
+            }
+            // Ocultamos el botón después de usarlo.
+            btnVerMasLogros.style.display = 'none';
+        });
+    }
+
+
+    // ==================================================================
+    // EFECTOS VISUALES Y ANIMACIONES
+    // ==================================================================
+
+    // --- Glitch Sutil Aleatorio ---
+    function applySubtleGlitch(element, type = 'text') {
+        const animationClass = type === 'text' ? (Math.random() > 0.5 ? 'textGlitch1' : 'textGlitch2') : 'borderGlitch';
+        const animationName = type === 'text' ? animationClass : 'borderGlitch';
+        if (element.style.animationName === animationName) return;
+        element.style.animation = `${animationName} 0.2s linear 1`;
+        setTimeout(() => { element.style.animation = ''; }, 200);
+    }
+
+    function initSubtleGlitches() {
+        const glitchableTexts = document.querySelectorAll('.glitch-text-subtle');
+        const glitchableBorders = document.querySelectorAll('.glitch-border-subtle');
+        glitchableTexts.forEach(el => {
+            setInterval(() => { if (Math.random() < 0.02) applySubtleGlitch(el, 'text'); }, Math.random() * 5000 + 3000);
+        });
+        glitchableBorders.forEach(el => {
+            setInterval(() => { if (Math.random() < 0.01) applySubtleGlitch(el, 'border'); }, Math.random() * 8000 + 5000);
+        });
+    }
+    initSubtleGlitches();
+
+    // --- Animación de Conteo para Métricas ---
+    function animateCountUp(element) {
+        const target = parseFloat(element.getAttribute('data-target'));
+        if (isNaN(target)) return;
+        const duration = 1500;
+        let start = 0;
+        const increment = target / (duration / 16);
+        function updateCount() {
+            start += increment;
+            if (start < target) {
+                element.textContent = Math.round(start);
+                requestAnimationFrame(updateCount);
+            } else {
+                element.textContent = target;
+            }
+        }
+        requestAnimationFrame(updateCount);
+    }
+    document.querySelectorAll('.count-up').forEach(animateCountUp);
+
+    // --- Joi Thinking Animation Control ---
+    function showJoiThinking(duration = 1500) {
+        const phraseDisplay = document.getElementById('joi-phrase-display');
+        const thinkingAnimation = document.getElementById('joi-thinking-animation');
+        if (!phraseDisplay || !thinkingAnimation) return;
+        phraseDisplay.classList.add('hidden');
+        thinkingAnimation.classList.remove('hidden');
+        setTimeout(() => {
+            thinkingAnimation.classList.add('hidden');
+            phraseDisplay.classList.remove('hidden');
+        }, duration);
+    }
+    showJoiThinking();
+
+    // --- Joi Image Enhancements ---
+    const joiImage = document.querySelector('.joi-flotante');
+    if (joiImage) {
+        joiImage.addEventListener('mouseenter', () => {
+            joiImage.style.filter = 'drop-shadow(0 0 30px #00ffff) drop-shadow(0 0 15px #ff00ff) brightness(1.2) saturate(1.5)';
+            joiImage.style.transform = 'scale(1.05)';
+        });
+        joiImage.addEventListener('mouseleave', () => {
+            joiImage.style.filter = 'drop-shadow(0 0 20px #00ffff) drop-shadow(0 0 10px #ff00ff)';
+            joiImage.style.transform = 'scale(1)';
+        });
+    }
+
+    // --- Lógica de botones (si existen) ---
+    const glitchButton = document.getElementById('glitchButton');
+    if (glitchButton) {
+        glitchButton.addEventListener('click', () => { /* Tu lógica de glitch aquí */ });
+    }
+    // ... y así para otros botones como particlesButton, emojiButton, etc.
+
+});
+class CodicePanelWidget {
+    constructor() {
+        this.clienteId = {{ cliente.id }};
+        this.inicializar();
+    }
+
+    inicializar() {
+        console.log('🎮 Inicializando widget del Códice en panel principal');
+        this.cargarDatos();
+
+        // Actualizar cada 30 segundos
+        setInterval(() => {
+            this.cargarDatos();
+        }, 30000);
+    }
+
+    async cargarDatos() {
+        try {
+            const response = await fetch(`/entrenos/gamificacion-resumen/${this.clienteId}/`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+            console.log('📊 Datos del Códice cargados:', data);
+
+            this.actualizarWidget(data);
+        } catch (error) {
+            console.error('❌ Error cargando datos del Códice:', error);
+            this.mostrarError();
+        }
+    }
+
+    actualizarWidget(data) {
+        if (!data.tiene_perfil) {
+            this.mostrarSinPerfil();
+            return;
+        }
+
+        // Actualizar información del personaje
+        const characterName = document.getElementById('codice-character-name');
+        const philosophy = document.getElementById('codice-philosophy');
+        const avatar = document.getElementById('codice-avatar');
+        const levelBadge = document.getElementById('codice-level-badge');
+
+        if (characterName) characterName.textContent = data.nivel_actual || 'Saitama - El Aspirante Calvo';
+        if (philosophy) philosophy.textContent = data.filosofia || '"Todo poder comienza con constancia y dedicación"';
+        if (avatar) avatar.textContent = data.icono || '🥊';
+        if (levelBadge) levelBadge.textContent = `Nivel ${data.nivel_numero || 1}`;
+
+        // Actualizar progreso
+        const points = document.getElementById('codice-points');
+        const nextLevel = document.getElementById('codice-next-level');
+        const progressFill = document.getElementById('codice-progress-fill');
+
+        if (points) points.textContent = `${data.puntos_actuales || 0} / ${data.puntos_siguiente || 250} puntos`;
+        if (nextLevel) nextLevel.textContent = `Próximo: ${data.siguiente_nivel || 'Rock Lee'}`;
+        if (progressFill) {
+            const porcentaje = data.porcentaje_progreso || 0;
+            progressFill.style.width = `${porcentaje}%`;
+        }
+
+        // Actualizar estadísticas
+        const entrenamientos = document.getElementById('codice-entrenamientos');
+        const racha = document.getElementById('codice-racha');
+
+        if (entrenamientos) entrenamientos.textContent = data.total_entrenamientos || 0;
+        if (racha) racha.textContent = data.racha_actual || 0;
+
+        // Efectos especiales para rachas altas
+        if (data.racha_actual >= 7) {
+            racha.classList.add('codice-fire-effect');
+        } else {
+            racha.classList.remove('codice-fire-effect');
+        }
+
+        console.log('✅ Widget del Códice actualizado');
+    }
+
+    mostrarSinPerfil() {
+        const widget = document.getElementById('codice-panel-widget');
+        if (widget) {
+            widget.innerHTML = `
+                <div class="codice-header">
+                    <div class="codice-title">⚔️ CÓDICE DE LAS LEYENDAS</div>
+                </div>
+                <div style="text-align: center; padding: 20px; color: #e0e0e0;">
+                    <p>🎮 ¡Tu aventura épica está por comenzar!</p>
+                    <p>Completa tu primer entrenamiento para despertar tu poder.</p>
+                    <a href="/entrenos/cliente/${this.clienteId}/entrenamiento-activo/" class="codice-btn codice-btn-primary" style="margin-top: 15px;">
+                        🚀 Comenzar Aventura
+                    </a>
+                </div>
+            `;
+        }
+    }
+
+    mostrarError() {
+        const widget = document.getElementById('codice-panel-widget');
+        if (widget) {
+            widget.style.opacity = '0.7';
+        }
+        console.log('⚠️ Error en widget del Códice - usando datos por defecto');
+    }
+}
+
+// Inicializar el widget cuando se carga la página
+document.addEventListener('DOMContentLoaded', function() {
+    if (typeof {{ cliente.id }} !== 'undefined') {
+        window.codicePanelWidget = new CodicePanelWidget();
+    }
+});
+
+// Función para testing
+function testCodicePanelWidget() {
+    console.log('🧪 Testing widget del Códice...');
+    const testData = {
+        tiene_perfil: true,
+        nivel_actual: 'Rock Lee - El Genio del Esfuerzo',
+        filosofia: '"La juventud arde con cada gota de sudor"',
+        icono: '💪',
+        nivel_numero: 2,
+        puntos_actuales: 750,
+        puntos_siguiente: 1000,
+        porcentaje_progreso: 75,
+        siguiente_nivel: 'Krillin',
+        total_entrenamientos: 15,
+        racha_actual: 8
+    };
+
+    if (window.codicePanelWidget) {
+        window.codicePanelWidget.actualizarWidget(testData);
+    }
+}
+
+console.log('🎮 Widget del Códice para panel principal cargado');
+console.log('🧪 Para probar: testCodicePanelWidget()');
+</script>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+{% endblock %}

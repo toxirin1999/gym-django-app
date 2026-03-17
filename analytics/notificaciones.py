@@ -20,19 +20,7 @@ def generar_notificaciones_contextuales(cliente: Any, entrenos_recientes: List[A
     """
     notificaciones = []
 
-    # 1. Notificación de Recordatorio de Entrenamiento
-    if entrenos_recientes:
-        ultimo_entreno = entrenos_recientes[0]
-        dias_sin_entrenar = (datetime.now().date() - ultimo_entreno.fecha).days
-
-        if dias_sin_entrenar >= 3:
-            notificaciones.append(Notificacion(
-                tipo='recordatorio',
-                titulo='Tu cuerpo te extraña',
-                mensaje=f"Han pasado {dias_sin_entrenar} días desde tu último entreno. ¿Qué tal una sesión hoy?",
-                icono='fa-dumbbell',
-                color='cyan'
-            ))
+    # 1. Eliminated Nudges (Tu cuerpo te extraña logic removed as per redesign)
 
     # 2. Notificación de Nuevo Récord (simplificado)
     # En una implementación real, esto se detectaría al guardar un entreno.

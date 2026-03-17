@@ -1,0 +1,169 @@
+{% extends 'diario/base_stoic.html' %}
+{% load static %}
+{% load custom_filters %}
+{% block title %}Logos - Reflexiones{% endblock %}
+
+{% block content %}
+<div class="fade-in-up">
+    <!-- Encabezado -->
+    <div class="card shadow-soft mb-4">
+        <div class="card-body text-center p-4">
+            <h1 class="text-gradient"><i class="fas fa-scroll me-3"></i>Logos</h1>
+            <p class="lead text-muted">Tu espacio de reflexión y crecimiento personal</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Columna Principal -->
+        <div class="col-lg-8">
+
+            <!-- Reflexión del Día -->
+            {% if reflexion_del_dia %}
+            <div class="card shadow-soft mb-4" style="border-left: 4px solid {{ reflexion_del_dia.color }};">
+                <div class="card-header d-flex align-items-center">
+                    <i class="{{ reflexion_del_dia.icono }} fa-2x me-3" style="color: {{ reflexion_del_dia.color }};"></i>
+                    <div>
+                        <h5 class="mb-0">Reflexión del Día</h5>
+                        <small class="text-muted">{{ reflexion_del_dia.get_categoria_display }}</small>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <h4>{{ reflexion_del_dia.titulo }}</h4>
+                    <p class="text-muted">{{ reflexion_del_dia.contexto|truncatewords:50 }}</p>
+                    <blockquote class="blockquote bg-light p-3 rounded fst-italic">
+                        <p class="mb-0">"{{ reflexion_del_dia.cita_filosofica }}"</p>
+                        <footer class="blockquote-footer mt-2">{{ reflexion_del_dia.autor_cita }}</footer>
+                    </blockquote>
+                    <div class="text-center mt-3">
+                        <a href="{% url 'diario:logos_reflexion_guiada' reflexion_del_dia.slug %}" class="btn btn-primary btn-lg">
+                            <i class="fas fa-pen-fancy me-2"></i>Comenzar Reflexión
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="card shadow-soft mb-4">
+                <div class="card-body text-center p-4">
+                    <i class="fas fa-calendar-day fa-3x text-muted mb-3"></i>
+                    <h5>No hay reflexión guiada para hoy</h5>
+                    <p class="text-muted">Pero siempre puedes escribir libremente tus pensamientos.</p>
+                    <a href="{% url 'diario:logos_escritura_libre' %}" class="btn btn-outline-primary">
+                        <i class="fas fa-feather-alt me-2"></i>Escribir Libremente
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Reflexiones Recientes -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-history me-2"></i>Reflexiones Recientes</h5>
+                    <a href="{% url 'diario:logos_lista_reflexiones' %}" class="btn btn-sm btn-outline-secondary">
+                        Ver Todas
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if reflexiones_recientes %}
+                    <div class="list-group list-group-flush">
+                        {% for reflexion in reflexiones_recientes %}
+                        <a href="{% url 'diario:logos_ver_reflexion' reflexion.id %}" class="list-group-item list-group-item-action">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1">{{ reflexion.titulo }}</h6>
+                                <small class="text-muted">{{ reflexion.fecha|date:"d/m/Y" }}</small>
+                            </div>
+                            <p class="mb-1 small text-muted">{{ reflexion.contenido|truncatewords:15 }}</p>
+                            <small>
+                                <span class="badge bg-secondary">{{ reflexion.get_tipo_display }}</span>
+                                {% if reflexion.etiquetas %}
+                                {% for etiqueta in reflexion.etiquetas|split:',' %}
+                                <span class="badge bg-light text-dark">{{ etiqueta|trim }}</span>
+                                {% endfor %}
+                                {% endif %}
+
+                            </small>
+                        </a>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted text-center p-3">Aún no has escrito ninguna reflexión. ¡Empieza hoy!</p>
+                    {% endif %}
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Columna Lateral -->
+        <div class="col-lg-4">
+
+            <!-- Racha de Escritura -->
+            <div class="card shadow-soft mb-4 text-center">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-fire text-danger me-2"></i>Tu Racha</h5>
+                </div>
+                <div class="card-body">
+                    <h1 class="display-3 text-primary">{{ racha.dias_consecutivos }}</h1>
+                    <p class="text-muted">días consecutivos escribiendo</p>
+                    <hr>
+                    <div class="row text-center">
+                        <div class="col-6">
+                            <p class="mb-0 small text-muted">Racha Máxima</p>
+                            <h4 class="text-success">{{ racha.racha_maxima }}</h4>
+                        </div>
+                        <div class="col-6">
+                            <p class="mb-0 small text-muted">Total Días</p>
+                            <h4 class="text-info">{{ racha.total_dias_escritos }}</h4>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Estadísticas -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Estadísticas</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between mb-1">
+                            <span class="small">Total de Reflexiones</span>
+                            <strong>{{ total_reflexiones }}</strong>
+                        </div>
+                        <div class="progress" style="height: 8px;">
+                            <div class="progress-bar bg-primary" role="progressbar" style="width: 100%"></div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between mb-1">
+                            <span class="small">Reflexiones Guiadas</span>
+                            <strong>{{ reflexiones_guiadas_completadas }}</strong>
+                        </div>
+                        <div class="progress" style="height: 8px;">
+                            <div class="progress-bar bg-success" role="progressbar" style="width: {% widthratio reflexiones_guiadas_completadas 50 100 %}%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Acciones Rápidas -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-bolt me-2"></i>Acciones Rápidas</h5>
+                </div>
+                <div class="card-body">
+                    <a href="{% url 'diario:logos_escritura_libre' %}" class="btn btn-primary w-100 mb-2">
+                        <i class="fas fa-feather-alt me-2"></i>Escribir Libremente
+                    </a>
+                    <a href="{% url 'diario:logos_calendario' %}" class="btn btn-outline-secondary w-100 mb-2">
+                        <i class="fas fa-calendar-alt me-2"></i>Ver Calendario
+                    </a>
+                    <a href="{% url 'diario:logos_lista_reflexiones' %}" class="btn btn-outline-secondary w-100">
+                        <i class="fas fa-search me-2"></i>Buscar Reflexiones
+                    </a>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}
+

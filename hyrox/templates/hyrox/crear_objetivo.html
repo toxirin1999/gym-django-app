@@ -1,0 +1,127 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Nuevo Objetivo Hyrox{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8 max-w-3xl">
+    <a href="{% url 'hyrox:dashboard' %}"
+        class="text-slate-400 hover:text-white mb-6 inline-flex items-center gap-2 transition bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-full text-sm font-semibold border border-slate-700"><i
+            class="fas fa-arrow-left"></i> Volver</a>
+
+    <div
+        class="bg-slate-800/80 border border-slate-700 rounded-2xl p-6 md:p-10 backdrop-blur-md shadow-2xl relative overflow-hidden">
+        <div class="absolute -top-40 -right-40 w-96 h-96 bg-cyan-600/20 rounded-full blur-[80px] pointer-events-none">
+        </div>
+
+        <div class="flex items-center gap-4 mb-2">
+            <div
+                class="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 text-white flex items-center justify-center text-xl shadow-lg shadow-cyan-500/30">
+                <i class="fas fa-flag-checkered"></i>
+            </div>
+            <h1 class="text-3xl font-bold text-white tracking-tight">Misión Hyrox</h1>
+        </div>
+        <p class="text-slate-400 mb-8 ml-16">Define tu evento y tu estado base para calibrar la programación de las
+            semanas de la carrera.</p>
+
+        <form method="post" class="space-y-8 relative z-10">
+            {% csrf_token %}
+
+            <div class="bg-slate-900/50 p-6 rounded-xl border border-slate-700 shadow-inner">
+                <h3 class="text-white font-bold mb-4 flex items-center gap-2"><i
+                        class="fas fa-calendar-alt text-cyan-500"></i> Evento Principal</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-bold text-slate-400 mb-2 uppercase tracking-wide">Race
+                            Day</label>
+                        {{ form.fecha_evento }}
+                    </div>
+                    <div>
+                        <label
+                            class="block text-sm font-bold text-slate-400 mb-2 uppercase tracking-wide">Categoría</label>
+                        {{ form.categoria }}
+                    </div>
+                </div>
+
+                <div class="mt-6 border-t border-slate-700/50 pt-4">
+                    <label class="block text-sm font-bold text-slate-400 mb-2 uppercase tracking-wide">Días Preferidos
+                        de Entrenamiento</label>
+                    <p class="text-xs text-slate-500 mb-2">Ingresa los números de los días separados por comas (0=Lunes,
+                        6=Domingo). <br>Ej: Si quieres Lunes, Miércoles y Viernes, escribe: <span
+                            class="text-cyan-400 font-mono">0,2,4</span></p>
+                    {{ form.dias_preferidos }}
+                </div>
+            </div>
+
+            <div class="bg-slate-900/50 p-6 rounded-xl border border-slate-700 shadow-inner">
+                <h3 class="text-white font-bold mb-4 flex items-center gap-2"><i
+                        class="fas fa-chart-bar text-purple-500"></i> Perfil Atlético Base</h3>
+                <p class="text-xs text-slate-500 mb-4">No necesitas ser 100% preciso, si no tienes RMs, déjalo en blanco
+                    y el motor lo adivinará con un test práctico la primera semana.</p>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 mb-2 uppercase tracking-wide">1RM P.
+                            Muerto</label>
+                        <div class="relative">
+                            {{ form.rm_peso_muerto }}
+                            <span class="absolute right-3 top-2.5 text-slate-500 pointer-events-none">kg</span>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 mb-2 uppercase tracking-wide">1RM
+                            Sentadilla</label>
+                        <div class="relative">
+                            {{ form.rm_sentadilla }}
+                            <span class="absolute right-3 top-2.5 text-slate-500 pointer-events-none">kg</span>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 mb-2 uppercase tracking-wide">Test
+                            5K</label>
+                        <div class="relative">
+                            {{ form.tiempo_5k_base }}
+                            <span class="absolute right-3 top-2.5 text-slate-500 pointer-events-none"><i
+                                    class="far fa-clock"></i></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Phase 8: Health Check Universal -->
+            <div class="bg-slate-900/50 p-6 rounded-xl border border-slate-700 shadow-inner">
+                <h3 class="text-white font-bold mb-4 flex items-center gap-2"><i
+                        class="fas fa-heartbeat text-red-500"></i> Health Check & Contexto</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
+                    <div>
+                        <label class="block text-sm font-bold text-slate-400 mb-2">Nivel de Experiencia</label>
+                        {{ form.nivel_experiencia }}
+                        <p class="text-[10px] text-slate-500 mt-1">Tu experiencia general entrenando fuerza y cardio.
+                        </p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-slate-400 mb-2">Lesiones Previas</label>
+                        {{ form.lesiones_previas }}
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-slate-900/50 p-6 rounded-xl border border-slate-700 shadow-inner">
+                <h3 class="text-white font-bold mb-2 flex items-center gap-2"><i class="fas fa-box text-pink-500"></i>
+                    Inventario</h3>
+                <label class="block text-xs font-bold text-slate-400 mb-2">¿Qué equipamiento especial tienes?</label>
+                <div class="text-[11px] text-slate-500 mb-3 leading-relaxed">Ej: Sled Push/Pull, SkiErg, Row,
+                    Kettlebells, Cuerda... Si entrenas en un gym comercial sin trineo, anótalo para poder buscarte
+                    alternativas en tu programa.</div>
+                {{ form.material_disponible }}
+            </div>
+
+            <div class="pt-2">
+                <button type="submit"
+                    class="w-full py-4 bg-gradient-to-r from-cyan-600 via-blue-600 to-purple-600 hover:from-cyan-500 hover:via-blue-500 hover:to-purple-500 text-white rounded-xl font-bold text-lg shadow-[0_0_20px_rgba(6,182,212,0.4)] transition-all transform hover:-translate-y-1">
+                    <i class="fas fa-rocket mr-2"></i> Fijar Misión e Iniciar Programa
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -230,12 +230,12 @@ def importar_liftin_completo(request):
             entrenamiento.save()
 
             try:
-                from logros.services import GamificacionService
-                GamificacionService.procesar_entreno(entrenamiento)
+                from logros.services import CodiceService
+                CodiceService.procesar_entreno_completo(entrenamiento)
                 print("✅ GAMIFICACIÓN PROCESADA")
 
-            except:
-                pass
+            except Exception as e:
+                print(f"❌ ERROR PROCESANDO GAMIFICACIÓN: {e}")
 
             messages.success(request,
                              f"Entrenamiento de Liftin guardado correctamente con {len(ejercicios_texto)} ejercicios.")

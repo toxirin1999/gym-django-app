@@ -67,7 +67,10 @@
 
 </div>
 {% if frase_magica %}
-<canvas id="fuegos" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;"></canvas>
+<div class="metric-card bg-[var(--lol-bg-alt)] border border-[var(--lol-border-subtle)] p-4 rounded-sm shadow-xl relative overflow-hidden transition-all hover:border-[rgba(200,170,110,0.3)] hover:shadow-[0_0_15px_var(--lol-glow-gold)]">
+    <h4 class="font-display text-[0.65rem] text-[var(--lol-gold-mid)] uppercase tracking-wider mb-3">◆ FUEGOS</h4>
+    <canvas id="fuegos" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;"></canvas>
+</div>
 <script>
     const canvas = document.getElementById('fuegos');
     const ctx = canvas.getContext('2d');

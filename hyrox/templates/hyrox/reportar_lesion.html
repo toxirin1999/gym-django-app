@@ -1,0 +1,417 @@
+{% extends 'base.html' %}
+
+{% block title %}Reportar Lesión - Hyrox Central{% endblock %}
+
+{% block extra_head %}
+<style>
+    .anatomy-region {
+        fill: #334155;
+        stroke: #0f172a;
+        stroke-width: 1.5;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .anatomy-region:hover {
+        fill: #f97316;
+        /* Naranja alerta al pasar el ratón */
+    }
+
+    .anatomy-region.active {
+        fill: #ef4444;
+        /* Rojo grave cuando está seleccionado */
+        filter: drop-shadow(0 0 6px rgba(239, 68, 68, 0.6));
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8 max-w-2xl mt-10">
+    <div class="mb-4">
+        <a href="{% url 'hyrox:dashboard' %}"
+            class="text-slate-400 hover:text-white transition group flex items-center gap-2">
+            <i class="fas fa-arrow-left text-sm group-hover:-translate-x-1 transition-transform"></i> Volver al
+            Dashboard
+        </a>
+    </div>
+
+    <div
+        class="bg-red-900/10 border border-red-500/30 rounded-2xl p-8 shadow-2xl backdrop-blur-md relative overflow-hidden">
+        <div class="absolute top-0 right-0 w-64 h-64 bg-red-500/5 rounded-full blur-[80px] pointer-events-none"></div>
+
+        <div class="text-center mb-8 relative z-10">
+            <div class="text-5xl text-red-500 mb-4 drop-shadow-[0_0_15px_rgba(239,68,68,0.5)]">
+                <i class="fas fa-user-injured"></i>
+            </div>
+            <h1 class="text-3xl font-black text-white tracking-tight">Activar Recovery Mode</h1>
+            <p class="text-red-300/80 mt-2 max-w-md mx-auto">
+                Registra tu lesión para que el Hyrox Training Engine ajuste automáticamente tus ejercicios, bloqueando
+                movimientos contraindicados.
+            </p>
+        </div>
+
+        <form method="POST" class="space-y-6 relative z-10">
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+            <div class="bg-red-500/20 text-red-300 p-4 rounded-lg border border-red-500/50">
+                {{ form.non_field_errors }}
+            </div>
+            {% endif %}
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Body Map Container -->
+                <div class="col-span-1 md:col-span-2">
+                    <label class="block text-sm font-bold text-slate-300 mb-2">Zona Afectada (Mapa Corporal)</label>
+                    <p class="text-xs text-slate-500 mb-4">Haz clic en la zona anatómica donde tengas la lesión para
+                        normalizar la patología y aplicar autodescartes.</p>
+
+                    <div
+                        class="flex flex-wrap justify-around gap-8 p-6 bg-slate-900/50 rounded-xl border border-slate-700/50">
+                        <!-- Vista Frontal -->
+                        <div class="text-center">
+                            <h3 class="text-xs uppercase tracking-wider text-slate-500 mb-4 font-bold">Frente</h3>
+                            <svg width="120" height="280" viewBox="0 0 100 240"
+                                class="overflow-visible mx-auto drop-shadow-lg">
+                                <!-- Cabeza -->
+                                <circle cx="50" cy="20" r="12" class="anatomy-region" data-slug="cervical"
+                                    data-name="Cabeza / Cuello" />
+                                <rect x="45" y="32" width="10" height="8" class="anatomy-region" data-slug="cervical"
+                                    data-name="Cervical Frontal" />
+                                <!-- Pectoral -->
+                                <path d="M 32 40 L 68 40 L 64 72 L 36 72 Z" class="anatomy-region" data-slug="pectoral"
+                                    data-name="Pectoral" />
+                                <!-- Hombros -->
+                                <circle cx="26" cy="45" r="7" class="anatomy-region" data-slug="hombro"
+                                    data-name="Hombro Izquierdo" />
+                                <circle cx="74" cy="45" r="7" class="anatomy-region" data-slug="hombro"
+                                    data-name="Hombro Derecho" />
+                                <!-- Brazos -->
+                                <rect x="19" y="52" width="10" height="24" rx="5" class="anatomy-region"
+                                    data-slug="codo" data-name="Brazo Izq." />
+                                <rect x="71" y="52" width="10" height="24" rx="5" class="anatomy-region"
+                                    data-slug="codo" data-name="Brazo Der." />
+                                <!-- Antebrazos -->
+                                <rect x="16" y="78" width="9" height="24" rx="4" class="anatomy-region"
+                                    data-slug="muneca" data-name="Antebrazo Izq." />
+                                <rect x="75" y="78" width="9" height="24" rx="4" class="anatomy-region"
+                                    data-slug="muneca" data-name="Antebrazo Der." />
+                                <!-- Manos -->
+                                <circle cx="20.5" cy="106" r="4.5" class="anatomy-region" data-slug="muneca"
+                                    data-name="Mano Izq." />
+                                <circle cx="79.5" cy="106" r="4.5" class="anatomy-region" data-slug="muneca"
+                                    data-name="Mano Der." />
+                                <!-- Abdomen -->
+                                <rect x="36" y="74" width="28" height="26" rx="2" class="anatomy-region"
+                                    data-slug="abdomen" data-name="Abdomen" />
+                                <!-- Cadera -->
+                                <path d="M 33 102 L 67 102 L 59 122 L 41 122 Z" class="anatomy-region"
+                                    data-slug="cadera" data-name="Cadera Frontal" />
+                                <!-- Cuadriceps -->
+                                <rect x="34" y="125" width="14" height="40" rx="3" class="anatomy-region"
+                                    data-slug="cuadriceps" data-name="Cuádriceps Izq." />
+                                <rect x="52" y="125" width="14" height="40" rx="3" class="anatomy-region"
+                                    data-slug="cuadriceps" data-name="Cuádriceps Der." />
+                                <!-- Rodillas -->
+                                <circle cx="41" cy="169" r="5.5" class="anatomy-region" data-slug="rodilla"
+                                    data-name="Rodilla Izq." />
+                                <circle cx="59" cy="169" r="5.5" class="anatomy-region" data-slug="rodilla"
+                                    data-name="Rodilla Der." />
+                                <!-- Tibias/Gemelos Frontales -->
+                                <rect x="37" y="178" width="8" height="35" rx="3" class="anatomy-region"
+                                    data-slug="gemelo" data-name="Tibia Izq." />
+                                <rect x="55" y="178" width="8" height="35" rx="3" class="anatomy-region"
+                                    data-slug="gemelo" data-name="Tibia Der." />
+                                <!-- Pies -->
+                                <path d="M 34 215 L 45 215 L 46 226 L 30 226 Z" class="anatomy-region" data-slug="pie"
+                                    data-name="Pie Izq." />
+                                <path d="M 55 215 L 66 215 L 70 226 L 54 226 Z" class="anatomy-region" data-slug="pie"
+                                    data-name="Pie Der." />
+                            </svg>
+                        </div>
+
+                        <!-- Vista Trasera -->
+                        <div class="text-center">
+                            <h3 class="text-xs uppercase tracking-wider text-slate-500 mb-4 font-bold">Espalda</h3>
+                            <svg width="120" height="280" viewBox="0 0 100 240"
+                                class="overflow-visible mx-auto drop-shadow-lg">
+                                <!-- Cabeza -->
+                                <circle cx="50" cy="20" r="12" class="anatomy-region" data-slug="cervical"
+                                    data-name="Nuca" />
+                                <rect x="45" y="32" width="10" height="8" class="anatomy-region" data-slug="cervical"
+                                    data-name="Cervical Trasera" />
+                                <!-- Dorsal -->
+                                <path d="M 30 40 L 70 40 L 64 68 L 36 68 Z" class="anatomy-region" data-slug="dorsal"
+                                    data-name="Dorsal / Escápulas" />
+                                <!-- Lumbar -->
+                                <rect x="36" y="70" width="28" height="28" rx="2" class="anatomy-region"
+                                    data-slug="lumbar" data-name="Lumbar / Espalda Baja" />
+                                <!-- Gluteos -->
+                                <path d="M 33 100 L 67 100 L 64 125 L 36 125 Z" class="anatomy-region"
+                                    data-slug="cadera" data-name="Glúteos" />
+                                <!-- Hombros -->
+                                <circle cx="26" cy="45" r="7" class="anatomy-region" data-slug="hombro"
+                                    data-name="Hombro Izq. Post." />
+                                <circle cx="74" cy="45" r="7" class="anatomy-region" data-slug="hombro"
+                                    data-name="Hombro Der. Post." />
+                                <!-- Triceps -->
+                                <rect x="19" y="52" width="10" height="24" rx="5" class="anatomy-region"
+                                    data-slug="codo" data-name="Tríceps Izq." />
+                                <rect x="71" y="52" width="10" height="24" rx="5" class="anatomy-region"
+                                    data-slug="codo" data-name="Tríceps Der." />
+                                <!-- Antebrazos -->
+                                <rect x="16" y="78" width="9" height="24" rx="4" class="anatomy-region"
+                                    data-slug="muneca" data-name="Antebrazo Izq." />
+                                <rect x="75" y="78" width="9" height="24" rx="4" class="anatomy-region"
+                                    data-slug="muneca" data-name="Antebrazo Der." />
+                                <!-- Manos -->
+                                <circle cx="20.5" cy="106" r="4.5" class="anatomy-region" data-slug="muneca"
+                                    data-name="Mano Izq." />
+                                <circle cx="79.5" cy="106" r="4.5" class="anatomy-region" data-slug="muneca"
+                                    data-name="Mano Der." />
+                                <!-- Isquios -->
+                                <rect x="34" y="127" width="14" height="38" rx="3" class="anatomy-region"
+                                    data-slug="isquiotibial" data-name="Isquiotibial Izq." />
+                                <rect x="52" y="127" width="14" height="38" rx="3" class="anatomy-region"
+                                    data-slug="isquiotibial" data-name="Isquiotibial Der." />
+                                <!-- Gemelos -->
+                                <rect x="36" y="167" width="10" height="38" rx="4" class="anatomy-region"
+                                    data-slug="gemelo" data-name="Gemelo Izq." />
+                                <rect x="54" y="167" width="10" height="38" rx="4" class="anatomy-region"
+                                    data-slug="gemelo" data-name="Gemelo Der." />
+                                <!-- Tobillos/Talón -->
+                                <circle cx="41" cy="210" r="4.5" class="anatomy-region" data-slug="tobillo"
+                                    data-name="Talón Izq." />
+                                <circle cx="59" cy="210" r="4.5" class="anatomy-region" data-slug="tobillo"
+                                    data-name="Talón Der." />
+                            </svg>
+                        </div>
+                    </div>
+
+                    <!-- Estado Actual Seleccionado -->
+                    <div
+                        class="mt-4 flex items-center justify-between bg-slate-800 p-4 rounded-xl border border-slate-700 shadow-inner">
+                        <div class="flex items-center gap-4">
+                            <div class="w-4 h-4 rounded-full bg-slate-600 transition-colors" id="selection-indicator">
+                            </div>
+                            <span class="text-white font-black tracking-wide" id="selected-zone-name">Limpio
+                                (Entrenamiento Normal)</span>
+                        </div>
+                        <button type="button" id="btn-clear-zone"
+                            class="hidden text-xs bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded-lg text-slate-300 transition-all font-bold">
+                            <i class="fas fa-undo mr-1"></i> Limpiar
+                        </button>
+                    </div>
+
+                    <!-- El SELECT Original Oculto -->
+                    <div class="hidden">
+                        {{ form.zona_afectada }}
+                    </div>
+                    {% if form.zona_afectada.errors %}
+                    <p class="text-red-400 text-xs mt-2">{{ form.zona_afectada.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-slate-300 mb-2">Fase de la Lesión</label>
+                    {{ form.fase }}
+                    {% if form.fase.errors %}
+                    <p class="text-red-400 text-xs mt-1">{{ form.fase.errors.0 }}</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-slate-700/50">
+                <div>
+                    <label class="block text-sm font-bold text-slate-300 mb-2">Fecha de Inicio</label>
+                    {{ form.fecha_inicio }}
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-slate-300 mb-2 flex justify-between">
+                        <span>Gravedad Percibida</span>
+                        <span class="text-red-400"><span id="gravedad-val">5</span>/10</span>
+                    </label>
+                    {{ form.gravedad }}
+                    <div class="flex justify-between text-xs text-slate-500 mt-1">
+                        <span>Molestia (1)</span>
+                        <span>Incapacitante (10)</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pt-6 border-t border-slate-700/50">
+                <label class="block text-sm font-bold text-slate-200 mb-4 flex items-center gap-2">
+                    <i class="fas fa-ban text-red-500"></i> Restricciones Biomecánicas (Opcional)
+                </label>
+                <p class="text-xs text-slate-400 mb-4">Selecciona qué patrones de movimiento te generan dolor. El
+                    sistema buscará alternativas (ej: Remar en vez de Correr). Si no estás seguro, déjalo libre y el
+                    Coach te preguntará en la revisión diaria.</p>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-60 overflow-y-auto pr-2 custom-scrollbar"
+                    id="tags-container">
+                    {% for tag in form.tags_seleccionados %}
+                    <label
+                        class="flex items-start gap-3 p-3 bg-slate-800/50 border border-slate-700 rounded-lg cursor-pointer hover:bg-slate-800 transition tag-item"
+                        data-value="{{ tag.data.value }}">
+                        <div class="mt-0.5">{{ tag.tag }}</div>
+                        <span class="text-sm text-slate-300">{{ tag.choice_label }}</span>
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="pt-8">
+                <button type="submit"
+                    class="w-full py-4 bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 text-white rounded-xl font-black text-lg shadow-lg shadow-red-500/30 hover:shadow-red-500/50 transition-all flex justify-center items-center gap-2">
+                    <i class="fas fa-shield-alt"></i> Confirmar Inhabilitación Temporal
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const zonaSelect = document.getElementById('id_zona_afectada');
+        const tagItems = document.querySelectorAll('.tag-item');
+        const anatomyRegions = document.querySelectorAll('.anatomy-region');
+        const indicator = document.getElementById('selection-indicator');
+        const nameDisplay = document.getElementById('selected-zone-name');
+        const btnClear = document.getElementById('btn-clear-zone');
+
+        // Mapping Biomecánico Inteligente
+        const constraintMapping = {
+            'gemelo': ['impacto_vertical', 'flexion_plantar', 'empuje_pierna', 'carga_distal_pierna', 'estabilidad_gemelo'],
+            'rodilla': ['flexion_rodilla_profunda', 'impacto_vertical'],
+            'lumbar': ['lumbar_carga', 'rotacion_tronco', 'impacto_vertical'],
+            'hombro': ['empuje_hombro', 'traccion_superior', 'empuje_horizontal'],
+            'pectoral': ['empuje_horizontal', 'empuje_hombro'],
+            'cervical': ['impacto_vertical', 'traccion_superior'],
+            'abdomen': ['rotacion_tronco', 'lumbar_carga'],
+            'cadera': ['impacto_vertical', 'flexion_rodilla_profunda', 'lumbar_carga'],
+            'cuadriceps': ['flexion_rodilla_profunda', 'empuje_pierna', 'carga_distal_pierna'],
+            'isquiotibial': ['flexion_rodilla_profunda', 'lumbar_carga'],
+            'pie': ['impacto_vertical', 'flexion_plantar'],
+            'tobillo': ['impacto_vertical', 'flexion_plantar'],
+            'codo': ['empuje_horizontal', 'empuje_hombro', 'traccion_superior'],
+            'muneca': ['empuje_horizontal', 'traccion_superior'],
+            'dorsal': ['traccion_superior', 'lumbar_carga']
+        };
+
+        const inferiorTags = ['impacto_vertical', 'flexion_rodilla_profunda', 'empuje_pierna', 'flexion_plantar', 'carga_distal_pierna', 'estabilidad_gemelo'];
+        const superiorTags = ['empuje_hombro', 'traccion_superior', 'empuje_horizontal'];
+        const coreTags = ['lumbar_carga', 'rotacion_tronco'];
+
+        function setZoneSelection(slug, humanName) {
+            // Activar visualmente en SVG
+            anatomyRegions.forEach(r => {
+                if (r.getAttribute('data-slug') === slug) {
+                    r.classList.add('active');
+                } else {
+                    r.classList.remove('active');
+                }
+            });
+
+            // Actualizar status visual
+            if (slug) {
+                indicator.classList.remove('bg-slate-600');
+                indicator.classList.add('bg-red-500', 'shadow-[0_0_8px_rgba(239,68,68,0.8)]');
+                nameDisplay.textContent = humanName;
+                btnClear.classList.remove('hidden');
+
+                // Actualizar valor en select oculto
+                zonaSelect.value = slug;
+            } else {
+                indicator.classList.add('bg-slate-600');
+                indicator.classList.remove('bg-red-500', 'shadow-[0_0_8px_rgba(239,68,68,0.8)]');
+                nameDisplay.textContent = "Limpio (Entrenamiento Normal)";
+                btnClear.classList.add('hidden');
+                zonaSelect.value = '';
+            }
+
+            // Filtrar tags contextuales
+            updateTags(slug);
+        }
+
+        function updateTags(activeSlug) {
+            const selectedOption = zonaSelect.options[zonaSelect.selectedIndex];
+            const optGroup = selectedOption && selectedOption.parentElement.tagName === 'OPTGROUP' ? selectedOption.parentElement.label : '';
+
+            // Primero, deseleccionar todos los checkboxes de restricciones porque ha cambiado la zona
+            tagItems.forEach(item => {
+                const checkbox = item.querySelector('input[type="checkbox"]');
+                if (checkbox) checkbox.checked = false;
+                item.classList.remove('bg-red-900/40', 'border-red-500/50'); // clear visual active styling if any
+            });
+
+            // Luego filtrar por Grupo Anatómico
+            tagItems.forEach(item => {
+                const val = item.getAttribute('data-value');
+                let show = true;
+
+                if (optGroup === 'Tren Inferior') {
+                    show = inferiorTags.includes(val) || coreTags.includes(val);
+                } else if (optGroup === 'Tren Superior') {
+                    show = superiorTags.includes(val) || coreTags.includes(val);
+                } else if (optGroup === 'Core y Columna') {
+                    show = coreTags.includes(val) || inferiorTags.includes(val) || superiorTags.includes(val);
+                }
+
+                if (show || activeSlug === '') { // Si está limpio, muestra todos
+                    item.style.display = 'flex';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+
+            // Auto-Check Constraint Mapping Service
+            if (activeSlug && constraintMapping[activeSlug]) {
+                const rules = constraintMapping[activeSlug];
+                tagItems.forEach(item => {
+                    const val = item.getAttribute('data-value');
+                    if (rules.includes(val)) {
+                        const checkbox = item.querySelector('input[type="checkbox"]');
+                        if (checkbox) checkbox.checked = true;
+                        item.classList.add('bg-red-900/40', 'border-red-500/50');
+                    }
+                });
+            }
+        }
+
+        // Event Listeners SVG
+        anatomyRegions.forEach(region => {
+            region.addEventListener('click', function () {
+                const slug = this.getAttribute('data-slug');
+                const name = this.getAttribute('data-name');
+                setZoneSelection(slug, name);
+            });
+        });
+
+        // Event Listener Limpiar
+        btnClear.addEventListener('click', function () {
+            setZoneSelection('', '');
+        });
+
+        // Event listeners para styling de checkboxes custom manual
+        tagItems.forEach(item => {
+            const checkbox = item.querySelector('input[type="checkbox"]');
+            if (checkbox) {
+                checkbox.addEventListener('change', function () {
+                    if (this.checked) {
+                        item.classList.add('bg-red-900/40', 'border-red-500/50');
+                    } else {
+                        item.classList.remove('bg-red-900/40', 'border-red-500/50');
+                    }
+                });
+            }
+        });
+
+        // Setup inicial si hubo error o viene con valor de editar
+        if (zonaSelect && zonaSelect.value) {
+            const initialSlug = zonaSelect.value;
+            setZoneSelection(initialSlug, initialSlug.charAt(0).toUpperCase() + initialSlug.slice(1));
+        } else {
+            updateTags('');
+        }
+    });
+</script>
+{% endblock %}

@@ -54,6 +54,9 @@ urlpatterns = [
     path('ia/optimizacion/<int:cliente_id>/', views_ia.vista_optimizacion_entrenamientos,
          name='vista_optimizacion_entrenamientos'),
 
+    # 4. Explicación del Plan (Helms)
+    path('explicacion-plan/', views.explicacion_plan_helms, name='explicacion_plan_helms'),
+
     # =================================================================
     # ### APIs Y FUNCIONES INTERNAS ###
     # =================================================================
@@ -82,4 +85,6 @@ urlpatterns = [
     path('api/cliente/<int:cliente_id>/guardar_meta/', views.api_guardar_meta, name='api_guardar_meta'),
     path('api/cliente/<int:cliente_id>/guardar_anotacion/', views.api_guardar_anotacion, name='api_guardar_anotacion'),
     path('cliente/<int:cliente_id>/equilibrio/', views.dashboard_equilibrio, name='dashboard_equilibrio'),
+    path('dashboard/global/<int:cliente_id>/', views.dashboard_global, name='dashboard_global'),
+
 ]

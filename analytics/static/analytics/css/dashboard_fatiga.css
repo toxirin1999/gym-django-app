@@ -1,0 +1,502 @@
+/* analytics/static/analytics/css/dashboard_fatiga.css */
+
+:root {
+    --primary-color: #3b82f6;
+    /* Blue-500 */
+    --secondary-color: #64748b;
+    /* Slate-500 */
+    --accent-color: #f59e0b;
+    /* Amber-500 */
+    --success-color: #10b981;
+    /* Emerald-500 */
+    --danger-color: #ef4444;
+    /* Red-500 */
+    --warning-color: #f59e0b;
+    /* Amber-500 */
+    --info-color: #0ea5e9;
+    /* Sky-500 */
+    --dark-bg: #0f172a;
+    /* Slate-900 */
+    --card-bg: #1e293b;
+    /* Slate-800 */
+    --text-primary: #f8fafc;
+    /* Slate-50 */
+    --text-secondary: #94a3b8;
+    /* Slate-400 */
+    --border-color: #334155;
+    /* Slate-700 */
+
+    /* Zonas de Riesgo - Específico de Fatiga */
+    --zona-optima: #10b981;
+    --zona-cuidado: #f59e0b;
+    --zona-riesgo: #ef4444;
+    --zona-baja: #3b82f6;
+
+    --transition-speed: 0.2s;
+}
+
+body {
+    background-color: var(--dark-bg);
+    color: var(--text-primary);
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    margin: 0;
+    line-height: 1.5;
+}
+
+.analytics-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 1.5rem;
+}
+
+/* --- Header Minimalista (Consistente con Progresion) --- */
+.analytics-header.minimal {
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.analytics-header.minimal h1 {
+    font-size: 1.8rem;
+    font-weight: 700;
+    margin: 0 0 0.5rem 0;
+    background: linear-gradient(to right, var(--text-primary), var(--text-secondary));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.analytics-header.minimal p {
+    color: var(--text-secondary);
+    margin: 0;
+    font-size: 0.95rem;
+}
+
+.back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-weight: 500;
+    transition: all var(--transition-speed);
+    background-color: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border-color);
+}
+
+.back-link:hover {
+    color: var(--text-primary);
+    background-color: rgba(255, 255, 255, 0.1);
+    border-color: var(--text-secondary);
+}
+
+/* --- Grid Layout --- */
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+}
+
+@media (min-width: 768px) {
+    .dashboard-grid {
+        grid-template-columns: 1fr 2fr;
+    }
+}
+
+/* --- Cards --- */
+.card {
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 1rem;
+    padding: 1.5rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.card-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* --- Gauge Component --- */
+.gauge-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem 0;
+    height: 100%;
+}
+
+.gauge-value {
+    font-size: 5rem;
+    font-weight: 800;
+    line-height: 1;
+    margin-bottom: 0.5rem;
+    /* Text Shadow Glow based on current color context */
+    text-shadow: 0 0 20px currentColor;
+}
+
+/* Tooltip Styles */
+.info-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background-color: var(--surface-hover);
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+    cursor: help;
+    margin-left: 0.5rem;
+    transition: all 0.2s ease;
+}
+
+.info-icon:hover {
+    background-color: var(--primary);
+    color: white;
+}
+
+.metric-label {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    position: relative;
+}
+
+.tooltip-card {
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--surface-card);
+    border: 1px solid var(--border-color);
+    padding: 1rem;
+    border-radius: 0.75rem;
+    width: 250px;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+    z-index: 50;
+    margin-bottom: 0.5rem;
+    text-align: left;
+    pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.2s ease;
+}
+
+.metric-label:hover .tooltip-card {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(-5px);
+}
+
+.tooltip-title {
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 0.25rem;
+    display: block;
+}
+
+.tooltip-text {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    line-height: 1.4;
+    display: block;
+}
+
+.gauge-label {
+    font-size: 1.25rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 1rem;
+}
+
+.gauge-reco {
+    font-size: 0.95rem;
+    color: var(--text-secondary);
+    text-align: center;
+    font-style: italic;
+    max-width: 90%;
+    line-height: 1.6;
+    background: rgba(0, 0, 0, 0.2);
+    padding: 1rem;
+    border-radius: 0.5rem;
+}
+
+/* Colores Dinámicos del Gauge */
+.zona-optima .gauge-value {
+    color: var(--zona-optima);
+}
+
+.zona-cuidado .gauge-value {
+    color: var(--zona-cuidado);
+}
+
+.zona-riesgo_alto .gauge-value {
+    color: var(--zona-riesgo);
+}
+
+.zona-baja_carga .gauge-value {
+    color: var(--zona-baja);
+}
+
+.zona-muy_baja .gauge-value {
+    color: var(--text-secondary);
+}
+
+.zona-optima .gauge-label {
+    color: var(--zona-optima);
+}
+
+.zona-cuidado .gauge-label {
+    color: var(--zona-cuidado);
+}
+
+.zona-riesgo_alto .gauge-label {
+    color: var(--zona-riesgo);
+}
+
+.zona-baja_carga .gauge-label {
+    color: var(--zona-baja);
+}
+
+/* --- Narrative Card --- */
+.narrative-card {
+    margin-top: 1.5rem;
+}
+
+.narrative-summary {
+    font-size: 1.05rem;
+    line-height: 1.7;
+    margin-bottom: 1.5rem;
+    color: var(--text-primary);
+}
+
+.narrative-points {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    gap: 1rem;
+}
+
+.narrative-points li {
+    display: flex;
+    gap: 1rem;
+    background: rgba(255, 255, 255, 0.03);
+    padding: 1rem;
+    border-radius: 0.75rem;
+    border-left: 3px solid var(--border-color);
+}
+
+.narrative-points li .emoji {
+    font-size: 1.5rem;
+}
+
+.narrative-points li p {
+    margin: 0;
+    font-size: 0.95rem;
+    color: var(--text-secondary);
+}
+
+.narrative-points li strong {
+    color: var(--text-primary);
+}
+
+/* --- Guide Section (Accordion) --- */
+.guide-content {
+    border-top: 1px solid var(--border-color);
+    padding-top: 1.5rem;
+    margin-top: 1rem;
+}
+
+.guide-section {
+    margin-bottom: 2rem;
+}
+
+.guide-section:last-child {
+    margin-bottom: 0;
+}
+
+.guide-subtitle {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.guide-list {
+    list-style: none;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.guide-list li {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+}
+
+.guide-list strong {
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+/* --- Utilities --- */
+.text-green-400 {
+    color: var(--zona-optima);
+}
+
+.text-yellow-400 {
+    color: var(--zona-cuidado);
+}
+
+.text-red-400 {
+    color: var(--zona-riesgo);
+}
+
+.text-blue-400 {
+    color: var(--zona-baja);
+}
+
+.text-orange-400 {
+    color: var(--accent-color);
+}
+
+.text-cyan-400 {
+    color: var(--info-color);
+}
+
+.text-fuchsia-400 {
+    color: #d946ef;
+}
+
+.mt-8 {
+    margin-top: 2rem;
+}
+
+.cursor-pointer {
+    cursor: pointer;
+}
+
+.flex {
+    display: flex;
+}
+
+.justify-between {
+    justify-content: space-between;
+}
+
+.items-center {
+    align-items: center;
+}
+
+@media (max-width: 640px) {
+    .analytics-header.minimal {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+
+    .back-link {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .gauge-value {
+        font-size: 4rem;
+    }
+}
+
+/* --- Metrics Visuals --- */
+.metric-row {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border-color);
+    margin-top: 1.5rem;
+}
+
+.metric-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.metric-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.metric-title {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+}
+
+.metric-value-large {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.progress-container {
+    height: 8px;
+    background-color: var(--surface-hover);
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+    width: 100%;
+}
+
+.progress-bar {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.5s ease, background-color 0.3s ease;
+}
+
+.status-pill {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 999px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.status-pill.success {
+    background-color: rgba(16, 185, 129, 0.1);
+    color: var(--success-color);
+}
+
+.status-pill.warning {
+    background-color: rgba(245, 158, 11, 0.1);
+    color: var(--warning-color);
+}
+
+.status-pill.danger {
+    background-color: rgba(239, 68, 68, 0.1);
+    color: var(--danger-color);
+}

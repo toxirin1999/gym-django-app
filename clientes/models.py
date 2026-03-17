@@ -2,6 +2,7 @@ from django.db import models
 from django.conf import settings
 from rutinas.models import Rutina
 from django import forms
+from django.utils import timezone
 # En tu archivo models.py (o donde tengas tus modelos)
 from django.db import models
 
@@ -473,3 +474,24 @@ class ObjetivoPeso(models.Model):
     def __str__(self):
         estado = "(Alcanzado)" if self.alcanzado else ""
         return f"{self.cliente.nombre} - Objetivo: {self.peso_objetivo_kg} kg {estado}"
+
+
+class FaseCliente(models.Model):
+    FASE_CHOICES = [
+        ('volumen', 'Hipertrofia (Volumen)'),
+        ('definicion', 'Definición (Corte)'),
+        ('mantenimiento', 'Mantenimiento'),
+        ('descarga', 'Descarga (Deload)'),
+    ]
+    cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE, related_name='fases')
+    fase = models.CharField(max_length=20, choices=FASE_CHOICES)
+    fecha_inicio = models.DateField(default=timezone.now)
+    fecha_fin = models.DateField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-fecha_inicio']
+        verbose_name = "Fase del Cliente"
+        verbose_name_plural = "Fases del Cliente"
+
+    def __str__(self):
+        return f"{self.cliente.nombre} - {self.get_fase_display()} ({self.fecha_inicio})"

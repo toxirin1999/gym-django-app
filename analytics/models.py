@@ -402,3 +402,109 @@ class AnotacionEntrenamiento(models.Model):
 
     class Meta:
         ordering = ['-fecha']
+
+
+class HistorialFase(models.Model):
+    """
+    Historial de fases de entrenamiento completadas.
+    Guarda snapshots de 1RM al inicio y fin de cada bloque para análisis de progreso.
+    """
+    cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE, related_name='historial_fases')
+    
+    # Información de la fase
+    nombre_fase = models.CharField(max_length=100, help_text="Ej: Hipertrofia - Acumulación")
+    tipo_fase = models.CharField(max_length=30, choices=[
+        ('hipertrofia', 'Hipertrofia'),
+        ('fuerza', 'Fuerza'),
+        ('potencia', 'Potencia'),
+        ('hipertrofia_especifica', 'Hipertrofia Específica'),
+        ('hipertrofia_metabolica', 'Hipertrofia Metabólica'),
+        ('descarga', 'Descarga')
+    ])
+    
+    # Fechas
+    fecha_inicio = models.DateField()
+    fecha_fin = models.DateField(null=True, blank=True)
+    semanas_completadas = models.IntegerField(default=0)
+    semanas_planificadas = models.IntegerField(default=0)
+    
+    # Snapshots de 1RM
+    rm_inicio = models.JSONField(
+        default=dict,
+        help_text="1RM al inicio de la fase: {'Sentadilla': 60.0, 'Press Banca': 80.0, ...}"
+    )
+    rm_fin = models.JSONField(
+        default=dict,
+        null=True,
+        blank=True,
+        help_text="1RM al final de la fase: {'Sentadilla': 65.0, 'Press Banca': 85.0, ...}"
+    )
+    
+    # Métricas de progreso
+    ganancia_promedio = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=0,
+        help_text="Ganancia promedio en % de todos los ejercicios"
+    )
+    
+    # Estado
+    completada = models.BooleanField(default=False)
+    activa = models.BooleanField(default=False)  # Solo una fase puede estar activa
+    
+    # Parámetros de la fase (para referencia)
+    rpe_inicio = models.IntegerField(null=True, blank=True)
+    rpe_fin = models.IntegerField(null=True, blank=True)
+    rango_reps = models.CharField(max_length=20, null=True, blank=True)
+    volumen_multiplicador = models.DecimalField(max_digits=4, decimal_places=2, null=True, blank=True)
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-fecha_inicio']
+        verbose_name = "Historial de Fase"
+        verbose_name_plural = "Historial de Fases"
+        indexes = [
+            models.Index(fields=['cliente', 'activa']),
+            models.Index(fields=['cliente', 'completada']),
+        ]
+    
+    def __str__(self):
+        estado = "Activa" if self.activa else ("Completada" if self.completada else "En progreso")
+        return f"{self.cliente.nombre} - {self.nombre_fase} ({estado})"
+    
+    def calcular_ganancia_promedio(self):
+        """Calcula la ganancia promedio en % entre rm_inicio y rm_fin"""
+        if not self.rm_fin or not self.rm_inicio:
+            return Decimal('0.00')
+        
+        ganancias = []
+        for ejercicio, rm_final in self.rm_fin.items():
+            rm_inicial = self.rm_inicio.get(ejercicio)
+            if rm_inicial and rm_inicial > 0:
+                ganancia_pct = ((rm_final - rm_inicial) / rm_inicial) * 100
+                ganancias.append(ganancia_pct)
+        
+        if ganancias:
+            return Decimal(str(sum(ganancias) / len(ganancias)))
+        return Decimal('0.00')
+    
+    def marcar_como_completada(self, rm_fin_dict):
+        """Marca la fase como completada y guarda el snapshot final de 1RM"""
+        self.rm_fin = rm_fin_dict
+        self.completada = True
+        self.activa = False
+        self.ganancia_promedio = self.calcular_ganancia_promedio()
+        self.save()
+    
+    @classmethod
+    def obtener_fase_activa(cls, cliente):
+        """Obtiene la fase activa del cliente (si existe)"""
+        return cls.objects.filter(cliente=cliente, activa=True).first()
+    
+    @classmethod
+    def obtener_fases_completadas(cls, cliente):
+        """Obtiene todas las fases completadas del cliente"""
+        return cls.objects.filter(cliente=cliente, completada=True).order_by('-fecha_fin')

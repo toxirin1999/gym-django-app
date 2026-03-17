@@ -1,0 +1,333 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Registrar Workout - Hyrox{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8 max-w-6xl">
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+        <div>
+            <a href="{% url 'hyrox:dashboard' %}"
+                class="text-slate-400 hover:text-white mb-4 inline-flex items-center gap-2 transition bg-slate-800/50 hover:bg-slate-700 px-4 py-2 rounded-full text-xs font-bold border border-slate-700">
+                <i class="fas fa-arrow-left"></i> Volver al Dashboard
+            </a>
+            <h1 class="text-4xl font-black text-white tracking-tight mt-2 flex items-center gap-4">
+                <span class="bg-gradient-to-br from-purple-500 to-pink-600 w-12 h-12 rounded-xl flex items-center justify-center shadow-lg shadow-purple-500/20 text-xl">
+                    <i class="fas fa-bolt"></i>
+                </span>
+                Registrar Workout
+            </h1>
+        </div>
+        
+        {% if lesion_activa %}
+        <div class="bg-red-500/10 border border-red-500/30 rounded-2xl px-5 py-4 flex items-center gap-4 backdrop-blur-md animate-pulse">
+            <div class="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center text-red-500">
+                <i class="fas fa-hand-holding-medical"></i>
+            </div>
+            <div>
+                <p class="text-[10px] uppercase font-black text-red-400 tracking-widest">Estado Biomecánico</p>
+                <p class="text-sm font-bold text-white">Fase {{ lesion_activa.get_fase_display }} ({{ lesion_activa.zona_afectada }})</p>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        <!-- Formulario (Lado Izquierdo) -->
+        <div class="lg:col-span-12 xl:col-span-8 space-y-6">
+            <form method="post" class="space-y-6">
+                {% csrf_token %}
+                
+                <div class="bg-slate-800/60 border border-slate-700/50 rounded-3xl p-6 md:p-8 backdrop-blur-xl shadow-2xl relative overflow-hidden">
+                    <div class="absolute -top-24 -right-24 w-64 h-64 bg-purple-600/10 rounded-full blur-[80px] pointer-events-none"></div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                        <div>
+                            <label class="block text-[10px] font-black text-slate-500 mb-2 uppercase tracking-widest">Fecha</label>
+                            {{ form.fecha }}
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-black text-slate-500 mb-2 uppercase tracking-widest">Título de Sesión</label>
+                            {{ form.titulo }}
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                        <div class="bg-slate-900/40 p-4 rounded-2xl border border-slate-700/30">
+                            <label class="block text-[10px] font-black text-yellow-500 mb-2 uppercase tracking-widest">Energía Pre (1-10)</label>
+                            <div class="flex items-center gap-3">
+                                {{ form.nivel_energia_pre }}
+                                <span id="energia-val" class="text-xl font-black text-white w-8">7</span>
+                            </div>
+                        </div>
+                        <div class="bg-slate-900/40 p-4 rounded-2xl border border-slate-700/30">
+                            <label class="block text-[10px] font-black text-pink-500 mb-2 uppercase tracking-widest">RPE Global (1-10)</label>
+                            <div class="flex items-center gap-3">
+                                {{ form.rpe_global }}
+                                <span id="rpe-val" class="text-xl font-black text-white w-8">5</span>
+                            </div>
+                        </div>
+                        <div class="bg-slate-900/40 p-4 rounded-2xl border border-slate-700/30 flex flex-col justify-between">
+                            <label class="block text-[10px] font-black text-cyan-500 mb-2 uppercase tracking-widest">Tiempo (min)</label>
+                            {{ form.tiempo_total_minutos }}
+                        </div>
+                    </div>
+
+                    <!-- Phase 15: Clinical Tracker Toggle -->
+                    <div class="bg-red-500/5 border border-red-500/20 rounded-2xl p-6 mb-8 flex items-center justify-between group transition-all hover:bg-red-500/10 hover:border-red-500/40">
+                        <div class="flex items-center gap-4">
+                            <div class="w-12 h-12 rounded-full bg-red-500/20 flex items-center justify-center text-red-500 text-xl border border-red-500/30">
+                                <i class="fas fa-heart-pulse"></i>
+                            </div>
+                            <div>
+                                <h4 class="text-sm font-black text-white tracking-tight">Registro de Sensaciones</h4>
+                                <p class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">¿Hubo molestias en la lesión durante el entreno?</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-3 bg-slate-900/60 p-2 rounded-xl border border-slate-700/50">
+                            {{ form.hubo_molestias }}
+                            <span class="text-xs font-black text-slate-400 group-hover:text-red-400 transition pr-2">SÍ / NO</span>
+                        </div>
+                    </div>
+
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-between">
+                            <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                                <i class="fas fa-align-left text-purple-500"></i> Resumen del Entrenamiento
+                            </label>
+                            <span class="text-[10px] px-2 py-1 bg-purple-500/20 text-purple-300 rounded-md font-bold">
+                                <i class="fas fa-wand-magic-sparkles mr-1"></i> IA Parser Activo
+                            </span>
+                        </div>
+                        
+                        <div id="bio-safe-alert" class="hidden animate-bounce">
+                            <div class="bg-amber-500/20 border border-amber-500/50 rounded-xl p-4 flex items-center gap-4 text-amber-200 shadow-lg shadow-amber-500/10">
+                                <div class="text-2xl">⚠️</div>
+                                <p class="text-xs font-bold leading-tight" id="bio-safe-msg">Cuidado David, este movimiento compromete tu recuperación.</p>
+                            </div>
+                        </div>
+
+                        {{ form.notas_raw }}
+                        
+                        <div class="flex flex-wrap items-center gap-4 pt-2">
+                            <div class="flex items-center gap-3 bg-slate-900/60 px-4 py-3 rounded-2xl border border-slate-700/50 cursor-pointer hover:bg-slate-900 transition group">
+                                {{ form.sustituir_material }}
+                                <label for="{{ form.sustituir_material.id_for_label }}" class="text-xs text-slate-300 cursor-pointer font-bold group-hover:text-white transition">
+                                    No tengo material oficial, busca equivalencia
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="pt-8 mt-8 border-t border-slate-700/50">
+                        <button type="submit" id="submit-btn"
+                            class="w-full py-5 bg-white hover:bg-slate-100 text-slate-900 rounded-2xl font-black text-lg shadow-[0_20px_50px_rgba(255,255,255,0.1)] transition-all transform hover:-translate-y-1 active:scale-95 flex items-center justify-center gap-3">
+                            <i class="fas fa-microchip text-purple-600" id="btn-icon"></i> <span id="btn-text">Procesar y Guardar Sesión</span>
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- Sidebar: Objetivos y Stats (Lado Derecho) -->
+        <div class="lg:col-span-12 xl:col-span-4 space-y-6">
+            {% if sesion_planificada %}
+            <div class="bg-slate-800/40 border border-slate-700/50 rounded-3xl p-6 backdrop-blur-xl">
+                <h3 class="text-xs font-black text-cyan-400 uppercase tracking-[0.2em] mb-6 flex items-center gap-3">
+                    <i class="fas fa-crosshairs"></i> Objetivos de Hoy
+                </h3>
+                
+                <div class="space-y-4">
+                    {% for act in actividades_planificadas %}
+                    <div class="bg-slate-900/60 border border-slate-700/30 rounded-2xl p-4 hover:border-cyan-500/30 transition-all duration-300">
+                        <div class="flex items-start gap-4">
+                            <div class="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center text-lg text-cyan-500 mt-0.5">
+                                <i class="fas {{ act.get_icon_class_only }}"></i>
+                            </div>
+                            <div class="flex-1">
+                                <p class="text-sm font-black text-white leading-tight mb-1">
+                                    {% if act.is_substituted %}<i class="fas fa-shield-alt text-cyan-400 mr-1"></i>{% endif %}
+                                    {{ act.display_name }}
+                                </p>
+                                
+                                <div class="flex flex-wrap gap-2 text-[11px] font-bold">
+                                    {% if act.data_metricas.series %}
+                                        {% for s in act.data_metricas.series %}
+                                        <span class="bg-slate-800 text-slate-300 px-2 py-0.5 rounded-md">
+                                            {{ s.reps }} reps {% if s.peso_kg %}@ {{ s.peso_kg }}kg{% endif %}
+                                        </span>
+                                        {% endfor %}
+                                    {% elif act.data_metricas.distancia_km %}
+                                        <span class="bg-cyan-500/20 text-cyan-300 px-2 py-0.5 rounded-md">
+                                            {{ act.data_metricas.distancia_km }} km
+                                        </span>
+                                    {% elif act.data_metricas.distancia_m %}
+                                        <span class="bg-cyan-500/20 text-cyan-300 px-2 py-0.5 rounded-md">
+                                            {{ act.data_metricas.distancia_m }} m {% if act.data_metricas.peso_kg %}@ {{ act.data_metricas.peso_kg }}kg{% endif %}
+                                        </span>
+                                    {% endif %}
+                                </div>
+                                
+                                {% if act.data_metricas.coach_tip %}
+                                <p class="mt-2 text-[10px] text-slate-500 italic leading-relaxed">
+                                    <i class="fas fa-lightbulb text-yellow-500/70 mr-1"></i> {{ act.data_metricas.coach_tip }}
+                                </p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    
+                    {% if sesion_planificada.activities.count == 0 %}
+                    <div class="text-center py-8">
+                        <div class="text-slate-600 text-3xl mb-2"><i class="fas fa-calendar-day"></i></div>
+                        <p class="text-xs text-slate-500 font-bold">Sin ejercicios prescritos hoy.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% else %}
+            <div class="bg-slate-800/40 border border-slate-700/50 rounded-3xl p-8 text-center backdrop-blur-xl">
+                <div class="w-16 h-16 bg-slate-700/30 rounded-full flex items-center justify-center text-slate-500 text-2xl mx-auto mb-4">
+                    <i class="fas fa-calendar-check"></i>
+                </div>
+                <h3 class="text-sm font-black text-white mb-2">Pizarra Limpia</h3>
+                <p class="text-xs text-slate-500 leading-relaxed">No hay sesiones planificadas para hoy. Mantén el foco en la recuperación o suma una sesión libre.</p>
+            </div>
+            {% endif %}
+
+            <div class="bg-gradient-to-br from-indigo-900/40 to-purple-900/40 border border-indigo-700/30 rounded-3xl p-6 backdrop-blur-xl relative overflow-hidden">
+                <div class="absolute -bottom-10 -right-10 w-32 h-32 bg-indigo-500/20 rounded-full blur-2xl"></div>
+                <h3 class="text-xs font-black text-indigo-300 uppercase tracking-widest mb-4">Consejo del Motor AI</h3>
+                <p class="text-xs text-slate-300 leading-relaxed">
+                    David, registra tus sensaciones reales. Si el RPE planificado era 8 pero te has sentido en 9, la IA ajustará automáticamente el volumen de tu próxima sesión de carrera.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Dinámica de Sliders
+    const energiaInput = document.querySelector('input[name="nivel_energia_pre"]');
+    const rpeInput = document.querySelector('input[name="rpe_global"]');
+    
+    if (energiaInput) {
+        energiaInput.addEventListener('input', (e) => {
+            document.getElementById('energia-val').innerText = e.target.value;
+        });
+    }
+    
+    if (rpeInput) {
+        rpeInput.addEventListener('input', (e) => {
+            document.getElementById('rpe-val').innerText = e.target.value;
+        });
+    }
+
+    // Bio-Safe Alert Logic
+    const textarea = document.querySelector('textarea[name="notas_raw"]');
+    const alertDiv = document.getElementById('bio-safe-alert');
+    const alertMsg = document.getElementById('bio-safe-msg');
+    
+    // Diccionario de tags y palabras clave prohibidas
+    const forbiddenKeywords = {
+        {% if lesion_activa and lesion_activa.fase == 'AGUDA' %}
+            {% for tag in lesion_activa.tags_restringidos %}
+                '{{ tag }}': [
+                    {% if tag == 'impacto_vertical' %}'carrera', 'run', 'running', 'impacto'{% endif %}
+                    {% if tag == 'estabilidad_gemelo' %}'prensa', 'squat', 'hack squat', 'sentadilla'{% endif %}
+                    {% if tag == 'flexion_rodilla_profunda' %}'wall ball', 'wall balls'{% endif %}
+                    {% if tag == 'empuje_pierna' %}'sled push', 'empuje trineo', 'trineo', 'sled'{% endif %}
+                    {% if tag == 'flexion_plantar' %}'salto', 'saltos', 'box jump', 'broad jumps'{% endif %}
+                    {% if tag == 'empuje_hombro' %}'burpee', 'burpees', 'press'{% endif %}
+                    {% if tag == 'traccion_superior' %}'dominada', 'pull-up', 'muscle up'{% endif %}
+                    {% if tag == 'empuje_horizontal' %}'flexion', 'push up', 'push-ups'{% endif %}
+                    {% if tag == 'lumbar_carga' %}'peso muerto', 'deadlift', 'dead lift'{% endif %}
+                    {% if tag == 'rotacion_tronco' %}'sandbag lunge', 'lunges', 'sandbag'{% endif %}
+                ],
+            {% endfor %}
+        {% endif %}
+    };
+
+    if (textarea && Object.keys(forbiddenKeywords).length > 0) {
+        const submitBtn = document.getElementById('submit-btn');
+        const btnText = document.getElementById('btn-text');
+        const btnIcon = document.getElementById('btn-icon');
+
+        textarea.addEventListener('input', (e) => {
+            const text = e.target.value.toLowerCase();
+            let found = false;
+            let foundWord = '';
+
+            for (const tag in forbiddenKeywords) {
+                for (const keyword of forbiddenKeywords[tag]) {
+                    if (text.includes(keyword)) {
+                        found = true;
+                        foundWord = keyword;
+                        break;
+                    }
+                }
+                if (found) break;
+            }
+
+            if (found) {
+                alertDiv.classList.remove('hidden');
+                alertMsg.innerText = `⚠️ David, este ejercicio no es Bio-Safe para tu fase actual.`;
+                
+                // Amber Alert Styling
+                submitBtn.classList.remove('bg-white', 'hover:bg-slate-100', 'text-slate-900');
+                submitBtn.classList.add('bg-amber-600', 'hover:bg-amber-700', 'text-white');
+                btnText.innerText = 'David, este ejercicio no es Bio-Safe para tu fase actual';
+                btnIcon.className = 'fas fa-exclamation-triangle text-white';
+            } else {
+                alertDiv.classList.add('hidden');
+                
+                // Reset to Default
+                submitBtn.classList.add('bg-white', 'hover:bg-slate-100', 'text-slate-900');
+                submitBtn.classList.remove('bg-amber-600', 'hover:bg-amber-700', 'text-white');
+                btnText.innerText = 'Procesar y Guardar Sesión';
+                btnIcon.className = 'fas fa-microchip text-purple-600';
+            }
+        });
+    }
+</script>
+
+<style>
+    /* Premium Styling Overrides */
+    input[type="range"] {
+        -webkit-appearance: none;
+        height: 6px;
+        background: #334155;
+        border-radius: 5px;
+        outline: none;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 18px;
+        height: 18px;
+        background: white;
+        border-radius: 50%;
+        cursor: pointer;
+        box-shadow: 0 0 10px rgba(0,0,0,0.5);
+    }
+    textarea {
+        background: rgba(15, 23, 42, 0.6) !important;
+        border: 1px solid rgba(51, 65, 85, 0.5) !important;
+        border-radius: 1.5rem !important;
+        padding: 1.5rem !important;
+        color: #e2e8f0 !important;
+        font-family: inherit !important;
+        transition: all 0.3s ease !important;
+    }
+    textarea:focus {
+        border-color: #a855f7 !important;
+        box-shadow: 0 0 0 4px rgba(168, 85, 247, 0.1) !important;
+        outline: none !important;
+    }
+    .form-control {
+        border-radius: 1rem !important;
+        height: 3.5rem !important;
+        padding-left: 1.25rem !important;
+    }
+</style>
+{% endblock %}

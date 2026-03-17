@@ -4,9 +4,12 @@
 /* ---------- 0 · VARIABLES GLOBALES ---------------------------------------- */
 :root {
   /* Fondo principal */
-  --c-bg-1: #000000;  /* negro azulado más oscuro */
-  --c-bg-2: #0d1321;  /* azul muy oscuro */
-  --c-bg-3: #101828;  /* cian muy oscuro */
+  --c-bg-1: #000000;
+  /* negro azulado más oscuro */
+  --c-bg-2: #0d1321;
+  /* azul muy oscuro */
+  --c-bg-3: #101828;
+  /* cian muy oscuro */
 
   /* Colores neón */
   --c-cyan: #31cff4;
@@ -21,7 +24,9 @@
 }
 
 /* ---------- 1 · RESET ----------------------------------------------------- */
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
@@ -414,9 +419,12 @@ main {
 
 /* Animaciones */
 @keyframes glow {
-  0%, 100% {
+
+  0%,
+  100% {
     box-shadow: 0 0 5px rgba(49, 207, 244, 0.3);
   }
+
   50% {
     box-shadow: 0 0 15px rgba(49, 207, 244, 0.5);
   }
@@ -709,6 +717,7 @@ form input[type="submit"]:hover {
   border-radius: 8px !important;
   color: #ffffff !important;
 }
+
 /* Joi flotando */
 .joi-flotante {
   animation: flotacionSuave 6s ease-in-out infinite;
@@ -719,8 +728,15 @@ form input[type="submit"]:hover {
 
 /* Flotación */
 @keyframes flotacionSuave {
-  0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-8px); }
+
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+
+  50% {
+    transform: translateY(-8px);
+  }
 }
 
 /* Glitch */
@@ -729,11 +745,32 @@ form input[type="submit"]:hover {
 }
 
 @keyframes glitchFlash {
-  0% { transform: translate(0); filter: none; clip-path: none; }
-  10% { transform: translate(-2px, 2px) skew(-5deg); filter: brightness(150%) hue-rotate(30deg); }
-  20% { transform: translate(2px, -1px) skew(5deg); filter: contrast(200%) hue-rotate(-20deg); clip-path: inset(10% 0 20% 0); }
-  30% { transform: translate(-1px, 1px) skew(-2deg); }
-  100% { transform: translate(0); filter: none; clip-path: none; }
+  0% {
+    transform: translate(0);
+    filter: none;
+    clip-path: none;
+  }
+
+  10% {
+    transform: translate(-2px, 2px) skew(-5deg);
+    filter: brightness(150%) hue-rotate(30deg);
+  }
+
+  20% {
+    transform: translate(2px, -1px) skew(5deg);
+    filter: contrast(200%) hue-rotate(-20deg);
+    clip-path: inset(10% 0 20% 0);
+  }
+
+  30% {
+    transform: translate(-1px, 1px) skew(-2deg);
+  }
+
+  100% {
+    transform: translate(0);
+    filter: none;
+    clip-path: none;
+  }
 }
 
 
@@ -758,6 +795,7 @@ body {
   0% {
     text-shadow: 0 0 30px rgba(0, 255, 255, 0.5);
   }
+
   100% {
     text-shadow: 0 0 50px rgba(0, 255, 255, 0.8), 0 0 80px rgba(255, 0, 128, 0.3);
   }
@@ -799,8 +837,71 @@ body {
   font-size: 0.9rem;
   line-height: 1.5;
 }
+
+/* =============================================================================
+   DIGITAL DOJO - RITUAL STYLES
+   ============================================================================= */
+
+/* Enso Circle Animation */
+.enso-container {
+  transition: all 0.3s ease;
+}
+
+.enso-container:hover {
+  transform: scale(1.05);
+}
+
+.enso-progress {
+  filter: drop-shadow(0 0 5px var(--c-cyan));
+}
+
+/* Modal Overlay */
+#ritual-modal {
+  backdrop-filter: blur(10px);
+  transition: opacity 0.3s ease;
+}
+
+/* Steps Transition */
+.ritual-step {
+  animation: fadeIn 0.5s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Success Button Pulse */
+.form-btn-success {
+  animation: pulseGreen 2s infinite;
+}
+
+@keyframes pulseGreen {
+  0% {
+    box-shadow: 0 0 0 0 rgba(0, 245, 160, 0.4);
+  }
+
+  70% {
+    box-shadow: 0 0 0 10px rgba(0, 245, 160, 0);
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 rgba(0, 245, 160, 0);
+  }
+}
+}
+
 select.form-control option,
 select.form-select option {
-    background-color: #FFFFFF; /* Fondo blanco para las opciones */
-    color: #000000;           /* Texto negro para las opciones */
+  background-color: #FFFFFF;
+  /* Fondo blanco para las opciones */
+  color: #000000;
+  /* Texto negro para las opciones */
 }

@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ plan.nombre }} - Estiramientos{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'estiramientos/css/player.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="player-container" data-steps='{{ steps|safe }}' data-transition="{{ transition }}"
+    data-plan-id="{{ plan.id }}">
+
+    <!-- Header -->
+    <div class="player-header">
+        <div class="player-title">
+            <i class="fas fa-spa"></i>
+            {{ plan.nombre }}
+        </div>
+        <div class="player-progress-text">
+            <span id="currentStep">1</span> / <span id="totalSteps">{{ steps|length }}</span>
+        </div>
+    </div>
+
+    <!-- Barra de progreso global -->
+    <div class="global-progress">
+        <div class="global-progress-bar" id="globalProgress" style="width: 0%"></div>
+    </div>
+
+    <!-- Imagen del ejercicio -->
+    <div class="exercise-image-container">
+        <img id="exerciseImage" class="exercise-image" src="" alt="" loading="lazy">
+        <div id="noImagePlaceholder" class="no-image-placeholder">
+            <i class="fas fa-child"></i>
+            <span id="placeholderText">Prepárate</span>
+        </div>
+
+        <!-- Indicador de respiración (NUEVO) -->
+        <div id="breathIndicator" class="breath-indicator">
+            <i class="fas fa-wind"></i>
+        </div>
+
+        <!-- Pantalla de transición -->
+        <div id="transitionScreen" class="transition-screen">
+            <div class="transition-text">Siguiente ejercicio</div>
+            <div id="transitionNextName" class="transition-next-name"></div>
+        </div>
+
+        <!-- Timer overlay -->
+        <div class="timer-overlay">
+            <div class="timer-display">
+                <div id="timerSeconds" class="timer-seconds">30</div>
+                <div id="timerLabel" class="timer-label">Estirando</div>
+            </div>
+
+            <!-- Progress ring -->
+            <div class="progress-ring-container">
+                <svg class="progress-ring" width="100" height="100">
+                    <circle class="progress-ring-bg" cx="50" cy="50" r="42" />
+                    <circle id="progressRing" class="progress-ring-fill" cx="50" cy="50" r="42" stroke-dasharray="264"
+                        stroke-dashoffset="0" />
+                </svg>
+            </div>
+        </div>
+    </div>
+
+    <!-- Info del ejercicio -->
+    <div class="exercise-info">
+        <div id="exerciseName" class="exercise-name">Cargando...</div>
+        <div id="exerciseMuscle" class="exercise-muscle">
+            <i class="fas fa-bullseye"></i>
+            <span>-</span>
+        </div>
+        <div id="exerciseDescription" class="exercise-description">
+            Preparando ejercicio...
+        </div>
+    </div>
+
+    <!-- Siguiente ejercicio -->
+    <div class="next-exercise">
+        <i class="fas fa-forward"></i>
+        <div>
+            <div class="next-exercise-label">Siguiente</div>
+            <div id="nextExerciseName" class="next-exercise-name">-</div>
+        </div>
+    </div>
+
+    <!-- Controles adicionales (NUEVO) -->
+    <div class="additional-controls">
+        <button id="btnBreath" class="control-btn-icon active" type="button" title="Indicador de respiración (B)">
+            <i class="fas fa-wind"></i>
+        </button>
+        <button id="btnFullscreen" class="control-btn-icon" type="button" title="Pantalla completa (F)">
+            <i class="fas fa-expand"></i>
+        </button>
+        <div class="duration-adjuster" title="Ajustar duración de ejercicios">
+            <button id="btnDurationMinus" type="button">
+                <i class="fas fa-minus"></i>
+            </button>
+            <span id="durationDisplay">Normal</span>
+            <button id="btnDurationPlus" type="button">
+                <i class="fas fa-plus"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Controles principales -->
+    <div class="player-controls">
+        <div class="control-item">
+            <button id="btnRestart" class="control-btn-small" type="button" aria-label="Reiniciar ejercicio (R)">
+                <i class="fas fa-redo-alt"></i>
+            </button>
+            <span class="control-label">Reiniciar</span>
+        </div>
+        <div class="control-item main">
+            <button id="btnPause" class="control-btn-main" type="button" aria-label="Pausar ejercicio (Espacio)"
+                aria-pressed="false">
+                <i class="fas fa-pause"></i>
+            </button>
+            <span id="pauseLabel" class="control-label">Pausar</span>
+        </div>
+        <div class="control-item skip">
+            <button id="btnSkip" class="control-btn-small skip" type="button" aria-label="Saltar ejercicio (→)">
+                <i class="fas fa-forward"></i>
+            </button>
+            <span class="control-label">Saltar</span>
+        </div>
+    </div>
+</div>
+
+<!-- Overlay de completado -->
+<div id="completedOverlay" class="completed-overlay" role="dialog" aria-labelledby="completedTitle">
+    <div class="completed-content">
+        <div class="completed-icon" role="img" aria-label="Celebración">🎉</div>
+        <div id="completedTitle" class="completed-title">¡Completado!</div>
+        <div class="completed-subtitle">Has terminado todos los estiramientos</div>
+
+        <div class="completed-stats">
+            <div class="completed-stat">
+                <div class="completed-stat-value" id="statExercises">0</div>
+                <div class="completed-stat-label">Ejercicios</div>
+            </div>
+            <div class="completed-stat">
+                <div class="completed-stat-value" id="statTime">0:00</div>
+                <div class="completed-stat-label">Tiempo</div>
+            </div>
+        </div>
+
+        <div class="completed-actions">
+            <button id="btnRestartFinal" class="completed-btn secondary">
+                <i class="fas fa-redo"></i> Repetir
+            </button>
+            <a href="{% url 'estiramientos:panel' %}" class="completed-btn primary">
+                <i class="fas fa-check"></i> Finalizar
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Toast de notificaciones (NUEVO) -->
+<div id="toast" class="toast" role="alert" aria-live="polite"></div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'estiramientos/js/player.js' %}"></script>
+<script>
+    // Inicializar player con datos del template
+    document.addEventListener('DOMContentLoaded', function () {
+        const playerContainer = document.querySelector('.player-container');
+
+        const player = new StretchPlayer({
+            steps: JSON.parse(playerContainer.dataset.steps),
+            transition: parseInt(playerContainer.dataset.transition),
+            planId: parseInt(playerContainer.dataset.planId)
+        });
+
+        player.init();
+
+        // Hacer player accesible globalmente para debugging
+        window.stretchPlayer = player;
+    });
+</script>
+{% endblock %}

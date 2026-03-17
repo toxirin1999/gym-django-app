@@ -289,7 +289,7 @@
                 <select class="form-control selector-cliente" onchange="cambiarCliente(this.value)">
                     <option value="">Seleccionar Cliente</option>
                     {% for c in todos_los_clientes %}
-                    <option value="{{ c.id }}" {% if c.id== cliente.id %}selected{% endif %}>
+                    <option value="{{ c.id }}" {% if c.id == cliente.id %}selected{% endif %}>
                         {{ c.nombre }} {{ c.apellido }}
                     </option>
                     {% endfor %}

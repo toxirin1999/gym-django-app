@@ -34,6 +34,12 @@ class EjercicioRealizado(models.Model):
     orden = models.PositiveIntegerField(default=0)
     completado = models.BooleanField(default=True)
     nuevo_record = models.BooleanField(default=False)
+    
+    # Phase 15: Tracking & Progression Resilience
+    is_recovery_load = models.BooleanField(
+        default=False,
+        help_text="True si este ejercicio se realizó bajo un estado biológico restringido (volume_modifier < 1.0)"
+    )
 
     fuente_datos = models.CharField(max_length=20, default='manual')
     fecha_creacion = models.DateTimeField(auto_now_add=True)
@@ -297,15 +303,32 @@ class EntrenoRealizado(models.Model):
     )
 
     def calcular_volumen_total(self):
-        '''Calcula el volumen total del entrenamiento'''
+        '''Calcula el volumen total del entrenamiento de todas las fuentes disponibles'''
         total = 0
-        for ejercicio in self.ejercicios_liftin_detallados.all():
-            if ejercicio.completado:
-                peso = float(ejercicio.peso_kg or 0)
-                series = int(ejercicio.series or 0)
-                reps = int(ejercicio.repeticiones or 0)
+        
+        # 1. Ejercicios Realizados (Manuales / Importados genéricos)
+        for ej in self.ejercicios_realizados.all():
+            if ej.completado:
+                peso = float(ej.peso_kg or 0)
+                series = int(ej.series or 0)
+                reps = int(ej.repeticiones or 0)
                 total += peso * series * reps
-        return total
+        
+        # 2. Ejercicios Liftin Detallados (Específicos de importación)
+        if hasattr(self, 'ejercicios_liftin_detallados'):
+            for ej in self.ejercicios_liftin_detallados.all():
+                if ej.completado:
+                    # Usar propiedad si existe, si no calcular manualmente
+                    if hasattr(ej, 'volumen_ejercicio') and ej.volumen_ejercicio:
+                        total += float(ej.volumen_ejercicio)
+                    else:
+                        peso = float(ej.peso_kg or 0)
+                        series = int(ej.series_realizadas or 0)
+                        # Usar reps min como base conservadora
+                        reps = int(ej.repeticiones_min or 0)
+                        total += peso * series * reps
+                        
+        return Decimal(str(total))
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
@@ -542,3 +565,381 @@ def activar_logros_liftin(entreno):
             logros_nuevos.append(logro)
 
     return logros_nuevos
+
+
+# ============================================================================
+# MODELOS DE GAMIFICACIÓN Y TRACKING DE PROGRESO
+# ============================================================================
+
+class SesionEntrenamiento(models.Model):
+    """
+    Resumen detallado de cada sesión de entrenamiento
+    Captura todos los datos que se muestran en el modal de finalización
+    """
+    entreno = models.OneToOneField(
+        'EntrenoRealizado',
+        on_delete=models.CASCADE,
+        related_name='sesion_detalle'
+    )
+
+    # Datos de tiempo
+    duracion_minutos = models.PositiveIntegerField(
+        help_text="Duración total de la sesión en minutos"
+    )
+    hora_inicio = models.TimeField(null=True, blank=True)
+    hora_fin = models.TimeField(null=True, blank=True)
+
+    # Datos de series y ejercicios
+    series_completadas = models.PositiveIntegerField(default=0)
+    series_totales = models.PositiveIntegerField(default=0)
+    ejercicios_completados = models.PositiveIntegerField(default=0)
+    ejercicios_totales = models.PositiveIntegerField(default=0)
+
+    # Métricas de esfuerzo
+    rpe_medio = models.FloatField(
+        null=True,
+        blank=True,
+        help_text="RPE promedio de la sesión (1-10)"
+    )
+    acwr = models.FloatField(
+        null=True,
+        blank=True,
+        help_text="Ratio ACWR de la sesión"
+    )
+    volumen_sesion = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        help_text="Volumen total en kg"
+    )
+
+    # Logros de la sesión
+    nuevos_records = models.PositiveIntegerField(
+        default=0,
+        help_text="Número de récords personales establecidos"
+    )
+    logros_desbloqueados = models.ManyToManyField(
+        'LogroAutomatico',
+        blank=True,
+        related_name='sesiones'
+    )
+
+    # Metadatos
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Sesión {self.entreno.cliente.nombre} - {self.entreno.fecha}"
+
+    @property
+    def porcentaje_completado(self):
+        """Porcentaje de series completadas"""
+        if self.series_totales > 0:
+            return int((self.series_completadas / self.series_totales) * 100)
+        return 0
+
+    @property
+    def es_sesion_perfecta(self):
+        """True si se completaron todas las series"""
+        return self.series_completadas == self.series_totales and self.series_totales > 0
+
+    class Meta:
+        verbose_name = "Sesión de Entrenamiento"
+        verbose_name_plural = "Sesiones de Entrenamiento"
+        ordering = ['-fecha_creacion']
+
+
+class RecordPersonal(models.Model):
+    """
+    Tracking de récords personales por ejercicio
+    """
+    TIPO_RECORD_CHOICES = [
+        ('peso_maximo', 'Peso Máximo'),
+        ('volumen_total', 'Volumen Total'),
+        ('reps_maximas', 'Repeticiones Máximas'),
+        ('one_rep_max', '1RM Estimado'),
+    ]
+
+    cliente = models.ForeignKey(
+        Cliente,
+        on_delete=models.CASCADE,
+        related_name='records_personales'
+    )
+    ejercicio_nombre = models.CharField(
+        max_length=200,
+        help_text="Nombre del ejercicio"
+    )
+    tipo_record = models.CharField(
+        max_length=20,
+        choices=TIPO_RECORD_CHOICES,
+        default='peso_maximo'
+    )
+
+    # Valor del récord
+    valor = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        help_text="Valor del récord (kg, reps, etc)"
+    )
+
+    # Contexto del récord
+    fecha_logrado = models.DateField(auto_now_add=True)
+    entreno = models.ForeignKey(
+        'EntrenoRealizado',
+        on_delete=models.CASCADE,
+        related_name='records_establecidos'
+    )
+
+    # Estado
+    superado = models.BooleanField(
+        default=False,
+        help_text="True si este récord fue superado posteriormente"
+    )
+    fecha_superado = models.DateField(null=True, blank=True)
+
+    def __str__(self):
+        estado = "🏆" if not self.superado else "📊"
+        return f"{estado} {self.cliente.nombre} - {self.ejercicio_nombre}: {self.valor} kg ({self.get_tipo_record_display()})"
+
+    class Meta:
+        verbose_name = "Récord Personal"
+        verbose_name_plural = "Récords Personales"
+        ordering = ['-fecha_logrado']
+        indexes = [
+            models.Index(fields=['cliente', 'ejercicio_nombre', 'tipo_record']),
+        ]
+
+
+class LogroAutomatico(models.Model):
+    """
+    Sistema de logros predefinidos que se desbloquean automáticamente
+    """
+    CATEGORIA_CHOICES = [
+        ('racha', '🔥 Racha'),
+        ('volumen', '💪 Volumen'),
+        ('tiempo', '⏱️ Tiempo'),
+        ('records', '🏆 Récords'),
+        ('perfeccion', '⭐ Perfección'),
+        ('especial', '🎯 Especial'),
+    ]
+
+    RAREZA_CHOICES = [
+        ('comun', 'Común'),
+        ('raro', 'Raro'),
+        ('epico', 'Épico'),
+        ('legendario', 'Legendario'),
+    ]
+
+    # Identificación
+    codigo = models.CharField(
+        max_length=50,
+        unique=True,
+        help_text="Código único del logro (ej: racha_7_dias)"
+    )
+    nombre = models.CharField(
+        max_length=100,
+        help_text="Nombre del logro (ej: Racha de Fuego 🔥)"
+    )
+    descripcion = models.TextField(
+        help_text="Descripción de cómo desbloquear el logro"
+    )
+    icono = models.CharField(
+        max_length=10,
+        default="🏅",
+        help_text="Emoji o icono del logro"
+    )
+
+    # Clasificación
+    categoria = models.CharField(
+        max_length=20,
+        choices=CATEGORIA_CHOICES,
+        default='especial'
+    )
+    rareza = models.CharField(
+        max_length=20,
+        choices=RAREZA_CHOICES,
+        default='comun'
+    )
+
+    # Condiciones de desbloqueo (JSON)
+    condicion_tipo = models.CharField(
+        max_length=50,
+        help_text="Tipo de condición (racha_dias, volumen_sesion, etc)"
+    )
+    condicion_valor = models.JSONField(
+        default=dict,
+        help_text="Parámetros de la condición en JSON"
+    )
+
+    # Recompensas
+    puntos_recompensa = models.PositiveIntegerField(
+        default=10,
+        help_text="Puntos que otorga este logro"
+    )
+
+    # Metadatos
+    activo = models.BooleanField(default=True)
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.icono} {self.nombre} ({self.get_rareza_display()})"
+
+    class Meta:
+        verbose_name = "Logro Automático"
+        verbose_name_plural = "Logros Automáticos"
+        ordering = ['rareza', 'nombre']
+
+
+class ClienteLogroAutomatico(models.Model):
+    """
+    Relación entre clientes y logros desbloqueados
+    """
+    cliente = models.ForeignKey(
+        Cliente,
+        on_delete=models.CASCADE,
+        related_name='logros_automaticos'
+    )
+    logro = models.ForeignKey(
+        LogroAutomatico,
+        on_delete=models.CASCADE,
+        related_name='clientes_desbloqueados'
+    )
+    fecha_desbloqueo = models.DateTimeField(auto_now_add=True)
+    sesion = models.ForeignKey(
+        'SesionEntrenamiento',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='logros_obtenidos'
+    )
+
+    def __str__(self):
+        return f"{self.cliente.nombre} - {self.logro.nombre}"
+
+    class Meta:
+        verbose_name = "Logro Desbloqueado"
+        verbose_name_plural = "Logros Desbloqueados"
+        unique_together = ['cliente', 'logro']
+        ordering = ['-fecha_desbloqueo']
+
+
+class DesafioSemanal(models.Model):
+    """
+    Desafíos temporales para motivar a los clientes
+    """
+    OBJETIVO_TIPO_CHOICES = [
+        ('sesiones', 'Número de Sesiones'),
+        ('volumen', 'Volumen Total (kg)'),
+        ('ejercicios', 'Ejercicios Diferentes'),
+        ('duracion', 'Tiempo Total (minutos)'),
+        ('racha', 'Días Consecutivos'),
+    ]
+
+    nombre = models.CharField(
+        max_length=100,
+        help_text="Nombre del desafío"
+    )
+    descripcion = models.TextField(
+        help_text="Descripción del desafío"
+    )
+    icono = models.CharField(
+        max_length=10,
+        default="🎯",
+        help_text="Emoji del desafío"
+    )
+
+    # Periodo
+    fecha_inicio = models.DateField()
+    fecha_fin = models.DateField()
+
+    # Objetivo
+    objetivo_tipo = models.CharField(
+        max_length=20,
+        choices=OBJETIVO_TIPO_CHOICES
+    )
+    objetivo_valor = models.PositiveIntegerField(
+        help_text="Valor objetivo a alcanzar"
+    )
+
+    # Recompensa
+    recompensa_puntos = models.PositiveIntegerField(
+        default=50,
+        help_text="Puntos que otorga completar el desafío"
+    )
+
+    # Estado
+    activo = models.BooleanField(default=True)
+    global_challenge = models.BooleanField(
+        default=True,
+        help_text="Si es True, aplica a todos los clientes"
+    )
+
+    def __str__(self):
+        return f"{self.icono} {self.nombre} ({self.fecha_inicio} - {self.fecha_fin})"
+
+    @property
+    def esta_activo(self):
+        """Verifica si el desafío está en periodo activo"""
+        from django.utils import timezone
+        hoy = timezone.now().date()
+        return self.activo and self.fecha_inicio <= hoy <= self.fecha_fin
+
+    class Meta:
+        verbose_name = "Desafío Semanal"
+        verbose_name_plural = "Desafíos Semanales"
+        ordering = ['-fecha_inicio']
+
+
+class ProgresoDesafio(models.Model):
+    """
+    Tracking del progreso de cada cliente en los desafíos
+    """
+    cliente = models.ForeignKey(
+        Cliente,
+        on_delete=models.CASCADE,
+        related_name='progresos_desafios'
+    )
+    desafio = models.ForeignKey(
+        DesafioSemanal,
+        on_delete=models.CASCADE,
+        related_name='progresos'
+    )
+
+    # Progreso
+    progreso_actual = models.PositiveIntegerField(
+        default=0,
+        help_text="Progreso actual hacia el objetivo"
+    )
+
+    # Estado
+    completado = models.BooleanField(default=False)
+    fecha_completado = models.DateTimeField(null=True, blank=True)
+
+    # Metadatos
+    fecha_inicio = models.DateTimeField(auto_now_add=True)
+    ultima_actualizacion = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.cliente.nombre} - {self.desafio.nombre}: {self.progreso_actual}/{self.desafio.objetivo_valor}"
+
+    @property
+    def porcentaje(self):
+        """Porcentaje de completado"""
+        if self.desafio.objetivo_valor > 0:
+            return min(100, int((self.progreso_actual / self.desafio.objetivo_valor) * 100))
+        return 0
+
+    def actualizar_progreso(self, incremento=1):
+        """Actualiza el progreso y marca como completado si alcanza el objetivo"""
+        self.progreso_actual += incremento
+
+        if self.progreso_actual >= self.desafio.objetivo_valor and not self.completado:
+            self.completado = True
+            self.fecha_completado = timezone.now()
+
+        self.save()
+
+    class Meta:
+        verbose_name = "Progreso de Desafío"
+        verbose_name_plural = "Progresos de Desafíos"
+        unique_together = ['cliente', 'desafio']
+        ordering = ['-ultima_actualizacion']

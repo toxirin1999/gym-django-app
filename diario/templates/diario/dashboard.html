@@ -4,233 +4,1107 @@
 
 {% block title %}Dashboard del Día - Diario Estoico{% endblock %}
 
+{% block extra_css %}
+<link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@300;400;500;600;700;800&display=swap"
+      rel="stylesheet">
+<style>
+    :root {
+        /* Paleta inspirada en freud v2 */
+        --bg-primary: #F8F5F1;
+        --bg-secondary: #FFFFFF;
+        --bg-card: #FFFFFF;
+        --bg-accent: #FFF9F5;
+
+        --text-primary: #2D3436;
+        --text-secondary: #636E72;
+        --text-muted: #B2BEC3;
+
+        --accent-orange: #F49459;
+        --accent-orange-dark: #E67E22;
+        --accent-green: #00B894;
+        --accent-green-light: #E8F8F5;
+        --accent-blue: #74B9FF;
+        --accent-purple: #A29BFE;
+        --accent-red: #FF7675;
+        --accent-yellow: #FDCB6E;
+
+        --border-color: #E8E4E0;
+        --shadow-soft: 0 2px 20px rgba(0, 0, 0, 0.05);
+        --shadow-medium: 0 4px 30px rgba(0, 0, 0, 0.08);
+
+        --radius-sm: 12px;
+        --radius-md: 16px;
+        --radius-lg: 24px;
+        --radius-xl: 32px;
+    }
+
+    /* Override base styles */
+    body {
+        font-family: 'Urbanist', -apple-system, BlinkMacSystemFont, sans-serif !important;
+        background: var(--bg-primary) !important;
+        color: var(--text-primary);
+    }
+
+    .dashboard-container {
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 1rem;
+        padding-bottom: 100px;
+    }
+
+    /* === HEADER === */
+    .dashboard-header {
+        padding: 1.5rem 0.5rem;
+        margin-bottom: 1rem;
+    }
+
+    .greeting {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin-bottom: 0.25rem;
+    }
+
+    .greeting-emoji {
+        display: inline-block;
+        animation: wave 2s ease-in-out infinite;
+    }
+
+    @keyframes wave {
+
+        0%,
+        100% {
+            transform: rotate(0deg);
+        }
+
+        25% {
+            transform: rotate(20deg);
+        }
+
+        75% {
+            transform: rotate(-10deg);
+        }
+    }
+
+    .date-display {
+        font-size: 0.95rem;
+        color: var(--text-secondary);
+        font-weight: 500;
+    }
+
+    /* === HERO CARD (Próximo Paso) === */
+    .hero-card {
+        background: linear-gradient(135deg, var(--accent-orange) 0%, var(--accent-orange-dark) 100%);
+        border-radius: var(--radius-xl);
+        padding: 2rem;
+        margin-bottom: 1.5rem;
+        color: white;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 10px 40px rgba(244, 148, 89, 0.3);
+    }
+
+    .hero-card.success {
+        background: linear-gradient(135deg, var(--accent-green) 0%, #00A884 100%);
+        box-shadow: 0 10px 40px rgba(0, 184, 148, 0.3);
+    }
+
+    .hero-card.night {
+        background: linear-gradient(135deg, var(--accent-purple) 0%, #8B7CF6 100%);
+        box-shadow: 0 10px 40px rgba(162, 155, 254, 0.3);
+    }
+
+    .hero-card::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -30%;
+        width: 200px;
+        height: 200px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 50%;
+    }
+
+    .hero-card::after {
+        content: '';
+        position: absolute;
+        bottom: -30%;
+        left: -20%;
+        width: 150px;
+        height: 150px;
+        background: rgba(255, 255, 255, 0.08);
+        border-radius: 50%;
+    }
+
+    .hero-icon {
+        width: 60px;
+        height: 60px;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 1.25rem;
+        font-size: 1.5rem;
+    }
+
+    .hero-label {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        opacity: 0.9;
+        margin-bottom: 0.5rem;
+        font-weight: 600;
+    }
+
+    .hero-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin-bottom: 0.75rem;
+        line-height: 1.3;
+    }
+
+    .hero-description {
+        font-size: 0.9rem;
+        opacity: 0.9;
+        line-height: 1.5;
+        margin-bottom: 1.5rem;
+    }
+
+    .hero-focus {
+        background: rgba(255, 255, 255, 0.15);
+        padding: 1rem;
+        border-radius: var(--radius-md);
+        margin-bottom: 1.5rem;
+        font-style: italic;
+    }
+
+    .hero-button {
+        background: white;
+        color: var(--accent-orange-dark);
+        border: none;
+        padding: 1rem 2rem;
+        border-radius: var(--radius-md);
+        font-family: inherit;
+        font-size: 1rem;
+        font-weight: 700;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        transition: all 0.3s ease;
+        position: relative;
+        z-index: 1;
+        text-decoration: none;
+    }
+
+    .hero-card.success .hero-button {
+        color: var(--accent-green);
+    }
+
+    .hero-card.night .hero-button {
+        color: var(--accent-purple);
+    }
+
+    .hero-button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15);
+        color: var(--accent-orange-dark);
+        text-decoration: none;
+    }
+
+    /* === WEEK TRACKER === */
+    .week-card {
+        background: var(--bg-card);
+        border-radius: var(--radius-lg);
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: var(--shadow-soft);
+    }
+
+    .week-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.25rem;
+    }
+
+    .week-title {
+        font-size: 1rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin: 0;
+    }
+
+    .week-subtitle {
+        font-size: 0.8rem;
+        color: var(--text-muted);
+        margin: 0;
+    }
+
+    .week-days {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 1.25rem;
+    }
+
+    .day-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .day-label {
+        font-size: 0.7rem;
+        font-weight: 600;
+        color: var(--text-muted);
+        text-transform: uppercase;
+    }
+
+    .day-dot {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        background: var(--bg-primary);
+        border: 2px solid var(--border-color);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        transition: all 0.3s ease;
+    }
+
+    .day-dot.completed {
+        background: var(--accent-green);
+        border-color: var(--accent-green);
+        color: white;
+    }
+
+    .day-dot.today {
+        border-color: var(--accent-orange);
+        border-width: 3px;
+        color: var(--accent-orange);
+        font-weight: 700;
+    }
+
+    .day-dot.today.completed {
+        background: var(--accent-orange);
+        border-color: var(--accent-orange);
+        color: white;
+    }
+
+    .week-stats {
+        display: flex;
+        justify-content: space-around;
+        padding-top: 1rem;
+        border-top: 1px solid var(--border-color);
+    }
+
+    .stat-item {
+        text-align: center;
+    }
+
+    .stat-value {
+        font-size: 1.5rem;
+        font-weight: 800;
+        color: var(--text-primary);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.25rem;
+    }
+
+    .stat-value .fire {
+        color: var(--accent-orange);
+    }
+
+    .stat-label {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        margin-top: 0.25rem;
+    }
+
+    /* === MOOD TRACKER === */
+    .mood-card {
+        background: var(--bg-card);
+        border-radius: var(--radius-lg);
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: var(--shadow-soft);
+    }
+
+    .mood-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+
+    .mood-question {
+        font-size: 1rem;
+        font-weight: 600;
+        margin: 0;
+    }
+
+    .mood-options {
+        display: flex;
+        justify-content: space-between;
+        gap: 0.5rem;
+    }
+
+    .mood-option {
+        flex: 1;
+        aspect-ratio: 1;
+        max-width: 60px;
+        border-radius: var(--radius-md);
+        border: 2px solid var(--border-color);
+        background: var(--bg-primary);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.75rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .mood-option:hover {
+        transform: scale(1.1);
+        border-color: var(--accent-orange);
+    }
+
+    .mood-option.selected {
+        background: var(--accent-orange);
+        border-color: var(--accent-orange);
+        transform: scale(1.1);
+    }
+
+    .mood-option input {
+        display: none;
+    }
+
+    /* === PILARES MINI === */
+    .pilares-card {
+        background: var(--bg-card);
+        border-radius: var(--radius-lg);
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: var(--shadow-soft);
+    }
+
+    .pilares-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+
+    .pilares-title {
+        font-size: 1rem;
+        font-weight: 700;
+        margin: 0;
+    }
+
+    .pilares-progress {
+        font-size: 0.85rem;
+        color: var(--accent-green);
+        font-weight: 600;
+    }
+
+    .pilares-grid {
+        display: flex;
+        justify-content: space-between;
+    }
+
+    .pilar-mini {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .pilar-icon {
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        background: var(--bg-primary);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1rem;
+        color: var(--text-muted);
+        transition: all 0.3s ease;
+    }
+
+    .pilar-icon.active {
+        background: var(--accent-green-light);
+        color: var(--accent-green);
+    }
+
+    .pilar-label {
+        font-size: 0.6rem;
+        color: var(--text-muted);
+        text-align: center;
+        max-width: 50px;
+    }
+
+    /* === QUICK ACCESS GRID === */
+    .quick-access {
+        margin-bottom: 1.5rem;
+    }
+
+    .section-title {
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 1rem;
+        padding-left: 0.25rem;
+    }
+
+    .quick-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+    }
+
+    .quick-item {
+        background: var(--bg-card);
+        border-radius: var(--radius-lg);
+        padding: 1.5rem;
+        text-align: center;
+        box-shadow: var(--shadow-soft);
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        color: inherit;
+        display: block;
+    }
+
+    .quick-item:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--shadow-medium);
+        text-decoration: none;
+        color: inherit;
+    }
+
+    .quick-icon {
+        width: 56px;
+        height: 56px;
+        border-radius: var(--radius-md);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 1rem;
+        font-size: 1.5rem;
+    }
+
+    .quick-icon.orange {
+        background: #FFF0E6;
+        color: var(--accent-orange);
+    }
+
+    .quick-icon.green {
+        background: #E8F8F5;
+        color: var(--accent-green);
+    }
+
+    .quick-icon.blue {
+        background: #EBF5FF;
+        color: var(--accent-blue);
+    }
+
+    .quick-icon.purple {
+        background: #F0EEFF;
+        color: var(--accent-purple);
+    }
+
+    .quick-label {
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 0.25rem;
+    }
+
+    .quick-sublabel {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+    }
+
+    /* === INSIGHT CARD === */
+    .insight-card {
+        background: var(--bg-card);
+        border-radius: var(--radius-lg);
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: var(--shadow-soft);
+        border-left: 4px solid var(--accent-purple);
+    }
+
+    .insight-header {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-bottom: 1rem;
+    }
+
+    .insight-icon {
+        width: 40px;
+        height: 40px;
+        background: #F0EEFF;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--accent-purple);
+    }
+
+    .insight-title {
+        font-size: 0.9rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin: 0;
+    }
+
+    .insight-text {
+        font-size: 0.9rem;
+        color: var(--text-secondary);
+        line-height: 1.6;
+        font-style: italic;
+        margin: 0;
+    }
+
+    .insight-author {
+        font-size: 0.8rem;
+        color: var(--text-muted);
+        margin-top: 0.5rem;
+        text-align: right;
+    }
+
+    .insight-action {
+        margin-top: 1rem;
+    }
+
+    .insight-action .btn {
+        background: var(--accent-purple);
+        color: white;
+        border: none;
+        padding: 0.75rem 1.5rem;
+        border-radius: var(--radius-md);
+        font-weight: 600;
+        width: 100%;
+        transition: all 0.3s ease;
+    }
+
+    .insight-action .btn:hover {
+        background: #8B7CF6;
+        transform: translateY(-2px);
+    }
+
+    /* === VIRTUDES MINI === */
+    .virtudes-card {
+        background: var(--bg-card);
+        border-radius: var(--radius-lg);
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: var(--shadow-soft);
+    }
+
+    .virtudes-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+
+    .virtudes-title {
+        font-size: 1rem;
+        font-weight: 700;
+        margin: 0;
+    }
+
+    .virtud-item {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .virtud-item:last-child {
+        margin-bottom: 0;
+    }
+
+    .virtud-icon {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.8rem;
+    }
+
+    .virtud-icon.sabiduria {
+        background: #EBF5FF;
+        color: var(--accent-blue);
+    }
+
+    .virtud-icon.coraje {
+        background: #FFE8E8;
+        color: var(--accent-red);
+    }
+
+    .virtud-icon.justicia {
+        background: #E8F8F5;
+        color: var(--accent-green);
+    }
+
+    .virtud-icon.templanza {
+        background: #FFF8E8;
+        color: var(--accent-yellow);
+    }
+
+    .virtud-info {
+        flex: 1;
+    }
+
+    .virtud-name {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 0.25rem;
+    }
+
+    .virtud-progress {
+        height: 6px;
+        background: var(--bg-primary);
+        border-radius: 3px;
+        overflow: hidden;
+    }
+
+    .virtud-progress-bar {
+        height: 100%;
+        border-radius: 3px;
+        transition: width 0.5s ease;
+    }
+
+    .virtud-progress-bar.sabiduria {
+        background: var(--accent-blue);
+    }
+
+    .virtud-progress-bar.coraje {
+        background: var(--accent-red);
+    }
+
+    .virtud-progress-bar.justicia {
+        background: var(--accent-green);
+    }
+
+    .virtud-progress-bar.templanza {
+        background: var(--accent-yellow);
+    }
+
+    .virtud-points {
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: var(--text-muted);
+        min-width: 40px;
+        text-align: right;
+    }
+
+    /* === ANIMATIONS === */
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .fade-in {
+        animation: fadeInUp 0.5s ease forwards;
+    }
+
+    .delay-1 {
+        animation-delay: 0.1s;
+        opacity: 0;
+    }
+
+    .delay-2 {
+        animation-delay: 0.2s;
+        opacity: 0;
+    }
+
+    .delay-3 {
+        animation-delay: 0.3s;
+        opacity: 0;
+    }
+
+    .delay-4 {
+        animation-delay: 0.4s;
+        opacity: 0;
+    }
+
+    .delay-5 {
+        animation-delay: 0.5s;
+        opacity: 0;
+    }
+
+    /* === RESPONSIVE === */
+    @media (min-width: 768px) {
+        .dashboard-container {
+            max-width: 700px;
+        }
+
+        .quick-grid {
+            grid-template-columns: repeat(4, 1fr);
+        }
+
+        .quick-item {
+            padding: 1.25rem;
+        }
+    }
+
+    /* === MODAL INSIGNIA === */
+    .modal-insignia .modal-content {
+        border-radius: var(--radius-xl);
+        border: none;
+        overflow: hidden;
+    }
+
+    .modal-insignia .modal-body {
+        padding: 3rem 2rem;
+        text-align: center;
+        background: linear-gradient(135deg, var(--bg-accent) 0%, var(--bg-primary) 100%);
+    }
+
+    .insignia-icon-large {
+        font-size: 4rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .insignia-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin-bottom: 0.5rem;
+    }
+
+    .insignia-name {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--accent-orange);
+        margin-bottom: 1rem;
+    }
+
+    .insignia-description {
+        color: var(--text-secondary);
+        margin-bottom: 1.5rem;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="fade-in-up">
-    <!-- Encabezado con la fecha -->
-    <div class="card shadow-soft mb-4">
-        <div class="card-body text-center p-4">
-            <h1 class="text-gradient">Dashboard del Día</h1>
-            <p class="lead text-muted">{{ hoy|date:"l, d \d\e F \d\e Y" }}</p>
+<div class="dashboard-container">
+    <!-- HEADER -->
+    <header class="dashboard-header fade-in">
+        {% now "H" as current_hour %}
+        <h1 class="greeting">
+            {% if current_hour|add:"0" < 12 %} Buenos días <span class="greeting-emoji">☀️</span>
+            {% elif current_hour|add:"0" < 20 %} Buenas tardes <span class="greeting-emoji">👋</span>
+            {% else %}
+            Buenas noches <span class="greeting-emoji">🌙</span>
+            {% endif %}
+        </h1>
+        <p class="date-display">{{ hoy|date:"l, d \d\e F \d\e Y" }}</p>
+    </header>
+
+    <!-- HERO CARD - PRÓXIMO PASO -->
+    {% if proximo_paso %}
+    <div
+            class="hero-card fade-in delay-1 {% if proximo_paso.icono == 'fa-check-circle' %}success{% elif proximo_paso.icono == 'fa-moon' %}night{% endif %}">
+        <div class="hero-icon">
+            <i class="fas {{ proximo_paso.icono }}"></i>
+        </div>
+        <p class="hero-label">Tu próximo paso</p>
+        <h2 class="hero-title">{{ proximo_paso.titulo }}</h2>
+        <p class="hero-description">{{ proximo_paso.descripcion }}</p>
+        {% if proximo_paso.foco_del_dia %}
+        <div class="hero-focus">
+            {{ proximo_paso.foco_del_dia }}
+        </div>
+        {% endif %}
+        <a href="{{ proximo_paso.url_boton }}" class="hero-button">
+            {{ proximo_paso.texto_boton }} <i class="fas fa-arrow-right"></i>
+        </a>
+    </div>
+    {% endif %}
+
+    <!-- WEEK TRACKER -->
+    <div class="week-card fade-in delay-2">
+        <div class="week-header">
+            <div>
+                <h3 class="week-title">Tu Semana</h3>
+                <p class="week-subtitle">{{ hoy|date:"F Y" }}</p>
+            </div>
+        </div>
+        <div class="week-days">
+            {% for dia in dias_semana %}
+            <div class="day-item">
+                <span class="day-label">{{ dia.nombre_corto }}</span>
+                <div class="day-dot {% if dia.completado %}completed{% endif %} {% if dia.es_hoy %}today{% endif %}">
+                    {% if dia.completado %}
+                    <i class="fas fa-check"></i>
+                    {% else %}
+                    {{ dia.numero }}
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        <div class="week-stats">
+            <div class="stat-item">
+                <div class="stat-value"><span class="fire">🔥</span> {{ racha.dias_consecutivos }}</div>
+                <div class="stat-label">Racha actual</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value">{{ dias_completados_semana }}/7</div>
+                <div class="stat-label">Esta semana</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value">{{ racha.total_dias_escritos }}</div>
+                <div class="stat-label">Total días</div>
+            </div>
         </div>
     </div>
 
-    <div class="row">
-        <!-- Columna Principal (70%) -->
-        <div class="col-lg-8">
-            <!-- ========== WIDGET DE PROSOCHE (Foco del Día) ========== -->
-            <!-- ========== WIDGET DE PRÓXIMO PASO (CON CALL TO ACTION DINÁMICO) ========== -->
-            <div class="card shadow-soft mb-4">
-                <div class="card-header d-flex align-items-center">
-                    <i class="fas fa-compass fa-2x text-primary me-3"></i>
-                    <div>
-                        <h5 class="mb-0">Tu Próximo Paso</h5>
-                        <small class="text-muted">Tu acción más importante ahora</small>
-                    </div>
-                </div>
-                <div class="card-body text-center p-4">
-                    {% if not entrada_hoy %}
-                    <!-- PRIORIDAD 1: Hacer la entrada de hoy -->
-                    <i class="fas fa-pen-nib fa-3x text-muted mb-3"></i>
-                    <h4>¿Cuál es tu propósito para hoy?</h4>
-                    <p class="text-muted mb-4">"Una vida sin examen no merece ser vivida." Dedica un momento a la reflexión.</p>
-                    <a href="{% url 'diario:prosoche_nueva_entrada' %}" class="btn btn-primary btn-lg">
-                        Crear Entrada de Hoy
-                    </a>
-
-                    {% elif hoy.weekday == 6 or hoy.weekday == 0 %}
-                    <!-- PRIORIDAD 2: Hacer la revisión semanal (si es Domingo o Lunes) -->
-                    <i class="fas fa-calendar-check fa-3x text-muted mb-3"></i>
-                    <h4>Es hora de reflexionar y planificar.</h4>
-                    <p class="text-muted mb-4">Revisa tus avances de la semana pasada y establece tus objetivos para la que comienza.</p>
-                    <a href="{% url 'diario:prosoche_revision_semanal' %}" class="btn btn-primary btn-lg">
-                        Hacer Revisión Semanal
-                    </a>
-
-                    {% else %}
-                    <!-- POR DEFECTO: Recordatorio de foco -->
-                    <div class="mb-3" style="font-size: 4rem;">
-                        {% if entrada_hoy.estado_animo == 5 %}😄
-                        {% elif entrada_hoy.estado_animo == 4 %}😊
-                        {% elif entrada_hoy.estado_animo == 3 %}😐
-                        {% elif entrada_hoy.estado_animo == 2 %}😕
-                        {% else %}😞
-                        {% endif %}
-                    </div>
-                    <h4>Día en marcha. Tu ánimo de hoy: {{ entrada_hoy.estado_animo }}/5</h4>
-                    <p class="text-muted mb-2">Recuerda tu foco principal:</p>
-                    <blockquote class="blockquote bg-light p-3 rounded">
-                        <p class="font-serif fs-5 mb-0">"{{ entrada_hoy.persona_quiero_ser|default:"Mantener el rumbo." }}"</p>
-                    </blockquote>
-
-                    <a href="{% url 'diario:prosoche_editar_entrada' entrada_hoy.id %}" class="btn btn-sm btn-outline-secondary mt-3">
-                        Ver Entrada de Hoy
-                    </a>
-                    {% endif %}
-                </div>
+    <!-- MOOD TRACKER (si no hay entrada hoy) -->
+    {% if not entrada_hoy or not entrada_hoy.estado_animo %}
+    <div class="mood-card fade-in delay-3">
+        <div class="mood-header">
+            <h3 class="mood-question">¿Cómo te sientes hoy?</h3>
+        </div>
+        <form method="post" action="{% url 'diario:guardar_estado_animo' %}">
+            {% csrf_token %}
+            <div class="mood-options">
+                <label class="mood-option" data-value="1">
+                    <input type="radio" name="estado_animo" value="1">
+                    😔
+                </label>
+                <label class="mood-option" data-value="2">
+                    <input type="radio" name="estado_animo" value="2">
+                    😐
+                </label>
+                <label class="mood-option" data-value="3">
+                    <input type="radio" name="estado_animo" value="3">
+                    🙂
+                </label>
+                <label class="mood-option" data-value="4">
+                    <input type="radio" name="estado_animo" value="4">
+                    😊
+                </label>
+                <label class="mood-option" data-value="5">
+                    <input type="radio" name="estado_animo" value="5">
+                    🤩
+                </label>
             </div>
-            <!-- WIDGET DE SIMBIOSIS (NUEVO) -->
-            <div class="card shadow-sm mb-4">
-                <div class="card-header"><h5 class="mb-0"><i class="fas fa-users text-info me-2"></i>Simbiosis</h5></div>
-                <div class="card-body">
-                    {% if interaccion_sin_reflexion %}
-                    <p class="small text-muted mb-1">Reflexión pendiente:</p>
-                    <h6 class="mb-2">"{{ interaccion_sin_reflexion.titulo }}"</h6>
-                    <a href="{% url 'diario:interaccion_editar' interaccion_sin_reflexion.id %}" class="btn btn-sm btn-outline-info w-100">Añadir Aprendizaje</a>
-                    {% elif relacion_a_mejorar %}
-                    <p class="small text-muted mb-1">Relación que necesita atención:</p>
-                    <h6 class="mb-2">{{ relacion_a_mejorar.nombre }} (Salud: {{ relacion_a_mejorar.salud_relacion }}/5)</h6>
-                    <a href="{% url 'diario:persona_detalle' relacion_a_mejorar.id %}" class="btn btn-sm btn-outline-info w-100">Revisar Relación</a>
-                    {% else %}
-                    <p class="small text-muted text-center">Tus relaciones parecen estar en equilibrio. ¡Buen trabajo!</p>
-                    {% endif %}
-                </div>
-            </div>
-            <!-- ========== WIDGET DE INSIGHTS DEL ORÁCULO ========== -->
-            {% if insight_principal %}
-            <div class="alert alert-info shadow-sm fade-in-up" role="alert">
-                <div class="d-flex">
-                    <div class="flex-shrink-0">
-                        <i class="fas fa-brain fa-2x"></i>
-                    </div>
-                    <div class="flex-grow-1 ms-3">
-                        <h4 class="alert-heading font-serif">{{ insight_principal.titulo }}</h4>
-                        <p>{{ insight_principal.mensaje }}</p>
-                        <hr>
-                        <a href="{% url 'diario:oraculo_insights' %}" class="alert-link small">Ver más insights...</a>
-                    </div>
-                </div>
-            </div>
-            {% endif %}
+        </form>
+    </div>
+    {% endif %}
 
-            <!-- ========== WIDGET DE KAIROS (Eventos) ========== -->
-            <div class="card shadow-sm mb-4">
-                <div class="card-header d-flex align-items-center">
-                    <i class="fas fa-calendar-alt fa-2x text-info me-3"></i>
-                    <div>
-                        <h5 class="mb-0">Agenda de Hoy (Kairos)</h5>
-                        <small class="text-muted">Tus compromisos y eventos</small>
-                    </div>
+    <!-- PILARES MINI -->
+    <div class="pilares-card fade-in delay-3">
+        <div class="pilares-header">
+            <h3 class="pilares-title">Tus 6 Pilares</h3>
+            <span class="pilares-progress">{{ pilares_activos }}/6 activos</span>
+        </div>
+        <div class="pilares-grid">
+            {% for pilar in pilares_status %}
+            <div class="pilar-mini">
+                <div class="pilar-icon {% if pilar.activo %}active{% endif %}">
+                    <i class="{{ pilar.icono }}"></i>
                 </div>
-                <div class="card-body">
-                    {% if eventos_hoy %}
-                    <ul class="list-group list-group-flush">
-                        {% for evento in eventos_hoy %}
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            <div>
-                                <span class="badge rounded-pill me-2" style="background-color: {{ evento.color|default:'#6c757d' }};">&nbsp;</span>
-                                {{ evento.titulo }}
-                            </div>
-                            <small class="text-muted">
-                                {% if evento.todo_el_dia %}Todo el día{% else %}{{ evento.fecha_inicio|date:"H:i" }}{% endif %}
-                            </small>
-                        </li>
-                        {% endfor %}
-                    </ul>
-                    {% else %}
-                    <p class="text-muted text-center p-3">No hay eventos programados para hoy.</p>
-                    {% endif %}
+                <span class="pilar-label">{{ pilar.nombre|truncatewords:1 }}</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- QUICK ACCESS -->
+    <div class="quick-access fade-in delay-4">
+        <h3 class="section-title">Acceso Rápido</h3>
+        <div class="quick-grid">
+            <a href="{% url 'diario:logos_escritura_libre' %}" class="quick-item">
+                <div class="quick-icon orange">
+                    <i class="fas fa-pen-fancy"></i>
                 </div>
-                <div class="card-footer text-center">
-                    <a href="{% url 'diario:kairos_dashboard' %}" class="btn btn-sm btn-outline-secondary">
-                        <i class="fas fa-calendar-plus me-2"></i>Gestionar Calendario
-                    </a>
+                <div class="quick-label">Diario</div>
+                <div class="quick-sublabel">Escribir entrada</div>
+            </a>
+            <a href="{% url 'diario:vires_seguimiento_crear' %}" class="quick-item">
+                <div class="quick-icon green">
+                    <i class="fas fa-heartbeat"></i>
                 </div>
+                <div class="quick-label">Vires</div>
+                <div class="quick-sublabel">Seguimiento</div>
+            </a>
+            <a href="{% url 'diario:oraculo_insights' %}" class="quick-item">
+                <div class="quick-icon purple">
+                    <i class="fas fa-brain"></i>
+                </div>
+                <div class="quick-label">Oráculo</div>
+                <div class="quick-sublabel">Consultar IA</div>
+            </a>
+            <a href="{% url 'diario:analiticas_personales' %}" class="quick-item">
+                <div class="quick-icon blue">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+                <div class="quick-label">Analíticas</div>
+                <div class="quick-sublabel">Ver progreso</div>
+            </a>
+        </div>
+    </div>
+
+    <!-- === HÁBITOS CARD === -->
+    <div class="fade-in delay-4"
+         style="background: linear-gradient(135deg, #F49459 0%, #E67E22 100%); border-radius: var(--radius-lg); padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: var(--shadow-soft); color: white;">
+        <div
+                style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 1rem;">
+            <h3 style="font-size: 1rem; font-weight: 700; margin: 0; color: white;">
+                <i class="fas fa-chart-line" style="margin-right: 0.5rem;"></i>Mis Hábitos
+            </h3>
+            <span
+                    style="background: white; color: #E67E22; padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.75rem; font-weight: 600;">Nuevo</span>
+        </div>
+        <div style="padding-top: 0.5rem;">
+            <p style="margin-bottom: 1rem; opacity: 0.95; font-size: 0.9rem; line-height: 1.4;">
+                Forma hábitos positivos y elimina los negativos con ciencia
+            </p>
+            <div style="display: flex; gap: 0.5rem;">
+                <a href="{% url 'diario:habitos_dashboard' %}"
+                   style="flex: 1; background: white; color: #E67E22; padding: 0.75rem; border-radius: 12px; text-decoration: none; text-align: center; font-weight: 600; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+                    <i class="fas fa-th-large"></i>
+                    Ver Dashboard
+                </a>
+                <a href="{% url 'diario:habito_crear' %}"
+                   style="flex: 1; background: rgba(255,255,255,0.2); color: white; padding: 0.75rem; border-radius: 12px; text-decoration: none; text-align: center; font-weight: 600; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem; border: 1px solid rgba(255,255,255,0.3);">
+                    <i class="fas fa-plus"></i>
+                    Nuevo Hábito
+                </a>
             </div>
         </div>
+    </div>
 
-        <!-- Columna Secundaria (30%) -->
-        <div class="col-lg-4">
-            <!-- ========== WIDGET DE VIRES (Salud) ========== -->
-            <div class="card shadow-sm mb-4">
-                <div class="card-header"><h5 class="mb-0"><i class="fas fa-dumbbell me-2 text-danger"></i>Vires</h5></div>
-                <div class="card-body">
-                    {% if seguimiento_vires_hoy %}
-                    <p class="text-success mb-2"><i class="fas fa-check-circle me-1"></i>Seguimiento registrado.</p>
-                    {% if seguimiento_vires_hoy.peso %}<p class="mb-1 small"><strong>Peso:</strong> {{ seguimiento_vires_hoy.peso }} kg</p>{% endif %}
-                    <div class="mt-2">
-                        <span class="badge {% if seguimiento_vires_hoy.entrenamiento_realizado %}bg-success{% else %}bg-light text-dark border{% endif %}">Entrenamiento</span>
-                        <span class="badge {% if seguimiento_vires_hoy.alimentacion_saludable %}bg-success{% else %}bg-light text-dark border{% endif %}">Dieta</span>
-                    </div>
-                    {% else %}
-                    <p class="text-muted small">Aún no has registrado tu seguimiento de salud de hoy.</p>
-                    <a href="{% url 'diario:vires_dashboard' %}" class="btn btn-sm btn-outline-primary w-100 mt-2">
-                        <i class="fas fa-plus me-1"></i>Registrar Ahora
-                    </a>
-                    {% endif %}
+    <!-- REFLEXIÓN DEL DÍA -->
+    {% if reflexion_del_dia %}
+    <div class="insight-card fade-in delay-4">
+        <div class="insight-header">
+            <div class="insight-icon">
+                <i class="{{ reflexion_del_dia.icono|default:'fas fa-lightbulb' }}"></i>
+            </div>
+            <h3 class="insight-title">{{ reflexion_del_dia.titulo }}</h3>
+        </div>
+        <p class="insight-text">"{{ reflexion_del_dia.cita_filosofica }}"</p>
+        <p class="insight-author">— {{ reflexion_del_dia.autor_cita }}</p>
+        <div class="insight-action">
+            <a href="{% url 'diario:logos_reflexion_guiada' reflexion_del_dia.slug %}" class="btn">
+                <i class="fas fa-pen-fancy me-2"></i>Comenzar Reflexión
+            </a>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- VIRTUDES MINI -->
+    {% if virtudes %}
+    <div class="virtudes-card fade-in delay-5">
+        <div class="virtudes-header">
+            <h3 class="virtudes-title">Tus Virtudes</h3>
+            <a href="{% url 'diario:virtudes_dashboard' %}" class="btn btn-sm"
+               style="color: var(--accent-orange); font-size: 0.8rem;">Ver más</a>
+        </div>
+        {% for virtud in virtudes %}
+        <div class="virtud-item">
+            <div class="virtud-icon {{ virtud.tipo }}">
+                {% if virtud.tipo == 'sabiduria' %}
+                <i class="fas fa-brain"></i>
+                {% elif virtud.tipo == 'coraje' %}
+                <i class="fas fa-shield-alt"></i>
+                {% elif virtud.tipo == 'justicia' %}
+                <i class="fas fa-balance-scale"></i>
+                {% elif virtud.tipo == 'templanza' %}
+                <i class="fas fa-yin-yang"></i>
+                {% endif %}
+            </div>
+            <div class="virtud-info">
+                <div class="virtud-name">{{ virtud.get_tipo_display }}</div>
+                <div class="virtud-progress">
+                    <div class="virtud-progress-bar {{ virtud.tipo }}"
+                         style="width: {{ virtud.porcentaje_progreso }}%;"></div>
                 </div>
             </div>
+            <div class="virtud-points">{{ virtud.puntos }}</div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
 
-            <!-- ========== WIDGET DE EUDAIMONIA (Foco) ========== -->
-            <div class="card shadow-sm mb-4">
-                <div class="card-header"><h5 class="mb-0"><i class="fas fa-balance-scale me-2 text-primary"></i>Eudaimonia</h5></div>
-                <div class="card-body">
-                    {% if area_prioritaria %}
-                    <p class="text-muted small mb-1">Área de enfoque principal:</p>
-                    <h6 class="mb-2">{{ area_prioritaria.area.nombre }}</h6>
-                    <div class="progress" style="height: 8px;">
-                        <div class="progress-bar" role="progressbar" style="width: {{ area_prioritaria.puntuacion|mul:10 }}%;" aria-valuenow="{{ area_prioritaria.puntuacion }}" aria-valuemin="0" aria-valuemax="10"></div>
-                    </div>
-                    <small class="text-muted">Puntuación: {{ area_prioritaria.puntuacion }}/10</small>
-                    {% else %}
-                    <p class="text-muted small">Define tus áreas de vida para encontrar tu foco.</p>
-                    {% endif %}
+<!-- MODALES DE INSIGNIAS -->
+{% if insignias_nuevas %}
+{% for insignia_usuario in insignias_nuevas %}
+<div class="modal fade modal-insignia" id="insigniaModal{{ insignia_usuario.id }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-body">
+                <div class="insignia-icon-large" style="color: {{ insignia_usuario.insignia.color }};">
+                    <i class="{{ insignia_usuario.insignia.icono }}"></i>
                 </div>
+                <h3 class="insignia-title">¡Nueva Insignia!</h3>
+                <p class="insignia-name">{{ insignia_usuario.insignia.nombre }}</p>
+                <p class="insignia-description">{{ insignia_usuario.insignia.descripcion }}</p>
+                <button type="button" class="btn hero-button" data-bs-dismiss="modal"
+                        style="width: 100%; justify-content: center;">
+                    ¡Genial! <i class="fas fa-check"></i>
+                </button>
             </div>
-
-            <!-- ========== WIDGET DE ARETÉ (Próxima Tarea) ========== -->
-            <div class="card shadow-sm mb-4">
-                <div class="card-header"><h5 class="mb-0"><i class="fas fa-graduation-cap me-2 text-success"></i>Areté</h5></div>
-                <div class="card-body">
-                    {% if proximo_arete %}
-                    <p class="text-muted small mb-1">Próximo ejercicio:</p>
-                    <h6 class="mb-2">{{ proximo_arete.titulo }}</h6>
-                    <a href="{% url 'diario:arete_dashboard' %}" class="btn btn-sm btn-outline-primary w-100 mt-2">
-                        <i class="fas fa-arrow-right me-1"></i>Empezar
-                    </a>
-                    {% else %}
-                    <p class="text-success small"><i class="fas fa-check-circle me-1"></i>¡Felicidades! Has completado todos los ejercicios de Areté.</p>
-                    {% endif %}
-                </div>
-            </div>
-            <div class="card shadow-soft mb-4 text-center">
-                <div class="card-header">
-                    <h5 class="mb-0">
-                        <i class="fas fa-brain me-2 text-primary"></i>
-                        Oráculo
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <p class="text-muted small">
-                        Obtén reflexiones personalizadas basadas en tus datos de la última semana.
-                    </p>
-                    <a href="{% url 'diario:oraculo_insights' %}" class="btn btn-primary w-100 mt-2">
-                        <i class="fas fa-eye me-2"></i>
-                        Consultar al Oráculo
-                    </a>
-                </div>
-            </div>
-
-
-            <!-- ========== WIDGET DE ANALÍTICAS ========== -->
-            <div class="card shadow-sm mb-4">
-                <div class="card-header">
-                    <h5 class="mb-0">
-                        <i class="fas fa-chart-line me-2 text-success"></i>
-                        Analíticas
-                    </h5>
-                </div>
-                <div class="card-body text-center">
-                    <p class="text-muted small">
-                        Visualiza tu progreso y descubre tendencias a lo largo del tiempo.
-                    </p>
-                    <a href="{% url 'diario:analiticas_personales' %}" class="btn btn-sm btn-outline-secondary w-100 mt-2">
-                        <i class="fas fa-search-plus me-2"></i>
-                        Explorar Mis Datos
-                    </a>
-                </div>
-            </div>
-
         </div>
     </div>
 </div>
+{% endfor %}
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Mood selector
+    document.querySelectorAll('.mood-option').forEach(option => {
+        option.addEventListener('click', function () {
+            document.querySelectorAll('.mood-option').forEach(o => o.classList.remove('selected'));
+            this.classList.add('selected');
+            this.querySelector('input').checked = true;
+
+            // Auto-submit después de seleccionar
+            setTimeout(() => {
+                this.closest('form').submit();
+            }, 500);
+        });
+    });
+
+    // Mostrar modales de insignias nuevas
+    {% if insignias_nuevas %}
+    document.addEventListener('DOMContentLoaded', function () {{% for insignia_usuario in insignias_nuevas %}
+        var modal{{ insignia_usuario.id }} = new bootstrap.Modal(document.getElementById('insigniaModal{{ insignia_usuario.id }}'));
+    setTimeout(function () {
+            modal{{ insignia_usuario.id }}.show();
+    }, {{ forloop.counter }}000);
+    {% endfor %}
+    });
+    {% endif %}
+</script>
 {% endblock %}

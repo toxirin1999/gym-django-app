@@ -1,0 +1,23 @@
+
+=== INICIANDO GENERACIÓN DE RECOMENDACIONES ===
+Cliente: david (ID: 2)
+
+1. ANÁLISIS DE CONSISTENCIA (últimos 30 días desde 2026-01-09)
+   - Ejercicios obtenidos: 70
+   - Ejercicios completados: 70/70
+   - Consistencia: 100.0%
+   - ¿Consistencia < 70%? False
+   ❌ No se genera recomendación (consistencia >= 70%)
+
+2. ANÁLISIS DE PROGRESIÓN
+   - Progresiones obtenidas: 43
+   - Ejercicios estancados (progresión < 5%): 15
+   - Ejercicios: Sentadilla Trasera Con Barra, Patada De Glúteo En Polea, Press Inclinado Con Barra, Press Arnold, Press Cerrado En Banca
+   ✅ Generando recomendación de estancamiento...
+   ✅ Recomendación ACTUALIZADA (ID: 6)
+
+=== RESUMEN ===
+Recomendaciones creadas: 0
+Recomendaciones actualizadas: 1
+=== FIN ===
+

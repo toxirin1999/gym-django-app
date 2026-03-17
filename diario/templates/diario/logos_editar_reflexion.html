@@ -1,0 +1,134 @@
+{% extends 'diario/base_stoic.html' %}
+{% load static %}
+
+{% block title %}Editar: {{ reflexion.titulo }} - Logos{% endblock %}
+
+{% block content %}
+<div class="fade-in-up">
+    <!-- Encabezado -->
+    <div class="card shadow-soft mb-4">
+        <div class="card-body text-center p-4">
+            <i class="fas fa-edit fa-3x text-primary mb-3"></i>
+            <h1 class="text-gradient">Editar Reflexión</h1>
+            <p class="text-muted mb-0">{{ reflexion.titulo }}</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            
+            <!-- Formulario de Edición -->
+            <div class="card shadow-soft">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-pen-nib me-2"></i>Editar Contenido</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label for="titulo" class="form-label">Título</label>
+                            <input 
+                                type="text" 
+                                class="form-control" 
+                                id="titulo" 
+                                name="titulo" 
+                                value="{{ reflexion.titulo }}"
+                                placeholder="Título de tu reflexión"
+                            >
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="contenido" class="form-label">Contenido</label>
+                            <textarea 
+                                class="form-control" 
+                                id="contenido" 
+                                name="contenido" 
+                                rows="15" 
+                                required
+                            >{{ reflexion.contenido }}</textarea>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="etiquetas" class="form-label">Etiquetas</label>
+                            <input 
+                                type="text" 
+                                class="form-control" 
+                                id="etiquetas" 
+                                name="etiquetas" 
+                                value="{{ reflexion.etiquetas }}"
+                                placeholder="Ej: miedo, gratitud, decisión"
+                            >
+                            <div class="form-text">
+                                Separa las etiquetas con comas.
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label">¿Cómo te sientes ahora?</label>
+                            <div class="d-flex justify-content-between flex-wrap">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="estado_animo_post" id="animo1" value="1" {% if reflexion.estado_animo_post == 1 %}checked{% endif %}>
+                                    <label class="form-check-label" for="animo1">😔 Mal</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="estado_animo_post" id="animo2" value="2" {% if reflexion.estado_animo_post == 2 %}checked{% endif %}>
+                                    <label class="form-check-label" for="animo2">😐 Regular</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="estado_animo_post" id="animo3" value="3" {% if reflexion.estado_animo_post == 3 or not reflexion.estado_animo_post %}checked{% endif %}>
+                                    <label class="form-check-label" for="animo3">🙂 Bien</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="estado_animo_post" id="animo4" value="4" {% if reflexion.estado_animo_post == 4 %}checked{% endif %}>
+                                    <label class="form-check-label" for="animo4">😊 Muy bien</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="estado_animo_post" id="animo5" value="5" {% if reflexion.estado_animo_post == 5 %}checked{% endif %}>
+                                    <label class="form-check-label" for="animo5">😄 Excelente</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>Nota:</strong> La fecha de modificación se actualizará automáticamente.
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="fas fa-save me-2"></i>Guardar Cambios
+                            </button>
+                            <a href="{% url 'diario:logos_ver_reflexion' reflexion.id %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-times me-2"></i>Cancelar
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Información de la Reflexión -->
+            <div class="card shadow-sm mt-4">
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-md-4">
+                            <small class="text-muted d-block">Tipo</small>
+                            <strong>{{ reflexion.get_tipo_display }}</strong>
+                        </div>
+                        <div class="col-md-4">
+                            <small class="text-muted d-block">Creada</small>
+                            <strong>{{ reflexion.fecha|date:"d/m/Y" }}</strong>
+                        </div>
+                        <div class="col-md-4">
+                            <small class="text-muted d-block">Última modificación</small>
+                            <strong>{{ reflexion.fecha_modificacion|date:"d/m/Y" }}</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}
+

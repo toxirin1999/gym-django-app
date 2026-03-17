@@ -3,7 +3,8 @@
 from django.shortcuts import render, get_object_or_404
 import json
 from decimal import Decimal
-
+from analytics.planificador_helms_completo import PlanificadorHelms, PerfilCliente
+from .calculators import CalculadoraEjerciciosTabla
 from .analisis_progresion import AnalisisProgresionAvanzado
 from .analisis_intensidad import AnalisisIntensidadAvanzado
 from django.shortcuts import render, get_object_or_404
@@ -61,49 +62,243 @@ class CalculadoraEjerciciosTabla:
         }
 
     # Archivo: analytics/views.py
-    # Clase: CalculadoraEjerciciosTabla
+    # Reemplaza la función calcular_1rm_estimado_por_ejercicio con esta versión CORREGIDA
+
+    # Archivo: analytics/views.py
+    # Reemplaza la función calcular_1rm_estimado_por_ejercicio con esta versión DEFINITIVA
 
     def calcular_1rm_estimado_por_ejercicio(self):
         """
-        Calcula el 1RM estimado. VERSIÓN FINAL CORREGIDA.
+        Calcula el 1RM estimado para cada movimiento principal.
+
+        VERSIÓN DEFINITIVA:
+        - Mapeo directo de ejercicios específicos a movimientos principales
+        - Basado en la clasificación exacta de patrones de movimiento
+        - Agrupa automáticamente variaciones de ejercicios
+        - Devuelve el 1RM máximo para cada movimiento principal
         """
+
+        # 1. MAPEO DIRECTO: Ejercicio específico -> Movimiento Principal
+        # Este mapeo es la FUENTE DE VERDAD para clasificar ejercicios
+        mapeo_ejercicios_a_principal = {
+            # 🎯 REMO (Row) - Tracción Horizontal
+            'remo con barra (pendlay)': 'Remo',
+            'remo con mancuerna a una mano': 'Remo',
+            'remo en polea baja (gironda)': 'Remo',
+
+            # 🎯 PRESS BANCA (Bench Press) - Empuje Horizontal
+            'press banca con barra': 'Press Banca',
+            'press banca con mancuernas': 'Press Banca',
+            'press inclinado con barra': 'Press Banca',
+            'press inclinado con mancuernas': 'Press Banca',
+            'press cerrado en banca': 'Press Banca',
+            'fondos en paralelas (con lastre)': 'Press Banca',
+
+            # 🎯 PRESS MILITAR (Overhead Press) - Empuje Vertical
+            'press militar con barra (de pie)': 'Press Militar',
+            'press militar con mancuernas (sentado)': 'Press Militar',
+            'push press': 'Press Militar',
+            'press arnold': 'Press Militar',
+
+            # 🎯 PESO MUERTO (Deadlift) - Bisagra de Cadera
+            'peso muerto': 'Peso Muerto',
+            'peso muerto rumano': 'Peso Muerto',
+            'peso muerto sumo': 'Peso Muerto',
+            # 'buenos días (good mornings)': 'Peso Muerto', # Eliminado por ser accesorio
+            # 'hip thrust con barra': 'Peso Muerto', # Eliminado: No es equivalente a peso muerto
+
+            # 🎯 SENTADILLA (Squat) - Flexión de Rodilla
+            'sentadilla trasera con barra': 'Sentadilla',
+            'sentadilla frontal con barra': 'Sentadilla',
+            'sentadilla búlgara': 'Sentadilla',
+            # 'prensa de piernas': 'Sentadilla', # Eliminado: Sobrestima masivamente el 1RM
+            # 'zancadas con mancuernas': 'Sentadilla', # Eliminado: Accesorio unilateral
+        }
+
+        # 2. Obtenemos todos los ejercicios realizados por el cliente
         todos_los_ejercicios = self.obtener_ejercicios_tabla()
         if not todos_los_ejercicios:
             return {}
 
-        ejercicios_agrupados = {}
+        # 3. Calculamos el 1RM para cada levantamiento individual
+        levantamientos_con_rm = []
         for e in todos_los_ejercicios:
-            nombre = e['nombre'].strip().title()
-            if nombre not in ejercicios_agrupados:
-                ejercicios_agrupados[nombre] = []
-
             try:
                 peso = float(e.get('peso', 0))
-
-                # --- INICIO DE LA CORRECCIÓN FINAL ---
-                # La depuración nos mostró que 'repeticiones' ya es un número.
-                # No necesitamos la función de parseo. Usamos el valor directamente.
                 reps = int(e.get('repeticiones', 0))
-                # --- FIN DE LA CORRECCIÓN FINAL ---
 
                 if peso > 0 and reps > 0:
-                    ejercicios_agrupados[nombre].append({'peso': peso, 'repeticiones': reps})
+                    # Fórmula de Epley para estimar 1RM
+                    rm_estimado = peso * (1 + (reps / 30))
+
+                    # Normalizamos el nombre del ejercicio para la búsqueda
+                    nombre_normalizado = e['nombre'].strip().lower()
+
+                    # Buscamos el movimiento principal usando el mapeo directo
+                    ejercicio_principal = mapeo_ejercicios_a_principal.get(nombre_normalizado, None)
+
+                    # Si no encontramos mapeo directo, lo saltamos
+                    if not ejercicio_principal:
+                        print(f"⚠️ Ejercicio no mapeado: '{e['nombre']}'")
+                        continue
+
+                    levantamientos_con_rm.append({
+                        'ejercicio_principal': ejercicio_principal,
+                        'rm': rm_estimado,
+                        'nombre_original': e['nombre'],
+                    })
+            except (ValueError, TypeError) as err:
+                print(f"❌ Error procesando ejercicio: {e.get('nombre', 'desconocido')} - {err}")
+                continue
+
+        # 4. Agrupamos por ejercicio principal y encontramos el RM máximo
+        one_rm_finales = {}
+        for levantamiento in levantamientos_con_rm:
+            principal = levantamiento['ejercicio_principal']
+            rm = levantamiento['rm']
+
+            if principal not in one_rm_finales or rm > one_rm_finales[principal]:
+                one_rm_finales[principal] = rm
+
+        # 5. Redondeamos los resultados finales
+        for ejercicio, rm in one_rm_finales.items():
+            one_rm_finales[ejercicio] = round(rm, 2)
+
+        # 6. DEBUG: Imprimimos los resultados para verificar
+        print("\n" + "=" * 60)
+        print("🔍 1RMs CALCULADOS (VERSIÓN DEFINITIVA)")
+        print("=" * 60)
+        print(f"Total de ejercicios en mapeo: {len(mapeo_ejercicios_a_principal)}")
+        print(f"Total de levantamientos procesados: {len(levantamientos_con_rm)}")
+        print(f"\n1RMs finales calculados:")
+        for principal, rm in sorted(one_rm_finales.items()):
+            print(f"  ✅ {principal}: {rm} kg")
+        print("=" * 60 + "\n")
+
+        return one_rm_finales
+
+    def calcular_volumen_por_grupo_muscular(self):
+        """
+        Calcula el volumen total por grupo muscular usando mapeo explícito de ejercicios.
+
+        VERSIÓN CORREGIDA:
+        - No depende del campo 'grupo_muscular' de la BD (que está vacío)
+        - Usa un mapeo explícito de ejercicios a grupos musculares
+        - Agrupa ejercicios relacionados correctamente
+        """
+
+        # MAPEO EXPLÍCITO: Ejercicio -> Grupo Muscular
+        mapeo_ejercicio_a_grupo = {
+            # PECHO
+            'press banca con barra': 'Pecho',
+            'press banca con mancuernas': 'Pecho',
+            'press inclinado con barra': 'Pecho',
+            'press inclinado con mancuernas': 'Pecho',
+            'press cerrado en banca': 'Pecho',
+            'fondos en paralelas (con lastre)': 'Pecho',
+            'aperturas con mancuernas': 'Pecho',
+            'cruce de poleas': 'Pecho',
+            'pec deck': 'Pecho',
+
+            # ESPALDA
+            'remo con barra (pendlay)': 'Espalda',
+            'remo con mancuerna a una mano': 'Espalda',
+            'remo en polea baja (gironda)': 'Espalda',
+            'peso muerto': 'Espalda',
+            'peso muerto rumano': 'Espalda',
+            'peso muerto sumo': 'Espalda',
+            'dominadas (con lastre)': 'Espalda',
+            'jalón al pecho': 'Espalda',
+            'face pulls': 'Espalda',
+            'pull-overs con mancuerna': 'Espalda',
+
+            # HOMBROS
+            'press militar con barra (de pie)': 'Hombros',
+            'press militar con mancuernas (sentado)': 'Hombros',
+            'push press': 'Hombros',
+            'press arnold': 'Hombros',
+            'elevaciones laterales con mancuernas': 'Hombros',
+            'elevaciones frontales con polea': 'Hombros',
+            'pájaros (bent over raises)': 'Hombros',
+
+            # CUÁDRICEPS
+            'sentadilla trasera con barra': 'Cuádriceps',
+            'sentadilla frontal con barra': 'Cuádriceps',
+            'sentadilla búlgara': 'Cuádriceps',
+            'prensa de piernas': 'Cuádriceps',
+            'zancadas con mancuernas': 'Cuádriceps',
+            'extensiones de cuádriceps en máquina': 'Cuádriceps',
+
+            # ISQUIOS
+            'buenos días (good mornings)': 'Isquios',
+            'curl femoral tumbado': 'Isquios',
+            'curl femoral sentado': 'Isquios',
+            'hiperextensiones inversas': 'Isquios',
+
+            # GLÚTEOS
+            'hip thrust con barra': 'Glúteos',
+            'patada de glúteo en polea': 'Glúteos',
+            'abducción de cadera en máquina': 'Glúteos',
+
+            # BÍCEPS
+            'curl con barra z': 'Bíceps',
+            'curl araña': 'Bíceps',
+            'curl de concentración': 'Bíceps',
+            'curl martillo con mancuernas': 'Bíceps',
+            'curl en polea alta': 'Bíceps',
+
+            # TRÍCEPS
+            'press francés con barra z': 'Tríceps',
+            'press cerrado en banca': 'Tríceps',
+            'extensiones de tríceps con polea alta': 'Tríceps',
+            'fondos entre bancos': 'Tríceps',
+            'patada de tríceps con polea': 'Tríceps',
+        }
+
+        # Obtener todos los ejercicios
+        todos_los_ejercicios = self.obtener_ejercicios_tabla()
+        if not todos_los_ejercicios:
+            return {}
+
+        # Calcular volumen por grupo
+        volumen_por_grupo = {}
+        ejercicios_no_mapeados = set()
+
+        for e in todos_los_ejercicios:
+            try:
+                # Normalizar nombre del ejercicio
+                nombre_normalizado = e['nombre'].strip().lower()
+
+                # Buscar el grupo muscular
+                grupo = mapeo_ejercicio_a_grupo.get(nombre_normalizado, None)
+
+                if not grupo:
+                    ejercicios_no_mapeados.add(e['nombre'])
+                    continue
+
+                # Calcular volumen del ejercicio
+                peso = float(e.get('peso', 0))
+                series = int(e.get('series', 1))
+                reps = int(e.get('repeticiones', 1))
+
+                if peso > 0 and series > 0 and reps > 0:
+                    volumen_ejercicio = peso * series * reps
+                    volumen_por_grupo[grupo] = volumen_por_grupo.get(grupo, 0) + volumen_ejercicio
+
             except (ValueError, TypeError):
                 continue
 
-        one_rm_finales = {}
-        for nombre_ejercicio, levantamientos in ejercicios_agrupados.items():
-            rm_maximo = 0
-            for levantamiento in levantamientos:
-                peso = levantamiento['peso']
-                reps = levantamiento['repeticiones']
-                rm_estimado = peso * (1 + (reps / 30))
-                if rm_estimado > rm_maximo:
-                    rm_maximo = rm_estimado
-            if rm_maximo > 0:
-                one_rm_finales[nombre_ejercicio] = round(rm_maximo, 2)
+        # Debug
+        if ejercicios_no_mapeados:
+            print(f"\n⚠️ Ejercicios no mapeados a grupo muscular:")
+            for ej in sorted(ejercicios_no_mapeados):
+                print(f"  - {ej}")
 
-        return one_rm_finales
+        print(f"\n✅ Volumen por grupo muscular calculado:")
+        for grupo, volumen in sorted(volumen_por_grupo.items(), key=lambda x: x[1], reverse=True):
+            print(f"  {grupo}: {volumen:.2f} kg")
+
+        return volumen_por_grupo
 
     def obtener_ejercicios_tabla(self, fecha_inicio=None, fecha_fin=None):
         """
@@ -157,55 +352,197 @@ class CalculadoraEjerciciosTabla:
 
         return ejercicios
 
+        # Archivo: analytics/views.py
+        # Reemplaza el método obtener_progresion_completa_ejercicios con esta versión CORREGIDA
+
+    def obtener_progresion_completa_ejercicios(self):
+        """
+        Calcula la progresión de TODOS los ejercicios del cliente desde el inicio.
+        Devuelve una lista ordenada por progresión (de mayor a menor).
+
+        VERSIÓN CORREGIDA: Maneja correctamente valores None en nombres de ejercicios.
+
+        Cada elemento contiene:
+        - nombre_ejercicio: Nombre del ejercicio
+        - progresion_peso: Porcentaje de cambio de peso (positivo = mejora, negativo = empeora)
+        - peso_inicial: Peso con el que empezó
+        - peso_final: Peso actual
+        - sesiones: Número de sesiones realizadas
+        - 1rm_inicial: 1RM estimado al inicio
+        - 1rm_final: 1RM estimado al final
+        - cambio_1rm: Cambio en el 1RM estimado
+        """
+        # Obtener todos los ejercicios sin filtro de fecha
+        ejercicios = self.obtener_ejercicios_tabla()
+
+        if not ejercicios:
+            return []
+
+        # Agrupar ejercicios por nombre normalizado
+        ejercicios_por_nombre = {}
+        for e in ejercicios:
+            # CORRECCIÓN: Verificar que el nombre no sea None antes de llamar a .strip()
+            nombre_raw = e.get('nombre')
+
+            # Si el nombre es None o está vacío, lo saltamos
+            if not nombre_raw:
+                continue
+
+            nombre_normalizado = nombre_raw.strip().lower()
+            nombre_mostrado = nombre_raw.strip().title()
+
+            # Saltamos si después de limpiar queda vacío
+            if not nombre_normalizado:
+                continue
+
+            if nombre_normalizado not in ejercicios_por_nombre:
+                ejercicios_por_nombre[nombre_normalizado] = {
+                    'nombre_mostrado': nombre_mostrado,
+                    'ejercicios': []
+                }
+            ejercicios_por_nombre[nombre_normalizado]['ejercicios'].append(e)
+
+        progresiones = []
+
+        for datos in ejercicios_por_nombre.values():
+            lista_ejercicios = datos['ejercicios']
+            nombre_mostrado = datos['nombre_mostrado']
+
+            # Se necesitan al menos dos sesiones para calcular una progresión
+            if len(lista_ejercicios) < 2:
+                continue
+
+            # Ordenar las sesiones por fecha
+            lista_ejercicios.sort(key=lambda x: x['fecha'])
+
+            primero = lista_ejercicios[0]
+            ultimo = lista_ejercicios[-1]
+
+            try:
+                # Obtener pesos - con manejo de None
+                peso_inicial_raw = primero.get('peso')
+                peso_final_raw = ultimo.get('peso')
+
+                # Convertir a float, tratando None y 'PC' como 0
+                if peso_inicial_raw is None or peso_inicial_raw == 'PC':
+                    peso_inicial = 0
+                else:
+                    peso_inicial = float(peso_inicial_raw)
+
+                if peso_final_raw is None or peso_final_raw == 'PC':
+                    peso_final = 0
+                else:
+                    peso_final = float(peso_final_raw)
+
+                # Calcular progresión de peso
+                if peso_inicial > 0:
+                    progresion_peso = ((peso_final - peso_inicial) / peso_inicial) * 100
+                else:
+                    progresion_peso = 100.0 if peso_final > 0 else 0.0
+
+                # Calcular 1RM estimado (usando la fórmula de Epley)
+                reps_inicial_raw = primero.get('repeticiones')
+                reps_final_raw = ultimo.get('repeticiones')
+
+                # Manejo de None para repeticiones
+                reps_inicial = int(reps_inicial_raw) if reps_inicial_raw is not None else 1
+                reps_final = int(reps_final_raw) if reps_final_raw is not None else 1
+
+                rm_inicial = peso_inicial * (1 + (reps_inicial / 30)) if peso_inicial > 0 else 0
+                rm_final = peso_final * (1 + (reps_final / 30)) if peso_final > 0 else 0
+
+                cambio_rm = rm_final - rm_inicial
+
+                # Determinar el color/estado basado en la progresión
+                if progresion_peso > 0:
+                    estado = 'mejora'
+                elif progresion_peso < 0:
+                    estado = 'empeora'
+                else:
+                    estado = 'estancado'
+
+                progresiones.append({
+                    'nombre_ejercicio': nombre_mostrado,
+                    'progresion_peso': round(progresion_peso, 2),
+                    'peso_inicial': round(peso_inicial, 2),
+                    'peso_final': round(peso_final, 2),
+                    'cambio_peso': round(peso_final - peso_inicial, 2),
+                    'sesiones': len(lista_ejercicios),
+                    '1rm_inicial': round(rm_inicial, 2),
+                    '1rm_final': round(rm_final, 2),
+                    'cambio_1rm': round(cambio_rm, 2),
+                    'estado': estado,
+                    'fecha_inicio': primero['fecha'],
+                    'fecha_fin': ultimo['fecha']
+                })
+
+            except (ValueError, TypeError) as e:
+                # Si hay algún error en la conversión de datos, lo registramos y continuamos
+                print(f"⚠️ Error procesando ejercicio '{nombre_mostrado}': {str(e)}")
+                continue
+
+        # Ordenar por progresión de peso (de mayor a menor)
+        progresiones.sort(key=lambda x: x['progresion_peso'], reverse=True)
+
+        return progresiones
+
     def calcular_metricas_principales(self, fecha_inicio=None, fecha_fin=None):
         """
-        Calcula todas las métricas principales de forma consistente y eficiente,
-        priorizando los datos pre-calculados del modelo EntrenoRealizado.
+        Calcula todas las métricas principales.
+        VERSIÓN CORREGIDA: Maneja correctamente los filtros de fecha opcionales.
         """
-        # 1. Obtener los entrenamientos del período con una única consulta.
-        entrenamientos = EntrenoRealizado.objects.filter(
-            cliente=self.cliente,
-            fecha__gte=fecha_inicio,
-            fecha__lte=fecha_fin
-        )
+        # 1. Empezamos con la consulta base, filtrando solo por cliente.
+        entrenamientos_qs = EntrenoRealizado.objects.filter(cliente=self.cliente)
 
-        if not entrenamientos.exists():
-            return self._metricas_vacias()
+        # 2. Aplicamos los filtros de fecha SOLO SI no son None.
+        if fecha_inicio:
+            entrenamientos_qs = entrenamientos_qs.filter(fecha__gte=fecha_inicio)
+        if fecha_fin:
+            entrenamientos_qs = entrenamientos_qs.filter(fecha__lte=fecha_fin)
 
-        # 2. Usar funciones de agregación de Django para obtener los totales.
-        # Esto es mucho más eficiente que iterar en Python.
-        agregados = entrenamientos.aggregate(
+        if not entrenamientos_qs.exists():
+            return self._metricas_vacias()  # Usamos el método que ya tenías para devolver ceros.
+
+        # 3. Usar funciones de agregación de Django para obtener los totales.
+        agregados = entrenamientos_qs.aggregate(
             volumen_total_agregado=Sum('volumen_total_kg'),
             duracion_total_agregada=Sum('duracion_minutos'),
             calorias_totales_agregadas=Sum('calorias_quemadas'),
             num_entrenamientos=Count('id')
         )
 
-        # Asignar valores, manejando el caso de que no haya datos (None).
+        # Obtenemos la primera y última fecha del queryset para el cálculo de frecuencia
+        # Hacemos esto DESPUÉS de aplicar los filtros.
+        if not fecha_inicio:
+            fecha_inicio = entrenamientos_qs.earliest('fecha').fecha
+        if not fecha_fin:
+            fecha_fin = entrenamientos_qs.latest('fecha').fecha
+
         volumen_total = agregados['volumen_total_agregado'] or 0
         duracion_total = agregados['duracion_total_agregada'] or 0
         calorias_totales = agregados['calorias_totales_agregadas'] or 0
         entrenamientos_unicos = agregados['num_entrenamientos']
 
-        # 3. Calcular métricas derivadas.
+        # 4. Calcular métricas derivadas.
         intensidad_promedio = (volumen_total / duracion_total) if duracion_total > 0 else 0
         duracion_promedio = (duracion_total / entrenamientos_unicos) if entrenamientos_unicos > 0 else 0
 
         dias_periodo = (fecha_fin - fecha_inicio).days + 1
         frecuencia_semanal = (entrenamientos_unicos * 7) / dias_periodo if dias_periodo > 0 else 0
 
-        # 4. Para métricas a nivel de ejercicio (consistencia, peso máx, etc.),
-        # necesitamos consultar la tabla de ejercicios.
+        # 5. Para métricas a nivel de ejercicio, llamamos a obtener_ejercicios_tabla
+        # pasando las mismas fechas (o None)
         ejercicios = self.obtener_ejercicios_tabla(fecha_inicio, fecha_fin)
         total_ejercicios = len(ejercicios)
         ejercicios_completados = len([e for e in ejercicios if e.get('completado', False)])
         consistencia = (ejercicios_completados / total_ejercicios * 100) if total_ejercicios > 0 else 0
 
-        pesos = [float(e['peso']) for e in ejercicios if isinstance(e.get('peso'), (int, float)) and e.get('peso') > 0]
+        pesos = [float(e['peso']) for e in ejercicios if
+                 isinstance(e.get('peso'), (int, float, Decimal)) and e.get('peso') > 0]
         peso_maximo = max(pesos) if pesos else 0
         peso_promedio = sum(pesos) / len(pesos) if pesos else 0
 
-        # 5. Devolver el diccionario completo con valores consistentes.
+        # 6. Devolver el diccionario completo.
         return {
             'volumen_total': volumen_total,
             'intensidad_promedio': intensidad_promedio,
@@ -221,9 +558,6 @@ class CalculadoraEjerciciosTabla:
             'repeticiones_totales': sum(e.get('series', 1) * e.get('repeticiones', 1) for e in ejercicios),
             'entrenamientos_unicos': entrenamientos_unicos
         }
-
-    # Archivo: analytics/views.py
-    # Dentro de la clase CalculadoraEjerciciosTabla
 
     def obtener_ejercicios_progresion(self, limite=5, datos_ejercicios=None):
         """
@@ -345,6 +679,114 @@ class CalculadoraEjerciciosTabla:
             'intensidad_diaria': datos_intensidad
         }
 
+        # Archivo: analytics/views.py
+        # ... dentro de la clase CalculadoraEjerciciosTabla ...
+
+    def analizar_acwr(self, periodo_dias=90, periodo_agudo=7, periodo_cronico=28):
+        """
+        Calcula la Carga Aguda, Carga Crónica y el ratio ACWR.
+        Utiliza pandas para un cálculo eficiente.
+        VERSIÓN CORREGIDA: Convierte Decimal a float para ser serializable en JSON.
+        """
+        try:
+            import pandas as pd
+        except ImportError:
+            return {'dataframe': [], 'acwr_actual': 0, 'zona_riesgo': 'desconocida',
+                    'recomendacion': 'Pandas no está instalado.'}
+        # Buscamos la fecha del último entrenamiento registrado para este cliente
+        ultimo_entreno = EntrenoRealizado.objects.filter(cliente=self.cliente).order_by('-fecha').first()
+        fecha_fin = ultimo_entreno.fecha if ultimo_entreno else timezone.now().date()
+        fecha_inicio = fecha_fin - timedelta(days=periodo_dias)
+
+        entrenamientos = EntrenoRealizado.objects.filter(
+            cliente=self.cliente,
+            fecha__gte=fecha_inicio,
+            fecha__lte=fecha_fin
+        ).order_by('fecha').values('fecha', 'volumen_total_kg')
+
+        if not entrenamientos:
+            return {'dataframe': [], 'acwr_actual': 0, 'zona_riesgo': 'muy_baja',
+                    'recomendacion': 'No hay datos suficientes.'}
+
+        df = pd.DataFrame(list(entrenamientos))
+        df['fecha'] = pd.to_datetime(df['fecha'])
+
+        # Convertir Decimal a float aquí
+        df['volumen_total_kg'] = df['volumen_total_kg'].astype(float)
+
+        df = df.groupby('fecha')['volumen_total_kg'].sum().reset_index()
+        df['carga_diaria'] = df['volumen_total_kg'] / 1000
+
+        idx = pd.date_range(start=fecha_inicio, end=fecha_fin)
+        df = df.set_index('fecha').reindex(idx, fill_value=0)
+
+        df['carga_aguda'] = df['carga_diaria'].rolling(window=periodo_agudo, min_periods=1).mean()
+        df['carga_cronica'] = df['carga_diaria'].rolling(window=periodo_cronico, min_periods=1).mean()
+        df['acwr'] = (df['carga_aguda'] / df['carga_cronica']).fillna(0).replace([np.inf, -np.inf], 0)
+
+        acwr_actual = round(df['acwr'].iloc[-1], 2) if not df.empty else 0
+
+        if 0.8 <= acwr_actual <= 1.3:
+            zona_riesgo = 'optima'
+            recomendacion = "Estás en la 'zona dulce'. La carga es ideal para progresar de forma segura."
+        elif 1.3 < acwr_actual < 1.5:
+            zona_riesgo = 'cuidado'
+            recomendacion = "Estás aumentando la carga. Procede con cuidado y vigila la recuperación."
+        elif acwr_actual >= 1.5:
+            zona_riesgo = 'riesgo_alto'
+            recomendacion = "¡Peligro! El riesgo de lesión es elevado. Considera reducir la intensidad o el volumen."
+        else:
+            zona_riesgo = 'baja_carga'
+            recomendacion = "La carga es baja. Ideal para una semana de descarga, pero riesgosa para perder adaptaciones si se mantiene."
+
+        df_json = df.reset_index().rename(columns={'index': 'fecha'})
+        df_json['fecha'] = df_json['fecha'].dt.strftime('%Y-%m-%d')
+
+        return {
+            'dataframe': df_json.to_dict('records'),
+            'acwr_actual': acwr_actual,
+            'zona_riesgo': zona_riesgo,
+            'recomendacion': recomendacion
+        }
+
+    def analizar_equilibrio_muscular(self):
+        """
+        Calcula ratios de fuerza. Ahora usa los nombres de los ejercicios principales del mapeo.
+        """
+        one_rm_estimados = self.calcular_1rm_estimado_por_ejercicio()
+
+        # Usamos los nombres de los ejercicios PRINCIPALES (las claves del mapeo)
+        config_ratios = {
+            'Press Banca / Sentadilla': ('Press Banca', 'Sentadilla'),
+            'Peso Muerto / Sentadilla': ('Peso Muerto', 'Sentadilla'),
+            'Press Militar / Press Banca': ('Press Militar', 'Press Banca'),
+            'Remo / Press Banca': ('Remo', 'Press Banca')
+        }
+
+        resultados = []
+        datos_radar = {'labels': [], 'valores': []}
+
+        for nombre_ratio, (ej_num, ej_den) in config_ratios.items():
+            valor_num = one_rm_estimados.get(ej_num, 0)
+            valor_den = one_rm_estimados.get(ej_den, 0)
+
+            ratio = 0
+            if valor_num > 0 and valor_den > 0:
+                ratio = round(valor_num / valor_den, 2)
+
+            resultados.append({
+                'nombre': nombre_ratio,
+                'ratio': ratio,
+                'ejercicio_numerador': ej_num,
+                'valor_numerador': valor_num,
+                'ejercicio_denominador': ej_den,
+                'valor_denominador': valor_den
+            })
+            datos_radar['labels'].append(nombre_ratio)
+            datos_radar['valores'].append(ratio)
+
+        return {'tabla_ratios': resultados, 'datos_radar': datos_radar}
+
 
 from django.shortcuts import render, get_object_or_404
 from django.utils import timezone
@@ -356,7 +798,445 @@ from clientes.models import Cliente
 from .analisis_intensidad import AnalisisIntensidadAvanzado
 from datetime import datetime  # Asegúrate de que datetime esté importado
 
-# Archivo: analytics/views.py
+
+# -------------------------------------------------------------------------
+# VISTA: EXPLICACIÓN DEL PLAN ACTUAL (HELMS)
+# -------------------------------------------------------------------------
+@login_required
+def explicacion_plan_helms(request):
+    """
+    Vista que explica al usuario en qué fase del plan se encuentra,
+    por qué está haciendo lo que hace (RPE, rangos) y ejemplos visuales.
+    """
+    cliente = get_object_or_404(Cliente, user=request.user)
+    
+    # 1. Instanciar Planificador y Perfil
+    # Necesitamos los máximos actuales para ejemplos precisos
+    calc = CalculadoraEjerciciosTabla(cliente)
+    maximos = calc.calcular_1rm_estimado_por_ejercicio()
+    
+    # Convertir a formato compatible con PerfilCliente si es necesario
+    # PerfilCliente espera diccionario o objeto, aquí pasamos un dict enriquecido
+    perfil_data = {
+        'id': cliente.id,
+        'nombre': cliente.nombre,
+        'experiencia_años': cliente.experiencia_años, # Asumiendo campo en modelo
+        'objetivo_principal': cliente.objetivo_principal,
+        'dias_disponibles': cliente.dias_disponibles,
+        'maximos_actuales': maximos,
+        # Otros campos requeridos por PerfilCliente con defaults
+        'nivel_estres': 5,
+        'calidad_sueño': 7,
+        'nivel_energia': 7,
+    }
+    
+    perfil = PerfilCliente(perfil_data)
+    planificador = PlanificadorHelms(perfil)
+    
+    # 2. Obtener el plan anual completo
+    plan_anual = planificador.generar_plan_anual()
+    
+    # 3. Determinar dónde estamos HOY
+    hoy = timezone.now().date()
+    # Para testing/demo podemos forzar una fecha si el plan empieza en otro momento
+    # hoy = date(2024, 1, 15) 
+    
+    bloque_actual_info = None
+    semana_actual_display = 0
+    total_semanas_bloque = 0
+    fase_actual = "Desconocida"
+    descripcion_fase = "No se ha encontrado un plan activo para hoy."
+    parametros_fase = {}
+    
+    # Buscar en entrenos_por_fecha primero para exactitud diaria
+    fecha_iso = hoy.isoformat()
+    entreno_hoy_data = plan_anual['entrenos_por_fecha'].get(fecha_iso)
+    
+    # Si no hay entreno justo hoy, buscar el bloque por rango de fechas (aproximación)
+    # Como PlanificadorHelms devuelve estructura plana, iteramos bloques y sus semanas
+    
+    # Lógica simplificada basada en la estructura de plan_por_bloques
+    # plan_por_bloques es una lista de dicts
+    
+    # Recorremos para encontrar el bloque actual
+    # Esto es complejo porque plan_por_bloques no tiene fechas absolutas explícitas en el nivel superior,
+    # pero las semanas sí tienen numeración global.
+    
+    semana_global_hoy = None
+    
+    # Truco: buscar cualquier fecha de esta semana en 'entrenos_por_fecha' para sacar la semana global
+    inicio_semana = hoy - timedelta(days=hoy.weekday())
+    for i in range(7):
+        dia_check = inicio_semana + timedelta(days=i)
+        iso_check = dia_check.isoformat()
+        if iso_check in plan_anual['entrenos_por_fecha']:
+            # Encontramos un día planificado esta semana
+            data_dia = plan_anual['entrenos_por_fecha'][iso_check]
+            # data_dia tiene 'semana_bloque', pero necesitamos cruzarlo con el bloque
+            # Lamentablemente el output plano a veces pierde la ref directa al bloque padre en un solo paso
+            # Pero data_dia['nombre_rutina'] suele tener " - NombreBloque"
+            break
+            
+    # Haremos un match manual con la lista de fechas para mayor robustez
+    fechas_ordenadas = sorted(plan_anual['entrenos_por_fecha'].keys())
+    if fechas_ordenadas:
+        primera_fecha = datetime.fromisoformat(fechas_ordenadas[0]).date()
+        ultima_fecha = datetime.fromisoformat(fechas_ordenadas[-1]).date()
+        
+        if hoy < primera_fecha:
+            estado_plan = "El plan aún no ha comenzado"
+            bloque_target = plan_anual['plan_por_bloques'][0] # Mostrar el primero como preview
+        elif hoy > ultima_fecha:
+            estado_plan = "El plan anual ha finalizado"
+            bloque_target = plan_anual['plan_por_bloques'][-1]
+        else:
+            estado_plan = "Activo"
+            # Determinar semana actual relativa al inicio
+            delta_days = (hoy - primera_fecha).days
+            semana_global_actual = (delta_days // 7) + 1
+            
+            # Buscar qué bloque contiene esta semana global
+            acumulado_semanas = 0
+            bloque_target = None
+            for bloque in plan_anual['plan_por_bloques']:
+                duracion = bloque['duracion'] # num semanas
+                if acumulado_semanas < semana_global_actual <= (acumulado_semanas + duracion):
+                    bloque_target = bloque
+                    semana_actual_display = semana_global_actual - acumulado_semanas
+                    break
+                acumulado_semanas += duracion
+                
+    else:
+        # Fallback si no hay fechas
+        estado_plan = "Sin plan generado"
+        bloque_target = None
+
+    if bloque_target:
+        fase_actual = bloque_target.get('nombre', 'Fase General')
+        objetivo_fase = bloque_target.get('objetivo', 'Hipertrofia')
+        descripcion_fase = bloque_target.get('descripcion', 'Fase enfocada en el desarrollo muscular y mejora de la capacidad de trabajo.')
+        total_semanas_bloque = bloque_target.get('duracion', 4)
+        semana_actual_display = semana_actual_display if semana_actual_display > 0 else 1
+        
+        # Extraer parámetros de una semana típica del bloque (la primera)
+        # Nota: La estructura legacy vs refactored puede variar.
+        # Asumimos que bloque_target tiene la info cruda o necesitamos inferirla
+        
+        # Mapeo de objetivos a descripción user-friendly paramétrica
+        parametros_fase = {
+            'rpe_target': "7-8", # Default
+            'rango_reps': "8-12", # Default
+            'enfoque': objetivo_fase.title()
+        }
+        
+        if 'fuerza' in objetivo_fase.lower():
+            parametros_fase['rpe_target'] = "8-9"
+            parametros_fase['rango_reps'] = "3-6"
+        elif 'metabolico' in objetivo_fase.lower() or 'resistencia' in objetivo_fase.lower():
+            parametros_fase['rpe_target'] = "6-8"
+            parametros_fase['rango_reps'] = "12-15"
+            
+    # 4. Generar Ejemplos Calculados (Big 3 + Militar)
+    ejemplos_calculados = []
+    ejercicios_clave = [
+        ('Sentadilla', 'Sentadilla'),
+        ('Press Banca', 'Press Banca'),
+        ('Peso Muerto', 'Peso Muerto'),
+        ('Press Militar', 'Press Militar')
+    ]
+    
+    # Usar CalculadorPeso para obtener números reales
+    from analytics.planificador_helms.calculo.peso import CalculadorPeso
+    
+    rpe_obj = 8 # Promedio para el ejemplo
+    reps_obj = "8" # Promedio
+    
+    # Intentar parsear del bloque si existe
+    if 'rpe_target' in parametros_fase:
+        try:
+            rpe_obj = int(parametros_fase['rpe_target'].split('-')[-1])
+        except: pass
+        
+    if 'rango_reps' in parametros_fase:
+        try:
+            reps_obj = parametros_fase['rango_reps'].split('-')[0]
+        except: pass
+
+    for nombre_mostrar, nombre_clave in ejercicios_clave:
+        rm_est = maximos.get(nombre_clave, 0)
+        
+        # Solo mostrar si tiene 1RM
+        if rm_est > 0:
+            peso_sugerido = CalculadorPeso.calcular_peso_trabajo(
+                nombre_ejercicio=nombre_clave,
+                repeticiones_str=reps_obj,
+                rpe_objetivo=rpe_obj,
+                maximos_actuales=maximos
+            )
+            
+            porcentaje_uso = (peso_sugerido / rm_est * 100) if rm_est > 0 else 0
+            
+            ejemplos_calculados.append({
+                'ejercicio': nombre_mostrar,
+                'rm_actual': rm_est,
+                'peso_target': peso_sugerido,
+                'porcentaje': round(porcentaje_uso),
+                'schema_reps': f"{reps_obj} reps @ RPE {rpe_obj}"
+            })
+            
+    # 5. Construir datos de timeline para el template
+    bloques_plan = []
+    if fechas_ordenadas:
+        acum_semanas = 0
+        total_semanas_plan = sum(b['duracion'] for b in plan_anual['plan_por_bloques'])
+        for bloque in plan_anual['plan_por_bloques']:
+            dur = bloque['duracion']
+            fecha_inicio_bloque = primera_fecha + timedelta(weeks=acum_semanas)
+            fecha_fin_bloque = primera_fecha + timedelta(weeks=acum_semanas + dur) - timedelta(days=1)
+            
+            # Determinar tipo de fase para color
+            objetivo = bloque.get('objetivo', '').lower()
+            if objetivo == 'descarga':
+                tipo_color = 'descarga'
+            elif 'fuerza' in objetivo:
+                tipo_color = 'fuerza'
+            elif 'potencia' in objetivo:
+                tipo_color = 'potencia'
+            else:
+                tipo_color = 'hipertrofia'
+            
+            # Obtener rep_range y rpe de la periodización original
+            rep_range = ''
+            rpe_display = ''
+            for bloque_orig in plan_anual.get('metadata', {}).get('periodizacion_completa', []):
+                if bloque_orig['nombre'] == bloque['nombre']:
+                    rep_range = bloque_orig.get('rep_range', '')
+                    rpe_i = bloque_orig.get('rpe_inicio', '')
+                    rpe_f = bloque_orig.get('rpe_fin', '')
+                    rpe_display = f"{rpe_i}-{rpe_f}" if rpe_i != rpe_f else str(rpe_i)
+                    break
+            
+            bloques_plan.append({
+                'nombre': bloque['nombre'],
+                'objetivo': bloque.get('objetivo', ''),
+                'descripcion': bloque.get('descripcion', ''),
+                'duracion': dur,
+                'fecha_inicio': fecha_inicio_bloque,
+                'fecha_fin': fecha_fin_bloque,
+                'es_actual': (bloque_target is not None and bloque['nombre'] == bloque_target.get('nombre', '')),
+                'es_descarga': objetivo == 'descarga',
+                'tipo_color': tipo_color,
+                'porcentaje_anual': round((dur / total_semanas_plan) * 100, 1),
+                'rep_range': rep_range,
+                'rpe': rpe_display,
+            })
+            acum_semanas += dur
+
+    # 6. Detectar transiciones de fase y guardar snapshots de 1RM
+    from analytics.models import HistorialFase
+    
+    if bloque_target and estado_plan == "Activo":
+        # Obtener la fase activa actual en la BD
+        fase_activa_bd = HistorialFase.obtener_fase_activa(cliente)
+        nombre_fase_actual = bloque_target.get('nombre', '')
+        objetivo_actual = bloque_target.get('objetivo', '').lower()
+        
+        # Mapear objetivo a tipo_fase
+        if objetivo_actual == 'descarga':
+            tipo_fase_actual = 'descarga'
+        elif 'fuerza' in objetivo_actual:
+            tipo_fase_actual = 'fuerza'
+        elif 'potencia' in objetivo_actual:
+            tipo_fase_actual = 'potencia'
+        elif 'metabolico' in objetivo_actual or 'metabólica' in objetivo_actual:
+            tipo_fase_actual = 'hipertrofia_metabolica'
+        elif 'específica' in objetivo_actual:
+            tipo_fase_actual = 'hipertrofia_especifica'
+        else:
+            tipo_fase_actual = 'hipertrofia'
+        
+        # Buscar el bloque actual en bloques_plan para obtener fechas
+        bloque_actual_info = next((b for b in bloques_plan if b['es_actual']), None)
+        
+        if bloque_actual_info:
+            # Caso 1: No hay fase activa en BD -> Crear la primera
+            if not fase_activa_bd:
+                HistorialFase.objects.create(
+                    cliente=cliente,
+                    nombre_fase=nombre_fase_actual,
+                    tipo_fase=tipo_fase_actual,
+                    fecha_inicio=bloque_actual_info['fecha_inicio'],
+                    semanas_planificadas=bloque_actual_info['duracion'],
+                    rm_inicio=maximos,  # Snapshot inicial
+                    activa=True,
+                    rpe_inicio=int(bloque_actual_info.get('rpe', '7-8').split('-')[0]) if bloque_actual_info.get('rpe') else None,
+                    rpe_fin=int(bloque_actual_info.get('rpe', '7-8').split('-')[-1]) if bloque_actual_info.get('rpe') else None,
+                    rango_reps=bloque_actual_info.get('rep_range', ''),
+                )
+            
+            # Caso 2: Hay fase activa pero es diferente -> Transición de fase
+            elif fase_activa_bd.nombre_fase != nombre_fase_actual:
+                # Marcar la fase anterior como completada con snapshot final
+                fase_activa_bd.marcar_como_completada(maximos)
+                fase_activa_bd.fecha_fin = hoy - timedelta(days=1)  # Terminó ayer
+                fase_activa_bd.semanas_completadas = ((hoy - fase_activa_bd.fecha_inicio).days // 7)
+                fase_activa_bd.save()
+                
+                # Crear nueva fase activa
+                HistorialFase.objects.create(
+                    cliente=cliente,
+                    nombre_fase=nombre_fase_actual,
+                    tipo_fase=tipo_fase_actual,
+                    fecha_inicio=bloque_actual_info['fecha_inicio'],
+                    semanas_planificadas=bloque_actual_info['duracion'],
+                    rm_inicio=maximos,  # Snapshot de inicio de nueva fase
+                    activa=True,
+                    rpe_inicio=int(bloque_actual_info.get('rpe', '7-8').split('-')[0]) if bloque_actual_info.get('rpe') else None,
+                    rpe_fin=int(bloque_actual_info.get('rpe', '7-8').split('-')[-1]) if bloque_actual_info.get('rpe') else None,
+                    rango_reps=bloque_actual_info.get('rep_range', ''),
+                )
+            
+            # Caso 3: Misma fase -> Actualizar semanas completadas
+            else:
+                semanas_transcurridas = ((hoy - fase_activa_bd.fecha_inicio).days // 7)
+                if semanas_transcurridas != fase_activa_bd.semanas_completadas:
+                    fase_activa_bd.semanas_completadas = semanas_transcurridas
+                    fase_activa_bd.save()
+    
+    # 7. Obtener historial de fases completadas para mostrar en el template
+    fases_completadas = HistorialFase.obtener_fases_completadas(cliente)[:5]  # Últimas 5
+
+    # 8. Calcular predicciones de 1RM basadas en tendencias históricas
+    predicciones_1rm = {}
+    
+    if fases_completadas.count() >= 2 and bloque_target:
+        # Necesitamos al menos 2 fases completadas para calcular tendencia
+        ejercicios_principales = ['Sentadilla', 'Press Banca', 'Peso Muerto', 'Press Militar']
+        
+        for ejercicio in ejercicios_principales:
+            rm_actual = maximos.get(ejercicio, 0)
+            
+            if rm_actual > 0:
+                # Calcular tasa de ganancia promedio de las últimas fases
+                ganancias = []
+                
+                for fase in fases_completadas[:3]:  # Últimas 3 fases
+                    if fase.rm_inicio and fase.rm_fin:
+                        rm_ini = fase.rm_inicio.get(ejercicio)
+                        rm_fin = fase.rm_fin.get(ejercicio)
+                        
+                        if rm_ini and rm_fin and rm_ini > 0:
+                            ganancia_pct = ((rm_fin - rm_ini) / rm_ini) * 100
+                            ganancias.append(ganancia_pct)
+                
+                if ganancias:
+                    # Promedio de ganancia por fase
+                    ganancia_promedio_pct = sum(ganancias) / len(ganancias)
+                    
+                    # Proyectar ganancia para la fase actual
+                    # Ajustar según el tipo de fase (fuerza gana más en 1RM que hipertrofia)
+                    objetivo_actual = bloque_target.get('objetivo', '').lower()
+                    multiplicador = 1.0
+                    
+                    if 'fuerza' in objetivo_actual:
+                        multiplicador = 1.2  # Fases de fuerza suelen ganar más en 1RM
+                    elif 'potencia' in objetivo_actual:
+                        multiplicador = 1.15
+                    elif 'hipertrofia' in objetivo_actual:
+                        multiplicador = 0.8  # Hipertrofia gana menos en 1RM directo
+                    elif 'descarga' in objetivo_actual:
+                        multiplicador = 0.0  # Descarga mantiene
+                    
+                    ganancia_proyectada_pct = ganancia_promedio_pct * multiplicador
+                    ganancia_proyectada_kg = rm_actual * (ganancia_proyectada_pct / 100)
+                    rm_proyectado = rm_actual + ganancia_proyectada_kg
+                    
+                    # Confianza basada en cantidad de datos históricos
+                    confianza = min(len(ganancias) * 30, 90)  # Max 90%
+                    
+                    predicciones_1rm[ejercicio] = {
+                        'actual': round(rm_actual, 1),
+                        'proyectado': round(rm_proyectado, 1),
+                        'ganancia_kg': round(ganancia_proyectada_kg, 1),
+                        'ganancia_pct': round(ganancia_proyectada_pct, 1),
+                        'confianza': confianza,
+                        'tendencia': 'positiva' if ganancia_proyectada_pct > 0 else 'neutral'
+                    }
+
+    # 9. Comparativa de fases: Agrupar por tipo y calcular estadísticas
+    comparativa_fases = {}
+    
+    if fases_completadas.count() >= 2:
+        # Agrupar fases por tipo
+        from collections import defaultdict
+        fases_por_tipo = defaultdict(list)
+        
+        for fase in fases_completadas:
+            fases_por_tipo[fase.tipo_fase].append(fase)
+        
+        # Calcular estadísticas por tipo de fase
+        for tipo_fase, fases in fases_por_tipo.items():
+            if not fases:
+                continue
+                
+            # Calcular ganancia promedio
+            ganancias_totales = [f.ganancia_promedio for f in fases if f.ganancia_promedio]
+            ganancia_prom = sum(ganancias_totales) / len(ganancias_totales) if ganancias_totales else 0
+            
+            # Encontrar mejor ejercicio (mayor ganancia absoluta promedio)
+            ejercicios_ganancias = defaultdict(list)
+            
+            for fase in fases:
+                if fase.rm_inicio and fase.rm_fin:
+                    for ejercicio in fase.rm_fin.keys():
+                        rm_ini = fase.rm_inicio.get(ejercicio, 0)
+                        rm_fin = fase.rm_fin.get(ejercicio, 0)
+                        if rm_ini > 0:
+                            ganancia_kg = rm_fin - rm_ini
+                            ejercicios_ganancias[ejercicio].append(ganancia_kg)
+            
+            mejor_ejercicio = None
+            mejor_ganancia = 0
+            
+            for ejercicio, ganancias in ejercicios_ganancias.items():
+                ganancia_prom_ej = sum(ganancias) / len(ganancias)
+                if ganancia_prom_ej > mejor_ganancia:
+                    mejor_ganancia = ganancia_prom_ej
+                    mejor_ejercicio = ejercicio
+            
+            # Calcular duración total en este tipo de fase
+            semanas_totales = sum(f.semanas_completadas for f in fases)
+            
+            comparativa_fases[tipo_fase] = {
+                'nombre_display': dict(HistorialFase._meta.get_field('tipo_fase').choices).get(tipo_fase, tipo_fase),
+                'cantidad_fases': len(fases),
+                'ganancia_promedio': round(ganancia_prom, 1),
+                'mejor_ejercicio': mejor_ejercicio,
+                'mejor_ganancia_kg': round(mejor_ganancia, 1) if mejor_ejercicio else 0,
+                'semanas_totales': semanas_totales,
+                'efectividad': 'alta' if ganancia_prom > 3 else ('media' if ganancia_prom > 1.5 else 'baja')
+            }
+
+
+    context = {
+        'cliente': cliente,
+        'fase_actual': fase_actual,
+        'descripcion': descripcion_fase,
+        'semana_actual': semana_actual_display,
+        'total_semanas': total_semanas_bloque,
+        'progreso_bloque': (semana_actual_display / total_semanas_bloque * 100) if total_semanas_bloque > 0 else 0,
+        'parametros': parametros_fase,
+        'ejemplos': ejemplos_calculados,
+        'hoy': hoy,
+        'bloques_plan': bloques_plan,
+        'año_plan': plan_anual.get('metadata', {}).get('año_planificacion', hoy.year),
+        'fases_completadas': fases_completadas,
+        'predicciones_1rm': predicciones_1rm,
+        'comparativa_fases': comparativa_fases,
+    }
+    
+    return render(request, 'analytics/explicacion_helms.html', context)
+
 
 # ... (tus imports)
 from .analisis_intensidad import AnalisisIntensidadAvanzado  # Asegúrate de que esté importado
@@ -468,10 +1348,81 @@ def dashboard(request, cliente_id=None):
 
 
 # Archivo: analytics/views.py
-
+# Reemplaza la vista dashboard_global completa con esta versión
 # Archivo: analytics/views.py
+# Reemplaza la vista dashboard_global completa con esta versión CORREGIDA
 
-# ... (tus otros imports)
+@login_required
+def dashboard_global(request, cliente_id):
+    """
+    Dashboard de Rendimiento Global.
+    VERSIÓN FINAL CORREGIDA: Maneja correctamente valores None en grupos musculares.
+    """
+    cliente = get_object_or_404(Cliente, id=cliente_id)
+    calculadora = CalculadoraEjerciciosTabla(cliente)
+
+    # --- 1. CÁLCULO DE MÉTRICAS GLOBALES ---
+
+    # A. Métricas para KPIs (tarjetas superiores) - GLOBALES (sin filtro de fecha)
+    metricas_principales = calculadora.calcular_metricas_principales()
+
+    # B. Análisis de Carga y Fatiga (ACWR) - Usa un período largo para ser robusto
+    analisis_acwr = calculadora.analizar_acwr(periodo_dias=365)
+
+    # C. Análisis de Equilibrio Muscular - Usa el historial COMPLETO
+    equilibrio_muscular = calculadora.analizar_equilibrio_muscular()
+
+    # D. Distribución de volumen por grupo muscular - Usa el historial COMPLETO
+    volumen_por_grupo = calculadora.calcular_volumen_por_grupo_muscular()
+    volumen_por_grupo_ordenado = sorted(volumen_por_grupo.items(), key=lambda x: x[1], reverse=True)
+
+    # E. Progresión de todos los ejercicios
+    progresion_ejercicios = calculadora.obtener_progresion_completa_ejercicios()
+
+    # --- 2. CONSTRUCCIÓN DEL CONTEXTO FINAL ---
+    # Preparar datos JSON para gráficos
+    volumen_grupo_data = {
+        'labels': [item[0] for item in volumen_por_grupo_ordenado],
+        'valores': [item[1] for item in volumen_por_grupo_ordenado]
+    }
+
+    context = {
+        'cliente': cliente,
+        'metricas_principales': metricas_principales,
+        'analisis_acwr': analisis_acwr,
+        'equilibrio_muscular': equilibrio_muscular,
+        'progresion_ejercicios': progresion_ejercicios,
+        'volumen_por_grupo_labels': json.dumps([item[0] for item in volumen_por_grupo_ordenado]),
+        'volumen_por_grupo_valores': json.dumps([item[1] for item in volumen_por_grupo_ordenado]),
+        'volumen_grupo_json': json.dumps(volumen_grupo_data),
+    }
+
+    context['acwr_data_json'] = json.dumps(analisis_acwr.get('dataframe', []))
+    context['equilibrio_radar_json'] = json.dumps(equilibrio_muscular.get('datos_radar', {}))
+
+    # --- 3. DATOS PARA EL HEATMAP DE ACTIVIDAD ANUAL ---
+    # Obtener entrenamientos del año actual
+    current_year = datetime.now().year
+    entrenamientos_anio = EntrenoRealizado.objects.filter(
+        cliente=cliente,
+        fecha__year=current_year
+    ).values('fecha').annotate(
+        intensidad=Count('id')  # Contar entrenamientos por día
+    )
+
+    # Crear diccionario con formato {"YYYY-MM-DD": intensidad}
+    heatmap_data = {}
+    for e in entrenamientos_anio:
+        fecha_str = e['fecha'].strftime('%Y-%m-%d')
+        # Normalizar intensidad: 1-4 según número de entrenamientos
+        intensidad = min(e['intensidad'], 4)  # Máximo 4 niveles
+        heatmap_data[fecha_str] = intensidad
+
+    context['heatmap_data_json'] = json.dumps(heatmap_data)
+
+    return render(request, 'analytics/dashboard_global.html', context)
+
+
 from django.shortcuts import render, get_object_or_404
 from .models import TendenciaProgresion, PrediccionRendimiento
 # Asumiendo que tienes esta función en analytics/vendor.py
@@ -526,26 +1477,57 @@ def analisis_progresion(request, cliente_id):
             historial_ejercicio = sorted(ejercicios_filtrados, key=lambda x: x['fecha'], reverse=True)
 
             # Preparar datos para el gráfico
+            # Variables para rastrear PRs
+            max_peso = 0
+            max_volumen = 0
+
+            # Primera pasada: Calcular datos y encontrar máximos
+            temp_datos = []
             for e in ejercicios_filtrados:
                 try:
                     peso = float(e.get('peso', 0)) if e.get('peso') != 'PC' else 0
-
-                    # Usamos la función robusta para obtener series y repeticiones
                     series, reps = parse_reps_and_series(str(e.get('repeticiones', '1x1')))
-
-                    # Calculamos el volumen
-                    volumen = peso * series * reps
-
-                    # --- INICIO DE LA CORRECCIÓN ---
-                    # Añadimos los datos calculados a la lista `datos_progresion`.
-                    # El formato debe coincidir con lo que espera el JavaScript.
-                    datos_progresion.append({
-                        'fecha': e['fecha'].strftime('%Y-%m-%d'),  # Formateamos la fecha
-                        'peso': peso,
-                        'volumen': volumen
-                    })
+                    
+                    if peso > 0 and reps > 0:
+                        volumen = peso * series * reps
+                        # Fórmula Epley para 1RM
+                        rm_estimado = round(peso * (1 + reps / 30), 2)
+                        
+                        # Actualizar máximos
+                        if peso > max_peso: max_peso = peso
+                        if volumen > max_volumen: max_volumen = volumen
+                        
+                        e['volumen_calculado'] = volumen
+                        e['rm_estimado'] = rm_estimado
+                        
+                        temp_datos.append({
+                            'fecha_obj': e['fecha'], # Guardamos objeto fecha para ordenamiento si fuera necesario
+                            'fecha': e['fecha'].strftime('%Y-%m-%d'),
+                            'peso': peso,
+                            'volumen': volumen,
+                            'rm': rm_estimado,
+                            'is_pr_peso': False, # Se calculará en la segunda pasada o aquí mismo si es secuencial histórico?
+                            'is_pr_volumen': False
+                        })
                 except (ValueError, TypeError):
                     continue
+
+            # Segunda pasada: Marcar PRs (Récords Históricos hasta la fecha)
+            # Si queremos marcar el "Récord Actual" (el mejor de todos), usamos max_peso.
+            # Si queremos "Récord hasta ese momento", necesitamos iterar cronológicamente.
+            # El usuario pidió "Highlight PRs", asumo el mejor histórico absoluto para la tabla.
+            
+            # Para el gráfico es útil saber cuáles son PRs.
+            # Vamos a marcar el PR absoluto en la lista de datos para el JS si se quiere usar,
+            # y actualizar el historial_ejercicio para la tabla.
+
+            for e in ejercicios_filtrados:
+                if 'volumen_calculado' in e:
+                    e['is_pr_peso'] = e.get('peso') == max_peso and max_peso > 0
+                    e['is_pr_volumen'] = e.get('volumen_calculado') == max_volumen and max_volumen > 0
+            
+            # Actualizamos datos_progresion con la info de PRs
+            datos_progresion = temp_datos
 
             # 5. Obtener datos de modelos de análisis relacionados
             tendencia = TendenciaProgresion.objects.filter(cliente=cliente,
@@ -1874,47 +2856,6 @@ class AnalisisProgresionAvanzado:
         return peso * 1.3  # Estimación conservadora para altas repeticiones
 
 
-# Vista para el Dashboard de Progresión Avanzado
-def dashboard_progresion_avanzado(request, cliente_id):
-    """
-    Vista principal del Dashboard de Progresión Avanzado
-    """
-    cliente = get_object_or_404(Cliente, id=cliente_id)
-    analizador = AnalisisProgresionAvanzado(cliente)
-
-    # Obtener parámetros
-    ejercicio_seleccionado = request.GET.get('ejercicio')
-    periodo = int(request.GET.get('periodo', 90))
-
-    # Análisis de ratios de fuerza
-    ratios_fuerza = analizador.calcular_ratios_fuerza()
-
-    # Evolución temporal
-    evolucion_temporal = analizador.analisis_evolucion_temporal(ejercicio_seleccionado, periodo)
-
-    # Análisis de mesociclos
-    analisis_mesociclos = analizador.analisis_mesociclos()
-
-    # Lista de ejercicios disponibles
-    ejercicios_disponibles = list(evolucion_temporal.keys()) if evolucion_temporal else []
-
-    context = {
-        'cliente': cliente,
-        'ejercicio_seleccionado': ejercicio_seleccionado,
-        'periodo': periodo,
-        'ejercicios_disponibles': ejercicios_disponibles,
-        'ratios_fuerza': ratios_fuerza,
-        'evolucion_temporal': evolucion_temporal,
-        'analisis_mesociclos': analisis_mesociclos,
-        'datos_graficos': json.dumps({
-            'evolucion': evolucion_temporal,
-            'ratios': ratios_fuerza
-        })
-    }
-
-    return render(request, 'analytics/progresion_avanzado.html', context)
-
-
 from django.shortcuts import render, get_object_or_404
 from django.http import JsonResponse
 from django.db.models import Sum, Avg, Max, Min, Count
@@ -2826,14 +3767,33 @@ class AnalizadorCargaYFatiga:
 
     def _calcular_carga_entrenamiento(self, entreno):
         """
-        Calcula la Carga de Entrenamiento (Training Load) para una sola sesión.
-        Usaremos una fórmula simple basada en el volumen: TRIMP = Volumen / 1000
+        Calcula la Carga de Entrenamiento (Training Load) multi-métrica.
+        Combina Volumen (GYM) con Duración x RPE (Cardio/Intensidad).
         """
+        carga = 0.0
+        # 1. Carga por Volumen (Fuerza)
         if entreno.volumen_total_kg and entreno.volumen_total_kg > 0:
-            return round(entreno.volumen_total_kg / 1000, 2)
-        return 0  # Si no hay volumen, la carga es cero
+            carga += float(entreno.volumen_total_kg) / 1000.0
+        
+        # 2. Carga por Duración y RPE (Cardio/HIIT/Metabólico)
+        duracion = entreno.duracion_minutos or 0
+        rpe = 0
+        
+        # Intentar obtener RPE y duración de la sesión detallada si existe
+        if hasattr(entreno, 'sesion_detalle'):
+            rpe = entreno.sesion_detalle.rpe_medio or 0
+            if not duracion:
+                duracion = entreno.sesion_detalle.duracion_minutos or 0
+        
+        if duracion > 0:
+            # Si no hay RPE registrado, asumimos un esfuerzo base de 5.0 (moderado)
+            rpe_val = rpe if rpe > 0 else 5.0
+            # Normalización: (Minutos * RPE) / 100
+            carga += (duracion * float(rpe_val)) / 100.0
+             
+        return round(float(carga), 2)
 
-    def _generar_narrativa_dinamica(self, df, acwr_actual, zona_riesgo):
+    def _generar_narrativa_dinamica(self, df, acwr_actual, zona_riesgo, monotonia=0):
         """
         Analiza el DataFrame de carga y genera un resumen textual dinámico.
         """
@@ -2860,6 +3820,18 @@ class AnalizadorCargaYFatiga:
 
         # 2. Identificar puntos clave
         puntos_clave = []
+
+        # Análisis de Monotonía
+        if monotonia > 2.0:
+            puntos_clave.append({
+                'emoji': '🥱',
+                'texto': f"Tu entrenamiento es muy monótono (índice <strong>{monotonia}</strong>). Variar la intensidad (días duros vs suaves) ayuda a evitar el estancamiento."
+            })
+        elif monotonia < 1.2:
+             puntos_clave.append({
+                'emoji': '⚡',
+                'texto': f"¡Gran variedad! Tu índice de monotonía es bajo (<strong>{monotonia}</strong>), lo que indica una buena alternancia entre cargas altas y bajas."
+            })
 
         # Punto de mayor riesgo
         riesgo_max = df['acwr'].max()
@@ -2898,10 +3870,10 @@ class AnalizadorCargaYFatiga:
 
     def analizar_acwr(self, periodo_agudo=7, periodo_cronico=28):
         """
-        MODIFICADO: Ahora también llama al generador de narrativa.
+        Calcula el ratio ACWR y genera narrativa dinámica.
+        Si no hay carga en los últimos 7 días, retrocede al último entreno para dar feedback útil.
         """
         if not self.entrenamientos.exists():
-            # ... (código para cuando no hay datos, se mantiene igual)
             return {
                 'dataframe_json': pd.DataFrame().to_json(orient='split'),
                 'acwr_actual': 0,
@@ -2910,17 +3882,29 @@ class AnalizadorCargaYFatiga:
                 'narrativa': self._generar_narrativa_dinamica(pd.DataFrame(), 0, 'muy_baja')
             }
 
-        # ... (toda la lógica de creación del DataFrame y cálculo de ACWR se mantiene igual)
-        idx = pd.date_range(start=self.fecha_inicio, end=self.fecha_fin)
+        # --- Lógica de Ventana Activa ---
+        # Si el último entreno es previo a hoy, pero reciente (< 30 días), 
+        # centramos el análisis ahí para no mostrar un dashboard vacío de 0.00.
+        ultimo_entreno_fecha = self.entrenamientos.latest('fecha').fecha
+        hoy = timezone.now().date()
+        referencia = hoy
+        
+        # Si David no ha entrenado esta semana, pero sí en el último mes
+        if (hoy - ultimo_entreno_fecha).days > 7 and (hoy - ultimo_entreno_fecha).days < 30:
+            referencia = ultimo_entreno_fecha
+
+        idx = pd.date_range(start=referencia - timedelta(days=90), end=referencia)
         cargas_diarias = {entreno.fecha: self._calcular_carga_entrenamiento(entreno) for entreno in self.entrenamientos}
         df = pd.DataFrame(cargas_diarias.items(), columns=['fecha', 'carga_diaria'])
         df['fecha'] = pd.to_datetime(df['fecha'])
         df = df.set_index('fecha').reindex(idx, fill_value=0)
+        
         df['carga_aguda'] = df['carga_diaria'].rolling(window=periodo_agudo, min_periods=1).mean()
         df['carga_cronica'] = df['carga_diaria'].rolling(window=periodo_cronico, min_periods=1).mean()
         df['acwr'] = (df['carga_aguda'] / df['carga_cronica']).fillna(0)
 
         acwr_actual = round(df['acwr'].iloc[-1], 2) if not df.empty else 0
+        # ... (lógica para determinar zona_riesgo y recomendacion se mantiene igual)
         # ... (lógica para determinar zona_riesgo y recomendacion se mantiene igual)
         if 0.8 <= acwr_actual <= 1.3:
             zona_riesgo = 'optima'
@@ -2935,17 +3919,93 @@ class AnalizadorCargaYFatiga:
             zona_riesgo = 'baja_carga'
             recomendacion = "La carga es baja, lo que puede llevar a una pérdida de adaptaciones. Ideal para una semana de descarga."
 
-        # --- LLAMADA AL NUEVO MÉTODO ---
-        narrativa = self._generar_narrativa_dinamica(df, acwr_actual, zona_riesgo)
+        # CÁLCULO DE MONOTONÍA Y STRAIN (Añadido)
+        # Monotonía = Carga Media Diaria / Desviación Estándar
+        # Strain = Carga Total Semanal * Monotonía
+        if not df.empty and len(df) >= 7:
+            last_7_days = df.iloc[-7:]
+            mean_load = last_7_days['carga_diaria'].mean()
+            std_dev = last_7_days['carga_diaria'].std()
+
+            if std_dev > 0:
+                monotonia = round(mean_load / std_dev, 2)
+            else:
+                monotonia = 0 # Evitar división por cero si todos los días son iguales (std=0)
+
+            carga_semanal = last_7_days['carga_diaria'].sum()
+            strain_raw = carga_semanal * monotonia
+            
+            # Normalización del Strain (0-100) para mejor comprensión
+            # Usamos un valor de referencia basado en el histórico o un estimado 'alto'
+            # Si no hay histórico suficiente, usamos un valor base razonable.
+            max_strain_historico = 1.0
+            if len(df) > 30:
+                 # Calculamos el strain histórico para normalizar
+                 # Esto es aproximado pero sirve para la escala
+                 df['rolling_std'] = df['carga_diaria'].rolling(7).std()
+                 df['rolling_mean'] = df['carga_diaria'].rolling(7).mean()
+                 df['rolling_load'] = df['carga_diaria'].rolling(7).sum()
+                 df['rolling_strain'] = df['rolling_load'] * (df['rolling_mean'] / df['rolling_std'].replace(0, 1))
+                 max_strain_historico = df['rolling_strain'].max()
+            
+            if max_strain_historico == 0: max_strain_historico = 1 # Evitar div/0
+            
+            # Si el strain actual es mayor, será 100 (o más, pero lo capamos visualmente)
+            # Si es muy bajo, será cercano a 0.
+            # Convertimos a escala 0-10.
+            # Ajuste heurístico: Si strain_raw es > max_historico, es un 10.
+            
+            # Simplificación: Devolvemos el valor raw y un porcentaje relativo
+            strain = round(strain_raw, 1)
+            strain_percent = min(round((strain_raw / max_strain_historico) * 100), 100) if max_strain_historico > 1 else 0
+
+        else:
+            monotonia = 0
+            strain = 0
+            strain_percent = 0
+
+        es_monotono = monotonia > 2.0
+
+        # --- CÁLCULO DE MONOTONÍA Y STRAIN (NUEVO) ---
+        # Monotonía = Carga Promedio / Desviación Estándar
+        # Strain = Carga Total * Monotonía
+        # Ya calculado arriba.
+        
+        # Preparar datos para el gráfico (Lista de dicts, no string JSON)
+        df_reset = df.reset_index()
+        # Aseguramos que la columna de fecha tenga el nombre correcto
+        if 'index' in df_reset.columns:
+            df_reset = df_reset.rename(columns={'index': 'fecha'})
+        
+        # Convertimos fechas a string ISO para evitar problemas de serialización
+        df_reset['fecha'] = df_reset['fecha'].dt.strftime('%Y-%m-%d')
+        
+        # Convertimos a lista de diccionarios
+        chart_data = df_reset.to_dict(orient='records')
+        
+        # Limpieza manual asegurada de NaN/Infinitos
+        for record in chart_data:
+            for key, value in record.items():
+                # Verificamos si es float y si es nulo (NaN) o infinito
+                if isinstance(value, float) and pd.isna(value):
+                    record[key] = None
+                # También limpiar strings 'NaN' si hubieran quedado
+                elif value == 'NaN':
+                    record[key] = None
 
         return {
-            'dataframe_json': df.reset_index().rename(columns={'index': 'fecha'}).to_json(orient='records',
-                                                                                          date_format='iso'),
+            'dataframe_json': chart_data, # Ahora es una lista, no un string JSON
             'acwr_actual': acwr_actual,
             'zona_riesgo': zona_riesgo,
             'recomendacion': recomendacion,
-            'narrativa': narrativa  # <-- AÑADIMOS LA NARRATIVA AL RESULTADO
+            'narrativa': self._generar_narrativa_dinamica(df, acwr_actual, zona_riesgo, monotonia),
+            'monotonia': monotonia,
+            'es_monotono': es_monotono,
+            'strain': strain,
+            'strain_percent': strain_percent # Nuevo campo para la barra de progreso
         }
+
+
 
 
 # --- AÑADE ESTA NUEVA VISTA ---
