@@ -1,0 +1,143 @@
+{% extends 'diario/base_stoic.html' %}
+{% load static %}
+{% load custom_filters %}
+{% block title %}{{ reflexion.titulo }} - Logos{% endblock %}
+
+{% block content %}
+<div class="fade-in-up">
+    <!-- Encabezado -->
+    <div class="card shadow-soft mb-4">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <h1 class="text-gradient mb-2">{{ reflexion.titulo }}</h1>
+                    <p class="text-muted mb-0">
+                        <i class="far fa-calendar me-2"></i>{{ reflexion.fecha|date:"l, d \d\e F \d\e Y \a \l\a\s H:i" }}
+                    </p>
+                </div>
+                <div>
+                    <span class="badge bg-secondary">{{ reflexion.get_tipo_display }}</span>
+                    {% if reflexion.favorita %}
+                    <span class="badge bg-warning"><i class="fas fa-star"></i> Favorita</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+
+            <!-- Contenido de la Reflexión -->
+            <div class="card shadow-soft mb-4">
+                <div class="card-body">
+                    <div class="reflexion-contenido" style="white-space: pre-wrap; line-height: 1.8; font-size: 1.05rem;">
+                        {{ reflexion.contenido }}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Reflexión Guiada Asociada (si aplica) -->
+            {% if reflexion.reflexion_guiada %}
+            <div class="card shadow-sm mb-4" style="border-left: 4px solid {{ reflexion.reflexion_guiada.color }};">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="{{ reflexion.reflexion_guiada.icono }} me-2"></i>
+                        Reflexión Guiada: {{ reflexion.reflexion_guiada.titulo }}
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <blockquote class="blockquote mb-0 fst-italic">
+                        <p class="small">"{{ reflexion.reflexion_guiada.cita_filosofica }}"</p>
+                        <footer class="blockquote-footer">{{ reflexion.reflexion_guiada.autor_cita }}</footer>
+                    </blockquote>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Acciones -->
+            <div class="d-flex gap-2 mb-4">
+                <a href="{% url 'diario:logos_editar_reflexion' reflexion.id %}" class="btn btn-primary">
+                    <i class="fas fa-edit me-2"></i>Editar
+                </a>
+                <a href="{% url 'diario:logos_lista_reflexiones' %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-list me-2"></i>Ver Todas
+                </a>
+                <a href="{% url 'diario:logos_dashboard' %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-home me-2"></i>Dashboard
+                </a>
+            </div>
+
+        </div>
+
+        <!-- Columna Lateral -->
+        <div class="col-lg-4">
+
+            <!-- Metadata -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>Información</h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <small class="text-muted d-block">Tipo</small>
+                        <strong>{{ reflexion.get_tipo_display }}</strong>
+                    </div>
+
+                    {% if reflexion.etiquetas %}
+                    <div class="mb-3">
+                        <small class="text-muted d-block mb-2">Etiquetas</small>
+                        {% for etiqueta in reflexion.etiquetas|split:"," %}
+
+                        <span class="badge bg-light text-dark me-1 mb-1">{{ etiqueta|trim }}</span>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+
+                    {% if reflexion.estado_animo_post %}
+                    <div class="mb-3">
+                        <small class="text-muted d-block">Estado después de escribir</small>
+                        <div class="mt-2">
+                            {% if reflexion.estado_animo_post == 1 %}
+                            <span class="fs-3">😔</span> <strong>Mal</strong>
+                            {% elif reflexion.estado_animo_post == 2 %}
+                            <span class="fs-3">😐</span> <strong>Regular</strong>
+                            {% elif reflexion.estado_animo_post == 3 %}
+                            <span class="fs-3">🙂</span> <strong>Bien</strong>
+                            {% elif reflexion.estado_animo_post == 4 %}
+                            <span class="fs-3">😊</span> <strong>Muy bien</strong>
+                            {% elif reflexion.estado_animo_post == 5 %}
+                            <span class="fs-3">😄</span> <strong>Excelente</strong>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <div class="mb-3">
+                        <small class="text-muted d-block">Creada</small>
+                        <strong>{{ reflexion.fecha|date:"d/m/Y H:i" }}</strong>
+                    </div>
+
+                    {% if reflexion.fecha_modificacion != reflexion.fecha %}
+                    <div class="mb-0">
+                        <small class="text-muted d-block">Última modificación</small>
+                        <strong>{{ reflexion.fecha_modificacion|date:"d/m/Y H:i" }}</strong>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Cita Inspiradora -->
+            <div class="card shadow-sm">
+                <div class="card-body text-center p-4">
+                    <i class="fas fa-quote-left fa-2x text-muted mb-3"></i>
+                    <p class="fst-italic mb-3">"La escritura es el espejo del alma."</p>
+                    <small class="text-muted">— Proverbio estoico</small>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}
+

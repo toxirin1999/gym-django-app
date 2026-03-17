@@ -1,0 +1,1102 @@
+{% extends 'base.html' %}
+
+{% load static %}
+{% load analytics_filters %}
+{% block title %}Tu Plan de Entrenamiento - Helms{% endblock %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --neon-blue: #00f3ff;
+        --neon-pink: #ff00ff;
+        --neon-green: #00ff9d;
+        --neon-orange: #ff9f43;
+        --glass-bg: rgba(18, 18, 24, 0.85);
+        --glass-border: rgba(255, 255, 255, 0.1);
+        --ink-black: #0a0a0f;
+        --color-hipertrofia: #00b4d8;
+        --color-fuerza: #e040fb;
+        --color-potencia: #00e676;
+        --color-descarga: #455a64;
+    }
+
+    .helms-container {
+        max-width: 1200px;
+        margin: 2rem auto;
+        padding: 0 1.5rem;
+        font-family: 'Inter', system-ui, sans-serif;
+        color: #e2e8f0;
+    }
+
+    /* HEADER */
+    .helms-header {
+        margin-bottom: 3rem;
+        position: relative;
+    }
+
+    .helms-header h1 {
+        font-size: 2.5rem;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+        margin-bottom: 0.5rem;
+        background: linear-gradient(135deg, #fff 0%, #cbd5e1 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    .header-badge {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        background: rgba(0, 243, 255, 0.1);
+        color: var(--neon-blue);
+        border: 1px solid rgba(0, 243, 255, 0.2);
+        margin-bottom: 1rem;
+    }
+
+    /* CARDS */
+    .helms-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 2rem;
+        margin-bottom: 3rem;
+    }
+
+    @media (max-width: 768px) {
+        .helms-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .helms-card {
+        background: var(--glass-bg);
+        border: 1px solid var(--glass-border);
+        border-radius: 1.5rem;
+        padding: 2rem;
+        position: relative;
+        overflow: hidden;
+        backdrop-filter: blur(10px);
+    }
+
+    .card-title {
+        font-size: 0.875rem;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: #94a3b8;
+        margin-bottom: 1.5rem;
+        font-weight: 600;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        padding-bottom: 0.5rem;
+    }
+
+    /* PHASE STATUS */
+    .phase-name {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #fff;
+        margin-bottom: 0.5rem;
+    }
+
+    .phase-description {
+        color: #cbd5e1;
+        line-height: 1.6;
+        margin-bottom: 2rem;
+        font-size: 0.95rem;
+    }
+
+    /* PROGRESS BAR */
+    .progress-labels {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 0.5rem;
+        font-size: 0.8rem;
+        color: #94a3b8;
+        font-weight: 500;
+    }
+
+    .progress-bar-bg {
+        height: 6px;
+        background: rgba(255, 255, 255, 0.08);
+        border-radius: 99px;
+        overflow: hidden;
+    }
+
+    .progress-bar-fill {
+        height: 100%;
+        background: linear-gradient(90deg, var(--neon-blue), var(--neon-pink));
+        border-radius: 99px;
+        transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* PARAMETERS GRID */
+    .params-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1rem;
+    }
+
+    .param-box {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 1rem;
+        padding: 1.25rem 0.5rem;
+        text-align: center;
+        transition: transform 0.2s;
+    }
+
+    .param-box:hover {
+        background: rgba(255, 255, 255, 0.06);
+        transform: translateY(-2px);
+    }
+
+    .param-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #fff;
+        margin-bottom: 0.25rem;
+    }
+
+    .param-label {
+        font-size: 0.7rem;
+        color: #94a3b8;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    /* EXAMPLES TABLE */
+    .examples-section {
+        background: var(--glass-bg);
+        border: 1px solid var(--glass-border);
+        border-radius: 1.5rem;
+        padding: 2rem;
+        margin-bottom: 3rem;
+    }
+
+    .examples-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        color: #e2e8f0;
+    }
+
+    .examples-table th {
+        text-align: left;
+        padding: 1rem;
+        font-size: 0.75rem;
+        color: #64748b;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        border-bottom: 1px solid var(--glass-border);
+    }
+
+    .examples-table td {
+        padding: 1.25rem 1rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+        vertical-align: middle;
+    }
+
+    .examples-table tr:hover td {
+        background: rgba(255, 255, 255, 0.02);
+    }
+
+    .examples-table tr:last-child td {
+        border-bottom: none;
+    }
+
+    .exercise-row {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .exercise-icon {
+        width: 40px;
+        height: 40px;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+    }
+
+    .exercise-name {
+        font-weight: 600;
+        font-size: 1rem;
+        color: #f1f5f9;
+        display: block;
+    }
+
+    .exercise-sub {
+        font-size: 0.75rem;
+        color: #64748b;
+    }
+
+    .target-weight {
+        font-weight: 700;
+        color: var(--neon-green);
+        font-size: 1.1rem;
+    }
+
+    .target-reps {
+        font-size: 0.85rem;
+        color: #94a3b8;
+        margin-top: 0.25rem;
+    }
+
+    /* ============================================================
+       TIMELINE BAR
+       ============================================================ */
+    .timeline-section {
+        background: var(--glass-bg);
+        border: 1px solid var(--glass-border);
+        border-radius: 1.5rem;
+        padding: 2rem;
+        margin-bottom: 3rem;
+    }
+
+    .timeline-bar {
+        display: flex;
+        height: 40px;
+        border-radius: 10px;
+        overflow: hidden;
+        background: rgba(255, 255, 255, 0.05);
+        gap: 2px;
+    }
+
+    .timeline-segment {
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.55rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: rgba(255, 255, 255, 0.85);
+        cursor: pointer;
+        transition: filter 0.2s, transform 0.2s;
+        overflow: hidden;
+        white-space: nowrap;
+    }
+
+    .timeline-segment:hover {
+        filter: brightness(1.3);
+        transform: scaleY(1.1);
+        z-index: 2;
+    }
+
+    .timeline-segment.is-current {
+        box-shadow: 0 0 12px rgba(255, 255, 255, 0.3);
+        z-index: 3;
+        animation: pulse-glow 2s infinite;
+    }
+
+    .timeline-segment.is-current::after {
+        content: '▼';
+        position: absolute;
+        bottom: -16px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 10px;
+        color: #fff;
+        filter: drop-shadow(0 0 3px rgba(255, 255, 255, 0.5));
+    }
+
+    @keyframes pulse-glow {
+
+        0%,
+        100% {
+            box-shadow: 0 0 8px rgba(255, 255, 255, 0.2);
+        }
+
+        50% {
+            box-shadow: 0 0 16px rgba(255, 255, 255, 0.5);
+        }
+    }
+
+    .seg-hipertrofia {
+        background: linear-gradient(135deg, #0077b6, #00b4d8);
+    }
+
+    .seg-fuerza {
+        background: linear-gradient(135deg, #7b1fa2, #e040fb);
+    }
+
+    .seg-potencia {
+        background: linear-gradient(135deg, #00695c, #00e676);
+    }
+
+    .seg-descarga {
+        background: rgba(69, 90, 100, 0.6);
+        font-size: 0;
+        min-width: 6px;
+    }
+
+    .timeline-legend {
+        display: flex;
+        gap: 1.5rem;
+        margin-top: 1.5rem;
+        flex-wrap: wrap;
+        justify-content: center;
+        font-size: 0.75rem;
+        color: #94a3b8;
+    }
+
+    .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+    }
+
+    .legend-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 3px;
+    }
+
+    .legend-dot.hipertrofia {
+        background: var(--color-hipertrofia);
+    }
+
+    .legend-dot.fuerza {
+        background: var(--color-fuerza);
+    }
+
+    .legend-dot.potencia {
+        background: var(--color-potencia);
+    }
+
+    .legend-dot.descarga {
+        background: var(--color-descarga);
+    }
+
+    .timeline-months {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 0.5rem;
+        font-size: 0.65rem;
+        color: #64748b;
+        padding: 0 2px;
+    }
+
+    /* ============================================================
+       PHASE DETAIL CARDS
+       ============================================================ */
+    .phases-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .phase-card {
+        background: var(--glass-bg);
+        border: 1px solid var(--glass-border);
+        border-radius: 1rem;
+        overflow: hidden;
+        transition: all 0.3s ease;
+    }
+
+    .phase-card.is-current-card {
+        border-color: rgba(0, 243, 255, 0.4);
+    }
+
+    .phase-card.is-descarga-card {
+        opacity: 0.6;
+    }
+
+    .phase-card-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 1.25rem 1.5rem;
+        cursor: pointer;
+        gap: 1rem;
+        transition: background 0.2s;
+    }
+
+    .phase-card-header:hover {
+        background: rgba(255, 255, 255, 0.03);
+    }
+
+    .phase-card-left {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        flex: 1;
+        min-width: 0;
+    }
+
+    .phase-color-bar {
+        width: 4px;
+        height: 36px;
+        border-radius: 4px;
+        flex-shrink: 0;
+    }
+
+    .phase-color-bar.hipertrofia {
+        background: var(--color-hipertrofia);
+    }
+
+    .phase-color-bar.fuerza {
+        background: var(--color-fuerza);
+    }
+
+    .phase-color-bar.potencia {
+        background: var(--color-potencia);
+    }
+
+    .phase-color-bar.descarga {
+        background: var(--color-descarga);
+    }
+
+    .phase-card-info {
+        min-width: 0;
+    }
+
+    .phase-card-name {
+        font-weight: 600;
+        font-size: 0.95rem;
+        color: #fff;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .phase-card-dates {
+        font-size: 0.75rem;
+        color: #64748b;
+        margin-top: 0.15rem;
+    }
+
+    .phase-card-badges {
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+        flex-shrink: 0;
+    }
+
+    .phase-badge {
+        padding: 0.2rem 0.6rem;
+        border-radius: 6px;
+        font-size: 0.65rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        background: rgba(255, 255, 255, 0.05);
+        color: #94a3b8;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .phase-badge.current-badge {
+        background: rgba(0, 243, 255, 0.15);
+        color: var(--neon-blue);
+        border-color: rgba(0, 243, 255, 0.3);
+    }
+
+    .phase-card-chevron {
+        color: #64748b;
+        transition: transform 0.3s;
+        font-size: 0.8rem;
+        flex-shrink: 0;
+    }
+
+    .phase-card.is-open .phase-card-chevron {
+        transform: rotate(180deg);
+    }
+
+    .phase-card-body {
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.4s ease, padding 0.3s ease;
+        padding: 0 1.5rem;
+    }
+
+    .phase-card.is-open .phase-card-body {
+        max-height: 300px;
+        padding: 0 1.5rem 1.5rem;
+    }
+
+    .phase-detail-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 0.75rem;
+        margin-bottom: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    @media (max-width: 600px) {
+        .phase-detail-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+
+    .phase-detail-item {
+        text-align: center;
+    }
+
+    .phase-detail-value {
+        font-weight: 700;
+        font-size: 1.1rem;
+        color: #fff;
+    }
+
+    .phase-detail-label {
+        font-size: 0.65rem;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        margin-top: 0.15rem;
+    }
+
+    .phase-detail-desc {
+        font-size: 0.85rem;
+        color: #94a3b8;
+        line-height: 1.6;
+        padding: 0.75rem 1rem;
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: 0.75rem;
+        border: 1px solid rgba(255, 255, 255, 0.04);
+    }
+
+    /* INK BG */
+    .ink-bg {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: -2;
+        background-color: var(--ink-black);
+        pointer-events: none;
+    }
+
+    .ink-stain {
+        position: absolute;
+        width: 600px;
+        height: 600px;
+        background: radial-gradient(circle, rgba(16, 185, 129, 0.03) 0%, transparent 60%);
+        border-radius: 50%;
+        filter: blur(80px);
+        z-index: -1;
+        top: -200px;
+        right: -100px;
+    }
+
+    .back-nav {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 2rem;
+        color: #64748b;
+        text-decoration: none;
+        font-size: 0.9rem;
+        transition: color 0.2s;
+    }
+
+    .back-nav:hover {
+        color: #fff;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="ink-bg"></div>
+
+<div class="helms-container">
+
+    <a href="{% url 'analytics:dashboard_cliente' cliente.id %}" class="back-nav">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+            <path fill-rule="evenodd"
+                d="M15 8a.5.5 0 0 0-.5-.5H2.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L2.707 8.5H14.5A.5.5 0 0 0 15 8z" />
+        </svg>
+        Volver al Dashboard
+    </a>
+
+    <!-- Header -->
+    <div class="helms-header">
+        <div class="ink-stain"></div>
+        <span class="header-badge">Metodología Helms</span>
+        <h1>Explicación de tu Plan</h1>
+        <p>Estás en la semana {{ semana_actual }} de la fase de {{ fase_actual|default:"Base" }}.</p>
+    </div>
+
+    <!-- Main Grid -->
+    <div class="helms-grid">
+
+        <!-- Status Card -->
+        <div class="helms-card">
+            <div class="card-title">Objetivo Actual</div>
+            <div class="phase-name">{{ fase_actual }}</div>
+            <div class="phase-description">{{ descripcion }}</div>
+            <div class="progress-container">
+                <div class="progress-labels">
+                    <span>Progreso del bloque</span>
+                    <span>{{ progreso_bloque|floatformat:0 }}%</span>
+                </div>
+                <div class="progress-bar-bg">
+                    <div class="progress-bar-fill" style="width: {{ progreso_bloque }}%;"></div>
+                </div>
+                <div style="text-align: right; margin-top: 0.5rem; font-size: 0.75rem; color: #64748b;">
+                    Semana {{ semana_actual }} / {{ total_semanas }}
+                </div>
+            </div>
+        </div>
+
+        <!-- Parameters Card -->
+        <div class="helms-card">
+            <div class="card-title">Parámetros de Entrenamiento</div>
+            <div class="params-grid">
+                <div class="param-box">
+                    <div class="param-value" style="color: var(--neon-pink);">{{ parametros.rpe_target }}</div>
+                    <div class="param-label">RPE Objetivo</div>
+                </div>
+                <div class="param-box">
+                    <div class="param-value" style="color: var(--neon-blue);">{{ parametros.rango_reps }}</div>
+                    <div class="param-label">Repeticiones</div>
+                </div>
+                <div class="param-box">
+                    <div class="param-value" style="font-size: 1.25rem;">{{ parametros.enfoque }}</div>
+                    <div class="param-label">Enfoque</div>
+                </div>
+            </div>
+            <div
+                style="margin-top: 2rem; padding: 1rem; background: rgba(0,0,0,0.2); border-radius: 0.75rem; border: 1px solid rgba(255,255,255,0.05);">
+                <div style="font-weight: 600; font-size: 0.85rem; color: #fff; margin-bottom: 0.25rem;">💡 ¿Qué
+                    significa esto?
+                </div>
+                <p style="font-size: 0.8rem; color: #94a3b8; line-height: 1.5; margin: 0;">
+                    Debes seleccionar un peso con el que llegues a <strong>{{ parametros.rango_reps }} reps</strong>
+                    sintiendo que te quedan
+                    <strong>{{ parametros.rpe_target_desc|default:"unas pocas" }}</strong> en reserva (RPE {{
+                    parametros.rpe_target }}).
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================
+         ANNUAL TIMELINE
+         ============================================================ -->
+    {% if bloques_plan %}
+    <div class="timeline-section">
+        <div class="card-title">Tu Año Completo — {{ año_plan }}</div>
+
+        <div class="timeline-bar">
+            {% for bloque in bloques_plan %}
+            <div class="timeline-segment seg-{{ bloque.tipo_color }} {% if bloque.es_actual %}is-current{% endif %}"
+                style="flex: {{ bloque.duracion }};" title="{{ bloque.nombre }} ({{ bloque.duracion }} sem)">
+                {% if not bloque.es_descarga and bloque.duracion >= 3 %}
+                {{ bloque.duracion }}s
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="timeline-months">
+            <span>Ene</span><span>Feb</span><span>Mar</span><span>Abr</span>
+            <span>May</span><span>Jun</span><span>Jul</span><span>Ago</span>
+            <span>Sep</span><span>Oct</span><span>Nov</span><span>Dic</span>
+        </div>
+
+        <div class="timeline-legend">
+            <div class="legend-item">
+                <div class="legend-dot hipertrofia"></div>
+                Hipertrofia
+            </div>
+            <div class="legend-item">
+                <div class="legend-dot fuerza"></div>
+                Fuerza
+            </div>
+            <div class="legend-item">
+                <div class="legend-dot potencia"></div>
+                Potencia
+            </div>
+            <div class="legend-item">
+                <div class="legend-dot descarga"></div>
+                Descarga
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================
+         PHASE DETAIL CARDS
+         ============================================================ -->
+    <div class="timeline-section" style="margin-bottom: 3rem;">
+        <div class="card-title">Detalle de cada Fase</div>
+        <div class="phases-grid">
+            {% for bloque in bloques_plan %}
+            <div class="phase-card {% if bloque.es_actual %}is-current-card is-open{% endif %} {% if bloque.es_descarga %}is-descarga-card{% endif %}"
+                data-phase-card>
+                <div class="phase-card-header" onclick="this.parentElement.classList.toggle('is-open')">
+                    <div class="phase-card-left">
+                        <div class="phase-color-bar {{ bloque.tipo_color }}"></div>
+                        <div class="phase-card-info">
+                            <div class="phase-card-name">{{ bloque.nombre }}</div>
+                            <div class="phase-card-dates">
+                                {{ bloque.fecha_inicio|date:"d M" }} → {{ bloque.fecha_fin|date:"d M" }}
+                                · {{ bloque.duracion }} semana{{ bloque.duracion|pluralize:"s" }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="phase-card-badges">
+                        {% if bloque.es_actual %}
+                        <span class="phase-badge current-badge">⚡ Fase Actual</span>
+                        {% endif %}
+                        {% if not bloque.es_descarga %}
+                        <span class="phase-badge">{{ bloque.objetivo|title }}</span>
+                        {% endif %}
+                    </div>
+                    {% if not bloque.es_descarga %}
+                    <div class="phase-card-chevron">▾</div>
+                    {% endif %}
+                </div>
+
+                {% if not bloque.es_descarga %}
+                <div class="phase-card-body">
+                    <div class="phase-detail-grid">
+                        <div class="phase-detail-item">
+                            <div class="phase-detail-value" style="color: var(--neon-blue);">{{ bloque.rep_range }}
+                            </div>
+                            <div class="phase-detail-label">Rango Reps</div>
+                        </div>
+                        <div class="phase-detail-item">
+                            <div class="phase-detail-value" style="color: var(--neon-pink);">{{ bloque.rpe }}</div>
+                            <div class="phase-detail-label">RPE</div>
+                        </div>
+                        <div class="phase-detail-item">
+                            <div class="phase-detail-value">{{ bloque.duracion }}</div>
+                            <div class="phase-detail-label">Semanas</div>
+                        </div>
+                        <div class="phase-detail-item">
+                            <div class="phase-detail-value" style="font-size: 0.85rem;">{{ bloque.objetivo|title }}
+                            </div>
+                            <div class="phase-detail-label">Objetivo</div>
+                        </div>
+                    </div>
+                    {% if bloque.descripcion %}
+                    <div class="phase-detail-desc">
+                        📋 {{ bloque.descripcion }}
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ============================================================
+         PHASE HISTORY (Completed Phases)
+         ============================================================ -->
+    {% if fases_completadas %}
+    <div class="timeline-section" style="margin-bottom: 3rem;">
+        <div class="card-title">📊 Historial de Fases Completadas</div>
+        <p style="color: #64748b; font-size: 0.85rem; margin-bottom: 1.5rem;">
+            Progreso real medido en cada bloque de entrenamiento que has completado.
+        </p>
+
+        <div class="phases-grid">
+            {% for fase in fases_completadas %}
+            <div class="phase-card"
+                style="border-left: 4px solid {% if fase.tipo_fase == 'hipertrofia' %}var(--color-hipertrofia){% elif fase.tipo_fase == 'fuerza' %}var(--color-fuerza){% elif fase.tipo_fase == 'potencia' %}var(--color-potencia){% else %}var(--color-descarga){% endif %};">
+                <div class="phase-card-header" onclick="this.parentElement.classList.toggle('is-open')">
+                    <div class="phase-card-left">
+                        <div class="phase-card-info" style="flex: 1;">
+                            <div class="phase-card-name">{{ fase.nombre_fase }}</div>
+                            <div class="phase-card-dates">
+                                {{ fase.fecha_inicio|date:"d M Y" }} → {{ fase.fecha_fin|date:"d M Y" }}
+                                · {{ fase.semanas_completadas }} semana{{ fase.semanas_completadas|pluralize:"s" }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="phase-card-badges">
+                        {% if fase.ganancia_promedio > 0 %}
+                        <span class="phase-badge"
+                            style="background: rgba(0, 255, 157, 0.15); color: var(--neon-green); border-color: rgba(0, 255, 157, 0.3);">
+                            ↗️ +{{ fase.ganancia_promedio|floatformat:1 }}%
+                        </span>
+                        {% elif fase.ganancia_promedio < 0 %} <span class="phase-badge"
+                            style="background: rgba(255, 100, 100, 0.15); color: #ff6464; border-color: rgba(255, 100, 100, 0.3);">
+                            ↘️ {{ fase.ganancia_promedio|floatformat:1 }}%
+                            </span>
+                            {% endif %}
+                            <span class="phase-badge">{{ fase.get_tipo_fase_display }}</span>
+                    </div>
+                    <div class="phase-card-chevron">▾</div>
+                </div>
+
+                <div class="phase-card-body">
+                    <div style="padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.05);">
+                        <div
+                            style="font-size: 0.75rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.75rem;">
+                            Progreso por Ejercicio
+                        </div>
+                        <div style="display: grid; gap: 0.5rem;">
+                            {% for ejercicio, rm_final in fase.rm_fin.items %}
+                            <div
+                                style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem; background: rgba(0,0,0,0.2); border-radius: 0.5rem;">
+                                <span style="font-size: 0.85rem; color: #cbd5e1;">{{ ejercicio }}</span>
+                                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                    <span style="font-size: 0.8rem; color: #64748b;">{{
+                                        fase.rm_inicio|get_item:ejercicio|default:"-"|floatformat:1 }}kg</span>
+                                    <span style="color: #94a3b8;">→</span>
+                                    <span style="font-size: 0.9rem; font-weight: 600; color: var(--neon-green);">{{
+                                        rm_final|floatformat:1 }}kg</span>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Applied Examples -->
+    <div class="examples-section">
+        <div class="card-title">
+            Referencias de Carga (Basado en tu 1RM)
+        </div>
+
+        <div style="overflow-x: auto;">
+            <table class="examples-table">
+                <thead>
+                    <tr>
+                        <th>Ejercicio</th>
+                        <th>Tu 1RM Est.</th>
+                        <th>% Fase</th>
+                        <th>Peso Objetivo</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ejemplo in ejemplos %}
+                    <tr>
+                        <td>
+                            <div class="exercise-row">
+                                <div class="exercise-icon">
+                                    {% if "Sentadilla" in ejemplo.ejercicio %}⚡
+                                    {% elif "Banca" in ejemplo.ejercicio %}🔥
+                                    {% elif "Muerto" in ejemplo.ejercicio %}🩸
+                                    {% else %}💪{% endif %}
+                                </div>
+                                <div>
+                                    <span class="exercise-name">{{ ejemplo.ejercicio }}</span>
+                                    <span class="exercise-sub">Principal</span>
+                                </div>
+                            </div>
+                        </td>
+                        <td style="color: #94a3b8; font-family: monospace; font-size: 1rem;">{{ ejemplo.rm_actual }} kg
+                        </td>
+                        <td style="color: #94a3b8;">~{{ ejemplo.porcentaje }}%</td>
+                        <td>
+                            <div class="target-weight">{{ ejemplo.peso_target }} kg</div>
+                            <div class="target-reps">{{ ejemplo.schema_reps }}</div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" style="text-align: center; color: #64748b; padding: 3rem;">
+                            <div style="font-size: 2rem; margin-bottom: 1rem; opacity: 0.5;">📊</div>
+                            No tenemos suficientes datos de 1RM para generar ejemplos precisos aún.<br>
+                            Sigue entrenando para desbloquear esta función.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 1RM Predictions Section -->
+        {% if predicciones_1rm %}
+        <div
+            style="margin-top: 3rem; padding: 1.5rem; background: linear-gradient(135deg, rgba(0,243,255,0.05), rgba(255,0,255,0.05)); border-radius: 1rem; border: 1px solid rgba(0,243,255,0.2);">
+            <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.5rem;">
+                <span style="font-size: 1.5rem;">🔮</span>
+                <div>
+                    <div style="font-weight: 600; font-size: 1.1rem; color: #fff;">Proyección de 1RM al Final de la Fase
+                    </div>
+                    <div style="font-size: 0.8rem; color: #64748b;">Basado en tu historial de progreso</div>
+                </div>
+            </div>
+
+            <div style="display: grid; gap: 1rem;">
+                {% for ejercicio, pred in predicciones_1rm.items %}
+                <div
+                    style="padding: 1rem; background: rgba(0,0,0,0.3); border-radius: 0.75rem; border: 1px solid rgba(255,255,255,0.05);">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                        <div style="font-weight: 600; color: #fff;">{{ ejercicio }}</div>
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <span style="font-size: 0.75rem; color: #64748b;">Confianza:</span>
+                            <span
+                                style="font-size: 0.75rem; padding: 0.25rem 0.5rem; background: rgba(0,243,255,0.15); color: var(--neon-blue); border-radius: 0.25rem;">{{
+                                pred.confianza }}%</span>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; align-items: center; gap: 1.5rem; margin-bottom: 0.5rem;">
+                        <div>
+                            <div
+                                style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em;">
+                                Actual</div>
+                            <div style="font-size: 1.5rem; font-weight: 700; color: #94a3b8; font-family: monospace;">{{
+                                pred.actual }}</div>
+                            <div style="font-size: 0.7rem; color: #64748b;">kg</div>
+                        </div>
+
+                        <div style="flex: 1; display: flex; align-items: center; gap: 0.5rem;">
+                            <div
+                                style="flex: 1; height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden;">
+                                <div
+                                    style="height: 100%; background: linear-gradient(90deg, var(--neon-blue), var(--neon-green)); width: {% widthratio pred.ganancia_pct 10 100 %}%; transition: width 0.3s ease;">
+                                </div>
+                            </div>
+                            <span style="font-size: 0.9rem; color: var(--neon-green); font-weight: 600;">+{{
+                                pred.ganancia_pct }}%</span>
+                        </div>
+
+                        <div>
+                            <div
+                                style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em;">
+                                Proyectado</div>
+                            <div
+                                style="font-size: 1.5rem; font-weight: 700; color: var(--neon-green); font-family: monospace;">
+                                {{ pred.proyectado }}</div>
+                            <div style="font-size: 0.7rem; color: var(--neon-green);">+{{ pred.ganancia_kg }} kg</div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <div
+                style="margin-top: 1rem; padding: 0.75rem; background: rgba(255,255,255,0.02); border-radius: 0.5rem; border-left: 3px solid var(--neon-blue);">
+                <div style="font-size: 0.75rem; color: #94a3b8; line-height: 1.5;">
+                    💡 <strong>Nota:</strong> Estas proyecciones se basan en tu tasa de progreso histórica ajustada por
+                    el tipo de fase actual. Los resultados reales pueden variar según adherencia, nutrición y
+                    recuperación.
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Phase Comparison Section -->
+        {% if comparativa_fases %}
+        <div style="margin-top: 3rem;">
+            <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.5rem;">
+                <span style="font-size: 1.5rem;">📈</span>
+                <div>
+                    <div style="font-weight: 600; font-size: 1.1rem; color: #fff;">Comparativa de Tipos de Fase</div>
+                    <div style="font-size: 0.8rem; color: #64748b;">¿Qué estilo de entrenamiento te funciona mejor?
+                    </div>
+                </div>
+            </div>
+
+            <div style="overflow-x: auto;">
+                <table style="width: 100%; border-collapse: separate; border-spacing: 0;">
+                    <thead>
+                        <tr style="background: rgba(0,0,0,0.3);">
+                            <th
+                                style="padding: 1rem; text-align: left; font-size: 0.75rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                                Tipo de Fase</th>
+                            <th
+                                style="padding: 1rem; text-align: center; font-size: 0.75rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                                Fases Completadas</th>
+                            <th
+                                style="padding: 1rem; text-align: center; font-size: 0.75rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                                Ganancia Promedio</th>
+                            <th
+                                style="padding: 1rem; text-align: left; font-size: 0.75rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                                Mejor Ejercicio</th>
+                            <th
+                                style="padding: 1rem; text-align: center; font-size: 0.75rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                                Tiempo Total</th>
+                            <th
+                                style="padding: 1rem; text-align: center; font-size: 0.75rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                                Efectividad</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for tipo, stats in comparativa_fases.items %}
+                        <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                            <td style="padding: 1rem;">
+                                <div style="font-weight: 600; color: #fff;">{{ stats.nombre_display }}</div>
+                            </td>
+                            <td style="padding: 1rem; text-align: center;">
+                                <span
+                                    style="font-size: 1.25rem; font-weight: 700; color: var(--neon-blue); font-family: monospace;">{{
+                                    stats.cantidad_fases }}</span>
+                            </td>
+                            <td style="padding: 1rem; text-align: center;">
+                                <div
+                                    style="font-size: 1.25rem; font-weight: 700; font-family: monospace; color: {% if stats.ganancia_promedio > 3 %}var(--neon-green){% elif stats.ganancia_promedio > 1.5 %}#fbbf24{% else %}#94a3b8{% endif %};">
+                                    +{{ stats.ganancia_promedio }}%
+                                </div>
+                            </td>
+                            <td style="padding: 1rem;">
+                                {% if stats.mejor_ejercicio %}
+                                <div style="color: #fff; font-weight: 500;">{{ stats.mejor_ejercicio }}</div>
+                                <div style="font-size: 0.75rem; color: var(--neon-green);">+{{ stats.mejor_ganancia_kg
+                                    }} kg promedio</div>
+                                {% else %}
+                                <span style="color: #64748b;">-</span>
+                                {% endif %}
+                            </td>
+                            <td style="padding: 1rem; text-align: center;">
+                                <span style="font-size: 1rem; color: #94a3b8; font-family: monospace;">{{
+                                    stats.semanas_totales }}</span>
+                                <div style="font-size: 0.7rem; color: #64748b;">semanas</div>
+                            </td>
+                            <td style="padding: 1rem; text-align: center;">
+                                {% if stats.efectividad == 'alta' %}
+                                <span
+                                    style="padding: 0.375rem 0.75rem; background: rgba(0,255,157,0.15); color: var(--neon-green); border-radius: 0.375rem; font-size: 0.75rem; font-weight: 600; text-transform: uppercase;">🔥
+                                    Alta</span>
+                                {% elif stats.efectividad == 'media' %}
+                                <span
+                                    style="padding: 0.375rem 0.75rem; background: rgba(251,191,36,0.15); color: #fbbf24; border-radius: 0.375rem; font-size: 0.75rem; font-weight: 600; text-transform: uppercase;">⚡
+                                    Media</span>
+                                {% else %}
+                                <span
+                                    style="padding: 0.375rem 0.75rem; background: rgba(148,163,184,0.15); color: #94a3b8; border-radius: 0.375rem; font-size: 0.75rem; font-weight: 600; text-transform: uppercase;">📊
+                                    Baja</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div
+                style="margin-top: 1rem; padding: 0.75rem; background: rgba(255,255,255,0.02); border-radius: 0.5rem; border-left: 3px solid var(--neon-pink);">
+                <div style="font-size: 0.75rem; color: #94a3b8; line-height: 1.5;">
+                    💡 <strong>Insight:</strong> Esta tabla te ayuda a identificar qué tipos de entrenamiento generan
+                    mejores resultados en tu caso particular. Usa esta información para optimizar tu periodización
+                    futura.
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <div style="margin-top: 2rem; text-align: center;">
+            <p style="color: #475569; font-size: 0.8rem; font-style: italic;">
+                * Estas cargas son sugerencias algorítmicas basadas en tu historial. <br>
+                Siempre prioriza la técnica y tu sensación diaria (RPE) sobre el número exacto.
+            </p>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

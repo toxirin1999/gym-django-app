@@ -9,7 +9,13 @@ from .models import (
     DetalleEjercicioRealizado,
     SerieRealizada,
     DatosLiftinDetallados,
-    LogroDesbloqueado
+    LogroDesbloqueado,
+    SesionEntrenamiento,
+    RecordPersonal,
+    LogroAutomatico,
+    ClienteLogroAutomatico,
+    DesafioSemanal,
+    ProgresoDesafio
 )
 
 
@@ -369,6 +375,292 @@ class LogroDesbloqueadoAdmin(admin.ModelAdmin):
     list_display = ['cliente', 'nombre', 'descripcion', 'fecha']
     list_filter = ['fecha', 'cliente']
     search_fields = ['cliente__nombre', 'nombre', 'descripcion']
+
+
+# ============================================================================
+# ADMIN PARA MODELOS DE GAMIFICACIÓN
+# ============================================================================
+
+@admin.register(SesionEntrenamiento)
+class SesionEntrenamientoAdmin(admin.ModelAdmin):
+    list_display = [
+        'entreno_info',
+        'duracion_minutos',
+        'porcentaje_completado_display',
+        'volumen_sesion',
+        'rpe_medio',
+        'acwr',
+        'nuevos_records',
+        'perfeccion_badge'
+    ]
+    list_filter = ['fecha_creacion', 'entreno__cliente']
+    search_fields = ['entreno__cliente__nombre']
+    date_hierarchy = 'fecha_creacion'
+    
+    fieldsets = (
+        ('Entrenamiento', {
+            'fields': ('entreno',)
+        }),
+        ('Tiempo', {
+            'fields': ('duracion_minutos', 'hora_inicio', 'hora_fin')
+        }),
+        ('Series y Ejercicios', {
+            'fields': ('series_completadas', 'series_totales', 'ejercicios_completados', 'ejercicios_totales')
+        }),
+        ('Métricas', {
+            'fields': ('volumen_sesion', 'rpe_medio', 'acwr', 'nuevos_records')
+        }),
+        ('Logros', {
+            'fields': ('logros_desbloqueados',)
+        })
+    )
+    
+    filter_horizontal = ['logros_desbloqueados']
+    
+    def entreno_info(self, obj):
+        return f"{obj.entreno.cliente.nombre} - {obj.entreno.fecha}"
+    entreno_info.short_description = 'Entrenamiento'
+    
+    def porcentaje_completado_display(self, obj):
+        return f"{obj.porcentaje_completado}%"
+    porcentaje_completado_display.short_description = '% Completado'
+    
+    def perfeccion_badge(self, obj):
+        if obj.es_sesion_perfecta:
+            return format_html(
+                '<span style="background-color: #ffd700; color: black; padding: 2px 6px; border-radius: 3px; font-size: 10px;">⭐ PERFECTA</span>'
+            )
+        return '-'
+    perfeccion_badge.short_description = 'Estado'
+
+
+@admin.register(RecordPersonal)
+class RecordPersonalAdmin(admin.ModelAdmin):
+    list_display = [
+        'cliente',
+        'ejercicio_nombre',
+        'tipo_record',
+        'valor',
+        'fecha_logrado',
+        'estado_badge'
+    ]
+    list_filter = ['tipo_record', 'superado', 'fecha_logrado', 'cliente']
+    search_fields = ['cliente__nombre', 'ejercicio_nombre']
+    date_hierarchy = 'fecha_logrado'
+    
+    fieldsets = (
+        ('Récord', {
+            'fields': ('cliente', 'ejercicio_nombre', 'tipo_record', 'valor')
+        }),
+        ('Contexto', {
+            'fields': ('entreno', 'fecha_logrado')
+        }),
+        ('Estado', {
+            'fields': ('superado', 'fecha_superado')
+        })
+    )
+    
+    readonly_fields = ['fecha_logrado']
+    
+    def estado_badge(self, obj):
+        if not obj.superado:
+            return format_html(
+                '<span style="background-color: #ffd700; color: black; padding: 2px 6px; border-radius: 3px; font-size: 10px;">🏆 VIGENTE</span>'
+            )
+        else:
+            return format_html(
+                '<span style="background-color: #6c757d; color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px;">📊 SUPERADO</span>'
+            )
+    estado_badge.short_description = 'Estado'
+
+
+@admin.register(LogroAutomatico)
+class LogroAutomaticoAdmin(admin.ModelAdmin):
+    list_display = [
+        'icono_nombre',
+        'categoria',
+        'rareza_badge',
+        'condicion_tipo',
+        'puntos_recompensa',
+        'activo_badge'
+    ]
+    list_filter = ['categoria', 'rareza', 'activo']
+    search_fields = ['nombre', 'codigo', 'descripcion']
+    
+    fieldsets = (
+        ('Identificación', {
+            'fields': ('codigo', 'nombre', 'descripcion', 'icono')
+        }),
+        ('Clasificación', {
+            'fields': ('categoria', 'rareza')
+        }),
+        ('Condiciones', {
+            'fields': ('condicion_tipo', 'condicion_valor')
+        }),
+        ('Recompensa', {
+            'fields': ('puntos_recompensa',)
+        }),
+        ('Estado', {
+            'fields': ('activo',)
+        })
+    )
+    
+    def icono_nombre(self, obj):
+        return f"{obj.icono} {obj.nombre}"
+    icono_nombre.short_description = 'Logro'
+    
+    def rareza_badge(self, obj):
+        colors = {
+            'comun': '#808080',
+            'raro': '#00ff00',
+            'epico': '#ff00ff',
+            'legendario': '#ffd700'
+        }
+        color = colors.get(obj.rareza, '#808080')
+        return format_html(
+            '<span style="background-color: {}; color: black; padding: 2px 6px; border-radius: 3px; font-size: 10px;">{}</span>',
+            color,
+            obj.get_rareza_display().upper()
+        )
+    rareza_badge.short_description = 'Rareza'
+    
+    def activo_badge(self, obj):
+        if obj.activo:
+            return format_html(
+                '<span style="background-color: #28a745; color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px;">✅ ACTIVO</span>'
+            )
+        else:
+            return format_html(
+                '<span style="background-color: #dc3545; color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px;">❌ INACTIVO</span>'
+            )
+    activo_badge.short_description = 'Estado'
+
+
+@admin.register(ClienteLogroAutomatico)
+class ClienteLogroAutomaticoAdmin(admin.ModelAdmin):
+    list_display = ['cliente', 'logro_nombre', 'fecha_desbloqueo', 'sesion']
+    list_filter = ['fecha_desbloqueo', 'cliente', 'logro__categoria', 'logro__rareza']
+    search_fields = ['cliente__nombre', 'logro__nombre']
+    date_hierarchy = 'fecha_desbloqueo'
+    
+    def logro_nombre(self, obj):
+        return f"{obj.logro.icono} {obj.logro.nombre}"
+    logro_nombre.short_description = 'Logro'
+
+
+@admin.register(DesafioSemanal)
+class DesafioSemanalAdmin(admin.ModelAdmin):
+    list_display = [
+        'icono_nombre',
+        'objetivo_display',
+        'periodo',
+        'recompensa_puntos',
+        'activo_badge',
+        'global_badge'
+    ]
+    list_filter = ['activo', 'global_challenge', 'objetivo_tipo', 'fecha_inicio']
+    search_fields = ['nombre', 'descripcion']
+    
+    fieldsets = (
+        ('Información', {
+            'fields': ('nombre', 'descripcion', 'icono')
+        }),
+        ('Periodo', {
+            'fields': ('fecha_inicio', 'fecha_fin')
+        }),
+        ('Objetivo', {
+            'fields': ('objetivo_tipo', 'objetivo_valor')
+        }),
+        ('Recompensa', {
+            'fields': ('recompensa_puntos',)
+        }),
+        ('Configuración', {
+            'fields': ('activo', 'global_challenge')
+        })
+    )
+    
+    def icono_nombre(self, obj):
+        return f"{obj.icono} {obj.nombre}"
+    icono_nombre.short_description = 'Desafío'
+    
+    def objetivo_display(self, obj):
+        return f"{obj.get_objetivo_tipo_display()}: {obj.objetivo_valor}"
+    objetivo_display.short_description = 'Objetivo'
+    
+    def periodo(self, obj):
+        return f"{obj.fecha_inicio} → {obj.fecha_fin}"
+    periodo.short_description = 'Periodo'
+    
+    def activo_badge(self, obj):
+        if obj.esta_activo:
+            return format_html(
+                '<span style="background-color: #28a745; color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px;">✅ ACTIVO</span>'
+            )
+        elif obj.activo:
+            return format_html(
+                '<span style="background-color: #ffc107; color: black; padding: 2px 6px; border-radius: 3px; font-size: 10px;">⏳ PROGRAMADO</span>'
+            )
+        else:
+            return format_html(
+                '<span style="background-color: #dc3545; color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px;">❌ INACTIVO</span>'
+            )
+    activo_badge.short_description = 'Estado'
+    
+    def global_badge(self, obj):
+        if obj.global_challenge:
+            return format_html(
+                '<span style="background-color: #007bff; color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px;">🌍 GLOBAL</span>'
+            )
+        else:
+            return format_html(
+                '<span style="background-color: #6c757d; color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px;">👤 INDIVIDUAL</span>'
+            )
+    global_badge.short_description = 'Alcance'
+
+
+@admin.register(ProgresoDesafio)
+class ProgresoDesafioAdmin(admin.ModelAdmin):
+    list_display = [
+        'cliente',
+        'desafio',
+        'progreso_display',
+        'porcentaje_display',
+        'completado_badge',
+        'ultima_actualizacion'
+    ]
+    list_filter = ['completado', 'desafio', 'cliente']
+    search_fields = ['cliente__nombre', 'desafio__nombre']
+    date_hierarchy = 'ultima_actualizacion'
+    
+    fieldsets = (
+        ('Desafío', {
+            'fields': ('cliente', 'desafio')
+        }),
+        ('Progreso', {
+            'fields': ('progreso_actual', 'completado', 'fecha_completado')
+        })
+    )
+    
+    readonly_fields = ['fecha_inicio', 'ultima_actualizacion']
+    
+    def progreso_display(self, obj):
+        return f"{obj.progreso_actual} / {obj.desafio.objetivo_valor}"
+    progreso_display.short_description = 'Progreso'
+    
+    def porcentaje_display(self, obj):
+        return f"{obj.porcentaje}%"
+    porcentaje_display.short_description = '%'
+    
+    def completado_badge(self, obj):
+        if obj.completado:
+            return format_html(
+                '<span style="background-color: #28a745; color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px;">✅ COMPLETADO</span>'
+            )
+        else:
+            return format_html(
+                '<span style="background-color: #ffc107; color: black; padding: 2px 6px; border-radius: 3px; font-size: 10px;">⏳ EN PROGRESO</span>'
+            )
+    completado_badge.short_description = 'Estado'
 
 
 # Personalización del admin site

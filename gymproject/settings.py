@@ -47,6 +47,8 @@ INSTALLED_APPS = [
     'django_celery_beat',
     'nutricion_app_django',
     'diario',
+    "estiramientos",
+    'hyrox',
 ]
 # Configuración de Celery (para notificaciones)
 CELERY_BROKER_URL = 'redis://localhost:6379/0'
@@ -86,6 +88,7 @@ TEMPLATES = [
                 'joi.context_processors.joi_context',
                 'joi.context_processors.utility_functions',
                 'estoico.context_processors.estoico_context',
+                'core.bio_context_processor.bio_context',
 
             ],
         },
@@ -279,3 +282,6 @@ GAMIFICACION_CONFIG = {
     'VALIDATE_INTEGRITY': True,  # Validación de integridad activada
     'NOTIFICATION_ENABLED': True,  # Notificaciones activadas
 }
+
+# --- IA INTEGRATION ---
+GEMINI_API_KEY = "AIzaSyCqKVpl4VjGPyX9nCd32CSTqh4yxnggqAw"

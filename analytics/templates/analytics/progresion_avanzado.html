@@ -431,7 +431,10 @@
         {% if ratios_fuerza.ratios %}
         <div class="ratios-grid">
             <div class="relative h-[400px] w-full max-w-[500px] mx-auto">
-                <canvas id="radarChart"></canvas>
+                <div class="metric-card bg-[var(--lol-bg-alt)] border border-[var(--lol-border-subtle)] p-4 rounded-sm shadow-xl relative overflow-hidden transition-all hover:border-[rgba(200,170,110,0.3)] hover:shadow-[0_0_15px_var(--lol-glow-gold)]">
+    <h4 class="font-display text-[0.65rem] text-[var(--lol-gold-mid)] uppercase tracking-wider mb-3">◆ RADAR</h4>
+    <canvas id="radarChart"></canvas>
+</div>
             </div>
 
 
@@ -480,7 +483,10 @@
     <div class="evolucion-grid">
         <!-- Gráfico de Evolución -->
         <div class="chart-container">
-            <canvas id="evolucionChart"></canvas>
+            <div class="metric-card bg-[var(--lol-bg-alt)] border border-[var(--lol-border-subtle)] p-4 rounded-sm shadow-xl relative overflow-hidden transition-all hover:border-[rgba(200,170,110,0.3)] hover:shadow-[0_0_15px_var(--lol-glow-gold)]">
+    <h4 class="font-display text-[0.65rem] text-[var(--lol-gold-mid)] uppercase tracking-wider mb-3">◆ EVOLUCION</h4>
+    <canvas id="evolucionChart"></canvas>
+</div>
         </div>
 
         <!-- Panel de estadísticas y análisis -->
@@ -619,129 +625,94 @@
 </div>
 {% endblock %}
 
+<!-- Archivo: templates/analytics/progresion_avanzado.html -->
+
 {% block extra_js %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.min.js"></script>
+<!-- ====================================================================== -->
+<!-- ### SOLUCIÓN FINAL (DE VERDAD) ### -->
+<!-- Cargamos Chart.js de la forma más simple y compatible posible. -->
+<!-- Eliminamos la necesidad de `type="module"` y los `import` explícitos -->
+<!-- que estaban causando el error de sintaxis. -->
+<!-- ====================================================================== -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const datosGraficos = {{ datos_graficos|safe }};
+    document.addEventListener('DOMContentLoaded', function( ) {
+        try {
+            const datosGraficos = JSON.parse('{{ datos_graficos_json|escapejs }}');
+            const ejercicioSeleccionado = "{{ ejercicio_seleccionado|escapejs }}";
 
-        // Gráfico Radar de Ratios
-        {% if ratios_fuerza.grafico_radar %}
-        const ctxRadar = document.getElementById('radarChart');
-        if (ctxRadar) {
-            new Chart(ctxRadar, {
-                type: 'radar',
-                data: {
-                    labels: {{ ratios_fuerza.grafico_radar.labels|safe }},
-                    datasets: [{
-                        label: 'Ratios Actuales',
-                        data: {{ ratios_fuerza.grafico_radar.valores|safe }},
-                        borderColor: '#10b981',
-                        backgroundColor: 'rgba(16, 185, 129, 0.2)',
-                        borderWidth: 2
-                    }, {
-                        label: 'Ratios Óptimos',
-                        data: {{ ratios_fuerza.grafico_radar.optimos|safe }},
-                        borderColor: '#3b82f6',
-                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                        borderWidth: 2,
-                        borderDash: [5, 5]
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            labels: { color: '#f8fafc' }
-                        }
+            // --- Gráfico Radar de Ratios ---
+            const ctxRadar = document.getElementById('radarChart');
+            if (ctxRadar && datosGraficos.ratios && datosGraficos.ratios.labels && datosGraficos.ratios.labels.length > 0) {
+                console.log("✅ Datos para el gráfico RADAR encontrados. Dibujando...");
+                new Chart(ctxRadar, {
+                    type: 'radar',
+                    data: {
+                        labels: datosGraficos.ratios.labels,
+                        datasets: [{
+                            label: 'Ratios Actuales',
+                            data: datosGraficos.ratios.valores,
+                            borderColor: '#10b981',
+                            backgroundColor: 'rgba(16, 185, 129, 0.2)',
+                            borderWidth: 2
+                        }, {
+                            label: 'Ratios Óptimos',
+                            data: datosGraficos.ratios.optimos,
+                            borderColor: '#3b82f6',
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            borderWidth: 2,
+                            borderDash: [5, 5]
+                        }]
                     },
-                    scales: {
-                      r: {
-                            beginAtZero: true,
-                            ticks: {
-                                color: '#ffffff',
-                                backdropColor: 'transparent',
-                                font: { size: 12 }
-                            },
-                            grid: {
-                                color: '#475569' // más suave que '#334155'
-                            },
-                            pointLabels: {
-                                color: '#ffffff',
-                                font: {
-                                    size: 14,
-                                    weight: 'bold'
-                                }
-                            }
+                    options: {
+                        responsive: true, maintainAspectRatio: false,
+                        plugins: { legend: { labels: { color: '#f8fafc' } } },
+                        scales: { r: { beginAtZero: true, ticks: { color: '#ffffff', backdropColor: 'transparent', font: { size: 12 } }, grid: { color: '#475569' }, pointLabels: { color: '#ffffff', font: { size: 14, weight: 'bold' } } } }
+                    }
+                });
+            } else {
+                console.log("⚠️ No se encontraron datos válidos para el gráfico RADAR.");
+            }
+
+            // --- Gráfico de Evolución Temporal ---
+            const ctxEvolucion = document.getElementById('evolucionChart');
+            if (ctxEvolucion && ejercicioSeleccionado && datosGraficos.evolucion[ejercicioSeleccionado]) {
+                console.log("✅ Datos para el gráfico de EVOLUCIÓN encontrados. Dibujando...");
+                const datosEvolucion = datosGraficos.evolucion[ejercicioSeleccionado];
+                new Chart(ctxEvolucion, {
+                    type: 'line',
+                    data: {
+                        labels: datosEvolucion.map(d => d.fecha),
+                        datasets: [{
+                            label: 'Peso (kg)',
+                            data: datosEvolucion.map(d => d.peso),
+                            borderColor: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                            borderWidth: 3, fill: true, tension: 0.4
+                        }, {
+                            label: 'Volumen (kg)',
+                            data: datosEvolucion.map(d => d.volumen),
+                            borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            borderWidth: 2, fill: false, yAxisID: 'y1'
+                        }]
+                    },
+                    options: {
+                        responsive: true, maintainAspectRatio: false,
+                        plugins: { legend: { labels: { color: '#f8fafc' } } },
+                        scales: {
+                            y: { type: 'linear', display: true, position: 'left', ticks: { color: '#cbd5e1' }, grid: { color: '#334155' } },
+                            y1: { type: 'linear', display: true, position: 'right', ticks: { color: '#cbd5e1' }, grid: { drawOnChartArea: false } },
+                            x: { ticks: { color: '#cbd5e1' }, grid: { color: '#334155' } }
                         }
                     }
-
-                }
-            });
+                });
+            } else {
+                console.log("⚠️ No se encontraron datos válidos para el gráfico de EVOLUCIÓN.");
+            }
+        } catch (e) {
+            console.error("❌ Error fatal al ejecutar el script de los gráficos:", e);
+            console.error("Datos recibidos de Django:", '{{ datos_graficos_json|escapejs }}');
         }
-        {% endif %}
-
-        // Gráfico de Evolución Temporal
-        {% if ejercicio_seleccionado and evolucion_temporal %}
-        const ctxEvolucion = document.getElementById('evolucionChart');
-        if (ctxEvolucion) {
-            const datosEvolucion = datosGraficos.evolucion['{{ ejercicio_seleccionado }}'];
-
-            new Chart(ctxEvolucion, {
-                type: 'line',
-                data: {
-                    labels: datosEvolucion.datos.map(d => d.fecha),
-                    datasets: [{
-                        label: 'Peso (kg)',
-                        data: datosEvolucion.datos.map(d => d.peso),
-                        borderColor: '#10b981',
-                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                        borderWidth: 3,
-                        fill: true,
-                        tension: 0.4
-                    }, {
-                        label: 'Volumen (kg)',
-                        data: datosEvolucion.datos.map(d => d.volumen),
-                        borderColor: '#3b82f6',
-                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                        borderWidth: 2,
-                        fill: false,
-                        yAxisID: 'y1'
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            labels: { color: '#f8fafc' }
-                        }
-                    },
-                    scales: {
-                        y: {
-                            type: 'linear',
-                            display: true,
-                            position: 'left',
-                            ticks: { color: '#cbd5e1' },
-                            grid: { color: '#334155' }
-                        },
-                        y1: {
-                            type: 'linear',
-                            display: true,
-                            position: 'right',
-                            ticks: { color: '#cbd5e1' },
-                            grid: { drawOnChartArea: false }
-                        },
-                        x: {
-                            ticks: { color: '#cbd5e1' },
-                            grid: { color: '#334155' }
-                        }
-                    }
-                }
-            });
-        }
-        {% endif %}
     });
 </script>
 {% endblock %}

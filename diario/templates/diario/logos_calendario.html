@@ -1,0 +1,126 @@
+{% extends 'diario/base_stoic.html' %}
+{% load static %}
+
+{% block title %}Calendario de Reflexiones - Logos{% endblock %}
+
+{% block content %}
+<div class="fade-in-up">
+    <!-- Encabezado -->
+    <div class="card shadow-soft mb-4">
+        <div class="card-body text-center p-4">
+            <i class="fas fa-calendar-alt fa-3x text-primary mb-3"></i>
+            <h1 class="text-gradient">Calendario de Reflexiones Guiadas</h1>
+            <p class="lead text-muted">Un viaje de crecimiento personal a lo largo del año</p>
+        </div>
+    </div>
+
+    <!-- Introducción -->
+    <div class="alert alert-info mb-4">
+        <i class="fas fa-info-circle me-2"></i>
+        <strong>¿Cómo funciona?</strong> Cada reflexión guiada se activa en una fecha específica del año, 
+        vinculada a eventos significativos, días internacionales o momentos filosóficos. 
+        Puedes completarlas en cualquier momento, pero te sugerimos hacerlo en su fecha correspondiente 
+        para conectar con el contexto global.
+    </div>
+
+    <!-- Calendario por Meses -->
+    {% for mes, reflexiones in reflexiones_por_mes.items %}
+    <div class="card shadow-sm mb-4">
+        <div class="card-header">
+            <h4 class="mb-0">
+                <i class="far fa-calendar me-2"></i>
+                {% if mes == 1 %}Enero
+                {% elif mes == 2 %}Febrero
+                {% elif mes == 3 %}Marzo
+                {% elif mes == 4 %}Abril
+                {% elif mes == 5 %}Mayo
+                {% elif mes == 6 %}Junio
+                {% elif mes == 7 %}Julio
+                {% elif mes == 8 %}Agosto
+                {% elif mes == 9 %}Septiembre
+                {% elif mes == 10 %}Octubre
+                {% elif mes == 11 %}Noviembre
+                {% elif mes == 12 %}Diciembre
+                {% endif %}
+            </h4>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                {% for reflexion in reflexiones %}
+                <div class="col-md-6 mb-3">
+                    <div class="card h-100" style="border-left: 4px solid {{ reflexion.color }};">
+                        <div class="card-body">
+                            <div class="d-flex align-items-start mb-2">
+                                <div class="me-3 text-center" style="min-width: 60px;">
+                                    <div class="badge bg-primary" style="font-size: 1.2rem;">
+                                        {{ reflexion.fecha_activacion.day }}
+                                    </div>
+                                    <small class="text-muted d-block">
+                                        {{ reflexion.fecha_activacion|date:"M" }}
+                                    </small>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <h6 class="mb-1">
+                                        <i class="{{ reflexion.icono }} me-1" style="color: {{ reflexion.color }};"></i>
+                                        {{ reflexion.titulo }}
+                                    </h6>
+                                    <span class="badge bg-light text-dark small">{{ reflexion.get_categoria_display }}</span>
+                                </div>
+                            </div>
+                            
+                            <p class="small text-muted mb-2">{{ reflexion.contexto|truncatewords:15 }}</p>
+                            
+                            <blockquote class="blockquote-footer small fst-italic mb-3">
+                                "{{ reflexion.cita_filosofica|truncatewords:12 }}"
+                            </blockquote>
+                            
+                            <a href="{% url 'diario:logos_reflexion_guiada' reflexion.slug %}" class="btn btn-sm btn-outline-primary w-100">
+                                <i class="fas fa-pen-fancy me-1"></i>Ver Reflexión
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="card shadow-sm">
+        <div class="card-body text-center p-5">
+            <i class="fas fa-calendar-times fa-3x text-muted mb-3"></i>
+            <h5>No hay reflexiones guiadas disponibles</h5>
+            <p class="text-muted">Pronto añadiremos más reflexiones al calendario.</p>
+        </div>
+    </div>
+    {% endfor %}
+
+    <!-- Información Adicional -->
+    <div class="card shadow-soft mt-4">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-lightbulb me-2"></i>Sobre las Reflexiones Guiadas</h5>
+        </div>
+        <div class="card-body">
+            <p>Las reflexiones guiadas están diseñadas para:</p>
+            <ul>
+                <li><strong>Expandir tu perspectiva:</strong> Cada reflexión te introduce a un tema importante que quizás no habías considerado.</li>
+                <li><strong>Conectar con el mundo:</strong> Muchas reflexiones están vinculadas a días internacionales de conciencia sobre causas sociales, salud o medio ambiente.</li>
+                <li><strong>Profundizar tu práctica filosófica:</strong> Incluyen citas y enseñanzas de filósofos estoicos y pensadores griegos.</li>
+                <li><strong>Motivar la acción:</strong> Cada reflexión sugiere una acción concreta que puedes realizar ese día.</li>
+            </ul>
+            
+            <div class="alert alert-success mt-3">
+                <i class="fas fa-trophy me-2"></i>
+                <strong>Recompensas:</strong> Al completar reflexiones guiadas, ganas puntos de Sabiduría y desbloqueas insignias especiales.
+            </div>
+        </div>
+    </div>
+
+    <!-- Botón de Regreso -->
+    <div class="text-center mt-4">
+        <a href="{% url 'diario:logos_dashboard' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Volver al Dashboard
+        </a>
+    </div>
+</div>
+{% endblock %}
+

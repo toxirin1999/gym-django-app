@@ -4,237 +4,453 @@
 {% block title %}Revisión Semanal - Prosoche{% endblock %}
 
 {% block extra_css %}
+<link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
 <style>
-    .accordion-button:not(.collapsed) {
-        color: var(--dark-color);
-        background-color: rgba(0,0,0,0.03);
+    :root{
+      --bg-primary: #F8F5F1;
+      --bg-card: #FFFFFF;
+      --text-primary: #2D3436;
+      --text-secondary: #636E72;
+      --text-muted: #B2BEC3;
+
+      --accent-orange: #F49459;
+      --accent-orange-dark: #E67E22;
+      --accent-green: #00B894;
+      --accent-green-light: #E8F8F5;
+      --accent-blue: #74B9FF;
+      --accent-purple: #A29BFE;
+      --accent-red: #FF7675;
+      --accent-yellow: #FDCB6E;
+
+      --border-color: #E8E4E0;
+      --shadow-soft: 0 2px 20px rgba(0,0,0,0.05);
+      --radius-sm: 12px;
+      --radius-md: 16px;
+      --radius-lg: 24px;
     }
-    .explanation-box {
-        background-color: rgba(var(--bs-info-rgb), 0.05);
-        border-left: 4px solid rgba(var(--bs-info-rgb), 0.5);
-        padding: 1rem;
-        border-radius: .25rem;
+
+    body{
+      font-family: 'Urbanist', -apple-system, BlinkMacSystemFont, sans-serif !important;
+      background: var(--bg-primary) !important;
+      color: var(--text-primary);
     }
+
+    .prosoche-container{
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 1rem;
+      padding-bottom: 2rem;
+    }
+
+    /* Header Prosoche */
+    .prosoche-header{ padding: 1.5rem 0; margin-bottom: 1rem; }
+    .header-top{ display:flex; justify-content:space-between; align-items:center; gap:1rem; flex-wrap:wrap; }
+    .header-title{ display:flex; align-items:center; gap:1rem; }
+    .header-icon{
+      width:56px; height:56px;
+      background: linear-gradient(135deg, var(--accent-blue) 0%, #5AA8FF 100%);
+      border-radius: var(--radius-md);
+      display:flex; align-items:center; justify-content:center;
+      color:white; font-size: 1.5rem; box-shadow: var(--shadow-soft);
+    }
+    .header-text h1{ font-size: 1.75rem; font-weight: 800; margin:0; letter-spacing:-.5px; }
+    .header-text p{ font-size: .9rem; margin:0; color: var(--text-muted); }
+    .header-actions{ display:flex; gap:.75rem; flex-wrap:wrap; }
+
+    /* Botones */
+    .btn-freud{
+      padding: 0.75rem 1.25rem;
+      border-radius: var(--radius-md);
+      font-weight: 700;
+      font-size: .9rem;
+      border: none;
+      cursor: pointer;
+      transition: all .2s ease;
+      display:inline-flex;
+      align-items:center;
+      gap:.5rem;
+      text-decoration:none;
+      user-select:none;
+    }
+    .btn-freud-primary{ background: var(--accent-orange); color:white; }
+    .btn-freud-primary:hover{ background: var(--accent-orange-dark); transform: translateY(-1px); color:white; text-decoration:none; }
+    .btn-freud-secondary{ background: var(--bg-card); color: var(--text-secondary); border: 1px solid var(--border-color); }
+    .btn-freud-secondary:hover{ background: var(--bg-primary); color: var(--text-primary); text-decoration:none; }
+
+    /* Cards */
+    .freud-card{
+      background: var(--bg-card);
+      border-radius: var(--radius-lg);
+      padding: 1.5rem;
+      margin-bottom: 1.25rem;
+      box-shadow: var(--shadow-soft);
+    }
+    .card-header-freud{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      margin-bottom: 1rem;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    .card-title-freud{ display:flex; align-items:center; gap:.75rem; }
+    .card-title-freud h3{ font-size: 1.1rem; font-weight: 800; margin:0; }
+    .card-icon{
+      width: 40px; height:40px;
+      border-radius: var(--radius-sm);
+      display:flex; align-items:center; justify-content:center;
+      font-size: 1rem;
+    }
+    .card-icon.info{ background:#EBF5FF; color: var(--accent-blue); }
+    .card-icon.success{ background: var(--accent-green-light); color: var(--accent-green); }
+    .card-icon.warning{ background:#FFF8E8; color: var(--accent-yellow); }
+    .card-icon.purple{ background:#F0EEFF; color: var(--accent-purple); }
+
+    /* Inputs */
+    .form-label{ display:block; font-size:.85rem; font-weight:700; color: var(--text-secondary); margin-bottom:.5rem; }
+    .form-input, .form-textarea{
+      width:100%;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      padding: .75rem 1rem;
+      font-size:.95rem;
+      font-family: inherit;
+      background:white;
+      color: var(--text-primary);
+      transition: all .2s ease;
+    }
+    .form-textarea{ resize: vertical; }
+    .form-input:focus, .form-textarea:focus{
+      outline:none;
+      border-color: var(--accent-orange);
+      box-shadow: 0 0 0 3px rgba(244,148,89,.12);
+    }
+
+    /* Layout */
+    .grid-2{ display:grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    @media (max-width: 992px){ .grid-2{ grid-template-columns: 1fr; } }
+
+    /* Stats mini */
+    .stats-row{ display:grid; grid-template-columns: repeat(3, 1fr); gap: .75rem; margin-bottom: 1rem; }
+    @media (max-width: 520px){ .stats-row{ grid-template-columns: 1fr; } }
+    .stat-mini{
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: .9rem;
+      text-align:center;
+    }
+    .stat-number{ font-weight: 900; font-size: 1.2rem; }
+    .stat-label{ font-size: .8rem; color: var(--text-muted); margin-top:.15rem; }
+
+    /* Accordion "freud" */
+    .accordion-wrap{ display:flex; flex-direction:column; gap:.6rem; }
+    details{
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      background: white;
+      overflow:hidden;
+    }
+    summary{
+      cursor:pointer;
+      padding: .9rem 1rem;
+      list-style:none;
+      display:flex;
+      align-items:center;
+      gap: .75rem;
+      font-weight: 800;
+    }
+    summary::-webkit-details-marker{ display:none; }
+    .pill{
+      margin-left:auto;
+      padding: .25rem .6rem;
+      border-radius: 999px;
+      font-size: .8rem;
+      border: 1px solid var(--border-color);
+      color: var(--text-secondary);
+      background: var(--bg-primary);
+      font-weight: 800;
+    }
+    .details-body{
+      padding: 1rem;
+      border-top: 1px solid var(--border-color);
+      color: var(--text-secondary);
+      line-height:1.6;
+    }
+
+    /* Info box */
+    .explanation-box{
+      background: #EBF5FF;
+      border: 1px solid rgba(116,185,255,.35);
+      border-left: 5px solid var(--accent-blue);
+      padding: 1rem;
+      border-radius: var(--radius-md);
+    }
+
+    /* Social panel (simbiosis) */
+    .badge-pill{
+      display:inline-flex;
+      align-items:center;
+      gap:.35rem;
+      padding: .35rem .7rem;
+      border-radius: 999px;
+      font-weight: 800;
+      font-size: .85rem;
+      border: 1px solid var(--border-color);
+      background: white;
+    }
+    .badge-green{ color: var(--accent-green); border-color: rgba(0,184,148,.25); background: var(--accent-green-light); }
+    .badge-red{ color: var(--accent-red); border-color: rgba(255,118,117,.25); background: #FFE8E8; }
+
+    /* Simple anim */
+    @keyframes fadeInUp{ from{opacity:0; transform: translateY(12px);} to{opacity:1; transform:none;} }
+    .fade-in{ animation: fadeInUp .45s ease both; }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="fade-in-up">
-    <!-- Encabezado -->
-    <div class="card shadow-soft mb-4">
-        <div class="card-body text-center p-4">
-            <h1 class="text-gradient">Revisión Semanal Guiada</h1>
-            <p class="lead text-muted">Reflexiona sobre el pasado, planifica el futuro.</p>
-        </div>
-    </div>
+<div class="prosoche-container fade-in">
 
-    <!-- UN ÚNICO FORMULARIO PARA TODA LA PÁGINA -->
-    <form method="POST">
-        {% csrf_token %}
-        <div class="row">
-            <!-- Columna de Revisión (Paso 1) -->
-            <div class="col-lg-6 mb-4 mb-lg-0">
-                <div class="card shadow-sm h-100">
-                    <div class="card-header d-flex align-items-center">
-                        <i class="fas fa-history fa-2x text-info me-3"></i>
-                        <div>
-                            <h5 class="mb-0">Paso 1: Revisa tu Semana Pasada</h5>
-                            <small class="text-muted">{{ inicio_semana_pasada|date:"d M" }} - {{ fin_semana_pasada|date:"d M Y" }}</small>
-                        </div>
-                    </div>
-                    <div class="card-body">
-                        {% if entradas_semana %}
-                        <!-- Estadísticas Clave -->
-                        <div class="row text-center mb-4 g-3">
-                            <div class="col">
-                                <div class="stat-item p-2 border rounded">
-                                    <div class="stat-number">{{ animo_promedio|default:"N/A" }}/5</div>
-                                    <div class="stat-label">Ánimo Prom.</div>
-                                </div>
-                            </div>
-                            <div class="col">
-                                <div class="stat-item p-2 border rounded">
-                                    <div class="stat-number">{{ tareas_completadas }}/{{ total_tareas }}</div>
-                                    <div class="stat-label">Tareas</div>
-                                </div>
-                            </div>
-                            <div class="col">
-                                <div class="stat-item p-2 border rounded">
-                                    <div class="stat-number">{{ porcentaje_tareas }}%</div>
-                                    <div class="stat-label">Productividad</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Resumen de Entradas -->
-                        <h6 class="text-muted">Tus Reflexiones Diarias:</h6>
-                        <div class="accordion" id="acordeonSemana">
-                            {% for entrada in entradas_semana %}
-                            <div class="accordion-item">
-                                <h2 class="accordion-header" id="heading{{ entrada.id }}">
-                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ entrada.id }}">
-                                        <strong>{{ entrada.fecha|date:"l, d M" }}</strong>
-                                        <span class="ms-auto me-2">Ánimo: {{ entrada.estado_animo }}/5</span>
-                                    </button>
-                                </h2>
-                                <div id="collapse{{ entrada.id }}" class="accordion-collapse collapse" data-bs-parent="#acordeonSemana">
-                                    <div class="accordion-body">
-                                        <p class="mb-2"><strong>Persona que quise ser:</strong> <em class="text-muted">"{{ entrada.persona_quiero_ser|default:"-" }}"</em></p>
-                                        <p class="mb-2"><strong>Algo bueno que pasó:</strong> <em class="text-muted">"{{ entrada.que_ha_ido_bien|default:"-" }}"</em></p>
-                                        <p class="mb-0"><strong>Algo que puedo mejorar:</strong> <em class="text-muted">"{{ entrada.que_puedo_mejorar|default:"-" }}"</em></p>
-                                    </div>
-                                </div>
-                            </div>
-                            {% endfor %}
-                        </div>
-
-                        <!-- Formulario de Reflexión Semanal (Integrado) -->
-                        <h6 class="text-muted mt-4">Tu Reflexión Semanal:</h6>
-                        <div class="mb-3">
-                            <label class="form-label fw-bold small"><i class="fas fa-trophy text-warning me-1"></i> Principal(es) logro(s) de la semana</label>
-                            <textarea name="logro_principal" class="form-control form-control-sm" rows="3" placeholder="Basado en tus entradas, ¿cuál fue tu mayor victoria?">{{ revision.logro_principal|default:'' }}</textarea>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label fw-bold small"><i class="fas fa-mountain text-danger me-1"></i> Principal obstáculo y cómo lo gestionaste</label>
-                            <textarea name="obstaculo_principal" class="form-control form-control-sm" rows="3" placeholder="¿Cuál fue el mayor desafío?">{{ revision.obstaculo_principal|default:'' }}</textarea>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label fw-bold small"><i class="fas fa-lightbulb text-success me-1"></i> Principal aprendizaje</label>
-                            <textarea name="aprendizaje_principal" class="form-control form-control-sm" rows="3" placeholder="¿Qué lección te llevas de esta semana?">{{ revision.aprendizaje_principal|default:'' }}</textarea>
-                        </div>
-
-                        {% else %}
-                        <div class="text-center p-4">
-                            <i class="fas fa-folder-open fa-3x text-muted mb-3"></i>
-                            <p class="text-muted">No hay suficientes datos de la semana pasada para realizar una revisión.</p>
-                            <small class="text-muted">¡Asegúrate de registrar tus entradas diarias esta semana!</small>
-                        </div>
-                        {% endif %}
-                    </div>
+    <!-- HEADER -->
+    <header class="prosoche-header">
+        <div class="header-top">
+            <div class="header-title">
+                <div class="header-icon"><i class="fas fa-calendar-week"></i></div>
+                <div class="header-text">
+                    <h1>Revisión Semanal Guiada</h1>
+                    <p>Reflexiona sobre el pasado, planifica el futuro.</p>
                 </div>
             </div>
 
-            <!-- Columna de Planificación (Paso 2) -->
-            <div class="col-lg-6">
-                <div class="card shadow-sm h-100">
-                    <div class="card-header d-flex align-items-center">
-                        <i class="fas fa-rocket fa-2x text-success me-3"></i>
-                        <div>
-                            <h5 class="mb-0">Paso 2: Planifica tu Próxima Semana</h5>
-                            <small class="text-muted">Establece tus 3 objetivos más importantes</small>
-                        </div>
-                    </div>
-                    <div class="card-body">
-                        {% if semana_actual %}
-                        <div class="explanation-box mb-4">
-                            <h6 class="text-info"><i class="fas fa-sitemap me-2"></i>La Jerarquía de la Planificación</h6>
-                            <p class="small text-muted mb-2"><strong>La Visión (Objetivos Mensuales):</strong> Tu "Norte Estratégico". Responden a: <em>"¿Qué quiero haber logrado cuando termine este mes?"</em></p>
-                            <p class="small text-muted mb-0"><strong>La Táctica (Objetivos Semanales):</strong> Tus "Pasos Concretos". Responden a: <em>"¿Qué 3 cosas debo hacer **esta semana** para acercarme a mis metas mensuales?"</em></p>
-                        </div>
-
-                        <!-- === LÍNEA CORREGIDA === -->
-                        {% if prosoche_mes_actual and prosoche_mes_actual.objetivo_principal_1 or prosoche_mes_actual.objetivo_principal_2 or prosoche_mes_actual.objetivo_principal_3 %}
-                        <div class="p-3 mb-4 rounded" style="background-color: rgba(var(--bs-primary-rgb), 0.05); border: 1px solid rgba(var(--bs-primary-rgb), 0.2);">
-                            <h6 class="text-muted"><i class="fas fa-bullseye"></i> Recordatorio de tus Objetivos Mensuales:</h6>
-                            <ul class="list-unstyled mb-0 small">
-                                {% if prosoche_mes_actual.objetivo_principal_1 %}
-                                <li>1. {{ prosoche_mes_actual.objetivo_principal_1 }}</li>
-                                {% endif %}
-                                {% if prosoche_mes_actual.objetivo_principal_2 %}
-                                <li>2. {{ prosoche_mes_actual.objetivo_principal_2 }}</li>
-                                {% endif %}
-                                {% if prosoche_mes_actual.objetivo_principal_3 %}
-                                <li>3. {{ prosoche_mes_actual.objetivo_principal_3 }}</li>
-                                {% endif %}
-                            </ul>
-                        </div>
-                        {% endif %}
-
-                        <p class="text-muted small">Alinea estos objetivos con tus metas mensuales. ¿Qué tres cosas te acercarán más a donde quieres estar?</p>
-
-                        <div class="mb-3">
-                            <label for="objetivo_1" class="form-label fw-bold">🎯 Objetivo Clave 1</label>
-                            <input type="text" class="form-control" id="objetivo_1" name="objetivo_1" value="{{ semana_actual.objetivo_1|default:'' }}" placeholder="Ej: Completar el informe del proyecto X">
-                        </div>
-                        <div class="mb-3">
-                            <label for="objetivo_2" class="form-label fw-bold">🎯 Objetivo Clave 2</label>
-                            <input type="text" class="form-control" id="objetivo_2" name="objetivo_2" value="{{ semana_actual.objetivo_2|default:'' }}" placeholder="Ej: Hacer ejercicio 3 veces esta semana">
-                        </div>
-                        <div class="mb-3">
-                            <label for="objetivo_3" class="form-label fw-bold">🎯 Objetivo Clave 3</label>
-                            <input type="text" class="form-control" id="objetivo_3" name="objetivo_3" value="{{ semana_actual.objetivo_3|default:'' }}" placeholder="Ej: Llamar a un viejo amigo">
-                        </div>
-
-                        {% else %}
-                        <div class="alert alert-danger">
-                            <strong>Error:</strong> No se ha podido inicializar el mes actual. Ve al <a href="{% url 'diario:prosoche_dashboard' %}" class="alert-link">dashboard de Prosoche</a> para crearlo.
-                        </div>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-        </div>
-        <!-- En diario/templates/diario/prosoche_revision_semanal.html -->
-
-        <!-- ... (después del bloque de estadísticas de Ánimo/Tareas/Productividad) ... -->
-
-        <!-- ================================================== -->
-        <!-- INICIO: NUEVO PANEL DE ANÁLISIS DE SIMBIOSIS -->
-        <!-- ================================================== -->
-        <div class="card shadow-sm mt-4">
-            <div class="card-header bg-light">
-                <h6 class="mb-0"><i class="fas fa-users me-2 text-info"></i>Tu Semana Social</h6>
-            </div>
-            <div class="card-body">
-                {% if interacciones_semana %}
-                <div class="row text-center g-3">
-                    <div class="col">
-                        <div class="stat-item p-2 border rounded">
-                            <div class="stat-number">{{ interacciones_semana|length }}</div>
-                            <div class="stat-label">Interacciones</div>
-                        </div>
-                    </div>
-                    <div class="col">
-                        <div class="stat-item p-2 border rounded">
-                            <div class="stat-number text-success">{{ balance_interacciones.positiva|default:0 }}</div>
-                            <div class="stat-label">Positivas</div>
-                        </div>
-                    </div>
-                    <div class="col">
-                        <div class="stat-item p-2 border rounded">
-                            <div class="stat-number text-danger">{{ balance_interacciones.conflicto|default:0 }}</div>
-                            <div class="stat-label">Conflictos</div>
-                        </div>
-                    </div>
-                </div>
-                {% if persona_mas_frecuente %}
-                <div class="mt-3 text-center">
-                    <small class="text-muted">Persona clave de la semana:</small>
-                    <p class="fw-bold mb-0">
-                        <a href="{% url 'diario:persona_detalle' persona_mas_frecuente.persona.id %}">
-                            {{ persona_mas_frecuente.persona.nombre }}
-                        </a>
-                        <span class="badge bg-secondary rounded-pill ms-1">{{ persona_mas_frecuente.count }}</span>
-                    </p>
-                </div>
-                {% endif %}
-                {% else %}
-                <p class="text-muted small text-center mb-0">No registraste interacciones significativas la semana pasada.</p>
-                {% endif %}
-            </div>
-        </div>
-        <!-- ================================================== -->
-        <!-- FIN: NUEVO PANEL DE ANÁLISIS DE SIMBIOSIS -->
-        <!-- ================================================== -->
-
-        <!-- Botón de Guardado Único -->
-        <div class="row mt-4">
-            <div class="col-12 text-center">
-                <button type="submit" class="btn btn-primary btn-lg shadow-soft px-5 py-3">
-                    <i class="fas fa-check-double me-2"></i>Finalizar Revisión y Guardar Todo
+            <div class="header-actions">
+                <a href="{% url 'diario:prosoche_dashboard' %}" class="btn-freud btn-freud-secondary">
+                    <i class="fas fa-arrow-left"></i> Volver
+                </a>
+                <button type="submit" form="revisionForm" class="btn-freud btn-freud-primary">
+                    <i class="fas fa-check-double"></i> Guardar todo
                 </button>
             </div>
         </div>
+    </header>
+
+    <form method="POST" id="revisionForm">
+        {% csrf_token %}
+
+        <div class="grid-2">
+
+            <!-- PASO 1 -->
+            <section class="freud-card">
+                <div class="card-header-freud">
+                    <div class="card-title-freud">
+                        <div class="card-icon info"><i class="fas fa-history"></i></div>
+                        <h3>Paso 1: Revisa tu Semana Pasada</h3>
+                    </div>
+                    <span class="pill">{{ inicio_semana_pasada|date:"d M" }} – {{ fin_semana_pasada|date:"d M Y" }}</span>
+                </div>
+
+                {% if entradas_semana %}
+                <!-- Stats -->
+                <div class="stats-row">
+                    <div class="stat-mini">
+                        <div class="stat-number">{{ animo_promedio|default:"N/A" }}/5</div>
+                        <div class="stat-label">Ánimo Prom.</div>
+                    </div>
+                    <div class="stat-mini">
+                        <div class="stat-number">{{ tareas_completadas }}/{{ total_tareas }}</div>
+                        <div class="stat-label">Tareas</div>
+                    </div>
+                    <div class="stat-mini">
+                        <div class="stat-number">{{ porcentaje_tareas }}%</div>
+                        <div class="stat-label">Productividad</div>
+                    </div>
+                </div>
+
+                <!-- Entradas -->
+                <div class="card-header-freud" style="margin-top:.25rem;">
+                    <div class="card-title-freud">
+                        <div class="card-icon purple"><i class="fas fa-book"></i></div>
+                        <h3>Tus Reflexiones Diarias</h3>
+                    </div>
+                </div>
+
+                <div class="accordion-wrap">
+                    {% for entrada in entradas_semana %}
+                    <details>
+                        <summary>
+                            {{ entrada.fecha|date:"l, d M" }}
+                            <span class="pill">Ánimo: {{ entrada.estado_animo }}/5</span>
+                        </summary>
+                        <div class="details-body">
+                            <p style="margin:0 0 .5rem 0;"><strong>Persona que quise ser:</strong> <em>"{{ entrada.persona_quiero_ser|default:"-" }}"</em></p>
+                            <p style="margin:0 0 .5rem 0;"><strong>Algo bueno que pasó:</strong> <em>"{{ entrada.que_ha_ido_bien|default:"-" }}"</em></p>
+                            <p style="margin:0;"><strong>Algo que puedo mejorar:</strong> <em>"{{ entrada.que_puedo_mejorar|default:"-" }}"</em></p>
+                        </div>
+                    </details>
+                    {% endfor %}
+                </div>
+
+                <!-- Reflexión semanal -->
+                <div class="card-header-freud" style="margin-top:1.25rem;">
+                    <div class="card-title-freud">
+                        <div class="card-icon warning"><i class="fas fa-trophy"></i></div>
+                        <h3>Tu Reflexión Semanal</h3>
+                    </div>
+                </div>
+
+                <div style="display:flex; flex-direction:column; gap:.9rem;">
+                    <div>
+                        <label class="form-label"><i class="fas fa-trophy" style="color:var(--accent-yellow); margin-right:.35rem;"></i> Principal(es) logro(s) de la semana</label>
+                        <textarea name="logro_principal" class="form-textarea" rows="3" placeholder="Basado en tus entradas, ¿cuál fue tu mayor victoria?">{{ revision.logro_principal|default:'' }}</textarea>
+                    </div>
+                    <div>
+                        <label class="form-label"><i class="fas fa-mountain" style="color:var(--accent-red); margin-right:.35rem;"></i> Principal obstáculo y cómo lo gestionaste</label>
+                        <textarea name="obstaculo_principal" class="form-textarea" rows="3" placeholder="¿Cuál fue el mayor desafío?">{{ revision.obstaculo_principal|default:'' }}</textarea>
+                    </div>
+                    <div>
+                        <label class="form-label"><i class="fas fa-lightbulb" style="color:var(--accent-green); margin-right:.35rem;"></i> Principal aprendizaje</label>
+                        <textarea name="aprendizaje_principal" class="form-textarea" rows="3" placeholder="¿Qué lección te llevas de esta semana?">{{ revision.aprendizaje_principal|default:'' }}</textarea>
+                    </div>
+                </div>
+
+                {% else %}
+                <div class="empty-state" style="padding: 1.25rem;">
+                    <i class="fas fa-folder-open" style="font-size:2rem; color: var(--text-muted);"></i>
+                    <p style="margin:.75rem 0 0 0; color: var(--text-secondary);">No hay suficientes datos de la semana pasada para realizar una revisión.</p>
+                    <small style="color: var(--text-muted);">Asegúrate de registrar tus entradas diarias esta semana.</small>
+                </div>
+                {% endif %}
+            </section>
+
+            <!-- PASO 2 -->
+            <section class="freud-card">
+                <div class="card-header-freud">
+                    <div class="card-title-freud">
+                        <div class="card-icon success"><i class="fas fa-rocket"></i></div>
+                        <h3>Paso 2: Planifica tu Próxima Semana</h3>
+                    </div>
+                    <span class="pill">Define tus 3 objetivos clave</span>
+                </div>
+
+                {% if semana_actual %}
+
+                <div class="explanation-box" style="margin-bottom: 1rem;">
+                    <h4 style="margin:0 0 .5rem 0; font-size:1rem; font-weight:900; color: var(--accent-blue);">
+                        <i class="fas fa-sitemap" style="margin-right:.4rem;"></i>Jerarquía de la planificación
+                    </h4>
+                    <p style="margin:0 0 .35rem 0; color: var(--text-secondary);">
+                        <strong>La Visión (Mensual):</strong> Tu “Norte Estratégico”. <em>¿Qué quiero haber logrado cuando termine este mes?</em>
+                    </p>
+                    <p style="margin:0; color: var(--text-secondary);">
+                        <strong>La Táctica (Semanal):</strong> Tus “Pasos Concretos”. <em>¿Qué 3 cosas debo hacer esta semana para acercarme a mis metas?</em>
+                    </p>
+                </div>
+
+                {% if prosoche_mes_actual and prosoche_mes_actual.objetivo_principal_1 or prosoche_mes_actual and prosoche_mes_actual.objetivo_principal_2 or prosoche_mes_actual and prosoche_mes_actual.objetivo_principal_3 %}
+                <div style="background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1rem; margin-bottom: 1rem;">
+                    <div style="display:flex; align-items:center; gap:.6rem; font-weight:900; margin-bottom:.5rem;">
+                        <i class="fas fa-bullseye" style="color: var(--accent-orange);"></i>
+                        <span style="color: var(--text-secondary);">Recordatorio de tus Objetivos Mensuales</span>
+                    </div>
+                    <ul style="margin:0; padding-left: 1.1rem; color: var(--text-secondary);">
+                        {% if prosoche_mes_actual.objetivo_principal_1 %}
+                        <li>{{ prosoche_mes_actual.objetivo_principal_1 }}</li>
+                        {% endif %}
+                        {% if prosoche_mes_actual.objetivo_principal_2 %}
+                        <li>{{ prosoche_mes_actual.objetivo_principal_2 }}</li>
+                        {% endif %}
+                        {% if prosoche_mes_actual.objetivo_principal_3 %}
+                        <li>{{ prosoche_mes_actual.objetivo_principal_3 }}</li>
+                        {% endif %}
+                    </ul>
+                </div>
+                {% endif %}
+
+                <p style="color: var(--text-secondary); margin-top:0;">
+                    Alinea estos objetivos con tus metas mensuales. ¿Qué tres cosas te acercarán más a donde quieres estar?
+                </p>
+
+                <div style="display:flex; flex-direction:column; gap:.9rem;">
+                    <div>
+                        <label for="objetivo_1" class="form-label">🎯 Objetivo Clave 1</label>
+                        <input type="text" class="form-input" id="objetivo_1" name="objetivo_1" value="{{ semana_actual.objetivo_1|default:'' }}" placeholder="Ej: Hacer ejercicio 3 veces">
+                    </div>
+                    <div>
+                        <label for="objetivo_2" class="form-label">🎯 Objetivo Clave 2</label>
+                        <input type="text" class="form-input" id="objetivo_2" name="objetivo_2" value="{{ semana_actual.objetivo_2|default:'' }}" placeholder="Ej: Leer 50 páginas">
+                    </div>
+                    <div>
+                        <label for="objetivo_3" class="form-label">🎯 Objetivo Clave 3</label>
+                        <input type="text" class="form-input" id="objetivo_3" name="objetivo_3" value="{{ semana_actual.objetivo_3|default:'' }}" placeholder="Ej: Llamar a un viejo amigo">
+                    </div>
+                </div>
+
+                {% else %}
+                <div style="background:#FFE8E8; border:1px solid rgba(255,118,117,.35); border-radius: var(--radius-md); padding: 1rem;">
+                    <strong style="color: var(--accent-red);">Error:</strong>
+                    <span style="color: var(--text-secondary);">No se ha podido inicializar el mes actual. Ve al dashboard de Prosoche para crearlo.</span>
+                    <div style="margin-top:.75rem;">
+                        <a href="{% url 'diario:prosoche_dashboard' %}" class="btn-freud btn-freud-secondary">
+                            <i class="fas fa-arrow-left"></i> Ir al dashboard
+                        </a>
+                    </div>
+                </div>
+                {% endif %}
+            </section>
+
+        </div>
+
+        <!-- PANEL SOCIAL (SIMBIOSIS) -->
+        <section class="freud-card">
+            <div class="card-header-freud">
+                <div class="card-title-freud">
+                    <div class="card-icon info"><i class="fas fa-users"></i></div>
+                    <h3>Tu Semana Social</h3>
+                </div>
+            </div>
+
+            {% if interacciones_semana %}
+            <div class="stats-row" style="grid-template-columns: repeat(3, 1fr);">
+                <div class="stat-mini">
+                    <div class="stat-number">{{ interacciones_semana|length }}</div>
+                    <div class="stat-label">Interacciones</div>
+                </div>
+                <div class="stat-mini">
+                    <div class="stat-number" style="color: var(--accent-green);">{{ balance_interacciones.positiva|default:0 }}</div>
+                    <div class="stat-label">Positivas</div>
+                </div>
+                <div class="stat-mini">
+                    <div class="stat-number" style="color: var(--accent-red);">{{ balance_interacciones.conflicto|default:0 }}</div>
+                    <div class="stat-label">Conflictos</div>
+                </div>
+            </div>
+
+            {% if persona_mas_frecuente %}
+            <div style="margin-top: .5rem; text-align:center;">
+                <small style="color: var(--text-muted);">Persona clave de la semana:</small>
+                <div style="margin-top:.4rem;">
+                    <a href="{% url 'diario:persona_detalle' persona_mas_frecuente.persona.id %}" class="badge-pill">
+                        {{ persona_mas_frecuente.persona.nombre }}
+                        <span class="badge-pill" style="padding:.2rem .55rem; font-size:.8rem; background: var(--bg-primary);">{{ persona_mas_frecuente.count }}</span>
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+
+            {% else %}
+            <p style="margin:0; text-align:center; color: var(--text-secondary);">
+                No registraste interacciones significativas la semana pasada.
+            </p>
+            {% endif %}
+        </section>
+
+        <!-- Botón inferior (por si no usan el del header) -->
+        <div style="text-align:center; margin-top: 1rem;">
+            <button type="submit" class="btn-freud btn-freud-primary" style="padding: .9rem 1.6rem;">
+                <i class="fas fa-check-double"></i> Finalizar Revisión y Guardar Todo
+            </button>
+        </div>
+
     </form>
 </div>
 {% endblock %}

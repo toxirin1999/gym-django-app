@@ -1,0 +1,11 @@
+FINAL MAXIMOS: {'Sentadilla': 63.33, 'Peso Muerto': 123.33, 'Press Banca': 104.0, 'Remo': 56.88, 'Press Militar': 57.8}
+HEAVY LIFT - Hip Thrust Con Barra | Date: 2025-10-03 | Weight: 156.66666666666666 | Reps: 8 | Est 1RM: 198.44 | ID: 161
+HEAVY LIFT - Hip Thrust Con Barra | Date: 2025-10-10 | Weight: 170.0 | Reps: 5 | Est 1RM: 198.33 | ID: 166
+HEAVY LIFT - Hip Thrust Con Barra | Date: 2025-10-17 | Weight: 155.0 | Reps: 8 | Est 1RM: 196.33 | ID: 171
+HEAVY LIFT - Hip Thrust Con Barra | Date: 2025-10-24 | Weight: 160.0 | Reps: 8 | Est 1RM: 202.67 | ID: 173
+HEAVY LIFT - Prensa De Piernas | Date: 2026-01-07 | Weight: 155.0 | Reps: 10 | Est 1RM: 206.67 | ID: 219
+HEAVY LIFT - Prensa De Piernas | Date: 2026-01-14 | Weight: 160.0 | Reps: 10 | Est 1RM: 213.33 | ID: 224
+HEAVY LIFT - Prensa De Piernas | Date: 2026-01-21 | Weight: 165.0 | Reps: 10 | Est 1RM: 220.00 | ID: 229
+HEAVY LIFT - Prensa De Piernas | Date: 2026-01-28 | Weight: 180.0 | Reps: 9 | Est 1RM: 234.00 | ID: 234
+HEAVY LIFT - Prensa De Piernas | Date: 2026-02-04 | Weight: 200.0 | Reps: 10 | Est 1RM: 266.67 | ID: 239
+HEAVY LIFT - Prensa De Piernas | Date: 2026-02-11 | Weight: 225.0 | Reps: 10 | Est 1RM: 300.00 | ID: 243

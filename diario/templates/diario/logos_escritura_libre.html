@@ -1,0 +1,150 @@
+{% extends 'diario/base_stoic.html' %}
+{% load static %}
+
+{% block title %}Escritura Libre - Logos{% endblock %}
+
+{% block content %}
+<div class="fade-in-up">
+    <!-- Encabezado -->
+    <div class="card shadow-soft mb-4">
+        <div class="card-body text-center p-4">
+            <i class="fas fa-feather-alt fa-3x text-primary mb-3"></i>
+            <h1 class="text-gradient">Escritura Libre</h1>
+            <p class="lead text-muted">Un espacio para tus pensamientos sin estructura ni juicios</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            
+            <!-- Cita Inspiradora -->
+            <div class="alert alert-info mb-4">
+                <i class="fas fa-quote-left me-2"></i>
+                <em>"Escribe para descubrir lo que piensas. Escribe para ordenar el caos de tu mente."</em>
+                <strong class="d-block mt-2 text-end">— Séneca (adaptado)</strong>
+            </div>
+
+            <!-- Formulario de Escritura -->
+            <div class="card shadow-soft">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-pen-nib me-2"></i>Tu Reflexión</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label for="titulo" class="form-label">Título (opcional)</label>
+                            <input 
+                                type="text" 
+                                class="form-control" 
+                                id="titulo" 
+                                name="titulo" 
+                                placeholder="Ej: Reflexiones sobre la paciencia"
+                            >
+                            <div class="form-text">
+                                Si no añades un título, se generará automáticamente con la fecha.
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="contenido" class="form-label">Contenido</label>
+                            <textarea 
+                                class="form-control" 
+                                id="contenido" 
+                                name="contenido" 
+                                rows="15" 
+                                placeholder="Escribe libremente lo que piensas, sientes o necesitas expresar...
+
+No hay respuestas correctas o incorrectas.
+No hay juicios.
+Solo tú y tus pensamientos.
+
+Algunas ideas para empezar:
+- ¿Qué te está preocupando hoy?
+- ¿Qué aprendiste recientemente?
+- ¿Qué decisión difícil enfrentas?
+- ¿Por qué estás agradecido?
+- ¿Qué miedo necesitas confrontar?"
+                                required
+                            ></textarea>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="etiquetas" class="form-label">Etiquetas (opcional)</label>
+                            <input 
+                                type="text" 
+                                class="form-control" 
+                                id="etiquetas" 
+                                name="etiquetas" 
+                                placeholder="Ej: miedo, gratitud, decisión, trabajo"
+                            >
+                            <div class="form-text">
+                                Separa las etiquetas con comas. Te ayudarán a encontrar esta reflexión más tarde.
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label">¿Cómo te sientes después de escribir?</label>
+                            <div class="d-flex justify-content-between flex-wrap">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="estado_animo_post" id="animo1" value="1">
+                                    <label class="form-check-label" for="animo1">😔 Mal</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="estado_animo_post" id="animo2" value="2">
+                                    <label class="form-check-label" for="animo2">😐 Regular</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="estado_animo_post" id="animo3" value="3" checked>
+                                    <label class="form-check-label" for="animo3">🙂 Bien</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="estado_animo_post" id="animo4" value="4">
+                                    <label class="form-check-label" for="animo4">😊 Muy bien</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="estado_animo_post" id="animo5" value="5">
+                                    <label class="form-check-label" for="animo5">😄 Excelente</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="alert alert-light">
+                            <i class="fas fa-lock me-2"></i>
+                            <strong>Privacidad:</strong> Tus reflexiones son completamente privadas. Solo tú puedes verlas.
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="fas fa-save me-2"></i>Guardar Reflexión
+                            </button>
+                            <a href="{% url 'diario:logos_dashboard' %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-arrow-left me-2"></i>Volver sin guardar
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Consejos de Escritura -->
+            <div class="card shadow-sm mt-4">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="fas fa-lightbulb me-2"></i>Consejos para una Escritura Reflexiva</h6>
+                </div>
+                <div class="card-body">
+                    <ul class="mb-0">
+                        <li><strong>Sé honesto:</strong> No escribas lo que "deberías" sentir, escribe lo que realmente sientes.</li>
+                        <li><strong>No te juzgues:</strong> Este es un espacio libre de crítica. Acepta tus pensamientos como son.</li>
+                        <li><strong>Explora el "por qué":</strong> No te quedes en la superficie. Pregúntate por qué sientes lo que sientes.</li>
+                        <li><strong>Escribe sin parar:</strong> No te preocupes por la gramática o la estructura. Deja fluir.</li>
+                        <li><strong>Relee después:</strong> Vuelve a leer tus reflexiones pasadas. Verás patrones y crecimiento.</li>
+                    </ul>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}
+

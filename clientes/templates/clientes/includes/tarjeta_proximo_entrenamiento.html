@@ -57,7 +57,7 @@
         <h3 class="section-title text-xl font-bold text-cyan-400">
             <i class="fas fa-calendar-check"></i> Próximo Entrenamiento
         </h3>
-        <a href="{% url 'entrenos:vista_plan_anual' cliente.id %}"
+        <a href="{% url 'entrenos:vista_resumen_anual' cliente.id %}"
            class="text-sm text-gray-400 hover:text-cyan-300 transition-colors duration-300">
             <i class="fas fa-external-link-alt"></i> Ver plan completo
         </a>
@@ -211,7 +211,7 @@
         </a>
 
         <!-- Botón Ver Plan Completo -->
-        <a href="{% url 'entrenos:vista_plan_anual' cliente.id %}"
+        <a href="{% url 'entrenos:vista_resumen_anual' cliente.id %}"
            class="btn-accion btn-plan">
             <i class="fas fa-calendar mr-2"></i>
             Ver Plan Completo

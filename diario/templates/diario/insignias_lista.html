@@ -1,0 +1,158 @@
+{% extends 'diario/base_stoic.html' %}
+{% load static %}
+
+{% block title %}Insignias - Sic Parvis Magna{% endblock %}
+
+{% block content %}
+<div class="fade-in-up">
+    <!-- Encabezado -->
+    <div class="card shadow-soft mb-4">
+        <div class="card-body text-center p-4">
+            <i class="fas fa-trophy fa-4x text-warning mb-3"></i>
+            <h1 class="text-gradient">Colección de Insignias</h1>
+            <p class="lead text-muted">Reconocimiento de tu crecimiento y logros</p>
+        </div>
+    </div>
+
+    <!-- Progreso General -->
+    <div class="card shadow-soft mb-4">
+        <div class="card-body text-center">
+            <h2 class="display-3 mb-2">{{ total_desbloqueadas }} / {{ total_disponibles }}</h2>
+            <p class="text-muted mb-3">insignias desbloqueadas</p>
+            <div class="progress" style="height: 25px;">
+                <div class="progress-bar bg-warning" role="progressbar" 
+                     style="width: {% widthratio total_desbloqueadas total_disponibles 100 %}%">
+                    <strong>{% widthratio total_desbloqueadas total_disponibles 100 %}%</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Información sobre Insignias -->
+    <div class="alert alert-info mb-4">
+        <i class="fas fa-info-circle me-2"></i>
+        <strong>¿Cómo funcionan las insignias?</strong> Las insignias se desbloquean automáticamente cuando cumples ciertos criterios. 
+        Cada insignia otorga puntos adicionales a la virtud correspondiente. Algunas insignias son secretas y solo se revelan al desbloquearlas.
+    </div>
+
+    <!-- Insignias por Virtud -->
+    {% for virtud, insignias in insignias_por_virtud.items %}
+    <div class="card shadow-sm mb-4">
+        <div class="card-header">
+            <h4 class="mb-0">
+                {% if 'Sabiduría' in virtud %}
+                    <i class="fas fa-brain me-2 text-primary"></i>
+                {% elif 'Coraje' in virtud %}
+                    <i class="fas fa-shield-alt me-2 text-danger"></i>
+                {% elif 'Justicia' in virtud %}
+                    <i class="fas fa-balance-scale me-2 text-info"></i>
+                {% elif 'Templanza' in virtud %}
+                    <i class="fas fa-yin-yang me-2 text-success"></i>
+                {% else %}
+                    <i class="fas fa-star me-2 text-warning"></i>
+                {% endif %}
+                {{ virtud }}
+            </h4>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                {% for item in insignias %}
+                <div class="col-md-4 col-lg-3 mb-4">
+                    <div class="card h-100 text-center {% if item.desbloqueada %}border-success shadow-sm{% else %}border-secondary{% endif %}">
+                        <div class="card-body">
+                            <!-- Icono -->
+                            <div class="mb-3">
+                                <i class="{{ item.insignia.icono }} fa-4x" 
+                                   style="color: {% if item.desbloqueada %}{{ item.insignia.color }}{% else %}#ccc{% endif %};"></i>
+                            </div>
+
+                            <!-- Nombre -->
+                            <h6 class="mb-2">{{ item.insignia.nombre }}</h6>
+
+                            <!-- Descripción -->
+                            <p class="small text-muted mb-3">{{ item.insignia.descripcion }}</p>
+
+                            <!-- Estado -->
+                            {% if item.desbloqueada %}
+                                <span class="badge bg-success w-100 mb-2">
+                                    <i class="fas fa-check-circle me-1"></i>Desbloqueada
+                                </span>
+                                <small class="text-success">
+                                    <i class="fas fa-trophy me-1"></i>+{{ item.insignia.puntos_virtud }} puntos
+                                </small>
+                            {% else %}
+                                <span class="badge bg-secondary w-100 mb-2">
+                                    <i class="fas fa-lock me-1"></i>Bloqueada
+                                </span>
+                                {% if not item.insignia.es_secreta %}
+                                <small class="text-muted d-block">
+                                    {{ item.insignia.criterio_logro }}
+                                </small>
+                                {% else %}
+                                <small class="text-muted fst-italic">
+                                    <i class="fas fa-question-circle me-1"></i>Insignia secreta
+                                </small>
+                                {% endif %}
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="card shadow-sm">
+        <div class="card-body text-center p-5">
+            <i class="fas fa-trophy fa-3x text-muted mb-3"></i>
+            <h5>No hay insignias disponibles todavía</h5>
+            <p class="text-muted mb-0">Pronto añadiremos insignias para reconocer tus logros.</p>
+        </div>
+    </div>
+    {% endfor %}
+
+    <!-- Estadísticas Adicionales -->
+    <div class="card shadow-soft">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Estadísticas</h5>
+        </div>
+        <div class="card-body">
+            <div class="row text-center">
+                <div class="col-md-3">
+                    <h3 class="text-primary">{{ total_desbloqueadas }}</h3>
+                    <p class="text-muted small mb-0">Insignias Desbloqueadas</p>
+                </div>
+                <div class="col-md-3">
+                    <h3 class="text-secondary">{{ total_disponibles|add:"-"|add:total_desbloqueadas }}</h3>
+                    <p class="text-muted small mb-0">Por Desbloquear</p>
+                </div>
+                <div class="col-md-3">
+                    <h3 class="text-warning">{% widthratio total_desbloqueadas total_disponibles 100 %}%</h3>
+                    <p class="text-muted small mb-0">Completado</p>
+                </div>
+                <div class="col-md-3">
+                    <h3 class="text-info">{{ total_disponibles }}</h3>
+                    <p class="text-muted small mb-0">Total Disponibles</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cita Motivacional -->
+    <div class="card shadow-sm mt-4">
+        <div class="card-body text-center p-4">
+            <i class="fas fa-quote-left fa-2x text-muted mb-3"></i>
+            <p class="fst-italic fs-5 mb-3">"Somos lo que hacemos repetidamente. La excelencia, entonces, no es un acto sino un hábito."</p>
+            <p class="text-muted mb-0">— Aristóteles</p>
+        </div>
+    </div>
+
+    <!-- Botón de Regreso -->
+    <div class="text-center mt-4">
+        <a href="{% url 'diario:virtudes_dashboard' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Volver a Virtudes
+        </a>
+    </div>
+</div>
+{% endblock %}
+

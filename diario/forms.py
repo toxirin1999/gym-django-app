@@ -1,7 +1,7 @@
 # diario/forms.py
 
 from django import forms
-from .models import PersonaImportante, Interaccion
+from .models import PersonaImportante, Interaccion, ProsocheHabito, TriggerHabito
 
 
 class PersonaImportanteForm(forms.ModelForm):
@@ -55,3 +55,120 @@ class InteraccionForm(forms.ModelForm):
         # para mostrar solo las personas importantes de ESE usuario.
         if usuario:
             self.fields['personas'].queryset = PersonaImportante.objects.filter(usuario=usuario)
+
+
+class ProsocheHabitoForm(forms.ModelForm):
+    """Formulario para crear/editar hábitos con soporte para hábitos positivos y negativos"""
+    
+    class Meta:
+        model = ProsocheHabito
+        fields = ['nombre', 'descripcion', 'tipo_habito', 'objetivo_dias', 'fecha_objetivo', 'color']
+        
+        widgets = {
+            'nombre': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Ej: Hacer ejercicio, Fumar, Leer...'
+            }),
+            'descripcion': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': '¿Por qué es importante este hábito para ti?'
+            }),
+            'tipo_habito': forms.Select(attrs={
+                'class': 'form-select',
+                'id': 'id_tipo_habito'
+            }),
+            'objetivo_dias': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'min': '1',
+                'max': '365',
+                'value': '30'
+            }),
+            'fecha_objetivo': forms.DateInput(attrs={
+                'class': 'form-control',
+                'type': 'date'
+            }),
+            'color': forms.TextInput(attrs={
+                'class': 'form-control',
+                'type': 'color'
+            })
+        }
+        
+        labels = {
+            'nombre': 'Nombre del Hábito',
+            'descripcion': 'Descripción',
+            'tipo_habito': 'Tipo de Hábito',
+            'objetivo_dias': 'Días Objetivo',
+            'fecha_objetivo': 'Fecha Objetivo (Opcional)',
+            'color': 'Color'
+        }
+        
+        help_texts = {
+            'tipo_habito': '¿Es un hábito que quieres formar o eliminar?',
+            'objetivo_dias': 'Número de días para establecer/eliminar el hábito (recomendado: 21-90 días)',
+            'fecha_objetivo': 'Fecha en la que quieres completar el desafío'
+        }
+
+
+class TriggerHabitoForm(forms.ModelForm):
+    """Formulario para registrar triggers/recaídas de hábitos negativos"""
+    
+    class Meta:
+        model = TriggerHabito
+        fields = [
+            'fecha', 'hora', 'emocion_previa', 'situacion', 
+            'personas_presentes', 'intensidad_deseo', 'cediste',
+            'estrategia_usada', 'aprendizaje'
+        ]
+        
+        widgets = {
+            'fecha': forms.DateInput(attrs={
+                'class': 'form-control',
+                'type': 'date'
+            }),
+            'hora': forms.TimeInput(attrs={
+                'class': 'form-control',
+                'type': 'time'
+            }),
+            'emocion_previa': forms.Select(attrs={
+                'class': 'form-select'
+            }),
+            'situacion': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': '¿Qué estaba pasando? ¿Dónde estabas?'
+            }),
+            'personas_presentes': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 2,
+                'placeholder': '¿Estabas solo o acompañado? ¿Con quién?'
+            }),
+            'intensidad_deseo': forms.Select(attrs={
+                'class': 'form-select'
+            }),
+            'cediste': forms.CheckboxInput(attrs={
+                'class': 'form-check-input'
+            }),
+            'estrategia_usada': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': '¿Qué hiciste para resistir? (si resististe)'
+            }),
+            'aprendizaje': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': '¿Qué aprendiste de esta experiencia?'
+            })
+        }
+        
+        labels = {
+            'fecha': 'Fecha del impulso',
+            'hora': 'Hora del impulso',
+            'emocion_previa': 'Emoción que sentías',
+            'situacion': 'Situación',
+            'personas_presentes': 'Personas presentes',
+            'intensidad_deseo': 'Intensidad del deseo (1-10)',
+            'cediste': '¿Cediste al impulso?',
+            'estrategia_usada': 'Estrategia usada',
+            'aprendizaje': 'Aprendizaje'
+        }

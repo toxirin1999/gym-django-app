@@ -40,10 +40,17 @@ class EjercicioEnRutina(models.Model):
 
 
 class EjercicioBase(models.Model):
-    # Este es el modelo CORRECTO. No se toca.
+    # Este es el modelo CORRECTO. No se toca a menos que sea para extensiones del sistema (ej: risk_tags)
     nombre = models.CharField(max_length=100, unique=True)  # <-- Es buena práctica añadir unique=True
     grupo_muscular = models.CharField(max_length=100)
     equipo = models.CharField(max_length=100, blank=True, null=True)
+    
+    # Etiquetas de riesgo biomecánico para filtrado de lesiones (ej: ["impacto_vertical", "flexion_plantar"])
+    risk_tags = models.JSONField(
+        default=list, 
+        blank=True,
+        help_text="Tokens de riesgo, ej: 'impacto_vertical', 'triple_extension_explosiva'"
+    )
 
     def __str__(self):
         return self.nombre

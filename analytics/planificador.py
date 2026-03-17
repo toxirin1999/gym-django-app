@@ -137,6 +137,21 @@ class PlanificadorAvanzadoHelms:
 
                 # Obtener el %1RM del día para calcular el peso
                 porcentaje_1rm_dia = config_dup.get('porcentaje_1rm', (0.6, 0.7))  # Fallback seguro
+                
+                # Calcular peso final y redondear
+                peso_calculado = self._calcular_peso_progresion(
+                    ejercicio_elegido, porcentaje_1rm_dia, semana_num_total
+                )
+                peso_final = float(peso_calculado) if peso_calculado else 0.0
+                
+                # Inyectar series de calentamiento (Aproximaciones) si el peso lo justifica
+                aproximaciones = None
+                if peso_final >= 10.0:
+                    aproximaciones = {
+                        'peso1': round(peso_final * 0.2, 1),
+                        'peso2': round(peso_final * 0.6, 1),
+                        'peso3': round(peso_final * 0.9, 1),
+                    }
 
                 rutina.append({
                     "nombre": ejercicio_elegido,
@@ -145,9 +160,8 @@ class PlanificadorAvanzadoHelms:
                     "rpe": f"{config_dup['rpe_objetivo'][0]}-{config_dup['rpe_objetivo'][1]}",
                     "descanso": f"{config_dup['descanso_min'][0]}-{config_dup['descanso_min'][1]} min",
                     # Clave 'descanso'
-                    "peso_kg": self._calcular_peso_progresion(  # Cálculo del peso
-                        ejercicio_elegido, porcentaje_1rm_dia, semana_num_total
-                    ),
+                    "peso_kg": peso_final,
+                    "aproximaciones": aproximaciones,
                     "notas": f"Objetivo del día: {config_dia['tipo'].capitalize()}"
                 })
         return rutina
@@ -231,30 +245,19 @@ def generar_contexto_calendario(plan_semanal_completo, año, mes):
 
 
 class PlanificadorAnualIA:
+    """Fallback planner para cuando PlanificadorIntegrado falla"""
     def __init__(self, cliente_id):
         self.cliente_id = cliente_id
-        self.cliente = Cliente.objects.get(id=cliente_id)
 
-        # Crear perfil para Helms
-        self.perfil_helms = self._crear_perfil_helms()
-        self.planificador_helms = PlanificadorHelms(self.perfil_helms)
-
-    def _crear_perfil_helms(self):
-        return PerfilCliente(
-            cliente_id=self.cliente.id,
-            experiencia_años=self.cliente.experiencia_años,
-            objetivo_principal=self._mapear_objetivo(),
-            dias_disponibles=self.cliente.dias_disponibles,
-            tiempo_por_sesion=self.cliente.tiempo_por_sesion,
-            # ... mapear resto de campos
-        )
-
+    def generar_plan(self):
+        return {
+            "cliente_id": self.cliente_id,
+            "fases": [{"nombre": "Mantenimiento", "duracion_semanas": 4}],
+            "ejercicios_por_semana": {
+                "Día 1": [{"nombre": "Descanso Activo", "series": 1, "repeticiones": "0", "peso_kg": 0}]
+            },
+            "bloques": []
+        }
+    
     def generar_plan_anual(self):
-        # Usar el planificador de Helms
-        plan_helms = self.planificador_helms.generar_plan_completo()
-
-        if plan_helms['status'] == 'success':
-            return self._convertir_a_formato_actual(plan_helms)
-        else:
-            # Fallback a tu planificador actual
-            return self._generar_plan_fallback()
+        return self.generar_plan()

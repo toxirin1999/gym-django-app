@@ -213,13 +213,12 @@ function createProgressChart(canvas) {
     
     new Chart(ctx, {
         type: 'line',
-        data: {
-            labels: data.map(d => d.date),
-            datasets: [{
+    data: {
+        datasets: [{
                 label: 'Días Activos',
                 data: data.map(d => d.active ? 1 : 0),
-                borderColor: '#2c3e50',
-                backgroundColor: 'rgba(44, 62, 80, 0.1)',
+                borderColor: '#C8AA6E',
+                backgroundColor: 'rgba(200,170,110,0.08)',
                 tension: 0.4
             }]
         },

@@ -1,418 +1,5973 @@
-<!-- templates/entrenos/vista_plan_calendario.html -->
 {% extends 'base.html' %}
 {% load static %}
 
 {% block title %}Calendario de Entrenamiento - {{ cliente.nombre }}{% endblock %}
 
 {% block extra_css %}
+<!-- Google Fonts: Space Grotesk, Inter, JetBrains Mono -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,700;1,300&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
 <style>
-    /* === BASE Y FONDOS === */
-    body {
-        background: url("{% static 'images/fondo_cyberpunk.png' %}" ) no-repeat center center fixed !important;
-        background-size: cover !important;
-        background-color: #000000 !important;
-        min-height: 100vh !important;
-        filter: brightness(0.9);
+
+    /* LoL Override fonts */
+    body { font-family: 'Rajdhani', sans-serif !important; }
+    h1, h2, h3, h4, h5, .header-title-text, .cp-title, .np-next-name, .modal-rutina-name, .topbar-title, .card-name, .np-days-num { font-family: 'Cinzel', serif !important; }
+    .summary-value, .kpi-value, .exercise-cell, .week-label, .header-stat-value { font-family: 'Share Tech Mono', monospace !important; }
+
+    /* ============================================
+       DASHBOARD CYBERPUNK REFINED
+       Fusión de estadísticas con estética neón
+       ============================================ */
+    /* === Row 2 columnas (como captura) === */
+    .stats-row-2col {
+        display: grid;
+        grid-template-columns: 1.65fr 1fr;
+        gap: 1.25rem;
+        margin: 1.25rem 0 1.5rem;
     }
-    .page-wrapper {
-        width: 100%;
-        overflow-x: hidden;
+
+    @media (max-width: 1100px) {
+        .stats-row-2col {
+            grid-template-columns: 1fr;
+        }
     }
-    body.modal-open {
-        overflow: inherit !important;
-        padding-right: 0 !important;
+
+    /* Panel base */
+    .glass-panel {
+        background: rgba(8, 10, 18, .55);
+        border: 1px solid rgba(255, 255, 255, 0.10);
+        border-radius: 22px;
+        overflow: hidden;
+        backdrop-filter: blur(18px);
+        box-shadow: 0 16px 40px rgba(0, 0, 0, .35);
+        min-height: 260px;
     }
-    .blade-runner-atmosphere {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
+
+    .panel-head {
+        padding: 16px 18px;
+        border-bottom: 1px solid rgba(255, 255, 255, .06);
+    }
+
+    .panel-title {
+        display: flex;
+        align-items: center;
+        gap: .75rem;
+    }
+
+    .panel-title h3 {
+        margin: 0;
+        font-size: 1.05rem;
+        font-weight: 700;
+        color: rgba(255, 255, 255, .92);
+    }
+
+    .panel-ico {
+        font-size: 1.05rem;
+        opacity: .95;
+    }
+
+    .panel-ico.cyan {
+        color: #00d4ff;
+        text-shadow: 0 0 12px rgba(0, 212, 255, .35);
+    }
+
+    .panel-body {
+        padding: 18px;
+    }
+
+    /* Chart */
+    .chart-wrap {
+        height: 200px;
+        display: flex;
+        align-items: center;
+    }
+
+    /* Fases */
+    .phase-list {
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+        padding-top: 4px;
+    }
+
+    .phase-item {
+        display: grid;
+        grid-template-columns: 120px 1fr 48px;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .phase-left {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .phase-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 999px;
+        display: inline-block;
+    }
+
+    .phase-name {
+        font-size: .92rem;
+        color: rgba(255, 255, 255, .85);
+        font-weight: 600;
+    }
+
+    .phase-bar {
+        height: 6px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, .08);
+        overflow: hidden;
+    }
+
+    .phase-bar-fill {
         height: 100%;
-        pointer-events: none;
-        z-index: -1;
+        border-radius: 999px;
+        box-shadow: 0 0 14px rgba(0, 0, 0, .25);
     }
-    .background-fog {
+
+    .phase-pct {
+        text-align: right;
+        font-size: .9rem;
+        color: rgba(255, 255, 255, .55);
+        font-weight: 600;
+    }
+
+    /* Colores */
+    .phase-dot.cyan,
+    .phase-bar-fill.cyan {
+        background: #00d4ff;
+    }
+
+    .phase-dot.pink,
+    .phase-bar-fill.pink {
+        background: #ff2d92;
+    }
+
+    .phase-dot.yellow,
+    .phase-bar-fill.yellow {
+        background: #ffcc00;
+    }
+
+    .phase-dot.green,
+    .phase-bar-fill.green {
+        background: #00ff88;
+    }
+
+    /* === MODAL OVERLAY === */
+    .cyber-modal {
+        display: none;
+        position: fixed;
+        inset: 0;
+        width: 100vw;
+        height: 100vh;
+        background: rgba(0, 0, 0, 0.85);
+        z-index: 9999;
+        align-items: center;
+        justify-content: center;
+        overflow-x: hidden;
+        overflow-y: auto;
+    }
+    .cyber-modal .modal-dialog {
+        width: 94%;
+        max-width: 720px;
+        margin: 2rem auto;
+        transform: translateY(-20px);
+        transition: transform 0.3s ease;
+    }
+    .cyber-modal.show .modal-dialog {
+        transform: translateY(0);
+    }
+    .cyber-modal .modal-content {
+        background: linear-gradient(165deg, rgba(15, 20, 35, 0.98), rgba(8, 10, 22, 0.99));
+        border: 1px solid rgba(0, 212, 255, 0.35);
+        box-shadow: 0 0 40px rgba(0, 212, 255, 0.15), 0 8px 32px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.05);
+        border-radius: 20px;
+        color: #fff;
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+        overflow: hidden;
+    }
+
+    /* Modal Header */
+    .modal-header-cyber {
+        padding: 24px 28px 16px;
+        position: relative;
+    }
+    .modal-header-cyber::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; right: 0;
+        height: 3px;
+        background: linear-gradient(90deg, #C8AA6E, #785A28, #C84B31);
+    }
+    .modal-header-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 12px;
+        margin-bottom: 12px;
+    }
+    .modal-rutina-name {
+        font-family: var(--font-display, 'Space Grotesk', sans-serif);
+        font-size: 1.35rem;
+        font-weight: 700;
+        color: #fff;
+        line-height: 1.3;
+    }
+    .modal-close-x {
+        background: rgba(255,255,255,0.06);
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 10px;
+        width: 36px; height: 36px;
+        display: flex; align-items: center; justify-content: center;
+        color: rgba(255,255,255,0.5);
+        font-size: 1.1rem;
+        cursor: pointer;
+        transition: all 0.2s;
+        flex-shrink: 0;
+    }
+    .modal-close-x:hover {
+        background: rgba(255, 77, 77, 0.15);
+        border-color: rgba(255, 77, 77, 0.4);
+        color: #ff6b6b;
+    }
+    .modal-header-meta {
+        display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    }
+    .modal-date-badge {
+        background: rgba(255,255,255,0.06);
+        border: 1px solid rgba(255,255,255,0.08);
+        padding: 4px 12px;
+        border-radius: 8px;
+        font-size: 0.8rem;
+        color: rgba(255,255,255,0.6);
+        font-weight: 500;
+    }
+    .modal-phase-badge {
+        padding: 4px 12px;
+        border-radius: 8px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .modal-stats-bar {
+        display: flex; gap: 16px; margin-top: 14px;
+        padding: 10px 16px;
+        background: rgba(255,255,255,0.03);
+        border-radius: 12px;
+        border: 1px solid rgba(255,255,255,0.04);
+    }
+    .modal-stat-item {
+        display: flex; align-items: center; gap: 6px;
+        font-size: 0.8rem; color: rgba(255,255,255,0.5);
+    }
+    .modal-stat-val { font-weight: 700; font-size: 0.9rem; }
+
+    /* Modal Exercise List */
+    .modal-body-cyber { padding: 0 28px 20px; }
+    .modal-exercise-header {
+        display: grid;
+        grid-template-columns: 36px 1fr 60px 60px 70px 60px 70px;
+        padding: 10px 12px; margin-bottom: 4px;
+        font-size: 0.68rem; font-weight: 700;
+        text-transform: uppercase; letter-spacing: 0.8px;
+        color: rgba(255,255,255,0.35);
+    }
+    .modal-exercise-row {
+        display: grid;
+        grid-template-columns: 36px 1fr 60px 60px 70px 60px 70px;
+        align-items: center;
+        padding: 12px; border-radius: 12px; margin-bottom: 4px;
+        background: rgba(255,255,255,0.02);
+        border: 1px solid rgba(255,255,255,0.04);
+        transition: all 0.25s ease;
+        opacity: 0; transform: translateX(-10px);
+        animation: modalRowIn 0.4s ease forwards;
+    }
+    .modal-exercise-row:hover {
+        background: rgba(255,255,255,0.06);
+        border-color: rgba(0, 212, 255, 0.2);
+    }
+    @keyframes modalRowIn { to { opacity: 1; transform: translateX(0); } }
+    .modal-ex-num {
+        width: 28px; height: 28px; border-radius: 8px;
+        background: rgba(255,255,255,0.06);
+        display: flex; align-items: center; justify-content: center;
+        font-size: 0.75rem; font-weight: 700; color: rgba(255,255,255,0.4);
+    }
+    .modal-ex-name-wrap { display: flex; align-items: center; gap: 10px; min-width: 0; }
+    .modal-ex-icon {
+        width: 32px; height: 32px; border-radius: 8px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 0.85rem; flex-shrink: 0;
+    }
+    .modal-ex-icon.pecho { background: rgba(255,45,146,0.15); color: #FF2D92; }
+    .modal-ex-icon.espalda { background: rgba(0,212,255,0.15); color: #00D4FF; }
+    .modal-ex-icon.piernas { background: rgba(255,184,0,0.15); color: #FFB800; }
+    .modal-ex-icon.hombros { background: rgba(168,85,247,0.15); color: #A855F7; }
+    .modal-ex-icon.biceps, .modal-ex-icon.brazos { background: rgba(0,255,136,0.15); color: #00FF88; }
+    .modal-ex-icon.triceps { background: rgba(244,114,182,0.15); color: #f472b6; }
+    .modal-ex-icon.core { background: rgba(251,191,36,0.15); color: #fbbf24; }
+    .modal-ex-icon.gemelos { background: rgba(52,211,153,0.15); color: #34d399; }
+    .modal-ex-icon.general { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.5); }
+    .modal-ex-name {
+        font-weight: 600; font-size: 0.88rem; color: #fff;
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .modal-ex-cell { text-align: center; font-weight: 600; font-size: 0.85rem; color: rgba(255,255,255,0.75); }
+    .modal-rpe-badge {
+        display: inline-flex; align-items: center; justify-content: center;
+        padding: 3px 10px; border-radius: 8px; font-size: 0.75rem; font-weight: 700;
+    }
+    .modal-rpe-badge.fase-fuerza { background: rgba(255,45,146,0.18); color: #FF2D92; }
+    .modal-rpe-badge.fase-hipertrofia { background: rgba(0,212,255,0.18); color: #00D4FF; }
+    .modal-rpe-badge.fase-potencia { background: rgba(255,184,0,0.18); color: #FFB800; }
+    .modal-rpe-badge.fase-descarga { background: rgba(0,255,136,0.18); color: #00FF88; }
+
+    /* Modal Footer */
+    .modal-footer-cyber {
+        display: flex; gap: 12px;
+        padding: 16px 28px 24px;
+        border-top: 1px solid rgba(255,255,255,0.06);
+    }
+    .modal-btn {
+        flex: 1; padding: 12px 20px; border-radius: 12px;
+        font-weight: 700; font-size: 0.9rem; cursor: pointer;
+        transition: all 0.25s ease; text-align: center;
+        text-decoration: none; display: flex;
+        align-items: center; justify-content: center; gap: 8px; border: none;
+    }
+    .modal-btn-close {
+        background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.7);
+        border: 1px solid rgba(255,255,255,0.1);
+    }
+    .modal-btn-close:hover { background: rgba(255,255,255,0.1); color: #fff; }
+    .modal-btn-start {
+        background: linear-gradient(135deg, #C8AA6E, #785A28);
+        color: #000; box-shadow: 0 4px 20px rgba(200,170,110,0.3);
+    }
+    .modal-btn-start:hover { box-shadow: 0 6px 30px rgba(0,212,255,0.5); transform: translateY(-2px); }
+
+    @media (max-width: 640px) {
+        .modal-exercise-header, .modal-exercise-row {
+            grid-template-columns: 30px 1fr 48px 48px 56px;
+        }
+        .modal-exercise-header > :nth-child(6), .modal-exercise-header > :nth-child(7),
+        .modal-exercise-row > :nth-child(6), .modal-exercise-row > :nth-child(7) { display: none; }
+        .cyber-modal .modal-dialog { width: 98%; margin: 1rem auto; }
+    }
+
+    :root {
+        /* Colores de Texto */
+        --text-bright: #FFFFFF;
+        --text-cloud: #E4E4E7;
+        --text-fog: #A1A1AA;
+        --text-muted: #71717A;
+
+        /* Colores de Fase/Estado */
+        --color-cyan: #C8AA6E;
+        --color-cyan-glow: rgba(200,170,110,0.4);
+        --color-pink: #C84B31;
+        --color-pink-glow: rgba(200,75,49,0.4);
+        --color-yellow: #C8AA6E;
+        --color-yellow-glow: rgba(200,170,110,0.4);
+        --color-green: #4ade80;
+        --color-green-glow: rgba(74,222,128,0.4);
+        --color-purple: #785A28;
+        --color-purple-glow: rgba(120,90,40,0.4);
+
+        /* Estados */
+        --success-color: #00FF88;
+        --warning-color: #FFB800;
+        --danger-color: #FF4757;
+
+        /* Tipografía */
+        --font-display: 'Cinzel', serif;
+        --font-body: 'Rajdhani', sans-serif;
+        --font-mono: 'Share Tech Mono', monospace;
+
+        /* Efectos Glassmorphism */
+        --glass-bg: rgba(10, 22, 40, 0.6);
+        --glass-bg-strong: rgba(1, 10, 19, 0.8);
+        --glass-border: rgba(200, 170, 110, 0.12);
+        --blur-amount: 20px;
+        --border-radius-lg: 24px;
+        --border-radius-md: 16px;
+        --border-radius-sm: 12px;
+    }
+
+    * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+    }
+
+    /* FONDO ESPACIAL DINÁMICO POR FASE */
+    body {
+        min-height: 100vh;
+        font-family: var(--font-body);
+        color: var(--text-cloud);
+
+        background: radial-gradient(ellipse at 10% 10%, rgba({
+                    {
+                    tema_fase.r1
+                }
+            }
+
+            , {
+                {
+                tema_fase.g1
+            }
+        }
+
+        , {
+            {
+            tema_fase.b1
+        }
+    }
+
+    , 0.15) 0%, transparent 40%),
+    radial-gradient(ellipse at 90% 20%, rgba({
+                {
+                tema_fase.r2
+            }
+        }
+
+        , {
+            {
+            tema_fase.g2
+        }
+    }
+
+    , {
+        {
+        tema_fase.b2
+    }
+    }
+
+    , 0.12) 0%, transparent 40%),
+    radial-gradient(ellipse at 80% 80%, rgba({
+                {
+                tema_fase.r1
+            }
+        }
+
+        , {
+            {
+            tema_fase.g1
+        }
+    }
+
+    , {
+        {
+        tema_fase.b1
+    }
+    }
+
+    , 0.10) 0%, transparent 40%),
+    radial-gradient(ellipse at 20% 90%, rgba({
+                {
+                tema_fase.r2
+            }
+        }
+
+        , {
+            {
+            tema_fase.g2
+        }
+    }
+
+    , {
+        {
+        tema_fase.b2
+    }
+    }
+
+    , 0.08) 0%, transparent 40%),
+    linear-gradient(160deg, #0a0a18 0%, #0d1020 25%, #0f0a1a 50%, #120818 75%, #0a0a18 100%) !important;
+    background-attachment: fixed !important;
+    }
+
+    .container {
+        width: 100%;
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 1.5rem;
+    }
+
+    /* === HEADER HERO === */
+    .page-header {
+        background: rgba(10,22,40,0.7);
+        backdrop-filter: blur(var(--blur-amount));
+        border: 1px solid var(--glass-border);
+        border-radius: var(--border-radius-lg);
+        padding: 2rem;
+        margin-bottom: 2rem;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .page-header::before {
+        content: '';
         position: absolute;
         top: 0;
         left: 0;
-        width: 100%;
-        height: 100%;
-        background: radial-gradient(circle at 30% 20%, rgba(0, 255, 255, 0.1) 0%, transparent 50%),
-                    radial-gradient(circle at 70% 80%, rgba(255, 0, 255, 0.1) 0%, transparent 50%);
+        right: 0;
+        height: 3px;
+        background: linear-gradient(90deg, #C8AA6E, #785A28, #C84B31);
     }
 
-    /* === CONTENEDOR DEL CALENDARIO (MINIMALISTA) === */
-    .cyber-calendar-container {
-        background: transparent !important;
-        backdrop-filter: none !important;
-        border: none !important;
-        box-shadow: none !important;
-        padding: 1rem;
-        margin: 1rem auto;
-        max-width: 900px;
-    }
-
-    /* === HEADER DEL CALENDARIO === */
-    .cyber-calendar-header {
+    .header-content {
         display: flex;
         justify-content: space-between;
-        align-items: center;
-        margin-bottom: 2rem;
-    }
-    .cyber-calendar-header h3 {
-        font-size: 1.8rem;
-        font-weight: 600;
-        color: #e5e7eb;
-        text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
-        margin: 0;
-        text-align: center;
-        flex: 1;
-    }
-    .cyber-nav-btn {
-        background: rgba(30, 30, 30, 0.7) !important;
-        border: 1px solid rgba(77, 208, 225, 0.4) !important;
-        color: #e5e7eb !important;
-        padding: 0.5rem 1rem;
-        border-radius: 8px;
-        transition: all 0.3s ease;
-    }
-    .cyber-nav-btn:hover {
-        background: rgba(40, 40, 40, 0.9) !important;
-        border-color: rgba(77, 208, 225, 0.7) !important;
-        color: #ffffff !important;
-    }
-
-    /* === GRID Y CELDAS DEL CALENDARIO === */
-    .cyber-calendar-grid {
-        display: grid;
-        grid-template-columns: repeat(7, 1fr);
-        gap: 12px;
-    }
-    .cyber-calendar-day-header {
-        text-align: center;
-        font-weight: 600;
-        color: #00ffff;
-        padding-bottom: 1rem;
-        font-size: 0.9rem;
-        text-transform: uppercase;
-        text-shadow: 0 0 5px rgba(0, 255, 255, 0.7);
-    }
-    .cyber-calendar-day {
-        aspect-ratio: 1 / 1;
-        border-radius: 16px;
-        background: rgba(10, 23, 36, 0.6);
-        border: 1px solid rgba(77, 208, 225, 0.2);
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        font-size: 1.1rem;
-        font-weight: 600;
-        color: rgba(229, 231, 235, 0.7);
-        transition: all 0.3s ease;
-    }
-    .cyber-calendar-day.has-training { cursor: pointer; }
-    .cyber-calendar-day.has-training:hover {
-        background: rgba(10, 23, 36, 0.9);
-        border-color: rgba(77, 208, 225, 0.6);
-    }
-    .cyber-calendar-day.empty {
-        background: transparent;
-        border-color: transparent;
-        cursor: default;
-    }
-
-    /* === ESTILOS DE ESTADO Y FASE === */
-    .cyber-calendar-day.today {
-        border: 2px solid #00ffff;
-        box-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
-        color: #00ffff;
-    }
-    .cyber-calendar-day.text-fase-acumulacion { color: #00aeff; text-shadow: 0 0 8px rgba(0, 174, 255, 0.7); }
-    .cyber-calendar-day.text-fase-fuerza { color: #ff4da6; text-shadow: 0 0 8px rgba(255, 77, 166, 0.7); }
-    .cyber-calendar-day.text-fase-potencia { color: #ffc400; text-shadow: 0 0 8px rgba(255, 196, 0, 0.7); }
-    .cyber-calendar-day.text-fase-descarga { color: #00ff64; text-shadow: 0 0 8px rgba(0, 255, 100, 0.7); }
-
-    /* === NUEVO: ESTILOS PARA LA LEYENDA DE COLORES === */
-    .cyber-legend-container {
-        max-width: 900px;
-        margin: 0 auto 2rem auto;
-        padding: 1rem;
-        background: rgba(10, 23, 36, 0.6);
-        border: 1px solid rgba(77, 208, 225, 0.2);
-        border-radius: 16px;
-    }
-    .cyber-legend-list {
-        display: flex;
-        justify-content: center;
         align-items: center;
         flex-wrap: wrap;
         gap: 1.5rem;
     }
-    .cyber-legend-item {
+
+    .header-title h1 {
+        font-family: var(--font-display);
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--text-bright);
         display: flex;
         align-items: center;
         gap: 0.75rem;
-        font-size: 0.9rem;
-        color: rgba(229, 231, 235, 0.8);
+        margin-bottom: 0.5rem;
     }
-    .legend-color-box {
-        width: 16px;
-        height: 16px;
-        border-radius: 4px;
-    }
-    .bg-fase-acumulacion { background-color: #00aeff; box-shadow: 0 0 8px rgba(0, 174, 255, 0.7); }
-    .bg-fase-fuerza { background-color: #ff4da6; box-shadow: 0 0 8px rgba(255, 77, 166, 0.7); }
-    .bg-fase-potencia { background-color: #ffc400; box-shadow: 0 0 8px rgba(255, 196, 0, 0.7); }
-    .bg-fase-descarga { background-color: #00ff64; box-shadow: 0 0 8px rgba(0, 255, 100, 0.7); }
 
-    /* === ESTILOS DEL MODAL === */
-    .cyber-modal .modal-content {
-        background: #121212 !important;
-        border: 1px solid rgba(0, 255, 255, 0.6) !important;
-        box-shadow: 0 0 30px rgba(0, 255, 255, 0.4) !important;
-        border-radius: 15px;
-        color: #ffffff;
+    .header-title h1 i {
+        color: #C8AA6E;
+        text-shadow: 0 0 20px var(--color-cyan-glow);
     }
-    .cyber-modal .modal-body { padding: 0 !important; }
-    .cyber-modal .modal-body table { border-radius: 15px 15px 0 0; overflow: hidden; }
-    .cyber-modal .modal-footer {
-        background: #121212 !important;
-        border-top: 1px solid #343a40;
-        border-radius: 0 0 15px 15px;
+
+    .header-title p {
+        color: var(--text-fog);
+        font-size: 1rem;
+    }
+
+    .header-stats {
         display: flex;
+        gap: 2rem;
+        flex-wrap: wrap;
+    }
+
+    .header-stat {
+        text-align: center;
+        padding: 1rem 1.5rem;
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: var(--border-radius-sm);
+        border: 1px solid var(--glass-border);
+    }
+
+    .header-stat-value {
+        font-family: var(--font-mono);
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: #C8AA6E;
+        text-shadow: 0 0 15px var(--color-cyan-glow);
+    }
+
+    .header-stat-label {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-top: 0.25rem;
+    }
+
+    .nav-btn {
+        width: 48px;
+        height: 48px;
+        border-radius: var(--border-radius-sm);
+        background: rgba(10,22,40,0.7);
+        backdrop-filter: blur(var(--blur-amount));
+        border: 1px solid var(--glass-border);
+        color: var(--text-fog);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        font-size: 1.2rem;
+    }
+
+    .nav-btn:hover {
+        background: rgba(200,170,110,0.1);
+        border-color: #C8AA6E;
+        color: #C8AA6E;
+        box-shadow: 0 0 25px var(--color-cyan-glow);
+    }
+
+    /* === HERO STATS GRID === */
+    .hero-stats {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+
+    .hero-stat {
+        background: rgba(10,22,40,0.7);
+        backdrop-filter: blur(var(--blur-amount));
+        border: 1px solid var(--glass-border);
+        border-radius: var(--border-radius-lg);
+        padding: 1.5rem;
+        text-align: center;
+        position: relative;
+        overflow: hidden;
+        transition: all 0.3s ease;
+    }
+
+    .hero-stat:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    }
+
+    .hero-stat::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        border-radius: 3px 3px 0 0;
+    }
+
+    .hero-stat.cyan::before {
+        background: var(--color-cyan);
+        box-shadow: 0 0 15px var(--color-cyan-glow);
+    }
+
+    .hero-stat.pink::before {
+        background: var(--color-pink);
+        box-shadow: 0 0 15px var(--color-pink-glow);
+    }
+
+    .hero-stat.yellow::before {
+        background: var(--color-yellow);
+        box-shadow: 0 0 15px var(--color-yellow-glow);
+    }
+
+    .hero-stat.green::before {
+        background: var(--color-green);
+        box-shadow: 0 0 15px var(--color-green-glow);
+    }
+
+    .hero-stat.purple::before {
+        background: var(--color-purple);
+        box-shadow: 0 0 15px var(--color-purple-glow);
+    }
+
+    .hero-stat-icon {
+        font-size: 1.5rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .hero-stat.cyan .hero-stat-icon {
+        color: #C8AA6E;
+        text-shadow: 0 0 15px var(--color-cyan-glow);
+    }
+
+    .hero-stat.pink .hero-stat-icon {
+        color: var(--color-pink);
+        text-shadow: 0 0 15px var(--color-pink-glow);
+    }
+
+    .hero-stat.yellow .hero-stat-icon {
+        color: var(--color-yellow);
+        text-shadow: 0 0 15px var(--color-yellow-glow);
+    }
+
+    .hero-stat.green .hero-stat-icon {
+        color: var(--color-green);
+        text-shadow: 0 0 15px var(--color-green-glow);
+    }
+
+    .hero-stat.purple .hero-stat-icon {
+        color: var(--color-purple);
+        text-shadow: 0 0 15px var(--color-purple-glow);
+    }
+
+    .hero-stat-value {
+        font-family: var(--font-mono);
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--text-bright);
+        line-height: 1;
+        margin-bottom: 0.5rem;
+    }
+
+    .hero-stat-label {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .hero-stat-change {
+        font-size: 0.7rem;
+        margin-top: 0.5rem;
+        padding: 0.25rem 0.5rem;
+        border-radius: 20px;
+        display: inline-block;
+    }
+
+    .hero-stat-change.positive {
+        background: rgba(0, 255, 136, 0.2);
+        color: var(--color-green);
+    }
+
+    .hero-stat-change.neutral {
+        background: rgba(255, 255, 255, 0.1);
+        color: var(--text-fog);
+    }
+
+    /* === CARDS === */
+    .card {
+        background: rgba(10,22,40,0.7);
+        backdrop-filter: blur(var(--blur-amount));
+        border: 1px solid var(--glass-border);
+        border-radius: var(--border-radius-lg);
+        overflow: visible;
+        margin-bottom: 1.5rem;
+        position: relative;
+    }
+
+    .card-body {
+        padding: 1.5rem;
+        overflow: hidden;
+        border-radius: 0 0 var(--border-radius-lg) var(--border-radius-lg);
+    }
+
+    .card-header {
+        padding: 1.25rem 1.5rem;
+        border-bottom: 1px solid var(--glass-border);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .card-title {
+        font-family: var(--font-display);
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--text-bright);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .card-title i {
+        color: #C8AA6E;
+        text-shadow: 0 0 10px var(--color-cyan-glow);
+    }
+
+    /* card-body ya definido arriba */
+
+    /* === GRID LAYOUTS === */
+    .grid-2 {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 1.5rem;
+    }
+
+    .grid-equal {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.5rem;
+    }
+
+    /* === ACWR SECTION === */
+    .acwr-container {
+        display: grid;
+        grid-template-columns: 1fr 1.5fr;
+        gap: 2rem;
+    }
+
+    .acwr-left {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+    }
+
+    .acwr-value-display {
+        margin-bottom: 1.5rem;
+    }
+
+    .acwr-big-value {
+        font-family: var(--font-mono);
+        font-size: 4rem;
+        font-weight: 900;
+        line-height: 1;
+        background: linear-gradient(135deg, var(--color-cyan), var(--color-green));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        text-shadow: 0 0 40px var(--color-cyan-glow);
+    }
+
+    .acwr-big-value.optima {
+        background: linear-gradient(135deg, var(--color-green), var(--color-cyan));
+        -webkit-background-clip: text;
+        background-clip: text;
+    }
+
+    .acwr-big-value.cuidado {
+        background: linear-gradient(135deg, var(--color-yellow), #FF8C00);
+        -webkit-background-clip: text;
+        background-clip: text;
+    }
+
+    .acwr-big-value.riesgo_alto {
+        background: linear-gradient(135deg, var(--danger-color), var(--color-pink));
+        -webkit-background-clip: text;
+        background-clip: text;
+    }
+
+    .acwr-big-value.baja_carga {
+        background: linear-gradient(135deg, var(--color-purple), var(--color-cyan));
+        -webkit-background-clip: text;
+        background-clip: text;
+    }
+
+    .acwr-label {
+        font-size: 0.85rem;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        margin-top: 0.5rem;
+    }
+
+    .acwr-status-badge {
+        padding: 0.75rem 1.5rem;
+        border-radius: var(--border-radius-sm);
+        font-weight: 600;
+        font-size: 0.9rem;
+        margin-bottom: 1rem;
+    }
+
+    .acwr-status-badge.optima {
+        background: rgba(0, 255, 136, 0.15);
+        color: var(--color-green);
+        border: 1px solid rgba(0, 255, 136, 0.3);
+        box-shadow: 0 0 15px var(--color-green-glow);
+    }
+
+    .acwr-status-badge.cuidado {
+        background: rgba(255, 184, 0, 0.15);
+        color: var(--color-yellow);
+        border: 1px solid rgba(255, 184, 0, 0.3);
+        box-shadow: 0 0 15px var(--color-yellow-glow);
+    }
+
+    .acwr-status-badge.riesgo_alto {
+        background: rgba(255, 71, 87, 0.15);
+        color: var(--danger-color);
+        border: 1px solid rgba(255, 71, 87, 0.3);
+        box-shadow: 0 0 15px rgba(255, 71, 87, 0.5);
+    }
+
+    .acwr-status-badge.baja_carga {
+        background: rgba(168, 85, 247, 0.15);
+        color: var(--color-purple);
+        border: 1px solid rgba(168, 85, 247, 0.3);
+        box-shadow: 0 0 15px var(--color-purple-glow);
+    }
+
+    .acwr-recommendation {
+        font-size: 0.9rem;
+        color: var(--text-fog);
+        line-height: 1.6;
+        max-width: 280px;
+    }
+
+    .acwr-right {
+        position: relative;
+    }
+
+    .chart-container {
+        position: relative;
+        height: 280px;
+    }
+
+    /* === GAUGE === */
+    .gauge-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        margin: 1.5rem 0;
+    }
+
+    .gauge-svg {
+        width: 180px;
+        height: auto;
+        filter: drop-shadow(0 4px 15px rgba(0, 212, 255, 0.3));
+    }
+
+    .gauge-labels {
+        display: flex;
+        justify-content: space-between;
+        width: 180px;
+        font-size: 0.65rem;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-top: 0.5rem;
+    }
+
+    /* === ZONE LEGEND === */
+    .zone-legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid var(--glass-border);
+    }
+
+    .zone-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.75rem;
+        color: var(--text-fog);
+    }
+
+    .zone-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+    }
+
+    .zone-dot.danger {
+        background: var(--danger-color);
+        box-shadow: 0 0 8px rgba(255, 71, 87, 0.5);
+    }
+
+    .zone-dot.warning {
+        background: var(--color-yellow);
+        box-shadow: 0 0 8px var(--color-yellow-glow);
+    }
+
+    .zone-dot.success {
+        background: var(--color-green);
+        box-shadow: 0 0 8px var(--color-green-glow);
+    }
+
+    .zone-dot.info {
+        background: var(--color-purple);
+        box-shadow: 0 0 8px var(--color-purple-glow);
+    }
+
+    /* === BALANCE TABLE === */
+    .balance-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .balance-table thead {
+        background: rgba(0, 0, 0, 0.3);
+    }
+
+    .balance-table th {
+        padding: 1rem 0.75rem;
+        text-align: left;
+        font-weight: 600;
+        color: var(--text-cloud);
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        border-bottom: 1px solid rgba(200,170,110,0.3);
+    }
+
+    .balance-table td {
+        padding: 1rem 0.75rem;
+        border-bottom: 1px solid var(--glass-border);
+        color: var(--text-cloud);
+    }
+
+    .balance-table tbody tr {
+        transition: background 0.2s ease;
+    }
+
+    .balance-table tbody tr:hover {
+        background: rgba(200,170,110,0.04);
+    }
+
+    .ratio-badge {
+        display: inline-block;
+        padding: 0.4rem 0.75rem;
+        border-radius: 20px;
+        font-family: var(--font-mono);
+        font-size: 0.85rem;
+        font-weight: 600;
+        background: rgba(200,170,110,0.1);
+        color: #C8AA6E;
+        box-shadow: 0 0 8px rgba(200,170,110,0.3);
+    }
+
+    .details {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        margin-top: 0.25rem;
+    }
+
+    /* === MUSCLE GRID === */
+    .muscle-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0.75rem;
+    }
+
+    .muscle-item {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 1rem;
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: var(--border-radius-sm);
+        border: 1px solid var(--glass-border);
+        transition: all 0.3s ease;
+    }
+
+    .muscle-item:hover {
+        background: rgba(200,170,110,0.04);
+        border-color: rgba(0, 212, 255, 0.2);
+    }
+
+    .muscle-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1rem;
+    }
+
+    .muscle-icon.pecho {
+        background: rgba(200,170,110,0.1);
+        color: #C8AA6E;
+    }
+
+    .muscle-icon.espalda {
+        background: rgba(168, 85, 247, 0.2);
+        color: var(--color-purple);
+    }
+
+    .muscle-icon.piernas {
+        background: rgba(255, 45, 146, 0.2);
+        color: var(--color-pink);
+    }
+
+    .muscle-icon.hombros {
+        background: rgba(255, 184, 0, 0.2);
+        color: var(--color-yellow);
+    }
+
+    .muscle-icon.brazos {
+        background: rgba(0, 255, 136, 0.2);
+        color: var(--color-green);
+    }
+
+    .muscle-icon.core {
+        background: rgba(255, 255, 255, 0.1);
+        color: var(--text-fog);
+    }
+
+    .muscle-info {
+        flex: 1;
+    }
+
+    .muscle-name {
+        font-size: 0.85rem;
+        color: var(--text-cloud);
+        font-weight: 500;
+    }
+
+    .muscle-value {
+        font-family: var(--font-mono);
+        font-size: 0.8rem;
+        color: var(--text-muted);
+    }
+
+    /* === PROGRESS TABLE === */
+    .progress-table-container {
+        overflow-x: auto;
+        border-radius: var(--border-radius-md);
+    }
+
+    .progress-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.9rem;
+    }
+
+    .progress-table thead {
+        background: rgba(0, 0, 0, 0.3);
+    }
+
+    .progress-table th {
+        padding: 1rem 0.75rem;
+        text-align: center;
+        font-weight: 600;
+        color: var(--text-cloud);
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        border-bottom: 1px solid rgba(200,170,110,0.3);
+    }
+
+    .progress-table th:first-child {
+        text-align: left;
+    }
+
+    .progress-table td {
+        padding: 1rem 0.75rem;
+        border-bottom: 1px solid var(--glass-border);
+        text-align: center;
+        color: var(--text-cloud);
+    }
+
+    .progress-table td:first-child {
+        text-align: left;
+        font-weight: 500;
+    }
+
+    .progress-table tbody tr {
+        transition: background 0.2s ease;
+    }
+
+    .progress-table tbody tr:hover {
+        background: rgba(200,170,110,0.04);
+    }
+
+    .progress-positive {
+        color: var(--color-green) !important;
+        font-weight: 600;
+    }
+
+    .progress-negative {
+        color: var(--danger-color) !important;
+        font-weight: 600;
+    }
+
+    .progress-neutral {
+        color: var(--text-muted);
+    }
+
+    .progress-indicator {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        margin-right: 0.5rem;
+    }
+
+    .progress-indicator.positive {
+        background: var(--color-green);
+        box-shadow: 0 0 10px var(--color-green-glow);
+    }
+
+    .progress-indicator.negative {
+        background: var(--danger-color);
+        box-shadow: 0 0 10px rgba(255, 71, 87, 0.5);
+    }
+
+    .exercise-date {
+        font-size: 0.7rem;
+        color: var(--text-muted);
+        display: block;
+        margin-top: 0.25rem;
+    }
+
+    /* === HEATMAP === */
+    .heatmap-container {
+        overflow-x: auto;
+        padding: 0.5rem 0;
+    }
+
+    .heatmap {
+        display: flex;
+        gap: 3px;
+    }
+
+    .heatmap-week {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+    }
+
+    .heatmap-day {
+        width: 12px;
+        height: 12px;
+        min-width: 12px;
+        min-height: 12px;
+        border-radius: 2px;
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.03);
+    }
+
+    .heatmap-day.level-1 {
+        background: rgba(200,170,110,0.1);
+    }
+
+    .heatmap-day.level-2 {
+        background: rgba(200,170,110,0.2);
+    }
+
+    .heatmap-day.level-3 {
+        background: rgba(0, 212, 255, 0.6);
+    }
+
+    .heatmap-day.level-4 {
+        background: var(--color-cyan);
+        box-shadow: 0 0 5px var(--color-cyan-glow);
+    }
+
+    .heatmap-months {
+        display: flex;
+        gap: 3px;
+        margin-bottom: 0.5rem;
+    }
+
+    .heatmap-month {
+        font-size: 0.6rem;
+        color: var(--text-muted);
+        width: 48px;
+    }
+
+    .heatmap-legend {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-top: 1rem;
+        justify-content: flex-end;
+    }
+
+    .heatmap-legend span {
+        font-size: 0.65rem;
+        color: var(--text-muted);
+    }
+
+    .heatmap-legend-item {
+        width: 12px;
+        height: 12px;
+        border-radius: 2px;
+    }
+
+    /* === PR LIST === */
+    .pr-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .pr-item {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 1rem;
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: var(--border-radius-sm);
+        border: 1px solid var(--glass-border);
+        transition: all 0.3s ease;
+    }
+
+    .pr-item:hover {
+        background: rgba(200,170,110,0.04);
+    }
+
+    .pr-rank {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: var(--font-mono);
+        font-size: 0.9rem;
+        font-weight: 700;
+    }
+
+    .pr-rank.gold {
+        background: linear-gradient(145deg, #FFB800, #FF8C00);
+        color: #010A13;
+    }
+
+    .pr-rank.silver {
+        background: linear-gradient(145deg, #C0C0C0, #A0A0A0);
+        color: #010A13;
+    }
+
+    .pr-rank.bronze {
+        background: linear-gradient(145deg, #CD7F32, #8B4513);
+        color: #010A13;
+    }
+
+    .pr-info {
+        flex: 1;
+    }
+
+    .pr-exercise {
+        font-size: 0.9rem;
+        color: var(--text-cloud);
+        font-weight: 500;
+    }
+
+    .pr-date {
+        font-size: 0.7rem;
+        color: var(--text-muted);
+    }
+
+    .pr-value {
+        font-family: var(--font-mono);
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #C8AA6E;
+        text-shadow: 0 0 10px var(--color-cyan-glow);
+    }
+
+    /* === TOOLTIPS === */
+    .info-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: rgba(200,170,110,0.1);
+        color: #C8AA6E;
+        font-size: 0.7rem;
+        font-weight: bold;
+        cursor: help;
+        margin-left: 0.5rem;
+        transition: all 0.3s ease;
+        position: relative;
+        z-index: 10;
+    }
+
+    .info-icon:hover {
+        background: rgba(200,170,110,0.2);
+        box-shadow: 0 0 15px var(--color-cyan-glow);
+    }
+
+    .tooltip {
+        position: absolute;
+        bottom: 150%;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(10, 15, 30, 0.95);
+        backdrop-filter: blur(var(--blur-amount));
+        color: var(--text-cloud);
+        padding: 0.75rem 1rem;
+        border-radius: var(--border-radius-sm);
+        font-size: 0.8rem;
+        white-space: nowrap;
+        pointer-events: none;
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.3s ease;
+        z-index: 99999;
+        border: 1px solid rgba(200,170,110,0.3);
+        box-shadow: 0 4px 20px rgba(200,170,110,0.2), 0 0 20px rgba(0,0,0,0.8);
+    }
+
+    .tooltip::after {
+        content: '';
+        position: absolute;
+        top: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        border: 6px solid transparent;
+        border-top-color: #C8AA6E;
+    }
+
+    .info-icon:hover .tooltip {
+        opacity: 1;
+        visibility: visible;
+    }
+
+    /* === EXPLANATION PANEL === */
+    .explanation-panel {
+        background: rgba(200,170,110,0.04);
+        border-left: 3px solid rgba(200,170,110,0.4);
+        padding: 1rem 1.25rem;
+        border-radius: 0 var(--border-radius-sm) var(--border-radius-sm) 0;
+        margin-top: 1rem;
+        font-size: 0.85rem;
+        color: var(--text-fog);
+        line-height: 1.6;
+    }
+
+    .explanation-title {
+        font-weight: 600;
+        color: #C8AA6E;
+        margin-bottom: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .metric-range {
+        background: rgba(0, 0, 0, 0.2);
+        padding: 0.75rem;
+        border-radius: var(--border-radius-sm);
+        margin-top: 0.75rem;
+        font-family: var(--font-mono);
+        font-size: 0.8rem;
+    }
+
+    .metric-range-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 0.35rem;
+    }
+
+    .metric-range-item:last-child {
+        margin-bottom: 0;
+    }
+
+    .range-color {
+        display: inline-block;
+        width: 12px;
+        height: 12px;
+        border-radius: 3px;
+    }
+
+    /* === RESPONSIVE === */
+    @media (max-width: 1200px) {
+        .hero-stats {
+            grid-template-columns: repeat(3, 1fr);
+        }
+
+        .grid-2,
+        .grid-equal {
+            grid-template-columns: 1fr;
+        }
+
+        .acwr-container {
+            grid-template-columns: 1fr;
+        }
+
+        .muscle-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+
+    @media (max-width: 768px) {
+        .container {
+            padding: 1rem;
+        }
+
+        .hero-stats {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .header-content {
+            flex-direction: column;
+            text-align: center;
+        }
+
+        .header-stats {
+            justify-content: center;
+        }
+
+        .muscle-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .progress-table {
+            font-size: 0.8rem;
+        }
+
+        .progress-table th,
+        .progress-table td {
+            padding: 0.75rem 0.5rem;
+        }
+    }
+
+    /* === ANIMATIONS === */
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .card {
+        animation: fadeInUp 0.5s ease-out;
+    }
+
+    .hero-stat {
+        animation: fadeInUp 0.5s ease-out;
+    }
+
+    .hero-stat:nth-child(1) {
+        animation-delay: 0.05s;
+    }
+
+    .hero-stat:nth-child(2) {
+        animation-delay: 0.1s;
+    }
+
+    .hero-stat:nth-child(3) {
+        animation-delay: 0.15s;
+    }
+
+    .hero-stat:nth-child(4) {
+        animation-delay: 0.2s;
+    }
+
+    .hero-stat:nth-child(5) {
+        animation-delay: 0.25s;
+    }
+
+    /* ===== Layout tipo capturas ===== */
+    .topbar {
+        display: grid;
+        grid-template-columns: 1fr auto 1fr;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .topbar-title {
+        display: flex;
+        align-items: center;
+        gap: .6rem;
+        font-family: var(--font-display);
+        font-weight: 700;
+        font-size: 1.4rem;
+        color: var(--text-bright);
+    }
+
+    .topbar-title i {
+        color: #C8AA6E;
+        text-shadow: 0 0 18px var(--color-cyan-glow);
+    }
+
+    .icon-btn {
+        width: 42px;
+        height: 42px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 12px;
+        background: rgba(0, 0, 0, 0.25);
+        border: 1px solid var(--glass-border);
+        color: var(--text-fog);
+        transition: .2s ease;
+        justify-self: end;
+        text-decoration: none;
+    }
+
+    .icon-btn:hover {
+        border-color: rgba(255, 255, 255, .16);
+        box-shadow: 0 0 18px rgba(0, 0, 0, .35);
+        color: var(--text-bright);
+    }
+
+    /* Segmented control */
+    .segmented {
+        background: rgba(0, 0, 0, 0.25);
+        border: 1px solid var(--glass-border);
+        border-radius: 14px;
+        padding: 4px;
+        display: flex;
+        gap: 4px;
+        min-width: 320px;
+        justify-content: center;
+    }
+
+    .segmented-btn {
+        flex: 1;
+        border: 0;
+        background: transparent;
+        color: var(--text-muted);
+        padding: 10px 14px;
+        border-radius: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: .2s ease;
+    }
+
+    .segmented-btn.active {
+        color: var(--text-bright);
+        background: linear-gradient(90deg, rgba(255, 45, 146, .35), rgba(0, 212, 255, .25));
+        box-shadow: 0 0 20px rgba(0, 212, 255, .10);
+    }
+
+    /* KPI cards */
+    .kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1.2rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .kpi-card {
+        background: rgba(10,22,40,0.7);
+        backdrop-filter: blur(var(--blur-amount));
+        border: 1px solid var(--glass-border);
+        border-radius: 22px;
+        padding: 1.3rem 1.4rem;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .kpi-card::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 0;
+        height: 3px;
+    }
+
+    .kpi-cyan::before {
+        background: var(--color-cyan);
+        box-shadow: 0 0 14px var(--color-cyan-glow);
+    }
+
+    .kpi-pink::before {
+        background: var(--color-pink);
+        box-shadow: 0 0 14px var(--color-pink-glow);
+    }
+
+    .kpi-yellow::before {
+        background: var(--color-yellow);
+        box-shadow: 0 0 14px var(--color-yellow-glow);
+    }
+
+    .kpi-green::before {
+        background: var(--color-green);
+        box-shadow: 0 0 14px var(--color-green-glow);
+    }
+
+    .kpi-icon {
+        font-size: 1.15rem;
+        margin-bottom: .75rem;
+        opacity: .95;
+    }
+
+    .kpi-cyan .kpi-icon {
+        color: #C8AA6E;
+    }
+
+    .kpi-pink .kpi-icon {
+        color: var(--color-pink);
+    }
+
+    .kpi-yellow .kpi-icon {
+        color: var(--color-yellow);
+    }
+
+    .kpi-green .kpi-icon {
+        color: var(--color-green);
+    }
+
+    .kpi-value {
+        font-family: var(--font-mono);
+        font-size: 2.2rem;
+        font-weight: 800;
+        color: var(--text-bright);
+        line-height: 1;
+    }
+
+    .kpi-label {
+        margin-top: .5rem;
+        font-size: .72rem;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: .08em;
+    }
+
+    .kpi-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: .4rem;
+        margin-top: .85rem;
+        padding: .28rem .7rem;
+        border-radius: 999px;
+        font-size: .72rem;
+        font-weight: 700;
+        border: 1px solid rgba(255, 255, 255, 0.10);
+        background: rgba(0, 0, 0, 0.18);
+        color: var(--text-fog);
+    }
+
+    .kpi-badge-positive {
+        border-color: rgba(0, 255, 136, .18);
+        background: rgba(0, 255, 136, .10);
+        color: var(--color-green);
+    }
+
+    .kpi-badge-negative {
+        border-color: rgba(255, 71, 87, .18);
+        background: rgba(255, 71, 87, .10);
+        color: var(--danger-color);
+    }
+
+    @media (max-width: 1200px) {
+        .kpi-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .topbar {
+            grid-template-columns: 1fr;
+        }
+
+        .topbar-right {
+            justify-self: start;
+        }
+
+        .segmented {
+            min-width: 100%;
+        }
+    }
+
+
+
+
+
+    :root {
+        --fase-hipertrofia: #C8AA6E;
+        --fase-hipertrofia-glow: rgba(200,170,110,0.4);
+        --fase-hipertrofia-bg: linear-gradient(145deg, rgba(200,170,110,0.18) 0%, rgba(200,170,110,0.06) 100%);
+
+        --fase-fuerza: #C84B31;
+        --fase-fuerza-glow: rgba(200,75,49,0.4);
+        --fase-fuerza-bg: linear-gradient(145deg, rgba(200,75,49,0.18) 0%, rgba(200,75,49,0.06) 100%);
+
+        --fase-potencia: #F0E6D3;
+        --fase-potencia-glow: rgba(240,230,210,0.3);
+        --fase-potencia-bg: linear-gradient(145deg, rgba(240,230,210,0.12) 0%, rgba(240,230,210,0.05) 100%);
+
+        --fase-descarga: #4ade80;
+        --fase-descarga-glow: rgba(74,222,128,0.4);
+        --fase-descarga-bg: linear-gradient(145deg, rgba(74,222,128,0.15) 0%, rgba(74,222,128,0.05) 100%);
+
+        --selected-gradient: linear-gradient(135deg, rgba(200,170,110,0.4) 0%, rgba(200,75,49,0.3) 100%);
+    }
+
+
+    :root {
+        --accent-cyan: #C8AA6E;
+        --accent-cyan-glow: rgba(200,170,110,0.4);
+        --accent-pink: #C84B31;
+        --accent-pink-glow: rgba(200,75,49,0.4);
+    }
+
+
+    /* Compat: la vista calendario usa .app-container y .main-content */
+    .app-container {
+        width: 100%;
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 1.5rem;
+    }
+
+    .main-content {
+        padding: 0;
+        max-width: none;
+        margin: 0;
+    }
+
+
+    /* ============================================
+       CYBERPUNK NEON - ESTÉTICA PREMIUM V2
+       Pantalla completa, glassmorphism, días rellenos
+       ============================================ */
+
+    /* === VARIABLES CSS === */
+    /* === RESET Y BASE === */
+    /* FONDO ESPACIAL CON DEGRADADO */
+    /* CONTENEDOR PANTALLA COMPLETA */
+    .app-container {
+        width: 100%;
+        max-width: 100%;
+        margin: 0;
+        padding: 0;
+        min-height: 100vh;
+        position: relative;
+    }
+
+    /* === HEADER PRINCIPAL === */
+    .app-header {
+        padding: 1.5rem 1.5rem 1rem;
+        background: linear-gradient(180deg, rgba(10, 10, 20, 0.7) 0%, transparent 100%);
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        backdrop-filter: blur(15px);
+    }
+
+    .header-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+        max-width: 800px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    .header-title {
+        font-family: var(--font-display);
+        font-size: 1.6rem;
+        font-weight: 700;
+        color: var(--text-bright);
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+    }
+
+    .header-title i {
+        color: #C8AA6E;
+        text-shadow: 0 0 10px rgba(200,170,110,0.3);
+    }
+
+    .nav-btn {
+        width: 44px;
+        height: 44px;
+        border-radius: var(--border-radius-sm);
+        background: rgba(10,22,40,0.7);
+        backdrop-filter: blur(var(--blur-amount));
+        border: 1px solid var(--glass-border);
+        color: var(--text-fog);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-decoration: none;
+    }
+
+    .nav-btn:hover {
+        background: rgba(200,170,110,0.1);
+        border-color: rgba(200,170,110,0.4);
+        color: #C8AA6E;
+        box-shadow: 0 0 15px rgba(200,170,110,0.3);
+    }
+
+    /* === SELECTOR DE MES === */
+    .month-selector {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 1.25rem;
+        margin-bottom: 1.25rem;
+    }
+
+    .month-nav-btn {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: rgba(10,22,40,0.7);
+        backdrop-filter: blur(var(--blur-amount));
+        border: 1px solid var(--glass-border);
+        color: var(--text-fog);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-decoration: none;
+    }
+
+    .month-nav-btn:hover {
+        background: rgba(200,170,110,0.1);
+        border-color: rgba(200,170,110,0.4);
+        color: #C8AA6E;
+        box-shadow: 0 0 12px rgba(200,170,110,0.3);
+    }
+
+    .current-month {
+        font-family: var(--font-display);
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: var(--text-bright);
+        min-width: 160px;
+        text-align: center;
+    }
+
+    /* === SELECTOR DE SEMANA === */
+    .week-selector {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 1rem;
+        margin-bottom: 1.25rem;
+    }
+
+    .week-nav-btn {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        background: rgba(10,22,40,0.7);
+        backdrop-filter: blur(var(--blur-amount));
+        border: 1px solid var(--glass-border);
+        color: var(--text-fog);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        font-size: 0.85rem;
+    }
+
+    .week-nav-btn:hover:not(:disabled) {
+        background: rgba(200,170,110,0.1);
+        border-color: rgba(200,170,110,0.4);
+        color: #C8AA6E;
+        box-shadow: 0 0 12px rgba(200,170,110,0.3);
+    }
+
+    .week-nav-btn:disabled {
+        opacity: 0.3;
+        cursor: not-allowed;
+    }
+
+    .week-label {
+        font-family: var(--font-body);
+        font-size: 0.9rem;
+        font-weight: 500;
+        color: var(--text-fog);
+        min-width: 120px;
+        text-align: center;
+    }
+
+    /* === VISTA SEMANAL - DÍAS RELLENOS CON DEGRADADO === */
+    .week-view {
+        display: flex;
+        gap: 10px;
+        padding: 0 1rem;
+        justify-content: center;
+        max-width: 600px;
+        margin: 0 auto;
+    }
+
+    .week-day {
+        flex: 1;
+        max-width: 70px;
+        min-width: 50px;
+        padding: 0.8rem 0.5rem;
+        border-radius: var(--border-radius-md);
+        background: rgba(10,22,40,0.7);
+        backdrop-filter: blur(var(--blur-amount));
+        border: 1px solid var(--glass-border);
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        position: relative;
+    }
+
+    .week-day:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+    }
+
+    /* DÍAS CON FASE - RELLENO CON DEGRADADO */
+    .week-day.fase-hipertrofia {
+        background: var(--fase-hipertrofia-bg);
+        border-color: rgba(0, 212, 255, 0.4);
+        box-shadow: 0 0 15px var(--fase-hipertrofia-glow), inset 0 0 20px rgba(0, 212, 255, 0.1);
+    }
+
+    .week-day.fase-fuerza {
+        background: var(--fase-fuerza-bg);
+        border-color: rgba(255, 45, 146, 0.4);
+        box-shadow: 0 0 15px var(--fase-fuerza-glow), inset 0 0 20px rgba(255, 45, 146, 0.1);
+    }
+
+    .week-day.fase-potencia {
+        background: var(--fase-potencia-bg);
+        border-color: rgba(255, 184, 0, 0.4);
+        box-shadow: 0 0 15px var(--fase-potencia-glow), inset 0 0 20px rgba(255, 184, 0, 0.1);
+    }
+
+    .week-day.fase-descarga {
+        background: var(--fase-descarga-bg);
+        border-color: rgba(0, 255, 136, 0.4);
+        box-shadow: 0 0 15px var(--fase-descarga-glow), inset 0 0 20px rgba(0, 255, 136, 0.1);
+    }
+
+    /* DÍA SELECCIONADO - DEGRADADO ROSA A CYAN */
+    .week-day.selected {
+        background: var(--selected-gradient) !important;
+        border-color: rgba(200,170,110,0.6) !important;
+        box-shadow:
+            0 0 20px rgba(200,170,110,0.3),
+            0 0 20px rgba(200,75,49,0.2),
+            inset 0 0 25px rgba(0, 212, 255, 0.15) !important;
+    }
+
+    .week-day.today:not(.selected) {
+        border-width: 2px;
+        border-color: #C84B31;
+    }
+
+    .day-name {
+        font-family: var(--font-body);
+        font-size: 0.7rem;
+        font-weight: 600;
+        color: var(--text-fog);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 0.4rem;
+    }
+
+    .week-day.selected .day-name,
+    .week-day.fase-hipertrofia .day-name,
+    .week-day.fase-fuerza .day-name,
+    .week-day.fase-potencia .day-name,
+    .week-day.fase-descarga .day-name {
+        color: var(--text-cloud);
+    }
+
+    .day-number {
+        font-family: var(--font-display);
+        font-size: 1.4rem;
+        font-weight: 700;
+        transition: all 0.3s ease;
+    }
+
+    /* Colores de número según fase */
+    .week-day .day-number {
+        color: var(--text-muted);
+    }
+
+    .week-day.fase-hipertrofia .day-number {
+        color: var(--fase-hipertrofia);
+        text-shadow: 0 0 12px var(--fase-hipertrofia-glow);
+    }
+
+    .week-day.fase-fuerza .day-number {
+        color: var(--fase-fuerza);
+        text-shadow: 0 0 12px var(--fase-fuerza-glow);
+    }
+
+    .week-day.fase-potencia .day-number {
+        color: var(--fase-potencia);
+        text-shadow: 0 0 12px var(--fase-potencia-glow);
+    }
+
+    .week-day.fase-descarga .day-number {
+        color: #4ade80;
+        text-shadow: 0 0 12px var(--fase-descarga-glow);
+    }
+
+    .week-day.selected .day-number {
+        color: var(--text-bright) !important;
+        text-shadow: 0 0 20px rgba(255, 255, 255, 0.8) !important;
+    }
+
+    /* Indicador de entrenamiento */
+    .day-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        margin: 0.5rem auto 0;
+        background: transparent;
+    }
+
+    .week-day.fase-hipertrofia .day-dot {
+        background: var(--fase-hipertrofia);
+        box-shadow: 0 0 10px var(--fase-hipertrofia);
+    }
+
+    .week-day.fase-fuerza .day-dot {
+        background: var(--fase-fuerza);
+        box-shadow: 0 0 10px var(--fase-fuerza);
+    }
+
+    .week-day.fase-potencia .day-dot {
+        background: var(--fase-potencia);
+        box-shadow: 0 0 10px var(--fase-potencia);
+    }
+
+    .week-day.fase-descarga .day-dot {
+        background: var(--fase-descarga);
+        box-shadow: 0 0 10px var(--fase-descarga);
+    }
+
+    .week-day.selected .day-dot {
+        background: var(--text-bright);
+        box-shadow: 0 0 10px rgba(255, 255, 255, 0.8);
+    }
+
+    /* === LEYENDA DE FASES === */
+    .phase-legend {
+        display: flex;
+        justify-content: center;
+        gap: 1.5rem;
+        padding: 1.25rem 1rem 0.5rem;
+        flex-wrap: wrap;
+    }
+
+    .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.8rem;
+        color: var(--text-fog);
+    }
+
+    .legend-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+    }
+
+    .legend-dot.hipertrofia {
+        background: var(--fase-hipertrofia);
+        box-shadow: 0 0 8px var(--fase-hipertrofia);
+    }
+
+    .legend-dot.fuerza {
+        background: var(--fase-fuerza);
+        box-shadow: 0 0 8px var(--fase-fuerza);
+    }
+
+    .legend-dot.potencia {
+        background: var(--fase-potencia);
+        box-shadow: 0 0 8px var(--fase-potencia);
+    }
+
+    .legend-dot.descarga {
+        background: var(--fase-descarga);
+        box-shadow: 0 0 8px var(--fase-descarga);
+    }
+
+    /* === CONTENIDO PRINCIPAL === */
+    .main-content {
+        padding: 1.25rem 1.5rem 2rem;
+        max-width: 800px;
+        margin: 0 auto;
+    }
+
+    /* === RESUMEN SEMANAL - GLASSMORPHISM TRANSPARENTE === */
+    .weekly-summary {
+        background: rgba(10,22,40,0.7);
+        backdrop-filter: blur(var(--blur-amount));
+        border: 1px solid var(--glass-border);
+        border-radius: var(--border-radius-lg);
+        padding: 1.25rem;
+        margin-bottom: 1.25rem;
+    }
+
+    .summary-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+
+    .summary-title {
+        font-family: var(--font-display);
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--text-bright);
+    }
+
+    .summary-week {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+    }
+
+    .summary-stats {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0.75rem;
+    }
+
+    .summary-stat {
+        text-align: center;
+        padding: 0.85rem 0.5rem;
+        background: rgba(0, 0, 0, 0.25);
+        border-radius: var(--border-radius-sm);
+        border: 1px solid var(--glass-border);
+    }
+
+    .summary-value {
+        font-family: var(--font-mono);
+        font-size: 1.6rem;
+        font-weight: 700;
+        color: #C8AA6E;
+        text-shadow: 0 0 10px rgba(200,170,110,0.3);
+    }
+
+    .summary-label {
+        font-size: 0.65rem;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-top: 0.3rem;
+    }
+
+    /* === TARJETA DE ENTRENAMIENTO - GLASSMORPHISM === */
+    .workout-card {
+        background: rgba(10,22,40,0.7);
+        backdrop-filter: blur(var(--blur-amount));
+        border: 1px solid var(--glass-border);
+        border-radius: var(--border-radius-lg);
+        overflow: hidden;
+        margin-bottom: 1rem;
+    }
+
+    /* Header con gradiente cyan brillante */
+    .workout-header-new {
+        background: linear-gradient(135deg, #0A1628 0%, #1a2d4a 50%, #0A1628 100%); border-bottom: 2px solid #C8AA6E;
+        padding: 1.25rem 1.5rem;
+        text-align: center;
+        position: relative;
+    }
+
+    .workout-header-new::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.25) 0%, transparent 50%);
+        pointer-events: none;
+    }
+
+    .workout-title-new {
+        font-family: var(--font-display);
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: white;
+        text-shadow: 0 2px 15px rgba(0, 0, 0, 0.4);
+        position: relative;
+        z-index: 1;
+    }
+
+    /* Barra de estadísticas */
+    .workout-stats-bar {
+        display: flex;
+        justify-content: space-around;
+        padding: 1.25rem 1rem 1.25rem;
+        background: var(--glass-bg-strong);
+        position: relative;
+    }
+
+    /* Barra de progreso gradiente */
+    .workout-stats-bar::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 1rem;
+        right: 1rem;
+        height: 4px;
+        border-radius: 2px;
+    }
+
+    .workout-stats-bar.fase-hipertrofia::after {
+        background: linear-gradient(90deg, var(--fase-hipertrofia), var(--fase-fuerza));
+        box-shadow: 0 0 12px var(--fase-hipertrofia-glow);
+    }
+
+    .workout-stats-bar.fase-fuerza::after {
+        background: linear-gradient(90deg, var(--fase-fuerza), var(--fase-potencia));
+        box-shadow: 0 0 12px var(--fase-fuerza-glow);
+    }
+
+    .workout-stats-bar.fase-potencia::after {
+        background: linear-gradient(90deg, var(--fase-potencia), var(--fase-hipertrofia));
+        box-shadow: 0 0 12px var(--fase-potencia-glow);
+    }
+
+    .workout-stats-bar.fase-descarga::after {
+        background: linear-gradient(90deg, var(--fase-descarga), var(--accent-cyan));
+        box-shadow: 0 0 12px var(--fase-descarga-glow);
+    }
+
+    .stat-item-new {
+        text-align: center;
+    }
+
+    .stat-label-new {
+        font-size: 0.7rem;
+        color: var(--text-muted);
+        margin-bottom: 0.35rem;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+    }
+
+    .stat-value-new {
+        font-family: var(--font-body);
+        font-size: 1rem;
+        color: var(--text-cloud);
+    }
+
+    .stat-value-new strong {
+        font-family: var(--font-mono);
+        font-weight: 600;
+        color: var(--text-bright);
+    }
+
+    /* Tabla de ejercicios */
+    .exercise-table {
+        width: 100%;
+        background: var(--glass-bg-strong);
+    }
+
+    .exercise-table-header {
+        display: grid;
+        grid-template-columns: 40px 2fr 70px 80px 80px 90px 100px 90px;
+        padding: 0.9rem 1rem;
+        background: rgba(0, 0, 0, 0.3);
+        border-bottom: 1px solid var(--glass-border);
+        gap: 0.5rem;
+    }
+
+    .table-header-cell {
+        font-size: 0.7rem;
+        font-weight: 600;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+    }
+
+    .table-header-number {
+        text-align: center;
+    }
+
+    .exercise-row {
+        display: grid;
+        grid-template-columns: 40px 2fr 70px 80px 80px 90px 100px 90px;
+        padding: 1rem;
+        align-items: center;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+        transition: background 0.2s ease;
+        gap: 0.5rem;
+    }
+
+    .exercise-row:last-child {
+        border-bottom: none;
+    }
+
+    .exercise-row:hover {
+        background: rgba(200,170,110,0.04);
+    }
+
+    .exercise-group {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .group-icon {
+        width: 42px;
+        height: 42px;
+        border-radius: var(--border-radius-sm);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1rem;
+        flex-shrink: 0;
+    }
+
+    .group-icon.pecho {
+        background: rgba(200,170,110,0.1);
+        color: var(--fase-hipertrofia);
+    }
+
+    .group-icon.espalda {
+        background: rgba(168, 85, 247, 0.2);
+        color: #A855F7;
+    }
+
+    .group-icon.piernas,
+    .group-icon.cuadriceps,
+    .group-icon.isquiotibiales,
+    .group-icon.gluteos {
+        background: rgba(255, 45, 146, 0.2);
+        color: var(--fase-fuerza);
+    }
+
+    .group-icon.hombros,
+    .group-icon.deltoides {
+        background: rgba(255, 184, 0, 0.2);
+        color: var(--fase-potencia);
+    }
+
+    .group-icon.biceps,
+    .group-icon.triceps,
+    .group-icon.brazos {
+        background: rgba(200,170,110,0.1);
+        color: #C8AA6E;
+    }
+
+    .group-icon.core,
+    .group-icon.abdominales {
+        background: rgba(0, 255, 136, 0.2);
+        color: #4ade80;
+    }
+
+    .group-icon.general {
+        background: rgba(161, 161, 170, 0.2);
+        color: var(--text-fog);
+    }
+
+    .exercise-name {
+        font-family: var(--font-body);
+        font-size: 0.9rem;
+        font-weight: 500;
+        color: var(--text-cloud);
+        line-height: 1.3;
+    }
+
+    .exercise-cell {
+        font-family: var(--font-mono);
+        font-size: 0.9rem;
+        color: var(--text-fog);
+        text-align: center;
+    }
+
+    /* Exercise number */
+    .exercise-number {
+        font-family: var(--font-mono);
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--text-muted);
+        text-align: center;
+        opacity: 0.7;
+    }
+
+    /* Tempo and rest cells */
+    .exercise-tempo,
+    .exercise-rest {
+        font-size: 0.8rem;
+        color: var(--text-fog);
+    }
+
+    .rpe-badge {
+        display: inline-block;
+        padding: 0.4rem 0.75rem;
+        border-radius: 20px;
+        font-family: var(--font-mono);
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+
+    .rpe-badge.fase-hipertrofia {
+        background: rgba(0, 212, 255, 0.25);
+        color: var(--fase-hipertrofia);
+        box-shadow: 0 0 12px var(--fase-hipertrofia-glow);
+    }
+
+    .rpe-badge.fase-fuerza {
+        background: rgba(255, 45, 146, 0.25);
+        color: var(--fase-fuerza);
+        box-shadow: 0 0 12px var(--fase-fuerza-glow);
+    }
+
+    .rpe-badge.fase-potencia {
+        background: rgba(255, 184, 0, 0.25);
+        color: var(--fase-potencia);
+        box-shadow: 0 0 12px var(--fase-potencia-glow);
+    }
+
+    .rpe-badge.fase-descarga {
+        background: rgba(0, 255, 136, 0.25);
+        color: #4ade80;
+        box-shadow: 0 0 12px var(--fase-descarga-glow);
+    }
+
+    /* Botón de acción con glow */
+    .action-button {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.75rem;
+        width: 100%;
+        padding: 1.15rem;
+        background: linear-gradient(135deg, #C8AA6E, #785A28);
+        border: none;
+        font-family: var(--font-display);
+        font-size: 1rem;
+        font-weight: 600;
+        color: #010A13;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-decoration: none;
+    }
+
+    .action-button:hover {
+        box-shadow: 0 0 20px rgba(200,170,110,0.4);
+        color: #010A13;
+        transform: translateY(-2px);
+    }
+
+    /* === DÍA DE DESCANSO === */
+    .rest-day-card {
+        background: rgba(10,22,40,0.7);
+        backdrop-filter: blur(var(--blur-amount));
+        border: 1px solid var(--glass-border);
+        border-radius: var(--border-radius-lg);
+        padding: 2rem 1.5rem;
+        text-align: center;
+        overflow: hidden;
+    }
+
+    .rest-day-card .workout-header-new {
+        background: linear-gradient(135deg, #0A1628, #1a3a2a); border-bottom: 2px solid #4ade80;
+        margin: -2rem -1.5rem 1.5rem;
+        padding: 1.25rem;
+    }
+
+    .rest-icon {
+        font-size: 3.5rem;
+        color: #4ade80;
+        margin-bottom: 1rem;
+        text-shadow: 0 0 15px rgba(74,222,128,0.4);
+    }
+
+    .rest-title {
+        font-family: var(--font-display);
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: var(--text-bright);
+        margin-bottom: 0.5rem;
+    }
+
+    .rest-message {
+        font-size: 0.9rem;
+        color: var(--text-fog);
+        max-width: 320px;
+        margin: 0 auto 1.5rem;
+        line-height: 1.5;
+    }
+
+    .rest-tips {
+        display: flex;
+        justify-content: center;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .rest-tip {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.85rem 1.25rem;
+        background: rgba(0, 0, 0, 0.25);
+        border-radius: var(--border-radius-sm);
+        border: 1px solid var(--glass-border);
+        min-width: 90px;
+    }
+
+    .rest-tip i {
+        font-size: 1.3rem;
+    }
+
+    .rest-tip span {
+        font-size: 0.7rem;
+        color: var(--text-muted);
+    }
+
+    /* === ESTADOS === */
+    .loading-state {
+        display: none;
+        text-align: center;
+        padding: 3rem 1rem;
+        color: #C8AA6E;
+    }
+
+    .loading-state.active {
+        display: block;
+    }
+
+    .loading-spinner {
+        font-size: 2.5rem;
+        margin-bottom: 1rem;
+        animation: spin 1s linear infinite;
+        text-shadow: 0 0 25px var(--accent-cyan-glow);
+    }
+
+    @keyframes spin {
+        from {
+            transform: rotate(0deg);
+        }
+
+        to {
+            transform: rotate(360deg);
+        }
+    }
+
+    .error-state {
+        display: none;
+        padding: 1rem;
+        background: rgba(239, 68, 68, 0.15);
+        border: 1px solid rgba(239, 68, 68, 0.4);
+        border-radius: var(--border-radius-sm);
+        color: #EF4444;
+        margin-bottom: 1rem;
+        font-size: 0.85rem;
+    }
+
+    .error-state.active {
+        display: block;
+    }
+
+    /* === RESPONSIVE === */
+    @media (max-width: 600px) {
+        .app-header {
+            padding: 1rem 1rem 0.75rem;
+        }
+
+        .main-content {
+            padding: 1rem;
+        }
+
+        .week-view {
+            gap: 6px;
+            padding: 0 0.5rem;
+        }
+
+        .week-day {
+            max-width: 50px;
+            min-width: 40px;
+            padding: 0.6rem 0.3rem;
+        }
+
+        .day-number {
+            font-size: 1.2rem;
+        }
+
+        .exercise-table-header,
+        .exercise-row {
+            grid-template-columns: 1.8fr 0.7fr 0.7fr 0.8fr 0.9fr;
+            padding: 0.75rem 0.6rem;
+        }
+
+        .group-icon {
+            width: 34px;
+            height: 34px;
+            font-size: 0.9rem;
+        }
+
+        .exercise-name {
+            font-size: 0.8rem;
+        }
+
+        .exercise-cell {
+            font-size: 0.75rem;
+        }
+    }
+
+    @media (min-width: 1200px) {
+        .main-content {
+            max-width: 900px;
+        }
+
+        .week-view {
+            max-width: 700px;
+        }
+
+        .week-day {
+            max-width: 85px;
+            padding: 1rem 0.6rem;
+        }
+
+        .day-number {
+            font-size: 1.6rem;
+        }
+    }
+
+    /* === HEADER HERO === */
+    .page-header {
+        background: rgba(10,22,40,0.7);
+        backdrop-filter: blur(var(--blur-amount));
+        border: 1px solid var(--glass-border);
+        border-radius: var(--border-radius-lg);
+        padding: 2rem;
+        margin-bottom: 2rem;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .page-header::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: linear-gradient(90deg, #C8AA6E, #785A28, #C84B31);
+    }
+
+    .header-content {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 1.5rem;
+    }
+
+    .header-title h1 {
+        font-family: var(--font-display);
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--text-bright);
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .header-title h1 i {
+        color: #C8AA6E;
+        text-shadow: 0 0 20px var(--color-cyan-glow);
+    }
+
+    .header-title p {
+        color: var(--text-fog);
+        font-size: 1rem;
+    }
+
+    .header-stats {
+        display: flex;
+        gap: 2rem;
+        flex-wrap: wrap;
+    }
+
+    .header-stat {
+        text-align: center;
+        padding: 1rem 1.5rem;
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: var(--border-radius-sm);
+        border: 1px solid var(--glass-border);
+    }
+
+    .header-stat-value {
+        font-family: var(--font-mono);
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: #C8AA6E;
+        text-shadow: 0 0 15px var(--color-cyan-glow);
+    }
+
+    .header-stat-label {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-top: 0.25rem;
+    }
+
+    .nav-btn {
+        width: 48px;
+        height: 48px;
+        border-radius: var(--border-radius-sm);
+        background: rgba(10,22,40,0.7);
+        backdrop-filter: blur(var(--blur-amount));
+        border: 1px solid var(--glass-border);
+        color: var(--text-fog);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        font-size: 1.2rem;
+    }
+
+    .nav-btn:hover {
+        background: rgba(200,170,110,0.1);
+        border-color: #C8AA6E;
+        color: #C8AA6E;
+        box-shadow: 0 0 25px var(--color-cyan-glow);
+    }
+
+    /* === HERO STATS GRID === */
+    .hero-stats {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+
+    .hero-stat {
+        background: rgba(10,22,40,0.7);
+        backdrop-filter: blur(var(--blur-amount));
+        border: 1px solid var(--glass-border);
+        border-radius: var(--border-radius-lg);
+        padding: 1.5rem;
+        text-align: center;
+        position: relative;
+        overflow: hidden;
+        transition: all 0.3s ease;
+    }
+
+    .hero-stat:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    }
+
+    .hero-stat::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        border-radius: 3px 3px 0 0;
+    }
+
+    .hero-stat.cyan::before {
+        background: var(--color-cyan);
+        box-shadow: 0 0 15px var(--color-cyan-glow);
+    }
+
+    .hero-stat.pink::before {
+        background: var(--color-pink);
+        box-shadow: 0 0 15px var(--color-pink-glow);
+    }
+
+    .hero-stat.yellow::before {
+        background: var(--color-yellow);
+        box-shadow: 0 0 15px var(--color-yellow-glow);
+    }
+
+    .hero-stat.green::before {
+        background: var(--color-green);
+        box-shadow: 0 0 15px var(--color-green-glow);
+    }
+
+    .hero-stat.purple::before {
+        background: var(--color-purple);
+        box-shadow: 0 0 15px var(--color-purple-glow);
+    }
+
+    .hero-stat-icon {
+        font-size: 1.5rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .hero-stat.cyan .hero-stat-icon {
+        color: #C8AA6E;
+        text-shadow: 0 0 15px var(--color-cyan-glow);
+    }
+
+    .hero-stat.pink .hero-stat-icon {
+        color: var(--color-pink);
+        text-shadow: 0 0 15px var(--color-pink-glow);
+    }
+
+    .hero-stat.yellow .hero-stat-icon {
+        color: var(--color-yellow);
+        text-shadow: 0 0 15px var(--color-yellow-glow);
+    }
+
+    .hero-stat.green .hero-stat-icon {
+        color: var(--color-green);
+        text-shadow: 0 0 15px var(--color-green-glow);
+    }
+
+    .hero-stat.purple .hero-stat-icon {
+        color: var(--color-purple);
+        text-shadow: 0 0 15px var(--color-purple-glow);
+    }
+
+    .hero-stat-value {
+        font-family: var(--font-mono);
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--text-bright);
+        line-height: 1;
+        margin-bottom: 0.5rem;
+    }
+
+    .hero-stat-label {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .hero-stat-change {
+        font-size: 0.7rem;
+        margin-top: 0.5rem;
+        padding: 0.25rem 0.5rem;
+        border-radius: 20px;
+        display: inline-block;
+    }
+
+    .hero-stat-change.positive {
+        background: rgba(0, 255, 136, 0.2);
+        color: var(--color-green);
+    }
+
+    .hero-stat-change.neutral {
+        background: rgba(255, 255, 255, 0.1);
+        color: var(--text-fog);
+    }
+
+    border-radius: 0 0 var(--border-radius-lg) var(--border-radius-lg);
+    }
+
+    .card-header {
+        padding: 1.25rem 1.5rem;
+        border-bottom: 1px solid var(--glass-border);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .card-title {
+        font-family: var(--font-display);
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--text-bright);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .card-title i {
+        color: #C8AA6E;
+        text-shadow: 0 0 10px var(--color-cyan-glow);
+    }
+
+    /* card-body ya definido arriba */
+
+    /* === GRID LAYOUTS === */
+    .grid-2 {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 1.5rem;
+    }
+
+    .grid-equal {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.5rem;
+    }
+
+    /* === ACWR SECTION === */
+    .acwr-container {
+        display: grid;
+        grid-template-columns: 1fr 1.5fr;
+        gap: 2rem;
+    }
+
+    .acwr-left {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+    }
+
+    .acwr-value-display {
+        margin-bottom: 1.5rem;
+    }
+
+    .acwr-big-value {
+        font-family: var(--font-mono);
+        font-size: 4rem;
+        font-weight: 900;
+        line-height: 1;
+        background: linear-gradient(135deg, var(--color-cyan), var(--color-green));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        text-shadow: 0 0 40px var(--color-cyan-glow);
+    }
+
+    .acwr-big-value.optima {
+        background: linear-gradient(135deg, var(--color-green), var(--color-cyan));
+        -webkit-background-clip: text;
+        background-clip: text;
+    }
+
+    .acwr-big-value.cuidado {
+        background: linear-gradient(135deg, var(--color-yellow), #FF8C00);
+        -webkit-background-clip: text;
+        background-clip: text;
+    }
+
+    .acwr-big-value.riesgo_alto {
+        background: linear-gradient(135deg, var(--danger-color), var(--color-pink));
+        -webkit-background-clip: text;
+        background-clip: text;
+    }
+
+    .acwr-big-value.baja_carga {
+        background: linear-gradient(135deg, var(--color-purple), var(--color-cyan));
+        -webkit-background-clip: text;
+        background-clip: text;
+    }
+
+    .acwr-label {
+        font-size: 0.85rem;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        margin-top: 0.5rem;
+    }
+
+    .acwr-status-badge {
+        padding: 0.75rem 1.5rem;
+        border-radius: var(--border-radius-sm);
+        font-weight: 600;
+        font-size: 0.9rem;
+        margin-bottom: 1rem;
+    }
+
+    .acwr-status-badge.optima {
+        background: rgba(0, 255, 136, 0.15);
+        color: var(--color-green);
+        border: 1px solid rgba(0, 255, 136, 0.3);
+        box-shadow: 0 0 15px var(--color-green-glow);
+    }
+
+    .acwr-status-badge.cuidado {
+        background: rgba(255, 184, 0, 0.15);
+        color: var(--color-yellow);
+        border: 1px solid rgba(255, 184, 0, 0.3);
+        box-shadow: 0 0 15px var(--color-yellow-glow);
+    }
+
+    .acwr-status-badge.riesgo_alto {
+        background: rgba(255, 71, 87, 0.15);
+        color: var(--danger-color);
+        border: 1px solid rgba(255, 71, 87, 0.3);
+        box-shadow: 0 0 15px rgba(255, 71, 87, 0.5);
+    }
+
+    .acwr-status-badge.baja_carga {
+        background: rgba(168, 85, 247, 0.15);
+        color: var(--color-purple);
+        border: 1px solid rgba(168, 85, 247, 0.3);
+        box-shadow: 0 0 15px var(--color-purple-glow);
+    }
+
+    .acwr-recommendation {
+        font-size: 0.9rem;
+        color: var(--text-fog);
+        line-height: 1.6;
+        max-width: 280px;
+    }
+
+    .acwr-right {
+        position: relative;
+    }
+
+    .chart-container {
+        position: relative;
+        height: 280px;
+    }
+
+    /* === GAUGE === */
+    .gauge-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        margin: 1.5rem 0;
+    }
+
+    .gauge-svg {
+        width: 180px;
+        height: auto;
+        filter: drop-shadow(0 4px 15px rgba(0, 212, 255, 0.3));
+    }
+
+    .gauge-labels {
+        display: flex;
+        justify-content: space-between;
+        width: 180px;
+        font-size: 0.65rem;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-top: 0.5rem;
+    }
+
+    /* === ZONE LEGEND === */
+    .zone-legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid var(--glass-border);
+    }
+
+    .zone-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.75rem;
+        color: var(--text-fog);
+    }
+
+    .zone-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+    }
+
+    .zone-dot.danger {
+        background: var(--danger-color);
+        box-shadow: 0 0 8px rgba(255, 71, 87, 0.5);
+    }
+
+    .zone-dot.warning {
+        background: var(--color-yellow);
+        box-shadow: 0 0 8px var(--color-yellow-glow);
+    }
+
+    .zone-dot.success {
+        background: var(--color-green);
+        box-shadow: 0 0 8px var(--color-green-glow);
+    }
+
+    .zone-dot.info {
+        background: var(--color-purple);
+        box-shadow: 0 0 8px var(--color-purple-glow);
+    }
+
+    /* === BALANCE TABLE === */
+    .balance-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .balance-table thead {
+        background: rgba(0, 0, 0, 0.3);
+    }
+
+    .balance-table th {
+        padding: 1rem 0.75rem;
+        text-align: left;
+        font-weight: 600;
+        color: var(--text-cloud);
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        border-bottom: 1px solid rgba(200,170,110,0.3);
+    }
+
+    .balance-table td {
+        padding: 1rem 0.75rem;
+        border-bottom: 1px solid var(--glass-border);
+        color: var(--text-cloud);
+    }
+
+    .balance-table tbody tr {
+        transition: background 0.2s ease;
+    }
+
+    .balance-table tbody tr:hover {
+        background: rgba(200,170,110,0.04);
+    }
+
+    .ratio-badge {
+        display: inline-block;
+        padding: 0.4rem 0.75rem;
+        border-radius: 20px;
+        font-family: var(--font-mono);
+        font-size: 0.85rem;
+        font-weight: 600;
+        background: rgba(200,170,110,0.1);
+        color: #C8AA6E;
+        box-shadow: 0 0 8px rgba(200,170,110,0.3);
+    }
+
+    .details {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        margin-top: 0.25rem;
+    }
+
+    /* === MUSCLE GRID === */
+    .muscle-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0.75rem;
+    }
+
+    .muscle-item {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 1rem;
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: var(--border-radius-sm);
+        border: 1px solid var(--glass-border);
+        transition: all 0.3s ease;
+    }
+
+    .muscle-item:hover {
+        background: rgba(200,170,110,0.04);
+        border-color: rgba(0, 212, 255, 0.2);
+    }
+
+    .muscle-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1rem;
+    }
+
+    .muscle-icon.pecho {
+        background: rgba(200,170,110,0.1);
+        color: #C8AA6E;
+    }
+
+    .muscle-icon.espalda {
+        background: rgba(168, 85, 247, 0.2);
+        color: var(--color-purple);
+    }
+
+    .muscle-icon.piernas {
+        background: rgba(255, 45, 146, 0.2);
+        color: var(--color-pink);
+    }
+
+    .muscle-icon.hombros {
+        background: rgba(255, 184, 0, 0.2);
+        color: var(--color-yellow);
+    }
+
+    .muscle-icon.brazos {
+        background: rgba(0, 255, 136, 0.2);
+        color: var(--color-green);
+    }
+
+    .muscle-icon.core {
+        background: rgba(255, 255, 255, 0.1);
+        color: var(--text-fog);
+    }
+
+    .muscle-info {
+        flex: 1;
+    }
+
+    .muscle-name {
+        font-size: 0.85rem;
+        color: var(--text-cloud);
+        font-weight: 500;
+    }
+
+    .muscle-value {
+        font-family: var(--font-mono);
+        font-size: 0.8rem;
+        color: var(--text-muted);
+    }
+
+    /* === PROGRESS TABLE === */
+    .progress-table-container {
+        overflow-x: auto;
+        border-radius: var(--border-radius-md);
+    }
+
+    .progress-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.9rem;
+    }
+
+    .progress-table thead {
+        background: rgba(0, 0, 0, 0.3);
+    }
+
+    .progress-table th {
+        padding: 1rem 0.75rem;
+        text-align: center;
+        font-weight: 600;
+        color: var(--text-cloud);
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        border-bottom: 1px solid rgba(200,170,110,0.3);
+    }
+
+    .progress-table th:first-child {
+        text-align: left;
+    }
+
+    .progress-table td {
+        padding: 1rem 0.75rem;
+        border-bottom: 1px solid var(--glass-border);
+        text-align: center;
+        color: var(--text-cloud);
+    }
+
+    .progress-table td:first-child {
+        text-align: left;
+        font-weight: 500;
+    }
+
+    .progress-table tbody tr {
+        transition: background 0.2s ease;
+    }
+
+    .progress-table tbody tr:hover {
+        background: rgba(200,170,110,0.04);
+    }
+
+    .progress-positive {
+        color: var(--color-green) !important;
+        font-weight: 600;
+    }
+
+    .progress-negative {
+        color: var(--danger-color) !important;
+        font-weight: 600;
+    }
+
+    .progress-neutral {
+        color: var(--text-muted);
+    }
+
+    .progress-indicator {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        margin-right: 0.5rem;
+    }
+
+    .progress-indicator.positive {
+        background: var(--color-green);
+        box-shadow: 0 0 10px var(--color-green-glow);
+    }
+
+    .progress-indicator.negative {
+        background: var(--danger-color);
+        box-shadow: 0 0 10px rgba(255, 71, 87, 0.5);
+    }
+
+    .exercise-date {
+        font-size: 0.7rem;
+        color: var(--text-muted);
+        display: block;
+        margin-top: 0.25rem;
+    }
+
+    /* === HEATMAP === */
+    .heatmap-container {
+        overflow-x: auto;
+        padding: 0.5rem 0;
+    }
+
+    .heatmap {
+        display: flex;
+        gap: 3px;
+    }
+
+    .heatmap-week {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+    }
+
+    .heatmap-day {
+        width: 12px;
+        height: 12px;
+        min-width: 12px;
+        min-height: 12px;
+        border-radius: 2px;
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.03);
+    }
+
+    .heatmap-day.level-1 {
+        background: rgba(200,170,110,0.1);
+    }
+
+    .heatmap-day.level-2 {
+        background: rgba(200,170,110,0.2);
+    }
+
+    .heatmap-day.level-3 {
+        background: rgba(0, 212, 255, 0.6);
+    }
+
+    .heatmap-day.level-4 {
+        background: var(--color-cyan);
+        box-shadow: 0 0 5px var(--color-cyan-glow);
+    }
+
+    .heatmap-months {
+        display: flex;
+        gap: 3px;
+        margin-bottom: 0.5rem;
+    }
+
+    .heatmap-month {
+        font-size: 0.6rem;
+        color: var(--text-muted);
+        width: 48px;
+    }
+
+    .heatmap-legend {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-top: 1rem;
+        justify-content: flex-end;
+    }
+
+    .heatmap-legend span {
+        font-size: 0.65rem;
+        color: var(--text-muted);
+    }
+
+    .heatmap-legend-item {
+        width: 12px;
+        height: 12px;
+        border-radius: 2px;
+    }
+
+    /* === PR LIST === */
+    .pr-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .pr-item {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 1rem;
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: var(--border-radius-sm);
+        border: 1px solid var(--glass-border);
+        transition: all 0.3s ease;
+    }
+
+    .pr-item:hover {
+        background: rgba(200,170,110,0.04);
+    }
+
+    .pr-rank {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: var(--font-mono);
+        font-size: 0.9rem;
+        font-weight: 700;
+    }
+
+    .pr-rank.gold {
+        background: linear-gradient(145deg, #FFB800, #FF8C00);
+        color: #010A13;
+    }
+
+    .pr-rank.silver {
+        background: linear-gradient(145deg, #C0C0C0, #A0A0A0);
+        color: #010A13;
+    }
+
+    .pr-rank.bronze {
+        background: linear-gradient(145deg, #CD7F32, #8B4513);
+        color: #010A13;
+    }
+
+    .pr-info {
+        flex: 1;
+    }
+
+    .pr-exercise {
+        font-size: 0.9rem;
+        color: var(--text-cloud);
+        font-weight: 500;
+    }
+
+    .pr-date {
+        font-size: 0.7rem;
+        color: var(--text-muted);
+    }
+
+    .pr-value {
+        font-family: var(--font-mono);
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #C8AA6E;
+        text-shadow: 0 0 10px var(--color-cyan-glow);
+    }
+
+    /* === TOOLTIPS === */
+    .info-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: rgba(200,170,110,0.1);
+        color: #C8AA6E;
+        font-size: 0.7rem;
+        font-weight: bold;
+        cursor: help;
+        margin-left: 0.5rem;
+        transition: all 0.3s ease;
+        position: relative;
+        z-index: 10;
+    }
+
+    .info-icon:hover {
+        background: rgba(200,170,110,0.2);
+        box-shadow: 0 0 15px var(--color-cyan-glow);
+    }
+
+    .tooltip {
+        position: absolute;
+        bottom: 150%;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(10, 15, 30, 0.95);
+        backdrop-filter: blur(var(--blur-amount));
+        color: var(--text-cloud);
+        padding: 0.75rem 1rem;
+        border-radius: var(--border-radius-sm);
+        font-size: 0.8rem;
+        white-space: nowrap;
+        pointer-events: none;
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.3s ease;
+        z-index: 99999;
+        border: 1px solid rgba(200,170,110,0.3);
+        box-shadow: 0 4px 20px rgba(200,170,110,0.2), 0 0 20px rgba(0,0,0,0.8);
+    }
+
+    .tooltip::after {
+        content: '';
+        position: absolute;
+        top: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        border: 6px solid transparent;
+        border-top-color: #C8AA6E;
+    }
+
+    .info-icon:hover .tooltip {
+        opacity: 1;
+        visibility: visible;
+    }
+
+    /* === EXPLANATION PANEL === */
+    .explanation-panel {
+        background: rgba(200,170,110,0.04);
+        border-left: 3px solid rgba(200,170,110,0.4);
+        padding: 1rem 1.25rem;
+        border-radius: 0 var(--border-radius-sm) var(--border-radius-sm) 0;
+        margin-top: 1rem;
+        font-size: 0.85rem;
+        color: var(--text-fog);
+        line-height: 1.6;
+    }
+
+    .explanation-title {
+        font-weight: 600;
+        color: #C8AA6E;
+        margin-bottom: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .metric-range {
+        background: rgba(0, 0, 0, 0.2);
+        padding: 0.75rem;
+        border-radius: var(--border-radius-sm);
+        margin-top: 0.75rem;
+        font-family: var(--font-mono);
+        font-size: 0.8rem;
+    }
+
+    .metric-range-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 0.35rem;
+    }
+
+    .metric-range-item:last-child {
+        margin-bottom: 0;
+    }
+
+    .range-color {
+        display: inline-block;
+        width: 12px;
+        height: 12px;
+        border-radius: 3px;
+    }
+
+    /* === RESPONSIVE === */
+    @media (max-width: 1200px) {
+        .hero-stats {
+            grid-template-columns: repeat(3, 1fr);
+        }
+
+        .grid-2,
+        .grid-equal {
+            grid-template-columns: 1fr;
+        }
+
+        .acwr-container {
+            grid-template-columns: 1fr;
+        }
+
+        .muscle-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+
+    @media (max-width: 768px) {
+        .container {
+            padding: 1rem;
+        }
+
+        .hero-stats {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .header-content {
+            flex-direction: column;
+            text-align: center;
+        }
+
+        .header-stats {
+            justify-content: center;
+        }
+
+        .muscle-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .progress-table {
+            font-size: 0.8rem;
+        }
+
+        .progress-table th,
+        .progress-table td {
+            padding: 0.75rem 0.5rem;
+        }
+    }
+
+    /* === ANIMATIONS === */
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .card {
+        animation: fadeInUp 0.5s ease-out;
+    }
+
+    .hero-stat {
+        animation: fadeInUp 0.5s ease-out;
+    }
+
+    .hero-stat:nth-child(1) {
+        animation-delay: 0.05s;
+    }
+
+    .hero-stat:nth-child(2) {
+        animation-delay: 0.1s;
+    }
+
+    .hero-stat:nth-child(3) {
+        animation-delay: 0.15s;
+    }
+
+    .hero-stat:nth-child(4) {
+        animation-delay: 0.2s;
+    }
+
+    .hero-stat:nth-child(5) {
+        animation-delay: 0.25s;
+    }
+
+    /* ===== Layout tipo capturas ===== */
+    .topbar {
+        display: grid;
+        grid-template-columns: 1fr auto 1fr;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .topbar-title {
+        display: flex;
+        align-items: center;
+        gap: .6rem;
+        font-family: var(--font-display);
+        font-weight: 700;
+        font-size: 1.4rem;
+        color: var(--text-bright);
+    }
+
+    .topbar-title i {
+        color: #C8AA6E;
+        text-shadow: 0 0 18px var(--color-cyan-glow);
+    }
+
+    .icon-btn {
+        width: 42px;
+        height: 42px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 12px;
+        background: rgba(0, 0, 0, 0.25);
+        border: 1px solid var(--glass-border);
+        color: var(--text-fog);
+        transition: .2s ease;
+        justify-self: end;
+        text-decoration: none;
+    }
+
+    .icon-btn:hover {
+        border-color: rgba(255, 255, 255, .16);
+        box-shadow: 0 0 18px rgba(0, 0, 0, .35);
+        color: var(--text-bright);
+    }
+
+    /* Segmented control */
+    .segmented {
+        background: rgba(0, 0, 0, 0.25);
+        border: 1px solid var(--glass-border);
+        border-radius: 14px;
+        padding: 4px;
+        display: flex;
+        gap: 4px;
+        min-width: 320px;
+        justify-content: center;
+    }
+
+    .segmented-btn {
+        flex: 1;
+        border: 0;
+        background: transparent;
+        color: var(--text-muted);
+        padding: 10px 14px;
+        border-radius: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: .2s ease;
+    }
+
+    .segmented-btn.active {
+        color: var(--text-bright);
+        background: linear-gradient(90deg, rgba(255, 45, 146, .35), rgba(0, 212, 255, .25));
+        box-shadow: 0 0 20px rgba(0, 212, 255, .10);
+    }
+
+    /* KPI cards */
+    .kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1.2rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .kpi-card {
+        background: rgba(10,22,40,0.7);
+        backdrop-filter: blur(var(--blur-amount));
+        border: 1px solid var(--glass-border);
+        border-radius: 22px;
+        padding: 1.3rem 1.4rem;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .kpi-card::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 0;
+        height: 3px;
+    }
+
+    .kpi-cyan::before {
+        background: var(--color-cyan);
+        box-shadow: 0 0 14px var(--color-cyan-glow);
+    }
+
+    .kpi-pink::before {
+        background: var(--color-pink);
+        box-shadow: 0 0 14px var(--color-pink-glow);
+    }
+
+    .kpi-yellow::before {
+        background: var(--color-yellow);
+        box-shadow: 0 0 14px var(--color-yellow-glow);
+    }
+
+    .kpi-green::before {
+        background: var(--color-green);
+        box-shadow: 0 0 14px var(--color-green-glow);
+    }
+
+    .kpi-icon {
+        font-size: 1.15rem;
+        margin-bottom: .75rem;
+        opacity: .95;
+    }
+
+    .kpi-cyan .kpi-icon {
+        color: #C8AA6E;
+    }
+
+    .kpi-pink .kpi-icon {
+        color: var(--color-pink);
+    }
+
+    .kpi-yellow .kpi-icon {
+        color: var(--color-yellow);
+    }
+
+    .kpi-green .kpi-icon {
+        color: var(--color-green);
+    }
+
+    .kpi-value {
+        font-family: var(--font-mono);
+        font-size: 2.2rem;
+        font-weight: 800;
+        color: var(--text-bright);
+        line-height: 1;
+    }
+
+    .kpi-label {
+        margin-top: .5rem;
+        font-size: .72rem;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: .08em;
+    }
+
+    .kpi-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: .4rem;
+        margin-top: .85rem;
+        padding: .28rem .7rem;
+        border-radius: 999px;
+        font-size: .72rem;
+        font-weight: 700;
+        border: 1px solid rgba(255, 255, 255, 0.10);
+        background: rgba(0, 0, 0, 0.18);
+        color: var(--text-fog);
+    }
+
+    .kpi-badge-positive {
+        border-color: rgba(0, 255, 136, .18);
+        background: rgba(0, 255, 136, .10);
+        color: var(--color-green);
+    }
+
+    .kpi-badge-negative {
+        border-color: rgba(255, 71, 87, .18);
+        background: rgba(255, 71, 87, .10);
+        color: var(--danger-color);
+    }
+
+    @media (max-width: 1200px) {
+        .kpi-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .topbar {
+            grid-template-columns: 1fr;
+        }
+
+        .topbar-right {
+            justify-self: start;
+        }
+
+        .segmented {
+            min-width: 100%;
+        }
+    }
+
+    /* Ajustes de compatibilidad para mantener la lógica original funcionando con el nuevo diseño */
+    .container-main {
+        width: 100%;
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 1.5rem;
+    }
+
+    /* Asegurar que los IDs originales sigan existiendo y sean visibles */
+    #workoutContainer {
+        min-height: 200px;
+    }
+
+    /* Estilos para que el calendario original se vea bien en el panel de cristal */
+    .app-header {
+        background: transparent !important;
+        backdrop-filter: none !important;
+        position: relative !important;
+        padding: 0 !important;
+    }
+
+    .header-top {
+        max-width: none !important;
+        margin-bottom: 1rem !important;
+    }
+
+    /* === PANEL DE PRÓXIMA FASE === */
+    .next-phase-countdown {
+        text-align: center;
+        margin-bottom: 1.5rem;
+        padding: 1.5rem 0;
+    }
+
+    .countdown-number {
+        font-family: var(--font-mono);
+        font-size: 5rem;
+        font-weight: 700;
+        color: #C8AA6E;
+        text-shadow: 0 0 15px rgba(200,170,110,0.3);
+        line-height: 1;
+        animation: pulse-glow 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse-glow {
+
+        0%,
+        100% {
+            text-shadow: 0 0 15px rgba(200,170,110,0.3);
+        }
+
+        50% {
+            text-shadow: 0 0 30px var(--accent-cyan-glow), 0 0 40px var(--accent-cyan-glow);
+        }
+    }
+
+    .countdown-label {
+        font-size: 0.9rem;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        margin-top: 0.5rem;
+    }
+
+    .next-phase-info {
+        text-align: center;
+        padding: 1.5rem;
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: 0.75rem;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .next-phase-name {
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: var(--text-bright);
+        margin-bottom: 0.75rem;
+    }
+
+    .next-phase-date {
+        font-size: 0.9rem;
+        color: #C8AA6E;
+        margin-bottom: 0.75rem;
+        font-weight: 500;
+    }
+
+    .next-phase-objective {
+        font-size: 0.85rem;
+        color: var(--text-fog);
+        line-height: 1.5;
+        font-style: italic;
+    }
+
+    .no-next-phase {
+        text-align: center;
+        padding: 3rem 1rem;
+    }
+
+    /* === PANEL DE PROYECCIONES (NUEVO DISEÑO) === */
+    :root {
+        --proj-bg: #010A13;
+        --proj-glass: rgba(255, 255, 255, 0.04);
+        --proj-glass-border: rgba(255, 255, 255, 0.08);
+        --proj-cyan: #C8AA6E;
+        --proj-cyan-dim: rgba(200,170,110,0.12);
+        --proj-gold: #C8AA6E;
+        --proj-text: #e8edf2;
+        --proj-muted: rgba(232, 237, 242, 0.45);
+        --proj-card-bg: rgba(10, 22, 40, 0.8);
+    }
+
+    .proj-panel {
+        width: 100%;
+        position: relative;
+        font-family: 'DM Sans', sans-serif;
+    }
+
+    /* Header */
+    .proj-header {
+        display: flex;
+        align-items: baseline;
+        gap: 1rem;
+        margin-bottom: 2rem;
+        padding-left: 0.25rem;
+    }
+
+    .header-title-text {
+        font-family: 'Bebas Neue', sans-serif;
+        font-size: 2.2rem;
+        letter-spacing: 0.06em;
+        color: var(--proj-text);
+        line-height: 1;
+    }
+
+    .header-sub {
+        font-size: 0.7rem;
+        font-weight: 500;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        color: var(--proj-cyan);
+        margin-bottom: 2px;
+    }
+
+    .phase-badge {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        background: var(--proj-cyan-dim);
+        border: 1px solid rgba(0, 212, 255, 0.25);
+        border-radius: 20px;
+        padding: 0.3rem 0.8rem;
+        margin-left: auto;
+    }
+
+    .phase-badge-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--proj-cyan);
+        box-shadow: 0 0 6px var(--proj-cyan);
+        animation: pulse-dot 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse-dot {
+
+        0%,
+        100% {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        50% {
+            opacity: 0.5;
+            transform: scale(0.8);
+        }
+    }
+
+    .phase-badge-text {
+        font-size: 0.65rem;
+        font-weight: 700;
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+        color: var(--proj-cyan);
+    }
+
+    /* Divider */
+    .header-line {
+        height: 1px;
+        background: linear-gradient(90deg, var(--proj-cyan) 0%, rgba(0, 212, 255, 0.1) 60%, transparent 100%);
+        margin-bottom: 1.75rem;
+    }
+
+    /* Cards */
+    .proj-cards {
+        display: flex;
+        flex-direction: column;
         gap: 1rem;
     }
-    .cyber-btn-secondary, .cyber-btn-success {
+
+    .proj-card {
+        background: var(--proj-card-bg);
+        border: 1px solid var(--proj-glass-border);
+        border-radius: 16px;
+        padding: 1.25rem 1.4rem;
+        backdrop-filter: blur(12px);
+        position: relative;
+        overflow: hidden;
+        cursor: default;
+        transition: border-color 0.3s, transform 0.3s;
+    }
+
+    .proj-card::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.03) 0%, transparent 60%);
+        pointer-events: none;
+    }
+
+    .proj-card:hover {
+        border-color: rgba(0, 212, 255, 0.3);
+        transform: translateY(-1px);
+    }
+
+    /* Corner accent */
+    .card-accent {
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 60px;
+        height: 60px;
+        background: radial-gradient(circle at top right, rgba(0, 212, 255, 0.12), transparent 70%);
+        pointer-events: none;
+    }
+
+    .card-top {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        margin-bottom: 1rem;
+    }
+
+    .card-name {
+        font-family: 'Bebas Neue', sans-serif;
+        font-size: 1.1rem;
+        letter-spacing: 0.1em;
+        color: var(--proj-text);
+        line-height: 1;
+        margin-bottom: 0.5rem;
+    }
+
+    .card-weights {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .weight-block {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+
+    .weight-label {
+        font-size: 0.58rem;
+        font-weight: 700;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--proj-muted);
+    }
+
+    .weight-value {
+        font-size: 1.5rem;
+        font-weight: 300;
+        color: var(--proj-text);
+        line-height: 1;
+        letter-spacing: -0.02em;
+    }
+
+    .weight-value.target {
+        color: var(--proj-cyan);
+        font-weight: 500;
+    }
+
+    .arrow-icon-proj {
+        color: var(--proj-muted);
+        font-size: 1rem;
+        margin-top: 14px;
+        flex-shrink: 0;
+    }
+
+    /* Delta badge */
+    .delta {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 2px;
+        margin-top: 2px;
+    }
+
+    .delta-kg {
+        font-size: 1rem;
+        font-weight: 700;
+        color: var(--proj-gold);
+        letter-spacing: -0.01em;
+    }
+
+    .delta-pct {
+        font-size: 0.65rem;
+        font-weight: 500;
+        letter-spacing: 0.1em;
+        color: rgba(245, 166, 35, 0.7);
+    }
+
+    /* Progress bar */
+    .progress-wrap {
+        position: relative;
+        height: 3px;
+        background: rgba(255, 255, 255, 0.06);
+        border-radius: 99px;
+        overflow: visible;
+    }
+
+    .progress-track {
+        height: 100%;
+        border-radius: 99px;
+        background: linear-gradient(90deg, rgba(200,170,110,0.4), #C8AA6E);
+        box-shadow: 0 0 8px rgba(200,170,110,0.4);
+        transition: width 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+        position: relative;
+    }
+
+    .progress-track::after {
+        content: '';
+        position: absolute;
+        right: -1px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--proj-cyan);
+        box-shadow: 0 0 6px var(--proj-cyan), 0 0 12px rgba(0, 212, 255, 0.4);
+    }
+
+    /* Bottom label row */
+    .progress-labels {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 0.55rem;
+    }
+
+    .progress-label {
+        font-size: 0.6rem;
+        font-weight: 500;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--proj-muted);
+    }
+
+    .progress-label.right {
+        color: rgba(0, 212, 255, 0.6);
+    }
+
+    /* Entry animation */
+    .proj-card {
+        opacity: 0;
+        transform: translateY(16px);
+        animation: fadeUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    .proj-card:nth-child(1) {
+        animation-delay: 0.05s;
+    }
+
+    .proj-card:nth-child(2) {
+        animation-delay: 0.15s;
+    }
+
+    .proj-card:nth-child(3) {
+        animation-delay: 0.25s;
+    }
+
+    .proj-card:nth-child(4) {
+        animation-delay: 0.35s;
+    }
+
+    @keyframes fadeUp {
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    /* ══════════════════════════════
+       ESTILOS PARA PANELES REDESIGNADOS
+    ══════════════════════════════ */
+
+    /* Layout de paneles */
+    .phase-panels-layout {
+        display: grid;
+        grid-template-columns: 1fr 320px;
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+
+    @media (max-width: 660px) {
+        .phase-panels-layout {
+            grid-template-columns: 1fr;
+            max-width: 440px;
+        }
+    }
+
+    /* ── CARD BASE ── */
+    .phase-glass-card {
+        background: rgba(10, 20, 30, 0.75);
+        border: 1px solid rgba(255, 255, 255, 0.07);
+        border-radius: 20px;
+        backdrop-filter: blur(16px);
+        position: relative;
+        overflow: hidden;
+        opacity: 0;
+        transform: translateY(14px);
+        animation: fadeUpPanel 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    .phase-glass-card:nth-child(1) {
+        animation-delay: 0.05s;
+    }
+
+    .phase-glass-card:nth-child(2) {
+        animation-delay: 0.2s;
+    }
+
+    @keyframes fadeUpPanel {
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .phase-glass-card::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.03) 0%, transparent 50%);
+        pointer-events: none;
+    }
+
+    /* ══════════════════════════════
+       PANEL 1 — FASE ACTUAL
+    ══════════════════════════════ */
+    .current-phase-card {
+        padding: 1.75rem 2rem;
+    }
+
+    /* Top row */
+    .cp-top-row {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        margin-bottom: 1.5rem;
+    }
+
+    .cp-title-block {}
+
+    .cp-label {
+        font-size: 0.58rem;
+        font-weight: 700;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        color: rgba(232, 237, 242, 0.45);
+        margin-bottom: 0.35rem;
+    }
+
+    .cp-title {
+        font-family: 'Bebas Neue', sans-serif;
+        font-size: 2rem;
+        letter-spacing: 0.06em;
+        color: #e8edf2;
+        line-height: 1;
+    }
+
+    .cp-week-badge {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        background: rgba(0, 212, 255, 0.18);
+        border: 1px solid rgba(0, 212, 255, 0.2);
+        border-radius: 20px;
+        padding: 0.35rem 0.85rem;
+        flex-shrink: 0;
+        margin-top: 4px;
+    }
+
+    .week-dot {
+        width: 5px;
+        height: 5px;
+        border-radius: 50%;
+        background: var(--phase-primary, #00d4ff);
+        box-shadow: 0 0 6px var(--phase-primary, #00d4ff);
+        animation: blinkDot 2s ease-in-out infinite;
+    }
+
+    @keyframes blinkDot {
+
+        0%,
+        100% {
+            opacity: 1;
+        }
+
+        50% {
+            opacity: 0.4;
+        }
+    }
+
+    .week-text {
+        font-size: 0.62rem;
+        font-weight: 700;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--phase-primary, #00d4ff);
+    }
+
+    /* Divider line */
+    .cp-divider {
+        height: 1px;
+        background: linear-gradient(90deg, var(--phase-primary, rgba(0, 212, 255, 0.3)), transparent 70%);
+        margin-bottom: 1.4rem;
+    }
+
+    /* Objective text */
+    .cp-objective-text {
+        font-size: 1.05rem;
+        font-weight: 400;
+        color: #e8edf2;
+        line-height: 1.4;
+        margin-bottom: 1.5rem;
+    }
+
+    /* Stats row */
+    .cp-stats-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.75rem;
+        margin-bottom: 1.75rem;
+    }
+
+    .cp-stat-box {
+        background: rgba(0, 0, 0, 0.3);
+        border: 1px solid rgba(255, 255, 255, 0.07);
+        border-radius: 12px;
+        padding: 0.9rem 1rem;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .cp-stat-box::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 2px;
+        background: linear-gradient(90deg, var(--phase-primary, #00d4ff), transparent);
+        opacity: 0.4;
+    }
+
+    .cp-stat-val {
+        font-family: 'Bebas Neue', sans-serif;
+        font-size: 1.6rem;
+        letter-spacing: 0.04em;
+        color: var(--phase-primary, #00d4ff);
+        line-height: 1;
+    }
+
+    .cp-stat-sub {
+        font-size: 0.6rem;
+        color: rgba(232, 237, 242, 0.45);
+        margin-top: 2px;
+    }
+
+    /* Progress */
+    .cp-progress-container {}
+
+    .cp-prog-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        margin-bottom: 0.5rem;
+    }
+
+    .cp-prog-pct {
+        font-family: 'Bebas Neue', sans-serif;
+        font-size: 1.1rem;
+        letter-spacing: 0.05em;
+        color: var(--phase-primary, #00d4ff);
+    }
+
+    .cp-prog-track {
+        height: 4px;
+        background: rgba(255, 255, 255, 0.06);
+        border-radius: 99px;
+        overflow: visible;
+        position: relative;
+    }
+
+    .cp-prog-fill {
+        height: 100%;
+        border-radius: 99px;
+        background: linear-gradient(90deg, rgba(0, 150, 220, 0.6), var(--phase-primary, #00d4ff));
+        box-shadow: 0 0 10px var(--phase-glow-color, rgba(0, 212, 255, 0.5));
+        width: 0%;
+        transition: width 1.4s cubic-bezier(0.16, 1, 0.3, 1);
+        position: relative;
+    }
+
+    .cp-prog-fill::after {
+        content: '';
+        position: absolute;
+        right: -2px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--phase-primary, #00d4ff);
+        box-shadow: 0 0 8px var(--phase-primary, #00d4ff), 0 0 16px var(--phase-glow-color, rgba(0, 212, 255, 0.4));
+    }
+
+    .cp-prog-dates {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 0.5rem;
+    }
+
+    .cp-prog-dates span {
+        font-size: 0.58rem;
+        color: rgba(232, 237, 242, 0.45);
+        letter-spacing: 0.05em;
+    }
+
+
+    /* ══════════════════════════════
+       PANEL 2 — PRÓXIMA FASE
+    ══════════════════════════════ */
+    .next-phase-card {
+        padding: 1.75rem 1.5rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    /* Top label */
+    .np-header {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .np-header>span:first-child {
+        font-size: 0.9rem;
+        opacity: 0.7;
+    }
+
+    .np-label {
+        font-size: 0.58rem;
+        font-weight: 700;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        color: rgba(232, 237, 242, 0.45);
+    }
+
+    .np-line {
         flex: 1;
-        text-align: center;
+        height: 1px;
+        background: linear-gradient(90deg, rgba(255, 255, 255, 0.07), transparent);
+    }
+
+    /* Countdown */
+    .np-ring-wrap {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        margin-bottom: 1.75rem;
+        position: relative;
+    }
+
+    .np-ring-svg {
+        width: 120px;
+        height: 120px;
+        transform: rotate(-90deg);
+        margin-bottom: 0.75rem;
+    }
+
+    .np-ring-bg {
+        fill: none;
+        stroke: rgba(255, 255, 255, 0.05);
+        stroke-width: 2;
+    }
+
+    .np-ring-fill {
+        fill: none;
+        stroke: var(--phase-primary, #00d4ff);
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-dasharray: 339.3;
+        stroke-dashoffset: 254.5;
+        filter: drop-shadow(0 0 4px var(--phase-glow-color, rgba(0, 212, 255, 0.6)));
+        transition: stroke-dashoffset 1.4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .np-countdown {
+        position: absolute;
+        top: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 120px;
+        height: 120px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
         justify-content: center;
+        margin-bottom: 0.75rem;
+    }
+
+    .np-days-num {
+        font-family: 'Bebas Neue', sans-serif;
+        font-size: 3rem;
+        letter-spacing: 0.02em;
+        color: var(--phase-primary, #00d4ff);
+        line-height: 1;
+        text-shadow: 0 0 20px var(--phase-glow-color, rgba(0, 212, 255, 0.4));
+    }
+
+    .np-days-label {
+        font-size: 0.5rem;
+        font-weight: 700;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        color: rgba(232, 237, 242, 0.45);
+        margin-top: 2px;
+    }
+
+    .np-countdown-sub {
+        font-size: 0.6rem;
+        font-weight: 500;
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+        color: rgba(232, 237, 242, 0.45);
+        margin-bottom: 1.25rem;
+    }
+
+    /* Separator */
+    .np-divider {
+        width: 100%;
+        height: 1px;
+        background: rgba(255, 255, 255, 0.07);
+        margin-bottom: 1.25rem;
+    }
+
+    /* Next phase info */
+    .np-info-box {
+        width: 100%;
+        background: rgba(0, 0, 0, 0.25);
+        border: 1px solid rgba(255, 255, 255, 0.07);
+        border-radius: 14px;
+        padding: 1rem 1.2rem;
+        position: relative;
+        overflow: hidden;
+        text-align: center;
+    }
+
+    .np-info-box::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 60%;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, #f5a623, transparent);
+    }
+
+    .np-next-name {
+        font-family: 'Bebas Neue', sans-serif;
+        font-size: 1.4rem;
+        letter-spacing: 0.08em;
+        color: #e8edf2;
+        margin-bottom: 0.3rem;
+    }
+
+    .np-next-date {
+        font-size: 0.68rem;
+        font-weight: 600;
+        letter-spacing: 0.1em;
+        color: #f5a623;
+        margin-bottom: 0.5rem;
+        text-transform: uppercase;
+    }
+
+    .np-next-desc {
+        font-size: 0.72rem;
+        font-weight: 300;
+        color: rgba(232, 237, 242, 0.45);
+        line-height: 1.5;
+        font-style: italic;
+    }
+
+    /* Arrow indicator */
+    .np-arrow {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background: rgba(245, 166, 35, 0.12);
+        border: 1px solid rgba(245, 166, 35, 0.2);
+        margin: 1rem auto 0;
+        color: #f5a623;
+        font-size: 0.7rem;
     }
 </style>
 {% endblock %}
+
 {% block content %}
-<div class="page-wrapper">
+<div class="app-container" data-cliente-id="{{ cliente.id }}" data-año="{{ calendario.año }}"
+    data-mes="{{ calendario.mes_num }}">
     {% if not validacion_fallida %}
-    <div class="blade-runner-atmosphere">
-        <div class="background-fog"></div>
+
+    <!-- HEADER PRINCIPAL -->
+    <header class="page-header">
+        <div class="header-content">
+            <div class="header-title">
+                <h1><i class="fas fa-calendar-alt"></i> Planificación de Entrenamiento</h1>
+                <p>Visualiza y gestiona tus sesiones programadas</p>
+            </div>
+            <div class="header-actions">
+                <a href="{% url 'clientes:panel_cliente' %}" class="nav-btn" title="Volver al Dashboard">
+                    <i class="fas fa-th-large"></i>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    {% include 'includes/adaptive_feedback_card.html' %}
+
+    <!-- SELECTOR DE MES -->
+    <div class="month-selector">
+        <a href="?año={{ nav.anterior.año }}&mes={{ nav.anterior.mes }}" class="month-nav-btn">
+            <i class="fas fa-chevron-left"></i>
+        </a>
+        <span class="current-month">{{ calendario.nombre_mes }} {{ calendario.año }}</span>
+        <a href="?año={{ nav.siguiente.año }}&mes={{ nav.siguiente.mes }}" class="month-nav-btn">
+            <i class="fas fa-chevron-right"></i>
+        </a>
     </div>
 
-    <div class="container">
+    <!-- SELECTOR DE SEMANA -->
+    <div class="week-selector">
+        <button class="week-nav-btn" id="prevWeekBtn" title="Semana anterior" onclick="goToPrevWeek()">
+            <i class="fas fa-chevron-left"></i>
+        </button>
+        <span class="week-label" id="weekLabel">Semana 1 de 5</span>
+        <button class="week-nav-btn" id="nextWeekBtn" title="Semana siguiente" onclick="goToNextWeek()">
+            <i class="fas fa-chevron-right"></i>
+        </button>
+    </div>
 
-        <!-- LEYENDA DE COLORES -->
-        <div class="cyber-legend-container">
-            <div class="cyber-legend-list">
-                <div class="cyber-legend-item">
-                    <div class="legend-color-box bg-fase-acumulacion"></div>
-                    <span>Hipertrofia</span>
+    <!-- VISTA SEMANAL -->
+    <div class="week-view" id="weekView">
+        <!-- Se llena dinámicamente con JavaScript -->
+    </div>
+
+    <!-- LEYENDA DE FASES -->
+    <div class="phase-legend">
+        <div class="legend-item">
+            <div class="legend-dot hipertrofia"></div>
+            <span>Hipertrofia</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-dot fuerza"></div>
+            <span>Fuerza</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-dot potencia"></div>
+            <span>Potencia</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-dot descarga"></div>
+            <span>Descarga</span>
+        </div>
+    </div>
+
+
+    <!-- PHASE INFO PANELS REDESIGN -->
+    <div class="phase-panels-layout" style="
+        --phase-primary: {{ tema_fase.primary }};
+        --phase-secondary: {{ tema_fase.secondary }};
+        --phase-bg-dim: {{ tema_fase.bg }};
+        --phase-border-dim: rgba({{ tema_fase.r1 }}, {{ tema_fase.g1 }}, {{ tema_fase.b1 }}, 0.2);
+        --phase-glow-color: {{ tema_fase.glow }};
+        --phase-primary-dim: rgba({{ tema_fase.r1 }}, {{ tema_fase.g1 }}, {{ tema_fase.b1 }}, 0.3);
+    ">
+
+        <!-- PANEL 1: FASE ACTUAL -->
+        <div class="phase-glass-card current-phase-card">
+            <div class="cp-top-row">
+                <div class="cp-title-block">
+                    <div class="cp-label">Fase actual</div>
+                    <div class="cp-title">{{ fase_actual.nombre }}</div>
                 </div>
-                <div class="cyber-legend-item">
-                    <div class="legend-color-box bg-fase-fuerza"></div>
-                    <span>Fuerza</span>
+                <div class="cp-week-badge">
+                    <div class="week-dot"></div>
+                    <span class="week-text">Semana {{ semana_actual }} de {{ total_semanas_fase }}</span>
                 </div>
-                <div class="cyber-legend-item">
-                    <div class="legend-color-box bg-fase-potencia"></div>
-                    <span>Potencia</span>
+            </div>
+
+            <div class="cp-divider"></div>
+
+            <div class="cp-label">Objetivo de esta fase</div>
+            <div class="cp-objective-text">{{ objetivo_fase }}</div>
+
+            <div class="cp-stats-grid">
+                <div class="cp-stat-box">
+                    <div class="cp-label">RPE Objetivo</div>
+                    <div class="cp-stat-val">{{ parametros_fase.rpe_min }}–{{ parametros_fase.rpe_max }}</div>
+                    <div class="cp-stat-sub">Intensidad controlada</div>
                 </div>
-                <div class="cyber-legend-item">
-                    <div class="legend-color-box bg-fase-descarga"></div>
-                    <span>Descarga</span>
+                <div class="cp-stat-box">
+                    <div class="cp-label">Rango de reps</div>
+                    <div class="cp-stat-val">{{ parametros_fase.reps_min }}–{{ parametros_fase.reps_max }}</div>
+                    <div class="cp-stat-sub">Adaptación progresiva</div>
+                </div>
+            </div>
+
+            <div class="cp-progress-container">
+                <div class="cp-prog-header">
+                    <span class="cp-label" style="margin-bottom:0;">Progreso de fase</span>
+                    <span class="cp-prog-pct">{{ progreso_fase }}%</span>
+                </div>
+                <div class="cp-prog-track">
+                    <div class="cp-prog-fill" style="width: {{ progreso_fase }}%;"></div>
+                </div>
+                <div class="cp-prog-dates">
+                    <span>Inicio: {{ fase_actual.fecha_inicio|date:"d M" }}</span>
+                    <span>Fin: {{ fase_actual.fecha_fin|date:"d M" }}</span>
                 </div>
             </div>
         </div>
 
-        <div class="cyber-calendar-container">
-            <!-- Header del calendario -->
-            <div class="cyber-calendar-header">
-                <a href="?año={{ nav.anterior.año }}&mes={{ nav.anterior.mes }}" class="cyber-nav-btn">
-                    <i class="fas fa-chevron-left"></i>
-                </a>
-                <h3><i class="fas fa-calendar-alt me-2"></i>{{ calendario.nombre_mes }} {{ calendario.año }}</h3>
-                <a href="?año={{ nav.siguiente.año }}&mes={{ nav.siguiente.mes }}" class="cyber-nav-btn">
-                    <i class="fas fa-chevron-right"></i>
-                </a>
+        <!-- PANEL 2: PRÓXIMA FASE -->
+        <div class="phase-glass-card next-phase-card">
+            <div class="np-header">
+                <span>⟶</span>
+                <span class="np-label">Próxima fase</span>
+                <div class="np-line"></div>
             </div>
 
-            <!-- Grid del calendario -->
-            <div class="cyber-calendar-grid">
-                <div class="cyber-calendar-day-header">L</div>
-                <div class="cyber-calendar-day-header">M</div>
-                <div class="cyber-calendar-day-header">X</div>
-                <div class="cyber-calendar-day-header">J</div>
-                <div class="cyber-calendar-day-header">V</div>
-                <div class="cyber-calendar-day-header">S</div>
-                <div class="cyber-calendar-day-header">D</div>
-
-                <!-- Días del mes con la lógica corregida -->
-                {% for semana in calendario.semanas %}
-                {% for dia in semana %}
-                {% if dia %}
-                <div class="cyber-calendar-day
-                             {% if dia.es_hoy %}today{% endif %}
-                             {% if dia.entrenamiento %}
-                                 has-training
-                                 {% if 'hipertrofia' in dia.entrenamiento.fase_css %}text-fase-acumulacion{% endif %}
-                                 {% if 'fuerza' in dia.entrenamiento.fase_css %}text-fase-fuerza{% endif %}
-                                 {% if 'potencia' in dia.entrenamiento.fase_css %}text-fase-potencia{% endif %}
-                                 {% if 'descarga' in dia.entrenamiento.fase_css %}text-fase-descarga{% endif %}
-                             {% endif %}"
-                     {% if dia.entrenamiento %}onclick="mostrarDetalles('{{ dia.numero }}')" {% endif %}>
-
-                    {{ dia.numero }}
+            {% if proxima_fase %}
+            <div class="np-ring-wrap">
+                <svg class="np-ring-svg" viewBox="0 0 110 110">
+                    <circle class="np-ring-bg" cx="55" cy="55" r="54" />
+                    <circle class="np-ring-fill" cx="55" cy="55" r="54" id="nextPhaseRing"
+                        data-days="{{ dias_hasta_proxima_fase }}" data-total="14"></circle>
+                </svg>
+                <div class="np-countdown">
+                    <span class="np-days-num">{{ dias_hasta_proxima_fase }}</span>
+                    <span class="np-days-label">días</span>
                 </div>
-                {% else %}
-                <div class="cyber-calendar-day empty"></div>
+            </div>
+
+            <span class="np-countdown-sub">para el cambio de fase</span>
+
+            <div class="np-divider"></div>
+
+            <div class="np-info-box">
+                <div class="np-next-name">{{ proxima_fase.nombre }}</div>
+                <div class="np-next-date">Comienza el {{ proxima_fase.fecha_inicio|date:"d/m/Y" }}</div>
+                <div class="np-next-desc">Desarrollo de fuerza máxima con cargas pesadas</div>
+            </div>
+
+            <div class="np-arrow">↓</div>
+            {% else %}
+            <!-- Estado Fin del Plan -->
+            <div class="np-ring-wrap" style="opacity: 0.5;">
+                <svg class="np-ring-svg" viewBox="0 0 110 110">
+                    <circle class="np-ring-bg" cx="55" cy="55" r="54" />
+                </svg>
+                <div class="np-countdown">
+                    <span class="np-days-num" style="font-size: 2rem;">--</span>
+                </div>
+            </div>
+            <div class="np-info-box">
+                <div class="np-next-name">Fin del Plan</div>
+                <div class="np-next-date">¡Plan Completado!</div>
+            </div>
+            {% endif %}
+        </div>
+
+    </div>
+
+
+    <!-- Contenedor Principal de Fases y Proyecciones -->
+    <div id="projections-container" class="proj-panel"
+        style="display: {% if fase_actual %}block{% else %}none{% endif %};">
+        <div class="proj-header">
+            <div>
+                <div class="header-sub">Objetivos</div>
+                <div class="header-title-text">Esta Fase</div>
+            </div>
+            <div class="phase-badge">
+                <div class="phase-badge-dot"
+                    style="background: {{ tema_fase.primary }}; box-shadow: 0 0 6px {{ tema_fase.primary }};"></div>
+                <span class="phase-badge-text" style="color: {{ tema_fase.primary }};">
+                    {{ fase_actual.tipo_fase|default:"En curso" }}</span>
+            </div>
+        </div>
+
+        <div class="header-line"
+            style="background: linear-gradient(90deg, {{ tema_fase.primary }} 0%, rgba(0,212,255,0.1) 60%, transparent 100%);">
+        </div>
+
+        <div class="proj-cards" id="projections-cards" {% if not proyecciones_fase %}style="display: none;" {% endif %}>
+            {% if proyecciones_fase %}
+            {% for proj in proyecciones_fase %}
+            <div class="proj-card">
+                <div class="card-accent"
+                    style="background: radial-gradient(circle at top right, {{ tema_fase.primary }}1F, transparent 70%);">
+                </div>
+                <div class="card-top">
+                    <div>
+                        <div class="card-name">{{ proj.nombre }}</div>
+                        <div class="card-weights"
+                            style="display: grid; grid-template-columns: 1fr auto 1fr auto 1fr; gap: 5px; align-items: center;">
+
+                            <div class="weight-block" style="align-items: center;">
+                                <span class="weight-label" style="font-size: 0.55rem;">INICIO</span>
+                                <span class="weight-value" style="font-size: 1rem;">
+                                    {{ proj.peso_inicial|default:proj.peso_actual }}<small
+                                        style="font-size:.6em;opacity:.6">kg</small></span>
+                            </div>
+
+                            <div class="arrow-icon-proj" style="font-size: 0.8rem; opacity: 0.4;">→</div>
+
+                            <div class="weight-block" style="align-items: center;">
+                                <span class="weight-label" style="font-size: 0.55rem;">ACTUAL</span>
+                                <span class="weight-value" style="font-size: 1.1rem; color: #fff;">
+                                    {{ proj.peso_actual }}<small style="font-size:.6em;opacity:.6">kg</small></span>
+                            </div>
+
+                            <div class="arrow-icon-proj" style="font-size: 0.8rem; opacity: 0.4;">→</div>
+
+                            <div class="weight-block" style="align-items: center;">
+                                <span class="weight-label" style="font-size: 0.55rem;">OBJETIVO</span>
+                                <span class="weight-value target"
+                                    style="font-size: 1rem; color: {{ tema_fase.primary }};">
+                                    {{ proj.peso_objetivo|default:proj.peso_proyectado }}<small
+                                        style="font-size:.6em;opacity:.7">kg</small></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="delta">
+                        <span class="delta-kg" style="color: #f5a623;">+{{ proj.incremento }}kg</span>
+                        <span class="delta-pct" style="color: rgba(245, 166, 35, 0.7);">+
+                            {{ proj.incremento_porcentaje }}%</span>
+                    </div>
+                </div>
+                <!-- Progress Section -->
+                <div style="margin-top: 12px;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                        <span class="progress-label" style="font-size: 0.65rem;">Progreso de Fase</span>
+                        <span class="progress-label right" style="color: {{ tema_fase.primary }}; font-size: 0.65rem;">
+                            {{ proj.progreso_pct|default:"0" }}%</span>
+                    </div>
+                    <div class="progress-wrap">
+                        <div class="progress-track"
+                            style="width: 0%; height: 100%; background: linear-gradient(90deg, {{ tema_fase.primary }}66, {{ tema_fase.primary }});"
+                            data-width="{{ proj.progreso_pct|default:'0' }}%"></div>
+                    </div>
+                </div>
+                {% endfor %}
                 {% endif %}
-                {% endfor %}
-                {% endfor %}
             </div>
-        </div>
-    </div>
 
-    <!-- Modal (sin cambios) -->
-    <div class="modal fade cyber-modal" id="detalleEntrenamientoModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-xl modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-body" id="modal-contenido-ejercicios"></div>
-                <div class="modal-footer">
-                    <button type="button" class="btn cyber-btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-                    <a href="#" id="btn-empezar-entreno" class="btn cyber-btn-success">Empezar Entrenamiento</a>
+        </div>
+
+        <!-- CONTENIDO PRINCIPAL -->
+        <main class="main-content">
+            <!-- MENSAJE DE ERROR -->
+            <div class="error-state" id="errorState"></div>
+
+            <!-- ESTADO DE CARGA -->
+            <div class="loading-state" id="loadingState">
+                <i class="fas fa-spinner loading-spinner"></i>
+                <p>Cargando entrenamiento...</p>
+            </div>
+
+            <!-- RESUMEN SEMANAL -->
+            <div class="weekly-summary" id="weeklySummary">
+                <div class="summary-header">
+                    <span class="summary-title">Resumen Semanal</span>
+                    <span class="summary-week" id="summaryWeekLabel">Semana 1</span>
+                </div>
+                <div class="summary-stats">
+                    <div class="summary-stat">
+                        <div class="summary-value" id="summaryWorkouts">0</div>
+                        <div class="summary-label">Entrenos</div>
+                    </div>
+                    <div class="summary-stat">
+                        <div class="summary-value" id="summarySeries">0</div>
+                        <div class="summary-label">Series</div>
+                    </div>
+                    <div class="summary-stat">
+                        <div class="summary-value" id="summaryMinutes">0</div>
+                        <div class="summary-label">Minutos</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TARJETA DE ENTRENAMIENTO DEL DÍA -->
+            <div id="workoutContainer">
+                <!-- Se llena dinámicamente con JavaScript -->
+            </div>
+        </main>
+
+        <!-- Modal de Entrenamiento Clásico -->
+        <div class="cyber-modal" id="detalleEntrenamientoModal">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div id="modal-contenido-ejercicios"></div>
                 </div>
             </div>
         </div>
+
+        {% endif %}
     </div>
-    {% endif %}
-</div>
-{% endblock %}
-{% block extra_js %}
-<script>
-    // Efectos adicionales de interactividad
-    document.addEventListener('DOMContentLoaded', function() {
-        // Efectos para días del calendario
-        const calendarDays = document.querySelectorAll('.cyber-calendar-day:not(.empty)');
-        calendarDays.forEach(day => {
-            day.addEventListener('mouseenter', function() {
-                this.style.transform = 'translateY(-3px)';
-            });
 
-            day.addEventListener('mouseleave', function() {
-                this.style.transform = 'translateY(0)';
-            });
-        });
 
-        // Efectos para entradas de entrenamiento
-        const trainingEntries = document.querySelectorAll('.cyber-training-entry');
-        trainingEntries.forEach(entry => {
-            entry.addEventListener('mouseenter', function() {
-                this.style.transform = 'translateY(-1px) scale(1.02)';
-            });
 
-            entry.addEventListener('mouseleave', function() {
-                this.style.transform = 'translateY(0) scale(1)';
-            });
-        });
+    {% endblock %}
 
-        // Efectos para botones de navegación
-        const navBtns = document.querySelectorAll('.cyber-nav-btn');
-        navBtns.forEach(btn => {
-            btn.addEventListener('mouseenter', function() {
-                this.style.transform = 'translateY(-2px)';
-            });
+    {% block extra_js %}
+    <script>
+        // ========== VARIABLES GLOBALES ==========
+        const appContainer = document.querySelector('.app-container');
+        const clienteId = appContainer.dataset.clienteId;
+        const año = parseInt(appContainer.dataset.año) || new Date().getFullYear();
+        const mes = parseInt(appContainer.dataset.mes) || (new Date().getMonth() + 1);
 
-            btn.addEventListener('mouseleave', function() {
-                this.style.transform = 'translateY(0)';
-            });
-        });
-    });
+        let entrenamientosCache = {};
+        let selectedDate = null;
+        let currentWeekDates = [];
+        let currentWeekIndex = 0;
+        let allWeeksInMonth = [];
 
-    // Datos de entrenamientos (se debe proporcionar desde Django)
-    const diasDeEntreno = {{ entrenos_por_fecha_data|safe }};
+        console.log(`📅 App cargada: Cliente ${clienteId}, ${año}-${mes}`);
 
-    function mostrarDetalles(dia) {
-        const añoActual = {{ calendario.año }};
-        const mesActual = String({{ calendario.mes_num }}).padStart(2, '0');
-        const diaActual = String(dia).padStart(2, '0');
-        const fechaSeleccionada = `${añoActual}-${mesActual}-${diaActual}`;
-
-        const entrenamiento = diasDeEntreno[fechaSeleccionada];
-        const modalElement = document.getElementById('detalleEntrenamientoModal');
-        const modalBody = document.getElementById('modal-contenido-ejercicios');
-        const btnEmpezar = document.getElementById('btn-empezar-entreno');
-
-        if (entrenamiento) {
-            let tableHtml = `
-                <table class="w-full table-auto text-sm text-left text-white shadow-lg rounded-xl overflow-hidden">
-            <thead class="bg-gradient-to-r from-[#31cff4] to-[#160f29] text-black uppercase text-xs tracking-wider">
-            <tr>
-                <th class="px-4 py-3">Nombre</th>
-                <th class="px-4 py-3">Series</th>
-                <th class="px-4 py-3">Rep</th>
-                <th class="px-4 py-3">RPE</th>
-                <th class="px-4 py-3">Exp</th>
-
-            </tr>
-            </thead>
-                    <tbody class="bg-[#121212] divide-y divide-gray-700">
-            `;
-
-            entrenamiento.ejercicios.forEach(ej => {
-                tableHtml += `
-                    <tr class="hover:bg-[#1f1f1f] transition">
-                        <td class="px-4 py-3 ">${ej.nombre.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</td>
-                        <td class="px-4 py-3 text-cyan-400">${ej.series}</td>
-                        <td class="px-4 py-3 font-bold text-yellow-300">${ej.repeticiones}</td>
-                        <td class="px-4 py-3 font-bold text-green-400">${ej.rpe_objetivo}</td>
-                        <td class="px-4 py-3 font-bold text-pink-400">--</td>
-
-                    </tr>
-                `;
-            });
-
-            tableHtml += `
-                    </tbody>
-                </table>
-            `;
-
-            modalBody.innerHTML = tableHtml;
-
-            const url = "{% url 'entrenos:entrenamiento_activo' cliente.id %}";
-            const params = new URLSearchParams({
-                fecha: fechaSeleccionada,
-                rutina_nombre: entrenamiento.nombre_rutina,
-                ejercicios: JSON.stringify(entrenamiento.ejercicios)
-            });
-            btnEmpezar.href = `${url}?${params.toString()}`;
-            btnEmpezar.style.display = 'inline-flex';
-
-        } else {
-            modalBody.innerHTML = `<div class="p-4 text-center text-muted">No hay entrenamiento programado para este día.</div>`;
-            btnEmpezar.style.display = 'none';
+        // ========== UTILIDADES ==========
+        function formatDate(date) {
+            const y = date.getFullYear();
+            const m = String(date.getMonth() + 1).padStart(2, '0');
+            const d = String(date.getDate()).padStart(2, '0');
+            return `${y}-${m}-${d}`;
         }
 
-        const modal = new bootstrap.Modal(modalElement);
-        modal.show();
+        function getDayName(date) {
+            const days = ['D', 'L', 'M', 'X', 'J', 'V', 'S'];
+            return days[date.getDay()];
+        }
 
-        // Efectos adicionales para el modal
-        setTimeout(() => {
-            const listItems = document.querySelectorAll('.cyber-list-group-item');
-            listItems.forEach((item, index) => {
-                setTimeout(() => {
-                    item.style.opacity = '1';
-                    item.style.transform = 'translateX(0)';
-                }, index * 100);
+        function getWeeksInMonth(year, month) {
+            const weeks = [];
+            const firstDay = new Date(year, month - 1, 1);
+            const lastDay = new Date(year, month, 0);
+
+            let current = new Date(firstDay);
+            const dayOfWeek = current.getDay();
+            current.setDate(current.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
+
+            while (current <= lastDay || weeks.length === 0) {
+                const week = [];
+                for (let i = 0; i < 7; i++) {
+                    week.push(new Date(current));
+                    current.setDate(current.getDate() + 1);
+                }
+                weeks.push(week);
+
+                if (current.getMonth() + 1 > month && current.getFullYear() >= year) {
+                    break;
+                }
+            }
+
+            return weeks;
+        }
+
+        function getIconoGrupo(grupo, nombre = '') {
+            const n = nombre.toLowerCase();
+            if (n.includes('ski')) return 'fa-skiing';
+            if (n.includes('row')) return 'fa-rowing';
+            if (n.includes('sled push')) return 'fa-arrow-right';
+            if (n.includes('sled pull')) return 'fa-grip-lines';
+            if (n.includes('burpee')) return 'fa-child';
+            if (n.includes('wall')) return 'fa-bullseye';
+            if (n.includes('farmer')) return 'fa-suitcase-rolling';
+            if (n.includes('lunge')) return 'fa-shoe-prints';
+            if (n.includes('running') || n.includes('carrera')) return 'fa-running';
+
+            const g = grupo?.toLowerCase() || '';
+            const iconos = {
+                'pecho': 'fa-hand-rock',
+                'espalda': 'fa-arrows-alt-v',
+                'piernas': 'fa-shoe-prints',
+                'pierna': 'fa-shoe-prints',
+                'cuadriceps': 'fa-shoe-prints',
+                'isquiotibiales': 'fa-shoe-prints',
+                'gluteos': 'fa-shoe-prints',
+                'hombros': 'fa-expand-arrows-alt',
+                'deltoides': 'fa-expand-arrows-alt',
+                'biceps': 'fa-hand-rock',
+                'triceps': 'fa-hand-paper',
+                'brazos': 'fa-hand-rock',
+                'core': 'fa-circle',
+                'abdominales': 'fa-circle',
+                'gemelos': 'fa-shoe-prints'
+            };
+            return iconos[g] || 'fa-dumbbell';
+        }
+
+        // ========== UI FUNCTIONS ==========
+        function showLoading(show = true) {
+            const el = document.getElementById('loadingState');
+            if (el) el.classList.toggle('active', show);
+        }
+
+        function showError(message) {
+            const errorEl = document.getElementById('errorState');
+            if (errorEl) {
+                errorEl.textContent = message;
+                errorEl.classList.add('active');
+            }
+        }
+
+        function hideError() {
+            const el = document.getElementById('errorState');
+            if (el) el.classList.remove('active');
+        }
+
+        // ========== RENDER WEEK VIEW ==========
+        function renderWeekView() {
+            const weekView = document.getElementById('weekView');
+            const today = new Date();
+            const todayStr = formatDate(today);
+
+            currentWeekDates = allWeeksInMonth[currentWeekIndex] || [];
+
+            document.getElementById('weekLabel').textContent = `Semana ${currentWeekIndex + 1} de ${allWeeksInMonth.length}`;
+
+            document.getElementById('prevWeekBtn').disabled = currentWeekIndex === 0;
+            document.getElementById('nextWeekBtn').disabled = currentWeekIndex >= allWeeksInMonth.length - 1;
+
+            weekView.innerHTML = currentWeekDates.map(date => {
+                const dateStr = formatDate(date);
+                const isToday = dateStr === todayStr;
+                const isSelected = dateStr === selectedDate;
+                const entrenamiento = entrenamientosCache[dateStr];
+                const fase = entrenamiento?.fase_css?.replace('fase-', '') || '';
+                const faseClass = fase ? `fase-${fase}` : '';
+
+                return `
+                <div class="week-day ${isToday ? 'today' : ''} ${isSelected ? 'selected' : ''} ${faseClass}"
+                     data-date="${dateStr}">
+                    <div class="day-name">${getDayName(date)}</div>
+                    <div class="day-number">${date.getDate()}</div>
+                    <div class="day-dot"></div>
+                </div>
+            `;
+            }).join('');
+
+            weekView.querySelectorAll('.week-day').forEach(el => {
+                el.addEventListener('click', () => selectDate(el.dataset.date, true));
             });
-        }, 100);
-    }
 
-    // Efectos de carga inicial
-    window.addEventListener('load', function() {
-        const calendarContainer = document.querySelector('.cyber-calendar-container');
-        calendarContainer.classList.add('loading-calendar');
+            updateWeeklySummary();
+        }
 
+        // ========== RENDER WORKOUT CARD ==========
+        function renderWorkoutCard(entrenamiento, fecha) {
+            const container = document.getElementById('workoutContainer');
+            if (!container) return;
+            if (!entrenamiento) {
+                container.innerHTML = `
+                <div class="rest-day-card">
+                    <div class="workout-header-new">
+                        <div class="workout-title-new">Día de Descanso</div>
+                    </div>
+                    <i class="fas fa-bed rest-icon"></i>
+                    <p class="rest-message">No hay entrenamiento programado. Tu cuerpo necesita recuperarse para seguir creciendo.</p>
+                    <div class="rest-tips">
+                        <div class="rest-tip">
+                            <i class="fas fa-walking" style="color: #4ade80;"></i>
+                            <span>Recuperación</span>
+                        </div>
+                        <div class="rest-tip">
+                            <i class="fas fa-moon" style="color: #C8AA6E;"></i>
+                            <span>Descanso</span>
+                        </div>
+                        <div class="rest-tip">
+                            <i class="fas fa-utensils" style="color: var(--fase-potencia);"></i>
+                            <span>Nutrición</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+                return;
+            }
+
+            const nombreRutina = entrenamiento.nombre_rutina || 'Entrenamiento';
+            const faseCss = entrenamiento.fase_css || 'fase-hipertrofia';
+
+            const semanaBloque = entrenamiento.semana_bloque || 1;
+            const totalSemanas = entrenamiento.total_semanas_bloque || 1;
+            const volumenMult = entrenamiento.volumen_mult || 1.0;
+            const rpeObjetivo = entrenamiento.rpe_objetivo || 7;
+
+            const ejercicios = entrenamiento.ejercicios || [];
+
+            let exerciseRowsHtml = ejercicios.map((ej, index) => {
+                const grupo = ej.grupo_muscular?.toLowerCase() || 'general';
+                const pesoDisplay = ej.peso_kg ? `${ej.peso_kg}kg` : '-';
+                const rpe = (ej.rpe_objetivo ?? ej.rpe ?? rpeObjetivo);
+                const tempo = entrenamiento.tempo || '2-0-X-0';
+                const descanso = entrenamiento.descanso || 90;
+
+                return `
+                <div class="exercise-row">
+                    <div class="exercise-number">${index + 1}</div>
+                    <div class="exercise-group">
+                        <div class="group-icon ${grupo}">
+                            <i class="fas ${getIconoGrupo(grupo, ej.nombre || '')}"></i>
+                        </div>
+                        <span class="exercise-name" ${ej.es_adaptado ? 'style="color: #4ade80;"' : ''}>
+                            ${ej.es_adaptado ? '<i class="fas fa-shield-alt" title="Adaptado por precaución biomecánica"></i> ' : ''}${ej.nombre || 'N/A'}
+                        </span>
+                    </div>
+                    <div class="exercise-cell">${ej.series || '-'}</div>
+                    <div class="exercise-cell">${ej.repeticiones || '-'}</div>
+                    <div class="exercise-cell">${pesoDisplay}</div>
+                    <div class="exercise-cell">
+                        <span class="rpe-badge ${faseCss}">RPE: ${rpe}</span>
+                    </div>
+                    <div class="exercise-cell exercise-tempo">⏱️ ${tempo}</div>
+                    <div class="exercise-cell exercise-rest">🕐 ${descanso}s</div>
+                </div>
+            `;
+            }).join('');
+
+            container.innerHTML = `
+            <div class="workout-card">
+                <div class="workout-header-new">
+                    <div class="workout-title-new">${nombreRutina}</div>
+                </div>
+
+                <div class="workout-stats-bar ${faseCss}">
+                    <div class="stat-item-new">
+                        <div class="stat-label-new">Semana</div>
+                        <div class="stat-value-new"><strong>${semanaBloque}</strong>/${totalSemanas}</div>
+                    </div>
+                    <div class="stat-item-new">
+                        <div class="stat-label-new">Volumen</div>
+                        <div class="stat-value-new"><strong>${Math.round(volumenMult * 100)}%</strong></div>
+                    </div>
+                    <div class="stat-item-new">
+                        <div class="stat-label-new">RPE</div>
+                        <div class="stat-value-new"><strong>${rpeObjetivo}</strong></div>
+                    </div>
+                </div>
+
+                <div class="exercise-table">
+                    <div class="exercise-table-header">
+                        <div class="table-header-cell table-header-number">#</div>
+                        <div class="table-header-cell">EJERCICIO</div>
+                        <div class="table-header-cell">SERIES:</div>
+                        <div class="table-header-cell">REPS:</div>
+                        <div class="table-header-cell">PESO:</div>
+                        <div class="table-header-cell">RPE:</div>
+                        <div class="table-header-cell">TEMPO:</div>
+                        <div class="table-header-cell">DESCANSO:</div>
+                    </div>
+                    ${exerciseRowsHtml}
+                </div>
+
+                <a href="{% url 'entrenos:entrenamiento_activo' cliente.id %}?fecha=${fecha}&rutina_nombre=${encodeURIComponent(nombreRutina)}&ejercicios=${encodeURIComponent(JSON.stringify(ejercicios))}"
+                   class="action-button">
+                    <i class="fas fa-play"></i>
+                    Empezar Entrenamiento
+                </a>
+            </div>
+        `;
+        }
+
+        // ========== UPDATE WEEKLY SUMMARY ==========
+        function updateWeeklySummary() {
+            let totalWorkouts = 0;
+            let totalSeries = 0;
+            let totalMinutes = 0;
+
+            currentWeekDates.forEach(date => {
+                const dateStr = formatDate(date);
+                const entrenamiento = entrenamientosCache[dateStr];
+                if (entrenamiento && entrenamiento.ejercicios) {
+                    totalWorkouts++;
+                    const series = entrenamiento.ejercicios.reduce((sum, ej) => sum + (ej.series || 0), 0);
+                    totalSeries += series;
+                    totalMinutes += Math.round(5 + (series * 2.5));
+                }
+            });
+
+            const elWorkouts = document.getElementById('summaryWorkouts');
+            const elSeries = document.getElementById('summarySeries');
+            const elMinutes = document.getElementById('summaryMinutes');
+            const elWeekLabel = document.getElementById('summaryWeekLabel');
+            if (elWorkouts) elWorkouts.textContent = totalWorkouts;
+            if (elSeries) elSeries.textContent = totalSeries;
+            if (elMinutes) elMinutes.textContent = totalMinutes;
+            if (elWeekLabel) elWeekLabel.textContent = `Semana ${currentWeekIndex + 1}`;
+        }
+
+        // ========== SELECT DATE ==========
+        function selectDate(dateStr, fromUserClick = false) {
+            selectedDate = dateStr;
+
+            document.querySelectorAll('.week-day').forEach(el => {
+                el.classList.toggle('selected', el.dataset.date === dateStr);
+            });
+
+            hideError();
+            const entrenamiento = entrenamientosCache[dateStr];
+            renderWorkoutCard(entrenamiento, dateStr);
+
+            if (fromUserClick && entrenamiento) {
+                openWorkoutModal(entrenamiento, dateStr);
+            }
+        }
+
+        // ========== WEEK NAVIGATION ==========
+        function goToPrevWeek() {
+            if (currentWeekIndex > 0) {
+                currentWeekIndex--;
+                renderWeekView();
+                if (currentWeekDates.length > 0) {
+                    selectDate(formatDate(currentWeekDates[0]));
+                }
+            }
+        }
+
+        function goToNextWeek() {
+            if (currentWeekIndex < allWeeksInMonth.length - 1) {
+                currentWeekIndex++;
+                renderWeekView();
+                if (currentWeekDates.length > 0) {
+                    selectDate(formatDate(currentWeekDates[0]));
+                }
+            }
+        }
+
+        // ========== LOAD DATA ==========
+        async function loadMonthData() {
+            try {
+                console.log(`📥 Cargando datos para ${año}-${mes}...`);
+
+                const url = `/entrenos/ajax/entrenamientos-mes/${clienteId}/?año=${año}&mes=${mes}`;
+                const response = await fetch(url);
+
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                const data = await response.json();
+
+                if (data.success) {
+                    entrenamientosCache = data.entrenamientos;
+                    console.log('✅ Datos cargados:', Object.keys(entrenamientosCache).length, 'días');
+                } else {
+                    throw new Error(data.error || 'Error desconocido');
+                }
+            } catch (error) {
+                console.error('❌ Error:', error);
+                showError(`Error al cargar datos: ${error.message}`);
+            }
+        }
+
+        // ========== FIND CURRENT WEEK INDEX ==========
+        function findCurrentWeekIndex() {
+            const today = new Date();
+            const todayStr = formatDate(today);
+
+            for (let i = 0; i < allWeeksInMonth.length; i++) {
+                for (let j = 0; j < allWeeksInMonth[i].length; j++) {
+                    if (formatDate(allWeeksInMonth[i][j]) === todayStr) {
+                        return i;
+                    }
+                }
+            }
+
+            return 0;
+        }
+
+        // ========== INITIALIZATION ==========
+        document.addEventListener('DOMContentLoaded', async function () {
+            console.log('🚀 Inicializando app...');
+            showLoading(true);
+
+            allWeeksInMonth = getWeeksInMonth(año, mes);
+
+            await loadMonthData();
+
+            currentWeekIndex = findCurrentWeekIndex();
+
+            renderWeekView();
+
+            const today = new Date();
+            const todayStr = formatDate(today);
+            const isCurrentMonth = today.getFullYear() === año && today.getMonth() + 1 === mes;
+
+            if (isCurrentMonth) {
+                selectDate(todayStr);
+            } else {
+                selectDate(formatDate(currentWeekDates[0]));
+            }
+
+            showLoading(false);
+
+            // ========================================
+            // DYNAMIC THEME SWITCHING ON DAY CLICK
+            // ========================================
+
+            // Parse bloques data from backend
+            const bloquesData = {{ bloques_json|default:"[]"|safe }};
+            const proyeccionesData = {{ proyecciones_json|default:"[]"|safe }};
+
+        // Theme color mapping
+        const themeColors = {
+            'hipertrofia': {
+                primary: '#00D4FF',
+                secondary: '#0EA5E9',
+                glow: 'rgba(0, 212, 255, 0.5)',
+                bg: 'rgba(0, 212, 255, 0.15)',
+                r1: 0, g1: 212, b1: 255,
+                r2: 14, g2: 165, b2: 233,
+                icon: '💪',
+                objetivo: 'Maximizar volumen muscular y crecimiento'
+            },
+            'hipertrofia_especifica': {
+                primary: '#00D4FF',
+                secondary: '#0EA5E9',
+                glow: 'rgba(0, 212, 255, 0.5)',
+                bg: 'rgba(0, 212, 255, 0.15)',
+                r1: 0, g1: 212, b1: 255,
+                r2: 14, g2: 165, b2: 233,
+                icon: '💪',
+                objetivo: 'Hipertrofia específica en grupos musculares'
+            },
+            'hipertrofia_metabolica': {
+                primary: '#00D4FF',
+                secondary: '#0EA5E9',
+                glow: 'rgba(0, 212, 255, 0.5)',
+                bg: 'rgba(0, 212, 255, 0.15)',
+                r1: 0, g1: 212, b1: 255,
+                r2: 14, g2: 165, b2: 233,
+                icon: '💪',
+                objetivo: 'Hipertrofia metabólica con alto volumen'
+            },
+            'fuerza': {
+                primary: '#FF2D92',
+                secondary: '#EC4899',
+                glow: 'rgba(255, 45, 146, 0.5)',
+                bg: 'rgba(255, 45, 146, 0.15)',
+                r1: 255, g1: 45, b1: 146,
+                r2: 236, g2: 72, b2: 153,
+                icon: '⚡',
+                objetivo: 'Incrementar fuerza máxima (1RM)'
+            },
+            'potencia': {
+                primary: '#FFB800',
+                secondary: '#F59E0B',
+                glow: 'rgba(255, 184, 0, 0.5)',
+                bg: 'rgba(255, 184, 0, 0.15)',
+                r1: 255, g1: 184, b1: 0,
+                r2: 245, g2: 158, b2: 11,
+                icon: '🔥',
+                objetivo: 'Desarrollar velocidad y explosividad'
+            },
+            'descarga': {
+                primary: '#A855F7',
+                secondary: '#9333EA',
+                glow: 'rgba(168, 85, 247, 0.5)',
+                bg: 'rgba(168, 85, 247, 0.15)',
+                r1: 168, g1: 85, b1: 247,
+                r2: 147, g2: 51, b2: 234,
+                icon: '🌙',
+                objetivo: 'Recuperación activa y regeneración'
+            }
+        };
+
+        // Function to update projections panel
+        function updateProjectionsPanel(bloque) {
+            // Find the cards container
+            const cardsContainer = document.getElementById('projections-cards');
+
+            // Find the parent container that holds everything
+            const mainContainer = document.getElementById('projections-container');
+
+            // Show main container since we have an active phase
+            if (mainContainer) {
+                mainContainer.style.display = 'block';
+            }
+
+            if (!cardsContainer) return; // If cards container doesn't exist, exit
+
+            // Determine phase type key for projections
+            const objetivo = bloque.objetivo ? bloque.objetivo.toLowerCase() : '';
+            const tipoFase = bloque.tipo_fase ? bloque.tipo_fase.toLowerCase() : '';
+
+            let phaseKey = null;
+            if (objetivo.includes('hipertrofia') || tipoFase.includes('hipertrofia')) {
+                phaseKey = 'hipertrofia';
+            } else if (objetivo.includes('fuerza') || tipoFase.includes('fuerza')) {
+                phaseKey = 'fuerza';
+            } else if (objetivo.includes('potencia') || tipoFase.includes('potencia')) {
+                phaseKey = 'potencia';
+            }
+
+            // Get theme colors for styling
+            let theme = themeColors['hipertrofia']; // Default
+            if (phaseKey === 'fuerza') theme = themeColors['fuerza'];
+            else if (phaseKey === 'potencia') theme = themeColors['potencia'];
+            else if (objetivo.includes('descarga') || tipoFase.includes('descarga')) theme = themeColors['descarga'];
+
+            // Update the Phase Badge in the projections header
+            const badgeText = mainContainer ? mainContainer.querySelector('.phase-badge-text') : null;
+            const badgeDot = mainContainer ? mainContainer.querySelector('.phase-badge-dot') : null;
+            const headerLine = mainContainer ? mainContainer.querySelector('.header-line') : null;
+
+            if (badgeText && badgeDot) {
+                badgeText.textContent = bloque.tipo_fase || 'En curso';
+                badgeText.style.color = theme.primary;
+                badgeDot.style.background = theme.primary;
+                badgeDot.style.boxShadow = `0 0 6px ${theme.primary}`;
+            }
+
+            if (headerLine) {
+                headerLine.style.background = `linear-gradient(90deg, ${theme.primary} 0%, rgba(0,212,255,0.1) 60%, transparent 100%)`;
+            }
+
+            // Get projections for this phase type
+            const projections = phaseKey ? proyeccionesData[phaseKey] : null;
+
+            if (projections && projections.length > 0) {
+                let html = '';
+
+                projections.forEach((proj, index) => {
+                    // Use backend calculated progress or fallback
+                    let pct = proj.progreso_pct !== undefined ? proj.progreso_pct : 0;
+
+                    // Fallback calculations if new fields aren't present
+                    const pInicial = proj.peso_inicial !== undefined ? proj.peso_inicial : proj.peso_actual;
+                    const pActual = proj.peso_actual;
+                    const pObjetivo = proj.peso_objetivo !== undefined ? proj.peso_objetivo : proj.peso_proyectado;
+
+                    // Animation delay for staggered entry
+                    const delay = 0.05 + (index * 0.1);
+
+                    html += `
+                    <div class="proj-card" style="animation-delay: ${delay}s">
+                        <div class="card-accent" style="background: radial-gradient(circle at top right, ${theme.primary}1F, transparent 70%);"></div>
+                        <div class="card-top">
+                        <div>
+                            <div class="card-name">${proj.nombre}</div>
+
+                            <!-- New Layout: Initial -> Current -> Target -->
+                            <div class="card-weights" style="display: grid; grid-template-columns: 1fr auto 1fr auto 1fr; gap: 5px; align-items: center;">
+
+                                <div class="weight-block" style="align-items: center;">
+                                    <span class="weight-label" style="font-size: 0.55rem;">INICIO</span>
+                                    <span class="weight-value" style="font-size: 1rem;">${pInicial}<small style="font-size:.6em;opacity:.6">kg</small></span>
+                                </div>
+
+                                <div class="arrow-icon-proj" style="font-size: 0.8rem; opacity: 0.4;">→</div>
+
+                                <div class="weight-block" style="align-items: center;">
+                                    <span class="weight-label" style="font-size: 0.55rem;">ACTUAL</span>
+                                    <span class="weight-value" style="font-size: 1.1rem; color: #fff;">${pActual}<small style="font-size:.6em;opacity:.6">kg</small></span>
+                                </div>
+
+                                <div class="arrow-icon-proj" style="font-size: 0.8rem; opacity: 0.4;">→</div>
+
+                                <div class="weight-block" style="align-items: center;">
+                                    <span class="weight-label" style="font-size: 0.55rem;">OBJETIVO</span>
+                                    <span class="weight-value target" style="font-size: 1rem; color: ${theme.primary};">${pObjetivo}<small style="font-size:.6em;opacity:.7">kg</small></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="delta" style="align-self: flex-start; margin-top: 5px;">
+                            <span class="delta-kg" style="color: #f5a623; font-size: 0.9rem;">+${proj.incremento}kg</span>
+                            <span class="delta-pct" style="color: rgba(245, 166, 35, 0.7); font-size: 0.7rem;">+${proj.incremento_porcentaje}%</span>
+                        </div>
+                        </div>
+
+                        <!-- Progress Section -->
+                        <div style="margin-top: 12px;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                                <span class="progress-label" style="font-size: 0.65rem;">Progreso de Fase</span>
+                                <span class="progress-label right" style="color: ${theme.primary}; font-size: 0.65rem;">${pct}%</span>
+                            </div>
+                            <div class="progress-wrap">
+                                <div class="progress-track" style="width: 0%; background: linear-gradient(90deg, ${theme.primary}66, ${theme.primary});" data-width="${pct}%"></div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                });
+
+                cardsContainer.innerHTML = html;
+                cardsContainer.style.display = 'flex'; // It matches .proj-cards display: flex
+
+                // Trigger progress bar animations
+                setTimeout(() => {
+                    cardsContainer.querySelectorAll('.progress-track').forEach(el => {
+                        el.style.width = el.dataset.width;
+                    });
+                }, 100);
+
+            } else {
+                // Hide just the projection cards if no projections exist, but keep the current/next phase panels
+                cardsContainer.style.display = 'none';
+            }
+        }
+
+        // Function to find which phase a date belongs to
+        function findPhaseForDate(dateStr) {
+            const clickedDate = new Date(dateStr);
+
+            for (const bloque of bloquesData) {
+                if (!bloque.fecha_inicio || !bloque.fecha_fin) continue;
+
+                const fechaInicio = new Date(bloque.fecha_inicio);
+                const fechaFin = new Date(bloque.fecha_fin);
+
+                if (clickedDate >= fechaInicio && clickedDate <= fechaFin) {
+                    return bloque;
+                }
+            }
+
+            return null;
+        }
+
+        // Function to update theme based on phase
+        function updateTheme(bloque) {
+            if (!bloque) return;
+
+            const objetivo = bloque.objetivo.toLowerCase();
+            let theme = themeColors['hipertrofia']; // Default
+
+            // Determine theme based on objetivo
+            if (objetivo.includes('hipertrofia_especifica')) {
+                theme = themeColors['hipertrofia_especifica'];
+            } else if (objetivo.includes('hipertrofia_metabolica')) {
+                theme = themeColors['hipertrofia_metabolica'];
+            } else if (objetivo.includes('hipertrofia')) {
+                theme = themeColors['hipertrofia'];
+            } else if (objetivo.includes('fuerza')) {
+                theme = themeColors['fuerza'];
+            } else if (objetivo.includes('potencia')) {
+                theme = themeColors['potencia'];
+            } else if (objetivo.includes('descarga') || objetivo.includes('deload')) {
+                theme = themeColors['descarga'];
+            }
+
+            // Update body background gradient
+            document.body.style.background = `
+                linear-gradient(135deg,
+                    rgba(${theme.r1}, ${theme.g1}, ${theme.b1}, 0.03) 0%,
+                    rgba(${theme.r2}, ${theme.g2}, ${theme.b2}, 0.05) 100%
+                ),
+                radial-gradient(ellipse at top left,
+                    rgba(${theme.r1}, ${theme.g1}, ${theme.b1}, 0.08) 0%,
+                    transparent 50%
+                ),
+                radial-gradient(ellipse at bottom right,
+                    rgba(${theme.r2}, ${theme.g2}, ${theme.b2}, 0.08) 0%,
+                    transparent 50%
+                ),
+                #0a0a0f
+            `;
+
+            // Update phase summary panel logic for new Glassmorphism design
+            const layout = document.querySelector('.phase-panels-layout');
+            if (layout) {
+                // Update CSS variables for dynamic theming
+                layout.style.setProperty('--phase-primary', theme.primary);
+                layout.style.setProperty('--phase-secondary', theme.secondary);
+                layout.style.setProperty('--phase-bg-dim', theme.bg);
+                layout.style.setProperty('--phase-border-dim', `rgba(${theme.r1}, ${theme.g1}, ${theme.b1}, 0.2)`);
+                layout.style.setProperty('--phase-glow-color', theme.glow);
+                layout.style.setProperty('--phase-primary-dim', `rgba(${theme.r1}, ${theme.g1}, ${theme.b1}, 0.3)`);
+
+                // Update Phase Name
+                const nameEl = layout.querySelector('.cp-title');
+                if (nameEl) nameEl.textContent = bloque.nombre;
+
+                // Update Phase Objective
+                const objectiveEl = layout.querySelector('.cp-objective-text');
+                if (objectiveEl) objectiveEl.textContent = theme.objetivo;
+
+                // Update RPE
+                const rpeVals = layout.querySelectorAll('.cp-stat-val');
+                if (rpeVals.length >= 2) {
+                    // RPE is the first one, Reps is the second
+                    rpeVals[0].textContent = `${bloque.rpe_min}–${bloque.rpe_max}`;
+                    rpeVals[1].textContent = `${bloque.reps_min}–${bloque.reps_max}`;
+                }
+
+                // (Optional) We could update the Next Phase name if we calculate it, but usually Phase switching 
+                // from the calendar click focuses on visually updating the "Current" info to match the clicked day.
+            }
+
+            console.log(`✨ Theme updated to: ${bloque.nombre} (${objetivo})`);
+        }
+
+        // Add click event listeners using event delegation for dynamically generated days
+        document.addEventListener('click', function (e) {
+            const dayEl = e.target.closest('.week-day');
+            if (!dayEl) return;
+
+            const dateStr = dayEl.dataset.date;
+            if (!dateStr) return;
+
+            const phase = findPhaseForDate(dateStr);
+            if (phase) {
+                updateTheme(phase);
+                updateProjectionsPanel(phase);
+            }
+        });
+
+        // week navigation handlers are set inline on the HTML buttons
+        // ========== ANIMACIÓN DE PANELES REDESIGNADOS ==========
         setTimeout(() => {
-            calendarContainer.classList.remove('loading-calendar');
-        }, 1000);
-    });
-</script>
-{% endblock %}
+            // Animar barra de progreso
+            const progressFill = document.querySelector('.cp-prog-fill');
+            if (progressFill) {
+                const targetWidth = progressFill.style.width;
+                progressFill.style.width = '0%';
+                setTimeout(() => {
+                    progressFill.style.width = targetWidth;
+                }, 100);
+            }
 
+            // Animar anillo de cuenta regresiva
+            const ring = document.getElementById('nextPhaseRing');
+            if (ring) {
+                const days = parseInt(ring.dataset.days) || 0;
+                const total = parseInt(ring.dataset.total) || 14;
+                const circumference = 2 * Math.PI * 54;
+                const ratio = days / total;
+                ring.style.strokeDashoffset = circumference * (1 - ratio);
+            }
+        }, 500);
+    });
+
+    const urlModal = "{% url 'entrenos:entrenamiento_activo' cliente.id %}";
+
+    let _modalCloseTimer = null;
+
+    function openWorkoutModal(entrenamiento, fechaSeleccionada) {
+        // Cancel any pending close animation
+        if (_modalCloseTimer) {
+            clearTimeout(_modalCloseTimer);
+            _modalCloseTimer = null;
+        }
+        const modalElement = document.getElementById('detalleEntrenamientoModal');
+        if (!modalElement) return;
+        // Move modal to body to avoid CSS transform containment (position:fixed breaks inside transform parents)
+        if (modalElement.parentElement !== document.body) {
+            document.body.appendChild(modalElement);
+        }
+        const modalBody = document.getElementById('modal-contenido-ejercicios');
+
+        if (entrenamiento) {
+            const nombreRutina = entrenamiento.nombre_rutina || 'Entrenamiento';
+            const faseCss = entrenamiento.fase_css || 'fase-hipertrofia';
+            const semanaBloque = entrenamiento.semana_bloque || '';
+            const totalSemanas = entrenamiento.total_semanas_bloque || '';
+            const rpeObjetivo = entrenamiento.rpe_objetivo || 7;
+            const ejercicios = entrenamiento.ejercicios || [];
+            const volumenPct = entrenamiento.volumen_mult ? Math.round(entrenamiento.volumen_mult * 100) : '';
+            const descansoGlobal = entrenamiento.descanso || 90;
+
+            const phaseMap = {
+                'fase-fuerza': { label: 'FUERZA', color: '#FF2D92', bg: 'rgba(255,45,146,0.15)' },
+                'fase-hipertrofia': { label: 'HIPERTROFIA', color: '#00D4FF', bg: 'rgba(0,212,255,0.15)' },
+                'fase-potencia': { label: 'POTENCIA', color: '#FFB800', bg: 'rgba(255,184,0,0.15)' },
+                'fase-descarga': { label: 'DESCARGA', color: '#00FF88', bg: 'rgba(0,255,136,0.15)' },
+            };
+            const phaseInfo = phaseMap[faseCss] || phaseMap['fase-hipertrofia'];
+
+            const dateObj = new Date(fechaSeleccionada + 'T00:00:00');
+            const dayNames = ['Domingo','Lunes','Martes','Mi\u00e9rcoles','Jueves','Viernes','S\u00e1bado'];
+            const monthNames = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+            const dateDisplay = `${dayNames[dateObj.getDay()]} ${dateObj.getDate()} ${monthNames[dateObj.getMonth()]}`;
+
+            function getModalIcon(grupo, nombre = '') {
+                const n = nombre.toLowerCase();
+                if (n.includes('ski')) return 'fa-skiing';
+                if (n.includes('row') || n.includes('remo')) return 'fa-water';
+                if (n.includes('sled push')) return 'fa-truck-loading';
+                if (n.includes('sled pull')) return 'fa-grip-lines';
+                if (n.includes('burpee')) return 'fa-person-running';
+                if (n.includes('wall')) return 'fa-bullseye';
+                if (n.includes('farmer') || n.includes('granjero')) return 'fa-suitcase';
+                if (n.includes('lunge') || n.includes('sandbag') || n.includes('zancada')) return 'fa-walking';
+                if (n.includes('running') || n.includes('carrera')) return 'fa-running';
+
+                const icons = {
+                    'pecho': 'fa-hand-rock', 'espalda': 'fa-arrows-alt-v', 'piernas': 'fa-shoe-prints',
+                    'pierna': 'fa-shoe-prints',
+                    'hombros': 'fa-expand-arrows-alt', 'biceps': 'fa-hand-rock', 'triceps': 'fa-hand-paper',
+                    'brazos': 'fa-hand-rock', 'core': 'fa-bullseye', 'gemelos': 'fa-shoe-prints',
+                    'gluteos': 'fa-shoe-prints', 'general': 'fa-dumbbell'
+                };
+                return icons[grupo.toLowerCase()] || 'fa-dumbbell';
+            }
+
+            const exerciseRows = ejercicios.map((ej, i) => {
+                const grupo = (ej.grupo_muscular || 'general').toLowerCase();
+                const nombre = ej.nombre || 'N/A';
+                const series = ej.series || '-';
+                const repeticiones = ej.repeticiones || '-';
+                const peso = ej.peso_kg ? `${ej.peso_kg}kg` : '-';
+                const rpe = ej.rpe_objetivo ?? ej.rpe ?? rpeObjetivo;
+                const descanso = `${descansoGlobal}s`;
+                return `
+                <div class="modal-exercise-row" style="animation-delay: ${i * 0.06}s">
+                    <div class="modal-ex-num">${i + 1}</div>
+                    <div class="modal-ex-name-wrap">
+                        <div class="modal-ex-icon ${grupo}"><i class="fas ${ej.es_adaptado ? 'fa-shield-alt' : getModalIcon(grupo, nombre)}"></i></div>
+                        <span class="modal-ex-name" ${ej.es_adaptado ? 'style="color: #4ade80;"' : ''}>
+                            ${ej.es_adaptado ? '<i class="fas fa-shield-alt" title="Adaptado por precaución biomecánica"></i> ' : ''}${nombre}
+                        </span>
+                    </div>
+                    <div class="modal-ex-cell" style="color:#00D4FF;">${series}</div>
+                    <div class="modal-ex-cell" style="color:#fde047;font-weight:700;">${repeticiones}</div>
+                    <div class="modal-ex-cell" style="color:rgba(255,255,255,0.55);">${peso}</div>
+                    <div class="modal-ex-cell"><span class="modal-rpe-badge ${faseCss}">${rpe}</span></div>
+                    <div class="modal-ex-cell" style="color:rgba(255,255,255,0.4);font-size:0.78rem;">${descanso}</div>
+                </div>`;
+            }).join('');
+
+            let statsHtml = '';
+            if (ejercicios.length) statsHtml += `<div class="modal-stat-item">\u{1F4CB} <span class="modal-stat-val" style="color:#00D4FF;">${ejercicios.length}</span> ejercicios</div>`;
+            if (semanaBloque) statsHtml += `<div class="modal-stat-item">\u{1F4C5} Semana <span class="modal-stat-val">${semanaBloque}/${totalSemanas}</span></div>`;
+            if (volumenPct) statsHtml += `<div class="modal-stat-item">\u{1F4CA} Vol. <span class="modal-stat-val" style="color:#FFB800;">${volumenPct}%</span></div>`;
+            statsHtml += `<div class="modal-stat-item">\u{23F1} <span class="modal-stat-val" style="color:#f472b6;">${descansoGlobal}s</span> desc.</div>`;
+
+            modalBody.innerHTML = `
+            <div class="modal-header-cyber">
+                <div class="modal-header-top">
+                    <div class="modal-rutina-name">${nombreRutina}</div>
+                    <div class="modal-close-x" id="modalCloseX">\u2715</div>
+                </div>
+                <div class="modal-header-meta">
+                    <span class="modal-date-badge">\u{1F4C5} ${dateDisplay}</span>
+                    <span class="modal-phase-badge" style="background:${phaseInfo.bg};color:${phaseInfo.color};">${phaseInfo.label}</span>
+                </div>
+                ${statsHtml ? `<div class="modal-stats-bar">${statsHtml}</div>` : ''}
+            </div>
+            <div class="modal-body-cyber">
+                <div class="modal-exercise-header">
+                    <div>#</div><div>EJERCICIO</div>
+                    <div style="text-align:center;">SERIES</div><div style="text-align:center;">REPS</div>
+                    <div style="text-align:center;">PESO</div><div style="text-align:center;">RPE</div>
+                    <div style="text-align:center;">DESC.</div>
+                </div>
+                ${exerciseRows}
+            </div>
+            <div class="modal-footer-cyber">
+                <button class="modal-btn modal-btn-close" id="modalBtnCerrar">Cerrar</button>
+                <a href="#" class="modal-btn modal-btn-start" id="btn-empezar-entreno">\u25B6 Empezar Entrenamiento</a>
+            </div>`;
+
+            const btnEmpezar = document.getElementById('btn-empezar-entreno');
+            const params = new URLSearchParams({
+                fecha: fechaSeleccionada,
+                rutina_nombre: entrenamiento.nombre_rutina || '',
+                ejercicios: JSON.stringify(entrenamiento.ejercicios || [])
+            });
+            if (btnEmpezar) btnEmpezar.href = `${urlModal}?${params.toString()}`;
+
+        } else {
+            modalBody.innerHTML = `
+            <div class="modal-header-cyber">
+                <div class="modal-header-top">
+                    <div class="modal-rutina-name">D\u00eda de Descanso</div>
+                    <div class="modal-close-x" id="modalCloseX">\u2715</div>
+                </div>
+            </div>
+            <div style="padding:40px 28px;text-align:center;">
+                <div style="font-size:3rem;margin-bottom:12px;">\u{1F6CC}</div>
+                <p style="color:rgba(255,255,255,0.5);font-size:0.95rem;">No hay entrenamiento programado para este d\u00eda.</p>
+            </div>
+            <div class="modal-footer-cyber">
+                <button class="modal-btn modal-btn-close" id="modalBtnCerrar" style="flex:1;">Cerrar</button>
+            </div>`;
+        }
+
+        // Show modal with direct inline styles (avoids CSS class conflicts)
+        modalElement.style.display = 'flex';
+        modalElement.style.opacity = '0';
+        modalElement.style.transition = 'opacity 0.3s ease';
+        document.body.classList.add('modal-open');
+        // Force reflow then animate opacity
+        modalElement.offsetHeight;
+        modalElement.style.opacity = '1';
+        // Also slide the dialog
+        const dialogEl = modalElement.querySelector('.modal-dialog');
+        if (dialogEl) {
+            dialogEl.style.transform = 'translateY(0)';
+        }
+
+        function closeModal() {
+            modalElement.style.opacity = '0';
+            document.body.classList.remove('modal-open');
+            _modalCloseTimer = setTimeout(() => { modalElement.style.display = 'none'; _modalCloseTimer = null; }, 300);
+        }
+        const closeX = document.getElementById('modalCloseX');
+        if (closeX) closeX.onclick = closeModal;
+        const closeBtn = document.getElementById('modalBtnCerrar');
+        if (closeBtn) closeBtn.onclick = closeModal;
+        modalElement.onclick = function(e) { if (e.target === modalElement) closeModal(); };
+    }
+    </script>
+    {% endblock %}

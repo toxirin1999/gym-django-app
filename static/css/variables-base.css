@@ -1,0 +1,512 @@
+/* ================================================================== */
+/* GYMPROJECT - VARIABLES CSS Y ESTILOS BASE                          */
+/* ================================================================== */
+/* Este archivo define todas las variables del tema cyberpunk         */
+/* Importar ANTES de cualquier otro CSS                               */
+/* ================================================================== */
+
+:root {
+  /* ── PALETA PRINCIPAL ── */
+  --lol-void:        #010A13;   /* Fondo más oscuro, body */
+  --lol-deep:        #0A1628;   /* Fondo de cards y paneles */
+  --lol-panel:       #071020;   /* Fondo de secciones internas */
+
+  /* Oro — color dominante y de acción */
+  --lol-gold-bright: #F0E6D3;   /* Texto principal, títulos */
+  --lol-gold-mid:    #C8AA6E;   /* Bordes activos, iconos, acentos */
+  --lol-gold-dim:    #A08C5B;   /* Estados hover secundarios */
+  --lol-gold-dark:   #785A28;   /* Bordes sutiles, decoraciones */
+  --lol-gold-glow:   rgba(200,170,110,0.15);
+
+  /* Rojo — peligro, HYROX, alertas */
+  --lol-red:         #C84B31;
+  --lol-red-dim:     rgba(200,75,49,0.6);
+  --lol-red-glow:    rgba(200,75,49,0.15);
+
+  /* Azul — datos técnicos, ACWR, métricas */
+  --lol-blue:        #0BC4E3;
+  --lol-blue-dim:    #0397AB;
+  --lol-blue-glow:   rgba(11,196,227,0.12);
+
+  /* Texto */
+  --lol-text-primary:  #C8C8C8;
+  --lol-text-bright:   #F0E6D3;
+  --lol-text-dim:      rgba(200,200,200,0.45);
+  --lol-text-muted:    rgba(200,200,200,0.25);
+
+  /* Bordes */
+  --lol-border-subtle: rgba(200,170,110,0.12);
+  --lol-border-mid:    rgba(200,170,110,0.25);
+  --lol-border-bright: rgba(200,170,110,0.55);
+
+  /* Sombras / Glow */
+  --lol-shadow-card:   0 4px 24px rgba(0,0,0,0.6), 0 1px 0 rgba(200,170,110,0.05) inset;
+  --lol-glow-gold:     0 0 20px rgba(200,170,110,0.25);
+  --lol-glow-red:      0 0 20px rgba(200,75,49,0.3);
+
+  /* Tipografías — se importan en base.html */
+  --font-display: 'Cinzel', 'Times New Roman', serif;       /* Títulos épicos */
+  --font-ui:      'Rajdhani', 'Arial Narrow', sans-serif;   /* UI general */
+  --font-data:    'Share Tech Mono', 'Courier New', monospace; /* Datos y stats */
+
+  /* ── COMPATIBILIDAD LEGACY (Mapping Cyberpunk -> LoL) ── */
+  --color-cyan:         var(--lol-blue);
+  --color-cyan-dark:    var(--lol-blue-dim);
+  --color-magenta:      var(--lol-red);
+  --color-magenta-dark: var(--lol-red-dim);
+  --color-gold:         var(--lol-gold-mid);
+  --color-red:          var(--lol-red);
+
+  --bg-primary:         var(--lol-void);
+  --bg-secondary:       var(--lol-deep);
+  --bg-card:            var(--lol-deep);
+  --bg-panel:           var(--lol-panel);
+
+  --text-primary:       var(--lol-text-primary);
+  --text-secondary:     var(--lol-text-dim);
+  --text-bright:        var(--lol-text-bright);
+
+  --border-subtle:      var(--lol-border-subtle);
+  --border-light:       var(--lol-border-mid);
+  --border-cyan:        rgba(11, 196, 227, 0.3);
+}
+
+/* ── REGLAS DE TIPOGRAFÍA GLOBAL ── */
+
+/* Títulos de página y sección (h1, h2) */
+h1, h2, .page-title, .section-title {
+  font-family: var(--font-display);
+  color: var(--lol-gold-bright);
+  letter-spacing: 0.03em;
+  font-weight: 700;
+}
+
+/* Subtítulos y labels de sección (h3, h4) */
+h3, h4, .subsection-title {
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--lol-gold-mid);
+}
+
+/* Texto de UI general */
+body, p, span, a, button, input {
+  font-family: var(--font-ui);
+  font-weight: 500;
+}
+
+/* Datos numéricos, stats, métricas */
+.stat-value, .metric-value, .data-num,
+[class*="stat-val"], [class*="-value"] {
+  font-family: var(--font-data);
+  color: var(--lol-gold-mid);
+}
+
+/* Labels de datos pequeños */
+.stat-label, .metric-label, [class*="stat-label"],
+[class*="-label"], [class*="tracking-widest"] {
+  font-family: var(--font-data);
+  font-size: 0.6rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--lol-text-dim);
+}
+
+/* Fondo base del body */
+body {
+  background-color: var(--lol-void);
+  background-image:
+    radial-gradient(ellipse 80% 50% at 50% 100%, rgba(10,22,40,0.8) 0%, transparent 60%),
+    repeating-linear-gradient(
+      45deg,
+      transparent, transparent 60px,
+      rgba(200,170,110,0.008) 60px, rgba(200,170,110,0.008) 61px
+    );
+  color: var(--lol-text-primary);
+  font-family: var(--font-ui);
+}
+
+/* ================================================================== */
+/* CLASES UTILITARIAS - LOL DESIGN SYSTEM                             */
+/* ================================================================== */
+
+/* ----- Efecto Glass / Panel ----- */
+.glass {
+    background: var(--lol-deep);
+    border: 1px solid var(--lol-border-mid);
+    box-shadow: var(--lol-shadow-card);
+    border-radius: 4px; /* Menos redondeado para estilo LoL */
+    position: relative;
+    overflow: hidden;
+}
+
+.glass::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    border: 1px solid var(--lol-border-subtle);
+    pointer-events: none;
+}
+
+.glass-subtle {
+    background: var(--lol-panel);
+    border: 1px solid var(--lol-border-subtle);
+    border-radius: 2px;
+}
+
+/* ----- Glow Effects (Mapped to Gold/Blue/Red) ----- */
+.glow-gold {
+    box-shadow: var(--lol-glow-gold);
+}
+
+.glow-blue {
+    box-shadow: var(--lol-blue-glow);
+}
+
+.glow-red {
+    box-shadow: var(--lol-glow-red);
+}
+
+.text-glow-gold {
+    text-shadow: 0 0 10px rgba(200, 170, 110, 0.4);
+}
+
+/* ----- Colores de texto ----- */
+.text-gold { color: var(--lol-gold-mid); }
+.text-gold-bright { color: var(--lol-gold-bright); }
+.text-blue { color: var(--lol-blue); }
+.text-red { color: var(--lol-red); }
+.text-muted { color: var(--lol-text-muted); }
+.text-dim { color: var(--lol-text-dim); }
+
+/* ----- Fondos y Gradientes ----- */
+.bg-void { background-color: var(--lol-void); }
+.bg-deep { background-color: var(--lol-deep); }
+.bg-panel { background-color: var(--lol-panel); }
+
+.bg-gradient-gold {
+    background: linear-gradient(135deg, var(--lol-gold-dark), var(--lol-gold-mid), var(--lol-gold-bright));
+}
+
+/* ================================================================== */
+/* ANIMACIONES BASE                                                    */
+/* ================================================================== */
+
+/* ----- Float suave ----- */
+@keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-5px); }
+}
+
+.animate-float {
+    animation: float 6s ease-in-out infinite;
+}
+
+/* ----- Fade + Slide ----- */
+@keyframes fadeSlide {
+    0% { opacity: 0; transform: translateY(10px); }
+    100% { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fadeSlide {
+    animation: fadeSlide 0.8s ease-out;
+}
+
+/* ----- Pulse ----- */
+@keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.7; transform: scale(1.05); }
+}
+
+.animate-pulse {
+    animation: pulse 2s ease-in-out infinite;
+}
+
+/* ----- Glow pulsante ----- */
+@keyframes glowPulseGold {
+    0%, 100% {
+        box-shadow: 0 0 10px rgba(200, 170, 110, 0.2);
+    }
+    50% {
+        box-shadow: 0 0 20px rgba(200, 170, 110, 0.4),
+                    0 0 30px rgba(200, 170, 110, 0.2);
+    }
+}
+
+.animate-glow-gold {
+    animation: glowPulseGold 3s ease-in-out infinite;
+}
+
+/* ----- Gradient shift (para bordes animados) ----- */
+@keyframes gradientShift {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+}
+
+.animate-gradient {
+    background-size: 200% 200%;
+    animation: gradientShift 3s ease infinite;
+}
+
+/* ----- Glitch sutil ----- */
+@keyframes glitchSubtle {
+    0%, 100% { transform: translate(0); }
+    20% { transform: translate(-1px, 1px); }
+    40% { transform: translate(1px, -1px); }
+    60% { transform: translate(-1px, -1px); }
+    80% { transform: translate(1px, 1px); }
+}
+
+.animate-glitch:hover {
+    animation: glitchSubtle 0.3s ease;
+}
+
+/* ================================================================== */
+/* COMPONENTES BASE REFACTORIZADOS                                    */
+/* ================================================================== */
+
+/* ----- Tarjetas/Cards ----- */
+.card {
+    background: var(--lol-deep);
+    border: 1px solid var(--lol-border-mid);
+    box-shadow: var(--lol-shadow-card);
+    border-radius: 4px;
+    padding: 1.5rem;
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.card:hover {
+    border-color: var(--lol-gold-mid);
+    box-shadow: var(--lol-glow-gold);
+}
+
+/* Decoración dorada en esquinas (opcional) */
+.card-lol {
+    border-image: linear-gradient(to bottom, var(--lol-gold-dark), var(--lol-gold-mid)) 1;
+}
+
+/* ----- Secciones ----- */
+.section {
+    margin-top: 2rem;
+}
+
+.section-title {
+    font-family: var(--font-display);
+    font-size: 1.5rem;
+    font-weight: 900;
+    margin-bottom: 1.25rem;
+    color: var(--lol-gold-bright);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--lol-gold-dark);
+    display: inline-block;
+    padding-bottom: 4px;
+}
+
+/* ----- Badges ----- */
+.badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border-radius: 2px;
+    font-family: var(--font-ui);
+}
+
+.badge-gold {
+    background: rgba(200, 170, 110, 0.1);
+    color: var(--lol-gold-mid);
+    border: 1px solid var(--lol-border-mid);
+}
+
+.badge-blue {
+    background: rgba(11, 196, 227, 0.1);
+    color: var(--lol-blue);
+    border: 1px solid rgba(11, 196, 227, 0.3);
+}
+
+.badge-red {
+    background: rgba(200, 75, 49, 0.1);
+    color: var(--lol-red);
+    border: 1px solid rgba(200, 75, 49, 0.3);
+}
+
+/* ----- Botones LoL (Inspirados en el Launcher) ----- */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 24px;
+    font-family: var(--font-ui);
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-decoration: none;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: 1px solid transparent;
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-primary {
+    background-color: var(--lol-gold-dark);
+    color: var(--lol-gold-bright);
+    border: 2px solid var(--lol-gold-mid);
+    box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+}
+
+.btn-primary:hover {
+    background-color: var(--lol-gold-mid);
+    color: var(--lol-void);
+    box-shadow: var(--lol-glow-gold);
+    transform: translateY(-1px);
+}
+
+.btn-secondary {
+    background: var(--lol-deep);
+    color: var(--lol-gold-mid);
+    border: 1px solid var(--lol-gold-dark);
+}
+
+.btn-secondary:hover {
+    border-color: var(--lol-gold-bright);
+    color: var(--lol-gold-bright);
+    background: var(--lol-panel);
+}
+
+.btn-ghost {
+    background: transparent;
+    color: var(--lol-text-dim);
+    border: 1px solid var(--lol-border-subtle);
+}
+
+.btn-ghost:hover {
+    color: var(--lol-gold-mid);
+    border-color: var(--lol-gold-mid);
+    background: rgba(200, 170, 110, 0.05);
+}
+/* ================================================================== */
+/* ANTI-TAILWIND OVERRIDES — Prioridad máxima                         */
+/* ================================================================== */
+
+body {
+  background-color: #010A13 !important;
+  background-image:
+    radial-gradient(ellipse 80% 50% at 50% 100%, rgba(10,22,40,0.8) 0%, transparent 60%),
+    repeating-linear-gradient(
+      45deg, transparent, transparent 60px,
+      rgba(200,170,110,0.008) 60px, rgba(200,170,110,0.008) 61px
+    ) !important;
+  color: #C8C8C8 !important;
+  font-family: 'Rajdhani', 'Arial Narrow', sans-serif !important;
+}
+
+/* Cards — forzar estilo LoL sobre clases Tailwind bg-slate-* */
+.metric-card, .timeline-section, .quote-box, .chat-bubble,
+div[class*="bg-slate-8"], div[class*="bg-slate-9"],
+div[class*="bg-gray-8"], div[class*="bg-gray-9"] {
+  background-color: #0A1628 !important;
+  border-color: rgba(200,170,110,0.15) !important;
+  border-radius: 2px !important;
+}
+
+.metric-card:hover, .timeline-section:hover {
+  border-color: rgba(200,170,110,0.3) !important;
+  box-shadow: 0 0 20px rgba(200,170,110,0.1) !important;
+}
+
+/* Tipografía — forzar Cinzel en títulos */
+h1, h2 {
+  font-family: 'Cinzel', 'Times New Roman', serif !important;
+  color: #F0E6D3 !important;
+}
+
+h3, h4 {
+  font-family: 'Cinzel', 'Times New Roman', serif !important;
+  color: #C8AA6E !important;
+  letter-spacing: 0.15em !important;
+  text-transform: uppercase !important;
+}
+
+/* Texto general — contrarrestar text-slate-* de Tailwind */
+p, span:not([class*="text-"]), li {
+  color: #C8C8C8 !important;
+  font-family: 'Rajdhani', sans-serif !important;
+}
+
+/* Números y stats */
+[class*="text-2xl"], [class*="text-3xl"], [class*="text-4xl"],
+[class*="font-black"], [class*="font-extrabold"] {
+  font-family: 'Share Tech Mono', monospace !important;
+  color: #C8AA6E !important;
+}
+
+/* Botón EMPEZAR principal */
+a[href*="entrenamiento_activo"].inline-flex,
+.btn-empezar,
+a.bg-blue-600, a.bg-blue-500,
+button.bg-blue-600, button.bg-blue-500 {
+  background: linear-gradient(135deg, #C8AA6E, #A08C5B, #C8AA6E) !important;
+  background-size: 200% 100% !important;
+  color: #010A13 !important;
+  border: none !important;
+  border-radius: 0 !important;
+  clip-path: polygon(10px 0%, 100% 0%, calc(100% - 10px) 100%, 0% 100%) !important;
+  font-family: 'Cinzel', serif !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.15em !important;
+  text-transform: uppercase !important;
+}
+
+/* Botón MODO BLADE RUNNER */
+a[href*="blade"], button[class*="blade"],
+.bg-cyan-500, a.bg-cyan-500, button.bg-cyan-500,
+[class*="blade-runner"] {
+  background: transparent !important;
+  border: 1px solid rgba(200,170,110,0.3) !important;
+  color: #C8AA6E !important;
+  font-family: 'Cinzel', serif !important;
+  letter-spacing: 0.12em !important;
+  text-transform: uppercase !important;
+}
+
+/* Toggle GYM activo */
+.mode-btn.active-gym {
+  background: rgba(11,196,227,0.08) !important;
+  border: 1px solid rgba(11,196,227,0.3) !important;
+  color: #0BC4E3 !important;
+  box-shadow: none !important;
+}
+
+/* Toggle HYROX activo */
+.mode-btn.active-hyrox {
+  background: rgba(200,75,49,0.1) !important;
+  border: 1px solid rgba(200,75,49,0.35) !important;
+  color: #C84B31 !important;
+  box-shadow: none !important;
+}
+
+/* Listas de entrenamientos recientes */
+.entreno-card {
+  background: rgba(10,22,40,0.7) !important;
+  border-color: rgba(200,170,110,0.1) !important;
+}
+
+.entreno-card:hover {
+  border-color: rgba(200,170,110,0.35) !important;
+}
+
+.entreno-card-date-badge {
+  background: rgba(200,170,110,0.08) !important;
+  color: #C8AA6E !important;
+  border-color: rgba(200,170,110,0.2) !important;
+}

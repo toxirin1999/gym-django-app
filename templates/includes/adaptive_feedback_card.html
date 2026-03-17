@@ -1,0 +1,109 @@
+{% if bio_banner.has_restrictions %}
+{% if bio_readiness.volume_modifier < 1.0 or '__aguda_tren_inferior' in bio_banner.tags %}
+{% load clientes_filters %}
+
+<div style="background: #0A1628; border: 1px solid rgba(200,170,110,0.12); border-radius: 4px; overflow: hidden; margin-bottom: 1rem;">
+
+    <!-- HEADER -->
+    <div style="background: rgba(1,10,19,0.6); border-bottom: 1px solid rgba(200,170,110,0.08); padding: 10px 16px; display: flex; align-items: center; justify-content: space-between;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <div style="width: 7px; height: 7px; border-radius: 50%; background: #C8AA6E;"></div>
+            <span style="font-family: 'Share Tech Mono', monospace; font-size: 0.62rem; color: #785A28; letter-spacing: 0.2em; text-transform: uppercase;">Protocolo adaptativo activo</span>
+        </div>
+        <button type="button"
+                data-bs-toggle="modal" data-bs-target="#adaptiveFeedbackModal"
+                style="font-family: 'Rajdhani', sans-serif; font-size: 0.75rem; font-weight: 600; color: rgba(200,200,200,0.5); background: none; border: 1px solid rgba(200,170,110,0.15); border-radius: 3px; padding: 3px 10px; cursor: pointer; letter-spacing: 0.05em;">
+            Base científica
+        </button>
+    </div>
+
+    <!-- ITEMS -->
+    <div style="padding: 10px 12px; display: flex; flex-direction: column; gap: 6px;">
+
+        {% if bio_readiness.volume_modifier < 1.0 %}
+        <div style="display: flex; align-items: flex-start; gap: 12px; padding: 11px 14px; background: rgba(200,170,110,0.06); border: 1px solid rgba(200,170,110,0.15); border-radius: 3px;">
+            <i class="fas fa-battery-half" style="color: #C8AA6E; font-size: 0.85rem; margin-top: 2px; flex-shrink: 0;"></i>
+            <div style="flex: 1;">
+                <p style="font-family: 'Rajdhani', sans-serif; font-size: 0.9rem; font-weight: 600; color: #C8AA6E; margin: 0 0 2px;">Volumen ajustado al {% widthratio bio_readiness.volume_modifier 1 100 %}%</p>
+                <p style="font-family: 'Rajdhani', sans-serif; font-size: 0.8rem; color: rgba(200,200,200,0.5); margin: 0;">Fatiga acumulada detectada — carga reducida para proteger la recuperación.</p>
+            </div>
+            <span style="font-family: 'Share Tech Mono', monospace; font-size: 1rem; font-weight: 700; color: #C8AA6E; flex-shrink: 0;">{% widthratio bio_readiness.volume_modifier 1 100 %}%</span>
+        </div>
+        {% endif %}
+
+        {% if '__aguda_tren_inferior' in bio_banner.tags %}
+        <div style="display: flex; align-items: flex-start; gap: 12px; padding: 11px 14px; background: rgba(200,75,49,0.06); border: 1px solid rgba(200,75,49,0.2); border-radius: 3px;">
+            <i class="fas fa-random" style="color: #C84B31; font-size: 0.85rem; margin-top: 2px; flex-shrink: 0;"></i>
+            <div>
+                <p style="font-family: 'Rajdhani', sans-serif; font-size: 0.9rem; font-weight: 600; color: #C84B31; margin: 0 0 2px;">Cadena cinética abierta activada</p>
+                <p style="font-family: 'Rajdhani', sans-serif; font-size: 0.8rem; color: rgba(200,200,200,0.5); margin: 0;">Ejercicios de tren inferior pivotados a aislamiento — protección del tejido lesionado.</p>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if bio_banner.recovery_test_passed %}
+        <div style="display: flex; align-items: flex-start; gap: 12px; padding: 11px 14px; background: rgba(74,222,128,0.06); border: 1px solid rgba(74,222,128,0.2); border-radius: 3px;">
+            <i class="fas fa-shield-alt" style="color: #4ade80; font-size: 0.85rem; margin-top: 2px; flex-shrink: 0;"></i>
+            <div>
+                <p style="font-family: 'Rajdhani', sans-serif; font-size: 0.9rem; font-weight: 600; color: #4ade80; margin: 0 0 2px;">Seguridad validada</p>
+                <p style="font-family: 'Rajdhani', sans-serif; font-size: 0.8rem; color: rgba(200,200,200,0.5); margin: 0;">Ejercicios de cadena cerrada desbloqueados en tu plan.</p>
+            </div>
+        </div>
+        {% endif %}
+
+    </div>
+
+    <!-- FOOTER CTA -->
+    {% if bio_banner.injuries %}
+    <div style="border-top: 1px solid rgba(200,170,110,0.08); padding: 10px 16px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+        <p style="font-family: 'Share Tech Mono', monospace; font-size: 0.62rem; color: #785A28; letter-spacing: 0.1em; margin: 0;">¿Listo para volver al protocolo completo?</p>
+        <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+            {% for inj in bio_banner.injuries %}
+            <a href="{% url 'hyrox:test_recuperacion' inj.id %}"
+               style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; background: transparent; border: 1px solid rgba(200,170,110,0.25); border-radius: 3px; color: #C8AA6E; font-family: 'Cinzel', serif; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; text-decoration: none;">
+                <i class="fas fa-stethoscope" style="font-size: 0.7rem;"></i>
+                Test Return-to-Play · {{ inj.zona|title }}
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+
+<!-- MODAL -->
+<div class="modal fade" id="adaptiveFeedbackModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="background: #0A1628; border: 1px solid rgba(200,170,110,0.2); border-radius: 4px; overflow: hidden;">
+            <div style="height: 2px; background: linear-gradient(90deg, #C8AA6E, #785A28, transparent);"></div>
+            <div style="padding: 14px 18px; border-bottom: 1px solid rgba(200,170,110,0.08); display: flex; align-items: center; justify-content: space-between;">
+                <span style="font-family: 'Cinzel', serif; font-size: 0.9rem; font-weight: 700; color: #F0E6D3;">Base científica de las adaptaciones</span>
+                <button data-bs-dismiss="modal"
+                        style="background: transparent; border: 1px solid rgba(200,170,110,0.15); border-radius: 3px; color: #785A28; width: 26px; height: 26px; cursor: pointer; font-size: 0.75rem; display: flex; align-items: center; justify-content: center;">✕</button>
+            </div>
+            <div style="padding: 16px 18px; display: flex; flex-direction: column; gap: 16px;">
+                <div>
+                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                        <div style="width: 5px; height: 5px; border-radius: 50%; background: #C8AA6E;"></div>
+                        <span style="font-family: 'Share Tech Mono', monospace; font-size: 0.6rem; color: #785A28; letter-spacing: 0.2em; text-transform: uppercase;">Deload dinámico</span>
+                    </div>
+                    <p style="font-family: 'Rajdhani', sans-serif; font-size: 0.88rem; color: rgba(200,200,200,0.65); line-height: 1.6; margin: 0;">
+                        Cuando tu <em>Readiness Score</em> cae por debajo de 0.6, reducimos el volumen y limitamos el RPE a 7. Esto evita el fallo técnico en fatiga prolongada y previene lesiones compensatorias.
+                    </p>
+                </div>
+                <div style="border-top: 1px solid rgba(200,170,110,0.08); padding-top: 16px;">
+                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                        <div style="width: 5px; height: 5px; border-radius: 50%; background: #C84B31;"></div>
+                        <span style="font-family: 'Share Tech Mono', monospace; font-size: 0.6rem; color: #785A28; letter-spacing: 0.2em; text-transform: uppercase;">Pivotaje cadena cinética</span>
+                    </div>
+                    <p style="font-family: 'Rajdhani', sans-serif; font-size: 0.88rem; color: rgba(200,200,200,0.65); line-height: 1.6; margin: 0;">
+                        En fases agudas de recuperación del tren inferior, los ejercicios de cadena cerrada aumentan el estrés estabilizador. El aislamiento mantiene el estímulo muscular sin comprometer el tejido dañado.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endif %}
+{% endif %}

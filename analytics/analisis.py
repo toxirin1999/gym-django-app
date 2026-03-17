@@ -329,16 +329,15 @@ class AnalisisProgresionAvanzado:
         self.cliente = cliente
         self.ejercicios_principales = [
             'Press banca', 'Press inclinado', 'Sentadilla', 'Peso muerto',
-            'Press militar', 'Dominadas', 'Remo', 'Hip thrust'
+            'Press militar', 'Dominadas', 'Rowing', 'Hip thrust'
         ]
-        self.mapeo_nombres = {
-            # FUERZA PRINCIPALES
-            'Press banca': ['press banca', 'press inclinado', 'press inclinado con barra', 'press en máquina',
-                            'press declinado'],
-            'Press inclinado': ['press inclinado', 'press inclinado con barra', 'press inclinado con mancuernas'],
-            'Sentadilla': ['sentadilla', ',Sentadilla libre', 'sentadilla libre', 'sentadilla en multipower'],
-            'Peso muerto': ['peso muerto', 'peso muerto rumano', 'peso muerto sumo'],
-            'Remo': ['remo', 'remo en máquina hammer', 'remo con barra', 'remo en polea baja', 'remo con mancuernas'],
+        self.ALIAS_EJERCICIOS = {
+            'Farmers Carry': ['Farmers Carry', 'Paseo del Granjero', 'Paseo granjero', 'Farmer walk'],
+            'Press banca': ['press banca', 'press de banca', 'press banca plano', 'press banca con barra'],
+            'Press inclinado': ['press inclinado', 'press banca inclinado', 'press superior'],
+            'Sentadilla': ['sentadilla', ',Sentadilla libre', 'sentadilla libre', 'sentadilla en multipower', 'sentadilla goblet'],
+            'Peso muerto': ['peso muerto', 'peso muerto convencional', 'pm', 'peso muerto sumo'],
+            'Rowing': ['remo', 'remo en máquina hammer', 'remo con barra', 'remo en polea baja', 'remo con mancuernas', 'rowing', 'remo gironda'],
             'Dominadas': ['dominadas'],
 
             # HOMBROS
@@ -415,7 +414,7 @@ class AnalisisProgresionAvanzado:
             'press_sentadilla': self._calcular_ratio(rms.get('Press banca', 0), rms.get('Sentadilla', 0)),
             'peso_muerto_sentadilla': self._calcular_ratio(rms.get('Peso muerto', 0), rms.get('Sentadilla', 0)),
             'press_militar_banca': self._calcular_ratio(rms.get('Press militar', 0), rms.get('Press banca', 0)),
-            'dominadas_remo': self._calcular_ratio(rms.get('Dominadas', 0), rms.get('Remo', 0))
+            'dominadas_remo': self._calcular_ratio(rms.get('Dominadas', 0), rms.get('Rowing', 0))
         }
 
         # Estándares definidos por clave interna
@@ -856,11 +855,17 @@ class AnalisisProgresionAvanzado:
         }
 
     def _normalizar_nombre(self, nombre):
-        nombre = nombre.strip().lower()
-        for clave, alias in self.mapeo_nombres.items():
-            if nombre in [a.lower() for a in alias]:
-                return clave
-        return nombre.title()
+        nombre_lower = nombre.lower().strip()
+        for principal, alias_list in self.ALIAS_EJERCICIOS.items():
+            if nombre_lower in [alias.lower() for alias in alias_list]:
+                return principal
+                
+        # AUTOAPRENDIZAJE: Si no está en el diccionario fijo, intentamos con Gemini
+        try:
+            from entrenos.utils.auto_aprendizaje import clasificar_ejercicio_dinamico
+            return clasificar_ejercicio_dinamico(nombre, default_return=nombre.title())
+        except ImportError:
+            return nombre.title()
 
     def _comparar_mesociclos(self, mesociclo_actual, mesociclo_anterior):
         """

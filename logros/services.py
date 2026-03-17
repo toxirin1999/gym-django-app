@@ -11,7 +11,7 @@ from .models import (
     PerfilGamificacion, Arquetipo, PruebaLegendaria, PruebaUsuario,
     HistorialPuntos, Quest, QuestUsuario, Notificacion
 )
-from entrenos.models import EntrenoRealizado, SerieRealizada
+from entrenos.models import EntrenoRealizado, SerieRealizada, SesionEntrenamiento
 
 logger = logging.getLogger('gamificacion')
 
@@ -44,6 +44,9 @@ class CodiceService:
         if created:
             logger.info(f"Creado nuevo perfil de gamificación para {entreno.cliente.nombre}")
 
+        # 0. Asegurar que existe el registro de SesionEntrenamiento (crucial para el Dashboard)
+        cls._asegurar_sesion_entrenamiento(entreno)
+
         # 1. Actualizar estadísticas base y otorgar puntos por actividad
         cls._actualizar_estadisticas_base(perfil, entreno)
 
@@ -56,7 +59,15 @@ class CodiceService:
         # 4. Actualizar el nivel (Arquetipo) del usuario
         nivel_subido = perfil.actualizar_nivel()
 
-        # 5. Crear notificaciones para logros importantes
+        # 5. Detectar Récords Personales (NUEVO - Centralizado)
+        try:
+            from entrenos.services.records_service import RecordsService
+            RecordsService.detectar_records_sesion(entreno)
+            logger.info(f"Récords detectados para entreno {entreno.id}")
+        except Exception as e:
+            logger.error(f"Error detectando récords en CodiceService: {e}")
+
+        # 6. Crear notificaciones para logros importantes
         cls._crear_notificaciones(perfil, pruebas_completadas, quests_completadas, nivel_subido)
 
         perfil.save()
@@ -68,6 +79,74 @@ class CodiceService:
             'nivel_subido': nivel_subido,
             'puntos_totales': perfil.puntos_totales
         }
+
+    @classmethod
+    def _asegurar_sesion_entrenamiento(cls, entreno):
+        """Asegura que exista un objeto SesionEntrenamiento con métricas para el dashboard"""
+        try:
+            # Si ya existe, no hacemos nada grueso, solo actualizar volumen por si acaso
+            sesion, created = SesionEntrenamiento.objects.get_or_create(
+                entreno=entreno,
+                defaults={
+                    'duracion_minutos': entreno.duracion_minutos or 0,
+                    'hora_inicio': entreno.hora_inicio,
+                    'hora_fin': entreno.hora_fin,
+                    'volumen_sesion': entreno.volumen_total_kg or 0,
+                    'series_totales': 0,
+                    'series_completadas': 0,
+                    'ejercicios_totales': getattr(entreno, 'numero_ejercicios', 0) or 0,
+                    'ejercicios_completados': getattr(entreno, 'numero_ejercicios', 0) or 0,
+                }
+            )
+            
+            # Recalcular métricas si es nuevo o si el volumen es 0
+            if created or sesion.volumen_sesion == 0:
+                # Usar el método unificado que acabamos de arreglar en el modelo
+                entreno.volumen_total_kg = entreno.calcular_volumen_total()
+                entreno.save(update_fields=['volumen_total_kg'])
+                
+                # Actualizar sesión
+                sesion.volumen_sesion = entreno.volumen_total_kg
+                
+                # Conteo de series/ejercicios
+                ejs = list(entreno.ejercicios_realizados.all())
+                sesion.ejercicios_totales = len(ejs)
+                sesion.ejercicios_completados = len([e for e in ejs if e.completado])
+                sesion.series_totales = sum([getattr(e, 'series', 1) or 0 for e in ejs])
+                sesion.series_completadas = sum([getattr(e, 'series', 1) or 0 for e in ejs if e.completado])
+                
+                # Si es Liftin, sumar esos también
+                if hasattr(entreno, 'ejercicios_liftin_detallados'):
+                    ejs_l = list(entreno.ejercicios_liftin_detallados.all())
+                    sesion.ejercicios_totales += len(ejs_l)
+                    sesion.ejercicios_completados += len([e for e in ejs_l if e.completado])
+                    sesion.series_totales += sum([getattr(e, 'series_realizadas', 1) or 0 for e in ejs_l])
+                    sesion.series_completadas += sum([getattr(e, 'series_realizadas', 1) or 0 for e in ejs_l if e.completado])
+                
+                sesion.save()
+
+            # --- CÁLCULO DE RPE Y ACTUALIZACIÓN SI FALTAN DATOS ---
+            if sesion.rpe_medio is None or sesion.rpe_medio == 0:
+                rpe_values = []
+                
+                # 1. De series (Fuente más precisa)
+                if hasattr(entreno, 'series'):
+                    series_rpe = list(entreno.series.filter(rpe_real__gt=0).values_list('rpe_real', flat=True))
+                    rpe_values.extend(series_rpe)
+                
+                # 2. De ejercicios (Fuente secundaria)
+                if not rpe_values and hasattr(entreno, 'ejercicios_realizados'):
+                    ejercicios_rpe = list(entreno.ejercicios_realizados.filter(rpe__gt=0).values_list('rpe', flat=True))
+                    rpe_values.extend(ejercicios_rpe)
+                
+                if rpe_values:
+                    sesion.rpe_medio = round(sum(rpe_values) / len(rpe_values), 1)
+                    sesion.save(update_fields=['rpe_medio'])
+
+            return sesion
+        except Exception as e:
+            logger.error(f"Error asegurando SesionEntrenamiento para {entreno.id}: {e}")
+            return None
 
     @classmethod
     def _calc_total_flexiones(cls, perfil, entreno, prueba):

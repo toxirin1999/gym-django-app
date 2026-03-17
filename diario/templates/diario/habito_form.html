@@ -1,0 +1,280 @@
+{% extends 'diario/base_stoic.html' %}
+{% load static %}
+
+{% block title %}{% if habito.id %}Editar{% else %}Crear{% endif %} Hábito - Diario Estoico{% endblock %}
+
+{% block extra_css %}
+<link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@300;400;500;600;700;800&display=swap"
+    rel="stylesheet">
+<style>
+    :root {
+        --bg-primary: #F8F5F1;
+        --bg-card: #FFFFFF;
+        --text-primary: #2D3436;
+        --text-secondary: #636E72;
+        --accent-orange: #F49459;
+        --accent-orange-dark: #E67E22;
+        --accent-green: #00B894;
+        --accent-red: #FF7675;
+        --border-color: #E8E4E0;
+        --shadow-soft: 0 2px 20px rgba(0, 0, 0, 0.05);
+        --radius-md: 16px;
+        --radius-lg: 24px;
+    }
+
+    body {
+        font-family: 'Urbanist', sans-serif !important;
+        background: var(--bg-primary) !important;
+    }
+
+    .form-container {
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 1rem;
+        padding-bottom: 100px;
+    }
+
+    .form-card {
+        background: var(--bg-card);
+        border-radius: var(--radius-lg);
+        padding: 2rem;
+        box-shadow: var(--shadow-soft);
+        border: 1px solid var(--border-color);
+    }
+
+    .form-header {
+        margin-bottom: 2rem;
+    }
+
+    .form-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin-bottom: 0.5rem;
+    }
+
+    .form-subtitle {
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+    }
+
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+
+    .form-label {
+        display: block;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 0.5rem;
+        font-size: 0.9rem;
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-md);
+        font-family: 'Urbanist', sans-serif;
+        font-size: 0.95rem;
+        transition: all 0.3s ease;
+        background: white;
+    }
+
+    .form-control:focus {
+        outline: none;
+        border-color: var(--accent-orange);
+        box-shadow: 0 0 0 3px rgba(244, 148, 89, 0.1);
+    }
+
+    .form-select {
+        appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23636E72' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 1rem center;
+        padding-right: 2.5rem;
+    }
+
+    .form-help {
+        font-size: 0.8rem;
+        color: var(--text-secondary);
+        margin-top: 0.25rem;
+    }
+
+    .type-selector {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .type-option {
+        padding: 1.5rem;
+        border: 2px solid var(--border-color);
+        border-radius: var(--radius-md);
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .type-option:hover {
+        border-color: var(--accent-orange);
+    }
+
+    .type-option.selected {
+        border-color: var(--accent-orange);
+        background: rgba(244, 148, 89, 0.05);
+    }
+
+    .type-option input {
+        display: none;
+    }
+
+    .type-icon {
+        font-size: 2rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .type-name {
+        font-weight: 700;
+        color: var(--text-primary);
+        margin-bottom: 0.25rem;
+    }
+
+    .type-desc {
+        font-size: 0.8rem;
+        color: var(--text-secondary);
+    }
+
+    .btn-submit {
+        background: linear-gradient(135deg, var(--accent-orange) 0%, var(--accent-orange-dark) 100%);
+        color: white;
+        border: none;
+        padding: 0.875rem 2rem;
+        border-radius: var(--radius-md);
+        font-weight: 600;
+        font-size: 0.95rem;
+        width: 100%;
+        cursor: pointer;
+        box-shadow: 0 4px 15px rgba(244, 148, 89, 0.3);
+        transition: all 0.3s ease;
+    }
+
+    .btn-submit:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(244, 148, 89, 0.4);
+    }
+
+    .btn-cancel {
+        background: transparent;
+        color: var(--text-secondary);
+        border: 1px solid var(--border-color);
+        padding: 0.875rem 2rem;
+        border-radius: var(--radius-md);
+        font-weight: 600;
+        font-size: 0.95rem;
+        width: 100%;
+        cursor: pointer;
+        margin-top: 0.75rem;
+        transition: all 0.3s ease;
+    }
+
+    .btn-cancel:hover {
+        background: var(--bg-primary);
+        border-color: var(--accent-orange);
+        color: var(--accent-orange);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <div class="form-card">
+        <div class="form-header">
+            <h1 class="form-title">
+                {% if habito.id %}
+                ✏️ Editar Hábito
+                {% else %}
+                ✨ Crear Nuevo Hábito
+                {% endif %}
+            </h1>
+            <p class="form-subtitle">Define tu hábito y comienza tu transformación</p>
+        </div>
+
+        <form method="post">
+            {% csrf_token %}
+
+            <!-- Tipo de Hábito -->
+            <div class="form-group">
+                <label class="form-label">Tipo de Hábito</label>
+                <div class="type-selector">
+                    <label
+                        class="type-option {% if form.tipo_habito.value == 'positivo' or not form.tipo_habito.value %}selected{% endif %}">
+                        <input type="radio" name="tipo_habito" value="positivo"
+                        {% if form.tipo_habito.value == 'positivo' or not form.tipo_habito.value %}checked{% endif %}>
+                        <div class="type-icon">✅</div>
+                        <div class="type-name">Hábito Positivo</div>
+                        <div class="type-desc">Quiero formarlo</div>
+                    </label>
+                    <label class="type-option {% if form.tipo_habito.value == 'negativo' %}selected{% endif %}">
+                        <input type="radio" name="tipo_habito" value="negativo"
+                        {% if form.tipo_habito.value == 'negativo' %}checked{% endif %}>
+                        <div class="type-icon">🛡️</div>
+                        <div class="type-name">Hábito Negativo</div>
+                        <div class="type-desc">Quiero eliminarlo</div>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Nombre -->
+            <div class="form-group">
+                <label class="form-label" for="id_nombre">Nombre del Hábito</label>
+                {{ form.nombre }}
+                <div class="form-help">Ej: "Hacer ejercicio", "Dejar de fumar"</div>
+            </div>
+
+            <!-- Descripción -->
+            <div class="form-group">
+                <label class="form-label" for="id_descripcion">Descripción (opcional)</label>
+                {{ form.descripcion }}
+                <div class="form-help">¿Por qué es importante este hábito para ti?</div>
+            </div>
+
+            <!-- Objetivo Días -->
+            <div class="form-group">
+                <label class="form-label" for="id_objetivo_dias">Días Objetivo</label>
+                {{ form.objetivo_dias }}
+                <div class="form-help">21 días para formar, 66 para consolidar, 90 para eliminar</div>
+            </div>
+
+            <!-- Color -->
+            <div class="form-group">
+                <label class="form-label" for="id_color">Color</label>
+                {{ form.color }}
+                <div class="form-help">Elige un color para identificar tu hábito</div>
+            </div>
+
+            <!-- Botones -->
+            <button type="submit" class="btn-submit">
+                <i class="fas fa-check me-2"></i>
+                {% if habito.id %}Guardar Cambios{% else %}Crear Hábito{% endif %}
+            </button>
+            <a href="{% url 'diario:habitos_dashboard' %}" class="btn-cancel"
+                style="display: block; text-align: center; text-decoration: none;">
+                Cancelar
+            </a>
+        </form>
+    </div>
+</div>
+
+<script>
+    // Type selector interaction
+    document.querySelectorAll('.type-option').forEach(option => {
+        option.addEventListener('click', function () {
+            document.querySelectorAll('.type-option').forEach(opt => opt.classList.remove('selected'));
+            this.classList.add('selected');
+            this.querySelector('input').checked = true;
+        });
+    });
+</script>
+{% endblock %}

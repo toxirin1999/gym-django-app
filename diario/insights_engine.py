@@ -3,7 +3,7 @@
 from django.utils import timezone
 from datetime import timedelta
 from django.db.models import Avg
-from .models import ProsocheDiario, SeguimientoVires
+from .models import ProsocheDiario, SeguimientoVires, ProsocheHabito, ProsocheMes
 from django.urls import reverse
 
 
@@ -54,7 +54,7 @@ def generar_insights_semanales(user):
                 'tipo': 'success',
                 'sugerencia_accion': {
                     'texto': 'Planificar Descanso',
-                    'url': reverse('diario:prosoche_revision_semanal')  # URL para añadir un objetivo de sueño
+                    'url': reverse('diario:prosoche_revision_semanal')
                 }
             })
 
@@ -72,9 +72,62 @@ def generar_insights_semanales(user):
                 'tipo': 'warning',
                 'sugerencia_accion': {
                     'texto': 'Reflexionar sobre el Estrés',
-                    'url': reverse('diario:analiticas_personales')  # URL para ver los gráficos
+                    'url': reverse('diario:analiticas_personales')
                 }
             })
+
+    # --- NUEVO: Insight 3: Progreso de Hábitos ---
+    mes_actual = ProsocheMes.objects.filter(
+        usuario=user,
+        mes=hoy.strftime('%B'),
+        año=hoy.year
+    ).first()
+    
+    if mes_actual:
+        habitos_positivos = mes_actual.habitos.filter(tipo_habito='positivo')
+        habitos_negativos = mes_actual.habitos.filter(tipo_habito='negativo')
+        
+        # Insight para hábitos positivos con buen progreso
+        for habito in habitos_positivos:
+            porcentaje = habito.get_porcentaje_exito()
+            if porcentaje >= 80:
+                insights.append({
+                    'titulo': f'¡Excelente Progreso en "{habito.nombre}"!',
+                    'mensaje': f'Llevas un {porcentaje}% de completitud en este hábito. La consistencia es la clave del éxito.',
+                    'tipo': 'success',
+                    'sugerencia_accion': {
+                        'texto': 'Ver Dashboard de Hábitos',
+                        'url': reverse('diario:habitos_dashboard')
+                    }
+                })
+        
+        # Insight para hábitos negativos con buen progreso
+        for habito in habitos_negativos:
+            dias_sin = habito.get_dias_sin_habito()
+            if dias_sin >= 7:
+                insights.append({
+                    'titulo': f'¡{dias_sin} Días sin {habito.nombre}!',
+                    'mensaje': f'Has demostrado gran fortaleza. Cada día sin este hábito es una victoria.',
+                    'tipo': 'success',
+                    'sugerencia_accion': {
+                        'texto': 'Ver Dashboard de Hábitos',
+                        'url': reverse('diario:habitos_dashboard')
+                    }
+                })
+        
+        # Insight para hábitos con bajo progreso
+        for habito in habitos_positivos:
+            porcentaje = habito.get_porcentaje_exito()
+            if porcentaje < 30 and habito.dias_completados.count() > 5:
+                insights.append({
+                    'titulo': f'Refuerza "{habito.nombre}"',
+                    'mensaje': f'Este hábito necesita más atención. Recuerda: el progreso no es lineal, pero la constancia sí importa.',
+                    'tipo': 'warning',
+                    'sugerencia_accion': {
+                        'texto': 'Revisar Hábito',
+                        'url': reverse('diario:habitos_dashboard')
+                    }
+                })
 
     # Si no se generó ningún insight específico, añadir uno genérico
     if not insights:

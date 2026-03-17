@@ -1,0 +1,179 @@
+{% extends 'diario/base_stoic.html' %}
+{% load static %}
+
+{% block title %}Virtudes - Sic Parvis Magna{% endblock %}
+
+{% block content %}
+<div class="fade-in-up">
+    <!-- Encabezado -->
+    <div class="card shadow-soft mb-4">
+        <div class="card-body text-center p-4">
+            <i class="fas fa-medal fa-3x text-warning mb-3"></i>
+            <h1 class="text-gradient">Tus Virtudes</h1>
+            <p class="lead text-muted">Las 4 virtudes cardinales del estoicismo</p>
+        </div>
+    </div>
+
+    <!-- Modales de Insignias Nuevas -->
+    {% if insignias_nuevas %}
+    {% for insignia_usuario in insignias_nuevas %}
+    <div class="modal fade show" id="insigniaModal{{ insignia_usuario.id }}" tabindex="-1" style="display: block; background: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content text-center">
+                <div class="modal-body p-5">
+                    <div class="mb-4">
+                        <i class="{{ insignia_usuario.insignia.icono }} fa-5x" style="color: {{ insignia_usuario.insignia.color }};"></i>
+                    </div>
+                    <h3 class="text-gradient mb-3">¡Nueva Insignia Desbloqueada!</h3>
+                    <h4 class="mb-3">{{ insignia_usuario.insignia.nombre }}</h4>
+                    <p class="text-muted mb-4">{{ insignia_usuario.insignia.descripcion }}</p>
+                    <div class="alert alert-success">
+                        <i class="fas fa-trophy me-2"></i>
+                        +{{ insignia_usuario.insignia.puntos_virtud }} puntos de {{ insignia_usuario.insignia.get_virtud_asociada_display }}
+                    </div>
+                    <button type="button" class="btn btn-primary" onclick="document.getElementById('insigniaModal{{ insignia_usuario.id }}').style.display='none'">
+                        ¡Continuar!
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    <!-- Las 4 Virtudes -->
+    <div class="row">
+        {% for virtud in virtudes %}
+        <div class="col-md-6 mb-4">
+            <div class="card shadow-soft h-100">
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            {% if virtud.tipo == 'sabiduria' %}
+                                <i class="fas fa-brain me-2 text-primary"></i>Sabiduría
+                            {% elif virtud.tipo == 'coraje' %}
+                                <i class="fas fa-shield-alt me-2 text-danger"></i>Coraje
+                            {% elif virtud.tipo == 'justicia' %}
+                                <i class="fas fa-balance-scale me-2 text-info"></i>Justicia
+                            {% elif virtud.tipo == 'templanza' %}
+                                <i class="fas fa-yin-yang me-2 text-success"></i>Templanza
+                            {% endif %}
+                        </h5>
+                        <span class="badge 
+                            {% if virtud.nivel == 'aprendiz' %}bg-secondary
+                            {% elif virtud.nivel == 'practicante' %}bg-primary
+                            {% elif virtud.nivel == 'adepto' %}bg-info
+                            {% elif virtud.nivel == 'maestro' %}bg-warning
+                            {% elif virtud.nivel == 'sabio' %}bg-success
+                            {% endif %}">
+                            {{ virtud.get_nivel_display }}
+                        </span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <!-- Nombre griego -->
+                    <p class="text-muted small fst-italic mb-3">
+                        {% if virtud.tipo == 'sabiduria' %}
+                            Sophia (σοφία)
+                        {% elif virtud.tipo == 'coraje' %}
+                            Andreia (ἀνδρεία)
+                        {% elif virtud.tipo == 'justicia' %}
+                            Dikaiosyne (δικαιοσύνη)
+                        {% elif virtud.tipo == 'templanza' %}
+                            Sophrosyne (σωφροσύνη)
+                        {% endif %}
+                    </p>
+
+                    <!-- Barra de progreso -->
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between mb-1">
+                            <small>Progreso al siguiente nivel</small>
+                            <small><strong>{{ virtud.puntos }} puntos</strong></small>
+                        </div>
+                        <div class="progress" style="height: 12px;">
+                            <div class="progress-bar 
+                                {% if virtud.tipo == 'sabiduria' %}bg-primary
+                                {% elif virtud.tipo == 'coraje' %}bg-danger
+                                {% elif virtud.tipo == 'justicia' %}bg-info
+                                {% elif virtud.tipo == 'templanza' %}bg-success
+                                {% endif %}" 
+                                role="progressbar" 
+                                style="width: {{ virtud.porcentaje_progreso }}%"
+                                aria-valuenow="{{ virtud.porcentaje_progreso }}" 
+                                aria-valuemin="0" 
+                                aria-valuemax="100">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Descripción -->
+                    <p class="small mb-3">
+                        {% if virtud.tipo == 'sabiduria' %}
+                            La sabiduría es el conocimiento de lo que es bueno, malo e indiferente. Se cultiva mediante la reflexión, el estudio y la práctica constante.
+                        {% elif virtud.tipo == 'coraje' %}
+                            El coraje no es la ausencia de miedo, sino la capacidad de actuar correctamente a pesar de él. Se fortalece con la perseverancia y la consistencia.
+                        {% elif virtud.tipo == 'justicia' %}
+                            La justicia es dar a cada uno lo que le corresponde. Se manifiesta en nuestras relaciones, empatía y servicio a los demás.
+                        {% elif virtud.tipo == 'templanza' %}
+                            La templanza es el equilibrio y la moderación en todas las cosas. Se desarrolla mediante el balance y la disciplina.
+                        {% endif %}
+                    </p>
+
+                    <a href="{% url 'diario:virtud_detalle' virtud.tipo %}" class="btn btn-outline-secondary btn-sm w-100">
+                        <i class="fas fa-eye me-1"></i>Ver Detalle
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Resumen de Insignias -->
+    <div class="card shadow-soft">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="fas fa-trophy me-2"></i>Insignias</h5>
+            <a href="{% url 'diario:insignias_lista' %}" class="btn btn-sm btn-outline-primary">
+                Ver Todas
+            </a>
+        </div>
+        <div class="card-body text-center">
+            <h2 class="display-4 text-warning mb-2">{{ total_insignias }}</h2>
+            <p class="text-muted">de {{ total_insignias_disponibles }} insignias desbloqueadas</p>
+            <div class="progress" style="height: 20px;">
+                <div class="progress-bar bg-warning" role="progressbar" 
+                     style="width: {% widthratio total_insignias total_insignias_disponibles 100 %}%">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Información sobre el Sistema -->
+    <div class="card shadow-sm mt-4">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Sobre las Virtudes</h5>
+        </div>
+        <div class="card-body">
+            <p>El sistema de virtudes está basado en las <strong>4 virtudes cardinales del estoicismo</strong>, enseñadas por filósofos como Marco Aurelio, Epicteto y Séneca.</p>
+            
+            <p>Cada virtud tiene <strong>5 niveles de progreso</strong>:</p>
+            <ul class="mb-3">
+                <li><span class="badge bg-secondary">Aprendiz</span> 0-49 puntos</li>
+                <li><span class="badge bg-primary">Practicante</span> 50-149 puntos</li>
+                <li><span class="badge bg-info">Adepto</span> 150-299 puntos</li>
+                <li><span class="badge bg-warning">Maestro</span> 300-499 puntos</li>
+                <li><span class="badge bg-success">Sabio</span> 500+ puntos</li>
+            </ul>
+
+            <p class="mb-0">Ganas puntos de virtud al completar acciones significativas en tu diario: reflexiones, ejercicios de Areté, cultivar relaciones, mantener balance en los 6 pilares, y más.</p>
+        </div>
+    </div>
+
+    <!-- Botón de Regreso -->
+    <div class="text-center mt-4">
+        <a href="{% url 'diario:dashboard_diario' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Volver al Dashboard
+        </a>
+    </div>
+</div>
+{% endblock %}
+

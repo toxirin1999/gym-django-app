@@ -83,6 +83,33 @@ class SistemaProgresionAvanzada:
         self.metricas_por_ejercicio: Dict[str, MetricasProgresion] = {}
         self.criterios_progresion = self._definir_criterios_progresion()
 
+    # Helper methods para compatibilidad con RegistroEjercicio y RegistroSesion
+    def _obtener_peso(self, sesion):
+        """Obtiene el peso de una sesión, compatible con ambos tipos"""
+        if hasattr(sesion, 'peso'):
+            return sesion.peso
+        elif hasattr(sesion, 'series') and sesion.series:
+            return sum(s.peso for s in sesion.series) / len(sesion.series)
+        return 0
+
+    def _obtener_repeticiones_totales(self, sesion):
+        """Obtiene repeticiones totales, compatible con ambos tipos"""
+        if hasattr(sesion, 'repeticiones_completadas'):
+            if isinstance(sesion.repeticiones_completadas, list):
+                return sum(sesion.repeticiones_completadas)
+            return sesion.repeticiones_completadas
+        elif hasattr(sesion, 'series') and sesion.series:
+            return sum(s.repeticiones for s in sesion.series)
+        return 0
+
+    def _obtener_series_totales(self, sesion) -> int:
+        """Obtiene el número total de series, compatible con ambos tipos"""
+        if hasattr(sesion, 'series'):
+            if isinstance(sesion.series, list):
+                return len(sesion.series)
+            return sesion.series
+        return 0
+
     def calcular_ratios_fuerza(self) -> Dict:
         """
         Calcula los ratios de fuerza basándose en los 1RM actuales del cliente.
@@ -189,21 +216,30 @@ class SistemaProgresionAvanzada:
         sesiones_recientes = historial[-4:]  # Últimas 4 sesiones
 
         carga_total_promedio = sum(
-            s.peso * sum(s.repeticiones_completadas)
+            self._obtener_peso(s) * self._obtener_repeticiones_totales(s)
             for s in sesiones_recientes
         ) / len(sesiones_recientes)
 
         volumen_semanal = sum(
-            sum(s.repeticiones_completadas)
+            self._obtener_repeticiones_totales(s)
             for s in sesiones_recientes
         )
 
-        intensidad_promedio = sum(s.rpe_real for s in sesiones_recientes) / len(sesiones_recientes)
+        # Helper para obtener RPE
+        def obtener_rpe(sesion):
+            if hasattr(sesion, 'rpe_real'):
+                return sesion.rpe_real
+            elif hasattr(sesion, 'series') and sesion.series:
+                rpes = [s.rpe for s in sesion.series if s.rpe is not None]
+                return sum(rpes) / len(rpes) if rpes else 7.0
+            return 7.0
+
+        intensidad_promedio = sum(obtener_rpe(s) for s in sesiones_recientes) / len(sesiones_recientes)
 
         # Calcular tendencia de carga
         if len(historial) >= 2:
-            carga_anterior = historial[-2].peso * sum(historial[-2].repeticiones_completadas)
-            carga_actual = historial[-1].peso * sum(historial[-1].repeticiones_completadas)
+            carga_anterior = self._obtener_peso(historial[-2]) * self._obtener_repeticiones_totales(historial[-2])
+            carga_actual = self._obtener_peso(historial[-1]) * self._obtener_repeticiones_totales(historial[-1])
 
             if carga_actual > carga_anterior * 1.05:
                 tendencia = "subiendo"
@@ -245,8 +281,8 @@ class SistemaProgresionAvanzada:
             sesion_anterior = historial[i - 1]
 
             # Verificar si hubo progresión
-            carga_actual = sesion_actual.peso * sum(sesion_actual.repeticiones_completadas)
-            carga_anterior = sesion_anterior.peso * sum(sesion_anterior.repeticiones_completadas)
+            carga_actual = self._obtener_peso(sesion_actual) * self._obtener_repeticiones_totales(sesion_actual)
+            carga_anterior = self._obtener_peso(sesion_anterior) * self._obtener_repeticiones_totales(sesion_anterior)
 
             if carga_actual > carga_anterior * 1.05:  # 5% de incremento
                 break
@@ -266,8 +302,8 @@ class SistemaProgresionAvanzada:
             sesion_actual = historial[i]
             sesion_anterior = historial[i - 1]
 
-            carga_actual = sesion_actual.peso * sum(sesion_actual.repeticiones_completadas)
-            carga_anterior = sesion_anterior.peso * sum(sesion_anterior.repeticiones_completadas)
+            carga_actual = self._obtener_peso(sesion_actual) * self._obtener_repeticiones_totales(sesion_actual)
+            carga_anterior = self._obtener_peso(sesion_anterior) * self._obtener_repeticiones_totales(sesion_anterior)
 
             if carga_actual > carga_anterior * 1.05:
                 return sesion_actual.fecha
@@ -322,8 +358,8 @@ class SistemaProgresionAvanzada:
 
         for sesion in sesiones_recientes:
             # Verificar si completó todas las repeticiones
-            reps_completadas = sum(sesion.repeticiones_completadas)
-            reps_planificadas = sesion.repeticiones_planificadas * sesion.series
+            reps_completadas = self._obtener_repeticiones_totales(sesion)
+            reps_planificadas = sesion.repeticiones_planificadas * self._obtener_series_totales(sesion)
 
             # Verificar si RPE fue igual o menor al objetivo
             if reps_completadas < reps_planificadas or sesion.rpe_real > sesion.rpe_planificado:
@@ -408,31 +444,33 @@ class SistemaProgresionAvanzada:
         else:
             incremento = 1.25  # Incrementos menores para ejercicios de aislamiento
 
-        nuevo_peso = ultima_sesion.peso + incremento
+        peso_base = self._obtener_peso(ultima_sesion)
+        nuevo_peso = peso_base + incremento
 
         return {
             'tipo': 'carga',
-            'peso_anterior': ultima_sesion.peso,
+            'peso_anterior': peso_base,
             'peso_nuevo': nuevo_peso,
             'incremento': incremento,
-            'series': ultima_sesion.series,
+            'series': self._obtener_series_totales(ultima_sesion),
             'repeticiones': ultima_sesion.repeticiones_planificadas,
             'rpe_objetivo': ultima_sesion.rpe_planificado,
-            'mensaje': f"Incrementar peso de {ultima_sesion.peso}kg a {nuevo_peso}kg"
+            'mensaje': f"Incrementar peso de {peso_base}kg a {nuevo_peso}kg"
         }
 
     def _aplicar_progresion_volumen(self, ejercicio: str, ultima_sesion: RegistroSesion) -> Dict[str, Any]:
         '''Aplica progresión de volumen'''
-        nuevas_series = min(ultima_sesion.series + 1, 6)  # Máximo 6 series
+        series_actuales = self._obtener_series_totales(ultima_sesion)
+        nuevas_series = min(series_actuales + 1, 6)  # Máximo 6 series
 
         return {
             'tipo': 'volumen',
-            'peso': ultima_sesion.peso,
-            'series_anteriores': ultima_sesion.series,
+            'peso': self._obtener_peso(ultima_sesion),
+            'series_anteriores': series_actuales,
             'series_nuevas': nuevas_series,
             'repeticiones': ultima_sesion.repeticiones_planificadas,
             'rpe_objetivo': ultima_sesion.rpe_planificado,
-            'mensaje': f"Incrementar de {ultima_sesion.series} a {nuevas_series} series"
+            'mensaje': f"Incrementar de {series_actuales} a {nuevas_series} series"
         }
 
     def _aplicar_progresion_densidad(self, ejercicio: str, ultima_sesion: RegistroSesion) -> Dict[str, Any]:
@@ -442,8 +480,8 @@ class SistemaProgresionAvanzada:
 
         return {
             'tipo': 'densidad',
-            'peso': ultima_sesion.peso,
-            'series': ultima_sesion.series,
+            'peso': self._obtener_peso(ultima_sesion),
+            'series': self._obtener_series_totales(ultima_sesion),
             'repeticiones': ultima_sesion.repeticiones_planificadas,
             'descanso_anterior': ultima_sesion.tiempo_descanso,
             'descanso_nuevo': nuevo_descanso,
@@ -453,15 +491,17 @@ class SistemaProgresionAvanzada:
 
     def _aplicar_descarga(self, ejercicio: str, ultima_sesion: RegistroSesion) -> Dict[str, Any]:
         '''Aplica semana de descarga'''
-        peso_descarga = ultima_sesion.peso * 0.8  # 80% del peso
-        series_descarga = max(ultima_sesion.series - 1, 2)  # Reducir series
+        peso_base = self._obtener_peso(ultima_sesion)
+        peso_descarga = peso_base * 0.8  # 80% del peso
+        series_actuales = self._obtener_series_totales(ultima_sesion)
+        series_descarga = max(series_actuales - 1, 2)  # Reducir series
         rpe_descarga = max(ultima_sesion.rpe_planificado - 2, 6)  # RPE más bajo
 
         return {
             'tipo': 'descarga',
-            'peso_anterior': ultima_sesion.peso,
+            'peso_anterior': peso_base,
             'peso_descarga': peso_descarga,
-            'series_anteriores': ultima_sesion.series,
+            'series_anteriores': series_actuales,
             'series_descarga': series_descarga,
             'rpe_anterior': ultima_sesion.rpe_planificado,
             'rpe_descarga': rpe_descarga,
@@ -480,13 +520,15 @@ class SistemaProgresionAvanzada:
 
         ejercicio_base = ejercicio.lower().replace('_', ' ')
         nueva_variacion = variaciones.get(ejercicio, f"{ejercicio}_variacion")
+        
+        peso_base = self._obtener_peso(ultima_sesion)
 
         return {
             'tipo': 'complejidad',
             'ejercicio_anterior': ejercicio,
             'ejercicio_nuevo': nueva_variacion,
-            'peso': ultima_sesion.peso * 0.9,  # Reducir peso para nueva variación
-            'series': ultima_sesion.series,
+            'peso': peso_base * 0.9,  # Reducir peso para nueva variación
+            'series': self._obtener_series_totales(ultima_sesion),
             'repeticiones': ultima_sesion.repeticiones_planificadas,
             'rpe_objetivo': ultima_sesion.rpe_planificado,
             'mensaje': f"Cambiar a variación más compleja: {nueva_variacion}"
@@ -496,8 +538,8 @@ class SistemaProgresionAvanzada:
         '''Mantiene parámetros actuales'''
         return {
             'tipo': 'mantenimiento',
-            'peso': ultima_sesion.peso,
-            'series': ultima_sesion.series,
+            'peso': self._obtener_peso(ultima_sesion),
+            'series': self._obtener_series_totales(ultima_sesion),
             'repeticiones': ultima_sesion.repeticiones_planificadas,
             'rpe_objetivo': ultima_sesion.rpe_planificado,
             'mensaje': "Mantener parámetros actuales y enfocar en técnica"

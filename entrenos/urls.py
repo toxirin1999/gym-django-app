@@ -5,6 +5,7 @@ from . import views
 from . import views_liftin
 from .views import ejercicios_realizados_view
 from clientes import views as vistas_clientes
+from .views import evaluacion_profesional_view
 
 app_name = 'entrenos'
 
@@ -33,6 +34,9 @@ urlpatterns = [
     # El nombre ('name') se mantiene, pero la ruta es más específica.
     path('cliente/<int:cliente_id>/guardar-entrenamiento-activo/', views.guardar_entrenamiento_activo,
          name='guardar_entrenamiento_activo'),
+    
+    # API para persistir sustituciones en caliente
+    path('api/cliente/<int:cliente_id>/save-hot-swap/', views.api_save_hot_swap, name='api_save_hot_swap'),
 
     # ============================================================================
     # URLs DE LIFTIN (Se mantienen)
@@ -73,4 +77,31 @@ urlpatterns = [
     path('cliente/<int:cliente_id>/comparacion/', views.dashboard_comparacion_planificadores,
          name='dashboard_comparacion'),
     path('resumen-anual/<int:cliente_id>/', views.vista_resumen_anual, name='vista_resumen_anual'),
+    path('cliente/<int:cliente_id>/dashboard-ejercicios/',
+         views.dashboard_ejercicios,
+         name='dashboard_ejercicios'),
+
+    # Detalle de ejercicio específico (opcional)
+    path('cliente/<int:cliente_id>/ejercicio/<str:nombre_ejercicio>/',
+         views.detalle_ejercicio_especifico,
+         name='detalle_ejercicio_especifico'),
+    path('ajax/entrenamiento/<int:cliente_id>/',
+         views.ajax_obtener_entrenamiento_dia,
+         name='ajax_entrenamiento_dia'),
+
+    path('ajax/entrenamientos-mes/<int:cliente_id>/',
+         views.ajax_obtener_entrenamientos_mes,
+         name='ajax_entrenamientos_mes'),
+    path('api/ejercicios/registrar/', views.api_registrar_ejercicio, name='api_registrar_ejercicio'),
+    path('api/estadisticas/', views.api_obtener_estadisticas, name='api_estadisticas'),
+    path('api/usuario/perfil/', views.api_obtener_perfil, name='api_perfil'),
+    path('api/bio-correlation/<int:cliente_id>/', views.api_bio_correlation, name='api_bio_correlation'),
+
+    # ============================================================================
+    # NUEVO DASHBOARD DE EVOLUCIÓN
+    # ============================================================================
+    path('cliente/<int:cliente_id>/dashboard-evolucion/', views.dashboard_evolucion, name='dashboard_evolucion'),
+    path('cliente/<int:cliente_id>/actualizar-fase/', views.actualizar_fase_cliente, name='actualizar_fase_cliente'),
+    path('cliente/<int:cliente_id>/evaluacion-profesional/', evaluacion_profesional_view,
+         name='evaluacion_profesional'),
 ]

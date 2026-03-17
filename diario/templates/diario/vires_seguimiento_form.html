@@ -3,86 +3,513 @@
 
 {% block title %}Registro de Vires - Diario Estoico{% endblock %}
 
+{% block extra_css %}
+<link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+    :root {
+        /* Paleta inspirada en freud v2 */
+        --bg-primary: #F8F5F1;
+        --bg-secondary: #FFFFFF;
+        --bg-card: #FFFFFF;
+        --bg-accent: #FFF9F5;
+
+        --text-primary: #2D3436;
+        --text-secondary: #636E72;
+        --text-muted: #B2BEC3;
+
+        --accent-orange: #F49459;
+        --accent-orange-dark: #E67E22;
+        --accent-green: #00B894;
+        --accent-green-light: #E8F8F5;
+        --accent-blue: #74B9FF;
+        --accent-purple: #A29BFE;
+        --accent-red: #FF7675;
+        --accent-yellow: #FDCB6E;
+
+        --border-color: #E8E4E0;
+        --shadow-soft: 0 2px 20px rgba(0, 0, 0, 0.05);
+        --shadow-medium: 0 4px 30px rgba(0, 0, 0, 0.08);
+
+        --radius-sm: 12px;
+        --radius-md: 16px;
+        --radius-lg: 24px;
+        --radius-xl: 32px;
+    }
+
+    body {
+        font-family: 'Urbanist', -apple-system, BlinkMacSystemFont, sans-serif !important;
+        background: var(--bg-primary) !important;
+        color: var(--text-primary);
+    }
+
+    .form-container{
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 1rem;
+        padding-bottom: 2rem;
+    }
+
+    /* === ANIMATIONS === */
+    @keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(18px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .fade-in { animation: fadeInUp 0.55s ease forwards; }
+    .delay-1 { animation-delay: .06s; opacity: 0; }
+    .delay-2 { animation-delay: .12s; opacity: 0; }
+    .delay-3 { animation-delay: .18s; opacity: 0; }
+    .delay-4 { animation-delay: .24s; opacity: 0; }
+    .delay-5 { animation-delay: .30s; opacity: 0; }
+
+    /* === HEADER === */
+    .form-header { padding: 1.5rem 0; margin-bottom: 1.5rem; }
+    .header-title { display:flex; align-items:center; gap: 1rem; }
+    .header-icon {
+        width: 64px; height: 64px;
+        background: linear-gradient(135deg, var(--accent-orange) 0%, var(--accent-orange-dark) 100%);
+        border-radius: var(--radius-md);
+        display:flex; align-items:center; justify-content:center;
+        color:white; font-size: 1.6rem;
+        box-shadow: var(--shadow-soft);
+    }
+    .header-text h1 { font-size: 2rem; font-weight: 800; margin: 0; letter-spacing: -0.6px; }
+    .header-text p { margin: 0; color: var(--text-muted); font-size: .95rem; }
+
+    /* === CARDS === */
+    .freud-card{
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-xl);
+        padding: 1.5rem;
+        box-shadow: var(--shadow-soft);
+        margin-bottom: 1rem;
+        overflow: hidden;
+    }
+    .card-header-freud{
+        display:flex;
+        align-items:center;
+        gap: 1rem;
+        margin-bottom: 1.2rem;
+        padding-bottom: 1rem;
+        border-bottom: 2px solid var(--border-color);
+    }
+    .card-icon{
+        width: 48px; height: 48px;
+        border-radius: 14px;
+        display:flex; align-items:center; justify-content:center;
+        color: white;
+        box-shadow: var(--shadow-soft);
+        flex-shrink: 0;
+        font-size: 1.3rem;
+    }
+    .card-icon.orange{ background: linear-gradient(135deg, var(--accent-orange) 0%, var(--accent-orange-dark) 100%); }
+    .card-icon.green{ background: linear-gradient(135deg, var(--accent-green) 0%, #00A884 100%); }
+    .card-icon.blue{ background: linear-gradient(135deg, var(--accent-blue) 0%, #4FA3FF 100%); }
+    .card-icon.red{ background: linear-gradient(135deg, var(--accent-red) 0%, #FF5A5A 100%); }
+    .card-icon.yellow{ background: linear-gradient(135deg, var(--accent-yellow) 0%, #F5B041 100%); }
+
+    .card-title-freud { font-size: 1.1rem; font-weight: 800; margin: 0; letter-spacing: -.2px; }
+    .card-subtitle { font-size: .85rem; color: var(--text-muted); margin-top: .25rem; }
+
+    /* === FORM FIELDS === */
+    .form-group {
+        margin-bottom: 1rem;
+    }
+    .form-label {
+        display: block;
+        font-weight: 700;
+        font-size: .95rem;
+        margin-bottom: .5rem;
+        color: var(--text-primary);
+    }
+    .form-label .unit {
+        font-weight: 500;
+        color: var(--text-muted);
+        font-size: .85rem;
+    }
+
+    .form-input, .form-textarea {
+        width: 100%;
+        padding: .85rem 1rem;
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-md);
+        font-family: 'Urbanist', sans-serif;
+        font-size: .95rem;
+        color: var(--text-primary);
+        background: var(--bg-secondary);
+        transition: all .2s ease;
+    }
+    .form-input:focus, .form-textarea:focus {
+        outline: none;
+        border-color: var(--accent-orange);
+        box-shadow: 0 0 0 3px rgba(244, 148, 89, 0.1);
+    }
+    .form-textarea {
+        resize: vertical;
+        min-height: 100px;
+    }
+
+    /* === RANGE SLIDER === */
+    .range-group {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+    .range-input {
+        flex: 1;
+        height: 6px;
+        border-radius: 3px;
+        background: var(--border-color);
+        outline: none;
+        -webkit-appearance: none;
+    }
+    .range-input::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, var(--accent-orange) 0%, var(--accent-orange-dark) 100%);
+        cursor: pointer;
+        box-shadow: var(--shadow-soft);
+    }
+    .range-input::-moz-range-thumb {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, var(--accent-orange) 0%, var(--accent-orange-dark) 100%);
+        cursor: pointer;
+        border: none;
+        box-shadow: var(--shadow-soft);
+    }
+    .range-value {
+        min-width: 50px;
+        text-align: center;
+        font-weight: 900;
+        font-size: 1.1rem;
+        color: var(--accent-orange);
+    }
+
+    /* === CHECKBOX CUSTOM === */
+    .checkbox-group {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: .8rem;
+    }
+    .checkbox-item {
+        display: flex;
+        align-items: center;
+        gap: .75rem;
+        padding: 1rem;
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--border-color);
+        background: var(--bg-secondary);
+        cursor: pointer;
+        transition: all .2s ease;
+    }
+    .checkbox-item:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-soft);
+    }
+    .checkbox-item input[type="checkbox"] {
+        display: none;
+    }
+    .checkbox-custom {
+        width: 24px;
+        height: 24px;
+        border-radius: 6px;
+        border: 2px solid var(--border-color);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        transition: all .2s ease;
+    }
+    .checkbox-item input[type="checkbox"]:checked + .checkbox-custom {
+        background: var(--accent-green);
+        border-color: var(--accent-green);
+        color: white;
+    }
+    .checkbox-label {
+        font-weight: 700;
+        margin: 0;
+        cursor: pointer;
+    }
+    .checkbox-item.checked {
+        background: var(--accent-green-light);
+        border-color: rgba(0, 184, 148, 0.25);
+    }
+
+    /* === GRID FIELDS === */
+    .fields-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+    }
+    @media (max-width: 768px) {
+        .fields-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+    .fields-grid-3 {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1rem;
+    }
+    @media (max-width: 768px) {
+        .fields-grid-3 {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    /* === BUTTONS === */
+    .button-group {
+        display: flex;
+        gap: 1rem;
+        margin-top: 2rem;
+        flex-wrap: wrap;
+    }
+    .btn-freud {
+        padding: .9rem 1.5rem;
+        border-radius: var(--radius-lg);
+        border: none;
+        font-weight: 700;
+        font-size: .95rem;
+        cursor: pointer;
+        transition: all .2s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: .5rem;
+    }
+    .btn-freud-primary {
+        background: linear-gradient(135deg, var(--accent-orange) 0%, var(--accent-orange-dark) 100%);
+        color: white;
+        flex: 1;
+        min-width: 200px;
+    }
+    .btn-freud-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-medium);
+        color: white;
+    }
+    .btn-freud-secondary {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border-color);
+        color: var(--text-primary);
+    }
+    .btn-freud-secondary:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-soft);
+        color: var(--text-primary);
+    }
+
+    /* === INFO BOX === */
+    .info-box {
+        padding: 1rem;
+        border-radius: var(--radius-lg);
+        background: linear-gradient(135deg, rgba(244, 148, 89, 0.08), rgba(244, 148, 89, 0.02));
+        border-left: 4px solid var(--accent-orange);
+        margin-bottom: 1rem;
+    }
+    .info-box p {
+        margin: 0;
+        color: var(--text-secondary);
+        font-size: .9rem;
+    }
+
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="fade-in-up">
-    <div class="card shadow-strong">
-        <div class="card-header">
-            <h5 class="mb-0"><i class="fas fa-plus me-2"></i>
-                {% if seguimiento %}Editar{% else %}Registrar{% endif %} Seguimiento - {{ fecha_hoy|date:"d/m/Y" }}
-            </h5>
+<div class="form-container">
+
+    <!-- HEADER -->
+    <header class="form-header fade-in">
+        <div class="header-title">
+            <div class="header-icon">
+                <i class="fas fa-dumbbell"></i>
+            </div>
+            <div class="header-text">
+                <h1>{% if seguimiento %}Editar{% else %}Registrar{% endif %} Seguimiento</h1>
+                <p>{{ fecha_hoy|date:"d M Y" }}</p>
+            </div>
         </div>
-        <div class="card-body">
-            <form method="post" action="{% url 'diario:vires_seguimiento_crear' %}">
-                {% csrf_token %}
-                <input type="hidden" name="fecha" value="{{ fecha_hoy|date:'Y-m-d' }}">
+    </header>
 
-                <h6 class="text-muted">Métricas de Recuperación</h6>
-                <div class="row border rounded p-3 mb-4">
-                    <div class="col-md-3 mb-3">
-                        <label class="form-label">Horas de Sueño</label>
-                        <input type="number" name="horas_sueno" class="form-control" step="0.25" placeholder="7.5" value="{{ seguimiento.horas_sueno|default:'' }}">
-                    </div>
-                    <div class="col-md-3 mb-3">
-                        <label class="form-label">Calidad Sueño (1-5)</label>
-                        <input type="number" name="calidad_sueno" class="form-control" min="1" max="5" placeholder="4" value="{{ seguimiento.calidad_sueno|default:'' }}">
-                    </div>
-                    <div class="col-md-3 mb-3">
-                        <label class="form-label">Nivel Energía (1-5)</label>
-                        <input type="number" name="nivel_energia" class="form-control" min="1" max="5" placeholder="4" value="{{ seguimiento.nivel_energia|default:'' }}">
-                    </div>
-                    <div class="col-md-3 mb-3">
-                        <label class="form-label">Nivel Estrés (1-5)</label>
-                        <input type="number" name="nivel_estres" class="form-control" min="1" max="5" placeholder="2" value="{{ seguimiento.nivel_estres|default:'' }}">
-                    </div>
-                </div>
-
-                <h6 class="text-muted">Medidas Corporales y Actividad</h6>
-                <div class="row border rounded p-3 mb-4">
-                    <div class="col-md-4 mb-3">
-                        <label class="form-label">Peso (kg)</label>
-                        <input type="number" name="peso" class="form-control" step="0.1" placeholder="70.5" value="{{ seguimiento.peso|default:'' }}">
-                    </div>
-                    <div class="col-md-4 mb-3">
-                        <label class="form-label">Grasa Corporal (%)</label>
-                        <input type="number" name="grasa_corporal" class="form-control" step="0.1" placeholder="15.2" value="{{ seguimiento.grasa_corporal|default:'' }}">
-                    </div>
-                    <div class="col-md-4 mb-3">
-                        <label class="form-label">Pasos del día</label>
-                        <input type="number" name="pasos" class="form-control" placeholder="10000" value="{{ seguimiento.pasos|default:'' }}">
-                    </div>
-                </div>
-
-                <h6 class="text-muted">Hábitos Saludables</h6>
-                <div class="p-3 border rounded mb-4">
-                    <div class="form-check form-switch mb-2">
-                        <input class="form-check-input" type="checkbox" name="entrenamiento_realizado" id="id_entrenamiento_realizado" {% if seguimiento.entrenamiento_realizado %}checked{% endif %}>
-                        <label class="form-check-label" for="id_entrenamiento_realizado">Entrenamiento realizado</label>
-                    </div>
-                    <div class="form-check form-switch mb-2">
-                        <input class="form-check-input" type="checkbox" name="alimentacion_saludable" id="id_alimentacion_saludable" {% if seguimiento.alimentacion_saludable %}checked{% endif %}>
-                        <label class="form-check-label" for="id_alimentacion_saludable">Alimentación saludable</label>
-                    </div>
-                    <div class="form-check form-switch mb-2">
-                        <input class="form-check-input" type="checkbox" name="hidratacion_adecuada" id="id_hidratacion_adecuada" {% if seguimiento.hidratacion_adecuada %}checked{% endif %}>
-                        <label class="form-check-label" for="id_hidratacion_adecuada">Hidratación adecuada</label>
-                    </div>
-                    <div class="form-check form-switch">
-                        <input class="form-check-input" type="checkbox" name="descanso_suficiente" id="id_descanso_suficiente" {% if seguimiento.descanso_suficiente %}checked{% endif %}>
-                        <label class="form-check-label" for="id_descanso_suficiente">Descanso suficiente</label>
-                    </div>
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label">Notas Adicionales (opcional)</label>
-                    <textarea name="notas" class="form-control" rows="3" placeholder="Cualquier observación adicional sobre tu día">{{ seguimiento.notas|default:'' }}</textarea>
-                </div>
-
-                <div class="d-flex gap-2 mt-4">
-                    <button type="submit" class="btn btn-success btn-lg"><i class="fas fa-save me-2"></i>Guardar Seguimiento</button>
-                    <a href="{% url 'diario:vires_dashboard' %}" class="btn btn-secondary">Cancelar</a>
-                </div>
-            </form>
-        </div>
+    <!-- INFO BOX -->
+    <div class="info-box fade-in delay-1">
+        <p><i class="fas fa-info-circle" style="margin-right: .5rem;"></i>Completa tu seguimiento diario para mantener un registro de tu progreso en salud y deporte.</p>
     </div>
+
+    <form method="post" action="{% url 'diario:vires_seguimiento_crear' %}">
+        {% csrf_token %}
+        <input type="hidden" name="fecha" value="{{ fecha_hoy|date:'Y-m-d' }}">
+
+        <!-- MÉTRICAS DE RECUPERACIÓN -->
+        <div class="freud-card fade-in delay-2">
+            <div class="card-header-freud">
+                <div class="card-icon blue"><i class="fas fa-moon"></i></div>
+                <div>
+                    <h3 class="card-title-freud">Métricas de Recuperación</h3>
+                    <p class="card-subtitle">Sueño, energía y estrés</p>
+                </div>
+            </div>
+
+            <div class="fields-grid-3">
+                <div class="form-group">
+                    <label class="form-label">Horas de Sueño <span class="unit">(horas)</span></label>
+                    <input type="number" name="horas_sueno" class="form-input" step="0.25" placeholder="7.5" value="{{ seguimiento.horas_sueno|default:'' }}">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Calidad del Sueño</label>
+                    <div class="range-group">
+                        <input type="range" name="calidad_sueno" class="range-input" min="1" max="5" value="{{ seguimiento.calidad_sueno|default:'3' }}" onchange="updateRangeValue(this)">
+                        <span class="range-value">{{ seguimiento.calidad_sueno|default:'3' }}</span>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Nivel de Energía</label>
+                    <div class="range-group">
+                        <input type="range" name="nivel_energia" class="range-input" min="1" max="5" value="{{ seguimiento.nivel_energia|default:'3' }}" onchange="updateRangeValue(this)">
+                        <span class="range-value">{{ seguimiento.nivel_energia|default:'3' }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group" style="margin-top: 1rem;">
+                <label class="form-label">Nivel de Estrés</label>
+                <div class="range-group">
+                    <input type="range" name="nivel_estres" class="range-input" min="1" max="5" value="{{ seguimiento.nivel_estres|default:'3' }}" onchange="updateRangeValue(this)">
+                    <span class="range-value">{{ seguimiento.nivel_estres|default:'3' }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- MEDIDAS CORPORALES -->
+        <div class="freud-card fade-in delay-3">
+            <div class="card-header-freud">
+                <div class="card-icon red"><i class="fas fa-weight"></i></div>
+                <div>
+                    <h3 class="card-title-freud">Medidas Corporales</h3>
+                    <p class="card-subtitle">Peso, composición y actividad</p>
+                </div>
+            </div>
+
+            <div class="fields-grid-3">
+                <div class="form-group">
+                    <label class="form-label">Peso <span class="unit">(kg)</span></label>
+                    <input type="number" name="peso" class="form-input" step="0.1" placeholder="70.5" value="{{ seguimiento.peso|default:'' }}">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Grasa Corporal <span class="unit">(%)</span></label>
+                    <input type="number" name="grasa_corporal" class="form-input" step="0.1" placeholder="15.2" value="{{ seguimiento.grasa_corporal|default:'' }}">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Pasos del Día</label>
+                    <input type="number" name="pasos" class="form-input" placeholder="10000" value="{{ seguimiento.pasos|default:'' }}">
+                </div>
+            </div>
+        </div>
+
+        <!-- HÁBITOS SALUDABLES -->
+        <div class="freud-card fade-in delay-4">
+            <div class="card-header-freud">
+                <div class="card-icon green"><i class="fas fa-heart"></i></div>
+                <div>
+                    <h3 class="card-title-freud">Hábitos Saludables</h3>
+                    <p class="card-subtitle">Marca los hábitos completados hoy</p>
+                </div>
+            </div>
+
+            <div class="checkbox-group">
+                <label class="checkbox-item {% if seguimiento.entrenamiento_realizado %}checked{% endif %}">
+                    <input type="checkbox" name="entrenamiento_realizado" {% if seguimiento.entrenamiento_realizado %}checked{% endif %}>
+                    <div class="checkbox-custom">
+                        {% if seguimiento.entrenamiento_realizado %}<i class="fas fa-check"></i>{% endif %}
+                    </div>
+                    <p class="checkbox-label">Entrenamiento realizado</p>
+                </label>
+
+                <label class="checkbox-item {% if seguimiento.alimentacion_saludable %}checked{% endif %}">
+                    <input type="checkbox" name="alimentacion_saludable" {% if seguimiento.alimentacion_saludable %}checked{% endif %}>
+                    <div class="checkbox-custom">
+                        {% if seguimiento.alimentacion_saludable %}<i class="fas fa-check"></i>{% endif %}
+                    </div>
+                    <p class="checkbox-label">Alimentación saludable</p>
+                </label>
+
+                <label class="checkbox-item {% if seguimiento.hidratacion_adecuada %}checked{% endif %}">
+                    <input type="checkbox" name="hidratacion_adecuada" {% if seguimiento.hidratacion_adecuada %}checked{% endif %}>
+                    <div class="checkbox-custom">
+                        {% if seguimiento.hidratacion_adecuada %}<i class="fas fa-check"></i>{% endif %}
+                    </div>
+                    <p class="checkbox-label">Hidratación adecuada</p>
+                </label>
+
+                <label class="checkbox-item {% if seguimiento.descanso_suficiente %}checked{% endif %}">
+                    <input type="checkbox" name="descanso_suficiente" {% if seguimiento.descanso_suficiente %}checked{% endif %}>
+                    <div class="checkbox-custom">
+                        {% if seguimiento.descanso_suficiente %}<i class="fas fa-check"></i>{% endif %}
+                    </div>
+                    <p class="checkbox-label">Descanso suficiente</p>
+                </label>
+            </div>
+        </div>
+
+        <!-- NOTAS ADICIONALES -->
+        <div class="freud-card fade-in delay-5">
+            <div class="card-header-freud">
+                <div class="card-icon yellow"><i class="fas fa-note-sticky"></i></div>
+                <div>
+                    <h3 class="card-title-freud">Notas Adicionales</h3>
+                    <p class="card-subtitle">Observaciones sobre tu día (opcional)</p>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <textarea name="notas" class="form-textarea" placeholder="Cualquier observación adicional sobre tu día...">{{ seguimiento.notas|default:'' }}</textarea>
+            </div>
+        </div>
+
+        <!-- BUTTONS -->
+        <div class="button-group fade-in delay-5">
+            <button type="submit" class="btn-freud btn-freud-primary">
+                <i class="fas fa-save"></i>
+                <span>Guardar Seguimiento</span>
+            </button>
+            <a href="{% url 'diario:vires_dashboard' %}" class="btn-freud btn-freud-secondary">
+                <i class="fas fa-arrow-left"></i>
+                <span>Cancelar</span>
+            </a>
+        </div>
+    </form>
+
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function updateRangeValue(input) {
+        const valueSpan = input.nextElementSibling;
+        if (valueSpan) {
+            valueSpan.textContent = input.value;
+        }
+    }
+
+    // Update checkbox items on load
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('.checkbox-item input[type="checkbox"]').forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                const item = this.closest('.checkbox-item');
+                if (this.checked) {
+                    item.classList.add('checked');
+                    item.querySelector('.checkbox-custom').innerHTML = '<i class="fas fa-check"></i>';
+                } else {
+                    item.classList.remove('checked');
+                    item.querySelector('.checkbox-custom').innerHTML = '';
+                }
+            });
+        });
+    });
+</script>
 {% endblock %}

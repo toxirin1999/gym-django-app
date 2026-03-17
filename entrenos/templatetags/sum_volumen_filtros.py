@@ -1,52 +1,104 @@
 from django import template
+from django.template.defaultfilters import stringfilter
 
 register = template.Library()
 
-@register.filter
-def sum_volumen(series):
+
+@register.filter(name='sum_volumen')
+def sum_volumen(ejercicios):
     """
-    Calcula el volumen total (peso * repeticiones) de una lista de series.
-    Redondea el resultado a 1 decimal para evitar números excesivamente largos.
+    Calcula el volumen total de una lista de ejercicios (peso * reps * series)
     """
     total = 0
-    for serie in series:
+    if not ejercicios:
+        return total
+
+    for ej in ejercicios:
         try:
-            peso = float(serie.peso_kg) if hasattr(serie, 'peso_kg') else 0
-            reps = int(serie.repeticiones) if hasattr(serie, 'repeticiones') else 0
-            total += peso * reps
+            # Intentar obtener de diccionario o de objeto
+            if isinstance(ej, dict):
+                peso = float(ej.get('peso', 0) or 0)
+                reps = int(ej.get('repeticiones', 0) or 0)
+                series = int(ej.get('series', 0) or 0)
+            else:
+                peso = float(getattr(ej, 'peso', 0) or 0)
+                reps = int(getattr(ej, 'repeticiones', 0) or 0)
+                series = int(getattr(ej, 'series', 0) or 0)
+            total += peso * reps * series
         except (ValueError, TypeError, AttributeError):
-            pass
-    return round(total, 1)
+            continue
+    return total
 
-@register.filter
-def subtract(value, arg):
+
+@register.filter(name='hex_to_rgba')
+@stringfilter
+def hex_to_rgba(hex_color, alpha):
     """
-    Resta arg de value.
+    Convierte un color HEX (ej: #FF2D92) a un string RGBA (ej: rgba(255, 45, 146, 0.1)).
     """
     try:
-        return float(value) - float(arg)
-    except (ValueError, TypeError):
-        return 0
+        hex_color = hex_color.lstrip('#')
+        if len(hex_color) != 6:
+            return f"rgba(0, 0, 0, {alpha})"
+
+        r = int(hex_color[0:2], 16)
+        g = int(hex_color[2:4], 16)
+        b = int(hex_color[4:6], 16)
+
+        return f"rgba({r}, {g}, {b}, {alpha})"
+    except Exception:
+        return f"rgba(0, 0, 0, {alpha})"
+
 
 @register.filter
-def multiply(value, arg):
-    """
-    Multiplica value por arg.
-    """
+def absval(value):
     try:
-        return float(value) * float(arg)
-    except (ValueError, TypeError):
-        return 0
+        return abs(float(value))
+    except Exception:
+        return value
+
 
 @register.filter
-def divide(value, arg):
-    """
-    Divide value entre arg. Devuelve 0 si arg es 0.
-    """
+def get_item(dictionary, key):
+    return dictionary.get(key)
+
+
+@register.filter
+def floatdiv(value, divisor):
     try:
-        arg = float(arg)
-        if arg == 0:
-            return 0
-        return float(value) / arg
-    except (ValueError, TypeError):
+        return float(value) / float(divisor)
+    except (ValueError, ZeroDivisionError):
         return 0
+
+
+@register.filter
+def percent_diff(value, base):
+    try:
+        return round(((float(value) - float(base)) / float(base)) * 100, 0)
+    except (ValueError, ZeroDivisionError):
+        return 0
+
+
+@register.filter(name='mul')
+def mul(value, arg):
+    """Multiplica el valor por el argumento de forma segura."""
+    from decimal import Decimal, InvalidOperation
+    try:
+        # Intenta convertir ambos a Decimal para mayor precisión con los pesos
+        return Decimal(str(value)) * Decimal(str(arg))
+    except (ValueError, TypeError, InvalidOperation):
+        # Si algo falla (ej. el valor no es un número), devuelve 0
+        return 0
+
+
+# Pega esto al final de tu archivo custom_filters.py
+
+@register.filter(name='to_float')
+def to_float(value):
+    """Convierte un valor a float, reemplazando comas por puntos."""
+    try:
+        # Reemplaza la coma por un punto y convierte a float
+        return float(str(value).replace(',', '.'))
+    except (ValueError, TypeError):
+        # Si falla la conversión, devuelve 0.0
+        return 0.0

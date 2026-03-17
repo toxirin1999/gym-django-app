@@ -1,0 +1,342 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Dashboard de Ejercicios - {{ cliente.nombre }}{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+<link href="{% static 'css/dashboard_ejercicios.css' %}" rel="stylesheet">
+<style>
+    /* Asegurar que la tabla sea completamente visible con scroll horizontal */
+    .table-wrapper {
+        width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .ejercicios-table {
+        min-width: 1200px;
+        width: 100%;
+    }
+
+    .ejercicios-table th,
+    .ejercicios-table td {
+        white-space: nowrap;
+        padding: 0.75rem 0.5rem;
+    }
+
+    .ejercicios-table th:first-child,
+    .ejercicios-table td:first-child {
+        min-width: 200px;
+        white-space: normal;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="main-wrapper max-w-7xl mx-auto px-4 py-8">
+
+    <!-- HEADER DEL DASHBOARD -->
+    <div class="dashboard-header mb-8">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+                <h1 class="text-4xl font-bold text-white mb-2">
+                    <i class="fas fa-chart-line text-cyan-400 mr-3" aria-hidden="true"></i>
+                    Dashboard de Ejercicios
+                </h1>
+                <p class="text-gray-300">Análisis completo de tu progreso - {{ cliente.nombre }}</p>
+            </div>
+            <div class="flex gap-3">
+                <a href="{% url 'clientes:detalle_cliente' cliente.id %}" class="btn-secondary" aria-label="Volver al perfil">
+                    <i class="fas fa-arrow-left" aria-hidden="true"></i> Volver al Perfil
+                </a>
+            </div>
+        </div>
+    </div>
+
+    {% if sin_datos %}
+    <!-- ESTADO VACÍO -->
+    <div class="empty-state-large">
+        <i class="fas fa-dumbbell text-6xl text-gray-600 mb-4" aria-hidden="true"></i>
+        <h2 class="text-2xl font-bold text-white mb-3">No hay datos de entrenamientos</h2>
+        <p class="text-gray-400 mb-6">Comienza a registrar tus entrenamientos para ver estadísticas detalladas de tu progreso.</p>
+    </div>
+    {% else %}
+
+    <!-- ESTADÍSTICAS GLOBALES -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div class="stat-card">
+            <div class="stat-icon bg-blue-500/20">
+                <i class="fas fa-list-ul text-blue-400 text-2xl" aria-hidden="true"></i>
+            </div>
+            <div class="stat-content">
+                <p class="stat-label">Ejercicios Únicos</p>
+                <p class="stat-value">{{ total_ejercicios_unicos }}</p>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon bg-green-500/20">
+                <i class="fas fa-calendar-check text-green-400 text-2xl" aria-hidden="true"></i>
+            </div>
+            <div class="stat-content">
+                <p class="stat-label">Sesiones Totales</p>
+                <p class="stat-value">{{ total_sesiones }}</p>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon bg-purple-500/20">
+                <i class="fas fa-weight-hanging text-purple-400 text-2xl" aria-hidden="true"></i>
+            </div>
+            <div class="stat-content">
+                <p class="stat-label">Volumen Total</p>
+                <p class="stat-value">{{ volumen_total_global|floatformat:0 }}<span class="text-sm ml-1">kg</span></p>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon bg-yellow-500/20">
+                <i class="fas fa-trophy text-yellow-400 text-2xl" aria-hidden="true"></i>
+            </div>
+            <div class="stat-content">
+                <p class="stat-label">Récords Recientes</p>
+                <p class="stat-value">{{ records_recientes|length }}</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- DESTACADOS -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        {% if ejercicio_mas_frecuente %}
+        <div class="card-halo">
+            <h3 class="section-title mb-4">
+                <i class="fas fa-fire text-orange-400 mr-2" aria-hidden="true"></i>
+                Ejercicio Más Frecuente
+            </h3>
+            <div class="highlight-card">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-2xl font-bold text-white mb-2">{{ ejercicio_mas_frecuente.nombre }}</p>
+                        <p class="text-gray-300 text-sm">Realizado <span class="text-cyan-400 font-bold">{{ ejercicio_mas_frecuente.veces_realizado }}</span> veces</p>
+                        <p class="text-gray-400 text-xs mt-1">{{ ejercicio_mas_frecuente.frecuencia_mensual|floatformat:1 }} veces/mes</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-sm text-gray-400">Peso Actual</p>
+                        <p class="text-3xl font-bold text-cyan-400">{{ ejercicio_mas_frecuente.peso_actual }}<span class="text-sm">kg</span></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if mayor_progresion %}
+        <div class="card-halo">
+            <h3 class="section-title mb-4">
+                <i class="fas fa-rocket text-green-400 mr-2" aria-hidden="true"></i>
+                Mayor Progresión
+            </h3>
+            <div class="highlight-card">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-2xl font-bold text-white mb-2">{{ mayor_progresion.nombre }}</p>
+                        <p class="text-gray-300 text-sm">
+                            <span class="text-gray-400">{{ mayor_progresion.peso_inicial }}kg</span>
+                            <i class="fas fa-arrow-right mx-2 text-green-400" aria-hidden="true"></i>
+                            <span class="text-green-400 font-bold">{{ mayor_progresion.peso_actual }}kg</span>
+                        </p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-sm text-gray-400">Mejora</p>
+                        <p class="text-3xl font-bold text-green-400">+{{ mayor_progresion.progresion_porcentaje|floatformat:1 }}<span class="text-sm">%</span></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- GRÁFICO DE VOLUMEN MENSUAL -->
+    <div class="card-halo mb-8">
+        <h3 class="section-title mb-4">
+            <i class="fas fa-chart-area text-cyan-400 mr-2" aria-hidden="true"></i>
+            Volumen Mensual
+        </h3>
+        <div class="h-64">
+            <canvas id="volumenMensualChart" aria-label="Gráfico de volumen mensual"></canvas>
+        </div>
+    </div>
+
+    <!-- FILTROS Y BÚSQUEDA -->
+    <div class="card-halo mb-6">
+        <form method="get" class="flex flex-col md:flex-row gap-4">
+            <div class="flex-grow">
+                <label for="buscar" class="sr-only">Buscar ejercicio</label>
+                <div class="relative">
+                    <input
+                        type="text"
+                        id="buscar"
+                        name="buscar"
+                        value="{{ busqueda_actual }}"
+                        placeholder="Buscar ejercicio..."
+                        class="input-search"
+                        aria-label="Buscar ejercicio por nombre"
+                    >
+                    <i class="fas fa-search absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400" aria-hidden="true"></i>
+                </div>
+            </div>
+            <div>
+                <label for="orden" class="sr-only">Ordenar por</label>
+                <select name="orden" id="orden" class="select-filter" onchange="this.form.submit()" aria-label="Ordenar ejercicios por">
+                    <option value="frecuencia" {% if orden_actual == 'frecuencia' %}selected{% endif %}>Más Frecuentes</option>
+                    <option value="progresion" {% if orden_actual == 'progresion' %}selected{% endif %}>Mayor Progresión</option>
+                    <option value="peso_maximo" {% if orden_actual == 'peso_maximo' %}selected{% endif %}>Peso Máximo</option>
+                    <option value="volumen" {% if orden_actual == 'volumen' %}selected{% endif %}>Mayor Volumen</option>
+                    <option value="reciente" {% if orden_actual == 'reciente' %}selected{% endif %}>Más Recientes</option>
+                    <option value="nombre" {% if orden_actual == 'nombre' %}selected{% endif %}>Alfabético</option>
+                </select>
+            </div>
+            <button type="submit" class="btn-primary">
+                <i class="fas fa-filter" aria-hidden="true"></i> Filtrar
+            </button>
+        </form>
+    </div>
+
+    <!-- TABLA DE EJERCICIOS -->
+    <div class="card-halo">
+        <h3 class="section-title mb-4">
+            <i class="fas fa-table text-cyan-400 mr-2" aria-hidden="true"></i>
+            Todos los Ejercicios ({{ estadisticas_ejercicios|length }})
+        </h3>
+
+        {% if estadisticas_ejercicios %}
+        <div class="table-wrapper">
+            <table class="ejercicios-table">
+                <thead>
+                    <tr>
+                        <th>Ejercicio</th>
+                        <th class="text-center">Veces</th>
+                        <th class="text-center">Peso Inicial</th>
+                        <th class="text-center">Peso Actual</th>
+                        <th class="text-center">Peso Máx</th>
+                        <th class="text-center">Progresión</th>
+                        <th class="text-center">Volumen Total</th>
+                        <th class="text-center">1RM Est.</th>
+                        <th class="text-center">Última Vez</th>
+                        <th class="text-center">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ejercicio in estadisticas_ejercicios %}
+                    <tr class="ejercicio-row">
+                        <td>
+                            <div class="flex items-center gap-2">
+                                <span class="font-semibold text-white">{{ ejercicio.nombre }}</span>
+                                {% if ejercicio.es_record_reciente %}
+                                <span class="badge badge-gold" title="Récord reciente">
+                                    <i class="fas fa-crown" aria-hidden="true"></i> PR
+                                </span>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td class="text-center">
+                            <span class="badge badge-blue">{{ ejercicio.veces_realizado }}</span>
+                        </td>
+                        <td class="text-center text-gray-300">{{ ejercicio.peso_inicial }} kg</td>
+                        <td class="text-center">
+                            <span class="font-bold text-cyan-400">{{ ejercicio.peso_actual }} kg</span>
+                        </td>
+                        <td class="text-center">
+                            <span class="font-bold text-green-400">{{ ejercicio.peso_maximo }} kg</span>
+                        </td>
+                        <td class="text-center">
+                            {% if ejercicio.progresion_kg > 0 %}
+                            <span class="text-green-400 font-semibold">
+                                <i class="fas fa-arrow-up" aria-hidden="true"></i> +{{ ejercicio.progresion_porcentaje }}%
+                            </span>
+                            {% elif ejercicio.progresion_kg < 0 %}
+                            <span class="text-red-400 font-semibold">
+                                <i class="fas fa-arrow-down" aria-hidden="true"></i> {{ ejercicio.progresion_porcentaje }}%
+                            </span>
+                            {% else %}
+                            <span class="text-gray-400">0%</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center text-purple-400 font-semibold">{{ ejercicio.volumen_total|floatformat:0 }} kg</td>
+                        <td class="text-center">
+                            {% if ejercicio.1rm_estimado %}
+                            <span class="text-yellow-400 font-semibold">{{ ejercicio.1rm_estimado }} kg</span>
+                            {% else %}
+                            <span class="text-gray-500">N/A</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center text-gray-400 text-sm">{{ ejercicio.ultima_fecha|date:"d/m/Y" }}</td>
+                        <td class="text-center">
+                            <button
+                                class="btn-icon btn-grafico"
+                                data-ejercicio-id="ejercicio-{{ forloop.counter }}"
+                                data-ejercicio-nombre="{{ ejercicio.nombre }}"
+                                aria-label="Ver detalles de {{ ejercicio.nombre }}"
+                            >
+                                <i class="fas fa-chart-line" aria-hidden="true"></i>
+                            </button>
+                            <!-- Datos del historial embebidos en el HTML -->
+                            <script type="application/json" id="data-ejercicio-{{ forloop.counter }}">
+                                {{ ejercicio.historial|safe }}
+                            </script>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <p class="text-gray-400">No se encontraron ejercicios con los filtros aplicados.</p>
+        </div>
+        {% endif %}
+    </div>
+
+    {% endif %}
+</div>
+
+<!-- MODAL PARA DETALLE DE EJERCICIO -->
+<div id="modalDetalleEjercicio" class="modal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 id="modalTitulo" class="text-2xl font-bold text-white"></h3>
+            <button class="modal-close" onclick="cerrarModal()" aria-label="Cerrar modal">
+                <i class="fas fa-times" aria-hidden="true"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div class="h-80 mb-4">
+                <canvas id="graficoProgresion" aria-label="Gráfico de progresión del ejercicio"></canvas>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div class="stat-mini">
+                    <p class="text-gray-400 text-sm">Registros</p>
+                    <p id="modalRegistros" class="text-2xl font-bold text-white"></p>
+                </div>
+                <div class="stat-mini">
+                    <p class="text-gray-400 text-sm">Peso Promedio</p>
+                    <p id="modalPesoPromedio" class="text-2xl font-bold text-cyan-400"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="{% static 'js/dashboard_ejercicios.js' %}"></script>
+<script>
+    // Pasar datos del backend al JavaScript
+    window.dashboardData = {
+        volumenMensualLabels: {{ volumen_mensual_labels|safe }},
+        volumenMensualData: {{ volumen_mensual_data|safe }}
+    };
+</script>
+{% endblock %}

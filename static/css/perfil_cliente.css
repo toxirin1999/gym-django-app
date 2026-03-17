@@ -1,0 +1,291 @@
+/**
+ * perfil_cliente.css
+ * Estilos personalizados para la página de perfil del cliente
+ * Utiliza Tailwind CSS como base y define componentes reutilizables
+ */
+
+/* ==========================================
+   COMPONENTE: CARD HALO
+   ========================================== */
+.card-halo {
+    background-color: rgba(30, 30, 30, 0.7);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(77, 208, 225, 0.3);
+    border-radius: 1rem;
+    padding: 1.5rem;
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card-halo:hover {
+    box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.2), 0 4px 6px -4px rgb(0 0 0 / 0.2);
+}
+
+/* ==========================================
+   COMPONENTE: TÍTULOS DE SECCIÓN
+   ========================================== */
+.section-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #ffffff;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+}
+
+/* ==========================================
+   COMPONENTE: BADGES
+   ========================================== */
+.badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1.5;
+}
+
+.badge-blue {
+    background-color: rgba(30, 58, 138, 0.7);
+    color: rgb(147, 197, 253);
+}
+
+.badge-success {
+    background-color: rgb(22, 163, 74);
+    color: #ffffff;
+}
+
+.badge-danger {
+    background-color: rgb(220, 38, 38);
+    color: #ffffff;
+}
+
+/* ==========================================
+   COMPONENTE: BOTONES PRIMARIOS
+   ========================================== */
+.btn-primary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    background: linear-gradient(to right, rgb(6, 182, 212), rgb(217, 70, 239));
+    color: #ffffff;
+    font-weight: 600;
+    padding: 0.5rem 1rem;
+    border-radius: 0.75rem;
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    text-decoration: none;
+}
+
+.btn-primary:hover {
+    transform: scale(1.05);
+    box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.2);
+}
+
+.btn-primary:focus {
+    outline: 2px solid rgb(6, 182, 212);
+    outline-offset: 2px;
+}
+
+/* ==========================================
+   COMPONENTE: BOTONES SECUNDARIOS
+   ========================================== */
+.btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    background: linear-gradient(to right, rgb(251, 191, 36), rgb(249, 115, 22));
+    color: #000000;
+    font-weight: 600;
+    padding: 0.5rem 1rem;
+    border-radius: 0.75rem;
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    text-decoration: none;
+}
+
+.btn-secondary:hover {
+    transform: scale(1.05);
+    box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.2);
+}
+
+.btn-secondary:focus {
+    outline: 2px solid rgb(251, 191, 36);
+    outline-offset: 2px;
+}
+
+/* ==========================================
+   COMPONENTE: BOTÓN ACCENT (MORADO)
+   ========================================== */
+.btn-accent {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    background: linear-gradient(to right, rgb(168, 85, 247), rgb(99, 102, 241));
+    color: #ffffff;
+    font-weight: 600;
+    padding: 0.5rem 1rem;
+    border-radius: 0.75rem;
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    text-decoration: none;
+}
+
+.btn-accent:hover {
+    transform: scale(1.05);
+    box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.2);
+}
+
+.btn-accent:focus {
+    outline: 2px solid rgb(168, 85, 247);
+    outline-offset: 2px;
+}
+
+/* ==========================================
+   COMPONENTE: BOTÓN SUCCESS PEQUEÑO
+   ========================================== */
+.btn-success-sm {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    background: linear-gradient(to right, rgb(74, 222, 128), rgb(132, 204, 22));
+    color: #000000;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.25rem 0.75rem;
+    border-radius: 0.5rem;
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    text-decoration: none;
+}
+
+.btn-success-sm:hover {
+    transform: scale(1.05);
+    box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.2);
+}
+
+.btn-success-sm:focus {
+    outline: 2px solid rgb(74, 222, 128);
+    outline-offset: 2px;
+}
+
+/* ==========================================
+   COMPONENTE: ESTADOS VACÍOS
+   ========================================== */
+.empty-state {
+    text-align: center;
+    padding: 2rem 1rem;
+}
+
+.empty-state-inline {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem;
+}
+
+/* ==========================================
+   COMPONENTE: ACORDEÓN
+   ========================================== */
+.semana-acordeon {
+    overflow: hidden;
+}
+
+.semana-header {
+    user-select: none;
+}
+
+.accordion-icon {
+    transition: transform 0.3s ease;
+}
+
+/* ==========================================
+   MEJORAS DE ACCESIBILIDAD
+   ========================================== */
+
+/* Mejora del contraste para texto gris */
+.text-gray-300 {
+    color: rgb(209, 213, 219);
+}
+
+/* Focus visible para elementos interactivos */
+a:focus,
+button:focus,
+[role="button"]:focus {
+    outline: 2px solid rgb(6, 182, 212);
+    outline-offset: 2px;
+}
+
+/* Mejora de hover para elementos interactivos */
+.semana-header:hover {
+    background-color: rgba(55, 65, 81, 0.5);
+}
+
+/* ==========================================
+   RESPONSIVE DESIGN
+   ========================================== */
+
+/* Ajustes para pantallas pequeñas */
+@media (max-width: 640px) {
+    .card-halo {
+        padding: 1rem;
+    }
+    
+    .section-title {
+        font-size: 1.125rem;
+    }
+    
+    .btn-primary,
+    .btn-secondary,
+    .btn-accent {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+/* Ajustes para pantallas medianas */
+@media (min-width: 641px) and (max-width: 1024px) {
+    .card-halo {
+        padding: 1.25rem;
+    }
+}
+
+/* ==========================================
+   ANIMACIONES SUTILES
+   ========================================== */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.semana-contenido {
+    animation: fadeIn 0.3s ease-out;
+}
+
+/* ==========================================
+   UTILIDADES ADICIONALES
+   ========================================== */
+
+/* Transición suave para todos los elementos interactivos */
+a,
+button,
+[role="button"] {
+    transition: all 0.2s ease;
+}
+
+/* Mejora visual para el canvas del gráfico */
+canvas {
+    border-radius: 0.5rem;
+}

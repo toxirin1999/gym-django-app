@@ -1,0 +1,306 @@
+{% extends 'diario/base_stoic.html' %}
+{% load static %}
+
+{% block title %}Análisis Histórico Total{% endblock %}
+
+{% block extra_css %}
+<style>
+    .nav-tabs-custom {
+        border-bottom: 2px solid #e0e0e0;
+        margin-bottom: 2rem;
+    }
+    .nav-tabs-custom .nav-link {
+        color: #666;
+        border: none;
+        border-bottom: 3px solid transparent;
+        padding: 1rem 1.5rem;
+        font-weight: 500;
+        transition: all 0.3s;
+    }
+    .nav-tabs-custom .nav-link:hover {
+        border-bottom-color: #ddd;
+        color: #333;
+    }
+    .nav-tabs-custom .nav-link.active {
+        color: #667eea;
+        border-bottom-color: #667eea;
+        background: none;
+    }
+    .color-indicator { width: 20px; height: 20px; border-radius: 50%; flex-shrink: 0; }
+    .stat-card { transition: transform 0.2s; }
+    .stat-card:hover { transform: translateY(-5px); }
+    .insight-card {
+        border-left: 4px solid #FFD700;
+        background: linear-gradient(135deg, rgba(255, 215, 0, 0.1), rgba(255, 215, 0, 0));
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid fade-in-up">
+    <!-- Navegación entre vistas -->
+    <div class="mb-4">
+        <ul class="nav nav-tabs-custom" role="tablist">
+            <li class="nav-item" role="presentation">
+                <a class="nav-link" href="{% url 'diario:analisis_habitos_mes_actual' %}">
+                    <i class="fas fa-calendar-day me-2"></i>Mes Actual
+                </a>
+            </li>
+            <li class="nav-item" role="presentation">
+                <a class="nav-link" href="{% url 'diario:analisis_habitos_anual' %}">
+                    <i class="fas fa-calendar-alt me-2"></i>Año Completo
+                </a>
+            </li>
+            <li class="nav-item" role="presentation">
+                <a class="nav-link active" href="{% url 'diario:analisis_habitos_historico' %}">
+                    <i class="fas fa-history me-2"></i>Histórico Total
+                </a>
+            </li>
+        </ul>
+    </div>
+
+    <!-- Encabezado -->
+    <div class="card shadow-soft mb-4">
+        <div class="card-body p-4">
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-history fa-3x me-4 text-warning"></i>
+                    <div>
+                        <h1 class="card-title text-gradient mb-1">Análisis Histórico Total</h1>
+                        <p class="text-muted mb-0">Todos tus hábitos a lo largo del tiempo</p>
+                    </div>
+                </div>
+                <div class="d-flex gap-2">
+                    <a href="{% url 'diario:dashboard_diario' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if sin_datos %}
+    <div class="alert alert-info">
+        <i class="fas fa-info-circle me-2"></i>
+        No hay datos históricos registrados. Comienza a registrar tus hábitos en Prosoche.
+    </div>
+    {% else %}
+    
+    <!-- Resumen Histórico General -->
+    <div class="card shadow-soft mb-4">
+        <div class="card-header bg-warning text-dark">
+            <h5 class="mb-0">
+                <i class="fas fa-crown me-2"></i>Resumen Histórico Total
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="row text-center">
+                <div class="col-md-3 mb-3 mb-md-0">
+                    <div class="stat-card p-3">
+                        <i class="fas fa-calendar fa-3x text-primary mb-3"></i>
+                        <div class="h2 mb-1">{{ estadisticas.años_registrados }}</div>
+                        <small class="text-muted">Años Registrados</small>
+                        <div class="mt-2">
+                            <small class="badge bg-secondary">
+                                {{ estadisticas.primer_año }} - {{ estadisticas.ultimo_año }}
+                            </small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3 mb-md-0">
+                    <div class="stat-card p-3">
+                        <i class="fas fa-tasks fa-3x text-success mb-3"></i>
+                        <div class="h2 mb-1">{{ estadisticas.total_habitos }}</div>
+                        <small class="text-muted">Hábitos Únicos</small>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3 mb-md-0">
+                    <div class="stat-card p-3">
+                        <i class="fas fa-percentage fa-3x text-info mb-3"></i>
+                        <div class="h2 mb-1 text-{% if estadisticas.promedio_historico >= 70 %}success{% elif estadisticas.promedio_historico >= 40 %}warning{% else %}danger{% endif %}">
+                            {{ estadisticas.promedio_historico|floatformat:0 }}%
+                        </div>
+                        <small class="text-muted">Promedio Histórico</small>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3 mb-md-0">
+                    <div class="stat-card p-3">
+                        <i class="fas fa-book fa-3x text-warning mb-3"></i>
+                        <div class="h2 mb-1">{{ estadisticas.total_entradas }}</div>
+                        <small class="text-muted">Entradas Totales</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Insights Históricos -->
+    {% if insights %}
+    <div class="card shadow-soft mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">
+                <i class="fas fa-medal me-2 text-warning"></i>Insights de Tu Trayectoria
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                {% for insight in insights %}
+                <div class="col-md-6 mb-3">
+                    <div class="insight-card p-3 rounded h-100">
+                        <div class="d-flex">
+                            <i class="fas {{ insight.icono }} fa-2x me-3 text-warning flex-shrink-0"></i>
+                            <div>
+                                <h6 class="mb-2"><strong>{{ insight.titulo }}</strong></h6>
+                                <p class="mb-2 text-muted small">{{ insight.descripcion }}</p>
+                                <small class="text-success">
+                                    <i class="fas fa-arrow-right me-1"></i>{{ insight.sugerencia }}
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Estadísticas por Año -->
+    <div class="card shadow-soft mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">
+                <i class="fas fa-chart-bar me-2"></i>Estadísticas por Año
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th><i class="fas fa-calendar me-2"></i>Año</th>
+                            <th class="text-center"><i class="fas fa-calendar-check me-2"></i>Meses</th>
+                            <th class="text-center"><i class="fas fa-book me-2"></i>Entradas</th>
+                            <th class="text-center"><i class="fas fa-tasks me-2"></i>Hábitos</th>
+                            <th class="text-center">Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for año_stat in años_estadisticas %}
+                        <tr>
+                            <td><strong class="text-primary">{{ año_stat.año }}</strong></td>
+                            <td class="text-center">
+                                <span class="badge bg-info">{{ año_stat.meses }}/12</span>
+                            </td>
+                            <td class="text-center">{{ año_stat.entradas }}</td>
+                            <td class="text-center">{{ año_stat.habitos_unicos }}</td>
+                            <td class="text-center">
+                                <a href="{% url 'diario:analisis_habitos_anual_año' año_stat.año %}" 
+                                   class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-eye me-1"></i>Ver Detalle
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Todos los Hábitos Históricos -->
+    <div class="card shadow-soft mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">
+                <i class="fas fa-list-check me-2"></i>Todos los Hábitos (Ordenados por Éxito Histórico)
+            </h5>
+        </div>
+        <div class="card-body">
+            {% for habito in habitos %}
+            <div class="mb-4 pb-4 {% if not forloop.last %}border-bottom{% endif %}">
+                <!-- Encabezado del hábito -->
+                <div class="row align-items-center mb-3">
+                    <div class="col-md-6">
+                        <div class="d-flex align-items-center">
+                            <div class="color-indicator me-3" style="background: {{ habito.color }};"></div>
+                            <div>
+                                <h6 class="mb-0">
+                                    <strong>{{ habito.nombre }}</strong>
+                                    {% if forloop.counter == 1 %}
+                                    <i class="fas fa-crown text-warning ms-2" title="Hábito más exitoso"></i>
+                                    {% endif %}
+                                </h6>
+                                <small class="text-muted">
+                                    {{ habito.total_dias_completados }} de {{ habito.total_dias_posibles }} días
+                                    • {{ habito.meses_totales }} meses registrados
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 text-md-end mt-2 mt-md-0">
+                        <span class="badge bg-{% if habito.porcentaje_historico >= 70 %}success{% elif habito.porcentaje_historico >= 40 %}warning{% else %}danger{% endif %} me-2" 
+                              style="font-size: 1.2rem; padding: 0.5rem 1rem;">
+                            {{ habito.porcentaje_historico|floatformat:0 }}%
+                        </span>
+                        <span class="badge bg-info">
+                            <i class="fas fa-hourglass me-1"></i>{{ habito.años_de_antiguedad }} año(s)
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Barra de progreso -->
+                <div class="progress mb-3" style="height: 25px;">
+                    <div class="progress-bar" 
+                         style="width: {{ habito.porcentaje_historico }}%; background: {{ habito.color }};"
+                         role="progressbar">
+                        <strong>{{ habito.porcentaje_historico|floatformat:1 }}%</strong>
+                    </div>
+                </div>
+
+                <!-- Estadísticas detalladas -->
+                <div class="row g-3">
+                    <div class="col-6 col-md-3">
+                        <div class="p-2 bg-light rounded text-center">
+                            <small class="text-muted d-block mb-1">Primer Registro</small>
+                            <strong class="text-primary">{{ habito.primer_registro }}</strong>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="p-2 bg-light rounded text-center">
+                            <small class="text-muted d-block mb-1">Último Registro</small>
+                            <strong class="text-success">{{ habito.ultimo_registro }}</strong>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="p-2 bg-light rounded text-center">
+                            <small class="text-muted d-block mb-1">Meses Totales</small>
+                            <strong class="text-info">{{ habito.meses_totales }}</strong>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="p-2 bg-light rounded text-center">
+                            <small class="text-muted d-block mb-1">Antigüedad</small>
+                            <strong class="text-warning">
+                                {{ habito.años_de_antiguedad }} año(s)
+                            </strong>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Mensaje especial para hábitos veteranos -->
+                {% if habito.años_de_antiguedad >= 2 %}
+                <div class="alert alert-success mt-3 mb-0 py-2">
+                    <small>
+                        <i class="fas fa-medal me-2"></i>
+                        <strong>Hábito Veterano:</strong> Has mantenido este hábito durante {{ habito.años_de_antiguedad }} años. ¡Impresionante persistencia!
+                    </small>
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    {% endif %}
+</div>
+{% endblock %}
+

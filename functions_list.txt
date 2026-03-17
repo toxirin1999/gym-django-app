@@ -1,0 +1,79 @@
+
+def obtener_ultimo_peso_ejercicio(cliente_id, nombre_ejercicio, fecha_actual):
+def detalle_ejercicio(request, nombre):
+def ejercicios_realizados_view(request):
+    def convertir_peso(p):
+def dashboard_liftin(request, cliente_id):  # <-- Acepta el ID desde la URL
+def importar_liftin(request):
+def lista_entrenamientos(request):
+def detalle_entrenamiento(request, entrenamiento_id):
+def estadisticas_liftin(request):
+def exportar_datos(request):
+def exportar_csv(entrenamientos):
+def exportar_json(entrenamientos):
+def api_stats_dashboard(request):
+def entrenos_filtrados(request, rango):
+def historial_entrenos(request):
+def crear_entreno(entreno, ejercicios_forms, request, cliente, rutina):
+def adaptar_plan_personalizado(entreno, ejercicios_forms, cliente, rutina, request):
+def actualizar_rutina_cliente(cliente, rutina):
+def empezar_entreno(request, rutina_id):
+def adaptar_plan_personalizado_manual(entreno, request, cliente, rutina):
+def crear_entreno_seguro(entreno, ejercicios_forms, request):
+def adaptar_plan_personalizado_seguro(entreno, ejercicios_forms, cliente_id, rutina_id, request):
+def crear_entreno_seguro(entreno, ejercicios_forms, request):
+def adaptar_plan_personalizado_seguro(entreno, ejercicios_forms, cliente_id, rutina_id, request):
+def hacer_entreno(request):
+def eliminar_entreno(request, pk):
+def mostrar_entreno_anterior(request, cliente_id, rutina_id):
+    def default(self, obj):
+    def default(self, obj):
+def resumen_entreno(request, pk):
+def importar_liftin_completo(request):
+def importar_liftin_basico(request):
+def buscar_entrenamientos_liftin(request):
+def detalle_ejercicios_liftin(request, entrenamiento_id):
+def exportar_datos_liftin(request):
+def exportar_csv_liftin(entrenamientos):
+def exportar_json_liftin(entrenamientos):
+def comparar_liftin_manual(request):
+def api_stats_liftin(request):
+def api_ejercicios_liftin(request, entrenamiento_id):
+def validar_datos_liftin(request):
+def preview_importacion(request):
+def gestionar_ejercicios_base(request):
+def vista_entrenamiento_activo(request, cliente_id):
+def guardar_entrenamiento_activo(request, cliente_id):
+def vista_plan_anual(request, cliente_id):
+def obtener_o_generar_plan(request, cliente_id):
+    def _derivar_fase_css(nombre_rutina: str) -> str:
+    def _normalizar_ejercicio_ui(ej: dict, idx: int) -> dict:
+    def _normalizar_plan_ui(plan: dict) -> dict:
+def ajax_obtener_entrenamiento_dia(request, cliente_id):
+def ajax_obtener_entrenamiento_dia(request, cliente_id):
+        def _normalizar_ejercicio_ui(ej: dict, idx: int) -> dict:
+def ajax_obtener_entrenamientos_mes(request, cliente_id):
+        def _normalizar_ejercicio_ui(ej: dict, idx: int) -> dict:
+def vista_plan_calendario(request, cliente_id):
+def api_regenerar_plan_helms(request, cliente_id):
+def dashboard_comparacion_planificadores(request, cliente_id):
+def _calcular_volumen_plan(plan: Dict) -> int:
+def _calcular_tiempo_plan(plan: Dict) -> int:
+def vista_plan_calendario_con_conversion(request, cliente_id):
+def vista_resumen_anual(request, cliente_id):
+def gamificacion_resumen(request, cliente_id):
+def calcular_1rm_epley(peso, repeticiones):
+def calcular_1rm_brzycki(peso, repeticiones):
+def dashboard_ejercicios(request, cliente_id):
+def detalle_ejercicio_especifico(request, cliente_id, nombre_ejercicio):
+def api_registrar_ejercicio(request):
+def api_obtener_estadisticas(request):
+def api_obtener_perfil(request):
+def dashboard_evolucion(request, cliente_id):
+def evaluacion_api_view(request, cliente_id):
+def integrar_evaluacion_en_dashboard(request, cliente_id):
+def evaluacion_profesional_view(request, cliente_id):
+    def default(self, obj):
+def evaluacion_profesional_api(request, cliente_id):
+def actualizar_fase_cliente(request, cliente_id):
+

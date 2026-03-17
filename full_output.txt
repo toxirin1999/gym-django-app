@@ -1,0 +1,15 @@
+118 objects imported automatically (use -v 2 for details).
+
+Debug Client: david (ID: 2)
+
+--- INICIANDO DEPURACIÓN DE obtener_ejercicios_tabla ---
+1. Buscando ejercicios para el cliente: david (ID: 2)
+2. Consulta inicial encontró: 341 registros de EjercicioRealizado para este cliente.
+4. La consulta final con .values() tiene 341 elementos.
+5. Primeros 3 registros crudos de la base de datos:
+   - {'nombre_ejercicio': 'Sentadilla Trasera Con Barra', 'grupo_muscular': 'Otros', 'peso_kg': 48.333333333333336, 'series': 6, 'repeticiones': 7, 'completado': True, 'entreno__fecha': datetime.date(2025, 8, 27), 'entreno__id': 103}
+   - {'nombre_ejercicio': 'Peso Muerto Rumano', 'grupo_muscular': 'Otros', 'peso_kg': 70.0, 'series': 6, 'repeticiones': 8, 'completado': True, 'entreno__fecha': datetime.date(2025, 8, 29), 'entreno__id': 104}
+   - {'nombre_ejercicio': 'Curl Femoral Sentado', 'grupo_muscular': 'Otros', 'peso_kg': 40.0, 'series': 6, 'repeticiones': 8, 'completado': True, 'entreno__fecha': datetime.date(2025, 8, 29), 'entreno__id': 104}
+6. Se ha construido la lista final 'ejercicios' con 341 diccionarios.
+--- FIN DE DEPURACIÓN ---
+
