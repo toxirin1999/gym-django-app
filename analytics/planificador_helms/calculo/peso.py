@@ -5,8 +5,10 @@ Lógica para el cálculo de pesos de trabajo.
 
 import math
 from typing import Dict, Any, Optional
-from ..config import PROGRESION, REDONDEO, DEFAULTS_1RM, KEYWORDS_BARRA, KEYWORDS_MANCUERNA, KEYWORDS_CABLE, KEYWORDS_MAQUINA
+from ..config import PROGRESION, REDONDEO, DEFAULTS_1RM, KEYWORDS_BARRA, KEYWORDS_MANCUERNA, KEYWORDS_CABLE, \
+    KEYWORDS_MAQUINA
 from ..utils.helpers import normalizar_nombre
+
 
 class CalculadorPeso:
     """Clase encargada de calcular los pesos de trabajo según el sistema Helms."""
@@ -44,7 +46,7 @@ class CalculadorPeso:
             return 0.0
 
         tipo = CalculadorPeso.inferir_tipo_carga(nombre_ejercicio)
-        
+
         # Obtener incremento según configuración
         inc = REDONDEO.get(tipo, REDONDEO['general'])
 
@@ -55,9 +57,13 @@ class CalculadorPeso:
         return round(peso / inc) * inc
 
     @classmethod
-    def calcular_peso_trabajo(cls, nombre_ejercicio: str, repeticiones_str: str, rpe_objetivo: int, maximos_actuales: Dict[str, float] = None) -> float:
+    def calcular_peso_trabajo(cls, nombre_ejercicio: str, repeticiones_str: str, rpe_objetivo: int,
+                              maximos_actuales: Dict[str, float] = None,
+                              rpe_real_anterior: Optional[float] = None) -> float:
         """
         Calcula el peso de trabajo teórico para un ejercicio dado.
+        rpe_real_anterior: RPE real registrado en la última sesión de este ejercicio.
+        Si se proporciona, modula la progresión automáticamente.
         """
         nombre_normalizado = normalizar_nombre(nombre_ejercicio)
         maximos_actuales = maximos_actuales or {}
@@ -70,7 +76,7 @@ class CalculadorPeso:
             for key, val in DEFAULTS_1RM.items():
                 if key in nombre:
                     return val
-            
+
             # TODO: Aquí se podría integrar la lógica de patrones si se tuviera acceso al PatronManager
             # Por ahora usamos el default general de aislamiento si no hay match
             return DEFAULTS_1RM['aislamiento']
@@ -91,14 +97,39 @@ class CalculadorPeso:
             reduccion_por_rpe = (10 - rpe_objetivo) * 0.03
             peso_base_calculado = peso_rpe_10 * (1 - reduccion_por_rpe)
 
-            # 2. Determinar el tipo de progresión basado en el 1RM actual.
+            # 2. Determinar progresión basada en RPE real anterior si existe
             umbral = PROGRESION['umbral_ejercicio_pesado']
-            if one_rm_estimado > umbral:
-                # Progresión porcentual para los grandes levantamientos
-                peso_con_progresion = peso_base_calculado * PROGRESION['porcentual']
+            es_pesado = one_rm_estimado > umbral
+
+            if rpe_real_anterior is not None:
+                diferencia_rpe = rpe_real_anterior - rpe_objetivo
+                if diferencia_rpe <= -2:
+                    # RPE muy por debajo del objetivo — subir agresivo
+                    if es_pesado:
+                        peso_con_progresion = peso_base_calculado * 1.075
+                    else:
+                        peso_con_progresion = peso_base_calculado + PROGRESION['fijo_grande']
+                elif diferencia_rpe <= 0:
+                    # RPE igual o ligeramente por debajo — subir normal
+                    if es_pesado:
+                        peso_con_progresion = peso_base_calculado * PROGRESION['porcentual']
+                    else:
+                        peso_con_progresion = peso_base_calculado + PROGRESION['fijo_pequeno']
+                elif diferencia_rpe <= 2:
+                    # RPE por encima del objetivo — mantener peso
+                    peso_con_progresion = peso_base_calculado
+                else:
+                    # RPE muy por encima — bajar ligeramente
+                    if es_pesado:
+                        peso_con_progresion = peso_base_calculado * 0.95
+                    else:
+                        peso_con_progresion = peso_base_calculado - PROGRESION['fijo_pequeno']
             else:
-                # Progresión fija para ejercicios más ligeros
-                peso_con_progresion = peso_base_calculado + PROGRESION['fijo_pequeno']
+                # Sin historial de RPE — progresión estándar
+                if es_pesado:
+                    peso_con_progresion = peso_base_calculado * PROGRESION['porcentual']
+                else:
+                    peso_con_progresion = peso_base_calculado + PROGRESION['fijo_pequeno']
 
             # 3. Redondear al múltiplo más cercano.
             peso_final = cls.redondear_peso(peso_con_progresion, nombre_ejercicio)
