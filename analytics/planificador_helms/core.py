@@ -219,12 +219,32 @@ class PlanificadorHelms:
 
                     if series_ajustadas <= 0: continue
 
-                    # Obtener RPE real de la última sesión de este ejercicio
-                    rpe_real_anterior = self._obtener_rpe_real_anterior(nombre)
-
-                    # Calcular parámetros con RPE real para modular progresión
-                    peso = CalculadorPeso.calcular_peso_trabajo(nombre, rep_range, rpe_objetivo, self.maximos_actuales,
-                                                                rpe_real_anterior)
+                    # Obtener historial real del ejercicio
+                    historial = self._obtener_historial_ejercicio(nombre)
+                    rpe_real_anterior = historial['rpe_real']
+                    peso_real_anterior = historial['peso_real']
+                    print(
+                        f"DEBUG PESO: {nombre} | real={peso_real_anterior} | rpe_real={rpe_real_anterior} | rpe_obj={rpe_objetivo} | peso_final={peso}")
+                    if peso_real_anterior and rpe_real_anterior is not None:
+                        # Partir del peso real usado y aplicar progresión según RPE
+                        diferencia_rpe = rpe_real_anterior - rpe_objetivo
+                        from analytics.planificador_helms.calculo.peso import PROGRESION, REDONDEO
+                        if diferencia_rpe <= -2:
+                            incremento = PROGRESION['fijo_grande']  # RPE muy fácil → +2.5kg
+                        elif diferencia_rpe <= 0:
+                            incremento = PROGRESION['fijo_pequeno']  # RPE ok → +1.25kg
+                        elif diferencia_rpe <= 2:
+                            incremento = 0  # RPE alto → mantener
+                        else:
+                            incremento = -PROGRESION['fijo_pequeno']  # RPE muy alto → bajar
+                        peso_nuevo = peso_real_anterior + incremento
+                        tipo = CalculadorPeso.inferir_tipo_carga(nombre)
+                        inc = REDONDEO.get(tipo, REDONDEO['general'])
+                        peso = round(peso_nuevo / inc) * inc if inc > 0 else round(peso_nuevo, 1)
+                    else:
+                        # Sin historial — calcular desde 1RM
+                        peso = CalculadorPeso.calcular_peso_trabajo(nombre, rep_range, rpe_objetivo,
+                                                                    self.maximos_actuales, rpe_real_anterior)
                     tempo = TEMPOS.get(fase, TEMPOS['hipertrofia'])
                     descanso = self._calcular_descanso_pormenorizado(nombre, rpe_objetivo, tipo_ej)
 
@@ -258,29 +278,29 @@ class PlanificadorHelms:
                     return tipo
         return 'aislamiento'
 
-    def _obtener_rpe_real_anterior(self, nombre_ejercicio: str) -> Optional[float]:
-        """
-        Consulta la BD para obtener el RPE real promedio de la última sesión
-        en que se realizó este ejercicio.
-        """
+    def _obtener_historial_ejercicio(self, nombre_ejercicio: str) -> dict:
+        """Devuelve el último peso real usado y RPE medio de las últimas series."""
+        resultado = {'peso_real': None, 'rpe_real': None}
         try:
             from entrenos.models import SerieRealizada
             nombre_lower = nombre_ejercicio.lower()
             series = SerieRealizada.objects.filter(
-                ejercicio__nombre__icontains=nombre_lower,
-                rpe_real__isnull=False
+                ejercicio__nombre__icontains=nombre_lower
             ).order_by('-id')[:3]
-
             if not series:
-                return None
-
+                return resultado
+            pesos = [float(s.peso_kg) for s in series if s.peso_kg]
             rpes = [float(s.rpe_real) for s in series if s.rpe_real is not None]
-            if not rpes:
-                return None
-
-            return sum(rpes) / len(rpes)
+            if pesos:
+                resultado['peso_real'] = max(pesos)
+            if rpes:
+                resultado['rpe_real'] = sum(rpes) / len(rpes)
         except Exception:
-            return None
+            pass
+        return resultado
+
+    def _obtener_rpe_real_anterior(self, nombre_ejercicio: str) -> Optional[float]:
+        return self._obtener_historial_ejercicio(nombre_ejercicio)['rpe_real']
 
     def _calcular_descanso_pormenorizado(self, nombre: str, rpe: int, tipo: str) -> int:
         """Calcula el tiempo de descanso."""
