@@ -20,8 +20,8 @@ PROGRESION = {
 REDONDEO = {
     'barra': 2.5,
     'mancuerna': 2.5,
-    'maquina': 5.0,
-    'cable': 5.0,
+    'maquina': 2.5,
+    'cable': 2.5,
     'general': 2.5
 }
 
@@ -119,7 +119,7 @@ TEMPOS = {
 DESCANSOS = {
     'principal': {
         'rpe_alto': 4,  # RPE >= 8
-        'rpe_bajo': 3   # RPE < 8
+        'rpe_bajo': 3  # RPE < 8
     },
     'secundario': {
         'rpe_alto': 2,

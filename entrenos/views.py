@@ -989,12 +989,20 @@ def empezar_entreno(request, rutina_id):
         rutina = get_object_or_404(Rutina, id=rutina_id)
         with connection.cursor() as cursor:
             cursor.execute("""
-                SELECT re.id, re.rutina_id, re.ejercicio_id, re.series, re.repeticiones, re.peso_kg, 
-                       e.id as ej_id, e.nombre as ej_nombre, e.grupo_muscular, e.equipo
-                FROM rutinas_rutinaejercicio re
-                JOIN rutinas_ejercicio e ON re.ejercicio_id = e.id
-                WHERE re.rutina_id = %s
-            """, [rutina_id])
+                           SELECT re.id,
+                                  re.rutina_id,
+                                  re.ejercicio_id,
+                                  re.series,
+                                  re.repeticiones,
+                                  re.peso_kg,
+                                  e.id     as ej_id,
+                                  e.nombre as ej_nombre,
+                                  e.grupo_muscular,
+                                  e.equipo
+                           FROM rutinas_rutinaejercicio re
+                                    JOIN rutinas_ejercicio e ON re.ejercicio_id = e.id
+                           WHERE re.rutina_id = %s
+                           """, [rutina_id])
             columns = [col[0] for col in cursor.description]
             ejercicios_rutina = [dict(zip(columns, row)) for row in cursor.fetchall()]
     except Exception as e:
@@ -1147,12 +1155,12 @@ def empezar_entreno(request, rutina_id):
             try:
                 with connection.cursor() as cursor:
                     cursor.execute("""
-                        SELECT id, fecha
-                        FROM entrenos_entrenorealizado
-                        WHERE cliente_id = %s AND rutina_id = %s
-                        ORDER BY fecha DESC, id DESC
-                        LIMIT 1
-                    """, [cliente_inicial.id, rutina_id])
+                                   SELECT id, fecha
+                                   FROM entrenos_entrenorealizado
+                                   WHERE cliente_id = %s
+                                     AND rutina_id = %s
+                                   ORDER BY fecha DESC, id DESC LIMIT 1
+                                   """, [cliente_inicial.id, rutina_id])
                     ultimo_entreno_row = cursor.fetchone()
 
                 if ultimo_entreno_row:
@@ -1160,13 +1168,19 @@ def empezar_entreno(request, rutina_id):
 
                     with connection.cursor() as cursor:
                         cursor.execute("""
-                            SELECT sr.id, sr.entreno_id, sr.ejercicio_id, sr.serie_numero, 
-                                   sr.repeticiones, sr.peso_kg, sr.completado,
-                                   e.id as ej_id, e.nombre as ej_nombre
-                            FROM entrenos_serierealizada sr
-                            JOIN rutinas_ejercicio e ON sr.ejercicio_id = e.id
-                            WHERE sr.entreno_id = %s
-                        """, [ultimo_entreno_id])
+                                       SELECT sr.id,
+                                              sr.entreno_id,
+                                              sr.ejercicio_id,
+                                              sr.serie_numero,
+                                              sr.repeticiones,
+                                              sr.peso_kg,
+                                              sr.completado,
+                                              e.id     as ej_id,
+                                              e.nombre as ej_nombre
+                                       FROM entrenos_serierealizada sr
+                                                JOIN rutinas_ejercicio e ON sr.ejercicio_id = e.id
+                                       WHERE sr.entreno_id = %s
+                                       """, [ultimo_entreno_id])
                         columns = [col[0] for col in cursor.description]
                         series_rows = [dict(zip(columns, row)) for row in cursor.fetchall()]
 
@@ -1395,25 +1409,37 @@ def adaptar_plan_personalizado_manual(entreno, request, cliente, rutina):
         # Obtener ejercicios de la rutina con SQL directo
         with connection.cursor() as cursor:
             cursor.execute("""
-                SELECT re.id, re.rutina_id, re.ejercicio_id, re.series, re.repeticiones, re.peso_kg, 
-                       e.id as ej_id, e.nombre as ej_nombre
-                FROM rutinas_rutinaejercicio re
-                JOIN rutinas_ejercicio e ON re.ejercicio_id = e.id
-                WHERE re.rutina_id = %s
-            """, [rutina.id])
+                           SELECT re.id,
+                                  re.rutina_id,
+                                  re.ejercicio_id,
+                                  re.series,
+                                  re.repeticiones,
+                                  re.peso_kg,
+                                  e.id     as ej_id,
+                                  e.nombre as ej_nombre
+                           FROM rutinas_rutinaejercicio re
+                                    JOIN rutinas_ejercicio e ON re.ejercicio_id = e.id
+                           WHERE re.rutina_id = %s
+                           """, [rutina.id])
             columns = [col[0] for col in cursor.description]
             ejercicios_rutina = [dict(zip(columns, row)) for row in cursor.fetchall()]
 
         # Obtener series realizadas con SQL directo
         with connection.cursor() as cursor:
             cursor.execute("""
-                SELECT sr.id, sr.entreno_id, sr.ejercicio_id, sr.serie_numero, 
-                       sr.repeticiones, sr.peso_kg, sr.completado,
-                       e.id as ej_id, e.nombre as ej_nombre
-                FROM entrenos_serierealizada sr
-                JOIN rutinas_ejercicio e ON sr.ejercicio_id = e.id
-                WHERE sr.entreno_id = %s
-            """, [entreno.id])
+                           SELECT sr.id,
+                                  sr.entreno_id,
+                                  sr.ejercicio_id,
+                                  sr.serie_numero,
+                                  sr.repeticiones,
+                                  sr.peso_kg,
+                                  sr.completado,
+                                  e.id     as ej_id,
+                                  e.nombre as ej_nombre
+                           FROM entrenos_serierealizada sr
+                                    JOIN rutinas_ejercicio e ON sr.ejercicio_id = e.id
+                           WHERE sr.entreno_id = %s
+                           """, [entreno.id])
             columns = [col[0] for col in cursor.description]
             series_rows = [dict(zip(columns, row)) for row in cursor.fetchall()]
 
@@ -1936,12 +1962,12 @@ def mostrar_entreno_anterior(request, cliente_id, rutina_id):
         # Obtener último entreno con SQL directo
         with connection.cursor() as cursor:
             cursor.execute("""
-                SELECT id, fecha
-                FROM entrenos_entrenorealizado
-                WHERE cliente_id = %s AND rutina_id = %s
-                ORDER BY fecha DESC, id DESC
-                LIMIT 1
-            """, [cliente_id, rutina_id])
+                           SELECT id, fecha
+                           FROM entrenos_entrenorealizado
+                           WHERE cliente_id = %s
+                             AND rutina_id = %s
+                           ORDER BY fecha DESC, id DESC LIMIT 1
+                           """, [cliente_id, rutina_id])
             entreno_row = cursor.fetchone()
 
         if entreno_row:
@@ -1961,13 +1987,19 @@ def mostrar_entreno_anterior(request, cliente_id, rutina_id):
             # Obtener series con SQL directo
             with connection.cursor() as cursor:
                 cursor.execute("""
-                    SELECT sr.id, sr.entreno_id, sr.ejercicio_id, sr.serie_numero, 
-                           sr.repeticiones, sr.peso_kg, sr.completado,
-                           e.id as ej_id, e.nombre as ej_nombre
-                    FROM entrenos_serierealizada sr
-                    JOIN rutinas_ejercicio e ON sr.ejercicio_id = e.id
-                    WHERE sr.entreno_id = %s
-                """, [entreno_id])
+                               SELECT sr.id,
+                                      sr.entreno_id,
+                                      sr.ejercicio_id,
+                                      sr.serie_numero,
+                                      sr.repeticiones,
+                                      sr.peso_kg,
+                                      sr.completado,
+                                      e.id     as ej_id,
+                                      e.nombre as ej_nombre
+                               FROM entrenos_serierealizada sr
+                                        JOIN rutinas_ejercicio e ON sr.ejercicio_id = e.id
+                               WHERE sr.entreno_id = %s
+                               """, [entreno_id])
                 columns = [col[0] for col in cursor.description]
                 series_rows = [dict(zip(columns, row)) for row in cursor.fetchall()]
 
@@ -2029,12 +2061,18 @@ def mostrar_entreno_anterior(request, cliente_id, rutina_id):
         # Obtener ejercicios de la rutina con SQL directo
         with connection.cursor() as cursor:
             cursor.execute("""
-                SELECT re.id, re.rutina_id, re.ejercicio_id, re.series, re.repeticiones, re.peso_kg, 
-                       e.id as ej_id, e.nombre as ej_nombre
-                FROM rutinas_rutinaejercicio re
-                JOIN rutinas_ejercicio e ON re.ejercicio_id = e.id
-                WHERE re.rutina_id = %s
-            """, [rutina_id])
+                           SELECT re.id,
+                                  re.rutina_id,
+                                  re.ejercicio_id,
+                                  re.series,
+                                  re.repeticiones,
+                                  re.peso_kg,
+                                  e.id     as ej_id,
+                                  e.nombre as ej_nombre
+                           FROM rutinas_rutinaejercicio re
+                                    JOIN rutinas_ejercicio e ON re.ejercicio_id = e.id
+                           WHERE re.rutina_id = %s
+                           """, [rutina_id])
             columns = [col[0] for col in cursor.description]
             ejercicios_rutina = [dict(zip(columns, row)) for row in cursor.fetchall()]
 
@@ -2042,10 +2080,11 @@ def mostrar_entreno_anterior(request, cliente_id, rutina_id):
         planes_personalizados = {}
         with connection.cursor() as cursor:
             cursor.execute("""
-                SELECT id, cliente_id, ejercicio_id, rutina_id, repeticiones_objetivo, peso_objetivo
-                FROM entrenos_planpersonalizado
-                WHERE cliente_id = %s AND rutina_id = %s
-            """, [cliente_id, rutina_id])
+                           SELECT id, cliente_id, ejercicio_id, rutina_id, repeticiones_objetivo, peso_objetivo
+                           FROM entrenos_planpersonalizado
+                           WHERE cliente_id = %s
+                             AND rutina_id = %s
+                           """, [cliente_id, rutina_id])
             columns = [col[0] for col in cursor.description]
             planes_rows = [dict(zip(columns, row)) for row in cursor.fetchall()]
 
@@ -3292,7 +3331,7 @@ def vista_entrenamiento_activo(request, cliente_id):
             fecha_str = fecha_obj.strftime('%Y-%m-%d')
         else:
             fecha_obj = datetime.strptime(fecha_str, '%Y-%m-%d').date()
-            
+
         fecha_para_template = fecha_obj.strftime('%Y-%m-%d')
 
         rutina_nombre = request.GET.get('rutina_nombre')
@@ -3309,17 +3348,17 @@ def vista_entrenamiento_activo(request, cliente_id):
 
         # --- BIO-BRIDGE: VALIDACIÓN EN TIEMPO REAL Y AJUSTE DE CARGA ---
         from core.bio_context import BioContextProvider
-        
+
         bio_readiness = BioContextProvider.get_readiness_score(cliente)
         vol_mod = bio_readiness.get('volume_modifier', 1.0)
-        
+
         bio_rest = BioContextProvider.get_current_restrictions(cliente)
         tags_bloqueados = bio_rest.get('tags', set())
 
         # --- INICIO DE LA MODIFICACIÓN CLAVE ---
         for i, ejercicio in enumerate(ejercicios_planificados):
             ejercicio['form_id'] = f'ejercicio_{i}'
-            
+
             # --- Ajuste de Volumen (Bio-Safety) ---
             try:
                 series_orig = int(ejercicio.get('series', 3))
@@ -3336,7 +3375,8 @@ def vista_entrenamiento_activo(request, cliente_id):
             if tags_bloqueados:
                 # Buscar el ejercicio en la BD de Helms para cruzar tags
                 nombre_ej = ejercicio.get('nombre', '')
-                from analytics.planificador_helms.utils.helpers import buscar_ejercicio_por_nombre, obtener_sustituto_en_caliente
+                from analytics.planificador_helms.utils.helpers import buscar_ejercicio_por_nombre, \
+                    obtener_sustituto_en_caliente
                 ej_db = buscar_ejercicio_por_nombre(nombre_ej)
                 if ej_db:
                     ej_tags = set(ej_db.get('risk_tags', []))
@@ -3374,13 +3414,13 @@ def vista_entrenamiento_activo(request, cliente_id):
             elif 'burpee' in nombre_ej_lower:
                 ejercicio['hyrox_icon'] = '🐸'
                 ejercicio['metric_type'] = 'reps_weight'
-            elif 'row' in nombre_ej_lower or 'remo' in nombre_ej_lower: # Catch Remo as well just in case
+            elif 'row' in nombre_ej_lower or 'remo' in nombre_ej_lower:  # Catch Remo as well just in case
                 ejercicio['hyrox_icon'] = '🚣'
                 ejercicio['metric_type'] = 'distance_time'
             elif 'farmer' in nombre_ej_lower or 'granjero' in nombre_ej_lower:
                 ejercicio['hyrox_icon'] = '⚖️'
                 ejercicio['metric_type'] = 'distance_time'
-            elif 'sandbag' in nombre_ej_lower or 'zancada' in nombre_ej_lower: # In hyrox context lunges
+            elif 'sandbag' in nombre_ej_lower or 'zancada' in nombre_ej_lower:  # In hyrox context lunges
                 ejercicio['hyrox_icon'] = '🎒'
                 ejercicio['metric_type'] = 'reps_weight'
             elif 'wall ball' in nombre_ej_lower:
@@ -3398,12 +3438,39 @@ def vista_entrenamiento_activo(request, cliente_id):
                 ejercicio['reps_objetivo'] = 8
 
             ejercicio['peso_recomendado_kg'] = ejercicio.get('peso_kg', 0.0)
-            
+
+            # --- TIPO DE PROGRESIÓN ---
+            # 1. Del planificador (EJERCICIOS_DATABASE ya tiene tipo_progresion)
+            # 2. Fallback: EjercicioBase en BD
+            # 3. Fallback final: peso_reps
+            tipo_prog = ejercicio.get('tipo_progresion')
+            if not tipo_prog:
+                try:
+                    from analytics.planificador_helms.utils.helpers import buscar_ejercicio_por_nombre
+                    ej_dict = buscar_ejercicio_por_nombre(ejercicio.get('nombre', ''))
+                    tipo_prog = ej_dict.get('tipo_progresion') if ej_dict else None
+                except Exception:
+                    tipo_prog = None
+            if not tipo_prog:
+                try:
+                    from rutinas.models import EjercicioBase as _EjBase
+                    _ej = _EjBase.objects.filter(nombre__iexact=ejercicio.get('nombre', '')).first()
+                    tipo_prog = _ej.tipo_progresion if _ej else None
+                except Exception:
+                    tipo_prog = None
+            ejercicio['tipo_progresion'] = tipo_prog or 'peso_reps'
+
+            # Flags de conveniencia para el template
+            ejercicio['usa_peso'] = ejercicio['tipo_progresion'] in ('peso_reps', 'peso_corporal_lastre')
+            ejercicio['usa_tiempo'] = ejercicio['tipo_progresion'] == 'progresion_tiempo'
+            ejercicio['usa_distancia'] = ejercicio['tipo_progresion'] == 'progresion_distancia'
+            ejercicio['solo_reps'] = ejercicio['tipo_progresion'] in ('progresion_reps', 'progresion_variante')
+
             # --- Ajuste de intensidad (Bio-Safety Max RPE) ---
             base_rpe = int(ejercicio.get('rpe_objetivo', 8))
             max_rpe = int(bio_readiness.get('max_rpe', 10))
             ejercicio['rpe_objetivo'] = min(base_rpe, max_rpe)
-            
+
             ejercicio['tempo'] = ejercicio.get('tempo', '2-0-X-0')
             ejercicio['descanso_minutos'] = ejercicio.get('descanso_minutos', 2)
 
@@ -3453,11 +3520,13 @@ def vista_entrenamiento_activo(request, cliente_id):
                     else:
                         ejercicio['pr_peso'] = 0.0
                         ejercicio['pr_reps'] = 0
-                        ejercicio['one_rm_estimado'] = estimar_1rm(float(datos_anterior.get('peso', 0)), int(datos_anterior.get('repeticiones', 1)))
+                        ejercicio['one_rm_estimado'] = estimar_1rm(float(datos_anterior.get('peso', 0)),
+                                                                   int(datos_anterior.get('repeticiones', 1)))
                 except:
                     ejercicio['pr_peso'] = 0.0
                     ejercicio['pr_reps'] = 0
-                    ejercicio['one_rm_estimado'] = estimar_1rm(float(datos_anterior.get('peso', 0)), int(datos_anterior.get('repeticiones', 1)))
+                    ejercicio['one_rm_estimado'] = estimar_1rm(float(datos_anterior.get('peso', 0)),
+                                                               int(datos_anterior.get('repeticiones', 1)))
             else:
                 ejercicio['peso_anterior_kg'] = 0.0
                 ejercicio['fecha_anterior'] = None
@@ -3519,12 +3588,12 @@ from analytics.utils import estimar_1rm  # ¡La importación que ya solucionamos
 # ... (importaciones)
 
 
-@transaction.atomic
 def guardar_entrenamiento_activo(request, cliente_id):
     cliente = get_object_or_404(Cliente, id=cliente_id)
     print("\n--- INICIANDO GUARDADO DE ENTRENAMIENTO ACTIVO (CON VOLUMEN) ---")
 
     try:
+
         # --- PASO 1: Crear el EntrenoRealizado (sin cambios) ---
         fecha = datetime.strptime(request.POST.get('fecha'), '%Y-%m-%d').date()
         rutina_nombre = request.POST.get('rutina_nombre')
@@ -3545,7 +3614,10 @@ def guardar_entrenamiento_activo(request, cliente_id):
         todos_rpes_sesion = []  # Lista para acumular RPEs de toda la sesión
 
         ejercicio_form_ids = [k.replace('_nombre', '') for k in request.POST if k.endswith('_nombre')]
-
+        print("=== POST DATA ===")
+        for key, val in request.POST.items():
+            print(f"  {key}: {val}")
+        print("=== FIN POST DATA ===")
         for form_id in ejercicio_form_ids:
             ejercicio_nombre = request.POST.get(f'{form_id}_nombre', '').strip().title()
             if not ejercicio_nombre: continue
@@ -3556,9 +3628,12 @@ def guardar_entrenamiento_activo(request, cliente_id):
 
             series_data_para_guardar = []
 
+            tipo_progresion = request.POST.get(f'{form_id}_tipo_progresion', 'peso_reps')
+            usa_peso = tipo_progresion in ('peso_reps', 'peso_corporal_lastre')
+
             for i in range(1, 11):
                 peso_key, reps_key = f"{form_id}_peso_{i}", f"{form_id}_reps_{i}"
-                if peso_key not in request.POST or reps_key not in request.POST: break
+                if reps_key not in request.POST: break
 
                 try:
                     peso_str = request.POST.get(peso_key, '0').replace(',', '.')
@@ -3569,17 +3644,18 @@ def guardar_entrenamiento_activo(request, cliente_id):
                     reps = int(reps_str) if reps_str else 0
                     rpe_real = float(rpe_str.replace(',', '.')) if rpe_str else None
 
-                    if peso > 0 and reps > 0:
-                        # Acumulamos el volumen de esta serie
-                        volumen_ejercicio += (Decimal(str(peso)) * Decimal(reps))
+                    serie_valida = (peso > 0 and reps > 0) if usa_peso else (reps > 0)
 
-                        rpe_a_usar = rpe_real if rpe_real is not None else 8  # Usamos RPE 8 si no se especifica
-                        rm_serie_actual = estimar_1rm_con_rpe(peso, reps, rpe_a_usar)
-                        if rm_serie_actual > mejor_rm_ejercicio:
-                            mejor_rm_ejercicio = rm_serie_actual
-
-                        series_data_para_guardar.append({'peso': peso, 'reps': reps, 'rpe_real': rpe_real})
-                        # Acumular RPE para el cálculo global de la sesión
+                    if serie_valida:
+                        if peso > 0:
+                            volumen_ejercicio += (Decimal(str(peso)) * Decimal(reps))
+                        if peso > 0 and reps > 0:
+                            rpe_a_usar = rpe_real if rpe_real is not None else 8
+                            rm_serie_actual = estimar_1rm_con_rpe(peso, reps, rpe_a_usar)
+                            if rm_serie_actual > mejor_rm_ejercicio:
+                                mejor_rm_ejercicio = rm_serie_actual
+                        series_data_para_guardar.append(
+                            {'peso': peso, 'reps': reps, 'rpe_real': rpe_real, 'tipo_progresion': tipo_progresion})
                         if rpe_real is not None:
                             todos_rpes_sesion.append(rpe_real)
 
@@ -3591,9 +3667,10 @@ def guardar_entrenamiento_activo(request, cliente_id):
                     nuevos_rms_sesion[nombre_normalizado] = round(mejor_rm_ejercicio, 2)
 
                 # Guardar el EjercicioRealizado (agregado)
-                peso_promedio = sum(s['peso'] for s in series_data_para_guardar) / len(series_data_para_guardar)
+                pesos_validos = [s['peso'] for s in series_data_para_guardar if s['peso'] > 0]
+                peso_promedio = sum(pesos_validos) / len(pesos_validos) if pesos_validos else 0.0
                 reps_promedio = sum(s['reps'] for s in series_data_para_guardar) // len(series_data_para_guardar)
-                
+
                 # Calcular RPE promedio (si hay datos)
                 rpes_validos = [s['rpe_real'] for s in series_data_para_guardar if s['rpe_real'] is not None]
                 rpe_promedio_ejercicio = None
@@ -3609,7 +3686,7 @@ def guardar_entrenamiento_activo(request, cliente_id):
                         grupo = ej_base.grupo_muscular
                 except Exception:
                     pass
-                    
+
                 # Extraer is_recovery_load del formulario
                 is_recovery_load_str = request.POST.get('is_recovery_load', 'false').lower()
                 is_recovery_load = is_recovery_load_str == 'true'
@@ -3622,7 +3699,7 @@ def guardar_entrenamiento_activo(request, cliente_id):
                     rpe=rpe_promedio_ejercicio,
                     is_recovery_load=is_recovery_load
                 )
-                
+
                 # CREAR SERIES REALIZADAS INDIVIDUALES (Importante para gráficas de detalle)
                 if ej_base:
                     for idx, s_data in enumerate(series_data_para_guardar, 1):
@@ -3674,14 +3751,15 @@ def guardar_entrenamiento_activo(request, cliente_id):
             ejs_tot = request.POST.get('ejercicios_totales')
             volumen_sesion = request.POST.get('volumen_total_sesion')
             rpe_medio = request.POST.get('rpe_medio_sesion')
-            
+
             # Calcular RPE medio real de la sesión basado en los datos guardados
             rpe_medio_calculado = None
             if todos_rpes_sesion:
                 rpe_medio_calculado = sum(todos_rpes_sesion) / len(todos_rpes_sesion)
-            
+
             # Usar el calculado si existe, si no intentar con el del POST
-            rpe_final = rpe_medio_calculado if rpe_medio_calculado is not None else (float(rpe_medio) if rpe_medio else None)
+            rpe_final = rpe_medio_calculado if rpe_medio_calculado is not None else (
+                float(rpe_medio) if rpe_medio else None)
 
             # Solo si tenemos datos mínimos, creamos la sesión de gamificación
             if any([series_comp, series_tot, ejs_comp, volumen_sesion]):
@@ -3798,13 +3876,13 @@ def vista_plan_anual(request, cliente_id):
         # Definir año y mes solicitados (o actuales)
         año_param = request.GET.get('año', '')
         mes_param = request.GET.get('mes', '')
-        
+
         # Manejar strings vacíos
         try:
             año_solicitado = int(año_param) if año_param else date.today().year
         except ValueError:
             año_solicitado = date.today().year
-            
+
         try:
             mes_solicitado = int(mes_param) if mes_param else date.today().month
         except ValueError:
@@ -3861,54 +3939,54 @@ def vista_plan_anual(request, cliente_id):
         # === DETECCIÓN DE FASE ACTUAL Y TEMA DINÁMICO ===
         hoy = date.today()
         print(f"🔍 DEBUG: Fecha hoy = {hoy}")
-        
+
         # Detectar fase actual basada en la semana actual
         fase_actual = None
         semana_actual = 1
         total_semanas_fase = 1
         progreso_fase = 0
-        
+
         # Acceder a la estructura correcta del plan y calcular fechas
         bloques = plan.get('plan_por_bloques', [])
         print(f"🔍 DEBUG: Total bloques encontrados = {len(bloques)}")
-        
+
         # Calcular fechas para cada bloque basándose en la duración
         from datetime import timedelta
         fecha_inicio_plan = date(año_solicitado, 1, 1)  # Empezar desde enero del año solicitado
-        
+
         # Ajustar al próximo lunes si no es lunes
         dias_hasta_lunes = (7 - fecha_inicio_plan.weekday()) % 7  # 0 = lunes, 6 = domingo
         if dias_hasta_lunes > 0:
             fecha_cursor = fecha_inicio_plan + timedelta(days=dias_hasta_lunes)
         else:
             fecha_cursor = fecha_inicio_plan
-        
-        
+
         for bloque in bloques:
             duracion_semanas = bloque.get('duracion', 4)  # Default 4 semanas si no está definido
-            
+
             # Calcular fechas (las fases siempre comienzan en lunes)
             bloque['fecha_inicio'] = fecha_cursor
             bloque['fecha_fin'] = fecha_cursor + timedelta(weeks=duracion_semanas) - timedelta(days=1)
-            
+
             # Mover el cursor para el siguiente bloque (próximo lunes)
             fecha_cursor = bloque['fecha_fin'] + timedelta(days=1)
-        
+
         # DEBUG: Mostrar fechas de todos los bloques
         print(f"\n📅 DEBUG: Fechas de bloques calculadas:")
         for idx, bloque in enumerate(bloques[:5]):  # Mostrar solo los primeros 5
-            print(f"   {idx+1}. {bloque.get('nombre')}: {bloque.get('fecha_inicio')} → {bloque.get('fecha_fin')} ({bloque.get('duracion')} semanas)")
-        
+            print(
+                f"   {idx + 1}. {bloque.get('nombre')}: {bloque.get('fecha_inicio')} → {bloque.get('fecha_fin')} ({bloque.get('duracion')} semanas)")
+
         # Ahora buscar la fase actual
         print(f"\n🔍 DEBUG: Buscando fase actual para {hoy}...\n")
-        
+
         for idx, bloque in enumerate(bloques):
             fecha_inicio = bloque.get('fecha_inicio')
             fecha_fin = bloque.get('fecha_fin')
-            
+
             if idx < 3:  # Mostrar solo los primeros 3 bloques para no saturar logs
                 print(f"🔍 DEBUG: Bloque '{bloque.get('nombre')}': {fecha_inicio} - {fecha_fin}")
-            
+
             if fecha_inicio and fecha_fin:
                 if fecha_inicio <= hoy <= fecha_fin:
                     fase_actual = bloque
@@ -3916,24 +3994,24 @@ def vista_plan_anual(request, cliente_id):
                     dias_transcurridos = (hoy - fecha_inicio).days
                     duracion_total_dias = (fecha_fin - fecha_inicio).days + 1  # +1 para incluir el último día
                     progreso_fase = min((dias_transcurridos / duracion_total_dias) * 100, 100)
-                    
+
                     # Calcular semana actual para display
                     semana_actual = (dias_transcurridos // 7) + 1
                     total_semanas_fase = bloque.get('duracion', 1)
-                    
+
                     print(f"\n✅ DEBUG: ¡Fase actual encontrada! '{bloque.get('nombre')}'")
                     print(f"   - Días transcurridos: {dias_transcurridos} de {duracion_total_dias}")
                     print(f"   - Semana {semana_actual} de {total_semanas_fase}")
                     print(f"   - Progreso: {progreso_fase:.1f}%\n")
                     break
-        
+
         if not fase_actual:
             print("⚠️ DEBUG: No se encontró fase actual, usando valores por defecto")
-        
+
         # === CALCULAR PRÓXIMA FASE ===
         proxima_fase = None
         dias_hasta_proxima_fase = 0
-        
+
         for bloque in bloques:
             fecha_inicio = bloque.get('fecha_inicio')
             if fecha_inicio and fecha_inicio > hoy:
@@ -3942,14 +4020,14 @@ def vista_plan_anual(request, cliente_id):
                 print(f"\n✅ DEBUG: Próxima fase encontrada: '{bloque.get('nombre')}'")
                 print(f"   - Comienza en {dias_hasta_proxima_fase} días ({fecha_inicio})\n")
                 break
-        
+
         if not proxima_fase:
             print("⚠️ DEBUG: No se encontró próxima fase (fin del plan)")
-        
+
         # === CALCULAR PROYECCIONES DE EJERCICIOS (PARA TODAS LAS FASES) ===
         proyecciones_totales = {}
         proyecciones_fase = []
-        
+
         # Definir configuración por tipo de fase
         config_fases = {
             'hipertrofia': {
@@ -3965,9 +4043,9 @@ def vista_plan_anual(request, cliente_id):
                 'incremento': 2.5  # 2-3% en 3 semanas
             }
         }
-        
+
         from entrenos.models import EjercicioRealizado
-        
+
         # Calcular proyecciones para CADA tipo de fase
         for tipo, config in config_fases.items():
             proyecciones_tipo = []
@@ -3977,12 +4055,12 @@ def vista_plan_anual(request, cliente_id):
                     entreno__cliente=cliente_obj,
                     nombre_ejercicio__icontains=ejercicio_nombre
                 ).order_by('-peso_kg').first()
-                
+
                 if ultimo_registro:
                     peso_actual = float(ultimo_registro.peso_kg)
                     peso_proyectado = peso_actual * (1 + config['incremento'] / 100)
                     incremento = peso_proyectado - peso_actual
-                    
+
                     proyecciones_tipo.append({
                         'nombre': ejercicio_nombre,
                         'peso_actual': peso_actual,
@@ -3996,7 +4074,7 @@ def vista_plan_anual(request, cliente_id):
         if fase_actual:
             objetivo = fase_actual.get('objetivo', '').lower()
             tipo_fase = fase_actual.get('tipo_fase', '').lower()
-            
+
             fase_key = None
             if 'hipertrofia' in objetivo or 'hipertrofia' in tipo_fase:
                 fase_key = 'hipertrofia'
@@ -4004,15 +4082,15 @@ def vista_plan_anual(request, cliente_id):
                 fase_key = 'fuerza'
             elif 'potencia' in objetivo or 'potencia' in tipo_fase:
                 fase_key = 'potencia'
-            
+
             if fase_key:
                 # Recalcular proyecciones ESPECÍFICAS para la fase actual con fechas
                 # Queremos mostrar: Peso Inicial (Al empezar fase) -> Peso Actual (Max en fase) -> Objetivo (Basado en inicial)
-                
+
                 proyecciones_fase = []
                 config_actual = config_fases.get(fase_key)
                 fecha_inicio_fase = fase_actual.get('fecha_inicio')
-                
+
                 if config_actual and fecha_inicio_fase:
                     for ejercicio_nombre in config_actual['ejercicios']:
                         # 1. Peso Inicial: Mejor marca ANTES de empezar la fase
@@ -4021,57 +4099,59 @@ def vista_plan_anual(request, cliente_id):
                             nombre_ejercicio__icontains=ejercicio_nombre,
                             entreno__fecha__lt=fecha_inicio_fase
                         ).order_by('-peso_kg').first()
-                        
+
                         peso_inicial = float(registro_inicial.peso_kg) if registro_inicial else 0
-                        
+
                         # 2. Peso Max en Fase: Mejor marca DURANTE la fase
                         registro_fase = EjercicioRealizado.objects.filter(
                             entreno__cliente=cliente_obj,
                             nombre_ejercicio__icontains=ejercicio_nombre,
                             entreno__fecha__gte=fecha_inicio_fase
                         ).order_by('-peso_kg').first()
-                        
+
                         peso_max_fase = float(registro_fase.peso_kg) if registro_fase else 0
-                        
+
                         # Peso Actual es el mayor entre el inicial y el logrado en fase
                         # (Si no ha entrenado en la fase, es el inicial. Si ha mejorado, es el de fase)
                         peso_actual = max(peso_inicial, peso_max_fase)
-                        
+
                         # 3. Objetivo: Basado en el peso INICIAL (Meta fija para la fase)
                         # Si no hay peso inicial, usamos el actual como base (o 0)
                         base_calculo = peso_inicial if peso_inicial > 0 else peso_actual
-                        
+
                         if base_calculo > 0:
                             peso_objetivo = base_calculo * (1 + config_actual['incremento'] / 100)
                             incremento = peso_objetivo - base_calculo
-                            
+
                             # Calcular progreso real
                             # (Actual - Inicial) / (Objetivo - Inicial)
                             # Si Actual > Objetivo, es > 100%
                             progreso_real = 0
                             if peso_objetivo > base_calculo:
                                 progreso_real = (peso_actual - base_calculo) / (peso_objetivo - base_calculo) * 100
-                                progreso_real = max(0, min(progreso_real, 100)) # Limitar 0-100 para barra (o dejar pasar 100 para celebrar)
-                            
+                                progreso_real = max(0, min(progreso_real,
+                                                           100))  # Limitar 0-100 para barra (o dejar pasar 100 para celebrar)
+
                             proyecciones_fase.append({
                                 'nombre': ejercicio_nombre,
-                                'peso_inicial': round(peso_inicial, 1), # NUEVO
+                                'peso_inicial': round(peso_inicial, 1),  # NUEVO
                                 'peso_actual': round(peso_actual, 1),
-                                'peso_objetivo': round(peso_objetivo, 1), # NUEVO NOMBRE COMPATIBLE
-                                'peso_proyectado': round(peso_objetivo, 1), # MANTENER COMPATIBILIDAD
+                                'peso_objetivo': round(peso_objetivo, 1),  # NUEVO NOMBRE COMPATIBLE
+                                'peso_proyectado': round(peso_objetivo, 1),  # MANTENER COMPATIBILIDAD
                                 'incremento': round(incremento, 1),
                                 'incremento_porcentaje': config_actual['incremento'],
-                                'progreso_pct': round(progreso_real, 1) # NUEVO CAMPO PROGRESO REAL
+                                'progreso_pct': round(progreso_real, 1)  # NUEVO CAMPO PROGRESO REAL
                             })
                 else:
                     # Fallback si no hay fechas (usar lógica generica)
                     proyecciones_fase = proyecciones_totales.get(fase_key, [])
-                
+
                 # IMPORTANT: Actualizar el diccionario total para que el JSON del frontend tenga los datos correctos
                 proyecciones_totales[fase_key] = proyecciones_fase
 
-                print(f"\n📊 DEBUG: Proyecciones FASE ACTUAL ('{fase_key}'): {len(proyecciones_fase)} ejercicios con progreso calculado")
-        
+                print(
+                    f"\n📊 DEBUG: Proyecciones FASE ACTUAL ('{fase_key}'): {len(proyecciones_fase)} ejercicios con progreso calculado")
+
         # Calcular tema de colores según tipo de fase
         tema_fase = {
             'primary': '#00D4FF',
@@ -4082,13 +4162,13 @@ def vista_plan_anual(request, cliente_id):
             'r2': 139, 'g2': 92, 'b2': 246,  # Purple
             'icon': '💪'
         }
-        
+
         objetivo_fase = "Entrenamiento general"
-        
+
         if fase_actual:
             objetivo = fase_actual.get('objetivo', '').lower()
             tipo_fase = fase_actual.get('tipo_fase', '').lower()
-            
+
             # Hipertrofia - Azul/Cyan
             if 'hipertrofia' in objetivo or 'hipertrofia' in tipo_fase:
                 tema_fase = {
@@ -4101,7 +4181,7 @@ def vista_plan_anual(request, cliente_id):
                     'icon': '💪'
                 }
                 objetivo_fase = "Maximizar volumen muscular y crecimiento"
-            
+
             # Fuerza - Rosa/Magenta
             elif 'fuerza' in objetivo or 'fuerza' in tipo_fase:
                 tema_fase = {
@@ -4114,7 +4194,7 @@ def vista_plan_anual(request, cliente_id):
                     'icon': '⚡'
                 }
                 objetivo_fase = "Incrementar fuerza máxima (1RM)"
-            
+
             # Potencia - Amarillo/Naranja
             elif 'potencia' in objetivo or 'potencia' in tipo_fase:
                 tema_fase = {
@@ -4127,7 +4207,7 @@ def vista_plan_anual(request, cliente_id):
                     'icon': '🔥'
                 }
                 objetivo_fase = "Desarrollar velocidad y explosividad"
-            
+
             # Descarga - Morado/Violeta
             elif 'descarga' in objetivo or 'descarga' in tipo_fase or 'deload' in objetivo:
                 tema_fase = {
@@ -4140,7 +4220,7 @@ def vista_plan_anual(request, cliente_id):
                     'icon': '🌙'
                 }
                 objetivo_fase = "Recuperación activa y regeneración"
-        
+
         # Extraer parámetros de la fase
         parametros_fase = {
             'rpe_min': 6,
@@ -4149,7 +4229,7 @@ def vista_plan_anual(request, cliente_id):
             'reps_max': 20,
             'series': '3-5'
         }
-        
+
         if fase_actual:
             parametros_fase = {
                 'rpe_min': fase_actual.get('rpe_min', 6),
@@ -4182,7 +4262,7 @@ def vista_plan_anual(request, cliente_id):
 
         # --- PASO 7: Contexto LIGERO para la plantilla ---
         import json
-        
+
         # Preparar bloques para JSON (convertir dates a strings)
         bloques_para_json = [{
             'nombre': b.get('nombre'),
@@ -4196,7 +4276,7 @@ def vista_plan_anual(request, cliente_id):
             'reps_max': b.get('reps_max', 20),
             'descripcion': b.get('descripcion', ''),
         } for b in bloques]
-        
+
         context = {
             'cliente': cliente_obj,
             'plan': plan,  # Añadir el plan completo para acceder a bloques
@@ -4404,9 +4484,6 @@ def obtener_o_generar_plan(request, cliente_id):
         return None
 
 
-
-
-
 def ajax_obtener_entrenamiento_dia(request, cliente_id):
     """
     Vista AJAX que devuelve el entrenamiento de un día específico.
@@ -4423,7 +4500,7 @@ def ajax_obtener_entrenamiento_dia(request, cliente_id):
             return JsonResponse({'error': 'No se pudo generar el plan'}, status=500)
 
         entrenos_del_plan = plan.get('entrenos_por_fecha', {})
-        
+
         entrenamiento_dia = None
         for k, v in entrenos_del_plan.items():
             try:
@@ -4434,7 +4511,7 @@ def ajax_obtener_entrenamiento_dia(request, cliente_id):
                     k_obj = k.date()
                 else:
                     k_obj = datetime.fromisoformat(str(k)).date()
-                    
+
                 if k_obj.isoformat() == fecha_str:
                     entrenamiento_dia = v
                     break
@@ -4474,14 +4551,14 @@ def ajax_obtener_entrenamiento_dia(request, cliente_id):
 
         if isinstance(entrenamiento_dia, dict):
             ejercicios = entrenamiento_dia.get("ejercicios") or []
-            
+
             # --- Phase 16: Bio-Restrictions and Exercise Substitution ---
             try:
                 from core.bio_context import BioContextProvider
                 from analytics.planificador_helms.ejercicios.selector import SelectorEjercicios
                 from analytics.planificador_helms.database.ejercicios import EJERCICIOS_DATABASE
                 from clientes.models import Cliente
-                
+
                 cliente = Cliente.objects.get(id=cliente_id)
                 bio_data = BioContextProvider.get_current_restrictions(cliente)
                 restricted_tags = bio_data.get('tags', set())
@@ -4499,7 +4576,7 @@ def ajax_obtener_entrenamiento_dia(request, cliente_id):
                     for idx, ej in enumerate(ejercicios):
                         grupo = ej.get('grupo_muscular', '')
                         nombre = ej.get('nombre', '').lower()
-                        
+
                         # Find original risk tags
                         ej_tags = set()
                         if grupo in EJERCICIOS_DATABASE:
@@ -4615,14 +4692,14 @@ def ajax_obtener_entrenamientos_mes(request, cliente_id):
                 if fecha_obj.year == año and fecha_obj.month == mes:
                     if isinstance(entrenamiento, dict):
                         ejercicios = entrenamiento.get("ejercicios") or []
-                        
+
                         # --- Phase 16: Bio-Restrictions ---
                         try:
                             from core.bio_context import BioContextProvider
                             from analytics.planificador_helms.ejercicios.selector import SelectorEjercicios
                             from analytics.planificador_helms.database.ejercicios import EJERCICIOS_DATABASE
                             from clientes.models import Cliente
-                            
+
                             cliente = Cliente.objects.get(id=cliente_id)
                             bio_data = BioContextProvider.get_current_restrictions(cliente)
                             restricted_tags = bio_data.get('tags', set())
@@ -4639,7 +4716,7 @@ def ajax_obtener_entrenamientos_mes(request, cliente_id):
                                 for idx, ej in enumerate(ejercicios):
                                     grupo = ej.get('grupo_muscular', '')
                                     nombre = ej.get('nombre', '').lower()
-                                    
+
                                     ej_tags = set()
                                     if grupo in EJERCICIOS_DATABASE:
                                         for cat in ['compuesto_principal', 'compuesto_secundario', 'aislamiento']:
@@ -4722,26 +4799,25 @@ def vista_plan_calendario(request, cliente_id):
         plan = planificador.generar_plan_anual()
         estadisticas = planificador.obtener_estadisticas_integracion()
 
-
         # === DETECCIÓN DE FASE ACTUAL Y TEMA DINÁMICO ===
         from datetime import date
         hoy = date.today()
-        
+
         # Detectar fase actual basada en la semana actual
         fase_actual = None
         semana_actual = 1
         total_semanas_fase = 1
         progreso_fase = 0
-        
+
         bloques = plan.get('bloques', []) or plan.get('fases', [])
-        
+
         # Calcular fechas si faltan (Helms format uses 'duracion' in weeks)
         fecha_cursor = None
         if bloques:
             # Fallback: primer lunes del año actual
             primer_dia = date(hoy.year, 1, 1)
             fecha_cursor = primer_dia + timedelta(days=(0 - primer_dia.weekday() + 7) % 7)
-            
+
             # Intentar ajustar si el primer bloque tiene fecha
             for b in bloques:
                 if b.get('fecha_inicio'):
@@ -4758,23 +4834,25 @@ def vista_plan_calendario(request, cliente_id):
             if 'reps_min' not in bloque: bloque['reps_min'] = 1
             if 'reps_max' not in bloque: bloque['reps_max'] = 20
             if 'series' not in bloque: bloque['series'] = '3-5'
-            if 'nombre' not in bloque: bloque['nombre'] = bloque.get('tipo_fase', f'Fase {i+1}')
+            if 'nombre' not in bloque: bloque['nombre'] = bloque.get('tipo_fase', f'Fase {i + 1}')
 
             # Normalizar fechas
             fecha_inicio = bloque.get('fecha_inicio')
             if isinstance(fecha_inicio, str):
                 fecha_inicio = date.fromisoformat(fecha_inicio[:10])
                 bloque['fecha_inicio'] = fecha_inicio
-                
+
             duracion_semanas = bloque.get('duracion') or bloque.get('duracion_semanas') or 1
             if not isinstance(duracion_semanas, int):
-                try: duracion_semanas = len(bloque.get('semanas', [])) or 1
-                except: duracion_semanas = 1
+                try:
+                    duracion_semanas = len(bloque.get('semanas', [])) or 1
+                except:
+                    duracion_semanas = 1
 
             if not fecha_inicio and fecha_cursor:
                 fecha_inicio = fecha_cursor
                 bloque['fecha_inicio'] = fecha_inicio
-            
+
             fecha_fin = bloque.get('fecha_fin')
             if isinstance(fecha_fin, str):
                 fecha_fin = date.fromisoformat(fecha_fin[:10])
@@ -4783,12 +4861,11 @@ def vista_plan_calendario(request, cliente_id):
             if not fecha_fin and fecha_inicio:
                 fecha_fin = fecha_inicio + timedelta(days=(duracion_semanas * 7) - 1)
                 bloque['fecha_fin'] = fecha_fin
-            
+
             # Avanzar cursor
             if fecha_fin:
                 fecha_cursor = fecha_fin + timedelta(days=1)
-            
-            
+
             if fecha_inicio and fecha_fin:
                 if fecha_inicio <= hoy <= fecha_fin:
                     fase_actual = bloque
@@ -4797,7 +4874,7 @@ def vista_plan_calendario(request, cliente_id):
                     semana_actual = (dias_transcurridos // 7) + 1
                     total_semanas_fase = duracion_semanas
                     progreso_fase = min((semana_actual / total_semanas_fase) * 100, 100)
-                    
+
                     # Detectar próxima fase
                     if i + 1 < len(bloques):
                         proxima_fase = bloques[i + 1]
@@ -4805,20 +4882,20 @@ def vista_plan_calendario(request, cliente_id):
                         prox_inicio = proxima_fase.get('fecha_inicio')
                         if isinstance(prox_inicio, str):
                             prox_inicio = date.fromisoformat(prox_inicio[:10])
-                        
+
                         if not prox_inicio:
                             prox_inicio = fecha_fin + timedelta(days=1)
                             proxima_fase['fecha_inicio'] = prox_inicio
-                            
+
                         dias_hasta_proxima_fase = (prox_inicio - hoy).days
                         if dias_hasta_proxima_fase < 0:
                             dias_hasta_proxima_fase = 0
-                            
+
                     break
-        
+
         if not fase_actual:
             pass
-        
+
         # Calcular tema de colores según tipo de fase
         tema_fase = {
             'primary': '#00D4FF',
@@ -4829,13 +4906,13 @@ def vista_plan_calendario(request, cliente_id):
             'r2': 139, 'g2': 92, 'b2': 246,  # Purple
             'icon': '💪'
         }
-        
+
         objetivo_fase = "Entrenamiento general"
-        
+
         if fase_actual:
             objetivo = (fase_actual.get('objetivo') or '').lower()
             tipo_fase = (fase_actual.get('tipo_fase') or '').lower()
-            
+
             # Hipertrofia - Azul/Cyan
             if 'hipertrofia' in objetivo or 'hipertrofia' in tipo_fase:
                 tema_fase = {
@@ -4848,7 +4925,7 @@ def vista_plan_calendario(request, cliente_id):
                     'icon': '💪'
                 }
                 objetivo_fase = "Maximizar volumen muscular y crecimiento"
-            
+
             # Fuerza - Rosa/Magenta
             elif 'fuerza' in objetivo or 'fuerza' in tipo_fase:
                 tema_fase = {
@@ -4861,7 +4938,7 @@ def vista_plan_calendario(request, cliente_id):
                     'icon': '⚡'
                 }
                 objetivo_fase = "Incrementar fuerza máxima (1RM)"
-            
+
             # Potencia - Amarillo/Naranja
             elif 'potencia' in objetivo or 'potencia' in tipo_fase:
                 tema_fase = {
@@ -4874,7 +4951,7 @@ def vista_plan_calendario(request, cliente_id):
                     'icon': '🔥'
                 }
                 objetivo_fase = "Desarrollar velocidad y explosividad"
-            
+
             # Descarga - Morado/Violeta
             elif 'descarga' in objetivo or 'descarga' in tipo_fase or 'deload' in objetivo:
                 tema_fase = {
@@ -4887,7 +4964,7 @@ def vista_plan_calendario(request, cliente_id):
                     'icon': '🌙'
                 }
                 objetivo_fase = "Recuperación activa y regeneración"
-        
+
         # Extraer parámetros de la fase
         parametros_fase = {
             'rpe_min': 6,
@@ -4896,7 +4973,7 @@ def vista_plan_calendario(request, cliente_id):
             'reps_max': 20,
             'series': '3-5'
         }
-        
+
         if fase_actual:
             parametros_fase = {
                 'rpe_min': fase_actual.get('rpe_min', 6),
@@ -4909,7 +4986,7 @@ def vista_plan_calendario(request, cliente_id):
         # === CALCULAR PROYECCIONES DE EJERCICIOS (PARA TODAS LAS FASES) ===
         proyecciones_totales = {}
         proyecciones_fase = []
-        
+
         # Definir configuración por tipo de fase
         config_fases = {
             'hipertrofia': {
@@ -4925,10 +5002,10 @@ def vista_plan_calendario(request, cliente_id):
                 'incremento': 2.5  # 2-3% en 3 semanas
             }
         }
-        
+
         from entrenos.models import EjercicioRealizado
-        cliente_obj = cliente # Ya lo tenemos de la base de datos
-        
+        cliente_obj = cliente  # Ya lo tenemos de la base de datos
+
         # Calcular proyecciones para CADA tipo de fase
         for tipo, config in config_fases.items():
             proyecciones_tipo = []
@@ -4938,12 +5015,12 @@ def vista_plan_calendario(request, cliente_id):
                     entreno__cliente=cliente_obj,
                     nombre_ejercicio__icontains=ejercicio_nombre
                 ).order_by('-peso_kg').first()
-                
+
                 if ultimo_registro:
                     peso_actual = float(ultimo_registro.peso_kg)
                     peso_proyectado = peso_actual * (1 + config['incremento'] / 100)
                     incremento = peso_proyectado - peso_actual
-                    
+
                     proyecciones_tipo.append({
                         'nombre': ejercicio_nombre,
                         'peso_actual': peso_actual,
@@ -4956,17 +5033,20 @@ def vista_plan_calendario(request, cliente_id):
         # Asignar proyecciones de la fase actual para renderizado inicial
         if fase_actual:
             tipo_fase = (fase_actual.get('tipo_fase', '') or '').lower()
-            
+
             fase_key = None
-            if 'hiper' in tipo_fase: fase_key = 'hipertrofia'
-            elif 'fuerza' in tipo_fase: fase_key = 'fuerza'
-            elif 'poten' in tipo_fase: fase_key = 'potencia'
-            
+            if 'hiper' in tipo_fase:
+                fase_key = 'hipertrofia'
+            elif 'fuerza' in tipo_fase:
+                fase_key = 'fuerza'
+            elif 'poten' in tipo_fase:
+                fase_key = 'potencia'
+
             if fase_key:
                 proyecciones_fase = []
                 config_actual = config_fases.get(fase_key)
                 fecha_inicio_fase = fase_actual.get('fecha_inicio')
-                
+
                 if config_actual and fecha_inicio_fase:
                     for ejercicio_nombre in config_actual['ejercicios']:
                         # 1. Peso Inicial: Mejor marca ANTES de empezar la fase
@@ -4975,33 +5055,33 @@ def vista_plan_calendario(request, cliente_id):
                             nombre_ejercicio__icontains=ejercicio_nombre,
                             entreno__fecha__lt=fecha_inicio_fase
                         ).order_by('-peso_kg').first()
-                        
+
                         peso_inicial = float(registro_inicial.peso_kg) if registro_inicial else 0
-                        
+
                         # 2. Peso Max en Fase: Mejor marca DURANTE la fase
                         registro_fase = EjercicioRealizado.objects.filter(
                             entreno__cliente=cliente_obj,
                             nombre_ejercicio__icontains=ejercicio_nombre,
                             entreno__fecha__gte=fecha_inicio_fase
                         ).order_by('-peso_kg').first()
-                        
+
                         peso_max_fase = float(registro_fase.peso_kg) if registro_fase else 0
-                        
+
                         # Peso Actual es el mayor entre el inicial y el logrado en fase
                         peso_actual = max(peso_inicial, peso_max_fase)
-                        
+
                         # 3. Objetivo: Basado en el peso INICIAL
                         base_calculo = peso_inicial if peso_inicial > 0 else peso_actual
-                        
+
                         if base_calculo > 0:
                             peso_objetivo = base_calculo * (1 + config_actual['incremento'] / 100)
                             incremento = peso_objetivo - base_calculo
-                            
+
                             progreso_real = 0
                             if peso_objetivo > base_calculo:
                                 progreso_real = (peso_actual - base_calculo) / (peso_objetivo - base_calculo) * 100
                                 progreso_real = max(0, min(progreso_real, 100))
-                            
+
                             proyecciones_fase.append({
                                 'nombre': ejercicio_nombre,
                                 'peso_inicial': round(peso_inicial, 1),
@@ -5014,9 +5094,8 @@ def vista_plan_calendario(request, cliente_id):
                             })
                 else:
                     proyecciones_fase = proyecciones_totales.get(fase_key, [])
-                
-                proyecciones_totales[fase_key] = proyecciones_fase
 
+                proyecciones_totales[fase_key] = proyecciones_fase
 
         import json
 
@@ -5035,7 +5114,7 @@ def vista_plan_calendario(request, cliente_id):
             'estadisticas_helms': estadisticas,
             'tiene_datos_helms': 'datos_helms' in plan,
             'generado_por_helms': plan.get('metadata', {}).get('generado_por') == 'helms',
-            
+
             # Tema dinámico de fase
             'fase_actual': fase_actual,
             'proxima_fase': proxima_fase,
@@ -5047,7 +5126,7 @@ def vista_plan_calendario(request, cliente_id):
             'total_semanas_fase': total_semanas_fase,
             'progreso_fase': round(progreso_fase, 1),
             'proyecciones_fase': proyecciones_fase,
-            
+
             # JSON para JS
             'bloques_json': safe_json_dumps(bloques),
             'proyecciones_json': safe_json_dumps(proyecciones_totales),
@@ -5559,7 +5638,7 @@ def dashboard_ejercicios(request, cliente_id):
             'repeticiones': h['repeticiones'],
             'volumen': h['volumen'],
             'rpe': h['rpe'],
-            # Phase 15: is_recovery_load 
+            # Phase 15: is_recovery_load
             'is_recovery_load': h.get('is_recovery_load', False)
         } for h in historial_grafico])
 
@@ -6248,19 +6327,19 @@ def integrar_evaluacion_en_dashboard(request, cliente_id):
     # Datos Reales de RPE y Fases
     rpe_data = EstadisticasService.calcular_rpe_semanal(cliente, rango)
     rpe_semanal = rpe_data['data']
-    
+
     # Asegurar que las listas tengan la misma longitud que volumen_semanal['data']
     # Si las cronologías no coinciden perfectamente, rellenamos o recortamos
     target_len = len(vol_semanal['data'])
     current_len = len(rpe_semanal)
-    
+
     if current_len < target_len:
         rpe_semanal.extend([0] * (target_len - current_len))
     elif current_len > target_len:
         rpe_semanal = rpe_semanal[:target_len]
 
     fases_historicas = EstadisticasService.obtener_fases_historicas(cliente, rango)
-    
+
     # Ajustar longitud de fases también
     current_fase_len = len(fases_historicas)
     if current_fase_len < target_len:
@@ -6426,17 +6505,17 @@ def actualizar_fase_cliente(request, cliente_id):
     from clientes.models import FaseCliente
 
     cliente = get_object_or_404(Cliente, id=cliente_id)
-    
+
     try:
         data = json.loads(request.body)
         nueva_fase = data.get('fase')
-        
+
         if not nueva_fase:
             return JsonResponse({'status': 'error', 'message': 'Fase no proporcionada'}, status=400)
 
         # 1. Buscar fase activa actual y cerrarla
         fase_anterior = FaseCliente.objects.filter(
-            cliente=cliente, 
+            cliente=cliente,
             fecha_fin__isnull=True
         ).first()
 
@@ -6444,7 +6523,7 @@ def actualizar_fase_cliente(request, cliente_id):
             # Si es la misma fase, no hacer nada (pero devolvemos OK)
             if fase_anterior.fase == nueva_fase:
                 return JsonResponse({'status': 'ok', 'message': f'Fase {nueva_fase} ya estaba activa'})
-            
+
             fase_anterior.fecha_fin = timezone.now().date()
             fase_anterior.save()
 
@@ -6475,47 +6554,47 @@ def api_bio_correlation(request, cliente_id):
     from datetime import timedelta
     from django.utils import timezone
     from core.bio_context import BioContextProvider
-    
+
     # 1. Verification
     cliente = get_object_or_404(Cliente, id=cliente_id)
     if request.user != cliente.user and not request.user.is_staff:
         return JsonResponse({'error': 'Unauthorized'}, status=403)
-        
+
     hoy = timezone.now().date()
     hace_30_dias = hoy - timedelta(days=29)
-    
+
     # Generate dates list
     dates = [hace_30_dias + timedelta(days=i) for i in range(30)]
     labels = [d.strftime('%d %b') for d in dates]
-    
+
     # Arrays for the chart
     readiness_data = []
     volume_data = []
-    
+
     # 2. Get Volume Data (group by date)
     entrenos_periodo = EntrenoRealizado.objects.filter(
-        cliente=cliente, 
-        fecha__gte=hace_30_dias, 
+        cliente=cliente,
+        fecha__gte=hace_30_dias,
         fecha__lte=hoy
     )
     volumen_por_dia = {}
     for e in entrenos_periodo:
         vol = float(e.volumen_total_kg) if e.volumen_total_kg else 0.0
         volumen_por_dia[e.fecha] = volumen_por_dia.get(e.fecha, 0.0) + vol
-        
+
     # 3. Assemble Data points per day
     for d in dates:
-        # Calculate historical readiness for that day. 
-        # Since BioContextProvider doesn't have a historical method yet, 
+        # Calculate historical readiness for that day.
+        # Since BioContextProvider doesn't have a historical method yet,
         # we try fetching daily recovery entry.
         from hyrox.models import DailyRecoveryEntry, UserInjury
         import math
-        
+
         # This mirrors a simplified `get_readiness_score` logic for historical dates
         score = 1.0
-        
+
         # a) Recovery Helms (optional simplification if not tracked historically)
-        
+
         # b) Pain/Inflammation for the day
         entries = DailyRecoveryEntry.objects.filter(lesion__cliente=cliente, fecha=d)
         for entry in entries:
@@ -6523,12 +6602,12 @@ def api_bio_correlation(request, cliente_id):
             pain_penalty = (pain / 10.0) * 0.4
             infl_penalty = (entry.inflamacion_percibida / 10.0) * 0.3
             score -= (pain_penalty + infl_penalty)
-            
+
         # c) Active injuries on that day
         active_injuries = UserInjury.objects.filter(
             cliente=cliente,
             fecha_inicio__lte=d,
-            activa=True # Asuming they were active or still active
+            activa=True  # Asuming they were active or still active
         )
         if active_injuries.exists():
             for inj in active_injuries:
@@ -6536,13 +6615,13 @@ def api_bio_correlation(request, cliente_id):
                     score *= 0.5
                 elif inj.fase == 'SUB_AGUDA':
                     score *= 0.8
-                    
+
         score = max(0.0, min(1.0, score)) * 100
         readiness_data.append(round(score, 1))
-        
+
         # Volume
         volume_data.append(round(volumen_por_dia.get(d, 0.0), 1))
-        
+
     return JsonResponse({
         'labels': labels,
         'readiness': readiness_data,
@@ -6551,6 +6630,7 @@ def api_bio_correlation(request, cliente_id):
 
 
 from django.views.decorators.http import require_POST
+
 
 @require_POST
 def api_save_hot_swap(request, cliente_id):
@@ -6562,52 +6642,55 @@ def api_save_hot_swap(request, cliente_id):
         original_name = data.get('original_name')
         substitute_name = data.get('substitute_name')
         fecha_str = data.get('fecha')
-        
+
         if not all([original_name, substitute_name, fecha_str]):
             return JsonResponse({'status': 'error', 'message': 'Faltan datos requeridos'}, status=400)
-            
+
         # Obtener el plan de la sesión
         plan_str = request.session.get(f'plan_anual_{cliente_id}')
         if not plan_str:
             return JsonResponse({'status': 'error', 'message': 'No se encontró el plan en la sesión'}, status=404)
-            
+
         try:
             plan = json.loads(plan_str)
         except TypeError:
-             # It might already be a dictionary in some cases depends on serializer
-             plan = plan_str
+            # It might already be a dictionary in some cases depends on serializer
+            plan = plan_str
 
         entrenos_dict = plan.get('entrenos_por_fecha', {})
-        
+
         entreno_dia = entrenos_dict.get(fecha_str)
         if not entreno_dia:
-            return JsonResponse({'status': 'error', 'message': f'No se encontró entrenamiento para la fecha {fecha_str}'}, status=404)
-            
+            return JsonResponse(
+                {'status': 'error', 'message': f'No se encontró entrenamiento para la fecha {fecha_str}'}, status=404)
+
         # Buscar el ejercicio a sustituir
         ejercicios = entreno_dia.get('ejercicios', [])
         sustituido = False
-        
+
         for ej in ejercicios:
             if ej.get('nombre', '').lower() == original_name.lower():
                 # Actualizamos el nombre y documentamos la sustitución
                 ej['nombre'] = substitute_name
                 ej['was_bio_substituted'] = True
                 if 'bio_substitution_reason' not in ej:
-                     ej['bio_substitution_reason'] = {}
+                    ej['bio_substitution_reason'] = {}
                 ej['bio_substitution_reason']['original'] = original_name
                 ej['bio_substitution_reason']['reason'] = 'Sustitución en caliente guardada permanentemente'
-                
+
                 sustituido = True
                 break
-                
+
         if sustituido:
             # Guardar el plan actualizado en la sesión
             request.session[f'plan_anual_{cliente_id}'] = json.dumps(plan)
             request.session.modified = True
             return JsonResponse({'status': 'success', 'message': 'Sustitución guardada exitosamente'})
         else:
-            return JsonResponse({'status': 'error', 'message': 'No se encontró el ejercicio original en el plan de hoy (quizás ya fue sustituido o borrado).'}, status=404)
-            
+            return JsonResponse({'status': 'error',
+                                 'message': 'No se encontró el ejercicio original en el plan de hoy (quizás ya fue sustituido o borrado).'},
+                                status=404)
+
     except Exception as e:
         print(f"Error en api_save_hot_swap: {e}")
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
