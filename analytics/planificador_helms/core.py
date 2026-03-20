@@ -78,7 +78,7 @@ class PlanificadorHelms:
         else:
             dias_offsets = [0, 1, 3, 4]
 
-        año_planificacion = getattr(self.perfil, "año_planificacion", datetime.now().year)
+        año_planificacion = getattr(self.perfil, "año_planificacion", None) or datetime.now().year
         primer_dia_del_año = date(año_planificacion, 1, 1)
         dias_para_lunes = (0 - primer_dia_del_año.weekday() + 7) % 7
         fecha_inicio_plan = primer_dia_del_año + timedelta(days=dias_para_lunes)
