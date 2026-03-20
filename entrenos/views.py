@@ -3443,7 +3443,7 @@ def vista_entrenamiento_activo(request, cliente_id):
             # 1. Del planificador (EJERCICIOS_DATABASE ya tiene tipo_progresion)
             # 2. Fallback: EjercicioBase en BD
             # 3. Fallback final: peso_reps
-            tipo_prog = ejercicio.get('tipo_progresion')
+            tipo_prog = None  # Siempre releer desde BD/EJERCICIOS_DATABASE
             if not tipo_prog:
                 try:
                     from analytics.planificador_helms.utils.helpers import buscar_ejercicio_por_nombre
@@ -3459,6 +3459,8 @@ def vista_entrenamiento_activo(request, cliente_id):
                 except Exception:
                     tipo_prog = None
             ejercicio['tipo_progresion'] = tipo_prog or 'peso_reps'
+            print(
+                f"TIPO_PROG: {ejercicio.get('nombre')} -> {ejercicio['tipo_progresion']} | orig={ejercicio.get('tipo_progresion', 'NO')}")
 
             # Flags de conveniencia para el template
             ejercicio['usa_peso'] = ejercicio['tipo_progresion'] in ('peso_reps', 'peso_corporal_lastre')
