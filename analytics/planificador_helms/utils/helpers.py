@@ -63,6 +63,8 @@ def ejercicio_a_dict(ejercicio: Any) -> Dict[str, Any]:
             result['estabilidad'] = ejercicio['estabilidad']
         if ejercicio.get('perfil'):
             result['perfil'] = ejercicio['perfil']
+        if ejercicio.get('tipo_progresion'):
+            result['tipo_progresion'] = ejercicio['tipo_progresion']
     return result
 
 
