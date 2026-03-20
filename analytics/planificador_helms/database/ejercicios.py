@@ -16,29 +16,40 @@ EJERCICIOS_DATABASE = {
     # =========================
     'pecho': {
         'compuesto_principal': [
-            {'nombre': 'Press Banca con Barra', 'patron': 'empuje_horizontal', 'estabilidad': 'media',
+            {'nombre': 'Press Banca con Barra', 'tipo_progresion': 'peso_reps', 'patron': 'empuje_horizontal',
+             'estabilidad': 'media',
              'perfil': 'media', 'posicion': 'tumbado', 'cadena': 'abierta'},
-            {'nombre': 'Press Inclinado con Barra', 'patron': 'empuje_horizontal', 'estabilidad': 'media',
+            {'nombre': 'Press Inclinado con Barra', 'tipo_progresion': 'peso_reps', 'patron': 'empuje_horizontal',
+             'estabilidad': 'media',
              'perfil': 'estirado', 'posicion': 'tumbado', 'cadena': 'abierta'},
-            {'nombre': 'Press Banca con Mancuernas', 'patron': 'empuje_horizontal', 'estabilidad': 'baja',
+            {'nombre': 'Press Banca con Mancuernas', 'tipo_progresion': 'peso_reps', 'patron': 'empuje_horizontal',
+             'estabilidad': 'baja',
              'perfil': 'estirado', 'posicion': 'tumbado', 'cadena': 'abierta'},
-            {'nombre': 'Convergent Machine Press', 'patron': 'empuje_horizontal', 'estabilidad': 'alta',
+            {'nombre': 'Convergent Machine Press', 'tipo_progresion': 'peso_reps', 'patron': 'empuje_horizontal',
+             'estabilidad': 'alta',
              'perfil': 'acortado', 'posicion': 'sentado', 'cadena': 'abierta'},
         ],
         'compuesto_secundario': [
-            {'nombre': 'Press Inclinado con Mancuernas', 'patron': 'empuje_horizontal', 'estabilidad': 'baja',
+            {'nombre': 'Press Inclinado con Mancuernas', 'tipo_progresion': 'peso_reps', 'patron': 'empuje_horizontal',
+             'estabilidad': 'baja',
              'perfil': 'estirado', 'posicion': 'tumbado', 'cadena': 'abierta'},
-            {'nombre': 'Press Cerrado en Banca', 'patron': 'empuje_horizontal', 'estabilidad': 'media',
+            {'nombre': 'Press Cerrado en Banca', 'tipo_progresion': 'peso_reps', 'patron': 'empuje_horizontal',
+             'estabilidad': 'media',
              'perfil': 'media', 'posicion': 'tumbado', 'cadena': 'abierta'},
-            {'nombre': 'Dips (Fondos en Pecho)', 'patron': 'empuje_horizontal', 'estabilidad': 'media',
+            {'nombre': 'Dips (Fondos en Pecho)', 'tipo_progresion': 'peso_corporal_lastre',
+             'patron': 'empuje_horizontal', 'estabilidad': 'media',
              'perfil': 'estirado', 'posicion': 'pie', 'cadena': 'cerrada'},
         ],
         'aislamiento': [
-            {'nombre': 'Aperturas con Mancuernas', 'patron': 'aislamiento', 'estabilidad': 'baja',
+            {'nombre': 'Aperturas con Mancuernas', 'tipo_progresion': 'peso_reps', 'patron': 'aislamiento',
+             'estabilidad': 'baja',
              'perfil': 'estirado', 'posicion': 'tumbado', 'cadena': 'abierta'},
-            {'nombre': 'Cruce de Poleas', 'patron': 'aislamiento', 'estabilidad': 'media', 'perfil': 'acortado', 'posicion': 'pie', 'cadena': 'abierta'},
-            {'nombre': 'Low-to-High Cable Fly', 'patron': 'aislamiento', 'estabilidad': 'media', 'perfil': 'estirado', 'posicion': 'pie', 'cadena': 'abierta'},
-            {'nombre': 'Pec Deck', 'patron': 'aislamiento', 'estabilidad': 'alta', 'perfil': 'acortado', 'posicion': 'sentado', 'cadena': 'abierta'},
+            {'nombre': 'Cruce de Poleas', 'tipo_progresion': 'peso_reps', 'patron': 'aislamiento',
+             'estabilidad': 'media', 'perfil': 'acortado', 'posicion': 'pie', 'cadena': 'abierta'},
+            {'nombre': 'Low-to-High Cable Fly', 'tipo_progresion': 'peso_reps', 'patron': 'aislamiento',
+             'estabilidad': 'media', 'perfil': 'estirado', 'posicion': 'pie', 'cadena': 'abierta'},
+            {'nombre': 'Pec Deck', 'tipo_progresion': 'peso_reps', 'patron': 'aislamiento', 'estabilidad': 'alta',
+             'perfil': 'acortado', 'posicion': 'sentado', 'cadena': 'abierta'},
         ]
     },
 
@@ -47,27 +58,37 @@ EJERCICIOS_DATABASE = {
     # =========================
     'espalda': {
         'compuesto_principal': [
-            {'nombre': 'Dominadas (con lastre)', 'patron': 'traccion_vertical', 'estabilidad': 'media',
+            {'nombre': 'Dominadas (con lastre)', 'tipo_progresion': 'peso_corporal_lastre',
+             'patron': 'traccion_vertical', 'estabilidad': 'media',
              'perfil': 'estirado', 'posicion': 'pie', 'cadena': 'cerrada'},
-            {'nombre': 'Jalón al Pecho', 'patron': 'traccion_vertical', 'estabilidad': 'alta', 'perfil': 'estirado', 'posicion': 'sentado', 'cadena': 'abierta'},
-            {'nombre': 'Jalon unilateral pecho', 'patron': 'traccion_vertical', 'estabilidad': 'media',
+            {'nombre': 'Jalón al Pecho', 'tipo_progresion': 'peso_reps', 'patron': 'traccion_vertical',
+             'estabilidad': 'alta', 'perfil': 'estirado', 'posicion': 'sentado', 'cadena': 'abierta'},
+            {'nombre': 'Jalon unilateral pecho', 'tipo_progresion': 'peso_reps', 'patron': 'traccion_vertical',
+             'estabilidad': 'media',
              'perfil': 'estirado', 'posicion': 'sentado', 'cadena': 'abierta'},
-            {'nombre': 'Remo con Barra (Pendlay)', 'patron': 'traccion_horizontal', 'estabilidad': 'baja',
+            {'nombre': 'Remo con Barra (Pendlay)', 'tipo_progresion': 'peso_reps', 'patron': 'traccion_horizontal',
+             'estabilidad': 'baja',
              'perfil': 'media', 'posicion': 'pie', 'cadena': 'cerrada'},
-            {'nombre': 'Remo pecho apoyado', 'patron': 'traccion_horizontal', 'estabilidad': 'alta',
+            {'nombre': 'Remo pecho apoyado', 'tipo_progresion': 'peso_reps', 'patron': 'traccion_horizontal',
+             'estabilidad': 'alta',
              'perfil': 'acortado', 'posicion': 'tumbado', 'cadena': 'abierta'},
         ],
         'compuesto_secundario': [
-            {'nombre': 'Remo con Mancuerna a una mano', 'patron': 'traccion_horizontal', 'estabilidad': 'media',
+            {'nombre': 'Remo con Mancuerna a una mano', 'tipo_progresion': 'peso_reps', 'patron': 'traccion_horizontal',
+             'estabilidad': 'media',
              'perfil': 'estirado', 'posicion': 'pie', 'cadena': 'abierta'},
-            {'nombre': 'Remo en Polea Baja (Gironda)', 'patron': 'traccion_horizontal', 'estabilidad': 'media',
+            {'nombre': 'Remo en Polea Baja (Gironda)', 'tipo_progresion': 'peso_reps', 'patron': 'traccion_horizontal',
+             'estabilidad': 'media',
              'perfil': 'acortado', 'universal_safe': True, 'posicion': 'sentado', 'cadena': 'abierta'},
         ],
         'aislamiento': [
-            {'nombre': 'Face Pulls', 'patron': 'traccion_horizontal', 'estabilidad': 'media', 'perfil': 'acortado', 'posicion': 'pie', 'cadena': 'abierta'},
-            {'nombre': 'Pull-over con Mancuerna', 'patron': 'traccion_vertical', 'estabilidad': 'baja',
+            {'nombre': 'Face Pulls', 'tipo_progresion': 'peso_reps', 'patron': 'traccion_horizontal',
+             'estabilidad': 'media', 'perfil': 'acortado', 'posicion': 'pie', 'cadena': 'abierta'},
+            {'nombre': 'Pull-over con Mancuerna', 'tipo_progresion': 'peso_reps', 'patron': 'traccion_vertical',
+             'estabilidad': 'baja',
              'perfil': 'estirado', 'posicion': 'tumbado', 'cadena': 'abierta'},
-            {'nombre': 'Jalon brazos rectos', 'patron': 'traccion_vertical', 'estabilidad': 'media',
+            {'nombre': 'Jalon brazos rectos', 'tipo_progresion': 'peso_reps', 'patron': 'traccion_vertical',
+             'estabilidad': 'media',
              'perfil': 'estirado', 'posicion': 'pie', 'cadena': 'abierta'},
         ]
     },
@@ -77,27 +98,37 @@ EJERCICIOS_DATABASE = {
     # =========================
     'hombros': {
         'compuesto_principal': [
-            {'nombre': 'Press Militar con Barra (de pie)', 'patron': 'empuje_vertical', 'estabilidad': 'baja',
+            {'nombre': 'Press Militar con Barra (de pie)', 'tipo_progresion': 'peso_reps', 'patron': 'empuje_vertical',
+             'estabilidad': 'baja',
              'perfil': 'media', 'posicion': 'pie', 'cadena': 'abierta'},
-            {'nombre': 'Push Press', 'patron': 'empuje_vertical', 'estabilidad': 'baja', 'perfil': 'media',
+            {'nombre': 'Push Press', 'tipo_progresion': 'peso_reps', 'patron': 'empuje_vertical', 'estabilidad': 'baja',
+             'perfil': 'media',
              'posicion': 'pie', 'cadena': 'abierta'},
-            {'nombre': 'Press Militar con Mancuernas (sentado)', 'patron': 'empuje_vertical', 'estabilidad': 'media',
+            {'nombre': 'Press Militar con Mancuernas (sentado)', 'tipo_progresion': 'peso_reps',
+             'patron': 'empuje_vertical', 'estabilidad': 'media',
              'perfil': 'estirado', 'universal_safe': True, 'posicion': 'sentado', 'cadena': 'abierta'},
-            {'nombre': 'Machine Shoulder Press', 'patron': 'empuje_vertical', 'estabilidad': 'alta',
+            {'nombre': 'Machine Shoulder Press', 'tipo_progresion': 'peso_reps', 'patron': 'empuje_vertical',
+             'estabilidad': 'alta',
              'perfil': 'acortado', 'posicion': 'sentado', 'cadena': 'abierta'},
         ],
         'compuesto_secundario': [
-            {'nombre': 'Press Arnold', 'patron': 'empuje_vertical', 'estabilidad': 'baja', 'perfil': 'estirado', 'posicion': 'sentado', 'cadena': 'abierta'},
+            {'nombre': 'Press Arnold', 'tipo_progresion': 'peso_reps', 'patron': 'empuje_vertical',
+             'estabilidad': 'baja', 'perfil': 'estirado', 'posicion': 'sentado', 'cadena': 'abierta'},
         ],
         'aislamiento': [
-            {'nombre': 'Elevaciones Laterales con Mancuernas', 'patron': 'aislamiento', 'estabilidad': 'baja',
+            {'nombre': 'Elevaciones Laterales con Mancuernas', 'tipo_progresion': 'peso_reps', 'patron': 'aislamiento',
+             'estabilidad': 'baja',
              'perfil': 'acortado', 'posicion': 'pie', 'cadena': 'abierta'},
-            {'nombre': 'Elevaciones Laterales en Polea', 'patron': 'aislamiento', 'estabilidad': 'media',
+            {'nombre': 'Elevaciones Laterales en Polea', 'tipo_progresion': 'peso_reps', 'patron': 'aislamiento',
+             'estabilidad': 'media',
              'perfil': 'estirado', 'posicion': 'pie', 'cadena': 'abierta'},
-            {'nombre': 'Y-Raises', 'patron': 'aislamiento', 'estabilidad': 'baja', 'perfil': 'estirado', 'posicion': 'pie', 'cadena': 'abierta'},
-            {'nombre': 'Elevaciones Frontales con Polea', 'patron': 'aislamiento', 'estabilidad': 'media',
+            {'nombre': 'Y-Raises', 'tipo_progresion': 'progresion_reps', 'patron': 'aislamiento', 'estabilidad': 'baja',
+             'perfil': 'estirado', 'posicion': 'pie', 'cadena': 'abierta'},
+            {'nombre': 'Elevaciones Frontales con Polea', 'tipo_progresion': 'peso_reps', 'patron': 'aislamiento',
+             'estabilidad': 'media',
              'perfil': 'acortado', 'posicion': 'pie', 'cadena': 'abierta'},
-            {'nombre': 'Pájaros (Bent Over Raises)', 'patron': 'aislamiento', 'estabilidad': 'baja',
+            {'nombre': 'Pájaros (Bent Over Raises)', 'tipo_progresion': 'peso_reps', 'patron': 'aislamiento',
+             'estabilidad': 'baja',
              'perfil': 'acortado', 'posicion': 'pie', 'cadena': 'abierta'},
         ]
     },
@@ -107,32 +138,40 @@ EJERCICIOS_DATABASE = {
     # =========================
     'cuadriceps': {
         'compuesto_principal': [
-            {'nombre': 'Sentadilla Trasera con Barra', 'patron': 'rodilla', 'estabilidad': 'media',
+            {'nombre': 'Sentadilla Trasera con Barra', 'tipo_progresion': 'peso_reps', 'patron': 'rodilla',
+             'estabilidad': 'media',
              'perfil': 'estirado', 'posicion': 'pie', 'cadena': 'cerrada',
              'risk_tags': ['flexion_rodilla_profunda', 'impacto_vertical', 'carga_axial']},
-            {'nombre': 'Sentadilla Frontal con Barra', 'patron': 'rodilla', 'estabilidad': 'media',
+            {'nombre': 'Sentadilla Frontal con Barra', 'tipo_progresion': 'peso_reps', 'patron': 'rodilla',
+             'estabilidad': 'media',
              'perfil': 'estirado', 'posicion': 'pie', 'cadena': 'cerrada',
              'risk_tags': ['flexion_rodilla_profunda', 'impacto_vertical', 'carga_axial']},
-            {'nombre': 'Sentadilla Hack', 'patron': 'rodilla', 'estabilidad': 'alta', 'perfil': 'estirado',
+            {'nombre': 'Sentadilla Hack', 'tipo_progresion': 'peso_reps', 'patron': 'rodilla', 'estabilidad': 'alta',
+             'perfil': 'estirado',
              'posicion': 'pie', 'cadena': 'cerrada',
              'risk_tags': ['flexion_rodilla_profunda', 'empuje_pierna', 'carga_distal_pierna']},
-            {'nombre': 'Sentadilla Búlgara', 'patron': 'rodilla', 'estabilidad': 'baja', 'perfil': 'estirado',
+            {'nombre': 'Sentadilla Búlgara', 'tipo_progresion': 'peso_reps', 'patron': 'rodilla', 'estabilidad': 'baja',
+             'perfil': 'estirado',
              'posicion': 'pie', 'cadena': 'cerrada',
              'risk_tags': ['flexion_rodilla_profunda', 'estabilidad_tobillo', 'impacto_vertical']},
         ],
         'compuesto_secundario': [
-            {'nombre': 'Prensa de Piernas', 'patron': 'rodilla', 'estabilidad': 'alta', 'perfil': 'media',
+            {'nombre': 'Prensa de Piernas', 'tipo_progresion': 'peso_reps', 'patron': 'rodilla', 'estabilidad': 'alta',
+             'perfil': 'media',
              'posicion': 'tumbado', 'cadena': 'cerrada',
              'risk_tags': ['empuje_pierna', 'flexion_rodilla_profunda', 'carga_distal_pierna']},
-            {'nombre': 'Zancadas con Mancuernas', 'patron': 'rodilla', 'estabilidad': 'baja', 'perfil': 'estirado',
+            {'nombre': 'Zancadas con Mancuernas', 'tipo_progresion': 'peso_reps', 'patron': 'rodilla',
+             'estabilidad': 'baja', 'perfil': 'estirado',
              'posicion': 'pie', 'cadena': 'cerrada',
              'risk_tags': ['estabilidad_tobillo', 'impacto_vertical', 'flexion_rodilla_profunda']},
         ],
         'aislamiento': [
-            {'nombre': 'Extensiones de Cuádriceps en Máquina', 'patron': 'aislamiento', 'estabilidad': 'alta',
+            {'nombre': 'Extensiones de Cuádriceps en Máquina', 'tipo_progresion': 'peso_reps', 'patron': 'aislamiento',
+             'estabilidad': 'alta',
              'perfil': 'acortado', 'posicion': 'sentado', 'cadena': 'abierta',
              'risk_tags': []},
-            {'nombre': 'Sissy Squat', 'patron': 'aislamiento', 'estabilidad': 'baja', 'perfil': 'estirado',
+            {'nombre': 'Sissy Squat', 'tipo_progresion': 'progresion_reps', 'patron': 'aislamiento',
+             'estabilidad': 'baja', 'perfil': 'estirado',
              'posicion': 'pie', 'cadena': 'cerrada',
              'risk_tags': ['flexion_rodilla_profunda', 'estabilidad_tobillo']},
         ]
@@ -143,26 +182,32 @@ EJERCICIOS_DATABASE = {
     # =========================
     'isquios': {
         'compuesto_principal': [
-            {'nombre': 'Peso Muerto Rumano', 'patron': 'bisagra', 'estabilidad': 'media', 'perfil': 'estirado',
+            {'nombre': 'Peso Muerto Rumano', 'tipo_progresion': 'peso_reps', 'patron': 'bisagra',
+             'estabilidad': 'media', 'perfil': 'estirado',
              'posicion': 'pie', 'cadena': 'cerrada',
              'risk_tags': ['bisagra_cadera', 'carga_axial']},
-            {'nombre': 'Buenos Días (Good Mornings)', 'patron': 'bisagra', 'estabilidad': 'baja', 'perfil': 'estirado',
+            {'nombre': 'Buenos Días (Good Mornings)', 'tipo_progresion': 'peso_reps', 'patron': 'bisagra',
+             'estabilidad': 'baja', 'perfil': 'estirado',
              'posicion': 'pie', 'cadena': 'cerrada',
              'risk_tags': ['bisagra_cadera', 'carga_axial']},
-            {'nombre': 'Curl Nórdico (Nordic Hamstring Curl)', 'patron': 'flexion_rodilla', 'estabilidad': 'baja',
+            {'nombre': 'Curl Nórdico (Nordic Hamstring Curl)', 'tipo_progresion': 'progresion_reps',
+             'patron': 'flexion_rodilla', 'estabilidad': 'baja',
              'perfil': 'estirado', 'posicion': 'tumbado', 'cadena': 'cerrada',
              'risk_tags': ['flexion_rodilla_profunda']},
         ],
         'compuesto_secundario': [
-            {'nombre': 'Curl Femoral Tumbado', 'patron': 'aislamiento', 'estabilidad': 'alta', 'perfil': 'media',
+            {'nombre': 'Curl Femoral Tumbado', 'tipo_progresion': 'peso_reps', 'patron': 'aislamiento',
+             'estabilidad': 'alta', 'perfil': 'media',
              'posicion': 'tumbado', 'cadena': 'abierta',
              'risk_tags': []},
-            {'nombre': 'Curl Femoral Sentado', 'patron': 'aislamiento', 'estabilidad': 'alta', 'perfil': 'estirado',
+            {'nombre': 'Curl Femoral Sentado', 'tipo_progresion': 'peso_reps', 'patron': 'aislamiento',
+             'estabilidad': 'alta', 'perfil': 'estirado',
              'posicion': 'sentado', 'cadena': 'abierta',
              'risk_tags': []},
         ],
         'aislamiento': [
-            {'nombre': 'Hiperextensiones Inversas', 'patron': 'bisagra', 'estabilidad': 'media', 'perfil': 'acortado',
+            {'nombre': 'Hiperextensiones Inversas', 'tipo_progresion': 'peso_reps', 'patron': 'bisagra',
+             'estabilidad': 'media', 'perfil': 'acortado',
              'risk_tags': []},
         ]
     },
@@ -172,18 +217,22 @@ EJERCICIOS_DATABASE = {
     # =========================
     'gluteos': {
         'compuesto_principal': [
-            {'nombre': 'Hip Thrust con Barra', 'patron': 'bisagra', 'estabilidad': 'media', 'perfil': 'acortado',
+            {'nombre': 'Hip Thrust con Barra', 'tipo_progresion': 'peso_reps', 'patron': 'bisagra',
+             'estabilidad': 'media', 'perfil': 'acortado',
              'posicion': 'tumbado', 'cadena': 'cerrada',
              'risk_tags': ['bisagra_cadera']},
-            {'nombre': 'Peso Muerto Sumo', 'patron': 'bisagra', 'estabilidad': 'media', 'perfil': 'estirado',
+            {'nombre': 'Peso Muerto Sumo', 'tipo_progresion': 'peso_reps', 'patron': 'bisagra', 'estabilidad': 'media',
+             'perfil': 'estirado',
              'posicion': 'pie', 'cadena': 'cerrada',
              'risk_tags': ['bisagra_cadera', 'carga_axial']},
         ],
         'compuesto_secundario': [
-            {'nombre': 'Patada de Glúteo en Polea', 'patron': 'aislamiento', 'estabilidad': 'media',
+            {'nombre': 'Patada de Glúteo en Polea', 'tipo_progresion': 'peso_reps', 'patron': 'aislamiento',
+             'estabilidad': 'media',
              'perfil': 'acortado', 'posicion': 'pie', 'cadena': 'abierta',
              'risk_tags': []},
-            {'nombre': 'Abducción de Cadera en Máquina', 'patron': 'aislamiento', 'estabilidad': 'alta',
+            {'nombre': 'Abducción de Cadera en Máquina', 'tipo_progresion': 'peso_reps', 'patron': 'aislamiento',
+             'estabilidad': 'alta',
              'perfil': 'acortado', 'posicion': 'sentado', 'cadena': 'abierta',
              'risk_tags': []},
         ],
@@ -196,17 +245,24 @@ EJERCICIOS_DATABASE = {
     'biceps': {
         'compuesto_principal': [],
         'compuesto_secundario': [
-            {'nombre': 'Curl con Barra Z', 'patron': 'flexion_codo', 'estabilidad': 'media', 'perfil': 'media', 'posicion': 'pie', 'cadena': 'abierta'},
-            {'nombre': 'Curl Araña', 'patron': 'flexion_codo', 'estabilidad': 'alta', 'perfil': 'acortado', 'posicion': 'tumbado', 'cadena': 'abierta'},
-            {'nombre': 'Curl Inclinado con Mancuernas', 'patron': 'flexion_codo', 'estabilidad': 'baja',
+            {'nombre': 'Curl con Barra Z', 'tipo_progresion': 'peso_reps', 'patron': 'flexion_codo',
+             'estabilidad': 'media', 'perfil': 'media', 'posicion': 'pie', 'cadena': 'abierta'},
+            {'nombre': 'Curl Araña', 'tipo_progresion': 'peso_reps', 'patron': 'flexion_codo', 'estabilidad': 'alta',
+             'perfil': 'acortado', 'posicion': 'tumbado', 'cadena': 'abierta'},
+            {'nombre': 'Curl Inclinado con Mancuernas', 'tipo_progresion': 'peso_reps', 'patron': 'flexion_codo',
+             'estabilidad': 'baja',
              'perfil': 'estirado', 'posicion': 'sentado', 'cadena': 'abierta'},
-            {'nombre': 'Bayesian Curl', 'patron': 'flexion_codo', 'estabilidad': 'media', 'perfil': 'estirado', 'posicion': 'pie', 'cadena': 'abierta'},
+            {'nombre': 'Bayesian Curl', 'tipo_progresion': 'peso_reps', 'patron': 'flexion_codo',
+             'estabilidad': 'media', 'perfil': 'estirado', 'posicion': 'pie', 'cadena': 'abierta'},
         ],
         'aislamiento': [
-            {'nombre': 'Curl de Concentración', 'patron': 'flexion_codo', 'estabilidad': 'baja', 'perfil': 'acortado', 'posicion': 'sentado', 'cadena': 'abierta'},
-            {'nombre': 'Curl Martillo con Mancuernas', 'patron': 'flexion_codo', 'estabilidad': 'baja',
+            {'nombre': 'Curl de Concentración', 'tipo_progresion': 'peso_reps', 'patron': 'flexion_codo',
+             'estabilidad': 'baja', 'perfil': 'acortado', 'posicion': 'sentado', 'cadena': 'abierta'},
+            {'nombre': 'Curl Martillo con Mancuernas', 'tipo_progresion': 'peso_reps', 'patron': 'flexion_codo',
+             'estabilidad': 'baja',
              'perfil': 'media', 'posicion': 'pie', 'cadena': 'abierta'},
-            {'nombre': 'Curl en Polea Alta', 'patron': 'flexion_codo', 'estabilidad': 'media', 'perfil': 'acortado', 'posicion': 'pie', 'cadena': 'abierta'},
+            {'nombre': 'Curl en Polea Alta', 'tipo_progresion': 'peso_reps', 'patron': 'flexion_codo',
+             'estabilidad': 'media', 'perfil': 'acortado', 'posicion': 'pie', 'cadena': 'abierta'},
         ]
     },
 
@@ -215,20 +271,28 @@ EJERCICIOS_DATABASE = {
     # =========================
     'triceps': {
         'compuesto_principal': [
-            {'nombre': 'Press Francés con Barra Z', 'patron': 'extension_codo', 'estabilidad': 'media',
+            {'nombre': 'Press Francés con Barra Z', 'tipo_progresion': 'peso_reps', 'patron': 'extension_codo',
+             'estabilidad': 'media',
              'perfil': 'estirado', 'posicion': 'tumbado', 'cadena': 'abierta'},
-            {'nombre': 'Press Cerrado en Banca', 'patron': 'extension_codo', 'estabilidad': 'media', 'perfil': 'media', 'posicion': 'tumbado', 'cadena': 'abierta'},
-            {'nombre': 'Fondos en Paralelas (con lastre)', 'patron': 'extension_codo', 'estabilidad': 'media',
+            {'nombre': 'Press Cerrado en Banca', 'tipo_progresion': 'peso_reps', 'patron': 'extension_codo',
+             'estabilidad': 'media', 'perfil': 'media', 'posicion': 'tumbado', 'cadena': 'abierta'},
+            {'nombre': 'Fondos en Paralelas (con lastre)', 'tipo_progresion': 'peso_corporal_lastre',
+             'patron': 'extension_codo', 'estabilidad': 'media',
              'perfil': 'estirado', 'posicion': 'pie', 'cadena': 'cerrada'},
-            {'nombre': 'Katana Extensions', 'patron': 'extension_codo', 'estabilidad': 'media', 'perfil': 'estirado', 'posicion': 'pie', 'cadena': 'abierta'},
+            {'nombre': 'Katana Extensions', 'tipo_progresion': 'peso_reps', 'patron': 'extension_codo',
+             'estabilidad': 'media', 'perfil': 'estirado', 'posicion': 'pie', 'cadena': 'abierta'},
         ],
         'compuesto_secundario': [
-            {'nombre': 'Extensiones de Tríceps con Polea Alta', 'patron': 'extension_codo', 'estabilidad': 'media',
+            {'nombre': 'Extensiones de Tríceps con Polea Alta', 'tipo_progresion': 'peso_reps',
+             'patron': 'extension_codo', 'estabilidad': 'media',
              'perfil': 'acortado', 'posicion': 'pie', 'cadena': 'abierta'},
-            {'nombre': 'Extensiones sobre la Cabeza con Mancuerna', 'patron': 'extension_codo', 'estabilidad': 'baja',
+            {'nombre': 'Extensiones sobre la Cabeza con Mancuerna', 'tipo_progresion': 'peso_reps',
+             'patron': 'extension_codo', 'estabilidad': 'baja',
              'perfil': 'estirado', 'posicion': 'sentado', 'cadena': 'abierta'},
-            {'nombre': 'Fondos entre Bancos', 'patron': 'extension_codo', 'estabilidad': 'media', 'perfil': 'media', 'posicion': 'pie', 'cadena': 'cerrada'},
-            {'nombre': 'Patada de Tríceps con Polea', 'patron': 'extension_codo', 'estabilidad': 'media',
+            {'nombre': 'Fondos entre Bancos', 'tipo_progresion': 'progresion_reps', 'patron': 'extension_codo',
+             'estabilidad': 'media', 'perfil': 'media', 'posicion': 'pie', 'cadena': 'cerrada'},
+            {'nombre': 'Patada de Tríceps con Polea', 'tipo_progresion': 'peso_reps', 'patron': 'extension_codo',
+             'estabilidad': 'media',
              'perfil': 'acortado', 'posicion': 'pie', 'cadena': 'abierta'},
         ],
         'aislamiento': []
@@ -239,23 +303,28 @@ EJERCICIOS_DATABASE = {
     # =========================
     'gemelos': {
         'compuesto_principal': [
-            {'nombre': 'Elevación de Gemelos de Pie (Máquina)', 'patron': 'gemelos', 'estabilidad': 'alta',
+            {'nombre': 'Elevación de Gemelos de Pie (Máquina)', 'tipo_progresion': 'peso_reps', 'patron': 'gemelos',
+             'estabilidad': 'alta',
              'perfil': 'estirado', 'posicion': 'pie', 'cadena': 'cerrada',
              'risk_tags': ['flexion_plantar', 'carga_distal_pierna', 'estabilidad_gemelo']},
-            {'nombre': 'Elevación de Gemelos en Prensa', 'patron': 'gemelos', 'estabilidad': 'alta',
+            {'nombre': 'Elevación de Gemelos en Prensa', 'tipo_progresion': 'peso_reps', 'patron': 'gemelos',
+             'estabilidad': 'alta',
              'perfil': 'estirado', 'posicion': 'tumbado', 'cadena': 'cerrada',
              'risk_tags': ['flexion_plantar', 'carga_distal_pierna', 'estabilidad_gemelo']},
         ],
         'compuesto_secundario': [
-            {'nombre': 'Elevación de Gemelos Sentado (Máquina)', 'patron': 'gemelos', 'estabilidad': 'alta',
+            {'nombre': 'Elevación de Gemelos Sentado (Máquina)', 'tipo_progresion': 'peso_reps', 'patron': 'gemelos',
+             'estabilidad': 'alta',
              'perfil': 'acortado', 'posicion': 'sentado', 'cadena': 'cerrada',
              'risk_tags': ['flexion_plantar', 'estabilidad_gemelo']},
         ],
         'aislamiento': [
-            {'nombre': 'Elevación de Gemelos Unilateral (Mancuerna)', 'patron': 'gemelos', 'estabilidad': 'baja',
+            {'nombre': 'Elevación de Gemelos Unilateral (Mancuerna)', 'tipo_progresion': 'peso_reps',
+             'patron': 'gemelos', 'estabilidad': 'baja',
              'perfil': 'estirado', 'posicion': 'pie', 'cadena': 'cerrada',
              'risk_tags': ['flexion_plantar', 'estabilidad_tobillo', 'estabilidad_gemelo']},
-            {'nombre': 'Elevación de Gemelos en Multipower', 'patron': 'gemelos', 'estabilidad': 'media',
+            {'nombre': 'Elevación de Gemelos en Multipower', 'tipo_progresion': 'peso_reps', 'patron': 'gemelos',
+             'estabilidad': 'media',
              'perfil': 'estirado', 'posicion': 'pie', 'cadena': 'cerrada',
              'risk_tags': ['flexion_plantar', 'carga_distal_pierna', 'estabilidad_gemelo']},
         ]
@@ -266,16 +335,22 @@ EJERCICIOS_DATABASE = {
     # =========================
     'core': {
         'compuesto_principal': [
-            {'nombre': 'Elevaciones de Piernas Colgado', 'patron': 'core', 'estabilidad': 'baja', 'posicion': 'pie', 'cadena': 'abierta'},
-            {'nombre': 'Crunch en Polea (Cable Crunch)', 'patron': 'core', 'estabilidad': 'media', 'posicion': 'pie', 'cadena': 'abierta'},
+            {'nombre': 'Elevaciones de Piernas Colgado', 'tipo_progresion': 'progresion_reps', 'patron': 'core',
+             'estabilidad': 'baja', 'posicion': 'pie', 'cadena': 'abierta'},
+            {'nombre': 'Crunch en Polea (Cable Crunch)', 'tipo_progresion': 'peso_reps', 'patron': 'core',
+             'estabilidad': 'media', 'posicion': 'pie', 'cadena': 'abierta'},
         ],
         'compuesto_secundario': [
-            {'nombre': 'Plancha (Plank)', 'patron': 'core', 'estabilidad': 'baja', 'universal_safe': True, 'posicion': 'tumbado', 'cadena': 'cerrada'},
-            {'nombre': 'Pallof Press', 'patron': 'core', 'estabilidad': 'media', 'posicion': 'pie', 'cadena': 'abierta'},
+            {'nombre': 'Plancha (Plank)', 'tipo_progresion': 'progresion_tiempo', 'patron': 'core',
+             'estabilidad': 'baja', 'universal_safe': True, 'posicion': 'tumbado', 'cadena': 'cerrada'},
+            {'nombre': 'Pallof Press', 'tipo_progresion': 'peso_reps', 'patron': 'core', 'estabilidad': 'media',
+             'posicion': 'pie', 'cadena': 'abierta'},
         ],
         'aislamiento': [
-            {'nombre': 'Dead Bug', 'patron': 'core', 'estabilidad': 'baja', 'universal_safe': True, 'posicion': 'tumbado', 'cadena': 'abierta'},
-            {'nombre': 'Ab Wheel (Rueda Abdominal)', 'patron': 'core', 'estabilidad': 'baja', 'posicion': 'tumbado', 'cadena': 'cerrada'},
+            {'nombre': 'Dead Bug', 'tipo_progresion': 'progresion_variante', 'patron': 'core', 'estabilidad': 'baja',
+             'universal_safe': True, 'posicion': 'tumbado', 'cadena': 'abierta'},
+            {'nombre': 'Ab Wheel (Rueda Abdominal)', 'tipo_progresion': 'progresion_reps', 'patron': 'core',
+             'estabilidad': 'baja', 'posicion': 'tumbado', 'cadena': 'cerrada'},
         ]
     },
 
@@ -284,15 +359,20 @@ EJERCICIOS_DATABASE = {
     # =========================
     'trapecios': {
         'compuesto_principal': [
-            {'nombre': 'Encogimientos con Barra', 'patron': 'trapecio', 'estabilidad': 'media', 'posicion': 'pie', 'cadena': 'abierta'},
-            {'nombre': 'Encogimientos con Mancuernas', 'patron': 'trapecio', 'estabilidad': 'baja', 'posicion': 'pie', 'cadena': 'abierta'},
+            {'nombre': 'Encogimientos con Barra', 'tipo_progresion': 'peso_reps', 'patron': 'trapecio',
+             'estabilidad': 'media', 'posicion': 'pie', 'cadena': 'abierta'},
+            {'nombre': 'Encogimientos con Mancuernas', 'tipo_progresion': 'peso_reps', 'patron': 'trapecio',
+             'estabilidad': 'baja', 'posicion': 'pie', 'cadena': 'abierta'},
         ],
         'compuesto_secundario': [
-            {'nombre': 'Farmer Walk (Paseo del Granjero)', 'patron': 'agarre', 'estabilidad': 'baja', 'posicion': 'pie', 'cadena': 'cerrada'},
+            {'nombre': 'Farmer Walk (Paseo del Granjero)', 'tipo_progresion': 'progresion_distancia',
+             'patron': 'agarre', 'estabilidad': 'baja', 'posicion': 'pie', 'cadena': 'cerrada'},
         ],
         'aislamiento': [
-            {'nombre': 'Face Pull', 'patron': 'traccion_horizontal', 'estabilidad': 'media', 'posicion': 'pie', 'cadena': 'abierta'},
-            {'nombre': 'Remo al Mentón con Polea (Upright Row)', 'patron': 'trapecio', 'estabilidad': 'media', 'posicion': 'pie', 'cadena': 'abierta'},
+            {'nombre': 'Face Pull', 'tipo_progresion': 'peso_reps', 'patron': 'traccion_horizontal',
+             'estabilidad': 'media', 'posicion': 'pie', 'cadena': 'abierta'},
+            {'nombre': 'Remo al Mentón con Polea (Upright Row)', 'tipo_progresion': 'peso_reps', 'patron': 'trapecio',
+             'estabilidad': 'media', 'posicion': 'pie', 'cadena': 'abierta'},
         ]
     },
 
@@ -302,13 +382,18 @@ EJERCICIOS_DATABASE = {
     'antebrazos': {
         'compuesto_principal': [],
         'compuesto_secundario': [
-            {'nombre': 'Farmer Walk (Paseo del Granjero)', 'patron': 'agarre', 'estabilidad': 'baja', 'posicion': 'pie', 'cadena': 'cerrada'},
-            {'nombre': 'Aguante en Barra (Dead Hang)', 'patron': 'agarre', 'estabilidad': 'media', 'posicion': 'pie', 'cadena': 'cerrada'},
+            {'nombre': 'Farmer Walk (Paseo del Granjero)', 'tipo_progresion': 'progresion_distancia',
+             'patron': 'agarre', 'estabilidad': 'baja', 'posicion': 'pie', 'cadena': 'cerrada'},
+            {'nombre': 'Aguante en Barra (Dead Hang)', 'tipo_progresion': 'progresion_tiempo', 'patron': 'agarre',
+             'estabilidad': 'media', 'posicion': 'pie', 'cadena': 'cerrada'},
         ],
         'aislamiento': [
-            {'nombre': 'Curl de Muñeca (Wrist Curl)', 'patron': 'antebrazo', 'estabilidad': 'media', 'posicion': 'sentado', 'cadena': 'abierta'},
-            {'nombre': 'Curl Inverso con Barra', 'patron': 'antebrazo', 'estabilidad': 'media', 'posicion': 'pie', 'cadena': 'abierta'},
-            {'nombre': 'Extensión de Muñeca (Reverse Wrist Curl)', 'patron': 'antebrazo', 'estabilidad': 'media', 'posicion': 'sentado', 'cadena': 'abierta'},
+            {'nombre': 'Curl de Muñeca (Wrist Curl)', 'tipo_progresion': 'peso_reps', 'patron': 'antebrazo',
+             'estabilidad': 'media', 'posicion': 'sentado', 'cadena': 'abierta'},
+            {'nombre': 'Curl Inverso con Barra', 'tipo_progresion': 'peso_reps', 'patron': 'antebrazo',
+             'estabilidad': 'media', 'posicion': 'pie', 'cadena': 'abierta'},
+            {'nombre': 'Extensión de Muñeca (Reverse Wrist Curl)', 'tipo_progresion': 'peso_reps',
+             'patron': 'antebrazo', 'estabilidad': 'media', 'posicion': 'sentado', 'cadena': 'abierta'},
         ]
     },
     # =========================
@@ -316,14 +401,22 @@ EJERCICIOS_DATABASE = {
     # =========================
     'hyrox': {
         'compuesto_principal': [
-            {'nombre': 'SkiErg', 'patron': 'traccion_vertical', 'risk_tags': ['flexion_plantar']},
-            {'nombre': 'Sled Push', 'patron': 'rodilla', 'risk_tags': ['empuje_pierna', 'carga_distal_pierna']},
-            {'nombre': 'Sled Pull', 'patron': 'bisagra', 'risk_tags': ['bisagra_cadera', 'traccion_horizontal']},
-            {'nombre': 'Burpee Broad Jump', 'patron': 'pleometrico', 'risk_tags': ['impacto_vertical', 'flexion_rodilla_profunda', 'triple_extension_explosiva']},
-            {'nombre': 'Rowing', 'patron': 'traccion_horizontal', 'risk_tags': ['bisagra_cadera']},
-            {'nombre': 'Farmers Carry', 'patron': 'agarre', 'risk_tags': ['carga_axial', 'estabilidad_tobillo']},
-            {'nombre': 'Sandbag Lunges', 'patron': 'rodilla', 'risk_tags': ['impacto_vertical', 'flexion_rodilla_profunda', 'estabilidad_tobillo']},
-            {'nombre': 'Wall Balls', 'patron': 'rodilla', 'risk_tags': ['impacto_vertical', 'flexion_rodilla_profunda']},
+            {'nombre': 'SkiErg', 'tipo_progresion': 'progresion_distancia', 'patron': 'traccion_vertical',
+             'risk_tags': ['flexion_plantar']},
+            {'nombre': 'Sled Push', 'tipo_progresion': 'progresion_distancia', 'patron': 'rodilla',
+             'risk_tags': ['empuje_pierna', 'carga_distal_pierna']},
+            {'nombre': 'Sled Pull', 'tipo_progresion': 'progresion_distancia', 'patron': 'bisagra',
+             'risk_tags': ['bisagra_cadera', 'traccion_horizontal']},
+            {'nombre': 'Burpee Broad Jump', 'tipo_progresion': 'progresion_reps', 'patron': 'pleometrico',
+             'risk_tags': ['impacto_vertical', 'flexion_rodilla_profunda', 'triple_extension_explosiva']},
+            {'nombre': 'Rowing', 'tipo_progresion': 'progresion_distancia', 'patron': 'traccion_horizontal',
+             'risk_tags': ['bisagra_cadera']},
+            {'nombre': 'Farmers Carry', 'tipo_progresion': 'progresion_distancia', 'patron': 'agarre',
+             'risk_tags': ['carga_axial', 'estabilidad_tobillo']},
+            {'nombre': 'Sandbag Lunges', 'tipo_progresion': 'progresion_reps', 'patron': 'rodilla',
+             'risk_tags': ['impacto_vertical', 'flexion_rodilla_profunda', 'estabilidad_tobillo']},
+            {'nombre': 'Wall Balls', 'tipo_progresion': 'progresion_reps', 'patron': 'rodilla',
+             'risk_tags': ['impacto_vertical', 'flexion_rodilla_profunda']},
         ],
         'compuesto_secundario': [],
         'aislamiento': []
@@ -377,7 +470,7 @@ def obtener_todos_ejercicios_por_grupo(grupo_muscular: str) -> List[Dict[str, st
 
     Ejemplo:
         >>> obtener_todos_ejercicios_por_grupo('pecho')
-        [{'nombre': 'Press Banca con Barra', 'patron': 'empuje_horizontal'}, ...]
+        [{'nombre': 'Press Banca con Barra', 'tipo_progresion': 'peso_reps', 'patron': 'empuje_horizontal'}, ...]
     """
     if grupo_muscular not in EJERCICIOS_DATABASE:
         return []
@@ -420,7 +513,7 @@ _MAPEO_INVERSO_CACHE: Optional[Dict[str, str]] = None
 def obtener_mapeo_inverso() -> Dict[str, str]:
     """
     Obtiene el mapeo inverso (con cache).
-    
+
     Returns:
         dict: Mapeo de ejercicio -> grupo muscular
     """

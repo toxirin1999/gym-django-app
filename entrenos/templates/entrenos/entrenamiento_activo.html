@@ -172,9 +172,7 @@ input{background:transparent!important;border:none!important;outline:none!import
 .pd-ctrl-btn.mas{color:var(--g);border-color:var(--bdm);}
 .pd-ctrl-btn:active{background:var(--panel);}
 
-.pd-notas{margin:0 16px 8px;}
-.pd-notas textarea{width:100%;background:var(--deep)!important;border:1px solid var(--bd)!important;color:var(--t)!important;font-size:13px;padding:10px;resize:none;height:58px;font-family:var(--fu);outline:none!important;}
-.pd-notas textarea::placeholder{color:var(--tm);}
+
 
 .btn-saltar{
   width:calc(100% - 32px);margin:0 16px 16px;height:44px;
@@ -337,83 +335,127 @@ input{background:transparent!important;border:none!important;outline:none!import
   <!-- LOG DE SERIES COMPLETADAS -->
   <div class="series-log" id="log-{{ ejercicio.form_id }}"></div>
 
-  <!-- PANTALLA REGISTRO (serie activa) -->
-  <div class="pantalla-registro" id="reg-{{ ejercicio.form_id }}">
-
-    <!-- Serie activa header -->
-    <div class="serie-activa" id="sa-{{ ejercicio.form_id }}">
+  <!-- SERIES — una pantalla por serie, generadas por Django -->
+  {% for i in ""|center:ejercicio.series %}{% with forloop.counter as sn %}
+  <div class="pantalla-registro" id="reg-{{ ejercicio.form_id }}-{{ sn }}"
+       style="display:{% if forloop.first %}block{% else %}none{% endif %};">
+    <div class="serie-activa">
       <div class="sa-header">
-        <span class="sa-num" id="sa-num-{{ ejercicio.form_id }}">SERIE 1 DE {{ ejercicio.series }}</span>
-        <span class="sa-obj">Obj: {% if ejercicio.peso_por_mancuerna_kg %}{{ ejercicio.peso_por_mancuerna_kg }}{% else %}{{ ejercicio.peso_recomendado_kg }}{% endif %}kg × {{ ejercicio.reps_objetivo }} reps</span>
+        <span class="sa-num">SERIE {{ sn }} DE {{ ejercicio.series }}</span>
+        {% if ejercicio.usa_peso %}
+          <span class="sa-obj">Obj: {{ ejercicio.peso_recomendado_kg }}kg × {{ ejercicio.reps_objetivo }} reps</span>
+        {% elif ejercicio.usa_tiempo %}
+          <span class="sa-obj">Obj: {{ ejercicio.reps_objetivo }}s</span>
+        {% elif ejercicio.usa_distancia %}
+          <span class="sa-obj">Obj: {{ ejercicio.reps_objetivo }}m</span>
+        {% else %}
+          <span class="sa-obj">Obj: {{ ejercicio.reps_objetivo }} reps</span>
+        {% endif %}
       </div>
 
-      <!-- PESO -->
+      {# ── PESO (solo si el ejercicio usa peso externo) ── #}
+      {% if ejercicio.usa_peso %}
       <div class="peso-zona">
         <div class="peso-label">Peso de trabajo</div>
-        <div class="serie-cell peso-ctrl" data-label="Peso de trabajo" style="display:flex;align-items:center;justify-content:center;padding:0;">
-          <button type="button" class="peso-btn menos quick-btn quick-minus">−</button>
+        <div class="peso-ctrl" style="display:flex;align-items:center;justify-content:center;">
+          <button type="button" class="peso-btn menos"
+                  onclick="ajustarPesoPanel('{{ ejercicio.form_id }}',{{ sn }},-2.5)">−</button>
           <div class="peso-num-wrap">
             <input type="number" step="0.5" readonly
                    class="peso-input weight-input"
-                   id="peso-act-{{ ejercicio.form_id }}"
-                   name="{{ ejercicio.form_id }}_peso_1"
+                   id="peso-{{ ejercicio.form_id }}-{{ sn }}"
+                   name="{{ ejercicio.form_id }}_peso_{{ sn }}"
                    value="{{ ejercicio.peso_recomendado_kg|stringformat:'.1f' }}"
-                   data-set="1"
                    data-rec-weight="{{ ejercicio.peso_recomendado_kg|stringformat:'.1f' }}"
                    data-eq-name="{{ ejercicio.nombre|lower }}">
             <span class="peso-kg">kg</span>
           </div>
-          <button type="button" class="peso-btn mas quick-btn quick-plus">+</button>
+          <button type="button" class="peso-btn mas"
+                  onclick="ajustarPesoPanel('{{ ejercicio.form_id }}',{{ sn }},2.5)">+</button>
         </div>
-        <div class="peso-lado weight-per-side-display" data-set="1" id="lado-{{ ejercicio.form_id }}"></div>
+        <div class="peso-lado" id="lado-{{ ejercicio.form_id }}-{{ sn }}"></div>
       </div>
+      {% else %}
+      {# Input oculto con valor 0 para que la view no falle al leer el campo #}
+      <input type="hidden" name="{{ ejercicio.form_id }}_peso_{{ sn }}" value="0">
+      {% endif %}
 
-      <!-- SLIDERS REPS + RPE -->
       <div class="sliders-zona">
+
+        {# ── TIEMPO ── #}
+        {% if ejercicio.usa_tiempo %}
+        <div class="slider-row">
+          <span class="sl-label">Tiempo</span>
+          <input type="range" class="sl-track" min="10" max="300" value="{{ ejercicio.reps_objetivo }}" step="5"
+                 oninput="syncSliderTiempo(this,'reps-disp-{{ ejercicio.form_id }}-{{ sn }}','reps-hid-{{ ejercicio.form_id }}-{{ sn }}')">
+          <span class="sl-val reps-v" id="reps-disp-{{ ejercicio.form_id }}-{{ sn }}">{{ ejercicio.reps_objetivo }}</span>
+          <span class="sl-unit">seg</span>
+        </div>
+
+        {# ── DISTANCIA ── #}
+        {% elif ejercicio.usa_distancia %}
+        <div class="slider-row">
+          <span class="sl-label">Metros</span>
+          <input type="range" class="sl-track" min="10" max="500" value="{{ ejercicio.reps_objetivo }}" step="5"
+                 oninput="syncSliderPanel(this,'reps-disp-{{ ejercicio.form_id }}-{{ sn }}','reps-hid-{{ ejercicio.form_id }}-{{ sn }}')">
+          <span class="sl-val reps-v" id="reps-disp-{{ ejercicio.form_id }}-{{ sn }}">{{ ejercicio.reps_objetivo }}</span>
+          <span class="sl-unit">m</span>
+        </div>
+
+        {# ── REPS (default — peso_reps, solo_reps, peso_corporal_lastre, variante) ── #}
+        {% else %}
         <div class="slider-row">
           <span class="sl-label">Reps</span>
-          <input type="range" class="sl-track" min="1" max="20" value="{{ ejercicio.reps_objetivo }}" step="1"
-                 id="sl-reps-{{ ejercicio.form_id }}"
-                 oninput="syncSlider(this,'reps','disp-reps-{{ ejercicio.form_id }}','hid-reps-{{ ejercicio.form_id }}')">
-          <span class="sl-val reps-v" id="disp-reps-{{ ejercicio.form_id }}">{{ ejercicio.reps_objetivo }}</span>
+          <input type="range" class="sl-track" min="1" max="30" value="{{ ejercicio.reps_objetivo }}" step="1"
+                 oninput="syncSliderPanel(this,'reps-disp-{{ ejercicio.form_id }}-{{ sn }}','reps-hid-{{ ejercicio.form_id }}-{{ sn }}')">
+          <span class="sl-val reps-v" id="reps-disp-{{ ejercicio.form_id }}-{{ sn }}">{{ ejercicio.reps_objetivo }}</span>
           <span class="sl-unit">reps</span>
         </div>
+        {% endif %}
+
+        {# RPE — siempre presente #}
         <div class="slider-row">
           <span class="sl-label">RPE</span>
           <input type="range" class="sl-track" min="5" max="10" value="{{ ejercicio.rpe_objetivo }}" step="0.5"
-                 id="sl-rpe-{{ ejercicio.form_id }}"
-                 oninput="syncSlider(this,'rpe','disp-rpe-{{ ejercicio.form_id }}','hid-rpe-{{ ejercicio.form_id }}')">
-          <span class="sl-val rpe-v" id="disp-rpe-{{ ejercicio.form_id }}">{{ ejercicio.rpe_objetivo }}</span>
+                 oninput="syncSliderPanel(this,'rpe-disp-{{ ejercicio.form_id }}-{{ sn }}','rpe-hid-{{ ejercicio.form_id }}-{{ sn }}')">
+          <span class="sl-val rpe-v" id="rpe-disp-{{ ejercicio.form_id }}-{{ sn }}">{{ ejercicio.rpe_objetivo }}</span>
           <span class="sl-unit"></span>
         </div>
-        <!-- Hidden inputs que se envían al form con el nombre correcto -->
-        <input type="number" class="hidden-reps reps-input"
-               id="hid-reps-{{ ejercicio.form_id }}"
-               name="{{ ejercicio.form_id }}_reps_1"
-               value="{{ ejercicio.reps_objetivo }}" data-set="1">
-        <input type="number" class="hidden-rpe rpe-input"
-               id="hid-rpe-{{ ejercicio.form_id }}"
-               name="{{ ejercicio.form_id }}_rpe_1"
-               value="{{ ejercicio.rpe_objetivo }}" data-set="1">
-        <input type="hidden" name="{{ ejercicio.form_id }}_rpe_obj_1" value="{{ ejercicio.rpe_objetivo }}">
+
+        <input type="number" style="display:none;" id="reps-hid-{{ ejercicio.form_id }}-{{ sn }}"
+               name="{{ ejercicio.form_id }}_reps_{{ sn }}" value="{{ ejercicio.reps_objetivo }}">
+        <input type="number" style="display:none;" id="rpe-hid-{{ ejercicio.form_id }}-{{ sn }}"
+               name="{{ ejercicio.form_id }}_rpe_{{ sn }}" value="{{ ejercicio.rpe_objetivo }}">
+        <input type="hidden" name="{{ ejercicio.form_id }}_rpe_obj_{{ sn }}" value="{{ ejercicio.rpe_objetivo }}">
+        <input type="hidden" name="{{ ejercicio.form_id }}_tipo_progresion" value="{{ ejercicio.tipo_progresion }}">
+        <input type="checkbox" style="display:none;"
+               id="check-{{ ejercicio.form_id }}-{{ sn }}"
+               name="{{ ejercicio.form_id }}_completado_{{ sn }}" value="1">
       </div>
 
-      <!-- HISTORIAL -->
       {% if ejercicio.peso_anterior_kg > 0 %}
       <div class="historial-zona">
-        Última vez ({{ ejercicio.fecha_anterior|date:"d/m" }}): <span>{{ ejercicio.peso_anterior_kg }}kg × {{ ejercicio.repeticiones_anterior }} reps @ {{ ejercicio.series_anterior }} series</span>
+        Última vez ({{ ejercicio.fecha_anterior|date:"d/m" }}):
+        {% if ejercicio.usa_peso %}
+          <span>{{ ejercicio.peso_anterior_kg }}kg × {{ ejercicio.repeticiones_anterior }} reps</span>
+        {% elif ejercicio.usa_tiempo %}
+          <span>{{ ejercicio.repeticiones_anterior }}s</span>
+        {% elif ejercicio.usa_distancia %}
+          <span>{{ ejercicio.repeticiones_anterior }}m</span>
+        {% else %}
+          <span>{{ ejercicio.repeticiones_anterior }} reps</span>
+        {% endif %}
       </div>
       {% endif %}
-    </div><!-- /serie-activa -->
-
-    <button type="button" class="btn-guardar" id="btn-guardar-{{ ejercicio.form_id }}"
-            onclick="guardarSerie('{{ ejercicio.form_id }}')">
+    </div>
+    <button type="button" class="btn-guardar"
+            onclick="guardarSeriePanel('{{ ejercicio.form_id }}',{{ sn }},{{ ejercicio.series }})">
       GUARDAR SERIE
     </button>
+  </div>
+  {% endwith %}{% endfor %}
 
-  </div><!-- /pantalla-registro -->
-
-  <!-- PANTALLA DESCANSO -->
+    <!-- PANTALLA DESCANSO -->
   <div class="pantalla-descanso" id="desc-{{ ejercicio.form_id }}">
     <div class="pd-header">
       <div style="width:8px;height:8px;border-radius:50%;background:var(--y);flex-shrink:0;"></div>
@@ -447,9 +489,7 @@ input{background:transparent!important;border:none!important;outline:none!import
       <button type="button" class="pd-ctrl-btn" onclick="ajustarTimer('{{ ejercicio.form_id }}',-30)">−30s</button>
       <button type="button" class="pd-ctrl-btn mas" onclick="ajustarTimer('{{ ejercicio.form_id }}',30)">+30s</button>
     </div>
-    <div class="pd-notas">
-      <textarea placeholder="Notas de técnica..."></textarea>
-    </div>
+
     <button type="button" class="btn-saltar" id="btn-saltar-{{ ejercicio.form_id }}"
             onclick="saltarDescanso('{{ ejercicio.form_id }}')">
       SALTAR DESCANSO
@@ -518,373 +558,277 @@ input{background:transparent!important;border:none!important;outline:none!import
 
 <script src="{% static 'entrenos/js/entrenamiento_activo.js' %}"></script>
 <script>
-// ═══════════════════════════════════════════════════════
-// IRON PROTOCOL — lógica de nuevo diseño
-// ═══════════════════════════════════════════════════════
-
-// Estado global
-const STATE = {
-  ejActual: 0,
-  serieActual: {}, // formId → número de serie actual (1-based)
-  seriesCompletadas: {}, // formId → [datos por serie]
-  timers: {}, // formId → {interval, seg, total}
-  tiempoInicio: Date.now(),
-};
-
-// Inicializar estado por ejercicio
-document.querySelectorAll('.cyber-ejercicio-card').forEach(card => {
-  const fid = card.dataset.formId;
-  STATE.serieActual[fid] = 1;
-  STATE.seriesCompletadas[fid] = [];
+const STATE={ejActual:0,serieActual:{},seriesCompletadas:{},timers:{}};
+document.querySelectorAll('.cyber-ejercicio-card').forEach(card=>{
+  STATE.serieActual[card.dataset.formId]=1;
+  STATE.seriesCompletadas[card.dataset.formId]=[];
 });
+const cards=Array.from(document.querySelectorAll('.cyber-ejercicio-card'));
 
-// ── SYNC SLIDERS ──────────────────────────────────────
-function syncSlider(el, tipo, dispId, hidId) {
-  const v = parseFloat(el.value);
-  const disp = document.getElementById(dispId);
-  const hid = document.getElementById(hidId);
-  if (tipo === 'rpe') {
-    disp.textContent = v % 1 === 0 ? v.toFixed(1) : v.toFixed(1);
-  } else {
-    disp.textContent = Math.round(v);
-  }
-  if (hid) hid.value = v;
+// Sliders por panel
+function syncSliderPanel(el,dispId,hidId){
+  const v=parseFloat(el.value);
+  const disp=document.getElementById(dispId);
+  const hid=document.getElementById(hidId);
+  const isRpe=dispId.includes('rpe-disp');
+  if(disp)disp.textContent=isRpe?v.toFixed(1):Math.round(v);
+  if(hid)hid.value=v;
 }
 
-// ── NAVEGACIÓN ENTRE EJERCICIOS ──────────────────────
-const cards = Array.from(document.querySelectorAll('.cyber-ejercicio-card'));
-function navEjercicio(delta) {
-  const nuevo = Math.max(0, Math.min(cards.length - 1, STATE.ejActual + delta));
-  if (nuevo === STATE.ejActual) return;
-  cards[STATE.ejActual].style.display = 'none';
-  STATE.ejActual = nuevo;
-  cards[nuevo].style.display = 'block';
+function syncSliderTiempo(el,dispId,hidId){
+  const seg=parseInt(el.value);
+  const disp=document.getElementById(dispId);
+  const hid=document.getElementById(hidId);
+  const m=Math.floor(seg/60), s=seg%60;
+  if(disp)disp.textContent=m>0?(m+'m '+(s>0?s+'s':'')):seg+'s';
+  if(hid)hid.value=seg;
+}
+
+// Botones peso por panel
+function ajustarPesoPanel(fid,sn,delta){
+  const inp=document.getElementById('peso-'+fid+'-'+sn);
+  if(!inp)return;
+  const actual=parseFloat((inp.value||'0').replace(',','.'))||0;
+  const nuevo=Math.max(0,Math.round((actual+delta)*10)/10);
+  inp.value=nuevo.toFixed(1);
+  inp.dispatchEvent(new Event('input',{bubbles:true}));
+  if(navigator.vibrate)navigator.vibrate(20);
+}
+
+// Navegación ejercicios
+function navEjercicio(delta){
+  const nuevo=Math.max(0,Math.min(cards.length-1,STATE.ejActual+delta));
+  if(nuevo===STATE.ejActual)return;
+  cards[STATE.ejActual].style.display='none';
+  STATE.ejActual=nuevo;
+  cards[nuevo].style.display='block';
   actualizarSticky();
 }
 
-// ── GUARDAR SERIE ─────────────────────────────────────
-function guardarSerie(fid) {
-  const card = document.getElementById('card-' + fid);
-  const sn = STATE.serieActual[fid];
-  const total = parseInt(card.dataset.totalSets);
-  const descansoMin = parseFloat(card.dataset.descanso) || 3;
-  const descansoSeg = Math.round(descansoMin * 60);
+// Guardar serie — marca el checkbox y avanza al panel siguiente
+function guardarSeriePanel(fid,sn,total){
+  const peso=parseFloat(document.getElementById('peso-'+fid+'-'+sn)?.value||0);
+  const reps=parseInt(document.getElementById('reps-hid-'+fid+'-'+sn)?.value||0);
+  const rpe=parseFloat(document.getElementById('rpe-hid-'+fid+'-'+sn)?.value||8);
 
-  // Leer peso y reps/rpe del slider
-  const pesoInput = card.querySelector('.weight-input');
-  const hidReps = document.getElementById('hid-reps-' + fid);
-  const hidRpe = document.getElementById('hid-rpe-' + fid);
-  const peso = parseFloat(pesoInput?.value || 0);
-  const reps = parseInt(hidReps?.value || 0);
-  const rpe = parseFloat(hidRpe?.value || 8);
+  // Marcar checkbox para que se envíe
+  const cb=document.getElementById('check-'+fid+'-'+sn);
+  if(cb)cb.checked=true;
 
-  // Guardar en estado
-  STATE.seriesCompletadas[fid].push({ peso, reps, rpe });
+  STATE.seriesCompletadas[fid].push({peso,reps,rpe});
 
-  // Añadir checkbox marcado (para que el form lo envíe)
-  const checksDiv = document.getElementById('checks-' + fid);
-  checksDiv.innerHTML += `<input type="checkbox" name="${fid}_completado_${sn}" value="1" checked style="display:none;">`;
+  // Log visual
+  const log=document.getElementById('log-'+fid);
+  if(log){
+    const row=document.createElement('div');
+    row.className='serie-done';
+    row.innerHTML='<div class="sd-check">✓</div>'
+      +'<div class="sd-info">Serie '+sn+' — <strong>'+peso+'kg × '+reps+' reps</strong></div>'
+      +'<div class="sd-rpe">RPE '+rpe.toFixed(1)+'</div>';
+    log.appendChild(row);
+  }
 
-  // Añadir al log visual
-  añadirAlLog(fid, sn, peso, reps, rpe);
+  if(navigator.vibrate)navigator.vibrate(40);
 
-  // Vibración
-  if (navigator.vibrate) navigator.vibrate(40);
-
-  // Mostrar pantalla descanso
-  document.getElementById('reg-' + fid).style.display = 'none';
-  const pdesc = document.getElementById('desc-' + fid);
-  pdesc.style.display = 'flex';
-  pdesc.style.flexDirection = 'column';
+  // Ocultar panel actual, mostrar descanso
+  document.getElementById('reg-'+fid+'-'+sn).style.display='none';
+  const pdesc=document.getElementById('desc-'+fid);
+  pdesc.style.display='flex';pdesc.style.flexDirection='column';
 
   // Info próxima serie
-  const esUltima = sn >= total;
-  const proxEl = document.getElementById('pd-prox-' + fid);
-  if (esUltima) {
-    proxEl.innerHTML = '<span style="color:var(--ok)">✓ Ejercicio completado</span>';
-  } else {
-    proxEl.innerHTML = `Serie <span class="pd-prox-kg">${sn + 1}</span> de ${total} — <span class="pd-prox-kg">${peso}kg</span> × ${reps} reps`;
+  const proxEl=document.getElementById('pd-prox-'+fid);
+  if(proxEl){
+    proxEl.innerHTML=sn>=total
+      ?'<span style="color:var(--ok)">✓ Ejercicio completado</span>'
+      :'Serie <span class="pd-prox-kg">'+(sn+1)+'</span> de '+total
+        +' — <span class="pd-prox-kg">'+peso+'kg</span> × '+reps+' reps';
   }
 
-  // Calculadora discos
-  calcularDiscos(fid, peso);
-
-  // Iniciar timer
-  iniciarDescanso(fid, descansoSeg);
-
+  calcularDiscos(fid,peso);
+  const card=document.getElementById('card-'+fid);
+  const descSeg=parseInt(card?.dataset.descansoSeg||'0');
+  const descMin=parseFloat(card?.dataset.descanso)||2;
+  const descansoSeg=descSeg>0?descSeg:Math.round(descMin*60);
+  iniciarDescanso(fid,descansoSeg,sn,total);
   actualizarProgreso();
   actualizarSticky();
 }
 
-// ── LOG VISUAL ────────────────────────────────────────
-function añadirAlLog(fid, sn, peso, reps, rpe) {
-  const log = document.getElementById('log-' + fid);
-  const div = document.createElement('div');
-  div.className = 'serie-done serie-row';
-  div.dataset.serieNum = sn;
-  div.innerHTML = `
-    <div class="sd-check">✓</div>
-    <div class="sd-info">Serie ${sn} — <strong>${peso}kg × ${reps} reps</strong></div>
-    <div class="sd-rpe">RPE ${parseFloat(rpe).toFixed(1)}</div>`;
-  log.appendChild(div);
-}
-
-// ── TIMER DE DESCANSO ─────────────────────────────────
-function iniciarDescanso(fid, totalSeg) {
-  if (STATE.timers[fid]) clearInterval(STATE.timers[fid].interval);
-  STATE.timers[fid] = { seg: totalSeg, total: totalSeg, interval: null };
+function iniciarDescanso(fid,totalSeg,snActual,totalSeries){
+  if(STATE.timers[fid])clearInterval(STATE.timers[fid].interval);
+  STATE.timers[fid]={seg:totalSeg,total:totalSeg,interval:null,snActual:snActual,totalSeries:totalSeries};
   actualizarTimerUI(fid);
-
-  STATE.timers[fid].interval = setInterval(() => {
-    STATE.timers[fid].seg = Math.max(0, STATE.timers[fid].seg - 1);
+  STATE.timers[fid].interval=setInterval(()=>{
+    STATE.timers[fid].seg=Math.max(0,STATE.timers[fid].seg-1);
     actualizarTimerUI(fid);
-    if (STATE.timers[fid].seg === 0) {
+    if(STATE.timers[fid].seg===0){
       clearInterval(STATE.timers[fid].interval);
-      if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
-      setTimeout(() => saltarDescanso(fid), 800);
+      if(navigator.vibrate)navigator.vibrate([100,50,100]);
+      setTimeout(()=>saltarDescanso(fid),800);
     }
-  }, 1000);
+  },1000);
 }
 
-function actualizarTimerUI(fid) {
-  const t = STATE.timers[fid];
-  if (!t) return;
-  const m = Math.floor(t.seg / 60);
-  const s = t.seg % 60;
-  const display = m + ':' + String(s).padStart(2, '0');
-  const tiempoEl = document.getElementById('pd-tiempo-' + fid);
-  const saltarEl = document.getElementById('btn-saltar-' + fid);
-  if (tiempoEl) tiempoEl.textContent = display;
-  if (saltarEl) saltarEl.textContent = `SALTAR DESCANSO (${display})`;
-  // Anillo SVG
-  const ring = document.getElementById('ring-' + fid);
-  if (ring) {
-    const pct = t.seg / t.total;
-    ring.style.strokeDashoffset = (502 * (1 - pct)).toFixed(1);
-  }
+function actualizarTimerUI(fid){
+  const t=STATE.timers[fid];if(!t)return;
+  const m=Math.floor(t.seg/60),s=t.seg%60;
+  const display=m+':'+String(s).padStart(2,'0');
+  const tiempoEl=document.getElementById('pd-tiempo-'+fid);
+  const saltarEl=document.getElementById('btn-saltar-'+fid);
+  if(tiempoEl)tiempoEl.textContent=display;
+  if(saltarEl)saltarEl.textContent='SALTAR DESCANSO ('+display+')';
+  const ring=document.getElementById('ring-'+fid);
+  if(ring)ring.style.strokeDashoffset=(502*(1-t.seg/t.total)).toFixed(1);
 }
 
-function ajustarTimer(fid, delta) {
-  if (!STATE.timers[fid]) return;
-  STATE.timers[fid].seg = Math.max(0, Math.min(600, STATE.timers[fid].seg + delta));
-  STATE.timers[fid].total = Math.max(STATE.timers[fid].total, STATE.timers[fid].seg);
+function ajustarTimer(fid,delta){
+  if(!STATE.timers[fid])return;
+  STATE.timers[fid].seg=Math.max(0,Math.min(600,STATE.timers[fid].seg+delta));
+  STATE.timers[fid].total=Math.max(STATE.timers[fid].total,STATE.timers[fid].seg);
   actualizarTimerUI(fid);
 }
 
-function saltarDescanso(fid) {
-  if (STATE.timers[fid]) clearInterval(STATE.timers[fid].interval);
-  document.getElementById('desc-' + fid).style.display = 'none';
+function saltarDescanso(fid){
+  if(STATE.timers[fid])clearInterval(STATE.timers[fid].interval);
+  document.getElementById('desc-'+fid).style.display='none';
 
-  const card   = document.getElementById('card-' + fid);
-  const total  = parseInt(card.dataset.totalSets);
-  const hechas = STATE.seriesCompletadas[fid].length; // fuente de verdad
+  const t=STATE.timers[fid];
+  const snActual=t?t.snActual:STATE.seriesCompletadas[fid].length;
+  const totalSeries=t?t.totalSeries:parseInt(document.getElementById('card-'+fid)?.dataset.totalSets||'0');
+  const snSiguiente=snActual+1;
 
-  if (hechas >= total) {
-    document.getElementById('reg-' + fid).style.display = 'none';
-    const div = document.createElement('div');
-    div.style.cssText = 'padding:20px 16px;text-align:center;border-top:1px solid var(--bd);';
-    div.innerHTML = '<div style="font-size:2rem;margin-bottom:8px;color:var(--ok);">✓</div>'
-      + '<div style="font-family:var(--fd);font-size:14px;font-weight:700;color:var(--gb);letter-spacing:2px;text-transform:uppercase;">Ejercicio completado</div>'
-      + '<div style="font-family:var(--fm);font-size:11px;color:var(--td);margin-top:6px;">' + hechas + ' series · ' + calcVolumenEj(fid) + ' kg vol</div>';
-    card.appendChild(div);
-    if (STATE.ejActual + 1 < cards.length) setTimeout(() => navEjercicio(1), 1500);
-  } else {
-    STATE.serieActual[fid] = hechas + 1;
-    prepararSiguienteSerie(fid);
-    document.getElementById('reg-' + fid).style.display = 'block';
+  if(snSiguiente>totalSeries){
+    // Ejercicio terminado
+    const card=document.getElementById('card-'+fid);
+    const div=document.createElement('div');
+    div.style.cssText='padding:20px 16px;text-align:center;border-top:1px solid var(--bd);';
+    div.innerHTML='<div style="font-size:2rem;color:var(--ok);">✓</div>'
+      +'<div style="font-family:var(--fd);font-size:14px;font-weight:700;color:var(--gb);letter-spacing:2px;text-transform:uppercase;margin-top:8px;">Ejercicio completado</div>'
+      +'<div style="font-family:var(--fm);font-size:11px;color:var(--td);margin-top:6px;">'+snActual+' series · '+calcVolumenEj(fid)+' kg</div>';
+    if(card)card.appendChild(div);
+    if(STATE.ejActual+1<cards.length)setTimeout(()=>navEjercicio(1),1500);
+  }else{
+    // Mostrar panel de la siguiente serie
+    const nextPanel=document.getElementById('reg-'+fid+'-'+snSiguiente);
+    if(nextPanel)nextPanel.style.display='block';
   }
   actualizarProgreso();
   actualizarSticky();
 }
 
-// ── PREPARAR SIGUIENTE SERIE ──────────────────────────
-function prepararSiguienteSerie(fid) {
-  const card = document.getElementById('card-' + fid);
-  const sn = STATE.serieActual[fid];
-  const total = parseInt(card.dataset.totalSets);
-
-  // Actualizar header
-  const saNum = document.getElementById('sa-num-' + fid);
-  if (saNum) saNum.textContent = `SERIE ${sn} DE ${total}`;
-
-  // Renombrar inputs para el número de serie correcto
-  const pesoInput = card.querySelector('.weight-input');
-  const hidReps = document.getElementById('hid-reps-' + fid);
-  const hidRpe = document.getElementById('hid-rpe-' + fid);
-  const slReps = document.getElementById('sl-reps-' + fid);
-  const slRpe = document.getElementById('sl-rpe-' + fid);
-  const dispReps = document.getElementById('disp-reps-' + fid);
-  const dispRpe = document.getElementById('disp-rpe-' + fid);
-
-  if (pesoInput) pesoInput.name = `${fid}_peso_${sn}`;
-  if (hidReps) hidReps.name = `${fid}_reps_${sn}`;
-  if (hidRpe) hidRpe.name = `${fid}_rpe_${sn}`;
-
-  // Ocultar hidden anterior y añadir rpe_obj
-  card.querySelectorAll(`input[name="${fid}_rpe_obj_${sn}"]`).forEach(e => e.remove());
-  const rpeObjHid = document.createElement('input');
-  rpeObjHid.type = 'hidden';
-  rpeObjHid.name = `${fid}_rpe_obj_${sn}`;
-  rpeObjHid.value = card.dataset.rpeTarget;
-  card.appendChild(rpeObjHid);
-
-  // Copiar peso de la serie anterior
-  const ultima = STATE.seriesCompletadas[fid].slice(-1)[0];
-  if (ultima && pesoInput) {
-    pesoInput.value = ultima.peso % 1 === 0 ? ultima.peso : ultima.peso.toFixed(1);
-    actualizarPesoPorLado(pesoInput);
-  }
-
-  // Resetear sliders
-  if (slReps) { slReps.value = card.dataset.repsMin || 8; dispReps.textContent = slReps.value; hidReps.value = slReps.value; }
-  if (slRpe) { slRpe.value = card.dataset.rpeTarget || 8; dispRpe.textContent = parseFloat(slRpe.value).toFixed(1); hidRpe.value = slRpe.value; }
+function calcularDiscos(fid,pesoTotal){
+  const contenedor=document.getElementById('discos-'+fid);
+  const txt=document.getElementById('calc-txt-'+fid);
+  if(!contenedor)return;
+  const barraKg=20;
+  let porLado=Math.max(0,(pesoTotal-barraKg)/2);
+  const sizes=[20,15,10,5,2.5,1];
+  const cls={20:'d20',15:'d15',10:'d10',5:'d5',2.5:'d25',1:'d1'};
+  const discos=[];let resto=porLado;
+  for(const t of sizes){while(resto>=t-0.001){discos.push(t);resto=Math.round((resto-t)*100)/100;}}
+  contenedor.innerHTML=discos.map(d=>'<div class="disco '+cls[d]+'">'+d+'</div>').join('')
+    +'<div class="barra"></div>'
+    +[...discos].reverse().map(d=>'<div class="disco '+cls[d]+'">'+d+'</div>').join('');
+  if(txt)txt.innerHTML='Barra '+barraKg+'kg + <strong>'+(discos.map(d=>d+'kg').join(' + ')||'sin discos')+' por lado</strong> = '+pesoTotal+'kg';
 }
 
-// ── CALCULADORA DE DISCOS ─────────────────────────────
-function calcularDiscos(fid, pesoTotal) {
-  const contenedor = document.getElementById('discos-' + fid);
-  const txt = document.getElementById('calc-txt-' + fid);
-  if (!contenedor) return;
-  const barraKg = 20;
-  let porLado = (pesoTotal - barraKg) / 2;
-  if (porLado < 0) porLado = 0;
-  const tamaños = [20, 15, 10, 5, 2.5, 1];
-  const clases = { 20: 'd20', 15: 'd15', 10: 'd10', 5: 'd5', 2.5: 'd25', 1: 'd1' };
-  const discosLado = [];
-  let resto = porLado;
-  for (const t of tamaños) {
-    while (resto >= t) { discosLado.push(t); resto = Math.round((resto - t) * 100) / 100; }
-  }
-  let html = '';
-  discosLado.forEach(d => html += `<div class="disco ${clases[d]}">${d}</div>`);
-  html += `<div class="barra"></div>`;
-  discosLado.slice().reverse().forEach(d => html += `<div class="disco ${clases[d]}">${d}</div>`);
-  contenedor.innerHTML = html;
-  const resumen = discosLado.map(d => d + 'kg').join(' + ');
-  txt.innerHTML = `Barra ${barraKg}kg + <strong>${resumen || 'sin discos'} por lado</strong> = ${pesoTotal}kg`;
+function calcVolumenEj(fid){
+  return STATE.seriesCompletadas[fid].reduce((a,s)=>a+s.peso*s.reps,0).toFixed(0);
 }
 
-function calcVolumenEj(fid) {
-  return STATE.seriesCompletadas[fid].reduce((acc, s) => acc + s.peso * s.reps, 0).toFixed(0);
-}
-
-// ── PROGRESO ──────────────────────────────────────────
-function actualizarProgreso() {
-  let comp = 0, total = 0;
-  document.querySelectorAll('.cyber-ejercicio-card').forEach(card => {
-    const fid = card.dataset.formId;
-    const t = parseInt(card.dataset.totalSets) || 0;
-    total += t;
-    comp += (STATE.seriesCompletadas[fid] || []).length;
+function actualizarProgreso(){
+  let comp=0,total=0;
+  document.querySelectorAll('.cyber-ejercicio-card').forEach(card=>{
+    total+=parseInt(card.dataset.totalSets)||0;
+    comp+=(STATE.seriesCompletadas[card.dataset.formId]||[]).length;
   });
-  const pct = total > 0 ? Math.round(comp / total * 100) : 0;
-  const fill = document.getElementById('tb-fill');
-  const pctEl = document.getElementById('tb-pct');
-  if (fill) fill.style.width = pct + '%';
-  if (pctEl) pctEl.textContent = pct + '%';
+  const pct=total>0?Math.round(comp/total*100):0;
+  const fill=document.getElementById('tb-fill');
+  const pctEl=document.getElementById('tb-pct');
+  if(fill)fill.style.width=pct+'%';
+  if(pctEl)pctEl.textContent=pct+'%';
 }
 
-// ── STICKY ────────────────────────────────────────────
-function actualizarSticky() {
-  let comp = 0, total = 0, volumen = 0;
-  document.querySelectorAll('.cyber-ejercicio-card').forEach(card => {
-    const fid = card.dataset.formId;
-    total += parseInt(card.dataset.totalSets) || 0;
-    const scs = STATE.seriesCompletadas[fid] || [];
-    comp += scs.length;
-    volumen += scs.reduce((a, s) => a + s.peso * s.reps, 0);
+function actualizarSticky(){
+  let comp=0,total=0,vol=0;
+  document.querySelectorAll('.cyber-ejercicio-card').forEach(card=>{
+    const fid=card.dataset.formId;
+    total+=parseInt(card.dataset.totalSets)||0;
+    const scs=STATE.seriesCompletadas[fid]||[];
+    comp+=scs.length;
+    vol+=scs.reduce((a,s)=>a+s.peso*s.reps,0);
   });
-  const elSeries = document.getElementById('series-completadas-sticky');
-  const elVol = document.getElementById('volumen-acumulado');
-  const elEj = document.getElementById('ejercicio-actual');
-  if (elSeries) elSeries.textContent = comp + '/' + total;
-  if (elVol) elVol.textContent = Math.round(volumen) + ' kg';
-  const cardActual = cards[STATE.ejActual];
-  if (elEj && cardActual) {
-    const nombre = cardActual.querySelector('.cyber-ejercicio-nombre')?.textContent || '--';
-    elEj.textContent = nombre;
-  }
+  const elS=document.getElementById('series-completadas-sticky');
+  const elV=document.getElementById('volumen-acumulado');
+  const elE=document.getElementById('ejercicio-actual');
+  if(elS)elS.textContent=comp+'/'+total;
+  if(elV)elV.textContent=Math.round(vol)+' kg';
+  if(elE)elE.textContent=cards[STATE.ejActual]?.querySelector('.cyber-ejercicio-nombre')?.textContent||'--';
 }
 
-// ── TIMER SESIÓN ──────────────────────────────────────
-const t0 = Date.now();
-setInterval(() => {
-  const seg = Math.floor((Date.now() - t0) / 1000);
-  const m = Math.floor(seg / 60), s = seg % 60;
-  const el = document.getElementById('tiempo-transcurrido');
-  if (el) el.textContent = String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
-  const hid = document.getElementById('hid-duracion');
-  if (hid) hid.value = Math.floor(seg / 60);
-}, 1000);
+const t0=Date.now();
+setInterval(()=>{
+  const seg=Math.floor((Date.now()-t0)/1000);
+  const el=document.getElementById('tiempo-transcurrido');
+  const hid=document.getElementById('hid-duracion');
+  if(el)el.textContent=String(Math.floor(seg/60)).padStart(2,'0')+':'+String(seg%60).padStart(2,'0');
+  if(hid)hid.value=Math.floor(seg/60);
+},1000);
 
-// ── PESO POR LADO (reutiliza función del JS externo) ──
-document.querySelectorAll('.weight-input').forEach(inp => {
-  inp.addEventListener('change', () => { if (typeof actualizarPesoPorLado === 'function') actualizarPesoPorLado(inp); });
-  inp.addEventListener('focus', function() { this.blur(); });
-  inp.addEventListener('touchstart', function(e) { e.preventDefault(); this.blur(); }, { passive: false });
-  if (typeof actualizarPesoPorLado === 'function') actualizarPesoPorLado(inp);
+document.querySelectorAll('.weight-input').forEach(inp=>{
+  inp.addEventListener('focus',function(){this.blur();});
+  inp.addEventListener('touchstart',function(e){e.preventDefault();this.blur();},{passive:false});
 });
 
-// ── MODAL FINALIZAR ───────────────────────────────────
-document.getElementById('btn-mostrar-resumen').addEventListener('click', () => {
-  // Rellenar métricas hidden
-  let comp = 0, total = 0, volumen = 0, rpes = [];
-  let ejComp = 0, ejTot = 0;
-  document.querySelectorAll('.cyber-ejercicio-card').forEach(card => {
-    const fid = card.dataset.formId;
-    const t = parseInt(card.dataset.totalSets) || 0;
-    total += t; ejTot++;
-    const scs = STATE.seriesCompletadas[fid] || [];
-    comp += scs.length;
-    if (scs.length >= t) ejComp++;
-    scs.forEach(s => { volumen += s.peso * s.reps; if (s.rpe) rpes.push(s.rpe); });
+document.getElementById('btn-mostrar-resumen').addEventListener('click',()=>{
+  let comp=0,total=0,vol=0,rpes=[],ejComp=0,ejTot=0;
+  document.querySelectorAll('.cyber-ejercicio-card').forEach(card=>{
+    const fid=card.dataset.formId;
+    const t=parseInt(card.dataset.totalSets)||0;
+    total+=t;ejTot++;
+    const scs=STATE.seriesCompletadas[fid]||[];
+    comp+=scs.length;
+    if(scs.length>=t)ejComp++;
+    scs.forEach(s=>{vol+=s.peso*s.reps;if(s.rpe)rpes.push(s.rpe);});
   });
-  document.getElementById('hid-series-comp').value = comp;
-  document.getElementById('hid-series-tot').value = total;
-  document.getElementById('hid-ej-comp').value = ejComp;
-  document.getElementById('hid-ej-tot').value = ejTot;
-  document.getElementById('hid-volumen').value = Math.round(volumen);
-  document.getElementById('hid-rpe-medio').value = rpes.length ? (rpes.reduce((a,b)=>a+b,0)/rpes.length).toFixed(1) : '';
-  // Mostrar modal
-  const seg = Math.floor((Date.now() - t0) / 1000);
-  document.getElementById('modal-tiempo').textContent = String(Math.floor(seg/60)).padStart(2,'0') + ':' + String(seg%60).padStart(2,'0');
-  document.getElementById('modal-series').textContent = comp + '/' + total;
-  document.getElementById('modal-volumen').textContent = Math.round(volumen) + ' kg';
-  document.getElementById('modal-ejercicios').textContent = ejComp + '/' + ejTot;
-  // Lista
-  let listaHTML = '';
-  document.querySelectorAll('.cyber-ejercicio-card').forEach(card => {
-    const fid = card.dataset.formId;
-    const nombre = card.querySelector('.cyber-ejercicio-nombre')?.textContent || '';
-    const scs = STATE.seriesCompletadas[fid] || [];
-    const vol = scs.reduce((a, s) => a + s.peso * s.reps, 0);
-    listaHTML += `<div class="modal-ej"><span class="modal-ej-nombre">${nombre}</span><span class="modal-ej-stats">${scs.length} series · ${Math.round(vol)}kg</span></div>`;
+  document.getElementById('hid-series-comp').value=comp;
+  document.getElementById('hid-series-tot').value=total;
+  document.getElementById('hid-ej-comp').value=ejComp;
+  document.getElementById('hid-ej-tot').value=ejTot;
+  document.getElementById('hid-volumen').value=Math.round(vol);
+  document.getElementById('hid-rpe-medio').value=rpes.length?(rpes.reduce((a,b)=>a+b,0)/rpes.length).toFixed(1):'';
+  const seg=Math.floor((Date.now()-t0)/1000);
+  document.getElementById('modal-tiempo').textContent=String(Math.floor(seg/60)).padStart(2,'0')+':'+String(seg%60).padStart(2,'0');
+  document.getElementById('modal-series').textContent=comp+'/'+total;
+  document.getElementById('modal-volumen').textContent=Math.round(vol)+' kg';
+  document.getElementById('modal-ejercicios').textContent=ejComp+'/'+ejTot;
+  let html='';
+  document.querySelectorAll('.cyber-ejercicio-card').forEach(card=>{
+    const fid=card.dataset.formId;
+    const nombre=card.querySelector('.cyber-ejercicio-nombre')?.textContent||'';
+    const scs=STATE.seriesCompletadas[fid]||[];
+    html+='<div class="modal-ej"><span class="modal-ej-nombre">'+nombre+'</span>'
+      +'<span class="modal-ej-stats">'+scs.length+' series · '+Math.round(scs.reduce((a,s)=>a+s.peso*s.reps,0))+'kg</span></div>';
   });
-  document.getElementById('modal-ejercicios-lista').innerHTML = listaHTML;
+  document.getElementById('modal-ejercicios-lista').innerHTML=html;
   document.getElementById('modal-resumen-overlay').classList.add('active');
 });
 
-document.getElementById('btn-volver-editar').addEventListener('click', () => {
-  document.getElementById('modal-resumen-overlay').classList.remove('active');
-});
+document.getElementById('btn-volver-editar').addEventListener('click',()=>document.getElementById('modal-resumen-overlay').classList.remove('active'));
+document.getElementById('btn-confirmar-guardar').addEventListener('click',()=>document.getElementById('workout-form').submit());
 
-document.getElementById('btn-confirmar-guardar').addEventListener('click', () => {
-  document.getElementById('workout-form').submit();
-});
-
-// ── NOTIFICACIONES DJANGO ──────────────────────────────
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded',function(){
   actualizarProgreso();
   actualizarSticky();
   {% if messages %}
-  let delay = 800;
+  let delay=800;
   {% for message in messages %}
-  (function() {
-    const msg = "{{ message.message|escapejs }}";
-    if (msg.startsWith('CODICE_PUNTOS:')) { try { const d = JSON.parse(msg.replace('CODICE_PUNTOS:', '')); setTimeout(() => mostrarNotificacionPuntos(d.total, d), delay); delay += 1500; } catch(e) {} }
-    else if (msg.startsWith('CODICE_PRUEBA:')) { try { const d = JSON.parse(msg.replace('CODICE_PRUEBA:', '')); setTimeout(() => mostrarNotificacionPrueba(d.nombre, d.puntos, d.descripcion), delay); delay += 2000; } catch(e) {} }
-    else if (msg.startsWith('CODICE_ASCENSION:')) { try { const d = JSON.parse(msg.replace('CODICE_ASCENSION:', '')); setTimeout(() => mostrarNotificacionAscension(d.anterior, d.nuevo, d.filosofia), delay); delay += 3000; } catch(e) {} }
-    else if (msg.startsWith('CODICE_RACHA:')) { try { const dias = parseInt(msg.replace('CODICE_RACHA:', '')); setTimeout(() => mostrarNotificacionRacha(dias), delay); delay += 1500; } catch(e) {} }
+  (function(){
+    const msg="{{ message.message|escapejs }}";
+    if(msg.startsWith('CODICE_PUNTOS:')){try{const d=JSON.parse(msg.replace('CODICE_PUNTOS:',''));setTimeout(()=>mostrarNotificacionPuntos(d.total,d),delay);delay+=1500;}catch(e){}}
+    else if(msg.startsWith('CODICE_PRUEBA:')){try{const d=JSON.parse(msg.replace('CODICE_PRUEBA:',''));setTimeout(()=>mostrarNotificacionPrueba(d.nombre,d.puntos,d.descripcion),delay);delay+=2000;}catch(e){}}
+    else if(msg.startsWith('CODICE_ASCENSION:')){try{const d=JSON.parse(msg.replace('CODICE_ASCENSION:',''));setTimeout(()=>mostrarNotificacionAscension(d.anterior,d.nuevo,d.filosofia),delay);delay+=3000;}catch(e){}}
+    else if(msg.startsWith('CODICE_RACHA:')){try{const dias=parseInt(msg.replace('CODICE_RACHA:',''));setTimeout(()=>mostrarNotificacionRacha(dias),delay);delay+=1500;}catch(e){}}
   })();
   {% endfor %}
   {% endif %}
