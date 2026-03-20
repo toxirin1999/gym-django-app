@@ -4872,7 +4872,7 @@
                     <span class="cp-prog-pct">{{ progreso_fase }}%</span>
                 </div>
                 <div class="cp-prog-track">
-                    <div class="cp-prog-fill" style="width: {{ progreso_fase }}%;"></div>
+                    <div class="cp-prog-fill" style="width: {{ progreso_fase|stringformat:'g' }}%;"></div>
                 </div>
                 <div class="cp-prog-dates">
                     <span>Inicio: {{ fase_actual.fecha_inicio|date:"d M" }}</span>
