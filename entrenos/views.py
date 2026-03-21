@@ -43,7 +43,6 @@ from datetime import date
 from django.core.serializers.json import DjangoJSONEncoder
 from django.core.paginator import Paginator
 import json
-import numpy as np
 from django.shortcuts import render, get_object_or_404, redirect
 from django.urls import reverse
 from django.contrib import messages
@@ -3434,7 +3433,7 @@ def vista_entrenamiento_activo(request, cliente_id):
             try:
                 reps_str = str(ejercicio.get('repeticiones', '8'))
                 ejercicio['reps_objetivo'] = int(reps_str.split('-')[0].strip())
-            except:
+            except (ValueError, AttributeError):
                 ejercicio['reps_objetivo'] = 8
 
             ejercicio['peso_recomendado_kg'] = ejercicio.get('peso_kg', 0.0)
@@ -3459,8 +3458,6 @@ def vista_entrenamiento_activo(request, cliente_id):
                 except Exception:
                     tipo_prog = None
             ejercicio['tipo_progresion'] = tipo_prog or 'peso_reps'
-            print(
-                f"TIPO_PROG: {ejercicio.get('nombre')} -> {ejercicio['tipo_progresion']} | orig={ejercicio.get('tipo_progresion', 'NO')}")
 
             # Flags de conveniencia para el template
             ejercicio['usa_peso'] = ejercicio['tipo_progresion'] in ('peso_reps', 'peso_corporal_lastre')
@@ -3524,7 +3521,7 @@ def vista_entrenamiento_activo(request, cliente_id):
                         ejercicio['pr_reps'] = 0
                         ejercicio['one_rm_estimado'] = estimar_1rm(float(datos_anterior.get('peso', 0)),
                                                                    int(datos_anterior.get('repeticiones', 1)))
-                except:
+                except Exception:
                     ejercicio['pr_peso'] = 0.0
                     ejercicio['pr_reps'] = 0
                     ejercicio['one_rm_estimado'] = estimar_1rm(float(datos_anterior.get('peso', 0)),
@@ -3537,6 +3534,9 @@ def vista_entrenamiento_activo(request, cliente_id):
                 ejercicio['volumen_anterior'] = 0.0
                 ejercicio['diferencia_peso'] = 0.0
                 ejercicio['one_rm_estimado'] = 0.0
+                ejercicio['pr_peso'] = 0.0
+                ejercicio['pr_reps'] = 0
+                ejercicio['peso_inicial_kg'] = float(ejercicio.get('peso_recomendado_kg', 0) or 0)
 
             # Las aproximaciones ahora vienen precargadas desde el planificador.
             # No es necesario calcularlas en caliente, asegurando persistencia en el JSON.
@@ -3561,7 +3561,7 @@ def vista_entrenamiento_activo(request, cliente_id):
         resumen_gamificacion = EntrenamientoGamificacionService.obtener_resumen_gamificacion(cliente)
         context['resumen_gamificacion'] = resumen_gamificacion
     except Exception as e:
-        print(f"Error obteniendo resumen gamificación: {e}")
+        logger.warning("Error obteniendo resumen gamificación: %s", e)
         context['resumen_gamificacion'] = {'tiene_perfil': False}
 
     return render(request, 'entrenos/entrenamiento_activo.html', context)
@@ -3592,11 +3592,10 @@ from analytics.utils import estimar_1rm  # ¡La importación que ya solucionamos
 
 def guardar_entrenamiento_activo(request, cliente_id):
     cliente = get_object_or_404(Cliente, id=cliente_id)
-    print("\n--- INICIANDO GUARDADO DE ENTRENAMIENTO ACTIVO (CON VOLUMEN) ---")
 
     try:
 
-        # --- PASO 1: Crear el EntrenoRealizado (sin cambios) ---
+        # --- PASO 1: Crear el EntrenoRealizado ---
         fecha = datetime.strptime(request.POST.get('fecha'), '%Y-%m-%d').date()
         rutina_nombre = request.POST.get('rutina_nombre')
         rutina_obj, _ = Rutina.objects.get_or_create(nombre=rutina_nombre)
@@ -3607,19 +3606,14 @@ def guardar_entrenamiento_activo(request, cliente_id):
             calorias_quemadas=request.POST.get('calorias_quemadas') or None,
             notas_liftin=request.POST.get('notas_liftin', '').strip()
         )
-        print(f"-> Creado EntrenoRealizado ID: {entreno.id}")
 
         # --- PASO 2: Procesar ejercicios, calcular 1RM y VOLUMEN ---
         nuevos_rms_sesion = {}
-        volumen_total_entreno = Decimal('0.0')  # Inicializamos el volumen total
+        volumen_total_entreno = Decimal('0.0')
         ejercicios_procesados_count = 0
-        todos_rpes_sesion = []  # Lista para acumular RPEs de toda la sesión
+        todos_rpes_sesion = []
 
         ejercicio_form_ids = [k.replace('_nombre', '') for k in request.POST if k.endswith('_nombre')]
-        print("=== POST DATA ===")
-        for key, val in request.POST.items():
-            print(f"  {key}: {val}")
-        print("=== FIN POST DATA ===")
         for form_id in ejercicio_form_ids:
             ejercicio_nombre = request.POST.get(f'{form_id}_nombre', '').strip().title()
             if not ejercicio_nombre: continue
@@ -3689,8 +3683,8 @@ def guardar_entrenamiento_activo(request, cliente_id):
                 except Exception:
                     pass
 
-                # Extraer is_recovery_load del formulario
-                is_recovery_load_str = request.POST.get('is_recovery_load', 'false').lower()
+                # Extraer is_recovery_load del formulario (campo por ejercicio)
+                is_recovery_load_str = request.POST.get(f'{form_id}_is_recovery_load', 'false').lower()
                 is_recovery_load = is_recovery_load_str == 'true'
 
                 ej_realizado = EjercicioRealizado.objects.create(
@@ -3726,8 +3720,6 @@ def guardar_entrenamiento_activo(request, cliente_id):
             entreno.volumen_total_kg = volumen_total_entreno
             entreno.numero_ejercicios = ejercicios_procesados_count
             entreno.save(update_fields=['volumen_total_kg', 'numero_ejercicios'])
-            print(
-                f"-> Métricas de entreno actualizadas: Volumen={volumen_total_entreno} kg, Ejercicios={ejercicios_procesados_count}")
         # =======================================================
 
         # --- PASO 4: Actualizar el perfil del cliente con los nuevos 1RM ---
@@ -3772,7 +3764,7 @@ def guardar_entrenamiento_activo(request, cliente_id):
                     acwr_data = EstadisticasService.analizar_acwr(cliente)
                     acwr_actual = acwr_data.get('acwr_actual', 1.0)
                 except Exception as e:
-                    print(f"Error calculando ACWR: {e}")
+                    logger.warning("Error calculando ACWR: %s", e)
 
                 sesion_gam = SesionGamificacion.objects.create(
                     entreno=entreno,
@@ -3830,7 +3822,7 @@ def guardar_entrenamiento_activo(request, cliente_id):
                                              f"🎯 ¡HAS COMPLETADO EL DESAFÍO: {desafio.nombre}! +{desafio.recompensa_puntos} pts")
 
         except Exception as e:
-            print(f"⚠️ Error en sistema de gamificación: {e}")
+            logger.warning("Error en sistema de gamificación: %s", e)
             # No bloqueamos el flujo principal si falla algo de gamificación
         # ============================================================================
 
@@ -3896,10 +3888,6 @@ def vista_plan_anual(request, cliente_id):
         # --- PASO 2: Calcular 1RM ---
         maximos_actuales = cliente_obj.one_rm_data or {}
 
-        print("\n" + "=" * 50)
-        print(f"LEYENDO 1RM PARA PLANIFICAR: {maximos_actuales}")
-        print("=" * 50 + "\n")
-
         # --- PASO 3: Crear perfil y VALIDAR ADHERENCIA ---
         perfil = crear_perfil_desde_cliente(cliente_obj)
         perfil.maximos_actuales = maximos_actuales
@@ -3914,33 +3902,23 @@ def vista_plan_anual(request, cliente_id):
                 'cliente': cliente_obj, 'error': True, 'validacion_fallida': True,
                 'validacion': validacion_adherencia,
             }
-            print(f"❌ Validación de Adherencia fallida: {validacion_adherencia.recomendaciones}")
             return render(request, 'entrenos/vista_plan_calendario.html', context)
-
-        print("✅ Validación de Adherencia superada.")
 
         # --- PASO 4: Generar y Enriquecer el Plan ---
         planificador = PlanificadorHelms(perfil)
-        # Generar plan (sin pasar el año, ya que no lo acepta)
         plan_original = planificador.generar_plan_anual()
-        print(f"✅ Plan original generado.")
-
         plan = agregar_educacion_a_plan(plan_original)
-        print("📚 Plan enriquecido con datos educativos.")
 
         if not plan or not isinstance(plan, dict):
             raise Exception("El plan generado está vacío o tiene un formato incorrecto.")
 
-        # --- PASO 5: ✅ SERIALIZAR EL PLAN ANTES DE GUARDAR EN SESIÓN ---
-        print("🔄 Serializando plan para sesión...")
+        # --- PASO 5: SERIALIZAR EL PLAN ANTES DE GUARDAR EN SESIÓN ---
         plan_serializado = serializar_plan_para_sesion(plan)
         request.session[f'plan_anual_{cliente_id}'] = plan_serializado
         request.session.modified = True
-        print("✅ Plan guardado en sesión.")
 
         # === DETECCIÓN DE FASE ACTUAL Y TEMA DINÁMICO ===
         hoy = date.today()
-        print(f"🔍 DEBUG: Fecha hoy = {hoy}")
 
         # Detectar fase actual basada en la semana actual
         fase_actual = None
@@ -3950,7 +3928,6 @@ def vista_plan_anual(request, cliente_id):
 
         # Acceder a la estructura correcta del plan y calcular fechas
         bloques = plan.get('plan_por_bloques', [])
-        print(f"🔍 DEBUG: Total bloques encontrados = {len(bloques)}")
 
         # Calcular fechas para cada bloque basándose en la duración
         from datetime import timedelta
@@ -3973,21 +3950,10 @@ def vista_plan_anual(request, cliente_id):
             # Mover el cursor para el siguiente bloque (próximo lunes)
             fecha_cursor = bloque['fecha_fin'] + timedelta(days=1)
 
-        # DEBUG: Mostrar fechas de todos los bloques
-        print(f"\n📅 DEBUG: Fechas de bloques calculadas:")
-        for idx, bloque in enumerate(bloques[:5]):  # Mostrar solo los primeros 5
-            print(
-                f"   {idx + 1}. {bloque.get('nombre')}: {bloque.get('fecha_inicio')} → {bloque.get('fecha_fin')} ({bloque.get('duracion')} semanas)")
-
-        # Ahora buscar la fase actual
-        print(f"\n🔍 DEBUG: Buscando fase actual para {hoy}...\n")
-
-        for idx, bloque in enumerate(bloques):
+        # Buscar la fase actual
+        for bloque in bloques:
             fecha_inicio = bloque.get('fecha_inicio')
             fecha_fin = bloque.get('fecha_fin')
-
-            if idx < 3:  # Mostrar solo los primeros 3 bloques para no saturar logs
-                print(f"🔍 DEBUG: Bloque '{bloque.get('nombre')}': {fecha_inicio} - {fecha_fin}")
 
             if fecha_inicio and fecha_fin:
                 if fecha_inicio <= hoy <= fecha_fin:
@@ -4001,14 +3967,7 @@ def vista_plan_anual(request, cliente_id):
                     semana_actual = (dias_transcurridos // 7) + 1
                     total_semanas_fase = bloque.get('duracion', 1)
 
-                    print(f"\n✅ DEBUG: ¡Fase actual encontrada! '{bloque.get('nombre')}'")
-                    print(f"   - Días transcurridos: {dias_transcurridos} de {duracion_total_dias}")
-                    print(f"   - Semana {semana_actual} de {total_semanas_fase}")
-                    print(f"   - Progreso: {progreso_fase:.1f}%\n")
                     break
-
-        if not fase_actual:
-            print("⚠️ DEBUG: No se encontró fase actual, usando valores por defecto")
 
         # === CALCULAR PRÓXIMA FASE ===
         proxima_fase = None
@@ -4019,12 +3978,7 @@ def vista_plan_anual(request, cliente_id):
             if fecha_inicio and fecha_inicio > hoy:
                 proxima_fase = bloque
                 dias_hasta_proxima_fase = (fecha_inicio - hoy).days
-                print(f"\n✅ DEBUG: Próxima fase encontrada: '{bloque.get('nombre')}'")
-                print(f"   - Comienza en {dias_hasta_proxima_fase} días ({fecha_inicio})\n")
                 break
-
-        if not proxima_fase:
-            print("⚠️ DEBUG: No se encontró próxima fase (fin del plan)")
 
         # === CALCULAR PROYECCIONES DE EJERCICIOS (PARA TODAS LAS FASES) ===
         proyecciones_totales = {}
@@ -4151,8 +4105,6 @@ def vista_plan_anual(request, cliente_id):
                 # IMPORTANT: Actualizar el diccionario total para que el JSON del frontend tenga los datos correctos
                 proyecciones_totales[fase_key] = proyecciones_fase
 
-                print(
-                    f"\n📊 DEBUG: Proyecciones FASE ACTUAL ('{fase_key}'): {len(proyecciones_fase)} ejercicios con progreso calculado")
 
         # Calcular tema de colores según tipo de fase
         tema_fase = {
@@ -4314,9 +4266,7 @@ def vista_plan_anual(request, cliente_id):
         return render(request, 'entrenos/vista_plan_calendario.html', context)
 
     except Exception as e:
-        print(f"❌ Error general en vista_plan_anual: {str(e)}")
-        import traceback
-        traceback.print_exc()
+        logger.exception("Error en vista_plan_anual: %s", e)
         error_context = {
             'error': True,
             'error_message': str(e),
@@ -4419,7 +4369,7 @@ def obtener_o_generar_plan(request, cliente_id):
 
     from django.core.cache import cache
     if cache.get(f"bio_needs_regen_{cliente_id}"):
-        print(f"⚠️ Regenerando plan anual porque las lesiones cambiaron (Signal cache triggered).")
+        logger.info("Regenerando plan anual: lesiones cambiaron (bio_needs_regen).")
         request.session.pop(f'plan_anual_{cliente_id}', None)
         request.session.pop(f'plan_anual_v2_{cliente_id}', None)
         cache.delete(f"bio_needs_regen_{cliente_id}")
@@ -4437,8 +4387,7 @@ def obtener_o_generar_plan(request, cliente_id):
     if plan:
         año_del_plan = plan.get('metadata', {}).get('año_generacion', date.today().year)
         if año_del_plan != año_solicitado:
-            print(
-                f"⚠️ Plan anual obsoleto (Año del plan: {año_del_plan}, Año solicitado: {año_solicitado}). Forzando regeneración.")
+            logger.info("Plan anual obsoleto (año plan: %s, solicitado: %s). Regenerando.", año_del_plan, año_solicitado)
             plan = None
         else:
             return plan  # ya viene serializado desde sesión
@@ -4480,9 +4429,7 @@ def obtener_o_generar_plan(request, cliente_id):
         return plan_serializado
 
     except Exception as e:
-        print(f"❌ Error al generar plan: {str(e)}")
-        import traceback
-        traceback.print_exc()
+        logger.exception("Error al generar plan: %s", e)
         return None
 
 
@@ -4608,7 +4555,7 @@ def ajax_obtener_entrenamiento_dia(request, cliente_id):
                                 ej['es_adaptado'] = True
                                 ej['explicacion_ejercicio'] = "🛡️ Adaptado por precaución biomecánica."
             except Exception as e:
-                print(f"❌ Error applying Bio-Restrictions: {e}")
+                logger.warning("Error applying Bio-Restrictions: %s", e)
 
             if isinstance(ejercicios, list):
                 entrenamiento_dia["ejercicios"] = [_normalizar_ejercicio_ui(ej, i) for i, ej in enumerate(ejercicios)]
@@ -4629,9 +4576,7 @@ def ajax_obtener_entrenamiento_dia(request, cliente_id):
         })
 
     except Exception as e:
-        print(f"❌ Error en AJAX: {str(e)}")
-        import traceback
-        traceback.print_exc()
+        logger.exception("Error en ajax_obtener_entrenamiento_dia: %s", e)
         return JsonResponse({'error': str(e)}, status=500)
 
 
@@ -4744,7 +4689,7 @@ def ajax_obtener_entrenamientos_mes(request, cliente_id):
                                             ej['es_adaptado'] = True
                                             ej['explicacion_ejercicio'] = "🛡️ Adaptado por precaución biomecánica."
                         except Exception as e:
-                            print(f"❌ Error applying Bio-Restrictions directly: {e}")
+                            logger.warning("Error applying Bio-Restrictions directly: %s", e)
 
                         if isinstance(ejercicios, list):
                             entrenamiento["ejercicios"] = [_normalizar_ejercicio_ui(ej, i) for i, ej in
@@ -4772,9 +4717,7 @@ def ajax_obtener_entrenamientos_mes(request, cliente_id):
         })
 
     except Exception as e:
-        print(f"❌ Error en AJAX: {str(e)}")
-        import traceback
-        traceback.print_exc()
+        logger.exception("Error en ajax_obtener_entrenamientos_mes: %s", e)
         return JsonResponse({'error': str(e)}, status=500)
 
 
@@ -5169,13 +5112,7 @@ def vista_plan_calendario(request, cliente_id):
         return render(request, 'entrenos/vista_plan_calendario.html', contexto)
 
     except Exception as e:
-        # Log del error y fallback
-        with open('/tmp/debug_vista.txt', 'a') as f:
-            f.write(f"❌ ERROR EN VISTA: {str(e)}\n")
-            import traceback
-            f.write(traceback.format_exc())
-            f.write("\n")
-        print(f"❌ Error en vista_plan_calendario: {str(e)}")
+        logger.exception("Error en vista_plan_calendario: %s", e)
 
         # Fallback a tu sistema actual
         from analytics.planificador import PlanificadorAnualIA
@@ -6172,23 +6109,17 @@ def dashboard_evolucion(request, cliente_id):
         defaults={'nivel_actual': Arquetipo.objects.order_by('nivel').first()}
     )
 
-    # --- LÓGICA EXTRA PARA FASE Y COACH IA ---
-    # En una implementación real, esto vendría de un modelo 'PerfilCliente' o 'PlanEntrenamiento'
-    fase_actual = "volumen"  # Valor por defecto
+    # --- FASE ACTUAL Y DATOS REALES DE RPE/FASES ---
+    from clientes.models import FaseCliente
+    fase_obj = FaseCliente.objects.filter(cliente=cliente).order_by('-fecha_inicio').first()
+    fase_actual = fase_obj.fase if fase_obj else 'volumen'
 
-    # Simulación de datos de RPE por semana para la gráfica
-    rpe_semanal = [round(float(stats.get('rpe_promedio', 7.0)) + (np.random.uniform(-0.5, 0.5)), 1) for _ in
-                   vol_semanal['data']]
+    # RPE semanal real desde SesionEntrenamiento / SerieRealizada
+    rpe_data = EstadisticasService.calcular_rpe_semanal(cliente, rango)
+    rpe_semanal = rpe_data['data']
 
-    # Simulación de fases históricas para la gráfica
-    fases_historicas = []
-    for i, _ in enumerate(vol_semanal['labels']):
-        if i < len(vol_semanal['labels']) // 3:
-            fases_historicas.append("volumen")
-        elif i < 2 * len(vol_semanal['labels']) // 3:
-            fases_historicas.append("definicion")
-        else:
-            fases_historicas.append("mantenimiento")
+    # Fases históricas reales desde FaseCliente
+    fases_historicas = EstadisticasService.obtener_fases_historicas(cliente, rango)
 
     context = {
         'cliente': cliente,
@@ -6712,5 +6643,5 @@ def api_save_hot_swap(request, cliente_id):
                                 status=404)
 
     except Exception as e:
-        print(f"Error en api_save_hot_swap: {e}")
+        logger.warning("Error en api_save_hot_swap: %s", e)
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)

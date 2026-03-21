@@ -288,6 +288,10 @@ class PlanificadorHelms:
                 rpes = [float(s.rpe_real) for s in series if s.rpe_real is not None]
                 if rpes:
                     resultado['rpe_real'] = sum(rpes) / len(rpes)
+                elif ej.rpe is not None:
+                    # Fallback: SerieRealizada no existe (EjercicioBase sin match exacto),
+                    # usar el RPE promedio guardado directamente en EjercicioRealizado
+                    resultado['rpe_real'] = float(ej.rpe)
         except Exception as e:
             logger.warning("Error al obtener historial del ejercicio '%s': %s", nombre_ejercicio, e)
         return resultado

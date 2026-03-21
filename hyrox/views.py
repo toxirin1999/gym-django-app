@@ -813,8 +813,15 @@ def reportar_lesion(request):
             lesion.fase = form.cleaned_data.get('fase', 'AGUDA')
             lesion.tags_restringidos = form.cleaned_data.get('tags_seleccionados', [])
             lesion.save()
-            
-            # Bio-Purge: Limpiar sesiones futuras para forzar re-evaluación
+
+            # Invalidar el plan Helms en sesión para que se regenere con las nuevas restricciones
+            from django.core.cache import cache
+            cache.set(f"bio_needs_regen_{cliente.id}", True, timeout=3600)
+            request.session.pop(f'plan_anual_{cliente.id}', None)
+            request.session.pop(f'plan_anual_v2_{cliente.id}', None)
+            request.session.modified = True
+
+            # Bio-Purge: Limpiar sesiones Hyrox futuras para forzar re-evaluación
             from core.bio_context import BioContextProvider
             BioContextProvider.force_clean_future_workouts(cliente)
             
@@ -888,8 +895,15 @@ def marcar_lesion_recuperada(request, lesion_id):
         lesion.activa = False
         lesion.fecha_resolucion = timezone.now().date()
         lesion.save()
-        
-        # Bio-Purge: Limpiar sesiones futuras para eliminar restricciones
+
+        # Invalidar plan Helms para que se regenere sin las restricciones
+        from django.core.cache import cache
+        cache.set(f"bio_needs_regen_{lesion.cliente.id}", True, timeout=3600)
+        request.session.pop(f'plan_anual_{lesion.cliente.id}', None)
+        request.session.pop(f'plan_anual_v2_{lesion.cliente.id}', None)
+        request.session.modified = True
+
+        # Bio-Purge: Limpiar sesiones Hyrox futuras para eliminar restricciones
         from core.bio_context import BioContextProvider
         BioContextProvider.force_clean_future_workouts(lesion.cliente)
         

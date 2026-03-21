@@ -225,7 +225,28 @@ class RecordsService:
         Obtiene los récords más recientes de un cliente
         """
         from entrenos.models import RecordPersonal
-        
+
         return RecordPersonal.objects.filter(
             cliente=cliente
         ).order_by('-fecha_logrado')[:limite]
+
+    @staticmethod
+    def obtener_mejor_marca(cliente, nombre_ejercicio):
+        """
+        Devuelve el EjercicioRealizado con el mayor peso para ese ejercicio y cliente.
+        El objeto retornado tiene .peso_kg y .repeticiones, compatibles con estimar_1rm().
+        Retorna None si no hay historial.
+        """
+        from entrenos.models import EjercicioRealizado
+
+        return (
+            EjercicioRealizado.objects
+            .filter(
+                entreno__cliente=cliente,
+                nombre_ejercicio__icontains=nombre_ejercicio,
+                peso_kg__gt=0,
+                completado=True,
+            )
+            .order_by('-peso_kg', '-entreno__fecha')
+            .first()
+        )

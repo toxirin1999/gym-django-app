@@ -700,6 +700,250 @@
         setTimeout(() => window.dispatchEvent(new Event('resize')), 50);
     }
 
+    // ══════════════════════════════════════════
+    // CHART INITIALIZATION
+    // ══════════════════════════════════════════
+    const CHART_COLORS = {
+        cyan:    '#00D4FF',
+        gold:    '#C8AA6E',
+        green:   '#00FF88',
+        pink:    '#FF2D92',
+        purple:  '#9B59B6',
+        blue:    '#3498DB',
+        gridLine: 'rgba(255,255,255,0.06)',
+        tick:     'rgba(255,255,255,0.4)',
+    };
+
+    Chart.defaults.color = CHART_COLORS.tick;
+    Chart.defaults.borderColor = CHART_COLORS.gridLine;
+    Chart.defaults.font.family = "'DM Sans', sans-serif";
+
+    function parseData(el, attr) {
+        try { return JSON.parse(el.getAttribute(attr) || 'null'); } catch { return null; }
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+
+        // ── 1. Volumen Semanal (línea + RPE secundario) ──
+        const cvVol = document.getElementById('volumenSemanalChart');
+        if (cvVol) {
+            const labels = parseData(cvVol, 'data-volumen-labels') || [];
+            const volData = parseData(cvVol, 'data-volumen-data') || [];
+            const rpeData = parseData(cvVol, 'data-volumen-rpe') || [];
+            new Chart(cvVol, {
+                type: 'bar',
+                data: {
+                    labels,
+                    datasets: [
+                        {
+                            label: 'Volumen (kg)',
+                            data: volData,
+                            backgroundColor: 'rgba(0,212,255,0.25)',
+                            borderColor: CHART_COLORS.cyan,
+                            borderWidth: 2,
+                            borderRadius: 4,
+                            yAxisID: 'yVol',
+                        },
+                        {
+                            label: 'RPE',
+                            data: rpeData,
+                            type: 'line',
+                            borderColor: CHART_COLORS.pink,
+                            backgroundColor: 'transparent',
+                            borderWidth: 2,
+                            pointRadius: 3,
+                            tension: 0.4,
+                            yAxisID: 'yRpe',
+                        },
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        yVol: { position: 'left',  grid: { color: CHART_COLORS.gridLine }, ticks: { color: CHART_COLORS.cyan } },
+                        yRpe: { position: 'right', min: 0, max: 10, grid: { display: false }, ticks: { color: CHART_COLORS.pink } },
+                        x:    { grid: { display: false } },
+                    }
+                }
+            });
+        }
+
+        // ── 2. Distribución Muscular (doughnut) ──
+        const cvDist = document.getElementById('distribucionMuscularChart');
+        if (cvDist) {
+            const labels = parseData(cvDist, 'data-distribucion-labels') || [];
+            const data   = parseData(cvDist, 'data-distribucion-data') || [];
+            const palette = [CHART_COLORS.cyan, CHART_COLORS.green, CHART_COLORS.gold,
+                             CHART_COLORS.pink, CHART_COLORS.purple, CHART_COLORS.blue,
+                             '#FF6B35', '#F7C59F'];
+            new Chart(cvDist, {
+                type: 'doughnut',
+                data: {
+                    labels,
+                    datasets: [{ data, backgroundColor: palette.slice(0, data.length), borderWidth: 0 }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '65%',
+                    plugins: {
+                        legend: { position: 'right', labels: { color: CHART_COLORS.tick, padding: 12, font: { size: 12 } } }
+                    }
+                }
+            });
+        }
+
+        // ── 3. ACWR (línea) ──
+        const cvAcwr = document.getElementById('acwrChart');
+        if (cvAcwr) {
+            const raw = parseData(cvAcwr, 'data-acwr') || [];
+            const labels = raw.map(r => r.fecha || '');
+            const acwrVals = raw.map(r => r.acwr || 0);
+            new Chart(cvAcwr, {
+                type: 'line',
+                data: {
+                    labels,
+                    datasets: [{
+                        label: 'ACWR',
+                        data: acwrVals,
+                        borderColor: CHART_COLORS.green,
+                        backgroundColor: 'rgba(0,255,136,0.1)',
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 2,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { min: 0, max: 2, grid: { color: CHART_COLORS.gridLine } },
+                        x: { grid: { display: false }, ticks: { maxTicksLimit: 8 } },
+                    }
+                }
+            });
+        }
+
+        // ── 4. Equilibrio Muscular (radar) ──
+        const cvRadar = document.getElementById('balanceRadarChart');
+        if (cvRadar) {
+            const raw    = parseData(cvRadar, 'data-radar') || {};
+            const labels = raw.labels || [];
+            const vals   = raw.valores || [];
+            new Chart(cvRadar, {
+                type: 'radar',
+                data: {
+                    labels,
+                    datasets: [{
+                        label: 'Ratio',
+                        data: vals,
+                        borderColor: CHART_COLORS.gold,
+                        backgroundColor: 'rgba(200,170,110,0.2)',
+                        pointBackgroundColor: CHART_COLORS.gold,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        r: {
+                            grid: { color: CHART_COLORS.gridLine },
+                            angleLines: { color: CHART_COLORS.gridLine },
+                            pointLabels: { color: CHART_COLORS.tick, font: { size: 11 } },
+                            ticks: { display: false },
+                        }
+                    }
+                }
+            });
+        }
+
+        // ── 5. Volumen Óptimo (barras agrupadas) ──
+        const cvOptimo = document.getElementById('volumenOptimoChart');
+        if (cvOptimo) {
+            const raw     = parseData(cvOptimo, 'data-vol-optimo') || {};
+            const labels  = raw.labels || [];
+            const reales  = raw.series_reales || [];
+            const minRec  = raw.min_recomendado || 10;
+            const maxRec  = raw.max_recomendado || 20;
+            new Chart(cvOptimo, {
+                type: 'bar',
+                data: {
+                    labels,
+                    datasets: [
+                        {
+                            label: 'Series reales/semana',
+                            data: reales,
+                            backgroundColor: reales.map(v =>
+                                v < minRec ? 'rgba(255,45,146,0.6)' :
+                                v > maxRec ? 'rgba(255,183,0,0.6)' : 'rgba(0,255,136,0.6)'
+                            ),
+                            borderRadius: 4,
+                        },
+                        {
+                            label: 'Mínimo recomendado',
+                            data: Array(labels.length).fill(minRec),
+                            type: 'line',
+                            borderColor: 'rgba(0,212,255,0.6)',
+                            borderDash: [4,4],
+                            pointRadius: 0,
+                            backgroundColor: 'transparent',
+                        },
+                        {
+                            label: 'Máximo recomendado',
+                            data: Array(labels.length).fill(maxRec),
+                            type: 'line',
+                            borderColor: 'rgba(255,183,0,0.6)',
+                            borderDash: [4,4],
+                            pointRadius: 0,
+                            backgroundColor: 'transparent',
+                        },
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { labels: { color: CHART_COLORS.tick, font: { size: 11 } } } },
+                    scales: {
+                        y: { grid: { color: CHART_COLORS.gridLine } },
+                        x: { grid: { display: false } },
+                    }
+                }
+            });
+        }
+
+        // ── 6. Intensidad Histórica (doughnut) ──
+        const cvInt = document.getElementById('intensidadChart');
+        if (cvInt) {
+            const raw  = parseData(cvInt, 'data-intensidad') || {};
+            const labels = raw.labels || [];
+            const data   = raw.data || [];
+            new Chart(cvInt, {
+                type: 'doughnut',
+                data: {
+                    labels,
+                    datasets: [{
+                        data,
+                        backgroundColor: ['rgba(0,212,255,0.7)', 'rgba(0,255,136,0.7)', 'rgba(255,183,0,0.7)', 'rgba(255,45,146,0.7)'],
+                        borderWidth: 0,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '60%',
+                    plugins: {
+                        legend: { position: 'bottom', labels: { color: CHART_COLORS.tick, padding: 10, font: { size: 11 } } }
+                    }
+                }
+            });
+        }
+
+    }); // end first DOMContentLoaded (charts)
+
     // ── Fase selector ──
     document.addEventListener('DOMContentLoaded', function () {
         const selector = document.getElementById('faseAnualSelector');
