@@ -4811,7 +4811,17 @@ def vista_plan_calendario(request, cliente_id):
         total_semanas_fase = 1
         progreso_fase = 0
 
-        bloques = plan.get('bloques', []) or plan.get('fases', [])
+        bloques = (
+            plan.get('bloques', []) or 
+            plan.get('fases', []) or 
+            plan.get('plan_por_bloques', [])
+        )
+        if not bloques and 'datos_helms' in plan:
+            bloques = (
+                plan['datos_helms'].get('plan_por_bloques', []) or 
+                plan['datos_helms'].get('fases', []) or 
+                plan['datos_helms'].get('bloques', [])
+            )
 
         # Calcular fechas si faltan (Helms format uses 'duracion' in weeks)
         fecha_cursor = None
@@ -4871,11 +4881,18 @@ def vista_plan_calendario(request, cliente_id):
             if fecha_inicio and fecha_fin:
                 if fecha_inicio <= hoy <= fecha_fin:
                     fase_actual = bloque
-                    # Calcular semana actual dentro de la fase
+                    # Calcular progreso basado en días para una barra más precisa
                     dias_transcurridos = (hoy - fecha_inicio).days
+                    duracion_total_dias = (fecha_fin - fecha_inicio).days + 1
+                    
+                    if duracion_total_dias > 0:
+                        progreso_fase = min(max((dias_transcurridos / duracion_total_dias) * 100, 0), 100)
+                    else:
+                        progreso_fase = 0
+                        
+                    # Mantener variables para display
                     semana_actual = (dias_transcurridos // 7) + 1
                     total_semanas_fase = duracion_semanas
-                    progreso_fase = min((semana_actual / total_semanas_fase) * 100, 100)
 
                     # Detectar próxima fase
                     if i + 1 < len(bloques):
@@ -5127,6 +5144,7 @@ def vista_plan_calendario(request, cliente_id):
             'semana_actual': semana_actual,
             'total_semanas_fase': total_semanas_fase,
             'progreso_fase': round(progreso_fase, 1),
+            'progreso_fase_css': str(round(progreso_fase, 1)).replace(',', '.'),
             'proyecciones_fase': proyecciones_fase,
 
             # JSON para JS
