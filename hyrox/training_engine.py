@@ -23,16 +23,17 @@ class HyroxTrainingEngine:
         today = timezone.now().date()
         days_until_event = (objective.fecha_evento - today).days
 
-        if days_until_event <= 0:
-            logger.warning("La fecha del evento ya ha pasado o es hoy.")
+        if days_until_event < 0:
+            logger.warning("La fecha del evento ya ha pasado.")
             return
 
         weeks_until_event = days_until_event // 7
         if weeks_until_event > 16:
-            # Planificamos máximo 16 semanas vista para no sobrecargar
             weeks_to_plan = 16
         else:
-            weeks_to_plan = weeks_until_event
+            # Mínimo 1 semana: si el evento es esta semana o ya pasó,
+            # generamos al menos las próximas sesiones de mantenimiento.
+            weeks_to_plan = max(1, weeks_until_event)
 
         # Determinar volumen semanal base por categoría
         sessions_per_week = 4

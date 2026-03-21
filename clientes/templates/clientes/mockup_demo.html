@@ -881,7 +881,7 @@
         border-radius: 50% !important;
         box-shadow: 0 0 12px rgba(34, 211, 238, 0.3) !important;
     }
-    
+
     /* Gauge styles from user request */
     .gauge-container {
         position: relative;
@@ -993,24 +993,6 @@
 <!-- MODO FOCUS: Rediseñado a 4 Zonas -->
 <div id="focus-mode-container" class="focus-mode-container">
 
-    <!-- ── ZONA 1: STATUS BAR ────────────────────────────────────────── -->
-    <div class="coach-ia-compact-banner">
-        <div class="flex items-center gap-2">
-            <i class="fas fa-robot" style="color: #C8AA6E;"></i>
-            <span style="font-family: 'Rajdhani', sans-serif; font-size: 0.8rem; color: rgba(200,200,200,0.6);">
-                Coach IA · Readiness <strong style="color: #C8AA6E;">{{ bio_readiness.score|default:"--" }}%</strong> · 
-                Vol. ajustado <strong style="color: #C8AA6E;">×{{ bio_readiness.volume_modifier|floatformat:2|default:"1.0" }}</strong> · 
-                {% if bio_readiness.score < 50 %}Recovery Mode activo{% else %}Performance Mode{% endif %}
-            </span>
-        </div>
-        <div class="flex items-center gap-2">
-            {% if bio_readiness.score < 50 %}
-                <span style="padding: 2px 10px; background: rgba(200,75,49,0.15); color: #C84B31; border: 1px solid rgba(200,75,49,0.3); font-family: 'Share Tech Mono', monospace; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.15em;">● PRECAUCIÓN {{ bio_readiness.score|default:"--" }}%</span>
-            {% else %}
-                <span style="padding: 2px 10px; background: rgba(74,222,128,0.1); color: #4ade80; border: 1px solid rgba(74,222,128,0.25); font-family: 'Share Tech Mono', monospace; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.15em;">● OK {{ bio_readiness.score|default:"--" }}%</span>
-            {% endif %}
-        </div>
-    </div>
 
     <!-- ── ZONA 2: HERO ENTRENO ──────────────────────────────────────── -->
     <div class="hero-entreno-section animate-fadeSlide">
@@ -1134,6 +1116,16 @@
                 VER HYROX
             </a>
             {% endif %}
+
+            <!-- Botones secundarios -->
+            <div style="display: flex; gap: 10px; max-width: 480px; margin: 10px auto 0 auto;">
+                <a href="{% url 'hyrox:dashboard' %}" style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 10px; background: transparent; border: 1px solid rgba(200,75,49,0.2); color: #A03020; font-family: 'Cinzel', serif; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; text-decoration: none; transition: all 0.2s;">
+                    ↺ VER PLAN
+                </a>
+                <a href="{% url 'hyrox:dashboard' %}" style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 10px; background: transparent; border: 1px solid rgba(200,75,49,0.3); color: #C84B31; font-family: 'Cinzel', serif; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; text-decoration: none; transition: all 0.2s;">
+                    ⚡ DASHBOARD HYROX
+                </a>
+            </div>
         </div>
         {% endif %}
 
@@ -1389,17 +1381,17 @@ document.addEventListener('DOMContentLoaded', function() {
     try {
         const btnGym = document.getElementById('btnGym');
         const btnHyrox = document.getElementById('btnHyrox');
-        
+
         // Focus Mode Elements
         const heroGymFocus = document.getElementById('heroGymFocus');
         const heroHyroxFocus = document.getElementById('heroHyroxFocus');
         const heroGymBtn = document.getElementById('heroGymBtn');
         const heroHyroxBtn = document.getElementById('heroHyroxBtn');
-        
+
         // Full Mode Elements
         const heroGym = document.getElementById('heroGym');
         const heroHyrox = document.getElementById('heroHyrox');
-        
+
         const focusMode = document.getElementById('focus-mode-container');
         const fullMode = document.getElementById('full-mode-container');
 
@@ -1426,7 +1418,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     // Full
                     if(heroGym) heroGym.style.display = 'block';
                     if(heroHyrox) heroHyrox.style.display = 'none';
-                    
+
                     btnGym.className = 'mode-btn active-gym';
                     btnHyrox.className = 'mode-btn';
                 } else {
@@ -1438,7 +1430,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     // Full
                     if(heroGym) heroGym.style.display = 'none';
                     if(heroHyrox) heroHyrox.style.display = 'block';
-                    
+
                     btnHyrox.className = 'mode-btn active-hyrox';
                     btnGym.className = 'mode-btn';
                 }
@@ -1451,7 +1443,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // Initial state
             const savedMode = localStorage.getItem('dashboard_mode');
             if (savedMode === 'hyrox') updateModeUI('hyrox');
-            
+
             const savedView = localStorage.getItem('dashboard_view_preference');
             if (savedView === 'full') {
                 focusMode.classList.add('view-hidden');

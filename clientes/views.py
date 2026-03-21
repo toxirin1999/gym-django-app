@@ -4,7 +4,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
 from django.db import IntegrityError
-from django.db.models import Avg, Count, F, Max, Q
+from django.db.models import Avg, Count, ExpressionWrapper, F, FloatField, Max, Q, Sum
 from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -31,7 +31,7 @@ from analytics.sistema_educacion_helms import NivelEducativo, SistemaEducacionHe
 from analytics.sistema_progresion_avanzada import (RegistroEjercicio,
                                                    RegistroSerie,
                                                    SistemaProgresionAvanzada)
-from entrenos.models import (DetalleEjercicioRealizado, EntrenoRealizado,
+from entrenos.models import (DetalleEjercicioRealizado, EjercicioRealizado, EntrenoRealizado,
                              EstadoEmocional as EntrenoEstadoEmocional, LogroDesbloqueado,
                              SerieRealizada, RecordPersonal)
 
@@ -634,12 +634,23 @@ def _get_dashboard_context_data(request, cliente):
     frase_extra_joi = "Estoy observando tu progreso emocional..."
     frase_recaida = recuperar_frase_de_recaida(usuario) if estado_joi in ['glitch', 'triste'] else None
 
-    # Carga total
+    # Carga total (últimos 3 entrenos, para notificaciones/sugerencias)
     carga_total = sum(
         detalle.peso_kg * detalle.repeticiones * detalle.series
         for entreno in entrenos
         for detalle in entreno.detalles.all()
     )
+
+    # Carga total acumulada (todos los entrenos, para el stat del dashboard)
+    _carga_agg = EjercicioRealizado.objects.filter(
+        entreno__cliente=cliente
+    ).aggregate(
+        total=Sum(ExpressionWrapper(
+            F('peso_kg') * F('repeticiones') * F('series'),
+            output_field=FloatField()
+        ))
+    )
+    carga_total_acumulada = round(_carga_agg['total'] or 0)
 
     emociones_lista = [
         ("😊", "feliz"), ("😐", "neutro"),
@@ -940,6 +951,9 @@ def _get_dashboard_context_data(request, cliente):
         'cliente': cliente,
         'entrenos': entrenos,
         'analisis_acwr': analis_acwr,
+        'carga_total_acumulada': carga_total_acumulada,
+        'consistencia_pct': 80,
+        'acwr_actual': analis_acwr.get('acwr_actual', 0.0) if analis_acwr else 0.0,
         'metricas_radar': metricas_radar,
         'emociones': emociones,
         'emociones_lista': emociones_lista,
