@@ -49,6 +49,7 @@ class GestorFatiga:
             tipo_ejercicio: str,
             series: int,
             es_pesado: bool,
+            grupo: str = '',
     ) -> int:
         """
         Ajusta el número de series si supera los límites de fatiga permitidos.
@@ -69,7 +70,10 @@ class GestorFatiga:
         series_ajustadas = int(series)
 
         if not es_pesado:
-            # Para series ligeras aplicar solo el límite de sesión
+            # Bug 9 fix: aplicar límite de sesión por grupo también para series ligeras
+            if grupo:
+                limites = self.obtener_limites_sesion(grupo)
+                series_ajustadas = min(series_ajustadas, limites['max'])
             return series_ajustadas
 
         # 1) Presupuesto global de series pesadas

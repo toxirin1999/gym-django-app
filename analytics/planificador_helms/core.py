@@ -5,7 +5,10 @@ Planificador principal basado en la metodología de Eric Helms.
 
 from datetime import datetime, timedelta, date
 from typing import Dict, List, Optional, Any, Set
+import logging
 import math
+
+logger = logging.getLogger(__name__)
 
 from .config import DISTRIBUCION_DIAS, VOLUMENES_BASE, TEMPOS
 from .models.perfil_cliente import PerfilCliente
@@ -21,7 +24,7 @@ from .utils.helpers import normalizar_nombre, extraer_nombre_ejercicio, extraer_
 class PlanificadorHelms:
     def __init__(self, perfil_cliente: PerfilCliente):
         self.perfil = perfil_cliente
-        self.dias_disponibles = self.perfil.dias_disponibles if self.perfil.dias_disponibles in [3, 4, 5] else 4
+        self.dias_disponibles = self.perfil.dias_disponibles if self.perfil.dias_disponibles in [3, 4, 5, 6] else 4
         self.experiencia_años = perfil_cliente.experiencia_años
         self.objetivo_principal = perfil_cliente.objetivo_principal
         self.maximos_actuales = getattr(perfil_cliente, 'maximos_actuales', {})
@@ -29,7 +32,12 @@ class PlanificadorHelms:
 
     def generar_entrenamiento_para_fecha(self, fecha_objetivo: date) -> Optional[Dict[str, Any]]:
         try:
-            semana_num_total = fecha_objetivo.isocalendar()[1]
+            # Bug 1 fix: usar semana RELATIVA al plan, no semana ISO del calendario
+            año_planificacion = getattr(self.perfil, 'año_planificacion', None) or datetime.now().year
+            primer_dia_del_año = date(año_planificacion, 1, 1)
+            dias_para_lunes = (0 - primer_dia_del_año.weekday() + 7) % 7
+            fecha_inicio_plan = primer_dia_del_año + timedelta(days=dias_para_lunes)
+            semana_num_total = (fecha_objetivo - fecha_inicio_plan).days // 7 + 1
             dia_semana_num = fecha_objetivo.weekday()
         except Exception:
             return None
@@ -44,6 +52,8 @@ class PlanificadorHelms:
             dias_entreno_indices = [0, 2, 4]
         elif self.dias_disponibles == 5:
             dias_entreno_indices = [0, 1, 2, 3, 4]
+        elif self.dias_disponibles == 6:
+            dias_entreno_indices = [0, 1, 2, 3, 4, 5]
         else:
             dias_entreno_indices = [0, 1, 3, 4]
 
@@ -75,6 +85,8 @@ class PlanificadorHelms:
             dias_offsets = [0, 2, 4]
         elif self.dias_disponibles == 5:
             dias_offsets = [0, 1, 2, 3, 4]
+        elif self.dias_disponibles == 6:
+            dias_offsets = [0, 1, 2, 3, 4, 5]
         else:
             dias_offsets = [0, 1, 3, 4]
 
@@ -147,8 +159,16 @@ class PlanificadorHelms:
         nivel = self.perfil.calcular_nivel_experiencia()
         volumen_semanal_base = VOLUMENES_BASE.get(nivel, VOLUMENES_BASE['principiante'])
         distribucion_volumen = DISTRIBUCION_DIAS.get(self.dias_disponibles, DISTRIBUCION_DIAS[4])
-        ejercicios_bloque = SelectorEjercicios.seleccionar_ejercicios_para_bloque(numero_bloque, fase,
-                                                                                  self.ejercicios_evitar)
+        # Bug 8 fix: pasar objeto cliente para que BioContext filtre ejercicios con lesiones activas
+        cliente_obj = None
+        try:
+            from clientes.models import Cliente
+            cliente_obj = Cliente.objects.get(pk=self.perfil.id)
+        except Exception:
+            pass
+        ejercicios_bloque = SelectorEjercicios.seleccionar_ejercicios_para_bloque(
+            numero_bloque, fase, self.ejercicios_evitar, cliente=cliente_obj
+        )
         patron_manager = PatronManager(fase)
         semana_planificada = {}
 
@@ -177,8 +197,9 @@ class PlanificadorHelms:
 
                     es_pesado = (int(rep_range.split('-')[0]) <= 6 or rpe_objetivo >= 9)
                     series_objetivo = max(2, min(4, math.ceil(vol_dia / len(candidatos[:2]))))
-                    series_ajustadas = gestor_fatiga.ajustar_series_por_limite(nombre, patron, tipo_ej, series_objetivo,
-                                                                               es_pesado)
+                    series_ajustadas = gestor_fatiga.ajustar_series_por_limite(
+                        nombre, patron, tipo_ej, series_objetivo, es_pesado, grupo=grupo
+                    )
                     if series_ajustadas <= 0: continue
 
                     # Obtener historial real del ejercicio
@@ -186,7 +207,7 @@ class PlanificadorHelms:
                     rpe_real_anterior = historial['rpe_real']
                     peso_real_anterior = historial['peso_real']
 
-                    if peso_real_anterior and rpe_real_anterior is not None:
+                    if peso_real_anterior is not None and rpe_real_anterior is not None:
                         diferencia_rpe = rpe_real_anterior - rpe_objetivo
                         from analytics.planificador_helms.calculo.peso import PROGRESION, REDONDEO
                         if diferencia_rpe <= -2:
@@ -267,8 +288,8 @@ class PlanificadorHelms:
                 rpes = [float(s.rpe_real) for s in series if s.rpe_real is not None]
                 if rpes:
                     resultado['rpe_real'] = sum(rpes) / len(rpes)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning("Error al obtener historial del ejercicio '%s': %s", nombre_ejercicio, e)
         return resultado
 
     def _obtener_rpe_real_anterior(self, nombre_ejercicio: str) -> Optional[float]:

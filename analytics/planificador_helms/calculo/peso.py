@@ -5,8 +5,8 @@ Lógica para el cálculo de pesos de trabajo.
 
 import math
 from typing import Dict, Any, Optional
-from ..config import PROGRESION, REDONDEO, DEFAULTS_1RM, KEYWORDS_BARRA, KEYWORDS_MANCUERNA, KEYWORDS_CABLE, \
-    KEYWORDS_MAQUINA
+from ..config import PROGRESION, REDONDEO, DEFAULTS_1RM, UMBRALES_PESADO, KEYWORDS_BARRA, KEYWORDS_MANCUERNA, \
+    KEYWORDS_CABLE, KEYWORDS_MAQUINA
 from ..utils.helpers import normalizar_nombre
 
 
@@ -92,13 +92,18 @@ class CalculadorPeso:
             reps_planificadas = 8
 
         try:
-            # 1. Calcular el peso de trabajo teórico para el RPE y repeticiones objetivo.
-            peso_rpe_10 = one_rm_estimado / (1 + (reps_planificadas / 30))
+            # 1. Calcular el peso de trabajo teórico (fórmula Brzycki, más precisa que Epley a altas reps)
+            # Brzycki: 1RM = peso / (1.0278 - 0.0278 * reps)
+            # → peso_rpe_10 = 1RM * (1.0278 - 0.0278 * reps)
+            factor_brzycki = max(0.01, 1.0278 - 0.0278 * reps_planificadas)
+            peso_rpe_10 = one_rm_estimado * factor_brzycki
             reduccion_por_rpe = (10 - rpe_objetivo) * 0.03
             peso_base_calculado = peso_rpe_10 * (1 - reduccion_por_rpe)
 
             # 2. Determinar progresión basada en RPE real anterior si existe
-            umbral = PROGRESION['umbral_ejercicio_pesado']
+            # Bug 5 fix: umbral varía según el tipo de carga del ejercicio
+            tipo_carga = cls.inferir_tipo_carga(nombre_ejercicio)
+            umbral = UMBRALES_PESADO.get(tipo_carga, PROGRESION['umbral_ejercicio_pesado'])
             es_pesado = one_rm_estimado > umbral
 
             if rpe_real_anterior is not None:

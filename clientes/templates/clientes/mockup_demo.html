@@ -1168,34 +1168,727 @@
 <!-- ================================================================== -->
 <!-- FULL MODE CONTAINER — LoL Aesthetic -->
 <!-- ================================================================== -->
-<div id="full-mode-container" class="view-hidden" style="min-height: 100vh; background: #010A13; padding: 1rem 1rem 3rem 1rem;">
-<div style="max-width: 900px; margin: 0 auto;">
+<!-- ================================================================== -->
+<!-- FULL MODE — LEAGUE OF LEGENDS CHAMPION DOSSIER                   -->
+<!-- ================================================================== -->
+<style>
+/* ── Base container ─────────────────────────────────────────────── */
+#full-mode-container {
+    background: #010A13;
+    position: relative;
+    overflow-x: hidden;
+}
 
-    <!-- ── HEADER ───────────────────────────────────────────────────── -->
-    <header style="display: flex; justify-content: space-between; align-items: flex-start; padding: 1rem 0 1.5rem 0; border-bottom: 1px solid rgba(200,170,110,0.1); margin-bottom: 1.5rem;">
+/* Atmospheric depth layers */
+#full-mode-container > .lol-atmo {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background:
+        radial-gradient(ellipse 100% 55% at 50% -5%, rgba(5,25,60,0.7) 0%, transparent 70%),
+        radial-gradient(ellipse 70% 40% at 85% 110%, rgba(200,170,110,0.05) 0%, transparent 60%),
+        radial-gradient(ellipse 50% 30% at 10% 100%, rgba(30,8,0,0.3) 0%, transparent 60%);
+}
+
+/* Horizontal scanline texture */
+#full-mode-container > .lol-scanlines {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 3px,
+        rgba(0, 0, 0, 0.025) 3px,
+        rgba(0, 0, 0, 0.025) 4px
+    );
+}
+
+.lol-wrapper {
+    position: relative;
+    z-index: 1;
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+/* ── HEADER ─────────────────────────────────────────────────────── */
+.lol-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 1.5rem 0 1.75rem;
+    margin-bottom: 1.5rem;
+    position: relative;
+}
+
+.lol-header::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg,
+        transparent 0%,
+        rgba(200,170,110,0.25) 15%,
+        rgba(200,170,110,0.7) 40%,
+        rgba(240,230,211,0.9) 50%,
+        rgba(200,170,110,0.7) 60%,
+        rgba(200,170,110,0.25) 85%,
+        transparent 100%
+    );
+}
+
+/* Diamond ornaments on the header line */
+.lol-header::before {
+    content: '◆';
+    position: absolute;
+    bottom: -6px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.55rem;
+    color: #C8AA6E;
+    background: #010A13;
+    padding: 0 8px;
+    line-height: 1;
+}
+
+.lol-eyebrow {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.52rem;
+    color: #785A28;
+    letter-spacing: 0.45em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.lol-eyebrow::before,
+.lol-eyebrow::after {
+    content: '';
+    display: inline-block;
+    width: 24px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, #785A28);
+    opacity: 0.7;
+}
+
+.lol-eyebrow::after {
+    background: linear-gradient(90deg, #785A28, transparent);
+}
+
+.lol-client-name {
+    font-family: 'Cinzel', serif;
+    font-size: clamp(1.7rem, 4.5vw, 2.6rem);
+    font-weight: 700;
+    background: linear-gradient(180deg, #F0E6D3 0%, #C8AA6E 45%, #A08040 75%, #785A28 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    margin: 0;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    line-height: 1;
+    filter: drop-shadow(0 2px 12px rgba(200,170,110,0.2));
+}
+
+.lol-quote {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 0.78rem;
+    color: rgba(200,170,110,0.38);
+    font-style: italic;
+    margin-top: 10px;
+    border-left: 2px solid rgba(200,170,110,0.18);
+    padding-left: 10px;
+    max-width: 400px;
+    line-height: 1.5;
+}
+
+.lol-header-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-shrink: 0;
+    padding-top: 6px;
+}
+
+.lol-icon-btn {
+    width: 36px;
+    height: 36px;
+    background: rgba(10,22,40,0.9);
+    border: 1px solid rgba(200,170,110,0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #785A28;
+    text-decoration: none;
+    transition: all 0.25s;
+    clip-path: polygon(5px 0%, calc(100% - 5px) 0%, 100% 5px, 100% calc(100% - 5px), calc(100% - 5px) 100%, 5px 100%, 0% calc(100% - 5px), 0% 5px);
+    font-size: 0.75rem;
+}
+
+.lol-icon-btn:hover {
+    border-color: rgba(200,170,110,0.55);
+    color: #C8AA6E;
+    background: rgba(200,170,110,0.09);
+    box-shadow: 0 0 14px rgba(200,170,110,0.15);
+}
+
+.lol-focus-btn {
+    padding: 8px 20px;
+    background: transparent;
+    border: 1px solid rgba(200,170,110,0.3);
+    color: #C8AA6E;
+    font-family: 'Cinzel', serif;
+    font-size: 0.58rem;
+    font-weight: 700;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.25s;
+    clip-path: polygon(6px 0%, calc(100% - 6px) 0%, 100% 6px, 100% calc(100% - 6px), calc(100% - 6px) 100%, 6px 100%, 0% calc(100% - 6px), 0% 6px);
+}
+
+.lol-focus-btn:hover {
+    background: rgba(200,170,110,0.08);
+    border-color: #C8AA6E;
+    box-shadow: 0 0 16px rgba(200,170,110,0.2), inset 0 0 12px rgba(200,170,110,0.05);
+}
+
+/* ── ORNATE PANEL ────────────────────────────────────────────────── */
+.lol-panel {
+    position: relative;
+    background: linear-gradient(145deg, #0D1F38 0%, #081525 60%, #050F1C 100%);
+    border: 1px solid rgba(200,170,110,0.18);
+    margin-bottom: 1.25rem;
+    overflow: hidden;
+    transition: border-color 0.3s;
+}
+
+.lol-panel:hover {
+    border-color: rgba(200,170,110,0.3);
+}
+
+/* Top shimmer bar */
+.lol-panel::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg,
+        transparent 0%,
+        rgba(200,170,110,0.4) 15%,
+        #C8AA6E 35%,
+        #F0E6D3 50%,
+        #C8AA6E 65%,
+        rgba(200,170,110,0.4) 85%,
+        transparent 100%
+    );
+    animation: lol-shimmer-bar 4s ease-in-out infinite;
+}
+
+@keyframes lol-shimmer-bar {
+    0%, 100% { opacity: 0.6; }
+    50% { opacity: 1; }
+}
+
+/* Bottom subtle glow */
+.lol-panel::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(200,170,110,0.12) 50%, transparent);
+}
+
+/* Corner ornaments */
+.lol-corner {
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    border-color: rgba(200,170,110,0.5);
+    border-style: solid;
+    pointer-events: none;
+}
+.lol-corner.tl { top: -1px; left: -1px; border-width: 2px 0 0 2px; }
+.lol-corner.tr { top: -1px; right: -1px; border-width: 2px 2px 0 0; }
+.lol-corner.bl { bottom: -1px; left: -1px; border-width: 0 0 2px 2px; }
+.lol-corner.br { bottom: -1px; right: -1px; border-width: 0 2px 2px 0; }
+
+.lol-panel-inner {
+    padding: 1.3rem 1.5rem 1.4rem;
+}
+
+/* ── HERO TAG & TITLE ────────────────────────────────────────────── */
+.lol-hero-tag {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.52rem;
+    color: #785A28;
+    letter-spacing: 0.32em;
+    text-transform: uppercase;
+    margin-bottom: 5px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.lol-hero-tag .lol-tag-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: #C8AA6E;
+    display: inline-block;
+    animation: lol-pulse 2.5s ease-in-out infinite;
+    box-shadow: 0 0 6px rgba(200,170,110,0.5);
+}
+
+@keyframes lol-pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.8); }
+}
+
+.lol-hero-title {
+    font-family: 'Cinzel', serif;
+    font-size: clamp(1.05rem, 2.5vw, 1.55rem);
+    font-weight: 700;
+    color: #F0E6D3;
+    margin: 0 0 14px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    line-height: 1.2;
+}
+
+.lol-vol-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 4px 14px 4px 10px;
+    background: rgba(200,170,110,0.06);
+    border: 1px solid rgba(200,170,110,0.18);
+    margin-bottom: 1.1rem;
+}
+
+.lol-vol-pip {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: #4ade80;
+    display: inline-block;
+    box-shadow: 0 0 7px rgba(74,222,128,0.7);
+    flex-shrink: 0;
+}
+
+.lol-vol-text {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.58rem;
+    color: #C8AA6E;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+/* ── ABILITY ROWS ────────────────────────────────────────────────── */
+.lol-ability-label {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.48rem;
+    color: rgba(120,90,40,0.7);
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    margin-bottom: 7px;
+}
+
+.lol-ability-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 7px 12px 7px 10px;
+    background: rgba(1,10,19,0.55);
+    border-left: 2px solid rgba(200,170,110,0.13);
+    margin-bottom: 2px;
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.lol-ability-row::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, rgba(200,170,110,0.05) 0%, transparent 60%);
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.lol-ability-row:hover::before { opacity: 1; }
+
+.lol-ability-row:hover {
+    border-left-color: rgba(200,170,110,0.45);
+    background: rgba(13,31,56,0.7);
+}
+
+.lol-ability-row.adapted { border-left-color: rgba(200,170,110,0.55); }
+
+.lol-ability-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    position: relative;
+}
+
+.lol-ability-icon {
+    width: 26px;
+    height: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(200,170,110,0.05);
+    border: 1px solid rgba(200,170,110,0.14);
+    clip-path: polygon(4px 0%, calc(100% - 4px) 0%, 100% 4px, 100% calc(100% - 4px), calc(100% - 4px) 100%, 4px 100%, 0% calc(100% - 4px), 0% 4px);
+    flex-shrink: 0;
+    font-size: 0.6rem;
+    color: #785A28;
+    transition: all 0.2s;
+}
+
+.lol-ability-row:hover .lol-ability-icon,
+.lol-ability-row.adapted .lol-ability-icon {
+    border-color: rgba(200,170,110,0.4);
+    color: #C8AA6E;
+    background: rgba(200,170,110,0.08);
+}
+
+.lol-ability-name {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 0.88rem;
+    color: #AAAAAA;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    transition: color 0.2s;
+}
+
+.lol-ability-row:hover .lol-ability-name { color: #E0D5C0; }
+.lol-ability-row.adapted .lol-ability-name { color: #F0E6D3; }
+
+.lol-adapted-badge {
+    display: inline-block;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.45rem;
+    color: #C8AA6E;
+    letter-spacing: 0.12em;
+    border: 1px solid rgba(200,170,110,0.35);
+    padding: 1px 5px;
+    margin-left: 7px;
+    vertical-align: middle;
+}
+
+.lol-ability-sets {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.7rem;
+    color: #C8AA6E;
+    white-space: nowrap;
+    position: relative;
+}
+
+.lol-more-badge {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.52rem;
+    color: rgba(120,90,40,0.65);
+    letter-spacing: 0.1em;
+    margin-top: 7px;
+    padding-left: 2px;
+}
+
+/* ── ACTION COL ──────────────────────────────────────────────────── */
+.lol-action-col {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 182px;
+    align-items: stretch;
+}
+
+/* ── STAT GRID ───────────────────────────────────────────────────── */
+.lol-stats-wrap {
+    margin-bottom: 1.6rem;
+    position: relative;
+}
+
+.lol-stats-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+
+.lol-stats-header .lol-line {
+    flex: 1;
+    height: 1px;
+}
+
+.lol-stats-header .lol-line.l {
+    background: linear-gradient(to right, transparent, rgba(200,170,110,0.35));
+}
+
+.lol-stats-header .lol-line.r {
+    background: linear-gradient(to left, transparent, rgba(200,170,110,0.35));
+}
+
+.lol-stats-header .lol-section-label {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.52rem;
+    color: #785A28;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.lol-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    background: rgba(200,170,110,0.07);
+    border: 1px solid rgba(200,170,110,0.1);
+    position: relative;
+    overflow: hidden;
+}
+
+/* Top accent bar on grid */
+.lol-stats-grid::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg,
+        transparent 0%,
+        rgba(200,170,110,0.4) 20%,
+        rgba(200,170,110,0.8) 50%,
+        rgba(200,170,110,0.4) 80%,
+        transparent 100%
+    );
+    z-index: 2;
+    pointer-events: none;
+}
+
+.lol-stat-cell {
+    background: #0A1628;
+    padding: 1.2rem 0.8rem 1rem;
+    text-align: center;
+    transition: background 0.25s;
+    position: relative;
+    overflow: hidden;
+}
+
+.lol-stat-cell::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 20%; right: 20%;
+    height: 1px;
+    background: rgba(200,170,110,0.08);
+}
+
+.lol-stat-cell:hover {
+    background: #0D1F38;
+}
+
+.lol-stat-value {
+    font-family: 'Cinzel', serif;
+    font-size: 1.55rem;
+    color: #C8AA6E;
+    font-weight: 700;
+    line-height: 1;
+    display: block;
+    margin-bottom: 5px;
+}
+
+.lol-stat-value.gold-shimmer {
+    background: linear-gradient(90deg, #785A28, #C8AA6E, #F0E6D3, #C8AA6E, #785A28);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: lol-value-shimmer 4s linear infinite;
+}
+
+@keyframes lol-value-shimmer {
+    0% { background-position: 0% center; }
+    100% { background-position: 200% center; }
+}
+
+.lol-stat-value.acwr-danger { color: #ef4444; }
+.lol-stat-value.acwr-safe { color: #4ade80; }
+
+.lol-stat-bar {
+    height: 2px;
+    background: rgba(200,170,110,0.08);
+    margin: 0 8px 6px;
+    overflow: hidden;
+    position: relative;
+}
+
+.lol-stat-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #3C2A10, #C8AA6E);
+    width: 0;
+    transition: width 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.lol-stat-label {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.48rem;
+    color: #785A28;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+}
+
+/* ── HISTORY ─────────────────────────────────────────────────────── */
+.lol-history-wrap {
+    margin-top: 0.25rem;
+}
+
+.lol-history-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 9px 14px 9px 12px;
+    background: #0A1628;
+    border-left: 2px solid rgba(200,170,110,0.1);
+    margin-bottom: 2px;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.lol-history-row::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, rgba(200,170,110,0.04), transparent 50%);
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.lol-history-row:hover::before { opacity: 1; }
+.lol-history-row:hover {
+    border-left-color: rgba(200,170,110,0.38);
+    background: #0D1F38;
+}
+
+.lol-history-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    position: relative;
+}
+
+.lol-history-num {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.5rem;
+    color: rgba(120,90,40,0.45);
+    width: 16px;
+    text-align: right;
+    flex-shrink: 0;
+}
+
+.lol-history-icon {
+    font-size: 0.6rem;
+    color: #785A28;
+    transition: color 0.2s;
+}
+
+.lol-history-row:hover .lol-history-icon { color: #C8AA6E; }
+
+.lol-history-name {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 0.875rem;
+    color: #AAAAAA;
+    font-weight: 600;
+    transition: color 0.2s;
+}
+
+.lol-history-row:hover .lol-history-name { color: #E0D5C0; }
+
+.lol-history-date {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.6rem;
+    color: rgba(120,90,40,0.7);
+    position: relative;
+}
+
+.lol-empty {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.65rem;
+    color: rgba(120,90,40,0.5);
+    text-align: center;
+    padding: 2.5rem 1rem;
+    border: 1px dashed rgba(200,170,110,0.1);
+    letter-spacing: 0.15em;
+}
+
+/* ── HYROX PANEL VARIANT ─────────────────────────────────────────── */
+.lol-panel.hyrox {
+    border-color: rgba(200,75,49,0.2);
+    background: linear-gradient(145deg, #1A0B08 0%, #0D0605 60%, #070302 100%);
+}
+
+.lol-panel.hyrox::before {
+    background: linear-gradient(90deg,
+        transparent 0%,
+        rgba(200,75,49,0.4) 15%,
+        #C84B31 40%,
+        #FF6B47 50%,
+        #C84B31 60%,
+        rgba(200,75,49,0.4) 85%,
+        transparent 100%
+    );
+}
+
+.lol-panel.hyrox .lol-corner { border-color: rgba(200,75,49,0.4); }
+.lol-panel.hyrox .lol-hero-tag { color: #A03020; }
+.lol-panel.hyrox .lol-hero-tag .lol-tag-dot { background: #C84B31; box-shadow: 0 0 6px rgba(200,75,49,0.6); }
+.lol-panel.hyrox .lol-ability-row { border-left-color: rgba(200,75,49,0.2); }
+.lol-panel.hyrox .lol-ability-row:hover { border-left-color: rgba(200,75,49,0.5); }
+.lol-panel.hyrox .lol-ability-icon { border-color: rgba(200,75,49,0.2); color: #A03020; }
+.lol-panel.hyrox .lol-ability-row:hover .lol-ability-icon { border-color: rgba(200,75,49,0.5); color: #C84B31; }
+
+/* ── RESPONSIVE ──────────────────────────────────────────────────── */
+@media (max-width: 600px) {
+    .lol-stats-grid { grid-template-columns: repeat(2, 1fr); }
+    .lol-panel-inner > div { flex-direction: column !important; }
+    .lol-action-col { min-width: unset; width: 100%; }
+}
+</style>
+
+<div id="full-mode-container" class="view-hidden" style="min-height: 100vh; background: #010A13; padding: 1.25rem 1rem 4rem;">
+
+<!-- atmospheric layers -->
+<div class="lol-atmo"></div>
+<div class="lol-scanlines"></div>
+
+<div class="lol-wrapper">
+
+    <!-- ── HEADER ─────────────────────────────────────────────────── -->
+    <header class="lol-header">
         <div>
-            <p style="font-family: 'Share Tech Mono', monospace; font-size: 0.6rem; color: #785A28; letter-spacing: 0.3em; text-transform: uppercase; margin-bottom: 4px;">◆ Vista Completa</p>
-            <h1 style="font-family: 'Cinzel', serif; font-size: clamp(1.4rem, 4vw, 2rem); font-weight: 700; color: #F0E6D3; margin: 0; letter-spacing: 0.05em;">{{ cliente.nombre|title }}</h1>
+            <p class="lol-eyebrow">Vista Detallada</p>
+            <h1 class="lol-client-name">{{ cliente.nombre|title }}</h1>
             {% if estoico_disponible and contenido_hoy %}
-            <p style="font-family: 'Rajdhani', sans-serif; font-size: 0.8rem; color: rgba(200,170,110,0.45); font-style: italic; margin-top: 6px; border-left: 2px solid rgba(200,170,110,0.2); padding-left: 10px; max-width: 420px;">
-                "{{ contenido_hoy.cita }}"
-            </p>
+            <p class="lol-quote">"{{ contenido_hoy.cita }}"</p>
             {% endif %}
         </div>
-        <div style="display: flex; gap: 8px; align-items: center;">
-            <a href="{% url 'clientes:detalle_cliente' cliente.id %}" style="width: 34px; height: 34px; border: 1px solid rgba(200,170,110,0.2); display: flex; align-items: center; justify-content: center; color: #785A28; text-decoration: none;" title="Perfil">
-                <i class="fas fa-user" style="font-size: 0.8rem;"></i>
+        <div class="lol-header-actions">
+            <a href="{% url 'clientes:detalle_cliente' cliente.id %}" class="lol-icon-btn" title="Perfil">
+                <i class="fas fa-user"></i>
             </a>
-            <a href="{% url 'clientes:configurar_preferencias_helms' cliente.id %}" style="width: 34px; height: 34px; border: 1px solid rgba(200,170,110,0.2); display: flex; align-items: center; justify-content: center; color: #785A28; text-decoration: none;" title="Ajustes">
-                <i class="fas fa-cog" style="font-size: 0.8rem;"></i>
+            <a href="{% url 'clientes:configurar_preferencias_helms' cliente.id %}" class="lol-icon-btn" title="Ajustes">
+                <i class="fas fa-cog"></i>
             </a>
-            <button onclick="toggleDashboardMode()" style="padding: 6px 14px; background: transparent; border: 1px solid rgba(200,170,110,0.3); color: #C8AA6E; font-family: 'Cinzel', serif; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; cursor: pointer;">
-                ← Focus
-            </button>
+            <button onclick="toggleDashboardMode()" class="lol-focus-btn">← Focus</button>
         </div>
     </header>
 
-    <!-- ── TOGGLE GYM / HYROX ────────────────────────────────────────── -->
+    <!-- ── TOGGLE GYM / HYROX ─────────────────────────────────────── -->
     {% if hyrox_objetivo %}
     <div class="mode-switcher" style="margin-bottom: 1.5rem; max-width: 240px;">
         <button class="mode-btn active-gym" data-mode="gym" id="btnGym">🏋️ GYM</button>
@@ -1203,155 +1896,193 @@
     </div>
     {% endif %}
 
-    <!-- ── HERO GYM ──────────────────────────────────────────────────── -->
-    <div class="hero-gym" id="heroGym" style="margin-bottom: 1.5rem;">
-        {% if proximo_entrenamiento %}
-        <div style="background: #0A1628; border: 1px solid rgba(200,170,110,0.2); border-left: 3px solid #C8AA6E;">
-            <div style="height: 2px; background: linear-gradient(90deg, #C8AA6E, #785A28, transparent);"></div>
-            <div style="padding: 1.25rem 1.5rem;">
-                <div style="display: flex; flex-wrap: wrap; gap: 1.5rem; align-items: flex-start; justify-content: space-between;">
-                    <div style="flex: 1; min-width: 240px;">
-                        <p style="font-family: 'Share Tech Mono', monospace; font-size: 0.6rem; color: #785A28; letter-spacing: 0.25em; text-transform: uppercase; margin-bottom: 6px;">
-                            {{ proximo_entrenamiento.objetivo|upper|default:"BASE" }} · Día {{ proximo_entrenamiento.dia|default:"1" }}
-                        </p>
-                        <h2 style="font-family: 'Cinzel', serif; font-size: clamp(1.2rem, 3vw, 1.8rem); font-weight: 700; color: #F0E6D3; margin: 0 0 10px 0; letter-spacing: 0.03em; text-transform: uppercase;">
-                            {{ proximo_entrenamiento.nombre|default:proximo_entrenamiento.rutina_nombre|default:"Sesión" }}
-                        </h2>
-                        <div style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; background: rgba(200,170,110,0.07); border: 1px solid rgba(200,170,110,0.2); margin-bottom: 1rem;">
-                            <span style="width: 5px; height: 5px; border-radius: 50%; background: #4ade80; display: inline-block;"></span>
-                            <span style="font-family: 'Share Tech Mono', monospace; font-size: 0.65rem; color: #C8AA6E; letter-spacing: 0.1em; text-transform: uppercase;">Vol. Sugerido: {% widthratio bio_readiness.volume_modifier|default:1 1 100 %}%</span>
-                        </div>
-                        {% if proximo_entrenamiento.ejercicios %}
-                        <p style="font-family: 'Share Tech Mono', monospace; font-size: 0.55rem; color: #785A28; letter-spacing: 0.2em; text-transform: uppercase; margin-bottom: 8px;">Ejercicios Principales</p>
-                        {% for ej in proximo_entrenamiento.ejercicios|slice:":4" %}
-                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; border-left: 2px solid {% if ej.es_adaptado %}rgba(200,170,110,0.6){% else %}rgba(200,170,110,0.15){% endif %}; background: rgba(1,10,19,0.5); margin-bottom: 2px;">
-                            <div style="display: flex; align-items: center; gap: 8px;">
-                                <i class="fas {{ ej.fa_icon|default:'fa-dumbbell' }}" style="color: {% if ej.es_adaptado %}#C8AA6E{% else %}#785A28{% endif %}; font-size: 0.7rem;"></i>
-                                <span style="font-family: 'Rajdhani', sans-serif; font-size: 0.9rem; color: {% if ej.es_adaptado %}#F0E6D3{% else %}#C8C8C8{% endif %}; font-weight: 600;">{{ ej.nombre }}{% if ej.es_adaptado %} <span style="font-size:0.6rem; color:#C8AA6E; letter-spacing:0.1em;">ADAPTADO</span>{% endif %}</span>
-                            </div>
-                            {% if ej.series and ej.repeticiones %}
-                            <span style="font-family: 'Share Tech Mono', monospace; font-size: 0.7rem; color: #C8AA6E;">{{ ej.series }}×{{ ej.repeticiones }}</span>
-                            {% endif %}
-                        </div>
-                        {% endfor %}
-                        {% if proximo_entrenamiento.ejercicios|length > 4 %}
-                        <p style="font-family: 'Share Tech Mono', monospace; font-size: 0.6rem; color: #785A28; letter-spacing: 0.1em; margin-top: 6px;">+ {{ proximo_entrenamiento.ejercicios|length|add:"-4" }} más</p>
-                        {% endif %}
-                        {% endif %}
+    <!-- ── HERO GYM ────────────────────────────────────────────────── -->
+    <div class="hero-gym" id="heroGym" style="margin-bottom: 1.25rem;">
+    {% if proximo_entrenamiento %}
+    <div class="lol-panel">
+        <span class="lol-corner tl"></span><span class="lol-corner tr"></span>
+        <span class="lol-corner bl"></span><span class="lol-corner br"></span>
+        <div class="lol-panel-inner">
+            <div style="display:flex; flex-wrap:wrap; gap:1.5rem; align-items:flex-start; justify-content:space-between;">
+                <div style="flex:1; min-width:230px;">
+                    <p class="lol-hero-tag">
+                        <span class="lol-tag-dot"></span>
+                        {{ proximo_entrenamiento.objetivo|upper|default:"BASE" }} &middot; Día {{ proximo_entrenamiento.dia|default:"1" }}
+                    </p>
+                    <h2 class="lol-hero-title">{{ proximo_entrenamiento.nombre|default:proximo_entrenamiento.rutina_nombre|default:"Sesión" }}</h2>
+                    <div class="lol-vol-pill">
+                        <span class="lol-vol-pip"></span>
+                        <span class="lol-vol-text">Vol. Sugerido: {% widthratio bio_readiness.volume_modifier|default:1 1 100 %}%</span>
                     </div>
-                    <div style="display: flex; flex-direction: column; gap: 8px; min-width: 180px; align-items: stretch;">
-                        <a href="{% url 'entrenos:entrenamiento_activo' cliente.id %}?fecha={{ hoy|date:'Y-m-d' }}&rutina_nombre={{ proximo_entrenamiento.rutina_nombre|urlencode }}&ejercicios={{ proximo_entrenamiento_json|urlencode }}" class="btn-empezar-gym" style="display:flex; align-items:center; justify-content:center; padding: 14px 20px; font-family: 'Cinzel', serif; font-size: 0.85rem; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; text-decoration: none; text-align: center;">
-                            ⚔ EMPEZAR
-                        </a>
-                        <a href="{% url 'entrenos:vista_plan_anual' cliente.id %}" style="display:flex; align-items:center; justify-content:center; padding: 10px; background: transparent; border: 1px solid rgba(200,170,110,0.2); color: #A08C5B; font-family: 'Cinzel', serif; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; text-decoration: none; text-align: center;">
-                            ↺ CAMBIAR RUTINA
-                        </a>
-                        <a href="{% url 'clientes:blade_runner_dashboard' %}" style="display:flex; align-items:center; justify-content:center; padding: 10px; background: transparent; border: 1px solid rgba(200,170,110,0.3); color: #C8AA6E; font-family: 'Cinzel', serif; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; text-decoration: none; text-align: center;">
-                            ⚡ BLADE RUNNER
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
-        {% endif %}
-    </div>
-
-    <!-- ── HERO HYROX ────────────────────────────────────────────────── -->
-    {% if hyrox_objetivo %}
-    <div class="hero-hyrox" id="heroHyrox" style="margin-bottom: 1.5rem; display: none;">
-        {% if hyrox_proxima_sesion %}
-        <div style="background: #0A1628; border: 1px solid rgba(200,75,49,0.25); border-left: 3px solid #C84B31;">
-            <div style="height: 2px; background: linear-gradient(90deg, #C84B31, #785A28, transparent);"></div>
-            <div style="padding: 1.25rem 1.5rem;">
-                <div style="display: flex; flex-wrap: wrap; gap: 1.5rem; align-items: flex-start; justify-content: space-between;">
-                    <div style="flex: 1; min-width: 240px;">
-                        <p style="font-family: 'Share Tech Mono', monospace; font-size: 0.6rem; color: #C84B31; letter-spacing: 0.25em; text-transform: uppercase; margin-bottom: 6px;">
-                            HYROX · {{ hyrox_proxima_sesion.tipo_fase|upper|default:"PROTOCOLO" }}
-                        </p>
-                        <h2 style="font-family: 'Cinzel', serif; font-size: clamp(1.2rem, 3vw, 1.8rem); font-weight: 700; color: #F0E6D3; margin: 0 0 1rem 0; letter-spacing: 0.03em; text-transform: uppercase;">
-                            {{ hyrox_proxima_sesion.titulo|default:"Sesión Hyrox" }}
-                        </h2>
-                        {% if hyrox_proxima_sesion.processed_activities %}
-                        {% for act in hyrox_proxima_sesion.processed_activities|slice:":4" %}
-                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; border-left: 2px solid rgba(200,75,49,0.3); background: rgba(1,10,19,0.5); margin-bottom: 2px;">
-                            <div style="display: flex; align-items: center; gap: 8px;">
-                                <i class="fas {{ act.fa_icon|default:'fa-running' }}" style="color: #C84B31; font-size: 0.7rem;"></i>
-                                <span style="font-family: 'Rajdhani', sans-serif; font-size: 0.9rem; color: #C8C8C8; font-weight: 600;">{{ act.nombre_ejercicio }}</span>
-                            </div>
-                            <span style="font-family: 'Share Tech Mono', monospace; font-size: 0.7rem; color: #C84B31;">
-                                {% if act.data_metricas.distancia_km %}{{ act.data_metricas.distancia_km }}km
-                                {% elif act.data_metricas.tiempo %}{{ act.data_metricas.tiempo }}
-                                {% elif act.data_metricas.peso %}{{ act.data_metricas.peso }}kg{% endif %}
+                    {% if proximo_entrenamiento.ejercicios %}
+                    <p class="lol-ability-label">Ejercicios Principales</p>
+                    {% for ej in proximo_entrenamiento.ejercicios|slice:":4" %}
+                    <div class="lol-ability-row {% if ej.es_adaptado %}adapted{% endif %}">
+                        <div class="lol-ability-left">
+                            <div class="lol-ability-icon"><i class="fas {{ ej.fa_icon|default:'fa-dumbbell' }}"></i></div>
+                            <span class="lol-ability-name">
+                                {{ ej.nombre }}
+                                {% if ej.es_adaptado %}<span class="lol-adapted-badge">ADAPTADO</span>{% endif %}
                             </span>
                         </div>
-                        {% endfor %}
+                        {% if ej.series and ej.repeticiones %}
+                        <span class="lol-ability-sets">{{ ej.series }}&times;{{ ej.repeticiones }}</span>
                         {% endif %}
                     </div>
-                    <div style="display: flex; flex-direction: column; gap: 8px; min-width: 180px;">
-                        {% if hyrox_proxima_sesion.objective %}
-                        <a href="{% url 'hyrox:registrar_entrenamiento' hyrox_proxima_sesion.objective.id %}" class="btn-empezar-hyrox" style="display:flex; align-items:center; justify-content:center; padding: 14px 20px; font-family: 'Cinzel', serif; font-size: 0.85rem; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; text-decoration: none; text-align: center;">
-                            ⚡ EMPEZAR HYROX
-                        </a>
-                        {% else %}
-                        <a href="{% url 'hyrox:dashboard' %}" class="btn-empezar-hyrox" style="display:flex; align-items:center; justify-content:center; padding: 14px 20px; font-family: 'Cinzel', serif; font-size: 0.85rem; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; text-decoration: none; text-align: center;">
-                            VER HYROX
-                        </a>
-                        {% endif %}
-                    </div>
+                    {% endfor %}
+                    {% if proximo_entrenamiento.ejercicios|length > 4 %}
+                    <p class="lol-more-badge">+ {{ proximo_entrenamiento.ejercicios|length|add:"-4" }} ejercicios más</p>
+                    {% endif %}
+                    {% endif %}
+                </div>
+                <div class="lol-action-col">
+                    <a href="{% url 'entrenos:entrenamiento_activo' cliente.id %}?fecha={{ hoy|date:'Y-m-d' }}&rutina_nombre={{ proximo_entrenamiento.rutina_nombre|urlencode }}&ejercicios={{ proximo_entrenamiento_json|urlencode }}"
+                       class="btn-empezar-gym"
+                       style="display:flex;align-items:center;justify-content:center;padding:14px 20px;font-family:'Cinzel',serif;font-size:0.85rem;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;text-decoration:none;text-align:center;">
+                        ⚔ EMPEZAR
+                    </a>
+                    <a href="{% url 'entrenos:vista_plan_anual' cliente.id %}"
+                       style="display:flex;align-items:center;justify-content:center;padding:10px;background:transparent;border:1px solid rgba(200,170,110,0.18);color:#A08C5B;font-family:'Cinzel',serif;font-size:0.62rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;text-decoration:none;text-align:center;clip-path:polygon(4px 0%,calc(100% - 4px) 0%,100% 4px,100% calc(100% - 4px),calc(100% - 4px) 100%,4px 100%,0% calc(100% - 4px),0% 4px);transition:all .2s;">
+                        ↺ CAMBIAR RUTINA
+                    </a>
+                    <a href="{% url 'clientes:blade_runner_dashboard' %}"
+                       style="display:flex;align-items:center;justify-content:center;padding:10px;background:transparent;border:1px solid rgba(200,170,110,0.28);color:#C8AA6E;font-family:'Cinzel',serif;font-size:0.62rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;text-decoration:none;text-align:center;clip-path:polygon(4px 0%,calc(100% - 4px) 0%,100% 4px,100% calc(100% - 4px),calc(100% - 4px) 100%,4px 100%,0% calc(100% - 4px),0% 4px);transition:all .2s;">
+                        ⚡ BLADE RUNNER
+                    </a>
                 </div>
             </div>
         </div>
-        {% endif %}
+    </div>
+    {% endif %}
+    </div>
+
+    <!-- ── HERO HYROX ──────────────────────────────────────────────── -->
+    {% if hyrox_objetivo %}
+    <div class="hero-hyrox" id="heroHyrox" style="margin-bottom: 1.25rem; display:none;">
+    {% if hyrox_proxima_sesion %}
+    <div class="lol-panel hyrox">
+        <span class="lol-corner tl"></span><span class="lol-corner tr"></span>
+        <span class="lol-corner bl"></span><span class="lol-corner br"></span>
+        <div class="lol-panel-inner">
+            <div style="display:flex; flex-wrap:wrap; gap:1.5rem; align-items:flex-start; justify-content:space-between;">
+                <div style="flex:1; min-width:230px;">
+                    <p class="lol-hero-tag">
+                        <span class="lol-tag-dot"></span>
+                        HYROX &middot; {{ hyrox_proxima_sesion.tipo_fase|upper|default:"PROTOCOLO" }}
+                    </p>
+                    <h2 class="lol-hero-title">{{ hyrox_proxima_sesion.titulo|default:"Sesión Hyrox" }}</h2>
+                    {% if hyrox_proxima_sesion.processed_activities %}
+                    <p class="lol-ability-label">Actividades</p>
+                    {% for act in hyrox_proxima_sesion.processed_activities|slice:":4" %}
+                    <div class="lol-ability-row">
+                        <div class="lol-ability-left">
+                            <div class="lol-ability-icon"><i class="fas {{ act.fa_icon|default:'fa-running' }}"></i></div>
+                            <span class="lol-ability-name">{{ act.nombre_ejercicio }}</span>
+                        </div>
+                        <span class="lol-ability-sets" style="color:#C84B31;">
+                            {% if act.data_metricas.distancia_km %}{{ act.data_metricas.distancia_km }}km
+                            {% elif act.data_metricas.tiempo %}{{ act.data_metricas.tiempo }}
+                            {% elif act.data_metricas.peso %}{{ act.data_metricas.peso }}kg
+                            {% endif %}
+                        </span>
+                    </div>
+                    {% endfor %}
+                    {% endif %}
+                </div>
+                <div class="lol-action-col">
+                    {% if hyrox_proxima_sesion.objective %}
+                    <a href="{% url 'hyrox:registrar_entrenamiento' hyrox_proxima_sesion.objective.id %}"
+                       class="btn-empezar-hyrox"
+                       style="display:flex;align-items:center;justify-content:center;padding:14px 20px;font-family:'Cinzel',serif;font-size:0.85rem;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;text-decoration:none;text-align:center;">
+                        ⚡ EMPEZAR HYROX
+                    </a>
+                    {% else %}
+                    <a href="{% url 'hyrox:dashboard' %}"
+                       class="btn-empezar-hyrox"
+                       style="display:flex;align-items:center;justify-content:center;padding:14px 20px;font-family:'Cinzel',serif;font-size:0.85rem;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;text-decoration:none;text-align:center;">
+                        VER HYROX
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
     </div>
     {% endif %}
 
-    <!-- ── MÉTRICAS ──────────────────────────────────────────────────── -->
-    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: rgba(200,170,110,0.08); border: 1px solid rgba(200,170,110,0.08); margin-bottom: 1.5rem;">
-        <div style="background: #0A1628; padding: 1rem; text-align: center;">
-            <div style="font-family: 'Share Tech Mono', monospace; font-size: 1.6rem; color: #C8AA6E; font-weight: 700; line-height: 1;">{{ entrenos_count|default:"0" }}</div>
-            <div style="font-family: 'Share Tech Mono', monospace; font-size: 0.55rem; color: #785A28; letter-spacing: 0.15em; text-transform: uppercase; margin-top: 4px;">Sesiones</div>
+    <!-- ── MÉTRICAS ───────────────────────────────────────────────── -->
+    <div class="lol-stats-wrap">
+        <div class="lol-stats-header">
+            <div class="lol-line l"></div>
+            <span class="lol-section-label">◆ Estadísticas ◆</span>
+            <div class="lol-line r"></div>
         </div>
-        <div style="background: #0A1628; padding: 1rem; text-align: center;">
-            <div style="font-family: 'Share Tech Mono', monospace; font-size: 1.6rem; color: #C8AA6E; font-weight: 700; line-height: 1;">{{ carga_total_acumulada|default:"0" }}</div>
-            <div style="font-family: 'Share Tech Mono', monospace; font-size: 0.55rem; color: #785A28; letter-spacing: 0.15em; text-transform: uppercase; margin-top: 4px;">Carga Total</div>
-        </div>
-        <div style="background: #0A1628; padding: 1rem; text-align: center;">
-            <div style="font-family: 'Share Tech Mono', monospace; font-size: 1.6rem; color: #C8AA6E; font-weight: 700; line-height: 1;">{{ consistencia_pct|default:"0" }}</div>
-            <div style="font-family: 'Share Tech Mono', monospace; font-size: 0.55rem; color: #785A28; letter-spacing: 0.15em; text-transform: uppercase; margin-top: 4px;">Consistencia</div>
-        </div>
-        <div style="background: #0A1628; padding: 1rem; text-align: center;">
-            <div style="font-family: 'Share Tech Mono', monospace; font-size: 1.6rem; font-weight: 700; line-height: 1;
-                {% if acwr_actual >= 1.3 %}color: #ef4444;{% elif acwr_actual >= 0.8 %}color: #C8AA6E;{% else %}color: #4ade80;{% endif %}">
-                {{ acwr_actual|floatformat:2|default:"—" }}
+        <div class="lol-stats-grid" id="lolStatsGrid">
+            <div class="lol-stat-cell">
+                <span class="lol-stat-value gold-shimmer">{{ entrenos_count|default:"0" }}</span>
+                <div class="lol-stat-bar"><div class="lol-stat-bar-fill" data-width="75"></div></div>
+                <span class="lol-stat-label">Sesiones</span>
             </div>
-            <div style="font-family: 'Share Tech Mono', monospace; font-size: 0.55rem; color: #785A28; letter-spacing: 0.15em; text-transform: uppercase; margin-top: 4px;">ACWR</div>
+            <div class="lol-stat-cell">
+                <span class="lol-stat-value">{{ carga_total_acumulada|default:"0" }}</span>
+                <div class="lol-stat-bar"><div class="lol-stat-bar-fill" data-width="60"></div></div>
+                <span class="lol-stat-label">Carga Total</span>
+            </div>
+            <div class="lol-stat-cell">
+                <span class="lol-stat-value">{{ consistencia_pct|default:"0" }}<span style="font-size:.75em;font-weight:400;">%</span></span>
+                <div class="lol-stat-bar"><div class="lol-stat-bar-fill" data-width="{{ consistencia_pct|default:0 }}"></div></div>
+                <span class="lol-stat-label">Consistencia</span>
+            </div>
+            <div class="lol-stat-cell">
+                <span class="lol-stat-value {% if acwr_actual >= 1.3 %}acwr-danger{% elif acwr_actual < 0.8 %}acwr-safe{% endif %}">
+                    {{ acwr_actual|floatformat:2|default:"—" }}
+                </span>
+                <div class="lol-stat-bar"><div class="lol-stat-bar-fill" data-width="55"></div></div>
+                <span class="lol-stat-label">ACWR</span>
+            </div>
         </div>
     </div>
 
-    <!-- ── HISTORIAL RECIENTE ────────────────────────────────────────── -->
-    <div>
-        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 1rem;">
-            <div style="flex: 1; height: 1px; background: linear-gradient(to right, rgba(200,170,110,0.2), transparent);"></div>
-            <span style="font-family: 'Share Tech Mono', monospace; font-size: 0.6rem; color: #785A28; letter-spacing: 0.25em; text-transform: uppercase;">◆ Historial Reciente ◆</span>
-            <div style="flex: 1; height: 1px; background: linear-gradient(to left, rgba(200,170,110,0.2), transparent);"></div>
-        </div>
+    <!-- ── HISTORIAL RECIENTE ──────────────────────────────────────── -->
+    <div class="lol-stats-header" style="margin-bottom:10px;">
+        <div class="lol-line l"></div>
+        <span class="lol-section-label">◆ Historial Reciente ◆</span>
+        <div class="lol-line r"></div>
+    </div>
+    <div class="lol-history-wrap">
         {% if entrenamientos_recientes %}
         {% for ent in entrenamientos_recientes %}
-        <a href="{% url 'entrenos:detalle_entrenamiento' ent.id %}" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; background: #0A1628; border-left: 2px solid rgba(200,170,110,0.15); margin-bottom: 2px; text-decoration: none; transition: border-color 0.2s;">
-            <div style="display: flex; align-items: center; gap: 10px;">
-                <i class="fas fa-dumbbell" style="color: #785A28; font-size: 0.7rem;"></i>
-                <span style="font-family: 'Rajdhani', sans-serif; font-size: 0.9rem; color: #C8C8C8; font-weight: 600;">{{ ent.rutina.nombre|default:"Entrenamiento" }}</span>
+        <a href="{% url 'entrenos:detalle_entrenamiento' ent.id %}" class="lol-history-row">
+            <div class="lol-history-left">
+                <span class="lol-history-num">{{ forloop.counter }}</span>
+                <i class="fas fa-dumbbell lol-history-icon"></i>
+                <span class="lol-history-name">{{ ent.rutina.nombre|default:"Entrenamiento" }}</span>
             </div>
-            <span style="font-family: 'Share Tech Mono', monospace; font-size: 0.7rem; color: #785A28;">{{ ent.fecha|date:"d M" }}</span>
+            <span class="lol-history-date">{{ ent.fecha|date:"d M" }}</span>
         </a>
         {% endfor %}
         {% else %}
-        <p style="font-family: 'Share Tech Mono', monospace; font-size: 0.7rem; color: #785A28; text-align: center; padding: 1.5rem; border: 1px dashed rgba(200,170,110,0.1);">Sin registros recientes</p>
+        <p class="lol-empty">◆ &nbsp; Sin registros recientes &nbsp; ◆</p>
         {% endif %}
     </div>
 
-</div><!-- max-width -->
+</div><!-- .lol-wrapper -->
 </div><!-- #full-mode-container -->
+
+<script>
+// Global function: animate LoL stat bars (called from toggleDashboardMode)
+window.animateLoLBars = function() {
+    document.querySelectorAll('#full-mode-container .lol-stat-bar-fill').forEach(function(el) {
+        el.style.width = '0';
+        requestAnimationFrame(function() {
+            var w = parseFloat(el.getAttribute('data-width') || 60);
+            el.style.transition = 'width 1.2s cubic-bezier(0.4,0,0.2,1)';
+            el.style.width = Math.min(100, Math.max(0, w)) + '%';
+        });
+    });
+};
+</script>
 
 
 
@@ -1404,6 +2135,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 focusMode.classList.add('view-hidden');
                 fullMode.classList.remove('view-hidden');
                 localStorage.setItem('dashboard_view_preference', 'full');
+                // Animate LoL stat bars when entering full mode
+                if (window.animateLoLBars) setTimeout(window.animateLoLBars, 80);
             }
         };
 
@@ -1448,6 +2181,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (savedView === 'full') {
                 focusMode.classList.add('view-hidden');
                 fullMode.classList.remove('view-hidden');
+                if (window.animateLoLBars) setTimeout(window.animateLoLBars, 120);
             }
         }
     } catch (e) { console.error('Error in Mode Switcher:', e); }

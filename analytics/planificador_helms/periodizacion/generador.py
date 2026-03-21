@@ -17,7 +17,10 @@ CAMBIOS v2:
   ya que el plan ahora cubre exactamente 52 semanas.
 """
 
+import logging
 from typing import Dict, List, Any
+
+logger = logging.getLogger(__name__)
 
 SEMANAS_TOTALES_PLAN = 52
 
@@ -227,9 +230,11 @@ class GeneradorPeriodizacion:
 
         # Verificación de cobertura (no debería ocurrir con el plan actual)
         semanas_cubiertas = sum(len(b['semanas']) for b in periodizacion_anual)
-        assert semanas_cubiertas == SEMANAS_TOTALES_PLAN, (
-            f"El plan cubre {semanas_cubiertas} semanas, se esperaban {SEMANAS_TOTALES_PLAN}. "
-            f"Ajusta el plan_base en generar_plan_base()."
-        )
+        if semanas_cubiertas != SEMANAS_TOTALES_PLAN:
+            logger.error(
+                "El plan cubre %d semanas, se esperaban %d. "
+                "Ajusta el plan_base en generar_plan_base().",
+                semanas_cubiertas, SEMANAS_TOTALES_PLAN,
+            )
 
         return periodizacion_anual

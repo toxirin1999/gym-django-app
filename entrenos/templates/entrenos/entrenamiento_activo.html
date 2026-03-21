@@ -237,6 +237,24 @@ input{background:transparent!important;border:none!important;outline:none!import
 .aprox-row:last-child{border:none;}
 .aprox-inp{background:var(--panel)!important;border:1px solid var(--bd)!important;color:var(--td)!important;text-align:center;padding:3px;font-family:var(--fm);font-size:11px;}
 
+/* ── 1RM DISPLAY ── */
+.orm-display{
+  font-family:var(--fm);font-size:11px;color:var(--g);
+  text-align:center;margin-top:6px;letter-spacing:1px;
+  opacity:0.85;min-height:16px;
+}
+
+/* ── INLINE DISK CALC ── */
+.serie-calc-inline{
+  margin:0 14px 12px;padding:10px 12px;
+  background:var(--panel);border:1px solid var(--bd);
+  border-top:none;
+}
+.sci-label{
+  font-family:var(--fm);font-size:9px;color:var(--td);
+  letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px;
+}
+
 /* BTN FINALIZAR */
 .btn-finalizar-wrap{padding:16px;}
 .btn-final{
@@ -374,6 +392,7 @@ input{background:transparent!important;border:none!important;outline:none!import
                   onclick="ajustarPesoPanel('{{ ejercicio.form_id }}',{{ sn }},2.5)">+</button>
         </div>
         <div class="peso-lado" id="lado-{{ ejercicio.form_id }}-{{ sn }}"></div>
+        <div class="orm-display" id="orm-{{ ejercicio.form_id }}-{{ sn }}"></div>
       </div>
       {% else %}
       {# Input oculto con valor 0 para que la view no falle al leer el campo #}
@@ -416,7 +435,7 @@ input{background:transparent!important;border:none!important;outline:none!import
         {# RPE — siempre presente #}
         <div class="slider-row">
           <span class="sl-label">RPE</span>
-          <input type="range" class="sl-track" min="5" max="10" value="{{ ejercicio.rpe_objetivo }}" step="0.5"
+          <input type="range" class="sl-track" min="5" max="10" value="{{ ejercicio.rpe_objetivo }}" step="1"
                  oninput="syncSliderPanel(this,'rpe-disp-{{ ejercicio.form_id }}-{{ sn }}','rpe-hid-{{ ejercicio.form_id }}-{{ sn }}')">
           <span class="sl-val rpe-v" id="rpe-disp-{{ ejercicio.form_id }}-{{ sn }}">{{ ejercicio.rpe_objetivo }}</span>
           <span class="sl-unit"></span>
@@ -448,6 +467,13 @@ input{background:transparent!important;border:none!important;outline:none!import
       </div>
       {% endif %}
     </div>
+    {% if ejercicio.usa_peso %}
+    <div class="serie-calc-inline">
+      <div class="sci-label">Calculadora de discos</div>
+      <div class="discos-visual" id="discos-inline-{{ ejercicio.form_id }}-{{ sn }}"></div>
+      <div class="pd-calc-txt" id="calc-inline-txt-{{ ejercicio.form_id }}-{{ sn }}"></div>
+    </div>
+    {% endif %}
     <button type="button" class="btn-guardar"
             onclick="guardarSeriePanel('{{ ejercicio.form_id }}',{{ sn }},{{ ejercicio.series }})">
       GUARDAR SERIE
@@ -571,8 +597,16 @@ function syncSliderPanel(el,dispId,hidId){
   const disp=document.getElementById(dispId);
   const hid=document.getElementById(hidId);
   const isRpe=dispId.includes('rpe-disp');
-  if(disp)disp.textContent=isRpe?v.toFixed(1):Math.round(v);
+  if(disp)disp.textContent=Math.round(v);  // RPE always integer now
   if(hid)hid.value=v;
+  // Update 1RM estimate when reps change
+  if(!isRpe){
+    const afterPrefix=hidId.replace('reps-hid-','');
+    const lastDash=afterPrefix.lastIndexOf('-');
+    const sn=afterPrefix.slice(lastDash+1);
+    const fid=afterPrefix.slice(0,lastDash);
+    actualizarORM(fid,sn);
+  }
 }
 
 function syncSliderTiempo(el,dispId,hidId){
@@ -593,6 +627,8 @@ function ajustarPesoPanel(fid,sn,delta){
   inp.value=nuevo.toFixed(1);
   inp.dispatchEvent(new Event('input',{bubbles:true}));
   if(navigator.vibrate)navigator.vibrate(20);
+  actualizarORM(fid,sn);
+  calcularDiscosInline(fid,sn,nuevo);
 }
 
 // Navegación ejercicios
@@ -624,7 +660,7 @@ function guardarSeriePanel(fid,sn,total){
     row.className='serie-done';
     row.innerHTML='<div class="sd-check">✓</div>'
       +'<div class="sd-info">Serie '+sn+' — <strong>'+peso+'kg × '+reps+' reps</strong></div>'
-      +'<div class="sd-rpe">RPE '+rpe.toFixed(1)+'</div>';
+      +'<div class="sd-rpe">RPE '+Math.round(rpe)+'</div>';
     log.appendChild(row);
   }
 
@@ -654,6 +690,66 @@ function guardarSeriePanel(fid,sn,total){
   actualizarSticky();
 }
 
+// ── SOUND ALERT (Web Audio API — no deps) ───────────────────────
+function playRestEndAlert(){
+  try{
+    const ctx=new(window.AudioContext||window.webkitAudioContext)();
+    const beeps=[{f:660,t:0,d:0.12},{f:660,t:0.16,d:0.12},{f:990,t:0.32,d:0.28}];
+    beeps.forEach(({f,t,d})=>{
+      const osc=ctx.createOscillator();
+      const gain=ctx.createGain();
+      osc.connect(gain);gain.connect(ctx.destination);
+      osc.type='sine';osc.frequency.value=f;
+      const now=ctx.currentTime;
+      gain.gain.setValueAtTime(0,now+t);
+      gain.gain.linearRampToValueAtTime(0.35,now+t+0.01);
+      gain.gain.exponentialRampToValueAtTime(0.001,now+t+d);
+      osc.start(now+t);osc.stop(now+t+d+0.05);
+    });
+  }catch(e){}
+}
+
+// ── 1RM ESTIMADO (Brzycki) ──────────────────────────────────────
+function actualizarORM(fid,sn){
+  const pesoInp=document.getElementById('peso-'+fid+'-'+sn);
+  const repsInp=document.getElementById('reps-hid-'+fid+'-'+sn);
+  const ormEl=document.getElementById('orm-'+fid+'-'+sn);
+  if(!ormEl)return;
+  const peso=parseFloat(pesoInp?.value)||0;
+  const reps=parseInt(repsInp?.value)||1;
+  if(peso<=0){ormEl.textContent='';return;}
+  const factor=1.0278-0.0278*Math.max(1,reps);
+  const orm=factor>0?Math.round(peso/factor):Math.round(peso);
+  ormEl.textContent='1RM est.: '+orm+' kg';
+}
+
+// ── CALCULADORA DISCOS INLINE ───────────────────────────────────
+function calcularDiscosInline(fid,sn,pesoTotal){
+  const contenedor=document.getElementById('discos-inline-'+fid+'-'+sn);
+  const txt=document.getElementById('calc-inline-txt-'+fid+'-'+sn);
+  if(!contenedor)return;
+  const barraKg=20;
+  let porLado=Math.max(0,(pesoTotal-barraKg)/2);
+  const sizes=[20,15,10,5,2.5,1];
+  const cls={20:'d20',15:'d15',10:'d10',5:'d5',2.5:'d25',1:'d1'};
+  const discos=[];let resto=porLado;
+  for(const t of sizes){while(resto>=t-0.001){discos.push(t);resto=Math.round((resto-t)*100)/100;}}
+  contenedor.innerHTML=discos.map(d=>'<div class="disco '+cls[d]+'">'+d+'</div>').join('')
+    +'<div class="barra"></div>'
+    +[...discos].reverse().map(d=>'<div class="disco '+cls[d]+'">'+d+'</div>').join('');
+  if(txt)txt.innerHTML='Barra '+barraKg+'kg + <strong>'+(discos.map(d=>d+'kg').join(' + ')||'sin discos')+' por lado</strong> = '+pesoTotal+'kg';
+}
+
+// ── INICIALIZAR PANEL SERIE ─────────────────────────────────────
+function initSeriePanel(fid,sn){
+  const pesoInp=document.getElementById('peso-'+fid+'-'+sn);
+  if(pesoInp){
+    const peso=parseFloat(pesoInp.value)||0;
+    calcularDiscosInline(fid,sn,peso);
+    actualizarORM(fid,sn);
+  }
+}
+
 function iniciarDescanso(fid,totalSeg,snActual,totalSeries){
   if(STATE.timers[fid])clearInterval(STATE.timers[fid].interval);
   STATE.timers[fid]={seg:totalSeg,total:totalSeg,interval:null,snActual:snActual,totalSeries:totalSeries};
@@ -663,6 +759,7 @@ function iniciarDescanso(fid,totalSeg,snActual,totalSeries){
     actualizarTimerUI(fid);
     if(STATE.timers[fid].seg===0){
       clearInterval(STATE.timers[fid].interval);
+      playRestEndAlert();
       if(navigator.vibrate)navigator.vibrate([100,50,100]);
       setTimeout(()=>saltarDescanso(fid),800);
     }
@@ -710,7 +807,10 @@ function saltarDescanso(fid){
   }else{
     // Mostrar panel de la siguiente serie
     const nextPanel=document.getElementById('reg-'+fid+'-'+snSiguiente);
-    if(nextPanel)nextPanel.style.display='block';
+    if(nextPanel){
+      nextPanel.style.display='block';
+      initSeriePanel(fid,snSiguiente);
+    }
   }
   actualizarProgreso();
   actualizarSticky();
@@ -820,6 +920,10 @@ document.getElementById('btn-confirmar-guardar').addEventListener('click',()=>do
 document.addEventListener('DOMContentLoaded',function(){
   actualizarProgreso();
   actualizarSticky();
+  // Init inline disk calc + 1RM for the first serie of each exercise
+  document.querySelectorAll('.cyber-ejercicio-card').forEach(card=>{
+    initSeriePanel(card.dataset.formId,1);
+  });
   {% if messages %}
   let delay=800;
   {% for message in messages %}
