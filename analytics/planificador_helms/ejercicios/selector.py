@@ -7,6 +7,7 @@ Integra seguridad biológica vía BioContextProvider.
 import logging
 from typing import Dict, List, Any, Optional, Set
 from ..database.ejercicios import EJERCICIOS_DATABASE
+from ..config import UNIVERSAL_SAFE_EXERCISE_NAMES
 from ..utils.helpers import normalizar_nombre, extraer_nombre_ejercicio, pick_rotado, ejercicio_a_dict, es_ejercicio_seguro
 from .patrones import PatronManager
 
@@ -39,7 +40,7 @@ def _pivotar_a_universal_safe(restricted_tags: Set[str], original_group: str) ->
                         
     if universal_safe_pool:
         import random
-        core_safes = [e for e in universal_safe_pool if normalizar_nombre(extraer_nombre_ejercicio(e)) in ['plancha (plank)', 'dead bug']]
+        core_safes = [e for e in universal_safe_pool if normalizar_nombre(extraer_nombre_ejercicio(e)) in UNIVERSAL_SAFE_EXERCISE_NAMES]
         otros_safes = [e for e in universal_safe_pool if e not in core_safes]
         
         if core_safes:

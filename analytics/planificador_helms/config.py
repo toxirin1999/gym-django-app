@@ -92,7 +92,11 @@ DEFAULTS_1RM = {
     'peso muerto': 140.0,
     'rumano': 125.0,
     'hip thrust': 160.0,
-    'mancuerna': 60.0,  # Total para 2 mancuernas
+    # Mancuernas: peso por mancuerna (no total)
+    'press mancuerna': 28.0,    # ~28kg/hand press
+    'curl mancuerna': 18.0,     # ~18kg/hand curl
+    'remo mancuerna': 30.0,     # ~30kg/hand row
+    'mancuerna': 22.0,          # Fallback genérico por mancuerna
     # Fallbacks por patrón
     'rodilla': 110.0,
     'bisagra': 120.0,
@@ -104,13 +108,28 @@ DEFAULTS_1RM = {
 }
 
 # ============================================================
+# UMBRALES DE EJERCICIO "PESADO" POR TIPO DE CARGA (kg 1RM)
+# ============================================================
+UMBRALES_PESADO = {
+    'barra': 70,        # Barbell: pesado desde 70kg 1RM
+    'mancuerna': 25,    # Dumbbell: pesado desde 25kg/hand
+    'cable': 35,        # Cable: pesado desde 35kg
+    'maquina': 50,      # Machine: pesado desde 50kg
+    'general': 50,      # Fallback
+}
+
+# ============================================================
 # TEMPOS POR OBJETIVO
 # ============================================================
 TEMPOS = {
     'hipertrofia': '2-0-X-0',
+    'hipertrofia_especifica': '3-0-X-0',   # más TUT para especialización
+    'hipertrofia_metabolica': '2-0-2-0',   # énfasis en fase concéntrica y excéntrica
     'fuerza': '1-0-X-0',
+    'fuerza_hipertrofia': '2-0-X-0',
     'potencia': '1-0-X-0',
-    'resistencia': '1-0-1-0'
+    'resistencia': '1-0-1-0',
+    'descarga': '2-0-2-0',                 # movimiento controlado, sin explosividad
 }
 
 # ============================================================
@@ -206,8 +225,24 @@ DISTRIBUCION_DIAS = {
         'dia_3': ['cuadriceps', 'gemelos'],
         'dia_4': ['hombros', 'trapecios'],
         'dia_5': ['isquios', 'gluteos', 'core']
+    },
+    6: {  # PPL × 2
+        'dia_1': ['pecho', 'hombros', 'triceps'],
+        'dia_2': ['espalda', 'biceps', 'antebrazos'],
+        'dia_3': ['cuadriceps', 'isquios', 'gluteos', 'gemelos'],
+        'dia_4': ['pecho', 'hombros', 'triceps'],
+        'dia_5': ['espalda', 'biceps'],
+        'dia_6': ['cuadriceps', 'isquios', 'gluteos', 'gemelos']
     }
 }
+
+# ============================================================
+# PATRONES OBJETIVO POR GRUPO MUSCULAR
+# ============================================================
+# ============================================================
+# EJERCICIOS COMODÍN SEGUROS (fallback bio-seguro universal)
+# ============================================================
+UNIVERSAL_SAFE_EXERCISE_NAMES = {'plancha (plank)', 'dead bug'}
 
 # ============================================================
 # PATRONES OBJETIVO POR GRUPO MUSCULAR
