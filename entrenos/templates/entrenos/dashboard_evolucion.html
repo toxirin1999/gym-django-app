@@ -8,9 +8,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link
-        href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Cinzel+Decorative:wght@400;700;900&family=Lato:wght@300;400;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
         rel="stylesheet">
-<link rel="stylesheet" href="{% static 'entrenos/css/dashboard_evolucion.css' %}?v=2.0">
+<link rel="stylesheet" href="{% static 'entrenos/css/dashboard_evolucion.css' %}?v=3.0">
 {% endblock %}
 
 {% block content %}
@@ -684,11 +684,24 @@
     // ── Coach toggle ──
     function dvToggleCoach(el) {
         const parent = el.closest('.dv-coach');
-        const detail = parent.querySelector('.dv-coach-detail');
         const icon = parent.querySelector('.dv-coach-toggle i');
-        const open = detail.classList.toggle('open');
+        const open = parent.classList.toggle('open');
         icon.style.transform = open ? 'rotate(180deg)' : '';
     }
+
+    // ── Auto-expand coach si estado es riesgo o cuidado ──
+    document.addEventListener('DOMContentLoaded', function () {
+        const coach = document.querySelector('.dv-coach');
+        if (coach) {
+            const estado = coach.classList.contains('coach-state-riesgo') ||
+                           coach.classList.contains('coach-state-cuidado');
+            if (estado) {
+                coach.classList.add('open');
+                const icon = coach.querySelector('.dv-coach-toggle i');
+                if (icon) icon.style.transform = 'rotate(180deg)';
+            }
+        }
+    });
 
     // ── Tab navigation ──
     function dvTab(name, btn) {
@@ -704,19 +717,19 @@
     // CHART INITIALIZATION
     // ══════════════════════════════════════════
     const CHART_COLORS = {
-        cyan:    '#00D4FF',
+        cyan:    '#0AC8B9',
         gold:    '#C8AA6E',
-        green:   '#00FF88',
-        pink:    '#FF2D92',
-        purple:  '#9B59B6',
-        blue:    '#3498DB',
-        gridLine: 'rgba(255,255,255,0.06)',
-        tick:     'rgba(255,255,255,0.4)',
+        green:   '#22c55e',
+        pink:    '#d45cba',
+        purple:  '#9a6cd4',
+        blue:    '#1E7898',
+        gridLine: 'rgba(200,170,110,0.07)',
+        tick:     'rgba(200,170,110,0.50)',
     };
 
     Chart.defaults.color = CHART_COLORS.tick;
     Chart.defaults.borderColor = CHART_COLORS.gridLine;
-    Chart.defaults.font.family = "'DM Sans', sans-serif";
+    Chart.defaults.font.family = "'Lato', sans-serif";
 
     function parseData(el, attr) {
         try { return JSON.parse(el.getAttribute(attr) || 'null'); } catch { return null; }
