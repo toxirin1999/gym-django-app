@@ -2609,23 +2609,6 @@ def obtener_proximo_entrenamiento(cliente):
         perfil.maximos_actuales = maximos_actuales
         planificador = PlanificadorHelms(perfil)
         plan_completo = planificador.generar_plan_anual()
-        # --- INICIO DEL BLOQUE DE DEPURACIÓN ---
-        print("\n" + "=" * 50)
-        print("🕵️  INICIANDO DEPURACIÓN DEL PLANIFICADOR 🕵️")
-        print(f"Fecha actual (hoy): {hoy}")
-        print(f"Semana del año (ISO): {hoy.isocalendar()[1]}")
-
-        print("\n--- Estructura del Plan Generado ---")
-        if 'plan_por_bloques' in plan_completo:
-            for i, bloque in enumerate(plan_completo['plan_por_bloques']):
-                nombre_bloque = bloque.get('nombre', 'N/A')
-                semanas_bloque = [s['semana_num_total'] for s in bloque.get('semanas', [])]
-                print(f"Bloque {i + 1}: '{nombre_bloque}' -> Semanas: {semanas_bloque}")
-        else:
-            print("ERROR: No se encontraron 'plan_por_bloques' en el plan.")
-
-        print("\n" + "=" * 50 + "\n")
-        # --- FIN DEL BLOQUE DE DEPURACIÓN ---
         # --- PASO 2: Encontrar el próximo entrenamiento (LÓGICA MEJORADA) ---
         hoy = date.today()
         entrenos_por_fecha = plan_completo.get('entrenos_por_fecha', {})
@@ -2644,16 +2627,20 @@ def obtener_proximo_entrenamiento(cliente):
 
         # --- PASO 3: Encontrar el bloque y semana correctos para ESA fecha ---
         bloque_info = {}
-        semana_del_año_entrenamiento = fecha_proximo_entrenamiento.isocalendar()[1]
+        año_planificacion = getattr(perfil, 'año_planificacion', None) or hoy.year
+        primer_dia_del_año = date(año_planificacion, 1, 1)
+        dias_para_lunes = (0 - primer_dia_del_año.weekday() + 7) % 7
+        fecha_inicio_plan = primer_dia_del_año + timedelta(days=dias_para_lunes)
+        semana_relativa = (fecha_proximo_entrenamiento - fecha_inicio_plan).days // 7 + 1
 
         for bloque in plan_completo.get('plan_por_bloques', []):
             semanas_del_bloque = [s['semana_num_total'] for s in bloque.get('semanas', [])]
-            if semana_del_año_entrenamiento in semanas_del_bloque:
+            if semana_relativa in semanas_del_bloque:
                 semana_inicio_bloque = semanas_del_bloque[0]
                 bloque_info = {
                     'bloque_actual': bloque.get('nombre', 'N/A'),
                     'objetivo': bloque.get('objetivo', 'N/A'),
-                    'semana_bloque': semana_del_año_entrenamiento - semana_inicio_bloque + 1
+                    'semana_bloque': semana_relativa - semana_inicio_bloque + 1
                 }
                 break
 
@@ -2665,7 +2652,7 @@ def obtener_proximo_entrenamiento(cliente):
             'fecha': fecha_proximo_entrenamiento,
             'dias_hasta': (fecha_proximo_entrenamiento - hoy).days,
             'rutina_nombre': entrenamiento_data['nombre_rutina'],
-            'ejercicios': entrenamiento_data['ejercicios'][:3],
+            'ejercicios': entrenamiento_data['ejercicios'],
             'total_ejercicios': len(entrenamiento_data['ejercicios']),
             'bloque_actual': bloque_info.get('bloque_actual', 'Bloque Desconocido'),
             'objetivo': bloque_info.get('objetivo', 'N/A'),
