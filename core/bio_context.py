@@ -294,17 +294,38 @@ class BioContextProvider:
         Returns:
             int: Cantidad de sesiones planificadas que fueron eliminadas.
         """
-        from entrenos.models import SesionEntrenamiento
+        from django.utils import timezone as tz
+        from hyrox.models import HyroxSession, HyroxObjective
+        from hyrox.training_engine import HyroxTrainingEngine
 
-        # Buscar sesiones futuras planificadas
-        sesiones_futuras = SesionEntrenamiento.objects.filter(
-            cliente=cliente,
+        objetivo_activo = HyroxObjective.objects.filter(
+            cliente=cliente, estado__in=['activo', 'active']
+        ).first()
+
+        # Solo borramos las sesiones planificadas si el evento es futuro y
+        # generate_training_plan podrá recrearlas. Si no, solo rellenamos huecos.
+        hoy = tz.now().date()
+        puede_regenerar = (
+            objetivo_activo is not None
+            and objetivo_activo.fecha_evento is not None
+            and objetivo_activo.fecha_evento >= hoy  # incluye evento hoy o futuro
+        )
+
+        sesiones_futuras = HyroxSession.objects.filter(
+            objective__cliente=cliente,
             estado='planificado'
         )
-        
         count = sesiones_futuras.count()
-        if count > 0:
-            logger.info(f"Bio-Purge: Eliminando {count} sesiones planificadas para el cliente {cliente.id} debido a cambios biológicos.")
+
+        if puede_regenerar and count > 0:
+            logger.info(f"Bio-Purge: Eliminando {count} sesiones planificadas para cliente {cliente.id} — se regenerarán con nuevos filtros.")
             sesiones_futuras.delete()
-            
+        elif not puede_regenerar:
+            logger.info(f"Bio-Purge: Evento pasado o sin objetivo activo para cliente {cliente.id} — se omite el borrado para conservar el plan.")
+
+        # Regenerar (o rellenar huecos si no se borró)
+        if objetivo_activo:
+            HyroxTrainingEngine.generate_training_plan(objetivo_activo)
+            logger.info(f"Bio-Purge: Plan regenerado para cliente {cliente.id}.")
+
         return count
