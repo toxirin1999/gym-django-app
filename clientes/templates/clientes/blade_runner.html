@@ -8,6 +8,7 @@
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/variables-base.css' %}">
 <link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+<link rel="stylesheet" href="{% static 'css/blade_runner_lol.css' %}?v=1.0">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 
 <style>
@@ -85,7 +86,7 @@
     }
 
     .entreno-card:hover .entreno-card-title {
-        color: #00ffff;
+        color: #F0E6D3;
     }
 
     /* Badge de fecha */
@@ -127,7 +128,7 @@
     }
 
     .entreno-card:hover .entreno-stat i {
-        color: rgba(0, 255, 255, 0.6);
+        color: rgba(200, 170, 110, 0.6);
     }
 
     /* Flecha */
@@ -189,7 +190,7 @@
 
     .entrenos-empty-btn:hover {
         transform: translateY(-2px);
-        box-shadow: 0 4px 15px rgba(0, 255, 255, 0.4);
+        box-shadow: 0 4px 15px rgba(200, 170, 110, 0.3);
     }
 
     /* ===== RESPONSIVE ===== */
@@ -501,12 +502,12 @@
     .quote-box,
     .timeline-section,
     .chat-bubble {
-        background: rgba(0, 0, 0, 0.4) !important;
+        background: rgba(10, 20, 40, 0.92) !important;
         backdrop-filter: blur(15px) saturate(180%) !important;
         -webkit-backdrop-filter: blur(15px) saturate(180%) !important;
-        border: 1px solid rgba(77, 208, 225, 0.6) !important;
-        box-shadow: 0 0 15px rgba(77, 208, 225, 0.4), inset 0 0 8px rgba(77, 208, 225, 0.2) !important;
-        border-radius: 10px !important;
+        border: 1px solid rgba(200, 170, 110, 0.25) !important;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5), 0 0 12px rgba(200, 170, 110, 0.06) !important;
+        border-radius: 0 !important;
     }
 
     /* Joi Specific - Imagen principal más grande y posicionada */
@@ -517,7 +518,7 @@
         margin-left: auto !important;
         margin-right: -70px !important;
         /* Mover más a la derecha */
-        filter: drop-shadow(0 0 20px #00ffff) drop-shadow(0 0 10px #ff00ff) blur(0.5px) !important;
+        filter: drop-shadow(0 0 20px rgba(200,170,110,0.5)) drop-shadow(0 0 10px rgba(10,200,185,0.3)) blur(0.5px) !important;
         /* Añadir difuminado sutil en los bordes */
         transition: filter 0.3s ease-in-out, transform 0.3s ease-in-out;
         border-radius: 15px !important;
@@ -528,7 +529,7 @@
     }
 
     .joi-flotante:hover {
-        filter: drop-shadow(0 0 30px #00ffff) drop-shadow(0 0 15px #ff00ff) brightness(1.2) blur(0.3px) !important;
+        filter: drop-shadow(0 0 30px rgba(200,170,110,0.7)) drop-shadow(0 0 15px rgba(10,200,185,0.4)) brightness(1.1) blur(0.3px) !important;
         transform: scale(1.05);
     }
 
@@ -537,7 +538,7 @@
         width: 120px !important;
         /* Aumentado de 80px a 120px */
         height: 120px !important;
-        filter: drop-shadow(0 0 15px #00ffff) drop-shadow(0 0 10px #ff00ff) drop-shadow(0 0 5px #00ff00) blur(0.3px) !important;
+        filter: drop-shadow(0 0 15px rgba(200,170,110,0.5)) drop-shadow(0 0 10px rgba(10,200,185,0.3)) blur(0.3px) !important;
         /* Difuminado sutil */
         transition: filter 0.5s ease-in-out, transform 0.3s ease-out;
         border-radius: 10px !important;
@@ -548,7 +549,7 @@
     }
 
     .entity-image:hover {
-        filter: drop-shadow(0 0 25px #00ffff) drop-shadow(0 0 15px #ff00ff) drop-shadow(0 0 8px #00ff00) brightness(1.5) saturate(1.5) blur(0.2px) !important;
+        filter: drop-shadow(0 0 25px rgba(200,170,110,0.7)) drop-shadow(0 0 15px rgba(10,200,185,0.4)) brightness(1.2) saturate(1.2) blur(0.2px) !important;
         transform: scale(1.1);
     }
 
@@ -563,27 +564,28 @@
         margin-bottom: 20px;
     }
 
-    /* Atmosphere Controls */
+    /* Atmosphere Controls — LoL palette */
     .atmosphere-control-btn {
-        background: linear-gradient(45deg, #00ffff, #ff00ff);
-        color: #000;
+        background: linear-gradient(135deg, #785A28, #C8AA6E);
+        color: #010A13;
         font-weight: bold;
         border: none;
         padding: 8px 15px;
-        border-radius: 5px;
+        border-radius: 0;
+        clip-path: polygon(5px 0%, 100% 0%, calc(100% - 5px) 100%, 0% 100%);
         cursor: pointer;
         transition: all 0.3s ease;
-        box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+        box-shadow: 0 0 10px rgba(200, 170, 110, 0.3);
     }
 
     .atmosphere-control-btn.active {
-        background: linear-gradient(45deg, #00ff00, #00ffff);
-        box-shadow: 0 0 15px rgba(0, 255, 0, 0.7);
+        background: linear-gradient(135deg, #0AC8B9, #0397AB);
+        box-shadow: 0 0 15px rgba(10, 200, 185, 0.4);
         transform: scale(1.05);
     }
 
     .atmosphere-control-btn:hover {
-        box-shadow: 0 0 20px rgba(255, 0, 255, 0.7), 0 0 10px rgba(0, 255, 255, 0.7);
+        box-shadow: 0 0 20px rgba(200, 170, 110, 0.5), 0 0 10px rgba(10, 200, 185, 0.3);
         transform: scale(1.02);
     }
 
@@ -658,32 +660,32 @@
     @keyframes textGlitch2 {
         0% {
             transform: translate(0px, 0px) !important;
-            text-shadow: 0 0 0px #0f0, 0 0 0px #f0f !important;
+            text-shadow: 0 0 0px rgba(200,170,110,0), 0 0 0px rgba(10,200,185,0) !important;
         }
 
         5% {
             transform: translate(0px, 1px) !important;
-            text-shadow: 0px 1px 0px #0f0, 0px -1px 0px #f0f !important;
+            text-shadow: 0px 1px 0px rgba(200,170,110,0.6), 0px -1px 0px rgba(10,200,185,0.4) !important;
         }
 
         10% {
             transform: translate(0px, -1px) !important;
-            text-shadow: 0px -1px 0px #0f0, 0px 1px 0px #f0f !important;
+            text-shadow: 0px -1px 0px rgba(200,170,110,0.6), 0px 1px 0px rgba(10,200,185,0.4) !important;
         }
 
         15% {
             transform: translate(0px, 1px) !important;
-            text-shadow: 0px 1px 0px #0f0, 0px -1px 0px #f0f !important;
+            text-shadow: 0px 1px 0px rgba(200,170,110,0.6), 0px -1px 0px rgba(10,200,185,0.4) !important;
         }
 
         20% {
             transform: translate(0px, 0px) !important;
-            text-shadow: 0 0 0px #0f0, 0 0 0px #f0f !important;
+            text-shadow: 0 0 0px rgba(200,170,110,0), 0 0 0px rgba(10,200,185,0) !important;
         }
 
         100% {
             transform: translate(0px, 0px) !important;
-            text-shadow: 0 0 0px #0f0, 0 0 0px #f0f !important;
+            text-shadow: 0 0 0px rgba(200,170,110,0), 0 0 0px rgba(10,200,185,0) !important;
         }
     }
 
@@ -698,25 +700,25 @@
     /* --- Mini-Glitch Border Effect (con !important para testear overrides) --- */
     @keyframes borderGlitch {
         0% {
-            border-color: rgba(77, 208, 225, 0.6) !important;
+            border-color: rgba(200, 170, 110, 0.35) !important;
         }
 
         5% {
-            border-color: rgba(255, 0, 255, 0.8) !important;
+            border-color: rgba(200, 170, 110, 0.7) !important;
         }
 
         /* Color glitch 1 */
         10% {
-            border-color: rgba(0, 255, 0, 0.8) !important;
+            border-color: rgba(10, 200, 185, 0.6) !important;
         }
 
         /* Color glitch 2 */
         15% {
-            border-color: rgba(77, 208, 225, 0.6) !important;
+            border-color: rgba(200, 170, 110, 0.5) !important;
         }
 
         100% {
-            border-color: rgba(77, 208, 225, 0.6) !important;
+            border-color: rgba(200, 170, 110, 0.35) !important;
         }
     }
 
@@ -775,17 +777,14 @@
         /* Se llena con JS */
         font-family: monospace;
         font-size: 2em;
-        color: #00ffff;
-        /* Cian */
+        color: #C8AA6E;
         animation: joiThinkingDots 1.5s steps(1, end) infinite;
     }
 
     .joi-thinking-lines {
         width: 60px;
-        /* Ancho de la línea */
         height: 2px;
-        background: linear-gradient(to right, #00ffff, #ff00ff);
-        /* Cian a magenta */
+        background: linear-gradient(to right, #C8AA6E, #0AC8B9);
         animation: joiThinkingLines 1.2s ease-in-out infinite;
         transform-origin: left center;
         opacity: 0;
@@ -819,7 +818,7 @@
         position: absolute;
         width: 4px;
         height: 4px;
-        background: rgba(255, 0, 128, 0.8);
+        background: rgba(200, 170, 110, 0.8);
         border-radius: 50%;
         pointer-events: none;
         animation: particleFloat 3s ease-out forwards;
@@ -1351,18 +1350,20 @@ document.addEventListener('DOMContentLoaded', function() {
                 datasets: [{
                     label: 'Peso Corporal (kg)',
                     data: [{% for punto in datos_peso %}{{ punto.peso }}{% if not forloop.last %},{% endif %}{% endfor %}],
-                    borderColor: '#32FF00',
-                    backgroundColor: 'rgba(50, 255, 0, 0.1)',
-                    tension: 0.3,
-                    fill: true
+                    borderColor: '#C8AA6E',
+                    backgroundColor: 'rgba(200,170,110,0.08)',
+                    tension: 0.4,
+                    fill: true,
+                    pointBackgroundColor: '#C8AA6E',
+                    pointRadius: 3
                 }]
             },
             options: {
                 responsive: true,
                 plugins: { legend: { display: false } },
                 scales: {
-                    x: { ticks: { color: '#aaa' }, grid: { color: '#333' } },
-                    y: { ticks: { color: '#aaa' }, grid: { color: '#333' } }
+                    x: { ticks: { color: 'rgba(200,170,110,0.4)', font: { family: "'Share Tech Mono', monospace", size: 9 } }, grid: { color: 'rgba(200,170,110,0.05)' } },
+                    y: { ticks: { color: 'rgba(200,170,110,0.4)', font: { family: "'Share Tech Mono', monospace", size: 9 } }, grid: { color: 'rgba(200,170,110,0.05)' } }
                 }
             }
         });
@@ -1379,18 +1380,20 @@ document.addEventListener('DOMContentLoaded', function() {
                 datasets: [{
                     label: 'Rendimiento',
                     data: [{% for punto in datos_rendimiento %}{{ punto.valor }}{% if not forloop.last %},{% endif %}{% endfor %}],
-                    borderColor: '#31CFF4',
-                    backgroundColor: 'rgba(49, 207, 244, 0.1)',
-                    tension: 0.3,
-                    fill: true
+                    borderColor: '#0AC8B9',
+                    backgroundColor: 'rgba(10,200,185,0.07)',
+                    tension: 0.4,
+                    fill: true,
+                    pointBackgroundColor: '#0AC8B9',
+                    pointRadius: 3
                 }]
             },
             options: {
                 responsive: true,
                 plugins: { legend: { display: false } },
                 scales: {
-                    x: { ticks: { color: '#aaa' }, grid: { color: '#333' } },
-                    y: { ticks: { color: '#aaa' }, grid: { color: '#333' } }
+                    x: { ticks: { color: 'rgba(200,170,110,0.4)', font: { family: "'Share Tech Mono', monospace", size: 9 } }, grid: { color: 'rgba(200,170,110,0.05)' } },
+                    y: { ticks: { color: 'rgba(200,170,110,0.4)', font: { family: "'Share Tech Mono', monospace", size: 9 } }, grid: { color: 'rgba(200,170,110,0.05)' } }
                 }
             }
         });
@@ -1407,18 +1410,21 @@ document.addEventListener('DOMContentLoaded', function() {
                 datasets: [{
                     label: 'Ratios Actuales',
                     data: ratiosData.valores,
-                    borderColor: '#00ffff',
-                    backgroundColor: 'rgba(0, 255, 255, 0.2)',
+                    borderColor: '#C8AA6E',
+                    backgroundColor: 'rgba(200,170,110,0.12)',
                     borderWidth: 2,
-                    pointBackgroundColor: '#00ffff'
+                    pointBackgroundColor: '#C8AA6E',
+                    pointBorderColor: '#010A13',
+                    pointRadius: 4
                 }, {
                     label: 'Ratios Óptimos',
                     data: ratiosData.optimos,
-                    borderColor: '#ff00ff',
-                    backgroundColor: 'rgba(255, 0, 255, 0.1)',
-                    borderWidth: 2,
-                    borderDash: [5, 5],
-                    pointBackgroundColor: '#ff00ff'
+                    borderColor: 'rgba(10,200,185,0.5)',
+                    backgroundColor: 'rgba(10,200,185,0.05)',
+                    borderWidth: 1.5,
+                    borderDash: [4, 4],
+                    pointBackgroundColor: 'rgba(10,200,185,0.4)',
+                    pointRadius: 3
                 }]
             },
             options: {
@@ -1427,10 +1433,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 plugins: { legend: { display: false } },
                 scales: {
                     r: {
-                        angleLines: { color: 'rgba(255, 255, 255, 0.2)' },
-                        grid: { color: 'rgba(255, 255, 255, 0.2)' },
-                        pointLabels: { color: '#e0e0e0', font: { size: 10 } },
-                        ticks: { color: '#aaa', backdropColor: 'transparent', stepSize: 0.2 }
+                        angleLines: { color: 'rgba(200,170,110,0.1)' },
+                        grid: { color: 'rgba(200,170,110,0.08)' },
+                        pointLabels: { color: '#785A28', font: { size: 10, family: "'Share Tech Mono', monospace" } },
+                        ticks: { color: 'rgba(200,170,110,0.4)', backdropColor: 'transparent', stepSize: 0.2 }
                     }
                 }
             }
@@ -1567,11 +1573,11 @@ document.addEventListener('DOMContentLoaded', function() {
     const joiImage = document.querySelector('.joi-flotante');
     if (joiImage) {
         joiImage.addEventListener('mouseenter', () => {
-            joiImage.style.filter = 'drop-shadow(0 0 30px #00ffff) drop-shadow(0 0 15px #ff00ff) brightness(1.2) saturate(1.5)';
+            joiImage.style.filter = 'drop-shadow(0 0 30px rgba(200,170,110,0.7)) drop-shadow(0 0 15px rgba(10,200,185,0.4)) brightness(1.1)';
             joiImage.style.transform = 'scale(1.05)';
         });
         joiImage.addEventListener('mouseleave', () => {
-            joiImage.style.filter = 'drop-shadow(0 0 20px #00ffff) drop-shadow(0 0 10px #ff00ff)';
+            joiImage.style.filter = 'drop-shadow(0 0 20px rgba(200,170,110,0.5)) drop-shadow(0 0 10px rgba(10,200,185,0.3))';
             joiImage.style.transform = 'scale(1)';
         });
     }
