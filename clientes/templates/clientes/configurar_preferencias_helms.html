@@ -6,482 +6,504 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Cinzel+Decorative:wght@700&family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 <style>
-    /* === BASE BODY CYBERPUNK === */
+    /* ══════════════════════════════════════════════════════
+       HELMS PREFERENCES — LoL RUNETERRA AESTHETIC
+       Champion Config Screen
+    ══════════════════════════════════════════════════════ */
+
+    :root {
+        --void:          #010A13;
+        --panel:         #0A1628;
+        --deep:          #060D14;
+        --gold-bright:   #F0E6D3;
+        --gold-mid:      #C8AA6E;
+        --gold-dark:     #785A28;
+        --gold-darker:   #463714;
+        --teal:          #0AC8B9;
+        --teal-dim:      #0397AB;
+        --red:           #C84B31;
+        --border-s:      rgba(200,170,110,0.12);
+        --border-m:      rgba(200,170,110,0.25);
+        --border-b:      rgba(200,170,110,0.55);
+        --glow-gold:     rgba(200,170,110,0.15);
+        --glow-teal:     rgba(10,200,185,0.12);
+    }
+
+    /* ── Fondo LoL ── */
     body {
-        background: url("{% static 'images/fondo_cyberpunk.png' %}") no-repeat center center fixed !important;
-        background-size: cover !important;
-        background-color: #000000 !important;
+        background: var(--void) !important;
+        background-image:
+            radial-gradient(ellipse 70% 45% at 50% 0%, rgba(10,200,185,0.06) 0%, transparent 55%),
+            radial-gradient(ellipse 50% 35% at 90% 90%, rgba(200,170,110,0.05) 0%, transparent 50%),
+            url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='104'%3E%3Cpath d='M30 2L57 17v30L30 62 3 47V17Z' fill='none' stroke='rgba(200,170,110,0.035)' stroke-width='0.8'/%3E%3C/svg%3E") !important;
+        background-size: auto, auto, 60px 104px !important;
         min-height: 100vh !important;
-        filter: brightness(0.9);
+        font-family: 'Rajdhani', sans-serif;
         overflow-x: hidden;
+        color: var(--gold-bright);
     }
 
-    /* === ANIMACIONES BASE === */
-    @keyframes float {
-        0% { transform: translateY(0px); }
-        50% { transform: translateY(-5px); }
-        100% { transform: translateY(0px); }
+    /* Suprimir efectos atmosféricos */
+    .blade-runner-atmosphere,
+    .background-fog { display: none !important; }
+
+    /* Scanline sutil */
+    body::after {
+        content: '';
+        position: fixed;
+        left: 0; right: 0;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, rgba(10,200,185,0.2) 50%, transparent);
+        animation: lolScan 14s linear infinite;
+        pointer-events: none;
+        z-index: 9999;
+        opacity: 0;
     }
-    .animate-float {
-        animation: float 6s ease-in-out infinite;
+    @keyframes lolScan {
+        0%   { top: -2px; opacity: 0; }
+        4%   { opacity: 0.5; }
+        96%  { opacity: 0.5; }
+        100% { top: 100vh; opacity: 0; }
     }
 
-    @keyframes fadeSlide {
-        0% { opacity: 0; transform: translateY(10px); }
-        100% { opacity: 1; transform: translateY(0); }
+    /* ── Animaciones de entrada ── */
+    @keyframes lolFadeUp {
+        from { opacity: 0; transform: translateY(18px); }
+        to   { opacity: 1; transform: translateY(0); }
     }
     .animate-fadeSlide {
-        animation: fadeSlide 0.8s ease-out;
+        animation: lolFadeUp 0.55s ease both;
     }
 
-    @keyframes pulse-neon {
-        0%, 100% {
-            box-shadow: 0 0 15px rgba(0, 255, 255, 0.4), inset 0 0 8px rgba(0, 255, 255, 0.2);
-        }
-        50% {
-            box-shadow: 0 0 25px rgba(0, 255, 255, 0.6), inset 0 0 12px rgba(0, 255, 255, 0.3);
-        }
-    }
-    .pulse-neon {
-        animation: pulse-neon 3s ease-in-out infinite;
+    /* ── Shimmer para botones ── */
+    @keyframes shimmerGold {
+        0%   { left: -100%; }
+        100% { left: 250%; }
     }
 
-    @keyframes titleGlow {
-        0%, 100% { text-shadow: 0 0 30px rgba(0, 255, 255, 0.5); }
-        50% { text-shadow: 0 0 60px rgba(0, 255, 255, 0.8), 0 0 40px rgba(255, 0, 255, 0.6); }
-    }
-
-    @keyframes inputGlow {
-        0%, 100% { border-color: rgba(0, 255, 255, 0.5); }
-        50% { border-color: rgba(0, 255, 255, 0.8); }
-    }
-
-    /* === EFECTOS ATMOSFÉRICOS === */
-    .blade-runner-atmosphere {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        pointer-events: none;
-        z-index: -1;
-    }
-
-    .background-fog {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: radial-gradient(circle at 30% 20%, rgba(0, 255, 255, 0.1) 0%, transparent 50%),
-                    radial-gradient(circle at 70% 80%, rgba(255, 0, 255, 0.1) 0%, transparent 50%);
-        animation: float 8s ease-in-out infinite;
-    }
-
-    /* === CONTENEDOR PRINCIPAL === */
+    /* ══ CONTENEDOR PRINCIPAL ══ */
     .cyberpunk-main-wrapper {
-        background: rgba(0, 0, 0, 0.4) !important;
-        backdrop-filter: blur(15px) saturate(180%) !important;
-        -webkit-backdrop-filter: blur(15px) saturate(180%) !important;
-        border: 1px solid rgba(77, 208, 225, 0.6) !important;
-        box-shadow: 0 0 15px rgba(77, 208, 225, 0.4), inset 0 0 8px rgba(77, 208, 225, 0.2) !important;
-        border-radius: 20px !important;
+        background: rgba(6,13,20,0.7) !important;
+        border: 1px solid var(--border-m) !important;
+        border-radius: 0 !important;
+        clip-path: polygon(0 0, calc(100% - 24px) 0, 100% 24px, 100% 100%, 24px 100%, 0 calc(100% - 24px));
+        box-shadow: 0 8px 48px rgba(0,0,0,0.7), 0 0 0 1px var(--border-s) !important;
         padding: 2rem;
         margin: 2rem 0;
         min-height: 80vh;
-    }
-
-    /* === HEADER CYBERPUNK === */
-    .cyber-adherencia-info {
-        background: rgba(0, 0, 0, 0.7) !important;
-        backdrop-filter: blur(20px) saturate(180%) !important;
-        -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
-        border: 1px solid rgba(0, 255, 255, 0.6) !important;
-        box-shadow: 0 0 25px rgba(0, 255, 255, 0.3), inset 0 0 15px rgba(0, 255, 255, 0.1) !important;
-        color: white;
-        border-radius: 15px;
-        padding: 2rem;
-        margin-bottom: 2rem;
         position: relative;
-        overflow: hidden;
+    }
+    .cyberpunk-main-wrapper::before {
+        content: '';
+        position: absolute;
+        top: 6px; left: 6px;
+        width: 22px; height: 22px;
+        border-top: 1px solid var(--border-b);
+        border-left: 1px solid var(--border-b);
+        pointer-events: none;
+    }
+    .cyberpunk-main-wrapper::after {
+        content: '';
+        position: absolute;
+        bottom: 6px; right: 6px;
+        width: 22px; height: 22px;
+        border-bottom: 1px solid var(--border-b);
+        border-right: 1px solid var(--border-b);
+        pointer-events: none;
     }
 
+    /* ══ HEADER — CHAMPION INFO ══ */
+    .cyber-adherencia-info {
+        background: var(--panel) !important;
+        border: 1px solid var(--border-m) !important;
+        border-radius: 0 !important;
+        clip-path: polygon(0 0, calc(100% - 18px) 0, 100% 18px, 100% 100%, 0 100%);
+        box-shadow: 0 4px 24px rgba(0,0,0,0.5), inset 0 1px 0 var(--border-s) !important;
+        color: var(--gold-bright);
+        padding: 2rem;
+        margin-bottom: 1.5rem;
+        position: relative;
+        overflow: visible;
+    }
     .cyber-adherencia-info::before {
         content: '';
         position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 3px;
-        background: linear-gradient(90deg, #00ffff, #ff00ff, #00ff00);
-        animation: float 3s ease-in-out infinite;
+        top: 0; left: 8%; right: 8%;
+        height: 2px;
+        background: linear-gradient(90deg, transparent, var(--gold-mid), var(--teal), var(--gold-mid), transparent);
+        opacity: 0.6;
     }
-
     .cyber-adherencia-info h2 {
-        font-size: 2.2rem;
+        font-family: 'Cinzel', serif !important;
+        font-size: 1.6rem;
         font-weight: 700;
-        background: linear-gradient(90deg, #00ffff, #00ff00, #ff00ff);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        color: transparent;
-        text-shadow: 0 0 30px rgba(0, 255, 255, 0.5);
-        animation: titleGlow 4s ease-in-out infinite alternate;
-        margin-bottom: 1rem;
+        color: var(--gold-bright) !important;
+        text-shadow: 0 0 20px rgba(200,170,110,0.3);
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        margin-bottom: 0.75rem;
+        -webkit-text-fill-color: unset;
+        background: none;
+        animation: none;
     }
-
     .cyber-adherencia-info p {
-        color: #ffffff;
-        font-size: 1.1rem;
-        text-shadow: 0 0 5px rgba(255, 255, 255, 0.3);
+        color: rgba(200,200,200,0.8);
+        font-family: 'Rajdhani', sans-serif;
+        font-size: 1rem;
     }
-
     .cyber-adherencia-info strong {
-        color: #00ffff;
-        text-shadow: 0 0 5px rgba(0, 255, 255, 0.5);
+        color: var(--gold-mid) !important;
+        font-family: 'Share Tech Mono', monospace;
+        text-shadow: none;
     }
 
-    /* === AVATAR CYBERPUNK === */
+    /* ── Avatar ── */
     .cyber-avatar {
-        width: 80px !important;
-        height: 80px !important;
-        border: 3px solid rgba(0, 255, 255, 0.8) !important;
-        box-shadow: 0 0 20px rgba(0, 255, 255, 0.5) !important;
-        filter: drop-shadow(0 0 10px rgba(0, 255, 255, 0.3));
+        width: 72px !important;
+        height: 72px !important;
+        border: 2px solid var(--gold-dark) !important;
+        box-shadow: 0 0 16px rgba(200,170,110,0.3) !important;
+        filter: none;
+        clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
         transition: all 0.3s ease;
     }
-
     .cyber-avatar:hover {
-        transform: scale(1.1);
-        box-shadow: 0 0 30px rgba(0, 255, 255, 0.7) !important;
+        transform: scale(1.08);
+        box-shadow: 0 0 28px rgba(200,170,110,0.5) !important;
+        border-color: var(--gold-mid) !important;
     }
 
-    /* === ALERT INFORMATIVO CYBERPUNK === */
+    /* ══ PANEL EDUCATIVO — LORE BOX ══ */
     .cyber-alert-info {
-        background: rgba(0, 0, 0, 0.6) !important;
-        backdrop-filter: blur(15px) saturate(180%) !important;
-        -webkit-backdrop-filter: blur(15px) saturate(180%) !important;
-        border: 1px solid rgba(0, 150, 255, 0.6) !important;
-        box-shadow: 0 0 20px rgba(0, 150, 255, 0.3), inset 0 0 10px rgba(0, 150, 255, 0.1) !important;
-        border-left: 5px solid #0096ff !important;
-        border-radius: 12px;
-        color: #ffffff;
-        padding: 1.5rem;
-        margin-bottom: 2rem;
-    }
-
-    .cyber-alert-info h5 {
-        color: #0096ff;
-        font-weight: 700;
-        text-shadow: 0 0 10px rgba(0, 150, 255, 0.5);
-        margin-bottom: 1rem;
-    }
-
-    .cyber-alert-info ul li {
-        margin-bottom: 0.5rem;
-        color: #ffffff;
-    }
-
-    .cyber-alert-info strong {
-        color: #00ffff;
-        text-shadow: 0 0 5px rgba(0, 255, 255, 0.3);
-    }
-
-    /* === FORMULARIO CYBERPUNK === */
-    .cyber-helms-card {
-        background: rgba(0, 0, 0, 0.5) !important;
-        backdrop-filter: blur(15px) saturate(180%) !important;
-        -webkit-backdrop-filter: blur(15px) saturate(180%) !important;
-        border: 1px solid rgba(77, 208, 225, 0.6) !important;
-        box-shadow: 0 0 20px rgba(77, 208, 225, 0.3), inset 0 0 10px rgba(77, 208, 225, 0.1) !important;
-        border-left: 5px solid #00ffff !important;
-        border-radius: 15px;
-        color: #ffffff;
-    }
-
-    .cyber-form-section {
-        background: rgba(0, 0, 0, 0.4) !important;
-        backdrop-filter: blur(10px) saturate(150%) !important;
-        -webkit-backdrop-filter: blur(10px) saturate(150%) !important;
-        border: 1px solid rgba(0, 255, 255, 0.3) !important;
-        box-shadow: 0 0 15px rgba(0, 255, 255, 0.2), inset 0 0 8px rgba(0, 255, 255, 0.1) !important;
-        border-radius: 12px;
+        background: rgba(10,20,40,0.8) !important;
+        border: 1px solid var(--border-m) !important;
+        border-left: 3px solid var(--teal) !important;
+        border-radius: 0 !important;
+        box-shadow: none !important;
+        color: var(--gold-bright);
         padding: 1.5rem;
         margin-bottom: 1.5rem;
-        transition: all 0.3s ease;
         position: relative;
-        overflow: hidden;
+    }
+    .cyber-alert-info h5 {
+        font-family: 'Cinzel', serif !important;
+        color: var(--teal) !important;
+        font-size: 0.85rem;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        font-weight: 600;
+        text-shadow: 0 0 8px rgba(10,200,185,0.3);
+        margin-bottom: 0.75rem;
+    }
+    .cyber-alert-info ul li {
+        margin-bottom: 0.4rem;
+        color: rgba(200,200,200,0.85);
+        font-family: 'Rajdhani', sans-serif;
+    }
+    .cyber-alert-info strong {
+        color: var(--gold-mid) !important;
+        text-shadow: none;
     }
 
+    /* ══ CARD DEL FORMULARIO ══ */
+    .cyber-helms-card {
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        border-left: none !important;
+        border-radius: 0 !important;
+        color: var(--gold-bright);
+    }
+    .cyber-helms-card .card-body {
+        padding: 0;
+    }
+
+    /* ══ SECCIONES DEL FORM ══ */
+    .cyber-form-section {
+        background: rgba(10,20,40,0.85) !important;
+        border: 1px solid var(--border-m) !important;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.4) !important;
+        border-radius: 0 !important;
+        clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px));
+        padding: 1.5rem;
+        margin-bottom: 1.25rem;
+        transition: border-color 0.25s ease, box-shadow 0.25s ease;
+        position: relative;
+        overflow: visible;
+    }
     .cyber-form-section::before {
         content: '';
         position: absolute;
-        top: 0;
-        left: -100%;
-        width: 100%;
-        height: 100%;
-        background: linear-gradient(90deg, transparent, rgba(0, 255, 255, 0.1), transparent);
-        transition: left 0.6s ease;
+        top: 4px; left: 4px;
+        width: 10px; height: 10px;
+        border-top: 1px solid var(--border-b);
+        border-left: 1px solid var(--border-b);
+        pointer-events: none;
     }
-
-    .cyber-form-section:hover::before {
-        left: 100%;
-    }
-
     .cyber-form-section:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 0 25px rgba(0, 255, 255, 0.4), inset 0 0 12px rgba(0, 255, 255, 0.2) !important;
+        border-color: rgba(200,170,110,0.4) !important;
+        box-shadow: 0 6px 24px rgba(0,0,0,0.5), 0 0 0 1px var(--border-s) !important;
+        transform: none;
     }
-
     .cyber-form-section h4 {
-        color: #00ffff;
-        font-weight: 700;
-        font-size: 1.4rem;
-        text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
-        margin-bottom: 1.5rem;
+        font-family: 'Cinzel', serif !important;
+        color: var(--gold-mid) !important;
+        font-weight: 600;
+        font-size: 1rem !important;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        text-shadow: 0 0 12px rgba(200,170,110,0.2);
+        margin-bottom: 1.25rem;
         display: flex;
         align-items: center;
         gap: 10px;
+        border-bottom: 1px solid var(--border-s);
+        padding-bottom: 0.75rem;
+    }
+    .cyber-form-section h4 i {
+        color: var(--teal);
     }
 
-    /* === INPUTS CYBERPUNK === */
-    .form-control, .form-select {
-        background: rgba(0, 0, 0, 0.7) !important;
-        border: 2px solid rgba(0, 255, 255, 0.4) !important;
-        color: #ffffff !important;
-        border-radius: 8px;
-        padding: 0.75rem 1rem;
-        transition: all 0.3s ease;
-        backdrop-filter: blur(5px);
-        -webkit-backdrop-filter: blur(5px);
-    }
-
-    .form-control:focus, .form-select:focus {
-        background: rgba(0, 0, 0, 0.8) !important;
-        border-color: rgba(0, 255, 255, 0.8) !important;
-        box-shadow: 0 0 15px rgba(0, 255, 255, 0.4) !important;
-        color: #ffffff !important;
-        animation: inputGlow 2s ease-in-out infinite;
-    }
-
-    .form-control::placeholder {
-        color: rgba(255, 255, 255, 0.6) !important;
-    }
-
-    /* === LABELS CYBERPUNK === */
+    /* ══ LABELS & TEXTOS ══ */
     .form-label, label {
-        color: #00ffff !important;
-        font-weight: 600;
-        text-shadow: 0 0 5px rgba(0, 255, 255, 0.3);
-        margin-bottom: 0.5rem;
+        font-family: 'Share Tech Mono', monospace !important;
+        color: rgba(200,170,110,0.75) !important;
+        font-size: 0.7rem !important;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        font-weight: 400;
+        text-shadow: none;
+        margin-bottom: 0.4rem;
     }
-
     .form-text {
-        color: rgba(255, 255, 255, 0.7) !important;
-        font-size: 0.9rem;
+        color: rgba(200,200,200,0.45) !important;
+        font-family: 'Rajdhani', sans-serif !important;
+        font-size: 0.78rem !important;
     }
 
-    /* === RADIO BUTTONS CYBERPUNK === */
+    /* ══ INPUTS & SELECTS ══ */
+    .form-control, .form-select {
+        background: rgba(1,10,19,0.8) !important;
+        border: 1px solid var(--border-m) !important;
+        color: var(--gold-bright) !important;
+        border-radius: 0 !important;
+        clip-path: polygon(4px 0%, 100% 0%, calc(100% - 4px) 100%, 0% 100%);
+        padding: 0.65rem 1rem;
+        font-family: 'Rajdhani', sans-serif !important;
+        font-size: 0.95rem !important;
+        transition: border-color 0.25s ease, box-shadow 0.25s ease;
+        backdrop-filter: none;
+    }
+    .form-control:focus, .form-select:focus {
+        background: rgba(1,10,19,0.95) !important;
+        border-color: var(--gold-mid) !important;
+        box-shadow: 0 0 12px rgba(200,170,110,0.2), 0 0 0 1px rgba(200,170,110,0.15) !important;
+        color: var(--gold-bright) !important;
+        animation: none;
+        outline: none;
+    }
+    .form-control::placeholder {
+        color: rgba(200,170,110,0.3) !important;
+    }
+    .form-select option {
+        background: var(--panel);
+        color: var(--gold-bright);
+    }
+
+    /* ══ RADIO BUTTONS ══ */
     .radio-group {
         display: flex;
-        gap: 20px;
+        gap: 10px;
         flex-wrap: wrap;
-        margin-top: 0.5rem;
+        margin-top: 0.4rem;
     }
-
     .radio-item {
         display: flex;
         align-items: center;
         gap: 8px;
-        background: rgba(0, 0, 0, 0.5);
-        padding: 0.5rem 1rem;
-        border-radius: 8px;
-        border: 1px solid rgba(0, 255, 255, 0.3);
-        transition: all 0.3s ease;
+        background: rgba(1,10,19,0.7);
+        padding: 0.45rem 0.9rem;
+        border: 1px solid var(--border-s);
+        border-radius: 0;
+        clip-path: polygon(4px 0%, 100% 0%, calc(100% - 4px) 100%, 0% 100%);
+        transition: all 0.2s ease;
         cursor: pointer;
     }
-
     .radio-item:hover {
-        background: rgba(0, 255, 255, 0.1);
-        border-color: rgba(0, 255, 255, 0.6);
-        transform: translateY(-2px);
-        box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
+        background: rgba(200,170,110,0.08);
+        border-color: var(--border-m);
+        transform: none;
+        box-shadow: none;
     }
-
+    .radio-item:has(input:checked) {
+        background: rgba(200,170,110,0.1);
+        border-color: var(--gold-dark);
+    }
     .radio-item input[type="radio"] {
-        accent-color: #00ffff;
-        transform: scale(1.2);
+        accent-color: var(--gold-mid);
+        transform: scale(1.1);
     }
-
     .radio-item label {
-        color: #ffffff !important;
+        font-family: 'Rajdhani', sans-serif !important;
+        color: rgba(200,200,200,0.85) !important;
+        font-size: 0.9rem !important;
+        text-transform: none;
+        letter-spacing: 0;
         margin-bottom: 0;
         cursor: pointer;
         text-shadow: none;
     }
 
-    /* === CHECKBOXES CYBERPUNK === */
+    /* ══ CHECKBOXES ══ */
     .form-check {
-        background: rgba(0, 0, 0, 0.5);
-        padding: 1rem;
-        border-radius: 8px;
-        border: 1px solid rgba(0, 255, 255, 0.3);
-        transition: all 0.3s ease;
+        background: rgba(1,10,19,0.6);
+        padding: 0.75rem 1rem;
+        border: 1px solid var(--border-s);
+        border-radius: 0;
+        transition: border-color 0.2s ease;
+        margin-bottom: 0.4rem;
     }
-
     .form-check:hover {
-        background: rgba(0, 255, 255, 0.1);
-        border-color: rgba(0, 255, 255, 0.6);
+        background: rgba(200,170,110,0.06);
+        border-color: var(--border-m);
     }
-
+    .form-check:has(input:checked) {
+        border-color: var(--gold-dark);
+        background: rgba(200,170,110,0.08);
+    }
     .form-check-input {
-        accent-color: #00ffff;
-        transform: scale(1.3);
+        accent-color: var(--gold-mid);
+        transform: scale(1.15);
+        border-radius: 0 !important;
     }
-
     .form-check-label {
-        color: #ffffff !important;
+        font-family: 'Rajdhani', sans-serif !important;
+        color: rgba(200,200,200,0.85) !important;
+        font-size: 0.9rem !important;
         font-weight: 500;
-        margin-left: 0.5rem;
+        margin-left: 0.4rem;
     }
 
-    /* === BOTONES CYBERPUNK === */
+    /* ══ BOTONES ══ */
     .cyber-btn-primary {
-        background: linear-gradient(45deg, rgba(0, 255, 255, 0.8), rgba(0, 150, 255, 0.6)) !important;
-        border: 1px solid rgba(0, 255, 255, 0.8) !important;
-        color: #000000 !important;
-        padding: 1rem 2rem;
-        border-radius: 10px;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: linear-gradient(135deg, var(--gold-darker) 0%, var(--gold-mid) 50%, var(--gold-darker) 100%) !important;
+        background-size: 200% 100% !important;
+        border: none !important;
+        color: var(--void) !important;
+        padding: 0.85rem 2.2rem;
+        border-radius: 0 !important;
+        clip-path: polygon(12px 0%, 100% 0%, calc(100% - 12px) 100%, 0% 100%);
+        font-family: 'Cinzel', serif !important;
+        font-size: 0.8rem !important;
         font-weight: 700;
-        font-size: 1.1rem;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
         text-decoration: none;
-        transition: all 0.3s ease;
-        backdrop-filter: blur(5px);
-        -webkit-backdrop-filter: blur(5px);
-        box-shadow: 0 0 20px rgba(0, 255, 255, 0.4);
-        display: inline-block;
-        text-align: center;
+        cursor: pointer;
+        transition: background-position 0.4s ease, box-shadow 0.3s ease, transform 0.2s ease;
+        box-shadow: 0 4px 20px rgba(200,170,110,0.25);
+        position: relative;
+        overflow: hidden;
     }
-
+    .cyber-btn-primary::before {
+        content: '';
+        position: absolute;
+        top: 0; left: -100%;
+        width: 55%; height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+        animation: shimmerGold 3s ease-in-out infinite;
+        pointer-events: none;
+    }
     .cyber-btn-primary:hover {
-        background: linear-gradient(45deg, rgba(0, 255, 255, 1), rgba(0, 150, 255, 0.8)) !important;
-        box-shadow: 0 0 30px rgba(0, 255, 255, 0.6);
-        transform: translateY(-3px);
-        color: #000000 !important;
+        background-position: 100% 0 !important;
+        box-shadow: 0 4px 28px rgba(200,170,110,0.45) !important;
+        transform: translateY(-2px);
+        color: var(--void) !important;
     }
 
     .cyber-btn-secondary {
-        background: linear-gradient(45deg, rgba(108, 117, 125, 0.8), rgba(150, 150, 150, 0.6)) !important;
-        border: 1px solid rgba(108, 117, 125, 0.8) !important;
-        color: #ffffff !important;
-        padding: 1rem 2rem;
-        border-radius: 10px;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: rgba(200,170,110,0.06) !important;
+        border: 1px solid var(--border-m) !important;
+        color: var(--gold-dark) !important;
+        padding: 0.85rem 2rem;
+        border-radius: 0 !important;
+        clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
+        font-family: 'Cinzel', serif !important;
+        font-size: 0.78rem !important;
         font-weight: 600;
-        font-size: 1.1rem;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
         text-decoration: none;
-        transition: all 0.3s ease;
-        backdrop-filter: blur(5px);
-        -webkit-backdrop-filter: blur(5px);
-        box-shadow: 0 0 15px rgba(108, 117, 125, 0.4);
-        display: inline-block;
-        text-align: center;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        box-shadow: none;
     }
-
     .cyber-btn-secondary:hover {
-        background: linear-gradient(45deg, rgba(108, 117, 125, 1), rgba(150, 150, 150, 0.8)) !important;
-        box-shadow: 0 0 25px rgba(108, 117, 125, 0.6);
-        transform: translateY(-3px);
-        color: #ffffff !important;
+        background: rgba(200,170,110,0.12) !important;
+        border-color: var(--border-b) !important;
+        color: var(--gold-mid) !important;
+        transform: translateY(-2px);
     }
 
-    /* === ALERT TIEMPO TOTAL === */
+    /* ══ ALERT TIEMPO TOTAL ══ */
     .cyber-alert-tiempo {
-        background: rgba(0, 0, 0, 0.6) !important;
-        backdrop-filter: blur(10px) saturate(150%) !important;
-        -webkit-backdrop-filter: blur(10px) saturate(150%) !important;
-        border: 1px solid rgba(0, 255, 100, 0.6) !important;
-        box-shadow: 0 0 15px rgba(0, 255, 100, 0.3), inset 0 0 8px rgba(0, 255, 100, 0.1) !important;
-        border-left: 4px solid #00ff64 !important;
-        border-radius: 8px;
-        color: #ffffff;
-        padding: 1rem;
+        background: rgba(10,200,185,0.05) !important;
+        border: 1px solid rgba(10,200,185,0.25) !important;
+        border-left: 3px solid var(--teal) !important;
+        border-radius: 0 !important;
+        box-shadow: none !important;
+        color: var(--gold-bright);
+        font-family: 'Share Tech Mono', monospace;
+        font-size: 0.82rem;
+        padding: 0.75rem 1rem;
         margin-top: 0.5rem;
     }
-
     .cyber-alert-tiempo strong {
-        color: #00ff64;
-        text-shadow: 0 0 5px rgba(0, 255, 100, 0.5);
+        color: var(--teal);
+        text-shadow: none;
     }
 
-    /* === RESPONSIVE === */
+    /* ══ DIVIDER LÍNEA DORADA ══ */
+    .lol-divider {
+        height: 1px;
+        background: linear-gradient(90deg, transparent, var(--gold-mid), transparent);
+        opacity: 0.2;
+        margin: 1.5rem 0;
+    }
+
+    /* ══ SCROLLBAR LoL ══ */
+    * { scrollbar-width: thin; scrollbar-color: var(--gold-dark) transparent; }
+    *::-webkit-scrollbar { width: 5px; }
+    *::-webkit-scrollbar-track { background: transparent; }
+    *::-webkit-scrollbar-thumb { background: var(--gold-dark); border-radius: 2px; }
+    *::-webkit-scrollbar-thumb:hover { background: var(--gold-mid); }
+
+    /* ══ RESPONSIVE ══ */
     @media (max-width: 768px) {
-        .cyber-adherencia-info h2 {
-            font-size: 1.8rem;
-        }
-
-        .cyber-avatar {
-            width: 60px !important;
-            height: 60px !important;
-        }
-
-        .cyber-form-section {
-            padding: 1rem;
-        }
-
-        .radio-group {
-            gap: 10px;
-        }
-
-        .radio-item {
-            padding: 0.4rem 0.8rem;
-        }
-
-        .cyber-btn-primary, .cyber-btn-secondary {
-            padding: 0.8rem 1.5rem;
-            font-size: 1rem;
-            margin: 0.5rem 0;
-        }
-
         .cyberpunk-main-wrapper {
             padding: 1rem;
-            margin: 1rem 0;
+            margin: 0.5rem 0;
+            clip-path: none;
         }
-    }
-
-    /* === EFECTOS ADICIONALES === */
-    .cyber-form-section:nth-child(odd) {
-        animation-delay: 0.1s;
-    }
-
-    .cyber-form-section:nth-child(even) {
-        animation-delay: 0.2s;
-    }
-
-    /* Efecto de partículas en hover para secciones */
-    .cyber-form-section:hover::after {
-        content: '';
-        position: absolute;
-        top: 50%;
-        right: 20px;
-        width: 4px;
-        height: 4px;
-        background: #00ffff;
-        border-radius: 50%;
-        box-shadow:
-            0 0 0 0 rgba(0, 255, 255, 0.7),
-            0 0 0 10px rgba(0, 255, 255, 0.4),
-            0 0 0 20px rgba(0, 255, 255, 0.2);
-        animation: pulse-particle 1.5s ease-out infinite;
-    }
-
-    @keyframes pulse-particle {
-        0% {
-            transform: translate(-50%, -50%) scale(0);
-            opacity: 1;
-        }
-        100% {
-            transform: translate(-50%, -50%) scale(1);
-            opacity: 0;
+        .cyber-adherencia-info h2 { font-size: 1.2rem; }
+        .cyber-avatar { width: 56px !important; height: 56px !important; }
+        .cyber-form-section { padding: 1rem; clip-path: none; }
+        .radio-group { gap: 8px; }
+        .radio-item { clip-path: none; padding: 0.4rem 0.7rem; }
+        .cyber-btn-primary, .cyber-btn-secondary {
+            padding: 0.75rem 1.4rem;
+            font-size: 0.72rem !important;
+            clip-path: none;
+            margin: 0.4rem 0;
         }
     }
 </style>

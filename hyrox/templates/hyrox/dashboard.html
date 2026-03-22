@@ -3,6 +3,335 @@
 
 {% block title %}Hyrox Central - GymProject{% endblock %}
 
+{% block extra_css %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+/* ══════════════════════════════════════════════════════════
+   HYROX DASHBOARD — LoL RUNETERRA OVERRIDE
+   Convierte clases Tailwind genéricas a paleta Runeterra
+   ══════════════════════════════════════════════════════════ */
+
+/* ── Fondo LoL Void ── */
+body {
+    background-color: #010A13 !important;
+    background-image:
+        radial-gradient(ellipse 65% 40% at 50% 0%, rgba(200,75,49,0.07) 0%, transparent 55%),
+        radial-gradient(ellipse 45% 35% at 90% 85%, rgba(200,170,110,0.05) 0%, transparent 50%),
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='104'%3E%3Cpath d='M30 2L57 17v30L30 62 3 47V17Z' fill='none' stroke='rgba(200,170,110,0.03)' stroke-width='0.8'/%3E%3C/svg%3E") !important;
+    background-size: auto, auto, 60px 104px !important;
+}
+
+/* Scanline sutil */
+body::after {
+    content: '';
+    position: fixed;
+    left: 0; right: 0; height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(200,75,49,0.2) 50%, transparent);
+    animation: hyroxScan 16s linear infinite;
+    pointer-events: none;
+    z-index: 9999;
+    opacity: 0;
+}
+@keyframes hyroxScan {
+    0%   { top: -2px; opacity: 0; }
+    4%   { opacity: 0.5; }
+    96%  { opacity: 0.5; }
+    100% { top: 100vh; opacity: 0; }
+}
+
+/* ── Paleta LoL via variables ── */
+:root {
+    --h-gold:    #C8AA6E;
+    --h-gold-b:  #F0E6D3;
+    --h-gold-d:  #785A28;
+    --h-teal:    #0AC8B9;
+    --h-red:     #C84B31;
+    --h-void:    #010A13;
+    --h-panel:   #0A1628;
+    --h-border:  rgba(200,170,110,0.25);
+}
+
+/* ══ "SIN OBJETIVO" estado vacío ══ */
+.bg-slate-800\/50.border.border-slate-700.rounded-xl {
+    background: rgba(10,22,40,0.8) !important;
+    border-color: rgba(200,170,110,0.2) !important;
+    border-radius: 0 !important;
+}
+.text-cyan-500 { color: var(--h-teal) !important; }
+.bg-cyan-600   { background-color: var(--h-red) !important; }
+.bg-cyan-600:hover, .hover\:bg-cyan-500:hover { background-color: #e05535 !important; }
+.shadow-cyan-500\/30 { box-shadow: 0 8px 24px rgba(200,75,49,0.25) !important; }
+.text-slate-400 { color: rgba(200,200,200,0.5) !important; }
+
+/* ══ MORNING BRIEFING & ALERTS ══ */
+.border-indigo-500 {
+    border-color: rgba(200,170,110,0.3) !important;
+    border-bottom-width: 1px !important;
+}
+.bg-slate-900\/50 { background: rgba(6,13,20,0.6) !important; }
+.text-indigo-300  { color: var(--h-gold) !important; font-family: 'Share Tech Mono', monospace; font-style: italic; }
+
+/* Smart Alerts */
+.border-cyan-500 { border-color: var(--h-teal) !important; }
+.text-cyan-400   { color: var(--h-teal) !important; }
+.bg-slate-800\/80 { background: rgba(10,22,40,0.8) !important; }
+.text-slate-300  { color: rgba(200,200,200,0.75) !important; }
+
+/* Mental Focus */
+.border-yellow-500 { border-color: var(--h-gold) !important; }
+.text-yellow-400   { color: var(--h-gold) !important; }
+.from-yellow-500\/10 { --tw-gradient-from: rgba(200,170,110,0.08) !important; }
+
+/* ══ RECOVERY MODE ══ */
+[style*="background: linear-gradient(135deg, rgba(15,23,42"] {
+    background: linear-gradient(135deg, rgba(10,22,40,0.97), rgba(20,10,10,0.97)) !important;
+    border: 1px solid rgba(200,75,49,0.2) !important;
+    border-radius: 0 !important;
+}
+.rounded-2xl { border-radius: 0 !important; }
+.rounded-xl  { border-radius: 0 !important; }
+.rounded-lg  { border-radius: 0 !important; }
+.rounded-full:not(circle):not(svg) { border-radius: 2px !important; }
+
+/* Phase bars recovery */
+.bg-gradient-to-r.from-red-600   { background: linear-gradient(90deg, #C84B31, #e05535) !important; }
+.bg-gradient-to-r.from-yellow-500 { background: linear-gradient(90deg, var(--h-gold-d), var(--h-gold)) !important; }
+.bg-gradient-to-r.from-emerald-500 { background: linear-gradient(90deg, #0AC8B9, #0397AB) !important; }
+
+/* Substituciones grid */
+.bg-slate-800\/60 { background: rgba(10,22,40,0.7) !important; }
+.border-slate-700\/50 { border-color: rgba(200,170,110,0.12) !important; }
+.text-emerald-300 { color: var(--h-teal) !important; }
+.text-emerald-400 { color: var(--h-teal) !important; }
+.bg-emerald-500\/10 { background: rgba(10,200,185,0.08) !important; }
+.border-emerald-500\/30 { border-color: rgba(10,200,185,0.25) !important; }
+
+/* Reporte diario pendiente */
+.bg-yellow-500\/5  { background: rgba(200,170,110,0.05) !important; }
+.border-yellow-500\/20 { border-color: rgba(200,170,110,0.2) !important; }
+.text-yellow-300   { color: var(--h-gold-b) !important; }
+.from-amber-600    { --tw-gradient-from: var(--h-gold-d) !important; }
+.to-yellow-500     { --tw-gradient-to: var(--h-gold) !important; }
+.shadow-yellow-500\/15 { box-shadow: 0 4px 16px rgba(200,170,110,0.15) !important; }
+.text-yellow-400   { color: var(--h-gold) !important; }
+
+/* Alta clínica */
+.bg-emerald-500\/10:hover { background: rgba(10,200,185,0.12) !important; }
+.hover\:border-emerald-400\/50:hover { border-color: rgba(10,200,185,0.4) !important; }
+.hover\:text-emerald-300:hover { color: var(--h-teal) !important; }
+
+/* ══ MACROCICLO TIMELINE ══ */
+.bg-slate-800\/80.border.border-slate-700 {
+    background: rgba(10,22,40,0.85) !important;
+    border-color: rgba(200,170,110,0.2) !important;
+}
+.text-purple-400 { color: var(--h-gold) !important; }
+.text-cyan-400.font-bold { color: var(--h-teal) !important; }
+.bg-clip-text.bg-gradient-to-r.from-cyan-400.to-purple-500 {
+    background: linear-gradient(90deg, var(--h-gold), var(--h-gold-b)) !important;
+    -webkit-background-clip: text !important;
+}
+.bg-slate-900 { background: rgba(1,10,19,0.9) !important; }
+
+/* Fases macrociclo */
+.bg-slate-600\/50 { background: rgba(200,170,110,0.1) !important; }
+.border-b-2.border-cyan-400  { border-bottom-color: var(--h-teal) !important; }
+.bg-purple-900\/40 { background: rgba(200,170,110,0.07) !important; }
+.border-b-2.border-purple-400 { border-bottom-color: var(--h-gold) !important; }
+.bg-pink-900\/40   { background: rgba(200,75,49,0.08) !important; }
+.border-b-2.border-pink-400   { border-bottom-color: var(--h-red) !important; }
+.bg-green-900\/40  { background: rgba(10,200,185,0.08) !important; }
+.border-b-2.border-green-400  { border-bottom-color: var(--h-teal) !important; }
+.bg-slate-800\/10 { background: rgba(1,10,19,0.2) !important; }
+.text-slate-600 { color: rgba(200,200,200,0.3) !important; }
+.text-slate-500 { color: rgba(200,200,200,0.4) !important; }
+
+/* Mantra */
+.text-slate-400.italic { color: rgba(200,170,110,0.55) !important; }
+
+/* Marker */
+.bg-white.shadow-\[0_0_8px_rgba\(255\,255\,255\,0\.8\)\] {
+    background: var(--h-gold) !important;
+    box-shadow: 0 0 8px rgba(200,170,110,0.8) !important;
+}
+.bg-white.rounded-full {
+    background: var(--h-gold-b) !important;
+}
+
+/* ══ 3 PANELS (Evento / Semana / Perfil Base) ══ */
+[style*="background: linear-gradient(160deg, rgba(15,23,42"] {
+    background: var(--h-panel) !important;
+    border: 1px solid var(--h-border) !important;
+    border-radius: 0 !important;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5) !important;
+}
+
+/* Panel headers — stripes de color */
+.h-0\.5.bg-gradient-to-r.from-cyan-500.via-blue-500.to-purple-500 {
+    background: linear-gradient(90deg, var(--h-gold-d), var(--h-gold), var(--h-gold-d)) !important;
+    height: 2px !important;
+}
+.h-0\.5.bg-gradient-to-r.from-purple-500.via-pink-500.to-rose-500 {
+    background: linear-gradient(90deg, var(--h-red), #e05535, var(--h-red)) !important;
+    height: 2px !important;
+}
+.h-0\.5.bg-gradient-to-r.from-emerald-500.via-yellow-400.to-orange-500 {
+    background: linear-gradient(90deg, var(--h-teal), var(--h-gold), var(--h-teal)) !important;
+    height: 2px !important;
+}
+
+/* Panel ambientes glow */
+.bg-cyan-500\/8 { background: rgba(200,170,110,0.05) !important; }
+.bg-purple-500\/8 { background: rgba(200,75,49,0.05) !important; }
+.bg-emerald-500\/8 { background: rgba(10,200,185,0.04) !important; }
+
+/* Panel texto */
+.text-white { color: var(--h-gold-b) !important; }
+
+/* Badge icono evento */
+.bg-cyan-500\/10.border.border-cyan-500\/20 {
+    background: rgba(200,170,110,0.08) !important;
+    border-color: rgba(200,170,110,0.2) !important;
+}
+.text-cyan-400.fas { color: var(--h-gold) !important; }
+
+/* Date card */
+.bg-slate-800\/50.border.border-slate-700\/30.rounded-lg {
+    background: rgba(1,10,19,0.7) !important;
+    border-color: rgba(200,170,110,0.15) !important;
+}
+.bg-purple-500\/10 { background: rgba(200,170,110,0.06) !important; }
+.text-purple-400.text-sm { color: var(--h-gold-d) !important; }
+
+/* Botones panel evento */
+.bg-cyan-500\/10 { background: rgba(10,200,185,0.07) !important; }
+.border-cyan-500\/25 { border-color: rgba(10,200,185,0.2) !important; }
+.hover\:bg-cyan-500\/20:hover { background: rgba(10,200,185,0.14) !important; }
+.hover\:border-cyan-400\/40:hover { border-color: rgba(10,200,185,0.35) !important; }
+
+/* Semana — ring SVG */
+stop[stop-color="#a855f7"] { stop-color: var(--h-gold-d) !important; }
+stop[stop-color="#ec4899"] { stop-color: var(--h-gold) !important; }
+
+/* Progress bars semana */
+.bg-cyan-500\/60 { background: var(--h-teal) !important; opacity: 0.7; }
+.bg-pink-500\/60 { background: var(--h-red) !important; opacity: 0.7; }
+.bg-purple-500\/60 { background: var(--h-gold) !important; opacity: 0.7; }
+.fas.text-cyan-500 { color: var(--h-teal) !important; }
+.fas.text-pink-500 { color: var(--h-red) !important; }
+.fas.text-purple-500 { color: var(--h-gold) !important; }
+
+/* Perfil base */
+.text-cyan-400.font-mono.font-bold { color: var(--h-teal) !important; }
+.text-purple-400.font-mono.font-bold { color: var(--h-gold) !important; }
+.text-pink-400.font-mono.font-bold { color: var(--h-red) !important; }
+.bg-slate-800\/40 { background: rgba(1,10,19,0.6) !important; }
+.border-slate-700\/30 { border-color: rgba(200,170,110,0.1) !important; }
+
+/* Race Readiness */
+.text-green-400 { color: var(--h-teal) !important; }
+.text-red-400   { color: var(--h-red) !important; }
+.bg-gradient-to-r.from-green-600.to-emerald-400 { background: linear-gradient(90deg, var(--h-teal), #0AC8B9) !important; }
+.bg-gradient-to-r.from-yellow-600.to-yellow-400 { background: linear-gradient(90deg, var(--h-gold-d), var(--h-gold)) !important; }
+.bg-gradient-to-r.from-red-600.to-red-400 { background: linear-gradient(90deg, var(--h-red), #e05535) !important; }
+
+/* ══ EQUILIBRIO ESTRATÉGICO ══ */
+.bg-indigo-950\/40 { background: rgba(10,22,40,0.6) !important; }
+.border-indigo-500\/30 { border-color: rgba(200,170,110,0.2) !important; }
+.text-indigo-400 { color: var(--h-gold) !important; }
+.text-indigo-300 { color: var(--h-gold) !important; }
+.text-indigo-200\/70 { color: rgba(200,170,110,0.5) !important; }
+.text-indigo-100 { color: rgba(200,200,200,0.85) !important; }
+.bg-indigo-500 { background: var(--h-gold-d) !important; }
+.bg-indigo-900\/50 { background: rgba(10,22,40,0.5) !important; }
+.border-indigo-500\/20 { border-color: rgba(200,170,110,0.15) !important; }
+.text-indigo-400.mt-1 { color: var(--h-gold) !important; }
+
+/* ══ READINESS BREAKDOWN ══ */
+.bg-slate-800\/60.border.border-slate-700\/50.rounded-xl {
+    background: rgba(10,22,40,0.7) !important;
+    border-color: rgba(200,170,110,0.2) !important;
+}
+.text-cyan-300 { color: var(--h-teal) !important; }
+.bg-cyan-500.h-1\.5 { background: var(--h-teal) !important; }
+.text-purple-300 { color: var(--h-gold) !important; }
+.bg-purple-500.h-1\.5 { background: var(--h-gold) !important; }
+.text-yellow-300 { color: var(--h-gold-b) !important; }
+.bg-yellow-500.h-1\.5 { background: var(--h-gold) !important; }
+.bg-pink-500\/20 { background: rgba(200,75,49,0.1) !important; }
+.text-pink-400  { color: var(--h-red) !important; }
+
+/* ══ COMPETITION STANDARDS ══ */
+[style*="background: linear-gradient(160deg, rgba(10,18,35"] {
+    background: rgba(10,22,40,0.95) !important;
+    border: 1px solid rgba(200,170,110,0.2) !important;
+    border-radius: 0 !important;
+}
+.h-0\.5.bg-gradient-to-r.from-cyan-500.via-blue-400.to-purple-500 {
+    background: linear-gradient(90deg, var(--h-gold-d), var(--h-gold), var(--h-gold-d)) !important;
+    height: 2px !important;
+}
+.bg-cyan-500\/10.rounded-full { background: rgba(200,170,110,0.08) !important; }
+.border-cyan-500\/20 { border-color: rgba(200,170,110,0.18) !important; }
+.text-cyan-400.fas.fa-trophy { color: var(--h-gold) !important; }
+.text-cyan-400 { color: var(--h-teal) !important; }
+.bg-slate-800\/50.border.border-slate-700\/30.rounded-xl {
+    background: rgba(6,13,20,0.8) !important;
+    border-color: rgba(200,170,110,0.15) !important;
+}
+.from-cyan-400.to-purple-400 {
+    --tw-gradient-from: var(--h-gold) !important;
+    --tw-gradient-to: var(--h-gold-b) !important;
+}
+
+/* Station cards */
+.border-cyan-500\/40.bg-cyan-950\/20 {
+    border-color: rgba(10,200,185,0.35) !important;
+    background: rgba(10,200,185,0.06) !important;
+    border-radius: 0 !important;
+}
+.border-slate-700\/40.bg-slate-800\/30 {
+    border-color: rgba(200,170,110,0.15) !important;
+    background: rgba(10,22,40,0.5) !important;
+    border-radius: 0 !important;
+}
+.border-slate-800\/30.bg-slate-900\/20 {
+    border-color: rgba(200,170,110,0.08) !important;
+    background: rgba(6,13,20,0.4) !important;
+    border-radius: 0 !important;
+}
+.bg-cyan-500\/20.border.border-cyan-400\/40 {
+    background: rgba(10,200,185,0.12) !important;
+    border-color: rgba(10,200,185,0.3) !important;
+}
+.text-cyan-400.text-\[10px\] { color: var(--h-teal) !important; }
+.text-cyan-300 { color: var(--h-teal) !important; }
+.text-cyan-400.font-bold { color: var(--h-teal) !important; }
+
+/* Progress bars competition */
+.bg-cyan-400.h-full   { background: var(--h-teal) !important; }
+.bg-cyan-600\/50      { background: rgba(10,200,185,0.4) !important; }
+.bg-purple-400.h-full { background: var(--h-gold) !important; }
+.bg-purple-600\/50    { background: rgba(200,170,110,0.35) !important; }
+.from-cyan-600.to-cyan-400 { background: linear-gradient(90deg, var(--h-teal), #0AC8B9) !important; }
+.from-cyan-700.to-cyan-500 { background: linear-gradient(90deg, var(--h-teal), #0AC8B9) !important; }
+
+/* SVG gradients */
+stop[stop-color="#06b6d4"] { stop-color: var(--h-gold-d) !important; }
+stop[stop-color="#a855f7"] { stop-color: var(--h-gold) !important; }
+stop[stop-color="#ca8a04"] { stop-color: var(--h-gold-d) !important; }
+stop[stop-color="#facc15"] { stop-color: var(--h-gold-b) !important; }
+
+/* ══ SCROLLBAR LoL ══ */
+* { scrollbar-width: thin; scrollbar-color: #785A28 transparent; }
+*::-webkit-scrollbar { width: 5px; height: 4px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb { background: #785A28; }
+*::-webkit-scrollbar-thumb:hover { background: #C8AA6E; }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container mx-auto px-4 py-8">
     <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">

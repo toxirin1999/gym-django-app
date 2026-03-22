@@ -1035,7 +1035,7 @@ def blade_runner_dashboard(request):
 
 
 def analizar_tendencia_peso(cliente):
-    registros = BitacoraDiaria.objects.filter(cliente=cliente, peso_kg__isnull=False).order_by('fecha')
+    registros = PesoDiario.objects.filter(cliente=cliente).order_by('fecha')
     if not registros:
         return None, [], {}
 

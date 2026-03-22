@@ -3,187 +3,806 @@
 {% load static %}
 {% load widget_tweaks %}
 
-{% block title %}{{ cliente.id|default:"Agregar" }} Cliente{% endblock %}
+{% block title %}Configurar Operativo — {{ cliente.nombre|default:"Nuevo" }}{% endblock %}
+
+{% block extra_css %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Cinzel+Decorative:wght@700&family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════════════
+   LOL CHAMPION CONFIG — EDITAR CLIENTE
+   ═══════════════════════════════════════════════════ */
+:root {
+  --void:       #010A13;
+  --void-2:     #0A1428;
+  --void-3:     #0D1B2E;
+  --gold:       #C8AA6E;
+  --gold-b:     #F0E6D3;
+  --gold-d:     #785A28;
+  --gold-deep:  #463714;
+  --teal:       #0AC8B9;
+  --red-lol:    #C84B31;
+  --border:     rgba(200,170,110,0.16);
+  --border-hi:  rgba(200,170,110,0.42);
+  --font-d: 'Cinzel', serif;
+  --font-u: 'Rajdhani', sans-serif;
+  --font-m: 'Share Tech Mono', monospace;
+}
+
+/* ── Reset ── */
+.ec-page *, .ec-page *::before, .ec-page *::after { box-sizing: border-box; }
+
+/* ── Page wrapper ── */
+.ec-page {
+  min-height: 100vh;
+  background: var(--void);
+  font-family: var(--font-u);
+  padding: 0 0 4rem 0;
+  position: relative;
+  overflow-x: hidden;
+}
+
+/* Hex grid + atmospheric gradients */
+.ec-page::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    radial-gradient(ellipse 70% 45% at 50% 0%, rgba(10,200,185,0.08) 0%, transparent 55%),
+    radial-gradient(ellipse 45% 35% at 85% 85%, rgba(200,170,110,0.06) 0%, transparent 50%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='97'%3E%3Cpath d='M28 2L54 16v28L28 58 2 44V16Z' fill='none' stroke='rgba(200,170,110,0.042)' stroke-width='0.7'/%3E%3C/svg%3E");
+  background-size: auto,auto,56px 97px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.ec-page > * { position: relative; z-index: 1; }
+
+/* ── HERO BANNER ── */
+.ec-hero {
+  background: linear-gradient(180deg, rgba(5,14,30,0.98) 0%, rgba(1,10,19,0.95) 100%);
+  border-bottom: 1px solid var(--border);
+  padding: 2rem 2rem 1.75rem;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Golden top line */
+.ec-hero::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent 0%, var(--gold-d) 20%, var(--gold) 50%, var(--gold-d) 80%, transparent 100%);
+}
+
+/* Corner ornaments */
+.ec-hero::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(10,200,185,0.2) 50%, transparent);
+}
+
+.ec-hero-inner {
+  max-width: 900px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 1.75rem;
+  flex-wrap: wrap;
+}
+
+/* Hexagonal avatar */
+.ec-avatar {
+  width: 72px; height: 72px;
+  background: linear-gradient(135deg, var(--gold-deep), var(--gold-d));
+  clip-path: polygon(50% 0%,93% 25%,93% 75%,50% 100%,7% 75%,7% 25%);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-d);
+  font-size: 1.8rem;
+  color: var(--gold-b);
+  flex-shrink: 0;
+  position: relative;
+  animation: avatarPulse 4s ease-in-out infinite;
+}
+
+@keyframes avatarPulse {
+  0%,100% { filter: drop-shadow(0 0 8px rgba(200,170,110,0.3)); }
+  50%      { filter: drop-shadow(0 0 20px rgba(200,170,110,0.5)); }
+}
+
+.ec-hero-text { flex: 1; min-width: 0; }
+
+.ec-eyebrow {
+  font-family: var(--font-m);
+  font-size: 0.58rem;
+  color: var(--teal);
+  letter-spacing: 0.35em;
+  text-transform: uppercase;
+  margin-bottom: 0.3rem;
+}
+
+.ec-hero-title {
+  font-family: var(--font-d);
+  font-size: clamp(1.5rem, 3.5vw, 2.2rem);
+  font-weight: 700;
+  color: var(--gold);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  margin: 0 0 0.5rem 0;
+  text-shadow: 0 0 24px rgba(200,170,110,0.35);
+}
+
+.ec-hero-sub {
+  font-family: var(--font-m);
+  font-size: 0.65rem;
+  color: var(--gold-d);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.ec-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 1.1rem;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--gold-d);
+  font-family: var(--font-d);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  text-decoration: none;
+  clip-path: polygon(5px 0%,100% 0%,calc(100% - 5px) 100%,0% 100%);
+  transition: all 0.2s ease;
+  align-self: center;
+}
+
+.ec-back-btn:hover {
+  border-color: var(--border-hi);
+  color: var(--gold);
+  background: rgba(200,170,110,0.06);
+}
+
+/* ── FORM CONTAINER ── */
+.ec-form-wrap {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* ── PANEL (section card) ── */
+.ec-panel {
+  background: rgba(10,20,40,0.92);
+  border: 1px solid var(--border);
+  position: relative;
+  overflow: hidden;
+  animation: panelIn 0.45s ease both;
+}
+
+.ec-panel:nth-child(1) { animation-delay: 0.05s; }
+.ec-panel:nth-child(2) { animation-delay: 0.12s; }
+.ec-panel:nth-child(3) { animation-delay: 0.19s; }
+.ec-panel:nth-child(4) { animation-delay: 0.26s; }
+
+@keyframes panelIn {
+  from { opacity:0; transform: translateY(14px); }
+  to   { opacity:1; transform: translateY(0); }
+}
+
+/* Corner ornaments */
+.ec-panel::before {
+  content:'';
+  position:absolute;
+  top:5px; left:5px;
+  width:14px; height:14px;
+  border-top: 1px solid rgba(200,170,110,0.4);
+  border-left: 1px solid rgba(200,170,110,0.4);
+  pointer-events:none;
+  z-index:1;
+}
+
+.ec-panel::after {
+  content:'';
+  position:absolute;
+  bottom:5px; right:5px;
+  width:14px; height:14px;
+  border-bottom: 1px solid rgba(200,170,110,0.4);
+  border-right: 1px solid rgba(200,170,110,0.4);
+  pointer-events:none;
+  z-index:1;
+}
+
+/* Panel header */
+.ec-panel-head {
+  padding: 0.85rem 1.4rem;
+  background: linear-gradient(90deg, rgba(200,170,110,0.06) 0%, transparent 70%);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  position: relative;
+}
+
+/* Accent line on panel header */
+.ec-panel-head::before {
+  content:'';
+  position:absolute;
+  bottom:-1px; left:1.4rem; right:40%;
+  height:1px;
+  background: linear-gradient(90deg, var(--gold-d), transparent);
+  opacity:0.6;
+}
+
+.ec-panel-icon {
+  width:28px; height:28px;
+  background: var(--gold-deep);
+  border: 1px solid var(--gold-d);
+  clip-path: polygon(50% 0%,93% 25%,93% 75%,50% 100%,7% 75%,7% 25%);
+  display:flex; align-items:center; justify-content:center;
+  font-size:0.75rem;
+  color: var(--gold);
+  flex-shrink:0;
+}
+
+.ec-panel-title {
+  font-family: var(--font-d);
+  font-size:0.72rem;
+  font-weight:600;
+  color: var(--gold);
+  letter-spacing:0.22em;
+  text-transform:uppercase;
+}
+
+.ec-panel-body {
+  padding: 1.4rem 1.4rem 1.6rem;
+}
+
+/* ── FORM GRID ── */
+.ec-grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:1.1rem; }
+.ec-grid-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:1rem; }
+.ec-grid-4 { display:grid; grid-template-columns:repeat(4,1fr); gap:1rem; }
+.ec-col-2  { grid-column: span 2; }
+
+@media (max-width:700px) {
+  .ec-grid-2 { grid-template-columns:1fr; }
+  .ec-grid-3 { grid-template-columns:1fr 1fr; }
+  .ec-grid-4 { grid-template-columns:1fr 1fr; }
+  .ec-col-2  { grid-column: span 1; }
+}
+
+@media (max-width:480px) {
+  .ec-grid-3,
+  .ec-grid-4 { grid-template-columns:1fr; }
+}
+
+/* ── FIELD ── */
+.ec-field { display:flex; flex-direction:column; gap:0.45rem; }
+
+.ec-label {
+  font-family: var(--font-m);
+  font-size:0.6rem;
+  color: var(--gold-d);
+  letter-spacing:0.18em;
+  text-transform:uppercase;
+  display:block;
+  transition: color 0.2s;
+}
+
+.ec-field:focus-within .ec-label { color: var(--gold); }
+
+/* ── INPUTS ── */
+.ec-input,
+input.af-input,
+select.af-select,
+select.af-input,
+input.af-input[type="date"] {
+  width: 100%;
+  background: rgba(1,10,19,0.8) !important;
+  border: 1px solid rgba(200,170,110,0.18) !important;
+  border-radius: 0 !important;
+  color: var(--gold-b) !important;
+  font-family: var(--font-u) !important;
+  font-size: 0.9rem !important;
+  font-weight: 500 !important;
+  padding: 0.6rem 0.9rem !important;
+  outline: none !important;
+  transition: border-color 0.2s, box-shadow 0.2s, background 0.2s !important;
+  clip-path: polygon(4px 0%,100% 0%,calc(100% - 4px) 100%,0% 100%) !important;
+  -webkit-appearance: none !important;
+  appearance: none !important;
+}
+
+.ec-input:focus,
+input.af-input:focus,
+select.af-select:focus,
+select.af-input:focus {
+  border-color: rgba(200,170,110,0.55) !important;
+  background: rgba(5,16,35,0.95) !important;
+  box-shadow: 0 0 0 1px rgba(200,170,110,0.12), 0 0 12px rgba(200,170,110,0.08) !important;
+}
+
+.ec-input::placeholder,
+input.af-input::placeholder { color: rgba(200,170,110,0.25) !important; }
+
+/* Select arrow */
+select.af-select,
+select.af-input {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23785A28'/%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 0.8rem center !important;
+  padding-right: 2rem !important;
+}
+
+select.af-select option,
+select.af-input option {
+  background: var(--void-2);
+  color: var(--gold-b);
+}
+
+/* Date input color fix */
+input.af-input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.5) sepia(1) saturate(2) hue-rotate(10deg);
+  opacity: 0.5;
+  cursor: pointer;
+}
+
+/* Password */
+input.af-input[type="password"] {
+  letter-spacing: 0.15em;
+}
+
+/* File input */
+input.af-input[type="file"] {
+  padding: 0.45rem 0.9rem !important;
+  font-size: 0.78rem !important;
+  color: var(--gold-d) !important;
+}
+
+input.af-input[type="file"]::-webkit-file-upload-button {
+  background: var(--gold-deep);
+  border: 1px solid var(--gold-d);
+  color: var(--gold);
+  font-family: var(--font-m);
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 4px 12px;
+  cursor: pointer;
+  margin-right: 12px;
+}
+
+/* ── CHECKBOX — LoL toggle ── */
+input.af-checkbox {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  width: 18px !important;
+  height: 18px !important;
+  background: rgba(1,10,19,0.9) !important;
+  border: 1px solid rgba(200,170,110,0.3) !important;
+  border-radius: 0 !important;
+  cursor: pointer !important;
+  position: relative !important;
+  flex-shrink: 0 !important;
+  transition: border-color 0.2s, background 0.2s !important;
+  clip-path: polygon(3px 0%,100% 0%,calc(100% - 3px) 100%,0% 100%) !important;
+}
+
+input.af-checkbox:checked {
+  background: var(--gold-deep) !important;
+  border-color: var(--gold) !important;
+}
+
+input.af-checkbox:checked::before {
+  content: '✓';
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  color: var(--gold);
+  font-size: 0.75rem;
+  line-height: 1;
+}
+
+.ec-check-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 0;
+}
+
+.ec-check-label {
+  font-family: var(--font-u);
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: rgba(240,230,211,0.8);
+  cursor: pointer;
+}
+
+/* ── DIVIDER ── */
+.ec-divider {
+  display:flex;
+  align-items:center;
+  gap:0.75rem;
+  margin: 0.25rem 0 1.1rem;
+  font-family: var(--font-m);
+  font-size:0.58rem;
+  color: var(--gold-d);
+  letter-spacing:0.2em;
+  text-transform:uppercase;
+}
+
+.ec-divider::before,
+.ec-divider::after {
+  content:'';
+  flex:1;
+  height:1px;
+}
+
+.ec-divider::before { background: linear-gradient(90deg,transparent,var(--gold-d)); }
+.ec-divider::after  { background: linear-gradient(90deg,var(--gold-d),transparent); }
+
+/* ── STAT BADGE (medidas) ── */
+.ec-stat-field {
+  display:flex;
+  flex-direction:column;
+  gap:0.4rem;
+}
+
+.ec-stat-field .ec-label {
+  font-size:0.58rem;
+}
+
+/* ── ACTIONS ROW ── */
+.ec-actions {
+  display:flex;
+  gap:0.75rem;
+  align-items:center;
+  justify-content:flex-end;
+  flex-wrap:wrap;
+  padding-top:0.5rem;
+}
+
+/* Submit button — primary LoL CTA */
+.ec-btn-submit {
+  display:inline-flex;
+  align-items:center;
+  gap:0.6rem;
+  padding: 0.85rem 2.5rem;
+  background: linear-gradient(135deg, var(--gold-d) 0%, var(--gold) 50%, var(--gold-d) 100%);
+  background-size: 200% 100%;
+  color: var(--void);
+  font-family: var(--font-d);
+  font-size:0.8rem;
+  font-weight:700;
+  letter-spacing:0.18em;
+  text-transform:uppercase;
+  border:none;
+  cursor:pointer;
+  clip-path: polygon(10px 0%,100% 0%,calc(100% - 10px) 100%,0% 100%);
+  transition: background-position 0.4s, box-shadow 0.3s, transform 0.2s;
+  position:relative;
+  overflow:hidden;
+}
+
+.ec-btn-submit::before {
+  content:'';
+  position:absolute;
+  top:0; left:-100%;
+  width:55%; height:100%;
+  background: linear-gradient(90deg,transparent,rgba(255,255,255,0.2),transparent);
+  animation: btnShimmer 2.8s ease-in-out infinite;
+}
+
+@keyframes btnShimmer {
+  0%   { left:-100%; }
+  100% { left:250%; }
+}
+
+.ec-btn-submit:hover {
+  background-position:100% 0;
+  box-shadow: 0 4px 24px rgba(200,170,110,0.4), 0 0 0 1px rgba(200,170,110,0.25);
+  transform: translateY(-2px);
+}
+
+.ec-btn-submit:active { transform: translateY(0); }
+
+/* Cancel button */
+.ec-btn-cancel {
+  display:inline-flex;
+  align-items:center;
+  gap:0.5rem;
+  padding: 0.85rem 1.8rem;
+  background:transparent;
+  border: 1px solid rgba(200,75,49,0.3);
+  color: #C84B31;
+  font-family: var(--font-d);
+  font-size:0.75rem;
+  font-weight:700;
+  letter-spacing:0.12em;
+  text-transform:uppercase;
+  text-decoration:none;
+  clip-path: polygon(8px 0%,100% 0%,calc(100% - 8px) 100%,0% 100%);
+  transition: all 0.2s;
+}
+
+.ec-btn-cancel:hover {
+  background: rgba(200,75,49,0.08);
+  border-color: rgba(200,75,49,0.6);
+  color: #e06050;
+}
+
+/* ── Error display ── */
+.ec-errors {
+  background: rgba(200,75,49,0.08);
+  border: 1px solid rgba(200,75,49,0.3);
+  padding: 0.6rem 0.9rem;
+  font-family: var(--font-m);
+  font-size: 0.65rem;
+  color: #e07060;
+  margin-top: 0.3rem;
+  line-height:1.5;
+}
+
+/* ── Responsive ── */
+@media (max-width:640px) {
+  .ec-hero { padding: 1.5rem 1rem; }
+  .ec-form-wrap { padding: 1.25rem 0.9rem 0; }
+  .ec-panel-body { padding: 1rem; }
+  .ec-hero-title { font-size:1.4rem; }
+  .ec-actions { justify-content:stretch; }
+  .ec-btn-submit,
+  .ec-btn-cancel { width:100%; justify-content:center; }
+}
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="w-full flex justify-center py-8 px-4">
-    <form method="post" enctype="multipart/form-data" class="space-y-8 bg-[#121212] p-8 rounded-xl shadow-lg max-w-4xl w-full border border-gray-800">
-        {% csrf_token %}
+<div class="ec-page">
 
-        <header>
-            <h2 class="text-2xl font-bold text-cyan-300 tracking-wide">{{ cliente.id|default:"Agregar" }} Cliente</h2>
-            <p class="text-gray-400 mt-1">Completa la información del cliente y sus medidas.</p>
-        </header>
+  <!-- ══════════ HERO BANNER ══════════ -->
+  <div class="ec-hero">
+    <div class="ec-hero-inner">
+      <div class="ec-avatar">
+        {{ cliente.nombre|first|upper|default:"?" }}
+      </div>
+      <div class="ec-hero-text">
+        <p class="ec-eyebrow">◆ Configuración de Operativo · ID {{ cliente.id|default:"—" }}</p>
+        <h1 class="ec-hero-title">{{ cliente.nombre|upper|default:"Nuevo Operativo" }}</h1>
+        <p class="ec-hero-sub">
+          {% if cliente.programa %}{{ cliente.get_programa_display|default:cliente.programa }}{% else %}Sin Programa Asignado{% endif %}
+          &nbsp;·&nbsp;
+          {% if cliente.membresia_activa %}
+            <span style="color:#4ade80;">● Membresía Activa</span>
+          {% else %}
+            <span style="color:#C84B31;">● Sin Membresía</span>
+          {% endif %}
+        </p>
+      </div>
+      <a href="{% url 'clientes:lista_clientes' %}" class="ec-back-btn">
+        ← Volver
+      </a>
+    </div>
+  </div>
 
-        <!-- SECCIÓN: DATOS PRINCIPALES -->
-        <fieldset class="space-y-4">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <!-- Nombre -->
-                <div>
-                    <label for="{{ form.nombre.id_for_label }}" class="form-label">{{ form.nombre.label }}</label>
-                    {{ form.nombre|add_class:"af-input" }}
-                </div>
-                <!-- Programa -->
-                <div>
-                    <label for="{{ form.programa.id_for_label }}" class="form-label">{{ form.programa.label }}</label>
-                    {{ form.programa|add_class:"af-select" }}
-                </div>
-                <!-- Email -->
-                <div>
-                    <label for="{{ form.email.id_for_label }}" class="form-label">{{ form.email.label }}</label>
-                    {{ form.email|add_class:"af-input" }}
-                </div>
-                <!-- Teléfono -->
-                <div>
-                    <label for="{{ form.telefono.id_for_label }}" class="form-label">{{ form.telefono.label }}</label>
-                    {{ form.telefono|add_class:"af-input" }}
-                </div>
-                <!-- Fecha de Nacimiento -->
-                <div>
-                    <label for="{{ form.fecha_nacimiento.id_for_label }}" class="form-label">{{ form.fecha_nacimiento.label }}</label>
-                    {{ form.fecha_nacimiento|add_class:"af-input"|attr:"type:date" }}
-                </div>
-                <!-- Próximo Registro de Peso -->
-                <div>
-                    <label for="{{ form.proximo_registro_peso.id_for_label }}" class="form-label">{{ form.proximo_registro_peso.label }}</label>
-                    {{ form.proximo_registro_peso|add_class:"af-input"|attr:"type:date" }}
-                </div>
-                <!-- Dirección -->
-                <div class="md:col-span-2">
-                    <label for="{{ form.direccion.id_for_label }}" class="form-label">{{ form.direccion.label }}</label>
-                    {{ form.direccion|add_class:"af-input" }}
-                </div>
-                <!-- Género -->
-                <div>
-                    <label for="{{ form.genero.id_for_label }}" class="form-label">{{ form.genero.label }}</label>
-                    {{ form.genero|add_class:"af-select" }}
-                </div>
-                <!-- Fecha Vencimiento Membresía -->
-                <div>
-                    <label for="{{ form.fecha_vencimiento_membresia.id_for_label }}" class="form-label">{{ form.fecha_vencimiento_membresia.label }}</label>
-                    {{ form.fecha_vencimiento_membresia|add_class:"af-input"|attr:"type:date" }}
-                </div>
-                <!-- Membresía Activa -->
-                <div class="md:col-span-2 flex items-center gap-3 pt-4">
-                    {{ form.membresia_activa|add_class:"af-checkbox" }}
-                    <label for="{{ form.membresia_activa.id_for_label }}" class="text-sm font-medium text-gray-300">{{ form.membresia_activa.label }}</label>
-                </div>
-            </div>
-        </fieldset>
+  <!-- ══════════ FORM ══════════ -->
+  <form method="post" enctype="multipart/form-data" class="ec-form-wrap">
+    {% csrf_token %}
 
-        <!-- SECCIÓN: MEDIDAS CORPORALES -->
-        <fieldset>
-            <legend class="text-lg font-semibold text-purple-300 mb-4">📏 Medidas Corporales</legend>
-            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                <!-- Peso Corporal -->
-                <div>
-                    <label for="{{ form.peso_corporal.id_for_label }}" class="form-label">{{ form.peso_corporal.label }}</label>
-                    {{ form.peso_corporal|add_class:"af-input" }}
-                </div>
-                <!-- Grasa Corporal -->
-                <div>
-                    <label for="{{ form.grasa_corporal.id_for_label }}" class="form-label">{{ form.grasa_corporal.label }}</label>
-                    {{ form.grasa_corporal|add_class:"af-input" }}
-                </div>
-                <!-- Cintura -->
-                <div>
-                    <label for="{{ form.cintura.id_for_label }}" class="form-label">{{ form.cintura.label }}</label>
-                    {{ form.cintura|add_class:"af-input" }}
-                </div>
-                <!-- Pecho -->
-                <div>
-                    <label for="{{ form.pecho.id_for_label }}" class="form-label">{{ form.pecho.label }}</label>
-                    {{ form.pecho|add_class:"af-input" }}
-                </div>
-                <!-- Hombro -->
-                <div>
-                    <label for="{{ form.hombro.id_for_label }}" class="form-label">{{ form.hombro.label }}</label>
-                    {{ form.hombro|add_class:"af-input" }}
-                </div>
-                <!-- Cuello -->
-                <div>
-                    <label for="{{ form.cuello.id_for_label }}" class="form-label">{{ form.cuello.label }}</label>
-                    {{ form.cuello|add_class:"af-input" }}
-                </div>
-                <!-- Bíceps -->
-                <div>
-                    <label for="{{ form.biceps.id_for_label }}" class="form-label">{{ form.biceps.label }}</label>
-                    {{ form.biceps|add_class:"af-input" }}
-                </div>
-                <!-- Antebrazos -->
-                <div>
-                    <label for="{{ form.antebrazos.id_for_label }}" class="form-label">{{ form.antebrazos.label }}</label>
-                    {{ form.antebrazos|add_class:"af-input" }}
-                </div>
-                <!-- Caderas -->
-                <div>
-                    <label for="{{ form.caderas.id_for_label }}" class="form-label">{{ form.caderas.label }}</label>
-                    {{ form.caderas|add_class:"af-input" }}
-                </div>
-                <!-- Muslos -->
-                <div>
-                    <label for="{{ form.muslos.id_for_label }}" class="form-label">{{ form.muslos.label }}</label>
-                    {{ form.muslos|add_class:"af-input" }}
-                </div>
-                <!-- Gemelos -->
-                <div>
-                    <label for="{{ form.gemelos.id_for_label }}" class="form-label">{{ form.gemelos.label }}</label>
-                    {{ form.gemelos|add_class:"af-input" }}
-                </div>
-            </div>
-        </fieldset>
+    <!-- ▸ PANEL 1: DATOS DEL OPERATIVO -->
+    <div class="ec-panel">
+      <div class="ec-panel-head">
+        <div class="ec-panel-icon">⚔</div>
+        <span class="ec-panel-title">◆ Datos del Operativo</span>
+      </div>
+      <div class="ec-panel-body">
+        <div class="ec-grid-2">
 
-        <!-- SECCIÓN: FOTO -->
-        <fieldset>
-            <legend class="text-lg font-semibold text-yellow-400 mb-4">📸 Foto de Perfil</legend>
-            <div>
-                <label for="{{ form.foto.id_for_label }}" class="form-label">{{ form.foto.label }}</label>
-                {{ form.foto|add_class:"af-input" }}
-            </div>
-        </fieldset>
+          <!-- Nombre -->
+          <div class="ec-field">
+            <label class="ec-label" for="{{ form.nombre.id_for_label }}">{{ form.nombre.label }}</label>
+            {{ form.nombre|add_class:"af-input" }}
+            {% if form.nombre.errors %}<div class="ec-errors">{{ form.nombre.errors|join:", " }}</div>{% endif %}
+          </div>
 
-        <!-- SECCIÓN: USUARIO VINCULADO -->
-        <fieldset>
-            <legend class="text-lg font-semibold text-fuchsia-400 mb-4">🔐 Usuario Vinculado</legend>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {% if cliente.user %}
-                <div>
-                    <label for="username" class="form-label">Usuario actual</label>
-                    <input type="text" id="username" class="af-input" value="{{ cliente.user.username }}" name="username" required>
-                </div>
-                <div>
-                    <label for="password" class="form-label">Nueva contraseña (opcional)</label>
-                    <input type="password" id="password" class="af-input" name="password" placeholder="Déjalo vacío para no cambiarla">
-                </div>
-                {% else %}
-                <div>
-                    <label for="username" class="form-label">Crear nombre de usuario</label>
-                    <input type="text" id="username" class="af-input" name="username" required>
-                </div>
-                <div>
-                    <label for="password" class="form-label">Contraseña</label>
-                    <input type="password" id="password" class="af-input" name="password" required>
-                </div>
-                {% endif %}
-            </div>
-        </fieldset>
+          <!-- Programa -->
+          <div class="ec-field">
+            <label class="ec-label" for="{{ form.programa.id_for_label }}">{{ form.programa.label }}</label>
+            {{ form.programa|add_class:"af-select" }}
+          </div>
 
-        <!-- SECCIÓN: ACCIONES -->
-        <div class="flex flex-col sm:flex-row-reverse gap-4 pt-6">
-            <button type="submit" class="btn-verde w-full sm:w-auto"><i class="bi bi-check-circle mr-2"></i> Guardar Cliente</button>
-            <a href="{% url 'clientes:lista_clientes' %}" class="btn-rojo w-full sm:w-auto text-center"><i class="bi bi-arrow-left mr-2"></i> Cancelar</a>
+          <!-- Email -->
+          <div class="ec-field">
+            <label class="ec-label" for="{{ form.email.id_for_label }}">{{ form.email.label }}</label>
+            {{ form.email|add_class:"af-input" }}
+          </div>
+
+          <!-- Teléfono -->
+          <div class="ec-field">
+            <label class="ec-label" for="{{ form.telefono.id_for_label }}">{{ form.telefono.label }}</label>
+            {{ form.telefono|add_class:"af-input" }}
+          </div>
+
+          <!-- Fecha Nacimiento -->
+          <div class="ec-field">
+            <label class="ec-label" for="{{ form.fecha_nacimiento.id_for_label }}">{{ form.fecha_nacimiento.label }}</label>
+            {{ form.fecha_nacimiento|add_class:"af-input"|attr:"type:date" }}
+          </div>
+
+          <!-- Género -->
+          <div class="ec-field">
+            <label class="ec-label" for="{{ form.genero.id_for_label }}">{{ form.genero.label }}</label>
+            {{ form.genero|add_class:"af-select" }}
+          </div>
+
+          <!-- Dirección -->
+          <div class="ec-field ec-col-2">
+            <label class="ec-label" for="{{ form.direccion.id_for_label }}">{{ form.direccion.label }}</label>
+            {{ form.direccion|add_class:"af-input" }}
+          </div>
+
         </div>
-    </form>
-</div>
+      </div>
+    </div>
 
-<!-- Opcional: Agrega esto a tu CSS para estandarizar las etiquetas -->
-<style>
-    .form-label {
-        display: block;
-        margin-bottom: 0.5rem; /* 8px */
-        font-size: 0.875rem; /* 14px */
-        font-weight: 500;
-        color: #d1d5db; /* gray-300 */
-    }
-</style>
+    <!-- ▸ PANEL 2: MEMBRESÍA -->
+    <div class="ec-panel">
+      <div class="ec-panel-head">
+        <div class="ec-panel-icon" style="color:var(--teal);border-color:rgba(10,200,185,0.4);background:rgba(10,200,185,0.08);">◈</div>
+        <span class="ec-panel-title" style="color:var(--teal);">◆ Protocolo de Membresía</span>
+      </div>
+      <div class="ec-panel-body">
+        <div class="ec-grid-2">
+
+          <!-- Fecha vencimiento -->
+          <div class="ec-field">
+            <label class="ec-label" for="{{ form.fecha_vencimiento_membresia.id_for_label }}">{{ form.fecha_vencimiento_membresia.label }}</label>
+            {{ form.fecha_vencimiento_membresia|add_class:"af-input"|attr:"type:date" }}
+          </div>
+
+          <!-- Próximo registro peso -->
+          <div class="ec-field">
+            <label class="ec-label" for="{{ form.proximo_registro_peso.id_for_label }}">{{ form.proximo_registro_peso.label }}</label>
+            {{ form.proximo_registro_peso|add_class:"af-input"|attr:"type:date" }}
+          </div>
+
+        </div>
+
+        <!-- Membresía activa toggle -->
+        <div class="ec-check-row" style="margin-top:1rem; border-top:1px solid var(--border); padding-top:1rem;">
+          {{ form.membresia_activa|add_class:"af-checkbox" }}
+          <label class="ec-check-label" for="{{ form.membresia_activa.id_for_label }}">
+            {{ form.membresia_activa.label }}
+          </label>
+          <span style="font-family:var(--font-m);font-size:0.6rem;color:var(--gold-d);letter-spacing:0.12em;margin-left:auto;">ACCESO ACTIVO AL CAMPO</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ▸ PANEL 3: ESTADÍSTICAS FÍSICAS -->
+    <div class="ec-panel">
+      <div class="ec-panel-head">
+        <div class="ec-panel-icon" style="color:#9a6cd4;border-color:rgba(154,108,212,0.4);background:rgba(154,108,212,0.08);">▲</div>
+        <span class="ec-panel-title" style="color:#9a6cd4;">◆ Estadísticas Físicas</span>
+      </div>
+      <div class="ec-panel-body">
+
+        <div class="ec-divider">Composición Corporal</div>
+        <div class="ec-grid-4" style="margin-bottom:1.25rem;">
+          <div class="ec-stat-field">
+            <label class="ec-label" for="{{ form.peso_corporal.id_for_label }}">⚖ {{ form.peso_corporal.label }}</label>
+            {{ form.peso_corporal|add_class:"af-input" }}
+          </div>
+          <div class="ec-stat-field">
+            <label class="ec-label" for="{{ form.grasa_corporal.id_for_label }}">% {{ form.grasa_corporal.label }}</label>
+            {{ form.grasa_corporal|add_class:"af-input" }}
+          </div>
+          <div class="ec-stat-field">
+            <label class="ec-label" for="{{ form.cintura.id_for_label }}">~ {{ form.cintura.label }}</label>
+            {{ form.cintura|add_class:"af-input" }}
+          </div>
+          <div class="ec-stat-field">
+            <label class="ec-label" for="{{ form.caderas.id_for_label }}">~ {{ form.caderas.label }}</label>
+            {{ form.caderas|add_class:"af-input" }}
+          </div>
+        </div>
+
+        <div class="ec-divider">Tren Superior</div>
+        <div class="ec-grid-4" style="margin-bottom:1.25rem;">
+          <div class="ec-stat-field">
+            <label class="ec-label" for="{{ form.pecho.id_for_label }}">{{ form.pecho.label }}</label>
+            {{ form.pecho|add_class:"af-input" }}
+          </div>
+          <div class="ec-stat-field">
+            <label class="ec-label" for="{{ form.hombro.id_for_label }}">{{ form.hombro.label }}</label>
+            {{ form.hombro|add_class:"af-input" }}
+          </div>
+          <div class="ec-stat-field">
+            <label class="ec-label" for="{{ form.cuello.id_for_label }}">{{ form.cuello.label }}</label>
+            {{ form.cuello|add_class:"af-input" }}
+          </div>
+          <div class="ec-stat-field">
+            <label class="ec-label" for="{{ form.biceps.id_for_label }}">{{ form.biceps.label }}</label>
+            {{ form.biceps|add_class:"af-input" }}
+          </div>
+        </div>
+
+        <div class="ec-divider">Tren Inferior &amp; Antebrazos</div>
+        <div class="ec-grid-4">
+          <div class="ec-stat-field">
+            <label class="ec-label" for="{{ form.antebrazos.id_for_label }}">{{ form.antebrazos.label }}</label>
+            {{ form.antebrazos|add_class:"af-input" }}
+          </div>
+          <div class="ec-stat-field">
+            <label class="ec-label" for="{{ form.muslos.id_for_label }}">{{ form.muslos.label }}</label>
+            {{ form.muslos|add_class:"af-input" }}
+          </div>
+          <div class="ec-stat-field">
+            <label class="ec-label" for="{{ form.gemelos.id_for_label }}">{{ form.gemelos.label }}</label>
+            {{ form.gemelos|add_class:"af-input" }}
+          </div>
+          <div class="ec-stat-field">
+            <!-- slot vacío decorativo -->
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ▸ PANEL 4: IDENTIDAD & ACCESO -->
+    <div class="ec-panel">
+      <div class="ec-panel-head">
+        <div class="ec-panel-icon" style="color:#C84B31;border-color:rgba(200,75,49,0.4);background:rgba(200,75,49,0.08);">🔐</div>
+        <span class="ec-panel-title" style="color:#C84B31;">◆ Identidad &amp; Acceso</span>
+      </div>
+      <div class="ec-panel-body">
+        <div class="ec-grid-2" style="margin-bottom:1.25rem;">
+          {% if cliente.user %}
+          <div class="ec-field">
+            <label class="ec-label" for="username">Usuario Actual</label>
+            <input type="text" id="username" class="af-input" value="{{ cliente.user.username }}" name="username" required>
+          </div>
+          <div class="ec-field">
+            <label class="ec-label" for="password">Nueva Contraseña <span style="color:var(--gold-d);">(opcional)</span></label>
+            <input type="password" id="password" class="af-input" name="password" placeholder="Vacío = sin cambios">
+          </div>
+          {% else %}
+          <div class="ec-field">
+            <label class="ec-label" for="username">Crear Nombre de Usuario</label>
+            <input type="text" id="username" class="af-input" name="username" required>
+          </div>
+          <div class="ec-field">
+            <label class="ec-label" for="password">Contraseña</label>
+            <input type="password" id="password" class="af-input" name="password" required>
+          </div>
+          {% endif %}
+        </div>
+
+        <div class="ec-divider">Imagen de Perfil</div>
+        <div class="ec-field">
+          <label class="ec-label" for="{{ form.foto.id_for_label }}">{{ form.foto.label }}</label>
+          {{ form.foto|add_class:"af-input" }}
+        </div>
+      </div>
+    </div>
+
+    <!-- ▸ ACCIONES -->
+    <div class="ec-actions" style="animation: panelIn 0.45s ease 0.32s both;">
+      <a href="{% url 'clientes:lista_clientes' %}" class="ec-btn-cancel">
+        ← Cancelar
+      </a>
+      <button type="submit" class="ec-btn-submit">
+        <span>⚔</span> Confirmar Configuración
+      </button>
+    </div>
+
+  </form>
+</div>
 {% endblock %}
