@@ -71,14 +71,22 @@ class HyroxTrainingEngine:
             except:
                 dias_semana_asignables = [0, 2, 4, 6]
 
-            # Si el array preferido no tiene suficientes días, llenamos
-            while len(dias_semana_asignables) < sessions_per_week:
-                for i in range(7):
-                    if i not in dias_semana_asignables:
-                        dias_semana_asignables.append(i)
-                        break
+            # Deduplicar y validar rango 0-6
+            seen = set()
+            dias_semana_asignables = [
+                d for d in dias_semana_asignables
+                if isinstance(d, int) and 0 <= d <= 6 and not (d in seen or seen.add(d))
+            ]
 
-            dias_asignados = sorted(dias_semana_asignables[:sessions_per_week])
+            # Si el array preferido no tiene suficientes días, llenamos con los restantes
+            sessions_per_week_capped = min(sessions_per_week, 7)
+            for i in range(7):
+                if len(dias_semana_asignables) >= sessions_per_week_capped:
+                    break
+                if i not in dias_semana_asignables:
+                    dias_semana_asignables.append(i)
+
+            dias_asignados = sorted(dias_semana_asignables[:sessions_per_week_capped])
 
             # Iterar asignando a los días de la semana
             try:

@@ -1,4 +1,4 @@
-from django.db import models
+from django.db import models, transaction
 from django.utils import timezone
 from clientes.models import Cliente
 
@@ -87,13 +87,15 @@ class HyroxObjective(models.Model):
             pct_tecnica = 0.0
 
         # ── Factor 2: Eficiencia de Esfuerzo (30%) ─────────────────────────
-        # Puntuamos las sesiones donde el trabajo fue efectivo con bajo coste (RPE < 8)
-        sesiones_completadas = list(self.sessions.filter(estado='completado'))
+        # Puntuamos las sesiones en zona óptima de esfuerzo (RPE 5-9).
+        # RPE < 5 indica trabajo demasiado fácil (sin estímulo), RPE 10 indica fallo extremo.
+        # prefetch_related evita el N+1: carga todas las activities en 1 query adicional
+        sesiones_completadas = list(self.sessions.filter(estado='completado').prefetch_related('activities'))
         total_sesiones = len(sesiones_completadas)
         sesiones_eficientes = 0
         for s in sesiones_completadas:
             rpe = s.rpe_global
-            if rpe and rpe < 8:
+            if rpe and 5 <= rpe <= 9:
                 sesiones_eficientes += 1
         if total_sesiones > 0:
             pct_eficiencia = min((sesiones_eficientes / total_sesiones) * 100, 100)
@@ -105,33 +107,34 @@ class HyroxObjective(models.Model):
         simulacros_score = 0.0
         import datetime
         from hyrox.services import HyroxMacrocycleEngine
-        fecha_obj_str = str(self.fecha_evento) if self.fecha_evento else HyroxMacrocycleEngine.EVENT_DATE
+        if not self.fecha_evento:
+            return 0.0
         try:
-            fecha_obj = datetime.datetime.strptime(fecha_obj_str, "%Y-%m-%d").date()
+            fecha_obj = self.fecha_evento if isinstance(self.fecha_evento, datetime.date) else datetime.datetime.strptime(str(self.fecha_evento), "%Y-%m-%d").date()
         except Exception:
-            fecha_obj = datetime.date(2026, 4, 19)
+            return 0.0
+
+        # Llamada única fuera del bucle para evitar 3 queries repetidas por sesión
+        inact, dias_run, tiene_credito_futbol, preguntar_bool = HyroxMacrocycleEngine.detect_running_inactivity(self.cliente.user_id)
+        hoy_date = datetime.date.today()
 
         for s in sesiones_completadas:
-            tipos = set(s.activities.values_list('tipo_actividad', flat=True))
+            # Usar activities.all() aprovecha el prefetch_related (sin query adicional)
+            tipos = set(a.tipo_actividad for a in s.activities.all())
             tiene_fuerza = bool(tipos & {'fuerza', 'hyrox_station', 'hiit'})
             tiene_carrera = bool(tipos & {'carrera', 'cardio_sustituto', 'remo', 'skierg', 'bici'})
             if tiene_fuerza and tiene_carrera:
                 if s.fecha:
                     dias_al_evento = (fecha_obj - s.fecha).days
-                    
+
                     puntos_base = 0.5
                     if dias_al_evento <= 56: # Fase de Simulación (8 semanas)
                         puntos_base = 2.0
                     elif dias_al_evento <= 77: # Fase Específica (11 semanas)
                         puntos_base = 1.0
-                        
-                    # Bono de Reenganche Rápido (+40% puntos perdidos -> se traduce en multiplicador dinámico)
-                    # En vez de un simple 1.5, el usuario pide "40% de los puntos perdidos".
-                    # Como el sistema acumula puntos (hasta 8), le daremos +40% al valor de la sesión de reenganche
-                    from hyrox.services import HyroxMacrocycleEngine
-                    inact, dias_run, tiene_credito_futbol, preguntar_bool = HyroxMacrocycleEngine.detect_running_inactivity(self.cliente.user_id)
-                    if inact and (datetime.date.today() - s.fecha).days <= 3:
-                        puntos_base *= 1.40 
+
+                    if inact and (hoy_date - s.fecha).days <= 3:
+                        puntos_base *= 1.40
 
                     simulacros_score += puntos_base
                 else:
@@ -141,14 +144,14 @@ class HyroxObjective(models.Model):
 
         # ── Score global ponderado ──────────────────────────────────────────
         score = pct_tecnica * 0.40 + pct_eficiencia * 0.30 + pct_resistencia * 0.30
-        
+
         # ── Suelo de Readiness Estructural (25%) ────────────────────────────────
         if pct_tecnica > 50.0:
             score = max(score, 25.0)
 
         # ── Readiness Post-Esfuerzo (Phase 16: Molestias Feedback) ──────────
-        # Penalizamos si en la última sesión hubo molestias registradas
-        last_session = self.sessions.filter(estado='completado').order_by('-fecha').first()
+        # Reutilizamos la lista ya cargada en lugar de hacer otra query
+        last_session = max(sesiones_completadas, key=lambda s: s.fecha or datetime.date.min, default=None)
         if last_session and last_session.hubo_molestias:
             score -= 10
             
@@ -159,11 +162,11 @@ class HyroxObjective(models.Model):
         Phase 10: Calcula el ratio de Empuje (Squat) vs Tracción (Deadlift).
         """
         sq = self.rm_sentadilla or 0
-        dl = self.rm_peso_muerto or 1 # Evitar división por 0
-        
-        if self.rm_peso_muerto == 0 or self.rm_peso_muerto is None:
+        dl = self.rm_peso_muerto
+
+        if not dl:
             return {"ratio": 0, "advice": "Falta registrar Peso Muerto."}
-            
+
         ratio = (sq / dl) * 100
         
         # Check Modo Preservación
@@ -301,7 +304,12 @@ class HyroxActivity(models.Model):
         ('ergometro', 'Ergómetro (Remo, SkiErg)'),
         ('isometrico', 'Isométricos (Wall Sit, Plancha)'),
         ('hyrox_station', 'Estación Específica Hyrox (Sled, Sandbag, etc.)'),
-        ('otro', 'Otro / Mixto')
+        ('cardio_sustituto', 'Cardio Sustituto (Fútbol, Ciclismo, etc.)'),
+        ('hiit', 'HIIT / Interválico'),
+        ('remo', 'Remo (Rowing Machine)'),
+        ('skierg', 'SkiErg'),
+        ('bici', 'Bicicleta / Ciclismo'),
+        ('otro', 'Otro / Mixto'),
     ]
     
     sesion = models.ForeignKey(HyroxSession, on_delete=models.CASCADE, related_name='activities')
@@ -394,19 +402,19 @@ class UserInjury(models.Model):
         from .models import HyroxSession, HyroxObjective
         from .training_engine import HyroxTrainingEngine
         hoy = timezone.now().date()
-        limite = hoy + timezone.timedelta(days=14)
-        
-        # Borramos TODAS las sesiones de Hyrox planificadas a partir de hoy
-        HyroxSession.objects.filter(
-            objective__cliente=self.cliente,
-            fecha__gte=hoy,
-            estado='planificado'
-        ).delete()
-        
-        # Regeneramos el plan para rellenar los huecos filtrados
-        obj_activo = HyroxObjective.objects.filter(cliente=self.cliente, estado='activo').first()
-        if obj_activo:
-            HyroxTrainingEngine.generate_training_plan(obj_activo)
+
+        with transaction.atomic():
+            # Borramos TODAS las sesiones de Hyrox planificadas a partir de hoy
+            HyroxSession.objects.filter(
+                objective__cliente=self.cliente,
+                fecha__gte=hoy,
+                estado='planificado'
+            ).delete()
+
+            # Regeneramos el plan para rellenar los huecos filtrados
+            obj_activo = HyroxObjective.objects.filter(cliente=self.cliente, estado='activo').first()
+            if obj_activo:
+                HyroxTrainingEngine.generate_training_plan(obj_activo)
         
     def __str__(self):
         estado = "ACTIVA" if self.activa else "RESUELTA"

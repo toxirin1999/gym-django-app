@@ -32,21 +32,22 @@ def hyrox_dashboard(request):
     if objetivo_activo:
         from .models import HyroxReadinessLog
         hoy = timezone.now().date()
-        
-        # Phase 6: Registrar/Actualizar el score de Race Readiness de hoy
-        current_score = objetivo_activo.get_race_readiness_score()
-        HyroxReadinessLog.objects.update_or_create(
-            objective=objetivo_activo,
-            fecha=hoy,
-            defaults={'score': current_score}
-        )
-        
+
+        # Phase 6: Registrar el score de Race Readiness solo si no existe aún hoy
+        # (evita recalcular en cada recarga; se invalida automáticamente al día siguiente)
+        log_hoy = HyroxReadinessLog.objects.filter(objective=objetivo_activo, fecha=hoy).first()
+        if log_hoy:
+            current_score = log_hoy.score
+        else:
+            current_score = objetivo_activo.get_race_readiness_score()
+            HyroxReadinessLog.objects.create(objective=objetivo_activo, fecha=hoy, score=current_score)
+
         # Generar puntos SVG para el mini-gráfico (ancho=100, alto=30)
-        logs = HyroxReadinessLog.objects.filter(objective=objetivo_activo).order_by('fecha')
+        logs_list = list(HyroxReadinessLog.objects.filter(objective=objetivo_activo).order_by('fecha'))
         svg_points = []
-        if logs.count() > 1:
-            step_x = 100 / (logs.count() - 1)
-            for i, log in enumerate(logs):
+        if len(logs_list) > 1:
+            step_x = 100 / (len(logs_list) - 1)
+            for i, log in enumerate(logs_list):
                 x = i * step_x
                 y = 30 - (log.score * 0.3) # 100% -> y=0, 0% -> y=30
                 svg_points.append(f"{x},{y}")

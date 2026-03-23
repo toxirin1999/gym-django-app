@@ -10,6 +10,16 @@ GEMINI_API_KEY = getattr(settings, 'GEMINI_API_KEY', os.environ.get('GEMINI_API_
 if GEMINI_API_KEY:
     genai.configure(api_key=GEMINI_API_KEY)
 
+def calcular_rm_estimado(peso: float, reps: int) -> float:
+    """
+    Fórmula de Brzycki para estimar 1RM: peso × (1 + reps / 30).
+    Fuente única para servicios y señales.
+    """
+    if peso <= 0 or reps <= 0:
+        return 0.0
+    return round(peso * (1 + reps / 30.0), 1)
+
+
 class HyroxParserService:
     @staticmethod
     def parse_workout_text(raw_text, sustituir_material=False):
@@ -77,19 +87,43 @@ Escribe ÚNICAMENTE un objeto JSON válido con la siguiente estructura (no añad
         try:
             response = model.generate_content(raw_text)
             response_text = response.text.strip()
-            
-            # Buscamos el primer `{` y el último `}` para aislar el JSON por si Gemini añade texto alrededor
-            start_idx = response_text.find('{')
-            end_idx = response_text.rfind('}')
-            
-            if start_idx != -1 and end_idx != -1 and end_idx > start_idx:
-                json_str = response_text[start_idx:end_idx+1]
-                parsed_data = json.loads(json_str)
+
+            # Eliminar posibles code fences de markdown (```json ... ``` o ``` ... ```)
+            response_text = re.sub(r'^```(?:json)?\s*', '', response_text)
+            response_text = re.sub(r'\s*```$', '', response_text)
+
+            # Intentar parsear directamente primero
+            try:
+                parsed_data = json.loads(response_text)
                 return parsed_data
-            else:
+            except json.JSONDecodeError:
+                pass
+
+            # Fallback: extraer el bloque JSON con match de llaves balanceadas
+            start_idx = response_text.find('{')
+            if start_idx == -1:
                 print("No se encontró estructura JSON válida en la respuesta.")
                 print("TEXTO COMPLETO RESPUESTA:", response_text)
                 return None
+
+            depth = 0
+            end_idx = -1
+            for i, ch in enumerate(response_text[start_idx:], start=start_idx):
+                if ch == '{':
+                    depth += 1
+                elif ch == '}':
+                    depth -= 1
+                    if depth == 0:
+                        end_idx = i
+                        break
+
+            if end_idx == -1:
+                print("JSON mal formado en la respuesta de Gemini.")
+                return None
+
+            json_str = response_text[start_idx:end_idx + 1]
+            parsed_data = json.loads(json_str)
+            return parsed_data
                 
         except Exception as e:
             print(f"Error parseando con Gemini: {e}")
@@ -177,8 +211,7 @@ Escribe ÚNICAMENTE un objeto JSON válido con la siguiente estructura (no añad
                         peso = float(serie.get("peso", 0))
                         reps = int(serie.get("reps", 0))
                         if peso > 0 and reps > 0:
-                            # Brzycki Formula: Peso * (1 + 0.0333 * Reps)
-                            rm_serie = peso * (1 + 0.0333 * reps)
+                            rm_serie = calcular_rm_estimado(peso, reps)
                             if rm_serie > rm_estimado_max:
                                 rm_estimado_max = round(rm_serie, 1)
                     except (ValueError, TypeError):
@@ -599,53 +632,8 @@ Instrucciones:
             return f"Hola {contexto.get('nombre', 'Atleta')}. {texto_sesion} ¡A por el día!"
 
 class CompetitionStandardsService:
-    # Estándares oficiales por categoría de HYROX (pesos en kg o distancia en m)
-    # Orden: SkiErg, Sled Push, Sled Pull, Burpee Broad Jumps, Rowing, Farmers Carry, Sandbag Lunges, Wall Balls
-    ESTANDARES_OFICIALES = {
-        'open_men': {
-            'SkiErg': 1000, 'Sled Push': 152, 'Sled Pull': 103,
-            'Burpee Broad Jumps': 80, 'Rowing': 1000,
-            'Farmers Carry': 24, 'Sandbag Lunges': 20, 'Wall Balls': 6,
-        },
-        'open_women': {
-            'SkiErg': 1000, 'Sled Push': 102, 'Sled Pull': 78,
-            'Burpee Broad Jumps': 80, 'Rowing': 1000,
-            'Farmers Carry': 16, 'Sandbag Lunges': 10, 'Wall Balls': 4,
-        },
-        'pro_men': {
-            'SkiErg': 1000, 'Sled Push': 152, 'Sled Pull': 153,
-            'Burpee Broad Jumps': 80, 'Rowing': 1000,
-            'Farmers Carry': 32, 'Sandbag Lunges': 30, 'Wall Balls': 9,
-        },
-        'pro_women': {
-            'SkiErg': 1000, 'Sled Push': 102, 'Sled Pull': 103,
-            'Burpee Broad Jumps': 80, 'Rowing': 1000,
-            'Farmers Carry': 24, 'Sandbag Lunges': 20, 'Wall Balls': 6,
-        },
-        'doubles_men': {
-            'SkiErg': 1000, 'Sled Push': 152, 'Sled Pull': 103,
-            'Burpee Broad Jumps': 80, 'Rowing': 1000,
-            'Farmers Carry': 24, 'Sandbag Lunges': 20, 'Wall Balls': 6,
-        },
-        'doubles_women': {
-            'SkiErg': 1000, 'Sled Push': 102, 'Sled Pull': 78,
-            'Burpee Broad Jumps': 80, 'Rowing': 1000,
-            'Farmers Carry': 16, 'Sandbag Lunges': 10, 'Wall Balls': 4,
-        },
-        'doubles_mixed': {
-            'SkiErg': 1000, 'Sled Push': 152, 'Sled Pull': 103,
-            'Burpee Broad Jumps': 80, 'Rowing': 1000,
-            'Farmers Carry': 24, 'Sandbag Lunges': 20, 'Wall Balls': 6,
-        },
-        'relay': {
-            'SkiErg': 1000, 'Sled Push': 125, 'Sled Pull': 75,
-            'Burpee Broad Jumps': 80, 'Rowing': 1000,
-            'Farmers Carry': 24, 'Sandbag Lunges': 20, 'Wall Balls': 6,
-        },
-    }
-
-    # Estándares oficiales por categoría de HYROX con métricas duales.
-    # Formato simple (distancia pura): valor numérico
+    # Estándares oficiales por categoría de HYROX.
+    # Formato simple (distancia pura): valor numérico en metros
     # Formato dual (carga + volumen): {'kg': X, 'vol': Y, 'vol_unit': 'reps'|'m'}
     ESTANDARES_OFICIALES = {
         'open_men': {
@@ -1018,6 +1006,8 @@ class HyroxRaceSimulator:
 
         # --- Convertir tiempo 5k a segundos ---
         t5k_seg = cls._tiempo_str_a_segundos(t5k_str)
+        if t5k_seg is None:
+            t5k_seg = 28 * 60  # 28:00 fallback explícito si el string es inválido
 
         # --- Calcular ritmo de 1km en segundos ---
         ritmo_1km_seg = t5k_seg / 5.0  # segundos por km
@@ -1139,16 +1129,26 @@ class HyroxRaceSimulator:
 
     @staticmethod
     def _tiempo_str_a_segundos(tiempo_str):
-        """Convierte 'MM:SS' o 'HH:MM:SS' a segundos."""
+        """
+        Convierte 'MM:SS' o 'HH:MM:SS' a segundos.
+        Retorna None si el formato es inválido o el valor está vacío,
+        para que el llamador pueda decidir cómo manejarlo en vez de
+        asumir silenciosamente 28 min.
+        """
+        import logging
+        logger = logging.getLogger(__name__)
+        if not tiempo_str or not str(tiempo_str).strip():
+            logger.warning("_tiempo_str_a_segundos: tiempo_str vacío o None")
+            return None
         try:
-            partes = tiempo_str.strip().split(':')
+            partes = str(tiempo_str).strip().split(':')
             if len(partes) == 2:
                 return int(partes[0]) * 60 + int(partes[1])
             elif len(partes) == 3:
                 return int(partes[0]) * 3600 + int(partes[1]) * 60 + int(partes[2])
-        except Exception:
-            pass
-        return 1680  # fallback: 28 min por defecto
+        except Exception as e:
+            logger.warning(f"_tiempo_str_a_segundos: formato inválido '{tiempo_str}': {e}")
+        return None
 
     @staticmethod
     def _segundos_a_tiempo_str(segundos):
