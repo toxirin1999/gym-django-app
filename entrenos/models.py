@@ -305,7 +305,7 @@ class EntrenoRealizado(models.Model):
     def calcular_volumen_total(self):
         '''Calcula el volumen total del entrenamiento de todas las fuentes disponibles'''
         total = 0
-        
+
         # 1. Ejercicios Realizados (Manuales / Importados genéricos)
         for ej in self.ejercicios_realizados.all():
             if ej.completado:
@@ -313,8 +313,14 @@ class EntrenoRealizado(models.Model):
                 series = int(ej.series or 0)
                 reps = int(ej.repeticiones or 0)
                 total += peso * series * reps
-        
-        # 2. Ejercicios Liftin Detallados (Específicos de importación)
+
+        # 2. Series Realizadas (modelo SerieRealizada, used when logging sets individually)
+        for serie in self.series.all():
+            peso = float(serie.peso_kg or 0)
+            reps = int(serie.repeticiones or 0)
+            total += peso * reps
+
+        # 3. Ejercicios Liftin Detallados (Específicos de importación)
         if hasattr(self, 'ejercicios_liftin_detallados'):
             for ej in self.ejercicios_liftin_detallados.all():
                 if ej.completado:
@@ -327,13 +333,13 @@ class EntrenoRealizado(models.Model):
                         # Usar reps min como base conservadora
                         reps = int(ej.repeticiones_min or 0)
                         total += peso * series * reps
-                        
+
         return Decimal(str(total))
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
-        # Calcular volumen automáticamente si no está establecido
-        if self.volumen_total_kg == 0:
+        # Calcular volumen automáticamente si no está establecido o es NULL
+        if self.volumen_total_kg is None or self.volumen_total_kg == 0:
             self.volumen_total_kg = self.calcular_volumen_total()
             super().save(update_fields=['volumen_total_kg'])
 
