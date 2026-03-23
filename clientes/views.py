@@ -595,7 +595,7 @@ def _get_dashboard_context_data(request, cliente):
     lunes = obtener_lunes_actual()
 
     # Datos principales
-    entrenos = EntrenoRealizado.objects.filter(cliente=cliente).order_by('-fecha')[:3]
+    entrenos = EntrenoRealizado.objects.filter(cliente=cliente).order_by('-fecha').prefetch_related('detalles_ejercicio')[:3]
     entrenamientos_recientes = entrenos  # alias para el template
 
     emociones = EstadoEmocional.objects.filter(user=usuario).order_by('-fecha')[:5]
@@ -619,14 +619,8 @@ def _get_dashboard_context_data(request, cliente):
             pruebas_activas = PruebaLegendaria.objects.filter(
                 arquetipo=perfil_gamificacion.nivel_actual
             ).exclude(id__in=pruebas_pendientes_ids)[:3]
-    try:
-        perfil = PerfilGamificacion.objects.get(cliente=cliente)
-        logros_completados = PruebaUsuario.objects.filter(
-            perfil=perfil,
-            completada=True
-        ).select_related('prueba', 'prueba__arquetipo')
-    except PerfilGamificacion.DoesNotExist:
-        pass
+    # Bloque duplicado eliminado: perfil_gamificacion ya fue consultado arriba
+    # y logros_completados se asigna en el if perfil_gamificacion: de arriba
 
     datos_logros = obtener_datos_logros(cliente)
     estado_joi = obtener_estado_joi(usuario)
@@ -638,7 +632,7 @@ def _get_dashboard_context_data(request, cliente):
     carga_total = sum(
         detalle.peso_kg * detalle.repeticiones * detalle.series
         for entreno in entrenos
-        for detalle in entreno.detalles.all()
+        for detalle in entreno.detalles_ejercicio.all()
     )
 
     # Carga total acumulada (todos los entrenos, para el stat del dashboard)
@@ -658,18 +652,23 @@ def _get_dashboard_context_data(request, cliente):
         ("🥀", "triste"), ("🕳", "glitch"),
     ]
 
-    # Rendimiento por semana
+    # Rendimiento por semana — 1 query en lugar de 4 COUNT separados
+    inicio_4_semanas = hoy - timedelta(days=hoy.weekday() + 3 * 7)
+    _fechas_entrenos = EntrenoRealizado.objects.filter(
+        cliente=cliente,
+        fecha__gte=inicio_4_semanas
+    ).values_list('fecha', flat=True)
+    _semana_counts = {}
+    for _fe in _fechas_entrenos:
+        _sem = _fe - timedelta(days=_fe.weekday())
+        _semana_counts[_sem] = _semana_counts.get(_sem, 0) + 1
+
     labels = []
     rendimiento = []
-    for i in range(4):
+    for i in range(3, -1, -1):  # de más antigua a más reciente
         inicio_semana = hoy - timedelta(days=hoy.weekday() + i * 7)
-        fin_semana = inicio_semana + timedelta(days=6)
-        total_entrenos = EntrenoRealizado.objects.filter(
-            cliente=cliente,
-            fecha__range=(inicio_semana, fin_semana)
-        ).count()
-        labels.insert(0, inicio_semana.strftime('%d %b'))
-        rendimiento.insert(0, total_entrenos)
+        labels.append(inicio_semana.strftime('%d %b'))
+        rendimiento.append(_semana_counts.get(inicio_semana, 0))
 
     def detectar_fatiga_semanal(energia_dias):
         dias_bajos = 0
@@ -683,7 +682,8 @@ def _get_dashboard_context_data(request, cliente):
                 consecutivos = 0
         return False
 
-    alerta_fatiga = detectar_fatiga_semanal(obtener_energia_semanal(cliente))
+    energia_dias = obtener_energia_semanal(cliente)  # guardamos para reusar en el context dict
+    alerta_fatiga = detectar_fatiga_semanal(energia_dias)
     peso_actual, datos_peso, cambios_peso = analizar_tendencia_peso(cliente)
     orden_peso = ['7d', '30d', '90d', 'inicio']
     ultimos_dias = BitacoraDiaria.objects.filter(cliente=cliente).order_by('-fecha')[:7]
@@ -740,7 +740,6 @@ def _get_dashboard_context_data(request, cliente):
     )
     emocion_texto = emocion_frecuente['emocion_dia'] if emocion_frecuente else "—"
 
-    analizador_ia = AnalisisIntensidadAvanzado(cliente)
     recomendaciones_principales = []
     sug_carga = sugerencia_carga_joi(cliente)
     if sug_carga:
@@ -749,14 +748,15 @@ def _get_dashboard_context_data(request, cliente):
             'descripcion': str(sug_carga).strip(),
             'prioridad': 'media'
         }]
-    
+
     recomendaciones_aplicadas = RecomendacionEntrenamiento.objects.filter(
         cliente=cliente,
         aplicada=True
     ).order_by('-fecha_aplicacion')[:3]
-    
+
     analizador_progresion = AnalisisProgresionAvanzado(cliente)
     ratios_fuerza = analizador_progresion.calcular_ratios_fuerza()
+    # Una sola instancia reutilizada (analizador_ia era un duplicado sin uso)
     analizador_intensidad = AnalisisIntensidadAvanzado(cliente)
     fatiga_acumulada = analizador_intensidad.calcular_fatiga_acumulada(periodo_dias=14)
     analisis_mesociclos = analizador_progresion.analisis_mesociclos()
@@ -772,15 +772,18 @@ def _get_dashboard_context_data(request, cliente):
     }
     
     sistema_progresion = SistemaProgresionAvanzada(cliente_id=cliente.id)
-    series_historial = SerieRealizada.objects.filter(entreno__cliente=cliente).order_by('entreno__fecha', 'entreno__id').select_related('entreno', 'ejercicio')
+    series_historial = list(SerieRealizada.objects.filter(entreno__cliente=cliente).order_by('entreno__fecha', 'entreno__id').select_related('entreno', 'ejercicio'))
     sesiones_agrupadas = defaultdict(lambda: defaultdict(list))
+    # Dict para lookup O(1) en lugar del next() O(n) dentro del bucle exterior
+    _entrenos_by_id = {}
     for serie in series_historial:
         sesiones_agrupadas[serie.entreno.id][serie.ejercicio.nombre].append(
             RegistroSerie(peso=float(serie.peso_kg), repeticiones=serie.repeticiones)
         )
+        _entrenos_by_id[serie.entreno.id] = serie.entreno
 
     for entreno_id, ejercicios in sesiones_agrupadas.items():
-        entreno_obj = next((s.entreno for s in series_historial if s.entreno.id == entreno_id), None)
+        entreno_obj = _entrenos_by_id.get(entreno_id)
         if entreno_obj:
             for nombre_ejercicio, series_registradas in ejercicios.items():
                 registro_ejercicio = RegistroEjercicio(
@@ -872,13 +875,21 @@ def _get_dashboard_context_data(request, cliente):
         reflexion_pendiente = not reflexion_hoy
         total_reflexiones = ReflexionDiaria.objects.filter(usuario=request.user).count()
         
+        # 1 query en lugar de hasta 365 queries individuales
+        fechas_con_reflexion = set(
+            ReflexionDiaria.objects.filter(
+                usuario=request.user,
+                fecha__gte=hoy - timedelta(days=365)
+            ).values_list('fecha', flat=True)
+        )
         racha_reflexion = 0
         fecha_actual = hoy
         for _ in range(365):
-            if ReflexionDiaria.objects.filter(usuario=request.user, fecha=fecha_actual).exists():
+            if fecha_actual in fechas_con_reflexion:
                 racha_reflexion += 1
                 fecha_actual -= timedelta(days=1)
-            else: break
+            else:
+                break
         
         if LogroEstoico:
             logros_estoicos = LogroEstoico.objects.filter(usuario=request.user).count()
@@ -891,11 +902,10 @@ def _get_dashboard_context_data(request, cliente):
     analizador_carga = AnalizadorCargaYFatiga(cliente)
     analis_acwr = analizador_carga.analizar_acwr()
 
+    # Reutilizamos restricciones_bio ya obtenido arriba (evita segunda llamada)
     tags_prohibidos = set()
     try:
-        from core.bio_context import BioContextProvider
-        restricciones = BioContextProvider.get_current_restrictions(cliente)
-        tags_prohibidos = restricciones.get('tags', set())
+        tags_prohibidos = restricciones_bio.get('tags', set())
     except Exception: pass
 
     def procesar_ejercicios(ejercicios_list, is_model=False):
@@ -977,7 +987,7 @@ def _get_dashboard_context_data(request, cliente):
         'grafico_labels': json.dumps(labels),
         'grafico_datos': json.dumps(rendimiento),
         'recomendacion_carga': sug_carga,
-        'energia_dias': obtener_energia_semanal(cliente),
+        'energia_dias': energia_dias,
         'alerta_fatiga': alerta_fatiga,
         'peso_actual': peso_actual,
         'datos_peso': datos_peso,

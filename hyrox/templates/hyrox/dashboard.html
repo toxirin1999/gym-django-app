@@ -1,1709 +1,1401 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Hyrox Central - GymProject{% endblock %}
+{% block title %}HYROX — Centro de Operaciones{% endblock %}
 
 {% block extra_css %}
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,300;0,400;0,500;0,700;0,900;1,400&family=JetBrains+Mono:wght@400;500;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-/* ══════════════════════════════════════════════════════════
-   HYROX DASHBOARD — LoL RUNETERRA OVERRIDE
-   Convierte clases Tailwind genéricas a paleta Runeterra
-   ══════════════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════
+   HYROX — RACE COMMAND CENTER
+   Design system autónomo, sin dependencia de Tailwind
+   ═══════════════════════════════════════════════════════ */
 
-/* ── Fondo LoL Void ── */
-body {
-    background-color: #010A13 !important;
-    background-image:
-        radial-gradient(ellipse 65% 40% at 50% 0%, rgba(200,75,49,0.07) 0%, transparent 55%),
-        radial-gradient(ellipse 45% 35% at 90% 85%, rgba(200,170,110,0.05) 0%, transparent 50%),
-        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='104'%3E%3Cpath d='M30 2L57 17v30L30 62 3 47V17Z' fill='none' stroke='rgba(200,170,110,0.03)' stroke-width='0.8'/%3E%3C/svg%3E") !important;
-    background-size: auto, auto, 60px 104px !important;
-}
-
-/* Scanline sutil */
-body::after {
-    content: '';
-    position: fixed;
-    left: 0; right: 0; height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(200,75,49,0.2) 50%, transparent);
-    animation: hyroxScan 16s linear infinite;
-    pointer-events: none;
-    z-index: 9999;
-    opacity: 0;
-}
-@keyframes hyroxScan {
-    0%   { top: -2px; opacity: 0; }
-    4%   { opacity: 0.5; }
-    96%  { opacity: 0.5; }
-    100% { top: 100vh; opacity: 0; }
-}
-
-/* ── Paleta LoL via variables ── */
 :root {
-    --h-gold:    #C8AA6E;
-    --h-gold-b:  #F0E6D3;
-    --h-gold-d:  #785A28;
-    --h-teal:    #0AC8B9;
-    --h-red:     #C84B31;
-    --h-void:    #010A13;
-    --h-panel:   #0A1628;
-    --h-border:  rgba(200,170,110,0.25);
+  --void:        #090D12;
+  --surface:     #111820;
+  --surface-2:   #19232F;
+  --surface-3:   #212D3A;
+  --red:         #E8341A;
+  --red-glow:    rgba(232,52,26,0.12);
+  --red-border:  rgba(232,52,26,0.28);
+  --text:        #EEE9E2;
+  --text-mid:    #8A9AAD;
+  --text-dim:    #4A5868;
+  --border:      rgba(255,255,255,0.06);
+  --border-2:    rgba(255,255,255,0.10);
+  --gold:        #C8A96E;
+  --gold-dim:    rgba(200,169,110,0.18);
+  --teal:        #1DC8B8;
+  --teal-dim:    rgba(29,200,184,0.14);
+  --warn:        #E89C1A;
 }
 
-/* ══ "SIN OBJETIVO" estado vacío ══ */
-.bg-slate-800\/50.border.border-slate-700.rounded-xl {
-    background: rgba(10,22,40,0.8) !important;
-    border-color: rgba(200,170,110,0.2) !important;
-    border-radius: 0 !important;
-}
-.text-cyan-500 { color: var(--h-teal) !important; }
-.bg-cyan-600   { background-color: var(--h-red) !important; }
-.bg-cyan-600:hover, .hover\:bg-cyan-500:hover { background-color: #e05535 !important; }
-.shadow-cyan-500\/30 { box-shadow: 0 8px 24px rgba(200,75,49,0.25) !important; }
-.text-slate-400 { color: rgba(200,200,200,0.5) !important; }
-
-/* ══ MORNING BRIEFING & ALERTS ══ */
-.border-indigo-500 {
-    border-color: rgba(200,170,110,0.3) !important;
-    border-bottom-width: 1px !important;
-}
-.bg-slate-900\/50 { background: rgba(6,13,20,0.6) !important; }
-.text-indigo-300  { color: var(--h-gold) !important; font-family: 'Share Tech Mono', monospace; font-style: italic; }
-
-/* Smart Alerts */
-.border-cyan-500 { border-color: var(--h-teal) !important; }
-.text-cyan-400   { color: var(--h-teal) !important; }
-.bg-slate-800\/80 { background: rgba(10,22,40,0.8) !important; }
-.text-slate-300  { color: rgba(200,200,200,0.75) !important; }
-
-/* Mental Focus */
-.border-yellow-500 { border-color: var(--h-gold) !important; }
-.text-yellow-400   { color: var(--h-gold) !important; }
-.from-yellow-500\/10 { --tw-gradient-from: rgba(200,170,110,0.08) !important; }
-
-/* ══ RECOVERY MODE ══ */
-[style*="background: linear-gradient(135deg, rgba(15,23,42"] {
-    background: linear-gradient(135deg, rgba(10,22,40,0.97), rgba(20,10,10,0.97)) !important;
-    border: 1px solid rgba(200,75,49,0.2) !important;
-    border-radius: 0 !important;
-}
-.rounded-2xl { border-radius: 0 !important; }
-.rounded-xl  { border-radius: 0 !important; }
-.rounded-lg  { border-radius: 0 !important; }
-.rounded-full:not(circle):not(svg) { border-radius: 2px !important; }
-
-/* Phase bars recovery */
-.bg-gradient-to-r.from-red-600   { background: linear-gradient(90deg, #C84B31, #e05535) !important; }
-.bg-gradient-to-r.from-yellow-500 { background: linear-gradient(90deg, var(--h-gold-d), var(--h-gold)) !important; }
-.bg-gradient-to-r.from-emerald-500 { background: linear-gradient(90deg, #0AC8B9, #0397AB) !important; }
-
-/* Substituciones grid */
-.bg-slate-800\/60 { background: rgba(10,22,40,0.7) !important; }
-.border-slate-700\/50 { border-color: rgba(200,170,110,0.12) !important; }
-.text-emerald-300 { color: var(--h-teal) !important; }
-.text-emerald-400 { color: var(--h-teal) !important; }
-.bg-emerald-500\/10 { background: rgba(10,200,185,0.08) !important; }
-.border-emerald-500\/30 { border-color: rgba(10,200,185,0.25) !important; }
-
-/* Reporte diario pendiente */
-.bg-yellow-500\/5  { background: rgba(200,170,110,0.05) !important; }
-.border-yellow-500\/20 { border-color: rgba(200,170,110,0.2) !important; }
-.text-yellow-300   { color: var(--h-gold-b) !important; }
-.from-amber-600    { --tw-gradient-from: var(--h-gold-d) !important; }
-.to-yellow-500     { --tw-gradient-to: var(--h-gold) !important; }
-.shadow-yellow-500\/15 { box-shadow: 0 4px 16px rgba(200,170,110,0.15) !important; }
-.text-yellow-400   { color: var(--h-gold) !important; }
-
-/* Alta clínica */
-.bg-emerald-500\/10:hover { background: rgba(10,200,185,0.12) !important; }
-.hover\:border-emerald-400\/50:hover { border-color: rgba(10,200,185,0.4) !important; }
-.hover\:text-emerald-300:hover { color: var(--h-teal) !important; }
-
-/* ══ MACROCICLO TIMELINE ══ */
-.bg-slate-800\/80.border.border-slate-700 {
-    background: rgba(10,22,40,0.85) !important;
-    border-color: rgba(200,170,110,0.2) !important;
-}
-.text-purple-400 { color: var(--h-gold) !important; }
-.text-cyan-400.font-bold { color: var(--h-teal) !important; }
-.bg-clip-text.bg-gradient-to-r.from-cyan-400.to-purple-500 {
-    background: linear-gradient(90deg, var(--h-gold), var(--h-gold-b)) !important;
-    -webkit-background-clip: text !important;
-}
-.bg-slate-900 { background: rgba(1,10,19,0.9) !important; }
-
-/* Fases macrociclo */
-.bg-slate-600\/50 { background: rgba(200,170,110,0.1) !important; }
-.border-b-2.border-cyan-400  { border-bottom-color: var(--h-teal) !important; }
-.bg-purple-900\/40 { background: rgba(200,170,110,0.07) !important; }
-.border-b-2.border-purple-400 { border-bottom-color: var(--h-gold) !important; }
-.bg-pink-900\/40   { background: rgba(200,75,49,0.08) !important; }
-.border-b-2.border-pink-400   { border-bottom-color: var(--h-red) !important; }
-.bg-green-900\/40  { background: rgba(10,200,185,0.08) !important; }
-.border-b-2.border-green-400  { border-bottom-color: var(--h-teal) !important; }
-.bg-slate-800\/10 { background: rgba(1,10,19,0.2) !important; }
-.text-slate-600 { color: rgba(200,200,200,0.3) !important; }
-.text-slate-500 { color: rgba(200,200,200,0.4) !important; }
-
-/* Mantra */
-.text-slate-400.italic { color: rgba(200,170,110,0.55) !important; }
-
-/* Marker */
-.bg-white.shadow-\[0_0_8px_rgba\(255\,255\,255\,0\.8\)\] {
-    background: var(--h-gold) !important;
-    box-shadow: 0 0 8px rgba(200,170,110,0.8) !important;
-}
-.bg-white.rounded-full {
-    background: var(--h-gold-b) !important;
+/* ── Body override ── */
+body {
+  background-color: var(--void) !important;
+  color: var(--text) !important;
+  font-family: 'Barlow', sans-serif !important;
 }
 
-/* ══ 3 PANELS (Evento / Semana / Perfil Base) ══ */
-[style*="background: linear-gradient(160deg, rgba(15,23,42"] {
-    background: var(--h-panel) !important;
-    border: 1px solid var(--h-border) !important;
-    border-radius: 0 !important;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.5) !important;
+/* ── Typography helpers ── */
+.hx-display {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+.hx-mono {
+  font-family: 'JetBrains Mono', monospace;
+}
+.hx-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+.hx-title {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
-/* Panel headers — stripes de color */
-.h-0\.5.bg-gradient-to-r.from-cyan-500.via-blue-500.to-purple-500 {
-    background: linear-gradient(90deg, var(--h-gold-d), var(--h-gold), var(--h-gold-d)) !important;
-    height: 2px !important;
-}
-.h-0\.5.bg-gradient-to-r.from-purple-500.via-pink-500.to-rose-500 {
-    background: linear-gradient(90deg, var(--h-red), #e05535, var(--h-red)) !important;
-    height: 2px !important;
-}
-.h-0\.5.bg-gradient-to-r.from-emerald-500.via-yellow-400.to-orange-500 {
-    background: linear-gradient(90deg, var(--h-teal), var(--h-gold), var(--h-teal)) !important;
-    height: 2px !important;
+/* ── Layout ── */
+.hx-wrap {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 20px 24px 60px;
 }
 
-/* Panel ambientes glow */
-.bg-cyan-500\/8 { background: rgba(200,170,110,0.05) !important; }
-.bg-purple-500\/8 { background: rgba(200,75,49,0.05) !important; }
-.bg-emerald-500\/8 { background: rgba(10,200,185,0.04) !important; }
+/* ── Dividers ── */
+.hx-rule       { height: 1px; background: var(--border); }
+.hx-rule-red   { height: 2px; background: var(--red); }
+.hx-rule-gold  { height: 1px; background: rgba(200,169,110,0.4); }
 
-/* Panel texto */
-.text-white { color: var(--h-gold-b) !important; }
-
-/* Badge icono evento */
-.bg-cyan-500\/10.border.border-cyan-500\/20 {
-    background: rgba(200,170,110,0.08) !important;
-    border-color: rgba(200,170,110,0.2) !important;
+/* ══ HEADER ══ */
+.hx-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 0 16px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 0;
+  flex-wrap: wrap;
+  gap: 10px;
 }
-.text-cyan-400.fas { color: var(--h-gold) !important; }
-
-/* Date card */
-.bg-slate-800\/50.border.border-slate-700\/30.rounded-lg {
-    background: rgba(1,10,19,0.7) !important;
-    border-color: rgba(200,170,110,0.15) !important;
+.hx-wordmark {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
 }
-.bg-purple-500\/10 { background: rgba(200,170,110,0.06) !important; }
-.text-purple-400.text-sm { color: var(--h-gold-d) !important; }
-
-/* Botones panel evento */
-.bg-cyan-500\/10 { background: rgba(10,200,185,0.07) !important; }
-.border-cyan-500\/25 { border-color: rgba(10,200,185,0.2) !important; }
-.hover\:bg-cyan-500\/20:hover { background: rgba(10,200,185,0.14) !important; }
-.hover\:border-cyan-400\/40:hover { border-color: rgba(10,200,185,0.35) !important; }
-
-/* Semana — ring SVG */
-stop[stop-color="#a855f7"] { stop-color: var(--h-gold-d) !important; }
-stop[stop-color="#ec4899"] { stop-color: var(--h-gold) !important; }
-
-/* Progress bars semana */
-.bg-cyan-500\/60 { background: var(--h-teal) !important; opacity: 0.7; }
-.bg-pink-500\/60 { background: var(--h-red) !important; opacity: 0.7; }
-.bg-purple-500\/60 { background: var(--h-gold) !important; opacity: 0.7; }
-.fas.text-cyan-500 { color: var(--h-teal) !important; }
-.fas.text-pink-500 { color: var(--h-red) !important; }
-.fas.text-purple-500 { color: var(--h-gold) !important; }
-
-/* Perfil base */
-.text-cyan-400.font-mono.font-bold { color: var(--h-teal) !important; }
-.text-purple-400.font-mono.font-bold { color: var(--h-gold) !important; }
-.text-pink-400.font-mono.font-bold { color: var(--h-red) !important; }
-.bg-slate-800\/40 { background: rgba(1,10,19,0.6) !important; }
-.border-slate-700\/30 { border-color: rgba(200,170,110,0.1) !important; }
-
-/* Race Readiness */
-.text-green-400 { color: var(--h-teal) !important; }
-.text-red-400   { color: var(--h-red) !important; }
-.bg-gradient-to-r.from-green-600.to-emerald-400 { background: linear-gradient(90deg, var(--h-teal), #0AC8B9) !important; }
-.bg-gradient-to-r.from-yellow-600.to-yellow-400 { background: linear-gradient(90deg, var(--h-gold-d), var(--h-gold)) !important; }
-.bg-gradient-to-r.from-red-600.to-red-400 { background: linear-gradient(90deg, var(--h-red), #e05535) !important; }
-
-/* ══ EQUILIBRIO ESTRATÉGICO ══ */
-.bg-indigo-950\/40 { background: rgba(10,22,40,0.6) !important; }
-.border-indigo-500\/30 { border-color: rgba(200,170,110,0.2) !important; }
-.text-indigo-400 { color: var(--h-gold) !important; }
-.text-indigo-300 { color: var(--h-gold) !important; }
-.text-indigo-200\/70 { color: rgba(200,170,110,0.5) !important; }
-.text-indigo-100 { color: rgba(200,200,200,0.85) !important; }
-.bg-indigo-500 { background: var(--h-gold-d) !important; }
-.bg-indigo-900\/50 { background: rgba(10,22,40,0.5) !important; }
-.border-indigo-500\/20 { border-color: rgba(200,170,110,0.15) !important; }
-.text-indigo-400.mt-1 { color: var(--h-gold) !important; }
-
-/* ══ READINESS BREAKDOWN ══ */
-.bg-slate-800\/60.border.border-slate-700\/50.rounded-xl {
-    background: rgba(10,22,40,0.7) !important;
-    border-color: rgba(200,170,110,0.2) !important;
+.hx-wordmark-name {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 900;
+  font-size: 26px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text);
 }
-.text-cyan-300 { color: var(--h-teal) !important; }
-.bg-cyan-500.h-1\.5 { background: var(--h-teal) !important; }
-.text-purple-300 { color: var(--h-gold) !important; }
-.bg-purple-500.h-1\.5 { background: var(--h-gold) !important; }
-.text-yellow-300 { color: var(--h-gold-b) !important; }
-.bg-yellow-500.h-1\.5 { background: var(--h-gold) !important; }
-.bg-pink-500\/20 { background: rgba(200,75,49,0.1) !important; }
-.text-pink-400  { color: var(--h-red) !important; }
+.hx-wordmark-meta {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--red);
+  font-weight: 700;
+  letter-spacing: 0.14em;
+}
+.hx-btn-group { display: flex; gap: 8px; flex-wrap: wrap; }
 
-/* ══ COMPETITION STANDARDS ══ */
-[style*="background: linear-gradient(160deg, rgba(10,18,35"] {
-    background: rgba(10,22,40,0.95) !important;
-    border: 1px solid rgba(200,170,110,0.2) !important;
-    border-radius: 0 !important;
+/* Botones */
+.hx-btn {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 7px 16px;
+  border: 1px solid var(--border-2);
+  background: transparent;
+  color: var(--text-mid);
+  cursor: pointer;
+  transition: all 0.2s;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  white-space: nowrap;
 }
-.h-0\.5.bg-gradient-to-r.from-cyan-500.via-blue-400.to-purple-500 {
-    background: linear-gradient(90deg, var(--h-gold-d), var(--h-gold), var(--h-gold-d)) !important;
-    height: 2px !important;
+.hx-btn:hover {
+  border-color: var(--red-border);
+  color: var(--text);
+  background: var(--red-glow);
+  text-decoration: none;
 }
-.bg-cyan-500\/10.rounded-full { background: rgba(200,170,110,0.08) !important; }
-.border-cyan-500\/20 { border-color: rgba(200,170,110,0.18) !important; }
-.text-cyan-400.fas.fa-trophy { color: var(--h-gold) !important; }
-.text-cyan-400 { color: var(--h-teal) !important; }
-.bg-slate-800\/50.border.border-slate-700\/30.rounded-xl {
-    background: rgba(6,13,20,0.8) !important;
-    border-color: rgba(200,170,110,0.15) !important;
+.hx-btn i { font-size: 11px; }
+
+.hx-btn-red {
+  background: var(--red);
+  border-color: var(--red);
+  color: white;
 }
-.from-cyan-400.to-purple-400 {
-    --tw-gradient-from: var(--h-gold) !important;
-    --tw-gradient-to: var(--h-gold-b) !important;
+.hx-btn-red:hover {
+  background: #FF3D20;
+  border-color: #FF3D20;
+  color: white;
+}
+.hx-btn-ghost-red {
+  border-color: var(--red-border);
+  color: rgba(232,52,26,0.7);
+}
+.hx-btn-ghost-red:hover {
+  background: var(--red-glow);
+  color: var(--red);
 }
 
-/* Station cards */
-.border-cyan-500\/40.bg-cyan-950\/20 {
-    border-color: rgba(10,200,185,0.35) !important;
-    background: rgba(10,200,185,0.06) !important;
-    border-radius: 0 !important;
+/* ══ STRIP ALERTS ══ */
+.hx-strip-alerts {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin-top: 1px;
 }
-.border-slate-700\/40.bg-slate-800\/30 {
-    border-color: rgba(200,170,110,0.15) !important;
-    background: rgba(10,22,40,0.5) !important;
-    border-radius: 0 !important;
+.hx-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 16px;
+  background: var(--surface);
+  border-left: 2px solid var(--red);
+  font-size: 12px;
+  color: var(--text-mid);
+  line-height: 1.4;
 }
-.border-slate-800\/30.bg-slate-900\/20 {
-    border-color: rgba(200,170,110,0.08) !important;
-    background: rgba(6,13,20,0.4) !important;
-    border-radius: 0 !important;
+.hx-alert .hx-alert-icon { color: var(--red); flex-shrink: 0; margin-top: 1px; }
+.hx-briefing {
+  background: var(--surface);
+  border-left: 2px solid var(--gold);
+  padding: 11px 16px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--gold);
+  font-style: italic;
+  line-height: 1.5;
 }
-.bg-cyan-500\/20.border.border-cyan-400\/40 {
-    background: rgba(10,200,185,0.12) !important;
-    border-color: rgba(10,200,185,0.3) !important;
+.hx-focus {
+  background: rgba(200,169,110,0.04);
+  border-left: 2px solid var(--gold);
+  padding: 11px 16px;
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
 }
-.text-cyan-400.text-\[10px\] { color: var(--h-teal) !important; }
-.text-cyan-300 { color: var(--h-teal) !important; }
-.text-cyan-400.font-bold { color: var(--h-teal) !important; }
 
-/* Progress bars competition */
-.bg-cyan-400.h-full   { background: var(--h-teal) !important; }
-.bg-cyan-600\/50      { background: rgba(10,200,185,0.4) !important; }
-.bg-purple-400.h-full { background: var(--h-gold) !important; }
-.bg-purple-600\/50    { background: rgba(200,170,110,0.35) !important; }
-.from-cyan-600.to-cyan-400 { background: linear-gradient(90deg, var(--h-teal), #0AC8B9) !important; }
-.from-cyan-700.to-cyan-500 { background: linear-gradient(90deg, var(--h-teal), #0AC8B9) !important; }
+/* ══ HERO ══ */
+.hx-hero {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  background: var(--surface);
+  border-left: 3px solid var(--red);
+  border-right: 1px solid var(--border);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  margin-top: 1px;
+}
+.hx-hero-left {
+  padding: 28px 36px;
+  border-right: 1px solid var(--border);
+}
+.hx-hero-right {
+  padding: 28px 36px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 200px;
+  background: rgba(0,0,0,0.15);
+}
+.hx-countdown-num {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 900;
+  font-size: clamp(72px, 11vw, 120px);
+  line-height: 0.85;
+  letter-spacing: -0.04em;
+  color: var(--text);
+  display: block;
+}
+.hx-countdown-unit {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  color: var(--red);
+  font-weight: 700;
+  margin-top: 6px;
+}
+.hx-readiness-num {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 900;
+  font-size: 60px;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+.hx-vert-bar-track {
+  width: 6px;
+  height: 72px;
+  background: var(--surface-3);
+  margin: 12px auto;
+  position: relative;
+  overflow: hidden;
+}
+.hx-vert-bar-fill {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  transition: height 1.5s ease;
+}
+.hx-hero-divider {
+  width: 32px;
+  height: 1px;
+  background: var(--border-2);
+  margin: 8px auto;
+}
 
-/* SVG gradients */
-stop[stop-color="#06b6d4"] { stop-color: var(--h-gold-d) !important; }
-stop[stop-color="#a855f7"] { stop-color: var(--h-gold) !important; }
-stop[stop-color="#ca8a04"] { stop-color: var(--h-gold-d) !important; }
-stop[stop-color="#facc15"] { stop-color: var(--h-gold-b) !important; }
+/* ══ MACROCYCLE ══ */
+.hx-macro {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-top: none;
+  padding: 18px 24px;
+  margin-top: 1px;
+}
+.hx-macro-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.hx-phase-bar {
+  display: flex;
+  height: 26px;
+  background: var(--void);
+  border: 1px solid var(--border);
+  overflow: visible;
+  position: relative;
+}
+.hx-phase {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 700;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  border-right: 1px solid rgba(255,255,255,0.04);
+  position: relative;
+  transition: background 0.2s;
+  color: var(--text-dim);
+}
+.hx-phase.hx-past {
+  background: rgba(232,52,26,0.05);
+  color: rgba(232,52,26,0.4);
+}
+.hx-phase.hx-active {
+  background: rgba(232,52,26,0.1);
+  color: var(--red);
+  border-bottom: 2px solid var(--red);
+}
+.hx-phase-marker {
+  position: absolute;
+  top: -5px; bottom: -5px;
+  width: 2px;
+  background: var(--red);
+  box-shadow: 0 0 8px var(--red), 0 0 16px rgba(232,52,26,0.4);
+  z-index: 10;
+  transition: left 1.2s ease;
+}
+.hx-phase-marker::before {
+  content: '';
+  position: absolute;
+  top: -5px;
+  left: -4px;
+  width: 10px;
+  height: 10px;
+  background: var(--red);
+  transform: rotate(45deg);
+  box-shadow: 0 0 6px var(--red);
+}
+.hx-macro-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 8px;
+}
 
-/* ══ SCROLLBAR LoL ══ */
-* { scrollbar-width: thin; scrollbar-color: #785A28 transparent; }
-*::-webkit-scrollbar { width: 5px; height: 4px; }
+/* ══ DATA PANELS ══ */
+.hx-panels {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  margin-top: 1px;
+  background: var(--border);
+}
+.hx-panel {
+  background: var(--surface);
+  padding: 20px;
+}
+.hx-panel-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 18px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.hx-panel-label::before {
+  content: '';
+  display: inline-block;
+  width: 12px;
+  height: 2px;
+  background: var(--red);
+  flex-shrink: 0;
+}
+
+/* Stat rows */
+.hx-stat-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+}
+.hx-stat-row:last-child { border-bottom: none; }
+.hx-stat-key { color: var(--text-dim); }
+.hx-stat-val {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--text);
+}
+
+/* Progress tracks */
+.hx-track {
+  height: 3px;
+  background: var(--surface-3);
+  margin-top: 5px;
+  position: relative;
+  overflow: hidden;
+}
+.hx-fill {
+  position: absolute;
+  top: 0; left: 0; bottom: 0;
+  transition: width 1.2s ease;
+}
+.hx-fill-red  { background: var(--red); }
+.hx-fill-teal { background: var(--teal); }
+.hx-fill-gold { background: var(--gold); }
+.hx-fill-auto {
+  background: linear-gradient(90deg, var(--red), var(--gold));
+}
+
+/* Ring counter (week) */
+.hx-ring-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.hx-ring-big {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 900;
+  font-size: 40px;
+  line-height: 1;
+  color: var(--text);
+}
+.hx-ring-sub {
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-top: 2px;
+}
+
+/* Breakdown bars */
+.hx-breakdown-row { margin-bottom: 14px; }
+.hx-breakdown-head {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 5px;
+  font-size: 11px;
+}
+
+/* ══ BOTTOM GRID ══ */
+.hx-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  margin-top: 1px;
+  background: var(--border);
+}
+
+/* ══ STANDARDS ══ */
+.hx-standards-section {
+  margin-top: 1px;
+}
+.hx-standards-header {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-bottom: none;
+  padding: 14px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.hx-standards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1px;
+  background: var(--border);
+}
+.hx-station-card {
+  background: var(--surface);
+  padding: 16px;
+  border-bottom: 2px solid transparent;
+  transition: border-color 0.2s;
+}
+.hx-station-card.hx-done {
+  background: rgba(29,200,184,0.04);
+  border-bottom-color: var(--teal);
+}
+.hx-station-card:not(.hx-done) { border-bottom-color: var(--border-2); }
+
+/* ══ SESSION CARDS ══ */
+.hx-sessions-section {
+  margin-top: 1px;
+}
+.hx-sessions-header {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-bottom: none;
+  padding: 14px 20px;
+}
+.hx-session-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1px;
+  background: var(--border);
+}
+.hx-session-card {
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+}
+.hx-session-head {
+  padding: 16px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.hx-session-head:hover { background: var(--surface-2); }
+.hx-session-body {
+  padding: 14px 16px;
+  background: rgba(0,0,0,0.2);
+  border-bottom: 1px solid var(--border);
+}
+.hx-session-foot {
+  padding: 12px 16px;
+  margin-top: auto;
+}
+.hx-activity-row {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 2px solid var(--red-border);
+  padding: 10px 12px;
+  margin-bottom: 6px;
+  font-size: 12px;
+}
+.hx-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--surface-3);
+  border: 1px solid var(--border);
+  padding: 2px 7px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--text-mid);
+  margin-right: 4px;
+  margin-bottom: 4px;
+}
+
+/* ══ HISTORY ══ */
+.hx-history-section {
+  margin-top: 1px;
+}
+.hx-history-toggle {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 14px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.hx-history-toggle:hover { background: var(--surface-2); }
+.hx-sesion-hist {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-top: none;
+  padding: 16px 20px;
+}
+.hx-sesion-hist + .hx-sesion-hist { border-top: 1px solid var(--border); }
+
+/* ══ RECOVERY ══ */
+.hx-recovery {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--red);
+  margin-top: 1px;
+}
+.hx-recovery-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.hx-recovery-body { padding: 18px 20px; }
+.hx-fase-badge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 4px 12px;
+  border: 1px solid;
+}
+.hx-sub-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  background: var(--void);
+  border: 1px solid var(--border);
+  margin-bottom: 4px;
+  font-size: 12px;
+}
+.hx-metric-box {
+  text-align: center;
+  padding: 14px 8px;
+  background: var(--void);
+  border: 1px solid var(--border);
+}
+.hx-metric-trio {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  margin-bottom: 14px;
+}
+
+/* ══ WEEKLY FLASH ══ */
+.hx-flash {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-top: 2px solid var(--gold);
+  padding: 16px 22px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 1px;
+}
+.hx-flash-stat {
+  padding: 0 20px;
+  border-left: 1px solid var(--border);
+  text-align: center;
+}
+.hx-flash-stat:first-child { border-left: none; padding-left: 0; }
+
+/* ══ EMPTY STATE ══ */
+.hx-empty {
+  max-width: 560px;
+  margin: 60px auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-top: 2px solid var(--red);
+  padding: 52px 40px;
+  text-align: center;
+}
+
+/* ══ PACE PREDICTION ══ */
+.hx-pace {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 16px;
+  background: var(--void);
+  border: 1px solid var(--border);
+  margin-top: 14px;
+}
+
+/* ══ ENTRANCE ANIMATIONS ══ */
+@keyframes hxIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.hx-a  { animation: hxIn 0.45s ease both; }
+.hx-a1 { animation-delay: 0.04s; }
+.hx-a2 { animation-delay: 0.09s; }
+.hx-a3 { animation-delay: 0.14s; }
+.hx-a4 { animation-delay: 0.19s; }
+.hx-a5 { animation-delay: 0.24s; }
+.hx-a6 { animation-delay: 0.29s; }
+.hx-a7 { animation-delay: 0.34s; }
+
+/* ══ SCROLLBAR ══ */
+* { scrollbar-width: thin; scrollbar-color: #1E2C3A transparent; }
+*::-webkit-scrollbar { width: 4px; height: 4px; }
 *::-webkit-scrollbar-track { background: transparent; }
-*::-webkit-scrollbar-thumb { background: #785A28; }
-*::-webkit-scrollbar-thumb:hover { background: #C8AA6E; }
+*::-webkit-scrollbar-thumb { background: #1E2C3A; }
+*::-webkit-scrollbar-thumb:hover { background: var(--red); }
+
+/* ══ RESPONSIVE ══ */
+@media (max-width: 900px) {
+  .hx-hero { grid-template-columns: 1fr; }
+  .hx-hero-right {
+    border-top: 1px solid var(--border);
+    border-left: none;
+    flex-direction: row;
+    justify-content: space-around;
+    padding: 20px;
+  }
+  .hx-hero-left { padding: 22px 20px; }
+  .hx-panels { grid-template-columns: 1fr; }
+  .hx-grid-2 { grid-template-columns: 1fr; }
+  .hx-wrap { padding: 14px 14px 40px; }
+  .hx-countdown-num { font-size: 80px; }
+}
+@media (max-width: 480px) {
+  .hx-wordmark-name { font-size: 20px; }
+  .hx-countdown-num { font-size: 64px; }
+}
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container mx-auto px-4 py-8">
-    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+<div class="hx-wrap">
+
+  {# ── HEADER ── #}
+  <header class="hx-header hx-a">
+    <div class="hx-wordmark">
+      <span class="hx-wordmark-name">Protocolo Hyrox</span>
+      {% if macro_data %}
+      <span class="hx-wordmark-meta">SEM&nbsp;{{ 12|add:"-"|add:macro_data.semanas_restantes }}&nbsp;/&nbsp;{{ macro_data.fase }}</span>
+      {% endif %}
+    </div>
+    <div class="hx-btn-group">
+      {% if objetivo_activo %}
+      {% if not lesion_activa %}
+      <a href="{% url 'hyrox:reportar_lesion' %}" class="hx-btn">
+        <i class="fas fa-heartbeat"></i> Lesión
+      </a>
+      {% endif %}
+      <a href="{% url 'hyrox:registrar_entrenamiento' objective_id=objetivo_activo.id %}" class="hx-btn hx-btn-red">
+        <i class="fas fa-plus"></i> Registrar Entreno
+      </a>
+      {% endif %}
+    </div>
+  </header>
+
+  {# ── EMPTY STATE ── #}
+  {% if not objetivo_activo %}
+  <div class="hx-empty hx-a hx-a1">
+    <div style="font-size:44px; color:var(--red); opacity:0.4; margin-bottom:22px;">
+      <i class="fas fa-flag-checkered"></i>
+    </div>
+    <p class="hx-label" style="margin-bottom:10px; color:var(--text-dim);">Sin objetivo activo</p>
+    <h2 class="hx-display" style="font-size:26px; color:var(--text); margin-bottom:10px;">
+      Configura tu evento
+    </h2>
+    <p style="color:var(--text-mid); font-size:14px; margin-bottom:30px; line-height:1.6; max-width:380px; margin-left:auto; margin-right:auto;">
+      Marca la fecha de tu competición y el sistema generará un plan de 12 semanas para que llegues al máximo nivel.
+    </p>
+    <a href="{% url 'hyrox:crear_objetivo' %}" class="hx-btn hx-btn-red" style="display:inline-flex;">
+      <i class="fas fa-rocket"></i> Configurar mi carrera
+    </a>
+  </div>
+
+  {% else %}
+
+  {# ── WEEKLY FLASH (Sunday) ── #}
+  {% if resumen_semanal %}
+  <div class="hx-flash hx-a hx-a1">
+    <div>
+      <p class="hx-label" style="color:var(--gold); margin-bottom:5px;">
+        <i class="fas fa-star" style="margin-right:4px;"></i>&nbsp;Resumen Dominical
+      </p>
+      <span class="hx-title" style="font-size:17px;">¡Semana completada!</span>
+    </div>
+    <div style="display:flex; gap:0;">
+      <div class="hx-flash-stat">
+        <p class="hx-label" style="margin-bottom:4px;">Volumen</p>
+        <p class="hx-mono" style="font-weight:700; font-size:20px;">{{ resumen_semanal.volumen_kg }}<span style="font-size:10px; color:var(--text-dim); margin-left:2px;">kg</span></p>
+      </div>
+      <div class="hx-flash-stat">
+        <p class="hx-label" style="margin-bottom:4px;">Carrera</p>
+        <p class="hx-mono" style="font-weight:700; font-size:20px;">{{ resumen_semanal.distancia_km }}<span style="font-size:10px; color:var(--text-dim); margin-left:2px;">km</span></p>
+      </div>
+      <div class="hx-flash-stat">
+        <p class="hx-label" style="margin-bottom:4px;">RPE Medio</p>
+        <p class="hx-mono" style="font-weight:700; font-size:20px;">{{ resumen_semanal.rpe_medio }}<span style="font-size:10px; color:var(--text-dim); margin-left:2px;">/10</span></p>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  {# ── BRIEFING & ALERTS STRIP ── #}
+  <div class="hx-strip-alerts hx-a hx-a1">
+    {% if morning_briefing %}
+    <div class="hx-briefing">
+      <i class="fas fa-robot" style="margin-right:8px; opacity:0.6;"></i>"{{ morning_briefing }}"
+    </div>
+    {% endif %}
+    {% if smart_alerts %}
+    {% for alert in smart_alerts %}
+    <div class="hx-alert">
+      <i class="fas fa-bolt hx-alert-icon"></i>
+      <span>{{ alert }}</span>
+    </div>
+    {% endfor %}
+    {% endif %}
+    {% if mental_focus %}
+    <div class="hx-focus">
+      <i class="fas fa-brain" style="color:var(--gold); flex-shrink:0; margin-top:1px;"></i>
+      <div>
+        <p class="hx-label" style="color:var(--gold); margin-bottom:3px;">Focus Estratégico</p>
+        <p style="font-size:12px; color:var(--text-mid);">{{ mental_focus }}</p>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  {# ── HERO: COUNTDOWN + READINESS ── #}
+  <div class="hx-hero hx-a hx-a2">
+    <div class="hx-hero-left">
+      <p class="hx-label" style="margin-bottom:14px;">Tiempo hasta el evento</p>
+      <div style="display:flex; align-items:flex-start; gap:28px; flex-wrap:wrap;">
+        {% if objetivo_activo.fecha_evento %}
         <div>
-            <h1 class="font-display text-4xl text-[var(--lol-gold-bright)] tracking-wide mb-1">
-                ◆ PROTOCOLO HYROX
-            </h1>
-            {% if macro_data %}
-            <p class="font-data text-[var(--lol-red)] tracking-[0.2em] uppercase text-sm font-bold">
-                SEMANA {{ 12|add:"-"|add:macro_data.semanas_restantes }} <span class="mx-2 opacity-50">|</span> FASE: {{ macro_data.fase }}
-            </p>
-            {% endif %}
-        </div>
-        {% if objetivo_activo %}
-        <div class="flex gap-3">
-            {% if not lesion_activa %}
-            <a href="{% url 'hyrox:reportar_lesion' %}"
-                class="btn-lol-secondary flex items-center gap-2">
-                <i class="fas fa-heartbeat text-[var(--lol-red)]"></i> <span class="hidden sm:inline">Reportar Lesión</span>
-            </a>
-            {% endif %}
-            <a href="{% url 'hyrox:registrar_entrenamiento' objective_id=objetivo_activo.id %}"
-                class="btn-lol-hyrox shadow-[0_0_15px_var(--lol-glow-red)] hover:shadow-[0_0_25px_var(--lol-glow-red)] flex items-center gap-2">
-                <i class="fas fa-plus"></i> <span class="hidden sm:inline">Registrar</span> Entrenamiento
-            </a>
+          <span class="hx-countdown-num" id="hx-days">—</span>
+          <p class="hx-countdown-unit">DÍAS RESTANTES</p>
         </div>
         {% endif %}
-    </div>
-
-    {% if not objetivo_activo %}
-    <div class="bg-slate-800/50 border border-slate-700 rounded-xl p-8 text-center max-w-2xl mx-auto backdrop-blur-md">
-        <div class="text-6xl text-cyan-500 mb-6 drop-shadow-[0_0_15px_rgba(6,182,212,0.5)]"><i
-                class="fas fa-flag-checkered"></i></div>
-        <h2 class="text-2xl font-bold mb-4 text-white">Aún no tienes un objetivo Hyrox activo</h2>
-        <p class="text-slate-400 mb-8 max-w-md mx-auto">Configura la fecha de tu evento, tu categoría y comencemos a
-            preparar esa máquina perfecta de resistencia y fuerza.</p>
-        <a href="{% url 'hyrox:crear_objetivo' %}"
-            class="inline-block px-8 py-3 bg-cyan-600 hover:bg-cyan-500 text-white rounded-full font-bold shadow-lg shadow-cyan-500/30 transition">
-            <i class="fas fa-rocket mr-2"></i> Preparar mi primera carrera
-        </a>
-    </div>
-    {% else %}
-
-    {% if resumen_semanal %}
-    <!-- Phase 6: Sunday Flash Card -->
-    <div class="mb-8 metric-card bg-[var(--lol-bg-alt)] border border-[var(--lol-border-subtle)] p-6 shadow-2xl relative overflow-hidden transition-all hover:border-[rgba(200,75,49,0.3)] hover:shadow-[0_0_15px_var(--lol-glow-red)]">
-        <div class="absolute top-0 right-0 w-64 h-64 bg-[var(--lol-red)] opacity-10 rounded-full blur-[80px] pointer-events-none"></div>
-        <div class="flex flex-col md:flex-row items-center justify-between gap-6 relative z-10">
-            <div class="flex-1">
-                <div class="flex items-center gap-3 mb-2">
-                    <span class="badge-lol font-data tracking-wide bg-[var(--lol-bg-dark)]">
-                        <i class="fas fa-star text-[var(--lol-gold-mid)] mr-1"></i> Resumen Dominical
-                    </span>
-                    <span class="font-data text-[10px] uppercase text-[var(--lol-gold-bright)] tracking-wide"><i class="fas fa-check-circle text-[var(--lol-red)] mr-1"></i> ¡Semana completada!</span>
-                </div>
-                <h3 class="font-display text-2xl md:text-3xl text-[var(--lol-gold-bright)] mb-2 tracking-wide uppercase">Gran trabajo esta semana</h3>
-                <p class="font-ui text-sm text-[var(--lol-text-dim)]">Aquí tienes el sumario del esfuerzo que has invertido en tu camino hacia el evento.</p>
-            </div>
-
-            <div class="flex gap-4 w-full md:w-auto overflow-x-auto pb-2 md:pb-0">
-                <div class="bg-[var(--lol-bg-dark)] border border-[var(--lol-border-subtle)] p-4 rounded-sm min-w-[120px] text-center">
-                    <div class="font-data text-[10px] text-[var(--lol-text-dim)] uppercase tracking-[0.1em] font-bold mb-1">Volumen</div>
-                    <div class="font-display text-xl text-[var(--lol-gold-bright)]">{{ resumen_semanal.volumen_kg }} <span class="text-sm text-[var(--lol-text-dim)]">kg</span></div>
-                </div>
-                <div class="bg-[var(--lol-bg-dark)] border border-[var(--lol-border-subtle)] p-4 rounded-sm min-w-[120px] text-center">
-                    <div class="font-data text-[10px] text-[var(--lol-text-dim)] uppercase tracking-[0.1em] font-bold mb-1">Carrera</div>
-                    <div class="font-display text-xl text-[var(--lol-gold-bright)]">{{ resumen_semanal.distancia_km }} <span class="text-sm text-[var(--lol-text-dim)]">km</span></div>
-                </div>
-                <div class="bg-[var(--lol-bg-dark)] border border-[var(--lol-border-subtle)] p-4 rounded-sm min-w-[120px] text-center">
-                    <div class="font-data text-[10px] text-[var(--lol-text-dim)] uppercase tracking-[0.1em] font-bold mb-1">RPE Medio</div>
-                    <div class="font-display text-xl text-[var(--lol-gold-bright)]">{{ resumen_semanal.rpe_medio }} <span class="text-sm text-[var(--lol-text-dim)]">/10</span></div>
-                </div>
-            </div>
+        <div style="padding-left:24px; border-left:1px solid var(--border); padding-top:4px;">
+          <p class="hx-label" style="margin-bottom:6px;">Categoría</p>
+          <p class="hx-title" style="font-size:19px; color:var(--text); margin-bottom:6px;">{{ objetivo_activo.get_categoria_display }}</p>
+          {% if objetivo_activo.fecha_evento %}
+          <p class="hx-mono" style="font-size:11px; color:var(--text-dim);">{{ objetivo_activo.fecha_evento|date:"d M Y" }}</p>
+          {% endif %}
         </div>
+      </div>
+      {% if daily_push %}
+      <p style="font-size:13px; color:var(--text-dim); margin-top:18px; font-style:italic; max-width:500px; line-height:1.55;">"{{ daily_push }}"</p>
+      {% endif %}
+      <div style="display:flex; gap:8px; margin-top:18px; padding-top:16px; border-top:1px solid var(--border); flex-wrap:wrap;">
+        <button type="button" onclick="(function(){
+            var chatEl = document.querySelector('[x-ref=chatInput]');
+            if(!chatEl){ alert('El chat del coach no está disponible en esta página.'); return; }
+            var r = chatEl.closest('[x-data]');
+            if(r && r._x_dataStack){
+              var d = r._x_dataStack[0];
+              d.currentInput = 'Coach, hazme una simulación de carrera';
+              setTimeout(function(){ d.sendMessage(); }, 80);
+            }
+          })()" class="hx-btn">
+          <i class="fas fa-stopwatch"></i> Simular Carrera
+        </button>
+        <a href="{% url 'hyrox:crear_objetivo' %}" class="hx-btn">
+          <i class="fas fa-pen"></i> Editar
+        </a>
+        <a href="{% url 'hyrox:cancelar_objetivo' objective_id=objetivo_activo.id %}"
+           onclick="return confirm('¿Seguro que quieres borrar TODOS tus entrenamientos Hyrox y empezar de cero?');"
+           class="hx-btn hx-btn-ghost-red">
+          <i class="fas fa-trash-alt"></i> Reset
+        </a>
+      </div>
     </div>
-    {% endif %}
 
-    {% if morning_briefing %}
-    <div class="mb-6 border-b-2 border-indigo-500 bg-slate-900/50 p-4 text-center rounded-t-xl">
-        <p class="text-indigo-300 text-sm md:text-base italic tracking-wide">"{{ morning_briefing }}"</p>
+    {# Readiness panel #}
+    <div class="hx-hero-right">
+      <p class="hx-label" style="margin-bottom:16px; text-align:center;">Race Readiness</p>
+      <div class="hx-readiness-num
+        {% if objetivo_activo.get_race_readiness_score >= 70 %}
+          " style="color:var(--teal); text-align:center;">
+        {% elif objetivo_activo.get_race_readiness_score >= 40 %}
+          " style="color:var(--gold); text-align:center;">
+        {% else %}
+          " style="color:var(--red); text-align:center;">
+        {% endif %}
+        {{ objetivo_activo.get_race_readiness_score }}
+      </div>
+      <p class="hx-countdown-unit" style="text-align:center; margin-top:4px;">PTS / 100</p>
+      <div class="hx-vert-bar-track">
+        <div class="hx-vert-bar-fill
+          {% if objetivo_activo.get_race_readiness_score >= 70 %}hx-fill-teal
+          {% elif objetivo_activo.get_race_readiness_score >= 40 %}hx-fill-gold
+          {% else %}hx-fill-red{% endif %}"
+          style="height:{{ objetivo_activo.get_race_readiness_score }}%;"></div>
+      </div>
+      {% if readiness_svg_points %}
+      <div style="width:100%; height:36px; position:relative; margin-top:6px;">
+        <svg viewBox="-2 -2 104 34" style="width:100%; height:100%; overflow:visible;">
+          <defs>
+            <linearGradient id="rGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stop-color="#E8341A"/>
+              <stop offset="100%" stop-color="#C8A96E"/>
+            </linearGradient>
+          </defs>
+          <polyline points="{{ readiness_svg_points }}" fill="none" stroke="url(#rGrad)"
+            stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <p class="hx-label" style="text-align:center; margin-top:2px;">Tendencia</p>
+      </div>
+      {% endif %}
     </div>
-    {% endif %}
+  </div>
 
-    {% if smart_alerts %}
-    <div class="mb-6 space-y-2">
-        {% for alert in smart_alerts %}
-        <div
-            class="bg-slate-800/80 border-l-4 border-cyan-500 text-slate-300 p-3 rounded shadow-md text-sm flex items-start gap-3">
-            <i class="fas fa-bolt text-cyan-400 mt-0.5"></i>
-            <div>{{ alert }}</div>
+  {# ── RECOVERY MODULE ── #}
+  {% if lesion_activa %}
+  <div class="hx-recovery hx-a hx-a3">
+    <div class="hx-recovery-header">
+      <div style="display:flex; align-items:center; gap:12px;">
+        <div style="width:30px; height:30px; background:var(--red-glow); border:1px solid var(--red-border); display:flex; align-items:center; justify-content:center;">
+          <i class="fas fa-heartbeat" style="color:var(--red); font-size:13px;"></i>
+        </div>
+        <div>
+          <p class="hx-title" style="font-size:14px; color:var(--text);">Recovery Mode</p>
+          <p class="hx-label" style="margin-top:2px;">{{ lesion_activa.zona_afectada|title }} · desde {{ lesion_activa.fecha_inicio|date:"d M Y" }}</p>
+        </div>
+      </div>
+      <span class="hx-fase-badge
+        {% if lesion_activa.fase == 'AGUDA' %}
+          " style="color:var(--red); border-color:var(--red-border); background:var(--red-glow);">
+        {% elif lesion_activa.fase == 'SUB_AGUDA' %}
+          " style="color:var(--warn); border-color:rgba(232,156,26,0.3); background:rgba(232,156,26,0.08);">
+        {% else %}
+          " style="color:var(--teal); border-color:rgba(29,200,184,0.3); background:var(--teal-dim);">
+        {% endif %}
+        {{ lesion_activa.get_fase_display }}
+      </span>
+    </div>
+    <div class="hx-recovery-body">
+      {% if sustituciones_activas %}
+      <p class="hx-label" style="margin-bottom:10px;"><i class="fas fa-exchange-alt" style="margin-right:6px;"></i>Sustituciones activas</p>
+      <div style="margin-bottom:16px;">
+        {% for sub in sustituciones_activas %}
+        <div class="hx-sub-row">
+          <span style="color:var(--red); font-size:10px;"><i class="fas fa-ban"></i></span>
+          <span style="color:var(--text-dim); text-decoration:line-through; flex:1;">{{ sub.orig }}</span>
+          <i class="fas fa-arrow-right" style="color:var(--text-dim); font-size:10px;"></i>
+          <span style="color:var(--teal); font-weight:600; flex:1;">{{ sub.sust }}</span>
         </div>
         {% endfor %}
+      </div>
+      {% endif %}
+
+      {% if not ultimo_reporte %}
+      <div style="background:rgba(200,169,110,0.05); border:1px solid rgba(200,169,110,0.2); padding:14px 16px; display:flex; justify-content:space-between; align-items:center; gap:14px; flex-wrap:wrap;">
+        <div>
+          <p class="hx-title" style="font-size:13px; color:var(--gold); margin-bottom:3px;">Reporte Diario Pendiente</p>
+          <p style="font-size:11px; color:var(--text-dim);">El Coach necesita saber cómo te encuentras hoy.</p>
+        </div>
+        <a href="{% url 'hyrox:reportar_recuperacion' lesion_id=lesion_activa.id %}" class="hx-btn" style="border-color:rgba(200,169,110,0.35); color:var(--gold);">
+          <i class="fas fa-clipboard-list"></i> Evaluar Dolor
+        </a>
+      </div>
+      {% else %}
+      <div class="hx-metric-trio">
+        <div class="hx-metric-box">
+          <p class="hx-label" style="margin-bottom:8px;">Dolor</p>
+          <p class="hx-mono" style="font-size:26px; font-weight:700;
+            {% if ultimo_reporte.dolor_movimiento > 5 %}color:var(--red);
+            {% elif ultimo_reporte.dolor_movimiento > 3 %}color:var(--warn);
+            {% else %}color:var(--teal);{% endif %}">
+            {{ ultimo_reporte.dolor_movimiento }}<span style="font-size:11px; color:var(--text-dim);">/10</span>
+          </p>
+        </div>
+        <div class="hx-metric-box">
+          <p class="hx-label" style="margin-bottom:8px;">Inflamación</p>
+          <p class="hx-mono" style="font-size:26px; font-weight:700;
+            {% if ultimo_reporte.inflamacion_percibida > 5 %}color:var(--red);
+            {% elif ultimo_reporte.inflamacion_percibida > 3 %}color:var(--warn);
+            {% else %}color:var(--teal);{% endif %}">
+            {{ ultimo_reporte.inflamacion_percibida }}<span style="font-size:11px; color:var(--text-dim);">/10</span>
+          </p>
+        </div>
+        <div class="hx-metric-box">
+          <p class="hx-label" style="margin-bottom:8px;">ROM</p>
+          <p class="hx-mono" style="font-size:26px; font-weight:700;
+            {% if ultimo_reporte.rango_movimiento >= 8 %}color:var(--teal);
+            {% elif ultimo_reporte.rango_movimiento >= 5 %}color:var(--warn);
+            {% else %}color:var(--red);{% endif %}">
+            {{ ultimo_reporte.rango_movimiento }}<span style="font-size:11px; color:var(--text-dim);">/10</span>
+          </p>
+        </div>
+      </div>
+      {% endif %}
+
+      <div style="display:flex; justify-content:space-between; align-items:center; padding-top:12px; border-top:1px solid var(--border);">
+        {% if ultimo_reporte %}
+        <a href="{% url 'hyrox:reportar_recuperacion' lesion_id=lesion_activa.id %}" class="hx-btn" style="font-size:11px;">
+          <i class="fas fa-sync-alt"></i> Actualizar
+        </a>
+        {% else %}<div></div>{% endif %}
+        {% if lesion_activa.fase != 'AGUDA' %}
+        <form method="post" action="{% url 'hyrox:marcar_lesion_recuperada' lesion_id=lesion_activa.id %}">
+          {% csrf_token %}
+          <button type="submit"
+            onclick="return confirm('¿Seguro que quieres dar el alta? Se eliminarán todas las restricciones.')"
+            class="hx-btn" style="color:var(--teal); border-color:rgba(29,200,184,0.3);">
+            <i class="fas fa-check-double"></i> Alta Clínica
+          </button>
+        </form>
+        {% endif %}
+      </div>
     </div>
-    {% endif %}
+  </div>
+  {% endif %}
 
-    {% if mental_focus %}
-    <div class="mb-8 border-l-4 border-yellow-500 bg-gradient-to-r from-yellow-500/10 to-transparent p-4 rounded-r-xl">
-        <h3 class="text-yellow-400 font-bold mb-1"><i class="fas fa-brain mr-2"></i> Focus Estratégico (Lunes)</h3>
-        <p class="text-slate-300 text-sm mb-0">{{ mental_focus }}</p>
+  {# ── MACROCYCLE TIMELINE ── #}
+  {% if macro_data %}
+  <div class="hx-macro hx-a hx-a3">
+    <div class="hx-macro-header">
+      <div>
+        <p class="hx-label" style="margin-bottom:4px;"><i class="fas fa-layer-group" style="margin-right:6px;"></i>Macrociclo 12 semanas</p>
+        <p style="font-size:13px; color:var(--text-mid);">
+          Semana <strong style="color:var(--text);">{{ 12|add:"-"|add:macro_data.semanas_restantes }}</strong> de 12
+          &nbsp;·&nbsp; Fase: <strong style="color:var(--red);">{{ macro_data.fase }}</strong>
+        </p>
+      </div>
+      <div style="text-align:right;">
+        <p class="hx-display" style="font-size:34px; color:var(--text);">{{ macro_data.pct_progreso }}<span style="font-size:18px; font-family:'Barlow Condensed',sans-serif; font-weight:400;">%</span></p>
+        <p class="hx-label">Completado</p>
+      </div>
     </div>
-    {% endif %}
 
-    {% if lesion_activa %}
-    <!-- RECOVERY MODE MODULE — Redesigned -->
-    <div class="mb-8 rounded-2xl overflow-hidden relative"
-         style="background: linear-gradient(135deg, rgba(15,23,42,0.95), rgba(30,20,30,0.95));">
+    <div class="hx-phase-bar">
+      <div class="hx-phase {% if macro_data.fase_numero == 1 %}hx-active{% elif macro_data.fase_numero > 1 %}hx-past{% endif %}"
+        style="width:33.3%;">Base</div>
+      <div class="hx-phase {% if macro_data.fase_numero == 2 %}hx-active{% elif macro_data.fase_numero > 2 %}hx-past{% endif %}"
+        style="width:33.3%;">Potencia</div>
+      <div class="hx-phase {% if macro_data.fase_numero == 3 %}hx-active{% elif macro_data.fase_numero > 3 %}hx-past{% endif %}"
+        style="width:25%;">Simulación</div>
+      <div class="hx-phase {% if macro_data.fase_numero == 4 %}hx-active{% endif %}"
+        style="width:8.4%; font-size:8px;">Tap.</div>
+      <div class="hx-phase-marker" style="left:calc({{ macro_data.pct_progreso }}% - 1px);"></div>
+    </div>
 
-        <!-- Top accent bar (phase-adaptive color) -->
-        {% if lesion_activa.fase == 'AGUDA' %}
-        <div class="h-1 bg-gradient-to-r from-red-600 via-red-500 to-orange-500"></div>
-        {% elif lesion_activa.fase == 'SUB_AGUDA' %}
-        <div class="h-1 bg-gradient-to-r from-yellow-500 via-amber-400 to-orange-400"></div>
+    <div class="hx-macro-footer">
+      <p style="font-size:12px; color:var(--text-dim); font-style:italic;">"{{ macro_data.mantra }}"</p>
+      <p class="hx-label">{{ macro_data.semanas_restantes }} sem. restantes</p>
+    </div>
+  </div>
+  {% endif %}
+
+  {# ── 3 DATA PANELS ── #}
+  <div class="hx-panels hx-a hx-a4">
+
+    {# PANEL: ESTA SEMANA #}
+    <div class="hx-panel">
+      <p class="hx-panel-label">Esta Semana</p>
+      <div class="hx-ring-row">
+        <div style="position:relative; width:58px; height:58px; flex-shrink:0;">
+          <svg viewBox="0 0 36 36" style="transform:rotate(-90deg); width:58px; height:58px;">
+            <circle cx="18" cy="18" r="15.5" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="3"/>
+            {% if stats_semana.total_planificadas > 0 %}
+            <circle cx="18" cy="18" r="15.5" fill="none" stroke="#E8341A" stroke-width="3" stroke-linecap="round"
+              stroke-dasharray="{% widthratio stats_semana.total_completadas stats_semana.total_planificadas 97 %} 97"/>
+            {% endif %}
+          </svg>
+          <div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center;">
+            <span class="hx-mono" style="font-weight:700; font-size:15px; color:var(--text);">{{ stats_semana.total_completadas }}</span>
+          </div>
+        </div>
+        <div>
+          <p class="hx-ring-big">{{ stats_semana.total_completadas }}<span style="font-size:22px; color:var(--text-dim);">/{{ stats_semana.total_planificadas }}</span></p>
+          <p class="hx-ring-sub">Sesiones completadas</p>
+        </div>
+      </div>
+
+      <div style="display:flex; flex-direction:column; gap:12px;">
+        <div>
+          <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+            <span style="font-size:12px; color:var(--text-dim);"><i class="fas fa-dumbbell" style="font-size:10px; margin-right:5px;"></i>Fuerza</span>
+            <span class="hx-mono" style="font-size:12px;
+              {% if stats_semana.fuerza_completadas >= stats_semana.fuerza_planificadas and stats_semana.fuerza_planificadas > 0 %}color:var(--teal);{% else %}color:var(--text-mid);{% endif %}">
+              {{ stats_semana.fuerza_completadas }}/{{ stats_semana.fuerza_planificadas }}
+            </span>
+          </div>
+          <div class="hx-track">
+            {% if stats_semana.fuerza_planificadas > 0 %}
+            <div class="hx-fill hx-fill-teal" style="width:{% widthratio stats_semana.fuerza_completadas stats_semana.fuerza_planificadas 100 %}%;"></div>
+            {% endif %}
+          </div>
+        </div>
+        <div>
+          <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+            <span style="font-size:12px; color:var(--text-dim);"><i class="fas fa-running" style="font-size:10px; margin-right:5px;"></i>Carrera</span>
+            <span class="hx-mono" style="font-size:12px;
+              {% if stats_semana.carrera_completadas >= stats_semana.carrera_planificadas and stats_semana.carrera_planificadas > 0 %}color:var(--teal);{% else %}color:var(--text-mid);{% endif %}">
+              {{ stats_semana.carrera_completadas }}/{{ stats_semana.carrera_planificadas }}
+            </span>
+          </div>
+          <div class="hx-track">
+            {% if stats_semana.carrera_planificadas > 0 %}
+            <div class="hx-fill hx-fill-red" style="width:{% widthratio stats_semana.carrera_completadas stats_semana.carrera_planificadas 100 %}%;"></div>
+            {% endif %}
+          </div>
+        </div>
+        <div>
+          <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+            <span style="font-size:12px; color:var(--text-dim);"><i class="fas fa-cube" style="font-size:10px; margin-right:5px;"></i>Específicos</span>
+            <span class="hx-mono" style="font-size:12px;
+              {% if stats_semana.espe_completadas >= stats_semana.espe_planificadas and stats_semana.espe_planificadas > 0 %}color:var(--teal);{% else %}color:var(--text-mid);{% endif %}">
+              {{ stats_semana.espe_completadas }}/{{ stats_semana.espe_planificadas }}
+            </span>
+          </div>
+          <div class="hx-track">
+            {% if stats_semana.espe_planificadas > 0 %}
+            <div class="hx-fill hx-fill-gold" style="width:{% widthratio stats_semana.espe_completadas stats_semana.espe_planificadas 100 %}%;"></div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {# PANEL: PERFIL BASE #}
+    <div class="hx-panel">
+      <p class="hx-panel-label">Perfil Base</p>
+      <div style="margin-bottom:18px;">
+        <div class="hx-stat-row">
+          <span class="hx-stat-key"><i class="fas fa-weight-hanging" style="margin-right:6px; font-size:10px;"></i>RM Peso Muerto</span>
+          <span class="hx-stat-val">{{ objetivo_activo.rm_peso_muerto|default:"—" }}&thinsp;<span style="font-size:10px; color:var(--text-dim);">kg</span></span>
+        </div>
+        <div class="hx-stat-row">
+          <span class="hx-stat-key"><i class="fas fa-dumbbell" style="margin-right:6px; font-size:10px;"></i>RM Sentadilla</span>
+          <span class="hx-stat-val">{{ objetivo_activo.rm_sentadilla|default:"—" }}&thinsp;<span style="font-size:10px; color:var(--text-dim);">kg</span></span>
+        </div>
+        <div class="hx-stat-row">
+          <span class="hx-stat-key"><i class="fas fa-running" style="margin-right:6px; font-size:10px;"></i>Test 5k</span>
+          <span class="hx-stat-val">{{ objetivo_activo.tiempo_5k_base|default:"—" }}</span>
+        </div>
+      </div>
+
+      <p class="hx-label" style="margin-bottom:8px;">Equilibrio de Fuerza</p>
+      <div style="display:flex; align-items:baseline; gap:8px; margin-bottom:7px;">
+        <span class="hx-mono" style="font-weight:700; font-size:26px; color:var(--text);">{{ strength_balance.ratio }}<span style="font-size:13px; color:var(--text-dim);">%</span></span>
+        <span style="font-size:11px; color:var(--text-dim);">objetivo &gt;70%</span>
+      </div>
+      <div class="hx-track" style="margin-bottom:12px; height:4px;">
+        <div class="hx-fill
+          {% if strength_balance.ratio >= 70 %}hx-fill-teal
+          {% elif strength_balance.ratio >= 50 %}hx-fill-gold
+          {% else %}hx-fill-red{% endif %}"
+          style="width:{{ strength_balance.ratio }}%;"></div>
+      </div>
+      <p style="font-size:11px; color:var(--text-dim); line-height:1.55;">{{ strength_balance.advice }}</p>
+    </div>
+
+    {# PANEL: READINESS BREAKDOWN #}
+    <div class="hx-panel">
+      <p class="hx-panel-label">Desglose Readiness</p>
+      <div style="display:flex; flex-direction:column; gap:14px;">
+        <div class="hx-breakdown-row">
+          <div class="hx-breakdown-head">
+            <span style="font-size:12px; color:var(--text-mid);">Resistencia</span>
+            <span class="hx-mono" style="font-size:12px; color:var(--teal);">{{ readiness_breakdown.resistencia }}%</span>
+          </div>
+          <div class="hx-track"><div class="hx-fill hx-fill-teal" style="width:{{ readiness_breakdown.resistencia }}%;"></div></div>
+        </div>
+        <div class="hx-breakdown-row">
+          <div class="hx-breakdown-head">
+            <span style="font-size:12px; color:var(--text-mid);">Potencia</span>
+            <span class="hx-mono" style="font-size:12px; color:var(--gold);">{{ readiness_breakdown.potencia }}%</span>
+          </div>
+          <div class="hx-track"><div class="hx-fill hx-fill-gold" style="width:{{ readiness_breakdown.potencia }}%;"></div></div>
+        </div>
+        <div class="hx-breakdown-row">
+          <div class="hx-breakdown-head">
+            <span style="font-size:12px; color:var(--text-mid);">Fuerza Estructural</span>
+            <span class="hx-mono" style="font-size:12px; color:var(--text);">{{ readiness_breakdown.fuerza }}%</span>
+          </div>
+          <div class="hx-track"><div class="hx-fill hx-fill-red" style="width:{{ readiness_breakdown.fuerza }}%;"></div></div>
+        </div>
+      </div>
+
+      {% if pace_prediction %}
+      <div class="hx-pace">
+        <i class="fas fa-stopwatch" style="color:var(--red); font-size:16px; flex-shrink:0;"></i>
+        <p style="font-size:12px; color:var(--text-mid); line-height:1.4;">{{ pace_prediction }}</p>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  {# ── COMPETITION STANDARDS ── #}
+  {% if competition_progress %}
+  <div class="hx-standards-section hx-a hx-a5">
+    <div class="hx-standards-header">
+      <div style="display:flex; align-items:center; gap:12px;">
+        <i class="fas fa-trophy" style="color:var(--gold); font-size:15px;"></i>
+        <div>
+          <p class="hx-title" style="font-size:14px; color:var(--text);">Estándares HYROX</p>
+          <p class="hx-label" style="margin-top:2px;">{{ objetivo_activo.get_categoria_display }} · Progreso Global</p>
+        </div>
+      </div>
+      <div style="display:flex; align-items:center; gap:16px;">
+        <div>
+          <p class="hx-display" style="font-size:28px; color:var(--text);">{% widthratio competition_progress.progreso_global 1 1 %}<span style="font-size:16px;">%</span></p>
+        </div>
+        <div style="position:relative; width:40px; height:40px;">
+          <svg viewBox="0 0 36 36" style="transform:rotate(-90deg); width:40px; height:40px;">
+            <circle cx="18" cy="18" r="15" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="2.5"/>
+            <circle cx="18" cy="18" r="15" fill="none" stroke="#E8341A" stroke-width="2.5" stroke-linecap="round"
+              stroke-dasharray="{% widthratio competition_progress.progreso_global 100 94 %} 94"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+
+    <div class="hx-standards-grid">
+      {% for std in competition_progress.progreso %}
+      <div class="hx-station-card {% if std.is_completed %}hx-done{% endif %}">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px;">
+          <p class="hx-title" style="font-size:12px;
+            {% if std.is_completed %}color:var(--teal);
+            {% elif std.porcentaje > 0 %}color:var(--text);
+            {% else %}color:var(--text-dim);{% endif %}">
+            {{ std.nombre }}
+          </p>
+          {% if std.is_completed %}
+          <span style="color:var(--teal); font-size:11px;"><i class="fas fa-check"></i></span>
+          {% else %}
+          <span class="hx-mono" style="font-size:11px; color:var(--text-dim);">{{ std.porcentaje }}%</span>
+          {% endif %}
+        </div>
+
+        {% if std.es_dual %}
+        <div style="margin-bottom:8px;">
+          <div style="display:flex; justify-content:space-between; font-size:10px; margin-bottom:3px;">
+            <span style="color:var(--text-dim);">Carga</span>
+            <span class="hx-mono" style="color:var(--text-mid);">{{ std.kg_actual|floatformat:1 }} / {{ std.kg_objetivo }} kg</span>
+          </div>
+          <div class="hx-track">
+            <div class="hx-fill {% if std.is_completed %}hx-fill-teal{% else %}hx-fill-red{% endif %}" style="width:{{ std.pct_kg }}%;"></div>
+          </div>
+        </div>
+        <div style="margin-bottom:8px;">
+          <div style="display:flex; justify-content:space-between; font-size:10px; margin-bottom:3px;">
+            <span style="color:var(--text-dim);">Volumen</span>
+            <span class="hx-mono" style="color:var(--text-mid);">{{ std.vol_actual|floatformat:0 }} / {{ std.vol_objetivo }} {{ std.vol_unit }}</span>
+          </div>
+          <div class="hx-track">
+            <div class="hx-fill hx-fill-gold" style="width:{{ std.pct_vol }}%;"></div>
+          </div>
+        </div>
         {% else %}
-        <div class="h-1 bg-gradient-to-r from-emerald-500 via-green-400 to-cyan-400"></div>
+        <div style="margin-bottom:8px;">
+          <div style="display:flex; justify-content:space-between; font-size:10px; margin-bottom:3px;">
+            <span style="color:var(--text-dim);">Distancia</span>
+            <span class="hx-mono" style="color:var(--text-mid);">{{ std.vol_actual|floatformat:0 }} / {{ std.vol_objetivo }} m</span>
+          </div>
+          <div class="hx-track" style="height:4px;">
+            <div class="hx-fill {% if std.is_completed %}hx-fill-teal{% else %}hx-fill-red{% endif %}" style="width:{{ std.porcentaje }}%;"></div>
+          </div>
+        </div>
         {% endif %}
 
-        <!-- Glow BG -->
-        <div class="absolute top-0 right-0 w-40 h-40 bg-red-500/5 rounded-full blur-[60px] pointer-events-none"></div>
-        <div class="absolute bottom-0 left-0 w-32 h-32 bg-purple-500/5 rounded-full blur-[50px] pointer-events-none"></div>
+        <div class="hx-track" style="height:4px; margin-top:4px;">
+          <div class="hx-fill {% if std.is_completed %}hx-fill-teal{% elif std.porcentaje >= 50 %}hx-fill-auto{% else %}hx-fill-red{% endif %}"
+            style="width:{{ std.porcentaje }}%;"></div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
 
-        <div class="p-5 md:p-6 relative z-10">
-            <!-- Header row -->
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
-                <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 rounded-xl flex items-center justify-center text-lg
-                        {% if lesion_activa.fase == 'AGUDA' %}bg-red-500/20 text-red-400
-                        {% elif lesion_activa.fase == 'SUB_AGUDA' %}bg-yellow-500/20 text-yellow-400
-                        {% else %}bg-emerald-500/20 text-emerald-400{% endif %}">
-                        <i class="fas fa-heartbeat"></i>
-                    </div>
-                    <div>
-                        <h3 class="text-lg font-bold text-white leading-tight">Recovery Mode</h3>
-                        <p class="text-xs text-slate-400">{{ lesion_activa.zona_afectada|title }} · desde {{ lesion_activa.fecha_inicio|date:"d M Y" }}</p>
-                    </div>
-                </div>
-                <span class="self-start sm:self-auto px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border
-                    {% if lesion_activa.fase == 'AGUDA' %}bg-red-500/10 text-red-400 border-red-500/30
-                    {% elif lesion_activa.fase == 'SUB_AGUDA' %}bg-yellow-500/10 text-yellow-400 border-yellow-500/30
-                    {% else %}bg-emerald-500/10 text-emerald-400 border-emerald-500/30{% endif %}">
-                    {{ lesion_activa.get_fase_display }}
-                </span>
-            </div>
+  {# ── PRÓXIMAS SESIONES ── #}
+  {% if proximas_sesiones %}
+  <div class="hx-sessions-section hx-a hx-a6">
+    <div class="hx-sessions-header">
+      <p class="hx-title" style="font-size:14px; color:var(--text);">
+        <i class="fas fa-bolt" style="color:var(--red); margin-right:8px;"></i>
+        Plan de Entrenamientos
+      </p>
+    </div>
+    <div class="hx-session-grid" style="background:var(--border);">
+      {% for plan in proximas_sesiones %}
+      <div class="hx-session-card" x-data="{ open: false }">
+        <div class="hx-session-head" @click="open = !open">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px;">
+            <span class="hx-mono" style="font-size:9px; color:var(--red); letter-spacing:0.12em;">
+              <i class="far fa-calendar-alt" style="margin-right:4px;"></i>{{ plan.fecha|date:"d M Y" }}
+            </span>
+            <span style="display:flex; align-items:center; gap:6px;">
+              <span style="font-size:11px; color:var(--text-dim);">{{ plan.activities.count }} bloques</span>
+              <i class="fas fa-chevron-down" style="color:var(--red); opacity:0.5; font-size:10px; transition:transform 0.2s;"
+                :style="open ? 'transform:rotate(180deg)' : ''"></i>
+            </span>
+          </div>
+          <p class="hx-title" style="font-size:14px; color:var(--text); line-height:1.2;">
+            {{ plan.titulo_sustituido|default:plan.titulo }}
+          </p>
+        </div>
 
-            <!-- Substitutions grid -->
-            {% if sustituciones_activas %}
-            <div class="mb-5">
-                <p class="text-[10px] uppercase tracking-[0.15em] font-bold text-slate-500 mb-2.5">
-                    <i class="fas fa-exchange-alt mr-1"></i> Sustituciones Metabólicas Activas
+        <div class="hx-session-body" x-show="open" x-transition.opacity.duration.200ms>
+          {% for act in plan.activities.all %}
+          <div class="hx-activity-row">
+            <div style="display:flex; align-items:flex-start; gap:8px; margin-bottom:6px;">
+              <span class="hx-mono" style="font-size:10px; color:var(--red); opacity:0.6; padding-top:1px;">{{ forloop.counter }}</span>
+              <div>
+                {% if act.is_substituted %}
+                <p style="font-size:12px; color:var(--text); font-weight:600; margin-bottom:2px;">
+                  <i class="fas {{ act.sustituto_icon }}" style="color:var(--red); margin-right:4px; opacity:0.7;"></i>{{ act.sustituto }}
+                  <span style="display:inline-block; margin-left:6px; font-size:9px; background:var(--teal-dim); color:var(--teal); border:1px solid rgba(29,200,184,0.3); padding:1px 6px; letter-spacing:0.1em;">BIO-SAFE</span>
                 </p>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {% for sub in sustituciones_activas %}
-                    <div class="flex items-center gap-3 bg-slate-800/60 border border-slate-700/50 rounded-lg px-3 py-2.5 group hover:border-slate-600/70 transition">
-                        <div class="flex items-center gap-2 flex-1 min-w-0">
-                            <span class="text-red-400/70 text-xs"><i class="fas fa-ban"></i></span>
-                            <span class="text-sm text-slate-400 truncate line-through decoration-red-500/40">{{ sub.orig }}</span>
-                        </div>
-                        <i class="fas fa-arrow-right text-[10px] text-slate-600"></i>
-                        <div class="flex items-center gap-2 flex-1 min-w-0">
-                            <span class="text-emerald-400/70 text-xs"><i class="fas {{ sub.icon }}"></i></span>
-                            <span class="text-sm text-emerald-300 font-medium truncate">{{ sub.sust }}</span>
-                        </div>
-                    </div>
-                    {% endfor %}
-                </div>
-            </div>
-            {% endif %}
-
-            <!-- Daily report section -->
-            {% if not ultimo_reporte %}
-            <div class="bg-yellow-500/5 border border-yellow-500/20 rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <div class="flex items-start gap-3">
-                    <div class="w-8 h-8 rounded-lg bg-yellow-500/15 flex items-center justify-center mt-0.5">
-                        <i class="fas fa-exclamation-triangle text-yellow-400 text-sm"></i>
-                    </div>
-                    <div>
-                        <p class="text-sm font-bold text-yellow-300">Reporte Diario Pendiente</p>
-                        <p class="text-xs text-slate-400 mt-0.5">El Coach necesita saber cómo te encuentras hoy para ajustar tu entrenamiento.</p>
-                    </div>
-                </div>
-                <a href="{% url 'hyrox:reportar_recuperacion' lesion_id=lesion_activa.id %}"
-                    class="px-5 py-2.5 bg-gradient-to-r from-amber-600 to-yellow-500 hover:from-amber-500 hover:to-yellow-400 text-white rounded-lg text-sm font-bold shadow-lg shadow-yellow-500/15 transition whitespace-nowrap inline-flex items-center">
-                    <i class="fas fa-clipboard-list mr-2"></i> Evaluar Dolor
-                </a>
-            </div>
-            {% else %}
-            <!-- Today's metrics -->
-            <div class="grid grid-cols-3 gap-3 mb-4">
-                <div class="bg-slate-800/50 border border-slate-700/40 rounded-xl p-3 text-center">
-                    <p class="text-[9px] text-slate-500 uppercase tracking-widest font-bold mb-1">Dolor Dinámico</p>
-                    <span class="text-2xl font-black {% if ultimo_reporte.dolor_movimiento > 5 %}text-red-500{% elif ultimo_reporte.dolor_movimiento > 3 %}text-yellow-500{% else %}text-green-400{% endif %}">
-                        {{ ultimo_reporte.dolor_movimiento }}<span class="text-xs text-slate-600 font-normal">/10</span>
-                    </span>
-                </div>
-                <div class="bg-slate-800/50 border border-slate-700/40 rounded-xl p-3 text-center">
-                    <p class="text-[9px] text-slate-500 uppercase tracking-widest font-bold mb-1">Inflamación</p>
-                    <span class="text-2xl font-black {% if ultimo_reporte.inflamacion_percibida > 5 %}text-red-500{% elif ultimo_reporte.inflamacion_percibida > 3 %}text-orange-400{% else %}text-green-400{% endif %}">
-                        {{ ultimo_reporte.inflamacion_percibida }}<span class="text-xs text-slate-600 font-normal">/10</span>
-                    </span>
-                </div>
-                <div class="bg-slate-800/50 border border-slate-700/40 rounded-xl p-3 text-center">
-                    <p class="text-[9px] text-slate-500 uppercase tracking-widest font-bold mb-1">ROM</p>
-                    <span class="text-2xl font-black {% if ultimo_reporte.rango_movimiento >= 8 %}text-green-400{% elif ultimo_reporte.rango_movimiento >= 5 %}text-yellow-400{% else %}text-red-500{% endif %}">
-                        {{ ultimo_reporte.rango_movimiento }}<span class="text-xs text-slate-600 font-normal">/10</span>
-                    </span>
-                </div>
-            </div>
-            {% endif %}
-
-            <!-- Action bar -->
-            <div class="flex items-center justify-between pt-3 border-t border-slate-700/30">
-                <div class="flex items-center gap-3">
-                    {% if ultimo_reporte %}
-                    <a href="{% url 'hyrox:reportar_recuperacion' lesion_id=lesion_activa.id %}"
-                        class="text-xs text-slate-400 hover:text-white transition inline-flex items-center gap-1.5">
-                        <i class="fas fa-sync-alt text-[10px]"></i> Actualizar Evaluación
-                    </a>
-                    {% endif %}
-                </div>
-                {% if lesion_activa.fase != 'AGUDA' %}
-                <form method="post" action="{% url 'hyrox:marcar_lesion_recuperada' lesion_id=lesion_activa.id %}">
-                    {% csrf_token %}
-                    <button type="submit"
-                            onclick="return confirm('¿Seguro que quieres dar el alta clínica a esta lesión? Se eliminarán todas las restricciones.')"
-                            class="px-4 py-2 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 hover:border-emerald-400/50 text-emerald-400 hover:text-emerald-300 rounded-lg text-xs font-bold transition inline-flex items-center gap-2">
-                        <i class="fas fa-check-double"></i> Dar de Alta
-                    </button>
-                </form>
-                {% endif %}
-            </div>
-        </div>
-    </div>
-    {% endif %}
-
-    {% if macro_data %}
-    <!-- MACROCYCLE TIMELINE BAR -->
-    <div class="mb-8 bg-slate-800/80 border border-slate-700 rounded-xl p-5 backdrop-blur-md shadow-xl">
-        <div class="flex justify-between items-end mb-3">
-            <div>
-                <h3 class="text-lg font-bold text-white flex items-center gap-2">
-                    <i class="fas fa-layer-group text-purple-400"></i> Macrociclo Hyrox
-                </h3>
-                <p class="text-xs text-slate-400">Semana {{ 12|add:"-"|add:macro_data.semanas_restantes }} de 12 • Fase
-                    actual: <span class="text-cyan-400 font-bold">{{ macro_data.fase }}</span></p>
-            </div>
-            <div class="text-right">
-                <div
-                    class="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-500">
-                    {{ macro_data.pct_progreso }}%</div>
-                <div class="text-[10px] text-slate-500 uppercase tracking-widest">Completado</div>
-            </div>
-        </div>
-
-        <div class="relative h-6 bg-slate-900 rounded-full w-full overflow-hidden flex shadow-inner">
-            <!-- Phase 1: Base (4 weeks = ~33%) -->
-            <div class="relative h-full flex items-center justify-center font-bold text-[9px] uppercase tracking-wider group cursor-help transition-colors {% if macro_data.fase_numero == 1 %}bg-slate-600/50 text-white border-b-2 border-cyan-400{% elif macro_data.fase_numero > 1 %}bg-slate-700/30 text-slate-500{% else %}bg-slate-800/10 text-slate-600{% endif %}"
-                style="width: 33.3%;">
-                Base
-                <div
-                    class="absolute bottom-full mb-2 hidden group-hover:block w-48 bg-slate-900 text-slate-300 text-xs p-2 rounded border border-slate-700 shadow-xl z-20 text-center">
-                    Semanas 12-9: Enfoque en técnica, volumen suave y corrección de desequilibrios.
-                </div>
-            </div>
-            <!-- Phase 2: Potencia (4 weeks = ~33%) -->
-            <div class="relative h-full flex items-center justify-center font-bold text-[9px] uppercase tracking-wider border-l border-slate-800 group cursor-help transition-colors {% if macro_data.fase_numero == 2 %}bg-purple-900/40 text-purple-200 border-b-2 border-purple-400{% elif macro_data.fase_numero > 2 %}bg-slate-700/30 text-slate-500{% else %}bg-slate-800/10 text-slate-600{% endif %}"
-                style="width: 33.3%;">
-                Potencia
-                <div
-                    class="absolute bottom-full mb-2 hidden group-hover:block w-48 bg-slate-900 text-slate-300 text-xs p-2 rounded border border-slate-700 shadow-xl z-20 text-center">
-                    Semanas 8-5: Construyendo la potencia pesada para dominar el Sled Push y Wall Balls.
-                </div>
-            </div>
-            <!-- Phase 3: Simulación (3 weeks = ~25%) -->
-            <div class="relative h-full flex items-center justify-center font-bold text-[9px] uppercase tracking-wider border-l border-slate-800 group cursor-help transition-colors {% if macro_data.fase_numero == 3 %}bg-pink-900/40 text-pink-200 border-b-2 border-pink-400{% elif macro_data.fase_numero > 3 %}bg-slate-700/30 text-slate-500{% else %}bg-slate-800/10 text-slate-600{% endif %}"
-                style="width: 25%;">
-                Simulación
-                <div
-                    class="absolute bottom-full mb-2 hidden group-hover:block w-48 bg-slate-900 text-slate-300 text-xs p-2 rounded border border-slate-700 shadow-xl z-20 text-center">
-                    Semanas 4-2: Carrera intervenida. Acostumbrando el cuerpo a correr bajo fatiga severa.
-                </div>
-            </div>
-            <!-- Phase 4: Tapering (1 week = ~8%) -->
-            <div class="relative h-full flex items-center justify-center font-bold text-[8px] uppercase tracking-wider border-l border-slate-800 group cursor-help transition-colors {% if macro_data.fase_numero == 4 %}bg-green-900/40 text-green-200 border-b-2 border-green-400{% else %}bg-slate-800/10 text-slate-600{% endif %}"
-                style="width: 8.4%;">
-                Tap.
-                <div
-                    class="absolute bottom-full mb-2 right-0 hidden group-hover:block w-48 bg-slate-900 text-slate-300 text-xs p-2 rounded border border-slate-700 shadow-xl z-20 text-center">
-                    Semana 1: Recuperación, afinación y puesta a punto. El trabajo ya está hecho.
-                </div>
-            </div>
-
-            <!-- Absolute Pointer Marker -->
-            <div class="absolute top-0 bottom-0 w-1 bg-white shadow-[0_0_8px_rgba(255,255,255,0.8)] z-10 transition-all duration-1000 ease-in-out"
-                style="left: calc({{ macro_data.pct_progreso }}% - 2px);">
-                <div class="absolute -top-1 -left-1 w-3 h-3 bg-white rounded-full"></div>
-            </div>
-        </div>
-
-        <div class="mt-3 text-center">
-            <p class="text-sm italic text-slate-400">"{{ macro_data.mantra }}"</p>
-        </div>
-    </div>
-    {% endif %}
-
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
-
-        <!-- ═══════ PANEL 1: TU EVENTO ═══════ -->
-        <div class="rounded-2xl overflow-hidden relative group"
-             style="background: linear-gradient(160deg, rgba(15,23,42,0.97), rgba(20,16,35,0.97));">
-            <div class="h-0.5 bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-500"></div>
-            <div class="absolute top-0 right-0 w-28 h-28 bg-cyan-500/8 rounded-full blur-[50px] pointer-events-none"></div>
-
-            <div class="p-5 flex flex-col h-full">
-                <!-- Event header -->
-                <div class="flex items-start justify-between mb-4">
-                    <div>
-                        <p class="text-[10px] text-slate-500 uppercase tracking-[0.15em] font-bold mb-1.5">Tu Evento</p>
-                        <h3 class="text-2xl font-black text-white leading-tight">{{ objetivo_activo.get_categoria_display }}</h3>
-                    </div>
-                    <div class="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center">
-                        <i class="fas fa-flag-checkered text-cyan-400"></i>
-                    </div>
-                </div>
-
-                <!-- Date with countdown feel -->
-                <div class="bg-slate-800/50 border border-slate-700/30 rounded-lg px-3 py-2.5 mb-4 flex items-center gap-3">
-                    <div class="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center">
-                        <i class="far fa-calendar-alt text-purple-400 text-sm"></i>
-                    </div>
-                    <div>
-                        <p class="text-sm text-white font-semibold">{{ objetivo_activo.fecha_evento|date:"d M Y" }}</p>
-                        <p class="text-[10px] text-slate-500 uppercase tracking-wider">Fecha del evento</p>
-                    </div>
-                </div>
-
-                {% if daily_push %}
-                <div class="mb-4 flex-1">
-                    <p class="text-xs text-slate-400/80 italic leading-relaxed">"{{ daily_push }}"</p>
-                </div>
-                {% endif %}
-
-                <!-- Buttons with hierarchy -->
-                <div class="flex items-center gap-2 mt-auto pt-3 border-t border-slate-700/30">
-                    <button type="button" onclick="(function(){
-                            var chatEl = document.querySelector('[x-ref=chatInput]');
-                            if(!chatEl){ alert('El chat del coach no está disponible en esta página.'); return; }
-                            var alpineRoot = chatEl.closest('[x-data]');
-                            if(alpineRoot && alpineRoot._x_dataStack){
-                                var data = alpineRoot._x_dataStack[0];
-                                data.currentInput = 'Coach, hazme una simulación de carrera';
-                                setTimeout(function(){ data.sendMessage(); }, 80);
-                            }
-                        })()"
-                        class="flex-1 px-3 py-2 bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/25 hover:border-cyan-400/40 text-cyan-400 rounded-lg text-xs font-bold transition inline-flex items-center justify-center gap-1.5">
-                        <i class="fas fa-stopwatch"></i> Simular Carrera
-                    </button>
-                    <a href="{% url 'hyrox:crear_objetivo' %}"
-                        class="px-3 py-2 bg-slate-700/30 hover:bg-slate-700/50 border border-slate-600/30 text-slate-300 hover:text-white rounded-lg text-xs font-medium transition inline-flex items-center gap-1.5">
-                        <i class="fas fa-pen text-[10px]"></i> Editar
-                    </a>
-                    <a href="{% url 'hyrox:cancelar_objetivo' objective_id=objetivo_activo.id %}"
-                        onclick="return confirm('¿Estás seguro de que deseas borrar TODOS tus entrenamientos Hyrox y empezar de cero? Esta acción no se puede deshacer.');"
-                        class="px-3 py-2 bg-red-500/5 hover:bg-red-500/15 border border-red-500/20 text-red-400/70 hover:text-red-400 rounded-lg text-xs font-medium transition inline-flex items-center gap-1.5">
-                        <i class="fas fa-trash-alt text-[10px]"></i> Reset
-                    </a>
-                </div>
-            </div>
-        </div>
-
-        <!-- ═══════ PANEL 2: TU SEMANA ═══════ -->
-        <div class="rounded-2xl overflow-hidden relative"
-             style="background: linear-gradient(160deg, rgba(15,23,42,0.97), rgba(25,15,30,0.97));">
-            <div class="h-0.5 bg-gradient-to-r from-purple-500 via-pink-500 to-rose-500"></div>
-            <div class="absolute top-0 right-0 w-28 h-28 bg-purple-500/8 rounded-full blur-[50px] pointer-events-none"></div>
-
-            <div class="p-5 flex flex-col h-full">
-                <p class="text-[10px] text-slate-500 uppercase tracking-[0.15em] font-bold mb-4">Tu Semana</p>
-
-                <!-- Big number + circular feel -->
-                <div class="flex items-center gap-5 mb-5">
-                    <div class="relative w-16 h-16 flex-shrink-0">
-                        <svg class="w-full h-full -rotate-90" viewBox="0 0 36 36">
-                            <circle cx="18" cy="18" r="15.5" fill="none" stroke="rgba(100,116,139,0.2)" stroke-width="3"/>
-                            {% if stats_semana.total_planificadas > 0 %}
-                            <circle cx="18" cy="18" r="15.5" fill="none"
-                                    stroke="url(#weekGrad)" stroke-width="3" stroke-linecap="round"
-                                    stroke-dasharray="{{ stats_semana.total_completadas|floatformat:0 }}{% widthratio stats_semana.total_completadas stats_semana.total_planificadas 97 %} 97"
-                                    />
-                            {% endif %}
-                            <defs>
-                                <linearGradient id="weekGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-                                    <stop offset="0%" stop-color="#a855f7"/>
-                                    <stop offset="100%" stop-color="#ec4899"/>
-                                </linearGradient>
-                            </defs>
-                        </svg>
-                        <div class="absolute inset-0 flex items-center justify-center">
-                            <span class="text-lg font-black text-white">{{ stats_semana.total_completadas }}</span>
-                        </div>
-                    </div>
-                    <div>
-                        <p class="text-sm text-white font-semibold">{{ stats_semana.total_completadas }} de {{ stats_semana.total_planificadas }}</p>
-                        <p class="text-[10px] text-slate-500 uppercase tracking-wider">Sesiones completadas</p>
-                    </div>
-                </div>
-
-                <!-- Type breakdown with mini progress bars -->
-                <div class="space-y-3 mt-auto">
-                    <div>
-                        <div class="flex justify-between items-center text-xs mb-1">
-                            <span class="text-slate-400 flex items-center gap-1.5"><i class="fas fa-dumbbell text-cyan-500 w-3 text-center text-[10px]"></i> Fuerza</span>
-                            <span class="font-bold {% if stats_semana.fuerza_completadas >= stats_semana.fuerza_planificadas and stats_semana.fuerza_planificadas > 0 %}text-green-400{% else %}text-slate-400{% endif %}">
-                                {{ stats_semana.fuerza_completadas }}/{{ stats_semana.fuerza_planificadas }}
-                            </span>
-                        </div>
-                        <div class="w-full bg-slate-800/80 rounded-full h-1">
-                            {% if stats_semana.fuerza_planificadas > 0 %}
-                            <div class="bg-cyan-500/60 h-1 rounded-full transition-all duration-700" style="width: {% widthratio stats_semana.fuerza_completadas stats_semana.fuerza_planificadas 100 %}%"></div>
-                            {% else %}
-                            <div class="bg-slate-700/30 h-1 rounded-full" style="width: 100%"></div>
-                            {% endif %}
-                        </div>
-                    </div>
-                    <div>
-                        <div class="flex justify-between items-center text-xs mb-1">
-                            <span class="text-slate-400 flex items-center gap-1.5"><i class="fas fa-running text-pink-500 w-3 text-center text-[10px]"></i> Carrera</span>
-                            <span class="font-bold {% if stats_semana.carrera_completadas >= stats_semana.carrera_planificadas and stats_semana.carrera_planificadas > 0 %}text-green-400{% else %}text-slate-400{% endif %}">
-                                {{ stats_semana.carrera_completadas }}/{{ stats_semana.carrera_planificadas }}
-                            </span>
-                        </div>
-                        <div class="w-full bg-slate-800/80 rounded-full h-1">
-                            {% if stats_semana.carrera_planificadas > 0 %}
-                            <div class="bg-pink-500/60 h-1 rounded-full transition-all duration-700" style="width: {% widthratio stats_semana.carrera_completadas stats_semana.carrera_planificadas 100 %}%"></div>
-                            {% else %}
-                            <div class="bg-slate-700/30 h-1 rounded-full" style="width: 100%"></div>
-                            {% endif %}
-                        </div>
-                    </div>
-                    <div>
-                        <div class="flex justify-between items-center text-xs mb-1">
-                            <span class="text-slate-400 flex items-center gap-1.5"><i class="fas fa-cube text-purple-500 w-3 text-center text-[10px]"></i> Específicos</span>
-                            <span class="font-bold {% if stats_semana.espe_completadas >= stats_semana.espe_planificadas and stats_semana.espe_planificadas > 0 %}text-green-400{% else %}text-slate-400{% endif %}">
-                                {{ stats_semana.espe_completadas }}/{{ stats_semana.espe_planificadas }}
-                            </span>
-                        </div>
-                        <div class="w-full bg-slate-800/80 rounded-full h-1">
-                            {% if stats_semana.espe_planificadas > 0 %}
-                            <div class="bg-purple-500/60 h-1 rounded-full transition-all duration-700" style="width: {% widthratio stats_semana.espe_completadas stats_semana.espe_planificadas 100 %}%"></div>
-                            {% else %}
-                            <div class="bg-slate-700/30 h-1 rounded-full" style="width: 100%"></div>
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- ═══════ PANEL 3: PERFIL BASE ═══════ -->
-        <div class="rounded-2xl overflow-hidden relative"
-             style="background: linear-gradient(160deg, rgba(15,23,42,0.97), rgba(15,25,20,0.97));">
-            <div class="h-0.5 bg-gradient-to-r from-emerald-500 via-yellow-400 to-orange-500"></div>
-            <div class="absolute top-0 right-0 w-28 h-28 bg-emerald-500/8 rounded-full blur-[50px] pointer-events-none"></div>
-
-            <div class="p-5 flex flex-col h-full">
-                <p class="text-[10px] text-slate-500 uppercase tracking-[0.15em] font-bold mb-4">Perfil Base</p>
-
-                <!-- RM Stats -->
-                <div class="space-y-2.5 mb-5">
-                    <div class="flex justify-between items-center bg-slate-800/40 rounded-lg px-3 py-2 border border-slate-700/30">
-                        <span class="text-xs text-slate-400 flex items-center gap-2">
-                            <i class="fas fa-weight-hanging text-cyan-500/70 text-[10px]"></i> RM Peso Muerto
-                        </span>
-                        <span class="text-sm text-cyan-400 font-mono font-bold">{{ objetivo_activo.rm_peso_muerto|default:"-" }}kg</span>
-                    </div>
-                    <div class="flex justify-between items-center bg-slate-800/40 rounded-lg px-3 py-2 border border-slate-700/30">
-                        <span class="text-xs text-slate-400 flex items-center gap-2">
-                            <i class="fas fa-dumbbell text-purple-500/70 text-[10px]"></i> RM Sentadilla
-                        </span>
-                        <span class="text-sm text-purple-400 font-mono font-bold">{{ objetivo_activo.rm_sentadilla|default:"-" }}kg</span>
-                    </div>
-                    <div class="flex justify-between items-center bg-slate-800/40 rounded-lg px-3 py-2 border border-slate-700/30">
-                        <span class="text-xs text-slate-400 flex items-center gap-2">
-                            <i class="fas fa-running text-pink-500/70 text-[10px]"></i> Test 5k
-                        </span>
-                        <span class="text-sm text-pink-400 font-mono font-bold">{{ objetivo_activo.tiempo_5k_base|default:"-" }}</span>
-                    </div>
-                </div>
-
-                <!-- Race Readiness -->
-                <div class="mt-auto pt-3 border-t border-slate-700/30">
-                    <div class="flex justify-between items-baseline mb-2">
-                        <span class="text-[10px] text-slate-500 uppercase tracking-wider font-bold">Race Readiness</span>
-                        <span class="text-lg font-black {% if objetivo_activo.get_race_readiness_score >= 70 %}text-green-400{% elif objetivo_activo.get_race_readiness_score >= 40 %}text-yellow-400{% else %}text-red-400{% endif %}">
-                            {{ objetivo_activo.get_race_readiness_score }}%
-                        </span>
-                    </div>
-                    <div class="w-full bg-slate-900 rounded-full h-2 border border-slate-700/50">
-                        <div class="h-2 rounded-full transition-all duration-1000 {% if objetivo_activo.get_race_readiness_score >= 70 %}bg-gradient-to-r from-green-600 to-emerald-400{% elif objetivo_activo.get_race_readiness_score >= 40 %}bg-gradient-to-r from-yellow-600 to-yellow-400{% else %}bg-gradient-to-r from-red-600 to-red-400{% endif %}"
-                            style="width: {{ objetivo_activo.get_race_readiness_score }}%"></div>
-                    </div>
-
-                    {% if readiness_svg_points %}
-                    <div class="h-10 w-full relative mt-3">
-                        <svg viewBox="-2 -2 104 34" class="w-full h-full overflow-visible">
-                            <defs>
-                                <linearGradient id="readinessGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-                                    <stop offset="0%" stop-color="#ca8a04" />
-                                    <stop offset="100%" stop-color="#facc15" />
-                                </linearGradient>
-                                <filter id="glowChart" x="-20%" y="-20%" width="140%" height="140%">
-                                    <feGaussianBlur stdDeviation="1.5" result="blur" />
-                                    <feComposite in="SourceGraphic" in2="blur" operator="over" />
-                                </filter>
-                            </defs>
-                            <polyline points="{{ readiness_svg_points }}" fill="none" stroke="url(#readinessGrad)"
-                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round" filter="url(#glowChart)" />
-                        </svg>
-                        <div class="absolute inset-0 bg-gradient-to-t from-slate-800/80 to-transparent pointer-events-none"></div>
-                        <div class="absolute bottom-0 left-0 text-[9px] text-slate-600 uppercase tracking-widest font-bold">
-                            Tendencia</div>
-                    </div>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-
-    </div>
-
-    <!-- Phase 10: Strategic Balance & Breakdown -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
-        <!-- Push/Pull Ratio -->
-        <div class="bg-indigo-950/40 border border-indigo-500/30 rounded-xl p-5 shadow-lg relative overflow-hidden">
-            <h3 class="text-lg font-bold text-white mb-2"><i class="fas fa-balance-scale text-indigo-400 mr-2"></i>
-                Equilibrio Estratégico</h3>
-            <p class="text-xs text-slate-400 mb-4">Ratio de Fuerza: Empuje (Squat) vs Tracción (Deadlift)</p>
-
-            <div class="flex items-end gap-4 mb-4">
-                <div class="text-4xl font-black text-indigo-300">{{ strength_balance.ratio }}%</div>
-                <div class="text-xs text-indigo-200/70 pb-1">Objetivo > 70%</div>
-            </div>
-
-            <div class="w-full bg-slate-800 rounded-full h-3 mb-4 flex border border-slate-700 overflow-hidden">
-                <div class="bg-indigo-500 h-3" style="width: {{ strength_balance.ratio }}%"></div>
-            </div>
-
-            <div
-                class="bg-indigo-900/50 p-3 rounded-lg border border-indigo-500/20 text-sm text-indigo-100 flex gap-3 items-start">
-                <i class="fas fa-robot text-indigo-400 mt-1"></i>
-                <div>{{ strength_balance.advice }}</div>
-            </div>
-        </div>
-
-        <!-- Readiness Breakdown & Pace Prediction -->
-        <div class="bg-slate-800/60 border border-slate-700/50 rounded-xl p-5 shadow-lg flex flex-col justify-between">
-            <div>
-                <h3 class="text-lg font-bold text-white mb-4"><i class="fas fa-chart-pie text-cyan-400 mr-2"></i>
-                    Desglose de Readiness</h3>
-
-                <div class="space-y-4">
-                    <!-- Resistencia -->
-                    <div>
-                        <div class="flex justify-between text-xs mb-1">
-                            <span class="text-cyan-300 font-bold">Resistencia (Carrera activa)</span>
-                            <span class="text-cyan-400">{{ readiness_breakdown.resistencia }}%</span>
-                        </div>
-                        <div class="w-full bg-slate-900 rounded-full h-1.5 opacity-80">
-                            <div class="bg-cyan-500 h-1.5 rounded-full"
-                                style="width: {{ readiness_breakdown.resistencia }}%"></div>
-                        </div>
-                    </div>
-                    <!-- Potencia -->
-                    <div>
-                        <div class="flex justify-between text-xs mb-1">
-                            <span class="text-purple-300 font-bold">Potencia (Estaciones de empuje)</span>
-                            <span class="text-purple-400">{{ readiness_breakdown.potencia }}%</span>
-                        </div>
-                        <div class="w-full bg-slate-900 rounded-full h-1.5 opacity-80">
-                            <div class="bg-purple-500 h-1.5 rounded-full"
-                                style="width: {{ readiness_breakdown.potencia }}%"></div>
-                        </div>
-                    </div>
-                    <!-- Estructural -->
-                    <div>
-                        <div class="flex justify-between text-xs mb-1">
-                            <span class="text-yellow-300 font-bold">Fuerza Estructural (Bases)</span>
-                            <span class="text-yellow-400">{{ readiness_breakdown.fuerza }}%</span>
-                        </div>
-                        <div class="w-full bg-slate-900 rounded-full h-1.5 opacity-80">
-                            <div class="bg-yellow-500 h-1.5 rounded-full"
-                                style="width: {{ readiness_breakdown.fuerza }}%"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {% if pace_prediction %}
-            <div class="mt-4 pt-4 border-t border-slate-700/50">
-                <div class="flex items-center gap-3">
-                    <div class="bg-pink-500/20 p-2 rounded-lg text-pink-400">
-                        <i class="fas fa-stopwatch text-xl"></i>
-                    </div>
-                    <div class="text-xs text-slate-300 leading-tight">
-                        {{ pace_prediction }}
-                    </div>
-                </div>
-            </div>
-            {% endif %}
-        </div>
-    </div>
-
-    <!-- Phase X: Competition Standards Progress — Redesigned -->
-    {% if competition_progress %}
-    <div class="mb-10 rounded-2xl overflow-hidden relative"
-         style="background: linear-gradient(160deg, rgba(10,18,35,0.97), rgba(15,12,25,0.97));">
-        <div class="h-0.5 bg-gradient-to-r from-cyan-500 via-blue-400 to-purple-500"></div>
-
-        <!-- Ambient glow -->
-        <div class="absolute -top-10 -right-10 w-40 h-40 bg-cyan-500/10 rounded-full blur-[60px] pointer-events-none"></div>
-        <div class="absolute -bottom-10 -left-10 w-40 h-40 bg-purple-500/10 rounded-full blur-[60px] pointer-events-none"></div>
-
-        <div class="p-5 md:p-6 relative z-10">
-            <!-- Header with global progress -->
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-                <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500/20 to-purple-500/20 border border-cyan-500/20 flex items-center justify-center">
-                        <i class="fas fa-trophy text-cyan-400"></i>
-                    </div>
-                    <div>
-                        <h3 class="text-lg font-black text-white uppercase tracking-wider">Estándares <span class="text-cyan-400">HYROX</span></h3>
-                        <p class="text-xs text-slate-500">Progreso hacia pesos de competición ({{ objetivo_activo.get_categoria_display }})</p>
-                    </div>
-                </div>
-
-                <!-- Global progress summary -->
-                <div class="flex items-center gap-3 bg-slate-800/50 border border-slate-700/30 rounded-xl px-4 py-2.5">
-                    <div class="text-right">
-                        <p class="text-[9px] text-slate-500 uppercase tracking-wider font-bold">Progreso Global</p>
-                        <p class="text-lg font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-400">
-                            {% widthratio competition_progress.progreso_global 1 1 %}%
-                        </p>
-                    </div>
-                    <div class="w-12 h-12 relative">
-                        <svg class="w-full h-full -rotate-90" viewBox="0 0 36 36">
-                            <circle cx="18" cy="18" r="15" fill="none" stroke="rgba(100,116,139,0.15)" stroke-width="2.5"/>
-                            <circle cx="18" cy="18" r="15" fill="none"
-                                    stroke="url(#globalGrad)" stroke-width="2.5" stroke-linecap="round"
-                                    stroke-dasharray="{% widthratio competition_progress.progreso_global 100 94 %} 94"/>
-                            <defs>
-                                <linearGradient id="globalGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-                                    <stop offset="0%" stop-color="#06b6d4"/>
-                                    <stop offset="100%" stop-color="#a855f7"/>
-                                </linearGradient>
-                            </defs>
-                        </svg>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Station cards grid -->
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {% for std in competition_progress.progreso %}
-                <div class="rounded-xl border transition-all duration-300 relative overflow-hidden
-                    {% if std.is_completed %}border-cyan-500/40 bg-cyan-950/20{% elif std.porcentaje > 0 %}border-slate-700/40 bg-slate-800/30{% else %}border-slate-800/30 bg-slate-900/20{% endif %}">
-
-                    {% if std.is_completed %}
-                    <!-- Completed badge -->
-                    <div class="absolute top-3 right-3 w-6 h-6 rounded-full bg-cyan-500/20 border border-cyan-400/40 flex items-center justify-center">
-                        <i class="fas fa-check text-cyan-400 text-[10px]"></i>
-                    </div>
-                    {% endif %}
-
-                    <div class="p-4">
-                        <!-- Station name + progress % -->
-                        <div class="flex items-center justify-between mb-3">
-                            <h4 class="font-bold text-sm {% if std.is_completed %}text-cyan-300{% elif std.porcentaje > 0 %}text-slate-200{% else %}text-slate-500{% endif %} tracking-wide">
-                                {{ std.nombre }}
-                            </h4>
-                            {% if not std.is_completed %}
-                            <span class="text-xs font-black {% if std.porcentaje >= 70 %}text-cyan-400{% elif std.porcentaje > 0 %}text-slate-400{% else %}text-slate-600{% endif %}">
-                                {{ std.porcentaje }}%
-                            </span>
-                            {% endif %}
-                        </div>
-
-                        {% if std.es_dual %}
-                        <!-- Dual metrics: Carga + Volumen -->
-                        <div class="space-y-2.5 mb-3">
-                            <div>
-                                <div class="flex justify-between items-center text-[11px] mb-1">
-                                    <span class="text-slate-500 flex items-center gap-1">
-                                        <i class="fas fa-weight-hanging text-cyan-500/50 text-[9px]"></i> Carga
-                                    </span>
-                                    <span class="font-mono {% if std.is_completed %}text-cyan-400 font-bold{% else %}text-slate-400{% endif %}">
-                                        {{ std.kg_actual|floatformat:1 }} / {{ std.kg_objetivo }} kg
-                                    </span>
-                                </div>
-                                <div class="w-full bg-slate-900/80 rounded-full h-1 overflow-hidden">
-                                    <div class="h-full rounded-full transition-all duration-700 {% if std.is_completed %}bg-cyan-400{% else %}bg-cyan-600/50{% endif %}"
-                                         style="width: {{ std.pct_kg }}%"></div>
-                                </div>
-                            </div>
-                            <div>
-                                <div class="flex justify-between items-center text-[11px] mb-1">
-                                    <span class="text-slate-500 flex items-center gap-1">
-                                        <i class="fas fa-ruler-horizontal text-purple-500/50 text-[9px]"></i> Volumen
-                                    </span>
-                                    <span class="font-mono {% if std.is_completed %}text-cyan-400 font-bold{% else %}text-slate-400{% endif %}">
-                                        {{ std.vol_actual|floatformat:0 }} / {{ std.vol_objetivo }} {{ std.vol_unit }}
-                                    </span>
-                                </div>
-                                <div class="w-full bg-slate-900/80 rounded-full h-1 overflow-hidden">
-                                    <div class="h-full rounded-full transition-all duration-700 {% if std.is_completed %}bg-purple-400{% else %}bg-purple-600/50{% endif %}"
-                                         style="width: {{ std.pct_vol }}%"></div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {% else %}
-                        <!-- Simple metric (distance) -->
-                        <div class="mb-3">
-                            <div class="flex justify-between items-center text-[11px] mb-1.5">
-                                <span class="text-slate-500 flex items-center gap-1">
-                                    <i class="fas fa-route text-cyan-500/50 text-[9px]"></i> Distancia
-                                </span>
-                                <span class="font-mono {% if std.is_completed %}text-cyan-400 font-bold{% else %}text-slate-400{% endif %}">
-                                    {{ std.vol_actual|floatformat:0 }} / {{ std.vol_objetivo }} m
-                                </span>
-                            </div>
-                            <div class="w-full bg-slate-900/80 rounded-full h-1.5 overflow-hidden">
-                                <div class="h-full rounded-full transition-all duration-700 {% if std.is_completed %}bg-gradient-to-r from-cyan-500 to-cyan-400{% else %}bg-slate-600/60{% endif %}"
-                                     style="width: {{ std.porcentaje }}%"></div>
-                            </div>
-                        </div>
-                        {% endif %}
-
-                        <!-- Main progress bar -->
-                        <div class="w-full bg-slate-900/60 rounded-full h-2.5 overflow-hidden relative border border-slate-800/50">
-                            <div class="h-full rounded-full transition-all duration-1000 ease-out
-                                {% if std.is_completed %}bg-gradient-to-r from-cyan-600 to-cyan-400{% elif std.porcentaje >= 50 %}bg-gradient-to-r from-cyan-700 to-cyan-500{% else %}bg-gradient-to-r from-slate-700 to-slate-600{% endif %}"
-                                style="width: {{ std.porcentaje }}%"></div>
-                            {% if std.is_completed %}
-                            <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full animate-[shimmer_2s_infinite]"></div>
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-        </div>
-    </div>
-    {% endif %}
-
-    <!-- NUEVA SECCIÓN: Próximos Entrenamientos Generados por el Motor -->
-    {% if proximas_sesiones %}
-    <div class="mb-10">
-        <h3 class="text-xl font-display text-[var(--lol-gold-bright)] mb-4 border-b border-[var(--lol-border-subtle)] pb-2 tracking-wide">
-            <i class="fas fa-bolt text-[var(--lol-red)] mr-2"></i> PRÓXIMOS ENTRENAMIENTOS (PLAN)
-        </h3>
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {% for plan in proximas_sesiones %}
-            <div class="metric-card bg-[var(--lol-bg-alt)] border border-[var(--lol-border-subtle)] shadow-lg flex flex-col relative hover:border-[rgba(200,75,49,0.3)] hover:shadow-[0_0_15px_var(--lol-glow-red)] transition-all"
-                x-data="{ expanded: false }">
-                <!-- Tarjeta Principal (Clickable) -->
-                <div @click="expanded = !expanded"
-                    class="p-4 cursor-pointer hover:bg-[var(--lol-bg-highlight)] transition group">
-                    <div class="flex justify-between items-start mb-2">
-                        <span class="font-data text-[10px] uppercase text-[var(--lol-red)] tracking-[0.1em]"><i
-                                class="far fa-calendar-alt"></i> {{ plan.fecha|date:"d M Y" }}</span>
-                        <div class="flex items-center gap-2">
-                            <span class="text-xs text-[var(--lol-text-dim)]"><i
-                                    class="fas fa-dumbbell text-[var(--lol-red)]"></i> {{ plan.activities.count }}
-                                bloques</span>
-                            <i class="fas fa-chevron-down text-[var(--lol-red)] opacity-50 transition-transform duration-300"
-                                :class="{'rotate-180': expanded}"></i>
-                        </div>
-                    </div>
-                    <h4 class="font-display text-[1.1rem] text-white mb-2 group-hover:text-[var(--lol-gold-bright)] transition tracking-wide">
-                        {{ plan.titulo_sustituido|default:plan.titulo }}
-                    </h4>
-                    <p class="font-data text-xs text-[var(--lol-text-dim)] mb-0 line-clamp-1">{% for a in plan.activities.all %}
-                        {{ a.display_name }}{% if not forloop.last %}, {% endif %}{% endfor %}</p>
-                </div>
-
-                <!-- Detalle Expandido (Cargas y Coach Tips) -->
-                <div x-show="expanded" x-transition.opacity.duration.300ms
-                    class="px-4 pb-4 border-t border-[var(--lol-border-subtle)] pt-3 bg-black/40">
-                    <div class="space-y-3">
-                        {% for act in plan.activities.all %}
-                        {% with ej_lower=act.nombre_ejercicio|lower %}
-                        <div
-                            class="text-sm bg-[var(--lol-bg-dark)] border border-[var(--lol-border-subtle)] p-3 mb-2 hover:border-[rgba(200,75,49,0.3)] transition-all group"
-                            style="border-left: 2px solid rgba(200,75,49,0.4);">
-                            
-                            <div class="mb-2 pb-2 border-b border-[var(--lol-border-subtle)] flex items-start justify-between">
-                                <div class="font-display text-[0.9rem] text-[var(--lol-gold-bright)] flex items-start gap-2">
-                                    <span class="font-display text-[0.65rem] text-[var(--lol-red)] pt-1">{{ forloop.counter }}</span>
-                                    <div>
-                                        {% if act.is_substituted %}
-                                        <i class="fas {{ act.sustituto_icon }} text-[var(--lol-red)] opacity-80"></i> {{ act.sustituto }}<br>
-                                        <span class="badge-lol-safe mt-1"><i class="fas fa-shield-alt"></i> Bio-Safe</span>
-                                        {% else %}
-                                        <i class="fas {{ act.get_icon_class }} text-[var(--lol-red)] opacity-80"></i> {{ act.nombre_ejercicio }}<br>
-                                        <span class="badge-lol mt-1">Específica</span>
-                                        {% endif %}
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Detalles numéricos -->
-                            <div class="flex flex-wrap items-center gap-2 mb-1">
-                                {% if act.data_metricas.series %}
-                                <div class="pl-2 font-data text-[10px] tracking-wide text-[var(--lol-gold-bright)]">
-                                    {% for s in act.data_metricas.series %}
-                                    <span class="bg-[var(--lol-bg-alt)] border border-[var(--lol-border-subtle)] px-1 py-0.5 rounded-sm mr-1 inline-block mb-1">
-                                        {{ s.reps }}<span class="text-[var(--lol-text-dim)] text-[8px] uppercase">Reps</span> x {{ s.peso_kg }}<span class="text-[var(--lol-text-dim)] text-[8px] uppercase">kg</span>
-                                    </span>
-                                    {% endfor %}
-                                </div>
-                                {% endif %}
-
-                                <!-- Phase 8: Execution Metadata -->
-                                {% if act.data_metricas.tempo %}
-                                <span class="bg-[var(--lol-bg-alt)] text-[var(--lol-text-dim)] border border-[var(--lol-border-subtle)] px-1.5 py-0.5 rounded-sm font-data text-[10px] tracking-wider">
-                                    <i class="fas fa-clock text-[var(--lol-red)] opacity-70"></i> {{ act.data_metricas.tempo }}
-                                </span>
-                                {% endif %}
-                                {% if act.data_metricas.descanso %}
-                                <span class="bg-[var(--lol-bg-alt)] text-[var(--lol-text-dim)] border border-[var(--lol-border-subtle)] px-1.5 py-0.5 rounded-sm font-data text-[10px] tracking-wider">
-                                    <i class="fas fa-hourglass-half text-[var(--lol-red)] opacity-70"></i> {{ act.data_metricas.descanso }}
-                                </span>
-                                {% endif %}
-                            </div>
-
-                            {% if act.data_metricas.distancia_km %}
-                            <div class="pl-2 font-data text-[10px] tracking-wide text-[var(--lol-gold-bright)] mb-1">
-                                {{ act.data_metricas.distancia_km }} km {% if act.data_metricas.ritmo_medio %}@ {{act.data_metricas.ritmo_medio}}{% endif %}
-                            </div>
-                            {% endif %}
-
-                            <!-- Extraigo e imprimo el Coach Tip si existe en las notas (Phase 7) -->
-                            {% if act.data_metricas.coach_tip %}
-                            <div class="mt-2 bg-[var(--lol-bg-highlight)] border border-[var(--lol-border-subtle)] rounded-sm p-2 font-data text-[10px] text-[var(--lol-gold-mid)]">
-                                <i class="fas fa-robot text-[var(--lol-red)] mr-1"></i> {{ act.data_metricas.coach_tip }}
-                            </div>
-                            {% endif %}
-                            {% if act.data_metricas.notas %}
-                            <div class="pl-2 text-[10px] text-[var(--lol-text-dim)] italic font-ui mt-1">
-                                {{ act.data_metricas.notas }}
-                            </div>
-                            {% endif %}
-                        </div>
-                        {% endwith %}
-                        {% endfor %}
-                    </div>
-                </div>
-
-                <!-- Footer Botón -->
-                <div class="p-4 pt-4 border-t border-[var(--lol-border-subtle)] mt-auto bg-black/60">
-                    {% if plan.is_blocked_by_injury %}
-                    <button disabled
-                        class="w-full py-2 bg-[var(--lol-bg-dark)] text-[var(--lol-text-dim)] font-data font-bold flex justify-center items-center gap-2 cursor-not-allowed border border-[var(--lol-border-subtle)]">
-                        <i class="fas fa-lock"></i> Bloqueado por Lesión
-                    </button>
-                    {% else %}
-                    <a href="{% url 'hyrox:registrar_entrenamiento' objective_id=objetivo_activo.id %}"
-                        class="btn-lol-hyrox w-full flex justify-center items-center gap-2 shadow-[0_0_10px_var(--lol-glow-red)]">
-                        <i class="fas fa-upload"></i> Subir Resultado Real
-                    </a>
-                    {% endif %}
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-    </div>
-    {% endif %}
-
-    <div x-data="{ showHistory: false }" class="mb-10">
-        <div @click="showHistory = !showHistory"
-            class="group cursor-pointer metric-card bg-[var(--lol-bg-alt)] border border-[var(--lol-border-subtle)] hover:border-[rgba(200,75,49,0.3)] transition-all flex justify-between items-center p-4 shadow-md">
-            <h3 class="text-xl font-display text-[var(--lol-gold-bright)] mb-0 flex items-center gap-3 tracking-wide">
-                <i class="fas fa-history text-[var(--lol-red)] text-2xl"></i>
-                <span>HISTORIAL DE ENTRENAMIENTOS</span>
-                <span class="font-data text-[10px] text-[var(--lol-text-dim)] uppercase bg-[var(--lol-bg-dark)] border border-[var(--lol-border-subtle)] px-2 py-0.5 ml-2 mt-1">
-                    {{ sesiones|length }} SESIONES
-                </span>
-            </h3>
-            <i class="fas fa-chevron-down text-[var(--lol-red)] opacity-50 transition-transform duration-300"
-                :class="{'rotate-180': showHistory}"></i>
-        </div>
-
-        <div x-show="showHistory" x-transition:enter="transition ease-out duration-300"
-            x-transition:enter-start="opacity-0 -translate-y-4" x-transition:enter-end="opacity-100 translate-y-0"
-            x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100 translate-y-0"
-            x-transition:leave-end="opacity-0 -translate-y-4" class="space-y-4 mt-4 origin-top">
-            {% for sesion in sesiones %}
-            <div
-                class="metric-card bg-[var(--lol-bg-alt)] border border-[var(--lol-border-subtle)] p-5 md:p-6 shadow-lg hover:border-[rgba(200,75,49,0.3)] transition-all">
-                <div class="flex flex-col md:flex-row justify-between items-start mb-4 gap-3">
-                    <div>
-                        <h4 class="font-display text-[1.2rem] text-[var(--lol-gold-bright)] transition tracking-wide">
-                            {{ sesion.titulo|default:"Entrenamiento General" }}</h4>
-                        <span class="font-data text-[10px] uppercase text-[var(--lol-red)] tracking-[0.1em] mt-1 block">
-                            <i class="far fa-calendar-alt"></i> {{ sesion.fecha|date:"d M Y" }}
-                        </span>
-                    </div>
-
-                    <div class="flex flex-wrap gap-2 items-center">
-                        <form action="{% url 'hyrox:borrar_entrenamiento' sesion.id %}" method="POST" class="inline"
-                            id="borrar-form-{{ sesion.id }}">
-                            {% csrf_token %}
-                            <button type="button"
-                                onclick="if(confirm('¿Eliminar este entrenamiento? Esta acción no se puede deshacer.')) document.getElementById('borrar-form-{{ sesion.id }}').submit();"
-                                style="all:unset; cursor:pointer; display:inline-flex; align-items:center; gap:4px; padding:4px 12px; background:rgba(239,68,68,0.1); color:#f87171; border:1px solid rgba(239,68,68,0.25); border-radius:9999px; font-size:12px; font-weight:700; transition:background 0.2s;"
-                                onmouseover="this.style.background='rgba(239,68,68,0.2)'"
-                                onmouseout="this.style.background='rgba(239,68,68,0.1)'">
-                                <i class="fas fa-trash-alt"></i> Eliminar
-                            </button>
-                        </form>
-
-                        {% if sesion.rpe_global %}
-                        <span
-                            class="px-3 py-1 bg-pink-500/10 text-pink-400 border border-pink-500/20 rounded-full text-xs font-bold"
-                            title="RPE">
-                            <i class="fas fa-fire"></i> RPE {{ sesion.rpe_global }}
-                        </span>
-                        {% endif %}
-
-                        <!-- Phase 8: Advanced Analytics -->
-                        {% if sesion.ai_evaluation_score %}
-                        <span
-                            class="px-3 py-1 text-yellow-400 border border-yellow-500/50 rounded-full text-xs font-bold shadow-[0_0_10px_rgba(234,179,8,0.2)] bg-slate-900/80 cursor-default"
-                            title="Validación de IA sobre el esfuerzo y plan">
-                            <i class="fas fa-medal"></i> IA Score: {{ sesion.ai_evaluation_score }}
-                        </span>
-                        {% endif %}
-
-                        {% if sesion.muscle_fatigue_index %}
-                        <span
-                            class="px-3 py-1 {% if sesion.muscle_fatigue_index == 'Alta' %}bg-red-500/20 text-red-400 border-red-500/40{% elif sesion.muscle_fatigue_index == 'Media' %}bg-orange-500/20 text-orange-400 border-orange-500/40{% else %}bg-green-500/20 text-green-400 border-green-500/40{% endif %} border rounded-full text-xs font-bold cursor-default"
-                            title="Índice de Fatiga Muscular Residual">
-                            <i
-                                class="fas {% if sesion.muscle_fatigue_index == 'Alta' %}fa-battery-quarter{% elif sesion.muscle_fatigue_index == 'Media' %}fa-battery-half{% else %}fa-battery-full{% endif %}"></i>
-                            Fatiga: {{ sesion.muscle_fatigue_index }}
-                        </span>
-                        {% endif %}
-
-                        {% if sesion.parsed_by_ia %}
-                        <span
-                            class="px-3 py-1 bg-purple-500/10 text-purple-400 border border-purple-500/20 rounded-full text-xs font-bold"
-                            title="Procesado con Inteligencia Artificial">
-                            <i class="fas fa-brain"></i> IA Parsed
-                        </span>
-                        {% endif %}
-                        <span
-                            class="px-3 py-1 bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 rounded-full text-xs font-bold">
-                            <i class="fas fa-stopwatch"></i> {{ sesion.tiempo_total_minutos|default:"--" }} min
-                        </span>
-                    </div>
-                </div>
-
-                {% if sesion.activities.all %}
-                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 mt-4">
-                    {% for act in sesion.activities.all %}
-                    <div class="text-sm bg-[var(--lol-bg-dark)] border border-[var(--lol-border-subtle)] p-3 hover:border-[rgba(200,75,49,0.3)] transition-all group relative overflow-hidden"
-                         style="border-left: 2px solid rgba(200,75,49,0.4);">
-                        
-                        <div class="mb-2 pb-2 border-b border-[var(--lol-border-subtle)] flex items-start justify-between">
-                            <div class="font-display text-[0.9rem] text-[var(--lol-gold-bright)] flex items-start gap-2">
-                                <span class="font-display text-[0.65rem] text-[var(--lol-red)] pt-1">{{ forloop.counter }}</span>
-                                <div>
-                                    <span>{{ act.nombre_ejercicio|title }}</span><br>
-                                    {% if act.data_metricas.is_equivalencia %}
-                                    <span class="badge-lol-safe mt-1"><i class="fas fa-exchange-alt"></i> Adaptado por IA</span>
-                                    {% endif %}
-                                </div>
-                            </div>
-                            <i class="fas text-[16px] {{ act.get_icon_class }} mt-1 opacity-80 text-[var(--lol-red)]"></i>
-                        </div>
-
-                        <div class="pl-2">
-                            {% if act.data_metricas.series %}
-                            <ul class="text-[10px] font-data text-[var(--lol-gold-bright)] space-y-1.5 tracking-wide">
-                                {% for s in act.data_metricas.series %}
-                                <li class="flex justify-between items-center bg-[var(--lol-bg-alt)] border border-[var(--lol-border-subtle)] px-1.5 py-0.5 rounded-sm">
-                                    <span class="text-[var(--lol-text-dim)]">S{{ forloop.counter }}</span>
-                                    {% if s.reps %}
-                                    <span>{{ s.reps }}<span class="text-[var(--lol-text-dim)] text-[8px] uppercase">Reps</span></span>
-                                    {% if s.peso_kg %}<span class="text-[var(--lol-gold-bright)]">{{ s.peso_kg }}<span class="text-[var(--lol-text-dim)] text-[8px] uppercase">kg</span></span>
-                                    {% elif s.peso %}<span class="text-[var(--lol-gold-bright)]">{{ s.peso }}<span class="text-[var(--lol-text-dim)] text-[8px] uppercase">kg</span></span>{% endif %}
-                                    {% elif s.tiempo_sec %}
-                                    <span><i class="fas fa-clock text-[var(--lol-red)] opacity-70"></i> {{ s.tiempo_sec }}s</span>
-                                    {% elif s.tiempo_segundos %}
-                                    <span><i class="fas fa-clock text-[var(--lol-red)] opacity-70"></i> {{ s.tiempo_segundos }}s</span>
-                                    {% else %}
-                                    <span class="text-[var(--lol-text-dim)]">—</span>
-                                    {% endif %}
-                                </li>
-                                {% endfor %}
-                            </ul>
-                            {% endif %}
-
-                            {% if act.data_metricas.distancia_km or act.data_metricas.tiempo_min %}
-                            <div class="font-data text-[10px] tracking-wide text-[var(--lol-gold-bright)] grid grid-cols-2 gap-2 mt-2">
-                                {% if act.data_metricas.distancia_km %}
-                                <div class="bg-[var(--lol-bg-alt)] border border-[var(--lol-border-subtle)] p-1.5 rounded-sm text-center">
-                                    <i class="fas fa-route text-[var(--lol-red)] block mb-1"></i>
-                                    <span>{{ act.data_metricas.distancia_km }}km</span>
-                                </div>
-                                {% endif %}
-                                {% if act.data_metricas.tiempo_min %}
-                                <div class="bg-[var(--lol-bg-alt)] border border-[var(--lol-border-subtle)] p-1.5 rounded-sm text-center">
-                                    <i class="fas fa-stopwatch text-[var(--lol-red)] block mb-1"></i>
-                                    <span>{{ act.data_metricas.tiempo_min }}'</span>
-                                </div>
-                                {% endif %}
-                                {% if act.data_metricas.ritmo_medio %}
-                                <div class="bg-[var(--lol-bg-alt)] border border-[var(--lol-border-subtle)] p-1.5 rounded-sm text-center col-span-2 flex justify-between px-2">
-                                    <span class="text-[var(--lol-text-dim)]">Ritmo:</span>
-                                    <span>{{ act.data_metricas.ritmo_medio }}/km</span>
-                                </div>
-                                {% endif %}
-                            </div>
-                            {% endif %}
-                        </div>
-                    </div>
-                    {% endfor %}
-                </div>
                 {% else %}
-                <div class="bg-slate-900/50 p-4 rounded-lg mt-3 border-l-2 border-slate-600">
-                    <p class="text-sm text-slate-400 font-mono whitespace-pre-line">{{ sesion.notas_raw }}</p>
-                    <div class="mt-3 flex items-center gap-3">
-                        <span class="text-xs text-slate-500"><i class="fas fa-info-circle"></i> Sin desglose
-                            detallado.</span>
-                        {% if sesion.notas_raw %}
-                        <form action="{% url 'hyrox:procesar_con_ia' sesion.id %}" method="POST"
-                            id="ia-form-{{ sesion.id }}">
-                            {% csrf_token %}
-                            <button type="button" onclick="document.getElementById('ia-form-{{ sesion.id }}').submit();"
-                                style="all:unset; cursor:pointer; display:inline-flex; align-items:center; gap:4px; padding:4px 12px; background:rgba(168,85,247,0.1); color:#c084fc; border:1px solid rgba(168,85,247,0.25); border-radius:9999px; font-size:12px; font-weight:700; transition:background 0.2s;"
-                                onmouseover="this.style.background='rgba(168,85,247,0.2)'"
-                                onmouseout="this.style.background='rgba(168,85,247,0.1)'">
-                                <i class="fas fa-brain"></i>&nbsp;Procesar con IA
-                            </button>
-                        </form>
-                        {% endif %}
-                    </div>
-                </div>
+                <p style="font-size:12px; color:var(--text); font-weight:600; margin-bottom:2px;">
+                  <i class="fas {{ act.get_icon_class }}" style="color:var(--red); margin-right:4px; opacity:0.7;"></i>{{ act.nombre_ejercicio }}
+                </p>
                 {% endif %}
-
-                <!-- SECCIÓN FEEDBACK IA -->
-                {% if sesion.feedback_ia %}
-                <div
-                    class="mt-4 bg-gradient-to-r from-purple-900/30 to-pink-900/30 border border-purple-500/30 rounded-lg p-4 shadow-inner">
-                    <div class="flex items-start gap-3">
-                        <div
-                            class="mt-1 flex-shrink-0 w-8 h-8 rounded-full bg-purple-600/50 flex items-center justify-center border border-purple-500 text-pink-200">
-                            <i class="fas fa-robot"></i>
-                        </div>
-                        <div>
-                            <h5 class="text-xs font-bold text-pink-400 uppercase tracking-widest mb-1">Análisis del
-                                Entrenador (IA)</h5>
-                            <p class="text-sm text-purple-100 whitespace-pre-line leading-relaxed">{{ sesion.feedback_ia
-                                }}
-                            </p>
-                        </div>
-                    </div>
-                </div>
-                {% endif %}
+              </div>
             </div>
-            {% empty %}
-            <div class="text-center py-16 bg-slate-800/30 rounded-xl border border-dashed border-slate-700">
-                <div
-                    class="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4 border border-slate-700 shadow-lg text-slate-500 text-2xl">
-                    <i class="fas fa-dumbbell"></i>
-                </div>
-                <h3 class="text-lg font-bold text-white mb-2">Tu muro está en blanco</h3>
-                <p class="text-slate-400 max-w-sm mx-auto">Vuelve aquí después de cada entrenamiento para registrar tu
-                    progreso y dejar que el sistema lo analice.</p>
+            {% if act.data_metricas.series %}
+            <div style="display:flex; flex-wrap:wrap; gap:4px; margin-left:20px; margin-bottom:6px;">
+              {% for s in act.data_metricas.series %}
+              <span class="hx-chip">{{ s.reps }}r × {{ s.peso_kg }}kg</span>
+              {% endfor %}
             </div>
-            {% endfor %}
+            {% endif %}
+            {% if act.data_metricas.distancia_km %}
+            <div style="margin-left:20px; margin-bottom:6px;">
+              <span class="hx-chip"><i class="fas fa-route" style="margin-right:3px;"></i>{{ act.data_metricas.distancia_km }}km{% if act.data_metricas.ritmo_medio %} @ {{ act.data_metricas.ritmo_medio }}{% endif %}</span>
+            </div>
+            {% endif %}
+            {% if act.data_metricas.coach_tip %}
+            <div style="margin-left:20px; margin-top:6px; padding:6px 10px; background:var(--void); border:1px solid var(--border);">
+              <p style="font-size:10px; color:var(--gold); font-family:'JetBrains Mono',monospace;">
+                <i class="fas fa-robot" style="margin-right:4px; opacity:0.6;"></i>{{ act.data_metricas.coach_tip }}
+              </p>
+            </div>
+            {% endif %}
+          </div>
+          {% endfor %}
         </div>
+
+        <div class="hx-session-foot">
+          {% if plan.is_blocked_by_injury %}
+          <button disabled class="hx-btn" style="width:100%; justify-content:center; opacity:0.4; cursor:not-allowed;">
+            <i class="fas fa-lock"></i> Bloqueado por Lesión
+          </button>
+          {% else %}
+          <a href="{% url 'hyrox:registrar_entrenamiento' objective_id=objetivo_activo.id %}"
+            class="hx-btn hx-btn-red" style="width:100%; justify-content:center;">
+            <i class="fas fa-upload"></i> Subir Resultado Real
+          </a>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
     </div>
-    {% endif %}
-</div>
+  </div>
+  {% endif %}
 
-<!-- INICIO DEL COACH CHAT WIDGET -->
-{% if objetivo_activo %}
-<div x-data="hyroxCoachChat()" x-init="initChat()" class="fixed bottom-6 right-6 z-50">
-
-    <!-- Botón flotante -->
-    <button @click="toggleChat()"
-        class="w-14 h-14 bg-gradient-to-r from-cyan-500 to-purple-600 rounded-full shadow-lg shadow-cyan-500/50 flex items-center justify-center text-white hover:scale-110 transition-transform duration-300 relative">
-        <i class="fas" :class="isOpen ? 'fa-times text-2xl' : 'fa-robot text-2xl'"></i>
-        <!-- Ping indicator si hay mensaje no leído (opcional) -->
-        <span x-show="!isOpen && messages.length > 0"
-            class="absolute top-0 right-0 w-4 h-4 bg-pink-500 border-2 border-slate-900 rounded-full animate-ping"></span>
-        <span x-show="!isOpen && messages.length > 0"
-            class="absolute top-0 right-0 w-4 h-4 bg-pink-500 border-2 border-slate-900 rounded-full"></span>
-    </button>
-
-    <!-- Ventana del Chat -->
-    <div x-show="isOpen" x-transition:enter="transition ease-out duration-300 transform"
-        x-transition:enter-start="opacity-0 translate-y-10 scale-95"
-        x-transition:enter-end="opacity-100 translate-y-0 scale-100"
-        x-transition:leave="transition ease-in duration-200 transform"
-        x-transition:leave-start="opacity-100 translate-y-0 scale-100"
-        x-transition:leave-end="opacity-0 translate-y-10 scale-95"
-        class="absolute bottom-20 right-0 w-[350px] sm:w-[400px] h-[500px] bg-slate-900/95 backdrop-blur-xl border border-slate-700/50 rounded-2xl shadow-2xl flex flex-col overflow-hidden">
-
-        <!-- Header del Chat -->
-        <div
-            class="bg-gradient-to-r from-slate-800 to-slate-900 p-4 border-b border-slate-700 font-bold text-white flex justify-between items-center shadow-md z-10">
-            <div class="flex items-center gap-3">
-                <div
-                    class="w-8 h-8 rounded-full bg-cyan-500/20 border border-cyan-500/50 flex items-center justify-center text-cyan-400">
-                    <i class="fas fa-robot"></i>
-                </div>
-                <div>
-                    <h3
-                        class="text-sm leading-tight text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-400 font-black tracking-wide">
-                        HYROX COACH</h3>
-                    <div class="flex items-center gap-1 mt-0.5">
-                        <span class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
-                        <span class="text-[10px] text-slate-400 font-mono">IA Conectada</span>
-                    </div>
-                </div>
-            </div>
-            <!-- Opcional: selector de sesión si queremos que el chat se asocie explícitamente a algo -->
-            <button @click="toggleChat()" class="text-slate-400 hover:text-white transition"><i
-                    class="fas fa-minus"></i></button>
-        </div>
-
-        <!-- Área de Mensajes -->
-        <div id="chat-messages-container" class="flex-1 overflow-y-auto p-4 space-y-4 scroll-smooth config-scroll">
-            <template x-for="(msg, index) in messages" :key="index">
-                <div class="flex flex-col" :class="msg.sender === 'user' ? 'items-end' : 'items-start'">
-                    <div class="max-w-[85%] rounded-2xl px-4 py-2.5 shadow-md relative group"
-                        :class="msg.sender === 'user' ? 'bg-indigo-600 text-white rounded-br-none' : 'bg-slate-800 text-slate-200 border border-slate-700/50 rounded-bl-none'">
-
-                        <!-- Contenido principal -->
-                        <div class="text-sm whitespace-pre-line leading-relaxed" x-html="formatMessage(msg.text)"></div>
-
-                        <!-- Meta info si es un registro exitoso -->
-                        <template x-if="msg.meta">
-                            <div class="mt-2 pt-2 border-t border-slate-600/50">
-                                <span
-                                    class="text-[10px] uppercase tracking-wider font-bold text-pink-400 block mb-1">Actividades
-                                    detectadas:</span>
-                                <ul
-                                    class="text-[11px] font-mono text-cyan-300 space-y-0.5 pl-1 border-l-2 border-cyan-500/30">
-                                    <template x-for="act in msg.meta.activities">
-                                        <li>- <span x-text="act.nombre"></span></li>
-                                    </template>
-                                </ul>
-                                <div class="mt-2 text-[10px] text-slate-400 flex justify-between">
-                                    <span>Readiness: <strong class="text-yellow-400"
-                                            x-text="msg.meta.readiness + '%'"></strong></span>
-                                </div>
-                            </div>
-                        </template>
-
-                    </div>
-                    <span class="text-[10px] text-slate-500 mt-1 font-mono tracking-wider"
-                        :class="msg.sender === 'user' ? 'mr-1' : 'ml-1'" x-text="msg.time"></span>
-                </div>
-            </template>
-
-            <!-- Indicador de Escribiendo (Loading) -->
-            <div x-show="isTyping" class="flex items-start mb-4">
-                <div
-                    class="bg-slate-800 border border-slate-700/50 text-slate-300 rounded-2xl rounded-bl-none px-4 py-3 shadow-md pb-2 mt-2">
-                    <div class="flex gap-1.5 items-center h-4">
-                        <span class="w-1.5 h-1.5 bg-cyan-500 rounded-full animate-bounce"
-                            style="animation-delay: 0s"></span>
-                        <span class="w-1.5 h-1.5 bg-cyan-500 rounded-full animate-bounce"
-                            style="animation-delay: 0.15s"></span>
-                        <span class="w-1.5 h-1.5 bg-cyan-500 rounded-full animate-bounce"
-                            style="animation-delay: 0.3s"></span>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Input Area -->
-        <div class="p-3 bg-slate-800 border-t border-slate-700 relative z-10">
-            <form @submit.prevent="sendMessage"
-                class="flex items-end gap-2 bg-slate-900 border border-slate-600 hover:border-slate-500 transition-colors rounded-xl p-1 shadow-inner focus-within:border-cyan-500 focus-within:ring-1 focus-within:ring-cyan-500">
-                <textarea x-model="currentInput" @keydown.enter.prevent="if(!$event.shiftKey) sendMessage()" rows="1"
-                    placeholder="Escribe tu entreno de hoy o consúltame..."
-                    class="w-full bg-transparent text-white text-sm border-none focus:ring-0 resize-none py-2 px-3 placeholder-slate-500 max-h-32 min-h-[40px] config-scroll"
-                    style="scrollbar-width: none;" x-ref="chatInput"
-                    @input="$el.style.height = '40px'; $el.style.height = ($el.scrollHeight < 120 ? $el.scrollHeight : 120) + 'px';"></textarea>
-                <button type="submit" :disabled="!currentInput.trim() || isTyping"
-                    class="h-10 w-10 shrink-0 flex items-center justify-center rounded-lg bg-gradient-to-br from-cyan-500 to-purple-600 text-white disabled:opacity-50 disabled:cursor-not-allowed transition hover:shadow-[0_0_10px_rgba(6,182,212,0.5)] mb-0.5 mr-0.5">
-                    <i class="fas fa-paper-plane text-sm translate-y-px -translate-x-px"></i>
-                </button>
+  {# ── HISTORIAL ── #}
+  {% if sesiones %}
+  <div class="hx-history-section hx-a hx-a7" x-data="{ open: false }">
+    <div class="hx-history-toggle" @click="open = !open">
+      <div style="display:flex; align-items:center; gap:12px;">
+        <i class="fas fa-history" style="color:var(--red);"></i>
+        <p class="hx-title" style="font-size:14px; color:var(--text);">Historial de Entrenamientos</p>
+        <span class="hx-mono" style="font-size:10px; color:var(--text-dim); background:var(--surface-3); border:1px solid var(--border); padding:2px 8px;">{{ sesiones|length }}</span>
+      </div>
+      <i class="fas fa-chevron-down" style="color:var(--red); opacity:0.5; transition:transform 0.2s;"
+        :style="open ? 'transform:rotate(180deg)' : ''"></i>
+    </div>
+    <div x-show="open"
+      x-transition:enter="transition ease-out duration-250"
+      x-transition:enter-start="opacity-0 -translate-y-2"
+      x-transition:enter-end="opacity-100 translate-y-0">
+      {% for sesion in sesiones %}
+      <div class="hx-sesion-hist">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:10px; margin-bottom:10px;">
+          <div>
+            <p class="hx-title" style="font-size:14px; color:var(--text); margin-bottom:3px;">{{ sesion.titulo|default:"Entrenamiento General" }}</p>
+            <p class="hx-mono" style="font-size:10px; color:var(--red); letter-spacing:0.1em;">
+              <i class="far fa-calendar-alt" style="margin-right:4px;"></i>{{ sesion.fecha|date:"d M Y" }}
+            </p>
+          </div>
+          <div style="display:flex; flex-wrap:wrap; gap:6px; align-items:center;">
+            {% if sesion.rpe_global %}
+            <span class="hx-chip">RPE {{ sesion.rpe_global }}/10</span>
+            {% endif %}
+            {% if sesion.hr_maxima %}
+            <span class="hx-chip"><i class="fas fa-heartbeat" style="margin-right:3px;"></i>{{ sesion.hr_maxima }}bpm</span>
+            {% endif %}
+            <form action="{% url 'hyrox:borrar_entrenamiento' sesion.id %}" method="POST" style="display:inline;">
+              {% csrf_token %}
+              <button type="button"
+                onclick="if(confirm('¿Borrar este entrenamiento?')) this.closest('form').submit();"
+                class="hx-btn hx-btn-ghost-red" style="font-size:10px; padding:4px 10px;">
+                <i class="fas fa-trash-alt"></i>
+              </button>
             </form>
-            <div class="text-center mt-2 group">
-                <p class="text-[9px] text-slate-500 font-mono"><i class="fas fa-bolt text-yellow-500/70"></i> Powered by
-                    Gemini AI</p>
-            </div>
+          </div>
         </div>
+        <div style="display:flex; flex-wrap:wrap; gap:4px;">
+          {% for act in sesion.activities.all %}
+          <span class="hx-chip">
+            <i class="fas {{ act.get_icon_class }}" style="font-size:9px;"></i>
+            {{ act.nombre_ejercicio }}
+          </span>
+          {% endfor %}
+        </div>
+        {% if sesion.feedback_ia %}
+        <div style="margin-top:10px; padding:8px 12px; background:var(--void); border-left:2px solid var(--gold); font-size:11px; color:var(--gold); font-family:'JetBrains Mono',monospace; font-style:italic; line-height:1.5;">
+          <i class="fas fa-robot" style="margin-right:6px; opacity:0.6;"></i>{{ sesion.feedback_ia }}
+        </div>
+        {% endif %}
+      </div>
+      {% endfor %}
     </div>
+  </div>
+  {% endif %}
+
+  {% endif %}{# end objetivo_activo #}
+
 </div>
 
 <script>
-    document.addEventListener('alpine:init', () => {
-        Alpine.data('hyroxCoachChat', () => ({
-            isOpen: false,
-            isTyping: false,
-            currentInput: '',
-            messages: [],
-            sessionTodayId: null, // Idealmente lo inyectaríamos si hay una sesión hoy
-
-            initChat() {
-                // Intentar inyectar el session_id si hay alguna planificada para hoy en el DOM 
-                // Esto se podría mejorar inyectándolo desde el template de Django
-                this.fetchGreeting();
-            },
-
-            toggleChat() {
-                this.isOpen = !this.isOpen;
-                if (this.isOpen) {
-                    setTimeout(() => {
-                        this.$refs.chatInput.focus();
-                        this.scrollToBottom();
-                    }, 300);
-                }
-            },
-
-            async fetchGreeting() {
-                this.isTyping = true;
-                try {
-                    const response = await fetch('/hyrox/get-greeting/');
-                    const data = await response.json();
-
-                    if (data.status === 'success') {
-                        this.addMessage(data.greeting, 'coach');
-                        // Actualizar UI externa si quisiéramos
-                        // document.getElementById('readiness-bar').style.width = data.readiness_score + '%';
-                    }
-                } catch (error) {
-                    console.error("Error cargando saludo:", error);
-                    this.addMessage("Hola David. El sistema está arrancando, pero estoy listo para guardar tu entreno de hoy.", 'coach');
-                } finally {
-                    this.isTyping = false;
-                }
-            },
-
-            addMessage(text, sender, meta = null) {
-                const now = new Date();
-                const timeString = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
-
-                this.messages.push({
-                    text: text,
-                    sender: sender,
-                    time: timeString,
-                    meta: meta
-                });
-                this.scrollToBottom();
-            },
-
-            scrollToBottom() {
-                setTimeout(() => {
-                    const container = document.getElementById('chat-messages-container');
-                    if (container) {
-                        container.scrollTop = container.scrollHeight;
-                    }
-                }, 50);
-            },
-
-            formatMessage(text) {
-                // Basic formatting for bold text (e.g. **bold**) if Gemini returns it
-                if (!text) return '';
-                let formatted = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-                return formatted;
-            },
-
-            async sendMessage() {
-                const text = this.currentInput.trim();
-                if (!text) return;
-
-                // 1. Añadir mensaje de usuario
-                this.addMessage(text, 'user');
-
-                // 2. Clear input & Reset textarea height
-                this.currentInput = '';
-                this.$refs.chatInput.style.height = '40px';
-                this.$refs.chatInput.focus();
-
-                this.isTyping = true;
-                this.scrollToBottom();
-
-                // 3. Enviar a Django
-                try {
-                    // Obtenemos el CSRF token de las cookies
-                    const cookies = document.cookie.split(';');
-                    let csrfToken = null;
-                    for (let i = 0; i < cookies.length; i++) {
-                        const cookie = cookies[i].trim();
-                        if (cookie.substring(0, 10) === ('csrftoken=')) {
-                            csrfToken = decodeURIComponent(cookie.substring(10));
-                            break;
-                        }
-                    }
-
-                    // Definimos el session_id a usar (en un caso real, buscaríamos la sesión 'planificada' de hoy)
-                    // Usaremos un truco: Si en context mandamos una 'sesión planificada para hoy', la pasamos.
-                    // Como MVP el servicio crea/busca internamente o espera el ID
-
-                    const payload = {
-                        user_input: text,
-                        session_id: null // Aquí iría el ID real
-                    };
-
-                    const response = await fetch('/hyrox/coach-chat/', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRFToken': csrfToken
-                        },
-                        body: JSON.stringify(payload)
-                    });
-
-                    const data = await response.json();
-
-                    if (data.status === 'success') {
-                        let metaDict = null;
-                        if (data.tipo === 'registro') {
-                            metaDict = {
-                                activities: data.updated_activities,
-                                readiness: data.new_readiness_score
-                            };
-                            // Opción pro: forzar recarga de la página o actualizar DOM suelto para reflejar los cambios
-                            setTimeout(() => {
-                                // window.location.reload(); // Si queremos que se vea todo el nuevo bloque en el historial
-                            }, 3000);
-                        }
-                        this.addMessage(data.coach_message, 'coach', metaDict);
-                    } else {
-                        this.addMessage("Ha ocurrido un error en mis sistemas: " + data.message, 'coach');
-                    }
-
-                } catch (error) {
-                    console.error("Chat error:", error);
-                    this.addMessage("Me he desconectado temporalmente. Revisa tu conexión y vuelve a intentarlo.", 'coach');
-                } finally {
-                    this.isTyping = false;
-                    this.scrollToBottom();
-                }
-            }
-        }));
-    });
+(function(){
+  {% if objetivo_activo.fecha_evento %}
+  var target = new Date("{{ objetivo_activo.fecha_evento|date:'Y-m-d' }}T00:00:00");
+  var el = document.getElementById('hx-days');
+  if(el){
+    var diff = Math.ceil((target - new Date()) / 86400000);
+    el.textContent = diff > 0 ? diff : '0';
+  }
+  {% endif %}
+})();
 </script>
-
-<style>
-    /* Utilities para el chat */
-    .config-scroll::-webkit-scrollbar {
-        width: 5px;
-    }
-
-    .config-scroll::-webkit-scrollbar-track {
-        background: transparent;
-    }
-
-    .config-scroll::-webkit-scrollbar-thumb {
-        background: rgba(148, 163, 184, 0.3);
-        border-radius: 10px;
-    }
-
-    .config-scroll::-webkit-scrollbar-thumb:hover {
-        background: rgba(148, 163, 184, 0.5);
-    }
-</style>
-{% endif %}
 {% endblock %}

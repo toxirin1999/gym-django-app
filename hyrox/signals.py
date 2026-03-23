@@ -3,6 +3,7 @@ from django.dispatch import receiver
 from django.utils import timezone
 from .models import HyroxSession, HyroxReadinessLog
 from .training_engine import HyroxTrainingEngine
+from .services import calcular_rm_estimado
 
 @receiver(post_save, sender=HyroxSession)
 def autorregular_plan_futuro(sender, instance, created, **kwargs):
@@ -33,8 +34,20 @@ def autorregular_plan_futuro(sender, instance, created, **kwargs):
         ).order_by('fecha').first()
 
         if proxima:
-            # CASO A: SOBREESFUERZO (RPE >= 9 o HR Max > 185)
-            if instance.rpe_global >= 9 or (instance.hr_maxima and instance.hr_maxima > 185):
+            # Calcular umbral HR máxima basado en la edad del cliente (fórmula 220 - edad)
+            hr_umbral = 185  # fallback genérico
+            try:
+                from django.utils import timezone as tz
+                import datetime
+                fn = instance.objective.cliente.fecha_nacimiento
+                if fn:
+                    edad = (tz.now().date() - fn).days // 365
+                    hr_umbral = 220 - edad
+            except Exception:
+                pass
+
+            # CASO A: SOBREESFUERZO (RPE >= 9 o HR Max > umbral por edad)
+            if instance.rpe_global >= 9 or (instance.hr_maxima and instance.hr_maxima > hr_umbral):
                 proxima.feedback_ia = (
                     "David, hemos detectado un nivel de fatiga alto. He reducido la carga de esta sesión "
                     "para priorizar la recuperación estratégica y llegar fuerte al 19 de abril."
@@ -97,8 +110,7 @@ def sync_gym_impact_to_hyrox(sender, instance, created, **kwargs):
             
             # --- Lógica de RM ---
             if peso_lift > 0 and slug in ['Sentadilla', 'Peso Muerto']:
-                # Calcular 1RM Brzycki
-                rm_estimado = peso_lift * (1 + (reps_lift / 30.0))
+                rm_estimado = calcular_rm_estimado(peso_lift, reps_lift)
                 
                 if slug == 'Sentadilla':
                     if not objetivo.rm_sentadilla or rm_estimado > objetivo.rm_sentadilla:
