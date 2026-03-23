@@ -652,7 +652,8 @@ class EstadisticasService:
 
         df = pd.DataFrame(list(entrenamientos))
         df['fecha'] = pd.to_datetime(df['fecha'])
-        df['volumen_total_kg'] = df['volumen_total_kg'].astype(float)
+        # NULL → 0 explícito antes de convertir a float para evitar NaN silenciosos
+        df['volumen_total_kg'] = df['volumen_total_kg'].fillna(0).astype(float)
 
         df = df.groupby('fecha')['volumen_total_kg'].sum().reset_index()
         df['carga_diaria'] = df['volumen_total_kg'] / 1000
@@ -660,13 +661,23 @@ class EstadisticasService:
         idx = pd.date_range(start=fecha_inicio, end=fecha_fin)
         df = df.set_index('fecha').reindex(idx, fill_value=0)
 
+        # min_periods=7 en la crónica: no mostramos ACWR hasta tener al menos 7 días
+        # de historia crónica (evita valores disparados en las primeras semanas)
         df['carga_aguda'] = df['carga_diaria'].rolling(window=7, min_periods=1).mean()
-        df['carga_cronica'] = df['carga_diaria'].rolling(window=28, min_periods=1).mean()
+        df['carga_cronica'] = df['carga_diaria'].rolling(window=28, min_periods=7).mean()
         df['acwr'] = (df['carga_aguda'] / df['carga_cronica']).fillna(0).replace([np.inf, -np.inf], 0)
 
         acwr_actual = round(df['acwr'].iloc[-1], 2) if not df.empty else 0
 
-        if 0.8 <= acwr_actual <= 1.3:
+        # Detectar parón: si no hay carga en la ventana crónica excepto los últimos 7 días,
+        # el ACWR sería artificialmente alto y no representativo de la fitness real del atleta.
+        carga_cronica_sin_aguda = df['carga_diaria'].iloc[-28:-7].sum() if len(df) >= 28 else 0
+        paron_activo = carga_cronica_sin_aguda == 0 and df['carga_diaria'].iloc[-7:].sum() > 0
+
+        if paron_activo:
+            zona_riesgo = 'reanudacion'
+            acwr_actual = 0  # No mostramos un ratio inválido
+        elif 0.8 <= acwr_actual <= 1.3:
             zona_riesgo = 'optima'
         elif 1.3 < acwr_actual < 1.5:
             zona_riesgo = 'cuidado'
@@ -680,6 +691,7 @@ class EstadisticasService:
 
         return {
             'dataframe': df_json.to_dict('records'),
+            'paron_detectado': paron_activo,
             'acwr_actual': acwr_actual,
             'zona_riesgo': zona_riesgo
         }

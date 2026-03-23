@@ -266,11 +266,10 @@
                                 </svg>
                             </div>
                             <div class="dv-acwr-badge {{ acwr.zona_riesgo }}">
-                                {% if acwr.zona_riesgo == 'optima' %}<i class="fas fa-check-circle"></i> Zona Óptima
-                                {% elif acwr.zona_riesgo == 'cuidado' %}<i class="fas fa-exclamation-triangle"></i>
-                                Cuidado
-                                {% elif acwr.zona_riesgo == 'riesgo_alto' %}<i class="fas fa-times-circle"></i> Riesgo
-                                Alto
+                                {% if acwr.zona_riesgo == 'reanudacion' %}<i class="fas fa-redo"></i> Reanudando tras descanso
+                                {% elif acwr.zona_riesgo == 'optima' %}<i class="fas fa-check-circle"></i> Zona Óptima
+                                {% elif acwr.zona_riesgo == 'cuidado' %}<i class="fas fa-exclamation-triangle"></i> Cuidado
+                                {% elif acwr.zona_riesgo == 'riesgo_alto' %}<i class="fas fa-times-circle"></i> Riesgo Alto
                                 {% else %}<i class="fas fa-info-circle"></i> Baja Carga{% endif %}
                             </div>
                         </div>
