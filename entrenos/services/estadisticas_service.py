@@ -32,6 +32,11 @@ MAPEO_EJERCICIOS_A_PRINCIPAL = {
     'remo en polea baja (gironda)': 'Rowing',
     'remo gironda': 'Rowing',
     'remo en polea alta': 'Rowing',
+    'remo con barra (pendlay)': 'Rowing',
+    'remo pendlay': 'Rowing',
+    'remo pecho apoyado': 'Rowing',
+    'remo al mentón con polea (upright row)': 'Rowing',
+    'remo al menton con polea (upright row)': 'Rowing',
     # 🎯 PRESS BANCA (Bench Press)
     'press banca con barra': 'Press Banca',
     'press banca con mancuernas': 'Press Banca',
@@ -65,7 +70,7 @@ CONFIG_RATIOS = {
     'Press Banca / Sentadilla': ('Press Banca', 'Sentadilla'),
     'Peso Muerto / Sentadilla': ('Peso Muerto', 'Sentadilla'),
     'Press Militar / Press Banca': ('Press Militar', 'Press Banca'),
-    'Remo / Press Banca': ('Remo', 'Press Banca')
+    'Remo / Press Banca': ('Rowing', 'Press Banca'),  # Rowing = clave usada en MAPEO_EJERCICIOS_A_PRINCIPAL
 }
 
 # MAPEO MUSCULAR DINÁMICO
@@ -522,32 +527,41 @@ class EstadisticasService:
             entreno__fecha__gte=fecha_inicio,
             rpe_medio__isnull=False
         ).select_related('entreno')
-        
+
+        entrenos_con_rpe_sesion = set()
         for s in sesiones:
             e = s.entreno
             lunes = e.fecha - timedelta(days=e.fecha.weekday())
             semana_str = lunes.strftime('%d %b')
-            
+
             if semana_str in rpe_semanal:
                 rpe_semanal[semana_str] += s.rpe_medio
                 conteo_semanal[semana_str] += 1
-                
-        # 2. RPE de Series individuales (Fallback o complemento)
+                entrenos_con_rpe_sesion.add(e.id)
+
+        # 2. RPE de Series individuales (Fallback: solo para entrenos sin SesionEntrenamiento con RPE)
         series = SerieRealizada.objects.filter(
             entreno__cliente=cliente,
             entreno__fecha__gte=fecha_inicio,
             rpe_real__isnull=False
-        ).select_related('entreno')
-        
+        ).exclude(
+            entreno_id__in=entrenos_con_rpe_sesion
+        ).select_related('entreno').values('entreno_id', 'entreno__fecha', 'rpe_real')
+
+        # Agrupar por entreno para evitar que N series de un mismo entreno inflen el conteo
+        rpe_por_entreno = {}
+        fechas_por_entreno = {}
         for s in series:
-            e = s.entreno
-            lunes = e.fecha - timedelta(days=e.fecha.weekday())
+            eid = s['entreno_id']
+            rpe_por_entreno.setdefault(eid, []).append(s['rpe_real'])
+            fechas_por_entreno[eid] = s['entreno__fecha']
+
+        for eid, rpelist in rpe_por_entreno.items():
+            fecha = fechas_por_entreno[eid]
+            lunes = fecha - timedelta(days=fecha.weekday())
             semana_str = lunes.strftime('%d %b')
-            
-            # Solo sumar si no hay datos de sesión para ese día (para no duplicar peso)
-            # Simplificación: Promediamos todo lo que hay
             if semana_str in rpe_semanal:
-                rpe_semanal[semana_str] += s.rpe_real
+                rpe_semanal[semana_str] += sum(rpelist) / len(rpelist)
                 conteo_semanal[semana_str] += 1
         
         # Calcular promedios
@@ -828,22 +842,17 @@ class EstadisticasService:
 
     @staticmethod
     def analizar_intensidad_historica(cliente, rango='30d'):
-        from entrenos.models import SesionEntrenamiento
-        
+        from entrenos.models import SesionEntrenamiento, EntrenoRealizado, EjercicioRealizado
+        from django.db.models import Avg
+
         fecha_inicio = EstadisticasService._calcular_fecha_inicio(rango)
-        
-        # Incluir sesiones dentro del rango
-        sesiones = SesionEntrenamiento.objects.filter(
-            entreno__cliente=cliente,
-            entreno__fecha__gte=fecha_inicio
-        )
+
         intensidad = {'Baja (1-5)': 0, 'Moderada (6-7)': 0, 'Alta (8-9)': 0, 'Máxima (10)': 0}
-        for s in sesiones:
-            val = s.rpe_medio
-            
+
+        def _clasificar(val):
             if val is None:
-                continue
-            elif val <= 5:
+                return
+            if val <= 5:
                 intensidad['Baja (1-5)'] += 1
             elif val <= 7.9:
                 intensidad['Moderada (6-7)'] += 1
@@ -851,6 +860,35 @@ class EstadisticasService:
                 intensidad['Alta (8-9)'] += 1
             else:
                 intensidad['Máxima (10)'] += 1
+
+        # 1. SesionEntrenamiento con rpe_medio (flujo antiguo)
+        sesiones = SesionEntrenamiento.objects.filter(
+            entreno__cliente=cliente,
+            entreno__fecha__gte=fecha_inicio
+        ).select_related('entreno')
+        # Solo marcamos como "cubiertos" los entrenos con RPE real, no los que tienen rpe_medio=None
+        entrenos_con_rpe_sesion = set()
+        for s in sesiones:
+            if s.rpe_medio is not None:
+                entrenos_con_rpe_sesion.add(s.entreno_id)
+                _clasificar(s.rpe_medio)
+
+        # 2. EjercicioRealizado.rpe como fallback para entrenos sin RPE en SesionEntrenamiento
+        # (flujo nuevo: guardar_entrenamiento_activo guarda RPE por ejercicio)
+        entrenos_sin_sesion = EntrenoRealizado.objects.filter(
+            cliente=cliente,
+            fecha__gte=fecha_inicio
+        ).exclude(id__in=entrenos_con_rpe_sesion).values_list('id', flat=True)
+
+        rpe_por_entreno = (
+            EjercicioRealizado.objects
+            .filter(entreno_id__in=entrenos_sin_sesion, rpe__isnull=False)
+            .values('entreno_id')
+            .annotate(rpe_medio=Avg('rpe'))
+        )
+        for row in rpe_por_entreno:
+            _clasificar(row['rpe_medio'])
+
         return {'labels': list(intensidad.keys()), 'data': list(intensidad.values())}
 
     @staticmethod
