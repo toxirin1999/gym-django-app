@@ -12,46 +12,50 @@
 {% endblock %}
 
 {% block content %}
+<a href="#main-content" class="dv-skip-link">Saltar al contenido</a>
 <div class="dv-wrapper">
 
   <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
        TOP BAR — sticky nav strip
   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
-  <nav class="ev-topbar">
+  <nav class="ev-topbar" aria-label="Navegación principal">
 
-    <div class="ev-crumbs">
-      <a href="{% url 'clientes:panel_cliente' %}">Panel</a>
-      <span class="ev-crumb-sep">/</span>
-      <span class="ev-crumb-active">Evolución</span>
-    </div>
+    <nav aria-label="Migas de pan" class="ev-crumbs">
+      <ol style="display:flex;align-items:center;gap:.4rem;list-style:none;margin:0;padding:0">
+        <li><a href="{% url 'clientes:panel_cliente' %}">Panel</a></li>
+        <li aria-hidden="true" class="ev-crumb-sep">/</li>
+        <li><span aria-current="page" class="ev-crumb-active">Evolución</span></li>
+      </ol>
+    </nav>
 
     <div class="ev-topbar-mid">
-      <div class="ev-periods">
-        <a href="?rango=30d"  class="ev-period {% if rango_seleccionado == '30d'  %}active{% endif %}">30D</a>
-        <a href="?rango=90d"  class="ev-period {% if rango_seleccionado == '90d'  %}active{% endif %}">90D</a>
-        <a href="?rango=180d" class="ev-period {% if rango_seleccionado == '180d' %}active{% endif %}">180D</a>
-        <a href="?rango=todo" class="ev-period {% if rango_seleccionado == 'todo' %}active{% endif %}">TODO</a>
+      <div class="ev-periods" role="group" aria-label="Periodo de análisis">
+        <a href="?rango=30d"  class="ev-period {% if rango_seleccionado == '30d'  %}active{% endif %}" {% if rango_seleccionado == '30d'  %}aria-current="page"{% endif %}>30D</a>
+        <a href="?rango=90d"  class="ev-period {% if rango_seleccionado == '90d'  %}active{% endif %}" {% if rango_seleccionado == '90d'  %}aria-current="page"{% endif %}>90D</a>
+        <a href="?rango=180d" class="ev-period {% if rango_seleccionado == '180d' %}active{% endif %}" {% if rango_seleccionado == '180d' %}aria-current="page"{% endif %}>180D</a>
+        <a href="?rango=todo" class="ev-period {% if rango_seleccionado == 'todo' %}active{% endif %}" {% if rango_seleccionado == 'todo' %}aria-current="page"{% endif %}>TODO</a>
       </div>
     </div>
 
     <div class="ev-topbar-actions">
       <a href="{% url 'entrenos:evaluacion_profesional' cliente.id %}" class="ev-action">
-        <i class="fas fa-microscope"></i> Evaluar
+        <i class="fas fa-microscope" aria-hidden="true"></i> Evaluar
       </a>
       <a href="{% url 'logros:ver_codice_completo' cliente.id %}" class="ev-action">
-        <i class="fas fa-book-journal-whills"></i> Códice
+        <i class="fas fa-book-journal-whills" aria-hidden="true"></i> Códice
       </a>
       <a href="{% url 'logros:leaderboard' %}" class="ev-action">
-        <i class="fas fa-trophy"></i> Ranking
+        <i class="fas fa-trophy" aria-hidden="true"></i> Ranking
       </a>
       <div class="ev-fase-wrap">
-        <i class="fas fa-sync-alt"></i>
-        <span class="ev-fase-label">Fase</span>
+        <label for="faseAnualSelector" class="ev-fase-label">
+          <i class="fas fa-sync-alt" aria-hidden="true"></i> Fase
+        </label>
         <select id="faseAnualSelector" class="ev-fase-select">
-          <option value="volumen"       style="background:#070A0D">Hipertrofia</option>
-          <option value="definicion"    style="background:#070A0D">Definición</option>
-          <option value="mantenimiento" style="background:#070A0D">Mantenimiento</option>
-          <option value="descarga"      style="background:#070A0D">Deload</option>
+          <option value="volumen">Hipertrofia</option>
+          <option value="definicion">Definición</option>
+          <option value="mantenimiento">Mantenimiento</option>
+          <option value="descarga">Deload</option>
         </select>
       </div>
     </div>
@@ -91,7 +95,7 @@
   <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
        KPI STRIP — 4 headline metrics
   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
-  <div class="ev-kpi-strip">
+  <div class="ev-kpi-strip" id="main-content">
     <div class="ev-kpi ev-kpi-lime">
       <div class="dv-stat-icon"><i class="fas fa-dumbbell"></i></div>
       <span class="dv-stat-val stat-value" data-count="{{ estadisticas_globales.total_entrenamientos }}">
