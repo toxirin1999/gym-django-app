@@ -1,654 +1,619 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Dashboard de Evolución - {{ cliente.nombre }}{% endblock %}
+{% block title %}Evolución · {{ cliente.nombre }}{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link
-        href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Cinzel+Decorative:wght@400;700;900&family=Lato:wght@300;400;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
-        rel="stylesheet">
-<link rel="stylesheet" href="{% static 'entrenos/css/dashboard_evolucion.css' %}?v=3.0">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700;800;900&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{% static 'entrenos/css/dashboard_evolucion.css' %}?v=4.0">
 {% endblock %}
 
 {% block content %}
 <div class="dv-wrapper">
 
-    <!-- ═══════════════════════════════════
-         HEADER
-    ═══════════════════════════════════ -->
-    <div class="dv-header">
-        <div class="dv-header-left">
-            <div class="dv-eyebrow">Dashboard de Evolución</div>
-            <h1 class="dv-title">{{ cliente.nombre }}</h1>
-            {% if perfil_gamificacion and perfil_gamificacion.nivel_actual %}
-            <a href="{% url 'logros:ver_codice_completo' cliente.id %}" class="dv-level-badge">
-                <i class="fas fa-crown"></i>
-                Nivel {{ perfil_gamificacion.nivel_actual.nivel }}: {{ perfil_gamificacion.nivel_actual.titulo_arquetipo }}
-            </a>
-            {% endif %}
-            <p class="dv-subtitle">Análisis completo de tu progreso físico</p>
-        </div>
+  <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+       TOP BAR — sticky nav strip
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+  <nav class="ev-topbar">
 
-        <div class="dv-header-right">
-            <!-- Filtros de periodo -->
-            <div class="dv-period-tabs">
-                <a href="?rango=30d" class="dv-period-tab {% if rango_seleccionado == '30d' %}active{% endif %}">
-                    <i class="fas fa-calendar-day"></i> 30 Días
-                </a>
-                <a href="?rango=90d" class="dv-period-tab {% if rango_seleccionado == '90d' %}active{% endif %}">
-                    <i class="fas fa-calendar-week"></i> 90 Días
-                </a>
-                <a href="?rango=180d" class="dv-period-tab {% if rango_seleccionado == '180d' %}active{% endif %}">
-                    <i class="fas fa-calendar"></i> 180 Días
-                </a>
-                <a href="?rango=todo" class="dv-period-tab {% if rango_seleccionado == 'todo' %}active{% endif %}">
-                    <i class="fas fa-infinity"></i> Todo
-                </a>
-            </div>
-
-            <!-- Acciones y fase -->
-            <div class="dv-actions-row">
-                <a href="{% url 'entrenos:evaluacion_profesional' cliente.id %}" class="dv-action-btn dv-btn-purple">
-                    <i class="fas fa-microscope"></i> Evaluación Profesional
-                </a>
-                <a href="{% url 'logros:ver_codice_completo' cliente.id %}" class="dv-action-btn dv-btn-gold">
-                    <i class="fas fa-book-journal-whills"></i> Códice
-                </a>
-                <a href="{% url 'logros:leaderboard' %}" class="dv-action-btn dv-btn-pink">
-                    <i class="fas fa-trophy"></i> Ranking
-                </a>
-                <div class="dv-fase-selector">
-                    <i class="fas fa-sync-alt"></i>
-                    <span class="dv-fase-label">Fase:</span>
-                    <select id="faseAnualSelector" class="dv-fase-select">
-                        <option value="volumen" style="background:#0a0f19">Hipertrofia (Volumen)</option>
-                        <option value="definicion" style="background:#0a0f19">Definición (Corte)</option>
-                        <option value="mantenimiento" style="background:#0a0f19">Mantenimiento</option>
-                        <option value="descarga" style="background:#0a0f19">Descarga (Deload)</option>
-                    </select>
-                </div>
-            </div>
-        </div>
+    <div class="ev-crumbs">
+      <a href="{% url 'clientes:panel_cliente' %}">Panel</a>
+      <span class="ev-crumb-sep">/</span>
+      <span class="ev-crumb-active">Evolución</span>
     </div>
 
-    <!-- ═══════════════════════════════════
-         COACH IA — alerta con prioridad única
-    ═══════════════════════════════════ -->
-    {% with coach_data=coach_data %}
-    <div class="dv-coach coach-state-{{ coach_data.estado }}"
-         style="--coach-color: {{ coach_data.color }}; --coach-rgba01: {{ coach_data.color_rgba_01 }}; --coach-rgba02: {{ coach_data.color_rgba_02 }}; --coach-rgba05: {{ coach_data.color_rgba_05 }};">
-
-        <div class="dv-coach-main" onclick="dvToggleCoach(this)">
-            <div class="dv-coach-icon">
-                <i class="{{ coach_data.icono }}"></i>
-            </div>
-            <div class="dv-coach-text">
-                <div class="dv-coach-kicker">Coach IA · Diagnóstico: {{ coach_data.estado|title }}</div>
-                <div class="dv-coach-msg">{{ coach_data.mensaje|safe|truncatechars:140 }}</div>
-            </div>
-            <div class="dv-coach-chips">
-                <span class="dv-chip dv-chip-green"><i class="fas fa-chart-line"></i> RPE
-                {{ coach_data.rpe_medio|floatformat:1 }}</span>
-                {% if coach_data.ejercicios_estancados > 0 %}
-                <span class="dv-chip dv-chip-gold"><i class="fas fa-anchor"></i> {{ coach_data.ejercicios_estancados }}
-                    estancamientos</span>
-                {% endif %}
-                {% if coach_data.desequilibrios %}
-                <span class="dv-chip dv-chip-pink"><i class="fas fa-balance-scale-left"></i> Desequilibrio</span>
-                {% endif %}
-                {% if coach_data.volumen_problema %}
-                <span class="dv-chip dv-chip-cyan"><i class="fas fa-layer-group"></i> Ajuste volumen</span>
-                {% endif %}
-            </div>
-            <div class="dv-coach-toggle"><i class="fas fa-chevron-down"></i></div>
-        </div>
-
-        <div class="dv-coach-detail">
-            <!-- ACWR prominente -->
-            <div class="dv-coach-acwr">
-                <div class="dv-coach-acwr-val">{{ coach_data.acwr|floatformat:2 }}</div>
-                <div class="dv-coach-acwr-label">Ratio ACWR</div>
-                <div class="dv-coach-acwr-bar">
-                    <div class="dv-coach-acwr-fill"></div>
-                </div>
-            </div>
-            <!-- Mensaje completo -->
-            <div class="dv-coach-fullmsg">{{ coach_data.mensaje|safe }}</div>
-        </div>
-
-    </div>
-    {% endwith %}
-
-    <!-- ═══════════════════════════════════
-         MÉTRICAS GLOBALES — 4 cards
-    ═══════════════════════════════════ -->
-    <div class="dv-stats-grid">
-        <div class="dv-stat-card dv-stat-cyan">
-            <div class="dv-stat-icon"><i class="fas fa-dumbbell"></i></div>
-            <div class="dv-stat-val" data-count="{{ estadisticas_globales.total_entrenamientos }}">
-                {{ estadisticas_globales.total_entrenamientos }}
-            </div>
-            <div class="dv-stat-label">Entrenamientos</div>
-        </div>
-        <div class="dv-stat-card dv-stat-magenta">
-            <div class="dv-stat-icon"><i class="fas fa-weight-hanging"></i></div>
-            <div class="dv-stat-val" data-count="{{ estadisticas_globales.volumen_total_global|floatformat:0 }}">
-                {{ estadisticas_globales.volumen_total_global|floatformat:0 }}
-            </div>
-            <div class="dv-stat-label">Volumen Total (kg)</div>
-        </div>
-        <div class="dv-stat-card dv-stat-gold">
-            <div class="dv-stat-icon"><i class="fas fa-stopwatch"></i></div>
-            <div class="dv-stat-val" data-count="{{ estadisticas_globales.duracion_promedio }}">
-                {{ estadisticas_globales.duracion_promedio }}
-            </div>
-            <div class="dv-stat-label">Media (min)</div>
-        </div>
-        <div class="dv-stat-card dv-stat-green">
-            <div class="dv-stat-icon"><i class="fas fa-bullseye"></i></div>
-            <div class="dv-stat-val" data-count="{{ estadisticas_globales.porcentaje_perfeccion }}">
-                {{ estadisticas_globales.porcentaje_perfeccion }}%
-            </div>
-            <div class="dv-stat-label">Eficiencia</div>
-        </div>
+    <div class="ev-topbar-mid">
+      <div class="ev-periods">
+        <a href="?rango=30d"  class="ev-period {% if rango_seleccionado == '30d'  %}active{% endif %}">30D</a>
+        <a href="?rango=90d"  class="ev-period {% if rango_seleccionado == '90d'  %}active{% endif %}">90D</a>
+        <a href="?rango=180d" class="ev-period {% if rango_seleccionado == '180d' %}active{% endif %}">180D</a>
+        <a href="?rango=todo" class="ev-period {% if rango_seleccionado == 'todo' %}active{% endif %}">TODO</a>
+      </div>
     </div>
 
-    <!-- ═══════════════════════════════════
-         NAV TABS
-    ═══════════════════════════════════ -->
-    <div class="dv-nav-tabs">
-        <button class="dv-nav-tab active" onclick="dvTab('overview', this)"><i class="fas fa-chart-line"></i> Visión
-            General
-        </button>
-        <button class="dv-nav-tab" onclick="dvTab('carga', this)"><i class="fas fa-heartbeat"></i> Carga &
-            Equilibrio
-        </button>
-        <button class="dv-nav-tab" onclick="dvTab('progresion', this)"><i class="fas fa-arrow-trend-up"></i>
-            Progresión
-        </button>
-        <button class="dv-nav-tab" onclick="dvTab('records', this)"><i class="fas fa-trophy"></i> Récords &
-            Logros
-        </button>
-        <button class="dv-nav-tab" onclick="dvTab('historial', this)"><i class="fas fa-history"></i> Historial</button>
+    <div class="ev-topbar-actions">
+      <a href="{% url 'entrenos:evaluacion_profesional' cliente.id %}" class="ev-action">
+        <i class="fas fa-microscope"></i> Evaluar
+      </a>
+      <a href="{% url 'logros:ver_codice_completo' cliente.id %}" class="ev-action">
+        <i class="fas fa-book-journal-whills"></i> Códice
+      </a>
+      <a href="{% url 'logros:leaderboard' %}" class="ev-action">
+        <i class="fas fa-trophy"></i> Ranking
+      </a>
+      <div class="ev-fase-wrap">
+        <i class="fas fa-sync-alt"></i>
+        <span class="ev-fase-label">Fase</span>
+        <select id="faseAnualSelector" class="ev-fase-select">
+          <option value="volumen"       style="background:#070A0D">Hipertrofia</option>
+          <option value="definicion"    style="background:#070A0D">Definición</option>
+          <option value="mantenimiento" style="background:#070A0D">Mantenimiento</option>
+          <option value="descarga"      style="background:#070A0D">Deload</option>
+        </select>
+      </div>
     </div>
 
-    <!-- ═══════════════════════════════════
-         TAB: VISIÓN GENERAL
-    ═══════════════════════════════════ -->
-    <div id="dv-tab-overview" class="dv-tab-panel active">
-        <div class="dv-grid-2 dv-gap">
-            <!-- Volumen semanal -->
-            <div class="dv-card">
-                <div class="dv-card-header">
-                    <div class="dv-card-title dv-title-cyan"><i class="fas fa-chart-area"></i> Volumen Semanal</div>
-                    <div class="dv-legend-row">
-                        <span class="dv-leg dv-leg-cyan">── Volumen</span>
-                        <span class="dv-leg dv-leg-magenta">- - RPE</span>
-                    </div>
-                </div>
-                <div class="dv-chart-wrap dv-chart-lg">
-                    <canvas id="volumenSemanalChart" data-volumen-labels='{{ volumen_semanal_labels|safe }}'
-                            data-volumen-data='{{ volumen_semanal_data|safe }}'
-                            data-volumen-rpe='{{ volumen_semanal_rpe|safe }}'
-                            data-volumen-fases='{{ volumen_semanal_fases|safe }}'></canvas>
-                </div>
-            </div>
+  </nav>
 
-            <!-- Distribución muscular -->
-            <div class="dv-card">
-                <div class="dv-card-header">
-                    <div class="dv-card-title dv-title-green"><i class="fas fa-chart-pie"></i> Distribución Muscular
-                    </div>
-                </div>
-                <div class="dv-chart-wrap">
-                    <canvas id="distribucionMuscularChart"
-                            data-distribucion-labels='{{ distribucion_muscular_labels|safe }}'
-                            data-distribucion-data='{{ distribucion_muscular_data|safe }}'></canvas>
-                </div>
-            </div>
-        </div>
+  <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+       HERO — client name + level
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+  <header class="ev-hero">
+    <div>
+      <div class="ev-hero-tag">Análisis de Evolución</div>
+      <h1 class="ev-hero-name">{{ cliente.nombre }}</h1>
+    </div>
+    <div class="ev-hero-aside">
+      {% if perfil_gamificacion and perfil_gamificacion.nivel_actual %}
+      <a href="{% url 'logros:ver_codice_completo' cliente.id %}" class="ev-level-tag">
+        <span class="ev-level-num">NIV {{ perfil_gamificacion.nivel_actual.nivel }}</span>
+        <span class="ev-level-sep"></span>
+        <span class="ev-level-title">{{ perfil_gamificacion.nivel_actual.titulo_arquetipo }}</span>
+      </a>
+      {% endif %}
+      <div class="ev-hero-sub">Periodo: {{ rango_seleccionado }}</div>
+    </div>
+  </header>
+
+  <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+       MOBILE PERIOD STRIP (hidden on desktop)
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+  <div class="ev-mobile-periods">
+    <a href="?rango=30d"  class="ev-period {% if rango_seleccionado == '30d'  %}active{% endif %}">30D</a>
+    <a href="?rango=90d"  class="ev-period {% if rango_seleccionado == '90d'  %}active{% endif %}">90D</a>
+    <a href="?rango=180d" class="ev-period {% if rango_seleccionado == '180d' %}active{% endif %}">180D</a>
+    <a href="?rango=todo" class="ev-period {% if rango_seleccionado == 'todo' %}active{% endif %}">TODO</a>
+  </div>
+
+  <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+       KPI STRIP — 4 headline metrics
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+  <div class="ev-kpi-strip">
+    <div class="ev-kpi ev-kpi-lime">
+      <div class="dv-stat-icon"><i class="fas fa-dumbbell"></i></div>
+      <span class="dv-stat-val stat-value" data-count="{{ estadisticas_globales.total_entrenamientos }}">
+        {{ estadisticas_globales.total_entrenamientos }}
+      </span>
+      <div class="ev-kpi-lbl">Sesiones</div>
+    </div>
+    <div class="ev-kpi ev-kpi-white">
+      <div class="dv-stat-icon"><i class="fas fa-weight-hanging"></i></div>
+      <span class="dv-stat-val stat-value" data-count="{{ estadisticas_globales.volumen_total_global|floatformat:0 }}">
+        {{ estadisticas_globales.volumen_total_global|floatformat:0 }}
+      </span>
+      <div class="ev-kpi-lbl">Volumen (kg)</div>
+    </div>
+    <div class="ev-kpi ev-kpi-amber">
+      <div class="dv-stat-icon"><i class="fas fa-stopwatch"></i></div>
+      <span class="dv-stat-val stat-value" data-count="{{ estadisticas_globales.duracion_promedio }}">
+        {{ estadisticas_globales.duracion_promedio }}
+      </span>
+      <div class="ev-kpi-lbl">Media min</div>
+    </div>
+    <div class="ev-kpi ev-kpi-mint">
+      <div class="dv-stat-icon"><i class="fas fa-bullseye"></i></div>
+      <span class="dv-stat-val stat-value" data-count="{{ estadisticas_globales.porcentaje_perfeccion }}">
+        {{ estadisticas_globales.porcentaje_perfeccion }}%
+      </span>
+      <div class="ev-kpi-lbl">Eficiencia</div>
+    </div>
+  </div>
+
+  <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+       COACH IA
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+  {% with coach_data=coach_data %}
+  <div class="dv-coach coach-state-{{ coach_data.estado }}"
+       style="--coach-color:{{ coach_data.color }};--coach-rgba01:{{ coach_data.color_rgba_01 }};--coach-rgba02:{{ coach_data.color_rgba_02 }};--coach-rgba05:{{ coach_data.color_rgba_05 }};">
+
+    <div class="dv-coach-main" onclick="dvToggleCoach(this)">
+      <div class="dv-coach-icon"><i class="{{ coach_data.icono }}"></i></div>
+      <div class="dv-coach-text">
+        <div class="dv-coach-kicker">Coach IA · Diagnóstico: {{ coach_data.estado|title }}</div>
+        <div class="dv-coach-msg">{{ coach_data.mensaje|safe|truncatechars:160 }}</div>
+      </div>
+      <div class="dv-coach-chips">
+        <span class="dv-chip dv-chip-green"><i class="fas fa-heart-pulse"></i> RPE {{ coach_data.rpe_medio|floatformat:1 }}</span>
+        {% if coach_data.ejercicios_estancados > 0 %}
+        <span class="dv-chip dv-chip-gold"><i class="fas fa-anchor"></i> {{ coach_data.ejercicios_estancados }} estancados</span>
+        {% endif %}
+        {% if coach_data.desequilibrios %}
+        <span class="dv-chip dv-chip-pink"><i class="fas fa-balance-scale-left"></i> Desequilibrio</span>
+        {% endif %}
+        {% if coach_data.volumen_problema %}
+        <span class="dv-chip dv-chip-cyan"><i class="fas fa-layer-group"></i> Ajuste volumen</span>
+        {% endif %}
+      </div>
+      <div class="dv-coach-toggle"><i class="fas fa-chevron-down"></i></div>
     </div>
 
-    <!-- ═══════════════════════════════════
-         TAB: CARGA & EQUILIBRIO
-    ═══════════════════════════════════ -->
-    <div id="dv-tab-carga" class="dv-tab-panel">
-        <div class="dv-grid-2 dv-gap">
-
-            <!-- ACWR -->
-            <div class="dv-card">
-                <div class="dv-card-header">
-                    <div class="dv-card-title dv-title-cyan"><i class="fas fa-heart-pulse"></i> Control de Carga (ACWR)
-                    </div>
-                </div>
-                <div class="dv-card-body">
-                    <div class="dv-acwr-layout">
-                        <div class="dv-acwr-left">
-                            <div class="dv-acwr-val {{ acwr.zona_riesgo }}">{{ acwr.acwr_actual }}</div>
-                            <div class="dv-acwr-sublabel">Ratio ACWR</div>
-                            <!-- SVG Gauge original — sin cambios para no romper JS -->
-                            <div class="gauge-container">
-                                <svg class="gauge-svg" viewBox="0 0 120 70" id="acwrGauge">
-                                    <defs>
-                                        <linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                                            <stop offset="0%" style="stop-color:#ef4444"/>
-                                            <stop offset="25%" style="stop-color:#fbbf24"/>
-                                            <stop offset="50%" style="stop-color:#22c55e"/>
-                                            <stop offset="75%" style="stop-color:#fbbf24"/>
-                                            <stop offset="100%" style="stop-color:#ef4444"/>
-                                        </linearGradient>
-                                    </defs>
-                                    <path d="M 15 55 A 45 45 0 0 1 105 55" stroke="rgba(255,255,255,0.05)"
-                                          stroke-width="10" fill="none" stroke-linecap="round"/>
-                                    <path d="M 15 55 A 45 45 0 0 1 32.2 22.8" stroke="#ef4444" stroke-width="10"
-                                          fill="none" stroke-linecap="round" opacity="0.9"/>
-                                    <path d="M 32.2 22.8 A 45 45 0 0 1 50 12" stroke="#fbbf24" stroke-width="10"
-                                          fill="none" stroke-linecap="round" opacity="0.9"/>
-                                    <path d="M 50 12 A 45 45 0 0 1 87.8 22.8" stroke="#22c55e" stroke-width="10"
-                                          fill="none" stroke-linecap="round" opacity="0.95"/>
-                                    <path d="M 87.8 22.8 A 45 45 0 0 1 98 38" stroke="#fbbf24" stroke-width="10"
-                                          fill="none" stroke-linecap="round" opacity="0.9"/>
-                                    <path d="M 98 38 A 45 45 0 0 1 105 55" stroke="#ef4444" stroke-width="10"
-                                          fill="none" stroke-linecap="round" opacity="0.9"/>
-                                    <line id="gaugeNeedle" x1="60" y1="55" x2="60" y2="18" stroke="url(#needleGradient)"
-                                          stroke-width="3" stroke-linecap="round">
-                                        <defs>
-                                            <linearGradient id="needleGradient" x1="0%" y1="100%" x2="0%" y2="0%">
-                                                <stop offset="0%" style="stop-color:#00d4ff"/>
-                                                <stop offset="100%" style="stop-color:#a855f7"/>
-                                            </linearGradient>
-                                        </defs>
-                                    </line>
-                                    <circle cx="60" cy="55" r="6" fill="#0a0f19" stroke="#00d4ff" stroke-width="2"/>
-                                </svg>
-                            </div>
-                            <div class="dv-acwr-badge {{ acwr.zona_riesgo }}">
-                                {% if acwr.zona_riesgo == 'reanudacion' %}<i class="fas fa-redo"></i> Reanudando tras descanso
-                                {% elif acwr.zona_riesgo == 'optima' %}<i class="fas fa-check-circle"></i> Zona Óptima
-                                {% elif acwr.zona_riesgo == 'cuidado' %}<i class="fas fa-exclamation-triangle"></i> Cuidado
-                                {% elif acwr.zona_riesgo == 'riesgo_alto' %}<i class="fas fa-times-circle"></i> Riesgo Alto
-                                {% else %}<i class="fas fa-info-circle"></i> Baja Carga{% endif %}
-                            </div>
-                        </div>
-                        <div class="dv-acwr-right">
-                            <div class="dv-chart-wrap dv-chart-sm">
-                                <canvas id="acwrChart" data-acwr='{{ acwr_data_json|safe }}'></canvas>
-                            </div>
-                            <div class="dv-zone-legend">
-                                <div class="dv-zone-item"><span class="dv-zone-dot dv-dot-red"></span>Riesgo</div>
-                                <div class="dv-zone-item"><span class="dv-zone-dot dv-dot-yellow"></span>Cuidado</div>
-                                <div class="dv-zone-item"><span class="dv-zone-dot dv-dot-green"></span>Óptimo</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Radar equilibrio muscular -->
-            <div class="dv-card">
-                <div class="dv-card-header">
-                    <div class="dv-card-title dv-title-pink"><i class="fas fa-scale-balanced"></i> Equilibrio Muscular
-                    </div>
-                </div>
-                <div class="dv-chart-wrap">
-                    <canvas id="balanceRadarChart" data-radar='{{ equilibrio_radar_json|safe }}'></canvas>
-                </div>
-                <div class="dv-card-footer"><i class="fas fa-info-circle"></i> Relación de fuerza entre patrones de
-                    movimiento principales (basado en 1RM estimado)
-                </div>
-            </div>
-        </div>
-
-        <div class="dv-grid-2 dv-gap">
-            <!-- Series semanales -->
-            <div class="dv-card">
-                <div class="dv-card-header">
-                    <div class="dv-card-title dv-title-gold">
-                        <i class="fas fa-layer-group"></i> Análisis de Series Semanales
-                        <a href="#glosario-mapeo" class="dv-info-link" title="Ver glosario"><i
-                                class="fas fa-circle-question"></i></a>
-                    </div>
-                </div>
-                <div class="dv-chart-wrap">
-                    <canvas id="volumenOptimoChart" data-vol-optimo='{{ volumen_optimo_json|safe }}'></canvas>
-                </div>
-                <div class="dv-card-footer"><i class="fas fa-lightbulb"></i> Rango recomendado: 10-20 series efectivas
-                    por grupo muscular
-                </div>
-            </div>
-
-            <!-- RPE distribución -->
-            <div class="dv-card">
-                <div class="dv-card-header">
-                    <div class="dv-card-title dv-title-pink"><i class="fas fa-fire-flame-curved"></i> Distribución de
-                        Intensidad (RPE)
-                    </div>
-                </div>
-                <div class="dv-chart-wrap">
-                    <canvas id="intensidadChart" data-intensidad='{{ intensidad_json|safe }}'></canvas>
-                </div>
-                <div class="dv-card-footer"><i class="fas fa-chart-simple"></i> Análisis del esfuerzo percibido en tus
-                    sesiones históricas
-                </div>
-            </div>
-        </div>
+    <div class="dv-coach-detail">
+      <div class="dv-coach-acwr">
+        <div class="dv-coach-acwr-val">{{ coach_data.acwr|floatformat:2 }}</div>
+        <div class="dv-coach-acwr-label">Ratio ACWR</div>
+        <div class="dv-coach-acwr-bar"><div class="dv-coach-acwr-fill"></div></div>
+      </div>
+      <div class="dv-coach-fullmsg">{{ coach_data.mensaje|safe }}</div>
     </div>
 
-    <!-- ═══════════════════════════════════
-         TAB: PROGRESIÓN
-    ═══════════════════════════════════ -->
-    <div id="dv-tab-progresion" class="dv-tab-panel">
-        <div class="dv-grid-2 dv-gap">
+  </div>
+  {% endwith %}
 
-            <!-- Proyecciones IA -->
-            <div class="dv-card">
-                <div class="dv-card-header">
-                    <div class="dv-card-title dv-title-purple"><i class="fas fa-wand-magic-sparkles"></i> Proyecciones
-                        IA (1RM Futuro)
-                    </div>
-                </div>
-                <div class="dv-card-body">
-                    <div class="dv-forecast-grid">
-                        {% if predicciones_ia %}
-                        {% for pred in predicciones_ia %}
-                        <div class="dv-forecast-item">
-                            <div class="dv-forecast-head">
-                                <strong>{{ pred.nombre }}</strong>
-                                <span class="dv-conf-badge"><i class="fas fa-chart-line"></i>
-                                {{ pred.confianza }}%</span>
-                            </div>
-                            <div class="dv-forecast-rows">
-                                <div class="dv-frow"><span>Actual</span><span class="dv-fval-current">{{ pred.actual }}
-                                        kg</span></div>
-                                <div class="dv-frow"><span>4 Semanas</span><span class="dv-fval-future">
-                                {{ pred.p4_semanas }} kg</span></div>
-                                <div class="dv-frow"><span>8 Semanas</span><span class="dv-fval-future dv-fval-hi">
-                                {{ pred.p8_semanas }} kg</span></div>
-                            </div>
-                            <div class="dv-forecast-bar">
-                                <div class="dv-forecast-fill" style="width: {{ pred.confianza }}%"></div>
-                            </div>
-                        </div>
-                        {% endfor %}
-                        {% else %}
-                        <div class="dv-no-data"><i class="fas fa-dumbbell"></i>
-                            <p>Entrena más días en los "3 Grandes" para generar proyecciones</p>
-                        </div>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
+  <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+       NAV TABS
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+  <div class="dv-nav-tabs">
+    <button class="dv-nav-tab active" onclick="dvTab('overview', this)">
+      <i class="fas fa-chart-line"></i><span> Visión General</span>
+    </button>
+    <button class="dv-nav-tab" onclick="dvTab('carga', this)">
+      <i class="fas fa-heartbeat"></i><span> Carga & Equilibrio</span>
+    </button>
+    <button class="dv-nav-tab" onclick="dvTab('progresion', this)">
+      <i class="fas fa-arrow-trend-up"></i><span> Progresión</span>
+    </button>
+    <button class="dv-nav-tab" onclick="dvTab('records', this)">
+      <i class="fas fa-trophy"></i><span> Récords & Logros</span>
+    </button>
+    <button class="dv-nav-tab" onclick="dvTab('historial', this)">
+      <i class="fas fa-history"></i><span> Historial</span>
+    </button>
+  </div>
 
-            <!-- Estancamientos -->
-            <div class="dv-card">
-                <div class="dv-card-header">
-                    <div class="dv-card-title dv-title-pink"><i class="fas fa-triangle-exclamation"></i> Detector de
-                        Estancamientos
-                    </div>
-                    {% if estancamientos %}
-                    <div class="dv-badge-count dv-badge-pink">{{ estancamientos|length }}</div>
-                    {% endif %}
-                </div>
-                <div class="dv-stall-list">
-                    {% if estancamientos %}
-                    {% for alert in estancamientos %}
-                    <div class="dv-stall-row">
-                        <div class="dv-stall-icon"><i class="fas fa-anchor"></i></div>
-                        <div class="dv-stall-info">
-                            <strong>{{ alert.nombre }}</strong>
-                            <p>{{ alert.sesiones_estancado }} sesiones sin progreso significativo</p>
-                            {% if alert.recomendacion %}<span class="dv-stall-tip"><i class="fas fa-lightbulb"></i>
-                            {{ alert.recomendacion }}</span>{% endif %}
-                        </div>
-                    </div>
-                    {% endfor %}
-                    {% else %}
-                    <div class="dv-all-clear">
-                        <i class="fas fa-circle-check"></i>
-                        <p>¡Sin estancamientos críticos! Sigue progresando.</p>
-                    </div>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
+  <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+       TAB: VISIÓN GENERAL
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+  <div id="dv-tab-overview" class="dv-tab-panel active">
+    <div class="dv-grid-2 dv-gap">
 
-        <!-- Tabla progresión -->
-        <div class="dv-card dv-gap">
-            <div class="dv-card-header">
-                <div class="dv-card-title dv-title-green"><i class="fas fa-chart-column"></i> Progresión de Ejercicios
-                </div>
-            </div>
-            <div class="dv-table-wrap">
-                <table class="dv-table">
-                    <thead>
-                    <tr>
-                        <th>Ejercicio</th>
-                        <th>Inicial</th>
-                        <th>Actual</th>
-                        <th>Cambio</th>
-                        <th>%</th>
-                        <th>Tendencia</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    {% for prog in progresion_ejercicios %}
-                    <tr>
-                        <td class="dv-td-name">{{ prog.nombre_ejercicio }}</td>
-                        <td class="dv-td-mono">{{ prog.peso_inicial }} kg</td>
-                        <td class="dv-td-mono">{{ prog.peso_actual }} kg</td>
-                        <td>
-                            {% if prog.progresion_kg > 0 %}<span class="dv-badge dv-badge-green"><i
-                                class="fas fa-arrow-up"></i> +{{ prog.progresion_kg }} kg</span>
-                            {% elif prog.progresion_kg < 0 %}<span class="dv-badge dv-badge-red"><i
-                                class="fas fa-arrow-down"></i> {{ prog.progresion_kg|floatformat:1 }} kg</span>
-                            {% else %}<span class="dv-badge dv-badge-muted"><i class="fas fa-minus"></i> 0
-                                        kg</span>{% endif %}
-                        </td>
-                        <td>
-                            {% if prog.progresion_porcentaje > 0 %}<span class="dv-badge dv-badge-green">+
-                            {{ prog.progresion_porcentaje }}%</span>
-                            {% elif prog.progresion_porcentaje < 0 %}<span class="dv-badge dv-badge-red">
-                            {{ prog.progresion_porcentaje }}%</span>
-                            {% else %}<span class="dv-badge dv-badge-muted">0%</span>{% endif %}
-                        </td>
-                        <td>
-                            {% if prog.tendencia == 'subiendo' %}<span class="dv-badge dv-badge-green"><i
-                                class="fas fa-arrow-trend-up"></i> Subiendo</span>
-                            {% elif prog.tendencia == 'bajando' %}<span class="dv-badge dv-badge-red"><i
-                                class="fas fa-arrow-trend-down"></i> Bajando</span>
-                            {% else %}<span class="dv-badge dv-badge-muted"><i class="fas fa-arrows-left-right"></i>
-                                    Estable</span>{% endif %}
-                        </td>
-                    </tr>
-                    {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-
-    <!-- ═══════════════════════════════════
-         TAB: RÉCORDS & LOGROS
-    ═══════════════════════════════════ -->
-    <div id="dv-tab-records" class="dv-tab-panel">
-        <div class="dv-grid-2 dv-gap">
-
-            <!-- Récords personales -->
-            <div class="dv-card">
-                <div class="dv-card-header">
-                    <div class="dv-card-title dv-title-gold"><i class="fas fa-trophy"></i> Récords Personales Vigentes
-                    </div>
-                </div>
-                <div class="dv-card-body">
-                    <div class="dv-record-grid">
-                        {% for record in records_personales %}
-                        <div class="dv-record-item">
-                            <div class="dv-record-name">{{ record.ejercicio_nombre }}</div>
-                            <div class="dv-record-type">{{ record.get_tipo_record_display }}</div>
-                            <div class="dv-record-val">{{ record.valor|floatformat:1 }}<small>kg</small></div>
-                            <div class="dv-record-date"><i class="fas fa-calendar"></i> {{ record.fecha_logrado|date:"M
-                                Y" }}
-                            </div>
-                        </div>
-                        {% empty %}
-                        <div class="dv-no-data"><i class="fas fa-medal"></i>
-                            <p>No hay récords vigentes aún. ¡Sigue entrenando!</p>
-                        </div>
-                        {% endfor %}
-                    </div>
-                </div>
-            </div>
-
-            <!-- Desafíos semanales -->
-            <div class="dv-card">
-                <div class="dv-card-header">
-                    <div class="dv-card-title dv-title-cyan"><i class="fas fa-crosshairs"></i> Desafíos Semanales</div>
-                </div>
-                <div class="dv-card-body">
-                    <div class="dv-challenge-list">
-                        {% for progreso in desafios_activos %}
-                        <div class="dv-challenge-item {% if progreso.completado %}dv-challenge-done{% endif %}">
-                            <div class="dv-challenge-icon">{{ progreso.desafio.icono }}</div>
-                            <div class="dv-challenge-body">
-                                <div class="dv-challenge-name">{{ progreso.desafio.nombre }}</div>
-                                <div class="dv-challenge-desc">{{ progreso.desafio.descripcion }}</div>
-                                <div class="dv-progress-track">
-                                    <div class="dv-progress-fill {% if progreso.completado %}dv-progress-done{% endif %}"
-                                         style="width: {{ progreso.porcentaje }}%"></div>
-                                </div>
-                                <div class="dv-challenge-footer">
-                                    <span>{{ progreso.progreso_actual }} / {{ progreso.desafio.objetivo_valor }}</span>
-                                    <span class="dv-pts"><i class="fas fa-star"></i> +{{
-                                        progreso.desafio.recompensa_puntos }} pts</span>
-                                </div>
-                            </div>
-                        </div>
-                        {% empty %}
-                        <div class="dv-no-data"><i class="fas fa-flag-checkered"></i>
-                            <p>No hay desafíos activos en este momento</p>
-                        </div>
-                        {% endfor %}
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Logros desbloqueados -->
-        <div class="dv-card dv-gap">
-            <div class="dv-card-header">
-                <div class="dv-card-title dv-title-gold"><i class="fas fa-medal"></i> Logros Desbloqueados</div>
-                <div class="dv-badge-count dv-badge-gold">{{ logros_desbloqueados|length }}</div>
-            </div>
-            <div class="dv-card-body">
-                <div class="dv-achievement-grid">
-                    {% for clitlogro in logros_desbloqueados %}
-                    <div class="dv-achievement-card dv-rareza-{{ clitlogro.logro.rareza }}"
-                         title="{{ clitlogro.logro.descripcion }}">
-                        <div class="dv-achievement-icon">{{ clitlogro.logro.icono }}</div>
-                        <div class="dv-achievement-name">{{ clitlogro.logro.nombre }}</div>
-                        <div class="dv-achievement-date">{{ clitlogro.fecha_desbloqueo|date:"d/m/Y" }}</div>
-                    </div>
-                    {% empty %}
-                    <div class="dv-no-data"><i class="fas fa-award"></i>
-                        <p>Sigue entrenando para desbloquear tu primer logro</p>
-                    </div>
-                    {% endfor %}
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- ═══════════════════════════════════
-         TAB: HISTORIAL
-    ═══════════════════════════════════ -->
-    <div id="dv-tab-historial" class="dv-tab-panel">
-        <div class="dv-grid-2 dv-gap">
-
-            <!-- Historial de sesiones -->
-            <div class="dv-card">
-                <div class="dv-card-header">
-                    <div class="dv-card-title dv-title-cyan"><i class="fas fa-clock-rotate-left"></i> Historial de
-                        Sesiones
-                    </div>
-                </div>
-                <div class="dv-card-body">
-                    <ul class="dv-timeline">
-                        {% for sesion in ultimas_sesiones %}
-                        <li class="dv-timeline-item">
-                            <div class="dv-tl-dot"></div>
-                            <div class="dv-tl-body">
-                                <div class="dv-tl-name">{{ sesion.entreno.rutina.nombre }}</div>
-                                <div class="dv-tl-date">{{ sesion.entreno.fecha|date:"d M Y" }}</div>
-                                <div class="dv-tl-chips">
-                                    <span class="dv-chip dv-chip-muted"><i class="fas fa-stopwatch"></i>
-                                    {{sesion.duracion_minutos }} min</span>
-                                    <span class="dv-chip dv-chip-muted"><i class="fas fa-check"></i>
-                                    {{ sesion.ejercicios_completados }}/{{ sesion.ejercicios_totales }} ejs</span>
-                                    <span class="dv-chip dv-chip-muted"><i class="fas fa-dumbbell"></i>
-                                     {{sesion.volumen_sesion|floatformat:0 }} kg</span>
-                                    {% if sesion.rpe_medio %}<span class="dv-chip dv-chip-muted"><i
-                                        class="fas fa-heart-pulse"></i> {{ sesion.rpe_medio }} RPE</span>{% endif %}
-                                </div>
-                            </div>
-                        </li>
-                        {% empty %}
-                        <div class="dv-no-data"><i class="fas fa-history"></i>
-                            <p>No hay sesiones registradas con el nuevo sistema</p>
-                        </div>
-                        {% endfor %}
-                    </ul>
-                </div>
-            </div>
-
-            <!-- Actividad anual -->
-            <div class="dv-card">
-                <div class="dv-card-header">
-                    <div class="dv-card-title dv-title-cyan"><i class="fas fa-calendar-days"></i> Actividad Anual</div>
-                    <div class="dv-heatmap-legend">
-                        <span>Menos</span>
-                        <div class="dv-hm-swatch" style="background:rgba(0,212,255,0.15)"></div>
-                        <div class="dv-hm-swatch" style="background:rgba(0,212,255,0.4)"></div>
-                        <div class="dv-hm-swatch" style="background:rgba(0,212,255,0.7)"></div>
-                        <div class="dv-hm-swatch" style="background:#00d4ff;box-shadow:0 0 6px #00d4ff"></div>
-                        <span>Más</span>
-                    </div>
-                </div>
-                <div class="dv-card-body">
-                    <div class="dv-heatmap-scroll">
-                        <div class="heatmap" id="heatmap" data-actividad='{{ actividad_anual_data|safe }}'></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- ═══════════════════════════════════
-         GLOSARIO (fuera de tabs, accesible via anchor)
-    ═══════════════════════════════════ -->
-    <div id="glosario-mapeo" class="dv-card dv-gap dv-glosario-card">
+      <!-- Volumen Semanal -->
+      <div class="dv-card">
         <div class="dv-card-header">
-            <div class="dv-card-title"><i class="fas fa-book"></i> Glosario de Mapeo Muscular</div>
+          <div class="dv-card-title dv-title-cyan"><i class="fas fa-chart-area"></i> Volumen Semanal</div>
+          <div class="dv-legend-row">
+            <span class="dv-leg dv-leg-cyan">── Vol (kg)</span>
+            <span class="dv-leg dv-leg-magenta">- - RPE</span>
+          </div>
         </div>
-        <p class="dv-glosario-sub">Consulta qué ejercicios se suman a cada barra del gráfico de series semanales.</p>
-        <div class="dv-glosario-grid">
-            {% for grupo, ejercicios in glosario.items %}
-            <div class="dv-glosario-item">
-                <div class="dv-glosario-header">
-                    <span class="dv-glosario-dot"></span>
-                    <strong>{{ grupo }}</strong>
+        <div class="dv-chart-wrap dv-chart-lg">
+          <canvas id="volumenSemanalChart"
+                  data-volumen-labels='{{ volumen_semanal_labels|safe }}'
+                  data-volumen-data='{{ volumen_semanal_data|safe }}'
+                  data-volumen-rpe='{{ volumen_semanal_rpe|safe }}'
+                  data-volumen-fases='{{ volumen_semanal_fases|safe }}'></canvas>
+        </div>
+      </div>
+
+      <!-- Distribución Muscular -->
+      <div class="dv-card">
+        <div class="dv-card-header">
+          <div class="dv-card-title dv-title-green"><i class="fas fa-chart-pie"></i> Distribución Muscular</div>
+        </div>
+        <div class="dv-chart-wrap">
+          <canvas id="distribucionMuscularChart"
+                  data-distribucion-labels='{{ distribucion_muscular_labels|safe }}'
+                  data-distribucion-data='{{ distribucion_muscular_data|safe }}'></canvas>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+       TAB: CARGA & EQUILIBRIO
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+  <div id="dv-tab-carga" class="dv-tab-panel">
+    <div class="dv-grid-2 dv-gap">
+
+      <!-- ACWR -->
+      <div class="dv-card">
+        <div class="dv-card-header">
+          <div class="dv-card-title dv-title-cyan"><i class="fas fa-heart-pulse"></i> Control de Carga (ACWR)</div>
+        </div>
+        <div class="dv-card-body">
+          <div class="dv-acwr-layout">
+            <div class="dv-acwr-left">
+              <div class="dv-acwr-val {{ acwr.zona_riesgo }}">{{ acwr.acwr_actual }}</div>
+              <div class="dv-acwr-sublabel">Ratio ACWR actual</div>
+
+              <!-- F1-style sector track (replaces gauge) -->
+              <div class="ev-acwr-track">
+                <div class="ev-track-bar">
+                  <div class="ev-track-seg seg-danger  {% if acwr.zona_riesgo == 'baja_carga'  %}seg-active{% endif %}"></div>
+                  <div class="ev-track-seg seg-caution {% if acwr.zona_riesgo == 'cuidado'     %}seg-active{% endif %}"></div>
+                  <div class="ev-track-seg seg-optimal {% if acwr.zona_riesgo == 'optima'      %}seg-active{% endif %}"></div>
+                  <div class="ev-track-seg seg-caution {% if acwr.zona_riesgo == 'riesgo_alto' or acwr.zona_riesgo == 'reanudacion' %}seg-active{% endif %}"></div>
+                  <div class="ev-track-seg seg-danger  {% if acwr.zona_riesgo == 'riesgo_alto' %}seg-active{% endif %}"></div>
                 </div>
-                <ul class="dv-glosario-list">
-                    {% for ej in ejercicios %}
-                    <li>{{ ej }}</li>
-                    {% endfor %}
-                </ul>
+                <div class="ev-track-labels">
+                  <span>0.0</span><span>0.8</span><span>1.0</span><span>1.3</span><span>2.0</span>
+                </div>
+              </div>
+
+              <!-- Hidden gauge SVG (needed by external JS for needle) -->
+              <div class="gauge-container" style="display:none">
+                <svg class="gauge-svg" viewBox="0 0 120 70" id="acwrGauge">
+                  <line id="gaugeNeedle" x1="60" y1="55" x2="60" y2="18" stroke="white" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+              </div>
+
+              <div class="dv-acwr-badge {{ acwr.zona_riesgo }}">
+                {% if acwr.zona_riesgo == 'reanudacion' %}<i class="fas fa-redo"></i> Reanudando tras descanso
+                {% elif acwr.zona_riesgo == 'optima' %}<i class="fas fa-check-circle"></i> Zona Óptima
+                {% elif acwr.zona_riesgo == 'cuidado' %}<i class="fas fa-exclamation-triangle"></i> Precaución
+                {% elif acwr.zona_riesgo == 'riesgo_alto' %}<i class="fas fa-times-circle"></i> Riesgo Alto
+                {% else %}<i class="fas fa-info-circle"></i> Carga Baja{% endif %}
+              </div>
+            </div>
+            <div class="dv-acwr-right">
+              <div class="dv-chart-wrap dv-chart-sm">
+                <canvas id="acwrChart" data-acwr='{{ acwr_data_json|safe }}'></canvas>
+              </div>
+              <div class="dv-zone-legend">
+                <div class="dv-zone-item"><span class="dv-zone-dot dv-dot-red"></span>Riesgo</div>
+                <div class="dv-zone-item"><span class="dv-zone-dot dv-dot-yellow"></span>Precaución</div>
+                <div class="dv-zone-item"><span class="dv-zone-dot dv-dot-green"></span>Óptimo</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Equilibrio Muscular -->
+      <div class="dv-card">
+        <div class="dv-card-header">
+          <div class="dv-card-title dv-title-pink"><i class="fas fa-scale-balanced"></i> Equilibrio Muscular</div>
+        </div>
+        <div class="dv-chart-wrap">
+          <canvas id="balanceRadarChart" data-radar='{{ equilibrio_radar_json|safe }}'></canvas>
+        </div>
+        <div class="dv-card-footer"><i class="fas fa-info-circle"></i> Ratio de fuerza por patrón de movimiento (1RM estimado)</div>
+      </div>
+
+    </div>
+
+    <div class="dv-grid-2 dv-gap">
+
+      <!-- Series Semanales -->
+      <div class="dv-card">
+        <div class="dv-card-header">
+          <div class="dv-card-title dv-title-gold">
+            <i class="fas fa-layer-group"></i> Series Semanales por Grupo
+            <a href="#glosario-mapeo" class="dv-info-link" title="Ver glosario"><i class="fas fa-circle-question"></i></a>
+          </div>
+        </div>
+        <div class="dv-chart-wrap">
+          <canvas id="volumenOptimoChart" data-vol-optimo='{{ volumen_optimo_json|safe }}'></canvas>
+        </div>
+        <div class="dv-card-footer"><i class="fas fa-lightbulb"></i> Rango recomendado: 10–20 series efectivas / grupo / semana</div>
+      </div>
+
+      <!-- Distribución de Intensidad -->
+      <div class="dv-card">
+        <div class="dv-card-header">
+          <div class="dv-card-title dv-title-pink"><i class="fas fa-fire-flame-curved"></i> Distribución de Intensidad (RPE)</div>
+        </div>
+        <div class="dv-chart-wrap">
+          <canvas id="intensidadChart" data-intensidad='{{ intensidad_json|safe }}'></canvas>
+        </div>
+        <div class="dv-card-footer"><i class="fas fa-chart-simple"></i> Esfuerzo percibido en sesiones históricas</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+       TAB: PROGRESIÓN
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+  <div id="dv-tab-progresion" class="dv-tab-panel">
+    <div class="dv-grid-2 dv-gap">
+
+      <!-- Proyecciones IA -->
+      <div class="dv-card">
+        <div class="dv-card-header">
+          <div class="dv-card-title dv-title-purple"><i class="fas fa-wand-magic-sparkles"></i> Proyecciones IA — 1RM Futuro</div>
+        </div>
+        <div class="dv-card-body">
+          <div class="dv-forecast-grid">
+            {% if predicciones_ia %}
+            {% for pred in predicciones_ia %}
+            <div class="dv-forecast-item">
+              <div class="dv-forecast-head">
+                <strong>{{ pred.nombre }}</strong>
+                <span class="dv-conf-badge"><i class="fas fa-chart-line"></i> {{ pred.confianza }}%</span>
+              </div>
+              <div class="dv-forecast-rows">
+                <div class="dv-frow"><span>Actual</span><span class="dv-fval-current">{{ pred.actual }} kg</span></div>
+                <div class="dv-frow"><span>+4 semanas</span><span class="dv-fval-future">{{ pred.p4_semanas }} kg</span></div>
+                <div class="dv-frow"><span>+8 semanas</span><span class="dv-fval-future dv-fval-hi">{{ pred.p8_semanas }} kg</span></div>
+              </div>
+              <div class="dv-forecast-bar">
+                <div class="dv-forecast-fill" style="width:{{ pred.confianza }}%"></div>
+              </div>
             </div>
             {% endfor %}
+            {% else %}
+            <div class="dv-no-data">
+              <i class="fas fa-dumbbell"></i>
+              <p>Entrena más días en los "3 Grandes" para generar proyecciones</p>
+            </div>
+            {% endif %}
+          </div>
         </div>
+      </div>
+
+      <!-- Estancamientos -->
+      <div class="dv-card">
+        <div class="dv-card-header">
+          <div class="dv-card-title dv-title-pink"><i class="fas fa-triangle-exclamation"></i> Detector de Estancamientos</div>
+          {% if estancamientos %}
+          <div class="dv-badge-count dv-badge-pink">{{ estancamientos|length }}</div>
+          {% endif %}
+        </div>
+        <div class="dv-stall-list">
+          {% if estancamientos %}
+          {% for alert in estancamientos %}
+          <div class="dv-stall-row">
+            <div class="dv-stall-icon"><i class="fas fa-anchor"></i></div>
+            <div class="dv-stall-info">
+              <strong>{{ alert.nombre }}</strong>
+              <p>{{ alert.sesiones_estancado }} sesiones sin progreso significativo</p>
+              {% if alert.recomendacion %}<span class="dv-stall-tip"><i class="fas fa-lightbulb"></i> {{ alert.recomendacion }}</span>{% endif %}
+            </div>
+          </div>
+          {% endfor %}
+          {% else %}
+          <div class="dv-all-clear">
+            <i class="fas fa-circle-check"></i>
+            <p>Sin estancamientos críticos — sigue progresando</p>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
     </div>
+
+    <!-- Tabla progresión -->
+    <div class="dv-card dv-gap">
+      <div class="dv-card-header">
+        <div class="dv-card-title dv-title-green"><i class="fas fa-chart-column"></i> Progresión de Ejercicios</div>
+      </div>
+      <div class="dv-table-wrap">
+        <table class="dv-table">
+          <thead>
+            <tr>
+              <th>Ejercicio</th>
+              <th>Inicial</th>
+              <th>Actual</th>
+              <th>Cambio</th>
+              <th>%</th>
+              <th>Tendencia</th>
+            </tr>
+          </thead>
+          <tbody>
+          {% for prog in progresion_ejercicios %}
+          <tr>
+            <td class="dv-td-name">{{ prog.nombre_ejercicio }}</td>
+            <td class="dv-td-mono">{{ prog.peso_inicial }} kg</td>
+            <td class="dv-td-mono">{{ prog.peso_actual }} kg</td>
+            <td>
+              {% if prog.progresion_kg > 0 %}<span class="dv-badge dv-badge-green"><i class="fas fa-arrow-up"></i> +{{ prog.progresion_kg }} kg</span>
+              {% elif prog.progresion_kg < 0 %}<span class="dv-badge dv-badge-red"><i class="fas fa-arrow-down"></i> {{ prog.progresion_kg|floatformat:1 }} kg</span>
+              {% else %}<span class="dv-badge dv-badge-muted"><i class="fas fa-minus"></i> 0 kg</span>{% endif %}
+            </td>
+            <td>
+              {% if prog.progresion_porcentaje > 0 %}<span class="dv-badge dv-badge-green">+{{ prog.progresion_porcentaje }}%</span>
+              {% elif prog.progresion_porcentaje < 0 %}<span class="dv-badge dv-badge-red">{{ prog.progresion_porcentaje }}%</span>
+              {% else %}<span class="dv-badge dv-badge-muted">0%</span>{% endif %}
+            </td>
+            <td>
+              {% if prog.tendencia == 'subiendo' %}<span class="dv-badge dv-badge-green"><i class="fas fa-arrow-trend-up"></i> Subiendo</span>
+              {% elif prog.tendencia == 'bajando' %}<span class="dv-badge dv-badge-red"><i class="fas fa-arrow-trend-down"></i> Bajando</span>
+              {% else %}<span class="dv-badge dv-badge-muted"><i class="fas fa-arrows-left-right"></i> Estable</span>{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+       TAB: RÉCORDS & LOGROS
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+  <div id="dv-tab-records" class="dv-tab-panel">
+    <div class="dv-grid-2 dv-gap">
+
+      <!-- Récords personales -->
+      <div class="dv-card">
+        <div class="dv-card-header">
+          <div class="dv-card-title dv-title-gold"><i class="fas fa-trophy"></i> Récords Personales Vigentes</div>
+        </div>
+        <div class="dv-card-body">
+          <div class="dv-record-grid">
+            {% for record in records_personales %}
+            <div class="dv-record-item">
+              <div class="dv-record-name">{{ record.ejercicio_nombre }}</div>
+              <div class="dv-record-type">{{ record.get_tipo_record_display }}</div>
+              <div class="dv-record-val">{{ record.valor|floatformat:1 }}<small>kg</small></div>
+              <div class="dv-record-date"><i class="fas fa-calendar"></i> {{ record.fecha_logrado|date:"M Y" }}</div>
+            </div>
+            {% empty %}
+            <div class="dv-no-data">
+              <i class="fas fa-medal"></i>
+              <p>No hay récords vigentes aún</p>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+      <!-- Desafíos semanales -->
+      <div class="dv-card">
+        <div class="dv-card-header">
+          <div class="dv-card-title dv-title-cyan"><i class="fas fa-crosshairs"></i> Desafíos Semanales</div>
+        </div>
+        <div class="dv-card-body">
+          <div class="dv-challenge-list">
+            {% for progreso in desafios_activos %}
+            <div class="dv-challenge-item {% if progreso.completado %}dv-challenge-done{% endif %}">
+              <div class="dv-challenge-icon">{{ progreso.desafio.icono }}</div>
+              <div class="dv-challenge-body">
+                <div class="dv-challenge-name">{{ progreso.desafio.nombre }}</div>
+                <div class="dv-challenge-desc">{{ progreso.desafio.descripcion }}</div>
+                <div class="dv-progress-track">
+                  <div class="dv-progress-fill progress-bar {% if progreso.completado %}dv-progress-done{% endif %}"
+                       style="width:{{ progreso.porcentaje }}%"></div>
+                </div>
+                <div class="dv-challenge-footer">
+                  <span>{{ progreso.progreso_actual }} / {{ progreso.desafio.objetivo_valor }}</span>
+                  <span class="dv-pts"><i class="fas fa-star"></i> +{{ progreso.desafio.recompensa_puntos }} pts</span>
+                </div>
+              </div>
+            </div>
+            {% empty %}
+            <div class="dv-no-data">
+              <i class="fas fa-flag-checkered"></i>
+              <p>No hay desafíos activos en este momento</p>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Logros -->
+    <div class="dv-card dv-gap">
+      <div class="dv-card-header">
+        <div class="dv-card-title dv-title-gold"><i class="fas fa-medal"></i> Logros Desbloqueados</div>
+        <div class="dv-badge-count dv-badge-gold">{{ logros_desbloqueados|length }}</div>
+      </div>
+      <div class="dv-card-body">
+        <div class="dv-achievement-grid">
+          {% for clitlogro in logros_desbloqueados %}
+          <div class="dv-achievement-card dv-rareza-{{ clitlogro.logro.rareza }}" title="{{ clitlogro.logro.descripcion }}">
+            <div class="dv-achievement-icon">{{ clitlogro.logro.icono }}</div>
+            <div class="dv-achievement-name">{{ clitlogro.logro.nombre }}</div>
+            <div class="dv-achievement-date">{{ clitlogro.fecha_desbloqueo|date:"d/m/Y" }}</div>
+          </div>
+          {% empty %}
+          <div class="dv-no-data">
+            <i class="fas fa-award"></i>
+            <p>Sigue entrenando para desbloquear tu primer logro</p>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+       TAB: HISTORIAL
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+  <div id="dv-tab-historial" class="dv-tab-panel">
+    <div class="dv-grid-2 dv-gap">
+
+      <!-- Historial de sesiones -->
+      <div class="dv-card">
+        <div class="dv-card-header">
+          <div class="dv-card-title dv-title-cyan"><i class="fas fa-clock-rotate-left"></i> Últimas Sesiones</div>
+        </div>
+        <div class="dv-card-body" style="padding:0">
+          <ul class="dv-timeline">
+            {% for sesion in ultimas_sesiones %}
+            <li class="dv-timeline-item">
+              <div class="dv-tl-dot"></div>
+              <div class="dv-tl-body">
+                <div class="dv-tl-name">{{ sesion.entreno.rutina.nombre }}</div>
+                <div class="dv-tl-date">{{ sesion.entreno.fecha|date:"d M Y" }}</div>
+                <div class="dv-tl-chips">
+                  <span class="dv-chip dv-chip-muted"><i class="fas fa-stopwatch"></i> {{ sesion.duracion_minutos }} min</span>
+                  <span class="dv-chip dv-chip-muted"><i class="fas fa-check"></i> {{ sesion.ejercicios_completados }}/{{ sesion.ejercicios_totales }}</span>
+                  <span class="dv-chip dv-chip-muted"><i class="fas fa-dumbbell"></i> {{ sesion.volumen_sesion|floatformat:0 }} kg</span>
+                  {% if sesion.rpe_medio %}<span class="dv-chip dv-chip-muted"><i class="fas fa-heart-pulse"></i> RPE {{ sesion.rpe_medio }}</span>{% endif %}
+                </div>
+              </div>
+            </li>
+            {% empty %}
+            <div class="dv-no-data">
+              <i class="fas fa-history"></i>
+              <p>Sin sesiones registradas con el nuevo sistema</p>
+            </div>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+
+      <!-- Actividad anual (heatmap) -->
+      <div class="dv-card">
+        <div class="dv-card-header">
+          <div class="dv-card-title dv-title-cyan"><i class="fas fa-calendar-days"></i> Actividad Anual</div>
+          <div class="dv-heatmap-legend">
+            <span>Menos</span>
+            <div class="dv-hm-swatch" style="background:rgba(184,255,0,0.15)"></div>
+            <div class="dv-hm-swatch" style="background:rgba(184,255,0,0.40)"></div>
+            <div class="dv-hm-swatch" style="background:rgba(184,255,0,0.70)"></div>
+            <div class="dv-hm-swatch" style="background:#B8FF00"></div>
+            <span>Más</span>
+          </div>
+        </div>
+        <div class="dv-card-body">
+          <div class="dv-heatmap-scroll">
+            <div class="heatmap" id="heatmap" data-actividad='{{ actividad_anual_data|safe }}'></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+       GLOSARIO (fuera de tabs)
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+  <div id="glosario-mapeo" class="dv-card dv-gap dv-glosario-card" style="margin:0 1.75rem 2.5rem;">
+    <div class="dv-card-header">
+      <div class="dv-card-title"><i class="fas fa-book"></i> Glosario de Mapeo Muscular</div>
+    </div>
+    <p class="dv-glosario-sub">Ejercicios contabilizados por cada grupo muscular en el gráfico de series semanales.</p>
+    <div class="dv-glosario-grid">
+      {% for grupo, ejercicios in glosario.items %}
+      <div class="dv-glosario-item">
+        <div class="dv-glosario-header">
+          <span class="dv-glosario-dot"></span>
+          <strong>{{ grupo }}</strong>
+        </div>
+        <ul class="dv-glosario-list">
+          {% for ej in ejercicios %}<li>{{ ej }}</li>{% endfor %}
+        </ul>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
 
 </div><!-- /dv-wrapper -->
 {% endblock %}
@@ -667,313 +632,329 @@
 {{ glosario|json_script:"glosario-data" }}
 
 <script>
-    // ── CSRF ──
-    function getCookie(name) {
-        let v = null;
-        if (document.cookie) {
-            document.cookie.split(';').forEach(c => {
-                c = c.trim();
-                if (c.startsWith(name + '=')) v = decodeURIComponent(c.slice(name.length + 1));
-            });
+  /* ── CSRF ── */
+  function getCookie(name) {
+    let v = null;
+    if (document.cookie) document.cookie.split(';').forEach(c => {
+      c = c.trim();
+      if (c.startsWith(name + '=')) v = decodeURIComponent(c.slice(name.length + 1));
+    });
+    return v;
+  }
+  const csrftoken = getCookie('csrftoken');
+
+  /* ── Coach toggle ── */
+  function dvToggleCoach(el) {
+    const parent = el.closest('.dv-coach');
+    const icon   = parent.querySelector('.dv-coach-toggle i');
+    const open   = parent.classList.toggle('open');
+    icon.style.transform = open ? 'rotate(180deg)' : '';
+  }
+
+  /* ── Auto-expand coach on risk states ── */
+  document.addEventListener('DOMContentLoaded', function () {
+    const coach = document.querySelector('.dv-coach');
+    if (coach) {
+      const risky = coach.classList.contains('coach-state-riesgo') ||
+                    coach.classList.contains('coach-state-cuidado');
+      if (risky) {
+        coach.classList.add('open');
+        const icon = coach.querySelector('.dv-coach-toggle i');
+        if (icon) icon.style.transform = 'rotate(180deg)';
+      }
+    }
+  });
+
+  /* ── Tab navigation ── */
+  function dvTab(name, btn) {
+    document.querySelectorAll('.dv-tab-panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.dv-nav-tab').forEach(b => b.classList.remove('active'));
+    document.getElementById('dv-tab-' + name).classList.add('active');
+    btn.classList.add('active');
+    setTimeout(() => window.dispatchEvent(new Event('resize')), 50);
+  }
+
+  /* ════════════════════════════════════════
+     CHART INITIALIZATION — inline fallback
+     (external JS also runs; whichever fires
+     first wins via canvas id check)
+  ════════════════════════════════════════ */
+  const PALETTE = {
+    lime:   '#B8FF00',
+    mint:   '#00D4A0',
+    amber:  '#FFB300',
+    purple: '#A855F7',
+    red:    '#FF3D1A',
+    sky:    '#38B6FF',
+    grid:   'rgba(255,255,255,0.04)',
+    tick:   'rgba(228,234,240,0.45)',
+  };
+
+  Chart.defaults.color       = PALETTE.tick;
+  Chart.defaults.borderColor = PALETTE.grid;
+  Chart.defaults.font.family = "'JetBrains Mono', monospace";
+
+  function parseData(el, attr) {
+    try { return JSON.parse(el.getAttribute(attr) || 'null'); } catch { return null; }
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+
+    /* 1. Volumen Semanal */
+    const cvVol = document.getElementById('volumenSemanalChart');
+    if (cvVol && !cvVol._chartjs) {
+      const labels  = parseData(cvVol, 'data-volumen-labels') || [];
+      const volData = parseData(cvVol, 'data-volumen-data')   || [];
+      const rpeData = parseData(cvVol, 'data-volumen-rpe')    || [];
+      new Chart(cvVol, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [
+            {
+              label: 'Volumen (kg)',
+              data: volData,
+              backgroundColor: 'rgba(184,255,0,0.18)',
+              borderColor: PALETTE.lime,
+              borderWidth: 1.5,
+              borderRadius: 0,
+              yAxisID: 'yVol',
+            },
+            {
+              label: 'RPE',
+              data: rpeData,
+              type: 'line',
+              borderColor: PALETTE.purple,
+              backgroundColor: 'transparent',
+              borderWidth: 2,
+              borderDash: [4,3],
+              pointRadius: 3,
+              pointBackgroundColor: PALETTE.purple,
+              tension: 0.35,
+              yAxisID: 'yRpe',
+            },
+          ]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            yVol: { position: 'left',  grid: { color: PALETTE.grid }, ticks: { color: PALETTE.lime, font: { size: 10 } } },
+            yRpe: { position: 'right', min: 0, max: 10, grid: { display: false }, ticks: { color: PALETTE.purple, font: { size: 10 } } },
+            x:    { grid: { display: false }, ticks: { font: { size: 10 } } },
+          }
         }
-        return v;
-    }
-    const csrftoken = getCookie('csrftoken');
-
-    // ── Coach toggle ──
-    function dvToggleCoach(el) {
-        const parent = el.closest('.dv-coach');
-        const icon = parent.querySelector('.dv-coach-toggle i');
-        const open = parent.classList.toggle('open');
-        icon.style.transform = open ? 'rotate(180deg)' : '';
+      });
     }
 
-    // ── Auto-expand coach si estado es riesgo o cuidado ──
-    document.addEventListener('DOMContentLoaded', function () {
-        const coach = document.querySelector('.dv-coach');
-        if (coach) {
-            const estado = coach.classList.contains('coach-state-riesgo') ||
-                           coach.classList.contains('coach-state-cuidado');
-            if (estado) {
-                coach.classList.add('open');
-                const icon = coach.querySelector('.dv-coach-toggle i');
-                if (icon) icon.style.transform = 'rotate(180deg)';
+    /* 2. Distribución Muscular */
+    const cvDist = document.getElementById('distribucionMuscularChart');
+    if (cvDist && !cvDist._chartjs) {
+      const labels = parseData(cvDist, 'data-distribucion-labels') || [];
+      const data   = parseData(cvDist, 'data-distribucion-data')   || [];
+      const pal    = [PALETTE.lime, PALETTE.mint, PALETTE.amber, PALETTE.purple, PALETTE.sky, PALETTE.red, '#FF9F43', '#F7C59F'];
+      new Chart(cvDist, {
+        type: 'doughnut',
+        data: { labels, datasets: [{ data, backgroundColor: pal.slice(0, data.length), borderWidth: 0 }] },
+        options: {
+          responsive: true, maintainAspectRatio: false, cutout: '68%',
+          plugins: {
+            legend: { position: 'right', labels: { color: PALETTE.tick, padding: 12, font: { size: 11 } } }
+          }
+        }
+      });
+    }
+
+    /* 3. ACWR chart */
+    const cvAcwr = document.getElementById('acwrChart');
+    if (cvAcwr && !cvAcwr._chartjs) {
+      const raw = parseData(cvAcwr, 'data-acwr') || [];
+      new Chart(cvAcwr, {
+        type: 'line',
+        data: {
+          labels: raw.map(r => r.fecha || ''),
+          datasets: [{
+            data: raw.map(r => r.acwr || 0),
+            borderColor: PALETTE.mint,
+            backgroundColor: 'rgba(0,212,160,0.08)',
+            fill: true,
+            tension: 0.4,
+            pointRadius: 0,
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            y: { min: 0, max: 2, grid: { color: PALETTE.grid }, ticks: { stepSize: 0.5, font: { size: 10 } } },
+            x: { grid: { display: false }, ticks: { maxTicksLimit: 6, font: { size: 9 } } },
+          }
+        }
+      });
+    }
+
+    /* 4. Equilibrio Muscular radar */
+    const cvRadar = document.getElementById('balanceRadarChart');
+    if (cvRadar && !cvRadar._chartjs) {
+      const raw    = parseData(cvRadar, 'data-radar') || {};
+      const labels = raw.labels  || [];
+      const vals   = raw.valores || [];
+      new Chart(cvRadar, {
+        type: 'radar',
+        data: {
+          labels,
+          datasets: [{
+            label: 'Ratio',
+            data: vals,
+            borderColor: PALETTE.amber,
+            backgroundColor: 'rgba(255,179,0,0.12)',
+            pointBackgroundColor: PALETTE.amber,
+            borderWidth: 2,
+            pointRadius: 4,
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            r: {
+              grid: { color: PALETTE.grid },
+              angleLines: { color: PALETTE.grid },
+              pointLabels: { color: PALETTE.tick, font: { size: 11 } },
+              ticks: { display: false },
             }
+          }
         }
-    });
-
-    // ── Tab navigation ──
-    function dvTab(name, btn) {
-        document.querySelectorAll('.dv-tab-panel').forEach(p => p.classList.remove('active'));
-        document.querySelectorAll('.dv-nav-tab').forEach(b => b.classList.remove('active'));
-        document.getElementById('dv-tab-' + name).classList.add('active');
-        btn.classList.add('active');
-        // Trigger chart resize for lazy-rendered charts
-        setTimeout(() => window.dispatchEvent(new Event('resize')), 50);
+      });
     }
 
-    // ══════════════════════════════════════════
-    // CHART INITIALIZATION
-    // ══════════════════════════════════════════
-    const CHART_COLORS = {
-        cyan:    '#0AC8B9',
-        gold:    '#C8AA6E',
-        green:   '#22c55e',
-        pink:    '#d45cba',
-        purple:  '#9a6cd4',
-        blue:    '#1E7898',
-        gridLine: 'rgba(200,170,110,0.07)',
-        tick:     'rgba(200,170,110,0.50)',
-    };
-
-    Chart.defaults.color = CHART_COLORS.tick;
-    Chart.defaults.borderColor = CHART_COLORS.gridLine;
-    Chart.defaults.font.family = "'Lato', sans-serif";
-
-    function parseData(el, attr) {
-        try { return JSON.parse(el.getAttribute(attr) || 'null'); } catch { return null; }
+    /* 5. Volumen Óptimo */
+    const cvOpt = document.getElementById('volumenOptimoChart');
+    if (cvOpt && !cvOpt._chartjs) {
+      const raw    = parseData(cvOpt, 'data-vol-optimo') || {};
+      const labels = raw.labels       || [];
+      const reales = raw.series_reales || [];
+      const minRec = raw.min_recomendado || 10;
+      const maxRec = raw.max_recomendado || 20;
+      new Chart(cvOpt, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [
+            {
+              label: 'Series/semana',
+              data: reales,
+              backgroundColor: reales.map(v =>
+                v < minRec ? 'rgba(255,61,26,0.55)' :
+                v > maxRec ? 'rgba(255,179,0,0.55)' : 'rgba(0,212,160,0.55)'
+              ),
+              borderRadius: 0,
+            },
+            {
+              label: 'Mín. recomendado',
+              data: Array(labels.length).fill(minRec),
+              type: 'line',
+              borderColor: 'rgba(184,255,0,0.5)',
+              borderDash: [4,3],
+              pointRadius: 0,
+              backgroundColor: 'transparent',
+            },
+            {
+              label: 'Máx. recomendado',
+              data: Array(labels.length).fill(maxRec),
+              type: 'line',
+              borderColor: 'rgba(255,179,0,0.5)',
+              borderDash: [4,3],
+              pointRadius: 0,
+              backgroundColor: 'transparent',
+            },
+          ]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { labels: { color: PALETTE.tick, font: { size: 10 } } } },
+          scales: {
+            y: { grid: { color: PALETTE.grid }, ticks: { font: { size: 10 } } },
+            x: { grid: { display: false }, ticks: { font: { size: 10 } } },
+          }
+        }
+      });
     }
 
-    document.addEventListener('DOMContentLoaded', function () {
-
-        // ── 1. Volumen Semanal (línea + RPE secundario) ──
-        const cvVol = document.getElementById('volumenSemanalChart');
-        if (cvVol) {
-            const labels = parseData(cvVol, 'data-volumen-labels') || [];
-            const volData = parseData(cvVol, 'data-volumen-data') || [];
-            const rpeData = parseData(cvVol, 'data-volumen-rpe') || [];
-            new Chart(cvVol, {
-                type: 'bar',
-                data: {
-                    labels,
-                    datasets: [
-                        {
-                            label: 'Volumen (kg)',
-                            data: volData,
-                            backgroundColor: 'rgba(0,212,255,0.25)',
-                            borderColor: CHART_COLORS.cyan,
-                            borderWidth: 2,
-                            borderRadius: 4,
-                            yAxisID: 'yVol',
-                        },
-                        {
-                            label: 'RPE',
-                            data: rpeData,
-                            type: 'line',
-                            borderColor: CHART_COLORS.pink,
-                            backgroundColor: 'transparent',
-                            borderWidth: 2,
-                            pointRadius: 3,
-                            tension: 0.4,
-                            yAxisID: 'yRpe',
-                        },
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: {
-                        yVol: { position: 'left',  grid: { color: CHART_COLORS.gridLine }, ticks: { color: CHART_COLORS.cyan } },
-                        yRpe: { position: 'right', min: 0, max: 10, grid: { display: false }, ticks: { color: CHART_COLORS.pink } },
-                        x:    { grid: { display: false } },
-                    }
-                }
-            });
+    /* 6. Intensidad Histórica */
+    const cvInt = document.getElementById('intensidadChart');
+    if (cvInt && !cvInt._chartjs) {
+      const raw    = parseData(cvInt, 'data-intensidad') || {};
+      const labels = raw.labels || [];
+      const data   = raw.data   || [];
+      new Chart(cvInt, {
+        type: 'doughnut',
+        data: {
+          labels,
+          datasets: [{
+            data,
+            backgroundColor: [
+              'rgba(56,182,255,0.7)',
+              'rgba(184,255,0,0.7)',
+              'rgba(255,179,0,0.7)',
+              'rgba(255,61,26,0.7)',
+            ],
+            borderWidth: 0,
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false, cutout: '60%',
+          plugins: {
+            legend: { position: 'bottom', labels: { color: PALETTE.tick, padding: 10, font: { size: 11 } } }
+          }
         }
+      });
+    }
 
-        // ── 2. Distribución Muscular (doughnut) ──
-        const cvDist = document.getElementById('distribucionMuscularChart');
-        if (cvDist) {
-            const labels = parseData(cvDist, 'data-distribucion-labels') || [];
-            const data   = parseData(cvDist, 'data-distribucion-data') || [];
-            const palette = [CHART_COLORS.cyan, CHART_COLORS.green, CHART_COLORS.gold,
-                             CHART_COLORS.pink, CHART_COLORS.purple, CHART_COLORS.blue,
-                             '#FF6B35', '#F7C59F'];
-            new Chart(cvDist, {
-                type: 'doughnut',
-                data: {
-                    labels,
-                    datasets: [{ data, backgroundColor: palette.slice(0, data.length), borderWidth: 0 }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    cutout: '65%',
-                    plugins: {
-                        legend: { position: 'right', labels: { color: CHART_COLORS.tick, padding: 12, font: { size: 12 } } }
-                    }
-                }
-            });
+  }); /* end DOMContentLoaded */
+
+  /* ── Fase selector ── */
+  document.addEventListener('DOMContentLoaded', function () {
+    const sel = document.getElementById('faseAnualSelector');
+    if (sel) {
+      sel.addEventListener('change', function () {
+        const clienteId = "{{ cliente.id }}";
+        fetch(`/entrenos/cliente/${clienteId}/actualizar-fase/`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
+          body: JSON.stringify({ fase: this.value })
+        })
+          .then(r => r.json())
+          .then(d => { if (d.status === 'ok') window.location.reload(); else alert('Error: ' + d.message); })
+          .catch(e => { console.error(e); alert('Error de conexión'); });
+      });
+    }
+  });
+
+  /* ── KPI count animation ── */
+  document.addEventListener('DOMContentLoaded', function () {
+    const els = document.querySelectorAll('.dv-stat-val[data-count], .stat-value[data-count]');
+    const obs = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        if (!e.isIntersecting) return;
+        const el  = e.target;
+        const raw = el.dataset.count || '';
+        const hasPercent = raw.includes('%');
+        const target = parseInt(raw.replace('%','')) || 0;
+        const t0 = performance.now();
+        const dur = 1200;
+        function tick(now) {
+          const p = Math.min((now - t0) / dur, 1);
+          const ease = 1 - (1-p)*(1-p);
+          el.textContent = Math.floor(target * ease).toLocaleString() + (hasPercent ? '%' : '');
+          if (p < 1) requestAnimationFrame(tick);
         }
-
-        // ── 3. ACWR (línea) ──
-        const cvAcwr = document.getElementById('acwrChart');
-        if (cvAcwr) {
-            const raw = parseData(cvAcwr, 'data-acwr') || [];
-            const labels = raw.map(r => r.fecha || '');
-            const acwrVals = raw.map(r => r.acwr || 0);
-            new Chart(cvAcwr, {
-                type: 'line',
-                data: {
-                    labels,
-                    datasets: [{
-                        label: 'ACWR',
-                        data: acwrVals,
-                        borderColor: CHART_COLORS.green,
-                        backgroundColor: 'rgba(0,255,136,0.1)',
-                        fill: true,
-                        tension: 0.4,
-                        pointRadius: 2,
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: {
-                        y: { min: 0, max: 2, grid: { color: CHART_COLORS.gridLine } },
-                        x: { grid: { display: false }, ticks: { maxTicksLimit: 8 } },
-                    }
-                }
-            });
-        }
-
-        // ── 4. Equilibrio Muscular (radar) ──
-        const cvRadar = document.getElementById('balanceRadarChart');
-        if (cvRadar) {
-            const raw    = parseData(cvRadar, 'data-radar') || {};
-            const labels = raw.labels || [];
-            const vals   = raw.valores || [];
-            new Chart(cvRadar, {
-                type: 'radar',
-                data: {
-                    labels,
-                    datasets: [{
-                        label: 'Ratio',
-                        data: vals,
-                        borderColor: CHART_COLORS.gold,
-                        backgroundColor: 'rgba(200,170,110,0.2)',
-                        pointBackgroundColor: CHART_COLORS.gold,
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: {
-                        r: {
-                            grid: { color: CHART_COLORS.gridLine },
-                            angleLines: { color: CHART_COLORS.gridLine },
-                            pointLabels: { color: CHART_COLORS.tick, font: { size: 11 } },
-                            ticks: { display: false },
-                        }
-                    }
-                }
-            });
-        }
-
-        // ── 5. Volumen Óptimo (barras agrupadas) ──
-        const cvOptimo = document.getElementById('volumenOptimoChart');
-        if (cvOptimo) {
-            const raw     = parseData(cvOptimo, 'data-vol-optimo') || {};
-            const labels  = raw.labels || [];
-            const reales  = raw.series_reales || [];
-            const minRec  = raw.min_recomendado || 10;
-            const maxRec  = raw.max_recomendado || 20;
-            new Chart(cvOptimo, {
-                type: 'bar',
-                data: {
-                    labels,
-                    datasets: [
-                        {
-                            label: 'Series reales/semana',
-                            data: reales,
-                            backgroundColor: reales.map(v =>
-                                v < minRec ? 'rgba(255,45,146,0.6)' :
-                                v > maxRec ? 'rgba(255,183,0,0.6)' : 'rgba(0,255,136,0.6)'
-                            ),
-                            borderRadius: 4,
-                        },
-                        {
-                            label: 'Mínimo recomendado',
-                            data: Array(labels.length).fill(minRec),
-                            type: 'line',
-                            borderColor: 'rgba(0,212,255,0.6)',
-                            borderDash: [4,4],
-                            pointRadius: 0,
-                            backgroundColor: 'transparent',
-                        },
-                        {
-                            label: 'Máximo recomendado',
-                            data: Array(labels.length).fill(maxRec),
-                            type: 'line',
-                            borderColor: 'rgba(255,183,0,0.6)',
-                            borderDash: [4,4],
-                            pointRadius: 0,
-                            backgroundColor: 'transparent',
-                        },
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { labels: { color: CHART_COLORS.tick, font: { size: 11 } } } },
-                    scales: {
-                        y: { grid: { color: CHART_COLORS.gridLine } },
-                        x: { grid: { display: false } },
-                    }
-                }
-            });
-        }
-
-        // ── 6. Intensidad Histórica (doughnut) ──
-        const cvInt = document.getElementById('intensidadChart');
-        if (cvInt) {
-            const raw  = parseData(cvInt, 'data-intensidad') || {};
-            const labels = raw.labels || [];
-            const data   = raw.data || [];
-            new Chart(cvInt, {
-                type: 'doughnut',
-                data: {
-                    labels,
-                    datasets: [{
-                        data,
-                        backgroundColor: ['rgba(0,212,255,0.7)', 'rgba(0,255,136,0.7)', 'rgba(255,183,0,0.7)', 'rgba(255,45,146,0.7)'],
-                        borderWidth: 0,
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    cutout: '60%',
-                    plugins: {
-                        legend: { position: 'bottom', labels: { color: CHART_COLORS.tick, padding: 10, font: { size: 11 } } }
-                    }
-                }
-            });
-        }
-
-    }); // end first DOMContentLoaded (charts)
-
-    // ── Fase selector ──
-    document.addEventListener('DOMContentLoaded', function () {
-        const selector = document.getElementById('faseAnualSelector');
-        if (selector) {
-            selector.addEventListener('change', function () {
-                const nuevaFase = this.value;
-                const clienteId = "{{ cliente.id }}";
-                fetch(`/entrenos/cliente/${clienteId}/actualizar-fase/`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
-                    body: JSON.stringify({ fase: nuevaFase })
-                })
-                    .then(r => r.json())
-                    .then(d => { if (d.status === 'ok') window.location.reload(); else alert('Error: ' + d.message); })
-                    .catch(e => { console.error(e); alert('Error de conexión'); });
-            });
-        }
-    });
+        requestAnimationFrame(tick);
+        obs.unobserve(el);
+      });
+    }, { threshold: 0.5 });
+    els.forEach(el => obs.observe(el));
+  });
 </script>
 
 <script src="{% static 'entrenos/js/dashboard_evolucion.js' %}?v={% now 'U' %}"></script>
