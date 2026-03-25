@@ -1,464 +1,529 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Evaluación Profesional v2 - {{ cliente.nombre }}{% endblock %}
+{% block title %}Evaluación Profesional · {{ cliente.nombre }}{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap"
-        rel="stylesheet">
-<link rel="stylesheet" href="{% static 'entrenos/css/dashboard_evolucion.css' %}">
-<link rel="stylesheet" href="{% static 'entrenos/css/evaluacion_profesional.css' %}">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700;800;900&family=DM+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{% static 'entrenos/css/evaluacion_profesional.css' %}?v=4.0">
 {% endblock %}
 
 {% block content %}
-<div class="dashboard-wrapper">
-    <!-- HEADER -->
-    <div class="dashboard-header">
-        <div>
-            <h1><i class="fas fa-microscope" aria-hidden="true"></i> Evaluación Profesional</h1>
-            <p>{{ cliente.nombre }} — Análisis científico de tu entrenamiento</p>
-        </div>
-        <div style="display: flex; gap: 1rem; align-items: center;">
-            {% if evaluacion.evaluacion_posible %}
-            <button id="exportPDFBtn" class="export-pdf-btn" aria-label="Exportar evaluación a PDF">
-                <i class="fas fa-file-pdf" aria-hidden="true"></i> Exportar PDF
-            </button>
-            {% endif %}
-            <a href="{% url 'entrenos:dashboard_evolucion' cliente.id %}" class="filter-btn"
-               aria-label="Volver al dashboard">
-                <i class="fas fa-arrow-left" aria-hidden="true"></i> Dashboard
-            </a>
-        </div>
+<div class="ep-shell">
+
+  <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+       STICKY TOPBAR
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+  <nav class="ep-topbar">
+    <div class="ep-crumbs">
+      <a href="{% url 'entrenos:dashboard_evolucion' cliente.id %}"><i class="fas fa-arrow-left"></i> Dashboard</a>
+      <span class="ep-crumb-sep">/</span>
+      <span class="ep-crumb-active">Evaluación</span>
     </div>
 
-    <!-- SELECTOR DE PERÍODO -->
-    <div class="filter-section" style="margin-bottom: 2rem;">
+    <div class="ep-topbar-mid">
+      <div class="ep-periods">
         {% for semana_opcion in opciones_semanas %}
         <a href="?semanas={{ semana_opcion }}"
-           class="filter-btn {% if semanas_analizadas == semana_opcion %}active{% endif %}">
-            <i class="fas fa-calendar"></i> {{ semana_opcion }} Semanas
+           class="ep-period {% if semanas_analizadas == semana_opcion %}active{% endif %}">
+          {{ semana_opcion }}sem
         </a>
         {% endfor %}
+      </div>
     </div>
 
-    {% if evaluacion.evaluacion_posible %}
-
-    <!-- PUNTUACIÓN GLOBAL CON DESGLOSE -->
-    <div class="card" style="margin-bottom: 2rem;">
-        <h2 class="card-title">
-            <i class="fas fa-star"></i> Puntuación Global
-            <span class="tooltip-icon">
-                <i class="fas fa-info"></i>
-                <span class="tooltip-text">La puntuación se calcula ponderando 7 categorías: Volumen (20%), Progresión
-                    (20%), Frecuencia (15%), Intensidad (15%), ACWR (10%), Equilibrio (10%) y Consistencia (10%).</span>
-            </span>
-        </h2>
-
-        <div class="score-container">
-            <!-- Anillo de Puntuación -->
-            <div class="score-ring-wrapper">
-                {% with score=evaluacion.puntuacion_global %}
-                <svg width="200" height="200" viewBox="0 0 200 200">
-                    <circle class="bg-ring" cx="100" cy="100" r="85"/>
-                    <circle class="score-ring" cx="100" cy="100" r="85"
-                            stroke="{% if score >= 70 %}#10B981{% elif score >= 55 %}#F59E0B{% else %}#EF4444{% endif %}"
-                            stroke-dasharray="0 534" data-target="{{ score }}"/>
-                </svg>
-                <div class="score-center">
-                    <div class="score-number"
-                         style="color: {% if score >= 70 %}#10B981{% elif score >= 55 %}#F59E0B{% else %}#EF4444{% endif %}">
-                        {{ score|floatformat:0 }}
-                    </div>
-                    <div class="score-label">de 100</div>
-                </div>
-                {% endwith %}
-            </div>
-
-            <!-- Desglose -->
-            <div class="score-breakdown">
-                {% for item in evaluacion.puntuacion_desglose %}
-                {% if item.tiene_datos %}
-                <div class="breakdown-item">
-                    <div class="breakdown-icon" style="background: {{ item.color }}20; color: {{ item.color }};">
-                        <i class="fas {{ item.icono }}"></i>
-                    </div>
-                    <div class="breakdown-info">
-                        <div class="breakdown-name">{{ item.nombre }} ({{ item.peso_porcentaje }}%)</div>
-                        <div class="breakdown-bar">
-                            <div class="breakdown-bar-fill"
-                                 style="width: {{ item.puntuacion_categoria }}%; background: {{ item.color }};"></div>
-                        </div>
-                    </div>
-                    <div class="breakdown-value" style="color: {{ item.color }};">
-                        {{item.puntuacion_categoria|floatformat:0 }}
-                    </div>
-                </div>
-                {% endif %}
-                {% endfor %}
-            </div>
-        </div>
-
-        <!-- Diagnóstico -->
-        <div
-                style="text-align: center; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--border-subtle);">
-            <div class="eval-nivel-badge {{ evaluacion.diagnostico_principal.nivel }}"
-                 style="font-size: 1.1rem; padding: 0.75rem 1.5rem;">
-                {{ evaluacion.diagnostico_principal.emoji }} {{ evaluacion.diagnostico_principal.titulo }}
-            </div>
-            <p
-                    style="margin-top: 1rem; color: var(--text-secondary); max-width: 600px; margin-left: auto; margin-right: auto;">
-                {{ evaluacion.diagnostico_principal.descripcion }}
-            </p>
-        </div>
+    <div class="ep-topbar-right">
+      {% if evaluacion.evaluacion_posible %}
+      <button id="exportPDFBtn" class="ep-btn ep-btn-lime">
+        <i class="fas fa-file-pdf"></i><span> PDF</span>
+      </button>
+      {% endif %}
     </div>
+  </nav>
 
-    <!-- COMPARATIVA CON PLAN HELMS -->
-    {% if evaluacion.comparativa_plan_helms.disponible %}
-    <div class="plan-comparison" style="margin-bottom: 2rem;">
-        <h2 class="card-title" style="margin-bottom: 1rem;">
-            <i class="fas fa-route"></i> Comparativa con tu Plan Helms
-            <span class="tooltip-icon">
-                <i class="fas fa-info"></i>
-                <span class="tooltip-text">Compara tu entrenamiento real con lo planificado según la metodología de Eric
-                    Helms.</span>
-            </span>
-        </h2>
-
-        <div class="plan-fase-badge">
-            <i class="fas fa-flag"></i>
-            Fase Actual: {{ evaluacion.comparativa_plan_helms.fase_actual.nombre }}
-        </div>
-
-        <p style="color: var(--text-secondary); margin-bottom: 1rem;">
-            {{ evaluacion.comparativa_plan_helms.fase_actual.descripcion }}
-        </p>
-
-        <div class="comparison-grid">
-            <div class="comparison-item">
-                <div class="comparison-label">RPE Objetivo</div>
-                <div class="comparison-values">
-                    <span class="comparison-planned">
-                    {{ evaluacion.comparativa_plan_helms.fase_actual.rpe_objetivo.0}}-
-                    {{ evaluacion.comparativa_plan_helms.fase_actual.rpe_objetivo.1 }}</span>
-                    <i class="fas fa-arrow-right comparison-arrow"></i>
-                    <span class="comparison-actual ok">
-                        {{ evaluacion.evaluaciones.intensidad.rpe_promedio|default:"--" }}</span>
-                </div>
-            </div>
-
-            <div class="comparison-item">
-                <div class="comparison-label">Rango de Reps</div>
-                <div class="comparison-values">
-                    <span class="comparison-planned">
-                    {{ evaluacion.comparativa_plan_helms.fase_actual.rep_range}}</span>
-                </div>
-            </div>
-
-            <div class="comparison-item">
-                <div class="comparison-label">Adherencia</div>
-                <div class="comparison-values">
-                    <span
-                            class="comparison-actual {% if evaluacion.comparativa_plan_helms.adherencia_estimada >= 75 %}ok{% else %}alto{% endif %}">
-                        {{ evaluacion.comparativa_plan_helms.adherencia_estimada }}%
-                    </span>
-                </div>
-            </div>
-
-            <div class="comparison-item">
-                <div class="comparison-label">Semana del Año</div>
-                <div class="comparison-values">
-                    <span class="comparison-actual ok">
-                    {{ evaluacion.comparativa_plan_helms.fase_actual.semana_del_año}}</span>
-                </div>
-            </div>
-        </div>
+  <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+       HERO
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+  <header class="ep-hero">
+    <div>
+      <div class="ep-hero-tag"><i class="fas fa-microscope"></i> Evaluación Profesional</div>
+      <h1 class="ep-hero-name">{{ cliente.nombre }}</h1>
     </div>
-    {% endif %}
-
-    <!-- EVALUACIONES POR CATEGORÍA -->
-    <div
-            style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
-
-        <!-- INTENSIDAD (RPE) -->
-        <div class="eval-card">
-            <div class="eval-card-header">
-                <div class="eval-card-title">
-                    <i class="fas fa-fire"></i> Intensidad (RPE)
-                    <span class="tooltip-icon">
-                        <i class="fas fa-info"></i>
-                        <span class="tooltip-text">{{ evaluacion.tooltips.RPE }}</span>
-                    </span>
-                </div>
-                {% if evaluacion.evaluaciones.intensidad.puntuacion %}
-                <div
-                        class="eval-card-score {% if evaluacion.evaluaciones.intensidad.puntuacion >= 70 %}high{% elif evaluacion.evaluaciones.intensidad.puntuacion >= 50 %}medium{% else %}low{% endif %}">
-                    {{ evaluacion.evaluaciones.intensidad.rpe_promedio|floatformat:1 }}
-                </div>
-                {% else %}
-                <div class="eval-card-score none">--</div>
-                {% endif %}
-            </div>
-
-            <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1rem;">
-                {{ evaluacion.evaluaciones.intensidad.mensaje }}
-            </p>
-
-            {% if evaluacion.evaluaciones.intensidad.distribucion.data %}
-            <div class="rpe-chart-container">
-                <div class="metric-card bg-[var(--lol-bg-alt)] border border-[var(--lol-border-subtle)] p-4 rounded-sm shadow-xl relative overflow-hidden transition-all hover:border-[rgba(200,170,110,0.3)] hover:shadow-[0_0_15px_var(--lol-glow-gold)]">
-    <h4 class="font-display text-[0.65rem] text-[var(--lol-gold-mid)] uppercase tracking-wider mb-3">◆ RPE</h4>
-    <canvas id="rpeChart"></canvas>
-</div>
-            </div>
-            {% endif %}
-        </div>
-
-        <!-- FRECUENCIA -->
-        <div class="eval-card">
-            <div class="eval-card-header">
-                <div class="eval-card-title">
-                    <i class="fas fa-calendar-check"></i> Frecuencia
-                </div>
-                <div
-                        class="eval-card-score {% if evaluacion.evaluaciones.frecuencia.puntuacion >= 70 %}high{% elif evaluacion.evaluaciones.frecuencia.puntuacion >= 50 %}medium{% else %}low{% endif %}">
-                    {{ evaluacion.evaluaciones.frecuencia.frecuencia_global|floatformat:1 }}
-                </div>
-            </div>
-
-            <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1rem;">
-                {{ evaluacion.evaluaciones.frecuencia.mensaje }}
-            </p>
-
-            <div
-                    style="display: flex; justify-content: space-around; text-align: center; padding: 1rem; background: rgba(255,255,255,0.02); border-radius: 8px;">
-                <div>
-                    <div style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">Mínimo</div>
-                    <div style="font-size: 1.25rem; font-weight: 700; color: #F59E0B;">
-                        {{evaluacion.evaluaciones.frecuencia.recomendacion.minima }}
-                    </div>
-                </div>
-                <div>
-                    <div style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">Óptimo</div>
-                    <div style="font-size: 1.25rem; font-weight: 700; color: #10B981;">
-                        {{evaluacion.evaluaciones.frecuencia.recomendacion.optima_hipertrofia }}
-                    </div>
-                </div>
-                <div>
-                    <div style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">Máximo</div>
-                    <div style="font-size: 1.25rem; font-weight: 700; color: #EF4444;">
-                        {{evaluacion.evaluaciones.frecuencia.recomendacion.maxima_recomendada }}
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- CONSISTENCIA -->
-        <div class="eval-card">
-            <div class="eval-card-header">
-                <div class="eval-card-title">
-                    <i class="fas fa-check-double"></i> Consistencia
-                </div>
-                {% if evaluacion.evaluaciones.consistencia.puntuacion %}
-                <div
-                        class="eval-card-score {% if evaluacion.evaluaciones.consistencia.puntuacion >= 70 %}high{% elif evaluacion.evaluaciones.consistencia.puntuacion >= 50 %}medium{% else %}low{% endif %}">
-                    {{ evaluacion.evaluaciones.consistencia.puntuacion|floatformat:0 }}
-                </div>
-                {% else %}
-                <div class="eval-card-score none">--</div>
-                {% endif %}
-            </div>
-
-            <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1rem;">
-                {{ evaluacion.evaluaciones.consistencia.mensaje }}
-            </p>
-
-            {% if evaluacion.evaluaciones.consistencia.puntuacion %}
-            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; text-align: center;">
-                <div style="padding: 0.75rem; background: rgba(255,255,255,0.02); border-radius: 8px;">
-                    <div style="font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase;">Días</div>
-                    <div style="font-size: 1.1rem; font-weight: 700; color: var(--neon-cyan);">
-                        {{evaluacion.evaluaciones.consistencia.dias_entrenados }}
-                    </div>
-                </div>
-                <div style="padding: 0.75rem; background: rgba(255,255,255,0.02); border-radius: 8px;">
-                    <div style="font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase;">Gap</div>
-                    <div style="font-size: 1.1rem; font-weight: 700; color: var(--text-primary);">
-                        {{evaluacion.evaluaciones.consistencia.gap_promedio }}d
-                    </div>
-                </div>
-                <div style="padding: 0.75rem; background: rgba(255,255,255,0.02); border-radius: 8px;">
-                    <div style="font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase;">%</div>
-                    <div
-                            style="font-size: 1.1rem; font-weight: 700; color: {% if evaluacion.evaluaciones.consistencia.porcentaje_cumplimiento >= 75 %}#10B981{% else %}#F59E0B{% endif %};">
-                        {{evaluacion.evaluaciones.consistencia.porcentaje_cumplimiento }}%
-                    </div>
-                </div>
-            </div>
-            {% endif %}
-        </div>
-
-        <!-- CARGA (ACWR) -->
-        <div class="eval-card">
-            <div class="eval-card-header">
-                <div class="eval-card-title">
-                    <i class="fas fa-weight-hanging"></i> Carga (ACWR)
-                    <span class="tooltip-icon">
-                        <i class="fas fa-info"></i>
-                        <span class="tooltip-text">{{ evaluacion.tooltips.ACWR }}</span>
-                    </span>
-                </div>
-                {% if evaluacion.evaluaciones.carga.acwr %}
-                <div
-                        class="eval-card-score {% if evaluacion.evaluaciones.carga.puntuacion >= 70 %}high{% elif evaluacion.evaluaciones.carga.puntuacion >= 50 %}medium{% else %}low{% endif %}">
-                    {{ evaluacion.evaluaciones.carga.acwr }}
-                </div>
-                {% else %}
-                <div class="eval-card-score none">--</div>
-                {% endif %}
-            </div>
-
-            <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1rem;">
-                {{ evaluacion.evaluaciones.carga.mensaje }}
-            </p>
-
-            {% if evaluacion.evaluaciones.carga.acwr %}
-            <div
-                    style="position: relative; height: 12px; background: linear-gradient(90deg, #3B82F6 0%, #10B981 35%, #10B981 55%, #F59E0B 70%, #EF4444 100%); border-radius: 6px; margin: 1.5rem 0;">
-                <div
-                        style="position: absolute; top: -6px; left: {% widthratio evaluacion.evaluaciones.carga.acwr 2 100 %}%; width: 24px; height: 24px; background: white; border-radius: 50%; transform: translateX(-50%); box-shadow: 0 2px 10px rgba(0,0,0,0.3);">
-                </div>
-            </div>
-            <div style="display: flex; justify-content: space-between; font-size: 0.65rem; color: var(--text-muted);">
-                <span>0.5 Bajo</span>
-                <span>0.8-1.3 Óptimo</span>
-                <span>1.5+ Peligro</span>
-            </div>
-            {% endif %}
-        </div>
+    <div class="ep-hero-meta">
+      {% if evaluacion.evaluacion_posible %}
+      <div class="ep-meta-item"><i class="fas fa-calendar-alt"></i> {{ evaluacion.periodo_analizado.fecha_inicio|date:"d M Y" }} – {{ evaluacion.periodo_analizado.fecha_fin|date:"d M Y" }}</div>
+      <div class="ep-meta-item"><i class="fas fa-dumbbell"></i> {{ evaluacion.metricas_raw.total_sesiones }} sesiones</div>
+      <div class="ep-meta-item ep-meta-ver"><i class="fas fa-code-branch"></i> v{{ evaluacion.version }}</div>
+      {% endif %}
     </div>
+  </header>
 
-    <!-- VOLUMEN POR GRUPO MUSCULAR -->
-    <div class="card" style="margin-bottom: 2rem;">
-        <h2 class="card-title">
-            <i class="fas fa-dumbbell"></i> Volumen por Grupo Muscular
-            <span class="tooltip-icon">
-                <i class="fas fa-info"></i>
-                <span class="tooltip-text">{{ evaluacion.tooltips.Volumen }}</span>
-            </span>
-        </h2>
-        <p style="color: var(--text-secondary); margin-bottom: 1.5rem; font-size: 0.85rem;">
-            Basado en los Volume Landmarks de Dr. Mike Israetel (Renaissance Periodization).
-        </p>
+  <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+       MOBILE PERIOD STRIP
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+  <div class="ep-mobile-periods">
+    {% for semana_opcion in opciones_semanas %}
+    <a href="?semanas={{ semana_opcion }}"
+       class="ep-period {% if semanas_analizadas == semana_opcion %}active{% endif %}">
+      {{ semana_opcion }} semanas
+    </a>
+    {% endfor %}
+  </div>
 
-        <div class="volumen-grid">
-            {% for item in evaluacion.evaluaciones.volumen.evaluaciones_por_grupo %}
-            <div class="volumen-card {{ item.estado }}">
-                <div class="volumen-header">
-                    <span class="volumen-grupo">{{ item.grupo }}</span>
-                    <span class="volumen-badge {{ item.estado }}">{{ item.estado|title }}</span>
-                </div>
-                <div class="volumen-value" style="color: {{ item.color }};">
-                    {{ item.series_semanales|floatformat:1 }}
-                    <span style="font-size: 0.75rem; font-weight: 400; color: var(--text-secondary);">series/sem</span>
-                </div>
-                <div class="volumen-bar-wrapper">
-                    <div class="volumen-bar-fill"
-                         style="width: {{ item.posicion_actual }}%; background: {{ item.color }};"></div>
-                    <div class="volumen-markers">
-                        <div class="volumen-marker mev" style="left: {{ item.posicion_mev }}%;"></div>
-                        <div class="volumen-marker mav" style="left: {{ item.posicion_mav }}%;"></div>
-                    </div>
-                </div>
-                <div class="volumen-legend">
-                    <span>MEV: {{ item.mev }}</span>
-                    <span>MAV: {{ item.mav }}</span>
-                    <span>MRV: {{ item.mrv }}</span>
-                </div>
-            </div>
-            {% endfor %}
+  {% if evaluacion.evaluacion_posible %}
+
+  <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+       SCORE HERO CARD
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+  <div class="ep-section">
+    <div class="ep-score-card">
+
+      <!-- Left: big grade -->
+      <div class="ep-score-left">
+        <div class="ep-score-label-top">Puntuación Global</div>
+        <div class="ep-score-number" id="scoreNumber">{{ evaluacion.puntuacion_global|floatformat:0 }}</div>
+        <div class="ep-score-denom">/ 100</div>
+
+        <!-- Precision track -->
+        <div class="ep-score-track">
+          <div class="ep-score-fill" style="width: {{ evaluacion.puntuacion_global|floatformat:0 }}%"
+               data-target="{{ evaluacion.puntuacion_global|floatformat:0 }}"></div>
+          <div class="ep-track-zones">
+            <span style="left:0%">0</span>
+            <span style="left:55%">55</span>
+            <span style="left:70%">70</span>
+            <span style="left:85%">85</span>
+          </div>
         </div>
-    </div>
 
-    <!-- RECOMENDACIONES -->
-    <div class="card" style="margin-bottom: 2rem;">
-        <h2 class="card-title">
-            <i class="fas fa-lightbulb"></i> Recomendaciones Priorizadas
-        </h2>
-
-        {% if evaluacion.recomendaciones %}
-        <div>
-            {% for rec in evaluacion.recomendaciones %}
-            <div class="recomendacion-card prioridad-{{ rec.prioridad }}">
-                <div class="recomendacion-header">
-                    <span class="recomendacion-emoji">{{ rec.icono }}</span>
-                    <span class="recomendacion-title">{{ rec.titulo }}</span>
-                    <span class="recomendacion-prioridad">P{{ rec.prioridad }}</span>
-                </div>
-                <p class="recomendacion-descripcion">{{ rec.descripcion }}</p>
-                <div class="recomendacion-accion">
-                    <i class="fas fa-arrow-right"></i> {{ rec.accion }}
-                </div>
-            </div>
-            {% endfor %}
+        <!-- Diagnostic badge -->
+        <div class="ep-nivel-badge ep-nivel-{{ evaluacion.diagnostico_principal.nivel }}">
+          {{ evaluacion.diagnostico_principal.emoji }} {{ evaluacion.diagnostico_principal.titulo }}
         </div>
-        {% else %}
-        <div style="text-align: center; padding: 2rem;">
-            <i class="fas fa-check-circle" style="font-size: 3rem; color: #10B981; margin-bottom: 1rem;"></i>
-            <p style="color: var(--text-secondary);">¡Excelente! No hay recomendaciones urgentes.</p>
+        <p class="ep-score-desc">{{ evaluacion.diagnostico_principal.descripcion }}</p>
+      </div>
+
+      <!-- Right: breakdown -->
+      <div class="ep-score-right">
+        <div class="ep-breakdown-label">Desglose por categoría</div>
+        {% for item in evaluacion.puntuacion_desglose %}
+        {% if item.tiene_datos %}
+        <div class="ep-breakdown-row">
+          <div class="ep-bd-icon" style="background:{{ item.color }}18;color:{{ item.color }}">
+            <i class="fas {{ item.icono }}"></i>
+          </div>
+          <div class="ep-bd-body">
+            <div class="ep-bd-name">{{ item.nombre }} <span class="ep-bd-weight">{{ item.peso_porcentaje }}%</span></div>
+            <div class="ep-bd-track">
+              <div class="ep-bd-fill" style="width:{{ item.puntuacion_categoria }}%;background:{{ item.color }}"></div>
+            </div>
+          </div>
+          <div class="ep-bd-val" style="color:{{ item.color }}">{{ item.puntuacion_categoria|floatformat:0 }}</div>
         </div>
         {% endif %}
-    </div>
+        {% endfor %}
+      </div>
 
-    <!-- MENSAJE MOTIVACIONAL -->
-    <div class="motivational-banner">
-        <p class="motivational-text">{{ evaluacion.resumen_ejecutivo.mensaje_motivacional }}</p>
     </div>
+  </div>
 
-    <!-- INFO -->
-    <div
-            style="margin-top: 2rem; padding: 1rem; background: rgba(255,255,255,0.02); border-radius: var(--radius-md); display: flex; justify-content: space-between; flex-wrap: wrap; gap: 1rem; font-size: 0.8rem; color: var(--text-muted);">
-        <div><i class="fas fa-calendar-alt"></i> {{ evaluacion.periodo_analizado.fecha_inicio|date:"d M Y" }} - {{
-            evaluacion.periodo_analizado.fecha_fin|date:"d M Y" }}
+  <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+       PLAN HELMS
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+  {% if evaluacion.comparativa_plan_helms.disponible %}
+  <div class="ep-section">
+    <div class="ep-card">
+      <div class="ep-card-header">
+        <div class="ep-card-title ep-title-purple">
+          <i class="fas fa-route"></i> Comparativa Plan Helms
+          <span class="ep-tooltip">
+            <i class="fas fa-info"></i>
+            <span class="ep-tooltip-text">Compara tu entrenamiento real con lo planificado según la metodología de Eric Helms.</span>
+          </span>
         </div>
-        <div><i class="fas fa-dumbbell"></i> {{ evaluacion.metricas_raw.total_sesiones }} sesiones</div>
-        <div><i class="fas fa-code-branch"></i> v{{ evaluacion.version }}</div>
+        <div class="ep-fase-badge">
+          <i class="fas fa-flag"></i> {{ evaluacion.comparativa_plan_helms.fase_actual.nombre }}
+        </div>
+      </div>
+      <p class="ep-card-desc">{{ evaluacion.comparativa_plan_helms.fase_actual.descripcion }}</p>
+      <div class="ep-comparison-grid">
+        <div class="ep-comp-item">
+          <div class="ep-comp-label">RPE Objetivo</div>
+          <div class="ep-comp-vals">
+            <span class="ep-comp-plan">{{ evaluacion.comparativa_plan_helms.fase_actual.rpe_objetivo.0 }}–{{ evaluacion.comparativa_plan_helms.fase_actual.rpe_objetivo.1 }}</span>
+            <i class="fas fa-arrow-right ep-comp-arrow"></i>
+            <span class="ep-comp-real ok">{{ evaluacion.evaluaciones.intensidad.rpe_promedio|default:"--" }}</span>
+          </div>
+        </div>
+        <div class="ep-comp-item">
+          <div class="ep-comp-label">Rango Reps</div>
+          <div class="ep-comp-vals">
+            <span class="ep-comp-plan">{{ evaluacion.comparativa_plan_helms.fase_actual.rep_range }}</span>
+          </div>
+        </div>
+        <div class="ep-comp-item">
+          <div class="ep-comp-label">Adherencia</div>
+          <div class="ep-comp-vals">
+            <span class="ep-comp-real {% if evaluacion.comparativa_plan_helms.adherencia_estimada >= 75 %}ok{% else %}alert{% endif %}">
+              {{ evaluacion.comparativa_plan_helms.adherencia_estimada }}%
+            </span>
+          </div>
+        </div>
+        <div class="ep-comp-item">
+          <div class="ep-comp-label">Semana del Año</div>
+          <div class="ep-comp-vals">
+            <span class="ep-comp-real ok">{{ evaluacion.comparativa_plan_helms.fase_actual.semana_del_año }}</span>
+          </div>
+        </div>
+      </div>
     </div>
+  </div>
+  {% endif %}
 
-    {% else %}
-    <!-- NO HAY DATOS -->
-    <div
-            style="text-align: center; padding: 4rem 2rem; background: var(--bg-card); border-radius: var(--radius-lg); border: 1px dashed var(--border-subtle);">
-        <i class="fas fa-database" style="font-size: 4rem; color: var(--text-muted); margin-bottom: 1.5rem;"></i>
-        <h3 style="color: var(--text-primary); margin-bottom: 0.75rem;">Datos Insuficientes</h3>
-        <p style="color: var(--text-secondary);">{{ evaluacion.mensaje }}</p>
-        <p style="margin-top: 1rem;"><strong>Sesiones:</strong> {{ evaluacion.sesiones_registradas }}/3 mínimas</p>
-        <a href="{% url 'entrenos:dashboard_evolucion' cliente.id %}" class="filter-btn active"
-           style="margin-top: 1.5rem;">
-            <i class="fas fa-arrow-left"></i> Volver
-        </a>
+  <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+       EVAL CARDS GRID (2×2)
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+  <div class="ep-section">
+    <div class="ep-grid-2">
+
+      <!-- INTENSIDAD (RPE) -->
+      <div class="ep-card">
+        <div class="ep-card-header">
+          <div class="ep-card-title ep-title-red">
+            <i class="fas fa-fire"></i> Intensidad (RPE)
+            <span class="ep-tooltip">
+              <i class="fas fa-info"></i>
+              <span class="ep-tooltip-text">{{ evaluacion.tooltips.RPE }}</span>
+            </span>
+          </div>
+          <div class="ep-card-score
+            {% if evaluacion.evaluaciones.intensidad.puntuacion >= 70 %}ep-score-high
+            {% elif evaluacion.evaluaciones.intensidad.puntuacion >= 50 %}ep-score-mid
+            {% else %}ep-score-low{% endif %}">
+            {{ evaluacion.evaluaciones.intensidad.rpe_promedio|floatformat:1|default:"--" }}
+          </div>
+        </div>
+        <p class="ep-card-desc">{{ evaluacion.evaluaciones.intensidad.mensaje }}</p>
+        {% if evaluacion.evaluaciones.intensidad.distribucion.data %}
+        <div class="ep-chart-wrap">
+          <canvas id="rpeChart"></canvas>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- FRECUENCIA -->
+      <div class="ep-card">
+        <div class="ep-card-header">
+          <div class="ep-card-title ep-title-lime">
+            <i class="fas fa-calendar-check"></i> Frecuencia
+          </div>
+          <div class="ep-card-score
+            {% if evaluacion.evaluaciones.frecuencia.puntuacion >= 70 %}ep-score-high
+            {% elif evaluacion.evaluaciones.frecuencia.puntuacion >= 50 %}ep-score-mid
+            {% else %}ep-score-low{% endif %}">
+            {{ evaluacion.evaluaciones.frecuencia.frecuencia_global|floatformat:1 }}
+          </div>
+        </div>
+        <p class="ep-card-desc">{{ evaluacion.evaluaciones.frecuencia.mensaje }}</p>
+        <div class="ep-freq-row">
+          <div class="ep-freq-item">
+            <div class="ep-freq-lbl">Mínimo</div>
+            <div class="ep-freq-val ep-val-amber">{{ evaluacion.evaluaciones.frecuencia.recomendacion.minima }}</div>
+          </div>
+          <div class="ep-freq-item ep-freq-item-hi">
+            <div class="ep-freq-lbl">Óptimo</div>
+            <div class="ep-freq-val ep-val-mint">{{ evaluacion.evaluaciones.frecuencia.recomendacion.optima_hipertrofia }}</div>
+          </div>
+          <div class="ep-freq-item">
+            <div class="ep-freq-lbl">Máximo</div>
+            <div class="ep-freq-val ep-val-red">{{ evaluacion.evaluaciones.frecuencia.recomendacion.maxima_recomendada }}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CONSISTENCIA -->
+      <div class="ep-card">
+        <div class="ep-card-header">
+          <div class="ep-card-title ep-title-mint">
+            <i class="fas fa-check-double"></i> Consistencia
+          </div>
+          <div class="ep-card-score
+            {% if evaluacion.evaluaciones.consistencia.puntuacion >= 70 %}ep-score-high
+            {% elif evaluacion.evaluaciones.consistencia.puntuacion >= 50 %}ep-score-mid
+            {% else %}ep-score-low{% endif %}">
+            {{ evaluacion.evaluaciones.consistencia.puntuacion|floatformat:0|default:"--" }}
+          </div>
+        </div>
+        <p class="ep-card-desc">{{ evaluacion.evaluaciones.consistencia.mensaje }}</p>
+        {% if evaluacion.evaluaciones.consistencia.puntuacion %}
+        <div class="ep-stats-row">
+          <div class="ep-stat-mini">
+            <div class="ep-stat-mini-lbl">Días</div>
+            <div class="ep-stat-mini-val ep-val-lime">{{ evaluacion.evaluaciones.consistencia.dias_entrenados }}</div>
+          </div>
+          <div class="ep-stat-mini">
+            <div class="ep-stat-mini-lbl">Gap medio</div>
+            <div class="ep-stat-mini-val">{{ evaluacion.evaluaciones.consistencia.gap_promedio }}d</div>
+          </div>
+          <div class="ep-stat-mini">
+            <div class="ep-stat-mini-lbl">Cumplimiento</div>
+            <div class="ep-stat-mini-val {% if evaluacion.evaluaciones.consistencia.porcentaje_cumplimiento >= 75 %}ep-val-mint{% else %}ep-val-amber{% endif %}">
+              {{ evaluacion.evaluaciones.consistencia.porcentaje_cumplimiento }}%
+            </div>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- CARGA (ACWR) -->
+      <div class="ep-card">
+        <div class="ep-card-header">
+          <div class="ep-card-title ep-title-sky">
+            <i class="fas fa-weight-hanging"></i> Carga (ACWR)
+            <span class="ep-tooltip">
+              <i class="fas fa-info"></i>
+              <span class="ep-tooltip-text">{{ evaluacion.tooltips.ACWR }}</span>
+            </span>
+          </div>
+          <div class="ep-card-score
+            {% if evaluacion.evaluaciones.carga.puntuacion >= 70 %}ep-score-high
+            {% elif evaluacion.evaluaciones.carga.puntuacion >= 50 %}ep-score-mid
+            {% else %}ep-score-low{% endif %}">
+            {{ evaluacion.evaluaciones.carga.acwr|default:"--" }}
+          </div>
+        </div>
+        <p class="ep-card-desc">{{ evaluacion.evaluaciones.carga.mensaje }}</p>
+        {% if evaluacion.evaluaciones.carga.acwr %}
+        <div class="ep-acwr-track-wrap">
+          <div class="ep-acwr-gradient"></div>
+          <div class="ep-acwr-marker" style="left: {% widthratio evaluacion.evaluaciones.carga.acwr 2 100 %}%"></div>
+          <div class="ep-acwr-labels">
+            <span>0.5 Bajo</span>
+            <span>0.8–1.3 Óptimo</span>
+            <span>1.5+ Peligro</span>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+
     </div>
-    {% endif %}
-</div>
+  </div>
+
+  <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+       VOLUMEN POR GRUPO MUSCULAR
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+  <div class="ep-section">
+    <div class="ep-card">
+      <div class="ep-card-header">
+        <div class="ep-card-title ep-title-amber">
+          <i class="fas fa-dumbbell"></i> Volumen por Grupo Muscular
+          <span class="ep-tooltip">
+            <i class="fas fa-info"></i>
+            <span class="ep-tooltip-text">{{ evaluacion.tooltips.Volumen }}</span>
+          </span>
+        </div>
+      </div>
+      <p class="ep-card-desc" style="padding: 0 1.2rem 0.5rem;">Basado en Volume Landmarks de Dr. Mike Israetel (Renaissance Periodization).</p>
+      <div class="ep-volumen-grid">
+        {% for item in evaluacion.evaluaciones.volumen.evaluaciones_por_grupo %}
+        <div class="ep-vol-card ep-vol-{{ item.estado }}">
+          <div class="ep-vol-header">
+            <span class="ep-vol-grupo">{{ item.grupo }}</span>
+            <span class="ep-vol-badge ep-vol-badge-{{ item.estado }}">{{ item.estado|title }}</span>
+          </div>
+          <div class="ep-vol-value" style="color:{{ item.color }}">
+            {{ item.series_semanales|floatformat:1 }}<span class="ep-vol-unit">series/sem</span>
+          </div>
+          <div class="ep-vol-bar-wrap">
+            <div class="ep-vol-bar-fill" style="width:{{ item.posicion_actual }}%;background:{{ item.color }}"></div>
+            <div class="ep-vol-markers">
+              <div class="ep-vol-marker ep-vol-mev" style="left:{{ item.posicion_mev }}%"></div>
+              <div class="ep-vol-marker ep-vol-mav" style="left:{{ item.posicion_mav }}%"></div>
+            </div>
+          </div>
+          <div class="ep-vol-legend">
+            <span>MEV: {{ item.mev }}</span>
+            <span>MAV: {{ item.mav }}</span>
+            <span>MRV: {{ item.mrv }}</span>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+       RECOMENDACIONES
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+  <div class="ep-section">
+    <div class="ep-card">
+      <div class="ep-card-header">
+        <div class="ep-card-title ep-title-lime"><i class="fas fa-lightbulb"></i> Recomendaciones Priorizadas</div>
+      </div>
+      {% if evaluacion.recomendaciones %}
+      <div class="ep-recs">
+        {% for rec in evaluacion.recomendaciones %}
+        <div class="ep-rec ep-rec-p{{ rec.prioridad }}">
+          <div class="ep-rec-header">
+            <span class="ep-rec-emoji">{{ rec.icono }}</span>
+            <span class="ep-rec-title">{{ rec.titulo }}</span>
+            <span class="ep-rec-pri">P{{ rec.prioridad }}</span>
+          </div>
+          <p class="ep-rec-desc">{{ rec.descripcion }}</p>
+          <div class="ep-rec-action"><i class="fas fa-arrow-right"></i> {{ rec.accion }}</div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="ep-empty">
+        <i class="fas fa-circle-check"></i>
+        <p>Sin recomendaciones urgentes — entrenamiento bien optimizado</p>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+       MOTIVATIONAL BANNER
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+  <div class="ep-section">
+    <div class="ep-motivational">
+      <i class="fas fa-bolt ep-motivational-icon"></i>
+      <p class="ep-motivational-text">{{ evaluacion.resumen_ejecutivo.mensaje_motivacional }}</p>
+    </div>
+  </div>
+
+  {% else %}
+  <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+       NO DATA STATE
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+  <div class="ep-section">
+    <div class="ep-nodata">
+      <i class="fas fa-database ep-nodata-icon"></i>
+      <h3 class="ep-nodata-title">Datos Insuficientes</h3>
+      <p class="ep-nodata-msg">{{ evaluacion.mensaje }}</p>
+      <p class="ep-nodata-sessions">{{ evaluacion.sesiones_registradas }}/3 sesiones mínimas registradas</p>
+      <a href="{% url 'entrenos:dashboard_evolucion' cliente.id %}" class="ep-btn ep-btn-lime">
+        <i class="fas fa-arrow-left"></i> Volver al Dashboard
+      </a>
+    </div>
+  </div>
+  {% endif %}
+
+</div><!-- /ep-shell -->
 {% endblock %}
 
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
-<!-- Data for JavaScript -->
 {% if evaluacion.evaluacion_posible and evaluacion.evaluaciones.intensidad.distribucion.data %}
-<script id="rpeChartData" type="application/json">
-    {{
-        evaluacion.evaluaciones.intensidad.distribucion
-        |
-        safe
-    }}
-</script>
+<script id="rpeChartData" type="application/json">{{ evaluacion.evaluaciones.intensidad.distribucion|safe }}</script>
 {% endif %}
 
-<script src="{% static 'entrenos/js/evaluacion_profesional.js' %}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+
+  /* ── Score fill animation ── */
+  const fill = document.querySelector('.ep-score-fill');
+  if (fill) {
+    const target = parseFloat(fill.dataset.target) || 0;
+    fill.style.width = '0%';
+    requestAnimationFrame(() => {
+      setTimeout(() => { fill.style.width = target + '%'; }, 120);
+    });
+  }
+
+  /* ── Score number count-up ── */
+  const numEl = document.getElementById('scoreNumber');
+  if (numEl) {
+    const target = parseInt(numEl.textContent) || 0;
+    const t0 = performance.now();
+    const dur = 1400;
+    function tick(now) {
+      const p = Math.min((now - t0) / dur, 1);
+      const ease = 1 - Math.pow(1 - p, 3);
+      numEl.textContent = Math.round(target * ease);
+      if (p < 1) requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+  }
+
+  /* ── RPE Chart ── */
+  const rpeDataEl = document.getElementById('rpeChartData');
+  const rpeCanvas = document.getElementById('rpeChart');
+  if (rpeDataEl && rpeCanvas) {
+    try {
+      const data = JSON.parse(rpeDataEl.textContent);
+      const palette = [
+        'rgba(56,182,255,0.75)',
+        'rgba(184,255,0,0.75)',
+        'rgba(255,179,0,0.75)',
+        'rgba(255,61,26,0.75)',
+      ];
+      new Chart(rpeCanvas, {
+        type: 'doughnut',
+        data: {
+          labels: data.labels || [],
+          datasets: [{
+            data: data.data || [],
+            backgroundColor: palette.slice(0, (data.data||[]).length),
+            borderWidth: 0,
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          cutout: '62%',
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: { color: 'rgba(228,234,240,0.5)', padding: 10, font: { size: 10, family: "'JetBrains Mono'" } }
+            }
+          }
+        }
+      });
+    } catch(e) { console.error('RPE chart error', e); }
+  }
+
+  /* ── Breakdown bars stagger ── */
+  document.querySelectorAll('.ep-bd-fill').forEach((el, i) => {
+    const w = el.style.width;
+    el.style.width = '0%';
+    setTimeout(() => {
+      el.style.transition = 'width 0.7s ease';
+      el.style.width = w;
+    }, 300 + i * 80);
+  });
+
+  /* ── Vol bars animate ── */
+  document.querySelectorAll('.ep-vol-bar-fill').forEach((el, i) => {
+    const w = el.style.width;
+    el.style.width = '0%';
+    setTimeout(() => {
+      el.style.transition = 'width 0.6s ease';
+      el.style.width = w;
+    }, 100 + i * 40);
+  });
+
+  /* ── PDF export ── */
+  const pdfBtn = document.getElementById('exportPDFBtn');
+  if (pdfBtn) {
+    pdfBtn.addEventListener('click', function () {
+      const opt = {
+        margin: 0.5,
+        filename: 'evaluacion_{{ cliente.nombre|slugify }}.pdf',
+        image: { type: 'jpeg', quality: 0.95 },
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+      };
+      html2pdf().set(opt).from(document.querySelector('.ep-shell')).save();
+    });
+  }
+
+});
+</script>
 {% endblock %}
