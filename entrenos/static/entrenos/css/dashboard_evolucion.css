@@ -72,6 +72,33 @@
 
 .dv-wrapper > * { position: relative; z-index: 2; }
 
+/* ── Skip link ──────────────────────────────────────────────── */
+.dv-skip-link {
+  position: absolute;
+  top: -100%;
+  left: 1rem;
+  background: var(--lime);
+  color: #070A0D;
+  font-family: var(--font-b);
+  font-weight: 700;
+  font-size: .85rem;
+  padding: .5rem 1rem;
+  border-radius: 0 0 6px 6px;
+  z-index: 9999;
+  text-decoration: none;
+  transition: top .1s;
+}
+.dv-skip-link:focus { top: 0; }
+
+/* ── Reduced motion ─────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .dv-wrapper *, .dv-wrapper *::before, .dv-wrapper *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
 /* ================================================================
    TOP BAR (breadcrumb + actions)
    ================================================================ */
@@ -119,7 +146,10 @@
   overflow: hidden;
 }
 .ev-period {
-  padding: 0.22rem 0.85rem;
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 0.85rem;
   font-family: var(--font-m);
   font-size: 0.62rem;
   letter-spacing: 0.12em;
@@ -174,9 +204,14 @@
 }
 .ev-fase-wrap i { color: var(--text-3); }
 .ev-fase-label {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
   color: var(--text-3);
   letter-spacing: 0.1em;
   text-transform: uppercase;
+  cursor: pointer;
+  margin: 0;
 }
 .ev-fase-select {
   background: transparent;

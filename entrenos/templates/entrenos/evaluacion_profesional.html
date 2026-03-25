@@ -12,23 +12,27 @@
 {% endblock %}
 
 {% block content %}
+<a href="#main-content" class="ep-skip-link">Saltar al contenido</a>
 <div class="ep-shell">
 
   <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
        STICKY TOPBAR
   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
-  <nav class="ep-topbar">
-    <div class="ep-crumbs">
-      <a href="{% url 'entrenos:dashboard_evolucion' cliente.id %}"><i class="fas fa-arrow-left"></i> Dashboard</a>
-      <span class="ep-crumb-sep">/</span>
-      <span class="ep-crumb-active">Evaluación</span>
-    </div>
+  <nav class="ep-topbar" aria-label="Navegación principal">
+    <nav aria-label="Migas de pan" class="ep-crumbs">
+      <ol style="display:flex;align-items:center;gap:.4rem;list-style:none;margin:0;padding:0">
+        <li><a href="{% url 'entrenos:dashboard_evolucion' cliente.id %}"><i class="fas fa-arrow-left" aria-hidden="true"></i> Dashboard</a></li>
+        <li aria-hidden="true" class="ep-crumb-sep">/</li>
+        <li><span aria-current="page" class="ep-crumb-active">Evaluación</span></li>
+      </ol>
+    </nav>
 
     <div class="ep-topbar-mid">
-      <div class="ep-periods">
+      <div class="ep-periods" role="group" aria-label="Periodo de análisis">
         {% for semana_opcion in opciones_semanas %}
         <a href="?semanas={{ semana_opcion }}"
-           class="ep-period {% if semanas_analizadas == semana_opcion %}active{% endif %}">
+           class="ep-period {% if semanas_analizadas == semana_opcion %}active{% endif %}"
+           {% if semanas_analizadas == semana_opcion %}aria-current="page"{% endif %}>
           {{ semana_opcion }}sem
         </a>
         {% endfor %}
@@ -37,8 +41,8 @@
 
     <div class="ep-topbar-right">
       {% if evaluacion.evaluacion_posible %}
-      <button id="exportPDFBtn" class="ep-btn ep-btn-lime">
-        <i class="fas fa-file-pdf"></i><span> PDF</span>
+      <button id="exportPDFBtn" class="ep-btn ep-btn-lime" aria-label="Exportar evaluación como PDF">
+        <i class="fas fa-file-pdf" aria-hidden="true"></i><span> PDF</span>
       </button>
       {% endif %}
     </div>
@@ -49,14 +53,14 @@
   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
   <header class="ep-hero">
     <div>
-      <div class="ep-hero-tag"><i class="fas fa-microscope"></i> Evaluación Profesional</div>
+      <div class="ep-hero-tag"><i class="fas fa-microscope" aria-hidden="true"></i> Evaluación Profesional</div>
       <h1 class="ep-hero-name">{{ cliente.nombre }}</h1>
     </div>
     <div class="ep-hero-meta">
       {% if evaluacion.evaluacion_posible %}
-      <div class="ep-meta-item"><i class="fas fa-calendar-alt"></i> {{ evaluacion.periodo_analizado.fecha_inicio|date:"d M Y" }} – {{ evaluacion.periodo_analizado.fecha_fin|date:"d M Y" }}</div>
-      <div class="ep-meta-item"><i class="fas fa-dumbbell"></i> {{ evaluacion.metricas_raw.total_sesiones }} sesiones</div>
-      <div class="ep-meta-item ep-meta-ver"><i class="fas fa-code-branch"></i> v{{ evaluacion.version }}</div>
+      <div class="ep-meta-item"><i class="fas fa-calendar-alt" aria-hidden="true"></i> {{ evaluacion.periodo_analizado.fecha_inicio|date:"d M Y" }} – {{ evaluacion.periodo_analizado.fecha_fin|date:"d M Y" }}</div>
+      <div class="ep-meta-item"><i class="fas fa-dumbbell" aria-hidden="true"></i> {{ evaluacion.metricas_raw.total_sesiones }} sesiones</div>
+      <div class="ep-meta-item ep-meta-ver"><i class="fas fa-code-branch" aria-hidden="true"></i> v{{ evaluacion.version }}</div>
       {% endif %}
     </div>
   </header>
@@ -74,6 +78,8 @@
   </div>
 
   {% if evaluacion.evaluacion_posible %}
+
+  <main id="main-content">
 
   <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
        SCORE HERO CARD
@@ -138,14 +144,14 @@
     <div class="ep-card">
       <div class="ep-card-header">
         <div class="ep-card-title ep-title-purple">
-          <i class="fas fa-route"></i> Comparativa Plan Helms
-          <span class="ep-tooltip">
-            <i class="fas fa-info"></i>
-            <span class="ep-tooltip-text">Compara tu entrenamiento real con lo planificado según la metodología de Eric Helms.</span>
+          <i class="fas fa-route" aria-hidden="true"></i> Comparativa Plan Helms
+          <span class="ep-tooltip" role="button" tabindex="0" aria-label="Más información sobre Plan Helms">
+            <i class="fas fa-info" aria-hidden="true"></i>
+            <span class="ep-tooltip-text" role="tooltip">Compara tu entrenamiento real con lo planificado según la metodología de Eric Helms.</span>
           </span>
         </div>
         <div class="ep-fase-badge">
-          <i class="fas fa-flag"></i> {{ evaluacion.comparativa_plan_helms.fase_actual.nombre }}
+          <i class="fas fa-flag" aria-hidden="true"></i> {{ evaluacion.comparativa_plan_helms.fase_actual.nombre }}
         </div>
       </div>
       <p class="ep-card-desc">{{ evaluacion.comparativa_plan_helms.fase_actual.descripcion }}</p>
@@ -154,7 +160,7 @@
           <div class="ep-comp-label">RPE Objetivo</div>
           <div class="ep-comp-vals">
             <span class="ep-comp-plan">{{ evaluacion.comparativa_plan_helms.fase_actual.rpe_objetivo.0 }}–{{ evaluacion.comparativa_plan_helms.fase_actual.rpe_objetivo.1 }}</span>
-            <i class="fas fa-arrow-right ep-comp-arrow"></i>
+            <i class="fas fa-arrow-right ep-comp-arrow" aria-hidden="true"></i>
             <span class="ep-comp-real ok">{{ evaluacion.evaluaciones.intensidad.rpe_promedio|default:"--" }}</span>
           </div>
         </div>
@@ -193,10 +199,10 @@
       <div class="ep-card">
         <div class="ep-card-header">
           <div class="ep-card-title ep-title-red">
-            <i class="fas fa-fire"></i> Intensidad (RPE)
-            <span class="ep-tooltip">
-              <i class="fas fa-info"></i>
-              <span class="ep-tooltip-text">{{ evaluacion.tooltips.RPE }}</span>
+            <i class="fas fa-fire" aria-hidden="true"></i> Intensidad (RPE)
+            <span class="ep-tooltip" role="button" tabindex="0" aria-label="Más información sobre RPE">
+              <i class="fas fa-info" aria-hidden="true"></i>
+              <span class="ep-tooltip-text" role="tooltip">{{ evaluacion.tooltips.RPE }}</span>
             </span>
           </div>
           <div class="ep-card-score
@@ -209,7 +215,7 @@
         <p class="ep-card-desc">{{ evaluacion.evaluaciones.intensidad.mensaje }}</p>
         {% if evaluacion.evaluaciones.intensidad.distribucion.data %}
         <div class="ep-chart-wrap">
-          <canvas id="rpeChart"></canvas>
+          <canvas id="rpeChart" role="img" aria-label="Distribución de intensidad RPE por zonas"></canvas>
         </div>
         {% endif %}
       </div>
@@ -218,7 +224,7 @@
       <div class="ep-card">
         <div class="ep-card-header">
           <div class="ep-card-title ep-title-lime">
-            <i class="fas fa-calendar-check"></i> Frecuencia
+            <i class="fas fa-calendar-check" aria-hidden="true"></i> Frecuencia
           </div>
           <div class="ep-card-score
             {% if evaluacion.evaluaciones.frecuencia.puntuacion >= 70 %}ep-score-high
@@ -248,7 +254,7 @@
       <div class="ep-card">
         <div class="ep-card-header">
           <div class="ep-card-title ep-title-mint">
-            <i class="fas fa-check-double"></i> Consistencia
+            <i class="fas fa-check-double" aria-hidden="true"></i> Consistencia
           </div>
           <div class="ep-card-score
             {% if evaluacion.evaluaciones.consistencia.puntuacion >= 70 %}ep-score-high
@@ -282,10 +288,10 @@
       <div class="ep-card">
         <div class="ep-card-header">
           <div class="ep-card-title ep-title-sky">
-            <i class="fas fa-weight-hanging"></i> Carga (ACWR)
-            <span class="ep-tooltip">
-              <i class="fas fa-info"></i>
-              <span class="ep-tooltip-text">{{ evaluacion.tooltips.ACWR }}</span>
+            <i class="fas fa-weight-hanging" aria-hidden="true"></i> Carga (ACWR)
+            <span class="ep-tooltip" role="button" tabindex="0" aria-label="Más información sobre ACWR">
+              <i class="fas fa-info" aria-hidden="true"></i>
+              <span class="ep-tooltip-text" role="tooltip">{{ evaluacion.tooltips.ACWR }}</span>
             </span>
           </div>
           <div class="ep-card-score
@@ -319,10 +325,10 @@
     <div class="ep-card">
       <div class="ep-card-header">
         <div class="ep-card-title ep-title-amber">
-          <i class="fas fa-dumbbell"></i> Volumen por Grupo Muscular
-          <span class="ep-tooltip">
-            <i class="fas fa-info"></i>
-            <span class="ep-tooltip-text">{{ evaluacion.tooltips.Volumen }}</span>
+          <i class="fas fa-dumbbell" aria-hidden="true"></i> Volumen por Grupo Muscular
+          <span class="ep-tooltip" role="button" tabindex="0" aria-label="Más información sobre Volumen">
+            <i class="fas fa-info" aria-hidden="true"></i>
+            <span class="ep-tooltip-text" role="tooltip">{{ evaluacion.tooltips.Volumen }}</span>
           </span>
         </div>
       </div>
@@ -361,7 +367,7 @@
   <div class="ep-section">
     <div class="ep-card">
       <div class="ep-card-header">
-        <div class="ep-card-title ep-title-lime"><i class="fas fa-lightbulb"></i> Recomendaciones Priorizadas</div>
+        <div class="ep-card-title ep-title-lime"><i class="fas fa-lightbulb" aria-hidden="true"></i> Recomendaciones Priorizadas</div>
       </div>
       {% if evaluacion.recomendaciones %}
       <div class="ep-recs">
@@ -373,13 +379,13 @@
             <span class="ep-rec-pri">P{{ rec.prioridad }}</span>
           </div>
           <p class="ep-rec-desc">{{ rec.descripcion }}</p>
-          <div class="ep-rec-action"><i class="fas fa-arrow-right"></i> {{ rec.accion }}</div>
+          <div class="ep-rec-action"><i class="fas fa-arrow-right" aria-hidden="true"></i> {{ rec.accion }}</div>
         </div>
         {% endfor %}
       </div>
       {% else %}
       <div class="ep-empty">
-        <i class="fas fa-circle-check"></i>
+        <i class="fas fa-circle-check" aria-hidden="true"></i>
         <p>Sin recomendaciones urgentes — entrenamiento bien optimizado</p>
       </div>
       {% endif %}
@@ -391,34 +397,38 @@
   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
   <div class="ep-section">
     <div class="ep-motivational">
-      <i class="fas fa-bolt ep-motivational-icon"></i>
+      <i class="fas fa-bolt ep-motivational-icon" aria-hidden="true"></i>
       <p class="ep-motivational-text">{{ evaluacion.resumen_ejecutivo.mensaje_motivacional }}</p>
     </div>
   </div>
+
+  </main><!-- /main-content -->
 
   {% else %}
   <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
        NO DATA STATE
   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+  <main id="main-content">
   <div class="ep-section">
     <div class="ep-nodata">
-      <i class="fas fa-database ep-nodata-icon"></i>
+      <i class="fas fa-database ep-nodata-icon" aria-hidden="true"></i>
       <h3 class="ep-nodata-title">Datos Insuficientes</h3>
       <p class="ep-nodata-msg">{{ evaluacion.mensaje }}</p>
       <p class="ep-nodata-sessions">{{ evaluacion.sesiones_registradas }}/3 sesiones mínimas registradas</p>
       <a href="{% url 'entrenos:dashboard_evolucion' cliente.id %}" class="ep-btn ep-btn-lime">
-        <i class="fas fa-arrow-left"></i> Volver al Dashboard
+        <i class="fas fa-arrow-left" aria-hidden="true"></i> Volver al Dashboard
       </a>
     </div>
   </div>
+  </main>
   {% endif %}
 
 </div><!-- /ep-shell -->
 {% endblock %}
 
 {% block extra_js %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" defer></script>
 
 {% if evaluacion.evaluacion_posible and evaluacion.evaluaciones.intensidad.distribucion.data %}
 <script id="rpeChartData" type="application/json">{{ evaluacion.evaluaciones.intensidad.distribucion|safe }}</script>
@@ -427,29 +437,37 @@
 <script>
 document.addEventListener('DOMContentLoaded', function () {
 
+  const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
   /* ── Score fill animation ── */
   const fill = document.querySelector('.ep-score-fill');
   if (fill) {
     const target = parseFloat(fill.dataset.target) || 0;
-    fill.style.width = '0%';
-    requestAnimationFrame(() => {
-      setTimeout(() => { fill.style.width = target + '%'; }, 120);
-    });
+    if (prefersReduced) {
+      fill.style.width = target + '%';
+    } else {
+      fill.style.width = '0%';
+      requestAnimationFrame(() => {
+        setTimeout(() => { fill.style.width = target + '%'; }, 120);
+      });
+    }
   }
 
   /* ── Score number count-up ── */
   const numEl = document.getElementById('scoreNumber');
   if (numEl) {
     const target = parseInt(numEl.textContent) || 0;
-    const t0 = performance.now();
-    const dur = 1400;
-    function tick(now) {
-      const p = Math.min((now - t0) / dur, 1);
-      const ease = 1 - Math.pow(1 - p, 3);
-      numEl.textContent = Math.round(target * ease);
-      if (p < 1) requestAnimationFrame(tick);
+    if (!prefersReduced) {
+      const t0 = performance.now();
+      const dur = 1400;
+      function tick(now) {
+        const p = Math.min((now - t0) / dur, 1);
+        const ease = 1 - Math.pow(1 - p, 3);
+        numEl.textContent = Math.round(target * ease);
+        if (p < 1) requestAnimationFrame(tick);
+      }
+      requestAnimationFrame(tick);
     }
-    requestAnimationFrame(tick);
   }
 
   /* ── RPE Chart ── */
@@ -478,6 +496,7 @@ document.addEventListener('DOMContentLoaded', function () {
           responsive: true,
           maintainAspectRatio: false,
           cutout: '62%',
+          animation: { duration: prefersReduced ? 0 : 800 },
           plugins: {
             legend: {
               position: 'bottom',
@@ -489,30 +508,46 @@ document.addEventListener('DOMContentLoaded', function () {
     } catch(e) { console.error('RPE chart error', e); }
   }
 
-  /* ── Breakdown bars stagger ── */
+  /* ── Breakdown bars — transform:scaleX (no width reflow) ── */
   document.querySelectorAll('.ep-bd-fill').forEach((el, i) => {
-    const w = el.style.width;
-    el.style.width = '0%';
+    el.style.transformOrigin = 'left';
+    if (prefersReduced) return;
+    el.style.transform = 'scaleX(0)';
     setTimeout(() => {
-      el.style.transition = 'width 0.7s ease';
-      el.style.width = w;
+      el.style.transition = 'transform 0.7s ease';
+      el.style.transform = 'scaleX(1)';
     }, 300 + i * 80);
   });
 
-  /* ── Vol bars animate ── */
+  /* ── Vol bars — transform:scaleX (no width reflow) ── */
   document.querySelectorAll('.ep-vol-bar-fill').forEach((el, i) => {
-    const w = el.style.width;
-    el.style.width = '0%';
+    el.style.transformOrigin = 'left';
+    if (prefersReduced) return;
+    el.style.transform = 'scaleX(0)';
     setTimeout(() => {
-      el.style.transition = 'width 0.6s ease';
-      el.style.width = w;
+      el.style.transition = 'transform 0.6s ease';
+      el.style.transform = 'scaleX(1)';
     }, 100 + i * 40);
   });
 
-  /* ── PDF export ── */
+  /* ── Tooltip keyboard support ── */
+  document.querySelectorAll('.ep-tooltip[tabindex="0"]').forEach(tip => {
+    tip.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        tip.classList.toggle('ep-tooltip--open');
+      }
+      if (e.key === 'Escape') tip.classList.remove('ep-tooltip--open');
+    });
+    tip.addEventListener('blur', () => tip.classList.remove('ep-tooltip--open'));
+  });
+
+  /* ── PDF export with loading state ── */
   const pdfBtn = document.getElementById('exportPDFBtn');
   if (pdfBtn) {
     pdfBtn.addEventListener('click', function () {
+      pdfBtn.disabled = true;
+      pdfBtn.innerHTML = '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i><span> Generando...</span>';
       const opt = {
         margin: 0.5,
         filename: 'evaluacion_{{ cliente.nombre|slugify }}.pdf',
@@ -520,7 +555,13 @@ document.addEventListener('DOMContentLoaded', function () {
         html2canvas: { scale: 2, useCORS: true },
         jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
       };
-      html2pdf().set(opt).from(document.querySelector('.ep-shell')).save();
+      html2pdf().set(opt).from(document.querySelector('.ep-shell')).save().then(() => {
+        pdfBtn.disabled = false;
+        pdfBtn.innerHTML = '<i class="fas fa-file-pdf" aria-hidden="true"></i><span> PDF</span>';
+      }).catch(() => {
+        pdfBtn.disabled = false;
+        pdfBtn.innerHTML = '<i class="fas fa-file-pdf" aria-hidden="true"></i><span> PDF</span>';
+      });
     });
   }
 
