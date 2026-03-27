@@ -23,47 +23,37 @@ django-timezone-field==7.1
 
 # ==============================
 # Ciencia de datos
-# (numpy 2.x requerido para Python 3.13)
+# NOTA: numpy, scipy, scikit-learn, pandas, matplotlib
+# suelen estar preinstalados en PythonAnywhere.
+# Descomenta solo si "python3.13 -c 'import numpy'" falla.
 # ==============================
-numpy==2.2.3
-scipy==1.15.2
-scikit-learn==1.6.1
-pandas==2.2.3
-joblib==1.4.2
-threadpoolctl==3.5.0
-
-# ==============================
-# Gráficos
-# ==============================
-matplotlib==3.10.3
-contourpy==1.3.2
-cycler==0.12.1
-fonttools==4.58.2
-kiwisolver==1.4.8
-pyparsing==3.2.3
-pillow==11.2.1
+# numpy
+# scipy
+# scikit-learn
+# pandas
+# matplotlib
+# pillow
+# contourpy
+# fonttools
+# kiwisolver
+# pyparsing
+# cycler
 
 # ==============================
 # Google Gemini AI
 # ==============================
 google-generativeai==0.8.6
-google-ai-generativelanguage==0.6.15
 google-api-core==2.30.0
 google-api-python-client==2.190.0
 google-auth==2.38.0
 google-auth-httplib2==0.3.0
 googleapis-common-protos==1.72.0
 grpcio==1.71.2
-grpcio-status==1.71.2
 proto-plus==1.27.1
 protobuf==5.29.6
-pyasn1==0.6.1
-pyasn1_modules==0.4.1
-uritemplate==4.1.1
-httplib2==0.22.0
 
 # ==============================
-# HTTP / Peticiones
+# HTTP
 # ==============================
 requests==2.32.4
 certifi==2025.4.26
@@ -77,7 +67,7 @@ urllib3==2.5.0
 reportlab==4.2.5
 
 # ==============================
-# Cola de tareas (Celery + Redis)
+# Cola de tareas
 # ==============================
 celery==5.5.3
 redis==5.2.1
@@ -96,7 +86,6 @@ python-crontab==3.3.0
 # Excel
 # ==============================
 openpyxl==3.1.5
-et_xmlfile==2.0.0
 
 # ==============================
 # Utilidades
@@ -107,7 +96,6 @@ tzdata==2025.2
 six==1.17.0
 packaging==25.0
 typing_extensions==4.14.0
-annotated-types==0.7.0
 pydantic==2.11.5
 pydantic_core==2.33.2
 colorama==0.4.6
