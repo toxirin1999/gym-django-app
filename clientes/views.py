@@ -14,6 +14,7 @@ from django.views.decorators.http import require_GET, require_POST
 from analytics.views import AnalizadorCargaYFatiga, CalculadoraEjerciciosTabla
 from django.shortcuts import render, get_object_or_404
 from logros.models import PerfilGamificacion, PruebaLegendaria, PruebaUsuario
+from django.core.cache import cache
 import json
 import logging
 import random
@@ -754,12 +755,20 @@ def _get_dashboard_context_data(request, cliente):
         aplicada=True
     ).order_by('-fecha_aplicacion')[:3]
 
-    analizador_progresion = AnalisisProgresionAvanzado(cliente)
-    ratios_fuerza = analizador_progresion.calcular_ratios_fuerza()
-    # Una sola instancia reutilizada (analizador_ia era un duplicado sin uso)
-    analizador_intensidad = AnalisisIntensidadAvanzado(cliente)
-    fatiga_acumulada = analizador_intensidad.calcular_fatiga_acumulada(periodo_dias=14)
-    analisis_mesociclos = analizador_progresion.analisis_mesociclos()
+    # --- Computaciones pesadas de analítica con caché de 15 minutos ---
+    _cache_analytics = cache.get(f'dashboard_analytics_{cliente.id}')
+    if _cache_analytics is None:
+        analizador_progresion = AnalisisProgresionAvanzado(cliente)
+        analizador_intensidad = AnalisisIntensidadAvanzado(cliente)
+        _cache_analytics = {
+            'ratios_fuerza': analizador_progresion.calcular_ratios_fuerza(),
+            'fatiga_acumulada': analizador_intensidad.calcular_fatiga_acumulada(periodo_dias=14),
+            'analisis_mesociclos': analizador_progresion.analisis_mesociclos(),
+        }
+        cache.set(f'dashboard_analytics_{cliente.id}', _cache_analytics, 900)  # 15 min
+    ratios_fuerza = _cache_analytics['ratios_fuerza']
+    fatiga_acumulada = _cache_analytics['fatiga_acumulada']
+    analisis_mesociclos = _cache_analytics['analisis_mesociclos']
     mesociclo_actual = None
     if analisis_mesociclos and analisis_mesociclos.get('mesociclos'):
         mesociclo_actual = analisis_mesociclos['mesociclos'][-1]
@@ -772,7 +781,14 @@ def _get_dashboard_context_data(request, cliente):
     }
     
     sistema_progresion = SistemaProgresionAvanzada(cliente_id=cliente.id)
-    series_historial = list(SerieRealizada.objects.filter(entreno__cliente=cliente).order_by('entreno__fecha', 'entreno__id').select_related('entreno', 'ejercicio'))
+    # Limitamos a los últimos 180 días para evitar cargar miles de registros históricos
+    fecha_limite_series = hoy - timedelta(days=180)
+    series_historial = list(
+        SerieRealizada.objects.filter(
+            entreno__cliente=cliente,
+            entreno__fecha__gte=fecha_limite_series
+        ).order_by('entreno__fecha', 'entreno__id').select_related('entreno', 'ejercicio')
+    )
     sesiones_agrupadas = defaultdict(lambda: defaultdict(list))
     # Dict para lookup O(1) en lugar del next() O(n) dentro del bucle exterior
     _entrenos_by_id = {}
@@ -899,8 +915,12 @@ def _get_dashboard_context_data(request, cliente):
     mensajes_integracion = ["Tu disciplina física refleja tu fortaleza mental.", "Un cuerpo entrenado es el hogar de una mente disciplinada."]
     mensaje_integracion = random.choice(mensajes_integracion)
 
-    analizador_carga = AnalizadorCargaYFatiga(cliente)
-    analis_acwr = analizador_carga.analizar_acwr()
+    _acwr_cache_key = f'dashboard_acwr_{cliente.id}'
+    analis_acwr = cache.get(_acwr_cache_key)
+    if analis_acwr is None:
+        analizador_carga = AnalizadorCargaYFatiga(cliente)
+        analis_acwr = analizador_carga.analizar_acwr()
+        cache.set(_acwr_cache_key, analis_acwr, 900)  # 15 min
 
     # Reutilizamos restricciones_bio ya obtenido arriba (evita segunda llamada)
     tags_prohibidos = set()
@@ -927,12 +947,16 @@ def _get_dashboard_context_data(request, cliente):
         # Usamos un periodo de 30 días para las métricas del dashboard
         fecha_fin_radar = timezone.now().date()
         fecha_inicio_radar = fecha_fin_radar - timedelta(days=30)
-        
-        calculadora_stats = CalculadoraEjerciciosTabla(cliente)
-        stats_principales = calculadora_stats.calcular_metricas_principales(
-            fecha_inicio=fecha_inicio_radar, 
-            fecha_fin=fecha_fin_radar
-        )
+
+        _radar_cache_key = f'dashboard_radar_{cliente.id}'
+        stats_principales = cache.get(_radar_cache_key)
+        if stats_principales is None:
+            calculadora_stats = CalculadoraEjerciciosTabla(cliente)
+            stats_principales = calculadora_stats.calcular_metricas_principales(
+                fecha_inicio=fecha_inicio_radar,
+                fecha_fin=fecha_fin_radar
+            )
+            cache.set(_radar_cache_key, stats_principales, 900)  # 15 min
         
         # Mapeamos a lo que el template blade_runner.html espera
         metricas_radar = {
@@ -981,7 +1005,7 @@ def _get_dashboard_context_data(request, cliente):
         'prediccion_riesgo': prediccion,
         'entrenamientos_recientes': entrenamientos_recientes,
         'dias_emocionales': dias_emocionales,
-        'entrenos_count': EntrenoRealizado.objects.filter(cliente=cliente).count(),
+        'entrenos_count': EntrenoRealizado.objects.filter(cliente=cliente).count(),  # TODO: cachear junto con resto de analytics
         'carga_total': round(carga_total),
         'consistencia': 80,
         'grafico_labels': json.dumps(labels),

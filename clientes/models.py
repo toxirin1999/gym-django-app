@@ -102,6 +102,11 @@ class BitacoraDiaria(models.Model):
     def __str__(self):
         return f"{self.cliente} - {self.fecha}"
 
+    class Meta:
+        indexes = [
+            models.Index(fields=['cliente', 'fecha'], name='bitacora_cliente_fecha_idx'),
+        ]
+
 
 class ObjetivoCliente(models.Model):
     cliente = models.ForeignKey('Cliente', on_delete=models.CASCADE, related_name='objetivos')
