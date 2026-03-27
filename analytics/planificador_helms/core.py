@@ -69,11 +69,16 @@ class PlanificadorHelms:
         if not ejercicios_del_dia:
             return {"rutina_nombre": "Día de Descanso", "ejercicios": [], "objetivo": "Descanso"}
 
+        semanas_del_bloque = bloque_actual.get('semanas', [])
+        semana_en_bloque = (semanas_del_bloque.index(semana_num_total) + 1) if semana_num_total in semanas_del_bloque else 1
+
         return {
             "rutina_nombre": f"{clave_dia.replace('_', ' ').title()} - {bloque_actual['nombre']}",
             "ejercicios": ejercicios_del_dia,
             "objetivo": bloque_actual['fase'].replace('_', ' ').title(),
             "bloque": bloque_actual['nombre'],
+            "dia": idx_en_offset + 1,
+            "semana_nombre": f"Semana {semana_en_bloque}",
         }
 
     def generar_plan_anual(self) -> Dict[str, Any]:

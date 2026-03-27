@@ -1,7 +1,6 @@
-# estoico/context_processors.py (crear este archivo)
-
 from .models import LogroUsuario, ReflexionDiaria, EstadisticaUsuario
 from django.utils import timezone
+from django.core.cache import cache
 
 
 def estoico_context(request):
@@ -9,32 +8,38 @@ def estoico_context(request):
     if not request.user.is_authenticated:
         return {}
 
-    try:
-        # Logros nuevos no vistos
-        logros_nuevos = LogroUsuario.objects.filter(
-            usuario=request.user,
-            visto=False
-        )
+    user = request.user
+    cache_key = f'estoico_ctx_{user.id}'
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return cached
 
-        # Reflexión de hoy
+    try:
         hoy = timezone.now().date()
+
+        logros_nuevos = list(LogroUsuario.objects.filter(
+            usuario=user,
+            visto=False
+        ))
+
         reflexion_hoy = ReflexionDiaria.objects.filter(
-            usuario=request.user,
+            usuario=user,
             fecha=hoy
         ).first()
 
-        # Estadísticas básicas
         try:
-            stats = EstadisticaUsuario.objects.get(usuario=request.user)
+            stats = EstadisticaUsuario.objects.get(usuario=user)
             racha_actual = stats.racha_actual
         except EstadisticaUsuario.DoesNotExist:
             racha_actual = 0
 
-        return {
+        result = {
             'logros_nuevos': logros_nuevos,
             'reflexion_hoy': reflexion_hoy,
             'racha_actual': racha_actual,
         }
+        cache.set(cache_key, result, 300)  # 5 minutos
+        return result
 
     except Exception:
         return {}

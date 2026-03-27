@@ -207,6 +207,11 @@ class SerieRealizada(models.Model):
     def __str__(self):
         return f"{self.ejercicio.nombre}: Serie {self.serie_numero} - {self.repeticiones} reps @ {self.peso_kg} kg"
 
+    class Meta:
+        indexes = [
+            models.Index(fields=['entreno'], name='serie_entreno_idx'),
+        ]
+
 
 class Rutina(models.Model):
     nombre = models.CharField(max_length=100)
@@ -388,6 +393,9 @@ class EntrenoRealizado(models.Model):
 
     class Meta:
         ordering = ['-fecha']
+        indexes = [
+            models.Index(fields=['cliente', 'fecha'], name='entreno_cliente_fecha_idx'),
+        ]
 
 
 # ⭐ MODELO PARA DATOS ESPECÍFICOS DE LIFTIN ⭐
