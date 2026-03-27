@@ -1,4 +1,5 @@
 from datetime import date, timedelta
+from django.core.cache import cache
 from django.views.decorators.http import require_POST, require_GET
 from decimal import Decimal, ROUND_HALF_UP
 from django.db.models import Avg, Count, Sum, Max, F, ExpressionWrapper, fields
@@ -4735,14 +4736,16 @@ def vista_plan_calendario(request, cliente_id):
     cliente = get_object_or_404(Cliente, id=cliente_id, user=request.user)
 
     try:
-        with open('/tmp/debug_vista.txt', 'a') as f:
-            f.write(f"\n--- INICIO VISTA --- {timezone.now()}\n")
-            f.write(f"Cliente ID: {cliente_id}\n")
-
-        # Usar el planificador integrado
-        planificador = PlanificadorIntegrado(cliente_id)
-        plan = planificador.generar_plan_anual()
-        estadisticas = planificador.obtener_estadisticas_integracion()
+        # Cachear el plan anual 30 minutos — es costoso de generar y cambia raramente
+        _plan_cache_key = f'plan_anual_{cliente_id}'
+        _plan_cached = cache.get(_plan_cache_key)
+        if _plan_cached is not None:
+            plan, estadisticas = _plan_cached
+        else:
+            planificador = PlanificadorIntegrado(cliente_id)
+            plan = planificador.generar_plan_anual()
+            estadisticas = planificador.obtener_estadisticas_integracion()
+            cache.set(_plan_cache_key, (plan, estadisticas), 1800)  # 30 min
 
         # === DETECCIÓN DE FASE ACTUAL Y TEMA DINÁMICO ===
         from datetime import date
@@ -4966,36 +4969,70 @@ def vista_plan_calendario(request, cliente_id):
         }
 
         from entrenos.models import EjercicioRealizado
-        cliente_obj = cliente  # Ya lo tenemos de la base de datos
 
-        # Calcular proyecciones para CADA tipo de fase
-        for tipo, config in config_fases.items():
-            proyecciones_tipo = []
-            for ejercicio_nombre in config['ejercicios']:
-                # Buscar último registro con peso máximo
-                ultimo_registro = EjercicioRealizado.objects.filter(
-                    entreno__cliente=cliente_obj,
-                    nombre_ejercicio__icontains=ejercicio_nombre
-                ).order_by('-peso_kg').first()
+        # --- Proyecciones: 1 sola query en lugar de 12+ queries con icontains ---
+        _proy_cache_key = f'proyecciones_plan_{cliente_id}'
+        _proy_cached = cache.get(_proy_cache_key)
 
-                if ultimo_registro:
-                    peso_actual = float(ultimo_registro.peso_kg)
-                    peso_proyectado = peso_actual * (1 + config['incremento'] / 100)
-                    incremento = peso_proyectado - peso_actual
+        if _proy_cached is not None:
+            proyecciones_totales = _proy_cached
+        else:
+            # Todos los nombres de ejercicios que necesitamos buscar
+            _ejercicios_buscar = set()
+            for config in config_fases.values():
+                _ejercicios_buscar.update(config['ejercicios'])
 
-                    proyecciones_tipo.append({
-                        'nombre': ejercicio_nombre,
-                        'peso_actual': peso_actual,
-                        'peso_proyectado': round(peso_proyectado, 1),
-                        'incremento': round(incremento, 1),
-                        'incremento_porcentaje': config['incremento']
-                    })
-            proyecciones_totales[tipo] = proyecciones_tipo
+            # Una sola query trae todos los registros relevantes, filtramos en Python
+            from django.db.models import Q
+            _q_filter = Q()
+            for nombre in _ejercicios_buscar:
+                _q_filter |= Q(nombre_ejercicio__icontains=nombre)
 
-        # Asignar proyecciones de la fase actual para renderizado inicial
+            _todos_registros = (
+                EjercicioRealizado.objects
+                .filter(_q_filter, entreno__cliente=cliente)
+                .values('nombre_ejercicio', 'peso_kg', 'entreno__fecha')
+                .order_by('-peso_kg')
+            )
+
+            # Indexar por nombre normalizado para lookup O(1)
+            _mejor_peso = {}  # nombre_lower → max peso_kg
+            _mejor_peso_antes = {}  # (nombre_lower, fecha_inicio) → max peso antes de fecha
+            _mejor_peso_desde = {}  # (nombre_lower, fecha_inicio) → max peso desde fecha
+
+            for r in _todos_registros:
+                nombre_r = (r['nombre_ejercicio'] or '').lower()
+                peso_r = float(r['peso_kg'] or 0)
+                fecha_r = r['entreno__fecha']
+
+                for ej_nombre in _ejercicios_buscar:
+                    if ej_nombre.lower() in nombre_r:
+                        key = ej_nombre.lower()
+                        if key not in _mejor_peso or peso_r > _mejor_peso[key]:
+                            _mejor_peso[key] = peso_r
+
+            # Calcular proyecciones por tipo de fase
+            for tipo, config in config_fases.items():
+                proyecciones_tipo = []
+                for ejercicio_nombre in config['ejercicios']:
+                    key = ejercicio_nombre.lower()
+                    peso_actual = _mejor_peso.get(key, 0)
+                    if peso_actual > 0:
+                        peso_proyectado = peso_actual * (1 + config['incremento'] / 100)
+                        proyecciones_tipo.append({
+                            'nombre': ejercicio_nombre,
+                            'peso_actual': peso_actual,
+                            'peso_proyectado': round(peso_proyectado, 1),
+                            'incremento': round(peso_proyectado - peso_actual, 1),
+                            'incremento_porcentaje': config['incremento']
+                        })
+                proyecciones_totales[tipo] = proyecciones_tipo
+
+            cache.set(_proy_cache_key, proyecciones_totales, 1800)  # 30 min
+
+        # Asignar proyecciones de la fase actual
         if fase_actual:
             tipo_fase = (fase_actual.get('tipo_fase', '') or '').lower()
-
             fase_key = None
             if 'hiper' in tipo_fase:
                 fase_key = 'hipertrofia'
@@ -5005,59 +5042,7 @@ def vista_plan_calendario(request, cliente_id):
                 fase_key = 'potencia'
 
             if fase_key:
-                proyecciones_fase = []
-                config_actual = config_fases.get(fase_key)
-                fecha_inicio_fase = fase_actual.get('fecha_inicio')
-
-                if config_actual and fecha_inicio_fase:
-                    for ejercicio_nombre in config_actual['ejercicios']:
-                        # 1. Peso Inicial: Mejor marca ANTES de empezar la fase
-                        registro_inicial = EjercicioRealizado.objects.filter(
-                            entreno__cliente=cliente_obj,
-                            nombre_ejercicio__icontains=ejercicio_nombre,
-                            entreno__fecha__lt=fecha_inicio_fase
-                        ).order_by('-peso_kg').first()
-
-                        peso_inicial = float(registro_inicial.peso_kg) if registro_inicial else 0
-
-                        # 2. Peso Max en Fase: Mejor marca DURANTE la fase
-                        registro_fase = EjercicioRealizado.objects.filter(
-                            entreno__cliente=cliente_obj,
-                            nombre_ejercicio__icontains=ejercicio_nombre,
-                            entreno__fecha__gte=fecha_inicio_fase
-                        ).order_by('-peso_kg').first()
-
-                        peso_max_fase = float(registro_fase.peso_kg) if registro_fase else 0
-
-                        # Peso Actual es el mayor entre el inicial y el logrado en fase
-                        peso_actual = max(peso_inicial, peso_max_fase)
-
-                        # 3. Objetivo: Basado en el peso INICIAL
-                        base_calculo = peso_inicial if peso_inicial > 0 else peso_actual
-
-                        if base_calculo > 0:
-                            peso_objetivo = base_calculo * (1 + config_actual['incremento'] / 100)
-                            incremento = peso_objetivo - base_calculo
-
-                            progreso_real = 0
-                            if peso_objetivo > base_calculo:
-                                progreso_real = (peso_actual - base_calculo) / (peso_objetivo - base_calculo) * 100
-                                progreso_real = max(0, min(progreso_real, 100))
-
-                            proyecciones_fase.append({
-                                'nombre': ejercicio_nombre,
-                                'peso_inicial': round(peso_inicial, 1),
-                                'peso_actual': round(peso_actual, 1),
-                                'peso_objetivo': round(peso_objetivo, 1),
-                                'peso_proyectado': round(peso_objetivo, 1),
-                                'incremento': round(incremento, 1),
-                                'incremento_porcentaje': config_actual['incremento'],
-                                'progreso_pct': round(progreso_real, 1)
-                            })
-                else:
-                    proyecciones_fase = proyecciones_totales.get(fase_key, [])
-
-                proyecciones_totales[fase_key] = proyecciones_fase
+                proyecciones_fase = proyecciones_totales.get(fase_key, [])
 
         import json
 
