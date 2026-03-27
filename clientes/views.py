@@ -601,27 +601,33 @@ def _get_dashboard_context_data(request, cliente):
 
     emociones = EstadoEmocional.objects.filter(user=usuario).order_by('-fecha')[:5]
     recuerdo = RecuerdoEmocional.objects.filter(user=usuario).order_by('-fecha').first()
-    perfil_gamificacion = PerfilGamificacion.objects.filter(cliente=cliente).select_related('nivel_actual').first()
-    logros_completados = []
-    pruebas_activas = []
+    # Cachear bloque de gamificación 15 minutos
+    _gamif_cache_key = f'dashboard_gamif_{cliente.id}'
+    _gamif_cached = cache.get(_gamif_cache_key)
+    if _gamif_cached is not None:
+        perfil_gamificacion, logros_completados, pruebas_activas = _gamif_cached
+    else:
+        perfil_gamificacion = PerfilGamificacion.objects.filter(cliente=cliente).select_related('nivel_actual').first()
+        logros_completados = []
+        pruebas_activas = []
 
-    if perfil_gamificacion:
-        logros_completados = PruebaUsuario.objects.filter(
-            perfil=perfil_gamificacion,
-            completada=True
-        ).select_related('prueba', 'prueba__arquetipo')
-
-        if perfil_gamificacion.nivel_actual:
-            pruebas_pendientes_ids = PruebaUsuario.objects.filter(
+        if perfil_gamificacion:
+            logros_completados = list(PruebaUsuario.objects.filter(
                 perfil=perfil_gamificacion,
                 completada=True
-            ).values_list('prueba_id', flat=True)
+            ).select_related('prueba', 'prueba__arquetipo'))
 
-            pruebas_activas = PruebaLegendaria.objects.filter(
-                arquetipo=perfil_gamificacion.nivel_actual
-            ).exclude(id__in=pruebas_pendientes_ids)[:3]
-    # Bloque duplicado eliminado: perfil_gamificacion ya fue consultado arriba
-    # y logros_completados se asigna en el if perfil_gamificacion: de arriba
+            if perfil_gamificacion.nivel_actual:
+                pruebas_pendientes_ids = list(PruebaUsuario.objects.filter(
+                    perfil=perfil_gamificacion,
+                    completada=True
+                ).values_list('prueba_id', flat=True))
+
+                pruebas_activas = list(PruebaLegendaria.objects.filter(
+                    arquetipo=perfil_gamificacion.nivel_actual
+                ).exclude(id__in=pruebas_pendientes_ids)[:3])
+
+        cache.set(_gamif_cache_key, (perfil_gamificacion, logros_completados, pruebas_activas), 900)
 
     datos_logros = obtener_datos_logros(cliente)
     estado_joi = obtener_estado_joi(usuario)
@@ -883,33 +889,45 @@ def _get_dashboard_context_data(request, cliente):
         from estoico.models import ContenidoDiario, ReflexionDiaria
         try: from estoico.models import LogroUsuario as LogroEstoico
         except ImportError: LogroEstoico = None
-        
+
         estoico_disponible = True
         dia_año = hoy.timetuple().tm_yday
-        contenido_hoy = ContenidoDiario.objects.filter(dia=dia_año).first()
-        reflexion_hoy = ReflexionDiaria.objects.filter(usuario=request.user, fecha=hoy).first()
-        reflexion_pendiente = not reflexion_hoy
-        total_reflexiones = ReflexionDiaria.objects.filter(usuario=request.user).count()
-        
-        # 1 query en lugar de hasta 365 queries individuales
-        fechas_con_reflexion = set(
-            ReflexionDiaria.objects.filter(
-                usuario=request.user,
-                fecha__gte=hoy - timedelta(days=365)
-            ).values_list('fecha', flat=True)
-        )
-        racha_reflexion = 0
-        fecha_actual = hoy
-        for _ in range(365):
-            if fecha_actual in fechas_con_reflexion:
-                racha_reflexion += 1
-                fecha_actual -= timedelta(days=1)
-            else:
-                break
-        
-        if LogroEstoico:
-            logros_estoicos = LogroEstoico.objects.filter(usuario=request.user).count()
-        dias_reflexion = total_reflexiones
+
+        # Cachear bloque estoico 10 minutos — cambia muy poco
+        _estoico_cache_key = f'dashboard_estoico_{usuario.id}_{hoy}'
+        _estoico_cached = cache.get(_estoico_cache_key)
+        if _estoico_cached is not None:
+            (contenido_hoy, reflexion_hoy, reflexion_pendiente,
+             total_reflexiones, racha_reflexion, logros_estoicos, dias_reflexion) = _estoico_cached
+        else:
+            contenido_hoy = ContenidoDiario.objects.filter(dia=dia_año).first()
+            reflexion_hoy = ReflexionDiaria.objects.filter(usuario=request.user, fecha=hoy).first()
+            reflexion_pendiente = not reflexion_hoy
+            total_reflexiones = ReflexionDiaria.objects.filter(usuario=request.user).count()
+
+            fechas_con_reflexion = set(
+                ReflexionDiaria.objects.filter(
+                    usuario=request.user,
+                    fecha__gte=hoy - timedelta(days=365)
+                ).values_list('fecha', flat=True)
+            )
+            racha_reflexion = 0
+            fecha_actual = hoy
+            for _ in range(365):
+                if fecha_actual in fechas_con_reflexion:
+                    racha_reflexion += 1
+                    fecha_actual -= timedelta(days=1)
+                else:
+                    break
+
+            logros_estoicos = LogroEstoico.objects.filter(usuario=request.user).count() if LogroEstoico else 0
+            dias_reflexion = total_reflexiones
+
+            cache.set(_estoico_cache_key, (
+                contenido_hoy, reflexion_hoy, reflexion_pendiente,
+                total_reflexiones, racha_reflexion, logros_estoicos, dias_reflexion
+            ), 600)  # 10 min
+
     except Exception: pass
 
     mensajes_integracion = ["Tu disciplina física refleja tu fortaleza mental.", "Un cuerpo entrenado es el hogar de una mente disciplinada."]
@@ -2108,9 +2126,14 @@ def detalle_cliente(request, cliente_id):
     revisiones = RevisionProgreso.objects.filter(cliente=cliente).order_by('fecha')
     ultima_revision = revisiones.last()
 
-    # Obtenemos todos los entrenamientos de una vez para reutilizarlos
-    historial_completo = EntrenoRealizado.objects.filter(cliente=cliente).prefetch_related(
-        'detalles_ejercicio', 'ejercicios_realizados').order_by('-fecha')
+    # Total de entrenamientos via COUNT directo (no carga registros)
+    total_entrenos = EntrenoRealizado.objects.filter(cliente=cliente).count()
+
+    # Para el gráfico semanal limitamos a últimos 90 días para no cargar todo el historial
+    _fecha_limite_detalle = date.today() - timedelta(days=90)
+    historial_completo = EntrenoRealizado.objects.filter(
+        cliente=cliente, fecha__gte=_fecha_limite_detalle
+    ).prefetch_related('detalles_ejercicio', 'ejercicios_realizados').order_by('-fecha')
 
     # --- 1b. CÁLCULO DE EDAD Y RECORDS ---
     edad = None
@@ -2158,7 +2181,7 @@ def detalle_cliente(request, cliente_id):
         'volumen': volumen_por_semana,
     }
 
-    total_entrenos = historial_completo.count()
+    # total_entrenos ya calculado arriba con COUNT directo sobre todo el historial
     total_semanas = len(historial_semanal)
 
     if total_semanas > 0:
