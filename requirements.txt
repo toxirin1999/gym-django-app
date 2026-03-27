@@ -48,7 +48,7 @@ google-api-python-client==2.190.0
 google-auth==2.38.0
 google-auth-httplib2==0.3.0
 googleapis-common-protos==1.72.0
-grpcio==1.71.2
+# grpcio — ya instalado en el sistema, no forzar versión
 proto-plus==1.27.1
 protobuf==5.29.6
 
