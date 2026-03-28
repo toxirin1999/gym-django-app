@@ -9,12 +9,13 @@ duplicates = 0
 
 for obj in data:
     if obj['model'] == 'rutinas.ejerciciobase':
-        nombre = obj['fields'].get('nombre', '')
-        if nombre in seen:
+        # Case-insensitive + strip para que MySQL (utf8mb4_unicode_ci) no rechace
+        nombre_key = obj['fields'].get('nombre', '').strip().lower()
+        if nombre_key in seen:
             duplicates += 1
-            print(f'Duplicado eliminado: {nombre} (pk={obj["pk"]})')
+            print(f'Duplicado eliminado: pk={obj["pk"]} nombre="{obj["fields"]["nombre"]}" (igual a pk={seen[nombre_key]})')
             continue
-        seen[nombre] = obj['pk']
+        seen[nombre_key] = obj['pk']
     cleaned.append(obj)
 
 print(f'Total duplicados eliminados: {duplicates}')
