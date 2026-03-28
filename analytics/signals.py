@@ -17,10 +17,12 @@ logger = logging.getLogger(__name__)
 
 
 @receiver(post_save, sender=EntrenoRealizado)
-def actualizar_metricas_entreno(sender, instance, created, **kwargs):
+def actualizar_metricas_entreno(sender, instance, created, raw=False, **kwargs):
     """
     Actualiza métricas cuando se crea o modifica un entrenamiento
     """
+    if raw or not created:
+        return
     if created:
         logger.info(f"Nuevo entrenamiento creado para {instance.cliente.nombre}")
 
@@ -32,10 +34,12 @@ def actualizar_metricas_entreno(sender, instance, created, **kwargs):
 
 
 @receiver(post_save, sender=EjercicioLiftinDetallado)
-def actualizar_analisis_ejercicio(sender, instance, created, **kwargs):
+def actualizar_analisis_ejercicio(sender, instance, created, raw=False, **kwargs):
     """
     Actualiza análisis de ejercicio cuando se crea o modifica un ejercicio detallado
     """
+    if raw:
+        return
     if created:
         logger.info(f"Nuevo ejercicio detallado: {instance.nombre_ejercicio}")
 

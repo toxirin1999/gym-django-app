@@ -17,11 +17,12 @@ logger = logging.getLogger('gamificacion')
 
 
 @receiver(post_save, sender=EntrenoRealizado)
-def procesar_gamificacion_post_entreno(sender, instance, created, **kwargs):
+def procesar_gamificacion_post_entreno(sender, instance, created, raw=False, **kwargs):
     """Signal que se ejecuta automáticamente después de crear un EntrenoRealizado"""
-    if created:
-        logger.info(f"SIGNAL: Detectado nuevo entreno {instance.id}. Iniciando procesamiento.")
-        CodiceService.procesar_entreno_completo(instance)
+    if raw or not created:
+        return
+    logger.info(f"SIGNAL: Detectado nuevo entreno {instance.id}. Iniciando procesamiento.")
+    CodiceService.procesar_entreno_completo(instance)
 
 
 class CodiceService:

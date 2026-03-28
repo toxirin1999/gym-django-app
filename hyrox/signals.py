@@ -72,7 +72,9 @@ from entrenos.models import EntrenoRealizado, EjercicioRealizado
 from hyrox.models import HyroxObjective
 
 @receiver(post_save, sender=EntrenoRealizado)
-def sync_gym_impact_to_hyrox(sender, instance, created, **kwargs):
+def sync_gym_impact_to_hyrox(sender, instance, created, raw=False, **kwargs):
+    if raw:
+        return
     """
     Signal transversal que se dispara cuando el usuario guarda un entrenamiento
     en el módulo general (Gym/Liftin).
