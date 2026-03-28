@@ -12,7 +12,8 @@ python-dotenv==1.1.1
 # ==============================
 # Base de datos
 # ==============================
-psycopg2-binary==2.9.10
+mysqlclient==2.2.4
+# psycopg2-binary==2.9.10  # PostgreSQL — ya no se usa
 
 # ==============================
 # Django extras
