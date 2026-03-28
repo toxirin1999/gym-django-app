@@ -3905,10 +3905,15 @@ def vista_plan_anual(request, cliente_id):
             }
             return render(request, 'entrenos/vista_plan_calendario.html', context)
 
-        # --- PASO 4: Generar y Enriquecer el Plan ---
-        planificador = PlanificadorHelms(perfil)
-        plan_original = planificador.generar_plan_anual()
-        plan = agregar_educacion_a_plan(plan_original)
+        # --- PASO 4: Generar y Enriquecer el Plan (con caché 30 min) ---
+        _plan_cache_key = f'plan_anual_{cliente_id}_{año_solicitado}'
+        plan = cache.get(_plan_cache_key)
+        if plan is None:
+            planificador = PlanificadorHelms(perfil)
+            plan_original = planificador.generar_plan_anual()
+            plan = agregar_educacion_a_plan(plan_original)
+            if plan and isinstance(plan, dict):
+                cache.set(_plan_cache_key, plan, 1800)
 
         if not plan or not isinstance(plan, dict):
             raise Exception("El plan generado está vacío o tiene un formato incorrecto.")
@@ -4002,22 +4007,33 @@ def vista_plan_anual(request, cliente_id):
         }
 
         from entrenos.models import EjercicioRealizado
+        from django.db.models import Max
 
-        # Calcular proyecciones para CADA tipo de fase
+        # Bulk query: máximo peso por ejercicio para este cliente (1 query total)
+        _proy_cache_key = f'proyecciones_plan_{cliente_id}'
+        _pesos_max = cache.get(_proy_cache_key)
+        if _pesos_max is None:
+            _todos_ejercicios = set()
+            for config in config_fases.values():
+                _todos_ejercicios.update(config['ejercicios'])
+
+            _pesos_max = {}
+            _registros = EjercicioRealizado.objects.filter(
+                entreno__cliente=cliente_obj,
+                nombre_ejercicio__in=list(_todos_ejercicios)
+            ).values('nombre_ejercicio').annotate(max_peso=Max('peso_kg'))
+            for r in _registros:
+                _pesos_max[r['nombre_ejercicio']] = float(r['max_peso'])
+            cache.set(_proy_cache_key, _pesos_max, 1800)
+
+        # Calcular proyecciones para CADA tipo de fase usando los pesos en memoria
         for tipo, config in config_fases.items():
             proyecciones_tipo = []
             for ejercicio_nombre in config['ejercicios']:
-                # Buscar último registro con peso máximo
-                ultimo_registro = EjercicioRealizado.objects.filter(
-                    entreno__cliente=cliente_obj,
-                    nombre_ejercicio__icontains=ejercicio_nombre
-                ).order_by('-peso_kg').first()
-
-                if ultimo_registro:
-                    peso_actual = float(ultimo_registro.peso_kg)
+                peso_actual = _pesos_max.get(ejercicio_nombre)
+                if peso_actual:
                     peso_proyectado = peso_actual * (1 + config['incremento'] / 100)
                     incremento = peso_proyectado - peso_actual
-
                     proyecciones_tipo.append({
                         'nombre': ejercicio_nombre,
                         'peso_actual': peso_actual,
@@ -4049,24 +4065,24 @@ def vista_plan_anual(request, cliente_id):
                 fecha_inicio_fase = fase_actual.get('fecha_inicio')
 
                 if config_actual and fecha_inicio_fase:
+                    # 2 queries bulk en vez de 2×N queries individuales
+                    _ejs = config_actual['ejercicios']
+                    _antes = {r['nombre_ejercicio']: float(r['max_peso'])
+                              for r in EjercicioRealizado.objects.filter(
+                                  entreno__cliente=cliente_obj,
+                                  nombre_ejercicio__in=_ejs,
+                                  entreno__fecha__lt=fecha_inicio_fase
+                              ).values('nombre_ejercicio').annotate(max_peso=Max('peso_kg'))}
+                    _durante = {r['nombre_ejercicio']: float(r['max_peso'])
+                                for r in EjercicioRealizado.objects.filter(
+                                    entreno__cliente=cliente_obj,
+                                    nombre_ejercicio__in=_ejs,
+                                    entreno__fecha__gte=fecha_inicio_fase
+                                ).values('nombre_ejercicio').annotate(max_peso=Max('peso_kg'))}
+
                     for ejercicio_nombre in config_actual['ejercicios']:
-                        # 1. Peso Inicial: Mejor marca ANTES de empezar la fase
-                        registro_inicial = EjercicioRealizado.objects.filter(
-                            entreno__cliente=cliente_obj,
-                            nombre_ejercicio__icontains=ejercicio_nombre,
-                            entreno__fecha__lt=fecha_inicio_fase
-                        ).order_by('-peso_kg').first()
-
-                        peso_inicial = float(registro_inicial.peso_kg) if registro_inicial else 0
-
-                        # 2. Peso Max en Fase: Mejor marca DURANTE la fase
-                        registro_fase = EjercicioRealizado.objects.filter(
-                            entreno__cliente=cliente_obj,
-                            nombre_ejercicio__icontains=ejercicio_nombre,
-                            entreno__fecha__gte=fecha_inicio_fase
-                        ).order_by('-peso_kg').first()
-
-                        peso_max_fase = float(registro_fase.peso_kg) if registro_fase else 0
+                        peso_inicial = _antes.get(ejercicio_nombre, 0)
+                        peso_max_fase = _durante.get(ejercicio_nombre, 0)
 
                         # Peso Actual es el mayor entre el inicial y el logrado en fase
                         # (Si no ha entrenado en la fase, es el inicial. Si ha mejorado, es el de fase)
