@@ -7,8 +7,8 @@ from datetime import datetime
 
 
 @receiver(post_save, sender=EntrenoRealizado)
-def crear_ejercicios_detallados(sender, instance, created, **kwargs):
-    if not instance.notas_liftin:
+def crear_ejercicios_detallados(sender, instance, created, raw=False, **kwargs):
+    if raw or not instance.notas_liftin:
         return
 
     ejercicios = parsear_ejercicios(instance.notas_liftin)
