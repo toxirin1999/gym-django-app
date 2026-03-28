@@ -8,13 +8,15 @@ from clientes.models import Cliente  # ¡Importante! También importamos el mode
 
 
 @receiver(post_save, sender=User)
-def crear_perfiles_asociados(sender, instance, created, **kwargs):
+def crear_perfiles_asociados(sender, instance, created, raw=False, **kwargs):
     """
     Esta función se ejecuta automáticamente DESPUÉS de que un User es creado.
     Se encarga de crear todos los perfiles necesarios en las diferentes apps.
 
     'created' es un booleano que es True solo la primera vez que se guarda el objeto.
     """
+    if raw or not created:
+        return
     if created:
         # 1. Crear el PerfilEstoico.
         #    Ya no pasamos argumentos extra, Django usará los 'default' del modelo.
