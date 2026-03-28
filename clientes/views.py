@@ -691,7 +691,12 @@ def _get_dashboard_context_data(request, cliente):
 
     energia_dias = obtener_energia_semanal(cliente)  # guardamos para reusar en el context dict
     alerta_fatiga = detectar_fatiga_semanal(energia_dias)
-    peso_actual, datos_peso, cambios_peso = analizar_tendencia_peso(cliente)
+    _peso_cache_key = f'dashboard_peso_{cliente.id}'
+    _peso_cached = cache.get(_peso_cache_key)
+    if _peso_cached is None:
+        _peso_cached = analizar_tendencia_peso(cliente)
+        cache.set(_peso_cache_key, _peso_cached, 900)
+    peso_actual, datos_peso, cambios_peso = _peso_cached
     orden_peso = ['7d', '30d', '90d', 'inicio']
     ultimos_dias = BitacoraDiaria.objects.filter(cliente=cliente).order_by('-fecha')[:7]
     dias_emocionales = []
@@ -720,7 +725,12 @@ def _get_dashboard_context_data(request, cliente):
 
     hace_7_dias = hoy - timedelta(days=7)
     bitacoras_semana = BitacoraDiaria.objects.filter(cliente=cliente, fecha__gte=hace_7_dias)
-    biceps_actual, datos_biceps, cambios_biceps = analizar_tendencia_biceps(cliente)
+    _biceps_cache_key = f'dashboard_biceps_{cliente.id}'
+    _biceps_cached = cache.get(_biceps_cache_key)
+    if _biceps_cached is None:
+        _biceps_cached = analizar_tendencia_biceps(cliente)
+        cache.set(_biceps_cache_key, _biceps_cached, 900)
+    biceps_actual, datos_biceps, cambios_biceps = _biceps_cached
 
     promedios = bitacoras_semana.aggregate(
         horas_sueno=Avg('horas_sueno'),
@@ -786,40 +796,42 @@ def _get_dashboard_context_data(request, cliente):
         'frase': "Esta semana cultivaste conciencia y resiliencia. Incluso los días bajos cuentan como práctica. 🌒"
     }
     
-    sistema_progresion = SistemaProgresionAvanzada(cliente_id=cliente.id)
-    # Limitamos a los últimos 180 días para evitar cargar miles de registros históricos
-    fecha_limite_series = hoy - timedelta(days=180)
-    series_historial = list(
-        SerieRealizada.objects.filter(
-            entreno__cliente=cliente,
-            entreno__fecha__gte=fecha_limite_series
-        ).order_by('entreno__fecha', 'entreno__id').select_related('entreno', 'ejercicio')
-    )
-    sesiones_agrupadas = defaultdict(lambda: defaultdict(list))
-    # Dict para lookup O(1) en lugar del next() O(n) dentro del bucle exterior
-    _entrenos_by_id = {}
-    for serie in series_historial:
-        sesiones_agrupadas[serie.entreno.id][serie.ejercicio.nombre].append(
-            RegistroSerie(peso=float(serie.peso_kg), repeticiones=serie.repeticiones)
+    _estanc_cache_key = f'dashboard_estanc_{cliente.id}'
+    estancamientos_detectados = cache.get(_estanc_cache_key)
+    if estancamientos_detectados is None:
+        sistema_progresion = SistemaProgresionAvanzada(cliente_id=cliente.id)
+        fecha_limite_series = hoy - timedelta(days=180)
+        series_historial = list(
+            SerieRealizada.objects.filter(
+                entreno__cliente=cliente,
+                entreno__fecha__gte=fecha_limite_series
+            ).order_by('entreno__fecha', 'entreno__id').select_related('entreno', 'ejercicio')
         )
-        _entrenos_by_id[serie.entreno.id] = serie.entreno
+        sesiones_agrupadas = defaultdict(lambda: defaultdict(list))
+        _entrenos_by_id = {}
+        for serie in series_historial:
+            sesiones_agrupadas[serie.entreno.id][serie.ejercicio.nombre].append(
+                RegistroSerie(peso=float(serie.peso_kg), repeticiones=serie.repeticiones)
+            )
+            _entrenos_by_id[serie.entreno.id] = serie.entreno
 
-    for entreno_id, ejercicios in sesiones_agrupadas.items():
-        entreno_obj = _entrenos_by_id.get(entreno_id)
-        if entreno_obj:
-            for nombre_ejercicio, series_registradas in ejercicios.items():
-                registro_ejercicio = RegistroEjercicio(
-                    fecha=timezone.make_aware(datetime.combine(entreno_obj.fecha, datetime.min.time())),
-                    ejercicio=nombre_ejercicio,
-                    series=series_registradas,
-                    repeticiones_planificadas=8,
-                    rpe_planificado=8,
-                    rpe_real=8,
-                    tiempo_descanso=120
-                )
-                sistema_progresion.registrar_sesion(registro_ejercicio)
+        for entreno_id, ejercicios in sesiones_agrupadas.items():
+            entreno_obj = _entrenos_by_id.get(entreno_id)
+            if entreno_obj:
+                for nombre_ejercicio, series_registradas in ejercicios.items():
+                    registro_ejercicio = RegistroEjercicio(
+                        fecha=timezone.make_aware(datetime.combine(entreno_obj.fecha, datetime.min.time())),
+                        ejercicio=nombre_ejercicio,
+                        series=series_registradas,
+                        repeticiones_planificadas=8,
+                        rpe_planificado=8,
+                        rpe_real=8,
+                        tiempo_descanso=120
+                    )
+                    sistema_progresion.registrar_sesion(registro_ejercicio)
 
-    estancamientos_detectados = sistema_progresion.detectar_estancamientos()
+        estancamientos_detectados = sistema_progresion.detectar_estancamientos()
+        cache.set(_estanc_cache_key, estancamientos_detectados, 900)
     proximo_entrenamiento = obtener_proximo_entrenamiento_simplificado(cliente)
 
     hyrox_objetivo = None
@@ -869,11 +881,16 @@ def _get_dashboard_context_data(request, cliente):
                         break
     except Exception: pass
 
-    estadisticas_plan = obtener_estadisticas_plan_anual(cliente)
-    
-    historial_adherencia = obtener_historial_adherencia_semanal(cliente, num_semanas=8)
-    prediccion = predecir_riesgo_abandono(historial_adherencia)
-    reporte_adherencia = calcular_reporte_adherencia_cliente(cliente)
+    _stats_cache_key = f'dashboard_stats_{cliente.id}'
+    _stats_cached = cache.get(_stats_cache_key)
+    if _stats_cached is None:
+        estadisticas_plan = obtener_estadisticas_plan_anual(cliente)
+        historial_adherencia = obtener_historial_adherencia_semanal(cliente, num_semanas=8)
+        prediccion = predecir_riesgo_abandono(historial_adherencia)
+        reporte_adherencia = calcular_reporte_adherencia_cliente(cliente)
+        _stats_cached = (estadisticas_plan, historial_adherencia, prediccion, reporte_adherencia)
+        cache.set(_stats_cache_key, _stats_cached, 900)
+    estadisticas_plan, historial_adherencia, prediccion, reporte_adherencia = _stats_cached
     notificaciones = generar_notificaciones_contextuales(cliente, entrenos)
 
     estoico_disponible = False
