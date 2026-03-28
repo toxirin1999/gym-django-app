@@ -1126,11 +1126,13 @@ class RachaEscritura(models.Model):
 
 
 @receiver(post_save, sender=User)
-def crear_virtudes_usuario(sender, instance, created, **kwargs):
+def crear_virtudes_usuario(sender, instance, created, raw=False, **kwargs):
     """
     Cuando se crea un nuevo usuario, automáticamente se crean sus 4 virtudes
     y su racha de escritura.
     """
+    if raw:
+        return
     if created:
         # Crear las 4 virtudes
         for tipo, _ in Virtud.TIPO_CHOICES:
