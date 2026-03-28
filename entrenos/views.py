@@ -4391,23 +4391,30 @@ def obtener_o_generar_plan(request, cliente_id):
         request.session.pop(f'plan_anual_v2_{cliente_id}', None)
         cache.delete(f"bio_needs_regen_{cliente_id}")
 
-    # Intentar obtener el plan de la sesión
-    plan = request.session.get(f'plan_anual_v2_{cliente_id}')
-
     # Obtener el año solicitado (si no se especifica, se asume el año actual)
     try:
         año_solicitado = int(request.GET.get('año'))
     except (TypeError, ValueError):
         año_solicitado = date.today().year
 
-    # Si el plan existe, verificar si el año del plan coincide con el año solicitado
+    # 1. Intentar obtener del caché Django (compartido entre views y AJAX)
+    _cache_key = f'plan_anual_{cliente_id}_{año_solicitado}'
+    plan = cache.get(_cache_key)
+    if plan:
+        return plan
+
+    # 2. Fallback: intentar obtener de la sesión
+    plan = request.session.get(f'plan_anual_v2_{cliente_id}')
+
+    # Si el plan existe en sesión, verificar si el año del plan coincide
     if plan:
         año_del_plan = plan.get('metadata', {}).get('año_generacion', date.today().year)
         if año_del_plan != año_solicitado:
             logger.info("Plan anual obsoleto (año plan: %s, solicitado: %s). Regenerando.", año_del_plan, año_solicitado)
             plan = None
         else:
-            return plan  # ya viene serializado desde sesión
+            cache.set(_cache_key, plan, 1800)  # promover sesión al caché
+            return plan
 
     # Si no existe, generarlo
     try:
@@ -4438,10 +4445,12 @@ def obtener_o_generar_plan(request, cliente_id):
         # ✅ NORMALIZAR ANTES DE SERIALIZAR (clave para que UI no “cancele” campos)
         plan = _normalizar_plan_ui(plan)
 
-        # Serializar y guardar en sesión para futuras peticiones
+        # Serializar y guardar en sesión y en caché Django
         plan_serializado = serializar_plan_para_sesion(plan)
         request.session[f'plan_anual_{cliente_id}'] = plan_serializado
+        request.session[f'plan_anual_v2_{cliente_id}'] = plan_serializado
         request.session.modified = True
+        cache.set(f'plan_anual_{cliente_id}_{año_solicitado}', plan_serializado, 1800)
 
         return plan_serializado
 
