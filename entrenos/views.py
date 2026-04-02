@@ -6858,11 +6858,21 @@ def timeline_atleta(request, cliente_id):
     hoy = date.today()
     fecha_inicio = hoy - timedelta(days=dias_rango - 1)
 
-    actividades = list(
+    actividades_raw = list(
         ActividadRealizada.objects
         .filter(cliente=cliente, fecha__range=(fecha_inicio, hoy))
         .order_by('fecha', 'hora_inicio')
     )
+    # Deduplicar: si hay dos entradas para el mismo EntrenoRealizado, quedarse con una
+    seen_gym = set()
+    actividades = []
+    for a in actividades_raw:
+        if a.entreno_gym_id:
+            if a.entreno_gym_id in seen_gym:
+                continue
+            seen_gym.add(a.entreno_gym_id)
+        actividades.append(a)
+
     bitacoras = list(
         BitacoraDiaria.objects
         .filter(cliente=cliente, fecha__range=(fecha_inicio, hoy))
