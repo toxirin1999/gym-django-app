@@ -8,12 +8,46 @@ import re
 
 def normalizar_nombre_ejercicio(nombre):
     """
-    Estandariza el nombre de un ejercicio para consistencia.
-    Ej: " press banca " -> "Press Banca"
+    Estandariza el nombre de un ejercicio para consistencia en búsqueda y almacenamiento.
+    Convierte a una forma canónica para evitar duplicados por mayúsculas, tildes, espacios o puntuación.
+
+    Ej: " PRESS  banca. " -> "press banca"
+        "Prèss Báncà"    -> "press banca"
+        "Press-Banca"    -> "press banca"
+    """
+    import unicodedata
+    import re
+
+    if not isinstance(nombre, str) or not nombre.strip():
+        return nombre
+
+    # 1. Eliminar acentos / diacríticos
+    nfkd = unicodedata.normalize('NFKD', nombre)
+    sin_acentos = ''.join(c for c in nfkd if not unicodedata.combining(c))
+
+    # 2. Lowercase
+    resultado = sin_acentos.lower()
+
+    # 3. Reemplazar separadores no alfanuméricos (guiones, puntos, barras) por espacio
+    resultado = re.sub(r'[-_/\\.]', ' ', resultado)
+
+    # 4. Eliminar caracteres no alfanuméricos ni espacios
+    resultado = re.sub(r'[^a-z0-9 ]', '', resultado)
+
+    # 5. Colapsar espacios múltiples y strip
+    resultado = re.sub(r'\s+', ' ', resultado).strip()
+
+    return resultado
+
+
+def nombre_ejercicio_display(nombre):
+    """
+    Versión para mostrar al usuario: Title Case limpio.
+    Ej: "press banca" -> "Press Banca"
     """
     if not isinstance(nombre, str):
         return nombre
-    return nombre.strip().title()
+    return normalizar_nombre_ejercicio(nombre).title()
 
 
 def parsear_ejercicios_de_notas(notas):

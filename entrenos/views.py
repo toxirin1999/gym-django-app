@@ -3539,8 +3539,21 @@ def vista_entrenamiento_activo(request, cliente_id):
                 ejercicio['pr_reps'] = 0
                 ejercicio['peso_inicial_kg'] = float(ejercicio.get('peso_recomendado_kg', 0) or 0)
 
-            # Las aproximaciones ahora vienen precargadas desde el planificador.
-            # No es necesario calcularlas en caliente, asegurando persistencia en el JSON.
+            # Calcular aproximaciones basadas en el peso de trabajo
+            try:
+                peso_trabajo = float(ejercicio.get('peso_inicial_kg') or ejercicio.get('peso_recomendado_kg') or 0)
+                if peso_trabajo > 0 and ejercicio.get('usa_peso', True):
+                    def redondear_peso(p):
+                        return round(round(p / 2.5) * 2.5, 1)
+                    ejercicio['aproximaciones'] = {
+                        'peso1': redondear_peso(peso_trabajo * 0.50),
+                        'peso2': redondear_peso(peso_trabajo * 0.70),
+                        'peso3': redondear_peso(peso_trabajo * 0.85),
+                    }
+                else:
+                    ejercicio['aproximaciones'] = None
+            except Exception:
+                ejercicio['aproximaciones'] = None
 
     except Exception as e:
         messages.error(request, f"Error al cargar los datos del entrenamiento: {e}")
@@ -6090,6 +6103,7 @@ def dashboard_evolucion(request, cliente_id):
     Dashboard de evolución física con logros, récords, progresión y motivación.
     """
     from .services.estadisticas_service import EstadisticasService
+    from .services.services import EstadisticasService as EstadisticasServiceV2
     from .models import RecordPersonal, ClienteLogroAutomatico, DesafioSemanal, ProgresoDesafio, SesionEntrenamiento
 
     cliente = get_object_or_404(Cliente, id=cliente_id)
@@ -6101,7 +6115,7 @@ def dashboard_evolucion(request, cliente_id):
     distribucion = EstadisticasService.calcular_distribucion_muscular(cliente, rango)
     vol_semanal = EstadisticasService.calcular_volumen_semanal(cliente, rango)
     heatmap = EstadisticasService.generar_heatmap_actividad(cliente)
-    acwr = EstadisticasService.analizar_acwr(cliente)
+    acwr = EstadisticasServiceV2.analizar_acwr_unificado(cliente)
     balance = EstadisticasService.analizar_equilibrio_muscular(cliente)
 
     # 🎯 Nuevos Paneles Final Tier
@@ -6820,3 +6834,280 @@ def api_reportar_molestia(request, cliente_id):
     except Exception as e:
         logger.warning("Error en api_reportar_molestia: %s", e)
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+# ============================================================================
+# FASE 5 — TIMELINE UNIFICADO DEL ATLETA
+# ============================================================================
+
+def timeline_atleta(request, cliente_id):
+    """
+    Timeline cronológico unificado: muestra cada día con sus actividades físicas
+    (ActividadRealizada) y su entrada de diario (BitacoraDiaria) juntas.
+    """
+    from .models import ActividadRealizada
+    from clientes.models import BitacoraDiaria
+    from entrenos.services.services import EstadisticasService
+    from collections import defaultdict
+    from django.db.models import Count as DCount
+
+    cliente = get_object_or_404(Cliente, id=cliente_id)
+    dias_rango = int(request.GET.get('dias', 30))
+    dias_rango = min(dias_rango, 90)
+
+    hoy = date.today()
+    fecha_inicio = hoy - timedelta(days=dias_rango - 1)
+
+    actividades = list(
+        ActividadRealizada.objects
+        .filter(cliente=cliente, fecha__range=(fecha_inicio, hoy))
+        .order_by('fecha', 'hora_inicio')
+    )
+    bitacoras = list(
+        BitacoraDiaria.objects
+        .filter(cliente=cliente, fecha__range=(fecha_inicio, hoy))
+    )
+
+    actos_por_dia = defaultdict(list)
+    for a in actividades:
+        actos_por_dia[a.fecha].append(a)
+
+    bitacora_por_dia = {b.fecha: b for b in bitacoras}
+
+    ICONOS = {
+        'gym': '🏋️', 'hyrox': '⚡', 'carrera': '🏃', 'ciclismo': '🚴',
+        'remo': '🚣', 'futbol': '⚽', 'natacion': '🏊',
+        'yoga': '🧘', 'estiramientos': '🤸', 'otro': '🎯',
+    }
+    HUMOR_EMOJI = {'verde': '😊', 'amarillo': '😐', 'rojo': '😞'}
+    DIAS_ES = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
+
+    dias = []
+    for i in range(dias_rango - 1, -1, -1):
+        f = hoy - timedelta(days=i)
+        actos = actos_por_dia.get(f, [])
+        bitacora = bitacora_por_dia.get(f)
+        carga_dia = sum(float(a.carga_ua) for a in actos if a.carga_ua)
+        tipos = list({a.tipo for a in actos})
+
+        dias.append({
+            'fecha': f,
+            'fecha_str': f.strftime('%-d %b'),
+            'dia_semana': DIAS_ES[f.weekday()],
+            'es_hoy': f == hoy,
+            'actividades': actos,
+            'iconos': [ICONOS.get(t, '🎯') for t in tipos],
+            'carga_dia': round(carga_dia, 1) if carga_dia else None,
+            'n_actividades': len(actos),
+            'bitacora': bitacora,
+            'humor_emoji': HUMOR_EMOJI.get(bitacora.humor, '') if bitacora and bitacora.humor else '',
+            'energia': bitacora.energia_subjetiva if bitacora else None,
+            'emocion_dia': bitacora.emocion_dia if bitacora else '',
+            'nota': (bitacora.nota_personal or '')[:100] if bitacora else '',
+        })
+
+    acwr = EstadisticasService.analizar_acwr_unificado(cliente, periodo_dias=dias_rango)
+    total_actividades = sum(d['n_actividades'] for d in dias)
+    dias_activos = sum(1 for d in dias if d['n_actividades'] > 0)
+    carga_total = sum(d['carga_dia'] or 0 for d in dias)
+
+    desglose_qs = (
+        ActividadRealizada.objects
+        .filter(cliente=cliente, fecha__range=(fecha_inicio, hoy))
+        .values('tipo').annotate(total=DCount('id')).order_by('-total')
+    )
+    desglose = [
+        {'tipo': d['tipo'], 'icono': ICONOS.get(d['tipo'], '🎯'), 'total': d['total']}
+        for d in desglose_qs
+    ]
+
+    return render(request, 'entrenos/timeline_atleta.html', {
+        'cliente': cliente,
+        'dias': dias,
+        'dias_rango': dias_rango,
+        'acwr': acwr,
+        'total_actividades': total_actividades,
+        'dias_activos': dias_activos,
+        'carga_total': round(carga_total, 1),
+        'desglose': desglose,
+        'rangos': [7, 30, 90],
+    })
+
+
+# ============================================================================
+# FASE 2 — REGISTRO DE ACTIVIDAD LIBRE + AUTOCOMPLETE DE EJERCICIOS
+# ============================================================================
+
+@require_GET
+def api_buscar_ejercicios(request, cliente_id):
+    """
+    API de autocomplete: devuelve sugerencias de actividades del cliente.
+    Busca en EjercicioRealizado (gym) y en ActividadRealizada.titulo (actividades libres).
+    """
+    from .utils.utils import normalizar_nombre_ejercicio
+    from .models import EjercicioRealizado, ActividadRealizada
+
+    q = request.GET.get('q', '').strip()
+    if len(q) < 2:
+        return JsonResponse({'resultados': []})
+
+    q_norm = normalizar_nombre_ejercicio(q)
+
+    # Fuente 1: ejercicios de gym
+    nombres_gym = (
+        EjercicioRealizado.objects
+        .filter(entreno__cliente_id=cliente_id)
+        .values_list('nombre_ejercicio', flat=True)
+        .distinct()
+    )
+    # Fuente 2: títulos de actividades libres previas
+    nombres_libres = (
+        ActividadRealizada.objects
+        .filter(cliente_id=cliente_id, titulo__isnull=False)
+        .exclude(titulo='')
+        .values_list('titulo', flat=True)
+        .distinct()
+    )
+
+    vistos = set()
+    resultados = []
+    for nombre in list(nombres_libres) + list(nombres_gym):
+        nombre_norm = normalizar_nombre_ejercicio(nombre)
+        if q_norm in nombre_norm and nombre_norm not in vistos:
+            vistos.add(nombre_norm)
+            resultados.append(nombre.strip().title())
+        if len(resultados) >= 10:
+            break
+
+    resultados.sort()
+    return JsonResponse({'resultados': resultados})
+
+
+def registrar_actividad_libre(request, cliente_id):
+    """
+    Formulario para registrar cualquier actividad física libre
+    (fútbol, ciclismo, natación, etc.) que no pasa por el motor de gym ni hyrox.
+    Crea directamente un registro en ActividadRealizada (hub central).
+    """
+    from .models import ActividadRealizada
+    from .utils.utils import normalizar_nombre_ejercicio
+
+    cliente = get_object_or_404(Cliente, id=cliente_id)
+
+    if request.method == 'POST':
+        try:
+            tipo = request.POST.get('tipo', 'otro')
+            titulo_raw = request.POST.get('titulo', '').strip()
+            fecha_str = request.POST.get('fecha', '')
+            hora_str = request.POST.get('hora_inicio', '')
+            duracion = request.POST.get('duracion_minutos', '') or None
+            distancia = request.POST.get('distancia_metros', '') or None
+            rpe = request.POST.get('rpe_medio', '') or None
+            calorias = request.POST.get('calorias', '') or None
+            notas = request.POST.get('notas', '').strip()
+
+            # Normalizar título si es nombre de ejercicio
+            titulo = titulo_raw.title() if titulo_raw else tipo.replace('_', ' ').title()
+
+            from datetime import date as date_type, datetime as datetime_type
+            fecha = date_type.fromisoformat(fecha_str) if fecha_str else date_type.today()
+
+            hora = None
+            if hora_str:
+                try:
+                    hora = datetime_type.strptime(hora_str, '%H:%M').time()
+                except ValueError:
+                    pass
+
+            duracion = int(duracion) if duracion else None
+            distancia = int(distancia) if distancia else None
+            rpe = float(rpe) if rpe else None
+            calorias = int(calorias) if calorias else None
+
+            carga_ua = round(rpe * duracion, 1) if (rpe and duracion) else None
+
+            ActividadRealizada.objects.create(
+                cliente=cliente,
+                tipo=tipo,
+                titulo=titulo,
+                fecha=fecha,
+                hora_inicio=hora,
+                duracion_minutos=duracion,
+                distancia_metros=distancia,
+                rpe_medio=rpe,
+                calorias=calorias,
+                carga_ua=carga_ua,
+                notas=notas,
+                fuente='manual',
+            )
+
+            messages.success(request, f'✅ Actividad "{titulo}" registrada correctamente.')
+            return redirect('entrenos:timeline_atleta', cliente_id=cliente.id)
+
+        except Exception as e:
+            logger.warning("Error registrando actividad libre: %s", e)
+            messages.error(request, f'Error al registrar la actividad: {e}')
+
+    # GET — mostrar formulario
+    from .models import ActividadRealizada
+    context = {
+        'cliente': cliente,
+        'tipo_choices': ActividadRealizada.TIPO_CHOICES,
+        'hoy': date.today().isoformat(),
+    }
+    return render(request, 'entrenos/registrar_actividad_libre.html', context)
+
+
+# ── Editar actividad libre ────────────────────────────────────────────────────
+@login_required
+def editar_actividad_libre(request, cliente_id, actividad_id):
+    from .models import ActividadRealizada
+    from .utils.utils import normalizar_nombre_ejercicio
+
+    cliente = get_object_or_404(Cliente, id=cliente_id)
+    actividad = get_object_or_404(ActividadRealizada, id=actividad_id, cliente=cliente)
+
+    # Solo actividades manuales son editables desde aquí
+    if actividad.entreno_gym or actividad.sesion_hyrox:
+        messages.warning(request, "Este registro se edita desde su sección original (Gym o Hyrox).")
+        return redirect('entrenos:timeline_atleta', cliente_id=cliente.id)
+
+    if request.method == 'POST':
+        actividad.tipo = request.POST.get('tipo', actividad.tipo)
+        actividad.titulo = request.POST.get('titulo', '').strip()
+        actividad.fecha = request.POST.get('fecha', actividad.fecha)
+        actividad.hora_inicio = request.POST.get('hora_inicio') or None
+        actividad.duracion_minutos = request.POST.get('duracion_minutos') or None
+        actividad.distancia_metros = request.POST.get('distancia_metros') or None
+        actividad.rpe_medio = request.POST.get('rpe_medio') or None
+        actividad.calorias = request.POST.get('calorias') or None
+        actividad.notas = request.POST.get('notas', '')
+        actividad.carga_ua = actividad.calcular_carga_ua()
+        actividad.save()
+        messages.success(request, '✅ Actividad actualizada.')
+        return redirect('entrenos:timeline_atleta', cliente_id=cliente.id)
+
+    context = {
+        'cliente': cliente,
+        'actividad': actividad,
+        'tipo_choices': ActividadRealizada.TIPO_CHOICES,
+    }
+    return render(request, 'entrenos/editar_actividad_libre.html', context)
+
+
+# ── Eliminar actividad libre ──────────────────────────────────────────────────
+@login_required
+@require_POST
+def eliminar_actividad_libre(request, cliente_id, actividad_id):
+    from .models import ActividadRealizada
+
+    cliente = get_object_or_404(Cliente, id=cliente_id)
+    actividad = get_object_or_404(ActividadRealizada, id=actividad_id, cliente=cliente)
+
+    if actividad.entreno_gym or actividad.sesion_hyrox:
+        messages.warning(request, "Este registro se elimina desde su sección original.")
+        return redirect('entrenos:timeline_atleta', cliente_id=cliente.id)
+
+    actividad.delete()
+    messages.success(request, '🗑️ Actividad eliminada.')
+    return redirect('entrenos:timeline_atleta', cliente_id=cliente.id)

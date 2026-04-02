@@ -1,6 +1,6 @@
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from entrenos.models import EntrenoRealizado, EjercicioLiftinDetallado
+from entrenos.models import EntrenoRealizado, EjercicioLiftinDetallado, ActividadRealizada
 from entrenos.utils.utils import parse_reps_and_series
 from django.utils.timezone import make_aware
 from datetime import datetime
@@ -40,3 +40,60 @@ def crear_ejercicios_detallados(sender, instance, created, raw=False, **kwargs):
             )
         except Exception as e:
             print(f"❌ Error al crear ejercicio en entreno {instance.id}: {e}")
+
+
+@receiver(post_save, sender=EntrenoRealizado)
+def sincronizar_hub_actividad(sender, instance, created, raw=False, **kwargs):
+    """
+    Cada vez que se guarda un EntrenoRealizado, asegura que existe
+    un registro correspondiente en ActividadRealizada (hub central).
+    Actualiza métricas si el entreno ya existía.
+    """
+    if raw:
+        return
+
+    # Calcular RPE medio desde ejercicios realizados
+    rpe_medio = None
+    try:
+        rpes = [
+            ej.rpe for ej in instance.ejercicios_realizados.all()
+            if ej.rpe is not None
+        ]
+        if rpes:
+            rpe_medio = round(sum(rpes) / len(rpes), 1)
+    except Exception:
+        pass
+
+    # Título: nombre de la rutina
+    titulo = ''
+    try:
+        titulo = instance.nombre_rutina_liftin or (instance.rutina.nombre if instance.rutina else '')
+    except Exception:
+        pass
+
+    # Carga UA
+    carga_ua = None
+    if rpe_medio and instance.duracion_minutos:
+        carga_ua = round(rpe_medio * instance.duracion_minutos, 1)
+
+    defaults = {
+        'cliente': instance.cliente,
+        'tipo': 'gym',
+        'titulo': titulo,
+        'fecha': instance.fecha,
+        'hora_inicio': instance.hora_inicio,
+        'duracion_minutos': instance.duracion_minutos,
+        'volumen_kg': instance.volumen_total_kg,
+        'calorias': instance.calorias_quemadas,
+        'rpe_medio': rpe_medio,
+        'carga_ua': carga_ua,
+        'fuente': 'liftin' if instance.fuente_datos == 'liftin' else 'manual',
+    }
+
+    try:
+        ActividadRealizada.objects.update_or_create(
+            entreno_gym=instance,
+            defaults=defaults,
+        )
+    except Exception as e:
+        print(f"❌ Hub ActividadRealizada error (entreno {instance.id}): {e}")

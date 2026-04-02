@@ -15,7 +15,8 @@ from .models import (
     LogroAutomatico,
     ClienteLogroAutomatico,
     DesafioSemanal,
-    ProgresoDesafio
+    ProgresoDesafio,
+    ActividadRealizada,
 )
 
 
@@ -661,6 +662,19 @@ class ProgresoDesafioAdmin(admin.ModelAdmin):
                 '<span style="background-color: #ffc107; color: black; padding: 2px 6px; border-radius: 3px; font-size: 10px;">⏳ EN PROGRESO</span>'
             )
     completado_badge.short_description = 'Estado'
+
+
+@admin.register(ActividadRealizada)
+class ActividadRealizadaAdmin(admin.ModelAdmin):
+    list_display = [
+        'cliente', 'fecha', 'tipo', 'titulo', 'duracion_minutos',
+        'volumen_kg', 'rpe_medio', 'carga_ua', 'fuente',
+    ]
+    list_filter = ['tipo', 'fuente', 'fecha', 'cliente']
+    search_fields = ['cliente__nombre', 'titulo']
+    date_hierarchy = 'fecha'
+    readonly_fields = ['fecha_creacion', 'carga_ua']
+    raw_id_fields = ['entreno_gym', 'sesion_hyrox']
 
 
 # Personalización del admin site

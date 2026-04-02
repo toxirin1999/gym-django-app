@@ -120,8 +120,14 @@
             </div>
 
             <!-- Action Buttons -->
-            <div class="flex-shrink-0 flex flex-col sm:flex-row gap-3 mt-4 md:mt-0">
-                <a href="{% url 'entrenos:dashboard_ejercicios' cliente.id %}" class="btn-lol-primary text-sm flex justify-center">
+            <div class="flex-shrink-0 flex flex-col sm:flex-row gap-3 mt-4 md:mt-0 flex-wrap">
+                <a href="{% url 'entrenos:timeline_atleta' cliente.id %}" class="btn-lol-primary text-sm flex justify-center">
+                    <i class="fas fa-stream mr-2"></i> Timeline
+                </a>
+                <a href="{% url 'entrenos:registrar_actividad_libre' cliente.id %}" class="btn-lol-primary text-sm flex justify-center" style="background: linear-gradient(135deg, #06b6d4, #0e7490);">
+                    <i class="fas fa-plus mr-2"></i> Añadir actividad
+                </a>
+                <a href="{% url 'entrenos:dashboard_ejercicios' cliente.id %}" class="btn-lol-secondary text-sm flex justify-center">
                     <i class="fas fa-chart-line mr-2"></i> Dashboard
                 </a>
                 <a href="{% url 'entrenos:vista_plan_anual' cliente.id %}" class="btn-lol-secondary text-sm flex justify-center">

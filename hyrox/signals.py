@@ -189,6 +189,46 @@ def sync_gym_impact_to_hyrox(sender, instance, created, raw=False, **kwargs):
         print(f"Error en el SSoT Signal Gym -> Hyrox: {e}")
         traceback.print_exc()
 
+@receiver(post_save, sender=HyroxSession)
+def sincronizar_hyrox_al_hub(sender, instance, created, raw=False, **kwargs):
+    """
+    Cuando una HyroxSession pasa a 'completado', crea o actualiza su registro
+    en el hub ActividadRealizada.
+    """
+    if raw or instance.estado != 'completado':
+        return
+
+    try:
+        from entrenos.models import ActividadRealizada
+        from clientes.models import Cliente
+
+        cliente = instance.objective.cliente
+        titulo = instance.titulo or f"Hyrox — {instance.fecha}"
+
+        # Carga UA: RPE × duración
+        carga_ua = None
+        if instance.rpe_global and instance.tiempo_total_minutos:
+            carga_ua = round(instance.rpe_global * instance.tiempo_total_minutos, 1)
+
+        ActividadRealizada.objects.update_or_create(
+            sesion_hyrox=instance,
+            defaults={
+                'cliente': cliente,
+                'tipo': 'hyrox',
+                'titulo': titulo,
+                'fecha': instance.fecha,
+                'duracion_minutos': instance.tiempo_total_minutos,
+                'rpe_medio': instance.rpe_global,
+                'carga_ua': carga_ua,
+                'fuente': 'hyrox_engine',
+            }
+        )
+    except Exception as e:
+        import traceback
+        print(f"❌ Hub ActividadRealizada error (HyroxSession {instance.id}): {e}")
+        traceback.print_exc()
+
+
 from django.db.models.signals import post_delete
 
 @receiver(post_delete, sender=EntrenoRealizado)

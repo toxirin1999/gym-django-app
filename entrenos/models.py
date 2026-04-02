@@ -966,3 +966,135 @@ class ProgresoDesafio(models.Model):
         verbose_name_plural = "Progresos de Desafíos"
         unique_together = ['cliente', 'desafio']
         ordering = ['-ultima_actualizacion']
+
+
+# ============================================================================
+# HUB CENTRAL DE ACTIVIDAD — FASE 1 DEL PLAN DE UNIFICACIÓN
+# ============================================================================
+
+class ActividadRealizada(models.Model):
+    """
+    Modelo hub que unifica TODAS las actividades físicas del atleta en una
+    línea temporal única. Cada registro representa una sesión de cualquier tipo:
+    gimnasio, hyrox, fútbol, remo, etc.
+
+    Relaciones opcionales (solo una estará presente por registro):
+    - entreno_gym → EntrenoRealizado (sesión de fuerza/musculación)
+    - sesion_hyrox → HyroxSession (sesión de hyrox planificada)
+
+    Este hub es la fuente única de verdad para:
+    - Timeline unificado del atleta
+    - Cálculo de ACWR multi-modalidad (Fase 3)
+    - Conexión con el diario emocional (Fase 4)
+    """
+
+    TIPO_CHOICES = [
+        ('gym', 'Gimnasio / Fuerza'),
+        ('hyrox', 'Sesión Hyrox'),
+        ('carrera', 'Carrera / Running'),
+        ('ciclismo', 'Ciclismo'),
+        ('remo', 'Remo / Ergómetro'),
+        ('futbol', 'Fútbol'),
+        ('natacion', 'Natación'),
+        ('yoga', 'Yoga / Movilidad'),
+        ('estiramientos', 'Estiramientos'),
+        ('otro', 'Otra Actividad'),
+    ]
+
+    FUENTE_CHOICES = [
+        ('manual', 'Registro manual'),
+        ('liftin', 'Importado de Liftin'),
+        ('hyrox_engine', 'Motor Hyrox'),
+        ('auto', 'Generado automáticamente'),
+    ]
+
+    # ── Quién ──────────────────────────────────────────────────────────────────
+    cliente = models.ForeignKey(
+        Cliente,
+        on_delete=models.CASCADE,
+        related_name='actividades_realizadas',
+        db_index=True,
+    )
+
+    # ── Qué ────────────────────────────────────────────────────────────────────
+    tipo = models.CharField(max_length=20, choices=TIPO_CHOICES, default='gym')
+    titulo = models.CharField(
+        max_length=200,
+        blank=True,
+        help_text="Nombre libre de la sesión (ej: 'Pierna A', 'Hyrox Semana 3')"
+    )
+
+    # ── Cuándo ─────────────────────────────────────────────────────────────────
+    fecha = models.DateField(db_index=True)
+    hora_inicio = models.TimeField(null=True, blank=True)
+
+    # ── Métricas universales ────────────────────────────────────────────────────
+    duracion_minutos = models.PositiveIntegerField(
+        null=True, blank=True,
+        help_text="Duración total de la sesión en minutos"
+    )
+    volumen_kg = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True,
+        help_text="Volumen total en kg (peso × series × reps). Null para cardio puro."
+    )
+    distancia_metros = models.PositiveIntegerField(
+        null=True, blank=True,
+        help_text="Distancia recorrida en metros (para cardio/running)"
+    )
+    carga_ua = models.FloatField(
+        null=True, blank=True,
+        help_text="Carga en Unidades Arbitrarias = RPE × duración_minutos (para ACWR)"
+    )
+    rpe_medio = models.FloatField(
+        null=True, blank=True,
+        help_text="RPE medio de la sesión (escala 1-10)"
+    )
+    calorias = models.PositiveIntegerField(null=True, blank=True)
+
+    # ── Punteros a modelos existentes (uno o ninguno) ───────────────────────────
+    entreno_gym = models.OneToOneField(
+        'EntrenoRealizado',
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='hub_actividad',
+        help_text="Enlace al EntrenoRealizado para sesiones de gimnasio"
+    )
+    sesion_hyrox = models.OneToOneField(
+        'hyrox.HyroxSession',
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='hub_actividad',
+        help_text="Enlace a HyroxSession para sesiones del motor hyrox"
+    )
+
+    # ── Metadatos ────────────────────────────────────────────────────────────
+    fuente = models.CharField(max_length=20, choices=FUENTE_CHOICES, default='manual')
+    notas = models.TextField(blank=True)
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Actividad Realizada"
+        verbose_name_plural = "Actividades Realizadas"
+        ordering = ['-fecha', '-hora_inicio']
+        indexes = [
+            models.Index(fields=['cliente', 'fecha'], name='actividad_cliente_fecha_idx'),
+            models.Index(fields=['cliente', 'tipo'], name='actividad_cliente_tipo_idx'),
+        ]
+
+    def __str__(self):
+        return f"{self.get_tipo_display()} — {self.cliente.nombre} ({self.fecha})"
+
+    def calcular_carga_ua(self):
+        """
+        Calcula la Carga en Unidades Arbitrarias (RPE × duración).
+        Este valor es la base del cálculo ACWR multi-modalidad.
+        """
+        if self.rpe_medio and self.duracion_minutos:
+            return round(self.rpe_medio * self.duracion_minutos, 1)
+        return None
+
+    def save(self, *args, **kwargs):
+        # Auto-calcular carga UA si tenemos RPE y duración
+        if self.carga_ua is None:
+            self.carga_ua = self.calcular_carga_ua()
+        super().save(*args, **kwargs)

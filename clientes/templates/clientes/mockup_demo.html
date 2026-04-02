@@ -1340,12 +1340,18 @@
             </a>
             {% endif %}
 
-            <div style="display: flex; gap: 10px; max-width: 480px; margin: 10px auto 0 auto;">
-                <a href="{% url 'entrenos:vista_plan_anual' cliente.id %}" style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 10px; background: transparent; border: 1px solid rgba(200,170,110,0.2); color: #A08C5B; font-family: 'Cinzel', serif; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; text-decoration: none; transition: all 0.2s;">
-                    ↺ CAMBIAR RUTINA
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; max-width: 480px; margin: 10px auto 0 auto; width: 100%;">
+                <a href="{% url 'entrenos:vista_plan_anual' cliente.id %}" style="display: flex; align-items: center; justify-content: center; padding: 10px 4px; background: transparent; border: 1px solid rgba(200,170,110,0.2); color: #A08C5B; font-family: 'Cinzel', serif; font-size: 0.58rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; text-decoration: none; text-align: center; transition: all 0.2s;">
+                    ↺ RUTINA
                 </a>
-                <a href="{% url 'clientes:blade_runner_dashboard' %}" style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 10px; background: transparent; border: 1px solid rgba(200,170,110,0.3); color: #C8AA6E; font-family: 'Cinzel', serif; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; text-decoration: none; transition: all 0.2s;">
-                    ⚡ MODO BLADE RUNNER
+                <a href="{% url 'clientes:blade_runner_dashboard' %}" style="display: flex; align-items: center; justify-content: center; padding: 10px 4px; background: transparent; border: 1px solid rgba(200,170,110,0.3); color: #C8AA6E; font-family: 'Cinzel', serif; font-size: 0.58rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; text-decoration: none; text-align: center; transition: all 0.2s;">
+                    ⚡ BLADE
+                </a>
+                <a href="{% url 'entrenos:registrar_actividad_libre' cliente.id %}" style="display: flex; align-items: center; justify-content: center; padding: 10px 4px; background: rgba(6,182,212,0.12); border: 1px solid rgba(6,182,212,0.45); color: #06b6d4; font-family: 'Cinzel', serif; font-size: 0.58rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; text-decoration: none; text-align: center; transition: all 0.2s;">
+                    ➕ AÑADIR
+                </a>
+                <a href="{% url 'entrenos:timeline_atleta' cliente.id %}" style="display: flex; align-items: center; justify-content: center; padding: 10px 4px; background: transparent; border: 1px solid rgba(6,182,212,0.25); color: rgba(6,182,212,0.7); font-family: 'Cinzel', serif; font-size: 0.58rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; text-decoration: none; text-align: center; transition: all 0.2s;">
+                    📅 TIMELINE
                 </a>
             </div>
         </div>
@@ -1429,12 +1435,18 @@
             {% endif %}
 
             <!-- Botones secundarios -->
-            <div style="display: flex; gap: 10px; max-width: 480px; margin: 10px auto 0 auto;">
-                <a href="{% url 'hyrox:dashboard' %}" style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 10px; background: transparent; border: 1px solid rgba(200,75,49,0.2); color: #A03020; font-family: 'Cinzel', serif; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; text-decoration: none; transition: all 0.2s;">
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; max-width: 480px; margin: 10px auto 0 auto; width: 100%;">
+                <a href="{% url 'hyrox:dashboard' %}" style="display: flex; align-items: center; justify-content: center; padding: 10px 4px; background: transparent; border: 1px solid rgba(200,75,49,0.2); color: #A03020; font-family: 'Cinzel', serif; font-size: 0.58rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; text-decoration: none; text-align: center; transition: all 0.2s;">
                     ↺ VER PLAN
                 </a>
-                <a href="{% url 'hyrox:dashboard' %}" style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 10px; background: transparent; border: 1px solid rgba(200,75,49,0.3); color: #C84B31; font-family: 'Cinzel', serif; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; text-decoration: none; transition: all 0.2s;">
-                    ⚡ DASHBOARD HYROX
+                <a href="{% url 'hyrox:dashboard' %}" style="display: flex; align-items: center; justify-content: center; padding: 10px 4px; background: transparent; border: 1px solid rgba(200,75,49,0.3); color: #C84B31; font-family: 'Cinzel', serif; font-size: 0.58rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; text-decoration: none; text-align: center; transition: all 0.2s;">
+                    ⚡ DASHBOARD
+                </a>
+                <a href="{% url 'entrenos:registrar_actividad_libre' cliente.id %}" style="display: flex; align-items: center; justify-content: center; padding: 10px 4px; background: rgba(6,182,212,0.12); border: 1px solid rgba(6,182,212,0.45); color: #06b6d4; font-family: 'Cinzel', serif; font-size: 0.58rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; text-decoration: none; text-align: center; transition: all 0.2s;">
+                    ➕ AÑADIR
+                </a>
+                <a href="{% url 'entrenos:timeline_atleta' cliente.id %}" style="display: flex; align-items: center; justify-content: center; padding: 10px 4px; background: transparent; border: 1px solid rgba(6,182,212,0.25); color: rgba(6,182,212,0.7); font-family: 'Cinzel', serif; font-size: 0.58rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; text-decoration: none; text-align: center; transition: all 0.2s;">
+                    📅 TIMELINE
                 </a>
             </div>
         </div>
@@ -2169,6 +2181,47 @@
     .lol-panel-inner > div { flex-direction: column !important; }
     .lol-action-col { min-width: unset; width: 100%; }
 }
+
+/* ── MOBILE GLOBAL ─────────────────────────────────────────── */
+@media (max-width: 480px) {
+    /* Modo focus: contenedor principal */
+    #focus-mode-container { padding: 0 !important; }
+
+    /* Modo detallado: sin padding lateral excesivo */
+    #full-mode-container { padding: 0.75rem 0.5rem 5rem !important; }
+    .lol-wrapper { padding: 0 !important; }
+    .lol-header { padding: 1rem 1rem 0.75rem !important; }
+
+    /* Botones de acción en modo detallado */
+    .lol-action-col a, .lol-action-col button {
+        min-height: 44px;
+        font-size: 0.65rem !important;
+    }
+
+    /* Grid 4 botones: 2×2 en pantallas muy estrechas */
+    .hero-gym > div[style*="grid-template-columns: repeat(4"],
+    .hero-hyrox > div[style*="grid-template-columns: repeat(4"] {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+
+    /* Tabs gym/hyrox: tamaño touch */
+    .mode-btn { min-height: 44px; font-size: 13px !important; }
+
+    /* Macros: texto legible */
+    .nut-panel { font-size: 12px; }
+
+    /* Stats footer: legible en móvil */
+    .lol-stats-grid { gap: 0.5rem; }
+    .lol-stat-val { font-size: 1.4rem !important; }
+    .lol-stat-lbl { font-size: 0.55rem !important; }
+}
+
+@media (max-width: 360px) {
+    /* 4 botones → 2 columnas en pantallas muy pequeñas */
+    div[style*="grid-template-columns: repeat(4, 1fr)"] {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+}
 </style>
 
 <div id="full-mode-container" class="view-hidden" style="min-height: 100vh; background: #010A13; padding: 1.25rem 1rem 4rem;">
@@ -2263,6 +2316,14 @@
                     <a href="/nutricion/mi-nutricion/"
                        style="display:flex;align-items:center;justify-content:center;padding:10px;background:transparent;border:1px solid rgba(0,255,200,0.3);color:#00ffc8;font-family:'Cinzel',serif;font-size:0.62rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;text-decoration:none;text-align:center;clip-path:polygon(4px 0%,calc(100% - 4px) 0%,100% 4px,100% calc(100% - 4px),calc(100% - 4px) 100%,4px 100%,0% calc(100% - 4px),0% 4px);transition:all .2s;">
                         MI NUTRICIÓN
+                    </a>
+                    <a href="{% url 'entrenos:registrar_actividad_libre' cliente.id %}"
+                       style="display:flex;align-items:center;justify-content:center;padding:10px;background:rgba(6,182,212,0.12);border:1px solid rgba(6,182,212,0.45);color:#06b6d4;font-family:'Cinzel',serif;font-size:0.62rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;text-decoration:none;text-align:center;clip-path:polygon(4px 0%,calc(100% - 4px) 0%,100% 4px,100% calc(100% - 4px),calc(100% - 4px) 100%,4px 100%,0% calc(100% - 4px),0% 4px);transition:all .2s;">
+                        ➕ AÑADIR
+                    </a>
+                    <a href="{% url 'entrenos:timeline_atleta' cliente.id %}"
+                       style="display:flex;align-items:center;justify-content:center;padding:10px;background:transparent;border:1px solid rgba(6,182,212,0.25);color:rgba(6,182,212,0.7);font-family:'Cinzel',serif;font-size:0.62rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;text-decoration:none;text-align:center;clip-path:polygon(4px 0%,calc(100% - 4px) 0%,100% 4px,100% calc(100% - 4px),calc(100% - 4px) 100%,4px 100%,0% calc(100% - 4px),0% 4px);transition:all .2s;">
+                        📅 TIMELINE
                     </a>
                 </div>
             </div>

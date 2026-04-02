@@ -22,3 +22,21 @@ def sum_volumen(series):
     except (AttributeError, TypeError) as e:
         # Manejar el caso donde series no es iterable o los objetos no tienen los atributos esperados
         return 0
+
+
+@register.filter(name='tipo_icono')
+def tipo_icono(tipo):
+    """Devuelve el emoji correspondiente al tipo de actividad."""
+    iconos = {
+        'gym':           '🏋️',
+        'hyrox':         '⚡',
+        'carrera':       '🏃',
+        'ciclismo':      '🚴',
+        'remo':          '🚣',
+        'futbol':        '⚽',
+        'natacion':      '🏊',
+        'yoga':          '🧘',
+        'estiramientos': '🤸',
+        'otro':          '🎯',
+    }
+    return iconos.get(tipo, '🎯')
