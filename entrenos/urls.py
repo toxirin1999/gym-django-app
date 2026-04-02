@@ -38,6 +38,9 @@ urlpatterns = [
     # API para persistir sustituciones en caliente
     path('api/cliente/<int:cliente_id>/save-hot-swap/', views.api_save_hot_swap, name='api_save_hot_swap'),
 
+    # API para reportar molestia intra-entreno
+    path('api/cliente/<int:cliente_id>/reportar-molestia/', views.api_reportar_molestia, name='api_reportar_molestia'),
+
     # ============================================================================
     # URLs DE LIFTIN (Se mantienen)
     # ============================================================================

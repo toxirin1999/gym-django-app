@@ -323,14 +323,31 @@ def cancelar_objetivo(request, objective_id):
     return redirect('hyrox:dashboard')
 
 @login_required
-def registrar_entrenamiento(request, objective_id):
+def regenerar_plan(request, objective_id):
+    """Elimina todas las sesiones planificadas futuras y regenera el plan completo."""
     objetivo = get_object_or_404(HyroxObjective, id=objective_id, cliente=request.user.cliente_perfil)
     hoy = timezone.now().date()
-    sesion_planificada = HyroxSession.objects.filter(
-        objective=objetivo,
-        fecha=hoy,
-        estado='planificado'
-    ).first()
+    eliminadas = HyroxSession.objects.filter(objective=objetivo, estado='planificado', fecha__gte=hoy).delete()
+    HyroxTrainingEngine.generate_training_plan(objetivo)
+    messages.success(request, "Plan regenerado correctamente con el nuevo motor de entrenamiento.")
+    return redirect('hyrox:dashboard')
+
+
+@login_required
+def registrar_entrenamiento(request, objective_id, session_id=None):
+    objetivo = get_object_or_404(HyroxObjective, id=objective_id, cliente=request.user.cliente_perfil)
+    hoy = timezone.now().date()
+
+    # Si se pasa un session_id explícito, cargamos esa sesión concreta;
+    # si no, buscamos la sesión de hoy (comportamiento previo para el botón "Registrar Entreno")
+    if session_id:
+        sesion_planificada = get_object_or_404(HyroxSession, id=session_id, objective=objetivo)
+    else:
+        sesion_planificada = HyroxSession.objects.filter(
+            objective=objetivo,
+            fecha=hoy,
+            estado='planificado'
+        ).first()
 
     if request.method == 'POST':
         form = HyroxSessionNotesForm(request.POST)

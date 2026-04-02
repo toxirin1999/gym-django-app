@@ -181,6 +181,7 @@ class Cliente(models.Model):
 
     # Campos físicos
     peso_corporal = models.FloatField(null=True, blank=True, help_text="kg")
+    altura_cm = models.FloatField(null=True, blank=True, help_text="cm")
     grasa_corporal = models.FloatField(null=True, blank=True, help_text="%")
     cintura = models.FloatField(null=True, blank=True, help_text="cm")
     pecho = models.FloatField(null=True, blank=True, help_text="cm")

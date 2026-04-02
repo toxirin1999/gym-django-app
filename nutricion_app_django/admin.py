@@ -1,8 +1,57 @@
 from django.contrib import admin
 from .models import (
     UserProfile, CalculoNivel1, CalculoNivel2, ProgresoNivel,
-    SeguimientoPeso, ConfiguracionNivel3, ConfiguracionNivel4, ConfiguracionNivel5
+    SeguimientoPeso, ConfiguracionNivel3, ConfiguracionNivel4, ConfiguracionNivel5,
+    PerfilNutricional, TargetNutricionalDiario, CheckNutricionalDiario,
+    RegistroBloques, InformeOptimizacion, AjusteNutricional,
 )
+
+
+@admin.register(PerfilNutricional)
+class PerfilNutricionalAdmin(admin.ModelAdmin):
+    list_display = ('cliente', 'fase', 'altura_cm', 'grasa_corporal_pct', 'masa_magra_kg', 'updated_at')
+    list_filter = ('fase',)
+    readonly_fields = ('grasa_corporal_pct', 'masa_magra_kg', 'updated_at')
+    search_fields = ('cliente__nombre',)
+
+
+@admin.register(TargetNutricionalDiario)
+class TargetNutricionalDiarioAdmin(admin.ModelAdmin):
+    list_display = ('cliente', 'fecha', 'tipo_sesion', 'bloques_proteina', 'bloques_carbos', 'bloques_grasas')
+    list_filter = ('tipo_sesion', 'fecha')
+    search_fields = ('cliente__nombre',)
+
+
+@admin.register(CheckNutricionalDiario)
+class CheckNutricionalDiarioAdmin(admin.ModelAdmin):
+    list_display = ('cliente', 'fecha', 'cumplimiento_pct', 'fatiga_percibida', 'calidad_sueno', 'energia_entreno')
+    list_filter = ('fecha',)
+    search_fields = ('cliente__nombre',)
+    readonly_fields = ('cumplimiento_pct',)
+
+
+@admin.register(RegistroBloques)
+class RegistroBloquesAdmin(admin.ModelAdmin):
+    list_display = ('cliente', 'fecha', 'comida', 'bloques_proteina', 'bloques_carbos', 'bloques_grasas', 'es_comodin')
+    list_filter = ('comida', 'fecha', 'es_comodin')
+    search_fields = ('cliente__nombre',)
+
+
+@admin.register(InformeOptimizacion)
+class InformeOptimizacionAdmin(admin.ModelAdmin):
+    list_display = ('cliente', 'semana', 'escenario', 'cumplimiento_semana_pct',
+                    'ajuste_bloques_carbos', 'ajuste_bloques_grasas', 'estado')
+    list_filter = ('escenario', 'estado', 'semana')
+    search_fields = ('cliente__nombre',)
+    readonly_fields = ('creado_en',)
+
+
+@admin.register(AjusteNutricional)
+class AjusteNutricionalAdmin(admin.ModelAdmin):
+    list_display = ('cliente', 'fecha', 'motivo', 'carbos_anterior', 'carbos_nuevo', 'aplica_a')
+    list_filter = ('motivo', 'fecha')
+    search_fields = ('cliente__nombre',)
+    readonly_fields = ('fecha',)
 
 @admin.register(UserProfile)
 class UserProfileAdmin(admin.ModelAdmin):

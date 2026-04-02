@@ -3546,6 +3546,21 @@ def vista_entrenamiento_activo(request, cliente_id):
         messages.error(request, f"Error al cargar los datos del entrenamiento: {e}")
         return redirect('entrenos:vista_plan_anual', cliente_id=cliente.id)
 
+    # Construir resumen bio para el banner del template
+    bio_adjustments = []
+    for ej in ejercicios_planificados:
+        if ej.get('is_hot_substituted'):
+            bio_adjustments.append({
+                'tipo': 'sustitucion',
+                'mensaje': f"{ej.get('original_name', '')} → {ej.get('nombre', '')} (restricción: {ej.get('hot_sub_tag', '')})"
+            })
+        if ej.get('is_bio_blocked'):
+            bio_adjustments.append({
+                'tipo': 'bloqueo',
+                'mensaje': f"{ej.get('nombre', '')} bloqueado por restricción: {ej.get('bio_blocked_tag', '')}"
+            })
+    vol_mod_pct = int(vol_mod * 100)
+
     context = {
         'cliente': cliente,
         'fecha': fecha_para_template,
@@ -3554,6 +3569,11 @@ def vista_entrenamiento_activo(request, cliente_id):
         'leyenda_rpe': leyenda_rpe,
         'is_in_transition': bio_readiness.get('is_in_transition', False),
         'transition_days_left': bio_readiness.get('transition_days_left', 0),
+        'vol_mod': vol_mod,
+        'vol_mod_pct': vol_mod_pct,
+        'bio_score': bio_readiness.get('score', 100),
+        'bio_adjustments': bio_adjustments,
+        'has_bio_adjustments': vol_mod < 1.0 or bool(bio_adjustments),
     }
 
     # Añadir contexto de gamificación (sin cambios)
@@ -3688,13 +3708,24 @@ def guardar_entrenamiento_activo(request, cliente_id):
                 is_recovery_load_str = request.POST.get(f'{form_id}_is_recovery_load', 'false').lower()
                 is_recovery_load = is_recovery_load_str == 'true'
 
+                # Extraer datos de molestia reportada intra-entreno
+                molestia_reportada = request.POST.get(f'{form_id}_molestia_reportada', 'false').lower() == 'true'
+                molestia_zona = request.POST.get(f'{form_id}_molestia_zona', '')
+                molestia_sev_str = request.POST.get(f'{form_id}_molestia_severidad', '')
+                molestia_severidad = int(molestia_sev_str) if molestia_sev_str.isdigit() else None
+                molestia_descripcion = request.POST.get(f'{form_id}_molestia_descripcion', '')
+
                 ej_realizado = EjercicioRealizado.objects.create(
                     entreno=entreno, nombre_ejercicio=ejercicio_nombre,
                     peso_kg=peso_promedio, series=len(series_data_para_guardar),
                     repeticiones=reps_promedio, fuente_datos='manual',
                     grupo_muscular=grupo, completado=True,
                     rpe=rpe_promedio_ejercicio,
-                    is_recovery_load=is_recovery_load
+                    is_recovery_load=is_recovery_load,
+                    molestia_reportada=molestia_reportada,
+                    molestia_zona=molestia_zona,
+                    molestia_severidad=molestia_severidad,
+                    molestia_descripcion=molestia_descripcion,
                 )
 
                 # CREAR SERIES REALIZADAS INDIVIDUALES (Importante para gráficas de detalle)
@@ -6654,4 +6685,138 @@ def api_save_hot_swap(request, cliente_id):
 
     except Exception as e:
         logger.warning("Error en api_save_hot_swap: %s", e)
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# MOLESTIA EN TIEMPO REAL
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Mapa zona corporal → risk_tags que deben bloquearse
+ZONA_TAGS_MAP = {
+    'hombro':  ['empuje_horizontal', 'empuje_vertical', 'rotacion_interna_hombro'],
+    'rodilla': ['flexion_rodilla_profunda', 'impacto_vertical', 'triple_extension_explosiva'],
+    'cadera':  ['flexion_cadera_profunda', 'triple_extension_explosiva', 'bisagra_cadera_cargada'],
+    'lumbar':  ['flexion_lumbar', 'carga_axial', 'bisagra_cadera_cargada'],
+    'muñeca':  ['agarre_pesado', 'apoyo_muñeca'],
+    'cuello':  ['carga_cervical'],
+    'tobillo': ['impacto_vertical', 'dorsiflexion_tobillo'],
+    'pecho':   ['empuje_horizontal'],
+    'codo':    ['traccion_codo', 'empuje_codo'],
+    'otro':    [],
+}
+
+SEVERIDAD_FASE = {
+    2: 'SUB_AGUDA',
+    3: 'AGUDA',
+}
+SEVERIDAD_GRAVEDAD = {
+    2: 4,
+    3: 7,
+}
+
+
+@require_POST
+def api_reportar_molestia(request, cliente_id):
+    """
+    Recibe un reporte de molestia intra-entreno.
+    - Severidad 1 (leve): solo registra, no crea UserInjury.
+    - Severidad 2-3: crea/actualiza UserInjury y retorna alternativas de ejercicio.
+    """
+    from hyrox.models import UserInjury
+    from analytics.planificador_helms.utils.helpers import (
+        obtener_sustituto_en_caliente,
+        buscar_ejercicio_por_nombre,
+    )
+
+    try:
+        cliente = get_object_or_404(Cliente, id=cliente_id)
+        data = json.loads(request.body)
+
+        ejercicio_nombre = data.get('ejercicio_nombre', '').strip()
+        zona = data.get('zona', 'otro').lower().strip()
+        severidad = int(data.get('severidad', 1))
+        descripcion = data.get('descripcion', '').strip()
+
+        tags_zona = ZONA_TAGS_MAP.get(zona, [])
+        alternativas = []
+        lesion_creada = False
+
+        # ── Severidad 2-3: crear/actualizar UserInjury ──────────────────
+        if severidad >= 2 and tags_zona:
+            fase_str = SEVERIDAD_FASE.get(severidad, 'SUB_AGUDA')
+            gravedad_val = SEVERIDAD_GRAVEDAD.get(severidad, 4)
+
+            # Buscar lesión activa en la misma zona para no duplicar
+            lesion_existente = UserInjury.objects.filter(
+                cliente=cliente,
+                zona_afectada__icontains=zona,
+                activa=True,
+            ).first()
+
+            if lesion_existente:
+                # Escalar si la nueva severidad es mayor
+                fases_orden = ['RECUPERADO', 'RETORNO', 'SUB_AGUDA', 'AGUDA']
+                if fases_orden.index(fase_str) > fases_orden.index(lesion_existente.fase):
+                    lesion_existente.fase = fase_str
+                    lesion_existente.gravedad = max(lesion_existente.gravedad, gravedad_val)
+                    if descripcion:
+                        lesion_existente.notas_medicas = (lesion_existente.notas_medicas or '') + f'\n[{zona.title()}] {descripcion}'
+                    lesion_existente.save()
+                lesion_creada = True
+            else:
+                notas = f'Reportada durante entrenamiento activo. Ejercicio: {ejercicio_nombre}.'
+                if descripcion:
+                    notas += f' Descripción: {descripcion}'
+                UserInjury.objects.create(
+                    cliente=cliente,
+                    zona_afectada=zona.title(),
+                    fase=fase_str,
+                    gravedad=gravedad_val,
+                    activa=True,
+                    tags_restringidos=tags_zona,
+                    notas_medicas=notas,
+                )
+                lesion_creada = True
+
+        # ── Buscar alternativas siempre que haya tags ────────────────────
+        if ejercicio_nombre and tags_zona:
+            try:
+                tags_bloqueados = set(tags_zona)
+                sustituto = obtener_sustituto_en_caliente(ejercicio_nombre, tags_bloqueados)
+                if sustituto:
+                    alternativas.append({
+                        'nombre': sustituto.get('nombre', ''),
+                        'patron': sustituto.get('patron', ''),
+                        'motivo': f'Sin carga en {zona}',
+                    })
+                # Buscar más opciones con tags parciales
+                for tag in tags_zona[:2]:
+                    alt = obtener_sustituto_en_caliente(ejercicio_nombre, {tag})
+                    if alt and alt.get('nombre') not in [a['nombre'] for a in alternativas]:
+                        alternativas.append({
+                            'nombre': alt.get('nombre', ''),
+                            'patron': alt.get('patron', ''),
+                            'motivo': f'Evita {tag.replace("_", " ")}',
+                        })
+                        if len(alternativas) >= 3:
+                            break
+            except Exception as e:
+                logger.warning("Error buscando alternativas molestia: %s", e)
+
+        return JsonResponse({
+            'status': 'ok',
+            'severidad': severidad,
+            'zona': zona,
+            'lesion_creada': lesion_creada,
+            'alternativas': alternativas,
+            'mensaje': {
+                1: 'Molestia leve anotada. Continúa con precaución.',
+                2: 'Molestia moderada registrada. Se ha creado una restricción activa.',
+                3: 'Dolor agudo registrado. Se recomienda parar este ejercicio.',
+            }.get(severidad, ''),
+        })
+
+    except Exception as e:
+        logger.warning("Error en api_reportar_molestia: %s", e)
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)

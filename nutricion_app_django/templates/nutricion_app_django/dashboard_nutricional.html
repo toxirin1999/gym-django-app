@@ -1,0 +1,818 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Mi Nutrición{% endblock %}
+
+{% block extra_css %}
+<style>
+  :root {
+    --nc: #00ffc8;       /* cyan nutrición */
+    --nb: #00bfff;       /* blue */
+    --ng: #C8AA6E;       /* gold hextech */
+    --nr: #f87171;       /* rojo carga */
+    --ny: #fbbf24;       /* amarillo moderado */
+    --ngr: #4ade80;      /* verde descarga */
+    --surface: rgba(10,22,40,0.9);
+    --surface2: rgba(5,14,28,0.95);
+    --border: rgba(0,255,200,0.15);
+    --border-gold: rgba(200,170,110,0.2);
+  }
+
+  /* ── Layout ───────────────────────────────────────────── */
+  .nut-wrap { max-width: 860px; margin: 0 auto; padding: 20px 16px 40px; }
+
+  /* ── Cards ────────────────────────────────────────────── */
+  .nut-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    backdrop-filter: blur(14px);
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+  .nut-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(0,255,200,0.03) 0%, transparent 60%);
+    pointer-events: none;
+  }
+
+  /* ── Tipografía ───────────────────────────────────────── */
+  .nut-label {
+    font-family: 'Cinzel', serif;
+    font-size: 0.65rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: rgba(0,255,200,0.5);
+    margin-bottom: 3px;
+  }
+  .nut-section-title {
+    font-family: 'Cinzel', serif;
+    background: linear-gradient(90deg, var(--nc), var(--nb));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    font-size: 0.8rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+
+  /* ── Header ───────────────────────────────────────────── */
+  .nut-header {
+    margin-bottom: 24px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .nut-h1 {
+    font-family: 'Cinzel', serif;
+    font-size: clamp(1.4rem, 4vw, 2rem);
+    font-weight: 700;
+    background: linear-gradient(90deg, #00ffc8, #00bfff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    line-height: 1.1;
+    margin: 0;
+  }
+  .nut-date {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.75rem;
+    color: #4a6080;
+    margin-top: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  /* ── Día badge ────────────────────────────────────────── */
+  .dia-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-family: 'Cinzel', serif;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    clip-path: polygon(6px 0%,calc(100% - 6px) 0%,100% 6px,100% calc(100% - 6px),calc(100% - 6px) 100%,6px 100%,0% calc(100% - 6px),0% 6px);
+  }
+  .dia-carga    { background: rgba(239,68,68,0.12);  color: #f87171; border: 1px solid rgba(239,68,68,0.35); box-shadow: 0 0 16px rgba(239,68,68,0.08); }
+  .dia-moderado { background: rgba(251,191,36,0.1);  color: #fbbf24; border: 1px solid rgba(251,191,36,0.35); box-shadow: 0 0 16px rgba(251,191,36,0.08); }
+  .dia-descarga { background: rgba(34,197,94,0.1);   color: #4ade80; border: 1px solid rgba(34,197,94,0.35); box-shadow: 0 0 16px rgba(34,197,94,0.08); }
+
+  /* ── Porciones ────────────────────────────────────────── */
+  .porciones-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  @media (max-width: 500px) {
+    .porciones-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  .porcion-card {
+    border-radius: 10px;
+    padding: 14px 8px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.2s;
+  }
+  .porcion-card:hover { transform: translateY(-2px); }
+  .porcion-card.pc-proteina {
+    background: rgba(0,255,200,0.06);
+    border: 1px solid rgba(0,255,200,0.2);
+  }
+  .porcion-card.pc-carbos {
+    background: rgba(251,191,36,0.06);
+    border: 1px solid rgba(251,191,36,0.2);
+  }
+  .porcion-card.pc-grasas {
+    background: rgba(200,170,110,0.06);
+    border: 1px solid rgba(200,170,110,0.2);
+  }
+  .porcion-card.pc-verduras {
+    background: rgba(74,222,128,0.06);
+    border: 1px solid rgba(74,222,128,0.2);
+  }
+  .porcion-icon {
+    font-size: 1.4rem;
+    margin-bottom: 8px;
+    display: block;
+  }
+  .porcion-num {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 2.2rem;
+    line-height: 1;
+    font-weight: 700;
+  }
+  .pc-proteina .porcion-num { color: var(--nc); }
+  .pc-carbos   .porcion-num { color: var(--ny); }
+  .pc-grasas   .porcion-num { color: var(--ng); }
+  .pc-verduras .porcion-num { color: var(--ngr); }
+  .porcion-label {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-top: 5px;
+  }
+  .pc-proteina .porcion-label { color: rgba(0,255,200,0.55); }
+  .pc-carbos   .porcion-label { color: rgba(251,191,36,0.55); }
+  .pc-grasas   .porcion-label { color: rgba(200,170,110,0.55); }
+  .pc-verduras .porcion-label { color: rgba(74,222,128,0.55); }
+
+  /* Carbos destacado en días de entrenamiento */
+  .pc-carbos.carbos-destacado {
+    background: rgba(251,191,36,0.12);
+    border: 2px solid rgba(251,191,36,0.5);
+    box-shadow: 0 0 22px rgba(251,191,36,0.14), inset 0 0 12px rgba(251,191,36,0.04);
+    transform: scale(1.04);
+    z-index: 1;
+  }
+  .pc-carbos.carbos-destacado .porcion-num { font-size: 2.6rem; }
+  .pc-carbos.carbos-destacado::after {
+    content: 'VARIABLE';
+    position: absolute;
+    top: 5px; right: 6px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.5rem;
+    letter-spacing: 0.12em;
+    color: rgba(251,191,36,0.5);
+  }
+
+  /* Verduras círculos */
+  .verduras-circles {
+    display: flex;
+    justify-content: center;
+    gap: 5px;
+    margin-bottom: 6px;
+  }
+  .verd-dot {
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    border: 1.5px solid rgba(74,222,128,0.4);
+    background: rgba(74,222,128,0.06);
+    transition: all 0.2s;
+  }
+  .verd-dot.filled {
+    background: rgba(74,222,128,0.35);
+    border-color: #4ade80;
+    box-shadow: 0 0 6px rgba(74,222,128,0.3);
+  }
+
+  .proteina-range {
+    font-family: 'Share Tech Mono', monospace;
+    color: rgba(0,255,200,0.3);
+    font-size: 0.7rem;
+    margin-top: 4px;
+  }
+
+  /* ── Check-in ─────────────────────────────────────────── */
+  .check-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 11px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+  }
+  .check-row:last-of-type { border-bottom: none; }
+  .check-label {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #94a3b8;
+    letter-spacing: 0.02em;
+  }
+
+  /* Toggle Sí/No — usar div, no button, para evitar override global form button */
+  .toggle-group {
+    display: flex;
+    gap: 4px;
+  }
+  .toggle-btn {
+    padding: 5px 14px;
+    border-radius: 5px;
+    border: 1px solid rgba(255,255,255,0.1);
+    background: rgba(255,255,255,0.03);
+    color: #4a6080;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.15s;
+    user-select: none;
+    display: inline-flex;
+    align-items: center;
+  }
+  .toggle-btn:hover { border-color: rgba(0,255,200,0.3); color: #94a3b8; }
+  .toggle-btn.active-si {
+    background: rgba(74,222,128,0.15) !important;
+    border: 1px solid rgba(74,222,128,0.5) !important;
+    color: #4ade80 !important;
+    box-shadow: 0 0 8px rgba(74,222,128,0.1);
+  }
+  .toggle-btn.active-no {
+    background: rgba(239,68,68,0.12) !important;
+    border: 1px solid rgba(239,68,68,0.4) !important;
+    color: #f87171 !important;
+    box-shadow: 0 0 8px rgba(239,68,68,0.08);
+  }
+
+  /* Energía dots */
+  .energia-dots {
+    display: flex;
+    gap: 6px;
+  }
+  .energia-dot {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 1px solid rgba(0,255,200,0.2);
+    background: rgba(0,255,200,0.04);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.7rem;
+    color: #4a6080;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .energia-dot:hover { border-color: rgba(0,255,200,0.5); color: var(--nc); }
+  .energia-dot.active {
+    background: rgba(0,255,200,0.15);
+    border-color: var(--nc);
+    color: var(--nc);
+    box-shadow: 0 0 8px rgba(0,255,200,0.15);
+  }
+
+  /* Check completado banner */
+  .check-ok-banner {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(74,222,128,0.08);
+    border: 1px solid rgba(74,222,128,0.25);
+    border-radius: 8px;
+    padding: 8px 14px;
+    margin-bottom: 14px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.75rem;
+    color: #4ade80;
+    letter-spacing: 0.06em;
+  }
+
+  /* Botón guardar */
+  .save-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: linear-gradient(135deg, var(--nc), var(--nb));
+    color: #030d1a;
+    font-family: 'Cinzel', serif;
+    font-weight: 700;
+    font-size: 0.8rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 11px 28px;
+    border: none;
+    border-radius: 7px;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.15s;
+    clip-path: polygon(6px 0%,calc(100% - 6px) 0%,100% 6px,100% calc(100% - 6px),calc(100% - 6px) 100%,6px 100%,0% calc(100% - 6px),0% 6px);
+  }
+  .save-btn:hover { opacity: 0.88; transform: translateY(-1px); }
+  .save-btn:active { transform: translateY(0); }
+
+  /* ── Stats composición ────────────────────────────────── */
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .stat-block {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 8px;
+    padding: 12px 10px;
+    text-align: center;
+  }
+  .stat-val {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 1.3rem;
+    color: var(--nc);
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+  .stat-lbl {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 0.68rem;
+    font-weight: 600;
+    color: #4a6080;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  /* ── Ajustes ──────────────────────────────────────────── */
+  .ajuste-row {
+    background: rgba(251,191,36,0.04);
+    border-left: 2px solid rgba(251,191,36,0.4);
+    border-radius: 0 6px 6px 0;
+    padding: 10px 14px;
+    margin-bottom: 8px;
+    font-family: 'Rajdhani', sans-serif;
+    color: #94a3b8;
+    font-size: 0.88rem;
+    line-height: 1.5;
+  }
+  .ajuste-fecha {
+    font-family: 'Share Tech Mono', monospace;
+    color: #4a6080;
+    font-size: 0.68rem;
+    display: block;
+    margin-bottom: 4px;
+  }
+
+  /* ── Layout principal ─────────────────────────────────── */
+  .nut-main-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+  @media (max-width: 640px) {
+    .nut-main-grid { grid-template-columns: 1fr; }
+    .stats-row { grid-template-columns: repeat(3,1fr); }
+  }
+
+  /* ── Separador decorativo ─────────────────────────────── */
+  .nut-divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(0,255,200,0.2), transparent);
+    margin: 20px 0;
+  }
+
+  /* ── Animaciones entrada ──────────────────────────────── */
+  @keyframes nutFadeUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .nut-anim { animation: nutFadeUp 0.4s ease both; }
+  @keyframes urgencePulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(251,191,36,0); }
+    50%       { box-shadow: 0 0 10px 2px rgba(251,191,36,0.2); }
+  }
+  .nut-anim-1 { animation-delay: 0.05s; }
+  .nut-anim-2 { animation-delay: 0.12s; }
+  .nut-anim-3 { animation-delay: 0.19s; }
+  .nut-anim-4 { animation-delay: 0.26s; }
+  .nut-anim-5 { animation-delay: 0.33s; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="nut-wrap">
+
+  <!-- ── Header ─────────────────────────────────────────── -->
+  <div class="nut-header nut-anim nut-anim-1">
+    <div>
+      <h1 class="nut-h1">Mi Nutrición</h1>
+      <p class="nut-date">{{ hoy|date:"l, j \d\e F \d\e Y" }}</p>
+    </div>
+    {% if target %}
+      <span class="dia-badge dia-{{ target.tipo_dia }}">
+        {% if target.tipo_dia == 'carga' %}⚡{% elif target.tipo_dia == 'moderado' %}◈{% else %}○{% endif %}
+        {{ target.get_tipo_dia_display }}
+      </span>
+    {% endif %}
+  </div>
+
+  <!-- ── Objetivo del día (v2 — Sistema de Bloques) ──────── -->
+  <div class="nut-card nut-anim nut-anim-2" style="margin-bottom:16px;">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
+      <p class="nut-section-title" style="margin:0;">Bloques de hoy</p>
+      {% if target %}
+      <span style="font-size:0.72rem; color:rgba(0,255,200,0.5); font-family:'Share Tech Mono',monospace; letter-spacing:0.06em;">
+        {{ target.get_tipo_sesion_display|upper }}
+      </span>
+      {% endif %}
+    </div>
+
+    {% if target %}
+      <div class="porciones-grid">
+        <div class="porcion-card pc-proteina">
+          <div class="porcion-num" style="color:#22d3ee;">{{ target.bloques_proteina }}</div>
+          <div class="porcion-label">Prot · {{ target.proteina_g_ref }}g</div>
+        </div>
+        <div class="porcion-card pc-carbos{% if target.tipo_dia == 'carga' or target.tipo_dia == 'moderado' %} carbos-destacado{% endif %}">
+          <div class="porcion-num" style="color:#f59e0b;">{{ target.bloques_carbos }}</div>
+          <div class="porcion-label">Carb · {{ target.carbos_g_ref }}g</div>
+        </div>
+        <div class="porcion-card pc-grasas">
+          <div class="porcion-num" style="color:#a78bfa;">{{ target.bloques_grasas }}</div>
+          <div class="porcion-label">Gras · {{ target.grasas_g_ref }}g</div>
+        </div>
+        <div class="porcion-card pc-verduras">
+          <div class="verduras-circles">
+            {% for i in "12345" %}{% if forloop.counter <= target.bloques_verduras %}<span class="verd-dot{% if form.verduras_cumplidas.value == True or form.verduras_cumplidas.value == 'True' %} filled{% endif %}"></span>{% endif %}{% endfor %}
+          </div>
+          <div class="porcion-label">Verduras · {{ target.bloques_verduras }}/día</div>
+        </div>
+      </div>
+
+      <!-- Progreso del día desde registros -->
+      {% if totales_hoy %}
+      <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:12px; font-size:0.75rem; text-align:center;">
+        <div style="color:#22d3ee;">{{ totales_hoy.P|floatformat:1 }} / {{ target.bloques_proteina }} P</div>
+        <div style="color:#f59e0b;">{{ totales_hoy.C|floatformat:1 }} / {{ target.bloques_carbos }} C</div>
+        <div style="color:#a78bfa;">{{ totales_hoy.G|floatformat:1 }} / {{ target.bloques_grasas }} G</div>
+      </div>
+      {% endif %}
+
+      <div style="margin-top:14px; display:flex; gap:8px; flex-wrap:wrap;">
+        <a href="{% url 'nutricion_app_django:calculadora_bloques' %}"
+           style="display:inline-block; padding:8px 20px; border:1px solid rgba(0,255,200,0.4);
+                  border-radius:8px; color:var(--nc); font-size:0.82rem; text-decoration:none;
+                  background:rgba(0,255,200,0.07); transition:all 0.15s;"
+           onmouseover="this.style.background='rgba(0,255,200,0.15)'"
+           onmouseout="this.style.background='rgba(0,255,200,0.07)'">
+          Registrar comida →
+        </a>
+        {% if informe_urgente %}
+        <a href="{% url 'nutricion_app_django:informe_semanal' %}"
+           style="display:inline-flex; align-items:center; gap:6px; padding:8px 18px;
+                  border:1px solid rgba(251,191,36,0.6); border-radius:8px;
+                  color:#fbbf24; font-size:0.82rem; text-decoration:none;
+                  background:rgba(251,191,36,0.12); transition:all 0.15s;
+                  animation:urgencePulse 2s ease infinite;"
+           onmouseover="this.style.background='rgba(251,191,36,0.22)'"
+           onmouseout="this.style.background='rgba(251,191,36,0.12)'">
+          <span style="width:7px;height:7px;border-radius:50%;background:#fbbf24;box-shadow:0 0 6px #fbbf24;flex-shrink:0;"></span>
+          Informe semanal
+        </a>
+        {% else %}
+        <a href="{% url 'nutricion_app_django:informe_semanal' %}"
+           style="display:inline-block; padding:8px 18px; border:1px solid rgba(200,170,110,0.35);
+                  border-radius:8px; color:var(--ng); font-size:0.82rem; text-decoration:none;
+                  background:rgba(200,170,110,0.06); transition:all 0.15s;"
+           onmouseover="this.style.background='rgba(200,170,110,0.14)'"
+           onmouseout="this.style.background='rgba(200,170,110,0.06)'">
+          Informe semanal
+        </a>
+        {% endif %}
+        <a href="{% url 'nutricion_app_django:monitor_progreso' %}"
+           style="display:inline-block; padding:8px 18px; border:1px solid rgba(0,191,255,0.3);
+                  border-radius:8px; color:var(--nb); font-size:0.82rem; text-decoration:none;
+                  background:rgba(0,191,255,0.05); transition:all 0.15s;"
+           onmouseover="this.style.background='rgba(0,191,255,0.12)'"
+           onmouseout="this.style.background='rgba(0,191,255,0.05)'">
+          Monitor
+        </a>
+        <a href="{% url 'nutricion_app_django:manifiesto_atleta' %}"
+           style="display:inline-block; padding:8px 18px; border:1px solid rgba(124,92,252,0.3);
+                  border-radius:8px; color:#a78bfa; font-size:0.82rem; text-decoration:none;
+                  background:rgba(124,92,252,0.05); transition:all 0.15s;"
+           onmouseover="this.style.background='rgba(124,92,252,0.12)'"
+           onmouseout="this.style.background='rgba(124,92,252,0.05)'">
+          Manifiesto
+        </a>
+      </div>
+    {% else %}
+      <p style="color:#4a6080; font-family:'Rajdhani',sans-serif; font-size:0.9rem;">
+        No hay target generado para hoy.
+      </p>
+    {% endif %}
+  </div>
+
+  <!-- ── Grid check-in + composición ───────────────────── -->
+  <div class="nut-main-grid">
+
+    <!-- CHECK-IN -->
+    <div class="nut-card nut-anim nut-anim-3">
+      <p class="nut-section-title">Check-in de hoy</p>
+
+      {% if check_completado %}
+        <div class="check-ok-banner">
+          ✓ &nbsp;CHECK COMPLETADO
+        </div>
+      {% endif %}
+
+      <form method="post" novalidate id="checkinForm">
+        {% csrf_token %}
+
+        <!-- Bloques proteína -->
+        <div class="check-row">
+          <span class="check-label">Bloques proteína</span>
+          <div class="toggle-group" data-field="bloques_proteina_cumplidos">
+            <div class="toggle-btn {% if form.bloques_proteina_cumplidos.value == True or form.bloques_proteina_cumplidos.value == 'True' %}active-si{% endif %}" data-val="True">Sí</div>
+            <div class="toggle-btn {% if form.bloques_proteina_cumplidos.value == False or form.bloques_proteina_cumplidos.value == 'False' %}active-no{% endif %}" data-val="False">No</div>
+          </div>
+          <input type="hidden" name="bloques_proteina_cumplidos" value="{% if form.bloques_proteina_cumplidos.value == True or form.bloques_proteina_cumplidos.value == 'True' %}True{% elif form.bloques_proteina_cumplidos.value == False or form.bloques_proteina_cumplidos.value == 'False' %}False{% endif %}">
+        </div>
+
+        <!-- Bloques carbos -->
+        <div class="check-row">
+          <span class="check-label">Bloques carbos</span>
+          <div class="toggle-group" data-field="bloques_carbos_cumplidos">
+            <div class="toggle-btn {% if form.bloques_carbos_cumplidos.value == True or form.bloques_carbos_cumplidos.value == 'True' %}active-si{% endif %}" data-val="True">Sí</div>
+            <div class="toggle-btn {% if form.bloques_carbos_cumplidos.value == False or form.bloques_carbos_cumplidos.value == 'False' %}active-no{% endif %}" data-val="False">No</div>
+          </div>
+          <input type="hidden" name="bloques_carbos_cumplidos" value="{% if form.bloques_carbos_cumplidos.value == True or form.bloques_carbos_cumplidos.value == 'True' %}True{% elif form.bloques_carbos_cumplidos.value == False or form.bloques_carbos_cumplidos.value == 'False' %}False{% endif %}">
+        </div>
+
+        <!-- Bloques grasas -->
+        <div class="check-row">
+          <span class="check-label">Bloques grasas</span>
+          <div class="toggle-group" data-field="bloques_grasas_cumplidos">
+            <div class="toggle-btn {% if form.bloques_grasas_cumplidos.value == True or form.bloques_grasas_cumplidos.value == 'True' %}active-si{% endif %}" data-val="True">Sí</div>
+            <div class="toggle-btn {% if form.bloques_grasas_cumplidos.value == False or form.bloques_grasas_cumplidos.value == 'False' %}active-no{% endif %}" data-val="False">No</div>
+          </div>
+          <input type="hidden" name="bloques_grasas_cumplidos" value="{% if form.bloques_grasas_cumplidos.value == True or form.bloques_grasas_cumplidos.value == 'True' %}True{% elif form.bloques_grasas_cumplidos.value == False or form.bloques_grasas_cumplidos.value == 'False' %}False{% endif %}">
+        </div>
+
+        <!-- Verduras -->
+        <div class="check-row">
+          <span class="check-label">Verduras</span>
+          <div class="toggle-group" data-field="verduras_cumplidas">
+            <div class="toggle-btn {% if form.verduras_cumplidas.value == True or form.verduras_cumplidas.value == 'True' %}active-si{% endif %}" data-val="True">Sí</div>
+            <div class="toggle-btn {% if form.verduras_cumplidas.value == False or form.verduras_cumplidas.value == 'False' %}active-no{% endif %}" data-val="False">No</div>
+          </div>
+          <input type="hidden" name="verduras_cumplidas" value="{% if form.verduras_cumplidas.value == True or form.verduras_cumplidas.value == 'True' %}True{% elif form.verduras_cumplidas.value == False or form.verduras_cumplidas.value == 'False' %}False{% endif %}">
+        </div>
+
+        <!-- Hidratación -->
+        <div class="check-row">
+          <span class="check-label">Hidratación</span>
+          <div class="toggle-group" data-field="hidratacion_ok">
+            <div class="toggle-btn {% if form.hidratacion_ok.value == True or form.hidratacion_ok.value == 'True' %}active-si{% endif %}" data-val="True">Sí</div>
+            <div class="toggle-btn {% if form.hidratacion_ok.value == False or form.hidratacion_ok.value == 'False' %}active-no{% endif %}" data-val="False">No</div>
+          </div>
+          <input type="hidden" name="hidratacion_ok" value="{% if form.hidratacion_ok.value == True or form.hidratacion_ok.value == 'True' %}True{% elif form.hidratacion_ok.value == False or form.hidratacion_ok.value == 'False' %}False{% endif %}">
+        </div>
+
+        <!-- Hambre excesiva -->
+        <div class="check-row">
+          <span class="check-label">Hambre excesiva</span>
+          <div class="toggle-group" data-field="hambre_excesiva">
+            <div class="toggle-btn {% if form.hambre_excesiva.value == True or form.hambre_excesiva.value == 'True' %}active-si{% endif %}" data-val="True">Sí</div>
+            <div class="toggle-btn {% if form.hambre_excesiva.value == False or form.hambre_excesiva.value == 'False' %}active-no{% endif %}" data-val="False">No</div>
+          </div>
+          <input type="hidden" name="hambre_excesiva" value="{% if form.hambre_excesiva.value == True or form.hambre_excesiva.value == 'True' %}True{% elif form.hambre_excesiva.value == False or form.hambre_excesiva.value == 'False' %}False{% endif %}">
+        </div>
+
+        <!-- Fatiga percibida (1-10) -->
+        <div class="check-row">
+          <span class="check-label">Fatiga (1-10)</span>
+          <div class="energia-dots" id="fatigaDots">
+            {% for i in "1234567890" %}
+              <div class="energia-dot {% if forloop.counter <= form.fatiga_percibida.value|default:0 %}active{% endif %}"
+                   data-val="{{ forloop.counter }}" style="background:{% if forloop.counter <= 3 %}rgba(74,222,128,0.15){% elif forloop.counter <= 6 %}rgba(251,191,36,0.15){% else %}rgba(248,113,113,0.15){% endif %};">{{ forloop.counter }}</div>
+            {% endfor %}
+          </div>
+          <input type="hidden" name="fatiga_percibida" id="fatigaInput" value="{{ form.fatiga_percibida.value|default:'' }}">
+        </div>
+
+        <!-- Calidad sueño (1-10) -->
+        <div class="check-row">
+          <span class="check-label">Sueño (1-10)</span>
+          <div class="energia-dots" id="suenoDots">
+            {% for i in "1234567890" %}
+              <div class="energia-dot {% if forloop.counter <= form.calidad_sueno.value|default:0 %}active{% endif %}"
+                   data-val="{{ forloop.counter }}">{{ forloop.counter }}</div>
+            {% endfor %}
+          </div>
+          <input type="hidden" name="calidad_sueno" id="suenoInput" value="{{ form.calidad_sueno.value|default:'' }}">
+        </div>
+
+        <!-- Energía en el entreno (1-5) -->
+        <div class="check-row" style="border-bottom:none;">
+          <span class="check-label">Energía entreno</span>
+          <div class="energia-dots" id="energiaDots">
+            {% for i in "12345" %}
+              <div class="energia-dot {% if forloop.counter <= form.energia_entreno.value|default:0 %}active{% endif %}"
+                   data-val="{{ forloop.counter }}">{{ forloop.counter }}</div>
+            {% endfor %}
+          </div>
+          <input type="hidden" name="energia_entreno" id="energiaInput" value="{{ form.energia_entreno.value|default:'' }}">
+        </div>
+
+        <div style="margin-top:18px; display:flex; justify-content:flex-end;">
+          <button type="submit" class="save-btn">Guardar</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- COMPOSICIÓN + AJUSTES -->
+    <div style="display:flex; flex-direction:column; gap:14px;">
+
+      <!-- Composición corporal -->
+      <div class="nut-card nut-anim nut-anim-4">
+        <p class="nut-section-title">Composición corporal</p>
+        <div class="stats-row">
+          <div class="stat-block">
+            <div class="stat-val">{{ perfil.grasa_corporal_pct|floatformat:1 }}<span style="font-size:0.8rem;color:#4a6080">%</span></div>
+            <div class="stat-lbl">Grasa</div>
+          </div>
+          <div class="stat-block">
+            <div class="stat-val">{{ perfil.masa_magra_kg|floatformat:1 }}<span style="font-size:0.8rem;color:#4a6080"> kg</span></div>
+            <div class="stat-lbl">Masa magra</div>
+          </div>
+          <div class="stat-block">
+            <div class="stat-val">{{ peso_actual|default:"—" }}<span style="font-size:0.8rem;color:#4a6080"> kg</span></div>
+            <div class="stat-lbl">Peso</div>
+          </div>
+        </div>
+        <p style="color:#2d4060; font-family:'Share Tech Mono',monospace; font-size:0.65rem; margin-top:6px; letter-spacing:0.05em;">
+          NAVY METHOD · {{ perfil.updated_at|date:"d/m/Y" }}
+        </p>
+      </div>
+
+      <!-- Últimos ajustes -->
+      <div class="nut-card nut-anim nut-anim-5" style="flex:1;">
+        <p class="nut-section-title">Últimos ajustes</p>
+        {% if ajustes %}
+          {% for ajuste in ajustes %}
+            <div class="ajuste-row">
+              <span class="ajuste-fecha">{{ ajuste.fecha|date:"d/m/Y" }}</span>
+              {{ ajuste.mensaje_usuario }}
+            </div>
+          {% endfor %}
+        {% else %}
+          <p style="color:#2d4060; font-family:'Rajdhani',sans-serif; font-size:0.85rem; line-height:1.6;">
+            Sin ajustes todavía.<br>
+            <span style="font-size:0.8rem;">El algoritmo analiza cada lunes.</span>
+          </p>
+        {% endif %}
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── Tendencia de peso ───────────────────────────────── -->
+  {% if pesos %}
+  <div class="nut-card nut-anim nut-anim-5">
+    <p class="nut-section-title">Tendencia de peso — últimos 14 días</p>
+    <canvas id="pesosChart" height="70"></canvas>
+  </div>
+  {% endif %}
+
+</div>
+
+<!-- ── Scripts ─────────────────────────────────────────── -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+
+// Toggle Sí/No — los divs no están afectados por el CSS global "form button"
+document.querySelectorAll('.toggle-group').forEach(function(group) {
+  var field = group.dataset.field;
+  var hiddenInput = document.querySelector('input[name="' + field + '"]');
+  if (!hiddenInput) return;
+
+  group.querySelectorAll('.toggle-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      group.querySelectorAll('.toggle-btn').forEach(function(b) {
+        b.classList.remove('active-si', 'active-no');
+      });
+
+      var val = btn.dataset.val;
+      btn.classList.add(val === 'True' ? 'active-si' : 'active-no');
+      hiddenInput.value = val;
+    });
+  });
+});
+
+// Dot groups: fatiga, sueño, energía
+[
+  { dotsId: 'fatigaDots',  inputId: 'fatigaInput'  },
+  { dotsId: 'suenoDots',   inputId: 'suenoInput'   },
+  { dotsId: 'energiaDots', inputId: 'energiaInput' },
+].forEach(function(group) {
+  var dotsEl = document.getElementById(group.dotsId);
+  var input  = document.getElementById(group.inputId);
+  if (!dotsEl || !input) return;
+  var dots = dotsEl.querySelectorAll('.energia-dot');
+  dots.forEach(function(dot) {
+    dot.addEventListener('click', function() {
+      var val = parseInt(dot.dataset.val);
+      input.value = val;
+      dots.forEach(function(d) {
+        if (parseInt(d.dataset.val) <= val) {
+          d.classList.add('active');
+        } else {
+          d.classList.remove('active');
+        }
+      });
+    });
+  });
+});
+
+}); // DOMContentLoaded
+</script>
+
+{% if pesos %}
+<script>
+const labels = [{% for p in pesos %}"{{ p.fecha|date:'d/m' }}"{% if not forloop.last %},{% endif %}{% endfor %}];
+const data   = [{% for p in pesos %}{{ p.peso_kg }}{% if not forloop.last %},{% endif %}{% endfor %}];
+
+new Chart(document.getElementById('pesosChart'), {
+  type: 'line',
+  data: {
+    labels,
+    datasets: [{
+      data,
+      borderColor: '#00ffc8',
+      backgroundColor: 'rgba(0,255,200,0.06)',
+      borderWidth: 2,
+      pointBackgroundColor: '#00ffc8',
+      pointBorderColor: '#030d1a',
+      pointBorderWidth: 2,
+      pointRadius: 5,
+      tension: 0.35,
+      fill: true,
+    }]
+  },
+  options: {
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: '#0a1628',
+        borderColor: 'rgba(0,255,200,0.3)',
+        borderWidth: 1,
+        titleColor: '#00ffc8',
+        titleFont: { family: "'Cinzel', serif", size: 10 },
+        bodyColor: '#94a3b8',
+        bodyFont: { family: "'Share Tech Mono', monospace", size: 11 },
+        padding: 10,
+        cornerRadius: 4,
+        callbacks: {
+          label: function(ctx) { return ' ' + ctx.parsed.y + ' kg'; }
+        }
+      }
+    },
+    scales: {
+      x: {
+        ticks: { color: '#2d4060', font: { family: 'Share Tech Mono', size: 9 } },
+        grid: { color: 'rgba(0,255,200,0.04)' },
+        border: { color: 'rgba(0,255,200,0.1)' }
+      },
+      y: {
+        ticks: { color: '#2d4060', font: { family: 'Share Tech Mono', size: 9 } },
+        grid: { color: 'rgba(0,255,200,0.04)' },
+        border: { color: 'rgba(0,255,200,0.1)' }
+      }
+    }
+  }
+});
+</script>
+{% endif %}
+{% endblock %}

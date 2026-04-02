@@ -1237,11 +1237,17 @@ body {
   {# ── PRÓXIMAS SESIONES ── #}
   {% if proximas_sesiones %}
   <div class="hx-sessions-section hx-a hx-a6">
-    <div class="hx-sessions-header">
+    <div class="hx-sessions-header" style="display:flex; justify-content:space-between; align-items:center;">
       <p class="hx-title" style="font-size:14px; color:var(--text);">
         <i class="fas fa-bolt" style="color:var(--red); margin-right:8px;"></i>
         Plan de Entrenamientos
       </p>
+      <a href="{% url 'hyrox:regenerar_plan' objective_id=objetivo_activo.id %}"
+         onclick="return confirm('¿Regenerar el plan completo? Las sesiones planificadas futuras se eliminarán y se crearán de nuevo con el motor actualizado.')"
+         style="font-size:10px; color:var(--text-dim); border:1px solid var(--border); padding:4px 10px; display:flex; align-items:center; gap:5px; text-decoration:none; transition:color 0.2s;"
+         onmouseover="this.style.color='var(--red)'" onmouseout="this.style.color='var(--text-dim)'">
+        <i class="fas fa-sync-alt"></i> Regenerar Plan
+      </a>
     </div>
     <div class="hx-session-grid" style="background:var(--border);">
       {% for plan in proximas_sesiones %}
@@ -1289,7 +1295,12 @@ body {
             {% endif %}
             {% if act.data_metricas.distancia_km %}
             <div style="margin-left:20px; margin-bottom:6px;">
-              <span class="hx-chip"><i class="fas fa-route" style="margin-right:3px;"></i>{{ act.data_metricas.distancia_km }}km{% if act.data_metricas.ritmo_medio %} @ {{ act.data_metricas.ritmo_medio }}{% endif %}</span>
+              <span class="hx-chip"><i class="fas fa-route" style="margin-right:3px;"></i>{{ act.data_metricas.distancia_km }}km{% if act.data_metricas.ritmo_objetivo %} · {{ act.data_metricas.ritmo_objetivo }}{% endif %}</span>
+            </div>
+            {% endif %}
+            {% if act.data_metricas.distancia_m %}
+            <div style="margin-left:20px; margin-bottom:6px;">
+              <span class="hx-chip"><i class="fas fa-arrows-alt-h" style="margin-right:3px;"></i>{{ act.data_metricas.distancia_m }}m{% if act.data_metricas.peso_kg %} · {{ act.data_metricas.peso_kg }}kg{% endif %}</span>
             </div>
             {% endif %}
             {% if act.data_metricas.coach_tip %}
@@ -1309,7 +1320,7 @@ body {
             <i class="fas fa-lock"></i> Bloqueado por Lesión
           </button>
           {% else %}
-          <a href="{% url 'hyrox:registrar_entrenamiento' objective_id=objetivo_activo.id %}"
+          <a href="{% url 'hyrox:registrar_entrenamiento_session' objective_id=objetivo_activo.id session_id=plan.id %}"
             class="hx-btn hx-btn-red" style="width:100%; justify-content:center;">
             <i class="fas fa-upload"></i> Subir Resultado Real
           </a>

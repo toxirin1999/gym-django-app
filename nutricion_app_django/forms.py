@@ -1,6 +1,100 @@
 from django import forms
 from django.contrib.auth.models import User
-from .models import UserProfile, CalculoNivel1, CalculoNivel2, ConfiguracionNivel4, ConfiguracionNivel5
+from .models import (
+    UserProfile, CalculoNivel1, CalculoNivel2, ConfiguracionNivel4, ConfiguracionNivel5,
+    PerfilNutricional, CheckNutricionalDiario,
+)
+
+
+class PerfilNutricionalForm(forms.Form):
+    """Onboarding nutricional — se rellena una sola vez."""
+    altura_cm = forms.FloatField(
+        label="Altura (cm)",
+        min_value=120, max_value=220,
+        widget=forms.NumberInput(attrs={'placeholder': 'Ej: 175', 'step': '0.5'})
+    )
+    cintura_cm = forms.FloatField(
+        label="Cintura (cm) — mide a la altura del ombligo",
+        min_value=40, max_value=200,
+        widget=forms.NumberInput(attrs={'placeholder': 'Ej: 82', 'step': '0.5'})
+    )
+    cuello_cm = forms.FloatField(
+        label="Cuello (cm)",
+        min_value=20, max_value=80,
+        widget=forms.NumberInput(attrs={'placeholder': 'Ej: 38', 'step': '0.5'})
+    )
+    caderas_cm = forms.FloatField(
+        label="Caderas (cm) — solo mujeres, mide la parte más ancha",
+        min_value=50, max_value=200,
+        required=False,
+        widget=forms.NumberInput(attrs={'placeholder': 'Ej: 95', 'step': '0.5'})
+    )
+
+    def clean(self):
+        cleaned = super().clean()
+        # caderas obligatorio si genero == F — se valida en la vista
+        return cleaned
+
+
+class CheckNutricionalForm(forms.ModelForm):
+    """Check-in diario del usuario — v2 (Sistema de Bloques)."""
+
+    bloques_proteina_cumplidos = forms.NullBooleanField(
+        label="¿Cumpliste los bloques de proteína?",
+        widget=forms.Select(choices=[('', '—'), ('True', 'Sí'), ('False', 'No')]),
+        required=False,
+    )
+    bloques_carbos_cumplidos = forms.NullBooleanField(
+        label="¿Cumpliste los bloques de carbos?",
+        widget=forms.Select(choices=[('', '—'), ('True', 'Sí'), ('False', 'No')]),
+        required=False,
+    )
+    bloques_grasas_cumplidos = forms.NullBooleanField(
+        label="¿Cumpliste los bloques de grasas?",
+        widget=forms.Select(choices=[('', '—'), ('True', 'Sí'), ('False', 'No')]),
+        required=False,
+    )
+    verduras_cumplidas = forms.NullBooleanField(
+        label="¿Comiste verduras hoy?",
+        widget=forms.Select(choices=[('', '—'), ('True', 'Sí'), ('False', 'No')]),
+        required=False,
+    )
+    hidratacion_ok = forms.NullBooleanField(
+        label="¿Hidratación correcta?",
+        widget=forms.Select(choices=[('', '—'), ('True', 'Sí'), ('False', 'No')]),
+        required=False,
+    )
+    hambre_excesiva = forms.NullBooleanField(
+        label="¿Tuviste hambre excesiva?",
+        widget=forms.Select(choices=[('', '—'), ('True', 'Sí'), ('False', 'No')]),
+        required=False,
+    )
+    fatiga_percibida = forms.IntegerField(
+        label="Fatiga percibida (1-10)",
+        min_value=1, max_value=10,
+        required=False,
+        widget=forms.NumberInput(attrs={'min': 1, 'max': 10}),
+    )
+    calidad_sueno = forms.IntegerField(
+        label="Calidad del sueño (1-10)",
+        min_value=1, max_value=10,
+        required=False,
+        widget=forms.NumberInput(attrs={'min': 1, 'max': 10}),
+    )
+    energia_entreno = forms.IntegerField(
+        label="Energía en el entreno (1-5)",
+        min_value=1, max_value=5,
+        required=False,
+        widget=forms.NumberInput(attrs={'min': 1, 'max': 5}),
+    )
+
+    class Meta:
+        model = CheckNutricionalDiario
+        fields = [
+            'bloques_proteina_cumplidos', 'bloques_carbos_cumplidos', 'bloques_grasas_cumplidos',
+            'verduras_cumplidas', 'hidratacion_ok', 'hambre_excesiva',
+            'fatiga_percibida', 'calidad_sueno', 'energia_entreno',
+        ]
 
 
 class UserProfileForm(forms.ModelForm):

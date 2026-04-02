@@ -155,6 +155,176 @@
         border: 1px dashed rgba(255, 255, 255, 0.15);
     }
 
+    /* ===== PANEL NUTRICIONAL ===== */
+    .nut-panel {
+        max-width: 100%;
+        margin: 0 0 16px 0;
+        background: rgba(8,18,36,0.95);
+        border: 1px solid rgba(0,255,200,0.22);
+        border-radius: 16px;
+        overflow: hidden;
+        position: relative;
+        width: 100%;
+    }
+    .nut-panel::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; right: 0;
+        height: 2px;
+        background: linear-gradient(90deg, transparent, rgba(0,255,200,0.55), transparent);
+    }
+    .nut-panel-body {
+        display: grid;
+        grid-template-columns: 130px 1fr 130px;
+        align-items: center;
+        padding: 22px 20px 18px;
+        gap: 18px;
+    }
+    .nut-status-col {
+        text-align: center;
+        flex-shrink: 0;
+    }
+    .nut-status-icon {
+        width: 60px; height: 60px;
+        margin: 0 auto 8px;
+        display: flex; align-items: center; justify-content: center;
+        background: radial-gradient(circle, rgba(0,255,200,0.12), transparent 70%);
+    }
+    .nut-status-label {
+        font-family: 'Cinzel', serif;
+        font-size: 0.72rem;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: #00ffc8;
+        margin-bottom: 4px;
+        line-height: 1.3;
+    }
+    .nut-status-sub {
+        font-family: 'Share Tech Mono', monospace;
+        font-size: 0.72rem;
+        color: rgba(255,255,255,0.45);
+        text-transform: uppercase;
+        line-height: 1.3;
+    }
+    .nut-macros-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 8px;
+    }
+    .nut-macro-block {
+        border-radius: 10px;
+        padding: 14px 6px 12px;
+        text-align: center;
+        position: relative;
+        overflow: hidden;
+    }
+    .nut-macro-block.mb-p { background: rgba(34,211,238,0.07); border: 1px solid rgba(34,211,238,0.22); }
+    .nut-macro-block.mb-c { background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.25); }
+    .nut-macro-block.mb-g { background: rgba(167,139,250,0.07); border: 1px solid rgba(167,139,250,0.2); }
+    .nut-macro-block.mb-v { background: rgba(74,222,128,0.06); border: 1px solid rgba(74,222,128,0.2); }
+    .nut-macro-num {
+        font-family: 'Share Tech Mono', monospace;
+        font-size: 2.2rem;
+        font-weight: 700;
+        line-height: 1;
+    }
+    .mb-p .nut-macro-num { color: #22d3ee; }
+    .mb-c .nut-macro-num { color: #f59e0b; }
+    .mb-g .nut-macro-num { color: #a78bfa; }
+    .mb-v .nut-macro-num { color: #4ade80; }
+    .nut-macro-lbl {
+        font-family: 'Cinzel', serif;
+        font-size: 0.6rem;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        margin-top: 5px;
+        opacity: 0.6;
+        line-height: 1.2;
+    }
+    .mb-p .nut-macro-lbl { color: #22d3ee; }
+    .mb-c .nut-macro-lbl { color: #f59e0b; }
+    .mb-g .nut-macro-lbl { color: #a78bfa; }
+    .mb-v .nut-macro-lbl { color: #4ade80; }
+    .nut-macro-bar {
+        height: 5px;
+        border-radius: 3px;
+        margin-top: 10px;
+        overflow: hidden;
+    }
+    .mb-p .nut-macro-bar { background: rgba(34,211,238,0.12); }
+    .mb-c .nut-macro-bar { background: rgba(245,158,11,0.12); }
+    .mb-g .nut-macro-bar { background: rgba(167,139,250,0.12); }
+    .mb-v .nut-macro-bar { background: rgba(74,222,128,0.12); }
+    .nut-macro-bar-fill {
+        height: 100%;
+        border-radius: 3px;
+        transition: width 1s cubic-bezier(0.22,1,0.36,1);
+    }
+    .mb-p .nut-macro-bar-fill { background: #22d3ee; }
+    .mb-c .nut-macro-bar-fill { background: #f59e0b; }
+    .mb-g .nut-macro-bar-fill { background: #a78bfa; }
+    .mb-v .nut-macro-bar-fill { background: #4ade80; }
+    .nut-hint-col {
+        text-align: center;
+        flex-shrink: 0;
+    }
+    .nut-hint-icon {
+        font-size: 1.4rem;
+        margin-bottom: 6px;
+        display: block;
+        color: #00ffc8;
+    }
+    .nut-hint-label {
+        font-family: 'Cinzel', serif;
+        font-size: 0.68rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #00ffc8;
+        margin-bottom: 5px;
+        line-height: 1.3;
+    }
+    .nut-hint-text {
+        font-family: 'Share Tech Mono', monospace;
+        font-size: 0.75rem;
+        color: rgba(255,255,255,0.5);
+        text-transform: uppercase;
+        line-height: 1.5;
+    }
+    .nut-cta {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        padding: 14px 20px;
+        background: linear-gradient(135deg, rgba(200,170,110,0.2), rgba(200,170,110,0.08));
+        border-top: 1px solid rgba(200,170,110,0.22);
+        color: #C8AA6E;
+        font-family: 'Cinzel', serif;
+        font-size: 0.88rem;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        text-decoration: none;
+        transition: background 0.2s;
+    }
+    .nut-cta:hover {
+        background: linear-gradient(135deg, rgba(200,170,110,0.32), rgba(200,170,110,0.14));
+        color: #E5C882;
+    }
+    .nut-cta-sub {
+        font-size: 0.72rem;
+        color: rgba(200,170,110,0.5);
+        font-weight: 400;
+        font-family: 'Share Tech Mono', monospace;
+        letter-spacing: 0.04em;
+        text-transform: none;
+    }
+    @media (max-width: 480px) {
+        .nut-panel-body { grid-template-columns: 90px 1fr 90px; padding: 16px 12px 14px; gap: 10px; }
+        .nut-macro-num { font-size: 1.7rem; }
+        .nut-status-label, .nut-hint-label { font-size: 0.6rem; }
+    }
+
     /* ===== MODE SWITCHER ===== */
     .mode-switcher {
         display: flex;
@@ -944,7 +1114,7 @@
         justify-content: center;
         align-items: center;
         text-align: center;
-        padding: 2rem 0;
+        padding: 2rem 0 0 0;
     }
 
     .hero-entreno-title {
@@ -1071,11 +1241,11 @@
     </div>
 
     <!-- ── ZONA 3: TOGGLE + BOTONES ─────────────────────────────────── -->
-    <div style="padding-bottom: 1.5rem;">
+    <div style="padding-bottom: 1.5rem; padding-top: 0;">
 
         <!-- Toggle GYM/HYROX -->
         {% if hyrox_objetivo %}
-        <div class="mode-switcher" style="margin-bottom: 1.25rem; max-width: 220px;" id="modeSwitcher">
+        <div class="mode-switcher" style="margin: 0.75rem auto 1rem auto; max-width: 220px;" id="modeSwitcher">
             <button class="mode-btn active-gym" data-mode="gym" id="btnGym">🏋️ GYM</button>
             <button class="mode-btn" data-mode="hyrox" id="btnHyrox">🏃 HYROX</button>
         </div>
@@ -1083,6 +1253,83 @@
 
         <!-- Botón EMPEZAR GYM -->
         <div class="hero-gym flex flex-col items-center w-full" id="heroGymBtn">
+
+            {% if nut_target %}
+            <!-- ── Panel Nutricional ── -->
+            <div class="nut-panel">
+              <div class="nut-panel-body">
+
+                <!-- Izquierda: Estado nutricional -->
+                <div class="nut-status-col">
+                  <div class="nut-status-icon">
+                    <svg width="56" height="56" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <!-- Dumbbell -->
+                      <rect x="3" y="17" width="6" height="3" rx="1.5" fill="rgba(0,255,200,0.5)"/>
+                      <rect x="9" y="15" width="3" height="7" rx="1.5" fill="#00ffc8"/>
+                      <rect x="12" y="16.5" width="12" height="3.5" rx="1.75" fill="rgba(0,255,200,0.7)"/>
+                      <rect x="24" y="15" width="3" height="7" rx="1.5" fill="#00ffc8"/>
+                      <rect x="27" y="17" width="6" height="3" rx="1.5" fill="rgba(0,255,200,0.5)"/>
+                      <!-- Leaf -->
+                      <path d="M18 4 C18 4 10 10 14 18 C14 18 18 12 24 12 C24 12 18 16 18 22" stroke="#4ade80" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+                      <path d="M18 4 C18 4 26 10 22 18" stroke="#4ade80" stroke-width="1" stroke-linecap="round" fill="none" opacity="0.6"/>
+                    </svg>
+                  </div>
+                  <div class="nut-status-label">ESTADO<br>NUTRICIONAL</div>
+                  <div class="nut-status-sub">{{ nut_target.get_tipo_sesion_display|upper }}</div>
+                </div>
+
+                <!-- Centro: Bloques de macros -->
+                <div class="nut-macros-grid">
+                  <div class="nut-macro-block mb-p">
+                    <div class="nut-macro-num">{{ nut_target.bloques_proteina }}</div>
+                    <div class="nut-macro-lbl">P / {{ nut_target.bloques_proteina }}<br>Total</div>
+                    <div class="nut-macro-bar"><div class="nut-macro-bar-fill" style="width:{{ nut_pct_p }}%"></div></div>
+                  </div>
+                  <div class="nut-macro-block mb-c">
+                    <div class="nut-macro-num">{{ nut_target.bloques_carbos }}</div>
+                    <div class="nut-macro-lbl">C / {{ nut_target.bloques_carbos }}<br>Total</div>
+                    <div class="nut-macro-bar"><div class="nut-macro-bar-fill" style="width:{{ nut_pct_c }}%"></div></div>
+                  </div>
+                  <div class="nut-macro-block mb-g">
+                    <div class="nut-macro-num">{{ nut_target.bloques_grasas }}</div>
+                    <div class="nut-macro-lbl">G / {{ nut_target.bloques_grasas }}<br>Total</div>
+                    <div class="nut-macro-bar"><div class="nut-macro-bar-fill" style="width:{{ nut_pct_g }}%"></div></div>
+                  </div>
+                  <div class="nut-macro-block mb-v">
+                    <div class="nut-macro-num">{{ nut_target.bloques_verduras }}</div>
+                    <div class="nut-macro-lbl">VERDURAS</div>
+                    <div class="nut-macro-bar"><div class="nut-macro-bar-fill" style="width:0%"></div></div>
+                  </div>
+                </div>
+
+                <!-- Derecha: Sugerencia -->
+                <div class="nut-hint-col">
+                  <span class="nut-hint-icon">
+                    <svg width="28" height="28" viewBox="0 0 18 18" fill="none">
+                      <circle cx="9" cy="9" r="7.5" stroke="#00ffc8" stroke-width="1.2" opacity="0.7"/>
+                      <path d="M9 5v4l2.5 2.5" stroke="#00ffc8" stroke-width="1.4" stroke-linecap="round"/>
+                    </svg>
+                  </span>
+                  <div class="nut-hint-label">SUGERENCIA<br>PRÓX. HITO</div>
+                  <div class="nut-hint-text">
+                    {% if nut_target.tipo_sesion == 'hyrox' %}PRE: 3C + 2P{% elif nut_target.tipo_dia == 'carga' %}POST:<br>5P + 4C{% elif nut_target.tipo_dia == 'descarga' %}CENA:<br>5P + 1G{% else %}EQUILIBRA<br>MACROS{% endif %}
+                  </div>
+                </div>
+
+              </div>
+              <a href="/nutricion/mi-nutricion/" class="nut-cta">
+                MI NUTRICIÓN &nbsp;<span class="nut-cta-sub">(Entrar a Calculadora)</span>
+              </a>
+            </div>
+            {% else %}
+            <!-- Sin target: acceso rápido -->
+            <div style="max-width: 480px; margin: 10px auto 0 auto;">
+              <a href="/nutricion/mi-nutricion/" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:10px;background:transparent;border:1px solid rgba(0,255,200,0.25);color:rgba(0,255,200,0.7);font-family:'Cinzel',serif;font-size:0.7rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;text-decoration:none;border-radius:8px;transition:all 0.2s;">
+                🌿 MI NUTRICIÓN
+              </a>
+            </div>
+            {% endif %}
+
             {% if proximo_entrenamiento %}
             <a href="{% url 'entrenos:entrenamiento_activo' cliente.id %}?fecha={{ hoy|date:'Y-m-d' }}&rutina_nombre={{ proximo_entrenamiento.rutina_nombre|urlencode }}&ejercicios={{ proximo_entrenamiento_json|urlencode }}" class="btn-empezar-cta btn-empezar-gym">
                 ⚔ EJECUTAR PROTOCOLO
@@ -1093,7 +1340,6 @@
             </a>
             {% endif %}
 
-            <!-- Botones secundarios -->
             <div style="display: flex; gap: 10px; max-width: 480px; margin: 10px auto 0 auto;">
                 <a href="{% url 'entrenos:vista_plan_anual' cliente.id %}" style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 10px; background: transparent; border: 1px solid rgba(200,170,110,0.2); color: #A08C5B; font-family: 'Cinzel', serif; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; text-decoration: none; transition: all 0.2s;">
                     ↺ CAMBIAR RUTINA
@@ -1107,6 +1353,71 @@
         <!-- Botón EMPEZAR HYROX -->
         {% if hyrox_objetivo %}
         <div class="hero-hyrox hidden flex flex-col items-center w-full" id="heroHyroxBtn">
+
+            <!-- Panel Nutricional -->
+            {% if nut_target %}
+            <div class="nut-panel">
+              <div class="nut-panel-body">
+                <div class="nut-status-col">
+                  <div class="nut-status-icon">
+                    <svg width="56" height="56" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <rect x="3" y="17" width="6" height="3" rx="1.5" fill="rgba(0,255,200,0.5)"/>
+                      <rect x="9" y="15" width="3" height="7" rx="1.5" fill="#00ffc8"/>
+                      <rect x="12" y="16.5" width="12" height="3.5" rx="1.75" fill="rgba(0,255,200,0.7)"/>
+                      <rect x="24" y="15" width="3" height="7" rx="1.5" fill="#00ffc8"/>
+                      <rect x="27" y="17" width="6" height="3" rx="1.5" fill="rgba(0,255,200,0.5)"/>
+                      <path d="M18 4 C18 4 10 10 14 18 C14 18 18 12 24 12 C24 12 18 16 18 22" stroke="#4ade80" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+                      <path d="M18 4 C18 4 26 10 22 18" stroke="#4ade80" stroke-width="1" stroke-linecap="round" fill="none" opacity="0.6"/>
+                    </svg>
+                  </div>
+                  <div class="nut-status-label">ESTADO<br>NUTRICIONAL</div>
+                  <div class="nut-status-sub">{{ nut_target.get_tipo_sesion_display|upper }}</div>
+                </div>
+                <div class="nut-macros-grid">
+                  <div class="nut-macro-block mb-p">
+                    <div class="nut-macro-num">{{ nut_target.bloques_proteina }}</div>
+                    <div class="nut-macro-lbl">P / {{ nut_target.bloques_proteina }}<br>Total</div>
+                    <div class="nut-macro-bar"><div class="nut-macro-bar-fill" style="width:{{ nut_pct_p }}%"></div></div>
+                  </div>
+                  <div class="nut-macro-block mb-c">
+                    <div class="nut-macro-num">{{ nut_target.bloques_carbos }}</div>
+                    <div class="nut-macro-lbl">C / {{ nut_target.bloques_carbos }}<br>Total</div>
+                    <div class="nut-macro-bar"><div class="nut-macro-bar-fill" style="width:{{ nut_pct_c }}%"></div></div>
+                  </div>
+                  <div class="nut-macro-block mb-g">
+                    <div class="nut-macro-num">{{ nut_target.bloques_grasas }}</div>
+                    <div class="nut-macro-lbl">G / {{ nut_target.bloques_grasas }}<br>Total</div>
+                    <div class="nut-macro-bar"><div class="nut-macro-bar-fill" style="width:{{ nut_pct_g }}%"></div></div>
+                  </div>
+                  <div class="nut-macro-block mb-v">
+                    <div class="nut-macro-num">{{ nut_target.bloques_verduras }}</div>
+                    <div class="nut-macro-lbl">VERDURAS</div>
+                    <div class="nut-macro-bar"><div class="nut-macro-bar-fill" style="width:0%"></div></div>
+                  </div>
+                </div>
+                <div class="nut-hint-col">
+                  <span class="nut-hint-icon">
+                    <svg width="28" height="28" viewBox="0 0 18 18" fill="none">
+                      <circle cx="9" cy="9" r="7.5" stroke="#00ffc8" stroke-width="1.2" opacity="0.7"/>
+                      <path d="M9 5v4l2.5 2.5" stroke="#00ffc8" stroke-width="1.4" stroke-linecap="round"/>
+                    </svg>
+                  </span>
+                  <div class="nut-hint-label">SUGERENCIA<br>PRÓX. HITO</div>
+                  <div class="nut-hint-text">PRE: 3C + 2P</div>
+                </div>
+              </div>
+              <a href="/nutricion/mi-nutricion/" class="nut-cta">
+                MI NUTRICIÓN &nbsp;<span class="nut-cta-sub">(Entrar a Calculadora)</span>
+              </a>
+            </div>
+            {% else %}
+            <div style="max-width: 480px; margin: 10px auto 0 auto;">
+              <a href="/nutricion/mi-nutricion/" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:10px;background:transparent;border:1px solid rgba(0,255,200,0.25);color:rgba(0,255,200,0.7);font-family:'Cinzel',serif;font-size:0.7rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;text-decoration:none;border-radius:8px;transition:all 0.2s;">
+                🌿 MI NUTRICIÓN
+              </a>
+            </div>
+            {% endif %}
+
             {% if hyrox_proxima_sesion.objective %}
             <a href="{% url 'hyrox:registrar_entrenamiento' hyrox_proxima_sesion.objective.id %}" class="btn-empezar-cta btn-empezar-hyrox">
                 ⚡ EJECUTAR HYROX
@@ -1948,6 +2259,10 @@
                     <a href="{% url 'clientes:blade_runner_dashboard' %}"
                        style="display:flex;align-items:center;justify-content:center;padding:10px;background:transparent;border:1px solid rgba(200,170,110,0.28);color:#C8AA6E;font-family:'Cinzel',serif;font-size:0.62rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;text-decoration:none;text-align:center;clip-path:polygon(4px 0%,calc(100% - 4px) 0%,100% 4px,100% calc(100% - 4px),calc(100% - 4px) 100%,4px 100%,0% calc(100% - 4px),0% 4px);transition:all .2s;">
                         ⚡ BLADE RUNNER
+                    </a>
+                    <a href="/nutricion/mi-nutricion/"
+                       style="display:flex;align-items:center;justify-content:center;padding:10px;background:transparent;border:1px solid rgba(0,255,200,0.3);color:#00ffc8;font-family:'Cinzel',serif;font-size:0.62rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;text-decoration:none;text-align:center;clip-path:polygon(4px 0%,calc(100% - 4px) 0%,100% 4px,100% calc(100% - 4px),calc(100% - 4px) 100%,4px 100%,0% calc(100% - 4px),0% 4px);transition:all .2s;">
+                        MI NUTRICIÓN
                     </a>
                 </div>
             </div>

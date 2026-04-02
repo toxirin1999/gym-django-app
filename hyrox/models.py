@@ -207,18 +207,23 @@ class HyroxObjective(models.Model):
 
     def get_readiness_breakdown(self):
         """
-        Phase 10: Desglose heurístico del Race Readiness en 3 áreas clave.
+        Phase 10: Desglose del Race Readiness en 3 áreas clave.
+        Los valores parten de 0 % y crecen con el trabajo real del atleta.
         """
-        fuerza = self.get_race_readiness_score() # Re-usamos el global base como fuerza estructural
-        
-        # Resistencia: Sube un 5% por cada sesión de carrera exitosa
-        carrera_sessions = self.sessions.filter(estado='completado', activities__tipo_actividad='carrera').distinct().count()
-        resistencia = min(40 + (carrera_sessions * 5), 100)
-        
-        # Potencia: Sube un 10% por cada sesión de estaciones hyrox
-        potencia_sessions = self.sessions.filter(estado='completado', activities__tipo_actividad='hyrox_station').distinct().count()
-        potencia = min(30 + (potencia_sessions * 10), 100)
-        
+        fuerza = self.get_race_readiness_score()
+
+        # Resistencia: 0 % de base, +6 % por cada sesión de carrera completada (máx 100 %)
+        carrera_sessions = self.sessions.filter(
+            estado='completado', activities__tipo_actividad='carrera'
+        ).distinct().count()
+        resistencia = min(carrera_sessions * 6, 100)
+
+        # Potencia: 0 % de base, +12 % por cada sesión de estaciones Hyrox (máx 100 %)
+        potencia_sessions = self.sessions.filter(
+            estado='completado', activities__tipo_actividad='hyrox_station'
+        ).distinct().count()
+        potencia = min(potencia_sessions * 12, 100)
+
         return {
             "fuerza": fuerza,
             "resistencia": resistencia,
@@ -396,8 +401,9 @@ class UserInjury(models.Model):
 
     def invalidate_future_sessions(self):
         """
-        Elimina las sesiones planificadas para los próximos 14 días 
-        y fuerza su regeneración inmediata bajo los nuevos filtros de riesgo.
+        Elimina TODAS las sesiones planificadas a partir de hoy y regenera el plan
+        completo aplicando los nuevos filtros de riesgo de la lesión activa.
+        Las sesiones ya completadas no se tocan.
         """
         from .models import HyroxSession, HyroxObjective
         from .training_engine import HyroxTrainingEngine

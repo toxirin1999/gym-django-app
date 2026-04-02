@@ -1,3 +1,5 @@
+from datetime import date, timedelta
+
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -8,10 +10,686 @@ import json
 
 from .models import (
     UserProfile, CalculoNivel1, CalculoNivel2, ProgresoNivel,
-    SeguimientoPeso, ConfiguracionNivel3
+    SeguimientoPeso, ConfiguracionNivel3,
+    PerfilNutricional, TargetNutricionalDiario, CheckNutricionalDiario,
+    AjusteNutricional, RegistroBloques,
 )
-from .forms import UserProfileForm, Nivel1Form, Nivel2Form, SeguimientoPesoForm
+from .forms import UserProfileForm, Nivel1Form, Nivel2Form, SeguimientoPesoForm, PerfilNutricionalForm, CheckNutricionalForm
 from .utils import CalculadoraNutricion, ValidadorNutricion
+from .services import generar_target_diario
+from .bloques_alimentos import PROTEINAS, CARBOS, GRASAS, VERDURAS, TODOS_LOS_ALIMENTOS, DOBLE_SESION_BONUS
+
+
+@login_required
+def recalcular_perfil(request):
+    """Fuerza el recálculo de composición corporal y target del día."""
+    try:
+        cliente = request.user.cliente_perfil
+        perfil = cliente.perfil_nutricional
+        perfil.save()
+        generar_target_diario(cliente)
+        messages.success(request, f"Recalculado: {perfil.masa_magra_kg:.1f} kg masa magra, {perfil.grasa_corporal_pct:.1f}% grasa.")
+    except Exception as e:
+        messages.error(request, f"Error: {e}")
+    return redirect('nutricion_app_django:dashboard_nutricional')
+
+
+@login_required
+def onboarding_nutricional(request):
+    """
+    Configuración inicial del perfil nutricional.
+    Recoge altura + medidas para el cálculo Navy Method.
+    """
+    try:
+        cliente = request.user.cliente_perfil
+    except Exception:
+        messages.error(request, "No tienes un perfil de cliente asociado.")
+        return redirect('/')
+
+    # Si ya tiene perfil, redirigir al dashboard
+    if hasattr(cliente, 'perfil_nutricional'):
+        return redirect('nutricion_app_django:dashboard_nutricional')
+
+    initial = {
+        'cintura_cm': cliente.cintura,
+        'cuello_cm':  cliente.cuello,
+        'caderas_cm': cliente.caderas,
+        'altura_cm':  cliente.altura_cm,
+    }
+
+    if request.method == 'POST':
+        form = PerfilNutricionalForm(request.POST)
+        if form.is_valid():
+            data = form.cleaned_data
+
+            # Validar caderas para mujeres
+            if cliente.genero == 'F' and not data.get('caderas_cm'):
+                form.add_error('caderas_cm', 'Las caderas son necesarias para calcular tu composición corporal.')
+            else:
+                # Actualizar medidas en Cliente
+                cliente.altura_cm  = data['altura_cm']
+                cliente.cintura    = data['cintura_cm']
+                cliente.cuello     = data['cuello_cm']
+                if data.get('caderas_cm'):
+                    cliente.caderas = data['caderas_cm']
+                cliente.save(update_fields=['altura_cm', 'cintura', 'cuello', 'caderas'])
+
+                # Crear PerfilNutricional
+                PerfilNutricional.objects.create(
+                    cliente=cliente,
+                    altura_cm=data['altura_cm'],
+                )
+
+                # Generar target del día de hoy
+                generar_target_diario(cliente)
+
+                messages.success(request, "Perfil nutricional configurado correctamente.")
+                return redirect('nutricion_app_django:dashboard_nutricional')
+    else:
+        form = PerfilNutricionalForm(initial=initial)
+
+    return render(request, 'nutricion_app_django/onboarding_nutricional.html', {
+        'form': form,
+        'cliente': cliente,
+    })
+
+
+@login_required
+def dashboard_nutricional(request):
+    """
+    Panel principal del módulo nutricional.
+    Muestra el target del día + check-in + tendencia de peso + últimos ajustes.
+    """
+    try:
+        cliente = request.user.cliente_perfil
+    except Exception:
+        return redirect('/')
+
+    # Sin perfil → onboarding
+    if not hasattr(cliente, 'perfil_nutricional'):
+        return redirect('nutricion_app_django:onboarding_nutricional')
+
+    cliente.refresh_from_db()
+
+    hoy = date.today()
+
+    # Target del día (generarlo si no existe)
+    target = TargetNutricionalDiario.objects.filter(cliente=cliente, fecha=hoy).first()
+    if not target:
+        target = generar_target_diario(cliente)
+
+    # Check de hoy
+    check_hoy, _ = CheckNutricionalDiario.objects.get_or_create(cliente=cliente, fecha=hoy)
+    check_completado = any([
+        check_hoy.bloques_proteina_cumplidos is not None,
+        check_hoy.bloques_carbos_cumplidos is not None,
+        check_hoy.verduras_cumplidas is not None,
+        check_hoy.hidratacion_ok is not None,
+        check_hoy.fatiga_percibida is not None,
+    ])
+
+    if request.method == 'POST':
+        form = CheckNutricionalForm(request.POST, instance=check_hoy)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Check-in guardado.")
+            return redirect('nutricion_app_django:dashboard_nutricional')
+    else:
+        form = CheckNutricionalForm(instance=check_hoy)
+
+    # Tendencia de peso últimos 14 días
+    from clientes.models import PesoDiario
+    pesos = list(
+        PesoDiario.objects
+        .filter(cliente=cliente, fecha__gte=hoy - timedelta(days=13))
+        .order_by('fecha')
+        .values('fecha', 'peso_kg')
+    )
+
+    # Últimos ajustes del algoritmo
+    ajustes = AjusteNutricional.objects.filter(cliente=cliente).order_by('-fecha')[:3]
+
+    # Urgencia informe: escenario B/C pendiente de revisar
+    from .models import InformeOptimizacion
+    _ultimo_inf = InformeOptimizacion.objects.filter(cliente=cliente).order_by('-semana').first()
+    informe_urgente = bool(
+        _ultimo_inf and
+        _ultimo_inf.escenario in ('B', 'C') and
+        _ultimo_inf.estado == 'pendiente'
+    )
+
+    perfil = cliente.perfil_nutricional
+
+    # Peso real: último PesoDiario o peso_corporal del cliente
+    from clientes.models import PesoDiario
+    ultimo_peso = (
+        PesoDiario.objects
+        .filter(cliente=cliente)
+        .order_by('-fecha')
+        .values_list('peso_kg', flat=True)
+        .first()
+    )
+    peso_actual = ultimo_peso or cliente.peso_corporal
+
+    # Bloques registrados hoy por comida
+    registros_hoy = (
+        RegistroBloques.objects
+        .filter(cliente=cliente, fecha=hoy)
+        .order_by('comida')
+    )
+    totales_hoy = {'P': 0.0, 'C': 0.0, 'G': 0.0}
+    for r in registros_hoy:
+        totales_hoy['P'] += r.bloques_proteina
+        totales_hoy['C'] += r.bloques_carbos
+        totales_hoy['G'] += r.bloques_grasas
+
+    return render(request, 'nutricion_app_django/dashboard_nutricional.html', {
+        'cliente':          cliente,
+        'perfil':           perfil,
+        'target':           target,
+        'form':             form,
+        'check_completado': check_completado,
+        'pesos':            pesos,
+        'ajustes':          ajustes,
+        'hoy':              hoy,
+        'peso_actual':      peso_actual,
+        'registros_hoy':    registros_hoy,
+        'totales_hoy':      totales_hoy,
+        'informe_urgente':  informe_urgente,
+    })
+
+
+@login_required
+def calculadora_bloques(request):
+    """
+    Calculadora visual de bloques por comida.
+    Permite al usuario registrar qué alimentos come sin escribir gramos.
+    """
+    try:
+        cliente = request.user.cliente_perfil
+    except Exception:
+        return redirect('/')
+
+    if not hasattr(cliente, 'perfil_nutricional'):
+        return redirect('nutricion_app_django:onboarding_nutricional')
+
+    hoy = date.today()
+
+    target = TargetNutricionalDiario.objects.filter(cliente=cliente, fecha=hoy).first()
+    if not target:
+        target = generar_target_diario(cliente)
+
+    registros_hoy = list(
+        RegistroBloques.objects
+        .filter(cliente=cliente, fecha=hoy)
+        .order_by('comida', 'id')
+        .values('id', 'comida', 'bloques_proteina', 'bloques_carbos', 'bloques_grasas',
+                'es_comodin', 'nota_comodin', 'alimentos_json')
+    )
+
+    totales_hoy = {'P': 0.0, 'C': 0.0, 'G': 0.0}
+    for r in registros_hoy:
+        totales_hoy['P'] += r['bloques_proteina']
+        totales_hoy['C'] += r['bloques_carbos']
+        totales_hoy['G'] += r['bloques_grasas']
+
+    # Distribución sugerida por comida desde el target
+    distribucion = target.distribucion_comidas or {}
+
+    # Detección de doble sesión (Hyrox + Gym el mismo día)
+    from entrenos.models import EntrenoRealizado
+    entrenos_hoy = EntrenoRealizado.objects.filter(cliente=cliente, fecha=hoy).count()
+    doble_sesion = entrenos_hoy >= 2
+
+    # Calcular calidad de bloques del día (% verde)
+    calidad_bloques = _calcular_calidad_bloques(registros_hoy)
+
+    return render(request, 'nutricion_app_django/calculadora_bloques.html', {
+        'cliente':         cliente,
+        'target':          target,
+        'hoy':             hoy,
+        'proteinas':       PROTEINAS,
+        'carbos':          CARBOS,
+        'grasas':          GRASAS,
+        'verduras':        VERDURAS,
+        'registros_hoy':   json.dumps(registros_hoy, default=str),
+        'totales_hoy':     totales_hoy,
+        'totales_hoy_json': json.dumps(totales_hoy),
+        'distribucion':    json.dumps(distribucion),
+        'alimentos_acn':   json.dumps(list(TODOS_LOS_ALIMENTOS.values()), default=str),
+        'doble_sesion':    doble_sesion,
+        'calidad_bloques': calidad_bloques,
+    })
+
+
+def _calcular_calidad_bloques(registros_hoy: list) -> dict:
+    """
+    Calcula el % de bloques 'verdes' del día a partir de los registros guardados.
+    Lee alimentos_json de cada registro y cruza con TODOS_LOS_ALIMENTOS.
+    """
+    verdes = 0.0
+    totales = 0.0
+    for r in registros_hoy:
+        if r.get('es_comodin'):
+            continue
+        alimentos_json = r.get('alimentos_json') or []
+        if isinstance(alimentos_json, str):
+            try:
+                alimentos_json = json.loads(alimentos_json)
+            except Exception:
+                alimentos_json = []
+        for item in alimentos_json:
+            alimento_id = item.get('id') or item.get('alimento_id')
+            cantidad = float(item.get('cantidad', 1))
+            alimento = TODOS_LOS_ALIMENTOS.get(alimento_id)
+            if not alimento:
+                continue
+            bloques = cantidad * (alimento.get('P', 0) + alimento.get('C', 0) + alimento.get('G', 0))
+            totales += bloques
+            if alimento.get('calidad') == 'verde':
+                verdes += bloques
+    pct = round(verdes / totales * 100) if totales > 0 else None
+    return {'verde': verdes, 'total': totales, 'pct': pct}
+
+
+@login_required
+def manifiesto_atleta(request):
+    """Manifiesto del atleta híbrido — onboarding 3 pantallas."""
+    return render(request, 'nutricion_app_django/manifiesto_atleta.html')
+
+
+@login_required
+def ajax_guardar_bloques(request):
+    """
+    Endpoint AJAX para guardar un registro de bloques de una comida.
+    Acepta POST con JSON body.
+    """
+    if request.method != 'POST':
+        return JsonResponse({'ok': False, 'error': 'Método no permitido'}, status=405)
+
+    try:
+        cliente = request.user.cliente_perfil
+    except Exception:
+        return JsonResponse({'ok': False, 'error': 'Sin perfil de cliente'}, status=403)
+
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'ok': False, 'error': 'JSON inválido'}, status=400)
+
+    comida = data.get('comida')
+    COMIDAS_VALIDAS = {'desayuno', 'almuerzo', 'cena', 'snack', 'pre', 'post'}
+    if comida not in COMIDAS_VALIDAS:
+        return JsonResponse({'ok': False, 'error': 'Comida no válida'}, status=400)
+
+    hoy = date.today()
+    es_comodin = bool(data.get('es_comodin', False))
+    alimentos_json = data.get('alimentos', [])
+
+    # Calcular bloques desde alimentos seleccionados
+    bloques_p = bloques_c = bloques_g = 0.0
+    if not es_comodin:
+        for item in alimentos_json:
+            alimento_id = item.get('id')
+            cantidad = float(item.get('cantidad', 1))
+            alimento = TODOS_LOS_ALIMENTOS.get(alimento_id)
+            if alimento:
+                bloques_p += alimento.get('P', 0) * cantidad
+                bloques_c += alimento.get('C', 0) * cantidad
+                bloques_g += alimento.get('G', 0) * cantidad
+    else:
+        # Comodín: el usuario declara los bloques directamente
+        bloques_p = float(data.get('bloques_proteina', 0))
+        bloques_c = float(data.get('bloques_carbos', 0))
+        bloques_g = float(data.get('bloques_grasas', 0))
+
+    registro_id = data.get('id')
+    if registro_id:
+        # Actualizar registro existente
+        try:
+            registro = RegistroBloques.objects.get(id=registro_id, cliente=cliente)
+            registro.comida = comida
+            registro.bloques_proteina = round(bloques_p, 2)
+            registro.bloques_carbos = round(bloques_c, 2)
+            registro.bloques_grasas = round(bloques_g, 2)
+            registro.es_comodin = es_comodin
+            registro.nota_comodin = data.get('nota_comodin', '')
+            registro.alimentos_json = alimentos_json if not es_comodin else None
+            registro.save()
+        except RegistroBloques.DoesNotExist:
+            return JsonResponse({'ok': False, 'error': 'Registro no encontrado'}, status=404)
+    else:
+        registro = RegistroBloques.objects.create(
+            cliente=cliente,
+            fecha=hoy,
+            comida=comida,
+            bloques_proteina=round(bloques_p, 2),
+            bloques_carbos=round(bloques_c, 2),
+            bloques_grasas=round(bloques_g, 2),
+            es_comodin=es_comodin,
+            nota_comodin=data.get('nota_comodin', ''),
+            alimentos_json=alimentos_json if not es_comodin else None,
+        )
+
+    # Recalcular totales del día
+    todos = RegistroBloques.objects.filter(cliente=cliente, fecha=hoy)
+    totales = {'P': 0.0, 'C': 0.0, 'G': 0.0}
+    for r in todos:
+        totales['P'] += r.bloques_proteina
+        totales['C'] += r.bloques_carbos
+        totales['G'] += r.bloques_grasas
+
+    return JsonResponse({
+        'ok': True,
+        'registro_id': registro.id,
+        'totales': {k: round(v, 2) for k, v in totales.items()},
+    })
+
+
+@login_required
+def informe_semanal(request):
+    """
+    Muestra el InformeOptimizacion de la semana más reciente.
+    El entrenador/usuario puede aceptar o rechazar el ajuste propuesto.
+    """
+    try:
+        cliente = request.user.cliente_perfil
+    except Exception:
+        return redirect('/')
+
+    if not hasattr(cliente, 'perfil_nutricional'):
+        return redirect('nutricion_app_django:onboarding_nutricional')
+
+    from .models import InformeOptimizacion
+    from .services import analisis_semanal_pas
+
+    hoy = date.today()
+    lunes = hoy - timedelta(days=hoy.weekday())
+
+    # Obtener o generar el informe de esta semana
+    informe = InformeOptimizacion.objects.filter(cliente=cliente, semana=lunes).first()
+    if not informe:
+        informe = analisis_semanal_pas(cliente, lunes=lunes)
+
+    # Historial de informes anteriores (sin el actual)
+    historial = (
+        InformeOptimizacion.objects
+        .filter(cliente=cliente)
+        .exclude(semana=lunes)
+        .order_by('-semana')[:8]
+    )
+
+    # Bloques del último target para mostrar comparativa antes/después
+    target_actual = (
+        TargetNutricionalDiario.objects
+        .filter(cliente=cliente)
+        .order_by('-fecha')
+        .first()
+    )
+    target_p = target_actual.bloques_proteina if target_actual else 0
+    target_c = target_actual.bloques_carbos   if target_actual else 0
+    target_g = target_actual.bloques_grasas   if target_actual else 0
+
+    return render(request, 'nutricion_app_django/informe_semanal.html', {
+        'cliente':   cliente,
+        'informe':   informe,
+        'historial': historial,
+        'hoy':       hoy,
+        'lunes':     lunes,
+        'target_p':  target_p,
+        'target_c':  target_c,
+        'target_g':  target_g,
+    })
+
+
+@login_required
+def ajax_accion_informe(request):
+    """
+    Acepta o rechaza el ajuste propuesto en el InformeOptimizacion.
+    POST JSON: { "informe_id": int, "accion": "aceptar"|"rechazar", "razon": str }
+    Si se acepta, crea un AjusteNutricional y marca el informe como 'aceptado'.
+    """
+    if request.method != 'POST':
+        return JsonResponse({'ok': False, 'error': 'Método no permitido'}, status=405)
+
+    try:
+        cliente = request.user.cliente_perfil
+    except Exception:
+        return JsonResponse({'ok': False, 'error': 'Sin perfil'}, status=403)
+
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'ok': False, 'error': 'JSON inválido'}, status=400)
+
+    from .models import InformeOptimizacion, AjusteNutricional, TargetNutricionalDiario
+
+    try:
+        informe = InformeOptimizacion.objects.get(id=data['informe_id'], cliente=cliente)
+    except InformeOptimizacion.DoesNotExist:
+        return JsonResponse({'ok': False, 'error': 'Informe no encontrado'}, status=404)
+
+    if informe.estado != 'pendiente':
+        return JsonResponse({'ok': False, 'error': 'El informe ya fue procesado'}, status=400)
+
+    accion = data.get('accion')
+
+    if accion == 'rechazar':
+        informe.estado = 'rechazado'
+        informe.razon_rechazo = data.get('razon', 'Semana atípica — sin ajuste')[:200]
+        informe.save(update_fields=['estado', 'razon_rechazo'])
+        return JsonResponse({'ok': True, 'estado': 'rechazado'})
+
+    if accion == 'aceptar':
+        # Obtener el último target para saber los bloques actuales
+        hoy = date.today()
+        target = (
+            TargetNutricionalDiario.objects
+            .filter(cliente=cliente)
+            .order_by('-fecha')
+            .first()
+        )
+
+        p_ant = target.bloques_proteina if target else 0
+        c_ant = target.bloques_carbos   if target else 0
+        g_ant = target.bloques_grasas   if target else 0
+
+        # Crear registro de ajuste
+        AjusteNutricional.objects.create(
+            cliente=cliente,
+            motivo=_motivo_desde_escenario(informe.escenario, informe.diet_break_sugerido),
+            proteina_anterior=p_ant,
+            proteina_nuevo=max(1, p_ant + informe.ajuste_bloques_proteina),
+            carbos_anterior=c_ant,
+            carbos_nuevo=max(1, c_ant + informe.ajuste_bloques_carbos),
+            grasas_anterior=g_ant,
+            grasas_nuevo=max(1, g_ant + informe.ajuste_bloques_grasas),
+            aplica_a=informe.ajuste_aplica_a,
+            mensaje_usuario=informe.justificacion[:500],
+        )
+
+        informe.estado = 'aceptado'
+        informe.save(update_fields=['estado'])
+
+        return JsonResponse({'ok': True, 'estado': 'aceptado'})
+
+    return JsonResponse({'ok': False, 'error': 'Acción no válida'}, status=400)
+
+
+def _motivo_desde_escenario(escenario, diet_break):
+    if diet_break:
+        return 'diet_break'
+    mapping = {
+        'A': 'inicio',
+        'B': 'sin_progreso',
+        'C': 'fatiga_alta',
+        'D': 'progreso_rapido',
+        'X': 'inicio',
+    }
+    return mapping.get(escenario, 'inicio')
+
+
+@login_required
+def monitor_progreso(request):
+    """
+    Sprint 7 + 8 — Monitor de Progreso + Estado de Recuperación.
+    Muestra evolución de peso (media móvil 7d), cumplimiento semanal
+    y panel de recuperación (fatiga, sueño, energía, alerta refeed).
+    """
+    try:
+        cliente = request.user.cliente_perfil
+    except Exception:
+        return redirect('/')
+
+    if not hasattr(cliente, 'perfil_nutricional'):
+        return redirect('nutricion_app_django:onboarding_nutricional')
+
+    from clientes.models import PesoDiario
+    from .models import CheckNutricionalDiario, InformeOptimizacion
+
+    hoy = date.today()
+    perfil = cliente.perfil_nutricional
+
+    # ── Datos de peso (últimos 60 días) ──────────────────────────────
+    pesos_qs = list(
+        PesoDiario.objects
+        .filter(cliente=cliente, fecha__gte=hoy - timedelta(days=59))
+        .order_by('fecha')
+        .values('fecha', 'peso_kg')
+    )
+
+    # Media móvil de 7 días
+    def media_movil(datos, ventana=7):
+        result = []
+        for i, d in enumerate(datos):
+            inicio = max(0, i - ventana + 1)
+            ventana_vals = [x['peso_kg'] for x in datos[inicio:i+1]]
+            result.append({
+                'fecha': d['fecha'].isoformat(),
+                'peso':  round(d['peso_kg'], 2),
+                'mm7':   round(sum(ventana_vals) / len(ventana_vals), 2),
+            })
+        return result
+
+    peso_data = media_movil(pesos_qs)
+
+    # Tendencia lineal (regresión simple sobre mm7)
+    tendencia_slope = None
+    if len(peso_data) >= 7:
+        vals = [d['mm7'] for d in peso_data]
+        n = len(vals)
+        x_mean = (n - 1) / 2
+        y_mean = sum(vals) / n
+        num = sum((i - x_mean) * (vals[i] - y_mean) for i in range(n))
+        den = sum((i - x_mean) ** 2 for i in range(n))
+        if den:
+            tendencia_slope = round(num / den, 4)  # kg/día
+
+    # ── Cumplimiento semanal (últimas 8 semanas) ──────────────────────
+    lunes_actual = hoy - timedelta(days=hoy.weekday())
+    cumplimiento_semanas = []
+    for i in range(7, -1, -1):  # 8 semanas, más antigua primero
+        lun = lunes_actual - timedelta(weeks=i)
+        dom = lun + timedelta(days=6)
+        checks = CheckNutricionalDiario.objects.filter(
+            cliente=cliente, fecha__range=(lun, dom)
+        )
+        if checks.exists():
+            media = round(sum(c.cumplimiento_pct for c in checks) / checks.count(), 1)
+        else:
+            media = None
+        cumplimiento_semanas.append({
+            'semana': lun.isoformat(),
+            'label':  lun.strftime('%d/%m'),
+            'pct':    media,
+        })
+
+    # ── Biofeedback últimos 7 días ────────────────────────────────────
+    hace7 = hoy - timedelta(days=6)
+    checks_recientes = list(
+        CheckNutricionalDiario.objects
+        .filter(cliente=cliente, fecha__gte=hace7)
+        .order_by('fecha')
+    )
+
+    fatiga_vals  = [c.fatiga_percibida for c in checks_recientes if c.fatiga_percibida is not None]
+    sueno_vals   = [c.calidad_sueno    for c in checks_recientes if c.calidad_sueno    is not None]
+    energia_vals = [c.energia_entreno  for c in checks_recientes if c.energia_entreno  is not None]
+
+    fatiga_media  = round(sum(fatiga_vals)  / len(fatiga_vals),  1) if fatiga_vals  else None
+    sueno_media   = round(sum(sueno_vals)   / len(sueno_vals),   1) if sueno_vals   else None
+    energia_media = round(sum(energia_vals) / len(energia_vals), 1) if energia_vals else None
+
+    # Alerta de refeed: fatiga ≥ 7 en 3+ de los últimos 7 días
+    dias_fatiga_alta = sum(1 for v in fatiga_vals if v >= 7)
+    alerta_refeed = dias_fatiga_alta >= 3
+
+    # Detalle diario biofeedback para gráfico
+    bio_data = []
+    for d_offset in range(6, -1, -1):
+        dia = hoy - timedelta(days=d_offset)
+        check = next((c for c in checks_recientes if c.fecha == dia), None)
+        bio_data.append({
+            'fecha':   dia.isoformat(),
+            'label':   dia.strftime('%a %d'),
+            'fatiga':  check.fatiga_percibida if check else None,
+            'sueno':   check.calidad_sueno    if check else None,
+            'energia': check.energia_entreno  if check else None,
+            'cumpl':   round(check.cumplimiento_pct) if check and check.cumplimiento_pct is not None else None,
+        })
+
+    # ── Últimos informes para contexto ───────────────────────────────
+    ultimo_informe = (
+        InformeOptimizacion.objects
+        .filter(cliente=cliente)
+        .order_by('-semana')
+        .first()
+    )
+
+    return render(request, 'nutricion_app_django/monitor_progreso.html', {
+        'cliente':             cliente,
+        'perfil':              perfil,
+        'hoy':                 hoy,
+        'peso_data':           json.dumps(peso_data),
+        'tendencia_slope':     tendencia_slope,
+        'cumplimiento_semanas': json.dumps(cumplimiento_semanas),
+        'fatiga_media':        fatiga_media,
+        'sueno_media':         sueno_media,
+        'energia_media':       energia_media,
+        'dias_fatiga_alta':    dias_fatiga_alta,
+        'alerta_refeed':       alerta_refeed,
+        'bio_data':            json.dumps(bio_data),
+        'ultimo_informe':      ultimo_informe,
+    })
+
+
+@login_required
+def ajax_eliminar_bloque(request):
+    """Elimina un registro de bloques por id."""
+    if request.method != 'POST':
+        return JsonResponse({'ok': False, 'error': 'Método no permitido'}, status=405)
+
+    try:
+        cliente = request.user.cliente_perfil
+    except Exception:
+        return JsonResponse({'ok': False, 'error': 'Sin perfil'}, status=403)
+
+    try:
+        data = json.loads(request.body)
+        registro_id = data.get('id')
+        RegistroBloques.objects.get(id=registro_id, cliente=cliente).delete()
+    except (RegistroBloques.DoesNotExist, Exception):
+        return JsonResponse({'ok': False, 'error': 'No encontrado'}, status=404)
+
+    hoy = date.today()
+    todos = RegistroBloques.objects.filter(cliente=cliente, fecha=hoy)
+    totales = {'P': 0.0, 'C': 0.0, 'G': 0.0}
+    for r in todos:
+        totales['P'] += r.bloques_proteina
+        totales['C'] += r.bloques_carbos
+        totales['G'] += r.bloques_grasas
+
+    return JsonResponse({'ok': True, 'totales': {k: round(v, 2) for k, v in totales.items()}})
 
 
 # En nutricion_app_django/views.py

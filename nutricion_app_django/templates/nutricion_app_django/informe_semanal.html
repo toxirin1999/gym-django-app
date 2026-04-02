@@ -1,0 +1,727 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Informe Semanal{% endblock %}
+
+{% block extra_css %}
+<style>
+  :root {
+    --nc:  #00ffc8;
+    --nb:  #00bfff;
+    --ng:  #C8AA6E;
+    --nr:  #f87171;
+    --ny:  #fbbf24;
+    --ngr: #4ade80;
+    --cp:  #22d3ee;
+    --cc:  #f59e0b;
+    --cg:  #a78bfa;
+    --surface:  rgba(10,22,40,0.92);
+    --surface2: rgba(5,14,28,0.97);
+    --border:   rgba(0,255,200,0.15);
+  }
+
+  .inf-wrap { max-width: 860px; margin: 0 auto; padding: 20px 16px 60px; }
+
+  /* ── Cards ── */
+  .inf-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    backdrop-filter: blur(14px);
+    padding: 22px;
+    margin-bottom: 16px;
+    position: relative;
+    overflow: hidden;
+  }
+  .inf-card::before {
+    content:'';
+    position:absolute; inset:0;
+    background: linear-gradient(135deg, rgba(0,255,200,0.03) 0%, transparent 60%);
+    pointer-events:none;
+  }
+
+  .inf-label {
+    font-family: 'Cinzel', serif;
+    font-size: 0.63rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: rgba(0,255,200,0.5);
+    margin-bottom: 4px;
+  }
+
+  /* ── Badge de escenario ── */
+  .escenario-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 20px;
+    border-radius: 30px;
+    font-family: 'Cinzel', serif;
+    font-size: 0.9rem;
+    letter-spacing: 0.1em;
+    font-weight: 600;
+    margin-bottom: 16px;
+  }
+  .esc-A { background: rgba(74,222,128,0.15);  border: 1px solid rgba(74,222,128,0.4);  color: var(--ngr); }
+  .esc-B { background: rgba(251,191,36,0.12);  border: 1px solid rgba(251,191,36,0.4);  color: var(--ny);  }
+  .esc-C { background: rgba(248,113,113,0.12); border: 1px solid rgba(248,113,113,0.4); color: var(--nr);  }
+  .esc-D { background: rgba(167,139,250,0.12); border: 1px solid rgba(167,139,250,0.4); color: #a78bfa;    }
+  .esc-X { background: rgba(100,116,139,0.15); border: 1px solid rgba(100,116,139,0.35);color: #94a3b8;    }
+
+  .esc-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+  }
+  .esc-A .esc-dot  { background: var(--ngr); box-shadow: 0 0 8px var(--ngr); }
+  .esc-B .esc-dot  { background: var(--ny);  box-shadow: 0 0 8px var(--ny);  }
+  .esc-C .esc-dot  { background: var(--nr);  box-shadow: 0 0 8px var(--nr);  }
+  .esc-D .esc-dot  { background: #a78bfa;    box-shadow: 0 0 8px #a78bfa;    }
+  .esc-X .esc-dot  { background: #94a3b8; }
+
+  /* ── Grid métricas ── */
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 10px;
+    margin-bottom: 18px;
+  }
+  .metric-block {
+    background: var(--surface2);
+    border-radius: 10px;
+    padding: 12px 14px;
+    text-align: center;
+    border: 1px solid rgba(255,255,255,0.06);
+  }
+  .metric-val {
+    font-size: 1.5rem;
+    font-weight: 700;
+    line-height: 1;
+    color: #fff;
+  }
+  .metric-val.positive { color: var(--ngr); }
+  .metric-val.negative { color: var(--nr); }
+  .metric-val.neutral  { color: var(--ny); }
+  .metric-val.na       { color: rgba(255,255,255,0.2); }
+  .metric-lbl { font-size: 0.68rem; color: rgba(255,255,255,0.38); margin-top: 4px; }
+  .metric-hint { font-size: 0.62rem; color: rgba(0,255,200,0.35); margin-top: 4px; font-style: italic; letter-spacing: 0.02em; }
+
+  /* ── Comparativa bloques ── */
+  .bloques-compare {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 12px;
+    align-items: center;
+    margin: 16px 0;
+  }
+  .bloques-col {
+    background: var(--surface2);
+    border-radius: 10px;
+    padding: 14px;
+  }
+  .bloques-col-title {
+    font-size: 0.68rem;
+    color: rgba(255,255,255,0.35);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 8px;
+  }
+  .bloques-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.85rem;
+    padding: 3px 0;
+  }
+  .bloques-row .macro-name { color: rgba(255,255,255,0.55); }
+  .bloques-row .macro-val  { font-weight: 600; }
+  .bloques-row .macro-val.p { color: var(--cp); }
+  .bloques-row .macro-val.c { color: var(--cc); }
+  .bloques-row .macro-val.g { color: var(--cg); }
+
+  .arrow-center {
+    text-align: center;
+    font-size: 1.4rem;
+    color: rgba(0,255,200,0.5);
+    padding: 0 4px;
+  }
+
+  .delta-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 0.72rem;
+    padding: 2px 7px;
+    border-radius: 20px;
+    margin-left: 6px;
+  }
+  .delta-chip.pos { background: rgba(74,222,128,0.15); color: var(--ngr); }
+  .delta-chip.neg { background: rgba(248,113,113,0.15); color: var(--nr); }
+  .delta-chip.zer { background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.3); }
+
+  /* ── Justificación ── */
+  .justificacion-box {
+    background: rgba(0,255,200,0.04);
+    border-left: 3px solid rgba(0,255,200,0.3);
+    border-radius: 0 8px 8px 0;
+    padding: 14px 16px;
+    font-size: 0.88rem;
+    line-height: 1.65;
+    color: rgba(255,255,255,0.8);
+    margin: 16px 0;
+  }
+
+  /* ── Alerta honestidad ── */
+  .alerta-honestidad {
+    background: rgba(251,191,36,0.08);
+    border: 1px solid rgba(251,191,36,0.35);
+    border-radius: 10px;
+    padding: 12px 16px;
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    margin-bottom: 14px;
+    font-size: 0.84rem;
+    color: var(--ny);
+  }
+  .alerta-honestidad .icon { font-size: 1.1rem; flex-shrink: 0; }
+
+  /* ── Safety lock ── */
+  .safety-lock {
+    background: rgba(248,113,113,0.08);
+    border: 1px solid rgba(248,113,113,0.3);
+    border-radius: 10px;
+    padding: 12px 16px;
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    margin-bottom: 14px;
+    font-size: 0.84rem;
+    color: var(--nr);
+  }
+
+  /* ── Acciones Aceptar/Rechazar ── */
+  .acciones-wrap {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 20px;
+  }
+  .btn-aceptar {
+    flex: 1; min-width: 150px;
+    background: linear-gradient(135deg, rgba(74,222,128,0.18), rgba(74,222,128,0.08));
+    border: 1px solid rgba(74,222,128,0.5);
+    color: var(--ngr);
+    border-radius: 10px;
+    padding: 12px 20px;
+    font-size: 0.9rem;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    transition: all 0.18s;
+    font-weight: 600;
+  }
+  .btn-aceptar:hover { background: rgba(74,222,128,0.25); }
+  .btn-aceptar:disabled { opacity: 0.35; cursor: not-allowed; }
+
+  .btn-rechazar {
+    flex: 1; min-width: 150px;
+    background: transparent;
+    border: 1px solid rgba(248,113,113,0.35);
+    color: var(--nr);
+    border-radius: 10px;
+    padding: 12px 20px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.18s;
+  }
+  .btn-rechazar:hover { background: rgba(248,113,113,0.08); }
+  .btn-rechazar:disabled { opacity: 0.35; cursor: not-allowed; }
+
+  /* Estado ya procesado */
+  .estado-badge {
+    display: inline-block;
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    letter-spacing: 0.05em;
+    font-weight: 600;
+  }
+  .estado-aceptado  { background: rgba(74,222,128,0.15);  color: var(--ngr); border: 1px solid rgba(74,222,128,0.3); }
+  .estado-rechazado { background: rgba(248,113,113,0.12); color: var(--nr);  border: 1px solid rgba(248,113,113,0.25); }
+  .estado-pendiente { background: rgba(251,191,36,0.12);  color: var(--ny);  border: 1px solid rgba(251,191,36,0.3); }
+
+  /* ── Modal rechazo ── */
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 9000;
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; pointer-events: none; transition: opacity 0.2s;
+  }
+  .modal-overlay.show { opacity: 1; pointer-events: all; }
+  .modal-box {
+    background: rgba(10,22,40,0.99);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 24px;
+    max-width: 420px;
+    width: 90%;
+    transform: scale(0.95); transition: transform 0.2s;
+  }
+  .modal-overlay.show .modal-box { transform: scale(1); }
+  .modal-title { font-family: 'Cinzel', serif; font-size: 0.85rem; color: var(--nc); margin-bottom: 14px; }
+  .modal-textarea {
+    width: 100%;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(0,255,200,0.2);
+    border-radius: 8px;
+    color: #fff;
+    padding: 10px 12px;
+    font-size: 0.85rem;
+    resize: vertical;
+    min-height: 80px;
+  }
+  .modal-textarea:focus { outline: none; border-color: var(--nc); }
+  .modal-actions { display: flex; gap: 10px; margin-top: 14px; }
+  .modal-btn-cancel {
+    flex: 1; padding: 9px; border: 1px solid rgba(255,255,255,0.15);
+    background: transparent; color: rgba(255,255,255,0.5); border-radius: 8px; cursor: pointer;
+  }
+  .modal-btn-confirm {
+    flex: 1; padding: 9px; border: 1px solid rgba(248,113,113,0.4);
+    background: rgba(248,113,113,0.1); color: var(--nr); border-radius: 8px; cursor: pointer;
+    font-weight: 600;
+  }
+
+  /* ── Chips de razón rápida ── */
+  .razon-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  .razon-chip {
+    padding: 6px 14px;
+    border: 1px solid rgba(255,255,255,0.12);
+    background: rgba(255,255,255,0.04);
+    color: rgba(255,255,255,0.55);
+    border-radius: 20px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .razon-chip:hover { border-color: rgba(0,255,200,0.35); color: var(--nc); background: rgba(0,255,200,0.06); }
+  .razon-chip.active { border-color: rgba(248,113,113,0.5); color: var(--nr); background: rgba(248,113,113,0.1); }
+
+  /* ── Historial ── */
+  .hist-item {
+    display: grid;
+    grid-template-columns: 80px 60px 1fr auto;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    font-size: 0.82rem;
+  }
+  .hist-item:last-child { border-bottom: none; }
+  .hist-semana { color: rgba(255,255,255,0.45); font-size: 0.75rem; }
+  .hist-esc {
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 0.85rem;
+  }
+  .hist-esc.A { background: rgba(74,222,128,0.15);  color: var(--ngr); }
+  .hist-esc.B { background: rgba(251,191,36,0.12);  color: var(--ny);  }
+  .hist-esc.C { background: rgba(248,113,113,0.12); color: var(--nr);  }
+  .hist-esc.D { background: rgba(167,139,250,0.12); color: #a78bfa;    }
+  .hist-esc.X { background: rgba(100,116,139,0.1);  color: #94a3b8;    }
+
+  /* ── Toast ── */
+  #toast {
+    position: fixed; bottom: 24px; left: 50%;
+    transform: translateX(-50%) translateY(60px);
+    background: rgba(10,22,40,0.97);
+    border: 1px solid var(--nc); color: var(--nc);
+    padding: 10px 24px; border-radius: 30px;
+    font-size: 0.85rem; opacity: 0;
+    transition: all 0.3s; z-index: 9999; pointer-events: none;
+  }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  #toast.error { border-color: var(--nr); color: var(--nr); }
+
+  @media (max-width: 560px) {
+    .bloques-compare { grid-template-columns: 1fr; }
+    .arrow-center { display: none; }
+    .metrics-grid { grid-template-columns: repeat(2, 1fr); }
+    .hist-item { grid-template-columns: 70px 36px 1fr auto; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="inf-wrap">
+
+  <!-- Header -->
+  <div class="d-flex align-items-center justify-content-between mb-3">
+    <div>
+      <div class="inf-label">Informe de Optimización</div>
+      <h4 style="color:#fff; margin:0; font-family:'Cinzel',serif; font-size:1.1rem;">
+        Semana del {{ lunes|date:"d M Y" }}
+      </h4>
+    </div>
+    <a href="{% url 'nutricion_app_django:dashboard_nutricional' %}" class="blq-btn-ghost"
+       style="background:transparent;border:1px solid rgba(255,255,255,0.15);color:rgba(255,255,255,0.55);
+              border-radius:10px;padding:8px 16px;font-size:0.83rem;text-decoration:none;">← Volver</a>
+  </div>
+
+  {% if informe %}
+  <!-- ── Tarjeta principal del informe ── -->
+  <div class="inf-card" id="informeCard">
+
+    <!-- Escenario badge -->
+    <div class="escenario-badge esc-{{ informe.escenario }}" id="escenarioBadge">
+      <div class="esc-dot"></div>
+      <span>
+        {% if informe.escenario == 'A' %}Escenario A — Óptimo{% endif %}
+        {% if informe.escenario == 'B' %}Escenario B — Estancamiento{% endif %}
+        {% if informe.escenario == 'C' %}Escenario C — Fatiga / Refeed{% endif %}
+        {% if informe.escenario == 'D' %}Escenario D — Sobreingesta{% endif %}
+        {% if informe.escenario == 'X' %}Sin datos suficientes{% endif %}
+      </span>
+      <span id="estadoBadge">
+        <span class="estado-badge estado-{{ informe.estado }}">
+          {% if informe.estado == 'pendiente' %}Pendiente{% endif %}
+          {% if informe.estado == 'aceptado' %}Aceptado{% endif %}
+          {% if informe.estado == 'rechazado' %}Rechazado{% endif %}
+        </span>
+      </span>
+    </div>
+
+    <!-- Alertas -->
+    {% if informe.alerta_honestidad %}
+    <div class="alerta-honestidad">
+      <span class="icon">⚠</span>
+      <div>
+        <strong>Alerta de honestidad:</strong> Declaraste un cumplimiento alto
+        pero el peso subió y el rendimiento bajó. Puede que el tamaño real de
+        tus bloques no coincida con el prescrito. Revisa las porciones.
+      </div>
+    </div>
+    {% endif %}
+
+    {% if informe.safety_lock_activado %}
+    <div class="safety-lock">
+      <span class="icon">🔒</span>
+      <div>
+        <strong>Safety Lock activado:</strong> El ajuste propuesto bajaría la
+        proteína o grasa por debajo del mínimo de seguridad.
+        {% if informe.diet_break_sugerido %}
+        Se recomienda una <strong>semana de mantenimiento</strong> antes de reducir más.
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Métricas de la semana -->
+    <div class="inf-label mb-2">Métricas de la semana</div>
+    <div class="metrics-grid">
+
+      <div class="metric-block">
+        <div class="metric-val
+          {% if informe.cumplimiento_semana_pct >= 90 %}positive
+          {% elif informe.cumplimiento_semana_pct >= 70 %}neutral
+          {% else %}negative{% endif %}">
+          {{ informe.cumplimiento_semana_pct|floatformat:0 }}%
+        </div>
+        <div class="metric-lbl">Cumplimiento</div>
+      </div>
+
+      <div class="metric-block">
+        {% if informe.media_peso_nueva %}
+          <div class="metric-val">{{ informe.media_peso_nueva|floatformat:1 }} kg</div>
+          {% if informe.media_peso_anterior %}
+          <div class="metric-lbl" style="color:rgba(255,255,255,0.3);">
+            antes: {{ informe.media_peso_anterior|floatformat:1 }} kg
+          </div>
+          {% endif %}
+        {% else %}
+          <div class="metric-val na">—</div>
+          <div class="metric-hint">Pesa cada mañana</div>
+        {% endif %}
+        <div class="metric-lbl">Peso medio</div>
+      </div>
+
+      <div class="metric-block">
+        {% if informe.fatiga_media %}
+          <div class="metric-val
+            {% if informe.fatiga_media <= 4 %}positive
+            {% elif informe.fatiga_media <= 6 %}neutral
+            {% else %}negative{% endif %}">
+            {{ informe.fatiga_media|floatformat:1 }}
+          </div>
+        {% else %}
+          <div class="metric-val na">—</div>
+          <div class="metric-hint">Completa el check-in diario</div>
+        {% endif %}
+        <div class="metric-lbl">Fatiga media</div>
+      </div>
+
+      <div class="metric-block">
+        {% if informe.rendimiento_gym_delta_pct is not None %}
+          <div class="metric-val
+            {% if informe.rendimiento_gym_delta_pct >= 0 %}positive
+            {% else %}negative{% endif %}">
+            {% if informe.rendimiento_gym_delta_pct >= 0 %}+{% endif %}{{ informe.rendimiento_gym_delta_pct|floatformat:1 }}%
+          </div>
+        {% else %}
+          <div class="metric-val na">—</div>
+          <div class="metric-hint">Registra tu entreno esta semana</div>
+        {% endif %}
+        <div class="metric-lbl">Δ Rendimiento gym</div>
+      </div>
+
+    </div>
+
+    <!-- Justificación del algoritmo -->
+    <div class="justificacion-box">
+      {{ informe.justificacion }}
+    </div>
+
+    <!-- Comparativa bloques: antes → después -->
+    {% if informe.escenario != 'X' %}
+    <div class="inf-label mb-2">Ajuste propuesto</div>
+    <div class="bloques-compare">
+      <!-- Antes (basado en el último target) -->
+      <div class="bloques-col">
+        <div class="bloques-col-title">Bloques actuales</div>
+        {% with adj_p=informe.ajuste_bloques_proteina adj_c=informe.ajuste_bloques_carbos adj_g=informe.ajuste_bloques_grasas %}
+        <div class="bloques-row">
+          <span class="macro-name">Proteína</span>
+          <span class="macro-val p" id="ant-p">—</span>
+        </div>
+        <div class="bloques-row">
+          <span class="macro-name">Carbos</span>
+          <span class="macro-val c" id="ant-c">—</span>
+        </div>
+        <div class="bloques-row">
+          <span class="macro-name">Grasas</span>
+          <span class="macro-val g" id="ant-g">—</span>
+        </div>
+        {% endwith %}
+        <div style="font-size:0.65rem;color:rgba(255,255,255,0.2);margin-top:6px;">
+          aplica a: {{ informe.ajuste_aplica_a }}
+        </div>
+      </div>
+
+      <div class="arrow-center">→</div>
+
+      <!-- Después -->
+      <div class="bloques-col">
+        <div class="bloques-col-title">Bloques nuevos</div>
+        <div class="bloques-row">
+          <span class="macro-name">Proteína</span>
+          <span class="macro-val p" id="new-p">—</span>
+          {% if informe.ajuste_bloques_proteina != 0 %}
+          <span class="delta-chip {% if informe.ajuste_bloques_proteina > 0 %}pos{% else %}neg{% endif %}">
+            {% if informe.ajuste_bloques_proteina > 0 %}+{% endif %}{{ informe.ajuste_bloques_proteina }}
+          </span>
+          {% endif %}
+        </div>
+        <div class="bloques-row">
+          <span class="macro-name">Carbos</span>
+          <span class="macro-val c" id="new-c">—</span>
+          {% if informe.ajuste_bloques_carbos != 0 %}
+          <span class="delta-chip {% if informe.ajuste_bloques_carbos > 0 %}pos{% else %}neg{% endif %}">
+            {% if informe.ajuste_bloques_carbos > 0 %}+{% endif %}{{ informe.ajuste_bloques_carbos }}
+          </span>
+          {% endif %}
+        </div>
+        <div class="bloques-row">
+          <span class="macro-name">Grasas</span>
+          <span class="macro-val g" id="new-g">—</span>
+          {% if informe.ajuste_bloques_grasas != 0 %}
+          <span class="delta-chip {% if informe.ajuste_bloques_grasas > 0 %}pos{% else %}neg{% endif %}">
+            {% if informe.ajuste_bloques_grasas > 0 %}+{% endif %}{{ informe.ajuste_bloques_grasas }}
+          </span>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Acciones -->
+    <div id="accionesWrap" class="acciones-wrap">
+      {% if informe.estado == 'pendiente' %}
+      <button class="btn-aceptar" id="btnAceptar" onclick="accionInforme('aceptar')">
+        ✓ &nbsp;Aplicar ajuste
+      </button>
+      <button class="btn-rechazar" id="btnRechazar" onclick="abrirModalRechazo()">
+        ✕ &nbsp;Semana atípica — rechazar
+      </button>
+      {% else %}
+      <div style="color:rgba(255,255,255,0.35);font-size:0.85rem;">
+        {% if informe.estado == 'rechazado' and informe.razon_rechazo %}
+          Rechazado: {{ informe.razon_rechazo }}
+        {% endif %}
+      </div>
+      {% endif %}
+    </div>
+
+  </div><!-- /inf-card -->
+
+  {% else %}
+  <div class="inf-card" style="text-align:center; padding:40px;">
+    <div style="color:rgba(255,255,255,0.35); font-size:0.95rem;">
+      No hay informe disponible para esta semana.<br>
+      <span style="font-size:0.8rem;color:rgba(255,255,255,0.2);">El algoritmo genera el informe cada lunes a las 7:00.</span>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- ── Historial de informes anteriores ── -->
+  {% if historial %}
+  <div class="inf-card">
+    <div class="inf-label mb-3">Historial de semanas</div>
+    {% for h in historial %}
+    <div class="hist-item">
+      <span class="hist-semana">{{ h.semana|date:"d/m/Y" }}</span>
+      <div class="hist-esc {{ h.escenario }}">{{ h.escenario }}</div>
+      <div style="font-size:0.78rem;color:rgba(255,255,255,0.45);">
+        Cumpl. {{ h.cumplimiento_semana_pct|floatformat:0 }}%
+        {% if h.media_peso_nueva %}· {{ h.media_peso_nueva|floatformat:1 }} kg{% endif %}
+      </div>
+      <span class="estado-badge estado-{{ h.estado }}" style="font-size:0.68rem;padding:3px 10px;">
+        {{ h.get_estado_display }}
+      </span>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+</div><!-- /inf-wrap -->
+
+<!-- Modal rechazo -->
+<div class="modal-overlay" id="modalRechazo">
+  <div class="modal-box">
+    <div class="modal-title">Rechazar ajuste — ¿por qué?</div>
+    <p style="font-size:0.82rem;color:rgba(255,255,255,0.5);margin-bottom:10px;">
+      Selecciona el motivo o escríbelo libremente:
+    </p>
+    <div class="razon-chips">
+      <button type="button" class="razon-chip" onclick="setRazonChip(this, 'Viaje o trabajo — semana no representativa')">✈ Viaje/Trabajo</button>
+      <button type="button" class="razon-chip" onclick="setRazonChip(this, 'Salud — enfermedad o lesión')">🤒 Salud</button>
+      <button type="button" class="razon-chip" onclick="setRazonChip(this, 'Puro placer — decisión consciente, sin datos fiables')">🎉 Puro placer</button>
+    </div>
+    <textarea class="modal-textarea" id="razonRechazo"
+              placeholder="O escribe tu razón aquí..."></textarea>
+    <div class="modal-actions">
+      <button class="modal-btn-cancel" onclick="cerrarModal()">Cancelar</button>
+      <button class="modal-btn-confirm" onclick="accionInforme('rechazar')">Confirmar rechazo</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+{% endblock %}
+
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+
+  const INFORME_ID = {{ informe.id|default:'null' }};
+  const ADJ_P = {{ informe.ajuste_bloques_proteina|default:0 }};
+  const ADJ_C = {{ informe.ajuste_bloques_carbos|default:0 }};
+  const ADJ_G = {{ informe.ajuste_bloques_grasas|default:0 }};
+  const CSRF = '{{ csrf_token }}';
+
+  // Cargar bloques actuales del target más reciente via inline
+  // (pasados como data-attributes en los span)
+  const TARGET_P = {{ target_p|default:0 }};
+  const TARGET_C = {{ target_c|default:0 }};
+  const TARGET_G = {{ target_g|default:0 }};
+
+  function fillCompare() {
+    const setEl = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
+    setEl('ant-p', TARGET_P);
+    setEl('ant-c', TARGET_C);
+    setEl('ant-g', TARGET_G);
+    setEl('new-p', Math.max(1, TARGET_P + ADJ_P));
+    setEl('new-c', Math.max(1, TARGET_C + ADJ_C));
+    setEl('new-g', Math.max(1, TARGET_G + ADJ_G));
+  }
+  fillCompare();
+
+  // ── Acciones ────────────────────────────────────────────────────────
+  window.accionInforme = async function(accion) {
+    if (!INFORME_ID) return;
+    const razon = accion === 'rechazar'
+      ? (document.getElementById('razonRechazo')?.value?.trim() || 'Semana atípica')
+      : '';
+
+    disableButtons(true);
+    cerrarModal();
+
+    try {
+      const resp = await fetch('{% url "nutricion_app_django:ajax_accion_informe" %}', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+        body: JSON.stringify({ informe_id: INFORME_ID, accion, razon }),
+      });
+      const data = await resp.json();
+      if (data.ok) {
+        const estado = data.estado;
+        // Actualizar UI
+        const badge = document.getElementById('estadoBadge');
+        const wrap  = document.getElementById('accionesWrap');
+        const clsMap = { aceptado: 'estado-aceptado', rechazado: 'estado-rechazado' };
+        const labelMap = { aceptado: 'Aceptado', rechazado: 'Rechazado' };
+        if (badge) badge.innerHTML = `<span class="estado-badge ${clsMap[estado]}">${labelMap[estado]}</span>`;
+        if (wrap)  wrap.innerHTML  = `<span style="color:rgba(255,255,255,0.3);font-size:0.83rem;">${labelMap[estado]}</span>`;
+        showToast(estado === 'aceptado' ? 'Ajuste aplicado ✓' : 'Semana marcada como atípica');
+      } else {
+        showToast(data.error || 'Error', true);
+        disableButtons(false);
+      }
+    } catch(e) {
+      showToast('Error de conexión', true);
+      disableButtons(false);
+    }
+  };
+
+  function disableButtons(v) {
+    ['btnAceptar','btnRechazar'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.disabled = v;
+    });
+  }
+
+  // ── Modal ────────────────────────────────────────────────────────────
+  window.setRazonChip = function(btn, texto) {
+    document.getElementById('razonRechazo').value = texto;
+    document.querySelectorAll('.razon-chip').forEach(c => c.classList.remove('active'));
+    btn.classList.add('active');
+  };
+
+  window.abrirModalRechazo = function() {
+    document.getElementById('modalRechazo').classList.add('show');
+    document.getElementById('razonRechazo').focus();
+  };
+  window.cerrarModal = function() {
+    document.getElementById('modalRechazo').classList.remove('show');
+  };
+  document.getElementById('modalRechazo').addEventListener('click', function(e) {
+    if (e.target === this) cerrarModal();
+  });
+
+  // ── Toast ────────────────────────────────────────────────────────────
+  function showToast(msg, isError = false) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = isError ? 'show error' : 'show';
+    clearTimeout(t._timer);
+    t._timer = setTimeout(() => { t.className = ''; }, 3000);
+  }
+
+});
+</script>
+{% endblock %}

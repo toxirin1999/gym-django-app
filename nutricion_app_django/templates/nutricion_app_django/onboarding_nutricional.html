@@ -1,0 +1,146 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Configurar Nutrición{% endblock %}
+
+{% block extra_css %}
+<style>
+  .onb-card {
+    background: rgba(10, 22, 40, 0.85);
+    border: 1px solid rgba(0,255,200,0.25);
+    border-radius: 16px;
+    backdrop-filter: blur(12px);
+    box-shadow: 0 0 30px rgba(0,255,200,0.08);
+  }
+  .onb-title {
+    font-family: 'Cinzel', serif;
+    background: linear-gradient(90deg, #00ffc8, #00bfff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .onb-input {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(0,255,200,0.3);
+    border-radius: 8px;
+    color: #e2e8f0;
+    padding: 10px 14px;
+    width: 100%;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 1rem;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .onb-input:focus { border-color: #00ffc8; }
+  .onb-label {
+    font-family: 'Rajdhani', sans-serif;
+    color: #94a3b8;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 6px;
+    display: block;
+  }
+  .onb-btn {
+    background: linear-gradient(135deg, #00ffc8, #00bfff);
+    color: #0a1628;
+    font-family: 'Cinzel', serif;
+    font-weight: 700;
+    padding: 12px 32px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    font-size: 1rem;
+    width: 100%;
+    transition: opacity 0.2s;
+  }
+  .onb-btn:hover { opacity: 0.85; }
+  .tip-box {
+    background: rgba(0,255,200,0.06);
+    border-left: 3px solid #00ffc8;
+    border-radius: 0 8px 8px 0;
+    padding: 12px 16px;
+    font-family: 'Share Tech Mono', monospace;
+    color: #94a3b8;
+    font-size: 0.8rem;
+    line-height: 1.6;
+  }
+  .error-msg { color: #f87171; font-size: 0.8rem; margin-top: 4px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="min-height:100vh; display:flex; align-items:center; justify-content:center; padding: 24px;">
+  <div class="onb-card" style="max-width:520px; width:100%; padding: 40px 36px;">
+
+    <div style="text-align:center; margin-bottom:32px;">
+      <div style="font-size:2.5rem; margin-bottom:8px;">⚗️</div>
+      <h1 class="onb-title" style="font-size:1.6rem; margin-bottom:8px;">Configuración Nutricional</h1>
+      <p style="color:#64748b; font-family:'Rajdhani',sans-serif; font-size:0.95rem;">
+        Solo necesitas esto una vez. El sistema calculará tu composición corporal con el método Navy.
+      </p>
+    </div>
+
+    <div class="tip-box" style="margin-bottom:28px;">
+      <strong style="color:#00ffc8;">Cómo medir:</strong><br>
+      · <strong>Cintura:</strong> rodea con la cinta a la altura del ombligo, sin tensar<br>
+      · <strong>Cuello:</strong> por debajo de la laringe (nuez de Adán)<br>
+      {% if cliente.genero == 'F' %}
+      · <strong>Caderas:</strong> la parte más ancha, generalmente a la altura de los glúteos<br>
+      {% endif %}
+      · Todas las medidas en centímetros
+    </div>
+
+    <form method="post" novalidate>
+      {% csrf_token %}
+
+      <div style="margin-bottom:20px;">
+        <label class="onb-label">{{ form.altura_cm.label }}</label>
+        <input type="number" name="altura_cm" class="onb-input"
+               value="{{ form.altura_cm.value|default:'' }}"
+               placeholder="Ej: 175" step="0.5" min="120" max="220">
+        {% if form.altura_cm.errors %}
+          <p class="error-msg">{{ form.altura_cm.errors.0 }}</p>
+        {% endif %}
+      </div>
+
+      <div style="margin-bottom:20px;">
+        <label class="onb-label">{{ form.cintura_cm.label }}</label>
+        <input type="number" name="cintura_cm" class="onb-input"
+               value="{{ form.cintura_cm.value|default:'' }}"
+               placeholder="Ej: 82" step="0.5" min="40" max="200">
+        {% if form.cintura_cm.errors %}
+          <p class="error-msg">{{ form.cintura_cm.errors.0 }}</p>
+        {% endif %}
+      </div>
+
+      <div style="margin-bottom:20px;">
+        <label class="onb-label">{{ form.cuello_cm.label }}</label>
+        <input type="number" name="cuello_cm" class="onb-input"
+               value="{{ form.cuello_cm.value|default:'' }}"
+               placeholder="Ej: 38" step="0.5" min="20" max="80">
+        {% if form.cuello_cm.errors %}
+          <p class="error-msg">{{ form.cuello_cm.errors.0 }}</p>
+        {% endif %}
+      </div>
+
+      {% if cliente.genero == 'F' %}
+      <div style="margin-bottom:20px;">
+        <label class="onb-label">{{ form.caderas_cm.label }}</label>
+        <input type="number" name="caderas_cm" class="onb-input"
+               value="{{ form.caderas_cm.value|default:'' }}"
+               placeholder="Ej: 95" step="0.5" min="50" max="200">
+        {% if form.caderas_cm.errors %}
+          <p class="error-msg">{{ form.caderas_cm.errors.0 }}</p>
+        {% endif %}
+      </div>
+      {% endif %}
+
+      <div style="margin-top:32px;">
+        <button type="submit" class="onb-btn">Calcular y Activar</button>
+      </div>
+    </form>
+
+  </div>
+</div>
+{% endblock %}

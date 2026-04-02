@@ -1,0 +1,1589 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Calculadora de Bloques{% endblock %}
+
+{% block extra_css %}
+<style>
+  :root {
+    --nc:  #00ffc8;
+    --nb:  #00bfff;
+    --ng:  #C8AA6E;
+    --nr:  #f87171;
+    --ny:  #fbbf24;
+    --ngr: #4ade80;
+    --cp:  #22d3ee;   /* proteína — cyan */
+    --cc:  #f59e0b;   /* carbos — ámbar */
+    --cg:  #a78bfa;   /* grasas — violeta */
+    --cv:  #4ade80;   /* verduras — verde */
+    --surface:  rgba(10,22,40,0.92);
+    --surface2: rgba(5,14,28,0.97);
+    --border:   rgba(0,255,200,0.15);
+  }
+
+  .blq-wrap { max-width: 960px; margin: 0 auto; padding: 20px 16px 60px; }
+
+  /* ── Cards ── */
+  .blq-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    backdrop-filter: blur(14px);
+    padding: 20px;
+    margin-bottom: 16px;
+    position: relative;
+    overflow: hidden;
+  }
+  .blq-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(0,255,200,0.03) 0%, transparent 60%);
+    pointer-events: none;
+  }
+
+  /* ── Labels ── */
+  .blq-label {
+    font-family: 'Cinzel', serif;
+    font-size: 0.63rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: rgba(0,255,200,0.5);
+    margin-bottom: 3px;
+  }
+
+  /* ── Barra total del día ── */
+  .day-summary {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  .day-macro {
+    background: var(--surface2);
+    border-radius: 10px;
+    padding: 12px 14px;
+    text-align: center;
+    border: 1px solid rgba(255,255,255,0.07);
+  }
+  .day-macro .val {
+    font-size: 1.6rem;
+    font-weight: 700;
+    line-height: 1;
+  }
+  .day-macro .lbl { font-size: 0.68rem; opacity: 0.55; margin-top: 2px; }
+  .day-macro .target-lbl { font-size: 0.7rem; opacity: 0.4; }
+
+  .macro-p .val { color: var(--cp); }
+  .macro-c .val { color: var(--cc); }
+  .macro-g .val { color: var(--cg); }
+
+  /* Semáforo */
+  .tl-green  { color: var(--ngr) !important; }
+  .tl-amber  { color: var(--ny)  !important; }
+  .tl-red    { color: var(--nr)  !important; }
+
+  /* ── Progress bars ── */
+  .prog-bar-wrap { height: 6px; background: rgba(255,255,255,0.08); border-radius: 3px; overflow: hidden; margin-top: 6px; }
+  .prog-bar { height: 100%; border-radius: 3px; transition: width 0.35s ease; }
+  .prog-bar-p { background: var(--cp); }
+  .prog-bar-c { background: var(--cc); }
+  .prog-bar-g { background: var(--cg); }
+
+  /* ── Tabs de comida ── */
+  .meal-tabs {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 18px;
+  }
+  .meal-tab {
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.78rem;
+    cursor: pointer;
+    border: 1px solid rgba(0,255,200,0.25);
+    background: transparent;
+    color: rgba(255,255,255,0.55);
+    transition: all 0.18s;
+    position: relative;
+  }
+  .meal-tab:hover { border-color: var(--nc); color: var(--nc); }
+  .meal-tab.active {
+    background: rgba(0,255,200,0.12);
+    border-color: var(--nc);
+    color: var(--nc);
+  }
+  .meal-tab .badge {
+    position: absolute;
+    top: -5px; right: -5px;
+    background: var(--nc);
+    color: #000;
+    border-radius: 50%;
+    width: 16px; height: 16px;
+    font-size: 0.6rem;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700;
+  }
+
+  /* ── Columnas de alimentos ── */
+  .food-columns {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+  }
+  @media (max-width: 640px) {
+    .food-columns { grid-template-columns: 1fr; }
+    .day-summary  { grid-template-columns: repeat(3,1fr); }
+  }
+
+  .food-col-header {
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    font-weight: 600;
+    padding: 6px 10px;
+    border-radius: 6px;
+    margin-bottom: 8px;
+    text-align: center;
+  }
+  .food-col-header.col-p { background: rgba(34,211,238,0.12); color: var(--cp); }
+  .food-col-header.col-c { background: rgba(245,158,11,0.12); color: var(--cc); }
+  .food-col-header.col-g { background: rgba(167,139,250,0.12); color: var(--cg); }
+
+  /* ── Tarjetas de alimento ── */
+  .food-item {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 8px;
+    padding: 8px 10px;
+    margin-bottom: 6px;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    user-select: none;
+  }
+  .food-item:hover { border-color: rgba(0,255,200,0.35); background: rgba(0,255,200,0.06); }
+  .food-item.selected {
+    border-color: var(--nc) !important;
+    background: rgba(0,255,200,0.1) !important;
+  }
+  .food-item .food-name { font-size: 0.82rem; flex: 1; }
+  .food-item .food-medida { font-size: 0.68rem; color: rgba(255,255,255,0.35); }
+  .food-item .food-blocks {
+    font-size: 0.7rem;
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+  .food-item .fb-p { color: var(--cp); }
+  .food-item .fb-c { color: var(--cc); }
+  .food-item .fb-g { color: var(--cg); }
+  .food-item .food-qty {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .food-item .qty-btn {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    border: 1px solid rgba(0,255,200,0.4);
+    background: transparent;
+    color: var(--nc);
+    font-size: 0.9rem;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    line-height: 1;
+  }
+  .food-item .qty-val { min-width: 18px; text-align: center; font-size: 0.82rem; }
+
+  /* ── Comodín ── */
+  .comodin-section {
+    margin-top: 14px;
+    border-top: 1px solid rgba(255,255,255,0.07);
+    padding-top: 14px;
+  }
+  .comodin-inputs {
+    display: grid;
+    grid-template-columns: repeat(3,1fr) 2fr;
+    gap: 8px;
+    align-items: end;
+  }
+  @media (max-width: 560px) {
+    .comodin-inputs { grid-template-columns: repeat(3,1fr); }
+    .comodin-nota { grid-column: 1/-1; }
+  }
+  .blq-input {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(0,255,200,0.2);
+    border-radius: 8px;
+    color: #fff;
+    padding: 7px 10px;
+    font-size: 0.85rem;
+    width: 100%;
+  }
+  .blq-input:focus { outline: none; border-color: var(--nc); }
+
+  /* ── Registros guardados ── */
+  .saved-list { margin-top: 12px; }
+  .saved-item {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 8px;
+    padding: 8px 12px;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: 0.82rem;
+  }
+  .saved-item .si-comida {
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--nc);
+    min-width: 60px;
+  }
+  .saved-item .si-blocks { display: flex; gap: 10px; }
+  .saved-item .si-b { font-size: 0.78rem; }
+  .saved-item .si-b.p { color: var(--cp); }
+  .saved-item .si-b.c { color: var(--cc); }
+  .saved-item .si-b.g { color: var(--cg); }
+  .saved-item .si-comodin { color: var(--ny); font-size: 0.72rem; }
+  .del-btn {
+    background: transparent;
+    border: none;
+    color: rgba(248,113,113,0.5);
+    cursor: pointer;
+    font-size: 1rem;
+    padding: 0 2px;
+    transition: color 0.15s;
+  }
+  .del-btn:hover { color: var(--nr); }
+
+  /* ── Botones ── */
+  .blq-btn {
+    background: linear-gradient(135deg, rgba(0,255,200,0.15) 0%, rgba(0,191,255,0.1) 100%);
+    border: 1px solid rgba(0,255,200,0.45);
+    color: var(--nc);
+    border-radius: 10px;
+    padding: 10px 22px;
+    font-size: 0.88rem;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    transition: all 0.18s;
+  }
+  .blq-btn:hover { background: rgba(0,255,200,0.22); }
+  .blq-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .blq-btn-ghost {
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.15);
+    color: rgba(255,255,255,0.55);
+    border-radius: 10px;
+    padding: 10px 18px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .blq-btn-ghost:hover { border-color: rgba(255,255,255,0.4); color: #fff; }
+
+  /* ── Sugerencia distribución ── */
+  .dist-hint {
+    font-size: 0.72rem;
+    color: rgba(0,255,200,0.45);
+    margin-top: 4px;
+  }
+
+  /* ── Toast ── */
+  #toast {
+    position: fixed;
+    bottom: 24px; left: 50%;
+    transform: translateX(-50%) translateY(60px);
+    background: rgba(10,22,40,0.97);
+    border: 1px solid var(--nc);
+    color: var(--nc);
+    padding: 10px 24px;
+    border-radius: 30px;
+    font-size: 0.85rem;
+    opacity: 0;
+    transition: all 0.3s;
+    z-index: 9999;
+    pointer-events: none;
+  }
+  #toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+  #toast.error { border-color: var(--nr); color: var(--nr); }
+
+  /* ── Tags de alimento (fuel / repair / rest) ── */
+  .food-tags { display: flex; gap: 3px; margin-top: 3px; flex-wrap: wrap; }
+  .food-tag {
+    font-size: 0.56rem; font-weight: 700; letter-spacing: 0.07em;
+    text-transform: uppercase; padding: 1px 5px;
+    border-radius: 3px; line-height: 1.5;
+  }
+  .tag-fuel   { background: rgba(251,191,36,0.18); color: var(--ny); }
+  .tag-repair { background: rgba(34,211,238,0.15); color: var(--cp); }
+  .tag-rest   { background: rgba(74,222,128,0.15); color: var(--ngr); }
+
+  /* ── Calidad de bloque (borde izquierdo) ── */
+  .food-item[data-calidad="verde"] { border-left: 2px solid rgba(74,222,128,0.4); }
+  .food-item[data-calidad="gris"]  { border-left: 2px solid rgba(255,255,255,0.12); }
+
+  /* ── Calidad barra del día ── */
+  .quality-bar-row {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255,255,255,0.04);
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 0.78rem;
+    color: rgba(255,255,255,0.5);
+    margin-top: 2px;
+  }
+  .quality-bar-inner {
+    flex: 1; height: 4px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 2px; overflow: hidden;
+  }
+  .quality-bar-fill { height: 100%; background: var(--ngr); border-radius: 2px; transition: width 0.4s ease; }
+  .quality-pct { font-weight: 700; color: var(--ngr); min-width: 32px; text-align: right; }
+
+  /* ── Semáforo de carga ── */
+  .semaforo-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 18px;
+    margin-bottom: 16px;
+    border-radius: 12px;
+    backdrop-filter: blur(12px);
+    border: 1px solid;
+  }
+  .semaforo-card.semaforo-hyrox {
+    background: rgba(255,68,68,0.08);
+    border-color: rgba(255,68,68,0.3);
+  }
+  .semaforo-card.semaforo-gym {
+    background: rgba(251,191,36,0.08);
+    border-color: rgba(251,191,36,0.3);
+  }
+  .semaforo-card.semaforo-descanso {
+    background: rgba(74,222,128,0.07);
+    border-color: rgba(74,222,128,0.25);
+  }
+  .semaforo-dot {
+    width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0;
+  }
+  .semaforo-hyrox .semaforo-dot  { background: #ff4444; box-shadow: 0 0 10px rgba(255,68,68,0.6); }
+  .semaforo-gym .semaforo-dot    { background: #fbbf24; box-shadow: 0 0 10px rgba(251,191,36,0.6); }
+  .semaforo-descanso .semaforo-dot { background: #4ade80; box-shadow: 0 0 10px rgba(74,222,128,0.5); }
+  .semaforo-texts { flex: 1; }
+  .semaforo-title { font-size: 0.82rem; font-weight: 600; color: #fff; line-height: 1.2; }
+  .semaforo-hyrox .semaforo-title  { color: #ff8080; }
+  .semaforo-gym .semaforo-title    { color: #fcd34d; }
+  .semaforo-descanso .semaforo-title { color: #86efac; }
+  .semaforo-msg { font-size: 0.75rem; color: rgba(255,255,255,0.5); margin-top: 2px; }
+  .doble-tag {
+    font-size: 0.68rem; font-weight: 700; letter-spacing: 0.05em;
+    background: rgba(251,191,36,0.2); color: var(--ny);
+    border: 1px solid rgba(251,191,36,0.35);
+    border-radius: 20px; padding: 3px 10px;
+    flex-shrink: 0;
+  }
+
+  /* ── ACN Panel ── */
+  .acn-section {
+    margin-top: 14px;
+    border-top: 1px solid rgba(255,255,255,0.07);
+    padding-top: 14px;
+  }
+  .acn-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.78rem;
+    color: rgba(0,255,200,0.7);
+    cursor: pointer;
+    user-select: none;
+    padding: 4px 0;
+    width: fit-content;
+  }
+  .acn-toggle:hover { color: var(--nc); }
+  .acn-toggle svg { flex-shrink: 0; transition: transform 0.2s; }
+  .acn-toggle.open svg { transform: rotate(90deg); }
+
+  #acnPanel {
+    margin-top: 12px;
+    background: rgba(0,0,0,0.25);
+    border: 1px solid rgba(0,255,200,0.12);
+    border-radius: 10px;
+    padding: 14px;
+    display: none;
+  }
+  .acn-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 10px; }
+  .acn-field { display: flex; flex-direction: column; gap: 4px; }
+  .acn-field label { font-size: 0.68rem; color: rgba(0,255,200,0.5); letter-spacing: 0.08em; text-transform: uppercase; }
+  .acn-select {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(0,255,200,0.2);
+    border-radius: 8px; color: #fff;
+    padding: 7px 10px; font-size: 0.82rem;
+    min-width: 180px;
+  }
+  .acn-select:focus { outline: none; border-color: var(--nc); }
+  .acn-peso-input {
+    width: 90px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(0,255,200,0.2);
+    border-radius: 8px; color: #fff;
+    padding: 7px 10px; font-size: 0.9rem;
+    text-align: center;
+  }
+  .acn-peso-input:focus { outline: none; border-color: var(--nc); }
+
+  .acn-cooking-toggle {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .acn-cooking-btn {
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    cursor: pointer;
+    border: 1px solid rgba(255,255,255,0.15);
+    background: transparent;
+    color: rgba(255,255,255,0.5);
+    transition: all 0.15s;
+  }
+  .acn-cooking-btn.active {
+    border-color: var(--nc);
+    background: rgba(0,255,200,0.1);
+    color: var(--nc);
+  }
+
+  #acnResult {
+    background: rgba(0,0,0,0.3);
+    border-radius: 8px;
+    padding: 12px;
+    margin: 10px 0;
+    display: none;
+  }
+  .acn-blocks-row {
+    display: flex;
+    gap: 14px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 8px;
+  }
+  .acn-blq {
+    text-align: center;
+  }
+  .acn-blq .acn-val { font-size: 1.5rem; font-weight: 700; line-height: 1; }
+  .acn-blq .acn-lbl { font-size: 0.65rem; opacity: 0.55; }
+  .acn-nota-acn {
+    font-size: 0.72rem;
+    color: var(--ny);
+    margin-top: 6px;
+    min-height: 16px;
+  }
+  .acn-calidad-badge {
+    font-size: 0.65rem; font-weight: 700; letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 2px 8px; border-radius: 10px;
+    display: inline-flex; align-items: center; gap: 4px;
+  }
+  .acn-calidad-badge.verde { background: rgba(74,222,128,0.15); color: #4ade80; }
+  .acn-calidad-badge.gris  { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.4); }
+
+  .acn-add-btn {
+    background: linear-gradient(135deg, rgba(0,255,200,0.15), rgba(0,191,255,0.1));
+    border: 1px solid rgba(0,255,200,0.4);
+    color: var(--nc);
+    border-radius: 8px; padding: 8px 18px;
+    font-size: 0.82rem; letter-spacing: 0.04em;
+    cursor: pointer; transition: all 0.15s;
+  }
+  .acn-add-btn:hover { background: rgba(0,255,200,0.22); }
+  .acn-add-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+  /* ── Plato Virtual flotante ── */
+  #platoVirtual {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    z-index: 800;
+    background: rgba(5,14,28,0.97);
+    border-top: 1px solid rgba(0,255,200,0.25);
+    backdrop-filter: blur(16px);
+    padding: 14px 20px 20px;
+    transform: translateY(100%);
+    transition: transform 0.28s cubic-bezier(0.22,1,0.36,1);
+    max-width: 960px;
+    margin: 0 auto;
+    pointer-events: none;
+  }
+  #platoVirtual.visible { transform: translateY(0); pointer-events: auto; }
+
+  /* Safe area para móvil */
+  @supports (padding-bottom: env(safe-area-inset-bottom)) {
+    #platoVirtual { padding-bottom: calc(20px + env(safe-area-inset-bottom)); }
+  }
+
+  .plato-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  .plato-title {
+    font-family: 'Cinzel', serif;
+    font-size: 0.65rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: rgba(0,255,200,0.55);
+  }
+  .plato-clear-btn {
+    background: none; border: none; padding: 0;
+    color: rgba(255,255,255,0.25); font-size: 0.72rem; cursor: pointer;
+    transition: color 0.15s;
+  }
+  .plato-clear-btn:hover { color: var(--nr); }
+
+  .plato-items {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 10px;
+    min-height: 22px;
+  }
+  .plato-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    border-radius: 14px;
+    background: rgba(0,255,200,0.08);
+    border: 1px solid rgba(0,255,200,0.2);
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 0.78rem;
+    color: rgba(255,255,255,0.8);
+  }
+  .plato-chip .chip-qty {
+    background: rgba(0,255,200,0.18);
+    color: var(--nc);
+    border-radius: 8px;
+    padding: 0 5px;
+    font-size: 0.7rem;
+    font-weight: 700;
+  }
+
+  .plato-totals {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+  }
+  .plato-total-item {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.82rem;
+  }
+  .plato-total-item.pt { color: var(--cp); }
+  .plato-total-item.ct { color: var(--cc); }
+  .plato-total-item.gt { color: var(--cg); }
+
+  .plato-confirm-btn {
+    width: 100%;
+    background: linear-gradient(135deg, var(--nc), var(--nb));
+    color: #030d1a;
+    font-family: 'Cinzel', serif;
+    font-weight: 700;
+    font-size: 0.85rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 13px;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: opacity 0.15s, transform 0.12s;
+  }
+  .plato-confirm-btn:hover  { opacity: 0.88; transform: translateY(-1px); }
+  .plato-confirm-btn:active { transform: translateY(0); }
+  .plato-confirm-btn:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
+
+  /* Espacio para que el contenido no quede bajo el panel flotante */
+  .blq-wrap { padding-bottom: 160px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="blq-wrap">
+
+  <!-- Header -->
+  <div class="d-flex align-items-center justify-content-between mb-3">
+    <div>
+      <div class="blq-label">Calculadora de Bloques</div>
+      <h4 style="color:#fff; margin:0; font-family:'Cinzel',serif; font-size:1.1rem;">
+        {{ hoy|date:"l, d M Y" }}
+        <span style="font-size:0.8rem; color:rgba(0,255,200,0.6); margin-left:8px;">
+          {{ target.get_tipo_sesion_display }}
+        </span>
+      </h4>
+    </div>
+    <a href="{% url 'nutricion_app_django:dashboard_nutricional' %}" class="blq-btn-ghost">← Volver</a>
+  </div>
+
+  <!-- Semáforo de carga nutricional -->
+  <div class="semaforo-card semaforo-{{ target.tipo_sesion }}">
+    <div class="semaforo-dot"></div>
+    <div class="semaforo-texts">
+      {% if target.tipo_sesion == 'hyrox' %}
+        <div class="semaforo-title">Día de Carga — Hyrox / HIIT</div>
+        <div class="semaforo-msg">Tu cuerpo necesita combustible rápido. Prioriza arroz y patata pre-entreno.</div>
+      {% elif target.tipo_sesion == 'gym' %}
+        <div class="semaforo-title">Día de Construcción — Gym / Fuerza</div>
+        <div class="semaforo-msg">Prioridad: reparación muscular. Proteína distribuida en 4-5 tomas.</div>
+      {% else %}
+        <div class="semaforo-title">Día de Reset — Descanso</div>
+        <div class="semaforo-msg">Optimización metabólica. Prioriza grasas saludables y fibra.</div>
+      {% endif %}
+    </div>
+    {% if doble_sesion %}
+    <div class="doble-tag">⚡ Doble sesión: +2C +1P</div>
+    {% endif %}
+  </div>
+
+  <!-- Resumen del día -->
+  <div class="blq-card">
+    <div class="blq-label mb-2">Progreso del día</div>
+    <div class="day-summary">
+      <div class="day-macro macro-p">
+        <div class="val" id="total-p">0</div>
+        <div class="target-lbl">/ {{ target.bloques_proteina }} bloques</div>
+        <div class="lbl">Proteína</div>
+        <div class="prog-bar-wrap"><div class="prog-bar prog-bar-p" id="bar-p" style="width:0%"></div></div>
+      </div>
+      <div class="day-macro macro-c">
+        <div class="val" id="total-c">0</div>
+        <div class="target-lbl">/ {{ target.bloques_carbos }} bloques</div>
+        <div class="lbl">Carbos</div>
+        <div class="prog-bar-wrap"><div class="prog-bar prog-bar-c" id="bar-c" style="width:0%"></div></div>
+      </div>
+      <div class="day-macro macro-g">
+        <div class="val" id="total-g">0</div>
+        <div class="target-lbl">/ {{ target.bloques_grasas }} bloques</div>
+        <div class="lbl">Grasas</div>
+        <div class="prog-bar-wrap"><div class="prog-bar prog-bar-g" id="bar-g" style="width:0%"></div></div>
+      </div>
+      <!-- Calidad de bloques -->
+      <div class="quality-bar-row" id="qualityRow" style="{% if not calidad_bloques.pct %}display:none{% endif %}">
+        <span style="font-size:0.72rem;">Calidad</span>
+        <div class="quality-bar-inner">
+          <div class="quality-bar-fill" id="qualityFill" style="width:{{ calidad_bloques.pct|default:0 }}%"></div>
+        </div>
+        <span class="quality-pct" id="qualityPct">{{ calidad_bloques.pct|default:0 }}%</span>
+        <span style="font-size:0.68rem; color:rgba(74,222,128,0.6);">verdes</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Selector de comida -->
+  <div class="blq-card">
+    <div class="blq-label mb-2">Añadir comida</div>
+
+    <!-- Tabs -->
+    <div class="meal-tabs" id="mealTabs">
+      <div class="meal-tab active" data-meal="desayuno" onclick="selectMeal('desayuno')">Desayuno</div>
+      {% if target.tipo_sesion != 'descanso' %}
+      <div class="meal-tab" data-meal="pre" onclick="selectMeal('pre')">Pre</div>
+      {% endif %}
+      <div class="meal-tab" data-meal="almuerzo" onclick="selectMeal('almuerzo')">Almuerzo</div>
+      {% if target.tipo_sesion != 'descanso' %}
+      <div class="meal-tab" data-meal="post" onclick="selectMeal('post')">Post</div>
+      {% endif %}
+      <div class="meal-tab" data-meal="cena" onclick="selectMeal('cena')">Cena</div>
+      <div class="meal-tab" data-meal="snack" onclick="selectMeal('snack')">Snack</div>
+    </div>
+
+    <!-- Sugerencia de distribución -->
+    <div class="dist-hint" id="distHint"></div>
+
+    <!-- Columnas de alimentos -->
+    <div class="food-columns" id="foodColumns">
+
+      <!-- PROTEÍNAS -->
+      <div>
+        <div class="food-col-header col-p">Proteínas · <span id="sel-p">0</span> bloq</div>
+        <div id="list-proteinas">
+          {% for a in proteinas %}
+          <div class="food-item" data-id="{{ a.id }}" data-P="{{ a.P }}" data-C="{{ a.C }}" data-G="{{ a.G }}"
+               data-calidad="{{ a.calidad }}" onclick="toggleFood(this)">
+            <div style="flex:1; min-width:0;">
+              <div class="food-name">{{ a.nombre }}</div>
+              <div class="food-tags">{% for t in a.tags %}<span class="food-tag tag-{{ t }}">{{ t }}</span>{% endfor %}</div>
+              <div class="food-medida">{{ a.medida_casa }}</div>
+            </div>
+            <div>
+              <div class="food-blocks">
+                {% if a.P %}<span class="fb-p">{{ a.P }}P</span>{% endif %}
+                {% if a.C %}<span class="fb-c">{{ a.C }}C</span>{% endif %}
+                {% if a.G %}<span class="fb-g">{{ a.G }}G</span>{% endif %}
+              </div>
+              <div class="food-qty" style="display:none">
+                <button class="qty-btn" onclick="changeQty(event,this,-1)">−</button>
+                <span class="qty-val">1</span>
+                <button class="qty-btn" onclick="changeQty(event,this,+1)">+</button>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- CARBOS -->
+      <div>
+        <div class="food-col-header col-c">Carbos · <span id="sel-c">0</span> bloq</div>
+        <div id="list-carbos">
+          {% for a in carbos %}
+          <div class="food-item" data-id="{{ a.id }}" data-P="{{ a.P }}" data-C="{{ a.C }}" data-G="{{ a.G }}"
+               data-calidad="{{ a.calidad }}" onclick="toggleFood(this)">
+            <div style="flex:1; min-width:0;">
+              <div class="food-name">{{ a.nombre }}</div>
+              <div class="food-tags">{% for t in a.tags %}<span class="food-tag tag-{{ t }}">{{ t }}</span>{% endfor %}</div>
+              <div class="food-medida">{{ a.medida_casa }}</div>
+            </div>
+            <div>
+              <div class="food-blocks">
+                {% if a.P %}<span class="fb-p">{{ a.P }}P</span>{% endif %}
+                {% if a.C %}<span class="fb-c">{{ a.C }}C</span>{% endif %}
+                {% if a.G %}<span class="fb-g">{{ a.G }}G</span>{% endif %}
+              </div>
+              <div class="food-qty" style="display:none">
+                <button class="qty-btn" onclick="changeQty(event,this,-1)">−</button>
+                <span class="qty-val">1</span>
+                <button class="qty-btn" onclick="changeQty(event,this,+1)">+</button>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- GRASAS -->
+      <div>
+        <div class="food-col-header col-g">Grasas · <span id="sel-g">0</span> bloq</div>
+        <div id="list-grasas">
+          {% for a in grasas %}
+          <div class="food-item" data-id="{{ a.id }}" data-P="{{ a.P }}" data-C="{{ a.C }}" data-G="{{ a.G }}"
+               data-calidad="{{ a.calidad }}" onclick="toggleFood(this)">
+            <div style="flex:1; min-width:0;">
+              <div class="food-name">{{ a.nombre }}</div>
+              <div class="food-tags">{% for t in a.tags %}<span class="food-tag tag-{{ t }}">{{ t }}</span>{% endfor %}</div>
+              <div class="food-medida">{{ a.medida_casa }}</div>
+            </div>
+            <div>
+              <div class="food-blocks">
+                {% if a.P %}<span class="fb-p">{{ a.P }}P</span>{% endif %}
+                {% if a.C %}<span class="fb-c">{{ a.C }}C</span>{% endif %}
+                {% if a.G %}<span class="fb-g">{{ a.G }}G</span>{% endif %}
+              </div>
+              <div class="food-qty" style="display:none">
+                <button class="qty-btn" onclick="changeQty(event,this,-1)">−</button>
+                <span class="qty-val">1</span>
+                <button class="qty-btn" onclick="changeQty(event,this,+1)">+</button>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+    </div><!-- /food-columns -->
+
+    <!-- ACN: Calculadora por Peso -->
+    <div class="acn-section">
+      <div class="acn-toggle" id="acnToggle" onclick="toggleACNPanel()">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+          <path d="M4 2L10 7L4 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span>Calculadora por peso — ACN</span>
+      </div>
+      <div id="acnPanel">
+        <div class="acn-row">
+          <div class="acn-field" style="flex:1; min-width:160px;">
+            <label>Alimento</label>
+            <select id="acnFood" class="acn-select" onchange="acnFoodChanged()">
+              <option value="">— Seleccionar alimento —</option>
+            </select>
+          </div>
+          <div class="acn-field">
+            <label>Peso (g)</label>
+            <input type="number" id="acnPeso" class="acn-peso-input" placeholder="0" min="0" max="2000" oninput="acnCalcular()">
+          </div>
+        </div>
+        <!-- Selector modo cocción (se muestra solo para alimentos que lo soportan) -->
+        <div id="acnCookingDiv" style="display:none; margin-bottom:10px;">
+          <div class="acn-field">
+            <label>Estado al pesar</label>
+            <div class="acn-cooking-toggle">
+              <button class="acn-cooking-btn active" data-mode="directo" onclick="acnSetMode(this)">Normal</button>
+              <button class="acn-cooking-btn" data-mode="crudo" onclick="acnSetMode(this)">Crudo</button>
+              <button class="acn-cooking-btn" data-mode="cocinado" onclick="acnSetMode(this)">Cocinado</button>
+            </div>
+          </div>
+        </div>
+        <!-- Resultado -->
+        <div id="acnResult">
+          <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:10px;">
+            <div class="acn-blocks-row">
+              <div class="acn-blq"><div class="acn-val" id="acn-p" style="color:var(--cp)">0</div><div class="acn-lbl">P bloq</div></div>
+              <div class="acn-blq"><div class="acn-val" id="acn-c" style="color:var(--cc)">0</div><div class="acn-lbl">C bloq</div></div>
+              <div class="acn-blq"><div class="acn-val" id="acn-g" style="color:var(--cg)">0</div><div class="acn-lbl">G bloq</div></div>
+            </div>
+            <span id="acnCalidadBadge" class="acn-calidad-badge"></span>
+          </div>
+          <div class="acn-nota-acn" id="acnNota"></div>
+          <button class="acn-add-btn" id="acnAddBtn" onclick="acnGuardar()" disabled>
+            Añadir a <span id="acnComidaLabel">desayuno</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Comodín -->
+    <div class="comodin-section">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.85rem;color:rgba(255,255,255,0.6)">
+        <input type="checkbox" id="chkComodin" onchange="toggleComodin()" style="accent-color:var(--ny)">
+        <span style="color:var(--ny);">Comodín</span> — declarar bloques sin especificar alimento
+      </label>
+      <div id="comodinFields" style="display:none; margin-top:10px;">
+        <div class="comodin-inputs">
+          <div>
+            <div class="blq-label">Proteína</div>
+            <input type="number" id="cmd-p" class="blq-input" min="0" step="0.5" value="0" placeholder="P">
+          </div>
+          <div>
+            <div class="blq-label">Carbos</div>
+            <input type="number" id="cmd-c" class="blq-input" min="0" step="0.5" value="0" placeholder="C">
+          </div>
+          <div>
+            <div class="blq-label">Grasas</div>
+            <input type="number" id="cmd-g" class="blq-input" min="0" step="0.5" value="0" placeholder="G">
+          </div>
+          <div class="comodin-nota">
+            <div class="blq-label">Nota (opcional)</div>
+            <input type="text" id="cmd-nota" class="blq-input" maxlength="200" placeholder="Ej: menú del restaurante">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Botón guardar -->
+    <div class="d-flex gap-2 mt-3">
+      <button class="blq-btn" onclick="guardarComida()" id="btnGuardar">
+        Guardar comida
+      </button>
+      <button class="blq-btn-ghost" onclick="limpiarSeleccion()">Limpiar</button>
+    </div>
+  </div>
+
+  <!-- Registros guardados hoy -->
+  <div class="blq-card">
+    <div class="blq-label mb-2">Registros de hoy</div>
+    <div class="saved-list" id="savedList">
+      <div id="emptyMsg" style="color:rgba(255,255,255,0.3);font-size:0.85rem;">No hay registros aún.</div>
+    </div>
+  </div>
+
+</div><!-- /blq-wrap -->
+
+<div id="toast"></div>
+
+<!-- ── Plato Virtual flotante ── -->
+<div id="platoVirtual">
+  <div class="plato-header">
+    <span class="plato-title">Tu plato actual</span>
+    <button class="plato-clear-btn" onclick="limpiarSeleccion()">✕ Limpiar</button>
+  </div>
+  <div class="plato-items" id="platoItems"></div>
+  <div class="plato-totals">
+    <span class="plato-total-item pt" id="plato-p-total">0 P</span>
+    <span style="color:rgba(255,255,255,0.15);">·</span>
+    <span class="plato-total-item ct" id="plato-c-total">0 C</span>
+    <span style="color:rgba(255,255,255,0.15);">·</span>
+    <span class="plato-total-item gt" id="plato-g-total">0 G</span>
+    <span style="font-size:0.68rem;color:rgba(255,255,255,0.25);margin-left:4px;">bloques seleccionados</span>
+  </div>
+  <button class="plato-confirm-btn" id="platoConfirmBtn" onclick="guardarComida()">
+    Confirmar comida
+  </button>
+</div>
+{% endblock %}
+
+
+{% block extra_js %}
+<!-- Datos para JS (sin depender de template vars inline que podrían romper el parser JS) -->
+<script id="nut-cfg" type="application/json">
+{
+  "csrf": "{{ csrf_token }}",
+  "urlGuardar": "{% url 'nutricion_app_django:ajax_guardar_bloques' %}",
+  "urlEliminar": "{% url 'nutricion_app_django:ajax_eliminar_bloque' %}"
+}
+</script>
+
+<!-- Script independiente: TODAS las interacciones — funciona aunque el script principal falle -->
+<script>
+(function() {
+  // ── Config ──
+  var cfg = {};
+  try { cfg = JSON.parse(document.getElementById('nut-cfg').textContent); } catch(e) {}
+  var _currentMeal = 'desayuno';
+
+  // ── Helpers ──
+  function _fmt(v) { return v.toFixed(1).replace(/\.0$/, ''); }
+
+  function _showToast(msg, isError) {
+    var t = document.getElementById('toast');
+    if (!t) { if (isError) alert(msg); return; }
+    t.textContent = msg;
+    t.className = isError ? 'show error' : 'show';
+    setTimeout(function() { t.className = ''; }, 3000);
+  }
+
+  // ── Update totals + Plato Virtual ──
+  function _updateTotals() {
+    var p = 0, c = 0, g = 0, selected = [];
+    document.querySelectorAll('.food-item.selected').forEach(function(el) {
+      var qty = parseInt(el.querySelector('.qty-val').textContent) || 1;
+      p += (parseFloat(el.dataset.p || el.dataset.P) || 0) * qty;
+      c += (parseFloat(el.dataset.c || el.dataset.C) || 0) * qty;
+      g += (parseFloat(el.dataset.g || el.dataset.G) || 0) * qty;
+      selected.push({ name: el.querySelector('.food-name').textContent.trim(), qty: qty });
+    });
+    var sp = document.getElementById('sel-p'), sc = document.getElementById('sel-c'), sg = document.getElementById('sel-g');
+    if (sp) sp.textContent = _fmt(p);
+    if (sc) sc.textContent = _fmt(c);
+    if (sg) sg.textContent = _fmt(g);
+    var plato = document.getElementById('platoVirtual');
+    var platoItems = document.getElementById('platoItems');
+    if (selected.length > 0) {
+      if (platoItems) platoItems.innerHTML = selected.map(function(s) {
+        return '<div class="plato-chip">' + s.name +
+          (s.qty > 1 ? '<span class="chip-qty">\xd7' + s.qty + '</span>' : '') + '</div>';
+      }).join('');
+      var pp = document.getElementById('plato-p-total'), pc = document.getElementById('plato-c-total'), pg = document.getElementById('plato-g-total');
+      if (pp) pp.textContent = _fmt(p) + ' P';
+      if (pc) pc.textContent = _fmt(c) + ' C';
+      if (pg) pg.textContent = _fmt(g) + ' G';
+      if (plato) plato.classList.add('visible');
+    } else {
+      if (plato) plato.classList.remove('visible');
+      if (platoItems) platoItems.innerHTML = '';
+    }
+  }
+
+  // ── Toggle alimento ──
+  window.toggleFood = function(el) {
+    try {
+      var cb = document.getElementById('chkComodin');
+      if (cb && cb.checked) return;
+      el.classList.toggle('selected');
+      var qtyDiv = el.querySelector('.food-qty');
+      if (el.classList.contains('selected')) {
+        if (qtyDiv) qtyDiv.style.display = 'flex';
+      } else {
+        if (qtyDiv) qtyDiv.style.display = 'none';
+        var qv = el.querySelector('.qty-val');
+        if (qv) qv.textContent = '1';
+      }
+      _updateTotals();
+    } catch(e) { console.error('toggleFood:', e); }
+  };
+
+  // ── Cambiar cantidad ──
+  window.changeQty = function(event, btn, delta) {
+    event.stopPropagation();
+    var item = btn.closest('.food-item');
+    var span = item.querySelector('.qty-val');
+    var val = parseInt(span.textContent) + delta;
+    if (val < 1) val = 1;
+    if (val > 10) val = 10;
+    span.textContent = val;
+    _updateTotals();
+  };
+
+  // ── Selección de comida (tab) ──
+  window.selectMeal = function(meal) {
+    _currentMeal = meal;
+    document.querySelectorAll('.meal-tab').forEach(function(t) {
+      t.classList.toggle('active', t.dataset.meal === meal);
+    });
+    window.limpiarSeleccion();
+  };
+
+  // ── Limpiar selección ──
+  window.limpiarSeleccion = function() {
+    document.querySelectorAll('.food-item.selected').forEach(function(el) {
+      el.classList.remove('selected');
+      var qd = el.querySelector('.food-qty');
+      if (qd) qd.style.display = 'none';
+      var qv = el.querySelector('.qty-val');
+      if (qv) qv.textContent = '1';
+    });
+    _updateTotals();
+    var chk = document.getElementById('chkComodin');
+    if (chk) chk.checked = false;
+    var cf = document.getElementById('comodinFields');
+    if (cf) cf.style.display = 'none';
+    var ids = ['cmd-p','cmd-c','cmd-g'];
+    ids.forEach(function(id) { var e = document.getElementById(id); if (e) e.value = '0'; });
+    var nota = document.getElementById('cmd-nota');
+    if (nota) nota.value = '';
+  };
+
+  // ── Toggle comodín ──
+  window.toggleComodin = function() {
+    var on = document.getElementById('chkComodin').checked;
+    var cf = document.getElementById('comodinFields');
+    if (cf) cf.style.display = on ? 'block' : 'none';
+    if (on) {
+      document.querySelectorAll('.food-item.selected').forEach(function(el) {
+        el.classList.remove('selected');
+        var qd = el.querySelector('.food-qty');
+        if (qd) qd.style.display = 'none';
+        var qv = el.querySelector('.qty-val');
+        if (qv) qv.textContent = '1';
+      });
+      _updateTotals();
+    }
+  };
+
+  // ── Guardar comida ──
+  window.guardarComida = async function() {
+    try {
+      var isComodin = document.getElementById('chkComodin').checked;
+      var btn = document.getElementById('btnGuardar');
+      var platoBtn = document.getElementById('platoConfirmBtn');
+      if (btn) btn.disabled = true;
+      if (platoBtn) platoBtn.disabled = true;
+
+      var payload = { comida: _currentMeal, es_comodin: isComodin };
+
+      if (isComodin) {
+        payload.bloques_proteina = parseFloat(document.getElementById('cmd-p').value) || 0;
+        payload.bloques_carbos   = parseFloat(document.getElementById('cmd-c').value) || 0;
+        payload.bloques_grasas   = parseFloat(document.getElementById('cmd-g').value) || 0;
+        payload.nota_comodin     = (document.getElementById('cmd-nota').value || '').trim();
+      } else {
+        var alimentos = [];
+        document.querySelectorAll('.food-item.selected').forEach(function(el) {
+          alimentos.push({
+            id:       el.dataset.id,
+            cantidad: parseInt(el.querySelector('.qty-val').textContent) || 1
+          });
+        });
+        if (!alimentos.length) {
+          _showToast('Selecciona al menos un alimento', true);
+          if (btn) btn.disabled = false;
+          if (platoBtn) platoBtn.disabled = false;
+          return;
+        }
+        payload.alimentos = alimentos;
+      }
+
+      var resp = await fetch(cfg.urlGuardar || '/nutricion/ajax/guardar-bloques/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': cfg.csrf || '' },
+        body: JSON.stringify(payload)
+      });
+      var data = await resp.json();
+      if (data.ok) {
+        _showToast('Guardado \u2713');
+        window.location.reload();
+      } else {
+        _showToast(data.error || 'Error al guardar', true);
+        if (btn) btn.disabled = false;
+        if (platoBtn) platoBtn.disabled = false;
+      }
+    } catch(e) {
+      console.error('guardarComida:', e);
+      _showToast('Error de conexión', true);
+      var b = document.getElementById('btnGuardar');
+      var p = document.getElementById('platoConfirmBtn');
+      if (b) b.disabled = false;
+      if (p) p.disabled = false;
+    }
+  };
+
+  // ── Eliminar registro ──
+  window.eliminarRegistro = async function(id) {
+    try {
+      var resp = await fetch(cfg.urlEliminar || '/nutricion/ajax/eliminar-bloque/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': cfg.csrf || '' },
+        body: JSON.stringify({ id: id })
+      });
+      var data = await resp.json();
+      if (data.ok) {
+        _showToast('Eliminado');
+        window.location.reload();
+      }
+    } catch(e) {
+      console.error('eliminarRegistro:', e);
+      _showToast('Error', true);
+    }
+  };
+
+  // Exponer para el script principal
+  window._updateTotals = _updateTotals;
+  window._nutCurrentMeal = function(m) { if (m) _currentMeal = m; return _currentMeal; };
+})();
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+
+  // ── Constantes ──────────────────────────────────────────────────────
+  const TARGET_P = {{ target.bloques_proteina }};
+  const TARGET_C = {{ target.bloques_carbos }};
+  const TARGET_G = {{ target.bloques_grasas }};
+  const CSRF = '{{ csrf_token }}';
+
+  const DISTRIBUCION = {{ distribucion|safe }};
+
+  // ── ACN: base de datos de alimentos ─────────────────────────────────
+  const ALIMENTOS_ACN_LIST = {{ alimentos_acn|safe }};
+  const ALIMENTOS_ACN = {};
+  ALIMENTOS_ACN_LIST.forEach(a => ALIMENTOS_ACN[a.id] = a);
+
+  const BLOCK_G = { P: 7, C: 9, G: 3 };
+
+  const COMIDA_LABELS = {
+    desayuno:'Desayuno', almuerzo:'Almuerzo', cena:'Cena',
+    snack:'Snack', pre:'Pre-entreno', post:'Post-entreno'
+  };
+
+  // ── Estado ──────────────────────────────────────────────────────────
+  let registros = {{ registros_hoy|safe }};
+  let currentMeal = 'desayuno';
+  let totales = {{ totales_hoy_json|safe }};
+
+  // ── Selección de comida (tab) ────────────────────────────────────────
+  window.selectMeal = function(meal) {
+    currentMeal = meal;
+    document.querySelectorAll('.meal-tab').forEach(t => t.classList.toggle('active', t.dataset.meal === meal));
+    limpiarSeleccion();
+    showDistHint(meal);
+  };
+
+  // toggleFood y changeQty ya definidos en el script independiente de arriba.
+  // Aquí se sobreescriben para incluir limpiarSeleccion en selectMeal (necesita closure).
+
+  // ── Arranque ────────────────────────────────────────────────────────
+  try { renderSaved(); } catch(e) { console.error('renderSaved:', e); }
+  try { updateDaySummary(); } catch(e) { console.error('updateDaySummary:', e); }
+  try { updateMealBadges(); } catch(e) { console.error('updateMealBadges:', e); }
+  try { showDistHint('desayuno'); } catch(e) { console.error('showDistHint:', e); }
+
+  function showDistHint(meal) {
+    const hint = document.getElementById('distHint');
+    if (!hint) return;
+    if (!DISTRIBUCION || !DISTRIBUCION[meal]) { hint.textContent = ''; return; }
+    const d = DISTRIBUCION[meal];
+    hint.textContent = `Sugerido: ${d.P||0}P · ${d.C||0}C · ${d.G||0}G bloques`;
+  }
+
+  // updateSelectionTotals delega al script independiente
+  function updateSelectionTotals() { window._updateTotals && window._updateTotals(); }
+
+  // ── Comodín ──────────────────────────────────────────────────────────
+  window.toggleComodin = function() {
+    const on = document.getElementById('chkComodin').checked;
+    document.getElementById('comodinFields').style.display = on ? 'block' : 'none';
+    if (on) {
+      // Deselect all foods
+      document.querySelectorAll('.food-item.selected').forEach(el => {
+        el.classList.remove('selected');
+        el.querySelector('.food-qty').style.display = 'none';
+        el.querySelector('.qty-val').textContent = '1';
+      });
+      updateSelectionTotals();
+    }
+  };
+
+  // ── Guardar ──────────────────────────────────────────────────────────
+  window.guardarComida = async function() {
+    const isComodin = document.getElementById('chkComodin').checked;
+    const btn = document.getElementById('btnGuardar');
+    const platoBtn = document.getElementById('platoConfirmBtn');
+    btn.disabled = true;
+    if (platoBtn) platoBtn.disabled = true;
+
+    let payload = { comida: currentMeal, es_comodin: isComodin };
+
+    if (isComodin) {
+      payload.bloques_proteina = parseFloat(document.getElementById('cmd-p').value) || 0;
+      payload.bloques_carbos   = parseFloat(document.getElementById('cmd-c').value) || 0;
+      payload.bloques_grasas   = parseFloat(document.getElementById('cmd-g').value) || 0;
+      payload.nota_comodin     = document.getElementById('cmd-nota').value.trim();
+    } else {
+      const alimentos = [];
+      document.querySelectorAll('.food-item.selected').forEach(el => {
+        alimentos.push({
+          id:       el.dataset.id,
+          cantidad: parseInt(el.querySelector('.qty-val').textContent),
+        });
+      });
+      if (!alimentos.length) { showToast('Selecciona al menos un alimento', true); btn.disabled = false; if (platoBtn) platoBtn.disabled = false; return; }
+      payload.alimentos = alimentos;
+    }
+
+    try {
+      const resp = await fetch('{% url "nutricion_app_django:ajax_guardar_bloques" %}', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+        body: JSON.stringify(payload),
+      });
+      const data = await resp.json();
+      if (data.ok) {
+        totales = data.totales;
+        // Recargar registros
+        await reloadRegistros();
+        limpiarSeleccion();
+        updateDaySummary();
+        updateMealBadges();
+        showToast('Guardado ✓');
+      } else {
+        showToast(data.error || 'Error al guardar', true);
+      }
+    } catch(e) {
+      showToast('Error de conexión', true);
+    }
+    btn.disabled = false;
+    if (platoBtn) platoBtn.disabled = false;
+  };
+
+  async function reloadRegistros() {
+    // Recarga la página silenciosamente para obtener los registros actualizados
+    const resp = await fetch(window.location.href, { headers: {'X-Requested-With':'XMLHttpRequest'} });
+    // Simplemente recargamos la página para reflejar los cambios
+    window.location.reload();
+  }
+
+  // ── Eliminar registro ────────────────────────────────────────────────
+  window.eliminarRegistro = async function(id) {
+    try {
+      const resp = await fetch('{% url "nutricion_app_django:ajax_eliminar_bloque" %}', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+        body: JSON.stringify({ id }),
+      });
+      const data = await resp.json();
+      if (data.ok) {
+        totales = data.totales;
+        registros = registros.filter(r => r.id !== id);
+        renderSaved();
+        updateDaySummary();
+        updateMealBadges();
+        showToast('Eliminado');
+      }
+    } catch(e) {
+      showToast('Error', true);
+    }
+  };
+
+  // ── Limpiar selección ────────────────────────────────────────────────
+  window.limpiarSeleccion = function() {
+    document.querySelectorAll('.food-item.selected').forEach(el => {
+      el.classList.remove('selected');
+      el.querySelector('.food-qty').style.display = 'none';
+      el.querySelector('.qty-val').textContent = '1';
+    });
+    updateSelectionTotals();
+    document.getElementById('chkComodin').checked = false;
+    document.getElementById('comodinFields').style.display = 'none';
+    document.getElementById('cmd-p').value = '0';
+    document.getElementById('cmd-c').value = '0';
+    document.getElementById('cmd-g').value = '0';
+    document.getElementById('cmd-nota').value = '';
+  };
+
+  // ── Render registros guardados ───────────────────────────────────────
+  function renderSaved() {
+    const list = document.getElementById('savedList');
+    const empty = document.getElementById('emptyMsg');
+    if (!registros.length) {
+      empty.style.display = 'block';
+      list.querySelectorAll('.saved-item').forEach(e => e.remove());
+      return;
+    }
+    empty.style.display = 'none';
+    list.querySelectorAll('.saved-item').forEach(e => e.remove());
+
+    registros.forEach(r => {
+      const div = document.createElement('div');
+      div.className = 'saved-item';
+      div.dataset.id = r.id;
+      div.innerHTML = `
+        <span class="si-comida">${COMIDA_LABELS[r.comida] || r.comida}</span>
+        <div class="si-blocks">
+          <span class="si-b p">${r.bloques_proteina}P</span>
+          <span class="si-b c">${r.bloques_carbos}C</span>
+          <span class="si-b g">${r.bloques_grasas}G</span>
+        </div>
+        ${r.es_comodin ? `<span class="si-comodin">⚡ Comodín${r.nota_comodin ? ' — ' + r.nota_comodin : ''}</span>` : ''}
+        <button class="del-btn" onclick="eliminarRegistro(${r.id})" title="Eliminar">✕</button>
+      `;
+      list.appendChild(div);
+    });
+  }
+
+  // ── Actualizar resumen del día ───────────────────────────────────────
+  function updateDaySummary() {
+    const setMacro = (key, target) => {
+      const val = totales[key] || 0;
+      const pct = target > 0 ? Math.min((val / target) * 100, 130) : 0;
+      const el = document.getElementById('total-' + key.toLowerCase());
+      const bar = document.getElementById('bar-' + key.toLowerCase());
+      if (!el || !bar) return;
+      el.textContent = val % 1 === 0 ? val : val.toFixed(1);
+      bar.style.width = pct + '%';
+
+      // Semáforo
+      el.className = 'val';
+      if (val <= target) el.classList.add('tl-green');
+      else if (val <= target * 1.15) el.classList.add('tl-amber');
+      else el.classList.add('tl-red');
+    };
+    setMacro('P', TARGET_P);
+    setMacro('C', TARGET_C);
+    setMacro('G', TARGET_G);
+  }
+
+  // ── Badges en tabs ───────────────────────────────────────────────────
+  function updateMealBadges() {
+    document.querySelectorAll('.meal-tab').forEach(tab => {
+      const meal = tab.dataset.meal;
+      const count = registros.filter(r => r.comida === meal).length;
+      let badge = tab.querySelector('.badge');
+      if (count > 0) {
+        if (!badge) { badge = document.createElement('span'); badge.className = 'badge'; tab.appendChild(badge); }
+        badge.textContent = count;
+      } else if (badge) {
+        badge.remove();
+      }
+    });
+  }
+
+  // ── Toast ────────────────────────────────────────────────────────────
+  function showToast(msg, isError = false) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = isError ? 'show error' : 'show';
+    clearTimeout(t._timer);
+    t._timer = setTimeout(() => { t.className = ''; }, 2800);
+  }
+
+  // ── ACN Panel ────────────────────────────────────────────────────────
+  window.toggleACNPanel = function() {
+    const panel = document.getElementById('acnPanel');
+    const toggle = document.getElementById('acnToggle');
+    const visible = panel.style.display !== 'none';
+    panel.style.display = visible ? 'none' : 'block';
+    toggle.classList.toggle('open', !visible);
+  };
+
+  // Populate ACN food select
+  (function initACNSelect() {
+    const sel = document.getElementById('acnFood');
+    if (!sel) return;
+    const groups = { proteina: 'Proteínas', carbo: 'Carbos', grasa: 'Grasas', verdura: 'Verduras' };
+    const cats = {};
+    ALIMENTOS_ACN_LIST.forEach(a => {
+      if (!cats[a.categoria]) cats[a.categoria] = [];
+      cats[a.categoria].push(a);
+    });
+    Object.entries(groups).forEach(([cat, label]) => {
+      if (!cats[cat]) return;
+      const og = document.createElement('optgroup');
+      og.label = label;
+      cats[cat].forEach(a => {
+        const o = document.createElement('option');
+        o.value = a.id;
+        o.textContent = a.nombre;
+        og.appendChild(o);
+      });
+      sel.appendChild(og);
+    });
+  })();
+
+  let acnCurrentMode = 'directo';
+  let acnCalcResult = null;
+
+  window.acnFoodChanged = function() {
+    const id = document.getElementById('acnFood').value;
+    const food = ALIMENTOS_ACN[id];
+    const cookDiv = document.getElementById('acnCookingDiv');
+    acnCurrentMode = 'directo';
+
+    if (food && food.cooking_modes && food.cooking_modes.length > 1) {
+      // Set the correct default mode (the reference state)
+      acnCurrentMode = food.estado_ref || 'directo';
+      document.querySelectorAll('.acn-cooking-btn').forEach(btn => {
+        const isRef = btn.dataset.mode === acnCurrentMode;
+        btn.classList.toggle('active', isRef);
+      });
+      cookDiv.style.display = 'block';
+    } else {
+      cookDiv.style.display = 'none';
+    }
+    acnCalcular();
+  };
+
+  window.acnSetMode = function(btn) {
+    document.querySelectorAll('.acn-cooking-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    acnCurrentMode = btn.dataset.mode;
+    acnCalcular();
+  };
+
+  function redondeoInteligente(val) {
+    if (val <= 0) return 0;
+    const floor = Math.floor(val);
+    const dec = val - floor;
+    if (dec < 0.25) return floor;
+    if (dec < 0.75) return floor + 0.5;
+    return floor + 1;
+  }
+
+  window.acnCalcular = function() {
+    const id = document.getElementById('acnFood').value;
+    const pesoRaw = parseFloat(document.getElementById('acnPeso').value) || 0;
+    const resultDiv = document.getElementById('acnResult');
+    const addBtn = document.getElementById('acnAddBtn');
+    acnCalcResult = null;
+
+    if (!id || pesoRaw <= 0) {
+      resultDiv.style.display = 'none';
+      addBtn.disabled = true;
+      return;
+    }
+
+    const food = ALIMENTOS_ACN[id];
+    if (!food || !food.macros_100g) {
+      resultDiv.style.display = 'none';
+      addBtn.disabled = true;
+      return;
+    }
+
+    const m = food.macros_100g;
+    let peso = pesoRaw;
+    let cookingAdjusted = false;
+    const estadoRef = food.estado_ref || 'directo';
+    const factor = food.factor_coccion;
+
+    // Regla B: Factor de cocción
+    if (factor && acnCurrentMode !== estadoRef && acnCurrentMode !== 'directo' && estadoRef !== 'directo') {
+      if (estadoRef === 'crudo' && acnCurrentMode === 'cocinado') {
+        peso = pesoRaw / factor;
+        cookingAdjusted = true;
+      } else if (estadoRef === 'cocinado' && acnCurrentMode === 'crudo') {
+        peso = pesoRaw * factor;
+        cookingAdjusted = true;
+      }
+    }
+
+    const rawP = (peso * m.p) / (100 * BLOCK_G.P);
+    const rawH = (peso * m.h) / (100 * BLOCK_G.C);
+    const rawG = (peso * m.g) / (100 * BLOCK_G.G);
+
+    // Regla C: Cap de fibra
+    const fibraRatio = m.h > 0 ? m.fibra / m.h : 0;
+    const fiberCapped = fibraRatio > 0.5;
+
+    const bloqP = redondeoInteligente(rawP);
+    const bloqC = fiberCapped ? 0 : redondeoInteligente(rawH);
+    const bloqG = redondeoInteligente(rawG);
+
+    // Build nota
+    const notas = [];
+    if (fiberCapped) notas.push('Fibra alta — carbos no cuentan');
+    if (cookingAdjusted) notas.push(`Ajuste cocción (×${factor} de ${estadoRef})`);
+    if (bloqG > 0 && food.categoria === 'proteina') notas.push(`Grasa oculta: ${bloqG} bloque${bloqG !== 1 ? 's' : ''} G descontados de tu cupo`);
+
+    acnCalcResult = { P: bloqP, C: bloqC, G: bloqG, nota: notas.join(' · '), calidad: food.calidad };
+
+    document.getElementById('acn-p').textContent = bloqP;
+    document.getElementById('acn-c').textContent = bloqC;
+    document.getElementById('acn-g').textContent = bloqG;
+    document.getElementById('acnNota').textContent = notas.join(' · ');
+
+    const badge = document.getElementById('acnCalidadBadge');
+    badge.className = `acn-calidad-badge ${food.calidad}`;
+    badge.textContent = food.calidad === 'verde' ? '✦ Verde' : '○ Procesado';
+
+    document.getElementById('acnComidaLabel').textContent = COMIDA_LABELS[currentMeal] || currentMeal;
+    resultDiv.style.display = 'block';
+    addBtn.disabled = (bloqP + bloqC + bloqG === 0);
+  };
+
+  window.acnGuardar = async function() {
+    if (!acnCalcResult) return;
+    const id = document.getElementById('acnFood').value;
+    const food = ALIMENTOS_ACN[id];
+    const nota = `${food ? food.nombre : id} — ${document.getElementById('acnPeso').value}g`;
+    const btn = document.getElementById('acnAddBtn');
+    btn.disabled = true;
+
+    const payload = {
+      comida: currentMeal,
+      es_comodin: true,
+      bloques_proteina: acnCalcResult.P,
+      bloques_carbos:   acnCalcResult.C,
+      bloques_grasas:   acnCalcResult.G,
+      nota_comodin:     nota,
+    };
+
+    try {
+      const resp = await fetch('{% url "nutricion_app_django:ajax_guardar_bloques" %}', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+        body: JSON.stringify(payload),
+      });
+      const data = await resp.json();
+      if (data.ok) {
+        totales = data.totales;
+        await reloadRegistros();
+        showToast('ACN guardado ✓');
+        document.getElementById('acnPeso').value = '';
+        document.getElementById('acnResult').style.display = 'none';
+        acnCalcResult = null;
+      } else {
+        showToast(data.error || 'Error al guardar', true);
+      }
+    } catch(e) {
+      showToast('Error de conexión', true);
+    }
+    btn.disabled = false;
+  };
+
+  // Update the selectMeal window function to also update ACN label
+  const _origSelectMeal = window.selectMeal;
+  window.selectMeal = function(meal) {
+    _origSelectMeal(meal);
+    const lbl = document.getElementById('acnComidaLabel');
+    if (lbl) lbl.textContent = COMIDA_LABELS[meal] || meal;
+  };
+
+});
+</script>
+{% endblock %}
