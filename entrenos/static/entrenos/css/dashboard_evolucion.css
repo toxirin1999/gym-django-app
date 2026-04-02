@@ -1334,11 +1334,19 @@
 .ev-mobile-periods .ev-period {
   flex: 1;
   text-align: center;
-  padding: 0.55rem 0;
+  padding: 0.4rem 0;
+  min-height: 36px;
   border-right: 1px solid var(--line);
   border-radius: 0;
+  font-size: 0.7rem;
 }
 .ev-mobile-periods .ev-period:last-child { border-right: none; }
+.ev-mobile-periods .ev-period.active {
+  background: var(--lime-mid);
+  color: var(--lime);
+  border-color: transparent;
+  font-weight: 700;
+}
 
 /* ================================================================
    RESPONSIVE — TABLET  ≤ 768px
