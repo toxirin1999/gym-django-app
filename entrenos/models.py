@@ -41,6 +41,15 @@ class EjercicioRealizado(models.Model):
         help_text="True si este ejercicio se realizó bajo un estado biológico restringido (volume_modifier < 1.0)"
     )
 
+    # Molestia reportada durante el entreno
+    molestia_reportada = models.BooleanField(default=False)
+    molestia_zona = models.CharField(max_length=100, blank=True)
+    molestia_severidad = models.PositiveIntegerField(
+        null=True, blank=True,
+        help_text="1=Leve, 2=Moderada, 3=Severa/Aguda"
+    )
+    molestia_descripcion = models.TextField(blank=True)
+
     fuente_datos = models.CharField(max_length=20, default='manual')
     fecha_creacion = models.DateTimeField(auto_now_add=True)
 

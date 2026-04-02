@@ -268,6 +268,238 @@ input{background:transparent!important;border:none!important;outline:none!import
   box-shadow:0 0 20px rgba(200,170,110,0.15);
 }
 .btn-final:active{filter:brightness(0.85);}
+
+/* ── BANNER BIO-SAFETY ── */
+.bio-banner{
+  margin:0;padding:10px 16px;
+  background:rgba(200,170,110,0.06);
+  border-bottom:1px solid var(--bdm);
+  display:flex;align-items:flex-start;gap:10px;
+}
+.bio-banner-icon{font-size:18px;flex-shrink:0;margin-top:1px;}
+.bio-banner-content{flex:1;}
+.bio-banner-title{
+  font-family:var(--fm);font-size:10px;color:var(--g);
+  letter-spacing:2px;text-transform:uppercase;font-weight:700;margin-bottom:4px;
+}
+.bio-banner-items{display:flex;flex-direction:column;gap:3px;}
+.bio-item{font-family:var(--fm);font-size:10px;color:var(--td);line-height:1.4;}
+.bio-item.sustitucion{color:var(--blue);}
+.bio-item.bloqueo{color:var(--rl);}
+.bio-item.volumen{color:var(--g);}
+.bio-banner-toggle{
+  background:none;border:none;color:var(--td);font-size:14px;cursor:pointer;
+  padding:0 4px;flex-shrink:0;align-self:flex-start;
+}
+
+/* ── DOTS NAVEGACIÓN ── */
+.ej-dots{
+  display:flex;align-items:center;justify-content:center;
+  gap:6px;padding:8px 16px;background:var(--panel);border-bottom:1px solid var(--bd);
+  flex-wrap:wrap;
+}
+.ej-dot{
+  width:8px;height:8px;border-radius:50%;
+  background:var(--tm);border:1px solid var(--bd);
+  cursor:pointer;transition:all .2s;flex-shrink:0;
+}
+.ej-dot.activo{background:var(--g);border-color:var(--g);width:10px;height:10px;}
+.ej-dot.completado{background:var(--ok);border-color:var(--ok);}
+.ej-dot.parcial{background:var(--gd);border-color:var(--gd);}
+
+/* ── RPE DESCRIPCIÓN ── */
+.rpe-desc{
+  font-family:var(--fm);font-size:9px;color:var(--td);
+  text-align:center;margin-top:3px;letter-spacing:0.5px;
+  min-height:13px;transition:color .2s;
+}
+
+/* ── OBJETIVO CHIP en serie header ── */
+.sa-obj-wrap{display:flex;flex-direction:column;align-items:flex-end;gap:2px;}
+.sa-obj-plan{font-family:var(--fm);font-size:9px;color:var(--td);letter-spacing:0.5px;}
+.sa-obj-diff{font-family:var(--fm);font-size:9px;font-weight:700;}
+.sa-obj-diff.mas{color:var(--ok);}
+.sa-obj-diff.menos{color:var(--rl);}
+.sa-obj-diff.igual{color:var(--td);}
+
+/* ── FLASH EJERCICIO COMPLETADO ── */
+@keyframes flashGreen{
+  0%{background:rgba(74,222,128,0);}
+  30%{background:rgba(74,222,128,0.12);}
+  100%{background:rgba(74,222,128,0);}
+}
+.ejercicio-flash{animation:flashGreen 1.2s ease-out;}
+
+/* ── PULSE TIMER cuando queda poco ── */
+@keyframes pulseRed{
+  0%,100%{opacity:1;}50%{opacity:0.4;}
+}
+.pd-tiempo.urgente{color:var(--r)!important;animation:pulseRed .8s ease-in-out infinite;}
+
+/* ── HISTORIAL MINI INLINE ── */
+.hist-mini{
+  margin:0 14px 8px;padding:8px 12px;
+  background:var(--panel);border:1px solid var(--bd);
+  display:flex;align-items:center;gap:10px;
+}
+.hist-mini-label{font-family:var(--fm);font-size:9px;color:var(--td);text-transform:uppercase;letter-spacing:1px;flex-shrink:0;}
+.sparkline{display:flex;align-items:flex-end;gap:2px;height:24px;flex:1;}
+.spark-bar{flex:1;max-width:20px;background:var(--gd);border-radius:1px 1px 0 0;min-height:3px;transition:background .2s;position:relative;}
+.spark-bar.ultimo{background:var(--g);}
+.spark-bar:hover{background:var(--gb);}
+.spark-val{font-family:var(--fm);font-size:9px;color:var(--td);flex-shrink:0;}
+
+/* ── PR BADGE ── */
+@keyframes prPulse{0%{transform:scale(1);}50%{transform:scale(1.15);}100%{transform:scale(1);}}
+.pr-badge{
+  display:none;align-items:center;gap:5px;
+  padding:4px 10px;margin:4px auto 0;
+  background:linear-gradient(135deg,rgba(200,170,110,0.15),rgba(200,170,110,0.05));
+  border:1px solid var(--g);border-radius:2px;width:fit-content;
+  font-family:var(--fm);font-size:10px;color:var(--g);letter-spacing:1px;font-weight:700;
+  animation:prPulse .6s ease-in-out;
+}
+.pr-badge.visible{display:flex;}
+
+/* ── DESCANSO GLOBAL (topbar) ── */
+.tb-rest-ctrl{display:flex;align-items:center;gap:4px;margin-left:8px;}
+.tb-rest-btn{
+  width:22px;height:22px;border-radius:2px;border:1px solid var(--bd);
+  background:var(--panel);color:var(--td);font-size:13px;font-weight:700;
+  display:flex;align-items:center;justify-content:center;cursor:pointer;
+  font-family:var(--fu);transition:all .15s;flex-shrink:0;
+}
+.tb-rest-btn:active{border-color:var(--g);color:var(--g);}
+.tb-rest-offset{font-family:var(--fm);font-size:9px;color:var(--td);min-width:28px;text-align:center;letter-spacing:0.5px;}
+
+/* ── MENSAJE MOTIVACIONAL ── */
+.msg-motivacional{
+  padding:14px 16px;border-top:1px solid var(--bd);
+  text-align:center;
+}
+.msg-moti-txt{font-family:var(--fu);font-size:14px;font-weight:600;color:var(--gb);letter-spacing:0.5px;margin-bottom:2px;}
+.msg-moti-sub{font-family:var(--fm);font-size:10px;color:var(--td);letter-spacing:0.5px;}
+
+/* ── MODAL MEJORADO ── */
+.modal-cumplimiento{padding:0 16px 12px;}
+.cumpl-label{font-family:var(--fm);font-size:9px;color:var(--td);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px;}
+.cumpl-bar-wrap{background:rgba(200,170,110,0.08);border:1px solid var(--bd);height:8px;border-radius:2px;overflow:hidden;}
+.cumpl-bar-fill{height:100%;background:linear-gradient(90deg,var(--gd),var(--g));border-radius:2px;transition:width .8s ease;width:0%;}
+.cumpl-pct{font-family:var(--fm);font-size:11px;color:var(--g);font-weight:700;text-align:right;margin-top:4px;}
+.modal-highlight{
+  margin:0 16px 12px;padding:10px 14px;
+  background:rgba(200,170,110,0.06);border:1px solid var(--bdm);
+  display:flex;justify-content:space-between;align-items:center;
+}
+.mh-label{font-family:var(--fm);font-size:9px;color:var(--td);letter-spacing:1px;text-transform:uppercase;}
+.mh-val{font-family:var(--fm);font-size:13px;font-weight:700;color:var(--g);}
+.modal-moti-banner{
+  margin:0 16px 12px;padding:10px 14px;text-align:center;
+  background:rgba(74,222,128,0.05);border:1px solid rgba(74,222,128,0.2);
+}
+.moti-emoji{font-size:1.5rem;display:block;margin-bottom:4px;}
+.moti-text{font-family:var(--fu);font-size:13px;font-weight:600;color:var(--gb);}
+.moti-sub{font-family:var(--fm);font-size:10px;color:var(--td);margin-top:2px;}
+
+/* ── BOTÓN MOLESTIA ── */
+.btn-molestia{
+  display:inline-flex;align-items:center;gap:4px;
+  background:rgba(200,75,49,0.08);border:1px solid rgba(200,75,49,0.3);
+  color:rgba(200,75,49,0.8);font-family:var(--fm);font-size:9px;
+  padding:3px 8px;border-radius:2px;cursor:pointer;letter-spacing:1px;
+  text-transform:uppercase;transition:all .15s;
+}
+.btn-molestia:hover{background:rgba(200,75,49,0.15);border-color:var(--r);color:var(--r);}
+.btn-molestia.activa{background:rgba(200,75,49,0.2);border-color:var(--r);color:var(--r);font-weight:700;}
+
+/* ── MODAL MOLESTIA ── */
+.mol-ov{
+  position:fixed;inset:0;background:rgba(1,10,19,0.92);z-index:200;
+  display:flex;align-items:flex-end;justify-content:center;
+  opacity:0;pointer-events:none;transition:opacity .2s;padding-bottom:0;
+}
+.mol-ov.active{opacity:1;pointer-events:all;}
+.mol-sheet{
+  background:var(--deep);border:1px solid var(--bdm);border-bottom:none;
+  width:100%;max-width:480px;max-height:90vh;overflow-y:auto;
+  transform:translateY(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);
+  position:relative;
+}
+.mol-ov.active .mol-sheet{transform:translateY(0);}
+.mol-sheet::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--r),transparent);}
+.mol-header{
+  padding:14px 16px 10px;display:flex;align-items:center;justify-content:space-between;
+  border-bottom:1px solid var(--bd);background:var(--panel);
+}
+.mol-title{font-family:var(--fd);font-size:1rem;color:var(--r);letter-spacing:2px;text-transform:uppercase;}
+.mol-close{background:none;border:none;color:var(--td);font-size:18px;cursor:pointer;padding:0 4px;}
+.mol-section{padding:12px 16px;border-bottom:1px solid var(--bd);}
+.mol-label{font-family:var(--fm);font-size:9px;color:var(--td);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;}
+.mol-zonas{display:flex;flex-wrap:wrap;gap:6px;}
+.mol-zona-chip{
+  padding:5px 10px;border:1px solid var(--bd);border-radius:2px;
+  font-family:var(--fm);font-size:10px;color:var(--td);cursor:pointer;
+  background:var(--panel);letter-spacing:0.5px;transition:all .15s;
+}
+.mol-zona-chip:hover{border-color:var(--r);color:var(--r);}
+.mol-zona-chip.sel{background:rgba(200,75,49,0.15);border-color:var(--r);color:var(--r);font-weight:700;}
+.mol-sev-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
+.mol-sev-btn{
+  padding:10px 6px;border:1px solid var(--bd);border-radius:2px;
+  font-family:var(--fu);font-size:12px;font-weight:600;cursor:pointer;
+  background:var(--panel);text-align:center;transition:all .15s;
+}
+.mol-sev-btn .sev-emoji{display:block;font-size:1.3rem;margin-bottom:3px;}
+.mol-sev-btn .sev-label{display:block;font-family:var(--fm);font-size:9px;color:var(--td);letter-spacing:0.5px;}
+.mol-sev-btn:hover,.mol-sev-btn.sel{border-color:var(--r);}
+.mol-sev-btn[data-sev="1"].sel{background:rgba(74,222,128,0.08);border-color:var(--ok);color:var(--ok);}
+.mol-sev-btn[data-sev="1"].sel .sev-label{color:var(--ok);}
+.mol-sev-btn[data-sev="2"].sel{background:rgba(200,170,110,0.1);border-color:var(--g);color:var(--g);}
+.mol-sev-btn[data-sev="2"].sel .sev-label{color:var(--g);}
+.mol-sev-btn[data-sev="3"].sel{background:rgba(200,75,49,0.12);border-color:var(--r);color:var(--r);}
+.mol-sev-btn[data-sev="3"].sel .sev-label{color:var(--rl);}
+.mol-desc-input{
+  width:100%;background:var(--panel)!important;border:1px solid var(--bd)!important;
+  color:var(--t)!important;font-family:var(--fu)!important;font-size:13px;
+  padding:8px 10px;resize:none;outline:none;
+}
+.mol-alternativas{padding:10px 16px;border-bottom:1px solid var(--bd);display:none;}
+.mol-alt-title{font-family:var(--fm);font-size:9px;color:var(--g);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;}
+.mol-alt-item{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:8px 10px;background:var(--panel);border:1px solid var(--bd);
+  margin-bottom:6px;cursor:pointer;transition:border-color .15s;
+}
+.mol-alt-item:hover{border-color:var(--g);}
+.mol-alt-nombre{font-family:var(--fu);font-size:13px;font-weight:600;color:var(--gb);}
+.mol-alt-motivo{font-family:var(--fm);font-size:9px;color:var(--td);margin-top:1px;}
+.mol-alt-btn{font-family:var(--fm);font-size:9px;color:var(--g);border:1px solid var(--bdm);padding:2px 8px;border-radius:2px;}
+.mol-actions{display:flex;gap:8px;padding:12px 16px;}
+.mol-btn{flex:1;height:44px;font-family:var(--fd);font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;border:none;transition:all .15s;}
+.mol-btn-ok{background:linear-gradient(135deg,var(--gd),var(--g));color:var(--void);}
+.mol-btn-cancel{background:transparent;border:1px solid var(--bd)!important;color:var(--td);font-family:var(--fm)!important;}
+.mol-btn-cancel:hover{border-color:var(--bdm)!important;color:var(--g);}
+.mol-spinner{text-align:center;padding:12px;font-family:var(--fm);font-size:10px;color:var(--td);}
+
+/* ── BADGE MOLESTIA EN LOG ── */
+.sd-molestia{font-family:var(--fm);font-size:9px;color:var(--rl);border:1px solid rgba(200,75,49,0.3);padding:1px 6px;border-radius:2px;}
+
+/* ── NOTAS POR SERIE ── */
+.nota-serie-wrap{padding:0 14px 10px;}
+.nota-serie-toggle{
+  width:100%;background:none;border:none;border-bottom:1px solid var(--bd);
+  color:var(--td);font-family:var(--fm);font-size:9px;letter-spacing:1px;
+  text-transform:uppercase;padding:4px 0;cursor:pointer;text-align:left;
+  display:flex;justify-content:space-between;
+}
+.nota-serie-toggle:hover{color:var(--g);}
+.nota-serie-input{
+  display:none;width:100%;margin-top:6px;
+  background:var(--panel)!important;border:1px solid var(--bd)!important;
+  color:var(--t)!important;font-family:var(--fu)!important;font-size:13px;
+  padding:6px 10px;resize:none;outline:none;
+}
+.nota-serie-input.open{display:block;}
 </style>
 </head>
 <body>
@@ -296,7 +528,41 @@ input{background:transparent!important;border:none!important;outline:none!import
   <div class="tb-right">
     <div class="tb-track"><div class="tb-fill" id="tb-fill" style="width:0%"></div></div>
     <span class="tb-pct" id="tb-pct">0%</span>
+    <div class="tb-rest-ctrl" title="Ajuste global del tiempo de descanso">
+      <button type="button" class="tb-rest-btn" onclick="ajustarDescansoGlobal(-30)">−</button>
+      <span class="tb-rest-offset" id="tb-rest-offset">0s</span>
+      <button type="button" class="tb-rest-btn" onclick="ajustarDescansoGlobal(30)">+</button>
+    </div>
   </div>
+</div>
+
+<!-- ══ BANNER BIO-SAFETY ══ -->
+{% if has_bio_adjustments %}
+<div class="bio-banner" id="bio-banner">
+  <div class="bio-banner-icon">🛡️</div>
+  <div class="bio-banner-content">
+    <div class="bio-banner-title">Ajustes bio-safety activos</div>
+    <div class="bio-banner-items">
+      {% if vol_mod < 1.0 %}
+      <div class="bio-item volumen">📉 Volumen reducido al {{ vol_mod_pct }}% (readiness {{ bio_score }}%)</div>
+      {% endif %}
+      {% for adj in bio_adjustments %}
+      <div class="bio-item {{ adj.tipo }}">{% if adj.tipo == 'sustitucion' %}🔄{% else %}⛔{% endif %} {{ adj.mensaje }}</div>
+      {% endfor %}
+    </div>
+  </div>
+  <button type="button" class="bio-banner-toggle" onclick="this.closest('.bio-banner').style.display='none'" title="Cerrar">×</button>
+</div>
+{% endif %}
+
+<!-- ══ DOTS NAVEGACIÓN ══ -->
+<div class="ej-dots" id="ej-dots-nav">
+  {% for ejercicio in ejercicios_planificados %}
+  <div class="ej-dot {% if forloop.first %}activo{% endif %}"
+       id="dot-{{ forloop.counter0 }}"
+       onclick="irEjercicio({{ forloop.counter0 }})"
+       title="{{ ejercicio.nombre|truncatechars:20 }}"></div>
+  {% endfor %}
 </div>
 
 <!-- ══ EJERCICIOS ══ -->
@@ -319,9 +585,21 @@ input{background:transparent!important;border:none!important;outline:none!import
          data-pr-peso="{{ ejercicio.pr_peso|default:0 }}"
          data-pr-reps="{{ ejercicio.pr_reps|default:0 }}">
 
+  <!-- Inputs ocultos de molestia — se rellenan por JS al confirmar -->
+  <input type="hidden" name="{{ ejercicio.form_id }}_molestia_reportada" id="mol-rep-{{ ejercicio.form_id }}" value="false">
+  <input type="hidden" name="{{ ejercicio.form_id }}_molestia_zona" id="mol-zona-{{ ejercicio.form_id }}" value="">
+  <input type="hidden" name="{{ ejercicio.form_id }}_molestia_severidad" id="mol-sev-{{ ejercicio.form_id }}" value="">
+  <input type="hidden" name="{{ ejercicio.form_id }}_molestia_descripcion" id="mol-desc-{{ ejercicio.form_id }}" value="">
+
   <!-- NOMBRE -->
   <div class="exname">
-    <h2 class="cyber-ejercicio-nombre">{{ ejercicio.nombre|title }}</h2>
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+      <h2 class="cyber-ejercicio-nombre" style="flex:1;">{{ ejercicio.nombre|title }}</h2>
+      <button type="button" class="btn-molestia" id="mol-btn-{{ ejercicio.form_id }}"
+              onclick="abrirModalMolestia('{{ ejercicio.form_id }}','{{ ejercicio.nombre|escapejs }}')">
+        ⚠️ Molestia
+      </button>
+    </div>
     <div class="exname-meta">
       <span class="exname-chip chip-g"><i class="fas fa-layer-group" style="font-size:8px;"></i>{{ ejercicio.series }} series · RPE {{ ejercicio.rpe_objetivo }}</span>
       <span class="exname-chip chip-n"><i class="fas fa-redo" style="font-size:8px;"></i>{{ ejercicio.repeticiones }} reps</span>
@@ -360,15 +638,26 @@ input{background:transparent!important;border:none!important;outline:none!import
     <div class="serie-activa">
       <div class="sa-header">
         <span class="sa-num">SERIE {{ sn }} DE {{ ejercicio.series }}</span>
-        {% if ejercicio.usa_peso %}
-          <span class="sa-obj">Obj: {{ ejercicio.peso_recomendado_kg }}kg × {{ ejercicio.reps_objetivo }} reps</span>
-        {% elif ejercicio.usa_tiempo %}
-          <span class="sa-obj">Obj: {{ ejercicio.reps_objetivo }}s</span>
-        {% elif ejercicio.usa_distancia %}
-          <span class="sa-obj">Obj: {{ ejercicio.reps_objetivo }}m</span>
-        {% else %}
-          <span class="sa-obj">Obj: {{ ejercicio.reps_objetivo }} reps</span>
-        {% endif %}
+        <div class="sa-obj-wrap">
+          {% if ejercicio.usa_peso %}
+            <span class="sa-obj-plan">🎯 {{ ejercicio.peso_recomendado_kg }}kg × {{ ejercicio.reps_objetivo }} reps</span>
+            {% if ejercicio.peso_anterior_kg > 0 %}
+              {% if ejercicio.peso_recomendado_kg > ejercicio.peso_anterior_kg %}
+                <span class="sa-obj-diff mas">▲ +{{ ejercicio.peso_recomendado_kg|add:"-"|add:ejercicio.peso_anterior_kg }}kg vs última</span>
+              {% elif ejercicio.peso_recomendado_kg < ejercicio.peso_anterior_kg %}
+                <span class="sa-obj-diff menos">▼ vs última {{ ejercicio.peso_anterior_kg }}kg</span>
+              {% else %}
+                <span class="sa-obj-diff igual">= mismo peso</span>
+              {% endif %}
+            {% endif %}
+          {% elif ejercicio.usa_tiempo %}
+            <span class="sa-obj-plan">🎯 {{ ejercicio.reps_objetivo }}s</span>
+          {% elif ejercicio.usa_distancia %}
+            <span class="sa-obj-plan">🎯 {{ ejercicio.reps_objetivo }}m</span>
+          {% else %}
+            <span class="sa-obj-plan">🎯 {{ ejercicio.reps_objetivo }} reps</span>
+          {% endif %}
+        </div>
       </div>
 
       {# ── PESO (solo si el ejercicio usa peso externo) ── #}
@@ -393,6 +682,8 @@ input{background:transparent!important;border:none!important;outline:none!import
         </div>
         <div class="peso-lado" id="lado-{{ ejercicio.form_id }}-{{ sn }}"></div>
         <div class="orm-display" id="orm-{{ ejercicio.form_id }}-{{ sn }}"></div>
+        <div class="pr-badge" id="pr-badge-{{ ejercicio.form_id }}-{{ sn }}"
+             data-pr="{{ ejercicio.pr_peso|default:0 }}">🏆 NUEVO PR</div>
       </div>
       {% else %}
       {# Input oculto con valor 0 para que la view no falle al leer el campo #}
@@ -435,8 +726,11 @@ input{background:transparent!important;border:none!important;outline:none!import
         {# RPE — siempre presente #}
         <div class="slider-row">
           <span class="sl-label">RPE</span>
-          <input type="range" class="sl-track" min="5" max="10" value="{{ ejercicio.rpe_objetivo }}" step="1"
-                 oninput="syncSliderPanel(this,'rpe-disp-{{ ejercicio.form_id }}-{{ sn }}','rpe-hid-{{ ejercicio.form_id }}-{{ sn }}')">
+          <div style="flex:1;display:flex;flex-direction:column;gap:3px;">
+            <input type="range" class="sl-track" min="5" max="10" value="{{ ejercicio.rpe_objetivo }}" step="1"
+                   oninput="syncSliderRPE(this,'rpe-disp-{{ ejercicio.form_id }}-{{ sn }}','rpe-hid-{{ ejercicio.form_id }}-{{ sn }}','rpe-desc-{{ ejercicio.form_id }}-{{ sn }}')">
+            <div class="rpe-desc" id="rpe-desc-{{ ejercicio.form_id }}-{{ sn }}"></div>
+          </div>
           <span class="sl-val rpe-v" id="rpe-disp-{{ ejercicio.form_id }}-{{ sn }}">{{ ejercicio.rpe_objetivo }}</span>
           <span class="sl-unit"></span>
         </div>
@@ -474,6 +768,16 @@ input{background:transparent!important;border:none!important;outline:none!import
       <div class="pd-calc-txt" id="calc-inline-txt-{{ ejercicio.form_id }}-{{ sn }}"></div>
     </div>
     {% endif %}
+    <div class="nota-serie-wrap">
+      <button type="button" class="nota-serie-toggle"
+              onclick="toggleNotaSerie(this)">
+        <span>+ Nota (opcional)</span><span>▾</span>
+      </button>
+      <textarea class="nota-serie-input"
+                id="nota-{{ ejercicio.form_id }}-{{ sn }}"
+                name="{{ ejercicio.form_id }}_nota_{{ sn }}"
+                rows="2" placeholder="Observaciones de esta serie…"></textarea>
+    </div>
     <button type="button" class="btn-guardar"
             onclick="guardarSeriePanel('{{ ejercicio.form_id }}',{{ sn }},{{ ejercicio.series }})">
       GUARDAR SERIE
@@ -500,6 +804,8 @@ input{background:transparent!important;border:none!important;outline:none!import
           <div class="pd-tiempo" id="pd-tiempo-{{ ejercicio.form_id }}">3:00</div>
           <div class="pd-de" id="pd-de-{{ ejercicio.form_id }}">DE 3:00</div>
         </div>
+        <div id="pd-urgente-overlay-{{ ejercicio.form_id }}"
+             style="display:none;position:absolute;inset:0;border-radius:50%;border:3px solid var(--r);opacity:0;animation:pulseRed .8s ease-in-out infinite;"></div>
       </div>
     </div>
     <div class="pd-proxima">
@@ -537,6 +843,80 @@ input{background:transparent!important;border:none!important;outline:none!import
 
 </form><!-- /workout-form -->
 
+<!-- ══ MODAL MOLESTIA ══ -->
+<div class="mol-ov" id="mol-overlay">
+  <div class="mol-sheet">
+    <div class="mol-header">
+      <span class="mol-title">⚠️ Reportar Molestia</span>
+      <button type="button" class="mol-close" onclick="cerrarModalMolestia()">×</button>
+    </div>
+    <div style="padding:10px 16px 6px;background:var(--panel);border-bottom:1px solid var(--bd);">
+      <span style="font-family:var(--fm);font-size:10px;color:var(--td);">Ejercicio: </span>
+      <span style="font-family:var(--fu);font-size:12px;font-weight:600;color:var(--gb);" id="mol-ej-nombre">—</span>
+    </div>
+
+    <!-- ZONA CORPORAL -->
+    <div class="mol-section">
+      <div class="mol-label">¿Dónde sientes la molestia?</div>
+      <div class="mol-zonas">
+        <div class="mol-zona-chip" data-zona="hombro">Hombro</div>
+        <div class="mol-zona-chip" data-zona="rodilla">Rodilla</div>
+        <div class="mol-zona-chip" data-zona="cadera">Cadera</div>
+        <div class="mol-zona-chip" data-zona="lumbar">Lumbar</div>
+        <div class="mol-zona-chip" data-zona="muñeca">Muñeca</div>
+        <div class="mol-zona-chip" data-zona="cuello">Cuello</div>
+        <div class="mol-zona-chip" data-zona="tobillo">Tobillo</div>
+        <div class="mol-zona-chip" data-zona="pecho">Pecho</div>
+        <div class="mol-zona-chip" data-zona="codo">Codo</div>
+        <div class="mol-zona-chip" data-zona="otro">Otro</div>
+      </div>
+    </div>
+
+    <!-- SEVERIDAD -->
+    <div class="mol-section">
+      <div class="mol-label">¿Qué intensidad tiene?</div>
+      <div class="mol-sev-grid">
+        <button type="button" class="mol-sev-btn" data-sev="1" onclick="selSeveridad(1)">
+          <span class="sev-emoji">😐</span>
+          <span style="font-size:13px;color:var(--ok);">Leve</span>
+          <span class="sev-label">Incomodidad puntual</span>
+        </button>
+        <button type="button" class="mol-sev-btn" data-sev="2" onclick="selSeveridad(2)">
+          <span class="sev-emoji">😬</span>
+          <span style="font-size:13px;color:var(--g);">Moderada</span>
+          <span class="sev-label">Dolor durante el movimiento</span>
+        </button>
+        <button type="button" class="mol-sev-btn" data-sev="3" onclick="selSeveridad(3)">
+          <span class="sev-emoji">😣</span>
+          <span style="font-size:13px;color:var(--r);">Severa</span>
+          <span class="sev-label">Dolor agudo o limitante</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- DESCRIPCIÓN -->
+    <div class="mol-section" style="border-bottom:none;">
+      <div class="mol-label">Describe la molestia (opcional)</div>
+      <textarea class="mol-desc-input" id="mol-desc-input" rows="2"
+                placeholder="p.ej. «pinchazo al bajar», «tensión en la parte posterior»…"></textarea>
+    </div>
+
+    <!-- ALTERNATIVAS (se llena por AJAX) -->
+    <div class="mol-alternativas" id="mol-alt-section">
+      <div class="mol-alt-title">🔄 Alternativas sugeridas</div>
+      <div id="mol-alt-lista"></div>
+    </div>
+
+    <!-- ACTIONS -->
+    <div class="mol-actions">
+      <button type="button" class="mol-btn mol-btn-cancel" onclick="cerrarModalMolestia()">Cancelar</button>
+      <button type="button" class="mol-btn mol-btn-ok" id="mol-btn-confirmar" onclick="confirmarMolestia()">
+        Anotar y continuar
+      </button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL RESUMEN -->
 <div class="modal-ov" id="modal-resumen-overlay">
   <div class="modal">
@@ -549,7 +929,27 @@ input{background:transparent!important;border:none!important;outline:none!import
       <div class="mstat"><span class="mstat-val" id="modal-tiempo">00:00</span><span class="mstat-lbl">Duración</span></div>
       <div class="mstat"><span class="mstat-val" id="modal-series">0/0</span><span class="mstat-lbl">Series</span></div>
       <div class="mstat"><span class="mstat-val" id="modal-volumen">0 kg</span><span class="mstat-lbl">Volumen</span></div>
-      <div class="mstat"><span class="mstat-val" id="modal-ejercicios">0/0</span><span class="mstat-lbl">Ejercicios</span></div>
+      <div class="mstat"><span class="mstat-val" id="modal-rpe-avg">—</span><span class="mstat-lbl">RPE Medio</span></div>
+    </div>
+    <!-- Barra de cumplimiento del plan -->
+    <div class="modal-cumplimiento">
+      <div class="cumpl-label">Cumplimiento del plan</div>
+      <div class="cumpl-bar-wrap"><div class="cumpl-bar-fill" id="modal-cumpl-fill"></div></div>
+      <div class="cumpl-pct" id="modal-cumpl-pct">0%</div>
+    </div>
+    <!-- Mejor ejercicio -->
+    <div class="modal-highlight" id="modal-mejor-ej-wrap" style="display:none;">
+      <div>
+        <div class="mh-label">Mayor volumen</div>
+        <div id="modal-mejor-ej-nombre" style="font-family:var(--fu);font-size:12px;color:var(--gb);margin-top:2px;"></div>
+      </div>
+      <div class="mh-val" id="modal-mejor-ej-vol">0 kg</div>
+    </div>
+    <!-- Banner motivacional -->
+    <div class="modal-moti-banner" id="modal-moti-banner">
+      <span class="moti-emoji" id="modal-moti-emoji">💪</span>
+      <div class="moti-text" id="modal-moti-text"></div>
+      <div class="moti-sub" id="modal-moti-sub"></div>
     </div>
     <div class="modal-desglose">
       <h3>Desglose</h3>
@@ -584,12 +984,89 @@ input{background:transparent!important;border:none!important;outline:none!import
 
 <script src="{% static 'entrenos/js/entrenamiento_activo.js' %}"></script>
 <script>
+// ── CONSTANTES RPE ───────────────────────────────────────────────
+const RPE_DESC={5:'Muy fácil — muchas reps en reserva',6:'Fácil — 4-5 reps en reserva',7:'Moderado — 3 reps en reserva',8:'Intenso — 2 reps en reserva',9:'Muy duro — 1 rep en reserva',10:'Máximo — sin reserva'};
+const STORAGE_KEY='entreno_activo_{{ cliente.id }}_{{ fecha }}';
+let descansoOffset=0; // segundos globales añadidos/quitados a todos los descansos
+
+// ── FRASES MOTIVACIONALES ────────────────────────────────────────
+const FRASES_MOTI={
+  bajo:  [{e:'🧠',t:'Sesión inteligente',s:'Gestionar la fatiga también es entrenar'},
+          {e:'🌱',t:'Progreso sostenible',s:'El rendimiento óptimo viene de la consistencia'},
+          {e:'💧',t:'Recuperación activa',s:'Has respetado tus límites hoy'}],
+  medio: [{e:'⚡',t:'Buen trabajo',s:'Intensidad controlada, resultados seguros'},
+          {e:'🔥',t:'En tu zona',s:'Así se construye la base'},
+          {e:'🎯',t:'Ejecutado',s:'Cada serie suma, cada rep importa'}],
+  alto:  [{e:'💥',t:'¡Al límite!',s:'Has dejado todo en el gym hoy'},
+          {e:'🏆',t:'Sesión de élite',s:'RPE alto + volumen = adaptación máxima'},
+          {e:'⚔️',t:'Sin cuartel',s:'El trabajo duro de hoy es el rendimiento de mañana'}]
+};
+function elegirFrase(rpeAvg){
+  const pool=rpeAvg<7?FRASES_MOTI.bajo:rpeAvg<9?FRASES_MOTI.medio:FRASES_MOTI.alto;
+  return pool[Math.floor(Math.random()*pool.length)];
+}
+
 const STATE={ejActual:0,serieActual:{},seriesCompletadas:{},timers:{}};
 document.querySelectorAll('.cyber-ejercicio-card').forEach(card=>{
   STATE.serieActual[card.dataset.formId]=1;
   STATE.seriesCompletadas[card.dataset.formId]=[];
 });
 const cards=Array.from(document.querySelectorAll('.cyber-ejercicio-card'));
+
+// ── RESTAURAR DESDE localStorage ────────────────────────────────
+(function restaurarSesion(){
+  try{
+    const saved=localStorage.getItem(STORAGE_KEY);
+    if(!saved)return;
+    const data=JSON.parse(saved);
+    if(!data.seriesCompletadas)return;
+    // Restaurar series completadas en STATE
+    Object.entries(data.seriesCompletadas).forEach(([fid,series])=>{
+      if(!STATE.seriesCompletadas[fid])return;
+      STATE.seriesCompletadas[fid]=series;
+      // Re-renderizar log visual
+      series.forEach((s,idx)=>{
+        const log=document.getElementById('log-'+fid);
+        if(!log)return;
+        const sn=idx+1;
+        const row=document.createElement('div');
+        row.className='serie-done';
+        row.innerHTML='<div class="sd-check">✓</div>'
+          +'<div class="sd-info">Serie '+sn+' — <strong>'+s.peso+'kg × '+s.reps+' reps</strong></div>'
+          +'<div class="sd-rpe">RPE '+Math.round(s.rpe)+'</div>';
+        log.appendChild(row);
+        // Marcar checkbox
+        const cb=document.getElementById('check-'+fid+'-'+sn);
+        if(cb)cb.checked=true;
+        // Ocultar el panel de esa serie
+        const reg=document.getElementById('reg-'+fid+'-'+sn);
+        if(reg)reg.style.display='none';
+      });
+      // Mostrar siguiente serie o completado
+      const card=document.getElementById('card-'+fid);
+      const totalSets=parseInt(card?.dataset.totalSets||'0');
+      const snSig=series.length+1;
+      if(snSig<=totalSets){
+        const nextPanel=document.getElementById('reg-'+fid+'-'+snSig);
+        if(nextPanel){nextPanel.style.display='block';initSeriePanel(fid,snSig);}
+      }
+    });
+    // Navegar al ejercicio guardado
+    if(data.ejActual!==undefined && data.ejActual<cards.length){
+      cards[STATE.ejActual].style.display='none';
+      STATE.ejActual=data.ejActual;
+      cards[STATE.ejActual].style.display='block';
+    }
+    actualizarProgreso();
+    actualizarSticky();
+    actualizarDots();
+    // Banner de recuperación
+    const banner=document.createElement('div');
+    banner.style.cssText='background:rgba(74,222,128,0.08);border-bottom:1px solid rgba(74,222,128,0.3);padding:8px 16px;font-family:var(--fm);font-size:10px;color:var(--ok);letter-spacing:1px;display:flex;justify-content:space-between;align-items:center;';
+    banner.innerHTML='<span>♻️ Sesión recuperada automáticamente</span><button onclick="this.parentElement.remove();localStorage.removeItem(STORAGE_KEY)" style="background:none;border:none;color:var(--td);cursor:pointer;font-size:12px;">×</button>';
+    document.querySelector('.wrap')?.insertBefore(banner,document.querySelector('.cyber-ejercicio-card'));
+  }catch(e){console.warn('No se pudo restaurar sesión:',e);}
+})();
 
 // Sliders por panel
 function syncSliderPanel(el,dispId,hidId){
@@ -629,16 +1106,36 @@ function ajustarPesoPanel(fid,sn,delta){
   if(navigator.vibrate)navigator.vibrate(20);
   actualizarORM(fid,sn);
   calcularDiscosInline(fid,sn,nuevo);
+  detectarPR(fid,sn,nuevo);
 }
 
 // Navegación ejercicios
 function navEjercicio(delta){
-  const nuevo=Math.max(0,Math.min(cards.length-1,STATE.ejActual+delta));
-  if(nuevo===STATE.ejActual)return;
+  irEjercicio(Math.max(0,Math.min(cards.length-1,STATE.ejActual+delta)));
+}
+
+function irEjercicio(idx){
+  if(idx===STATE.ejActual)return;
   cards[STATE.ejActual].style.display='none';
-  STATE.ejActual=nuevo;
-  cards[nuevo].style.display='block';
+  STATE.ejActual=idx;
+  cards[idx].style.display='block';
   actualizarSticky();
+  actualizarDots();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function actualizarDots(){
+  document.querySelectorAll('.ej-dot').forEach((dot,i)=>{
+    const card=cards[i];
+    if(!card)return;
+    const fid=card.dataset.formId;
+    const total=parseInt(card.dataset.totalSets)||0;
+    const comp=(STATE.seriesCompletadas[fid]||[]).length;
+    dot.classList.remove('activo','completado','parcial');
+    if(i===STATE.ejActual)dot.classList.add('activo');
+    else if(comp>=total && total>0)dot.classList.add('completado');
+    else if(comp>0)dot.classList.add('parcial');
+  });
 }
 
 // Guardar serie — marca el checkbox y avanza al panel siguiente
@@ -666,6 +1163,16 @@ function guardarSeriePanel(fid,sn,total){
 
   if(navigator.vibrate)navigator.vibrate(40);
 
+  // Guardar en localStorage (checkpoint)
+  guardarCheckpoint();
+
+  // Flash verde en la card
+  const flashCard=document.getElementById('card-'+fid);
+  if(flashCard){flashCard.classList.remove('ejercicio-flash');void flashCard.offsetWidth;flashCard.classList.add('ejercicio-flash');}
+
+  // Actualizar dots
+  actualizarDots();
+
   // Ocultar panel actual, mostrar descanso
   document.getElementById('reg-'+fid+'-'+sn).style.display='none';
   const pdesc=document.getElementById('desc-'+fid);
@@ -689,6 +1196,84 @@ function guardarSeriePanel(fid,sn,total){
   actualizarProgreso();
   actualizarSticky();
 }
+
+// ── DETECCIÓN PR EN TIEMPO REAL ─────────────────────────────────
+function detectarPR(fid,sn,peso){
+  const badge=document.getElementById('pr-badge-'+fid+'-'+sn);
+  if(!badge)return;
+  const prAnterior=parseFloat(badge.dataset.pr)||0;
+  if(prAnterior>0 && peso>prAnterior){
+    badge.innerHTML='🏆 NUEVO PR — '+peso+'kg (ant: '+prAnterior+'kg)';
+    badge.classList.add('visible');
+    badge.style.animation='none';
+    void badge.offsetWidth;
+    badge.style.animation='prPulse .6s ease-in-out';
+  }else{
+    badge.classList.remove('visible');
+  }
+}
+
+// ── DESCANSO GLOBAL ──────────────────────────────────────────────
+function ajustarDescansoGlobal(delta){
+  descansoOffset=Math.max(-120,Math.min(300,descansoOffset+delta));
+  const el=document.getElementById('tb-rest-offset');
+  if(el){
+    const sign=descansoOffset>0?'+':descansoOffset<0?'':'+';
+    el.textContent=(descansoOffset===0?'0s':sign+descansoOffset+'s');
+    el.style.color=descansoOffset>0?'var(--ok)':descansoOffset<0?'var(--rl)':'var(--td)';
+  }
+  if(navigator.vibrate)navigator.vibrate(10);
+}
+
+// ── MENSAJE MOTIVACIONAL AL COMPLETAR EJERCICIO ──────────────────
+function mostrarMensajeEjercicio(card,fid){
+  const scs=STATE.seriesCompletadas[fid]||[];
+  if(!scs.length)return;
+  const rpeAvg=scs.reduce((a,s)=>a+(s.rpe||8),0)/scs.length;
+  const frase=elegirFrase(rpeAvg);
+  const div=document.createElement('div');
+  div.className='msg-motivacional';
+  div.innerHTML='<div style="font-size:1.8rem;margin-bottom:6px;">'+frase.e+'</div>'
+    +'<div class="msg-moti-txt">'+frase.t+'</div>'
+    +'<div class="msg-moti-sub">'+frase.s+'</div>';
+  card.appendChild(div);
+}
+
+// ── RPE SLIDER CON DESCRIPCIÓN ──────────────────────────────────
+function syncSliderRPE(el,dispId,hidId,descId){
+  const v=parseInt(el.value);
+  const disp=document.getElementById(dispId);
+  const hid=document.getElementById(hidId);
+  const desc=document.getElementById(descId);
+  if(disp)disp.textContent=v;
+  if(hid)hid.value=v;
+  if(desc){
+    desc.textContent=RPE_DESC[v]||'';
+    desc.style.color=v>=9?'var(--rl)':v>=7?'var(--g)':'var(--td)';
+  }
+}
+
+// ── NOTAS OPCIONALES POR SERIE ───────────────────────────────────
+function toggleNotaSerie(btn){
+  const textarea=btn.nextElementSibling;
+  const arrow=btn.querySelector('span:last-child');
+  textarea.classList.toggle('open');
+  arrow.textContent=textarea.classList.contains('open')?'▴':'▾';
+}
+
+// ── CHECKPOINT localStorage ──────────────────────────────────────
+function guardarCheckpoint(){
+  try{
+    localStorage.setItem(STORAGE_KEY,JSON.stringify({
+      ejActual:STATE.ejActual,
+      seriesCompletadas:STATE.seriesCompletadas,
+      ts:Date.now()
+    }));
+  }catch(e){}
+}
+
+// ── LIMPIAR localStorage al guardar ──────────────────────────────
+function limpiarCheckpoint(){try{localStorage.removeItem(STORAGE_KEY);}catch(e){}}
 
 // ── SOUND ALERT (Web Audio API — no deps) ───────────────────────
 function playRestEndAlert(){
@@ -752,7 +1337,11 @@ function initSeriePanel(fid,sn){
 
 function iniciarDescanso(fid,totalSeg,snActual,totalSeries){
   if(STATE.timers[fid])clearInterval(STATE.timers[fid].interval);
-  STATE.timers[fid]={seg:totalSeg,total:totalSeg,interval:null,snActual:snActual,totalSeries:totalSeries};
+  const segAjustado=Math.max(5,totalSeg+descansoOffset);
+  STATE.timers[fid]={seg:segAjustado,total:segAjustado,interval:null,snActual:snActual,totalSeries:totalSeries};
+  // Actualizar label "DE X:XX" con el tiempo ajustado
+  const deEl=document.getElementById('pd-de-'+fid);
+  if(deEl){const m=Math.floor(segAjustado/60),s=segAjustado%60;deEl.textContent='DE '+m+':'+String(s).padStart(2,'0');}
   actualizarTimerUI(fid);
   STATE.timers[fid].interval=setInterval(()=>{
     STATE.timers[fid].seg=Math.max(0,STATE.timers[fid].seg-1);
@@ -772,9 +1361,21 @@ function actualizarTimerUI(fid){
   const display=m+':'+String(s).padStart(2,'0');
   const tiempoEl=document.getElementById('pd-tiempo-'+fid);
   const saltarEl=document.getElementById('btn-saltar-'+fid);
-  if(tiempoEl)tiempoEl.textContent=display;
-  if(saltarEl)saltarEl.textContent='SALTAR DESCANSO ('+display+')';
+  const overlay=document.getElementById('pd-urgente-overlay-'+fid);
   const ring=document.getElementById('ring-'+fid);
+  if(tiempoEl){
+    tiempoEl.textContent=display;
+    if(t.seg<=10){
+      tiempoEl.classList.add('urgente');
+      if(overlay){overlay.style.display='block';overlay.style.opacity='1';}
+      if(ring)ring.style.stroke='#C84B31';
+    }else{
+      tiempoEl.classList.remove('urgente');
+      if(overlay){overlay.style.display='none';}
+      if(ring)ring.style.stroke='#e5c100';
+    }
+  }
+  if(saltarEl)saltarEl.textContent='SALTAR DESCANSO ('+display+')';
   if(ring)ring.style.strokeDashoffset=(502*(1-t.seg/t.total)).toFixed(1);
 }
 
@@ -799,11 +1400,13 @@ function saltarDescanso(fid){
     const card=document.getElementById('card-'+fid);
     const div=document.createElement('div');
     div.style.cssText='padding:20px 16px;text-align:center;border-top:1px solid var(--bd);';
-    div.innerHTML='<div style="font-size:2rem;color:var(--ok);">✓</div>'
-      +'<div style="font-family:var(--fd);font-size:14px;font-weight:700;color:var(--gb);letter-spacing:2px;text-transform:uppercase;margin-top:8px;">Ejercicio completado</div>'
-      +'<div style="font-family:var(--fm);font-size:11px;color:var(--td);margin-top:6px;">'+snActual+' series · '+calcVolumenEj(fid)+' kg</div>';
+    const frase=elegirFrase((STATE.seriesCompletadas[fid]||[]).reduce((a,s)=>a+(s.rpe||8),0)/Math.max(1,(STATE.seriesCompletadas[fid]||[]).length));
+    div.innerHTML='<div style="font-size:2rem;color:var(--ok);">'+frase.e+'</div>'
+      +'<div style="font-family:var(--fd);font-size:14px;font-weight:700;color:var(--gb);letter-spacing:2px;text-transform:uppercase;margin-top:8px;">'+frase.t+'</div>'
+      +'<div style="font-family:var(--fm);font-size:11px;color:var(--td);margin-top:4px;">'+snActual+' series · '+calcVolumenEj(fid)+' kg</div>'
+      +'<div style="font-family:var(--fm);font-size:10px;color:var(--tdm);margin-top:2px;font-style:italic;">'+frase.s+'</div>';
     if(card)card.appendChild(div);
-    if(STATE.ejActual+1<cards.length)setTimeout(()=>navEjercicio(1),1500);
+    if(STATE.ejActual+1<cards.length)setTimeout(()=>navEjercicio(1),2000);
   }else{
     // Mostrar panel de la siguiente serie
     const nextPanel=document.getElementById('reg-'+fid+'-'+snSiguiente);
@@ -814,6 +1417,7 @@ function saltarDescanso(fid){
   }
   actualizarProgreso();
   actualizarSticky();
+  actualizarDots();
 }
 
 function calcularDiscos(fid,pesoTotal){
@@ -891,38 +1495,105 @@ document.getElementById('btn-mostrar-resumen').addEventListener('click',()=>{
     if(scs.length>=t)ejComp++;
     scs.forEach(s=>{vol+=s.peso*s.reps;if(s.rpe)rpes.push(s.rpe);});
   });
+  const rpeAvg=rpes.length?(rpes.reduce((a,b)=>a+b,0)/rpes.length):0;
   document.getElementById('hid-series-comp').value=comp;
   document.getElementById('hid-series-tot').value=total;
   document.getElementById('hid-ej-comp').value=ejComp;
   document.getElementById('hid-ej-tot').value=ejTot;
   document.getElementById('hid-volumen').value=Math.round(vol);
-  document.getElementById('hid-rpe-medio').value=rpes.length?(rpes.reduce((a,b)=>a+b,0)/rpes.length).toFixed(1):'';
+  document.getElementById('hid-rpe-medio').value=rpeAvg?rpeAvg.toFixed(1):'';
   const seg=Math.floor((Date.now()-t0)/1000);
   document.getElementById('modal-tiempo').textContent=String(Math.floor(seg/60)).padStart(2,'0')+':'+String(seg%60).padStart(2,'0');
   document.getElementById('modal-series').textContent=comp+'/'+total;
   document.getElementById('modal-volumen').textContent=Math.round(vol)+' kg';
-  document.getElementById('modal-ejercicios').textContent=ejComp+'/'+ejTot;
+  document.getElementById('modal-rpe-avg').textContent=rpeAvg?rpeAvg.toFixed(1):'—';
+
+  // Barra cumplimiento
+  const cumplPct=total>0?Math.round(comp/total*100):0;
+  const fillEl=document.getElementById('modal-cumpl-fill');
+  const pctEl=document.getElementById('modal-cumpl-pct');
+  if(fillEl)setTimeout(()=>{fillEl.style.width=cumplPct+'%';},100);
+  if(pctEl)pctEl.textContent=cumplPct+'%';
+
+  // Mejor ejercicio (mayor volumen)
+  let mejorNombre='',mejorVol=0;
   let html='';
   document.querySelectorAll('.cyber-ejercicio-card').forEach(card=>{
     const fid=card.dataset.formId;
+    const t=parseInt(card.dataset.totalSets)||0;
     const nombre=card.querySelector('.cyber-ejercicio-nombre')?.textContent||'';
     const scs=STATE.seriesCompletadas[fid]||[];
-    html+='<div class="modal-ej"><span class="modal-ej-nombre">'+nombre+'</span>'
-      +'<span class="modal-ej-stats">'+scs.length+' series · '+Math.round(scs.reduce((a,s)=>a+s.peso*s.reps,0))+'kg</span></div>';
+    const volEj=scs.reduce((a,s)=>a+s.peso*s.reps,0);
+    const completo=scs.length>=t&&t>0;
+    if(volEj>mejorVol){mejorVol=volEj;mejorNombre=nombre;}
+    const icon=completo?'<span style="color:var(--ok);margin-right:4px;">✓</span>':'<span style="color:var(--td);margin-right:4px;">○</span>';
+    html+='<div class="modal-ej">'+icon+'<span class="modal-ej-nombre">'+nombre+'</span>'
+      +'<span class="modal-ej-stats">'+scs.length+'/'+t+' · '+Math.round(volEj)+'kg</span></div>';
   });
   document.getElementById('modal-ejercicios-lista').innerHTML=html;
+  if(mejorNombre&&mejorVol>0){
+    document.getElementById('modal-mejor-ej-wrap').style.display='flex';
+    document.getElementById('modal-mejor-ej-nombre').textContent=mejorNombre;
+    document.getElementById('modal-mejor-ej-vol').textContent=Math.round(mejorVol)+' kg';
+  }
+
+  // Mensaje motivacional
+  const frase=elegirFrase(rpeAvg||7);
+  document.getElementById('modal-moti-emoji').textContent=frase.e;
+  document.getElementById('modal-moti-text').textContent=frase.t;
+  document.getElementById('modal-moti-sub').textContent=frase.s;
+
   document.getElementById('modal-resumen-overlay').classList.add('active');
 });
 
 document.getElementById('btn-volver-editar').addEventListener('click',()=>document.getElementById('modal-resumen-overlay').classList.remove('active'));
-document.getElementById('btn-confirmar-guardar').addEventListener('click',()=>document.getElementById('workout-form').submit());
+document.getElementById('btn-confirmar-guardar').addEventListener('click',()=>{limpiarCheckpoint();document.getElementById('workout-form').submit();});
+
+// ── SWIPE PARA NAVEGAR ───────────────────────────────────────────
+(function(){
+  let xStart=null,yStart=null;
+  const wrap=document.querySelector('.wrap');
+  if(!wrap)return;
+  wrap.addEventListener('touchstart',e=>{
+    xStart=e.touches[0].clientX;
+    yStart=e.touches[0].clientY;
+  },{passive:true});
+  wrap.addEventListener('touchend',e=>{
+    if(xStart===null)return;
+    const dx=e.changedTouches[0].clientX-xStart;
+    const dy=e.changedTouches[0].clientY-yStart;
+    // Solo swipe horizontal claro (dx > 70px y más horizontal que vertical)
+    if(Math.abs(dx)>70 && Math.abs(dx)>Math.abs(dy)*1.5){
+      // Verificar que no haya un timer activo (usuario en descanso)
+      const fid=cards[STATE.ejActual]?.dataset.formId;
+      const enDescanso=fid&&STATE.timers[fid]&&STATE.timers[fid].interval;
+      if(!enDescanso){
+        navEjercicio(dx<0?1:-1);
+      }
+    }
+    xStart=null;yStart=null;
+  },{passive:true});
+})();
 
 document.addEventListener('DOMContentLoaded',function(){
   actualizarProgreso();
   actualizarSticky();
+  actualizarDots();
   // Init inline disk calc + 1RM for the first serie of each exercise
   document.querySelectorAll('.cyber-ejercicio-card').forEach(card=>{
     initSeriePanel(card.dataset.formId,1);
+  });
+  // Init RPE descriptions for all first series
+  document.querySelectorAll('[id^="rpe-desc-"]').forEach(desc=>{
+    const parts=desc.id.replace('rpe-desc-','').split('-');
+    const sn=parts[parts.length-1];
+    const fid=parts.slice(0,-1).join('-');
+    const hidEl=document.getElementById('rpe-hid-'+fid+'-'+sn);
+    if(hidEl){
+      const v=parseInt(hidEl.value)||8;
+      desc.textContent=RPE_DESC[v]||'';
+      desc.style.color=v>=9?'var(--rl)':v>=7?'var(--g)':'var(--td)';
+    }
   });
   {% if messages %}
   let delay=800;
@@ -936,6 +1607,169 @@ document.addEventListener('DOMContentLoaded',function(){
   })();
   {% endfor %}
   {% endif %}
+});
+
+// ══════════════════════════════════════════════════════════════════
+// SISTEMA DE REPORTE DE MOLESTIAS
+// ══════════════════════════════════════════════════════════════════
+
+let MOL = { fid: null, ejNombre: null, zona: null, severidad: null };
+const CSRF_TOKEN = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+
+function abrirModalMolestia(fid, ejNombre) {
+  MOL = { fid, ejNombre, zona: null, severidad: null };
+  document.getElementById('mol-ej-nombre').textContent = ejNombre;
+  document.getElementById('mol-desc-input').value = '';
+  document.getElementById('mol-alt-section').style.display = 'none';
+  document.getElementById('mol-alt-lista').innerHTML = '';
+  document.getElementById('mol-btn-confirmar').textContent = 'Anotar y continuar';
+  document.querySelectorAll('.mol-zona-chip').forEach(c => c.classList.remove('sel'));
+  document.querySelectorAll('.mol-sev-btn').forEach(b => b.classList.remove('sel'));
+  document.getElementById('mol-overlay').classList.add('active');
+  document.body.style.overflow = 'hidden';
+  // Pre-seleccionar zona si ya hay una registrada
+  const zonaGuardada = document.getElementById('mol-zona-' + fid)?.value;
+  if (zonaGuardada) {
+    const chip = document.querySelector(`.mol-zona-chip[data-zona="${zonaGuardada}"]`);
+    if (chip) { chip.classList.add('sel'); MOL.zona = zonaGuardada; }
+  }
+}
+
+function cerrarModalMolestia() {
+  document.getElementById('mol-overlay').classList.remove('active');
+  document.body.style.overflow = '';
+}
+
+function selSeveridad(sev) {
+  MOL.severidad = sev;
+  document.querySelectorAll('.mol-sev-btn').forEach(b => {
+    b.classList.toggle('sel', parseInt(b.dataset.sev) === sev);
+  });
+  // Si zona ya seleccionada y sev >= 2, buscar alternativas
+  if (MOL.zona && sev >= 2) buscarAlternativas();
+}
+
+document.querySelectorAll('.mol-zona-chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    document.querySelectorAll('.mol-zona-chip').forEach(c => c.classList.remove('sel'));
+    chip.classList.add('sel');
+    MOL.zona = chip.dataset.zona;
+    if (MOL.severidad && MOL.severidad >= 2) buscarAlternativas();
+  });
+});
+
+function buscarAlternativas() {
+  const altSection = document.getElementById('mol-alt-section');
+  const altLista = document.getElementById('mol-alt-lista');
+  altSection.style.display = 'block';
+  altLista.innerHTML = '<div class="mol-spinner">Buscando alternativas…</div>';
+
+  fetch("{% url 'entrenos:api_reportar_molestia' cliente.id %}", {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
+    body: JSON.stringify({
+      ejercicio_nombre: MOL.ejNombre,
+      zona: MOL.zona,
+      severidad: MOL.severidad,
+      descripcion: document.getElementById('mol-desc-input').value,
+      solo_alternativas: true,  // no crear UserInjury todavía
+    }),
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.alternativas && data.alternativas.length) {
+      altLista.innerHTML = data.alternativas.map(alt => `
+        <div class="mol-alt-item" onclick="usarAlternativa('${alt.nombre.replace(/'/g,"\\'")}')">
+          <div>
+            <div class="mol-alt-nombre">${alt.nombre}</div>
+            <div class="mol-alt-motivo">${alt.motivo || ''}</div>
+          </div>
+          <div class="mol-alt-btn">Usar →</div>
+        </div>
+      `).join('');
+    } else {
+      altLista.innerHTML = '<div style="font-family:var(--fm);font-size:10px;color:var(--td);padding:4px 0;">No se encontraron alternativas específicas.</div>';
+    }
+  })
+  .catch(() => { altLista.innerHTML = ''; });
+}
+
+function usarAlternativa(nombreAlt) {
+  // Actualizar visualmente el nombre del ejercicio en la card
+  const card = document.getElementById('card-' + MOL.fid);
+  if (card) {
+    const h2 = card.querySelector('.cyber-ejercicio-nombre');
+    if (h2) h2.textContent = nombreAlt;
+    // Actualizar input hidden del nombre
+    const hidNombre = card.querySelector(`input[name="${MOL.fid}_nombre"]`);
+    if (hidNombre) hidNombre.value = nombreAlt;
+  }
+  MOL.ejNombre = nombreAlt;
+  // Cerrar modal con el botón de confirmar
+  confirmarMolestia();
+}
+
+function confirmarMolestia() {
+  if (!MOL.zona) {
+    // Highlight la sección de zona
+    document.querySelector('.mol-section .mol-label').style.color = 'var(--r)';
+    setTimeout(() => document.querySelector('.mol-section .mol-label').style.color = '', 1500);
+    return;
+  }
+  if (!MOL.severidad) {
+    document.querySelectorAll('.mol-sev-btn').forEach(b => b.style.borderColor = 'var(--r)');
+    setTimeout(() => document.querySelectorAll('.mol-sev-btn').forEach(b => b.style.borderColor = ''), 1500);
+    return;
+  }
+
+  const desc = document.getElementById('mol-desc-input').value.trim();
+
+  // Guardar en inputs ocultos del form
+  document.getElementById('mol-rep-' + MOL.fid).value = 'true';
+  document.getElementById('mol-zona-' + MOL.fid).value = MOL.zona;
+  document.getElementById('mol-sev-' + MOL.fid).value = MOL.severidad;
+  document.getElementById('mol-desc-' + MOL.fid).value = desc;
+
+  // Marcar botón ⚠️ como activo
+  const btnMol = document.getElementById('mol-btn-' + MOL.fid);
+  if (btnMol) {
+    btnMol.classList.add('activa');
+    btnMol.textContent = '⚠️ ' + MOL.zona.charAt(0).toUpperCase() + MOL.zona.slice(1) + ' · ' + ['','Leve','Moderada','Severa'][MOL.severidad];
+  }
+
+  // Llamada real al backend (registra en BD y crea UserInjury si procede)
+  fetch("{% url 'entrenos:api_reportar_molestia' cliente.id %}", {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
+    body: JSON.stringify({
+      ejercicio_nombre: MOL.ejNombre,
+      zona: MOL.zona,
+      severidad: MOL.severidad,
+      descripcion: desc,
+    }),
+  })
+  .then(r => r.json())
+  .then(data => {
+    // Notificación sutil según severidad
+    const msgs = ['', '💛 Molestia leve anotada', '🟠 Restricción activa creada', '🔴 Lesión registrada — toma precauciones'];
+    if (window.notificacionesCodeice) {
+      window.notificacionesCodeice.mostrarNotificacion({
+        icono: ['','😐','😬','😣'][MOL.severidad],
+        titulo: msgs[MOL.severidad],
+        mensaje: data.mensaje || '',
+        tipo: 'molestia',
+        duracion: 4000,
+      });
+    }
+  })
+  .catch(() => {});
+
+  cerrarModalMolestia();
+}
+
+// Cerrar al pulsar fuera del sheet
+document.getElementById('mol-overlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('mol-overlay')) cerrarModalMolestia();
 });
 </script>
 </body>

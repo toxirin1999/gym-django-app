@@ -1,0 +1,640 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Monitor de Progreso{% endblock %}
+
+{% block extra_css %}
+<style>
+  :root {
+    --nc:  #00ffc8;
+    --nb:  #00bfff;
+    --ng:  #C8AA6E;
+    --nr:  #f87171;
+    --ny:  #fbbf24;
+    --ngr: #4ade80;
+    --cp:  #22d3ee;
+    --cc:  #f59e0b;
+    --cg:  #a78bfa;
+    --surface:  rgba(10,22,40,0.92);
+    --surface2: rgba(5,14,28,0.97);
+    --border:   rgba(0,255,200,0.15);
+  }
+
+  .mon-wrap { max-width: 960px; margin: 0 auto; padding: 20px 16px 60px; }
+
+  .mon-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    backdrop-filter: blur(14px);
+    padding: 22px;
+    margin-bottom: 16px;
+    position: relative;
+    overflow: hidden;
+  }
+  .mon-card::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(135deg, rgba(0,255,200,0.03) 0%, transparent 60%);
+    pointer-events: none;
+  }
+
+  .mon-label {
+    font-family: 'Cinzel', serif;
+    font-size: 0.63rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: rgba(0,255,200,0.5);
+    margin-bottom: 4px;
+  }
+
+  .mon-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #fff;
+    margin: 0 0 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  /* ── Layout 2 columnas en desktop ── */
+  .mon-grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  @media (max-width: 700px) {
+    .mon-grid-2 { grid-template-columns: 1fr; }
+  }
+
+  /* ── Métricas composición ── */
+  .comp-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-top: 10px;
+  }
+  .comp-block {
+    background: var(--surface2);
+    border-radius: 10px;
+    padding: 12px;
+    text-align: center;
+    border: 1px solid rgba(255,255,255,0.06);
+  }
+  .comp-val {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--nc);
+    line-height: 1;
+  }
+  .comp-lbl { font-size: 0.68rem; color: rgba(255,255,255,0.38); margin-top: 4px; }
+
+  /* ── Tendencia chip ── */
+  .tendencia-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.78rem;
+    font-weight: 600;
+  }
+  .tend-baja   { background: rgba(74,222,128,0.12); color: var(--ngr); border: 1px solid rgba(74,222,128,0.3); }
+  .tend-sube   { background: rgba(248,113,113,0.12); color: var(--nr);  border: 1px solid rgba(248,113,113,0.3); }
+  .tend-estable{ background: rgba(251,191,36,0.1);   color: var(--ny);  border: 1px solid rgba(251,191,36,0.25); }
+
+  /* ── Biofeedback gauges ── */
+  .bio-gauges {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  @media (max-width: 480px) {
+    .bio-gauges { grid-template-columns: 1fr; }
+  }
+  .bio-gauge {
+    background: var(--surface2);
+    border-radius: 10px;
+    padding: 14px 12px;
+    text-align: center;
+    border: 1px solid rgba(255,255,255,0.06);
+  }
+  .bio-gauge .gauge-val {
+    font-size: 1.8rem;
+    font-weight: 700;
+    line-height: 1;
+  }
+  .bio-gauge .gauge-lbl { font-size: 0.68rem; color: rgba(255,255,255,0.38); margin-top: 4px; }
+  .bio-gauge .gauge-bar {
+    height: 4px;
+    border-radius: 2px;
+    margin-top: 8px;
+    background: rgba(255,255,255,0.08);
+    overflow: hidden;
+  }
+  .bio-gauge .gauge-fill { height: 100%; border-radius: 2px; transition: width 0.5s; }
+
+  /* Colores semáforo por valor */
+  .gauge-fatiga .gauge-val { color: var(--nr); }
+  .gauge-fatiga .gauge-fill { background: var(--nr); }
+  .gauge-sueno  .gauge-val { color: var(--nb); }
+  .gauge-sueno  .gauge-fill { background: var(--nb); }
+  .gauge-energia .gauge-val { color: var(--ngr); }
+  .gauge-energia .gauge-fill { background: var(--ngr); }
+
+  /* ── Alerta refeed ── */
+  .alerta-refeed {
+    background: rgba(248,113,113,0.08);
+    border: 1px solid rgba(248,113,113,0.35);
+    border-radius: 10px;
+    padding: 14px 16px;
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    margin-bottom: 16px;
+  }
+  .alerta-refeed .icon { font-size: 1.2rem; flex-shrink: 0; }
+  .alerta-refeed .body { font-size: 0.85rem; color: var(--nr); line-height: 1.5; }
+  .alerta-refeed strong { color: #fff; }
+
+  /* ── Info recuperación días ── */
+  .days-strip {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    padding-bottom: 6px;
+    margin-top: 10px;
+  }
+  .day-pill {
+    flex-shrink: 0;
+    background: var(--surface2);
+    border-radius: 8px;
+    padding: 8px 10px;
+    text-align: center;
+    min-width: 58px;
+    border: 1px solid rgba(255,255,255,0.06);
+  }
+  .day-pill .dp-fecha { font-size: 0.65rem; color: rgba(255,255,255,0.3); margin-bottom: 4px; }
+  .day-pill .dp-row { font-size: 0.72rem; display: flex; justify-content: space-between; gap: 6px; margin: 1px 0; }
+  .dp-f { color: var(--nr); }
+  .dp-s { color: var(--nb); }
+  .dp-e { color: var(--ngr); }
+  .dp-na { color: rgba(255,255,255,0.18); }
+
+  /* ── Contexto último informe ── */
+  .informe-ctx {
+    background: rgba(0,255,200,0.04);
+    border: 1px solid rgba(0,255,200,0.12);
+    border-radius: 10px;
+    padding: 12px 16px;
+    font-size: 0.82rem;
+    color: rgba(255,255,255,0.65);
+    line-height: 1.5;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .informe-ctx .esc-pill {
+    width: 32px; height: 32px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 0.9rem; flex-shrink: 0;
+  }
+  .esc-A-pill { background: rgba(74,222,128,0.15);  color: var(--ngr); }
+  .esc-B-pill { background: rgba(251,191,36,0.12);  color: var(--ny);  }
+  .esc-C-pill { background: rgba(248,113,113,0.12); color: var(--nr);  }
+  .esc-D-pill { background: rgba(167,139,250,0.12); color: #a78bfa;    }
+  .esc-X-pill { background: rgba(100,116,139,0.1);  color: #94a3b8;    }
+
+  canvas { display: block; }
+
+  /* ── Check diario cumplimiento ── */
+  .cumpl-daily-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 6px;
+    margin-top: 6px;
+  }
+  .cumpl-day-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+  }
+  .cumpl-day-label {
+    font-size: 0.62rem;
+    color: rgba(255,255,255,0.3);
+    text-align: center;
+    line-height: 1.2;
+    white-space: nowrap;
+  }
+  .cumpl-day-circle {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 700;
+    border: 1.5px solid rgba(255,255,255,0.1);
+    background: rgba(255,255,255,0.03);
+    color: rgba(255,255,255,0.2);
+    font-family: 'Share Tech Mono', monospace;
+    flex-shrink: 0;
+  }
+  .cumpl-day-circle.ok   { background: rgba(74,222,128,0.15); border-color: rgba(74,222,128,0.5); color: #4ade80; }
+  .cumpl-day-circle.med  { background: rgba(251,191,36,0.12); border-color: rgba(251,191,36,0.45); color: #fbbf24; }
+  .cumpl-day-circle.low  { background: rgba(248,113,113,0.1); border-color: rgba(248,113,113,0.4); color: #f87171; }
+  .cumpl-day-pct {
+    font-size: 0.6rem;
+    color: rgba(255,255,255,0.25);
+    font-family: 'Share Tech Mono', monospace;
+  }
+
+  /* ── Lápiz editar composición ── */
+  .edit-pencil {
+    display: inline-flex; align-items: center; gap: 4px;
+    color: rgba(255,255,255,0.25);
+    text-decoration: none;
+    font-size: 0.72rem;
+    font-family: 'Share Tech Mono', monospace;
+    letter-spacing: 0.04em;
+    padding: 4px 8px;
+    border-radius: 6px;
+    border: 1px solid rgba(255,255,255,0.08);
+    transition: all 0.15s;
+  }
+  .edit-pencil:hover {
+    color: var(--nc);
+    border-color: rgba(0,255,200,0.3);
+    background: rgba(0,255,200,0.05);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="mon-wrap">
+
+  <!-- Header -->
+  <div class="d-flex align-items-center justify-content-between mb-3">
+    <div>
+      <div class="mon-label">Monitor</div>
+      <h4 style="color:#fff; margin:0; font-family:'Cinzel',serif; font-size:1.1rem;">
+        Progreso y Recuperación
+      </h4>
+    </div>
+    <a href="{% url 'nutricion_app_django:dashboard_nutricional' %}"
+       style="background:transparent;border:1px solid rgba(255,255,255,0.15);color:rgba(255,255,255,0.55);
+              border-radius:10px;padding:8px 16px;font-size:0.83rem;text-decoration:none;">← Volver</a>
+  </div>
+
+  <!-- ── Composición corporal ── -->
+  <div class="mon-card">
+    <div class="mon-title">
+      <span>Composición corporal</span>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span style="font-size:0.7rem;color:rgba(255,255,255,0.25);font-family:'Share Tech Mono',monospace;">
+          Navy Method · {{ perfil.updated_at|date:"d/m/Y" }}
+        </span>
+        <a href="{% url 'nutricion_app_django:configurar_perfil' %}" class="edit-pencil" title="Editar medidas">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+            <path d="M8 1.5L10.5 4L4.5 10H2V7.5L8 1.5Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Editar
+        </a>
+      </div>
+    </div>
+    <div class="comp-grid">
+      <div class="comp-block">
+        <div class="comp-val">{{ perfil.grasa_corporal_pct|floatformat:1 }}<span style="font-size:0.85rem;color:#4a6080;">%</span></div>
+        <div class="comp-lbl">Grasa corporal</div>
+      </div>
+      <div class="comp-block">
+        <div class="comp-val" style="color:var(--cp);">{{ perfil.masa_magra_kg|floatformat:1 }}<span style="font-size:0.85rem;color:#4a6080;"> kg</span></div>
+        <div class="comp-lbl">Masa magra</div>
+      </div>
+      <div class="comp-block">
+        <div class="comp-val" style="color:var(--ng);">
+          {% if tendencia_slope is not None %}
+            {% if tendencia_slope < -0.03 %}
+              <span class="tendencia-chip tend-baja">↓ bajando</span>
+            {% elif tendencia_slope > 0.03 %}
+              <span class="tendencia-chip tend-sube">↑ subiendo</span>
+            {% else %}
+              <span class="tendencia-chip tend-estable">→ estable</span>
+            {% endif %}
+          {% else %}
+            <span style="font-size:1rem;color:rgba(255,255,255,0.2);">sin datos</span>
+          {% endif %}
+        </div>
+        <div class="comp-lbl">Tendencia peso</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Gráfico peso + MM7 ── -->
+  <div class="mon-card">
+    <div class="mon-title">
+      <span>Evolución de peso — últimos 60 días</span>
+      <div style="display:flex;gap:14px;font-size:0.72rem;">
+        <span style="color:rgba(0,255,200,0.45);">● Peso real</span>
+        <span style="color:rgba(0,191,255,0.7);">── Media 7d</span>
+      </div>
+    </div>
+    <canvas id="pesoChart" height="90"></canvas>
+    <div id="pesoEmpty" style="display:none;text-align:center;color:rgba(255,255,255,0.2);padding:40px 0;font-size:0.85rem;">
+      No hay suficientes registros de peso todavía.
+    </div>
+  </div>
+
+  <!-- ── Cumplimiento — esta semana (check diario) ── -->
+  <div class="mon-card">
+    <div class="mon-title">
+      <span>Cumplimiento — esta semana</span>
+      <span style="font-size:0.7rem;color:rgba(255,255,255,0.25);font-family:'Share Tech Mono',monospace;">últimos 7 días</span>
+    </div>
+    <div class="cumpl-daily-grid" id="cumplDailyGrid">
+      <!-- Rellenado por JS -->
+    </div>
+    <div style="display:flex;gap:14px;margin-top:12px;font-size:0.65rem;color:rgba(255,255,255,0.3);">
+      <span><span style="color:#4ade80;">●</span> ≥90%</span>
+      <span><span style="color:#fbbf24;">●</span> 70–89%</span>
+      <span><span style="color:#f87171;">●</span> &lt;70%</span>
+      <span>○ Sin datos</span>
+    </div>
+  </div>
+
+  <!-- ── Tendencia histórica (8 semanas) ── -->
+  <div class="mon-card">
+    <div class="mon-title">Tendencia histórica — últimas 8 semanas</div>
+    <canvas id="cumplChart" height="80"></canvas>
+  </div>
+
+  <!-- ── Estado de Recuperación ── -->
+  <div class="mon-card">
+    <div class="mon-title">Estado de Recuperación — últimos 7 días</div>
+
+    {% if alerta_refeed %}
+    <div class="alerta-refeed">
+      <span class="icon">🔴</span>
+      <div class="body">
+        <strong>Alerta de fatiga acumulada:</strong>
+        Llevas {{ dias_fatiga_alta }} días con fatiga ≥ 7 esta semana.
+        El algoritmo recomienda un <strong>Refeed técnico</strong> (+3 bloques de carbos en tu próximo día de alta intensidad).
+        Revisa tu informe semanal para aplicar el ajuste.
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Gauges -->
+    <div class="bio-gauges">
+      <div class="bio-gauge gauge-fatiga">
+        {% if fatiga_media is not None %}
+          <div class="gauge-val">{{ fatiga_media }}</div>
+          <div class="gauge-bar"><div class="gauge-fill" style="width:{{ fatiga_media|default:0 }}0%"></div></div>
+        {% else %}
+          <div class="gauge-val" style="color:rgba(255,255,255,0.18);">—</div>
+        {% endif %}
+        <div class="gauge-lbl">Fatiga media (1-10)</div>
+      </div>
+      <div class="bio-gauge gauge-sueno">
+        {% if sueno_media is not None %}
+          <div class="gauge-val">{{ sueno_media }}</div>
+          <div class="gauge-bar"><div class="gauge-fill" style="width:{{ sueno_media|default:0 }}0%"></div></div>
+        {% else %}
+          <div class="gauge-val" style="color:rgba(255,255,255,0.18);">—</div>
+        {% endif %}
+        <div class="gauge-lbl">Sueño medio (1-10)</div>
+      </div>
+      <div class="bio-gauge gauge-energia">
+        {% if energia_media is not None %}
+          <div class="gauge-val">{{ energia_media }}</div>
+          <div class="gauge-bar"><div class="gauge-fill" style="width:{{ energia_media|default:0 }}0%"></div></div>
+        {% else %}
+          <div class="gauge-val" style="color:rgba(255,255,255,0.18);">—</div>
+        {% endif %}
+        <div class="gauge-lbl">Energía entreno (1-5)</div>
+      </div>
+    </div>
+
+    <!-- Strip diario -->
+    <div class="mon-label mb-2">Detalle por día</div>
+    <div class="days-strip" id="daysStrip"></div>
+
+  </div>
+
+  <!-- ── Contexto último informe ── -->
+  {% if ultimo_informe %}
+  <div class="mon-card">
+    <div class="mon-label mb-2">Último ajuste del algoritmo</div>
+    <div class="informe-ctx">
+      <div class="esc-pill esc-{{ ultimo_informe.escenario }}-pill">{{ ultimo_informe.escenario }}</div>
+      <div>
+        <strong style="color:#fff;">Semana del {{ ultimo_informe.semana|date:"d M" }}</strong>
+        — {{ ultimo_informe.justificacion|truncatechars:120 }}
+        <br>
+        <a href="{% url 'nutricion_app_django:informe_semanal' %}"
+           style="color:var(--nc);font-size:0.78rem;text-decoration:none;">Ver informe completo →</a>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+</div><!-- /mon-wrap -->
+{% endblock %}
+
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+
+  const PESO_DATA = {{ peso_data|safe }};
+  const CUMPL_DATA = {{ cumplimiento_semanas|safe }};
+  const BIO_DATA = {{ bio_data|safe }};
+
+  // ── Gráfico de peso ─────────────────────────────────────────────────
+  if (PESO_DATA.length >= 2) {
+    const labels = PESO_DATA.map(d => {
+      const dt = new Date(d.fecha);
+      return dt.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' });
+    });
+    const pesoReal = PESO_DATA.map(d => d.peso);
+    const mm7      = PESO_DATA.map(d => d.mm7);
+
+    new Chart(document.getElementById('pesoChart'), {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [
+          {
+            label: 'Peso real',
+            data: pesoReal,
+            borderColor: 'rgba(0,255,200,0.4)',
+            backgroundColor: 'rgba(0,255,200,0.04)',
+            borderWidth: 1.5,
+            pointRadius: 2,
+            pointHoverRadius: 5,
+            tension: 0.2,
+            fill: true,
+          },
+          {
+            label: 'Media 7 días',
+            data: mm7,
+            borderColor: 'rgba(0,191,255,0.85)',
+            backgroundColor: 'transparent',
+            borderWidth: 2.5,
+            pointRadius: 0,
+            pointHoverRadius: 4,
+            tension: 0.4,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: 'rgba(5,14,28,0.95)',
+            borderColor: 'rgba(0,255,200,0.3)',
+            borderWidth: 1,
+            titleColor: '#00ffc8',
+            bodyColor: 'rgba(255,255,255,0.7)',
+            callbacks: {
+              label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y} kg`,
+            },
+          },
+        },
+        scales: {
+          x: {
+            ticks: { color: 'rgba(255,255,255,0.3)', font: { size: 10 }, maxTicksLimit: 10 },
+            grid:  { color: 'rgba(255,255,255,0.04)' },
+          },
+          y: {
+            ticks: { color: 'rgba(255,255,255,0.3)', font: { size: 10 },
+                     callback: v => v + ' kg' },
+            grid:  { color: 'rgba(255,255,255,0.06)' },
+          },
+        },
+        interaction: { intersect: false, mode: 'index' },
+      },
+    });
+  } else {
+    document.getElementById('pesoChart').style.display = 'none';
+    document.getElementById('pesoEmpty').style.display  = 'block';
+  }
+
+  // ── Gráfico cumplimiento semanal ────────────────────────────────────
+  (function() {
+    const labels = CUMPL_DATA.map(d => d.label);
+    const vals   = CUMPL_DATA.map(d => d.pct);
+    const colors = vals.map(v =>
+      v === null        ? 'rgba(255,255,255,0.06)' :
+      v >= 90           ? 'rgba(74,222,128,0.65)'  :
+      v >= 70           ? 'rgba(251,191,36,0.6)'   :
+                          'rgba(248,113,113,0.6)'
+    );
+    const borders = colors.map(c => c.replace(/[\d.]+\)$/, '1)'));
+
+    new Chart(document.getElementById('cumplChart'), {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [{
+          label: 'Cumplimiento',
+          data: vals.map(v => v ?? 0),
+          backgroundColor: colors,
+          borderColor: borders,
+          borderWidth: 1,
+          borderRadius: 5,
+        }],
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: 'rgba(5,14,28,0.95)',
+            borderColor: 'rgba(0,255,200,0.2)',
+            borderWidth: 1,
+            titleColor: '#00ffc8',
+            bodyColor: 'rgba(255,255,255,0.7)',
+            callbacks: {
+              label: ctx => ctx.parsed.y > 0 ? ctx.parsed.y + '%' : 'Sin datos',
+            },
+          },
+          annotation: {
+            annotations: {
+              linea90: {
+                type: 'line',
+                yMin: 90, yMax: 90,
+                borderColor: 'rgba(74,222,128,0.3)',
+                borderWidth: 1,
+                borderDash: [4, 4],
+              },
+            },
+          },
+        },
+        scales: {
+          x: {
+            ticks: { color: 'rgba(255,255,255,0.35)', font: { size: 11 } },
+            grid:  { display: false },
+          },
+          y: {
+            min: 0, max: 105,
+            ticks: { color: 'rgba(255,255,255,0.3)', font: { size: 10 },
+                     callback: v => v + '%', stepSize: 25 },
+            grid:  { color: 'rgba(255,255,255,0.05)' },
+          },
+        },
+      },
+    });
+  })();
+
+  // ── Check diario cumplimiento ────────────────────────────────────────
+  (function() {
+    const grid = document.getElementById('cumplDailyGrid');
+    if (!grid) return;
+    BIO_DATA.forEach(d => {
+      const pct = d.cumpl;
+      let cls = '', symbol = '○', pctText = '—';
+      if (pct !== null && pct !== undefined) {
+        pctText = pct + '%';
+        if (pct >= 90)      { cls = 'ok';  symbol = '✓'; }
+        else if (pct >= 70) { cls = 'med'; symbol = '~'; }
+        else                { cls = 'low'; symbol = '✕'; }
+      }
+      const dayName = d.label.split(' ')[0]; // 'lun', 'mar', etc.
+      const dayNum  = d.label.split(' ')[1] || '';
+      const col = document.createElement('div');
+      col.className = 'cumpl-day-col';
+      col.innerHTML = `
+        <div class="cumpl-day-label">${dayName}<br>${dayNum}</div>
+        <div class="cumpl-day-circle ${cls}">${symbol}</div>
+        <div class="cumpl-day-pct">${pctText}</div>
+      `;
+      grid.appendChild(col);
+    });
+  })();
+
+  // ── Strip biofeedback ────────────────────────────────────────────────
+  (function() {
+    const strip = document.getElementById('daysStrip');
+    BIO_DATA.forEach(d => {
+      const f = d.fatiga  !== null ? `<span class="dp-f">${d.fatiga}</span>`  : `<span class="dp-na">—</span>`;
+      const s = d.sueno   !== null ? `<span class="dp-s">${d.sueno}</span>`   : `<span class="dp-na">—</span>`;
+      const e = d.energia !== null ? `<span class="dp-e">${d.energia}</span>` : `<span class="dp-na">—</span>`;
+
+      const pill = document.createElement('div');
+      pill.className = 'day-pill';
+      pill.innerHTML = `
+        <div class="dp-fecha">${d.label}</div>
+        <div class="dp-row"><span style="color:rgba(255,255,255,0.25);font-size:0.65rem;">F</span>${f}</div>
+        <div class="dp-row"><span style="color:rgba(255,255,255,0.25);font-size:0.65rem;">S</span>${s}</div>
+        <div class="dp-row"><span style="color:rgba(255,255,255,0.25);font-size:0.65rem;">E</span>${e}</div>
+      `;
+      strip.appendChild(pill);
+    });
+  })();
+
+});
+</script>
+{% endblock %}

@@ -1091,6 +1091,37 @@ def panel_cliente(request):
     usuario = request.user
     cliente = get_object_or_404(Cliente, user=usuario)
     context = _get_dashboard_context_data(request, cliente)
+
+    # ── Panel nutricional del día ──────────────────────────────────────
+    try:
+        from nutricion_app_django.models import TargetNutricionalDiario, RegistroBloques
+        from datetime import date as _date
+        _hoy = _date.today()
+        nut_target = TargetNutricionalDiario.objects.filter(cliente=cliente, fecha=_hoy).first()
+        if not nut_target and hasattr(cliente, 'perfil_nutricional'):
+            from nutricion_app_django.services import generar_target_diario
+            try:
+                nut_target = generar_target_diario(cliente)
+            except Exception:
+                nut_target = None
+        if nut_target:
+            _registros = RegistroBloques.objects.filter(cliente=cliente, fecha=_hoy)
+            nut_p, nut_c, nut_g = 0.0, 0.0, 0.0
+            for _r in _registros:
+                nut_p += _r.bloques_proteina
+                nut_c += _r.bloques_carbos
+                nut_g += _r.bloques_grasas
+            _pct = lambda consumido, target: min(100, round(consumido / target * 100)) if target else 0
+            context['nut_target']  = nut_target
+            context['nut_pct_p']   = _pct(nut_p, nut_target.bloques_proteina)
+            context['nut_pct_c']   = _pct(nut_c, nut_target.bloques_carbos)
+            context['nut_pct_g']   = _pct(nut_g, nut_target.bloques_grasas)
+            context['nut_consumido_p'] = round(nut_p, 1)
+            context['nut_consumido_c'] = round(nut_c, 1)
+            context['nut_consumido_g'] = round(nut_g, 1)
+    except Exception:
+        pass
+
     return render(request, 'clientes/mockup_demo.html', context)
 
 

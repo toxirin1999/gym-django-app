@@ -1,0 +1,500 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Manifiesto del Atleta Híbrido{% endblock %}
+
+{% block extra_css %}
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600&display=swap');
+
+  :root {
+    --ink:    #0a0c0f;
+    --paper:  #111318;
+    --card:   #161b22;
+    --line:   rgba(255,255,255,0.07);
+    --c1:     #00ffc8;   /* electric teal */
+    --c2:     #ff6b2b;   /* fire orange   */
+    --c3:     #7c5cfc;   /* violet        */
+    --text:   #e8eaf0;
+    --muted:  rgba(232,234,240,0.45);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--ink);
+    color: var(--text);
+    font-family: 'Inter', system-ui, sans-serif;
+    min-height: 100dvh;
+    overflow-x: hidden;
+  }
+
+  /* ── Layout ──────────────────────────────────────────────────────────── */
+  .mf-shell {
+    max-width: 520px;
+    margin: 0 auto;
+    padding: 0 0 40px;
+    position: relative;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── Progress bar ────────────────────────────────────────────────────── */
+  .mf-progress {
+    display: flex;
+    gap: 6px;
+    padding: 28px 24px 0;
+  }
+  .mf-progress-seg {
+    flex: 1;
+    height: 3px;
+    background: var(--line);
+    border-radius: 2px;
+    transition: background 0.3s;
+  }
+  .mf-progress-seg.done { background: var(--c1); }
+  .mf-progress-seg.active { background: rgba(0,255,200,0.4); }
+
+  /* ── Slide container ─────────────────────────────────────────────────── */
+  .mf-slides {
+    flex: 1;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .mf-slide {
+    position: absolute;
+    inset: 0;
+    padding: 40px 24px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    opacity: 0;
+    transform: translateX(60px);
+    transition: opacity 0.4s ease, transform 0.4s ease;
+    pointer-events: none;
+  }
+  .mf-slide.active {
+    opacity: 1;
+    transform: translateX(0);
+    pointer-events: auto;
+  }
+  .mf-slide.exit {
+    opacity: 0;
+    transform: translateX(-60px);
+  }
+
+  /* ── Slide content ───────────────────────────────────────────────────── */
+  .mf-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 5px 12px;
+    border-radius: 20px;
+    margin-bottom: 28px;
+    width: fit-content;
+  }
+  .badge-red   { background: rgba(255,107,43,0.15); color: var(--c2); border: 1px solid rgba(255,107,43,0.3); }
+  .badge-teal  { background: rgba(0,255,200,0.1);   color: var(--c1); border: 1px solid rgba(0,255,200,0.25); }
+  .badge-violet{ background: rgba(124,92,252,0.15); color: var(--c3); border: 1px solid rgba(124,92,252,0.3); }
+
+  .mf-icon {
+    width: 80px;
+    height: 80px;
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.2rem;
+    margin-bottom: 32px;
+  }
+  .icon-1 { background: linear-gradient(135deg, rgba(255,107,43,0.2), rgba(255,107,43,0.05)); border: 1px solid rgba(255,107,43,0.25); }
+  .icon-2 { background: linear-gradient(135deg, rgba(0,255,200,0.15), rgba(0,255,200,0.03)); border: 1px solid rgba(0,255,200,0.2); }
+  .icon-3 { background: linear-gradient(135deg, rgba(124,92,252,0.2), rgba(124,92,252,0.05)); border: 1px solid rgba(124,92,252,0.25); }
+
+  .mf-number {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(3.5rem, 12vw, 5.5rem);
+    line-height: 0.9;
+    letter-spacing: -0.01em;
+    margin-bottom: 16px;
+  }
+  .num-1 { color: var(--c2); }
+  .num-2 { color: var(--c1); }
+  .num-3 { color: var(--c3); }
+
+  .mf-headline {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(1.8rem, 7vw, 2.8rem);
+    line-height: 1.0;
+    letter-spacing: 0.02em;
+    margin-bottom: 20px;
+    color: var(--text);
+  }
+
+  .mf-body {
+    font-size: 0.95rem;
+    line-height: 1.65;
+    color: var(--muted);
+    margin-bottom: 28px;
+    flex: 1;
+  }
+  .mf-body strong {
+    color: var(--text);
+    font-weight: 600;
+  }
+
+  /* ── Highlight cards ─────────────────────────────────────────────────── */
+  .mf-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 28px;
+  }
+  .mf-card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 14px 16px;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .mf-card-icon {
+    font-size: 1.2rem;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+  .mf-card-text {
+    font-size: 0.85rem;
+    line-height: 1.5;
+    color: var(--muted);
+  }
+  .mf-card-text strong { color: var(--text); }
+
+  /* ── Quote block ─────────────────────────────────────────────────────── */
+  .mf-quote {
+    border-left: 3px solid var(--c1);
+    padding: 12px 16px;
+    background: rgba(0,255,200,0.04);
+    border-radius: 0 8px 8px 0;
+    margin-bottom: 28px;
+  }
+  .mf-quote p {
+    font-size: 0.9rem;
+    line-height: 1.55;
+    color: var(--text);
+    font-style: italic;
+  }
+
+  /* ── Nav buttons ─────────────────────────────────────────────────────── */
+  .mf-nav {
+    display: flex;
+    gap: 12px;
+    padding: 0 24px;
+    margin-top: auto;
+    position: sticky;
+    bottom: 28px;
+  }
+
+  .btn-back {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    border: 1px solid var(--line);
+    background: var(--card);
+    color: var(--muted);
+    font-size: 1.2rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    flex-shrink: 0;
+  }
+  .btn-back:hover { border-color: rgba(255,255,255,0.2); color: var(--text); }
+  .btn-back:disabled { opacity: 0.2; cursor: default; }
+
+  .btn-next {
+    flex: 1;
+    height: 48px;
+    border-radius: 12px;
+    border: none;
+    background: var(--c1);
+    color: #000;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+  .btn-next:hover { background: #00e8b5; transform: translateY(-1px); }
+  .btn-next.last { background: linear-gradient(135deg, var(--c2), #ff4500); color: #fff; }
+  .btn-next.last:hover { background: linear-gradient(135deg, #ff7a3d, #ff4500); }
+
+  /* ── Skip link ───────────────────────────────────────────────────────── */
+  .mf-skip {
+    text-align: center;
+    padding: 16px 24px 0;
+    font-size: 0.78rem;
+    color: var(--muted);
+  }
+  .mf-skip a {
+    color: var(--muted);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .mf-skip a:hover { color: var(--text); }
+
+  /* ── Slide 3 semáforo ────────────────────────────────────────────────── */
+  .semaforo-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 28px;
+  }
+  .semaforo-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 12px 14px;
+  }
+  .semaforo-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .dot-red    { background: #ff4444; box-shadow: 0 0 8px rgba(255,68,68,0.5); }
+  .dot-yellow { background: #ffcc00; box-shadow: 0 0 8px rgba(255,204,0,0.5); }
+  .dot-green  { background: #22c55e; box-shadow: 0 0 8px rgba(34,197,94,0.5); }
+
+  .semaforo-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    min-width: 70px;
+    color: var(--text);
+  }
+  .semaforo-desc {
+    font-size: 0.8rem;
+    color: var(--muted);
+    line-height: 1.4;
+  }
+
+  /* Decorative bg noise */
+  .mf-shell::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+  }
+  .mf-progress, .mf-slides, .mf-nav, .mf-skip { position: relative; z-index: 1; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="mf-shell">
+
+  <!-- Progress -->
+  <div class="mf-progress">
+    <div class="mf-progress-seg done active" id="seg-0"></div>
+    <div class="mf-progress-seg" id="seg-1"></div>
+    <div class="mf-progress-seg" id="seg-2"></div>
+  </div>
+
+  <!-- Slides -->
+  <div class="mf-slides">
+
+    <!-- ── Slide 1: Adiós a MyFitnessPal ── -->
+    <div class="mf-slide active" id="slide-0">
+      <div class="mf-badge badge-red">01 / 03 &nbsp;·&nbsp; El Problema</div>
+      <div class="mf-icon icon-1">🧮</div>
+      <div class="mf-number num-1">Adiós<br>Calorías</div>
+      <div class="mf-headline">Bienvenido al sistema de bloques</div>
+      <div class="mf-body">
+        Tu cuerpo no es una calculadora térmica, es <strong>un laboratorio químico</strong>.
+        Las calorías son una métrica incompleta. Aquí no contamos números vacíos,
+        gestionamos <strong>unidades de función</strong>.
+      </div>
+
+      <div class="mf-cards">
+        <div class="mf-card">
+          <div class="mf-card-icon">🔵</div>
+          <div class="mf-card-text"><strong>Bloque P — Proteína</strong><br>7g de proteína neta. Ladrillos para reparar músculo tras el gym.</div>
+        </div>
+        <div class="mf-card">
+          <div class="mf-card-icon">🟠</div>
+          <div class="mf-card-text"><strong>Bloque C — Carbos</strong><br>9g de carbos netos. Combustible para tu próximo WOD de Hyrox.</div>
+        </div>
+        <div class="mf-card">
+          <div class="mf-card-icon">🟡</div>
+          <div class="mf-card-text"><strong>Bloque G — Grasa</strong><br>3g de grasa. Anti-inflamación y soporte hormonal.</div>
+        </div>
+      </div>
+
+      <div class="mf-quote">
+        <p>"Si el bloque no sirve a tu entrenamiento de hoy, no entra en el plato."</p>
+      </div>
+    </div>
+
+    <!-- ── Slide 2: Nutrición Sincronizada ── -->
+    <div class="mf-slide" id="slide-1">
+      <div class="mf-badge badge-teal">02 / 03 &nbsp;·&nbsp; El Sistema</div>
+      <div class="mf-icon icon-2">⚡</div>
+      <div class="mf-number num-2">Come<br>según<br>el día</div>
+      <div class="mf-headline">Nutrición sincronizada con tu entreno</div>
+      <div class="mf-body">
+        Comer lo mismo todos los días es <strong>ignorancia atlética</strong>.
+        Un WOD de Hyrox no demanda lo mismo que una sesión de fuerza.
+        <strong>La comida sigue al esfuerzo, nunca al revés.</strong>
+      </div>
+
+      <div class="semaforo-grid">
+        <div class="semaforo-row">
+          <div class="semaforo-dot dot-red"></div>
+          <div class="semaforo-label">Hyrox</div>
+          <div class="semaforo-desc">+25% Carbos / −15% Grasas. Prioriza arroz y patata pre-entreno.</div>
+        </div>
+        <div class="semaforo-row">
+          <div class="semaforo-dot dot-yellow"></div>
+          <div class="semaforo-label">Gym</div>
+          <div class="semaforo-desc">Proteína estable. Carbos moderados para mover cargas pesadas.</div>
+        </div>
+        <div class="semaforo-row">
+          <div class="semaforo-dot dot-green"></div>
+          <div class="semaforo-label">Descanso</div>
+          <div class="semaforo-desc">−30% Carbos / +15% Grasas. Quema grasa. Optimiza hormonas.</div>
+        </div>
+      </div>
+
+      <div class="mf-quote">
+        <p>"Si el calendario detecta dos actividades, se activa el Modo Supervivencia: +2C +1P para evitar el catabolismo."</p>
+      </div>
+    </div>
+
+    <!-- ── Slide 3: Ajuste Dinámico ── -->
+    <div class="mf-slide" id="slide-2">
+      <div class="mf-badge badge-violet">03 / 03 &nbsp;·&nbsp; La Inteligencia</div>
+      <div class="mf-icon icon-3">🧠</div>
+      <div class="mf-number num-3">Ajuste<br>Semanal</div>
+      <div class="mf-headline">El algoritmo aprende de tu cuerpo</div>
+      <div class="mf-body">
+        Cada lunes, el sistema analiza tu <strong>peso medio, adherencia y rendimiento en gym</strong>
+        para decidir si subir, bajar o mantener bloques.
+        <strong>El espejo miente, el rendimiento no.</strong>
+      </div>
+
+      <div class="mf-cards">
+        <div class="mf-card">
+          <div class="mf-card-icon">📊</div>
+          <div class="mf-card-text"><strong>Escenario A — Óptimo</strong><br>Peso bajando, adherencia alta, rendimiento estable. Sin cambios.</div>
+        </div>
+        <div class="mf-card">
+          <div class="mf-card-icon">📉</div>
+          <div class="mf-card-text"><strong>Escenario B — Estancado</strong><br>Misma adherencia, sin cambios de peso. −1C −1G para romper el plateau.</div>
+        </div>
+        <div class="mf-card">
+          <div class="mf-card-icon">🔋</div>
+          <div class="mf-card-text"><strong>Escenario C — Fatiga</strong><br>Fatiga ≥ 7 días seguidos. Refeed +3C para resetear leptina y recuperar rendimiento.</div>
+        </div>
+      </div>
+
+      <div class="mf-quote">
+        <p>"Precisión sin obsesión. El sistema está diseñado para que puedas comer en un restaurante, en casa de tus padres o en el trabajo sin perder el control."</p>
+      </div>
+    </div>
+
+  </div><!-- /mf-slides -->
+
+  <!-- Skip -->
+  <div class="mf-skip" id="skipLine">
+    <a href="{% url 'nutricion_app_django:dashboard_nutricional' %}">Saltar introducción →</a>
+  </div>
+
+  <!-- Nav -->
+  <div class="mf-nav">
+    <button class="btn-back" id="btnBack" disabled onclick="slidePrev()">←</button>
+    <button class="btn-next" id="btnNext" onclick="slideNext()">
+      Siguiente <span>→</span>
+    </button>
+  </div>
+
+</div><!-- /mf-shell -->
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  const TOTAL = 3;
+  let current = 0;
+
+  const slides   = document.querySelectorAll('.mf-slide');
+  const segments = document.querySelectorAll('.mf-progress-seg');
+  const btnBack  = document.getElementById('btnBack');
+  const btnNext  = document.getElementById('btnNext');
+  const skipLine = document.getElementById('skipLine');
+
+  function goTo(idx) {
+    // Exit current
+    slides[current].classList.remove('active');
+    slides[current].classList.add('exit');
+    setTimeout(() => slides[current >= TOTAL ? TOTAL - 1 : current].classList.remove('exit'), 450);
+
+    current = idx;
+
+    // Enter new
+    slides[current].classList.add('active');
+
+    // Update segments
+    segments.forEach((s, i) => {
+      s.classList.toggle('done',   i < current);
+      s.classList.toggle('active', i === current);
+    });
+
+    // Update buttons
+    btnBack.disabled = current === 0;
+    btnNext.textContent = '';
+
+    if (current === TOTAL - 1) {
+      btnNext.className = 'btn-next last';
+      btnNext.innerHTML = 'Empezar a entrenar con datos &nbsp;⚡';
+      skipLine.style.display = 'none';
+    } else {
+      btnNext.className = 'btn-next';
+      btnNext.innerHTML = 'Siguiente <span>→</span>';
+      skipLine.style.display = '';
+    }
+  }
+
+  window.slideNext = function () {
+    if (current < TOTAL - 1) {
+      goTo(current + 1);
+    } else {
+      window.location.href = "{% url 'nutricion_app_django:dashboard_nutricional' %}";
+    }
+  };
+
+  window.slidePrev = function () {
+    if (current > 0) goTo(current - 1);
+  };
+})();
+</script>
+{% endblock %}
