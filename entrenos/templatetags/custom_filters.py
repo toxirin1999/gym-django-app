@@ -50,8 +50,24 @@ def mul(value, arg):
 def to_float(value):
     """Convierte un valor a float, reemplazando comas por puntos."""
     try:
-        # Reemplaza la coma por un punto y convierte a float
         return float(str(value).replace(',', '.'))
     except (ValueError, TypeError):
-        # Si falla la conversión, devuelve 0.0
         return 0.0
+
+
+@register.filter(name='tipo_icono')
+def tipo_icono(tipo):
+    """Devuelve el emoji correspondiente al tipo de actividad."""
+    iconos = {
+        'gym':          '🏋️',
+        'hyrox':        '⚡',
+        'carrera':      '🏃',
+        'ciclismo':     '🚴',
+        'remo':         '🚣',
+        'futbol':       '⚽',
+        'natacion':     '🏊',
+        'yoga':         '🧘',
+        'estiramientos':'🤸',
+        'otro':         '🎯',
+    }
+    return iconos.get(tipo, '🎯')

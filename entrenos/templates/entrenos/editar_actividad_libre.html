@@ -1,0 +1,208 @@
+{% extends 'base.html' %}
+{% load entreno_tags %}
+{% block title %}Editar Actividad — {{ cliente.nombre }}{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-950 text-white px-4 py-8">
+  <div class="max-w-lg mx-auto">
+
+    <div class="mb-8">
+      <a href="{% url 'entrenos:timeline_atleta' cliente.id %}" class="text-cyan-400 text-sm flex items-center gap-2 mb-4">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+        </svg>
+        Volver al Timeline
+      </a>
+      <h1 class="text-2xl font-bold text-white">Editar actividad</h1>
+      <p class="text-gray-400 text-sm mt-1">{{ cliente.nombre }}</p>
+    </div>
+
+    {% if messages %}
+      {% for msg in messages %}
+        <div class="mb-4 px-4 py-3 rounded-lg {% if msg.tags == 'error' %}bg-red-900/50 text-red-300{% else %}bg-green-900/50 text-green-300{% endif %}">
+          {{ msg }}
+        </div>
+      {% endfor %}
+    {% endif %}
+
+    <form method="post" class="space-y-5">
+      {% csrf_token %}
+
+      <!-- Tipo -->
+      <div>
+        <label class="block text-sm font-medium text-gray-300 mb-2">Tipo de actividad</label>
+        <div class="grid grid-cols-3 gap-2" id="tipo-grid">
+          {% for value, label in tipo_choices %}
+            {% if value != 'gym' and value != 'hyrox' %}
+            <label class="tipo-btn cursor-pointer">
+              <input type="radio" name="tipo" value="{{ value }}" class="sr-only"
+                     {% if actividad.tipo == value %}checked{% endif %}>
+              <div class="tipo-card border border-gray-700 rounded-xl p-3 text-center transition-all
+                          hover:border-cyan-500 text-xs text-gray-300 leading-tight">
+                <div class="text-lg mb-1">{{ value|tipo_icono }}</div>
+                {{ label }}
+              </div>
+            </label>
+            {% endif %}
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Título -->
+      <div class="relative">
+        <label class="block text-sm font-medium text-gray-300 mb-2">
+          Nombre de la actividad <span class="text-gray-500 font-normal">(opcional)</span>
+        </label>
+        <input type="text" name="titulo" id="titulo-input"
+               value="{{ actividad.titulo }}"
+               placeholder="Ej: Partido de fútbol, Ruta montaña..."
+               autocomplete="off"
+               class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white
+                      placeholder-gray-500 focus:outline-none focus:border-cyan-500 transition">
+        <ul id="autocomplete-list"
+            class="absolute z-50 w-full mt-1 bg-gray-800 border border-gray-700 rounded-xl
+                   shadow-xl overflow-hidden hidden"></ul>
+      </div>
+
+      <!-- Fecha y hora -->
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-sm font-medium text-gray-300 mb-2">Fecha</label>
+          <input type="date" name="fecha" value="{{ actividad.fecha|date:'Y-m-d' }}"
+                 class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white
+                        focus:outline-none focus:border-cyan-500 transition">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-300 mb-2">Hora inicio</label>
+          <input type="time" name="hora_inicio"
+                 value="{% if actividad.hora_inicio %}{{ actividad.hora_inicio|time:'H:i' }}{% endif %}"
+                 class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white
+                        focus:outline-none focus:border-cyan-500 transition">
+        </div>
+      </div>
+
+      <!-- Duración y distancia -->
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-sm font-medium text-gray-300 mb-2">Duración (min)</label>
+          <input type="number" name="duracion_minutos" min="1" max="600"
+                 value="{{ actividad.duracion_minutos|default:'' }}"
+                 class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white
+                        placeholder-gray-500 focus:outline-none focus:border-cyan-500 transition">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-300 mb-2">Distancia (m)</label>
+          <input type="number" name="distancia_metros" min="0"
+                 value="{{ actividad.distancia_metros|default:'' }}"
+                 class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white
+                        placeholder-gray-500 focus:outline-none focus:border-cyan-500 transition">
+        </div>
+      </div>
+
+      <!-- RPE -->
+      <div>
+        <label class="block text-sm font-medium text-gray-300 mb-2">
+          Esfuerzo percibido (RPE)
+          <span id="rpe-label" class="text-cyan-400 font-semibold ml-2">—</span>
+        </label>
+        <input type="range" name="rpe_medio" id="rpe-slider" min="1" max="10" step="0.5"
+               value="{{ actividad.rpe_medio|default:'' }}"
+               class="w-full accent-cyan-400">
+        <div class="flex justify-between text-xs text-gray-500 mt-1">
+          <span>1 Fácil</span><span>5 Moderado</span><span>10 Máximo</span>
+        </div>
+      </div>
+
+      <!-- Calorías -->
+      <div>
+        <label class="block text-sm font-medium text-gray-300 mb-2">Calorías <span class="text-gray-500 font-normal">(opcional)</span></label>
+        <input type="number" name="calorias" min="0"
+               value="{{ actividad.calorias|default:'' }}"
+               class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white
+                      placeholder-gray-500 focus:outline-none focus:border-cyan-500 transition">
+      </div>
+
+      <!-- Notas -->
+      <div>
+        <label class="block text-sm font-medium text-gray-300 mb-2">Notas <span class="text-gray-500 font-normal">(opcional)</span></label>
+        <textarea name="notas" rows="3"
+                  class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white
+                         placeholder-gray-500 focus:outline-none focus:border-cyan-500 transition resize-none">{{ actividad.notas }}</textarea>
+      </div>
+
+      <button type="submit"
+              class="w-full bg-cyan-500 hover:bg-cyan-400 text-black font-bold py-4 rounded-xl
+                     transition-all active:scale-95 text-base">
+        Guardar cambios
+      </button>
+    </form>
+
+    <!-- Eliminar -->
+    <form method="post" action="{% url 'entrenos:eliminar_actividad_libre' cliente.id actividad.id %}"
+          class="mt-4"
+          onsubmit="return confirm('¿Eliminar esta actividad? Esta acción no se puede deshacer.')">
+      {% csrf_token %}
+      <button type="submit"
+              class="w-full border border-red-800 text-red-400 hover:bg-red-900/30 font-semibold
+                     py-3 rounded-xl transition-all text-sm">
+        🗑️ Eliminar actividad
+      </button>
+    </form>
+
+  </div>
+</div>
+
+<script>
+document.querySelectorAll('.tipo-btn input').forEach(radio => {
+  radio.addEventListener('change', () => {
+    document.querySelectorAll('.tipo-card').forEach(c => {
+      c.classList.remove('border-cyan-500', 'bg-cyan-900/20', 'text-white');
+      c.classList.add('border-gray-700', 'text-gray-300');
+    });
+    radio.closest('.tipo-btn').querySelector('.tipo-card')
+         .classList.add('border-cyan-500', 'bg-cyan-900/20', 'text-white');
+  });
+});
+const checkedRadio = document.querySelector('.tipo-btn input:checked');
+if (checkedRadio) {
+  checkedRadio.closest('.tipo-btn').querySelector('.tipo-card')
+              .classList.add('border-cyan-500', 'bg-cyan-900/20', 'text-white');
+}
+
+const RPE_DESC = {1:'Recuperación',2:'Muy fácil',3:'Fácil',4:'Moderado-bajo',5:'Moderado',
+                  6:'Moderado-alto',7:'Difícil',8:'Muy difícil',9:'Extremo',10:'Máximo absoluto'};
+const rpeSlider = document.getElementById('rpe-slider');
+const rpeLabel  = document.getElementById('rpe-label');
+if (rpeSlider.value) rpeLabel.textContent = `${rpeSlider.value} — ${RPE_DESC[Math.round(rpeSlider.value)] || ''}`;
+rpeSlider.addEventListener('input', () => {
+  rpeLabel.textContent = `${rpeSlider.value} — ${RPE_DESC[Math.round(rpeSlider.value)] || ''}`;
+});
+
+const input = document.getElementById('titulo-input');
+const list  = document.getElementById('autocomplete-list');
+const clienteId = {{ cliente.id }};
+let timer;
+input.addEventListener('input', () => {
+  clearTimeout(timer);
+  const q = input.value.trim();
+  if (q.length < 2) { list.classList.add('hidden'); return; }
+  timer = setTimeout(() => {
+    fetch(`/entrenos/api/cliente/${clienteId}/buscar-ejercicios/?q=${encodeURIComponent(q)}`)
+      .then(r => r.json())
+      .then(data => {
+        list.innerHTML = '';
+        if (!data.resultados.length) { list.classList.add('hidden'); return; }
+        data.resultados.forEach(nombre => {
+          const li = document.createElement('li');
+          li.textContent = nombre;
+          li.className = 'px-4 py-3 cursor-pointer hover:bg-gray-700 text-sm text-gray-200 transition';
+          li.addEventListener('mousedown', e => { e.preventDefault(); input.value = nombre; list.classList.add('hidden'); });
+          list.appendChild(li);
+        });
+        list.classList.remove('hidden');
+      });
+  }, 250);
+});
+document.addEventListener('click', e => { if (!e.target.closest('#titulo-input')) list.classList.add('hidden'); });
+</script>
+{% endblock %}

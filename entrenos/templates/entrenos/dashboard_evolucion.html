@@ -38,6 +38,9 @@
     </div>
 
     <div class="ev-topbar-actions">
+      <a href="{% url 'entrenos:timeline_atleta' cliente.id %}" class="ev-action">
+        <i class="fas fa-stream" aria-hidden="true"></i> Timeline
+      </a>
       <a href="{% url 'entrenos:evaluacion_profesional' cliente.id %}" class="ev-action">
         <i class="fas fa-microscope" aria-hidden="true"></i> Evaluar
       </a>

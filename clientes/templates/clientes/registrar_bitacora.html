@@ -387,6 +387,53 @@
             <p class="page-subtitle">Reflexiona sobre tu día y planifica tu crecimiento</p>
         </div>
 
+        <!-- ── Actividades físicas del día (hub ActividadRealizada) ── -->
+        {% if actividades_hoy %}
+        <div style="margin-bottom: 1.5rem; background: rgba(0,255,200,0.06); border: 1px solid rgba(0,255,200,0.2);
+                    border-radius: 1rem; padding: 1rem 1.25rem;">
+            <p style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em;
+                       color: #00ffc8; margin-bottom: 0.75rem; font-weight: 600;">
+                ⚡ Tu actividad de hoy
+            </p>
+            <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                {% for act in actividades_hoy %}
+                <div style="display: flex; align-items: center; gap: 0.75rem; font-size: 0.85rem; color: #e0e0e0;">
+                    <span style="font-size: 1.1rem;">
+                        {% if act.tipo == 'gym' %}🏋️
+                        {% elif act.tipo == 'hyrox' %}⚡
+                        {% elif act.tipo == 'carrera' %}🏃
+                        {% elif act.tipo == 'ciclismo' %}🚴
+                        {% elif act.tipo == 'remo' %}🚣
+                        {% elif act.tipo == 'futbol' %}⚽
+                        {% elif act.tipo == 'natacion' %}🏊
+                        {% elif act.tipo == 'yoga' %}🧘
+                        {% else %}🎯{% endif %}
+                    </span>
+                    <span style="font-weight: 500;">{{ act.titulo|default:act.get_tipo_display }}</span>
+                    {% if act.duracion_minutos %}
+                    <span style="color: #888;">· {{ act.duracion_minutos }} min</span>
+                    {% endif %}
+                    {% if act.rpe_medio %}
+                    <span style="color: #888;">· RPE {{ act.rpe_medio }}</span>
+                    {% endif %}
+                    {% if act.carga_ua %}
+                    <span style="margin-left:auto; font-size:0.7rem; color:#00ffc8; font-weight:600;">
+                        {{ act.carga_ua }} UA
+                    </span>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            {% with total_ua=actividades_hoy|length %}
+            {% if actividades_hoy|length > 1 %}
+            <p style="font-size: 0.72rem; color: #666; margin-top: 0.75rem;">
+                {{ actividades_hoy|length }} actividades registradas hoy
+            </p>
+            {% endif %}
+            {% endwith %}
+        </div>
+        {% endif %}
+
         <!-- Formulario mejorado -->
         <div class="form-container animate-fade-in">
             <form method="post" id="bitacora-form">

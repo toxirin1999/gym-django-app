@@ -5,9 +5,21 @@
     <h2 class="text-2xl font-semibold text-center mb-4">📅 Bitácoras de {{ mes }} {{ año }}</h2>
     <div class="grid grid-cols-7 gap-2 text-sm text-center">
         {% for dia in dias %}
-        <div onclick="verBitacora('{{ año }}-{{ mes|stringformat:'02d' }}-{{ dia.dia|stringformat:'02d' }}')" class="p-2 rounded-xl cursor-pointer text-white {% if dia.estado == 'verde' %} bg-green-600 {% elif dia.estado == 'amarillo' %} bg-yellow-500 {% elif dia.estado == 'rojo' %} bg-red-500 {% else %} bg-gray-800 {% endif %}">
-            {{ dia.dia }}
-
+        <div onclick="verBitacora('{{ año }}-{{ mes|stringformat:'02d' }}-{{ dia.dia|stringformat:'02d' }}')"
+             class="p-2 rounded-xl cursor-pointer text-white relative
+                    {% if dia.estado == 'verde' %} bg-green-600
+                    {% elif dia.estado == 'amarillo' %} bg-yellow-500
+                    {% elif dia.estado == 'rojo' %} bg-red-500
+                    {% else %} bg-gray-800 {% endif %}"
+             {% if dia.actividades %}title="{% for a in dia.actividades %}{{ a.icono }} {{ a.titulo }}{% if a.duracion %} · {{ a.duracion }}min{% endif %}&#10;{% endfor %}"{% endif %}>
+            <span class="font-semibold">{{ dia.dia }}</span>
+            {% if dia.actividades %}
+            <div class="flex flex-wrap justify-center gap-0.5 mt-0.5" style="font-size:0.6rem; line-height:1;">
+                {% for a in dia.actividades %}
+                <span>{{ a.icono }}</span>
+                {% endfor %}
+            </div>
+            {% endif %}
         </div>
         {% endfor %}
     </div>

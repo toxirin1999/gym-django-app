@@ -107,4 +107,18 @@ urlpatterns = [
     path('cliente/<int:cliente_id>/actualizar-fase/', views.actualizar_fase_cliente, name='actualizar_fase_cliente'),
     path('cliente/<int:cliente_id>/evaluacion-profesional/', evaluacion_profesional_view,
          name='evaluacion_profesional'),
+
+    # ── Fase 2: Actividades libres ────────────────────────────────────────────
+    path('cliente/<int:cliente_id>/registrar-actividad/', views.registrar_actividad_libre,
+         name='registrar_actividad_libre'),
+    path('api/cliente/<int:cliente_id>/buscar-ejercicios/', views.api_buscar_ejercicios,
+         name='api_buscar_ejercicios'),
+
+    # ── Fase 5: Timeline unificado ────────────────────────────────────────────
+    path('cliente/<int:cliente_id>/timeline/', views.timeline_atleta,
+         name='timeline_atleta'),
+    path('cliente/<int:cliente_id>/actividad/<int:actividad_id>/editar/', views.editar_actividad_libre,
+         name='editar_actividad_libre'),
+    path('cliente/<int:cliente_id>/actividad/<int:actividad_id>/eliminar/', views.eliminar_actividad_libre,
+         name='eliminar_actividad_libre'),
 ]

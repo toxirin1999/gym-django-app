@@ -500,6 +500,100 @@ input{background:transparent!important;border:none!important;outline:none!import
   padding:6px 10px;resize:none;outline:none;
 }
 .nota-serie-input.open{display:block;}
+
+/* ══════════════════════════════════════════════════════════════════
+   MOBILE OPTIMIZATIONS — max-width: 480px
+   ══════════════════════════════════════════════════════════════════ */
+@media (max-width: 480px) {
+
+  /* Topbar: labels legibles */
+  .tb-left { font-size: 11px; letter-spacing: 1px; }
+  .tb-track { width: 60px; }
+
+  /* Nombre ejercicio */
+  .exname h2 { font-size: 1rem; }
+  .exname-chip { font-size: 10px; padding: 4px 8px; }
+
+  /* Navegación entre ejercicios — touch targets mínimo 44px */
+  .nav-btn {
+    font-size: 12px;
+    padding: 10px 16px;
+    min-height: 44px;
+    display: flex; align-items: center;
+  }
+  .nav-centro { font-size: 11px; }
+
+  /* Series completadas */
+  .sd-check { width: 32px; height: 32px; font-size: 13px; }
+  .sd-info { font-size: 14px; }
+  .sd-rpe { font-size: 11px; padding: 4px 10px; }
+
+  /* Header de serie activa */
+  .sa-num { font-size: 11px; }
+
+  /* Peso: reducir font para que no desborde en pantallas < 360px */
+  .peso-input { font-size: clamp(36px, 12vw, 54px) !important; width: clamp(100px, 28vw, 140px) !important; }
+  .peso-btn { width: 52px; height: 64px; font-size: 26px; }
+  .peso-label { font-size: 10px; }
+  .peso-kg { font-size: 14px; }
+
+  /* Sliders */
+  .sl-label { font-size: 10px; min-width: 32px; }
+  .sl-val { font-size: 22px; }
+  .sl-unit { font-size: 10px; }
+
+  /* Descanso: ring proporcional */
+  .pd-ring-wrap { width: min(200px, 55vw); height: min(200px, 55vw); }
+  .pd-tiempo { font-size: clamp(44px, 14vw, 68px); }
+  .pd-de { font-size: 10px; }
+  .pd-label { font-size: 10px; }
+
+  /* Info próxima serie */
+  .pd-prox-lbl { font-size: 10px; }
+  .pd-prox-info { font-size: 15px; }
+
+  /* Controles descanso — touch 44px */
+  .pd-ctrl-btn { height: 48px; font-size: 13px; }
+  .btn-saltar { height: 48px; font-size: 12px; }
+
+  /* Botón guardar */
+  .btn-guardar { height: 56px; font-size: 14px; }
+
+  /* Botón finalizar */
+  .btn-final { height: 56px; font-size: 14px; }
+
+  /* Textos de label pequeños */
+  .pd-calc-lbl, .pd-prox-lbl { font-size: 10px; letter-spacing: 1px; }
+  .pd-calc-txt { font-size: 12px; }
+
+  /* Botón molestia */
+  .btn-molestia { min-height: 44px; font-size: 11px; padding: 10px 14px; }
+
+  /* Historial zona */
+  .historial-zona { font-size: 12px; }
+
+  /* Aproximaciones */
+  .aprox-toggle-btn { height: 44px; font-size: 12px; }
+  .aprox-row { font-size: 12px; gap: 4px; }
+
+  /* Modal no desborde */
+  .modal { max-width: 100%; margin: 0; max-height: 90vh; }
+  .modal-ov { padding: 8px; align-items: flex-end; }
+
+  /* Sticky footer de ejercicio */
+  .btn-finalizar-wrap { padding: 12px 16px; }
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   EXTRA PEQUEÑO — max-width: 360px (Galaxy A, iPhone SE)
+   ══════════════════════════════════════════════════════════════════ */
+@media (max-width: 360px) {
+  .peso-input { font-size: 32px !important; width: 90px !important; }
+  .peso-btn { width: 44px; height: 56px; font-size: 22px; }
+  .pd-tiempo { font-size: 40px; }
+  .exname h2 { font-size: 0.9rem; }
+  .nav-btn { padding: 8px 12px; font-size: 11px; }
+}
 </style>
 </head>
 <body>
@@ -634,7 +728,17 @@ input{background:transparent!important;border:none!important;outline:none!import
   <!-- SERIES — una pantalla por serie, generadas por Django -->
   {% for i in ""|center:ejercicio.series %}{% with forloop.counter as sn %}
   <div class="pantalla-registro" id="reg-{{ ejercicio.form_id }}-{{ sn }}"
-       style="display:{% if forloop.first %}block{% else %}none{% endif %};">
+       style="display:{% if forloop.first %}block{% else %}none{% endif %};"
+       data-rpe-obj="{{ ejercicio.rpe_objetivo }}"
+       data-reps-obj="{{ ejercicio.reps_objetivo }}"
+       data-usa-peso="{% if ejercicio.usa_peso %}1{% else %}0{% endif %}">
+    {% if not forloop.first %}
+    <div id="sugerencia-{{ ejercicio.form_id }}-{{ sn }}"
+         style="display:none;margin:8px 16px 0;padding:8px 12px;
+                border-left:3px solid var(--g);background:rgba(200,170,110,0.08);
+                font-family:var(--fm);font-size:11px;color:var(--g);letter-spacing:0.5px;">
+    </div>
+    {% endif %}
     <div class="serie-activa">
       <div class="sa-header">
         <span class="sa-num">SERIE {{ sn }} DE {{ ejercicio.series }}</span>
@@ -811,6 +915,12 @@ input{background:transparent!important;border:none!important;outline:none!import
     <div class="pd-proxima">
       <div class="pd-prox-lbl">Próxima serie</div>
       <div class="pd-prox-info" id="pd-prox-{{ ejercicio.form_id }}">—</div>
+    </div>
+    <!-- Banner autoregulación -->
+    <div id="pd-sugerencia-{{ ejercicio.form_id }}" style="display:none;
+         margin:0 16px 8px;padding:10px 14px;
+         border-left:3px solid var(--g);background:rgba(74,222,128,0.07);
+         font-family:var(--fm);font-size:11px;letter-spacing:0.5px;line-height:1.5;">
     </div>
     <div class="pd-calc">
       <div class="pd-calc-lbl">Calculadora de discos</div>
@@ -1139,6 +1249,97 @@ function actualizarDots(){
 }
 
 // Guardar serie — marca el checkbox y avanza al panel siguiente
+// ── AUTOREGULACIÓN: sugerencia de peso para la siguiente serie ──────────────
+function calcularPesoSiguienteSerie(peso, rpe, repsReales, rpeObj, repsObj) {
+  if (!peso || peso <= 0) return null;
+  const deltaRpe = rpe - rpeObj;      // positivo = demasiado duro, negativo = demasiado fácil
+  const deltaReps = repsReales - repsObj; // positivo = más reps de las objetivo
+
+  // Cada unidad de RPE ≈ 2.5% del peso
+  let factorRpe = -deltaRpe * 0.025;
+  // Cada rep extra/menos ≈ 1% adicional (secundario al RPE)
+  let factorReps = deltaReps * 0.01;
+  let factor = factorRpe + factorReps;
+
+  // Limitar el ajuste a ±10% por seguridad
+  factor = Math.max(-0.10, Math.min(0.10, factor));
+
+  if (Math.abs(factor) < 0.012) return null; // Diferencia insignificante, no sugerir
+
+  const pesoSugerido = Math.round((peso * (1 + factor)) / 2.5) * 2.5;
+  const diff = +(pesoSugerido - peso).toFixed(1);
+  return { pesoSugerido, diff, deltaRpe, deltaReps };
+}
+
+function aplicarSugerenciaSiguienteSerie(fid, snActual, total, peso, rpe, reps) {
+  const snSig = snActual + 1;
+
+  // Limpiar banner de descanso si no hay siguiente serie
+  const bannerDescanso = document.getElementById('pd-sugerencia-'+fid);
+  if (bannerDescanso) bannerDescanso.style.display = 'none';
+
+  if (snSig > total) return;
+
+  const panelSig = document.getElementById('reg-'+fid+'-'+snSig);
+  if (!panelSig) return;
+
+  const rpeObj  = parseFloat(panelSig.dataset.rpeObj  || rpe);
+  const repsObj = parseFloat(panelSig.dataset.repsObj || reps);
+  const usaPeso = panelSig.dataset.usaPeso === '1';
+  if (!usaPeso) return;
+
+  const resultado = calcularPesoSiguienteSerie(peso, rpe, reps, rpeObj, repsObj);
+
+  // ── Banner en la pantalla de descanso ────────────────────────────────────
+  if (bannerDescanso) {
+    if (!resultado) {
+      bannerDescanso.style.display = 'none';
+    } else {
+      const signo = resultado.diff > 0 ? '+' : '';
+      let razon = '';
+      if (Math.abs(resultado.deltaRpe) >= 1) {
+        razon = resultado.deltaRpe > 0
+          ? `RPE ${rpe} > objetivo ${rpeObj}`
+          : `RPE ${rpe} < objetivo ${rpeObj}`;
+      } else if (Math.abs(resultado.deltaReps) >= 2) {
+        razon = resultado.deltaReps > 0
+          ? `${reps} reps > objetivo ${repsObj}`
+          : `${reps} reps < objetivo ${repsObj}`;
+      }
+      const bajada = resultado.diff < 0;
+      bannerDescanso.style.borderLeftColor = bajada ? 'var(--rl)' : 'var(--ok)';
+      bannerDescanso.style.background = bajada ? 'rgba(200,75,49,0.07)' : 'rgba(74,222,128,0.07)';
+      bannerDescanso.innerHTML =
+        `<div style="font-size:9px;color:var(--td);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:4px;">⚡ Autoregulación</div>`
+        + `<div style="font-size:13px;font-weight:700;color:${bajada ? 'var(--rl)' : 'var(--ok)'};">`
+        + `${resultado.pesoSugerido.toFixed(1)} kg `
+        + `<span style="font-size:11px;font-weight:400;">(${signo}${resultado.diff}kg)</span></div>`
+        + (razon ? `<div style="font-size:10px;color:var(--td);margin-top:2px;">${razon}</div>` : '');
+      bannerDescanso.style.display = 'block';
+    }
+  }
+
+  // ── Pre-rellenar peso en el panel de la siguiente serie ───────────────────
+  if (resultado) {
+    const pesoInput = document.getElementById('peso-'+fid+'-'+snSig);
+    if (pesoInput) pesoInput.value = resultado.pesoSugerido.toFixed(1);
+  }
+
+  // ── Banner secundario en el panel de la siguiente serie ──────────────────
+  const bannerSig = document.getElementById('sugerencia-'+fid+'-'+snSig);
+  if (bannerSig) {
+    if (!resultado) { bannerSig.style.display = 'none'; return; }
+    const signo = resultado.diff > 0 ? '+' : '';
+    const bajada = resultado.diff < 0;
+    bannerSig.style.borderLeftColor = bajada ? 'var(--rl)' : 'var(--ok)';
+    bannerSig.style.color = bajada ? 'var(--rl)' : 'var(--ok)';
+    bannerSig.style.background = bajada ? 'rgba(200,75,49,0.06)' : 'rgba(74,222,128,0.06)';
+    bannerSig.innerHTML = `⚡ Ajuste serie anterior: <strong>${resultado.pesoSugerido.toFixed(1)}kg</strong> `
+      + `<span style="opacity:0.75;">(${signo}${resultado.diff}kg)</span>`;
+    bannerSig.style.display = 'block';
+  }
+}
+
 function guardarSeriePanel(fid,sn,total){
   const peso=parseFloat(document.getElementById('peso-'+fid+'-'+sn)?.value||0);
   const reps=parseInt(document.getElementById('reps-hid-'+fid+'-'+sn)?.value||0);
@@ -1188,6 +1389,10 @@ function guardarSeriePanel(fid,sn,total){
   }
 
   calcularDiscos(fid,peso);
+
+  // Sugerencia de peso para la siguiente serie
+  aplicarSugerenciaSiguienteSerie(fid, sn, total, peso, rpe, reps);
+
   const card=document.getElementById('card-'+fid);
   const descSeg=parseInt(card?.dataset.descansoSeg||'0');
   const descMin=parseFloat(card?.dataset.descanso)||2;

@@ -171,6 +171,24 @@
 
     </div>
 
+    {% if cliente %}
+    <div style="display:flex; gap:0.75rem; margin-bottom:1.5rem;">
+        <a href="{% url 'entrenos:registrar_actividad_libre' cliente.id %}"
+           style="flex:1; display:flex; align-items:center; justify-content:center; gap:0.5rem;
+                  background:linear-gradient(135deg,#06b6d4,#0e7490); color:#000; font-weight:700;
+                  padding:0.85rem; border-radius:1rem; text-decoration:none; font-size:0.95rem;">
+            ➕ Añadir actividad
+        </a>
+        <a href="{% url 'entrenos:timeline_atleta' cliente.id %}"
+           style="flex:1; display:flex; align-items:center; justify-content:center; gap:0.5rem;
+                  background:#1e293b; color:#e2e8f0; font-weight:600;
+                  padding:0.85rem; border-radius:1rem; text-decoration:none; font-size:0.95rem;
+                  border:1px solid #334155;">
+            📅 Mi Timeline
+        </a>
+    </div>
+    {% endif %}
+
     <div class="timeline">
         <h3>Últimos entrenos</h3>
         <ul>

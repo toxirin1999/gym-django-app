@@ -189,6 +189,28 @@ def calendario_bitacoras(request):
 
     dias_con_bitacora = set(b.fecha.day for b in bitacoras)
 
+    # ── Actividades del mes desde el hub ────────────────────────────────────
+    from entrenos.models import ActividadRealizada
+    actividades_mes = ActividadRealizada.objects.filter(
+        cliente=cliente,
+        fecha__range=(inicio_mes, fin_mes),
+    ).order_by('fecha', 'hora_inicio').values('fecha', 'tipo', 'titulo', 'duracion_minutos', 'rpe_medio')
+
+    # Agrupar por día
+    actividades_por_dia = defaultdict(list)
+    ICONOS_TIPO = {
+        'gym': '🏋️', 'hyrox': '⚡', 'carrera': '🏃', 'ciclismo': '🚴',
+        'remo': '🚣', 'futbol': '⚽', 'natacion': '🏊', 'yoga': '🧘',
+        'estiramientos': '🤸', 'otro': '🎯',
+    }
+    for a in actividades_mes:
+        actividades_por_dia[a['fecha'].day].append({
+            'icono': ICONOS_TIPO.get(a['tipo'], '🎯'),
+            'titulo': a['titulo'] or a['tipo'].title(),
+            'duracion': a['duracion_minutos'],
+            'rpe': a['rpe_medio'],
+        })
+
     dias = []
     for d in range(1, dias_mes + 1):
         fecha = date(year, month, d)
@@ -213,7 +235,11 @@ def calendario_bitacoras(request):
         else:
             color = 'vacio'
 
-        dias.append({"dia": d, "estado": color})
+        dias.append({
+            "dia": d,
+            "estado": color,
+            "actividades": actividades_por_dia.get(d, []),
+        })
 
     return render(request, "clientes/calendario_bitacoras.html", {
         "dias": dias,
@@ -419,6 +445,13 @@ def registrar_bitacora(request):
     hoy = date.today()
     bitacora_existente = BitacoraDiaria.objects.filter(cliente=cliente, fecha=hoy).first()
 
+    # ── Actividades físicas del día desde el hub ────────────────────────────
+    from entrenos.models import ActividadRealizada
+    actividades_hoy = list(
+        ActividadRealizada.objects.filter(cliente=cliente, fecha=hoy)
+        .order_by('hora_inicio')
+    )
+
     if request.method == 'POST':
         form = BitacoraDiariaForm(request.POST, instance=bitacora_existente)
         if form.is_valid():
@@ -481,7 +514,8 @@ def registrar_bitacora(request):
         'form': form,
         'cliente': cliente,
         'saludo_joi': saludo_joi,
-        "respuesta_joi": respuesta_joi,
+        'respuesta_joi': respuesta_joi,
+        'actividades_hoy': actividades_hoy,
     })
 
 
@@ -2442,10 +2476,12 @@ def eliminar_cliente(request, cliente_id):
 def home(request):
     # Si el usuario tiene perfil de cliente, renderiza el panel del cliente
     if hasattr(request.user, 'cliente_perfil'):
+        cliente = request.user.cliente_perfil
         recuerdo_dia = RecuerdoEmocional.objects.filter(user=request.user).order_by('-fecha').first()
         motivacion = MotivacionUsuario.objects.filter(user=request.user).last()
 
         context = {
+            'cliente': cliente,
             'recuerdo_dia': recuerdo_dia,
             'motivacion': motivacion,
         }

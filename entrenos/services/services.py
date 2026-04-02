@@ -369,7 +369,8 @@ class EstadisticasService:
     @staticmethod
     def analizar_acwr(cliente, periodo_dias=90):
         """
-        Calcula la Carga Aguda, Carga Crónica y el ratio ACWR.
+        LEGACY: Calcula ACWR solo desde EntrenoRealizado (gym).
+        Mantenido por compatibilidad. Usar analizar_acwr_unificado() para nuevas vistas.
         """
         from entrenos.models import EntrenoRealizado
         try:
@@ -421,6 +422,100 @@ class EstadisticasService:
             'dataframe': df_json.to_dict('records'),
             'acwr_actual': acwr_actual,
             'zona_riesgo': zona_riesgo
+        }
+
+    @staticmethod
+    def analizar_acwr_unificado(cliente, periodo_dias=90):
+        """
+        ACWR Multi-Modalidad: lee desde ActividadRealizada (hub central).
+
+        Métrica de carga: carga_ua = RPE × duración_minutos
+        Esto unifica gym, hyrox, fútbol, carrera y cualquier actividad libre
+        en una única escala de esfuerzo comparable.
+
+        Fallback por actividad: si carga_ua es nula pero hay volumen_kg,
+        estima la carga como volumen_kg / 100 (equivalencia conservadora).
+
+        Devuelve el mismo formato que analizar_acwr() para compatibilidad.
+        """
+        from entrenos.models import ActividadRealizada
+        try:
+            import pandas as pd
+        except ImportError:
+            return {'dataframe': [], 'acwr_actual': 0, 'zona_riesgo': 'desconocida'}
+
+        fecha_fin = timezone.now().date()
+        fecha_inicio = fecha_fin - timedelta(days=periodo_dias)
+
+        actividades = ActividadRealizada.objects.filter(
+            cliente=cliente,
+            fecha__gte=fecha_inicio,
+            fecha__lte=fecha_fin,
+        ).order_by('fecha').values('fecha', 'carga_ua', 'volumen_kg', 'tipo')
+
+        if not actividades:
+            # Fallback al método legacy si el hub todavía está vacío
+            return EstadisticasService.analizar_acwr(cliente, periodo_dias)
+
+        rows = []
+        for a in actividades:
+            if a['carga_ua'] is not None:
+                carga = float(a['carga_ua'])
+            elif a['volumen_kg'] is not None:
+                # Estimación: 1 kg de volumen ≈ 0.01 UA (equivale a ~100kg × RPE5 × 2min)
+                carga = float(a['volumen_kg']) / 100
+            else:
+                carga = 0.0
+            rows.append({'fecha': a['fecha'], 'carga': carga, 'tipo': a['tipo']})
+
+        df = pd.DataFrame(rows)
+        df['fecha'] = pd.to_datetime(df['fecha'])
+
+        # Suma diaria de carga (puede haber varias actividades el mismo día)
+        df_diario = df.groupby('fecha')['carga'].sum().reset_index()
+        df_diario.rename(columns={'carga': 'carga_diaria'}, inplace=True)
+
+        # Rellenar días sin actividad con 0
+        idx = pd.date_range(start=fecha_inicio, end=fecha_fin)
+        df_diario = df_diario.set_index('fecha').reindex(idx, fill_value=0)
+
+        # Rolling averages
+        df_diario['carga_aguda']  = df_diario['carga_diaria'].rolling(window=7,  min_periods=1).mean()
+        df_diario['carga_cronica'] = df_diario['carga_diaria'].rolling(window=28, min_periods=1).mean()
+        df_diario['acwr'] = (
+            df_diario['carga_aguda'] / df_diario['carga_cronica']
+        ).fillna(0).replace([np.inf, -np.inf], 0)
+
+        acwr_actual = round(float(df_diario['acwr'].iloc[-1]), 2) if not df_diario.empty else 0
+        carga_aguda_actual  = round(float(df_diario['carga_aguda'].iloc[-1]), 1)  if not df_diario.empty else 0
+        carga_cronica_actual = round(float(df_diario['carga_cronica'].iloc[-1]), 1) if not df_diario.empty else 0
+
+        if 0.8 <= acwr_actual <= 1.3:
+            zona_riesgo = 'optima'
+        elif 1.3 < acwr_actual < 1.5:
+            zona_riesgo = 'cuidado'
+        elif acwr_actual >= 1.5:
+            zona_riesgo = 'riesgo_alto'
+        else:
+            zona_riesgo = 'baja_carga'
+
+        # Desglose por tipo de actividad en los últimos 7 días
+        df_tipos = df[df['fecha'] >= pd.Timestamp(fecha_fin - timedelta(days=7))]
+        desglose_tipos = {}
+        if not df_tipos.empty:
+            desglose_tipos = df_tipos.groupby('tipo')['carga'].sum().round(1).to_dict()
+
+        df_json = df_diario.reset_index().rename(columns={'index': 'fecha'})
+        df_json['fecha'] = df_json['fecha'].dt.strftime('%Y-%m-%d')
+
+        return {
+            'dataframe': df_json.to_dict('records'),
+            'acwr_actual': acwr_actual,
+            'zona_riesgo': zona_riesgo,
+            'carga_aguda': carga_aguda_actual,
+            'carga_cronica': carga_cronica_actual,
+            'desglose_tipos': desglose_tipos,  # {'gym': 340.0, 'futbol': 120.0, ...}
+            'fuente': 'unificado',
         }
 
     @staticmethod
