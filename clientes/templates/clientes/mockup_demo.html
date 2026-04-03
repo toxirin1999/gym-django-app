@@ -320,9 +320,14 @@
         text-transform: none;
     }
     @media (max-width: 480px) {
-        .nut-panel-body { grid-template-columns: 90px 1fr 90px; padding: 16px 12px 14px; gap: 10px; }
-        .nut-macro-num { font-size: 1.7rem; }
-        .nut-status-label, .nut-hint-label { font-size: 0.6rem; }
+        /* Columna sugerencia oculta en móvil → macros tienen todo el espacio */
+        .nut-panel-body { grid-template-columns: 80px 1fr; padding: 14px 12px 12px; gap: 10px; }
+        .nut-hint-col { display: none; }
+        .nut-macro-num { font-size: 1.55rem; }
+        .nut-macro-block { padding: 10px 4px 8px; }
+        .nut-macro-lbl { font-size: 0.55rem; }
+        .nut-status-label { font-size: 0.6rem; }
+        .nut-status-icon { width: 44px; height: 44px; }
     }
 
     /* ===== MODE SWITCHER ===== */
