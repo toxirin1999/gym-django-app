@@ -319,15 +319,28 @@
         letter-spacing: 0.04em;
         text-transform: none;
     }
-    @media (max-width: 480px) {
-        /* Columna sugerencia oculta en móvil → macros tienen todo el espacio */
-        .nut-panel-body { grid-template-columns: 80px 1fr; padding: 14px 12px 12px; gap: 10px; }
-        .nut-hint-col { display: none; }
-        .nut-macro-num { font-size: 1.55rem; }
-        .nut-macro-block { padding: 10px 4px 8px; }
-        .nut-macro-lbl { font-size: 0.55rem; }
-        .nut-status-label { font-size: 0.6rem; }
-        .nut-status-icon { width: 44px; height: 44px; }
+    /* Panel nutricional: layout vertical en móvil */
+    @media (max-width: 640px) {
+        .nut-panel-body {
+            display: flex !important;
+            flex-direction: column !important;
+            padding: 12px 12px 10px !important;
+            gap: 10px !important;
+        }
+        .nut-hint-col { display: none !important; }
+        .nut-status-col {
+            display: flex !important;
+            align-items: center !important;
+            text-align: left !important;
+            gap: 10px !important;
+        }
+        .nut-status-icon { width: 40px !important; height: 40px !important; margin: 0 !important; }
+        .nut-status-label { font-size: 0.62rem !important; }
+        .nut-status-sub { font-size: 0.6rem !important; }
+        .nut-macros-grid { gap: 6px !important; }
+        .nut-macro-num { font-size: 1.8rem !important; }
+        .nut-macro-block { padding: 10px 4px 8px !important; }
+        .nut-macro-lbl { font-size: 0.56rem !important; }
     }
 
     /* ===== MODE SWITCHER ===== */
