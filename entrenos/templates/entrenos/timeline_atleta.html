@@ -1,203 +1,823 @@
 {% extends 'base.html' %}
 {% load entreno_tags %}
-{% block title %}Timeline — {{ cliente.nombre }}{% endblock %}
+{% block title %}SIGNAL — {{ cliente.nombre }}{% endblock %}
 
 {% block content %}
-<div class="min-h-screen bg-gray-950 text-white pb-16">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@400;600;700&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap');
 
-  <!-- ── Header ──────────────────────────────────────────────────────────── -->
-  <div class="sticky top-0 z-30 bg-gray-950/95 backdrop-blur border-b border-gray-800 px-4 py-3">
-    <div class="max-w-2xl mx-auto flex items-center justify-between">
-      <div>
-        <h1 class="text-lg font-bold text-white leading-tight">Timeline</h1>
-        <p class="text-xs text-gray-400">{{ cliente.nombre }}</p>
-      </div>
-      <!-- Selector de rango -->
-      <div class="flex gap-1">
-        {% for r in rangos %}
-        <a href="?dias={{ r }}"
-           class="px-3 py-1 rounded-lg text-xs font-semibold transition
-                  {% if dias_rango == r %}bg-cyan-500 text-black{% else %}bg-gray-800 text-gray-400 hover:bg-gray-700{% endif %}">
-          {% if r == 7 %}7d{% elif r == 30 %}30d{% else %}90d{% endif %}
-        </a>
-        {% endfor %}
-      </div>
-    </div>
-  </div>
+:root {
+  --black: #000000;
+  --void: #050507;
+  --panel: #0a0a0e;
+  --panel2: #0f0f14;
+  --line: #1a1a22;
+  --green: #00ff41;
+  --green-dim: #00cc33;
+  --green-faint: rgba(0,255,65,0.06);
+  --amber: #ff8c00;
+  --amber-faint: rgba(255,140,0,0.08);
+  --red: #ff2244;
+  --red-faint: rgba(255,34,68,0.08);
+  --blue: #00b4ff;
+  --blue-faint: rgba(0,180,255,0.06);
+  --yellow: #ffe000;
+  --white: #e8e8f0;
+  --muted: #4a4a5a;
+  --mono: 'IBM Plex Mono', monospace;
+  --display: 'Bebas Neue', sans-serif;
+  --space: 'Space Mono', monospace;
+}
 
-  <div class="max-w-2xl mx-auto px-4 pt-5 space-y-5">
+/* ── Reset & Base ─────────────────────────────────────────── */
+#sig-wrap * { box-sizing: border-box; margin: 0; padding: 0; }
+#sig-wrap {
+  font-family: var(--mono);
+  background: var(--void);
+  min-height: 100vh;
+  color: var(--white);
+  position: relative;
+  overflow-x: hidden;
+  padding-bottom: 80px;
+}
 
-    <!-- ── KPIs del periodo ──────────────────────────────────────────────── -->
-    <div class="grid grid-cols-4 gap-2">
-      <div class="bg-gray-900 rounded-xl p-3 text-center">
-        <p class="text-xl font-bold text-white">{{ dias_activos }}</p>
-        <p class="text-xs text-gray-500 mt-0.5">Días activos</p>
-      </div>
-      <div class="bg-gray-900 rounded-xl p-3 text-center">
-        <p class="text-xl font-bold text-white">{{ total_actividades }}</p>
-        <p class="text-xs text-gray-500 mt-0.5">Actividades</p>
-      </div>
-      <div class="bg-gray-900 rounded-xl p-3 text-center">
-        <p class="text-xl font-bold text-cyan-400">{{ carga_total }}</p>
-        <p class="text-xs text-gray-500 mt-0.5">Carga UA</p>
-      </div>
-      <!-- ACWR badge -->
-      <div class="rounded-xl p-3 text-center
-                  {% if acwr.zona_riesgo == 'optima' %}bg-green-900/60 border border-green-700
-                  {% elif acwr.zona_riesgo == 'cuidado' %}bg-yellow-900/60 border border-yellow-700
-                  {% elif acwr.zona_riesgo == 'riesgo_alto' %}bg-red-900/60 border border-red-700
-                  {% else %}bg-gray-900{% endif %}">
-        <p class="text-xl font-bold
-                  {% if acwr.zona_riesgo == 'optima' %}text-green-400
-                  {% elif acwr.zona_riesgo == 'cuidado' %}text-yellow-400
-                  {% elif acwr.zona_riesgo == 'riesgo_alto' %}text-red-400
-                  {% else %}text-gray-400{% endif %}">
-          {{ acwr.acwr_actual }}
-        </p>
-        <p class="text-xs text-gray-500 mt-0.5">ACWR</p>
-      </div>
-    </div>
+/* ── Scanlines overlay ─────────────────────────────────────── */
+#sig-wrap::before {
+  content: '';
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0,0,0,0.15) 2px,
+    rgba(0,0,0,0.15) 4px
+  );
+  z-index: 1000;
+  mix-blend-mode: multiply;
+}
 
-    <!-- Desglose por tipo -->
-    {% if desglose %}
-    <div class="flex flex-wrap gap-2">
-      {% for d in desglose %}
-      <span class="bg-gray-800 text-gray-300 text-xs px-3 py-1 rounded-full">
-        {{ d.icono }} {{ d.tipo|title }} <span class="text-cyan-400 font-semibold">×{{ d.total }}</span>
-      </span>
+/* ── Noise grain ──────────────────────────────────────────── */
+#sig-grain {
+  pointer-events: none;
+  position: fixed;
+  inset: -50%;
+  width: 200%;
+  height: 200%;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+  opacity: 0.028;
+  z-index: 999;
+  animation: grainShift 0.5s steps(1) infinite;
+}
+@keyframes grainShift {
+  0%  { transform: translate(0,0); }
+  20% { transform: translate(-3%,-2%); }
+  40% { transform: translate(2%,3%); }
+  60% { transform: translate(-1%,1%); }
+  80% { transform: translate(3%,-1%); }
+}
+
+/* ── Header / Nav ─────────────────────────────────────────── */
+.sig-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(5,5,7,0.96);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--line);
+}
+.sig-header-inner {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 0 16px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.sig-logo {
+  font-family: var(--display);
+  font-size: 28px;
+  letter-spacing: 3px;
+  color: var(--green);
+  line-height: 1;
+  text-shadow: 0 0 20px var(--green), 0 0 40px rgba(0,255,65,0.3);
+  flex-shrink: 0;
+}
+.sig-athlete {
+  flex: 1;
+  font-size: 9px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-family: var(--space);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sig-athlete span { color: var(--white); }
+
+/* Range pills */
+.sig-range-pills {
+  display: flex;
+  gap: 2px;
+  flex-shrink: 0;
+}
+.sig-pill {
+  font-family: var(--display);
+  font-size: 16px;
+  letter-spacing: 1px;
+  padding: 4px 10px;
+  border: 1px solid var(--line);
+  text-decoration: none;
+  color: var(--muted);
+  transition: all 0.15s;
+  clip-path: polygon(4px 0%, 100% 0%, calc(100% - 4px) 100%, 0% 100%);
+}
+.sig-pill.active {
+  background: var(--green);
+  color: var(--black);
+  border-color: var(--green);
+  box-shadow: 0 0 12px rgba(0,255,65,0.4);
+}
+.sig-pill:hover:not(.active) {
+  border-color: var(--green);
+  color: var(--green);
+}
+
+/* ── Hero KPI band ─────────────────────────────────────────── */
+.sig-kpi-band {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 20px 16px 0;
+}
+
+.sig-kpi-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1.2fr;
+  gap: 2px;
+  margin-bottom: 2px;
+}
+
+.sig-kpi {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  padding: 14px 12px 10px;
+  position: relative;
+  overflow: hidden;
+}
+.sig-kpi::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--green), transparent);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+.sig-kpi:hover::before { opacity: 1; }
+.sig-kpi-label {
+  font-size: 7px;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  color: var(--muted);
+  display: block;
+  margin-bottom: 6px;
+  font-family: var(--space);
+}
+.sig-kpi-val {
+  font-family: var(--display);
+  font-size: 38px;
+  line-height: 1;
+  color: var(--white);
+}
+.sig-kpi-sub {
+  font-size: 8px;
+  color: var(--muted);
+  letter-spacing: 1px;
+  display: block;
+  margin-top: 3px;
+  font-family: var(--space);
+}
+
+/* ACWR KPI */
+.sig-kpi.acwr-optima  { border-color: rgba(0,255,65,0.3); background: rgba(0,255,65,0.04); }
+.sig-kpi.acwr-cuidado { border-color: rgba(255,224,0,0.3); background: rgba(255,224,0,0.04); }
+.sig-kpi.acwr-riesgo  { border-color: rgba(255,34,68,0.4); background: rgba(255,34,68,0.06); }
+.sig-kpi.acwr-optima  .sig-kpi-val { color: var(--green); text-shadow: 0 0 16px rgba(0,255,65,0.5); }
+.sig-kpi.acwr-cuidado .sig-kpi-val { color: var(--yellow); text-shadow: 0 0 16px rgba(255,224,0,0.4); }
+.sig-kpi.acwr-riesgo  .sig-kpi-val { color: var(--red); text-shadow: 0 0 16px rgba(255,34,68,0.5); }
+
+/* ── Desglose tipo chips ───────────────────────────────────── */
+.sig-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 14px 16px 0;
+  max-width: 720px;
+  margin: 0 auto;
+}
+.sig-chip {
+  font-family: var(--space);
+  font-size: 9px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  padding: 5px 10px;
+  border: 1px solid var(--line);
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.sig-chip-count {
+  font-weight: 700;
+  font-size: 11px;
+  color: var(--green);
+}
+
+/* ── Register CTA ──────────────────────────────────────────── */
+.sig-cta-wrap {
+  max-width: 720px;
+  margin: 16px auto 0;
+  padding: 0 16px;
+}
+.sig-cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 14px;
+  background: transparent;
+  border: 1px solid var(--green);
+  color: var(--green);
+  font-family: var(--display);
+  font-size: 20px;
+  letter-spacing: 3px;
+  text-decoration: none;
+  transition: all 0.2s;
+  position: relative;
+  overflow: hidden;
+  clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
+}
+.sig-cta::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--green);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.2s ease;
+}
+.sig-cta:hover { color: var(--black); }
+.sig-cta:hover::before { transform: scaleX(1); }
+.sig-cta span, .sig-cta svg { position: relative; z-index: 1; }
+
+/* ── Timeline grid ─────────────────────────────────────────── */
+.sig-timeline {
+  max-width: 720px;
+  margin: 24px auto 0;
+  padding: 0 16px;
+}
+
+/* ── Day block ─────────────────────────────────────────────── */
+.sig-day {
+  display: grid;
+  grid-template-columns: 56px 1fr;
+  gap: 0 12px;
+  margin-bottom: 24px;
+  opacity: 0;
+  transform: translateY(16px);
+  animation: fadeUp 0.4s forwards;
+}
+@keyframes fadeUp {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Date column */
+.sig-date-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+}
+.sig-date-dow {
+  font-family: var(--space);
+  font-size: 7px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--muted);
+  text-align: center;
+}
+.sig-date-num {
+  font-family: var(--display);
+  font-size: 30px;
+  line-height: 1.05;
+  color: var(--muted);
+  text-align: center;
+}
+.sig-date-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--line);
+  margin: 6px auto 0;
+  flex-shrink: 0;
+}
+.sig-date-vline {
+  flex: 1;
+  width: 1px;
+  background: var(--line);
+  margin: 4px auto 0;
+  min-height: 20px;
+}
+
+/* TODAY */
+.sig-day.today .sig-date-dow { color: var(--green); }
+.sig-day.today .sig-date-num { color: var(--green); text-shadow: 0 0 20px rgba(0,255,65,0.6); }
+.sig-day.today .sig-date-dot { background: var(--green); box-shadow: 0 0 8px var(--green); }
+
+/* Content column */
+.sig-day-content { display: flex; flex-direction: column; gap: 6px; padding-bottom: 4px; }
+
+/* ── Activity card ─────────────────────────────────────────── */
+.sig-act {
+  border: 1px solid var(--line);
+  background: var(--panel);
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.2s;
+}
+.sig-act:hover { border-color: var(--muted); }
+
+/* Left accent bar + fill */
+.sig-act-bar {
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+  flex-shrink: 0;
+}
+.sig-act-fill {
+  position: absolute;
+  left: 3px; top: 0; bottom: 0;
+  width: var(--fill-w, 0%);
+  max-width: 100%;
+  transition: width 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: none;
+}
+
+/* Type colors */
+.type-gym    .sig-act-bar { background: var(--green); }
+.type-gym    .sig-act-fill { background: var(--green-faint); }
+.type-hyrox  .sig-act-bar { background: var(--amber); }
+.type-hyrox  .sig-act-fill { background: var(--amber-faint); }
+.type-carrera .sig-act-bar { background: var(--blue); }
+.type-carrera .sig-act-fill { background: var(--blue-faint); }
+.type-ciclismo .sig-act-bar { background: #c084fc; }
+.type-ciclismo .sig-act-fill { background: rgba(192,132,252,0.07); }
+.type-natacion .sig-act-bar { background: #38bdf8; }
+.type-natacion .sig-act-fill { background: rgba(56,189,248,0.07); }
+.type-remo    .sig-act-bar { background: #fb923c; }
+.type-remo    .sig-act-fill { background: rgba(251,146,60,0.07); }
+.type-futbol  .sig-act-bar { background: #86efac; }
+.type-futbol  .sig-act-fill { background: rgba(134,239,172,0.07); }
+.type-yoga    .sig-act-bar { background: #f9a8d4; }
+.type-yoga    .sig-act-fill { background: rgba(249,168,212,0.07); }
+.type-otro    .sig-act-bar { background: var(--muted); }
+.type-otro    .sig-act-fill { background: rgba(74,74,90,0.15); }
+
+.sig-act-inner {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  padding: 10px 10px 10px 14px;
+  position: relative;
+}
+
+.sig-act-icon {
+  width: 36px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  margin-right: 8px;
+}
+
+.sig-act-body { flex: 1; min-width: 0; }
+.sig-act-title {
+  font-family: var(--display);
+  font-size: 18px;
+  letter-spacing: 1px;
+  line-height: 1.1;
+  color: var(--white);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sig-act-sub {
+  font-size: 8px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-family: var(--space);
+  margin-top: 2px;
+}
+
+.sig-act-metrics {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  flex-shrink: 0;
+  padding-left: 8px;
+}
+.sig-metric {
+  font-size: 9px;
+  letter-spacing: 0.5px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.sig-metric.ua {
+  font-family: var(--display);
+  font-size: 20px;
+  letter-spacing: 1px;
+  color: var(--green);
+  line-height: 1;
+}
+.type-hyrox  .sig-metric.ua { color: var(--amber); }
+.type-carrera .sig-metric.ua { color: var(--blue); }
+.type-ciclismo .sig-metric.ua { color: #c084fc; }
+.type-natacion .sig-metric.ua { color: #38bdf8; }
+
+/* Edit/delete actions */
+.sig-act-actions {
+  display: flex;
+  gap: 4px;
+  margin-top: 4px;
+  justify-content: flex-end;
+}
+.sig-act-btn {
+  font-size: 10px;
+  padding: 2px 6px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-family: var(--mono);
+  letter-spacing: 1px;
+  text-decoration: none;
+  transition: all 0.15s;
+}
+.sig-act-btn:hover { border-color: var(--green); color: var(--green); }
+.sig-act-btn.del:hover { border-color: var(--red); color: var(--red); }
+
+/* ── Bitácora card ─────────────────────────────────────────── */
+.sig-log {
+  border: 1px solid rgba(74,74,90,0.4);
+  background: rgba(10,10,14,0.6);
+  padding: 10px 12px;
+  position: relative;
+  overflow: hidden;
+}
+.sig-log::before {
+  content: '///';
+  font-family: var(--space);
+  font-size: 8px;
+  color: var(--line);
+  position: absolute;
+  top: 4px; right: 8px;
+  letter-spacing: 2px;
+}
+.sig-log-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.sig-log-emoji { font-size: 16px; }
+.sig-log-label {
+  font-size: 7px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-family: var(--space);
+}
+.sig-log-energy {
+  margin-left: auto;
+  font-family: var(--display);
+  font-size: 16px;
+  letter-spacing: 1px;
+  color: var(--amber);
+}
+.sig-log-energy-label {
+  font-size: 7px;
+  color: var(--muted);
+  font-family: var(--space);
+  letter-spacing: 1px;
+}
+.sig-log-emocion {
+  font-family: var(--space);
+  font-size: 10px;
+  font-style: italic;
+  color: var(--white);
+  margin-bottom: 4px;
+}
+.sig-log-nota {
+  font-size: 9px;
+  color: var(--muted);
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ── Empty state ──────────────────────────────────────────── */
+.sig-empty {
+  text-align: center;
+  padding: 60px 20px;
+  border: 1px dashed var(--line);
+}
+.sig-empty-symbol {
+  font-family: var(--display);
+  font-size: 72px;
+  letter-spacing: 6px;
+  color: var(--line);
+  display: block;
+  margin-bottom: 12px;
+}
+.sig-empty-text {
+  font-size: 10px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-family: var(--space);
+}
+.sig-empty-link {
+  display: inline-block;
+  margin-top: 20px;
+  color: var(--green);
+  font-family: var(--display);
+  font-size: 18px;
+  letter-spacing: 2px;
+  text-decoration: none;
+  border: 1px solid var(--green);
+  padding: 8px 20px;
+}
+.sig-empty-link:hover { background: var(--green); color: var(--black); }
+
+/* ── Stagger delays ───────────────────────────────────────── */
+.sig-day:nth-child(1) { animation-delay: 0.05s; }
+.sig-day:nth-child(2) { animation-delay: 0.10s; }
+.sig-day:nth-child(3) { animation-delay: 0.15s; }
+.sig-day:nth-child(4) { animation-delay: 0.20s; }
+.sig-day:nth-child(5) { animation-delay: 0.25s; }
+.sig-day:nth-child(6) { animation-delay: 0.30s; }
+.sig-day:nth-child(7) { animation-delay: 0.35s; }
+.sig-day:nth-child(8) { animation-delay: 0.40s; }
+.sig-day:nth-child(9) { animation-delay: 0.45s; }
+.sig-day:nth-child(n+10) { animation-delay: 0.50s; }
+
+/* ── Bottom section label ──────────────────────────────────── */
+.sig-section-label {
+  font-family: var(--space);
+  font-size: 7px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--line);
+  max-width: 720px;
+  margin: 20px auto 10px;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.sig-section-label::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+
+/* ── Mobile tweaks ─────────────────────────────────────────── */
+@media (max-width: 480px) {
+  .sig-kpi-val { font-size: 28px; }
+  .sig-kpi { padding: 10px 8px 8px; }
+  .sig-act-title { font-size: 16px; }
+  .sig-logo { font-size: 22px; }
+}
+
+/* ── Glitch flicker on logo ───────────────────────────────── */
+@keyframes glitch {
+  0%, 100% { clip-path: none; transform: none; }
+  92% { clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%); transform: none; }
+  93% { clip-path: polygon(0 15%, 100% 15%, 100% 40%, 0 40%); transform: translateX(-2px); color: var(--blue); }
+  94% { clip-path: polygon(0 60%, 100% 60%, 100% 75%, 0 75%); transform: translateX(2px); color: var(--amber); }
+  95% { clip-path: none; transform: none; color: var(--green); }
+}
+.sig-logo { animation: glitch 8s infinite; }
+</style>
+
+<div id="sig-wrap">
+<div id="sig-grain"></div>
+
+<!-- ── HEADER ─────────────────────────────────────────── -->
+<div class="sig-header">
+  <div class="sig-header-inner">
+    <div class="sig-logo">SIGNAL</div>
+    <div class="sig-athlete">ATLETA / <span>{{ cliente.nombre|upper }}</span></div>
+    <div class="sig-range-pills">
+      {% for r in rangos %}
+      <a href="?dias={{ r }}"
+         class="sig-pill {% if dias_rango == r %}active{% endif %}">
+        {% if r == 7 %}7D{% elif r == 30 %}30D{% else %}90D{% endif %}
+      </a>
       {% endfor %}
     </div>
-    {% endif %}
+  </div>
+</div>
 
-    <!-- ── Botón registrar actividad ─────────────────────────────────────── -->
-    <a href="{% url 'entrenos:registrar_actividad_libre' cliente.id %}"
-       class="flex items-center justify-center gap-2 w-full bg-cyan-500 hover:bg-cyan-400
-              text-black font-bold py-3 rounded-xl transition active:scale-95 text-sm">
-      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-      </svg>
-      Registrar actividad
+<!-- ── KPI BAND ────────────────────────────────────────── -->
+<div class="sig-kpi-band">
+  <div class="sig-kpi-row">
+    <div class="sig-kpi">
+      <span class="sig-kpi-label">Días activos</span>
+      <div class="sig-kpi-val">{{ dias_activos }}</div>
+      <span class="sig-kpi-sub">/ {{ dias_rango }} totales</span>
+    </div>
+    <div class="sig-kpi">
+      <span class="sig-kpi-label">Actividades</span>
+      <div class="sig-kpi-val">{{ total_actividades }}</div>
+      <span class="sig-kpi-sub">registradas</span>
+    </div>
+    <div class="sig-kpi">
+      <span class="sig-kpi-label">Carga UA</span>
+      <div class="sig-kpi-val" style="color:var(--green);text-shadow:0 0 16px rgba(0,255,65,0.4);">{{ carga_total }}</div>
+      <span class="sig-kpi-sub">unidades arb.</span>
+    </div>
+    <div class="sig-kpi
+      {% if acwr.zona_riesgo == 'optima' %}acwr-optima
+      {% elif acwr.zona_riesgo == 'cuidado' %}acwr-cuidado
+      {% elif acwr.zona_riesgo == 'riesgo_alto' %}acwr-riesgo
+      {% endif %}">
+      <span class="sig-kpi-label">ACWR</span>
+      <div class="sig-kpi-val">{{ acwr.acwr_actual }}</div>
+      <span class="sig-kpi-sub">
+        {% if acwr.zona_riesgo == 'optima' %}ZONA ÓPTIMA
+        {% elif acwr.zona_riesgo == 'cuidado' %}PRECAUCIÓN
+        {% elif acwr.zona_riesgo == 'riesgo_alto' %}RIESGO ALTO
+        {% else %}—{% endif %}
+      </span>
+    </div>
+  </div>
+</div>
+
+<!-- ── DESGLOSE CHIPS ──────────────────────────────────── -->
+{% if desglose %}
+<div class="sig-chips">
+  {% for d in desglose %}
+  <div class="sig-chip">
+    <span>{{ d.icono }}</span>
+    <span>{{ d.tipo|upper }}</span>
+    <span class="sig-chip-count">×{{ d.total }}</span>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<!-- ── REGISTER CTA ────────────────────────────────────── -->
+<div class="sig-cta-wrap">
+  <a href="{% url 'entrenos:registrar_actividad_libre' cliente.id %}" class="sig-cta">
+    <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+    </svg>
+    <span>REGISTRAR ACTIVIDAD</span>
+  </a>
+</div>
+
+<!-- ── TIMELINE ────────────────────────────────────────── -->
+<div class="sig-section-label">FEED</div>
+
+<div class="sig-timeline">
+  {% if total_actividades == 0 %}
+  <div class="sig-empty">
+    <span class="sig-empty-symbol">NO_DATA</span>
+    <p class="sig-empty-text">Sin actividades en los últimos {{ dias_rango }} días</p>
+    <a href="{% url 'entrenos:registrar_actividad_libre' cliente.id %}" class="sig-empty-link">
+      INICIAR REGISTRO
     </a>
+  </div>
+  {% endif %}
 
-    <!-- ── Timeline ───────────────────────────────────────────────────────── -->
-    <div class="space-y-3">
-      {% for dia in dias %}
-      {% if dia.n_actividades > 0 or dia.bitacora %}
-      <div class="relative">
-        <!-- Línea vertical -->
-        <div class="absolute left-8 top-10 bottom-0 w-px bg-gray-800"></div>
+  {% for dia in dias %}
+  {% if dia.n_actividades > 0 or dia.bitacora %}
+  <div class="sig-day {% if dia.es_hoy %}today{% endif %}">
 
-        <!-- Fecha dot -->
-        <div class="flex items-start gap-3">
-          <div class="flex-shrink-0 w-16 pt-1 text-center">
-            <p class="text-xs font-bold {% if dia.es_hoy %}text-cyan-400{% else %}text-gray-500{% endif %}">
-              {{ dia.dia_semana }}
-            </p>
-            <p class="text-sm font-bold {% if dia.es_hoy %}text-white{% else %}text-gray-400{% endif %}">
-              {{ dia.fecha_str }}
-            </p>
-            {% if dia.es_hoy %}
-            <span class="text-xs text-cyan-400 font-semibold">Hoy</span>
+    <!-- Date column -->
+    <div class="sig-date-col">
+      <span class="sig-date-dow">{{ dia.dia_semana|slice:":3"|upper }}</span>
+      <span class="sig-date-num">{{ dia.fecha_str|slice:":2" }}</span>
+      <div class="sig-date-dot"></div>
+      <div class="sig-date-vline"></div>
+    </div>
+
+    <!-- Content -->
+    <div class="sig-day-content">
+
+      {% for act in dia.actividades %}
+      {% with tipo=act.tipo %}
+      <div class="sig-act type-{{ tipo }}"
+           data-ua="{{ act.carga_ua|default:0 }}">
+        <div class="sig-act-bar"></div>
+        <div class="sig-act-fill"></div>
+        <div class="sig-act-inner">
+          <div class="sig-act-icon">
+            {% if tipo == 'gym' %}🏋️
+            {% elif tipo == 'hyrox' %}⚡
+            {% elif tipo == 'carrera' %}🏃
+            {% elif tipo == 'ciclismo' %}🚴
+            {% elif tipo == 'remo' %}🚣
+            {% elif tipo == 'futbol' %}⚽
+            {% elif tipo == 'natacion' %}🏊
+            {% elif tipo == 'yoga' %}🧘
+            {% else %}🎯{% endif %}
+          </div>
+          <div class="sig-act-body">
+            <div class="sig-act-title">{{ act.titulo|default:act.get_tipo_display|upper }}</div>
+            <div class="sig-act-sub">
+              {{ act.get_tipo_display|upper }}{% if act.hora_inicio %} · {{ act.hora_inicio|time:"H:i" }}{% endif %}
+            </div>
+            {% if not act.entreno_gym and not act.sesion_hyrox %}
+            <div class="sig-act-actions">
+              <a href="{% url 'entrenos:editar_actividad_libre' cliente.id act.id %}" class="sig-act-btn">EDIT</a>
+              <form method="post" action="{% url 'entrenos:eliminar_actividad_libre' cliente.id act.id %}"
+                    onsubmit="return confirm('¿Eliminar esta actividad?')" style="display:inline;">
+                {% csrf_token %}
+                <button type="submit" class="sig-act-btn del">DEL</button>
+              </form>
+            </div>
             {% endif %}
           </div>
-
-          <!-- Contenido del día -->
-          <div class="flex-1 space-y-2 pb-4">
-
-            <!-- Actividades físicas -->
-            {% for act in dia.actividades %}
-            <div class="bg-gray-900 border border-gray-800 rounded-xl p-3">
-              <div class="flex items-center justify-between">
-                <div class="flex items-center gap-2">
-                  <span class="text-lg">
-                    {% if act.tipo == 'gym' %}🏋️
-                    {% elif act.tipo == 'hyrox' %}⚡
-                    {% elif act.tipo == 'carrera' %}🏃
-                    {% elif act.tipo == 'ciclismo' %}🚴
-                    {% elif act.tipo == 'remo' %}🚣
-                    {% elif act.tipo == 'futbol' %}⚽
-                    {% elif act.tipo == 'natacion' %}🏊
-                    {% elif act.tipo == 'yoga' %}🧘
-                    {% else %}🎯{% endif %}
-                  </span>
-                  <div>
-                    <p class="text-sm font-semibold text-white leading-tight">
-                      {{ act.titulo|default:act.get_tipo_display }}
-                    </p>
-                    <p class="text-xs text-gray-500">
-                      {{ act.get_tipo_display }}
-                      {% if act.hora_inicio %} · {{ act.hora_inicio|time:"H:i" }}{% endif %}
-                    </p>
-                  </div>
-                </div>
-                <!-- Métricas + acciones -->
-                <div class="text-right text-xs text-gray-400 space-y-0.5">
-                  {% if act.duracion_minutos %}
-                  <p>⏱ {{ act.duracion_minutos }}min</p>
-                  {% endif %}
-                  {% if act.rpe_medio %}
-                  <p>RPE {{ act.rpe_medio }}</p>
-                  {% endif %}
-                  {% if act.carga_ua %}
-                  <p class="text-cyan-400 font-semibold">{{ act.carga_ua }} UA</p>
-                  {% endif %}
-                  {% if act.volumen_kg %}
-                  <p>{{ act.volumen_kg|floatformat:0 }} kg</p>
-                  {% endif %}
-                  {% if not act.entreno_gym and not act.sesion_hyrox %}
-                  <div class="flex gap-2 justify-end mt-1">
-                    <a href="{% url 'entrenos:editar_actividad_libre' cliente.id act.id %}"
-                       class="text-gray-500 hover:text-cyan-400 transition" title="Editar">✏️</a>
-                    <form method="post" action="{% url 'entrenos:eliminar_actividad_libre' cliente.id act.id %}"
-                          onsubmit="return confirm('¿Eliminar esta actividad?')" style="display:inline;">
-                      {% csrf_token %}
-                      <button type="submit" class="text-gray-500 hover:text-red-400 transition" title="Eliminar">🗑️</button>
-                    </form>
-                  </div>
-                  {% endif %}
-                </div>
-              </div>
-            </div>
-            {% endfor %}
-
-            <!-- Entrada de diario -->
-            {% if dia.bitacora %}
-            <div class="bg-gray-900/60 border border-gray-700/50 rounded-xl p-3">
-              <div class="flex items-center gap-2 mb-1">
-                <span class="text-base">{% if dia.humor_emoji %}{{ dia.humor_emoji }}{% else %}📓{% endif %}</span>
-                <span class="text-xs text-gray-400 font-medium">Bitácora</span>
-                {% if dia.energia %}
-                <span class="ml-auto text-xs text-gray-500">⚡ Energía {{ dia.energia }}/10</span>
-                {% endif %}
-              </div>
-              {% if dia.emocion_dia %}
-              <p class="text-xs text-gray-300 italic">"{{ dia.emocion_dia }}"</p>
-              {% endif %}
-              {% if dia.nota %}
-              <p class="text-xs text-gray-500 mt-1 line-clamp-2">{{ dia.nota }}</p>
-              {% endif %}
-            </div>
-            {% endif %}
-
+          <div class="sig-act-metrics">
+            {% if act.carga_ua %}<div class="sig-metric ua">{{ act.carga_ua }}</div><div class="sig-metric" style="font-size:7px;letter-spacing:1px;">UA</div>{% endif %}
+            {% if act.duracion_minutos %}<div class="sig-metric">{{ act.duracion_minutos }}MIN</div>{% endif %}
+            {% if act.rpe_medio %}<div class="sig-metric">RPE {{ act.rpe_medio }}</div>{% endif %}
+            {% if act.volumen_kg %}<div class="sig-metric">{{ act.volumen_kg|floatformat:0 }}KG</div>{% endif %}
           </div>
         </div>
       </div>
-      {% endif %}
+      {% endwith %}
       {% endfor %}
 
-      <!-- Si no hay nada en el rango -->
-      {% if total_actividades == 0 %}
-      <div class="text-center py-12 text-gray-600">
-        <p class="text-4xl mb-3">📭</p>
-        <p class="text-sm">Sin actividades en los últimos {{ dias_rango }} días.</p>
-        <a href="{% url 'entrenos:registrar_actividad_libre' cliente.id %}"
-           class="mt-4 inline-block text-cyan-400 text-sm underline">
-          Registra tu primera actividad
-        </a>
+      {% if dia.bitacora %}
+      <div class="sig-log">
+        <div class="sig-log-header">
+          <span class="sig-log-emoji">{% if dia.humor_emoji %}{{ dia.humor_emoji }}{% else %}📓{% endif %}</span>
+          <span class="sig-log-label">Bitácora</span>
+          {% if dia.energia %}
+          <div class="sig-log-energy">
+            {{ dia.energia }}<span class="sig-log-energy-label">/10</span>
+          </div>
+          {% endif %}
+        </div>
+        {% if dia.emocion_dia %}<p class="sig-log-emocion">"{{ dia.emocion_dia }}"</p>{% endif %}
+        {% if dia.nota %}<p class="sig-log-nota">{{ dia.nota }}</p>{% endif %}
       </div>
       {% endif %}
-    </div>
 
+    </div>
   </div>
+  {% endif %}
+  {% endfor %}
+
 </div>
+</div>
+
+<script>
+// Animate fill bars on load
+(function(){
+  // Max UA for normalization (or 100 as fallback)
+  var cards = document.querySelectorAll('.sig-act[data-ua]');
+  var maxUA = 0;
+  cards.forEach(function(c){
+    var v = parseFloat(c.dataset.ua) || 0;
+    if(v > maxUA) maxUA = v;
+  });
+  if(maxUA < 1) maxUA = 100;
+
+  // Trigger fills after a short delay for the animation to be visible
+  requestAnimationFrame(function(){
+    setTimeout(function(){
+      cards.forEach(function(c){
+        var ua = parseFloat(c.dataset.ua) || 0;
+        var pct = Math.min(100, (ua / maxUA) * 100);
+        var fill = c.querySelector('.sig-act-fill');
+        if(fill) fill.style.setProperty('--fill-w', pct + '%');
+      });
+    }, 300);
+  });
+})();
+</script>
 {% endblock %}

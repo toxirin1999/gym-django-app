@@ -4054,20 +4054,28 @@ def vista_plan_anual(request, cliente_id):
         from django.db.models import Max
 
         # Bulk query: máximo peso por ejercicio para este cliente (1 query total)
+        # Usamos keywords flexibles para tolerar variantes de nombres ("Press de Banca", "Sentadilla Libre", etc.)
+        _EJERCICIO_KEYWORDS = {
+            'Press Banca':   ['banca', 'bench'],
+            'Sentadilla':    ['sentadilla', 'squat'],
+            'Peso Muerto':   ['muerto', 'deadlift'],
+            'Press Militar': ['militar', 'overhead', ' ohp'],
+            'Power Clean':   ['power clean', 'cargada'],
+        }
         _proy_cache_key = f'proyecciones_plan_{cliente_id}'
         _pesos_max = cache.get(_proy_cache_key)
         if _pesos_max is None:
-            _todos_ejercicios = set()
-            for config in config_fases.values():
-                _todos_ejercicios.update(config['ejercicios'])
-
             _pesos_max = {}
             _registros = EjercicioRealizado.objects.filter(
                 entreno__cliente=cliente_obj,
-                nombre_ejercicio__in=list(_todos_ejercicios)
+                peso_kg__isnull=False,
             ).values('nombre_ejercicio').annotate(max_peso=Max('peso_kg'))
             for r in _registros:
-                _pesos_max[r['nombre_ejercicio']] = float(r['max_peso'])
+                nombre_lower = r['nombre_ejercicio'].lower()
+                for canonical, keywords in _EJERCICIO_KEYWORDS.items():
+                    if any(kw in nombre_lower for kw in keywords):
+                        if canonical not in _pesos_max or float(r['max_peso']) > _pesos_max[canonical]:
+                            _pesos_max[canonical] = float(r['max_peso'])
             cache.set(_proy_cache_key, _pesos_max, 1800)
 
         # Calcular proyecciones para CADA tipo de fase usando los pesos en memoria
@@ -4100,6 +4108,22 @@ def vista_plan_anual(request, cliente_id):
             elif 'potencia' in objetivo or 'potencia' in tipo_fase:
                 fase_key = 'potencia'
 
+            # En descarga: buscar el próximo bloque no-descarga para mostrar sus objetivos
+            if fase_key is None:
+                idx_actual = next((i for i, b in enumerate(bloques) if b is fase_actual), None)
+                if idx_actual is not None:
+                    for bloque_sig in bloques[idx_actual + 1:]:
+                        obj_sig = bloque_sig.get('objetivo', '').lower()
+                        if 'hipertrofia' in obj_sig:
+                            fase_key = 'hipertrofia'
+                            break
+                        elif 'fuerza' in obj_sig:
+                            fase_key = 'fuerza'
+                            break
+                        elif 'potencia' in obj_sig:
+                            fase_key = 'potencia'
+                            break
+
             if fase_key:
                 # Recalcular proyecciones ESPECÍFICAS para la fase actual con fechas
                 # Queremos mostrar: Peso Inicial (Al empezar fase) -> Peso Actual (Max en fase) -> Objetivo (Basado en inicial)
@@ -4109,20 +4133,32 @@ def vista_plan_anual(request, cliente_id):
                 fecha_inicio_fase = fase_actual.get('fecha_inicio')
 
                 if config_actual and fecha_inicio_fase:
-                    # 2 queries bulk en vez de 2×N queries individuales
-                    _ejs = config_actual['ejercicios']
-                    _antes = {r['nombre_ejercicio']: float(r['max_peso'])
-                              for r in EjercicioRealizado.objects.filter(
-                                  entreno__cliente=cliente_obj,
-                                  nombre_ejercicio__in=_ejs,
-                                  entreno__fecha__lt=fecha_inicio_fase
-                              ).values('nombre_ejercicio').annotate(max_peso=Max('peso_kg'))}
-                    _durante = {r['nombre_ejercicio']: float(r['max_peso'])
-                                for r in EjercicioRealizado.objects.filter(
-                                    entreno__cliente=cliente_obj,
-                                    nombre_ejercicio__in=_ejs,
-                                    entreno__fecha__gte=fecha_inicio_fase
-                                ).values('nombre_ejercicio').annotate(max_peso=Max('peso_kg'))}
+                    # Helper: colapsa filas DB (nombres variantes) a nombres canónicos tomando el máximo
+                    def _colapsar_con_keywords(qs):
+                        resultado = {}
+                        for r in qs:
+                            nombre_lower = r['nombre_ejercicio'].lower()
+                            for canonical, kws in _EJERCICIO_KEYWORDS.items():
+                                if any(kw in nombre_lower for kw in kws):
+                                    v = float(r['max_peso'])
+                                    if canonical not in resultado or v > resultado[canonical]:
+                                        resultado[canonical] = v
+                        return resultado
+
+                    _antes = _colapsar_con_keywords(
+                        EjercicioRealizado.objects.filter(
+                            entreno__cliente=cliente_obj,
+                            peso_kg__isnull=False,
+                            entreno__fecha__lt=fecha_inicio_fase
+                        ).values('nombre_ejercicio').annotate(max_peso=Max('peso_kg'))
+                    )
+                    _durante = _colapsar_con_keywords(
+                        EjercicioRealizado.objects.filter(
+                            entreno__cliente=cliente_obj,
+                            peso_kg__isnull=False,
+                            entreno__fecha__gte=fecha_inicio_fase
+                        ).values('nombre_ejercicio').annotate(max_peso=Max('peso_kg'))
+                    )
 
                     for ejercicio_nombre in config_actual['ejercicios']:
                         peso_inicial = _antes.get(ejercicio_nombre, 0)
