@@ -1,532 +1,380 @@
 {% extends 'base.html' %}
 {% load entreno_tags %}
-{% block title %}SIGNAL — {{ cliente.nombre }}{% endblock %}
+{% block title %}Timeline · {{ cliente.nombre }}{% endblock %}
 
 {% block content %}
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@400;600;700&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700;800;900&family=Barlow:wght@300;400;500;600&display=swap');
 
+/* ── Tokens ──────────────────────────────────────────────────── */
 :root {
-  --black: #000000;
-  --void: #050507;
-  --panel: #0a0a0e;
-  --panel2: #0f0f14;
-  --line: #1a1a22;
-  --green: #00ff41;
-  --green-dim: #00cc33;
-  --green-faint: rgba(0,255,65,0.06);
-  --amber: #ff8c00;
-  --amber-faint: rgba(255,140,0,0.08);
-  --red: #ff2244;
-  --red-faint: rgba(255,34,68,0.08);
-  --blue: #00b4ff;
-  --blue-faint: rgba(0,180,255,0.06);
-  --yellow: #ffe000;
-  --white: #e8e8f0;
-  --muted: #4a4a5a;
-  --mono: 'IBM Plex Mono', monospace;
-  --display: 'Bebas Neue', sans-serif;
-  --space: 'Space Mono', monospace;
+  --bg:       #09090b;
+  --bg-card:  #111113;
+  --bg-raise: #18181b;
+  --border:   #27272a;
+  --border-hi:#3f3f46;
+  --fg:       #fafafa;
+  --fg-2:     #a1a1aa;
+  --fg-3:     #52525b;
+  --amber:    #f97316;
+  --amber-lo: rgba(249,115,22,.1);
+  --green:    #22c55e;
+  --green-lo: rgba(34,197,94,.08);
+  --red:      #ef4444;
+  --red-lo:   rgba(239,68,68,.08);
+  --blue:     #38bdf8;
+  --blue-lo:  rgba(56,189,248,.08);
+  --purple:   #a78bfa;
+  --yellow:   #fbbf24;
+  --font-d:   'Barlow Condensed', sans-serif;
+  --font-b:   'Barlow', sans-serif;
+  --ease:     cubic-bezier(.16,1,.3,1);
+  --r:        8px;
 }
 
-/* ── Reset & Base ─────────────────────────────────────────── */
-#sig-wrap * { box-sizing: border-box; margin: 0; padding: 0; }
-#sig-wrap {
-  font-family: var(--mono);
-  background: var(--void);
-  min-height: 100vh;
-  color: var(--white);
-  position: relative;
+/* ── Reset ───────────────────────────────────────────────────── */
+#tl * { box-sizing: border-box; margin: 0; padding: 0; }
+#tl {
+  font-family: var(--font-b);
+  background: var(--bg);
+  min-height: 100dvh;
+  color: var(--fg);
   overflow-x: hidden;
-  padding-bottom: 80px;
+  padding-bottom: 64px;
 }
 
-/* ── Scanlines overlay ─────────────────────────────────────── */
-#sig-wrap::before {
-  content: '';
-  pointer-events: none;
-  position: fixed;
-  inset: 0;
-  background: repeating-linear-gradient(
-    0deg,
-    transparent,
-    transparent 2px,
-    rgba(0,0,0,0.15) 2px,
-    rgba(0,0,0,0.15) 4px
-  );
-  z-index: 1000;
-  mix-blend-mode: multiply;
+/* ── Header ──────────────────────────────────────────────────── */
+.tl-nav {
+  position: sticky; top: 0; z-index: 50;
+  background: rgba(9,9,11,.92);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border);
 }
-
-/* ── Noise grain ──────────────────────────────────────────── */
-#sig-grain {
-  pointer-events: none;
-  position: fixed;
-  inset: -50%;
-  width: 200%;
-  height: 200%;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
-  opacity: 0.028;
-  z-index: 999;
-  animation: grainShift 0.5s steps(1) infinite;
-}
-@keyframes grainShift {
-  0%  { transform: translate(0,0); }
-  20% { transform: translate(-3%,-2%); }
-  40% { transform: translate(2%,3%); }
-  60% { transform: translate(-1%,1%); }
-  80% { transform: translate(3%,-1%); }
-}
-
-/* ── Header / Nav ─────────────────────────────────────────── */
-.sig-header {
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  background: rgba(5,5,7,0.96);
-  backdrop-filter: blur(12px);
-  border-bottom: 1px solid var(--line);
-}
-.sig-header-inner {
-  max-width: 720px;
-  margin: 0 auto;
+.tl-nav-inner {
+  max-width: 680px; margin: 0 auto;
   padding: 0 16px;
   height: 56px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
+  display: flex; align-items: center; gap: 12px;
 }
-.sig-logo {
-  font-family: var(--display);
-  font-size: 28px;
-  letter-spacing: 3px;
-  color: var(--green);
-  line-height: 1;
-  text-shadow: 0 0 20px var(--green), 0 0 40px rgba(0,255,65,0.3);
-  flex-shrink: 0;
-}
-.sig-athlete {
+.tl-nav-title {
+  font-family: var(--font-d);
+  font-size: 22px; font-weight: 800;
+  letter-spacing: .5px; line-height: 1;
+  text-transform: uppercase;
   flex: 1;
-  font-size: 9px;
-  letter-spacing: 2px;
+}
+.tl-nav-sub {
+  font-size: 11px; font-weight: 400;
+  color: var(--fg-2);
+  letter-spacing: .5px;
   text-transform: uppercase;
-  color: var(--muted);
-  font-family: var(--space);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  margin-top: 1px;
 }
-.sig-athlete span { color: var(--white); }
 
-/* Range pills */
-.sig-range-pills {
-  display: flex;
-  gap: 2px;
-  flex-shrink: 0;
-}
-.sig-pill {
-  font-family: var(--display);
-  font-size: 16px;
+/* Range selector */
+.tl-range { display: flex; gap: 2px; }
+.tl-range a {
+  font-family: var(--font-d);
+  font-size: 13px; font-weight: 700;
   letter-spacing: 1px;
-  padding: 4px 10px;
-  border: 1px solid var(--line);
-  text-decoration: none;
-  color: var(--muted);
-  transition: all 0.15s;
-  clip-path: polygon(4px 0%, 100% 0%, calc(100% - 4px) 100%, 0% 100%);
-}
-.sig-pill.active {
-  background: var(--green);
-  color: var(--black);
-  border-color: var(--green);
-  box-shadow: 0 0 12px rgba(0,255,65,0.4);
-}
-.sig-pill:hover:not(.active) {
-  border-color: var(--green);
-  color: var(--green);
-}
-
-/* ── Hero KPI band ─────────────────────────────────────────── */
-.sig-kpi-band {
-  max-width: 720px;
-  margin: 0 auto;
-  padding: 20px 16px 0;
-}
-
-.sig-kpi-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr 1.2fr;
-  gap: 2px;
-  margin-bottom: 2px;
-}
-
-.sig-kpi {
-  background: var(--panel);
-  border: 1px solid var(--line);
-  padding: 14px 12px 10px;
-  position: relative;
-  overflow: hidden;
-}
-.sig-kpi::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, var(--green), transparent);
-  opacity: 0;
-  transition: opacity 0.3s;
-}
-.sig-kpi:hover::before { opacity: 1; }
-.sig-kpi-label {
-  font-size: 7px;
-  letter-spacing: 2.5px;
-  text-transform: uppercase;
-  color: var(--muted);
-  display: block;
-  margin-bottom: 6px;
-  font-family: var(--space);
-}
-.sig-kpi-val {
-  font-family: var(--display);
-  font-size: 38px;
-  line-height: 1;
-  color: var(--white);
-}
-.sig-kpi-sub {
-  font-size: 8px;
-  color: var(--muted);
-  letter-spacing: 1px;
-  display: block;
-  margin-top: 3px;
-  font-family: var(--space);
-}
-
-/* ACWR KPI */
-.sig-kpi.acwr-optima  { border-color: rgba(0,255,65,0.3); background: rgba(0,255,65,0.04); }
-.sig-kpi.acwr-cuidado { border-color: rgba(255,224,0,0.3); background: rgba(255,224,0,0.04); }
-.sig-kpi.acwr-riesgo  { border-color: rgba(255,34,68,0.4); background: rgba(255,34,68,0.06); }
-.sig-kpi.acwr-optima  .sig-kpi-val { color: var(--green); text-shadow: 0 0 16px rgba(0,255,65,0.5); }
-.sig-kpi.acwr-cuidado .sig-kpi-val { color: var(--yellow); text-shadow: 0 0 16px rgba(255,224,0,0.4); }
-.sig-kpi.acwr-riesgo  .sig-kpi-val { color: var(--red); text-shadow: 0 0 16px rgba(255,34,68,0.5); }
-
-/* ── Desglose tipo chips ───────────────────────────────────── */
-.sig-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  padding: 14px 16px 0;
-  max-width: 720px;
-  margin: 0 auto;
-}
-.sig-chip {
-  font-family: var(--space);
-  font-size: 9px;
-  letter-spacing: 1.5px;
   text-transform: uppercase;
   padding: 5px 10px;
-  border: 1px solid var(--line);
-  color: var(--muted);
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-.sig-chip-count {
-  font-weight: 700;
-  font-size: 11px;
-  color: var(--green);
-}
-
-/* ── Register CTA ──────────────────────────────────────────── */
-.sig-cta-wrap {
-  max-width: 720px;
-  margin: 16px auto 0;
-  padding: 0 16px;
-}
-.sig-cta {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  width: 100%;
-  padding: 14px;
-  background: transparent;
-  border: 1px solid var(--green);
-  color: var(--green);
-  font-family: var(--display);
-  font-size: 20px;
-  letter-spacing: 3px;
+  border: 1px solid var(--border);
   text-decoration: none;
-  transition: all 0.2s;
-  position: relative;
-  overflow: hidden;
-  clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
+  color: var(--fg-3);
+  border-radius: 4px;
+  transition: all .15s var(--ease);
 }
-.sig-cta::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: var(--green);
-  transform: scaleX(0);
-  transform-origin: left;
-  transition: transform 0.2s ease;
-}
-.sig-cta:hover { color: var(--black); }
-.sig-cta:hover::before { transform: scaleX(1); }
-.sig-cta span, .sig-cta svg { position: relative; z-index: 1; }
-
-/* ── Timeline grid ─────────────────────────────────────────── */
-.sig-timeline {
-  max-width: 720px;
-  margin: 24px auto 0;
-  padding: 0 16px;
+.tl-range a:hover { border-color: var(--border-hi); color: var(--fg-2); }
+.tl-range a.on {
+  background: var(--amber);
+  border-color: var(--amber);
+  color: #000;
 }
 
-/* ── Day block ─────────────────────────────────────────────── */
-.sig-day {
+/* ── KPI Strip ───────────────────────────────────────────────── */
+.tl-kpis {
+  max-width: 680px; margin: 0 auto;
+  padding: 16px 16px 0;
   display: grid;
-  grid-template-columns: 56px 1fr;
-  gap: 0 12px;
-  margin-bottom: 24px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 2px;
+}
+.tl-kpi {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  padding: 12px 10px 10px;
+  border-radius: var(--r);
+  position: relative; overflow: hidden;
+}
+.tl-kpi::after {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  background: var(--amber);
   opacity: 0;
-  transform: translateY(16px);
-  animation: fadeUp 0.4s forwards;
+  transition: opacity .2s;
 }
-@keyframes fadeUp {
-  to { opacity: 1; transform: translateY(0); }
+.tl-kpi:hover::after { opacity: 1; }
+.tl-kpi-lbl {
+  font-family: var(--font-d);
+  font-size: 9px; font-weight: 600;
+  letter-spacing: 2px; text-transform: uppercase;
+  color: var(--fg-3); display: block; margin-bottom: 5px;
 }
+.tl-kpi-val {
+  font-family: var(--font-d);
+  font-size: 32px; font-weight: 800;
+  line-height: 1; color: var(--fg);
+}
+.tl-kpi-unit {
+  font-size: 10px; color: var(--fg-3);
+  font-family: var(--font-b);
+  display: block; margin-top: 2px;
+}
+/* ACWR states */
+.acwr-ok  .tl-kpi-val { color: var(--green); }
+.acwr-ok::after { background: var(--green) !important; opacity: 1; }
+.acwr-ok  { border-color: rgba(34,197,94,.25); background: var(--green-lo); }
+.acwr-warn .tl-kpi-val { color: var(--yellow); }
+.acwr-warn::after { background: var(--yellow) !important; opacity: 1; }
+.acwr-warn { border-color: rgba(251,191,36,.25); background: rgba(251,191,36,.06); }
+.acwr-risk .tl-kpi-val { color: var(--red); }
+.acwr-risk::after { background: var(--red) !important; opacity: 1; }
+.acwr-risk { border-color: rgba(239,68,68,.25); background: var(--red-lo); }
+
+/* ── Type chips ──────────────────────────────────────────────── */
+.tl-chips {
+  max-width: 680px; margin: 10px auto 0;
+  padding: 0 16px;
+  display: flex; flex-wrap: wrap; gap: 6px;
+}
+.tl-chip {
+  font-family: var(--font-d);
+  font-size: 11px; font-weight: 600;
+  letter-spacing: 1.5px; text-transform: uppercase;
+  padding: 4px 10px;
+  background: var(--bg-raise);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--fg-2);
+  display: flex; align-items: center; gap: 5px;
+}
+.tl-chip-n { color: var(--amber); font-size: 13px; }
+
+/* ── CTA ─────────────────────────────────────────────────────── */
+.tl-cta-wrap {
+  max-width: 680px; margin: 12px auto 0; padding: 0 16px;
+}
+.tl-cta {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  width: 100%; padding: 13px 20px;
+  background: var(--amber);
+  border: none;
+  border-radius: var(--r);
+  font-family: var(--font-d);
+  font-size: 16px; font-weight: 800;
+  letter-spacing: 2px; text-transform: uppercase;
+  color: #000; text-decoration: none;
+  cursor: pointer;
+  transition: all .15s var(--ease);
+}
+.tl-cta:hover { background: #fb923c; transform: translateY(-1px); }
+.tl-cta:active { transform: scale(.98); }
+
+/* ── Feed label ──────────────────────────────────────────────── */
+.tl-feed-lbl {
+  max-width: 680px; margin: 20px auto 8px;
+  padding: 0 16px;
+  font-family: var(--font-d);
+  font-size: 10px; font-weight: 700;
+  letter-spacing: 3px; text-transform: uppercase;
+  color: var(--fg-3);
+  display: flex; align-items: center; gap: 10px;
+}
+.tl-feed-lbl::after {
+  content: ''; flex: 1; height: 1px; background: var(--border);
+}
+
+/* ── Timeline ────────────────────────────────────────────────── */
+.tl-feed {
+  max-width: 680px; margin: 0 auto; padding: 0 16px;
+}
+.tl-day {
+  display: grid;
+  grid-template-columns: 52px 1fr;
+  gap: 0 10px;
+  margin-bottom: 20px;
+  opacity: 0; transform: translateY(12px);
+  animation: up .35s var(--ease) forwards;
+}
+@keyframes up { to { opacity:1; transform:none; } }
 
 /* Date column */
-.sig-date-col {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0;
+.tl-date {
+  display: flex; flex-direction: column; align-items: center;
 }
-.sig-date-dow {
-  font-family: var(--space);
-  font-size: 7px;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  color: var(--muted);
-  text-align: center;
+.tl-date-dow {
+  font-family: var(--font-d);
+  font-size: 10px; font-weight: 700;
+  letter-spacing: 2px; text-transform: uppercase;
+  color: var(--fg-3);
 }
-.sig-date-num {
-  font-family: var(--display);
-  font-size: 30px;
-  line-height: 1.05;
-  color: var(--muted);
-  text-align: center;
+.tl-date-num {
+  font-family: var(--font-d);
+  font-size: 28px; font-weight: 800;
+  line-height: 1; color: var(--fg-3);
 }
-.sig-date-dot {
-  width: 6px;
-  height: 6px;
+.tl-date-dot {
+  width: 8px; height: 8px;
   border-radius: 50%;
-  background: var(--line);
-  margin: 6px auto 0;
+  background: var(--border);
+  margin: 6px 0 0;
   flex-shrink: 0;
 }
-.sig-date-vline {
-  flex: 1;
-  width: 1px;
-  background: var(--line);
-  margin: 4px auto 0;
-  min-height: 20px;
+.tl-date-line {
+  flex: 1; width: 1px;
+  background: var(--border);
+  margin-top: 4px; min-height: 16px;
 }
-
-/* TODAY */
-.sig-day.today .sig-date-dow { color: var(--green); }
-.sig-day.today .sig-date-num { color: var(--green); text-shadow: 0 0 20px rgba(0,255,65,0.6); }
-.sig-day.today .sig-date-dot { background: var(--green); box-shadow: 0 0 8px var(--green); }
+.tl-day.today .tl-date-dow { color: var(--amber); }
+.tl-day.today .tl-date-num { color: var(--fg); }
+.tl-day.today .tl-date-dot { background: var(--amber); box-shadow: 0 0 8px var(--amber); }
 
 /* Content column */
-.sig-day-content { display: flex; flex-direction: column; gap: 6px; padding-bottom: 4px; }
+.tl-day-col { display: flex; flex-direction: column; gap: 5px; padding-bottom: 4px; }
 
-/* ── Activity card ─────────────────────────────────────────── */
-.sig-act {
-  border: 1px solid var(--line);
-  background: var(--panel);
-  position: relative;
+/* ── Activity card ───────────────────────────────────────────── */
+.tl-act {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
   overflow: hidden;
-  transition: border-color 0.2s;
+  position: relative;
+  transition: border-color .2s var(--ease);
 }
-.sig-act:hover { border-color: var(--muted); }
+.tl-act:hover { border-color: var(--border-hi); }
 
-/* Left accent bar + fill */
-.sig-act-bar {
-  position: absolute;
-  left: 0; top: 0; bottom: 0;
-  width: 3px;
-  flex-shrink: 0;
-}
-.sig-act-fill {
+/* Left accent */
+.tl-act-bar { position: absolute; left: 0; top: 0; bottom: 0; width: 3px; }
+
+/* Fill */
+.tl-act-fill {
   position: absolute;
   left: 3px; top: 0; bottom: 0;
-  width: var(--fill-w, 0%);
-  max-width: 100%;
-  transition: width 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+  width: var(--w, 0%);
+  transition: width 1s var(--ease);
   pointer-events: none;
 }
 
 /* Type colors */
-.type-gym    .sig-act-bar { background: var(--green); }
-.type-gym    .sig-act-fill { background: var(--green-faint); }
-.type-hyrox  .sig-act-bar { background: var(--amber); }
-.type-hyrox  .sig-act-fill { background: var(--amber-faint); }
-.type-carrera .sig-act-bar { background: var(--blue); }
-.type-carrera .sig-act-fill { background: var(--blue-faint); }
-.type-ciclismo .sig-act-bar { background: #c084fc; }
-.type-ciclismo .sig-act-fill { background: rgba(192,132,252,0.07); }
-.type-natacion .sig-act-bar { background: #38bdf8; }
-.type-natacion .sig-act-fill { background: rgba(56,189,248,0.07); }
-.type-remo    .sig-act-bar { background: #fb923c; }
-.type-remo    .sig-act-fill { background: rgba(251,146,60,0.07); }
-.type-futbol  .sig-act-bar { background: #86efac; }
-.type-futbol  .sig-act-fill { background: rgba(134,239,172,0.07); }
-.type-yoga    .sig-act-bar { background: #f9a8d4; }
-.type-yoga    .sig-act-fill { background: rgba(249,168,212,0.07); }
-.type-otro    .sig-act-bar { background: var(--muted); }
-.type-otro    .sig-act-fill { background: rgba(74,74,90,0.15); }
+.t-gym    .tl-act-bar { background: var(--green); }
+.t-gym    .tl-act-fill { background: var(--green-lo); }
+.t-hyrox  .tl-act-bar { background: var(--amber); }
+.t-hyrox  .tl-act-fill { background: var(--amber-lo); }
+.t-carrera .tl-act-bar { background: var(--blue); }
+.t-carrera .tl-act-fill { background: var(--blue-lo); }
+.t-ciclismo .tl-act-bar { background: var(--purple); }
+.t-ciclismo .tl-act-fill { background: rgba(167,139,250,.08); }
+.t-natacion .tl-act-bar { background: #22d3ee; }
+.t-natacion .tl-act-fill { background: rgba(34,211,238,.07); }
+.t-remo   .tl-act-bar { background: #fb923c; }
+.t-remo   .tl-act-fill { background: rgba(251,146,60,.07); }
+.t-yoga   .tl-act-bar { background: #f472b6; }
+.t-yoga   .tl-act-fill { background: rgba(244,114,182,.07); }
+.t-otro   .tl-act-bar { background: var(--border-hi); }
+.t-otro   .tl-act-fill { background: rgba(63,63,70,.2); }
 
-.sig-act-inner {
-  display: flex;
-  align-items: stretch;
-  gap: 0;
+.tl-act-body {
   padding: 10px 10px 10px 14px;
+  display: flex; align-items: center; gap: 10px;
   position: relative;
 }
-
-.sig-act-icon {
-  width: 36px;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 20px;
-  margin-right: 8px;
+.tl-act-icon { font-size: 18px; flex-shrink: 0; width: 28px; text-align: center; }
+.tl-act-info { flex: 1; min-width: 0; }
+.tl-act-name {
+  font-family: var(--font-d);
+  font-size: 16px; font-weight: 700;
+  letter-spacing: .3px; line-height: 1.1;
+  color: var(--fg);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-
-.sig-act-body { flex: 1; min-width: 0; }
-.sig-act-title {
-  font-family: var(--display);
-  font-size: 18px;
-  letter-spacing: 1px;
-  line-height: 1.1;
-  color: var(--white);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.sig-act-sub {
-  font-size: 8px;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  color: var(--muted);
-  font-family: var(--space);
+.tl-act-meta {
+  font-size: 10px; color: var(--fg-3);
+  font-family: var(--font-d);
+  letter-spacing: 1.5px; text-transform: uppercase;
   margin-top: 2px;
 }
-
-.sig-act-metrics {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 2px;
-  flex-shrink: 0;
-  padding-left: 8px;
+.tl-act-stats {
+  display: flex; flex-direction: column;
+  align-items: flex-end; gap: 2px; flex-shrink: 0;
 }
-.sig-metric {
-  font-size: 9px;
-  letter-spacing: 0.5px;
-  color: var(--muted);
-  white-space: nowrap;
-}
-.sig-metric.ua {
-  font-family: var(--display);
-  font-size: 20px;
-  letter-spacing: 1px;
-  color: var(--green);
+.tl-stat-ua {
+  font-family: var(--font-d);
+  font-size: 22px; font-weight: 800;
   line-height: 1;
 }
-.type-hyrox  .sig-metric.ua { color: var(--amber); }
-.type-carrera .sig-metric.ua { color: var(--blue); }
-.type-ciclismo .sig-metric.ua { color: #c084fc; }
-.type-natacion .sig-metric.ua { color: #38bdf8; }
-
-/* Edit/delete actions */
-.sig-act-actions {
-  display: flex;
-  gap: 4px;
-  margin-top: 4px;
-  justify-content: flex-end;
+.t-gym    .tl-stat-ua { color: var(--green); }
+.t-hyrox  .tl-stat-ua { color: var(--amber); }
+.t-carrera .tl-stat-ua { color: var(--blue); }
+.t-ciclismo .tl-stat-ua { color: var(--purple); }
+.tl-stat-sub {
+  font-size: 9px; color: var(--fg-3);
+  font-family: var(--font-d); letter-spacing: 1px; text-transform: uppercase;
 }
-.sig-act-btn {
-  font-size: 10px;
-  padding: 2px 6px;
-  border: 1px solid var(--line);
+.tl-stat-row {
+  font-size: 9px; color: var(--fg-2);
+  font-family: var(--font-b); white-space: nowrap;
+}
+/* edit/delete */
+.tl-act-actions {
+  padding: 0 10px 8px 14px;
+  display: flex; gap: 6px; justify-content: flex-end;
+  position: relative;
+}
+.tl-act-btn {
+  font-family: var(--font-d);
+  font-size: 9px; font-weight: 700;
+  letter-spacing: 2px; text-transform: uppercase;
+  padding: 3px 8px;
+  border: 1px solid var(--border);
   background: transparent;
-  color: var(--muted);
-  cursor: pointer;
-  font-family: var(--mono);
-  letter-spacing: 1px;
-  text-decoration: none;
-  transition: all 0.15s;
+  color: var(--fg-3); cursor: pointer;
+  text-decoration: none; border-radius: 3px;
+  transition: all .15s;
 }
-.sig-act-btn:hover { border-color: var(--green); color: var(--green); }
-.sig-act-btn.del:hover { border-color: var(--red); color: var(--red); }
+.tl-act-btn:hover { border-color: var(--border-hi); color: var(--fg-2); }
+.tl-act-btn.del:hover { border-color: var(--red); color: var(--red); }
 
-/* ── Bitácora card ─────────────────────────────────────────── */
-.sig-log {
-  border: 1px solid rgba(74,74,90,0.4);
-  background: rgba(10,10,14,0.6);
+/* ── Log card ────────────────────────────────────────────────── */
+.tl-log {
+  background: rgba(255,255,255,.02);
+  border: 1px solid rgba(255,255,255,.06);
+  border-radius: var(--r);
   padding: 10px 12px;
   position: relative;
-  overflow: hidden;
 }
-.sig-log::before {
-  content: '///';
-  font-family: var(--space);
-  font-size: 8px;
-  color: var(--line);
-  position: absolute;
-  top: 4px; right: 8px;
-  letter-spacing: 2px;
+.tl-log-head {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 5px;
 }
-.sig-log-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 6px;
+.tl-log-lbl {
+  font-family: var(--font-d);
+  font-size: 9px; font-weight: 700;
+  letter-spacing: 2px; text-transform: uppercase;
+  color: var(--fg-3);
 }
-.sig-log-emoji { font-size: 16px; }
-.sig-log-label {
-  font-size: 7px;
-  letter-spacing: 3px;
-  text-transform: uppercase;
-  color: var(--muted);
-  font-family: var(--space);
-}
-.sig-log-energy {
+.tl-log-energy {
   margin-left: auto;
-  font-family: var(--display);
-  font-size: 16px;
-  letter-spacing: 1px;
+  font-family: var(--font-d);
+  font-size: 13px; font-weight: 700;
   color: var(--amber);
 }
-.sig-log-energy-label {
-  font-size: 7px;
-  color: var(--muted);
-  font-family: var(--space);
-  letter-spacing: 1px;
+.tl-log-emo {
+  font-family: var(--font-b);
+  font-size: 11px; font-style: italic;
+  color: var(--fg-2); margin-bottom: 3px;
 }
-.sig-log-emocion {
-  font-family: var(--space);
-  font-size: 10px;
-  font-style: italic;
-  color: var(--white);
-  margin-bottom: 4px;
-}
-.sig-log-nota {
-  font-size: 9px;
-  color: var(--muted);
+.tl-log-nota {
+  font-size: 10px; color: var(--fg-3);
   line-height: 1.5;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -534,290 +382,241 @@
   overflow: hidden;
 }
 
-/* ── Empty state ──────────────────────────────────────────── */
-.sig-empty {
+/* ── Empty ───────────────────────────────────────────────────── */
+.tl-empty {
+  max-width: 680px; margin: 40px auto; padding: 0 16px;
   text-align: center;
-  padding: 60px 20px;
-  border: 1px dashed var(--line);
+  border: 1px dashed var(--border);
+  border-radius: var(--r);
+  padding: 48px 24px;
 }
-.sig-empty-symbol {
-  font-family: var(--display);
-  font-size: 72px;
-  letter-spacing: 6px;
-  color: var(--line);
-  display: block;
-  margin-bottom: 12px;
+.tl-empty-n {
+  font-family: var(--font-d);
+  font-size: 64px; font-weight: 900;
+  letter-spacing: 4px; text-transform: uppercase;
+  color: var(--border); display: block; margin-bottom: 10px;
 }
-.sig-empty-text {
-  font-size: 10px;
-  letter-spacing: 3px;
-  text-transform: uppercase;
-  color: var(--muted);
-  font-family: var(--space);
+.tl-empty-t {
+  font-family: var(--font-d);
+  font-size: 12px; font-weight: 600;
+  letter-spacing: 3px; text-transform: uppercase;
+  color: var(--fg-3); display: block; margin-bottom: 16px;
 }
-.sig-empty-link {
+.tl-empty-cta {
+  font-family: var(--font-d);
+  font-size: 13px; font-weight: 700;
+  letter-spacing: 2px; text-transform: uppercase;
+  color: var(--amber); text-decoration: none;
+  border: 1px solid var(--amber);
+  padding: 8px 20px; border-radius: 4px;
   display: inline-block;
-  margin-top: 20px;
-  color: var(--green);
-  font-family: var(--display);
-  font-size: 18px;
-  letter-spacing: 2px;
-  text-decoration: none;
-  border: 1px solid var(--green);
-  padding: 8px 20px;
+  transition: all .15s;
 }
-.sig-empty-link:hover { background: var(--green); color: var(--black); }
+.tl-empty-cta:hover { background: var(--amber); color: #000; }
 
-/* ── Stagger delays ───────────────────────────────────────── */
-.sig-day:nth-child(1) { animation-delay: 0.05s; }
-.sig-day:nth-child(2) { animation-delay: 0.10s; }
-.sig-day:nth-child(3) { animation-delay: 0.15s; }
-.sig-day:nth-child(4) { animation-delay: 0.20s; }
-.sig-day:nth-child(5) { animation-delay: 0.25s; }
-.sig-day:nth-child(6) { animation-delay: 0.30s; }
-.sig-day:nth-child(7) { animation-delay: 0.35s; }
-.sig-day:nth-child(8) { animation-delay: 0.40s; }
-.sig-day:nth-child(9) { animation-delay: 0.45s; }
-.sig-day:nth-child(n+10) { animation-delay: 0.50s; }
+/* ── Stagger ─────────────────────────────────────────────────── */
+.tl-day:nth-child(1) { animation-delay:.04s }
+.tl-day:nth-child(2) { animation-delay:.08s }
+.tl-day:nth-child(3) { animation-delay:.12s }
+.tl-day:nth-child(4) { animation-delay:.16s }
+.tl-day:nth-child(5) { animation-delay:.20s }
+.tl-day:nth-child(6) { animation-delay:.24s }
+.tl-day:nth-child(7) { animation-delay:.28s }
+.tl-day:nth-child(8) { animation-delay:.32s }
+.tl-day:nth-child(n+9) { animation-delay:.36s }
 
-/* ── Bottom section label ──────────────────────────────────── */
-.sig-section-label {
-  font-family: var(--space);
-  font-size: 7px;
-  letter-spacing: 3px;
-  text-transform: uppercase;
-  color: var(--line);
-  max-width: 720px;
-  margin: 20px auto 10px;
-  padding: 0 16px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.sig-section-label::after {
-  content: '';
-  flex: 1;
-  height: 1px;
-  background: var(--line);
-}
-
-/* ── Mobile tweaks ─────────────────────────────────────────── */
+/* ── Mobile ──────────────────────────────────────────────────── */
 @media (max-width: 480px) {
-  .sig-kpi-val { font-size: 28px; }
-  .sig-kpi { padding: 10px 8px 8px; }
-  .sig-act-title { font-size: 16px; }
-  .sig-logo { font-size: 22px; }
+  .tl-kpi-val { font-size: 24px; }
+  .tl-kpi { padding: 10px 8px 8px; }
+  .tl-act-name { font-size: 15px; }
+  .tl-stat-ua { font-size: 18px; }
 }
-
-/* ── Glitch flicker on logo ───────────────────────────────── */
-@keyframes glitch {
-  0%, 100% { clip-path: none; transform: none; }
-  92% { clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%); transform: none; }
-  93% { clip-path: polygon(0 15%, 100% 15%, 100% 40%, 0 40%); transform: translateX(-2px); color: var(--blue); }
-  94% { clip-path: polygon(0 60%, 100% 60%, 100% 75%, 0 75%); transform: translateX(2px); color: var(--amber); }
-  95% { clip-path: none; transform: none; color: var(--green); }
-}
-.sig-logo { animation: glitch 8s infinite; }
 </style>
 
-<div id="sig-wrap">
-<div id="sig-grain"></div>
+<div id="tl">
 
-<!-- ── HEADER ─────────────────────────────────────────── -->
-<div class="sig-header">
-  <div class="sig-header-inner">
-    <div class="sig-logo">SIGNAL</div>
-    <div class="sig-athlete">ATLETA / <span>{{ cliente.nombre|upper }}</span></div>
-    <div class="sig-range-pills">
-      {% for r in rangos %}
-      <a href="?dias={{ r }}"
-         class="sig-pill {% if dias_rango == r %}active{% endif %}">
-        {% if r == 7 %}7D{% elif r == 30 %}30D{% else %}90D{% endif %}
-      </a>
-      {% endfor %}
+  <!-- NAV -->
+  <nav class="tl-nav">
+    <div class="tl-nav-inner">
+      <div style="flex:1;min-width:0;">
+        <div class="tl-nav-title">Timeline</div>
+        <div class="tl-nav-sub">{{ cliente.nombre }}</div>
+      </div>
+      <div class="tl-range">
+        {% for r in rangos %}
+        <a href="?dias={{ r }}" class="{% if dias_rango == r %}on{% endif %}">
+          {% if r == 7 %}7D{% elif r == 30 %}30D{% else %}90D{% endif %}
+        </a>
+        {% endfor %}
+      </div>
     </div>
-  </div>
-</div>
+  </nav>
 
-<!-- ── KPI BAND ────────────────────────────────────────── -->
-<div class="sig-kpi-band">
-  <div class="sig-kpi-row">
-    <div class="sig-kpi">
-      <span class="sig-kpi-label">Días activos</span>
-      <div class="sig-kpi-val">{{ dias_activos }}</div>
-      <span class="sig-kpi-sub">/ {{ dias_rango }} totales</span>
+  <!-- KPIs -->
+  <div class="tl-kpis">
+    <div class="tl-kpi">
+      <span class="tl-kpi-lbl">Días activos</span>
+      <div class="tl-kpi-val">{{ dias_activos }}</div>
+      <span class="tl-kpi-unit">/ {{ dias_rango }} días</span>
     </div>
-    <div class="sig-kpi">
-      <span class="sig-kpi-label">Actividades</span>
-      <div class="sig-kpi-val">{{ total_actividades }}</div>
-      <span class="sig-kpi-sub">registradas</span>
+    <div class="tl-kpi">
+      <span class="tl-kpi-lbl">Actividades</span>
+      <div class="tl-kpi-val">{{ total_actividades }}</div>
+      <span class="tl-kpi-unit">registradas</span>
     </div>
-    <div class="sig-kpi">
-      <span class="sig-kpi-label">Carga UA</span>
-      <div class="sig-kpi-val" style="color:var(--green);text-shadow:0 0 16px rgba(0,255,65,0.4);">{{ carga_total }}</div>
-      <span class="sig-kpi-sub">unidades arb.</span>
+    <div class="tl-kpi">
+      <span class="tl-kpi-lbl">Carga UA</span>
+      <div class="tl-kpi-val" style="color:var(--amber);">{{ carga_total }}</div>
+      <span class="tl-kpi-unit">unidades arb.</span>
     </div>
-    <div class="sig-kpi
-      {% if acwr.zona_riesgo == 'optima' %}acwr-optima
-      {% elif acwr.zona_riesgo == 'cuidado' %}acwr-cuidado
-      {% elif acwr.zona_riesgo == 'riesgo_alto' %}acwr-riesgo
-      {% endif %}">
-      <span class="sig-kpi-label">ACWR</span>
-      <div class="sig-kpi-val">{{ acwr.acwr_actual }}</div>
-      <span class="sig-kpi-sub">
-        {% if acwr.zona_riesgo == 'optima' %}ZONA ÓPTIMA
-        {% elif acwr.zona_riesgo == 'cuidado' %}PRECAUCIÓN
-        {% elif acwr.zona_riesgo == 'riesgo_alto' %}RIESGO ALTO
+    <div class="tl-kpi
+      {% if acwr.zona_riesgo == 'optima' %}acwr-ok
+      {% elif acwr.zona_riesgo == 'cuidado' %}acwr-warn
+      {% elif acwr.zona_riesgo == 'riesgo_alto' %}acwr-risk{% endif %}">
+      <span class="tl-kpi-lbl">ACWR</span>
+      <div class="tl-kpi-val">{{ acwr.acwr_actual }}</div>
+      <span class="tl-kpi-unit">
+        {% if acwr.zona_riesgo == 'optima' %}Óptimo
+        {% elif acwr.zona_riesgo == 'cuidado' %}Precaución
+        {% elif acwr.zona_riesgo == 'riesgo_alto' %}Riesgo
         {% else %}—{% endif %}
       </span>
     </div>
   </div>
-</div>
 
-<!-- ── DESGLOSE CHIPS ──────────────────────────────────── -->
-{% if desglose %}
-<div class="sig-chips">
-  {% for d in desglose %}
-  <div class="sig-chip">
-    <span>{{ d.icono }}</span>
-    <span>{{ d.tipo|upper }}</span>
-    <span class="sig-chip-count">×{{ d.total }}</span>
+  <!-- CHIPS -->
+  {% if desglose %}
+  <div class="tl-chips">
+    {% for d in desglose %}
+    <div class="tl-chip">
+      <span>{{ d.icono }}</span>
+      <span>{{ d.tipo|upper }}</span>
+      <span class="tl-chip-n">×{{ d.total }}</span>
+    </div>
+    {% endfor %}
   </div>
-  {% endfor %}
-</div>
-{% endif %}
+  {% endif %}
 
-<!-- ── REGISTER CTA ────────────────────────────────────── -->
-<div class="sig-cta-wrap">
-  <a href="{% url 'entrenos:registrar_actividad_libre' cliente.id %}" class="sig-cta">
-    <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
-      <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
-    </svg>
-    <span>REGISTRAR ACTIVIDAD</span>
-  </a>
-</div>
+  <!-- CTA -->
+  <div class="tl-cta-wrap">
+    <a href="{% url 'entrenos:registrar_actividad_libre' cliente.id %}" class="tl-cta">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+      </svg>
+      Registrar actividad
+    </a>
+  </div>
 
-<!-- ── TIMELINE ────────────────────────────────────────── -->
-<div class="sig-section-label">FEED</div>
+  <!-- FEED -->
+  <div class="tl-feed-lbl">Actividad</div>
 
-<div class="sig-timeline">
   {% if total_actividades == 0 %}
-  <div class="sig-empty">
-    <span class="sig-empty-symbol">NO_DATA</span>
-    <p class="sig-empty-text">Sin actividades en los últimos {{ dias_rango }} días</p>
-    <a href="{% url 'entrenos:registrar_actividad_libre' cliente.id %}" class="sig-empty-link">
-      INICIAR REGISTRO
+  <div class="tl-empty">
+    <span class="tl-empty-n">0</span>
+    <span class="tl-empty-t">Sin actividades en los últimos {{ dias_rango }} días</span>
+    <a href="{% url 'entrenos:registrar_actividad_libre' cliente.id %}" class="tl-empty-cta">
+      Registrar primera actividad
     </a>
   </div>
   {% endif %}
 
-  {% for dia in dias %}
-  {% if dia.n_actividades > 0 or dia.bitacora %}
-  <div class="sig-day {% if dia.es_hoy %}today{% endif %}">
+  <div class="tl-feed">
+    {% for dia in dias %}
+    {% if dia.n_actividades > 0 or dia.bitacora %}
+    <div class="tl-day {% if dia.es_hoy %}today{% endif %}">
 
-    <!-- Date column -->
-    <div class="sig-date-col">
-      <span class="sig-date-dow">{{ dia.dia_semana|slice:":3"|upper }}</span>
-      <span class="sig-date-num">{{ dia.fecha_str|slice:":2" }}</span>
-      <div class="sig-date-dot"></div>
-      <div class="sig-date-vline"></div>
-    </div>
-
-    <!-- Content -->
-    <div class="sig-day-content">
-
-      {% for act in dia.actividades %}
-      {% with tipo=act.tipo %}
-      <div class="sig-act type-{{ tipo }}"
-           data-ua="{{ act.carga_ua|default:0 }}">
-        <div class="sig-act-bar"></div>
-        <div class="sig-act-fill"></div>
-        <div class="sig-act-inner">
-          <div class="sig-act-icon">
-            {% if tipo == 'gym' %}🏋️
-            {% elif tipo == 'hyrox' %}⚡
-            {% elif tipo == 'carrera' %}🏃
-            {% elif tipo == 'ciclismo' %}🚴
-            {% elif tipo == 'remo' %}🚣
-            {% elif tipo == 'futbol' %}⚽
-            {% elif tipo == 'natacion' %}🏊
-            {% elif tipo == 'yoga' %}🧘
-            {% else %}🎯{% endif %}
-          </div>
-          <div class="sig-act-body">
-            <div class="sig-act-title">{{ act.titulo|default:act.get_tipo_display|upper }}</div>
-            <div class="sig-act-sub">
-              {{ act.get_tipo_display|upper }}{% if act.hora_inicio %} · {{ act.hora_inicio|time:"H:i" }}{% endif %}
-            </div>
-            {% if not act.entreno_gym and not act.sesion_hyrox %}
-            <div class="sig-act-actions">
-              <a href="{% url 'entrenos:editar_actividad_libre' cliente.id act.id %}" class="sig-act-btn">EDIT</a>
-              <form method="post" action="{% url 'entrenos:eliminar_actividad_libre' cliente.id act.id %}"
-                    onsubmit="return confirm('¿Eliminar esta actividad?')" style="display:inline;">
-                {% csrf_token %}
-                <button type="submit" class="sig-act-btn del">DEL</button>
-              </form>
-            </div>
-            {% endif %}
-          </div>
-          <div class="sig-act-metrics">
-            {% if act.carga_ua %}<div class="sig-metric ua">{{ act.carga_ua }}</div><div class="sig-metric" style="font-size:7px;letter-spacing:1px;">UA</div>{% endif %}
-            {% if act.duracion_minutos %}<div class="sig-metric">{{ act.duracion_minutos }}MIN</div>{% endif %}
-            {% if act.rpe_medio %}<div class="sig-metric">RPE {{ act.rpe_medio }}</div>{% endif %}
-            {% if act.volumen_kg %}<div class="sig-metric">{{ act.volumen_kg|floatformat:0 }}KG</div>{% endif %}
-          </div>
-        </div>
+      <!-- Fecha -->
+      <div class="tl-date">
+        <span class="tl-date-dow">{{ dia.dia_semana|slice:":3"|upper }}</span>
+        <span class="tl-date-num">{{ dia.fecha_str|slice:":2" }}</span>
+        <div class="tl-date-dot"></div>
+        <div class="tl-date-line"></div>
       </div>
-      {% endwith %}
-      {% endfor %}
 
-      {% if dia.bitacora %}
-      <div class="sig-log">
-        <div class="sig-log-header">
-          <span class="sig-log-emoji">{% if dia.humor_emoji %}{{ dia.humor_emoji }}{% else %}📓{% endif %}</span>
-          <span class="sig-log-label">Bitácora</span>
-          {% if dia.energia %}
-          <div class="sig-log-energy">
-            {{ dia.energia }}<span class="sig-log-energy-label">/10</span>
+      <!-- Actividades -->
+      <div class="tl-day-col">
+
+        {% for act in dia.actividades %}
+        <div class="tl-act t-{{ act.tipo }}" data-ua="{{ act.carga_ua|default:0 }}">
+          <div class="tl-act-bar"></div>
+          <div class="tl-act-fill"></div>
+          <div class="tl-act-body">
+            <div class="tl-act-icon">
+              {% if act.tipo == 'gym' %}🏋️
+              {% elif act.tipo == 'hyrox' %}⚡
+              {% elif act.tipo == 'carrera' %}🏃
+              {% elif act.tipo == 'ciclismo' %}🚴
+              {% elif act.tipo == 'remo' %}🚣
+              {% elif act.tipo == 'futbol' %}⚽
+              {% elif act.tipo == 'natacion' %}🏊
+              {% elif act.tipo == 'yoga' %}🧘
+              {% else %}🎯{% endif %}
+            </div>
+            <div class="tl-act-info">
+              <div class="tl-act-name">{{ act.titulo|default:act.get_tipo_display|upper }}</div>
+              <div class="tl-act-meta">
+                {{ act.get_tipo_display|upper }}{% if act.hora_inicio %} · {{ act.hora_inicio|time:"H:i" }}{% endif %}
+              </div>
+            </div>
+            <div class="tl-act-stats">
+              {% if act.carga_ua %}
+              <div class="tl-stat-ua">{{ act.carga_ua }}</div>
+              <div class="tl-stat-sub">UA</div>
+              {% endif %}
+              {% if act.duracion_minutos %}<div class="tl-stat-row">{{ act.duracion_minutos }} min</div>{% endif %}
+              {% if act.rpe_medio %}<div class="tl-stat-row">RPE {{ act.rpe_medio }}</div>{% endif %}
+              {% if act.volumen_kg %}<div class="tl-stat-row">{{ act.volumen_kg|floatformat:0 }} kg</div>{% endif %}
+            </div>
+          </div>
+          {% if not act.entreno_gym and not act.sesion_hyrox %}
+          <div class="tl-act-actions">
+            <a href="{% url 'entrenos:editar_actividad_libre' cliente.id act.id %}" class="tl-act-btn">Edit</a>
+            <form method="post" action="{% url 'entrenos:eliminar_actividad_libre' cliente.id act.id %}"
+                  onsubmit="return confirm('¿Eliminar esta actividad?')" style="display:inline;">
+              {% csrf_token %}
+              <button type="submit" class="tl-act-btn del">Del</button>
+            </form>
           </div>
           {% endif %}
         </div>
-        {% if dia.emocion_dia %}<p class="sig-log-emocion">"{{ dia.emocion_dia }}"</p>{% endif %}
-        {% if dia.nota %}<p class="sig-log-nota">{{ dia.nota }}</p>{% endif %}
+        {% endfor %}
+
+        {% if dia.bitacora %}
+        <div class="tl-log">
+          <div class="tl-log-head">
+            <span>{% if dia.humor_emoji %}{{ dia.humor_emoji }}{% else %}📓{% endif %}</span>
+            <span class="tl-log-lbl">Bitácora</span>
+            {% if dia.energia %}
+            <div class="tl-log-energy">{{ dia.energia }}<span style="font-size:9px;opacity:.6;"> /10</span></div>
+            {% endif %}
+          </div>
+          {% if dia.emocion_dia %}<p class="tl-log-emo">"{{ dia.emocion_dia }}"</p>{% endif %}
+          {% if dia.nota %}<p class="tl-log-nota">{{ dia.nota }}</p>{% endif %}
+        </div>
+        {% endif %}
+
       </div>
-      {% endif %}
-
     </div>
+    {% endif %}
+    {% endfor %}
   </div>
-  {% endif %}
-  {% endfor %}
 
-</div>
 </div>
 
 <script>
-// Animate fill bars on load
 (function(){
-  // Max UA for normalization (or 100 as fallback)
-  var cards = document.querySelectorAll('.sig-act[data-ua]');
-  var maxUA = 0;
-  cards.forEach(function(c){
-    var v = parseFloat(c.dataset.ua) || 0;
-    if(v > maxUA) maxUA = v;
-  });
-  if(maxUA < 1) maxUA = 100;
-
-  // Trigger fills after a short delay for the animation to be visible
-  requestAnimationFrame(function(){
-    setTimeout(function(){
-      cards.forEach(function(c){
-        var ua = parseFloat(c.dataset.ua) || 0;
-        var pct = Math.min(100, (ua / maxUA) * 100);
-        var fill = c.querySelector('.sig-act-fill');
-        if(fill) fill.style.setProperty('--fill-w', pct + '%');
-      });
-    }, 300);
-  });
+  const cards = document.querySelectorAll('.tl-act[data-ua]');
+  let max = 0;
+  cards.forEach(c => { const v = +c.dataset.ua || 0; if(v > max) max = v; });
+  if(max < 1) max = 100;
+  requestAnimationFrame(() => setTimeout(() => {
+    cards.forEach(c => {
+      const pct = Math.min(100, ((+c.dataset.ua || 0) / max) * 100);
+      const fill = c.querySelector('.tl-act-fill');
+      if(fill) fill.style.setProperty('--w', pct + '%');
+    });
+  }, 200));
 })();
 </script>
 {% endblock %}
