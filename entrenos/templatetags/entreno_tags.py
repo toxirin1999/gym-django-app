@@ -4,6 +4,14 @@ register = template.Library()
 
 
 @register.filter
+def subtract(value, arg):
+    try:
+        return round(float(value) - float(arg), 1)
+    except (ValueError, TypeError):
+        return ''
+
+
+@register.filter
 def sum_volumen(series):
     """
     Calcula el volumen total (peso x repeticiones) para una lista de series.

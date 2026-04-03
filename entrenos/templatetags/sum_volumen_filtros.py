@@ -4,6 +4,14 @@ from django.template.defaultfilters import stringfilter
 register = template.Library()
 
 
+@register.filter
+def subtract(value, arg):
+    try:
+        return round(float(value) - float(arg), 1)
+    except (ValueError, TypeError):
+        return ''
+
+
 @register.filter(name='sum_volumen')
 def sum_volumen(ejercicios):
     """

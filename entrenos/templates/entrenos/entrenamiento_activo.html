@@ -775,7 +775,7 @@ input{background:transparent!important;border:none!important;outline:none!import
             <span class="sa-obj-plan">🎯 {{ ejercicio.peso_recomendado_kg }}kg × {{ ejercicio.reps_objetivo }} reps</span>
             {% if ejercicio.peso_anterior_kg > 0 %}
               {% if ejercicio.peso_recomendado_kg > ejercicio.peso_anterior_kg %}
-                <span class="sa-obj-diff mas">▲ +{{ ejercicio.peso_recomendado_kg|add:"-"|add:ejercicio.peso_anterior_kg }}kg vs última</span>
+                <span class="sa-obj-diff mas">▲ +{{ ejercicio.peso_recomendado_kg|subtract:ejercicio.peso_anterior_kg }}kg vs última</span>
               {% elif ejercicio.peso_recomendado_kg < ejercicio.peso_anterior_kg %}
                 <span class="sa-obj-diff menos">▼ vs última {{ ejercicio.peso_anterior_kg }}kg</span>
               {% else %}
@@ -894,7 +894,7 @@ input{background:transparent!important;border:none!important;outline:none!import
             </div>
             <div class="rpe-desc" id="rpe-desc-{{ ejercicio.form_id }}-{{ sn }}"></div>
           </div>
-          <span class="sl-val rpe-v" id="rpe-disp-{{ ejercicio.form_id }}-{{ sn }}">{{ ejercicio.rpe_objetivo }}</span>
+          <span class="sl-val rpe-v" id="rpe-disp-{{ ejercicio.form_id }}-{{ sn }}" style="display:none;">{{ ejercicio.rpe_objetivo }}</span>
         </div>
 
         <input type="number" style="display:none;" id="reps-hid-{{ ejercicio.form_id }}-{{ sn }}"
@@ -1324,7 +1324,11 @@ function calcularPesoSiguienteSerie(peso, rpe, repsReales, rpeObj, repsObj) {
 
   if (Math.abs(factor) < 0.012) return null; // Diferencia insignificante, no sugerir
 
-  const pesoSugerido = Math.round((peso * (1 + factor)) / 2.5) * 2.5;
+  // Redondear al múltiplo de 2.5kg más cercano: hacia arriba si subimos, hacia abajo si bajamos
+  const pesoRaw = peso * (1 + factor);
+  const pesoSugerido = factor > 0
+    ? Math.ceil(pesoRaw / 2.5) * 2.5
+    : Math.floor(pesoRaw / 2.5) * 2.5;
   const diff = +(pesoSugerido - peso).toFixed(1);
   return { pesoSugerido, diff, deltaRpe, deltaReps };
 }
@@ -1378,9 +1382,13 @@ function aplicarSugerenciaSiguienteSerie(fid, snActual, total, peso, rpe, reps) 
   }
 
   // ── Pre-rellenar peso en el panel de la siguiente serie ───────────────────
-  if (resultado) {
-    const pesoInput = document.getElementById('peso-'+fid+'-'+snSig);
-    if (pesoInput) pesoInput.value = resultado.pesoSugerido.toFixed(1);
+  // SIEMPRE propagar el peso real usado (con ajuste si hay, sin ajuste si no)
+  const pesoInput = document.getElementById('peso-'+fid+'-'+snSig);
+  if (pesoInput) {
+    const pesoPrefill = resultado ? resultado.pesoSugerido : peso;
+    pesoInput.value = pesoPrefill.toFixed(1);
+    calcularDiscosInline(fid, snSig, pesoPrefill);
+    detectarPR(fid, snSig, pesoPrefill);
   }
 
   // ── Banner secundario en el panel de la siguiente serie ──────────────────
