@@ -119,6 +119,33 @@ input{background:transparent!important;border:none!important;outline:none!import
 .sl-unit{font-family:var(--fm);font-size:9px;color:var(--td);min-width:26px;}
 .hidden-reps,.hidden-rpe{display:none;}
 
+/* ── PICKER REPS / TIEMPO / DISTANCIA ── */
+.picker-ctrl{flex:1;display:flex;align-items:center;background:var(--panel);border:1px solid var(--bdm);}
+.picker-btn{
+  width:52px;height:54px;background:transparent;border:none;
+  font-size:26px;font-weight:700;font-family:var(--fu);
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;transition:background .1s;flex-shrink:0;
+  -webkit-tap-highlight-color:transparent;
+}
+.picker-btn.menos{color:var(--rl);border-right:1px solid var(--bd);}
+.picker-btn.mas{color:var(--g);border-left:1px solid var(--bd);}
+.picker-btn:active{background:rgba(200,170,110,0.12);}
+.picker-val{flex:1;text-align:center;font-family:var(--fm);font-size:26px!important;font-weight:700!important;color:var(--gb)!important;line-height:1;}
+
+/* ── PICKER RPE ── */
+.rpe-row{align-items:flex-start!important;}
+.rpe-picker-grid{display:flex;gap:4px;}
+.rpe-pick-btn{
+  flex:1;height:46px;
+  background:var(--panel);border:1px solid var(--bd);
+  color:var(--td);font-family:var(--fm);font-size:15px;font-weight:700;
+  cursor:pointer;border-radius:2px;transition:all .1s;
+  -webkit-tap-highlight-color:transparent;
+}
+.rpe-pick-btn:active{transform:scale(0.93);}
+.rpe-pick-btn.sel{background:rgba(200,170,110,0.15);border-color:var(--g);color:var(--g);}
+
 /* HISTORIAL */
 .historial-zona{margin:0 14px 12px;padding:8px 12px;background:var(--panel);border:1px solid var(--bd);font-family:var(--fm);font-size:11px;color:var(--tm);}
 .historial-zona span{color:var(--td);}
@@ -800,19 +827,34 @@ input{background:transparent!important;border:none!important;outline:none!import
         {% if ejercicio.usa_tiempo %}
         <div class="slider-row">
           <span class="sl-label">Tiempo</span>
-          <input type="range" class="sl-track" min="10" max="300" value="{{ ejercicio.reps_objetivo }}" step="5"
-                 oninput="syncSliderTiempo(this,'reps-disp-{{ ejercicio.form_id }}-{{ sn }}','reps-hid-{{ ejercicio.form_id }}-{{ sn }}')">
-          <span class="sl-val reps-v" id="reps-disp-{{ ejercicio.form_id }}-{{ sn }}">{{ ejercicio.reps_objetivo }}</span>
-          <span class="sl-unit">seg</span>
+          <div class="picker-ctrl">
+            <button type="button" class="picker-btn menos"
+                    data-disp="reps-disp-{{ ejercicio.form_id }}-{{ sn }}"
+                    data-hid="reps-hid-{{ ejercicio.form_id }}-{{ sn }}"
+                    data-delta="-5" data-min="10" data-max="600" data-tipo="tiempo">−</button>
+            <span class="picker-val" id="reps-disp-{{ ejercicio.form_id }}-{{ sn }}">{{ ejercicio.reps_objetivo }}s</span>
+            <button type="button" class="picker-btn mas"
+                    data-disp="reps-disp-{{ ejercicio.form_id }}-{{ sn }}"
+                    data-hid="reps-hid-{{ ejercicio.form_id }}-{{ sn }}"
+                    data-delta="5" data-min="10" data-max="600" data-tipo="tiempo">+</button>
+          </div>
         </div>
 
         {# ── DISTANCIA ── #}
         {% elif ejercicio.usa_distancia %}
         <div class="slider-row">
           <span class="sl-label">Metros</span>
-          <input type="range" class="sl-track" min="10" max="500" value="{{ ejercicio.reps_objetivo }}" step="5"
-                 oninput="syncSliderPanel(this,'reps-disp-{{ ejercicio.form_id }}-{{ sn }}','reps-hid-{{ ejercicio.form_id }}-{{ sn }}')">
-          <span class="sl-val reps-v" id="reps-disp-{{ ejercicio.form_id }}-{{ sn }}">{{ ejercicio.reps_objetivo }}</span>
+          <div class="picker-ctrl">
+            <button type="button" class="picker-btn menos"
+                    data-disp="reps-disp-{{ ejercicio.form_id }}-{{ sn }}"
+                    data-hid="reps-hid-{{ ejercicio.form_id }}-{{ sn }}"
+                    data-delta="-5" data-min="0" data-max="2000">−</button>
+            <span class="picker-val" id="reps-disp-{{ ejercicio.form_id }}-{{ sn }}">{{ ejercicio.reps_objetivo }}</span>
+            <button type="button" class="picker-btn mas"
+                    data-disp="reps-disp-{{ ejercicio.form_id }}-{{ sn }}"
+                    data-hid="reps-hid-{{ ejercicio.form_id }}-{{ sn }}"
+                    data-delta="5" data-min="0" data-max="2000">+</button>
+          </div>
           <span class="sl-unit">m</span>
         </div>
 
@@ -820,23 +862,38 @@ input{background:transparent!important;border:none!important;outline:none!import
         {% else %}
         <div class="slider-row">
           <span class="sl-label">Reps</span>
-          <input type="range" class="sl-track" min="1" max="30" value="{{ ejercicio.reps_objetivo }}" step="1"
-                 oninput="syncSliderPanel(this,'reps-disp-{{ ejercicio.form_id }}-{{ sn }}','reps-hid-{{ ejercicio.form_id }}-{{ sn }}')">
-          <span class="sl-val reps-v" id="reps-disp-{{ ejercicio.form_id }}-{{ sn }}">{{ ejercicio.reps_objetivo }}</span>
+          <div class="picker-ctrl">
+            <button type="button" class="picker-btn menos"
+                    data-disp="reps-disp-{{ ejercicio.form_id }}-{{ sn }}"
+                    data-hid="reps-hid-{{ ejercicio.form_id }}-{{ sn }}"
+                    data-delta="-1" data-min="1" data-max="50"
+                    data-fid="{{ ejercicio.form_id }}" data-sn="{{ sn }}">−</button>
+            <span class="picker-val" id="reps-disp-{{ ejercicio.form_id }}-{{ sn }}">{{ ejercicio.reps_objetivo }}</span>
+            <button type="button" class="picker-btn mas"
+                    data-disp="reps-disp-{{ ejercicio.form_id }}-{{ sn }}"
+                    data-hid="reps-hid-{{ ejercicio.form_id }}-{{ sn }}"
+                    data-delta="1" data-min="1" data-max="50"
+                    data-fid="{{ ejercicio.form_id }}" data-sn="{{ sn }}">+</button>
+          </div>
           <span class="sl-unit">reps</span>
         </div>
         {% endif %}
 
-        {# RPE — siempre presente #}
-        <div class="slider-row">
-          <span class="sl-label">RPE</span>
-          <div style="flex:1;display:flex;flex-direction:column;gap:3px;">
-            <input type="range" class="sl-track" min="5" max="10" value="{{ ejercicio.rpe_objetivo }}" step="1"
-                   oninput="syncSliderRPE(this,'rpe-disp-{{ ejercicio.form_id }}-{{ sn }}','rpe-hid-{{ ejercicio.form_id }}-{{ sn }}','rpe-desc-{{ ejercicio.form_id }}-{{ sn }}')">
+        {# RPE — grid de botones táctiles #}
+        <div class="slider-row rpe-row">
+          <span class="sl-label" style="padding-top:8px;">RPE</span>
+          <div style="flex:1;display:flex;flex-direction:column;gap:4px;">
+            <div class="rpe-picker-grid" id="rpe-grid-{{ ejercicio.form_id }}-{{ sn }}">
+              <button type="button" class="rpe-pick-btn {% if ejercicio.rpe_objetivo == 5 %}sel{% endif %}" data-val="5" data-fid-sn="{{ ejercicio.form_id }}-{{ sn }}">5</button>
+              <button type="button" class="rpe-pick-btn {% if ejercicio.rpe_objetivo == 6 %}sel{% endif %}" data-val="6" data-fid-sn="{{ ejercicio.form_id }}-{{ sn }}">6</button>
+              <button type="button" class="rpe-pick-btn {% if ejercicio.rpe_objetivo == 7 %}sel{% endif %}" data-val="7" data-fid-sn="{{ ejercicio.form_id }}-{{ sn }}">7</button>
+              <button type="button" class="rpe-pick-btn {% if ejercicio.rpe_objetivo == 8 %}sel{% endif %}" data-val="8" data-fid-sn="{{ ejercicio.form_id }}-{{ sn }}">8</button>
+              <button type="button" class="rpe-pick-btn {% if ejercicio.rpe_objetivo == 9 %}sel{% endif %}" data-val="9" data-fid-sn="{{ ejercicio.form_id }}-{{ sn }}">9</button>
+              <button type="button" class="rpe-pick-btn {% if ejercicio.rpe_objetivo == 10 %}sel{% endif %}" data-val="10" data-fid-sn="{{ ejercicio.form_id }}-{{ sn }}">10</button>
+            </div>
             <div class="rpe-desc" id="rpe-desc-{{ ejercicio.form_id }}-{{ sn }}"></div>
           </div>
           <span class="sl-val rpe-v" id="rpe-disp-{{ ejercicio.form_id }}-{{ sn }}">{{ ejercicio.rpe_objetivo }}</span>
-          <span class="sl-unit"></span>
         </div>
 
         <input type="number" style="display:none;" id="reps-hid-{{ ejercicio.form_id }}-{{ sn }}"
@@ -1457,6 +1514,67 @@ function syncSliderRPE(el,dispId,hidId,descId){
     desc.style.color=v>=9?'var(--rl)':v>=7?'var(--g)':'var(--td)';
   }
 }
+
+// ── PICKER REPS / TIEMPO / DISTANCIA ────────────────────────────
+function cambiarPicker(dispId,hidId,delta,min,max,fid,sn,tipo){
+  const disp=document.getElementById(dispId);
+  const hid=document.getElementById(hidId);
+  if(!disp||!hid)return;
+  const current=tipo==='tiempo'?(parseInt(hid.value)||0):(parseInt(disp.textContent)||0);
+  const val=Math.max(min,Math.min(max,current+delta));
+  if(tipo==='tiempo'){
+    const m=Math.floor(val/60),s=val%60;
+    disp.textContent=m>0?(m+'m'+(s>0?' '+s+'s':'')):(val+'s');
+  }else{
+    disp.textContent=val;
+  }
+  hid.value=val;
+  if(navigator.vibrate)navigator.vibrate(8);
+  if(fid&&sn)actualizarORM(fid,sn);
+}
+
+// Hold-to-repeat: mantener pulsado acelera el cambio
+document.querySelectorAll('.picker-btn').forEach(btn=>{
+  let holdT,holdI;
+  const act=()=>cambiarPicker(
+    btn.dataset.disp,btn.dataset.hid,
+    parseInt(btn.dataset.delta),
+    parseInt(btn.dataset.min),parseInt(btn.dataset.max),
+    btn.dataset.fid,btn.dataset.sn,btn.dataset.tipo
+  );
+  btn.addEventListener('pointerdown',e=>{
+    e.preventDefault();act();
+    holdT=setTimeout(()=>{holdI=setInterval(act,90);},450);
+  });
+  ['pointerup','pointerleave','pointercancel'].forEach(ev=>
+    btn.addEventListener(ev,()=>{clearTimeout(holdT);clearInterval(holdI);}));
+});
+
+// ── PICKER RPE ───────────────────────────────────────────────────
+function seleccionarRPE(fidSn,valor){
+  const disp=document.getElementById('rpe-disp-'+fidSn);
+  const hid=document.getElementById('rpe-hid-'+fidSn);
+  const desc=document.getElementById('rpe-desc-'+fidSn);
+  const grid=document.getElementById('rpe-grid-'+fidSn);
+  if(disp)disp.textContent=valor;
+  if(hid)hid.value=valor;
+  if(grid)grid.querySelectorAll('.rpe-pick-btn').forEach(b=>b.classList.toggle('sel',parseInt(b.dataset.val)===valor));
+  if(desc){desc.textContent=RPE_DESC[valor]||'';desc.style.color=valor>=9?'var(--rl)':valor>=7?'var(--g)':'var(--td)';}
+  if(navigator.vibrate)navigator.vibrate(8);
+}
+document.querySelectorAll('.rpe-pick-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>seleccionarRPE(btn.dataset.fidSn,parseInt(btn.dataset.val)));
+});
+
+// Inicializar descripciones RPE en carga
+document.querySelectorAll('.rpe-picker-grid').forEach(grid=>{
+  const sel=grid.querySelector('.rpe-pick-btn.sel');
+  if(!sel)return;
+  const fidSn=sel.dataset.fidSn;
+  const val=parseInt(sel.dataset.val);
+  const desc=document.getElementById('rpe-desc-'+fidSn);
+  if(desc){desc.textContent=RPE_DESC[val]||'';desc.style.color=val>=9?'var(--rl)':val>=7?'var(--g)':'var(--td)';}
+});
 
 // ── NOTAS OPCIONALES POR SERIE ───────────────────────────────────
 function toggleNotaSerie(btn){
