@@ -645,6 +645,7 @@ input{background:transparent!important;border:none!important;outline:none!import
 
 <!-- ══ TOPBAR ══ -->
 <div class="topbar">
+  <a href="{% url 'clientes:panel_cliente' %}" style="color:var(--td);font-size:16px;line-height:1;text-decoration:none;flex-shrink:0;padding:4px 8px 4px 0;" title="Inicio">🏠</a>
   <span class="tb-left">{{ rutina_nombre|truncatechars:30 }}</span>
   <div class="tb-right">
     <div class="tb-track"><div class="tb-fill" id="tb-fill" style="width:0%"></div></div>
