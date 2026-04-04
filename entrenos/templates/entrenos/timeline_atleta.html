@@ -1,451 +1,29 @@
 {% extends 'base.html' %}
-{% load entreno_tags %}
+{% load entreno_tags static %}
 {% block title %}Timeline · {{ cliente.nombre }}{% endblock %}
 
+{% block extra_css %}
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700;800;900&family=Barlow:wght@300;400;500;600&display=swap">
+<link rel="stylesheet" href="{% static 'entrenos/css/timeline.css' %}">
+{% endblock %}
+
 {% block content %}
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700;800;900&family=Barlow:wght@300;400;500;600&display=swap');
-
-/* ── Tokens ──────────────────────────────────────────────────── */
-:root {
-  --bg:       #09090b;
-  --bg-card:  #111113;
-  --bg-raise: #18181b;
-  --border:   #27272a;
-  --border-hi:#3f3f46;
-  --fg:       #fafafa;
-  --fg-2:     #a1a1aa;
-  --fg-3:     #52525b;
-  --amber:    #f97316;
-  --amber-lo: rgba(249,115,22,.1);
-  --green:    #22c55e;
-  --green-lo: rgba(34,197,94,.08);
-  --red:      #ef4444;
-  --red-lo:   rgba(239,68,68,.08);
-  --blue:     #38bdf8;
-  --blue-lo:  rgba(56,189,248,.08);
-  --purple:   #a78bfa;
-  --yellow:   #fbbf24;
-  --font-d:   'Barlow Condensed', sans-serif;
-  --font-b:   'Barlow', sans-serif;
-  --ease:     cubic-bezier(.16,1,.3,1);
-  --r:        8px;
-}
-
-/* ── Reset ───────────────────────────────────────────────────── */
-#tl * { box-sizing: border-box; margin: 0; padding: 0; }
-#tl {
-  font-family: var(--font-b);
-  background: var(--bg);
-  min-height: 100dvh;
-  color: var(--fg);
-  overflow-x: hidden;
-  padding-bottom: 64px;
-}
-
-/* ── Header ──────────────────────────────────────────────────── */
-.tl-nav {
-  position: sticky; top: 0; z-index: 50;
-  background: rgba(9,9,11,.92);
-  backdrop-filter: blur(16px);
-  border-bottom: 1px solid var(--border);
-}
-.tl-nav-inner {
-  max-width: 680px; margin: 0 auto;
-  padding: 0 16px;
-  height: 56px;
-  display: flex; align-items: center; gap: 12px;
-}
-.tl-nav-title {
-  font-family: var(--font-d);
-  font-size: 22px; font-weight: 800;
-  letter-spacing: .5px; line-height: 1;
-  text-transform: uppercase;
-  flex: 1;
-}
-.tl-nav-sub {
-  font-size: 11px; font-weight: 400;
-  color: var(--fg-2);
-  letter-spacing: .5px;
-  text-transform: uppercase;
-  margin-top: 1px;
-}
-
-/* Range selector */
-.tl-range { display: flex; gap: 2px; }
-.tl-range a {
-  font-family: var(--font-d);
-  font-size: 13px; font-weight: 700;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  padding: 5px 10px;
-  border: 1px solid var(--border);
-  text-decoration: none;
-  color: var(--fg-3);
-  border-radius: 4px;
-  transition: all .15s var(--ease);
-}
-.tl-range a:hover { border-color: var(--border-hi); color: var(--fg-2); }
-.tl-range a.on {
-  background: var(--amber);
-  border-color: var(--amber);
-  color: #000;
-}
-
-/* ── KPI Strip ───────────────────────────────────────────────── */
-.tl-kpis {
-  max-width: 680px; margin: 0 auto;
-  padding: 16px 16px 0;
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 2px;
-}
-.tl-kpi {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  padding: 12px 10px 10px;
-  border-radius: var(--r);
-  position: relative; overflow: hidden;
-}
-.tl-kpi::after {
-  content: '';
-  position: absolute; top: 0; left: 0; right: 0; height: 2px;
-  background: var(--amber);
-  opacity: 0;
-  transition: opacity .2s;
-}
-.tl-kpi:hover::after { opacity: 1; }
-.tl-kpi-lbl {
-  font-family: var(--font-d);
-  font-size: 9px; font-weight: 600;
-  letter-spacing: 2px; text-transform: uppercase;
-  color: var(--fg-3); display: block; margin-bottom: 5px;
-}
-.tl-kpi-val {
-  font-family: var(--font-d);
-  font-size: 32px; font-weight: 800;
-  line-height: 1; color: var(--fg);
-}
-.tl-kpi-unit {
-  font-size: 10px; color: var(--fg-3);
-  font-family: var(--font-b);
-  display: block; margin-top: 2px;
-}
-/* ACWR states */
-.acwr-ok  .tl-kpi-val { color: var(--green); }
-.acwr-ok::after { background: var(--green) !important; opacity: 1; }
-.acwr-ok  { border-color: rgba(34,197,94,.25); background: var(--green-lo); }
-.acwr-warn .tl-kpi-val { color: var(--yellow); }
-.acwr-warn::after { background: var(--yellow) !important; opacity: 1; }
-.acwr-warn { border-color: rgba(251,191,36,.25); background: rgba(251,191,36,.06); }
-.acwr-risk .tl-kpi-val { color: var(--red); }
-.acwr-risk::after { background: var(--red) !important; opacity: 1; }
-.acwr-risk { border-color: rgba(239,68,68,.25); background: var(--red-lo); }
-
-/* ── Type chips ──────────────────────────────────────────────── */
-.tl-chips {
-  max-width: 680px; margin: 10px auto 0;
-  padding: 0 16px;
-  display: flex; flex-wrap: wrap; gap: 6px;
-}
-.tl-chip {
-  font-family: var(--font-d);
-  font-size: 11px; font-weight: 600;
-  letter-spacing: 1.5px; text-transform: uppercase;
-  padding: 4px 10px;
-  background: var(--bg-raise);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  color: var(--fg-2);
-  display: flex; align-items: center; gap: 5px;
-}
-.tl-chip-n { color: var(--amber); font-size: 13px; }
-
-/* ── CTA ─────────────────────────────────────────────────────── */
-.tl-cta-wrap {
-  max-width: 680px; margin: 12px auto 0; padding: 0 16px;
-}
-.tl-cta {
-  display: flex; align-items: center; justify-content: center; gap: 8px;
-  width: 100%; padding: 13px 20px;
-  background: var(--amber);
-  border: none;
-  border-radius: var(--r);
-  font-family: var(--font-d);
-  font-size: 16px; font-weight: 800;
-  letter-spacing: 2px; text-transform: uppercase;
-  color: #000; text-decoration: none;
-  cursor: pointer;
-  transition: all .15s var(--ease);
-}
-.tl-cta:hover { background: #fb923c; transform: translateY(-1px); }
-.tl-cta:active { transform: scale(.98); }
-
-/* ── Feed label ──────────────────────────────────────────────── */
-.tl-feed-lbl {
-  max-width: 680px; margin: 20px auto 8px;
-  padding: 0 16px;
-  font-family: var(--font-d);
-  font-size: 10px; font-weight: 700;
-  letter-spacing: 3px; text-transform: uppercase;
-  color: var(--fg-3);
-  display: flex; align-items: center; gap: 10px;
-}
-.tl-feed-lbl::after {
-  content: ''; flex: 1; height: 1px; background: var(--border);
-}
-
-/* ── Timeline ────────────────────────────────────────────────── */
-.tl-feed {
-  max-width: 680px; margin: 0 auto; padding: 0 16px;
-}
-.tl-day {
-  display: grid;
-  grid-template-columns: 52px 1fr;
-  gap: 0 10px;
-  margin-bottom: 20px;
-  opacity: 0; transform: translateY(12px);
-  animation: up .35s var(--ease) forwards;
-}
-@keyframes up { to { opacity:1; transform:none; } }
-
-/* Date column */
-.tl-date {
-  display: flex; flex-direction: column; align-items: center;
-}
-.tl-date-dow {
-  font-family: var(--font-d);
-  font-size: 10px; font-weight: 700;
-  letter-spacing: 2px; text-transform: uppercase;
-  color: var(--fg-3);
-}
-.tl-date-num {
-  font-family: var(--font-d);
-  font-size: 28px; font-weight: 800;
-  line-height: 1; color: var(--fg-3);
-}
-.tl-date-dot {
-  width: 8px; height: 8px;
-  border-radius: 50%;
-  background: var(--border);
-  margin: 6px 0 0;
-  flex-shrink: 0;
-}
-.tl-date-line {
-  flex: 1; width: 1px;
-  background: var(--border);
-  margin-top: 4px; min-height: 16px;
-}
-.tl-day.today .tl-date-dow { color: var(--amber); }
-.tl-day.today .tl-date-num { color: var(--fg); }
-.tl-day.today .tl-date-dot { background: var(--amber); box-shadow: 0 0 8px var(--amber); }
-
-/* Content column */
-.tl-day-col { display: flex; flex-direction: column; gap: 5px; padding-bottom: 4px; }
-
-/* ── Activity card ───────────────────────────────────────────── */
-.tl-act {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: var(--r);
-  overflow: hidden;
-  position: relative;
-  transition: border-color .2s var(--ease);
-}
-.tl-act:hover { border-color: var(--border-hi); }
-
-/* Left accent */
-.tl-act-bar { position: absolute; left: 0; top: 0; bottom: 0; width: 3px; }
-
-/* Fill */
-.tl-act-fill {
-  position: absolute;
-  left: 3px; top: 0; bottom: 0;
-  width: var(--w, 0%);
-  transition: width 1s var(--ease);
-  pointer-events: none;
-}
-
-/* Type colors */
-.t-gym    .tl-act-bar { background: var(--green); }
-.t-gym    .tl-act-fill { background: var(--green-lo); }
-.t-hyrox  .tl-act-bar { background: var(--amber); }
-.t-hyrox  .tl-act-fill { background: var(--amber-lo); }
-.t-carrera .tl-act-bar { background: var(--blue); }
-.t-carrera .tl-act-fill { background: var(--blue-lo); }
-.t-ciclismo .tl-act-bar { background: var(--purple); }
-.t-ciclismo .tl-act-fill { background: rgba(167,139,250,.08); }
-.t-natacion .tl-act-bar { background: #22d3ee; }
-.t-natacion .tl-act-fill { background: rgba(34,211,238,.07); }
-.t-remo   .tl-act-bar { background: #fb923c; }
-.t-remo   .tl-act-fill { background: rgba(251,146,60,.07); }
-.t-yoga   .tl-act-bar { background: #f472b6; }
-.t-yoga   .tl-act-fill { background: rgba(244,114,182,.07); }
-.t-otro   .tl-act-bar { background: var(--border-hi); }
-.t-otro   .tl-act-fill { background: rgba(63,63,70,.2); }
-
-.tl-act-body {
-  padding: 10px 10px 10px 14px;
-  display: flex; align-items: center; gap: 10px;
-  position: relative;
-}
-.tl-act-icon { font-size: 18px; flex-shrink: 0; width: 28px; text-align: center; }
-.tl-act-info { flex: 1; min-width: 0; }
-.tl-act-name {
-  font-family: var(--font-d);
-  font-size: 16px; font-weight: 700;
-  letter-spacing: .3px; line-height: 1.1;
-  color: var(--fg);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.tl-act-meta {
-  font-size: 10px; color: var(--fg-3);
-  font-family: var(--font-d);
-  letter-spacing: 1.5px; text-transform: uppercase;
-  margin-top: 2px;
-}
-.tl-act-stats {
-  display: flex; flex-direction: column;
-  align-items: flex-end; gap: 2px; flex-shrink: 0;
-}
-.tl-stat-ua {
-  font-family: var(--font-d);
-  font-size: 22px; font-weight: 800;
-  line-height: 1;
-}
-.t-gym    .tl-stat-ua { color: var(--green); }
-.t-hyrox  .tl-stat-ua { color: var(--amber); }
-.t-carrera .tl-stat-ua { color: var(--blue); }
-.t-ciclismo .tl-stat-ua { color: var(--purple); }
-.tl-stat-sub {
-  font-size: 9px; color: var(--fg-3);
-  font-family: var(--font-d); letter-spacing: 1px; text-transform: uppercase;
-}
-.tl-stat-row {
-  font-size: 9px; color: var(--fg-2);
-  font-family: var(--font-b); white-space: nowrap;
-}
-/* edit/delete */
-.tl-act-actions {
-  padding: 0 10px 8px 14px;
-  display: flex; gap: 6px; justify-content: flex-end;
-  position: relative;
-}
-.tl-act-btn {
-  font-family: var(--font-d);
-  font-size: 9px; font-weight: 700;
-  letter-spacing: 2px; text-transform: uppercase;
-  padding: 3px 8px;
-  border: 1px solid var(--border);
-  background: transparent;
-  color: var(--fg-3); cursor: pointer;
-  text-decoration: none; border-radius: 3px;
-  transition: all .15s;
-}
-.tl-act-btn:hover { border-color: var(--border-hi); color: var(--fg-2); }
-.tl-act-btn.del:hover { border-color: var(--red); color: var(--red); }
-
-/* ── Log card ────────────────────────────────────────────────── */
-.tl-log {
-  background: rgba(255,255,255,.02);
-  border: 1px solid rgba(255,255,255,.06);
-  border-radius: var(--r);
-  padding: 10px 12px;
-  position: relative;
-}
-.tl-log-head {
-  display: flex; align-items: center; gap: 8px; margin-bottom: 5px;
-}
-.tl-log-lbl {
-  font-family: var(--font-d);
-  font-size: 9px; font-weight: 700;
-  letter-spacing: 2px; text-transform: uppercase;
-  color: var(--fg-3);
-}
-.tl-log-energy {
-  margin-left: auto;
-  font-family: var(--font-d);
-  font-size: 13px; font-weight: 700;
-  color: var(--amber);
-}
-.tl-log-emo {
-  font-family: var(--font-b);
-  font-size: 11px; font-style: italic;
-  color: var(--fg-2); margin-bottom: 3px;
-}
-.tl-log-nota {
-  font-size: 10px; color: var(--fg-3);
-  line-height: 1.5;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-/* ── Empty ───────────────────────────────────────────────────── */
-.tl-empty {
-  max-width: 680px; margin: 40px auto; padding: 0 16px;
-  text-align: center;
-  border: 1px dashed var(--border);
-  border-radius: var(--r);
-  padding: 48px 24px;
-}
-.tl-empty-n {
-  font-family: var(--font-d);
-  font-size: 64px; font-weight: 900;
-  letter-spacing: 4px; text-transform: uppercase;
-  color: var(--border); display: block; margin-bottom: 10px;
-}
-.tl-empty-t {
-  font-family: var(--font-d);
-  font-size: 12px; font-weight: 600;
-  letter-spacing: 3px; text-transform: uppercase;
-  color: var(--fg-3); display: block; margin-bottom: 16px;
-}
-.tl-empty-cta {
-  font-family: var(--font-d);
-  font-size: 13px; font-weight: 700;
-  letter-spacing: 2px; text-transform: uppercase;
-  color: var(--amber); text-decoration: none;
-  border: 1px solid var(--amber);
-  padding: 8px 20px; border-radius: 4px;
-  display: inline-block;
-  transition: all .15s;
-}
-.tl-empty-cta:hover { background: var(--amber); color: #000; }
-
-/* ── Stagger ─────────────────────────────────────────────────── */
-.tl-day:nth-child(1) { animation-delay:.04s }
-.tl-day:nth-child(2) { animation-delay:.08s }
-.tl-day:nth-child(3) { animation-delay:.12s }
-.tl-day:nth-child(4) { animation-delay:.16s }
-.tl-day:nth-child(5) { animation-delay:.20s }
-.tl-day:nth-child(6) { animation-delay:.24s }
-.tl-day:nth-child(7) { animation-delay:.28s }
-.tl-day:nth-child(8) { animation-delay:.32s }
-.tl-day:nth-child(n+9) { animation-delay:.36s }
-
-/* ── Mobile ──────────────────────────────────────────────────── */
-@media (max-width: 480px) {
-  .tl-kpi-val { font-size: 24px; }
-  .tl-kpi { padding: 10px 8px 8px; }
-  .tl-act-name { font-size: 15px; }
-  .tl-stat-ua { font-size: 18px; }
-}
-</style>
-
 <div id="tl">
 
   <!-- NAV -->
-  <nav class="tl-nav">
+  <nav class="tl-nav" aria-label="Navegación de timeline">
     <div class="tl-nav-inner">
       <div style="flex:1;min-width:0;">
         <div class="tl-nav-title">Timeline</div>
         <div class="tl-nav-sub">{{ cliente.nombre }}</div>
       </div>
-      <div class="tl-range">
+      <div class="tl-range" role="group" aria-label="Rango de fechas">
         {% for r in rangos %}
-        <a href="?dias={{ r }}" class="{% if dias_rango == r %}on{% endif %}">
+        <a href="?dias={{ r }}"
+           class="{% if dias_rango == r %}on{% endif %}"
+           {% if dias_rango == r %}aria-current="page"{% endif %}
+           aria-label="Últimos {% if r == 7 %}7{% elif r == 30 %}30{% else %}90{% endif %} días">
           {% if r == 7 %}7D{% elif r == 30 %}30D{% else %}90D{% endif %}
         </a>
         {% endfor %}
@@ -454,45 +32,53 @@
   </nav>
 
   <!-- KPIs -->
-  <div class="tl-kpis">
+  <dl class="tl-kpis">
     <div class="tl-kpi">
-      <span class="tl-kpi-lbl">Días activos</span>
-      <div class="tl-kpi-val">{{ dias_activos }}</div>
-      <span class="tl-kpi-unit">/ {{ dias_rango }} días</span>
+      <dt class="tl-kpi-lbl">Días activos</dt>
+      <dd>
+        <span class="tl-kpi-val">{{ dias_activos }}</span>
+        <span class="tl-kpi-unit">/ {{ dias_rango }} días</span>
+      </dd>
     </div>
     <div class="tl-kpi">
-      <span class="tl-kpi-lbl">Actividades</span>
-      <div class="tl-kpi-val">{{ total_actividades }}</div>
-      <span class="tl-kpi-unit">registradas</span>
+      <dt class="tl-kpi-lbl">Actividades</dt>
+      <dd>
+        <span class="tl-kpi-val">{{ total_actividades }}</span>
+        <span class="tl-kpi-unit">registradas</span>
+      </dd>
     </div>
     <div class="tl-kpi">
-      <span class="tl-kpi-lbl">Carga UA</span>
-      <div class="tl-kpi-val" style="color:var(--amber);">{{ carga_total }}</div>
-      <span class="tl-kpi-unit">unidades arb.</span>
+      <dt class="tl-kpi-lbl">Carga UA</dt>
+      <dd>
+        <span class="tl-kpi-val" style="color:var(--amber);">{{ carga_total }}</span>
+        <span class="tl-kpi-unit">unidades arb.</span>
+      </dd>
     </div>
     <div class="tl-kpi
       {% if acwr.zona_riesgo == 'optima' %}acwr-ok
       {% elif acwr.zona_riesgo == 'cuidado' %}acwr-warn
       {% elif acwr.zona_riesgo == 'riesgo_alto' %}acwr-risk{% endif %}">
-      <span class="tl-kpi-lbl">ACWR</span>
-      <div class="tl-kpi-val">{{ acwr.acwr_actual }}</div>
-      <span class="tl-kpi-unit">
-        {% if acwr.zona_riesgo == 'optima' %}Óptimo
-        {% elif acwr.zona_riesgo == 'cuidado' %}Precaución
-        {% elif acwr.zona_riesgo == 'riesgo_alto' %}Riesgo
-        {% else %}—{% endif %}
-      </span>
+      <dt class="tl-kpi-lbl">ACWR</dt>
+      <dd>
+        <span class="tl-kpi-val">{{ acwr.acwr_actual }}</span>
+        <span class="tl-kpi-unit">
+          {% if acwr.zona_riesgo == 'optima' %}Óptimo
+          {% elif acwr.zona_riesgo == 'cuidado' %}Precaución
+          {% elif acwr.zona_riesgo == 'riesgo_alto' %}Riesgo
+          {% else %}—{% endif %}
+        </span>
+      </dd>
     </div>
-  </div>
+  </dl>
 
   <!-- CHIPS -->
   {% if desglose %}
-  <div class="tl-chips">
+  <div class="tl-chips" aria-label="Resumen por tipo de actividad">
     {% for d in desglose %}
     <div class="tl-chip">
-      <span>{{ d.icono }}</span>
+      <span aria-hidden="true">{{ d.icono }}</span>
       <span>{{ d.tipo|upper }}</span>
-      <span class="tl-chip-n">×{{ d.total }}</span>
+      <span class="tl-chip-n" aria-label="{{ d.total }} sesiones">×{{ d.total }}</span>
     </div>
     {% endfor %}
   </div>
@@ -501,7 +87,8 @@
   <!-- CTA -->
   <div class="tl-cta-wrap">
     <a href="{% url 'entrenos:registrar_actividad_libre' cliente.id %}" class="tl-cta">
-      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"
+           viewBox="0 0 24 24" aria-hidden="true" focusable="false">
         <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
       </svg>
       Registrar actividad
@@ -509,11 +96,11 @@
   </div>
 
   <!-- FEED -->
-  <div class="tl-feed-lbl">Actividad</div>
+  <h2 class="tl-feed-lbl">Actividad</h2>
 
   {% if total_actividades == 0 %}
-  <div class="tl-empty">
-    <span class="tl-empty-n">0</span>
+  <div class="tl-empty" role="status">
+    <span class="tl-empty-n" aria-hidden="true">0</span>
     <span class="tl-empty-t">Sin actividades en los últimos {{ dias_rango }} días</span>
     <a href="{% url 'entrenos:registrar_actividad_libre' cliente.id %}" class="tl-empty-cta">
       Registrar primera actividad
@@ -527,22 +114,23 @@
     <div class="tl-day {% if dia.es_hoy %}today{% endif %}">
 
       <!-- Fecha -->
-      <div class="tl-date">
-        <span class="tl-date-dow">{{ dia.dia_semana|slice:":3"|upper }}</span>
-        <span class="tl-date-num">{{ dia.fecha_str|slice:":2" }}</span>
-        <div class="tl-date-dot"></div>
-        <div class="tl-date-line"></div>
+      <div class="tl-date" aria-label="{{ dia.dia_semana }} {{ dia.fecha_dia }}">
+        <span class="tl-date-dow" aria-hidden="true">{{ dia.dia_semana|upper }}</span>
+        <span class="tl-date-num" aria-hidden="true">{{ dia.fecha_dia }}</span>
+        <div class="tl-date-dot" aria-hidden="true"></div>
+        <div class="tl-date-line" aria-hidden="true"></div>
       </div>
 
       <!-- Actividades -->
       <div class="tl-day-col">
 
         {% for act in dia.actividades %}
+        {% with act_label=act.titulo|default:act.get_tipo_display %}
         <div class="tl-act t-{{ act.tipo }}" data-ua="{{ act.carga_ua|default:0 }}">
-          <div class="tl-act-bar"></div>
-          <div class="tl-act-fill"></div>
+          <div class="tl-act-bar" aria-hidden="true"></div>
+          <div class="tl-act-fill" aria-hidden="true"></div>
           <div class="tl-act-body">
-            <div class="tl-act-icon">
+            <div class="tl-act-icon" aria-hidden="true">
               {% if act.tipo == 'gym' %}🏋️
               {% elif act.tipo == 'hyrox' %}⚡
               {% elif act.tipo == 'carrera' %}🏃
@@ -554,15 +142,15 @@
               {% else %}🎯{% endif %}
             </div>
             <div class="tl-act-info">
-              <div class="tl-act-name">{{ act.titulo|default:act.get_tipo_display|upper }}</div>
+              <div class="tl-act-name" title="{{ act_label }}">{{ act_label|upper }}</div>
               <div class="tl-act-meta">
                 {{ act.get_tipo_display|upper }}{% if act.hora_inicio %} · {{ act.hora_inicio|time:"H:i" }}{% endif %}
               </div>
             </div>
             <div class="tl-act-stats">
               {% if act.carga_ua %}
-              <div class="tl-stat-ua">{{ act.carga_ua }}</div>
-              <div class="tl-stat-sub">UA</div>
+              <div class="tl-stat-ua" aria-label="{{ act.carga_ua }} unidades arbitrarias">{{ act.carga_ua }}</div>
+              <div class="tl-stat-sub" aria-hidden="true">UA</div>
               {% endif %}
               {% if act.duracion_minutos %}<div class="tl-stat-row">{{ act.duracion_minutos }} min</div>{% endif %}
               {% if act.rpe_medio %}<div class="tl-stat-row">RPE {{ act.rpe_medio }}</div>{% endif %}
@@ -571,24 +159,54 @@
           </div>
           {% if not act.entreno_gym and not act.sesion_hyrox %}
           <div class="tl-act-actions">
-            <a href="{% url 'entrenos:editar_actividad_libre' cliente.id act.id %}" class="tl-act-btn">Edit</a>
-            <form method="post" action="{% url 'entrenos:eliminar_actividad_libre' cliente.id act.id %}"
-                  onsubmit="return confirm('¿Eliminar esta actividad?')" style="display:inline;">
+            <a href="{% url 'entrenos:editar_actividad_libre' cliente.id act.id %}"
+               class="tl-act-btn"
+               aria-label="Editar {{ act_label }}">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                   aria-hidden="true" focusable="false">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+              </svg>
+              Editar
+            </a>
+            <!-- Trigger: visible by default -->
+            <button type="button"
+                    class="tl-act-btn del js-del-trigger"
+                    aria-label="Eliminar {{ act_label }}"
+                    aria-expanded="false">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                   aria-hidden="true" focusable="false">
+                <polyline points="3 6 5 6 21 6"/>
+                <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                <path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/>
+              </svg>
+              Eliminar
+            </button>
+            <!-- Inline confirmation: hidden until trigger is clicked -->
+            <form method="post"
+                  action="{% url 'entrenos:eliminar_actividad_libre' cliente.id act.id %}"
+                  class="tl-del-confirm"
+                  aria-label="Confirmar eliminación de {{ act_label }}">
               {% csrf_token %}
-              <button type="submit" class="tl-act-btn del">Del</button>
+              <span class="tl-del-msg">¿Eliminar?</span>
+              <button type="submit" class="tl-act-btn del">Sí</button>
+              <button type="button" class="tl-act-btn js-del-cancel">No</button>
             </form>
           </div>
           {% endif %}
         </div>
+        {% endwith %}
         {% endfor %}
 
         {% if dia.bitacora %}
         <div class="tl-log">
           <div class="tl-log-head">
-            <span>{% if dia.humor_emoji %}{{ dia.humor_emoji }}{% else %}📓{% endif %}</span>
+            <span aria-hidden="true">{% if dia.humor_emoji %}{{ dia.humor_emoji }}{% else %}📓{% endif %}</span>
             <span class="tl-log-lbl">Bitácora</span>
             {% if dia.energia %}
-            <div class="tl-log-energy">{{ dia.energia }}<span style="font-size:9px;opacity:.6;"> /10</span></div>
+            <div class="tl-log-energy" aria-label="Energía {{ dia.energia }} de 10">
+              {{ dia.energia }}<span style="font-size:9px;opacity:.6;" aria-hidden="true"> /10</span>
+            </div>
             {% endif %}
           </div>
           {% if dia.emocion_dia %}<p class="tl-log-emo">"{{ dia.emocion_dia }}"</p>{% endif %}
@@ -606,17 +224,41 @@
 
 <script>
 (function(){
+  /* ── UA fill bars ─────────────────────────────────────────── */
   const cards = document.querySelectorAll('.tl-act[data-ua]');
   let max = 0;
   cards.forEach(c => { const v = +c.dataset.ua || 0; if(v > max) max = v; });
   if(max < 1) max = 100;
-  requestAnimationFrame(() => setTimeout(() => {
+  setTimeout(() => {
     cards.forEach(c => {
       const pct = Math.min(100, ((+c.dataset.ua || 0) / max) * 100);
       const fill = c.querySelector('.tl-act-fill');
       if(fill) fill.style.setProperty('--w', pct + '%');
     });
-  }, 200));
+  }, 200);
+
+  /* ── Inline delete confirmation ───────────────────────────── */
+  document.querySelectorAll('.js-del-trigger').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const actions = btn.closest('.tl-act-actions');
+      const form = actions.querySelector('.tl-del-confirm');
+      btn.hidden = true;
+      btn.setAttribute('aria-expanded', 'true');
+      form.classList.add('active');
+    });
+  });
+
+  document.querySelectorAll('.js-del-cancel').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const form = btn.closest('.tl-del-confirm');
+      const actions = form.closest('.tl-act-actions');
+      const trigger = actions.querySelector('.js-del-trigger');
+      form.classList.remove('active');
+      trigger.hidden = false;
+      trigger.setAttribute('aria-expanded', 'false');
+      trigger.focus();
+    });
+  });
 })();
 </script>
 {% endblock %}

@@ -6876,6 +6876,7 @@ def api_reportar_molestia(request, cliente_id):
 # FASE 5 — TIMELINE UNIFICADO DEL ATLETA
 # ============================================================================
 
+@login_required
 def timeline_atleta(request, cliente_id):
     """
     Timeline cronológico unificado: muestra cada día con sus actividades físicas
@@ -6884,12 +6885,10 @@ def timeline_atleta(request, cliente_id):
     from .models import ActividadRealizada
     from clientes.models import BitacoraDiaria
     from entrenos.services.services import EstadisticasService
-    from collections import defaultdict
-    from django.db.models import Count as DCount
+    from collections import defaultdict, Counter
 
     cliente = get_object_or_404(Cliente, id=cliente_id)
-    dias_rango = int(request.GET.get('dias', 30))
-    dias_rango = min(dias_rango, 90)
+    dias_rango = max(1, min(int(request.GET.get('dias', 30)), 90))
 
     hoy = date.today()
     fecha_inicio = hoy - timedelta(days=dias_rango - 1)
@@ -6897,6 +6896,7 @@ def timeline_atleta(request, cliente_id):
     actividades_raw = list(
         ActividadRealizada.objects
         .filter(cliente=cliente, fecha__range=(fecha_inicio, hoy))
+        .select_related('entreno_gym', 'sesion_hyrox')
         .order_by('fecha', 'hora_inicio')
     )
     # Deduplicar: si hay dos entradas para el mismo EntrenoRealizado, quedarse con una
@@ -6938,7 +6938,7 @@ def timeline_atleta(request, cliente_id):
 
         dias.append({
             'fecha': f,
-            'fecha_str': f.strftime('%-d %b'),
+            'fecha_dia': f.day,
             'dia_semana': DIAS_ES[f.weekday()],
             'es_hoy': f == hoy,
             'actividades': actos,
@@ -6957,14 +6957,11 @@ def timeline_atleta(request, cliente_id):
     dias_activos = sum(1 for d in dias if d['n_actividades'] > 0)
     carga_total = sum(d['carga_dia'] or 0 for d in dias)
 
-    desglose_qs = (
-        ActividadRealizada.objects
-        .filter(cliente=cliente, fecha__range=(fecha_inicio, hoy))
-        .values('tipo').annotate(total=DCount('id')).order_by('-total')
-    )
+    # Desglose calculado en Python desde datos ya cargados — sin query extra
+    conteo_tipos = Counter(a.tipo for a in actividades)
     desglose = [
-        {'tipo': d['tipo'], 'icono': ICONOS.get(d['tipo'], '🎯'), 'total': d['total']}
-        for d in desglose_qs
+        {'tipo': tipo, 'icono': ICONOS.get(tipo, '🎯'), 'total': total}
+        for tipo, total in conteo_tipos.most_common()
     ]
 
     return render(request, 'entrenos/timeline_atleta.html', {
