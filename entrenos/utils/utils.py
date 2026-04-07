@@ -40,6 +40,37 @@ def normalizar_nombre_ejercicio(nombre):
     return resultado
 
 
+def nombres_ejercicio_equivalentes(a, b):
+    """
+    Compara dos nombres de ejercicio normalizados de forma tolerante:
+    - Ignora diferencias de singular/plural (trailing 's' o 'es')
+    - Permite que uno sea prefijo del otro (max 2 chars de diferencia)
+
+    Ej: "face pull" == "face pulls"  → True
+        "curl bicep" == "curl biceps" → True
+        "press banca" == "press" → False (diferencia > 2)
+    """
+    na = normalizar_nombre_ejercicio(a)
+    nb = normalizar_nombre_ejercicio(b)
+    if na == nb:
+        return True
+    # Normalizar plural: quitar 's' o 'es' final para comparar raíz
+    def quitar_plural(s):
+        if s.endswith('es') and len(s) > 4:
+            return s[:-2]
+        if s.endswith('s') and len(s) > 3:
+            return s[:-1]
+        return s
+    if quitar_plural(na) == quitar_plural(nb):
+        return True
+    # Prefijo: uno contiene al otro con diferencia máxima de 2 caracteres
+    if na.startswith(nb) and len(na) - len(nb) <= 2:
+        return True
+    if nb.startswith(na) and len(nb) - len(na) <= 2:
+        return True
+    return False
+
+
 def nombre_ejercicio_display(nombre):
     """
     Versión para mostrar al usuario: Title Case limpio.
