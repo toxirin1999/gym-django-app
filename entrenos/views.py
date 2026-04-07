@@ -28,7 +28,7 @@ from .forms import (
 )
 from django.utils.dateformat import DateFormat
 from django.utils.translation import gettext as _
-from .utils.utils import normalizar_nombre_ejercicio, parsear_ejercicios_de_notas, parse_reps_and_series
+from .utils.utils import normalizar_nombre_ejercicio, nombres_ejercicio_equivalentes, parsear_ejercicios_de_notas, parse_reps_and_series
 from types import SimpleNamespace
 import copy
 from types import SimpleNamespace
@@ -80,7 +80,7 @@ from .services.records_service import RecordsService
 def obtener_ultimo_peso_ejercicio(cliente_id, nombre_ejercicio, fecha_actual):
     """
     Busca el último registro de un ejercicio específico de un cliente
-    antes de la fecha actual.
+    antes de la fecha actual (o en el mismo día si no hay datos previos).
 
     Busca en los modelos EjercicioRealizado y EjercicioLiftinDetallado.
 
@@ -89,27 +89,34 @@ def obtener_ultimo_peso_ejercicio(cliente_id, nombre_ejercicio, fecha_actual):
     """
     from clientes.models import Cliente
     from .models import EntrenoRealizado, EjercicioRealizado, EjercicioLiftinDetallado
+    from django.db.models import Q
 
     try:
         cliente = Cliente.objects.get(id=cliente_id)
     except Cliente.DoesNotExist:
         return None
 
-    # Normalizar el nombre del ejercicio para comparación
     nombre_normalizado = normalizar_nombre_ejercicio(nombre_ejercicio)
 
-    # --- OPCIÓN 1: Buscar en EjercicioRealizado ---
-    ejercicio_anterior = EjercicioRealizado.objects.filter(
-        entreno__cliente=cliente,
-        entreno__fecha__lt=fecha_actual,
-        peso_kg__gt=0
-    ).select_related('entreno').order_by('-is_recovery_load', '-entreno__fecha')
+    # Construir variantes de nombre para filtro DB (primera palabra y nombre completo)
+    palabras = nombre_ejercicio.strip().split()
+    nombre_icontains = palabras[0] if palabras else nombre_ejercicio
 
-    for ej in ejercicio_anterior:
-        if normalizar_nombre_ejercicio(ej.nombre_ejercicio) == nombre_normalizado:
-            peso = round(float(ej.peso_kg), 2)
-            series = ej.series
-            repeticiones = ej.repeticiones
+    # --- OPCIÓN 1: Buscar en EjercicioRealizado ---
+    # Filtro por nombre a nivel de BD (icontains sobre la primera palabra) para evitar
+    # cargar todos los ejercicios del cliente en Python.
+    # Incluimos ejercicios con peso >= 0 (el filtro peso>0 excluía ejercicios de peso corporal).
+    candidatos = EjercicioRealizado.objects.filter(
+        entreno__cliente=cliente,
+        entreno__fecha__lte=fecha_actual,  # lte para incluir mismo día
+        nombre_ejercicio__icontains=nombre_icontains,
+    ).select_related('entreno').order_by('-entreno__fecha')
+
+    for ej in candidatos:
+        if nombres_ejercicio_equivalentes(ej.nombre_ejercicio, nombre_ejercicio):
+            peso = round(float(ej.peso_kg or 0), 2)
+            series = ej.series or 1
+            repeticiones = ej.repeticiones or 0
             volumen = round(peso * series * repeticiones, 2)
             return {
                 'peso': peso,
@@ -120,17 +127,16 @@ def obtener_ultimo_peso_ejercicio(cliente_id, nombre_ejercicio, fecha_actual):
             }
 
     # --- OPCIÓN 2: Buscar en EjercicioLiftinDetallado ---
-    ejercicio_liftin_anterior = EjercicioLiftinDetallado.objects.filter(
+    candidatos_liftin = EjercicioLiftinDetallado.objects.filter(
         entreno__cliente=cliente,
-        entreno__fecha__lt=fecha_actual,
-        peso_kg__gt=0
+        entreno__fecha__lte=fecha_actual,
+        nombre_ejercicio__icontains=nombre_icontains,
     ).select_related('entreno').order_by('-entreno__fecha')
 
-    for ej in ejercicio_liftin_anterior:
-        if normalizar_nombre_ejercicio(ej.nombre_ejercicio) == nombre_normalizado:
-            peso = round(float(ej.peso_kg), 2)
-            series = ej.series_realizadas
-            # Usar repeticiones promedio si hay rango
+    for ej in candidatos_liftin:
+        if nombres_ejercicio_equivalentes(ej.nombre_ejercicio, nombre_ejercicio):
+            peso = round(float(ej.peso_kg or 0), 2)
+            series = ej.series_realizadas or 1
             if ej.repeticiones_min and ej.repeticiones_max:
                 repeticiones = (ej.repeticiones_min + ej.repeticiones_max) // 2
             elif ej.repeticiones_min:
@@ -149,7 +155,7 @@ def obtener_ultimo_peso_ejercicio(cliente_id, nombre_ejercicio, fecha_actual):
     # --- OPCIÓN 3: Buscar en notas_liftin (fallback) ---
     entrenos_anteriores = EntrenoRealizado.objects.filter(
         cliente=cliente,
-        fecha__lt=fecha_actual,
+        fecha__lte=fecha_actual,
     ).exclude(
         notas_liftin__isnull=True
     ).exclude(
@@ -160,12 +166,11 @@ def obtener_ultimo_peso_ejercicio(cliente_id, nombre_ejercicio, fecha_actual):
         try:
             ejercicios = parsear_ejercicios_de_notas(entreno.notas_liftin)
             for e in ejercicios:
-                if normalizar_nombre_ejercicio(e.get("nombre")) == nombre_normalizado:
+                if nombres_ejercicio_equivalentes(e.get("nombre", ""), nombre_ejercicio):
                     peso_str = str(e.get("peso", "")).replace(",", ".")
                     try:
                         peso = round(float(peso_str), 2)
                         if peso > 0:
-                            # Intentar parsear series y repeticiones del formato "3x10"
                             reps_str = e.get("repeticiones", "")
                             series, repeticiones = parse_reps_and_series(reps_str)
                             volumen = round(peso * series * repeticiones, 2)
@@ -3574,10 +3579,22 @@ def vista_entrenamiento_activo(request, cliente_id):
             })
     vol_mod_pct = int(vol_mod * 100)
 
+    # Separar "DÍA 3 - DESCARGA ACTIVA" en dos partes para el header
+    _sep = ' - ' if ' - ' in rutina_nombre else (' · ' if ' · ' in rutina_nombre else None)
+    if _sep:
+        _parts = rutina_nombre.split(_sep, 1)
+        rutina_dia = _parts[0].strip()
+        rutina_tipo = _parts[1].strip()
+    else:
+        rutina_dia = ''
+        rutina_tipo = rutina_nombre
+
     context = {
         'cliente': cliente,
         'fecha': fecha_para_template,
         'rutina_nombre': rutina_nombre,
+        'rutina_dia': rutina_dia,
+        'rutina_tipo': rutina_tipo,
         'ejercicios_planificados': ejercicios_planificados,
         'leyenda_rpe': leyenda_rpe,
         'is_in_transition': bio_readiness.get('is_in_transition', False),
@@ -6853,6 +6870,18 @@ def api_reportar_molestia(request, cliente_id):
                             break
             except Exception as e:
                 logger.warning("Error buscando alternativas molestia: %s", e)
+
+        # Enriquecer alternativas con peso histórico del cliente
+        from django.utils import timezone as _tz
+        fecha_hoy = _tz.now().date()
+        for alt in alternativas:
+            try:
+                datos_alt = obtener_ultimo_peso_ejercicio(cliente.id, alt['nombre'], fecha_hoy)
+                alt['peso_anterior'] = datos_alt['peso'] if datos_alt else 0
+                alt['fecha_anterior'] = datos_alt['fecha'].strftime('%d/%m') if datos_alt and datos_alt.get('fecha') else None
+            except Exception:
+                alt['peso_anterior'] = 0
+                alt['fecha_anterior'] = None
 
         return JsonResponse({
             'status': 'ok',

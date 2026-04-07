@@ -122,7 +122,7 @@ EJERCICIOS_DATABASE = {
             {'nombre': 'Elevaciones Laterales en Polea', 'tipo_progresion': 'peso_reps', 'patron': 'aislamiento',
              'estabilidad': 'media',
              'perfil': 'estirado', 'posicion': 'pie', 'cadena': 'abierta'},
-            {'nombre': 'Y-Raises', 'tipo_progresion': 'progresion_reps', 'patron': 'aislamiento', 'estabilidad': 'baja',
+            {'nombre': 'Y-Raises', 'tipo_progresion': 'peso_reps', 'patron': 'aislamiento', 'estabilidad': 'baja',
              'perfil': 'estirado', 'posicion': 'pie', 'cadena': 'abierta'},
             {'nombre': 'Elevaciones Frontales con Polea', 'tipo_progresion': 'peso_reps', 'patron': 'aislamiento',
              'estabilidad': 'media',
