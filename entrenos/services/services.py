@@ -451,7 +451,7 @@ class EstadisticasService:
             cliente=cliente,
             fecha__gte=fecha_inicio,
             fecha__lte=fecha_fin,
-        ).order_by('fecha').values('fecha', 'carga_ua', 'volumen_kg', 'tipo')
+        ).order_by('fecha').values('fecha', 'fecha_realizado', 'carga_ua', 'volumen_kg', 'tipo')
 
         if not actividades:
             # Fallback al método legacy si el hub todavía está vacío
@@ -462,11 +462,13 @@ class EstadisticasService:
             if a['carga_ua'] is not None:
                 carga = float(a['carga_ua'])
             elif a['volumen_kg'] is not None:
-                # Estimación: 1 kg de volumen ≈ 0.01 UA (equivale a ~100kg × RPE5 × 2min)
                 carga = float(a['volumen_kg']) / 100
             else:
                 carga = 0.0
-            rows.append({'fecha': a['fecha'], 'carga': carga, 'tipo': a['tipo']})
+            # Usar fecha_realizado si existe (cuándo realmente se entrenó),
+            # si no, fallback a fecha (planificada)
+            fecha_carga = a['fecha_realizado'] or a['fecha']
+            rows.append({'fecha': fecha_carga, 'carga': carga, 'tipo': a['tipo']})
 
         df = pd.DataFrame(rows)
         df['fecha'] = pd.to_datetime(df['fecha'])
@@ -508,13 +510,29 @@ class EstadisticasService:
         df_json = df_diario.reset_index().rename(columns={'index': 'fecha'})
         df_json['fecha'] = df_json['fecha'].dt.strftime('%Y-%m-%d')
 
+        # Días de descanso para volver a zona verde (ACWR 0.8–1.3)
+        # Aproximación: media 7d rolling con 0 carga por día de descanso
+        # nueva_aguda = carga_aguda × (7-d)/7  →  ACWR_target = nueva_aguda / carga_cronica
+        # d = ceil(7 × (1 − ACWR_target/ACWR_actual))
+        dias_descanso = None
+        if carga_cronica_actual > 0:
+            import math
+            if acwr_actual > 1.3:
+                d = 7 * (1 - 1.3 / acwr_actual)
+                dias_descanso = max(1, math.ceil(d))
+            elif acwr_actual < 0.8:
+                dias_descanso = 0  # ya bajo, entrenar más
+            else:
+                dias_descanso = 0  # ya en verde
+
         return {
             'dataframe': df_json.to_dict('records'),
             'acwr_actual': acwr_actual,
             'zona_riesgo': zona_riesgo,
             'carga_aguda': carga_aguda_actual,
             'carga_cronica': carga_cronica_actual,
-            'desglose_tipos': desglose_tipos,  # {'gym': 340.0, 'futbol': 120.0, ...}
+            'desglose_tipos': desglose_tipos,
+            'dias_descanso': dias_descanso,  # días sin entrenar para volver a zona verde
             'fuente': 'unificado',
         }
 

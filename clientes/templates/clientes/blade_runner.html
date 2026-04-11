@@ -1090,6 +1090,27 @@
             <!-- PRÓXIMO ENTRENAMIENTO -->
             {% include 'clientes/includes/tarjeta_proximo_entrenamiento.html' %}
 
+            <!-- SESIONES ANTICIPADAS -->
+            {% if sesiones_anticipadas %}
+            <div style="background: #0A1628; border: 1px solid rgba(251,191,36,0.2); padding: 1.25rem 1.5rem;">
+                <div style="height: 2px; background: linear-gradient(90deg, #fbbf24, #785A28, transparent); margin: -1.25rem -1.5rem 1rem -1.5rem;"></div>
+                <p style="font-family: 'Share Tech Mono', monospace; font-size: 0.6rem; color: #fbbf24; letter-spacing: 0.3em; text-transform: uppercase; margin-bottom: 1rem;">⚡ MISIONES ANTICIPADAS</p>
+                <div style="display: flex; flex-direction: column; gap: 2px;">
+                    {% for s in sesiones_anticipadas %}
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; background: rgba(251,191,36,0.05); border-left: 2px solid rgba(251,191,36,0.3);">
+                        <div>
+                            <div style="font-family: 'Rajdhani', sans-serif; font-size: 0.9rem; color: #C8C8C8; font-weight: 600;">{{ s.entreno_gym.rutina.nombre|default:s.tipo|default:"Entrenamiento" }}</div>
+                            <div style="font-family: 'Share Tech Mono', monospace; font-size: 0.6rem; color: #785A28; margin-top: 2px;">
+                                Plan: {{ s.fecha|date:"d M" }} · Realizado: {{ s.fecha_realizado|date:"d M" }}
+                            </div>
+                        </div>
+                        <span style="font-family: 'Share Tech Mono', monospace; font-size: 0.65rem; color: #4ade80;">✓</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
             <!-- REGISTROS DE CAMPO -->
             <div style="background: #0A1628; border: 1px solid rgba(200,170,110,0.12); padding: 1.25rem 1.5rem;">
                 <div style="height: 2px; background: linear-gradient(90deg, #C8AA6E, #785A28, transparent); margin: -1.25rem -1.5rem 1rem -1.5rem;"></div>

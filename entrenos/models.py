@@ -1025,7 +1025,11 @@ class ActividadRealizada(models.Model):
     )
 
     # ── Cuándo ─────────────────────────────────────────────────────────────────
-    fecha = models.DateField(db_index=True)
+    fecha = models.DateField(db_index=True)          # fecha planificada del entreno
+    fecha_realizado = models.DateField(              # fecha en que realmente se ejecutó
+        null=True, blank=True, db_index=True,
+        help_text="Fecha real de ejecución. Si es null, se asume igual a 'fecha'."
+    )
     hora_inicio = models.TimeField(null=True, blank=True)
 
     # ── Métricas universales ────────────────────────────────────────────────────

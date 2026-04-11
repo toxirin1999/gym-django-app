@@ -2247,6 +2247,7 @@ document.getElementById('btn-mostrar-resumen').addEventListener('click',()=>{
   const seg=Math.floor((Date.now()-t0)/1000);
   const mins=Math.floor(seg/60);
   document.getElementById('modal-tiempo').textContent=mins+'m';
+  document.getElementById('hid-duracion').value=mins;
   document.getElementById('modal-series').textContent=comp+'/'+total;
   document.getElementById('modal-rpe-avg').textContent=rpeAvg?rpeAvg.toFixed(1):'—';
   document.getElementById('modal-reps').textContent=reps;
@@ -2303,7 +2304,11 @@ document.getElementById('btn-mostrar-resumen').addEventListener('click',()=>{
 });
 
 document.getElementById('btn-volver-editar').addEventListener('click',()=>document.getElementById('modal-resumen-overlay').classList.remove('active'));
-document.getElementById('btn-confirmar-guardar').addEventListener('click',()=>{limpiarCheckpoint();document.getElementById('workout-form').submit();});
+document.getElementById('btn-confirmar-guardar').addEventListener('click',()=>{
+  document.getElementById('hid-duracion').value=Math.floor((Date.now()-t0)/1000/60);
+  limpiarCheckpoint();
+  document.getElementById('workout-form').submit();
+});
 
 // ── SWIPE PARA NAVEGAR ───────────────────────────────────────────
 (function(){

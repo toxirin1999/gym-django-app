@@ -1355,6 +1355,43 @@
             </a>
             {% endif %}
 
+            <!-- ── TIRA DE HISTORIAL RECIENTE ──────────────────────────── -->
+            {% if actividades_recientes_focus %}
+            <div style="width:100%;max-width:480px;margin:14px auto 4px auto;">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+                <div style="flex:1;height:1px;background:linear-gradient(to right,transparent,rgba(200,170,110,0.2));"></div>
+                <span style="font-family:'Share Tech Mono',monospace;font-size:0.52rem;color:#785A28;letter-spacing:0.25em;text-transform:uppercase;">Últimas sesiones</span>
+                <div style="flex:1;height:1px;background:linear-gradient(to left,transparent,rgba(200,170,110,0.2));"></div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:2px;">
+                {% for act in actividades_recientes_focus %}
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 12px;background:rgba(10,22,40,0.6);border-left:2px solid {% if act.es_anticipada %}rgba(251,191,36,0.5){% else %}rgba(200,170,110,0.2){% endif %};">
+                  <div style="display:flex;flex-direction:column;gap:1px;min-width:0;overflow:hidden;flex:1;">
+                    <div style="display:flex;align-items:center;gap:8px;overflow:hidden;">
+                      <span style="font-family:'Share Tech Mono',monospace;font-size:0.6rem;color:#785A28;white-space:nowrap;">{{ act.fecha_efectiva|date:"D d/m"|upper }}</span>
+                      <span style="font-family:'Rajdhani',sans-serif;font-size:0.88rem;color:#C8C8C8;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                        {% if act.titulo %}{{ act.titulo }}
+                        {% elif act.entreno_gym %}{{ act.entreno_gym.rutina.nombre|default:"Entreno" }}
+                        {% else %}{{ act.get_tipo_display }}{% endif %}
+                      </span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:6px;">
+                      <span style="font-family:'Share Tech Mono',monospace;font-size:0.52rem;color:rgba(120,90,40,0.6);">📅 Plan {{ act.fecha|date:"D d/m"|upper }}</span>
+                      {% if act.es_anticipada %}
+                      <span style="font-family:'Share Tech Mono',monospace;font-size:0.48rem;color:#fbbf24;background:rgba(251,191,36,0.1);border:1px solid rgba(251,191,36,0.2);padding:1px 5px;">⚡ anticipado</span>
+                      {% endif %}
+                    </div>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;margin-left:10px;">
+                    {% if act.duracion_minutos %}<span style="font-family:'Share Tech Mono',monospace;font-size:0.6rem;color:rgba(200,170,110,0.5);">{{ act.duracion_minutos }}m</span>{% endif %}
+                    <span style="color:#4ade80;font-size:0.75rem;">✓</span>
+                  </div>
+                </div>
+                {% endfor %}
+              </div>
+            </div>
+            {% endif %}
+
             <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; max-width: 480px; margin: 10px auto 0 auto; width: 100%;">
                 <a href="{% url 'entrenos:vista_plan_anual' cliente.id %}" style="display: flex; align-items: center; justify-content: center; padding: 10px 4px; background: transparent; border: 1px solid rgba(200,170,110,0.2); color: #A08C5B; font-family: 'Cinzel', serif; font-size: 0.52rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; text-decoration: none; text-align: center; transition: all 0.2s;">
                     ↺ RUTINA
@@ -1567,7 +1604,84 @@
 
     </div>
 
-    <!-- ── ZONA 4: STATS FOOTER ──────────────────────────────────────── -->
+    <!-- ── ZONA 4: PANEL ACWR (chart) ───────────────────────────────── -->
+    {% with zona=analisis_acwr.zona_riesgo dias=analisis_acwr.dias_descanso %}
+    <div class="acwr-card" data-zona="{{ zona }}" data-acwr="{{ acwr_actual }}" id="acwr-card-focus">
+
+      <!-- Header -->
+      <div class="acwr-hdr">
+        <div class="acwr-hdr-dot"></div>
+        <span class="acwr-hdr-label">💓 Control de Carga (ACWR)</span>
+        <button class="acwr-info-btn" onclick="document.getElementById('acwr-info-modal').classList.add('open')" title="¿Qué es esto?">?</button>
+      </div>
+
+      <!-- Número grande + track de zonas -->
+      <div style="display:flex; align-items:flex-start; gap:16px; margin-bottom:12px;">
+        <div>
+          <div class="acwr-big-num {% if zona == 'optima' %}acwr-num-green{% elif zona == 'cuidado' %}acwr-num-yellow{% elif zona == 'riesgo_alto' %}acwr-num-red{% else %}acwr-num-gray{% endif %}">
+            {{ acwr_actual|floatformat:2|default:"—" }}
+          </div>
+          <div style="font-size:9px;font-weight:700;letter-spacing:.15em;color:rgba(255,255,255,.3);text-transform:uppercase;margin-top:2px;">ACWR actual</div>
+        </div>
+        <div style="flex:1;padding-top:6px;">
+          <!-- Barra de zonas con marcador de posición -->
+          <div class="acwr-track-wrap">
+            <div class="acwr-track-bar">
+              <div class="acwr-track-seg" style="flex:0.8;background:linear-gradient(90deg,#7f1d1d,#ef4444);"></div>
+              <div class="acwr-track-seg" style="flex:0.5;background:linear-gradient(90deg,#78350f,#f59e0b);"></div>
+              <div class="acwr-track-seg" style="flex:0.5;background:linear-gradient(90deg,#14532d,#22c55e);"></div>
+              <div class="acwr-track-seg" style="flex:0.2;background:linear-gradient(90deg,#78350f,#f59e0b);"></div>
+              <div class="acwr-track-seg" style="flex:0.5;background:linear-gradient(90deg,#991b1b,#ef4444);"></div>
+            </div>
+            <!-- Marcador posición actual -->
+            <div class="acwr-track-marker" id="acwr-track-marker" style="left:0%">▼</div>
+            <div class="acwr-track-labels">
+              <span>0.0</span><span>0.8</span><span>1.0</span><span>1.3</span><span>2.0</span>
+            </div>
+          </div>
+          <!-- Badge zona -->
+          <div class="acwr-zone-badge acwr-zone-{{ zona }}" style="margin-top:8px;display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:99px;font-size:11px;font-weight:700;">
+            {% if zona == 'optima' %}✓ Zona Óptima
+            {% elif zona == 'cuidado' %}⚠ Precaución
+            {% elif zona == 'riesgo_alto' %}✕ Riesgo Alto
+            {% else %}↓ Carga Baja{% endif %}
+          </div>
+        </div>
+      </div>
+
+      <!-- Gráfico ACWR histórico -->
+      <div style="height:160px;margin-bottom:10px;">
+        <canvas id="acwrChartDash" data-acwr='{{ acwr_data_json|safe }}'></canvas>
+      </div>
+
+      <!-- Leyenda + días para zona verde -->
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+        <div style="display:flex;gap:12px;align-items:center;">
+          <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:rgba(255,255,255,.5);">
+            <span style="width:8px;height:8px;border-radius:50%;background:#ef4444;display:inline-block;"></span>Riesgo
+          </div>
+          <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:rgba(255,255,255,.5);">
+            <span style="width:8px;height:8px;border-radius:50%;background:#f59e0b;display:inline-block;"></span>Precaución
+          </div>
+          <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:rgba(255,255,255,.5);">
+            <span style="width:8px;height:8px;border-radius:50%;background:#22c55e;display:inline-block;"></span>Óptimo
+          </div>
+        </div>
+        {% if dias is not None and dias > 0 %}
+        <div style="font-size:11px;background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.25);color:#22c55e;padding:4px 10px;border-radius:8px;font-weight:600;">
+          🟢 ~{{ dias }} día{{ dias|pluralize }} de descanso para zona verde
+        </div>
+        {% elif dias == 0 %}
+        <div style="font-size:11px;background:rgba(34,197,94,.08);color:rgba(34,197,94,.7);padding:4px 10px;border-radius:8px;">
+          ✓ Ya estás en zona verde
+        </div>
+        {% endif %}
+      </div>
+
+    </div>
+    {% endwith %}
+
+    <!-- ── ZONA 6: STATS FOOTER ──────────────────────────────────────── -->
     <div style="display: grid; grid-template-columns: repeat(4, 1fr); border-top: 1px solid rgba(200,170,110,0.1); padding-top: 0.75rem; padding-bottom: 0.5rem; gap: 0;">
         <div style="text-align: center; padding: 0 8px; border-right: 1px solid rgba(200,170,110,0.08);">
             <div style="font-family: 'Share Tech Mono', monospace; font-size: clamp(1.1rem, 3vw, 1.5rem); color: #C8AA6E; font-weight: 700; line-height: 1;">{{ entrenos_count|default:"0" }}</div>
@@ -1591,6 +1705,85 @@
             <div style="font-family: 'Share Tech Mono', monospace; font-size: 0.55rem; color: #785A28; letter-spacing: 0.15em; text-transform: uppercase; margin-top: 3px;">ACWR</div>
         </div>
     </div>
+
+<!-- ── MODAL ACWR INFO ─────────────────────────────────────────────── -->
+<div class="acwr-modal-ov" id="acwr-info-modal" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="acwr-modal-box">
+    <div class="acwr-modal-handle"></div>
+    <div class="acwr-modal-title">¿Qué es el ACWR?</div>
+    <div class="acwr-modal-sub">Acute:Chronic Workload Ratio — Ratio de Carga Aguda/Crónica</div>
+
+    <div class="acwr-modal-section">
+      <div class="acwr-modal-section-title">¿Para qué sirve?</div>
+      <div class="acwr-modal-row">
+        <div class="acwr-modal-row-icon">🎯</div>
+        <div class="acwr-modal-row-text">
+          <div class="acwr-modal-row-label">Predice el riesgo de lesión</div>
+          <div class="acwr-modal-row-desc">Compara cuánto has entrenado esta semana versus lo que tu cuerpo está acostumbrado a soportar. Subir demasiado rápido = mayor riesgo de lesión.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="acwr-modal-section">
+      <div class="acwr-modal-section-title">Cómo se calcula</div>
+      <div class="acwr-modal-formula">
+        <div class="acwr-modal-formula-eq">ACWR = Carga 7d ÷ Carga 28d</div>
+        <div class="acwr-modal-formula-desc">Cada sesión genera una Carga UA = RPE × minutos de entreno</div>
+      </div>
+      <div class="acwr-modal-row">
+        <div class="acwr-modal-row-icon">⚡</div>
+        <div class="acwr-modal-row-text">
+          <div class="acwr-modal-row-label">Carga 7d (Aguda)</div>
+          <div class="acwr-modal-row-desc">Media diaria de carga de los últimos 7 días. Refleja lo que has entrenado esta semana.</div>
+        </div>
+      </div>
+      <div class="acwr-modal-row">
+        <div class="acwr-modal-row-icon">📅</div>
+        <div class="acwr-modal-row-text">
+          <div class="acwr-modal-row-label">Carga 28d (Crónica)</div>
+          <div class="acwr-modal-row-desc">Media diaria de carga del último mes. Representa la capacidad de carga que tu cuerpo ha desarrollado.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="acwr-modal-section">
+      <div class="acwr-modal-section-title">Zonas del indicador</div>
+      <div class="acwr-modal-zone-row" style="background:rgba(100,116,139,.1)">
+        <div class="acwr-modal-zone-dot" style="background:#64748b"></div>
+        <div class="acwr-modal-zone-range" style="color:#94a3b8">0.0 – 0.8</div>
+        <div class="acwr-modal-zone-text"><strong style="color:#fff">Carga baja</strong> — Puedes exigirte más esta semana sin riesgo.</div>
+      </div>
+      <div class="acwr-modal-zone-row" style="background:rgba(34,197,94,.08)">
+        <div class="acwr-modal-zone-dot" style="background:#22c55e"></div>
+        <div class="acwr-modal-zone-range" style="color:#22c55e">0.8 – 1.3</div>
+        <div class="acwr-modal-zone-text"><strong style="color:#fff">Zona óptima</strong> — Equilibrio perfecto entre esfuerzo y recuperación.</div>
+      </div>
+      <div class="acwr-modal-zone-row" style="background:rgba(245,158,11,.08)">
+        <div class="acwr-modal-zone-dot" style="background:#f59e0b"></div>
+        <div class="acwr-modal-zone-range" style="color:#f59e0b">1.3 – 1.5</div>
+        <div class="acwr-modal-zone-text"><strong style="color:#fff">Cuidado</strong> — Has subido rápido. Mantén pero no aumentes la carga.</div>
+      </div>
+      <div class="acwr-modal-zone-row" style="background:rgba(239,68,68,.08)">
+        <div class="acwr-modal-zone-dot" style="background:#ef4444"></div>
+        <div class="acwr-modal-zone-range" style="color:#ef4444">1.5+</div>
+        <div class="acwr-modal-zone-text"><strong style="color:#fff">Zona de riesgo</strong> — Riesgo de lesión elevado. Descansa o reduce intensidad.</div>
+      </div>
+    </div>
+
+    <div class="acwr-modal-section">
+      <div class="acwr-modal-section-title">La aguja del medidor</div>
+      <div class="acwr-modal-row">
+        <div class="acwr-modal-row-icon">🪡</div>
+        <div class="acwr-modal-row-text">
+          <div class="acwr-modal-row-label">Posición de la aguja</div>
+          <div class="acwr-modal-row-desc">Apunta a tu ACWR actual en una escala de 0 a 2. Cuanto más a la derecha, mayor el riesgo. El arco de color muestra en qué zona estás.</div>
+        </div>
+      </div>
+    </div>
+
+    <button class="acwr-modal-close" onclick="document.getElementById('acwr-info-modal').classList.remove('open')">Entendido</button>
+  </div>
+</div>
 
 </div> <!-- #focus-mode-container -->
 
@@ -2148,39 +2341,207 @@
 .lol-stat-value.acwr-danger { color: #ef4444; }
 .lol-stat-value.acwr-safe { color: #4ade80; }
 
-/* ── Semáforo ACWR ─────────────────────────────────────── */
-.acwr-semaforo {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-    border-radius: 12px;
-    padding: 14px 16px;
-    margin-bottom: 18px;
-    border: 1px solid transparent;
+/* ── Panel ACWR ─────────────────────────────────────────── */
+.acwr-card {
+    border-radius: 20px;
+    padding: 18px 20px 20px;
+    margin-bottom: 20px;
+    border: 1px solid rgba(255,255,255,0.07);
+    background: #111;
     position: relative;
     overflow: hidden;
 }
-.acwr-semaforo::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    opacity: .06;
-    pointer-events: none;
-}
-.acwr-zona-optima  { background: rgba(74,222,128,.08); border-color: rgba(74,222,128,.25); }
-.acwr-zona-optima  .acwr-sem-dot { background: #4ade80; box-shadow: 0 0 8px #4ade80; }
-.acwr-zona-optima  .acwr-sem-num { color: #4ade80; }
-.acwr-zona-cuidado { background: rgba(251,191,36,.08); border-color: rgba(251,191,36,.25); }
-.acwr-zona-cuidado .acwr-sem-dot { background: #fbbf24; box-shadow: 0 0 8px #fbbf24; }
-.acwr-zona-cuidado .acwr-sem-num { color: #fbbf24; }
-.acwr-zona-riesgo  { background: rgba(239,68,68,.08); border-color: rgba(239,68,68,.25); }
-.acwr-zona-riesgo  .acwr-sem-dot { background: #ef4444; box-shadow: 0 0 8px #ef4444; }
-.acwr-zona-riesgo  .acwr-sem-num { color: #ef4444; }
-.acwr-zona-baja    { background: rgba(148,163,184,.08); border-color: rgba(148,163,184,.2); }
-.acwr-zona-baja    .acwr-sem-dot { background: #94a3b8; }
-.acwr-zona-baja    .acwr-sem-num { color: #94a3b8; }
+.acwr-card[data-zona="optima"]     { border-color: rgba(34,197,94,.35);  background: linear-gradient(150deg,#071a0e 0%,#0d0d0d 55%); }
+.acwr-card[data-zona="cuidado"]    { border-color: rgba(245,158,11,.35); background: linear-gradient(150deg,#1a110a 0%,#0d0d0d 55%); }
+.acwr-card[data-zona="riesgo_alto"]{ border-color: rgba(239,68,68,.35);  background: linear-gradient(150deg,#1a0a0a 0%,#0d0d0d 55%); }
+.acwr-card[data-zona="baja_carga"] { border-color: rgba(148,163,184,.18);background: linear-gradient(150deg,#111 0%,#0d0d0d 55%); }
 
+/* Header */
+.acwr-hdr { display:flex; align-items:center; gap:8px; margin-bottom:14px; }
+.acwr-hdr-dot {
+    width:8px; height:8px; border-radius:50%;
+    animation: acwrPulse 2.2s ease-in-out infinite;
+}
+.acwr-card[data-zona="optima"]     .acwr-hdr-dot { background:#22c55e; box-shadow:0 0 10px #22c55e; }
+.acwr-card[data-zona="cuidado"]    .acwr-hdr-dot { background:#f59e0b; box-shadow:0 0 10px #f59e0b; }
+.acwr-card[data-zona="riesgo_alto"].acwr-hdr-dot { background:#ef4444; box-shadow:0 0 10px #ef4444; }
+.acwr-card[data-zona="baja_carga"] .acwr-hdr-dot { background:#64748b; }
+@keyframes acwrPulse {
+    0%,100% { opacity:1; transform:scale(1); }
+    50%      { opacity:.4; transform:scale(.8); }
+}
+.acwr-hdr-label {
+    flex:1; font-size:10px; font-weight:700;
+    letter-spacing:.18em; text-transform:uppercase; color:rgba(255,255,255,.4);
+}
+.acwr-hdr-chip {
+    font-size:10px; font-weight:700; letter-spacing:.1em;
+    text-transform:uppercase; padding:3px 10px; border-radius:99px;
+}
+.acwr-card[data-zona="optima"]     .acwr-hdr-chip { background:rgba(34,197,94,.15);  color:#22c55e; }
+.acwr-card[data-zona="cuidado"]    .acwr-hdr-chip { background:rgba(245,158,11,.15); color:#f59e0b; }
+.acwr-card[data-zona="riesgo_alto"].acwr-hdr-chip { background:rgba(239,68,68,.15);  color:#ef4444; }
+.acwr-card[data-zona="baja_carga"] .acwr-hdr-chip { background:rgba(100,116,139,.15);color:#94a3b8; }
+
+/* Gauge */
+.acwr-gauge-wrap { position:relative; width:200px; margin:0 auto 8px; }
+.acwr-gauge-svg  { width:100%; display:block; }
+.acwr-gauge-center {
+    position:absolute; bottom:-2px; left:50%; transform:translateX(-50%);
+    text-align:center; pointer-events:none;
+}
+.acwr-gauge-num {
+    font-size:32px; font-weight:800; line-height:1;
+    font-variant-numeric:tabular-nums; letter-spacing:-.02em;
+    transition: color .5s;
+}
+.acwr-card[data-zona="optima"]     .acwr-gauge-num { color:#22c55e; }
+.acwr-card[data-zona="cuidado"]    .acwr-gauge-num { color:#f59e0b; }
+.acwr-card[data-zona="riesgo_alto"].acwr-gauge-num { color:#ef4444; }
+.acwr-card[data-zona="baja_carga"] .acwr-gauge-num { color:#94a3b8; }
+.acwr-gauge-sub {
+    font-size:9px; font-weight:700; letter-spacing:.2em; text-transform:uppercase;
+    color:rgba(255,255,255,.3); margin-top:3px;
+}
+/* Needle: CSS transforms para que transition funcione en SVG */
+#acwr-needle, #acwr-needle-f {
+    transform-box: fill-box;
+    transform-origin: 50% 100%;
+    transform: rotate(-90deg);
+    transition: transform 1.4s cubic-bezier(.34,1.56,.64,1);
+}
+
+/* Loads row */
+.acwr-loads {
+    display:flex; align-items:center;
+    background:rgba(255,255,255,.04); border-radius:12px;
+    margin-bottom:14px; overflow:hidden;
+}
+.acwr-load-item { flex:1; text-align:center; padding:10px 0; }
+.acwr-load-val  { display:block; font-size:20px; font-weight:700; color:#fff; line-height:1; }
+.acwr-load-lbl  { display:block; font-size:10px; color:rgba(255,255,255,.4); text-transform:uppercase; letter-spacing:.1em; margin-top:3px; }
+.acwr-load-sep  { width:1px; height:40px; background:rgba(255,255,255,.08); flex-shrink:0; }
+
+/* Verdict */
+.acwr-verdict { text-align:center; padding-top:2px; }
+.acwr-verdict-icon  { font-size:26px; margin-bottom:6px; }
+.acwr-verdict-title { font-size:15px; font-weight:700; color:#fff; margin-bottom:4px; }
+.acwr-verdict-sub   { font-size:12px; color:rgba(255,255,255,.5); line-height:1.55; max-width:280px; margin:0 auto; }
+
+/* Scale: no usamos CSS flex — las marcas van dentro del SVG */
+.acwr-scale { display:none; }
+
+/* Número grande ACWR */
+.acwr-big-num { font-size:42px; font-weight:900; line-height:1; letter-spacing:-.03em; font-variant-numeric:tabular-nums; }
+.acwr-num-green  { color:#22c55e; }
+.acwr-num-yellow { color:#f59e0b; }
+.acwr-num-red    { color:#ef4444; }
+.acwr-num-gray   { color:#64748b; }
+
+/* Track de zonas */
+.acwr-track-wrap { position:relative; width:100%; }
+.acwr-track-bar  { display:flex; height:7px; border-radius:99px; overflow:hidden; gap:2px; margin-bottom:2px; }
+.acwr-track-seg  { height:100%; border-radius:2px; }
+.acwr-track-marker {
+    position:absolute; top:-14px; font-size:10px;
+    transform:translateX(-50%); color:#fff;
+    transition:left .8s cubic-bezier(.34,1.2,.64,1);
+    filter:drop-shadow(0 0 4px rgba(255,255,255,.8));
+}
+.acwr-track-labels {
+    display:flex; justify-content:space-between;
+    font-size:9px; color:rgba(255,255,255,.3);
+    margin-top:3px; font-family:monospace;
+}
+
+/* Badge zona (chart panel) */
+.acwr-zone-badge { font-weight:700; font-size:11px; }
+.acwr-zone-optima      { background:rgba(34,197,94,.15);  color:#22c55e; }
+.acwr-zone-cuidado     { background:rgba(245,158,11,.15); color:#f59e0b; }
+.acwr-zone-riesgo_alto { background:rgba(239,68,68,.15);  color:#ef4444; }
+.acwr-zone-baja_carga  { background:rgba(100,116,139,.15);color:#94a3b8; }
+
+/* Botón info */
+.acwr-info-btn {
+    width:22px; height:22px; border-radius:50%;
+    background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.15);
+    color:rgba(255,255,255,.5); font-size:12px; font-weight:700;
+    cursor:pointer; display:flex; align-items:center; justify-content:center;
+    flex-shrink:0; transition:background .2s,color .2s;
+    font-family: system-ui, sans-serif;
+}
+.acwr-info-btn:hover { background:rgba(255,255,255,.15); color:#fff; }
+
+/* Modal ACWR info */
+.acwr-modal-ov {
+    position:fixed; inset:0; z-index:9999;
+    background:rgba(0,0,0,.75); backdrop-filter:blur(6px);
+    display:flex; align-items:flex-end; justify-content:center;
+    opacity:0; pointer-events:none;
+    transition:opacity .25s;
+}
+.acwr-modal-ov.open { opacity:1; pointer-events:all; }
+.acwr-modal-box {
+    background:#161616; border:1px solid rgba(255,255,255,.1);
+    border-radius:24px 24px 0 0;
+    padding:24px 20px 36px; width:100%; max-width:520px;
+    transform:translateY(40px);
+    transition:transform .3s cubic-bezier(.34,1.2,.64,1);
+    max-height:90dvh; overflow-y:auto;
+}
+.acwr-modal-ov.open .acwr-modal-box { transform:translateY(0); }
+.acwr-modal-handle {
+    width:36px; height:4px; border-radius:99px;
+    background:rgba(255,255,255,.2); margin:0 auto 20px;
+}
+.acwr-modal-title {
+    font-size:17px; font-weight:800; color:#fff;
+    margin-bottom:4px; text-align:center;
+}
+.acwr-modal-sub {
+    font-size:12px; color:rgba(255,255,255,.4);
+    text-align:center; margin-bottom:20px;
+}
+.acwr-modal-section { margin-bottom:18px; }
+.acwr-modal-section-title {
+    font-size:10px; font-weight:700; letter-spacing:.18em;
+    text-transform:uppercase; color:rgba(255,255,255,.35);
+    margin-bottom:10px;
+}
+.acwr-modal-row {
+    display:flex; gap:10px; align-items:flex-start;
+    background:rgba(255,255,255,.04); border-radius:12px;
+    padding:12px 14px; margin-bottom:6px;
+}
+.acwr-modal-row-icon { font-size:20px; flex-shrink:0; margin-top:1px; }
+.acwr-modal-row-text {}
+.acwr-modal-row-label { font-size:13px; font-weight:700; color:#fff; margin-bottom:2px; }
+.acwr-modal-row-desc  { font-size:12px; color:rgba(255,255,255,.5); line-height:1.5; }
+.acwr-modal-zone-row {
+    display:flex; align-items:center; gap:10px;
+    padding:9px 14px; border-radius:10px; margin-bottom:5px;
+}
+.acwr-modal-zone-dot  { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+.acwr-modal-zone-range { font-size:12px; font-weight:700; font-variant-numeric:tabular-nums; min-width:52px; }
+.acwr-modal-zone-text  { font-size:12px; color:rgba(255,255,255,.6); line-height:1.4; }
+.acwr-modal-formula {
+    background:rgba(255,255,255,.04); border-radius:12px;
+    padding:14px; text-align:center; margin-bottom:6px;
+}
+.acwr-modal-formula-eq {
+    font-size:15px; font-weight:700; color:#fff; margin-bottom:4px;
+    font-family: 'Share Tech Mono', monospace;
+}
+.acwr-modal-formula-desc { font-size:11px; color:rgba(255,255,255,.4); }
+.acwr-modal-close {
+    width:100%; padding:14px; margin-top:8px;
+    background:rgba(255,255,255,.08); border:none; border-radius:14px;
+    color:rgba(255,255,255,.7); font-size:14px; font-weight:600;
+    cursor:pointer; transition:background .2s;
+}
+.acwr-modal-close:hover { background:rgba(255,255,255,.14); }
+
+/* legacy compat (kept for other uses) */
 .acwr-sem-left {
     display: flex;
     align-items: flex-start;
@@ -2578,36 +2939,109 @@
     </div>
     {% endif %}
 
-    <!-- ── SEMÁFORO ACWR ──────────────────────────────────────────── -->
+    <!-- ── PANEL ACWR ────────────────────────────────────────────── -->
     {% with zona=analisis_acwr.zona_riesgo %}
-    <div class="acwr-semaforo
-        {% if zona == 'optima' %}acwr-zona-optima
-        {% elif zona == 'cuidado' %}acwr-zona-cuidado
-        {% elif zona == 'riesgo_alto' %}acwr-zona-riesgo
-        {% else %}acwr-zona-baja{% endif %}">
+    <div class="acwr-card" data-zona="{{ zona }}" data-acwr="{{ acwr_actual }}">
 
-      <div class="acwr-sem-left">
-        <div class="acwr-sem-dot"></div>
-        <div>
-          <div class="acwr-sem-titulo">
-            {% if zona == 'optima' %}Zona óptima — Puedes entrenar
-            {% elif zona == 'cuidado' %}Carga elevada — Modera la intensidad
-            {% elif zona == 'riesgo_alto' %}Sobrecarga — Descansa hoy
-            {% else %}Carga baja — Puedes exigirte más{% endif %}
-          </div>
-          <div class="acwr-sem-sub">
-            {% if zona == 'optima' %}Tu carga aguda y crónica están equilibradas. Entrena con normalidad.
-            {% elif zona == 'cuidado' %}Aumentas rápido. Sigue entrenando pero baja la intensidad un 20%.
-            {% elif zona == 'riesgo_alto' %}Riesgo de lesión elevado. Prioriza recuperación activa o descanso.
-            {% else %}No has acumulado suficiente carga reciente. Esta semana puedes apretar más.{% endif %}
-          </div>
+      <!-- Header -->
+      <div class="acwr-hdr">
+        <div class="acwr-hdr-dot"></div>
+        <span class="acwr-hdr-label">Carga de entrenamiento</span>
+        <span class="acwr-hdr-chip">
+          {% if zona == 'optima' %}Óptimo
+          {% elif zona == 'cuidado' %}Cuidado
+          {% elif zona == 'riesgo_alto' %}Riesgo
+          {% else %}Carga baja{% endif %}
+        </span>
+        <button class="acwr-info-btn" onclick="document.getElementById('acwr-info-modal').classList.add('open')" title="¿Qué es esto?">?</button>
+      </div>
+
+      <!-- Gauge semicircular -->
+      <!-- Arc: r=90, center=(110,115), total length ≈ π×90 ≈ 283 -->
+      <!-- Zonas: baja 0-0.8 (0-113px), óptima 0.8-1.3 (113-184px), cuidado 1.3-1.5 (184-212px), riesgo 1.5-2.0 (212-283px) -->
+      <div class="acwr-gauge-wrap">
+        <svg viewBox="0 0 220 125" class="acwr-gauge-svg" aria-hidden="true">
+          <!-- Pista de fondo -->
+          <path d="M 20 115 A 90 90 0 0 1 200 115"
+                stroke="#1c1c1e" stroke-width="14" fill="none" stroke-linecap="round"/>
+          <!-- Zona baja (gris) -->
+          <path d="M 20 115 A 90 90 0 0 1 200 115"
+                stroke="#263040" stroke-width="14" fill="none" stroke-linecap="round"
+                stroke-dasharray="113 10000" stroke-dashoffset="0"/>
+          <!-- Zona óptima (verde) -->
+          <path d="M 20 115 A 90 90 0 0 1 200 115"
+                stroke="#166534" stroke-width="14" fill="none" stroke-linecap="round"
+                stroke-dasharray="71 10000" stroke-dashoffset="-113"/>
+          <!-- Zona cuidado (ámbar) -->
+          <path d="M 20 115 A 90 90 0 0 1 200 115"
+                stroke="#92400e" stroke-width="14" fill="none" stroke-linecap="round"
+                stroke-dasharray="28 10000" stroke-dashoffset="-184"/>
+          <!-- Zona riesgo (rojo) -->
+          <path d="M 20 115 A 90 90 0 0 1 200 115"
+                stroke="#7f1d1d" stroke-width="14" fill="none" stroke-linecap="round"
+                stroke-dasharray="71 10000" stroke-dashoffset="-212"/>
+          <!-- Arco activo (brillo en zona actual) — JS lo pinta -->
+          <path id="acwr-active-arc" d="M 20 115 A 90 90 0 0 1 200 115"
+                stroke="#22c55e" stroke-width="14" fill="none" stroke-linecap="round"
+                opacity="0.55" stroke-dasharray="0 10000" stroke-dashoffset="0"/>
+          <!-- Aguja -->
+          <line id="acwr-needle"
+                x1="110" y1="115" x2="110" y2="33"
+                stroke="white" stroke-width="2.5" stroke-linecap="round"
+                transform="rotate(-90 110 115)"/>
+          <circle cx="110" cy="115" r="5" fill="#111" stroke="white" stroke-width="2"/>
+        </svg>
+
+        <!-- Número central -->
+        <div class="acwr-gauge-center">
+          <div class="acwr-gauge-num">{{ acwr_actual|floatformat:2|default:"—" }}</div>
+          <div class="acwr-gauge-sub">ACWR</div>
         </div>
       </div>
 
-      <div class="acwr-sem-valor">
-        <div class="acwr-sem-num">{{ acwr_actual|floatformat:2|default:"—" }}</div>
-        <div class="acwr-sem-etiqueta">ACWR</div>
+      <!-- Etiquetas de escala -->
+      <div class="acwr-scale">
+        <span class="acwr-scale-lbl">0.0</span>
+        <span class="acwr-scale-lbl">0.8</span>
+        <span class="acwr-scale-lbl">1.3</span>
+        <span class="acwr-scale-lbl">1.5</span>
+        <span class="acwr-scale-lbl">2.0</span>
       </div>
+
+      <!-- Carga aguda / crónica -->
+      <div class="acwr-loads">
+        <div class="acwr-load-item">
+          <span class="acwr-load-val">{{ analisis_acwr.carga_aguda|floatformat:0|default:"—" }}</span>
+          <span class="acwr-load-lbl">Carga 7d</span>
+        </div>
+        <div class="acwr-load-sep"></div>
+        <div class="acwr-load-item">
+          <span class="acwr-load-val">{{ analisis_acwr.carga_cronica|floatformat:0|default:"—" }}</span>
+          <span class="acwr-load-lbl">Carga 28d</span>
+        </div>
+      </div>
+
+      <!-- Veredicto motivacional -->
+      <div class="acwr-verdict">
+        {% if zona == 'optima' %}
+          <div class="acwr-verdict-icon">💪</div>
+          <div class="acwr-verdict-title">¡Tu cuerpo está listo — dale caña!</div>
+          <div class="acwr-verdict-sub">Carga perfectamente equilibrada. Hoy es día de entrenar fuerte sin miedo.</div>
+        {% elif zona == 'cuidado' %}
+          <div class="acwr-verdict-icon">⚡</div>
+          <div class="acwr-verdict-title">Estás al límite — modera la intensidad</div>
+          <div class="acwr-verdict-sub">Sigue activo pero reduce un 20% esta semana. Tu cuerpo lo agradecerá.</div>
+        {% elif zona == 'riesgo_alto' %}
+          <div class="acwr-verdict-icon">🛑</div>
+          <div class="acwr-verdict-title">Tu cuerpo pide descanso hoy</div>
+          <div class="acwr-verdict-sub">Riesgo de lesión elevado. Prioriza recuperación activa o reposo completo.</div>
+        {% else %}
+          <div class="acwr-verdict-icon">🔥</div>
+          <div class="acwr-verdict-title">Puedes apretar más esta semana</div>
+          <div class="acwr-verdict-sub">Tu carga es baja. Añade una sesión extra o sube la intensidad sin riesgo.</div>
+        {% endif %}
+      </div>
+
     </div>
     {% endwith %}
 
@@ -2697,6 +3131,119 @@ window.animateLoLBars = function() {
 <script>
 document.addEventListener('DOMContentLoaded', function() {
 
+    // ── ACWR Gauge (función reutilizable) ────────────────────────────
+    function animarAcwrGauge(cardSelector, arcId, needleId) {
+        try {
+            const card = document.querySelector(cardSelector);
+            if (!card) return;
+            const acwr  = parseFloat(card.dataset.acwr) || 0;
+            const zona  = card.dataset.zona || 'baja_carga';
+            const L     = Math.PI * 90; // ≈283
+            const clamp = Math.min(Math.max(acwr, 0), 2.0);
+            const COLORS = { optima:'#22c55e', cuidado:'#f59e0b', riesgo_alto:'#ef4444', baja_carga:'#64748b' };
+            const color  = COLORS[zona] || '#64748b';
+
+            // Arco activo
+            const activeArc = document.getElementById(arcId);
+            if (activeArc) {
+                activeArc.setAttribute('stroke', color);
+                setTimeout(() => {
+                    activeArc.style.transition = 'stroke-dasharray 1.2s cubic-bezier(.4,0,.2,1)';
+                    activeArc.setAttribute('stroke-dasharray', `${(clamp/2)*L} 10000`);
+                }, 150);
+            }
+
+            // Aguja: CSS transform (transform-box:fill-box, origin:50% 100%)
+            // -90deg = izquierda (ACWR=0), 0deg = arriba (ACWR=1), +90deg = derecha (ACWR=2)
+            const needle = document.getElementById(needleId);
+            if (needle) {
+                const deg = (clamp / 2) * 180 - 90;
+                setTimeout(() => {
+                    needle.style.transform = `rotate(${deg}deg)`;
+                }, 200);
+            }
+        } catch(e) { console.error('ACWR gauge error:', e); }
+    }
+    animarAcwrGauge('#acwr-card-focus', 'acwr-active-arc-f', 'acwr-needle-f');
+    animarAcwrGauge('.acwr-card:not(#acwr-card-focus)', 'acwr-active-arc', 'acwr-needle');
+
+    // ── ACWR Chart (dashboard panel) ─────────────────────────────────
+    try {
+        const cvDash = document.getElementById('acwrChartDash');
+        if (cvDash && typeof Chart !== 'undefined') {
+            let raw = [];
+            try { raw = JSON.parse(cvDash.dataset.acwr || '[]'); } catch(e) {}
+
+            const labels = raw.map(r => r.fecha || '');
+            const vals   = raw.map(r => parseFloat(r.acwr) || 0);
+            const today  = new Date().toISOString().slice(0,10);
+
+            // Punto actual: último valor (hoy)
+            const todayIdx = labels.lastIndexOf(today) >= 0
+                ? labels.lastIndexOf(today)
+                : labels.length - 1;
+            const currentVal = vals[todayIdx] || 0;
+
+            // Colores por zona en cada punto (para coloring de la línea)
+            const pointColors = vals.map(v =>
+                v >= 1.3 ? '#ef4444' : v >= 0.8 ? '#22c55e' : '#f59e0b'
+            );
+
+            new Chart(cvDash, {
+                type: 'line',
+                data: {
+                    labels,
+                    datasets: [
+                        {
+                            data: vals,
+                            borderColor: '#00d4a0',
+                            backgroundColor: 'rgba(0,212,160,0.07)',
+                            fill: true, tension: 0.4,
+                            pointRadius: vals.map((_, i) => i === todayIdx ? 6 : 0),
+                            pointBackgroundColor: vals.map((_, i) =>
+                                i === todayIdx
+                                    ? (currentVal >= 1.3 ? '#ef4444' : currentVal >= 0.8 ? '#22c55e' : '#f59e0b')
+                                    : 'transparent'
+                            ),
+                            pointBorderColor: '#fff',
+                            pointBorderWidth: 2,
+                        },
+                        // Línea zona verde inferior (0.8)
+                        { data: labels.map(() => 0.8), borderColor:'rgba(34,197,94,.25)', borderDash:[4,4], borderWidth:1, pointRadius:0, fill:false },
+                        // Línea zona verde superior (1.3)
+                        { data: labels.map(() => 1.3), borderColor:'rgba(245,158,11,.25)', borderDash:[4,4], borderWidth:1, pointRadius:0, fill:false },
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: ctx => {
+                                    if (ctx.datasetIndex > 0) return null;
+                                    const v = ctx.raw;
+                                    const z = v >= 1.3 ? 'Riesgo' : v >= 0.8 ? 'Óptimo' : 'Precaución';
+                                    return `ACWR ${v.toFixed(2)} — ${z}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: { min:0, max:2, grid:{color:'rgba(255,255,255,.05)'}, ticks:{stepSize:0.5,color:'rgba(255,255,255,.3)',font:{size:9}} },
+                        x: { grid:{display:false}, ticks:{maxTicksLimit:5,color:'rgba(255,255,255,.3)',font:{size:9}} },
+                    }
+                }
+            });
+
+            // Marcador en la barra de track (posición relativa en escala 0-2)
+            const marker = document.getElementById('acwr-track-marker');
+            if (marker) {
+                const pct = Math.min(Math.max(currentVal / 2.0, 0), 1) * 100;
+                setTimeout(() => { marker.style.left = pct + '%'; }, 300);
+            }
+        }
+    } catch(e) { console.error('ACWR chart dash error:', e); }
 
     try {
         window.confirmarEntrenoExtra = function() {

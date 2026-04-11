@@ -457,7 +457,12 @@
 
         <!-- Info — metric color set by CSS [data-tipo] rules -->
         <div class="tl-info">
-          <div class="tl-info-type">{{ actividad.tipo|capfirst }}{% if actividad.titulo %} · {{ actividad.titulo }}{% endif %}</div>
+          <div class="tl-info-type">
+            {{ actividad.tipo|capfirst }}{% if actividad.titulo %} · {{ actividad.titulo }}{% endif %}
+            {% if actividad.fecha_realizado and actividad.fecha_realizado != actividad.fecha %}
+              <span style="display:inline-block;margin-left:6px;font-size:9px;font-weight:700;padding:2px 7px;border-radius:99px;background:rgba(251,191,36,.15);color:#fbbf24;vertical-align:middle;" title="Sesión planificada para {{ actividad.fecha }}">📅 Plan {{ actividad.fecha|date:"d/m" }}</span>
+            {% endif %}
+          </div>
           <div class="tl-info-metric">
             <span class="tl-metric-val">{% if actividad.distancia_metros %}{% widthratio actividad.distancia_metros 1000 1 %}{% elif actividad.calorias %}{{ actividad.calorias|floatformat:0 }}{% elif actividad.carga_ua %}{{ actividad.carga_ua|floatformat:0 }}{% elif actividad.volumen_kg %}{{ actividad.volumen_kg|floatformat:0 }}{% elif actividad.duracion_minutos %}{{ actividad.duracion_minutos }}{% elif actividad.rpe_medio %}{{ actividad.rpe_medio|floatformat:1 }}{% else %}—{% endif %}</span>
             <span class="tl-metric-unit">{% if actividad.distancia_metros %}KM{% elif actividad.calorias %}CAL{% elif actividad.carga_ua %}UA{% elif actividad.volumen_kg %}KG{% elif actividad.duracion_minutos %}MIN{% elif actividad.rpe_medio %}RPE{% endif %}</span>
