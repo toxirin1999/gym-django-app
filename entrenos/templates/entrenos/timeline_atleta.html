@@ -3,262 +3,673 @@
 {% block title %}Timeline · {{ cliente.nombre }}{% endblock %}
 
 {% block extra_css %}
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700;800;900&family=Barlow:wght@300;400;500;600&display=swap">
-<link rel="stylesheet" href="{% static 'entrenos/css/timeline.css' %}">
+<style>
+/* ═══════════════════════════════════════════════════
+   TIMELINE v2.0 — iOS Fitness Style
+   max-width 680px · glassmorphism · activity rings
+═══════════════════════════════════════════════════ */
+
+.tl-shell {
+  --sc-gym:         #B8FF00;
+  --sc-hyrox:       hsl(0,100%,60%);
+  --sc-carrera:     hsl(210,100%,56%);
+  --sc-ciclismo:    hsl(32,100%,50%);
+  --sc-natacion:    hsl(185,100%,50%);
+  --sc-remo:        hsl(195,100%,70%);
+  --sc-yoga:        hsl(280,80%,60%);
+  --sc-futbol:      #B8FF00;
+  --sc-estiramientos: hsl(195,80%,70%);
+  --sc-otro:        rgba(235,235,245,0.4);
+
+  --tl-green:  #B8FF00;
+  --tl-red:    hsl(0,100%,55%);
+  --tl-cyan:   #00D4A0;
+  --tl-yellow: #FFB300;
+  --tl-blue:   hsl(210,100%,56%);
+  --tl-muted:  rgba(235,235,245,0.5);
+  --tl-muted2: rgba(235,235,245,0.3);
+  --tl-border: rgba(255,255,255,0.09);
+
+  min-height: 100vh;
+  background: #000;
+  color: #fff;
+  font-family: -apple-system,'SF Pro Display','DM Sans',sans-serif;
+  max-width: 680px;
+  margin: 0 auto;
+  padding-bottom: 80px;
+}
+
+/* ── Sticky nav ── */
+.tl-nav {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 16px;
+  background: rgba(0,0,0,0.82);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.tl-nav-back {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: transparent; border: none;
+  color: var(--tl-green);
+  cursor: pointer; font-size: 20px;
+  text-decoration: none; flex-shrink: 0;
+  transition: background .15s;
+}
+.tl-nav-back:hover { background: rgba(255,255,255,0.08); }
+
+.tl-nav-titles { flex: 1; min-width: 0; }
+.tl-nav-title  { font-size: 17px; font-weight: 600; letter-spacing: -.3px; line-height: 1.2; color: #fff; }
+.tl-nav-sub    { font-size: 12px; color: var(--tl-muted); line-height: 1; }
+
+.tl-range-group {
+  display: flex; gap: 2px;
+  background: #2c2c2e;
+  border-radius: 9px; padding: 2px;
+  flex-shrink: 0;
+}
+.tl-range-btn {
+  padding: 5px 12px;
+  border-radius: 7px;
+  font-size: 13px; font-weight: 500;
+  color: var(--tl-muted);
+  background: transparent; border: none;
+  cursor: pointer; text-decoration: none;
+  display: inline-flex; align-items: center;
+  transition: background .15s, color .15s;
+  white-space: nowrap;
+}
+.tl-range-btn.active {
+  background: rgba(235,235,245,0.12);
+  color: #fff; font-weight: 600;
+  box-shadow: 0 1px 3px rgba(0,0,0,.35);
+}
+
+/* ── Large title ── */
+.tl-h1 {
+  font-size: 34px; font-weight: 700;
+  letter-spacing: .3px;
+  padding: 12px 20px 4px;
+  color: #fff;
+}
+
+/* ── Mini stats ── */
+.tl-stats {
+  display: flex; align-items: baseline;
+  gap: 20px; flex-wrap: nowrap;
+  padding: 0 20px 12px;
+  overflow-x: auto; scrollbar-width: none;
+}
+.tl-stats::-webkit-scrollbar { display: none; }
+.tl-stat { display: flex; align-items: baseline; gap: 4px; }
+.tl-stat-val {
+  font-size: 17px; font-weight: 700;
+  font-variant-numeric: tabular-nums; line-height: 1;
+}
+.tl-stat-lbl { font-size: 12px; color: var(--tl-muted); white-space: nowrap; }
+.cv-green { color: var(--tl-green); }
+.cv-red   { color: var(--tl-red);   }
+.cv-cyan  { color: var(--tl-cyan);  }
+
+.tl-acwr-badge {
+  margin-left: auto;
+  font-size: 12px; font-weight: 600;
+  padding: 3px 10px; border-radius: 999px;
+  white-space: nowrap; flex-shrink: 0;
+}
+.tl-acwr-ok   { background: rgba(184,255,0,.12); color: var(--tl-green); }
+.tl-acwr-warn { background: rgba(255,179,0,.12); color: var(--tl-yellow); }
+.tl-acwr-risk { background: rgba(255,61,26,.12);  color: var(--tl-red);   }
+.tl-acwr-none { background: rgba(255,255,255,.08);color: var(--tl-muted); }
+
+/* ── Filter pills ── */
+.tl-filters-wrap {
+  padding: 0 20px 12px;
+  overflow-x: auto; scrollbar-width: none;
+}
+.tl-filters-wrap::-webkit-scrollbar { display: none; }
+.tl-filters {
+  display: flex; gap: 8px;
+  width: max-content; min-width: 100%;
+}
+.tl-filter-btn {
+  padding: 7px 16px;
+  border-radius: 999px;
+  font-size: 15px; font-weight: 600;
+  background: #2c2c2e; color: var(--tl-muted);
+  border: none; cursor: pointer;
+  white-space: nowrap; flex-shrink: 0;
+  transition: background .15s, color .15s;
+}
+.tl-filter-btn.active { background: var(--tl-green); color: #000; }
+
+/* ── CTA button ── */
+.tl-cta-wrap { padding: 0 20px 12px; }
+.tl-cta {
+  width: 100%;
+  background: var(--tl-red); color: #fff;
+  border: none; border-radius: 999px;
+  font-size: 15px; font-weight: 600;
+  padding: 13px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  gap: 6px;
+  transition: opacity .15s, transform .1s;
+  text-decoration: none;
+}
+.tl-cta:hover  { opacity: .87; }
+.tl-cta:active { opacity: .75; transform: scale(.99); }
+
+/* ── List ── */
+.tl-list { display: flex; flex-direction: column; }
+
+/* ── Activity row ── */
+.tl-row {
+  display: flex; align-items: center;
+  gap: 14px; padding: 12px 16px;
+  cursor: pointer; position: relative;
+  transition: background .15s;
+}
+.tl-row:hover { background: rgba(255,255,255,0.03); }
+.tl-row + .tl-row::before {
+  content: '';
+  position: absolute; top: 0;
+  left: 70px; right: 0;
+  height: .5px;
+  background: var(--tl-border);
+}
+
+/* ── Activity ring ── */
+.tl-ring-wrap {
+  position: relative; width: 46px; height: 46px;
+  flex-shrink: 0;
+}
+.tl-ring-emoji {
+  position: absolute; top: 50%; left: 50%;
+  transform: translate(-50%,-50%);
+  font-size: 18px; line-height: 1;
+  pointer-events: none;
+}
+
+/* ── Activity info ── */
+.tl-info { flex: 1; min-width: 0; }
+.tl-info-type {
+  font-size: 13px; color: var(--tl-muted);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  margin-bottom: 1px;
+}
+.tl-info-metric {
+  display: flex; align-items: baseline;
+  gap: 3px; line-height: 1;
+}
+.tl-metric-val {
+  font-size: 26px; font-weight: 700;
+  letter-spacing: -.5px;
+  font-variant-numeric: tabular-nums;
+}
+.tl-metric-unit { font-size: 14px; font-weight: 600; }
+
+/* ── Sport colors via data-tipo ── */
+.tl-row[data-tipo="gym"]           .tl-ring-arc,
+.tl-row[data-tipo="futbol"]        .tl-ring-arc { stroke: var(--sc-gym); }
+.tl-row[data-tipo="hyrox"]         .tl-ring-arc { stroke: var(--sc-hyrox); }
+.tl-row[data-tipo="carrera"]       .tl-ring-arc { stroke: var(--sc-carrera); }
+.tl-row[data-tipo="ciclismo"]      .tl-ring-arc { stroke: var(--sc-ciclismo); }
+.tl-row[data-tipo="natacion"]      .tl-ring-arc { stroke: var(--sc-natacion); }
+.tl-row[data-tipo="remo"]          .tl-ring-arc { stroke: var(--sc-remo); }
+.tl-row[data-tipo="yoga"]          .tl-ring-arc,
+.tl-row[data-tipo="estiramientos"] .tl-ring-arc { stroke: var(--sc-yoga); }
+.tl-row[data-tipo="otro"]          .tl-ring-arc { stroke: var(--sc-otro); }
+
+.tl-row[data-tipo="gym"]           .tl-metric-val,
+.tl-row[data-tipo="gym"]           .tl-metric-unit,
+.tl-row[data-tipo="futbol"]        .tl-metric-val,
+.tl-row[data-tipo="futbol"]        .tl-metric-unit { color: var(--sc-gym); }
+.tl-row[data-tipo="hyrox"]         .tl-metric-val,
+.tl-row[data-tipo="hyrox"]         .tl-metric-unit { color: var(--sc-hyrox); }
+.tl-row[data-tipo="carrera"]       .tl-metric-val,
+.tl-row[data-tipo="carrera"]       .tl-metric-unit { color: var(--sc-carrera); }
+.tl-row[data-tipo="ciclismo"]      .tl-metric-val,
+.tl-row[data-tipo="ciclismo"]      .tl-metric-unit { color: var(--sc-ciclismo); }
+.tl-row[data-tipo="natacion"]      .tl-metric-val,
+.tl-row[data-tipo="natacion"]      .tl-metric-unit { color: var(--sc-natacion); }
+.tl-row[data-tipo="remo"]          .tl-metric-val,
+.tl-row[data-tipo="remo"]          .tl-metric-unit { color: var(--sc-remo); }
+.tl-row[data-tipo="yoga"]          .tl-metric-val,
+.tl-row[data-tipo="yoga"]          .tl-metric-unit,
+.tl-row[data-tipo="estiramientos"] .tl-metric-val,
+.tl-row[data-tipo="estiramientos"] .tl-metric-unit { color: var(--sc-yoga); }
+.tl-row[data-tipo="otro"]          .tl-metric-val,
+.tl-row[data-tipo="otro"]          .tl-metric-unit { color: var(--sc-otro); }
+
+/* ── Date column ── */
+.tl-date-col {
+  display: flex; flex-direction: column;
+  align-items: flex-end; gap: 4px;
+  flex-shrink: 0;
+}
+.tl-date    { font-size: 13px; color: var(--tl-muted); white-space: nowrap; }
+.tl-substat { font-size: 11px; color: var(--tl-muted2); }
+
+/* ── Expandable actions ── */
+.tl-actions-wrap { overflow: hidden; }
+.tl-actions {
+  display: flex;
+  max-height: 0; opacity: 0;
+  overflow: hidden;
+  border-top: .5px solid transparent;
+  transition: max-height .25s ease, opacity .25s ease, border-color .25s;
+}
+.tl-actions.open {
+  max-height: 44px; opacity: 1;
+  border-color: var(--tl-border);
+}
+.tl-action-btn {
+  flex: 1; display: flex; align-items: center;
+  justify-content: center; gap: 6px;
+  padding: 12px; background: transparent;
+  border: none; font-size: 13px; font-weight: 500;
+  cursor: pointer; color: var(--tl-blue);
+}
+.tl-action-btn.del { color: var(--tl-red); }
+.tl-action-btn + .tl-action-btn { border-left: .5px solid var(--tl-border); }
+.tl-action-btn-divider { width: .5px; background: var(--tl-border); }
+
+/* Delete confirm state */
+.tl-confirm { display: none; width: 100%; }
+.tl-confirm.show { display: flex; }
+.tl-normal { display: flex; width: 100%; }
+.tl-normal.hide { display: none; }
+.tl-confirm-label {
+  flex: 1; display: flex; align-items: center;
+  justify-content: center; font-size: 13px;
+  color: var(--tl-red); font-weight: 500;
+}
+
+/* ── Journal / Bitácora row ── */
+.tl-row-log { align-items: flex-start; }
+.tl-log-icon {
+  width: 46px; height: 46px;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.06);
+  display: flex; align-items: center;
+  justify-content: center;
+  font-size: 20px; flex-shrink: 0; line-height: 1;
+}
+.tl-log-body  { flex: 1; min-width: 0; }
+.tl-log-hdr   { font-size: 13px; color: var(--tl-muted); margin-bottom: 3px; }
+.tl-log-text  {
+  font-size: 15px; font-weight: 500; color: #fff;
+  display: -webkit-box; -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical; overflow: hidden;
+}
+.tl-log-energy { flex-shrink: 0; text-align: right; }
+.tl-log-energy-val {
+  font-size: 20px; font-weight: 700;
+  color: var(--tl-yellow); line-height: 1;
+}
+.tl-log-energy-lbl { font-size: 10px; color: var(--tl-muted2); }
+
+/* ── Empty state ── */
+.tl-empty {
+  background: #2c2c2e; border-radius: 12px;
+  padding: 52px 24px; margin: 40px 16px;
+  text-align: center;
+}
+.tl-empty-num {
+  font-size: 64px; font-weight: 700;
+  letter-spacing: -4px; color: rgba(255,255,255,.1);
+  line-height: 1; margin-bottom: 8px;
+}
+.tl-empty-msg { font-size: 17px; font-weight: 600; color: var(--tl-muted); }
+
+/* ── Animations ── */
+@keyframes tlFadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0);   }
+}
+.tl-row { animation: tlFadeIn .3s ease both; }
+</style>
 {% endblock %}
 
 {% block content %}
-<div id="tl">
+<div class="tl-shell" id="tl-shell" data-cliente="{{ cliente.id }}">
 
-  <!-- NAV -->
-  <nav class="tl-nav" aria-label="Navegación de timeline">
-    <div class="tl-nav-inner">
-      <div style="flex:1;min-width:0;">
-        <div class="tl-nav-title">Timeline</div>
-        <div class="tl-nav-sub">{{ cliente.nombre }}</div>
-      </div>
-      <div class="tl-range" role="group" aria-label="Rango de fechas">
-        {% for r in rangos %}
-        <a href="?dias={{ r }}"
-           class="{% if dias_rango == r %}on{% endif %}"
-           {% if dias_rango == r %}aria-current="page"{% endif %}
-           aria-label="Últimos {% if r == 7 %}7{% elif r == 30 %}30{% else %}90{% endif %} días">
-          {% if r == 7 %}7D{% elif r == 30 %}30D{% else %}90D{% endif %}
-        </a>
-        {% endfor %}
-      </div>
+  <!-- ══════════════════════════════════
+       NAVBAR — sticky glassmorphism
+  ══════════════════════════════════════ -->
+  <nav class="tl-nav" aria-label="Navegación principal">
+
+    <a href="{% url 'clientes:panel_cliente' %}" class="tl-nav-back" aria-label="Volver">‹</a>
+
+    <div class="tl-nav-titles">
+      <div class="tl-nav-title">Timeline</div>
+      <div class="tl-nav-sub">{{ cliente.nombre }}</div>
     </div>
+
+    <div class="tl-range-group" role="group" aria-label="Rango de fechas">
+      {% for r in rangos %}
+      <a href="?dias={{ r }}"
+         class="tl-range-btn {% if dias_rango == r %}active{% endif %}"
+         {% if dias_rango == r %}aria-current="page"{% endif %}>
+        {% if r == 7 %}7D{% elif r == 30 %}30D{% else %}90D{% endif %}
+      </a>
+      {% endfor %}
+    </div>
+
   </nav>
 
-  <!-- KPIs -->
-  <dl class="tl-kpis">
-    <div class="tl-kpi">
-      <dt class="tl-kpi-lbl">Días activos</dt>
-      <dd>
-        <span class="tl-kpi-val">{{ dias_activos }}</span>
-        <span class="tl-kpi-unit">/ {{ dias_rango }} días</span>
-      </dd>
-    </div>
-    <div class="tl-kpi">
-      <dt class="tl-kpi-lbl">Actividades</dt>
-      <dd>
-        <span class="tl-kpi-val">{{ total_actividades }}</span>
-        <span class="tl-kpi-unit">registradas</span>
-      </dd>
-    </div>
-    <div class="tl-kpi">
-      <dt class="tl-kpi-lbl">Carga UA</dt>
-      <dd>
-        <span class="tl-kpi-val" style="color:var(--amber);">{{ carga_total }}</span>
-        <span class="tl-kpi-unit">unidades arb.</span>
-      </dd>
-    </div>
-    <div class="tl-kpi
-      {% if acwr.zona_riesgo == 'optima' %}acwr-ok
-      {% elif acwr.zona_riesgo == 'cuidado' %}acwr-warn
-      {% elif acwr.zona_riesgo == 'riesgo_alto' %}acwr-risk{% endif %}">
-      <dt class="tl-kpi-lbl">ACWR</dt>
-      <dd>
-        <span class="tl-kpi-val">{{ acwr.acwr_actual }}</span>
-        <span class="tl-kpi-unit">
-          {% if acwr.zona_riesgo == 'optima' %}Óptimo
-          {% elif acwr.zona_riesgo == 'cuidado' %}Precaución
-          {% elif acwr.zona_riesgo == 'riesgo_alto' %}Riesgo
-          {% else %}—{% endif %}
-        </span>
-      </dd>
-    </div>
-  </dl>
+  <!-- ══════════════════════════════════
+       LARGE TITLE
+  ══════════════════════════════════════ -->
+  <h1 class="tl-h1">Historial</h1>
 
-  <!-- CHIPS -->
-  {% if desglose %}
-  <div class="tl-chips" aria-label="Resumen por tipo de actividad">
-    {% for d in desglose %}
-    <div class="tl-chip">
-      <span aria-hidden="true">{{ d.icono }}</span>
-      <span>{{ d.tipo|upper }}</span>
-      <span class="tl-chip-n" aria-label="{{ d.total }} sesiones">×{{ d.total }}</span>
+  <!-- ══════════════════════════════════
+       MINI STATS
+  ══════════════════════════════════════ -->
+  <div class="tl-stats">
+    <div class="tl-stat">
+      <span class="tl-stat-val cv-green">{{ dias_activos }}</span>
+      <span class="tl-stat-lbl">días activos</span>
     </div>
-    {% endfor %}
+    <div class="tl-stat">
+      <span class="tl-stat-val cv-red">{{ carga_total }}</span>
+      <span class="tl-stat-lbl">UA total</span>
+    </div>
+    <div class="tl-stat">
+      <span class="tl-stat-val cv-cyan">{{ total_actividades }}</span>
+      <span class="tl-stat-lbl">actividades</span>
+    </div>
+    <div class="tl-acwr-badge
+      {% if acwr.zona_riesgo == 'optima' %}tl-acwr-ok
+      {% elif acwr.zona_riesgo == 'cuidado' %}tl-acwr-warn
+      {% elif acwr.zona_riesgo == 'riesgo_alto' %}tl-acwr-risk
+      {% else %}tl-acwr-none{% endif %}">
+      ACWR {{ acwr.acwr_actual }}
+    </div>
   </div>
-  {% endif %}
 
-  <!-- CTA -->
+  <!-- ══════════════════════════════════
+       FILTER PILLS
+  ══════════════════════════════════════ -->
+  <div class="tl-filters-wrap">
+    <div class="tl-filters" role="group" aria-label="Filtrar por tipo">
+      <button class="tl-filter-btn active" data-filter="all">Todo</button>
+      {% for d in desglose %}
+      <button class="tl-filter-btn" data-filter="{{ d.tipo }}">
+        {{ d.icono }} {{ d.tipo|capfirst }}
+      </button>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════
+       CTA — Registrar actividad
+  ══════════════════════════════════════ -->
   <div class="tl-cta-wrap">
     <a href="{% url 'entrenos:registrar_actividad_libre' cliente.id %}" class="tl-cta">
-      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"
-           viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
-      </svg>
-      Registrar actividad
+      <span style="font-size:14px;font-weight:700">+</span> Registrar actividad
     </a>
   </div>
 
-  <!-- FEED -->
-  <h2 class="tl-feed-lbl">Actividad</h2>
+  <!-- ══════════════════════════════════
+       ACTIVITY LIST
+  ══════════════════════════════════════ -->
+  <div class="tl-list" id="tl-list">
 
-  {% if total_actividades == 0 %}
-  <div class="tl-empty" role="status">
-    <span class="tl-empty-n" aria-hidden="true">0</span>
-    <span class="tl-empty-t">Sin actividades en los últimos {{ dias_rango }} días</span>
-    <a href="{% url 'entrenos:registrar_actividad_libre' cliente.id %}" class="tl-empty-cta">
-      Registrar primera actividad
-    </a>
-  </div>
-  {% endif %}
-
-  <div class="tl-feed">
     {% for dia in dias %}
-    {% if dia.n_actividades > 0 or dia.bitacora %}
-    <div class="tl-day {% if dia.es_hoy %}today{% endif %}">
 
-      <!-- Fecha -->
-      <div class="tl-date" aria-label="{{ dia.dia_semana }} {{ dia.fecha_dia }}">
-        <span class="tl-date-dow" aria-hidden="true">{{ dia.dia_semana|upper }}</span>
-        <span class="tl-date-num" aria-hidden="true">{{ dia.fecha_dia }}</span>
-        <div class="tl-date-dot" aria-hidden="true"></div>
-        <div class="tl-date-line" aria-hidden="true"></div>
+      {% comment %} ── Activities for this day ── {% endcomment %}
+      {% for actividad in dia.actividades %}
+      <div class="tl-row"
+           data-tipo="{{ actividad.tipo }}"
+           data-carga="{{ actividad.carga_ua|default:0 }}"
+           data-distancia="{{ actividad.distancia_metros|default:0 }}"
+           data-calorias="{{ actividad.calorias|default:0 }}"
+           data-duracion="{{ actividad.duracion_minutos|default:0 }}"
+           data-rpe="{{ actividad.rpe_medio|default:0 }}"
+           data-id="{{ actividad.id }}"
+           onclick="tlToggleRow(this)">
+
+        <!-- Ring — arc color set by CSS [data-tipo] rules -->
+        <div class="tl-ring-wrap">
+          <svg viewBox="0 0 46 46" width="46" height="46" class="tl-ring-svg">
+            <circle cx="23" cy="23" r="21" fill="#2c2c2e"/>
+            <circle cx="23" cy="23" r="19" fill="none"
+                    stroke="rgba(255,255,255,0.08)" stroke-width="4"/>
+            <circle cx="23" cy="23" r="19" fill="none"
+                    stroke-width="4" stroke-linecap="round"
+                    stroke-dasharray="0 119.38"
+                    transform="rotate(-90 23 23)"
+                    class="tl-ring-arc"/>
+          </svg>
+          <span class="tl-ring-emoji">{% if actividad.tipo == 'gym' %}🏋️{% elif actividad.tipo == 'hyrox' %}⚡{% elif actividad.tipo == 'carrera' %}🏃{% elif actividad.tipo == 'ciclismo' %}🚴{% elif actividad.tipo == 'natacion' %}🏊{% elif actividad.tipo == 'remo' %}🚣{% elif actividad.tipo == 'yoga' or actividad.tipo == 'estiramientos' %}🧘{% elif actividad.tipo == 'futbol' %}⚽{% else %}🎯{% endif %}</span>
+        </div>
+
+        <!-- Info — metric color set by CSS [data-tipo] rules -->
+        <div class="tl-info">
+          <div class="tl-info-type">{{ actividad.tipo|capfirst }}{% if actividad.titulo %} · {{ actividad.titulo }}{% endif %}</div>
+          <div class="tl-info-metric">
+            <span class="tl-metric-val">{% if actividad.distancia_metros %}{% widthratio actividad.distancia_metros 1000 1 %}{% elif actividad.calorias %}{{ actividad.calorias|floatformat:0 }}{% elif actividad.carga_ua %}{{ actividad.carga_ua|floatformat:0 }}{% else %}{{ actividad.duracion_minutos|default:0 }}{% endif %}</span>
+            <span class="tl-metric-unit">{% if actividad.distancia_metros %}KM{% elif actividad.calorias %}CAL{% elif actividad.carga_ua %}UA{% else %}MIN{% endif %}</span>
+          </div>
+        </div>
+
+        <!-- Date -->
+        <div class="tl-date-col">
+          <span class="tl-date">{{ dia.dia_semana|upper }} {{ dia.fecha|date:"d M" }}</span>
+          <span class="tl-substat">
+            {% if actividad.distancia_metros and actividad.duracion_minutos %}{{ actividad.duracion_minutos }} min{% endif %}
+            {% if not actividad.distancia_metros and actividad.rpe_medio %}RPE {{ actividad.rpe_medio|floatformat:1 }}{% endif %}
+          </span>
+        </div>
+
+      </div><!-- /tl-row -->
+
+      <!-- Expandable actions -->
+      <div class="tl-actions-wrap" data-for="{{ actividad.id }}">
+        <div class="tl-actions" id="tl-actions-{{ actividad.id }}">
+          <div class="tl-normal" id="tl-normal-{{ actividad.id }}">
+            <button class="tl-action-btn" onclick="tlEditActivity('{{ actividad.id }}')">
+              ✏️ Editar
+            </button>
+            <button class="tl-action-btn del" onclick="tlConfirmDelete('{{ actividad.id }}', event)">
+              🗑 Eliminar
+            </button>
+          </div>
+          <div class="tl-confirm" id="tl-confirm-{{ actividad.id }}">
+            <span class="tl-confirm-label">¿Eliminar?</span>
+            <button class="tl-action-btn del"
+                    onclick="tlDeleteActivity('{{ actividad.id }}', event)">Sí</button>
+            <button class="tl-action-btn"
+                    onclick="tlCancelDelete('{{ actividad.id }}', event)">No</button>
+          </div>
+        </div>
       </div>
 
-      <!-- Actividades -->
-      <div class="tl-day-col">
+      {% endfor %}{% comment %} /actividades {% endcomment %}
 
-        {% for act in dia.actividades %}
-        {% with act_label=act.titulo|default:act.get_tipo_display %}
-        <div class="tl-act t-{{ act.tipo }}" data-ua="{{ act.carga_ua|default:0 }}">
-          <div class="tl-act-bar" aria-hidden="true"></div>
-          <div class="tl-act-fill" aria-hidden="true"></div>
-          <div class="tl-act-body">
-            <div class="tl-act-icon" aria-hidden="true">
-              {% if act.tipo == 'gym' %}🏋️
-              {% elif act.tipo == 'hyrox' %}⚡
-              {% elif act.tipo == 'carrera' %}🏃
-              {% elif act.tipo == 'ciclismo' %}🚴
-              {% elif act.tipo == 'remo' %}🚣
-              {% elif act.tipo == 'futbol' %}⚽
-              {% elif act.tipo == 'natacion' %}🏊
-              {% elif act.tipo == 'yoga' %}🧘
-              {% else %}🎯{% endif %}
-            </div>
-            <div class="tl-act-info">
-              <div class="tl-act-name" title="{{ act_label }}">{{ act_label|upper }}</div>
-              <div class="tl-act-meta">
-                {{ act.get_tipo_display|upper }}{% if act.hora_inicio %} · {{ act.hora_inicio|time:"H:i" }}{% endif %}
-              </div>
-            </div>
-            <div class="tl-act-stats">
-              {% if act.carga_ua %}
-              <div class="tl-stat-ua" aria-label="{{ act.carga_ua }} unidades arbitrarias">{{ act.carga_ua }}</div>
-              <div class="tl-stat-sub" aria-hidden="true">UA</div>
-              {% endif %}
-              {% if act.duracion_minutos %}<div class="tl-stat-row">{{ act.duracion_minutos }} min</div>{% endif %}
-              {% if act.rpe_medio %}<div class="tl-stat-row">RPE {{ act.rpe_medio }}</div>{% endif %}
-              {% if act.volumen_kg %}<div class="tl-stat-row">{{ act.volumen_kg|floatformat:0 }} kg</div>{% endif %}
-            </div>
+      {% comment %} ── Journal entry for this day ── {% endcomment %}
+      {% if dia.bitacora %}
+      <div class="tl-row tl-row-log" data-tipo="log" onclick="void(0)">
+
+        <div class="tl-log-icon">{{ dia.humor_emoji|default:"📓" }}</div>
+
+        <div class="tl-log-body">
+          <div class="tl-log-hdr">Bitácora · {{ dia.dia_semana|upper }} {{ dia.fecha|date:"d M" }}</div>
+          <div class="tl-log-text">
+            {% if dia.emocion_dia %}"{{ dia.emocion_dia }}"{% endif %}
+            {% if dia.nota %}{% if dia.emocion_dia %} — {% endif %}{{ dia.nota }}{% endif %}
           </div>
-          {% if not act.entreno_gym and not act.sesion_hyrox %}
-          <div class="tl-act-actions">
-            <a href="{% url 'entrenos:editar_actividad_libre' cliente.id act.id %}"
-               class="tl-act-btn"
-               aria-label="Editar {{ act_label }}">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                   aria-hidden="true" focusable="false">
-                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-              </svg>
-              Editar
-            </a>
-            <!-- Trigger: visible by default -->
-            <button type="button"
-                    class="tl-act-btn del js-del-trigger"
-                    aria-label="Eliminar {{ act_label }}"
-                    aria-expanded="false">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                   aria-hidden="true" focusable="false">
-                <polyline points="3 6 5 6 21 6"/>
-                <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
-                <path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/>
-              </svg>
-              Eliminar
-            </button>
-            <!-- Inline confirmation: hidden until trigger is clicked -->
-            <form method="post"
-                  action="{% url 'entrenos:eliminar_actividad_libre' cliente.id act.id %}"
-                  class="tl-del-confirm"
-                  aria-label="Confirmar eliminación de {{ act_label }}">
-              {% csrf_token %}
-              <span class="tl-del-msg">¿Eliminar?</span>
-              <button type="submit" class="tl-act-btn del">Sí</button>
-              <button type="button" class="tl-act-btn js-del-cancel">No</button>
-            </form>
-          </div>
-          {% endif %}
         </div>
-        {% endwith %}
-        {% endfor %}
 
-        {% if dia.bitacora %}
-        <div class="tl-log">
-          <div class="tl-log-head">
-            <span aria-hidden="true">{% if dia.humor_emoji %}{{ dia.humor_emoji }}{% else %}📓{% endif %}</span>
-            <span class="tl-log-lbl">Bitácora</span>
-            {% if dia.energia %}
-            <div class="tl-log-energy" aria-label="Energía {{ dia.energia }} de 10">
-              {{ dia.energia }}<span style="font-size:9px;opacity:.6;" aria-hidden="true"> /10</span>
-            </div>
-            {% endif %}
-          </div>
-          {% if dia.emocion_dia %}<p class="tl-log-emo">"{{ dia.emocion_dia }}"</p>{% endif %}
-          {% if dia.nota %}<p class="tl-log-nota">{{ dia.nota }}</p>{% endif %}
+        {% if dia.energia %}
+        <div class="tl-log-energy">
+          <div class="tl-log-energy-val">{{ dia.energia }}</div>
+          <div class="tl-log-energy-lbl">/10</div>
         </div>
         {% endif %}
 
       </div>
-    </div>
-    {% endif %}
-    {% endfor %}
-  </div>
+      {% endif %}{% comment %} /bitacora {% endcomment %}
 
-</div>
+    {% empty %}
 
+      <div class="tl-empty">
+        <div class="tl-empty-num">0</div>
+        <div class="tl-empty-msg">Sin actividades en este periodo</div>
+      </div>
+
+    {% endfor %}{% comment %} /dias {% endcomment %}
+
+  </div><!-- /tl-list -->
+
+</div><!-- /tl-shell -->
+{% endblock %}
+
+{% block extra_js %}
 <script>
-(function(){
-  /* ── UA fill bars ─────────────────────────────────────────── */
-  const cards = document.querySelectorAll('.tl-act[data-ua]');
-  let max = 0;
-  cards.forEach(c => { const v = +c.dataset.ua || 0; if(v > max) max = v; });
-  if(max < 1) max = 100;
-  setTimeout(() => {
-    cards.forEach(c => {
-      const pct = Math.min(100, ((+c.dataset.ua || 0) / max) * 100);
-      const fill = c.querySelector('.tl-act-fill');
-      if(fill) fill.style.setProperty('--w', pct + '%');
-    });
-  }, 200);
+(function () {
+'use strict';
 
-  /* ── Inline delete confirmation ───────────────────────────── */
-  document.querySelectorAll('.js-del-trigger').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const actions = btn.closest('.tl-act-actions');
-      const form = actions.querySelector('.tl-del-confirm');
-      btn.hidden = true;
-      btn.setAttribute('aria-expanded', 'true');
-      form.classList.add('active');
-    });
+/* ═══════════════════════════════════════════
+   RING ANIMATION
+═══════════════════════════════════════════ */
+const CIRC = 2 * Math.PI * 19; // ≈ 119.38
+
+function initRings() {
+  const rows  = document.querySelectorAll('.tl-row[data-carga]');
+  let maxUA = 1;
+  rows.forEach(r => {
+    const v = parseFloat(r.dataset.carga) || 0;
+    if (v > maxUA) maxUA = v;
   });
 
-  document.querySelectorAll('.js-del-cancel').forEach(btn => {
+  rows.forEach((row, i) => {
+    const arc   = row.querySelector('.tl-ring-arc');
+    if (!arc) return;
+    const carga = parseFloat(row.dataset.carga) || 0;
+    const ratio = Math.min(carga / maxUA, 1);
+    const dash  = ratio * CIRC;
+    // Animate after a staggered delay
+    setTimeout(() => {
+      arc.style.transition = 'stroke-dasharray 0.9s cubic-bezier(0.25,0.46,0.45,0.94)';
+      arc.setAttribute('stroke-dasharray', `${dash.toFixed(2)} ${CIRC.toFixed(2)}`);
+    }, 80 + i * 40);
+  });
+}
+
+/* ═══════════════════════════════════════════
+   FILTER PILLS
+═══════════════════════════════════════════ */
+function initFilters() {
+  document.querySelectorAll('.tl-filter-btn').forEach(btn => {
     btn.addEventListener('click', () => {
-      const form = btn.closest('.tl-del-confirm');
-      const actions = form.closest('.tl-act-actions');
-      const trigger = actions.querySelector('.js-del-trigger');
-      form.classList.remove('active');
-      trigger.hidden = false;
-      trigger.setAttribute('aria-expanded', 'false');
-      trigger.focus();
+      document.querySelectorAll('.tl-filter-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const filter = btn.dataset.filter;
+      document.querySelectorAll('#tl-list .tl-row, #tl-list .tl-actions-wrap').forEach(el => {
+        if (filter === 'all' || el.dataset.tipo === filter || el.dataset.tipo === 'log') {
+          el.style.display = '';
+        } else {
+          el.style.display = 'none';
+        }
+      });
     });
   });
+}
+
+/* ═══════════════════════════════════════════
+   ROW TOGGLE (expand/collapse actions)
+═══════════════════════════════════════════ */
+let openRow = null;
+
+function tlToggleRow(rowEl) {
+  if (rowEl.classList.contains('tl-row-log')) return;
+  const id      = rowEl.dataset.id;
+  const actions = document.getElementById('tl-actions-' + id);
+  if (!actions) return;
+
+  if (openRow && openRow !== id) {
+    const prev = document.getElementById('tl-actions-' + openRow);
+    if (prev) prev.classList.remove('open');
+    cancelDeleteUI(openRow);
+  }
+
+  actions.classList.toggle('open');
+  openRow = actions.classList.contains('open') ? id : null;
+}
+window.tlToggleRow = tlToggleRow;
+
+/* ═══════════════════════════════════════════
+   ACTION HANDLERS
+═══════════════════════════════════════════ */
+function tlEditActivity(id) {
+  const clienteId = document.getElementById('tl-shell').dataset.cliente;
+  window.location.href = '/entrenos/cliente/' + clienteId + '/actividad/' + id + '/editar/';
+}
+window.tlEditActivity = tlEditActivity;
+
+function tlConfirmDelete(id, e) {
+  e.stopPropagation();
+  document.getElementById('tl-normal-'  + id).classList.add('hide');
+  document.getElementById('tl-confirm-' + id).classList.add('show');
+}
+window.tlConfirmDelete = tlConfirmDelete;
+
+function tlCancelDelete(id, e) {
+  e.stopPropagation();
+  cancelDeleteUI(id);
+}
+window.tlCancelDelete = tlCancelDelete;
+
+function cancelDeleteUI(id) {
+  const n = document.getElementById('tl-normal-'  + id);
+  const c = document.getElementById('tl-confirm-' + id);
+  if (n) { n.classList.remove('hide'); }
+  if (c) { c.classList.remove('show'); }
+}
+
+function tlDeleteActivity(id, e) {
+  e.stopPropagation();
+  const clienteId = document.getElementById('tl-shell').dataset.cliente;
+  const csrftoken = (document.cookie.match(/csrftoken=([^;]+)/) || [])[1] || '';
+  fetch('/entrenos/cliente/' + clienteId + '/actividad/' + id + '/eliminar/', {
+    method: 'POST',
+    headers: { 'X-CSRFToken': csrftoken, 'Content-Type': 'application/json' }
+  })
+    .then(r => r.ok ? location.reload() : alert('Error al eliminar'))
+    .catch(() => alert('Error de conexión'));
+}
+window.tlDeleteActivity = tlDeleteActivity;
+
+/* ═══════════════════════════════════════════
+   STAGGER ANIMATIONS
+═══════════════════════════════════════════ */
+function initAnimations() {
+  document.querySelectorAll('#tl-list .tl-row').forEach((row, i) => {
+    row.style.animationDelay = (i * 0.04) + 's';
+  });
+}
+
+/* ═══════════════════════════════════════════
+   BOOT
+═══════════════════════════════════════════ */
+document.addEventListener('DOMContentLoaded', () => {
+  initRings();
+  initFilters();
+  initAnimations();
+});
+
 })();
 </script>
 {% endblock %}
