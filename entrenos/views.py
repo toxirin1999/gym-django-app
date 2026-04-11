@@ -3828,9 +3828,10 @@ def guardar_entrenamiento_activo(request, cliente_id):
                 except Exception as e:
                     logger.warning("Error calculando ACWR: %s", e)
 
+                duracion_guardada = int(duracion_real) if duracion_real else (entreno.duracion_minutos or 0)
                 sesion_gam = SesionGamificacion.objects.create(
                     entreno=entreno,
-                    duracion_minutos=int(duracion_real) if duracion_real else (entreno.duracion_minutos or 0),
+                    duracion_minutos=duracion_guardada,
                     series_completadas=int(series_comp) if series_comp else 0,
                     series_totales=int(series_tot) if series_tot else 0,
                     ejercicios_completados=int(ejs_comp) if ejs_comp else 0,
@@ -3839,6 +3840,12 @@ def guardar_entrenamiento_activo(request, cliente_id):
                     rpe_medio=rpe_final,
                     acwr=acwr_actual
                 )
+
+                # Propagar duración a EntrenoRealizado y ActividadRealizada para que
+                # el timeline la muestre correctamente
+                if duracion_guardada and not entreno.duracion_minutos:
+                    entreno.duracion_minutos = duracion_guardada
+                    entreno.save(update_fields=['duracion_minutos'])
 
                 # 1. Detectar Récords Personales
                 records_nuevos = RecordsService.detectar_records_sesion(entreno)
