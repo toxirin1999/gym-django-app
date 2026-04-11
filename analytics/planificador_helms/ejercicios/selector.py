@@ -122,7 +122,7 @@ class SelectorEjercicios:
                 bio = BioContextProvider.get_current_restrictions(cliente)
                 restricted_tags = bio.get('tags', set())
                 if restricted_tags:
-                    logger.info(
+                    logger.debug(
                         "BioContext: %d tags restringidos activos → %s",
                         len(restricted_tags), restricted_tags,
                     )
@@ -193,7 +193,7 @@ class SelectorEjercicios:
                     blocked_ex_tags = set(blocked_principal.get('risk_tags', [])) if isinstance(blocked_principal, dict) else set()
                     matching_tags = list(blocked_ex_tags.intersection(restricted_tags))
 
-                    logger.info(
+                    logger.debug(
                         "BioContext: principal '%s' bloqueado en '%s' por tags %s, buscando sustituto",
                         blocked_name, grupo, matching_tags,
                     )
@@ -204,18 +204,15 @@ class SelectorEjercicios:
 
                     # ── Anotar metadata de sustitución en el ejercicio sustituto ──
                     if ej1 and isinstance(ej1, dict):
-                        # Obtener fase de la lesión si está disponible
+                        # Reusar `bio` ya obtenido al inicio del método — sin segunda query
                         injury_fase = ''
                         injury_zona = ''
-                        if cliente is not None:
-                            try:
-                                from core.bio_context import BioContextProvider
-                                bio_data = BioContextProvider.get_current_restrictions(cliente)
-                                if bio_data.get('injuries'):
-                                    injury_fase = bio_data['injuries'][0].get('fase', '')
-                                    injury_zona = bio_data['injuries'][0].get('zona', '')
-                            except Exception:
-                                pass
+                        try:
+                            if bio.get('injuries'):
+                                injury_fase = bio['injuries'][0].get('fase', '')
+                                injury_zona = bio['injuries'][0].get('zona', '')
+                        except Exception:
+                            pass
                         ej1['was_bio_substituted'] = True
                         ej1['metadata_adaptacion'] = {
                             'ejercicio_original': blocked_name,

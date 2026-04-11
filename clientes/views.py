@@ -1054,10 +1054,10 @@ def _get_dashboard_context_data(request, cliente):
         
         # Mapeamos a lo que el template blade_runner.html espera
         metricas_radar = {
-            'asistencia': stats_principales.get('entrenamientos_unicos', 0),
-            'volumen': (stats_principales.get('volumen_total', 0) / 1000.0), # Convertimos a Toneladas
-            'frecuencia_semanal': stats_principales.get('frecuencia_semanal', 0.0),
-            'intensidad': stats_principales.get('intensidad_promedio', 0.0),
+            'asistencia': int(stats_principales.get('entrenamientos_unicos', 0)),
+            'volumen': float(stats_principales.get('volumen_total', 0)) / 1000.0,  # Toneladas
+            'frecuencia_semanal': float(stats_principales.get('frecuencia_semanal', 0.0)),
+            'intensidad': float(stats_principales.get('intensidad_promedio', 0.0)),
         }
     except Exception as e:
         logger.error(f"Error calculando métricas radar: {e}")
@@ -3638,6 +3638,12 @@ def establecer_objetivo_peso(request, cliente_id):
 
 
 def obtener_proximo_entrenamiento_simplificado(cliente):
+    hoy = timezone.now().date()
+    _cache_key = f'proximo_entrenamiento_{cliente.id}_{hoy}'
+    cached = cache.get(_cache_key)
+    if cached is not None:
+        return cached  # None es un valor válido (día de descanso)
+
     try:
         # 1. Leemos los 1RM directamente del cliente. ¡Nuestra única fuente de verdad!
         maximos_actuales = cliente.one_rm_data or {}
@@ -3648,11 +3654,11 @@ def obtener_proximo_entrenamiento_simplificado(cliente):
 
         # 3. Generamos el plan y buscamos el día de hoy
         planificador = PlanificadorHelms(perfil)
-        hoy = timezone.now().date()
         entrenamiento_hoy = planificador.generar_entrenamiento_para_fecha(hoy)
 
         if not entrenamiento_hoy or not entrenamiento_hoy.get("ejercicios"):
-            return None  # Es un día de descanso
+            cache.set(_cache_key, None, 1800)  # día de descanso — cachear 30 min
+            return None
 
         # Normalización de claves para evitar VariableDoesNotExist en templates estrictos
         r_nombre = entrenamiento_hoy.get("rutina_nombre") or entrenamiento_hoy.get("nombre_rutina")
@@ -3660,10 +3666,11 @@ def obtener_proximo_entrenamiento_simplificado(cliente):
             entrenamiento_hoy["rutina_nombre"] = r_nombre
             entrenamiento_hoy["nombre_rutina"] = r_nombre
 
+        cache.set(_cache_key, entrenamiento_hoy, 1800)  # válido durante 30 min
         return entrenamiento_hoy
 
     except Exception as e:
-        print(f"Error en obtener_proximo_entrenamiento_simplificado: {e}")
+        logger.warning("obtener_proximo_entrenamiento_simplificado: %s", e)
         return None
 
 
