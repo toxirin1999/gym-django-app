@@ -6925,7 +6925,7 @@ def timeline_atleta(request, cliente_id):
     actividades_raw = list(
         ActividadRealizada.objects
         .filter(cliente=cliente, fecha__range=(fecha_inicio, hoy))
-        .select_related('entreno_gym', 'sesion_hyrox')
+        .select_related('entreno_gym', 'entreno_gym__sesion_detalle', 'sesion_hyrox')
         .order_by('fecha', 'hora_inicio')
     )
     # Deduplicar: si hay dos entradas para el mismo EntrenoRealizado, quedarse con una
@@ -6936,6 +6936,16 @@ def timeline_atleta(request, cliente_id):
             if a.entreno_gym_id in seen_gym:
                 continue
             seen_gym.add(a.entreno_gym_id)
+        # Rellenar duracion_minutos desde el modelo relacionado si está vacío
+        if not a.duracion_minutos and a.entreno_gym_id and a.entreno_gym:
+            gym = a.entreno_gym
+            detalle = getattr(gym, 'sesion_detalle', None)
+            a.duracion_minutos = (
+                gym.duracion_minutos
+                or (detalle.duracion_minutos if detalle else None)
+            )
+        if not a.duracion_minutos and a.sesion_hyrox:
+            a.duracion_minutos = getattr(a.sesion_hyrox, 'tiempo_total_minutos', None)
         actividades.append(a)
 
     bitacoras = list(
