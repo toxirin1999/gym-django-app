@@ -984,11 +984,11 @@ def _get_dashboard_context_data(request, cliente):
     mensajes_integracion = ["Tu disciplina física refleja tu fortaleza mental.", "Un cuerpo entrenado es el hogar de una mente disciplinada."]
     mensaje_integracion = random.choice(mensajes_integracion)
 
-    _acwr_cache_key = f'dashboard_acwr_{cliente.id}'
+    _acwr_cache_key = f'dashboard_acwr_unificado_{cliente.id}'
     analis_acwr = cache.get(_acwr_cache_key)
     if analis_acwr is None:
-        analizador_carga = AnalizadorCargaYFatiga(cliente)
-        analis_acwr = analizador_carga.analizar_acwr()
+        from entrenos.services.services import EstadisticasService as _ES
+        analis_acwr = _ES.analizar_acwr_unificado(cliente)
         cache.set(_acwr_cache_key, analis_acwr, 900)  # 15 min
 
     # Reutilizamos restricciones_bio ya obtenido arriba (evita segunda llamada)
