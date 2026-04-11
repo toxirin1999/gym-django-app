@@ -739,7 +739,7 @@ def _get_dashboard_context_data(request, cliente):
     for b in reversed(ultimos_dias):
         dias_emocionales.append({
             'fecha': b.fecha.strftime("%A"),
-            'autoconciencia': b.autoconciencia or 0,
+            'autoconciencia': int(b.autoconciencia) if b.autoconciencia is not None else 0,
             'humor': b.get_humor_display() if b.humor else "—",
             'rumiacion_baja': b.rumiacion_baja if b.rumiacion_baja is not None else False
         })
@@ -1056,7 +1056,7 @@ def _get_dashboard_context_data(request, cliente):
         'analisis_acwr': analis_acwr,
         'carga_total_acumulada': carga_total_acumulada,
         'consistencia_pct': 80,
-        'acwr_actual': analis_acwr.get('acwr_actual', 0.0) if analis_acwr else 0.0,
+        'acwr_actual': float(analis_acwr.get('acwr_actual', 0.0)) if analis_acwr else 0.0,
         'metricas_radar': metricas_radar,
         'emociones': emociones,
         'emociones_lista': emociones_lista,
@@ -1155,6 +1155,37 @@ def panel_cliente(request):
             context['nut_consumido_g'] = round(nut_g, 1)
     except Exception:
         pass
+
+    # ── Bienestar de hoy (Prosoche + Vires) ───────────────────────────
+    try:
+        from datetime import date as _date_today
+        from diario.models import ProsocheDiario, ProsocheMes, SeguimientoVires
+        _hoy = _date_today.today()
+        _prosoche_mes = ProsocheMes.objects.filter(
+            usuario=cliente.user, mes=_hoy.month, año=_hoy.year
+        ).first()
+        context['prosoche_hoy'] = (
+            ProsocheDiario.objects.filter(prosoche_mes=_prosoche_mes, fecha=_hoy).first()
+            if _prosoche_mes else None
+        )
+        context['vires_hoy'] = SeguimientoVires.objects.filter(
+            usuario=cliente.user, fecha=_hoy
+        ).first()
+    except Exception:
+        context['prosoche_hoy'] = None
+        context['vires_hoy'] = None
+
+    # ── Diario: área de vida de alta prioridad ─────────────────────────
+    try:
+        from diario.models import Eudaimonia
+        context['eudaimonia_alta'] = (
+            Eudaimonia.objects
+            .filter(usuario=cliente.user, prioridad='alta')
+            .select_related('area')
+            .first()
+        )
+    except Exception:
+        context['eudaimonia_alta'] = None
 
     return render(request, 'clientes/mockup_demo.html', context)
 
