@@ -157,20 +157,6 @@
         </div>
     </div>
 
-    <div class="emotion-box">
-        <h3>¿Cómo te sientes hoy?</h3>
-        <div class="emojis">
-            <button>😊</button>
-            <button>😐</button>
-            <button>😟</button>
-            <button>😣</button>
-            <button>🥀</button>
-            <button>🕳</button>
-        </div>
-        <a href="{% url 'registrar_bitacora' %}" class="btn-fucsia">Registrar bitácora de hoy</a>
-
-    </div>
-
     {% if cliente %}
     <div style="display:flex; gap:0.75rem; margin-bottom:1.5rem;">
         <a href="{% url 'entrenos:registrar_actividad_libre' cliente.id %}"
