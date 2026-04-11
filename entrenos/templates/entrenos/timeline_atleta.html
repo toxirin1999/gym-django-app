@@ -432,7 +432,7 @@
       {% for actividad in dia.actividades %}
       <div class="tl-row"
            data-tipo="{{ actividad.tipo }}"
-           data-carga="{{ actividad.carga_ua|default:0 }}"
+           data-carga="{{ actividad.carga_ua|default:actividad.volumen_kg|default:actividad.duracion_minutos|default:0 }}"
            data-distancia="{{ actividad.distancia_metros|default:0 }}"
            data-calorias="{{ actividad.calorias|default:0 }}"
            data-duracion="{{ actividad.duracion_minutos|default:0 }}"
@@ -459,8 +459,8 @@
         <div class="tl-info">
           <div class="tl-info-type">{{ actividad.tipo|capfirst }}{% if actividad.titulo %} · {{ actividad.titulo }}{% endif %}</div>
           <div class="tl-info-metric">
-            <span class="tl-metric-val">{% if actividad.distancia_metros %}{% widthratio actividad.distancia_metros 1000 1 %}{% elif actividad.calorias %}{{ actividad.calorias|floatformat:0 }}{% elif actividad.carga_ua %}{{ actividad.carga_ua|floatformat:0 }}{% else %}{{ actividad.duracion_minutos|default:0 }}{% endif %}</span>
-            <span class="tl-metric-unit">{% if actividad.distancia_metros %}KM{% elif actividad.calorias %}CAL{% elif actividad.carga_ua %}UA{% else %}MIN{% endif %}</span>
+            <span class="tl-metric-val">{% if actividad.distancia_metros %}{% widthratio actividad.distancia_metros 1000 1 %}{% elif actividad.calorias %}{{ actividad.calorias|floatformat:0 }}{% elif actividad.carga_ua %}{{ actividad.carga_ua|floatformat:0 }}{% elif actividad.volumen_kg %}{{ actividad.volumen_kg|floatformat:0 }}{% elif actividad.duracion_minutos %}{{ actividad.duracion_minutos }}{% elif actividad.rpe_medio %}{{ actividad.rpe_medio|floatformat:1 }}{% else %}—{% endif %}</span>
+            <span class="tl-metric-unit">{% if actividad.distancia_metros %}KM{% elif actividad.calorias %}CAL{% elif actividad.carga_ua %}UA{% elif actividad.volumen_kg %}KG{% elif actividad.duracion_minutos %}MIN{% elif actividad.rpe_medio %}RPE{% endif %}</span>
           </div>
         </div>
 
