@@ -118,11 +118,16 @@ def sincronizar_hub_actividad(sender, instance, created, raw=False, **kwargs):
     elif instance.volumen_total_kg and instance.volumen_total_kg > 0:
         carga_ua = round(float(instance.volumen_total_kg) / 100, 1)
 
+    from datetime import date as _date
+    hoy = _date.today()
+
     defaults = {
         'cliente': instance.cliente,
         'tipo': 'gym',
         'titulo': titulo,
         'fecha': instance.fecha,
+        # fecha_realizado: solo se fija en la primera creación (hoy).
+        # En updates posteriores no se sobreescribe para preservar la fecha real.
         'hora_inicio': instance.hora_inicio,
         'duracion_minutos': duracion,
         'volumen_kg': instance.volumen_total_kg,
@@ -133,9 +138,13 @@ def sincronizar_hub_actividad(sender, instance, created, raw=False, **kwargs):
     }
 
     try:
-        ActividadRealizada.objects.update_or_create(
+        obj, created = ActividadRealizada.objects.update_or_create(
             entreno_gym=instance,
             defaults=defaults,
         )
+        # Fijar fecha_realizado solo al crear (preservar si ya existía)
+        if created and not obj.fecha_realizado:
+            obj.fecha_realizado = hoy
+            obj.save(update_fields=['fecha_realizado'])
     except Exception as e:
         print(f"❌ Hub ActividadRealizada error (entreno {instance.id}): {e}")

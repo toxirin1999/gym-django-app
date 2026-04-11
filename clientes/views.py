@@ -991,6 +991,30 @@ def _get_dashboard_context_data(request, cliente):
         analis_acwr = _ES.analizar_acwr_unificado(cliente)
         cache.set(_acwr_cache_key, analis_acwr, 900)  # 15 min
 
+    # Sesiones realizadas con anticipación (fecha planificada > hoy, pero ya hechas)
+    from entrenos.models import ActividadRealizada as _AR
+    from django.db.models import Q as _Q
+    _hoy = date.today()
+    sesiones_anticipadas = list(
+        _AR.objects.filter(
+            cliente=cliente,
+            fecha__gt=_hoy,
+            fecha_realizado__lte=_hoy,
+        ).order_by('fecha')
+    )
+
+    # Últimas actividades realizadas (para tira de historial en focus mode)
+    _actividades_recientes_qs = _AR.objects.filter(
+        cliente=cliente,
+    ).filter(
+        _Q(fecha_realizado__lte=_hoy) |
+        _Q(fecha_realizado__isnull=True, fecha__lte=_hoy)
+    ).select_related('entreno_gym__rutina').order_by('-fecha_realizado', '-fecha')[:4]
+    actividades_recientes_focus = list(_actividades_recientes_qs)
+    for _act in actividades_recientes_focus:
+        _act.es_anticipada = bool(_act.fecha_realizado and _act.fecha_realizado != _act.fecha)
+        _act.fecha_efectiva = _act.fecha_realizado or _act.fecha
+
     # Reutilizamos restricciones_bio ya obtenido arriba (evita segunda llamada)
     tags_prohibidos = set()
     try:
@@ -1048,12 +1072,17 @@ def _get_dashboard_context_data(request, cliente):
         analis_acwr['acwr'] = analis_acwr.get('acwr_actual', 0.0)
 
     import urllib.parse
-    
+    import json as _json
+    acwr_data_json = _json.dumps(analis_acwr.get('dataframe', [])) if analis_acwr else '[]'
+
     return {
         'usuario': usuario,
         'cliente': cliente,
         'entrenos': entrenos,
         'analisis_acwr': analis_acwr,
+        'acwr_data_json': acwr_data_json,
+        'sesiones_anticipadas': sesiones_anticipadas,
+        'actividades_recientes_focus': actividades_recientes_focus,
         'carga_total_acumulada': carga_total_acumulada,
         'consistencia_pct': 80,
         'acwr_actual': float(analis_acwr.get('acwr_actual', 0.0)) if analis_acwr else 0.0,
@@ -2785,11 +2814,24 @@ def obtener_proximo_entrenamiento(cliente):
         hoy = date.today()
         entrenos_por_fecha = plan_completo.get('entrenos_por_fecha', {})
 
-        # Filtra las fechas del plan que son hoy o en el futuro
-        fechas_futuras = sorted([f for f in entrenos_por_fecha.keys() if date.fromisoformat(f) >= hoy])
+        # Fechas ya realizadas anticipadamente (fecha > hoy pero ya completadas)
+        from entrenos.models import ActividadRealizada as _AR_plan
+        fechas_ya_realizadas = set(
+            _AR_plan.objects.filter(
+                cliente=cliente,
+                fecha__gt=hoy,
+                fecha_realizado__lte=hoy,
+            ).values_list('fecha', flat=True)
+        )
+
+        # Filtra las fechas del plan que son hoy o futuras y NO ya realizadas
+        fechas_futuras = sorted([
+            f for f in entrenos_por_fecha.keys()
+            if date.fromisoformat(f) >= hoy
+            and date.fromisoformat(f) not in fechas_ya_realizadas
+        ])
 
         if not fechas_futuras:
-            # Si no hay fechas futuras, significa que el plan terminó o no se generó.
             return {'es_descanso': True, 'rutina_nombre': 'Plan Finalizado'}
 
         # La próxima fecha de entrenamiento es la primera de la lista.

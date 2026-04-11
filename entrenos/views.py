@@ -6929,9 +6929,16 @@ def timeline_atleta(request, cliente_id):
     hoy = date.today()
     fecha_inicio = hoy - timedelta(days=dias_rango - 1)
 
+    # Incluir actividades con fecha_realizado en el rango, aunque fecha (planificada) sea futura
+    from django.db.models import Q
     actividades_raw = list(
         ActividadRealizada.objects
-        .filter(cliente=cliente, fecha__range=(fecha_inicio, hoy))
+        .filter(
+            cliente=cliente,
+        ).filter(
+            Q(fecha_realizado__range=(fecha_inicio, hoy)) |
+            Q(fecha_realizado__isnull=True, fecha__range=(fecha_inicio, hoy))
+        )
         .select_related('entreno_gym', 'entreno_gym__sesion_detalle', 'sesion_hyrox')
         .order_by('fecha', 'hora_inicio')
     )
@@ -6953,6 +6960,8 @@ def timeline_atleta(request, cliente_id):
             )
         if not a.duracion_minutos and a.sesion_hyrox:
             a.duracion_minutos = getattr(a.sesion_hyrox, 'tiempo_total_minutos', None)
+        # Fecha efectiva para agrupar en el timeline (cuándo se hizo realmente)
+        a._fecha_efectiva = a.fecha_realizado or a.fecha
         actividades.append(a)
 
     bitacoras = list(
@@ -6962,7 +6971,7 @@ def timeline_atleta(request, cliente_id):
 
     actos_por_dia = defaultdict(list)
     for a in actividades:
-        actos_por_dia[a.fecha].append(a)
+        actos_por_dia[a._fecha_efectiva].append(a)
 
     bitacora_por_dia = {b.fecha: b for b in bitacoras}
 
@@ -7115,11 +7124,13 @@ def registrar_actividad_libre(request, cliente_id):
 
             carga_ua = round(rpe * duracion, 1) if (rpe and duracion) else None
 
+            from datetime import date as _date_today
             ActividadRealizada.objects.create(
                 cliente=cliente,
                 tipo=tipo,
                 titulo=titulo,
                 fecha=fecha,
+                fecha_realizado=_date_today.today(),  # siempre hoy (cuándo se registra)
                 hora_inicio=hora,
                 duracion_minutos=duracion,
                 distancia_metros=distancia,
