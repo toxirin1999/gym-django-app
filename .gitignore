@@ -16,11 +16,17 @@ ENV/
 # Django
 *.sqlite3
 db.sqlite3
+db.sqlite333
 /media/
 media/
 *.log
 staticfiles/
 *.bak
+
+# Variables de entorno — NUNCA subir al repo
+.env
+.env.local
+.env.*.local
 
 # Django file cache
 django_cache/

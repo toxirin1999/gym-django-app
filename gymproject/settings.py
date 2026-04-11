@@ -11,20 +11,24 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 import os
 from pathlib import Path
+from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Load environment variables from .env file
+load_dotenv(BASE_DIR / '.env')
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-m^_f1+)gb!61wnzpvso)w7jhv1keu_o6@zs7yna@$$i1*2(&_z'
+SECRET_KEY = os.environ['SECRET_KEY']
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '').split(',')
 
 # Application definition
 
@@ -51,15 +55,15 @@ INSTALLED_APPS = [
     'hyrox',
 ]
 # Configuración de Celery (para notificaciones)
-CELERY_BROKER_URL = 'redis://localhost:6379/0'
-CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
+CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL', 'redis://localhost:6379/0')
+CELERY_RESULT_BACKEND = os.environ.get('CELERY_RESULT_BACKEND', 'redis://localhost:6379/0')
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'America/Mexico_City'
 # Configuración de notificaciones push
 PUSH_NOTIFICATION_URL = 'https://fcm.googleapis.com/fcm/send'
-PUSH_NOTIFICATION_KEY = 'tu_clave_fcm_aqui'
+PUSH_NOTIFICATION_KEY = os.environ.get('PUSH_NOTIFICATION_KEY', '')
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -103,11 +107,11 @@ WSGI_APPLICATION = 'gymproject.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'toxirin$gymdb',
-        'USER': 'toxirin',
-        'PASSWORD': 'ph2Xr4kd',
-        'HOST': 'toxirin.mysql.pythonanywhere-services.com',
-        'PORT': '3306',
+        'NAME': os.environ.get('DB_NAME', 'toxirin$gymdb'),
+        'USER': os.environ.get('DB_USER', 'toxirin'),
+        'PASSWORD': os.environ['DB_PASSWORD'],
+        'HOST': os.environ.get('DB_HOST', 'toxirin.mysql.pythonanywhere-services.com'),
+        'PORT': os.environ.get('DB_PORT', '3306'),
         'OPTIONS': {
             'charset': 'utf8mb4',
             'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
@@ -297,4 +301,4 @@ GAMIFICACION_CONFIG = {
 }
 
 # --- IA INTEGRATION ---
-GEMINI_API_KEY = "AIzaSyCqKVpl4VjGPyX9nCd32CSTqh4yxnggqAw"
+GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
