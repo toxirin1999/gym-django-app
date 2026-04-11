@@ -71,10 +71,52 @@ def sincronizar_hub_actividad(sender, instance, created, raw=False, **kwargs):
     except Exception:
         pass
 
-    # Carga UA
+    # Duración: si no está en el entreno, buscar en sesion_detalle
+    duracion = instance.duracion_minutos
+    if not duracion:
+        try:
+            duracion = instance.sesion_detalle.duracion_minutos or None
+        except Exception:
+            pass
+    # Parsear tiempo_total_formateado como último recurso (ej: "1:10:23" → 70 min)
+    if not duracion and instance.tiempo_total_formateado:
+        try:
+            partes = instance.tiempo_total_formateado.replace('h', ':').replace('m', '').split(':')
+            partes = [p.strip() for p in partes if p.strip()]
+            if len(partes) == 3:
+                duracion = int(partes[0]) * 60 + int(partes[1])
+            elif len(partes) == 2:
+                duracion = int(partes[0]) * 60 + int(partes[1])
+            elif len(partes) == 1:
+                duracion = int(partes[0])
+        except Exception:
+            pass
+
+    # Propagar duración a EntrenoRealizado si se recuperó de otra fuente
+    if duracion and not instance.duracion_minutos:
+        try:
+            EntrenoRealizado.objects.filter(pk=instance.pk).update(duracion_minutos=duracion)
+        except Exception:
+            pass
+
+    # RPE: si no viene de ejercicios, intentar desde sesion_detalle
+    if not rpe_medio:
+        try:
+            rpe_medio = instance.sesion_detalle.rpe_medio or None
+        except Exception:
+            pass
+
+    # Carga UA con fallbacks:
+    # 1. RPE × duración (estándar)
+    # 2. RPE por defecto (5.0 = moderado) × duración si no hay RPE
+    # 3. Volumen / 100 como estimación mínima si no hay duración
     carga_ua = None
-    if rpe_medio and instance.duracion_minutos:
-        carga_ua = round(rpe_medio * instance.duracion_minutos, 1)
+    if rpe_medio and duracion:
+        carga_ua = round(float(rpe_medio) * duracion, 1)
+    elif duracion:
+        carga_ua = round(5.0 * duracion, 1)   # esfuerzo moderado por defecto
+    elif instance.volumen_total_kg and instance.volumen_total_kg > 0:
+        carga_ua = round(float(instance.volumen_total_kg) / 100, 1)
 
     defaults = {
         'cliente': instance.cliente,
@@ -82,7 +124,7 @@ def sincronizar_hub_actividad(sender, instance, created, raw=False, **kwargs):
         'titulo': titulo,
         'fecha': instance.fecha,
         'hora_inicio': instance.hora_inicio,
-        'duracion_minutos': instance.duracion_minutos,
+        'duracion_minutos': duracion,
         'volumen_kg': instance.volumen_total_kg,
         'calorias': instance.calorias_quemadas,
         'rpe_medio': rpe_medio,

@@ -2148,6 +2148,90 @@
 .lol-stat-value.acwr-danger { color: #ef4444; }
 .lol-stat-value.acwr-safe { color: #4ade80; }
 
+/* ── Semáforo ACWR ─────────────────────────────────────── */
+.acwr-semaforo {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin-bottom: 18px;
+    border: 1px solid transparent;
+    position: relative;
+    overflow: hidden;
+}
+.acwr-semaforo::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    opacity: .06;
+    pointer-events: none;
+}
+.acwr-zona-optima  { background: rgba(74,222,128,.08); border-color: rgba(74,222,128,.25); }
+.acwr-zona-optima  .acwr-sem-dot { background: #4ade80; box-shadow: 0 0 8px #4ade80; }
+.acwr-zona-optima  .acwr-sem-num { color: #4ade80; }
+.acwr-zona-cuidado { background: rgba(251,191,36,.08); border-color: rgba(251,191,36,.25); }
+.acwr-zona-cuidado .acwr-sem-dot { background: #fbbf24; box-shadow: 0 0 8px #fbbf24; }
+.acwr-zona-cuidado .acwr-sem-num { color: #fbbf24; }
+.acwr-zona-riesgo  { background: rgba(239,68,68,.08); border-color: rgba(239,68,68,.25); }
+.acwr-zona-riesgo  .acwr-sem-dot { background: #ef4444; box-shadow: 0 0 8px #ef4444; }
+.acwr-zona-riesgo  .acwr-sem-num { color: #ef4444; }
+.acwr-zona-baja    { background: rgba(148,163,184,.08); border-color: rgba(148,163,184,.2); }
+.acwr-zona-baja    .acwr-sem-dot { background: #94a3b8; }
+.acwr-zona-baja    .acwr-sem-num { color: #94a3b8; }
+
+.acwr-sem-left {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    flex: 1;
+    min-width: 0;
+}
+.acwr-sem-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    margin-top: 4px;
+    animation: acwrPulse 2s ease-in-out infinite;
+}
+@keyframes acwrPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: .4; }
+}
+.acwr-sem-titulo {
+    font-size: 13px;
+    font-weight: 700;
+    color: #e2e8f0;
+    line-height: 1.3;
+    margin-bottom: 4px;
+    font-family: 'Beaufort for LOL', 'Share Tech Mono', monospace;
+    letter-spacing: .3px;
+}
+.acwr-sem-sub {
+    font-size: 11px;
+    color: rgba(226,232,240,.55);
+    line-height: 1.5;
+}
+.acwr-sem-valor {
+    text-align: center;
+    flex-shrink: 0;
+}
+.acwr-sem-num {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 28px;
+    font-weight: 700;
+    line-height: 1;
+}
+.acwr-sem-etiqueta {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    color: #785A28;
+    letter-spacing: .15em;
+    text-transform: uppercase;
+    margin-top: 3px;
+}
+
 .lol-stat-bar {
     height: 2px;
     background: rgba(200,170,110,0.08);
@@ -2493,6 +2577,39 @@
     {% endif %}
     </div>
     {% endif %}
+
+    <!-- ── SEMÁFORO ACWR ──────────────────────────────────────────── -->
+    {% with zona=analisis_acwr.zona_riesgo %}
+    <div class="acwr-semaforo
+        {% if zona == 'optima' %}acwr-zona-optima
+        {% elif zona == 'cuidado' %}acwr-zona-cuidado
+        {% elif zona == 'riesgo_alto' %}acwr-zona-riesgo
+        {% else %}acwr-zona-baja{% endif %}">
+
+      <div class="acwr-sem-left">
+        <div class="acwr-sem-dot"></div>
+        <div>
+          <div class="acwr-sem-titulo">
+            {% if zona == 'optima' %}Zona óptima — Puedes entrenar
+            {% elif zona == 'cuidado' %}Carga elevada — Modera la intensidad
+            {% elif zona == 'riesgo_alto' %}Sobrecarga — Descansa hoy
+            {% else %}Carga baja — Puedes exigirte más{% endif %}
+          </div>
+          <div class="acwr-sem-sub">
+            {% if zona == 'optima' %}Tu carga aguda y crónica están equilibradas. Entrena con normalidad.
+            {% elif zona == 'cuidado' %}Aumentas rápido. Sigue entrenando pero baja la intensidad un 20%.
+            {% elif zona == 'riesgo_alto' %}Riesgo de lesión elevado. Prioriza recuperación activa o descanso.
+            {% else %}No has acumulado suficiente carga reciente. Esta semana puedes apretar más.{% endif %}
+          </div>
+        </div>
+      </div>
+
+      <div class="acwr-sem-valor">
+        <div class="acwr-sem-num">{{ acwr_actual|floatformat:2|default:"—" }}</div>
+        <div class="acwr-sem-etiqueta">ACWR</div>
+      </div>
+    </div>
+    {% endwith %}
 
     <!-- ── MÉTRICAS ───────────────────────────────────────────────── -->
     <div class="lol-stats-wrap">
