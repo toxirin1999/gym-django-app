@@ -1,0 +1,85 @@
+{# _widget_bienestar.html
+   Variables requeridas: prosoche_hoy, vires_hoy
+#}
+<div style="margin:8px 16px 10px;padding:12px 14px;background:rgba(8,14,28,0.85);border:1px solid rgba(200,170,110,0.14);border-radius:10px;">
+
+  {% if prosoche_hoy or vires_hoy %}
+  <!-- Check-in completado -->
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+
+    <div style="font-family:'Cinzel',serif;font-size:0.5rem;letter-spacing:0.18em;text-transform:uppercase;color:#785A28;flex-shrink:0;">Hoy</div>
+
+    <div style="display:flex;gap:16px;flex:1;justify-content:center;">
+      {% if vires_hoy.nivel_energia is not None %}
+      <div style="display:flex;flex-direction:column;align-items:center;gap:2px;">
+        <span style="font-family:'Share Tech Mono',monospace;font-size:1rem;font-weight:700;color:#fbbf24;line-height:1;">{{ vires_hoy.nivel_energia }}</span>
+        <span style="font-family:'Cinzel',serif;font-size:0.42rem;color:#785A28;letter-spacing:0.12em;text-transform:uppercase;">Energía</span>
+      </div>
+      {% endif %}
+
+      {% if vires_hoy.horas_sueno %}
+      <div style="display:flex;flex-direction:column;align-items:center;gap:2px;">
+        <span style="font-family:'Share Tech Mono',monospace;font-size:1rem;font-weight:700;color:#818cf8;line-height:1;">{{ vires_hoy.horas_sueno }}h</span>
+        <span style="font-family:'Cinzel',serif;font-size:0.42rem;color:#785A28;letter-spacing:0.12em;text-transform:uppercase;">Sueño</span>
+      </div>
+      {% endif %}
+
+      {% if prosoche_hoy.estado_animo %}
+      <div style="display:flex;flex-direction:column;align-items:center;gap:2px;">
+        <span style="font-family:'Share Tech Mono',monospace;font-size:1rem;font-weight:700;line-height:1;
+          {% if prosoche_hoy.estado_animo >= 4 %}color:#4ade80;{% elif prosoche_hoy.estado_animo == 3 %}color:#fbbf24;{% else %}color:#ef4444;{% endif %}">
+          {{ prosoche_hoy.estado_animo }}/5
+        </span>
+        <span style="font-family:'Cinzel',serif;font-size:0.42rem;color:#785A28;letter-spacing:0.12em;text-transform:uppercase;">Ánimo</span>
+      </div>
+      {% endif %}
+
+      {% if vires_hoy.nivel_estres is not None %}
+      <div style="display:flex;flex-direction:column;align-items:center;gap:2px;padding-left:10px;border-left:1px solid rgba(200,170,110,0.1);">
+        <span style="font-family:'Share Tech Mono',monospace;font-size:1rem;font-weight:700;line-height:1;
+          {% if vires_hoy.nivel_estres <= 2 %}color:#4ade80;{% elif vires_hoy.nivel_estres == 3 %}color:#fbbf24;{% else %}color:#ef4444;{% endif %}">
+          {{ vires_hoy.nivel_estres }}
+        </span>
+        <span style="font-family:'Cinzel',serif;font-size:0.42rem;color:#785A28;letter-spacing:0.12em;text-transform:uppercase;">Estrés</span>
+      </div>
+      {% endif %}
+
+      {% if prosoche_hoy %}
+      <div style="display:flex;flex-direction:column;align-items:center;gap:2px;padding-left:10px;border-left:1px solid rgba(200,170,110,0.1);">
+        <span style="font-family:'Share Tech Mono',monospace;font-size:1rem;font-weight:700;color:#C8AA6E;line-height:1;">{{ prosoche_hoy.get_tareas_completadas }}/{{ prosoche_hoy.get_total_tareas }}</span>
+        <span style="font-family:'Cinzel',serif;font-size:0.42rem;color:#785A28;letter-spacing:0.12em;text-transform:uppercase;">Tareas</span>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Acciones rápidas -->
+    <div style="display:flex;gap:5px;flex-shrink:0;">
+      <a href="{% url 'diario:prosoche_nueva_entrada' %}" title="Checklist diario"
+         style="display:flex;align-items:center;justify-content:center;width:28px;height:28px;background:rgba(200,170,110,0.07);border:1px solid rgba(200,170,110,0.2);border-radius:6px;font-size:0.75rem;text-decoration:none;">✏️</a>
+      <a href="{% url 'diario:dashboard_diario' %}" title="Diario"
+         style="display:flex;align-items:center;justify-content:center;width:28px;height:28px;background:rgba(200,170,110,0.07);border:1px solid rgba(200,170,110,0.2);border-radius:6px;font-size:0.75rem;text-decoration:none;">📓</a>
+    </div>
+
+  </div>
+
+  {% else %}
+  <!-- Sin check-in hoy -->
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+    <div>
+      <div style="font-family:'Cinzel',serif;font-size:0.55rem;letter-spacing:0.14em;text-transform:uppercase;color:rgba(200,170,110,0.5);margin-bottom:2px;">Check-in pendiente</div>
+      <div style="font-family:'Share Tech Mono',monospace;font-size:0.6rem;color:rgba(200,170,110,0.25);">¿Cómo estás hoy?</div>
+    </div>
+    <div style="display:flex;gap:6px;">
+      <a href="{% url 'diario:prosoche_nueva_entrada' %}"
+         style="display:flex;align-items:center;gap:4px;padding:7px 11px;background:rgba(200,170,110,0.08);border:1px solid rgba(200,170,110,0.25);border-radius:6px;font-family:'Cinzel',serif;font-size:0.53rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#C8AA6E;text-decoration:none;">
+        ✏️ Registrar
+      </a>
+      <a href="{% url 'diario:dashboard_diario' %}"
+         style="display:flex;align-items:center;gap:4px;padding:7px 11px;background:rgba(200,170,110,0.04);border:1px solid rgba(200,170,110,0.12);border-radius:6px;font-family:'Cinzel',serif;font-size:0.53rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:rgba(200,170,110,0.45);text-decoration:none;">
+        📓 Diario
+      </a>
+    </div>
+  </div>
+  {% endif %}
+
+</div>

@@ -57,6 +57,7 @@ urlpatterns = [
     path('panel/', clientes_views.dashboard, name='dashboard'),
     path('mi-panel/', panel_cliente, name='panel_cliente'),
     path('mi-panel/blade-runner/', views.blade_runner_dashboard, name='blade_runner_dashboard'),
+    path('mi-panel/widget/acwr/<int:cliente_id>/', views.widget_acwr, name='widget_acwr'),
 
     # Nutrición
     path('nutricion/calcular/', views.calcular_plan_nutricional, name='calcular_plan_nutricional'),
