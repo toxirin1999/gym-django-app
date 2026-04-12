@@ -7,9 +7,9 @@
 
 :root {
   /* ── PALETA PRINCIPAL ── */
-  --lol-void:        #010A13;   /* Fondo más oscuro, body */
-  --lol-deep:        #0A1628;   /* Fondo de cards y paneles */
-  --lol-panel:       #071020;   /* Fondo de secciones internas */
+  --lol-void:        #000000;   /* Fondo negro total */
+  --lol-deep:        #0d0d0d;   /* Fondo de cards y paneles */
+  --lol-panel:       #111111;   /* Fondo de secciones internas */
 
   /* Oro — color dominante y de acción */
   --lol-gold-bright: #F0E6D3;   /* Texto principal, títulos */
@@ -116,14 +116,8 @@ body, p, span, a, button, input {
 
 /* Fondo base del body */
 body {
-  background-color: var(--lol-void);
-  background-image:
-    radial-gradient(ellipse 80% 50% at 50% 100%, rgba(10,22,40,0.8) 0%, transparent 60%),
-    repeating-linear-gradient(
-      45deg,
-      transparent, transparent 60px,
-      rgba(200,170,110,0.008) 60px, rgba(200,170,110,0.008) 61px
-    );
+  background-color: #000 !important;
+  background-image: none !important;
   color: var(--lol-text-primary);
   font-family: var(--font-ui);
 }
