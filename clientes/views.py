@@ -623,6 +623,113 @@ def calcular_top_1rm(cliente):
         return []
 
 
+def _ctx_gamificacion(cliente):
+    """Bloque de gamificación con caché de 15 minutos."""
+    _key = f'dashboard_gamif_{cliente.id}'
+    cached = cache.get(_key)
+    if cached is not None:
+        return cached
+    perfil = PerfilGamificacion.objects.filter(cliente=cliente).select_related('nivel_actual').first()
+    logros_completados, pruebas_activas = [], []
+    if perfil:
+        logros_completados = list(PruebaUsuario.objects.filter(
+            perfil=perfil, completada=True
+        ).select_related('prueba', 'prueba__arquetipo'))
+        if perfil.nivel_actual:
+            ids_completadas = list(PruebaUsuario.objects.filter(
+                perfil=perfil, completada=True
+            ).values_list('prueba_id', flat=True))
+            pruebas_activas = list(PruebaLegendaria.objects.filter(
+                arquetipo=perfil.nivel_actual
+            ).exclude(id__in=ids_completadas)[:3])
+    result = (perfil, logros_completados, pruebas_activas)
+    cache.set(_key, result, 900)
+    return result
+
+
+def _ctx_estoico(request, hoy):
+    """Bloque estoico con caché de 10 minutos."""
+    defaults = (False, None, None, False, 0, 0, 0, 0)
+    try:
+        from estoico.models import ContenidoDiario, ReflexionDiaria
+        try:
+            from estoico.models import LogroUsuario as LogroEstoico
+        except ImportError:
+            LogroEstoico = None
+
+        _key = f'dashboard_estoico_{request.user.id}_{hoy}'
+        cached = cache.get(_key)
+        if cached is not None:
+            return (True,) + cached
+
+        contenido_hoy = ContenidoDiario.objects.filter(dia=hoy.timetuple().tm_yday).first()
+        reflexion_hoy = ReflexionDiaria.objects.filter(usuario=request.user, fecha=hoy).first()
+        total_reflexiones = ReflexionDiaria.objects.filter(usuario=request.user).count()
+        fechas = set(ReflexionDiaria.objects.filter(
+            usuario=request.user, fecha__gte=hoy - timedelta(days=365)
+        ).values_list('fecha', flat=True))
+        racha = 0
+        d = hoy
+        for _ in range(365):
+            if d in fechas:
+                racha += 1
+                d -= timedelta(days=1)
+            else:
+                break
+        logros_estoicos = LogroEstoico.objects.filter(usuario=request.user).count() if LogroEstoico else 0
+        payload = (contenido_hoy, reflexion_hoy, not reflexion_hoy, total_reflexiones, racha, logros_estoicos, total_reflexiones)
+        cache.set(_key, payload, 600)
+        return (True,) + payload
+    except Exception:
+        return defaults
+
+
+def _ctx_analytics(cliente, hoy):
+    """Analytics pesados: mesociclos, fatiga, ratios fuerza. Caché 15 min."""
+    _key = f'dashboard_analytics_{cliente.id}'
+    cached = cache.get(_key)
+    if cached is None:
+        analizador_progresion = AnalisisProgresionAvanzado(cliente)
+        analizador_intensidad = AnalisisIntensidadAvanzado(cliente)
+        cached = {
+            'ratios_fuerza': analizador_progresion.calcular_ratios_fuerza(),
+            'fatiga_acumulada': analizador_intensidad.calcular_fatiga_acumulada(periodo_dias=14),
+            'analisis_mesociclos': analizador_progresion.analisis_mesociclos(),
+        }
+        cache.set(_key, cached, 900)
+    return cached
+
+
+def _ctx_hyrox(cliente, hoy):
+    """Objetivo Hyrox activo y próxima sesión."""
+    try:
+        from hyrox.models import HyroxObjective, HyroxSession
+        objetivo = (
+            HyroxObjective.objects.filter(cliente=cliente, estado='active').first()
+            or HyroxObjective.objects.filter(cliente=cliente, estado='activo').first()
+        )
+        proxima = None
+        if objetivo:
+            proxima = HyroxSession.objects.filter(
+                objective=objetivo, estado='planificado', fecha__gte=hoy
+            ).order_by('fecha').prefetch_related('activities').first()
+        return objetivo, proxima
+    except Exception:
+        return None, None
+
+
+def _ctx_bio(cliente):
+    """Bio readiness y restricciones activas."""
+    try:
+        from core.bio_context import BioContextProvider
+        return (
+            BioContextProvider.get_readiness_score(cliente),
+            BioContextProvider.get_current_restrictions(cliente),
+        )
+    except Exception:
+        return {}, {}
+
+
 def _get_dashboard_context_data(request, cliente):
     usuario = request.user
     hoy = timezone.now().date()
@@ -635,33 +742,7 @@ def _get_dashboard_context_data(request, cliente):
 
     emociones = EstadoEmocional.objects.filter(user=usuario).order_by('-fecha')[:5]
     recuerdo = RecuerdoEmocional.objects.filter(user=usuario).order_by('-fecha').first()
-    # Cachear bloque de gamificación 15 minutos
-    _gamif_cache_key = f'dashboard_gamif_{cliente.id}'
-    _gamif_cached = cache.get(_gamif_cache_key)
-    if _gamif_cached is not None:
-        perfil_gamificacion, logros_completados, pruebas_activas = _gamif_cached
-    else:
-        perfil_gamificacion = PerfilGamificacion.objects.filter(cliente=cliente).select_related('nivel_actual').first()
-        logros_completados = []
-        pruebas_activas = []
-
-        if perfil_gamificacion:
-            logros_completados = list(PruebaUsuario.objects.filter(
-                perfil=perfil_gamificacion,
-                completada=True
-            ).select_related('prueba', 'prueba__arquetipo'))
-
-            if perfil_gamificacion.nivel_actual:
-                pruebas_pendientes_ids = list(PruebaUsuario.objects.filter(
-                    perfil=perfil_gamificacion,
-                    completada=True
-                ).values_list('prueba_id', flat=True))
-
-                pruebas_activas = list(PruebaLegendaria.objects.filter(
-                    arquetipo=perfil_gamificacion.nivel_actual
-                ).exclude(id__in=pruebas_pendientes_ids)[:3])
-
-        cache.set(_gamif_cache_key, (perfil_gamificacion, logros_completados, pruebas_activas), 900)
+    perfil_gamificacion, logros_completados, pruebas_activas = _ctx_gamificacion(cliente)
 
     datos_logros = obtener_datos_logros(cliente)
     estado_joi = obtener_estado_joi(usuario)
@@ -805,17 +886,7 @@ def _get_dashboard_context_data(request, cliente):
         aplicada=True
     ).order_by('-fecha_aplicacion')[:3]
 
-    # --- Computaciones pesadas de analítica con caché de 15 minutos ---
-    _cache_analytics = cache.get(f'dashboard_analytics_{cliente.id}')
-    if _cache_analytics is None:
-        analizador_progresion = AnalisisProgresionAvanzado(cliente)
-        analizador_intensidad = AnalisisIntensidadAvanzado(cliente)
-        _cache_analytics = {
-            'ratios_fuerza': analizador_progresion.calcular_ratios_fuerza(),
-            'fatiga_acumulada': analizador_intensidad.calcular_fatiga_acumulada(periodo_dias=14),
-            'analisis_mesociclos': analizador_progresion.analisis_mesociclos(),
-        }
-        cache.set(f'dashboard_analytics_{cliente.id}', _cache_analytics, 900)  # 15 min
+    _cache_analytics = _ctx_analytics(cliente, hoy)
     ratios_fuerza = _cache_analytics['ratios_fuerza']
     fatiga_acumulada = _cache_analytics['fatiga_acumulada']
     analisis_mesociclos = _cache_analytics['analisis_mesociclos']
@@ -868,30 +939,11 @@ def _get_dashboard_context_data(request, cliente):
         cache.set(_estanc_cache_key, estancamientos_detectados, 900)
     proximo_entrenamiento = obtener_proximo_entrenamiento_simplificado(cliente)
 
-    hyrox_objetivo = None
-    hyrox_proxima_sesion = None
-    try:
-        from hyrox.models import HyroxObjective, HyroxSession
-        hyrox_objetivo = HyroxObjective.objects.filter(cliente=cliente, estado='active').first() or HyroxObjective.objects.filter(cliente=cliente, estado='activo').first()
-        if hyrox_objetivo:
-            hyrox_proxima_sesion = HyroxSession.objects.filter(
-                objective=hyrox_objetivo,
-                estado='planificado',
-                fecha__gte=hoy
-            ).order_by('fecha').prefetch_related('activities').first()
-    except Exception: pass
-
-    bio_readiness = {}
-    try:
-        from core.bio_context import BioContextProvider
-        bio_readiness = BioContextProvider.get_readiness_score(cliente)
-    except Exception: pass
+    hyrox_objetivo, hyrox_proxima_sesion = _ctx_hyrox(cliente, hoy)
+    bio_readiness, restricciones_bio = _ctx_bio(cliente)
 
     sesion_pendiente = None
-    restricciones_bio = {}
     try:
-        from core.bio_context import BioContextProvider as _BCP
-        restricciones_bio = _BCP.get_current_restrictions(cliente)
         pierna_bloqueada = '__aguda_tren_inferior' in restricciones_bio.get('tags', set())
 
         if not proximo_entrenamiento or not proximo_entrenamiento.get('ejercicios'):
@@ -927,59 +979,8 @@ def _get_dashboard_context_data(request, cliente):
     estadisticas_plan, historial_adherencia, prediccion, reporte_adherencia = _stats_cached
     notificaciones = generar_notificaciones_contextuales(cliente, entrenos)
 
-    estoico_disponible = False
-    contenido_hoy = None
-    reflexion_hoy = None
-    reflexion_pendiente = False
-    total_reflexiones = 0
-    racha_reflexion = 0
-    logros_estoicos = 0
-    dias_reflexion = 0
-
-    try:
-        from estoico.models import ContenidoDiario, ReflexionDiaria
-        try: from estoico.models import LogroUsuario as LogroEstoico
-        except ImportError: LogroEstoico = None
-
-        estoico_disponible = True
-        dia_año = hoy.timetuple().tm_yday
-
-        # Cachear bloque estoico 10 minutos — cambia muy poco
-        _estoico_cache_key = f'dashboard_estoico_{usuario.id}_{hoy}'
-        _estoico_cached = cache.get(_estoico_cache_key)
-        if _estoico_cached is not None:
-            (contenido_hoy, reflexion_hoy, reflexion_pendiente,
-             total_reflexiones, racha_reflexion, logros_estoicos, dias_reflexion) = _estoico_cached
-        else:
-            contenido_hoy = ContenidoDiario.objects.filter(dia=dia_año).first()
-            reflexion_hoy = ReflexionDiaria.objects.filter(usuario=request.user, fecha=hoy).first()
-            reflexion_pendiente = not reflexion_hoy
-            total_reflexiones = ReflexionDiaria.objects.filter(usuario=request.user).count()
-
-            fechas_con_reflexion = set(
-                ReflexionDiaria.objects.filter(
-                    usuario=request.user,
-                    fecha__gte=hoy - timedelta(days=365)
-                ).values_list('fecha', flat=True)
-            )
-            racha_reflexion = 0
-            fecha_actual = hoy
-            for _ in range(365):
-                if fecha_actual in fechas_con_reflexion:
-                    racha_reflexion += 1
-                    fecha_actual -= timedelta(days=1)
-                else:
-                    break
-
-            logros_estoicos = LogroEstoico.objects.filter(usuario=request.user).count() if LogroEstoico else 0
-            dias_reflexion = total_reflexiones
-
-            cache.set(_estoico_cache_key, (
-                contenido_hoy, reflexion_hoy, reflexion_pendiente,
-                total_reflexiones, racha_reflexion, logros_estoicos, dias_reflexion
-            ), 600)  # 10 min
-
-    except Exception: pass
+    (estoico_disponible, contenido_hoy, reflexion_hoy, reflexion_pendiente,
+     total_reflexiones, racha_reflexion, logros_estoicos, dias_reflexion) = _ctx_estoico(request, hoy)
 
     mensajes_integracion = ["Tu disciplina física refleja tu fortaleza mental.", "Un cuerpo entrenado es el hogar de una mente disciplinada."]
     mensaje_integracion = random.choice(mensajes_integracion)
@@ -1053,10 +1054,10 @@ def _get_dashboard_context_data(request, cliente):
         
         # Mapeamos a lo que el template blade_runner.html espera
         metricas_radar = {
-            'asistencia': stats_principales.get('entrenamientos_unicos', 0),
-            'volumen': (stats_principales.get('volumen_total', 0) / 1000.0), # Convertimos a Toneladas
-            'frecuencia_semanal': stats_principales.get('frecuencia_semanal', 0.0),
-            'intensidad': stats_principales.get('intensidad_promedio', 0.0),
+            'asistencia': int(stats_principales.get('entrenamientos_unicos', 0)),
+            'volumen': float(stats_principales.get('volumen_total', 0)) / 1000.0,  # Toneladas
+            'frecuencia_semanal': float(stats_principales.get('frecuencia_semanal', 0.0)),
+            'intensidad': float(stats_principales.get('intensidad_promedio', 0.0)),
         }
     except Exception as e:
         logger.error(f"Error calculando métricas radar: {e}")
@@ -1217,6 +1218,36 @@ def panel_cliente(request):
         context['eudaimonia_alta'] = None
 
     return render(request, 'clientes/mockup_demo.html', context)
+
+
+@login_required
+def widget_acwr(request, cliente_id):
+    """Widget ACWR cargado de forma lazy vía HTMX.
+    Devuelve solo el partial _widget_acwr.html con los datos del ACWR.
+    """
+    from django.shortcuts import get_object_or_404
+    import json as _json
+
+    cliente = get_object_or_404(Cliente, id=cliente_id, user=request.user)
+    hoy = timezone.now().date()
+
+    _acwr_cache_key = f'dashboard_acwr_unificado_{cliente.id}'
+    analis_acwr = cache.get(_acwr_cache_key)
+    if analis_acwr is None:
+        from entrenos.services.services import EstadisticasService as _ES
+        analis_acwr = _ES.analizar_acwr_unificado(cliente)
+        cache.set(_acwr_cache_key, analis_acwr, 900)
+
+    if analis_acwr and 'acwr' not in analis_acwr:
+        analis_acwr['acwr'] = analis_acwr.get('acwr_actual', 0.0)
+
+    acwr_data_json = _json.dumps(analis_acwr.get('dataframe', [])) if analis_acwr else '[]'
+
+    return render(request, 'clientes/partials/_widget_acwr.html', {
+        'analisis_acwr': analis_acwr or {},
+        'acwr_actual': float(analis_acwr.get('acwr_actual', 0.0)) if analis_acwr else 0.0,
+        'acwr_data_json': acwr_data_json,
+    })
 
 
 @login_required
@@ -3607,6 +3638,12 @@ def establecer_objetivo_peso(request, cliente_id):
 
 
 def obtener_proximo_entrenamiento_simplificado(cliente):
+    hoy = timezone.now().date()
+    _cache_key = f'proximo_entrenamiento_{cliente.id}_{hoy}'
+    cached = cache.get(_cache_key)
+    if cached is not None:
+        return cached  # None es un valor válido (día de descanso)
+
     try:
         # 1. Leemos los 1RM directamente del cliente. ¡Nuestra única fuente de verdad!
         maximos_actuales = cliente.one_rm_data or {}
@@ -3617,11 +3654,11 @@ def obtener_proximo_entrenamiento_simplificado(cliente):
 
         # 3. Generamos el plan y buscamos el día de hoy
         planificador = PlanificadorHelms(perfil)
-        hoy = timezone.now().date()
         entrenamiento_hoy = planificador.generar_entrenamiento_para_fecha(hoy)
 
         if not entrenamiento_hoy or not entrenamiento_hoy.get("ejercicios"):
-            return None  # Es un día de descanso
+            cache.set(_cache_key, None, 1800)  # día de descanso — cachear 30 min
+            return None
 
         # Normalización de claves para evitar VariableDoesNotExist en templates estrictos
         r_nombre = entrenamiento_hoy.get("rutina_nombre") or entrenamiento_hoy.get("nombre_rutina")
@@ -3629,10 +3666,11 @@ def obtener_proximo_entrenamiento_simplificado(cliente):
             entrenamiento_hoy["rutina_nombre"] = r_nombre
             entrenamiento_hoy["nombre_rutina"] = r_nombre
 
+        cache.set(_cache_key, entrenamiento_hoy, 1800)  # válido durante 30 min
         return entrenamiento_hoy
 
     except Exception as e:
-        print(f"Error en obtener_proximo_entrenamiento_simplificado: {e}")
+        logger.warning("obtener_proximo_entrenamiento_simplificado: %s", e)
         return None
 
 
