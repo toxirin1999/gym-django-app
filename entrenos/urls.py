@@ -121,4 +121,7 @@ urlpatterns = [
          name='editar_actividad_libre'),
     path('cliente/<int:cliente_id>/actividad/<int:actividad_id>/eliminar/', views.eliminar_actividad_libre,
          name='eliminar_actividad_libre'),
+
+    # ── Apple Health / Shortcuts API ──────────────────────────────────────────
+    path('api/apple-health/', views.api_apple_health, name='api_apple_health'),
 ]

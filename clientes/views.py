@@ -3720,3 +3720,16 @@ def vista_educacion_helms(request, cliente_id):
     # 5. Renderizamos el template que ya has creado.
     return render(request, 'clientes/educacion_helms.html',
                   context)  # Asegúrate de que la ruta al template sea correcta
+
+
+@login_required
+def apple_health_token(request):
+    """Muestra (y genera si no existe) el token de Apple Health del usuario."""
+    cliente = get_object_or_404(Cliente, user=request.user)
+    token = cliente.get_or_create_api_token()
+    endpoint = request.build_absolute_uri('/entrenos/api/apple-health/')
+    return render(request, 'clientes/apple_health_token.html', {
+        'cliente': cliente,
+        'token': token,
+        'endpoint': endpoint,
+    })
