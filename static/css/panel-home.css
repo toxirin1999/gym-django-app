@@ -377,3 +377,173 @@
     .entreno-stat { font-size: 0.75rem; }
     .entreno-card-arrow { padding: 0 12px; }
 }
+
+/* ================================================================
+   FONDO NEGRO TOTAL
+   ================================================================ */
+body {
+    background-color: #000 !important;
+}
+
+/* ================================================================
+   ÚLTIMAS SESIONES
+   ================================================================ */
+.sessions-section {
+    width: 100%;
+    max-width: 480px;
+    margin: 16px auto 0 auto;
+    padding-bottom: 6rem; /* espacio para el tab bar */
+}
+.sessions-header {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.35);
+    text-align: center;
+    margin: 0 0 10px 0;
+}
+.sessions-card {
+    background: #111;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 16px;
+    overflow: hidden;
+}
+.session-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    position: relative;
+}
+.session-row--sep::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 56px;
+    right: 16px;
+    height: 0.5px;
+    background: rgba(255,255,255,0.08);
+}
+.session-left {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+    flex: 1;
+}
+.session-title-row {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    overflow: hidden;
+}
+.session-date {
+    font-size: 11px;
+    font-weight: 600;
+    color: rgba(255,255,255,0.35);
+    text-transform: uppercase;
+    white-space: nowrap;
+    width: 52px;
+    flex-shrink: 0;
+    line-height: 1.3;
+}
+.session-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: #fff;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    line-height: 1.3;
+}
+.session-subtitle {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin-left: 62px;
+    font-size: 11px;
+    color: rgba(255,255,255,0.3);
+}
+.session-subtitle i {
+    color: #ef4444;
+    font-size: 10px;
+    flex-shrink: 0;
+}
+.session-badge {
+    font-size: 10px;
+    color: #fbbf24;
+    background: rgba(251,191,36,0.1);
+    border: 1px solid rgba(251,191,36,0.2);
+    padding: 1px 5px;
+    border-radius: 3px;
+}
+.session-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+    margin-left: 12px;
+}
+.session-duration {
+    font-size: 13px;
+    font-weight: 600;
+    color: rgba(255,255,255,0.45);
+    font-variant-numeric: tabular-nums;
+}
+.session-check {
+    font-size: 16px;
+    color: #22c55e;
+}
+
+/* ================================================================
+   BOTTOM TAB BAR
+   ================================================================ */
+.bottom-tab-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 200;
+    background: rgba(0, 0, 0, 0.82);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+.bottom-tab-bar__inner {
+    max-width: 480px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    padding: 8px 0 calc(8px + env(safe-area-inset-bottom, 0px));
+}
+.tab-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    text-decoration: none;
+    color: rgba(255, 255, 255, 0.35);
+    transition: color 0.2s;
+    padding: 4px 10px;
+    min-width: 48px;
+}
+.tab-item:hover { color: rgba(255, 255, 255, 0.75); }
+.tab-item__icon {
+    width: 18px;
+    height: 18px;
+}
+.tab-item__icon--lg {
+    width: 22px;
+    height: 22px;
+}
+.tab-item__label {
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+}
+.tab-item--accent {
+    color: #22c55e;
+}
+.tab-item--accent:hover { color: #4ade80; }
