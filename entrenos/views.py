@@ -3847,6 +3847,35 @@ def guardar_entrenamiento_activo(request, cliente_id):
                     entreno.duracion_minutos = duracion_guardada
                     entreno.save(update_fields=['duracion_minutos'])
 
+                # Actualizar ActividadRealizada con la duración real y recalcular carga_ua
+                try:
+                    from entrenos.models import ActividadRealizada as _AR
+                    from django.core.cache import cache as _cache
+                    from datetime import date as _date
+                    _hoy = _date.today()
+                    _act_qs = _AR.objects.filter(entreno_gym=entreno)
+                    if _act_qs.exists():
+                        _act = _act_qs.first()
+                        _update_fields = []
+                        if duracion_guardada and _act.duracion_minutos != duracion_guardada:
+                            _act.duracion_minutos = duracion_guardada
+                            _update_fields.append('duracion_minutos')
+                        if rpe_final and _act.rpe_medio != rpe_final:
+                            _act.rpe_medio = rpe_final
+                            _update_fields.append('rpe_medio')
+                        if _update_fields:
+                            # Recalcular carga_ua con los datos reales
+                            _rpe = _act.rpe_medio or 5.0
+                            _dur = _act.duracion_minutos or 0
+                            if _dur:
+                                _act.carga_ua = round(_rpe * _dur, 1)
+                                _update_fields.append('carga_ua')
+                            _act.save(update_fields=_update_fields)
+                    # Invalidar caché ACWR inmediatamente tras guardar
+                    _cache.delete(f'dashboard_acwr_unificado_{cliente.id}')
+                except Exception as _e:
+                    logger.warning("Error actualizando ActividadRealizada tras sesion: %s", _e)
+
                 # 1. Detectar Récords Personales
                 records_nuevos = RecordsService.detectar_records_sesion(entreno)
                 sesion_gam.nuevos_records = len(records_nuevos)
