@@ -146,5 +146,10 @@ def sincronizar_hub_actividad(sender, instance, created, raw=False, **kwargs):
         if created and not obj.fecha_realizado:
             obj.fecha_realizado = hoy
             obj.save(update_fields=['fecha_realizado'])
+
+        # Invalidar caché ACWR para que el dashboard refleje el nuevo entreno
+        from django.core.cache import cache as _cache
+        _cache.delete(f'dashboard_acwr_unificado_{instance.cliente_id}')
+        _cache.delete(f'dashboard_gamif_{instance.cliente_id}')
     except Exception as e:
         print(f"❌ Hub ActividadRealizada error (entreno {instance.id}): {e}")
