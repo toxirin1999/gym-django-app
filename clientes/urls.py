@@ -94,4 +94,7 @@ urlpatterns = [
     path('panel-entrenador/', views.panel_entrenador, name='panel_entrenador'),
 
     path('<int:cliente_id>/filosofia-plan/', views.vista_educacion_helms, name='vista_educacion_helms'),
+
+    # Apple Health token
+    path('apple-health/token/', views.apple_health_token, name='apple_health_token'),
 ]

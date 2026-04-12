@@ -7240,3 +7240,127 @@ def eliminar_actividad_libre(request, cliente_id, actividad_id):
     actividad.delete()
     messages.success(request, '🗑️ Actividad eliminada.')
     return redirect('entrenos:timeline_atleta', cliente_id=cliente.id)
+
+
+# ==============================================================================
+# API APPLE HEALTH — recibe datos desde iOS Shortcuts / Apple Watch
+# ==============================================================================
+@csrf_exempt
+def api_apple_health(request):
+    """
+    POST /api/apple-health/
+    Recibe datos de un workout del Apple Watch vía iOS Shortcuts.
+    Crea una ActividadRealizada y actualiza ACWR.
+
+    Body JSON esperado:
+    {
+        "token": "abc123...",
+        "workout_type": "Traditional Strength Training",
+        "start_date": "2026-04-12T10:00:00",
+        "duration_minutes": 48,
+        "calories": 320,
+        "avg_heart_rate": 142,
+        "max_heart_rate": 178,
+        "notes": ""
+    }
+    """
+    import json as _json
+    from datetime import date as _date, datetime as _dt
+    from django.core.cache import cache as _cache
+
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Solo POST'}, status=405)
+
+    try:
+        data = _json.loads(request.body)
+    except Exception:
+        return JsonResponse({'error': 'JSON inválido'}, status=400)
+
+    token = data.get('token', '').strip()
+    if not token:
+        return JsonResponse({'error': 'Token requerido'}, status=401)
+
+    try:
+        from clientes.models import Cliente as _Cliente
+        cliente = _Cliente.objects.get(api_token=token)
+    except _Cliente.DoesNotExist:
+        return JsonResponse({'error': 'Token inválido'}, status=401)
+
+    # Parsear fecha y duración
+    start_date_str = data.get('start_date', '')
+    try:
+        if start_date_str:
+            fecha_dt = _dt.fromisoformat(start_date_str.replace('Z', '+00:00'))
+            fecha = fecha_dt.date()
+        else:
+            fecha = _date.today()
+    except Exception:
+        fecha = _date.today()
+
+    duracion = int(data.get('duration_minutes') or 0)
+    calorias = int(data.get('calories') or 0) or None
+    fc_media = float(data.get('avg_heart_rate') or 0) or None
+    fc_max = float(data.get('max_heart_rate') or 0) or None
+    workout_type = data.get('workout_type', 'otro')
+    notas = data.get('notes', '')
+
+    # Mapear tipo de workout de Apple a tipo interno
+    TIPO_MAP = {
+        'Traditional Strength Training': 'gym',
+        'Functional Strength Training': 'gym',
+        'Running': 'carrera',
+        'Cycling': 'ciclismo',
+        'Rowing': 'remo',
+        'Soccer': 'futbol',
+        'Swimming': 'natacion',
+        'Yoga': 'yoga',
+        'HIIT': 'otro',
+        'Cross Training': 'otro',
+    }
+    tipo = TIPO_MAP.get(workout_type, 'otro')
+
+    # RPE estimado desde FC media (si disponible)
+    rpe_estimado = None
+    if fc_media:
+        # Fórmula simple: RPE ≈ FC_media / FC_max_teorica * 10
+        fc_max_teorica = 220 - 30  # estimación conservadora
+        rpe_estimado = round(min(10.0, (fc_media / fc_max_teorica) * 10), 1)
+
+    # Carga UA
+    carga_ua = None
+    if duracion:
+        rpe_base = rpe_estimado or 5.0
+        carga_ua = round(rpe_base * duracion, 1)
+
+    # Crear ActividadRealizada
+    actividad = ActividadRealizada.objects.create(
+        cliente=cliente,
+        tipo=tipo,
+        titulo=f"Apple Watch · {workout_type}",
+        fecha=fecha,
+        fecha_realizado=_date.today(),
+        duracion_minutos=duracion or None,
+        calorias=calorias,
+        rpe_medio=rpe_estimado,
+        carga_ua=carga_ua,
+        fuente='auto',
+        notas=notas,
+    )
+
+    # Añadir FC al título si disponible
+    if fc_media:
+        actividad.titulo = f"Apple Watch · {workout_type} · FC {int(fc_media)}ppm"
+        actividad.save(update_fields=['titulo'])
+
+    # Invalidar caché ACWR
+    _cache.delete(f'dashboard_acwr_unificado_{cliente.id}')
+
+    return JsonResponse({
+        'ok': True,
+        'actividad_id': actividad.id,
+        'fecha': fecha.isoformat(),
+        'duracion_minutos': duracion,
+        'carga_ua': carga_ua,
+        'rpe_estimado': rpe_estimado,
+        'mensaje': f'Workout guardado: {actividad.titulo}',
+    }, status=201)

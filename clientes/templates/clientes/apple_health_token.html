@@ -1,0 +1,109 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Apple Watch · Token API{% endblock %}
+
+{% block content %}
+<div style="max-width:520px;margin:2rem auto;padding:0 1rem;">
+
+  <!-- Header -->
+  <div style="text-align:center;margin-bottom:2rem;">
+    <div style="font-size:3rem;margin-bottom:0.5rem;">⌚</div>
+    <h1 style="font-family:'Cinzel',serif;font-size:1.4rem;color:#F0E6D3;letter-spacing:0.1em;text-transform:uppercase;margin:0 0 6px 0;">Apple Watch</h1>
+    <p style="font-family:'Share Tech Mono',monospace;font-size:0.65rem;color:#785A28;letter-spacing:0.2em;text-transform:uppercase;">Integración via iOS Shortcuts</p>
+  </div>
+
+  <!-- Token card -->
+  <div style="background:#111;border:1px solid rgba(200,170,110,0.2);padding:1.5rem;margin-bottom:1.5rem;">
+    <p style="font-family:'Share Tech Mono',monospace;font-size:0.55rem;color:#785A28;letter-spacing:0.25em;text-transform:uppercase;margin-bottom:8px;">◆ Tu Token de Acceso</p>
+    <div style="background:#000;border:1px solid rgba(200,170,110,0.1);padding:12px 14px;border-radius:4px;display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px;">
+      <code style="font-family:'Share Tech Mono',monospace;font-size:0.72rem;color:#C8AA6E;word-break:break-all;" id="token-text">{{ token }}</code>
+      <button onclick="navigator.clipboard.writeText('{{ token }}');this.textContent='✓';setTimeout(()=>this.textContent='Copiar',2000)"
+        style="flex-shrink:0;padding:6px 12px;background:rgba(200,170,110,0.1);border:1px solid rgba(200,170,110,0.3);color:#C8AA6E;font-family:'Cinzel',serif;font-size:0.6rem;font-weight:700;letter-spacing:0.1em;cursor:pointer;">
+        Copiar
+      </button>
+    </div>
+    <p style="font-family:'Share Tech Mono',monospace;font-size:0.55rem;color:#785A28;letter-spacing:0.15em;">Endpoint: <span style="color:rgba(200,170,110,0.6);">{{ endpoint }}</span></p>
+  </div>
+
+  <!-- Instrucciones Shortcut -->
+  <div style="background:#111;border:1px solid rgba(200,170,110,0.15);padding:1.5rem;margin-bottom:1rem;">
+    <p style="font-family:'Share Tech Mono',monospace;font-size:0.55rem;color:#785A28;letter-spacing:0.25em;text-transform:uppercase;margin-bottom:1rem;">◆ Cómo configurar el Atajo en iOS</p>
+
+    {% for paso in pasos %}{% endfor %}
+
+    <div style="display:flex;flex-direction:column;gap:12px;">
+
+      <div style="display:flex;gap:12px;align-items:flex-start;">
+        <span style="font-family:'Share Tech Mono',monospace;font-size:0.9rem;color:#C8AA6E;font-weight:700;flex-shrink:0;width:24px;">1</span>
+        <div>
+          <div style="font-family:'Rajdhani',sans-serif;font-size:0.95rem;color:#F0E6D3;font-weight:600;">Abre la app Atajos en tu iPhone</div>
+          <div style="font-family:'Share Tech Mono',monospace;font-size:0.6rem;color:#785A28;margin-top:2px;">Toca el botón "+" para crear un nuevo atajo</div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:12px;align-items:flex-start;">
+        <span style="font-family:'Share Tech Mono',monospace;font-size:0.9rem;color:#C8AA6E;font-weight:700;flex-shrink:0;width:24px;">2</span>
+        <div>
+          <div style="font-family:'Rajdhani',sans-serif;font-size:0.95rem;color:#F0E6D3;font-weight:600;">Añade "Buscar entrenamientos"</div>
+          <div style="font-family:'Share Tech Mono',monospace;font-size:0.6rem;color:#785A28;margin-top:2px;">Configurar: Límite = 1, Ordenar por = Fecha de inicio más reciente</div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:12px;align-items:flex-start;">
+        <span style="font-family:'Share Tech Mono',monospace;font-size:0.9rem;color:#C8AA6E;font-weight:700;flex-shrink:0;width:24px;">3</span>
+        <div>
+          <div style="font-family:'Rajdhani',sans-serif;font-size:0.95rem;color:#F0E6D3;font-weight:600;">Añade "Obtener detalles del entrenamiento"</div>
+          <div style="font-family:'Share Tech Mono',monospace;font-size:0.6rem;color:#785A28;margin-top:2px;">Selecciona el entrenamiento del paso anterior. Repite para cada dato: Duración, Calorías activas, FC media, FC máxima, Tipo de actividad, Fecha de inicio</div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:12px;align-items:flex-start;">
+        <span style="font-family:'Share Tech Mono',monospace;font-size:0.9rem;color:#C8AA6E;font-weight:700;flex-shrink:0;width:24px;">4</span>
+        <div>
+          <div style="font-family:'Rajdhani',sans-serif;font-size:0.95rem;color:#F0E6D3;font-weight:600;">Añade "Obtener contenido de la URL"</div>
+          <div style="font-family:'Share Tech Mono',monospace;font-size:0.6rem;color:#785A28;margin-top:2px;">URL: <code style="color:#C8AA6E;">{{ endpoint }}</code><br>Método: POST · Tipo: JSON<br>
+          Cuerpo:</div>
+          <div style="background:#000;border:1px solid rgba(200,170,110,0.1);padding:10px;margin-top:6px;border-radius:4px;">
+<pre style="font-family:'Share Tech Mono',monospace;font-size:0.58rem;color:#C8AA6E;margin:0;white-space:pre-wrap;">{
+  "token": "{{ token }}",
+  "workout_type": [Tipo de actividad],
+  "start_date": [Fecha de inicio],
+  "duration_minutes": [Duración en minutos],
+  "calories": [Calorías activas],
+  "avg_heart_rate": [FC media],
+  "max_heart_rate": [FC máxima]
+}</pre>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:12px;align-items:flex-start;">
+        <span style="font-family:'Share Tech Mono',monospace;font-size:0.9rem;color:#C8AA6E;font-weight:700;flex-shrink:0;width:24px;">5</span>
+        <div>
+          <div style="font-family:'Rajdhani',sans-serif;font-size:0.95rem;color:#F0E6D3;font-weight:600;">Guarda el atajo y ejecútalo tras cada entreno</div>
+          <div style="font-family:'Share Tech Mono',monospace;font-size:0.6rem;color:#785A28;margin-top:2px;">También puedes añadirlo a la pantalla de inicio del Apple Watch para ejecutarlo directamente desde la muñeca</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Datos que se importan -->
+  <div style="background:#111;border:1px solid rgba(200,170,110,0.1);padding:1.25rem;margin-bottom:1.5rem;">
+    <p style="font-family:'Share Tech Mono',monospace;font-size:0.55rem;color:#785A28;letter-spacing:0.25em;text-transform:uppercase;margin-bottom:10px;">◆ Datos que importa tu app</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+      {% for dato in datos_importados %}{% endfor %}
+      <div style="padding:8px 10px;background:rgba(200,170,110,0.04);border:1px solid rgba(200,170,110,0.1);font-family:'Share Tech Mono',monospace;font-size:0.6rem;color:#C8AA6E;">⏱ Duración</div>
+      <div style="padding:8px 10px;background:rgba(200,170,110,0.04);border:1px solid rgba(200,170,110,0.1);font-family:'Share Tech Mono',monospace;font-size:0.6rem;color:#C8AA6E;">🔥 Calorías</div>
+      <div style="padding:8px 10px;background:rgba(200,170,110,0.04);border:1px solid rgba(200,170,110,0.1);font-family:'Share Tech Mono',monospace;font-size:0.6rem;color:#C8AA6E;">❤️ FC Media → RPE estimado</div>
+      <div style="padding:8px 10px;background:rgba(200,170,110,0.04);border:1px solid rgba(200,170,110,0.1);font-family:'Share Tech Mono',monospace;font-size:0.6rem;color:#C8AA6E;">📈 FC Máxima</div>
+      <div style="padding:8px 10px;background:rgba(200,170,110,0.04);border:1px solid rgba(200,170,110,0.1);font-family:'Share Tech Mono',monospace;font-size:0.6rem;color:#C8AA6E;">📅 Fecha real</div>
+      <div style="padding:8px 10px;background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);font-family:'Share Tech Mono',monospace;font-size:0.6rem;color:#22c55e;">⚡ Carga ACWR automática</div>
+    </div>
+  </div>
+
+  <a href="{% url 'clientes:panel_cliente' %}" style="display:block;text-align:center;padding:12px;background:transparent;border:1px solid rgba(200,170,110,0.2);color:#785A28;font-family:'Cinzel',serif;font-size:0.7rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;text-decoration:none;">← Volver al Panel</a>
+
+</div>
+{% endblock %}

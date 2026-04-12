@@ -381,6 +381,20 @@ class Cliente(models.Model):
         ]
         return [ej for ej in todos_ejercicios if ej not in self.ejercicios_evitar]
 
+    # Token para la API de Apple Health / Shortcuts
+    api_token = models.CharField(
+        max_length=64, blank=True, default='',
+        help_text="Token de autenticación para el endpoint de Apple Health"
+    )
+
+    def get_or_create_api_token(self):
+        """Genera un token único si no existe."""
+        if not self.api_token:
+            import secrets
+            self.api_token = secrets.token_hex(32)
+            self.save(update_fields=['api_token'])
+        return self.api_token
+
     class Meta:
         verbose_name = "Cliente"
         verbose_name_plural = "Clientes"
