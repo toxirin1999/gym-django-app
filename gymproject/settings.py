@@ -114,7 +114,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': os.environ.get('DB_NAME', 'toxirin$gymdb'),
         'USER': os.environ.get('DB_USER', 'toxirin'),
-        'PASSWORD': os.environ['DB_PASSWORD'],
+        'PASSWORD': os.environ.get('DB_PASSWORD', ''),
         'HOST': os.environ.get('DB_HOST', 'toxirin.mysql.pythonanywhere-services.com'),
         'PORT': os.environ.get('DB_PORT', '3306'),
         'OPTIONS': {
