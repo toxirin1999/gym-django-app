@@ -1,8 +1,3 @@
-{# _widget_acwr.html
-   Partial reutilizable del widget ACWR. Usado tanto en carga directa
-   como respuesta de la view widget_acwr (HTMX).
-   Variables: analisis_acwr, acwr_actual, acwr_data_json
-#}
 {% with zona=analisis_acwr.zona_riesgo dias=analisis_acwr.dias_descanso %}
 <div class="acwr-card" data-zona="{{ zona }}" data-acwr="{{ acwr_actual }}" id="acwr-card-focus">
 

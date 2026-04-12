@@ -23,102 +23,116 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     };
 
-    // ── ACWR Gauge (función reutilizable) ────────────────────────────────────
-    function animarAcwrGauge(cardSelector, arcId, needleId) {
+    // ── ACWR: inicialización (gauge + chart + marker) ────────────────────────
+    // Se llama tanto en DOMContentLoaded como después de que HTMX cargue el widget
+    function initAcwrWidgets() {
+        // Gauge
+        function animarAcwrGauge(cardSelector, arcId, needleId) {
+            try {
+                const card = document.querySelector(cardSelector);
+                if (!card) return;
+                const acwr = parseFloat(card.dataset.acwr) || 0;
+                const zona = card.dataset.zona || 'baja_carga';
+                const L = Math.PI * 90;
+                const clamp = Math.min(Math.max(acwr, 0), 2.0);
+                const COLORS = { optima: '#22c55e', cuidado: '#f59e0b', riesgo_alto: '#ef4444', baja_carga: '#64748b' };
+                const color = COLORS[zona] || '#64748b';
+                const activeArc = document.getElementById(arcId);
+                if (activeArc) {
+                    activeArc.setAttribute('stroke', color);
+                    setTimeout(() => {
+                        activeArc.style.transition = 'stroke-dasharray 1.2s cubic-bezier(.4,0,.2,1)';
+                        activeArc.setAttribute('stroke-dasharray', `${(clamp / 2) * L} 10000`);
+                    }, 150);
+                }
+                const needle = document.getElementById(needleId);
+                if (needle) {
+                    const deg = (clamp / 2) * 180 - 90;
+                    setTimeout(() => { needle.style.transform = `rotate(${deg}deg)`; }, 200);
+                }
+            } catch (e) { console.error('ACWR gauge error:', e); }
+        }
+        animarAcwrGauge('#acwr-card-focus', 'acwr-active-arc-f', 'acwr-needle-f');
+        animarAcwrGauge('.acwr-card:not(#acwr-card-focus)', 'acwr-active-arc', 'acwr-needle');
+
+        // Chart + track marker
         try {
-            const card = document.querySelector(cardSelector);
-            if (!card) return;
-            const acwr = parseFloat(card.dataset.acwr) || 0;
-            const zona = card.dataset.zona || 'baja_carga';
-            const L = Math.PI * 90;
-            const clamp = Math.min(Math.max(acwr, 0), 2.0);
-            const COLORS = { optima: '#22c55e', cuidado: '#f59e0b', riesgo_alto: '#ef4444', baja_carga: '#64748b' };
-            const color = COLORS[zona] || '#64748b';
+            const cvDash = document.getElementById('acwrChartDash');
+            if (cvDash && typeof Chart !== 'undefined') {
+                // Evitar inicializar dos veces el mismo canvas
+                if (cvDash._chartInstance) { cvDash._chartInstance.destroy(); }
 
-            const activeArc = document.getElementById(arcId);
-            if (activeArc) {
-                activeArc.setAttribute('stroke', color);
-                setTimeout(() => {
-                    activeArc.style.transition = 'stroke-dasharray 1.2s cubic-bezier(.4,0,.2,1)';
-                    activeArc.setAttribute('stroke-dasharray', `${(clamp / 2) * L} 10000`);
-                }, 150);
-            }
+                let raw = [];
+                try { raw = JSON.parse(cvDash.dataset.acwr || '[]'); } catch (e) {}
+                const labels = raw.map(r => r.fecha || '');
+                const vals = raw.map(r => parseFloat(r.acwr) || 0);
+                const today = new Date().toISOString().slice(0, 10);
+                const todayIdx = labels.lastIndexOf(today) >= 0 ? labels.lastIndexOf(today) : labels.length - 1;
+                const currentVal = vals[todayIdx] || 0;
 
-            const needle = document.getElementById(needleId);
-            if (needle) {
-                const deg = (clamp / 2) * 180 - 90;
-                setTimeout(() => { needle.style.transform = `rotate(${deg}deg)`; }, 200);
-            }
-        } catch (e) { console.error('ACWR gauge error:', e); }
-    }
-    animarAcwrGauge('#acwr-card-focus', 'acwr-active-arc-f', 'acwr-needle-f');
-    animarAcwrGauge('.acwr-card:not(#acwr-card-focus)', 'acwr-active-arc', 'acwr-needle');
-
-    // ── ACWR Chart ───────────────────────────────────────────────────────────
-    try {
-        const cvDash = document.getElementById('acwrChartDash');
-        if (cvDash && typeof Chart !== 'undefined') {
-            let raw = [];
-            try { raw = JSON.parse(cvDash.dataset.acwr || '[]'); } catch (e) {}
-
-            const labels = raw.map(r => r.fecha || '');
-            const vals = raw.map(r => parseFloat(r.acwr) || 0);
-            const today = new Date().toISOString().slice(0, 10);
-            const todayIdx = labels.lastIndexOf(today) >= 0 ? labels.lastIndexOf(today) : labels.length - 1;
-            const currentVal = vals[todayIdx] || 0;
-
-            new Chart(cvDash, {
-                type: 'line',
-                data: {
-                    labels,
-                    datasets: [
-                        {
-                            data: vals,
-                            borderColor: '#00d4a0',
-                            backgroundColor: 'rgba(0,212,160,0.07)',
-                            fill: true, tension: 0.4,
-                            pointRadius: vals.map((_, i) => i === todayIdx ? 6 : 0),
-                            pointBackgroundColor: vals.map((_, i) =>
-                                i === todayIdx
-                                    ? (currentVal >= 1.3 ? '#ef4444' : currentVal >= 0.8 ? '#22c55e' : '#f59e0b')
-                                    : 'transparent'
-                            ),
-                            pointBorderColor: '#fff',
-                            pointBorderWidth: 2,
-                        },
-                        { data: labels.map(() => 0.8), borderColor: 'rgba(34,197,94,.25)', borderDash: [4, 4], borderWidth: 1, pointRadius: 0, fill: false },
-                        { data: labels.map(() => 1.3), borderColor: 'rgba(245,158,11,.25)', borderDash: [4, 4], borderWidth: 1, pointRadius: 0, fill: false },
-                    ]
-                },
-                options: {
-                    responsive: true, maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: {
-                            callbacks: {
-                                label: ctx => {
-                                    if (ctx.datasetIndex > 0) return null;
-                                    const v = ctx.raw;
-                                    const z = v >= 1.3 ? 'Riesgo' : v >= 0.8 ? 'Óptimo' : 'Precaución';
-                                    return `ACWR ${v.toFixed(2)} — ${z}`;
+                cvDash._chartInstance = new Chart(cvDash, {
+                    type: 'line',
+                    data: {
+                        labels,
+                        datasets: [
+                            {
+                                data: vals,
+                                borderColor: '#00d4a0',
+                                backgroundColor: 'rgba(0,212,160,0.07)',
+                                fill: true, tension: 0.4,
+                                pointRadius: vals.map((_, i) => i === todayIdx ? 6 : 0),
+                                pointBackgroundColor: vals.map((_, i) =>
+                                    i === todayIdx
+                                        ? (currentVal >= 1.3 ? '#ef4444' : currentVal >= 0.8 ? '#22c55e' : '#f59e0b')
+                                        : 'transparent'
+                                ),
+                                pointBorderColor: '#fff',
+                                pointBorderWidth: 2,
+                            },
+                            { data: labels.map(() => 0.8), borderColor: 'rgba(34,197,94,.25)', borderDash: [4, 4], borderWidth: 1, pointRadius: 0, fill: false },
+                            { data: labels.map(() => 1.3), borderColor: 'rgba(245,158,11,.25)', borderDash: [4, 4], borderWidth: 1, pointRadius: 0, fill: false },
+                        ]
+                    },
+                    options: {
+                        responsive: true, maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                callbacks: {
+                                    label: ctx => {
+                                        if (ctx.datasetIndex > 0) return null;
+                                        const v = ctx.raw;
+                                        const z = v >= 1.3 ? 'Riesgo' : v >= 0.8 ? 'Óptimo' : 'Precaución';
+                                        return `ACWR ${v.toFixed(2)} — ${z}`;
+                                    }
                                 }
                             }
+                        },
+                        scales: {
+                            y: { min: 0, max: 2, grid: { color: 'rgba(255,255,255,.05)' }, ticks: { stepSize: 0.5, color: 'rgba(255,255,255,.3)', font: { size: 9 } } },
+                            x: { grid: { display: false }, ticks: { maxTicksLimit: 5, color: 'rgba(255,255,255,.3)', font: { size: 9 } } },
                         }
-                    },
-                    scales: {
-                        y: { min: 0, max: 2, grid: { color: 'rgba(255,255,255,.05)' }, ticks: { stepSize: 0.5, color: 'rgba(255,255,255,.3)', font: { size: 9 } } },
-                        x: { grid: { display: false }, ticks: { maxTicksLimit: 5, color: 'rgba(255,255,255,.3)', font: { size: 9 } } },
                     }
-                }
-            });
+                });
 
-            const marker = document.getElementById('acwr-track-marker');
-            if (marker) {
-                const pct = Math.min(Math.max(currentVal / 2.0, 0), 1) * 100;
-                setTimeout(() => { marker.style.left = pct + '%'; }, 300);
+                const marker = document.getElementById('acwr-track-marker');
+                if (marker) {
+                    const pct = Math.min(Math.max(currentVal / 2.0, 0), 1) * 100;
+                    setTimeout(() => { marker.style.left = pct + '%'; }, 300);
+                }
             }
+        } catch (e) { console.error('ACWR chart dash error:', e); }
+    }
+
+    // Llamada inicial (por si el widget ya está en el DOM sin HTMX)
+    initAcwrWidgets();
+
+    // Re-inicializar tras carga HTMX del widget ACWR
+    document.body.addEventListener('htmx:afterSettle', function (evt) {
+        if (evt.detail && evt.detail.target && evt.detail.target.id === 'acwr-widget-container') {
+            initAcwrWidgets();
         }
-    } catch (e) { console.error('ACWR chart dash error:', e); }
+    });
 
     // ── Confirmación entrenamiento de emergencia ─────────────────────────────
     try {
