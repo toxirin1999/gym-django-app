@@ -65,13 +65,13 @@
     </div>
 
   </div>
-  <a href="{% url 'nutricion:mi_nutricion' %}" class="nut-cta">
+  <a href="{% url 'nutricion_app_django:dashboard_nutricional' %}" class="nut-cta">
     MI NUTRICIÓN &nbsp;<span class="nut-cta-sub">(Entrar a Calculadora)</span>
   </a>
 </div>
 {% else %}
 <div style="max-width:480px;margin:10px auto 0 auto;">
-  <a href="{% url 'nutricion:mi_nutricion' %}"
+  <a href="{% url 'nutricion_app_django:dashboard_nutricional' %}"
      style="display:flex;align-items:center;justify-content:center;gap:8px;padding:10px;
             background:transparent;border:1px solid rgba(0,255,200,0.25);color:rgba(0,255,200,0.7);
             font-family:'Cinzel',serif;font-size:0.7rem;font-weight:700;letter-spacing:0.12em;
