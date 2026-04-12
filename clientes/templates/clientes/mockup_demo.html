@@ -9,7 +9,7 @@
 <link rel="stylesheet" href="{% static 'css/variables-base.css' %}?v=2">
 <link rel="stylesheet" href="{% static 'css/dashboard.css' %}?v=2">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-<link rel="stylesheet" href="{% static 'css/panel-home.css' %}?v=1">
+<link rel="stylesheet" href="{% static 'css/panel-home.css' %}?v=3">
 {% endblock %}
 
 {% block content %}
@@ -124,36 +124,31 @@
             </a>
             {% endif %}
 
-            <!-- ── TIRA DE HISTORIAL RECIENTE ──────────────────────────── -->
+            <!-- ── ÚLTIMAS SESIONES ────────────────────────────────────── -->
             {% if actividades_recientes_focus %}
-            <div style="width:100%;max-width:480px;margin:14px auto 4px auto;">
-              <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
-                <div style="flex:1;height:1px;background:linear-gradient(to right,transparent,rgba(200,170,110,0.2));"></div>
-                <span style="font-family:'Share Tech Mono',monospace;font-size:0.52rem;color:#785A28;letter-spacing:0.25em;text-transform:uppercase;">Últimas sesiones</span>
-                <div style="flex:1;height:1px;background:linear-gradient(to left,transparent,rgba(200,170,110,0.2));"></div>
-              </div>
-              <div style="display:flex;flex-direction:column;gap:2px;">
+            <div class="sessions-section">
+              <p class="sessions-header">ÚLTIMAS SESIONES</p>
+              <div class="sessions-card">
                 {% for act in actividades_recientes_focus %}
-                <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 12px;background:rgba(10,22,40,0.6);border-left:2px solid {% if act.es_anticipada %}rgba(251,191,36,0.5){% else %}rgba(200,170,110,0.2){% endif %};">
-                  <div style="display:flex;flex-direction:column;gap:1px;min-width:0;overflow:hidden;flex:1;">
-                    <div style="display:flex;align-items:center;gap:8px;overflow:hidden;">
-                      <span style="font-family:'Share Tech Mono',monospace;font-size:0.6rem;color:#785A28;white-space:nowrap;">{{ act.fecha_efectiva|date:"D d/m"|upper }}</span>
-                      <span style="font-family:'Rajdhani',sans-serif;font-size:0.88rem;color:#C8C8C8;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                <div class="session-row{% if not forloop.first %} session-row--sep{% endif %}">
+                  <div class="session-left">
+                    <div class="session-title-row">
+                      <span class="session-date">{{ act.fecha_efectiva|date:"D d/m"|upper }}</span>
+                      <span class="session-title">
                         {% if act.titulo %}{{ act.titulo }}
                         {% elif act.entreno_gym %}{{ act.entreno_gym.rutina.nombre|default:"Entreno" }}
                         {% else %}{{ act.get_tipo_display }}{% endif %}
                       </span>
                     </div>
-                    <div style="display:flex;align-items:center;gap:6px;">
-                      <span style="font-family:'Share Tech Mono',monospace;font-size:0.52rem;color:rgba(120,90,40,0.6);">📅 Plan {{ act.fecha|date:"D d/m"|upper }}</span>
-                      {% if act.es_anticipada %}
-                      <span style="font-family:'Share Tech Mono',monospace;font-size:0.48rem;color:#fbbf24;background:rgba(251,191,36,0.1);border:1px solid rgba(251,191,36,0.2);padding:1px 5px;">⚡ anticipado</span>
-                      {% endif %}
+                    <div class="session-subtitle">
+                      <i class="fa-regular fa-calendar"></i>
+                      <span>Plan {{ act.fecha|date:"D d/m"|upper }}</span>
+                      {% if act.es_anticipada %}<span class="session-badge">⚡ anticipado</span>{% endif %}
                     </div>
                   </div>
-                  <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;margin-left:10px;">
-                    {% if act.duracion_minutos %}<span style="font-family:'Share Tech Mono',monospace;font-size:0.6rem;color:rgba(200,170,110,0.5);">{{ act.duracion_minutos }}m</span>{% endif %}
-                    <span style="color:#4ade80;font-size:0.75rem;">✓</span>
+                  <div class="session-right">
+                    {% if act.duracion_minutos %}<span class="session-duration">{{ act.duracion_minutos }}m</span>{% endif %}
+                    <i class="fa-regular fa-circle-check session-check"></i>
                   </div>
                 </div>
                 {% endfor %}
@@ -161,23 +156,7 @@
             </div>
             {% endif %}
 
-            <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; max-width: 480px; margin: 10px auto 0 auto; width: 100%;">
-                <a href="{% url 'entrenos:vista_plan_anual' cliente.id %}" style="display: flex; align-items: center; justify-content: center; padding: 10px 4px; background: transparent; border: 1px solid rgba(200,170,110,0.2); color: #A08C5B; font-family: 'Cinzel', serif; font-size: 0.52rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; text-decoration: none; text-align: center; transition: all 0.2s;">
-                    ↺ RUTINA
-                </a>
-                <a href="{% url 'clientes:blade_runner_dashboard' %}" style="display: flex; align-items: center; justify-content: center; padding: 10px 4px; background: transparent; border: 1px solid rgba(200,170,110,0.3); color: #C8AA6E; font-family: 'Cinzel', serif; font-size: 0.52rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; text-decoration: none; text-align: center; transition: all 0.2s;">
-                    ⚡ BLADE
-                </a>
-                <a href="{% url 'diario:dashboard_diario' %}" style="display: flex; align-items: center; justify-content: center; padding: 10px 4px; background: rgba(200,170,110,0.06); border: 1px solid rgba(200,170,110,0.25); color: #C8AA6E; font-family: 'Cinzel', serif; font-size: 0.52rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; text-decoration: none; text-align: center; transition: all 0.2s;">
-                    📓 DIARIO
-                </a>
-                <a href="{% url 'entrenos:registrar_actividad_libre' cliente.id %}" style="display: flex; align-items: center; justify-content: center; padding: 10px 4px; background: rgba(6,182,212,0.12); border: 1px solid rgba(6,182,212,0.45); color: #06b6d4; font-family: 'Cinzel', serif; font-size: 0.52rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; text-decoration: none; text-align: center; transition: all 0.2s;">
-                    ➕ AÑADIR
-                </a>
-                <a href="{% url 'entrenos:timeline_atleta' cliente.id %}" style="display: flex; align-items: center; justify-content: center; padding: 10px 4px; background: transparent; border: 1px solid rgba(6,182,212,0.25); color: rgba(6,182,212,0.7); font-family: 'Cinzel', serif; font-size: 0.52rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; text-decoration: none; text-align: center; transition: all 0.2s;">
-                    📅 TIMELINE
-                </a>
-            </div>
+            {# nav grid eliminado — reemplazado por bottom-tab-bar fijo #}
         </div>
 
         <!-- Botón EMPEZAR HYROX -->
@@ -1593,8 +1572,42 @@ window.animateLoLBars = function() {
 };
 </script>
 
-
-
+<!-- ── TAB BAR INFERIOR ─────────────────────────────────────── -->
+<nav class="bottom-tab-bar" role="navigation" aria-label="Navegación principal">
+  <div class="bottom-tab-bar__inner">
+    <a href="{% url 'entrenos:vista_plan_anual' cliente.id %}" class="tab-item">
+      <svg class="tab-item__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M6.5 6.5a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2 2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2z"/><path d="M17.5 6.5a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2 2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2z"/>
+        <line x1="8.5" y1="12" x2="15.5" y2="12"/><line x1="2" y1="10" x2="4.5" y2="10"/><line x1="2" y1="14" x2="4.5" y2="14"/><line x1="19.5" y1="10" x2="22" y2="10"/><line x1="19.5" y1="14" x2="22" y2="14"/>
+      </svg>
+      <span class="tab-item__label">Rutina</span>
+    </a>
+    <a href="{% url 'clientes:blade_runner_dashboard' %}" class="tab-item">
+      <svg class="tab-item__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+      </svg>
+      <span class="tab-item__label">Blade</span>
+    </a>
+    <a href="{% url 'diario:dashboard_diario' %}" class="tab-item">
+      <svg class="tab-item__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+      </svg>
+      <span class="tab-item__label">Diario</span>
+    </a>
+    <a href="{% url 'entrenos:registrar_actividad_libre' cliente.id %}" class="tab-item tab-item--accent">
+      <svg class="tab-item__icon tab-item__icon--lg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/>
+      </svg>
+      <span class="tab-item__label">Añadir</span>
+    </a>
+    <a href="{% url 'entrenos:timeline_atleta' cliente.id %}" class="tab-item">
+      <svg class="tab-item__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+      </svg>
+      <span class="tab-item__label">Timeline</span>
+    </a>
+  </div>
+</nav>
 
 {% endblock %}
 
