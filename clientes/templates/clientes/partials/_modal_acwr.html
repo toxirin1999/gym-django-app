@@ -1,0 +1,78 @@
+{# _modal_acwr.html — Modal informativo del ACWR. Sin variables de contexto. #}
+<div class="acwr-modal-ov" id="acwr-info-modal" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="acwr-modal-box">
+    <div class="acwr-modal-handle"></div>
+    <div class="acwr-modal-title">¿Qué es el ACWR?</div>
+    <div class="acwr-modal-sub">Acute:Chronic Workload Ratio — Ratio de Carga Aguda/Crónica</div>
+
+    <div class="acwr-modal-section">
+      <div class="acwr-modal-section-title">¿Para qué sirve?</div>
+      <div class="acwr-modal-row">
+        <div class="acwr-modal-row-icon">🎯</div>
+        <div class="acwr-modal-row-text">
+          <div class="acwr-modal-row-label">Predice el riesgo de lesión</div>
+          <div class="acwr-modal-row-desc">Compara cuánto has entrenado esta semana versus lo que tu cuerpo está acostumbrado a soportar. Subir demasiado rápido = mayor riesgo de lesión.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="acwr-modal-section">
+      <div class="acwr-modal-section-title">Cómo se calcula</div>
+      <div class="acwr-modal-formula">
+        <div class="acwr-modal-formula-eq">ACWR = Carga 7d ÷ Carga 28d</div>
+        <div class="acwr-modal-formula-desc">Cada sesión genera una Carga UA = RPE × minutos de entreno</div>
+      </div>
+      <div class="acwr-modal-row">
+        <div class="acwr-modal-row-icon">⚡</div>
+        <div class="acwr-modal-row-text">
+          <div class="acwr-modal-row-label">Carga 7d (Aguda)</div>
+          <div class="acwr-modal-row-desc">Media diaria de carga de los últimos 7 días. Refleja lo que has entrenado esta semana.</div>
+        </div>
+      </div>
+      <div class="acwr-modal-row">
+        <div class="acwr-modal-row-icon">📅</div>
+        <div class="acwr-modal-row-text">
+          <div class="acwr-modal-row-label">Carga 28d (Crónica)</div>
+          <div class="acwr-modal-row-desc">Media diaria de carga del último mes. Representa la capacidad de carga que tu cuerpo ha desarrollado.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="acwr-modal-section">
+      <div class="acwr-modal-section-title">Zonas del indicador</div>
+      <div class="acwr-modal-zone-row" style="background:rgba(100,116,139,.1)">
+        <div class="acwr-modal-zone-dot" style="background:#64748b"></div>
+        <div class="acwr-modal-zone-range" style="color:#94a3b8">0.0 – 0.8</div>
+        <div class="acwr-modal-zone-text"><strong style="color:#fff">Carga baja</strong> — Puedes exigirte más esta semana sin riesgo.</div>
+      </div>
+      <div class="acwr-modal-zone-row" style="background:rgba(34,197,94,.08)">
+        <div class="acwr-modal-zone-dot" style="background:#22c55e"></div>
+        <div class="acwr-modal-zone-range" style="color:#22c55e">0.8 – 1.3</div>
+        <div class="acwr-modal-zone-text"><strong style="color:#fff">Zona óptima</strong> — Equilibrio perfecto entre esfuerzo y recuperación.</div>
+      </div>
+      <div class="acwr-modal-zone-row" style="background:rgba(245,158,11,.08)">
+        <div class="acwr-modal-zone-dot" style="background:#f59e0b"></div>
+        <div class="acwr-modal-zone-range" style="color:#f59e0b">1.3 – 1.5</div>
+        <div class="acwr-modal-zone-text"><strong style="color:#fff">Cuidado</strong> — Has subido rápido. Mantén pero no aumentes la carga.</div>
+      </div>
+      <div class="acwr-modal-zone-row" style="background:rgba(239,68,68,.08)">
+        <div class="acwr-modal-zone-dot" style="background:#ef4444"></div>
+        <div class="acwr-modal-zone-range" style="color:#ef4444">1.5+</div>
+        <div class="acwr-modal-zone-text"><strong style="color:#fff">Zona de riesgo</strong> — Riesgo de lesión elevado. Descansa o reduce intensidad.</div>
+      </div>
+    </div>
+
+    <div class="acwr-modal-section">
+      <div class="acwr-modal-section-title">La aguja del medidor</div>
+      <div class="acwr-modal-row">
+        <div class="acwr-modal-row-icon">🪡</div>
+        <div class="acwr-modal-row-text">
+          <div class="acwr-modal-row-label">Posición de la aguja</div>
+          <div class="acwr-modal-row-desc">Apunta a tu ACWR actual en una escala de 0 a 2. Cuanto más a la derecha, mayor el riesgo. El arco de color muestra en qué zona estás.</div>
+        </div>
+      </div>
+    </div>
+
+    <button class="acwr-modal-close" onclick="document.getElementById('acwr-info-modal').classList.remove('open')">Entendido</button>
+  </div>
+</div>
