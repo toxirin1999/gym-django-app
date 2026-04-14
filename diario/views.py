@@ -293,6 +293,10 @@ def prosoche_entrada_form(request, entrada_id=None):
         prosoche_mes, _ = ProsocheMes.objects.get_or_create(
             usuario=request.user, mes=mes_nombre, año=año
         )
+        # Si ya hay entrada para hoy, editarla en vez de crear una nueva vacía
+        entrada_existente = ProsocheDiario.objects.filter(
+            prosoche_mes=prosoche_mes, fecha=fecha
+        ).first()
 
     if request.method == 'POST':
         try:

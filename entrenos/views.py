@@ -7332,35 +7332,72 @@ def api_apple_health(request):
         rpe_base = rpe_estimado or 5.0
         carga_ua = round(rpe_base * duracion, 1)
 
-    # Crear ActividadRealizada
-    actividad = ActividadRealizada.objects.create(
+    # ¿Ya existe una sesión de app para el mismo día y tipo? → enriquecer en lugar de duplicar
+    hoy = _date.today()
+    existing = ActividadRealizada.objects.filter(
         cliente=cliente,
         tipo=tipo,
-        titulo=f"Apple Watch · {workout_type}",
-        fecha=fecha,
-        fecha_realizado=_date.today(),
-        duracion_minutos=duracion or None,
-        calorias=calorias,
-        rpe_medio=rpe_estimado,
-        carga_ua=carga_ua,
-        fuente='auto',
-        notas=notas,
-    )
+        fecha_realizado=hoy,
+        fuente__in=['manual', 'liftin'],
+    ).first()
 
-    # Añadir FC al título si disponible
-    if fc_media:
-        actividad.titulo = f"Apple Watch · {workout_type} · FC {int(fc_media)}ppm"
-        actividad.save(update_fields=['titulo'])
+    if existing:
+        # Enriquecer la sesión existente con los datos del Apple Watch
+        update_fields = []
+        if calorias and not existing.calorias:
+            existing.calorias = calorias
+            update_fields.append('calorias')
+        if rpe_estimado and not existing.rpe_medio:
+            existing.rpe_medio = rpe_estimado
+            update_fields.append('rpe_medio')
+        if duracion and not existing.duracion_minutos:
+            existing.duracion_minutos = duracion
+            update_fields.append('duracion_minutos')
+        if fc_media and existing.notas is not None:
+            fc_nota = f" · FC {int(fc_media)}ppm"
+            if fc_nota not in existing.notas:
+                existing.notas = (existing.notas or '') + fc_nota
+                update_fields.append('notas')
+        if update_fields:
+            # Recalcular carga_ua si ahora tenemos duración y RPE
+            _dur = existing.duracion_minutos or 0
+            _rpe = existing.rpe_medio or 0
+            if _dur and _rpe:
+                existing.carga_ua = round(_rpe * _dur, 1)
+                update_fields.append('carga_ua')
+            existing.save(update_fields=update_fields)
+        actividad = existing
+        accion = 'enriched'
+    else:
+        # Crear nueva ActividadRealizada (workout no registrado en la app)
+        titulo = f"Apple Watch · {workout_type}"
+        if fc_media:
+            titulo += f" · FC {int(fc_media)}ppm"
+        actividad = ActividadRealizada.objects.create(
+            cliente=cliente,
+            tipo=tipo,
+            titulo=titulo,
+            fecha=fecha,
+            fecha_realizado=hoy,
+            duracion_minutos=duracion or None,
+            calorias=calorias,
+            rpe_medio=rpe_estimado,
+            carga_ua=carga_ua,
+            fuente='auto',
+            notas=notas,
+        )
+        accion = 'created'
 
     # Invalidar caché ACWR
     _cache.delete(f'dashboard_acwr_unificado_{cliente.id}')
 
     return JsonResponse({
         'ok': True,
+        'accion': accion,
         'actividad_id': actividad.id,
         'fecha': fecha.isoformat(),
-        'duracion_minutos': duracion,
-        'carga_ua': carga_ua,
-        'rpe_estimado': rpe_estimado,
-        'mensaje': f'Workout guardado: {actividad.titulo}',
-    }, status=201)
+        'duracion_minutos': actividad.duracion_minutos,
+        'carga_ua': actividad.carga_ua,
+        'rpe_estimado': actividad.rpe_medio,
+        'mensaje': f'Workout {"enriquecido" if accion == "enriched" else "guardado"}: {actividad.titulo}',
+    }, status=200 if accion == 'enriched' else 201)

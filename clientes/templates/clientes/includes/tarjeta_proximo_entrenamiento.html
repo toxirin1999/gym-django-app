@@ -84,9 +84,15 @@
                 </div>
                 <div class="text-right">
                     {% if proximo_entrenamiento.dias_hasta == 0 %}
+                    {% if entreno_hoy_realizado %}
+                    <span class="bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded-full text-xs font-bold">
+                        ✓ COMPLETADO
+                    </span>
+                    {% else %}
                     <span class="bg-green-500/20 text-green-400 px-2 py-1 rounded-full text-xs font-bold">
-                            ¡HOY!
-                        </span>
+                        ¡HOY!
+                    </span>
+                    {% endif %}
                     {% elif proximo_entrenamiento.dias_hasta == 1 %}
                     <span class="bg-yellow-500/20 text-yellow-400 px-2 py-1 rounded-full text-xs font-bold">
                             MAÑANA
@@ -203,12 +209,20 @@
     {% endif %}
     <!-- Acciones rápidas y unificadas (AHORA USAN LAS NUEVAS CLASES CSS) -->
     <div class="mt-4 flex flex-wrap items-stretch gap-2">
-        <!-- Botón Iniciar Entrenamiento -->
+        <!-- Botón Iniciar / Ver resumen según si ya se hizo hoy -->
+        {% if entreno_hoy_realizado %}
+        <a href="{% url 'entrenos:historial_entrenos' %}"
+           class="btn-accion" style="background-image:linear-gradient(to right,#4ade80,#16a34a);">
+            <i class="fas fa-check-circle mr-2"></i>
+            Ver Resumen de Hoy
+        </a>
+        {% else %}
         <a href="{% url 'entrenos:entrenamiento_activo' cliente.id %}"
            class="btn-accion btn-iniciar">
             <i class="fas fa-play mr-2"></i>
             Iniciar Entrenamiento
         </a>
+        {% endif %}
 
         <!-- Botón Ver Plan Completo -->
         <a href="{% url 'entrenos:vista_resumen_anual' cliente.id %}"

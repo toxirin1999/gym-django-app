@@ -938,6 +938,7 @@ def _get_dashboard_context_data(request, cliente):
         estancamientos_detectados = sistema_progresion.detectar_estancamientos()
         cache.set(_estanc_cache_key, estancamientos_detectados, 900)
     proximo_entrenamiento = obtener_proximo_entrenamiento_simplificado(cliente)
+    entreno_hoy_realizado = EntrenoRealizado.objects.filter(cliente=cliente, fecha=hoy).exists()
 
     hyrox_objetivo, hyrox_proxima_sesion = _ctx_hyrox(cliente, hoy)
     bio_readiness, restricciones_bio = _ctx_bio(cliente)
@@ -1127,6 +1128,7 @@ def _get_dashboard_context_data(request, cliente):
         'ratios_fuerza': ratios_fuerza,
         'mesociclo_actual': mesociclo_actual,
         'fatiga_acumulada': fatiga_acumulada,
+        'entreno_hoy_realizado': entreno_hoy_realizado,
         'proximo_entrenamiento': proximo_entrenamiento,
         'proximo_entrenamiento_json': json.dumps(proximo_entrenamiento.get("ejercicios", [])) if proximo_entrenamiento else "[]",
         'estadisticas_plan': estadisticas_plan,
@@ -1192,7 +1194,7 @@ def panel_cliente(request):
         from diario.models import ProsocheDiario, ProsocheMes, SeguimientoVires
         _hoy = _date_today.today()
         _prosoche_mes = ProsocheMes.objects.filter(
-            usuario=cliente.user, mes=_hoy.month, año=_hoy.year
+            usuario=cliente.user, mes=_hoy.strftime('%B'), año=_hoy.year
         ).first()
         context['prosoche_hoy'] = (
             ProsocheDiario.objects.filter(prosoche_mes=_prosoche_mes, fecha=_hoy).first()
