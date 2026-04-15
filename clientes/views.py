@@ -938,7 +938,38 @@ def _get_dashboard_context_data(request, cliente):
         estancamientos_detectados = sistema_progresion.detectar_estancamientos()
         cache.set(_estanc_cache_key, estancamientos_detectados, 900)
     proximo_entrenamiento = obtener_proximo_entrenamiento_simplificado(cliente)
-    entreno_hoy_realizado = EntrenoRealizado.objects.filter(cliente=cliente, fecha=hoy).exists()
+
+    # ── Comprobar si el entreno de hoy (o el próximo) ya fue realizado ──────
+    # Nivel 1: hecho exactamente hoy (fecha o fecha_realizado = hoy)
+    from entrenos.models import ActividadRealizada as _AR
+    from django.db.models import Q as _Q2
+    entreno_hoy_realizado = (
+        EntrenoRealizado.objects.filter(cliente=cliente, fecha=hoy).exists()
+        or _AR.objects.filter(
+            cliente=cliente, tipo='gym', fuente='manual',
+        ).filter(_Q2(fecha=hoy) | _Q2(fecha_realizado=hoy)).exists()
+    )
+
+    # Nivel 2: hecho esta semana (para sesiones "anticipadas")
+    _lunes_semana = hoy - timedelta(days=hoy.weekday())
+    _rutina_hoy = (proximo_entrenamiento or {}).get('rutina_nombre') or (proximo_entrenamiento or {}).get('nombre', '')
+    entreno_semana_realizado = False
+    if _rutina_hoy and not entreno_hoy_realizado:
+        # Busca por nombre de rutina en los EntrenoRealizado de esta semana
+        entreno_semana_realizado = EntrenoRealizado.objects.filter(
+            cliente=cliente,
+            fecha__gte=_lunes_semana,
+            rutina__nombre__iexact=_rutina_hoy,
+        ).exists()
+        if not entreno_semana_realizado:
+            # Busca en ActividadRealizada por título (sesiones anticipadas)
+            entreno_semana_realizado = _AR.objects.filter(
+                cliente=cliente,
+                tipo='gym',
+                fuente='manual',
+                fecha_realizado__gte=_lunes_semana,
+                titulo__icontains=_rutina_hoy[:20] if _rutina_hoy else '',
+            ).exists()
 
     hyrox_objetivo, hyrox_proxima_sesion = _ctx_hyrox(cliente, hoy)
     bio_readiness, restricciones_bio = _ctx_bio(cliente)
@@ -1129,6 +1160,7 @@ def _get_dashboard_context_data(request, cliente):
         'mesociclo_actual': mesociclo_actual,
         'fatiga_acumulada': fatiga_acumulada,
         'entreno_hoy_realizado': entreno_hoy_realizado,
+        'entreno_semana_realizado': entreno_semana_realizado,
         'proximo_entrenamiento': proximo_entrenamiento,
         'proximo_entrenamiento_json': json.dumps(proximo_entrenamiento.get("ejercicios", [])) if proximo_entrenamiento else "[]",
         'estadisticas_plan': estadisticas_plan,
