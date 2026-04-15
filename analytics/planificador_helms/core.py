@@ -10,7 +10,7 @@ import math
 
 logger = logging.getLogger(__name__)
 
-from .config import DISTRIBUCION_DIAS, VOLUMENES_BASE, TEMPOS
+from .config import DISTRIBUCION_DIAS, VOLUMENES_BASE, TEMPOS, REP_RANGE_AJUSTE_PEQUENOS, GRUPOS_GRANDES
 from .models.perfil_cliente import PerfilCliente
 from .database.ejercicios import EJERCICIOS_DATABASE
 from .periodizacion.generador import GeneradorPeriodizacion
@@ -200,7 +200,13 @@ class PlanificadorHelms:
                     if patron == 'bisagra' and not patron_manager.puede_usar_bisagra(idx_dia):
                         continue
 
-                    es_pesado = (int(rep_range.split('-')[0]) <= 6 or rpe_objetivo >= 9)
+                    # Ajustar rep_range según tamaño del músculo (evidencia: pequeños → reps más altas)
+                    rep_range_ej = (
+                        rep_range if grupo in GRUPOS_GRANDES
+                        else REP_RANGE_AJUSTE_PEQUENOS.get(rep_range, rep_range)
+                    )
+
+                    es_pesado = (int(rep_range_ej.split('-')[0]) <= 6 or rpe_objetivo >= 9)
                     series_objetivo = max(2, min(4, math.ceil(vol_dia / len(candidatos[:2]))))
                     series_ajustadas = gestor_fatiga.ajustar_series_por_limite(
                         nombre, patron, tipo_ej, series_objetivo, es_pesado, grupo=grupo
@@ -228,7 +234,7 @@ class PlanificadorHelms:
                         inc = REDONDEO.get(tipo, REDONDEO['general'])
                         peso = math.ceil(peso_nuevo / inc) * inc if inc > 0 else round(peso_nuevo, 1)
                     else:
-                        peso = CalculadorPeso.calcular_peso_trabajo(nombre, rep_range, rpe_objetivo,
+                        peso = CalculadorPeso.calcular_peso_trabajo(nombre, rep_range_ej, rpe_objetivo,
                                                                     self.maximos_actuales, rpe_real_anterior)
 
                     tempo = TEMPOS.get(fase, TEMPOS['hipertrofia'])
@@ -238,7 +244,7 @@ class PlanificadorHelms:
                         'nombre': nombre,
                         'grupo_muscular': grupo,
                         'series': series_ajustadas,
-                        'repeticiones': rep_range,
+                        'repeticiones': rep_range_ej,
                         'peso_kg': peso,
                         'rpe_objetivo': rpe_objetivo,
                         'tempo': tempo,

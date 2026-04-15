@@ -174,6 +174,28 @@ LIMITES_SERIES_SESION = {
 GRUPOS_GRANDES = {'pecho', 'espalda', 'cuadriceps', 'isquios', 'gluteos'}
 
 # ============================================================
+# AJUSTE DE REPETICIONES PARA MÚSCULOS PEQUEÑOS
+# La evidencia muestra que bíceps, tríceps, deltoides lateral,
+# gemelos, core y antebrazos responden mejor a rangos de rep
+# más altos que los músculos grandes (Schoenfeld et al., 2017).
+# Este mapa traduce el rep_range del bloque al rango óptimo
+# para músculos pequeños.
+# ============================================================
+REP_RANGE_AJUSTE_PEQUENOS = {
+    '2-4':  '6-8',    # potencia → rango funcional para pequeños
+    '3-5':  '8-12',   # fuerza → rango híbrido para pequeños
+    '4-6':  '8-12',   # fuerza → mismo
+    '8-10': '12-15',  # intensificación → bump clásico
+    '8-12': '12-15',  # hipertrofia principal → óptimo para pequeños
+    '10-12': '12-15', # acumulación → leve subida
+    '12-15': '15-20', # metabólico → máximo pump para pequeños
+}
+
+GRUPOS_PEQUENOS = {
+    'biceps', 'triceps', 'hombros', 'gemelos', 'core', 'trapecios', 'antebrazos'
+}
+
+# ============================================================
 # KEYWORDS DE EJERCICIOS
 # ============================================================
 KEYWORDS_MANCUERNA = ['mancuerna', 'mancuernas', 'db ']
