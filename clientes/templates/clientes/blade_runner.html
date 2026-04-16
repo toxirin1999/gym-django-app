@@ -864,7 +864,7 @@
             {% for lesion in lesiones_activas %}
             <form method="POST" action="{% url 'hyrox:marcar_lesion_recuperada' lesion.id %}" style="margin:0;" onsubmit="return confirm('¿Confirmas que te has recuperado totalmente de {{ lesion.zona_afectada|default:lesion }}?')">
                 {% csrf_token %}
-                <input type="hidden" name="next" value="{% url 'clientes:blade_runner_dashboard' %}">
+                <input type="hidden" name="next" value="{% url 'clientes:panel_cliente' %}">
                 <button type="submit" style="padding:2px 10px;background:rgba(74,222,128,0.15);color:#4ade80;border:1px solid rgba(74,222,128,0.4);font-family:'Share Tech Mono',monospace;font-size:0.65rem;font-weight:700;letter-spacing:0.1em;cursor:pointer;transition:all .15s;" onmouseover="this.style.background='rgba(74,222,128,0.3)'" onmouseout="this.style.background='rgba(74,222,128,0.15)'">
                     ✅ RECUPERADO
                 </button>
