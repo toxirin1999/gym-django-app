@@ -726,8 +726,9 @@ def _ctx_bio(cliente):
             BioContextProvider.get_readiness_score(cliente),
             BioContextProvider.get_current_restrictions(cliente),
         )
-    except Exception:
-        return {}, {}
+    except Exception as e:
+        logger.warning("_ctx_bio error para cliente %s: %s", cliente.id, e)
+        return {'score': 1.0, 'volume_modifier': 1.0, 'max_rpe': 10, 'is_in_transition': False}, {}
 
 
 def _get_dashboard_context_data(request, cliente):
