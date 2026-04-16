@@ -6791,6 +6791,60 @@ def api_save_hot_swap(request, cliente_id):
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
 
 
+@require_POST
+def api_alternativas_maquina(request, cliente_id):
+    """
+    Devuelve hasta 3 alternativas para un ejercicio cuando la máquina está ocupada.
+    Busca ejercicios del mismo grupo muscular y enriquece con peso histórico del cliente.
+    """
+    try:
+        data = json.loads(request.body)
+        nombre_actual = data.get('nombre', '').lower()
+        grupo = data.get('grupo_muscular', '')
+
+        if not grupo:
+            return JsonResponse({'status': 'error', 'message': 'Falta grupo_muscular'}, status=400)
+
+        from analytics.planificador_helms.database.ejercicios import EJERCICIOS_DATABASE
+        from entrenos.models import EjercicioRealizado
+
+        candidatos = []
+        db_grupo = EJERCICIOS_DATABASE.get(grupo, {})
+        for tipo in ('compuesto_principal', 'compuesto_secundario', 'aislamiento'):
+            for ej_entry in db_grupo.get(tipo, []):
+                nombre_ej = ej_entry if isinstance(ej_entry, str) else ej_entry.get('nombre', '')
+                if nombre_ej.lower() == nombre_actual:
+                    continue
+                candidatos.append(nombre_ej)
+                if len(candidatos) >= 6:
+                    break
+            if len(candidatos) >= 6:
+                break
+
+        # Enriquecer con peso histórico
+        alternativas = []
+        for nombre_ej in candidatos[:3]:
+            ej_realizado = EjercicioRealizado.objects.filter(
+                nombre_ejercicio__icontains=nombre_ej,
+                entreno__cliente_id=cliente_id
+            ).order_by('-entreno__fecha', '-id').first()
+
+            peso_hist = None
+            if ej_realizado and ej_realizado.peso_kg:
+                peso_hist = round(float(ej_realizado.peso_kg), 1)
+
+            alternativas.append({
+                'nombre': nombre_ej,
+                'peso_historico_kg': peso_hist,
+            })
+
+        return JsonResponse({'status': 'ok', 'alternativas': alternativas})
+
+    except Exception as e:
+        logger.warning("Error en api_alternativas_maquina: %s", e)
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # MOLESTIA EN TIEMPO REAL
 # ─────────────────────────────────────────────────────────────────────────────
