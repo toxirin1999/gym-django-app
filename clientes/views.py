@@ -1290,6 +1290,14 @@ def blade_runner_dashboard(request):
     usuario = request.user
     cliente = get_object_or_404(Cliente, user=usuario)
     context = _get_dashboard_context_data(request, cliente)
+    # Lesiones activas para el botón "Recuperado"
+    try:
+        from hyrox.models import UserInjury
+        context['lesiones_activas'] = list(
+            UserInjury.objects.filter(cliente=cliente, activa=True).exclude(fase=UserInjury.Fase.RECUPERADO)
+        )
+    except Exception:
+        context['lesiones_activas'] = []
     return render(request, 'clientes/blade_runner.html', context)
 
 

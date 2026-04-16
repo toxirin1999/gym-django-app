@@ -852,7 +852,7 @@
                 COACH_IA · Readiness: <strong style="color: #C8AA6E;">{% widthratio bio_readiness.score|default:1 1 100 %}%</strong> · Vol ×{{ ajuste_volumen|default:"1.0" }} · {{ modo_recuperacion|default:"Protocolo Estándar" }}
             </span>
         </div>
-        <div>
+        <div style="display:flex;align-items:center;gap:8px;">
             {% widthratio bio_readiness.score|default:1 1 100 as readiness_pct %}
             {% if readiness_pct|add:0 >= 80 %}
                 <span style="padding: 2px 12px; background: rgba(74,222,128,0.1); color: #4ade80; border: 1px solid rgba(74,222,128,0.25); font-family: 'Share Tech Mono', monospace; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.15em;">● ÓPTIMO</span>
@@ -861,6 +861,15 @@
             {% else %}
                 <span style="padding: 2px 12px; background: rgba(239,68,68,0.15); color: #ef4444; border: 1px solid rgba(239,68,68,0.3); font-family: 'Share Tech Mono', monospace; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.15em;">● RIESGO</span>
             {% endif %}
+            {% for lesion in lesiones_activas %}
+            <form method="POST" action="{% url 'hyrox:marcar_lesion_recuperada' lesion.id %}" style="margin:0;" onsubmit="return confirm('¿Confirmas que te has recuperado totalmente de {{ lesion.zona_afectada|default:lesion }}?')">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{% url 'clientes:blade_runner_dashboard' %}">
+                <button type="submit" style="padding:2px 10px;background:rgba(74,222,128,0.15);color:#4ade80;border:1px solid rgba(74,222,128,0.4);font-family:'Share Tech Mono',monospace;font-size:0.65rem;font-weight:700;letter-spacing:0.1em;cursor:pointer;transition:all .15s;" onmouseover="this.style.background='rgba(74,222,128,0.3)'" onmouseout="this.style.background='rgba(74,222,128,0.15)'">
+                    ✅ RECUPERADO
+                </button>
+            </form>
+            {% endfor %}
         </div>
     </div>
 
