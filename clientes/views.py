@@ -731,6 +731,14 @@ def _ctx_bio(cliente):
         return {'score': 1.0, 'volume_modifier': 1.0, 'max_rpe': 10, 'is_in_transition': False}, {}
 
 
+def _ctx_lesiones_activas(cliente):
+    try:
+        from hyrox.models import UserInjury
+        return list(UserInjury.objects.filter(cliente=cliente, activa=True).exclude(fase=UserInjury.Fase.RECUPERADO))
+    except Exception:
+        return []
+
+
 def _get_dashboard_context_data(request, cliente):
     usuario = request.user
     hoy = timezone.now().date()
@@ -1182,6 +1190,7 @@ def _get_dashboard_context_data(request, cliente):
         'sesion_pendiente': sesion_pendiente,
         'restricciones_bio': restricciones_bio,
         'hoy': timezone.now().date(),
+        'lesiones_activas': _ctx_lesiones_activas(cliente),
     }
 
 
@@ -1290,14 +1299,6 @@ def blade_runner_dashboard(request):
     usuario = request.user
     cliente = get_object_or_404(Cliente, user=usuario)
     context = _get_dashboard_context_data(request, cliente)
-    # Lesiones activas para el botón "Recuperado"
-    try:
-        from hyrox.models import UserInjury
-        context['lesiones_activas'] = list(
-            UserInjury.objects.filter(cliente=cliente, activa=True).exclude(fase=UserInjury.Fase.RECUPERADO)
-        )
-    except Exception:
-        context['lesiones_activas'] = []
     return render(request, 'clientes/blade_runner.html', context)
 
 
