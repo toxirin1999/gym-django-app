@@ -926,8 +926,12 @@ def marcar_lesion_recuperada(request, lesion_id):
         BioContextProvider.force_clean_future_workouts(lesion.cliente)
         
         messages.success(request, "¡Enhorabuena! Has marcado la lesión como recuperada. Ya no hay restricciones.")
-        
-    return redirect('hyrox:dashboard')
+
+    next_url = request.POST.get('next') or request.GET.get('next') or 'hyrox:dashboard'
+    try:
+        return redirect(next_url)
+    except Exception:
+        return redirect('hyrox:dashboard')
 
 
 # Phase 12: Return to Play - Recovery Test
