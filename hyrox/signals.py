@@ -48,21 +48,13 @@ def autorregular_plan_futuro(sender, instance, created, **kwargs):
 
             # CASO A: SOBREESFUERZO (RPE >= 9 o HR Max > umbral por edad)
             if instance.rpe_global >= 9 or (instance.hr_maxima and instance.hr_maxima > hr_umbral):
-                proxima.feedback_ia = (
-                    "David, hemos detectado un nivel de fatiga alto. He reducido la carga de esta sesión "
-                    "para priorizar la recuperación estratégica y llegar fuerte al 19 de abril."
-                )
                 proxima.muscle_fatigue_index = 'Alta'
-                proxima.save(update_fields=['feedback_ia', 'muscle_fatigue_index'])
-            
+                proxima.save(update_fields=['muscle_fatigue_index'])
+
             # CASO B: PROGRESO FLUIDO (RPE <= 5)
             elif instance.rpe_global <= 5:
-                proxima.feedback_ia = (
-                    "Tu última sesión fue muy eficiente. Hoy subiremos un poco la intensidad "
-                    "para seguir cerrando la brecha de fuerza en tus cuádriceps."
-                )
                 proxima.muscle_fatigue_index = 'Baja'
-                proxima.save(update_fields=['feedback_ia', 'muscle_fatigue_index'])
+                proxima.save(update_fields=['muscle_fatigue_index'])
 
 
 # ==============================================================================
@@ -180,9 +172,8 @@ def sync_gym_impact_to_hyrox(sender, instance, created, raw=False, **kwargs):
             
             if proxima:
                 proxima.muscle_fatigue_index = fatiga_inyectada
-                proxima.feedback_ia = motivo_fatiga
                 proxima.fatiga_updated_at = timezone.now()
-                proxima.save(update_fields=['muscle_fatigue_index', 'feedback_ia', 'fatiga_updated_at'])
+                proxima.save(update_fields=['muscle_fatigue_index', 'fatiga_updated_at'])
                 
     except Exception as e:
         import traceback
@@ -255,9 +246,8 @@ def revert_gym_impact_on_hyrox(sender, instance, **kwargs):
         if proxima and proxima.muscle_fatigue_index == 'Alta' and proxima.fatiga_updated_at:
             # Revertimos a Baja por default si el usuario elimina la sesión pesada
             proxima.muscle_fatigue_index = 'Baja'
-            proxima.feedback_ia = None
             proxima.fatiga_updated_at = None
-            proxima.save(update_fields=['muscle_fatigue_index', 'feedback_ia', 'fatiga_updated_at'])
+            proxima.save(update_fields=['muscle_fatigue_index', 'fatiga_updated_at'])
             
             # Recálculo de RM real no lo hacemos on-delete sincrónicamente para evitar 
             # latencia al usuario, pero se actualizará en su próximo Liftin sync automático.

@@ -4,1141 +4,1304 @@
 {% block title %}Registrar Sesión · Hyrox{% endblock %}
 
 {% block content %}
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,300;0,400;0,500;0,700;0,900;1,400&family=JetBrains+Mono:wght@400;500;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
-
 <style>
-  /* ── TOKENS ────────────────────────────────────────────── */
-  :root {
-    --void:        #090D12;
-    --surface:     #111820;
-    --surface-2:   #19232F;
-    --surface-3:   #212D3A;
-    --red:         #E8341A;
-    --red-glow:    rgba(232,52,26,0.10);
-    --red-border:  rgba(232,52,26,0.30);
-    --text:        #EEE9E2;
-    --text-mid:    #8A9AAD;
-    --text-dim:    #4A5868;
-    --border:      rgba(255,255,255,0.06);
-    --border-2:    rgba(255,255,255,0.10);
-    --gold:        #C8A96E;
-    --gold-dim:    rgba(200,169,110,0.14);
-    --teal:        #1DC8B8;
-    --teal-dim:    rgba(29,200,184,0.12);
-    --radius:      12px;
-  }
+  /* ───────────────────────────────────────────── */
+  /*  HYROX · REGISTRAR ENTRENAMIENTO · RACE BIB  */
+  /* ───────────────────────────────────────────── */
 
-  /* ── BASE ──────────────────────────────────────────────── */
-  .rr-wrap {
-    background: var(--void);
+  @import url('https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+  /* Reset base.html dark theme for this page */
+  html, body, main { background: #EFEAE1 !important; }
+
+  .rb-scope {
+    --bg: #EFEAE1;
+    --ink: #0F0F0E;
+    --ink-2: #2A2926;
+    --ink-3: rgba(15,15,14,0.55);
+    --ink-4: rgba(15,15,14,0.28);
+    --line: rgba(15,15,14,0.12);
+    --line-2: rgba(15,15,14,0.25);
+    --paper: #F7F3EA;
+    --paper-2: #E4DED1;
+    --accent: oklch(0.55 0.21 28);
+    --accent-2: oklch(0.62 0.18 60);
+    --ok: oklch(0.55 0.15 145);
+    --warn: oklch(0.72 0.17 70);
+    --danger: oklch(0.55 0.22 25);
+    --font-disp: 'Archivo Black', 'Archivo', sans-serif;
+    --font-body: 'Archivo', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+    background: var(--bg);
+    color: var(--ink);
     min-height: 100vh;
-    font-family: 'Barlow', sans-serif;
-    color: var(--text);
-    padding: 0 0 80px;
+    padding-bottom: 110px;
+    font-family: var(--font-body);
+    -webkit-font-smoothing: antialiased;
   }
 
-  /* ── TOPBAR ────────────────────────────────────────────── */
-  .rr-topbar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 20px 24px 16px;
-    border-bottom: 1px solid var(--border);
-    gap: 12px;
-    flex-wrap: wrap;
-  }
-  .rr-back {
-    display: inline-flex;
-    align-items: center;
-    gap: 7px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10px;
-    letter-spacing: 0.1em;
-    color: var(--text-dim);
-    text-decoration: none;
-    padding: 6px 12px;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    transition: color 0.15s, border-color 0.15s;
-  }
-  .rr-back:hover { color: var(--text); border-color: var(--border-2); }
+  .rb-scope *, .rb-scope *::before, .rb-scope *::after { box-sizing: border-box; }
 
-  /* ── INJURY BADGE ──────────────────────────────────────── */
-  .rr-injury-badge {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 6px 14px;
-    background: rgba(232,52,26,0.08);
-    border: 1px solid var(--red-border);
-    border-radius: 6px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10px;
-    letter-spacing: 0.08em;
-    color: var(--red);
-    animation: pulseBorder 2s ease-in-out infinite;
-  }
-  @keyframes pulseBorder {
-    0%, 100% { border-color: rgba(232,52,26,0.30); }
-    50%       { border-color: rgba(232,52,26,0.65); }
-  }
+  .rb-scope input[type="number"]::-webkit-inner-spin-button,
+  .rb-scope input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+  .rb-scope input[type="number"] { -moz-appearance: textfield; }
 
-  /* ── SESSION IDENTITY ─────────────────────────────────── */
-  .rr-identity {
-    padding: 28px 24px 20px;
-    border-bottom: 1px solid var(--border);
-  }
-  .rr-session-label {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 9px;
-    letter-spacing: 0.18em;
-    color: var(--red);
-    text-transform: uppercase;
-    margin-bottom: 8px;
-  }
-  .rr-session-title {
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: clamp(22px, 4vw, 32px);
-    font-weight: 700;
-    color: var(--text);
-    line-height: 1.1;
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
-    margin-bottom: 10px;
-  }
-  .rr-session-meta {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    flex-wrap: wrap;
-  }
-  .rr-meta-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10px;
-    color: var(--text-dim);
-    padding: 3px 8px;
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    letter-spacing: 0.05em;
-  }
-  .rr-meta-chip.highlight { color: var(--gold); border-color: var(--gold-dim); background: var(--gold-dim); }
+  .rb-container { max-width: 560px; margin: 0 auto; padding: 0 20px; }
 
-  /* ── MAIN GRID ─────────────────────────────────────────── */
-  .rr-grid {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 0;
-  }
-  @media (min-width: 960px) {
-    .rr-grid {
-      grid-template-columns: 420px 1fr;
-      min-height: calc(100vh - 140px);
-    }
-  }
-
-  /* ── MISSION PANEL (LEFT) ──────────────────────────────── */
-  .rr-mission {
-    border-right: 1px solid var(--border);
-    border-bottom: 1px solid var(--border);
-  }
-  @media (min-width: 960px) {
-    .rr-mission {
-      border-bottom: none;
-      position: sticky;
-      top: 0;
-      max-height: 100vh;
-      overflow-y: auto;
-      scrollbar-width: none;
-    }
-    .rr-mission::-webkit-scrollbar { display: none; }
-  }
-
-  .rr-panel-header {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 20px 24px 14px;
-    border-bottom: 1px solid var(--border);
-  }
-  .rr-panel-header-line {
-    width: 3px;
-    height: 18px;
-    background: var(--red);
-    border-radius: 2px;
-    flex-shrink: 0;
-  }
-  .rr-panel-title {
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-    color: var(--text-mid);
-  }
-  .rr-panel-count {
-    margin-left: auto;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10px;
-    color: var(--text-dim);
-    background: var(--surface-2);
-    border: 1px solid var(--border);
-    padding: 2px 7px;
-    border-radius: 4px;
-  }
-
-  /* ── ACTIVITY CARD ─────────────────────────────────────── */
-  .rr-activities { padding: 12px 16px 20px; display: flex; flex-direction: column; gap: 8px; }
-
-  .rr-act-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 14px 16px;
-    transition: border-color 0.15s;
-  }
-  .rr-act-card:hover { border-color: var(--border-2); }
-
-  .rr-act-top {
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
-    margin-bottom: 8px;
-  }
-  .rr-act-icon {
-    width: 32px;
-    height: 32px;
-    border-radius: 8px;
-    background: var(--surface-2);
-    border: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 13px;
-    color: var(--red);
-    flex-shrink: 0;
-  }
-  .rr-act-name {
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 15px;
-    font-weight: 600;
-    color: var(--text);
-    line-height: 1.25;
-    letter-spacing: 0.02em;
-    flex: 1;
-  }
-  .rr-biosafe-badge {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 8px;
-    font-weight: 700;
-    letter-spacing: 0.12em;
-    color: var(--teal);
-    background: var(--teal-dim);
-    border: 1px solid rgba(29,200,184,0.25);
-    padding: 2px 6px;
-    border-radius: 3px;
-    white-space: nowrap;
-    margin-top: 2px;
-    flex-shrink: 0;
-  }
-
-  .rr-act-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 6px; }
-  .rr-chip {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10px;
-    color: var(--text-mid);
-    background: var(--surface-3);
-    border: 1px solid var(--border);
-    padding: 3px 8px;
-    border-radius: 4px;
-    white-space: nowrap;
-  }
-  .rr-chip.red   { color: var(--red);  background: var(--red-glow);  border-color: var(--red-border); }
-  .rr-chip.teal  { color: var(--teal); background: var(--teal-dim);  border-color: rgba(29,200,184,0.25); }
-  .rr-chip.gold  { color: var(--gold); background: var(--gold-dim);  border-color: rgba(200,169,110,0.25); }
-
-  .rr-act-tip {
-    margin-top: 8px;
-    padding: 8px 10px;
-    background: var(--gold-dim);
-    border-left: 2px solid var(--gold);
-    border-radius: 0 6px 6px 0;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 9px;
-    line-height: 1.6;
-    color: var(--gold);
-    letter-spacing: 0.03em;
-  }
-  .rr-act-notes {
-    margin-top: 6px;
-    font-size: 11px;
-    line-height: 1.5;
-    color: var(--text-dim);
-    font-style: italic;
-  }
-
-  /* ── EMPTY MISSION ─────────────────────────────────────── */
-  .rr-empty {
-    padding: 40px 24px;
-    text-align: center;
-    color: var(--text-dim);
-  }
-  .rr-empty-icon {
-    font-size: 28px;
-    color: var(--surface-3);
-    margin-bottom: 12px;
-  }
-  .rr-empty-title {
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--text-mid);
-    margin-bottom: 4px;
-    letter-spacing: 0.05em;
-  }
-  .rr-empty-sub {
-    font-size: 11px;
-    line-height: 1.5;
-    max-width: 220px;
-    margin: 0 auto;
-  }
-
-  /* ── FORM PANEL (RIGHT) ───────────────────────────────── */
-  .rr-form-panel {
-    padding: 20px 24px 32px;
-  }
-
-  .rr-form-section {
-    margin-bottom: 28px;
-  }
-  .rr-form-section-label {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 9px;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    color: var(--text-dim);
+  /* ── BIB HEADER ──────────────────────────────── */
+  .rb-header { padding: 24px 0 0; position: sticky; top: 0; z-index: 50; background: var(--bg); }
+  .rb-topstrip {
+    display: flex; justify-content: space-between; align-items: center;
     margin-bottom: 14px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
   }
-  .rr-form-section-label::after {
-    content: '';
-    flex: 1;
-    height: 1px;
-    background: var(--border);
+  .rb-back {
+    display: inline-flex; align-items: center; gap: 4px;
+    text-decoration: none; color: var(--ink);
+    font-family: var(--font-body); font-size: 13px; font-weight: 700;
+    letter-spacing: 0.05em; text-transform: uppercase;
   }
+  .rb-back svg { width: 16px; height: 16px; }
+  .rb-rec {
+    font-family: var(--font-mono); font-size: 11px; font-weight: 700;
+    letter-spacing: 0.12em; color: var(--ink-3); text-transform: uppercase;
+  }
+  .rb-rec-dot {
+    display: inline-block; width: 6px; height: 6px; border-radius: 50%;
+    background: var(--accent); margin-left: 6px; vertical-align: middle;
+    animation: rb-blink 1.2s infinite;
+  }
+  @keyframes rb-blink { 0%,100%{opacity:1} 50%{opacity:.3} }
 
-  /* ── VITALS (SLIDERS) ─────────────────────────────────── */
-  .rr-vitals { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  @media (max-width: 480px) { .rr-vitals { grid-template-columns: 1fr; } }
-
-  .rr-vital-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 16px;
-    transition: border-color 0.2s;
-  }
-  .rr-vital-card:focus-within { border-color: var(--border-2); }
-
-  .rr-vital-top {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    margin-bottom: 12px;
-  }
-  .rr-vital-label {
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
-    color: var(--text-mid);
-  }
-  .rr-vital-value {
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 32px;
-    font-weight: 900;
-    line-height: 1;
-    transition: color 0.2s;
-    letter-spacing: -0.01em;
-  }
-  .rr-vital-hint {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 8px;
-    letter-spacing: 0.08em;
-    color: var(--text-dim);
-    transition: color 0.2s;
-    margin-top: 2px;
-  }
-
-  /* Custom Slider */
-  .rr-slider {
-    -webkit-appearance: none;
-    width: 100%;
-    height: 4px;
-    background: var(--surface-3);
-    border-radius: 2px;
-    outline: none;
-    cursor: pointer;
-    transition: background 0.2s;
-  }
-  .rr-slider::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    background: var(--text);
-    cursor: pointer;
-    border: 3px solid var(--void);
-    box-shadow: 0 0 0 1px var(--border-2);
-    transition: transform 0.1s, box-shadow 0.1s;
-  }
-  .rr-slider::-webkit-slider-thumb:hover {
-    transform: scale(1.15);
-    box-shadow: 0 0 0 1px var(--border-2), 0 0 10px rgba(255,255,255,0.15);
-  }
-  .rr-slider:active::-webkit-slider-thumb { transform: scale(0.95); }
-
-  /* ── METRICS GRID ─────────────────────────────────────── */
-  .rr-metrics { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
-  @media (max-width: 540px) { .rr-metrics { grid-template-columns: 1fr 1fr; } }
-
-  .rr-metric-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 14px 14px 12px;
-    transition: border-color 0.15s;
-  }
-  .rr-metric-card:focus-within { border-color: var(--border-2); }
-  .rr-metric-label {
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 9px;
-    font-weight: 700;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    color: var(--text-dim);
-    margin-bottom: 8px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-  .rr-metric-label i { color: var(--red); font-size: 10px; }
-
-  .rr-metric-input {
-    width: 100%;
-    background: transparent;
-    border: none;
-    outline: none;
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 22px;
-    font-weight: 700;
-    color: var(--text);
-    letter-spacing: 0.01em;
-    padding: 0;
-    -moz-appearance: textfield;
-  }
-  .rr-metric-input::-webkit-inner-spin-button,
-  .rr-metric-input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
-  .rr-metric-unit {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 9px;
-    color: var(--text-dim);
-    margin-top: 2px;
-  }
-
-  /* ── INJURY TOGGLE ────────────────────────────────────── */
-  .rr-injury-toggle {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 16px 18px;
-    cursor: pointer;
-    transition: background 0.15s, border-color 0.15s;
-    gap: 16px;
-  }
-  .rr-injury-toggle:hover { background: var(--surface-2); border-color: var(--border-2); }
-  .rr-injury-toggle.active {
-    background: rgba(232,52,26,0.06);
-    border-color: var(--red-border);
-  }
-  .rr-injury-left { display: flex; align-items: center; gap: 12px; }
-  .rr-injury-icon {
-    width: 36px;
-    height: 36px;
+  .rb-bib {
+    background: var(--paper);
+    border: 2px solid var(--ink);
     border-radius: 8px;
-    background: var(--surface-2);
-    border: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 15px;
-    color: var(--text-dim);
-    transition: color 0.15s, background 0.15s;
-    flex-shrink: 0;
+    padding: 10px 16px 14px;
+    position: relative;
   }
-  .rr-injury-toggle.active .rr-injury-icon {
-    color: var(--red);
-    background: var(--red-glow);
-    border-color: var(--red-border);
-  }
-  .rr-injury-text-title {
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 14px;
-    font-weight: 700;
-    color: var(--text);
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
+  .rb-bib-meta {
+    display: flex; justify-content: space-between;
+    font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+    letter-spacing: 0.1em; color: var(--ink-3); text-transform: uppercase;
     margin-bottom: 2px;
   }
-  .rr-injury-text-sub {
-    font-size: 11px;
-    color: var(--text-dim);
-    line-height: 1.3;
+  .rb-bib-num {
+    font-family: var(--font-disp);
+    font-size: clamp(68px, 18vw, 92px);
+    line-height: 0.88;
+    letter-spacing: -0.04em;
+    color: var(--accent);
+  }
+  .rb-bib-title {
+    font-family: var(--font-disp); font-size: 22px; line-height: 1.02;
+    color: var(--ink); letter-spacing: -0.01em;
+    text-transform: uppercase; margin-top: 4px;
+    word-wrap: break-word;
+  }
+  .rb-bib-divider {
+    display: flex; justify-content: space-between; align-items: baseline;
+    margin-top: 14px; border-top: 1.5px dashed var(--ink); padding-top: 10px;
+  }
+  .rb-bib-stat-label {
+    font-family: var(--font-mono); font-size: 9px;
+    letter-spacing: 0.12em; color: var(--ink-3);
+    text-transform: uppercase; font-weight: 700;
+  }
+  .rb-bib-stat-val {
+    font-family: var(--font-mono); font-size: 22px; font-weight: 700;
+    color: var(--ink); letter-spacing: -0.03em;
+    font-variant-numeric: tabular-nums; line-height: 1;
   }
 
-  /* Toggle switch */
-  .rr-toggle-wrap { flex-shrink: 0; }
-  .rr-toggle-input { display: none; }
-  .rr-toggle-track {
-    width: 44px;
-    height: 24px;
-    background: var(--surface-3);
-    border: 1px solid var(--border-2);
-    border-radius: 12px;
-    position: relative;
-    cursor: pointer;
-    transition: background 0.2s, border-color 0.2s;
-    display: block;
+  /* ── BIO-SAFE PILL ───────────────────────────── */
+  .rb-biosafe-pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--danger); color: var(--paper);
+    padding: 4px 10px; border-radius: 2px;
+    font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+    letter-spacing: 0.12em; text-transform: uppercase;
+    margin-left: 8px;
   }
-  .rr-toggle-input:checked + .rr-toggle-track { background: var(--red); border-color: var(--red); }
-  .rr-toggle-track::after {
-    content: '';
-    position: absolute;
-    width: 18px;
-    height: 18px;
-    background: var(--text);
-    border-radius: 50%;
-    top: 2px;
-    left: 2px;
-    transition: transform 0.2s cubic-bezier(0.34,1.56,0.64,1);
-    box-shadow: 0 1px 4px rgba(0,0,0,0.4);
-  }
-  .rr-toggle-input:checked + .rr-toggle-track::after { transform: translateX(20px); }
+  .rb-biosafe-pill svg { width: 11px; height: 11px; }
 
-  /* ── NOTES AREA ───────────────────────────────────────── */
-  .rr-notes-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    overflow: hidden;
-    transition: border-color 0.2s;
-  }
-  .rr-notes-card:focus-within { border-color: var(--border-2); }
-
-  .rr-notes-topbar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 10px 14px;
-    background: var(--surface-2);
-    border-bottom: 1px solid var(--border);
-  }
-  .rr-notes-topbar-left {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 9px;
-    letter-spacing: 0.12em;
-    color: var(--text-dim);
-  }
-  .rr-notes-topbar-left .dot {
-    width: 6px; height: 6px; border-radius: 50%; background: var(--red); display: inline-block;
-    animation: blink 2s step-end infinite;
-  }
-  @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.2; } }
-
-  .rr-notes-ai-badge {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 8px;
-    letter-spacing: 0.1em;
-    color: var(--teal);
-    border: 1px solid rgba(29,200,184,0.25);
-    padding: 2px 7px;
-    border-radius: 3px;
-    background: var(--teal-dim);
-  }
-
-  .rr-notes-textarea {
-    width: 100%;
-    min-height: 140px;
-    background: transparent;
-    border: none;
-    outline: none;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 12px;
-    line-height: 1.7;
-    color: var(--text);
-    padding: 14px 16px;
-    resize: vertical;
-    box-sizing: border-box;
-    caret-color: var(--red);
-  }
-  .rr-notes-textarea::placeholder { color: var(--text-dim); }
-
-  .rr-notes-footer {
-    padding: 8px 14px;
-    border-top: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-  }
-  .rr-equiv-toggle {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    cursor: pointer;
-    font-size: 11px;
-    color: var(--text-dim);
-    transition: color 0.15s;
-  }
-  .rr-equiv-toggle:hover { color: var(--text-mid); }
-  .rr-equiv-toggle input { display: none; }
-  .rr-equiv-dot {
-    width: 12px;
-    height: 12px;
-    border-radius: 3px;
-    border: 1px solid var(--border-2);
-    background: var(--surface-3);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: background 0.15s, border-color 0.15s;
-    flex-shrink: 0;
-  }
-  .rr-equiv-toggle input:checked ~ .rr-equiv-label .rr-equiv-dot { background: var(--teal); border-color: var(--teal); }
-
-  /* ── BIOSAFE ALERT ────────────────────────────────────── */
-  .rr-biosafe-alert {
-    display: none;
-    align-items: flex-start;
-    gap: 12px;
-    padding: 14px 16px;
-    background: rgba(232,52,26,0.06);
-    border: 1px solid var(--red-border);
-    border-radius: var(--radius);
+  /* ── SECTION ─────────────────────────────────── */
+  .rb-section { padding: 22px 0 4px; }
+  .rb-section-head {
+    display: flex; align-items: center; gap: 8px;
     margin-bottom: 12px;
-    animation: slideIn 0.2s ease;
   }
-  .rr-biosafe-alert.show { display: flex; }
-  @keyframes slideIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
-  .rr-biosafe-icon { color: var(--red); font-size: 16px; padding-top: 1px; flex-shrink: 0; }
-  .rr-biosafe-text { font-size: 12px; color: var(--text-mid); line-height: 1.5; }
+  .rb-section-num {
+    font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+    color: var(--ink-4); letter-spacing: 0.15em;
+  }
+  .rb-section-title {
+    margin: 0; font-family: var(--font-disp);
+    font-size: 15px; letter-spacing: 0.02em;
+    color: var(--ink); text-transform: uppercase;
+  }
+  .rb-section-line { flex: 1; height: 1px; background: var(--line); }
+  .rb-section-right {
+    font-family: var(--font-mono); font-size: 11px; font-weight: 700;
+    color: var(--ink-3); letter-spacing: 0.05em;
+  }
 
-  /* ── SUBMIT ───────────────────────────────────────────── */
-  .rr-submit-wrap { padding-top: 8px; }
-  .rr-submit-btn {
-    width: 100%;
-    padding: 18px 24px;
-    background: var(--red);
-    border: none;
-    border-radius: var(--radius);
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 16px;
-    font-weight: 700;
-    letter-spacing: 0.14em;
+  /* ── VITALS ──────────────────────────────────── */
+  .rb-vitals { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .rb-vital {
+    background: var(--paper); border: 1px solid var(--line);
+    padding: 16px; border-radius: 4px;
+  }
+  .rb-vital-top { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 14px; }
+  .rb-vital-label {
+    font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+    letter-spacing: 0.12em; color: var(--ink-3);
+    text-transform: uppercase; margin-bottom: 6px;
+  }
+  .rb-vital-hint {
+    font-family: var(--font-body); font-size: 12px;
+    color: var(--ink-2); font-weight: 500; line-height: 1.3;
+  }
+  .rb-ring-wrap { position: relative; width: 60px; height: 60px; flex-shrink: 0; }
+  .rb-ring-wrap svg { transform: rotate(-90deg); }
+  .rb-ring-val {
+    position: absolute; inset: 0; display: flex;
+    align-items: center; justify-content: center;
+    font-family: var(--font-disp); font-size: 26px; line-height: 1;
+  }
+  .rb-slider {
+    -webkit-appearance: none; appearance: none;
+    width: 100%; height: 3px; background: var(--line);
+    outline: none; border-radius: 2px; cursor: pointer;
+  }
+  .rb-slider::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 18px; height: 18px; border-radius: 50%;
+    background: var(--ink); border: 3px solid var(--paper);
+    box-shadow: 0 0 0 1px var(--ink); cursor: pointer;
+  }
+  .rb-slider::-moz-range-thumb {
+    width: 18px; height: 18px; border-radius: 50%;
+    background: var(--ink); border: 3px solid var(--paper);
+    box-shadow: 0 0 0 1px var(--ink); cursor: pointer;
+  }
+  .rb-slider-ticks {
+    display: flex; justify-content: space-between;
+    font-family: var(--font-mono); font-size: 9px;
+    color: var(--ink-4); font-weight: 700;
+    margin-top: 2px; letter-spacing: 0.1em;
+  }
+
+  /* ── ACTIVITY CARD ───────────────────────────── */
+  .rb-cards { display: flex; flex-direction: column; gap: 10px; }
+  .rb-card {
+    background: var(--paper); padding: 16px 16px 18px;
+    border: 1px solid var(--line);
+    border-left: 4px solid var(--ink);
+    border-radius: 4px;
+    transition: border-color 0.3s;
+  }
+  .rb-card.rb-card--cardio { border-left-color: var(--accent); }
+  .rb-card.rb-card--station { border-left-color: var(--accent-2); }
+  .rb-card.rb-card--done { border-left-color: var(--ok); }
+
+  .rb-card-meta {
+    display: flex; justify-content: space-between; align-items: center;
+    font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+    letter-spacing: 0.15em; color: var(--ink-3);
+    text-transform: uppercase; margin-bottom: 4px;
+  }
+  .rb-card-meta-type { display: flex; align-items: center; gap: 5px; }
+  .rb-card-meta-type svg { width: 14px; height: 14px; }
+
+  .rb-card-title {
+    margin: 0; font-family: var(--font-disp);
+    font-size: 22px; line-height: 1.05; letter-spacing: -0.02em;
+    color: var(--ink); text-transform: uppercase;
+    display: flex; align-items: center; flex-wrap: wrap;
+  }
+
+  .rb-chips {
+    display: flex; gap: 6px; flex-wrap: wrap;
+    margin-top: 10px; margin-bottom: 12px;
+  }
+  .rb-chip {
+    font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+    padding: 3px 7px; border-radius: 2px; letter-spacing: 0.08em;
+    background: transparent; color: var(--ink-2);
+    border: 1px solid var(--line-2);
     text-transform: uppercase;
-    color: #fff;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
-    box-shadow: 0 4px 20px rgba(232,52,26,0.25);
   }
-  .rr-submit-btn:hover {
-    background: #c42d16;
-    transform: translateY(-1px);
-    box-shadow: 0 6px 28px rgba(232,52,26,0.35);
-  }
-  .rr-submit-btn:active { transform: scale(0.98); }
-  .rr-submit-btn.loading { opacity: 0.7; pointer-events: none; }
-
-  .rr-submit-sub {
-    text-align: center;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 9px;
-    letter-spacing: 0.1em;
-    color: var(--text-dim);
-    margin-top: 10px;
+  .rb-chip.rb-chip--hi {
+    background: var(--ink); color: var(--paper); border-color: var(--ink);
   }
 
-  /* ── HIDDEN DJANGO FIELDS ─────────────────────────────── */
-  .rr-hidden-field input {
-    background: var(--surface-2);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    color: var(--text);
-    font-family: 'Barlow', sans-serif;
-    font-size: 14px;
-    padding: 10px 14px;
-    width: 100%;
-    outline: none;
-    box-sizing: border-box;
-    transition: border-color 0.15s;
+  .rb-tip {
+    padding: 8px 10px; background: var(--paper-2);
+    border-left: 2px solid var(--accent);
+    font-family: var(--font-body); font-size: 12px; line-height: 1.45;
+    color: var(--ink-2); margin-top: 8px;
   }
-  .rr-hidden-field input:focus { border-color: var(--border-2); }
-  .rr-hidden-field label {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 9px;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--text-dim);
-    display: block;
-    margin-bottom: 6px;
+  .rb-tip-label {
+    font-family: var(--font-mono); font-size: 9px; font-weight: 700;
+    letter-spacing: 0.15em; color: var(--accent); display: block;
+    margin-bottom: 2px;
   }
 
-  /* ── DIVIDER ──────────────────────────────────────────── */
-  .rr-divider { height: 1px; background: var(--border); margin: 20px 0; }
+  /* ── SERIES ──────────────────────────────────── */
+  .rb-series { margin-top: 10px; }
+  .rb-serie {
+    display: grid; grid-template-columns: 34px 1fr 1fr 40px;
+    align-items: center; gap: 10px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--line);
+    transition: opacity 0.2s;
+  }
+  .rb-serie:first-child { border-top: 1px solid var(--line); }
+  .rb-serie.rb-serie--done { opacity: 0.42; }
+  .rb-serie-n {
+    font-family: var(--font-mono); font-size: 11px;
+    color: var(--ink-3); font-weight: 700;
+  }
+  .rb-num-cell { position: relative; }
+  .rb-num-input {
+    width: 100%; background: transparent; border: none; outline: none;
+    font-family: var(--font-disp); font-size: 26px; font-weight: 900;
+    color: var(--ink); padding: 2px 0 0; line-height: 1;
+    font-variant-numeric: tabular-nums; letter-spacing: -0.02em;
+  }
+  .rb-num-input::placeholder { color: var(--ink-4); }
+  .rb-num-label {
+    font-family: var(--font-mono); font-size: 9px; font-weight: 700;
+    letter-spacing: 0.15em; color: var(--ink-4);
+    text-transform: uppercase; margin-top: 1px;
+  }
+  .rb-check {
+    width: 34px; height: 34px; border-radius: 50%;
+    border: 1.5px solid var(--ink-4);
+    background: transparent; color: var(--ink-4);
+    cursor: pointer; display: flex;
+    align-items: center; justify-content: center;
+    transition: all 0.2s cubic-bezier(.34,1.56,.64,1);
+  }
+  .rb-check:hover { border-color: var(--ink); color: var(--ink); }
+  .rb-check.rb-check--done {
+    background: var(--ink); color: var(--paper);
+    border-color: var(--ink); transform: scale(1.05);
+  }
+  .rb-check svg { width: 14px; height: 14px; }
+
+  /* progress */
+  .rb-prog { display: flex; gap: 10px; align-items: center; margin-top: 12px; }
+  .rb-prog-track { flex: 1; height: 3px; background: var(--line); position: relative; }
+  .rb-prog-fill {
+    position: absolute; inset: 0; width: 0%;
+    background: var(--ink); transition: width 0.3s, background 0.3s;
+  }
+  .rb-prog-fill.rb-prog-fill--all { background: var(--ok); }
+  .rb-prog-txt {
+    font-family: var(--font-mono); font-size: 11px; font-weight: 700;
+    color: var(--ink-3); min-width: 48px; text-align: right;
+    letter-spacing: 0.05em;
+  }
+  .rb-prog-txt.rb-prog-txt--all { color: var(--ok); }
+
+  .rb-add {
+    background: none; border: 1px dashed var(--line-2);
+    color: var(--ink-3); padding: 4px 10px;
+    font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    cursor: pointer; display: flex; align-items: center; gap: 4px;
+  }
+  .rb-add:hover { border-color: var(--ink-2); color: var(--ink-2); }
+  .rb-add svg { width: 10px; height: 10px; }
+
+  /* ── CARDIO ──────────────────────────────────── */
+  .rb-cardio-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 14px;
+    padding: 14px 0; border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+  }
+  .rb-biginput-label {
+    display: flex; justify-content: space-between; align-items: baseline;
+    margin-bottom: 2px;
+  }
+  .rb-biginput-label span:first-child {
+    font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+    letter-spacing: 0.15em; color: var(--ink-3); text-transform: uppercase;
+  }
+  .rb-biginput-label span:last-child {
+    font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+    color: var(--ink-4); letter-spacing: 0.1em;
+  }
+  .rb-biginput {
+    width: 100%; background: transparent; border: none; outline: none;
+    font-family: var(--font-disp); font-size: 42px; font-weight: 900;
+    color: var(--ink); padding: 0; letter-spacing: -0.03em;
+    line-height: 1; font-variant-numeric: tabular-nums;
+  }
+  .rb-biginput::placeholder { color: var(--ink-4); }
+
+  .rb-pace {
+    display: none; align-items: center; gap: 12px;
+    padding: 12px; margin-top: 12px;
+    background: var(--paper-2);
+    border: 1px solid var(--line-2); border-radius: 4px;
+  }
+  .rb-pace.rb-pace--show { display: flex; }
+  .rb-pace-col { flex: 1; }
+  .rb-pace-col-lbl {
+    font-family: var(--font-mono); font-size: 9px; font-weight: 700;
+    letter-spacing: 0.15em; color: var(--ink-3); text-transform: uppercase;
+  }
+  .rb-pace-val {
+    font-family: var(--font-disp); font-size: 28px; line-height: 1;
+    letter-spacing: -0.02em; color: var(--ink); margin-top: 2px;
+    font-variant-numeric: tabular-nums;
+  }
+  .rb-pace-badge {
+    font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+    letter-spacing: 0.1em; padding: 4px 10px;
+    border: 1.5px solid; border-radius: 2px;
+  }
+  .rb-pace-badge.ok   { color: var(--ok); border-color: var(--ok); }
+  .rb-pace-badge.warn { color: var(--warn); border-color: var(--warn); }
+  .rb-pace-badge.fast { color: var(--accent); border-color: var(--accent); }
+  .rb-pace-note {
+    font-family: var(--font-body); font-size: 10px;
+    color: var(--ink-3); margin-top: 4px; text-align: right;
+  }
+
+  /* ── DONE BUTTON ─────────────────────────────── */
+  .rb-done-btn {
+    width: 100%; margin-top: 12px; padding: 10px 12px;
+    background: transparent; color: var(--ink);
+    border: 1.5px solid var(--ink); border-radius: 2px;
+    font-family: var(--font-disp); font-size: 13px;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    cursor: pointer; display: flex;
+    align-items: center; justify-content: center; gap: 6px;
+    transition: all 0.2s;
+  }
+  .rb-done-btn:hover { background: var(--paper-2); }
+  .rb-done-btn.rb-done-btn--done {
+    background: var(--ink); color: var(--paper);
+  }
+  .rb-done-btn svg { width: 14px; height: 14px; }
+
+  /* ── METRICS STRIP ───────────────────────────── */
+  .rb-metrics {
+    display: grid; grid-template-columns: 1fr 1fr 1fr;
+    background: var(--paper); border: 1px solid var(--line);
+    border-radius: 4px;
+  }
+  .rb-metric { padding: 14px 10px 12px; position: relative; }
+  .rb-metric + .rb-metric { border-left: 1px solid var(--line); }
+  .rb-metric-lbl {
+    display: flex; align-items: center; gap: 4px;
+    font-family: var(--font-mono); font-size: 9px; font-weight: 700;
+    letter-spacing: 0.12em; color: var(--ink-3);
+    text-transform: uppercase; margin-bottom: 4px;
+  }
+  .rb-metric-lbl svg { width: 12px; height: 12px; }
+  .rb-metric-input {
+    width: 100%; background: transparent; border: none; outline: none;
+    font-family: var(--font-disp); font-size: 28px; font-weight: 900;
+    color: var(--ink); padding: 0; letter-spacing: -0.03em;
+    line-height: 1; font-variant-numeric: tabular-nums;
+  }
+  .rb-metric-input::placeholder { color: var(--ink-4); }
+  .rb-metric-unit {
+    font-family: var(--font-mono); font-size: 9px; font-weight: 700;
+    color: var(--ink-4); margin-top: 2px; letter-spacing: 0.15em;
+  }
+
+  /* ── HEALTH TOGGLE ───────────────────────────── */
+  .rb-health {
+    display: flex; align-items: center; justify-content: space-between;
+    background: var(--paper); border: 1px solid var(--line);
+    padding: 14px; border-radius: 4px; cursor: pointer;
+    border-left: 4px solid var(--line-2); transition: border-color 0.2s;
+  }
+  .rb-health.rb-health--active { border-left-color: var(--danger); }
+  .rb-health-title {
+    font-family: var(--font-disp); font-size: 14px;
+    letter-spacing: -0.01em; color: var(--ink); text-transform: uppercase;
+  }
+  .rb-health-sub {
+    font-family: var(--font-body); font-size: 12px;
+    color: var(--ink-3); margin-top: 2px;
+  }
+  .rb-toggle-inp { display: none; }
+  .rb-toggle {
+    width: 44px; height: 26px; border-radius: 13px;
+    background: var(--line-2); position: relative;
+    transition: background 0.2s; flex-shrink: 0;
+  }
+  .rb-toggle::after {
+    content: ''; position: absolute; top: 2px; left: 2px;
+    width: 22px; height: 22px; border-radius: 50%;
+    background: var(--paper);
+    transition: left 0.22s cubic-bezier(.34,1.56,.64,1);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+  }
+  .rb-toggle-inp:checked ~ .rb-toggle { background: var(--danger); }
+  .rb-toggle-inp:checked ~ .rb-toggle::after { left: 20px; }
+
+  /* ── NOTES ───────────────────────────────────── */
+  .rb-notes {
+    background: var(--paper); border: 1px solid var(--line);
+    border-radius: 4px; overflow: hidden;
+  }
+  .rb-notes-head {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 14px; background: var(--paper-2);
+    border-bottom: 1px solid var(--line);
+  }
+  .rb-notes-head-l {
+    display: flex; align-items: center; gap: 6px;
+    font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+    letter-spacing: 0.1em; color: var(--ink-3); text-transform: uppercase;
+  }
+  .rb-notes-ai {
+    font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+    padding: 2px 8px; border: 1.5px solid var(--accent-2);
+    color: var(--accent-2); letter-spacing: 0.08em; border-radius: 2px;
+  }
+  .rb-notes-text {
+    width: 100%; min-height: 110px; border: none; outline: none;
+    background: transparent; padding: 12px 14px; resize: vertical;
+    font-family: var(--font-mono); font-size: 12px; line-height: 1.6;
+    color: var(--ink);
+  }
+  .rb-notes-text::placeholder { color: var(--ink-4); }
+  .rb-notes-foot {
+    padding: 10px 14px; border-top: 1px solid var(--line);
+    display: flex; align-items: center;
+  }
+  .rb-equiv {
+    display: flex; align-items: center; gap: 8px; cursor: pointer;
+    font-family: var(--font-body); font-size: 12px; color: var(--ink-2);
+  }
+  .rb-equiv input { display: none; }
+  .rb-equiv-box {
+    width: 16px; height: 16px; border-radius: 2px; flex-shrink: 0;
+    border: 1.5px solid var(--ink-4); background: var(--bg);
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+  }
+  .rb-equiv-box svg { width: 10px; height: 10px; opacity: 0; color: var(--paper); }
+  .rb-equiv input:checked ~ .rb-equiv-box {
+    background: var(--ink); border-color: var(--ink);
+  }
+  .rb-equiv input:checked ~ .rb-equiv-box svg { opacity: 1; }
+
+  /* ── BIO ALERT ───────────────────────────────── */
+  .rb-alert {
+    display: none; gap: 10px;
+    padding: 12px 14px; margin-bottom: 12px;
+    background: rgba(200,40,40,0.06);
+    border: 1px solid var(--danger);
+    border-left: 4px solid var(--danger);
+    border-radius: 2px;
+  }
+  .rb-alert.rb-alert--show { display: flex; }
+  .rb-alert svg { width: 16px; height: 16px; color: var(--danger); flex-shrink: 0; margin-top: 1px; }
+  .rb-alert-txt {
+    font-family: var(--font-body); font-size: 12.5px; line-height: 1.45;
+    color: var(--ink-2);
+  }
+
+  /* ── EMPTY ───────────────────────────────────── */
+  .rb-empty {
+    text-align: center; padding: 40px 20px;
+    background: var(--paper); border: 1px dashed var(--line-2);
+    border-radius: 4px;
+  }
+  .rb-empty-title {
+    font-family: var(--font-disp); font-size: 15px;
+    text-transform: uppercase; letter-spacing: -0.01em;
+    color: var(--ink);
+  }
+  .rb-empty-sub {
+    font-family: var(--font-body); font-size: 12px;
+    color: var(--ink-3); margin-top: 6px;
+  }
+
+  /* ── DJANGO MESSAGES (if shown here) ─────────── */
+  .rb-scope .messages, .rb-scope ul.messages { list-style: none; padding: 0; margin: 14px 0 0; }
+
+  /* ── SUBMIT BAR (fixed) ──────────────────────── */
+  .rb-submit-bar {
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 60;
+    padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+    background: linear-gradient(to top, var(--bg) 70%, transparent);
+  }
+  .rb-submit {
+    display: flex; width: 100%; max-width: 528px; margin: 0 auto;
+    padding: 0 16px; height: 62px; border: none;
+    background: var(--ink); color: var(--paper);
+    cursor: pointer; position: relative; overflow: hidden;
+    border-radius: 6px; align-items: center; gap: 14px;
+    transition: transform 0.1s;
+  }
+  .rb-submit:active { transform: scale(0.99); }
+  .rb-submit-fill {
+    position: absolute; top: 0; left: 0; bottom: 0;
+    width: 0%; background: var(--accent);
+    transition: width 0.3s;
+  }
+  .rb-submit-inner {
+    position: relative; display: flex; align-items: center; gap: 12px; width: 100%;
+  }
+  .rb-submit-pct {
+    width: 38px; height: 38px; border-radius: 50%;
+    background: var(--paper); color: var(--ink);
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-disp); font-size: 14px;
+    font-variant-numeric: tabular-nums;
+  }
+  .rb-submit-txt { flex: 1; text-align: left; }
+  .rb-submit-eyebrow {
+    font-family: var(--font-mono); font-size: 9px; font-weight: 700;
+    letter-spacing: 0.2em; opacity: 0.7;
+  }
+  .rb-submit-label {
+    font-family: var(--font-disp); font-size: 17px;
+    letter-spacing: 0.02em; text-transform: uppercase; line-height: 1.1;
+  }
+  .rb-submit svg { width: 22px; height: 22px; }
+
 </style>
 
-<div class="rr-wrap">
-  <form method="post" id="mainForm">
+<div class="rb-scope">
+  <form method="post" id="rb-form">
     {% csrf_token %}
-    {% comment %}Hidden Django form fields rendered but not shown in custom UI{% endcomment %}
-    <div style="display:none">{{ form.fecha }}{{ form.titulo }}</div>
+    {# hidden: títulos, notas_raw se compila al submit #}
+    <div style="display:none">{{ form.titulo }}</div>
+    <textarea name="notas_raw" id="id_notas_raw" style="display:none"></textarea>
 
-    <!-- ── TOPBAR ────────────────────────────────────── -->
-    <div class="rr-topbar">
-      <a href="{% url 'hyrox:dashboard' %}" class="rr-back">
-        <i class="fas fa-arrow-left"></i> DASHBOARD
-      </a>
+    <div class="rb-container">
 
-      {% if lesion_activa %}
-      <div class="rr-injury-badge">
-        <i class="fas fa-shield-virus"></i>
-        BIO-SAFE · {{ lesion_activa.get_fase_display|upper }} · {{ lesion_activa.zona_afectada|upper }}
-      </div>
-      {% endif %}
-    </div>
-
-    <!-- ── SESSION IDENTITY ───────────────────────── -->
-    <div class="rr-identity">
-      <div class="rr-session-label">
-        <i class="fas fa-bolt" style="margin-right:5px;"></i> Registrar Sesión
-      </div>
-      <div class="rr-session-title">
-        {{ sesion_planificada.titulo|default:"Sesión Libre" }}
-      </div>
-      <div class="rr-session-meta">
-        {% if sesion_planificada %}
-        <span class="rr-meta-chip highlight">
-          <i class="far fa-calendar-alt"></i>
-          {{ sesion_planificada.fecha|date:"d M Y" }}
-        </span>
-        <span class="rr-meta-chip">
-          <i class="fas fa-layer-group"></i>
-          {{ sesion_planificada.activities.count }} bloques planificados
-        </span>
-        {% if objetivo.nivel_experiencia %}
-        <span class="rr-meta-chip">
-          <i class="fas fa-signal"></i>
-          {{ objetivo.get_nivel_experiencia_display }}
-        </span>
-        {% endif %}
-        {% else %}
-        <span class="rr-meta-chip">
-          <i class="fas fa-pen"></i> Sesión libre — sin plan previo
-        </span>
-        {% endif %}
-      </div>
-    </div>
-
-    <!-- ── MAIN GRID ──────────────────────────────── -->
-    <div class="rr-grid">
-
-      <!-- ── MISSION PANEL ─────────────────────────── -->
-      <div class="rr-mission">
-        <div class="rr-panel-header">
-          <div class="rr-panel-header-line"></div>
-          <span class="rr-panel-title">Misión del Día</span>
-          {% if actividades_planificadas %}
-          <span class="rr-panel-count">{{ actividades_planificadas|length }} ejercicios</span>
-          {% endif %}
+      <!-- ═══════════════ HEADER / BIB ═══════════════ -->
+      <header class="rb-header">
+        <div class="rb-topstrip">
+          <a href="{% url 'hyrox:dashboard' %}" class="rb-back">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+            Dashboard
+          </a>
+          <div class="rb-rec">
+            HYROX · REC<span class="rb-rec-dot"></span>
+          </div>
         </div>
 
-        <div class="rr-activities">
+        <div class="rb-bib">
+          <div class="rb-bib-meta">
+            <span>RACE BIB · {% if sesion_planificada.fecha %}{{ sesion_planificada.fecha|date:"D d M" }}{% else %}HOY{% endif %}</span>
+            <span>{% if sesion_planificada %}SESIÓN #{{ sesion_planificada.id }}{% else %}LIBRE{% endif %}</span>
+          </div>
+          <div class="rb-bib-num">{% if sesion_planificada.id %}{{ sesion_planificada.id|stringformat:"03d" }}{% else %}000{% endif %}</div>
+          <div class="rb-bib-title">
+            {{ sesion_planificada.titulo|default:"Sesión Libre" }}
+            {% if lesion_activa %}
+            <span class="rb-biosafe-pill">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              BIO-SAFE
+            </span>
+            {% endif %}
+          </div>
+          <div class="rb-bib-divider">
+            <div>
+              <div class="rb-bib-stat-label">Elapsed</div>
+              <div class="rb-bib-stat-val" id="rb-elapsed">00:00</div>
+            </div>
+            <div style="text-align:right">
+              <div class="rb-bib-stat-label">Bloques</div>
+              <div class="rb-bib-stat-val">{% if actividades_planificadas %}{{ actividades_planificadas|length }}{% else %}—{% endif %}</div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {% if messages %}
+      <ul class="messages" style="margin-top:14px; padding:0; list-style:none;">
+        {% for message in messages %}
+        <li style="background: var(--paper); padding: 10px 14px; border-left: 4px solid var(--accent); font-size: 12px; margin-bottom: 6px; border-radius: 2px;">{{ message|safe }}</li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+
+      <!-- ═══════════════ 01 · SEÑALES VITALES ═══════════════ -->
+      <section class="rb-section">
+        <div class="rb-section-head">
+          <span class="rb-section-num">01</span>
+          <h2 class="rb-section-title">Señales Vitales</h2>
+          <div class="rb-section-line"></div>
+        </div>
+
+        <div class="rb-vitals">
+          <!-- Energía Pre -->
+          <div class="rb-vital">
+            <div class="rb-vital-top">
+              <div style="flex:1">
+                <div class="rb-vital-label">Energía Pre</div>
+                <div class="rb-vital-hint" id="rb-energia-hint">Zona óptima</div>
+              </div>
+              <div class="rb-ring-wrap">
+                <svg width="60" height="60" viewBox="0 0 60 60">
+                  <circle cx="30" cy="30" r="25" fill="none" stroke="var(--line)" stroke-width="4"/>
+                  <circle id="rb-ring-energia" cx="30" cy="30" r="25" fill="none"
+                          stroke="var(--ok)" stroke-width="4" stroke-linecap="round"
+                          stroke-dasharray="157" stroke-dashoffset="47"/>
+                </svg>
+                <div class="rb-ring-val" id="rb-energia-val" style="color:var(--ok)">7</div>
+              </div>
+            </div>
+            <input type="range" name="nivel_energia_pre" id="id_nivel_energia_pre"
+                   class="rb-slider" min="1" max="10" value="7"
+                   oninput="rbVital('energia', this.value)">
+            <div class="rb-slider-ticks"><span>LOW</span><span>MAX</span></div>
+          </div>
+
+          <!-- RPE Global -->
+          <div class="rb-vital">
+            <div class="rb-vital-top">
+              <div style="flex:1">
+                <div class="rb-vital-label">RPE Global</div>
+                <div class="rb-vital-hint" id="rb-rpe-hint">Zona óptima</div>
+              </div>
+              <div class="rb-ring-wrap">
+                <svg width="60" height="60" viewBox="0 0 60 60">
+                  <circle cx="30" cy="30" r="25" fill="none" stroke="var(--line)" stroke-width="4"/>
+                  <circle id="rb-ring-rpe" cx="30" cy="30" r="25" fill="none"
+                          stroke="var(--warn)" stroke-width="4" stroke-linecap="round"
+                          stroke-dasharray="157" stroke-dashoffset="87"/>
+                </svg>
+                <div class="rb-ring-val" id="rb-rpe-val" style="color:var(--warn)">5</div>
+              </div>
+            </div>
+            <input type="range" name="rpe_global" id="id_rpe_global"
+                   class="rb-slider" min="1" max="10" value="5"
+                   oninput="rbVital('rpe', this.value)">
+            <div class="rb-slider-ticks"><span>LOW</span><span>MAX</span></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══════════════ 02 · MISIÓN DEL DÍA ═══════════════ -->
+      <section class="rb-section">
+        <div class="rb-section-head">
+          <span class="rb-section-num">02</span>
+          <h2 class="rb-section-title">Misión del día</h2>
+          <div class="rb-section-line"></div>
+          <span class="rb-section-right" id="rb-progress-global">0 / 0</span>
+        </div>
+
+        <div class="rb-cards">
           {% if actividades_planificadas %}
             {% for act in actividades_planificadas %}
-            <div class="rr-act-card">
-              <div class="rr-act-top">
-                <div class="rr-act-icon">
-                  <i class="fas {{ act.get_icon_class }}"></i>
+            {% with idx=forloop.counter %}
+
+            {# ── Decide card flavor ── #}
+            {% if act.data_metricas.series %}
+              {# FUERZA / SERIES #}
+              <article class="rb-card" id="rb-card-{{ idx }}"
+                       data-name="{{ act.nombre_ejercicio }}"
+                       data-type="{{ act.tipo_actividad }}">
+                <div class="rb-card-meta">
+                  <span class="rb-card-meta-type">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 6.5v11M17.5 6.5v11M3 10v4M21 10v4M6.5 12h11"/></svg>
+                    FUERZA
+                  </span>
+                  <span>#{{ idx|stringformat:"02d" }}</span>
                 </div>
-                <div class="rr-act-name">
+                <h3 class="rb-card-title">
                   {% if act.is_substituted %}{{ act.display_name }}{% else %}{{ act.nombre_ejercicio }}{% endif %}
+                  {% if act.is_substituted %}
+                  <span class="rb-biosafe-pill">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                    ADAPTADO
+                  </span>
+                  {% endif %}
+                </h3>
+
+                {% if act.data_metricas.porcentaje_rm or act.data_metricas.tempo or act.data_metricas.descanso %}
+                <div class="rb-chips">
+                  {% if act.data_metricas.porcentaje_rm %}<span class="rb-chip rb-chip--hi">{{ act.data_metricas.porcentaje_rm }}% RM</span>{% endif %}
+                  {% if act.data_metricas.tempo %}<span class="rb-chip">TEMPO {{ act.data_metricas.tempo }}</span>{% endif %}
+                  {% if act.data_metricas.descanso %}<span class="rb-chip">REST {{ act.data_metricas.descanso }}</span>{% endif %}
                 </div>
-                {% if act.is_substituted %}
-                <span class="rr-biosafe-badge"><i class="fas fa-shield-alt" style="margin-right:3px;font-size:7px;"></i>BIO-SAFE</span>
                 {% endif %}
-              </div>
 
-              <div class="rr-act-chips">
-                {% if act.data_metricas.series %}
+                {% if act.data_metricas.coach_tip %}
+                <div class="rb-tip">
+                  <span class="rb-tip-label">COACH TIP</span>
+                  {{ act.data_metricas.coach_tip }}
+                </div>
+                {% elif act.data_metricas.notas %}
+                <div class="rb-tip"><span class="rb-tip-label">NOTA</span>{{ act.data_metricas.notas }}</div>
+                {% endif %}
+
+                <div class="rb-series" id="rb-series-{{ idx }}">
                   {% for s in act.data_metricas.series %}
-                    {% if s.peso_kg %}
-                    <span class="rr-chip">{{ s.reps }}r × {{ s.peso_kg }}kg</span>
-                    {% elif s.reps %}
-                    <span class="rr-chip">{{ s.reps }} reps</span>
-                    {% elif s.tiempo_sec %}
-                    <span class="rr-chip">{{ s.tiempo_sec }}s</span>
-                    {% endif %}
+                  <div class="rb-serie" data-i="{{ forloop.counter }}">
+                    <span class="rb-serie-n">#{{ forloop.counter|stringformat:"02d" }}</span>
+                    <div class="rb-num-cell">
+                      <input type="number" class="rb-num-input rb-input-reps"
+                             value="{{ s.reps|default:'' }}" placeholder="—" min="1" step="1" inputmode="numeric">
+                      <div class="rb-num-label">REPS</div>
+                    </div>
+                    <div class="rb-num-cell">
+                      <input type="number" class="rb-num-input rb-input-kg"
+                             value="{{ s.peso_kg|default:'' }}" placeholder="—" min="0" step="0.5" inputmode="decimal">
+                      <div class="rb-num-label">KG</div>
+                    </div>
+                    <button type="button" class="rb-check" onclick="rbToggleSerie(this)">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                    </button>
+                  </div>
                   {% endfor %}
-                {% endif %}
-                {% if act.data_metricas.distancia_km %}
-                <span class="rr-chip teal">
-                  <i class="fas fa-route" style="margin-right:3px;"></i>{{ act.data_metricas.distancia_km }} km
-                  {% if act.data_metricas.ritmo_objetivo %}· {{ act.data_metricas.ritmo_objetivo }}{% endif %}
-                </span>
-                {% endif %}
-                {% if act.data_metricas.distancia_m %}
-                <span class="rr-chip red">
-                  <i class="fas fa-arrows-alt-h" style="margin-right:3px;"></i>{{ act.data_metricas.distancia_m }}m
-                  {% if act.data_metricas.peso_kg %}· {{ act.data_metricas.peso_kg }}kg{% endif %}
-                </span>
-                {% endif %}
-                {% if act.data_metricas.porcentaje_rm %}
-                <span class="rr-chip gold">{{ act.data_metricas.porcentaje_rm }}% RM</span>
-                {% endif %}
-                {% if act.data_metricas.tempo %}
-                <span class="rr-chip">⏱ {{ act.data_metricas.tempo }}</span>
-                {% endif %}
-                {% if act.data_metricas.descanso %}
-                <span class="rr-chip">🔄 {{ act.data_metricas.descanso }}</span>
-                {% endif %}
-              </div>
+                </div>
 
-              {% if act.data_metricas.coach_tip %}
-              <div class="rr-act-tip">
-                <i class="fas fa-robot" style="margin-right:5px; opacity:0.6;"></i>{{ act.data_metricas.coach_tip }}
-              </div>
-              {% elif act.data_metricas.notas %}
-              <div class="rr-act-notes">{{ act.data_metricas.notas }}</div>
-              {% endif %}
-            </div>
+                <div class="rb-prog">
+                  <div class="rb-prog-track"><div class="rb-prog-fill"></div></div>
+                  <span class="rb-prog-txt">0 / {{ act.data_metricas.series|length }}</span>
+                  <button type="button" class="rb-add"
+                          onclick="rbAddSerie('rb-series-{{ idx }}', 'rb-card-{{ idx }}')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    ADD
+                  </button>
+                </div>
+              </article>
+
+            {% elif act.data_metricas.distancia_km %}
+              {# CARRERA / CARDIO CON PACE #}
+              <article class="rb-card rb-card--cardio" id="rb-card-{{ idx }}"
+                       data-name="{{ act.nombre_ejercicio }}"
+                       data-type="{{ act.tipo_actividad }}"
+                       data-plan-pace="{{ act.data_metricas.ritmo_objetivo|default:'' }}">
+                <div class="rb-card-meta">
+                  <span class="rb-card-meta-type">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="17" cy="4" r="2"/><path d="M15.2 11.7L13 9.2l-3.6 5 2.3 2.1L10 22"/><path d="M8 11l3-3 4 2 1.5 4"/></svg>
+                    {% if act.data_metricas.ritmo_objetivo %}CARRERA Z2{% else %}CARRERA{% endif %}
+                  </span>
+                  <span>#{{ idx|stringformat:"02d" }}</span>
+                </div>
+                <h3 class="rb-card-title">{% if act.is_substituted %}{{ act.display_name }}{% else %}{{ act.nombre_ejercicio }}{% endif %}</h3>
+
+                <div class="rb-chips">
+                  {% if act.data_metricas.ritmo_objetivo %}<span class="rb-chip rb-chip--hi">Z2 · {{ act.data_metricas.ritmo_objetivo }}/KM</span>{% endif %}
+                  <span class="rb-chip">{{ act.data_metricas.distancia_km }} KM PLAN</span>
+                </div>
+
+                {% if act.data_metricas.coach_tip %}
+                <div class="rb-tip" style="margin-bottom:10px"><span class="rb-tip-label">COACH TIP</span>{{ act.data_metricas.coach_tip }}</div>
+                {% endif %}
+
+                <div class="rb-cardio-grid">
+                  <div>
+                    <div class="rb-biginput-label"><span>Distancia</span><span>km</span></div>
+                    <input type="number" class="rb-biginput rb-input-distkm"
+                           id="rb-dist-{{ idx }}"
+                           value="{{ act.data_metricas.distancia_km }}"
+                           step="0.1" min="0" inputmode="decimal"
+                           oninput="rbCalcPace({{ idx }})">
+                  </div>
+                  <div>
+                    <div class="rb-biginput-label"><span>Tiempo</span><span>min</span></div>
+                    <input type="number" class="rb-biginput rb-input-time"
+                           id="rb-time-{{ idx }}"
+                           placeholder="0" min="0" step="1" inputmode="numeric"
+                           oninput="rbCalcPace({{ idx }})">
+                  </div>
+                </div>
+
+                <div class="rb-pace" id="rb-pace-{{ idx }}">
+                  <div class="rb-pace-col">
+                    <div class="rb-pace-col-lbl">PACE / KM</div>
+                    <div class="rb-pace-val" id="rb-pace-val-{{ idx }}">—</div>
+                  </div>
+                  <div style="text-align:right">
+                    <span class="rb-pace-badge" id="rb-pace-badge-{{ idx }}"></span>
+                    <div class="rb-pace-note" id="rb-pace-note-{{ idx }}"></div>
+                  </div>
+                </div>
+
+                <button type="button" class="rb-done-btn" id="rb-done-{{ idx }}"
+                        onclick="rbToggleDone('rb-card-{{ idx }}', this)">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  MARCAR COMPLETADA
+                </button>
+              </article>
+
+            {% elif act.data_metricas.distancia_m %}
+              {# ESTACIÓN HYROX #}
+              <article class="rb-card rb-card--station" id="rb-card-{{ idx }}"
+                       data-name="{{ act.nombre_ejercicio }}"
+                       data-type="{{ act.tipo_actividad }}">
+                <div class="rb-card-meta">
+                  <span class="rb-card-meta-type">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="10" width="18" height="8" rx="1"/><path d="M3 18l-2 3M21 18l2 3M6 10V6M18 10V6"/></svg>
+                    ESTACIÓN
+                  </span>
+                  <span>#{{ idx|stringformat:"02d" }}</span>
+                </div>
+                <h3 class="rb-card-title">{% if act.is_substituted %}{{ act.display_name }}{% else %}{{ act.nombre_ejercicio }}{% endif %}</h3>
+
+                <div class="rb-chips">
+                  <span class="rb-chip rb-chip--hi">{{ act.data_metricas.distancia_m }}M</span>
+                  {% if act.data_metricas.peso_kg %}<span class="rb-chip">{{ act.data_metricas.peso_kg }} KG</span>{% endif %}
+                </div>
+
+                {% if act.data_metricas.coach_tip %}
+                <div class="rb-tip" style="margin-bottom:10px"><span class="rb-tip-label">COACH TIP</span>{{ act.data_metricas.coach_tip }}</div>
+                {% endif %}
+
+                <div class="rb-cardio-grid">
+                  <div>
+                    <div class="rb-biginput-label"><span>Distancia</span><span>m</span></div>
+                    <input type="number" class="rb-biginput rb-input-distm"
+                           value="{{ act.data_metricas.distancia_m }}"
+                           step="1" min="0" inputmode="numeric">
+                  </div>
+                  {% if act.data_metricas.peso_kg %}
+                  <div>
+                    <div class="rb-biginput-label"><span>Carga</span><span>kg</span></div>
+                    <input type="number" class="rb-biginput rb-input-carga"
+                           value="{{ act.data_metricas.peso_kg }}"
+                           step="1" min="0" inputmode="numeric">
+                  </div>
+                  {% endif %}
+                </div>
+
+                <button type="button" class="rb-done-btn"
+                        onclick="rbToggleDone('rb-card-{{ idx }}', this)">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  MARCAR COMPLETADA
+                </button>
+              </article>
+
+            {% else %}
+              {# GENÉRICO #}
+              <article class="rb-card" id="rb-card-{{ idx }}"
+                       data-name="{{ act.nombre_ejercicio }}"
+                       data-type="{{ act.tipo_actividad }}">
+                <div class="rb-card-meta">
+                  <span class="rb-card-meta-type">{{ act.get_tipo_actividad_display|default:"BLOQUE"|upper }}</span>
+                  <span>#{{ idx|stringformat:"02d" }}</span>
+                </div>
+                <h3 class="rb-card-title">{% if act.is_substituted %}{{ act.display_name }}{% else %}{{ act.nombre_ejercicio }}{% endif %}</h3>
+                {% if act.data_metricas.coach_tip %}
+                <div class="rb-tip" style="margin-top:10px"><span class="rb-tip-label">COACH TIP</span>{{ act.data_metricas.coach_tip }}</div>
+                {% endif %}
+                <button type="button" class="rb-done-btn"
+                        onclick="rbToggleDone('rb-card-{{ idx }}', this)">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  MARCAR COMPLETADA
+                </button>
+              </article>
+            {% endif %}
+
+            {% endwith %}
             {% endfor %}
-
           {% else %}
-          <div class="rr-empty">
-            <div class="rr-empty-icon"><i class="fas fa-calendar-day"></i></div>
-            <div class="rr-empty-title">Sesión Libre</div>
-            <div class="rr-empty-sub">No hay ejercicios prescritos para este día. Registra lo que hayas hecho.</div>
-          </div>
+            <div class="rb-empty">
+              <div class="rb-empty-title">Sesión Libre</div>
+              <div class="rb-empty-sub">Sin ejercicios prescritos. Usa el informe de sesión abajo para describir lo que hayas hecho.</div>
+            </div>
           {% endif %}
         </div>
-      </div>
+      </section>
 
-      <!-- ── FORM PANEL ─────────────────────────────── -->
-      <div class="rr-form-panel">
-
-        <!-- VITALS -->
-        <div class="rr-form-section">
-          <div class="rr-form-section-label"><i class="fas fa-heartbeat" style="color:var(--red);"></i>Señales Vitales</div>
-          <div class="rr-vitals">
-
-            <!-- Energía Pre -->
-            <div class="rr-vital-card">
-              <div class="rr-vital-top">
-                <div>
-                  <div class="rr-vital-label">Energía Pre</div>
-                  <div class="rr-vital-hint" id="energia-hint">Cargando...</div>
-                </div>
-                <div class="rr-vital-value" id="energia-val" style="color:var(--text);">7</div>
-              </div>
-              <input type="range" name="nivel_energia_pre" id="id_nivel_energia_pre"
-                     class="rr-slider" min="1" max="10" value="7"
-                     oninput="updateVital('energia', this.value)">
+      <!-- ═══════════════ 03 · MÉTRICAS ═══════════════ -->
+      <section class="rb-section">
+        <div class="rb-section-head">
+          <span class="rb-section-num">03</span>
+          <h2 class="rb-section-title">Métricas de sesión</h2>
+          <div class="rb-section-line"></div>
+        </div>
+        <div class="rb-metrics">
+          <div class="rb-metric">
+            <div class="rb-metric-lbl">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              TIEMPO
             </div>
-
-            <!-- RPE Global -->
-            <div class="rr-vital-card">
-              <div class="rr-vital-top">
-                <div>
-                  <div class="rr-vital-label">RPE Global</div>
-                  <div class="rr-vital-hint" id="rpe-hint">Cargando...</div>
-                </div>
-                <div class="rr-vital-value" id="rpe-val" style="color:var(--text);">5</div>
-              </div>
-              <input type="range" name="rpe_global" id="id_rpe_global"
-                     class="rr-slider" min="1" max="10" value="5"
-                     oninput="updateVital('rpe', this.value)">
+            <input type="number" name="tiempo_total_minutos" id="id_tiempo_total_minutos"
+                   class="rb-metric-input" placeholder="—" min="0" step="1" inputmode="numeric">
+            <div class="rb-metric-unit">MIN</div>
+          </div>
+          <div class="rb-metric">
+            <div class="rb-metric-lbl">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21.2l7.8-7.8 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>
+              FC MED
             </div>
-
+            <input type="number" name="hr_media" id="id_hr_media"
+                   class="rb-metric-input" placeholder="—" min="0" step="1" inputmode="numeric">
+            <div class="rb-metric-unit">LPM</div>
+          </div>
+          <div class="rb-metric">
+            <div class="rb-metric-lbl">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21.2l7.8-7.8 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>
+              FC MÁX
+            </div>
+            <input type="number" name="hr_maxima" id="id_hr_maxima"
+                   class="rb-metric-input" placeholder="—" min="0" step="1" inputmode="numeric">
+            <div class="rb-metric-unit">LPM</div>
           </div>
         </div>
+      </section>
 
-        <!-- METRICS -->
-        <div class="rr-form-section">
-          <div class="rr-form-section-label"><i class="fas fa-tachometer-alt" style="color:var(--red);"></i>Métricas de Sesión</div>
-          <div class="rr-metrics">
+      <!-- ═══════════════ 04 · SALUD ═══════════════ -->
+      <section class="rb-section">
+        <div class="rb-section-head">
+          <span class="rb-section-num">04</span>
+          <h2 class="rb-section-title">Control de salud</h2>
+          <div class="rb-section-line"></div>
+        </div>
+        <label class="rb-health" id="rb-health-row">
+          <div style="flex:1">
+            <div class="rb-health-title">Molestias en lesión</div>
+            <div class="rb-health-sub">¿Sentiste dolor o incomodidad durante el entreno?</div>
+          </div>
+          <input type="checkbox" name="hubo_molestias" id="id_hubo_molestias" class="rb-toggle-inp"
+                 onchange="document.getElementById('rb-health-row').classList.toggle('rb-health--active', this.checked)">
+          <span class="rb-toggle"></span>
+        </label>
+      </section>
 
-            <div class="rr-metric-card">
-              <div class="rr-metric-label"><i class="fas fa-clock"></i>Tiempo</div>
-              {{ form.tiempo_total_minutos }}
-              <div class="rr-metric-unit">MINUTOS</div>
+      <!-- ═══════════════ 05 · INFORME ═══════════════ -->
+      <section class="rb-section">
+        <div class="rb-section-head">
+          <span class="rb-section-num">05</span>
+          <h2 class="rb-section-title">Informe de sesión</h2>
+          <div class="rb-section-line"></div>
+        </div>
+
+        <div class="rb-alert" id="rb-biosafe-alert">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h16.9a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          <div class="rb-alert-txt" id="rb-biosafe-msg"></div>
+        </div>
+
+        <div class="rb-notes">
+          <div class="rb-notes-head">
+            <div class="rb-notes-head-l">
+              <span class="rb-rec-dot" style="margin-left:0"></span>
+              Notas adicionales
             </div>
-
-            <div class="rr-metric-card">
-              <div class="rr-metric-label"><i class="fas fa-heart"></i>FC Media</div>
-              {{ form.hr_media }}
-              <div class="rr-metric-unit">LPM</div>
-            </div>
-
-            <div class="rr-metric-card">
-              <div class="rr-metric-label"><i class="fas fa-fire"></i>FC Máx</div>
-              {{ form.hr_maxima }}
-              <div class="rr-metric-unit">LPM</div>
-            </div>
-
+            <span class="rb-notes-ai">PARSER AUTO</span>
+          </div>
+          <textarea id="id_notas_extra" class="rb-notes-text"
+            placeholder="Observaciones adicionales (opcional).&#10;&#10;El tracker de arriba ya registra series, pesos, distancias y ritmos. Usa este campo para notas: técnica, sensaciones, contexto…"></textarea>
+          <div class="rb-notes-foot">
+            <label class="rb-equiv">
+              <input type="checkbox" name="sustituir_material" id="id_sustituir_material">
+              <span class="rb-equiv-box">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              </span>
+              Sin material oficial — usar equivalencias
+            </label>
           </div>
         </div>
+      </section>
 
-        <!-- INJURY CHECK -->
-        <div class="rr-form-section">
-          <div class="rr-form-section-label"><i class="fas fa-stethoscope" style="color:var(--red);"></i>Control de Salud</div>
-
-          <label class="rr-injury-toggle" id="injury-toggle-label">
-            <div class="rr-injury-left">
-              <div class="rr-injury-icon" id="injury-icon">
-                <i class="fas fa-heart-pulse"></i>
-              </div>
-              <div>
-                <div class="rr-injury-text-title">Molestias en Lesión</div>
-                <div class="rr-injury-text-sub">¿Sentiste dolor o incomodidad durante el entrenamiento?</div>
-              </div>
-            </div>
-            <div class="rr-toggle-wrap">
-              <input type="checkbox" name="hubo_molestias" id="id_hubo_molestias"
-                     class="rr-toggle-input" onchange="toggleInjury(this)">
-              <span class="rr-toggle-track"></span>
-            </div>
-          </label>
-        </div>
-
-        <!-- NOTES / IA PARSER -->
-        <div class="rr-form-section">
-          <div class="rr-form-section-label"><i class="fas fa-microchip" style="color:var(--red);"></i>Informe de Sesión</div>
-
-          <!-- Bio-safe warning -->
-          <div class="rr-biosafe-alert" id="biosafe-alert">
-            <i class="fas fa-exclamation-triangle rr-biosafe-icon"></i>
-            <div class="rr-biosafe-text" id="biosafe-msg">Movimiento restringido detectado.</div>
-          </div>
-
-          <div class="rr-notes-card">
-            <div class="rr-notes-topbar">
-              <div class="rr-notes-topbar-left">
-                <span class="dot"></span>
-                CANAL ACTIVO · IA PARSER
-              </div>
-              <span class="rr-notes-ai-badge">GEMINI 2.5</span>
-            </div>
-            <textarea name="notas_raw" id="id_notas_raw"
-                      class="rr-notes-textarea"
-                      placeholder="Pega o escribe tu entrenamiento en texto libre...
-Ej: Sentadilla 4x10@80kg. Carrera 6km en 35min. RPE 8. Piernas algo cargadas pero buena técnica.
-
-La IA extraerá automáticamente los ejercicios, pesos, series y repeticiones.">{{ form.notas_raw.value|default:'' }}</textarea>
-
-            <div class="rr-notes-footer">
-              <label class="rr-equiv-toggle" id="equiv-label">
-                <input type="checkbox" name="sustituir_material" id="id_sustituir_material">
-                <span class="rr-equiv-label" style="display:flex;align-items:center;gap:6px;">
-                  <span class="rr-equiv-dot" id="equiv-dot"></span>
-                  <span style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:0.08em;color:var(--text-dim);" id="equiv-text">Sin material oficial → usar equivalencias</span>
-                </span>
-              </label>
-            </div>
-          </div>
-        </div>
-
-        <!-- SUBMIT -->
-        <div class="rr-submit-wrap">
-          <button type="submit" class="rr-submit-btn" id="submit-btn">
-            <i class="fas fa-microchip" id="btn-icon"></i>
-            <span id="btn-text">Procesar y Guardar Sesión</span>
-          </button>
-          <div class="rr-submit-sub">IA PARSER · GEMINI 2.5 FLASH · ANÁLISIS AUTOMÁTICO</div>
-        </div>
-
-      </div>{# /rr-form-panel #}
-    </div>{# /rr-grid #}
+    </div>
   </form>
+
+  <!-- ═══════════════ SUBMIT BAR ═══════════════ -->
+  <div class="rb-submit-bar">
+    <button type="button" class="rb-submit" id="rb-submit" onclick="rbSubmit()">
+      <div class="rb-submit-fill" id="rb-submit-fill"></div>
+      <div class="rb-submit-inner">
+        <div class="rb-submit-pct" id="rb-submit-pct">0</div>
+        <div class="rb-submit-txt">
+          <div class="rb-submit-eyebrow">FINISH LINE</div>
+          <div class="rb-submit-label" id="rb-submit-label">Guardar progreso</div>
+        </div>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+      </div>
+    </button>
+  </div>
 </div>
 
-<!-- ── STYLE OVERRIDES FOR DJANGO FORM WIDGETS ────────── -->
-<style>
-  /* Override metric inputs rendered by Django */
-  #id_tiempo_total_minutos,
-  #id_hr_media,
-  #id_hr_maxima {
-    width: 100% !important;
-    background: transparent !important;
-    border: none !important;
-    outline: none !important;
-    font-family: 'Barlow Condensed', sans-serif !important;
-    font-size: 22px !important;
-    font-weight: 700 !important;
-    color: var(--text) !important;
-    letter-spacing: 0.01em !important;
-    padding: 0 !important;
-    -moz-appearance: textfield !important;
-  }
-  #id_tiempo_total_minutos::-webkit-inner-spin-button,
-  #id_hr_media::-webkit-inner-spin-button,
-  #id_hr_maxima::-webkit-inner-spin-button,
-  #id_tiempo_total_minutos::-webkit-outer-spin-button,
-  #id_hr_media::-webkit-outer-spin-button,
-  #id_hr_maxima::-webkit-outer-spin-button { -webkit-appearance: none !important; margin: 0 !important; }
-</style>
-
 <script>
-  // ── VITAL STATES ──────────────────────────────────────────
-  const ENERGIA_STATES = {
-    low:  { color: 'var(--red)',  hint: 'Energía baja · Vol -30%' },
-    mid:  { color: 'var(--gold)', hint: 'Energía moderada' },
-    high: { color: 'var(--teal)', hint: 'Energía óptima · 🔥' },
-  };
-  const RPE_STATES = {
-    low:  { color: 'var(--teal)', hint: 'Muy fácil · Considera subir carga' },
-    mid:  { color: 'var(--gold)', hint: 'Zona óptima' },
-    high: { color: 'var(--red)',  hint: 'Esfuerzo máximo · Recuperación necesaria' },
-  };
+/* ─────────────────────────────────────────
+   HYROX RACE BIB — vanilla JS controller
+   ───────────────────────────────────────── */
 
-  function getEnergiaState(v) {
-    if (v <= 4) return 'low';
-    if (v <= 7) return 'mid';
-    return 'high';
-  }
-  function getRpeState(v) {
-    if (v <= 4) return 'low';
-    if (v <= 8) return 'mid';
-    return 'high';
-  }
+/* ── Ring helpers ─────────────────────────── */
+const RB_CIRC = 2 * Math.PI * 25; // ~157
 
-  function updateVital(type, val) {
-    const v = parseInt(val);
-    if (type === 'energia') {
-      const state = ENERGIA_STATES[getEnergiaState(v)];
-      document.getElementById('energia-val').textContent = v;
-      document.getElementById('energia-val').style.color = state.color;
-      document.getElementById('energia-hint').textContent = state.hint;
-      document.getElementById('energia-hint').style.color = state.color;
+function rbVital(kind, val) {
+  const v = parseInt(val);
+  const pct = (v - 1) / 9;
+  const off = RB_CIRC * (1 - pct);
+
+  let color, hint;
+  if (kind === 'energia') {
+    if (v <= 4)      { color = 'var(--danger)'; hint = 'Volumen reducido'; }
+    else if (v <= 7) { color = 'var(--warn)';   hint = 'Energía moderada'; }
+    else             { color = 'var(--ok)';     hint = 'Zona óptima'; }
+    const r = document.getElementById('rb-ring-energia');
+    r.setAttribute('stroke', color);
+    r.style.strokeDashoffset = off;
+    const vd = document.getElementById('rb-energia-val');
+    vd.textContent = v; vd.style.color = color;
+    document.getElementById('rb-energia-hint').textContent = hint;
+  } else {
+    if (v <= 4)      { color = 'var(--ok)';     hint = 'Muy fácil — considera subir carga'; }
+    else if (v <= 8) { color = 'var(--warn)';   hint = 'Zona óptima'; }
+    else             { color = 'var(--danger)'; hint = 'Esfuerzo máximo'; }
+    const r = document.getElementById('rb-ring-rpe');
+    r.setAttribute('stroke', color);
+    r.style.strokeDashoffset = off;
+    const vd = document.getElementById('rb-rpe-val');
+    vd.textContent = v; vd.style.color = color;
+    document.getElementById('rb-rpe-hint').textContent = hint;
+  }
+}
+
+/* Init rings */
+rbVital('energia', document.getElementById('id_nivel_energia_pre').value);
+rbVital('rpe', document.getElementById('id_rpe_global').value);
+
+/* ── Elapsed timer ────────────────────────── */
+(function() {
+  let elapsed = 0;
+  const el = document.getElementById('rb-elapsed');
+  setInterval(() => {
+    elapsed++;
+    const m = String(Math.floor(elapsed / 60)).padStart(2, '0');
+    const s = String(elapsed % 60).padStart(2, '0');
+    if (el) el.textContent = `${m}:${s}`;
+  }, 1000);
+})();
+
+/* ── Series tracker ───────────────────────── */
+function rbToggleSerie(btn) {
+  const row = btn.closest('.rb-serie');
+  row.classList.toggle('rb-serie--done');
+  btn.classList.toggle('rb-check--done');
+  rbSyncCard(btn.closest('.rb-card'));
+  rbSyncGlobal();
+}
+
+function rbSyncCard(card) {
+  const rows = card.querySelectorAll('.rb-serie');
+  const done = card.querySelectorAll('.rb-serie.rb-serie--done').length;
+  const total = rows.length;
+  const fill = card.querySelector('.rb-prog-fill');
+  const txt  = card.querySelector('.rb-prog-txt');
+  if (!fill || !txt) return;
+  const pct = total ? (done / total) * 100 : 0;
+  fill.style.width = pct + '%';
+  txt.textContent = (done === total && total > 0) ? `${total} completas` : `${done} / ${total}`;
+  const all = (done === total && total > 0);
+  fill.classList.toggle('rb-prog-fill--all', all);
+  txt.classList.toggle('rb-prog-txt--all', all);
+  card.classList.toggle('rb-card--done', all);
+}
+
+function rbAddSerie(seriesId, cardId) {
+  const list = document.getElementById(seriesId);
+  const card = document.getElementById(cardId);
+  const rows = list.querySelectorAll('.rb-serie');
+  const n = rows.length + 1;
+  const last = rows[rows.length - 1];
+  const lr = last?.querySelector('.rb-input-reps')?.value || '';
+  const lk = last?.querySelector('.rb-input-kg')?.value  || '';
+  const el = document.createElement('div');
+  el.className = 'rb-serie';
+  el.dataset.i = n;
+  el.innerHTML = `
+    <span class="rb-serie-n">#${String(n).padStart(2,'0')}</span>
+    <div class="rb-num-cell">
+      <input type="number" class="rb-num-input rb-input-reps" value="${lr}" placeholder="—" min="1" step="1" inputmode="numeric">
+      <div class="rb-num-label">REPS</div>
+    </div>
+    <div class="rb-num-cell">
+      <input type="number" class="rb-num-input rb-input-kg" value="${lk}" placeholder="—" min="0" step="0.5" inputmode="decimal">
+      <div class="rb-num-label">KG</div>
+    </div>
+    <button type="button" class="rb-check" onclick="rbToggleSerie(this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+    </button>`;
+  list.appendChild(el);
+  rbSyncCard(card);
+  rbSyncGlobal();
+  el.querySelector('.rb-input-reps').focus();
+}
+
+/* ── Cardio pace ──────────────────────────── */
+function rbCalcPace(idx) {
+  const dist = parseFloat(document.getElementById('rb-dist-' + idx)?.value || 0);
+  const mins = parseFloat(document.getElementById('rb-time-' + idx)?.value || 0);
+  const pace = document.getElementById('rb-pace-' + idx);
+  if (!pace) return;
+  if (!dist || !mins || dist <= 0 || mins <= 0) {
+    pace.classList.remove('rb-pace--show');
+    return;
+  }
+  const secs = Math.round((mins * 60) / dist);
+  const pm = Math.floor(secs / 60), ps = secs % 60;
+  document.getElementById('rb-pace-val-' + idx).textContent =
+    `${pm}:${String(ps).padStart(2,'0')}`;
+  pace.classList.add('rb-pace--show');
+
+  const card = document.getElementById('rb-card-' + idx);
+  const planPaceStr = card?.dataset?.planPace || '';
+  const badge = document.getElementById('rb-pace-badge-' + idx);
+  const note  = document.getElementById('rb-pace-note-' + idx);
+  badge.className = 'rb-pace-badge';
+  if (planPaceStr) {
+    const pp = planPaceStr.replace('/km','').trim().split(':');
+    const planSec = parseInt(pp[0]) * 60 + parseInt(pp[1]);
+    const diff = planSec - secs;
+    if (diff <= -30)      { badge.classList.add('fast'); badge.textContent = 'TEMPO'; note.textContent = 'Por encima de Z2'; }
+    else if (diff <= -10) { badge.classList.add('warn'); badge.textContent = 'ALERT'; note.textContent = 'Ligeramente rápido'; }
+    else                  { badge.classList.add('ok');   badge.textContent = 'Z2 OK'; note.textContent = 'Dentro de zona'; }
+  } else {
+    badge.textContent = '';
+    note.textContent = '';
+  }
+}
+
+/* ── Toggle done (cardio/station) ─────────── */
+function rbToggleDone(cardId, btn) {
+  const card = document.getElementById(cardId);
+  const was = btn.classList.contains('rb-done-btn--done');
+  btn.classList.toggle('rb-done-btn--done');
+  card.classList.toggle('rb-card--done');
+  btn.innerHTML = `
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+    ${!was ? 'COMPLETADA ✓' : 'MARCAR COMPLETADA'}`;
+  rbSyncGlobal();
+}
+
+/* ── Global progress ──────────────────────── */
+function rbSyncGlobal() {
+  const cards = document.querySelectorAll('.rb-card');
+  let total = 0, done = 0;
+  cards.forEach(c => {
+    const series = c.querySelectorAll('.rb-serie');
+    if (series.length) {
+      total += series.length;
+      done += c.querySelectorAll('.rb-serie.rb-serie--done').length;
     } else {
-      const state = RPE_STATES[getRpeState(v)];
-      document.getElementById('rpe-val').textContent = v;
-      document.getElementById('rpe-val').style.color = state.color;
-      document.getElementById('rpe-hint').textContent = state.hint;
-      document.getElementById('rpe-hint').style.color = state.color;
-    }
-  }
-
-  // Init on load
-  updateVital('energia', document.getElementById('id_nivel_energia_pre').value);
-  updateVital('rpe', document.getElementById('id_rpe_global').value);
-
-  // ── INJURY TOGGLE ─────────────────────────────────────────
-  function toggleInjury(checkbox) {
-    const label = document.getElementById('injury-toggle-label');
-    if (checkbox.checked) { label.classList.add('active'); }
-    else                   { label.classList.remove('active'); }
-  }
-
-  // ── EQUIVALENCE CHECKBOX ──────────────────────────────────
-  document.getElementById('id_sustituir_material').addEventListener('change', function() {
-    const dot  = document.getElementById('equiv-dot');
-    const text = document.getElementById('equiv-text');
-    if (this.checked) {
-      dot.style.background     = 'var(--teal)';
-      dot.style.borderColor    = 'var(--teal)';
-      text.style.color         = 'var(--teal)';
-    } else {
-      dot.style.background     = '';
-      dot.style.borderColor    = '';
-      text.style.color         = '';
+      total += 1;
+      if (c.classList.contains('rb-card--done')) done += 1;
     }
   });
+  const pct = total ? Math.round(done / total * 100) : 0;
+  document.getElementById('rb-submit-fill').style.width = pct + '%';
+  document.getElementById('rb-submit-pct').textContent = pct;
+  document.getElementById('rb-submit-label').textContent = pct === 100 ? 'Cerrar sesión' : 'Guardar progreso';
+  document.getElementById('rb-progress-global').textContent = `${done} / ${total}`;
+}
 
-  // ── BIO-SAFE ALERT (only if injury in AGUDA phase) ───────
-  {% if lesion_activa and lesion_activa.fase == 'AGUDA' %}
-  const forbiddenKw = {
-    {% for tag in lesion_activa.tags_restringidos %}
-    '{{ tag }}': [
-      {% if tag == 'impacto_vertical' %}'carrera','run','running','correr'{% endif %}
-      {% if tag == 'estabilidad_gemelo' %}'prensa','squat','hack squat','sentadilla'{% endif %}
-      {% if tag == 'flexion_rodilla_profunda' %}'wall ball','wall balls'{% endif %}
-      {% if tag == 'empuje_pierna' %}'sled push','trineo','sled'{% endif %}
-      {% if tag == 'flexion_plantar' %}'salto','box jump','broad jump'{% endif %}
-      {% if tag == 'empuje_hombro' %}'burpee','burpees','press'{% endif %}
-      {% if tag == 'traccion_superior' %}'dominada','pull-up','muscle up'{% endif %}
-      {% if tag == 'empuje_horizontal' %}'flexion','push up','push-ups'{% endif %}
-      {% if tag == 'lumbar_carga' %}'peso muerto','deadlift'{% endif %}
-      {% if tag == 'rotacion_tronco' %}'sandbag lunge','lunges'{% endif %}
-    ],
-    {% endfor %}
-  };
+/* Initialize progress (e.g., if pre-loaded cards exist) */
+rbSyncGlobal();
 
-  const textarea  = document.getElementById('id_notas_raw');
-  const alertEl   = document.getElementById('biosafe-alert');
-  const alertMsg  = document.getElementById('biosafe-msg');
-  const submitBtn = document.getElementById('submit-btn');
-  const btnText   = document.getElementById('btn-text');
-  const btnIcon   = document.getElementById('btn-icon');
+/* ── Submit: build notas_raw then submit form ── */
+function rbBuildNotasRaw() {
+  const extra = document.getElementById('id_notas_extra').value.trim();
+  const lines = [];
 
-  if (textarea && Object.keys(forbiddenKw).length > 0) {
-    textarea.addEventListener('input', function() {
-      const text = this.value.toLowerCase();
-      let found = false, foundWord = '';
-      for (const tag in forbiddenKw) {
-        for (const kw of forbiddenKw[tag]) {
-          if (kw && text.includes(kw)) { found = true; foundWord = kw; break; }
+  document.querySelectorAll('.rb-card').forEach(card => {
+    const name = card.dataset.name;
+    if (!name) return;
+
+    /* Strength */
+    const series = card.querySelectorAll('.rb-serie');
+    if (series.length) {
+      const parts = [];
+      series.forEach(row => {
+        const r = (row.querySelector('.rb-input-reps')?.value || '').trim();
+        const k = (row.querySelector('.rb-input-kg')?.value  || '').trim();
+        if (r) parts.push(k ? `${r}@${k}kg` : `${r} reps`);
+      });
+      if (parts.length) lines.push(`${name}: ${parts.join(', ')}`);
+      return;
+    }
+
+    /* Cardio (km + pace) */
+    const distKm = card.querySelector('.rb-input-distkm');
+    if (distKm) {
+      const idx = card.id.split('-').pop();
+      const timeIn = document.getElementById('rb-time-' + idx);
+      let line = `${name} ${distKm.value}km`;
+      if (timeIn?.value) {
+        const d = parseFloat(distKm.value), m = parseFloat(timeIn.value);
+        if (d > 0 && m > 0) {
+          const s = Math.round((m * 60) / d);
+          const pm = Math.floor(s / 60), ps = s % 60;
+          line += ` · ${m}min · ritmo ${pm}:${String(ps).padStart(2,'0')}/km`;
         }
-        if (found) break;
       }
-      if (found) {
-        alertEl.classList.add('show');
-        alertMsg.textContent = `"${foundWord}" — movimiento restringido por lesión activa (fase {{ lesion_activa.fase }}).`;
-        submitBtn.style.background = 'rgba(232,52,26,0.3)';
-        submitBtn.style.boxShadow  = 'none';
-        btnText.textContent = 'Movimiento Bio-Unsafe Detectado';
-        btnIcon.className   = 'fas fa-exclamation-triangle';
-      } else {
-        alertEl.classList.remove('show');
-        submitBtn.style.background = '';
-        submitBtn.style.boxShadow  = '';
-        btnText.textContent = 'Procesar y Guardar Sesión';
-        btnIcon.className   = 'fas fa-microchip';
-      }
-    });
-  }
-  {% endif %}
+      lines.push(line);
+      return;
+    }
 
-  // ── SUBMIT LOADING STATE ──────────────────────────────────
-  document.getElementById('mainForm').addEventListener('submit', function() {
-    const btn = document.getElementById('submit-btn');
-    document.getElementById('btn-text').textContent = 'Procesando con IA...';
-    document.getElementById('btn-icon').className   = 'fas fa-circle-notch fa-spin';
-    btn.classList.add('loading');
+    /* Station (m + carga) */
+    const distM  = card.querySelector('.rb-input-distm');
+    const carga  = card.querySelector('.rb-input-carga');
+    if (distM) {
+      let line = `${name} ${distM.value}m`;
+      if (carga) line += ` @${carga.value}kg`;
+      lines.push(line);
+      return;
+    }
+
+    if (card.classList.contains('rb-card--done')) lines.push(name);
   });
+
+  let raw = lines.join('\n');
+  if (extra) raw += '\n\n' + extra;
+  document.getElementById('id_notas_raw').value = raw;
+}
+
+function rbSubmit() {
+  rbBuildNotasRaw();
+  document.getElementById('rb-form').submit();
+}
+
+/* ── Bio-safe alert on notes ──────────────── */
+{% if lesion_activa and lesion_activa.tags_restringidos %}
+(function() {
+  const ALL_KW_MAP = {
+    'impacto_vertical':       ['carrera','run','running','correr'],
+    'estabilidad_gemelo':     ['prensa','squat','sentadilla'],
+    'flexion_rodilla_profunda':['wall ball','wall balls'],
+    'empuje_pierna':          ['sled push','sled'],
+    'flexion_plantar':        ['salto','box jump'],
+    'empuje_hombro':          ['burpee','press'],
+    'traccion_superior':      ['dominada','pull-up'],
+    'empuje_horizontal':      ['flexion','push up'],
+    'lumbar_carga':           ['peso muerto','deadlift'],
+    'rotacion_tronco':        ['sandbag lunge','lunges'],
+  };
+  const activeTags = {{ lesion_activa.tags_restringidos|safe }};
+  const forb = {};
+  activeTags.forEach(t => { if (ALL_KW_MAP[t]) forb[t] = ALL_KW_MAP[t]; });
+
+  const ta = document.getElementById('id_notas_extra');
+  ta.addEventListener('input', function() {
+    const t = this.value.toLowerCase();
+    let found = '';
+    for (const tag in forb) {
+      for (const kw of forb[tag]) { if (kw && t.includes(kw)) { found = kw; break; } }
+      if (found) break;
+    }
+    const al = document.getElementById('rb-biosafe-alert');
+    if (found) {
+      al.classList.add('rb-alert--show');
+      document.getElementById('rb-biosafe-msg').textContent =
+        `"${found}" — movimiento restringido por lesión (fase {{ lesion_activa.fase }}).`;
+    } else {
+      al.classList.remove('rb-alert--show');
+    }
+  });
+})();
+{% endif %}
 </script>
+
 {% endblock %}

@@ -23,10 +23,12 @@ class HyroxTrainingEngine:
     # ─────────────────────────────────────────────────────────────────────────
 
     @staticmethod
-    def _calcular_porcentaje_rm(week, weeks_to_plan, is_deload, is_taper):
+    def _calcular_porcentaje_rm(week, weeks_to_plan, is_deload, is_taper, rpe_acumulado=None):
         """
-        Progresión lineal de carga del 65 % al 85 % a lo largo del macrociclo.
-        Semanas de deload bajan al 60 %; tapering al 50 %.
+        Progresión de carga basada en calendario + RPE acumulado real del atleta.
+        - Semanas de deload: 60%; tapering: 50%.
+        - Si RPE medio últimas 3 sesiones > 8.5: NO progresar (carga crónica alta).
+        - Si RPE medio < 6.0: progresar más rápido (atleta adapta fácilmente).
         """
         if is_taper:
             return 0.50
@@ -35,7 +37,17 @@ class HyroxTrainingEngine:
         if weeks_to_plan <= 1:
             return 0.70
         progreso = week / max(weeks_to_plan - 1, 1)
-        return round(0.65 + (progreso * 0.20), 3)
+        base_pct = round(0.65 + (progreso * 0.20), 3)
+
+        if rpe_acumulado is not None:
+            if rpe_acumulado > 8.5:
+                # Carga crónica alta: no progresar, mantener o bajar 5%
+                base_pct = max(round(base_pct - 0.05, 3), 0.65)
+            elif rpe_acumulado < 6.0:
+                # Atleta se adapta fácilmente: acelerar progresión 5%
+                base_pct = min(round(base_pct + 0.05, 3), 0.85)
+
+        return base_pct
 
     @staticmethod
     def _calcular_ritmos_carrera(tiempo_5k_str):
@@ -86,6 +98,46 @@ class HyroxTrainingEngine:
 
         return round(distancia, 1)
 
+    @staticmethod
+    def _get_gym_external_load(cliente, dias=7):
+        """
+        Lee ActividadRealizada (hub unificado) para los últimos N días — SOLO LECTURA.
+        Calcula la carga externa de gym que el algoritmo Hyrox debe considerar.
+        No escribe nada en entrenos; los dos módulos quedan desacoplados.
+        """
+        try:
+            from entrenos.models import ActividadRealizada
+            cutoff = (timezone.now() - timedelta(days=dias)).date()
+            actividades = list(ActividadRealizada.objects.filter(
+                cliente=cliente,
+                tipo='gym',
+                fecha__gte=cutoff,
+            ))
+            count = len(actividades)
+            if count == 0:
+                return {'entrenos_count': 0, 'volumen_total_kg': 0, 'rpe_medio_gym': 0.0, 'fatiga_gym': 'Baja'}
+
+            volumen_total = sum(float(a.volumen_kg or 0) for a in actividades)
+            rpes = [float(a.rpe_medio) for a in actividades if a.rpe_medio]
+            rpe_medio = round(sum(rpes) / len(rpes), 1) if rpes else 0.0
+
+            # Alta: ≥3 sesiones en la semana, o volumen >15 000 kg, o RPE medio >7.5
+            if count >= 3 or volumen_total > 15000 or rpe_medio > 7.5:
+                fatiga_gym = 'Alta'
+            elif count >= 2 or volumen_total > 8000 or rpe_medio > 6.5:
+                fatiga_gym = 'Media'
+            else:
+                fatiga_gym = 'Baja'
+
+            return {
+                'entrenos_count': count,
+                'volumen_total_kg': round(volumen_total),
+                'rpe_medio_gym': rpe_medio,
+                'fatiga_gym': fatiga_gym,
+            }
+        except Exception:
+            return {'entrenos_count': 0, 'volumen_total_kg': 0, 'rpe_medio_gym': 0.0, 'fatiga_gym': 'Baja'}
+
     # ─────────────────────────────────────────────────────────────────────────
     # GENERACIÓN DEL PLAN
     # ─────────────────────────────────────────────────────────────────────────
@@ -110,6 +162,14 @@ class HyroxTrainingEngine:
 
         weeks_until_event = days_until_event // 7
         weeks_to_plan = min(max(1, weeks_until_event), 16)
+
+        # RPE acumulado real de las últimas 3 sesiones Hyrox completadas
+        ultimas_sesiones_hyrox = list(
+            HyroxSession.objects.filter(objective=objective, estado='completado')
+            .order_by('-fecha')[:3]
+        )
+        rpe_vals = [s.rpe_global for s in ultimas_sesiones_hyrox if s.rpe_global is not None]
+        rpe_acumulado = round(sum(rpe_vals) / len(rpe_vals), 2) if rpe_vals else None
 
         # Volumen semanal base por categoría
         sessions_per_week = 5 if 'pro' in objective.categoria else 4
@@ -179,6 +239,7 @@ class HyroxTrainingEngine:
                 week=week,
                 weeks_to_plan=weeks_to_plan,
                 restricted_tags=restricted_tags,
+                rpe_acumulado=rpe_acumulado,
             )
 
             # Día 1: Fuerza + MetCon
@@ -412,6 +473,43 @@ class HyroxTrainingEngine:
                         f"para priorizar tu salud y evitar sobre-entrenamiento."
                     )
 
+        # --- TRIGGER 4: FATIGA CRÓNICA DE SNC (3 sesiones consecutivas RPE > 8.5) ---
+        # El SNC no se recupera igual que el músculo. 3 sesiones seguidas al límite
+        # sin descenso indica agotamiento neurológico. Se bloquea la intensificación.
+        ultimas_3 = list(HyroxSession.objects.filter(
+            objective=sesion_completada.objective,
+            estado='completado',
+            fecha__lte=sesion_completada.fecha,
+        ).order_by('-fecha')[:3])
+        rpes_snc = [s.rpe_global for s in ultimas_3 if s.rpe_global is not None]
+        if len(rpes_snc) == 3 and all(r > 8.5 for r in rpes_snc):
+            proxima_fuerza = HyroxSession.objects.filter(
+                objective=sesion_completada.objective,
+                estado='planificado',
+                fecha__gt=sesion_completada.fecha,
+                titulo__icontains='fuerza',
+            ).order_by('fecha').first()
+            if proxima_fuerza:
+                snc_mutated = False
+                for act in proxima_fuerza.activities.filter(tipo_actividad='fuerza'):
+                    porcentaje_actual = act.data_metricas.get('porcentaje_rm', 75)
+                    if porcentaje_actual > 70:
+                        factor_reduccion = 70.0 / porcentaje_actual
+                        if 'series' in act.data_metricas:
+                            for serie in act.data_metricas['series']:
+                                if 'peso_kg' in serie:
+                                    serie['peso_kg'] = round(float(serie['peso_kg']) * factor_reduccion)
+                        act.data_metricas['porcentaje_rm'] = 70
+                        notas = act.data_metricas.get('notas', '')
+                        act.data_metricas['notas'] = notas + " | ⚡ Bloqueo SNC: 3 sesiones RPE>8.5. Carga capada al 70% RM para proteger el sistema nervioso."
+                        act.save()
+                        snc_mutated = True
+                if snc_mutated:
+                    mensajes_ui.append(
+                        f"⚡ {nombre}: Detecto fatiga nerviosa acumulada (3 sesiones seguidas con RPE > 8.5). "
+                        f"He capado la próxima sesión de fuerza al 70% RM. El SNC necesita margen para recuperarse antes de la competición."
+                    )
+
         return mensajes_ui
 
     # ─────────────────────────────────────────────────────────────────────────
@@ -421,18 +519,38 @@ class HyroxTrainingEngine:
     @staticmethod
     def scale_volume_by_energy(sesion: HyroxSession):
         """
-        Phase 14: Escala el volumen de la sesión según el nivel de energía pre-entreno reportado.
-        Si la energía es baja (< 5), se reduce el volumen un 30 %.
-        Si la energía es alta (> 8), se mantiene pero se sugiere aumentar intensidad.
+        Escala el volumen de la sesión según energía pre-entreno y carga externa del gym.
+        - energia < 5:   70% volumen (energía crítica)
+        - energia 5-6:   85% volumen (energía moderada-baja, tier nuevo)
+        - energia 7-8:   sin cambio
+        - energia > 8:   sugerencia de subir ritmo
+        Además lee ActividadRealizada para detectar fatiga acumulada del gym.
         """
         if sesion.nivel_energia_pre is None:
             return False
 
         is_mutated = False
-        energia    = sesion.nivel_energia_pre
+        energia = sesion.nivel_energia_pre
+
+        # Carga externa gym (últimos 3 días)
+        gym_load = HyroxTrainingEngine._get_gym_external_load(
+            sesion.objective.cliente, dias=3
+        )
+        gym_aviso = ""
+        if gym_load['fatiga_gym'] == 'Alta':
+            gym_aviso = (
+                f" | ⚠️ Gym detectado: {gym_load['entrenos_count']} sesiones últimos 3 días "
+                f"(vol. {gym_load['volumen_total_kg']} kg, RPE {gym_load['rpe_medio_gym']}). "
+                f"Prioriza técnica sobre carga absoluta hoy."
+            )
+        elif gym_load['fatiga_gym'] == 'Media' and gym_load['rpe_medio_gym'] > 6.5:
+            gym_aviso = (
+                f" | 📊 Gym moderado detectado. Carga acumulada de {gym_load['volumen_total_kg']} kg "
+                f"esta semana. Escucha el cuerpo en los primeros sets."
+            )
 
         if energia < 5:
-            ajuste_notas = "📉 Ajuste por Energía Baja (70 % Volumen)"
+            ajuste_notas = "📉 Ajuste por Energía Baja (70% Volumen)"
             for act in sesion.activities.all():
                 mutated_act = False
                 if 'series' in act.data_metricas:
@@ -446,11 +564,33 @@ class HyroxTrainingEngine:
                 if 'distancia_km' in act.data_metricas:
                     act.data_metricas['distancia_km'] = round(float(act.data_metricas['distancia_km']) * 0.7, 1)
                     mutated_act = True
-
                 if mutated_act:
                     notas_actuales = act.data_metricas.get('notas', '')
                     if "Ajuste por Energía" not in notas_actuales:
-                        act.data_metricas['notas'] = f"{notas_actuales} | {ajuste_notas}".strip(" |")
+                        act.data_metricas['notas'] = f"{notas_actuales} | {ajuste_notas}{gym_aviso}".strip(" |")
+                    act.save()
+                    is_mutated = True
+
+        elif energia <= 6:
+            # Nuevo tier: energía moderada-baja → 85% volumen, 90% carga
+            ajuste_notas = "📉 Ajuste por Energía Moderada-Baja (85% Volumen)"
+            for act in sesion.activities.all():
+                mutated_act = False
+                if 'series' in act.data_metricas:
+                    for serie in act.data_metricas['series']:
+                        if 'reps' in serie:
+                            serie['reps'] = max(1, round(int(serie['reps']) * 0.85))
+                            mutated_act = True
+                        if 'peso_kg' in serie:
+                            serie['peso_kg'] = max(1, round(float(serie['peso_kg']) * 0.90))
+                            mutated_act = True
+                if 'distancia_km' in act.data_metricas:
+                    act.data_metricas['distancia_km'] = round(float(act.data_metricas['distancia_km']) * 0.85, 1)
+                    mutated_act = True
+                if mutated_act:
+                    notas_actuales = act.data_metricas.get('notas', '')
+                    if "Ajuste" not in notas_actuales:
+                        act.data_metricas['notas'] = f"{notas_actuales} | {ajuste_notas}{gym_aviso}".strip(" |")
                     act.save()
                     is_mutated = True
 
@@ -459,7 +599,16 @@ class HyroxTrainingEngine:
             for act in sesion.activities.all():
                 notas_actuales = act.data_metricas.get('notas', '')
                 if "Energía Óptima" not in notas_actuales:
-                    act.data_metricas['notas'] = f"{notas_actuales} | {ajuste_notas}".strip(" |")
+                    act.data_metricas['notas'] = f"{notas_actuales} | {ajuste_notas}{gym_aviso}".strip(" |")
+                    act.save()
+                    is_mutated = True
+
+        elif gym_aviso:
+            # Energía normal (7-8) pero hay fatiga de gym: solo añadir aviso sin reducir volumen
+            for act in sesion.activities.all():
+                notas_actuales = act.data_metricas.get('notas', '')
+                if "Gym detectado" not in notas_actuales and "Gym moderado" not in notas_actuales:
+                    act.data_metricas['notas'] = f"{notas_actuales}{gym_aviso}".strip(" |")
                     act.save()
                     is_mutated = True
 
@@ -474,7 +623,8 @@ class HyroxTrainingEngine:
         objective, fecha, titulo, template,
         is_taper=False, is_deload=False,
         week=0, weeks_to_plan=1,
-        restricted_tags=None
+        restricted_tags=None,
+        rpe_acumulado=None,
     ):
         """
         Crea la sesión y sus actividades planificadas basadas en el template,
@@ -537,8 +687,10 @@ class HyroxTrainingEngine:
             elif rm_squat > (rm_deadlift * 1.2):
                 imbalance_type = 'weak_deadlift'
 
-            # Progresión lineal de % RM semana a semana
-            porcentaje_rm = HyroxTrainingEngine._calcular_porcentaje_rm(week, weeks_to_plan, is_deload, is_taper)
+            # Progresión de % RM: calendario + RPE acumulado real del atleta
+            porcentaje_rm = HyroxTrainingEngine._calcular_porcentaje_rm(
+                week, weeks_to_plan, is_deload, is_taper, rpe_acumulado=rpe_acumulado
+            )
 
             # Parámetros de series/reps/fase según % RM actual
             if is_taper:

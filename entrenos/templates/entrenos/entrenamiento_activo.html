@@ -2125,16 +2125,20 @@ function initSeriePanel(fid,sn){
 function iniciarDescanso(fid,totalSeg,snActual,totalSeries){
   if(STATE.timers[fid])clearInterval(STATE.timers[fid].interval);
   const segAjustado=Math.max(5,totalSeg+descansoOffset);
-  STATE.timers[fid]={seg:segAjustado,total:segAjustado,interval:null,snActual:snActual,totalSeries:totalSeries};
+  const endTs=Date.now()+segAjustado*1000;  // timestamp absoluto de fin
+  STATE.timers[fid]={seg:segAjustado,total:segAjustado,endTs:endTs,interval:null,snActual:snActual,totalSeries:totalSeries};
   // Actualizar label "DE X:XX" con el tiempo ajustado
   const deEl=document.getElementById('pd-de-'+fid);
   if(deEl){const m=Math.floor(segAjustado/60),s=segAjustado%60;deEl.textContent='DE '+m+':'+String(s).padStart(2,'0');}
   actualizarTimerUI(fid);
   STATE.timers[fid].interval=setInterval(()=>{
-    STATE.timers[fid].seg=Math.max(0,STATE.timers[fid].seg-1);
+    // Usar timestamp real en lugar de contador — inmune a congelación de Safari
+    const restante=Math.max(0,Math.round((STATE.timers[fid].endTs-Date.now())/1000));
+    STATE.timers[fid].seg=restante;
     actualizarTimerUI(fid);
-    if(STATE.timers[fid].seg===0){
+    if(restante===0){
       clearInterval(STATE.timers[fid].interval);
+      STATE.timers[fid].interval=null;
       playRestEndAlert();
       if(navigator.vibrate)navigator.vibrate([100,50,100]);
       setTimeout(()=>saltarDescanso(fid),800);
@@ -2257,7 +2261,12 @@ function actualizarSticky(){
   if(elE)elE.textContent=cards[STATE.ejActual]?.querySelector('.cyber-ejercicio-nombre')?.textContent||'--';
 }
 
-const t0=Date.now();
+// ── TIMER TOTAL (sobrevive recargas de Safari via localStorage) ──────────
+const _WK_KEY = 'workout_t0_{{ cliente.id }}_{{ fecha }}';
+const _stored = localStorage.getItem(_WK_KEY);
+const t0 = _stored ? parseInt(_stored) : Date.now();
+if (!_stored) localStorage.setItem(_WK_KEY, t0);
+
 setInterval(()=>{
   const seg=Math.floor((Date.now()-t0)/1000);
   const el=document.getElementById('tiempo-transcurrido');
@@ -2265,6 +2274,29 @@ setInterval(()=>{
   if(el)el.textContent=String(Math.floor(seg/60)).padStart(2,'0')+':'+String(seg%60).padStart(2,'0');
   if(hid)hid.value=Math.floor(seg/60);
 },1000);
+
+// Recalcular al volver de background (Page Visibility API)
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState!=='visible') return;
+  // Resync timer total
+  const seg=Math.floor((Date.now()-t0)/1000);
+  const el=document.getElementById('tiempo-transcurrido');
+  if(el)el.textContent=String(Math.floor(seg/60)).padStart(2,'0')+':'+String(seg%60).padStart(2,'0');
+  // Resync timers de descanso activos
+  Object.keys(STATE.timers||{}).forEach(fid=>{
+    const t=STATE.timers[fid];
+    if(!t||!t.endTs) return;
+    const restante=Math.max(0,Math.round((t.endTs-Date.now())/1000));
+    t.seg=restante;
+    actualizarTimerUI(fid);
+    if(restante===0 && t.interval){
+      clearInterval(t.interval);
+      t.interval=null;
+      playRestEndAlert();
+      setTimeout(()=>saltarDescanso(fid),800);
+    }
+  });
+});
 
 document.querySelectorAll('.weight-input').forEach(inp=>{
   inp.addEventListener('focus',function(){this.blur();});
@@ -2425,6 +2457,9 @@ function cerrarSwapMaquina() {
 document.getElementById('btn-confirmar-guardar').addEventListener('click',()=>{
   document.getElementById('hid-duracion').value=Math.floor((Date.now()-t0)/1000/60);
   limpiarCheckpoint();
+
+  // Limpiar timestamp del localStorage antes de guardar
+  localStorage.removeItem(_WK_KEY);
 
   // Mostrar overlay de guardando
   const ov = document.getElementById('saving-overlay');

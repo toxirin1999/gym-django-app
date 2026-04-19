@@ -21,115 +21,186 @@ def calcular_rm_estimado(peso: float, reps: int) -> float:
 
 
 class HyroxParserService:
+
+    # Palabras clave para clasificar el tipo de actividad
+    _KEYWORDS_HYROX = {
+        'sled push', 'sled pull', 'trineo', 'empuje trineo', 'arrastre trineo',
+        'wall ball', 'wall balls', 'skierg', 'ski erg', 'remo ergometro',
+        'burpee broad jump', 'burpees broad', 'sandbag lunge', 'sandbag lunges',
+        'farmers carry', 'farmer carry',
+    }
+    _KEYWORDS_CARRERA = {
+        'carrera', 'correr', 'running', 'trote', 'sprint', 'run',
+    }
+    _KEYWORDS_CARDIO = {
+        'bici', 'ciclismo', 'assault bike', 'remo', 'rowing', 'skierg',
+        'ski erg', 'ergometro', 'eliptica',
+    }
+    _KEYWORDS_FUERZA = {
+        'sentadilla', 'squat', 'peso muerto', 'deadlift', 'press', 'curl',
+        'remo con', 'jalón', 'jalon', 'dominada', 'pull up', 'pull-up',
+        'hip thrust', 'zancada', 'lunge', 'prensa', 'hack squat', 'rumano',
+        'extensión', 'extension', 'flexión', 'flexion', 'plancha', 'plank',
+    }
+
+    @staticmethod
+    def _classify_type(nombre: str) -> str:
+        n = nombre.lower()
+        for kw in HyroxParserService._KEYWORDS_HYROX:
+            if kw in n:
+                return 'hyrox_station'
+        for kw in HyroxParserService._KEYWORDS_CARRERA:
+            if kw in n:
+                return 'carrera'
+        for kw in HyroxParserService._KEYWORDS_CARDIO:
+            if kw in n:
+                return 'ergometro'
+        return 'fuerza'
+
+    @staticmethod
+    def _estimate_fatigue(actividades: list, rpe: float | None) -> str:
+        n = len(actividades)
+        if rpe and rpe >= 8:
+            return 'Alta'
+        if rpe and rpe >= 6:
+            return 'Media'
+        return 'Alta' if n >= 5 else 'Media' if n >= 3 else 'Baja'
+
     @staticmethod
     def parse_workout_text(raw_text, sustituir_material=False):
         """
-        Llama a la API de Gemini para convertir el texto libre del usuario en un JSON estructurado.
-        Retorna una lista de diccionarios, donde cada diccionario representa un `HyroxActivity`.
+        Parser local (sin IA) que convierte texto libre en JSON estructurado.
+        Reconoce patrones comunes: 4x8@80kg, 5km, 50m@100kg, series de N reps, etc.
+        Devuelve el mismo formato que save_parsed_session espera.
         """
-        if not GEMINI_API_KEY:
-            raise ValueError("GEMINI_API_KEY no está configurada en settings ni en el entorno.")
-            
-        matriz_equivalencia = ""
-        if sustituir_material:
-            matriz_equivalencia = """
-*** INSTRUCCIÓN CRÍTICA DE SUSTITUCIÓN DE MATERIAL ***
-El usuario ha indicado que *NO TENÍA MATERIAL OFICIAL DE HYROX* y ha usado alternativas de gimnasio. 
-Aplica esta Matriz de Equivalencias y refleja el Volumen Relativo en el feedback final:
-- Sled Push -> Sustituto: Prensa de Piernas pesada (Power) + Sprints cortos. (Ratio 1:1 en fatiga de cuádriceps).
-- Sled Pull -> Sustituto: Remo en polea baja o Hand-over-hand. (Enfoque en agarre y cadena posterior).
-- Sandbag Lunges -> Sustituto: Zancadas con mancuernas/barra (mantener el peso total de 20/30kg).
-- SkiErg -> Sustituto: Battle Ropes o Jalón al pecho explosivo. (Extensión de cadera y potencia brazos).
+        actividades = []
 
-Si el usuario registra Prensa de piernas en lugar de Sled Push, asume la equivalencia y, si notas que el volumen (Reps x Peso) es desmesurado comparado con el Sled normal (ej: hace 300kg en prensa en lugar de empujar 100kg en trineo), déjale un feedback advirtiéndolo. Indica en el feedback siempre que se ha procedido a una adaptación heurística del entrenamiento.
-"""
+        # Patrones de extracción
+        # Series×Reps con peso: 4x8@80kg · 4x8 @80 · 4 series 8 reps 80kg
+        re_series_reps_peso = re.compile(
+            r'(\d+)\s*[x×]\s*(\d+)\s*(?:reps?)?\s*(?:[@a]|con|@|a\s)?\s*(\d+(?:[.,]\d+)?)\s*kg',
+            re.IGNORECASE
+        )
+        # Series×Reps sin peso: 4x8 · 3x15
+        re_series_reps = re.compile(r'(\d+)\s*[x×]\s*(\d+)\s*(?:reps?)?', re.IGNORECASE)
+        # Distancia en km: 5km · 5 km
+        re_dist_km = re.compile(r'(\d+(?:[.,]\d+)?)\s*km', re.IGNORECASE)
+        # Distancia en metros: 50m · 1000m
+        re_dist_m = re.compile(r'(\d+(?:[.,]\d+)?)\s*m\b', re.IGNORECASE)
+        # Tiempo en segundos o minutos: 30s · 2min · 2:30
+        re_tiempo = re.compile(r'(\d+)\s*(?:s(?:eg(?:undos?)?)?|min(?:utos?)?)', re.IGNORECASE)
+        # Peso suelto: @ 80kg · con 80kg
+        re_peso_suelto = re.compile(r'(?:[@a]|con)\s*(\d+(?:[.,]\d+)?)\s*kg', re.IGNORECASE)
+        # Ritmo de carrera: "ritmo 4:30" · "4:30/km" · "a 5:00" · "pace 4:45"
+        re_ritmo = re.compile(
+            r'(?:ritmo|pace|a)\s+(\d{1,2}):(\d{2})\s*(?:/km)?|(\d{1,2}):(\d{2})\s*/km',
+            re.IGNORECASE
+        )
+        # N series de N reps
+        re_series_de_reps = re.compile(
+            r'(\d+)\s*series?\s+(?:de\s+)?(\d+)\s*(?:reps?|repeticiones?)',
+            re.IGNORECASE
+        )
 
-        system_prompt = """
-Eres el Hyrox Performance Engine. Tu misión es transformar el registro del usuario en datos estructurados y coaching estratégico.
+        for raw_line in raw_text.splitlines():
+            line = raw_line.strip().lstrip('-•·*').strip()
+            if not line or len(line) < 3:
+                continue
+            # Ignorar líneas que son solo metadatos (RPE, FC, etc.)
+            if re.match(r'^(?:rpe|fc|hr|rpm|tiempo total|duraci[oó]n)\b', line, re.IGNORECASE):
+                continue
 
-[MATRIZ_EQUIVALENCIA]
+            # Extraer nombre: todo antes del primer número de métricas
+            nombre_match = re.split(r'\s+(?=\d+\s*[x×km]|\d+\s*(?:series?|reps?|kg|min|seg))', line, maxsplit=1)
+            nombre = nombre_match[0].strip(' :')
+            resto = nombre_match[1] if len(nombre_match) > 1 else line[len(nombre):]
+            if not nombre or len(nombre) < 2:
+                continue
 
-Contexto Estratégico del Atleta: 
-- El usuario está en una fase de reconstrucción consciente, buscando orden y disciplina.
-- Tiene un desequilibrio estructural: Peso Muerto (100kg) vs Sentadilla (50kg). El enfoque debe ser priorizar cadena anterior/cuádriceps.
-- Objetivo principal: Relay el 19 de Abril de 2026.
+            tipo = HyroxParserService._classify_type(nombre)
+            series_data = []
+            carrera_data = {}
 
-Reglas de Feedback (Max 2 líneas densas y precisas):
-1. Si el entreno es dominante de pierna (Sentadilla/Prensa), resalta que está cerrando la brecha de fuerza esencial para el Sled Push.
-2. Si el esfuerzo es extremo (RPE >= 9) o la frecuencia cardíaca es altísima, prioriza mensajes estrictos de recuperación y asimilación de carga.
-3. Conecta siempre el esfuerzo diario con la meta del 19 de abril de 2026 y la consolidación de su nueva identidad/disciplina.
+            # 1. Intentar extraer series×reps con peso
+            m = re_series_reps_peso.search(resto or line)
+            if m:
+                n_series = int(m.group(1))
+                reps = int(m.group(2))
+                peso = float(m.group(3).replace(',', '.'))
+                series_data = [{'reps': reps, 'peso': peso} for _ in range(n_series)]
 
-Escribe ÚNICAMENTE un objeto JSON válido con la siguiente estructura (no añadas markdown ni comillas fuera del JSON):
-{
-  "ai_evaluation_score": 85,
-  "muscle_fatigue_index": "Alta",
-  "feedback": "David, gran volumen hoy...",
-  "actividades": [
-    {
-      "tipo_actividad": "fuerza", // "fuerza", "carrera", "hyrox_station", "hiit"
-      "nombre_ejercicio": "Nombre claro del ejercicio (Ej: Sentadilla, Sled Push, Burpees Broad Jumps)",
-      "series_data": [
-        {"reps": 10, "peso": 50},
-        {"reps": 15},
-        {"tiempo_sec": 30}
-      ]
-      // REGLA: ejercicios de tiempo (High Knees, plancha, AMRAP de tiempo...) usan SOLO {"tiempo_sec": X} sin reps ni peso
-    }
-  ]
-}
-"""
-        
-        system_prompt = system_prompt.replace("[MATRIZ_EQUIVALENCIA]", matriz_equivalencia)
+            # 2. "N series de N reps"
+            elif re_series_de_reps.search(resto or line):
+                m2 = re_series_de_reps.search(resto or line)
+                n_series = int(m2.group(1))
+                reps = int(m2.group(2))
+                peso_m = re_peso_suelto.search(resto or line)
+                peso = float(peso_m.group(1).replace(',', '.')) if peso_m else 0
+                series_data = [{'reps': reps, 'peso': peso} if peso else {'reps': reps} for _ in range(n_series)]
 
-        # Modelo base, usamos flash porque es súper rápido y suficiente para JSON routing
-        model = genai.GenerativeModel('gemini-2.5-flash', system_instruction=system_prompt)
-        
-        try:
-            response = model.generate_content(raw_text)
-            response_text = response.text.strip()
+            # 3. Series×Reps sin peso
+            elif re_series_reps.search(resto or line):
+                m3 = re_series_reps.search(resto or line)
+                n_series = int(m3.group(1))
+                reps = int(m3.group(2))
+                peso_m = re_peso_suelto.search(resto or line)
+                peso = float(peso_m.group(1).replace(',', '.')) if peso_m else 0
+                series_data = [{'reps': reps, 'peso': peso} if peso else {'reps': reps} for _ in range(n_series)]
 
-            # Eliminar posibles code fences de markdown (```json ... ``` o ``` ... ```)
-            response_text = re.sub(r'^```(?:json)?\s*', '', response_text)
-            response_text = re.sub(r'\s*```$', '', response_text)
+            # 4. Distancia en km (carrera)
+            elif re_dist_km.search(line):
+                m4 = re_dist_km.search(line)
+                dist = float(m4.group(1).replace(',', '.'))
+                carrera_data = {'distancia_km': dist}
+                if tipo not in ('carrera', 'ergometro', 'hyrox_station'):
+                    tipo = 'carrera'
+                # Extraer ritmo real si está en la línea: "ritmo 4:30" o "4:30/km"
+                mr = re_ritmo.search(line)
+                if mr:
+                    mins = int(mr.group(1) or mr.group(3))
+                    secs = int(mr.group(2) or mr.group(4))
+                    carrera_data['ritmo_real'] = f"{mins}:{secs:02d}/km"
 
-            # Intentar parsear directamente primero
-            try:
-                parsed_data = json.loads(response_text)
-                return parsed_data
-            except json.JSONDecodeError:
-                pass
+            # 5. Distancia en metros (estaciones)
+            elif re_dist_m.search(line):
+                m5 = re_dist_m.search(line)
+                dist_m = float(m5.group(1).replace(',', '.'))
+                peso_m = re_peso_suelto.search(line)
+                peso = float(peso_m.group(1).replace(',', '.')) if peso_m else 0
+                carrera_data = {'distancia_m': int(dist_m)}
+                if peso:
+                    carrera_data['peso_kg'] = peso
 
-            # Fallback: extraer el bloque JSON con match de llaves balanceadas
-            start_idx = response_text.find('{')
-            if start_idx == -1:
-                print("No se encontró estructura JSON válida en la respuesta.")
-                print("TEXTO COMPLETO RESPUESTA:", response_text)
-                return None
+            # 6. Solo tiempo
+            elif re_tiempo.search(line):
+                m6 = re_tiempo.search(line)
+                valor = int(m6.group(1))
+                unidad = m6.group(0)
+                seg = valor * 60 if 'min' in unidad.lower() else valor
+                series_data = [{'tiempo_sec': seg}]
 
-            depth = 0
-            end_idx = -1
-            for i, ch in enumerate(response_text[start_idx:], start=start_idx):
-                if ch == '{':
-                    depth += 1
-                elif ch == '}':
-                    depth -= 1
-                    if depth == 0:
-                        end_idx = i
-                        break
+            # 7. Sin métricas: guardar el nombre al menos
+            else:
+                series_data = []
 
-            if end_idx == -1:
-                print("JSON mal formado en la respuesta de Gemini.")
-                return None
+            act = {
+                'tipo_actividad': tipo,
+                'nombre_ejercicio': nombre,
+            }
+            if series_data:
+                act['series_data'] = series_data
+            if carrera_data:
+                act['carrera_data'] = carrera_data
 
-            json_str = response_text[start_idx:end_idx + 1]
-            parsed_data = json.loads(json_str)
-            return parsed_data
-                
-        except Exception as e:
-            print(f"Error parseando con Gemini: {e}")
-            if 'response_text' in locals():
-                 print("TEXTO COMPLETO RESPUESTA:", response_text)
-            return None
+            actividades.append(act)
+
+        fatigue = HyroxParserService._estimate_fatigue(actividades, None)
+        return {
+            'ai_evaluation_score': None,
+            'muscle_fatigue_index': fatigue,
+            'feedback': None,
+            'actividades': actividades,
+        } if actividades else None
 
     @staticmethod
     def save_parsed_session(session, parsed_data):
@@ -157,7 +228,7 @@ Escribe ÚNICAMENTE un objeto JSON válido con la siguiente estructura (no añad
         # Almacenamos el feedback y métricas de Fase 8 en la sesión
         session_updated = False
         if feedback_text:
-            session.feedback_ia = feedback_text
+            # feedback_ia no existe en el modelo; se descarta (campo eliminado)
             session_updated = True
         if ai_score is not None:
             session.ai_evaluation_score = ai_score
@@ -173,9 +244,24 @@ Escribe ÚNICAMENTE un objeto JSON válido con la siguiente estructura (no añad
                 session.save()
             return {'activities': [], 'new_records': []}
             
+        # Leer ritmo_objetivo planificado ANTES de borrar (para comparar luego)
+        ritmo_planificado_seg = None
+        for act_plan in HyroxActivity.objects.filter(sesion=session, tipo_actividad='carrera'):
+            ro = (act_plan.data_metricas or {}).get('ritmo_objetivo')
+            if ro:
+                try:
+                    p = ro.replace('/km', '').strip().split(':')
+                    ritmo_planificado_seg = int(p[0]) * 60 + int(p[1])
+                except Exception:
+                    pass
+                break
+
+        # Borrar actividades previas (planificadas) antes de insertar las reales registradas
+        HyroxActivity.objects.filter(sesion=session).delete()
+
         activities_created = []
         new_records = []
-        
+
         # Recuperar el objetivo para actualizar RM
         objetivo = session.objective
 
@@ -202,6 +288,41 @@ Escribe ÚNICAMENTE un objeto JSON válido con la siguiente estructura (no añad
                 data_metricas=data_metricas
             )
             activities_created.append(activity)
+
+            # --- Comparación ritmo real vs planificado (carrera) ---
+            if tipo == 'carrera' and ritmo_planificado_seg:
+                ritmo_real_str = (item.get('carrera_data') or {}).get('ritmo_real')
+                if ritmo_real_str:
+                    try:
+                        p = ritmo_real_str.replace('/km', '').strip().split(':')
+                        ritmo_real_seg = int(p[0]) * 60 + int(p[1])
+                        diferencia_seg = ritmo_planificado_seg - ritmo_real_seg
+                        # El usuario fue MÁS rápido que lo planificado
+                        if diferencia_seg > 15:
+                            zona_real = 'Tempo/Umbral' if diferencia_seg > 45 else 'Z3'
+                            plan_mins, plan_secs = divmod(ritmo_planificado_seg, 60)
+                            ritmo_plan_str = f"{plan_mins}:{plan_secs:02d}/km"
+                            activity.data_metricas['alerta_ritmo'] = (
+                                f"⚡ Fuiste {diferencia_seg}s/km más rápido que el ritmo Z2 planificado "
+                                f"({ritmo_real_str} real vs {ritmo_plan_str} objetivo). "
+                                f"Zona real: {zona_real}. Esto suma fatiga neurológica y muscular adicional. "
+                                f"El sistema ha ajustado la carga de tu próxima sesión."
+                            )
+                            activity.save()
+                            # Inyectar fatiga extra en la próxima sesión planificada
+                            from .models import HyroxSession
+                            prox = HyroxSession.objects.filter(
+                                objective=session.objective,
+                                estado='planificado',
+                                fecha__gt=session.fecha
+                            ).order_by('fecha').first()
+                            if prox and prox.muscle_fatigue_index != 'Alta':
+                                prox.muscle_fatigue_index = 'Media' if diferencia_seg < 45 else 'Alta'
+                                from django.utils import timezone
+                                prox.fatiga_updated_at = timezone.now()
+                                prox.save(update_fields=['muscle_fatigue_index', 'fatiga_updated_at'])
+                    except Exception:
+                        pass
 
             # --- Sincronización Automática de PBs ---
             if tipo == 'fuerza' and (objetivo and isinstance(series_data, list)):
@@ -508,14 +629,29 @@ Si el usuario ha completado algún estándar recientemente o lo ves en la lista 
         
         fatiga_reciente = ultima_sesion.muscle_fatigue_index if ultima_sesion else "Desconocida"
 
-        # --- Fatigue Decay Engine ---
-        # Si la sesión de hoy tiene fatiga 'Alta' inyectada por el Gym/Fútbol, revisamos el decaimiento
+        # --- Fatigue Decay Engine (variable por tipo de sesión) ---
+        # Los tiempos de recuperación no son iguales para todos los estímulos:
+        #   Simulacro (fuerza + carrera juntas): 72h → Baja, 48h → Media
+        #   Fuerza pesada o estaciones Hyrox:   48h → Baja, 24h → Media
+        #   Cardio Z2 / carrera ligera:          24h → Baja, 12h → Media
         if sesion_hoy and sesion_hoy.muscle_fatigue_index == 'Alta' and sesion_hoy.fatiga_updated_at:
             horas_pasadas = (timezone.now() - sesion_hoy.fatiga_updated_at).total_seconds() / 3600.0
-            if horas_pasadas > 48:
+            titulo_lower = (sesion_hoy.titulo or '').lower()
+            tipos_act = set(sesion_hoy.activities.values_list('tipo_actividad', flat=True))
+            es_simulacro = bool(tipos_act & {'fuerza', 'hyrox_station'}) and bool(tipos_act & {'carrera', 'cardio_sustituto'})
+            es_cardio_puro = tipos_act <= {'carrera', 'cardio_sustituto', 'bici', 'remo', 'skierg'}
+
+            if es_simulacro:
+                umbral_baja, umbral_media = 72, 48
+            elif es_cardio_puro:
+                umbral_baja, umbral_media = 24, 12
+            else:
+                umbral_baja, umbral_media = 48, 24  # fuerza o estaciones
+
+            if horas_pasadas > umbral_baja:
                 sesion_hoy.muscle_fatigue_index = 'Baja'
                 sesion_hoy.save(update_fields=['muscle_fatigue_index'])
-            elif horas_pasadas > 24:
+            elif horas_pasadas > umbral_media:
                 sesion_hoy.muscle_fatigue_index = 'Media'
                 sesion_hoy.save(update_fields=['muscle_fatigue_index'])
 
@@ -545,16 +681,14 @@ Si el usuario ha completado algún estándar recientemente o lo ves en la lista 
             alerta_inactividad = f"\n⚠️ ALERTA MITIGADA: Lleva {dias_run} días sin correr, pero el FÚTBOL está manteniendo su base aeróbica. Recuérdale que el fútbol ayuda, pero pronto hay que volver a correr."
             
         alerta_gym = ""
-        if sesion_hoy and sesion_hoy.feedback_ia and ("impacto estructural" in sesion_hoy.feedback_ia or "fútbol de ayer" in sesion_hoy.feedback_ia or "Partido intenso de fútbol" in sesion_hoy.feedback_ia):
-            # Calcular horas para informar al coach exactamente del tiempo de recuperación
-            horas_recuperacion = int((timezone.now() - sesion_hoy.fatiga_updated_at).total_seconds() / 3600.0) if sesion_hoy.fatiga_updated_at else 0
-            
+        if sesion_hoy and sesion_hoy.muscle_fatigue_index and sesion_hoy.fatiga_updated_at:
+            horas_recuperacion = int((timezone.now() - sesion_hoy.fatiga_updated_at).total_seconds() / 3600.0)
             if sesion_hoy.muscle_fatigue_index == 'Alta':
-                alerta_gym = f"\n⚠️ ALERTA DE FATIGA RECIENTE (hace {horas_recuperacion}h): {sesion_hoy.feedback_ia} La fatiga sigue ALTA. Prioriza técnica y descanso, nada de Sled o sentadillas pesadas hoy."
+                alerta_gym = f"\n⚠️ ALERTA DE FATIGA RECIENTE (hace {horas_recuperacion}h): La fatiga sigue ALTA. Prioriza técnica y descanso, nada de Sled o sentadillas pesadas hoy."
             elif sesion_hoy.muscle_fatigue_index == 'Media':
-                alerta_gym = f"\n⚠️ ALERTA FATIGA DECAY (hace {horas_recuperacion}h): Tuvimos un evento pesado, pero gracias al decaimiento temporal la fatiga ya bajó a MODERADA. Menciona esto: felicítale por recuperar bien e indica que hoy podemos subir algo más la intensidad sin llegar al límite."
+                alerta_gym = f"\n⚠️ ALERTA FATIGA DECAY (hace {horas_recuperacion}h): Fatiga bajando a MODERADA. Puedes subir algo la intensidad sin llegar al límite."
             elif sesion_hoy.muscle_fatigue_index == 'Baja':
-                 alerta_gym = f"\n⚠️ RECUPERACIÓN COMPLETADA (hace {horas_recuperacion}h): El evento pesado de hace dos días ya fue asimilado. Su fatiga está baja de nuevo. Anímalo a romperla hoy."
+                alerta_gym = f"\n⚠️ RECUPERACIÓN COMPLETADA (hace {horas_recuperacion}h): Fatiga asimilada. Puedes rendir al máximo hoy."
 
         # --- Módulo de Lesión y Pain Score ---
         from .models import UserInjury, DailyRecoveryEntry
