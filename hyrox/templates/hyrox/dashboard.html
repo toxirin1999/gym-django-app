@@ -556,6 +556,7 @@ a.rb-dia:hover { background: var(--paper-2); text-decoration: none; }
       {% endif %}
 
       <div class="rb-hero-actions">
+        <a href="{% url 'clientes:panel_cliente' %}" class="rb-btn rb-btn-ghost"><i class="fas fa-home"></i> Panel</a>
         {% if not lesion_activa %}
         <a href="{% url 'hyrox:reportar_lesion' %}" class="rb-btn rb-btn-ghost"><i class="fas fa-heartbeat"></i> Lesión</a>
         {% endif %}
