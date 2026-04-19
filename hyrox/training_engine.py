@@ -1,9 +1,232 @@
 import logging
+import math
+import datetime
 from datetime import timedelta
 from django.utils import timezone
 from .models import HyroxObjective, HyroxSession, HyroxActivity
 
 logger = logging.getLogger(__name__)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# HYROX LOAD MANAGER — Carga objetiva, zonas cardíacas, TRIMP, CTL/ATL/TSB
+# ══════════════════════════════════════════════════════════════════════════════
+
+class HyroxLoadManager:
+    """
+    Gestión científica de la carga de entrenamiento:
+    · TRIMP (Banister): carga objetiva por sesión = duración × intensidad relativa FC
+    · CTL (42 días): Chronic Training Load → fitness acumulado
+    · ATL  (7 días): Acute Training Load   → fatiga reciente
+    · TSB: CTL - ATL → "forma" del atleta (positivo=fresco, negativo=fatigado)
+    · Zonas Z1-Z5 calibradas a la FC máx real del atleta
+    · Validación RPE vs FC: detecta subestimación/sobreestimación subjetiva
+    """
+
+    # Factor b de Banister: mayor en hombres por diferencias hormonales
+    B_FACTOR = {'M': 1.92, 'F': 1.67}
+
+    # Rangos de cada zona como fracción de FC máxima
+    ZONAS_FC = {
+        'Z1': (0.00, 0.60),
+        'Z2': (0.60, 0.70),
+        'Z3': (0.70, 0.80),
+        'Z4': (0.80, 0.90),
+        'Z5': (0.90, 1.01),
+    }
+
+    ZONA_INFO = {
+        'Z1': {'nombre': 'Recuperación Activa',     'uso': 'Descanso activo, vuelta a la calma'},
+        'Z2': {'nombre': 'Aeróbico Base',            'uso': 'Motor de resistencia, quema de grasas'},
+        'Z3': {'nombre': 'Tempo / Umbral Aeróbico',  'uso': 'Carreras de ritmo, umbral de lactato'},
+        'Z4': {'nombre': 'Umbral Láctico',           'uso': 'Intervalos de alta intensidad'},
+        'Z5': {'nombre': 'VO₂max / Anaeróbico',      'uso': 'Sprints, HIIT máximo'},
+    }
+
+    # Zona → RPE esperado (rango aproximado)
+    RPE_POR_ZONA = {
+        'Z1': (1, 4), 'Z2': (4, 6), 'Z3': (6, 7), 'Z4': (7, 9), 'Z5': (9, 10)
+    }
+
+    @classmethod
+    def get_fc_max(cls, objetivo):
+        """FC máxima: real si está registrada, sino 220-edad."""
+        if objetivo.fc_max_real:
+            return objetivo.fc_max_real
+        try:
+            edad = (timezone.now().date() - objetivo.cliente.fecha_nacimiento).days // 365
+            return max(150, 220 - edad)
+        except Exception:
+            return 185
+
+    @classmethod
+    def get_fc_reposo(cls, objetivo):
+        return objetivo.fc_reposo or 60
+
+    @classmethod
+    def get_zonas_absolutas(cls, objetivo):
+        """Devuelve rangos de FC en lpm para cada zona, calibrados al atleta."""
+        fc_max = cls.get_fc_max(objetivo)
+        zonas = {}
+        for zona, (low, high) in cls.ZONAS_FC.items():
+            zonas[zona] = {
+                'min_lpm': round(fc_max * low),
+                'max_lpm': round(fc_max * min(high, 1.0)),
+                **cls.ZONA_INFO[zona],
+            }
+        return zonas
+
+    @classmethod
+    def calcular_zona_predominante(cls, hr_media, objetivo):
+        """Determina la zona cardíaca predominante según FC media de la sesión."""
+        if not hr_media or not objetivo:
+            return None
+        fc_max = cls.get_fc_max(objetivo)
+        pct = hr_media / fc_max
+        for zona, (low, high) in cls.ZONAS_FC.items():
+            if low <= pct < high:
+                return zona
+        return 'Z5'
+
+    @classmethod
+    def calcular_trimp(cls, duracion_min, hr_media, objetivo):
+        """
+        TRIMP de Banister.
+        Fórmula: T × HRR × e^(b × HRR)
+        donde HRR = (FC_media - FC_reposo) / (FC_max - FC_reposo)
+        """
+        if not duracion_min or not hr_media:
+            return None
+        fc_max  = cls.get_fc_max(objetivo)
+        fc_rep  = cls.get_fc_reposo(objetivo)
+        b       = cls.B_FACTOR.get(getattr(objetivo, 'genero', 'M'), 1.92)
+
+        if fc_max <= fc_rep:
+            return None
+
+        hrr = (hr_media - fc_rep) / (fc_max - fc_rep)
+        hrr = max(0.0, min(hrr, 1.0))
+        trimp = duracion_min * hrr * math.exp(b * hrr)
+        return round(trimp, 1)
+
+    @classmethod
+    def calcular_ctl_atl_tsb(cls, objetivo, hasta_fecha=None):
+        """
+        CTL/ATL/TSB usando exponential weighted moving average (EWMA).
+        Constantes de tiempo: CTL=42 días, ATL=7 días.
+        TSB = CTL - ATL (Training Stress Balance = "forma").
+        """
+        if hasta_fecha is None:
+            hasta_fecha = timezone.now().date()
+
+        sesiones = list(
+            HyroxSession.objects.filter(
+                objective=objetivo,
+                estado='completado',
+                trimp__isnull=False,
+                fecha__lte=hasta_fecha,
+            ).order_by('fecha').values('fecha', 'trimp')
+        )
+
+        if not sesiones:
+            return {'ctl': 0.0, 'atl': 0.0, 'tsb': 0.0}
+
+        # Construir mapa fecha → TRIMP total del día
+        trimp_por_dia = {}
+        for s in sesiones:
+            d = s['fecha']
+            trimp_por_dia[d] = trimp_por_dia.get(d, 0) + s['trimp']
+
+        desde = sesiones[0]['fecha']
+        dias  = (hasta_fecha - desde).days + 1
+
+        ctl = atl = 0.0
+        k_ctl = 1 / 42.0
+        k_atl = 1 / 7.0
+
+        fecha_cursor = desde
+        for _ in range(dias):
+            t = trimp_por_dia.get(fecha_cursor, 0)
+            ctl = ctl + (t - ctl) * k_ctl
+            atl = atl + (t - atl) * k_atl
+            fecha_cursor += timedelta(days=1)
+
+        tsb = round(ctl - atl, 1)
+        return {'ctl': round(ctl, 1), 'atl': round(atl, 1), 'tsb': tsb}
+
+    @classmethod
+    def validar_rpe_vs_fc(cls, sesion):
+        """
+        Cross-validación RPE subjetivo vs FC objetiva.
+        Retorna string de alerta si hay discordancia significativa, o None si es coherente.
+        """
+        if not sesion.rpe_global or not sesion.hr_media:
+            return None
+
+        objetivo = sesion.objective
+        fc_max   = cls.get_fc_max(objetivo)
+        zona     = cls.calcular_zona_predominante(sesion.hr_media, objetivo)
+        pct_fc   = round((sesion.hr_media / fc_max) * 100)
+        rpe      = sesion.rpe_global
+        rango    = cls.RPE_POR_ZONA.get(zona, (1, 10))
+
+        if rpe < rango[0] - 1:
+            return (
+                f"⚠️ FC/RPE DISCORDANTE: FC media {sesion.hr_media} lpm "
+                f"({zona} — {pct_fc}% FCmax) pero reportaste RPE {rpe}. "
+                f"Subestimas el esfuerzo real. El TRIMP objetivo ajusta la próxima sesión."
+            )
+        if rpe > rango[1] + 1:
+            return (
+                f"📊 RPE alto vs FC moderada: RPE {rpe} con FC {sesion.hr_media} lpm ({zona}). "
+                f"Posible fatiga mental o inicio de sobreentrenamiento. Revisa el descanso."
+            )
+        return None
+
+    @classmethod
+    def get_zona_para_template(cls, template, is_taper=False, is_deload=False):
+        """Zona cardíaca objetivo según tipo de sesión."""
+        if is_taper or is_deload:
+            return 'Z1' if is_deload else 'Z2'
+        return {
+            'cardio':         'Z2',
+            'simulacion':     'Z3',
+            'hyrox_stations': 'Z3',
+            'fuerza_metcon':  'Z2',
+            'calibracion':    'Z1',
+        }.get(template, 'Z2')
+
+    @classmethod
+    def get_prescripcion_zona(cls, template, objetivo, is_taper=False, is_deload=False):
+        """
+        Devuelve texto de prescripción de zona con lpm reales del atleta.
+        Útil para incluir en las notas de las actividades planificadas.
+        """
+        zona     = cls.get_zona_para_template(template, is_taper, is_deload)
+        fc_max   = cls.get_fc_max(objetivo)
+        low, high = cls.ZONAS_FC[zona]
+        min_lpm  = round(fc_max * low)
+        max_lpm  = round(fc_max * min(high, 1.0))
+        nombre   = cls.ZONA_INFO[zona]['nombre']
+        return f"Zona objetivo: {zona} — {nombre} · FC {min_lpm}-{max_lpm} lpm"
+
+    @classmethod
+    def get_estado_forma(cls, tsb):
+        """Clasifica el estado de forma según TSB."""
+        if tsb is None:
+            return {'estado': 'Sin datos', 'recomendacion': 'Registra FC y duración para calibrar.'}
+        if tsb >= 10:
+            return {'estado': 'Fresco / Listo', 'recomendacion': 'Óptimo para intensidad máxima o competición.'}
+        if tsb >= 0:
+            return {'estado': 'Óptimo', 'recomendacion': 'Zona ideal de entrenamiento productivo.'}
+        if tsb >= -15:
+            return {'estado': 'Acumulando carga', 'recomendacion': 'Progresando. Vigila descanso y nutrición.'}
+        if tsb >= -25:
+            return {'estado': 'Fatiga alta', 'recomendacion': 'Reduce intensidad. Prioriza sueño y recuperación.'}
+        return {'estado': '⚠️ Sobreentrenamiento', 'recomendacion': 'Descanso obligatorio 48-72h antes de retomar.'}
+
+
+# ══════════════════════════════════════════════════════════════════════════════
 
 # Parámetros de volumen por nivel de experiencia
 _VOLUMEN_POR_NIVEL = {
@@ -23,12 +246,18 @@ class HyroxTrainingEngine:
     # ─────────────────────────────────────────────────────────────────────────
 
     @staticmethod
-    def _calcular_porcentaje_rm(week, weeks_to_plan, is_deload, is_taper, rpe_acumulado=None):
+    def _calcular_porcentaje_rm(week, weeks_to_plan, is_deload, is_taper,
+                                 rpe_acumulado=None, tsb=None):
         """
-        Progresión de carga basada en calendario + RPE acumulado real del atleta.
-        - Semanas de deload: 60%; tapering: 50%.
-        - Si RPE medio últimas 3 sesiones > 8.5: NO progresar (carga crónica alta).
-        - Si RPE medio < 6.0: progresar más rápido (atleta adapta fácilmente).
+        Progresión de carga ponderada por:
+        1. Calendario (semana del macrociclo)
+        2. RPE acumulado (últimas 3 sesiones) — señal subjetiva
+        3. TSB (Training Stress Balance) — señal objetiva de forma/fatiga
+
+        TSB > +10  → atleta fresco: acelerar progresión
+        TSB 0-10   → zona óptima: progresión normal
+        TSB -15-0  → carga acumulada: prudencia
+        TSB < -20  → fatiga excesiva: reducir carga
         """
         if is_taper:
             return 0.50
@@ -36,16 +265,31 @@ class HyroxTrainingEngine:
             return 0.60
         if weeks_to_plan <= 1:
             return 0.70
+
         progreso = week / max(weeks_to_plan - 1, 1)
         base_pct = round(0.65 + (progreso * 0.20), 3)
 
+        # Ajuste por RPE acumulado (señal subjetiva)
         if rpe_acumulado is not None:
             if rpe_acumulado > 8.5:
-                # Carga crónica alta: no progresar, mantener o bajar 5%
                 base_pct = max(round(base_pct - 0.05, 3), 0.65)
             elif rpe_acumulado < 6.0:
-                # Atleta se adapta fácilmente: acelerar progresión 5%
                 base_pct = min(round(base_pct + 0.05, 3), 0.85)
+
+        # Ajuste por TSB (señal objetiva — tiene prioridad sobre RPE)
+        if tsb is not None:
+            if tsb < -25:
+                # Sobreentrenamiento: reducción de emergencia
+                base_pct = max(round(base_pct - 0.12, 3), 0.60)
+            elif tsb < -15:
+                # Fatiga alta: bajar 7%
+                base_pct = max(round(base_pct - 0.07, 3), 0.63)
+            elif tsb < -5:
+                # Carga acumulada leve: bajar 3%
+                base_pct = max(round(base_pct - 0.03, 3), 0.65)
+            elif tsb > 10:
+                # Atleta fresco: puede progresar más
+                base_pct = min(round(base_pct + 0.05, 3), 0.90)
 
         return base_pct
 
@@ -171,6 +415,10 @@ class HyroxTrainingEngine:
         rpe_vals = [s.rpe_global for s in ultimas_sesiones_hyrox if s.rpe_global is not None]
         rpe_acumulado = round(sum(rpe_vals) / len(rpe_vals), 2) if rpe_vals else None
 
+        # TSB actual (Training Stress Balance) — señal objetiva de forma/fatiga
+        carga_actual = HyroxLoadManager.calcular_ctl_atl_tsb(objective)
+        tsb_actual   = carga_actual['tsb'] if carga_actual['ctl'] > 0 else None
+
         # Volumen semanal base por categoría
         sessions_per_week = 5 if 'pro' in objective.categoria else 4
 
@@ -240,6 +488,7 @@ class HyroxTrainingEngine:
                 weeks_to_plan=weeks_to_plan,
                 restricted_tags=restricted_tags,
                 rpe_acumulado=rpe_acumulado,
+                tsb=tsb_actual,
             )
 
             # Día 1: Fuerza + MetCon
@@ -625,10 +874,12 @@ class HyroxTrainingEngine:
         week=0, weeks_to_plan=1,
         restricted_tags=None,
         rpe_acumulado=None,
+        tsb=None,
     ):
         """
         Crea la sesión y sus actividades planificadas basadas en el template,
-        escaladas a los RM del usuario, nivel de experiencia y semana del macrociclo.
+        escaladas a los RM del usuario, nivel de experiencia, semana del macrociclo
+        y estado de forma objetivo (TSB).
         """
         if HyroxSession.objects.filter(objective=objective, fecha=fecha).exists():
             return
@@ -637,6 +888,11 @@ class HyroxTrainingEngine:
         nivel           = getattr(objective, 'nivel_experiencia', 'intermedio') or 'intermedio'
         nombre_cliente  = objective.cliente.nombre
         vol             = _VOLUMEN_POR_NIVEL.get(nivel, _VOLUMEN_POR_NIVEL['intermedio'])
+
+        # Prescripción de zona cardíaca para esta sesión
+        prescripcion_zona = HyroxLoadManager.get_prescripcion_zona(
+            template, objective, is_taper, is_deload
+        )
 
         sesion = HyroxSession.objects.create(
             objective=objective,
@@ -687,9 +943,10 @@ class HyroxTrainingEngine:
             elif rm_squat > (rm_deadlift * 1.2):
                 imbalance_type = 'weak_deadlift'
 
-            # Progresión de % RM: calendario + RPE acumulado real del atleta
+            # Progresión de % RM: calendario + RPE acumulado + TSB objetivo
             porcentaje_rm = HyroxTrainingEngine._calcular_porcentaje_rm(
-                week, weeks_to_plan, is_deload, is_taper, rpe_acumulado=rpe_acumulado
+                week, weeks_to_plan, is_deload, is_taper,
+                rpe_acumulado=rpe_acumulado, tsb=tsb
             )
 
             # Parámetros de series/reps/fase según % RM actual
@@ -762,20 +1019,29 @@ class HyroxTrainingEngine:
                 ejercicio = 'Sentadilla con Mancuernas / Goblet Squat'
                 notas_ej  = notas_ej + ' (Adaptado a mancuernas por material disponible.)'
 
-            # Coach tip personalizado
-            edad         = getattr(objective.cliente, 'edad', 35) or 35
+            # Coach tip personalizado con zona cardíaca real
+            edad         = getattr(objetivo := objective.cliente, 'edad', None)
+            if not edad:
+                try:
+                    edad = (timezone.now().date() - objective.cliente.fecha_nacimiento).days // 365
+                except Exception:
+                    edad = 35
             reserva_reps = '2' if rpe_target <= 8 else '1'
+            tsb_estado   = HyroxLoadManager.get_estado_forma(tsb)
             coach_tip    = (
                 f"{nombre_cliente}, estamos en {fase_nombre} ({round(porcentaje_rm * 100)} % RM). "
                 f"Hoy buscamos RPE {rpe_target}, guarda {reserva_reps} rep en reserva. "
+                f"Forma actual: {tsb_estado['estado']}. {prescripcion_zona}."
             )
-            if edad >= 45:
+            if tsb is not None and tsb < -20:
+                coach_tip += " ⚠️ Fatiga acumulada detectada: reduce el peso si notas que el cuerpo no responde."
+            if edad and edad >= 45:
                 coach_tip += (
-                    f"⚠️ Ajuste (+40): Calentamiento articular estricto de 10 min antes de la primera serie "
+                    f" ⚠️ Ajuste (+40): Calentamiento articular estricto de 10 min antes de la primera serie "
                     f"efectiva a {round(peso_trabajo)} kg. Cuida la excéntrica (2 s de bajada)."
                 )
-            elif edad <= 25:
-                coach_tip += "🚀 Máxima explosividad concéntrica aprovechando tu recuperación de SNC."
+            elif edad and edad <= 25:
+                coach_tip += " Máxima explosividad concéntrica aprovechando tu recuperación de SNC."
 
             HyroxActivity.objects.create(
                 sesion=sesion,
@@ -788,6 +1054,8 @@ class HyroxTrainingEngine:
                     "tempo":          tempo_str,
                     "descanso":       descanso_str,
                     "porcentaje_rm":  round(porcentaje_rm * 100),
+                    "zona_cardiaca":  prescripcion_zona,
+                    "tsb_al_planificar": tsb,
                     "series": [
                         {"reps": reps_obj, "peso_kg": round(peso_trabajo)}
                         for _ in range(series_obj)
@@ -801,17 +1069,36 @@ class HyroxTrainingEngine:
             distancia = HyroxTrainingEngine._distancia_carrera(nivel, week, weeks_to_plan, is_deload, is_taper)
             ritmos    = HyroxTrainingEngine._calcular_ritmos_carrera(objective.tiempo_5k_base or '')
 
+            # Zona cardíaca real en lpm
+            zona_cardio = HyroxLoadManager.get_zona_para_template('cardio', is_taper, is_deload)
+            fc_max_obj  = HyroxLoadManager.get_fc_max(objective)
+            low_z, high_z = HyroxLoadManager.ZONAS_FC[zona_cardio]
+            lpm_min = round(fc_max_obj * low_z)
+            lpm_max = round(fc_max_obj * min(high_z, 1.0))
+
             if ritmos:
-                nota_ritmo    = f"Ritmo objetivo Z2: {ritmos['ritmo_z2']}. Referencia tempo: {ritmos['ritmo_tempo']}."
+                zona_nombre = HyroxLoadManager.ZONA_INFO[zona_cardio]['nombre']
+                nota_ritmo  = (
+                    f"Ritmo objetivo {zona_cardio} ({zona_nombre}): {ritmos['ritmo_z2']} · "
+                    f"FC {lpm_min}-{lpm_max} lpm. "
+                    f"Referencia tempo: {ritmos['ritmo_tempo']}. "
+                    f"Si tu FC sube de {lpm_max} lpm, baja el ritmo aunque el pace sea lento."
+                )
                 ritmo_guardar = ritmos['ritmo_z2']
             else:
-                nota_ritmo    = "Mantener pulsaciones bajas (Z2, ~65-75 % FC máx). Sin tiempo 5K registrado."
+                nota_ritmo    = (
+                    f"Mantener FC en {zona_cardio} ({lpm_min}-{lpm_max} lpm). "
+                    f"Sin tiempo 5K registrado — calibra por pulsaciones."
+                )
                 ritmo_guardar = None
 
             metricas = {
-                "planificado":  True,
-                "distancia_km": distancia if not is_sub else round(distancia * 0.8, 1),
-                "notas":        (
+                "planificado":    True,
+                "distancia_km":   distancia if not is_sub else round(distancia * 0.8, 1),
+                "zona_objetivo":  zona_cardio,
+                "fc_min_lpm":     lpm_min,
+                "fc_max_lpm":     lpm_max,
+                "notas":          (
                     f"Sustitución metabólica por lesión. {nota_ritmo}" if is_sub
                     else nota_ritmo
                 ),

@@ -2,59 +2,131 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.utils import timezone
 from .models import HyroxSession, HyroxReadinessLog
-from .training_engine import HyroxTrainingEngine
+from .training_engine import HyroxTrainingEngine, HyroxLoadManager
 from .services import calcular_rm_estimado
+
+import logging
+logger = logging.getLogger(__name__)
+
+
+def _calcular_y_guardar_carga(instance):
+    """
+    Calcula TRIMP, zona cardíaca, CTL/ATL/TSB al completar una sesión.
+    Todas las señales de carga objetiva pasan por aquí.
+    """
+    objetivo = instance.objective
+    campos_actualizados = []
+
+    # 1. TRIMP (requiere duración + FC media)
+    trimp = HyroxLoadManager.calcular_trimp(
+        instance.tiempo_total_minutos,
+        instance.hr_media,
+        objetivo,
+    )
+    if trimp is not None:
+        instance.trimp = trimp
+        campos_actualizados.append('trimp')
+
+    # 2. Zona cardíaca predominante
+    if instance.hr_media:
+        zona = HyroxLoadManager.calcular_zona_predominante(instance.hr_media, objetivo)
+        if zona:
+            instance.zona_cardiaca_predominante = zona
+            campos_actualizados.append('zona_cardiaca_predominante')
+
+    # 3. CTL / ATL / TSB — sólo si tenemos TRIMP en alguna sesión
+    carga = HyroxLoadManager.calcular_ctl_atl_tsb(objetivo)
+    if carga['ctl'] > 0 or trimp:
+        instance.ctl = carga['ctl']
+        instance.atl = carga['atl']
+        instance.tsb = carga['tsb']
+        campos_actualizados += ['ctl', 'atl', 'tsb']
+
+    if campos_actualizados:
+        instance.save(update_fields=campos_actualizados)
+
+    # 4. Validación RPE vs FC (no bloquea, solo loguea/genera alerta en notes)
+    alerta_rpe_fc = HyroxLoadManager.validar_rpe_vs_fc(instance)
+    if alerta_rpe_fc:
+        logger.info(f"[HYROX FC/RPE] Sesión {instance.id}: {alerta_rpe_fc}")
+        # Inyectar la alerta en la primera actividad de la sesión para que la vea el usuario
+        primera_act = instance.activities.first()
+        if primera_act:
+            notas = primera_act.data_metricas.get('notas', '')
+            if 'DISCORDANTE' not in notas and 'RPE alto vs FC' not in notas:
+                primera_act.data_metricas['notas'] = (
+                    f"{notas} | {alerta_rpe_fc}".strip(' |')
+                )
+                primera_act.save(update_fields=['data_metricas'])
+
+    return carga
+
 
 @receiver(post_save, sender=HyroxSession)
 def autorregular_plan_futuro(sender, instance, created, **kwargs):
     """
-    Paso 3: Lógica de Autorregulación Avanzada y Actualización de Dashboard en tiempo real.
-    Ajusta el volumen y el feedback de la próxima sesión según el esfuerzo de hoy.
+    Autorregulación avanzada + carga objetiva al completar una sesión.
+    Orden de ejecución:
+      1. Calcular TRIMP / zona / CTL-ATL-TSB
+      2. Adaptar plan continuo (RPE, TSB)
+      3. Actualizar Race Readiness
+      4. Ajustar fatiga de la próxima sesión
     """
-    # Solo actuamos cuando una sesión pasa a estado 'completado'
-    if instance.estado == 'completado' and instance.rpe_global:
-        
-        # Opcional: Ejecutar motor avanzado (si aplica x0.8 o x1.1 a métricas internas)
-        HyroxTrainingEngine.apply_continuous_adaptation(instance)
+    if instance.estado != 'completado' or not instance.rpe_global:
+        return
 
-        # 1. ACTUALIZAR RACE READINESS SCORE (Para que la gráfica suba instantáneamente)
-        if instance.objective:
-            current_score = instance.objective.get_race_readiness_score()
-            HyroxReadinessLog.objects.update_or_create(
-                objective=instance.objective,
-                fecha=timezone.now().date(),
-                defaults={'score': current_score}
-            )
+    # ── 1. CARGA OBJETIVA ──────────────────────────────────────────────────
+    carga = _calcular_y_guardar_carga(instance)
+    tsb_actual = carga.get('tsb')
 
-        # 2. AUTORREGULACIÓN DE LA PRÓXIMA SESIÓN
-        proxima = HyroxSession.objects.filter(
-            objective=instance.objective, 
-            fecha__gt=instance.fecha, 
-            estado='planificado'
-        ).order_by('fecha').first()
+    # ── 2. ADAPTACIÓN CONTINUA ─────────────────────────────────────────────
+    HyroxTrainingEngine.apply_continuous_adaptation(instance)
 
-        if proxima:
-            # Calcular umbral HR máxima basado en la edad del cliente (fórmula 220 - edad)
-            hr_umbral = 185  # fallback genérico
-            try:
-                from django.utils import timezone as tz
-                import datetime
-                fn = instance.objective.cliente.fecha_nacimiento
-                if fn:
-                    edad = (tz.now().date() - fn).days // 365
-                    hr_umbral = 220 - edad
-            except Exception:
-                pass
+    # ── 3. RACE READINESS ──────────────────────────────────────────────────
+    if instance.objective:
+        current_score = instance.objective.get_race_readiness_score()
+        HyroxReadinessLog.objects.update_or_create(
+            objective=instance.objective,
+            fecha=timezone.now().date(),
+            defaults={'score': current_score}
+        )
 
-            # CASO A: SOBREESFUERZO (RPE >= 9 o HR Max > umbral por edad)
-            if instance.rpe_global >= 9 or (instance.hr_maxima and instance.hr_maxima > hr_umbral):
-                proxima.muscle_fatigue_index = 'Alta'
-                proxima.save(update_fields=['muscle_fatigue_index'])
+    # ── 4. FATIGA EN PRÓXIMA SESIÓN ────────────────────────────────────────
+    proxima = HyroxSession.objects.filter(
+        objective=instance.objective,
+        fecha__gt=instance.fecha,
+        estado='planificado'
+    ).order_by('fecha').first()
 
-            # CASO B: PROGRESO FLUIDO (RPE <= 5)
-            elif instance.rpe_global <= 5:
-                proxima.muscle_fatigue_index = 'Baja'
-                proxima.save(update_fields=['muscle_fatigue_index'])
+    if proxima:
+        # Umbral FC máxima personalizado por edad
+        hr_umbral = HyroxLoadManager.get_fc_max(instance.objective)
+
+        nueva_fatiga = None
+
+        # A. TSB muy negativo → alta fatiga objetiva
+        if tsb_actual is not None and tsb_actual < -20:
+            nueva_fatiga = 'Alta'
+
+        # B. Sobreesfuerzo por RPE o FC máxima
+        elif instance.rpe_global >= 9 or (instance.hr_maxima and instance.hr_maxima > hr_umbral * 0.95):
+            nueva_fatiga = 'Alta'
+
+        # C. Zona cardíaca en Z4/Z5 con duración significativa → fatiga moderada-alta
+        elif (instance.zona_cardiaca_predominante in ('Z4', 'Z5')
+              and instance.tiempo_total_minutos
+              and instance.tiempo_total_minutos >= 30):
+            nueva_fatiga = 'Alta'
+
+        # D. Progreso fluido: RPE bajo Y zona Z1/Z2
+        elif (instance.rpe_global <= 5
+              and instance.zona_cardiaca_predominante in ('Z1', 'Z2', None)):
+            nueva_fatiga = 'Baja'
+
+        if nueva_fatiga:
+            proxima.muscle_fatigue_index = nueva_fatiga
+            proxima.fatiga_updated_at    = timezone.now()
+            proxima.save(update_fields=['muscle_fatigue_index', 'fatiga_updated_at'])
 
 
 # ==============================================================================
