@@ -771,25 +771,33 @@ body {
 
   <!-- ── BOTTOM ACTION GRID ────────────────────── -->
   <div class="rb-bottom-actions">
-    <a href="{% url 'entrenos:dashboard_evolucion' cliente.id %}" class="rb-bottom-btn">
-      <i class="fas fa-chart-area"></i>
-      Evolución
+    <a href="{% url 'entrenos:vista_plan_anual' cliente.id %}" class="rb-bottom-btn">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 6.5a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2 2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2z"/><path d="M17.5 6.5a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2 2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2z"/><line x1="8.5" y1="12" x2="15.5" y2="12"/><line x1="2" y1="10" x2="4.5" y2="10"/><line x1="2" y1="14" x2="4.5" y2="14"/><line x1="19.5" y1="10" x2="22" y2="10"/><line x1="19.5" y1="14" x2="22" y2="14"/></svg>
+      Rutina
     </a>
-    <a href="{% url 'hyrox:dashboard' %}" class="rb-bottom-btn">
-      <i class="fas fa-person-running"></i>
-      Hyrox
+    <a href="{% url 'clientes:blade_runner_dashboard' %}" class="rb-bottom-btn">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+      Blade
     </a>
-    <a href="{% url 'nutricion_app_django:dashboard_nutricional' %}" class="rb-bottom-btn">
-      <i class="fas fa-utensils"></i>
-      Nutrición
+    <a href="{% url 'diario:dashboard_diario' %}" class="rb-bottom-btn">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+      Diario
+    </a>
+    <a href="{% url 'entrenos:registrar_actividad_libre' cliente.id %}" class="rb-bottom-btn" style="background:var(--accent);border-color:var(--accent);color:var(--paper);">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+      Añadir
     </a>
     <a href="{% url 'entrenos:timeline_atleta' cliente.id %}" class="rb-bottom-btn">
-      <i class="fas fa-calendar-days"></i>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
       Timeline
     </a>
   </div>
 
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px;">
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:6px;">
+    <a href="{% url 'entrenos:dashboard_evolucion' cliente.id %}" class="rb-bottom-btn" style="flex-direction:row;gap:6px;padding:10px 12px;">
+      <i class="fas fa-chart-area"></i>
+      Evolución
+    </a>
     <a href="{% url 'estoico:dashboard' %}" class="rb-bottom-btn" style="flex-direction:row;gap:6px;padding:10px 12px;">
       <i class="fas fa-fire-flame-curved"></i>
       Estoico
