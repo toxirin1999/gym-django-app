@@ -734,7 +734,6 @@ a.rb-dia:hover { background: var(--paper-2); text-decoration: none; }
               {% if stats_semana.total_planificadas > 0 %}
               <circle cx="32" cy="32" r="27" fill="none" stroke="var(--accent)" stroke-width="4"
                 stroke-linecap="round" stroke-dasharray="170"
-                stroke-dashoffset="{% widthratio stats_semana.total_completadas stats_semana.total_planificadas 170 as _done %}{{ _done|default:0 }}"
                 style="stroke-dashoffset: calc(170 - {% widthratio stats_semana.total_completadas stats_semana.total_planificadas 170 %})"/>
               {% endif %}
             </svg>
