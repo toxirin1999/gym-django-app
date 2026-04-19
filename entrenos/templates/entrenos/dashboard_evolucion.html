@@ -492,6 +492,9 @@ body {
 
   <!-- ── ACCIONES ── -->
   <div class="rb-actions">
+    <a href="{% url 'clientes:panel_cliente' %}" class="rb-btn rb-btn-primary rb-btn-sm">
+      <i class="fas fa-home"></i> Panel Principal
+    </a>
     <a href="{% url 'entrenos:timeline_atleta' cliente.id %}" class="rb-btn rb-btn-ghost rb-btn-sm">
       <i class="fas fa-stream"></i> Timeline
     </a>
