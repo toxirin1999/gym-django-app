@@ -26,10 +26,9 @@ class HyroxSessionNotesForm(forms.ModelForm):
     
     class Meta:
         model = HyroxSession
-        fields = ['nivel_energia_pre', 'fecha', 'titulo', 'tiempo_total_minutos', 'hr_media', 'hr_maxima', 'rpe_global', 'notas_raw']
+        fields = ['nivel_energia_pre', 'titulo', 'tiempo_total_minutos', 'hr_media', 'hr_maxima', 'rpe_global', 'notas_raw']
         widgets = {
             'nivel_energia_pre': forms.NumberInput(attrs={'type': 'range', 'class': 'w-full accent-yellow-500 mt-2', 'min': 1, 'max': 10, 'value': 7, 'oninput': 'document.getElementById("energia-val").innerText = this.value'}),
-            'fecha': forms.DateInput(attrs={'type': 'date', 'class': 'form-control bg-slate-800 border-slate-700 text-slate-200'}),
             'titulo': forms.TextInput(attrs={'class': 'form-control bg-slate-800 border-slate-700 text-slate-200', 'placeholder': 'Ej. Simulación Hyrox Mitad'}),
             'tiempo_total_minutos': forms.NumberInput(attrs={'class': 'form-control bg-slate-800 border-slate-700 text-slate-200', 'placeholder': 'Ej. 45'}),
             'hr_media': forms.NumberInput(attrs={'class': 'form-control bg-slate-800 border-slate-700 text-slate-200', 'placeholder': 'Ej. 155'}),

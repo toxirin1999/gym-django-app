@@ -145,16 +145,26 @@ class HyroxObjective(models.Model):
         # ── Score global ponderado ──────────────────────────────────────────
         score = pct_tecnica * 0.40 + pct_eficiencia * 0.30 + pct_resistencia * 0.30
 
-        # ── Suelo de Readiness Estructural (25%) ────────────────────────────────
-        if pct_tecnica > 50.0:
-            score = max(score, 25.0)
+        # El floor artificial (max(score,25) si pct_tecnica>50) ha sido eliminado:
+        # daba falsa sensación de preparación aunque el atleta no corriera ni simulara.
+
+        # ── Penalización por carga acumulada del gym (últimos 5 días) ──────
+        # Si el atleta viene de días pesados de gym, su readiness Hyrox baja.
+        try:
+            from hyrox.training_engine import HyroxTrainingEngine
+            gym_load = HyroxTrainingEngine._get_gym_external_load(self.cliente, dias=5)
+            if gym_load['fatiga_gym'] == 'Alta':
+                score -= 8   # carga de gym muy alta: impacto directo en readiness
+            elif gym_load['fatiga_gym'] == 'Media':
+                score -= 4   # carga moderada: penalización menor
+        except Exception:
+            pass
 
         # ── Readiness Post-Esfuerzo (Phase 16: Molestias Feedback) ──────────
-        # Reutilizamos la lista ya cargada en lugar de hacer otra query
         last_session = max(sesiones_completadas, key=lambda s: s.fecha or datetime.date.min, default=None)
         if last_session and last_session.hubo_molestias:
             score -= 10
-            
+
         return min(max(int(score), 0), 100)
 
     def get_strength_balance(self):

@@ -57,9 +57,90 @@ def hyrox_dashboard(request):
         HyroxTrainingEngine.auto_adjust(objetivo_activo)
         
         sesiones_completadas = HyroxSession.objects.filter(objective=objetivo_activo, estado='completado').order_by('-fecha')
-        # Traer planes desde hoy en adelante
-        hoy = timezone.now().date()
-        sesiones_planificadas = HyroxSession.objects.filter(objective=objetivo_activo, estado='planificado', fecha__gte=hoy).order_by('fecha')[:3]
+
+        # Sesiones futuras deduplicadas por fecha (evita duplicados del auto_adjust)
+        todas_futuras = list(
+            HyroxSession.objects.filter(
+                objective=objetivo_activo, estado='planificado', fecha__gte=hoy
+            ).prefetch_related('activities').order_by('fecha')
+        )
+        vistas = set()
+        todas_futuras_unicas = []
+        for s in todas_futuras:
+            if s.fecha not in vistas:
+                vistas.add(s.fecha)
+                todas_futuras_unicas.append(s)
+
+        sesiones_planificadas = todas_futuras_unicas[:3]
+
+        # Agrupar todas las sesiones futuras por semana para el plan timeline
+        DIAS_ES = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
+        TIPO_LABEL = {
+            'fuerza': ('Fuerza', 'fa-dumbbell', '#E8341A'),
+            'carrera': ('Carrera', 'fa-running', '#1DC8B8'),
+            'hyrox_station': ('Estaciones', 'fa-cube', '#F59E0B'),
+            'ergometro': ('Cardio', 'fa-bicycle', '#8B5CF6'),
+            'cardio_sustituto': ('Cardio Alt.', 'fa-bicycle', '#8B5CF6'),
+            'hiit': ('HIIT', 'fa-fire', '#EF4444'),
+            'simulacion': ('Simulación', 'fa-flag', '#E8341A'),
+        }
+
+        plan_semanas = []
+        semana_buf = []
+        semana_num_actual = None
+        for s in todas_futuras_unicas:
+            dias_diff = (s.fecha - hoy).days
+            num_semana = dias_diff // 7
+            if semana_num_actual is None:
+                semana_num_actual = num_semana
+            if num_semana != semana_num_actual:
+                if semana_buf:
+                    plan_semanas.append({'semana_idx': semana_num_actual, 'sesiones': semana_buf})
+                semana_buf = []
+                semana_num_actual = num_semana
+
+            tipos_act = [a.tipo_actividad for a in s.activities.all()]
+            tipo_principal = tipos_act[0] if tipos_act else 'fuerza'
+            tipo_info = TIPO_LABEL.get(tipo_principal, ('Entreno', 'fa-bolt', '#888'))
+
+            actividades_resumen = []
+            for act in s.activities.all():
+                m = act.data_metricas
+                if 'distancia_km' in m:
+                    ritmo_str = f" · 🎯 {m['ritmo_objetivo']}" if 'ritmo_objetivo' in m else ''
+                    actividades_resumen.append(f"{m['distancia_km']} km{ritmo_str}")
+                elif 'distancia_m' in m:
+                    peso_m = f" @{m['peso_kg']}kg" if 'peso_kg' in m else ''
+                    actividades_resumen.append(f"{act.nombre_ejercicio} {m['distancia_m']}m{peso_m}")
+                elif 'series' in m:
+                    series_list = m['series']
+                    reps = series_list[0].get('reps', '?') if series_list else '?'
+                    peso = series_list[0].get('peso_kg', '') if series_list else ''
+                    peso_str = f" @{peso}kg" if peso else ''
+                    actividades_resumen.append(f"{act.nombre_ejercicio} {len(series_list)}×{reps}{peso_str}")
+                else:
+                    actividades_resumen.append(act.nombre_ejercicio)
+
+            # Comprobar si hay una sesión completada en la misma fecha
+            completada_hoy = HyroxSession.objects.filter(
+                objective=objetivo_activo, estado='completado', fecha=s.fecha
+            ).first() if s.fecha == hoy else None
+
+            semana_buf.append({
+                'sesion': s,
+                'dia_str': DIAS_ES[s.fecha.weekday()],
+                'tipo_label': tipo_info[0],
+                'tipo_icon': tipo_info[1],
+                'tipo_color': tipo_info[2],
+                'actividades_resumen': actividades_resumen[:3],
+                'es_hoy': s.fecha == hoy,
+                'es_manana': (s.fecha - hoy).days == 1,
+                'completada': completada_hoy is not None,
+                'sesion_completada': completada_hoy,
+            })
+
+        if semana_buf:
+            plan_semanas.append({'semana_idx': semana_num_actual, 'sesiones': semana_buf})
         
         # Desglose de la semana actual
         start_of_week = hoy - timezone.timedelta(days=hoy.weekday())
@@ -255,6 +336,7 @@ def hyrox_dashboard(request):
         'objetivo_activo': objetivo_activo,
         'sesiones': sesiones_completadas,
         'proximas_sesiones': sesiones_planificadas,
+        'plan_semanas': plan_semanas if objetivo_activo else [],
         'stats_semana': stats_semana,
         'resumen_semanal': resumen_semanal,
         'readiness_svg_points': readiness_svg_points,
@@ -349,12 +431,23 @@ def registrar_entrenamiento(request, objective_id, session_id=None):
             estado='planificado'
         ).first()
 
+    from .models import UserInjury
+    lesion_activa = UserInjury.objects.filter(cliente=request.user.cliente_perfil, activa=True).first()
+
     if request.method == 'POST':
         form = HyroxSessionNotesForm(request.POST)
         if form.is_valid():
-            sesion = form.save(commit=False)
-            sesion.objective = objetivo
-            sesion.estado = 'planificado' # temporal hasta procesar IA
+            if sesion_planificada:
+                # Actualizar la sesión planificada existente (no crear una nueva)
+                for field, value in form.cleaned_data.items():
+                    if field != 'sustituir_material' and hasattr(sesion_planificada, field):
+                        setattr(sesion_planificada, field, value)
+                sesion = sesion_planificada
+            else:
+                sesion = form.save(commit=False)
+                sesion.objective = objetivo
+                sesion.fecha = hoy
+            sesion.estado = 'planificado'
             sesion.save()
 
             # Procesamiento de la IA
@@ -382,14 +475,9 @@ def registrar_entrenamiento(request, objective_id, session_id=None):
                              messages.info(request, f"🧠 Entrenador IA: {feedback_str}")
 
                     else:
-                        if getattr(sesion, 'parsed_by_ia', False):
-                             messages.success(request, "Sesión evaluada por la IA. Se ha calculado tu fatiga y rendimiento global.")
-                             if feedback_str:
-                                 messages.info(request, f"🧠 Entrenador IA: {feedback_str}")
-                        else:
-                             messages.warning(request, "Se guardó la sesión, pero o no incluiste ejercicios detectables o Gemini no devolvió la estructura esperada.")
+                        messages.success(request, "Sesión guardada. No se detectaron ejercicios estructurados en el texto.")
                 else:
-                    messages.error(request, "Atención: No se pudo conectar con la API de Gemini para procesar el texto.")
+                    messages.warning(request, "No se pudieron extraer ejercicios del texto. Revisa el formato.")
             else:
                 messages.success(request, "Datos de la sesión guardados sin procesamiento IA.")
                 actividades = sesion.activities.all()
@@ -457,9 +545,7 @@ def registrar_entrenamiento(request, objective_id, session_id=None):
         bio_data = BioContextProvider.get_current_restrictions(cliente)
         restricted_tags = bio_data.get('tags', set())
 
-        initial_notes = ""
         if sesion_planificada:
-            lines = []
             safe_replacements_cache = {}
             fase_nombre_temp = 'hipertrofia'
             try:
@@ -501,30 +587,7 @@ def registrar_entrenamiento(request, objective_id, session_id=None):
                         act.display_name = safe_opts[0].get('nombre', act.nombre_ejercicio)
                         act.is_substituted = True
 
-                # Build notes
-                metrics = act.data_metricas
-                line = f"- {act.display_name}: "
-                if 'series' in metrics:
-                    s_parts = []
-                    for s in metrics['series']:
-                        sp = f"{s.get('reps', 'X')} reps"
-                        if 'peso_kg' in s: sp += f" @ {s['peso_kg']}kg"
-                        s_parts.append(sp)
-                    line += ", ".join(s_parts)
-                elif 'distancia_km' in metrics:
-                    line += f"{metrics['distancia_km']}km"
-                elif 'distancia_m' in metrics:
-                    line += f"{metrics['distancia_m']}m"
-                    if 'peso_kg' in metrics: line += f" @ {metrics['peso_kg']}kg"
-                
-                lines.append(line)
-            initial_notes = "\n".join(lines)
-            
-        form = HyroxSessionNotesForm(initial={'notas_raw': initial_notes, 'titulo': sesion_planificada.titulo if sesion_planificada else ""})
-        
-    # Info de lesiones para el UI alert
-    from .models import UserInjury
-    lesion_activa = UserInjury.objects.filter(cliente=request.user.cliente_perfil, activa=True).first()
+        form = HyroxSessionNotesForm(initial={'titulo': sesion_planificada.titulo if sesion_planificada else ""})
         
     return render(request, 'hyrox/registrar_entrenamiento.html', {
         'form': form, 
@@ -604,7 +667,7 @@ def registrar_entrenamiento_ia(request, session_id):
             sesion.save()
             
             # Formatear la respuesta JSON
-            feedback = sesion.feedback_ia if sesion.feedback_ia else parsed_data.get('feedback', '')
+            feedback = parsed_data.get('feedback', '')
             score = sesion.ai_evaluation_score if sesion.ai_evaluation_score else parsed_data.get('ai_evaluation_score', None)
             
             # 3. Lógica de Visualización Estratégica

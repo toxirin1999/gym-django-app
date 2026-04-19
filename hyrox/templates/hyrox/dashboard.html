@@ -1,1412 +1,690 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}HYROX — Centro de Operaciones{% endblock %}
+{% block title %}HYROX — Race Command{% endblock %}
 
 {% block extra_css %}
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,300;0,400;0,500;0,700;0,900;1,400&family=JetBrains+Mono:wght@400;500;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
-/* ═══════════════════════════════════════════════════════
-   HYROX — RACE COMMAND CENTER
-   Design system autónomo, sin dependencia de Tailwind
-   ═══════════════════════════════════════════════════════ */
+/* ── HYROX v3 — Diseño radical ── */
+.hx3 *, .hx3 *::before, .hx3 *::after { box-sizing: border-box; }
 
-:root {
-  --void:        #090D12;
-  --surface:     #111820;
-  --surface-2:   #19232F;
-  --surface-3:   #212D3A;
-  --red:         #E8341A;
-  --red-glow:    rgba(232,52,26,0.12);
-  --red-border:  rgba(232,52,26,0.28);
-  --text:        #EEE9E2;
-  --text-mid:    #8A9AAD;
-  --text-dim:    #4A5868;
-  --border:      rgba(255,255,255,0.06);
-  --border-2:    rgba(255,255,255,0.10);
-  --gold:        #C8A96E;
-  --gold-dim:    rgba(200,169,110,0.18);
-  --teal:        #1DC8B8;
-  --teal-dim:    rgba(29,200,184,0.14);
-  --warn:        #E89C1A;
+.hx3 {
+  background: #000 !important;
+  color: #F0EBE3 !important;
+  font-family: 'Barlow Condensed', sans-serif !important;
+  padding: 0 !important;
+  margin: 0;
+  min-height: 100vh;
+  max-width: 100% !important;
 }
 
-/* ── Body override ── */
-body {
-  background-color: var(--void) !important;
-  color: var(--text) !important;
-  font-family: 'Barlow', sans-serif !important;
+/* TOP NAV */
+.h3-nav {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 40px; height: 56px;
+  border-bottom: 1px solid #1A1A1A;
+  background: #000;
+  position: sticky; top: 0; z-index: 200;
+}
+.h3-brand {
+  display: flex; align-items: center; gap: 0;
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 20px; letter-spacing: .22em; color: #fff;
+}
+.h3-brand-bar { width: 4px; height: 22px; background: #E8341A; margin-right: 14px; box-shadow: 0 0 12px #E8341A; }
+.h3-live { display: flex; align-items: center; gap: 8px; font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: .18em; color: #444; }
+.h3-dot { width: 6px; height: 6px; background: #E8341A; border-radius: 50%; animation: h3blink 1.4s ease-in-out infinite; box-shadow: 0 0 6px #E8341A; }
+@keyframes h3blink { 0%,100%{opacity:1} 50%{opacity:.15} }
+.h3-nav-btns { display: flex; gap: 8px; }
+
+/* BUTTONS */
+.h3-btn {
+  font-family: 'Barlow Condensed', sans-serif; font-weight: 700;
+  font-size: 11px; letter-spacing: .16em; text-transform: uppercase;
+  padding: 8px 20px; border: 1px solid #2A2A2A; background: transparent;
+  color: #555; cursor: pointer; transition: all .15s; text-decoration: none;
+  display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
+}
+.h3-btn:hover { border-color: #E8341A; color: #fff; background: rgba(232,52,26,.1); text-decoration: none; }
+.h3-btn-red { background: #E8341A; border-color: #E8341A; color: #fff; box-shadow: 0 0 28px rgba(232,52,26,.4); }
+.h3-btn-red:hover { background: #FF4422; color: #fff; box-shadow: 0 0 40px rgba(232,52,26,.6); transform: translateY(-1px); }
+.h3-btn-ghost { border-color: rgba(232,52,26,.3); color: rgba(232,52,26,.55); }
+.h3-btn-ghost:hover { background: rgba(232,52,26,.08); color: #E8341A; }
+
+/* ALERTS */
+.h3-alerts { background: #000; }
+.h3-brief { padding: 10px 40px; background: rgba(200,169,110,.05); border-left: 3px solid #C8A96E; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #C8A96E; font-style: italic; border-top: 1px solid #111; }
+.h3-alert { padding: 9px 40px; background: rgba(232,52,26,.04); border-left: 3px solid #E8341A; font-size: 12px; color: #555; display: flex; gap: 10px; align-items: center; border-top: 1px solid #0D0D0D; }
+.h3-focus { padding: 9px 40px; border-left: 3px solid rgba(200,169,110,.3); font-size: 12px; color: #555; display: flex; gap: 10px; align-items: center; border-top: 1px solid #0D0D0D; background: rgba(200,169,110,.02); }
+
+/* ── HERO — CONTADOR GIGANTE ── */
+.h3-hero {
+  display: grid; grid-template-columns: 1fr 340px;
+  border-top: 1px solid #111; border-bottom: 1px solid #111;
+  min-height: 380px; position: relative; overflow: hidden;
+}
+.h3-hero::after {
+  content: 'HYROX';
+  position: absolute; bottom: -60px; right: -20px;
+  font-family: 'Bebas Neue', sans-serif; font-size: 320px;
+  color: rgba(255,255,255,.018); pointer-events: none; line-height: 1; user-select: none;
+}
+.h3-hero-left {
+  padding: 48px 40px 40px;
+  border-right: 1px solid #111;
+  position: relative; background: #000;
+}
+.h3-hero-left::before {
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px;
+  background: linear-gradient(180deg, #E8341A 0%, transparent 100%);
 }
 
-/* ── Typography helpers ── */
-.hx-display {
-  font-family: 'Barlow Condensed', sans-serif;
-  font-weight: 900;
-  text-transform: uppercase;
-  letter-spacing: -0.02em;
-  line-height: 1;
+/* Número countdown — ocupa casi todo */
+.h3-day-lbl {
+  font-family: 'JetBrains Mono', monospace; font-size: 9px;
+  letter-spacing: .28em; color: #E8341A; text-transform: uppercase;
+  margin-bottom: 0; display: flex; align-items: center; gap: 10px;
 }
-.hx-mono {
-  font-family: 'JetBrains Mono', monospace;
+.h3-day-lbl::before { content: ''; width: 24px; height: 1px; background: #E8341A; }
+.h3-days-num {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(120px, 18vw, 220px);
+  line-height: .82; color: #fff; letter-spacing: -.02em; display: block;
+  text-shadow: 0 0 120px rgba(232,52,26,.2);
 }
-.hx-label {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 9px;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--text-dim);
-}
-.hx-title {
-  font-family: 'Barlow Condensed', sans-serif;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
+.h3-days-unit { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: .26em; color: #333; margin-top: 8px; text-transform: uppercase; }
 
-/* ── Layout ── */
-.hx-wrap {
-  max-width: 1440px;
-  margin: 0 auto;
-  padding: 20px 24px 60px;
+.h3-meta-strip {
+  display: flex; gap: 32px; margin-top: 24px; padding-top: 20px;
+  border-top: 1px solid #111; flex-wrap: wrap;
 }
+.h3-mk { font-family: 'JetBrains Mono', monospace; font-size: 7px; letter-spacing: .22em; color: #2E2E2E; text-transform: uppercase; margin-bottom: 4px; }
+.h3-mv { font-family: 'Bebas Neue', sans-serif; font-size: 20px; color: #fff; letter-spacing: .06em; }
+.h3-mv-red { color: #E8341A; }
 
-/* ── Dividers ── */
-.hx-rule       { height: 1px; background: var(--border); }
-.hx-rule-red   { height: 2px; background: var(--red); }
-.hx-rule-gold  { height: 1px; background: rgba(200,169,110,0.4); }
+.h3-quote { font-size: 12px; color: #333; font-style: italic; margin-top: 18px; padding-left: 12px; border-left: 2px solid #1A1A1A; line-height: 1.6; max-width: 520px; }
+.h3-hero-actions { display: flex; gap: 8px; margin-top: 18px; flex-wrap: wrap; }
 
-/* ══ HEADER ══ */
-.hx-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 14px 0 16px;
-  border-bottom: 1px solid var(--border);
-  margin-bottom: 0;
-  flex-wrap: wrap;
-  gap: 10px;
+/* Readiness side — FONDO ROJO */
+.h3-hero-right {
+  background: #E8341A;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 40px 28px; gap: 20px; position: relative; overflow: hidden;
 }
-.hx-wordmark {
-  display: flex;
-  align-items: baseline;
-  gap: 14px;
+.h3-hero-right::before {
+  content: ''; position: absolute; inset: 0;
+  background: radial-gradient(ellipse at 50% 0%, rgba(255,255,255,.08) 0%, transparent 60%);
 }
-.hx-wordmark-name {
-  font-family: 'Barlow Condensed', sans-serif;
-  font-weight: 900;
-  font-size: 26px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--text);
+.h3-rs-lbl { font-family: 'JetBrains Mono', monospace; font-size: 8px; letter-spacing: .24em; color: rgba(255,255,255,.5); text-transform: uppercase; text-align: center; }
+.h3-rs-num {
+  font-family: 'Bebas Neue', sans-serif; font-size: 100px; line-height: .85;
+  color: #fff; text-align: center; text-shadow: 0 0 60px rgba(0,0,0,.3);
 }
-.hx-wordmark-meta {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 10px;
-  color: var(--red);
-  font-weight: 700;
-  letter-spacing: 0.14em;
-}
-.hx-btn-group { display: flex; gap: 8px; flex-wrap: wrap; }
+.h3-rs-unit { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: .18em; color: rgba(255,255,255,.5); text-align: center; text-transform: uppercase; }
+.h3-rs-bar-wrap { width: 100%; }
+.h3-rs-bar { height: 4px; background: rgba(0,0,0,.3); width: 100%; }
+.h3-rs-bar-fill { height: 4px; background: #fff; transition: width 1.5s cubic-bezier(.4,0,.2,1); box-shadow: 0 0 8px rgba(255,255,255,.6); }
+.h3-trend-lbl { font-family: 'JetBrains Mono', monospace; font-size: 8px; letter-spacing: .16em; color: rgba(255,255,255,.35); text-align: center; margin-top: 6px; text-transform: uppercase; }
 
-/* Botones */
-.hx-btn {
-  font-family: 'Barlow Condensed', sans-serif;
-  font-weight: 700;
-  font-size: 12px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  padding: 7px 16px;
-  border: 1px solid var(--border-2);
-  background: transparent;
-  color: var(--text-mid);
-  cursor: pointer;
-  transition: all 0.2s;
-  text-decoration: none;
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  white-space: nowrap;
+/* ── RED STRIP — MACROCICLO ── */
+.h3-macro {
+  display: flex; align-items: center; gap: 20px; padding: 16px 40px;
+  background: #0A0A0A; border-bottom: 1px solid #111; flex-wrap: wrap;
 }
-.hx-btn:hover {
-  border-color: var(--red-border);
-  color: var(--text);
-  background: var(--red-glow);
-  text-decoration: none;
+.h3-macro-pct { font-family: 'Bebas Neue', sans-serif; font-size: 44px; color: #fff; line-height: 1; flex-shrink: 0; }
+.h3-macro-pct span { font-size: 22px; color: #333; }
+.h3-phases { display: flex; gap: 2px; flex: 1; min-width: 160px; height: 32px; }
+.h3-phase {
+  flex: 1; display: flex; align-items: center; justify-content: center;
+  font-family: 'Barlow Condensed', sans-serif; font-weight: 700;
+  font-size: 10px; letter-spacing: .1em; text-transform: uppercase;
+  color: #222; background: #0E0E0E; border: 1px solid #141414;
+  transition: all .3s; clip-path: polygon(7px 0%,100% 0%,calc(100% - 7px) 100%,0% 100%);
 }
-.hx-btn i { font-size: 11px; }
+.h3-phase.past { background: rgba(232,52,26,.08); color: rgba(232,52,26,.35); border-color: rgba(232,52,26,.12); }
+.h3-phase.active { background: #E8341A; color: #fff; border-color: #E8341A; box-shadow: 0 0 20px rgba(232,52,26,.4); }
+.h3-macro-right { flex-shrink: 0; text-align: right; }
 
-.hx-btn-red {
-  background: var(--red);
-  border-color: var(--red);
-  color: white;
+/* ── RECOVERY ── */
+.h3-recovery {
+  background: #000; border-left: 4px solid #E8341A;
+  border-top: 1px solid #111; border-bottom: 1px solid #111;
+  box-shadow: -4px 0 30px rgba(232,52,26,.12);
 }
-.hx-btn-red:hover {
-  background: #FF3D20;
-  border-color: #FF3D20;
-  color: white;
-}
-.hx-btn-ghost-red {
-  border-color: var(--red-border);
-  color: rgba(232,52,26,0.7);
-}
-.hx-btn-ghost-red:hover {
-  background: var(--red-glow);
-  color: var(--red);
-}
+.h3-rv-head { display: flex; justify-content: space-between; align-items: center; padding: 18px 40px; border-bottom: 1px solid #111; flex-wrap: wrap; gap: 12px; }
+.h3-rv-body { padding: 24px 40px; }
+.h3-fase-tag { font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 700; letter-spacing: .2em; text-transform: uppercase; padding: 5px 16px; border: 1px solid; clip-path: polygon(5px 0%,100% 0%,calc(100% - 5px) 100%,0% 100%); }
+.h3-sub-row { display: flex; align-items: center; gap: 8px; padding: 9px 14px; background: #080808; border: 1px solid #111; margin-bottom: 4px; font-size: 12px; }
+.h3-metrics3 { display: grid; grid-template-columns: repeat(3,1fr); gap: 1px; background: #111; margin-bottom: 18px; }
+.h3-metric { background: #000; padding: 22px 10px; text-align: center; }
+.h3-metric-n { font-family: 'Bebas Neue', sans-serif; font-size: 42px; line-height: 1; }
+.h3-metric-l { font-family: 'JetBrains Mono', monospace; font-size: 8px; letter-spacing: .2em; color: #2A2A2A; text-transform: uppercase; margin-bottom: 8px; }
 
-/* ══ STRIP ALERTS ══ */
-.hx-strip-alerts {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  margin-top: 1px;
+/* ── 3 DATA STRIPS ── */
+.h3-strips { display: grid; grid-template-columns: repeat(3,1fr); gap: 1px; background: #111; border-top: 1px solid #111; }
+.h3-strip { background: #000; padding: 28px 28px; }
+.h3-strip-title {
+  font-family: 'JetBrains Mono', monospace; font-size: 8px; letter-spacing: .28em;
+  text-transform: uppercase; color: #222; margin-bottom: 22px;
+  display: flex; align-items: center; gap: 10px;
 }
-.hx-alert {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 10px 16px;
-  background: var(--surface);
-  border-left: 2px solid var(--red);
-  font-size: 12px;
-  color: var(--text-mid);
-  line-height: 1.4;
-}
-.hx-alert .hx-alert-icon { color: var(--red); flex-shrink: 0; margin-top: 1px; }
-.hx-briefing {
-  background: var(--surface);
-  border-left: 2px solid var(--gold);
-  padding: 11px 16px;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 11px;
-  color: var(--gold);
-  font-style: italic;
-  line-height: 1.5;
-}
-.hx-focus {
-  background: rgba(200,169,110,0.04);
-  border-left: 2px solid var(--gold);
-  padding: 11px 16px;
-  display: flex;
-  gap: 10px;
-  align-items: flex-start;
-}
+.h3-strip-title::after { content: ''; flex: 1; height: 1px; background: #111; }
+.h3-strip-title::before { content: ''; width: 3px; height: 12px; background: #E8341A; box-shadow: 0 0 6px #E8341A; flex-shrink: 0; }
 
-/* ══ HERO ══ */
-.hx-hero {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  background: var(--surface);
-  border-left: 3px solid var(--red);
-  border-right: 1px solid var(--border);
-  border-top: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
-  margin-top: 1px;
-}
-.hx-hero-left {
-  padding: 28px 36px;
-  border-right: 1px solid var(--border);
-}
-.hx-hero-right {
-  padding: 28px 36px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-width: 200px;
-  background: rgba(0,0,0,0.15);
-}
-.hx-countdown-num {
-  font-family: 'Barlow Condensed', sans-serif;
-  font-weight: 900;
-  font-size: clamp(72px, 11vw, 120px);
-  line-height: 0.85;
-  letter-spacing: -0.04em;
-  color: var(--text);
-  display: block;
-}
-.hx-countdown-unit {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 10px;
-  letter-spacing: 0.2em;
-  color: var(--red);
-  font-weight: 700;
-  margin-top: 6px;
-}
-.hx-readiness-num {
-  font-family: 'Barlow Condensed', sans-serif;
-  font-weight: 900;
-  font-size: 60px;
-  line-height: 1;
-  letter-spacing: -0.02em;
-}
-.hx-vert-bar-track {
-  width: 6px;
-  height: 72px;
-  background: var(--surface-3);
-  margin: 12px auto;
-  position: relative;
-  overflow: hidden;
-}
-.hx-vert-bar-fill {
-  position: absolute;
-  bottom: 0; left: 0; right: 0;
-  transition: height 1.5s ease;
-}
-.hx-hero-divider {
-  width: 32px;
-  height: 1px;
-  background: var(--border-2);
-  margin: 8px auto;
-}
+/* Ring */
+.h3-ring-row { display: flex; align-items: center; gap: 14px; margin-bottom: 22px; }
+.h3-ring-n { font-family: 'Bebas Neue', sans-serif; font-size: 54px; line-height: 1; color: #fff; }
 
-/* ══ MACROCYCLE ══ */
-.hx-macro {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-top: none;
-  padding: 18px 24px;
-  margin-top: 1px;
-}
-.hx-macro-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-  margin-bottom: 12px;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-.hx-phase-bar {
-  display: flex;
-  height: 26px;
-  background: var(--void);
-  border: 1px solid var(--border);
-  overflow: visible;
-  position: relative;
-}
-.hx-phase {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: 'Barlow Condensed', sans-serif;
-  font-weight: 700;
-  font-size: 10px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  border-right: 1px solid rgba(255,255,255,0.04);
-  position: relative;
-  transition: background 0.2s;
-  color: var(--text-dim);
-}
-.hx-phase.hx-past {
-  background: rgba(232,52,26,0.05);
-  color: rgba(232,52,26,0.4);
-}
-.hx-phase.hx-active {
-  background: rgba(232,52,26,0.1);
-  color: var(--red);
-  border-bottom: 2px solid var(--red);
-}
-.hx-phase-marker {
-  position: absolute;
-  top: -5px; bottom: -5px;
-  width: 2px;
-  background: var(--red);
-  box-shadow: 0 0 8px var(--red), 0 0 16px rgba(232,52,26,0.4);
-  z-index: 10;
-  transition: left 1.2s ease;
-}
-.hx-phase-marker::before {
-  content: '';
-  position: absolute;
-  top: -5px;
-  left: -4px;
-  width: 10px;
-  height: 10px;
-  background: var(--red);
-  transform: rotate(45deg);
-  box-shadow: 0 0 6px var(--red);
-}
-.hx-macro-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 8px;
-}
+/* Bars */
+.h3-brow { margin-bottom: 14px; }
+.h3-brow-head { display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 12px; }
+.h3-bar { height: 2px; background: #0D0D0D; position: relative; overflow: hidden; }
+.h3-bar-fill { position: absolute; top: 0; left: 0; bottom: 0; transition: width 1.5s cubic-bezier(.4,0,.2,1); }
+.h3-br { background: #E8341A; box-shadow: 0 0 6px rgba(232,52,26,.5); }
+.h3-bt { background: #1DC8B8; box-shadow: 0 0 6px rgba(29,200,184,.5); }
+.h3-bg { background: #C8A96E; box-shadow: 0 0 6px rgba(200,169,110,.5); }
 
-/* ══ DATA PANELS ══ */
-.hx-panels {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1px;
-  margin-top: 1px;
-  background: var(--border);
-}
-.hx-panel {
-  background: var(--surface);
-  padding: 20px;
-}
-.hx-panel-label {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 9px;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: var(--text-dim);
-  margin-bottom: 18px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.hx-panel-label::before {
-  content: '';
-  display: inline-block;
-  width: 12px;
-  height: 2px;
-  background: var(--red);
-  flex-shrink: 0;
-}
+/* Stat */
+.h3-stat { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #0D0D0D; font-size: 12px; }
+.h3-stat:last-child { border-bottom: none; }
+.h3-sk { color: #2E2E2E; }
+.h3-sv { font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 15px; color: #fff; }
+.h3-pace { margin-top: 16px; padding: 12px 14px; background: #080808; border: 1px solid #111; border-left: 2px solid rgba(232,52,26,.25); display: flex; gap: 10px; align-items: center; font-size: 12px; color: #333; }
 
-/* Stat rows */
-.hx-stat-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 8px 0;
-  border-bottom: 1px solid var(--border);
-  font-size: 12px;
-}
-.hx-stat-row:last-child { border-bottom: none; }
-.hx-stat-key { color: var(--text-dim); }
-.hx-stat-val {
-  font-family: 'JetBrains Mono', monospace;
-  font-weight: 700;
-  font-size: 13px;
-  color: var(--text);
-}
+/* ── STANDARDS ── */
+.h3-sec { border-top: 1px solid #111; }
+.h3-sec-head { padding: 18px 40px; display: flex; justify-content: space-between; align-items: center; background: #000; border-bottom: 1px solid #111; }
+.h3-sec-title { font-family: 'Bebas Neue', sans-serif; font-size: 22px; letter-spacing: .1em; color: #fff; display: flex; align-items: center; gap: 12px; }
+.h3-sec-title i { color: #E8341A; font-size: 16px; }
+.h3-std-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(200px,1fr)); gap: 1px; background: #0A0A0A; }
+.h3-std-card { background: #000; padding: 20px; border-bottom: 3px solid transparent; transition: all .2s; }
+.h3-std-card:hover { background: #080808; transform: translateY(-2px); }
+.h3-std-card.done { border-bottom-color: #1DC8B8; }
+.h3-std-name { font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 13px; letter-spacing: .06em; text-transform: uppercase; margin-bottom: 12px; }
 
-/* Progress tracks */
-.hx-track {
-  height: 3px;
-  background: var(--surface-3);
-  margin-top: 5px;
-  position: relative;
-  overflow: hidden;
-}
-.hx-fill {
-  position: absolute;
-  top: 0; left: 0; bottom: 0;
-  transition: width 1.2s ease;
-}
-.hx-fill-red  { background: var(--red); }
-.hx-fill-teal { background: var(--teal); }
-.hx-fill-gold { background: var(--gold); }
-.hx-fill-auto {
-  background: linear-gradient(90deg, var(--red), var(--gold));
-}
+/* ── SESSIONS ── */
+.h3-sess-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(300px,1fr)); gap: 1px; background: #0A0A0A; }
+.h3-sess { background: #000; display: flex; flex-direction: column; border-left: 3px solid transparent; transition: all .22s; }
+.h3-sess:hover { background: #060606; border-left-color: #E8341A; }
+.h3-sess-head { padding: 22px; border-bottom: 1px solid #0D0D0D; cursor: pointer; }
+.h3-sess-date { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: .14em; color: #E8341A; margin-bottom: 8px; }
+.h3-sess-title { font-family: 'Bebas Neue', sans-serif; font-size: 20px; letter-spacing: .05em; color: #fff; line-height: 1.1; }
+.h3-sess-body { padding: 14px 22px; background: #050505; border-bottom: 1px solid #0D0D0D; }
+.h3-act-row { display: flex; gap: 8px; padding: 7px 0; border-bottom: 1px solid #080808; font-size: 12px; align-items: flex-start; }
+.h3-act-row:last-child { border-bottom: none; }
+.h3-act-n { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: rgba(232,52,26,.4); padding-top: 2px; flex-shrink: 0; width: 16px; }
+.h3-chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 5px; }
+.h3-chip { font-family: 'JetBrains Mono', monospace; font-size: 9px; padding: 2px 8px; background: #080808; border: 1px solid #111; color: #333; letter-spacing: .05em; }
+.h3-sess-foot { padding: 14px 22px; margin-top: auto; }
+.h3-coach-tip { margin-top: 6px; padding: 5px 10px; border-left: 2px solid rgba(200,169,110,.22); font-size: 10px; color: #7A6840; font-family: 'JetBrains Mono', monospace; line-height: 1.5; }
 
-/* Ring counter (week) */
-.hx-ring-row {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  margin-bottom: 16px;
-}
-.hx-ring-big {
-  font-family: 'Barlow Condensed', sans-serif;
-  font-weight: 900;
-  font-size: 40px;
-  line-height: 1;
-  color: var(--text);
-}
-.hx-ring-sub {
-  font-size: 11px;
-  color: var(--text-dim);
-  margin-top: 2px;
-}
+/* ── HISTORY ── */
+.h3-hist-toggle { padding: 18px 40px; background: #000; display: flex; justify-content: space-between; align-items: center; cursor: pointer; border-top: 1px solid #111; border-bottom: 1px solid #111; transition: background .2s; }
+.h3-hist-toggle:hover { background: #060606; }
+.h3-hist-item { padding: 22px 40px; background: #000; border-top: 1px solid #0A0A0A; transition: background .2s; }
+.h3-hist-item:hover { background: #050505; }
+.h3-feedback-ia { margin-top: 12px; padding: 8px 14px; border-left: 2px solid rgba(200,169,110,.2); font-size: 11px; color: #7A6840; font-family: 'JetBrains Mono', monospace; font-style: italic; line-height: 1.6; }
 
-/* Breakdown bars */
-.hx-breakdown-row { margin-bottom: 14px; }
-.hx-breakdown-head {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 5px;
-  font-size: 11px;
-}
+/* ── FLASH ── */
+.h3-flash { padding: 18px 40px; background: #060600; border-top: 2px solid #C8A96E; border-bottom: 1px solid #1A1600; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; }
+.h3-flash-stats { display: flex; gap: 0; }
+.h3-fstat { padding: 0 28px; border-left: 1px solid #111; text-align: center; }
+.h3-fstat:first-child { border-left: none; padding-left: 0; }
 
-/* ══ BOTTOM GRID ══ */
-.hx-grid-2 {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1px;
-  margin-top: 1px;
-  background: var(--border);
-}
+/* ── EMPTY ── */
+.h3-empty { max-width: 500px; margin: 100px auto; padding: 64px 44px; background: #000; border: 1px solid #111; border-top: 3px solid #E8341A; text-align: center; }
 
-/* ══ STANDARDS ══ */
-.hx-standards-section {
-  margin-top: 1px;
-}
-.hx-standards-header {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-bottom: none;
-  padding: 14px 20px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-.hx-standards-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 1px;
-  background: var(--border);
-}
-.hx-station-card {
-  background: var(--surface);
-  padding: 16px;
-  border-bottom: 2px solid transparent;
-  transition: border-color 0.2s;
-}
-.hx-station-card.hx-done {
-  background: rgba(29,200,184,0.04);
-  border-bottom-color: var(--teal);
-}
-.hx-station-card:not(.hx-done) { border-bottom-color: var(--border-2); }
+/* UTILS */
+.h3-lbl { font-family: 'JetBrains Mono', monospace; font-size: 8px; letter-spacing: .22em; text-transform: uppercase; color: #222; }
+.h3-mono { font-family: 'JetBrains Mono', monospace; }
+.h3-ttl { font-family: 'Bebas Neue', sans-serif; text-transform: uppercase; letter-spacing: .06em; }
+.h3-bio-safe { font-size: 8px; background: rgba(29,200,184,.1); color: #1DC8B8; border: 1px solid rgba(29,200,184,.2); padding: 1px 6px; letter-spacing: .1em; margin-left: 6px; font-family: 'JetBrains Mono', monospace; }
 
-/* ══ SESSION CARDS ══ */
-.hx-sessions-section {
-  margin-top: 1px;
-}
-.hx-sessions-header {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-bottom: none;
-  padding: 14px 20px;
-}
-.hx-session-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 1px;
-  background: var(--border);
-}
-.hx-session-card {
-  background: var(--surface);
-  display: flex;
-  flex-direction: column;
-}
-.hx-session-head {
-  padding: 16px;
-  border-bottom: 1px solid var(--border);
-  cursor: pointer;
-  transition: background 0.2s;
-}
-.hx-session-head:hover { background: var(--surface-2); }
-.hx-session-body {
-  padding: 14px 16px;
-  background: rgba(0,0,0,0.2);
-  border-bottom: 1px solid var(--border);
-}
-.hx-session-foot {
-  padding: 12px 16px;
-  margin-top: auto;
-}
-.hx-activity-row {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-left: 2px solid var(--red-border);
-  padding: 10px 12px;
-  margin-bottom: 6px;
-  font-size: 12px;
-}
-.hx-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  background: var(--surface-3);
-  border: 1px solid var(--border);
-  padding: 2px 7px;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 10px;
-  color: var(--text-mid);
-  margin-right: 4px;
-  margin-bottom: 4px;
-}
+/* Animations */
+@keyframes h3in { from { opacity:0; transform:translateY(14px); } to { opacity:1; transform:translateY(0); } }
+.a0{animation:h3in .5s ease both .04s}.a1{animation:h3in .5s ease both .12s}
+.a2{animation:h3in .5s ease both .20s}.a3{animation:h3in .5s ease both .28s}
+.a4{animation:h3in .5s ease both .36s}.a5{animation:h3in .5s ease both .44s}
+.a6{animation:h3in .5s ease both .52s}
 
-/* ══ HISTORY ══ */
-.hx-history-section {
-  margin-top: 1px;
-}
-.hx-history-toggle {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  padding: 14px 20px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-.hx-history-toggle:hover { background: var(--surface-2); }
-.hx-sesion-hist {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-top: none;
-  padding: 16px 20px;
-}
-.hx-sesion-hist + .hx-sesion-hist { border-top: 1px solid var(--border); }
+/* Scrollbar */
+.hx3 *{scrollbar-width:thin;scrollbar-color:#1A1A1A transparent}
+.hx3 *::-webkit-scrollbar{width:3px}
+.hx3 *::-webkit-scrollbar-thumb{background:#1A1A1A}
+.hx3 *::-webkit-scrollbar-thumb:hover{background:#E8341A}
 
-/* ══ RECOVERY ══ */
-.hx-recovery {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-left: 3px solid var(--red);
-  margin-top: 1px;
+/* Responsive */
+@media(max-width:960px){
+  .h3-hero{grid-template-columns:1fr}
+  .h3-hero-right{flex-direction:row;justify-content:space-around;min-height:auto;padding:28px 20px}
+  .h3-strips{grid-template-columns:1fr}
+  .h3-days-num{font-size:120px}
+  .h3-nav,.h3-hero-left,.h3-rv-head,.h3-rv-body,.h3-macro,.h3-sec-head,.h3-hist-toggle,.h3-hist-item,.h3-flash,.h3-brief,.h3-alert,.h3-focus{padding-left:20px;padding-right:20px}
+  .h3-strip{padding:22px 18px}
 }
-.hx-recovery-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 20px;
-  border-bottom: 1px solid var(--border);
-  flex-wrap: wrap;
-  gap: 10px;
-}
-.hx-recovery-body { padding: 18px 20px; }
-.hx-fase-badge {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  padding: 4px 12px;
-  border: 1px solid;
-}
-.hx-sub-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 9px 12px;
-  background: var(--void);
-  border: 1px solid var(--border);
-  margin-bottom: 4px;
-  font-size: 12px;
-}
-.hx-metric-box {
-  text-align: center;
-  padding: 14px 8px;
-  background: var(--void);
-  border: 1px solid var(--border);
-}
-.hx-metric-trio {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 4px;
-  margin-bottom: 14px;
-}
-
-/* ══ WEEKLY FLASH ══ */
-.hx-flash {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-top: 2px solid var(--gold);
-  padding: 16px 22px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 16px;
-  margin-top: 1px;
-}
-.hx-flash-stat {
-  padding: 0 20px;
-  border-left: 1px solid var(--border);
-  text-align: center;
-}
-.hx-flash-stat:first-child { border-left: none; padding-left: 0; }
-
-/* ══ EMPTY STATE ══ */
-.hx-empty {
-  max-width: 560px;
-  margin: 60px auto;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-top: 2px solid var(--red);
-  padding: 52px 40px;
-  text-align: center;
-}
-
-/* ══ PACE PREDICTION ══ */
-.hx-pace {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 12px 16px;
-  background: var(--void);
-  border: 1px solid var(--border);
-  margin-top: 14px;
-}
-
-/* ══ ENTRANCE ANIMATIONS ══ */
-@keyframes hxIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-.hx-a  { animation: hxIn 0.45s ease both; }
-.hx-a1 { animation-delay: 0.04s; }
-.hx-a2 { animation-delay: 0.09s; }
-.hx-a3 { animation-delay: 0.14s; }
-.hx-a4 { animation-delay: 0.19s; }
-.hx-a5 { animation-delay: 0.24s; }
-.hx-a6 { animation-delay: 0.29s; }
-.hx-a7 { animation-delay: 0.34s; }
-
-/* ══ SCROLLBAR ══ */
-* { scrollbar-width: thin; scrollbar-color: #1E2C3A transparent; }
-*::-webkit-scrollbar { width: 4px; height: 4px; }
-*::-webkit-scrollbar-track { background: transparent; }
-*::-webkit-scrollbar-thumb { background: #1E2C3A; }
-*::-webkit-scrollbar-thumb:hover { background: var(--red); }
-
-/* ══ RESPONSIVE ══ */
-@media (max-width: 900px) {
-  .hx-hero { grid-template-columns: 1fr; }
-  .hx-hero-right {
-    border-top: 1px solid var(--border);
-    border-left: none;
-    flex-direction: row;
-    justify-content: space-around;
-    padding: 20px;
-  }
-  .hx-hero-left { padding: 22px 20px; }
-  .hx-panels { grid-template-columns: 1fr; }
-  .hx-grid-2 { grid-template-columns: 1fr; }
-  .hx-wrap { padding: 14px 14px 40px; }
-  .hx-countdown-num { font-size: 80px; }
-}
-@media (max-width: 480px) {
-  .hx-wordmark-name { font-size: 20px; }
-  .hx-countdown-num { font-size: 64px; }
-}
+@media(max-width:480px){.h3-days-num{font-size:88px}.h3-rs-num{font-size:72px}}
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="hx-wrap">
+<div class="hx3">
 
-  {# ── HEADER ── #}
-  <header class="hx-header hx-a">
-    <div class="hx-wordmark">
-      <span class="hx-wordmark-name">Protocolo Hyrox</span>
+{# NAV #}
+<nav class="h3-nav a0">
+  <div class="h3-brand"><div class="h3-brand-bar"></div>PROTOCOLO HYROX</div>
+  <div class="h3-live"><div class="h3-dot"></div>SISTEMA ACTIVO</div>
+  <div class="h3-nav-btns">
+    {% if objetivo_activo %}
+    {% if not lesion_activa %}<a href="{% url 'hyrox:reportar_lesion' %}" class="h3-btn"><i class="fas fa-heartbeat"></i> Lesión</a>{% endif %}
+    <a href="{% url 'hyrox:registrar_entrenamiento' objective_id=objetivo_activo.id %}" class="h3-btn h3-btn-red"><i class="fas fa-plus"></i> Registrar Entreno</a>
+    {% endif %}
+  </div>
+</nav>
+
+{% if not objetivo_activo %}
+<div class="h3-empty a1">
+  <div style="font-size:52px;color:#E8341A;opacity:.3;margin-bottom:28px;"><i class="fas fa-flag-checkered"></i></div>
+  <p class="h3-lbl" style="margin-bottom:12px;">Sin objetivo activo</p>
+  <h2 class="h3-ttl" style="font-size:36px;color:#fff;margin-bottom:14px;">Configura tu evento</h2>
+  <p style="color:#333;font-size:14px;margin-bottom:36px;line-height:1.7;">Marca la fecha de tu competición y el sistema generará un plan de 12 semanas.</p>
+  <a href="{% url 'hyrox:crear_objetivo' %}" class="h3-btn h3-btn-red" style="display:inline-flex;padding:12px 28px;font-size:13px;"><i class="fas fa-rocket"></i> Configurar mi carrera</a>
+</div>
+{% else %}
+
+{% if resumen_semanal %}
+<div class="h3-flash a0">
+  <div>
+    <p class="h3-lbl" style="color:#C8A96E;margin-bottom:6px;"><i class="fas fa-star" style="margin-right:5px;"></i>Resumen Dominical</p>
+    <p class="h3-ttl" style="font-size:24px;color:#fff;">¡Semana completada!</p>
+  </div>
+  <div class="h3-flash-stats">
+    <div class="h3-fstat"><p class="h3-lbl" style="margin-bottom:6px;">Volumen</p><p class="h3-mono" style="font-weight:700;font-size:28px;color:#fff;">{{ resumen_semanal.volumen_kg }}<span style="font-size:12px;color:#333;margin-left:3px;">kg</span></p></div>
+    <div class="h3-fstat"><p class="h3-lbl" style="margin-bottom:6px;">Carrera</p><p class="h3-mono" style="font-weight:700;font-size:28px;color:#fff;">{{ resumen_semanal.distancia_km }}<span style="font-size:12px;color:#333;margin-left:3px;">km</span></p></div>
+    <div class="h3-fstat"><p class="h3-lbl" style="margin-bottom:6px;">RPE Medio</p><p class="h3-mono" style="font-weight:700;font-size:28px;color:#fff;">{{ resumen_semanal.rpe_medio }}<span style="font-size:12px;color:#333;margin-left:3px;">/10</span></p></div>
+  </div>
+</div>
+{% endif %}
+
+<div class="h3-alerts">
+  {% if morning_briefing %}<div class="h3-brief"><i class="fas fa-robot" style="margin-right:8px;opacity:.4;"></i>"{{ morning_briefing }}"</div>{% endif %}
+  {% if smart_alerts %}{% for alert in smart_alerts %}<div class="h3-alert"><i class="fas fa-bolt" style="color:#E8341A;flex-shrink:0;"></i><span>{{ alert }}</span></div>{% endfor %}{% endif %}
+  {% if mental_focus %}<div class="h3-focus"><i class="fas fa-brain" style="color:#C8A96E;flex-shrink:0;"></i><div><p class="h3-lbl" style="color:#C8A96E;margin-bottom:3px;">Focus Estratégico</p><span>{{ mental_focus }}</span></div></div>{% endif %}
+</div>
+
+{# ── HERO ── #}
+<div class="h3-hero a1">
+  <div class="h3-hero-left">
+    {% if objetivo_activo.fecha_evento %}
+    <p class="h3-day-lbl">días para la carrera</p>
+    <span class="h3-days-num" id="hx-days">—</span>
+    <p class="h3-days-unit">días restantes</p>
+    {% endif %}
+    <div class="h3-meta-strip">
+      <div><p class="h3-mk">Categoría</p><p class="h3-mv">{{ objetivo_activo.get_categoria_display }}</p></div>
+      {% if objetivo_activo.fecha_evento %}<div><p class="h3-mk">Fecha evento</p><p class="h3-mv">{{ objetivo_activo.fecha_evento|date:"d M Y" }}</p></div>{% endif %}
       {% if macro_data %}
-      <span class="hx-wordmark-meta">SEM&nbsp;{{ 12|add:"-"|add:macro_data.semanas_restantes }}&nbsp;/&nbsp;{{ macro_data.fase }}</span>
+      <div><p class="h3-mk">Semana</p><p class="h3-mv">{{ 12|add:"-"|add:macro_data.semanas_restantes }}<span style="color:#222;"> / 12</span></p></div>
+      <div><p class="h3-mk">Fase</p><p class="h3-mv h3-mv-red">{{ macro_data.fase }}</p></div>
       {% endif %}
     </div>
-    <div class="hx-btn-group">
-      {% if objetivo_activo %}
-      {% if not lesion_activa %}
-      <a href="{% url 'hyrox:reportar_lesion' %}" class="hx-btn">
-        <i class="fas fa-heartbeat"></i> Lesión
-      </a>
-      {% endif %}
-      <a href="{% url 'hyrox:registrar_entrenamiento' objective_id=objetivo_activo.id %}" class="hx-btn hx-btn-red">
-        <i class="fas fa-plus"></i> Registrar Entreno
-      </a>
-      {% endif %}
+    {% if daily_push %}<p class="h3-quote">"{{ daily_push }}"</p>{% endif %}
+    <div class="h3-hero-actions">
+      <button type="button" onclick="(function(){var c=document.querySelector('[x-ref=chatInput]');if(!c){alert('Coach no disponible.');return;}var r=c.closest('[x-data]');if(r&&r._x_dataStack){var d=r._x_dataStack[0];d.currentInput='Coach, hazme una simulación de carrera';setTimeout(function(){d.sendMessage();},80);}})()" class="h3-btn"><i class="fas fa-stopwatch"></i> Simular</button>
+      <a href="{% url 'hyrox:crear_objetivo' %}" class="h3-btn"><i class="fas fa-pen"></i> Editar</a>
+      <a href="{% url 'hyrox:cancelar_objetivo' objective_id=objetivo_activo.id %}" onclick="return confirm('¿Borrar TODOS tus entrenamientos Hyrox?');" class="h3-btn h3-btn-ghost"><i class="fas fa-trash-alt"></i> Reset</a>
     </div>
-  </header>
-
-  {# ── EMPTY STATE ── #}
-  {% if not objetivo_activo %}
-  <div class="hx-empty hx-a hx-a1">
-    <div style="font-size:44px; color:var(--red); opacity:0.4; margin-bottom:22px;">
-      <i class="fas fa-flag-checkered"></i>
-    </div>
-    <p class="hx-label" style="margin-bottom:10px; color:var(--text-dim);">Sin objetivo activo</p>
-    <h2 class="hx-display" style="font-size:26px; color:var(--text); margin-bottom:10px;">
-      Configura tu evento
-    </h2>
-    <p style="color:var(--text-mid); font-size:14px; margin-bottom:30px; line-height:1.6; max-width:380px; margin-left:auto; margin-right:auto;">
-      Marca la fecha de tu competición y el sistema generará un plan de 12 semanas para que llegues al máximo nivel.
-    </p>
-    <a href="{% url 'hyrox:crear_objetivo' %}" class="hx-btn hx-btn-red" style="display:inline-flex;">
-      <i class="fas fa-rocket"></i> Configurar mi carrera
-    </a>
   </div>
 
-  {% else %}
-
-  {# ── WEEKLY FLASH (Sunday) ── #}
-  {% if resumen_semanal %}
-  <div class="hx-flash hx-a hx-a1">
-    <div>
-      <p class="hx-label" style="color:var(--gold); margin-bottom:5px;">
-        <i class="fas fa-star" style="margin-right:4px;"></i>&nbsp;Resumen Dominical
-      </p>
-      <span class="hx-title" style="font-size:17px;">¡Semana completada!</span>
-    </div>
-    <div style="display:flex; gap:0;">
-      <div class="hx-flash-stat">
-        <p class="hx-label" style="margin-bottom:4px;">Volumen</p>
-        <p class="hx-mono" style="font-weight:700; font-size:20px;">{{ resumen_semanal.volumen_kg }}<span style="font-size:10px; color:var(--text-dim); margin-left:2px;">kg</span></p>
-      </div>
-      <div class="hx-flash-stat">
-        <p class="hx-label" style="margin-bottom:4px;">Carrera</p>
-        <p class="hx-mono" style="font-weight:700; font-size:20px;">{{ resumen_semanal.distancia_km }}<span style="font-size:10px; color:var(--text-dim); margin-left:2px;">km</span></p>
-      </div>
-      <div class="hx-flash-stat">
-        <p class="hx-label" style="margin-bottom:4px;">RPE Medio</p>
-        <p class="hx-mono" style="font-weight:700; font-size:20px;">{{ resumen_semanal.rpe_medio }}<span style="font-size:10px; color:var(--text-dim); margin-left:2px;">/10</span></p>
+  {# READINESS — FONDO ROJO SÓLIDO #}
+  <div class="h3-hero-right">
+    {% with score=objetivo_activo.get_race_readiness_score %}
+    <p class="h3-rs-lbl">RACE READINESS</p>
+    <p class="h3-rs-num">{{ score }}</p>
+    <p class="h3-rs-unit">PTS / 100</p>
+    <div class="h3-rs-bar-wrap">
+      <div class="h3-rs-bar"><div class="h3-rs-bar-fill" style="width:{{ score }}%;"></div></div>
+      <div style="display:flex;justify-content:space-between;margin-top:6px;">
+        <span style="font-family:'JetBrains Mono',monospace;font-size:8px;letter-spacing:.1em;color:rgba(255,255,255,.3);">0</span>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:8px;letter-spacing:.1em;color:rgba(255,255,255,.3);">100</span>
       </div>
     </div>
-  </div>
-  {% endif %}
-
-  {# ── BRIEFING & ALERTS STRIP ── #}
-  <div class="hx-strip-alerts hx-a hx-a1">
-    {% if morning_briefing %}
-    <div class="hx-briefing">
-      <i class="fas fa-robot" style="margin-right:8px; opacity:0.6;"></i>"{{ morning_briefing }}"
+    {% if readiness_svg_points %}
+    <div style="width:100%;">
+      <svg viewBox="-2 -2 104 34" style="width:100%;height:36px;overflow:visible;">
+        <polyline points="{{ readiness_svg_points }}" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <p class="h3-trend-lbl">TENDENCIA</p>
     </div>
     {% endif %}
-    {% if smart_alerts %}
-    {% for alert in smart_alerts %}
-    <div class="hx-alert">
-      <i class="fas fa-bolt hx-alert-icon"></i>
-      <span>{{ alert }}</span>
+    {% endwith %}
+  </div>
+</div>
+
+{# MACROCICLO #}
+{% if macro_data %}
+<div class="h3-macro a2">
+  <div><p class="h3-lbl" style="margin-bottom:4px;">Progreso global</p><p class="h3-macro-pct">{{ macro_data.pct_progreso }}<span>%</span></p></div>
+  <div class="h3-phases">
+    <div class="h3-phase {% if macro_data.fase_numero == 1 %}active{% elif macro_data.fase_numero > 1 %}past{% endif %}" style="flex:4;">Base</div>
+    <div class="h3-phase {% if macro_data.fase_numero == 2 %}active{% elif macro_data.fase_numero > 2 %}past{% endif %}" style="flex:4;">Potencia</div>
+    <div class="h3-phase {% if macro_data.fase_numero == 3 %}active{% elif macro_data.fase_numero > 3 %}past{% endif %}" style="flex:3;">Simulación</div>
+    <div class="h3-phase {% if macro_data.fase_numero == 4 %}active{% endif %}" style="flex:1;font-size:8px;">Tap</div>
+  </div>
+  <div class="h3-macro-right">
+    <p class="h3-lbl" style="margin-bottom:3px;">Fase actual</p>
+    <p class="h3-ttl" style="font-size:20px;color:#E8341A;">{{ macro_data.fase }}</p>
+    <p class="h3-lbl" style="margin-top:4px;font-style:italic;color:#1A1A1A;">"{{ macro_data.mantra }}"</p>
+  </div>
+</div>
+{% endif %}
+
+{# RECOVERY #}
+{% if lesion_activa %}
+<div class="h3-recovery a2">
+  <div class="h3-rv-head">
+    <div style="display:flex;align-items:center;gap:14px;">
+      <div style="width:36px;height:36px;background:rgba(232,52,26,.1);border:1px solid rgba(232,52,26,.3);display:flex;align-items:center;justify-content:center;animation:h3blink 2s ease-in-out infinite;"><i class="fas fa-heartbeat" style="color:#E8341A;"></i></div>
+      <div><p class="h3-ttl" style="font-size:18px;">Recovery Mode</p><p class="h3-lbl" style="margin-top:3px;">{{ lesion_activa.zona_afectada|title }} · desde {{ lesion_activa.fecha_inicio|date:"d M Y" }}</p></div>
+    </div>
+    <span class="h3-fase-tag {% if lesion_activa.fase == 'AGUDA' %}" style="color:#E8341A;border-color:rgba(232,52,26,.4);background:rgba(232,52,26,.08);">{% elif lesion_activa.fase == 'SUB_AGUDA' %}" style="color:#E89C1A;border-color:rgba(232,156,26,.4);background:rgba(232,156,26,.08);">{% else %}" style="color:#1DC8B8;border-color:rgba(29,200,184,.4);background:rgba(29,200,184,.08);">{% endif %}{{ lesion_activa.get_fase_display }}</span>
+  </div>
+  <div class="h3-rv-body">
+    {% if sustituciones_activas %}<p class="h3-lbl" style="margin-bottom:10px;"><i class="fas fa-exchange-alt" style="margin-right:6px;"></i>Sustituciones</p><div style="margin-bottom:16px;">{% for sub in sustituciones_activas %}<div class="h3-sub-row"><i class="fas fa-ban" style="color:#E8341A;font-size:10px;"></i><span style="color:#333;text-decoration:line-through;flex:1;">{{ sub.orig }}</span><i class="fas fa-arrow-right" style="color:#333;font-size:10px;"></i><span style="color:#1DC8B8;font-weight:600;flex:1;">{{ sub.sust }}</span></div>{% endfor %}</div>{% endif %}
+    {% if not ultimo_reporte %}
+    <div style="background:#080800;border:1px solid #1A1600;border-left:3px solid #C8A96E;padding:16px 20px;display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;">
+      <div><p class="h3-ttl" style="font-size:16px;color:#C8A96E;margin-bottom:4px;">Reporte Diario Pendiente</p><p style="font-size:11px;color:#333;">El Coach necesita saber cómo te encuentras hoy.</p></div>
+      <a href="{% url 'hyrox:reportar_recuperacion' lesion_id=lesion_activa.id %}" class="h3-btn" style="border-color:rgba(200,169,110,.3);color:#C8A96E;"><i class="fas fa-clipboard-list"></i> Evaluar Dolor</a>
+    </div>
+    {% else %}
+    <div class="h3-metrics3">
+      <div class="h3-metric"><p class="h3-metric-l">Dolor</p><p class="h3-metric-n {% if ultimo_reporte.dolor_movimiento > 5 %}" style="color:#E8341A;">{% elif ultimo_reporte.dolor_movimiento > 3 %}" style="color:#E89C1A;">{% else %}" style="color:#1DC8B8;">{% endif %}{{ ultimo_reporte.dolor_movimiento }}<span style="font-size:16px;color:#222;">/10</span></p></div>
+      <div class="h3-metric"><p class="h3-metric-l">Inflamación</p><p class="h3-metric-n {% if ultimo_reporte.inflamacion_percibida > 5 %}" style="color:#E8341A;">{% elif ultimo_reporte.inflamacion_percibida > 3 %}" style="color:#E89C1A;">{% else %}" style="color:#1DC8B8;">{% endif %}{{ ultimo_reporte.inflamacion_percibida }}<span style="font-size:16px;color:#222;">/10</span></p></div>
+      <div class="h3-metric"><p class="h3-metric-l">ROM</p><p class="h3-metric-n {% if ultimo_reporte.rango_movimiento >= 8 %}" style="color:#1DC8B8;">{% elif ultimo_reporte.rango_movimiento >= 5 %}" style="color:#E89C1A;">{% else %}" style="color:#E8341A;">{% endif %}{{ ultimo_reporte.rango_movimiento }}<span style="font-size:16px;color:#222;">/10</span></p></div>
+    </div>
+    {% endif %}
+    <div style="display:flex;justify-content:space-between;align-items:center;padding-top:14px;border-top:1px solid #0D0D0D;">
+      {% if ultimo_reporte %}<a href="{% url 'hyrox:reportar_recuperacion' lesion_id=lesion_activa.id %}" class="h3-btn"><i class="fas fa-sync-alt"></i> Actualizar</a>{% else %}<div></div>{% endif %}
+      {% if lesion_activa.fase != 'AGUDA' %}<form method="post" action="{% url 'hyrox:marcar_lesion_recuperada' lesion_id=lesion_activa.id %}">{% csrf_token %}<button type="submit" onclick="return confirm('¿Alta clínica?')" class="h3-btn" style="color:#1DC8B8;border-color:rgba(29,200,184,.3);"><i class="fas fa-check-double"></i> Alta Clínica</button></form>{% endif %}
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{# 3 STRIPS #}
+<div class="h3-strips a3">
+  <div class="h3-strip">
+    <p class="h3-strip-title">Esta semana</p>
+    <div class="h3-ring-row">
+      <div style="position:relative;width:64px;height:64px;flex-shrink:0;">
+        <svg viewBox="0 0 36 36" style="transform:rotate(-90deg);width:64px;height:64px;">
+          <circle cx="18" cy="18" r="15.5" fill="none" stroke="#0D0D0D" stroke-width="3"/>
+          {% if stats_semana.total_planificadas > 0 %}<circle cx="18" cy="18" r="15.5" fill="none" stroke="#E8341A" stroke-width="3" stroke-linecap="round" stroke-dasharray="{% widthratio stats_semana.total_completadas stats_semana.total_planificadas 97 %} 97"/>{% endif %}
+        </svg>
+        <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;"><span class="h3-mono" style="font-weight:700;font-size:16px;color:#fff;">{{ stats_semana.total_completadas }}</span></div>
+      </div>
+      <div><p class="h3-ring-n">{{ stats_semana.total_completadas }}<span style="font-size:28px;color:#1A1A1A;">/{{ stats_semana.total_planificadas }}</span></p><p style="font-size:11px;color:#222;margin-top:2px;">Sesiones completadas</p></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:13px;">
+      <div><div style="display:flex;justify-content:space-between;margin-bottom:5px;font-size:12px;"><span style="color:#2A2A2A;"><i class="fas fa-dumbbell" style="font-size:10px;margin-right:4px;"></i>Fuerza</span><span class="h3-mono" style="{% if stats_semana.fuerza_completadas >= stats_semana.fuerza_planificadas and stats_semana.fuerza_planificadas > 0 %}color:#1DC8B8;{% else %}color:#222;{% endif %}">{{ stats_semana.fuerza_completadas }}/{{ stats_semana.fuerza_planificadas }}</span></div><div class="h3-bar">{% if stats_semana.fuerza_planificadas > 0 %}<div class="h3-bar-fill h3-bt" style="width:{% widthratio stats_semana.fuerza_completadas stats_semana.fuerza_planificadas 100 %}%;"></div>{% endif %}</div></div>
+      <div><div style="display:flex;justify-content:space-between;margin-bottom:5px;font-size:12px;"><span style="color:#2A2A2A;"><i class="fas fa-running" style="font-size:10px;margin-right:4px;"></i>Carrera</span><span class="h3-mono" style="{% if stats_semana.carrera_completadas >= stats_semana.carrera_planificadas and stats_semana.carrera_planificadas > 0 %}color:#1DC8B8;{% else %}color:#222;{% endif %}">{{ stats_semana.carrera_completadas }}/{{ stats_semana.carrera_planificadas }}</span></div><div class="h3-bar">{% if stats_semana.carrera_planificadas > 0 %}<div class="h3-bar-fill h3-br" style="width:{% widthratio stats_semana.carrera_completadas stats_semana.carrera_planificadas 100 %}%;"></div>{% endif %}</div></div>
+      <div><div style="display:flex;justify-content:space-between;margin-bottom:5px;font-size:12px;"><span style="color:#2A2A2A;"><i class="fas fa-cube" style="font-size:10px;margin-right:4px;"></i>Específicos</span><span class="h3-mono" style="{% if stats_semana.espe_completadas >= stats_semana.espe_planificadas and stats_semana.espe_planificadas > 0 %}color:#1DC8B8;{% else %}color:#222;{% endif %}">{{ stats_semana.espe_completadas }}/{{ stats_semana.espe_planificadas }}</span></div><div class="h3-bar">{% if stats_semana.espe_planificadas > 0 %}<div class="h3-bar-fill h3-bg" style="width:{% widthratio stats_semana.espe_completadas stats_semana.espe_planificadas 100 %}%;"></div>{% endif %}</div></div>
+    </div>
+  </div>
+  <div class="h3-strip">
+    <p class="h3-strip-title">Perfil base</p>
+    <div class="h3-stat"><span class="h3-sk"><i class="fas fa-weight-hanging" style="margin-right:7px;font-size:10px;"></i>RM Peso Muerto</span><span class="h3-sv">{{ objetivo_activo.rm_peso_muerto|default:"—" }}<span style="font-size:10px;color:#222;"> kg</span></span></div>
+    <div class="h3-stat"><span class="h3-sk"><i class="fas fa-dumbbell" style="margin-right:7px;font-size:10px;"></i>RM Sentadilla</span><span class="h3-sv">{{ objetivo_activo.rm_sentadilla|default:"—" }}<span style="font-size:10px;color:#222;"> kg</span></span></div>
+    <div class="h3-stat"><span class="h3-sk"><i class="fas fa-running" style="margin-right:7px;font-size:10px;"></i>Test 5k</span><span class="h3-sv">{{ objetivo_activo.tiempo_5k_base|default:"—" }}</span></div>
+    <div style="margin-top:20px;"><p class="h3-lbl" style="margin-bottom:8px;">Equilibrio de fuerza</p><div style="display:flex;align-items:baseline;gap:10px;margin-bottom:8px;"><span class="h3-mono" style="font-weight:700;font-size:32px;color:#fff;">{{ strength_balance.ratio }}<span style="font-size:14px;color:#1A1A1A;">%</span></span><span style="font-size:11px;color:#222;">obj &gt;70%</span></div><div class="h3-bar" style="height:4px;margin-bottom:12px;"><div class="h3-bar-fill {% if strength_balance.ratio >= 70 %}h3-bt{% elif strength_balance.ratio >= 50 %}h3-bg{% else %}h3-br{% endif %}" style="width:{{ strength_balance.ratio }}%;"></div></div><p style="font-size:11px;color:#2A2A2A;line-height:1.6;">{{ strength_balance.advice }}</p></div>
+  </div>
+  <div class="h3-strip">
+    <p class="h3-strip-title">Desglose readiness</p>
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      <div class="h3-brow"><div class="h3-brow-head"><span style="color:#2A2A2A;">Resistencia</span><span class="h3-mono" style="color:#1DC8B8;">{{ readiness_breakdown.resistencia }}%</span></div><div class="h3-bar"><div class="h3-bar-fill h3-bt" style="width:{{ readiness_breakdown.resistencia }}%;"></div></div></div>
+      <div class="h3-brow"><div class="h3-brow-head"><span style="color:#2A2A2A;">Potencia</span><span class="h3-mono" style="color:#C8A96E;">{{ readiness_breakdown.potencia }}%</span></div><div class="h3-bar"><div class="h3-bar-fill h3-bg" style="width:{{ readiness_breakdown.potencia }}%;"></div></div></div>
+      <div class="h3-brow"><div class="h3-brow-head"><span style="color:#2A2A2A;">Fuerza Estructural</span><span class="h3-mono" style="color:#E8341A;">{{ readiness_breakdown.fuerza }}%</span></div><div class="h3-bar"><div class="h3-bar-fill h3-br" style="width:{{ readiness_breakdown.fuerza }}%;"></div></div></div>
+    </div>
+    {% if pace_prediction %}<div class="h3-pace"><i class="fas fa-stopwatch" style="color:#E8341A;flex-shrink:0;"></i><span>{{ pace_prediction }}</span></div>{% endif %}
+  </div>
+</div>
+
+{% if competition_progress %}
+<div class="h3-sec a4">
+  <div class="h3-sec-head">
+    <p class="h3-sec-title"><i class="fas fa-trophy"></i>Estándares HYROX — {{ objetivo_activo.get_categoria_display }}</p>
+    <div style="display:flex;align-items:center;gap:16px;">
+      <div><p class="h3-lbl" style="margin-bottom:3px;">Progreso global</p><p class="h3-ttl" style="font-size:34px;color:#fff;">{% widthratio competition_progress.progreso_global 1 1 %}<span style="font-size:18px;color:#1A1A1A;">%</span></p></div>
+    </div>
+  </div>
+  <div class="h3-std-grid">
+    {% for std in competition_progress.progreso %}
+    <div class="h3-std-card {% if std.is_completed %}done{% endif %}">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">
+        <p class="h3-std-name" style="{% if std.is_completed %}color:#1DC8B8;{% elif std.porcentaje > 0 %}color:#fff;{% else %}color:#1A1A1A;{% endif %}">{{ std.nombre }}</p>
+        {% if std.is_completed %}<i class="fas fa-check" style="color:#1DC8B8;font-size:11px;"></i>{% else %}<span class="h3-mono" style="font-size:10px;color:#1A1A1A;">{{ std.porcentaje }}%</span>{% endif %}
+      </div>
+      {% if std.es_dual %}
+      <div style="margin-bottom:7px;"><div style="display:flex;justify-content:space-between;font-size:10px;margin-bottom:3px;"><span style="color:#1A1A1A;">Carga</span><span class="h3-mono" style="color:#1A1A1A;">{{ std.kg_actual|floatformat:1 }}/{{ std.kg_objetivo }}kg</span></div><div class="h3-bar"><div class="h3-bar-fill {% if std.is_completed %}h3-bt{% else %}h3-br{% endif %}" style="width:{{ std.pct_kg }}%;"></div></div></div>
+      <div style="margin-bottom:7px;"><div style="display:flex;justify-content:space-between;font-size:10px;margin-bottom:3px;"><span style="color:#1A1A1A;">Volumen</span><span class="h3-mono" style="color:#1A1A1A;">{{ std.vol_actual|floatformat:0 }}/{{ std.vol_objetivo }}{{ std.vol_unit }}</span></div><div class="h3-bar"><div class="h3-bar-fill h3-bg" style="width:{{ std.pct_vol }}%;"></div></div></div>
+      {% else %}
+      <div style="margin-bottom:7px;"><div style="display:flex;justify-content:space-between;font-size:10px;margin-bottom:3px;"><span style="color:#1A1A1A;">Distancia</span><span class="h3-mono" style="color:#1A1A1A;">{{ std.vol_actual|floatformat:0 }}/{{ std.vol_objetivo }}m</span></div><div class="h3-bar" style="height:4px;"><div class="h3-bar-fill {% if std.is_completed %}h3-bt{% else %}h3-br{% endif %}" style="width:{{ std.porcentaje }}%;"></div></div></div>
+      {% endif %}
+      <div class="h3-bar" style="height:3px;margin-top:4px;"><div class="h3-bar-fill {% if std.is_completed %}h3-bt{% elif std.porcentaje >= 50 %}h3-bg{% else %}h3-br{% endif %}" style="width:{{ std.porcentaje }}%;"></div></div>
     </div>
     {% endfor %}
-    {% endif %}
-    {% if mental_focus %}
-    <div class="hx-focus">
-      <i class="fas fa-brain" style="color:var(--gold); flex-shrink:0; margin-top:1px;"></i>
-      <div>
-        <p class="hx-label" style="color:var(--gold); margin-bottom:3px;">Focus Estratégico</p>
-        <p style="font-size:12px; color:var(--text-mid);">{{ mental_focus }}</p>
-      </div>
-    </div>
-    {% endif %}
+  </div>
+</div>
+{% endif %}
+
+{% if plan_semanas %}
+<style>
+/* ── PLAN MACROCICLO ─────────────────────────────── */
+.hxp-wrap { margin-bottom: 32px; }
+.hxp-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; flex-wrap:wrap; gap:12px; }
+.hxp-title { font-family:'Bebas Neue',sans-serif; font-size:22px; letter-spacing:.14em; color:#fff; display:flex; align-items:center; gap:10px; }
+.hxp-title i { color:#E8341A; font-size:16px; }
+
+/* Phase pills */
+.hxp-phases { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:14px; }
+.hxp-ph { font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:.12em; padding:4px 12px; border:1px solid #1E1E1E; color:#333; background:transparent; white-space:nowrap; }
+.hxp-ph.active { background:#E8341A; border-color:#E8341A; color:#fff; }
+
+/* Progress bar */
+.hxp-bar-wrap { height:3px; background:#111; margin-bottom:8px; }
+.hxp-bar-fill { height:100%; background:#E8341A; transition:width .6s; }
+.hxp-bar-meta { display:flex; justify-content:space-between; font-family:'JetBrains Mono',monospace; font-size:9px; color:#333; margin-bottom:16px; letter-spacing:.1em; }
+.hxp-mantra { font-size:11px; color:#444; font-style:italic; border-left:2px solid #E8341A; padding-left:10px; margin-bottom:24px; line-height:1.6; }
+
+/* Semana section */
+.hxp-semana { margin-bottom:28px; }
+.hxp-semana-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; padding-bottom:8px; border-bottom:1px solid #111; }
+.hxp-semana-label { font-family:'Bebas Neue',sans-serif; font-size:15px; letter-spacing:.18em; color:#E8341A; }
+.hxp-semana-label.next { color:#555; }
+.hxp-semana-count { font-family:'JetBrains Mono',monospace; font-size:9px; color:#333; }
+
+/* Day grid */
+.hxp-dia-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:10px; }
+.hxp-dia { background:#080808; border:1px solid #111; padding:14px; display:flex; flex-direction:column; gap:8px; position:relative; transition:border-color .15s; }
+.hxp-dia.hoy { border-color:#E8341A; background:#0D0000; }
+.hxp-dia-top { display:flex; align-items:flex-start; justify-content:space-between; }
+.hxp-dia-fecha { display:flex; flex-direction:column; }
+.hxp-dia-nombre { font-family:'JetBrains Mono',monospace; font-size:9px; color:#444; letter-spacing:.12em; }
+.hxp-dia-num { font-family:'Bebas Neue',sans-serif; font-size:28px; color:#fff; line-height:1; }
+.hxp-hoy-tag { font-family:'JetBrains Mono',monospace; font-size:8px; letter-spacing:.14em; background:#E8341A; color:#fff; padding:2px 6px; }
+.hxp-man-tag { font-family:'JetBrains Mono',monospace; font-size:8px; letter-spacing:.14em; background:#1A1A1A; color:#555; padding:2px 6px; }
+.hxp-dia-tipo { display:flex; align-items:center; gap:5px; font-family:'Barlow Condensed',sans-serif; font-weight:700; font-size:11px; letter-spacing:.1em; text-transform:uppercase; }
+.hxp-dia-acts { list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:3px; flex:1; }
+.hxp-dia-acts li { font-size:10px; color:#444; font-family:'JetBrains Mono',monospace; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.hxp-dia-acts li::before { content:'›'; color:#E8341A; margin-right:4px; }
+.hxp-dia-btn { display:block; text-align:center; padding:7px; font-family:'Barlow Condensed',sans-serif; font-weight:700; font-size:10px; letter-spacing:.14em; text-transform:uppercase; border:1px solid #1A1A1A; color:#444; text-decoration:none; transition:all .15s; margin-top:4px; }
+.hxp-dia-btn:hover { border-color:#E8341A; color:#fff; text-decoration:none; }
+.hxp-dia-btn.hot { background:#E8341A; border-color:#E8341A; color:#fff; box-shadow:0 0 20px rgba(232,52,26,.35); }
+.hxp-dia.done { border-color:#1DC8B8; opacity:.85; }
+.hxp-dia.done .hxp-dia-num { color:#1DC8B8; }
+.hxp-done-tag { font-family:'JetBrains Mono',monospace; font-size:8px; letter-spacing:.14em; background:#0D2420; color:#1DC8B8; padding:2px 6px; border:1px solid #1DC8B8; }
+
+/* Más semanas toggle */
+.hxp-more-toggle { font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:.12em; color:#333; background:none; border:1px solid #111; padding:8px 18px; cursor:pointer; display:block; width:100%; text-align:center; margin-top:4px; transition:border-color .15s; }
+.hxp-more-toggle:hover { border-color:#E8341A; color:#E8341A; }
+</style>
+
+<div class="h3-sec a5 hxp-wrap">
+  <div class="hxp-header">
+    <p class="hxp-title"><i class="fas fa-calendar-alt"></i>Plan de Entrenamiento</p>
+    <a href="{% url 'hyrox:regenerar_plan' objective_id=objetivo_activo.id %}" onclick="return confirm('¿Regenerar el plan completo? Se eliminarán las sesiones planificadas.')" class="h3-btn"><i class="fas fa-sync-alt"></i> Regenerar</a>
   </div>
 
-  {# ── HERO: COUNTDOWN + READINESS ── #}
-  <div class="hx-hero hx-a hx-a2">
-    <div class="hx-hero-left">
-      <p class="hx-label" style="margin-bottom:14px;">Tiempo hasta el evento</p>
-      <div style="display:flex; align-items:flex-start; gap:28px; flex-wrap:wrap;">
-        {% if objetivo_activo.fecha_evento %}
-        <div>
-          <span class="hx-countdown-num" id="hx-days">—</span>
-          <p class="hx-countdown-unit">DÍAS RESTANTES</p>
-        </div>
-        {% endif %}
-        <div style="padding-left:24px; border-left:1px solid var(--border); padding-top:4px;">
-          <p class="hx-label" style="margin-bottom:6px;">Categoría</p>
-          <p class="hx-title" style="font-size:19px; color:var(--text); margin-bottom:6px;">{{ objetivo_activo.get_categoria_display }}</p>
-          {% if objetivo_activo.fecha_evento %}
-          <p class="hx-mono" style="font-size:11px; color:var(--text-dim);">{{ objetivo_activo.fecha_evento|date:"d M Y" }}</p>
-          {% endif %}
-        </div>
-      </div>
-      {% if daily_push %}
-      <p style="font-size:13px; color:var(--text-dim); margin-top:18px; font-style:italic; max-width:500px; line-height:1.55;">"{{ daily_push }}"</p>
-      {% endif %}
-      <div style="display:flex; gap:8px; margin-top:18px; padding-top:16px; border-top:1px solid var(--border); flex-wrap:wrap;">
-        <button type="button" onclick="(function(){
-            var chatEl = document.querySelector('[x-ref=chatInput]');
-            if(!chatEl){ alert('El chat del coach no está disponible en esta página.'); return; }
-            var r = chatEl.closest('[x-data]');
-            if(r && r._x_dataStack){
-              var d = r._x_dataStack[0];
-              d.currentInput = 'Coach, hazme una simulación de carrera';
-              setTimeout(function(){ d.sendMessage(); }, 80);
-            }
-          })()" class="hx-btn">
-          <i class="fas fa-stopwatch"></i> Simular Carrera
-        </button>
-        <a href="{% url 'hyrox:crear_objetivo' %}" class="hx-btn">
-          <i class="fas fa-pen"></i> Editar
-        </a>
-        <a href="{% url 'hyrox:cancelar_objetivo' objective_id=objetivo_activo.id %}"
-           onclick="return confirm('¿Seguro que quieres borrar TODOS tus entrenamientos Hyrox y empezar de cero?');"
-           class="hx-btn hx-btn-ghost-red">
-          <i class="fas fa-trash-alt"></i> Reset
-        </a>
-      </div>
-    </div>
-
-    {# Readiness panel #}
-    <div class="hx-hero-right">
-      <p class="hx-label" style="margin-bottom:16px; text-align:center;">Race Readiness</p>
-      <div class="hx-readiness-num
-        {% if objetivo_activo.get_race_readiness_score >= 70 %}
-          " style="color:var(--teal); text-align:center;">
-        {% elif objetivo_activo.get_race_readiness_score >= 40 %}
-          " style="color:var(--gold); text-align:center;">
-        {% else %}
-          " style="color:var(--red); text-align:center;">
-        {% endif %}
-        {{ objetivo_activo.get_race_readiness_score }}
-      </div>
-      <p class="hx-countdown-unit" style="text-align:center; margin-top:4px;">PTS / 100</p>
-      <div class="hx-vert-bar-track">
-        <div class="hx-vert-bar-fill
-          {% if objetivo_activo.get_race_readiness_score >= 70 %}hx-fill-teal
-          {% elif objetivo_activo.get_race_readiness_score >= 40 %}hx-fill-gold
-          {% else %}hx-fill-red{% endif %}"
-          style="height:{{ objetivo_activo.get_race_readiness_score }}%;"></div>
-      </div>
-      {% if readiness_svg_points %}
-      <div style="width:100%; height:36px; position:relative; margin-top:6px;">
-        <svg viewBox="-2 -2 104 34" style="width:100%; height:100%; overflow:visible;">
-          <defs>
-            <linearGradient id="rGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stop-color="#E8341A"/>
-              <stop offset="100%" stop-color="#C8A96E"/>
-            </linearGradient>
-          </defs>
-          <polyline points="{{ readiness_svg_points }}" fill="none" stroke="url(#rGrad)"
-            stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-        <p class="hx-label" style="text-align:center; margin-top:2px;">Tendencia</p>
-      </div>
-      {% endif %}
-    </div>
-  </div>
-
-  {# ── RECOVERY MODULE ── #}
-  {% if lesion_activa %}
-  <div class="hx-recovery hx-a hx-a3">
-    <div class="hx-recovery-header">
-      <div style="display:flex; align-items:center; gap:12px;">
-        <div style="width:30px; height:30px; background:var(--red-glow); border:1px solid var(--red-border); display:flex; align-items:center; justify-content:center;">
-          <i class="fas fa-heartbeat" style="color:var(--red); font-size:13px;"></i>
-        </div>
-        <div>
-          <p class="hx-title" style="font-size:14px; color:var(--text);">Recovery Mode</p>
-          <p class="hx-label" style="margin-top:2px;">{{ lesion_activa.zona_afectada|title }} · desde {{ lesion_activa.fecha_inicio|date:"d M Y" }}</p>
-        </div>
-      </div>
-      <span class="hx-fase-badge
-        {% if lesion_activa.fase == 'AGUDA' %}
-          " style="color:var(--red); border-color:var(--red-border); background:var(--red-glow);">
-        {% elif lesion_activa.fase == 'SUB_AGUDA' %}
-          " style="color:var(--warn); border-color:rgba(232,156,26,0.3); background:rgba(232,156,26,0.08);">
-        {% else %}
-          " style="color:var(--teal); border-color:rgba(29,200,184,0.3); background:var(--teal-dim);">
-        {% endif %}
-        {{ lesion_activa.get_fase_display }}
-      </span>
-    </div>
-    <div class="hx-recovery-body">
-      {% if sustituciones_activas %}
-      <p class="hx-label" style="margin-bottom:10px;"><i class="fas fa-exchange-alt" style="margin-right:6px;"></i>Sustituciones activas</p>
-      <div style="margin-bottom:16px;">
-        {% for sub in sustituciones_activas %}
-        <div class="hx-sub-row">
-          <span style="color:var(--red); font-size:10px;"><i class="fas fa-ban"></i></span>
-          <span style="color:var(--text-dim); text-decoration:line-through; flex:1;">{{ sub.orig }}</span>
-          <i class="fas fa-arrow-right" style="color:var(--text-dim); font-size:10px;"></i>
-          <span style="color:var(--teal); font-weight:600; flex:1;">{{ sub.sust }}</span>
-        </div>
-        {% endfor %}
-      </div>
-      {% endif %}
-
-      {% if not ultimo_reporte %}
-      <div style="background:rgba(200,169,110,0.05); border:1px solid rgba(200,169,110,0.2); padding:14px 16px; display:flex; justify-content:space-between; align-items:center; gap:14px; flex-wrap:wrap;">
-        <div>
-          <p class="hx-title" style="font-size:13px; color:var(--gold); margin-bottom:3px;">Reporte Diario Pendiente</p>
-          <p style="font-size:11px; color:var(--text-dim);">El Coach necesita saber cómo te encuentras hoy.</p>
-        </div>
-        <a href="{% url 'hyrox:reportar_recuperacion' lesion_id=lesion_activa.id %}" class="hx-btn" style="border-color:rgba(200,169,110,0.35); color:var(--gold);">
-          <i class="fas fa-clipboard-list"></i> Evaluar Dolor
-        </a>
-      </div>
-      {% else %}
-      <div class="hx-metric-trio">
-        <div class="hx-metric-box">
-          <p class="hx-label" style="margin-bottom:8px;">Dolor</p>
-          <p class="hx-mono" style="font-size:26px; font-weight:700;
-            {% if ultimo_reporte.dolor_movimiento > 5 %}color:var(--red);
-            {% elif ultimo_reporte.dolor_movimiento > 3 %}color:var(--warn);
-            {% else %}color:var(--teal);{% endif %}">
-            {{ ultimo_reporte.dolor_movimiento }}<span style="font-size:11px; color:var(--text-dim);">/10</span>
-          </p>
-        </div>
-        <div class="hx-metric-box">
-          <p class="hx-label" style="margin-bottom:8px;">Inflamación</p>
-          <p class="hx-mono" style="font-size:26px; font-weight:700;
-            {% if ultimo_reporte.inflamacion_percibida > 5 %}color:var(--red);
-            {% elif ultimo_reporte.inflamacion_percibida > 3 %}color:var(--warn);
-            {% else %}color:var(--teal);{% endif %}">
-            {{ ultimo_reporte.inflamacion_percibida }}<span style="font-size:11px; color:var(--text-dim);">/10</span>
-          </p>
-        </div>
-        <div class="hx-metric-box">
-          <p class="hx-label" style="margin-bottom:8px;">ROM</p>
-          <p class="hx-mono" style="font-size:26px; font-weight:700;
-            {% if ultimo_reporte.rango_movimiento >= 8 %}color:var(--teal);
-            {% elif ultimo_reporte.rango_movimiento >= 5 %}color:var(--warn);
-            {% else %}color:var(--red);{% endif %}">
-            {{ ultimo_reporte.rango_movimiento }}<span style="font-size:11px; color:var(--text-dim);">/10</span>
-          </p>
-        </div>
-      </div>
-      {% endif %}
-
-      <div style="display:flex; justify-content:space-between; align-items:center; padding-top:12px; border-top:1px solid var(--border);">
-        {% if ultimo_reporte %}
-        <a href="{% url 'hyrox:reportar_recuperacion' lesion_id=lesion_activa.id %}" class="hx-btn" style="font-size:11px;">
-          <i class="fas fa-sync-alt"></i> Actualizar
-        </a>
-        {% else %}<div></div>{% endif %}
-        {% if lesion_activa.fase != 'AGUDA' %}
-        <form method="post" action="{% url 'hyrox:marcar_lesion_recuperada' lesion_id=lesion_activa.id %}">
-          {% csrf_token %}
-          <button type="submit"
-            onclick="return confirm('¿Seguro que quieres dar el alta? Se eliminarán todas las restricciones.')"
-            class="hx-btn" style="color:var(--teal); border-color:rgba(29,200,184,0.3);">
-            <i class="fas fa-check-double"></i> Alta Clínica
-          </button>
-        </form>
-        {% endif %}
-      </div>
-    </div>
-  </div>
-  {% endif %}
-
-  {# ── MACROCYCLE TIMELINE ── #}
   {% if macro_data %}
-  <div class="hx-macro hx-a hx-a3">
-    <div class="hx-macro-header">
-      <div>
-        <p class="hx-label" style="margin-bottom:4px;"><i class="fas fa-layer-group" style="margin-right:6px;"></i>Macrociclo 12 semanas</p>
-        <p style="font-size:13px; color:var(--text-mid);">
-          Semana <strong style="color:var(--text);">{{ 12|add:"-"|add:macro_data.semanas_restantes }}</strong> de 12
-          &nbsp;·&nbsp; Fase: <strong style="color:var(--red);">{{ macro_data.fase }}</strong>
-        </p>
-      </div>
-      <div style="text-align:right;">
-        <p class="hx-display" style="font-size:34px; color:var(--text);">{{ macro_data.pct_progreso }}<span style="font-size:18px; font-family:'Barlow Condensed',sans-serif; font-weight:400;">%</span></p>
-        <p class="hx-label">Completado</p>
-      </div>
-    </div>
-
-    <div class="hx-phase-bar">
-      <div class="hx-phase {% if macro_data.fase_numero == 1 %}hx-active{% elif macro_data.fase_numero > 1 %}hx-past{% endif %}"
-        style="width:33.3%;">Base</div>
-      <div class="hx-phase {% if macro_data.fase_numero == 2 %}hx-active{% elif macro_data.fase_numero > 2 %}hx-past{% endif %}"
-        style="width:33.3%;">Potencia</div>
-      <div class="hx-phase {% if macro_data.fase_numero == 3 %}hx-active{% elif macro_data.fase_numero > 3 %}hx-past{% endif %}"
-        style="width:25%;">Simulación</div>
-      <div class="hx-phase {% if macro_data.fase_numero == 4 %}hx-active{% endif %}"
-        style="width:8.4%; font-size:8px;">Tap.</div>
-      <div class="hx-phase-marker" style="left:calc({{ macro_data.pct_progreso }}% - 1px);"></div>
-    </div>
-
-    <div class="hx-macro-footer">
-      <p style="font-size:12px; color:var(--text-dim); font-style:italic;">"{{ macro_data.mantra }}"</p>
-      <p class="hx-label">{{ macro_data.semanas_restantes }} sem. restantes</p>
-    </div>
+  <!-- Macrocycle phases -->
+  <div class="hxp-phases">
+    <span class="hxp-ph {% if macro_data.fase_numero == 1 %}active{% endif %}">① BASE ESTRUCTURAL</span>
+    <span class="hxp-ph {% if macro_data.fase_numero == 2 %}active{% endif %}">② POTENCIA ESPECÍFICA</span>
+    <span class="hxp-ph {% if macro_data.fase_numero == 3 %}active{% endif %}">③ SIMULACIÓN REAL</span>
+    <span class="hxp-ph {% if macro_data.fase_numero == 4 %}active{% endif %}">④ TAPERING</span>
   </div>
+  <div class="hxp-bar-wrap"><div class="hxp-bar-fill" style="width:{{ macro_data.pct_progreso }}%;"></div></div>
+  <div class="hxp-bar-meta">
+    <span>{{ macro_data.pct_progreso }}% COMPLETADO · FASE {{ macro_data.fase_numero }}/4</span>
+    <span>{{ macro_data.semanas_restantes }} SEMANAS AL EVENTO</span>
+  </div>
+  <p class="hxp-mantra">{{ macro_data.mantra }}</p>
   {% endif %}
 
-  {# ── 3 DATA PANELS ── #}
-  <div class="hx-panels hx-a hx-a4">
-
-    {# PANEL: ESTA SEMANA #}
-    <div class="hx-panel">
-      <p class="hx-panel-label">Esta Semana</p>
-      <div class="hx-ring-row">
-        <div style="position:relative; width:58px; height:58px; flex-shrink:0;">
-          <svg viewBox="0 0 36 36" style="transform:rotate(-90deg); width:58px; height:58px;">
-            <circle cx="18" cy="18" r="15.5" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="3"/>
-            {% if stats_semana.total_planificadas > 0 %}
-            <circle cx="18" cy="18" r="15.5" fill="none" stroke="#E8341A" stroke-width="3" stroke-linecap="round"
-              stroke-dasharray="{% widthratio stats_semana.total_completadas stats_semana.total_planificadas 97 %} 97"/>
-            {% endif %}
-          </svg>
-          <div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center;">
-            <span class="hx-mono" style="font-weight:700; font-size:15px; color:var(--text);">{{ stats_semana.total_completadas }}</span>
-          </div>
-        </div>
-        <div>
-          <p class="hx-ring-big">{{ stats_semana.total_completadas }}<span style="font-size:22px; color:var(--text-dim);">/{{ stats_semana.total_planificadas }}</span></p>
-          <p class="hx-ring-sub">Sesiones completadas</p>
-        </div>
-      </div>
-
-      <div style="display:flex; flex-direction:column; gap:12px;">
-        <div>
-          <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
-            <span style="font-size:12px; color:var(--text-dim);"><i class="fas fa-dumbbell" style="font-size:10px; margin-right:5px;"></i>Fuerza</span>
-            <span class="hx-mono" style="font-size:12px;
-              {% if stats_semana.fuerza_completadas >= stats_semana.fuerza_planificadas and stats_semana.fuerza_planificadas > 0 %}color:var(--teal);{% else %}color:var(--text-mid);{% endif %}">
-              {{ stats_semana.fuerza_completadas }}/{{ stats_semana.fuerza_planificadas }}
-            </span>
-          </div>
-          <div class="hx-track">
-            {% if stats_semana.fuerza_planificadas > 0 %}
-            <div class="hx-fill hx-fill-teal" style="width:{% widthratio stats_semana.fuerza_completadas stats_semana.fuerza_planificadas 100 %}%;"></div>
-            {% endif %}
-          </div>
-        </div>
-        <div>
-          <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
-            <span style="font-size:12px; color:var(--text-dim);"><i class="fas fa-running" style="font-size:10px; margin-right:5px;"></i>Carrera</span>
-            <span class="hx-mono" style="font-size:12px;
-              {% if stats_semana.carrera_completadas >= stats_semana.carrera_planificadas and stats_semana.carrera_planificadas > 0 %}color:var(--teal);{% else %}color:var(--text-mid);{% endif %}">
-              {{ stats_semana.carrera_completadas }}/{{ stats_semana.carrera_planificadas }}
-            </span>
-          </div>
-          <div class="hx-track">
-            {% if stats_semana.carrera_planificadas > 0 %}
-            <div class="hx-fill hx-fill-red" style="width:{% widthratio stats_semana.carrera_completadas stats_semana.carrera_planificadas 100 %}%;"></div>
-            {% endif %}
-          </div>
-        </div>
-        <div>
-          <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
-            <span style="font-size:12px; color:var(--text-dim);"><i class="fas fa-cube" style="font-size:10px; margin-right:5px;"></i>Específicos</span>
-            <span class="hx-mono" style="font-size:12px;
-              {% if stats_semana.espe_completadas >= stats_semana.espe_planificadas and stats_semana.espe_planificadas > 0 %}color:var(--teal);{% else %}color:var(--text-mid);{% endif %}">
-              {{ stats_semana.espe_completadas }}/{{ stats_semana.espe_planificadas }}
-            </span>
-          </div>
-          <div class="hx-track">
-            {% if stats_semana.espe_planificadas > 0 %}
-            <div class="hx-fill hx-fill-gold" style="width:{% widthratio stats_semana.espe_completadas stats_semana.espe_planificadas 100 %}%;"></div>
-            {% endif %}
-          </div>
-        </div>
-      </div>
+  <!-- Semana actual -->
+  {% for semana in plan_semanas %}
+  {% if semana.semana_idx == 0 %}
+  <div class="hxp-semana">
+    <div class="hxp-semana-head">
+      <span class="hxp-semana-label">Esta semana</span>
+      <span class="hxp-semana-count">{{ semana.sesiones|length }} SESIONES PLANIFICADAS</span>
     </div>
-
-    {# PANEL: PERFIL BASE #}
-    <div class="hx-panel">
-      <p class="hx-panel-label">Perfil Base</p>
-      <div style="margin-bottom:18px;">
-        <div class="hx-stat-row">
-          <span class="hx-stat-key"><i class="fas fa-weight-hanging" style="margin-right:6px; font-size:10px;"></i>RM Peso Muerto</span>
-          <span class="hx-stat-val">{{ objetivo_activo.rm_peso_muerto|default:"—" }}&thinsp;<span style="font-size:10px; color:var(--text-dim);">kg</span></span>
-        </div>
-        <div class="hx-stat-row">
-          <span class="hx-stat-key"><i class="fas fa-dumbbell" style="margin-right:6px; font-size:10px;"></i>RM Sentadilla</span>
-          <span class="hx-stat-val">{{ objetivo_activo.rm_sentadilla|default:"—" }}&thinsp;<span style="font-size:10px; color:var(--text-dim);">kg</span></span>
-        </div>
-        <div class="hx-stat-row">
-          <span class="hx-stat-key"><i class="fas fa-running" style="margin-right:6px; font-size:10px;"></i>Test 5k</span>
-          <span class="hx-stat-val">{{ objetivo_activo.tiempo_5k_base|default:"—" }}</span>
-        </div>
-      </div>
-
-      <p class="hx-label" style="margin-bottom:8px;">Equilibrio de Fuerza</p>
-      <div style="display:flex; align-items:baseline; gap:8px; margin-bottom:7px;">
-        <span class="hx-mono" style="font-weight:700; font-size:26px; color:var(--text);">{{ strength_balance.ratio }}<span style="font-size:13px; color:var(--text-dim);">%</span></span>
-        <span style="font-size:11px; color:var(--text-dim);">objetivo &gt;70%</span>
-      </div>
-      <div class="hx-track" style="margin-bottom:12px; height:4px;">
-        <div class="hx-fill
-          {% if strength_balance.ratio >= 70 %}hx-fill-teal
-          {% elif strength_balance.ratio >= 50 %}hx-fill-gold
-          {% else %}hx-fill-red{% endif %}"
-          style="width:{{ strength_balance.ratio }}%;"></div>
-      </div>
-      <p style="font-size:11px; color:var(--text-dim); line-height:1.55;">{{ strength_balance.advice }}</p>
-    </div>
-
-    {# PANEL: READINESS BREAKDOWN #}
-    <div class="hx-panel">
-      <p class="hx-panel-label">Desglose Readiness</p>
-      <div style="display:flex; flex-direction:column; gap:14px;">
-        <div class="hx-breakdown-row">
-          <div class="hx-breakdown-head">
-            <span style="font-size:12px; color:var(--text-mid);">Resistencia</span>
-            <span class="hx-mono" style="font-size:12px; color:var(--teal);">{{ readiness_breakdown.resistencia }}%</span>
+    <div class="hxp-dia-grid">
+      {% for item in semana.sesiones %}
+      <div class="hxp-dia {% if item.es_hoy %}hoy{% endif %} {% if item.completada %}done{% endif %}">
+        <div class="hxp-dia-top">
+          <div class="hxp-dia-fecha">
+            <span class="hxp-dia-nombre">{{ item.dia_str }}</span>
+            <span class="hxp-dia-num">{{ item.sesion.fecha|date:"d" }}</span>
           </div>
-          <div class="hx-track"><div class="hx-fill hx-fill-teal" style="width:{{ readiness_breakdown.resistencia }}%;"></div></div>
+          {% if item.completada %}<span class="hxp-done-tag">✓ LISTO</span>
+          {% elif item.es_hoy %}<span class="hxp-hoy-tag">HOY</span>
+          {% elif item.es_manana %}<span class="hxp-man-tag">MAÑANA</span>{% endif %}
         </div>
-        <div class="hx-breakdown-row">
-          <div class="hx-breakdown-head">
-            <span style="font-size:12px; color:var(--text-mid);">Potencia</span>
-            <span class="hx-mono" style="font-size:12px; color:var(--gold);">{{ readiness_breakdown.potencia }}%</span>
-          </div>
-          <div class="hx-track"><div class="hx-fill hx-fill-gold" style="width:{{ readiness_breakdown.potencia }}%;"></div></div>
+        <div class="hxp-dia-tipo" style="color:{{ item.tipo_color }};">
+          <i class="fas {{ item.tipo_icon }}" style="font-size:10px;"></i>{{ item.tipo_label }}
         </div>
-        <div class="hx-breakdown-row">
-          <div class="hx-breakdown-head">
-            <span style="font-size:12px; color:var(--text-mid);">Fuerza Estructural</span>
-            <span class="hx-mono" style="font-size:12px; color:var(--text);">{{ readiness_breakdown.fuerza }}%</span>
-          </div>
-          <div class="hx-track"><div class="hx-fill hx-fill-red" style="width:{{ readiness_breakdown.fuerza }}%;"></div></div>
-        </div>
-      </div>
-
-      {% if pace_prediction %}
-      <div class="hx-pace">
-        <i class="fas fa-stopwatch" style="color:var(--red); font-size:16px; flex-shrink:0;"></i>
-        <p style="font-size:12px; color:var(--text-mid); line-height:1.4;">{{ pace_prediction }}</p>
-      </div>
-      {% endif %}
-    </div>
-  </div>
-
-  {# ── COMPETITION STANDARDS ── #}
-  {% if competition_progress %}
-  <div class="hx-standards-section hx-a hx-a5">
-    <div class="hx-standards-header">
-      <div style="display:flex; align-items:center; gap:12px;">
-        <i class="fas fa-trophy" style="color:var(--gold); font-size:15px;"></i>
-        <div>
-          <p class="hx-title" style="font-size:14px; color:var(--text);">Estándares HYROX</p>
-          <p class="hx-label" style="margin-top:2px;">{{ objetivo_activo.get_categoria_display }} · Progreso Global</p>
-        </div>
-      </div>
-      <div style="display:flex; align-items:center; gap:16px;">
-        <div>
-          <p class="hx-display" style="font-size:28px; color:var(--text);">{% widthratio competition_progress.progreso_global 1 1 %}<span style="font-size:16px;">%</span></p>
-        </div>
-        <div style="position:relative; width:40px; height:40px;">
-          <svg viewBox="0 0 36 36" style="transform:rotate(-90deg); width:40px; height:40px;">
-            <circle cx="18" cy="18" r="15" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="2.5"/>
-            <circle cx="18" cy="18" r="15" fill="none" stroke="#E8341A" stroke-width="2.5" stroke-linecap="round"
-              stroke-dasharray="{% widthratio competition_progress.progreso_global 100 94 %} 94"/>
-          </svg>
-        </div>
-      </div>
-    </div>
-
-    <div class="hx-standards-grid">
-      {% for std in competition_progress.progreso %}
-      <div class="hx-station-card {% if std.is_completed %}hx-done{% endif %}">
-        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px;">
-          <p class="hx-title" style="font-size:12px;
-            {% if std.is_completed %}color:var(--teal);
-            {% elif std.porcentaje > 0 %}color:var(--text);
-            {% else %}color:var(--text-dim);{% endif %}">
-            {{ std.nombre }}
-          </p>
-          {% if std.is_completed %}
-          <span style="color:var(--teal); font-size:11px;"><i class="fas fa-check"></i></span>
+        <ul class="hxp-dia-acts">
+          {% if item.completada and item.sesion_completada %}
+            {% for act in item.sesion_completada.activities.all|slice:":3" %}
+            <li style="color:#1DC8B8;">{{ act.nombre_ejercicio }}</li>
+            {% endfor %}
           {% else %}
-          <span class="hx-mono" style="font-size:11px; color:var(--text-dim);">{{ std.porcentaje }}%</span>
+            {% for act_str in item.actividades_resumen %}<li>{{ act_str }}</li>{% endfor %}
+            {% if not item.actividades_resumen %}<li style="color:#222;">Sin detalle</li>{% endif %}
           {% endif %}
-        </div>
-
-        {% if std.es_dual %}
-        <div style="margin-bottom:8px;">
-          <div style="display:flex; justify-content:space-between; font-size:10px; margin-bottom:3px;">
-            <span style="color:var(--text-dim);">Carga</span>
-            <span class="hx-mono" style="color:var(--text-mid);">{{ std.kg_actual|floatformat:1 }} / {{ std.kg_objetivo }} kg</span>
+        </ul>
+        {% if item.completada %}
+          <div class="hxp-dia-btn" style="border-color:#1DC8B8;color:#1DC8B8;cursor:default;">
+            <i class="fas fa-check-circle"></i> Completado{% if item.sesion_completada.rpe_global %} · RPE {{ item.sesion_completada.rpe_global }}{% endif %}
           </div>
-          <div class="hx-track">
-            <div class="hx-fill {% if std.is_completed %}hx-fill-teal{% else %}hx-fill-red{% endif %}" style="width:{{ std.pct_kg }}%;"></div>
-          </div>
-        </div>
-        <div style="margin-bottom:8px;">
-          <div style="display:flex; justify-content:space-between; font-size:10px; margin-bottom:3px;">
-            <span style="color:var(--text-dim);">Volumen</span>
-            <span class="hx-mono" style="color:var(--text-mid);">{{ std.vol_actual|floatformat:0 }} / {{ std.vol_objetivo }} {{ std.vol_unit }}</span>
-          </div>
-          <div class="hx-track">
-            <div class="hx-fill hx-fill-gold" style="width:{{ std.pct_vol }}%;"></div>
-          </div>
-        </div>
         {% else %}
-        <div style="margin-bottom:8px;">
-          <div style="display:flex; justify-content:space-between; font-size:10px; margin-bottom:3px;">
-            <span style="color:var(--text-dim);">Distancia</span>
-            <span class="hx-mono" style="color:var(--text-mid);">{{ std.vol_actual|floatformat:0 }} / {{ std.vol_objetivo }} m</span>
-          </div>
-          <div class="hx-track" style="height:4px;">
-            <div class="hx-fill {% if std.is_completed %}hx-fill-teal{% else %}hx-fill-red{% endif %}" style="width:{{ std.porcentaje }}%;"></div>
-          </div>
-        </div>
+          <a href="{% url 'hyrox:registrar_entrenamiento_session' objective_id=objetivo_activo.id session_id=item.sesion.id %}"
+             class="hxp-dia-btn {% if item.es_hoy %}hot{% endif %}">
+            {% if item.es_hoy %}<i class="fas fa-upload"></i> Registrar{% else %}<i class="fas fa-eye"></i> Ver detalle{% endif %}
+          </a>
         {% endif %}
-
-        <div class="hx-track" style="height:4px; margin-top:4px;">
-          <div class="hx-fill {% if std.is_completed %}hx-fill-teal{% elif std.porcentaje >= 50 %}hx-fill-auto{% else %}hx-fill-red{% endif %}"
-            style="width:{{ std.porcentaje }}%;"></div>
-        </div>
       </div>
       {% endfor %}
     </div>
   </div>
   {% endif %}
+  {% endfor %}
 
-  {# ── PRÓXIMAS SESIONES ── #}
-  {% if proximas_sesiones %}
-  <div class="hx-sessions-section hx-a hx-a6">
-    <div class="hx-sessions-header" style="display:flex; justify-content:space-between; align-items:center;">
-      <p class="hx-title" style="font-size:14px; color:var(--text);">
-        <i class="fas fa-bolt" style="color:var(--red); margin-right:8px;"></i>
-        Plan de Entrenamientos
-      </p>
-      <a href="{% url 'hyrox:regenerar_plan' objective_id=objetivo_activo.id %}"
-         onclick="return confirm('¿Regenerar el plan completo? Las sesiones planificadas futuras se eliminarán y se crearán de nuevo con el motor actualizado.')"
-         style="font-size:10px; color:var(--text-dim); border:1px solid var(--border); padding:4px 10px; display:flex; align-items:center; gap:5px; text-decoration:none; transition:color 0.2s;"
-         onmouseover="this.style.color='var(--red)'" onmouseout="this.style.color='var(--text-dim)'">
-        <i class="fas fa-sync-alt"></i> Regenerar Plan
-      </a>
-    </div>
-    <div class="hx-session-grid" style="background:var(--border);">
-      {% for plan in proximas_sesiones %}
-      <div class="hx-session-card" x-data="{ open: false }">
-        <div class="hx-session-head" @click="open = !open">
-          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px;">
-            <span class="hx-mono" style="font-size:9px; color:var(--red); letter-spacing:0.12em;">
-              <i class="far fa-calendar-alt" style="margin-right:4px;"></i>{{ plan.fecha|date:"d M Y" }}
-            </span>
-            <span style="display:flex; align-items:center; gap:6px;">
-              <span style="font-size:11px; color:var(--text-dim);">{{ plan.activities.count }} bloques</span>
-              <i class="fas fa-chevron-down" style="color:var(--red); opacity:0.5; font-size:10px; transition:transform 0.2s;"
-                :style="open ? 'transform:rotate(180deg)' : ''"></i>
-            </span>
-          </div>
-          <p class="hx-title" style="font-size:14px; color:var(--text); line-height:1.2;">
-            {{ plan.titulo_sustituido|default:plan.titulo }}
-          </p>
+  <!-- Próximas semanas (colapsable) -->
+  {% with proximas=plan_semanas|slice:"1:" %}
+  {% if proximas %}
+  <div x-data="{ open: false }">
+    <button class="hxp-more-toggle" @click="open = !open">
+      <i class="fas fa-chevron-down" :style="open?'transform:rotate(180deg)':''" style="margin-right:6px;transition:transform .2s;"></i>
+      <span x-text="open ? 'Ocultar plan completo' : 'Ver plan completo ({{ proximas|length }} semanas más)'"></span>
+    </button>
+    <div x-show="open" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" style="margin-top:20px;">
+      {% for semana in proximas %}
+      <div class="hxp-semana">
+        <div class="hxp-semana-head">
+          <span class="hxp-semana-label next">Semana +{{ semana.semana_idx }}</span>
+          <span class="hxp-semana-count">{{ semana.sesiones|length }} SESIONES</span>
         </div>
-
-        <div class="hx-session-body" x-show="open" x-transition.opacity.duration.200ms>
-          {% for act in plan.activities.all %}
-          <div class="hx-activity-row">
-            <div style="display:flex; align-items:flex-start; gap:8px; margin-bottom:6px;">
-              <span class="hx-mono" style="font-size:10px; color:var(--red); opacity:0.6; padding-top:1px;">{{ forloop.counter }}</span>
-              <div>
-                {% if act.is_substituted %}
-                <p style="font-size:12px; color:var(--text); font-weight:600; margin-bottom:2px;">
-                  <i class="fas {{ act.sustituto_icon }}" style="color:var(--red); margin-right:4px; opacity:0.7;"></i>{{ act.sustituto }}
-                  <span style="display:inline-block; margin-left:6px; font-size:9px; background:var(--teal-dim); color:var(--teal); border:1px solid rgba(29,200,184,0.3); padding:1px 6px; letter-spacing:0.1em;">BIO-SAFE</span>
-                </p>
-                {% else %}
-                <p style="font-size:12px; color:var(--text); font-weight:600; margin-bottom:2px;">
-                  <i class="fas {{ act.get_icon_class }}" style="color:var(--red); margin-right:4px; opacity:0.7;"></i>{{ act.nombre_ejercicio }}
-                </p>
-                {% endif %}
+        <div class="hxp-dia-grid">
+          {% for item in semana.sesiones %}
+          <div class="hxp-dia">
+            <div class="hxp-dia-top">
+              <div class="hxp-dia-fecha">
+                <span class="hxp-dia-nombre">{{ item.dia_str }}</span>
+                <span class="hxp-dia-num">{{ item.sesion.fecha|date:"d" }}</span>
               </div>
             </div>
-            {% if act.data_metricas.series %}
-            <div style="display:flex; flex-wrap:wrap; gap:4px; margin-left:20px; margin-bottom:6px;">
-              {% for s in act.data_metricas.series %}
-              <span class="hx-chip">{{ s.reps }}r × {{ s.peso_kg }}kg</span>
-              {% endfor %}
+            <div class="hxp-dia-tipo" style="color:{{ item.tipo_color }};">
+              <i class="fas {{ item.tipo_icon }}" style="font-size:10px;"></i>{{ item.tipo_label }}
             </div>
-            {% endif %}
-            {% if act.data_metricas.distancia_km %}
-            <div style="margin-left:20px; margin-bottom:6px;">
-              <span class="hx-chip"><i class="fas fa-route" style="margin-right:3px;"></i>{{ act.data_metricas.distancia_km }}km{% if act.data_metricas.ritmo_objetivo %} · {{ act.data_metricas.ritmo_objetivo }}{% endif %}</span>
-            </div>
-            {% endif %}
-            {% if act.data_metricas.distancia_m %}
-            <div style="margin-left:20px; margin-bottom:6px;">
-              <span class="hx-chip"><i class="fas fa-arrows-alt-h" style="margin-right:3px;"></i>{{ act.data_metricas.distancia_m }}m{% if act.data_metricas.peso_kg %} · {{ act.data_metricas.peso_kg }}kg{% endif %}</span>
-            </div>
-            {% endif %}
-            {% if act.data_metricas.coach_tip %}
-            <div style="margin-left:20px; margin-top:6px; padding:6px 10px; background:var(--void); border:1px solid var(--border);">
-              <p style="font-size:10px; color:var(--gold); font-family:'JetBrains Mono',monospace;">
-                <i class="fas fa-robot" style="margin-right:4px; opacity:0.6;"></i>{{ act.data_metricas.coach_tip }}
-              </p>
-            </div>
-            {% endif %}
+            <ul class="hxp-dia-acts">
+              {% for act_str in item.actividades_resumen %}<li>{{ act_str }}</li>{% endfor %}
+            </ul>
+            <a href="{% url 'hyrox:registrar_entrenamiento_session' objective_id=objetivo_activo.id session_id=item.sesion.id %}"
+               class="hxp-dia-btn"><i class="fas fa-eye"></i> Ver detalle</a>
           </div>
           {% endfor %}
-        </div>
-
-        <div class="hx-session-foot">
-          {% if plan.is_blocked_by_injury %}
-          <button disabled class="hx-btn" style="width:100%; justify-content:center; opacity:0.4; cursor:not-allowed;">
-            <i class="fas fa-lock"></i> Bloqueado por Lesión
-          </button>
-          {% else %}
-          <a href="{% url 'hyrox:registrar_entrenamiento_session' objective_id=objetivo_activo.id session_id=plan.id %}"
-            class="hx-btn hx-btn-red" style="width:100%; justify-content:center;">
-            <i class="fas fa-upload"></i> Subir Resultado Real
-          </a>
-          {% endif %}
         </div>
       </div>
       {% endfor %}
     </div>
   </div>
   {% endif %}
+  {% endwith %}
+</div>
+{% endif %}
 
-  {# ── HISTORIAL ── #}
-  {% if sesiones %}
-  <div class="hx-history-section hx-a hx-a7" x-data="{ open: false }">
-    <div class="hx-history-toggle" @click="open = !open">
-      <div style="display:flex; align-items:center; gap:12px;">
-        <i class="fas fa-history" style="color:var(--red);"></i>
-        <p class="hx-title" style="font-size:14px; color:var(--text);">Historial de Entrenamientos</p>
-        <span class="hx-mono" style="font-size:10px; color:var(--text-dim); background:var(--surface-3); border:1px solid var(--border); padding:2px 8px;">{{ sesiones|length }}</span>
-      </div>
-      <i class="fas fa-chevron-down" style="color:var(--red); opacity:0.5; transition:transform 0.2s;"
-        :style="open ? 'transform:rotate(180deg)' : ''"></i>
+{% if sesiones %}
+<div class="a6" x-data="{ open: false }">
+  <div class="h3-hist-toggle" @click="open = !open">
+    <div style="display:flex;align-items:center;gap:14px;">
+      <i class="fas fa-history" style="color:#E8341A;"></i>
+      <span class="h3-ttl" style="font-size:18px;color:#fff;">Historial de Entrenamientos</span>
+      <span class="h3-mono" style="font-size:10px;color:#222;border:1px solid #111;padding:2px 8px;">{{ sesiones|length }}</span>
     </div>
-    <div x-show="open"
-      x-transition:enter="transition ease-out duration-250"
-      x-transition:enter-start="opacity-0 -translate-y-2"
-      x-transition:enter-end="opacity-100 translate-y-0">
-      {% for sesion in sesiones %}
-      <div class="hx-sesion-hist">
-        <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:10px; margin-bottom:10px;">
-          <div>
-            <p class="hx-title" style="font-size:14px; color:var(--text); margin-bottom:3px;">{{ sesion.titulo|default:"Entrenamiento General" }}</p>
-            <p class="hx-mono" style="font-size:10px; color:var(--red); letter-spacing:0.1em;">
-              <i class="far fa-calendar-alt" style="margin-right:4px;"></i>{{ sesion.fecha|date:"d M Y" }}
-            </p>
-          </div>
-          <div style="display:flex; flex-wrap:wrap; gap:6px; align-items:center;">
-            {% if sesion.rpe_global %}
-            <span class="hx-chip">RPE {{ sesion.rpe_global }}/10</span>
-            {% endif %}
-            {% if sesion.hr_maxima %}
-            <span class="hx-chip"><i class="fas fa-heartbeat" style="margin-right:3px;"></i>{{ sesion.hr_maxima }}bpm</span>
-            {% endif %}
-            <form action="{% url 'hyrox:borrar_entrenamiento' sesion.id %}" method="POST" style="display:inline;">
-              {% csrf_token %}
-              <button type="button"
-                onclick="if(confirm('¿Borrar este entrenamiento?')) this.closest('form').submit();"
-                class="hx-btn hx-btn-ghost-red" style="font-size:10px; padding:4px 10px;">
-                <i class="fas fa-trash-alt"></i>
-              </button>
-            </form>
-          </div>
-        </div>
-        <div style="display:flex; flex-wrap:wrap; gap:4px;">
-          {% for act in sesion.activities.all %}
-          <span class="hx-chip">
-            <i class="fas {{ act.get_icon_class }}" style="font-size:9px;"></i>
-            {{ act.nombre_ejercicio }}
-          </span>
-          {% endfor %}
-        </div>
-        {% if sesion.feedback_ia %}
-        <div style="margin-top:10px; padding:8px 12px; background:var(--void); border-left:2px solid var(--gold); font-size:11px; color:var(--gold); font-family:'JetBrains Mono',monospace; font-style:italic; line-height:1.5;">
-          <i class="fas fa-robot" style="margin-right:6px; opacity:0.6;"></i>{{ sesion.feedback_ia }}
-        </div>
-        {% endif %}
-      </div>
-      {% endfor %}
-    </div>
+    <i class="fas fa-chevron-down" style="color:#E8341A;opacity:.4;transition:transform .2s;" :style="open?'transform:rotate(180deg)':''"></i>
   </div>
-  {% endif %}
+  <div x-show="open" x-transition:enter="transition ease-out duration-250" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100">
+    {% for sesion in sesiones %}
+    <div class="h3-hist-item">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px;margin-bottom:12px;">
+        <div><p class="h3-ttl" style="font-size:18px;margin-bottom:4px;">{{ sesion.titulo|default:"Entrenamiento General" }}</p><p class="h3-mono" style="font-size:9px;color:#E8341A;letter-spacing:.14em;"><i class="far fa-calendar-alt" style="margin-right:4px;"></i>{{ sesion.fecha|date:"d M Y" }}</p></div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;">
+          {% if sesion.rpe_global %}<span class="h3-chip">RPE {{ sesion.rpe_global }}/10</span>{% endif %}
+          {% if sesion.hr_maxima %}<span class="h3-chip"><i class="fas fa-heartbeat" style="margin-right:3px;"></i>{{ sesion.hr_maxima }}bpm</span>{% endif %}
+          <form action="{% url 'hyrox:borrar_entrenamiento' sesion.id %}" method="POST" style="display:inline;">{% csrf_token %}<button type="button" onclick="if(confirm('¿Borrar?')) this.closest('form').submit();" class="h3-btn h3-btn-ghost" style="font-size:10px;padding:4px 10px;"><i class="fas fa-trash-alt"></i></button></form>
+        </div>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:4px;">{% for act in sesion.activities.all %}<span class="h3-chip"><i class="fas {{ act.get_icon_class }}" style="font-size:9px;"></i> {{ act.nombre_ejercicio }}</span>{% endfor %}</div>
+      {% if sesion.feedback_ia %}<div class="h3-feedback-ia"><i class="fas fa-robot" style="margin-right:6px;opacity:.4;"></i>{{ sesion.feedback_ia }}</div>{% endif %}
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
 
-  {% endif %}{# end objetivo_activo #}
-
+{% endif %}
 </div>
 
 <script>
 (function(){
   {% if objetivo_activo.fecha_evento %}
-  var target = new Date("{{ objetivo_activo.fecha_evento|date:'Y-m-d' }}T00:00:00");
-  var el = document.getElementById('hx-days');
-  if(el){
-    var diff = Math.ceil((target - new Date()) / 86400000);
-    el.textContent = diff > 0 ? diff : '0';
-  }
+  var t=new Date("{{ objetivo_activo.fecha_evento|date:'Y-m-d' }}T00:00:00"),el=document.getElementById('hx-days');
+  if(el){var d=Math.ceil((t-new Date())/86400000);el.textContent=d>0?d:'0';}
   {% endif %}
+  document.querySelectorAll('.h3-bar-fill,.h3-rs-bar-fill').forEach(function(f){var w=f.style.width;f.style.width='0';requestAnimationFrame(function(){setTimeout(function(){f.style.width=w;},200);});});
 })();
 </script>
 {% endblock %}
