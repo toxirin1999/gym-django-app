@@ -1,1894 +1,940 @@
-{% extends 'base.html' %}
 {% load static %}
-
 {% load clientes_filters %}
-
-{% block title %}Inicio – Nueva Gym{% endblock %}
-
-{% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/variables-base.css' %}?v=2">
-<link rel="stylesheet" href="{% static 'css/dashboard.css' %}?v=2">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-<link rel="stylesheet" href="{% static 'css/panel-home.css' %}?v=3">
-{% endblock %}
-
-{% block content %}
-
-<!-- Dashboard Principal -->
-
-
-<!-- MODO COMPLETO: Dashboard Original (Detallado) -->
-<!-- MODO FOCUS: Rediseñado a 4 Zonas -->
-<div id="focus-mode-container" class="focus-mode-container">
-
-
-    <!-- ── ZONA 2: HERO ENTRENO ──────────────────────────────────────── -->
-    <div class="hero-entreno-section animate-fadeSlide">
-
-        <!-- Divisor ornamental -->
-        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 1.5rem; width: 100%; max-width: 600px;">
-            <div style="flex: 1; height: 1px; background: linear-gradient(to right, transparent, rgba(200,170,110,0.3));"></div>
-            <span style="font-family: 'Share Tech Mono', monospace; font-size: 0.6rem; color: #785A28; letter-spacing: 0.3em; text-transform: uppercase;">◆ Protocolo de Combate ◆</span>
-            <div style="flex: 1; height: 1px; background: linear-gradient(to left, transparent, rgba(200,170,110,0.3));"></div>
-        </div>
-
-        <!-- GYM Hero -->
-        <div class="hero-gym" id="heroGymFocus" style="width: 100%; max-width: 680px; text-align: center;">
-            {% if proximo_entrenamiento %}
-
-            <!-- Fase / Semana / Día -->
-            <p style="font-family: 'Share Tech Mono', monospace; font-size: 0.65rem; color: #785A28; letter-spacing: 0.25em; text-transform: uppercase; margin-bottom: 0.5rem;">
-                · {{ proximo_entrenamiento.objetivo|upper|default:"BASE" }} · {{ proximo_entrenamiento.semana_nombre|default:"Semana" }} · Día {{ proximo_entrenamiento.dia|default:"1" }} ·
-            </p>
-
-            <!-- Número de día grande -->
-            <p style="font-family: 'Cinzel', serif; font-size: clamp(1rem, 3vw, 1.4rem); color: rgba(200,170,110,0.5); letter-spacing: 0.2em; margin-bottom: 0.25rem; text-transform: uppercase;">
-                Día {{ proximo_entrenamiento.dia|default:"1" }}
-            </p>
-
-            <!-- Nombre del entreno — HERO -->
-            <h1 class="hero-entreno-title">{{ proximo_entrenamiento.nombre|default:proximo_entrenamiento.rutina_nombre|default:"Sesión" }}</h1>
-
-            <!-- Badge volumen -->
-            <div style="display: inline-flex; align-items: center; gap: 8px; padding: 5px 16px; background: rgba(200,170,110,0.07); border: 1px solid rgba(200,170,110,0.2); margin: 0.75rem 0 1.25rem 0;">
-                <span style="width: 6px; height: 6px; border-radius: 50%; background: #4ade80; display: inline-block;"></span>
-                <span style="font-family: 'Share Tech Mono', monospace; font-size: 0.7rem; color: #C8AA6E; letter-spacing: 0.15em; text-transform: uppercase;">Volumen Sugerido: {% widthratio bio_readiness.volume_modifier|default:1 1 100 %}%</span>
-            </div>
-
-            <!-- Lista ejercicios -->
-            {% if proximo_entrenamiento.ejercicios %}
-            <div style="width: 100%; max-width: 600px; margin: 0 auto 0.5rem auto;">
-                {% for ej in proximo_entrenamiento.ejercicios|slice:":3" %}
-                <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; border-left: 2px solid rgba(200,170,110,0.25); background: rgba(10,22,40,0.5); margin-bottom: 2px; text-align: left;">
-                    <div style="display: flex; align-items: center; gap: 10px;">
-                        <i class="fas {{ ej.fa_icon|default:'fa-dumbbell' }}" style="color: #785A28; font-size: 0.75rem;"></i>
-                        <span style="font-family: 'Rajdhani', sans-serif; font-size: 0.95rem; color: #C8C8C8; font-weight: 600;">{{ ej.nombre }}</span>
-                    </div>
-                    <span style="font-family: 'Share Tech Mono', monospace; font-size: 0.75rem; color: #C8AA6E;">{{ ej.series|default:"4" }} × {{ ej.repeticiones|default:"4-6" }}</span>
-                </div>
-                {% endfor %}
-                {% if proximo_entrenamiento.ejercicios|length > 3 %}
-                <p style="font-family: 'Share Tech Mono', monospace; font-size: 0.65rem; color: #785A28; letter-spacing: 0.1em; text-align: center; margin-top: 6px;">
-                    + {{ proximo_entrenamiento.ejercicios|length|add:"-3" }} ejercicio{% if proximo_entrenamiento.ejercicios|length|add:"-3" != 1 %}s{% endif %} más
-                </p>
-                {% endif %}
-            </div>
-            {% endif %}
-
-            {% else %}
-            <h1 class="hero-entreno-title">Día de Descanso</h1>
-            <p class="hero-entreno-subtitle">RECUPERACIÓN ACTIVA · MOVILIDAD</p>
-            {% endif %}
-        </div>
-
-        <!-- HYROX Hero -->
-        {% if hyrox_objetivo %}
-        <div class="hero-hyrox hidden" id="heroHyroxFocus" style="width: 100%; max-width: 680px; text-align: center;">
-            {% if hyrox_proxima_sesion %}
-            <p style="font-family: 'Share Tech Mono', monospace; font-size: 0.65rem; color: #C84B31; letter-spacing: 0.25em; text-transform: uppercase; margin-bottom: 0.5rem;">
-                · {{ hyrox_proxima_sesion.tipo_fase|upper|default:"HYROX" }} ·
-            </p>
-            <h1 class="hero-entreno-title" style="color: #F0E6D3;">{{ hyrox_proxima_sesion.titulo|default:"Hyrox Session" }}</h1>
-            {% else %}
-            <h1 class="hero-entreno-title">Recuperación</h1>
-            <p class="hero-entreno-subtitle">SIN SESIÓN HYROX HOY</p>
-            {% endif %}
-        </div>
-        {% endif %}
-
-    </div>
-
-    <!-- ── ZONA 3: TOGGLE + BOTONES ─────────────────────────────────── -->
-    <div style="padding-bottom: 1.5rem; padding-top: 0;">
-
-        <!-- Toggle GYM/HYROX -->
-        {% if hyrox_objetivo %}
-        <div class="mode-switcher" style="margin: 0.75rem auto 1rem auto; max-width: 220px;" id="modeSwitcher">
-            <button class="mode-btn active-gym" data-mode="gym" id="btnGym">🏋️ GYM</button>
-            <button class="mode-btn" data-mode="hyrox" id="btnHyrox">🏃 HYROX</button>
-        </div>
-        {% endif %}
-
-        <!-- Botón EMPEZAR GYM -->
-        <div class="hero-gym flex flex-col items-center w-full" id="heroGymBtn">
-
-            {% include 'clientes/partials/_widget_nutricion.html' %}
-
-            {% if proximo_entrenamiento %}
-            <a href="{% url 'entrenos:entrenamiento_activo' cliente.id %}?fecha={{ hoy|date:'Y-m-d' }}&rutina_nombre={{ proximo_entrenamiento.rutina_nombre|urlencode }}&ejercicios={{ proximo_entrenamiento_json|urlencode }}" class="btn-empezar-cta btn-empezar-gym">
-                ⚔ EJECUTAR PROTOCOLO
-            </a>
-            {% else %}
-            <a href="{% url 'estoico:dashboard' %}" class="btn-empezar-cta btn-empezar-gym">
-                VER ESTOICO
-            </a>
-            {% endif %}
-
-            <!-- ── ÚLTIMAS SESIONES ────────────────────────────────────── -->
-            {% if actividades_recientes_focus %}
-            <div class="sessions-section">
-              <p class="sessions-header">ÚLTIMAS SESIONES</p>
-              <div class="sessions-card">
-                {% for act in actividades_recientes_focus %}
-                <div class="session-row{% if not forloop.first %} session-row--sep{% endif %}">
-                  <div class="session-left">
-                    <div class="session-title-row">
-                      <span class="session-date">{{ act.fecha_efectiva|date:"D d/m"|upper }}</span>
-                      <span class="session-title">
-                        {% if act.titulo %}{{ act.titulo }}
-                        {% elif act.entreno_gym %}{{ act.entreno_gym.rutina.nombre|default:"Entreno" }}
-                        {% else %}{{ act.get_tipo_display }}{% endif %}
-                      </span>
-                    </div>
-                    <div class="session-subtitle">
-                      <i class="fa-regular fa-calendar"></i>
-                      <span>Plan {{ act.fecha|date:"D d/m"|upper }}</span>
-                      {% if act.es_anticipada %}<span class="session-badge">⚡ anticipado</span>{% endif %}
-                    </div>
-                  </div>
-                  <div class="session-right">
-                    {% if act.duracion_minutos %}<span class="session-duration">{{ act.duracion_minutos }}m</span>{% endif %}
-                    <i class="fa-regular fa-circle-check session-check"></i>
-                  </div>
-                </div>
-                {% endfor %}
-              </div>
-            </div>
-            {% endif %}
-
-            {# nav grid eliminado — reemplazado por bottom-tab-bar fijo #}
-        </div>
-
-        <!-- Botón EMPEZAR HYROX -->
-        {% if hyrox_objetivo %}
-        <div class="hero-hyrox hidden flex flex-col items-center w-full" id="heroHyroxBtn">
-
-            {% include 'clientes/partials/_widget_nutricion.html' %}
-
-            {% if hyrox_proxima_sesion.objective %}
-            <a href="{% url 'hyrox:registrar_entrenamiento' hyrox_proxima_sesion.objective.id %}" class="btn-empezar-cta btn-empezar-hyrox">
-                ⚡ EJECUTAR HYROX
-            </a>
-            {% else %}
-            <a href="{% url 'hyrox:dashboard' %}" class="btn-empezar-cta btn-empezar-hyrox">
-                VER HYROX
-            </a>
-            {% endif %}
-
-            <!-- Botones secundarios -->
-            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; max-width: 480px; margin: 10px auto 0 auto; width: 100%;">
-                <a href="{% url 'hyrox:dashboard' %}" style="display: flex; align-items: center; justify-content: center; padding: 10px 4px; background: transparent; border: 1px solid rgba(200,75,49,0.2); color: #A03020; font-family: 'Cinzel', serif; font-size: 0.58rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; text-decoration: none; text-align: center; transition: all 0.2s;">
-                    ↺ VER PLAN
-                </a>
-                <a href="{% url 'hyrox:dashboard' %}" style="display: flex; align-items: center; justify-content: center; padding: 10px 4px; background: transparent; border: 1px solid rgba(200,75,49,0.3); color: #C84B31; font-family: 'Cinzel', serif; font-size: 0.58rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; text-decoration: none; text-align: center; transition: all 0.2s;">
-                    ⚡ DASHBOARD
-                </a>
-                <a href="{% url 'entrenos:registrar_actividad_libre' cliente.id %}" style="display: flex; align-items: center; justify-content: center; padding: 10px 4px; background: rgba(6,182,212,0.12); border: 1px solid rgba(6,182,212,0.45); color: #06b6d4; font-family: 'Cinzel', serif; font-size: 0.58rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; text-decoration: none; text-align: center; transition: all 0.2s;">
-                    ➕ AÑADIR
-                </a>
-                <a href="{% url 'entrenos:timeline_atleta' cliente.id %}" style="display: flex; align-items: center; justify-content: center; padding: 10px 4px; background: transparent; border: 1px solid rgba(6,182,212,0.25); color: rgba(6,182,212,0.7); font-family: 'Cinzel', serif; font-size: 0.58rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; text-decoration: none; text-align: center; transition: all 0.2s;">
-                    📅 TIMELINE
-                </a>
-            </div>
-        </div>
-        {% endif %}
-
-        <!-- Link modo detallado -->
-        <div style="text-align: center; margin-top: 12px;">
-            <button onclick="toggleDashboardMode()" style="background: none; border: none; font-family: 'Share Tech Mono', monospace; font-size: 0.6rem; color: rgba(200,170,110,0.3); letter-spacing: 0.2em; text-transform: uppercase; cursor: pointer; transition: color 0.2s;">
-                Cambiar a Modo Detallado
-            </button>
-        </div>
-    </div>
-
-
-    {% include 'clientes/partials/_widget_bienestar.html' %}
-
-    <!-- ── ZONA 4: PANEL ACWR (chart) — carga lazy via HTMX ──────────── -->
-    <div id="acwr-widget-container"
-         hx-get="{% url 'clientes:widget_acwr' cliente.id %}"
-         hx-trigger="load"
-         hx-swap="innerHTML">
-      <div class="widget-skeleton" style="margin:8px 16px;min-height:220px;border-radius:12px;"></div>
-    </div>
-
-    <!-- ── ZONA 6: STATS FOOTER ──────────────────────────────────────── -->
-    <div style="display: grid; grid-template-columns: repeat(4, 1fr); border-top: 1px solid rgba(200,170,110,0.1); padding-top: 0.75rem; padding-bottom: 0.5rem; gap: 0;">
-        <div style="text-align: center; padding: 0 8px; border-right: 1px solid rgba(200,170,110,0.08);">
-            <div style="font-family: 'Share Tech Mono', monospace; font-size: clamp(1.1rem, 3vw, 1.5rem); color: #C8AA6E; font-weight: 700; line-height: 1;">{{ entrenos_count|default:"0" }}</div>
-            <div style="font-family: 'Share Tech Mono', monospace; font-size: 0.55rem; color: #785A28; letter-spacing: 0.15em; text-transform: uppercase; margin-top: 3px;">Sesiones</div>
-        </div>
-        <div style="text-align: center; padding: 0 8px; border-right: 1px solid rgba(200,170,110,0.08);">
-            <div style="font-family: 'Share Tech Mono', monospace; font-size: clamp(1.1rem, 3vw, 1.5rem); color: #C8AA6E; font-weight: 700; line-height: 1;">{{ carga_total_acumulada|default:"0" }}</div>
-            <div style="font-family: 'Share Tech Mono', monospace; font-size: 0.55rem; color: #785A28; letter-spacing: 0.15em; text-transform: uppercase; margin-top: 3px;">Carga Total</div>
-        </div>
-        <div style="text-align: center; padding: 0 8px; border-right: 1px solid rgba(200,170,110,0.08);">
-            <div style="font-family: 'Share Tech Mono', monospace; font-size: clamp(1.1rem, 3vw, 1.5rem); color: #C8AA6E; font-weight: 700; line-height: 1;">{{ consistencia_pct|default:"0" }}</div>
-            <div style="font-family: 'Share Tech Mono', monospace; font-size: 0.55rem; color: #785A28; letter-spacing: 0.15em; text-transform: uppercase; margin-top: 3px;">Consistencia</div>
-        </div>
-        <div style="text-align: center; padding: 0 8px;">
-            <div style="font-family: 'Share Tech Mono', monospace; font-size: clamp(1.1rem, 3vw, 1.5rem); font-weight: 700; line-height: 1;
-                {% if acwr_actual >= 1.3 %}color: #ef4444;
-                {% elif acwr_actual >= 0.8 %}color: #C8AA6E;
-                {% else %}color: #4ade80;{% endif %}">
-                {{ acwr_actual|floatformat:2|default:"—" }}
-            </div>
-            <div style="font-family: 'Share Tech Mono', monospace; font-size: 0.55rem; color: #785A28; letter-spacing: 0.15em; text-transform: uppercase; margin-top: 3px;">ACWR</div>
-        </div>
-    </div>
-
-{% include 'clientes/partials/_modal_acwr.html' %}
-
-</div> <!-- #focus-mode-container -->
-
-<!-- ================================================================== -->
-<!-- ================================================================== -->
-<!-- FULL MODE CONTAINER — LoL Aesthetic -->
-<!-- ================================================================== -->
-<!-- ================================================================== -->
-<!-- FULL MODE — LEAGUE OF LEGENDS CHAMPION DOSSIER                   -->
-<!-- ================================================================== -->
-<style>
-/* ── Base container ─────────────────────────────────────────────── */
-#full-mode-container {
-    background: #010A13;
-    position: relative;
-    overflow-x: hidden;
-}
-
-/* Atmospheric depth layers */
-#full-mode-container > .lol-atmo {
-    position: fixed;
-    inset: 0;
-    pointer-events: none;
-    z-index: 0;
-    background:
-        radial-gradient(ellipse 100% 55% at 50% -5%, rgba(5,25,60,0.7) 0%, transparent 70%),
-        radial-gradient(ellipse 70% 40% at 85% 110%, rgba(200,170,110,0.05) 0%, transparent 60%),
-        radial-gradient(ellipse 50% 30% at 10% 100%, rgba(30,8,0,0.3) 0%, transparent 60%);
-}
-
-/* Horizontal scanline texture */
-#full-mode-container > .lol-scanlines {
-    position: fixed;
-    inset: 0;
-    pointer-events: none;
-    z-index: 0;
-    background: repeating-linear-gradient(
-        0deg,
-        transparent,
-        transparent 3px,
-        rgba(0, 0, 0, 0.025) 3px,
-        rgba(0, 0, 0, 0.025) 4px
-    );
-}
-
-.lol-wrapper {
-    position: relative;
-    z-index: 1;
-    max-width: 900px;
-    margin: 0 auto;
-}
-
-/* ── HEADER ─────────────────────────────────────────────────────── */
-.lol-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    padding: 1.5rem 0 1.75rem;
-    margin-bottom: 1.5rem;
-    position: relative;
-}
-
-.lol-header::after {
-    content: '';
-    position: absolute;
-    bottom: 0; left: 0; right: 0;
-    height: 1px;
-    background: linear-gradient(90deg,
-        transparent 0%,
-        rgba(200,170,110,0.25) 15%,
-        rgba(200,170,110,0.7) 40%,
-        rgba(240,230,211,0.9) 50%,
-        rgba(200,170,110,0.7) 60%,
-        rgba(200,170,110,0.25) 85%,
-        transparent 100%
-    );
-}
-
-/* Diamond ornaments on the header line */
-.lol-header::before {
-    content: '◆';
-    position: absolute;
-    bottom: -6px;
-    left: 50%;
-    transform: translateX(-50%);
-    font-size: 0.55rem;
-    color: #C8AA6E;
-    background: #010A13;
-    padding: 0 8px;
-    line-height: 1;
-}
-
-.lol-eyebrow {
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.52rem;
-    color: #785A28;
-    letter-spacing: 0.45em;
-    text-transform: uppercase;
-    margin-bottom: 8px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.lol-eyebrow::before,
-.lol-eyebrow::after {
-    content: '';
-    display: inline-block;
-    width: 24px;
-    height: 1px;
-    background: linear-gradient(90deg, transparent, #785A28);
-    opacity: 0.7;
-}
-
-.lol-eyebrow::after {
-    background: linear-gradient(90deg, #785A28, transparent);
-}
-
-.lol-client-name {
-    font-family: 'Cinzel', serif;
-    font-size: clamp(1.7rem, 4.5vw, 2.6rem);
-    font-weight: 700;
-    background: linear-gradient(180deg, #F0E6D3 0%, #C8AA6E 45%, #A08040 75%, #785A28 100%);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-    margin: 0;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    line-height: 1;
-    filter: drop-shadow(0 2px 12px rgba(200,170,110,0.2));
-}
-
-.lol-quote {
-    font-family: 'Rajdhani', sans-serif;
-    font-size: 0.78rem;
-    color: rgba(200,170,110,0.38);
-    font-style: italic;
-    margin-top: 10px;
-    border-left: 2px solid rgba(200,170,110,0.18);
-    padding-left: 10px;
-    max-width: 400px;
-    line-height: 1.5;
-}
-
-.lol-header-actions {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    flex-shrink: 0;
-    padding-top: 6px;
-}
-
-.lol-icon-btn {
-    width: 36px;
-    height: 36px;
-    background: rgba(10,22,40,0.9);
-    border: 1px solid rgba(200,170,110,0.2);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #785A28;
-    text-decoration: none;
-    transition: all 0.25s;
-    clip-path: polygon(5px 0%, calc(100% - 5px) 0%, 100% 5px, 100% calc(100% - 5px), calc(100% - 5px) 100%, 5px 100%, 0% calc(100% - 5px), 0% 5px);
-    font-size: 0.75rem;
-}
-
-.lol-icon-btn:hover {
-    border-color: rgba(200,170,110,0.55);
-    color: #C8AA6E;
-    background: rgba(200,170,110,0.09);
-    box-shadow: 0 0 14px rgba(200,170,110,0.15);
-}
-
-.lol-focus-btn {
-    padding: 8px 20px;
-    background: transparent;
-    border: 1px solid rgba(200,170,110,0.3);
-    color: #C8AA6E;
-    font-family: 'Cinzel', serif;
-    font-size: 0.58rem;
-    font-weight: 700;
-    letter-spacing: 0.22em;
-    text-transform: uppercase;
-    cursor: pointer;
-    transition: all 0.25s;
-    clip-path: polygon(6px 0%, calc(100% - 6px) 0%, 100% 6px, 100% calc(100% - 6px), calc(100% - 6px) 100%, 6px 100%, 0% calc(100% - 6px), 0% 6px);
-}
-
-.lol-focus-btn:hover {
-    background: rgba(200,170,110,0.08);
-    border-color: #C8AA6E;
-    box-shadow: 0 0 16px rgba(200,170,110,0.2), inset 0 0 12px rgba(200,170,110,0.05);
-}
-
-/* ── ORNATE PANEL ────────────────────────────────────────────────── */
-.lol-panel {
-    position: relative;
-    background: linear-gradient(145deg, #0D1F38 0%, #081525 60%, #050F1C 100%);
-    border: 1px solid rgba(200,170,110,0.18);
-    margin-bottom: 1.25rem;
-    overflow: hidden;
-    transition: border-color 0.3s;
-}
-
-.lol-panel:hover {
-    border-color: rgba(200,170,110,0.3);
-}
-
-/* Top shimmer bar */
-.lol-panel::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    height: 2px;
-    background: linear-gradient(90deg,
-        transparent 0%,
-        rgba(200,170,110,0.4) 15%,
-        #C8AA6E 35%,
-        #F0E6D3 50%,
-        #C8AA6E 65%,
-        rgba(200,170,110,0.4) 85%,
-        transparent 100%
-    );
-    animation: lol-shimmer-bar 4s ease-in-out infinite;
-}
-
-@keyframes lol-shimmer-bar {
-    0%, 100% { opacity: 0.6; }
-    50% { opacity: 1; }
-}
-
-/* Bottom subtle glow */
-.lol-panel::after {
-    content: '';
-    position: absolute;
-    bottom: 0; left: 0; right: 0;
-    height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(200,170,110,0.12) 50%, transparent);
-}
-
-/* Corner ornaments */
-.lol-corner {
-    position: absolute;
-    width: 14px;
-    height: 14px;
-    border-color: rgba(200,170,110,0.5);
-    border-style: solid;
-    pointer-events: none;
-}
-.lol-corner.tl { top: -1px; left: -1px; border-width: 2px 0 0 2px; }
-.lol-corner.tr { top: -1px; right: -1px; border-width: 2px 2px 0 0; }
-.lol-corner.bl { bottom: -1px; left: -1px; border-width: 0 0 2px 2px; }
-.lol-corner.br { bottom: -1px; right: -1px; border-width: 0 2px 2px 0; }
-
-.lol-panel-inner {
-    padding: 1.3rem 1.5rem 1.4rem;
-}
-
-/* ── HERO TAG & TITLE ────────────────────────────────────────────── */
-.lol-hero-tag {
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.52rem;
-    color: #785A28;
-    letter-spacing: 0.32em;
-    text-transform: uppercase;
-    margin-bottom: 5px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.lol-hero-tag .lol-tag-dot {
-    width: 5px;
-    height: 5px;
-    border-radius: 50%;
-    background: #C8AA6E;
-    display: inline-block;
-    animation: lol-pulse 2.5s ease-in-out infinite;
-    box-shadow: 0 0 6px rgba(200,170,110,0.5);
-}
-
-@keyframes lol-pulse {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.5; transform: scale(0.8); }
-}
-
-.lol-hero-title {
-    font-family: 'Cinzel', serif;
-    font-size: clamp(1.05rem, 2.5vw, 1.55rem);
-    font-weight: 700;
-    color: #F0E6D3;
-    margin: 0 0 14px;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-    line-height: 1.2;
-}
-
-.lol-vol-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 7px;
-    padding: 4px 14px 4px 10px;
-    background: rgba(200,170,110,0.06);
-    border: 1px solid rgba(200,170,110,0.18);
-    margin-bottom: 1.1rem;
-}
-
-.lol-vol-pip {
-    width: 5px;
-    height: 5px;
-    border-radius: 50%;
-    background: #4ade80;
-    display: inline-block;
-    box-shadow: 0 0 7px rgba(74,222,128,0.7);
-    flex-shrink: 0;
-}
-
-.lol-vol-text {
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.58rem;
-    color: #C8AA6E;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-}
-
-/* ── ABILITY ROWS ────────────────────────────────────────────────── */
-.lol-ability-label {
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.48rem;
-    color: rgba(120,90,40,0.7);
-    letter-spacing: 0.3em;
-    text-transform: uppercase;
-    margin-bottom: 7px;
-}
-
-.lol-ability-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 7px 12px 7px 10px;
-    background: rgba(1,10,19,0.55);
-    border-left: 2px solid rgba(200,170,110,0.13);
-    margin-bottom: 2px;
-    transition: all 0.2s ease;
-    position: relative;
-    overflow: hidden;
-}
-
-.lol-ability-row::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(90deg, rgba(200,170,110,0.05) 0%, transparent 60%);
-    opacity: 0;
-    transition: opacity 0.2s;
-}
-
-.lol-ability-row:hover::before { opacity: 1; }
-
-.lol-ability-row:hover {
-    border-left-color: rgba(200,170,110,0.45);
-    background: rgba(13,31,56,0.7);
-}
-
-.lol-ability-row.adapted { border-left-color: rgba(200,170,110,0.55); }
-
-.lol-ability-left {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    position: relative;
-}
-
-.lol-ability-icon {
-    width: 26px;
-    height: 26px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba(200,170,110,0.05);
-    border: 1px solid rgba(200,170,110,0.14);
-    clip-path: polygon(4px 0%, calc(100% - 4px) 0%, 100% 4px, 100% calc(100% - 4px), calc(100% - 4px) 100%, 4px 100%, 0% calc(100% - 4px), 0% 4px);
-    flex-shrink: 0;
-    font-size: 0.6rem;
-    color: #785A28;
-    transition: all 0.2s;
-}
-
-.lol-ability-row:hover .lol-ability-icon,
-.lol-ability-row.adapted .lol-ability-icon {
-    border-color: rgba(200,170,110,0.4);
-    color: #C8AA6E;
-    background: rgba(200,170,110,0.08);
-}
-
-.lol-ability-name {
-    font-family: 'Rajdhani', sans-serif;
-    font-size: 0.88rem;
-    color: #AAAAAA;
-    font-weight: 600;
-    letter-spacing: 0.01em;
-    transition: color 0.2s;
-}
-
-.lol-ability-row:hover .lol-ability-name { color: #E0D5C0; }
-.lol-ability-row.adapted .lol-ability-name { color: #F0E6D3; }
-
-.lol-adapted-badge {
-    display: inline-block;
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.45rem;
-    color: #C8AA6E;
-    letter-spacing: 0.12em;
-    border: 1px solid rgba(200,170,110,0.35);
-    padding: 1px 5px;
-    margin-left: 7px;
-    vertical-align: middle;
-}
-
-.lol-ability-sets {
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.7rem;
-    color: #C8AA6E;
-    white-space: nowrap;
-    position: relative;
-}
-
-.lol-more-badge {
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.52rem;
-    color: rgba(120,90,40,0.65);
-    letter-spacing: 0.1em;
-    margin-top: 7px;
-    padding-left: 2px;
-}
-
-/* ── ACTION COL ──────────────────────────────────────────────────── */
-.lol-action-col {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    min-width: 182px;
-    align-items: stretch;
-}
-
-/* ── STAT GRID ───────────────────────────────────────────────────── */
-.lol-stats-wrap {
-    margin-bottom: 1.6rem;
-    position: relative;
-}
-
-.lol-stats-header {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 10px;
-}
-
-.lol-stats-header .lol-line {
-    flex: 1;
-    height: 1px;
-}
-
-.lol-stats-header .lol-line.l {
-    background: linear-gradient(to right, transparent, rgba(200,170,110,0.35));
-}
-
-.lol-stats-header .lol-line.r {
-    background: linear-gradient(to left, transparent, rgba(200,170,110,0.35));
-}
-
-.lol-stats-header .lol-section-label {
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.52rem;
-    color: #785A28;
-    letter-spacing: 0.3em;
-    text-transform: uppercase;
-    white-space: nowrap;
-}
-
-.lol-stats-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 1px;
-    background: rgba(200,170,110,0.07);
-    border: 1px solid rgba(200,170,110,0.1);
-    position: relative;
-    overflow: hidden;
-}
-
-/* Top accent bar on grid */
-.lol-stats-grid::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    height: 2px;
-    background: linear-gradient(90deg,
-        transparent 0%,
-        rgba(200,170,110,0.4) 20%,
-        rgba(200,170,110,0.8) 50%,
-        rgba(200,170,110,0.4) 80%,
-        transparent 100%
-    );
-    z-index: 2;
-    pointer-events: none;
-}
-
-.lol-stat-cell {
-    background: #0A1628;
-    padding: 1.2rem 0.8rem 1rem;
-    text-align: center;
-    transition: background 0.25s;
-    position: relative;
-    overflow: hidden;
-}
-
-.lol-stat-cell::after {
-    content: '';
-    position: absolute;
-    bottom: 0; left: 20%; right: 20%;
-    height: 1px;
-    background: rgba(200,170,110,0.08);
-}
-
-.lol-stat-cell:hover {
-    background: #0D1F38;
-}
-
-.lol-stat-value {
-    font-family: 'Cinzel', serif;
-    font-size: 1.55rem;
-    color: #C8AA6E;
-    font-weight: 700;
-    line-height: 1;
-    display: block;
-    margin-bottom: 5px;
-}
-
-.lol-stat-value.gold-shimmer {
-    background: linear-gradient(90deg, #785A28, #C8AA6E, #F0E6D3, #C8AA6E, #785A28);
-    background-size: 200% auto;
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-    animation: lol-value-shimmer 4s linear infinite;
-}
-
-@keyframes lol-value-shimmer {
-    0% { background-position: 0% center; }
-    100% { background-position: 200% center; }
-}
-
-.lol-stat-value.acwr-danger { color: #ef4444; }
-.lol-stat-value.acwr-safe { color: #4ade80; }
-
-/* ── Panel ACWR ─────────────────────────────────────────── */
-.acwr-card {
-    border-radius: 20px;
-    padding: 18px 20px 20px;
-    margin-bottom: 20px;
-    border: 1px solid rgba(255,255,255,0.07);
-    background: #111;
-    position: relative;
-    overflow: hidden;
-}
-.acwr-card[data-zona="optima"]     { border-color: rgba(34,197,94,.35);  background: linear-gradient(150deg,#071a0e 0%,#0d0d0d 55%); }
-.acwr-card[data-zona="cuidado"]    { border-color: rgba(245,158,11,.35); background: linear-gradient(150deg,#1a110a 0%,#0d0d0d 55%); }
-.acwr-card[data-zona="riesgo_alto"]{ border-color: rgba(239,68,68,.35);  background: linear-gradient(150deg,#1a0a0a 0%,#0d0d0d 55%); }
-.acwr-card[data-zona="baja_carga"] { border-color: rgba(148,163,184,.18);background: linear-gradient(150deg,#111 0%,#0d0d0d 55%); }
-
-/* Header */
-.acwr-hdr { display:flex; align-items:center; gap:8px; margin-bottom:14px; }
-.acwr-hdr-dot {
-    width:8px; height:8px; border-radius:50%;
-    animation: acwrPulse 2.2s ease-in-out infinite;
-}
-.acwr-card[data-zona="optima"]     .acwr-hdr-dot { background:#22c55e; box-shadow:0 0 10px #22c55e; }
-.acwr-card[data-zona="cuidado"]    .acwr-hdr-dot { background:#f59e0b; box-shadow:0 0 10px #f59e0b; }
-.acwr-card[data-zona="riesgo_alto"].acwr-hdr-dot { background:#ef4444; box-shadow:0 0 10px #ef4444; }
-.acwr-card[data-zona="baja_carga"] .acwr-hdr-dot { background:#64748b; }
-@keyframes acwrPulse {
-    0%,100% { opacity:1; transform:scale(1); }
-    50%      { opacity:.4; transform:scale(.8); }
-}
-.acwr-hdr-label {
-    flex:1; font-size:10px; font-weight:700;
-    letter-spacing:.18em; text-transform:uppercase; color:rgba(255,255,255,.4);
-}
-.acwr-hdr-chip {
-    font-size:10px; font-weight:700; letter-spacing:.1em;
-    text-transform:uppercase; padding:3px 10px; border-radius:99px;
-}
-.acwr-card[data-zona="optima"]     .acwr-hdr-chip { background:rgba(34,197,94,.15);  color:#22c55e; }
-.acwr-card[data-zona="cuidado"]    .acwr-hdr-chip { background:rgba(245,158,11,.15); color:#f59e0b; }
-.acwr-card[data-zona="riesgo_alto"].acwr-hdr-chip { background:rgba(239,68,68,.15);  color:#ef4444; }
-.acwr-card[data-zona="baja_carga"] .acwr-hdr-chip { background:rgba(100,116,139,.15);color:#94a3b8; }
-
-/* Gauge */
-.acwr-gauge-wrap { position:relative; width:200px; margin:0 auto 8px; }
-.acwr-gauge-svg  { width:100%; display:block; }
-.acwr-gauge-center {
-    position:absolute; bottom:-2px; left:50%; transform:translateX(-50%);
-    text-align:center; pointer-events:none;
-}
-.acwr-gauge-num {
-    font-size:32px; font-weight:800; line-height:1;
-    font-variant-numeric:tabular-nums; letter-spacing:-.02em;
-    transition: color .5s;
-}
-.acwr-card[data-zona="optima"]     .acwr-gauge-num { color:#22c55e; }
-.acwr-card[data-zona="cuidado"]    .acwr-gauge-num { color:#f59e0b; }
-.acwr-card[data-zona="riesgo_alto"].acwr-gauge-num { color:#ef4444; }
-.acwr-card[data-zona="baja_carga"] .acwr-gauge-num { color:#94a3b8; }
-.acwr-gauge-sub {
-    font-size:9px; font-weight:700; letter-spacing:.2em; text-transform:uppercase;
-    color:rgba(255,255,255,.3); margin-top:3px;
-}
-/* Needle: CSS transforms para que transition funcione en SVG */
-#acwr-needle, #acwr-needle-f {
-    transform-box: fill-box;
-    transform-origin: 50% 100%;
-    transform: rotate(-90deg);
-    transition: transform 1.4s cubic-bezier(.34,1.56,.64,1);
-}
-
-/* Loads row */
-.acwr-loads {
-    display:flex; align-items:center;
-    background:rgba(255,255,255,.04); border-radius:12px;
-    margin-bottom:14px; overflow:hidden;
-}
-.acwr-load-item { flex:1; text-align:center; padding:10px 0; }
-.acwr-load-val  { display:block; font-size:20px; font-weight:700; color:#fff; line-height:1; }
-.acwr-load-lbl  { display:block; font-size:10px; color:rgba(255,255,255,.4); text-transform:uppercase; letter-spacing:.1em; margin-top:3px; }
-.acwr-load-sep  { width:1px; height:40px; background:rgba(255,255,255,.08); flex-shrink:0; }
-
-/* Verdict */
-.acwr-verdict { text-align:center; padding-top:2px; }
-.acwr-verdict-icon  { font-size:26px; margin-bottom:6px; }
-.acwr-verdict-title { font-size:15px; font-weight:700; color:#fff; margin-bottom:4px; }
-.acwr-verdict-sub   { font-size:12px; color:rgba(255,255,255,.5); line-height:1.55; max-width:280px; margin:0 auto; }
-
-/* Scale: no usamos CSS flex — las marcas van dentro del SVG */
-.acwr-scale { display:none; }
-
-/* Número grande ACWR */
-.acwr-big-num { font-size:42px; font-weight:900; line-height:1; letter-spacing:-.03em; font-variant-numeric:tabular-nums; }
-.acwr-num-green  { color:#22c55e; }
-.acwr-num-yellow { color:#f59e0b; }
-.acwr-num-red    { color:#ef4444; }
-.acwr-num-gray   { color:#64748b; }
-
-/* Track de zonas */
-.acwr-track-wrap { position:relative; width:100%; }
-.acwr-track-bar  { display:flex; height:7px; border-radius:99px; overflow:hidden; gap:2px; margin-bottom:2px; }
-.acwr-track-seg  { height:100%; border-radius:2px; }
-.acwr-track-marker {
-    position:absolute; top:-14px; font-size:10px;
-    transform:translateX(-50%); color:#fff;
-    transition:left .8s cubic-bezier(.34,1.2,.64,1);
-    filter:drop-shadow(0 0 4px rgba(255,255,255,.8));
-}
-.acwr-track-labels {
-    display:flex; justify-content:space-between;
-    font-size:9px; color:rgba(255,255,255,.3);
-    margin-top:3px; font-family:monospace;
-}
-
-/* Badge zona (chart panel) */
-.acwr-zone-badge { font-weight:700; font-size:11px; }
-.acwr-zone-optima      { background:rgba(34,197,94,.15);  color:#22c55e; }
-.acwr-zone-cuidado     { background:rgba(245,158,11,.15); color:#f59e0b; }
-.acwr-zone-riesgo_alto { background:rgba(239,68,68,.15);  color:#ef4444; }
-.acwr-zone-baja_carga  { background:rgba(100,116,139,.15);color:#94a3b8; }
-
-/* Botón info */
-.acwr-info-btn {
-    width:22px; height:22px; border-radius:50%;
-    background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.15);
-    color:rgba(255,255,255,.5); font-size:12px; font-weight:700;
-    cursor:pointer; display:flex; align-items:center; justify-content:center;
-    flex-shrink:0; transition:background .2s,color .2s;
-    font-family: system-ui, sans-serif;
-}
-.acwr-info-btn:hover { background:rgba(255,255,255,.15); color:#fff; }
-
-/* Modal ACWR info */
-.acwr-modal-ov {
-    position:fixed; inset:0; z-index:9999;
-    background:rgba(0,0,0,.75); backdrop-filter:blur(6px);
-    display:flex; align-items:flex-end; justify-content:center;
-    opacity:0; pointer-events:none;
-    transition:opacity .25s;
-}
-.acwr-modal-ov.open { opacity:1; pointer-events:all; }
-.acwr-modal-box {
-    background:#161616; border:1px solid rgba(255,255,255,.1);
-    border-radius:24px 24px 0 0;
-    padding:24px 20px 36px; width:100%; max-width:520px;
-    transform:translateY(40px);
-    transition:transform .3s cubic-bezier(.34,1.2,.64,1);
-    max-height:90dvh; overflow-y:auto;
-}
-.acwr-modal-ov.open .acwr-modal-box { transform:translateY(0); }
-.acwr-modal-handle {
-    width:36px; height:4px; border-radius:99px;
-    background:rgba(255,255,255,.2); margin:0 auto 20px;
-}
-.acwr-modal-title {
-    font-size:17px; font-weight:800; color:#fff;
-    margin-bottom:4px; text-align:center;
-}
-.acwr-modal-sub {
-    font-size:12px; color:rgba(255,255,255,.4);
-    text-align:center; margin-bottom:20px;
-}
-.acwr-modal-section { margin-bottom:18px; }
-.acwr-modal-section-title {
-    font-size:10px; font-weight:700; letter-spacing:.18em;
-    text-transform:uppercase; color:rgba(255,255,255,.35);
-    margin-bottom:10px;
-}
-.acwr-modal-row {
-    display:flex; gap:10px; align-items:flex-start;
-    background:rgba(255,255,255,.04); border-radius:12px;
-    padding:12px 14px; margin-bottom:6px;
-}
-.acwr-modal-row-icon { font-size:20px; flex-shrink:0; margin-top:1px; }
-.acwr-modal-row-text {}
-.acwr-modal-row-label { font-size:13px; font-weight:700; color:#fff; margin-bottom:2px; }
-.acwr-modal-row-desc  { font-size:12px; color:rgba(255,255,255,.5); line-height:1.5; }
-.acwr-modal-zone-row {
-    display:flex; align-items:center; gap:10px;
-    padding:9px 14px; border-radius:10px; margin-bottom:5px;
-}
-.acwr-modal-zone-dot  { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
-.acwr-modal-zone-range { font-size:12px; font-weight:700; font-variant-numeric:tabular-nums; min-width:52px; }
-.acwr-modal-zone-text  { font-size:12px; color:rgba(255,255,255,.6); line-height:1.4; }
-.acwr-modal-formula {
-    background:rgba(255,255,255,.04); border-radius:12px;
-    padding:14px; text-align:center; margin-bottom:6px;
-}
-.acwr-modal-formula-eq {
-    font-size:15px; font-weight:700; color:#fff; margin-bottom:4px;
-    font-family: 'Share Tech Mono', monospace;
-}
-.acwr-modal-formula-desc { font-size:11px; color:rgba(255,255,255,.4); }
-.acwr-modal-close {
-    width:100%; padding:14px; margin-top:8px;
-    background:rgba(255,255,255,.08); border:none; border-radius:14px;
-    color:rgba(255,255,255,.7); font-size:14px; font-weight:600;
-    cursor:pointer; transition:background .2s;
-}
-.acwr-modal-close:hover { background:rgba(255,255,255,.14); }
-
-/* legacy compat (kept for other uses) */
-.acwr-sem-left {
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-    flex: 1;
-    min-width: 0;
-}
-.acwr-sem-dot {
-    width: 10px; height: 10px;
-    border-radius: 50%;
-    flex-shrink: 0;
-    margin-top: 4px;
-    animation: acwrPulse 2s ease-in-out infinite;
-}
-@keyframes acwrPulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: .4; }
-}
-.acwr-sem-titulo {
-    font-size: 13px;
-    font-weight: 700;
-    color: #e2e8f0;
-    line-height: 1.3;
-    margin-bottom: 4px;
-    font-family: 'Beaufort for LOL', 'Share Tech Mono', monospace;
-    letter-spacing: .3px;
-}
-.acwr-sem-sub {
-    font-size: 11px;
-    color: rgba(226,232,240,.55);
-    line-height: 1.5;
-}
-.acwr-sem-valor {
-    text-align: center;
-    flex-shrink: 0;
-}
-.acwr-sem-num {
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 28px;
-    font-weight: 700;
-    line-height: 1;
-}
-.acwr-sem-etiqueta {
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 10px;
-    color: #785A28;
-    letter-spacing: .15em;
-    text-transform: uppercase;
-    margin-top: 3px;
-}
-
-.lol-stat-bar {
-    height: 2px;
-    background: rgba(200,170,110,0.08);
-    margin: 0 8px 6px;
-    overflow: hidden;
-    position: relative;
-}
-
-.lol-stat-bar-fill {
-    height: 100%;
-    background: linear-gradient(90deg, #3C2A10, #C8AA6E);
-    width: 0;
-    transition: width 1.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.lol-stat-label {
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.48rem;
-    color: #785A28;
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-}
-
-/* ── HISTORY ─────────────────────────────────────────────────────── */
-.lol-history-wrap {
-    margin-top: 0.25rem;
-}
-
-.lol-history-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 9px 14px 9px 12px;
-    background: #0A1628;
-    border-left: 2px solid rgba(200,170,110,0.1);
-    margin-bottom: 2px;
-    text-decoration: none;
-    transition: all 0.2s ease;
-    position: relative;
-    overflow: hidden;
-}
-
-.lol-history-row::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(90deg, rgba(200,170,110,0.04), transparent 50%);
-    opacity: 0;
-    transition: opacity 0.2s;
-}
-
-.lol-history-row:hover::before { opacity: 1; }
-.lol-history-row:hover {
-    border-left-color: rgba(200,170,110,0.38);
-    background: #0D1F38;
-}
-
-.lol-history-left {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    position: relative;
-}
-
-.lol-history-num {
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.5rem;
-    color: rgba(120,90,40,0.45);
-    width: 16px;
-    text-align: right;
-    flex-shrink: 0;
-}
-
-.lol-history-icon {
-    font-size: 0.6rem;
-    color: #785A28;
-    transition: color 0.2s;
-}
-
-.lol-history-row:hover .lol-history-icon { color: #C8AA6E; }
-
-.lol-history-name {
-    font-family: 'Rajdhani', sans-serif;
-    font-size: 0.875rem;
-    color: #AAAAAA;
-    font-weight: 600;
-    transition: color 0.2s;
-}
-
-.lol-history-row:hover .lol-history-name { color: #E0D5C0; }
-
-.lol-history-date {
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.6rem;
-    color: rgba(120,90,40,0.7);
-    position: relative;
-}
-
-.lol-empty {
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.65rem;
-    color: rgba(120,90,40,0.5);
-    text-align: center;
-    padding: 2.5rem 1rem;
-    border: 1px dashed rgba(200,170,110,0.1);
-    letter-spacing: 0.15em;
-}
-
-/* ── HYROX PANEL VARIANT ─────────────────────────────────────────── */
-.lol-panel.hyrox {
-    border-color: rgba(200,75,49,0.2);
-    background: linear-gradient(145deg, #1A0B08 0%, #0D0605 60%, #070302 100%);
-}
-
-.lol-panel.hyrox::before {
-    background: linear-gradient(90deg,
-        transparent 0%,
-        rgba(200,75,49,0.4) 15%,
-        #C84B31 40%,
-        #FF6B47 50%,
-        #C84B31 60%,
-        rgba(200,75,49,0.4) 85%,
-        transparent 100%
-    );
-}
-
-.lol-panel.hyrox .lol-corner { border-color: rgba(200,75,49,0.4); }
-.lol-panel.hyrox .lol-hero-tag { color: #A03020; }
-.lol-panel.hyrox .lol-hero-tag .lol-tag-dot { background: #C84B31; box-shadow: 0 0 6px rgba(200,75,49,0.6); }
-.lol-panel.hyrox .lol-ability-row { border-left-color: rgba(200,75,49,0.2); }
-.lol-panel.hyrox .lol-ability-row:hover { border-left-color: rgba(200,75,49,0.5); }
-.lol-panel.hyrox .lol-ability-icon { border-color: rgba(200,75,49,0.2); color: #A03020; }
-.lol-panel.hyrox .lol-ability-row:hover .lol-ability-icon { border-color: rgba(200,75,49,0.5); color: #C84B31; }
-
-/* ── RESPONSIVE ──────────────────────────────────────────────────── */
-@media (max-width: 600px) {
-    .lol-stats-grid { grid-template-columns: repeat(2, 1fr); }
-    .lol-panel-inner > div { flex-direction: column !important; }
-    .lol-action-col { min-width: unset; width: 100%; }
-}
-
-/* ── MOBILE GLOBAL ─────────────────────────────────────────── */
-@media (max-width: 480px) {
-    /* Modo focus: contenedor principal */
-    #focus-mode-container { padding: 0 !important; }
-
-    /* Modo detallado: sin padding lateral excesivo */
-    #full-mode-container { padding: 0.75rem 0.5rem 5rem !important; }
-    .lol-wrapper { padding: 0 !important; }
-    .lol-header { padding: 1rem 1rem 0.75rem !important; }
-
-    /* Botones de acción en modo detallado */
-    .lol-action-col a, .lol-action-col button {
-        min-height: 44px;
-        font-size: 0.65rem !important;
-    }
-
-    /* Grid 4 botones: 2×2 en pantallas muy estrechas */
-    .hero-gym > div[style*="grid-template-columns: repeat(4"],
-    .hero-hyrox > div[style*="grid-template-columns: repeat(4"] {
-        grid-template-columns: repeat(2, 1fr) !important;
-    }
-
-    /* Tabs gym/hyrox: tamaño touch */
-    .mode-btn { min-height: 44px; font-size: 13px !important; }
-
-    /* Macros: texto legible */
-    .nut-panel { font-size: 12px; }
-
-    /* Stats footer: legible en móvil */
-    .lol-stats-grid { gap: 0.5rem; }
-    .lol-stat-val { font-size: 1.4rem !important; }
-    .lol-stat-lbl { font-size: 0.55rem !important; }
-}
-
-@media (max-width: 360px) {
-    /* 4 botones → 2 columnas en pantallas muy pequeñas */
-    div[style*="grid-template-columns: repeat(4, 1fr)"] {
-        grid-template-columns: repeat(2, 1fr) !important;
-    }
-}
-</style>
-
-<div id="full-mode-container" class="view-hidden" style="min-height: 100vh; background: #010A13; padding: 1.25rem 1rem 4rem;">
-
-<!-- atmospheric layers -->
-<div class="lol-atmo"></div>
-<div class="lol-scanlines"></div>
-
-<div class="lol-wrapper">
-
-    <!-- ── HEADER ─────────────────────────────────────────────────── -->
-    <header class="lol-header">
-        <div>
-            <p class="lol-eyebrow">Vista Detallada</p>
-            <h1 class="lol-client-name">{{ cliente.nombre|title }}</h1>
-            {% if estoico_disponible and contenido_hoy %}
-            <p class="lol-quote">"{{ contenido_hoy.cita }}"</p>
-            {% endif %}
-        </div>
-        <div class="lol-header-actions">
-            <a href="{% url 'clientes:detalle_cliente' cliente.id %}" class="lol-icon-btn" title="Perfil">
-                <i class="fas fa-user"></i>
-            </a>
-            <a href="{% url 'clientes:configurar_preferencias_helms' cliente.id %}" class="lol-icon-btn" title="Ajustes">
-                <i class="fas fa-cog"></i>
-            </a>
-            <button onclick="toggleDashboardMode()" class="lol-focus-btn">← Focus</button>
-        </div>
-    </header>
-
-    <!-- ── TOGGLE GYM / HYROX ─────────────────────────────────────── -->
-    {% if hyrox_objetivo %}
-    <div class="mode-switcher" style="margin-bottom: 1.5rem; max-width: 240px;">
-        <button class="mode-btn active-gym" data-mode="gym" id="btnGym">🏋️ GYM</button>
-        <button class="mode-btn" data-mode="hyrox" id="btnHyrox">🏃 HYROX</button>
-    </div>
-    {% endif %}
-
-    <!-- ── HERO GYM ────────────────────────────────────────────────── -->
-    <div class="hero-gym" id="heroGym" style="margin-bottom: 1.25rem;">
-    {% if proximo_entrenamiento %}
-    <div class="lol-panel">
-        <span class="lol-corner tl"></span><span class="lol-corner tr"></span>
-        <span class="lol-corner bl"></span><span class="lol-corner br"></span>
-        <div class="lol-panel-inner">
-            <div style="display:flex; flex-wrap:wrap; gap:1.5rem; align-items:flex-start; justify-content:space-between;">
-                <div style="flex:1; min-width:230px;">
-                    <p class="lol-hero-tag">
-                        <span class="lol-tag-dot"></span>
-                        {{ proximo_entrenamiento.objetivo|upper|default:"BASE" }} &middot; Día {{ proximo_entrenamiento.dia|default:"1" }}
-                    </p>
-                    <h2 class="lol-hero-title">{{ proximo_entrenamiento.nombre|default:proximo_entrenamiento.rutina_nombre|default:"Sesión" }}</h2>
-                    <div class="lol-vol-pill">
-                        <span class="lol-vol-pip"></span>
-                        <span class="lol-vol-text">Vol. Sugerido: {% widthratio bio_readiness.volume_modifier|default:1 1 100 %}%</span>
-                    </div>
-                    {% if proximo_entrenamiento.ejercicios %}
-                    <p class="lol-ability-label">Ejercicios Principales</p>
-                    {% for ej in proximo_entrenamiento.ejercicios|slice:":4" %}
-                    <div class="lol-ability-row {% if ej.es_adaptado %}adapted{% endif %}">
-                        <div class="lol-ability-left">
-                            <div class="lol-ability-icon"><i class="fas {{ ej.fa_icon|default:'fa-dumbbell' }}"></i></div>
-                            <span class="lol-ability-name">
-                                {{ ej.nombre }}
-                                {% if ej.es_adaptado %}<span class="lol-adapted-badge">ADAPTADO</span>{% endif %}
-                            </span>
-                        </div>
-                        {% if ej.series and ej.repeticiones %}
-                        <span class="lol-ability-sets">{{ ej.series }}&times;{{ ej.repeticiones }}</span>
-                        {% endif %}
-                    </div>
-                    {% endfor %}
-                    {% if proximo_entrenamiento.ejercicios|length > 4 %}
-                    <p class="lol-more-badge">+ {{ proximo_entrenamiento.ejercicios|length|add:"-4" }} ejercicios más</p>
-                    {% endif %}
-                    {% endif %}
-                </div>
-                <div class="lol-action-col">
-                    <a href="{% url 'entrenos:entrenamiento_activo' cliente.id %}?fecha={{ hoy|date:'Y-m-d' }}&rutina_nombre={{ proximo_entrenamiento.rutina_nombre|urlencode }}&ejercicios={{ proximo_entrenamiento_json|urlencode }}"
-                       class="btn-empezar-gym"
-                       style="display:flex;align-items:center;justify-content:center;padding:14px 20px;font-family:'Cinzel',serif;font-size:0.85rem;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;text-decoration:none;text-align:center;">
-                        ⚔ EMPEZAR
-                    </a>
-                    <a href="{% url 'entrenos:vista_plan_anual' cliente.id %}"
-                       style="display:flex;align-items:center;justify-content:center;padding:10px;background:transparent;border:1px solid rgba(200,170,110,0.18);color:#A08C5B;font-family:'Cinzel',serif;font-size:0.62rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;text-decoration:none;text-align:center;clip-path:polygon(4px 0%,calc(100% - 4px) 0%,100% 4px,100% calc(100% - 4px),calc(100% - 4px) 100%,4px 100%,0% calc(100% - 4px),0% 4px);transition:all .2s;">
-                        ↺ CAMBIAR RUTINA
-                    </a>
-                    <a href="{% url 'clientes:blade_runner_dashboard' %}"
-                       style="display:flex;align-items:center;justify-content:center;padding:10px;background:transparent;border:1px solid rgba(200,170,110,0.28);color:#C8AA6E;font-family:'Cinzel',serif;font-size:0.62rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;text-decoration:none;text-align:center;clip-path:polygon(4px 0%,calc(100% - 4px) 0%,100% 4px,100% calc(100% - 4px),calc(100% - 4px) 100%,4px 100%,0% calc(100% - 4px),0% 4px);transition:all .2s;">
-                        ⚡ BLADE RUNNER
-                    </a>
-                    <a href="/nutricion/mi-nutricion/"
-                       style="display:flex;align-items:center;justify-content:center;padding:10px;background:transparent;border:1px solid rgba(0,255,200,0.3);color:#00ffc8;font-family:'Cinzel',serif;font-size:0.62rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;text-decoration:none;text-align:center;clip-path:polygon(4px 0%,calc(100% - 4px) 0%,100% 4px,100% calc(100% - 4px),calc(100% - 4px) 100%,4px 100%,0% calc(100% - 4px),0% 4px);transition:all .2s;">
-                        MI NUTRICIÓN
-                    </a>
-                    <a href="{% url 'entrenos:registrar_actividad_libre' cliente.id %}"
-                       style="display:flex;align-items:center;justify-content:center;padding:10px;background:rgba(6,182,212,0.12);border:1px solid rgba(6,182,212,0.45);color:#06b6d4;font-family:'Cinzel',serif;font-size:0.62rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;text-decoration:none;text-align:center;clip-path:polygon(4px 0%,calc(100% - 4px) 0%,100% 4px,100% calc(100% - 4px),calc(100% - 4px) 100%,4px 100%,0% calc(100% - 4px),0% 4px);transition:all .2s;">
-                        ➕ AÑADIR
-                    </a>
-                    <a href="{% url 'entrenos:timeline_atleta' cliente.id %}"
-                       style="display:flex;align-items:center;justify-content:center;padding:10px;background:transparent;border:1px solid rgba(6,182,212,0.25);color:rgba(6,182,212,0.7);font-family:'Cinzel',serif;font-size:0.62rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;text-decoration:none;text-align:center;clip-path:polygon(4px 0%,calc(100% - 4px) 0%,100% 4px,100% calc(100% - 4px),calc(100% - 4px) 100%,4px 100%,0% calc(100% - 4px),0% 4px);transition:all .2s;">
-                        📅 TIMELINE
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
-    {% endif %}
-    </div>
-
-    <!-- ── HERO HYROX ──────────────────────────────────────────────── -->
-    {% if hyrox_objetivo %}
-    <div class="hero-hyrox" id="heroHyrox" style="margin-bottom: 1.25rem; display:none;">
-    {% if hyrox_proxima_sesion %}
-    <div class="lol-panel hyrox">
-        <span class="lol-corner tl"></span><span class="lol-corner tr"></span>
-        <span class="lol-corner bl"></span><span class="lol-corner br"></span>
-        <div class="lol-panel-inner">
-            <div style="display:flex; flex-wrap:wrap; gap:1.5rem; align-items:flex-start; justify-content:space-between;">
-                <div style="flex:1; min-width:230px;">
-                    <p class="lol-hero-tag">
-                        <span class="lol-tag-dot"></span>
-                        HYROX &middot; {{ hyrox_proxima_sesion.tipo_fase|upper|default:"PROTOCOLO" }}
-                    </p>
-                    <h2 class="lol-hero-title">{{ hyrox_proxima_sesion.titulo|default:"Sesión Hyrox" }}</h2>
-                    {% if hyrox_proxima_sesion.processed_activities %}
-                    <p class="lol-ability-label">Actividades</p>
-                    {% for act in hyrox_proxima_sesion.processed_activities|slice:":4" %}
-                    <div class="lol-ability-row">
-                        <div class="lol-ability-left">
-                            <div class="lol-ability-icon"><i class="fas {{ act.fa_icon|default:'fa-running' }}"></i></div>
-                            <span class="lol-ability-name">{{ act.nombre_ejercicio }}</span>
-                        </div>
-                        <span class="lol-ability-sets" style="color:#C84B31;">
-                            {% if act.data_metricas.distancia_km %}{{ act.data_metricas.distancia_km }}km
-                            {% elif act.data_metricas.tiempo %}{{ act.data_metricas.tiempo }}
-                            {% elif act.data_metricas.peso %}{{ act.data_metricas.peso }}kg
-                            {% endif %}
-                        </span>
-                    </div>
-                    {% endfor %}
-                    {% endif %}
-                </div>
-                <div class="lol-action-col">
-                    {% if hyrox_proxima_sesion.objective %}
-                    <a href="{% url 'hyrox:registrar_entrenamiento' hyrox_proxima_sesion.objective.id %}"
-                       class="btn-empezar-hyrox"
-                       style="display:flex;align-items:center;justify-content:center;padding:14px 20px;font-family:'Cinzel',serif;font-size:0.85rem;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;text-decoration:none;text-align:center;">
-                        ⚡ EMPEZAR HYROX
-                    </a>
-                    {% else %}
-                    <a href="{% url 'hyrox:dashboard' %}"
-                       class="btn-empezar-hyrox"
-                       style="display:flex;align-items:center;justify-content:center;padding:14px 20px;font-family:'Cinzel',serif;font-size:0.85rem;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;text-decoration:none;text-align:center;">
-                        VER HYROX
-                    </a>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-    </div>
-    {% endif %}
-    </div>
-    {% endif %}
-
-    <!-- ── PANEL ACWR ────────────────────────────────────────────── -->
-    {% with zona=analisis_acwr.zona_riesgo %}
-    <div class="acwr-card" data-zona="{{ zona }}" data-acwr="{{ acwr_actual }}">
-
-      <!-- Header -->
-      <div class="acwr-hdr">
-        <div class="acwr-hdr-dot"></div>
-        <span class="acwr-hdr-label">Carga de entrenamiento</span>
-        <span class="acwr-hdr-chip">
-          {% if zona == 'optima' %}Óptimo
-          {% elif zona == 'cuidado' %}Cuidado
-          {% elif zona == 'riesgo_alto' %}Riesgo
-          {% else %}Carga baja{% endif %}
-        </span>
-        <button class="acwr-info-btn" onclick="document.getElementById('acwr-info-modal').classList.add('open')" title="¿Qué es esto?">?</button>
-      </div>
-
-      <!-- Gauge semicircular -->
-      <!-- Arc: r=90, center=(110,115), total length ≈ π×90 ≈ 283 -->
-      <!-- Zonas: baja 0-0.8 (0-113px), óptima 0.8-1.3 (113-184px), cuidado 1.3-1.5 (184-212px), riesgo 1.5-2.0 (212-283px) -->
-      <div class="acwr-gauge-wrap">
-        <svg viewBox="0 0 220 125" class="acwr-gauge-svg" aria-hidden="true">
-          <!-- Pista de fondo -->
-          <path d="M 20 115 A 90 90 0 0 1 200 115"
-                stroke="#1c1c1e" stroke-width="14" fill="none" stroke-linecap="round"/>
-          <!-- Zona baja (gris) -->
-          <path d="M 20 115 A 90 90 0 0 1 200 115"
-                stroke="#263040" stroke-width="14" fill="none" stroke-linecap="round"
-                stroke-dasharray="113 10000" stroke-dashoffset="0"/>
-          <!-- Zona óptima (verde) -->
-          <path d="M 20 115 A 90 90 0 0 1 200 115"
-                stroke="#166534" stroke-width="14" fill="none" stroke-linecap="round"
-                stroke-dasharray="71 10000" stroke-dashoffset="-113"/>
-          <!-- Zona cuidado (ámbar) -->
-          <path d="M 20 115 A 90 90 0 0 1 200 115"
-                stroke="#92400e" stroke-width="14" fill="none" stroke-linecap="round"
-                stroke-dasharray="28 10000" stroke-dashoffset="-184"/>
-          <!-- Zona riesgo (rojo) -->
-          <path d="M 20 115 A 90 90 0 0 1 200 115"
-                stroke="#7f1d1d" stroke-width="14" fill="none" stroke-linecap="round"
-                stroke-dasharray="71 10000" stroke-dashoffset="-212"/>
-          <!-- Arco activo (brillo en zona actual) — JS lo pinta -->
-          <path id="acwr-active-arc" d="M 20 115 A 90 90 0 0 1 200 115"
-                stroke="#22c55e" stroke-width="14" fill="none" stroke-linecap="round"
-                opacity="0.55" stroke-dasharray="0 10000" stroke-dashoffset="0"/>
-          <!-- Aguja -->
-          <line id="acwr-needle"
-                x1="110" y1="115" x2="110" y2="33"
-                stroke="white" stroke-width="2.5" stroke-linecap="round"
-                transform="rotate(-90 110 115)"/>
-          <circle cx="110" cy="115" r="5" fill="#111" stroke="white" stroke-width="2"/>
-        </svg>
-
-        <!-- Número central -->
-        <div class="acwr-gauge-center">
-          <div class="acwr-gauge-num">{{ acwr_actual|floatformat:2|default:"—" }}</div>
-          <div class="acwr-gauge-sub">ACWR</div>
-        </div>
-      </div>
-
-      <!-- Etiquetas de escala -->
-      <div class="acwr-scale">
-        <span class="acwr-scale-lbl">0.0</span>
-        <span class="acwr-scale-lbl">0.8</span>
-        <span class="acwr-scale-lbl">1.3</span>
-        <span class="acwr-scale-lbl">1.5</span>
-        <span class="acwr-scale-lbl">2.0</span>
-      </div>
-
-      <!-- Carga aguda / crónica -->
-      <div class="acwr-loads">
-        <div class="acwr-load-item">
-          <span class="acwr-load-val">{{ analisis_acwr.carga_aguda|floatformat:0|default:"—" }}</span>
-          <span class="acwr-load-lbl">Carga 7d</span>
-        </div>
-        <div class="acwr-load-sep"></div>
-        <div class="acwr-load-item">
-          <span class="acwr-load-val">{{ analisis_acwr.carga_cronica|floatformat:0|default:"—" }}</span>
-          <span class="acwr-load-lbl">Carga 28d</span>
-        </div>
-      </div>
-
-      <!-- Veredicto motivacional -->
-      <div class="acwr-verdict">
-        {% if zona == 'optima' %}
-          <div class="acwr-verdict-icon">💪</div>
-          <div class="acwr-verdict-title">¡Tu cuerpo está listo — dale caña!</div>
-          <div class="acwr-verdict-sub">Carga perfectamente equilibrada. Hoy es día de entrenar fuerte sin miedo.</div>
-        {% elif zona == 'cuidado' %}
-          <div class="acwr-verdict-icon">⚡</div>
-          <div class="acwr-verdict-title">Estás al límite — modera la intensidad</div>
-          <div class="acwr-verdict-sub">Sigue activo pero reduce un 20% esta semana. Tu cuerpo lo agradecerá.</div>
-        {% elif zona == 'riesgo_alto' %}
-          <div class="acwr-verdict-icon">🛑</div>
-          <div class="acwr-verdict-title">Tu cuerpo pide descanso hoy</div>
-          <div class="acwr-verdict-sub">Riesgo de lesión elevado. Prioriza recuperación activa o reposo completo.</div>
-        {% else %}
-          <div class="acwr-verdict-icon">🔥</div>
-          <div class="acwr-verdict-title">Puedes apretar más esta semana</div>
-          <div class="acwr-verdict-sub">Tu carga es baja. Añade una sesión extra o sube la intensidad sin riesgo.</div>
-        {% endif %}
-      </div>
-
-    </div>
-    {% endwith %}
-
-    <!-- ── MÉTRICAS ───────────────────────────────────────────────── -->
-    <div class="lol-stats-wrap">
-        <div class="lol-stats-header">
-            <div class="lol-line l"></div>
-            <span class="lol-section-label">◆ Estadísticas ◆</span>
-            <div class="lol-line r"></div>
-        </div>
-        <div class="lol-stats-grid" id="lolStatsGrid">
-            <div class="lol-stat-cell">
-                <span class="lol-stat-value gold-shimmer">{{ entrenos_count|default:"0" }}</span>
-                <div class="lol-stat-bar"><div class="lol-stat-bar-fill" data-width="75"></div></div>
-                <span class="lol-stat-label">Sesiones</span>
-            </div>
-            <div class="lol-stat-cell">
-                <span class="lol-stat-value">{{ carga_total_acumulada|default:"0" }}</span>
-                <div class="lol-stat-bar"><div class="lol-stat-bar-fill" data-width="60"></div></div>
-                <span class="lol-stat-label">Carga Total</span>
-            </div>
-            <div class="lol-stat-cell">
-                <span class="lol-stat-value">{{ consistencia_pct|default:"0" }}<span style="font-size:.75em;font-weight:400;">%</span></span>
-                <div class="lol-stat-bar"><div class="lol-stat-bar-fill" data-width="{{ consistencia_pct|default:0 }}"></div></div>
-                <span class="lol-stat-label">Consistencia</span>
-            </div>
-            <div class="lol-stat-cell">
-                <span class="lol-stat-value {% if acwr_actual >= 1.3 %}acwr-danger{% elif acwr_actual < 0.8 %}acwr-safe{% endif %}">
-                    {{ acwr_actual|floatformat:2|default:"—" }}
-                </span>
-                <div class="lol-stat-bar"><div class="lol-stat-bar-fill" data-width="55"></div></div>
-                <span class="lol-stat-label">ACWR</span>
-            </div>
-        </div>
-    </div>
-
-    <!-- ── HISTORIAL RECIENTE ──────────────────────────────────────── -->
-    <div class="lol-stats-header" style="margin-bottom:10px;">
-        <div class="lol-line l"></div>
-        <span class="lol-section-label">◆ Historial Reciente ◆</span>
-        <div class="lol-line r"></div>
-    </div>
-    <div class="lol-history-wrap">
-        {% if entrenamientos_recientes %}
-        {% for ent in entrenamientos_recientes %}
-        <a href="{% url 'entrenos:detalle_entrenamiento' ent.id %}" class="lol-history-row">
-            <div class="lol-history-left">
-                <span class="lol-history-num">{{ forloop.counter }}</span>
-                <i class="fas fa-dumbbell lol-history-icon"></i>
-                <span class="lol-history-name">{{ ent.rutina.nombre|default:"Entrenamiento" }}</span>
-            </div>
-            <span class="lol-history-date">{{ ent.fecha|date:"d M" }}</span>
-        </a>
-        {% endfor %}
-        {% else %}
-        <p class="lol-empty">◆ &nbsp; Sin registros recientes &nbsp; ◆</p>
-        {% endif %}
-    </div>
-
-</div><!-- .lol-wrapper -->
-</div><!-- #full-mode-container -->
-
-<script>
-// Global function: animate LoL stat bars (called from toggleDashboardMode)
-window.animateLoLBars = function() {
-    document.querySelectorAll('#full-mode-container .lol-stat-bar-fill').forEach(function(el) {
-        el.style.width = '0';
-        requestAnimationFrame(function() {
-            var w = parseFloat(el.getAttribute('data-width') || 60);
-            el.style.transition = 'width 1.2s cubic-bezier(0.4,0,0.2,1)';
-            el.style.width = Math.min(100, Math.max(0, w)) + '%';
-        });
-    });
-};
-</script>
-
-<!-- ── TAB BAR INFERIOR ─────────────────────────────────────── -->
-<nav class="bottom-tab-bar" role="navigation" aria-label="Navegación principal">
-  <div class="bottom-tab-bar__inner">
-    <a href="{% url 'entrenos:vista_plan_anual' cliente.id %}" class="tab-item">
-      <svg class="tab-item__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M6.5 6.5a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2 2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2z"/><path d="M17.5 6.5a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2 2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2z"/>
-        <line x1="8.5" y1="12" x2="15.5" y2="12"/><line x1="2" y1="10" x2="4.5" y2="10"/><line x1="2" y1="14" x2="4.5" y2="14"/><line x1="19.5" y1="10" x2="22" y2="10"/><line x1="19.5" y1="14" x2="22" y2="14"/>
-      </svg>
-      <span class="tab-item__label">Rutina</span>
-    </a>
-    <a href="{% url 'clientes:blade_runner_dashboard' %}" class="tab-item">
-      <svg class="tab-item__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
-      </svg>
-      <span class="tab-item__label">Blade</span>
-    </a>
-    <a href="{% url 'diario:dashboard_diario' %}" class="tab-item">
-      <svg class="tab-item__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
-      </svg>
-      <span class="tab-item__label">Diario</span>
-    </a>
-    <a href="{% url 'entrenos:registrar_actividad_libre' cliente.id %}" class="tab-item tab-item--accent">
-      <svg class="tab-item__icon tab-item__icon--lg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/>
-      </svg>
-      <span class="tab-item__label">Añadir</span>
-    </a>
-    <a href="{% url 'entrenos:timeline_atleta' cliente.id %}" class="tab-item">
-      <svg class="tab-item__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
-      </svg>
-      <span class="tab-item__label">Timeline</span>
-    </a>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Panel · {{ cliente.user.get_full_name|default:cliente.user.username }}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://unpkg.com/htmx.org@1.9.10/dist/htmx.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+/* ═══════════════════════════════════════════════
+   PANEL · RACE BIB
+   mobile-first · paper cream + burnt red
+   ═══════════════════════════════════════════════ */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body { background: #EFEAE1; min-height: 100vh; }
+
+body {
+  --bg: #EFEAE1;
+  --ink: #0F0F0E;
+  --ink-2: #2A2926;
+  --ink-3: rgba(15,15,14,0.55);
+  --ink-4: rgba(15,15,14,0.28);
+  --line: rgba(15,15,14,0.12);
+  --line-2: rgba(15,15,14,0.25);
+  --paper: #F7F3EA;
+  --paper-2: #E4DED1;
+  --accent: oklch(0.55 0.21 28);
+  --accent-rgb: 193,53,21;
+  --accent-2: oklch(0.62 0.18 60);
+  --ok: oklch(0.55 0.15 145);
+  --warn: oklch(0.72 0.17 70);
+  --danger: oklch(0.55 0.22 25);
+  --font-disp: 'Archivo Black','Archivo',sans-serif;
+  --font-body: 'Archivo',system-ui,sans-serif;
+  --font-mono: 'JetBrains Mono',ui-monospace,monospace;
+
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  padding-bottom: 80px;
+}
+
+.rb-container { max-width: 560px; margin: 0 auto; padding: 0 20px; }
+
+/* ── NAV ─────────────────────────────────────── */
+.rb-nav {
+  position: sticky; top: 0; z-index: 100; background: var(--bg);
+  border-bottom: 1px solid var(--line);
+  padding: 14px 20px; display: flex; justify-content: space-between; align-items: center;
+}
+.rb-brand { display: flex; align-items: center; gap: 10px;
+  font-family: var(--font-disp); font-size: 13px; letter-spacing: 0.14em;
+  color: var(--ink); text-transform: uppercase; text-decoration: none; }
+.rb-brand-bar { width: 3px; height: 18px; background: var(--accent); flex-shrink: 0; }
+.rb-live { display: flex; align-items: center; gap: 6px;
+  font-family: var(--font-mono); font-size: 9px; font-weight: 700;
+  letter-spacing: 0.15em; color: var(--ink-3); text-transform: uppercase; }
+.rb-live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--ok);
+  animation: rb-blink 1.3s ease-in-out infinite; }
+@keyframes rb-blink { 0%,100%{opacity:1} 50%{opacity:.25} }
+
+/* ── BUTTONS ─────────────────────────────────── */
+.rb-btn {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 7px 13px; border: 1.5px solid var(--ink);
+  background: transparent; color: var(--ink);
+  font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  cursor: pointer; text-decoration: none; transition: all .15s;
+  border-radius: 2px;
+}
+.rb-btn:hover { background: var(--ink); color: var(--paper); text-decoration: none; }
+.rb-btn-primary { background: var(--accent); border-color: var(--accent); color: var(--paper); }
+.rb-btn-primary:hover { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+.rb-btn-ghost { border-color: var(--line-2); color: var(--ink-3); }
+.rb-btn-ghost:hover { background: var(--paper-2); color: var(--ink); border-color: var(--ink-2); }
+.rb-btn-sm { padding: 4px 9px; font-size: 9px; }
+
+/* ── CTA ─────────────────────────────────────── */
+.rb-cta {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  width: 100%; padding: 18px 24px;
+  background: var(--accent); border: 2px solid var(--ink);
+  color: var(--paper); font-family: var(--font-disp); font-size: 16px;
+  letter-spacing: 0.1em; text-transform: uppercase; text-decoration: none;
+  border-radius: 4px; cursor: pointer; transition: all .15s;
+  margin-top: 6px;
+}
+.rb-cta:hover { background: var(--ink); color: var(--paper); text-decoration: none; }
+.rb-cta-rest {
+  background: var(--paper); border-color: var(--line-2); color: var(--ink-3);
+}
+.rb-cta-rest:hover { background: var(--paper-2); color: var(--ink); border-color: var(--ink-2); }
+
+/* ── SECTION HEAD ────────────────────────────── */
+.rb-section { padding: 20px 0 0; }
+.rb-section-head { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+.rb-section-num { font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+  color: var(--ink-4); letter-spacing: 0.15em; }
+.rb-section-title { margin: 0; font-family: var(--font-disp);
+  font-size: 14px; letter-spacing: 0.06em; color: var(--ink); text-transform: uppercase; }
+.rb-section-line { flex: 1; height: 1px; background: var(--line); }
+
+/* ── BIB HERO ────────────────────────────────── */
+.rb-bib {
+  background: var(--paper); border: 2px solid var(--ink); border-radius: 8px;
+  padding: 14px 16px 16px; margin-top: 18px; position: relative; overflow: hidden;
+}
+.rb-bib-meta { display: flex; justify-content: space-between; align-items: center;
+  font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+  letter-spacing: 0.12em; color: var(--ink-3); text-transform: uppercase; margin-bottom: 6px; }
+.rb-bib-name { font-family: var(--font-disp); font-size: clamp(26px,8vw,40px);
+  line-height: 0.95; letter-spacing: -0.02em; color: var(--ink); text-transform: uppercase; }
+.rb-bib-workout { font-family: var(--font-disp); font-size: clamp(18px,5vw,24px);
+  color: var(--accent); letter-spacing: 0.01em; text-transform: uppercase;
+  line-height: 1.05; margin-top: 8px; }
+.rb-bib-sub { font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+  letter-spacing: 0.18em; color: var(--ink-3); text-transform: uppercase; margin-top: 4px; }
+.rb-bib-divider {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  margin-top: 14px; border-top: 1.5px dashed var(--ink); padding-top: 12px; gap: 0;
+}
+.rb-bib-stat { text-align: center; border-right: 1px solid var(--line); padding: 0 4px; }
+.rb-bib-stat:last-child { border-right: none; }
+.rb-bib-stat-label { font-family: var(--font-mono); font-size: 8px; font-weight: 700;
+  letter-spacing: 0.12em; color: var(--ink-3); text-transform: uppercase; margin-bottom: 2px; }
+.rb-bib-stat-val { font-family: var(--font-mono); font-size: 16px; font-weight: 700;
+  color: var(--ink); letter-spacing: -0.02em; font-variant-numeric: tabular-nums; line-height: 1; }
+.rb-bib-stat-val.ok { color: var(--ok); }
+.rb-bib-stat-val.warn { color: var(--warn); }
+.rb-bib-stat-val.danger { color: var(--danger); }
+
+/* ── READINESS ───────────────────────────────── */
+.rb-readiness {
+  margin-top: 14px; padding: 12px 14px; border: 1.5px solid var(--ink);
+  background: var(--accent); color: var(--paper); border-radius: 4px;
+}
+.rb-rd-top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+.rb-rd-lbl { font-family: var(--font-mono); font-size: 9px; font-weight: 700;
+  letter-spacing: 0.16em; opacity: 0.85; text-transform: uppercase; }
+.rb-rd-num { font-family: var(--font-disp); font-size: 36px; line-height: 1;
+  letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+.rb-rd-unit { font-family: var(--font-mono); font-size: 10px; opacity: 0.7; margin-left: 3px; }
+.rb-rd-bar { height: 4px; background: rgba(0,0,0,0.25); border-radius: 2px; overflow: hidden; }
+.rb-rd-bar-fill { height: 100%; background: var(--paper); transition: width 1.2s cubic-bezier(.4,0,.2,1); }
+.rb-rd-trend { display: flex; align-items: center; justify-content: space-between;
+  margin-top: 6px; font-family: var(--font-mono); font-size: 9px; opacity: 0.7;
+  letter-spacing: 0.1em; text-transform: uppercase; }
+
+/* ── TOGGLE ──────────────────────────────────── */
+.rb-toggle {
+  display: flex; border: 1.5px solid var(--ink); border-radius: 4px; overflow: hidden;
+  margin-top: 16px; width: 100%;
+}
+.rb-toggle-btn {
+  flex: 1; padding: 10px 8px; background: transparent; border: none;
+  font-family: var(--font-mono); font-size: 10px; font-weight: 700; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--ink-3); cursor: pointer; transition: all .15s;
+  border-right: 1px solid var(--line);
+}
+.rb-toggle-btn:last-child { border-right: none; }
+.rb-toggle-btn.active { background: var(--ink); color: var(--paper); }
+.rb-toggle-btn.active-hyrox { background: var(--accent); color: var(--paper); }
+
+/* ── WORKOUT CARD ────────────────────────────── */
+.rb-workout-card {
+  background: var(--paper); border: 1px solid var(--line);
+  border-radius: 4px; padding: 14px 16px; margin-top: 12px;
+}
+.rb-workout-eyebrow { font-family: var(--font-mono); font-size: 9px; font-weight: 700;
+  letter-spacing: 0.2em; color: var(--ink-4); text-transform: uppercase; margin-bottom: 4px; }
+.rb-workout-title { font-family: var(--font-disp); font-size: clamp(22px,6vw,32px);
+  color: var(--ink); letter-spacing: -0.01em; text-transform: uppercase; line-height: 1.05; }
+.rb-workout-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 10px; border: 1px solid var(--line-2);
+  background: var(--bg); border-radius: 2px; margin-top: 8px;
+  font-family: var(--font-mono); font-size: 9px; font-weight: 700;
+  letter-spacing: 0.12em; text-transform: uppercase; color: var(--ok);
+}
+.rb-workout-badge::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--ok); }
+.rb-ex-list { margin-top: 12px; display: flex; flex-direction: column; gap: 2px; }
+.rb-ex-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 9px 12px; border-left: 2px solid var(--line-2); background: var(--bg);
+}
+.rb-ex-row:first-child { border-left-color: var(--accent); }
+.rb-ex-name { font-family: var(--font-body); font-size: 14px; font-weight: 600;
+  color: var(--ink-2); }
+.rb-ex-sets { font-family: var(--font-mono); font-size: 12px; font-weight: 700;
+  color: var(--accent); letter-spacing: 0.05em; }
+.rb-ex-more { font-family: var(--font-mono); font-size: 9px; color: var(--ink-4);
+  letter-spacing: 0.1em; text-align: center; margin-top: 6px; }
+
+/* ── NUTRITION ───────────────────────────────── */
+.rb-nut-card {
+  background: var(--paper); border: 1px solid var(--line);
+  border-radius: 4px; padding: 14px 16px; margin-top: 12px;
+}
+.rb-nut-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 10px; }
+.rb-nut-block { text-align: center; }
+.rb-nut-val { font-family: var(--font-mono); font-size: 22px; font-weight: 700;
+  color: var(--ink); letter-spacing: -0.02em; line-height: 1; }
+.rb-nut-lbl { font-family: var(--font-mono); font-size: 9px; font-weight: 700;
+  letter-spacing: 0.12em; color: var(--ink-4); text-transform: uppercase; margin-top: 3px; }
+.rb-nut-bar { height: 3px; background: var(--line); border-radius: 2px; margin-top: 4px; overflow: hidden; }
+.rb-nut-bar-fill { height: 100%; border-radius: 2px; }
+.rb-nut-p .rb-nut-bar-fill { background: var(--accent); }
+.rb-nut-c .rb-nut-bar-fill { background: var(--accent-2); }
+.rb-nut-g .rb-nut-bar-fill { background: var(--ok); }
+.rb-nut-v .rb-nut-bar-fill { background: oklch(0.62 0.14 260); }
+.rb-nut-footer { display: flex; align-items: center; justify-content: space-between;
+  margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); }
+.rb-nut-hint { font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+  letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-3); }
+.rb-nut-tipo { font-family: var(--font-mono); font-size: 9px; color: var(--ink-4);
+  letter-spacing: 0.1em; text-transform: uppercase; }
+
+/* ── SESSIONS ────────────────────────────────── */
+.rb-sessions { margin-top: 12px; display: flex; flex-direction: column; }
+.rb-session-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 11px 0; border-bottom: 1px solid var(--line);
+}
+.rb-session-row:last-child { border-bottom: none; }
+.rb-session-date { font-family: var(--font-mono); font-size: 9px; font-weight: 700;
+  letter-spacing: 0.12em; color: var(--ink-4); text-transform: uppercase; margin-bottom: 2px; }
+.rb-session-name { font-family: var(--font-body); font-size: 14px; font-weight: 600; color: var(--ink-2); }
+.rb-session-badge {
+  font-family: var(--font-mono); font-size: 8px; font-weight: 700;
+  letter-spacing: 0.1em; color: var(--accent); text-transform: uppercase;
+  padding: 2px 6px; border: 1px solid rgba(var(--accent-rgb),0.3); border-radius: 2px; margin-left: 4px;
+}
+.rb-session-right { display: flex; align-items: center; gap: 8px;
+  font-family: var(--font-mono); font-size: 11px; font-weight: 700; color: var(--ink-3); }
+.rb-session-check { color: var(--ok); font-size: 14px; }
+
+/* ── BIENESTAR ───────────────────────────────── */
+.rb-bio-card {
+  background: var(--paper); border: 1px solid var(--line);
+  border-radius: 4px; padding: 14px 16px; margin-top: 12px;
+}
+.rb-bio-grid { display: flex; gap: 0; margin-top: 10px; }
+.rb-bio-item { flex: 1; text-align: center; border-right: 1px solid var(--line); padding: 0 6px; }
+.rb-bio-item:last-child { border-right: none; }
+.rb-bio-val { font-family: var(--font-mono); font-size: 20px; font-weight: 700;
+  color: var(--ink); line-height: 1; font-variant-numeric: tabular-nums; }
+.rb-bio-lbl { font-family: var(--font-mono); font-size: 8px; font-weight: 700;
+  letter-spacing: 0.1em; color: var(--ink-4); text-transform: uppercase; margin-top: 3px; }
+.rb-bio-actions { display: flex; gap: 6px; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); }
+
+/* ── ACWR ────────────────────────────────────── */
+.rb-acwr-container { margin-top: 12px; }
+.rb-skeleton { min-height: 200px; background: var(--paper); border: 1px solid var(--line);
+  border-radius: 4px; position: relative; overflow: hidden; }
+.rb-skeleton::after {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(90deg, transparent 25%, rgba(15,15,14,0.04) 50%, transparent 75%);
+  animation: rb-shimmer 1.6s infinite;
+}
+@keyframes rb-shimmer { 0%{transform:translateX(-100%)} 100%{transform:translateX(100%)} }
+
+/* ── STATS FOOTER ────────────────────────────── */
+.rb-stats-bar {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  border-top: 2px solid var(--ink); border-bottom: 2px solid var(--ink);
+  margin-top: 20px;
+}
+.rb-stat-cell {
+  text-align: center; padding: 14px 4px;
+  border-right: 1px solid var(--line);
+}
+.rb-stat-cell:last-child { border-right: none; }
+.rb-stat-val { font-family: var(--font-mono); font-size: clamp(16px,4vw,22px); font-weight: 700;
+  color: var(--ink); letter-spacing: -0.03em; line-height: 1;
+  font-variant-numeric: tabular-nums; }
+.rb-stat-val.ok { color: var(--ok); }
+.rb-stat-val.warn { color: var(--warn); }
+.rb-stat-val.danger { color: var(--danger); }
+.rb-stat-lbl { font-family: var(--font-mono); font-size: 8px; font-weight: 700;
+  letter-spacing: 0.14em; color: var(--ink-4); text-transform: uppercase; margin-top: 3px; }
+
+/* ── BOTTOM ACTIONS ──────────────────────────── */
+.rb-bottom-actions {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 20px;
+}
+.rb-bottom-btn {
+  display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 10px 4px;
+  background: var(--paper); border: 1px solid var(--line); border-radius: 4px;
+  font-family: var(--font-mono); font-size: 8px; font-weight: 700;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3);
+  text-decoration: none; cursor: pointer; transition: all .15s;
+}
+.rb-bottom-btn i { font-size: 14px; color: var(--ink-3); }
+.rb-bottom-btn:hover { background: var(--ink); color: var(--paper); border-color: var(--ink); text-decoration: none; }
+.rb-bottom-btn:hover i { color: var(--paper); }
+
+/* ── ACWR MODAL ──────────────────────────────── */
+.rb-modal-ov {
+  display: none; position: fixed; inset: 0; z-index: 500;
+  background: rgba(15,15,14,0.6); backdrop-filter: blur(4px);
+  align-items: flex-end; justify-content: center;
+}
+.rb-modal-ov.open { display: flex; }
+.rb-modal-box {
+  background: var(--paper); border: 2px solid var(--ink); border-radius: 12px 12px 0 0;
+  width: 100%; max-width: 560px; max-height: 80vh; overflow-y: auto;
+  padding: 20px 20px 32px;
+}
+.rb-modal-handle { width: 40px; height: 4px; background: var(--line-2); border-radius: 2px;
+  margin: 0 auto 16px; }
+.rb-modal-title { font-family: var(--font-disp); font-size: 18px; color: var(--ink);
+  text-transform: uppercase; margin-bottom: 4px; }
+.rb-modal-sub { font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+  letter-spacing: 0.1em; color: var(--ink-3); text-transform: uppercase; margin-bottom: 16px; }
+.rb-modal-section { margin-bottom: 16px; }
+.rb-modal-section-title { font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+  letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); margin-bottom: 8px; }
+.rb-modal-row { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 8px;
+  padding: 8px 10px; background: var(--bg); border-radius: 4px; border: 1px solid var(--line); }
+.rb-modal-row-icon { font-size: 14px; flex-shrink: 0; }
+.rb-modal-row-label { font-family: var(--font-body); font-size: 13px; font-weight: 700; color: var(--ink); margin-bottom: 2px; }
+.rb-modal-row-desc { font-family: var(--font-body); font-size: 12px; color: var(--ink-3); line-height: 1.5; }
+.rb-modal-formula { background: var(--ink); color: var(--paper); padding: 12px 14px;
+  border-radius: 4px; margin-bottom: 10px; font-family: var(--font-mono); }
+.rb-modal-formula-eq { font-size: 15px; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 4px; }
+.rb-modal-formula-desc { font-size: 10px; opacity: 0.7; letter-spacing: 0.08em; }
+.rb-modal-zone-row { display: flex; align-items: center; gap: 10px; padding: 8px 10px;
+  border-radius: 4px; border: 1px solid var(--line); margin-bottom: 4px;
+  background: var(--bg); }
+.rb-modal-zone-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.rb-modal-zone-range { font-family: var(--font-mono); font-size: 11px; font-weight: 700;
+  min-width: 64px; letter-spacing: 0.05em; }
+.rb-modal-zone-text { font-size: 12px; color: var(--ink-2); line-height: 1.4; }
+
+  /* ── ACWR WIDGET ─────────────────────────────── */
+  .acwr-card { width:100%; }
+  .acwr-hdr { display:flex; align-items:center; gap:8px; margin-bottom:10px; }
+  .acwr-hdr-dot { width:7px; height:7px; border-radius:50%; background:var(--accent); animation:rb-blink 1.3s infinite; }
+  .acwr-hdr-label { font-family:var(--font-mono); font-size:10px; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:var(--ink-3); flex:1; }
+  .acwr-info-btn { width:22px; height:22px; border-radius:50%; background:var(--paper-2); border:1px solid var(--line-2); color:var(--ink-3); font-size:11px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all .15s; }
+  .acwr-info-btn:hover { background:var(--ink); color:var(--paper); }
+  .acwr-big-num { font-family:var(--font-disp); font-size:36px; font-weight:900; line-height:1; letter-spacing:-.03em; font-variant-numeric:tabular-nums; }
+  .acwr-num-green  { color:var(--ok); }
+  .acwr-num-yellow { color:var(--warn); }
+  .acwr-num-red    { color:var(--danger); }
+  .acwr-num-gray   { color:var(--ink-4); }
+  /* Track */
+  .acwr-track-wrap { position:relative; width:100%; padding-top:18px; }
+  .acwr-track-bar  { display:flex; height:8px; border-radius:99px; overflow:hidden; gap:2px; margin-bottom:4px; }
+  .acwr-track-seg  { height:100%; border-radius:2px; }
+  .acwr-track-marker { position:absolute; top:2px; font-size:11px; transform:translateX(-50%); color:var(--ink); transition:left .8s cubic-bezier(.34,1.2,.64,1); }
+  .acwr-track-labels { display:flex; justify-content:space-between; font-size:9px; font-weight:700; color:var(--ink-4); margin-top:2px; font-family:var(--font-mono); }
+  /* Zone badge */
+  .acwr-zone-badge { font-weight:700; font-size:11px; font-family:var(--font-mono); letter-spacing:.05em; }
+  .acwr-zone-optima      { background:rgba(22,163,74,.12);  color:var(--ok); }
+  .acwr-zone-cuidado     { background:rgba(217,119,6,.12);  color:var(--warn); }
+  .acwr-zone-riesgo_alto { background:rgba(193,53,21,.12);  color:var(--danger); }
+  .acwr-zone-baja_carga  { background:rgba(15,15,14,.06);   color:var(--ink-3); }
+
+  </style>
+</head>
+<body>
+
+<!-- ── NAV ─────────────────────────────────────── -->
+<nav class="rb-nav">
+  <a class="rb-brand" href="{% url 'clientes:panel_cliente' %}">
+    <div class="rb-brand-bar"></div>
+    GYM PANEL
+  </a>
+  <div class="rb-live">
+    <div class="rb-live-dot"></div>
+    {{ hoy|date:"D d/M"|upper }}
   </div>
 </nav>
 
-{% endblock %}
+<!-- ── MAIN ─────────────────────────────────────── -->
+<div class="rb-container">
 
-{% block extra_js %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://unpkg.com/htmx.org@1.9.12"></script>
+  <!-- ── BIB HERO ─────────────────────────────── -->
+  <div class="rb-bib">
+    <div class="rb-bib-meta">
+      <span>Atleta</span>
+      <span>{{ hoy|date:"Y" }}</span>
+    </div>
+    <div class="rb-bib-name">{{ cliente.user.get_full_name|default:cliente.user.username }}</div>
+
+    <!-- Workout name -->
+    {% if proximo_entrenamiento %}
+    <div class="rb-bib-workout">{{ proximo_entrenamiento.nombre|default:proximo_entrenamiento.rutina_nombre|default:"Sesión" }}</div>
+    <div class="rb-bib-sub">
+      {{ proximo_entrenamiento.objetivo|upper|default:"BASE" }} · {{ proximo_entrenamiento.semana_nombre|default:"Semana" }} · Día {{ proximo_entrenamiento.dia|default:"1" }}
+    </div>
+    {% else %}
+    <div class="rb-bib-workout">Día de Descanso</div>
+    <div class="rb-bib-sub">Recuperación activa · Movilidad</div>
+    {% endif %}
+
+    <!-- Stats divider -->
+    <div class="rb-bib-divider">
+      <div class="rb-bib-stat">
+        <div class="rb-bib-stat-label">Sesiones</div>
+        <div class="rb-bib-stat-val">{{ entrenos_count|default:"0" }}</div>
+      </div>
+      <div class="rb-bib-stat">
+        <div class="rb-bib-stat-label">Carga</div>
+        <div class="rb-bib-stat-val">{{ carga_total_acumulada|default:"0" }}</div>
+      </div>
+      <div class="rb-bib-stat">
+        <div class="rb-bib-stat-label">Consist.</div>
+        <div class="rb-bib-stat-val">{{ consistencia_pct|default:"0" }}<span style="font-size:10px;color:var(--ink-4)">%</span></div>
+      </div>
+      <div class="rb-bib-stat">
+        <div class="rb-bib-stat-label">ACWR</div>
+        <div class="rb-bib-stat-val {% if acwr_actual >= 1.3 %}danger{% elif acwr_actual >= 0.8 %}ok{% else %}warn{% endif %}">
+          {{ acwr_actual|floatformat:2|default:"—" }}
+        </div>
+      </div>
+    </div>
+
+    <!-- Bio readiness -->
+    {% if bio_readiness %}
+    <div class="rb-readiness">
+      <div class="rb-rd-top">
+        <div class="rb-rd-lbl">Bio Readiness</div>
+        <div>
+          <span class="rb-rd-num">{% widthratio bio_readiness.score|default:0 1 100 %}</span>
+          <span class="rb-rd-unit">/ 100</span>
+        </div>
+      </div>
+      <div class="rb-rd-bar">
+        <div class="rb-rd-bar-fill" style="width:{% widthratio bio_readiness.score|default:0 1 100 %}%"></div>
+      </div>
+      <div class="rb-rd-trend">
+        <span>Vol. modifier: {% widthratio bio_readiness.volume_modifier|default:1 1 100 %}%</span>
+        <span>{{ bio_readiness.label|default:"Listo" }}</span>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- ── TOGGLE GYM / HYROX ──────────────────── -->
+  {% if hyrox_objetivo %}
+  <div class="rb-toggle" id="modeSwitcherRb">
+    <button class="rb-toggle-btn active" data-mode="gym" id="rbBtnGym">
+      <i class="fas fa-dumbbell"></i> GYM
+    </button>
+    <button class="rb-toggle-btn" data-mode="hyrox" id="rbBtnHyrox">
+      <i class="fas fa-person-running"></i> HYROX
+    </button>
+  </div>
+  {% endif %}
+
+  <!-- ── GYM WORKOUT CARD ─────────────────────── -->
+  <div id="rbGymContent">
+
+    {% if proximo_entrenamiento %}
+    <div class="rb-workout-card">
+      <div class="rb-workout-eyebrow">Próximo Entrenamiento</div>
+      <div class="rb-workout-title">{{ proximo_entrenamiento.nombre|default:proximo_entrenamiento.rutina_nombre|default:"Sesión" }}</div>
+      <div class="rb-workout-badge">Volumen: {% widthratio bio_readiness.volume_modifier|default:1 1 100 %}%</div>
+      {% if proximo_entrenamiento.ejercicios %}
+      <div class="rb-ex-list">
+        {% for ej in proximo_entrenamiento.ejercicios|slice:":4" %}
+        <div class="rb-ex-row">
+          <span class="rb-ex-name">{{ ej.nombre }}</span>
+          <span class="rb-ex-sets">{{ ej.series|default:"4" }} × {{ ej.repeticiones|default:"4–6" }}</span>
+        </div>
+        {% endfor %}
+        {% if proximo_entrenamiento.ejercicios|length > 4 %}
+        <div class="rb-ex-more">+ {{ proximo_entrenamiento.ejercicios|length|add:"-4" }} ejercicio{{ proximo_entrenamiento.ejercicios|length|add:"-4"|pluralize:"s" }} más</div>
+        {% endif %}
+      </div>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Nutrition widget -->
+    {% if nut_target %}
+    <div class="rb-nut-card">
+      <div class="rb-section-head" style="margin-bottom:0;">
+        <div class="rb-section-num">NUT</div>
+        <h3 class="rb-section-title">Nutrición Hoy</h3>
+        <div class="rb-section-line"></div>
+      </div>
+      <div class="rb-nut-grid">
+        <div class="rb-nut-block rb-nut-p">
+          <div class="rb-nut-val">{{ nut_target.bloques_proteina }}</div>
+          <div class="rb-nut-lbl">Prot.</div>
+          <div class="rb-nut-bar"><div class="rb-nut-bar-fill" style="width:{{ nut_pct_p }}%"></div></div>
+        </div>
+        <div class="rb-nut-block rb-nut-c">
+          <div class="rb-nut-val">{{ nut_target.bloques_carbos }}</div>
+          <div class="rb-nut-lbl">Carbos</div>
+          <div class="rb-nut-bar"><div class="rb-nut-bar-fill" style="width:{{ nut_pct_c }}%"></div></div>
+        </div>
+        <div class="rb-nut-block rb-nut-g">
+          <div class="rb-nut-val">{{ nut_target.bloques_grasas }}</div>
+          <div class="rb-nut-lbl">Grasas</div>
+          <div class="rb-nut-bar"><div class="rb-nut-bar-fill" style="width:{{ nut_pct_g }}%"></div></div>
+        </div>
+        <div class="rb-nut-block rb-nut-v">
+          <div class="rb-nut-val">{{ nut_target.bloques_verduras }}</div>
+          <div class="rb-nut-lbl">Verd.</div>
+          <div class="rb-nut-bar"><div class="rb-nut-bar-fill" style="width:0%"></div></div>
+        </div>
+      </div>
+      <div class="rb-nut-footer">
+        <span class="rb-nut-tipo">{{ nut_target.get_tipo_sesion_display|upper }}</span>
+        <span class="rb-nut-hint">
+          {% if nut_target.tipo_sesion == 'hyrox' %}PRE: 3C + 2P
+          {% elif nut_target.tipo_dia == 'carga' %}POST: 5P + 4C
+          {% elif nut_target.tipo_dia == 'descarga' %}CENA: 5P + 1G
+          {% else %}Equilibra macros{% endif %}
+        </span>
+        <a href="{% url 'nutricion_app_django:dashboard_nutricional' %}" class="rb-btn rb-btn-ghost rb-btn-sm">Ver</a>
+      </div>
+    </div>
+    {% else %}
+    <div style="margin-top:12px;">
+      <a href="{% url 'nutricion_app_django:dashboard_nutricional' %}" class="rb-btn rb-btn-ghost" style="width:100%;justify-content:center;">
+        <i class="fas fa-leaf"></i> Mi Nutrición
+      </a>
+    </div>
+    {% endif %}
+
+    <!-- CTA: Ejecutar -->
+    {% if proximo_entrenamiento %}
+    <a href="{% url 'entrenos:entrenamiento_activo' cliente.id %}?fecha={{ hoy|date:'Y-m-d' }}&rutina_nombre={{ proximo_entrenamiento.rutina_nombre|urlencode }}&ejercicios={{ proximo_entrenamiento_json|urlencode }}" class="rb-cta">
+      <i class="fas fa-play"></i> Ejecutar Protocolo
+    </a>
+    {% else %}
+    <a href="{% url 'estoico:dashboard' %}" class="rb-cta rb-cta-rest">
+      <i class="fas fa-sun"></i> Ver Estoico
+    </a>
+    {% endif %}
+
+    <!-- Recent sessions -->
+    {% if actividades_recientes_focus %}
+    <div class="rb-section">
+      <div class="rb-section-head">
+        <div class="rb-section-num">LOG</div>
+        <h3 class="rb-section-title">Últimas Sesiones</h3>
+        <div class="rb-section-line"></div>
+      </div>
+      <div class="rb-sessions">
+        {% for act in actividades_recientes_focus %}
+        <div class="rb-session-row">
+          <div>
+            <div class="rb-session-date">{{ act.fecha_efectiva|date:"D d/m"|upper }}</div>
+            <div class="rb-session-name">
+              {% if act.titulo %}{{ act.titulo }}
+              {% elif act.entreno_gym %}{{ act.entreno_gym.rutina.nombre|default:"Entreno" }}
+              {% else %}{{ act.get_tipo_display }}{% endif %}
+            </div>
+            <div style="font-family:var(--font-mono);font-size:9px;color:var(--ink-4);margin-top:2px;display:flex;align-items:center;gap:6px;">
+              <i class="fas fa-calendar" style="font-size:8px;"></i>
+              Plan {{ act.fecha|date:"D d/m"|upper }}
+              {% if act.es_anticipada %}<span class="rb-session-badge">⚡ anticipado</span>{% endif %}
+            </div>
+          </div>
+          <div class="rb-session-right">
+            {% if act.duracion_minutos %}<span>{{ act.duracion_minutos }}m</span>{% endif %}
+            <i class="fas fa-circle-check rb-session-check"></i>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+  </div><!-- #rbGymContent -->
+
+  <!-- ── HYROX CONTENT ────────────────────────── -->
+  {% if hyrox_objetivo %}
+  <div id="rbHyroxContent" style="display:none;">
+
+    {% if hyrox_proxima_sesion %}
+    <div class="rb-workout-card" style="border-left:3px solid var(--accent);">
+      <div class="rb-workout-eyebrow">Próxima Sesión Hyrox</div>
+      <div class="rb-workout-title">{{ hyrox_proxima_sesion.titulo|default:"Hyrox Session" }}</div>
+      {% if hyrox_proxima_sesion.tipo_fase %}
+      <div class="rb-workout-badge" style="color:var(--accent);">{{ hyrox_proxima_sesion.tipo_fase|upper }}</div>
+      {% endif %}
+    </div>
+    {% else %}
+    <div class="rb-workout-card">
+      <div class="rb-workout-eyebrow">Hyrox</div>
+      <div class="rb-workout-title">Sin sesión programada</div>
+      <div class="rb-bib-sub" style="margin-top:6px;">Recuperación activa</div>
+    </div>
+    {% endif %}
+
+    {% if nut_target %}
+    <div class="rb-nut-card">
+      <div class="rb-section-head" style="margin-bottom:0;">
+        <div class="rb-section-num">NUT</div>
+        <h3 class="rb-section-title">Nutrición Hyrox</h3>
+        <div class="rb-section-line"></div>
+      </div>
+      <div class="rb-nut-grid">
+        <div class="rb-nut-block rb-nut-p">
+          <div class="rb-nut-val">{{ nut_target.bloques_proteina }}</div>
+          <div class="rb-nut-lbl">Prot.</div>
+          <div class="rb-nut-bar"><div class="rb-nut-bar-fill" style="width:{{ nut_pct_p }}%"></div></div>
+        </div>
+        <div class="rb-nut-block rb-nut-c">
+          <div class="rb-nut-val">{{ nut_target.bloques_carbos }}</div>
+          <div class="rb-nut-lbl">Carbos</div>
+          <div class="rb-nut-bar"><div class="rb-nut-bar-fill" style="width:{{ nut_pct_c }}%"></div></div>
+        </div>
+        <div class="rb-nut-block rb-nut-g">
+          <div class="rb-nut-val">{{ nut_target.bloques_grasas }}</div>
+          <div class="rb-nut-lbl">Grasas</div>
+          <div class="rb-nut-bar"><div class="rb-nut-bar-fill" style="width:{{ nut_pct_g }}%"></div></div>
+        </div>
+        <div class="rb-nut-block rb-nut-v">
+          <div class="rb-nut-val">{{ nut_target.bloques_verduras }}</div>
+          <div class="rb-nut-lbl">Verd.</div>
+          <div class="rb-nut-bar"><div class="rb-nut-bar-fill" style="width:0%"></div></div>
+        </div>
+      </div>
+      <div class="rb-nut-footer">
+        <span class="rb-nut-tipo">PRE-HYROX</span>
+        <span class="rb-nut-hint">PRE: 3C + 2P</span>
+        <a href="{% url 'nutricion_app_django:dashboard_nutricional' %}" class="rb-btn rb-btn-ghost rb-btn-sm">Ver</a>
+      </div>
+    </div>
+    {% endif %}
+
+    {% if hyrox_proxima_sesion.objective %}
+    <a href="{% url 'hyrox:registrar_entrenamiento' hyrox_proxima_sesion.objective.id %}" class="rb-cta">
+      <i class="fas fa-bolt"></i> Ejecutar Hyrox
+    </a>
+    {% else %}
+    <a href="{% url 'hyrox:dashboard' %}" class="rb-cta">
+      <i class="fas fa-gauge-high"></i> Ver Dashboard Hyrox
+    </a>
+    {% endif %}
+
+    <div style="margin-top:12px;display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+      <a href="{% url 'hyrox:dashboard' %}" class="rb-btn rb-btn-ghost" style="justify-content:center;">
+        <i class="fas fa-chart-line"></i> Ver Plan
+      </a>
+      <a href="{% url 'entrenos:registrar_actividad_libre' cliente.id %}" class="rb-btn rb-btn-ghost" style="justify-content:center;">
+        <i class="fas fa-plus"></i> Añadir Actividad
+      </a>
+    </div>
+
+  </div>
+  {% endif %}
+
+  <!-- ── BIENESTAR ─────────────────────────────── -->
+  <div class="rb-section">
+    <div class="rb-section-head">
+      <div class="rb-section-num">BIO</div>
+      <h3 class="rb-section-title">Bienestar Hoy</h3>
+      <div class="rb-section-line"></div>
+    </div>
+    <div class="rb-bio-card">
+      {% if prosoche_hoy or vires_hoy %}
+      <div class="rb-bio-grid">
+        {% if vires_hoy.nivel_energia is not None %}
+        <div class="rb-bio-item">
+          <div class="rb-bio-val" style="color:oklch(0.72 0.17 70);">{{ vires_hoy.nivel_energia }}</div>
+          <div class="rb-bio-lbl">Energía</div>
+        </div>
+        {% endif %}
+        {% if vires_hoy.horas_sueno %}
+        <div class="rb-bio-item">
+          <div class="rb-bio-val" style="color:oklch(0.55 0.15 265);">{{ vires_hoy.horas_sueno }}h</div>
+          <div class="rb-bio-lbl">Sueño</div>
+        </div>
+        {% endif %}
+        {% if prosoche_hoy.estado_animo %}
+        <div class="rb-bio-item">
+          <div class="rb-bio-val {% if prosoche_hoy.estado_animo >= 4 %}ok{% elif prosoche_hoy.estado_animo == 3 %}warn{% else %}danger{% endif %}">
+            {{ prosoche_hoy.estado_animo }}/5
+          </div>
+          <div class="rb-bio-lbl">Ánimo</div>
+        </div>
+        {% endif %}
+        {% if vires_hoy.nivel_estres is not None %}
+        <div class="rb-bio-item">
+          <div class="rb-bio-val {% if vires_hoy.nivel_estres <= 2 %}ok{% elif vires_hoy.nivel_estres == 3 %}warn{% else %}danger{% endif %}">
+            {{ vires_hoy.nivel_estres }}
+          </div>
+          <div class="rb-bio-lbl">Estrés</div>
+        </div>
+        {% endif %}
+        {% if prosoche_hoy %}
+        <div class="rb-bio-item">
+          <div class="rb-bio-val">{{ prosoche_hoy.get_tareas_completadas }}/{{ prosoche_hoy.get_total_tareas }}</div>
+          <div class="rb-bio-lbl">Tareas</div>
+        </div>
+        {% endif %}
+      </div>
+      <div class="rb-bio-actions">
+        <a href="{% url 'diario:prosoche_nueva_entrada' %}" class="rb-btn rb-btn-ghost rb-btn-sm">
+          <i class="fas fa-pen"></i> Registrar
+        </a>
+        <a href="{% url 'diario:dashboard_diario' %}" class="rb-btn rb-btn-ghost rb-btn-sm">
+          <i class="fas fa-book"></i> Diario
+        </a>
+      </div>
+      {% else %}
+      <div style="padding:8px 0;">
+        <p style="font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--ink-4);margin-bottom:10px;">Check-in pendiente · ¿Cómo estás hoy?</p>
+        <div style="display:flex;gap:6px;">
+          <a href="{% url 'diario:prosoche_nueva_entrada' %}" class="rb-btn rb-btn-ghost rb-btn-sm">
+            <i class="fas fa-pen"></i> Registrar
+          </a>
+          <a href="{% url 'diario:dashboard_diario' %}" class="rb-btn rb-btn-ghost rb-btn-sm">
+            <i class="fas fa-book"></i> Diario
+          </a>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- ── ACWR WIDGET (HTMX lazy) ──────────────── -->
+  <div class="rb-section">
+    <div class="rb-section-head">
+      <div class="rb-section-num">CARGA</div>
+      <h3 class="rb-section-title">Ratio Carga ACWR</h3>
+      <div class="rb-section-line"></div>
+      <button onclick="document.getElementById('rbAcwrModal').classList.add('open')"
+              class="rb-btn rb-btn-ghost rb-btn-sm" style="flex-shrink:0;">
+        <i class="fas fa-circle-info"></i>
+      </button>
+    </div>
+    <div class="rb-acwr-container"
+         id="acwr-widget-container"
+         hx-get="{% url 'clientes:widget_acwr' cliente.id %}"
+         hx-trigger="load"
+         hx-swap="innerHTML">
+      <div class="rb-skeleton"></div>
+    </div>
+  </div>
+
+  <!-- ── STATS BAR ─────────────────────────────── -->
+  <div class="rb-stats-bar">
+    <div class="rb-stat-cell">
+      <div class="rb-stat-val">{{ entrenos_count|default:"0" }}</div>
+      <div class="rb-stat-lbl">Sesiones</div>
+    </div>
+    <div class="rb-stat-cell">
+      <div class="rb-stat-val">{{ carga_total_acumulada|default:"0" }}</div>
+      <div class="rb-stat-lbl">Carga</div>
+    </div>
+    <div class="rb-stat-cell">
+      <div class="rb-stat-val">{{ consistencia_pct|default:"0" }}<span style="font-size:10px;font-weight:400;color:var(--ink-4)">%</span></div>
+      <div class="rb-stat-lbl">Consist.</div>
+    </div>
+    <div class="rb-stat-cell">
+      <div class="rb-stat-val {% if acwr_actual >= 1.3 %}danger{% elif acwr_actual >= 0.8 %}ok{% else %}warn{% endif %}">
+        {{ acwr_actual|floatformat:2|default:"—" }}
+      </div>
+      <div class="rb-stat-lbl">ACWR</div>
+    </div>
+  </div>
+
+  <!-- ── BOTTOM ACTION GRID ────────────────────── -->
+  <div class="rb-bottom-actions">
+    <a href="{% url 'entrenos:dashboard_evolucion' cliente.id %}" class="rb-bottom-btn">
+      <i class="fas fa-chart-area"></i>
+      Evolución
+    </a>
+    <a href="{% url 'hyrox:dashboard' %}" class="rb-bottom-btn">
+      <i class="fas fa-person-running"></i>
+      Hyrox
+    </a>
+    <a href="{% url 'nutricion_app_django:dashboard_nutricional' %}" class="rb-bottom-btn">
+      <i class="fas fa-utensils"></i>
+      Nutrición
+    </a>
+    <a href="{% url 'entrenos:timeline_atleta' cliente.id %}" class="rb-bottom-btn">
+      <i class="fas fa-calendar-days"></i>
+      Timeline
+    </a>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px;">
+    <a href="{% url 'estoico:dashboard' %}" class="rb-bottom-btn" style="flex-direction:row;gap:6px;padding:10px 12px;">
+      <i class="fas fa-fire-flame-curved"></i>
+      Estoico
+    </a>
+    <a href="/logros/" class="rb-bottom-btn" style="flex-direction:row;gap:6px;padding:10px 12px;">
+      <i class="fas fa-trophy"></i>
+      Logros
+    </a>
+  </div>
+
+</div><!-- .rb-container -->
+
+<!-- ── ACWR MODAL ───────────────────────────────── -->
+<div class="rb-modal-ov" id="rbAcwrModal" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="rb-modal-box">
+    <div class="rb-modal-handle"></div>
+    <div class="rb-modal-title">¿Qué es el ACWR?</div>
+    <div class="rb-modal-sub">Acute:Chronic Workload Ratio — Ratio de Carga Aguda/Crónica</div>
+
+    <div class="rb-modal-section">
+      <div class="rb-modal-section-title">¿Para qué sirve?</div>
+      <div class="rb-modal-row">
+        <div class="rb-modal-row-icon">🎯</div>
+        <div>
+          <div class="rb-modal-row-label">Predice el riesgo de lesión</div>
+          <div class="rb-modal-row-desc">Compara cuánto has entrenado esta semana versus lo que tu cuerpo está acostumbrado. Subir demasiado rápido = mayor riesgo de lesión.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="rb-modal-section">
+      <div class="rb-modal-section-title">Cómo se calcula</div>
+      <div class="rb-modal-formula">
+        <div class="rb-modal-formula-eq">ACWR = Carga 7d ÷ Carga 28d</div>
+        <div class="rb-modal-formula-desc">Cada sesión: Carga UA = RPE × minutos de entreno</div>
+      </div>
+    </div>
+
+    <div class="rb-modal-section">
+      <div class="rb-modal-section-title">Zonas del indicador</div>
+      <div class="rb-modal-zone-row">
+        <div class="rb-modal-zone-dot" style="background:#64748b"></div>
+        <div class="rb-modal-zone-range" style="color:#64748b">0.0 – 0.8</div>
+        <div class="rb-modal-zone-text"><strong>Carga baja</strong> — Puedes exigirte más sin riesgo.</div>
+      </div>
+      <div class="rb-modal-zone-row" style="border-color:rgba(var(--accent-rgb),0.2);">
+        <div class="rb-modal-zone-dot" style="background:var(--ok)"></div>
+        <div class="rb-modal-zone-range" style="color:var(--ok)">0.8 – 1.3</div>
+        <div class="rb-modal-zone-text"><strong>Zona óptima</strong> — Equilibrio perfecto entre esfuerzo y recuperación.</div>
+      </div>
+      <div class="rb-modal-zone-row">
+        <div class="rb-modal-zone-dot" style="background:var(--warn)"></div>
+        <div class="rb-modal-zone-range" style="color:var(--warn)">1.3 – 1.5</div>
+        <div class="rb-modal-zone-text"><strong>Cuidado</strong> — Has subido rápido. Mantén pero no aumentes la carga.</div>
+      </div>
+      <div class="rb-modal-zone-row">
+        <div class="rb-modal-zone-dot" style="background:var(--danger)"></div>
+        <div class="rb-modal-zone-range" style="color:var(--danger)">1.5+</div>
+        <div class="rb-modal-zone-text"><strong>Zona de riesgo</strong> — Riesgo elevado. Descansa o reduce intensidad.</div>
+      </div>
+    </div>
+
+    <button class="rb-cta rb-cta-rest" onclick="document.getElementById('rbAcwrModal').classList.remove('open')" style="margin-top:16px;">
+      Entendido
+    </button>
+  </div>
+</div>
+
 <script>
-window.PANEL_CONFIG = {
-    bioReadiness: {{ bio_readiness.score|default:50 }},
-    emergencyUrl: "{% url 'entrenos:entrenamiento_activo' cliente.id %}?modo=emergencia",
-    gamiWidgetUrl: "/logros/gamificacion-resumen/{{ cliente.id }}/",
-    ratiosFuerza: {
-        empujeVertical:    parseFloat("{{ ratios_fuerza.empuje_vertical|default:0 }}") || 0,
-        traccionVertical:  parseFloat("{{ ratios_fuerza.traccion_vertical|default:0 }}") || 0,
-        empujeHorizontal:  parseFloat("{{ ratios_fuerza.empuje_horizontal|default:0 }}") || 0,
-        traccionHorizontal: parseFloat("{{ ratios_fuerza.traccion_horizontal|default:0 }}") || 0,
-        dominanciaRodilla: parseFloat("{{ ratios_fuerza.dominancia_rodilla|default:0 }}") || 0,
-        dominanciaCadera:  parseFloat("{{ ratios_fuerza.dominancia_cadera|default:0 }}") || 0,
+function initAcwrChart() {
+  const cvDash = document.getElementById('acwrChartDash');
+  if (!cvDash || typeof Chart === 'undefined') return;
+  if (cvDash._chartInstance) { cvDash._chartInstance.destroy(); cvDash._chartInstance = null; }
+  let raw = [];
+  try { raw = JSON.parse(cvDash.dataset.acwr || '[]'); } catch(e) {}
+  const labels = raw.map(r => r.fecha || '');
+  const vals   = raw.map(r => parseFloat(r.acwr) || 0);
+  const today  = new Date().toISOString().slice(0, 10);
+  const todayIdx = labels.lastIndexOf(today) >= 0 ? labels.lastIndexOf(today) : labels.length - 1;
+  const cur = vals[todayIdx] || 0;
+  cvDash._chartInstance = new Chart(cvDash, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        {
+          data: vals,
+          borderColor: 'oklch(0.55 0.21 28)',
+          backgroundColor: 'rgba(193,53,21,0.07)',
+          fill: true, tension: 0.4,
+          pointRadius: vals.map((_, i) => i === todayIdx ? 6 : 0),
+          pointBackgroundColor: vals.map((_, i) => i === todayIdx ? (cur >= 1.3 ? '#ef4444' : cur >= 0.8 ? '#16a34a' : '#d97706') : 'transparent'),
+          pointBorderColor: '#fff', pointBorderWidth: 2,
+        },
+        { data: labels.map(() => 0.8), borderColor: 'rgba(22,163,74,.3)', borderDash: [4,4], borderWidth: 1, pointRadius: 0, fill: false },
+        { data: labels.map(() => 1.3), borderColor: 'rgba(217,119,6,.3)', borderDash: [4,4], borderWidth: 1, pointRadius: 0, fill: false },
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { min: 0, max: 2, grid: { color: 'rgba(15,15,14,0.06)' }, ticks: { stepSize: 0.5, color: 'rgba(15,15,14,0.4)', font: { size: 9 } } },
+        x: { grid: { display: false }, ticks: { maxTicksLimit: 5, color: 'rgba(15,15,14,0.4)', font: { size: 9 } } },
+      }
     }
-};
-</script>
-<script src="{% static 'js/panel-home.js' %}?v=1"></script>
-<script>
-document.addEventListener('DOMContentLoaded', function() {
+  });
+  const marker = document.getElementById('acwr-track-marker');
+  if (marker) setTimeout(() => { marker.style.left = Math.min(Math.max(cur/2,0),1)*100+'%'; }, 300);
+}
 
-    // ── ACWR Gauge (función reutilizable) ────────────────────────────
-    function animarAcwrGauge(cardSelector, arcId, needleId) {
-        try {
-            const card = document.querySelector(cardSelector);
-            if (!card) return;
-            const acwr  = parseFloat(card.dataset.acwr) || 0;
-            const zona  = card.dataset.zona || 'baja_carga';
-            const L     = Math.PI * 90; // ≈283
-            const clamp = Math.min(Math.max(acwr, 0), 2.0);
-            const COLORS = { optima:'#22c55e', cuidado:'#f59e0b', riesgo_alto:'#ef4444', baja_carga:'#64748b' };
-            const color  = COLORS[zona] || '#64748b';
+document.body.addEventListener('htmx:afterSettle', function(evt) {
+  if (evt.detail?.target?.id === 'acwr-widget-container') initAcwrChart();
+});
 
-            // Arco activo
-            const activeArc = document.getElementById(arcId);
-            if (activeArc) {
-                activeArc.setAttribute('stroke', color);
-                setTimeout(() => {
-                    activeArc.style.transition = 'stroke-dasharray 1.2s cubic-bezier(.4,0,.2,1)';
-                    activeArc.setAttribute('stroke-dasharray', `${(clamp/2)*L} 10000`);
-                }, 150);
-            }
+document.addEventListener('DOMContentLoaded', function () {
+  {% if hyrox_objetivo %}
+  const btnGym = document.getElementById('rbBtnGym');
+  const btnHyrox = document.getElementById('rbBtnHyrox');
+  const gymContent = document.getElementById('rbGymContent');
+  const hyroxContent = document.getElementById('rbHyroxContent');
 
-            // Aguja: CSS transform (transform-box:fill-box, origin:50% 100%)
-            // -90deg = izquierda (ACWR=0), 0deg = arriba (ACWR=1), +90deg = derecha (ACWR=2)
-            const needle = document.getElementById(needleId);
-            if (needle) {
-                const deg = (clamp / 2) * 180 - 90;
-                setTimeout(() => {
-                    needle.style.transform = `rotate(${deg}deg)`;
-                }, 200);
-            }
-        } catch(e) { console.error('ACWR gauge error:', e); }
+  function setMode(mode) {
+    if (mode === 'hyrox') {
+      btnGym.classList.remove('active');
+      btnHyrox.classList.add('active-hyrox');
+      gymContent.style.display = 'none';
+      hyroxContent.style.display = 'block';
+    } else {
+      btnHyrox.classList.remove('active-hyrox');
+      btnGym.classList.add('active');
+      gymContent.style.display = 'block';
+      hyroxContent.style.display = 'none';
     }
-    animarAcwrGauge('#acwr-card-focus', 'acwr-active-arc-f', 'acwr-needle-f');
-    animarAcwrGauge('.acwr-card:not(#acwr-card-focus)', 'acwr-active-arc', 'acwr-needle');
+    localStorage.setItem('rb_panel_mode', mode);
+  }
 
-    // ── ACWR Chart (dashboard panel) ─────────────────────────────────
-    try {
-        const cvDash = document.getElementById('acwrChartDash');
-        if (cvDash && typeof Chart !== 'undefined') {
-            let raw = [];
-            try { raw = JSON.parse(cvDash.dataset.acwr || '[]'); } catch(e) {}
+  btnGym.addEventListener('click', () => setMode('gym'));
+  btnHyrox.addEventListener('click', () => setMode('hyrox'));
 
-            const labels = raw.map(r => r.fecha || '');
-            const vals   = raw.map(r => parseFloat(r.acwr) || 0);
-            const today  = new Date().toISOString().slice(0,10);
-
-            // Punto actual: último valor (hoy)
-            const todayIdx = labels.lastIndexOf(today) >= 0
-                ? labels.lastIndexOf(today)
-                : labels.length - 1;
-            const currentVal = vals[todayIdx] || 0;
-
-            // Colores por zona en cada punto (para coloring de la línea)
-            const pointColors = vals.map(v =>
-                v >= 1.3 ? '#ef4444' : v >= 0.8 ? '#22c55e' : '#f59e0b'
-            );
-
-            new Chart(cvDash, {
-                type: 'line',
-                data: {
-                    labels,
-                    datasets: [
-                        {
-                            data: vals,
-                            borderColor: '#00d4a0',
-                            backgroundColor: 'rgba(0,212,160,0.07)',
-                            fill: true, tension: 0.4,
-                            pointRadius: vals.map((_, i) => i === todayIdx ? 6 : 0),
-                            pointBackgroundColor: vals.map((_, i) =>
-                                i === todayIdx
-                                    ? (currentVal >= 1.3 ? '#ef4444' : currentVal >= 0.8 ? '#22c55e' : '#f59e0b')
-                                    : 'transparent'
-                            ),
-                            pointBorderColor: '#fff',
-                            pointBorderWidth: 2,
-                        },
-                        // Línea zona verde inferior (0.8)
-                        { data: labels.map(() => 0.8), borderColor:'rgba(34,197,94,.25)', borderDash:[4,4], borderWidth:1, pointRadius:0, fill:false },
-                        // Línea zona verde superior (1.3)
-                        { data: labels.map(() => 1.3), borderColor:'rgba(245,158,11,.25)', borderDash:[4,4], borderWidth:1, pointRadius:0, fill:false },
-                    ]
-                },
-                options: {
-                    responsive: true, maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: {
-                            callbacks: {
-                                label: ctx => {
-                                    if (ctx.datasetIndex > 0) return null;
-                                    const v = ctx.raw;
-                                    const z = v >= 1.3 ? 'Riesgo' : v >= 0.8 ? 'Óptimo' : 'Precaución';
-                                    return `ACWR ${v.toFixed(2)} — ${z}`;
-                                }
-                            }
-                        }
-                    },
-                    scales: {
-                        y: { min:0, max:2, grid:{color:'rgba(255,255,255,.05)'}, ticks:{stepSize:0.5,color:'rgba(255,255,255,.3)',font:{size:9}} },
-                        x: { grid:{display:false}, ticks:{maxTicksLimit:5,color:'rgba(255,255,255,.3)',font:{size:9}} },
-                    }
-                }
-            });
-
-            // Marcador en la barra de track (posición relativa en escala 0-2)
-            const marker = document.getElementById('acwr-track-marker');
-            if (marker) {
-                const pct = Math.min(Math.max(currentVal / 2.0, 0), 1) * 100;
-                setTimeout(() => { marker.style.left = pct + '%'; }, 300);
-            }
-        }
-    } catch(e) { console.error('ACWR chart dash error:', e); }
-
-    try {
-        window.confirmarEntrenoExtra = function() {
-            const readiness = parseInt("{{ bio_readiness.score|default:50 }}") || 50;
-            const riskLevel = readiness < 50 ? 'ALTO' : (readiness < 70 ? 'MEDIO' : 'BAJO');
-            const msg = `⚠️ ADVERTENCIA: Tu Readiness actual es del ${readiness}%.\n\nNivel de riesgo: ${riskLevel}\n\nEntrenar hoy puede comprometer tu recuperación y aumentar el riesgo de lesión.\n\nSe generará una rutina de emergencia Bio-Safe de bajo impacto.\n\n¿Deseas continuar?`;
-            if (confirm(msg)) {
-                window.location.href = "{% url 'entrenos:entrenamiento_activo' cliente.id %}?modo=emergencia";
-            }
-        };
-    } catch (e) { console.error('Error in ConfirmarEntrenoExtra:', e); }
-
-    try {
-        const btnGym = document.getElementById('btnGym');
-        const btnHyrox = document.getElementById('btnHyrox');
-
-        // Focus Mode Elements
-        const heroGymFocus = document.getElementById('heroGymFocus');
-        const heroHyroxFocus = document.getElementById('heroHyroxFocus');
-        const heroGymBtn = document.getElementById('heroGymBtn');
-        const heroHyroxBtn = document.getElementById('heroHyroxBtn');
-
-        // Full Mode Elements
-        const heroGym = document.getElementById('heroGym');
-        const heroHyrox = document.getElementById('heroHyrox');
-
-        const focusMode = document.getElementById('focus-mode-container');
-        const fullMode = document.getElementById('full-mode-container');
-
-        window.toggleDashboardMode = function() {
-            if (focusMode.classList.contains('view-hidden')) {
-                focusMode.classList.remove('view-hidden');
-                fullMode.classList.add('view-hidden');
-                localStorage.setItem('dashboard_view_preference', 'focus');
-            } else {
-                focusMode.classList.add('view-hidden');
-                fullMode.classList.remove('view-hidden');
-                localStorage.setItem('dashboard_view_preference', 'full');
-                // Animate LoL stat bars when entering full mode
-                if (window.animateLoLBars) setTimeout(window.animateLoLBars, 80);
-            }
-        };
-
-        if (btnGym && btnHyrox) {
-            function updateModeUI(mode) {
-                if (mode === 'gym') {
-                    // Focus
-                    if(heroGymFocus) { heroGymFocus.classList.remove('hidden'); heroGymFocus.style.display = 'block'; }
-                    if(heroHyroxFocus) { heroHyroxFocus.classList.add('hidden'); heroHyroxFocus.style.display = 'none'; }
-                    if(heroGymBtn) { heroGymBtn.classList.remove('hidden'); heroGymBtn.style.display = 'flex'; }
-                    if(heroHyroxBtn) { heroHyroxBtn.classList.add('hidden'); heroHyroxBtn.style.display = 'none'; }
-                    // Full
-                    if(heroGym) heroGym.style.display = 'block';
-                    if(heroHyrox) heroHyrox.style.display = 'none';
-
-                    btnGym.className = 'mode-btn active-gym';
-                    btnHyrox.className = 'mode-btn';
-                } else {
-                    // Focus
-                    if(heroGymFocus) { heroGymFocus.classList.add('hidden'); heroGymFocus.style.display = 'none'; }
-                    if(heroHyroxFocus) { heroHyroxFocus.classList.remove('hidden'); heroHyroxFocus.style.display = 'block'; }
-                    if(heroGymBtn) { heroGymBtn.classList.add('hidden'); heroGymBtn.style.display = 'none'; }
-                    if(heroHyroxBtn) { heroHyroxBtn.classList.remove('hidden'); heroHyroxBtn.style.display = 'flex'; }
-                    // Full
-                    if(heroGym) heroGym.style.display = 'none';
-                    if(heroHyrox) heroHyrox.style.display = 'block';
-
-                    btnHyrox.className = 'mode-btn active-hyrox';
-                    btnGym.className = 'mode-btn';
-                }
-                localStorage.setItem('dashboard_mode', mode);
-            }
-
-            btnGym.addEventListener('click', () => updateModeUI('gym'));
-            btnHyrox.addEventListener('click', () => updateModeUI('hyrox'));
-
-            // Initial state
-            const savedMode = localStorage.getItem('dashboard_mode');
-            if (savedMode === 'hyrox') updateModeUI('hyrox');
-
-            const savedView = localStorage.getItem('dashboard_view_preference');
-            if (savedView === 'full') {
-                focusMode.classList.add('view-hidden');
-                fullMode.classList.remove('view-hidden');
-                if (window.animateLoLBars) setTimeout(window.animateLoLBars, 120);
-            }
-        }
-    } catch (e) { console.error('Error in Mode Switcher:', e); }
-
-    try {
-        function createRadarChart(canvasId) {
-            const ctx = document.getElementById(canvasId);
-            if (!ctx) return;
-            new Chart(ctx, {
-                type: 'radar',
-                data: {
-                    labels: ['Empuje V.', 'Tracción V.', 'Empuje H.', 'Tracción H.', 'Dominancia R.', 'Dominancia C.'],
-                    datasets: [{
-                        label: 'Balance Actual',
-                        data: [
-                            parseFloat("{{ ratios_fuerza.empuje_vertical|default:0 }}") || 0,
-                            parseFloat("{{ ratios_fuerza.traccion_vertical|default:0 }}") || 0,
-                            parseFloat("{{ ratios_fuerza.empuje_horizontal|default:0 }}") || 0,
-                            parseFloat("{{ ratios_fuerza.traccion_horizontal|default:0 }}") || 0,
-                            parseFloat("{{ ratios_fuerza.dominancia_rodilla|default:0 }}") || 0,
-                            parseFloat("{{ ratios_fuerza.dominancia_cadera|default:0 }}") || 0
-                        ],
-                        backgroundColor: 'rgba(34, 211, 238, 0.2)',
-                        borderColor: '#22d3ee',
-                        pointBackgroundColor: '#22d3ee',
-                        borderWidth: 2
-                    }]
-                },
-                options: {
-                    scales: {
-                        r: {
-                            angleLines: { color: 'rgba(255, 255, 255, 0.1)' },
-                            grid: { color: 'rgba(255, 255, 255, 0.1)' },
-                            pointLabels: { color: '#94a3b8', font: { size: 10 } },
-                            ticks: { display: false },
-                            suggestedMin: 0,
-                            suggestedMax: 100
-                        }
-                    },
-                    plugins: { legend: { display: false } }
-                }
-            });
-        }
-        createRadarChart('ratiosFuerzaChartFull');
-    } catch (e) { console.error('Error in Radar Charts:', e); }
-
-    try {
-        function loadGamiWidget(containerId) {
-            const gamiWidget = document.getElementById(containerId);
-            if (gamiWidget) {
-                fetch("/logros/gamificacion-resumen/{{ cliente.id }}/")
-                    .then(response => response.text())
-                    .then(html => { gamiWidget.innerHTML = html; })
-                    .catch(err => { console.error('Error loading widget:', err); });
-            }
-        }
-        loadGamiWidget('hero-panel-widget');
-    } catch (e) { console.error('Error in Gami Widget:', e); }
+  const saved = localStorage.getItem('rb_panel_mode');
+  if (saved === 'hyrox') setMode('hyrox');
+  {% endif %}
 });
 </script>
-{% endblock %}
+
+</body>
+</html>
