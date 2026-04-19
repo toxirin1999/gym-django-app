@@ -1,583 +1,955 @@
-{% extends "base.html" %}
 {% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Evolución · {{ cliente.nombre }}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+/* ═══════════════════════════════════════════════
+   GYM · EVOLUCIÓN · RACE BIB
+   cream paper · burnt red accent · mono data
+   ═══════════════════════════════════════════════ */
 
-{% block title %}Evolución · {{ cliente.nombre }}{% endblock %}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-{% block extra_css %}
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700;800;900&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="{% static 'entrenos/css/dashboard_evolucion.css' %}?v=5.0">
-{% endblock %}
+html, body { background: #EFEAE1; min-height: 100vh; }
 
-{% block content %}
-<a href="#main-content" class="ev-skip">Saltar al contenido</a>
-<div class="ev-shell">
+body {
+  --bg:      #EFEAE1;
+  --ink:     #0F0F0E;
+  --ink-2:   #2A2926;
+  --ink-3:   rgba(15,15,14,0.55);
+  --ink-4:   rgba(15,15,14,0.28);
+  --line:    rgba(15,15,14,0.12);
+  --line-2:  rgba(15,15,14,0.25);
+  --paper:   #F7F3EA;
+  --paper-2: #E4DED1;
+  --accent:  oklch(0.55 0.21 28);
+  --accent-2:oklch(0.62 0.18 60);
+  --ok:      oklch(0.50 0.16 145);
+  --warn:    oklch(0.68 0.17 70);
+  --danger:  oklch(0.52 0.22 25);
+  --font-disp: 'Archivo Black','Archivo',sans-serif;
+  --font-body: 'Archivo',system-ui,sans-serif;
+  --font-mono: 'JetBrains Mono',ui-monospace,monospace;
 
-  <!-- ══════════════════════════════════════════════
-       TOPBAR — sticky glassmorphism
-  ══════════════════════════════════════════════════ -->
-  <nav class="ev-topbar" aria-label="Navegación principal">
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  padding-bottom: 60px;
+}
 
-    <nav aria-label="Migas de pan" class="ev-crumbs">
-      <ol>
-        <li><a href="{% url 'clientes:panel_cliente' %}">Panel</a></li>
-        <li aria-hidden="true" class="ev-crumb-sep">/</li>
-        <li><span aria-current="page">Evolución</span></li>
-      </ol>
-    </nav>
+.rb-container { max-width: 620px; margin: 0 auto; padding: 0 20px; }
 
-    <div class="ev-periods" role="group" aria-label="Periodo de análisis">
-      <a href="?rango=30d"  class="ev-pill {% if rango_seleccionado == '30d'  %}ev-pill--active{% endif %}" {% if rango_seleccionado == '30d'  %}aria-current="page"{% endif %}>30D</a>
-      <a href="?rango=90d"  class="ev-pill {% if rango_seleccionado == '90d'  %}ev-pill--active{% endif %}" {% if rango_seleccionado == '90d'  %}aria-current="page"{% endif %}>90D</a>
-      <a href="?rango=180d" class="ev-pill {% if rango_seleccionado == '180d' %}ev-pill--active{% endif %}" {% if rango_seleccionado == '180d' %}aria-current="page"{% endif %}>180D</a>
-      <a href="?rango=todo" class="ev-pill {% if rango_seleccionado == 'todo' %}ev-pill--active{% endif %}" {% if rango_seleccionado == 'todo' %}aria-current="page"{% endif %}>TODO</a>
+/* ── NAV ─────────────────────────────────────── */
+.rb-nav {
+  position: sticky; top: 0; z-index: 100; background: var(--bg);
+  border-bottom: 1px solid var(--line);
+  padding: 12px 20px;
+  display: flex; justify-content: space-between; align-items: center; gap: 12px;
+  flex-wrap: wrap;
+}
+.rb-brand {
+  display: flex; align-items: center; gap: 10px;
+  font-family: var(--font-disp); font-size: 13px; letter-spacing: 0.14em;
+  color: var(--ink); text-transform: uppercase; text-decoration: none;
+}
+.rb-brand-bar { width: 3px; height: 18px; background: var(--accent); flex-shrink: 0; }
+.rb-nav-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.rb-live { display: flex; align-items: center; gap: 6px;
+  font-family: var(--font-mono); font-size: 9px; font-weight: 700;
+  letter-spacing: 0.15em; color: var(--ink-3); text-transform: uppercase; }
+.rb-live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--ok);
+  animation: rb-blink 1.3s ease-in-out infinite; }
+@keyframes rb-blink { 0%,100%{opacity:1} 50%{opacity:.25} }
+
+/* ── BUTTONS ─────────────────────────────────── */
+.rb-btn {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 6px 12px; border: 1.5px solid var(--ink);
+  background: transparent; color: var(--ink);
+  font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  cursor: pointer; text-decoration: none; transition: all .15s;
+  border-radius: 2px; white-space: nowrap;
+}
+.rb-btn:hover { background: var(--ink); color: var(--paper); text-decoration: none; }
+.rb-btn-primary { background: var(--accent); border-color: var(--accent); color: var(--paper); }
+.rb-btn-primary:hover { background: var(--ink); border-color: var(--ink); }
+.rb-btn-ghost { border-color: var(--line-2); color: var(--ink-3); }
+.rb-btn-ghost:hover { background: var(--paper-2); color: var(--ink); border-color: var(--ink-2); }
+.rb-btn-active { background: var(--ink); color: var(--paper); }
+.rb-btn-sm { padding: 4px 9px; font-size: 9px; }
+
+/* ── PERIOD PILLS ────────────────────────────── */
+.rb-periods { display: flex; gap: 4px; }
+.rb-period { font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+  letter-spacing: 0.1em; text-transform: uppercase; text-decoration: none;
+  padding: 4px 10px; border: 1.5px solid var(--line-2); border-radius: 2px;
+  color: var(--ink-3); transition: all .15s; }
+.rb-period:hover { border-color: var(--ink-2); color: var(--ink); text-decoration: none; }
+.rb-period.active { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+
+/* ── SECTION ─────────────────────────────────── */
+.rb-section { padding: 20px 0 4px; }
+.rb-section-head { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
+.rb-section-num { font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+  color: var(--ink-4); letter-spacing: 0.15em; }
+.rb-section-title { margin: 0; font-family: var(--font-disp);
+  font-size: 14px; letter-spacing: 0.02em; color: var(--ink); text-transform: uppercase; }
+.rb-section-line { flex: 1; height: 1px; background: var(--line); }
+.rb-section-right { font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+  color: var(--ink-3); letter-spacing: 0.05em; }
+
+/* ── HERO BIB ────────────────────────────────── */
+.rb-bib {
+  background: var(--paper); border: 2px solid var(--ink); border-radius: 6px;
+  padding: 14px 18px 16px; margin-top: 18px; position: relative;
+}
+.rb-bib-meta { display: flex; justify-content: space-between;
+  font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+  letter-spacing: 0.12em; color: var(--ink-3); text-transform: uppercase;
+  margin-bottom: 6px; }
+.rb-bib-name { font-family: var(--font-disp);
+  font-size: clamp(32px, 10vw, 56px); line-height: 0.95;
+  letter-spacing: -0.03em; color: var(--ink); text-transform: uppercase; }
+.rb-bib-level { font-family: var(--font-mono); font-size: 11px; font-weight: 700;
+  letter-spacing: 0.1em; color: var(--accent); text-transform: uppercase; margin-top: 8px;
+  text-decoration: none; display: inline-block; }
+.rb-bib-level:hover { text-decoration: underline; }
+.rb-bib-divider { display: flex; justify-content: space-between; align-items: baseline;
+  margin-top: 14px; border-top: 1.5px dashed var(--ink); padding-top: 12px;
+  gap: 8px; flex-wrap: wrap; }
+.rb-bib-stat { display: flex; flex-direction: column; gap: 3px; }
+.rb-bib-stat-label { font-family: var(--font-mono); font-size: 8px;
+  letter-spacing: 0.14em; color: var(--ink-3); text-transform: uppercase; font-weight: 700; }
+.rb-bib-stat-val { font-family: var(--font-mono); font-size: 20px; font-weight: 700;
+  color: var(--ink); letter-spacing: -0.02em; font-variant-numeric: tabular-nums; line-height: 1; }
+.rb-bib-stat-val.accent { color: var(--accent); }
+
+/* ── CARDS ───────────────────────────────────── */
+.rb-card {
+  background: var(--paper); border: 1.5px solid var(--line-2); border-radius: 4px;
+  padding: 16px 18px; margin-bottom: 12px;
+}
+.rb-card-head { display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 14px; gap: 8px; }
+.rb-card-title { font-family: var(--font-disp); font-size: 12px; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--ink); display: flex; align-items: center; gap: 7px; }
+.rb-card-title i { font-size: 11px; color: var(--ink-3); }
+.rb-card-title.t-accent { color: var(--accent); }
+.rb-card-title.t-ok    { color: var(--ok); }
+.rb-card-title.t-warn  { color: var(--warn); }
+.rb-card-foot { font-family: var(--font-mono); font-size: 10px; color: var(--ink-4);
+  letter-spacing: 0.05em; margin-top: 10px; display: flex; align-items: center; gap: 6px; }
+
+/* ── GRID LAYOUTS ────────────────────────────── */
+.rb-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 500px) { .rb-grid-2 { grid-template-columns: 1fr; } }
+.rb-stack { display: flex; flex-direction: column; gap: 12px; }
+
+/* ── CHART BOXES ─────────────────────────────── */
+.rb-chart-box { position: relative; }
+.rb-chart-box.lg { height: 220px; }
+.rb-chart-box.md { height: 180px; }
+.rb-chart-box.sm { height: 150px; }
+.rb-chart-box.radar { height: 200px; }
+.rb-chart-box.horiz { height: 200px; }
+.rb-chart-box canvas { width: 100% !important; }
+
+/* ── COACH BLOCK ─────────────────────────────── */
+.rb-coach { background: var(--paper); border: 1.5px solid var(--line-2);
+  border-radius: 4px; margin-bottom: 12px; overflow: hidden; }
+.rb-coach-header { display: flex; align-items: flex-start; gap: 12px; padding: 14px 16px;
+  cursor: pointer; user-select: none; }
+.rb-coach-icon { width: 36px; height: 36px; border-radius: 50%;
+  border: 1.5px solid var(--line-2); display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; font-size: 14px; color: var(--ink-3); }
+.rb-coach-text { flex: 1; min-width: 0; }
+.rb-coach-eyebrow { font-family: var(--font-mono); font-size: 9px; font-weight: 700;
+  letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-4); margin-bottom: 3px; }
+.rb-coach-msg { font-size: 13px; color: var(--ink-2); line-height: 1.45;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.rb-coach-chevron { margin-left: auto; font-size: 12px; color: var(--ink-4);
+  transition: transform .2s; flex-shrink: 0; padding-top: 4px; }
+.rb-coach.open .rb-coach-chevron { transform: rotate(180deg); }
+.rb-coach-body { max-height: 0; overflow: hidden; transition: max-height .3s ease; }
+.rb-coach.open .rb-coach-body { max-height: 600px; }
+.rb-coach-inner { padding: 0 16px 16px; border-top: 1px solid var(--line); }
+.rb-coach-fullmsg { font-size: 13px; color: var(--ink-2); line-height: 1.6; margin-top: 12px; }
+.rb-coach-acwr-wrap { display: flex; gap: 16px; align-items: center; margin-top: 12px; }
+.rb-coach-acwr-num { font-family: var(--font-mono); font-size: 28px; font-weight: 700;
+  color: var(--ink); letter-spacing: -0.03em; }
+.rb-coach-acwr-lbl { font-family: var(--font-mono); font-size: 9px; font-weight: 700;
+  letter-spacing: 0.14em; color: var(--ink-4); text-transform: uppercase; margin-top: 2px; }
+.rb-coach-acwr-bar { flex: 1; height: 4px; background: var(--line); border-radius: 2px; overflow: hidden; }
+.rb-coach-acwr-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width .6s ease; }
+
+/* ACWR track */
+.rb-track { margin: 12px 0 8px; }
+.rb-track-bar { display: flex; height: 8px; border-radius: 4px; overflow: hidden; gap: 2px; }
+.rb-track-seg { flex: 1; border-radius: 2px; }
+.rb-seg-red    { background: rgba(193,53,21,0.25); }
+.rb-seg-yellow { background: rgba(180,83,9,0.25); }
+.rb-seg-green  { background: rgba(45,125,69,0.25); }
+.rb-seg-active.rb-seg-red    { background: oklch(0.52 0.22 25); }
+.rb-seg-active.rb-seg-yellow { background: oklch(0.68 0.17 70); }
+.rb-seg-active.rb-seg-green  { background: oklch(0.50 0.16 145); }
+.rb-track-labels { display: flex; justify-content: space-between;
+  font-family: var(--font-mono); font-size: 9px; color: var(--ink-4); margin-top: 4px; }
+
+/* ── CHIPS ───────────────────────────────────── */
+.rb-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.rb-chip { display: inline-flex; align-items: center; gap: 5px;
+  font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+  padding: 4px 8px; border-radius: 2px; letter-spacing: 0.06em; }
+.rb-chip-ok     { background: rgba(45,125,69,0.12); color: var(--ok); border: 1px solid rgba(45,125,69,0.2); }
+.rb-chip-warn   { background: rgba(180,83,9,0.12);  color: var(--warn); border: 1px solid rgba(180,83,9,0.2); }
+.rb-chip-accent { background: rgba(193,53,21,0.10); color: var(--accent); border: 1px solid rgba(193,53,21,0.2); }
+.rb-chip-muted  { background: var(--paper-2); color: var(--ink-3); border: 1px solid var(--line); }
+
+/* ── ZONE BADGE ──────────────────────────────── */
+.rb-zone-badge { font-family: var(--font-mono); font-size: 11px; font-weight: 700;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  padding: 6px 12px; border-radius: 2px; display: inline-flex; align-items: center; gap: 6px;
+  margin-top: 10px; }
+.rb-zone-optima    { background: rgba(45,125,69,0.12); color: var(--ok); border: 1px solid rgba(45,125,69,0.25); }
+.rb-zone-cuidado   { background: rgba(180,83,9,0.12);  color: var(--warn); border: 1px solid rgba(180,83,9,0.25); }
+.rb-zone-riesgo_alto { background: rgba(193,53,21,0.12); color: var(--danger); border: 1px solid rgba(193,53,21,0.25); }
+.rb-zone-baja_carga  { background: var(--paper-2); color: var(--ink-3); border: 1px solid var(--line-2); }
+.rb-zone-reanudacion { background: rgba(180,83,9,0.10); color: var(--warn); border: 1px solid rgba(180,83,9,0.25); }
+
+/* ── TABS ────────────────────────────────────── */
+.rb-tabs { display: flex; gap: 0; border-bottom: 1.5px solid var(--line-2);
+  margin-bottom: 16px; overflow-x: auto; -webkit-overflow-scrolling: touch;
+  scrollbar-width: none; }
+.rb-tabs::-webkit-scrollbar { display: none; }
+.rb-tab { padding: 10px 14px; font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+  letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-4); cursor: pointer;
+  background: none; border: none; border-bottom: 2px solid transparent;
+  margin-bottom: -1.5px; transition: all .15s; white-space: nowrap;
+  display: flex; align-items: center; gap: 6px; }
+.rb-tab:hover { color: var(--ink-2); }
+.rb-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+/* ── TABLE ───────────────────────────────────── */
+.rb-table-wrap { overflow-x: auto; }
+.rb-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.rb-table th { font-family: var(--font-mono); font-size: 9px; font-weight: 700;
+  letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-4);
+  padding: 8px 10px; border-bottom: 1.5px solid var(--line-2); text-align: left; }
+.rb-table td { padding: 10px 10px; border-bottom: 1px solid var(--line);
+  font-size: 12px; color: var(--ink-2); vertical-align: middle; }
+.rb-table tbody tr:last-child td { border-bottom: none; }
+.rb-table tbody tr:hover td { background: var(--paper-2); }
+.rb-td-mono { font-family: var(--font-mono); font-size: 12px; font-weight: 700; color: var(--ink); }
+.rb-td-name { font-weight: 600; color: var(--ink); max-width: 160px; }
+
+/* ── BADGES ──────────────────────────────────── */
+.rb-badge { display: inline-flex; align-items: center; gap: 4px;
+  font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+  padding: 3px 7px; border-radius: 2px; letter-spacing: 0.06em; }
+.rb-badge-ok      { background: rgba(45,125,69,0.12);  color: var(--ok); }
+.rb-badge-accent  { background: rgba(193,53,21,0.10);  color: var(--danger); }
+.rb-badge-warn    { background: rgba(180,83,9,0.10);   color: var(--warn); }
+.rb-badge-muted   { background: var(--paper-2); color: var(--ink-4); }
+.rb-count-badge { font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+  padding: 3px 8px; border-radius: 2px; }
+.rb-count-warn  { background: rgba(180,83,9,0.12); color: var(--warn); border: 1px solid rgba(180,83,9,0.2); }
+.rb-count-ok    { background: rgba(45,125,69,0.12); color: var(--ok); border: 1px solid rgba(45,125,69,0.2); }
+
+/* ── LEGEND ROW ──────────────────────────────── */
+.rb-legend-row { display: flex; gap: 12px; }
+.rb-leg { font-family: var(--font-mono); font-size: 10px; color: var(--ink-3); }
+.rb-leg-ok   { color: var(--ok); }
+.rb-leg-warn { color: var(--warn); }
+
+/* ── FORECAST ────────────────────────────────── */
+.rb-forecast-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+@media(max-width:480px){ .rb-forecast-grid { grid-template-columns: 1fr; } }
+.rb-forecast-item { border: 1.5px solid var(--line-2); border-radius: 4px; padding: 12px; }
+.rb-forecast-top { display: flex; justify-content: space-between; align-items: flex-start;
+  margin-bottom: 10px; gap: 6px; }
+.rb-forecast-top strong { font-size: 12px; font-weight: 700; color: var(--ink); line-height: 1.3; }
+.rb-conf-badge { font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+  color: var(--ok); white-space: nowrap; }
+.rb-frow { display: flex; justify-content: space-between; align-items: center;
+  padding: 5px 0; border-bottom: 1px solid var(--line); font-size: 12px; color: var(--ink-3); }
+.rb-frow:last-child { border-bottom: none; }
+.rb-fval-now  { font-family: var(--font-mono); font-weight: 700; color: var(--ink); }
+.rb-fval-ok   { font-family: var(--font-mono); font-weight: 700; color: var(--ok); }
+.rb-fval-warn { font-family: var(--font-mono); font-weight: 700; color: var(--warn); }
+.rb-forecast-bar { height: 3px; background: var(--line); border-radius: 2px; margin-top: 10px; overflow: hidden; }
+.rb-forecast-fill { height: 100%; background: var(--ok); border-radius: 2px; }
+
+/* ── STALLS ──────────────────────────────────── */
+.rb-stall-row { display: flex; gap: 12px; align-items: flex-start;
+  padding: 12px 0; border-bottom: 1px solid var(--line); }
+.rb-stall-row:last-child { border-bottom: none; }
+.rb-stall-icon { width: 32px; height: 32px; border: 1.5px solid var(--line-2); border-radius: 2px;
+  display: flex; align-items: center; justify-content: center; font-size: 13px;
+  color: var(--accent); flex-shrink: 0; }
+.rb-stall-info strong { font-size: 13px; font-weight: 700; color: var(--ink); }
+.rb-stall-info p { font-size: 12px; color: var(--ink-3); margin-top: 2px; }
+.rb-stall-tip { display: inline-block; font-family: var(--font-mono); font-size: 10px;
+  color: var(--warn); margin-top: 6px; letter-spacing: 0.04em; }
+
+/* ── RECORDS ─────────────────────────────────── */
+.rb-record-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; }
+.rb-record-item { border: 1.5px solid var(--line-2); border-radius: 4px; padding: 12px;
+  text-align: center; }
+.rb-record-type { font-family: var(--font-mono); font-size: 8px; font-weight: 700;
+  letter-spacing: 0.14em; color: var(--accent); text-transform: uppercase; margin-bottom: 4px; }
+.rb-record-name { font-size: 11px; font-weight: 700; color: var(--ink); margin-bottom: 6px;
+  line-height: 1.3; }
+.rb-record-val { font-family: var(--font-disp); font-size: 24px; color: var(--ink); line-height: 1; }
+.rb-record-val small { font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+  color: var(--ink-3); margin-left: 2px; }
+.rb-record-date { font-family: var(--font-mono); font-size: 9px; color: var(--ink-4);
+  margin-top: 6px; text-transform: uppercase; letter-spacing: 0.1em; }
+
+/* ── CHALLENGES ──────────────────────────────── */
+.rb-challenge { display: flex; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.rb-challenge:last-child { border-bottom: none; }
+.rb-challenge.done .rb-challenge-name { text-decoration: line-through; opacity: .6; }
+.rb-challenge-icon { font-size: 20px; flex-shrink: 0; width: 36px; text-align: center; }
+.rb-challenge-body { flex: 1; min-width: 0; }
+.rb-challenge-name { font-size: 13px; font-weight: 700; color: var(--ink); }
+.rb-challenge-desc { font-size: 11px; color: var(--ink-3); margin-top: 2px; }
+.rb-progress-track { height: 4px; background: var(--line); border-radius: 2px; margin: 8px 0; overflow: hidden; }
+.rb-progress-fill { height: 100%; background: var(--ok); border-radius: 2px;
+  transition: width .6s ease; }
+.rb-progress-fill.done { background: var(--accent); }
+.rb-challenge-foot { display: flex; justify-content: space-between;
+  font-family: var(--font-mono); font-size: 10px; color: var(--ink-3); }
+.rb-pts { color: var(--warn); font-weight: 700; }
+
+/* ── ACHIEVEMENTS ────────────────────────────── */
+.rb-achievement-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 8px; }
+.rb-achievement { border: 1.5px solid var(--line-2); border-radius: 4px; padding: 10px;
+  text-align: center; transition: border-color .15s; }
+.rb-achievement:hover { border-color: var(--accent); }
+.rb-achievement-icon { font-size: 20px; margin-bottom: 6px; }
+.rb-achievement-name { font-size: 10px; font-weight: 700; color: var(--ink); line-height: 1.3; }
+.rb-achievement-date { font-family: var(--font-mono); font-size: 9px; color: var(--ink-4); margin-top: 4px; }
+
+/* ── TIMELINE ────────────────────────────────── */
+.rb-timeline { display: flex; flex-direction: column; gap: 0; }
+.rb-tl-item { display: flex; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line);
+  align-items: flex-start; }
+.rb-tl-item:last-child { border-bottom: none; }
+.rb-tl-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent);
+  flex-shrink: 0; margin-top: 5px; }
+.rb-tl-content { flex: 1; min-width: 0; }
+.rb-tl-title { font-size: 13px; font-weight: 700; color: var(--ink); }
+.rb-tl-date { font-family: var(--font-mono); font-size: 9px; font-weight: 700;
+  letter-spacing: 0.12em; color: var(--ink-4); text-transform: uppercase; margin-top: 2px; }
+.rb-tl-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
+.rb-tl-chip { font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+  padding: 3px 7px; background: var(--paper-2); border-radius: 2px; color: var(--ink-3);
+  display: inline-flex; align-items: center; gap: 4px; }
+
+/* ── HEATMAP ─────────────────────────────────── */
+.rb-heatmap-wrap { overflow-x: auto; padding-bottom: 8px; }
+#ev-heatmap { display: flex; gap: 3px; }
+.ev-hm-col { display: flex; flex-direction: column; gap: 3px; }
+.ev-hm-cell { width: 10px; height: 10px; border-radius: 2px; background: var(--paper-2); }
+.rb-hm-legend { display: flex; align-items: center; gap: 4px; margin-top: 8px; }
+.rb-hm-lbl { font-family: var(--font-mono); font-size: 9px; color: var(--ink-4); }
+.rb-hm-swatch { width: 10px; height: 10px; border-radius: 2px; }
+
+/* ── FASE SELECTOR ───────────────────────────── */
+.rb-fase-wrap { display: flex; align-items: center; gap: 6px; }
+.rb-fase-wrap label { font-family: var(--font-mono); font-size: 10px; color: var(--ink-3);
+  cursor: pointer; }
+.rb-fase-wrap select { font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+  background: transparent; border: 1.5px solid var(--line-2); border-radius: 2px;
+  color: var(--ink); padding: 4px 8px; cursor: pointer; }
+
+/* ── ZONE LEGEND ─────────────────────────────── */
+.rb-zone-legend { display: flex; gap: 14px; margin-top: 10px; }
+.rb-zone-item { display: flex; align-items: center; gap: 5px;
+  font-family: var(--font-mono); font-size: 10px; color: var(--ink-3); }
+.rb-zone-dot { width: 8px; height: 8px; border-radius: 50%; }
+.rb-dot-red    { background: var(--danger); }
+.rb-dot-yellow { background: var(--warn); }
+.rb-dot-green  { background: var(--ok); }
+
+/* ── GLOSARIO ────────────────────────────────── */
+.rb-glosario { margin-top: 20px; }
+.rb-glosario-sub { font-size: 12px; color: var(--ink-3); margin-bottom: 14px; line-height: 1.5; }
+.rb-glosario-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
+.rb-glosario-item { border: 1px solid var(--line); border-radius: 4px; padding: 10px 12px; }
+.rb-glosario-head { display: flex; align-items: center; gap: 7px; margin-bottom: 7px; }
+.rb-glosario-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); flex-shrink: 0; }
+.rb-glosario-head strong { font-size: 12px; font-weight: 700; color: var(--ink); }
+.rb-glosario-list { list-style: none; }
+.rb-glosario-list li { font-size: 11px; color: var(--ink-3); padding: 2px 0;
+  border-bottom: 1px solid var(--line); }
+.rb-glosario-list li:last-child { border-bottom: none; }
+
+/* ── EMPTY / ALL-CLEAR ───────────────────────── */
+.rb-empty { text-align: center; padding: 24px 0; }
+.rb-empty i { font-size: 24px; color: var(--ink-4); margin-bottom: 8px; display: block; }
+.rb-empty p { font-size: 13px; color: var(--ink-3); }
+.rb-all-clear { display: flex; align-items: center; gap: 10px; padding: 14px;
+  background: rgba(45,125,69,0.08); border: 1px solid rgba(45,125,69,0.2); border-radius: 4px;
+  color: var(--ok); }
+.rb-all-clear i { font-size: 18px; flex-shrink: 0; }
+.rb-all-clear p { font-size: 13px; font-weight: 600; }
+
+/* ── ACTIONS BAR ─────────────────────────────── */
+.rb-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+
+/* ── SKIP LINK ───────────────────────────────── */
+.rb-skip { position: absolute; top: -40px; left: 0; background: var(--ink); color: var(--paper);
+  padding: 8px 16px; font-family: var(--font-mono); font-size: 12px; z-index: 9999;
+  transition: top .15s; text-decoration: none; }
+.rb-skip:focus { top: 0; }
+
+/* ── RESPONSIVE ──────────────────────────────── */
+@media(max-width:480px) {
+  .rb-nav { padding: 10px 16px; }
+  .rb-bib-name { font-size: clamp(26px, 9vw, 42px); }
+  .rb-bib-stat-val { font-size: 17px; }
+  .rb-record-grid { grid-template-columns: repeat(2, 1fr); }
+  .rb-achievement-grid { grid-template-columns: repeat(3, 1fr); }
+}
+  </style>
+</head>
+<body>
+
+<a href="#main-content" class="rb-skip">Saltar al contenido</a>
+
+<!-- ── NAV ── -->
+<nav class="rb-nav" aria-label="Navegación principal">
+  <a href="{% url 'clientes:panel_cliente' %}" class="rb-brand">
+    <div class="rb-brand-bar"></div>
+    GYM · EVOLUCIÓN
+  </a>
+
+  <div class="rb-nav-right">
+    <div class="rb-periods" role="group" aria-label="Periodo">
+      <a href="?rango=30d"  class="rb-period {% if rango_seleccionado == '30d'  %}active{% endif %}">30D</a>
+      <a href="?rango=90d"  class="rb-period {% if rango_seleccionado == '90d'  %}active{% endif %}">90D</a>
+      <a href="?rango=180d" class="rb-period {% if rango_seleccionado == '180d' %}active{% endif %}">180D</a>
+      <a href="?rango=todo" class="rb-period {% if rango_seleccionado == 'todo' %}active{% endif %}">Todo</a>
     </div>
 
-    <div class="ev-topbar-actions">
-      <a href="{% url 'entrenos:timeline_atleta' cliente.id %}" class="ev-action-btn">
-        <i class="fas fa-stream" aria-hidden="true"></i><span>Timeline</span>
-      </a>
-      <a href="{% url 'entrenos:evaluacion_profesional' cliente.id %}" class="ev-action-btn">
-        <i class="fas fa-microscope" aria-hidden="true"></i><span>Evaluar</span>
-      </a>
-      <a href="{% url 'logros:ver_codice_completo' cliente.id %}" class="ev-action-btn">
-        <i class="fas fa-book-journal-whills" aria-hidden="true"></i><span>Códice</span>
-      </a>
-      <a href="{% url 'logros:leaderboard' %}" class="ev-action-btn">
-        <i class="fas fa-trophy" aria-hidden="true"></i><span>Ranking</span>
-      </a>
-      <div class="ev-fase-wrap">
-        <label for="faseAnualSelector"><i class="fas fa-sync-alt" aria-hidden="true"></i></label>
-        <select id="faseAnualSelector">
-          <option value="volumen">Hipertrofia</option>
-          <option value="definicion">Definición</option>
-          <option value="mantenimiento">Mantenimiento</option>
-          <option value="descarga">Deload</option>
-        </select>
+    <div class="rb-fase-wrap">
+      <label for="faseAnualSelector"><i class="fas fa-sync-alt"></i></label>
+      <select id="faseAnualSelector">
+        <option value="volumen">Hipertrofia</option>
+        <option value="definicion">Definición</option>
+        <option value="mantenimiento">Mantenimiento</option>
+        <option value="descarga">Deload</option>
+      </select>
+    </div>
+
+    <div class="rb-live"><div class="rb-live-dot"></div> Live</div>
+  </div>
+</nav>
+
+<div class="rb-container">
+
+  <!-- ── HERO BIB ── -->
+  <div class="rb-bib" id="main-content">
+    <div class="rb-bib-meta">
+      <span>Análisis · {{ rango_seleccionado|upper }}</span>
+      <span>Gym Log</span>
+    </div>
+    <div class="rb-bib-name">{{ cliente.nombre }}</div>
+    {% if perfil_gamificacion and perfil_gamificacion.nivel_actual %}
+    <a href="{% url 'logros:ver_codice_completo' cliente.id %}" class="rb-bib-level">
+      NIV {{ perfil_gamificacion.nivel_actual.nivel }} · {{ perfil_gamificacion.nivel_actual.titulo_arquetipo }}
+    </a>
+    {% endif %}
+    <div class="rb-bib-divider">
+      <div class="rb-bib-stat">
+        <div class="rb-bib-stat-label">Sesiones</div>
+        <div class="rb-bib-stat-val stat-value" data-count="{{ estadisticas_globales.total_entrenamientos }}">{{ estadisticas_globales.total_entrenamientos }}</div>
+      </div>
+      <div class="rb-bib-stat">
+        <div class="rb-bib-stat-label">Volumen (kg)</div>
+        <div class="rb-bib-stat-val stat-value" data-count="{{ estadisticas_globales.volumen_total_global|floatformat:0 }}">{{ estadisticas_globales.volumen_total_global|floatformat:0 }}</div>
+      </div>
+      <div class="rb-bib-stat">
+        <div class="rb-bib-stat-label">Media min</div>
+        <div class="rb-bib-stat-val stat-value" data-count="{{ estadisticas_globales.duracion_promedio }}">{{ estadisticas_globales.duracion_promedio }}</div>
+      </div>
+      <div class="rb-bib-stat">
+        <div class="rb-bib-stat-label">Eficiencia</div>
+        <div class="rb-bib-stat-val accent stat-value" data-count="{{ estadisticas_globales.porcentaje_perfeccion }}">{{ estadisticas_globales.porcentaje_perfeccion }}%</div>
       </div>
     </div>
-
-  </nav>
-
-  <!-- ══════════════════════════════════════════════
-       HERO
-  ══════════════════════════════════════════════════ -->
-  <header class="ev-hero">
-    <div class="ev-hero-left">
-      <div class="ev-hero-eyebrow">Análisis de Evolución</div>
-      <h1 class="ev-hero-name">{{ cliente.nombre }}</h1>
-    </div>
-    <div class="ev-hero-right">
-      {% if perfil_gamificacion and perfil_gamificacion.nivel_actual %}
-      <a href="{% url 'logros:ver_codice_completo' cliente.id %}" class="ev-level-badge">
-        <span class="ev-level-num">NIV {{ perfil_gamificacion.nivel_actual.nivel }}</span>
-        <span class="ev-level-sep">·</span>
-        <span class="ev-level-title">{{ perfil_gamificacion.nivel_actual.titulo_arquetipo }}</span>
-      </a>
-      {% endif %}
-      <div class="ev-period-badge">Periodo: {{ rango_seleccionado }}</div>
-    </div>
-  </header>
-
-  <!-- ══════════════════════════════════════════════
-       KPI GRID 2×2
-  ══════════════════════════════════════════════════ -->
-  <div class="ev-kpi-grid" id="main-content">
-
-    <div class="ev-kpi-card">
-      <div class="ev-kpi-wm"><i class="fas fa-dumbbell"></i></div>
-      <div class="ev-kpi-val ev-kpi-green stat-value" data-count="{{ estadisticas_globales.total_entrenamientos }}">
-        {{ estadisticas_globales.total_entrenamientos }}
-      </div>
-      <div class="ev-kpi-lbl">Sesiones</div>
-    </div>
-
-    <div class="ev-kpi-card">
-      <div class="ev-kpi-wm"><i class="fas fa-weight-hanging"></i></div>
-      <div class="ev-kpi-val ev-kpi-fg stat-value" data-count="{{ estadisticas_globales.volumen_total_global|floatformat:0 }}">
-        {{ estadisticas_globales.volumen_total_global|floatformat:0 }}
-      </div>
-      <div class="ev-kpi-lbl">Volumen (kg)</div>
-    </div>
-
-    <div class="ev-kpi-card">
-      <div class="ev-kpi-wm"><i class="fas fa-stopwatch"></i></div>
-      <div class="ev-kpi-val ev-kpi-yellow stat-value" data-count="{{ estadisticas_globales.duracion_promedio }}">
-        {{ estadisticas_globales.duracion_promedio }}
-      </div>
-      <div class="ev-kpi-lbl">Media min</div>
-    </div>
-
-    <div class="ev-kpi-card">
-      <div class="ev-kpi-wm"><i class="fas fa-bullseye"></i></div>
-      <div class="ev-kpi-val ev-kpi-cyan stat-value" data-count="{{ estadisticas_globales.porcentaje_perfeccion }}">
-        {{ estadisticas_globales.porcentaje_perfeccion }}%
-      </div>
-      <div class="ev-kpi-lbl">Eficiencia</div>
-    </div>
-
   </div>
 
-  <!-- ══════════════════════════════════════════════
-       COACH IA — expandible
-  ══════════════════════════════════════════════════ -->
+  <!-- ── ACCIONES ── -->
+  <div class="rb-actions">
+    <a href="{% url 'entrenos:timeline_atleta' cliente.id %}" class="rb-btn rb-btn-ghost rb-btn-sm">
+      <i class="fas fa-stream"></i> Timeline
+    </a>
+    <a href="{% url 'entrenos:evaluacion_profesional' cliente.id %}" class="rb-btn rb-btn-ghost rb-btn-sm">
+      <i class="fas fa-microscope"></i> Evaluar
+    </a>
+    <a href="{% url 'logros:ver_codice_completo' cliente.id %}" class="rb-btn rb-btn-ghost rb-btn-sm">
+      <i class="fas fa-book-journal-whills"></i> Códice
+    </a>
+    <a href="{% url 'logros:leaderboard' %}" class="rb-btn rb-btn-ghost rb-btn-sm">
+      <i class="fas fa-trophy"></i> Ranking
+    </a>
+  </div>
+
+  <!-- ── COACH IA ── -->
   {% with coach_data=coach_data %}
-  <div class="ev-coach coach-state-{{ coach_data.estado }}"
-       style="--coach-color:{{ coach_data.color }};--coach-rgba01:{{ coach_data.color_rgba_01 }};--coach-rgba02:{{ coach_data.color_rgba_02 }};--coach-rgba05:{{ coach_data.color_rgba_05 }};">
-
-    <div class="ev-coach-header" onclick="evToggleCoach(this)" role="button" aria-expanded="false">
-      <div class="ev-coach-icon-wrap"><i class="{{ coach_data.icono }}"></i></div>
-      <div class="ev-coach-text">
-        <div class="ev-coach-eyebrow">Coach IA · Diagnóstico: {{ coach_data.estado|title }}</div>
-        <div class="ev-coach-msg">{{ coach_data.mensaje|safe|truncatechars:160 }}</div>
-      </div>
-      <div class="ev-coach-chips">
-        <span class="ev-chip ev-chip-green"><i class="fas fa-heart-pulse"></i> RPE {{ coach_data.rpe_medio|floatformat:1 }}</span>
-        {% if coach_data.ejercicios_estancados > 0 %}
-        <span class="ev-chip ev-chip-yellow"><i class="fas fa-anchor"></i> {{ coach_data.ejercicios_estancados }} estancados</span>
-        {% endif %}
-        {% if coach_data.desequilibrios %}
-        <span class="ev-chip ev-chip-pink"><i class="fas fa-balance-scale-left"></i> Desequilibrio</span>
-        {% endif %}
-        {% if coach_data.volumen_problema %}
-        <span class="ev-chip ev-chip-blue"><i class="fas fa-layer-group"></i> Ajuste volumen</span>
-        {% endif %}
-      </div>
-      <div class="ev-coach-chevron"><i class="fas fa-chevron-down"></i></div>
+  <div class="rb-section">
+    <div class="rb-section-head">
+      <span class="rb-section-num">01</span>
+      <h2 class="rb-section-title">Coach IA</h2>
+      <div class="rb-section-line"></div>
+      <span class="rb-section-right">{{ coach_data.estado|upper }}</span>
     </div>
+  </div>
 
-    <div class="ev-coach-body">
-      <div class="ev-coach-inner">
-        <div class="ev-coach-acwr-block">
-          <div class="ev-coach-acwr-num">{{ coach_data.acwr|floatformat:2 }}</div>
-          <div class="ev-coach-acwr-lbl">Ratio ACWR</div>
-          <div class="ev-coach-acwr-bar">
-            <div class="ev-coach-acwr-fill" data-acwr="{{ coach_data.acwr|floatformat:2 }}"></div>
+  <div class="rb-coach {% if coach_data.estado == 'riesgo' or coach_data.estado == 'cuidado' %}open{% endif %}"
+       id="coachBlock">
+    <div class="rb-coach-header" onclick="toggleCoach()" aria-expanded="false">
+      <div class="rb-coach-icon"><i class="{{ coach_data.icono }}"></i></div>
+      <div class="rb-coach-text">
+        <div class="rb-coach-eyebrow">Diagnóstico · {{ coach_data.estado|title }}</div>
+        <div class="rb-coach-msg">{{ coach_data.mensaje|safe|truncatechars:160 }}</div>
+      </div>
+      <div class="rb-chips" style="margin:0;flex-shrink:0;">
+        <span class="rb-chip rb-chip-ok">RPE {{ coach_data.rpe_medio|floatformat:1 }}</span>
+        {% if coach_data.ejercicios_estancados > 0 %}
+        <span class="rb-chip rb-chip-warn">{{ coach_data.ejercicios_estancados }} estancados</span>
+        {% endif %}
+      </div>
+      <div class="rb-coach-chevron"><i class="fas fa-chevron-down"></i></div>
+    </div>
+    <div class="rb-coach-body">
+      <div class="rb-coach-inner">
+        <div class="rb-coach-acwr-wrap">
+          <div>
+            <div class="rb-coach-acwr-num">{{ coach_data.acwr|floatformat:2 }}</div>
+            <div class="rb-coach-acwr-lbl">Ratio ACWR</div>
+          </div>
+          <div class="rb-coach-acwr-bar">
+            <div class="rb-coach-acwr-fill" style="width:{{ coach_data.acwr|floatformat:2|default:'0' }}%"></div>
           </div>
         </div>
-        <div class="ev-coach-fullmsg">{{ coach_data.mensaje|safe }}</div>
+        <div class="rb-coach-fullmsg">{{ coach_data.mensaje|safe }}</div>
       </div>
     </div>
-
   </div>
   {% endwith %}
 
-  <!-- ══════════════════════════════════════════════
-       TABS NAV
-  ══════════════════════════════════════════════════ -->
-  <div class="ev-tabs" role="tablist" aria-label="Secciones del dashboard">
-    <button class="ev-tab ev-tab--active" onclick="evTab('overview', this)" role="tab" aria-selected="true" aria-controls="ev-tab-overview">
-      <i class="fas fa-chart-line" aria-hidden="true"></i><span class="ev-tab-lbl"> Visión General</span>
+  <!-- ── TABS ── -->
+  <div class="rb-section" style="padding-bottom:0;">
+    <div class="rb-section-head">
+      <span class="rb-section-num">02</span>
+      <h2 class="rb-section-title">Dashboard</h2>
+      <div class="rb-section-line"></div>
+    </div>
+  </div>
+
+  <div class="rb-tabs" role="tablist" aria-label="Secciones">
+    <button class="rb-tab active" onclick="rbTab('overview', this)" role="tab">
+      <i class="fas fa-chart-line"></i> General
     </button>
-    <button class="ev-tab" onclick="evTab('carga', this)" role="tab" aria-selected="false" aria-controls="ev-tab-carga">
-      <i class="fas fa-heartbeat" aria-hidden="true"></i><span class="ev-tab-lbl"> Carga</span>
+    <button class="rb-tab" onclick="rbTab('carga', this)" role="tab">
+      <i class="fas fa-heartbeat"></i> Carga
     </button>
-    <button class="ev-tab" onclick="evTab('progresion', this)" role="tab" aria-selected="false" aria-controls="ev-tab-progresion">
-      <i class="fas fa-arrow-trend-up" aria-hidden="true"></i><span class="ev-tab-lbl"> Progresión</span>
+    <button class="rb-tab" onclick="rbTab('progresion', this)" role="tab">
+      <i class="fas fa-arrow-trend-up"></i> Progresión
     </button>
-    <button class="ev-tab" onclick="evTab('records', this)" role="tab" aria-selected="false" aria-controls="ev-tab-records">
-      <i class="fas fa-trophy" aria-hidden="true"></i><span class="ev-tab-lbl"> Récords</span>
+    <button class="rb-tab" onclick="rbTab('records', this)" role="tab">
+      <i class="fas fa-trophy"></i> Récords
     </button>
-    <button class="ev-tab" onclick="evTab('historial', this)" role="tab" aria-selected="false" aria-controls="ev-tab-historial">
-      <i class="fas fa-history" aria-hidden="true"></i><span class="ev-tab-lbl"> Historial</span>
+    <button class="rb-tab" onclick="rbTab('historial', this)" role="tab">
+      <i class="fas fa-history"></i> Historial
     </button>
   </div>
 
-  <!-- ══════════════════════════════════════════════
-       TAB PANELS
-  ══════════════════════════════════════════════════ -->
-  <div class="ev-panels">
+  <!-- ─────────── TAB PANELS ─────────── -->
 
-    <!-- ── TAB: VISIÓN GENERAL ── -->
-    <div id="ev-tab-overview" class="ev-panel ev-panel--active" role="tabpanel">
-      <div class="ev-grid-2">
+  <!-- GENERAL -->
+  <div id="rb-tab-overview" class="rb-tab-panel">
+    <div class="rb-grid-2">
 
-        <div class="ev-card">
-          <div class="ev-card-head">
-            <div class="ev-card-title ev-t-green"><i class="fas fa-chart-area"></i> Volumen Semanal</div>
-            <div class="ev-legend-row">
-              <span class="ev-leg ev-leg-green">── Vol (kg)</span>
-              <span class="ev-leg ev-leg-purple">- - RPE</span>
-            </div>
-          </div>
-          <div class="ev-chart-box ev-chart-lg">
-            <canvas id="volumenSemanalChart"
-                    data-volumen-labels='{{ volumen_semanal_labels|safe }}'
-                    data-volumen-data='{{ volumen_semanal_data|safe }}'
-                    data-volumen-rpe='{{ volumen_semanal_rpe|safe }}'
-                    data-volumen-fases='{{ volumen_semanal_fases|safe }}'></canvas>
+      <div class="rb-card">
+        <div class="rb-card-head">
+          <div class="rb-card-title t-ok"><i class="fas fa-chart-area"></i> Volumen Semanal</div>
+          <div class="rb-legend-row">
+            <span class="rb-leg rb-leg-ok">── Vol</span>
+            <span class="rb-leg rb-leg-warn">- - RPE</span>
           </div>
         </div>
-
-        <div class="ev-card">
-          <div class="ev-card-head">
-            <div class="ev-card-title ev-t-cyan"><i class="fas fa-chart-pie"></i> Distribución Muscular</div>
-          </div>
-          <div class="ev-chart-box">
-            <canvas id="distribucionMuscularChart"
-                    data-distribucion-labels='{{ distribucion_muscular_labels|safe }}'
-                    data-distribucion-data='{{ distribucion_muscular_data|safe }}'></canvas>
-          </div>
+        <div class="rb-chart-box lg">
+          <canvas id="volumenSemanalChart"
+                  data-volumen-labels='{{ volumen_semanal_labels|safe }}'
+                  data-volumen-data='{{ volumen_semanal_data|safe }}'
+                  data-volumen-rpe='{{ volumen_semanal_rpe|safe }}'
+                  data-volumen-fases='{{ volumen_semanal_fases|safe }}'></canvas>
         </div>
-
       </div>
+
+      <div class="rb-card">
+        <div class="rb-card-head">
+          <div class="rb-card-title"><i class="fas fa-chart-pie"></i> Distribución Muscular</div>
+        </div>
+        <div class="rb-chart-box md">
+          <canvas id="distribucionMuscularChart"
+                  data-distribucion-labels='{{ distribucion_muscular_labels|safe }}'
+                  data-distribucion-data='{{ distribucion_muscular_data|safe }}'></canvas>
+        </div>
+      </div>
+
     </div>
+  </div>
 
-    <!-- ── TAB: CARGA & EQUILIBRIO ── -->
-    <div id="ev-tab-carga" class="ev-panel" role="tabpanel">
-      <div class="ev-stack">
+  <!-- CARGA -->
+  <div id="rb-tab-carga" class="rb-tab-panel" style="display:none;">
+    <div class="rb-stack">
 
-        <!-- ACWR — card vertical completo -->
-        <div class="ev-card">
-          <div class="ev-card-head">
-            <div class="ev-card-title ev-t-cyan"><i class="fas fa-heart-pulse"></i> Control de Carga (ACWR)</div>
+      <div class="rb-card">
+        <div class="rb-card-head">
+          <div class="rb-card-title"><i class="fas fa-heart-pulse"></i> Control de Carga (ACWR)</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:20px;margin-bottom:12px;">
+          <div>
+            <div style="font-family:var(--font-disp);font-size:40px;line-height:1;color:var(--ink);">{{ acwr.acwr_actual }}</div>
+            <div style="font-family:var(--font-mono);font-size:9px;letter-spacing:0.14em;color:var(--ink-4);text-transform:uppercase;margin-top:3px;">ACWR Actual</div>
           </div>
-          <div class="ev-acwr-body">
-            <div class="ev-acwr-top">
-              <div>
-                <div class="ev-acwr-big {{ acwr.zona_riesgo }}">{{ acwr.acwr_actual }}</div>
-                <div class="ev-acwr-sublbl">ACWR ACTUAL</div>
+          <div style="flex:1;">
+            <div class="rb-track">
+              <div class="rb-track-bar">
+                <div class="rb-track-seg rb-seg-red    {% if acwr.zona_riesgo == 'baja_carga'  %}rb-seg-active{% endif %}"></div>
+                <div class="rb-track-seg rb-seg-yellow {% if acwr.zona_riesgo == 'cuidado'     %}rb-seg-active{% endif %}"></div>
+                <div class="rb-track-seg rb-seg-green  {% if acwr.zona_riesgo == 'optima'      %}rb-seg-active{% endif %}"></div>
+                <div class="rb-track-seg rb-seg-yellow {% if acwr.zona_riesgo == 'reanudacion' or acwr.zona_riesgo == 'riesgo_alto' %}rb-seg-active{% endif %}"></div>
+                <div class="rb-track-seg rb-seg-red    {% if acwr.zona_riesgo == 'riesgo_alto' %}rb-seg-active{% endif %}"></div>
               </div>
-            </div>
-
-            <div class="ev-track">
-              <div class="ev-track-bar">
-                <div class="ev-track-seg ev-seg-red    {% if acwr.zona_riesgo == 'baja_carga'  %}ev-seg-active{% endif %}"></div>
-                <div class="ev-track-seg ev-seg-yellow {% if acwr.zona_riesgo == 'cuidado'     %}ev-seg-active{% endif %}"></div>
-                <div class="ev-track-seg ev-seg-green  {% if acwr.zona_riesgo == 'optima'      %}ev-seg-active{% endif %}"></div>
-                <div class="ev-track-seg ev-seg-yellow {% if acwr.zona_riesgo == 'riesgo_alto' or acwr.zona_riesgo == 'reanudacion' %}ev-seg-active{% endif %}"></div>
-                <div class="ev-track-seg ev-seg-red    {% if acwr.zona_riesgo == 'riesgo_alto' %}ev-seg-active{% endif %}"></div>
-              </div>
-              <div class="ev-track-labels">
+              <div class="rb-track-labels">
                 <span>0.0</span><span>0.8</span><span>1.0</span><span>1.3</span><span>2.0</span>
               </div>
             </div>
-
-            <!-- Hidden gauge SVG (needed by external JS for needle) -->
-            <div class="gauge-container" style="display:none">
-              <svg class="gauge-svg" viewBox="0 0 120 70" id="acwrGauge">
-                <line id="gaugeNeedle" x1="60" y1="55" x2="60" y2="18" stroke="white" stroke-width="2" stroke-linecap="round"/>
-              </svg>
-            </div>
-
-            <div class="ev-zone-badge ev-zone-{{ acwr.zona_riesgo }}">
-              {% if acwr.zona_riesgo == 'reanudacion' %}<i class="fas fa-redo"></i> Reanudando tras descanso
+            <div class="rb-zone-badge rb-zone-{{ acwr.zona_riesgo }}">
+              {% if acwr.zona_riesgo == 'reanudacion' %}<i class="fas fa-redo"></i> Reanudando
               {% elif acwr.zona_riesgo == 'optima' %}<i class="fas fa-check-circle"></i> Zona Óptima
               {% elif acwr.zona_riesgo == 'cuidado' %}<i class="fas fa-exclamation-triangle"></i> Precaución
               {% elif acwr.zona_riesgo == 'riesgo_alto' %}<i class="fas fa-times-circle"></i> Riesgo Alto
               {% else %}<i class="fas fa-info-circle"></i> Carga Baja{% endif %}
             </div>
-
-            <div class="ev-chart-box ev-chart-acwr">
-              <canvas id="acwrChart" data-acwr='{{ acwr_data_json|safe }}'></canvas>
-            </div>
-
-            <div class="ev-zone-legend">
-              <div class="ev-zone-item"><span class="ev-zone-dot ev-dot-red"></span>Riesgo</div>
-              <div class="ev-zone-item"><span class="ev-zone-dot ev-dot-yellow"></span>Precaución</div>
-              <div class="ev-zone-item"><span class="ev-zone-dot ev-dot-green"></span>Óptimo</div>
-            </div>
           </div>
         </div>
-
-        <!-- Equilibrio Muscular -->
-        <div class="ev-card">
-          <div class="ev-card-head">
-            <div class="ev-card-title ev-t-yellow"><i class="fas fa-scale-balanced"></i> Equilibrio Muscular</div>
-          </div>
-          <div class="ev-chart-box ev-chart-radar">
-            <canvas id="balanceRadarChart" data-radar='{{ equilibrio_radar_json|safe }}'></canvas>
-          </div>
-          <div class="ev-card-foot"><i class="fas fa-info-circle"></i> Ratio de fuerza por patrón de movimiento (1RM estimado)</div>
+        <div class="rb-chart-box sm">
+          <canvas id="acwrChart" data-acwr='{{ acwr_data_json|safe }}'></canvas>
         </div>
-
-        <!-- Series Semanales -->
-        <div class="ev-card">
-          <div class="ev-card-head">
-            <div class="ev-card-title ev-t-yellow">
-              <i class="fas fa-fire-flame-curved"></i> Series Semanales por Grupo
-              <a href="#glosario-mapeo" class="ev-info-link" title="Ver glosario"><i class="fas fa-circle-question"></i></a>
-            </div>
-          </div>
-          <div class="ev-chart-box ev-chart-horiz">
-            <canvas id="volumenOptimoChart" data-vol-optimo='{{ volumen_optimo_json|safe }}'></canvas>
-          </div>
-          <div class="ev-card-foot"><i class="fas fa-lightbulb"></i> Rango recomendado: 10–20 series efectivas / grupo / semana</div>
+        <div class="rb-zone-legend">
+          <div class="rb-zone-item"><span class="rb-zone-dot rb-dot-red"></span>Riesgo</div>
+          <div class="rb-zone-item"><span class="rb-zone-dot rb-dot-yellow"></span>Precaución</div>
+          <div class="rb-zone-item"><span class="rb-zone-dot rb-dot-green"></span>Óptimo</div>
         </div>
-
-        <!-- Distribución Intensidad -->
-        <div class="ev-card">
-          <div class="ev-card-head">
-            <div class="ev-card-title ev-t-pink"><i class="fas fa-chart-pie"></i> Distribución de Intensidad (RPE)</div>
-          </div>
-          <div class="ev-chart-box">
-            <canvas id="intensidadChart" data-intensidad='{{ intensidad_json|safe }}'></canvas>
-          </div>
-          <div class="ev-card-foot"><i class="fas fa-chart-simple"></i> Esfuerzo percibido en sesiones históricas</div>
-        </div>
-
       </div>
+
+      <div class="rb-card">
+        <div class="rb-card-head">
+          <div class="rb-card-title t-warn"><i class="fas fa-scale-balanced"></i> Equilibrio Muscular</div>
+        </div>
+        <div class="rb-chart-box radar">
+          <canvas id="balanceRadarChart" data-radar='{{ equilibrio_radar_json|safe }}'></canvas>
+        </div>
+        <div class="rb-card-foot"><i class="fas fa-info-circle"></i> Ratio de fuerza por patrón (1RM estimado)</div>
+      </div>
+
+      <div class="rb-card">
+        <div class="rb-card-head">
+          <div class="rb-card-title t-warn"><i class="fas fa-fire-flame-curved"></i> Series Semanales por Grupo
+            <a href="#glosario-mapeo" style="color:var(--ink-4);font-size:11px;margin-left:4px;">
+              <i class="fas fa-circle-question"></i>
+            </a>
+          </div>
+        </div>
+        <div class="rb-chart-box horiz">
+          <canvas id="volumenOptimoChart" data-vol-optimo='{{ volumen_optimo_json|safe }}'></canvas>
+        </div>
+        <div class="rb-card-foot"><i class="fas fa-lightbulb"></i> Rango recomendado: 10–20 series efectivas / grupo / semana</div>
+      </div>
+
+      <div class="rb-card">
+        <div class="rb-card-head">
+          <div class="rb-card-title t-accent"><i class="fas fa-chart-pie"></i> Distribución de Intensidad (RPE)</div>
+        </div>
+        <div class="rb-chart-box md">
+          <canvas id="intensidadChart" data-intensidad='{{ intensidad_json|safe }}'></canvas>
+        </div>
+        <div class="rb-card-foot"><i class="fas fa-chart-simple"></i> Esfuerzo percibido en sesiones históricas</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- PROGRESIÓN -->
+  <div id="rb-tab-progresion" class="rb-tab-panel" style="display:none;">
+    <div class="rb-stack">
+
+      <div class="rb-card">
+        <div class="rb-card-head">
+          <div class="rb-card-title"><i class="fas fa-wand-magic-sparkles"></i> Proyecciones IA — 1RM Futuro</div>
+        </div>
+        <div class="rb-forecast-grid">
+          {% if predicciones_ia %}
+          {% for pred in predicciones_ia %}
+          <div class="rb-forecast-item">
+            <div class="rb-forecast-top">
+              <strong>{{ pred.nombre }}</strong>
+              <span class="rb-conf-badge"><i class="fas fa-chart-line"></i> {{ pred.confianza }}%</span>
+            </div>
+            <div class="rb-frow"><span>Actual</span><span class="rb-fval-now">{{ pred.actual }} kg</span></div>
+            <div class="rb-frow"><span>+4 semanas</span><span class="rb-fval-ok">{{ pred.p4_semanas }} kg</span></div>
+            <div class="rb-frow"><span>+8 semanas</span><span class="rb-fval-warn">{{ pred.p8_semanas }} kg</span></div>
+            <div class="rb-forecast-bar"><div class="rb-forecast-fill" style="width:{{ pred.confianza }}%"></div></div>
+          </div>
+          {% endfor %}
+          {% else %}
+          <div class="rb-empty" style="grid-column:1/-1;">
+            <i class="fas fa-dumbbell"></i>
+            <p>Entrena más en los "3 Grandes" para generar proyecciones</p>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="rb-card">
+        <div class="rb-card-head">
+          <div class="rb-card-title t-accent"><i class="fas fa-triangle-exclamation"></i> Detector de Estancamientos</div>
+          {% if estancamientos %}
+          <span class="rb-count-badge rb-count-warn">{{ estancamientos|length }}</span>
+          {% endif %}
+        </div>
+        <div>
+          {% if estancamientos %}
+          {% for alert in estancamientos %}
+          <div class="rb-stall-row">
+            <div class="rb-stall-icon"><i class="fas fa-anchor"></i></div>
+            <div class="rb-stall-info">
+              <strong>{{ alert.nombre }}</strong>
+              <p>{{ alert.sesiones_estancado }} sesiones sin progreso significativo</p>
+              {% if alert.recomendacion %}
+              <span class="rb-stall-tip"><i class="fas fa-lightbulb"></i> {{ alert.recomendacion }}</span>
+              {% endif %}
+            </div>
+          </div>
+          {% endfor %}
+          {% else %}
+          <div class="rb-all-clear">
+            <i class="fas fa-circle-check"></i>
+            <p>Sin estancamientos críticos — sigue progresando</p>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
     </div>
 
-    <!-- ── TAB: PROGRESIÓN ── -->
-    <div id="ev-tab-progresion" class="ev-panel" role="tabpanel">
-      <div class="ev-stack">
-
-        <div class="ev-card">
-          <div class="ev-card-head">
-            <div class="ev-card-title ev-t-purple"><i class="fas fa-wand-magic-sparkles"></i> Proyecciones IA — 1RM Futuro</div>
-          </div>
-          <div class="ev-forecast-grid">
-            {% if predicciones_ia %}
-            {% for pred in predicciones_ia %}
-            <div class="ev-forecast-item">
-              <div class="ev-forecast-top">
-                <strong>{{ pred.nombre }}</strong>
-                <span class="ev-conf-badge"><i class="fas fa-chart-line"></i> {{ pred.confianza }}%</span>
-              </div>
-              <div class="ev-forecast-rows">
-                <div class="ev-frow"><span>Actual</span><span class="ev-fval-now">{{ pred.actual }} kg</span></div>
-                <div class="ev-frow"><span>+4 semanas</span><span class="ev-fval-green">{{ pred.p4_semanas }} kg</span></div>
-                <div class="ev-frow"><span>+8 semanas</span><span class="ev-fval-cyan">{{ pred.p8_semanas }} kg</span></div>
-              </div>
-              <div class="ev-forecast-bar">
-                <div class="ev-forecast-fill" style="width:{{ pred.confianza }}%"></div>
-              </div>
-            </div>
-            {% endfor %}
-            {% else %}
-            <div class="ev-empty">
-              <i class="fas fa-dumbbell"></i>
-              <p>Entrena más días en los "3 Grandes" para generar proyecciones</p>
-            </div>
-            {% endif %}
-          </div>
-        </div>
-
-        <div class="ev-card">
-          <div class="ev-card-head">
-            <div class="ev-card-title ev-t-pink"><i class="fas fa-triangle-exclamation"></i> Detector de Estancamientos</div>
-            {% if estancamientos %}
-            <div class="ev-count-badge ev-count-pink">{{ estancamientos|length }}</div>
-            {% endif %}
-          </div>
-          <div class="ev-stall-list">
-            {% if estancamientos %}
-            {% for alert in estancamientos %}
-            <div class="ev-stall-row">
-              <div class="ev-stall-icon"><i class="fas fa-anchor"></i></div>
-              <div class="ev-stall-info">
-                <strong>{{ alert.nombre }}</strong>
-                <p>{{ alert.sesiones_estancado }} sesiones sin progreso significativo</p>
-                {% if alert.recomendacion %}
-                <span class="ev-stall-tip"><i class="fas fa-lightbulb"></i> {{ alert.recomendacion }}</span>
-                {% endif %}
-              </div>
-            </div>
-            {% endfor %}
-            {% else %}
-            <div class="ev-all-clear">
-              <i class="fas fa-circle-check"></i>
-              <p>Sin estancamientos críticos — sigue progresando</p>
-            </div>
-            {% endif %}
-          </div>
-        </div>
-
+    <div class="rb-card" style="margin-top:12px;">
+      <div class="rb-card-head">
+        <div class="rb-card-title t-ok"><i class="fas fa-chart-column"></i> Progresión de Ejercicios</div>
       </div>
-
-      <div class="ev-card">
-        <div class="ev-card-head">
-          <div class="ev-card-title ev-t-green"><i class="fas fa-chart-column"></i> Progresión de Ejercicios</div>
-        </div>
-        <div class="ev-table-wrap">
-          <table class="ev-table">
-            <thead>
-              <tr>
-                <th>Ejercicio</th>
-                <th>Inicial</th>
-                <th>Actual</th>
-                <th>Cambio</th>
-                <th>%</th>
-                <th>Tendencia</th>
-              </tr>
-            </thead>
-            <tbody>
-            {% for prog in progresion_ejercicios %}
+      <div class="rb-table-wrap">
+        <table class="rb-table">
+          <thead>
             <tr>
-              <td class="ev-td-name">{{ prog.nombre_ejercicio }}</td>
-              <td class="ev-td-mono">{{ prog.peso_inicial }} kg</td>
-              <td class="ev-td-mono">{{ prog.peso_actual }} kg</td>
-              <td>
-                {% if prog.progresion_kg > 0 %}<span class="ev-badge ev-badge-green"><i class="fas fa-arrow-up"></i> +{{ prog.progresion_kg }} kg</span>
-                {% elif prog.progresion_kg < 0 %}<span class="ev-badge ev-badge-red"><i class="fas fa-arrow-down"></i> {{ prog.progresion_kg|floatformat:1 }} kg</span>
-                {% else %}<span class="ev-badge ev-badge-muted"><i class="fas fa-minus"></i> 0 kg</span>{% endif %}
-              </td>
-              <td>
-                {% if prog.progresion_porcentaje > 0 %}<span class="ev-badge ev-badge-green">+{{ prog.progresion_porcentaje }}%</span>
-                {% elif prog.progresion_porcentaje < 0 %}<span class="ev-badge ev-badge-red">{{ prog.progresion_porcentaje }}%</span>
-                {% else %}<span class="ev-badge ev-badge-muted">0%</span>{% endif %}
-              </td>
-              <td>
-                {% if prog.tendencia == 'subiendo' %}<span class="ev-badge ev-badge-green"><i class="fas fa-arrow-trend-up"></i> Subiendo</span>
-                {% elif prog.tendencia == 'bajando' %}<span class="ev-badge ev-badge-red"><i class="fas fa-arrow-trend-down"></i> Bajando</span>
-                {% else %}<span class="ev-badge ev-badge-muted"><i class="fas fa-arrows-left-right"></i> Estable</span>{% endif %}
-              </td>
+              <th>Ejercicio</th>
+              <th>Inicial</th>
+              <th>Actual</th>
+              <th>Cambio</th>
+              <th>%</th>
+              <th>Tendencia</th>
             </tr>
-            {% endfor %}
-            </tbody>
-          </table>
-        </div>
+          </thead>
+          <tbody>
+          {% for prog in progresion_ejercicios %}
+          <tr>
+            <td class="rb-td-name">{{ prog.nombre_ejercicio }}</td>
+            <td class="rb-td-mono">{{ prog.peso_inicial }} kg</td>
+            <td class="rb-td-mono">{{ prog.peso_actual }} kg</td>
+            <td>
+              {% if prog.progresion_kg > 0 %}<span class="rb-badge rb-badge-ok"><i class="fas fa-arrow-up"></i> +{{ prog.progresion_kg }} kg</span>
+              {% elif prog.progresion_kg < 0 %}<span class="rb-badge rb-badge-accent"><i class="fas fa-arrow-down"></i> {{ prog.progresion_kg|floatformat:1 }} kg</span>
+              {% else %}<span class="rb-badge rb-badge-muted"><i class="fas fa-minus"></i> 0 kg</span>{% endif %}
+            </td>
+            <td>
+              {% if prog.progresion_porcentaje > 0 %}<span class="rb-badge rb-badge-ok">+{{ prog.progresion_porcentaje }}%</span>
+              {% elif prog.progresion_porcentaje < 0 %}<span class="rb-badge rb-badge-accent">{{ prog.progresion_porcentaje }}%</span>
+              {% else %}<span class="rb-badge rb-badge-muted">0%</span>{% endif %}
+            </td>
+            <td>
+              {% if prog.tendencia == 'subiendo' %}<span class="rb-badge rb-badge-ok"><i class="fas fa-arrow-trend-up"></i> Subiendo</span>
+              {% elif prog.tendencia == 'bajando' %}<span class="rb-badge rb-badge-accent"><i class="fas fa-arrow-trend-down"></i> Bajando</span>
+              {% else %}<span class="rb-badge rb-badge-muted"><i class="fas fa-arrows-left-right"></i> Estable</span>{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+          </tbody>
+        </table>
       </div>
     </div>
+  </div>
 
-    <!-- ── TAB: RÉCORDS & LOGROS ── -->
-    <div id="ev-tab-records" class="ev-panel" role="tabpanel">
-      <div class="ev-stack">
+  <!-- RÉCORDS -->
+  <div id="rb-tab-records" class="rb-tab-panel" style="display:none;">
+    <div class="rb-stack">
 
-        <div class="ev-card">
-          <div class="ev-card-head">
-            <div class="ev-card-title ev-t-yellow"><i class="fas fa-trophy"></i> Récords Personales Vigentes</div>
-          </div>
-          <div class="ev-record-grid">
-            {% for record in records_personales %}
-            <div class="ev-record-item">
-              <div class="ev-record-type">{{ record.get_tipo_record_display }}</div>
-              <div class="ev-record-name">{{ record.ejercicio_nombre }}</div>
-              <div class="ev-record-val">{{ record.valor|floatformat:1 }}<small>kg</small></div>
-              <div class="ev-record-date"><i class="fas fa-calendar"></i> {{ record.fecha_logrado|date:"M Y" }}</div>
-            </div>
-            {% empty %}
-            <div class="ev-empty"><i class="fas fa-medal"></i><p>No hay récords vigentes aún</p></div>
-            {% endfor %}
-          </div>
+      <div class="rb-card">
+        <div class="rb-card-head">
+          <div class="rb-card-title t-warn"><i class="fas fa-trophy"></i> Récords Personales Vigentes</div>
         </div>
-
-        <div class="ev-card">
-          <div class="ev-card-head">
-            <div class="ev-card-title ev-t-cyan"><i class="fas fa-crosshairs"></i> Desafíos Semanales</div>
-          </div>
-          <div class="ev-challenges">
-            {% for progreso in desafios_activos %}
-            <div class="ev-challenge {% if progreso.completado %}ev-challenge--done{% endif %}">
-              <div class="ev-challenge-icon">{{ progreso.desafio.icono }}</div>
-              <div class="ev-challenge-body">
-                <div class="ev-challenge-name">{{ progreso.desafio.nombre }}</div>
-                <div class="ev-challenge-desc">{{ progreso.desafio.descripcion }}</div>
-                <div class="ev-progress-track">
-                  <div class="ev-progress-fill progress-bar {% if progreso.completado %}ev-progress--done{% endif %}"
-                       style="width:{{ progreso.porcentaje }}%"></div>
-                </div>
-                <div class="ev-challenge-foot">
-                  <span>{{ progreso.progreso_actual }} / {{ progreso.desafio.objetivo_valor }}</span>
-                  <span class="ev-pts"><i class="fas fa-star"></i> +{{ progreso.desafio.recompensa_puntos }} pts</span>
-                </div>
-              </div>
-            </div>
-            {% empty %}
-            <div class="ev-empty"><i class="fas fa-flag-checkered"></i><p>No hay desafíos activos en este momento</p></div>
-            {% endfor %}
-          </div>
-        </div>
-
-      </div>
-
-      <div class="ev-card">
-        <div class="ev-card-head">
-          <div class="ev-card-title ev-t-yellow"><i class="fas fa-medal"></i> Logros Desbloqueados</div>
-          <div class="ev-count-badge ev-count-yellow">{{ logros_desbloqueados|length }}</div>
-        </div>
-        <div class="ev-achievement-grid">
-          {% for clitlogro in logros_desbloqueados %}
-          <div class="ev-achievement ev-rareza-{{ clitlogro.logro.rareza }}" title="{{ clitlogro.logro.descripcion }}">
-            <div class="ev-achievement-icon">{{ clitlogro.logro.icono }}</div>
-            <div class="ev-achievement-name">{{ clitlogro.logro.nombre }}</div>
-            <div class="ev-achievement-date">{{ clitlogro.fecha_desbloqueo|date:"d/m/Y" }}</div>
+        <div class="rb-record-grid">
+          {% for record in records_personales %}
+          <div class="rb-record-item">
+            <div class="rb-record-type">{{ record.get_tipo_record_display }}</div>
+            <div class="rb-record-name">{{ record.ejercicio_nombre }}</div>
+            <div class="rb-record-val">{{ record.valor|floatformat:1 }}<small>kg</small></div>
+            <div class="rb-record-date"><i class="fas fa-calendar"></i> {{ record.fecha_logrado|date:"M Y" }}</div>
           </div>
           {% empty %}
-          <div class="ev-empty">
-            <i class="fas fa-award"></i>
-            <p>Sigue entrenando para desbloquear tu primer logro</p>
+          <div class="rb-empty" style="grid-column:1/-1;">
+            <i class="fas fa-medal"></i><p>No hay récords vigentes aún</p>
           </div>
           {% endfor %}
         </div>
       </div>
+
+      <div class="rb-card">
+        <div class="rb-card-head">
+          <div class="rb-card-title"><i class="fas fa-crosshairs"></i> Desafíos Semanales</div>
+        </div>
+        {% for progreso in desafios_activos %}
+        <div class="rb-challenge {% if progreso.completado %}done{% endif %}">
+          <div class="rb-challenge-icon">{{ progreso.desafio.icono }}</div>
+          <div class="rb-challenge-body">
+            <div class="rb-challenge-name">{{ progreso.desafio.nombre }}</div>
+            <div class="rb-challenge-desc">{{ progreso.desafio.descripcion }}</div>
+            <div class="rb-progress-track">
+              <div class="rb-progress-fill progress-bar {% if progreso.completado %}done{% endif %}"
+                   style="width:{{ progreso.porcentaje }}%"></div>
+            </div>
+            <div class="rb-challenge-foot">
+              <span>{{ progreso.progreso_actual }} / {{ progreso.desafio.objetivo_valor }}</span>
+              <span class="rb-pts"><i class="fas fa-star"></i> +{{ progreso.desafio.recompensa_puntos }} pts</span>
+            </div>
+          </div>
+        </div>
+        {% empty %}
+        <div class="rb-empty"><i class="fas fa-flag-checkered"></i><p>No hay desafíos activos</p></div>
+        {% endfor %}
+      </div>
+
     </div>
 
-    <!-- ── TAB: HISTORIAL ── -->
-    <div id="ev-tab-historial" class="ev-panel" role="tabpanel">
-      <div class="ev-grid-2">
-
-        <div class="ev-card">
-          <div class="ev-card-head">
-            <div class="ev-card-title ev-t-green"><i class="fas fa-list-ul"></i> Últimas Sesiones</div>
-          </div>
-          <div class="ev-timeline">
-            {% for sesion in ultimas_sesiones %}
-            <div class="ev-tl-item">
-              <div class="ev-tl-dot"></div>
-              <div class="ev-tl-content">
-                <div class="ev-tl-title">
-                  {% if sesion.entreno.rutina %}{{ sesion.entreno.rutina.nombre }}{% else %}Sesión libre{% endif %}
-                </div>
-                <div class="ev-tl-date">{{ sesion.entreno.fecha|date:"d M Y"|upper }}</div>
-                <div class="ev-tl-chips">
-                  <span class="ev-chip ev-chip-sm"><i class="fas fa-clock"></i> {{ sesion.duracion_minutos }} min</span>
-                  <span class="ev-chip ev-chip-sm"><i class="fas fa-dumbbell"></i> {{ sesion.ejercicios_completados }}/{{ sesion.ejercicios_totales }}</span>
-                  <span class="ev-chip ev-chip-sm"><i class="fas fa-weight-hanging"></i> {{ sesion.volumen_sesion|floatformat:0 }} kg</span>
-                  {% if sesion.rpe_medio %}
-                  <span class="ev-chip ev-chip-sm ev-chip-rpe"><i class="fas fa-heart"></i> RPE {{ sesion.rpe_medio|floatformat:1 }}</span>
-                  {% endif %}
-                </div>
-              </div>
-            </div>
-            {% empty %}
-            <div class="ev-empty"><i class="fas fa-calendar-xmark"></i><p>No hay sesiones registradas</p></div>
-            {% endfor %}
-          </div>
+    <div class="rb-card" style="margin-top:12px;">
+      <div class="rb-card-head">
+        <div class="rb-card-title t-warn"><i class="fas fa-medal"></i> Logros Desbloqueados</div>
+        <span class="rb-count-badge rb-count-ok">{{ logros_desbloqueados|length }}</span>
+      </div>
+      <div class="rb-achievement-grid">
+        {% for clitlogro in logros_desbloqueados %}
+        <div class="rb-achievement" title="{{ clitlogro.logro.descripcion }}">
+          <div class="rb-achievement-icon">{{ clitlogro.logro.icono }}</div>
+          <div class="rb-achievement-name">{{ clitlogro.logro.nombre }}</div>
+          <div class="rb-achievement-date">{{ clitlogro.fecha_desbloqueo|date:"d/m/Y" }}</div>
         </div>
-
-        <div class="ev-card">
-          <div class="ev-card-head">
-            <div class="ev-card-title ev-t-green"><i class="fas fa-calendar-days"></i> Actividad Anual</div>
-          </div>
-          <div class="ev-heatmap-wrap">
-            <div id="ev-heatmap"></div>
-            <div class="ev-hm-legend">
-              <span class="ev-hm-lbl">Menos</span>
-              <div class="ev-hm-swatch" style="background:rgba(184,255,0,.15)"></div>
-              <div class="ev-hm-swatch" style="background:rgba(184,255,0,.35)"></div>
-              <div class="ev-hm-swatch" style="background:rgba(184,255,0,.6)"></div>
-              <div class="ev-hm-swatch" style="background:rgba(184,255,0,.8)"></div>
-              <div class="ev-hm-swatch" style="background:rgba(184,255,0,1)"></div>
-              <span class="ev-hm-lbl">Más</span>
-            </div>
-          </div>
+        {% empty %}
+        <div class="rb-empty" style="grid-column:1/-1;">
+          <i class="fas fa-award"></i><p>Sigue entrenando para desbloquear tu primer logro</p>
         </div>
-
+        {% endfor %}
       </div>
     </div>
+  </div>
 
-  </div><!-- /ev-panels -->
+  <!-- HISTORIAL -->
+  <div id="rb-tab-historial" class="rb-tab-panel" style="display:none;">
+    <div class="rb-grid-2">
 
-  <!-- ══════════════════════════════════════════════
-       GLOSARIO
-  ══════════════════════════════════════════════════ -->
-  <div id="glosario-mapeo" class="ev-card ev-glosario">
-    <div class="ev-card-head">
-      <div class="ev-card-title"><i class="fas fa-book"></i> Glosario de Mapeo Muscular</div>
+      <div class="rb-card">
+        <div class="rb-card-head">
+          <div class="rb-card-title t-ok"><i class="fas fa-list-ul"></i> Últimas Sesiones</div>
+        </div>
+        <div class="rb-timeline">
+          {% for sesion in ultimas_sesiones %}
+          <div class="rb-tl-item">
+            <div class="rb-tl-dot"></div>
+            <div class="rb-tl-content">
+              <div class="rb-tl-title">
+                {% if sesion.entreno.rutina %}{{ sesion.entreno.rutina.nombre }}{% else %}Sesión libre{% endif %}
+              </div>
+              <div class="rb-tl-date">{{ sesion.entreno.fecha|date:"d M Y"|upper }}</div>
+              <div class="rb-tl-chips">
+                <span class="rb-tl-chip"><i class="fas fa-clock"></i> {{ sesion.duracion_minutos }} min</span>
+                <span class="rb-tl-chip"><i class="fas fa-dumbbell"></i> {{ sesion.ejercicios_completados }}/{{ sesion.ejercicios_totales }}</span>
+                <span class="rb-tl-chip"><i class="fas fa-weight-hanging"></i> {{ sesion.volumen_sesion|floatformat:0 }} kg</span>
+                {% if sesion.rpe_medio %}
+                <span class="rb-tl-chip" style="background:rgba(193,53,21,0.10);color:var(--accent);">
+                  <i class="fas fa-heart"></i> RPE {{ sesion.rpe_medio|floatformat:1 }}
+                </span>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+          {% empty %}
+          <div class="rb-empty"><i class="fas fa-calendar-xmark"></i><p>No hay sesiones registradas</p></div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="rb-card">
+        <div class="rb-card-head">
+          <div class="rb-card-title t-ok"><i class="fas fa-calendar-days"></i> Actividad Anual</div>
+        </div>
+        <div class="rb-heatmap-wrap">
+          <div id="ev-heatmap"></div>
+          <div class="rb-hm-legend">
+            <span class="rb-hm-lbl">Menos</span>
+            <div class="rb-hm-swatch" style="background:rgba(193,53,21,0.12)"></div>
+            <div class="rb-hm-swatch" style="background:rgba(193,53,21,0.30)"></div>
+            <div class="rb-hm-swatch" style="background:rgba(193,53,21,0.55)"></div>
+            <div class="rb-hm-swatch" style="background:rgba(193,53,21,0.80)"></div>
+            <div class="rb-hm-swatch" style="background:rgba(193,53,21,1)"></div>
+            <span class="rb-hm-lbl">Más</span>
+          </div>
+        </div>
+      </div>
+
     </div>
-    <p class="ev-glosario-sub">Ejercicios contabilizados por cada grupo muscular en el gráfico de series semanales.</p>
-    <div class="ev-glosario-grid">
+  </div>
+
+  <!-- ── GLOSARIO ── -->
+  <div id="glosario-mapeo" class="rb-section">
+    <div class="rb-section-head">
+      <span class="rb-section-num">03</span>
+      <h2 class="rb-section-title">Glosario Muscular</h2>
+      <div class="rb-section-line"></div>
+    </div>
+  </div>
+  <div class="rb-card rb-glosario">
+    <p class="rb-glosario-sub">Ejercicios contabilizados por grupo muscular en el gráfico de series semanales.</p>
+    <div class="rb-glosario-grid">
       {% for grupo, ejercicios in glosario.items %}
-      <div class="ev-glosario-item">
-        <div class="ev-glosario-head">
-          <span class="ev-glosario-dot"></span>
+      <div class="rb-glosario-item">
+        <div class="rb-glosario-head">
+          <span class="rb-glosario-dot"></span>
           <strong>{{ grupo }}</strong>
         </div>
-        <ul class="ev-glosario-list">
+        <ul class="rb-glosario-list">
           {% for ej in ejercicios %}<li>{{ ej }}</li>{% endfor %}
         </ul>
       </div>
@@ -585,10 +957,8 @@
     </div>
   </div>
 
-</div><!-- /ev-shell -->
-{% endblock %}
+</div><!-- /rb-container -->
 
-{% block extra_js %}
 {{ distribucion_muscular_labels|json_script:"distribucion-labels" }}
 {{ distribucion_muscular_data|json_script:"distribucion-data" }}
 {{ volumen_semanal_labels|json_script:"volumen-labels" }}
@@ -600,9 +970,7 @@
 {{ glosario|json_script:"glosario-data" }}
 
 <script>
-/* ═══════════════════════════════════════════════════
-   UTILITIES
-═══════════════════════════════════════════════════ */
+/* ── UTILITIES ────────────────────────────── */
 function getCookie(name) {
   let v = null;
   if (document.cookie) document.cookie.split(';').forEach(c => {
@@ -617,81 +985,46 @@ function parseAttr(el, attr) {
   try { return JSON.parse(el.getAttribute(attr) || 'null'); } catch { return null; }
 }
 
-/* ═══════════════════════════════════════════════════
-   COACH TOGGLE
-═══════════════════════════════════════════════════ */
-function evToggleCoach(headerEl) {
-  const coach = headerEl.closest('.ev-coach');
-  const icon  = headerEl.querySelector('.ev-coach-chevron i');
-  const open  = coach.classList.toggle('ev-coach--open');
-  headerEl.setAttribute('aria-expanded', open);
-  icon.style.transform = open ? 'rotate(180deg)' : '';
+/* ── COACH TOGGLE ─────────────────────────── */
+function toggleCoach() {
+  const block = document.getElementById('coachBlock');
+  block.classList.toggle('open');
 }
 
-document.addEventListener('DOMContentLoaded', function () {
-  /* Auto-expand on risk states */
-  const coach = document.querySelector('.ev-coach');
-  if (coach) {
-    const risky = coach.classList.contains('coach-state-riesgo') ||
-                  coach.classList.contains('coach-state-cuidado');
-    if (risky) {
-      coach.classList.add('ev-coach--open');
-      const hdr  = coach.querySelector('.ev-coach-header');
-      const icon = coach.querySelector('.ev-coach-chevron i');
-      if (hdr)  hdr.setAttribute('aria-expanded', 'true');
-      if (icon) icon.style.transform = 'rotate(180deg)';
-    }
-  }
-  /* ACWR bar fill */
-  document.querySelectorAll('.ev-coach-acwr-fill[data-acwr]').forEach(el => {
-    const v = parseFloat(el.dataset.acwr) || 0;
-    el.style.width = Math.min((v / 2) * 100, 100) + '%';
-  });
-});
-
-/* ═══════════════════════════════════════════════════
-   TAB NAVIGATION
-═══════════════════════════════════════════════════ */
-function evTab(name, btn) {
-  document.querySelectorAll('.ev-panel').forEach(p => p.classList.remove('ev-panel--active'));
-  document.querySelectorAll('.ev-tab').forEach(b => {
-    b.classList.remove('ev-tab--active');
-    b.setAttribute('aria-selected', 'false');
-  });
-  const panel = document.getElementById('ev-tab-' + name);
-  if (panel) panel.classList.add('ev-panel--active');
-  btn.classList.add('ev-tab--active');
-  btn.setAttribute('aria-selected', 'true');
+/* ── TAB NAVIGATION ───────────────────────── */
+function rbTab(name, btn) {
+  document.querySelectorAll('.rb-tab-panel').forEach(p => p.style.display = 'none');
+  document.querySelectorAll('.rb-tab').forEach(b => b.classList.remove('active'));
+  const panel = document.getElementById('rb-tab-' + name);
+  if (panel) panel.style.display = '';
+  btn.classList.add('active');
   setTimeout(() => window.dispatchEvent(new Event('resize')), 50);
 }
 
-/* ═══════════════════════════════════════════════════
-   CHART PALETTE
-═══════════════════════════════════════════════════ */
+/* ── CHART PALETTE (light bg) ─────────────── */
 const PAL = {
-  green:  '#B8FF00',
-  cyan:   '#00D4A0',
-  yellow: '#FFB300',
-  purple: '#A855F7',
-  red:    '#FF3D1A',
-  blue:   '#38B6FF',
-  pink:   '#F472B6',
-  grid:   'rgba(255,255,255,0.05)',
-  tick:   'rgba(228,234,240,0.5)',
+  green:  '#16A34A',
+  cyan:   '#0891B2',
+  yellow: '#D97706',
+  purple: '#7C3AED',
+  red:    '#C13515',
+  blue:   '#2563EB',
+  pink:   '#DB2777',
+  orange: '#EA580C',
+  grid:   'rgba(15,15,14,0.08)',
+  tick:   'rgba(15,15,14,0.45)',
 };
 
 Chart.defaults.color       = PAL.tick;
 Chart.defaults.borderColor = PAL.grid;
 Chart.defaults.font.family = "'JetBrains Mono', monospace";
 
-/* ═══════════════════════════════════════════════════
-   CHARTS — DOMContentLoaded
-═══════════════════════════════════════════════════ */
+/* ── CHARTS ───────────────────────────────── */
 document.addEventListener('DOMContentLoaded', function () {
 
   /* 1. Volumen Semanal */
   const cvVol = document.getElementById('volumenSemanalChart');
-  if (cvVol && !cvVol._chartjs) {
+  if (cvVol) {
     const labels  = parseAttr(cvVol, 'data-volumen-labels') || [];
     const volData = parseAttr(cvVol, 'data-volumen-data')   || [];
     const rpeData = parseAttr(cvVol, 'data-volumen-rpe')    || [];
@@ -700,28 +1033,13 @@ document.addEventListener('DOMContentLoaded', function () {
       data: {
         labels,
         datasets: [
-          {
-            label: 'Volumen (kg)',
-            data: volData,
-            backgroundColor: 'rgba(184,255,0,0.15)',
-            borderColor: PAL.green,
-            borderWidth: 1.5,
-            borderRadius: 4,
-            yAxisID: 'yVol',
-          },
-          {
-            label: 'RPE',
-            data: rpeData,
-            type: 'line',
-            borderColor: PAL.purple,
-            backgroundColor: 'transparent',
-            borderWidth: 2,
-            borderDash: [4,3],
-            pointRadius: 3,
-            pointBackgroundColor: PAL.purple,
-            tension: 0.35,
-            yAxisID: 'yRpe',
-          },
+          { label: 'Volumen (kg)', data: volData,
+            backgroundColor: 'rgba(22,163,74,0.15)', borderColor: PAL.green,
+            borderWidth: 1.5, borderRadius: 3, yAxisID: 'yVol' },
+          { label: 'RPE', data: rpeData, type: 'line',
+            borderColor: PAL.purple, backgroundColor: 'transparent',
+            borderWidth: 2, borderDash: [4,3], pointRadius: 2,
+            pointBackgroundColor: PAL.purple, tension: 0.35, yAxisID: 'yRpe' },
         ]
       },
       options: {
@@ -738,23 +1056,23 @@ document.addEventListener('DOMContentLoaded', function () {
 
   /* 2. Distribución Muscular */
   const cvDist = document.getElementById('distribucionMuscularChart');
-  if (cvDist && !cvDist._chartjs) {
+  if (cvDist) {
     const labels = parseAttr(cvDist, 'data-distribucion-labels') || [];
     const data   = parseAttr(cvDist, 'data-distribucion-data')   || [];
-    const cols   = [PAL.green, PAL.blue, PAL.yellow, PAL.pink, '#FF9F43', PAL.cyan, PAL.red];
+    const cols   = [PAL.green, PAL.blue, PAL.yellow, PAL.pink, PAL.orange, PAL.cyan, PAL.red];
     new Chart(cvDist, {
       type: 'doughnut',
-      data: { labels, datasets: [{ data, backgroundColor: cols.slice(0, data.length), borderWidth: 0 }] },
+      data: { labels, datasets: [{ data, backgroundColor: cols.slice(0, data.length), borderWidth: 2, borderColor: '#F7F3EA' }] },
       options: {
         responsive: true, maintainAspectRatio: false, cutout: '68%',
-        plugins: { legend: { position: 'right', labels: { color: PAL.tick, padding: 12, font: { size: 11 } } } }
+        plugins: { legend: { position: 'right', labels: { color: PAL.tick, padding: 10, font: { size: 10 }, boxWidth: 10 } } }
       }
     });
   }
 
   /* 3. ACWR histórico */
   const cvAcwr = document.getElementById('acwrChart');
-  if (cvAcwr && !cvAcwr._chartjs) {
+  if (cvAcwr) {
     const raw = parseAttr(cvAcwr, 'data-acwr') || [];
     new Chart(cvAcwr, {
       type: 'line',
@@ -762,9 +1080,8 @@ document.addEventListener('DOMContentLoaded', function () {
         labels: raw.map(r => r.fecha || ''),
         datasets: [{
           data: raw.map(r => r.acwr || 0),
-          borderColor: PAL.cyan,
-          backgroundColor: 'rgba(0,212,160,0.08)',
-          fill: true, tension: 0.4, pointRadius: 0,
+          borderColor: PAL.cyan, backgroundColor: 'rgba(8,145,178,0.08)',
+          fill: true, tension: 0.4, pointRadius: 0, borderWidth: 2,
         }]
       },
       options: {
@@ -772,7 +1089,7 @@ document.addEventListener('DOMContentLoaded', function () {
         plugins: { legend: { display: false } },
         scales: {
           y: { min: 0, max: 2, grid: { color: PAL.grid }, ticks: { stepSize: 0.5, font: { size: 10 } } },
-          x: { grid: { display: false }, ticks: { maxTicksLimit: 6, font: { size: 9 } } },
+          x: { grid: { display: false }, ticks: { maxTicksLimit: 5, font: { size: 9 } } },
         }
       }
     });
@@ -780,41 +1097,32 @@ document.addEventListener('DOMContentLoaded', function () {
 
   /* 4. Equilibrio Radar */
   const cvRadar = document.getElementById('balanceRadarChart');
-  if (cvRadar && !cvRadar._chartjs) {
+  if (cvRadar) {
     const raw    = parseAttr(cvRadar, 'data-radar') || {};
     const labels = raw.labels  || [];
     const vals   = raw.valores || [];
     new Chart(cvRadar, {
       type: 'radar',
-      data: {
-        labels,
-        datasets: [{
-          label: 'Ratio',
-          data: vals,
-          borderColor: PAL.yellow,
-          backgroundColor: 'rgba(255,179,0,0.12)',
-          pointBackgroundColor: PAL.yellow,
-          borderWidth: 2, pointRadius: 4,
-        }]
-      },
+      data: { labels, datasets: [{
+        label: 'Ratio', data: vals,
+        borderColor: PAL.yellow, backgroundColor: 'rgba(217,119,6,0.10)',
+        pointBackgroundColor: PAL.yellow, borderWidth: 2, pointRadius: 4,
+      }] },
       options: {
         responsive: true, maintainAspectRatio: false,
         plugins: { legend: { display: false } },
-        scales: {
-          r: {
-            grid: { color: PAL.grid },
-            angleLines: { color: PAL.grid },
-            pointLabels: { color: PAL.tick, font: { size: 11 } },
-            ticks: { display: false },
-          }
-        }
+        scales: { r: {
+          grid: { color: PAL.grid }, angleLines: { color: PAL.grid },
+          pointLabels: { color: PAL.tick, font: { size: 11 } },
+          ticks: { display: false },
+        } }
       }
     });
   }
 
   /* 5. Volumen Óptimo */
   const cvOpt = document.getElementById('volumenOptimoChart');
-  if (cvOpt && !cvOpt._chartjs) {
+  if (cvOpt) {
     const raw    = parseAttr(cvOpt, 'data-vol-optimo') || {};
     const labels = raw.labels        || [];
     const reales = raw.series_reales || [];
@@ -825,32 +1133,22 @@ document.addEventListener('DOMContentLoaded', function () {
       data: {
         labels,
         datasets: [
-          {
-            label: 'Series/semana',
-            data: reales,
+          { label: 'Series/semana', data: reales, borderRadius: 3,
             backgroundColor: reales.map(v =>
-              v < minRec ? 'rgba(255,61,26,0.55)' :
-              v > maxRec ? 'rgba(255,179,0,0.55)' : 'rgba(0,212,160,0.55)'
-            ),
-            borderRadius: 4,
-          },
-          {
-            label: 'Mín. recomendado',
-            data: Array(labels.length).fill(minRec),
-            type: 'line', borderColor: 'rgba(184,255,0,0.5)', borderDash: [4,3],
-            pointRadius: 0, backgroundColor: 'transparent',
-          },
-          {
-            label: 'Máx. recomendado',
-            data: Array(labels.length).fill(maxRec),
-            type: 'line', borderColor: 'rgba(255,179,0,0.5)', borderDash: [4,3],
-            pointRadius: 0, backgroundColor: 'transparent',
-          },
+              v < minRec ? 'rgba(193,53,21,0.5)' :
+              v > maxRec ? 'rgba(217,119,6,0.5)' : 'rgba(22,163,74,0.5)'
+            ) },
+          { label: 'Mín. recomendado', data: Array(labels.length).fill(minRec),
+            type: 'line', borderColor: 'rgba(22,163,74,0.5)', borderDash: [4,3],
+            pointRadius: 0, backgroundColor: 'transparent' },
+          { label: 'Máx. recomendado', data: Array(labels.length).fill(maxRec),
+            type: 'line', borderColor: 'rgba(217,119,6,0.5)', borderDash: [4,3],
+            pointRadius: 0, backgroundColor: 'transparent' },
         ]
       },
       options: {
         responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { labels: { color: PAL.tick, font: { size: 10 } } } },
+        plugins: { legend: { labels: { color: PAL.tick, font: { size: 10 }, boxWidth: 10 } } },
         scales: {
           y: { grid: { color: PAL.grid }, ticks: { font: { size: 10 } } },
           x: { grid: { display: false }, ticks: { font: { size: 10 } } },
@@ -861,46 +1159,34 @@ document.addEventListener('DOMContentLoaded', function () {
 
   /* 6. Intensidad */
   const cvInt = document.getElementById('intensidadChart');
-  if (cvInt && !cvInt._chartjs) {
-    const raw    = parseAttr(cvInt, 'data-intensidad') || {};
-    const labels = raw.labels || [];
-    const data   = raw.data   || [];
+  if (cvInt) {
+    const raw  = parseAttr(cvInt, 'data-intensidad') || {};
+    const labs = raw.labels || [];
+    const data = raw.data   || [];
     new Chart(cvInt, {
       type: 'doughnut',
-      data: {
-        labels,
-        datasets: [{
-          data,
-          backgroundColor: [
-            'rgba(56,182,255,0.7)',
-            'rgba(184,255,0,0.7)',
-            'rgba(255,179,0,0.7)',
-            'rgba(255,61,26,0.7)',
-          ],
-          borderWidth: 0,
-        }]
-      },
+      data: { labels: labs, datasets: [{ data,
+        backgroundColor: [
+          'rgba(37,99,235,0.7)', 'rgba(22,163,74,0.7)',
+          'rgba(217,119,6,0.7)', 'rgba(193,53,21,0.7)',
+        ], borderWidth: 0,
+      }] },
       options: {
         responsive: true, maintainAspectRatio: false, cutout: '60%',
-        plugins: { legend: { position: 'bottom', labels: { color: PAL.tick, padding: 10, font: { size: 11 } } } }
+        plugins: { legend: { position: 'bottom', labels: { color: PAL.tick, padding: 10, font: { size: 10 }, boxWidth: 10 } } }
       }
     });
   }
 
-}); /* end charts DOMContentLoaded */
+}); /* end charts */
 
-/* ═══════════════════════════════════════════════════
-   ACTIVITY HEATMAP
-═══════════════════════════════════════════════════ */
+/* ── HEATMAP ──────────────────────────────── */
 document.addEventListener('DOMContentLoaded', function () {
   const container = document.getElementById('ev-heatmap');
   if (!container) return;
 
   let rawData = [];
-  try {
-    const el = document.getElementById('actividad-data');
-    if (el) rawData = JSON.parse(el.textContent || '[]');
-  } catch {}
+  try { rawData = JSON.parse(document.getElementById('actividad-data').textContent || '[]'); } catch {}
 
   const lookup = {};
   rawData.forEach(d => { if (d.fecha) lookup[d.fecha] = d.count || 1; });
@@ -924,8 +1210,8 @@ document.addEventListener('DOMContentLoaded', function () {
       const cell    = document.createElement('div');
       cell.className = 'ev-hm-cell';
       if (count > 0) {
-        const opacity = Math.min(0.2 + (count / maxCount) * 0.8, 1).toFixed(2);
-        cell.style.backgroundColor = `rgba(184,255,0,${opacity})`;
+        const opacity = Math.min(0.15 + (count / maxCount) * 0.85, 1).toFixed(2);
+        cell.style.backgroundColor = `rgba(193,53,21,${opacity})`;
       }
       cell.title = dateStr + (count ? ` · ${count} sesión${count > 1 ? 'es' : ''}` : '');
       col.appendChild(cell);
@@ -936,29 +1222,24 @@ document.addEventListener('DOMContentLoaded', function () {
   container.appendChild(frag);
 });
 
-/* ═══════════════════════════════════════════════════
-   FASE SELECTOR
-═══════════════════════════════════════════════════ */
+/* ── FASE SELECTOR ────────────────────────── */
 document.addEventListener('DOMContentLoaded', function () {
   const sel = document.getElementById('faseAnualSelector');
   if (sel) {
     sel.addEventListener('change', function () {
-      const clienteId = "{{ cliente.id }}";
-      fetch(`/entrenos/cliente/${clienteId}/actualizar-fase/`, {
+      fetch(`/entrenos/cliente/{{ cliente.id }}/actualizar-fase/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
         body: JSON.stringify({ fase: this.value })
       })
         .then(r => r.json())
         .then(d => { if (d.status === 'ok') window.location.reload(); else alert('Error: ' + d.message); })
-        .catch(e => { console.error(e); alert('Error de conexión'); });
+        .catch(() => alert('Error de conexión'));
     });
   }
 });
 
-/* ═══════════════════════════════════════════════════
-   KPI COUNT ANIMATION
-═══════════════════════════════════════════════════ */
+/* ── KPI COUNT ANIMATION ──────────────────── */
 document.addEventListener('DOMContentLoaded', function () {
   const els = document.querySelectorAll('.stat-value[data-count]');
   const obs = new IntersectionObserver(entries => {
@@ -969,7 +1250,7 @@ document.addEventListener('DOMContentLoaded', function () {
       const hasPct = raw.includes('%');
       const target = parseInt(raw.replace('%','')) || 0;
       const t0  = performance.now();
-      const dur = 1200;
+      const dur = 1000;
       function tick(now) {
         const p    = Math.min((now - t0) / dur, 1);
         const ease = 1 - (1-p)*(1-p);
@@ -982,7 +1263,22 @@ document.addEventListener('DOMContentLoaded', function () {
   }, { threshold: 0.5 });
   els.forEach(el => obs.observe(el));
 });
-</script>
 
-<script src="{% static 'entrenos/js/dashboard_evolucion.js' %}?v={% now 'U' %}"></script>
-{% endblock %}
+/* ── PROGRESS BAR ANIMATION ───────────────── */
+document.addEventListener('DOMContentLoaded', function () {
+  const bars = document.querySelectorAll('.progress-bar');
+  const pObs = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (!e.isIntersecting) return;
+      const bar = e.target;
+      const w = bar.style.width;
+      bar.style.width = '0%';
+      setTimeout(() => { bar.style.transition = 'width .7s ease'; bar.style.width = w; }, 80);
+      pObs.unobserve(bar);
+    });
+  }, { threshold: 0.3 });
+  bars.forEach(b => pObs.observe(b));
+});
+</script>
+</body>
+</html>
