@@ -40,6 +40,10 @@ class EjercicioRealizado(models.Model):
         default=False,
         help_text="True si este ejercicio se realizó bajo un estado biológico restringido (volume_modifier < 1.0)"
     )
+    es_tope_maquina = models.BooleanField(
+        default=False,
+        help_text="True si el peso recomendado supera el máximo físico de la máquina. Congela progresión de peso y avanza por reps/tempo."
+    )
 
     # Molestia reportada durante el entreno
     molestia_reportada = models.BooleanField(default=False)

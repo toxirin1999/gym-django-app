@@ -892,15 +892,29 @@ def adaptar_plan_personalizado(entreno, ejercicios_forms, cliente, rutina, reque
                 })
                 registro['historial'] = registro['historial'][-3:]  # Mantener solo últimos 3
 
+                # Verificar si el usuario marcó tope de máquina en esta sesión
+                es_tope = EjercicioRealizado.objects.filter(
+                    entreno=entreno,
+                    nombre_ejercicio__iexact=ejercicio_obj.nombre,
+                    es_tope_maquina=True
+                ).exists()
+
                 # Lógica de adaptación
                 if fue_exitoso:
-                    # Aumentar peso y reiniciar contador
-                    nuevo_peso = (peso_anterior * Decimal('1.10')).quantize(Decimal('0.1'))
-                    plan.peso_objetivo = nuevo_peso
-                    plan.save()
-                    registro['fallos_consecutivos'] = 0  # Reiniciar contador
+                    if es_tope:
+                        # Tope de máquina: congelar peso, progresar por reps (+1)
+                        plan.repeticiones_objetivo = plan.repeticiones_objetivo + 1
+                        plan.save()
+                        registro['fallos_consecutivos'] = 0
+                        print(f"🔒 TOPE MÁQUINA - Peso congelado en {float(peso_anterior)}kg | Reps → {plan.repeticiones_objetivo}")
+                    else:
+                        # Aumentar peso y reiniciar contador
+                        nuevo_peso = (peso_anterior * Decimal('1.10')).quantize(Decimal('0.1'))
+                        plan.peso_objetivo = nuevo_peso
+                        plan.save()
+                        registro['fallos_consecutivos'] = 0
 
-                    print(f"✅ ÉXITO - Peso aumentado a {float(nuevo_peso)}kg | Contador reiniciado")
+                    print(f"✅ ÉXITO - Peso aumentado a {float(nuevo_peso if not es_tope else peso_anterior)}kg | Contador reiniciado")
 
                     if 'adaptaciones_positivas' not in request.session:
                         request.session['adaptaciones_positivas'] = []
@@ -1505,18 +1519,34 @@ def adaptar_plan_personalizado_manual(entreno, request, cliente, rutina):
                     }
                 )
 
+                # Tope de máquina: congelar progresión de peso
+                es_tope = EjercicioRealizado.objects.filter(
+                    entreno=entreno,
+                    nombre_ejercicio__iexact=asignacion['ej_nombre'],
+                    es_tope_maquina=True
+                ).exists()
+
                 # Procesar adaptaciones según el resultado del entreno
                 if completado:
-                    # Éxito: aumentar peso
                     peso_anterior = plan.peso_objetivo
-                    plan.peso_objetivo = round(float(peso_kg) * 1.05, 1)  # Incremento del 5%
-                    plan.save()
-
-                    adaptaciones_positivas.append({
-                        'ejercicio': asignacion['ej_nombre'],
-                        'peso_anterior': peso_anterior,
-                        'peso_nuevo': plan.peso_objetivo
-                    })
+                    if es_tope:
+                        plan.repeticiones_objetivo = plan.repeticiones_objetivo + 1
+                        plan.save()
+                        adaptaciones_positivas.append({
+                            'ejercicio': asignacion['ej_nombre'],
+                            'peso_anterior': peso_anterior,
+                            'peso_nuevo': peso_anterior,
+                            'tope_maquina': True,
+                        })
+                    else:
+                        # Éxito: aumentar peso
+                        plan.peso_objetivo = round(float(peso_kg) * 1.05, 1)  # Incremento del 5%
+                        plan.save()
+                        adaptaciones_positivas.append({
+                            'ejercicio': asignacion['ej_nombre'],
+                            'peso_anterior': peso_anterior,
+                            'peso_nuevo': plan.peso_objetivo
+                        })
 
                     # Actualizar registro de fallos
                     session_key = f'adaptacion_{cliente.id}_{rutina.id}'
@@ -1665,18 +1695,34 @@ def adaptar_plan_personalizado_seguro(entreno, ejercicios_forms, cliente_id, rut
                     }
                 )
 
+                # Tope de máquina: congelar progresión de peso
+                es_tope = EjercicioRealizado.objects.filter(
+                    entreno=entreno,
+                    nombre_ejercicio__iexact=ejercicio_dict['nombre'],
+                    es_tope_maquina=True
+                ).exists()
+
                 # Procesar adaptaciones según el resultado del entreno
                 if completado:
-                    # Éxito: aumentar peso
                     peso_anterior = plan.peso_objetivo
-                    plan.peso_objetivo = round(float(peso_kg) * 1.05, 1)  # Incremento del 5%
-                    plan.save()
-
-                    adaptaciones_positivas.append({
-                        'ejercicio': ejercicio_dict['nombre'],
-                        'peso_anterior': peso_anterior,
-                        'peso_nuevo': plan.peso_objetivo
-                    })
+                    if es_tope:
+                        plan.repeticiones_objetivo = plan.repeticiones_objetivo + 1
+                        plan.save()
+                        adaptaciones_positivas.append({
+                            'ejercicio': ejercicio_dict['nombre'],
+                            'peso_anterior': peso_anterior,
+                            'peso_nuevo': peso_anterior,
+                            'tope_maquina': True,
+                        })
+                    else:
+                        # Éxito: aumentar peso
+                        plan.peso_objetivo = round(float(peso_kg) * 1.05, 1)  # Incremento del 5%
+                        plan.save()
+                        adaptaciones_positivas.append({
+                            'ejercicio': ejercicio_dict['nombre'],
+                            'peso_anterior': peso_anterior,
+                            'peso_nuevo': plan.peso_objetivo
+                        })
 
                     # Actualizar registro de fallos
                     session_key = f'adaptacion_{cliente_id}_{rutina_id}'
@@ -1829,18 +1875,34 @@ def adaptar_plan_personalizado_seguro(entreno, ejercicios_forms, cliente_id, rut
                     }
                 )
 
+                # Tope de máquina: congelar progresión de peso
+                es_tope = EjercicioRealizado.objects.filter(
+                    entreno=entreno,
+                    nombre_ejercicio__iexact=ejercicio_dict['nombre'],
+                    es_tope_maquina=True
+                ).exists()
+
                 # Procesar adaptaciones según el resultado del entreno
                 if completado:
-                    # Éxito: aumentar peso
                     peso_anterior = plan.peso_objetivo
-                    plan.peso_objetivo = round(float(peso_kg) * 1.05, 1)  # Incremento del 5%
-                    plan.save()
-
-                    adaptaciones_positivas.append({
-                        'ejercicio': ejercicio_dict['nombre'],
-                        'peso_anterior': peso_anterior,
-                        'peso_nuevo': plan.peso_objetivo
-                    })
+                    if es_tope:
+                        plan.repeticiones_objetivo = plan.repeticiones_objetivo + 1
+                        plan.save()
+                        adaptaciones_positivas.append({
+                            'ejercicio': ejercicio_dict['nombre'],
+                            'peso_anterior': peso_anterior,
+                            'peso_nuevo': peso_anterior,
+                            'tope_maquina': True,
+                        })
+                    else:
+                        # Éxito: aumentar peso
+                        plan.peso_objetivo = round(float(peso_kg) * 1.05, 1)  # Incremento del 5%
+                        plan.save()
+                        adaptaciones_positivas.append({
+                            'ejercicio': ejercicio_dict['nombre'],
+                            'peso_anterior': peso_anterior,
+                            'peso_nuevo': plan.peso_objetivo
+                        })
 
                     # Actualizar registro de fallos
                     session_key = f'adaptacion_{cliente_id}_{rutina_id}'
@@ -3738,6 +3800,8 @@ def guardar_entrenamiento_activo(request, cliente_id):
                 is_recovery_load_str = request.POST.get(f'{form_id}_is_recovery_load', 'false').lower()
                 is_recovery_load = is_recovery_load_str == 'true'
 
+                es_tope_maquina = request.POST.get(f'{form_id}_es_tope_maquina', 'false').lower() == 'true'
+
                 # Extraer datos de molestia reportada intra-entreno
                 molestia_reportada = request.POST.get(f'{form_id}_molestia_reportada', 'false').lower() == 'true'
                 molestia_zona = request.POST.get(f'{form_id}_molestia_zona', '')
@@ -3752,6 +3816,7 @@ def guardar_entrenamiento_activo(request, cliente_id):
                     grupo_muscular=grupo, completado=True,
                     rpe=rpe_promedio_ejercicio,
                     is_recovery_load=is_recovery_load,
+                    es_tope_maquina=es_tope_maquina,
                     molestia_reportada=molestia_reportada,
                     molestia_zona=molestia_zona,
                     molestia_severidad=molestia_severidad,
