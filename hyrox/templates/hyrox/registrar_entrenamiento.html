@@ -1,20 +1,26 @@
-{% extends 'base.html' %}
 {% load static %}
-
-{% block title %}Registrar Sesión · Hyrox{% endblock %}
-
-{% block content %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Registrar Sesión · Hyrox</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
   /* ───────────────────────────────────────────── */
   /*  HYROX · REGISTRAR ENTRENAMIENTO · RACE BIB  */
   /* ───────────────────────────────────────────── */
 
-  @import url('https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap');
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-  /* Reset base.html dark theme for this page */
-  html, body, main { background: #EFEAE1 !important; }
+  html, body {
+    background: #EFEAE1;
+    min-height: 100vh;
+  }
 
-  .rb-scope {
+  body {
     --bg: #EFEAE1;
     --ink: #0F0F0E;
     --ink-2: #2A2926;
@@ -35,17 +41,14 @@
 
     background: var(--bg);
     color: var(--ink);
-    min-height: 100vh;
-    padding-bottom: 110px;
     font-family: var(--font-body);
     -webkit-font-smoothing: antialiased;
+    padding-bottom: 110px;
   }
 
-  .rb-scope *, .rb-scope *::before, .rb-scope *::after { box-sizing: border-box; }
-
-  .rb-scope input[type="number"]::-webkit-inner-spin-button,
-  .rb-scope input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
-  .rb-scope input[type="number"] { -moz-appearance: textfield; }
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+  input[type="number"] { -moz-appearance: textfield; }
 
   .rb-container { max-width: 560px; margin: 0 auto; padding: 0 20px; }
 
@@ -291,7 +294,6 @@
   }
   .rb-check svg { width: 14px; height: 14px; }
 
-  /* progress */
   .rb-prog { display: flex; gap: 10px; align-items: center; margin-top: 12px; }
   .rb-prog-track { flex: 1; height: 3px; background: var(--line); position: relative; }
   .rb-prog-fill {
@@ -372,7 +374,6 @@
     color: var(--ink-3); margin-top: 4px; text-align: right;
   }
 
-  /* ── DONE BUTTON ─────────────────────────────── */
   .rb-done-btn {
     width: 100%; margin-top: 12px; padding: 10px 12px;
     background: transparent; color: var(--ink);
@@ -384,9 +385,7 @@
     transition: all 0.2s;
   }
   .rb-done-btn:hover { background: var(--paper-2); }
-  .rb-done-btn.rb-done-btn--done {
-    background: var(--ink); color: var(--paper);
-  }
+  .rb-done-btn.rb-done-btn--done { background: var(--ink); color: var(--paper); }
   .rb-done-btn svg { width: 14px; height: 14px; }
 
   /* ── METRICS STRIP ───────────────────────────── */
@@ -428,10 +427,7 @@
     font-family: var(--font-disp); font-size: 14px;
     letter-spacing: -0.01em; color: var(--ink); text-transform: uppercase;
   }
-  .rb-health-sub {
-    font-family: var(--font-body); font-size: 12px;
-    color: var(--ink-3); margin-top: 2px;
-  }
+  .rb-health-sub { font-family: var(--font-body); font-size: 12px; color: var(--ink-3); margin-top: 2px; }
   .rb-toggle-inp { display: none; }
   .rb-toggle {
     width: 44px; height: 26px; border-radius: 13px;
@@ -491,9 +487,7 @@
     transition: all 0.15s;
   }
   .rb-equiv-box svg { width: 10px; height: 10px; opacity: 0; color: var(--paper); }
-  .rb-equiv input:checked ~ .rb-equiv-box {
-    background: var(--ink); border-color: var(--ink);
-  }
+  .rb-equiv input:checked ~ .rb-equiv-box { background: var(--ink); border-color: var(--ink); }
   .rb-equiv input:checked ~ .rb-equiv-box svg { opacity: 1; }
 
   /* ── BIO ALERT ───────────────────────────────── */
@@ -507,10 +501,7 @@
   }
   .rb-alert.rb-alert--show { display: flex; }
   .rb-alert svg { width: 16px; height: 16px; color: var(--danger); flex-shrink: 0; margin-top: 1px; }
-  .rb-alert-txt {
-    font-family: var(--font-body); font-size: 12.5px; line-height: 1.45;
-    color: var(--ink-2);
-  }
+  .rb-alert-txt { font-family: var(--font-body); font-size: 12.5px; line-height: 1.45; color: var(--ink-2); }
 
   /* ── EMPTY ───────────────────────────────────── */
   .rb-empty {
@@ -518,18 +509,8 @@
     background: var(--paper); border: 1px dashed var(--line-2);
     border-radius: 4px;
   }
-  .rb-empty-title {
-    font-family: var(--font-disp); font-size: 15px;
-    text-transform: uppercase; letter-spacing: -0.01em;
-    color: var(--ink);
-  }
-  .rb-empty-sub {
-    font-family: var(--font-body); font-size: 12px;
-    color: var(--ink-3); margin-top: 6px;
-  }
-
-  /* ── DJANGO MESSAGES (if shown here) ─────────── */
-  .rb-scope .messages, .rb-scope ul.messages { list-style: none; padding: 0; margin: 14px 0 0; }
+  .rb-empty-title { font-family: var(--font-disp); font-size: 15px; text-transform: uppercase; color: var(--ink); }
+  .rb-empty-sub { font-family: var(--font-body); font-size: 12px; color: var(--ink-3); margin-top: 6px; }
 
   /* ── SUBMIT BAR (fixed) ──────────────────────── */
   .rb-submit-bar {
@@ -548,12 +529,9 @@
   .rb-submit:active { transform: scale(0.99); }
   .rb-submit-fill {
     position: absolute; top: 0; left: 0; bottom: 0;
-    width: 0%; background: var(--accent);
-    transition: width 0.3s;
+    width: 0%; background: var(--accent); transition: width 0.3s;
   }
-  .rb-submit-inner {
-    position: relative; display: flex; align-items: center; gap: 12px; width: 100%;
-  }
+  .rb-submit-inner { position: relative; display: flex; align-items: center; gap: 12px; width: 100%; }
   .rb-submit-pct {
     width: 38px; height: 38px; border-radius: 50%;
     background: var(--paper); color: var(--ink);
@@ -562,39 +540,29 @@
     font-variant-numeric: tabular-nums;
   }
   .rb-submit-txt { flex: 1; text-align: left; }
-  .rb-submit-eyebrow {
-    font-family: var(--font-mono); font-size: 9px; font-weight: 700;
-    letter-spacing: 0.2em; opacity: 0.7;
-  }
-  .rb-submit-label {
-    font-family: var(--font-disp); font-size: 17px;
-    letter-spacing: 0.02em; text-transform: uppercase; line-height: 1.1;
-  }
+  .rb-submit-eyebrow { font-family: var(--font-mono); font-size: 9px; font-weight: 700; letter-spacing: 0.2em; opacity: 0.7; }
+  .rb-submit-label { font-family: var(--font-disp); font-size: 17px; letter-spacing: 0.02em; text-transform: uppercase; line-height: 1.1; }
   .rb-submit svg { width: 22px; height: 22px; }
-
 </style>
+</head>
+<body>
 
-<div class="rb-scope">
   <form method="post" id="rb-form">
     {% csrf_token %}
-    {# hidden: títulos, notas_raw se compila al submit #}
     <div style="display:none">{{ form.titulo }}</div>
     <textarea name="notas_raw" id="id_notas_raw" style="display:none"></textarea>
 
     <div class="rb-container">
 
-      <!-- ═══════════════ HEADER / BIB ═══════════════ -->
+      <!-- HEADER / BIB -->
       <header class="rb-header">
         <div class="rb-topstrip">
           <a href="{% url 'hyrox:dashboard' %}" class="rb-back">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
             Dashboard
           </a>
-          <div class="rb-rec">
-            HYROX · REC<span class="rb-rec-dot"></span>
-          </div>
+          <div class="rb-rec">HYROX · REC<span class="rb-rec-dot"></span></div>
         </div>
-
         <div class="rb-bib">
           <div class="rb-bib-meta">
             <span>RACE BIB · {% if sesion_planificada.fecha %}{{ sesion_planificada.fecha|date:"D d M" }}{% else %}HOY{% endif %}</span>
@@ -624,23 +592,21 @@
       </header>
 
       {% if messages %}
-      <ul class="messages" style="margin-top:14px; padding:0; list-style:none;">
+      <ul style="margin-top:14px; padding:0; list-style:none;">
         {% for message in messages %}
-        <li style="background: var(--paper); padding: 10px 14px; border-left: 4px solid var(--accent); font-size: 12px; margin-bottom: 6px; border-radius: 2px;">{{ message|safe }}</li>
+        <li style="background:var(--paper);padding:10px 14px;border-left:4px solid var(--accent);font-size:12px;margin-bottom:6px;border-radius:2px;">{{ message|safe }}</li>
         {% endfor %}
       </ul>
       {% endif %}
 
-      <!-- ═══════════════ 01 · SEÑALES VITALES ═══════════════ -->
+      <!-- 01 · SEÑALES VITALES -->
       <section class="rb-section">
         <div class="rb-section-head">
           <span class="rb-section-num">01</span>
           <h2 class="rb-section-title">Señales Vitales</h2>
           <div class="rb-section-line"></div>
         </div>
-
         <div class="rb-vitals">
-          <!-- Energía Pre -->
           <div class="rb-vital">
             <div class="rb-vital-top">
               <div style="flex:1">
@@ -650,20 +616,14 @@
               <div class="rb-ring-wrap">
                 <svg width="60" height="60" viewBox="0 0 60 60">
                   <circle cx="30" cy="30" r="25" fill="none" stroke="var(--line)" stroke-width="4"/>
-                  <circle id="rb-ring-energia" cx="30" cy="30" r="25" fill="none"
-                          stroke="var(--ok)" stroke-width="4" stroke-linecap="round"
-                          stroke-dasharray="157" stroke-dashoffset="47"/>
+                  <circle id="rb-ring-energia" cx="30" cy="30" r="25" fill="none" stroke="var(--ok)" stroke-width="4" stroke-linecap="round" stroke-dasharray="157" stroke-dashoffset="47"/>
                 </svg>
                 <div class="rb-ring-val" id="rb-energia-val" style="color:var(--ok)">7</div>
               </div>
             </div>
-            <input type="range" name="nivel_energia_pre" id="id_nivel_energia_pre"
-                   class="rb-slider" min="1" max="10" value="7"
-                   oninput="rbVital('energia', this.value)">
+            <input type="range" name="nivel_energia_pre" id="id_nivel_energia_pre" class="rb-slider" min="1" max="10" value="7" oninput="rbVital('energia', this.value)">
             <div class="rb-slider-ticks"><span>LOW</span><span>MAX</span></div>
           </div>
-
-          <!-- RPE Global -->
           <div class="rb-vital">
             <div class="rb-vital-top">
               <div style="flex:1">
@@ -673,22 +633,18 @@
               <div class="rb-ring-wrap">
                 <svg width="60" height="60" viewBox="0 0 60 60">
                   <circle cx="30" cy="30" r="25" fill="none" stroke="var(--line)" stroke-width="4"/>
-                  <circle id="rb-ring-rpe" cx="30" cy="30" r="25" fill="none"
-                          stroke="var(--warn)" stroke-width="4" stroke-linecap="round"
-                          stroke-dasharray="157" stroke-dashoffset="87"/>
+                  <circle id="rb-ring-rpe" cx="30" cy="30" r="25" fill="none" stroke="var(--warn)" stroke-width="4" stroke-linecap="round" stroke-dasharray="157" stroke-dashoffset="87"/>
                 </svg>
                 <div class="rb-ring-val" id="rb-rpe-val" style="color:var(--warn)">5</div>
               </div>
             </div>
-            <input type="range" name="rpe_global" id="id_rpe_global"
-                   class="rb-slider" min="1" max="10" value="5"
-                   oninput="rbVital('rpe', this.value)">
+            <input type="range" name="rpe_global" id="id_rpe_global" class="rb-slider" min="1" max="10" value="5" oninput="rbVital('rpe', this.value)">
             <div class="rb-slider-ticks"><span>LOW</span><span>MAX</span></div>
           </div>
         </div>
       </section>
 
-      <!-- ═══════════════ 02 · MISIÓN DEL DÍA ═══════════════ -->
+      <!-- 02 · MISIÓN DEL DÍA -->
       <section class="rb-section">
         <div class="rb-section-head">
           <span class="rb-section-num">02</span>
@@ -696,18 +652,12 @@
           <div class="rb-section-line"></div>
           <span class="rb-section-right" id="rb-progress-global">0 / 0</span>
         </div>
-
         <div class="rb-cards">
           {% if actividades_planificadas %}
             {% for act in actividades_planificadas %}
             {% with idx=forloop.counter %}
-
-            {# ── Decide card flavor ── #}
             {% if act.data_metricas.series %}
-              {# FUERZA / SERIES #}
-              <article class="rb-card" id="rb-card-{{ idx }}"
-                       data-name="{{ act.nombre_ejercicio }}"
-                       data-type="{{ act.tipo_actividad }}">
+              <article class="rb-card" id="rb-card-{{ idx }}" data-name="{{ act.nombre_ejercicio }}" data-type="{{ act.tipo_actividad }}">
                 <div class="rb-card-meta">
                   <span class="rb-card-meta-type">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 6.5v11M17.5 6.5v11M3 10v4M21 10v4M6.5 12h11"/></svg>
@@ -717,14 +667,8 @@
                 </div>
                 <h3 class="rb-card-title">
                   {% if act.is_substituted %}{{ act.display_name }}{% else %}{{ act.nombre_ejercicio }}{% endif %}
-                  {% if act.is_substituted %}
-                  <span class="rb-biosafe-pill">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                    ADAPTADO
-                  </span>
-                  {% endif %}
+                  {% if act.is_substituted %}<span class="rb-biosafe-pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>ADAPTADO</span>{% endif %}
                 </h3>
-
                 {% if act.data_metricas.porcentaje_rm or act.data_metricas.tempo or act.data_metricas.descanso %}
                 <div class="rb-chips">
                   {% if act.data_metricas.porcentaje_rm %}<span class="rb-chip rb-chip--hi">{{ act.data_metricas.porcentaje_rm }}% RM</span>{% endif %}
@@ -732,28 +676,18 @@
                   {% if act.data_metricas.descanso %}<span class="rb-chip">REST {{ act.data_metricas.descanso }}</span>{% endif %}
                 </div>
                 {% endif %}
-
-                {% if act.data_metricas.coach_tip %}
-                <div class="rb-tip">
-                  <span class="rb-tip-label">COACH TIP</span>
-                  {{ act.data_metricas.coach_tip }}
-                </div>
-                {% elif act.data_metricas.notas %}
-                <div class="rb-tip"><span class="rb-tip-label">NOTA</span>{{ act.data_metricas.notas }}</div>
-                {% endif %}
-
+                {% if act.data_metricas.coach_tip %}<div class="rb-tip"><span class="rb-tip-label">COACH TIP</span>{{ act.data_metricas.coach_tip }}</div>
+                {% elif act.data_metricas.notas %}<div class="rb-tip"><span class="rb-tip-label">NOTA</span>{{ act.data_metricas.notas }}</div>{% endif %}
                 <div class="rb-series" id="rb-series-{{ idx }}">
                   {% for s in act.data_metricas.series %}
                   <div class="rb-serie" data-i="{{ forloop.counter }}">
                     <span class="rb-serie-n">#{{ forloop.counter|stringformat:"02d" }}</span>
                     <div class="rb-num-cell">
-                      <input type="number" class="rb-num-input rb-input-reps"
-                             value="{{ s.reps|default:'' }}" placeholder="—" min="1" step="1" inputmode="numeric">
+                      <input type="number" class="rb-num-input rb-input-reps" value="{{ s.reps|default:'' }}" placeholder="—" min="1" step="1" inputmode="numeric">
                       <div class="rb-num-label">REPS</div>
                     </div>
                     <div class="rb-num-cell">
-                      <input type="number" class="rb-num-input rb-input-kg"
-                             value="{{ s.peso_kg|default:'' }}" placeholder="—" min="0" step="0.5" inputmode="decimal">
+                      <input type="number" class="rb-num-input rb-input-kg" value="{{ s.peso_kg|default:'' }}" placeholder="—" min="0" step="0.5" inputmode="decimal">
                       <div class="rb-num-label">KG</div>
                     </div>
                     <button type="button" class="rb-check" onclick="rbToggleSerie(this)">
@@ -762,24 +696,17 @@
                   </div>
                   {% endfor %}
                 </div>
-
                 <div class="rb-prog">
                   <div class="rb-prog-track"><div class="rb-prog-fill"></div></div>
                   <span class="rb-prog-txt">0 / {{ act.data_metricas.series|length }}</span>
-                  <button type="button" class="rb-add"
-                          onclick="rbAddSerie('rb-series-{{ idx }}', 'rb-card-{{ idx }}')">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                    ADD
+                  <button type="button" class="rb-add" onclick="rbAddSerie('rb-series-{{ idx }}','rb-card-{{ idx }}')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>ADD
                   </button>
                 </div>
               </article>
 
             {% elif act.data_metricas.distancia_km %}
-              {# CARRERA / CARDIO CON PACE #}
-              <article class="rb-card rb-card--cardio" id="rb-card-{{ idx }}"
-                       data-name="{{ act.nombre_ejercicio }}"
-                       data-type="{{ act.tipo_actividad }}"
-                       data-plan-pace="{{ act.data_metricas.ritmo_objetivo|default:'' }}">
+              <article class="rb-card rb-card--cardio" id="rb-card-{{ idx }}" data-name="{{ act.nombre_ejercicio }}" data-type="{{ act.tipo_actividad }}" data-plan-pace="{{ act.data_metricas.ritmo_objetivo|default:'' }}">
                 <div class="rb-card-meta">
                   <span class="rb-card-meta-type">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="17" cy="4" r="2"/><path d="M15.2 11.7L13 9.2l-3.6 5 2.3 2.1L10 22"/><path d="M8 11l3-3 4 2 1.5 4"/></svg>
@@ -788,34 +715,21 @@
                   <span>#{{ idx|stringformat:"02d" }}</span>
                 </div>
                 <h3 class="rb-card-title">{% if act.is_substituted %}{{ act.display_name }}{% else %}{{ act.nombre_ejercicio }}{% endif %}</h3>
-
                 <div class="rb-chips">
                   {% if act.data_metricas.ritmo_objetivo %}<span class="rb-chip rb-chip--hi">Z2 · {{ act.data_metricas.ritmo_objetivo }}/KM</span>{% endif %}
                   <span class="rb-chip">{{ act.data_metricas.distancia_km }} KM PLAN</span>
                 </div>
-
-                {% if act.data_metricas.coach_tip %}
-                <div class="rb-tip" style="margin-bottom:10px"><span class="rb-tip-label">COACH TIP</span>{{ act.data_metricas.coach_tip }}</div>
-                {% endif %}
-
+                {% if act.data_metricas.coach_tip %}<div class="rb-tip" style="margin-bottom:10px"><span class="rb-tip-label">COACH TIP</span>{{ act.data_metricas.coach_tip }}</div>{% endif %}
                 <div class="rb-cardio-grid">
                   <div>
                     <div class="rb-biginput-label"><span>Distancia</span><span>km</span></div>
-                    <input type="number" class="rb-biginput rb-input-distkm"
-                           id="rb-dist-{{ idx }}"
-                           value="{{ act.data_metricas.distancia_km }}"
-                           step="0.1" min="0" inputmode="decimal"
-                           oninput="rbCalcPace({{ idx }})">
+                    <input type="number" class="rb-biginput rb-input-distkm" id="rb-dist-{{ idx }}" value="{{ act.data_metricas.distancia_km }}" step="0.1" min="0" inputmode="decimal" oninput="rbCalcPace({{ idx }})">
                   </div>
                   <div>
                     <div class="rb-biginput-label"><span>Tiempo</span><span>min</span></div>
-                    <input type="number" class="rb-biginput rb-input-time"
-                           id="rb-time-{{ idx }}"
-                           placeholder="0" min="0" step="1" inputmode="numeric"
-                           oninput="rbCalcPace({{ idx }})">
+                    <input type="number" class="rb-biginput rb-input-time" id="rb-time-{{ idx }}" placeholder="0" min="0" step="1" inputmode="numeric" oninput="rbCalcPace({{ idx }})">
                   </div>
                 </div>
-
                 <div class="rb-pace" id="rb-pace-{{ idx }}">
                   <div class="rb-pace-col">
                     <div class="rb-pace-col-lbl">PACE / KM</div>
@@ -826,82 +740,55 @@
                     <div class="rb-pace-note" id="rb-pace-note-{{ idx }}"></div>
                   </div>
                 </div>
-
-                <button type="button" class="rb-done-btn" id="rb-done-{{ idx }}"
-                        onclick="rbToggleDone('rb-card-{{ idx }}', this)">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                  MARCAR COMPLETADA
+                <button type="button" class="rb-done-btn" id="rb-done-{{ idx }}" onclick="rbToggleDone('rb-card-{{ idx }}',this)">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>MARCAR COMPLETADA
                 </button>
               </article>
 
             {% elif act.data_metricas.distancia_m %}
-              {# ESTACIÓN HYROX #}
-              <article class="rb-card rb-card--station" id="rb-card-{{ idx }}"
-                       data-name="{{ act.nombre_ejercicio }}"
-                       data-type="{{ act.tipo_actividad }}">
+              <article class="rb-card rb-card--station" id="rb-card-{{ idx }}" data-name="{{ act.nombre_ejercicio }}" data-type="{{ act.tipo_actividad }}">
                 <div class="rb-card-meta">
                   <span class="rb-card-meta-type">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="10" width="18" height="8" rx="1"/><path d="M3 18l-2 3M21 18l2 3M6 10V6M18 10V6"/></svg>
-                    ESTACIÓN
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="10" width="18" height="8" rx="1"/><path d="M3 18l-2 3M21 18l2 3M6 10V6M18 10V6"/></svg>ESTACIÓN
                   </span>
                   <span>#{{ idx|stringformat:"02d" }}</span>
                 </div>
                 <h3 class="rb-card-title">{% if act.is_substituted %}{{ act.display_name }}{% else %}{{ act.nombre_ejercicio }}{% endif %}</h3>
-
                 <div class="rb-chips">
                   <span class="rb-chip rb-chip--hi">{{ act.data_metricas.distancia_m }}M</span>
                   {% if act.data_metricas.peso_kg %}<span class="rb-chip">{{ act.data_metricas.peso_kg }} KG</span>{% endif %}
                 </div>
-
-                {% if act.data_metricas.coach_tip %}
-                <div class="rb-tip" style="margin-bottom:10px"><span class="rb-tip-label">COACH TIP</span>{{ act.data_metricas.coach_tip }}</div>
-                {% endif %}
-
+                {% if act.data_metricas.coach_tip %}<div class="rb-tip" style="margin-bottom:10px"><span class="rb-tip-label">COACH TIP</span>{{ act.data_metricas.coach_tip }}</div>{% endif %}
                 <div class="rb-cardio-grid">
                   <div>
                     <div class="rb-biginput-label"><span>Distancia</span><span>m</span></div>
-                    <input type="number" class="rb-biginput rb-input-distm"
-                           value="{{ act.data_metricas.distancia_m }}"
-                           step="1" min="0" inputmode="numeric">
+                    <input type="number" class="rb-biginput rb-input-distm" value="{{ act.data_metricas.distancia_m }}" step="1" min="0" inputmode="numeric">
                   </div>
                   {% if act.data_metricas.peso_kg %}
                   <div>
                     <div class="rb-biginput-label"><span>Carga</span><span>kg</span></div>
-                    <input type="number" class="rb-biginput rb-input-carga"
-                           value="{{ act.data_metricas.peso_kg }}"
-                           step="1" min="0" inputmode="numeric">
+                    <input type="number" class="rb-biginput rb-input-carga" value="{{ act.data_metricas.peso_kg }}" step="1" min="0" inputmode="numeric">
                   </div>
                   {% endif %}
                 </div>
-
-                <button type="button" class="rb-done-btn"
-                        onclick="rbToggleDone('rb-card-{{ idx }}', this)">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                  MARCAR COMPLETADA
+                <button type="button" class="rb-done-btn" onclick="rbToggleDone('rb-card-{{ idx }}',this)">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>MARCAR COMPLETADA
                 </button>
               </article>
 
             {% else %}
-              {# GENÉRICO #}
-              <article class="rb-card" id="rb-card-{{ idx }}"
-                       data-name="{{ act.nombre_ejercicio }}"
-                       data-type="{{ act.tipo_actividad }}">
+              <article class="rb-card" id="rb-card-{{ idx }}" data-name="{{ act.nombre_ejercicio }}" data-type="{{ act.tipo_actividad }}">
                 <div class="rb-card-meta">
                   <span class="rb-card-meta-type">{{ act.get_tipo_actividad_display|default:"BLOQUE"|upper }}</span>
                   <span>#{{ idx|stringformat:"02d" }}</span>
                 </div>
                 <h3 class="rb-card-title">{% if act.is_substituted %}{{ act.display_name }}{% else %}{{ act.nombre_ejercicio }}{% endif %}</h3>
-                {% if act.data_metricas.coach_tip %}
-                <div class="rb-tip" style="margin-top:10px"><span class="rb-tip-label">COACH TIP</span>{{ act.data_metricas.coach_tip }}</div>
-                {% endif %}
-                <button type="button" class="rb-done-btn"
-                        onclick="rbToggleDone('rb-card-{{ idx }}', this)">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                  MARCAR COMPLETADA
+                {% if act.data_metricas.coach_tip %}<div class="rb-tip" style="margin-top:10px"><span class="rb-tip-label">COACH TIP</span>{{ act.data_metricas.coach_tip }}</div>{% endif %}
+                <button type="button" class="rb-done-btn" onclick="rbToggleDone('rb-card-{{ idx }}',this)">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>MARCAR COMPLETADA
                 </button>
               </article>
             {% endif %}
-
             {% endwith %}
             {% endfor %}
           {% else %}
@@ -913,7 +800,7 @@
         </div>
       </section>
 
-      <!-- ═══════════════ 03 · MÉTRICAS ═══════════════ -->
+      <!-- 03 · MÉTRICAS -->
       <section class="rb-section">
         <div class="rb-section-head">
           <span class="rb-section-num">03</span>
@@ -923,35 +810,29 @@
         <div class="rb-metrics">
           <div class="rb-metric">
             <div class="rb-metric-lbl">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-              TIEMPO
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>TIEMPO
             </div>
-            <input type="number" name="tiempo_total_minutos" id="id_tiempo_total_minutos"
-                   class="rb-metric-input" placeholder="—" min="0" step="1" inputmode="numeric">
+            <input type="number" name="tiempo_total_minutos" id="id_tiempo_total_minutos" class="rb-metric-input" placeholder="—" min="0" step="1" inputmode="numeric">
             <div class="rb-metric-unit">MIN</div>
           </div>
           <div class="rb-metric">
             <div class="rb-metric-lbl">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21.2l7.8-7.8 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>
-              FC MED
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21.2l7.8-7.8 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>FC MED
             </div>
-            <input type="number" name="hr_media" id="id_hr_media"
-                   class="rb-metric-input" placeholder="—" min="0" step="1" inputmode="numeric">
+            <input type="number" name="hr_media" id="id_hr_media" class="rb-metric-input" placeholder="—" min="0" step="1" inputmode="numeric">
             <div class="rb-metric-unit">LPM</div>
           </div>
           <div class="rb-metric">
             <div class="rb-metric-lbl">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21.2l7.8-7.8 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>
-              FC MÁX
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21.2l7.8-7.8 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>FC MÁX
             </div>
-            <input type="number" name="hr_maxima" id="id_hr_maxima"
-                   class="rb-metric-input" placeholder="—" min="0" step="1" inputmode="numeric">
+            <input type="number" name="hr_maxima" id="id_hr_maxima" class="rb-metric-input" placeholder="—" min="0" step="1" inputmode="numeric">
             <div class="rb-metric-unit">LPM</div>
           </div>
         </div>
       </section>
 
-      <!-- ═══════════════ 04 · SALUD ═══════════════ -->
+      <!-- 04 · SALUD -->
       <section class="rb-section">
         <div class="rb-section-head">
           <span class="rb-section-num">04</span>
@@ -964,34 +845,28 @@
             <div class="rb-health-sub">¿Sentiste dolor o incomodidad durante el entreno?</div>
           </div>
           <input type="checkbox" name="hubo_molestias" id="id_hubo_molestias" class="rb-toggle-inp"
-                 onchange="document.getElementById('rb-health-row').classList.toggle('rb-health--active', this.checked)">
+                 onchange="document.getElementById('rb-health-row').classList.toggle('rb-health--active',this.checked)">
           <span class="rb-toggle"></span>
         </label>
       </section>
 
-      <!-- ═══════════════ 05 · INFORME ═══════════════ -->
+      <!-- 05 · INFORME -->
       <section class="rb-section">
         <div class="rb-section-head">
           <span class="rb-section-num">05</span>
           <h2 class="rb-section-title">Informe de sesión</h2>
           <div class="rb-section-line"></div>
         </div>
-
         <div class="rb-alert" id="rb-biosafe-alert">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h16.9a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
           <div class="rb-alert-txt" id="rb-biosafe-msg"></div>
         </div>
-
         <div class="rb-notes">
           <div class="rb-notes-head">
-            <div class="rb-notes-head-l">
-              <span class="rb-rec-dot" style="margin-left:0"></span>
-              Notas adicionales
-            </div>
+            <div class="rb-notes-head-l"><span class="rb-rec-dot" style="margin-left:0"></span>Notas adicionales</div>
             <span class="rb-notes-ai">PARSER AUTO</span>
           </div>
-          <textarea id="id_notas_extra" class="rb-notes-text"
-            placeholder="Observaciones adicionales (opcional).&#10;&#10;El tracker de arriba ya registra series, pesos, distancias y ritmos. Usa este campo para notas: técnica, sensaciones, contexto…"></textarea>
+          <textarea id="id_notas_extra" class="rb-notes-text" placeholder="Observaciones adicionales (opcional).&#10;&#10;El tracker de arriba ya registra series, pesos, distancias y ritmos."></textarea>
           <div class="rb-notes-foot">
             <label class="rb-equiv">
               <input type="checkbox" name="sustituir_material" id="id_sustituir_material">
@@ -1007,7 +882,7 @@
     </div>
   </form>
 
-  <!-- ═══════════════ SUBMIT BAR ═══════════════ -->
+  <!-- SUBMIT BAR -->
   <div class="rb-submit-bar">
     <button type="button" class="rb-submit" id="rb-submit" onclick="rbSubmit()">
       <div class="rb-submit-fill" id="rb-submit-fill"></div>
@@ -1021,50 +896,37 @@
       </div>
     </button>
   </div>
-</div>
 
 <script>
-/* ─────────────────────────────────────────
-   HYROX RACE BIB — vanilla JS controller
-   ───────────────────────────────────────── */
-
-/* ── Ring helpers ─────────────────────────── */
-const RB_CIRC = 2 * Math.PI * 25; // ~157
+const RB_CIRC = 2 * Math.PI * 25;
 
 function rbVital(kind, val) {
   const v = parseInt(val);
-  const pct = (v - 1) / 9;
-  const off = RB_CIRC * (1 - pct);
-
+  const off = RB_CIRC * (1 - (v - 1) / 9);
   let color, hint;
   if (kind === 'energia') {
     if (v <= 4)      { color = 'var(--danger)'; hint = 'Volumen reducido'; }
     else if (v <= 7) { color = 'var(--warn)';   hint = 'Energía moderada'; }
     else             { color = 'var(--ok)';     hint = 'Zona óptima'; }
-    const r = document.getElementById('rb-ring-energia');
-    r.setAttribute('stroke', color);
-    r.style.strokeDashoffset = off;
-    const vd = document.getElementById('rb-energia-val');
-    vd.textContent = v; vd.style.color = color;
+    document.getElementById('rb-ring-energia').setAttribute('stroke', color);
+    document.getElementById('rb-ring-energia').style.strokeDashoffset = off;
+    document.getElementById('rb-energia-val').textContent = v;
+    document.getElementById('rb-energia-val').style.color = color;
     document.getElementById('rb-energia-hint').textContent = hint;
   } else {
     if (v <= 4)      { color = 'var(--ok)';     hint = 'Muy fácil — considera subir carga'; }
     else if (v <= 8) { color = 'var(--warn)';   hint = 'Zona óptima'; }
     else             { color = 'var(--danger)'; hint = 'Esfuerzo máximo'; }
-    const r = document.getElementById('rb-ring-rpe');
-    r.setAttribute('stroke', color);
-    r.style.strokeDashoffset = off;
-    const vd = document.getElementById('rb-rpe-val');
-    vd.textContent = v; vd.style.color = color;
+    document.getElementById('rb-ring-rpe').setAttribute('stroke', color);
+    document.getElementById('rb-ring-rpe').style.strokeDashoffset = off;
+    document.getElementById('rb-rpe-val').textContent = v;
+    document.getElementById('rb-rpe-val').style.color = color;
     document.getElementById('rb-rpe-hint').textContent = hint;
   }
 }
-
-/* Init rings */
 rbVital('energia', document.getElementById('id_nivel_energia_pre').value);
 rbVital('rpe', document.getElementById('id_rpe_global').value);
 
-/* ── Elapsed timer ────────────────────────── */
 (function() {
   let elapsed = 0;
   const el = document.getElementById('rb-elapsed');
@@ -1076,7 +938,6 @@ rbVital('rpe', document.getElementById('id_rpe_global').value);
   }, 1000);
 })();
 
-/* ── Series tracker ───────────────────────── */
 function rbToggleSerie(btn) {
   const row = btn.closest('.rb-serie');
   row.classList.toggle('rb-serie--done');
@@ -1092,10 +953,9 @@ function rbSyncCard(card) {
   const fill = card.querySelector('.rb-prog-fill');
   const txt  = card.querySelector('.rb-prog-txt');
   if (!fill || !txt) return;
-  const pct = total ? (done / total) * 100 : 0;
-  fill.style.width = pct + '%';
+  fill.style.width = (total ? (done / total) * 100 : 0) + '%';
   txt.textContent = (done === total && total > 0) ? `${total} completas` : `${done} / ${total}`;
-  const all = (done === total && total > 0);
+  const all = done === total && total > 0;
   fill.classList.toggle('rb-prog-fill--all', all);
   txt.classList.toggle('rb-prog-txt--all', all);
   card.classList.toggle('rb-card--done', all);
@@ -1110,43 +970,27 @@ function rbAddSerie(seriesId, cardId) {
   const lr = last?.querySelector('.rb-input-reps')?.value || '';
   const lk = last?.querySelector('.rb-input-kg')?.value  || '';
   const el = document.createElement('div');
-  el.className = 'rb-serie';
-  el.dataset.i = n;
+  el.className = 'rb-serie'; el.dataset.i = n;
   el.innerHTML = `
     <span class="rb-serie-n">#${String(n).padStart(2,'0')}</span>
-    <div class="rb-num-cell">
-      <input type="number" class="rb-num-input rb-input-reps" value="${lr}" placeholder="—" min="1" step="1" inputmode="numeric">
-      <div class="rb-num-label">REPS</div>
-    </div>
-    <div class="rb-num-cell">
-      <input type="number" class="rb-num-input rb-input-kg" value="${lk}" placeholder="—" min="0" step="0.5" inputmode="decimal">
-      <div class="rb-num-label">KG</div>
-    </div>
-    <button type="button" class="rb-check" onclick="rbToggleSerie(this)">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-    </button>`;
+    <div class="rb-num-cell"><input type="number" class="rb-num-input rb-input-reps" value="${lr}" placeholder="—" min="1" step="1" inputmode="numeric"><div class="rb-num-label">REPS</div></div>
+    <div class="rb-num-cell"><input type="number" class="rb-num-input rb-input-kg" value="${lk}" placeholder="—" min="0" step="0.5" inputmode="decimal"><div class="rb-num-label">KG</div></div>
+    <button type="button" class="rb-check" onclick="rbToggleSerie(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></button>`;
   list.appendChild(el);
-  rbSyncCard(card);
-  rbSyncGlobal();
+  rbSyncCard(card); rbSyncGlobal();
   el.querySelector('.rb-input-reps').focus();
 }
 
-/* ── Cardio pace ──────────────────────────── */
 function rbCalcPace(idx) {
   const dist = parseFloat(document.getElementById('rb-dist-' + idx)?.value || 0);
   const mins = parseFloat(document.getElementById('rb-time-' + idx)?.value || 0);
   const pace = document.getElementById('rb-pace-' + idx);
   if (!pace) return;
-  if (!dist || !mins || dist <= 0 || mins <= 0) {
-    pace.classList.remove('rb-pace--show');
-    return;
-  }
+  if (!dist || !mins || dist <= 0 || mins <= 0) { pace.classList.remove('rb-pace--show'); return; }
   const secs = Math.round((mins * 60) / dist);
   const pm = Math.floor(secs / 60), ps = secs % 60;
-  document.getElementById('rb-pace-val-' + idx).textContent =
-    `${pm}:${String(ps).padStart(2,'0')}`;
+  document.getElementById('rb-pace-val-' + idx).textContent = `${pm}:${String(ps).padStart(2,'0')}`;
   pace.classList.add('rb-pace--show');
-
   const card = document.getElementById('rb-card-' + idx);
   const planPaceStr = card?.dataset?.planPace || '';
   const badge = document.getElementById('rb-pace-badge-' + idx);
@@ -1159,37 +1003,25 @@ function rbCalcPace(idx) {
     if (diff <= -30)      { badge.classList.add('fast'); badge.textContent = 'TEMPO'; note.textContent = 'Por encima de Z2'; }
     else if (diff <= -10) { badge.classList.add('warn'); badge.textContent = 'ALERT'; note.textContent = 'Ligeramente rápido'; }
     else                  { badge.classList.add('ok');   badge.textContent = 'Z2 OK'; note.textContent = 'Dentro de zona'; }
-  } else {
-    badge.textContent = '';
-    note.textContent = '';
   }
 }
 
-/* ── Toggle done (cardio/station) ─────────── */
 function rbToggleDone(cardId, btn) {
   const card = document.getElementById(cardId);
   const was = btn.classList.contains('rb-done-btn--done');
   btn.classList.toggle('rb-done-btn--done');
   card.classList.toggle('rb-card--done');
-  btn.innerHTML = `
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-    ${!was ? 'COMPLETADA ✓' : 'MARCAR COMPLETADA'}`;
+  btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>${!was ? 'COMPLETADA ✓' : 'MARCAR COMPLETADA'}`;
   rbSyncGlobal();
 }
 
-/* ── Global progress ──────────────────────── */
 function rbSyncGlobal() {
   const cards = document.querySelectorAll('.rb-card');
   let total = 0, done = 0;
   cards.forEach(c => {
     const series = c.querySelectorAll('.rb-serie');
-    if (series.length) {
-      total += series.length;
-      done += c.querySelectorAll('.rb-serie.rb-serie--done').length;
-    } else {
-      total += 1;
-      if (c.classList.contains('rb-card--done')) done += 1;
-    }
+    if (series.length) { total += series.length; done += c.querySelectorAll('.rb-serie.rb-serie--done').length; }
+    else { total += 1; if (c.classList.contains('rb-card--done')) done += 1; }
   });
   const pct = total ? Math.round(done / total * 100) : 0;
   document.getElementById('rb-submit-fill').style.width = pct + '%';
@@ -1197,20 +1029,12 @@ function rbSyncGlobal() {
   document.getElementById('rb-submit-label').textContent = pct === 100 ? 'Cerrar sesión' : 'Guardar progreso';
   document.getElementById('rb-progress-global').textContent = `${done} / ${total}`;
 }
-
-/* Initialize progress (e.g., if pre-loaded cards exist) */
 rbSyncGlobal();
 
-/* ── Submit: build notas_raw then submit form ── */
 function rbBuildNotasRaw() {
-  const extra = document.getElementById('id_notas_extra').value.trim();
   const lines = [];
-
   document.querySelectorAll('.rb-card').forEach(card => {
-    const name = card.dataset.name;
-    if (!name) return;
-
-    /* Strength */
+    const name = card.dataset.name; if (!name) return;
     const series = card.querySelectorAll('.rb-serie');
     if (series.length) {
       const parts = [];
@@ -1222,8 +1046,6 @@ function rbBuildNotasRaw() {
       if (parts.length) lines.push(`${name}: ${parts.join(', ')}`);
       return;
     }
-
-    /* Cardio (km + pace) */
     const distKm = card.querySelector('.rb-input-distkm');
     if (distKm) {
       const idx = card.id.split('-').pop();
@@ -1231,29 +1053,16 @@ function rbBuildNotasRaw() {
       let line = `${name} ${distKm.value}km`;
       if (timeIn?.value) {
         const d = parseFloat(distKm.value), m = parseFloat(timeIn.value);
-        if (d > 0 && m > 0) {
-          const s = Math.round((m * 60) / d);
-          const pm = Math.floor(s / 60), ps = s % 60;
-          line += ` · ${m}min · ritmo ${pm}:${String(ps).padStart(2,'0')}/km`;
-        }
+        if (d > 0 && m > 0) { const s = Math.round((m*60)/d); line += ` · ${m}min · ritmo ${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}/km`; }
       }
-      lines.push(line);
-      return;
+      lines.push(line); return;
     }
-
-    /* Station (m + carga) */
-    const distM  = card.querySelector('.rb-input-distm');
-    const carga  = card.querySelector('.rb-input-carga');
-    if (distM) {
-      let line = `${name} ${distM.value}m`;
-      if (carga) line += ` @${carga.value}kg`;
-      lines.push(line);
-      return;
-    }
-
+    const distM = card.querySelector('.rb-input-distm');
+    const carga = card.querySelector('.rb-input-carga');
+    if (distM) { let line = `${name} ${distM.value}m`; if (carga) line += ` @${carga.value}kg`; lines.push(line); return; }
     if (card.classList.contains('rb-card--done')) lines.push(name);
   });
-
+  const extra = (document.getElementById('id_notas_extra')?.value || '').trim();
   let raw = lines.join('\n');
   if (extra) raw += '\n\n' + extra;
   document.getElementById('id_notas_raw').value = raw;
@@ -1264,44 +1073,33 @@ function rbSubmit() {
   document.getElementById('rb-form').submit();
 }
 
-/* ── Bio-safe alert on notes ──────────────── */
 {% if lesion_activa and lesion_activa.tags_restringidos %}
 (function() {
   const ALL_KW_MAP = {
-    'impacto_vertical':       ['carrera','run','running','correr'],
-    'estabilidad_gemelo':     ['prensa','squat','sentadilla'],
+    'impacto_vertical':['carrera','run','running','correr'],
+    'estabilidad_gemelo':['prensa','squat','sentadilla'],
     'flexion_rodilla_profunda':['wall ball','wall balls'],
-    'empuje_pierna':          ['sled push','sled'],
-    'flexion_plantar':        ['salto','box jump'],
-    'empuje_hombro':          ['burpee','press'],
-    'traccion_superior':      ['dominada','pull-up'],
-    'empuje_horizontal':      ['flexion','push up'],
-    'lumbar_carga':           ['peso muerto','deadlift'],
-    'rotacion_tronco':        ['sandbag lunge','lunges'],
+    'empuje_pierna':['sled push','sled'],
+    'flexion_plantar':['salto','box jump'],
+    'empuje_hombro':['burpee','press'],
+    'traccion_superior':['dominada','pull-up'],
+    'empuje_horizontal':['flexion','push up'],
+    'lumbar_carga':['peso muerto','deadlift'],
+    'rotacion_tronco':['sandbag lunge','lunges'],
   };
   const activeTags = {{ lesion_activa.tags_restringidos|safe }};
   const forb = {};
   activeTags.forEach(t => { if (ALL_KW_MAP[t]) forb[t] = ALL_KW_MAP[t]; });
-
-  const ta = document.getElementById('id_notas_extra');
-  ta.addEventListener('input', function() {
+  document.getElementById('id_notas_extra').addEventListener('input', function() {
     const t = this.value.toLowerCase();
     let found = '';
-    for (const tag in forb) {
-      for (const kw of forb[tag]) { if (kw && t.includes(kw)) { found = kw; break; } }
-      if (found) break;
-    }
+    for (const tag in forb) { for (const kw of forb[tag]) { if (kw && t.includes(kw)) { found = kw; break; } } if (found) break; }
     const al = document.getElementById('rb-biosafe-alert');
-    if (found) {
-      al.classList.add('rb-alert--show');
-      document.getElementById('rb-biosafe-msg').textContent =
-        `"${found}" — movimiento restringido por lesión (fase {{ lesion_activa.fase }}).`;
-    } else {
-      al.classList.remove('rb-alert--show');
-    }
+    if (found) { al.classList.add('rb-alert--show'); document.getElementById('rb-biosafe-msg').textContent = `"${found}" — movimiento restringido por lesión (fase {{ lesion_activa.fase }}).`; }
+    else { al.classList.remove('rb-alert--show'); }
   });
 })();
 {% endif %}
 </script>
-
-{% endblock %}
+</body>
+</html>
