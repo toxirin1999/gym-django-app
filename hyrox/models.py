@@ -42,7 +42,16 @@ class HyroxObjective(models.Model):
     # Disponibilidad Semanal (Fase 14)
     # Ejemplo de estructura: "0,2,4" (0=Lunes, 6=Domingo)
     dias_preferidos = models.CharField(max_length=20, default="0,2,4,5", help_text="Días de la semana preferidos para entrenar (0=Lunes, 6=Domingo)")
-    
+
+    # ── Fisiología para carga objetiva (TRIMP / Karvonen) ────────────────────
+    GENERO_CHOICES = [('M', 'Masculino'), ('F', 'Femenino')]
+    genero = models.CharField(max_length=1, choices=GENERO_CHOICES, default='M',
+        help_text="Factor b del TRIMP: M=1.92, F=1.67")
+    fc_max_real = models.IntegerField(null=True, blank=True,
+        help_text="FC máxima real medida en prueba de esfuerzo (lpm). Vacío = 220-edad.")
+    fc_reposo = models.IntegerField(null=True, blank=True, default=60,
+        help_text="FC en reposo por la mañana (lpm). Necesario para TRIMP Karvonen.")
+
     fecha_creacion = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
@@ -287,7 +296,19 @@ class HyroxSession(models.Model):
     hr_media = models.IntegerField(null=True, blank=True, help_text="Frecuencia Cardíaca Media (lpm)")
     hr_maxima = models.IntegerField(null=True, blank=True, help_text="Frecuencia Cardíaca Máxima (lpm)")
     rpe_global = models.PositiveSmallIntegerField(null=True, blank=True, help_text="Escala de Esfuerzo Percibido 1-10")
-    
+
+    # ── Carga objetiva (TRIMP / CTL / ATL / TSB) ────────────────────────────
+    trimp = models.FloatField(null=True, blank=True,
+        help_text="Training Impulse (Banister): carga objetiva de la sesión")
+    zona_cardiaca_predominante = models.CharField(max_length=5, null=True, blank=True,
+        help_text="Zona cardíaca predominante de la sesión: Z1-Z5")
+    ctl = models.FloatField(null=True, blank=True,
+        help_text="Chronic Training Load: fitness acumulado (42 días, exponential decay)")
+    atl = models.FloatField(null=True, blank=True,
+        help_text="Acute Training Load: fatiga acumulada (7 días, exponential decay)")
+    tsb = models.FloatField(null=True, blank=True,
+        help_text="Training Stress Balance: CTL - ATL (positivo=fresco, negativo=fatigado)")
+
     # Texto en crudo pegado por el usuario (sobre el que actuará Gemini)
     notas_raw = models.TextField(blank=True, null=True, help_text="Texto libre pegado por el usuario del entrenamiento")
     parsed_by_ia = models.BooleanField(default=False, help_text="True si ya fue procesado por el parser de IA")
