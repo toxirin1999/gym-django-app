@@ -862,33 +862,18 @@ def explicacion_plan_helms(request):
     # Esto es complejo porque plan_por_bloques no tiene fechas absolutas explícitas en el nivel superior,
     # pero las semanas sí tienen numeración global.
     
-    semana_global_hoy = None
-    
-    # Truco: buscar cualquier fecha de esta semana en 'entrenos_por_fecha' para sacar la semana global
-    inicio_semana = hoy - timedelta(days=hoy.weekday())
-    for i in range(7):
-        dia_check = inicio_semana + timedelta(days=i)
-        iso_check = dia_check.isoformat()
-        if iso_check in plan_anual['entrenos_por_fecha']:
-            # Encontramos un día planificado esta semana
-            data_dia = plan_anual['entrenos_por_fecha'][iso_check]
-            # data_dia tiene 'semana_bloque', pero necesitamos cruzarlo con el bloque
-            # Lamentablemente el output plano a veces pierde la ref directa al bloque padre en un solo paso
-            # Pero data_dia['nombre_rutina'] suele tener " - NombreBloque"
-            break
-            
-    # Haremos un match manual con la lista de fechas para mayor robustez
     fechas_ordenadas = sorted(plan_anual['entrenos_por_fecha'].keys())
     if fechas_ordenadas:
         primera_fecha = datetime.fromisoformat(fechas_ordenadas[0]).date()
         ultima_fecha = datetime.fromisoformat(fechas_ordenadas[-1]).date()
         
+        bloques_disponibles = plan_anual.get('plan_por_bloques', [])
         if hoy < primera_fecha:
             estado_plan = "El plan aún no ha comenzado"
-            bloque_target = plan_anual['plan_por_bloques'][0] # Mostrar el primero como preview
+            bloque_target = bloques_disponibles[0] if bloques_disponibles else None
         elif hoy > ultima_fecha:
             estado_plan = "El plan anual ha finalizado"
-            bloque_target = plan_anual['plan_por_bloques'][-1]
+            bloque_target = bloques_disponibles[-1] if bloques_disponibles else None
         else:
             estado_plan = "Activo"
             # Determinar semana actual relativa al inicio
@@ -924,17 +909,27 @@ def explicacion_plan_helms(request):
         
         # Mapeo de objetivos a descripción user-friendly paramétrica
         parametros_fase = {
-            'rpe_target': "7-8", # Default
-            'rango_reps': "8-12", # Default
+            'rpe_target': "7-8",
+            'rango_reps': "8-12",
             'enfoque': objetivo_fase.title()
         }
-        
+
         if 'fuerza' in objetivo_fase.lower():
             parametros_fase['rpe_target'] = "8-9"
             parametros_fase['rango_reps'] = "3-6"
         elif 'metabolico' in objetivo_fase.lower() or 'resistencia' in objetivo_fase.lower():
             parametros_fase['rpe_target'] = "6-8"
             parametros_fase['rango_reps'] = "12-15"
+
+        # Descripción legible del RIR (Reps In Reserve) a partir del RPE objetivo
+        _rpe_max = int(parametros_fase['rpe_target'].split('-')[-1])
+        _rir = 10 - _rpe_max
+        if _rir == 0:
+            parametros_fase['rpe_target_desc'] = "ninguna"
+        elif _rir == 1:
+            parametros_fase['rpe_target_desc'] = "1"
+        else:
+            parametros_fase['rpe_target_desc'] = f"{_rir}-{_rir + 1}"
             
     # 4. Generar Ejemplos Calculados (Big 3 + Militar)
     ejemplos_calculados = []
@@ -1033,15 +1028,14 @@ def explicacion_plan_helms(request):
             acum_semanas += dur
 
     # 6. Detectar transiciones de fase y guardar snapshots de 1RM
+    # Solo se ejecuta cuando el plan está activo; escribe a BD únicamente si hay un cambio real.
     from analytics.models import HistorialFase
-    
+
     if bloque_target and estado_plan == "Activo":
-        # Obtener la fase activa actual en la BD
         fase_activa_bd = HistorialFase.obtener_fase_activa(cliente)
         nombre_fase_actual = bloque_target.get('nombre', '')
         objetivo_actual = bloque_target.get('objetivo', '').lower()
-        
-        # Mapear objetivo a tipo_fase
+
         if objetivo_actual == 'descarga':
             tipo_fase_actual = 'descarga'
         elif 'fuerza' in objetivo_actual:
@@ -1054,51 +1048,55 @@ def explicacion_plan_helms(request):
             tipo_fase_actual = 'hipertrofia_especifica'
         else:
             tipo_fase_actual = 'hipertrofia'
-        
-        # Buscar el bloque actual en bloques_plan para obtener fechas
+
         bloque_actual_info = next((b for b in bloques_plan if b['es_actual']), None)
-        
+
         if bloque_actual_info:
-            # Caso 1: No hay fase activa en BD -> Crear la primera
+            def _rpe_int(bloque_info, idx):
+                raw = bloque_info.get('rpe', '')
+                try:
+                    return int(raw.split('-')[idx])
+                except (ValueError, IndexError):
+                    return None
+
             if not fase_activa_bd:
+                # Caso 1: Primera vez — crear registro inicial
                 HistorialFase.objects.create(
                     cliente=cliente,
                     nombre_fase=nombre_fase_actual,
                     tipo_fase=tipo_fase_actual,
                     fecha_inicio=bloque_actual_info['fecha_inicio'],
                     semanas_planificadas=bloque_actual_info['duracion'],
-                    rm_inicio=maximos,  # Snapshot inicial
+                    rm_inicio=maximos,
                     activa=True,
-                    rpe_inicio=int(bloque_actual_info.get('rpe', '7-8').split('-')[0]) if bloque_actual_info.get('rpe') else None,
-                    rpe_fin=int(bloque_actual_info.get('rpe', '7-8').split('-')[-1]) if bloque_actual_info.get('rpe') else None,
+                    rpe_inicio=_rpe_int(bloque_actual_info, 0),
+                    rpe_fin=_rpe_int(bloque_actual_info, -1),
                     rango_reps=bloque_actual_info.get('rep_range', ''),
                 )
-            
-            # Caso 2: Hay fase activa pero es diferente -> Transición de fase
+
             elif fase_activa_bd.nombre_fase != nombre_fase_actual:
-                # Marcar la fase anterior como completada con snapshot final
+                # Caso 2: Cambio de fase — cerrar la anterior y abrir la nueva
                 fase_activa_bd.marcar_como_completada(maximos)
-                fase_activa_bd.fecha_fin = hoy - timedelta(days=1)  # Terminó ayer
-                fase_activa_bd.semanas_completadas = ((hoy - fase_activa_bd.fecha_inicio).days // 7)
+                fase_activa_bd.fecha_fin = hoy - timedelta(days=1)
+                fase_activa_bd.semanas_completadas = (hoy - fase_activa_bd.fecha_inicio).days // 7
                 fase_activa_bd.save()
-                
-                # Crear nueva fase activa
+
                 HistorialFase.objects.create(
                     cliente=cliente,
                     nombre_fase=nombre_fase_actual,
                     tipo_fase=tipo_fase_actual,
                     fecha_inicio=bloque_actual_info['fecha_inicio'],
                     semanas_planificadas=bloque_actual_info['duracion'],
-                    rm_inicio=maximos,  # Snapshot de inicio de nueva fase
+                    rm_inicio=maximos,
                     activa=True,
-                    rpe_inicio=int(bloque_actual_info.get('rpe', '7-8').split('-')[0]) if bloque_actual_info.get('rpe') else None,
-                    rpe_fin=int(bloque_actual_info.get('rpe', '7-8').split('-')[-1]) if bloque_actual_info.get('rpe') else None,
+                    rpe_inicio=_rpe_int(bloque_actual_info, 0),
+                    rpe_fin=_rpe_int(bloque_actual_info, -1),
                     rango_reps=bloque_actual_info.get('rep_range', ''),
                 )
-            
-            # Caso 3: Misma fase -> Actualizar semanas completadas
+
             else:
-                semanas_transcurridas = ((hoy - fase_activa_bd.fecha_inicio).days // 7)
+                # Caso 3: Misma fase — solo escribe si el contador de semanas cambió
+                semanas_transcurridas = (hoy - fase_activa_bd.fecha_inicio).days // 7
                 if semanas_transcurridas != fase_activa_bd.semanas_completadas:
                     fase_activa_bd.semanas_completadas = semanas_transcurridas
                     fase_activa_bd.save()
@@ -1218,6 +1216,14 @@ def explicacion_plan_helms(request):
             }
 
 
+    # Etiquetas de mes dinámicas para el timeline (basadas en la fecha real de inicio del plan)
+    MESES_ES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
+    if fechas_ordenadas:
+        mes_inicio = datetime.fromisoformat(fechas_ordenadas[0]).month  # 1-12
+        timeline_meses = [MESES_ES[(mes_inicio - 1 + i) % 12] for i in range(12)]
+    else:
+        timeline_meses = MESES_ES[:]
+
     context = {
         'cliente': cliente,
         'fase_actual': fase_actual,
@@ -1233,6 +1239,7 @@ def explicacion_plan_helms(request):
         'fases_completadas': fases_completadas,
         'predicciones_1rm': predicciones_1rm,
         'comparativa_fases': comparativa_fases,
+        'timeline_meses': timeline_meses,
     }
     
     return render(request, 'analytics/explicacion_helms.html', context)

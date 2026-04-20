@@ -701,9 +701,7 @@
         </div>
 
         <div class="timeline-months">
-            <span>Ene</span><span>Feb</span><span>Mar</span><span>Abr</span>
-            <span>May</span><span>Jun</span><span>Jul</span><span>Ago</span>
-            <span>Sep</span><span>Oct</span><span>Nov</span><span>Dic</span>
+            {% for mes in timeline_meses %}<span>{{ mes }}</span>{% endfor %}
         </div>
 
         <div class="timeline-legend">
@@ -799,7 +797,7 @@
          ============================================================ -->
     {% if fases_completadas %}
     <div class="timeline-section" style="margin-bottom: 3rem;">
-        <div class="card-title">📊 Historial de Fases Completadas</div>
+        <div class="card-title">Historial de Fases Completadas</div>
         <p style="color: #64748b; font-size: 0.85rem; margin-bottom: 1.5rem;">
             Progreso real medido en cada bloque de entrenamiento que has completado.
         </p>
@@ -822,11 +820,11 @@
                         {% if fase.ganancia_promedio > 0 %}
                         <span class="phase-badge"
                             style="background: rgba(0, 255, 157, 0.15); color: var(--neon-green); border-color: rgba(0, 255, 157, 0.3);">
-                            ↗️ +{{ fase.ganancia_promedio|floatformat:1 }}%
+                            +{{ fase.ganancia_promedio|floatformat:1 }}%
                         </span>
                         {% elif fase.ganancia_promedio < 0 %} <span class="phase-badge"
                             style="background: rgba(255, 100, 100, 0.15); color: #ff6464; border-color: rgba(255, 100, 100, 0.3);">
-                            ↘️ {{ fase.ganancia_promedio|floatformat:1 }}%
+                            {{ fase.ganancia_promedio|floatformat:1 }}%
                             </span>
                             {% endif %}
                             <span class="phase-badge">{{ fase.get_tipo_fase_display }}</span>
@@ -885,10 +883,15 @@
                         <td>
                             <div class="exercise-row">
                                 <div class="exercise-icon">
-                                    {% if "Sentadilla" in ejemplo.ejercicio %}⚡
-                                    {% elif "Banca" in ejemplo.ejercicio %}🔥
-                                    {% elif "Muerto" in ejemplo.ejercicio %}🩸
-                                    {% else %}💪{% endif %}
+                                    {% if "Sentadilla" in ejemplo.ejercicio %}
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4v16M18 4v16M6 12h12"/></svg>
+                                    {% elif "Banca" in ejemplo.ejercicio %}
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="10" width="20" height="4" rx="1"/><line x1="6" y1="10" x2="6" y2="6"/><line x1="18" y1="10" x2="18" y2="6"/><line x1="4" y1="14" x2="4" y2="18"/><line x1="20" y1="14" x2="20" y2="18"/></svg>
+                                    {% elif "Muerto" in ejemplo.ejercicio %}
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="3" x2="12" y2="21"/><path d="M4 9l8-6 8 6"/><path d="M4 15l8 6 8-6"/></svg>
+                                    {% else %}
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="10" x2="8" y2="20"/><line x1="16" y1="10" x2="16" y2="20"/></svg>
+                                    {% endif %}
                                 </div>
                                 <div>
                                     <span class="exercise-name">{{ ejemplo.ejercicio }}</span>
@@ -907,9 +910,9 @@
                     {% empty %}
                     <tr>
                         <td colspan="4" style="text-align: center; color: #64748b; padding: 3rem;">
-                            <div style="font-size: 2rem; margin-bottom: 1rem; opacity: 0.5;">📊</div>
-                            No tenemos suficientes datos de 1RM para generar ejemplos precisos aún.<br>
-                            Sigue entrenando para desbloquear esta función.
+                            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:1rem;opacity:0.3;"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                            <div>No tenemos suficientes datos de 1RM para generar ejemplos precisos aún.<br>
+                            Sigue entrenando para desbloquear esta función.</div>
                         </td>
                     </tr>
                     {% endfor %}
@@ -922,7 +925,7 @@
         <div
             style="margin-top: 3rem; padding: 1.5rem; background: linear-gradient(135deg, rgba(0,243,255,0.05), rgba(255,0,255,0.05)); border-radius: 1rem; border: 1px solid rgba(0,243,255,0.2);">
             <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.5rem;">
-                <span style="font-size: 1.5rem;">🔮</span>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;opacity:0.7;"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
                 <div>
                     <div style="font-weight: 600; font-size: 1.1rem; color: #fff;">Proyección de 1RM al Final de la Fase
                     </div>
@@ -940,8 +943,8 @@
                         <div style="display: flex; align-items: center; gap: 0.5rem;">
                             <span style="font-size: 0.75rem; color: #64748b;">Confianza:</span>
                             <span
-                                style="font-size: 0.75rem; padding: 0.25rem 0.5rem; background: rgba(0,243,255,0.15); color: var(--neon-blue); border-radius: 0.25rem;">{{
-                                pred.confianza }}%</span>
+                                style="font-size: 0.75rem; padding: 0.25rem 0.5rem; background: rgba(0,243,255,0.15); color: var(--neon-blue); border-radius: 0.25rem;">
+                                {{ pred.confianza }}%</span>
                         </div>
                     </div>
 
@@ -950,8 +953,8 @@
                             <div
                                 style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em;">
                                 Actual</div>
-                            <div style="font-size: 1.5rem; font-weight: 700; color: #94a3b8; font-family: monospace;">{{
-                                pred.actual }}</div>
+                            <div style="font-size: 1.5rem; font-weight: 700; color: #94a3b8; font-family: monospace;">
+                                {{ pred.actual }}</div>
                             <div style="font-size: 0.7rem; color: #64748b;">kg</div>
                         </div>
 
@@ -959,11 +962,11 @@
                             <div
                                 style="flex: 1; height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden;">
                                 <div
-                                    style="height: 100%; background: linear-gradient(90deg, var(--neon-blue), var(--neon-green)); width: {% widthratio pred.ganancia_pct 10 100 %}%; transition: width 0.3s ease;">
+                                    style="height: 100%; background: linear-gradient(90deg, var(--neon-blue), var(--neon-green)); width: {% if pred.ganancia_pct > 0 %}{% widthratio pred.ganancia_pct 20 100 %}{% else %}0{% endif %}%; max-width: 100%; transition: width 0.3s ease;">
                                 </div>
                             </div>
-                            <span style="font-size: 0.9rem; color: var(--neon-green); font-weight: 600;">+{{
-                                pred.ganancia_pct }}%</span>
+                            <span style="font-size: 0.9rem; color: var(--neon-green); font-weight: 600;">+
+                                {{ pred.ganancia_pct }}%</span>
                         </div>
 
                         <div>
@@ -995,7 +998,7 @@
         {% if comparativa_fases %}
         <div style="margin-top: 3rem;">
             <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.5rem;">
-                <span style="font-size: 1.5rem;">📈</span>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;opacity:0.7;"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
                 <div>
                     <div style="font-weight: 600; font-size: 1.1rem; color: #fff;">Comparativa de Tipos de Fase</div>
                     <div style="font-size: 0.8rem; color: #64748b;">¿Qué estilo de entrenamiento te funciona mejor?
@@ -1035,8 +1038,8 @@
                             </td>
                             <td style="padding: 1rem; text-align: center;">
                                 <span
-                                    style="font-size: 1.25rem; font-weight: 700; color: var(--neon-blue); font-family: monospace;">{{
-                                    stats.cantidad_fases }}</span>
+                                    style="font-size: 1.25rem; font-weight: 700; color: var(--neon-blue); font-family: monospace;">
+                                    {{ stats.cantidad_fases }}</span>
                             </td>
                             <td style="padding: 1rem; text-align: center;">
                                 <div
@@ -1047,29 +1050,29 @@
                             <td style="padding: 1rem;">
                                 {% if stats.mejor_ejercicio %}
                                 <div style="color: #fff; font-weight: 500;">{{ stats.mejor_ejercicio }}</div>
-                                <div style="font-size: 0.75rem; color: var(--neon-green);">+{{ stats.mejor_ganancia_kg
-                                    }} kg promedio</div>
+                                <div style="font-size: 0.75rem; color: var(--neon-green);">+
+                                    {{ stats.mejor_ganancia_kg }} kg promedio</div>
                                 {% else %}
                                 <span style="color: #64748b;">-</span>
                                 {% endif %}
                             </td>
                             <td style="padding: 1rem; text-align: center;">
-                                <span style="font-size: 1rem; color: #94a3b8; font-family: monospace;">{{
-                                    stats.semanas_totales }}</span>
+                                <span style="font-size: 1rem; color: #94a3b8; font-family: monospace;">
+                                    {{ stats.semanas_totales }}</span>
                                 <div style="font-size: 0.7rem; color: #64748b;">semanas</div>
                             </td>
                             <td style="padding: 1rem; text-align: center;">
                                 {% if stats.efectividad == 'alta' %}
                                 <span
-                                    style="padding: 0.375rem 0.75rem; background: rgba(0,255,157,0.15); color: var(--neon-green); border-radius: 0.375rem; font-size: 0.75rem; font-weight: 600; text-transform: uppercase;">🔥
+                                    style="padding: 0.375rem 0.75rem; background: rgba(0,255,157,0.15); color: var(--neon-green); border-radius: 0.375rem; font-size: 0.75rem; font-weight: 600; text-transform: uppercase;">
                                     Alta</span>
                                 {% elif stats.efectividad == 'media' %}
                                 <span
-                                    style="padding: 0.375rem 0.75rem; background: rgba(251,191,36,0.15); color: #fbbf24; border-radius: 0.375rem; font-size: 0.75rem; font-weight: 600; text-transform: uppercase;">⚡
+                                    style="padding: 0.375rem 0.75rem; background: rgba(251,191,36,0.15); color: #fbbf24; border-radius: 0.375rem; font-size: 0.75rem; font-weight: 600; text-transform: uppercase;">
                                     Media</span>
                                 {% else %}
                                 <span
-                                    style="padding: 0.375rem 0.75rem; background: rgba(148,163,184,0.15); color: #94a3b8; border-radius: 0.375rem; font-size: 0.75rem; font-weight: 600; text-transform: uppercase;">📊
+                                    style="padding: 0.375rem 0.75rem; background: rgba(148,163,184,0.15); color: #94a3b8; border-radius: 0.375rem; font-size: 0.75rem; font-weight: 600; text-transform: uppercase;">
                                     Baja</span>
                                 {% endif %}
                             </td>
