@@ -793,10 +793,14 @@ body {
     </a>
   </div>
 
-  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:6px;">
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px;margin-top:6px;">
     <a href="{% url 'entrenos:dashboard_evolucion' cliente.id %}" class="rb-bottom-btn" style="flex-direction:row;gap:6px;padding:10px 12px;">
       <i class="fas fa-chart-area"></i>
       Evolución
+    </a>
+    <a href="{% url 'analytics:explicacion_plan_helms' %}" class="rb-bottom-btn" style="flex-direction:row;gap:6px;padding:10px 12px;">
+      <i class="fas fa-map"></i>
+      Plan
     </a>
     <a href="{% url 'estoico:dashboard' %}" class="rb-bottom-btn" style="flex-direction:row;gap:6px;padding:10px 12px;">
       <i class="fas fa-fire-flame-curved"></i>
