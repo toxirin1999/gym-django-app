@@ -1269,7 +1269,7 @@ input{background:transparent!important;border:none!important;outline:none!import
       {% endif %}
     </div>
     {% if ejercicio.usa_peso %}
-    <div class="serie-calc-inline">
+    <div class="serie-calc-inline" id="sci-{{ ejercicio.form_id }}-{{ sn }}" style="display:none;">
       <div class="sci-label">Calculadora de discos</div>
       <div class="discos-visual" id="discos-inline-{{ ejercicio.form_id }}-{{ sn }}"></div>
       <div class="pd-calc-txt" id="calc-inline-txt-{{ ejercicio.form_id }}-{{ sn }}"></div>
@@ -1333,8 +1333,16 @@ input{background:transparent!important;border:none!important;outline:none!import
          font-size:11px;letter-spacing:0.5px;line-height:1.5;color:var(--td);">
     </div>
 
-    <!-- 4 — Calculadora de discos -->
-    <div class="pd-calc">
+    <!-- 4 — Calculadora de discos (oculta por defecto) -->
+    <button type="button"
+            onclick="toggleCalcDiscos('{{ ejercicio.form_id }}')"
+            id="btn-calc-{{ ejercicio.form_id }}"
+            style="background:none;border:1px dashed rgba(255,255,255,0.15);color:rgba(255,255,255,0.35);
+                   font-size:10px;letter-spacing:0.12em;padding:5px 12px;border-radius:6px;
+                   cursor:pointer;width:100%;margin-bottom:6px;transition:all 0.2s;">
+      ⚖ VER CALCULADORA DE DISCOS
+    </button>
+    <div class="pd-calc" id="pd-calc-{{ ejercicio.form_id }}" style="display:none;">
       <div class="pd-calc-lbl">Calculadora de discos</div>
       <div class="discos-visual" id="discos-{{ ejercicio.form_id }}"></div>
       <div class="pd-calc-txt" id="calc-txt-{{ ejercicio.form_id }}"></div>
@@ -2229,6 +2237,17 @@ function saltarDescanso(fid){
   actualizarProgreso();
   actualizarSticky();
   actualizarDots();
+}
+
+function toggleCalcDiscos(fid){
+  const panel=document.getElementById('pd-calc-'+fid);
+  const btn=document.getElementById('btn-calc-'+fid);
+  if(!panel)return;
+  const visible=panel.style.display!=='none';
+  panel.style.display=visible?'none':'block';
+  btn.style.color=visible?'rgba(255,255,255,0.35)':'rgba(255,255,255,0.7)';
+  btn.style.borderColor=visible?'rgba(255,255,255,0.15)':'rgba(255,255,255,0.35)';
+  btn.textContent=visible?'⚖ VER CALCULADORA DE DISCOS':'⚖ OCULTAR CALCULADORA';
 }
 
 function calcularDiscos(fid,pesoTotal){
