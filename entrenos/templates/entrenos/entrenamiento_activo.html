@@ -112,6 +112,10 @@ input{background:transparent!important;border:none!important;outline:none!import
 .sd-info strong{color:#fff;font-weight:700;}
 /* badge RPE: fondo surf3, sin borde */
 .sd-rpe{font-size:12px;font-weight:600;color:var(--td);background:var(--surf3);padding:4px 10px;border-radius:8px;border:none;}
+/* botón editar serie guardada */
+.sd-edit{background:none;border:1px solid rgba(255,255,255,0.15);color:rgba(255,255,255,0.4);
+  font-size:13px;padding:3px 8px;border-radius:6px;cursor:pointer;transition:all .15s;flex-shrink:0;}
+.sd-edit:hover{border-color:rgba(255,200,80,0.6);color:rgba(255,200,80,0.9);background:rgba(255,200,80,0.08);}
 
 /* ── SERIE ACTIVA — contenedor sin card propia, las hijas tienen sus cards ── */
 .serie-activa{margin:0;background:transparent;}
@@ -395,14 +399,21 @@ input{background:transparent!important;border:none!important;outline:none!import
   letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px;
 }
 
-/* BTN FINALIZAR — texto verde, no relleno */
-.btn-finalizar-wrap{padding:8px 16px 24px;}
-.btn-final{
-  width:100%;height:48px;
-  background:transparent;border:none;
-  color:var(--green);font-size:16px;font-weight:600;
-  cursor:pointer;transition:opacity .15s;
+/* BTN FINALIZAR — sticky en la parte inferior */
+.btn-finalizar-wrap{
+  position:sticky; bottom:0; z-index:50;
+  background:linear-gradient(to top, var(--bg) 70%, transparent);
+  padding:12px 16px 24px;
 }
+.btn-final{
+  width:100%;height:52px;
+  background:rgba(46,204,113,0.12);
+  border:1.5px solid var(--green);border-radius:12px;
+  color:var(--green);font-size:15px;font-weight:700;
+  cursor:pointer;transition:all .15s;
+  letter-spacing:0.04em;
+}
+.btn-final:hover{background:rgba(46,204,113,0.22);}
 .btn-final:active{opacity:0.7;}
 
 /* ── BANNER BIO-SAFETY ── */
@@ -1356,11 +1367,6 @@ input{background:transparent!important;border:none!important;outline:none!import
       SALTAR DESCANSO
     </button>
 
-    <!-- 7 — Finalizar y Guardar -->
-    <button type="button" class="pd-finalizar-link" onclick="document.getElementById('btn-mostrar-resumen').click()">
-      🏁 Finalizar y Guardar
-    </button>
-
     <!-- checkboxes ocultos — se marcan al guardar la serie -->
     <div id="checks-{{ ejercicio.form_id }}" style="display:none;"></div>
   </div><!-- /pantalla-descanso -->
@@ -1657,9 +1663,11 @@ const cards=Array.from(document.querySelectorAll('.cyber-ejercicio-card'));
         const sn=idx+1;
         const row=document.createElement('div');
         row.className='serie-done';
+        row.dataset.sn=sn;
         row.innerHTML='<div class="sd-check">✓</div>'
           +'<div class="sd-info">Serie '+sn+' — <strong>'+s.peso+'kg × '+s.reps+' reps</strong></div>'
-          +'<div class="sd-rpe">RPE '+Math.round(s.rpe)+'</div>';
+          +'<div class="sd-rpe">RPE '+Math.round(s.rpe)+'</div>'
+          +'<button type="button" class="sd-edit" onclick="editarSeriePanel(\''+fid+'\','+sn+','+totalSets+')" title="Editar esta serie">✎</button>';
         log.appendChild(row);
         // Marcar checkbox
         const cb=document.getElementById('check-'+fid+'-'+sn);
@@ -1899,9 +1907,11 @@ function guardarSeriePanel(fid,sn,total){
   if(log){
     const row=document.createElement('div');
     row.className='serie-done';
+    row.dataset.sn=sn;
     row.innerHTML='<div class="sd-check">✓</div>'
       +'<div class="sd-info">Serie '+sn+' — <strong>'+peso+'kg × '+reps+' reps</strong></div>'
-      +'<div class="sd-rpe">RPE '+Math.round(rpe)+'</div>';
+      +'<div class="sd-rpe">RPE '+Math.round(rpe)+'</div>'
+      +'<button type="button" class="sd-edit" onclick="editarSeriePanel(\''+fid+'\','+sn+','+total+')" title="Editar esta serie">✎</button>';
     log.appendChild(row);
   }
 
@@ -1944,6 +1954,62 @@ function guardarSeriePanel(fid,sn,total){
   iniciarDescanso(fid,descansoSeg,sn,total);
   actualizarProgreso();
   actualizarSticky();
+}
+
+function editarSeriePanel(fid,sn,total){
+  // 1. Eliminar del array en STATE (sn es 1-based)
+  const idx=sn-1;
+  if(STATE.seriesCompletadas[fid] && STATE.seriesCompletadas[fid].length>idx){
+    STATE.seriesCompletadas[fid].splice(idx,1);
+  }
+
+  // 2. Desmarcar checkbox oculto
+  const cb=document.getElementById('check-'+fid+'-'+sn);
+  if(cb)cb.checked=false;
+
+  // 3. Quitar la fila del log visual
+  const log=document.getElementById('log-'+fid);
+  if(log){
+    const fila=log.querySelector('[data-sn="'+sn+'"]');
+    if(fila)fila.remove();
+    // Renumerar filas posteriores en el DOM y en STATE
+    log.querySelectorAll('.serie-done').forEach((row,i)=>{
+      const newSn=i+1;
+      row.dataset.sn=newSn;
+      const infoEl=row.querySelector('.sd-info');
+      const s=STATE.seriesCompletadas[fid]?.[i];
+      if(infoEl&&s) infoEl.innerHTML='Serie '+newSn+' — <strong>'+s.peso+'kg × '+s.reps+' reps</strong>';
+      const editBtn=row.querySelector('.sd-edit');
+      if(editBtn) editBtn.setAttribute('onclick',"editarSeriePanel('"+fid+"',"+newSn+","+total+")");
+    });
+  }
+
+  // 4. Ocultar pantalla de descanso si está activa
+  if(STATE.timers[fid]){
+    clearInterval(STATE.timers[fid].interval);
+    delete STATE.timers[fid];
+  }
+  const desc=document.getElementById('desc-'+fid);
+  if(desc)desc.style.display='none';
+
+  // 5. Ocultar cualquier panel de serie posterior que estuviera visible
+  for(let s2=sn+1;s2<=total;s2++){
+    const p=document.getElementById('reg-'+fid+'-'+s2);
+    if(p)p.style.display='none';
+  }
+
+  // 6. Mostrar de nuevo el panel de esa serie
+  const panel=document.getElementById('reg-'+fid+'-'+sn);
+  if(panel){
+    panel.style.display='block';
+    panel.scrollIntoView({behavior:'smooth',block:'start'});
+  }
+
+  // 7. Actualizar dots, pills, progreso
+  actualizarDots();
+  actualizarSetPills(fid);
+  actualizarProgreso();
+  guardarCheckpoint();
 }
 
 // ── DETECCIÓN PR EN TIEMPO REAL ─────────────────────────────────
@@ -2207,8 +2273,10 @@ function actualizarTimerUI(fid){
 
 function ajustarTimer(fid,delta){
   if(!STATE.timers[fid])return;
-  STATE.timers[fid].seg=Math.max(0,Math.min(600,STATE.timers[fid].seg+delta));
-  STATE.timers[fid].total=Math.max(STATE.timers[fid].total,STATE.timers[fid].seg);
+  const nuevo=Math.max(0,Math.min(600,STATE.timers[fid].seg+delta));
+  STATE.timers[fid].seg=nuevo;
+  STATE.timers[fid].endTs=Date.now()+nuevo*1000; // sincronizar timestamp para que el tick no revierta
+  STATE.timers[fid].total=Math.max(STATE.timers[fid].total,nuevo);
   actualizarTimerUI(fid);
 }
 
