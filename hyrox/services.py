@@ -911,7 +911,12 @@ class CompetitionStandardsService:
             for act in actividades_directas:
                 metricas = act.get('data_metricas', {}) or {}
                 series = metricas.get('series', [])
+                # Soportar distancia en clave 'distancia', 'distancia_m' o 'distancia_km'
                 distancia = float(metricas.get('distancia', 0) or 0)
+                if not distancia:
+                    distancia = float(metricas.get('distancia_m', 0) or 0)
+                if not distancia:
+                    distancia = float(metricas.get('distancia_km', 0) or 0) * 1000
                 total_reps = 0
 
                 if isinstance(series, list):
@@ -925,6 +930,10 @@ class CompetitionStandardsService:
                     reps_serie = float(series.get('reps', 0) or 0)
                     kg_registrado = max(kg_registrado, peso_serie)
                     total_reps = reps_serie
+
+                # Fallback: peso_kg en nivel raíz (ej. Sandbag Lunges planificadas)
+                if not kg_registrado:
+                    kg_registrado = max(kg_registrado, float(metricas.get('peso_kg', 0) or 0))
 
                 # Volumen acumulado
                 if vol_unit == 'reps':
