@@ -462,7 +462,34 @@ body {
   <!-- ── GYM WORKOUT CARD ─────────────────────── -->
   <div id="rbGymContent">
 
-    {% if proximo_entrenamiento %}
+    {% if entreno_hoy_realizado or entreno_semana_realizado %}
+    <!-- Estado: ya completado (anticipado o hoy) -->
+    <div class="rb-workout-card" style="border-left:3px solid var(--ok);">
+      <div class="rb-workout-eyebrow" style="color:var(--ok);">
+        &#10003; COMPLETADO
+        {% if entreno_realizado_fecha %}&nbsp;·&nbsp;{{ entreno_realizado_fecha|date:"l j N" }}{% endif %}
+      </div>
+      <div class="rb-workout-title">{{ proximo_entrenamiento.nombre|default:proximo_entrenamiento.rutina_nombre|default:"Sesión" }}</div>
+      {% if ejercicios_realizados_resumen %}
+      <div class="rb-ex-list" style="margin-top:10px;">
+        {% for ej in ejercicios_realizados_resumen %}
+        <div class="rb-ex-row">
+          <span class="rb-ex-name">{{ ej.nombre }}</span>
+          <span class="rb-ex-sets">
+            {{ ej.series }} ×
+            {% if ej.peso_kg > 0 %}{{ ej.peso_kg|floatformat:"-1" }} kg{% else %}P.C.{% endif %}
+          </span>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="rb-workout-badge" style="color:var(--ok);border-color:var(--ok);margin-top:8px;">
+        <span style="width:6px;height:6px;border-radius:50%;background:var(--ok);display:inline-block;"></span>
+        Sesión registrada
+      </div>
+      {% endif %}
+    </div>
+    {% elif proximo_entrenamiento %}
     <div class="rb-workout-card">
       <div class="rb-workout-eyebrow">Próximo Entrenamiento</div>
       <div class="rb-workout-title">{{ proximo_entrenamiento.nombre|default:proximo_entrenamiento.rutina_nombre|default:"Sesión" }}</div>
@@ -533,7 +560,11 @@ body {
     {% endif %}
 
     <!-- CTA: Ejecutar -->
-    {% if proximo_entrenamiento %}
+    {% if entreno_hoy_realizado or entreno_semana_realizado %}
+    <a href="{% url 'entrenos:vista_plan_anual' cliente.id %}" class="rb-cta" style="background:rgba(var(--accent-rgb),0.08);border:1.5px solid var(--accent);color:var(--accent);">
+      <i class="fas fa-plus"></i> Hacer otro entreno
+    </a>
+    {% elif proximo_entrenamiento %}
     <a href="{% url 'entrenos:entrenamiento_activo' cliente.id %}?fecha={{ hoy|date:'Y-m-d' }}&rutina_nombre={{ proximo_entrenamiento.rutina_nombre|urlencode }}&ejercicios={{ proximo_entrenamiento_json|urlencode }}" class="rb-cta">
       <i class="fas fa-play"></i> Ejecutar Protocolo
     </a>
