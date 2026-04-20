@@ -963,13 +963,15 @@ def _get_dashboard_context_data(request, cliente):
     _lunes_semana = hoy - timedelta(days=hoy.weekday())
     _rutina_hoy = (proximo_entrenamiento or {}).get('rutina_nombre') or (proximo_entrenamiento or {}).get('nombre', '')
     entreno_semana_realizado = False
+    entreno_realizado_obj = None  # El EntrenoRealizado concreto, si ya fue hecho
     if _rutina_hoy and not entreno_hoy_realizado:
         # Busca por nombre de rutina en los EntrenoRealizado de esta semana
-        entreno_semana_realizado = EntrenoRealizado.objects.filter(
+        entreno_realizado_obj = EntrenoRealizado.objects.filter(
             cliente=cliente,
             fecha__gte=_lunes_semana,
             rutina__nombre__iexact=_rutina_hoy,
-        ).exists()
+        ).prefetch_related('ejercicios_realizados').order_by('-fecha').first()
+        entreno_semana_realizado = entreno_realizado_obj is not None
         if not entreno_semana_realizado:
             # Busca en ActividadRealizada por título (sesiones anticipadas)
             entreno_semana_realizado = _AR.objects.filter(
@@ -979,6 +981,25 @@ def _get_dashboard_context_data(request, cliente):
                 fecha_realizado__gte=_lunes_semana,
                 titulo__icontains=_rutina_hoy[:20] if _rutina_hoy else '',
             ).exists()
+
+    # Si también se hizo exactamente hoy, tomar ese objeto
+    if entreno_hoy_realizado and not entreno_realizado_obj:
+        entreno_realizado_obj = EntrenoRealizado.objects.filter(
+            cliente=cliente, fecha=hoy,
+        ).prefetch_related('ejercicios_realizados').order_by('-fecha').first()
+
+    # Construir lista de ejercicios con peso medio para mostrar en el panel
+    ejercicios_realizados_resumen = []
+    if entreno_realizado_obj:
+        for _ej in entreno_realizado_obj.ejercicios_realizados.all():
+            ejercicios_realizados_resumen.append({
+                'nombre': _ej.nombre_ejercicio,
+                'series': _ej.series or 0,
+                'peso_kg': float(_ej.peso_kg or 0),
+            })
+        entreno_realizado_fecha = entreno_realizado_obj.fecha
+    else:
+        entreno_realizado_fecha = None
 
     hyrox_objetivo, hyrox_proxima_sesion = _ctx_hyrox(cliente, hoy)
     bio_readiness, restricciones_bio = _ctx_bio(cliente)
@@ -1170,6 +1191,8 @@ def _get_dashboard_context_data(request, cliente):
         'fatiga_acumulada': fatiga_acumulada,
         'entreno_hoy_realizado': entreno_hoy_realizado,
         'entreno_semana_realizado': entreno_semana_realizado,
+        'ejercicios_realizados_resumen': ejercicios_realizados_resumen,
+        'entreno_realizado_fecha': entreno_realizado_fecha,
         'proximo_entrenamiento': proximo_entrenamiento,
         'proximo_entrenamiento_json': json.dumps(proximo_entrenamiento.get("ejercicios", [])) if proximo_entrenamiento else "[]",
         'estadisticas_plan': estadisticas_plan,
