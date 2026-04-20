@@ -864,7 +864,9 @@ class CompetitionStandardsService:
         'Farmer walk':       {'target': 'Farmers Carry',  'factor': 1.0,  'mode': 'kg'},
         'Remo':              {'target': 'Rowing',         'factor': 1.0,  'mode': 'vol'},
         # Modo 'reps_to_dist': total_reps × factor → vol_registrado (metros)
-        'Burpees':         {'target': 'Burpee Broad Jumps', 'factor': 1.3, 'mode': 'reps_to_dist'},
+        'Burpees':             {'target': 'Burpee Broad Jumps', 'factor': 1.3, 'mode': 'reps_to_dist'},
+        # Alias de nombre exacto guardado por el parser
+        'Burpees Broad Jump':  {'target': 'Burpee Broad Jumps', 'factor': 1.0, 'mode': 'dist'},
     }
 
     @classmethod
@@ -943,7 +945,11 @@ class CompetitionStandardsService:
                         metricas = act.get('data_metricas', {}) or {}
                         series = metricas.get('series', [])
 
-                        if mode == 'reps_to_dist':
+                        if mode == 'dist':
+                            # Alias exacto: leer distancia directamente
+                            distancia_equiv = float(metricas.get('distancia', metricas.get('distancia_m', 0)) or 0)
+                            vol_registrado = max(vol_registrado, distancia_equiv * equiv_data['factor'])
+                        elif mode == 'reps_to_dist':
                             # Contar reps totales y convertir a distancia (metros)
                             total_reps_equiv = 0.0
                             if isinstance(series, list):
