@@ -599,19 +599,20 @@
       </ul>
       {% endif %}
 
-      <!-- 01 · SEÑALES VITALES -->
+      <!-- 01 · SEÑALES VITALES PRE -->
       <section class="rb-section">
         <div class="rb-section-head">
           <span class="rb-section-num">01</span>
           <h2 class="rb-section-title">Señales Vitales</h2>
           <div class="rb-section-line"></div>
+          <span class="rb-section-right" style="font-family:var(--font-mono);font-size:9px;font-weight:700;letter-spacing:.15em;color:var(--ok);background:rgba(var(--ok-rgb,80,160,80),.1);border:1px solid var(--ok);padding:3px 8px;border-radius:2px;">PRE</span>
         </div>
         <div class="rb-vitals">
           <div class="rb-vital">
             <div class="rb-vital-top">
               <div style="flex:1">
                 <div class="rb-vital-label">Energía Pre</div>
-                <div class="rb-vital-hint" id="rb-energia-hint">Zona óptima</div>
+                <div class="rb-vital-hint" id="rb-energia-hint">Rellena antes de entrenar</div>
               </div>
               <div class="rb-ring-wrap">
                 <svg width="60" height="60" viewBox="0 0 60 60">
@@ -622,23 +623,6 @@
               </div>
             </div>
             <input type="range" name="nivel_energia_pre" id="id_nivel_energia_pre" class="rb-slider" min="1" max="10" value="7" oninput="rbVital('energia', this.value)">
-            <div class="rb-slider-ticks"><span>LOW</span><span>MAX</span></div>
-          </div>
-          <div class="rb-vital">
-            <div class="rb-vital-top">
-              <div style="flex:1">
-                <div class="rb-vital-label">RPE Global</div>
-                <div class="rb-vital-hint" id="rb-rpe-hint">Zona óptima</div>
-              </div>
-              <div class="rb-ring-wrap">
-                <svg width="60" height="60" viewBox="0 0 60 60">
-                  <circle cx="30" cy="30" r="25" fill="none" stroke="var(--line)" stroke-width="4"/>
-                  <circle id="rb-ring-rpe" cx="30" cy="30" r="25" fill="none" stroke="var(--warn)" stroke-width="4" stroke-linecap="round" stroke-dasharray="157" stroke-dashoffset="87"/>
-                </svg>
-                <div class="rb-ring-val" id="rb-rpe-val" style="color:var(--warn)">5</div>
-              </div>
-            </div>
-            <input type="range" name="rpe_global" id="id_rpe_global" class="rb-slider" min="1" max="10" value="5" oninput="rbVital('rpe', this.value)">
             <div class="rb-slider-ticks"><span>LOW</span><span>MAX</span></div>
           </div>
         </div>
@@ -800,12 +784,13 @@
         </div>
       </section>
 
-      <!-- 03 · MÉTRICAS -->
+      <!-- 03 · MÉTRICAS POST -->
       <section class="rb-section">
         <div class="rb-section-head">
           <span class="rb-section-num">03</span>
           <h2 class="rb-section-title">Métricas de sesión</h2>
           <div class="rb-section-line"></div>
+          <span class="rb-section-right" style="font-family:var(--font-mono);font-size:9px;font-weight:700;letter-spacing:.15em;color:var(--accent);background:rgba(193,53,21,.08);border:1px solid var(--accent);padding:3px 8px;border-radius:2px;">POST</span>
         </div>
         <div class="rb-metrics">
           <div class="rb-metric">
@@ -828,6 +813,27 @@
             </div>
             <input type="number" name="hr_maxima" id="id_hr_maxima" class="rb-metric-input" placeholder="—" min="0" step="1" inputmode="numeric">
             <div class="rb-metric-unit">LPM</div>
+          </div>
+        </div>
+
+        <!-- RPE Global (post-entreno) -->
+        <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--line);">
+          <div class="rb-vital">
+            <div class="rb-vital-top">
+              <div style="flex:1">
+                <div class="rb-vital-label">RPE Global</div>
+                <div class="rb-vital-hint" id="rb-rpe-hint">Esfuerzo percibido al terminar</div>
+              </div>
+              <div class="rb-ring-wrap">
+                <svg width="60" height="60" viewBox="0 0 60 60">
+                  <circle cx="30" cy="30" r="25" fill="none" stroke="var(--line)" stroke-width="4"/>
+                  <circle id="rb-ring-rpe" cx="30" cy="30" r="25" fill="none" stroke="var(--warn)" stroke-width="4" stroke-linecap="round" stroke-dasharray="157" stroke-dashoffset="87"/>
+                </svg>
+                <div class="rb-ring-val" id="rb-rpe-val" style="color:var(--warn)">5</div>
+              </div>
+            </div>
+            <input type="range" name="rpe_global" id="id_rpe_global" class="rb-slider" min="1" max="10" value="5" oninput="rbVital('rpe', this.value)">
+            <div class="rb-slider-ticks"><span>LOW</span><span>MAX</span></div>
           </div>
         </div>
       </section>
