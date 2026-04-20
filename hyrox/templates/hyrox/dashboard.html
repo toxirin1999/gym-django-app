@@ -562,6 +562,9 @@ a.rb-dia:hover { background: var(--paper-2); text-decoration: none; }
         {% endif %}
         <a href="{% url 'hyrox:registrar_entrenamiento' objective_id=objetivo_activo.id %}" class="rb-btn rb-btn-primary"><i class="fas fa-plus"></i> Registrar Entreno</a>
         <a href="{% url 'hyrox:crear_objetivo' %}" class="rb-btn rb-btn-ghost"><i class="fas fa-pen"></i> Editar</a>
+        <button type="button" class="rb-btn rb-btn-ghost" onclick="document.getElementById('modal-como-funciona').style.display='flex'">
+          <i class="fas fa-brain"></i> Cómo funciona tu plan
+        </button>
       </div>
     </div>
   </section>
@@ -1003,6 +1006,174 @@ a.rb-dia:hover { background: var(--paper-2); text-decoration: none; }
     });
   })();
   </script>
+
+<!-- ═══════════════════════════════════════════════
+     MODAL: CÓMO FUNCIONA TU PLAN
+     ═══════════════════════════════════════════════ -->
+<div id="modal-como-funciona"
+     style="display:none; position:fixed; inset:0; z-index:9999;
+            background:rgba(15,15,14,0.72); backdrop-filter:blur(4px);
+            align-items:flex-end; justify-content:center;"
+     onclick="if(event.target===this)this.style.display='none'">
+
+  <div style="background:var(--paper); border:2px solid var(--ink); border-bottom:none;
+              border-radius:12px 12px 0 0; width:100%; max-width:560px;
+              max-height:88vh; overflow-y:auto; padding:0 0 40px;">
+
+    <!-- Header -->
+    <div style="position:sticky; top:0; background:var(--paper); border-bottom:1px solid var(--line);
+                padding:16px 20px; display:flex; align-items:center; justify-content:space-between; z-index:1;">
+      <div style="display:flex; align-items:center; gap:10px;">
+        <div style="width:3px; height:20px; background:var(--accent); border-radius:2px;"></div>
+        <span style="font-family:var(--font-disp); font-size:14px; letter-spacing:0.1em; text-transform:uppercase;">
+          Cómo funciona tu plan
+        </span>
+      </div>
+      <button onclick="document.getElementById('modal-como-funciona').style.display='none'"
+              style="background:none; border:none; cursor:pointer; font-size:18px; color:var(--ink-3); padding:4px 8px;">✕</button>
+    </div>
+
+    <div style="padding:20px 20px 0;">
+
+      <!-- ── INTRO ── -->
+      <p style="font-size:13px; line-height:1.65; color:var(--ink-2); margin-bottom:20px;">
+        Tu plan no es una plantilla fija. Es un bucle cerrado de planificación y retroalimentación que
+        reescribe las sesiones futuras según lo que registras en cada entreno.
+        Cuanto más datos introduzcas, más preciso y personalizado será.
+      </p>
+
+      <!-- ── BLOQUE 1: ESTRUCTURA DEL PLAN ── -->
+      <div style="margin-bottom:18px;">
+        <div style="font-family:var(--font-mono); font-size:9px; font-weight:700; letter-spacing:0.18em;
+                    color:var(--ink-4); text-transform:uppercase; margin-bottom:8px;">01 — Estructura del plan</div>
+        <div style="background:var(--bg); border:1px solid var(--line); border-radius:6px; padding:14px; display:flex; flex-direction:column; gap:8px;">
+          <div style="display:flex; gap:10px; align-items:flex-start;">
+            <span style="font-family:var(--font-mono); font-size:10px; font-weight:700; color:var(--accent); min-width:28px;">DÍA1</span>
+            <span style="font-size:12px; color:var(--ink-2); line-height:1.5;"><strong>Fuerza + MetCon</strong> — Sentadilla / Peso Muerto con % RM calculado. Detecta si tienes desequilibrio muscular y cambia el ejercicio.</span>
+          </div>
+          <div style="display:flex; gap:10px; align-items:flex-start;">
+            <span style="font-family:var(--font-mono); font-size:10px; font-weight:700; color:var(--accent); min-width:28px;">DÍA2</span>
+            <span style="font-size:12px; color:var(--ink-2); line-height:1.5;"><strong>Motor aeróbico</strong> — Carrera Z2 con ritmo calculado desde tu tiempo 5K real y FC máxima.</span>
+          </div>
+          <div style="display:flex; gap:10px; align-items:flex-start;">
+            <span style="font-family:var(--font-mono); font-size:10px; font-weight:700; color:var(--accent); min-width:28px;">DÍA3</span>
+            <span style="font-size:12px; color:var(--ink-2); line-height:1.5;"><strong>Estaciones Hyrox</strong> — Sled Push/Pull, Wall Balls, Burpees, Sandbag Lunges escalados a tu nivel.</span>
+          </div>
+          <div style="display:flex; gap:10px; align-items:flex-start;">
+            <span style="font-family:var(--font-mono); font-size:10px; font-weight:700; color:var(--accent); min-width:28px;">DÍA4</span>
+            <span style="font-size:12px; color:var(--ink-2); line-height:1.5;"><strong>Simulación</strong> — Bloques carrera + estación alternados. Open: 4 días/sem. Pro: 5 días/sem.</span>
+          </div>
+          <div style="margin-top:4px; padding:8px 10px; background:var(--paper); border-left:2px solid var(--accent-2); border-radius:2px; font-size:11px; color:var(--ink-3); line-height:1.5;">
+            Cada 4ª semana: <strong>Deload</strong> automático (carga −40%). Las 2 últimas semanas antes del evento: <strong>Tapering</strong> (activación, volumen mínimo).
+          </div>
+        </div>
+      </div>
+
+      <!-- ── BLOQUE 2: ADAPTACIÓN CONTINUA ── -->
+      <div style="margin-bottom:18px;">
+        <div style="font-family:var(--font-mono); font-size:9px; font-weight:700; letter-spacing:0.18em;
+                    color:var(--ink-4); text-transform:uppercase; margin-bottom:8px;">02 — El plan se adapta después de cada entreno</div>
+        <div style="display:flex; flex-direction:column; gap:6px;">
+
+          <div style="background:var(--bg); border:1px solid var(--line); border-left:3px solid var(--accent); border-radius:4px; padding:12px 14px;">
+            <div style="font-family:var(--font-mono); font-size:10px; font-weight:700; color:var(--accent); letter-spacing:0.1em; margin-bottom:4px;">SOBREESFUERZO</div>
+            <div style="font-size:12px; color:var(--ink-2); line-height:1.5;">Si registras <strong>RPE ≥ 9</strong> o <strong>FC máx > 185 lpm</strong>, la sesión de 48h después se reduce automáticamente un <strong>20%</strong> en volumen y carga.</div>
+          </div>
+
+          <div style="background:var(--bg); border:1px solid var(--line); border-left:3px solid var(--ok); border-radius:4px; padding:12px 14px;">
+            <div style="font-family:var(--font-mono); font-size:10px; font-weight:700; color:var(--ok); letter-spacing:0.1em; margin-bottom:4px;">ESTANCAMIENTO</div>
+            <div style="font-size:12px; color:var(--ink-2); line-height:1.5;">Si <strong>2 sesiones seguidas</strong> tienen RPE ≤ 5, la carga del mismo ejercicio sube un <strong>+10%</strong> en la próxima sesión.</div>
+          </div>
+
+          <div style="background:var(--bg); border:1px solid var(--line); border-left:3px solid var(--warn); border-radius:4px; padding:12px 14px;">
+            <div style="font-family:var(--font-mono); font-size:10px; font-weight:700; color:var(--warn); letter-spacing:0.1em; margin-bottom:4px;">ENERGÍA CRÍTICA</div>
+            <div style="font-size:12px; color:var(--ink-2); line-height:1.5;">Si reportas <strong>energía pre-entreno < 3</strong> dos sesiones consecutivas, la siguiente sesión se cancela y se convierte en descanso activo.</div>
+          </div>
+
+          <div style="background:var(--bg); border:1px solid var(--line); border-left:3px solid var(--danger); border-radius:4px; padding:12px 14px;">
+            <div style="font-family:var(--font-mono); font-size:10px; font-weight:700; color:var(--danger); letter-spacing:0.1em; margin-bottom:4px;">FATIGA SNC</div>
+            <div style="font-size:12px; color:var(--ink-2); line-height:1.5;">Si <strong>3 sesiones seguidas</strong> superan RPE 8.5, la próxima sesión de fuerza queda capada al <strong>70% RM</strong> para proteger el sistema nervioso.</div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ── BLOQUE 3: SEÑALES QUE USA ── -->
+      <div style="margin-bottom:18px;">
+        <div style="font-family:var(--font-mono); font-size:9px; font-weight:700; letter-spacing:0.18em;
+                    color:var(--ink-4); text-transform:uppercase; margin-bottom:8px;">03 — Señales que alimentan el algoritmo</div>
+        <div style="background:var(--bg); border:1px solid var(--line); border-radius:6px; overflow:hidden;">
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:1px; background:var(--line);">
+            <div style="background:var(--paper); padding:10px 12px;">
+              <div style="font-family:var(--font-mono); font-size:9px; font-weight:700; color:var(--ink-4); letter-spacing:0.1em; text-transform:uppercase; margin-bottom:3px;">RPE post-sesión</div>
+              <div style="font-size:11px; color:var(--ink-2); line-height:1.4;">Esfuerzo percibido 1–10. Ajusta carga de las próximas sesiones.</div>
+            </div>
+            <div style="background:var(--paper); padding:10px 12px;">
+              <div style="font-family:var(--font-mono); font-size:9px; font-weight:700; color:var(--ink-4); letter-spacing:0.1em; text-transform:uppercase; margin-bottom:3px;">FC media / máxima</div>
+              <div style="font-size:11px; color:var(--ink-2); line-height:1.4;">Valida el RPE subjetivo. Detecta sobreestimación o subestimación del esfuerzo.</div>
+            </div>
+            <div style="background:var(--paper); padding:10px 12px;">
+              <div style="font-family:var(--font-mono); font-size:9px; font-weight:700; color:var(--ink-4); letter-spacing:0.1em; text-transform:uppercase; margin-bottom:3px;">Energía pre-entreno</div>
+              <div style="font-size:11px; color:var(--ink-2); line-height:1.4;">Escala el volumen antes de empezar: &lt;5 → 70%, 5–6 → 85%, &gt;8 → sugerencia de subir ritmo.</div>
+            </div>
+            <div style="background:var(--paper); padding:10px 12px;">
+              <div style="font-family:var(--font-mono); font-size:9px; font-weight:700; color:var(--ink-4); letter-spacing:0.1em; text-transform:uppercase; margin-bottom:3px;">CTL / ATL / TSB</div>
+              <div style="font-size:11px; color:var(--ink-2); line-height:1.4;">Fitness acumulado (42 días) vs fatiga reciente (7 días). TSB &gt; 10 = fresco, TSB &lt; −25 = reducción de emergencia.</div>
+            </div>
+            <div style="background:var(--paper); padding:10px 12px;">
+              <div style="font-family:var(--font-mono); font-size:9px; font-weight:700; color:var(--ink-4); letter-spacing:0.1em; text-transform:uppercase; margin-bottom:3px;">Tus RMs</div>
+              <div style="font-size:11px; color:var(--ink-2); line-height:1.4;">Sentadilla y Peso Muerto definen el % de carga real de cada sesión de fuerza.</div>
+            </div>
+            <div style="background:var(--paper); padding:10px 12px;">
+              <div style="font-family:var(--font-mono); font-size:9px; font-weight:700; color:var(--ink-4); letter-spacing:0.1em; text-transform:uppercase; margin-bottom:3px;">Entrenos de gym</div>
+              <div style="font-size:11px; color:var(--ink-2); line-height:1.4;">Lee la fatiga acumulada del módulo de gym (últimos 3 días) y añade avisos si la carga es alta.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── BLOQUE 4: ADAPTACIONES DE NIVEL ── -->
+      <div style="margin-bottom:18px;">
+        <div style="font-family:var(--font-mono); font-size:9px; font-weight:700; letter-spacing:0.18em;
+                    color:var(--ink-4); text-transform:uppercase; margin-bottom:8px;">04 — Se adapta a tu nivel y circunstancias</div>
+        <div style="display:flex; flex-direction:column; gap:5px;">
+          <div style="display:flex; gap:8px; align-items:flex-start; font-size:12px; color:var(--ink-2); line-height:1.5;">
+            <span style="color:var(--accent); font-weight:700; flex-shrink:0;">—</span>
+            <span><strong>Nivel de experiencia</strong> (principiante / intermedio / avanzado): ajusta series, distancias de carrera y peso de sled push.</span>
+          </div>
+          <div style="display:flex; gap:8px; align-items:flex-start; font-size:12px; color:var(--ink-2); line-height:1.5;">
+            <span style="color:var(--accent); font-weight:700; flex-shrink:0;">—</span>
+            <span><strong>Desequilibrio muscular</strong>: si Peso Muerto > 1.5× Sentadilla, el ejercicio principal cambia a foco de cuádriceps. Al revés, a cadena posterior.</span>
+          </div>
+          <div style="display:flex; gap:8px; align-items:flex-start; font-size:12px; color:var(--ink-2); line-height:1.5;">
+            <span style="color:var(--accent); font-weight:700; flex-shrink:0;">—</span>
+            <span><strong>Lesión activa</strong>: los ejercicios con tags de riesgo biomecánico restringidos se eliminan automáticamente del plan. La carrera se sustituye por remo/SkiErg.</span>
+          </div>
+          <div style="display:flex; gap:8px; align-items:flex-start; font-size:12px; color:var(--ink-2); line-height:1.5;">
+            <span style="color:var(--accent); font-weight:700; flex-shrink:0;">—</span>
+            <span><strong>Sin barra disponible</strong>: la sentadilla se convierte en Goblet Squat con mancuerna automáticamente.</span>
+          </div>
+          <div style="display:flex; gap:8px; align-items:flex-start; font-size:12px; color:var(--ink-2); line-height:1.5;">
+            <span style="color:var(--accent); font-weight:700; flex-shrink:0;">—</span>
+            <span><strong>Sesión saltada</strong>: si era una sesión de carrera o simulación, el plan la reprograma para hoy y empuja el resto del calendario para no perder el estímulo aeróbico antes de la carrera.</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── CTA ── -->
+      <div style="margin-top:20px; padding:14px; background:var(--accent); border-radius:6px; text-align:center;">
+        <div style="font-family:var(--font-disp); font-size:13px; letter-spacing:0.06em; text-transform:uppercase; color:var(--paper); margin-bottom:6px;">
+          Para que funcione bien
+        </div>
+        <div style="font-size:12px; color:rgba(247,243,234,0.85); line-height:1.6;">
+          Registra siempre RPE, FC y energía pre-entreno.<br>
+          Sin esos datos, la mayor parte de la adaptación no se activa.
+        </div>
+      </div>
+
+    </div><!-- /padding -->
+  </div><!-- /sheet -->
+</div><!-- /overlay -->
 
 </body>
 </html>
