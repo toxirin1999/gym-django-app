@@ -63,7 +63,7 @@ def _calcular_y_guardar_carga(instance):
 
 
 @receiver(post_save, sender=HyroxSession)
-def autorregular_plan_futuro(sender, instance, created, **kwargs):
+def autorregular_plan_futuro(sender, instance, created, update_fields=None, **kwargs):
     """
     Autorregulación avanzada + carga objetiva al completar una sesión.
     Orden de ejecución:
@@ -72,6 +72,9 @@ def autorregular_plan_futuro(sender, instance, created, **kwargs):
       3. Actualizar Race Readiness
       4. Ajustar fatiga de la próxima sesión
     """
+    # update_fields indica un save() parcial interno — evitar recursión infinita
+    if update_fields is not None:
+        return
     if instance.estado != 'completado' or not instance.rpe_global:
         return
 
@@ -253,12 +256,12 @@ def sync_gym_impact_to_hyrox(sender, instance, created, raw=False, **kwargs):
         traceback.print_exc()
 
 @receiver(post_save, sender=HyroxSession)
-def sincronizar_hyrox_al_hub(sender, instance, created, raw=False, **kwargs):
+def sincronizar_hyrox_al_hub(sender, instance, created, raw=False, update_fields=None, **kwargs):
     """
     Cuando una HyroxSession pasa a 'completado', crea o actualiza su registro
     en el hub ActividadRealizada.
     """
-    if raw or instance.estado != 'completado':
+    if raw or update_fields is not None or instance.estado != 'completado':
         return
 
     try:
