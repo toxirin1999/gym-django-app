@@ -1009,6 +1009,8 @@ input{background:transparent!important;border:none!important;outline:none!import
      data-inc-kg="{{ ejercicio.incremento_kg|default:2.5 }}"
      data-total-sets="{{ ejercicio.series }}"
      data-descanso="{{ ejercicio.descanso_minutos|default:3 }}"
+     data-barra-kg="{{ ejercicio.barra_kg|default:0 }}"
+     data-tipo-equipo="{{ ejercicio.tipo_equipo|default:'otro' }}"
      style="display:{% if forloop.first %}block{% else %}none{% endif %};">
 
   <input type="hidden" name="{{ ejercicio.form_id }}_nombre" value="{{ ejercicio.nombre }}">
@@ -1268,9 +1270,9 @@ input{background:transparent!important;border:none!important;outline:none!import
       </div>
       {% endif %}
     </div>
-    {% if ejercicio.usa_peso %}
-    <div class="serie-calc-inline" id="sci-{{ ejercicio.form_id }}-{{ sn }}" style="display:none;">
-      <div class="sci-label">Calculadora de discos</div>
+    {% if ejercicio.usa_barra %}
+    <div class="serie-calc-inline" id="sci-{{ ejercicio.form_id }}-{{ sn }}">
+      <div class="sci-label">{% if ejercicio.tipo_equipo == 'maquina_discos' %}Discos por lado{% else %}Calculadora de discos{% endif %}</div>
       <div class="discos-visual" id="discos-inline-{{ ejercicio.form_id }}-{{ sn }}"></div>
       <div class="pd-calc-txt" id="calc-inline-txt-{{ ejercicio.form_id }}-{{ sn }}"></div>
     </div>
@@ -1333,20 +1335,14 @@ input{background:transparent!important;border:none!important;outline:none!import
          font-size:11px;letter-spacing:0.5px;line-height:1.5;color:var(--td);">
     </div>
 
-    <!-- 4 — Calculadora de discos (oculta por defecto) -->
-    <button type="button"
-            onclick="toggleCalcDiscos('{{ ejercicio.form_id }}')"
-            id="btn-calc-{{ ejercicio.form_id }}"
-            style="background:none;border:1px dashed rgba(255,255,255,0.15);color:rgba(255,255,255,0.35);
-                   font-size:10px;letter-spacing:0.12em;padding:5px 12px;border-radius:6px;
-                   cursor:pointer;width:100%;margin-bottom:6px;transition:all 0.2s;">
-      ⚖ VER CALCULADORA DE DISCOS
-    </button>
-    <div class="pd-calc" id="pd-calc-{{ ejercicio.form_id }}" style="display:none;">
-      <div class="pd-calc-lbl">Calculadora de discos</div>
+    <!-- 4 — Calculadora de discos (barra o máquina con discos) -->
+    {% if ejercicio.usa_barra %}
+    <div class="pd-calc" id="pd-calc-{{ ejercicio.form_id }}">
+      <div class="pd-calc-lbl">{% if ejercicio.tipo_equipo == 'maquina_discos' %}Discos por lado{% else %}Calculadora de discos{% endif %}</div>
       <div class="discos-visual" id="discos-{{ ejercicio.form_id }}"></div>
       <div class="pd-calc-txt" id="calc-txt-{{ ejercicio.form_id }}"></div>
     </div>
+    {% endif %}
 
     <!-- 5 — −30s / +30s -->
     <div class="pd-controles">
@@ -2124,20 +2120,31 @@ function actualizarORM(fid,sn){
 }
 
 // ── CALCULADORA DISCOS INLINE ───────────────────────────────────
+function getBarraKg(fid){
+  const card=document.getElementById('card-'+fid);
+  return parseFloat(card?.dataset.barraKg||'0');
+}
+
 function calcularDiscosInline(fid,sn,pesoTotal){
   const contenedor=document.getElementById('discos-inline-'+fid+'-'+sn);
   const txt=document.getElementById('calc-inline-txt-'+fid+'-'+sn);
   if(!contenedor)return;
-  const barraKg=20;
+  const barraKg=getBarraKg(fid);
   let porLado=Math.max(0,(pesoTotal-barraKg)/2);
   const sizes=[20,15,10,5,2.5,1];
   const cls={20:'d20',15:'d15',10:'d10',5:'d5',2.5:'d25',1:'d1'};
   const discos=[];let resto=porLado;
   for(const t of sizes){while(resto>=t-0.001){discos.push(t);resto=Math.round((resto-t)*100)/100;}}
   contenedor.innerHTML=discos.map(d=>'<div class="disco '+cls[d]+'">'+d+'</div>').join('')
-    +'<div class="barra"></div>'
+    +(barraKg>0?'<div class="barra"></div>':'')
     +[...discos].reverse().map(d=>'<div class="disco '+cls[d]+'">'+d+'</div>').join('');
-  if(txt)txt.innerHTML='Barra '+barraKg+'kg + <strong>'+(discos.map(d=>d+'kg').join(' + ')||'sin discos')+' por lado</strong> = '+pesoTotal+'kg';
+  if(txt){
+    if(barraKg>0){
+      txt.innerHTML='Barra '+barraKg+'kg + <strong>'+(discos.map(d=>d+'kg').join(' + ')||'sin discos')+' por lado</strong> = '+pesoTotal+'kg';
+    }else{
+      txt.innerHTML='<strong>'+(discos.map(d=>d+'kg').join(' + ')||'sin discos')+' por lado</strong> = '+pesoTotal+'kg';
+    }
+  }
 }
 
 // ── INICIALIZAR PANEL SERIE ─────────────────────────────────────
@@ -2239,31 +2246,27 @@ function saltarDescanso(fid){
   actualizarDots();
 }
 
-function toggleCalcDiscos(fid){
-  const panel=document.getElementById('pd-calc-'+fid);
-  const btn=document.getElementById('btn-calc-'+fid);
-  if(!panel)return;
-  const visible=panel.style.display!=='none';
-  panel.style.display=visible?'none':'block';
-  btn.style.color=visible?'rgba(255,255,255,0.35)':'rgba(255,255,255,0.7)';
-  btn.style.borderColor=visible?'rgba(255,255,255,0.15)':'rgba(255,255,255,0.35)';
-  btn.textContent=visible?'⚖ VER CALCULADORA DE DISCOS':'⚖ OCULTAR CALCULADORA';
-}
 
 function calcularDiscos(fid,pesoTotal){
   const contenedor=document.getElementById('discos-'+fid);
   const txt=document.getElementById('calc-txt-'+fid);
   if(!contenedor)return;
-  const barraKg=20;
+  const barraKg=getBarraKg(fid);
   let porLado=Math.max(0,(pesoTotal-barraKg)/2);
   const sizes=[20,15,10,5,2.5,1];
   const cls={20:'d20',15:'d15',10:'d10',5:'d5',2.5:'d25',1:'d1'};
   const discos=[];let resto=porLado;
   for(const t of sizes){while(resto>=t-0.001){discos.push(t);resto=Math.round((resto-t)*100)/100;}}
   contenedor.innerHTML=discos.map(d=>'<div class="disco '+cls[d]+'">'+d+'</div>').join('')
-    +'<div class="barra"></div>'
+    +(barraKg>0?'<div class="barra"></div>':'')
     +[...discos].reverse().map(d=>'<div class="disco '+cls[d]+'">'+d+'</div>').join('');
-  if(txt)txt.innerHTML='Barra '+barraKg+'kg + <strong>'+(discos.map(d=>d+'kg').join(' + ')||'sin discos')+' por lado</strong> = '+pesoTotal+'kg';
+  if(txt){
+    if(barraKg>0){
+      txt.innerHTML='Barra '+barraKg+'kg + <strong>'+(discos.map(d=>d+'kg').join(' + ')||'sin discos')+' por lado</strong> = '+pesoTotal+'kg';
+    }else{
+      txt.innerHTML='<strong>'+(discos.map(d=>d+'kg').join(' + ')||'sin discos')+' por lado</strong> = '+pesoTotal+'kg';
+    }
+  }
 }
 
 function calcVolumenEj(fid){

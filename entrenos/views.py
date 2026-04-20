@@ -3533,6 +3533,61 @@ def vista_entrenamiento_activo(request, cliente_id):
             ejercicio['usa_distancia'] = ejercicio['tipo_progresion'] == 'progresion_distancia'
             ejercicio['solo_reps'] = ejercicio['tipo_progresion'] in ('progresion_reps', 'progresion_variante')
 
+            # Detección automática del tipo de equipo por palabras clave en el nombre
+            _nombre_lower = ejercicio.get('nombre', '').lower()
+            # Máquinas con discos laterales (sin barra — base 0 kg)
+            _KEYWORDS_MAQUINA_DISCOS = [
+                'prensa', 'leg press', 'hack squat', 'hack-squat',
+            ]
+            # Barras olímpicas (base 20 kg)
+            _KEYWORDS_BARRA = [
+                'barra', 'press banca', 'sentadilla', 'peso muerto', 'deadlift',
+                'squat', 'bench press', 'overhead press', 'ohp', 'barbell',
+                'hip thrust', 'good morning', 'pendlay', 'rumanian', 'rdl',
+                'zercher', 'front squat', 'back squat', 'smith', 'multipower',
+            ]
+            _KEYWORDS_CABLE = [
+                'polea', 'cable', 'jalón', 'jalon', 'pulldown', 'pull-down',
+                'face pull', 'cruce', 'crossover', 'tricep cuerda', 'press polea',
+            ]
+            _KEYWORDS_MAQUINA_SELECTOR = [
+                'máquina', 'maquina', 'pec deck', 'chest press maquina',
+                'shoulder press maquina', 'leg curl', 'leg extension', 'hip abductor',
+                'seated row maquina', 'lat pulldown maquina',
+            ]
+            _KEYWORDS_MANCUERNA = [
+                'mancuerna', 'dumbbell', 'db ', 'db-',
+            ]
+            _KEYWORDS_PESO_CORPORAL = [
+                'dominada', 'pull-up', 'pullup', 'fondos', 'dips', 'ausi',
+                'muscle up', 'pistol', 'push-up', 'flexión', 'flexion',
+            ]
+            if ejercicio['tipo_progresion'] == 'peso_corporal_lastre':
+                ejercicio['tipo_equipo'] = 'peso_corporal'
+                ejercicio['barra_kg'] = 0
+            elif any(k in _nombre_lower for k in _KEYWORDS_MAQUINA_DISCOS):
+                ejercicio['tipo_equipo'] = 'maquina_discos'
+                ejercicio['barra_kg'] = 0
+            elif any(k in _nombre_lower for k in _KEYWORDS_BARRA):
+                ejercicio['tipo_equipo'] = 'barra'
+                ejercicio['barra_kg'] = 20
+            elif any(k in _nombre_lower for k in _KEYWORDS_CABLE):
+                ejercicio['tipo_equipo'] = 'cable'
+                ejercicio['barra_kg'] = 0
+            elif any(k in _nombre_lower for k in _KEYWORDS_MAQUINA_SELECTOR):
+                ejercicio['tipo_equipo'] = 'maquina'
+                ejercicio['barra_kg'] = 0
+            elif any(k in _nombre_lower for k in _KEYWORDS_MANCUERNA):
+                ejercicio['tipo_equipo'] = 'mancuerna'
+                ejercicio['barra_kg'] = 0
+            elif any(k in _nombre_lower for k in _KEYWORDS_PESO_CORPORAL):
+                ejercicio['tipo_equipo'] = 'peso_corporal'
+                ejercicio['barra_kg'] = 0
+            else:
+                ejercicio['tipo_equipo'] = 'otro'
+                ejercicio['barra_kg'] = 0
+            ejercicio['usa_barra'] = ejercicio['tipo_equipo'] in ('barra', 'maquina_discos')
+
             # --- Ajuste de intensidad (Bio-Safety Max RPE) ---
             base_rpe = int(ejercicio.get('rpe_objetivo', 8))
             max_rpe = int(bio_readiness.get('max_rpe', 10))
