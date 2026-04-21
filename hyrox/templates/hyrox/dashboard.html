@@ -973,6 +973,7 @@ a.rb-dia:hover { background: var(--paper-2); text-decoration: none; }
           <div style="display:flex;gap:4px;flex-wrap:wrap;align-items:center">
             {% if sesion.rpe_global %}<span class="rb-chip">RPE {{ sesion.rpe_global }}/10</span>{% endif %}
             {% if sesion.hr_maxima %}<span class="rb-chip"><i class="fas fa-heartbeat"></i> {{ sesion.hr_maxima }}</span>{% endif %}
+            <a href="{% url 'hyrox:editar_sesion' sesion.id %}" class="rb-btn rb-btn-sm rb-btn-ghost" title="Editar sesión"><i class="fas fa-pen"></i></a>
             <form action="{% url 'hyrox:borrar_entrenamiento' sesion.id %}" method="POST" style="display:inline;margin:0">{% csrf_token %}
               <button type="button" onclick="if(confirm('¿Borrar?')) this.closest('form').submit();" class="rb-btn rb-btn-sm rb-btn-ghost"><i class="fas fa-trash-alt"></i></button>
             </form>
