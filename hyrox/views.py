@@ -724,7 +724,6 @@ def procesar_con_ia(request, session_id):
 @login_required
 def editar_sesion_hyrox(request, session_id):
     from .models import HyroxActivity
-    from .signals import _calcular_y_guardar_carga
 
     session = get_object_or_404(
         HyroxSession,
@@ -733,48 +732,55 @@ def editar_sesion_hyrox(request, session_id):
     )
 
     if request.method == 'POST':
-        session.rpe_global = request.POST.get('rpe_global') or session.rpe_global
-        session.tiempo_total_minutos = request.POST.get('tiempo_total_minutos') or session.tiempo_total_minutos
-        session.hr_media = request.POST.get('hr_media') or session.hr_media
-        session.hr_maxima = request.POST.get('hr_maxima') or session.hr_maxima
-        notas_raw = request.POST.get('notas_raw', '').strip()
+        # Campos de sesión
+        rpe = request.POST.get('rpe_global')
+        if rpe: session.rpe_global = int(rpe)
+        tiempo = request.POST.get('tiempo_total_minutos')
+        if tiempo: session.tiempo_total_minutos = int(tiempo)
+        hr_med = request.POST.get('hr_media')
+        if hr_med: session.hr_media = int(hr_med)
+        hr_max = request.POST.get('hr_maxima')
+        if hr_max: session.hr_maxima = int(hr_max)
 
-        if notas_raw:
-            # Re-parsear y sustituir actividades
-            parsed_data = HyroxParserService.parse_workout_text(notas_raw)
-            if parsed_data:
-                HyroxParserService.save_parsed_session(session, parsed_data)
+        # Procesar actividades directamente (sin re-parseo)
+        ids_borrar = set(request.POST.getlist('act_delete'))
+        for act in session.activities.all():
+            if str(act.id) in ids_borrar:
+                act.delete()
+                continue
+            m = dict(act.data_metricas or {})
+            if 'distancia_km' in m:
+                km = request.POST.get(f'act_km_{act.id}')
+                mins = request.POST.get(f'act_min_{act.id}')
+                if km: m['distancia_km'] = float(km)
+                if mins and km and float(km) > 0 and float(mins) > 0:
+                    secs = round((float(mins) * 60) / float(km))
+                    m['ritmo_real'] = f"{secs // 60}:{str(secs % 60).zfill(2)}/km"
+                    m['tiempo_minutos'] = float(mins)
+            elif 'distancia_m' in m or m.get('peso_kg'):
+                distm = request.POST.get(f'act_distm_{act.id}')
+                kg = request.POST.get(f'act_kg_{act.id}')
+                if distm: m['distancia_m'] = float(distm)
+                if kg: m['peso_kg'] = float(kg)
+            elif 'series' in m:
+                series = m.get('series', [])
+                for i, serie in enumerate(series):
+                    reps = request.POST.get(f'act_reps_{act.id}_{i}')
+                    kg = request.POST.get(f'act_kg_serie_{act.id}_{i}')
+                    if reps: serie['reps'] = int(reps)
+                    if kg: serie['peso_kg'] = float(kg); serie['peso'] = float(kg)
+                m['series'] = series
+            act.data_metricas = m
+            act.save()
 
         session.estado = 'completado'
-        session.save()  # dispara el signal de adaptación
-
-        messages.success(request, "Sesión actualizada. El plan se ha re-adaptado con los nuevos datos.")
+        session.save()
+        messages.success(request, "Sesión actualizada. El plan se ha re-adaptado.")
         return redirect('hyrox:dashboard')
 
-    # Reconstruir notas_raw a partir de las actividades guardadas
-    actividades = session.activities.all()
-    notas_reconstruidas = []
-    for act in actividades:
-        m = act.data_metricas or {}
-        if m.get('series'):
-            series = m['series']
-            partes = []
-            for s in series:
-                r = s.get('reps', '')
-                k = s.get('peso_kg', s.get('peso', ''))
-                partes.append(f"{r}@{k}kg" if k else f"{r} reps")
-            notas_reconstruidas.append(f"{act.nombre_ejercicio}: {', '.join(partes)}")
-        elif m.get('distancia_km'):
-            notas_reconstruidas.append(f"{act.nombre_ejercicio} {m['distancia_km']}km")
-        elif m.get('distancia_m'):
-            peso_str = f" @{m['peso_kg']}kg" if m.get('peso_kg') else ''
-            notas_reconstruidas.append(f"{act.nombre_ejercicio} {m['distancia_m']}m{peso_str}")
-        else:
-            notas_reconstruidas.append(act.nombre_ejercicio)
-
+    actividades = list(session.activities.all())
     return render(request, 'hyrox/editar_sesion.html', {
         'session': session,
-        'notas_reconstruidas': '\n'.join(notas_reconstruidas),
         'actividades': actividades,
     })
 
