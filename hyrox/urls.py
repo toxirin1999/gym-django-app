@@ -11,6 +11,7 @@ urlpatterns = [
     path('registrar-entrenamiento/<int:objective_id>/<int:session_id>/', views.registrar_entrenamiento, name='registrar_entrenamiento_session'),
     path('regenerar-plan/<int:objective_id>/', views.regenerar_plan, name='regenerar_plan'),
     path('borrar-entrenamiento/<int:session_id>/', views.borrar_entrenamiento, name='borrar_entrenamiento'),
+    path('editar-sesion/<int:session_id>/', views.editar_sesion_hyrox, name='editar_sesion'),
     path('procesar-con-ia/<int:session_id>/', views.procesar_con_ia, name='procesar_con_ia'),
     path('registrar-entrenamiento-ia/<int:session_id>/', views.registrar_entrenamiento_ia, name='registrar_entrenamiento_ia'),
     path('coach-chat/', views.CoachInteractionView.as_view(), name='coach_chat'),

@@ -888,6 +888,19 @@
     </div>
   </form>
 
+  <!-- CONFIRM MODAL -->
+  <div id="rb-confirm-overlay" style="display:none;position:fixed;inset:0;background:rgba(15,15,14,.55);z-index:200;align-items:flex-end;justify-content:center;">
+    <div style="background:var(--paper);border-radius:12px 12px 0 0;padding:28px 24px 36px;width:100%;max-width:560px;">
+      <div style="font-family:var(--font-mono);font-size:9px;font-weight:700;letter-spacing:.2em;color:var(--warn);margin-bottom:8px;">SESIÓN INCOMPLETA</div>
+      <div style="font-family:var(--font-disp);font-size:22px;text-transform:uppercase;line-height:1.1;margin-bottom:10px;" id="rb-confirm-title">Solo has completado el 0%</div>
+      <p style="font-size:13px;color:var(--ink-3);line-height:1.5;margin-bottom:24px;">¿Seguro que quieres guardar ahora? El algoritmo de adaptación usará estos datos parciales para ajustar tus próximas sesiones.</p>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <button onclick="rbConfirmSave()" style="background:var(--accent);color:var(--paper);border:none;border-radius:8px;padding:14px;font-family:var(--font-disp);font-size:15px;text-transform:uppercase;cursor:pointer;">Guardar de todas formas</button>
+        <button onclick="document.getElementById('rb-confirm-overlay').style.display='none'" style="background:transparent;color:var(--ink);border:1.5px solid var(--line-2);border-radius:8px;padding:14px;font-family:var(--font-disp);font-size:15px;text-transform:uppercase;cursor:pointer;">Volver al entrenamiento</button>
+      </div>
+    </div>
+  </div>
+
   <!-- SUBMIT BAR -->
   <div class="rb-submit-bar">
     <button type="button" class="rb-submit" id="rb-submit" onclick="rbSubmit()">
@@ -1075,6 +1088,17 @@ function rbBuildNotasRaw() {
 }
 
 function rbSubmit() {
+  const pct = parseInt(document.getElementById('rb-submit-pct').textContent) || 0;
+  if (pct < 100) {
+    document.getElementById('rb-confirm-title').textContent = `Solo has completado el ${pct}%`;
+    document.getElementById('rb-confirm-overlay').style.display = 'flex';
+    return;
+  }
+  rbConfirmSave();
+}
+
+function rbConfirmSave() {
+  document.getElementById('rb-confirm-overlay').style.display = 'none';
   rbBuildNotasRaw();
   document.getElementById('rb-form').submit();
 }
