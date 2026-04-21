@@ -743,13 +743,18 @@ def editar_sesion_hyrox(request, session_id):
         if hr_max: session.hr_maxima = int(hr_max)
 
         # Procesar actividades directamente (sin re-parseo)
+        _CARRERA_TIPOS = {'carrera', 'cardio_sustituto'}
+        _ESTACION_TIPOS = {'hyrox_station', 'ergometro', 'isometrico', 'hiit', 'remo', 'skierg', 'bici', 'otro'}
         ids_borrar = set(request.POST.getlist('act_delete'))
         for act in session.activities.all():
             if str(act.id) in ids_borrar:
                 act.delete()
                 continue
             m = dict(act.data_metricas or {})
-            if 'distancia_km' in m:
+            ta = act.tipo_actividad or ''
+            is_carrera = ta in _CARRERA_TIPOS or 'distancia_km' in m
+            is_fuerza = ta == 'fuerza' or 'series' in m
+            if is_carrera:
                 km = request.POST.get(f'act_km_{act.id}')
                 mins = request.POST.get(f'act_min_{act.id}')
                 if km: m['distancia_km'] = float(km)
@@ -757,19 +762,20 @@ def editar_sesion_hyrox(request, session_id):
                     secs = round((float(mins) * 60) / float(km))
                     m['ritmo_real'] = f"{secs // 60}:{str(secs % 60).zfill(2)}/km"
                     m['tiempo_minutos'] = float(mins)
-            elif 'distancia_m' in m or m.get('peso_kg'):
-                distm = request.POST.get(f'act_distm_{act.id}')
-                kg = request.POST.get(f'act_kg_{act.id}')
-                if distm: m['distancia_m'] = float(distm)
-                if kg: m['peso_kg'] = float(kg)
-            elif 'series' in m:
-                series = m.get('series', [])
+            elif is_fuerza:
+                series = m.get('series') or []
                 for i, serie in enumerate(series):
                     reps = request.POST.get(f'act_reps_{act.id}_{i}')
                     kg = request.POST.get(f'act_kg_serie_{act.id}_{i}')
                     if reps: serie['reps'] = int(reps)
                     if kg: serie['peso_kg'] = float(kg); serie['peso'] = float(kg)
                 m['series'] = series
+            else:
+                # estacion u otro
+                distm = request.POST.get(f'act_distm_{act.id}')
+                kg = request.POST.get(f'act_kg_{act.id}')
+                if distm: m['distancia_m'] = float(distm)
+                if kg: m['peso_kg'] = float(kg)
             act.data_metricas = m
             act.save()
 
@@ -778,10 +784,38 @@ def editar_sesion_hyrox(request, session_id):
         messages.success(request, "Sesión actualizada. El plan se ha re-adaptado.")
         return redirect('hyrox:dashboard')
 
-    actividades = list(session.activities.all())
+    TIPO_ACT_CARRERA = {'carrera', 'cardio_sustituto'}
+    TIPO_ACT_ESTACION = {'hyrox_station', 'ergometro', 'isometrico', 'hiit', 'remo', 'skierg', 'bici', 'otro'}
+    actividades_ctx = []
+    for act in session.activities.all():
+        m = act.data_metricas or {}
+        ta = act.tipo_actividad or ''
+        # Determinar tipo por tipo_actividad del modelo (fuente autoritativa)
+        if ta in TIPO_ACT_CARRERA or m.get('distancia_km'):
+            tipo = 'carrera'
+        elif ta == 'fuerza' or m.get('series'):
+            tipo = 'fuerza'
+        elif ta in TIPO_ACT_ESTACION or m.get('distancia_m') is not None or m.get('peso_kg') is not None:
+            tipo = 'estacion'
+        else:
+            tipo = 'otro'
+        # series puede ser lista vacía en sesión planificada aún no ejecutada
+        series = m.get('series') or []
+        actividades_ctx.append({
+            'id': act.id,
+            'nombre': act.nombre_ejercicio or act.get_tipo_actividad_display(),
+            'tipo': tipo,
+            'tipo_actividad': ta,
+            'km': m.get('distancia_km', '') or '',
+            'tiempo_min': m.get('tiempo_minutos', '') or '',
+            'distm': m.get('distancia_m', '') or '',
+            'kg': m.get('peso_kg', '') or '',
+            'series': series,
+        })
+
     return render(request, 'hyrox/editar_sesion.html', {
         'session': session,
-        'actividades': actividades,
+        'actividades': actividades_ctx,
     })
 
 
