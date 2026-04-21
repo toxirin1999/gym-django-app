@@ -174,25 +174,24 @@
 
       <div class="rb-ex-cards" id="ex-cards">
         {% for act in actividades %}
-        {% with m=act.data_metricas %}
 
         <div class="rb-ex-card" id="card-{{ act.id }}">
           <div class="rb-ex-card-head">
-            {% if m.distancia_km %}
+            {% if act.tipo == 'carrera' %}
               <div class="rb-ex-type-dot carrera"></div>
-              <span class="rb-ex-name">{{ act.nombre_ejercicio }}</span>
+              <span class="rb-ex-name">{{ act.nombre }}</span>
               <span class="rb-ex-type-tag">Carrera</span>
-            {% elif m.distancia_m or m.peso_kg %}
+            {% elif act.tipo == 'estacion' %}
               <div class="rb-ex-type-dot estacion"></div>
-              <span class="rb-ex-name">{{ act.nombre_ejercicio }}</span>
+              <span class="rb-ex-name">{{ act.nombre }}</span>
               <span class="rb-ex-type-tag">Estación</span>
-            {% elif m.series %}
+            {% elif act.tipo == 'fuerza' %}
               <div class="rb-ex-type-dot fuerza"></div>
-              <span class="rb-ex-name">{{ act.nombre_ejercicio }}</span>
-              <span class="rb-ex-type-tag">{{ m.series|length }} series</span>
+              <span class="rb-ex-name">{{ act.nombre }}</span>
+              <span class="rb-ex-type-tag">{{ act.series|length }} series</span>
             {% else %}
               <div class="rb-ex-type-dot" style="background:var(--ink-4)"></div>
-              <span class="rb-ex-name">{{ act.nombre_ejercicio }}</span>
+              <span class="rb-ex-name">{{ act.nombre }}</span>
               <span class="rb-ex-type-tag">Completado</span>
             {% endif %}
             <button type="button" class="rb-delete-btn" onclick="deleteCard({{ act.id }})" title="Eliminar ejercicio">
@@ -201,40 +200,40 @@
             <input type="checkbox" name="act_delete" value="{{ act.id }}" id="del-{{ act.id }}" style="display:none">
           </div>
 
-          {% if m.distancia_km %}
+          {% if act.tipo == 'carrera' %}
           <!-- Carrera: km + tiempo -->
           <div class="rb-ex-fields">
             <div class="rb-ex-field">
               <div class="rb-ex-field-lbl">Distancia</div>
-              <input type="number" name="act_km_{{ act.id }}" class="rb-ex-field-input" value="{{ m.distancia_km }}" step="0.01" min="0" inputmode="decimal">
+              <input type="number" name="act_km_{{ act.id }}" class="rb-ex-field-input" value="{{ act.km }}" step="0.01" min="0" inputmode="decimal">
               <div class="rb-ex-field-unit">KM</div>
             </div>
             <div class="rb-ex-field">
               <div class="rb-ex-field-lbl">Tiempo</div>
-              <input type="number" name="act_min_{{ act.id }}" class="rb-ex-field-input" value="{{ m.tiempo_minutos|default:'' }}" step="1" min="0" placeholder="—" inputmode="numeric">
+              <input type="number" name="act_min_{{ act.id }}" class="rb-ex-field-input" value="{{ act.tiempo_min }}" step="1" min="0" placeholder="—" inputmode="numeric">
               <div class="rb-ex-field-unit">MIN</div>
             </div>
           </div>
 
-          {% elif m.distancia_m or m.peso_kg %}
+          {% elif act.tipo == 'estacion' %}
           <!-- Estación: metros + kg -->
           <div class="rb-ex-fields">
             <div class="rb-ex-field">
               <div class="rb-ex-field-lbl">Distancia</div>
-              <input type="number" name="act_distm_{{ act.id }}" class="rb-ex-field-input" value="{{ m.distancia_m|default:'' }}" step="1" min="0" placeholder="—" inputmode="numeric">
+              <input type="number" name="act_distm_{{ act.id }}" class="rb-ex-field-input" value="{{ act.distm }}" step="1" min="0" placeholder="—" inputmode="numeric">
               <div class="rb-ex-field-unit">M</div>
             </div>
             <div class="rb-ex-field">
               <div class="rb-ex-field-lbl">Carga</div>
-              <input type="number" name="act_kg_{{ act.id }}" class="rb-ex-field-input" value="{{ m.peso_kg|default:'' }}" step="0.5" min="0" placeholder="—" inputmode="decimal">
+              <input type="number" name="act_kg_{{ act.id }}" class="rb-ex-field-input" value="{{ act.kg }}" step="0.5" min="0" placeholder="—" inputmode="decimal">
               <div class="rb-ex-field-unit">KG</div>
             </div>
           </div>
 
-          {% elif m.series %}
+          {% elif act.tipo == 'fuerza' %}
           <!-- Fuerza: series con reps y kg -->
           <div class="rb-series-list">
-            {% for serie in m.series %}
+            {% for serie in act.series %}
             <div class="rb-serie-row">
               <span class="rb-serie-num">S{{ forloop.counter }}</span>
               <div class="rb-serie-field">
@@ -253,7 +252,6 @@
           {% endif %}
         </div>
 
-        {% endwith %}
         {% empty %}
         <div style="font-family:var(--font-mono);font-size:11px;color:var(--ink-4);padding:16px 0;text-align:center;">Sin ejercicios registrados</div>
         {% endfor %}
