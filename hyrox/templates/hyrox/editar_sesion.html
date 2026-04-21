@@ -1,0 +1,232 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Editar Sesión · Hyrox</title>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      --bg: #EFEAE1; --ink: #0F0F0E; --ink-2: #2A2926; --ink-3: rgba(15,15,14,.55);
+      --ink-4: rgba(15,15,14,.28); --line: rgba(15,15,14,.12); --line-2: rgba(15,15,14,.25);
+      --paper: #F7F3EA; --accent: oklch(0.55 0.21 28); --ok: oklch(0.55 0.15 145);
+      --warn: oklch(0.72 0.17 70);
+      --font-disp: 'Archivo Black', sans-serif; --font-body: 'Archivo', system-ui, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+      background: var(--bg); color: var(--ink); font-family: var(--font-body);
+      -webkit-font-smoothing: antialiased; padding-bottom: 100px;
+    }
+    .rb-container { max-width: 560px; margin: 0 auto; padding: 0 20px; }
+
+    .rb-header { padding: 24px 0 16px; display: flex; align-items: center; gap: 12px; }
+    .rb-back { display: flex; align-items: center; gap: 6px; font-family: var(--font-mono);
+      font-size: 10px; font-weight: 700; letter-spacing: .15em; color: var(--ink-3);
+      text-decoration: none; text-transform: uppercase; }
+    .rb-back:hover { color: var(--ink); }
+    .rb-header-title { font-family: var(--font-disp); font-size: 26px; text-transform: uppercase; line-height: 1; }
+    .rb-header-sub { font-family: var(--font-mono); font-size: 10px; color: var(--ink-3);
+      letter-spacing: .15em; text-transform: uppercase; margin-top: 3px; }
+
+    .rb-warn-banner { background: rgba(193,53,21,.08); border: 1px solid var(--accent);
+      border-radius: 6px; padding: 12px 14px; margin: 0 0 20px;
+      font-size: 13px; color: var(--ink-2); line-height: 1.5; }
+    .rb-warn-banner strong { font-family: var(--font-mono); font-size: 10px;
+      letter-spacing: .15em; color: var(--accent); text-transform: uppercase; display: block; margin-bottom: 4px; }
+
+    .rb-section { padding: 20px 0 4px; }
+    .rb-section-head { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+    .rb-section-num { font-family: var(--font-mono); font-size: 9px; font-weight: 700;
+      letter-spacing: .2em; color: var(--ink-4); }
+    .rb-section-title { font-family: var(--font-disp); font-size: 13px; text-transform: uppercase; }
+    .rb-section-line { flex: 1; height: 1px; background: var(--line); }
+
+    .rb-metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .rb-metric { background: var(--paper); border: 1px solid var(--line); border-radius: 4px;
+      padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; }
+    .rb-metric-lbl { font-family: var(--font-mono); font-size: 9px; font-weight: 700;
+      letter-spacing: .15em; color: var(--ink-4); text-transform: uppercase; display: flex; align-items: center; gap: 4px; }
+    .rb-metric-lbl svg { width: 12px; height: 12px; flex-shrink: 0; }
+    .rb-metric-input { border: none; background: transparent; font-family: var(--font-disp);
+      font-size: 26px; color: var(--ink); width: 100%; outline: none; padding: 2px 0; }
+    .rb-metric-unit { font-family: var(--font-mono); font-size: 9px; color: var(--ink-4); letter-spacing: .1em; }
+
+    /* RPE slider */
+    .rb-vital { background: var(--paper); border: 1px solid var(--line); border-radius: 4px; padding: 14px 16px; }
+    .rb-vital-top { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+    .rb-vital-label { font-family: var(--font-disp); font-size: 15px; text-transform: uppercase; }
+    .rb-vital-hint { font-family: var(--font-mono); font-size: 9px; color: var(--ink-4); letter-spacing: .1em; margin-top: 3px; }
+    .rb-ring-wrap { position: relative; width: 60px; height: 60px; flex-shrink: 0; }
+    .rb-ring-val { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-disp); font-size: 18px; }
+    .rb-slider { width: 100%; accent-color: var(--warn); }
+    .rb-slider-ticks { display: flex; justify-content: space-between;
+      font-family: var(--font-mono); font-size: 9px; color: var(--ink-4); margin-top: 4px; letter-spacing: .1em; }
+
+    /* Activities list */
+    .rb-act-list { display: flex; flex-direction: column; gap: 2px; }
+    .rb-act-row { display: flex; justify-content: space-between; align-items: center;
+      padding: 9px 12px; border-left: 2px solid var(--line-2); background: var(--paper); }
+    .rb-act-row:first-child { border-left-color: var(--accent); }
+    .rb-act-name { font-size: 13px; font-weight: 600; color: var(--ink-2); }
+    .rb-act-meta { font-family: var(--font-mono); font-size: 11px; color: var(--ink-3); }
+
+    /* Notas textarea */
+    .rb-notes-area { width: 100%; background: var(--paper); border: 1px solid var(--line-2);
+      border-radius: 4px; padding: 12px 14px; font-family: var(--font-mono); font-size: 12px;
+      color: var(--ink); resize: vertical; min-height: 160px; outline: none; line-height: 1.7; }
+    .rb-notes-area:focus { border-color: var(--accent); }
+    .rb-notes-hint { font-family: var(--font-mono); font-size: 10px; color: var(--ink-4);
+      letter-spacing: .1em; margin-top: 6px; line-height: 1.5; }
+
+    /* Submit */
+    .rb-submit-bar { position: fixed; bottom: 0; left: 0; right: 0; padding: 12px 20px 28px;
+      background: linear-gradient(to top, var(--bg) 70%, transparent); z-index: 50; }
+    .rb-submit { width: 100%; max-width: 560px; margin: 0 auto; display: flex;
+      align-items: center; justify-content: center; gap: 10px;
+      background: var(--ink); color: var(--paper); border: none; border-radius: 8px;
+      padding: 16px 24px; font-family: var(--font-disp); font-size: 16px;
+      text-transform: uppercase; cursor: pointer; letter-spacing: .04em; }
+    .rb-submit:active { transform: scale(.99); }
+    .rb-submit svg { width: 20px; height: 20px; }
+  </style>
+</head>
+<body>
+<div class="rb-container">
+
+  <div class="rb-header">
+    <a href="{% url 'hyrox:dashboard' %}" class="rb-back">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+      Dashboard
+    </a>
+  </div>
+
+  <div style="margin-bottom:6px;font-family:var(--font-mono);font-size:9px;font-weight:700;letter-spacing:.2em;color:var(--ink-4);">HYROX · EDIT SESSION</div>
+  <div class="rb-header-title">{{ session.titulo|default:"Sesión Hyrox" }}</div>
+  <div class="rb-header-sub">{{ session.fecha|date:"l j N Y" }}</div>
+
+  <div class="rb-warn-banner" style="margin-top:16px;">
+    <strong>⚠ Atención</strong>
+    Al guardar los cambios el algoritmo re-adaptará tus próximas sesiones usando los nuevos datos. Los ejercicios se re-analizarán si modificas las notas.
+  </div>
+
+  <form method="post">
+    {% csrf_token %}
+
+    <!-- 01 · MÉTRICAS POST -->
+    <div class="rb-section">
+      <div class="rb-section-head">
+        <span class="rb-section-num">01</span>
+        <h2 class="rb-section-title">Métricas de sesión</h2>
+        <div class="rb-section-line"></div>
+      </div>
+      <div class="rb-metrics">
+        <div class="rb-metric">
+          <div class="rb-metric-lbl">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>TIEMPO
+          </div>
+          <input type="number" name="tiempo_total_minutos" class="rb-metric-input"
+                 value="{{ session.tiempo_total_minutos|default:'' }}" placeholder="—" min="0" step="1" inputmode="numeric">
+          <div class="rb-metric-unit">MIN</div>
+        </div>
+        <div class="rb-metric">
+          <div class="rb-metric-lbl">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21.2l7.8-7.8 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>FC MED
+          </div>
+          <input type="number" name="hr_media" class="rb-metric-input"
+                 value="{{ session.hr_media|default:'' }}" placeholder="—" min="0" step="1" inputmode="numeric">
+          <div class="rb-metric-unit">LPM</div>
+        </div>
+        <div class="rb-metric">
+          <div class="rb-metric-lbl">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21.2l7.8-7.8 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>FC MÁX
+          </div>
+          <input type="number" name="hr_maxima" class="rb-metric-input"
+                 value="{{ session.hr_maxima|default:'' }}" placeholder="—" min="0" step="1" inputmode="numeric">
+          <div class="rb-metric-unit">LPM</div>
+        </div>
+      </div>
+
+      <!-- RPE -->
+      <div style="margin-top:14px;">
+        <div class="rb-vital">
+          <div class="rb-vital-top">
+            <div style="flex:1">
+              <div class="rb-vital-label">RPE Global</div>
+              <div class="rb-vital-hint">Esfuerzo percibido al terminar</div>
+            </div>
+            <div class="rb-ring-wrap">
+              <svg width="60" height="60" viewBox="0 0 60 60">
+                <circle cx="30" cy="30" r="25" fill="none" stroke="var(--line)" stroke-width="4"/>
+                <circle id="rb-ring-rpe" cx="30" cy="30" r="25" fill="none" stroke="var(--warn)" stroke-width="4" stroke-linecap="round" stroke-dasharray="157" stroke-dashoffset="{{ session.rpe_global|default:5 }}"/>
+              </svg>
+              <div class="rb-ring-val" id="rb-rpe-val" style="color:var(--warn)">{{ session.rpe_global|default:5 }}</div>
+            </div>
+          </div>
+          <input type="range" name="rpe_global" id="id_rpe_global" class="rb-slider"
+                 min="1" max="10" value="{{ session.rpe_global|default:5 }}"
+                 oninput="document.getElementById('rb-rpe-val').textContent=this.value;rbUpdateRing(this.value)">
+          <div class="rb-slider-ticks"><span>LOW</span><span>MAX</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 02 · EJERCICIOS REGISTRADOS -->
+    <div class="rb-section">
+      <div class="rb-section-head">
+        <span class="rb-section-num">02</span>
+        <h2 class="rb-section-title">Ejercicios registrados</h2>
+        <div class="rb-section-line"></div>
+        <span style="font-family:var(--font-mono);font-size:9px;color:var(--ink-4);">{{ actividades|length }}</span>
+      </div>
+      <div class="rb-act-list">
+        {% for act in actividades %}
+        <div class="rb-act-row">
+          <span class="rb-act-name">{{ act.nombre_ejercicio }}</span>
+          <span class="rb-act-meta">
+            {% with m=act.data_metricas %}
+              {% if m.series %}{{ m.series|length }}×{% endif %}
+              {% if m.distancia_km %}{{ m.distancia_km }}km{% endif %}
+              {% if m.distancia_m %}{{ m.distancia_m }}m{% endif %}
+              {% if m.peso_kg %} · {{ m.peso_kg }}kg{% endif %}
+            {% endwith %}
+          </span>
+        </div>
+        {% empty %}
+        <div style="font-family:var(--font-mono);font-size:11px;color:var(--ink-4);padding:12px 0;">Sin ejercicios registrados</div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- 03 · NOTAS / RE-PARSEO -->
+    <div class="rb-section">
+      <div class="rb-section-head">
+        <span class="rb-section-num">03</span>
+        <h2 class="rb-section-title">Editar ejercicios</h2>
+        <div class="rb-section-line"></div>
+        <span style="font-family:var(--font-mono);font-size:9px;font-weight:700;letter-spacing:.12em;color:var(--accent);background:rgba(193,53,21,.08);border:1px solid var(--accent);padding:3px 8px;border-radius:2px;">PARSER AUTO</span>
+      </div>
+      <textarea name="notas_raw" class="rb-notes-area" placeholder="Modifica los ejercicios y vuelve a guardar...">{{ notas_reconstruidas }}</textarea>
+      <div class="rb-notes-hint">FORMATO: Nombre ejercicio: Nx@Xkg · Nombre carrera Xkm · Nombre estación Xm @Xkg</div>
+    </div>
+
+  </form>
+</div>
+
+<div class="rb-submit-bar">
+  <button type="button" class="rb-submit" onclick="document.querySelector('form').submit()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v13a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+    Guardar cambios · Re-adaptar plan
+  </button>
+</div>
+
+<script>
+function rbUpdateRing(val) {
+  const offset = 157 - (val / 10 * 157);
+  document.getElementById('rb-ring-rpe').setAttribute('stroke-dashoffset', offset);
+}
+rbUpdateRing({{ session.rpe_global|default:5 }});
+</script>
+</body>
+</html>
