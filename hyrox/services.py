@@ -202,8 +202,9 @@ class HyroxParserService:
                 series_data = [{'reps': reps, 'peso': peso} if peso else {'reps': reps} for _ in range(n_series)]
 
             # 3b. Reps simples separadas por coma: "15 reps, 15 reps" (formulario sin peso)
-            elif len(re_reps_simple.findall(resto or line)) >= 2:
-                counts = re_reps_simple.findall(resto or line)
+            # También captura un único "100 reps @4kg" (Wall Balls desde el formulario)
+            elif re_reps_simple.search(resto or line):
+                counts = re_reps_simple.findall(resto or line) or re_reps_simple.findall(line)
                 peso_m = re_peso_suelto.search(resto or line)
                 peso = float(peso_m.group(1).replace(',', '.')) if peso_m else 0
                 series_data = [{'reps': int(r), 'peso': peso} if peso else {'reps': int(r)} for r in counts]

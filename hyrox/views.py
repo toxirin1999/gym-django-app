@@ -745,6 +745,7 @@ def editar_sesion_hyrox(request, session_id):
         # Procesar actividades directamente (sin re-parseo)
         _CARRERA_TIPOS = {'carrera', 'cardio_sustituto'}
         _ESTACION_TIPOS = {'hyrox_station', 'ergometro', 'isometrico', 'hiit', 'remo', 'skierg', 'bici', 'otro'}
+        _REPS_STATIONS = {'wall ball', 'wall balls', 'burpee broad jump', 'burpees broad jump'}
         ids_borrar = set(request.POST.getlist('act_delete'))
         for act in session.activities.all():
             if str(act.id) in ids_borrar:
@@ -752,8 +753,10 @@ def editar_sesion_hyrox(request, session_id):
                 continue
             m = dict(act.data_metricas or {})
             ta = act.tipo_actividad or ''
+            nombre_lower = (act.nombre_ejercicio or '').lower()
             is_carrera = ta in _CARRERA_TIPOS or 'distancia_km' in m
             is_fuerza = ta == 'fuerza' or 'series' in m
+            is_reps_station = any(kw in nombre_lower for kw in _REPS_STATIONS) and ta in _ESTACION_TIPOS
             if is_carrera:
                 km = request.POST.get(f'act_km_{act.id}')
                 mins = request.POST.get(f'act_min_{act.id}')
@@ -770,8 +773,15 @@ def editar_sesion_hyrox(request, session_id):
                     if reps: serie['reps'] = int(reps)
                     if kg: serie['peso_kg'] = float(kg); serie['peso'] = float(kg)
                 m['series'] = series
+            elif is_reps_station:
+                reps = request.POST.get(f'act_reps_total_{act.id}')
+                kg = request.POST.get(f'act_kg_{act.id}')
+                if reps:
+                    peso = float(kg) if kg else None
+                    m['series'] = [{'reps': int(reps), 'peso_kg': peso}] if peso else [{'reps': int(reps)}]
+                if kg: m['peso_kg'] = float(kg)
             else:
-                # estacion u otro
+                # estacion por distancia u otro
                 distm = request.POST.get(f'act_distm_{act.id}')
                 kg = request.POST.get(f'act_kg_{act.id}')
                 if distm: m['distancia_m'] = float(distm)
@@ -786,21 +796,42 @@ def editar_sesion_hyrox(request, session_id):
 
     TIPO_ACT_CARRERA = {'carrera', 'cardio_sustituto'}
     TIPO_ACT_ESTACION = {'hyrox_station', 'ergometro', 'isometrico', 'hiit', 'remo', 'skierg', 'bici', 'otro'}
+    # Estaciones Hyrox que funcionan por reps+kg, no por distancia
+    ESTACIONES_REPS = {'wall ball', 'wall balls', 'burpee broad jump', 'burpees broad jump'}
+
     actividades_ctx = []
     for act in session.activities.all():
         m = act.data_metricas or {}
         ta = act.tipo_actividad or ''
-        # Determinar tipo por tipo_actividad del modelo (fuente autoritativa)
+        nombre_lower = (act.nombre_ejercicio or '').lower()
+        es_reps_station = any(kw in nombre_lower for kw in ESTACIONES_REPS)
+
         if ta in TIPO_ACT_CARRERA or m.get('distancia_km'):
             tipo = 'carrera'
-        elif ta == 'fuerza' or m.get('series'):
+        elif m.get('series'):
+            # Si ya tiene series guardadas, editar como fuerza independientemente del tipo
             tipo = 'fuerza'
-        elif ta in TIPO_ACT_ESTACION or m.get('distancia_m') is not None or m.get('peso_kg') is not None:
+        elif ta == 'fuerza':
+            tipo = 'fuerza'
+        elif ta in TIPO_ACT_ESTACION and m.get('distancia_m') is not None:
+            tipo = 'estacion'
+        elif ta in TIPO_ACT_ESTACION and es_reps_station:
+            # Wall Balls y similares: reps + kg, aunque aún no tengan datos guardados
+            tipo = 'reps_kg'
+        elif ta in TIPO_ACT_ESTACION:
+            tipo = 'estacion'
+        elif m.get('peso_kg') is not None:
             tipo = 'estacion'
         else:
             tipo = 'otro'
-        # series puede ser lista vacía en sesión planificada aún no ejecutada
+
         series = m.get('series') or []
+        # Para reps_kg sin series guardadas, crear una fila vacía para que el usuario rellene
+        reps_total = m.get('reps_total', '')
+        if tipo == 'reps_kg' and series:
+            # Consolidar todas las series en total reps
+            reps_total = sum(int(s.get('reps', 0)) for s in series)
+
         actividades_ctx.append({
             'id': act.id,
             'nombre': act.nombre_ejercicio or act.get_tipo_actividad_display(),
@@ -811,6 +842,7 @@ def editar_sesion_hyrox(request, session_id):
             'distm': m['distancia_m'] if 'distancia_m' in m else '',
             'kg': m['peso_kg'] if 'peso_kg' in m else '',
             'series': series,
+            'reps_total': reps_total,
         })
 
     return render(request, 'hyrox/editar_sesion.html', {

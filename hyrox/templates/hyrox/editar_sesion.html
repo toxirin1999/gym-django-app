@@ -185,6 +185,10 @@
               <div class="rb-ex-type-dot estacion"></div>
               <span class="rb-ex-name">{{ act.nombre }}</span>
               <span class="rb-ex-type-tag">Estación</span>
+            {% elif act.tipo == 'reps_kg' %}
+              <div class="rb-ex-type-dot estacion"></div>
+              <span class="rb-ex-name">{{ act.nombre }}</span>
+              <span class="rb-ex-type-tag">Reps</span>
             {% elif act.tipo == 'fuerza' %}
               <div class="rb-ex-type-dot fuerza"></div>
               <span class="rb-ex-name">{{ act.nombre }}</span>
@@ -216,12 +220,27 @@
           </div>
 
           {% elif act.tipo == 'estacion' %}
-          <!-- Estación: metros + kg -->
+          <!-- Estación por distancia: metros + kg -->
           <div class="rb-ex-fields">
             <div class="rb-ex-field">
               <div class="rb-ex-field-lbl">Distancia</div>
               <input type="number" name="act_distm_{{ act.id }}" class="rb-ex-field-input" value="{{ act.distm }}" step="1" min="0" placeholder="—" inputmode="numeric">
               <div class="rb-ex-field-unit">M</div>
+            </div>
+            <div class="rb-ex-field">
+              <div class="rb-ex-field-lbl">Carga</div>
+              <input type="number" name="act_kg_{{ act.id }}" class="rb-ex-field-input" value="{{ act.kg }}" step="0.5" min="0" placeholder="—" inputmode="decimal">
+              <div class="rb-ex-field-unit">KG</div>
+            </div>
+          </div>
+
+          {% elif act.tipo == 'reps_kg' %}
+          <!-- Estación por reps: total reps + kg (Wall Balls, etc.) -->
+          <div class="rb-ex-fields">
+            <div class="rb-ex-field">
+              <div class="rb-ex-field-lbl">Reps totales</div>
+              <input type="number" name="act_reps_total_{{ act.id }}" class="rb-ex-field-input" value="{{ act.reps_total }}" step="1" min="0" placeholder="—" inputmode="numeric">
+              <div class="rb-ex-field-unit">REPS</div>
             </div>
             <div class="rb-ex-field">
               <div class="rb-ex-field-lbl">Carga</div>
