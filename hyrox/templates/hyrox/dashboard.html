@@ -456,7 +456,7 @@ a.rb-dia:hover { background: var(--paper-2); text-decoration: none; }
 .rb-a6 { animation: rb-in .4s ease both .52s; }
 
 /* ── RUN EVOLUTION ───────────────────────────── */
-.rb-run-kpis { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-bottom: 14px; }
+.rb-run-kpis { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-bottom: 10px; }
 .rb-run-kpi { background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; text-align: center; }
 .rb-run-kpi-val { font-family: var(--font-disp); font-size: 20px; font-weight: 700; color: var(--ink); line-height: 1.1; }
 .rb-run-kpi-lbl { font-family: var(--font-mono); font-size: 9px; text-transform: uppercase; color: var(--ink-5); margin-top: 2px; }
@@ -464,17 +464,21 @@ a.rb-dia:hover { background: var(--paper-2); text-decoration: none; }
 .rb-run-kpi-trend.up { color: #1DC8B8; }
 .rb-run-kpi-trend.down { color: #EF4444; }
 .rb-run-kpi-trend.flat { color: var(--ink-5); }
-.rb-run-chart-wrap { background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: 12px; margin-bottom: 10px; }
-.rb-run-chart-title { font-family: var(--font-mono); font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--ink-5); margin-bottom: 8px; }
+.rb-run-chart-wrap { background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: 14px; margin-bottom: 10px; }
+.rb-run-chart-title { font-family: var(--font-mono); font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--ink-5); margin-bottom: 10px; }
 .rb-run-chart { position: relative; }
+/* eje Y con etiquetas de ritmo */
+.rb-run-yaxis { position: absolute; left: 0; top: 0; height: 80px; display: flex; flex-direction: column; justify-content: space-between; pointer-events: none; }
+.rb-run-yaxis span { font-family: var(--font-mono); font-size: 8px; color: var(--ink-5); line-height: 1; }
+.rb-run-svg-wrap { padding-left: 28px; }
 .rb-run-legend { display: flex; gap: 12px; margin-top: 6px; }
 .rb-run-legend span { display: flex; align-items: center; gap: 4px; font-family: var(--font-mono); font-size: 9px; color: var(--ink-5); }
-.rb-run-bars-wrap { background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: 12px; margin-bottom: 10px; }
-.rb-run-bars { display: flex; align-items: flex-end; gap: 6px; height: 60px; }
-.rb-run-bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; height: 100%; justify-content: flex-end; }
-.rb-run-bar-fill-wrap { width: 100%; display: flex; align-items: flex-end; flex: 1; }
-.rb-run-bar-fill { width: 100%; background: var(--accent); border-radius: 3px 3px 0 0; min-height: 3px; transition: height .4s ease; }
-.rb-run-bar-val { font-family: var(--font-mono); font-size: 8px; color: var(--ink-5); }
+/* barras km */
+.rb-run-bars-wrap { background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: 14px; margin-bottom: 10px; }
+.rb-run-bars { display: flex; align-items: flex-end; gap: 8px; height: 64px; margin-top: 8px; }
+.rb-run-bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 2px; }
+.rb-run-bar-fill { width: 100%; background: var(--accent); border-radius: 3px 3px 0 0; min-height: 4px; transition: height .4s ease; }
+.rb-run-bar-val { font-family: var(--font-mono); font-size: 8px; color: var(--ink-5); margin-top: 2px; }
 .rb-run-bar-lbl { font-family: var(--font-mono); font-size: 8px; color: var(--ink-5); }
 .rb-run-fc-row { display: flex; align-items: flex-start; gap: 8px; background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
 .rb-run-fc-icon { padding-top: 2px; }
@@ -1008,62 +1012,97 @@ a.rb-dia:hover { background: var(--paper-2); text-decoration: none; }
     <!-- Gráfico ritmo SVG -->
     {% if evolucion_carrera.puntos_ritmo|length > 1 %}
     <div class="rb-run-chart-wrap">
-      <div class="rb-run-chart-title">Ritmo min/km <span style="opacity:.5;font-weight:400">(abajo = más rápido)</span></div>
-      <div class="rb-run-chart" id="rb-pace-chart"
-           data-puntos="{{ evolucion_carrera.puntos_ritmo|length }}"
-           data-objetivo="{{ evolucion_carrera.pace_objetivo_secs|default:'' }}">
-        <svg id="rb-pace-svg" width="100%" height="80" viewBox="0 0 300 80" preserveAspectRatio="none">
-          <!-- líneas de fondo -->
-          <line x1="0" y1="20" x2="300" y2="20" stroke="var(--line)" stroke-width="0.5"/>
-          <line x1="0" y1="40" x2="300" y2="40" stroke="var(--line)" stroke-width="0.5"/>
-          <line x1="0" y1="60" x2="300" y2="60" stroke="var(--line)" stroke-width="0.5"/>
-          <!-- polilínea generada por JS -->
-          <polyline id="rb-pace-line" points="" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
-          <!-- línea objetivo -->
-          <line id="rb-pace-target" x1="0" y1="0" x2="300" y2="0" stroke="#F59E0B" stroke-width="1" stroke-dasharray="4 3" display="none"/>
-        </svg>
-        <!-- etiquetas X generadas por JS -->
-        <div id="rb-pace-labels" style="display:flex;justify-content:space-between;padding:2px 0 0;"></div>
+      <div class="rb-run-chart-title">Ritmo min/km
+        <span style="opacity:.5;font-weight:400;text-transform:none"> — arriba = más rápido</span>
+      </div>
+      <!-- Eje Y + SVG -->
+      <div style="position:relative;display:flex;gap:4px;align-items:flex-start">
+        <!-- etiquetas eje Y generadas por JS -->
+        <div id="rb-pace-yaxis" style="display:flex;flex-direction:column;justify-content:space-between;height:80px;min-width:24px;text-align:right"></div>
+        <div style="flex:1;position:relative">
+          <svg id="rb-pace-svg" width="100%" height="80" viewBox="0 0 300 80" preserveAspectRatio="none">
+            <line x1="0" y1="20" x2="300" y2="20" stroke="var(--line)" stroke-width="0.5"/>
+            <line x1="0" y1="40" x2="300" y2="40" stroke="var(--line)" stroke-width="0.5"/>
+            <line x1="0" y1="60" x2="300" y2="60" stroke="var(--line)" stroke-width="0.5"/>
+            <polyline id="rb-pace-line" points="" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+            <line id="rb-pace-target" x1="0" y1="0" x2="300" y2="0" stroke="#F59E0B" stroke-width="1.5" stroke-dasharray="5 3" display="none"/>
+          </svg>
+          <!-- tooltips de puntos: círculos + valores -->
+          <svg id="rb-pace-dots" width="100%" height="80" viewBox="0 0 300 80" preserveAspectRatio="none" style="position:absolute;top:0;left:0"></svg>
+          <div id="rb-pace-labels" style="display:flex;justify-content:space-between;padding:3px 0 0;"></div>
+        </div>
       </div>
 
       <script>
       (function(){
         var pts = [{% for p in evolucion_carrera.puntos_ritmo %}{"s":{{ p.secs }},"f":"{{ p.fecha }}","l":"{{ p.label }}"}{% if not forloop.last %},{% endif %}{% endfor %}];
         var objetivo = {{ evolucion_carrera.pace_objetivo_secs|default:'null' }};
-        if(!pts.length) return;
+        if(pts.length < 2) return;
         var mn = Math.min.apply(null, pts.map(function(p){return p.s;}));
         var mx = Math.max.apply(null, pts.map(function(p){return p.s;}));
-        var rng = mx - mn || 1;
+        // Añadir margen para que la línea no toque los bordes
+        var margin = Math.max((mx - mn) * 0.2, 10);
+        mn = mn - margin; mx = mx + margin;
+        var rng = mx - mn;
         var W = 300, H = 80, pad = 6;
-        var xs = pts.map(function(_,i){return i*(W/(pts.length-1||1));});
-        var ys = pts.map(function(p){return pad + ((p.s-mn)/rng)*(H-2*pad);});
+        // Invertido: ritmo BAJO (más rápido) = y PEQUEÑO (arriba en SVG = arriba en pantalla)
+        // Invertido: ritmo ALTO (más lento) = y GRANDE (abajo en SVG = abajo en pantalla)
+        var xs = pts.map(function(_,i){return i*(W/(pts.length-1));});
+        var ys = pts.map(function(p){
+          // más rápido (s pequeño) → y pequeño → arriba
+          return pad + ((p.s - mn) / rng) * (H - 2*pad);
+        });
         var pline = document.getElementById('rb-pace-line');
         if(pline) pline.setAttribute('points', xs.map(function(x,i){return x+','+ys[i];}).join(' '));
-        // objetivo
+        // Dots con etiqueta de ritmo
+        var dotsEl = document.getElementById('rb-pace-dots');
+        if(dotsEl){
+          var dHtml = '';
+          pts.forEach(function(p,i){
+            var isLast = i === pts.length-1;
+            var color = isLast ? 'var(--accent)' : 'var(--line)';
+            dHtml += '<circle cx="'+xs[i]+'" cy="'+ys[i]+'" r="3" fill="'+color+'" stroke="var(--paper)" stroke-width="1.5"/>';
+            if(isLast){
+              var anchor = xs[i] > 250 ? 'end' : 'start';
+              var tx = xs[i] + (anchor==='end'?-6:6);
+              dHtml += '<text x="'+tx+'" y="'+(ys[i]-6)+'" font-size="9" fill="var(--accent)" font-family="monospace" text-anchor="'+anchor+'">'+p.l+'</text>';
+            }
+          });
+          dotsEl.innerHTML = dHtml;
+        }
+        // Línea objetivo
         if(objetivo){
-          var yt = pad + ((objetivo-mn)/rng)*(H-2*pad);
+          var yt = pad + ((objetivo - mn) / rng) * (H - 2*pad);
           yt = Math.max(pad, Math.min(H-pad, yt));
           var tl = document.getElementById('rb-pace-target');
           if(tl){ tl.setAttribute('y1',yt); tl.setAttribute('y2',yt); tl.removeAttribute('display'); }
         }
-        // etiquetas X (cada 3 puntos)
+        // Eje Y: mostrar ritmo más rápido arriba, más lento abajo
+        var yax = document.getElementById('rb-pace-yaxis');
+        if(yax){
+          function secsToLabel(s){ var m=Math.floor(s/60); var sc=s%60; return m+':'+(sc<10?'0':'')+sc; }
+          // valores en los 3 niveles de fondo (y=20,40,60)
+          var labels = [20,40,60].map(function(yPx){
+            // invertir: yPx → secs
+            var s = mn + (yPx - pad) / (H - 2*pad) * rng;
+            return secsToLabel(Math.round(s));
+          });
+          yax.innerHTML = labels.map(function(l){
+            return '<span style="font-size:8px;color:var(--ink-5);font-family:monospace;line-height:1">'+l+'</span>';
+          }).join('');
+          yax.style.height = '80px';
+          yax.style.justifyContent = 'space-around';
+          yax.style.display = 'flex';
+        }
+        // Etiquetas X
         var labWrap = document.getElementById('rb-pace-labels');
-        if(labWrap && pts.length){
-          var step = Math.max(1, Math.floor(pts.length/4));
-          var html = '';
-          for(var i=0;i<pts.length;i++){
-            if(i===0||i===pts.length-1||i%step===0){
-              html += '<span style="font-size:9px;color:var(--ink-5);font-family:var(--font-mono)">'+pts[i].f+'</span>';
-            } else {
-              html += '<span></span>';
-            }
-          }
-          labWrap.innerHTML = html;
+        if(labWrap){
+          labWrap.innerHTML = '<span style="font-size:9px;color:var(--ink-5);font-family:monospace">'+pts[0].f+'</span>'
+            + '<span style="font-size:9px;color:var(--ink-5);font-family:monospace">'+pts[pts.length-1].f+'</span>';
         }
       })();
       </script>
 
-      <!-- leyenda -->
       <div class="rb-run-legend">
         <span><svg width="14" height="4"><line x1="0" y1="2" x2="14" y2="2" stroke="var(--accent)" stroke-width="2"/></svg> Ritmo real</span>
         {% if evolucion_carrera.pace_objetivo_secs %}
@@ -1080,9 +1119,7 @@ a.rb-dia:hover { background: var(--paper-2); text-decoration: none; }
       <div class="rb-run-bars" id="rb-km-bars">
         {% for semana, km in evolucion_carrera.km_por_semana %}
         <div class="rb-run-bar-col" data-km="{{ km }}">
-          <div class="rb-run-bar-fill-wrap">
-            <div class="rb-run-bar-fill" style="height:3px"></div>
-          </div>
+          <div class="rb-run-bar-fill" style="height:4px"></div>
           <div class="rb-run-bar-val">{{ km }}</div>
           <div class="rb-run-bar-lbl">{{ semana }}</div>
         </div>
@@ -1097,7 +1134,7 @@ a.rb-dia:hover { background: var(--paper-2); text-decoration: none; }
         cols.forEach(function(c){
           var pct = (parseFloat(c.dataset.km)||0) / maxKm;
           var fill = c.querySelector('.rb-run-bar-fill');
-          if(fill) fill.style.height = Math.max(3, Math.round(pct*52)) + 'px';
+          if(fill) fill.style.height = Math.max(4, Math.round(pct * 56)) + 'px';
         });
       })();
       </script>
