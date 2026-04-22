@@ -1,4 +1,4 @@
-{% load static %}
+{% load static l10n %}
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -110,6 +110,7 @@
   <div class="rb-page-title">{{ session.titulo|default:"Sesión Hyrox" }}</div>
   <div class="rb-page-sub">{{ session.fecha|date:"l j N Y" }}</div>
 
+  {% localize off %}
   <form method="post" id="edit-form">
     {% csrf_token %}
 
@@ -282,6 +283,7 @@
     </div>
 
   </form>
+  {% endlocalize %}
 </div>
 
 <div class="rb-submit-bar">
