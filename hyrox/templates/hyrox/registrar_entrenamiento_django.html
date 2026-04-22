@@ -876,6 +876,45 @@
                 </button>
               </article>
 
+            {% elif act.tipo_actividad == 'hyrox_station' %}
+              {# ESTACIÓN REPS (Wall Balls, etc.) — sin distancia_m planificada #}
+              <article class="rb-card rb-card--station" id="rb-card-{{ idx }}"
+                       data-name="{{ act.nombre_ejercicio }}"
+                       data-type="{{ act.tipo_actividad }}">
+                <div class="rb-card-meta">
+                  <span class="rb-card-meta-type">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="10" width="18" height="8" rx="1"/><path d="M3 18l-2 3M21 18l2 3M6 10V6M18 10V6"/></svg>
+                    ESTACIÓN
+                  </span>
+                  <span>#{{ idx|stringformat:"02d" }}</span>
+                </div>
+                <h3 class="rb-card-title">{% if act.is_substituted %}{{ act.display_name }}{% else %}{{ act.nombre_ejercicio }}{% endif %}</h3>
+
+                {% if act.data_metricas.coach_tip %}
+                <div class="rb-tip" style="margin-bottom:10px"><span class="rb-tip-label">COACH TIP</span>{{ act.data_metricas.coach_tip }}</div>
+                {% endif %}
+
+                <div class="rb-cardio-grid">
+                  <div>
+                    <div class="rb-biginput-label"><span>Reps totales</span><span>reps</span></div>
+                    <input type="number" class="rb-biginput rb-input-reps-total"
+                           value="" placeholder="—" step="1" min="0" inputmode="numeric">
+                  </div>
+                  <div>
+                    <div class="rb-biginput-label"><span>Carga</span><span>kg</span></div>
+                    <input type="number" class="rb-biginput rb-input-carga-station"
+                           value="{{ act.data_metricas.peso_kg|default:'' }}"
+                           step="0.5" min="0" placeholder="—" inputmode="decimal">
+                  </div>
+                </div>
+
+                <button type="button" class="rb-done-btn"
+                        onclick="rbToggleDone('rb-card-{{ idx }}', this)">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  MARCAR COMPLETADA
+                </button>
+              </article>
+
             {% else %}
               {# GENÉRICO #}
               <article class="rb-card" id="rb-card-{{ idx }}"
@@ -1236,7 +1275,19 @@ function rbBuildNotasRaw() {
       return;
     }
 
-    /* Station (m + carga) */
+    /* Station reps (Wall Balls etc: reps totales + carga) */
+    const repsTotal = card.querySelector('.rb-input-reps-total');
+    if (repsTotal) {
+      const cargaStation = card.querySelector('.rb-input-carga-station');
+      if (repsTotal.value) {
+        let line = `${name}: ${repsTotal.value} reps`;
+        if (cargaStation && cargaStation.value) line += ` @${cargaStation.value}kg`;
+        lines.push(line);
+      }
+      return;
+    }
+
+    /* Station distance (m + carga) */
     const distM  = card.querySelector('.rb-input-distm');
     const carga  = card.querySelector('.rb-input-carga');
     if (distM) {
