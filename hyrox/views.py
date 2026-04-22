@@ -251,7 +251,90 @@ def hyrox_dashboard(request):
     macro_data = None
     lesion_activa = None
     ultimo_reporte = None
-    
+    evolucion_carrera = None
+
+    if objetivo_activo:
+        # ── EVOLUCIÓN CARRERA ──────────────────────────────────────
+        from .models import HyroxActivity
+        runs_qs = (
+            HyroxActivity.objects
+            .filter(
+                sesion__objective=objetivo_activo,
+                sesion__estado='completado',
+                tipo_actividad__in=['carrera', 'cardio_sustituto'],
+            )
+            .select_related('sesion')
+            .order_by('sesion__fecha')
+        )
+
+        pace_objetivo_secs = None
+        if objetivo_activo.tiempo_5k_base:
+            try:
+                parts = str(objetivo_activo.tiempo_5k_base).split(':')
+                pace_objetivo_secs = int(parts[0]) * 60 + int(parts[1])
+            except Exception:
+                pass
+
+        puntos_ritmo = []     # [{fecha, secs, label}]
+        km_por_semana = {}    # {iso_week_label: km}
+        fc_puntos = []        # [{fecha, fc}]
+
+        for act in runs_qs:
+            m = act.data_metricas or {}
+            fecha = act.sesion.fecha
+            fecha_str = fecha.strftime('%d/%m')
+            iso = fecha.isocalendar()
+            semana_key = f"S{iso[1]}"
+
+            # Ritmo
+            ritmo_str = m.get('ritmo_real') or m.get('ritmo_objetivo')
+            if ritmo_str:
+                try:
+                    p = ritmo_str.split('/')[0].strip()
+                    mins, secs = p.split(':')
+                    total_secs = int(mins) * 60 + int(secs)
+                    puntos_ritmo.append({'fecha': fecha_str, 'secs': total_secs,
+                                         'label': p})
+                except Exception:
+                    pass
+
+            # Km por semana
+            try:
+                km = float(m.get('distancia_km') or 0)
+                km_por_semana[semana_key] = round(km_por_semana.get(semana_key, 0) + km, 2)
+            except Exception:
+                pass
+
+            # FC media de la sesión
+            fc = act.sesion.hr_media
+            if fc:
+                fc_puntos.append({'fecha': fecha_str, 'fc': fc})
+
+        # Estadísticas globales
+        mejor_ritmo = min(puntos_ritmo, key=lambda x: x['secs']) if puntos_ritmo else None
+        ultimo_ritmo = puntos_ritmo[-1] if puntos_ritmo else None
+        tendencia = None
+        if len(puntos_ritmo) >= 3:
+            ultimos = [p['secs'] for p in puntos_ritmo[-3:]]
+            if ultimos[-1] < ultimos[0]:
+                tendencia = 'mejora'
+            elif ultimos[-1] > ultimos[0]:
+                tendencia = 'empeora'
+            else:
+                tendencia = 'estable'
+
+        evolucion_carrera = {
+            'puntos_ritmo': puntos_ritmo[-12:],   # últimas 12 sesiones
+            'km_por_semana': list(km_por_semana.items())[-8:],
+            'fc_puntos': fc_puntos[-12:],
+            'mejor_ritmo': mejor_ritmo,
+            'ultimo_ritmo': ultimo_ritmo,
+            'tendencia': tendencia,
+            'pace_objetivo_secs': pace_objetivo_secs,
+            'total_km': round(sum(km_por_semana.values()), 1),
+            'num_sesiones': len(puntos_ritmo),
+        }
+
     if objetivo_activo:
         from .services import CompetitionStandardsService, HyroxMacrocycleEngine
         from .models import UserInjury, DailyRecoveryEntry
@@ -349,6 +432,7 @@ def hyrox_dashboard(request):
         'smart_alerts': smart_alerts if objetivo_activo else [],
         'lesion_activa': lesion_activa,
         'ultimo_reporte': ultimo_reporte,
+        'evolucion_carrera': evolucion_carrera,
         'sustituciones_activas': sustituciones_activas if 'sustituciones_activas' in locals() else [],
         'sustituciones_dict': sustituciones_dict if 'sustituciones_dict' in locals() else {},
     }
