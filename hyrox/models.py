@@ -41,7 +41,7 @@ class HyroxObjective(models.Model):
     
     # Disponibilidad Semanal (Fase 14)
     # Ejemplo de estructura: "0,2,4" (0=Lunes, 6=Domingo)
-    dias_preferidos = models.CharField(max_length=20, default="0,2,4,5", help_text="Días de la semana preferidos para entrenar (0=Lunes, 6=Domingo)")
+    dias_preferidos = models.CharField(max_length=20, default="0,2,4,6", help_text="Días de la semana preferidos para entrenar (0=Lunes, 6=Domingo)")
 
     # ── Fisiología para carga objetiva (TRIMP / Karvonen) ────────────────────
     GENERO_CHOICES = [('M', 'Masculino'), ('F', 'Femenino')]

@@ -471,6 +471,52 @@ class HyroxTrainingEngine:
     # ─────────────────────────────────────────────────────────────────────────
 
     @staticmethod
+    def _distribuir_dias(dias_preferidos: list, n: int) -> list:
+        """
+        Devuelve n días de la semana (0-6) con al menos 1 día de descanso
+        entre sesiones consecutivas. Respeta los días preferidos cuando es
+        posible; si tienen días adyacentes, prioriza los primeros y busca
+        sustitutos con separación correcta para los restantes.
+        """
+        # Plantillas óptimas garantizadas por n de sesiones
+        FALLBACKS = {
+            1: [0],
+            2: [0, 3],
+            3: [0, 2, 5],
+            4: [0, 2, 4, 6],
+            5: [0, 2, 4, 6, 8 % 7],  # no aplicable (máx 4)
+        }
+
+        candidatos = sorted(set(d for d in dias_preferidos if 0 <= d <= 6))
+
+        # Filtrar candidatos respetando separación mínima de 2 días
+        resultado = []
+        for d in candidatos:
+            if not resultado or d - resultado[-1] >= 2:
+                resultado.append(d)
+            if len(resultado) == n:
+                return resultado
+
+        # Completar con días del pool general que tengan separación >= 2
+        for d in range(7):
+            if len(resultado) >= n:
+                break
+            if d in resultado:
+                continue
+            if all(abs(d - r) >= 2 for r in resultado):
+                resultado.append(d)
+
+        resultado = sorted(resultado[:n])
+
+        # Fallback garantizado si no se pudo completar con separación correcta
+        if len(resultado) < n or any(
+            resultado[i+1] - resultado[i] < 2 for i in range(len(resultado)-1)
+        ):
+            resultado = FALLBACKS.get(n, [0, 2, 4, 6])
+
+        return resultado[:n]
+
+    @staticmethod
     def generate_training_plan(objective: HyroxObjective):
         """
         Genera el plan de entrenamiento estructurado hasta la fecha del evento.
@@ -536,31 +582,22 @@ class HyroxTrainingEngine:
             # Días preferidos del usuario
             dias_pref = getattr(objective, 'dias_preferidos', '0,2,4,6') or '0,2,4,6'
             try:
-                dias_semana_asignables = [int(p) for p in dias_pref.split(',')]
+                dias_raw = [int(p) for p in dias_pref.split(',')]
             except Exception:
-                dias_semana_asignables = [0, 2, 4, 6]
+                dias_raw = [0, 2, 4, 6]
 
-            # Deduplicar y validar rango 0-6
-            seen = set()
-            dias_semana_asignables = [
-                d for d in dias_semana_asignables
-                if isinstance(d, int) and 0 <= d <= 6 and not (d in seen or seen.add(d))
-            ]
+            sessions_per_week_capped = min(sessions_per_week, 4)
 
-            sessions_per_week_capped = min(sessions_per_week, 7)
-            for i in range(7):
-                if len(dias_semana_asignables) >= sessions_per_week_capped:
-                    break
-                if i not in dias_semana_asignables:
-                    dias_semana_asignables.append(i)
-
-            dias_asignados = sorted(dias_semana_asignables[:sessions_per_week_capped])
+            # Distribuir con separación mínima de 1 día de descanso
+            dias_asignados = HyroxTrainingEngine._distribuir_dias(
+                dias_raw, sessions_per_week_capped
+            )
 
             try:
                 dia_fuerza = dias_asignados[0]
                 dia_cardio = dias_asignados[1]
                 dia_espe   = dias_asignados[2]
-                dia_simul  = dias_asignados[3] if sessions_per_week >= 4 else dias_asignados[2]
+                dia_simul  = dias_asignados[3] if sessions_per_week_capped >= 4 else dias_asignados[2]
             except IndexError:
                 dia_fuerza, dia_cardio, dia_espe, dia_simul = 0, 2, 4, 6
 
