@@ -591,6 +591,9 @@ a.rb-dia:hover { background: var(--paper-2); text-decoration: none; }
         {% endif %}
         <a href="{% url 'hyrox:registrar_entrenamiento' objective_id=objetivo_activo.id %}" class="rb-btn rb-btn-primary"><i class="fas fa-plus"></i> Registrar Entreno</a>
         <a href="{% url 'hyrox:crear_objetivo' %}" class="rb-btn rb-btn-ghost"><i class="fas fa-pen"></i> Editar</a>
+        <button type="button" class="rb-btn rb-btn-ghost" onclick="document.getElementById('modal-regen-plan').style.display='flex'">
+          <i class="fas fa-sync-alt"></i> Regenerar plan
+        </button>
         <button type="button" class="rb-btn rb-btn-ghost" onclick="document.getElementById('modal-como-funciona').style.display='flex'">
           <i class="fas fa-brain"></i> Cómo funciona tu plan
         </button>
@@ -884,7 +887,7 @@ a.rb-dia:hover { background: var(--paper-2); text-decoration: none; }
       <span class="rb-section-num">{% if lesion_activa %}05{% else %}04{% endif %}</span>
       <h2 class="rb-section-title">Plan de entrenamiento</h2>
       <div class="rb-section-line"></div>
-      <a href="{% url 'hyrox:regenerar_plan' objective_id=objetivo_activo.id %}" onclick="return confirm('¿Regenerar el plan completo?')" class="rb-btn rb-btn-sm rb-btn-ghost"><i class="fas fa-sync-alt"></i> Regen</a>
+      <button type="button" class="rb-btn rb-btn-sm rb-btn-ghost" onclick="document.getElementById('modal-regen-plan').style.display='flex'"><i class="fas fa-sync-alt"></i> Regenerar</button>
     </div>
 
     {% for semana in plan_semanas %}
@@ -1387,6 +1390,41 @@ a.rb-dia:hover { background: var(--paper-2); text-decoration: none; }
     </div><!-- /padding -->
   </div><!-- /sheet -->
 </div><!-- /overlay -->
+
+<!-- ═══════════════════════════════════════════════
+     MODAL: REGENERAR PLAN
+     ═══════════════════════════════════════════════ -->
+{% if objetivo_activo %}
+<div id="modal-regen-plan"
+     style="display:none; position:fixed; inset:0; z-index:9999;
+            background:rgba(15,15,14,0.80); backdrop-filter:blur(4px);
+            align-items:center; justify-content:center;"
+     onclick="if(event.target===this)this.style.display='none'">
+  <div style="background:var(--paper); border:2px solid var(--ink); border-radius:14px;
+              width:calc(100% - 32px); max-width:420px; padding:28px 24px;">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+      <span style="font-size:22px">🔄</span>
+      <h3 style="margin:0;font-family:var(--font-disp);font-size:18px">Regenerar plan de entrenamiento</h3>
+    </div>
+    <p style="font-family:var(--font-body);font-size:14px;color:var(--ink-3);line-height:1.5;margin:0 0 8px">
+      Esto <strong>borrará todas las sesiones futuras planificadas</strong> y creará un plan nuevo con la distribución correcta de días de descanso.
+    </p>
+    <p style="font-family:var(--font-body);font-size:13px;color:var(--ink-5);margin:0 0 22px">
+      ✅ Tus sesiones ya completadas y el historial no se tocan.<br>
+      ⚠️ Cualquier ajuste manual en sesiones futuras se perderá.
+    </p>
+    <div style="display:flex;gap:10px;justify-content:flex-end">
+      <button type="button"
+              onclick="document.getElementById('modal-regen-plan').style.display='none'"
+              class="rb-btn rb-btn-ghost">Cancelar</button>
+      <a href="{% url 'hyrox:regenerar_plan' objective_id=objetivo_activo.id %}"
+         class="rb-btn rb-btn-primary">
+        <i class="fas fa-sync-alt"></i> Sí, regenerar plan
+      </a>
+    </div>
+  </div>
+</div>
+{% endif %}
 
 </body>
 </html>
