@@ -455,6 +455,31 @@ a.rb-dia:hover { background: var(--paper-2); text-decoration: none; }
 .rb-a5 { animation: rb-in .4s ease both .44s; }
 .rb-a6 { animation: rb-in .4s ease both .52s; }
 
+/* ── RUN EVOLUTION ───────────────────────────── */
+.rb-run-kpis { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-bottom: 14px; }
+.rb-run-kpi { background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; text-align: center; }
+.rb-run-kpi-val { font-family: var(--font-disp); font-size: 20px; font-weight: 700; color: var(--ink); line-height: 1.1; }
+.rb-run-kpi-lbl { font-family: var(--font-mono); font-size: 9px; text-transform: uppercase; color: var(--ink-5); margin-top: 2px; }
+.rb-run-kpi-trend { font-family: var(--font-mono); font-size: 9px; margin-top: 4px; font-weight: 700; }
+.rb-run-kpi-trend.up { color: #1DC8B8; }
+.rb-run-kpi-trend.down { color: #EF4444; }
+.rb-run-kpi-trend.flat { color: var(--ink-5); }
+.rb-run-chart-wrap { background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: 12px; margin-bottom: 10px; }
+.rb-run-chart-title { font-family: var(--font-mono); font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--ink-5); margin-bottom: 8px; }
+.rb-run-chart { position: relative; }
+.rb-run-legend { display: flex; gap: 12px; margin-top: 6px; }
+.rb-run-legend span { display: flex; align-items: center; gap: 4px; font-family: var(--font-mono); font-size: 9px; color: var(--ink-5); }
+.rb-run-bars-wrap { background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: 12px; margin-bottom: 10px; }
+.rb-run-bars { display: flex; align-items: flex-end; gap: 6px; height: 60px; }
+.rb-run-bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; height: 100%; justify-content: flex-end; }
+.rb-run-bar-fill-wrap { width: 100%; display: flex; align-items: flex-end; flex: 1; }
+.rb-run-bar-fill { width: 100%; background: var(--accent); border-radius: 3px 3px 0 0; min-height: 3px; transition: height .4s ease; }
+.rb-run-bar-val { font-family: var(--font-mono); font-size: 8px; color: var(--ink-5); }
+.rb-run-bar-lbl { font-family: var(--font-mono); font-size: 8px; color: var(--ink-5); }
+.rb-run-fc-row { display: flex; align-items: flex-start; gap: 8px; background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+.rb-run-fc-icon { padding-top: 2px; }
+.rb-run-fc-list { display: flex; flex-wrap: wrap; gap: 4px; }
+
 /* responsive */
 @media (min-width: 720px) {
   .rb-container { max-width: 760px; }
@@ -943,6 +968,154 @@ a.rb-dia:hover { background: var(--paper-2); text-decoration: none; }
     </div>
     {% endif %}
     {% endwith %}
+  </section>
+  {% endif %}
+
+  <!-- ═══════════════ EVOLUCIÓN CARRERA ═══════════════ -->
+  {% if evolucion_carrera and evolucion_carrera.num_sesiones > 0 %}
+  <section class="rb-section rb-a5" id="rb-run-evolution">
+    <div class="rb-section-head">
+      <span class="rb-section-num">{% if lesion_activa %}06{% else %}05{% endif %}</span>
+      <h2 class="rb-section-title">Evolución Carrera</h2>
+      <div class="rb-section-line"></div>
+      <span class="rb-section-right">{{ evolucion_carrera.total_km }} KM TOTAL</span>
+    </div>
+
+    <!-- KPIs rápidos -->
+    <div class="rb-run-kpis">
+      <div class="rb-run-kpi">
+        <div class="rb-run-kpi-val">
+          {% if evolucion_carrera.ultimo_ritmo %}{{ evolucion_carrera.ultimo_ritmo.label }}{% else %}—{% endif %}
+        </div>
+        <div class="rb-run-kpi-lbl">Último ritmo</div>
+        {% if evolucion_carrera.tendencia == 'mejora' %}<div class="rb-run-kpi-trend up">▲ mejorando</div>
+        {% elif evolucion_carrera.tendencia == 'empeora' %}<div class="rb-run-kpi-trend down">▼ bajando</div>
+        {% elif evolucion_carrera.tendencia == 'estable' %}<div class="rb-run-kpi-trend flat">= estable</div>
+        {% endif %}
+      </div>
+      <div class="rb-run-kpi">
+        <div class="rb-run-kpi-val">
+          {% if evolucion_carrera.mejor_ritmo %}{{ evolucion_carrera.mejor_ritmo.label }}{% else %}—{% endif %}
+        </div>
+        <div class="rb-run-kpi-lbl">Mejor ritmo</div>
+      </div>
+      <div class="rb-run-kpi">
+        <div class="rb-run-kpi-val">{{ evolucion_carrera.num_sesiones }}</div>
+        <div class="rb-run-kpi-lbl">Sesiones</div>
+      </div>
+    </div>
+
+    <!-- Gráfico ritmo SVG -->
+    {% if evolucion_carrera.puntos_ritmo|length > 1 %}
+    <div class="rb-run-chart-wrap">
+      <div class="rb-run-chart-title">Ritmo min/km <span style="opacity:.5;font-weight:400">(abajo = más rápido)</span></div>
+      <div class="rb-run-chart" id="rb-pace-chart"
+           data-puntos="{{ evolucion_carrera.puntos_ritmo|length }}"
+           data-objetivo="{{ evolucion_carrera.pace_objetivo_secs|default:'' }}">
+        <svg id="rb-pace-svg" width="100%" height="80" viewBox="0 0 300 80" preserveAspectRatio="none">
+          <!-- líneas de fondo -->
+          <line x1="0" y1="20" x2="300" y2="20" stroke="var(--line)" stroke-width="0.5"/>
+          <line x1="0" y1="40" x2="300" y2="40" stroke="var(--line)" stroke-width="0.5"/>
+          <line x1="0" y1="60" x2="300" y2="60" stroke="var(--line)" stroke-width="0.5"/>
+          <!-- polilínea generada por JS -->
+          <polyline id="rb-pace-line" points="" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+          <!-- línea objetivo -->
+          <line id="rb-pace-target" x1="0" y1="0" x2="300" y2="0" stroke="#F59E0B" stroke-width="1" stroke-dasharray="4 3" display="none"/>
+        </svg>
+        <!-- etiquetas X generadas por JS -->
+        <div id="rb-pace-labels" style="display:flex;justify-content:space-between;padding:2px 0 0;"></div>
+      </div>
+
+      <script>
+      (function(){
+        var pts = [{% for p in evolucion_carrera.puntos_ritmo %}{"s":{{ p.secs }},"f":"{{ p.fecha }}","l":"{{ p.label }}"}{% if not forloop.last %},{% endif %}{% endfor %}];
+        var objetivo = {{ evolucion_carrera.pace_objetivo_secs|default:'null' }};
+        if(!pts.length) return;
+        var mn = Math.min.apply(null, pts.map(function(p){return p.s;}));
+        var mx = Math.max.apply(null, pts.map(function(p){return p.s;}));
+        var rng = mx - mn || 1;
+        var W = 300, H = 80, pad = 6;
+        var xs = pts.map(function(_,i){return i*(W/(pts.length-1||1));});
+        var ys = pts.map(function(p){return pad + ((p.s-mn)/rng)*(H-2*pad);});
+        var pline = document.getElementById('rb-pace-line');
+        if(pline) pline.setAttribute('points', xs.map(function(x,i){return x+','+ys[i];}).join(' '));
+        // objetivo
+        if(objetivo){
+          var yt = pad + ((objetivo-mn)/rng)*(H-2*pad);
+          yt = Math.max(pad, Math.min(H-pad, yt));
+          var tl = document.getElementById('rb-pace-target');
+          if(tl){ tl.setAttribute('y1',yt); tl.setAttribute('y2',yt); tl.removeAttribute('display'); }
+        }
+        // etiquetas X (cada 3 puntos)
+        var labWrap = document.getElementById('rb-pace-labels');
+        if(labWrap && pts.length){
+          var step = Math.max(1, Math.floor(pts.length/4));
+          var html = '';
+          for(var i=0;i<pts.length;i++){
+            if(i===0||i===pts.length-1||i%step===0){
+              html += '<span style="font-size:9px;color:var(--ink-5);font-family:var(--font-mono)">'+pts[i].f+'</span>';
+            } else {
+              html += '<span></span>';
+            }
+          }
+          labWrap.innerHTML = html;
+        }
+      })();
+      </script>
+
+      <!-- leyenda -->
+      <div class="rb-run-legend">
+        <span><svg width="14" height="4"><line x1="0" y1="2" x2="14" y2="2" stroke="var(--accent)" stroke-width="2"/></svg> Ritmo real</span>
+        {% if evolucion_carrera.pace_objetivo_secs %}
+        <span><svg width="14" height="4"><line x1="0" y1="2" x2="14" y2="2" stroke="#F59E0B" stroke-width="1.5" stroke-dasharray="3 2"/></svg> Objetivo</span>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Barras km/semana -->
+    {% if evolucion_carrera.km_por_semana %}
+    <div class="rb-run-bars-wrap">
+      <div class="rb-run-chart-title">Km por semana</div>
+      <div class="rb-run-bars" id="rb-km-bars">
+        {% for semana, km in evolucion_carrera.km_por_semana %}
+        <div class="rb-run-bar-col" data-km="{{ km }}">
+          <div class="rb-run-bar-fill-wrap">
+            <div class="rb-run-bar-fill" style="height:3px"></div>
+          </div>
+          <div class="rb-run-bar-val">{{ km }}</div>
+          <div class="rb-run-bar-lbl">{{ semana }}</div>
+        </div>
+        {% endfor %}
+      </div>
+      <script>
+      (function(){
+        var cols = document.querySelectorAll('#rb-km-bars .rb-run-bar-col');
+        var maxKm = 0;
+        cols.forEach(function(c){ maxKm = Math.max(maxKm, parseFloat(c.dataset.km)||0); });
+        if(!maxKm) return;
+        cols.forEach(function(c){
+          var pct = (parseFloat(c.dataset.km)||0) / maxKm;
+          var fill = c.querySelector('.rb-run-bar-fill');
+          if(fill) fill.style.height = Math.max(3, Math.round(pct*52)) + 'px';
+        });
+      })();
+      </script>
+    </div>
+    {% endif %}
+
+    <!-- FC -->
+    {% if evolucion_carrera.fc_puntos %}
+    <div class="rb-run-fc-row">
+      <span class="rb-run-fc-icon"><i class="fas fa-heartbeat" style="color:#EF4444"></i></span>
+      <div class="rb-run-fc-list">
+        {% for fp in evolucion_carrera.fc_puntos %}
+        <span class="rb-chip"><span style="opacity:.6">{{ fp.fecha }}</span> {{ fp.fc }}</span>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
   </section>
   {% endif %}
 
