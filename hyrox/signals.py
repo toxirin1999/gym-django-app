@@ -9,6 +9,84 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+# ══════════════════════════════════════════════════════════════════════════════
+# PUENTE SUEÑO → HYROX
+# BitacoraDiaria con sueño < 6h o energía < 4 inyecta fatiga en próxima sesión
+# ══════════════════════════════════════════════════════════════════════════════
+
+@receiver(post_save, sender='clientes.BitacoraDiaria')
+def sueno_to_hyrox_fatiga(sender, instance, created, update_fields=None, **kwargs):
+    """
+    Cuando se guarda una BitacoraDiaria detecta sueño insuficiente o baja energía
+    e inyecta fatiga en la próxima HyroxSession planificada.
+    """
+    try:
+        from hyrox.models import HyroxObjective
+        from clientes.models import Cliente
+
+        horas = float(instance.horas_sueno or 0)
+        energia = instance.energia_subjetiva
+
+        sueno_bajo = horas > 0 and horas < 6
+        energia_baja = energia is not None and energia < 4
+
+        if not sueno_bajo and not energia_baja:
+            return
+
+        # Obtener cliente: BitacoraDiaria puede tener FK a cliente o a usuario
+        cliente = getattr(instance, 'cliente', None)
+        if cliente is None:
+            usuario = getattr(instance, 'usuario', None)
+            if usuario:
+                cliente = Cliente.objects.filter(user=usuario).first()
+        if not cliente:
+            return
+
+        objetivo = HyroxObjective.objects.filter(cliente=cliente, estado='activo').first()
+        if not objetivo:
+            return
+
+        proxima = HyroxSession.objects.filter(
+            objective=objetivo,
+            fecha__gte=instance.fecha,
+            estado='planificado',
+        ).order_by('fecha').first()
+
+        if not proxima:
+            return
+
+        # Alta fatiga: sueño < 5h o energía muy baja (<3)
+        if (horas > 0 and horas < 5) or (energia is not None and energia < 3):
+            nueva_fatiga = 'Alta'
+            motivo = (
+                f"Sueño insuficiente ({horas:.1f}h)" if sueno_bajo
+                else f"Energía muy baja ({energia}/10)"
+            )
+        else:
+            nueva_fatiga = 'Media'
+            motivo = (
+                f"Sueño reducido ({horas:.1f}h)" if sueno_bajo
+                else f"Energía baja ({energia}/10)"
+            )
+
+        # No degradar si ya hay fatiga Alta marcada por otra causa
+        if proxima.muscle_fatigue_index == 'Alta' and nueva_fatiga == 'Media':
+            return
+
+        proxima.muscle_fatigue_index = nueva_fatiga
+        proxima.fatiga_updated_at = timezone.now()
+        proxima.save(update_fields=['muscle_fatigue_index', 'fatiga_updated_at'])
+        logger.info(
+            f"[HYROX Sueño] Fatiga {nueva_fatiga} inyectada en sesión {proxima.id} "
+            f"({proxima.fecha}): {motivo}"
+        )
+
+    except Exception as e:
+        import traceback
+        logger.error(f"[HYROX Sueño signal] Error: {e}")
+        traceback.print_exc()
+
+
 def _calcular_y_guardar_carga(instance):
     """
     Calcula TRIMP, zona cardíaca, CTL/ATL/TSB al completar una sesión.
@@ -130,6 +208,37 @@ def autorregular_plan_futuro(sender, instance, created, update_fields=None, **kw
             proxima.muscle_fatigue_index = nueva_fatiga
             proxima.fatiga_updated_at    = timezone.now()
             proxima.save(update_fields=['muscle_fatigue_index', 'fatiga_updated_at'])
+
+    # ── 5. FC REPOSO ELEVADA ──────────────────────────────────────────────────
+    # Si la FC de reposo de hoy supera la basal +7 lpm → posible enfermedad/fatiga
+    # no detectada por RPE subjetivo → inyectar fatiga Media en próxima sesión.
+    try:
+        hoy_readiness = HyroxReadinessLog.objects.filter(
+            objective=instance.objective,
+            fecha=timezone.now().date(),
+            fc_reposo__isnull=False,
+        ).order_by('-fecha').first()
+
+        if hoy_readiness and hoy_readiness.fc_reposo:
+            fc_hoy = hoy_readiness.fc_reposo
+            fc_basal = HyroxLoadManager.get_fc_reposo_basal(instance.objective, dias=14)
+            if fc_hoy > fc_basal + 7:
+                if not proxima:
+                    proxima = HyroxSession.objects.filter(
+                        objective=instance.objective,
+                        fecha__gt=instance.fecha,
+                        estado='planificado'
+                    ).order_by('fecha').first()
+                if proxima and proxima.muscle_fatigue_index != 'Alta':
+                    proxima.muscle_fatigue_index = 'Media'
+                    proxima.fatiga_updated_at = timezone.now()
+                    proxima.save(update_fields=['muscle_fatigue_index', 'fatiga_updated_at'])
+                    logger.info(
+                        f"[HYROX FC Reposo] FC hoy {fc_hoy} lpm vs basal {fc_basal} lpm "
+                        f"(+{fc_hoy - fc_basal} lpm). Fatiga Media inyectada en sesión {proxima.id}."
+                    )
+    except Exception as e:
+        logger.error(f"[HYROX FC Reposo check] Error: {e}")
 
 
 # ==============================================================================
