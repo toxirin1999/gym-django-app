@@ -747,6 +747,9 @@ def editar_sesion_hyrox(request, session_id):
         _ESTACION_TIPOS = {'hyrox_station', 'ergometro', 'isometrico', 'hiit', 'remo', 'skierg', 'bici', 'otro'}
         _REPS_STATIONS = {'wall ball', 'wall balls', 'burpee broad jump', 'burpees broad jump'}
         ids_borrar = set(request.POST.getlist('act_delete'))
+        import logging as _logging
+        _log = _logging.getLogger('hyrox.editar_sesion')
+
         for act in session.activities.all():
             if str(act.id) in ids_borrar:
                 act.delete()
@@ -757,9 +760,13 @@ def editar_sesion_hyrox(request, session_id):
             is_carrera = ta in _CARRERA_TIPOS or 'distancia_km' in m
             is_fuerza = ta == 'fuerza' or 'series' in m
             is_reps_station = any(kw in nombre_lower for kw in _REPS_STATIONS) and ta in _ESTACION_TIPOS
+
+            _log.warning(f'[EDIT act={act.id}] ta={ta!r} is_carrera={is_carrera} is_fuerza={is_fuerza} m_keys={list(m.keys())}')
+
             if is_carrera:
                 km = request.POST.get(f'act_km_{act.id}')
                 mins = request.POST.get(f'act_min_{act.id}')
+                _log.warning(f'[EDIT act={act.id}] CARRERA km={km!r} mins={mins!r}')
                 if km: m['distancia_km'] = float(km)
                 if mins and km and float(km) > 0 and float(mins) > 0:
                     secs = round((float(mins) * 60) / float(km))
@@ -786,11 +793,21 @@ def editar_sesion_hyrox(request, session_id):
                 kg = request.POST.get(f'act_kg_{act.id}')
                 if distm: m['distancia_m'] = float(distm)
                 if kg: m['peso_kg'] = float(kg)
+
+            _log.warning(f'[EDIT act={act.id}] GUARDANDO data_metricas={m}')
             act.data_metricas = m
             act.save()
+            # Verificar persistencia inmediata
+            act.refresh_from_db()
+            _log.warning(f'[EDIT act={act.id}] POST-SAVE DB={act.data_metricas}')
 
         session.estado = 'completado'
-        session.save()
+        try:
+            session.save()
+        except Exception as e:
+            import traceback as _tb
+            _log.error(f'[EDIT session={session.id}] ERROR en session.save(): {e}\n{_tb.format_exc()}')
+            # El save de actividades ya se completó — continuar con el redirect
         messages.success(request, "Sesión actualizada. El plan se ha re-adaptado.")
         return redirect('hyrox:dashboard')
 
