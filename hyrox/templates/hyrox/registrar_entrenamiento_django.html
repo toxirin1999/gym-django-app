@@ -861,14 +861,12 @@
                            value="{{ act.data_metricas.distancia_m }}"
                            step="1" min="0" inputmode="numeric">
                   </div>
-                  {% if act.data_metricas.peso_kg %}
                   <div>
                     <div class="rb-biginput-label"><span>Carga</span><span>kg</span></div>
                     <input type="number" class="rb-biginput rb-input-carga"
-                           value="{{ act.data_metricas.peso_kg }}"
-                           step="1" min="0" inputmode="numeric">
+                           value="{{ act.data_metricas.peso_kg|default:'' }}"
+                           step="1" min="0" placeholder="—" inputmode="numeric">
                   </div>
-                  {% endif %}
                 </div>
 
                 <button type="button" class="rb-done-btn"
@@ -1243,7 +1241,7 @@ function rbBuildNotasRaw() {
     const carga  = card.querySelector('.rb-input-carga');
     if (distM) {
       let line = `${name} ${distM.value}m`;
-      if (carga) line += ` @${carga.value}kg`;
+      if (carga && carga.value) line += ` @${carga.value}kg`;
       lines.push(line);
       return;
     }
