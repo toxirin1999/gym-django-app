@@ -750,7 +750,20 @@ def editar_sesion_hyrox(request, session_id):
         import logging as _logging
         _log = _logging.getLogger('hyrox.editar_sesion')
 
-        for act in session.activities.all():
+        acts_qs = list(session.activities.all())
+        _log.warning(f'[EDIT session={session.id}] activities_count={len(acts_qs)} notas_raw={bool(session.notas_raw)}')
+
+        # Si no hay actividades pero hay notas_raw, re-parsear antes de editar
+        if not acts_qs and session.notas_raw:
+            from .services import HyroxParserService
+            try:
+                HyroxParserService.save_parsed_session(session)
+                acts_qs = list(session.activities.all())
+                _log.warning(f'[EDIT session={session.id}] re-parseado notas_raw, ahora {len(acts_qs)} actividades')
+            except Exception as e:
+                _log.error(f'[EDIT session={session.id}] ERROR re-parseando: {e}')
+
+        for act in acts_qs:
             if str(act.id) in ids_borrar:
                 act.delete()
                 continue
@@ -815,6 +828,14 @@ def editar_sesion_hyrox(request, session_id):
     TIPO_ACT_ESTACION = {'hyrox_station', 'ergometro', 'isometrico', 'hiit', 'remo', 'skierg', 'bici', 'otro'}
     # Estaciones Hyrox que funcionan por reps+kg, no por distancia
     ESTACIONES_REPS = {'wall ball', 'wall balls', 'burpee broad jump', 'burpees broad jump'}
+
+    # Si no hay actividades pero hay notas_raw, intentar re-parsear
+    if session.activities.count() == 0 and session.notas_raw:
+        from .services import HyroxParserService
+        try:
+            HyroxParserService.save_parsed_session(session)
+        except Exception:
+            pass
 
     actividades_ctx = []
     for act in session.activities.all():
