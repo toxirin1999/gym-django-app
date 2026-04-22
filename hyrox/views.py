@@ -806,10 +806,10 @@ def editar_sesion_hyrox(request, session_id):
             'nombre': act.nombre_ejercicio or act.get_tipo_actividad_display(),
             'tipo': tipo,
             'tipo_actividad': ta,
-            'km': m.get('distancia_km', '') or '',
-            'tiempo_min': m.get('tiempo_minutos', '') or '',
-            'distm': m.get('distancia_m', '') or '',
-            'kg': m.get('peso_kg', '') or '',
+            'km': m['distancia_km'] if 'distancia_km' in m else '',
+            'tiempo_min': m['tiempo_minutos'] if 'tiempo_minutos' in m else '',
+            'distm': m['distancia_m'] if 'distancia_m' in m else '',
+            'kg': m['peso_kg'] if 'peso_kg' in m else '',
             'series': series,
         })
 

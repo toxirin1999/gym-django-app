@@ -184,6 +184,90 @@ class HyroxLoadManager:
         return None
 
     @classmethod
+    def get_acwr(cls, objetivo):
+        """
+        Acute:Chronic Workload Ratio = ATL / CTL.
+        > 1.5  → zona roja (riesgo lesión por pico de carga)
+        0.8-1.3 → zona óptima de rendimiento
+        < 0.8  → desentrenamiento (carga insuficiente)
+        """
+        carga = cls.calcular_ctl_atl_tsb(objetivo)
+        ctl = carga['ctl']
+        atl = carga['atl']
+        if ctl <= 0:
+            return None
+        return round(atl / ctl, 2)
+
+    @classmethod
+    def get_fc_reposo_basal(cls, objetivo, dias=14):
+        """
+        FC de reposo basal = media rolling de los últimos N días con lectura.
+        Prioriza lecturas en HyroxReadinessLog; fallback al campo del objetivo.
+        """
+        from .models import HyroxReadinessLog
+        lecturas = list(
+            HyroxReadinessLog.objects.filter(
+                objective=objetivo,
+                fc_reposo__isnull=False,
+            ).order_by('-fecha')[:dias].values_list('fc_reposo', flat=True)
+        )
+        if lecturas:
+            return round(sum(lecturas) / len(lecturas))
+        return objetivo.fc_reposo or 60
+
+    @classmethod
+    def get_progression_curve(cls, objetivo, tipo_actividad, ejercicio_keyword=None, semanas=8):
+        """
+        Devuelve lista de (fecha, valor) con la progresión de una métrica clave.
+        - carrera: ritmo promedio en seg/km
+        - hyrox_station / fuerza: peso máximo usado
+        Útil para detectar estancamiento real vs. RPE subjetivo.
+        """
+        desde = timezone.now().date() - timedelta(weeks=semanas)
+        actividades = (
+            HyroxActivity.objects
+            .filter(
+                sesion__objective=objetivo,
+                sesion__estado='completado',
+                sesion__fecha__gte=desde,
+                tipo_actividad=tipo_actividad,
+            )
+            .order_by('sesion__fecha')
+            .values('sesion__fecha', 'data_metricas', 'nombre_ejercicio')
+        )
+
+        curva = []
+        for a in actividades:
+            if ejercicio_keyword and ejercicio_keyword.lower() not in a['nombre_ejercicio'].lower():
+                continue
+            m = a['data_metricas'] or {}
+            valor = None
+            if tipo_actividad == 'carrera':
+                ritmo = m.get('ritmo_real', '')
+                if ritmo:
+                    try:
+                        parts = ritmo.replace('/km', '').split(':')
+                        valor = int(parts[0]) * 60 + int(parts[1])
+                    except Exception:
+                        pass
+                elif m.get('distancia_km') and m.get('tiempo_minutos'):
+                    km = float(m['distancia_km'])
+                    mins = float(m['tiempo_minutos'])
+                    if km > 0:
+                        valor = round((mins * 60) / km)
+            elif tipo_actividad in ('hyrox_station', 'fuerza'):
+                peso = m.get('peso_kg')
+                if peso:
+                    valor = float(peso)
+                elif m.get('series'):
+                    pesos = [float(s.get('peso_kg', s.get('peso', 0))) for s in m['series'] if s.get('peso_kg') or s.get('peso')]
+                    if pesos:
+                        valor = max(pesos)
+            if valor is not None:
+                curva.append({'fecha': str(a['sesion__fecha']), 'valor': valor})
+        return curva
+
+    @classmethod
     def get_zona_para_template(cls, template, is_taper=False, is_deload=False):
         """Zona cardíaca objetivo según tipo de sesión."""
         if is_taper or is_deload:
@@ -656,7 +740,7 @@ class HyroxTrainingEngine:
                         f"{sesion_sig.fecha.strftime('%d/%m')} para optimizar tu recuperación."
                     )
 
-        # --- TRIGGER 2: ESTANCAMIENTO (2 sesiones seguidas RPE <= 5) ---
+        # --- TRIGGER 2: ESTANCAMIENTO (2 sesiones seguidas RPE <= 5 + validación curva progresión) ---
         if rpe <= 5:
             tipos_actual = set(a.tipo_actividad for a in sesion_completada.activities.all())
             prev_sesion = HyroxSession.objects.filter(
@@ -671,6 +755,24 @@ class HyroxTrainingEngine:
 
                 if common_types:
                     for tipo in common_types:
+                        # Validar estancamiento real con curva objetiva antes de incrementar
+                        curva = HyroxLoadManager.get_progression_curve(
+                            sesion_completada.objective, tipo, semanas=4
+                        )
+                        # Estancamiento confirmado si la curva tiene >= 3 puntos y no mejora
+                        hay_plateau = True
+                        if len(curva) >= 3:
+                            valores = [p['valor'] for p in curva[-3:]]
+                            # Para carrera: mejora = valores decrecen (menos seg/km)
+                            # Para fuerza/stations: mejora = valores crecen
+                            if tipo == 'carrera':
+                                hay_plateau = (max(valores) - min(valores)) < 10  # < 10 seg/km variación
+                            else:
+                                hay_plateau = (max(valores) - min(valores)) / max(valores) < 0.05  # < 5% variación
+
+                        if not hay_plateau:
+                            continue  # La curva muestra progresión real, no estancamiento
+
                         next_sesion = HyroxSession.objects.filter(
                             objective=sesion_completada.objective,
                             estado='planificado',
@@ -693,7 +795,8 @@ class HyroxTrainingEngine:
 
                             if is_mutated:
                                 mensajes_ui.append(
-                                    f"He detectado carga baja persistente en {tipo.capitalize()}. "
+                                    f"He detectado carga baja persistente en {tipo.capitalize()} "
+                                    f"(RPE ≤5 confirmado en curva objetiva). "
                                     f"He incrementado un 10 % la intensidad de tu sesión del {next_sesion.fecha.strftime('%d/%m')}."
                                 )
 
@@ -757,6 +860,102 @@ class HyroxTrainingEngine:
                     mensajes_ui.append(
                         f"⚡ {nombre}: Detecto fatiga nerviosa acumulada (3 sesiones seguidas con RPE > 8.5). "
                         f"He capado la próxima sesión de fuerza al 70% RM. El SNC necesita margen para recuperarse antes de la competición."
+                    )
+
+        # --- TRIGGER 5: SOBRECARGA PROGRESIVA (cumplimiento alto + RPE sostenible) ---
+        # Si el atleta completó ≥ 90% del plan con RPE ≤ 7 dos sesiones seguidas,
+        # la carga planificada es demasiado baja → subir 5-8% en la siguiente sesión.
+        cumplimiento = sesion_completada.cumplimiento_ratio
+        if cumplimiento is not None and cumplimiento >= 0.90 and rpe is not None and rpe <= 7:
+            prev_sesion = HyroxSession.objects.filter(
+                objective=sesion_completada.objective,
+                estado='completado',
+                fecha__lt=sesion_completada.fecha
+            ).order_by('-fecha').first()
+
+            prev_cumplimiento = getattr(prev_sesion, 'cumplimiento_ratio', None) if prev_sesion else None
+            prev_rpe = getattr(prev_sesion, 'rpe_global', None) if prev_sesion else None
+
+            if (prev_cumplimiento is not None and prev_cumplimiento >= 0.90
+                    and prev_rpe is not None and prev_rpe <= 7):
+                # Dos sesiones seguidas con cumplimiento ≥ 90% y RPE ≤ 7 → progresión
+                next_sesion = HyroxSession.objects.filter(
+                    objective=sesion_completada.objective,
+                    estado='planificado',
+                    fecha__gt=sesion_completada.fecha,
+                ).order_by('fecha').first()
+
+                if next_sesion:
+                    factor = 1.07  # +7%
+                    progresion_mutated = False
+                    for act in next_sesion.activities.all():
+                        m = act.data_metricas or {}
+                        mutated = False
+                        if 'series' in m:
+                            for serie in m['series']:
+                                if 'peso_kg' in serie:
+                                    serie['peso_kg'] = round(float(serie['peso_kg']) * factor, 1)
+                                    mutated = True
+                                elif 'reps' in serie:
+                                    # Sin peso: aumentar reps en 1
+                                    serie['reps'] = int(serie['reps']) + 1
+                                    mutated = True
+                        if 'distancia_km' in m:
+                            m['distancia_km'] = round(float(m['distancia_km']) * factor, 2)
+                            mutated = True
+                        if mutated:
+                            notas = m.get('notas', '')
+                            m['notas'] = (notas + f" | 📈 Progresión +7%: cumplimiento ≥90% y RPE≤7 dos sesiones seguidas.").strip(' |')
+                            act.data_metricas = m
+                            act.save()
+                            progresion_mutated = True
+
+                    if progresion_mutated:
+                        mensajes_ui.append(
+                            f"📈 {nombre}: Excelente consistencia. Completaste el plan al {int(cumplimiento*100)}% "
+                            f"con RPE {rpe} dos semanas seguidas. He incrementado un 7% la carga del "
+                            f"{next_sesion.fecha.strftime('%d/%m')} para seguir progresando."
+                        )
+
+        # --- TRIGGER 6: ACWR ZONA ROJA (riesgo lesión por pico de carga) ---
+        # ACWR > 1.5 indica que la carga reciente duplica la crónica → alto riesgo lesión.
+        # Actuamos con reducción preventiva + alerta al usuario.
+        acwr = HyroxLoadManager.get_acwr(sesion_completada.objective)
+        if acwr is not None and acwr > 1.5:
+            proxima_acwr = HyroxSession.objects.filter(
+                objective=sesion_completada.objective,
+                estado='planificado',
+                fecha__gt=sesion_completada.fecha,
+            ).order_by('fecha').first()
+
+            if proxima_acwr:
+                acwr_mutated = False
+                for act in proxima_acwr.activities.all():
+                    m = act.data_metricas or {}
+                    mutated = False
+                    if 'series' in m:
+                        for serie in m['series']:
+                            if 'peso_kg' in serie:
+                                serie['peso_kg'] = round(float(serie['peso_kg']) * 0.85, 1)
+                                mutated = True
+                            if 'reps' in serie:
+                                serie['reps'] = max(1, round(int(serie['reps']) * 0.85))
+                                mutated = True
+                    if 'distancia_km' in m:
+                        m['distancia_km'] = round(float(m['distancia_km']) * 0.85, 2)
+                        mutated = True
+                    if mutated:
+                        notas = m.get('notas', '')
+                        m['notas'] = (notas + f" | ⚠️ ACWR {acwr}: carga reciente excede la crónica. Reducción preventiva -15%.").strip(' |')
+                        act.data_metricas = m
+                        act.save()
+                        acwr_mutated = True
+
+                if acwr_mutated:
+                    mensajes_ui.append(
+                        f"⚠️ {nombre}: Tu ratio carga-aguda/crónica es {acwr} (límite seguro: 1.3). "
+                        f"El riesgo de lesión se dispara en esta zona. He reducido un 15% la sesión "
+                        f"del {proxima_acwr.fecha.strftime('%d/%m')} para devolverte al rango óptimo."
                     )
 
         return mensajes_ui

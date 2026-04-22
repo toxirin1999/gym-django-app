@@ -58,6 +58,41 @@ class HyroxParserService:
         return 'fuerza'
 
     @staticmethod
+    def _calcular_cumplimiento_actividad(real: dict, plan: dict, tipo: str) -> float | None:
+        """
+        Devuelve un ratio 0-1 comparando métricas reales vs. planificadas.
+        Retorna None si no hay datos planificados comparables.
+        """
+        if not plan:
+            return None
+        # Carrera: ratio distancia real / planificada
+        if tipo in ('carrera', 'cardio_sustituto') and 'distancia_km' in plan:
+            plan_km = float(plan['distancia_km'] or 0)
+            real_km = float(real.get('distancia_km') or 0)
+            return min(real_km / plan_km, 1.0) if plan_km > 0 else None
+        # Estación: ratio distancia en metros
+        if tipo == 'hyrox_station' and 'distancia_m' in plan:
+            plan_m = float(plan['distancia_m'] or 0)
+            real_m = float(real.get('distancia_m') or 0)
+            return min(real_m / plan_m, 1.0) if plan_m > 0 else None
+        # Fuerza: ratio de volumen total (series × reps × peso)
+        if 'series' in plan and 'series' in real:
+            def volumen(series):
+                return sum(
+                    float(s.get('reps', 0)) * max(float(s.get('peso_kg', s.get('peso', 1))), 1)
+                    for s in series if s.get('reps')
+                )
+            plan_vol = volumen(plan['series'])
+            real_vol = volumen(real['series'])
+            return min(real_vol / plan_vol, 1.0) if plan_vol > 0 else None
+        # Solo reps (sin peso, e.g. Wall Balls)
+        if 'series' in plan and 'series' in real:
+            plan_reps = sum(int(s.get('reps', 0)) for s in plan['series'])
+            real_reps = sum(int(s.get('reps', 0)) for s in real['series'])
+            return min(real_reps / plan_reps, 1.0) if plan_reps > 0 else None
+        return None
+
+    @staticmethod
     def _estimate_fatigue(actividades: list, rpe: float | None) -> str:
         n = len(actividades)
         if rpe and rpe >= 8:
@@ -101,6 +136,12 @@ class HyroxParserService:
             r'(\d+)\s*series?\s+(?:de\s+)?(\d+)\s*(?:reps?|repeticiones?)',
             re.IGNORECASE
         )
+        # Reps@kg individual: "4@18kg, 4@18kg" (formato generado por el formulario)
+        re_reps_at_kg = re.compile(r'(\d+)\s*@\s*(\d+(?:[.,]\d+)?)\s*kg', re.IGNORECASE)
+        # Reps simples: "15 reps, 15 reps" (formulario sin peso)
+        re_reps_simple = re.compile(r'(\d+)\s*reps?', re.IGNORECASE)
+        # Tiempo en minutos (específico): "8min" → float
+        re_tiempo_min = re.compile(r'(\d+(?:[.,]\d+)?)\s*min', re.IGNORECASE)
 
         for raw_line in raw_text.splitlines():
             line = raw_line.strip().lstrip('-•·*').strip()
@@ -111,7 +152,11 @@ class HyroxParserService:
                 continue
 
             # Extraer nombre: todo antes del primer número de métricas
-            nombre_match = re.split(r'\s+(?=\d+\s*[x×km]|\d+\s*(?:series?|reps?|kg|min|seg))', line, maxsplit=1)
+            # Incluye decimales (1.8km, 5.0km) en el split
+            nombre_match = re.split(
+                r'\s+(?=\d+(?:[.,]\d+)?\s*[x×km]|\d+(?:[.,]\d+)?\s*(?:series?|reps?|kg|min|seg))',
+                line, maxsplit=1
+            )
             nombre = nombre_match[0].strip(' :')
             resto = nombre_match[1] if len(nombre_match) > 1 else line[len(nombre):]
             if not nombre or len(nombre) < 2:
@@ -128,6 +173,15 @@ class HyroxParserService:
                 reps = int(m.group(2))
                 peso = float(m.group(3).replace(',', '.'))
                 series_data = [{'reps': reps, 'peso': peso} for _ in range(n_series)]
+
+            # 1b. Reps@kg individuales: "4@18kg, 4@18kg, 4@18kg" (formato del formulario)
+            elif re_reps_at_kg.search(resto or line):
+                matches = re_reps_at_kg.findall(resto or line)
+                series_data = [{'reps': int(r), 'peso': float(k.replace(',', '.'))} for r, k in matches]
+                # Limpiar nombre si las series quedaron embebidas (e.g. "Ejercicio: 4@18kg, ...")
+                clean_nombre = re.sub(r'\s*:?\s*\d+@\d+.*$', '', nombre).strip(' :')
+                if clean_nombre and len(clean_nombre) >= 2:
+                    nombre = clean_nombre
 
             # 2. "N series de N reps"
             elif re_series_de_reps.search(resto or line):
@@ -147,13 +201,24 @@ class HyroxParserService:
                 peso = float(peso_m.group(1).replace(',', '.')) if peso_m else 0
                 series_data = [{'reps': reps, 'peso': peso} if peso else {'reps': reps} for _ in range(n_series)]
 
-            # 4. Distancia en km (carrera)
+            # 3b. Reps simples separadas por coma: "15 reps, 15 reps" (formulario sin peso)
+            elif len(re_reps_simple.findall(resto or line)) >= 2:
+                counts = re_reps_simple.findall(resto or line)
+                peso_m = re_peso_suelto.search(resto or line)
+                peso = float(peso_m.group(1).replace(',', '.')) if peso_m else 0
+                series_data = [{'reps': int(r), 'peso': peso} if peso else {'reps': int(r)} for r in counts]
+
+            # 4. Distancia en km (carrera) — busca en línea completa para capturar "Carrera 1.8km · 8min"
             elif re_dist_km.search(line):
                 m4 = re_dist_km.search(line)
                 dist = float(m4.group(1).replace(',', '.'))
                 carrera_data = {'distancia_km': dist}
                 if tipo not in ('carrera', 'ergometro', 'hyrox_station'):
                     tipo = 'carrera'
+                # Extraer tiempo en minutos
+                mt = re_tiempo_min.search(line)
+                if mt:
+                    carrera_data['tiempo_minutos'] = float(mt.group(1).replace(',', '.'))
                 # Extraer ritmo real si está en la línea: "ritmo 4:30" o "4:30/km"
                 mr = re_ritmo.search(line)
                 if mr:
@@ -244,48 +309,71 @@ class HyroxParserService:
                 session.save()
             return {'activities': [], 'new_records': []}
             
-        # Leer ritmo_objetivo planificado ANTES de borrar (para comparar luego)
+        # ── SNAPSHOT DEL PLAN ──────────────────────────────────────────────────
+        # Guardar lo planificado ANTES de borrar, agrupado por tipo_actividad+índice
+        # para poder calcular el cumplimiento real vs. plan.
         ritmo_planificado_seg = None
-        for act_plan in HyroxActivity.objects.filter(sesion=session, tipo_actividad='carrera'):
-            ro = (act_plan.data_metricas or {}).get('ritmo_objetivo')
-            if ro:
-                try:
-                    p = ro.replace('/km', '').strip().split(':')
-                    ritmo_planificado_seg = int(p[0]) * 60 + int(p[1])
-                except Exception:
-                    pass
-                break
+        plan_snapshot = {}  # {(tipo_actividad, idx): data_metricas_planificado}
+        tipo_counters = {}
+        for act_plan in HyroxActivity.objects.filter(sesion=session).order_by('id'):
+            ta = act_plan.tipo_actividad
+            idx = tipo_counters.get(ta, 0)
+            tipo_counters[ta] = idx + 1
+            m = act_plan.data_metricas or {}
+            plan_snapshot[(ta, idx)] = m
+            # Extraer ritmo objetivo de carrera para la comparativa de pace
+            if ta == 'carrera' and not ritmo_planificado_seg:
+                ro = m.get('ritmo_objetivo')
+                if ro:
+                    try:
+                        p = ro.replace('/km', '').strip().split(':')
+                        ritmo_planificado_seg = int(p[0]) * 60 + int(p[1])
+                    except Exception:
+                        pass
 
         # Borrar actividades previas (planificadas) antes de insertar las reales registradas
         HyroxActivity.objects.filter(sesion=session).delete()
 
         activities_created = []
         new_records = []
+        cumplimiento_scores = []  # list de ratios (0-1) por actividad comparable
 
         # Recuperar el objetivo para actualizar RM
         objetivo = session.objective
+        real_tipo_counters = {}
 
         for item in actividades_list:
             tipo = item.get("tipo_actividad", item.get("tipo", "otro"))
             nombre = item.get("nombre_ejercicio", item.get("nombre", item.get("ejercicio", "Desconocido")))
-            
+
             data_metricas = {}
             if "is_equivalencia" in item and item["is_equivalencia"]:
                 data_metricas["is_equivalencia"] = True
-            
+
             series_data = []
             if "series_data" in item:
                 data_metricas["series"] = item["series_data"]
                 series_data = item["series_data"]
-                
+
             if "carrera_data" in item:
                 data_metricas.update(item["carrera_data"])
-                
+
+            # ── Recuperar plan para esta actividad ──────────────────────────
+            real_idx = real_tipo_counters.get(tipo, 0)
+            real_tipo_counters[tipo] = real_idx + 1
+            plan_m = plan_snapshot.get((tipo, real_idx), {})
+
+            # Calcular ratio de cumplimiento individual
+            ratio = HyroxParserService._calcular_cumplimiento_actividad(data_metricas, plan_m, tipo)
+            if ratio is not None:
+                cumplimiento_scores.append(ratio)
+
             activity = HyroxActivity.objects.create(
                 sesion=session,
                 tipo_actividad=tipo,
                 nombre_ejercicio=nombre,
-                data_metricas=data_metricas
+                data_metricas=data_metricas,
+                data_planificado=plan_m if plan_m else None,
             )
             activities_created.append(activity)
 
@@ -357,7 +445,10 @@ class HyroxParserService:
                             objetivo.save()
                             new_records.append({"ejercicio": "Peso Muerto", "old": rm_actual, "new": rm_estimado_max})
             
+        # ── Guardar cumplimiento en la sesión ──────────────────────────────
         session.parsed_by_ia = True
+        if cumplimiento_scores:
+            session.cumplimiento_ratio = round(sum(cumplimiento_scores) / len(cumplimiento_scores), 3)
         session.save()
         return {'activities': activities_created, 'new_records': new_records}
 

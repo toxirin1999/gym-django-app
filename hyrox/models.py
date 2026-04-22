@@ -317,6 +317,12 @@ class HyroxSession(models.Model):
     
     fecha_actualizacion = models.DateTimeField(auto_now=True)
 
+    # Cumplimiento real vs. plan (0.0 – 1.0)
+    cumplimiento_ratio = models.FloatField(
+        null=True, blank=True,
+        help_text="0-1: qué % del volumen/distancia planificado completó el usuario"
+    )
+
     # Phase 8: Historial Inteligente y Analytics Acumulado
     ai_evaluation_score = models.IntegerField(null=True, blank=True, help_text="Valor 1-100 calculado por IA basado en cumplimiento vs plan")
     muscle_fatigue_index = models.CharField(max_length=20, null=True, blank=True, choices=[('Baja', 'Baja'), ('Media', 'Media'), ('Alta', 'Alta')], help_text="Estimación de fatiga calculada por IA resumiendo el RPE/Volumen")
@@ -357,6 +363,11 @@ class HyroxActivity(models.Model):
         default=dict,
         help_text="JSON flexible con series, kg, tiempos, ritmos o FC extrados del texto libre"
     )
+    # Snapshot de lo que estaba planificado antes de registrar lo real
+    data_planificado = models.JSONField(
+        null=True, blank=True,
+        help_text="Copia de data_metricas planificado antes de sobrescribir con lo real"
+    )
 
     @property
     def get_icon_class(self):
@@ -382,12 +393,25 @@ class HyroxReadinessLog(models.Model):
     objective = models.ForeignKey(HyroxObjective, on_delete=models.CASCADE, related_name='readiness_logs')
     fecha = models.DateField(auto_now_add=True)
     score = models.IntegerField()
-    
+
+    # Biometría matutina diaria
+    fc_reposo = models.IntegerField(
+        null=True, blank=True,
+        help_text="FC de reposo al despertar (lpm) — indicador clave de recuperación"
+    )
+    horas_sueno = models.FloatField(
+        null=True, blank=True,
+        help_text="Horas de sueño la noche anterior"
+    )
+    calidad_sueno = models.IntegerField(
+        null=True, blank=True,
+        help_text="Calidad subjetiva del sueño (1-10)"
+    )
+
     class Meta:
         ordering = ['fecha']
-        # Prevent multiple logs per day for the same objective
         unique_together = ('objective', 'fecha')
-        
+
     def __str__(self):
         return f"{self.objective.cliente.nombre} - {self.score}% ({self.fecha})"
 
