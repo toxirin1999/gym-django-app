@@ -487,21 +487,41 @@ a.rb-dia:hover { background: var(--paper-2); text-decoration: none; }
 .rb-run-fc-list { display: flex; flex-wrap: wrap; gap: 6px; }
 
 /* ── SPLITS ──────────────────────────────────── */
-.rb-splits-intro { font-family: var(--font-mono); font-size: 10px; color: var(--ink-5); margin-bottom: 10px; }
 .rb-splits-table { display: flex; flex-direction: column; gap: 8px; }
-.rb-split-row { background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
-.rb-split-name { font-family: var(--font-disp); font-size: 13px; font-weight: 700; margin-bottom: 8px; }
-.rb-split-times { display: flex; gap: 16px; align-items: flex-end; margin-bottom: 8px; }
+.rb-split-row {
+  background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: 14px 12px;
+}
+.rb-split-row--empty { opacity: .55; }
+.rb-split-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.rb-split-name { font-family: var(--font-disp); font-size: 14px; font-weight: 700; }
+.rb-split-badge-no { font-family: var(--font-mono); font-size: 9px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-4); border: 1px solid var(--line); border-radius: 4px; padding: 2px 7px; }
+.rb-split-times { display: flex; gap: 14px; align-items: flex-end; margin-bottom: 10px; }
 .rb-split-val { font-family: var(--font-mono); font-size: 22px; font-weight: 700; line-height: 1; display: flex; flex-direction: column; }
 .rb-split-ref { font-family: var(--font-mono); font-size: 16px; color: var(--ink-4); line-height: 1; display: flex; flex-direction: column; }
 .rb-split-lbl { font-size: 8px; text-transform: uppercase; color: var(--ink-5); margin-top: 2px; font-weight: 400; }
-.rb-split-gap { font-family: var(--font-mono); font-size: 13px; font-weight: 700; margin-left: auto; align-self: center; }
-.rb-split-ok { color: #1DC8B8; }
-.rb-split-warn { color: #EF4444; }
+.rb-split-gap { font-family: var(--font-mono); font-size: 13px; font-weight: 700; margin-left: auto; align-self: center; padding: 4px 8px; border-radius: 4px; }
+.rb-split-ok  { color: #1DC8B8; }
+.rb-split-warn{ color: #EF4444; }
 .rb-split-mid { color: #F59E0B; }
-.rb-split-bar-wrap { height: 4px; background: var(--line); border-radius: 2px; margin-bottom: 6px; }
-.rb-split-bar-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width .4s ease; }
-.rb-split-meta { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 9px; color: var(--ink-5); }
+.rb-split-gap.rb-split-ok   { background: rgba(29,200,184,.1); }
+.rb-split-gap.rb-split-warn { background: rgba(239,68,68,.08); }
+.rb-split-gap.rb-split-mid  { background: rgba(245,158,11,.08); }
+
+/* Barra progreso hacia estándar */
+.rb-split-prog { margin-bottom: 8px; }
+.rb-split-prog-header { display: flex; justify-content: space-between; margin-bottom: 3px; }
+.rb-split-prog-lbl { font-family: var(--font-mono); font-size: 9px; color: var(--ink-5); text-transform: uppercase; }
+.rb-split-prog-pct { font-family: var(--font-mono); font-size: 9px; font-weight: 700; color: var(--ink-3); }
+.rb-split-prog-track { height: 5px; background: var(--line); border-radius: 3px; }
+.rb-split-prog-fill { height: 100%; border-radius: 3px; transition: width .5s ease; }
+
+/* Tendencia semanal */
+.rb-split-trend { display: flex; gap: 4px; align-items: flex-end; height: 28px; margin-top: 10px; }
+.rb-split-trend-bar { flex: 1; border-radius: 2px 2px 0 0; min-height: 2px; transition: height .3s; }
+.rb-split-trend-empty { flex: 1; border-radius: 2px; background: var(--line); height: 4px; align-self: center; }
+.rb-split-trend-labels { display: flex; gap: 4px; margin-top: 3px; }
+.rb-split-trend-lbl { flex: 1; font-family: var(--font-mono); font-size: 7px; color: var(--ink-5); text-align: center; }
+.rb-split-meta { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 9px; color: var(--ink-5); margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line); }
 .rb-splits-note { font-family: var(--font-mono); font-size: 10px; color: var(--ink-5); margin-top: 8px; padding: 8px 10px; background: var(--paper); border: 1px solid var(--line); border-radius: 6px; }
 
 /* responsive */
@@ -1184,7 +1204,7 @@ a.rb-dia:hover { background: var(--paper-2); text-decoration: none; }
   {% endif %}
 
   <!-- ═══════════════ SPLITS ═══════════════ -->
-  {% if splits_estaciones %}
+  {% if objetivo_activo %}
   <section class="rb-section rb-a6">
     <div class="rb-section-head">
       <span class="rb-section-num">
@@ -1194,46 +1214,92 @@ a.rb-dia:hover { background: var(--paper-2); text-decoration: none; }
       <div class="rb-section-line"></div>
       <span class="rb-section-right">VS OPEN</span>
     </div>
-    <div class="rb-splits-intro">
-      Tiempo medio por estación comparado con el estándar Open.
+
+    {% if not splits_estaciones or splits_estaciones|length == 0 %}
+    <div class="rb-splits-note" style="text-align:center;padding:20px;">
+      <i class="fas fa-stopwatch" style="font-size:22px;color:var(--accent);display:block;margin-bottom:8px;"></i>
+      <strong style="font-family:var(--font-disp);font-size:13px;display:block;margin-bottom:4px;">Sin datos de splits aún</strong>
+      Activa el cronómetro en cada estación al registrar un entreno y los splits irán apareciendo aquí.
     </div>
+    {% else %}
     <div class="rb-splits-table">
       {% for split in splits_estaciones %}
-      <div class="rb-split-row">
-        <div class="rb-split-name">{{ split.nombre }}</div>
+      <div class="rb-split-row {% if not split.tiene_datos %}rb-split-row--empty{% endif %}">
+
+        {# ── Cabecera: nombre + badge ── #}
+        <div class="rb-split-header">
+          <span class="rb-split-name">{{ split.nombre }}</span>
+          {% if not split.tiene_datos %}
+          <span class="rb-split-badge-no">Sin datos</span>
+          {% else %}
+          <span class="rb-split-badge-no">{{ split.sesiones }} sesión{% if split.sesiones != 1 %}es{% endif %}</span>
+          {% endif %}
+        </div>
+
+        {# ── Tiempos ── #}
         <div class="rb-split-times">
-          <div class="rb-split-val {% if split.gap_secs and split.gap_secs <= 0 %}rb-split-ok{% elif split.gap_secs and split.gap_secs > 30 %}rb-split-warn{% endif %}">
-            {{ split.promedio_str }}
-            <span class="rb-split-lbl">promedio</span>
+          <div class="rb-split-val {% if split.gap_secs is not None and split.gap_secs <= 0 %}rb-split-ok{% elif split.gap_secs and split.gap_secs > 30 %}rb-split-warn{% endif %}">
+            {{ split.promedio_str|default:"--:--" }}
+            <span class="rb-split-lbl">tu promedio</span>
           </div>
-          {% if split.ref_str %}
           <div class="rb-split-ref">
             {{ split.ref_str }}
-            <span class="rb-split-lbl">objetivo</span>
+            <span class="rb-split-lbl">estándar Open</span>
           </div>
-          {% endif %}
           {% if split.gap_str %}
           <div class="rb-split-gap {% if split.gap_secs <= 0 %}rb-split-ok{% elif split.gap_secs > 30 %}rb-split-warn{% else %}rb-split-mid{% endif %}">
             {{ split.gap_str }}
           </div>
           {% endif %}
         </div>
-        {% if split.ref_secs %}
-        <div class="rb-split-bar-wrap">
-          <div class="rb-split-bar-fill" style="width:{% if split.pct_ref > 100 %}100{% else %}{{ split.pct_ref }}{% endif %}%"></div>
+
+        {# ── Barra progreso hacia estándar ── #}
+        <div class="rb-split-prog">
+          <div class="rb-split-prog-header">
+            <span class="rb-split-prog-lbl">Progreso hacia estándar</span>
+            <span class="rb-split-prog-pct">{{ split.pct_ref }}%</span>
+          </div>
+          <div class="rb-split-prog-track">
+            <div class="rb-split-prog-fill" style="width:{{ split.pct_ref }}%;background:{% if split.pct_ref >= 95 %}#1DC8B8{% elif split.pct_ref >= 70 %}#F59E0B{% else %}#EF4444{% endif %}"></div>
+          </div>
+        </div>
+
+        {# ── Tendencia semanal (últimas 6 semanas) ── #}
+        {% if split.tiene_datos %}
+        <div>
+          <div class="rb-split-prog-lbl" style="margin-bottom:4px;">Tendencia semanal</div>
+          <div class="rb-split-trend">
+            {% for semana in split.tendencia %}
+              {% if semana.avg_secs %}
+              <div class="rb-split-trend-bar" style="height:{{ semana.pct }}%;background:{% if semana.pct >= 95 %}#1DC8B8{% elif semana.pct >= 70 %}#F59E0B{% else %}#EF4444{% endif %};max-height:28px;min-height:4px;" title="{{ semana.label }}: {{ semana.avg_secs }}s"></div>
+              {% else %}
+              <div class="rb-split-trend-empty" title="{{ semana.label }}: sin dato"></div>
+              {% endif %}
+            {% endfor %}
+          </div>
+          <div class="rb-split-trend-labels">
+            {% for semana in split.tendencia %}<span class="rb-split-trend-lbl">{{ semana.label }}</span>{% endfor %}
+          </div>
         </div>
         {% endif %}
+
+        {# ── Meta ── #}
+        {% if split.mejor_str %}
         <div class="rb-split-meta">
           <span>Mejor: <strong>{{ split.mejor_str }}</strong></span>
-          <span>{{ split.sesiones }} sesión{% if split.sesiones != 1 %}es{% endif %}</span>
+          <span style="color:var(--ink-4)">Objetivo: {{ split.ref_str }}</span>
         </div>
+        {% endif %}
+
       </div>
       {% endfor %}
     </div>
     <div class="rb-splits-note">
       <i class="fas fa-stopwatch" style="margin-right:4px;color:var(--accent)"></i>
-      Activa el cronómetro en cada ejercicio al registrar para acumular más datos.
+      Activa el cronómetro en cada estación al registrar para acumular más datos.
     </div>
+    {% endif %}
+
   </section>
   {% endif %}
 
