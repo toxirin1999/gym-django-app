@@ -336,8 +336,9 @@ def hyrox_dashboard(request):
         }
 
     # ── SPLITS POR ESTACIÓN ────────────────────────────────────────────
-    splits_estaciones = None
+    splits_estaciones = []
     if objetivo_activo:
+        import datetime as _dt
         from .models import HyroxActivity
         from .services import HyroxRaceSimulator
 
@@ -351,9 +352,11 @@ def hyrox_dashboard(request):
             'sandbag': 'Sandbag Lunges', 'sandbag lunge': 'Sandbag Lunges',
             'wall ball': 'Wall Balls', 'wall balls': 'Wall Balls',
         }
-        REFERENCIA = HyroxRaceSimulator.TIEMPOS_BASE_OPEN_SEGUNDOS  # {nombre: secs}
+        REFERENCIA = HyroxRaceSimulator.TIEMPOS_BASE_OPEN_SEGUNDOS
 
-        tiempos_acum = {}  # {nombre_canon: [secs, ...]}
+        tiempos_acum = {}       # {canon: [secs, ...]}
+        tiempos_por_semana = {} # {canon: {(year, week): [secs, ...]}}
+
         acts_timer = HyroxActivity.objects.filter(
             sesion__objective=objetivo_activo,
             sesion__estado='completado',
@@ -367,28 +370,53 @@ def hyrox_dashboard(request):
             canon = next((v for k, v in NOMBRE_CANON.items() if k in nombre_lower), None)
             if not canon:
                 continue
-            tiempos_acum.setdefault(canon, []).append(int(secs))
+            secs = int(secs)
+            tiempos_acum.setdefault(canon, []).append(secs)
+            fecha_s = act.sesion.fecha or timezone.localdate()
+            iso_w = fecha_s.isocalendar()[:2]  # (year, week)
+            tiempos_por_semana.setdefault(canon, {}).setdefault(iso_w, []).append(secs)
 
-        if tiempos_acum:
-            splits_estaciones = []
-            for nombre, lista in sorted(tiempos_acum.items()):
+        hoy = timezone.localdate()
+        for nombre, ref in sorted(REFERENCIA.items()):
+            lista = tiempos_acum.get(nombre, [])
+            semanas_dict = tiempos_por_semana.get(nombre, {})
+
+            # Últimas 6 semanas para la tendencia
+            tendencia = []
+            for w in range(5, -1, -1):
+                d = hoy - _dt.timedelta(weeks=w)
+                iso = d.isocalendar()[:2]
+                vals = semanas_dict.get(iso, [])
+                avg = round(sum(vals) / len(vals)) if vals else None
+                # progreso = qué % del objetivo cumple (100 = en objetivo, >100 = por encima)
+                pct = min(round((ref / avg) * 100), 100) if avg else 0
+                tendencia.append({'label': f"S-{w}" if w > 0 else "Esta", 'avg_secs': avg, 'pct': pct})
+
+            if lista:
                 promedio = round(sum(lista) / len(lista))
-                ref = REFERENCIA.get(nombre)
-                gap = promedio - ref if ref else None
+                gap = promedio - ref
                 mejor = min(lista)
-                splits_estaciones.append({
-                    'nombre': nombre,
-                    'promedio_secs': promedio,
-                    'promedio_str': f"{promedio // 60}:{promedio % 60:02d}",
-                    'mejor_secs': mejor,
-                    'mejor_str': f"{mejor // 60}:{mejor % 60:02d}",
-                    'ref_secs': ref,
-                    'ref_str': f"{ref // 60}:{ref % 60:02d}" if ref else None,
-                    'gap_secs': gap,
-                    'gap_str': (f"+{gap // 60}:{gap % 60:02d}" if gap and gap > 0 else f"{gap // 60}:{abs(gap) % 60:02d}") if gap else None,
-                    'pct_ref': round((ref / promedio) * 100) if ref else None,
-                    'sesiones': len(lista),
-                })
+                pct_ref = min(round((ref / promedio) * 100), 100)
+                gap_str = (f"+{gap // 60}:{abs(gap) % 60:02d}" if gap > 0 else f"-{abs(gap) // 60}:{abs(gap) % 60:02d}") if gap != 0 else "0:00"
+            else:
+                promedio = mejor = gap = pct_ref = None
+                gap_str = None
+
+            splits_estaciones.append({
+                'nombre': nombre,
+                'promedio_secs': promedio,
+                'promedio_str': f"{promedio // 60}:{promedio % 60:02d}" if promedio else None,
+                'mejor_secs': mejor,
+                'mejor_str': f"{mejor // 60}:{mejor % 60:02d}" if mejor else None,
+                'ref_secs': ref,
+                'ref_str': f"{ref // 60}:{ref % 60:02d}",
+                'gap_secs': gap,
+                'gap_str': gap_str,
+                'pct_ref': pct_ref or 0,
+                'sesiones': len(lista),
+                'tendencia': tendencia,
+                'tiene_datos': bool(lista),
+            })
 
     if objetivo_activo:
         from .services import CompetitionStandardsService, HyroxMacrocycleEngine
