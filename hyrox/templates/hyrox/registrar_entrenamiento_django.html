@@ -386,6 +386,33 @@
   }
   .rb-done-btn svg { width: 14px; height: 14px; }
 
+  /* ── CRONÓMETRO ──────────────────────────────── */
+  .rb-timer {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px; margin-top: 10px;
+    background: var(--paper-2); border: 1px solid var(--line-2); border-radius: 4px;
+  }
+  .rb-timer-display {
+    font-family: var(--font-mono); font-size: 26px; font-weight: 700;
+    color: var(--ink); letter-spacing: 0.04em; font-variant-numeric: tabular-nums;
+    flex: 1; line-height: 1;
+  }
+  .rb-timer-display.rb-timer--running { color: var(--accent); }
+  .rb-timer-display.rb-timer--done { color: var(--ok); }
+  .rb-timer-btn {
+    width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--ink);
+    background: transparent; cursor: pointer; display: flex; align-items: center;
+    justify-content: center; flex-shrink: 0; transition: all 0.15s;
+  }
+  .rb-timer-btn:hover { background: var(--ink); color: var(--paper); }
+  .rb-timer-btn svg { width: 14px; height: 14px; pointer-events: none; }
+  .rb-timer-btn.rb-timer-btn--start { border-color: var(--accent); color: var(--accent); }
+  .rb-timer-btn.rb-timer-btn--start:hover { background: var(--accent); color: var(--paper); }
+  .rb-timer-btn.rb-timer-btn--stop { border-color: var(--danger); color: var(--danger); }
+  .rb-timer-btn.rb-timer-btn--stop:hover { background: var(--danger); color: var(--paper); }
+  .rb-timer-btn.rb-timer-btn--reset { border-color: var(--line-2); color: var(--ink-4); width: 28px; height: 28px; }
+  .rb-timer-lbl { font-family: var(--font-mono); font-size: 9px; color: var(--ink-5); text-transform: uppercase; }
+
   /* ── METRICS STRIP ───────────────────────────── */
   .rb-metrics {
     display: grid; grid-template-columns: 1fr 1fr 1fr;
@@ -824,6 +851,7 @@
                   </div>
                 </div>
 
+                {% include 'hyrox/partials/_timer.html' with card_id=idx %}
                 <button type="button" class="rb-done-btn" id="rb-done-{{ idx }}"
                         onclick="rbToggleDone('rb-card-{{ idx }}', this)">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
@@ -869,6 +897,7 @@
                   </div>
                 </div>
 
+                {% include 'hyrox/partials/_timer.html' with card_id=idx %}
                 <button type="button" class="rb-done-btn"
                         onclick="rbToggleDone('rb-card-{{ idx }}', this)">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
@@ -908,6 +937,7 @@
                   </div>
                 </div>
 
+                {% include 'hyrox/partials/_timer.html' with card_id=idx %}
                 <button type="button" class="rb-done-btn"
                         onclick="rbToggleDone('rb-card-{{ idx }}', this)">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
@@ -1236,6 +1266,52 @@ function rbSyncGlobal() {
 rbSyncGlobal();
 
 /* ── Submit: build notas_raw then submit form ── */
+/* ── CRONÓMETRO ───────────────────────────────── */
+const _rbTimers = {};  // {id: {interval, secs, running}}
+
+function rbTimerToggle(id) {
+  if (!_rbTimers[id]) _rbTimers[id] = { interval: null, secs: 0, running: false };
+  const t = _rbTimers[id];
+  const disp = document.getElementById('rb-tdisp-' + id);
+  const btn  = document.getElementById('rb-tbtn-'  + id);
+
+  if (t.running) {
+    // STOP
+    clearInterval(t.interval);
+    t.running = false;
+    disp.classList.remove('rb-timer--running');
+    disp.classList.add('rb-timer--done');
+    disp.dataset.secs = t.secs;
+    btn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>';
+    btn.className = 'rb-timer-btn rb-timer-btn--start';
+    btn.title = 'Reanudar';
+  } else {
+    // START
+    t.running = true;
+    disp.classList.add('rb-timer--running');
+    disp.classList.remove('rb-timer--done');
+    btn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>';
+    btn.className = 'rb-timer-btn rb-timer-btn--stop';
+    btn.title = 'Parar';
+    t.interval = setInterval(function() {
+      t.secs++;
+      const m = Math.floor(t.secs / 60), s = t.secs % 60;
+      disp.textContent = String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+    }, 1000);
+  }
+}
+
+function rbTimerReset(id) {
+  if (_rbTimers[id]) {
+    clearInterval(_rbTimers[id].interval);
+    _rbTimers[id] = { interval: null, secs: 0, running: false };
+  }
+  const disp = document.getElementById('rb-tdisp-' + id);
+  const btn  = document.getElementById('rb-tbtn-'  + id);
+  if (disp) { disp.textContent = '00:00'; disp.dataset.secs = 0; disp.className = 'rb-timer-display'; }
+  if (btn)  { btn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>'; btn.className = 'rb-timer-btn rb-timer-btn--start'; }
+}
+
 function rbBuildNotasRaw() {
   const extra = document.getElementById('id_notas_extra').value.trim();
   const lines = [];
@@ -1257,11 +1333,16 @@ function rbBuildNotasRaw() {
       return;
     }
 
+    /* Helper: obtener segundos del cronómetro de esta card */
+    const cardIdx = card.id.split('-').pop();
+    const timerDisp = document.getElementById('rb-tdisp-' + cardIdx);
+    const timerSecs = timerDisp ? parseInt(timerDisp.dataset.secs || '0') : 0;
+    const timerSuffix = timerSecs > 0 ? ` [${timerSecs}s]` : '';
+
     /* Cardio (km + pace) */
     const distKm = card.querySelector('.rb-input-distkm');
     if (distKm) {
-      const idx = card.id.split('-').pop();
-      const timeIn = document.getElementById('rb-time-' + idx);
+      const timeIn = document.getElementById('rb-time-' + cardIdx);
       let line = `${name} ${distKm.value}km`;
       if (timeIn?.value) {
         const d = parseFloat(distKm.value), m = parseFloat(timeIn.value);
@@ -1271,6 +1352,7 @@ function rbBuildNotasRaw() {
           line += ` · ${m}min · ritmo ${pm}:${String(ps).padStart(2,'0')}/km`;
         }
       }
+      line += timerSuffix;
       lines.push(line);
       return;
     }
@@ -1282,6 +1364,7 @@ function rbBuildNotasRaw() {
       if (repsTotal.value) {
         let line = `${name}: ${repsTotal.value} reps`;
         if (cargaStation && cargaStation.value) line += ` @${cargaStation.value}kg`;
+        line += timerSuffix;
         lines.push(line);
       }
       return;
@@ -1293,6 +1376,7 @@ function rbBuildNotasRaw() {
     if (distM) {
       let line = `${name} ${distM.value}m`;
       if (carga && carga.value) line += ` @${carga.value}kg`;
+      line += timerSuffix;
       lines.push(line);
       return;
     }

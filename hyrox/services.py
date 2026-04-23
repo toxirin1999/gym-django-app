@@ -142,6 +142,8 @@ class HyroxParserService:
         re_reps_simple = re.compile(r'(\d+)\s*reps?', re.IGNORECASE)
         # Tiempo en minutos (específico): "8min" → float
         re_tiempo_min = re.compile(r'(\d+(?:[.,]\d+)?)\s*min', re.IGNORECASE)
+        # Tiempo del cronómetro: "[125s]" → int segundos
+        re_timer_secs = re.compile(r'\[(\d+)s\]')
 
         for raw_line in raw_text.splitlines():
             line = raw_line.strip().lstrip('-•·*').strip()
@@ -249,6 +251,10 @@ class HyroxParserService:
             else:
                 series_data = []
 
+            # Extraer tiempo del cronómetro: "[125s]"
+            timer_match = re_timer_secs.search(line)
+            tiempo_segundos = int(timer_match.group(1)) if timer_match else None
+
             act = {
                 'tipo_actividad': tipo,
                 'nombre_ejercicio': nombre,
@@ -257,6 +263,8 @@ class HyroxParserService:
                 act['series_data'] = series_data
             if carrera_data:
                 act['carrera_data'] = carrera_data
+            if tiempo_segundos:
+                act['tiempo_segundos'] = tiempo_segundos
 
             actividades.append(act)
 
@@ -358,6 +366,9 @@ class HyroxParserService:
 
             if "carrera_data" in item:
                 data_metricas.update(item["carrera_data"])
+
+            if item.get("tiempo_segundos"):
+                data_metricas["tiempo_segundos"] = item["tiempo_segundos"]
 
             # ── Recuperar plan para esta actividad ──────────────────────────
             real_idx = real_tipo_counters.get(tipo, 0)
