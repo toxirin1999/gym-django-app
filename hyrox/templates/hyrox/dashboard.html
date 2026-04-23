@@ -1212,8 +1212,16 @@ a.rb-dia:hover { background: var(--paper-2); text-decoration: none; }
       </span>
       <h2 class="rb-section-title">Mis splits</h2>
       <div class="rb-section-line"></div>
-      <span class="rb-section-right">VS OPEN</span>
+      <span class="rb-section-right" style="font-size:9px;">
+        {{ splits_categoria|default:"Open" }}{% if splits_edad %} · {{ splits_edad }} años{% endif %}
+      </span>
     </div>
+    {% if splits_edad and splits_edad >= 40 %}
+    <div style="font-family:var(--font-mono);font-size:9px;color:var(--ink-5);margin-bottom:8px;padding:6px 10px;background:var(--paper);border:1px solid var(--line);border-radius:6px;">
+      <i class="fas fa-info-circle" style="color:var(--accent);margin-right:4px;"></i>
+      Los estándares muestran la categoría <strong>{{ splits_categoria }}</strong>. Hyrox tiene categorías Masters (40+/50+) con tiempos más ajustados — estos valores son orientativos.
+    </div>
+    {% endif %}
 
     {% if not splits_estaciones or splits_estaciones|length == 0 %}
     <div class="rb-splits-note" style="text-align:center;padding:20px;">

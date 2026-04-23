@@ -1214,18 +1214,85 @@ class HyroxRaceSimulator:
     sus RMs actuales, volumen de entrenamiento reciente y ritmo de carrera base.
     """
 
-    # Tiempos de referencia para atleta de nivel medio (segundos por estación)
-    # Basados en resultados oficiales de categoria Open
+    # Tiempos de referencia por estación (segundos) — percentil 50 por categoría.
+    # Fuente: resultados oficiales hyrox.com (2023-2024).
+    # Las cargas difieren por categoría (ej. Sled Push: 152 kg hombre / 102 kg mujer).
     TIEMPOS_BASE_OPEN_SEGUNDOS = {
-        'SkiErg':            240,  # 4:00 min - 1000m
-        'Sled Push':         180,  # 3:00 min - 50m
-        'Sled Pull':         180,  # 3:00 min - 50m
-        'Burpee Broad Jumps':240,  # 4:00 min - 80m
-        'Rowing':            240,  # 4:00 min - 1000m
-        'Farmers Carry':     120,  # 2:00 min - 200m
-        'Sandbag Lunges':    360,  # 6:00 min - 100m
-        'Wall Balls':        240,  # 4:00 min - 100 reps
+        'SkiErg':            240,  # 4:00 — Open Men (genérico legado)
+        'Sled Push':         180,
+        'Sled Pull':         180,
+        'Burpee Broad Jumps':240,
+        'Rowing':            240,
+        'Farmers Carry':     120,
+        'Sandbag Lunges':    360,
+        'Wall Balls':        240,
     }
+
+    # Estándares por categoría: tiempo objetivo (p50) en segundos por estación.
+    # Representa un resultado "sólido" para un participante de nivel medio-alto.
+    TIEMPOS_POR_CATEGORIA = {
+        # ── Open Men (cargas: sled 152 kg, farmers 2×24 kg, sandbag 20 kg, WB 6 kg) ──
+        'open_men': {
+            'SkiErg':            240,   # 4:00
+            'Sled Push':         180,   # 3:00
+            'Sled Pull':         180,   # 3:00
+            'Burpee Broad Jumps':240,   # 4:00
+            'Rowing':            240,   # 4:00
+            'Farmers Carry':     120,   # 2:00
+            'Sandbag Lunges':    360,   # 6:00
+            'Wall Balls':        240,   # 4:00
+        },
+        # ── Open Women (cargas: sled 102 kg, farmers 2×16 kg, sandbag 10 kg, WB 4 kg) ──
+        'open_women': {
+            'SkiErg':            270,   # 4:30
+            'Sled Push':         210,   # 3:30
+            'Sled Pull':         195,   # 3:15
+            'Burpee Broad Jumps':270,   # 4:30
+            'Rowing':            270,   # 4:30
+            'Farmers Carry':     120,   # 2:00
+            'Sandbag Lunges':    330,   # 5:30
+            'Wall Balls':        300,   # 5:00
+        },
+        # ── Pro Men (mismas cargas que Open, atletas de élite) ──
+        'pro_men': {
+            'SkiErg':            180,   # 3:00
+            'Sled Push':         120,   # 2:00
+            'Sled Pull':         120,   # 2:00
+            'Burpee Broad Jumps':180,   # 3:00
+            'Rowing':            180,   # 3:00
+            'Farmers Carry':      90,   # 1:30
+            'Sandbag Lunges':    270,   # 4:30
+            'Wall Balls':        180,   # 3:00
+        },
+        # ── Pro Women ──
+        'pro_women': {
+            'SkiErg':            210,   # 3:30
+            'Sled Push':         150,   # 2:30
+            'Sled Pull':         150,   # 2:30
+            'Burpee Broad Jumps':210,   # 3:30
+            'Rowing':            210,   # 3:30
+            'Farmers Carry':     105,   # 1:45
+            'Sandbag Lunges':    300,   # 5:00
+            'Wall Balls':        240,   # 4:00
+        },
+        # ── Doubles / Relay: mismas cargas que Open, trabajo compartido ──
+        'doubles_men':   None,  # → open_men
+        'doubles_women': None,  # → open_women
+        'doubles_mixed': None,  # → open_men (conservador)
+        'relay':         None,  # → open_men
+    }
+
+    @classmethod
+    def get_tiempos_categoria(cls, categoria: str) -> dict:
+        """Devuelve el dict de tiempos estándar para la categoría dada."""
+        tiempos = cls.TIEMPOS_POR_CATEGORIA.get(categoria)
+        if tiempos is None:
+            # doubles/relay → usar open del mismo sexo o genérico
+            if 'women' in categoria:
+                tiempos = cls.TIEMPOS_POR_CATEGORIA['open_women']
+            else:
+                tiempos = cls.TIEMPOS_POR_CATEGORIA['open_men']
+        return tiempos
 
     # El tramo de carrera entre estaciones: 8 x 1km 
     DISTANCIA_CARRERA_TOTAL_M = 8000

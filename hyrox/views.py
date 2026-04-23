@@ -335,6 +335,14 @@ def hyrox_dashboard(request):
             'num_sesiones': len(puntos_ritmo),
         }
 
+    # ── EDAD DEL ATLETA ───────────────────────────────────────────────
+    edad_atleta = None
+    if objetivo_activo and cliente.fecha_nacimiento:
+        import datetime as _dt2
+        hoy_e = timezone.localdate()
+        fn = cliente.fecha_nacimiento
+        edad_atleta = hoy_e.year - fn.year - ((hoy_e.month, hoy_e.day) < (fn.month, fn.day))
+
     # ── SPLITS POR ESTACIÓN ────────────────────────────────────────────
     splits_estaciones = []
     if objetivo_activo:
@@ -352,7 +360,7 @@ def hyrox_dashboard(request):
             'sandbag': 'Sandbag Lunges', 'sandbag lunge': 'Sandbag Lunges',
             'wall ball': 'Wall Balls', 'wall balls': 'Wall Balls',
         }
-        REFERENCIA = HyroxRaceSimulator.TIEMPOS_BASE_OPEN_SEGUNDOS
+        REFERENCIA = HyroxRaceSimulator.get_tiempos_categoria(objetivo_activo.categoria)
 
         tiempos_acum = {}       # {canon: [secs, ...]}
         tiempos_por_semana = {} # {canon: {(year, week): [secs, ...]}}
@@ -517,6 +525,8 @@ def hyrox_dashboard(request):
         'ultimo_reporte': ultimo_reporte,
         'evolucion_carrera': evolucion_carrera,
         'splits_estaciones': splits_estaciones,
+        'splits_categoria': objetivo_activo.get_categoria_display() if objetivo_activo else None,
+        'splits_edad': edad_atleta,
         'sustituciones_activas': sustituciones_activas if 'sustituciones_activas' in locals() else [],
         'sustituciones_dict': sustituciones_dict if 'sustituciones_dict' in locals() else {},
     }
