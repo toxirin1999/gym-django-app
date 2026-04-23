@@ -486,6 +486,24 @@ a.rb-dia:hover { background: var(--paper-2); text-decoration: none; }
 .rb-run-fc-title { font-family: var(--font-mono); font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--ink-5); margin-bottom: 8px; }
 .rb-run-fc-list { display: flex; flex-wrap: wrap; gap: 6px; }
 
+/* ── SPLITS ──────────────────────────────────── */
+.rb-splits-intro { font-family: var(--font-mono); font-size: 10px; color: var(--ink-5); margin-bottom: 10px; }
+.rb-splits-table { display: flex; flex-direction: column; gap: 8px; }
+.rb-split-row { background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
+.rb-split-name { font-family: var(--font-disp); font-size: 13px; font-weight: 700; margin-bottom: 8px; }
+.rb-split-times { display: flex; gap: 16px; align-items: flex-end; margin-bottom: 8px; }
+.rb-split-val { font-family: var(--font-mono); font-size: 22px; font-weight: 700; line-height: 1; display: flex; flex-direction: column; }
+.rb-split-ref { font-family: var(--font-mono); font-size: 16px; color: var(--ink-4); line-height: 1; display: flex; flex-direction: column; }
+.rb-split-lbl { font-size: 8px; text-transform: uppercase; color: var(--ink-5); margin-top: 2px; font-weight: 400; }
+.rb-split-gap { font-family: var(--font-mono); font-size: 13px; font-weight: 700; margin-left: auto; align-self: center; }
+.rb-split-ok { color: #1DC8B8; }
+.rb-split-warn { color: #EF4444; }
+.rb-split-mid { color: #F59E0B; }
+.rb-split-bar-wrap { height: 4px; background: var(--line); border-radius: 2px; margin-bottom: 6px; }
+.rb-split-bar-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width .4s ease; }
+.rb-split-meta { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 9px; color: var(--ink-5); }
+.rb-splits-note { font-family: var(--font-mono); font-size: 10px; color: var(--ink-5); margin-top: 8px; padding: 8px 10px; background: var(--paper); border: 1px solid var(--line); border-radius: 6px; }
+
 /* responsive */
 @media (min-width: 720px) {
   .rb-container { max-width: 760px; }
@@ -1162,6 +1180,60 @@ a.rb-dia:hover { background: var(--paper-2); text-decoration: none; }
     </div>
     {% endif %}
 
+  </section>
+  {% endif %}
+
+  <!-- ═══════════════ SPLITS ═══════════════ -->
+  {% if splits_estaciones %}
+  <section class="rb-section rb-a6">
+    <div class="rb-section-head">
+      <span class="rb-section-num">
+        {% if lesion_activa %}07{% elif evolucion_carrera and evolucion_carrera.num_sesiones > 0 %}06{% else %}05{% endif %}
+      </span>
+      <h2 class="rb-section-title">Mis splits</h2>
+      <div class="rb-section-line"></div>
+      <span class="rb-section-right">VS OPEN</span>
+    </div>
+    <div class="rb-splits-intro">
+      Tiempo medio por estación comparado con el estándar Open.
+    </div>
+    <div class="rb-splits-table">
+      {% for split in splits_estaciones %}
+      <div class="rb-split-row">
+        <div class="rb-split-name">{{ split.nombre }}</div>
+        <div class="rb-split-times">
+          <div class="rb-split-val {% if split.gap_secs and split.gap_secs <= 0 %}rb-split-ok{% elif split.gap_secs and split.gap_secs > 30 %}rb-split-warn{% endif %}">
+            {{ split.promedio_str }}
+            <span class="rb-split-lbl">promedio</span>
+          </div>
+          {% if split.ref_str %}
+          <div class="rb-split-ref">
+            {{ split.ref_str }}
+            <span class="rb-split-lbl">objetivo</span>
+          </div>
+          {% endif %}
+          {% if split.gap_str %}
+          <div class="rb-split-gap {% if split.gap_secs <= 0 %}rb-split-ok{% elif split.gap_secs > 30 %}rb-split-warn{% else %}rb-split-mid{% endif %}">
+            {{ split.gap_str }}
+          </div>
+          {% endif %}
+        </div>
+        {% if split.ref_secs %}
+        <div class="rb-split-bar-wrap">
+          <div class="rb-split-bar-fill" style="width:{% if split.pct_ref > 100 %}100{% else %}{{ split.pct_ref }}{% endif %}%"></div>
+        </div>
+        {% endif %}
+        <div class="rb-split-meta">
+          <span>Mejor: <strong>{{ split.mejor_str }}</strong></span>
+          <span>{{ split.sesiones }} sesión{% if split.sesiones != 1 %}es{% endif %}</span>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="rb-splits-note">
+      <i class="fas fa-stopwatch" style="margin-right:4px;color:var(--accent)"></i>
+      Activa el cronómetro en cada ejercicio al registrar para acumular más datos.
+    </div>
   </section>
   {% endif %}
 

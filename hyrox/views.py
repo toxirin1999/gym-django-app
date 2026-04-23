@@ -335,6 +335,61 @@ def hyrox_dashboard(request):
             'num_sesiones': len(puntos_ritmo),
         }
 
+    # ── SPLITS POR ESTACIÓN ────────────────────────────────────────────
+    splits_estaciones = None
+    if objetivo_activo:
+        from .models import HyroxActivity
+        from .services import HyroxRaceSimulator
+
+        NOMBRE_CANON = {
+            'skierg': 'SkiErg', 'ski erg': 'SkiErg',
+            'sled push': 'Sled Push',
+            'sled pull': 'Sled Pull',
+            'burpee broad jump': 'Burpee Broad Jumps', 'burpees broad jump': 'Burpee Broad Jumps',
+            'rowing': 'Rowing', 'remo': 'Rowing', 'remo ergometro': 'Rowing',
+            'farmer': 'Farmers Carry', 'farmer carry': 'Farmers Carry', "farmer's carry": 'Farmers Carry',
+            'sandbag': 'Sandbag Lunges', 'sandbag lunge': 'Sandbag Lunges',
+            'wall ball': 'Wall Balls', 'wall balls': 'Wall Balls',
+        }
+        REFERENCIA = HyroxRaceSimulator.TIEMPOS_BASE_OPEN_SEGUNDOS  # {nombre: secs}
+
+        tiempos_acum = {}  # {nombre_canon: [secs, ...]}
+        acts_timer = HyroxActivity.objects.filter(
+            sesion__objective=objetivo_activo,
+            sesion__estado='completado',
+        ).exclude(data_metricas__tiempo_segundos__isnull=True).select_related('sesion')
+
+        for act in acts_timer:
+            secs = act.data_metricas.get('tiempo_segundos')
+            if not secs or secs <= 0:
+                continue
+            nombre_lower = (act.nombre_ejercicio or '').lower().strip()
+            canon = next((v for k, v in NOMBRE_CANON.items() if k in nombre_lower), None)
+            if not canon:
+                continue
+            tiempos_acum.setdefault(canon, []).append(int(secs))
+
+        if tiempos_acum:
+            splits_estaciones = []
+            for nombre, lista in sorted(tiempos_acum.items()):
+                promedio = round(sum(lista) / len(lista))
+                ref = REFERENCIA.get(nombre)
+                gap = promedio - ref if ref else None
+                mejor = min(lista)
+                splits_estaciones.append({
+                    'nombre': nombre,
+                    'promedio_secs': promedio,
+                    'promedio_str': f"{promedio // 60}:{promedio % 60:02d}",
+                    'mejor_secs': mejor,
+                    'mejor_str': f"{mejor // 60}:{mejor % 60:02d}",
+                    'ref_secs': ref,
+                    'ref_str': f"{ref // 60}:{ref % 60:02d}" if ref else None,
+                    'gap_secs': gap,
+                    'gap_str': (f"+{gap // 60}:{gap % 60:02d}" if gap and gap > 0 else f"{gap // 60}:{abs(gap) % 60:02d}") if gap else None,
+                    'pct_ref': round((ref / promedio) * 100) if ref else None,
+                    'sesiones': len(lista),
+                })
+
     if objetivo_activo:
         from .services import CompetitionStandardsService, HyroxMacrocycleEngine
         from .models import UserInjury, DailyRecoveryEntry
@@ -433,6 +488,7 @@ def hyrox_dashboard(request):
         'lesion_activa': lesion_activa,
         'ultimo_reporte': ultimo_reporte,
         'evolucion_carrera': evolucion_carrera,
+        'splits_estaciones': splits_estaciones,
         'sustituciones_activas': sustituciones_activas if 'sustituciones_activas' in locals() else [],
         'sustituciones_dict': sustituciones_dict if 'sustituciones_dict' in locals() else {},
     }
