@@ -796,6 +796,7 @@
                     ADD
                   </button>
                 </div>
+                {% include 'hyrox/partials/_timer.html' with card_id=idx %}
               </article>
 
             {% elif act.data_metricas.distancia_km %}
@@ -958,6 +959,7 @@
                 {% if act.data_metricas.coach_tip %}
                 <div class="rb-tip" style="margin-top:10px"><span class="rb-tip-label">COACH TIP</span>{{ act.data_metricas.coach_tip }}</div>
                 {% endif %}
+                {% include 'hyrox/partials/_timer.html' with card_id=idx %}
                 <button type="button" class="rb-done-btn"
                         onclick="rbToggleDone('rb-card-{{ idx }}', this)">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
@@ -1320,6 +1322,12 @@ function rbBuildNotasRaw() {
     const name = card.dataset.name;
     if (!name) return;
 
+    /* Helper: obtener segundos del cronómetro de esta card */
+    const cardIdx = card.id.split('-').pop();
+    const timerDisp = document.getElementById('rb-tdisp-' + cardIdx);
+    const timerSecs = timerDisp ? parseInt(timerDisp.dataset.secs || '0') : 0;
+    const timerSuffix = timerSecs > 0 ? ` [${timerSecs}s]` : '';
+
     /* Strength */
     const series = card.querySelectorAll('.rb-serie');
     if (series.length) {
@@ -1329,15 +1337,9 @@ function rbBuildNotasRaw() {
         const k = (row.querySelector('.rb-input-kg')?.value  || '').trim();
         if (r) parts.push(k ? `${r}@${k}kg` : `${r} reps`);
       });
-      if (parts.length) lines.push(`${name}: ${parts.join(', ')}`);
+      if (parts.length) lines.push(`${name}: ${parts.join(', ')}${timerSuffix}`);
       return;
     }
-
-    /* Helper: obtener segundos del cronómetro de esta card */
-    const cardIdx = card.id.split('-').pop();
-    const timerDisp = document.getElementById('rb-tdisp-' + cardIdx);
-    const timerSecs = timerDisp ? parseInt(timerDisp.dataset.secs || '0') : 0;
-    const timerSuffix = timerSecs > 0 ? ` [${timerSecs}s]` : '';
 
     /* Cardio (km + pace) */
     const distKm = card.querySelector('.rb-input-distkm');
