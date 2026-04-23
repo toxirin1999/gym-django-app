@@ -543,6 +543,33 @@
   .rb-submit-eyebrow { font-family: var(--font-mono); font-size: 9px; font-weight: 700; letter-spacing: 0.2em; opacity: 0.7; }
   .rb-submit-label { font-family: var(--font-disp); font-size: 17px; letter-spacing: 0.02em; text-transform: uppercase; line-height: 1.1; }
   .rb-submit svg { width: 22px; height: 22px; }
+
+  /* ── CRONÓMETRO ──────────────────────────────── */
+  .rb-timer {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px; margin-top: 10px;
+    background: var(--paper-2); border: 1px solid var(--line-2); border-radius: 4px;
+  }
+  .rb-timer-display {
+    font-family: var(--font-mono); font-size: 26px; font-weight: 700;
+    color: var(--ink); letter-spacing: 0.04em; font-variant-numeric: tabular-nums;
+    flex: 1; line-height: 1;
+  }
+  .rb-timer-display.rb-timer--running { color: var(--accent); }
+  .rb-timer-display.rb-timer--done { color: var(--ok); }
+  .rb-timer-btn {
+    width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--ink);
+    background: transparent; cursor: pointer; display: flex; align-items: center;
+    justify-content: center; flex-shrink: 0; transition: all 0.15s;
+  }
+  .rb-timer-btn:hover { background: var(--ink); color: var(--paper); }
+  .rb-timer-btn svg { width: 14px; height: 14px; pointer-events: none; }
+  .rb-timer-btn.rb-timer-btn--start { border-color: var(--accent); color: var(--accent); }
+  .rb-timer-btn.rb-timer-btn--start:hover { background: var(--accent); color: var(--paper); }
+  .rb-timer-btn.rb-timer-btn--stop { border-color: var(--danger); color: var(--danger); }
+  .rb-timer-btn.rb-timer-btn--stop:hover { background: var(--danger); color: var(--paper); }
+  .rb-timer-btn.rb-timer-btn--reset { border-color: var(--line-2); color: var(--ink-4); width: 28px; height: 28px; }
+  .rb-timer-lbl { font-family: var(--font-mono); font-size: 9px; color: var(--ink-4); text-transform: uppercase; }
 </style>
 </head>
 <body>
@@ -687,6 +714,11 @@
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>ADD
                   </button>
                 </div>
+                <div class="rb-timer" id="rb-timer-{{ idx }}">
+                  <div style="flex:1"><div class="rb-timer-lbl">Tiempo ejercicio</div><div class="rb-timer-display" id="rb-tdisp-{{ idx }}" data-secs="0">00:00</div></div>
+                  <button type="button" class="rb-timer-btn rb-timer-btn--start" id="rb-tbtn-{{ idx }}" onclick="rbTimerToggle({{ idx }})" title="Iniciar"><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg></button>
+                  <button type="button" class="rb-timer-btn rb-timer-btn--reset" onclick="rbTimerReset({{ idx }})" title="Reset"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.95"/></svg></button>
+                </div>
               </article>
 
             {% elif act.data_metricas.distancia_km %}
@@ -724,6 +756,11 @@
                     <div class="rb-pace-note" id="rb-pace-note-{{ idx }}"></div>
                   </div>
                 </div>
+                <div class="rb-timer" id="rb-timer-{{ idx }}">
+                  <div style="flex:1"><div class="rb-timer-lbl">Tiempo ejercicio</div><div class="rb-timer-display" id="rb-tdisp-{{ idx }}" data-secs="0">00:00</div></div>
+                  <button type="button" class="rb-timer-btn rb-timer-btn--start" id="rb-tbtn-{{ idx }}" onclick="rbTimerToggle({{ idx }})" title="Iniciar"><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg></button>
+                  <button type="button" class="rb-timer-btn rb-timer-btn--reset" onclick="rbTimerReset({{ idx }})" title="Reset"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.95"/></svg></button>
+                </div>
                 <button type="button" class="rb-done-btn" id="rb-done-{{ idx }}" onclick="rbToggleDone('rb-card-{{ idx }}',this)">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>MARCAR COMPLETADA
                 </button>
@@ -755,6 +792,11 @@
                   </div>
                   {% endif %}
                 </div>
+                <div class="rb-timer" id="rb-timer-{{ idx }}">
+                  <div style="flex:1"><div class="rb-timer-lbl">Tiempo ejercicio</div><div class="rb-timer-display" id="rb-tdisp-{{ idx }}" data-secs="0">00:00</div></div>
+                  <button type="button" class="rb-timer-btn rb-timer-btn--start" id="rb-tbtn-{{ idx }}" onclick="rbTimerToggle({{ idx }})" title="Iniciar"><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg></button>
+                  <button type="button" class="rb-timer-btn rb-timer-btn--reset" onclick="rbTimerReset({{ idx }})" title="Reset"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.95"/></svg></button>
+                </div>
                 <button type="button" class="rb-done-btn" onclick="rbToggleDone('rb-card-{{ idx }}',this)">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>MARCAR COMPLETADA
                 </button>
@@ -768,6 +810,11 @@
                 </div>
                 <h3 class="rb-card-title">{% if act.is_substituted %}{{ act.display_name }}{% else %}{{ act.nombre_ejercicio }}{% endif %}</h3>
                 {% if act.data_metricas.coach_tip %}<div class="rb-tip" style="margin-top:10px"><span class="rb-tip-label">COACH TIP</span>{{ act.data_metricas.coach_tip }}</div>{% endif %}
+                <div class="rb-timer" id="rb-timer-{{ idx }}">
+                  <div style="flex:1"><div class="rb-timer-lbl">Tiempo ejercicio</div><div class="rb-timer-display" id="rb-tdisp-{{ idx }}" data-secs="0">00:00</div></div>
+                  <button type="button" class="rb-timer-btn rb-timer-btn--start" id="rb-tbtn-{{ idx }}" onclick="rbTimerToggle({{ idx }})" title="Iniciar"><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg></button>
+                  <button type="button" class="rb-timer-btn rb-timer-btn--reset" onclick="rbTimerReset({{ idx }})" title="Reset"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.95"/></svg></button>
+                </div>
                 <button type="button" class="rb-done-btn" onclick="rbToggleDone('rb-card-{{ idx }}',this)">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>MARCAR COMPLETADA
                 </button>
@@ -1050,10 +1097,50 @@ function rbSyncGlobal() {
 }
 rbSyncGlobal();
 
+/* ── CRONÓMETRO ───────────────────────────────── */
+const _rbTimers = {};
+
+function rbTimerToggle(id) {
+  if (!_rbTimers[id]) _rbTimers[id] = { interval: null, secs: 0, running: false };
+  const t = _rbTimers[id];
+  const disp = document.getElementById('rb-tdisp-' + id);
+  const btn  = document.getElementById('rb-tbtn-'  + id);
+  if (t.running) {
+    clearInterval(t.interval); t.running = false;
+    disp.classList.remove('rb-timer--running'); disp.classList.add('rb-timer--done');
+    disp.dataset.secs = t.secs;
+    btn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>';
+    btn.className = 'rb-timer-btn rb-timer-btn--start'; btn.title = 'Reanudar';
+  } else {
+    t.running = true;
+    disp.classList.add('rb-timer--running'); disp.classList.remove('rb-timer--done');
+    btn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>';
+    btn.className = 'rb-timer-btn rb-timer-btn--stop'; btn.title = 'Parar';
+    t.interval = setInterval(function() {
+      t.secs++;
+      const m = Math.floor(t.secs / 60), s = t.secs % 60;
+      disp.textContent = String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+    }, 1000);
+  }
+}
+
+function rbTimerReset(id) {
+  if (_rbTimers[id]) { clearInterval(_rbTimers[id].interval); _rbTimers[id] = { interval: null, secs: 0, running: false }; }
+  const disp = document.getElementById('rb-tdisp-' + id);
+  const btn  = document.getElementById('rb-tbtn-'  + id);
+  if (disp) { disp.textContent = '00:00'; disp.dataset.secs = 0; disp.className = 'rb-timer-display'; }
+  if (btn)  { btn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>'; btn.className = 'rb-timer-btn rb-timer-btn--start'; }
+}
+
 function rbBuildNotasRaw() {
   const lines = [];
   document.querySelectorAll('.rb-card').forEach(card => {
     const name = card.dataset.name; if (!name) return;
+    const cardIdx = card.id.split('-').pop();
+    const timerDisp = document.getElementById('rb-tdisp-' + cardIdx);
+    const timerSecs = timerDisp ? parseInt(timerDisp.dataset.secs || '0') : 0;
+    const timerSuffix = timerSecs > 0 ? ` [${timerSecs}s]` : '';
+
     const series = card.querySelectorAll('.rb-serie');
     if (series.length) {
       const parts = [];
@@ -1062,24 +1149,23 @@ function rbBuildNotasRaw() {
         const k = (row.querySelector('.rb-input-kg')?.value  || '').trim();
         if (r) parts.push(k ? `${r}@${k}kg` : `${r} reps`);
       });
-      if (parts.length) lines.push(`${name}: ${parts.join(', ')}`);
+      if (parts.length) lines.push(`${name}: ${parts.join(', ')}${timerSuffix}`);
       return;
     }
     const distKm = card.querySelector('.rb-input-distkm');
     if (distKm) {
-      const idx = card.id.split('-').pop();
-      const timeIn = document.getElementById('rb-time-' + idx);
+      const timeIn = document.getElementById('rb-time-' + cardIdx);
       let line = `${name} ${distKm.value}km`;
       if (timeIn?.value) {
         const d = parseFloat(distKm.value), m = parseFloat(timeIn.value);
         if (d > 0 && m > 0) { const s = Math.round((m*60)/d); line += ` · ${m}min · ritmo ${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}/km`; }
       }
-      lines.push(line); return;
+      line += timerSuffix; lines.push(line); return;
     }
     const distM = card.querySelector('.rb-input-distm');
     const carga = card.querySelector('.rb-input-carga');
-    if (distM) { let line = `${name} ${distM.value}m`; if (carga) line += ` @${carga.value}kg`; lines.push(line); return; }
-    if (card.classList.contains('rb-card--done')) lines.push(name);
+    if (distM) { let line = `${name} ${distM.value}m`; if (carga && carga.value) line += ` @${carga.value}kg`; line += timerSuffix; lines.push(line); return; }
+    if (card.classList.contains('rb-card--done')) lines.push(`${name}${timerSuffix}`);
   });
   const extra = (document.getElementById('id_notas_extra')?.value || '').trim();
   let raw = lines.join('\n');
