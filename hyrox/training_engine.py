@@ -402,6 +402,82 @@ class HyroxTrainingEngine:
         except Exception:
             return None
 
+    # Pesos oficiales de competición por categoría (kg)
+    PESOS_OFICIALES = {
+        'open_men':     {'sled_push': 152, 'sled_pull': 103, 'farmers': 24, 'sandbag': 20, 'wall_ball': 6},
+        'open_women':   {'sled_push': 102, 'sled_pull':  78, 'farmers': 16, 'sandbag': 10, 'wall_ball': 4},
+        'pro_men':      {'sled_push': 152, 'sled_pull': 103, 'farmers': 32, 'sandbag': 20, 'wall_ball': 6},
+        'pro_women':    {'sled_push': 102, 'sled_pull':  78, 'farmers': 20, 'sandbag': 10, 'wall_ball': 4},
+        'doubles_men':  {'sled_push': 152, 'sled_pull': 103, 'farmers': 24, 'sandbag': 20, 'wall_ball': 6},
+        'doubles_women':{'sled_push': 102, 'sled_pull':  78, 'farmers': 16, 'sandbag': 10, 'wall_ball': 4},
+        'doubles_mixed':{'sled_push': 102, 'sled_pull':  78, 'farmers': 20, 'sandbag': 15, 'wall_ball': 5},
+        'relay':        {'sled_push': 152, 'sled_pull': 103, 'farmers': 24, 'sandbag': 20, 'wall_ball': 6},
+    }
+
+    @classmethod
+    def _pesos_progresivos(cls, categoria, week, weeks_to_plan, is_deload, is_taper,
+                           nivel='intermedio', rpe_acumulado=None, tsb=None):
+        """
+        Devuelve los pesos de trabajo para estaciones con carga, escalados
+        progresivamente desde ~55% del oficial (semana 1) hasta 100% (simulación/peak).
+
+        Fase        | Factor base
+        Adaptation  | 0.55 → 0.65  (semanas 1-4)
+        Accumulation| 0.65 → 0.80  (semanas 5-12)
+        Intensif.   | 0.80 → 0.95  (semanas 13-20)
+        Simulation  | 1.00
+        Deload      | factor_fase × 0.75
+        Taper       | 0.55  (reducción de volumen, no reintroducir carga)
+        """
+        oficiales = cls.PESOS_OFICIALES.get(categoria, cls.PESOS_OFICIALES['open_men'])
+
+        if is_taper:
+            factor = 0.55
+        elif is_deload:
+            progreso = week / max(weeks_to_plan - 1, 1)
+            factor = round((0.55 + progreso * 0.45) * 0.75, 3)
+        else:
+            progreso = week / max(weeks_to_plan - 1, 1)
+            factor = round(0.55 + progreso * 0.45, 3)   # 0.55 → 1.00 lineal
+
+            # Ajuste por RPE acumulado (subjetivo)
+            if rpe_acumulado is not None:
+                if rpe_acumulado > 8.5:
+                    factor = max(factor - 0.05, 0.55)
+                elif rpe_acumulado < 6.0:
+                    factor = min(factor + 0.03, 1.00)
+
+            # Ajuste por TSB (objetivo, prioridad sobre RPE)
+            if tsb is not None:
+                if tsb < -25:
+                    factor = max(factor - 0.10, 0.55)
+                elif tsb < -15:
+                    factor = max(factor - 0.06, 0.57)
+                elif tsb < -5:
+                    factor = max(factor - 0.03, 0.58)
+                elif tsb > 10:
+                    factor = min(factor + 0.04, 1.00)
+
+        # Ajuste por nivel de experiencia
+        nivel_mult = {'principiante': 0.85, 'intermedio': 1.00, 'avanzado': 1.05}.get(nivel, 1.00)
+        factor = round(min(factor * nivel_mult, 1.00), 3)
+
+        def _kg(clave, redondeo=5):
+            oficial = oficiales[clave]
+            raw = oficial * factor
+            # Redondear al múltiplo de redondeo más cercano (placas reales)
+            return max(redondeo, round(raw / redondeo) * redondeo)
+
+        return {
+            'sled_push':  _kg('sled_push', 5),
+            'sled_pull':  _kg('sled_pull', 5),
+            'farmers':    _kg('farmers',   2),   # por mano
+            'sandbag':    _kg('sandbag',   2),
+            'wall_ball':  oficiales['wall_ball'], # el kg de wall ball no progresa (hay tallas fijas)
+            'factor':     factor,
+            'oficiales':  oficiales,
+        }
+
     @staticmethod
     def _distancia_carrera(nivel, week, weeks_to_plan, is_deload, is_taper):
         """
@@ -1356,46 +1432,58 @@ class HyroxTrainingEngine:
 
         # ── ESTACIONES HYROX ──────────────────────────────────────────────────
         elif template == 'hyrox_stations':
-            peso_sled_base = 100 if 'pro' not in objective.categoria.lower() else 150
+            pesos = HyroxTrainingEngine._pesos_progresivos(
+                objective.categoria, week, weeks_to_plan,
+                is_deload, is_taper, nivel, rpe_acumulado, tsb
+            )
 
-            # Escalar por fase y nivel
-            if is_taper:
-                peso_sled = peso_sled_base // 2
-            elif is_deload:
-                peso_sled = round(peso_sled_base * 0.60)
-            else:
-                peso_sled = peso_sled_base
-
-            if nivel == 'principiante':
-                peso_sled = round(peso_sled * 0.70)
-            elif nivel == 'avanzado':
-                peso_sled = round(peso_sled * 1.10)
-
-            # Wall Balls reps por nivel
-            wb_reps = {'principiante': 12, 'intermedio': 20, 'avanzado': 25}.get(nivel, 20)
+            # Wall Balls: reps objetivo progresivos (de parciales a 100 reps)
+            wb_reps_max = {'principiante': 15, 'intermedio': 25, 'avanzado': 30}.get(nivel, 25)
+            progreso_wb = week / max(weeks_to_plan - 1, 1)
+            wb_reps = max(8, round(8 + progreso_wb * (wb_reps_max - 8)))
             if is_deload or is_taper:
-                wb_reps = max(8, round(wb_reps * 0.60))
+                wb_reps = max(6, round(wb_reps * 0.60))
+
+            nota_progresion = (
+                f"Peso de trabajo: {round(pesos['factor']*100)}% del oficial "
+                f"({pesos['oficiales']['sled_push']} kg sled / "
+                f"{pesos['oficiales']['sandbag']} kg sandbag / "
+                f"{pesos['oficiales']['wall_ball']} kg WB). "
+                f"Progresión automática hacia el peso de competición."
+            )
 
             estaciones = [
                 {
                     'nombre': 'Sled Push',
-                    'distancia_m': 50, 'peso_kg': peso_sled,
-                    'tags': ['empuje_pierna', 'carga_distal_pierna']
+                    'distancia_m': 50,
+                    'peso_kg': pesos['sled_push'],
+                    'coach_tip': f"Peso hoy: {pesos['sled_push']} kg → oficial: {pesos['oficiales']['sled_push']} kg",
+                    'tags': ['empuje_pierna', 'carga_distal_pierna'],
                 },
                 {
                     'nombre': 'Wall Balls',
-                    'series': [{"reps": wb_reps}, {"reps": wb_reps}, {"reps": wb_reps}],
-                    'tags': ['impacto_vertical', 'flexion_rodilla_profunda']
+                    'series': [{"reps": wb_reps, "peso_kg": pesos['wall_ball']} for _ in range(3)],
+                    'coach_tip': f"{wb_reps} reps × {pesos['wall_ball']} kg (oficial: {pesos['oficiales']['wall_ball']} kg / 100 reps)",
+                    'tags': ['impacto_vertical', 'flexion_rodilla_profunda'],
                 },
                 {
                     'nombre': 'Burpees Broad Jump',
                     'distancia_m': 80,
-                    'tags': ['impacto_vertical', 'flexion_rodilla_profunda', 'triple_extension_explosiva']
+                    'tags': ['impacto_vertical', 'flexion_rodilla_profunda', 'triple_extension_explosiva'],
                 },
                 {
                     'nombre': 'Sandbag Lunges',
-                    'distancia_m': 80, 'peso_kg': 20,
-                    'tags': ['impacto_vertical', 'flexion_rodilla_profunda', 'estabilidad_tobillo']
+                    'distancia_m': 80,
+                    'peso_kg': pesos['sandbag'],
+                    'coach_tip': f"Peso hoy: {pesos['sandbag']} kg → oficial: {pesos['oficiales']['sandbag']} kg",
+                    'tags': ['impacto_vertical', 'flexion_rodilla_profunda', 'estabilidad_tobillo'],
+                },
+                {
+                    'nombre': 'Farmers Carry',
+                    'distancia_m': 200,
+                    'peso_kg': pesos['farmers'],
+                    'coach_tip': f"{pesos['farmers']} kg/mano → oficial: {pesos['oficiales']['farmers']} kg/mano",
+                    'tags': ['lumbar_carga'],
                 },
             ]
 
@@ -1403,9 +1491,8 @@ class HyroxTrainingEngine:
                 if restricted_tags and any(tag in restricted_tags for tag in est.get('tags', [])):
                     logger.info(f"Bio-Safe: Saltando {est['nombre']} por restricciones biomecánicas.")
                     continue
-
                 nombre_est = est.pop('nombre')
-                est.pop('tags', None)
+                tags_est   = est.pop('tags', None)
                 HyroxActivity.objects.create(
                     sesion=sesion,
                     tipo_actividad='hyrox_station',
@@ -1416,14 +1503,18 @@ class HyroxTrainingEngine:
         # ── SIMULACIÓN ────────────────────────────────────────────────────────
         elif template == 'simulacion':
             if not is_taper and not is_deload:
-                is_sub     = 'impacto_vertical' in restricted_tags or 'carrera' in restricted_tags
-                peso_sled  = 100 if 'pro' not in objective.categoria.lower() else 150
-                if nivel == 'principiante':
-                    peso_sled = round(peso_sled * 0.70)
+                is_sub = 'impacto_vertical' in restricted_tags or 'carrera' in restricted_tags
+                pesos  = HyroxTrainingEngine._pesos_progresivos(
+                    objective.categoria, week, weeks_to_plan,
+                    False, False, nivel, rpe_acumulado, tsb
+                )
 
-                # Tramos de carrera proporcionales a la semana del macrociclo
                 dist_carrera = HyroxTrainingEngine._distancia_carrera(nivel, week, weeks_to_plan, False, False)
                 dist_tramo   = round(min(dist_carrera * 0.35, 2.0), 1)
+
+                # Wall Balls en simulación: 50 reps (subimos progresivamente a 100)
+                progreso_sim = week / max(weeks_to_plan - 1, 1)
+                wb_sim_reps  = max(15, round(15 + progreso_sim * 85))  # 15 → 100
 
                 segmentos = [
                     {
@@ -1434,7 +1525,11 @@ class HyroxTrainingEngine:
                     {
                         'tipo': 'hyrox_station',
                         'nombre': 'Sled Push',
-                        'metricas': {"planificado": True, "distancia_m": 50, "peso_kg": peso_sled},
+                        'metricas': {
+                            "planificado": True, "distancia_m": 50,
+                            "peso_kg": pesos['sled_push'],
+                            "coach_tip": f"{pesos['sled_push']} kg → oficial {pesos['oficiales']['sled_push']} kg",
+                        },
                         'tags': ['empuje_pierna'],
                     },
                     {
@@ -1445,7 +1540,11 @@ class HyroxTrainingEngine:
                     {
                         'tipo': 'hyrox_station',
                         'nombre': 'Sled Pull',
-                        'metricas': {"planificado": True, "distancia_m": 25, "peso_kg": round(peso_sled * 0.60)},
+                        'metricas': {
+                            "planificado": True, "distancia_m": 25,
+                            "peso_kg": pesos['sled_pull'],
+                            "coach_tip": f"{pesos['sled_pull']} kg → oficial {pesos['oficiales']['sled_pull']} kg",
+                        },
                     },
                     {
                         'tipo': 'cardio_sustituto' if is_sub else 'carrera',
@@ -1455,7 +1554,11 @@ class HyroxTrainingEngine:
                     {
                         'tipo': 'hyrox_station',
                         'nombre': 'Wall Balls',
-                        'metricas': {"planificado": True, "series": [{"reps": 15}]},
+                        'metricas': {
+                            "planificado": True,
+                            "series": [{"reps": wb_sim_reps, "peso_kg": pesos['wall_ball']}],
+                            "coach_tip": f"{wb_sim_reps} reps × {pesos['wall_ball']} kg (objetivo: 100 reps)",
+                        },
                         'tags': ['impacto_vertical'],
                     },
                 ]
