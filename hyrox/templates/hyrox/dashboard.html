@@ -868,8 +868,121 @@ a.rb-dia:hover { background: var(--paper-2); text-decoration: none; }
   </div>
   {% endif %}
 
+  <!-- ═══════════════ RACE INTELLIGENCE COMMAND ═══════════════ -->
+  {% if race_briefing and not modo_competicion %}
+  <section class="rb-section rb-a2">
+    <div class="rb-section-head">
+      <span class="rb-section-num">00</span>
+      <h2 class="rb-section-title">Race Command</h2>
+      <div class="rb-section-line"></div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px 12px;">
+        <div style="font-size:9px;color:var(--ink-4);font-family:var(--font-body);margin-bottom:2px;">Tiempo estimado hoy</div>
+        <div style="font-family:var(--font-mono);font-size:20px;font-weight:700;color:var(--accent);">
+          {{ race_briefing.tiempo_estimado|default:"Sin datos" }}
+        </div>
+        {% if race_briefing.tiempo_rango_min %}
+        <div style="font-size:9px;color:var(--ink-4);font-family:var(--font-mono);margin-top:2px;">
+          {{ race_briefing.tiempo_rango_min }} – {{ race_briefing.tiempo_rango_max }}
+        </div>
+        {% endif %}
+      </div>
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:6px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-size:9px;color:var(--ink-4);font-family:var(--font-body);">Readiness</span>
+          <span style="font-family:var(--font-mono);font-size:13px;font-weight:700;color:{% if race_briefing.readiness >= 70 %}#1DC8B8{% elif race_briefing.readiness >= 45 %}#F59E0B{% else %}#EF4444{% endif %};">{{ race_briefing.readiness }}/100</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-size:9px;color:var(--ink-4);font-family:var(--font-body);">TSB (forma)</span>
+          <span style="font-family:var(--font-mono);font-size:13px;font-weight:700;color:{% if race_briefing.tsb and race_briefing.tsb > 0 %}#1DC8B8{% elif race_briefing.tsb and race_briefing.tsb < -15 %}#EF4444{% else %}#F59E0B{% endif %};">{{ race_briefing.tsb|default:"—" }}</span>
+        </div>
+        {% if race_briefing.acwr %}
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-size:9px;color:var(--ink-4);font-family:var(--font-body);">ACWR</span>
+          <span style="font-family:var(--font-mono);font-size:13px;font-weight:700;color:{% if race_briefing.acwr > 1.5 %}#EF4444{% elif race_briefing.acwr > 1.3 %}#F59E0B{% else %}#1DC8B8{% endif %};">{{ race_briefing.acwr }}</span>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Decisión del día -->
+    <div style="background:{% if race_briefing.decision.nivel == 'rojo' %}rgba(239,68,68,.08){% elif race_briefing.decision.nivel == 'amarillo' %}rgba(245,158,11,.08){% else %}rgba(29,200,184,.08){% endif %};border:1px solid {% if race_briefing.decision.nivel == 'rojo' %}rgba(239,68,68,.3){% elif race_briefing.decision.nivel == 'amarillo' %}rgba(245,158,11,.3){% else %}rgba(29,200,184,.3){% endif %};border-radius:8px;padding:10px 12px;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+        <i class="fas {% if race_briefing.decision.nivel == 'rojo' %}fa-exclamation-triangle{% elif race_briefing.decision.nivel == 'amarillo' %}fa-exclamation-circle{% else %}fa-check-circle{% endif %}" style="color:{% if race_briefing.decision.nivel == 'rojo' %}#EF4444{% elif race_briefing.decision.nivel == 'amarillo' %}#F59E0B{% else %}#1DC8B8{% endif %};font-size:12px;"></i>
+        <span style="font-family:var(--font-disp);font-size:12px;font-weight:700;color:var(--ink-1);">{{ race_briefing.decision.titulo }}</span>
+      </div>
+      <p style="font-size:11px;color:var(--ink-3);font-family:var(--font-body);margin:0 0 6px;line-height:1.5;">{{ race_briefing.decision.mensaje }}</p>
+      <div style="font-size:11px;font-weight:700;color:var(--ink-1);font-family:var(--font-body);">→ {{ race_briefing.decision.accion }}</div>
+    </div>
+
+    {% if race_briefing.interferencia_principal %}
+    <div style="margin-top:8px;font-size:10px;color:var(--ink-4);font-family:var(--font-body);line-height:1.5;padding:8px 10px;background:rgba(255,255,255,.03);border-radius:6px;border:1px solid var(--border);">
+      <i class="fas fa-bolt" style="color:var(--accent);margin-right:4px;"></i>
+      Fuga principal: <strong style="color:var(--ink-2);">{{ race_briefing.interferencia_principal.estacion }}</strong>
+      · +{{ race_briefing.interferencia_principal.if_pct }}% velocidad
+      · +{{ race_briefing.interferencia_principal.delta_secs }}s/km post-estación
+    </div>
+    {% endif %}
+
+    {% if race_briefing.impacto %}
+    <div style="margin-top:12px;border:1.5px solid var(--line);background:var(--paper);border-radius:8px;padding:12px;">
+      <div style="font-family:var(--font-mono);font-size:9px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);margin-bottom:6px;">
+        Impacto competitivo
+      </div>
+      <div style="font-family:var(--font-disp);font-size:16px;line-height:1.1;text-transform:uppercase;color:{% if race_briefing.impacto.nivel == 'rojo' %}var(--danger){% elif race_briefing.impacto.nivel == 'amarillo' %}var(--warn){% else %}var(--ok){% endif %};margin-bottom:12px;">
+        {{ race_briefing.impacto.headline }}
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+        {% for escenario in race_briefing.impacto.escenarios %}
+        <div style="background:var(--paper-2);border:1px solid var(--line);border-radius:6px;padding:10px;">
+          <div style="font-family:var(--font-mono);font-size:9px;color:var(--ink-3);text-transform:uppercase;font-weight:800;">{{ escenario.label }}</div>
+          <div style="font-family:var(--font-disp);font-size:26px;line-height:1;margin:5px 0;color:{% if escenario.tipo == 'riesgo' %}var(--danger){% else %}var(--ok){% endif %};">{{ escenario.delta }}</div>
+          <div style="font-size:10px;color:var(--ink-3);line-height:1.35;">{{ escenario.texto }}</div>
+        </div>
+        {% endfor %}
+      </div>
+
+      {% if race_briefing.impacto.factores %}
+      <div style="display:flex;flex-direction:column;gap:5px;">
+        {% for f in race_briefing.impacto.factores %}
+        <div style="font-size:11px;line-height:1.4;color:var(--ink-2);border-left:3px solid {% if f.nivel == 'rojo' %}var(--danger){% elif f.nivel == 'amarillo' %}var(--warn){% else %}var(--ok){% endif %};padding-left:8px;">
+          <strong>{{ f.tipo }}</strong> · {{ f.detalle }}
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+    {% endif %}
+  </section>
+  {% endif %}
+
+  <!-- ═══════════════ MODO COMPETICIÓN ═══════════════ -->
+  {% if modo_competicion and race_day_briefing %}
+  <section class="rb-section rb-a2" style="border:2px solid rgba(239,68,68,.5);background:rgba(239,68,68,.04);">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+      <span style="font-family:var(--font-mono);font-size:10px;font-weight:700;color:#EF4444;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);padding:3px 8px;border-radius:4px;letter-spacing:.08em;">MODO COMPETICIÓN</span>
+      <span style="font-family:var(--font-disp);font-size:14px;font-weight:700;color:var(--ink-1);">{{ race_day_briefing.fase_label }}</span>
+    </div>
+    <p style="font-size:11px;color:var(--ink-3);font-family:var(--font-body);margin:0 0 10px;line-height:1.5;">
+      El plan está <strong>congelado</strong>. No se generan ni ajustan sesiones esta semana.
+      Solo queda ejecutar lo que ya tienes construido.
+    </p>
+    <ul style="margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px;">
+      {% for consejo in race_day_briefing.consejos %}
+      <li style="display:flex;gap:8px;align-items:flex-start;font-size:11px;color:var(--ink-2);font-family:var(--font-body);line-height:1.5;">
+        <i class="fas fa-chevron-right" style="color:#EF4444;font-size:9px;margin-top:3px;flex-shrink:0;"></i>
+        {{ consejo }}
+      </li>
+      {% endfor %}
+    </ul>
+  </section>
+  {% endif %}
+
   <!-- ═══════════════ MACROCICLO ═══════════════ -->
-  {% if macro_data %}
+  {% if macro_data and not modo_competicion %}
   <section class="rb-section rb-a2">
     <div class="rb-section-head">
       <span class="rb-section-num">01</span>
@@ -1653,6 +1766,142 @@ a.rb-dia:hover { background: var(--paper-2); text-decoration: none; }
     </div>
     {% endif %}
 
+  </section>
+  {% endif %}
+
+  <!-- ═══════════════ ÍNDICE DE INTERFERENCIA ═══════════════ -->
+  {% if objetivo_activo and interferencia_index %}
+  <section class="rb-section rb-a6">
+    <div class="rb-section-head">
+      <span class="rb-section-num">IF</span>
+      <h2 class="rb-section-title">Índice de Interferencia</h2>
+      <div class="rb-section-line"></div>
+    </div>
+
+    <div style="font-family:var(--font-body);font-size:11px;color:var(--ink-4);margin-bottom:12px;line-height:1.5;">
+      Caída de ritmo de carrera <strong>inmediatamente después</strong> de cada estación.
+      Tu talón de Aquiles es la estación con mayor porcentaje.
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      {% for item in interferencia_index %}
+      <div style="background:var(--card);border:1px solid {% if item.severidad == 'alta' %}rgba(239,68,68,.3){% elif item.severidad == 'media' %}rgba(245,158,11,.3){% else %}rgba(29,200,184,.3){% endif %};border-radius:8px;padding:10px 12px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+          <span style="font-family:var(--font-disp);font-size:12px;font-weight:700;color:var(--ink-1);">{{ item.estacion }}</span>
+          <div style="display:flex;gap:6px;align-items:center;">
+            {% if item.trend == 'mejora' %}
+            <span style="font-size:9px;color:#1DC8B8;font-family:var(--font-mono)"><i class="fas fa-arrow-down"></i> mejorando</span>
+            {% elif item.trend == 'empeora' %}
+            <span style="font-size:9px;color:#EF4444;font-family:var(--font-mono)"><i class="fas fa-arrow-up"></i> empeorando</span>
+            {% elif item.trend == 'estable' %}
+            <span style="font-size:9px;color:var(--ink-4);font-family:var(--font-mono)"><i class="fas fa-minus"></i> estable</span>
+            {% endif %}
+            <span style="font-family:var(--font-mono);font-size:9px;color:var(--ink-4)">{{ item.sesiones }}×</span>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div style="flex:1;background:rgba(255,255,255,.05);border-radius:4px;height:6px;overflow:hidden;">
+            <div style="height:100%;width:{% if item.if_pct > 0 %}{% widthratio item.if_pct 40 100 %}{% else %}0{% endif %}%;background:{% if item.severidad == 'alta' %}#EF4444{% elif item.severidad == 'media' %}#F59E0B{% else %}#1DC8B8{% endif %};border-radius:4px;max-width:100%;transition:width .4s;"></div>
+          </div>
+          <span style="font-family:var(--font-mono);font-size:13px;font-weight:700;color:{% if item.severidad == 'alta' %}#EF4444{% elif item.severidad == 'media' %}#F59E0B{% else %}#1DC8B8{% endif %};min-width:44px;text-align:right;">+{{ item.if_pct }}%</span>
+          <span style="font-family:var(--font-mono);font-size:10px;color:var(--ink-4);min-width:54px;text-align:right;">+{{ item.delta_secs }}s/km</span>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <div style="margin-top:10px;font-size:10px;color:var(--ink-4);font-family:var(--font-body);line-height:1.4;">
+      <i class="fas fa-info-circle" style="color:var(--accent);margin-right:3px;"></i>
+      Calculado comparando tu ritmo de carrera post-estación vs. tu pace base en sesiones de carrera pura.
+      Necesitas registrar sesiones de simulación (carrera + estaciones combinadas) para acumular datos.
+    </div>
+  </section>
+  {% endif %}
+
+  <!-- ═══════════════ RACE CARD ═══════════════ -->
+  {% if objetivo_activo and race_card %}
+  <section class="rb-section rb-a6 {% if race_card.es_race_week %}rb-race-week{% endif %}">
+    <div class="rb-section-head">
+      <span class="rb-section-num" style="{% if race_card.es_race_week %}color:#EF4444;{% endif %}">RC</span>
+      <h2 class="rb-section-title">Race Card Táctica
+        {% if race_card.es_race_week %}<span style="font-size:10px;color:#EF4444;font-family:var(--font-mono);margin-left:8px;">RACE WEEK</span>{% endif %}
+      </h2>
+      <div class="rb-section-line"></div>
+    </div>
+
+    {% if race_card.es_race_week %}
+    <div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:11px;color:#EF4444;font-family:var(--font-body);line-height:1.5;">
+      <i class="fas fa-flag-checkered" style="margin-right:5px;"></i>
+      <strong>Faltan {{ race_card.dias_evento }} día{{ race_card.dias_evento|pluralize }}.</strong>
+      Esta es tu tarjeta táctica. Memoriza los ritmos, no los improvises en el muro del km 5.
+    </div>
+    {% endif %}
+
+    <!-- Resumen global -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px;">
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center;">
+        <div style="font-family:var(--font-mono);font-size:18px;font-weight:700;color:var(--accent);">{{ race_card.total_str }}</div>
+        <div style="font-size:9px;color:var(--ink-4);font-family:var(--font-body);margin-top:2px;">Tiempo objetivo</div>
+      </div>
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center;">
+        <div style="font-family:var(--font-mono);font-size:18px;font-weight:700;color:#1DC8B8;">{{ race_card.total_run_str }}</div>
+        <div style="font-size:9px;color:var(--ink-4);font-family:var(--font-body);margin-top:2px;">Tiempo corriendo</div>
+      </div>
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center;">
+        <div style="font-family:var(--font-mono);font-size:18px;font-weight:700;color:#F59E0B;">{{ race_card.total_sta_str }}</div>
+        <div style="font-size:9px;color:var(--ink-4);font-family:var(--font-body);margin-top:2px;">Tiempo en estaciones</div>
+      </div>
+    </div>
+
+    <!-- Confianza de la predicción -->
+    <div style="font-size:10px;color:var(--ink-4);font-family:var(--font-body);margin-bottom:12px;">
+      <i class="fas fa-circle" style="font-size:7px;color:{% if race_card.confianza == 'alta' %}#1DC8B8{% elif race_card.confianza == 'media' %}#F59E0B{% else %}#888{% endif %};margin-right:5px;"></i>
+      Confianza <strong>{{ race_card.confianza }}</strong> — {{ race_card.stations_reales }}/8 estaciones con datos reales tuyos.
+      Tu pace base: <span style="font-family:var(--font-mono);color:var(--ink-1);">{{ race_card.pace_base_str }}/km</span>
+    </div>
+
+    <!-- Tabla de la Race Card -->
+    <div style="display:flex;flex-direction:column;gap:4px;">
+      {% for fila in race_card.filas %}
+      <div style="display:grid;grid-template-columns:24px 1fr 8px 1fr;gap:0;align-items:stretch;">
+
+        <!-- Número de km -->
+        <div style="display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:9px;color:var(--ink-4);padding-right:4px;">
+          {{ fila.num }}
+        </div>
+
+        <!-- Bloque carrera -->
+        <div style="background:rgba(29,200,184,.08);border:1px solid rgba(29,200,184,.2);border-radius:6px 0 0 6px;padding:7px 10px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-size:9px;color:#1DC8B8;font-family:var(--font-body);"><i class="fas fa-running" style="margin-right:3px;font-size:8px;"></i>Km {{ fila.num }}</span>
+            <span style="font-family:var(--font-mono);font-size:14px;font-weight:700;color:#1DC8B8;">{{ fila.run_pace_str }}<span style="font-size:9px;color:var(--ink-4);font-weight:400;">/km</span></span>
+          </div>
+        </div>
+
+        <!-- Conector -->
+        <div style="display:flex;align-items:center;justify-content:center;">
+          <div style="width:1px;height:100%;background:var(--border);"></div>
+        </div>
+
+        <!-- Bloque estación -->
+        <div style="background:{% if fila.station_source == 'real' %}rgba(245,158,11,.08){% else %}rgba(255,255,255,.03){% endif %};border:1px solid {% if fila.station_source == 'real' %}rgba(245,158,11,.25){% else %}var(--border){% endif %};border-radius:0 6px 6px 0;padding:7px 10px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-size:9px;color:{% if fila.station_source == 'real' %}#F59E0B{% else %}var(--ink-4){% endif %};font-family:var(--font-body);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100px;" title="{{ fila.station }}">{{ fila.station }}</span>
+            <span style="font-family:var(--font-mono);font-size:14px;font-weight:700;color:{% if fila.station_source == 'real' %}#F59E0B{% else %}var(--ink-3){% endif %};">{{ fila.station_str }}
+              {% if fila.station_source == 'ref' %}<span style="font-size:8px;color:var(--ink-4);font-weight:400;" title="Tiempo de referencia, sin datos reales tuyos">ref</span>{% endif %}
+            </span>
+          </div>
+        </div>
+
+      </div>
+      {% endfor %}
+    </div>
+
+    <div style="margin-top:10px;font-size:10px;color:var(--ink-4);font-family:var(--font-body);line-height:1.5;">
+      <i class="fas fa-info-circle" style="color:var(--accent);margin-right:3px;"></i>
+      Ritmos de carrera calculados desde tu pace base y el IF real de cada estación.
+      Tiempos marcados en <span style="color:#F59E0B;">naranja</span> son de tus sesiones reales; en gris son referencias de categoría.
+    </div>
   </section>
   {% endif %}
 

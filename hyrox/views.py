@@ -1,4 +1,7 @@
+import logging
 from django.shortcuts import render, redirect, get_object_or_404
+
+logger = logging.getLogger(__name__)
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.utils import timezone
@@ -712,6 +715,69 @@ def hyrox_dashboard(request):
             'tip_mental': 'En la estación 6 (Farmers Carry) tu mente cederá antes que el cuerpo. Ese es el momento de acelerar.',
         }
 
+    # ── ÍNDICE DE INTERFERENCIA ───────────────────────────────────────────────
+    interferencia_index = []
+    if objetivo_activo:
+        from .services import InterferenceIndexService
+        interferencia_index = InterferenceIndexService.compute_for_objective(objetivo_activo)
+
+    # ── RACE CARD TÁCTICA + MODO COMPETICIÓN ─────────────────────────────────
+    race_card = None
+    modo_competicion = False
+    race_day_briefing = None
+    if objetivo_activo and objetivo_activo.tiempo_5k_base:
+        from .services import RaceCardService
+        race_card = RaceCardService.generate(objetivo_activo, splits_estaciones, interferencia_index)
+        if race_card and race_card['es_race_week']:
+            modo_competicion = True
+            dias = race_card['dias_evento']
+            if dias == 0:
+                fase_label = 'HOY ES EL DÍA'
+                consejos = [
+                    'Desayuno familiar 3h antes: arroz, huevo, plátano. Sin experimentos.',
+                    'Calentamiento 20 min: trote suave + movilidad de cadera y tobillo.',
+                    'Objetivo mental: los primeros 2 km son la carrera dentro de la carrera.',
+                    'En el Sled Push: pasos cortos, no pares. Piensa "metro a metro".',
+                    'En Wall Balls: series de 10-15, 3 segundos de descanso. Nunca al fallo.',
+                ]
+            elif dias <= 2:
+                fase_label = f'FALTAN {dias} DÍA{"S" if dias > 1 else ""} — ACTIVACIÓN'
+                consejos = [
+                    'Hoy o mañana: 20-30 min de trote suave + 4 strides de 80m al ritmo de carrera.',
+                    'Sin gimnasio, sin pesos, sin fatiga.',
+                    'Hidratación activa: 2.5-3L de agua. Reduce el café.',
+                    'Visualiza los primeros 3 km y la transición al Sled Push.',
+                    'Duerme mínimo 7-8h. Es la sesión de entrenamiento más importante de la semana.',
+                ]
+            else:
+                fase_label = f'FALTAN {dias} DÍAS — TAPER FINAL'
+                consejos = [
+                    'Máximo 2 sesiones esta semana: una activación suave + un día de movilidad.',
+                    'Reduce volumen un 50-60%. Mantén la intensidad en las pocas series que hagas.',
+                    'Nada nuevo: misma comida, mismo horario de sueño.',
+                    'Repasa mentalmente la Race Card. Los ritmos deben estar memorizados.',
+                    'Confia en el trabajo acumulado. El fitness está hecho; solo queda expresarlo.',
+                ]
+            race_day_briefing = {
+                'fase_label': fase_label,
+                'consejos': consejos,
+                'dias': dias,
+            }
+
+    # ── RACE INTELLIGENCE BRIEFING ────────────────────────────────────────────
+    race_briefing = None
+    if objetivo_activo:
+        from .services import HyroxRaceIntelligence
+        try:
+            race_briefing = HyroxRaceIntelligence.get_race_briefing(
+                objetivo_activo,
+                interferencia_index=interferencia_index,
+                race_card=race_card,
+            )
+        except Exception:
+            logger.exception("[HYROX RaceIntelligence] Error generando race_briefing")
+            race_briefing = None
+
     if objetivo_activo:
         from .services import CompetitionStandardsService, HyroxMacrocycleEngine
         from .models import UserInjury, DailyRecoveryEntry
@@ -822,6 +888,11 @@ def hyrox_dashboard(request):
         'race_day_strategy': race_day_strategy,
         'sustituciones_activas': sustituciones_activas if 'sustituciones_activas' in locals() else [],
         'sustituciones_dict': sustituciones_dict if 'sustituciones_dict' in locals() else {},
+        'interferencia_index': interferencia_index,
+        'race_card': race_card,
+        'modo_competicion': modo_competicion,
+        'race_day_briefing': race_day_briefing,
+        'race_briefing': race_briefing,
     }
     return render(request, 'hyrox/dashboard.html', context)
 

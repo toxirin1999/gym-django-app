@@ -804,6 +804,11 @@ class HyroxTrainingEngine:
         if objective.estado != 'activo':
             return
 
+        # Modo Competición: congelar el plan la semana previa al evento
+        hoy = timezone.now().date()
+        if objective.fecha_evento and (objective.fecha_evento - hoy).days <= 7:
+            return
+
         hoy = timezone.now().date()
         start_of_week = hoy - timedelta(days=hoy.weekday())
 
