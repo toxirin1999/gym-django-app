@@ -190,7 +190,23 @@ class HyroxLoadManager:
         > 1.5  → zona roja (riesgo lesión por pico de carga)
         0.8-1.3 → zona óptima de rendimiento
         < 0.8  → desentrenamiento (carga insuficiente)
+
+        Requiere mínimo 28 días de historial: con menos datos el CTL es
+        demasiado pequeño y el ratio se dispara a valores sin sentido.
         """
+        primera = (
+            HyroxSession.objects
+            .filter(objective=objetivo, estado='completado', trimp__isnull=False)
+            .order_by('fecha')
+            .values_list('fecha', flat=True)
+            .first()
+        )
+        if not primera:
+            return None
+        dias_historial = (timezone.now().date() - primera).days
+        if dias_historial < 28:
+            return None
+
         carga = cls.calcular_ctl_atl_tsb(objetivo)
         ctl = carga['ctl']
         atl = carga['atl']
