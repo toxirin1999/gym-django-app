@@ -94,6 +94,15 @@
     .rb-submit svg { width:20px;height:20px; }
 
     .rb-undo-bar { font-family:var(--font-mono);font-size:10px;color:var(--ink-4);text-align:center;padding:8px 0 0;letter-spacing:.1em; }
+
+    /* Timer field */
+    .rb-timer-field { display:flex;align-items:center;gap:8px;padding:10px 14px;border-top:1px solid var(--line);margin-top:0; }
+    .rb-timer-lbl { font-family:var(--font-mono);font-size:9px;font-weight:700;letter-spacing:.15em;color:var(--ink-4);text-transform:uppercase;min-width:70px; }
+    .rb-timer-inputs { display:flex;align-items:baseline;gap:3px; }
+    .rb-timer-inp { width:46px;border:none;background:transparent;font-family:var(--font-disp);font-size:22px;color:var(--ink);outline:none;text-align:center;padding:2px 0; }
+    .rb-timer-inp::placeholder { color:var(--ink-4); }
+    .rb-timer-sep { font-family:var(--font-disp);font-size:22px;color:var(--ink-3); }
+    .rb-timer-unit { font-family:var(--font-mono);font-size:9px;color:var(--ink-4);letter-spacing:.1em;margin-left:4px; }
   </style>
 </head>
 <body>
@@ -270,6 +279,22 @@
           </div>
 
           {% endif %}
+
+          <!-- Tiempo de ejercicio (timer del wizard) -->
+          <input type="hidden" name="act_tiempo_s_{{ act.id }}" id="ts-{{ act.id }}" value="{{ act.tiempo_s }}">
+          <div class="rb-timer-field">
+            <span class="rb-timer-lbl">⏱ TIEMPO</span>
+            <div class="rb-timer-inputs">
+              <input type="number" class="rb-timer-inp rb-tmm" id="tmm-{{ act.id }}" data-act="{{ act.id }}"
+                     placeholder="00" min="0" max="99" step="1" inputmode="numeric"
+                     oninput="rbTimeSave('{{ act.id }}')">
+              <span class="rb-timer-sep">:</span>
+              <input type="number" class="rb-timer-inp rb-tmss" id="tmss-{{ act.id }}" data-act="{{ act.id }}"
+                     placeholder="00" min="0" max="59" step="1" inputmode="numeric"
+                     oninput="rbTimeSave('{{ act.id }}')">
+            </div>
+            <span class="rb-timer-unit">MIN · SEG</span>
+          </div>
         </div>
 
         {% empty %}
@@ -329,6 +354,26 @@ function updateDeletedCount() {
   cnt.textContent = deletedIds.size;
   bar.style.display = deletedIds.size > 0 ? 'block' : 'none';
 }
+
+/* ── TIMER FIELDS ── */
+function rbTimeSave(actId) {
+  const mm = parseInt(document.getElementById('tmm-' + actId)?.value || '0') || 0;
+  const ss = parseInt(document.getElementById('tmss-' + actId)?.value || '0') || 0;
+  document.getElementById('ts-' + actId).value = mm * 60 + ss;
+}
+
+// Populate MM:SS from stored seconds on load
+document.querySelectorAll('input[id^="ts-"]').forEach(function(hidden) {
+  const secs = parseInt(hidden.value || '0');
+  if (!secs) return;
+  const actId = hidden.id.replace('ts-', '');
+  const mm = Math.floor(secs / 60);
+  const ss = secs % 60;
+  const mmEl = document.getElementById('tmm-' + actId);
+  const ssEl = document.getElementById('tmss-' + actId);
+  if (mmEl) mmEl.value = mm;
+  if (ssEl) ssEl.value = ss;
+});
 </script>
 </body>
 </html>

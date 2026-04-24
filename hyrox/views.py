@@ -953,6 +953,18 @@ def registrar_entrenamiento(request, objective_id, session_id=None):
                 messages.success(request, "Datos de la sesión guardados sin procesamiento IA.")
                 actividades = sesion.activities.all()
 
+            # Guardar tiempo por ejercicio (wizard timer → data_metricas['tiempo_s'])
+            acts_ordered = list(sesion.activities.all().order_by('id'))
+            for i, act in enumerate(acts_ordered, 1):
+                t_s_raw = request.POST.get(f'act_tiempo_s_{i}')
+                if t_s_raw and t_s_raw.strip():
+                    t_s = int(t_s_raw)
+                    if t_s > 0:
+                        m = dict(act.data_metricas or {})
+                        m['tiempo_s'] = t_s
+                        act.data_metricas = m
+                        act.save(update_fields=['data_metricas'])
+
             # --- CHECK BIO-SAFETY: VALIDACIÓN DE LESIONES ---
             # UserInjury ya está importado al inicio de la función
             bloqueado_por_bio_safety = False
@@ -1315,6 +1327,10 @@ def editar_sesion_hyrox(request, session_id):
                 if distm: m['distancia_m'] = float(distm)
                 if kg: m['peso_kg'] = float(kg)
 
+            tiempo_s = request.POST.get(f'act_tiempo_s_{act.id}')
+            if tiempo_s and tiempo_s.strip():
+                m['tiempo_s'] = int(tiempo_s)
+
             _log.warning(f'[EDIT act={act.id}] GUARDANDO data_metricas={m}')
             act.data_metricas = m
             act.save()
@@ -1389,6 +1405,7 @@ def editar_sesion_hyrox(request, session_id):
             'kg': m['peso_kg'] if 'peso_kg' in m else '',
             'series': series,
             'reps_total': reps_total,
+            'tiempo_s': m.get('tiempo_s', ''),
         })
 
     return render(request, 'hyrox/editar_sesion.html', {
