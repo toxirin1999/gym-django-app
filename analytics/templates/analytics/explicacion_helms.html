@@ -844,11 +844,11 @@
                                 style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem; background: rgba(0,0,0,0.2); border-radius: 0.5rem;">
                                 <span style="font-size: 0.85rem; color: #cbd5e1;">{{ ejercicio }}</span>
                                 <div style="display: flex; align-items: center; gap: 0.75rem;">
-                                    <span style="font-size: 0.8rem; color: #64748b;">{{
-                                        fase.rm_inicio|get_item:ejercicio|default:"-"|floatformat:1 }}kg</span>
+                                    <span style="font-size: 0.8rem; color: #64748b;">
+                                        {{ fase.rm_inicio|get_item:ejercicio|default:"-"|floatformat:1 }}kg</span>
                                     <span style="color: #94a3b8;">→</span>
-                                    <span style="font-size: 0.9rem; font-weight: 600; color: var(--neon-green);">{{
-                                        rm_final|floatformat:1 }}kg</span>
+                                    <span style="font-size: 0.9rem; font-weight: 600; color: var(--neon-green);">
+                                        {{ rm_final|floatformat:1 }}kg</span>
                                 </div>
                             </div>
                             {% endfor %}

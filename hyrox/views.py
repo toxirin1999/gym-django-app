@@ -84,6 +84,15 @@ def hyrox_dashboard(request):
             'hiit': ('HIIT', 'fa-fire', '#EF4444'),
             'simulacion': ('Simulación', 'fa-flag', '#E8341A'),
         }
+        PROPOSITO_SESION = {
+            'fuerza': 'Construir potencia base y tolerar carga progresiva',
+            'carrera': 'Desarrollar motor aeróbico y economía de carrera',
+            'cardio_sustituto': 'Cardio de bajo impacto como sustituto de carrera',
+            'hyrox_station': 'Técnica en estaciones y adaptación al peso oficial',
+            'ergometro': 'Capacidad cardiovascular en ergómetro específico',
+            'simulacion': 'Simular la demanda metabólica completa de Hyrox',
+            'hiit': 'Potencia anaeróbica y tolerancia al lactato',
+        }
 
         plan_semanas = []
         semana_buf = []
@@ -126,12 +135,22 @@ def hyrox_dashboard(request):
                 objective=objetivo_activo, estado='completado', fecha=s.fecha
             ).first() if s.fecha == hoy else None
 
+            proposito = PROPOSITO_SESION.get(tipo_principal, 'Sesión de entrenamiento Hyrox')
+            titulo_lower = (s.titulo or '').lower()
+            if 'deload' in titulo_lower or 'descarga' in titulo_lower:
+                proposito = 'Semana de descarga — reduce la carga para supracompensar'
+            elif 'calibraci' in titulo_lower:
+                proposito = 'Establecer líneas base de fuerza y capacidad aeróbica'
+            elif 'taper' in titulo_lower or 'activaci' in titulo_lower:
+                proposito = 'Activación suave precompetición — mantén el ritmo, baja el volumen'
+
             semana_buf.append({
                 'sesion': s,
                 'dia_str': DIAS_ES[s.fecha.weekday()],
                 'tipo_label': tipo_info[0],
                 'tipo_icon': tipo_info[1],
                 'tipo_color': tipo_info[2],
+                'proposito': proposito,
                 'actividades_resumen': actividades_resumen[:3],
                 'es_hoy': s.fecha == hoy,
                 'es_manana': (s.fecha - hoy).days == 1,
@@ -410,6 +429,18 @@ def hyrox_dashboard(request):
                 promedio = mejor = gap = pct_ref = None
                 gap_str = None
 
+            # Status badge
+            if not lista:
+                status = 'sin_datos'
+            elif pct_ref >= 95:
+                status = 'strong'
+            elif pct_ref >= 80:
+                status = 'good'
+            elif pct_ref >= 60:
+                status = 'needs_work'
+            else:
+                status = 'priority'
+
             splits_estaciones.append({
                 'nombre': nombre,
                 'promedio_secs': promedio,
@@ -424,7 +455,262 @@ def hyrox_dashboard(request):
                 'sesiones': len(lista),
                 'tendencia': tendencia,
                 'tiene_datos': bool(lista),
+                'status': status,
             })
+
+    # Race prediction + time-loss analysis
+    race_prediction = None
+    top_perdidas = []
+    if objetivo_activo and splits_estaciones:
+        top_perdidas = sorted(
+            [s for s in splits_estaciones if s['tiene_datos'] and s['gap_secs'] and s['gap_secs'] > 0],
+            key=lambda x: x['gap_secs'],
+            reverse=True
+        )[:3]
+
+        running_secs = None
+        if objetivo_activo.tiempo_5k_base:
+            try:
+                parts = str(objetivo_activo.tiempo_5k_base).split(':')
+                pace_km = int(parts[0]) * 60 + int(parts[1])
+                running_secs = pace_km * 8
+            except Exception:
+                pass
+
+        if running_secs:
+            _REF_RUN = {
+                'open_men': 2400, 'open_women': 2880,
+                'pro_men': 1920, 'pro_women': 2160,
+            }
+            _run_ref = _REF_RUN.get(objetivo_activo.categoria, 2400)
+
+            total_est = sum(
+                s['promedio_secs'] if s['tiene_datos'] else s['ref_secs']
+                for s in splits_estaciones
+            )
+            total_mejor = sum(
+                s['mejor_secs'] if (s['tiene_datos'] and s['mejor_secs']) else s['ref_secs']
+                for s in splits_estaciones
+            )
+            total_ref = sum(s['ref_secs'] for s in splits_estaciones)
+
+            total_est += running_secs
+            total_mejor += int(running_secs * 0.97)
+            total_ref_total = total_ref + _run_ref
+            stations_con_datos = sum(1 for s in splits_estaciones if s['tiene_datos'])
+
+            def _fmt_race(s):
+                h, rem = divmod(s, 3600)
+                m, sec = divmod(rem, 60)
+                return f"{h}:{m:02d}:{sec:02d}" if h else f"{m}:{sec:02d}"
+
+            mejora_secs = total_est - total_ref_total
+            race_prediction = {
+                'tiene_datos': stations_con_datos > 0,
+                'stations_con_datos': stations_con_datos,
+                'total_stations': len(splits_estaciones),
+                'estimado_str': _fmt_race(total_est),
+                'mejor_str': _fmt_race(total_mejor),
+                'ref_str': _fmt_race(total_ref_total),
+                'mejora_str': _fmt_race(abs(mejora_secs)),
+                'por_encima': mejora_secs > 0,
+            }
+
+    # ── STATION WEAKNESS TARGETING ─────────────────────────────────────────────
+    estaciones_debiles = []
+    if objetivo_activo and splits_estaciones:
+        estaciones_debiles = [
+            s for s in splits_estaciones
+            if s['status'] in ('priority', 'needs_work')
+        ]
+        estaciones_debiles.sort(key=lambda x: x['pct_ref'])  # peor primero
+
+    # ── FASES TIMELINE ─────────────────────────────────────────────────────────
+    fases_timeline = []
+    if objetivo_activo and objetivo_activo.fecha_evento:
+        import datetime as _dt3
+        _hoy_ft = timezone.localdate()
+        _days_left = (objetivo_activo.fecha_evento - _hoy_ft).days
+        _weeks_total = min(max(1, _days_left // 7), 16)
+        # semana 0 = primera semana del plan (en el pasado o hoy)
+        for _w in range(_weeks_total):
+            _is_taper  = (_weeks_total - _w) <= 2
+            _is_deload = (_w % 4 == 3) and not _is_taper
+            if _is_taper:
+                _fase_lbl, _fase_col = 'Taper', '#1DC8B8'
+                _intens = 35
+            elif _is_deload:
+                _fase_lbl, _fase_col = 'Deload', '#8B5CF6'
+                _intens = 45
+            elif _w < _weeks_total * 0.25:
+                _fase_lbl, _fase_col = 'Base', '#F59E0B'
+                _intens = 45 + int((_w / max(_weeks_total-1,1)) * 30)
+            elif _w < _weeks_total * 0.6:
+                _fase_lbl, _fase_col = 'Potencia', '#E8341A'
+                _intens = 60 + int((_w / max(_weeks_total-1,1)) * 20)
+            elif _w < _weeks_total * 0.85:
+                _fase_lbl, _fase_col = 'Intens.', '#EF4444'
+                _intens = 75 + int((_w / max(_weeks_total-1,1)) * 15)
+            else:
+                _fase_lbl, _fase_col = 'Simul.', '#EF4444'
+                _intens = 90
+            _es_actual = _w == (_weeks_total - _days_left // 7 - 1) if _days_left < _weeks_total * 7 else False
+            fases_timeline.append({
+                'semana': _w + 1,
+                'fase': _fase_lbl,
+                'color': _fase_col,
+                'intensidad': min(_intens, 100),
+                'es_deload': _is_deload,
+                'es_taper': _is_taper,
+                'es_actual': (_weeks_total - _w) == (_days_left // 7 + 1),
+            })
+
+    # ── MILESTONES ─────────────────────────────────────────────────────────────
+    milestones = []
+    if objetivo_activo and objetivo_activo.fecha_evento:
+        _fe = objetivo_activo.fecha_evento
+        _hoy_m = timezone.localdate()
+        _semanas = (_fe - _hoy_m).days // 7
+        milestones = [
+            {
+                'semana_desde_hoy': max(0, _semanas - round(_semanas * 0.75)),
+                'titulo': 'Test de ritmo 5K',
+                'desc': 'Mide tu progreso en carrera y ajusta los ritmos del plan',
+                'icono': 'fa-stopwatch',
+                'pasado': _semanas <= round(_semanas * 0.25),
+            },
+            {
+                'semana_desde_hoy': max(0, _semanas - round(_semanas * 0.50)),
+                'titulo': 'Primera simulación completa',
+                'desc': 'Realiza las 8 estaciones seguidas para primera vez',
+                'icono': 'fa-flag',
+                'pasado': _semanas <= round(_semanas * 0.50),
+            },
+            {
+                'semana_desde_hoy': max(0, _semanas - round(_semanas * 0.25)),
+                'titulo': 'Simulación a peso oficial',
+                'desc': 'Todas las estaciones al 100% de los pesos de competición',
+                'icono': 'fa-medal',
+                'pasado': _semanas <= round(_semanas * 0.15),
+            },
+            {
+                'semana_desde_hoy': 0,
+                'titulo': 'Race Day',
+                'desc': objetivo_activo.fecha_evento.strftime('%d %b %Y'),
+                'icono': 'fa-trophy',
+                'pasado': False,
+            },
+        ]
+
+    # ── COACHING CARDS POR ESTACIÓN ───────────────────────────────────────────
+    _COACHING = {
+        'SkiErg': {
+            'tecnica': 'Tira con los brazos Y el core, no solo brazos. Inicia el movimiento desde las caderas, deja que los brazos sigan. Mantén un ritmo de paladas constante (~30 spm). Respira cada 2 paladas.',
+            'protocolo': 'El error más común es ir demasiado rápido los primeros 200m. Empieza al 85% y mantén ese ritmo hasta el final.',
+            'icono': 'fa-arrows-alt-v',
+        },
+        'Sled Push': {
+            'tecnica': 'Ángulo bajo, espalda recta, empuja desde los talones. Pasos cortos y rápidos, no largos. Mantén las caderas bajas durante todo el recorrido.',
+            'protocolo': 'La fuerza de piernas es clave aquí — con tu sentadilla en 60 kg, vamos a subir eso significativamente. Semana final: 100% peso oficial sin pausa.',
+            'icono': 'fa-arrow-right',
+        },
+        'Sled Pull': {
+            'tecnica': 'Camina hacia atrás con pasos controlados, cuerda corta entre manos. Tira desde los codos, no las muñecas. Mantén el torso ligeramente inclinado atrás.',
+            'protocolo': 'Con tu base de gym, el patrón de tracción va a mejorar rápido. Combina con Farmers Carry para simular la transición de carrera.',
+            'icono': 'fa-arrow-left',
+        },
+        'Burpee Broad Jumps': {
+            'tecnica': 'Estrategia clave: ritmo constante y bajo desde el inicio. No saltes al máximo — salta 1.2-1.5 m por rep y mantén ese ritmo. Respira en cada subida.',
+            'protocolo': 'Nunca pares completamente, aunque vayas lento. Practica después de carrera para acostumbrarte a la fatiga previa.',
+            'icono': 'fa-running',
+        },
+        'Rowing': {
+            'tecnica': 'Secuencia: piernas-cuerpo-brazos en el tirón, brazos-cuerpo-piernas en el regreso. No uses solo brazos. Damper en 4-5, no al máximo.',
+            'protocolo': 'Tu 500m row en 2:00-2:15 es tu punto de partida — apunta a mantener ese ritmo en carrera. SPM 24-26.',
+            'icono': 'fa-water',
+        },
+        'Farmers Carry': {
+            'tecnica': 'Hombros atrás y abajo, core apretado, pasos cortos y constantes. No te pares — si necesitas, ve más lento pero sin soltar.',
+            'protocolo': 'Con tu experiencia de gym y fuerza de grip, esta estación puede ser una de tus mejores. Trabaja 4×50m progresivo.',
+            'icono': 'fa-suitcase',
+        },
+        'Sandbag Lunges': {
+            'tecnica': 'Rodilla trasera cerca del suelo, torso erguido, sandbag en el pecho o hombros. Pasos constantes sin pausas largas.',
+            'protocolo': 'Con cuádriceps débiles y meniscos con historial, vamos a construir esto muy gradualmente. Prioriza técnica perfecta antes de aumentar peso.',
+            'icono': 'fa-dumbbell',
+        },
+        'Wall Balls': {
+            'tecnica': 'Sentadilla profunda, pelota al pecho, explota hacia arriba y lanza en el punto más alto. No esperes la pelota — muévete hacia ella.',
+            'protocolo': 'Con 12 reps unbroken ahora, vamos a llegar a sets de 20-25 para la carrera. Meta final: 100 reps sin soltar el balón.',
+            'icono': 'fa-circle',
+        },
+    }
+
+    coaching_estaciones = []
+    if objetivo_activo:
+        _splits_map = {s['nombre']: s for s in splits_estaciones}
+        for nombre, coach in _COACHING.items():
+            sp = _splits_map.get(nombre)
+            mejora_str = None
+            potencial_str = None
+            if sp and sp['tiene_datos'] and sp['gap_secs'] and sp['gap_secs'] > 0:
+                mejora_str = sp['gap_str']
+                potencial_str = f"Con entrenar 2×/semana en esta estación puedes recortar ~{sp['gap_secs'] // 6}s por mes"
+            coaching_estaciones.append({
+                'nombre': nombre,
+                'tecnica': coach['tecnica'],
+                'protocolo': coach['protocolo'],
+                'icono': coach['icono'],
+                'status': sp['status'] if sp else 'sin_datos',
+                'pct_ref': sp['pct_ref'] if sp else 0,
+                'mejora_str': mejora_str,
+                'potencial_str': potencial_str,
+                'tiene_datos': sp['tiene_datos'] if sp else False,
+            })
+
+    # ── RACE DAY STRATEGY ─────────────────────────────────────────────────────
+    race_day_strategy = None
+    if objetivo_activo:
+        _GRUPOS_RD = [
+            {'nombre': 'Arranque', 'estaciones': ['SkiErg', 'Sled Push'],
+             'consejo': 'Arranca al 85% — el exceso de ritmo aquí destruye el resto de la carrera.'},
+            {'nombre': 'Bloque Central', 'estaciones': ['Sled Pull', 'Burpee Broad Jumps', 'Rowing'],
+             'consejo': 'Mantén esfuerzo constante. Es el bloque más largo — gestiona el lactato.'},
+            {'nombre': 'Bloque Final', 'estaciones': ['Farmers Carry', 'Sandbag Lunges', 'Wall Balls'],
+             'consejo': 'Aquí se gana o se pierde la carrera. Da todo lo que te queda en Wall Balls.'},
+        ]
+        _splits_map2 = {s['nombre']: s for s in splits_estaciones}
+        grupos_rd = []
+        for g in _GRUPOS_RD:
+            sps = [_splits_map2.get(e) for e in g['estaciones'] if _splits_map2.get(e) and _splits_map2[e]['tiene_datos']]
+            avg_pct = round(sum(s['pct_ref'] for s in sps) / len(sps)) if sps else None
+            if avg_pct is None:
+                color, nivel = '#888', 'Sin datos'
+            elif avg_pct >= 85:
+                color, nivel = '#1DC8B8', '85-90% esfuerzo — zona fuerte'
+            elif avg_pct >= 65:
+                color, nivel = '#F59E0B', '80-85% esfuerzo — zona de mejora'
+            else:
+                color, nivel = '#EF4444', '75-80% — conserva energía aquí'
+            grupos_rd.append({**g, 'avg_pct': avg_pct, 'color': color, 'nivel': nivel})
+
+        _ritmo_carrera = None
+        if objetivo_activo.tiempo_5k_base:
+            try:
+                _parts = str(objetivo_activo.tiempo_5k_base).split(':')
+                _pace = int(_parts[0]) * 60 + int(_parts[1])
+                _ritmo_z3 = _pace * 1.04
+                _m, _s = divmod(int(_ritmo_z3), 60)
+                _ritmo_carrera = f"{_m}:{_s:02d}/km"
+            except Exception:
+                pass
+
+        race_day_strategy = {
+            'grupos': grupos_rd,
+            'ritmo_carrera': _ritmo_carrera,
+            'tip_running': 'Corre al ritmo Z3 (+4% sobre tu ritmo 5K). Los 8 segmentos de 1km deben ser iguales.',
+            'tip_mental': 'En la estación 6 (Farmers Carry) tu mente cederá antes que el cuerpo. Ese es el momento de acelerar.',
+        }
 
     if objetivo_activo:
         from .services import CompetitionStandardsService, HyroxMacrocycleEngine
@@ -527,6 +813,13 @@ def hyrox_dashboard(request):
         'splits_estaciones': splits_estaciones,
         'splits_categoria': objetivo_activo.get_categoria_display() if objetivo_activo else None,
         'splits_edad': edad_atleta,
+        'race_prediction': race_prediction,
+        'top_perdidas': top_perdidas,
+        'estaciones_debiles': estaciones_debiles,
+        'fases_timeline': fases_timeline,
+        'milestones': milestones,
+        'coaching_estaciones': coaching_estaciones,
+        'race_day_strategy': race_day_strategy,
         'sustituciones_activas': sustituciones_activas if 'sustituciones_activas' in locals() else [],
         'sustituciones_dict': sustituciones_dict if 'sustituciones_dict' in locals() else {},
     }
@@ -732,10 +1025,47 @@ def registrar_entrenamiento(request, objective_id, session_id=None):
                 fase_nombre_temp = fase_data.get('fase', 'hipertrofia').lower()
             except: pass
 
+            _STATION_TIPS = {
+                'skierg':         "Tira con los brazos Y el core, no solo brazos. Inicia el movimiento desde las caderas, deja que los brazos sigan. Mantén un ritmo de paladas constante (~30 spm). Respira cada 2 paladas. El error más común es ir demasiado rápido los primeros 200m.",
+                'sled push':      "Ángulo bajo, espalda recta, empuja desde los talones. Pasos cortos y rápidos, no largos. Mantén las caderas bajas durante todo el recorrido. La fuerza de piernas es clave — con tu sentadilla en 60 kg, vamos a subir eso significativamente.",
+                'sled pull':      "Camina hacia atrás con pasos controlados, cuerda corta entre manos. Tira desde los codos, no las muñecas. Mantén el torso ligeramente inclinado atrás. Con tu base de gym, el patrón de tracción va a mejorar rápido.",
+                'burpee':         "Este es tu mayor reto. Estrategia clave: ritmo constante y bajo desde el inicio. No saltes al máximo — salta 1.2-1.5 m por rep y mantén ese ritmo. Respira en cada subida. Nunca pares completamente, aunque vayas lento.",
+                'rowing':         "Secuencia: piernas-cuerpo-brazos en el tirón, brazos-cuerpo-piernas en el regreso. No uses solo brazos. Tu 500m row en 2:00-2:15 es tu punto de partida — apunta a mantener ese ritmo. Damper en 4-5, no al máximo.",
+                'farmers carry':  "Hombros atrás y abajo, core apretado, pasos cortos y constantes. No te pares — si necesitas, ve más lento pero sin soltar. Con tu experiencia de gym y fuerza de grip, esta estación puede ser una de tus mejores.",
+                'sandbag':        "Rodilla trasera cerca del suelo, torso erguido, sandbag en el pecho o hombros. Pasos constantes sin pausas largas. Con cuádriceps débiles y meniscos con historial, vamos a construir esto muy gradualmente para proteger las rodillas.",
+                'wall ball':      "Sentadilla profunda, pelota al pecho, explota hacia arriba y lanza en el punto más alto. No esperes la pelota — muévete hacia ella. Con 12 reps unbroken ahora, vamos a llegar a sets de 20-25 para la carrera.",
+            }
+
+            from hyrox.training_engine import HyroxTrainingEngine as _HTE
+            _oficiales_pesos = _HTE.PESOS_OFICIALES.get(
+                sesion_planificada.objective.categoria,
+                _HTE.PESOS_OFICIALES['open_men']
+            )
+
             # Prepare activities for the context to preserve display_name and is_substituted
             actividades_planificadas = list(sesion_planificada.activities.all())
             for act in actividades_planificadas:
                 act.display_name = act.nombre_ejercicio # Default
+                m = act.data_metricas or {}
+                nombre_lower = act.nombre_ejercicio.lower()
+                # Inject station coaching tip into a copy (don't mutate the DB object)
+                if not m.get('coach_tip'):
+                    m = dict(m)
+                    for kw, tip in _STATION_TIPS.items():
+                        if kw in nombre_lower:
+                            m['coach_tip'] = tip
+                            break
+                    act.data_metricas = m
+                # Build series_processed: unified peso_display handling legacy 'peso' key
+                # and injecting official weight for wall balls with no weight data
+                _wb_peso = _oficiales_pesos.get('wall_ball') if 'wall ball' in nombre_lower else None
+                series_raw = m.get('series') or []
+                act.series_processed = []
+                for serie in series_raw:
+                    s2 = dict(serie)
+                    peso = s2.get('peso_kg') or s2.get('peso') or _wb_peso or ''
+                    s2['peso_display'] = peso
+                    act.series_processed.append(s2)
                 
                 # Check for Bio-Safe issues
                 ej_name = act.nombre_ejercicio.lower()

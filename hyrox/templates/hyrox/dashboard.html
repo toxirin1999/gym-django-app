@@ -524,6 +524,179 @@ a.rb-dia:hover { background: var(--paper-2); text-decoration: none; }
 .rb-split-meta { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 9px; color: var(--ink-5); margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line); }
 .rb-splits-note { font-family: var(--font-mono); font-size: 10px; color: var(--ink-5); margin-top: 8px; padding: 8px 10px; background: var(--paper); border: 1px solid var(--line); border-radius: 6px; }
 
+/* ── SESSION PURPOSE ────────────────────────── */
+.rb-dia-proposito {
+  font-family: var(--font-mono); font-size: 8px; color: var(--ink-4);
+  letter-spacing: .04em; line-height: 1.4; margin-top: 2px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* ── WEAKNESS TARGETING ──────────────────────── */
+.rb-weakness {
+  background: rgba(239,68,68,.06); border: 1px solid rgba(239,68,68,.18);
+  border-left: 3px solid #EF4444; border-radius: 6px; padding: 12px;
+  margin-bottom: 12px;
+}
+.rb-weakness-title { font-family: var(--font-mono); font-size: 9px; font-weight: 700;
+  letter-spacing: .12em; text-transform: uppercase; color: #EF4444; margin-bottom: 10px; }
+.rb-weakness-pills { display: flex; flex-wrap: wrap; gap: 6px; }
+.rb-weakness-pill {
+  display: flex; align-items: center; gap: 5px;
+  background: var(--paper); border: 1px solid rgba(239,68,68,.25);
+  border-radius: 20px; padding: 4px 10px;
+  font-family: var(--font-mono); font-size: 10px; font-weight: 700; color: var(--ink-2);
+}
+.rb-weakness-pill-pct { font-size: 9px; color: #EF4444; }
+
+/* ── FASES TIMELINE ──────────────────────────── */
+.rb-phases-timeline { display: flex; gap: 2px; align-items: flex-end; height: 52px; margin: 12px 0 4px; }
+.rb-phase-bar-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.rb-phase-bar {
+  width: 100%; border-radius: 2px 2px 0 0; min-height: 4px;
+  transition: height .4s ease; position: relative;
+}
+.rb-phase-bar.actual { outline: 2px solid var(--ink); outline-offset: 1px; }
+.rb-phase-bar.deload { opacity: .5; background: #8B5CF6 !important; }
+.rb-phase-lbl { font-family: var(--font-mono); font-size: 6.5px; color: var(--ink-5); text-align: center; white-space: nowrap; }
+.rb-phase-lbl.actual { color: var(--ink); font-weight: 700; }
+
+/* ── MILESTONES ──────────────────────────────── */
+.rb-milestones { display: flex; flex-direction: column; gap: 0; margin-top: 8px; position: relative; }
+.rb-milestones::before {
+  content: ''; position: absolute; left: 13px; top: 20px; bottom: 20px;
+  width: 1px; background: var(--line-2);
+}
+.rb-milestone {
+  display: flex; align-items: flex-start; gap: 10px; padding: 8px 0;
+  position: relative;
+}
+.rb-milestone-dot {
+  width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--line-2);
+  background: var(--bg); flex-shrink: 0; display: flex; align-items: center;
+  justify-content: center; font-size: 11px; z-index: 1;
+}
+.rb-milestone-dot.active { background: var(--accent); border-color: var(--accent); color: var(--paper); }
+.rb-milestone-dot.done { background: var(--ok); border-color: var(--ok); color: var(--paper); }
+.rb-milestone-body { flex: 1; padding-top: 4px; }
+.rb-milestone-title { font-family: var(--font-disp); font-size: 13px; color: var(--ink); text-transform: uppercase; line-height: 1.1; }
+.rb-milestone-desc { font-family: var(--font-mono); font-size: 9px; color: var(--ink-4); margin-top: 2px; }
+.rb-milestone-sem { font-family: var(--font-mono); font-size: 9px; color: var(--ink-3); margin-top: 1px; font-weight: 700; }
+
+/* ── STATUS BADGES ──────────────────────────── */
+.rb-status-badge {
+  font-family: var(--font-mono); font-size: 9px; font-weight: 700;
+  letter-spacing: .1em; text-transform: uppercase;
+  border-radius: 4px; padding: 2px 7px; flex-shrink: 0;
+}
+.rb-status-priority  { background: rgba(239,68,68,.12);  color: #EF4444; border: 1px solid rgba(239,68,68,.3); }
+.rb-status-needs_work{ background: rgba(245,158,11,.12); color: #F59E0B; border: 1px solid rgba(245,158,11,.3); }
+.rb-status-good      { background: rgba(29,200,184,.12); color: #1DC8B8; border: 1px solid rgba(29,200,184,.3); }
+.rb-status-strong    { background: rgba(29,200,184,.18); color: #0FA893; border: 1px solid rgba(29,200,184,.4); }
+.rb-status-sin_datos { font-family: var(--font-mono); font-size: 9px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-4); border: 1px solid var(--line); border-radius: 4px; padding: 2px 7px; }
+
+/* ── RACE PREDICTION ─────────────────────────── */
+.rb-pred-card {
+  background: var(--ink); color: var(--paper);
+  border-radius: 8px; padding: 16px 14px; margin-bottom: 10px;
+}
+.rb-pred-eyebrow { font-family: var(--font-mono); font-size: 9px; letter-spacing: .14em;
+  text-transform: uppercase; opacity: .6; margin-bottom: 10px; }
+.rb-pred-times { display: flex; gap: 12px; align-items: flex-end; margin-bottom: 10px; }
+.rb-pred-main { flex: 1; }
+.rb-pred-lbl { font-family: var(--font-mono); font-size: 9px; letter-spacing: .1em;
+  text-transform: uppercase; opacity: .55; margin-bottom: 3px; }
+.rb-pred-val { font-family: var(--font-disp); font-size: 36px; line-height: 1;
+  letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+.rb-pred-range { display: flex; flex-direction: column; gap: 6px; }
+.rb-pred-secondary { font-family: var(--font-mono); font-size: 15px; font-weight: 700;
+  letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
+.rb-pred-note { font-family: var(--font-mono); font-size: 9px; opacity: .45;
+  letter-spacing: .08em; text-transform: uppercase; padding-top: 10px;
+  border-top: 1px solid rgba(255,255,255,.12); }
+.rb-pred-mejora { display: inline-flex; align-items: center; gap: 5px;
+  margin-top: 6px; padding: 3px 8px; border-radius: 4px;
+  font-family: var(--font-mono); font-size: 10px; font-weight: 700; }
+.rb-pred-mejora-over  { background: rgba(239,68,68,.18); color: #EF4444; }
+.rb-pred-mejora-under { background: rgba(29,200,184,.18); color: #1DC8B8; }
+
+/* ── DÓNDE PIERDES TIEMPO ────────────────────── */
+.rb-losses { background: var(--paper); border: 1px solid var(--line); border-radius: 8px; padding: 14px 12px; margin-bottom: 10px; }
+.rb-losses-title { font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+  letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 12px; }
+.rb-loss-row { display: flex; align-items: center; gap: 8px; margin-bottom: 9px; }
+.rb-loss-row:last-child { margin-bottom: 0; }
+.rb-loss-rank { font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+  color: var(--ink-4); width: 14px; flex-shrink: 0; }
+.rb-loss-name { font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+  color: var(--ink); flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rb-loss-gap { font-family: var(--font-mono); font-size: 11px; font-weight: 700;
+  color: #EF4444; flex-shrink: 0; min-width: 44px; text-align: right; }
+.rb-loss-bar-track { flex: 1; height: 4px; background: var(--line); border-radius: 2px; overflow: hidden; max-width: 60px; }
+.rb-loss-bar-fill { height: 100%; border-radius: 2px; background: #EF4444; transition: width .5s ease; }
+
+/* ── STATION BREAKDOWN ───────────────────────── */
+.rb-breakdown { background: var(--paper); border: 1px solid var(--line); border-radius: 8px; padding: 14px 12px; margin-bottom: 10px; }
+.rb-breakdown-title { font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+  letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 12px; }
+.rb-breakdown-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.rb-breakdown-row:last-child { margin-bottom: 0; }
+.rb-breakdown-name { font-family: var(--font-mono); font-size: 9px; color: var(--ink-3);
+  width: 88px; flex-shrink: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rb-breakdown-bars { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.rb-breakdown-bar-track { height: 7px; background: var(--line); border-radius: 3px; overflow: hidden; }
+.rb-breakdown-bar-you { height: 100%; border-radius: 3px; transition: width .6s ease; }
+.rb-breakdown-val { font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+  color: var(--ink); width: 38px; text-align: right; flex-shrink: 0; }
+.rb-breakdown-ref-lbl { font-family: var(--font-mono); font-size: 7px; color: var(--ink-5); text-align: right; }
+
+/* ── COACHING CARDS ──────────────────────────── */
+.rb-coach-cards { display: flex; flex-direction: column; gap: 10px; }
+.rb-coach-card {
+  background: var(--paper); border: 1px solid var(--line); border-radius: 10px;
+  padding: 14px 12px; border-left: 3px solid var(--line-2);
+}
+.rb-coach-card.priority  { border-left-color: #EF4444; }
+.rb-coach-card.needs_work{ border-left-color: #F59E0B; }
+.rb-coach-card.good      { border-left-color: #1DC8B8; }
+.rb-coach-card.strong    { border-left-color: #0FA893; }
+.rb-coach-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.rb-coach-name { font-family: var(--font-disp); font-size: 14px; font-weight: 700; text-transform: uppercase; }
+.rb-coach-pct  { font-family: var(--font-mono); font-size: 11px; font-weight: 700; color: var(--ink-3); }
+.rb-coach-section { margin-bottom: 8px; }
+.rb-coach-section:last-child { margin-bottom: 0; }
+.rb-coach-lbl { font-family: var(--font-mono); font-size: 9px; font-weight: 700; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--ink-4); margin-bottom: 3px; }
+.rb-coach-txt { font-family: var(--font-body); font-size: 12px; color: var(--ink-2); line-height: 1.5; }
+.rb-coach-potencial {
+  font-family: var(--font-mono); font-size: 9px; color: #1DC8B8;
+  background: rgba(29,200,184,.08); border: 1px solid rgba(29,200,184,.2);
+  border-radius: 4px; padding: 4px 8px; margin-top: 6px; display: inline-block;
+}
+.rb-coach-mejora {
+  font-family: var(--font-mono); font-size: 9px; color: #EF4444;
+  background: rgba(239,68,68,.07); border: 1px solid rgba(239,68,68,.2);
+  border-radius: 4px; padding: 4px 8px; margin-top: 4px; display: inline-block;
+}
+
+/* ── RACE DAY STRATEGY ───────────────────────── */
+.rb-rd-strategy { display: flex; flex-direction: column; gap: 8px; }
+.rb-rd-group {
+  background: var(--paper); border: 1px solid var(--line); border-radius: 8px; padding: 12px;
+}
+.rb-rd-group-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+.rb-rd-group-name { font-family: var(--font-disp); font-size: 13px; text-transform: uppercase; }
+.rb-rd-group-nivel { font-family: var(--font-mono); font-size: 9px; font-weight: 700;
+  padding: 2px 8px; border-radius: 10px; letter-spacing: .06em; }
+.rb-rd-group-stations { font-family: var(--font-mono); font-size: 9px; color: var(--ink-4);
+  letter-spacing: .05em; margin-bottom: 6px; }
+.rb-rd-group-consejo { font-family: var(--font-body); font-size: 11px; color: var(--ink-2); line-height: 1.5; }
+.rb-rd-tip {
+  background: var(--ink); color: var(--paper); border-radius: 6px; padding: 12px;
+  font-family: var(--font-body); font-size: 12px; line-height: 1.5; margin-top: 10px;
+}
+.rb-rd-tip-lbl { font-family: var(--font-mono); font-size: 9px; letter-spacing: .12em;
+  text-transform: uppercase; opacity: .55; margin-bottom: 4px; }
+
 /* responsive */
 @media (min-width: 720px) {
   .rb-container { max-width: 760px; }
@@ -930,6 +1103,24 @@ a.rb-dia:hover { background: var(--paper-2); text-decoration: none; }
       <button type="button" class="rb-btn rb-btn-sm rb-btn-ghost" onclick="document.getElementById('modal-regen-plan').style.display='flex'"><i class="fas fa-sync-alt"></i> Regenerar</button>
     </div>
 
+    {% if estaciones_debiles %}
+    <div class="rb-weakness">
+      <div class="rb-weakness-title"><i class="fas fa-crosshairs" style="margin-right:5px"></i>Estaciones a reforzar esta semana</div>
+      <div class="rb-weakness-pills">
+        {% for e in estaciones_debiles|slice:":3" %}
+        <div class="rb-weakness-pill">
+          <i class="fas fa-exclamation-triangle" style="color:#EF4444;font-size:9px"></i>
+          {{ e.nombre }}
+          <span class="rb-weakness-pill-pct">{{ e.pct_ref }}%</span>
+        </div>
+        {% endfor %}
+      </div>
+      <div style="font-family:var(--font-mono);font-size:9px;color:var(--ink-4);margin-top:8px;">
+        Dedica las sesiones de estaciones a estos ejercicios primero. Usa el cronómetro para acumular datos.
+      </div>
+    </div>
+    {% endif %}
+
     {% for semana in plan_semanas %}
     {% if semana.semana_idx == 0 %}
     <div class="rb-plan-head-bar">
@@ -946,6 +1137,7 @@ a.rb-dia:hover { background: var(--paper-2); text-decoration: none; }
         </div>
         <div class="rb-dia-body">
           <div class="rb-dia-tipo" style="color:var(--ok)"><i class="fas {{ item.tipo_icon }}"></i> {{ item.tipo_label }}</div>
+          <div class="rb-dia-proposito">{{ item.proposito|truncatechars:48 }}</div>
           <div class="rb-dia-title">
             {% if item.sesion_completada %}
               {% for act in item.sesion_completada.activities.all|slice:":1" %}{{ act.nombre_ejercicio }}{% endfor %}
@@ -965,6 +1157,7 @@ a.rb-dia:hover { background: var(--paper-2); text-decoration: none; }
         </div>
         <div class="rb-dia-body">
           <div class="rb-dia-tipo"><i class="fas {{ item.tipo_icon }}"></i> {{ item.tipo_label }}</div>
+          <div class="rb-dia-proposito">{{ item.proposito|truncatechars:48 }}</div>
           <div class="rb-dia-title">
             {% for act_str in item.actividades_resumen|slice:":1" %}{{ act_str }}{% endfor %}
             {% if not item.actividades_resumen %}Sesión{% endif %}
@@ -1003,6 +1196,7 @@ a.rb-dia:hover { background: var(--paper-2); text-decoration: none; }
             </div>
             <div class="rb-dia-body">
               <div class="rb-dia-tipo"><i class="fas {{ item.tipo_icon }}"></i> {{ item.tipo_label }}</div>
+              <div class="rb-dia-proposito">{{ item.proposito|truncatechars:44 }}</div>
               <div class="rb-dia-title">{% for act_str in item.actividades_resumen|slice:":1" %}{{ act_str }}{% endfor %}</div>
               <div class="rb-dia-acts">{% for act_str in item.actividades_resumen|slice:"1:3" %}{{ act_str }}{% if not forloop.last %} · {% endif %}{% endfor %}</div>
             </div>
@@ -1015,6 +1209,62 @@ a.rb-dia:hover { background: var(--paper-2); text-decoration: none; }
     </div>
     {% endif %}
     {% endwith %}
+
+    {% if fases_timeline %}
+    <div style="margin-top:20px;background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:14px 12px;">
+      <div style="font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);margin-bottom:4px;">
+        <i class="fas fa-layer-group" style="margin-right:5px;color:var(--accent)"></i>Fases del macrociclo
+      </div>
+      <div class="rb-phases-timeline">
+        {% for f in fases_timeline %}
+        <div class="rb-phase-bar-wrap">
+          <div class="rb-phase-bar {% if f.es_actual %}actual{% endif %} {% if f.es_deload %}deload{% endif %}"
+               style="height:{{ f.intensidad }}%;background:{{ f.color }};max-height:44px;min-height:4px;"
+               title="S{{ f.semana }}: {{ f.fase }} ({{ f.intensidad }}%)"></div>
+          {% if f.es_actual or f.es_deload or f.es_taper %}
+          <div class="rb-phase-lbl {% if f.es_actual %}actual{% endif %}">
+            {% if f.es_actual %}NOW{% elif f.es_deload %}DL{% elif f.es_taper %}TP{% endif %}
+          </div>
+          {% else %}
+          <div class="rb-phase-lbl"></div>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:6px;">
+        <span style="font-family:var(--font-mono);font-size:8px;color:var(--ink-4)"><span style="display:inline-block;width:8px;height:8px;background:#F59E0B;border-radius:1px;margin-right:3px"></span>Base</span>
+        <span style="font-family:var(--font-mono);font-size:8px;color:var(--ink-4)"><span style="display:inline-block;width:8px;height:8px;background:#E8341A;border-radius:1px;margin-right:3px"></span>Potencia</span>
+        <span style="font-family:var(--font-mono);font-size:8px;color:var(--ink-4)"><span style="display:inline-block;width:8px;height:8px;background:#EF4444;border-radius:1px;margin-right:3px"></span>Intensif.</span>
+        <span style="font-family:var(--font-mono);font-size:8px;color:var(--ink-4)"><span style="display:inline-block;width:8px;height:8px;background:#1DC8B8;border-radius:1px;margin-right:3px"></span>Taper</span>
+        <span style="font-family:var(--font-mono);font-size:8px;color:var(--ink-4)"><span style="display:inline-block;width:8px;height:8px;background:#8B5CF6;border-radius:1px;margin-right:3px"></span>Deload</span>
+      </div>
+    </div>
+    {% endif %}
+
+    {% if milestones %}
+    <div style="margin-top:16px;background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:14px 12px;">
+      <div style="font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);margin-bottom:10px;">
+        <i class="fas fa-flag-checkered" style="margin-right:5px;color:var(--accent)"></i>Hitos del macrociclo
+      </div>
+      <div class="rb-milestones">
+        {% for m in milestones %}
+        <div class="rb-milestone">
+          <div class="rb-milestone-dot {% if m.pasado %}done{% elif forloop.last %}active{% endif %}">
+            <i class="fas {{ m.icono }}" style="font-size:11px;color:{% if m.pasado %}var(--paper){% elif forloop.last %}var(--paper){% else %}var(--ink-4){% endif %}"></i>
+          </div>
+          <div class="rb-milestone-body">
+            <div class="rb-milestone-title">{{ m.titulo }}</div>
+            <div class="rb-milestone-desc">{{ m.desc }}</div>
+            {% if m.semana_desde_hoy > 0 %}
+            <div class="rb-milestone-sem">en {{ m.semana_desde_hoy }} sem</div>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
   </section>
   {% endif %}
 
@@ -1203,12 +1453,96 @@ a.rb-dia:hover { background: var(--paper-2); text-decoration: none; }
   </section>
   {% endif %}
 
+  <!-- ═══════════════ ANÁLISIS DE CARRERA ═══════════════ -->
+  {% if objetivo_activo and splits_estaciones %}
+  <section class="rb-section rb-a6">
+    <div class="rb-section-head">
+      <span class="rb-section-num">06</span>
+      <h2 class="rb-section-title">Análisis de carrera</h2>
+      <div class="rb-section-line"></div>
+    </div>
+
+    {% if race_prediction and race_prediction.tiene_datos %}
+    <div class="rb-pred-card">
+      <div class="rb-pred-eyebrow">Predicción basada en tus splits actuales</div>
+      <div class="rb-pred-times">
+        <div class="rb-pred-main">
+          <div class="rb-pred-lbl">Tiempo estimado</div>
+          <div class="rb-pred-val">{{ race_prediction.estimado_str }}</div>
+          <div class="rb-pred-mejora {% if race_prediction.por_encima %}rb-pred-mejora-over{% else %}rb-pred-mejora-under{% endif %}">
+            {% if race_prediction.por_encima %}
+            <i class="fas fa-arrow-up"></i> +{{ race_prediction.mejora_str }} sobre referencia
+            {% else %}
+            <i class="fas fa-arrow-down"></i> {{ race_prediction.mejora_str }} bajo referencia
+            {% endif %}
+          </div>
+        </div>
+        <div class="rb-pred-range">
+          <div>
+            <div class="rb-pred-lbl">Mejor caso</div>
+            <div class="rb-pred-secondary">{{ race_prediction.mejor_str }}</div>
+          </div>
+          <div>
+            <div class="rb-pred-lbl">Ref. {{ splits_categoria|default:"Open" }}</div>
+            <div class="rb-pred-secondary">{{ race_prediction.ref_str }}</div>
+          </div>
+        </div>
+      </div>
+      <div class="rb-pred-note">
+        <i class="fas fa-database" style="margin-right:4px"></i>
+        {{ race_prediction.stations_con_datos }}/{{ race_prediction.total_stations }} estaciones con datos reales · Running estimado de tu ritmo 5K
+      </div>
+    </div>
+    {% elif not race_prediction %}
+    <div class="rb-splits-note" style="margin-bottom:10px;">
+      <i class="fas fa-info-circle" style="margin-right:4px;color:var(--accent)"></i>
+      Añade tu tiempo de 5K al objetivo para activar la predicción de carrera.
+    </div>
+    {% endif %}
+
+    {% if top_perdidas %}
+    <div class="rb-losses">
+      <div class="rb-losses-title"><i class="fas fa-clock" style="margin-right:5px;color:var(--accent)"></i>Dónde pierdes más tiempo</div>
+      {% for sp in top_perdidas %}
+      <div class="rb-loss-row">
+        <span class="rb-loss-rank">{{ forloop.counter }}</span>
+        <span class="rb-loss-name">{{ sp.nombre }}</span>
+        <span class="rb-loss-gap">+{{ sp.gap_str }}</span>
+        <div class="rb-loss-bar-track">
+          <div class="rb-loss-bar-fill" style="width:{{ sp.pct_ref }}%"></div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="rb-breakdown">
+      <div class="rb-breakdown-title"><i class="fas fa-chart-bar" style="margin-right:5px;color:var(--accent)"></i>Desglose por estación</div>
+      {% for sp in splits_estaciones %}
+      <div class="rb-breakdown-row">
+        <div class="rb-breakdown-name" title="{{ sp.nombre }}">{{ sp.nombre }}</div>
+        <div class="rb-breakdown-bars">
+          <div class="rb-breakdown-bar-track">
+            <div class="rb-breakdown-bar-you" style="width:{{ sp.pct_ref }}%;background:{% if sp.pct_ref >= 95 %}#1DC8B8{% elif sp.pct_ref >= 80 %}#1DC8B8{% elif sp.pct_ref >= 60 %}#F59E0B{% else %}#EF4444{% endif %}"></div>
+          </div>
+        </div>
+        <div>
+          <div class="rb-breakdown-val">{% if sp.tiene_datos %}{{ sp.promedio_str }}{% else %}—{% endif %}</div>
+          <div class="rb-breakdown-ref-lbl">ref: {{ sp.ref_str }}</div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+  </section>
+  {% endif %}
+
   <!-- ═══════════════ SPLITS ═══════════════ -->
   {% if objetivo_activo %}
   <section class="rb-section rb-a6">
     <div class="rb-section-head">
       <span class="rb-section-num">
-        {% if lesion_activa %}07{% elif evolucion_carrera and evolucion_carrera.num_sesiones > 0 %}06{% else %}05{% endif %}
+        {% if lesion_activa %}08{% elif evolucion_carrera and evolucion_carrera.num_sesiones > 0 %}07{% else %}07{% endif %}
       </span>
       <h2 class="rb-section-title">Mis splits</h2>
       <div class="rb-section-line"></div>
@@ -1234,14 +1568,25 @@ a.rb-dia:hover { background: var(--paper-2); text-decoration: none; }
       {% for split in splits_estaciones %}
       <div class="rb-split-row {% if not split.tiene_datos %}rb-split-row--empty{% endif %}">
 
-        {# ── Cabecera: nombre + badge ── #}
+        {# ── Cabecera: nombre + status badge ── #}
         <div class="rb-split-header">
           <span class="rb-split-name">{{ split.nombre }}</span>
-          {% if not split.tiene_datos %}
-          <span class="rb-split-badge-no">Sin datos</span>
-          {% else %}
-          <span class="rb-split-badge-no">{{ split.sesiones }} sesión{% if split.sesiones != 1 %}es{% endif %}</span>
-          {% endif %}
+          <div style="display:flex;gap:5px;align-items:center">
+            {% if split.sesiones > 0 %}
+            <span style="font-family:var(--font-mono);font-size:8px;color:var(--ink-4)">{{ split.sesiones }}×</span>
+            {% endif %}
+            {% if split.status == 'priority' %}
+            <span class="rb-status-badge rb-status-priority">Priority</span>
+            {% elif split.status == 'needs_work' %}
+            <span class="rb-status-badge rb-status-needs_work">Needs Work</span>
+            {% elif split.status == 'good' %}
+            <span class="rb-status-badge rb-status-good">Good</span>
+            {% elif split.status == 'strong' %}
+            <span class="rb-status-badge rb-status-strong">Strong</span>
+            {% else %}
+            <span class="rb-status-badge rb-status-sin_datos">Sin datos</span>
+            {% endif %}
+          </div>
         </div>
 
         {# ── Tiempos ── #}
