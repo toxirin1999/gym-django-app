@@ -61,7 +61,7 @@ class HyroxLoadManager:
 
     @classmethod
     def get_fc_reposo(cls, objetivo):
-        return objetivo.fc_reposo or 60
+        return objetivo.fc_reposo if objetivo.fc_reposo is not None else 60
 
     @classmethod
     def get_zonas_absolutas(cls, objetivo):
@@ -213,7 +213,40 @@ class HyroxLoadManager:
         )
         if lecturas:
             return round(sum(lecturas) / len(lecturas))
-        return objetivo.fc_reposo or 60
+        return objetivo.fc_reposo if objetivo.fc_reposo is not None else 60
+
+    @classmethod
+    def get_sleep_penalty(cls, objetivo, dias=7):
+        """
+        Penalización de carga derivada del sueño reciente (HyroxReadinessLog).
+        Retorna un valor 0–8 que se resta al TSB efectivo antes de calcular cargas:
+          < 6 h sueño  → +4   |  6–7 h → +2
+          calidad < 4  → +3   |  4–5   → +1.5
+        Un atleta bien descansado no recibe penalización (retorna 0).
+        """
+        from .models import HyroxReadinessLog
+        lecturas = list(
+            HyroxReadinessLog.objects.filter(objective=objetivo)
+            .order_by('-fecha')[:dias]
+            .values('horas_sueno', 'calidad_sueno')
+        )
+        if not lecturas:
+            return 0.0
+        total = 0.0
+        for l in lecturas:
+            horas   = l.get('horas_sueno') or 0
+            calidad = l.get('calidad_sueno') or 5
+            p = 0.0
+            if horas and horas < 6:
+                p += 4.0
+            elif horas and horas < 7:
+                p += 2.0
+            if calidad and calidad < 4:
+                p += 3.0
+            elif calidad and calidad < 6:
+                p += 1.5
+            total += p
+        return round(total / len(lecturas), 1)
 
     @classmethod
     def get_progression_curve(cls, objetivo, tipo_actividad, ejercicio_keyword=None, semanas=8):
@@ -331,13 +364,14 @@ class HyroxTrainingEngine:
 
     @staticmethod
     def _calcular_porcentaje_rm(week, weeks_to_plan, is_deload, is_taper,
-                                 rpe_acumulado=None, tsb=None):
+                                 rpe_acumulado=None, tsb=None, sleep_penalty=0.0):
         """
         Progresión de carga ponderada por:
         1. Calendario (semana del macrociclo)
         2. RPE acumulado (últimas 3 sesiones) — señal subjetiva
-        3. TSB (Training Stress Balance) — señal objetiva de forma/fatiga
+        3. TSB + penalización sueño (señal objetiva de forma/fatiga)
 
+        TSB efectivo = TSB real − sleep_penalty (sueño deficiente reduce forma percibida)
         TSB > +10  → atleta fresco: acelerar progresión
         TSB 0-10   → zona óptima: progresión normal
         TSB -15-0  → carga acumulada: prudencia
@@ -360,19 +394,22 @@ class HyroxTrainingEngine:
             elif rpe_acumulado < 6.0:
                 base_pct = min(round(base_pct + 0.05, 3), 0.85)
 
-        # Ajuste por TSB (señal objetiva — tiene prioridad sobre RPE)
+        # TSB efectivo: combinamos forma objetiva + penalización por sueño deficiente
+        tsb_eff = None
         if tsb is not None:
-            if tsb < -25:
-                # Sobreentrenamiento: reducción de emergencia
+            tsb_eff = tsb - sleep_penalty
+        elif sleep_penalty > 0:
+            tsb_eff = -sleep_penalty  # sin historial TRIMP, el sueño ya indica fatiga
+
+        # Ajuste por TSB efectivo (prioridad sobre RPE)
+        if tsb_eff is not None:
+            if tsb_eff < -25:
                 base_pct = max(round(base_pct - 0.12, 3), 0.60)
-            elif tsb < -15:
-                # Fatiga alta: bajar 7%
+            elif tsb_eff < -15:
                 base_pct = max(round(base_pct - 0.07, 3), 0.63)
-            elif tsb < -5:
-                # Carga acumulada leve: bajar 3%
+            elif tsb_eff < -5:
                 base_pct = max(round(base_pct - 0.03, 3), 0.65)
-            elif tsb > 10:
-                # Atleta fresco: puede progresar más
+            elif tsb_eff > 10:
                 base_pct = min(round(base_pct + 0.05, 3), 0.90)
 
         return base_pct
@@ -625,16 +662,31 @@ class HyroxTrainingEngine:
         carga_actual = HyroxLoadManager.calcular_ctl_atl_tsb(objective)
         tsb_actual   = carga_actual['tsb'] if carga_actual['ctl'] > 0 else None
 
+        # Penalización por sueño deficiente (últimos 7 días)
+        sleep_penalty = HyroxLoadManager.get_sleep_penalty(objective)
+
         # Volumen semanal base por categoría
         sessions_per_week = 5 if 'pro' in objective.categoria else 4
 
-        # Tags de lesiones activas para Bio-Safe substitution
+        # Tags de lesiones activas — restricciones GRADUADAS según fase de lesión
         from .models import UserInjury
+        # Movimientos de alto impacto que se restringen incluso en SUB_AGUDA
+        _HIGH_IMPACT = {'impacto_vertical', 'triple_extension_explosiva', 'flexion_plantar'}
         lesiones_activas = UserInjury.objects.filter(cliente=objective.cliente, activa=True)
         restricted_tags = set()
+        retorno_tags = set()  # tags en fase RETORNO: permitidos con carga reducida, no bloqueados
         for inj in lesiones_activas:
-            if inj.tags_restringidos:
+            if not inj.tags_restringidos:
+                continue
+            if inj.fase == 'AGUDA':
+                # Fase aguda: bloquear todos los tags restringidos
                 restricted_tags.update(inj.tags_restringidos)
+            elif inj.fase == 'SUB_AGUDA':
+                # Sub-aguda: solo bloquear los de alto impacto real
+                restricted_tags.update(t for t in inj.tags_restringidos if t in _HIGH_IMPACT)
+            elif inj.fase == 'RETORNO':
+                # Retorno: no bloquear pero marcar para reducción de carga
+                retorno_tags.update(inj.tags_restringidos)
 
         current_date = today
 
@@ -684,8 +736,10 @@ class HyroxTrainingEngine:
                 week=week,
                 weeks_to_plan=weeks_to_plan,
                 restricted_tags=restricted_tags,
+                retorno_tags=retorno_tags,
                 rpe_acumulado=rpe_acumulado,
                 tsb=tsb_actual,
+                sleep_penalty=sleep_penalty,
             )
 
             # Día 1: Fuerza + MetCon
@@ -807,6 +861,14 @@ class HyroxTrainingEngine:
         rpe    = sesion_completada.rpe_global
         hr_max = sesion_completada.hr_maxima or 0
         nombre = sesion_completada.objective.cliente.nombre
+
+        # RPE fresco de las últimas 3 sesiones (más actualizado que el del plan)
+        sesiones_recientes = list(HyroxSession.objects.filter(
+            objective=sesion_completada.objective,
+            estado='completado',
+        ).order_by('-fecha')[:3])
+        rpe_vals_frescos = [s.rpe_global for s in sesiones_recientes if s.rpe_global is not None]
+        rpe_acumulado_fresco = round(sum(rpe_vals_frescos) / len(rpe_vals_frescos), 2) if rpe_vals_frescos else None
 
         if not rpe:
             return mensajes_ui
@@ -1071,6 +1133,76 @@ class HyroxTrainingEngine:
                         f"del {proxima_acwr.fecha.strftime('%d/%m')} para devolverte al rango óptimo."
                     )
 
+        # --- TRIGGER 7: SUEÑO DEFICIENTE CRÓNICO ---
+        # Si el sueño reciente es muy deficiente, reducir carga preventivamente.
+        sleep_penalty = HyroxLoadManager.get_sleep_penalty(sesion_completada.objective, dias=7)
+        if sleep_penalty >= 4.0:
+            proxima_sleep = HyroxSession.objects.filter(
+                objective=sesion_completada.objective,
+                estado='planificado',
+                fecha__gt=sesion_completada.fecha,
+            ).order_by('fecha').first()
+            if proxima_sleep:
+                sleep_mutated = False
+                for act in proxima_sleep.activities.all():
+                    m = dict(act.data_metricas or {})
+                    mutated = False
+                    if 'series' in m:
+                        for serie in m['series']:
+                            if 'peso_kg' in serie:
+                                serie['peso_kg'] = round(float(serie['peso_kg']) * 0.90, 1)
+                                mutated = True
+                    if 'distancia_km' in m:
+                        m['distancia_km'] = round(float(m['distancia_km']) * 0.90, 1)
+                        mutated = True
+                    if mutated:
+                        notas = m.get('notas', '')
+                        if 'Ajuste sueño' not in notas:
+                            m['notas'] = (notas + f" | 😴 Ajuste sueño: déficit crónico detectado (penalización {sleep_penalty}). Carga -10%.").strip(' |')
+                        act.data_metricas = m
+                        act.save()
+                        sleep_mutated = True
+                if sleep_mutated:
+                    mensajes_ui.append(
+                        f"😴 {nombre}: El análisis de tu sueño reciente indica déficit crónico. "
+                        f"He reducido un 10% la carga de la sesión del {proxima_sleep.fecha.strftime('%d/%m')} "
+                        f"para optimizar la recuperación."
+                    )
+
+        # --- TRIGGER 8: DURACIÓN REAL VS PLANIFICADA (tiempo_s por ejercicio) ---
+        # Si el atleta tarda >30% más de lo planificado en los ejercicios,
+        # añadir una nota de ajuste a la próxima sesión.
+        actividades_con_tiempo = [
+            a for a in sesion_completada.activities.all()
+            if (a.data_metricas or {}).get('tiempo_s', 0) > 0
+        ]
+        if actividades_con_tiempo and sesion_completada.tiempo_total_minutos:
+            total_ejercicios_s  = sum(int(a.data_metricas['tiempo_s']) for a in actividades_con_tiempo)
+            total_planificado_s = sesion_completada.tiempo_total_minutos * 60
+            if total_planificado_s > 0:
+                ratio_duracion = total_ejercicios_s / total_planificado_s
+                if ratio_duracion > 1.30:
+                    proxima_larga = HyroxSession.objects.filter(
+                        objective=sesion_completada.objective,
+                        estado='planificado',
+                        fecha__gt=sesion_completada.fecha,
+                    ).order_by('fecha').first()
+                    if proxima_larga:
+                        for act in proxima_larga.activities.all():
+                            m = dict(act.data_metricas or {})
+                            notas = m.get('notas', '')
+                            if 'Ajuste duración' not in notas:
+                                m['notas'] = (notas + (
+                                    f" | ⏱ Ajuste duración: la sesión anterior ocupó {int(ratio_duracion*100)}% "
+                                    f"del tiempo planificado. Acorta pausas o reduce series si el tiempo es limitante."
+                                )).strip(' |')
+                                act.data_metricas = m
+                                act.save()
+                    mensajes_ui.append(
+                        f"⏱ {nombre}: Tus ejercicios ocuparon el {int(ratio_duracion*100)}% del tiempo total planificado. "
+                        f"He añadido una nota en la próxima sesión para ajustar los tiempos de descanso."
+                    )
+
         return mensajes_ui
 
     # ─────────────────────────────────────────────────────────────────────────
@@ -1185,8 +1317,10 @@ class HyroxTrainingEngine:
         is_taper=False, is_deload=False,
         week=0, weeks_to_plan=1,
         restricted_tags=None,
+        retorno_tags=None,
         rpe_acumulado=None,
         tsb=None,
+        sleep_penalty=0.0,
     ):
         """
         Crea la sesión y sus actividades planificadas basadas en el template,
@@ -1197,6 +1331,7 @@ class HyroxTrainingEngine:
             return
 
         restricted_tags = restricted_tags or set()
+        retorno_tags    = retorno_tags or set()
         nivel           = getattr(objective, 'nivel_experiencia', 'intermedio') or 'intermedio'
         nombre_cliente  = objective.cliente.nombre
         vol             = _VOLUMEN_POR_NIVEL.get(nivel, _VOLUMEN_POR_NIVEL['intermedio'])
@@ -1215,6 +1350,20 @@ class HyroxTrainingEngine:
 
         rm_squat    = objective.rm_sentadilla  or 60.0
         rm_deadlift = objective.rm_peso_muerto or 80.0
+
+        # Calibrar RM desde rendimiento reciente si hay datos más actualizados
+        if template != 'calibracion':
+            curva_sq = HyroxLoadManager.get_progression_curve(objective, 'fuerza', 'sentadilla', semanas=6)
+            if curva_sq:
+                max_real_sq = max(p['valor'] for p in curva_sq)
+                # Si el atleta ha levantado >90% del RM registrado, estimar RM actualizado
+                if max_real_sq > rm_squat * 0.90:
+                    rm_squat = max(rm_squat, round(max_real_sq / 0.85))
+            curva_dl = HyroxLoadManager.get_progression_curve(objective, 'fuerza', 'muerto', semanas=6)
+            if curva_dl:
+                max_real_dl = max(p['valor'] for p in curva_dl)
+                if max_real_dl > rm_deadlift * 0.90:
+                    rm_deadlift = max(rm_deadlift, round(max_real_dl / 0.85))
 
         # ── CALIBRACIÓN ──────────────────────────────────────────────────────
         if template == 'calibracion':
@@ -1255,10 +1404,10 @@ class HyroxTrainingEngine:
             elif rm_squat > (rm_deadlift * 1.2):
                 imbalance_type = 'weak_deadlift'
 
-            # Progresión de % RM: calendario + RPE acumulado + TSB objetivo
+            # Progresión de % RM: calendario + RPE + TSB + sueño
             porcentaje_rm = HyroxTrainingEngine._calcular_porcentaje_rm(
                 week, weeks_to_plan, is_deload, is_taper,
-                rpe_acumulado=rpe_acumulado, tsb=tsb
+                rpe_acumulado=rpe_acumulado, tsb=tsb, sleep_penalty=sleep_penalty
             )
 
             # Parámetros de series/reps/fase según % RM actual
@@ -1313,6 +1462,13 @@ class HyroxTrainingEngine:
                 notas_ej  = 'Equilibrio estructural OK.'
 
             peso_trabajo = peso_base * porcentaje_rm
+
+            # Ajuste RETORNO: lesión en fase de reincorporación → -15% de carga
+            _retorno_pierna = {'impacto_vertical', 'flexion_rodilla_profunda', 'empuje_pierna',
+                               'flexion_plantar', 'carga_distal_pierna', 'estabilidad_gemelo'}
+            if retorno_tags and any(tag in retorno_tags for tag in _retorno_pierna):
+                peso_trabajo *= 0.85
+                notas_ej += ' | ⚕️ Fase RETORNO: carga reducida al 85% como precaución biomecánica.'
 
             # Sustitución Bio-Segura por lesión de tren inferior
             restricciones_pierna = {
