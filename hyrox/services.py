@@ -1887,13 +1887,23 @@ class InterferenceIndexService:
             else:
                 severidad = 'baja'
 
+            n = len(entries)
+            if n < 3:
+                confianza_if = 'baja'
+            elif n < 6:
+                confianza_if = 'media'
+            else:
+                confianza_if = 'alta'
+
             result.append({
                 'estacion': station,
                 'if_pct': avg_if,
                 'delta_secs': delta_secs,
-                'sesiones': len(entries),
+                'sesiones': n,
                 'trend': trend,
                 'severidad': severidad,
+                'confianza': confianza_if,
+                'es_provisional': n < 3,
             })
 
         result.sort(key=lambda x: x['if_pct'], reverse=True)
@@ -2123,21 +2133,35 @@ class HyroxImpactEngine:
         if interferencia_principal:
             if_pct = float(interferencia_principal.get('if_pct') or 0)
             estacion = interferencia_principal.get('estacion', 'estación crítica')
+            es_provisional = interferencia_principal.get('es_provisional', False)
+
             if if_pct >= 15:
                 impacto = min(240, max(90, int(if_pct * 8)))
+                if es_provisional:
+                    impacto = min(impacto, 90)  # cap cuando n < 3
                 factors.append({
-                    'tipo': 'Fuga de rendimiento',
-                    'detalle': f'{estacion}: caes +{if_pct}% al volver a correr.',
+                    'tipo': 'Fuga posible' if es_provisional else 'Fuga de rendimiento',
+                    'detalle': (
+                        f'{estacion}: dato provisional (1 muestra). Necesitamos 2 simulaciones más para confirmarlo.'
+                        if es_provisional else
+                        f'{estacion}: caes +{if_pct}% al volver a correr.'
+                    ),
                     'impacto_secs': impacto,
-                    'nivel': 'rojo' if if_pct >= 22 else 'amarillo',
+                    'nivel': 'amarillo' if es_provisional else ('rojo' if if_pct >= 22 else 'amarillo'),
                 })
                 riesgo_ignorar += impacto
                 beneficio_seguir += int(impacto * 0.45)
             elif if_pct >= 7:
                 impacto = min(90, max(35, int(if_pct * 5)))
+                if es_provisional:
+                    impacto = min(impacto, 45)
                 factors.append({
-                    'tipo': 'Interferencia moderada',
-                    'detalle': f'{estacion}: pérdida de ritmo aún aprovechable.',
+                    'tipo': 'Interferencia posible' if es_provisional else 'Interferencia moderada',
+                    'detalle': (
+                        f'{estacion}: dato provisional (1 muestra). Necesitamos 2 simulaciones más.'
+                        if es_provisional else
+                        f'{estacion}: pérdida de ritmo aún aprovechable.'
+                    ),
                     'impacto_secs': impacto,
                     'nivel': 'amarillo',
                 })
