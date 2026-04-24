@@ -319,17 +319,21 @@ class HyroxParserService:
             return {'activities': [], 'new_records': []}
             
         # ── SNAPSHOT DEL PLAN ──────────────────────────────────────────────────
-        # Guardar lo planificado ANTES de borrar, agrupado por tipo_actividad+índice
-        # para poder calcular el cumplimiento real vs. plan.
+        # Índice doble: por nombre (preferido) y por tipo+orden (fallback).
+        # El matching por nombre evita errores de índice cuando el usuario omite actividades.
         ritmo_planificado_seg = None
-        plan_snapshot = {}  # {(tipo_actividad, idx): data_metricas_planificado}
+        plan_snapshot = {}   # {(tipo_actividad, idx): data_metricas}
+        name_snapshot = {}   # {nombre_lower: data_metricas}  ← matching preciso
         tipo_counters = {}
         for act_plan in HyroxActivity.objects.filter(sesion=session).order_by('id'):
-            ta = act_plan.tipo_actividad
+            ta  = act_plan.tipo_actividad
             idx = tipo_counters.get(ta, 0)
             tipo_counters[ta] = idx + 1
-            m = act_plan.data_metricas or {}
+            m   = act_plan.data_metricas or {}
             plan_snapshot[(ta, idx)] = m
+            nombre_plan = (act_plan.nombre_ejercicio or '').lower().strip()
+            if nombre_plan:
+                name_snapshot[nombre_plan] = m
             # Extraer ritmo objetivo de carrera para la comparativa de pace
             if ta == 'carrera' and not ritmo_planificado_seg:
                 ro = m.get('ritmo_objetivo')
@@ -371,9 +375,18 @@ class HyroxParserService:
                 data_metricas["tiempo_segundos"] = item["tiempo_segundos"]
 
             # ── Recuperar plan para esta actividad ──────────────────────────
+            # 1) Matching por nombre (exacto o subcadena) — robusto ante actividades omitidas
+            nombre_real_lower = nombre.lower().strip()
+            plan_m = {}
+            for plan_name, plan_data in name_snapshot.items():
+                if nombre_real_lower == plan_name or nombre_real_lower in plan_name or plan_name in nombre_real_lower:
+                    plan_m = plan_data
+                    break
+            # 2) Fallback: tipo + índice de aparición (comportamiento anterior)
             real_idx = real_tipo_counters.get(tipo, 0)
             real_tipo_counters[tipo] = real_idx + 1
-            plan_m = plan_snapshot.get((tipo, real_idx), {})
+            if not plan_m:
+                plan_m = plan_snapshot.get((tipo, real_idx), {})
 
             # Calcular ratio de cumplimiento individual
             ratio = HyroxParserService._calcular_cumplimiento_actividad(data_metricas, plan_m, tipo)
