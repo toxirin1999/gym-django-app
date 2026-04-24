@@ -1704,3 +1704,649 @@ class InjuryPhaseManager:
                 return {"action": "UPGRADE", "msg": "¡Alta Médica! Recuperación al 100%. Regresas al plan normal sin restricciones."}
 
         return None
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# INTERFERENCE INDEX — Caída de ritmo de carrera post-estación
+# ══════════════════════════════════════════════════════════════════════════════
+
+class InterferenceIndexService:
+    """
+    Calcula cuánto cae el ritmo de carrera del atleta inmediatamente DESPUÉS
+    de cada estación específica de Hyrox, comparado con su ritmo base.
+
+    Resultado: lista ordenada de estaciones por impacto, con % de caída.
+    """
+
+    STATION_ALIASES = {
+        'skierg': 'SkiErg', 'ski erg': 'SkiErg',
+        'sled push': 'Sled Push',
+        'sled pull': 'Sled Pull',
+        'burpee broad jump': 'Burpee Broad Jumps', 'burpees broad jump': 'Burpee Broad Jumps',
+        'rowing': 'Rowing', 'remo ergometro': 'Rowing', 'remo': 'Rowing',
+        'farmer': 'Farmers Carry', 'farmer carry': 'Farmers Carry',
+        'sandbag': 'Sandbag Lunges', 'sandbag lunge': 'Sandbag Lunges',
+        'wall ball': 'Wall Balls', 'wall balls': 'Wall Balls',
+    }
+
+    @classmethod
+    def _pace_to_secs(cls, pace_str):
+        """Convierte '4:30/km' o '4:30' a segundos (int). None si no parseable."""
+        if not pace_str:
+            return None
+        try:
+            clean = pace_str.replace('/km', '').strip()
+            parts = clean.split(':')
+            return int(parts[0]) * 60 + int(parts[1])
+        except Exception:
+            return None
+
+    @classmethod
+    def _canonize_station(cls, nombre):
+        """Devuelve el nombre canónico de la estación o None si no es reconocida."""
+        n = (nombre or '').lower().strip()
+        for kw, canon in cls.STATION_ALIASES.items():
+            if kw in n:
+                return canon
+        return None
+
+    @classmethod
+    def _get_baseline_pace(cls, objetivo):
+        """
+        Pace base del atleta: promedio de ritmo en sesiones de carrera pura
+        (sin hyrox_station en la misma sesión), en segundos/km.
+        Si no hay datos, usa tiempo_5k_base del objetivo.
+        """
+        from .models import HyroxActivity, HyroxSession
+        pure_run_sessions = (
+            HyroxSession.objects
+            .filter(objective=objetivo, estado='completado')
+            .prefetch_related('activities')
+        )
+        paces = []
+        for s in pure_run_sessions:
+            acts = list(s.activities.all())
+            tipos = {a.tipo_actividad for a in acts}
+            # Solo sesiones sin estaciones Hyrox (carrera pura o cardio)
+            if tipos & {'hyrox_station'}:
+                continue
+            for a in acts:
+                if a.tipo_actividad not in ('carrera', 'cardio_sustituto'):
+                    continue
+                m = a.data_metricas or {}
+                secs = cls._pace_to_secs(m.get('ritmo_real') or m.get('ritmo_objetivo'))
+                if secs and 180 < secs < 600:  # sanity: 3:00 - 10:00 /km
+                    paces.append(secs)
+
+        if paces:
+            return round(sum(paces) / len(paces))
+
+        # Fallback: usar tiempo_5k_base como ritmo base
+        if objetivo.tiempo_5k_base:
+            return cls._pace_to_secs(objetivo.tiempo_5k_base)
+        return None
+
+    @classmethod
+    def compute_for_objective(cls, objetivo):
+        """
+        Retorna lista de dicts ordenada por caída de ritmo descendente:
+        [
+          {
+            'estacion': 'Sled Push',
+            'if_pct': 18.5,       # % más lento post-estación vs baseline
+            'delta_secs': 50,     # segundos más por km
+            'sesiones': 3,
+            'trend': 'mejora' | 'empeora' | 'estable' | None,
+            'severidad': 'alta' | 'media' | 'baja',
+          }, ...
+        ]
+        Devuelve [] si no hay datos suficientes.
+        """
+        from .models import HyroxActivity, HyroxSession
+
+        baseline = cls._get_baseline_pace(objetivo)
+        if not baseline:
+            return []
+
+        # Cargar sesiones de simulación (tienen estaciones + carrera)
+        sim_sessions = (
+            HyroxSession.objects
+            .filter(objective=objetivo, estado='completado')
+            .prefetch_related('activities')
+        )
+
+        # Acumular: {station_canon: [(if_pct, fecha), ...]}
+        data_by_station = {}
+
+        for session in sim_sessions:
+            acts = sorted(session.activities.all(), key=lambda a: a.pk)
+            tipos = {a.tipo_actividad for a in acts}
+            if not (tipos & {'hyrox_station'} and tipos & {'carrera'}):
+                continue
+
+            # Detectar primer ritmo de carrera en la sesión como baseline local
+            local_baseline = baseline
+            for a in acts:
+                if a.tipo_actividad == 'carrera':
+                    m = a.data_metricas or {}
+                    s = cls._pace_to_secs(m.get('ritmo_real') or m.get('ritmo_objetivo'))
+                    if s and 180 < s < 600:
+                        local_baseline = s
+                        break
+
+            # Buscar pares: estación → siguiente carrera
+            for i, act in enumerate(acts):
+                if act.tipo_actividad != 'hyrox_station':
+                    continue
+                canon = cls._canonize_station(act.nombre_ejercicio)
+                if not canon:
+                    continue
+                # Buscar la siguiente actividad de carrera
+                post_run = next(
+                    (a for a in acts[i + 1:] if a.tipo_actividad == 'carrera'),
+                    None
+                )
+                if not post_run:
+                    continue
+                m = post_run.data_metricas or {}
+                post_pace = cls._pace_to_secs(m.get('ritmo_real') or m.get('ritmo_objetivo'))
+                if not post_pace or not (180 < post_pace < 600):
+                    continue
+
+                if_pct = ((post_pace - local_baseline) / local_baseline) * 100
+                fecha = session.fecha
+                data_by_station.setdefault(canon, []).append((if_pct, fecha))
+
+        if not data_by_station:
+            return []
+
+        result = []
+        for station, entries in data_by_station.items():
+            entries_sorted = sorted(entries, key=lambda x: x[1])
+            pcts = [e[0] for e in entries_sorted]
+            avg_if = round(sum(pcts) / len(pcts), 1)
+            delta_secs = round((avg_if / 100) * baseline)
+
+            # Tendencia: comparar primera mitad vs segunda mitad
+            trend = None
+            if len(pcts) >= 4:
+                mid = len(pcts) // 2
+                first_avg = sum(pcts[:mid]) / mid
+                second_avg = sum(pcts[mid:]) / (len(pcts) - mid)
+                if second_avg < first_avg - 2:
+                    trend = 'mejora'
+                elif second_avg > first_avg + 2:
+                    trend = 'empeora'
+                else:
+                    trend = 'estable'
+
+            if avg_if >= 15:
+                severidad = 'alta'
+            elif avg_if >= 7:
+                severidad = 'media'
+            else:
+                severidad = 'baja'
+
+            result.append({
+                'estacion': station,
+                'if_pct': avg_if,
+                'delta_secs': delta_secs,
+                'sesiones': len(entries),
+                'trend': trend,
+                'severidad': severidad,
+            })
+
+        result.sort(key=lambda x: x['if_pct'], reverse=True)
+        return result
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# RACE CARD — Tarjeta táctica de ritmos para el día de la carrera
+# ══════════════════════════════════════════════════════════════════════════════
+
+class RaceCardService:
+    """
+    Genera una tarjeta táctica completa para el día de la carrera:
+    - 8 segmentos de carrera con ritmos individualizados
+    - 8 estaciones con tiempos objetivo basados en datos reales del atleta
+    - Tiempo total predicho y distribución de esfuerzo
+
+    Estructura Hyrox: Run→Est→Run→Est→...→Run→Est (Wall Balls es la última)
+    """
+
+    STATION_ORDER = [
+        'SkiErg', 'Sled Push', 'Sled Pull', 'Burpee Broad Jumps',
+        'Rowing', 'Farmers Carry', 'Sandbag Lunges', 'Wall Balls',
+    ]
+
+    # Penalización por defecto en segundos/km si no hay IF real para esa estación
+    DEFAULT_IF_DELTA = {
+        'SkiErg':            15,
+        'Sled Push':         40,
+        'Sled Pull':         35,
+        'Burpee Broad Jumps': 30,
+        'Rowing':            20,
+        'Farmers Carry':     25,
+        'Sandbag Lunges':    35,
+        'Wall Balls':        45,
+    }
+
+    @classmethod
+    def _fmt(cls, secs):
+        """Formatea segundos a M:SS."""
+        m, s = divmod(int(secs), 60)
+        return f"{m}:{s:02d}"
+
+    @classmethod
+    def _fmt_race(cls, secs):
+        """Formatea segundos a H:MM:SS o M:SS según duración."""
+        h, rem = divmod(int(secs), 3600)
+        m, s = divmod(rem, 60)
+        return f"{h}:{m:02d}:{s:02d}" if h else f"{m}:{s:02d}"
+
+    @classmethod
+    def generate(cls, objetivo, splits_estaciones, interferencia_index):
+        """
+        Retorna un dict con la Race Card completa o None si faltan datos base.
+        """
+        # Pace base en segundos/km
+        pace_base = InterferenceIndexService._get_baseline_pace(objetivo)
+        if not pace_base:
+            return None
+
+        # Índices por nombre
+        if_lookup = {item['estacion']: item['delta_secs'] for item in (interferencia_index or [])}
+        sp_lookup = {s['nombre']: s for s in (splits_estaciones or [])}
+        ref_times = HyroxRaceSimulator.get_tiempos_categoria(objetivo.categoria)
+
+        filas = []
+        total_secs = 0
+
+        for i, station in enumerate(cls.STATION_ORDER):
+            # ── Pace del km que PRECEDE a esta estación ──────────────────────
+            if i == 0:
+                # Km 1: salida conservadora
+                run_pace = pace_base + 15
+                run_nota = 'Freno de mano — sal al 90%'
+            else:
+                # El km i está penalizado por la estación i-1
+                prev_station = cls.STATION_ORDER[i - 1]
+                delta = if_lookup.get(prev_station, cls.DEFAULT_IF_DELTA.get(prev_station, 25))
+                run_pace = pace_base + delta
+                run_nota = f'+{delta}s post {prev_station}'
+            run_pace = max(run_pace, pace_base)  # nunca más rápido que fresco
+            total_secs += run_pace
+
+            # ── Tiempo objetivo en la estación ───────────────────────────────
+            sp = sp_lookup.get(station)
+            if sp and sp.get('tiene_datos') and sp.get('promedio_secs'):
+                station_secs = sp['promedio_secs']
+                station_source = 'real'
+            else:
+                station_secs = ref_times.get(station, 240)
+                station_source = 'ref'
+            total_secs += station_secs
+
+            filas.append({
+                'num':             i + 1,
+                'run_pace_secs':   run_pace,
+                'run_pace_str':    cls._fmt(run_pace),
+                'run_nota':        run_nota,
+                'station':         station,
+                'station_secs':    station_secs,
+                'station_str':     cls._fmt(station_secs),
+                'station_source':  station_source,   # 'real' | 'ref'
+            })
+
+        # ── Tiempo total y desglose ───────────────────────────────────────────
+        total_run_secs  = sum(f['run_pace_secs'] for f in filas)
+        total_sta_secs  = sum(f['station_secs']  for f in filas)
+        stations_reales = sum(1 for f in filas if f['station_source'] == 'real')
+
+        # Semáforo de confianza de la predicción
+        if stations_reales >= 6:
+            confianza = 'alta'
+        elif stations_reales >= 3:
+            confianza = 'media'
+        else:
+            confianza = 'baja'
+
+        # ¿Estamos en semana de carrera?
+        import datetime
+        from django.utils import timezone
+        dias_evento = (objetivo.fecha_evento - timezone.localdate()).days if objetivo.fecha_evento else 999
+        es_race_week = 0 <= dias_evento <= 7
+
+        return {
+            'filas':              filas,
+            'total_str':          cls._fmt_race(total_secs),
+            'total_run_str':      cls._fmt_race(total_run_secs),
+            'total_sta_str':      cls._fmt_race(total_sta_secs),
+            'pace_base_str':      cls._fmt(pace_base),
+            'stations_reales':    stations_reales,
+            'confianza':          confianza,
+            'es_race_week':       es_race_week,
+            'dias_evento':        dias_evento,
+        }
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# IMPACT ENGINE — consecuencia competitiva de cada decisión de entrenamiento
+# ══════════════════════════════════════════════════════════════════════════════
+
+class HyroxImpactEngine:
+    """
+    Traduce fatiga, carga e interferencia a impacto en tiempo de carrera:
+    qué pasa si el atleta obedece o ignora la decisión del sistema.
+    """
+
+    @staticmethod
+    def _fmt_delta(seconds):
+        if not seconds:
+            return "0:00"
+        sign = "+" if seconds > 0 else "-"
+        m, s = divmod(abs(int(seconds)), 60)
+        return f"{sign}{m}:{s:02d}"
+
+    @classmethod
+    def calculate(cls, readiness, carga, acwr, interferencia_index=None, race_card=None):
+        factors = []
+        riesgo_ignorar = 0
+        beneficio_seguir = 0
+
+        tsb = (carga.get('tsb') or 0) if carga else 0
+        interferencia_principal = interferencia_index[0] if interferencia_index else None
+
+        # 1. Carga aguda/crónica
+        if acwr:
+            if acwr > 1.5:
+                factors.append({
+                    'tipo': 'Carga crítica',
+                    'detalle': f'ACWR {acwr}: pico de carga por encima de zona segura.',
+                    'impacto_secs': 150,
+                    'nivel': 'rojo',
+                })
+                riesgo_ignorar += 150
+                beneficio_seguir += 90
+            elif acwr > 1.3:
+                factors.append({
+                    'tipo': 'Carga elevada',
+                    'detalle': f'ACWR {acwr}: acumulas fatiga más rápido de lo que asimilas.',
+                    'impacto_secs': 75,
+                    'nivel': 'amarillo',
+                })
+                riesgo_ignorar += 75
+                beneficio_seguir += 45
+
+        # 2. Forma / fatiga acumulada (TSB)
+        if tsb < -25:
+            factors.append({
+                'tipo': 'Fatiga profunda',
+                'detalle': f'TSB {tsb}: tu cuerpo está lejos de expresar rendimiento.',
+                'impacto_secs': 180,
+                'nivel': 'rojo',
+            })
+            riesgo_ignorar += 180
+            beneficio_seguir += 90
+        elif tsb < -15:
+            factors.append({
+                'tipo': 'Fatiga alta',
+                'detalle': f'TSB {tsb}: hay carga útil, pero forzar baja la calidad.',
+                'impacto_secs': 90,
+                'nivel': 'amarillo',
+            })
+            riesgo_ignorar += 90
+            beneficio_seguir += 45
+
+        # 3. Readiness
+        if readiness is not None:
+            if readiness < 40:
+                factors.append({
+                    'tipo': 'Disponibilidad baja',
+                    'detalle': f'Readiness {readiness}/100: hoy no es día para exprimir.',
+                    'impacto_secs': 120,
+                    'nivel': 'rojo',
+                })
+                riesgo_ignorar += 120
+                beneficio_seguir += 60
+            elif readiness < 60:
+                factors.append({
+                    'tipo': 'Disponibilidad limitada',
+                    'detalle': f'Readiness {readiness}/100: conviene entrenar con margen.',
+                    'impacto_secs': 60,
+                    'nivel': 'amarillo',
+                })
+                riesgo_ignorar += 60
+                beneficio_seguir += 30
+
+        # 4. Interferencia HYROX
+        if interferencia_principal:
+            if_pct = float(interferencia_principal.get('if_pct') or 0)
+            estacion = interferencia_principal.get('estacion', 'estación crítica')
+            if if_pct >= 15:
+                impacto = min(240, max(90, int(if_pct * 8)))
+                factors.append({
+                    'tipo': 'Fuga de rendimiento',
+                    'detalle': f'{estacion}: caes +{if_pct}% al volver a correr.',
+                    'impacto_secs': impacto,
+                    'nivel': 'rojo' if if_pct >= 22 else 'amarillo',
+                })
+                riesgo_ignorar += impacto
+                beneficio_seguir += int(impacto * 0.45)
+            elif if_pct >= 7:
+                impacto = min(90, max(35, int(if_pct * 5)))
+                factors.append({
+                    'tipo': 'Interferencia moderada',
+                    'detalle': f'{estacion}: pérdida de ritmo aún aprovechable.',
+                    'impacto_secs': impacto,
+                    'nivel': 'amarillo',
+                })
+                riesgo_ignorar += impacto
+                beneficio_seguir += int(impacto * 0.35)
+
+        if riesgo_ignorar >= 240:
+            nivel = 'rojo'
+            headline = 'Ignorar el ajuste hoy puede salir caro.'
+        elif riesgo_ignorar >= 90:
+            nivel = 'amarillo'
+            headline = 'Hoy hay margen de error, pero no infinito.'
+        else:
+            nivel = 'verde'
+            headline = 'El plan actual es estable.'
+
+        return {
+            'nivel': nivel,
+            'headline': headline,
+            'riesgo_ignorar_secs': riesgo_ignorar,
+            'beneficio_seguir_secs': beneficio_seguir,
+            'riesgo_ignorar_str': cls._fmt_delta(riesgo_ignorar),
+            'beneficio_seguir_str': cls._fmt_delta(-beneficio_seguir),
+            'confianza': (race_card or {}).get('confianza', 'media'),
+            'factores': factors[:3],
+            'escenarios': [
+                {
+                    'label': 'Si ignoras el ajuste',
+                    'delta': cls._fmt_delta(riesgo_ignorar),
+                    'texto': 'Más fatiga residual y peor expresión del ritmo bajo carga.',
+                    'tipo': 'riesgo',
+                },
+                {
+                    'label': 'Si sigues el ajuste',
+                    'delta': cls._fmt_delta(-beneficio_seguir),
+                    'texto': 'Más probabilidad de llegar fresco a la próxima sesión clave.',
+                    'tipo': 'beneficio',
+                },
+            ],
+        }
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# RACE INTELLIGENCE — capa estratégica: predicción + decisión diaria
+# ══════════════════════════════════════════════════════════════════════════════
+
+class HyroxRaceIntelligence:
+    """
+    Convierte los datos internos del sistema en una orden clara para el usuario:
+    tiempo estimado hoy, estación limitante, y decisión de entrenamiento.
+
+    No recalcula nada: orquesta HyroxLoadManager, InterferenceIndexService
+    y HyroxRaceSimulator que ya existen.
+    """
+
+    @staticmethod
+    def _fmt_time(seconds):
+        if seconds is None:
+            return None
+        seconds = int(seconds)
+        h, rem = divmod(seconds, 3600)
+        m, s = divmod(rem, 60)
+        return f"{h}:{m:02d}:{s:02d}" if h else f"{m}:{s:02d}"
+
+    @classmethod
+    def get_race_briefing(cls, objective, interferencia_index=None, race_card=None):
+        """
+        Punto de entrada único.
+        interferencia_index y race_card pueden pasarse desde el view (ya calculados)
+        para evitar doble trabajo.
+        """
+        from .training_engine import HyroxLoadManager
+
+        if not objective:
+            return None
+
+        # ── Carga y fatiga ──────────────────────────────────────────────────
+        carga = HyroxLoadManager.calcular_ctl_atl_tsb(objective)
+        acwr  = HyroxLoadManager.get_acwr(objective)
+        readiness = objective.get_race_readiness_score()
+
+        # ── Tiempo base de simulación ───────────────────────────────────────
+        simulacion = None
+        tiempo_base_secs = None
+        try:
+            simulacion = HyroxRaceSimulator.simular(objective.cliente.user_id)
+            if simulacion and 'error' not in simulacion:
+                raw = simulacion.get('tiempo_total_str', '')
+                # Parsear "01:15:20" o "1:15:20"
+                parts = raw.split(':')
+                if len(parts) == 3:
+                    tiempo_base_secs = int(parts[0]) * 3600 + int(parts[1]) * 60 + int(parts[2])
+                elif len(parts) == 2:
+                    tiempo_base_secs = int(parts[0]) * 60 + int(parts[1])
+        except Exception:
+            pass
+
+        # ── Ajuste por fatiga/readiness ─────────────────────────────────────
+        ajuste = cls._calcular_ajuste_fatiga(readiness, carga, acwr)
+        tiempo_ajustado = (tiempo_base_secs + ajuste) if tiempo_base_secs else None
+
+        # ── Interferencia principal ─────────────────────────────────────────
+        if interferencia_index is None:
+            interferencia_index = InterferenceIndexService.compute_for_objective(objective)
+        interferencia_principal = interferencia_index[0] if interferencia_index else None
+
+        # ── Decisión de hoy ─────────────────────────────────────────────────
+        decision = cls._get_decision_hoy(readiness, carga, acwr, interferencia_principal)
+
+        # ── Impacto competitivo ──────────────────────────────────────────────
+        impacto = HyroxImpactEngine.calculate(
+            readiness=readiness,
+            carga=carga,
+            acwr=acwr,
+            interferencia_index=interferencia_index,
+            race_card=race_card,
+        )
+
+        return {
+            'readiness':              readiness,
+            'tsb':                    carga.get('tsb'),
+            'ctl':                    round(carga.get('ctl', 0), 1),
+            'atl':                    round(carga.get('atl', 0), 1),
+            'acwr':                   acwr,
+            'tiempo_estimado':        cls._fmt_time(tiempo_ajustado),
+            'tiempo_base':            cls._fmt_time(tiempo_base_secs),
+            'tiempo_rango_min':       cls._fmt_time(tiempo_ajustado - 90)  if tiempo_ajustado else None,
+            'tiempo_rango_max':       cls._fmt_time(tiempo_ajustado + 150) if tiempo_ajustado else None,
+            'ajuste_seg':             ajuste,
+            'interferencia_principal': interferencia_principal,
+            'decision':               decision,
+            'impacto':                impacto,
+        }
+
+    @staticmethod
+    def _calcular_ajuste_fatiga(readiness, carga, acwr):
+        ajuste = 0
+
+        if readiness < 40:
+            ajuste += 180
+        elif readiness < 60:
+            ajuste += 90
+        elif readiness > 85:
+            ajuste -= 45
+
+        tsb = carga.get('tsb', 0) or 0
+        if tsb < -25:
+            ajuste += 180
+        elif tsb < -15:
+            ajuste += 90
+        elif tsb > 10:
+            ajuste -= 30
+
+        if acwr:
+            if acwr > 1.5:
+                ajuste += 150
+            elif acwr > 1.3:
+                ajuste += 75
+            elif acwr < 0.75:
+                ajuste += 45
+
+        return ajuste
+
+    @staticmethod
+    def _get_decision_hoy(readiness, carga, acwr, interferencia):
+        tsb = carga.get('tsb', 0) or 0
+
+        if acwr and acwr > 1.5:
+            return {
+                'nivel': 'rojo',
+                'titulo': 'Bajar volumen hoy',
+                'mensaje': 'Tu carga aguda está muy por encima de tu base. Forzar hoy no mejora tu HYROX: aumenta el riesgo de lesión.',
+                'accion': 'Reduce volumen un 30-40% o cambia a Z2/movilidad.',
+            }
+
+        if tsb < -20:
+            return {
+                'nivel': 'rojo',
+                'titulo': 'Recuperación estratégica',
+                'mensaje': 'Tu forma está negativa. No necesitas demostrar dureza; necesitas asimilar la carga acumulada.',
+                'accion': 'Evita HIIT, trineo pesado y simulaciones hoy.',
+            }
+
+        if readiness < 50:
+            return {
+                'nivel': 'amarillo',
+                'titulo': 'Entrenar, pero sin heroísmos',
+                'mensaje': 'La sesión suma si controla la fatiga. Hoy buscamos continuidad, no récord.',
+                'accion': 'Mantén intensidad moderada y corta una serie si el RPE se dispara por encima del plan.',
+            }
+
+        if interferencia and interferencia.get('severidad') == 'alta':
+            estacion = interferencia['estacion']
+            pct = interferencia['if_pct']
+            delta = interferencia['delta_secs']
+            return {
+                'nivel': 'amarillo',
+                'titulo': f'Prioridad: {estacion}',
+                'mensaje': (
+                    f'Tu mayor fuga de rendimiento está después de {estacion}: '
+                    f'caes un {pct}% más lento en el km siguiente (+{delta}s/km). '
+                    f'Más volumen de carrera pura no resuelve esto.'
+                ),
+                'accion': f'Trabaja transición {estacion} → carrera. Dos series de estación + 400m inmediato.',
+            }
+
+        return {
+            'nivel': 'verde',
+            'titulo': 'Sesión productiva',
+            'mensaje': 'Tus métricas permiten entrenar con intención. Mantén el plan y respeta el RPE previsto.',
+            'accion': 'Ejecuta la sesión planificada.',
+        }
