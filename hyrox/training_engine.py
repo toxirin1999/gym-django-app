@@ -469,7 +469,7 @@ class HyroxTrainingEngine:
 
     @classmethod
     def _pesos_progresivos(cls, categoria, week, weeks_to_plan, is_deload, is_taper,
-                           nivel='intermedio', rpe_acumulado=None, tsb=None):
+                           nivel='intermedio', rpe_acumulado=None, tsb=None, perfil_atletico=None):
         """
         Devuelve los pesos de trabajo para estaciones con carga, escalados
         progresivamente desde ~55% del oficial (semana 1) hasta 100% (simulación/peak).
@@ -514,6 +514,19 @@ class HyroxTrainingEngine:
         # Ajuste por nivel de experiencia
         nivel_mult = {'principiante': 0.85, 'intermedio': 1.00, 'avanzado': 1.05}.get(nivel, 1.00)
         factor = round(min(factor * nivel_mult, 1.00), 3)
+
+        # Ajuste por perfil atlético
+        if perfil_atletico:
+            p = perfil_atletico.get('ajuste_plan', {})
+            if p.get('prioridad') == 'fuerza':
+                # Endurance: acelerar progresión de fuerza en estaciones (+8%)
+                factor = round(min(factor * 1.08, 1.00), 3)
+            elif p.get('prioridad') == 'cardio':
+                # Power: frenar carga de estaciones, reservar energía para carrera (-5%)
+                factor = round(max(factor * 0.95, 0.50), 3)
+            if p.get('progresion_lineal_fuerza') and factor > 0.70:
+                # Sled >65% RM: cap en 70% hasta que la fuerza base mejore
+                factor = min(factor, 0.70)
 
         def _kg(clave, redondeo=5):
             oficial = oficiales[clave]
@@ -1357,6 +1370,10 @@ class HyroxTrainingEngine:
         nombre_cliente  = objective.cliente.nombre
         vol             = _VOLUMEN_POR_NIVEL.get(nivel, _VOLUMEN_POR_NIVEL['intermedio'])
 
+        # Perfil atlético — calcula Power/Endurance/Hybrid y ajusta cargas de estaciones
+        from hyrox.services import HyroxAthleticProfile
+        perfil_atletico = HyroxAthleticProfile.compute(objective)
+
         # Prescripción de zona cardíaca para esta sesión
         prescripcion_zona = HyroxLoadManager.get_prescripcion_zona(
             template, objective, is_taper, is_deload
@@ -1611,7 +1628,8 @@ class HyroxTrainingEngine:
         elif template == 'hyrox_stations':
             pesos = HyroxTrainingEngine._pesos_progresivos(
                 objective.categoria, week, weeks_to_plan,
-                is_deload, is_taper, nivel, rpe_acumulado, tsb
+                is_deload, is_taper, nivel, rpe_acumulado, tsb,
+                perfil_atletico=perfil_atletico,
             )
 
             # Wall Balls: reps objetivo progresivos (de parciales a 100 reps)
@@ -1683,7 +1701,8 @@ class HyroxTrainingEngine:
                 is_sub = 'impacto_vertical' in restricted_tags or 'carrera' in restricted_tags
                 pesos  = HyroxTrainingEngine._pesos_progresivos(
                     objective.categoria, week, weeks_to_plan,
-                    False, False, nivel, rpe_acumulado, tsb
+                    False, False, nivel, rpe_acumulado, tsb,
+                    perfil_atletico=perfil_atletico,
                 )
 
                 dist_carrera = HyroxTrainingEngine._distancia_carrera(nivel, week, weeks_to_plan, False, False)
