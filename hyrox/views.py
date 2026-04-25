@@ -778,6 +778,18 @@ def hyrox_dashboard(request):
             logger.exception("[HYROX RaceIntelligence] Error generando race_briefing")
             race_briefing = None
 
+    # ── SESSION OVERRIDE ENGINE ───────────────────────────────────────────────
+    sesion_override = None
+    if objetivo_activo and race_briefing:
+        from .services import HyroxSessionOverrideEngine
+        try:
+            sesion_override = HyroxSessionOverrideEngine.apply_today_override(
+                objetivo_activo, race_briefing
+            )
+        except Exception:
+            logger.exception("[HYROX Override] Error aplicando override automático")
+            sesion_override = None
+
     if objetivo_activo:
         from .services import CompetitionStandardsService, HyroxMacrocycleEngine
         from .models import UserInjury, DailyRecoveryEntry
@@ -893,6 +905,7 @@ def hyrox_dashboard(request):
         'modo_competicion': modo_competicion,
         'race_day_briefing': race_day_briefing,
         'race_briefing': race_briefing,
+        'sesion_override': sesion_override,
     }
     return render(request, 'hyrox/dashboard.html', context)
 
@@ -1178,14 +1191,26 @@ def registrar_entrenamiento(request, objective_id, session_id=None):
                         act.display_name = safe_opts[0].get('nombre', act.nombre_ejercicio)
                         act.is_substituted = True
 
-        form = HyroxSessionNotesForm(initial={'titulo': sesion_planificada.titulo if sesion_planificada else ""})
-        
+        # Detectar AUTO-OVERRIDE y recuperar plan original del snapshot
+        es_override = sesion_planificada and '[AUTO-OVERRIDE]' in (sesion_planificada.titulo or '')
+        titulo_limpio = sesion_planificada.titulo.replace('[AUTO-OVERRIDE] ', '') if es_override else (sesion_planificada.titulo if sesion_planificada else '')
+        plan_original_snapshot = []
+        if es_override and sesion_planificada:
+            primera_act = sesion_planificada.activities.first()
+            if primera_act and primera_act.data_planificado:
+                plan_original_snapshot = primera_act.data_planificado.get('plan_original', [])
+
+        form = HyroxSessionNotesForm(initial={'titulo': titulo_limpio})
+
     return render(request, 'hyrox/registrar_entrenamiento.html', {
-        'form': form, 
+        'form': form,
         'objetivo': objetivo,
         'sesion_planificada': sesion_planificada,
         'actividades_planificadas': actividades_planificadas if 'actividades_planificadas' in locals() else sesion_planificada.activities.all() if sesion_planificada else [],
-        'lesion_activa': lesion_activa
+        'lesion_activa': lesion_activa,
+        'es_override': es_override if 'es_override' in locals() else False,
+        'titulo_limpio': titulo_limpio if 'titulo_limpio' in locals() else '',
+        'plan_original_snapshot': plan_original_snapshot if 'plan_original_snapshot' in locals() else [],
     })
 
 from django.http import JsonResponse

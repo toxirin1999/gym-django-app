@@ -2041,6 +2041,225 @@ class RaceCardService:
 
 
 # ══════════════════════════════════════════════════════════════════════════════
+# SESSION OVERRIDE ENGINE — modifica la sesión de hoy según Race Command
+# ══════════════════════════════════════════════════════════════════════════════
+
+class HyroxSessionOverrideEngine:
+    """
+    Modifica automáticamente la sesión planificada de hoy según Race Command.
+    No toca sesiones completadas ni semana de competición.
+    Solo actúa en nivel rojo o amarillo — verde no interviene.
+    """
+
+    @classmethod
+    def apply_today_override(cls, objective, race_briefing):
+        from django.utils import timezone
+        from .models import HyroxSession, HyroxActivity
+
+        if not objective or not race_briefing:
+            return None
+
+        hoy = timezone.now().date()
+
+        # Semana de carrera: no tocar
+        if objective.fecha_evento and (objective.fecha_evento - hoy).days <= 7:
+            return None
+
+        # Sin TSB fiable: no hay base para juzgar fatiga → no intervenir
+        tsb = race_briefing.get('tsb')
+        if tsb is None:
+            return None
+
+        # Solo intervenir si TSB indica fatiga real (< -10)
+        if tsb >= -10:
+            return None
+
+        sesion = (
+            HyroxSession.objects
+            .filter(objective=objective, fecha=hoy, estado='planificado')
+            .prefetch_related('activities')
+            .first()
+        )
+        if not sesion:
+            return None
+
+        # Evitar sobrescribir en cada recarga
+        if '[AUTO-OVERRIDE]' in (sesion.titulo or ''):
+            return sesion
+
+        interferencia = race_briefing.get('interferencia_principal')
+        impacto = race_briefing.get('impacto', {})
+        decision = race_briefing.get('decision', {})
+        nivel_tsb = 'rojo' if tsb < -20 else 'amarillo'
+
+        override = cls._build_override_plan(
+            nivel=nivel_tsb,
+            tsb=tsb,
+            interferencia=interferencia,
+            impacto=impacto,
+        )
+        if not override:
+            return None
+
+        # Guardar snapshot del plan original antes de borrar
+        plan_original = [
+            {'nombre': act.nombre_ejercicio, 'tipo': act.tipo_actividad, 'metricas': act.data_metricas or {}}
+            for act in sesion.activities.all()
+        ]
+
+        sesion.activities.all().delete()
+
+        sesion.titulo = f'[AUTO-OVERRIDE] {override["titulo"]}'
+        sesion.muscle_fatigue_index = override['fatiga']
+        sesion.fatiga_updated_at = timezone.now()
+        sesion.save(update_fields=['titulo', 'muscle_fatigue_index', 'fatiga_updated_at'])
+
+        for item in override['actividades']:
+            HyroxActivity.objects.create(
+                sesion=sesion,
+                tipo_actividad=item['tipo_actividad'],
+                nombre_ejercicio=item['nombre_ejercicio'],
+                data_metricas=item['data_metricas'],
+                data_planificado={'plan_original': plan_original},
+            )
+
+        return sesion
+
+    @classmethod
+    def _build_override_plan(cls, nivel, tsb, interferencia, impacto):
+        estacion = interferencia.get('estacion') if interferencia else None
+
+        # Rojo: TSB < -20 → recuperación estratégica
+        if nivel == 'rojo' or (tsb is not None and tsb < -20):
+            return {
+                'titulo': 'Recuperación Estratégica HYROX',
+                'fatiga': 'Alta',
+                'actividades': [
+                    {
+                        'tipo_actividad': 'cardio_sustituto',
+                        'nombre_ejercicio': 'Z2 suave / movilidad',
+                        'data_metricas': {
+                            'override': True, 'duracion_min': 25, 'rpe_objetivo': '4-5',
+                            'notas': 'Sesión modificada automáticamente: hoy recuperamos sin perder continuidad.',
+                        },
+                    },
+                    {
+                        'tipo_actividad': 'otro',
+                        'nombre_ejercicio': 'Movilidad cadera/tobillo/columna',
+                        'data_metricas': {
+                            'override': True, 'duracion_min': 12,
+                            'notas': 'Movilidad específica para proteger carrera, trineo y wall balls.',
+                        },
+                    },
+                ],
+            }
+
+        # Amarillo con estación limitante: técnica específica
+        if estacion and not interferencia.get('es_provisional', False):
+            return cls._override_por_estacion(estacion)
+
+        # Amarillo genérico: TSB entre -10 y -20
+        if nivel == 'amarillo':
+            return {
+                'titulo': 'Sesión Ajustada · Control de Fatiga',
+                'fatiga': 'Media',
+                'actividades': [
+                    {
+                        'tipo_actividad': 'carrera',
+                        'nombre_ejercicio': 'Carrera Z2 controlada',
+                        'data_metricas': {
+                            'override': True, 'distancia_km': 4, 'rpe_objetivo': '5-6',
+                            'notas': 'Mantén conversación posible. Si el RPE sube, corta antes.',
+                        },
+                    },
+                    {
+                        'tipo_actividad': 'otro',
+                        'nombre_ejercicio': 'Core antirotacional + movilidad',
+                        'data_metricas': {
+                            'override': True,
+                            'series': [{'reps': 10}, {'reps': 10}, {'reps': 10}],
+                            'notas': 'Trabajo accesorio sin fatiga excesiva.',
+                        },
+                    },
+                ],
+            }
+
+        return None
+
+    @classmethod
+    def _override_por_estacion(cls, estacion):
+        e = (estacion or '').lower()
+
+        if 'sled pull' in e:
+            ejercicios = [
+                {
+                    'tipo_actividad': 'hyrox_station',
+                    'nombre_ejercicio': 'Sled Pull técnico',
+                    'data_metricas': {
+                        'override': True, 'distancia_m': 20,
+                        'series': [{'reps': 1}, {'reps': 1}, {'reps': 1}, {'reps': 1}],
+                        'rpe_objetivo': '5-6',
+                        'notas': 'Técnica: pies firmes, tirón con cadera, brazos largos. No buscar fallo.',
+                    },
+                },
+                {
+                    'tipo_actividad': 'carrera',
+                    'nombre_ejercicio': 'Transición Sled Pull → carrera suave',
+                    'data_metricas': {
+                        'override': True, 'distancia_km': 2.5, 'rpe_objetivo': '5',
+                        'notas': 'Objetivo: volver a correr sin hundirte, no hacer marca.',
+                    },
+                },
+            ]
+        elif 'sled push' in e:
+            ejercicios = [
+                {
+                    'tipo_actividad': 'hyrox_station',
+                    'nombre_ejercicio': 'Sled Push técnico',
+                    'data_metricas': {
+                        'override': True, 'distancia_m': 20,
+                        'series': [{'reps': 1}, {'reps': 1}, {'reps': 1}, {'reps': 1}],
+                        'rpe_objetivo': '5-6',
+                        'notas': 'Pasos cortos, cadera baja, brazos bloqueados. Técnica antes que peso.',
+                    },
+                },
+                {
+                    'tipo_actividad': 'carrera',
+                    'nombre_ejercicio': 'Transición Sled Push → carrera Z2',
+                    'data_metricas': {
+                        'override': True, 'distancia_km': 2.5, 'rpe_objetivo': '5',
+                        'notas': 'No acelerar. Enseñar al cuerpo a volver a correr.',
+                    },
+                },
+            ]
+        else:
+            ejercicios = [
+                {
+                    'tipo_actividad': 'hyrox_station',
+                    'nombre_ejercicio': f'Técnica específica · {estacion}',
+                    'data_metricas': {
+                        'override': True, 'duracion_min': 15, 'rpe_objetivo': '5-6',
+                        'notas': f'Trabajo técnico en {estacion} con fatiga controlada.',
+                    },
+                },
+                {
+                    'tipo_actividad': 'carrera',
+                    'nombre_ejercicio': 'Carrera Z2 posterior',
+                    'data_metricas': {
+                        'override': True, 'distancia_km': 3, 'rpe_objetivo': '5',
+                        'notas': 'Consolidar transición sin acumular fatiga excesiva.',
+                    },
+                },
+            ]
+
+        return {
+            'titulo': f'Ajuste Técnico · {estacion}',
+            'fatiga': 'Media',
+            'actividades': ejercicios,
+        }
+
+
+# ══════════════════════════════════════════════════════════════════════════════
 # IMPACT ENGINE — consecuencia competitiva de cada decisión de entrenamiento
 # ══════════════════════════════════════════════════════════════════════════════
 
@@ -2059,7 +2278,7 @@ class HyroxImpactEngine:
         return f"{sign}{m}:{s:02d}"
 
     @classmethod
-    def calculate(cls, readiness, carga, acwr, interferencia_index=None, race_card=None):
+    def calculate(cls, carga, acwr, interferencia_index=None, race_card=None, **_):
         factors = []
         riesgo_ignorar = 0
         beneficio_seguir = 0
@@ -2108,28 +2327,7 @@ class HyroxImpactEngine:
             riesgo_ignorar += 90
             beneficio_seguir += 45
 
-        # 3. Readiness
-        if readiness is not None:
-            if readiness < 40:
-                factors.append({
-                    'tipo': 'Disponibilidad baja',
-                    'detalle': f'Readiness {readiness}/100: hoy no es día para exprimir.',
-                    'impacto_secs': 120,
-                    'nivel': 'rojo',
-                })
-                riesgo_ignorar += 120
-                beneficio_seguir += 60
-            elif readiness < 60:
-                factors.append({
-                    'tipo': 'Disponibilidad limitada',
-                    'detalle': f'Readiness {readiness}/100: conviene entrenar con margen.',
-                    'impacto_secs': 60,
-                    'nivel': 'amarillo',
-                })
-                riesgo_ignorar += 60
-                beneficio_seguir += 30
-
-        # 4. Interferencia HYROX
+        # 3. Interferencia HYROX
         if interferencia_principal:
             if_pct = float(interferencia_principal.get('if_pct') or 0)
             estacion = interferencia_principal.get('estacion', 'estación crítica')
@@ -2202,6 +2400,92 @@ class HyroxImpactEngine:
                 },
             ],
         }
+
+    @classmethod
+    def build_razones_concretas(cls, objective):
+        """Genera frases concretas basadas en datos reales de los últimos 7 días."""
+        from django.utils import timezone
+        from .models import HyroxSession
+        import datetime
+
+        razones = []
+        hoy = timezone.now().date()
+        hace_7 = hoy - datetime.timedelta(days=7)
+        hace_2 = hoy - datetime.timedelta(days=2)
+
+        sesiones_semana = list(
+            HyroxSession.objects.filter(
+                objective=objective,
+                fecha__gte=hace_7,
+                fecha__lt=hoy,
+                estado='completado',
+            ).order_by('-fecha')
+        )
+
+        if not sesiones_semana:
+            razones.append({'icono': '📊', 'texto': 'Sin sesiones esta semana — sin carga acumulada.', 'tipo': 'neutro'})
+            return razones
+
+        # Carga total (TRIMP)
+        trimp_total = sum(s.trimp or 0 for s in sesiones_semana)
+        if trimp_total > 300:
+            razones.append({'icono': '🔥', 'texto': f'Esta semana acumulaste {int(trimp_total)} TRIMP — carga alta.', 'tipo': 'negativo'})
+        elif trimp_total > 150:
+            razones.append({'icono': '📈', 'texto': f'Carga semanal moderada: {int(trimp_total)} TRIMP.', 'tipo': 'neutro'})
+        else:
+            razones.append({'icono': '✅', 'texto': f'Semana ligera: solo {int(trimp_total)} TRIMP acumulados.', 'tipo': 'positivo'})
+
+        # Número de sesiones
+        n = len(sesiones_semana)
+        if n >= 5:
+            razones.append({'icono': '📅', 'texto': f'{n} sesiones en 7 días — densidad de entrenamiento alta.', 'tipo': 'negativo'})
+        elif n >= 3:
+            razones.append({'icono': '📅', 'texto': f'{n} sesiones esta semana — ritmo normal.', 'tipo': 'neutro'})
+
+        # Sesión de ayer o anteayer
+        reciente = next((s for s in sesiones_semana if s.fecha >= hace_2), None)
+        if reciente:
+            rpe = reciente.rpe_global
+            tiempo = reciente.tiempo_total_minutos
+            fecha_str = 'Ayer' if reciente.fecha == hoy - datetime.timedelta(days=1) else 'Hace 2 días'
+
+            if rpe and rpe >= 9:
+                razones.append({'icono': '😓', 'texto': f'{fecha_str}: sesión al límite (RPE {rpe}/10).', 'tipo': 'negativo'})
+            elif rpe and rpe >= 7:
+                razones.append({'icono': '💪', 'texto': f'{fecha_str}: sesión exigente (RPE {rpe}/10).', 'tipo': 'neutro'})
+            elif rpe:
+                razones.append({'icono': '😊', 'texto': f'{fecha_str}: sesión controlada (RPE {rpe}/10).', 'tipo': 'positivo'})
+
+            if tiempo and tiempo >= 90:
+                razones.append({'icono': '⏱️', 'texto': f'{fecha_str}: {tiempo} minutos de entrenamiento.', 'tipo': 'negativo'})
+
+            # Distancia en carrera
+            for act in reciente.activities.filter(tipo_actividad='carrera'):
+                km = (act.data_metricas or {}).get('distancia_km') or (act.data_metricas or {}).get('distancia')
+                if km:
+                    try:
+                        km = float(km)
+                        if km >= 15:
+                            razones.append({'icono': '🏃', 'texto': f'{fecha_str} corriste {km:.1f} km — carga de carrera alta.', 'tipo': 'negativo'})
+                        elif km >= 8:
+                            razones.append({'icono': '🏃', 'texto': f'{fecha_str} corriste {km:.1f} km.', 'tipo': 'neutro'})
+                    except (ValueError, TypeError):
+                        pass
+
+        # HR máxima reciente
+        for s in sesiones_semana[:2]:
+            if s.hr_maxima and s.hr_maxima >= 185:
+                razones.append({'icono': '❤️', 'texto': f'FC máxima de {s.hr_maxima} bpm en la última sesión — estrés cardiovascular alto.', 'tipo': 'negativo'})
+                break
+
+        # Dias sin entrenar (descanso acumulado)
+        ultima = sesiones_semana[0].fecha if sesiones_semana else None
+        if ultima:
+            dias_descanso = (hoy - ultima).days
+            if dias_descanso >= 3:
+                razones.append({'icono': '🛌', 'texto': f'Llevas {dias_descanso} días sin entrenar — batería recargada.', 'tipo': 'positivo'})
+
+        return razones or [{'icono': '📊', 'texto': 'Sin datos suficientes para analizar la semana.', 'tipo': 'neutro'}]
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -2280,6 +2564,8 @@ class HyroxRaceIntelligence:
             race_card=race_card,
         )
 
+        razones_concretas = HyroxImpactEngine.build_razones_concretas(objective)
+
         return {
             'readiness':              readiness,
             'tsb':                    carga.get('tsb'),
@@ -2294,6 +2580,7 @@ class HyroxRaceIntelligence:
             'interferencia_principal': interferencia_principal,
             'decision':               decision,
             'impacto':                impacto,
+            'razones_concretas':      razones_concretas,
         }
 
     @staticmethod

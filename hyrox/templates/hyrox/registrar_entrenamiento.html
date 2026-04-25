@@ -638,7 +638,7 @@
             <div class="rb-bib-num">{% if sesion_planificada.id %}{{ sesion_planificada.id|stringformat:"03d" }}{% else %}000{% endif %}</div>
             <div>
               <div class="rb-bib-title">
-                {{ sesion_planificada.titulo|default:"Sesión Libre" }}
+                {% if es_override %}{{ titulo_limpio }}{% else %}{{ sesion_planificada.titulo|default:"Sesión Libre" }}{% endif %}
                 {% if lesion_activa %}
                 <span class="rb-biosafe-pill">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>BIO-SAFE
@@ -649,6 +649,43 @@
             </div>
           </div>
         </div>
+
+        {% if es_override %}
+        <!-- Banner AUTO-OVERRIDE -->
+        <div style="background:rgba(139,92,246,.1);border:1px solid rgba(139,92,246,.35);border-radius:8px;padding:10px 12px;display:flex;gap:10px;align-items:flex-start;margin-bottom:4px;">
+          <svg style="width:16px;height:16px;flex-shrink:0;color:#8B5CF6;margin-top:1px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+          <div>
+            <div style="font-size:11px;font-weight:700;color:#8B5CF6;letter-spacing:.05em;text-transform:uppercase;margin-bottom:2px;">Sesión ajustada automáticamente</div>
+            <div style="font-size:11px;color:var(--ink-3);line-height:1.5;">El sistema detectó fatiga elevada (TSB bajo) y modificó el plan de hoy. Abajo puedes ver qué cambió.</div>
+          </div>
+        </div>
+
+        {% if plan_original_snapshot %}
+        <!-- Plan original → Plan ajustado -->
+        <div style="border:1px solid var(--line-2);border-radius:8px;overflow:hidden;margin-bottom:4px;">
+          <div style="display:grid;grid-template-columns:1fr 1fr;">
+            <div style="padding:8px 12px;background:var(--paper-2);border-right:1px solid var(--line-2);">
+              <div style="font-size:9px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-4);margin-bottom:6px;">Plan original</div>
+              {% for item in plan_original_snapshot %}
+              <div style="font-size:11px;color:var(--ink-3);padding:2px 0;display:flex;gap:6px;align-items:center;">
+                <span style="width:6px;height:6px;border-radius:50%;background:var(--ink-4);flex-shrink:0;"></span>
+                {{ item.nombre }}
+              </div>
+              {% endfor %}
+            </div>
+            <div style="padding:8px 12px;background:rgba(139,92,246,.05);">
+              <div style="font-size:9px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#8B5CF6;margin-bottom:6px;">Plan ajustado</div>
+              {% for act in actividades_planificadas %}
+              <div style="font-size:11px;color:var(--ink-2);padding:2px 0;display:flex;gap:6px;align-items:center;">
+                <span style="width:6px;height:6px;border-radius:50%;background:#8B5CF6;flex-shrink:0;"></span>
+                {{ act.nombre_ejercicio }}
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+        {% endif %}
+        {% endif %}
 
         {% if actividades_planificadas %}
         <!-- Equipment checklist -->
@@ -684,6 +721,18 @@
           </div>
           {% endwith %}
           {% endfor %}
+        </div>
+
+        <!-- Equivalencias de material — aquí, no al final -->
+        <div style="margin-top:12px;padding:10px 12px;background:var(--paper-2);border:1px solid var(--line-2);border-radius:8px;display:flex;align-items:flex-start;gap:10px;">
+          <label class="rb-equiv" style="margin:0;flex:1;">
+            <input type="checkbox" name="sustituir_material" id="id_sustituir_material">
+            <span class="rb-equiv-box">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            </span>
+            <span style="font-size:12px;font-weight:600;color:var(--ink-2);">Sin material oficial — usar equivalencias</span>
+          </label>
+          <span style="font-size:11px;color:var(--ink-3);line-height:1.4;max-width:160px;">El sistema adaptará Sled, SkiErg, Remo, etc. a lo que tengas disponible.</span>
         </div>
         {% endif %}
       </div>
@@ -1005,13 +1054,7 @@
           </div>
           <textarea id="id_notas_extra" class="rb-notes-text" placeholder="Observaciones adicionales (opcional).&#10;&#10;El tracker ya registra series, pesos, distancias y ritmos."></textarea>
           <div class="rb-notes-foot">
-            <label class="rb-equiv">
-              <input type="checkbox" name="sustituir_material" id="id_sustituir_material">
-              <span class="rb-equiv-box">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-              </span>
-              Sin material oficial — usar equivalencias
-            </label>
+            <span style="font-size:10px;color:var(--ink-4);">Las equivalencias se configuran en el briefing inicial.</span>
           </div>
         </div>
       </div>

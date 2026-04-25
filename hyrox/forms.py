@@ -2,6 +2,30 @@ from django import forms
 from .models import HyroxObjective, HyroxSession
 
 class HyroxObjectiveForm(forms.ModelForm):
+
+    def clean_tiempo_5k_base(self):
+        valor = self.cleaned_data.get('tiempo_5k_base', '').strip()
+        if not valor:
+            return valor
+        # Auto-completar: "35" → "35:00"
+        if ':' not in valor:
+            try:
+                minutos = int(valor)
+                valor = f"{minutos}:00"
+            except ValueError:
+                raise forms.ValidationError("Formato inválido. Usa MM:SS, por ejemplo 35:00.")
+        # Validar estructura MM:SS
+        partes = valor.split(':')
+        if len(partes) != 2:
+            raise forms.ValidationError("Formato inválido. Usa MM:SS, por ejemplo 35:00.")
+        try:
+            m, s = int(partes[0]), int(partes[1])
+            if not (0 <= m <= 99 and 0 <= s <= 59):
+                raise ValueError
+        except ValueError:
+            raise forms.ValidationError("Tiempo fuera de rango. Ej: 25:30 significa 25 minutos 30 segundos.")
+        return f"{m}:{s:02d}"
+
     class Meta:
         model = HyroxObjective
         fields = ['categoria', 'fecha_evento', 'rm_peso_muerto', 'rm_sentadilla', 'tiempo_5k_base', 'material_disponible', 'nivel_experiencia', 'lesiones_previas', 'dias_preferidos']
