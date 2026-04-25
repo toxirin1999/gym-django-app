@@ -875,6 +875,54 @@ a.rb-dia:hover { background: var(--paper-2); text-decoration: none; }
       <span class="rb-section-num">00</span>
       <h2 class="rb-section-title">Race Command</h2>
       <div class="rb-section-line"></div>
+      <button onclick="document.getElementById('modal-race-info').style.display='flex'" style="background:none;border:1px solid var(--border);border-radius:50%;width:20px;height:20px;cursor:pointer;font-size:11px;color:var(--ink-3);line-height:1;flex-shrink:0;" title="¿Qué significan estas métricas?">?</button>
+    </div>
+
+    <!-- Modal info Race Command -->
+    <div id="modal-race-info" style="display:none;position:fixed;inset:0;z-index:9999;align-items:flex-start;justify-content:center;background:rgba(0,0,0,.75);overflow-y:auto;padding:30px 16px;" onclick="if(event.target===this)this.style.display='none'">
+      <div style="background:#1e2235;border:1px solid #334155;border-radius:12px;padding:24px;max-width:440px;width:100%;" onclick="event.stopPropagation()">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+          <span style="font-family:var(--font-disp);font-size:14px;font-weight:700;color:#e2e8f0;">¿Qué es Race Command?</span>
+          <button onclick="document.getElementById('modal-race-info').style.display='none'" style="background:none;border:none;color:#94a3b8;font-size:22px;cursor:pointer;line-height:1;padding:0 4px;">×</button>
+        </div>
+        <p style="font-size:11px;color:#94a3b8;line-height:1.6;margin:0 0 16px;">
+          Race Command centraliza todas las señales de tu preparación para decirte, cada día, si entrenar fuerte, moderar o recuperar.
+        </p>
+
+        <div style="display:flex;flex-direction:column;gap:14px;">
+
+          <div style="border-left:3px solid #1DC8B8;padding-left:10px;">
+            <div style="font-size:12px;font-weight:700;color:#e2e8f0;margin-bottom:3px;">Tiempo estimado hoy</div>
+            <div style="font-size:11px;color:#94a3b8;line-height:1.5;">Proyección de tu tiempo en carrera si compites ahora mismo, basada en tus simulacros, RMs y tiempo en 5K. Necesita al menos una sesión de simulacro para calibrarse.</div>
+          </div>
+
+          <div style="border-left:3px solid #1DC8B8;padding-left:10px;">
+            <div style="font-size:12px;font-weight:700;color:#e2e8f0;margin-bottom:3px;">Race Readiness <span style="font-weight:400;color:#64748b;">(0–100)</span></div>
+            <div style="font-size:11px;color:#94a3b8;line-height:1.5;">Mide cuánto has progresado hacia tu objetivo de carrera. <strong style="color:#e2e8f0;">No es fatiga.</strong> Sube con simulacros, sesiones eficientes y progreso en estándares técnicos (Sled, Wall Balls…). Con poco historial estará bajo aunque te encuentres bien.</div>
+          </div>
+
+          <div style="border-left:3px solid #F59E0B;padding-left:10px;">
+            <div style="font-size:12px;font-weight:700;color:#e2e8f0;margin-bottom:3px;">TSB · Forma <span style="font-weight:400;color:#64748b;">(Training Stress Balance)</span></div>
+            <div style="font-size:11px;color:#94a3b8;line-height:1.5;">Diferencia entre tu forma crónica (42 días) y tu carga aguda (7 días). <strong style="color:#1DC8B8;">Positivo</strong> = estás fresco. <strong style="color:#EF4444;">Muy negativo (&lt;−20)</strong> = acumulas fatiga. Es el indicador que usa el sistema para decidir si modificar tu sesión de hoy.</div>
+          </div>
+
+          <div style="border-left:3px solid #8B5CF6;padding-left:10px;">
+            <div style="font-size:12px;font-weight:700;color:#e2e8f0;margin-bottom:3px;">ACWR <span style="font-weight:400;color:#64748b;">(Acute:Chronic Workload Ratio)</span></div>
+            <div style="font-size:11px;color:#94a3b8;line-height:1.5;">Ratio entre lo que has entrenado esta semana vs. tu media de las últimas 4. Zona segura: <strong style="color:#1DC8B8;">0.8–1.3</strong>. Por encima de 1.5 aumenta el riesgo de lesión. Requiere mínimo 28 días de historial para ser fiable — hasta entonces muestra "—".</div>
+          </div>
+
+          <div style="border-left:3px solid #EF4444;padding-left:10px;">
+            <div style="font-size:12px;font-weight:700;color:#e2e8f0;margin-bottom:3px;">Sesión modificada automáticamente</div>
+            <div style="font-size:11px;color:#94a3b8;line-height:1.5;">Si el TSB cae por debajo de −10 y tienes una sesión planificada, el sistema la sustituye por una más suave. Si no hay datos de TSB suficientes, no actúa. El plan original queda guardado.</div>
+          </div>
+
+          <div style="border-left:3px solid #475569;padding-left:10px;">
+            <div style="font-size:12px;font-weight:700;color:#e2e8f0;margin-bottom:3px;">Índice de Interferencia (IF)</div>
+            <div style="font-size:11px;color:#94a3b8;line-height:1.5;">Cuánto baja tu ritmo de carrera justo después de cada estación. Un IF alto en Sled Pull significa que esa estación te cuesta más recuperación. Se calcula con tus simulacros — necesita 3+ para ser fiable.</div>
+          </div>
+
+        </div>
+      </div>
     </div>
 
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">
@@ -943,8 +991,11 @@ a.rb-dia:hover { background: var(--paper-2); text-decoration: none; }
 
     {% if race_briefing.impacto %}
     <div style="margin-top:12px;border:1.5px solid var(--line);background:var(--paper);border-radius:8px;padding:12px;">
-      <div style="font-family:var(--font-mono);font-size:9px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);margin-bottom:6px;">
-        Impacto competitivo
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+        <span style="font-family:var(--font-mono);font-size:9px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);">Impacto competitivo</span>
+        {% if race_briefing.razones_concretas %}
+        <button onclick="document.getElementById('modal-razones').style.display='flex'" style="background:none;border:1px solid var(--border);border-radius:50%;width:16px;height:16px;cursor:pointer;font-size:10px;color:var(--ink-3);line-height:1;flex-shrink:0;padding:0;" title="¿Por qué estos números?">?</button>
+        {% endif %}
       </div>
       <div style="font-family:var(--font-disp);font-size:16px;line-height:1.1;text-transform:uppercase;color:{% if race_briefing.impacto.nivel == 'rojo' %}var(--danger){% elif race_briefing.impacto.nivel == 'amarillo' %}var(--warn){% else %}var(--ok){% endif %};margin-bottom:12px;">
         {{ race_briefing.impacto.headline }}
@@ -971,6 +1022,42 @@ a.rb-dia:hover { background: var(--paper-2); text-decoration: none; }
       {% endif %}
     </div>
     {% endif %}
+  </section>
+  {% endif %}
+
+  <!-- Modal razones concretas -->
+  {% if race_briefing.razones_concretas %}
+  <div id="modal-razones" style="display:none;position:fixed;inset:0;z-index:9999;align-items:flex-start;justify-content:center;background:rgba(0,0,0,.75);overflow-y:auto;padding:30px 16px;" onclick="if(event.target===this)this.style.display='none'">
+    <div style="background:#1e2235;border:1px solid #334155;border-radius:12px;padding:24px;max-width:420px;width:100%;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <span style="font-size:13px;font-weight:700;color:#e2e8f0;">¿Por qué estos números?</span>
+        <button onclick="document.getElementById('modal-razones').style.display='none'" style="background:none;border:none;color:#94a3b8;font-size:22px;cursor:pointer;line-height:1;padding:0 4px;">×</button>
+      </div>
+      <p style="font-size:11px;color:#64748b;margin:0 0 14px;line-height:1.5;">Basado en tus últimas sesiones registradas.</p>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        {% for r in race_briefing.razones_concretas %}
+        <div style="display:flex;gap:10px;align-items:flex-start;padding:8px 10px;border-radius:6px;background:{% if r.tipo == 'negativo' %}rgba(239,68,68,.08){% elif r.tipo == 'positivo' %}rgba(29,200,184,.08){% else %}rgba(255,255,255,.04){% endif %};border:1px solid {% if r.tipo == 'negativo' %}rgba(239,68,68,.2){% elif r.tipo == 'positivo' %}rgba(29,200,184,.2){% else %}rgba(255,255,255,.06){% endif %};">
+          <span style="font-size:14px;flex-shrink:0;">{{ r.icono }}</span>
+          <span style="font-size:11px;color:#cbd5e1;line-height:1.5;">{{ r.texto }}</span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- ═══════════════ SESSION OVERRIDE ═══════════════ -->
+  {% if sesion_override %}
+  <section class="rb-section rb-a2" style="border:1px solid rgba(139,92,246,.4);background:rgba(139,92,246,.05);">
+    <div style="display:flex;align-items:flex-start;gap:12px;">
+      <i class="fas fa-random" style="color:#8B5CF6;font-size:16px;margin-top:2px;flex-shrink:0;"></i>
+      <div>
+        <div style="font-family:var(--font-mono);font-size:10px;font-weight:700;color:#8B5CF6;letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px;">Sesión modificada automáticamente</div>
+        <div style="font-size:12px;color:var(--ink-2);font-family:var(--font-body);line-height:1.5;">
+          El sistema ha sustituido la sesión de hoy por: <strong style="color:var(--ink-1);">{{ sesion_override.titulo|slice:"16:" }}</strong>.
+        </div>
+      </div>
+    </div>
   </section>
   {% endif %}
 
