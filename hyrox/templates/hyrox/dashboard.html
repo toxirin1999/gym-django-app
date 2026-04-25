@@ -1083,6 +1083,75 @@ a.rb-dia:hover { background: var(--paper-2); text-decoration: none; }
   </section>
   {% endif %}
 
+  <!-- ═══════════════ PERFIL ATLÉTICO ═══════════════ -->
+  {% if perfil_atletico %}
+  <section class="rb-section rb-a2">
+    <div class="rb-section-head">
+      <span class="rb-section-num" style="font-size:10px;">ID</span>
+      <h2 class="rb-section-title">Perfil Atlético</h2>
+      <div class="rb-section-line"></div>
+      <span style="font-family:var(--font-mono);font-size:10px;font-weight:700;padding:3px 8px;border-radius:4px;letter-spacing:.06em;
+        {% if perfil_atletico.perfil == 'power' %}background:rgba(239,68,68,.12);color:#EF4444;border:1px solid rgba(239,68,68,.3);
+        {% elif perfil_atletico.perfil == 'endurance' %}background:rgba(29,200,184,.12);color:#1DC8B8;border:1px solid rgba(29,200,184,.3);
+        {% elif perfil_atletico.perfil == 'hybrid' %}background:rgba(245,158,11,.12);color:#F59E0B;border:1px solid rgba(245,158,11,.3);
+        {% else %}background:rgba(255,255,255,.05);color:var(--ink-3);border:1px solid var(--border);{% endif %}">
+        {{ perfil_atletico.label|upper }}
+      </span>
+    </div>
+
+    <p style="font-size:11px;color:var(--ink-3);font-family:var(--font-body);line-height:1.5;margin:0 0 12px;">
+      {{ perfil_atletico.descripcion }}
+    </p>
+
+    <!-- Barras de score -->
+    {% if perfil_atletico.score_fuerza or perfil_atletico.score_carrera %}
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;">
+      {% if perfil_atletico.score_fuerza %}
+      <div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:3px;">
+          <span style="font-size:10px;color:var(--ink-3);font-family:var(--font-mono);">FUERZA</span>
+          <span style="font-size:10px;color:var(--ink-2);font-family:var(--font-mono);font-weight:700;">{{ perfil_atletico.score_fuerza }}%</span>
+        </div>
+        <div style="height:5px;background:var(--border);border-radius:3px;overflow:hidden;">
+          <div style="height:100%;width:{{ perfil_atletico.score_fuerza|default:0 }}%;max-width:100%;background:#EF4444;border-radius:3px;transition:width .4s;"></div>
+        </div>
+      </div>
+      {% endif %}
+      {% if perfil_atletico.score_carrera %}
+      <div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:3px;">
+          <span style="font-size:10px;color:var(--ink-3);font-family:var(--font-mono);">CARRERA</span>
+          <span style="font-size:10px;color:var(--ink-2);font-family:var(--font-mono);font-weight:700;">{{ perfil_atletico.score_carrera }}%</span>
+        </div>
+        <div style="height:5px;background:var(--border);border-radius:3px;overflow:hidden;">
+          <div style="height:100%;width:{{ perfil_atletico.score_carrera|default:0 }}%;max-width:100%;background:#1DC8B8;border-radius:3px;transition:width .4s;"></div>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- % carga de competición -->
+    {% if perfil_atletico.pct_comp_sled %}
+    <div style="background:{% if perfil_atletico.necesita_fuerza_base %}rgba(245,158,11,.08){% else %}rgba(29,200,184,.06){% endif %};border:1px solid {% if perfil_atletico.necesita_fuerza_base %}rgba(245,158,11,.3){% else %}rgba(29,200,184,.2){% endif %};border-radius:6px;padding:8px 12px;display:flex;justify-content:space-between;align-items:center;">
+      <div>
+        <div style="font-size:10px;color:var(--ink-3);font-family:var(--font-mono);margin-bottom:2px;">SLED OFICIAL / RM SENTADILLA</div>
+        <div style="font-size:11px;color:var(--ink-2);font-family:var(--font-body);">{{ perfil_atletico.peso_sled_oficial }} kg vs tu RM</div>
+      </div>
+      <div style="font-family:var(--font-disp);font-size:22px;font-weight:700;color:{% if perfil_atletico.necesita_fuerza_base %}#F59E0B{% else %}#1DC8B8{% endif %};">
+        {{ perfil_atletico.pct_comp_sled }}%
+      </div>
+    </div>
+    {% if perfil_atletico.necesita_fuerza_base %}
+    <div style="font-size:10px;color:#F59E0B;font-family:var(--font-body);margin-top:5px;padding-left:4px;line-height:1.4;">
+      ⚠ {{ perfil_atletico.ajuste_plan.aviso }}
+    </div>
+    {% endif %}
+    {% endif %}
+
+  </section>
+  {% endif %}
+
   <!-- ═══════════════ MACROCICLO ═══════════════ -->
   {% if macro_data and not modo_competicion %}
   <section class="rb-section rb-a2">

@@ -715,6 +715,15 @@ def hyrox_dashboard(request):
             'tip_mental': 'En la estación 6 (Farmers Carry) tu mente cederá antes que el cuerpo. Ese es el momento de acelerar.',
         }
 
+    # ── PERFIL ATLÉTICO ───────────────────────────────────────────────────────
+    perfil_atletico = None
+    if objetivo_activo:
+        from .services import HyroxAthleticProfile
+        try:
+            perfil_atletico = HyroxAthleticProfile.compute(objetivo_activo)
+        except Exception:
+            logger.exception("[HYROX] Error calculando perfil atlético")
+
     # ── ÍNDICE DE INTERFERENCIA ───────────────────────────────────────────────
     interferencia_index = []
     if objetivo_activo:
@@ -906,6 +915,7 @@ def hyrox_dashboard(request):
         'race_day_briefing': race_day_briefing,
         'race_briefing': race_briefing,
         'sesion_override': sesion_override,
+        'perfil_atletico': perfil_atletico,
     }
     return render(request, 'hyrox/dashboard.html', context)
 

@@ -2489,6 +2489,163 @@ class HyroxImpactEngine:
 
 
 # ══════════════════════════════════════════════════════════════════════════════
+# ATHLETIC PROFILE — identidad atlética: Power / Endurance / Hybrid
+# ══════════════════════════════════════════════════════════════════════════════
+
+class HyroxAthleticProfile:
+    """
+    Calcula el perfil atlético de un usuario a partir de sus datos de objetivo.
+    Tres arquetipos:
+      Power    — fuerte pero lento: priorizar volumen de carrera y resistencia metabólica
+      Endurance — rápido pero débil: priorizar fuerza en estaciones y potencia
+      Hybrid   — equilibrado: optimizar transiciones
+    """
+
+    # Tiempos de referencia 5K por categoría (segundos) — nivel "competitivo medio"
+    _5K_REF = {
+        'open_men':      22 * 60,       # 22:00
+        'open_women':    26 * 60,       # 26:00
+        'pro_men':       18 * 60,       # 18:00
+        'pro_women':     22 * 60,       # 22:00
+        'doubles_men':   22 * 60,
+        'doubles_women': 26 * 60,
+        'doubles_mixed': 24 * 60,
+        'relay':         22 * 60,
+    }
+
+    # RM de sentadilla de referencia por categoría (kg) — nivel "competitivo medio"
+    _RM_REF = {
+        'open_men':      120,
+        'open_women':    70,
+        'pro_men':       150,
+        'pro_women':     90,
+        'doubles_men':   110,
+        'doubles_women': 65,
+        'doubles_mixed': 90,
+        'relay':         110,
+    }
+
+    @classmethod
+    def _parse_5k_secs(cls, tiempo_str):
+        if not tiempo_str:
+            return None
+        partes = str(tiempo_str).strip().split(':')
+        try:
+            if len(partes) == 2:
+                return int(partes[0]) * 60 + int(partes[1])
+            if len(partes) == 3:
+                return int(partes[0]) * 3600 + int(partes[1]) * 60 + int(partes[2])
+        except (ValueError, TypeError):
+            return None
+        return None
+
+    @classmethod
+    def compute(cls, objective):
+        """
+        Devuelve un dict con:
+          perfil        — 'power' | 'endurance' | 'hybrid'
+          score_fuerza  — 0–100 (% sobre referencia de categoría)
+          score_carrera — 0–100 (% sobre referencia de categoría, invertido: menor tiempo = mayor score)
+          ratio         — score_fuerza / score_carrera
+          label         — texto legible
+          descripcion   — frase de qué priorizar
+          pct_comp_sled — % que representa el Sled Push oficial sobre el RM del usuario
+          ajuste_plan   — dict con modificadores para el training engine
+        """
+        cat = getattr(objective, 'categoria', 'open_men') or 'open_men'
+
+        rm_sq = float(objective.rm_sentadilla or 0)
+        rm_dl = float(objective.rm_peso_muerto or 0)
+        t5k_secs = cls._parse_5k_secs(getattr(objective, 'tiempo_5k_base', None))
+
+        rm_ref = cls._RM_REF.get(cat, 120)
+        t5k_ref = cls._5K_REF.get(cat, 22 * 60)
+
+        # Score fuerza: media de RM disponibles como % de referencia (cap 100)
+        rms = [v for v in [rm_sq, rm_dl] if v > 0]
+        if rms:
+            score_fuerza = min(round((sum(rms) / len(rms)) / rm_ref * 100), 130)
+        else:
+            score_fuerza = None
+
+        # Score carrera: referencia / tiempo_real * 100 (más rápido = más score)
+        if t5k_secs and t5k_secs > 0:
+            score_carrera = min(round(t5k_ref / t5k_secs * 100), 130)
+        else:
+            score_carrera = None
+
+        # % que representa el peso oficial de Sled Push sobre el RM de sentadilla
+        from hyrox.training_engine import HyroxTrainingEngine
+        peso_sled_oficial = HyroxTrainingEngine.PESOS_OFICIALES.get(cat, {}).get('sled_push', 152)
+        if rm_sq > 0:
+            pct_comp_sled = round(peso_sled_oficial / rm_sq * 100)
+        else:
+            pct_comp_sled = None
+
+        # Si faltan datos, devolver perfil neutro
+        if score_fuerza is None and score_carrera is None:
+            return cls._perfil_neutro(pct_comp_sled)
+
+        if score_fuerza is None:
+            ratio = 0.5
+        elif score_carrera is None:
+            ratio = 1.5
+        else:
+            ratio = score_fuerza / max(score_carrera, 1)
+
+        # Clasificación: ratio > 1.2 → Power, < 0.83 → Endurance, resto → Hybrid
+        if ratio >= 1.2:
+            perfil = 'power'
+            label = 'Power'
+            descripcion = 'Eres más fuerte que rápido. El plan prioriza volumen de carrera y resistencia metabólica para igualar tu capacidad aeróbica con tu fuerza.'
+            ajuste_plan = {'extra_carrera': True, 'reducir_fuerza_base': False, 'prioridad': 'cardio'}
+        elif ratio <= 0.83:
+            perfil = 'endurance'
+            label = 'Endurance'
+            descripcion = 'Eres más rápido que fuerte. El plan prioriza fuerza de estaciones (Sled, Wall Balls) para que la carga no te frene en carrera.'
+            ajuste_plan = {'extra_carrera': False, 'reducir_fuerza_base': False, 'prioridad': 'fuerza'}
+        else:
+            perfil = 'hybrid'
+            label = 'Hybrid'
+            descripcion = 'Tienes un perfil equilibrado. El plan optimiza las transiciones y busca que tu tiempo en estaciones y carrera converjan.'
+            ajuste_plan = {'extra_carrera': False, 'reducir_fuerza_base': False, 'prioridad': 'transicion'}
+
+        # Añadir aviso de progresión lineal si el Sled es >65% del RM
+        necesita_fuerza_base = pct_comp_sled is not None and pct_comp_sled > 65
+        if necesita_fuerza_base:
+            ajuste_plan['progresion_lineal_fuerza'] = True
+            ajuste_plan['aviso'] = f'El Sled oficial ({peso_sled_oficial} kg) representa el {pct_comp_sled}% de tu RM — necesitas base de fuerza antes de trabajar velocidad.'
+
+        return {
+            'perfil': perfil,
+            'label': label,
+            'score_fuerza': score_fuerza,
+            'score_carrera': score_carrera,
+            'ratio': round(ratio, 2),
+            'descripcion': descripcion,
+            'pct_comp_sled': pct_comp_sled,
+            'peso_sled_oficial': peso_sled_oficial,
+            'necesita_fuerza_base': necesita_fuerza_base,
+            'ajuste_plan': ajuste_plan,
+        }
+
+    @classmethod
+    def _perfil_neutro(cls, pct_comp_sled):
+        return {
+            'perfil': 'unknown',
+            'label': 'Sin datos',
+            'score_fuerza': None,
+            'score_carrera': None,
+            'ratio': None,
+            'descripcion': 'Introduce tu RM de sentadilla y tu tiempo en 5K para que el sistema calcule tu perfil atlético.',
+            'pct_comp_sled': pct_comp_sled,
+            'peso_sled_oficial': None,
+            'necesita_fuerza_base': False,
+            'ajuste_plan': {'prioridad': 'neutro'},
+        }
+
+
+# ══════════════════════════════════════════════════════════════════════════════
 # RACE INTELLIGENCE — capa estratégica: predicción + decisión diaria
 # ══════════════════════════════════════════════════════════════════════════════
 
