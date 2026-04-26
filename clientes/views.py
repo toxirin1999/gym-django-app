@@ -641,9 +641,33 @@ def registrar_emocion(request):
 @login_required
 def redirigir_usuario(request):
     if request.user.is_superuser or request.user.is_staff:
-        return redirect('clientes:panel_entrenador')  # ✅ panel nuevo con Joi y diseño moderno
-    else:
-        return redirect('clientes:panel_cliente')
+        return redirect('clientes:panel_entrenador')
+
+    # Check-in gate: primera visita del día sin check-in → panel de check-in
+    from datetime import date as _date
+    try:
+        cliente = Cliente.objects.get(user=request.user)
+        hoy = _date.today()
+        checkin_hecho = BitacoraDiaria.objects.filter(
+            cliente=cliente, fecha=hoy, fc_reposo__isnull=False
+        ).exists()
+        if not checkin_hecho:
+            return redirect('clientes:panel_cliente')
+    except Cliente.DoesNotExist:
+        pass
+
+    # Check-in ya hecho → ir al destino habitual
+    try:
+        from hyrox.models import HyroxObjective
+        tiene_hyrox = HyroxObjective.objects.filter(
+            cliente=cliente, estado='activo'
+        ).exists()
+        if tiene_hyrox:
+            return redirect('hyrox:dashboard')
+    except Exception:
+        pass
+
+    return redirect('clientes:mockup_demo')
 
 
 from django.contrib.auth.decorators import login_required
@@ -1290,6 +1314,22 @@ def _get_dashboard_context_data(request, cliente):
 def panel_cliente(request):
     usuario = request.user
     cliente = get_object_or_404(Cliente, user=usuario)
+
+    # Si el check-in ya está hecho hoy, redirigir al destino habitual
+    from datetime import date as _date
+    hoy = _date.today()
+    checkin_hecho = BitacoraDiaria.objects.filter(
+        cliente=cliente, fecha=hoy, fc_reposo__isnull=False
+    ).exists()
+    if checkin_hecho:
+        try:
+            from hyrox.models import HyroxObjective
+            if HyroxObjective.objects.filter(cliente=cliente, estado='activo').exists():
+                return redirect('hyrox:dashboard')
+        except Exception:
+            pass
+        return redirect('clientes:mockup_demo')
+
     context = _get_dashboard_context_data(request, cliente)
 
     # ── Panel nutricional del día ──────────────────────────────────────
@@ -1367,6 +1407,10 @@ def mockup_demo(request):
     usuario = request.user
     cliente = get_object_or_404(Cliente, user=usuario)
     context = _get_dashboard_context_data(request, cliente)
+    from datetime import date as _date
+    context['checkin_hoy'] = BitacoraDiaria.objects.filter(
+        cliente=cliente, fecha=_date.today(), fc_reposo__isnull=False
+    ).first()
     return render(request, 'clientes/mockup_demo.html', context)
 
 
