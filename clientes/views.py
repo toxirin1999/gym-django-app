@@ -1363,6 +1363,14 @@ def panel_cliente(request):
 
 
 @login_required
+def mockup_demo(request):
+    usuario = request.user
+    cliente = get_object_or_404(Cliente, user=usuario)
+    context = _get_dashboard_context_data(request, cliente)
+    return render(request, 'clientes/mockup_demo.html', context)
+
+
+@login_required
 def widget_acwr(request, cliente_id):
     """Widget ACWR cargado de forma lazy vía HTMX.
     Devuelve solo el partial _widget_acwr.html con los datos del ACWR.

@@ -71,7 +71,7 @@ urlpatterns = [
     path('datos-graficas/<int:cliente_id>/', views.datos_graficas, name='datos_graficas'),
     path('medidas/', views.lista_medidas, name='lista_medidas'),
     path('medidas/agregar/', views.agregar_medida, name='agregar_medida'),
-    path('mockup-demo/', views.panel_cliente, name='mockup_demo'),
+    path('mockup-demo/', views.mockup_demo, name='mockup_demo'),
     path('responder-sugerencia/', views.responder_sugerencia, name='responder_sugerencia'),
 
     # Historial
