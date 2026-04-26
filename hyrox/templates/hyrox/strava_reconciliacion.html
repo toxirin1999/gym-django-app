@@ -162,20 +162,20 @@
   </div>
 
   {% for item in items %}
-  {% with act=item.actividad match=item.sesion_match %}
+  {% with act=item.actividad %}
   <div class="act-card" id="act-{{ act.id }}">
+
+    <!-- HEADER -->
     <div class="act-header">
       <div>
-        <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px;">
+        <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px;flex-wrap:wrap;">
           <span class="act-pill act-pill-strava"><i class="fab fa-strava"></i> {{ act.tipo_strava }}</span>
           {% if act.tipo_strava == 'Walk' or act.tipo_strava == 'Hike' %}
-          <span class="act-pill" style="background:rgba(15,15,14,.08);color:var(--ink-3);border:1px solid var(--line-2);">
-            💡 Caminata — considera ignorar
-          </span>
+          <span class="act-pill" style="background:rgba(15,15,14,.08);color:var(--ink-3);border:1px solid var(--line-2);">💡 Caminata — considera ignorar</span>
           {% endif %}
-          {% if match %}
+          {% if item.hyrox_matches or item.gym_matches %}
           <span class="act-pill" style="background:rgba(0,180,100,.12);color:#00b464;border:1px solid rgba(0,180,100,.3);">
-            ✓ Match encontrado
+            ✓ {{ item.hyrox_matches|length|add:item.gym_matches|length }} coincidencia{{ item.hyrox_matches|length|add:item.gym_matches|length|pluralize:"s" }} ese día
           </span>
           {% endif %}
         </div>
@@ -184,127 +184,126 @@
       </div>
     </div>
 
-    <!-- METRICS COMPARISON -->
-    {% if match %}
-    <div class="compare">
-      <div class="compare-col">
-        <div class="compare-col-title"><i class="fab fa-strava"></i> Strava</div>
-        <div class="compare-row">
-          <span class="compare-lbl">Duración</span>
-          <span class="compare-val">{{ act.duracion_minutos }} min</span>
-        </div>
-        <div class="compare-row">
-          <span class="compare-lbl">FC Media</span>
-          <span class="compare-val">{% if act.hr_media %}{{ act.hr_media }} bpm{% else %}—{% endif %}</span>
-        </div>
-        <div class="compare-row">
-          <span class="compare-lbl">FC Max</span>
-          <span class="compare-val">{% if act.hr_maxima %}{{ act.hr_maxima }} bpm{% else %}—{% endif %}</span>
-        </div>
-        {% if act.distancia_metros %}
-        <div class="compare-row">
-          <span class="compare-lbl">Distancia</span>
-          <span class="compare-val">{{ act.distancia_metros|floatformat:0 }} m</span>
-        </div>
-        {% endif %}
+    <!-- STRAVA METRICS -->
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;">
+      <div style="background:var(--paper-2);border-radius:3px;padding:7px 12px;text-align:center;">
+        <div style="font-family:var(--font-mono);font-size:13px;font-weight:700;">{{ act.duracion_minutos }}</div>
+        <div style="font-size:9px;color:var(--ink-3);letter-spacing:.05em;">MIN</div>
       </div>
-      <div class="compare-col">
-        <div class="compare-col-title">📋 Sesión registrada</div>
-        <div class="compare-row">
-          <span class="compare-lbl">Duración</span>
-          <span class="compare-val">{% if match.tiempo_total_minutos %}{{ match.tiempo_total_minutos }} min{% else %}—{% endif %}</span>
-        </div>
-        <div class="compare-row">
-          <span class="compare-lbl">FC Media</span>
-          <span class="compare-val">{% if match.hr_media %}{{ match.hr_media }} bpm{% else %}—{% endif %}</span>
-        </div>
-        <div class="compare-row">
-          <span class="compare-lbl">FC Max</span>
-          <span class="compare-val">{% if match.hr_maxima %}{{ match.hr_maxima }} bpm{% else %}—{% endif %}</span>
-        </div>
-        <div class="compare-row">
-          <span class="compare-lbl">TRIMP</span>
-          <span class="compare-val">{% if match.trimp %}{{ match.trimp|floatformat:1 }}{% else %}—{% endif %}</span>
-        </div>
-      </div>
+      {% if act.hr_media %}<div style="background:var(--paper-2);border-radius:3px;padding:7px 12px;text-align:center;">
+        <div style="font-family:var(--font-mono);font-size:13px;font-weight:700;">{{ act.hr_media }}</div>
+        <div style="font-size:9px;color:var(--ink-3);letter-spacing:.05em;">FC MED</div>
+      </div>{% endif %}
+      {% if act.hr_maxima %}<div style="background:var(--paper-2);border-radius:3px;padding:7px 12px;text-align:center;">
+        <div style="font-family:var(--font-mono);font-size:13px;font-weight:700;">{{ act.hr_maxima }}</div>
+        <div style="font-size:9px;color:var(--ink-3);letter-spacing:.05em;">FC MAX</div>
+      </div>{% endif %}
+      {% if act.distancia_metros %}<div style="background:var(--paper-2);border-radius:3px;padding:7px 12px;text-align:center;">
+        <div style="font-family:var(--font-mono);font-size:13px;font-weight:700;">{{ act.distancia_metros|floatformat:0 }}</div>
+        <div style="font-size:9px;color:var(--ink-3);letter-spacing:.05em;">METROS</div>
+      </div>{% endif %}
     </div>
-    <div style="font-size:12px;color:var(--ink-3);margin-bottom:12px;">
-      Fusionar rellenará los campos vacíos de tu sesión con los datos de Strava.
-    </div>
-    {% else %}
-    <!-- No match: show Strava metrics alone -->
-    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px;">
-      <div style="background:var(--paper-2);border-radius:3px;padding:8px 14px;text-align:center;">
-        <div style="font-family:var(--font-mono);font-size:14px;font-weight:700;">{{ act.duracion_minutos }}</div>
-        <div style="font-size:10px;color:var(--ink-3);letter-spacing:.05em;">MIN</div>
+
+    <!-- HYROX MATCHES -->
+    {% if item.hyrox_matches %}
+    <div style="margin-bottom:10px;">
+      <div style="font-family:var(--font-mono);font-size:9px;font-weight:700;letter-spacing:.1em;
+                  text-transform:uppercase;color:var(--accent);margin-bottom:6px;">Sesiones Hyrox ese día</div>
+      {% for s in item.hyrox_matches %}
+      <div style="background:var(--paper-2);border-radius:3px;padding:10px 12px;margin-bottom:6px;
+                  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+        <div>
+          <div style="font-weight:700;font-size:13px;">{{ s.titulo|default:"Sesión Hyrox" }}</div>
+          <div style="font-size:11px;color:var(--ink-3);">
+            {{ s.tiempo_total_minutos|default:"—" }} min
+            {% if s.hr_media %} · {{ s.hr_media }} bpm{% endif %}
+            {% if s.rpe_global %} · RPE {{ s.rpe_global }}{% endif %}
+          </div>
+        </div>
+        <button class="rb-btn rb-btn-ok" style="font-size:10px;padding:5px 10px;"
+          onclick="procesarActividad({{ act.id }}, 'merge_hyrox', { session_id: '{{ s.id }}' })">
+          <i class="fas fa-code-merge"></i> Fusionar
+        </button>
       </div>
-      {% if act.hr_media %}
-      <div style="background:var(--paper-2);border-radius:3px;padding:8px 14px;text-align:center;">
-        <div style="font-family:var(--font-mono);font-size:14px;font-weight:700;">{{ act.hr_media }}</div>
-        <div style="font-size:10px;color:var(--ink-3);letter-spacing:.05em;">FC MEDIA</div>
-      </div>
-      {% endif %}
-      {% if act.hr_maxima %}
-      <div style="background:var(--paper-2);border-radius:3px;padding:8px 14px;text-align:center;">
-        <div style="font-family:var(--font-mono);font-size:14px;font-weight:700;">{{ act.hr_maxima }}</div>
-        <div style="font-size:10px;color:var(--ink-3);letter-spacing:.05em;">FC MAX</div>
-      </div>
-      {% endif %}
-      {% if act.distancia_metros %}
-      <div style="background:var(--paper-2);border-radius:3px;padding:8px 14px;text-align:center;">
-        <div style="font-family:var(--font-mono);font-size:14px;font-weight:700;">{{ act.distancia_metros|floatformat:0 }}</div>
-        <div style="font-size:10px;color:var(--ink-3);letter-spacing:.05em;">METROS</div>
-      </div>
-      {% endif %}
+      {% endfor %}
     </div>
     {% endif %}
 
-    <!-- ACTIONS -->
-    <div class="act-actions">
-      {% if match %}
-      <button class="rb-btn rb-btn-ok"
-        onclick="procesarActividad({{ act.id }}, 'merge', { session_id: '{{ match.id }}' })">
-        <i class="fas fa-code-merge"></i> Fusionar con sesión
-      </button>
-      {% endif %}
-
-      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
-        <select class="act-select" id="tipo-{{ act.id }}">
-          <option value="carrera" {% if act.tipo_hyrox == 'carrera' %}selected{% endif %}>🏃 Carrera</option>
-          <option value="fuerza" {% if act.tipo_hyrox == 'fuerza' %}selected{% endif %}>🏋️ Fuerza</option>
-          <option value="bici" {% if act.tipo_hyrox == 'bici' %}selected{% endif %}>🚴 Bici</option>
-          <option value="remo" {% if act.tipo_hyrox == 'remo' %}selected{% endif %}>🚣 Remo</option>
-          <option value="cardio_sustituto" {% if act.tipo_hyrox == 'cardio_sustituto' %}selected{% endif %}>⚽ Cardio sustituto</option>
-          <option value="hiit" {% if act.tipo_hyrox == 'hiit' %}selected{% endif %}>⚡ HIIT</option>
-          <option value="otro" {% if act.tipo_hyrox == 'otro' %}selected{% endif %}>🔹 Otro</option>
-        </select>
-        {% if not match %}
-        <div style="display:flex;align-items:center;gap:4px;">
-          <span style="font-family:var(--font-mono);font-size:10px;font-weight:700;color:var(--ink-3);white-space:nowrap;">RPE</span>
-          <select class="act-select" id="rpe-{{ act.id }}" style="width:70px;">
-            <option value="">—</option>
-            <option value="1">1</option><option value="2">2</option>
-            <option value="3">3</option><option value="4">4</option>
-            <option value="5">5</option><option value="6">6</option>
-            <option value="7">7</option><option value="8">8</option>
-            <option value="9">9</option><option value="10">10</option>
-          </select>
+    <!-- GYM MATCHES -->
+    {% if item.gym_matches %}
+    <div style="margin-bottom:10px;">
+      <div style="font-family:var(--font-mono);font-size:9px;font-weight:700;letter-spacing:.1em;
+                  text-transform:uppercase;color:var(--ink-3);margin-bottom:6px;">Entrenos de gym ese día</div>
+      {% for e in item.gym_matches %}
+      <div style="background:var(--paper-2);border-radius:3px;padding:10px 12px;margin-bottom:6px;
+                  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+        <div>
+          <div style="font-weight:700;font-size:13px;">{{ e.nombre_rutina_liftin|default:e.rutina.nombre|default:"Entreno gym" }}</div>
+          <div style="font-size:11px;color:var(--ink-3);">
+            {{ e.duracion_minutos|default:"—" }} min
+            {% if e.frecuencia_cardiaca_promedio %} · {{ e.frecuencia_cardiaca_promedio }} bpm{% endif %}
+          </div>
         </div>
-        {% endif %}
-        <button class="rb-btn rb-btn-ok"
-          onclick="procesarActividad({{ act.id }}, 'create', {
-            tipo_actividad: document.getElementById('tipo-{{ act.id }}').value,
-            {% if not match %}rpe: document.getElementById('rpe-{{ act.id }}').value{% endif %}
-          })">
-          <i class="fas fa-plus"></i> Crear sesión nueva
+        <button class="rb-btn rb-btn-ok" style="font-size:10px;padding:5px 10px;"
+          onclick="procesarActividad({{ act.id }}, 'merge_gym', { entreno_id: '{{ e.id }}' })">
+          <i class="fas fa-code-merge"></i> Fusionar
         </button>
       </div>
+      {% endfor %}
+    </div>
+    {% endif %}
 
-      <button class="rb-btn rb-btn-danger"
+    <!-- CREATE ACTIONS -->
+    <div style="font-family:var(--font-mono);font-size:9px;font-weight:700;letter-spacing:.1em;
+                text-transform:uppercase;color:var(--ink-3);margin-bottom:8px;">
+      {% if item.hyrox_matches or item.gym_matches %}O crear nuevo{% else %}Sin coincidencias — crear{% endif %}
+    </div>
+    <div class="act-actions">
+      <!-- RPE selector (shared) -->
+      <div style="display:flex;align-items:center;gap:5px;">
+        <span style="font-family:var(--font-mono);font-size:10px;font-weight:700;color:var(--ink-3);">RPE</span>
+        <select class="act-select" id="rpe-{{ act.id }}" style="width:70px;">
+          <option value="">—</option>
+          <option value="1">1</option><option value="2">2</option>
+          <option value="3">3</option><option value="4">4</option>
+          <option value="5">5</option><option value="6">6</option>
+          <option value="7">7</option><option value="8">8</option>
+          <option value="9">9</option><option value="10">10</option>
+        </select>
+      </div>
+
+      <!-- Type selector for Hyrox -->
+      <select class="act-select" id="tipo-{{ act.id }}">
+        <option value="carrera" {% if act.tipo_hyrox == 'carrera' %}selected{% endif %}>🏃 Carrera</option>
+        <option value="fuerza" {% if act.tipo_hyrox == 'fuerza' %}selected{% endif %}>🏋️ Fuerza</option>
+        <option value="bici" {% if act.tipo_hyrox == 'bici' %}selected{% endif %}>🚴 Bici</option>
+        <option value="remo" {% if act.tipo_hyrox == 'remo' %}selected{% endif %}>🚣 Remo</option>
+        <option value="cardio_sustituto" {% if act.tipo_hyrox == 'cardio_sustituto' %}selected{% endif %}>⚽ Cardio sust.</option>
+        <option value="hiit" {% if act.tipo_hyrox == 'hiit' %}selected{% endif %}>⚡ HIIT</option>
+        <option value="otro" {% if act.tipo_hyrox == 'otro' %}selected{% endif %}>🔹 Otro</option>
+      </select>
+
+      <button class="rb-btn rb-btn-ok" style="font-size:10px;"
+        onclick="procesarActividad({{ act.id }}, 'create_hyrox', {
+          tipo_actividad: document.getElementById('tipo-{{ act.id }}').value,
+          rpe: document.getElementById('rpe-{{ act.id }}').value
+        })">
+        <i class="fas fa-plus"></i> Crear Hyrox
+      </button>
+
+      <button class="rb-btn" style="font-size:10px;border-color:var(--ink-3);color:var(--ink-3);"
+        onclick="procesarActividad({{ act.id }}, 'create_gym', {
+          rpe: document.getElementById('rpe-{{ act.id }}').value
+        })">
+        <i class="fas fa-dumbbell"></i> Crear Gym
+      </button>
+
+      <button class="rb-btn rb-btn-danger" style="font-size:10px;"
         onclick="procesarActividad({{ act.id }}, 'ignore', {})">
         <i class="fas fa-times"></i> Ignorar
       </button>
     </div>
+
   </div>
   {% endwith %}
   {% endfor %}
