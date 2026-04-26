@@ -76,7 +76,7 @@ class BitacoraDiaria(models.Model):
     mindfulness_pm = models.BooleanField(default=False)
     peso_kg = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
     energia_subjetiva = models.PositiveSmallIntegerField(null=True, blank=True, help_text="Energía subjetiva de 0 a 10")
-    calidad_sueno = models.PositiveSmallIntegerField(null=True, blank=True, help_text="Calidad del sueño (1-10)")
+    calidad_sueno = models.PositiveSmallIntegerField(null=True, blank=True, help_text="Calidad del sueño (0-100)")
     fc_reposo = models.PositiveSmallIntegerField(null=True, blank=True, help_text="FC de reposo al despertar (lpm)")
     dolor_articular = models.PositiveSmallIntegerField(null=True, blank=True, help_text="Dolor articular de 0 a 10")
     autoconciencia = models.TextField(null=True, blank=True, help_text="¿Qué emoción domina (0-10)?")
