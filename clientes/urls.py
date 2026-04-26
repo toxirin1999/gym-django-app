@@ -5,7 +5,7 @@ from . import views
 from .views import calendario_bitacoras
 from .views import registrar_bitacora
 from clientes import views as clientes_views
-from .views import historial_cliente, redirigir_usuario, panel_cliente
+from .views import historial_cliente, redirigir_usuario, panel_cliente, checkin_matutino
 from django.contrib.auth.decorators import login_required
 from joi import views as joi_views
 from .views import recuerdos_semanales
@@ -56,6 +56,7 @@ urlpatterns = [
     # Paneles
     path('panel/', clientes_views.dashboard, name='dashboard'),
     path('mi-panel/', panel_cliente, name='panel_cliente'),
+    path('mi-panel/checkin/', checkin_matutino, name='checkin_matutino'),
     path('mi-panel/blade-runner/', views.blade_runner_dashboard, name='blade_runner_dashboard'),
     path('mi-panel/widget/acwr/<int:cliente_id>/', views.widget_acwr, name='widget_acwr'),
 

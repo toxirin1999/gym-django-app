@@ -519,6 +519,72 @@ def registrar_bitacora(request):
     })
 
 
+@login_required
+@require_POST
+def checkin_matutino(request):
+    """
+    Quick morning check-in: saves fc_reposo, horas_sueno, calidad_sueno, energia_subjetiva
+    to BitacoraDiaria and syncs to HyroxReadinessLog if an active objective exists.
+    Returns JSON so the panel_cliente widget can update in place.
+    """
+    from datetime import date as _date
+    from clientes.models import BitacoraDiaria, Cliente
+
+    cliente = get_object_or_404(Cliente, user=request.user)
+    hoy = _date.today()
+
+    def _int(key, lo=None, hi=None):
+        try:
+            v = int(request.POST.get(key, ''))
+            if lo is not None and v < lo: return None
+            if hi is not None and v > hi: return None
+            return v
+        except (ValueError, TypeError):
+            return None
+
+    def _float(key):
+        try:
+            return float(request.POST.get(key, ''))
+        except (ValueError, TypeError):
+            return None
+
+    fc_reposo    = _int('fc_reposo', 30, 200)
+    horas_sueno  = _float('horas_sueno')
+    calidad      = _int('calidad_sueno', 1, 10)
+    energia      = _int('energia_subjetiva', 1, 10)
+
+    bitacora, _ = BitacoraDiaria.objects.get_or_create(cliente=cliente, fecha=hoy)
+    if fc_reposo   is not None: bitacora.fc_reposo        = fc_reposo
+    if horas_sueno is not None: bitacora.horas_sueno      = horas_sueno
+    if calidad     is not None: bitacora.calidad_sueno    = calidad
+    if energia     is not None: bitacora.energia_subjetiva = energia
+    bitacora.save()
+
+    # Sync to HyroxReadinessLog
+    try:
+        from hyrox.models import HyroxObjective, HyroxReadinessLog
+        objetivo = HyroxObjective.objects.filter(cliente=cliente, estado='activo').first()
+        if objetivo:
+            defaults = {}
+            if fc_reposo   is not None: defaults['fc_reposo']    = fc_reposo
+            if horas_sueno is not None: defaults['horas_sueno']  = horas_sueno
+            if calidad     is not None: defaults['calidad_sueno'] = calidad
+            if defaults:
+                log, created = HyroxReadinessLog.objects.get_or_create(
+                    objective=objetivo, fecha=hoy,
+                    defaults={'score': objetivo.get_race_readiness_score(), **defaults}
+                )
+                if not created:
+                    for k, v in defaults.items():
+                        setattr(log, k, v)
+                    log.save(update_fields=list(defaults.keys()))
+    except Exception:
+        pass
+
+    return JsonResponse({'ok': True, 'fc_reposo': fc_reposo, 'horas_sueno': horas_sueno,
+                         'calidad_sueno': calidad, 'energia_subjetiva': energia})
+
+
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 from joi.models import EstadoEmocional, RecuerdoEmocional, Entrenamiento, EventoLogro
@@ -1284,7 +1350,13 @@ def panel_cliente(request):
     except Exception:
         context['eudaimonia_alta'] = None
 
-    return render(request, 'clientes/mockup_demo.html', context)
+    # ── Check-in matutino ─────────────────────────────────────────────
+    from datetime import date as _today
+    _hoy2 = _today.today()
+    bitacora_hoy = BitacoraDiaria.objects.filter(cliente=cliente, fecha=_hoy2).first()
+    context['checkin_hoy'] = bitacora_hoy  # None if not done yet
+
+    return render(request, 'clientes/panel_cliente.html', context)
 
 
 @login_required
