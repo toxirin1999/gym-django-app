@@ -2204,12 +2204,12 @@ def strava_procesar(request, actividad_id):
                 tipo_actividad  = tipo,
                 nombre_ejercicio= act.nombre_strava or act.tipo_strava,
                 data_metricas   = {
-                    'duracion_min':    round(act.duracion_segundos / 60, 1),
-                    'distancia_m':     act.distancia_metros,
-                    'hr_media':        act.hr_media,
-                    'hr_maxima':       act.hr_maxima,
-                    'fuente':          'strava',
-                    'strava_id':       act.strava_id,
+                    'distancia_km':   round(act.distancia_metros / 1000, 2) if act.distancia_metros else '',
+                    'tiempo_minutos': round(act.duracion_segundos / 60, 1),
+                    'hr_media':       act.hr_media,
+                    'hr_maxima':      act.hr_maxima,
+                    'fuente':         'strava',
+                    'strava_id':      act.strava_id,
                 },
             )
         act.estado = 'created'
