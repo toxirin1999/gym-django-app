@@ -1023,11 +1023,18 @@ def crear_objetivo(request):
                     'nivel_experiencia': objetivo_actual.nivel_experiencia,
                     'lesiones_previas': objetivo_actual.lesiones_previas,
                     'material_disponible': objetivo_actual.material_disponible,
-                    'dias_preferidos': objetivo_actual.dias_preferidos
+                    'dias_preferidos': objetivo_actual.dias_preferidos,
+                    'objetivo_tiempo_carrera': objetivo_actual.objetivo_tiempo_carrera,
+                    'primer_hyrox': objetivo_actual.primer_hyrox,
+                    'peso_corporal': objetivo_actual.peso_corporal,
+                    'genero': objetivo_actual.genero,
+                    'fc_max_real': objetivo_actual.fc_max_real,
+                    'fc_reposo': objetivo_actual.fc_reposo,
                 }
         form = HyroxObjectiveForm(initial=initial_data)
-        
-    return render(request, 'hyrox/crear_objetivo.html', {'form': form})
+
+    dias_semana = [(0,'Lun'),(1,'Mar'),(2,'Mié'),(3,'Jue'),(4,'Vie'),(5,'Sáb'),(6,'Dom')]
+    return render(request, 'hyrox/crear_objetivo.html', {'form': form, 'dias_semana': dias_semana})
 
 @login_required
 def cancelar_objetivo(request, objective_id):
