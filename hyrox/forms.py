@@ -3,42 +3,59 @@ from .models import HyroxObjective, HyroxSession
 
 class HyroxObjectiveForm(forms.ModelForm):
 
-    def clean_tiempo_5k_base(self):
-        valor = self.cleaned_data.get('tiempo_5k_base', '').strip()
+    def _clean_tiempo(self, field_name, placeholder):
+        valor = self.cleaned_data.get(field_name, '')
         if not valor:
             return valor
-        # Auto-completar: "35" → "35:00"
-        if ':' not in valor:
-            try:
-                minutos = int(valor)
-                valor = f"{minutos}:00"
-            except ValueError:
-                raise forms.ValidationError("Formato inválido. Usa MM:SS, por ejemplo 35:00.")
-        # Validar estructura MM:SS
+        valor = valor.strip()
         partes = valor.split(':')
-        if len(partes) != 2:
-            raise forms.ValidationError("Formato inválido. Usa MM:SS, por ejemplo 35:00.")
         try:
-            m, s = int(partes[0]), int(partes[1])
-            if not (0 <= m <= 99 and 0 <= s <= 59):
+            if len(partes) == 2:
+                m, s = int(partes[0]), int(partes[1])
+                if not (0 <= m <= 99 and 0 <= s <= 59):
+                    raise ValueError
+                return f"{m}:{s:02d}"
+            elif len(partes) == 3:
+                h, m, s = int(partes[0]), int(partes[1]), int(partes[2])
+                if not (0 <= h <= 9 and 0 <= m <= 59 and 0 <= s <= 59):
+                    raise ValueError
+                return f"{h}:{m:02d}:{s:02d}"
+            else:
                 raise ValueError
         except ValueError:
-            raise forms.ValidationError("Tiempo fuera de rango. Ej: 25:30 significa 25 minutos 30 segundos.")
-        return f"{m}:{s:02d}"
+            raise forms.ValidationError(f"Formato inválido. Usa {placeholder}.")
+
+    def clean_tiempo_5k_base(self):
+        return self._clean_tiempo('tiempo_5k_base', 'MM:SS (ej. 25:00)')
+
+    def clean_objetivo_tiempo_carrera(self):
+        return self._clean_tiempo('objetivo_tiempo_carrera', 'H:MM:SS (ej. 1:15:00) o MM:SS')
 
     class Meta:
         model = HyroxObjective
-        fields = ['categoria', 'fecha_evento', 'rm_peso_muerto', 'rm_sentadilla', 'tiempo_5k_base', 'material_disponible', 'nivel_experiencia', 'lesiones_previas', 'dias_preferidos']
+        fields = [
+            'categoria', 'fecha_evento',
+            'objetivo_tiempo_carrera', 'primer_hyrox',
+            'rm_peso_muerto', 'rm_sentadilla', 'tiempo_5k_base', 'peso_corporal',
+            'nivel_experiencia', 'genero', 'fc_max_real', 'fc_reposo',
+            'lesiones_previas', 'material_disponible', 'dias_preferidos',
+        ]
         widgets = {
             'fecha_evento': forms.DateInput(attrs={'type': 'date', 'class': 'form-control bg-slate-800 border-slate-700 text-slate-200'}),
             'categoria': forms.Select(attrs={'class': 'form-select bg-slate-800 border-slate-700 text-slate-200'}),
-            'rm_peso_muerto': forms.NumberInput(attrs={'class': 'form-control bg-slate-800 border-slate-700 text-slate-200', 'placeholder': 'Ej. 120 (Si no sabes, déjalo en blanco)'}),
-            'rm_sentadilla': forms.NumberInput(attrs={'class': 'form-control bg-slate-800 border-slate-700 text-slate-200', 'placeholder': 'Ej. 100 (Si no sabes, déjalo en blanco)'}),
+            'objetivo_tiempo_carrera': forms.TextInput(attrs={'class': 'form-control bg-slate-800 border-slate-700 text-slate-200', 'placeholder': 'Ej. 1:15:00 (1h 15min)'}),
+            'primer_hyrox': forms.CheckboxInput(attrs={'class': 'w-5 h-5 text-cyan-500 bg-slate-800 border-slate-700 rounded focus:ring-cyan-500'}),
+            'rm_peso_muerto': forms.NumberInput(attrs={'class': 'form-control bg-slate-800 border-slate-700 text-slate-200', 'placeholder': 'Ej. 120'}),
+            'rm_sentadilla': forms.NumberInput(attrs={'class': 'form-control bg-slate-800 border-slate-700 text-slate-200', 'placeholder': 'Ej. 100'}),
             'tiempo_5k_base': forms.TextInput(attrs={'class': 'form-control bg-slate-800 border-slate-700 text-slate-200', 'placeholder': 'Ej. 25:00'}),
+            'peso_corporal': forms.NumberInput(attrs={'class': 'form-control bg-slate-800 border-slate-700 text-slate-200', 'placeholder': 'Ej. 75'}),
             'nivel_experiencia': forms.Select(attrs={'class': 'form-select bg-slate-800 border-slate-700 text-slate-200'}),
+            'genero': forms.Select(attrs={'class': 'form-select bg-slate-800 border-slate-700 text-slate-200'}),
+            'fc_max_real': forms.NumberInput(attrs={'class': 'form-control bg-slate-800 border-slate-700 text-slate-200', 'placeholder': 'Ej. 185 (vacío = 220−edad)'}),
+            'fc_reposo': forms.NumberInput(attrs={'class': 'form-control bg-slate-800 border-slate-700 text-slate-200', 'placeholder': 'Ej. 55'}),
             'lesiones_previas': forms.Textarea(attrs={'class': 'form-control bg-slate-800 border-slate-700 text-slate-200', 'rows': 2, 'placeholder': 'Ej: Molestias en hombro derecho...'}),
             'material_disponible': forms.Textarea(attrs={'class': 'form-control bg-slate-800 border-slate-700 text-slate-200', 'rows': 3, 'placeholder': '¿Tienes acceso a Sled, SkiErg, Row? Escríbelo aquí...'}),
-            'dias_preferidos': forms.TextInput(attrs={'class': 'form-control bg-slate-800 border-slate-700 text-slate-200 font-mono text-sm', 'placeholder': 'Ej: 0,2,4,5 (Lunes, Mierc, Viern, Sab)'}),
+            'dias_preferidos': forms.HiddenInput(attrs={'id': 'id_dias_preferidos'}),
         }
 
 class HyroxSessionNotesForm(forms.ModelForm):

@@ -38,7 +38,13 @@ class HyroxObjective(models.Model):
     nivel_experiencia = models.CharField(max_length=20, choices=NIVEL_CHOICES, default='intermedio', help_text="Experiencia en fuerza/cardio")
     lesiones_previas = models.TextField(blank=True, help_text="Ej: Rodilla derecha, lumbalgia. Dejar en blanco si no hay.")
     material_disponible = models.TextField(blank=True, help_text="Material del que dispone el usuario")
-    
+
+    # Objetivo de carrera
+    objetivo_tiempo_carrera = models.CharField(max_length=10, blank=True, null=True,
+        help_text="Tiempo objetivo para acabar la carrera (H:MM:SS o MM:SS)")
+    primer_hyrox = models.BooleanField(default=True, help_text="¿Es la primera vez que compite en Hyrox?")
+    peso_corporal = models.FloatField(null=True, blank=True, help_text="Peso corporal en kg (para escalar cargas relativas)")
+
     # Disponibilidad Semanal (Fase 14)
     # Ejemplo de estructura: "0,2,4" (0=Lunes, 6=Domingo)
     dias_preferidos = models.CharField(max_length=20, default="0,2,4,6", help_text="Días de la semana preferidos para entrenar (0=Lunes, 6=Domingo)")
