@@ -251,15 +251,17 @@ class HyroxLoadManager:
         total = 0.0
         for l in lecturas:
             horas   = l.get('horas_sueno') or 0
-            calidad = l.get('calidad_sueno') or 5
+            calidad_raw = l.get('calidad_sueno') or 50
+            # Support both 0-100 (new) and 1-10 (legacy) scales
+            calidad = calidad_raw if calidad_raw > 10 else calidad_raw * 10
             p = 0.0
             if horas and horas < 6:
                 p += 4.0
             elif horas and horas < 7:
                 p += 2.0
-            if calidad and calidad < 4:
+            if calidad and calidad < 40:
                 p += 3.0
-            elif calidad and calidad < 6:
+            elif calidad and calidad < 60:
                 p += 1.5
             total += p
         return round(total / len(lecturas), 1)

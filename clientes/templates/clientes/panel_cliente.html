@@ -158,13 +158,19 @@
                        value="{{ checkin_hoy.horas_sueno|default:'' }}">
             </div>
             <div class="ci-field">
-                <label>Calidad sueño (1-10)</label>
-                <input type="number" name="calidad_sueno" placeholder="7" min="1" max="10" inputmode="numeric"
+                <label>Calidad sueño (0-100)</label>
+                <input type="number" name="calidad_sueno" placeholder="75" min="0" max="100" inputmode="numeric"
                        value="{{ checkin_hoy.calidad_sueno|default:'' }}">
             </div>
             <div class="ci-field">
-                <label>Energía (1-10)</label>
-                <input type="number" name="energia_subjetiva" placeholder="8" min="1" max="10" inputmode="numeric"
+                <label>Energía</label>
+                <div style="display:flex;gap:4px;margin-bottom:3px;" id="ci-energia-btns">
+                  <button type="button" data-val="2" onclick="ciSetEnergia(2)"  style="flex:1;padding:6px 2px;border-radius:6px;border:1px solid #1e3a5f;background:#0f1827;color:#94a3b8;font-size:12px;cursor:pointer;">😴<br><span style="font-size:9px">Agotado</span></button>
+                  <button type="button" data-val="5" onclick="ciSetEnergia(5)"  style="flex:1;padding:6px 2px;border-radius:6px;border:1px solid #1e3a5f;background:#0f1827;color:#94a3b8;font-size:12px;cursor:pointer;">😐<br><span style="font-size:9px">Normal</span></button>
+                  <button type="button" data-val="8" onclick="ciSetEnergia(8)"  style="flex:1;padding:6px 2px;border-radius:6px;border:1px solid #1e3a5f;background:#0f1827;color:#94a3b8;font-size:12px;cursor:pointer;">⚡<br><span style="font-size:9px">Cargado</span></button>
+                  <button type="button" data-val="10" onclick="ciSetEnergia(10)" style="flex:1;padding:6px 2px;border-radius:6px;border:1px solid #1e3a5f;background:#0f1827;color:#94a3b8;font-size:12px;cursor:pointer;">🔥<br><span style="font-size:9px">100%</span></button>
+                </div>
+                <input type="hidden" name="energia_subjetiva" id="ci-energia-val"
                        value="{{ checkin_hoy.energia_subjetiva|default:'' }}">
             </div>
             <div style="grid-column:1/-1">
@@ -202,6 +208,19 @@
 const CI_URL = "{% url 'clientes:checkin_matutino' %}";
 const CSRF   = "{{ csrf_token }}";
 
+function ciSetEnergia(val) {
+    document.getElementById('ci-energia-val').value = val;
+    document.querySelectorAll('#ci-energia-btns button').forEach(b => {
+        const active = parseInt(b.dataset.val) === val;
+        b.style.background = active ? '#0ea5e9' : '#0f1827';
+        b.style.color      = active ? '#fff'    : '#94a3b8';
+        b.style.borderColor = active ? '#0ea5e9' : '#1e3a5f';
+    });
+}
+
+// Pre-select energy if already set
+{% if checkin_hoy.energia_subjetiva %}ciSetEnergia({{ checkin_hoy.energia_subjetiva }});{% endif %}
+
 document.getElementById('ci-form')?.addEventListener('submit', async function(e) {
     e.preventDefault();
     const fd = new FormData(this);
@@ -210,19 +229,12 @@ document.getElementById('ci-form')?.addEventListener('submit', async function(e)
         const r = await fetch(CI_URL, { method: 'POST', body: fd });
         const data = await r.json();
         if (data.ok) {
-            // Replace form with done stats
-            const card = document.getElementById('ci-card');
-            card.innerHTML = `
-                <div class="card-title">Check-in matutino</div>
-                <div class="checkin-done">
-                    <div class="ci-stat"><div class="ci-stat-val">${data.fc_reposo ?? '—'}</div><div class="ci-stat-lbl">FC reposo</div></div>
-                    <div class="ci-stat"><div class="ci-stat-val">${data.horas_sueno ?? '—'}</div><div class="ci-stat-lbl">h sueño</div></div>
-                    <div class="ci-stat"><div class="ci-stat-val">${data.calidad_sueno ?? '—'}</div><div class="ci-stat-lbl">calidad</div></div>
-                    <div class="ci-stat"><div class="ci-stat-val">${data.energia_subjetiva ?? '—'}</div><div class="ci-stat-lbl">energía</div></div>
-                </div>`;
             const t = document.getElementById('ci-toast');
             t.classList.add('show');
-            setTimeout(() => t.classList.remove('show'), 2500);
+            // Redirect to Hyrox dashboard (or wherever the server tells us)
+            setTimeout(() => {
+                window.location.href = data.redirect || '/hyrox/';
+            }, 900);
         }
     } catch(err) { console.error(err); }
 });

@@ -550,7 +550,7 @@ def checkin_matutino(request):
 
     fc_reposo    = _int('fc_reposo', 30, 200)
     horas_sueno  = _float('horas_sueno')
-    calidad      = _int('calidad_sueno', 1, 10)
+    calidad      = _int('calidad_sueno', 0, 100)
     energia      = _int('energia_subjetiva', 1, 10)
 
     bitacora, _ = BitacoraDiaria.objects.get_or_create(cliente=cliente, fecha=hoy)
@@ -581,8 +581,11 @@ def checkin_matutino(request):
     except Exception:
         pass
 
+    from django.urls import reverse as _rev
+    redirect_url = _rev('hyrox:dashboard') if True else _rev('clientes:panel_cliente')
     return JsonResponse({'ok': True, 'fc_reposo': fc_reposo, 'horas_sueno': horas_sueno,
-                         'calidad_sueno': calidad, 'energia_subjetiva': energia})
+                         'calidad_sueno': calidad, 'energia_subjetiva': energia,
+                         'redirect': redirect_url})
 
 
 from django.contrib.auth.decorators import login_required
