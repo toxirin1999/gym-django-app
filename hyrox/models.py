@@ -528,3 +528,79 @@ class RecoveryTestLog(models.Model):
     def __str__(self):
         estado = "Apto" if self.es_apto else "No Apto"
         return f"Test {self.fecha.strftime('%Y-%m-%d')} - {self.lesion.zona_afectada} - {estado}"
+
+
+# ── Strava Integration ────────────────────────────────────────────────────────
+
+class StravaToken(models.Model):
+    """OAuth2 tokens per athlete. One per cliente."""
+    cliente = models.OneToOneField(Cliente, on_delete=models.CASCADE, related_name='strava_token')
+    athlete_id = models.BigIntegerField(unique=True)
+    access_token = models.CharField(max_length=200)
+    refresh_token = models.CharField(max_length=200)
+    expires_at = models.DateTimeField()
+
+    def is_expired(self):
+        from django.utils import timezone
+        return timezone.now() >= self.expires_at
+
+    def __str__(self):
+        return f"Strava token — {self.cliente}"
+
+
+class StravaActivityRaw(models.Model):
+    """Incoming Strava activity, staged before user confirms."""
+    ESTADO_CHOICES = [
+        ('pending',  'Pendiente de revisión'),
+        ('merged',   'Fusionado con sesión existente'),
+        ('created',  'Nueva sesión creada'),
+        ('ignored',  'Ignorado por el usuario'),
+    ]
+
+    TIPO_STRAVA_MAP = {
+        'Run':            'carrera',
+        'Walk':           'cardio_sustituto',
+        'Hike':           'cardio_sustituto',
+        'Ride':           'bici',
+        'VirtualRide':    'bici',
+        'Rowing':         'remo',
+        'WeightTraining': 'fuerza',
+        'Workout':        'otro',
+        'Soccer':         'cardio_sustituto',
+        'Football':       'cardio_sustituto',
+        'EBikeRide':      'bici',
+        'Swim':           'cardio_sustituto',
+        'Yoga':           'otro',
+    }
+
+    cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE, related_name='strava_activities')
+    strava_id = models.BigIntegerField(unique=True)
+    fecha_actividad = models.DateField()
+    tipo_strava = models.CharField(max_length=50, blank=True)
+    nombre_strava = models.CharField(max_length=200, blank=True)
+    duracion_segundos = models.IntegerField(default=0)
+    hr_media = models.IntegerField(null=True, blank=True)
+    hr_maxima = models.IntegerField(null=True, blank=True)
+    distancia_metros = models.FloatField(null=True, blank=True)
+    raw_json = models.JSONField()
+    estado = models.CharField(max_length=10, choices=ESTADO_CHOICES, default='pending')
+    hyrox_session = models.ForeignKey(
+        'HyroxSession', null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='strava_sources'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-fecha_actividad']
+        verbose_name = "Actividad Strava"
+        verbose_name_plural = "Actividades Strava"
+
+    def tipo_hyrox(self):
+        return self.TIPO_STRAVA_MAP.get(self.tipo_strava, 'otro')
+
+    def duracion_minutos(self):
+        return round(self.duracion_segundos / 60, 1)
+
+    def __str__(self):
+        return f"Strava #{self.strava_id} — {self.tipo_strava} {self.fecha_actividad}"
+

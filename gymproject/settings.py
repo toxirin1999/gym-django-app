@@ -307,3 +307,8 @@ GAMIFICACION_CONFIG = {
 
 # --- IA INTEGRATION ---
 GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
+
+# --- STRAVA INTEGRATION ---
+STRAVA_CLIENT_ID     = os.environ.get('STRAVA_CLIENT_ID', '')
+STRAVA_CLIENT_SECRET = os.environ.get('STRAVA_CLIENT_SECRET', '')
+STRAVA_VERIFY_TOKEN  = os.environ.get('STRAVA_VERIFY_TOKEN', 'hyrox_strava_verify')

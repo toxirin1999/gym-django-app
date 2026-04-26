@@ -1,0 +1,381 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Strava · Importar actividades</title>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #EFEAE1; --ink: #0F0F0E; --ink-3: rgba(15,15,14,.55); --ink-4: rgba(15,15,14,.28);
+      --line: rgba(15,15,14,.12); --line-2: rgba(15,15,14,.25);
+      --paper: #F7F3EA; --paper-2: #E4DED1;
+      --accent: oklch(0.55 0.21 28); --ok: oklch(0.55 0.15 145); --warn: oklch(0.72 0.17 70);
+      --strava: #FC4C02;
+      --font-disp: 'Archivo Black','Archivo',sans-serif;
+      --font-body: 'Archivo',system-ui,sans-serif;
+      --font-mono: 'JetBrains Mono',ui-monospace,monospace;
+    }
+    body { background: var(--bg); color: var(--ink); font-family: var(--font-body);
+           -webkit-font-smoothing: antialiased; padding-bottom: 80px; }
+    .rb-container { max-width: 580px; margin: 0 auto; padding: 0 20px; }
+
+    /* NAV */
+    .rb-nav { position: sticky; top: 0; z-index: 100; background: var(--bg);
+      border-bottom: 1px solid var(--line); padding: 14px 20px;
+      display: flex; justify-content: space-between; align-items: center; }
+    .rb-brand { display: flex; align-items: center; gap: 10px;
+      font-family: var(--font-disp); font-size: 13px; letter-spacing: 0.14em;
+      color: var(--ink); text-transform: uppercase; text-decoration: none; }
+    .rb-brand-bar { width: 3px; height: 18px; background: var(--strava); flex-shrink: 0; }
+    .rb-btn { display: inline-flex; align-items: center; gap: 5px;
+      padding: 7px 13px; border: 1.5px solid var(--ink);
+      background: transparent; color: var(--ink); font-family: var(--font-mono);
+      font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+      cursor: pointer; text-decoration: none; border-radius: 2px; transition: all .15s; }
+    .rb-btn:hover { background: var(--ink); color: var(--paper); }
+    .rb-btn-strava { background: var(--strava); color: #fff; border-color: var(--strava); }
+    .rb-btn-strava:hover { background: #e04400; color: #fff; border-color: #e04400; }
+    .rb-btn-ok { background: var(--ok); color: #fff; border-color: var(--ok); }
+    .rb-btn-danger { border-color: var(--accent); color: var(--accent); }
+    .rb-btn-danger:hover { background: var(--accent); color: #fff; }
+
+    /* HEADER */
+    .page-header { padding: 28px 0 20px; }
+    .page-title { font-family: var(--font-disp); font-size: 26px; line-height: 1.1; margin-bottom: 6px; }
+    .page-sub { font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+      color: var(--ink-3); letter-spacing: 0.12em; text-transform: uppercase; }
+
+    /* CONNECT CARD */
+    .connect-card { background: var(--paper); border: 1.5px solid var(--line-2);
+      border-radius: 4px; padding: 20px; margin-bottom: 24px;
+      display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+    .connect-icon { font-size: 28px; }
+    .connect-body { flex: 1; min-width: 200px; }
+    .connect-title { font-family: var(--font-disp); font-size: 14px; margin-bottom: 4px; }
+    .connect-desc { font-size: 12px; color: var(--ink-3); line-height: 1.5; }
+
+    /* ACTIVITY CARD */
+    .act-card { background: var(--paper); border: 1.5px solid var(--line-2);
+      border-radius: 4px; padding: 18px; margin-bottom: 16px; }
+    .act-header { display: flex; align-items: flex-start; justify-content: space-between;
+      gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
+    .act-pill { display: inline-flex; align-items: center; gap: 5px;
+      font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+      letter-spacing: 0.1em; text-transform: uppercase; padding: 4px 9px;
+      border-radius: 2px; }
+    .act-pill-strava { background: var(--strava); color: #fff; }
+    .act-pill-match { background: rgba(var(--ok),0.12); color: var(--ok);
+      border: 1px solid rgba(var(--ok),0.3); }
+    .act-title { font-family: var(--font-disp); font-size: 16px; margin-bottom: 3px; }
+    .act-date { font-family: var(--font-mono); font-size: 10px; color: var(--ink-3);
+      letter-spacing: 0.08em; }
+
+    /* COMPARE TABLE */
+    .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+    .compare-col { background: var(--paper-2); border-radius: 3px; padding: 10px 12px; }
+    .compare-col-title { font-family: var(--font-mono); font-size: 9px; font-weight: 700;
+      letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 8px; }
+    .compare-row { display: flex; justify-content: space-between; align-items: center;
+      padding: 4px 0; border-bottom: 1px solid var(--line); }
+    .compare-row:last-child { border-bottom: none; }
+    .compare-lbl { font-size: 11px; color: var(--ink-3); }
+    .compare-val { font-family: var(--font-mono); font-size: 12px; font-weight: 700; }
+
+    /* ACTIONS */
+    .act-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+    .act-select { padding: 6px 10px; border: 1.5px solid var(--line-2); border-radius: 3px;
+      background: var(--paper); font-family: var(--font-mono); font-size: 11px;
+      font-weight: 700; color: var(--ink); cursor: pointer; }
+
+    /* EMPTY STATE */
+    .empty { text-align: center; padding: 48px 20px; }
+    .empty-icon { font-size: 40px; margin-bottom: 12px; }
+    .empty-title { font-family: var(--font-disp); font-size: 18px; margin-bottom: 6px; }
+    .empty-desc { font-size: 13px; color: var(--ink-3); line-height: 1.6; }
+
+    /* TOAST */
+    #rb-toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+      background: var(--ink); color: var(--paper); font-family: var(--font-mono);
+      font-size: 11px; font-weight: 700; padding: 10px 20px; border-radius: 3px;
+      opacity: 0; pointer-events: none; transition: opacity .2s; z-index: 9999; }
+    #rb-toast.show { opacity: 1; }
+  </style>
+</head>
+<body>
+
+<nav class="rb-nav">
+  <a href="{% url 'hyrox:dashboard' %}" class="rb-brand">
+    <div class="rb-brand-bar"></div>
+    HYROX · STRAVA
+  </a>
+  <a href="{% url 'hyrox:dashboard' %}" class="rb-btn">← Dashboard</a>
+</nav>
+
+<div class="rb-container">
+  <div class="page-header">
+    <div class="page-title">Importar de Strava</div>
+    <div class="page-sub">Revisa y confirma las actividades recibidas</div>
+  </div>
+
+  <!-- DJANGO MESSAGES -->
+  {% for msg in messages %}
+  <div style="padding:10px 14px;margin-bottom:12px;border-radius:3px;font-family:var(--font-mono);
+              font-size:11px;font-weight:700;letter-spacing:.06em;
+              {% if msg.tags == 'success' %}background:rgba(0,180,100,.12);color:#00a050;border:1px solid rgba(0,180,100,.3);
+              {% else %}background:rgba(193,53,21,.1);color:var(--accent);border:1px solid rgba(193,53,21,.3);{% endif %}">
+    {{ msg }}
+  </div>
+  {% endfor %}
+
+  <!-- CONNECTION STATUS -->
+  <div class="connect-card">
+    <div class="connect-icon">🟠</div>
+    <div class="connect-body">
+      {% if tiene_token %}
+      <div class="connect-title">Strava conectado</div>
+      <div class="connect-desc">Tu cuenta de Strava está vinculada. Las nuevas actividades llegarán automáticamente vía webhook.</div>
+      {% else %}
+      <div class="connect-title">Conecta tu cuenta de Strava</div>
+      <div class="connect-desc">Vincula una vez y todas tus actividades (Apple Watch → Health → Strava) se importarán automáticamente.</div>
+      {% endif %}
+    </div>
+    {% if not tiene_token %}
+    <a href="{% url 'hyrox:strava_connect' %}" class="rb-btn rb-btn-strava">
+      <i class="fab fa-strava"></i> Conectar Strava
+    </a>
+    {% else %}
+    <button class="rb-btn rb-btn-strava" onclick="importarRecientes(this)">
+      <i class="fas fa-download"></i> Importar últimos 30 días
+    </button>
+    {% endif %}
+  </div>
+
+  <!-- PENDING ACTIVITIES -->
+  {% if items %}
+  <div style="font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:.12em;
+              text-transform:uppercase;color:var(--ink-3);margin-bottom:14px;">
+    {{ items|length }} actividad{{ items|length|pluralize:"es" }} pendiente{{ items|length|pluralize:"s" }}
+  </div>
+
+  {% for item in items %}
+  {% with act=item.actividad match=item.sesion_match %}
+  <div class="act-card" id="act-{{ act.id }}">
+    <div class="act-header">
+      <div>
+        <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px;">
+          <span class="act-pill act-pill-strava"><i class="fab fa-strava"></i> {{ act.tipo_strava }}</span>
+          {% if act.tipo_strava == 'Walk' or act.tipo_strava == 'Hike' %}
+          <span class="act-pill" style="background:rgba(15,15,14,.08);color:var(--ink-3);border:1px solid var(--line-2);">
+            💡 Caminata — considera ignorar
+          </span>
+          {% endif %}
+          {% if match %}
+          <span class="act-pill" style="background:rgba(0,180,100,.12);color:#00b464;border:1px solid rgba(0,180,100,.3);">
+            ✓ Match encontrado
+          </span>
+          {% endif %}
+        </div>
+        <div class="act-title">{{ act.nombre_strava|default:"Sin nombre" }}</div>
+        <div class="act-date">{{ act.fecha_actividad|date:"l, d M Y" }}</div>
+      </div>
+    </div>
+
+    <!-- METRICS COMPARISON -->
+    {% if match %}
+    <div class="compare">
+      <div class="compare-col">
+        <div class="compare-col-title"><i class="fab fa-strava"></i> Strava</div>
+        <div class="compare-row">
+          <span class="compare-lbl">Duración</span>
+          <span class="compare-val">{{ act.duracion_minutos }} min</span>
+        </div>
+        <div class="compare-row">
+          <span class="compare-lbl">FC Media</span>
+          <span class="compare-val">{% if act.hr_media %}{{ act.hr_media }} bpm{% else %}—{% endif %}</span>
+        </div>
+        <div class="compare-row">
+          <span class="compare-lbl">FC Max</span>
+          <span class="compare-val">{% if act.hr_maxima %}{{ act.hr_maxima }} bpm{% else %}—{% endif %}</span>
+        </div>
+        {% if act.distancia_metros %}
+        <div class="compare-row">
+          <span class="compare-lbl">Distancia</span>
+          <span class="compare-val">{{ act.distancia_metros|floatformat:0 }} m</span>
+        </div>
+        {% endif %}
+      </div>
+      <div class="compare-col">
+        <div class="compare-col-title">📋 Sesión registrada</div>
+        <div class="compare-row">
+          <span class="compare-lbl">Duración</span>
+          <span class="compare-val">{% if match.tiempo_total_minutos %}{{ match.tiempo_total_minutos }} min{% else %}—{% endif %}</span>
+        </div>
+        <div class="compare-row">
+          <span class="compare-lbl">FC Media</span>
+          <span class="compare-val">{% if match.hr_media %}{{ match.hr_media }} bpm{% else %}—{% endif %}</span>
+        </div>
+        <div class="compare-row">
+          <span class="compare-lbl">FC Max</span>
+          <span class="compare-val">{% if match.hr_maxima %}{{ match.hr_maxima }} bpm{% else %}—{% endif %}</span>
+        </div>
+        <div class="compare-row">
+          <span class="compare-lbl">TRIMP</span>
+          <span class="compare-val">{% if match.trimp %}{{ match.trimp|floatformat:1 }}{% else %}—{% endif %}</span>
+        </div>
+      </div>
+    </div>
+    <div style="font-size:12px;color:var(--ink-3);margin-bottom:12px;">
+      Fusionar rellenará los campos vacíos de tu sesión con los datos de Strava.
+    </div>
+    {% else %}
+    <!-- No match: show Strava metrics alone -->
+    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px;">
+      <div style="background:var(--paper-2);border-radius:3px;padding:8px 14px;text-align:center;">
+        <div style="font-family:var(--font-mono);font-size:14px;font-weight:700;">{{ act.duracion_minutos }}</div>
+        <div style="font-size:10px;color:var(--ink-3);letter-spacing:.05em;">MIN</div>
+      </div>
+      {% if act.hr_media %}
+      <div style="background:var(--paper-2);border-radius:3px;padding:8px 14px;text-align:center;">
+        <div style="font-family:var(--font-mono);font-size:14px;font-weight:700;">{{ act.hr_media }}</div>
+        <div style="font-size:10px;color:var(--ink-3);letter-spacing:.05em;">FC MEDIA</div>
+      </div>
+      {% endif %}
+      {% if act.hr_maxima %}
+      <div style="background:var(--paper-2);border-radius:3px;padding:8px 14px;text-align:center;">
+        <div style="font-family:var(--font-mono);font-size:14px;font-weight:700;">{{ act.hr_maxima }}</div>
+        <div style="font-size:10px;color:var(--ink-3);letter-spacing:.05em;">FC MAX</div>
+      </div>
+      {% endif %}
+      {% if act.distancia_metros %}
+      <div style="background:var(--paper-2);border-radius:3px;padding:8px 14px;text-align:center;">
+        <div style="font-family:var(--font-mono);font-size:14px;font-weight:700;">{{ act.distancia_metros|floatformat:0 }}</div>
+        <div style="font-size:10px;color:var(--ink-3);letter-spacing:.05em;">METROS</div>
+      </div>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- ACTIONS -->
+    <div class="act-actions">
+      {% if match %}
+      <button class="rb-btn rb-btn-ok"
+        onclick="procesarActividad({{ act.id }}, 'merge', { session_id: '{{ match.id }}' })">
+        <i class="fas fa-code-merge"></i> Fusionar con sesión
+      </button>
+      {% endif %}
+
+      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+        <select class="act-select" id="tipo-{{ act.id }}">
+          <option value="carrera" {% if act.tipo_hyrox == 'carrera' %}selected{% endif %}>🏃 Carrera</option>
+          <option value="fuerza" {% if act.tipo_hyrox == 'fuerza' %}selected{% endif %}>🏋️ Fuerza</option>
+          <option value="bici" {% if act.tipo_hyrox == 'bici' %}selected{% endif %}>🚴 Bici</option>
+          <option value="remo" {% if act.tipo_hyrox == 'remo' %}selected{% endif %}>🚣 Remo</option>
+          <option value="cardio_sustituto" {% if act.tipo_hyrox == 'cardio_sustituto' %}selected{% endif %}>⚽ Cardio sustituto</option>
+          <option value="hiit" {% if act.tipo_hyrox == 'hiit' %}selected{% endif %}>⚡ HIIT</option>
+          <option value="otro" {% if act.tipo_hyrox == 'otro' %}selected{% endif %}>🔹 Otro</option>
+        </select>
+        <button class="rb-btn rb-btn-ok"
+          onclick="procesarActividad({{ act.id }}, 'create', { tipo_actividad: document.getElementById('tipo-{{ act.id }}').value })">
+          <i class="fas fa-plus"></i> Crear sesión nueva
+        </button>
+      </div>
+
+      <button class="rb-btn rb-btn-danger"
+        onclick="procesarActividad({{ act.id }}, 'ignore', {})">
+        <i class="fas fa-times"></i> Ignorar
+      </button>
+    </div>
+  </div>
+  {% endwith %}
+  {% endfor %}
+
+  {% else %}
+  <div class="empty">
+    <div class="empty-icon">✅</div>
+    <div class="empty-title">Todo al día</div>
+    <div class="empty-desc">
+      No hay actividades de Strava pendientes de revisión.<br>
+      Las nuevas llegarán automáticamente cuando grabes con el Apple Watch.
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- SETUP INSTRUCTIONS -->
+  <details style="margin-top:32px;">
+    <summary style="font-family:var(--font-mono);font-size:10px;font-weight:700;
+                    letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);
+                    cursor:pointer;padding:8px 0;">CÓMO CONFIGURAR EL FLUJO COMPLETO</summary>
+    <div style="background:var(--paper);border:1px solid var(--line);border-radius:3px;
+                padding:16px;margin-top:8px;font-size:12px;line-height:1.8;color:var(--ink-3);">
+      <strong style="color:var(--ink);">1. Apple Watch → Strava (una vez)</strong><br>
+      En iPhone: Strava → Configuración → Aplicaciones → Conectar Apple Health.<br><br>
+      <strong style="color:var(--ink);">2. Strava → Este servidor (webhook)</strong><br>
+      Registra el webhook en Strava para: <code style="font-family:var(--font-mono);font-size:11px;">https://tu-dominio.com/hyrox/strava/webhook/</code><br>
+      Usa el verify token configurado en tu <code style="font-family:var(--font-mono);font-size:11px;">.env</code> como <code style="font-family:var(--font-mono);font-size:11px;">STRAVA_VERIFY_TOKEN</code>.<br><br>
+      <strong style="color:var(--ink);">3. Flujo automático</strong><br>
+      Grabas → Apple Watch sincroniza → Strava notifica al servidor → aparece aquí para confirmar.
+    </div>
+  </details>
+</div>
+
+<div id="rb-toast"></div>
+
+<script>
+const CSRF = '{{ csrf_token }}';
+
+function procesarActividad(id, accion, extra) {
+  const body = new URLSearchParams({ accion, ...extra });
+  fetch(`/hyrox/strava/procesar/${id}/`, {
+    method: 'POST',
+    headers: { 'X-CSRFToken': CSRF, 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: body.toString(),
+  })
+  .then(r => r.json())
+  .then(d => {
+    if (d.ok) {
+      const card = document.getElementById('act-' + id);
+      card.style.opacity = '0.3';
+      card.style.pointerEvents = 'none';
+      setTimeout(() => card.remove(), 600);
+      showToast(d.msg);
+    } else {
+      showToast('Error: ' + d.msg, true);
+    }
+  })
+  .catch(() => showToast('Error de conexión', true));
+}
+
+function importarRecientes(btn) {
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Importando...';
+  fetch('{% url "hyrox:strava_importar_recientes" %}', {
+    method: 'POST',
+    headers: { 'X-CSRFToken': CSRF },
+  })
+  .then(r => r.json())
+  .then(d => {
+    showToast(d.msg, !d.ok);
+    if (d.ok && d.msg.includes('importada')) setTimeout(() => location.reload(), 1500);
+    else { btn.disabled = false; btn.innerHTML = '<i class="fas fa-download"></i> Importar últimos 30 días'; }
+  })
+  .catch(() => {
+    showToast('Error de conexión', true);
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-download"></i> Importar últimos 30 días';
+  });
+}
+
+function showToast(msg, error) {
+  const t = document.getElementById('rb-toast');
+  t.textContent = msg;
+  t.style.background = error ? 'oklch(0.55 0.21 28)' : 'var(--ink)';
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+</script>
+</body>
+</html>

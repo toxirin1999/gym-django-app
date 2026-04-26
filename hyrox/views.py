@@ -21,7 +21,9 @@ from django.utils.safestring import mark_safe
 from .forms import HyroxObjectiveForm, HyroxSessionNotesForm, UserInjuryForm, DailyRecoveryEntryForm
 from .services import HyroxParserService, HyroxCoachService
 from .training_engine import HyroxTrainingEngine
-from .models import HyroxObjective, HyroxSession, UserInjury, DailyRecoveryEntry
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST
+from .models import HyroxObjective, HyroxSession, HyroxActivity, UserInjury, DailyRecoveryEntry
 
 @login_required
 def hyrox_dashboard(request):
@@ -1943,3 +1945,340 @@ def test_recuperacion(request, lesion_id):
 
     return render(request, 'hyrox/test_recuperacion.html', {'form': form, 'lesion': lesion})
 
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# STRAVA INTEGRATION
+# ─────────────────────────────────────────────────────────────────────────────
+
+import hashlib
+import hmac
+import urllib.parse
+from datetime import datetime as _dt
+
+from django.conf import settings as django_settings
+from django.views.decorators.csrf import csrf_exempt
+from django.http import HttpResponse
+
+from .models import StravaToken, StravaActivityRaw
+
+
+def _strava_refresh_token(token: StravaToken) -> StravaToken:
+    """Exchange a stale token for a fresh one via Strava API."""
+    import requests as _req
+    resp = _req.post('https://www.strava.com/oauth/token', data={
+        'client_id':     django_settings.STRAVA_CLIENT_ID,
+        'client_secret': django_settings.STRAVA_CLIENT_SECRET,
+        'grant_type':    'refresh_token',
+        'refresh_token': token.refresh_token,
+    }, timeout=10)
+    resp.raise_for_status()
+    data = resp.json()
+    from django.utils import timezone as _tz
+    token.access_token  = data['access_token']
+    token.refresh_token = data['refresh_token']
+    token.expires_at    = _tz.datetime.fromtimestamp(data['expires_at'], tz=__import__('datetime').timezone.utc)
+    token.save()
+    return token
+
+
+def _strava_get_activity(token: StravaToken, activity_id: int) -> dict:
+    """Fetch full activity from Strava API, refreshing token if needed."""
+    import requests as _req
+    if token.is_expired():
+        token = _strava_refresh_token(token)
+    resp = _req.get(
+        f'https://www.strava.com/api/v3/activities/{activity_id}',
+        headers={'Authorization': f'Bearer {token.access_token}'},
+        timeout=10,
+    )
+    resp.raise_for_status()
+    return resp.json()
+
+
+@login_required
+def strava_connect(request):
+    """Redirect user to Strava OAuth page."""
+    params = urllib.parse.urlencode({
+        'client_id':     django_settings.STRAVA_CLIENT_ID,
+        'redirect_uri':  request.build_absolute_uri('/hyrox/strava/callback/'),
+        'response_type': 'code',
+        'approval_prompt': 'auto',
+        'scope':         'activity:read_all',
+    })
+    return redirect(f'https://www.strava.com/oauth/authorize?{params}')
+
+
+@login_required
+def strava_callback(request):
+    """Handle OAuth callback, save tokens, redirect to Hyrox dashboard."""
+    import requests as _req
+    from django.utils import timezone as _tz
+
+    code = request.GET.get('code')
+    if not code:
+        messages.error(request, 'Conexión con Strava cancelada.')
+        return redirect('hyrox:dashboard')
+
+    try:
+        resp = _req.post('https://www.strava.com/oauth/token', data={
+            'client_id':     django_settings.STRAVA_CLIENT_ID,
+            'client_secret': django_settings.STRAVA_CLIENT_SECRET,
+            'code':          code,
+            'grant_type':    'authorization_code',
+        }, timeout=10)
+        resp.raise_for_status()
+        data = resp.json()
+
+        cliente = request.user.cliente_perfil
+        expires = _tz.datetime.fromtimestamp(data['expires_at'], tz=__import__('datetime').timezone.utc)
+        StravaToken.objects.update_or_create(
+            cliente=cliente,
+            defaults={
+                'athlete_id':    data['athlete']['id'],
+                'access_token':  data['access_token'],
+                'refresh_token': data['refresh_token'],
+                'expires_at':    expires,
+            }
+        )
+        messages.success(request, '¡Strava conectado! Las nuevas actividades llegarán automáticamente.')
+    except Exception as exc:
+        messages.error(request, f'Error conectando con Strava: {exc}')
+
+    return redirect('hyrox:strava_reconciliacion')
+
+
+@csrf_exempt
+def strava_webhook(request):
+    """
+    GET  — Strava subscription verification challenge.
+    POST — Incoming activity event; stage it for user review.
+    """
+    if request.method == 'GET':
+        challenge    = request.GET.get('hub.challenge', '')
+        verify_token = request.GET.get('hub.verify_token', '')
+        if verify_token == django_settings.STRAVA_VERIFY_TOKEN:
+            return JsonResponse({'hub.challenge': challenge})
+        return HttpResponse(status=403)
+
+    if request.method == 'POST':
+        import json as _json
+        try:
+            body    = _json.loads(request.body)
+            aspect  = body.get('aspect_type')       # 'create' | 'update' | 'delete'
+            obj_type = body.get('object_type')      # 'activity'
+            act_id  = body.get('object_id')
+            ath_id  = body.get('owner_id')
+
+            if aspect == 'create' and obj_type == 'activity':
+                try:
+                    token = StravaToken.objects.select_related('cliente').get(athlete_id=ath_id)
+                    # Avoid duplicate inserts
+                    if not StravaActivityRaw.objects.filter(strava_id=act_id).exists():
+                        raw = _strava_get_activity(token, act_id)
+                        from datetime import date as _date
+                        fecha_str = raw.get('start_date_local', '')[:10]
+                        fecha = _date.fromisoformat(fecha_str) if fecha_str else _date.today()
+                        StravaActivityRaw.objects.create(
+                            cliente          = token.cliente,
+                            strava_id        = act_id,
+                            fecha_actividad  = fecha,
+                            tipo_strava      = raw.get('type', ''),
+                            nombre_strava    = raw.get('name', ''),
+                            duracion_segundos = raw.get('moving_time', 0),
+                            hr_media         = raw.get('average_heartrate') or None,
+                            hr_maxima        = raw.get('max_heartrate') or None,
+                            distancia_metros = raw.get('distance') or None,
+                            raw_json         = raw,
+                        )
+                except StravaToken.DoesNotExist:
+                    pass  # Activity for an unregistered athlete — ignore
+                except Exception:
+                    pass  # Never let webhook fail with non-200
+        except Exception:
+            pass
+        return HttpResponse(status=200)
+
+    return HttpResponse(status=405)
+
+
+@login_required
+def strava_reconciliacion(request):
+    """List pending Strava activities and let the user decide what to do."""
+    cliente = request.user.cliente_perfil
+    pendientes = StravaActivityRaw.objects.filter(
+        cliente=cliente, estado='pending'
+    ).select_related('hyrox_session')
+
+    objetivo = HyroxObjective.objects.filter(cliente=cliente, estado='activo').first()
+
+    # For each pending activity, look for a matching HyroxSession (same date, ±15% duration)
+    items = []
+    for act in pendientes:
+        sesion_match = None
+        if objetivo:
+            duracion_min = act.duracion_segundos / 60
+            margen = duracion_min * 0.15
+            sesion_match = HyroxSession.objects.filter(
+                objective=objetivo,
+                fecha=act.fecha_actividad,
+                estado='completado',
+                tiempo_total_minutos__gte=duracion_min - margen,
+                tiempo_total_minutos__lte=duracion_min + margen,
+            ).first()
+        items.append({'actividad': act, 'sesion_match': sesion_match})
+
+    return render(request, 'hyrox/strava_reconciliacion.html', {
+        'items':     items,
+        'objetivo':  objetivo,
+        'tiene_token': StravaToken.objects.filter(cliente=cliente).exists(),
+    })
+
+
+@login_required
+@require_POST
+def strava_procesar(request, actividad_id):
+    """
+    Process a pending Strava activity.
+    accion: 'merge' | 'create' | 'ignore'
+    session_id: existing HyroxSession pk (only for 'merge')
+    tipo_actividad: HyroxActivity tipo (only for 'create')
+    """
+    from django.utils.dateparse import parse_date
+    cliente = request.user.cliente_perfil
+    act = get_object_or_404(StravaActivityRaw, id=actividad_id, cliente=cliente, estado='pending')
+    accion = request.POST.get('accion')
+
+    if accion == 'ignore':
+        act.estado = 'ignored'
+        act.save()
+        return JsonResponse({'ok': True, 'msg': 'Actividad ignorada.'})
+
+    objetivo = HyroxObjective.objects.filter(cliente=cliente, estado='activo').first()
+    if not objetivo:
+        return JsonResponse({'ok': False, 'msg': 'No tienes un objetivo Hyrox activo.'}, status=400)
+
+    duracion_min = act.duracion_segundos / 60
+
+    if accion == 'merge':
+        session_id = request.POST.get('session_id')
+        sesion = get_object_or_404(HyroxSession, id=session_id, objective=objetivo)
+        # Prefer Strava HR data if app data is missing
+        if act.hr_media and not sesion.hr_media:
+            sesion.hr_media = act.hr_media
+        if act.hr_maxima and not sesion.hr_maxima:
+            sesion.hr_maxima = act.hr_maxima
+        if not sesion.tiempo_total_minutos:
+            sesion.tiempo_total_minutos = int(duracion_min)
+        if not sesion.trimp and sesion.hr_media:
+            from .training_engine import HyroxLoadManager
+            sesion.trimp = HyroxLoadManager.calcular_trimp(
+                sesion.tiempo_total_minutos, sesion.hr_media, objetivo
+            )
+        sesion.save()
+        act.estado = 'merged'
+        act.hyrox_session = sesion
+        act.save()
+        return JsonResponse({'ok': True, 'msg': 'Datos de Strava fusionados con la sesión existente.'})
+
+    if accion == 'create':
+        from django.db import transaction
+        tipo = request.POST.get('tipo_actividad', act.tipo_hyrox())
+        trimp = None
+        if act.hr_media:
+            from .training_engine import HyroxLoadManager
+            trimp = HyroxLoadManager.calcular_trimp(int(duracion_min), act.hr_media, objetivo)
+        with transaction.atomic():
+            sesion = HyroxSession.objects.create(
+                objective            = objetivo,
+                fecha                = act.fecha_actividad,
+                titulo               = act.nombre_strava or f'Strava — {act.tipo_strava}',
+                estado               = 'completado',
+                tiempo_total_minutos = int(duracion_min),
+                hr_media             = act.hr_media,
+                hr_maxima            = act.hr_maxima,
+                trimp                = trimp,
+            )
+            HyroxActivity.objects.create(
+                sesion          = sesion,
+                tipo_actividad  = tipo,
+                nombre_ejercicio= act.nombre_strava or act.tipo_strava,
+                data_metricas   = {
+                    'duracion_min':    round(act.duracion_segundos / 60, 1),
+                    'distancia_m':     act.distancia_metros,
+                    'hr_media':        act.hr_media,
+                    'hr_maxima':       act.hr_maxima,
+                    'fuente':          'strava',
+                    'strava_id':       act.strava_id,
+                },
+            )
+        act.estado = 'created'
+        act.hyrox_session = sesion
+        act.save()
+        return JsonResponse({'ok': True, 'msg': 'Nueva sesión creada desde Strava.'})
+
+    return JsonResponse({'ok': False, 'msg': 'Acción no reconocida.'}, status=400)
+
+
+@login_required
+@require_POST
+def strava_importar_recientes(request):
+    """Fetch last 30 days of activities from Strava API and stage them as pending."""
+    import requests as _req
+    from datetime import date as _date, timedelta as _td
+
+    cliente = request.user.cliente_perfil
+    try:
+        token = StravaToken.objects.get(cliente=cliente)
+    except StravaToken.DoesNotExist:
+        return JsonResponse({'ok': False, 'msg': 'No hay cuenta de Strava conectada.'}, status=400)
+
+    if token.is_expired():
+        try:
+            token = _strava_refresh_token(token)
+        except Exception as e:
+            return JsonResponse({'ok': False, 'msg': f'Error renovando token: {e}'}, status=400)
+
+    after_ts = int((_date.today() - _td(days=30)).strftime('%s') if hasattr(_date.today(), 'strftime') else
+                   (__import__('datetime').datetime.combine(_date.today() - _td(days=30), __import__('datetime').time.min)).timestamp())
+
+    try:
+        resp = _req.get(
+            'https://www.strava.com/api/v3/athlete/activities',
+            headers={'Authorization': f'Bearer {token.access_token}'},
+            params={'after': after_ts, 'per_page': 50},
+            timeout=15,
+        )
+        resp.raise_for_status()
+        activities = resp.json()
+    except Exception as e:
+        return JsonResponse({'ok': False, 'msg': f'Error conectando con Strava: {e}'}, status=400)
+
+    nuevas = 0
+    for raw in activities:
+        act_id = raw.get('id')
+        if not act_id or StravaActivityRaw.objects.filter(strava_id=act_id).exists():
+            continue
+        fecha_str = raw.get('start_date_local', '')[:10]
+        try:
+            from datetime import date as _d2
+            fecha = _d2.fromisoformat(fecha_str)
+        except Exception:
+            continue
+        StravaActivityRaw.objects.create(
+            cliente           = cliente,
+            strava_id         = act_id,
+            fecha_actividad   = fecha,
+            tipo_strava       = raw.get('type', ''),
+            nombre_strava     = raw.get('name', ''),
+            duracion_segundos = raw.get('moving_time', 0),
+            hr_media          = raw.get('average_heartrate') or None,
+            hr_maxima         = raw.get('max_heartrate') or None,
+            distancia_metros  = raw.get('distance') or None,
+            raw_json          = raw,
+        )
+        nuevas += 1
+
+    if nuevas:
+        return JsonResponse({'ok': True, 'msg': f'{nuevas} actividad{"es" if nuevas != 1 else ""} importada{"s" if nuevas != 1 else ""}. Revísalas abajo.'})
+    return JsonResponse({'ok': True, 'msg': 'No hay actividades nuevas en los últimos 30 días.'})
