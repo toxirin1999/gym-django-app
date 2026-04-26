@@ -2105,6 +2105,8 @@ def strava_webhook(request):
 @login_required
 def strava_reconciliacion(request):
     """List pending Strava activities and let the user decide what to do."""
+    from entrenos.models import EntrenoRealizado
+
     cliente = request.user.cliente_perfil
     pendientes = StravaActivityRaw.objects.filter(
         cliente=cliente, estado='pending'
@@ -2112,25 +2114,41 @@ def strava_reconciliacion(request):
 
     objetivo = HyroxObjective.objects.filter(cliente=cliente, estado='activo').first()
 
-    # For each pending activity, look for a matching HyroxSession (same date, ±15% duration)
     items = []
     for act in pendientes:
-        sesion_match = None
+        # Search BOTH HyroxSession and EntrenoRealizado on the same date
+        hyrox_matches = []
+        gym_matches   = []
+
         if objetivo:
-            duracion_min = act.duracion_segundos / 60
-            margen = duracion_min * 0.15
-            sesion_match = HyroxSession.objects.filter(
+            hyrox_matches = list(HyroxSession.objects.filter(
                 objective=objetivo,
                 fecha=act.fecha_actividad,
                 estado='completado',
-                tiempo_total_minutos__gte=duracion_min - margen,
-                tiempo_total_minutos__lte=duracion_min + margen,
-            ).first()
-        items.append({'actividad': act, 'sesion_match': sesion_match})
+            ).order_by('id'))
+
+        gym_matches = list(EntrenoRealizado.objects.filter(
+            cliente=cliente,
+            fecha=act.fecha_actividad,
+        ).order_by('id'))
+
+        # Preselect best candidate based on Strava type
+        tipo_hyrox = act.tipo_hyrox()
+        if tipo_hyrox in ('carrera', 'remo', 'bici', 'cardio_sustituto', 'hiit'):
+            preselect = ('hyrox', hyrox_matches[0].id) if hyrox_matches else ('gym', gym_matches[0].id) if gym_matches else None
+        else:
+            preselect = ('gym', gym_matches[0].id) if gym_matches else ('hyrox', hyrox_matches[0].id) if hyrox_matches else None
+
+        items.append({
+            'actividad':      act,
+            'hyrox_matches':  hyrox_matches,
+            'gym_matches':    gym_matches,
+            'preselect':      preselect,
+        })
 
     return render(request, 'hyrox/strava_reconciliacion.html', {
-        'items':     items,
-        'objetivo':  objetivo,
+        'items':       items,
+        'objetivo':    objetivo,
         'tiene_token': StravaToken.objects.filter(cliente=cliente).exists(),
     })
 
@@ -2139,31 +2157,39 @@ def strava_reconciliacion(request):
 @require_POST
 def strava_procesar(request, actividad_id):
     """
-    Process a pending Strava activity.
-    accion: 'merge' | 'create' | 'ignore'
-    session_id: existing HyroxSession pk (only for 'merge')
-    tipo_actividad: HyroxActivity tipo (only for 'create')
+    accion:
+      'ignore'       — descartar
+      'merge_hyrox'  — fusionar con HyroxSession existente
+      'merge_gym'    — fusionar con EntrenoRealizado existente
+      'create_hyrox' — nueva HyroxSession
+      'create_gym'   — nueva ActividadRealizada directa (sin ejercicios)
     """
-    from django.utils.dateparse import parse_date
+    from django.db import transaction
+    from entrenos.models import EntrenoRealizado, ActividadRealizada
+
     cliente = request.user.cliente_perfil
     act = get_object_or_404(StravaActivityRaw, id=actividad_id, cliente=cliente, estado='pending')
     accion = request.POST.get('accion')
+    duracion_min = act.duracion_segundos / 60
 
+    def _rpe():
+        try:
+            return int(request.POST.get('rpe', '')) or None
+        except (ValueError, TypeError):
+            return None
+
+    # ── IGNORAR ──────────────────────────────────────────────────────────────
     if accion == 'ignore':
         act.estado = 'ignored'
         act.save()
         return JsonResponse({'ok': True, 'msg': 'Actividad ignorada.'})
 
-    objetivo = HyroxObjective.objects.filter(cliente=cliente, estado='activo').first()
-    if not objetivo:
-        return JsonResponse({'ok': False, 'msg': 'No tienes un objetivo Hyrox activo.'}, status=400)
-
-    duracion_min = act.duracion_segundos / 60
-
-    if accion == 'merge':
-        session_id = request.POST.get('session_id')
-        sesion = get_object_or_404(HyroxSession, id=session_id, objective=objetivo)
-        # Prefer Strava HR data if app data is missing
+    # ── FUSIONAR CON HYROX ───────────────────────────────────────────────────
+    if accion == 'merge_hyrox':
+        objetivo = HyroxObjective.objects.filter(cliente=cliente, estado='activo').first()
+        if not objetivo:
+            return JsonResponse({'ok': False, 'msg': 'No tienes un objetivo Hyrox activo.'}, status=400)
+        sesion = get_object_or_404(HyroxSession, id=request.POST.get('session_id'), objective=objetivo)
         if act.hr_media and not sesion.hr_media:
             sesion.hr_media = act.hr_media
         if act.hr_maxima and not sesion.hr_maxima:
@@ -2172,54 +2198,87 @@ def strava_procesar(request, actividad_id):
             sesion.tiempo_total_minutos = int(duracion_min)
         if not sesion.trimp and sesion.hr_media:
             from .training_engine import HyroxLoadManager
-            sesion.trimp = HyroxLoadManager.calcular_trimp(
-                sesion.tiempo_total_minutos, sesion.hr_media, objetivo
-            )
-        sesion.save()  # signal sincronizar_hyrox_al_hub recalcula carga_ua con rpe_global existente
+            sesion.trimp = HyroxLoadManager.calcular_trimp(sesion.tiempo_total_minutos, sesion.hr_media, objetivo)
+        sesion.save()
         act.estado = 'merged'
         act.hyrox_session = sesion
         act.save()
         rpe_info = f' · RPE {sesion.rpe_global}' if sesion.rpe_global else ' (sin RPE — no computará en ACWR)'
-        return JsonResponse({'ok': True, 'msg': f'Fusionado con sesión existente{rpe_info}.'})
+        return JsonResponse({'ok': True, 'msg': f'Fusionado con sesión Hyrox{rpe_info}.'})
 
-    if accion == 'create':
-        from django.db import transaction
-        tipo = request.POST.get('tipo_actividad', act.tipo_hyrox())
+    # ── FUSIONAR CON GYM ─────────────────────────────────────────────────────
+    if accion == 'merge_gym':
+        entreno = get_object_or_404(EntrenoRealizado, id=request.POST.get('entreno_id'), cliente=cliente)
+        if act.hr_media and not entreno.frecuencia_cardiaca_promedio:
+            entreno.frecuencia_cardiaca_promedio = act.hr_media
+        if act.hr_maxima and not entreno.frecuencia_cardiaca_maxima:
+            entreno.frecuencia_cardiaca_maxima = act.hr_maxima
+        if not entreno.duracion_minutos:
+            entreno.duracion_minutos = int(duracion_min)
+        entreno.save()
+        # Actualizar carga_ua en ActividadRealizada hub si existe
         try:
-            rpe = int(request.POST.get('rpe', '')) or None
-        except (ValueError, TypeError):
-            rpe = None
+            ar = ActividadRealizada.objects.get(entreno_gym=entreno)
+            if ar.rpe_medio and not ar.carga_ua:
+                ar.carga_ua = round(ar.rpe_medio * duracion_min, 1)
+                ar.save(update_fields=['carga_ua'])
+        except ActividadRealizada.DoesNotExist:
+            pass
+        act.estado = 'merged'
+        act.save()
+        return JsonResponse({'ok': True, 'msg': f'Datos Strava fusionados con entreno de gym del {act.fecha_actividad}.'})
+
+    # ── CREAR HYROX ──────────────────────────────────────────────────────────
+    if accion == 'create_hyrox':
+        objetivo = HyroxObjective.objects.filter(cliente=cliente, estado='activo').first()
+        if not objetivo:
+            return JsonResponse({'ok': False, 'msg': 'No tienes un objetivo Hyrox activo.'}, status=400)
+        tipo  = request.POST.get('tipo_actividad', act.tipo_hyrox())
+        rpe   = _rpe()
         from .training_engine import HyroxLoadManager
         trimp = HyroxLoadManager.calcular_trimp(int(duracion_min), act.hr_media, objetivo) if act.hr_media else None
         with transaction.atomic():
             sesion = HyroxSession.objects.create(
-                objective            = objetivo,
-                fecha                = act.fecha_actividad,
-                titulo               = act.nombre_strava or f'Strava — {act.tipo_strava}',
-                estado               = 'completado',
-                tiempo_total_minutos = int(duracion_min),
-                hr_media             = act.hr_media,
-                hr_maxima            = act.hr_maxima,
-                trimp                = trimp,
-                rpe_global           = rpe,
+                objective=objetivo, fecha=act.fecha_actividad,
+                titulo=act.nombre_strava or f'Strava — {act.tipo_strava}',
+                estado='completado', tiempo_total_minutos=int(duracion_min),
+                hr_media=act.hr_media, hr_maxima=act.hr_maxima,
+                trimp=trimp, rpe_global=rpe,
             )
             HyroxActivity.objects.create(
-                sesion          = sesion,
-                tipo_actividad  = tipo,
-                nombre_ejercicio= act.nombre_strava or act.tipo_strava,
-                data_metricas   = {
+                sesion=sesion, tipo_actividad=tipo,
+                nombre_ejercicio=act.nombre_strava or act.tipo_strava,
+                data_metricas={
                     'distancia_km':   round(act.distancia_metros / 1000, 2) if act.distancia_metros else '',
-                    'tiempo_minutos': round(act.duracion_segundos / 60, 1),
-                    'hr_media':       act.hr_media,
-                    'hr_maxima':      act.hr_maxima,
-                    'fuente':         'strava',
-                    'strava_id':      act.strava_id,
+                    'tiempo_minutos': round(duracion_min, 1),
+                    'hr_media': act.hr_media, 'hr_maxima': act.hr_maxima,
+                    'fuente': 'strava', 'strava_id': act.strava_id,
                 },
             )
         act.estado = 'created'
         act.hyrox_session = sesion
         act.save()
-        return JsonResponse({'ok': True, 'msg': 'Nueva sesión creada desde Strava.'})
+        return JsonResponse({'ok': True, 'msg': 'Nueva sesión Hyrox creada desde Strava.'})
+
+    # ── CREAR GYM (ActividadRealizada directa) ───────────────────────────────
+    if accion == 'create_gym':
+        rpe = _rpe()
+        carga_ua = round(rpe * duracion_min, 1) if rpe else None
+        ActividadRealizada.objects.create(
+            cliente=cliente,
+            tipo='gym',
+            titulo=act.nombre_strava or f'Strava — {act.tipo_strava}',
+            fecha=act.fecha_actividad,
+            duracion_minutos=int(duracion_min),
+            rpe_medio=rpe,
+            carga_ua=carga_ua,
+            distancia_metros=int(act.distancia_metros) if act.distancia_metros else None,
+            fuente='strava',
+        )
+        act.estado = 'created'
+        act.save()
+        acwr_info = '' if carga_ua else ' (sin RPE — no computará en ACWR)'
+        return JsonResponse({'ok': True, 'msg': f'Actividad de gym registrada{acwr_info}.'})
 
     return JsonResponse({'ok': False, 'msg': 'Acción no reconocida.'}, status=400)
 
