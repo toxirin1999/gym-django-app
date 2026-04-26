@@ -2175,19 +2175,22 @@ def strava_procesar(request, actividad_id):
             sesion.trimp = HyroxLoadManager.calcular_trimp(
                 sesion.tiempo_total_minutos, sesion.hr_media, objetivo
             )
-        sesion.save()
+        sesion.save()  # signal sincronizar_hyrox_al_hub recalcula carga_ua con rpe_global existente
         act.estado = 'merged'
         act.hyrox_session = sesion
         act.save()
-        return JsonResponse({'ok': True, 'msg': 'Datos de Strava fusionados con la sesión existente.'})
+        rpe_info = f' · RPE {sesion.rpe_global}' if sesion.rpe_global else ' (sin RPE — no computará en ACWR)'
+        return JsonResponse({'ok': True, 'msg': f'Fusionado con sesión existente{rpe_info}.'})
 
     if accion == 'create':
         from django.db import transaction
         tipo = request.POST.get('tipo_actividad', act.tipo_hyrox())
-        trimp = None
-        if act.hr_media:
-            from .training_engine import HyroxLoadManager
-            trimp = HyroxLoadManager.calcular_trimp(int(duracion_min), act.hr_media, objetivo)
+        try:
+            rpe = int(request.POST.get('rpe', '')) or None
+        except (ValueError, TypeError):
+            rpe = None
+        from .training_engine import HyroxLoadManager
+        trimp = HyroxLoadManager.calcular_trimp(int(duracion_min), act.hr_media, objetivo) if act.hr_media else None
         with transaction.atomic():
             sesion = HyroxSession.objects.create(
                 objective            = objetivo,
@@ -2198,6 +2201,7 @@ def strava_procesar(request, actividad_id):
                 hr_media             = act.hr_media,
                 hr_maxima            = act.hr_maxima,
                 trimp                = trimp,
+                rpe_global           = rpe,
             )
             HyroxActivity.objects.create(
                 sesion          = sesion,

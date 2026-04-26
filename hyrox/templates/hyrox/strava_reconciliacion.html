@@ -278,8 +278,24 @@
           <option value="hiit" {% if act.tipo_hyrox == 'hiit' %}selected{% endif %}>⚡ HIIT</option>
           <option value="otro" {% if act.tipo_hyrox == 'otro' %}selected{% endif %}>🔹 Otro</option>
         </select>
+        {% if not match %}
+        <div style="display:flex;align-items:center;gap:4px;">
+          <span style="font-family:var(--font-mono);font-size:10px;font-weight:700;color:var(--ink-3);white-space:nowrap;">RPE</span>
+          <select class="act-select" id="rpe-{{ act.id }}" style="width:70px;">
+            <option value="">—</option>
+            <option value="1">1</option><option value="2">2</option>
+            <option value="3">3</option><option value="4">4</option>
+            <option value="5">5</option><option value="6">6</option>
+            <option value="7">7</option><option value="8">8</option>
+            <option value="9">9</option><option value="10">10</option>
+          </select>
+        </div>
+        {% endif %}
         <button class="rb-btn rb-btn-ok"
-          onclick="procesarActividad({{ act.id }}, 'create', { tipo_actividad: document.getElementById('tipo-{{ act.id }}').value })">
+          onclick="procesarActividad({{ act.id }}, 'create', {
+            tipo_actividad: document.getElementById('tipo-{{ act.id }}').value,
+            {% if not match %}rpe: document.getElementById('rpe-{{ act.id }}').value{% endif %}
+          })">
           <i class="fas fa-plus"></i> Crear sesión nueva
         </button>
       </div>
