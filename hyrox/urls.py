@@ -20,4 +20,12 @@ urlpatterns = [
     path('reportar-recuperacion/<int:lesion_id>/', views.reportar_recuperacion, name='reportar_recuperacion'),
     path('marcar-lesion-recuperada/<int:lesion_id>/', views.marcar_lesion_recuperada, name='marcar_lesion_recuperada'),
     path('test-recuperacion/<int:lesion_id>/', views.test_recuperacion, name='test_recuperacion'),
+
+    # Strava integration
+    path('strava/connect/',                         views.strava_connect,         name='strava_connect'),
+    path('strava/callback/',                        views.strava_callback,        name='strava_callback'),
+    path('strava/webhook/',                         views.strava_webhook,         name='strava_webhook'),
+    path('strava/reconciliacion/',                  views.strava_reconciliacion,  name='strava_reconciliacion'),
+    path('strava/procesar/<int:actividad_id>/',     views.strava_procesar,        name='strava_procesar'),
+    path('strava/importar-recientes/',              views.strava_importar_recientes, name='strava_importar_recientes'),
 ]
