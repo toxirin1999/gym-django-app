@@ -727,6 +727,7 @@
             {% with idx=forloop.counter %}
 
             {# ── Decide card flavor ── #}
+            <input type="hidden" name="act_done_{{ idx }}" id="act-done-{{ idx }}" value="0">
             {% if act.data_metricas.series %}
               {# FUERZA / SERIES #}
               <article class="rb-card" id="rb-card-{{ idx }}"
@@ -1165,6 +1166,10 @@ function rbSyncCard(card) {
   fill.classList.toggle('rb-prog-fill--all', all);
   txt.classList.toggle('rb-prog-txt--all', all);
   card.classList.toggle('rb-card--done', all);
+  // Track completion fraction for server-side cumplimiento calc
+  const idx = card.id.replace('rb-card-', '');
+  const hi = document.getElementById('act-done-' + idx);
+  if (hi && total > 0) hi.value = (done / total).toFixed(3);
 }
 
 function rbAddSerie(seriesId, cardId) {
@@ -1240,6 +1245,10 @@ function rbToggleDone(cardId, btn) {
   btn.innerHTML = `
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
     ${!was ? 'COMPLETADA ✓' : 'MARCAR COMPLETADA'}`;
+  // Track completion fraction for server-side cumplimiento calc
+  const idx = cardId.replace('rb-card-', '');
+  const hi = document.getElementById('act-done-' + idx);
+  if (hi) hi.value = !was ? '1' : '0';
   rbSyncGlobal();
 }
 

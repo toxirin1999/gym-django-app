@@ -1,198 +1,231 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Inicio Fitness+</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <title>Mi Panel · Fitness+</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
-          margin: 0;
-          padding: 2rem;
+          min-height: 100vh;
+          padding: 1.5rem 1rem 6rem;
           background: linear-gradient(to bottom right, #0f1117, #101828);
           font-family: 'Inter', sans-serif;
-          color: white;
+          color: #e2e8f0;
         }
-        .container {
-          max-width: 480px;
-          margin: 0 auto;
-        }
+        .container { max-width: 480px; margin: 0 auto; }
+
+        /* header */
         .joi-header {
           position: relative;
           background: #161d2a;
-          border-radius: 1.5rem;
-          padding: 2rem;
-          margin-bottom: 2rem;
+          border-radius: 1.25rem;
+          padding: 1.5rem;
+          margin-bottom: 1.25rem;
         }
-        .joi-header h1 {
-          font-size: 2rem;
-          font-weight: 600;
-          margin: 0 0 0.5rem;
-        }
-        .joi-dialog {
-          color: #00ffff;
-          font-size: 1rem;
-          font-style: italic;
+        .joi-header h1 { font-size: 1.6rem; font-weight: 700; margin-bottom: 0.25rem; }
+        .joi-dialog { color: #22d3ee; font-size: 0.9rem; font-style: italic; }
+
+        /* section card */
+        .card {
+          background: #1a2235;
+          border-radius: 1rem;
+          padding: 1rem 1.1rem;
           margin-bottom: 1rem;
+          border: 1px solid #1e293b;
         }
-        .joi-avatar {
-          position: absolute;
-          top: 1.5rem;
-          right: 1.5rem;
-          width: 80px;
-          height: 80px;
-          border-radius: 50%;
-          object-fit: cover;
-          box-shadow: 0 0 12px rgba(0,255,255,0.5);
-          border: 2px solid #00ffff;
+        .card-title {
+          font-size: 0.72rem;
+          font-weight: 700;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+          color: #64748b;
+          margin-bottom: 0.75rem;
         }
-        .quote-box {
-          background: linear-gradient(to right, #4b0082, #6a0dad);
-          border-radius: 1rem;
-          padding: 1rem;
-          margin-bottom: 2rem;
+
+        /* quick actions */
+        .btn-row { display: flex; gap: 0.6rem; }
+        .btn-row a {
+          flex: 1; display: flex; align-items: center; justify-content: center; gap: 0.4rem;
+          padding: 0.75rem; border-radius: 0.75rem; text-decoration: none;
+          font-weight: 700; font-size: 0.88rem;
         }
-        .metrics {
-          display: flex;
-          justify-content: space-between;
-          margin-bottom: 2rem;
-        }
-        .metric-box {
-          background: #1a1a1a;
-          padding: 1rem;
-          border-radius: 1rem;
-          text-align: center;
-          flex: 1;
-          margin: 0 0.5rem;
-        }
-        .metric-box h2 {
-          margin: 0;
-          font-size: 1.5rem;
-          font-weight: 600;
-        }
-        .metric-box p {
-          margin: 0;
-          font-size: 0.8rem;
-          color: #aaa;
-        }
-        .emotion-box {
-          background: #1f1f1f;
-          border-radius: 1rem;
-          padding: 1rem;
-          text-align: center;
-          margin-bottom: 2rem;
-        }
-        .emojis button {
-          font-size: 1.8rem;
-          margin: 0.2rem;
-          background: none;
-          border: none;
-          cursor: pointer;
-          transition: transform 0.2s ease;
-        }
-        .emojis button:hover {
-          transform: scale(1.2);
-        }
-        .timeline {
-          background: #151515;
-          padding: 1rem;
-          border-radius: 1rem;
-          margin-bottom: 2rem;
-        }
-        .timeline h3 {
-          margin-top: 0;
-          font-size: 1rem;
-          color: #32FF00;
-        }
-        .timeline ul {
-          padding-left: 0;
-          list-style: none;
-        }
-        .timeline li {
-          display: flex;
-          justify-content: space-between;
-          font-size: 0.9rem;
-          padding: 0.3rem 0;
-          border-bottom: 1px solid #2a2a2a;
-        }
-        .badges {
-          display: flex;
-          flex-wrap: wrap;
+        .btn-primary { background: linear-gradient(135deg,#06b6d4,#0e7490); color: #000; }
+        .btn-secondary { background: #1e293b; color: #e2e8f0; border: 1px solid #334155; }
+
+        /* check-in matutino */
+        .checkin-done {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
           gap: 0.5rem;
+          text-align: center;
         }
-        .badge {
-          background: rgba(255, 255, 255, 0.1);
-          padding: 0.3rem 0.7rem;
-          border-radius: 9999px;
-          font-size: 0.8rem;
-          color: #32FF00;
+        .ci-stat { background: #0f1827; border-radius: 0.6rem; padding: 0.6rem 0.4rem; }
+        .ci-stat-val { font-size: 1.2rem; font-weight: 700; color: #22d3ee; }
+        .ci-stat-lbl { font-size: 0.65rem; color: #64748b; margin-top: 2px; text-transform: uppercase; letter-spacing: 0.05em; }
+        .ci-pending-label { font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.75rem; }
+
+        .ci-form { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+        .ci-field label {
+          display: block; font-size: 0.68rem; color: #64748b; margin-bottom: 3px;
+          text-transform: uppercase; letter-spacing: 0.05em;
         }
+        .ci-field input {
+          width: 100%; background: #0f1827; border: 1px solid #1e3a5f;
+          border-radius: 0.5rem; color: #e2e8f0; font-size: 1rem; font-weight: 600;
+          padding: 0.5rem 0.6rem; outline: none;
+        }
+        .ci-field input:focus { border-color: #22d3ee; }
+        .ci-submit {
+          margin-top: 0.6rem; width: 100%;
+          background: linear-gradient(135deg, #0ea5e9, #0284c7);
+          color: #fff; font-weight: 700; font-size: 0.88rem;
+          border: none; border-radius: 0.65rem; padding: 0.65rem;
+          cursor: pointer; letter-spacing: 0.03em;
+        }
+        .ci-submit:active { opacity: 0.85; }
+
+        /* timeline */
+        .tl-list { list-style: none; }
+        .tl-list li {
+          display: flex; justify-content: space-between; align-items: center;
+          font-size: 0.88rem; padding: 0.4rem 0;
+          border-bottom: 1px solid #1e293b;
+        }
+        .tl-list li:last-child { border-bottom: none; }
+        .tl-tag {
+          font-size: 0.68rem; font-weight: 600; letter-spacing: 0.06em;
+          background: #1e3a5f; color: #38bdf8; padding: 2px 7px; border-radius: 9999px;
+        }
+
+        /* toast */
+        #ci-toast {
+          position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%);
+          background: #0ea5e9; color: #fff; padding: 0.6rem 1.2rem;
+          border-radius: 9999px; font-size: 0.85rem; font-weight: 600;
+          opacity: 0; pointer-events: none; transition: opacity 0.3s;
+        }
+        #ci-toast.show { opacity: 1; }
     </style>
 </head>
 <body>
 <div class="container">
+
     <div class="joi-header">
-        <h1>Hola, K</h1>
-        <p class="joi-dialog">Corres como si algo te persiguiera... ¿qué es?</p>
-        <img src="joi_mock.png" alt="Joi" class="joi-avatar">
+        <h1>Hola{% if request.user.first_name %}, {{ request.user.first_name }}{% endif %}</h1>
+        <p class="joi-dialog">{{ saludo_joi|default:"Un nuevo día, una nueva oportunidad." }}</p>
     </div>
 
-    <div class="quote-box">
-        <p><strong>Recuerdo del día</strong></p>
-        <p>La desmotivación es la sombra de un objetivo mal iluminado.</p>
+    <!-- ── CHECK-IN MATUTINO ─────────────────────────── -->
+    <div class="card" id="ci-card">
+        <div class="card-title">Check-in matutino</div>
+
+        {% if checkin_hoy and checkin_hoy.fc_reposo %}
+        {# Already done today #}
+        <div class="checkin-done" id="ci-done">
+            <div class="ci-stat">
+                <div class="ci-stat-val">{{ checkin_hoy.fc_reposo }}</div>
+                <div class="ci-stat-lbl">FC reposo</div>
+            </div>
+            <div class="ci-stat">
+                <div class="ci-stat-val">{{ checkin_hoy.horas_sueno|default:"—" }}</div>
+                <div class="ci-stat-lbl">h sueño</div>
+            </div>
+            <div class="ci-stat">
+                <div class="ci-stat-val">{{ checkin_hoy.calidad_sueno|default:"—" }}</div>
+                <div class="ci-stat-lbl">calidad</div>
+            </div>
+            <div class="ci-stat">
+                <div class="ci-stat-val">{{ checkin_hoy.energia_subjetiva|default:"—" }}</div>
+                <div class="ci-stat-lbl">energía</div>
+            </div>
+        </div>
+        {% else %}
+        {# Pending #}
+        <p class="ci-pending-label">Registra tus métricas de recuperación al despertar</p>
+        <form id="ci-form" class="ci-form">
+            {% csrf_token %}
+            <div class="ci-field">
+                <label>FC reposo (lpm)</label>
+                <input type="number" name="fc_reposo" placeholder="60" min="30" max="200" inputmode="numeric"
+                       value="{{ checkin_hoy.fc_reposo|default:'' }}">
+            </div>
+            <div class="ci-field">
+                <label>Horas de sueño</label>
+                <input type="number" name="horas_sueno" placeholder="7.5" min="0" max="12" step="0.25" inputmode="decimal"
+                       value="{{ checkin_hoy.horas_sueno|default:'' }}">
+            </div>
+            <div class="ci-field">
+                <label>Calidad sueño (1-10)</label>
+                <input type="number" name="calidad_sueno" placeholder="7" min="1" max="10" inputmode="numeric"
+                       value="{{ checkin_hoy.calidad_sueno|default:'' }}">
+            </div>
+            <div class="ci-field">
+                <label>Energía (1-10)</label>
+                <input type="number" name="energia_subjetiva" placeholder="8" min="1" max="10" inputmode="numeric"
+                       value="{{ checkin_hoy.energia_subjetiva|default:'' }}">
+            </div>
+            <div style="grid-column:1/-1">
+                <button type="submit" class="ci-submit">Registrar check-in</button>
+            </div>
+        </form>
+        {% endif %}
     </div>
 
-    <div class="metrics">
-        <div class="metric-box">
-            <h2>4</h2>
-            <p>Entrenos</p>
-        </div>
-        <div class="metric-box">
-            <h2>12.800kg</h2>
-            <p>Carga total</p>
-        </div>
-        <div class="metric-box">
-            <h2>82</h2>
-            <p>Consistencia</p>
-        </div>
-    </div>
-
+    <!-- ── ACCIONES RÁPIDAS ──────────────────────────── -->
     {% if cliente %}
-    <div style="display:flex; gap:0.75rem; margin-bottom:1.5rem;">
-        <a href="{% url 'entrenos:registrar_actividad_libre' cliente.id %}"
-           style="flex:1; display:flex; align-items:center; justify-content:center; gap:0.5rem;
-                  background:linear-gradient(135deg,#06b6d4,#0e7490); color:#000; font-weight:700;
-                  padding:0.85rem; border-radius:1rem; text-decoration:none; font-size:0.95rem;">
+    <div class="btn-row" style="margin-bottom:1rem;">
+        <a href="{% url 'entrenos:registrar_actividad_libre' cliente.id %}" class="btn-primary">
             ➕ Añadir actividad
         </a>
-        <a href="{% url 'entrenos:timeline_atleta' cliente.id %}"
-           style="flex:1; display:flex; align-items:center; justify-content:center; gap:0.5rem;
-                  background:#1e293b; color:#e2e8f0; font-weight:600;
-                  padding:0.85rem; border-radius:1rem; text-decoration:none; font-size:0.95rem;
-                  border:1px solid #334155;">
+        <a href="{% url 'entrenos:timeline_atleta' cliente.id %}" class="btn-secondary">
             📅 Mi Timeline
         </a>
     </div>
     {% endif %}
 
-    <div class="timeline">
-        <h3>Últimos entrenos</h3>
-        <ul>
-            <li><span>Cardio</span><span>Apr 21</span></li>
-            <li><span>Pull</span><span>Apr 19</span></li>
-            <li><span>Piernas</span><span>Apr 18</span></li>
+    <!-- ── ÚLTIMOS ENTRENOS (placeholder) ───────────── -->
+    <div class="card">
+        <div class="card-title">Últimos entrenamientos</div>
+        <ul class="tl-list">
+            <li><span>Cargando...</span><span class="tl-tag">—</span></li>
         </ul>
     </div>
 
-    <div class="timeline">
-        <h3>Logros desbloqueados</h3>
-        <div class="badges">
-            <span class="badge">Primer entreno</span>
-            <span class="badge">5 días seguidos</span>
-            <span class="badge">+10k kg</span>
-        </div>
-    </div>
 </div>
 
+<div id="ci-toast">Check-in registrado</div>
+
+<script>
+const CI_URL = "{% url 'clientes:checkin_matutino' %}";
+const CSRF   = "{{ csrf_token }}";
+
+document.getElementById('ci-form')?.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const fd = new FormData(this);
+    fd.append('csrfmiddlewaretoken', CSRF);
+    try {
+        const r = await fetch(CI_URL, { method: 'POST', body: fd });
+        const data = await r.json();
+        if (data.ok) {
+            // Replace form with done stats
+            const card = document.getElementById('ci-card');
+            card.innerHTML = `
+                <div class="card-title">Check-in matutino</div>
+                <div class="checkin-done">
+                    <div class="ci-stat"><div class="ci-stat-val">${data.fc_reposo ?? '—'}</div><div class="ci-stat-lbl">FC reposo</div></div>
+                    <div class="ci-stat"><div class="ci-stat-val">${data.horas_sueno ?? '—'}</div><div class="ci-stat-lbl">h sueño</div></div>
+                    <div class="ci-stat"><div class="ci-stat-val">${data.calidad_sueno ?? '—'}</div><div class="ci-stat-lbl">calidad</div></div>
+                    <div class="ci-stat"><div class="ci-stat-val">${data.energia_subjetiva ?? '—'}</div><div class="ci-stat-lbl">energía</div></div>
+                </div>`;
+            const t = document.getElementById('ci-toast');
+            t.classList.add('show');
+            setTimeout(() => t.classList.remove('show'), 2500);
+        }
+    } catch(err) { console.error(err); }
+});
+</script>
 </body>
 </html>

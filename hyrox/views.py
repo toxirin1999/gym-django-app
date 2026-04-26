@@ -876,6 +876,56 @@ def hyrox_dashboard(request):
                     else:
                         act.display_name = act.nombre_ejercicio
 
+    # ── CURVAS DE PROGRESIÓN ──────────────────────────────────────────────────
+    curvas_progresion = {}
+    if objetivo_activo:
+        from .training_engine import HyroxLoadManager
+        import json as _json
+        _curvas_def = [
+            ('carrera',   None,         'Carrera · Ritmo',       'min/km'),
+            ('fuerza',    'sentadilla',  'Sentadilla · Peso',     'kg'),
+            ('fuerza',    'muerto',      'Peso Muerto · Peso',    'kg'),
+            ('hyrox_station', 'sled',   'Sled Push · Peso',      'kg'),
+        ]
+        for _tipo, _kw, _label, _unit in _curvas_def:
+            try:
+                _puntos = HyroxLoadManager.get_progression_curve(
+                    objetivo_activo, _tipo, ejercicio_keyword=_kw, semanas=10
+                )
+                if _puntos and len(_puntos) >= 2:
+                    from datetime import datetime as _dtp
+                    def _fmt_fecha(f):
+                        try:
+                            return _dtp.strptime(str(f), '%Y-%m-%d').strftime('%d/%m')
+                        except Exception:
+                            return str(f)
+                    if _tipo == 'carrera':
+                        _display = [{'f': _fmt_fecha(p['fecha']), 'v': round(p['valor'] / 60, 2)} for p in _puntos]
+                    else:
+                        _display = [{'f': _fmt_fecha(p['fecha']), 'v': p['valor']} for p in _puntos]
+                    _vals = [p['v'] for p in _display]
+                    _min_v, _max_v = min(_vals), max(_vals)
+                    # Trend: last 3 vs first 3
+                    _trend = None
+                    if len(_vals) >= 4:
+                        _early = sum(_vals[:2]) / 2
+                        _late  = sum(_vals[-2:]) / 2
+                        if _tipo == 'carrera':
+                            _trend = 'mejora' if _late < _early else ('empeora' if _late > _early else 'estable')
+                        else:
+                            _trend = 'mejora' if _late > _early else ('empeora' if _late < _early else 'estable')
+                    curvas_progresion[_tipo + ('_' + _kw if _kw else '')] = {
+                        'label': _label,
+                        'unit': _unit,
+                        'puntos': _display,
+                        'min_v': _min_v,
+                        'max_v': _max_v,
+                        'trend': _trend,
+                        'json': _json.dumps(_display),
+                    }
+            except Exception:
+                pass
+
     context = {
         'competition_progress': competition_progress,
         'macro_data': macro_data,
@@ -916,6 +966,7 @@ def hyrox_dashboard(request):
         'race_briefing': race_briefing,
         'sesion_override': sesion_override,
         'perfil_atletico': perfil_atletico,
+        'curvas_progresion': curvas_progresion,
     }
     return render(request, 'hyrox/dashboard.html', context)
 
@@ -1099,8 +1150,23 @@ def registrar_entrenamiento(request, objective_id, session_id=None):
 
             if not bloqueado_por_bio_safety:
                 sesion.estado = 'completado'
+
+                # Calculate cumplimiento_ratio from per-activity hidden inputs
+                acts_for_compl = list(sesion.activities.all().order_by('id'))
+                compl_scores = []
+                for _i, _act in enumerate(acts_for_compl, 1):
+                    _raw = request.POST.get(f'act_done_{_i}', '')
+                    try:
+                        _frac = float(_raw)
+                        if 0.0 <= _frac <= 1.0:
+                            compl_scores.append(_frac)
+                    except (ValueError, TypeError):
+                        pass
+                if compl_scores:
+                    sesion.cumplimiento_ratio = round(sum(compl_scores) / len(compl_scores), 3)
+
                 sesion.save()
-                
+
                 # Phase 8 & 9 & 14: Bucle de Feedback Continuo Post-Procesamiento.
                 # 1. Ajuste de volumen inmediato por Energía Pre-Entreno
                 HyroxTrainingEngine.scale_volume_by_energy(sesion)
