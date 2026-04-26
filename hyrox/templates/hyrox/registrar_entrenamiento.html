@@ -1,4 +1,4 @@
-{% load static %}
+{% load static l10n %}
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -635,7 +635,7 @@
             <span>{% if sesion_planificada %}#{{ sesion_planificada.id }}{% else %}LIBRE{% endif %}</span>
           </div>
           <div class="rb-bib-body">
-            <div class="rb-bib-num">{% if sesion_planificada.id %}{{ sesion_planificada.id|stringformat:"03d" }}{% else %}000{% endif %}</div>
+            <div class="rb-bib-num" style="font-size:clamp(28px,10vw,52px);">{% if sesion_planificada.fecha %}{{ sesion_planificada.fecha|date:"d" }}{% else %}—{% endif %}</div>
             <div>
               <div class="rb-bib-title">
                 {% if es_override %}{{ titulo_limpio }}{% else %}{{ sesion_planificada.titulo|default:"Sesión Libre" }}{% endif %}
@@ -856,7 +856,7 @@
                     <div class="rb-num-label">REPS</div>
                   </div>
                   <div class="rb-num-cell">
-                    <input type="number" class="rb-num-input rb-input-kg" value="{{ s.peso_display }}" placeholder="—" min="0" step="0.5" inputmode="decimal">
+                    <input type="number" class="rb-num-input rb-input-kg" value="{{ s.peso_display|unlocalize }}" placeholder="—" min="0" step="0.5" inputmode="decimal">
                     <div class="rb-num-label">KG</div>
                   </div>
                   <button type="button" class="rb-check" onclick="rbToggleSerie(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></button>
@@ -1257,38 +1257,54 @@ function rbCalcPace(idx) {
 }
 
 /* ───── TIMER ───── */
+// Timer basado en timestamps absolutos — resiste suspensión de pantalla y cambio de app
 const _rbTimers = {};
+function _rbTimerFmt(secs) {
+  secs = Math.max(0, Math.floor(secs));
+  return String(Math.floor(secs/60)).padStart(2,'0') + ':' + String(secs%60).padStart(2,'0');
+}
+function _rbTimerTick(id) {
+  const t = _rbTimers[id];
+  if (!t || !t.running) return;
+  const elapsed = t.secsBase + (Date.now() - t.startTs) / 1000;
+  const disp = document.getElementById('rb-tdisp-' + id);
+  if (disp) disp.textContent = _rbTimerFmt(elapsed);
+  t._raf = requestAnimationFrame(() => _rbTimerTick(id));
+}
 function rbTimerToggle(id) {
-  if (!_rbTimers[id]) _rbTimers[id] = { interval: null, secs: 0, running: false };
+  if (!_rbTimers[id]) _rbTimers[id] = { running: false, secsBase: 0, startTs: 0, _raf: null };
   const t = _rbTimers[id];
   const disp = document.getElementById('rb-tdisp-' + id);
-  const btn = document.getElementById('rb-tbtn-' + id);
+  const btn  = document.getElementById('rb-tbtn-' + id);
   const hero = document.getElementById('rb-timer-' + id);
   if (t.running) {
-    clearInterval(t.interval); t.running = false;
-    disp.dataset.secs = t.secs;
+    // Pause: guardar segundos acumulados
+    t.secsBase += (Date.now() - t.startTs) / 1000;
+    t.running = false;
+    cancelAnimationFrame(t._raf);
+    if (disp) { disp.dataset.secs = Math.floor(t.secsBase); disp.textContent = _rbTimerFmt(t.secsBase); }
     hero.classList.remove('running'); hero.classList.add('done');
     btn.classList.remove('stop');
     btn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>';
   } else {
+    // Start/resume: guardar timestamp de inicio
+    t.startTs = Date.now();
     t.running = true;
     hero.classList.add('running'); hero.classList.remove('done');
     btn.classList.add('stop');
     btn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>';
-    t.interval = setInterval(() => {
-      t.secs++;
-      disp.textContent = String(Math.floor(t.secs/60)).padStart(2,'0') + ':' + String(t.secs%60).padStart(2,'0');
-    }, 1000);
+    _rbTimerTick(id);
   }
 }
 function rbTimerReset(id) {
-  if (_rbTimers[id]) { clearInterval(_rbTimers[id].interval); _rbTimers[id] = { interval: null, secs: 0, running: false }; }
+  const t = _rbTimers[id];
+  if (t) { cancelAnimationFrame(t._raf); _rbTimers[id] = { running: false, secsBase: 0, startTs: 0, _raf: null }; }
   const disp = document.getElementById('rb-tdisp-' + id);
-  const btn = document.getElementById('rb-tbtn-' + id);
+  const btn  = document.getElementById('rb-tbtn-' + id);
   const hero = document.getElementById('rb-timer-' + id);
   if (disp) { disp.textContent = '00:00'; disp.dataset.secs = 0; }
   if (hero) hero.classList.remove('running', 'done');
-  if (btn) { btn.classList.remove('stop'); btn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>'; }
+  if (btn)  { btn.classList.remove('stop'); btn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>'; }
 }
 function rbTimerAutoStop(cardId) {
   const idx = cardId.split('-').pop();
