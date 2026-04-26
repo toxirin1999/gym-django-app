@@ -2,6 +2,18 @@ import logging
 from django.shortcuts import render, redirect, get_object_or_404
 
 logger = logging.getLogger(__name__)
+
+
+def _checkin_hoy(cliente):
+    """Returns today's BitacoraDiaria if morning check-in was done, else None."""
+    try:
+        from datetime import date
+        from clientes.models import BitacoraDiaria
+        return BitacoraDiaria.objects.filter(
+            cliente=cliente, fecha=date.today(), fc_reposo__isnull=False
+        ).first()
+    except Exception:
+        return None
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.utils import timezone
@@ -972,6 +984,7 @@ def hyrox_dashboard(request):
         'sesion_override': sesion_override,
         'perfil_atletico': perfil_atletico,
         'curvas_progresion': curvas_progresion,
+        'checkin_hoy': _checkin_hoy(cliente),
     }
     return render(request, 'hyrox/dashboard.html', context)
 
