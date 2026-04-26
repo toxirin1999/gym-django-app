@@ -113,6 +113,21 @@
 <body>
 <div class="container">
 
+    <div style="display:flex;gap:0.6rem;margin-bottom:1rem;">
+        <a href="{% url 'hyrox:dashboard' %}"
+           style="flex:1;display:flex;align-items:center;justify-content:center;gap:0.4rem;
+                  background:#1e293b;color:#e2e8f0;font-weight:700;font-size:0.88rem;
+                  padding:0.7rem;border-radius:0.75rem;text-decoration:none;border:1px solid #334155;">
+            ← Hyrox
+        </a>
+        <a href="{% url 'clientes:dashboard' %}"
+           style="flex:1;display:flex;align-items:center;justify-content:center;gap:0.4rem;
+                  background:#1e293b;color:#e2e8f0;font-weight:700;font-size:0.88rem;
+                  padding:0.7rem;border-radius:0.75rem;text-decoration:none;border:1px solid #334155;">
+            Panel Gym
+        </a>
+    </div>
+
     <div class="joi-header">
         <h1>Hola{% if request.user.first_name %}, {{ request.user.first_name }}{% endif %}</h1>
         <p class="joi-dialog">{{ saludo_joi|default:"Un nuevo día, una nueva oportunidad." }}</p>
@@ -142,6 +157,12 @@
                 <div class="ci-stat-lbl">energía</div>
             </div>
         </div>
+        <a href="{% url 'hyrox:dashboard' %}"
+           style="display:block;margin-top:0.75rem;text-align:center;background:linear-gradient(135deg,#0ea5e9,#0284c7);
+                  color:#fff;font-weight:700;font-size:0.88rem;padding:0.65rem;border-radius:0.65rem;
+                  text-decoration:none;letter-spacing:0.03em;">
+            Ir al entrenamiento →
+        </a>
         {% else %}
         {# Pending #}
         <p class="ci-pending-label">Registra tus métricas de recuperación al despertar</p>
