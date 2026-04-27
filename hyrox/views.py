@@ -214,8 +214,8 @@ def hyrox_dashboard(request):
                 stats_semana['espe_planificadas'] += 1
                 if s.estado == 'completado': stats_semana['espe_completadas'] += 1
 
-        stats_semana['total_planificadas'] = stats_semana['fuerza_planificadas'] + stats_semana['carrera_planificadas'] + stats_semana['espe_planificadas']
-        stats_semana['total_completadas'] = stats_semana['fuerza_completadas'] + stats_semana['carrera_completadas'] + stats_semana['espe_completadas']
+        stats_semana['total_planificadas'] = len(list(sesiones_semana))
+        stats_semana['total_completadas'] = sum(1 for s in sesiones_semana if s.estado == 'completado')
 
         # Phase 6: Resumen Semanal Flash Card (Solo Domingos)
         resumen_semanal = None
@@ -303,13 +303,27 @@ def hyrox_dashboard(request):
             .order_by('sesion__fecha')
         )
 
+        def _parse_5k_to_pace(raw):
+            """
+            Convierte tiempo_5k_base a segundos/km.
+            Si MM >= 10 asume tiempo total de 5K (ej. "25:00" = 5:00/km).
+            Si MM < 10 asume ritmo por km (ej. "5:00" = 5:00/km).
+            """
+            try:
+                parts = str(raw).split(':')
+                if len(parts) == 3:
+                    total = int(parts[0]) * 3600 + int(parts[1]) * 60 + int(parts[2])
+                    return total // 5
+                mm = int(parts[0])
+                ss = int(parts[1])
+                total = mm * 60 + ss
+                return total // 5 if mm >= 10 else total
+            except Exception:
+                return None
+
         pace_objetivo_secs = None
         if objetivo_activo.tiempo_5k_base:
-            try:
-                parts = str(objetivo_activo.tiempo_5k_base).split(':')
-                pace_objetivo_secs = int(parts[0]) * 60 + int(parts[1])
-            except Exception:
-                pass
+            pace_objetivo_secs = _parse_5k_to_pace(objetivo_activo.tiempo_5k_base)
 
         puntos_ritmo = []     # [{fecha, secs, label}]
         km_por_semana = {}    # {iso_week_label: km}
@@ -350,11 +364,14 @@ def hyrox_dashboard(request):
         mejor_ritmo = min(puntos_ritmo, key=lambda x: x['secs']) if puntos_ritmo else None
         ultimo_ritmo = puntos_ritmo[-1] if puntos_ritmo else None
         tendencia = None
-        if len(puntos_ritmo) >= 3:
-            ultimos = [p['secs'] for p in puntos_ritmo[-3:]]
-            if ultimos[-1] < ultimos[0]:
+        if len(puntos_ritmo) >= 5:
+            ultimos = [p['secs'] for p in puntos_ritmo[-5:]]
+            media_primera = sum(ultimos[:2]) / 2
+            media_ultima = sum(ultimos[-2:]) / 2
+            delta = media_primera - media_ultima  # positivo = mejora (menor ritmo = más rápido)
+            if delta > 10:
                 tendencia = 'mejora'
-            elif ultimos[-1] > ultimos[0]:
+            elif delta < -10:
                 tendencia = 'empeora'
             else:
                 tendencia = 'estable'
@@ -433,7 +450,7 @@ def hyrox_dashboard(request):
                 vals = semanas_dict.get(iso, [])
                 avg = round(sum(vals) / len(vals)) if vals else None
                 # progreso = qué % del objetivo cumple (100 = en objetivo, >100 = por encima)
-                pct = min(round((ref / avg) * 100), 100) if avg else 0
+                pct = min(round((ref / avg) * 100), 100) if avg else None
                 tendencia.append({'label': f"S-{w}" if w > 0 else "Esta", 'avg_secs': avg, 'pct': pct})
 
             if lista:
@@ -487,12 +504,9 @@ def hyrox_dashboard(request):
 
         running_secs = None
         if objetivo_activo.tiempo_5k_base:
-            try:
-                parts = str(objetivo_activo.tiempo_5k_base).split(':')
-                pace_km = int(parts[0]) * 60 + int(parts[1])
-                running_secs = pace_km * 8
-            except Exception:
-                pass
+            _pace = _parse_5k_to_pace(objetivo_activo.tiempo_5k_base)
+            if _pace:
+                running_secs = _pace * 8
 
         if running_secs:
             _REF_RUN = {
@@ -512,7 +526,12 @@ def hyrox_dashboard(request):
             total_ref = sum(s['ref_secs'] for s in splits_estaciones)
 
             total_est += running_secs
-            total_mejor += int(running_secs * 0.97)
+            # Mejor caso: usa el mejor ritmo real registrado si existe, si no aplica 3%
+            _mejor_pace = evolucion_carrera.get('mejor_ritmo', {}).get('secs') if evolucion_carrera else None
+            if _mejor_pace:
+                total_mejor += _mejor_pace * 8
+            else:
+                total_mejor += int(running_secs * 0.97)
             total_ref_total = total_ref + _run_ref
             stations_con_datos = sum(1 for s in splits_estaciones if s['tiene_datos'])
 
