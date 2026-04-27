@@ -2150,6 +2150,7 @@ def strava_reconciliacion(request):
             'actividad':      act,
             'hyrox_matches':  hyrox_matches,
             'gym_matches':    gym_matches,
+            'total_matches':  len(hyrox_matches) + len(gym_matches),
             'preselect':      preselect,
         })
 
@@ -2197,11 +2198,18 @@ def strava_procesar(request, actividad_id):
         if not objetivo:
             return JsonResponse({'ok': False, 'msg': 'No tienes un objetivo Hyrox activo.'}, status=400)
         sesion = get_object_or_404(HyroxSession, id=request.POST.get('session_id'), objective=objetivo)
-        if act.hr_media and not sesion.hr_media:
+        ov_tiempo    = request.POST.get('override_tiempo', 'mine')
+        ov_hr_media  = request.POST.get('override_hr_media', 'mine')
+        ov_hr_maxima = request.POST.get('override_hr_maxima', 'mine')
+        if ov_hr_media == 'strava' and act.hr_media:
             sesion.hr_media = act.hr_media
-        if act.hr_maxima and not sesion.hr_maxima:
+        elif not sesion.hr_media and act.hr_media:
+            sesion.hr_media = act.hr_media
+        if ov_hr_maxima == 'strava' and act.hr_maxima:
             sesion.hr_maxima = act.hr_maxima
-        if not sesion.tiempo_total_minutos:
+        elif not sesion.hr_maxima and act.hr_maxima:
+            sesion.hr_maxima = act.hr_maxima
+        if ov_tiempo == 'strava' or not sesion.tiempo_total_minutos:
             sesion.tiempo_total_minutos = int(duracion_min)
         if not sesion.trimp and sesion.hr_media:
             from .training_engine import HyroxLoadManager
@@ -2216,11 +2224,18 @@ def strava_procesar(request, actividad_id):
     # ── FUSIONAR CON GYM ─────────────────────────────────────────────────────
     if accion == 'merge_gym':
         entreno = get_object_or_404(EntrenoRealizado, id=request.POST.get('entreno_id'), cliente=cliente)
-        if act.hr_media and not entreno.frecuencia_cardiaca_promedio:
+        ov_tiempo    = request.POST.get('override_tiempo', 'mine')
+        ov_hr_media  = request.POST.get('override_hr_media', 'mine')
+        ov_hr_maxima = request.POST.get('override_hr_maxima', 'mine')
+        if ov_hr_media == 'strava' and act.hr_media:
             entreno.frecuencia_cardiaca_promedio = act.hr_media
-        if act.hr_maxima and not entreno.frecuencia_cardiaca_maxima:
+        elif not entreno.frecuencia_cardiaca_promedio and act.hr_media:
+            entreno.frecuencia_cardiaca_promedio = act.hr_media
+        if ov_hr_maxima == 'strava' and act.hr_maxima:
             entreno.frecuencia_cardiaca_maxima = act.hr_maxima
-        if not entreno.duracion_minutos:
+        elif not entreno.frecuencia_cardiaca_maxima and act.hr_maxima:
+            entreno.frecuencia_cardiaca_maxima = act.hr_maxima
+        if ov_tiempo == 'strava' or not entreno.duracion_minutos:
             entreno.duracion_minutos = int(duracion_min)
         entreno.save()
         # Actualizar carga_ua en ActividadRealizada hub si existe
