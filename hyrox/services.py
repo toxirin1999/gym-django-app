@@ -1836,32 +1836,33 @@ class InterferenceIndexService:
         # Acumular: {station_canon: [(if_pct, fecha), ...]}
         data_by_station = {}
 
+        RUNNING_TYPES = {'carrera', 'cardio_sustituto'}
+
         for session in sim_sessions:
             acts = sorted(session.activities.all(), key=lambda a: a.pk)
             tipos = {a.tipo_actividad for a in acts}
-            if not (tipos & {'hyrox_station'} and tipos & {'carrera'}):
+            if not (tipos & {'hyrox_station'} and tipos & RUNNING_TYPES):
                 continue
 
             # Detectar primer ritmo de carrera en la sesión como baseline local
             local_baseline = baseline
             for a in acts:
-                if a.tipo_actividad == 'carrera':
+                if a.tipo_actividad in RUNNING_TYPES:
                     m = a.data_metricas or {}
                     s = cls._pace_to_secs(m.get('ritmo_real') or m.get('ritmo_objetivo'))
                     if s and 180 < s < 600:
                         local_baseline = s
                         break
 
-            # Buscar pares: estación → siguiente carrera
+            # Buscar pares: estación → siguiente carrera (o sustituto cardio)
             for i, act in enumerate(acts):
                 if act.tipo_actividad != 'hyrox_station':
                     continue
                 canon = cls._canonize_station(act.nombre_ejercicio)
                 if not canon:
                     continue
-                # Buscar la siguiente actividad de carrera
                 post_run = next(
-                    (a for a in acts[i + 1:] if a.tipo_actividad == 'carrera'),
+                    (a for a in acts[i + 1:] if a.tipo_actividad in RUNNING_TYPES),
                     None
                 )
                 if not post_run:
