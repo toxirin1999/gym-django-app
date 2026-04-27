@@ -2566,16 +2566,43 @@ def detalle_cliente(request, cliente_id):
     todos_los_programas = Programa.objects.all()
     todas_las_rutinas = Rutina.objects.all()
 
-    # --- 6b. HYROX ---
+    # --- 6b. HYROX + TSB ---
     hyrox_objetivo = None
     hyrox_readiness = None
     hyrox_dias_para_evento = None
+    hyrox_fase = None
+    tsb_data = None
+    hyrox_fuga = None
     try:
         from hyrox.models import HyroxObjective, UserInjury
+        from hyrox.training_engine import HyroxLoadManager
         hyrox_objetivo = HyroxObjective.objects.filter(cliente=cliente, estado='activo').first()
         if hyrox_objetivo:
             hyrox_readiness = hyrox_objetivo.get_race_readiness_score()
             hyrox_dias_para_evento = (hyrox_objetivo.fecha_evento - hoy).days
+            tsb_raw = HyroxLoadManager.calcular_ctl_atl_tsb(hyrox_objetivo)
+            tsb_data = {
+                'tsb': tsb_raw['tsb'],
+                'ctl': tsb_raw['ctl'],
+                'atl': tsb_raw['atl'],
+                'estado': HyroxLoadManager.get_estado_forma(tsb_raw['tsb']),
+            }
+            # Fase actual del objetivo (primeras 2 semanas = Base, etc.)
+            try:
+                breakdown = hyrox_objetivo.get_readiness_breakdown()
+                hyrox_fase = breakdown.get('fase_actual', None)
+            except Exception:
+                pass
+            # Estación más débil (actividades con menor progreso respecto al estándar)
+            try:
+                from hyrox.services import CompetitionStandardsService
+                splits = CompetitionStandardsService.get_splits_por_estacion(hyrox_objetivo)
+                if splits:
+                    debiles = [s for s in splits if s.get('status') in ('priority', 'needs_work')]
+                    debiles.sort(key=lambda x: x.get('pct_ref', 100))
+                    hyrox_fuga = debiles[0].get('nombre') if debiles else None
+            except Exception:
+                pass
     except Exception:
         pass
 
@@ -2626,18 +2653,93 @@ def detalle_cliente(request, cliente_id):
 
     # --- 6f. GAMIFICACIÓN ---
     perfil_gamificacion = None
+    logros_completados = []
+    pruebas_activas = []
     try:
-        from logros.models import PerfilGamificacion, PruebaUsuario, PruebaLegendaria
+        from logros.models import PruebaUsuario, PruebaLegendaria
         perfil_gamificacion = getattr(cliente, 'perfil_gamificacion', None)
-        logros_completados = PruebaUsuario.objects.filter(
+        logros_completados = list(PruebaUsuario.objects.filter(
             usuario=cliente.user, completado=True
-        ).select_related('prueba')[:6]
-        pruebas_activas = PruebaLegendaria.objects.filter(
+        ).select_related('prueba')[:6])
+        pruebas_activas = list(PruebaLegendaria.objects.filter(
             es_secreta=False
-        ).exclude(id__in=logros_completados.values_list('prueba_id', flat=True))[:4]
+        ).exclude(id__in=[l.prueba_id for l in logros_completados])[:4])
     except Exception:
-        logros_completados = []
-        pruebas_activas = []
+        pass
+
+    # --- 6g. ACTIVIDAD RECIENTE UNIFICADA (gym + hyrox) ---
+    actividad_reciente = []
+    try:
+        from hyrox.models import HyroxSession
+        gym_reciente = list(EntrenoRealizado.objects.filter(
+            cliente=cliente
+        ).order_by('-fecha').values('fecha', 'rutina__nombre')[:10])
+        for g in gym_reciente:
+            actividad_reciente.append({
+                'fecha': g['fecha'],
+                'tipo': 'gym',
+                'nombre': g['rutina__nombre'] or 'Entrenamiento',
+                'icono': 'fas fa-dumbbell',
+                'color': 'text-purple-400',
+            })
+        if hyrox_objetivo:
+            hyrox_reciente = list(HyroxSession.objects.filter(
+                objective=hyrox_objetivo, estado='completado'
+            ).order_by('-fecha').values('fecha', 'titulo', 'rpe_global')[:10])
+            for h in hyrox_reciente:
+                actividad_reciente.append({
+                    'fecha': h['fecha'],
+                    'tipo': 'hyrox',
+                    'nombre': h['titulo'] or 'Sesión Hyrox',
+                    'icono': 'fas fa-flag-checkered',
+                    'color': 'text-cyan-400',
+                    'rpe': h['rpe_global'],
+                })
+        actividad_reciente.sort(key=lambda x: x['fecha'], reverse=True)
+        actividad_reciente = actividad_reciente[:6]
+    except Exception:
+        pass
+
+    # --- 6h. RESUMEN GLOBAL (calculado, no IA) ---
+    def _resumen_global():
+        partes = []
+        riesgo = 'bajo'
+        if lesion_activa:
+            partes.append(f"Lesión activa ({lesion_activa.zona_afectada}) en fase {lesion_activa.fase}.")
+            riesgo = 'medio'
+        if tsb_data and tsb_data['tsb'] is not None:
+            estado = tsb_data['estado']['estado']
+            partes.append(f"Carga Hyrox: {estado}.")
+            if tsb_data['tsb'] < -20:
+                riesgo = 'alto'
+            elif tsb_data['tsb'] < -10:
+                riesgo = 'medio' if riesgo == 'bajo' else riesgo
+        if acwr_valor:
+            if acwr_valor > 1.5:
+                partes.append("ACWR elevado — reduce volumen esta semana.")
+                riesgo = 'alto'
+            elif acwr_valor < 0.8:
+                partes.append("ACWR bajo — acumulando base de entrenamiento.")
+            else:
+                partes.append("ACWR en zona óptima.")
+        if not partes:
+            partes.append("Acumulando datos. Sigue registrando para afinar el análisis.")
+        lectura = ' '.join(partes)
+        if hyrox_objetivo and hyrox_readiness is not None:
+            if hyrox_readiness >= 70:
+                fase_txt = "preparación avanzada"
+            elif hyrox_readiness >= 40:
+                fase_txt = "base en construcción"
+            else:
+                fase_txt = "fase inicial"
+            estado_txt = f"El atleta está en {fase_txt} para Hyrox ({hyrox_readiness}% preparación)."
+        elif total_entrenos > 0:
+            estado_txt = "Entrenos registrados. Sin objetivo Hyrox activo."
+        else:
+            estado_txt = "Sin historial suficiente para análisis."
+        return {'estado': estado_txt, 'lectura': lectura, 'riesgo': riesgo}
+
+    resumen_global = _resumen_global()
 
     # --- 6. CONSTRUIR EL CONTEXTO FINAL ---
     context = {
@@ -2646,11 +2748,6 @@ def detalle_cliente(request, cliente_id):
         'historial_semanal': dict(sorted(historial_semanal.items(), reverse=True)),
         'total_entrenos': total_entrenos,
         'promedio_semanal': promedio_semanal,
-        'grafico_data': json.dumps(grafico_data),
-        'fechas': json.dumps(fechas),
-        'pesos': json.dumps(pesos),
-        'grasas': json.dumps(grasas),
-        'cinturas': json.dumps(cinturas),
         'objetivos': objetivos,
         'today': hoy,
         'peso_7d': peso_7d,
@@ -2671,18 +2768,27 @@ def detalle_cliente(request, cliente_id):
         'todas_las_rutinas': todas_las_rutinas,
         'edad': edad,
         'records_prs': records_list,
-        # Nuevos
+        # Estado actual
+        'acwr_valor': acwr_valor,
+        'acwr_zona': acwr_zona,
+        'resumen_global': resumen_global,
+        # Hyrox
         'hyrox_objetivo': hyrox_objetivo,
         'hyrox_readiness': hyrox_readiness,
         'hyrox_dias_para_evento': hyrox_dias_para_evento,
+        'hyrox_fase': hyrox_fase,
+        'hyrox_fuga': hyrox_fuga,
+        'tsb_data': tsb_data,
+        # Salud
         'lesion_activa': lesion_activa,
-        'acwr_valor': acwr_valor,
-        'acwr_zona': acwr_zona,
+        # Módulos
         'perfil_nutricional': perfil_nutricional,
         'target_nutricional': target_nutricional,
         'perfil_gamificacion': perfil_gamificacion,
         'logros_completados': logros_completados,
         'pruebas_activas': pruebas_activas,
+        # Timeline unificado
+        'actividad_reciente': actividad_reciente,
     }
 
     return render(request, 'clientes/detalle.html', context)
