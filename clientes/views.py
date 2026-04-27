@@ -2566,13 +2566,15 @@ def detalle_cliente(request, cliente_id):
     todos_los_programas = Programa.objects.all()
     todas_las_rutinas = Rutina.objects.all()
 
-    # --- 6b. HYROX + TSB ---
+    # --- 6b. HYROX + TSB + PERFIL ATLÉTICO ---
     hyrox_objetivo = None
     hyrox_readiness = None
     hyrox_dias_para_evento = None
     hyrox_fase = None
     tsb_data = None
+    sleep_penalty = None
     hyrox_fuga = None
+    perfil_atletico = None
     try:
         from hyrox.models import HyroxObjective, UserInjury
         from hyrox.training_engine import HyroxLoadManager
@@ -2581,19 +2583,21 @@ def detalle_cliente(request, cliente_id):
             hyrox_readiness = hyrox_objetivo.get_race_readiness_score()
             hyrox_dias_para_evento = (hyrox_objetivo.fecha_evento - hoy).days
             tsb_raw = HyroxLoadManager.calcular_ctl_atl_tsb(hyrox_objetivo)
+            sleep_penalty = round(HyroxLoadManager.get_sleep_penalty(hyrox_objetivo), 1)
             tsb_data = {
                 'tsb': tsb_raw['tsb'],
                 'ctl': tsb_raw['ctl'],
                 'atl': tsb_raw['atl'],
-                'estado': HyroxLoadManager.get_estado_forma(tsb_raw['tsb']),
+                'tsb_efectivo': round(tsb_raw['tsb'] - sleep_penalty, 1),
+                'estado': HyroxLoadManager.get_estado_forma(tsb_raw['tsb'] - sleep_penalty),
             }
-            # Fase actual del objetivo (primeras 2 semanas = Base, etc.)
+            # Fase actual
             try:
                 breakdown = hyrox_objetivo.get_readiness_breakdown()
                 hyrox_fase = breakdown.get('fase_actual', None)
             except Exception:
                 pass
-            # Estación más débil (actividades con menor progreso respecto al estándar)
+            # Estación más débil
             try:
                 from hyrox.services import CompetitionStandardsService
                 splits = CompetitionStandardsService.get_splits_por_estacion(hyrox_objetivo)
@@ -2601,6 +2605,12 @@ def detalle_cliente(request, cliente_id):
                     debiles = [s for s in splits if s.get('status') in ('priority', 'needs_work')]
                     debiles.sort(key=lambda x: x.get('pct_ref', 100))
                     hyrox_fuga = debiles[0].get('nombre') if debiles else None
+            except Exception:
+                pass
+            # Perfil atlético Power/Endurance/Hybrid
+            try:
+                from hyrox.services import HyroxAthleticProfile
+                perfil_atletico = HyroxAthleticProfile.compute(hyrox_objetivo)
             except Exception:
                 pass
     except Exception:
@@ -2667,7 +2677,15 @@ def detalle_cliente(request, cliente_id):
     except Exception:
         pass
 
-    # --- 6g. ACTIVIDAD RECIENTE UNIFICADA (gym + hyrox) ---
+    # --- 6g. GYM EXTERNAL LOAD ---
+    gym_load = {'entrenos_count': 0, 'volumen_total_kg': 0, 'rpe_medio_gym': 0.0, 'fatiga_gym': 'Baja'}
+    try:
+        from hyrox.training_engine import HyroxTrainingEngine
+        gym_load = HyroxTrainingEngine._get_gym_external_load(cliente, dias=7)
+    except Exception:
+        pass
+
+    # --- 6h. ACTIVIDAD RECIENTE UNIFICADA (gym + hyrox) ---
     actividad_reciente = []
     try:
         from hyrox.models import HyroxSession
@@ -2779,6 +2797,9 @@ def detalle_cliente(request, cliente_id):
         'hyrox_fase': hyrox_fase,
         'hyrox_fuga': hyrox_fuga,
         'tsb_data': tsb_data,
+        'sleep_penalty': sleep_penalty,
+        'perfil_atletico': perfil_atletico,
+        'gym_load': gym_load,
         # Salud
         'lesion_activa': lesion_activa,
         # Módulos
