@@ -47,7 +47,18 @@
         </div>
 
         <div class="flex-grow text-center md:text-left">
-            <h1 class="font-display leading-none mb-1" style="font-size:2rem;color:var(--lol-gold-bright);">{{ cliente.nombre }}</h1>
+            <div class="flex flex-wrap items-center gap-3 mb-1">
+                <h1 class="font-display leading-none" style="font-size:2rem;color:var(--lol-gold-bright);">{{ cliente.nombre }}</h1>
+                {% if perfil_atletico and perfil_atletico.label %}
+                <span class="stat-pill font-bold
+                    {% if perfil_atletico.perfil == 'power' %}border-orange-600 text-orange-300 bg-orange-900/20
+                    {% elif perfil_atletico.perfil == 'endurance' %}border-blue-600 text-blue-300 bg-blue-900/20
+                    {% else %}border-purple-600 text-purple-300 bg-purple-900/20{% endif %}">
+                    <i class="fas {% if perfil_atletico.perfil == 'power' %}fa-fist-raised{% elif perfil_atletico.perfil == 'endurance' %}fa-running{% else %}fa-yin-yang{% endif %} mr-1"></i>
+                    {{ perfil_atletico.label }}
+                </span>
+                {% endif %}
+            </div>
             <p class="text-[.72rem] text-[var(--lol-text-dim)] tracking-widest uppercase mb-3">
                 {% if edad %}{{ edad }} años · {% endif %}
                 Objetivo: {{ cliente.get_objetivo_principal_display|default:"General" }}
@@ -130,8 +141,25 @@
                 {% if hyrox_fuga %}
                 <div class="row-metric"><span class="label">Fuga detectada</span><span class="value text-sm text-orange-400">{{ hyrox_fuga }}</span></div>
                 {% endif %}
+                {% if perfil_atletico and perfil_atletico.pct_comp_sled %}
+                <div class="row-metric">
+                    <span class="label">Sled vs RM</span>
+                    <span class="value text-sm {% if perfil_atletico.pct_comp_sled > 80 %}text-red-400{% elif perfil_atletico.pct_comp_sled > 65 %}text-yellow-400{% else %}text-green-400{% endif %}">
+                        {{ perfil_atletico.pct_comp_sled }}%
+                        {% if perfil_atletico.pct_comp_sled > 80 %}<i class="fas fa-exclamation-triangle ml-1"></i>{% endif %}
+                    </span>
+                </div>
+                {% endif %}
             </div>
         </div>
+        {% if perfil_atletico and perfil_atletico.descripcion %}
+        <p class="text-[10px] text-[var(--lol-text-dim)] italic mb-3 leading-relaxed">{{ perfil_atletico.descripcion }}</p>
+        {% endif %}
+        {% if perfil_atletico and perfil_atletico.ajuste_plan.aviso %}
+        <div class="text-[10px] text-yellow-300 bg-yellow-900/20 border border-yellow-700/40 rounded-lg px-3 py-2 mb-3">
+            <i class="fas fa-exclamation-triangle mr-1"></i>{{ perfil_atletico.ajuste_plan.aviso }}
+        </div>
+        {% endif %}
         <a href="{% url 'hyrox:dashboard' %}" class="btn-lol-secondary text-xs w-full justify-center py-1.5"><i class="fas fa-arrow-right mr-1"></i>Ver dashboard Hyrox</a>
         {% else %}
         <div class="text-center py-6">
@@ -149,19 +177,32 @@
         <!-- TSB -->
         <div class="mb-4">
             <div class="flex items-baseline gap-3 mb-1">
+                {% if tsb_data %}
                 <span class="font-display text-3xl
-                    {% if tsb_data %}
-                        {% if tsb_data.tsb >= 10 %}text-green-400
-                        {% elif tsb_data.tsb >= 0 %}text-cyan-400
-                        {% elif tsb_data.tsb >= -15 %}text-yellow-400
-                        {% else %}text-red-400{% endif %}
-                    {% else %}text-[var(--lol-text-dim)]{% endif %}">
-                    {% if tsb_data %}{{ tsb_data.tsb }}{% else %}—{% endif %}
+                    {% if tsb_data.tsb_efectivo >= 10 %}text-green-400
+                    {% elif tsb_data.tsb_efectivo >= 0 %}text-cyan-400
+                    {% elif tsb_data.tsb_efectivo >= -15 %}text-yellow-400
+                    {% elif tsb_data.tsb_efectivo >= -25 %}text-orange-400
+                    {% else %}text-red-400{% endif %}">
+                    {{ tsb_data.tsb_efectivo }}
+                    {% if tsb_data.tsb_efectivo < -25 %}<i class="fas fa-exclamation-triangle text-lg ml-1 text-red-400"></i>{% endif %}
                 </span>
-                <span class="text-[9px] uppercase tracking-widest text-[var(--lol-text-dim)]">TSB (Hyrox)</span>
+                {% else %}
+                <span class="font-display text-3xl text-[var(--lol-text-dim)]">—</span>
+                {% endif %}
+                <span class="text-[9px] uppercase tracking-widest text-[var(--lol-text-dim)]">TSB efectivo</span>
             </div>
             {% if tsb_data %}
-            <p class="text-xs text-[var(--lol-text-dim)]">{{ tsb_data.estado.estado }} — {{ tsb_data.estado.recomendacion }}</p>
+            <p class="text-xs {% if tsb_data.tsb_efectivo < -15 %}text-orange-300{% else %}text-[var(--lol-text-dim)]{% endif %}">
+                {{ tsb_data.estado.estado }} — {{ tsb_data.estado.recomendacion }}
+            </p>
+            {% if sleep_penalty and sleep_penalty > 0 %}
+            <div class="flex items-center gap-1.5 mt-1.5 text-[10px] text-indigo-300 bg-indigo-900/20 border border-indigo-700/30 rounded px-2 py-1">
+                <i class="fas fa-moon text-[9px]"></i>
+                Penalización sueño: −{{ sleep_penalty }} pts sobre TSB
+                <span class="text-[var(--lol-text-dim)]">(TSB real: {{ tsb_data.tsb }})</span>
+            </div>
+            {% endif %}
             {% else %}
             <p class="text-xs text-[var(--lol-muted)]">Sin sesiones Hyrox con FC registrada.</p>
             {% endif %}
@@ -175,11 +216,17 @@
             <div class="flex items-baseline gap-3 mb-1">
                 <span class="font-display text-3xl {% if acwr_zona %}{{ acwr_zona.1 }}{% else %}text-[var(--lol-text-dim)]{% endif %}">
                     {% if acwr_valor %}{{ acwr_valor }}{% else %}—{% endif %}
+                    {% if acwr_valor and acwr_valor > 1.5 %}<i class="fas fa-exclamation-triangle text-lg ml-1 text-red-400"></i>{% endif %}
                 </span>
-                <span class="text-[9px] uppercase tracking-widest text-[var(--lol-text-dim)]">ACWR (unificado)</span>
+                <span class="text-[9px] uppercase tracking-widest text-[var(--lol-text-dim)]">ACWR unificado</span>
             </div>
             {% if acwr_zona %}
             <p class="text-xs {{ acwr_zona.1 }}">{{ acwr_zona.2 }}</p>
+            {% if acwr_valor > 1.5 %}
+            <p class="text-[10px] text-red-300 bg-red-900/20 border border-red-700/30 rounded px-2 py-1 mt-1">
+                <i class="fas fa-ban mr-1"></i>Reduce volumen esta semana. Riesgo de lesión por sobrecarga.
+            </p>
+            {% endif %}
             {% else %}
             <p class="text-xs text-[var(--lol-muted)]">Sin 28 días de datos suficientes.</p>
             {% endif %}
@@ -243,11 +290,21 @@
 
     <!-- Gym -->
     <div class="mc mc-hover p-5">
-        <div class="section-label"><i class="fas fa-dumbbell text-purple-400"></i> Gym</div>
+        <div class="section-label"><i class="fas fa-dumbbell text-purple-400"></i> Gym · Últimos 7 días</div>
         <div class="space-y-0">
-            <div class="row-metric"><span class="label">Esta semana</span><span class="value text-xl">{{ entrenos_esta_semana }}</span></div>
-            <div class="row-metric"><span class="label">Total entrenos</span><span class="value">{{ total_entrenos }}</span></div>
-            <div class="row-metric"><span class="label">Media semanal</span><span class="value">{{ promedio_semanal }}</span></div>
+            <div class="row-metric">
+                <span class="label">Fatiga</span>
+                <span class="value text-sm
+                    {% if gym_load.fatiga_gym == 'Alta' %}text-red-400
+                    {% elif gym_load.fatiga_gym == 'Media' %}text-yellow-400
+                    {% else %}text-green-400{% endif %}">
+                    {{ gym_load.fatiga_gym }}
+                    {% if gym_load.fatiga_gym == 'Alta' %}<i class="fas fa-exclamation-triangle ml-1 text-xs"></i>{% endif %}
+                </span>
+            </div>
+            <div class="row-metric"><span class="label">Sesiones</span><span class="value text-xl">{{ gym_load.entrenos_count }}</span></div>
+            <div class="row-metric"><span class="label">Volumen total</span><span class="value">{{ gym_load.volumen_total_kg }} kg</span></div>
+            <div class="row-metric"><span class="label">RPE medio</span><span class="value">{{ gym_load.rpe_medio_gym }}</span></div>
             {% if ultima_revision.peso_corporal %}
             <div class="row-metric"><span class="label">Peso</span>
                 <span class="value">{{ ultima_revision.peso_corporal }} kg
@@ -256,10 +313,12 @@
                 </span>{% endif %}</span>
             </div>
             {% endif %}
-            {% if ultimo_entreno %}
-            <div class="row-metric"><span class="label">Último</span><span class="value text-sm">{{ ultimo_entreno.fecha|date:"d M" }}</span></div>
-            {% endif %}
         </div>
+        {% if gym_load.fatiga_gym == 'Alta' %}
+        <div class="text-[10px] text-red-300 bg-red-900/20 border border-red-700/30 rounded px-2 py-1.5 mt-2">
+            <i class="fas fa-dumbbell mr-1"></i>Fatiga de gym elevada. Sesiones Hyrox ajustadas a técnica y Z2.
+        </div>
+        {% endif %}
         <a href="{% url 'entrenos:dashboard_ejercicios' cliente.id %}" class="btn-lol-secondary text-[10px] w-full justify-center py-1.5 mt-3"><i class="fas fa-chart-bar mr-1"></i>Analytics gym</a>
     </div>
 
