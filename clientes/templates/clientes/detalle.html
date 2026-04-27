@@ -6,496 +6,687 @@
 
 {% block extra_css %}
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="{% static 'css/variables-base.css' %}">
-<link rel="stylesheet" href="{% static 'css/entrenamiento_activo.css' %}">
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
-.mc { background:rgba(0,0,0,.45)!important; backdrop-filter:blur(14px) saturate(180%)!important; border:1px solid var(--lol-border-subtle)!important; box-shadow:0 0 18px rgba(0,0,0,.5),inset 0 0 8px rgba(200,170,110,.04)!important; border-radius:12px!important; }
-.mc-hover { transition:border-color .2s,transform .2s; }
-.mc-hover:hover { border-color:rgba(200,170,110,.35)!important; transform:translateY(-1px); }
-.avatar-glow { padding:4px; border-radius:50%; background:linear-gradient(135deg,var(--lol-gold-dark),var(--lol-gold-mid),var(--lol-gold-dark)); background-size:200% 200%; animation:ag 4s ease infinite; }
-@keyframes ag { 0%,100%{background-position:0 50%} 50%{background-position:100% 50%} }
-.avatar-img { border-radius:50%; width:100px; height:100px; object-fit:cover; border:3px solid var(--lol-deep); }
-.avatar-placeholder { border-radius:50%; width:100px; height:100px; display:flex; align-items:center; justify-content:center; background:var(--lol-deep); color:var(--lol-gold-dark); font-size:2.5rem; border:3px solid var(--lol-gold-dark); }
-.stat-pill { font-size:.65rem; letter-spacing:.06em; text-transform:uppercase; padding:3px 9px; border-radius:999px; border:1px solid; }
-.section-label { font-family:'Bebas Neue',sans-serif; font-size:.75rem; letter-spacing:.12em; text-transform:uppercase; color:var(--lol-gold-mid); margin-bottom:.75rem; display:flex; align-items:center; gap:.5rem; }
-.riesgo-bajo  { color:#34d399; }
-.riesgo-medio { color:#fbbf24; }
-.riesgo-alto  { color:#f87171; }
-.row-metric { display:flex; justify-content:space-between; align-items:baseline; padding:.35rem 0; border-bottom:1px solid rgba(255,255,255,.05); font-size:.72rem; }
-.row-metric:last-child { border-bottom:none; }
-.row-metric .label { color:var(--lol-text-dim); }
-.row-metric .value { font-family:'JetBrains Mono',monospace; color:var(--lol-gold-bright); font-size:.9rem; }
+/* ═══════════════════════════════════════════════
+   COMMAND CENTER — race-bib aesthetic
+   ═══════════════════════════════════════════════ */
+.cc-wrap {
+  --bg:      #EFEAE1;
+  --ink:     #0F0F0E;
+  --ink-2:   #2A2926;
+  --ink-3:   rgba(15,15,14,.55);
+  --ink-4:   rgba(15,15,14,.28);
+  --line:    rgba(15,15,14,.12);
+  --line-2:  rgba(15,15,14,.25);
+  --paper:   #F7F3EA;
+  --paper-2: #E4DED1;
+  --accent:  oklch(0.55 0.21 28);   /* burnt red */
+  --accent-2:oklch(0.62 0.18 60);   /* amber */
+  --ok:      oklch(0.55 0.15 145);  /* green */
+  --warn:    oklch(0.72 0.17 70);   /* yellow */
+  --danger:  oklch(0.55 0.22 25);   /* red */
+  --font-d:  'Archivo Black','Archivo',sans-serif;
+  --font-b:  'Archivo',system-ui,sans-serif;
+  --font-m:  'JetBrains Mono',ui-monospace,monospace;
+
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-b);
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+  padding: 24px 16px 60px;
+}
+.cc-inner { max-width: 660px; margin: 0 auto; }
+
+/* ── SECTION ─── */
+.cc-sec { padding: 20px 0 0; }
+.cc-sec-head { display:flex; align-items:center; gap:8px; margin-bottom:12px; }
+.cc-sec-num  { font-family:var(--font-m); font-size:10px; font-weight:700; color:var(--ink-4); letter-spacing:.15em; }
+.cc-sec-title{ margin:0; font-family:var(--font-d); font-size:14px; letter-spacing:.04em; color:var(--ink); text-transform:uppercase; }
+.cc-sec-line { flex:1; height:1px; background:var(--line); }
+
+/* ── CARD / STRIP ─── */
+.cc-card { background:var(--paper); border:1px solid var(--line); border-radius:6px; padding:16px; }
+.cc-card + .cc-card { margin-top:8px; }
+.cc-card-head { display:flex; align-items:center; gap:6px; margin-bottom:14px;
+  padding-bottom:10px; border-bottom:1px solid var(--line); }
+.cc-card-dot  { width:3px; height:14px; background:var(--accent); border-radius:1px; flex-shrink:0; }
+.cc-card-label{ font-family:var(--font-m); font-size:10px; font-weight:700;
+  letter-spacing:.16em; color:var(--ink-3); text-transform:uppercase; }
+.cc-card-line { flex:1; height:1px; background:var(--line); }
+.cc-card-action { font-family:var(--font-m); font-size:9px; font-weight:700;
+  letter-spacing:.1em; color:var(--ink-3); text-decoration:none; text-transform:uppercase;
+  transition:color .15s; }
+.cc-card-action:hover { color:var(--accent); text-decoration:none; }
+
+/* ── BIB HERO ─── */
+.cc-bib { background:var(--paper); border:2px solid var(--ink); border-radius:8px; padding:16px 18px 18px; }
+.cc-bib-meta { display:flex; justify-content:space-between; font-family:var(--font-m);
+  font-size:10px; font-weight:700; letter-spacing:.12em; color:var(--ink-3);
+  text-transform:uppercase; margin-bottom:6px; }
+.cc-bib-name  { font-family:var(--font-d); font-size:clamp(2.2rem,7vw,3rem);
+  line-height:1; letter-spacing:-.03em; color:var(--ink); text-transform:uppercase; }
+.cc-bib-sub   { font-family:var(--font-m); font-size:10px; font-weight:700;
+  letter-spacing:.18em; color:var(--ink-3); text-transform:uppercase; margin-top:4px; }
+
+/* ── BADGE PILLS ─── */
+.cc-pill { font-family:var(--font-m); font-size:9px; font-weight:700;
+  letter-spacing:.1em; text-transform:uppercase; padding:3px 10px;
+  border:1.5px solid; border-radius:2px; display:inline-flex; align-items:center; gap:5px; }
+.cc-pill-accent { border-color:var(--accent); color:var(--accent); background:rgba(180,60,30,.06); }
+.cc-pill-ok     { border-color:var(--ok);     color:var(--ok);     background:rgba(30,160,90,.06); }
+.cc-pill-warn   { border-color:var(--warn);   color:var(--warn);   background:rgba(200,150,30,.06); }
+.cc-pill-danger { border-color:var(--danger); color:var(--danger); background:rgba(200,40,40,.06); }
+.cc-pill-ink    { border-color:var(--ink-2);  color:var(--ink-2);  background:transparent; }
+.cc-pill-amber  { border-color:var(--accent-2); color:var(--accent-2); background:rgba(200,140,30,.07); }
+.cc-pill-power    { border-color:#c2410c; color:#c2410c; background:rgba(194,65,12,.07); }
+.cc-pill-endurance{ border-color:#1d4ed8; color:#1d4ed8; background:rgba(29,78,216,.07); }
+.cc-pill-hybrid   { border-color:#7c3aed; color:#7c3aed; background:rgba(124,58,237,.07); }
+
+/* ── STAT ROW ─── */
+.cc-stat { display:flex; justify-content:space-between; align-items:baseline;
+  padding:8px 0; border-bottom:1px solid var(--line); font-size:12px; }
+.cc-stat:last-child { border-bottom:none; }
+.cc-stat .sk { color:var(--ink-3); display:flex; align-items:center; gap:6px; }
+.cc-stat .sv { font-family:var(--font-m); font-weight:700; font-size:14px; color:var(--ink); }
+.cc-stat .sv.ok     { color:var(--ok); }
+.cc-stat .sv.warn   { color:var(--warn); }
+.cc-stat .sv.danger { color:var(--danger); }
+.cc-stat .sv.accent { color:var(--accent); }
+
+/* ── GRID 2 / 3 ─── */
+.cc-grid2 { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.cc-grid3 { display:grid; grid-template-columns:repeat(3,1fr); gap:1px;
+  background:var(--line); border:1px solid var(--line); }
+.cc-g3cell { background:var(--paper); padding:12px 10px; text-align:center; }
+.cc-g3-lbl { font-family:var(--font-m); font-size:9px; font-weight:700;
+  letter-spacing:.12em; color:var(--ink-3); text-transform:uppercase; margin-bottom:4px; }
+.cc-g3-val { font-family:var(--font-d); font-size:24px; line-height:1;
+  letter-spacing:-.03em; font-variant-numeric:tabular-nums; color:var(--ink); }
+.cc-g3-val span { font-size:11px; color:var(--ink-4); }
+
+/* ── READINESS BLOCK ─── */
+.cc-readiness { background:var(--accent); color:var(--paper); border-radius:4px;
+  padding:14px; border:1.5px solid var(--ink); }
+.cc-rd-lbl  { font-family:var(--font-m); font-size:10px; font-weight:700;
+  letter-spacing:.14em; opacity:.85; text-transform:uppercase; margin-bottom:4px; }
+.cc-rd-num  { font-family:var(--font-d); font-size:48px; line-height:1;
+  letter-spacing:-.03em; font-variant-numeric:tabular-nums; }
+.cc-rd-unit { font-family:var(--font-m); font-size:11px; opacity:.7; margin-left:3px; }
+.cc-rd-bar  { height:4px; background:rgba(0,0,0,.25); border-radius:2px; overflow:hidden; margin:8px 0; }
+.cc-rd-fill { height:100%; background:var(--paper); transition:width 1.2s cubic-bezier(.4,0,.2,1); }
+.cc-rd-desc { font-size:11px; opacity:.8; line-height:1.45; font-style:italic; margin-top:6px; }
+
+/* ── NOTE / ALERT ─── */
+.cc-note { padding:9px 12px; border-left:2px solid var(--accent-2); background:var(--paper-2);
+  font-size:12px; line-height:1.5; color:var(--ink-2); border-radius:2px; margin-top:8px; }
+.cc-note.danger { border-left-color:var(--danger); }
+.cc-note.ok     { border-left-color:var(--ok); }
+.cc-note.warn   { border-left-color:var(--warn); }
+.cc-note.indigo { border-left-color:#4f46e5; }
+
+/* ── BAR PROGRESS ─── */
+.cc-bar { height:3px; background:var(--line); border-radius:2px; overflow:hidden; margin-top:5px; }
+.cc-bar-fill { height:100%; border-radius:2px; background:var(--accent);
+  transition:width 1.2s cubic-bezier(.4,0,.2,1); }
+.cc-bar-fill.ok   { background:var(--ok); }
+.cc-bar-fill.warn { background:var(--warn); }
+
+/* ── BUTTONS ─── */
+.cc-btn { display:inline-flex; align-items:center; gap:5px;
+  padding:7px 14px; border:1.5px solid var(--ink); background:transparent; color:var(--ink);
+  font-family:var(--font-m); font-size:10px; font-weight:700; letter-spacing:.1em;
+  text-transform:uppercase; cursor:pointer; text-decoration:none;
+  border-radius:2px; transition:all .15s; }
+.cc-btn:hover { background:var(--ink); color:var(--paper); text-decoration:none; }
+.cc-btn-primary { background:var(--accent); border-color:var(--accent); color:var(--paper); }
+.cc-btn-primary:hover { background:var(--ink); border-color:var(--ink); }
+.cc-btn-ghost { border-color:var(--line-2); color:var(--ink-3); }
+.cc-btn-ghost:hover { background:var(--paper-2); color:var(--ink); border-color:var(--ink-2); }
+.cc-btn-sm { padding:4px 10px; font-size:9px; }
+.cc-btn-full { display:flex; justify-content:center; width:100%; margin-top:12px; }
+
+/* ── ACTIVITY ROW ─── */
+.cc-act-row { display:flex; align-items:center; gap:12px; padding:9px 0;
+  border-bottom:1px solid var(--line); }
+.cc-act-row:last-child { border-bottom:none; }
+.cc-act-icon { width:32px; height:32px; border-radius:4px; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center; font-size:13px; }
+.cc-act-icon.gym   { background:rgba(124,58,237,.1); color:#7c3aed; }
+.cc-act-icon.hyrox { background:rgba(180,60,30,.1);  color:var(--accent); }
+.cc-act-body { flex:1; min-width:0; }
+.cc-act-name { font-family:var(--font-d); font-size:13px; color:var(--ink);
+  text-transform:uppercase; letter-spacing:-.01em; white-space:nowrap;
+  overflow:hidden; text-overflow:ellipsis; }
+.cc-act-meta { font-family:var(--font-m); font-size:9px; font-weight:700;
+  color:var(--ink-3); letter-spacing:.1em; text-transform:uppercase; margin-top:1px; }
+.cc-act-date { font-family:var(--font-m); font-size:11px; color:var(--accent);
+  font-weight:700; letter-spacing:.08em; flex-shrink:0; }
+
+/* ── PR ROW ─── */
+.cc-pr-row { display:grid; grid-template-columns:1fr auto; align-items:baseline;
+  padding:8px 0; border-bottom:1px solid var(--line); }
+.cc-pr-row:last-child { border-bottom:none; }
+.cc-pr-name { font-family:var(--font-b); font-size:12px; color:var(--ink-2); }
+.cc-pr-val  { font-family:var(--font-d); font-size:20px; letter-spacing:-.02em;
+  color:var(--ink); font-variant-numeric:tabular-nums; }
+.cc-pr-val span { font-size:11px; color:var(--ink-4); font-family:var(--font-m); }
+.cc-pr-date { font-family:var(--font-m); font-size:9px; color:var(--ink-4);
+  grid-column:2; text-align:right; margin-top:1px; }
+
+/* ── LOGRO ─── */
+.cc-logro { display:flex; align-items:center; gap:12px; padding:10px;
+  background:var(--paper-2); border:1px solid var(--line); border-radius:4px; }
+.cc-logro + .cc-logro { margin-top:6px; }
+.cc-logro-icon { font-size:18px; color:var(--accent); width:24px; text-align:center; flex-shrink:0; }
+.cc-logro-locked .cc-logro-icon { color:var(--ink-4); filter:grayscale(1); }
+.cc-logro-locked { opacity:.3; }
+.cc-logro-name { font-family:var(--font-d); font-size:12px; color:var(--ink);
+  text-transform:uppercase; letter-spacing:-.01em; }
+.cc-logro-desc { font-size:11px; color:var(--ink-3); margin-top:1px; }
+
+/* ── RIESGO BADGE ─── */
+.cc-riesgo { display:inline-flex; align-items:center; gap:6px; padding:5px 12px;
+  border:1.5px solid; border-radius:2px; font-family:var(--font-m); font-size:9px;
+  font-weight:700; letter-spacing:.14em; text-transform:uppercase; }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="max-w-5xl mx-auto px-4 py-8 space-y-5">
+<div class="cc-wrap">
+<div class="cc-inner">
 
 <!-- ══════════════════════════════════════════════════
-     1. HERO
+     1 · HERO BIB
 ══════════════════════════════════════════════════ -->
-<div class="mc p-5 md:p-6">
-    <div class="flex flex-col md:flex-row items-center gap-5">
-        <div class="flex-shrink-0 avatar-glow">
-            {% if cliente.foto %}
-            <img src="{{ cliente.foto.url }}" alt="{{ cliente.nombre }}" class="avatar-img">
-            {% else %}
-            <div class="avatar-placeholder"><i class="fas fa-user"></i></div>
-            {% endif %}
-        </div>
+<div class="cc-bib">
+  <div class="cc-bib-meta">
+    <span>Centro de Mando · Atleta</span>
+    <span>{% now "d M Y" %}</span>
+  </div>
 
-        <div class="flex-grow text-center md:text-left">
-            <div class="flex flex-wrap items-center gap-3 mb-1">
-                <h1 class="font-display leading-none" style="font-size:2rem;color:var(--lol-gold-bright);">{{ cliente.nombre }}</h1>
-                {% if perfil_atletico and perfil_atletico.label %}
-                <span class="stat-pill font-bold
-                    {% if perfil_atletico.perfil == 'power' %}border-orange-600 text-orange-300 bg-orange-900/20
-                    {% elif perfil_atletico.perfil == 'endurance' %}border-blue-600 text-blue-300 bg-blue-900/20
-                    {% else %}border-purple-600 text-purple-300 bg-purple-900/20{% endif %}">
-                    <i class="fas {% if perfil_atletico.perfil == 'power' %}fa-fist-raised{% elif perfil_atletico.perfil == 'endurance' %}fa-running{% else %}fa-yin-yang{% endif %} mr-1"></i>
-                    {{ perfil_atletico.label }}
-                </span>
-                {% endif %}
-            </div>
-            <p class="text-[.72rem] text-[var(--lol-text-dim)] tracking-widest uppercase mb-3">
-                {% if edad %}{{ edad }} años · {% endif %}
-                Objetivo: {{ cliente.get_objetivo_principal_display|default:"General" }}
-                {% if hyrox_objetivo %} / Hyrox {{ hyrox_objetivo.get_categoria_display }}{% endif %}
-            </p>
+  <div style="display:flex;align-items:flex-start;gap:16px;flex-wrap:wrap;">
+    <div style="flex:1;min-width:0;">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:4px;">
+        <div class="cc-bib-name">{{ cliente.nombre }}</div>
+        {% if perfil_atletico and perfil_atletico.label %}
+        <span class="cc-pill cc-pill-{% if perfil_atletico.perfil == 'power' %}power{% elif perfil_atletico.perfil == 'endurance' %}endurance{% else %}hybrid{% endif %}">
+          <i class="fas {% if perfil_atletico.perfil == 'power' %}fa-fist-raised{% elif perfil_atletico.perfil == 'endurance' %}fa-running{% else %}fa-yin-yang{% endif %}"></i>
+          {{ perfil_atletico.label }}
+        </span>
+        {% endif %}
+      </div>
+      <div class="cc-bib-sub">
+        {% if edad %}{{ edad }} años · {% endif %}{{ cliente.get_objetivo_principal_display|default:"Entrenamiento General" }}
+        {% if hyrox_objetivo %} · Hyrox {{ hyrox_objetivo.get_categoria_display }}{% endif %}
+      </div>
 
-            <div class="flex flex-wrap gap-2 justify-center md:justify-start">
-                {% if perfil_gamificacion and perfil_gamificacion.nivel_actual %}
-                <span class="badge-lol stat-pill"><i class="fas fa-crown mr-1 text-[var(--lol-gold-dark)]"></i>Niv. {{ perfil_gamificacion.nivel_actual.numero }} · {{ perfil_gamificacion.puntos_totales }} XP</span>
-                <span class="badge-lol stat-pill"><i class="fas fa-fire mr-1"></i>{{ perfil_gamificacion.racha_actual|default:0 }}d racha</span>
-                {% endif %}
-                {% if cliente.membresia_activa %}
-                <span class="badge-lol stat-pill"><i class="fas fa-id-card mr-1"></i>Membresía activa</span>
-                {% else %}
-                <span class="badge-lol-danger stat-pill">Membresía inactiva</span>
-                {% endif %}
-                {% if lesion_activa %}
-                <span class="badge-lol-danger stat-pill animate-pulse"><i class="fas fa-shield-alt mr-1"></i>Lesión {{ lesion_activa.fase }}</span>
-                {% endif %}
-            </div>
-        </div>
-
-        <div class="flex flex-wrap gap-2 justify-center flex-shrink-0">
-            <a href="{% url 'entrenos:timeline_atleta' cliente.id %}" class="btn-lol-primary text-xs px-3 py-2"><i class="fas fa-stream mr-1"></i>Timeline</a>
-            <a href="{% url 'entrenos:registrar_actividad_libre' cliente.id %}" class="btn-lol-primary text-xs px-3 py-2" style="background:linear-gradient(135deg,#06b6d4,#0e7490)"><i class="fas fa-plus mr-1"></i>Actividad</a>
-            {% if hyrox_objetivo %}
-            <a href="{% url 'hyrox:dashboard' %}" class="btn-lol-secondary text-xs px-3 py-2"><i class="fas fa-flag-checkered mr-1"></i>Hyrox</a>
-            {% endif %}
-            <a href="{% url 'clientes:editar_cliente' cliente.id %}" class="btn-lol-secondary text-xs px-3 py-2"><i class="fas fa-pencil-alt mr-1"></i>Editar</a>
-        </div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:12px;">
+        {% if perfil_gamificacion and perfil_gamificacion.nivel_actual %}
+        <span class="cc-pill cc-pill-ink"><i class="fas fa-crown"></i>Niv.{{ perfil_gamificacion.nivel_actual.numero }} · {{ perfil_gamificacion.puntos_totales }} XP</span>
+        <span class="cc-pill cc-pill-ink"><i class="fas fa-fire"></i>{{ perfil_gamificacion.racha_actual|default:0 }}d</span>
+        {% endif %}
+        {% if cliente.membresia_activa %}
+        <span class="cc-pill cc-pill-ok"><i class="fas fa-id-card"></i>Activo</span>
+        {% else %}
+        <span class="cc-pill cc-pill-danger">Inactivo</span>
+        {% endif %}
+        {% if lesion_activa %}
+        <span class="cc-pill cc-pill-danger"><i class="fas fa-shield-alt"></i>Lesión {{ lesion_activa.fase }}</span>
+        {% endif %}
+      </div>
     </div>
+  </div>
+
+  <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:14px;padding-top:12px;border-top:1.5px dashed var(--line-2);">
+    <a href="{% url 'entrenos:timeline_atleta' cliente.id %}" class="cc-btn cc-btn-primary cc-btn-sm"><i class="fas fa-stream"></i>Timeline</a>
+    <a href="{% url 'entrenos:registrar_actividad_libre' cliente.id %}" class="cc-btn cc-btn-sm"><i class="fas fa-plus"></i>Actividad</a>
+    {% if hyrox_objetivo %}<a href="{% url 'hyrox:dashboard' %}" class="cc-btn cc-btn-ghost cc-btn-sm"><i class="fas fa-flag-checkered"></i>Hyrox</a>{% endif %}
+    <a href="{% url 'entrenos:dashboard_ejercicios' cliente.id %}" class="cc-btn cc-btn-ghost cc-btn-sm"><i class="fas fa-chart-line"></i>Analytics</a>
+    <a href="{% url 'clientes:editar_cliente' cliente.id %}" class="cc-btn cc-btn-ghost cc-btn-sm"><i class="fas fa-pencil-alt"></i>Editar</a>
+  </div>
 </div>
 
 <!-- ══════════════════════════════════════════════════
-     2. RESUMEN GLOBAL
+     2 · RESUMEN GLOBAL
 ══════════════════════════════════════════════════ -->
-<div class="mc p-5">
-    <div class="section-label"><i class="fas fa-brain text-purple-400"></i> Resumen Global del Atleta</div>
-    <div class="flex flex-col md:flex-row gap-4 items-start">
-        <div class="flex-grow">
-            <p class="text-sm text-[var(--lol-gold-bright)] font-semibold mb-1">{{ resumen_global.estado }}</p>
-            <p class="text-xs text-[var(--lol-text-dim)] leading-relaxed">{{ resumen_global.lectura }}</p>
-        </div>
-        <div class="flex-shrink-0 flex items-center gap-2 text-xs font-semibold px-4 py-2 rounded-xl border
-            {% if resumen_global.riesgo == 'bajo' %}border-green-700 bg-green-900/20 text-green-300
-            {% elif resumen_global.riesgo == 'medio' %}border-yellow-700 bg-yellow-900/20 text-yellow-300
-            {% else %}border-red-700 bg-red-900/20 text-red-300{% endif %}">
-            <i class="fas fa-circle text-[8px]"></i>
-            Riesgo {{ resumen_global.riesgo }}
-        </div>
+<div class="cc-sec">
+  <div class="cc-sec-head">
+    <span class="cc-sec-num">01</span>
+    <h2 class="cc-sec-title">Estado del Atleta</h2>
+    <div class="cc-sec-line"></div>
+  </div>
+  <div class="cc-card" style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;">
+    <div style="flex:1;min-width:0;">
+      <p style="font-family:var(--font-d);font-size:14px;color:var(--ink);text-transform:uppercase;letter-spacing:-.01em;margin-bottom:4px;">{{ resumen_global.estado }}</p>
+      <p style="font-size:12px;color:var(--ink-3);line-height:1.55;">{{ resumen_global.lectura }}</p>
     </div>
+    <div>
+      {% if resumen_global.riesgo == 'bajo' %}
+      <div class="cc-riesgo" style="border-color:var(--ok);color:var(--ok);"><i class="fas fa-circle" style="font-size:6px;"></i>Riesgo bajo</div>
+      {% elif resumen_global.riesgo == 'medio' %}
+      <div class="cc-riesgo" style="border-color:var(--warn);color:var(--warn);"><i class="fas fa-circle" style="font-size:6px;"></i>Riesgo medio</div>
+      {% else %}
+      <div class="cc-riesgo" style="border-color:var(--danger);color:var(--danger);"><i class="fas fa-exclamation-triangle" style="font-size:10px;"></i>Riesgo alto</div>
+      {% endif %}
+    </div>
+  </div>
 </div>
 
 <!-- ══════════════════════════════════════════════════
-     3. HYROX + CARGA / FATIGA
+     3 · HYROX + CARGA/FATIGA
 ══════════════════════════════════════════════════ -->
-<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<div class="cc-sec">
+  <div class="cc-sec-head">
+    <span class="cc-sec-num">02</span>
+    <h2 class="cc-sec-title">Hyrox & Carga</h2>
+    <div class="cc-sec-line"></div>
+  </div>
+  <div class="cc-grid2">
 
     <!-- Hyrox -->
-    <div class="mc p-5">
-        <div class="section-label"><i class="fas fa-flag-checkered text-cyan-400"></i> Hyrox</div>
-        {% if hyrox_objetivo %}
-        <div class="flex items-center gap-4 mb-4">
-            <div class="text-center">
-                <div class="font-display text-4xl
-                    {% if hyrox_readiness >= 70 %}text-green-400{% elif hyrox_readiness >= 40 %}text-yellow-400{% else %}text-red-400{% endif %}">
-                    {{ hyrox_readiness|default:"—" }}{% if hyrox_readiness %}<span class="text-lg">%</span>{% endif %}
-                </div>
-                <div class="text-[9px] uppercase tracking-wider text-[var(--lol-text-dim)] mt-0.5">Preparación Hyrox</div>
-            </div>
-            <div class="flex-grow space-y-1.5">
-                <div class="row-metric"><span class="label">Categoría</span><span class="value text-sm">{{ hyrox_objetivo.get_categoria_display }}</span></div>
-                {% if hyrox_fase %}<div class="row-metric"><span class="label">Fase</span><span class="value text-sm">{{ hyrox_fase }}</span></div>{% endif %}
-                <div class="row-metric">
-                    <span class="label">Race Day</span>
-                    <span class="value text-sm {% if hyrox_dias_para_evento <= 14 %}text-red-400{% elif hyrox_dias_para_evento <= 60 %}text-yellow-400{% else %}text-cyan-400{% endif %}">
-                        {{ hyrox_dias_para_evento }}d · {{ hyrox_objetivo.fecha_evento|date:"d M Y" }}
-                    </span>
-                </div>
-                {% if hyrox_fuga %}
-                <div class="row-metric"><span class="label">Fuga detectada</span><span class="value text-sm text-orange-400">{{ hyrox_fuga }}</span></div>
-                {% endif %}
-                {% if perfil_atletico and perfil_atletico.pct_comp_sled %}
-                <div class="row-metric">
-                    <span class="label">Sled vs RM</span>
-                    <span class="value text-sm {% if perfil_atletico.pct_comp_sled > 80 %}text-red-400{% elif perfil_atletico.pct_comp_sled > 65 %}text-yellow-400{% else %}text-green-400{% endif %}">
-                        {{ perfil_atletico.pct_comp_sled }}%
-                        {% if perfil_atletico.pct_comp_sled > 80 %}<i class="fas fa-exclamation-triangle ml-1"></i>{% endif %}
-                    </span>
-                </div>
-                {% endif %}
-            </div>
+    <div class="cc-card">
+      <div class="cc-card-head">
+        <div class="cc-card-dot"></div>
+        <span class="cc-card-label">Hyrox</span>
+        <div class="cc-card-line"></div>
+        {% if hyrox_objetivo %}<a href="{% url 'hyrox:dashboard' %}" class="cc-card-action">Ver →</a>{% endif %}
+      </div>
+      {% if hyrox_objetivo %}
+        <div class="cc-readiness">
+          <div class="cc-rd-lbl">Preparación Hyrox</div>
+          <div>
+            <span class="cc-rd-num">{{ hyrox_readiness|default:"—" }}</span>
+            {% if hyrox_readiness %}<span class="cc-rd-unit">%</span>{% endif %}
+          </div>
+          <div class="cc-rd-bar"><div class="cc-rd-fill" style="width:{% if hyrox_readiness %}{{ hyrox_readiness }}%{% else %}0%{% endif %}"></div></div>
+          {% if perfil_atletico and perfil_atletico.descripcion %}
+          <div class="cc-rd-desc">{{ perfil_atletico.descripcion|truncatewords:16 }}</div>
+          {% endif %}
         </div>
-        {% if perfil_atletico and perfil_atletico.descripcion %}
-        <p class="text-[10px] text-[var(--lol-text-dim)] italic mb-3 leading-relaxed">{{ perfil_atletico.descripcion }}</p>
-        {% endif %}
+
+        <div style="margin-top:10px;">
+          <div class="cc-stat">
+            <span class="sk">Categoría</span>
+            <span class="sv">{{ hyrox_objetivo.get_categoria_display }}</span>
+          </div>
+          {% if hyrox_fase %}
+          <div class="cc-stat">
+            <span class="sk">Fase</span>
+            <span class="sv accent">{{ hyrox_fase }}</span>
+          </div>
+          {% endif %}
+          <div class="cc-stat">
+            <span class="sk">Race Day</span>
+            <span class="sv {% if hyrox_dias_para_evento <= 14 %}danger{% elif hyrox_dias_para_evento <= 60 %}warn{% else %}accent{% endif %}">
+              {{ hyrox_dias_para_evento }}d
+            </span>
+          </div>
+          {% if hyrox_fuga %}
+          <div class="cc-stat">
+            <span class="sk">Fuga</span>
+            <span class="sv warn">{{ hyrox_fuga }}</span>
+          </div>
+          {% endif %}
+          {% if perfil_atletico and perfil_atletico.pct_comp_sled %}
+          <div class="cc-stat">
+            <span class="sk">Sled vs RM</span>
+            <span class="sv {% if perfil_atletico.pct_comp_sled > 80 %}danger{% elif perfil_atletico.pct_comp_sled > 65 %}warn{% else %}ok{% endif %}">
+              {{ perfil_atletico.pct_comp_sled }}%
+            </span>
+          </div>
+          {% endif %}
+        </div>
+
         {% if perfil_atletico and perfil_atletico.ajuste_plan.aviso %}
-        <div class="text-[10px] text-yellow-300 bg-yellow-900/20 border border-yellow-700/40 rounded-lg px-3 py-2 mb-3">
-            <i class="fas fa-exclamation-triangle mr-1"></i>{{ perfil_atletico.ajuste_plan.aviso }}
+        <div class="cc-note warn" style="margin-top:10px;">
+          <i class="fas fa-exclamation-triangle" style="color:var(--warn);margin-right:6px;"></i>{{ perfil_atletico.ajuste_plan.aviso }}
         </div>
         {% endif %}
-        <a href="{% url 'hyrox:dashboard' %}" class="btn-lol-secondary text-xs w-full justify-center py-1.5"><i class="fas fa-arrow-right mr-1"></i>Ver dashboard Hyrox</a>
-        {% else %}
-        <div class="text-center py-6">
-            <i class="fas fa-flag-checkered text-3xl text-[var(--lol-text-dim)] opacity-20 mb-3"></i>
-            <p class="text-xs text-[var(--lol-muted)] mb-3">Sin objetivo Hyrox activo.</p>
-            <a href="{% url 'hyrox:crear_objetivo' %}" class="btn-lol-primary text-xs px-4 py-2"><i class="fas fa-plus mr-1"></i>Crear objetivo</a>
+
+      {% else %}
+        <div style="padding:20px 0;text-align:center;">
+          <p style="font-size:12px;color:var(--ink-3);margin-bottom:12px;">Sin objetivo activo.</p>
+          <a href="{% url 'hyrox:crear_objetivo' %}" class="cc-btn cc-btn-primary cc-btn-sm"><i class="fas fa-plus"></i>Crear objetivo</a>
         </div>
-        {% endif %}
+      {% endif %}
     </div>
 
     <!-- Carga / Fatiga -->
-    <div class="mc p-5">
-        <div class="section-label"><i class="fas fa-heartbeat text-red-400"></i> Carga / Fatiga</div>
+    <div class="cc-card">
+      <div class="cc-card-head">
+        <div class="cc-card-dot" style="background:var(--danger);"></div>
+        <span class="cc-card-label">Carga / Fatiga</span>
+        <div class="cc-card-line"></div>
+        <a href="{% url 'entrenos:dashboard_ejercicios' cliente.id %}" class="cc-card-action">Ver →</a>
+      </div>
 
-        <!-- TSB -->
-        <div class="mb-4">
-            <div class="flex items-baseline gap-3 mb-1">
-                {% if tsb_data %}
-                <span class="font-display text-3xl
-                    {% if tsb_data.tsb_efectivo >= 10 %}text-green-400
-                    {% elif tsb_data.tsb_efectivo >= 0 %}text-cyan-400
-                    {% elif tsb_data.tsb_efectivo >= -15 %}text-yellow-400
-                    {% elif tsb_data.tsb_efectivo >= -25 %}text-orange-400
-                    {% else %}text-red-400{% endif %}">
-                    {{ tsb_data.tsb_efectivo }}
-                    {% if tsb_data.tsb_efectivo < -25 %}<i class="fas fa-exclamation-triangle text-lg ml-1 text-red-400"></i>{% endif %}
-                </span>
-                {% else %}
-                <span class="font-display text-3xl text-[var(--lol-text-dim)]">—</span>
-                {% endif %}
-                <span class="text-[9px] uppercase tracking-widest text-[var(--lol-text-dim)]">TSB efectivo</span>
-            </div>
-            {% if tsb_data %}
-            <p class="text-xs {% if tsb_data.tsb_efectivo < -15 %}text-orange-300{% else %}text-[var(--lol-text-dim)]{% endif %}">
-                {{ tsb_data.estado.estado }} — {{ tsb_data.estado.recomendacion }}
-            </p>
-            {% if sleep_penalty and sleep_penalty > 0 %}
-            <div class="flex items-center gap-1.5 mt-1.5 text-[10px] text-indigo-300 bg-indigo-900/20 border border-indigo-700/30 rounded px-2 py-1">
-                <i class="fas fa-moon text-[9px]"></i>
-                Penalización sueño: −{{ sleep_penalty }} pts sobre TSB
-                <span class="text-[var(--lol-text-dim)]">(TSB real: {{ tsb_data.tsb }})</span>
-            </div>
-            {% endif %}
-            {% else %}
-            <p class="text-xs text-[var(--lol-muted)]">Sin sesiones Hyrox con FC registrada.</p>
-            {% endif %}
+      <!-- TSB -->
+      <div style="margin-bottom:14px;">
+        <div style="font-family:var(--font-m);font-size:9px;font-weight:700;letter-spacing:.14em;color:var(--ink-3);text-transform:uppercase;margin-bottom:4px;">TSB efectivo</div>
+        <div style="display:flex;align-items:baseline;gap:8px;">
+          <span style="font-family:var(--font-d);font-size:40px;line-height:1;letter-spacing:-.03em;font-variant-numeric:tabular-nums;
+            color:{% if tsb_data %}{% if tsb_data.tsb_efectivo >= 10 %}var(--ok){% elif tsb_data.tsb_efectivo >= 0 %}#0e7490{% elif tsb_data.tsb_efectivo >= -15 %}var(--warn){% elif tsb_data.tsb_efectivo >= -25 %}var(--accent-2){% else %}var(--danger){% endif %}{% else %}var(--ink-4){% endif %};">
+            {% if tsb_data %}{{ tsb_data.tsb_efectivo }}{% else %}—{% endif %}
+          </span>
+          {% if tsb_data and tsb_data.tsb_efectivo < -25 %}
+          <i class="fas fa-exclamation-triangle" style="color:var(--danger);font-size:16px;"></i>
+          {% endif %}
         </div>
-
-        <!-- Divisor -->
-        <div class="border-t border-white/5 my-3"></div>
-
-        <!-- ACWR -->
-        <div>
-            <div class="flex items-baseline gap-3 mb-1">
-                <span class="font-display text-3xl {% if acwr_zona %}{{ acwr_zona.1 }}{% else %}text-[var(--lol-text-dim)]{% endif %}">
-                    {% if acwr_valor %}{{ acwr_valor }}{% else %}—{% endif %}
-                    {% if acwr_valor and acwr_valor > 1.5 %}<i class="fas fa-exclamation-triangle text-lg ml-1 text-red-400"></i>{% endif %}
-                </span>
-                <span class="text-[9px] uppercase tracking-widest text-[var(--lol-text-dim)]">ACWR unificado</span>
-            </div>
-            {% if acwr_zona %}
-            <p class="text-xs {{ acwr_zona.1 }}">{{ acwr_zona.2 }}</p>
-            {% if acwr_valor > 1.5 %}
-            <p class="text-[10px] text-red-300 bg-red-900/20 border border-red-700/30 rounded px-2 py-1 mt-1">
-                <i class="fas fa-ban mr-1"></i>Reduce volumen esta semana. Riesgo de lesión por sobrecarga.
-            </p>
-            {% endif %}
-            {% else %}
-            <p class="text-xs text-[var(--lol-muted)]">Sin 28 días de datos suficientes.</p>
-            {% endif %}
+        {% if tsb_data %}
+        <p style="font-size:11px;color:var(--ink-3);margin-top:3px;">{{ tsb_data.estado.estado }}</p>
+        <div class="cc-bar" style="margin-top:5px;">
+          <div class="cc-bar-fill {% if tsb_data.tsb_efectivo >= 0 %}ok{% elif tsb_data.tsb_efectivo >= -15 %}warn{% else %}{% endif %}"
+               style="width:{% if tsb_data %}{% if tsb_data.tsb_efectivo >= 10 %}100%{% elif tsb_data.tsb_efectivo >= 0 %}70%{% elif tsb_data.tsb_efectivo >= -15 %}45%{% else %}20%{% endif %}{% else %}0%{% endif %};
+               {% if tsb_data.tsb_efectivo < -15 %}background:var(--danger);{% endif %}"></div>
         </div>
-
-        <div class="border-t border-white/5 my-3"></div>
-        <a href="{% url 'entrenos:dashboard_ejercicios' cliente.id %}" class="btn-lol-secondary text-xs w-full justify-center py-1.5"><i class="fas fa-chart-line mr-1"></i>Ver dashboard analytics</a>
-    </div>
-</div>
-
-<!-- ══════════════════════════════════════════════════
-     4. SALUD / LIMITACIONES
-══════════════════════════════════════════════════ -->
-<div class="mc p-5">
-    <div class="section-label"><i class="fas fa-shield-alt text-orange-400"></i> Salud / Limitaciones</div>
-    {% if lesion_activa %}
-    <div class="flex flex-col md:flex-row gap-4 items-start">
-        <div class="flex-grow">
-            <div class="flex items-center gap-2 mb-2">
-                <span class="w-2 h-2 rounded-full bg-red-500 animate-pulse inline-block"></span>
-                <span class="text-sm font-semibold text-red-300">Lesión activa — {{ lesion_activa.zona_afectada|title }}</span>
-                <span class="stat-pill border-red-700 text-red-400 text-[10px]">Fase {{ lesion_activa.fase }}</span>
-            </div>
-            <div class="grid grid-cols-3 gap-3 text-xs">
-                <div class="row-metric flex-col gap-0"><span class="label">Desde</span><span class="value">{{ lesion_activa.fecha_inicio|date:"d/m/Y" }}</span></div>
-                <div class="row-metric flex-col gap-0"><span class="label">Gravedad</span><span class="value">{{ lesion_activa.gravedad }}/10</span></div>
-                <div class="row-metric flex-col gap-0"><span class="label">Días</span><span class="value">{{ lesion_activa.fecha_inicio|timesince|truncatewords:1 }}</span></div>
-            </div>
-            {% if lesion_activa.tags_restringidos %}
-            <p class="text-[10px] text-[var(--lol-text-dim)] mt-2">
-                <i class="fas fa-ban mr-1 text-red-400"></i>
-                Movimientos restringidos: {{ lesion_activa.tags_restringidos|join:", " }}
-            </p>
-            {% endif %}
-        </div>
-        <div class="flex flex-col gap-2 flex-shrink-0">
-            <a href="{% url 'hyrox:test_recuperacion' lesion_activa.id %}" class="btn-lol-primary text-xs px-3 py-2"><i class="fas fa-vial mr-1"></i>Test recuperación</a>
-            <a href="{% url 'hyrox:reportar_lesion' %}" class="btn-lol-secondary text-xs px-3 py-2"><i class="fas fa-plus mr-1"></i>Nueva molestia</a>
-        </div>
-    </div>
-    {% else %}
-    <div class="flex items-center justify-between">
-        <div class="flex items-center gap-3">
-            <div class="w-8 h-8 rounded-full bg-green-900/30 border border-green-700/40 flex items-center justify-center">
-                <i class="fas fa-check text-green-400 text-sm"></i>
-            </div>
-            <div>
-                <p class="text-sm text-green-300 font-semibold">Sin lesión activa</p>
-                <p class="text-[10px] text-[var(--lol-text-dim)]">Últimas molestias: ninguna registrada</p>
-            </div>
-        </div>
-        <a href="{% url 'hyrox:reportar_lesion' %}" class="btn-lol-secondary text-xs px-3 py-2"><i class="fas fa-exclamation-triangle mr-1"></i>Reportar molestia</a>
-    </div>
-    {% endif %}
-</div>
-
-<!-- ══════════════════════════════════════════════════
-     5. GYM + NUTRICIÓN + DIARIO
-══════════════════════════════════════════════════ -->
-<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-
-    <!-- Gym -->
-    <div class="mc mc-hover p-5">
-        <div class="section-label"><i class="fas fa-dumbbell text-purple-400"></i> Gym · Últimos 7 días</div>
-        <div class="space-y-0">
-            <div class="row-metric">
-                <span class="label">Fatiga</span>
-                <span class="value text-sm
-                    {% if gym_load.fatiga_gym == 'Alta' %}text-red-400
-                    {% elif gym_load.fatiga_gym == 'Media' %}text-yellow-400
-                    {% else %}text-green-400{% endif %}">
-                    {{ gym_load.fatiga_gym }}
-                    {% if gym_load.fatiga_gym == 'Alta' %}<i class="fas fa-exclamation-triangle ml-1 text-xs"></i>{% endif %}
-                </span>
-            </div>
-            <div class="row-metric"><span class="label">Sesiones</span><span class="value text-xl">{{ gym_load.entrenos_count }}</span></div>
-            <div class="row-metric"><span class="label">Volumen total</span><span class="value">{{ gym_load.volumen_total_kg }} kg</span></div>
-            <div class="row-metric"><span class="label">RPE medio</span><span class="value">{{ gym_load.rpe_medio_gym }}</span></div>
-            {% if ultima_revision.peso_corporal %}
-            <div class="row-metric"><span class="label">Peso</span>
-                <span class="value">{{ ultima_revision.peso_corporal }} kg
-                {% if peso_30d %}<span class="text-[10px] {% if peso_30d < 0 %}text-green-400{% else %}text-red-400{% endif %}">
-                    ({% if peso_30d > 0 %}+{% endif %}{{ peso_30d }})
-                </span>{% endif %}</span>
-            </div>
-            {% endif %}
-        </div>
-        {% if gym_load.fatiga_gym == 'Alta' %}
-        <div class="text-[10px] text-red-300 bg-red-900/20 border border-red-700/30 rounded px-2 py-1.5 mt-2">
-            <i class="fas fa-dumbbell mr-1"></i>Fatiga de gym elevada. Sesiones Hyrox ajustadas a técnica y Z2.
+        {% if sleep_penalty and sleep_penalty > 0 %}
+        <div class="cc-note indigo" style="margin-top:8px;font-size:11px;">
+          <i class="fas fa-moon" style="color:#4f46e5;margin-right:5px;"></i>
+          Sueño resta −{{ sleep_penalty }} pts · TSB real: {{ tsb_data.tsb }}
         </div>
         {% endif %}
-        <a href="{% url 'entrenos:dashboard_ejercicios' cliente.id %}" class="btn-lol-secondary text-[10px] w-full justify-center py-1.5 mt-3"><i class="fas fa-chart-bar mr-1"></i>Analytics gym</a>
+        {% endif %}
+      </div>
+
+      <div style="height:1px;background:var(--line);margin-bottom:12px;"></div>
+
+      <!-- ACWR -->
+      <div>
+        <div style="font-family:var(--font-m);font-size:9px;font-weight:700;letter-spacing:.14em;color:var(--ink-3);text-transform:uppercase;margin-bottom:4px;">ACWR unificado</div>
+        <div style="display:flex;align-items:baseline;gap:8px;">
+          <span style="font-family:var(--font-d);font-size:40px;line-height:1;letter-spacing:-.03em;font-variant-numeric:tabular-nums;
+            color:{% if acwr_zona %}{% if acwr_zona.0 == 'bajo' %}#0e7490{% elif acwr_zona.0 == 'optimo' %}var(--ok){% elif acwr_zona.0 == 'alerta' %}var(--warn){% else %}var(--danger){% endif %}{% else %}var(--ink-4){% endif %};">
+            {% if acwr_valor %}{{ acwr_valor }}{% else %}—{% endif %}
+          </span>
+          {% if acwr_valor and acwr_valor > 1.5 %}
+          <i class="fas fa-exclamation-triangle" style="color:var(--danger);font-size:16px;"></i>
+          {% endif %}
+        </div>
+        {% if acwr_zona %}
+        <p style="font-size:11px;margin-top:3px;
+          color:{% if acwr_zona.0 == 'optimo' %}var(--ok){% elif acwr_zona.0 == 'alerta' %}var(--warn){% elif acwr_zona.0 == 'riesgo' %}var(--danger){% else %}var(--ink-3){% endif %};">
+          {{ acwr_zona.2 }}
+        </p>
+        {% if acwr_valor > 1.5 %}
+        <div class="cc-note danger" style="margin-top:8px;font-size:11px;">
+          <i class="fas fa-ban" style="color:var(--danger);margin-right:5px;"></i>Reduce volumen. Riesgo de lesión por sobrecarga.
+        </div>
+        {% endif %}
+        {% else %}
+        <p style="font-size:11px;color:var(--ink-4);margin-top:3px;">Sin 28 días de datos.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     4 · SALUD / LIMITACIONES
+══════════════════════════════════════════════════ -->
+<div class="cc-sec">
+  <div class="cc-sec-head">
+    <span class="cc-sec-num">03</span>
+    <h2 class="cc-sec-title">Salud / Limitaciones</h2>
+    <div class="cc-sec-line"></div>
+  </div>
+  <div class="cc-card" style="border-left:4px solid {% if lesion_activa %}var(--danger){% else %}var(--ok){% endif %};">
+    {% if lesion_activa %}
+    <div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;">
+      <div style="flex:1;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+          <span class="cc-pill cc-pill-danger"><i class="fas fa-shield-alt"></i>Lesión activa — Fase {{ lesion_activa.fase }}</span>
+        </div>
+        <div class="cc-grid3" style="margin-bottom:10px;">
+          <div class="cc-g3cell">
+            <div class="cc-g3-lbl">Zona</div>
+            <div style="font-family:var(--font-d);font-size:14px;color:var(--ink);text-transform:uppercase;">{{ lesion_activa.zona_afectada|title }}</div>
+          </div>
+          <div class="cc-g3cell">
+            <div class="cc-g3-lbl">Gravedad</div>
+            <div class="cc-g3-val" style="color:var(--danger);">{{ lesion_activa.gravedad }}<span>/10</span></div>
+          </div>
+          <div class="cc-g3cell">
+            <div class="cc-g3-lbl">Inicio</div>
+            <div style="font-family:var(--font-m);font-size:12px;font-weight:700;color:var(--ink);">{{ lesion_activa.fecha_inicio|date:"d/m" }}</div>
+          </div>
+        </div>
+        {% if lesion_activa.tags_restringidos %}
+        <p style="font-size:11px;color:var(--ink-3);"><i class="fas fa-ban" style="color:var(--danger);margin-right:4px;"></i>Restringido: {{ lesion_activa.tags_restringidos|join:", " }}</p>
+        {% endif %}
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        <a href="{% url 'hyrox:test_recuperacion' lesion_activa.id %}" class="cc-btn cc-btn-primary cc-btn-sm"><i class="fas fa-vial"></i>Test recup.</a>
+        <a href="{% url 'hyrox:reportar_lesion' %}" class="cc-btn cc-btn-ghost cc-btn-sm"><i class="fas fa-plus"></i>Molestia</a>
+      </div>
+    </div>
+    {% else %}
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span class="cc-pill cc-pill-ok"><i class="fas fa-check"></i>Sin lesión activa</span>
+        <span style="font-size:12px;color:var(--ink-3);">Sistema sin restricciones.</span>
+      </div>
+      <a href="{% url 'hyrox:reportar_lesion' %}" class="cc-btn cc-btn-ghost cc-btn-sm"><i class="fas fa-exclamation-triangle"></i>Reportar</a>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     5 · GYM + NUTRICIÓN + DIARIO
+══════════════════════════════════════════════════ -->
+<div class="cc-sec">
+  <div class="cc-sec-head">
+    <span class="cc-sec-num">04</span>
+    <h2 class="cc-sec-title">Módulos Activos</h2>
+    <div class="cc-sec-line"></div>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
+
+    <!-- Gym -->
+    <div class="cc-card">
+      <div class="cc-card-head">
+        <div class="cc-card-dot" style="background:#7c3aed;"></div>
+        <span class="cc-card-label">Gym · 7d</span>
+        <div class="cc-card-line"></div>
+      </div>
+      <div style="text-align:center;margin-bottom:10px;">
+        <div style="font-family:var(--font-d);font-size:36px;line-height:1;letter-spacing:-.03em;color:var(--ink);">{{ gym_load.entrenos_count }}</div>
+        <div style="font-family:var(--font-m);font-size:9px;color:var(--ink-3);letter-spacing:.1em;text-transform:uppercase;margin-top:2px;">sesiones</div>
+      </div>
+      <div class="cc-stat" style="padding:5px 0;">
+        <span class="sk" style="font-size:11px;">Volumen</span>
+        <span class="sv" style="font-size:12px;">{{ gym_load.volumen_total_kg }}kg</span>
+      </div>
+      <div class="cc-stat" style="padding:5px 0;">
+        <span class="sk" style="font-size:11px;">RPE med.</span>
+        <span class="sv" style="font-size:12px;">{{ gym_load.rpe_medio_gym }}</span>
+      </div>
+      <div class="cc-stat" style="padding:5px 0;border-bottom:none;">
+        <span class="sk" style="font-size:11px;">Fatiga</span>
+        <span class="sv {% if gym_load.fatiga_gym == 'Alta' %}danger{% elif gym_load.fatiga_gym == 'Media' %}warn{% else %}ok{% endif %}" style="font-size:12px;">{{ gym_load.fatiga_gym }}</span>
+      </div>
+      <a href="{% url 'entrenos:dashboard_ejercicios' cliente.id %}" class="cc-btn cc-btn-ghost cc-btn-sm cc-btn-full">Analytics</a>
     </div>
 
     <!-- Nutrición -->
-    <div class="mc mc-hover p-5">
-        <div class="section-label"><i class="fas fa-apple-alt text-emerald-400"></i> Nutrición</div>
-        {% if perfil_nutricional %}
-        <div class="space-y-0">
-            <div class="row-metric"><span class="label">Fase</span><span class="value text-sm capitalize">{{ perfil_nutricional.fase }}</span></div>
-            {% if target_nutricional %}
-            <div class="row-metric"><span class="label">Proteína (bloques)</span><span class="value text-blue-300">{{ target_nutricional.bloques_proteina }}</span></div>
-            <div class="row-metric"><span class="label">Carbos (bloques)</span><span class="value text-yellow-300">{{ target_nutricional.bloques_carbohidrato }}</span></div>
-            <div class="row-metric"><span class="label">Grasa (bloques)</span><span class="value text-orange-300">{{ target_nutricional.bloques_grasa }}</span></div>
-            {% endif %}
-            {% if perfil_nutricional.masa_magra_kg %}
-            <div class="row-metric"><span class="label">Masa magra</span><span class="value">{{ perfil_nutricional.masa_magra_kg }} kg</span></div>
-            {% endif %}
-        </div>
-        {% else %}
-        <p class="text-xs text-[var(--lol-muted)] mb-3">Sin perfil nutricional configurado.</p>
-        {% endif %}
-        <a href="{% url 'nutricion_app_django:dashboard_nutricional' %}" class="btn-lol-secondary text-[10px] w-full justify-center py-1.5 mt-3"><i class="fas fa-apple-alt mr-1"></i>Ver nutrición</a>
+    <div class="cc-card">
+      <div class="cc-card-head">
+        <div class="cc-card-dot" style="background:var(--ok);"></div>
+        <span class="cc-card-label">Nutrición</span>
+        <div class="cc-card-line"></div>
+      </div>
+      {% if perfil_nutricional %}
+      <div style="text-align:center;margin-bottom:10px;">
+        <div style="font-family:var(--font-d);font-size:18px;line-height:1;color:var(--accent);text-transform:uppercase;letter-spacing:.02em;">{{ perfil_nutricional.fase }}</div>
+        <div style="font-family:var(--font-m);font-size:9px;color:var(--ink-3);letter-spacing:.1em;text-transform:uppercase;margin-top:2px;">fase actual</div>
+      </div>
+      {% if target_nutricional %}
+      <div class="cc-grid3" style="margin-bottom:0;">
+        <div class="cc-g3cell" style="padding:8px 4px;"><div class="cc-g3-lbl" style="font-size:8px;">Prot</div><div class="cc-g3-val" style="font-size:20px;color:#1d4ed8;">{{ target_nutricional.bloques_proteina }}</div></div>
+        <div class="cc-g3cell" style="padding:8px 4px;"><div class="cc-g3-lbl" style="font-size:8px;">Carbs</div><div class="cc-g3-val" style="font-size:20px;color:var(--accent-2);">{{ target_nutricional.bloques_carbohidrato }}</div></div>
+        <div class="cc-g3cell" style="padding:8px 4px;"><div class="cc-g3-lbl" style="font-size:8px;">Grasa</div><div class="cc-g3-val" style="font-size:20px;color:var(--accent);">{{ target_nutricional.bloques_grasa }}</div></div>
+      </div>
+      {% endif %}
+      {% else %}
+      <p style="font-size:11px;color:var(--ink-3);text-align:center;padding:10px 0;">Sin perfil.</p>
+      {% endif %}
+      <a href="{% url 'nutricion_app_django:dashboard_nutricional' %}" class="cc-btn cc-btn-ghost cc-btn-sm cc-btn-full">Ver dieta</a>
     </div>
 
     <!-- Diario -->
-    <div class="mc mc-hover p-5">
-        <div class="section-label"><i class="fas fa-book text-indigo-400"></i> Diario</div>
-        <div class="space-y-0">
-            <div class="row-metric"><span class="label">Esta semana</span><span class="value text-xl">{{ entrenos_esta_semana }}</span></div>
-        </div>
-        <p class="text-[10px] text-[var(--lol-text-dim)] mt-2 mb-3">Reflexiones, hábitos y áreas de vida.</p>
-        <a href="{% url 'diario:dashboard_diario' %}" class="btn-lol-secondary text-[10px] w-full justify-center py-1.5"><i class="fas fa-book-open mr-1"></i>Ver diario</a>
+    <div class="cc-card">
+      <div class="cc-card-head">
+        <div class="cc-card-dot" style="background:#4f46e5;"></div>
+        <span class="cc-card-label">Diario</span>
+        <div class="cc-card-line"></div>
+      </div>
+      <div style="text-align:center;margin:10px 0 14px;">
+        <div style="font-size:30px;color:#4f46e5;margin-bottom:4px;"><i class="fas fa-book-open"></i></div>
+        <p style="font-size:11px;color:var(--ink-3);line-height:1.45;">Reflexiones, hábitos y áreas de vida.</p>
+      </div>
+      <a href="{% url 'diario:dashboard_diario' %}" class="cc-btn cc-btn-ghost cc-btn-sm cc-btn-full">Ver diario</a>
     </div>
+  </div>
 </div>
 
 <!-- ══════════════════════════════════════════════════
-     6. MEJORES MARCAS + OBJETIVOS
+     6 · MARCAS + OBJETIVOS
 ══════════════════════════════════════════════════ -->
-<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<div class="cc-sec">
+  <div class="cc-sec-head">
+    <span class="cc-sec-num">05</span>
+    <h2 class="cc-sec-title">Marcas & Objetivos</h2>
+    <div class="cc-sec-line"></div>
+  </div>
+  <div class="cc-grid2">
 
-    <!-- Mejores marcas -->
-    <div class="mc p-5">
-        <div class="flex justify-between items-center mb-3">
-            <div class="section-label mb-0"><i class="fas fa-medal text-[var(--lol-gold-mid)]"></i> Mejores Marcas</div>
-            <a href="{% url 'entrenos:dashboard_ejercicios' cliente.id %}" class="text-[10px] text-[var(--lol-gold-mid)] hover:text-white">Ver historial →</a>
+    <!-- PRs -->
+    <div class="cc-card">
+      <div class="cc-card-head">
+        <div class="cc-card-dot" style="background:var(--accent-2);"></div>
+        <span class="cc-card-label">Mejores Marcas</span>
+        <div class="cc-card-line"></div>
+        <a href="{% url 'entrenos:dashboard_ejercicios' cliente.id %}" class="cc-card-action">Ver →</a>
+      </div>
+      {% if records_prs %}
+      {% for record in records_prs %}
+      <div class="cc-pr-row">
+        <div>
+          <div class="cc-pr-name">{{ record.ejercicio_nombre }}</div>
+          <div class="cc-pr-date">{{ record.fecha_logrado|date:"M Y" }}</div>
         </div>
-        {% if records_prs %}
-        <div class="space-y-0">
-            {% for record in records_prs %}
-            <div class="row-metric">
-                <span class="label">{{ record.ejercicio_nombre }}</span>
-                <span class="value">{{ record.valor }} <span class="text-[9px] text-[var(--lol-gold-mid)] font-sans">kg · {{ record.fecha_logrado|date:"M Y" }}</span></span>
-            </div>
-            {% endfor %}
-        </div>
-        {% else %}
-        <div class="text-center py-5 border border-dashed border-[var(--lol-border-subtle)] rounded-lg">
-            <p class="text-xs text-[var(--lol-muted)]">Sin marcas registradas.</p>
-        </div>
-        {% endif %}
+        <div class="cc-pr-val">{{ record.valor }}<span> kg</span></div>
+      </div>
+      {% endfor %}
+      {% else %}
+      <p style="font-size:12px;color:var(--ink-3);padding:16px 0;text-align:center;">Sin marcas aún.</p>
+      {% endif %}
     </div>
 
-    <!-- Objetivos activos -->
-    <div class="mc p-5">
-        <div class="flex justify-between items-center mb-3">
-            <div class="section-label mb-0"><i class="fas fa-bullseye text-[var(--lol-gold-mid)]"></i> Objetivos Activos</div>
-            <a href="{% url 'clientes:definir_objetivo' cliente.id %}" class="btn-lol-primary text-[9px] px-2 py-1 h-auto min-h-0"><i class="fas fa-plus"></i> Nuevo</a>
+    <!-- Objetivos -->
+    <div class="cc-card">
+      <div class="cc-card-head">
+        <div class="cc-card-dot"></div>
+        <span class="cc-card-label">Objetivos</span>
+        <div class="cc-card-line"></div>
+        <a href="{% url 'clientes:definir_objetivo' cliente.id %}" class="cc-card-action">+ Nuevo</a>
+      </div>
+      {% for obj in objetivos %}
+      <div class="cc-stat">
+        <span class="sk">{{ obj.get_medida_display }}</span>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span class="sv" style="font-size:13px;">{{ obj.valor }}</span>
+          <a href="{% url 'clientes:editar_objetivo' obj.id %}" style="color:var(--ink-3);font-size:11px;"><i class="fas fa-pencil-alt"></i></a>
+          <a href="{% url 'clientes:eliminar_objetivo' obj.id %}" style="color:var(--danger);font-size:11px;" onclick="return confirm('¿Eliminar?');"><i class="fas fa-trash"></i></a>
         </div>
-        {% if objetivos %}
-        <div class="space-y-0">
-            {% for obj in objetivos %}
-            <div class="row-metric">
-                <span class="label">{{ obj.get_medida_display }}</span>
-                <div class="flex items-center gap-2">
-                    <span class="value">{{ obj.valor }}</span>
-                    <a href="{% url 'clientes:editar_objetivo' obj.id %}" class="text-[var(--lol-gold-mid)] hover:text-white text-xs"><i class="fas fa-pencil-alt"></i></a>
-                    <a href="{% url 'clientes:eliminar_objetivo' obj.id %}" class="text-[var(--lol-red)] hover:text-white text-xs" onclick="return confirm('¿Eliminar?');"><i class="fas fa-trash"></i></a>
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-        {% else %}
-        <div class="text-center py-5 border border-dashed border-[var(--lol-border-subtle)] rounded-lg">
-            <p class="text-xs text-[var(--lol-muted)] mb-2">Sin objetivos.</p>
-            <a href="{% url 'clientes:definir_objetivo' cliente.id %}" class="btn-lol-primary text-[10px] px-3 py-1"><i class="fas fa-plus mr-1"></i>Crear objetivo</a>
-        </div>
-        {% endif %}
-        <!-- Hyrox como objetivo implícito -->
-        {% if hyrox_objetivo %}
-        <div class="row-metric mt-1">
-            <span class="label text-cyan-400"><i class="fas fa-flag-checkered mr-1"></i>Hyrox finish</span>
-            <span class="value text-sm text-cyan-400">{{ hyrox_objetivo.get_categoria_display }} · {{ hyrox_objetivo.fecha_evento|date:"d M Y" }}</span>
-        </div>
-        {% endif %}
+      </div>
+      {% endfor %}
+      {% if hyrox_objetivo %}
+      <div class="cc-stat">
+        <span class="sk" style="color:var(--accent);"><i class="fas fa-flag-checkered" style="margin-right:4px;"></i>Hyrox finish</span>
+        <span class="sv accent" style="font-size:12px;">{{ hyrox_objetivo.fecha_evento|date:"d M Y" }}</span>
+      </div>
+      {% endif %}
+      {% if not objetivos and not hyrox_objetivo %}
+      <p style="font-size:12px;color:var(--ink-3);padding:16px 0;text-align:center;">Sin objetivos.</p>
+      {% endif %}
     </div>
+  </div>
 </div>
 
 <!-- ══════════════════════════════════════════════════
-     7. HISTORIAL RECIENTE (unificado)
+     7 · HISTORIAL RECIENTE
 ══════════════════════════════════════════════════ -->
-<div class="mc p-5">
-    <div class="flex justify-between items-center mb-3">
-        <div class="section-label mb-0"><i class="fas fa-history text-[var(--lol-gold-mid)]"></i> Historial Reciente</div>
-        <a href="{% url 'entrenos:timeline_atleta' cliente.id %}" class="text-[10px] text-[var(--lol-gold-mid)] hover:text-white">Ver timeline completo →</a>
-    </div>
+<div class="cc-sec">
+  <div class="cc-sec-head">
+    <span class="cc-sec-num">06</span>
+    <h2 class="cc-sec-title">Historial Reciente</h2>
+    <div class="cc-sec-line"></div>
+    <a href="{% url 'entrenos:timeline_atleta' cliente.id %}" style="font-family:var(--font-m);font-size:10px;font-weight:700;letter-spacing:.1em;color:var(--ink-3);text-decoration:none;text-transform:uppercase;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--ink-3)'">Timeline →</a>
+  </div>
+  <div class="cc-card">
     {% if actividad_reciente %}
-    <div class="space-y-1.5">
-        {% for act in actividad_reciente %}
-        <div class="flex items-center gap-3 py-2 border-b border-white/[.04] last:border-0">
-            <div class="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0
-                {% if act.tipo == 'hyrox' %}bg-cyan-900/30{% else %}bg-purple-900/30{% endif %}">
-                <i class="{{ act.icono }} {{ act.color }} text-xs"></i>
-            </div>
-            <div class="flex-grow">
-                <p class="text-xs text-[var(--lol-gold-bright)] leading-tight m-0">{{ act.nombre }}</p>
-                <p class="text-[9px] text-[var(--lol-text-dim)] m-0 uppercase tracking-wide">
-                    {{ act.tipo|upper }}{% if act.rpe %} · RPE {{ act.rpe }}{% endif %}
-                </p>
-            </div>
-            <span class="text-[10px] text-[var(--lol-muted)] font-mono flex-shrink-0">{{ act.fecha|date:"d M" }}</span>
-        </div>
-        {% endfor %}
+    {% for act in actividad_reciente %}
+    <div class="cc-act-row">
+      <div class="cc-act-icon {{ act.tipo }}"><i class="{{ act.icono }}"></i></div>
+      <div class="cc-act-body">
+        <div class="cc-act-name">{{ act.nombre }}</div>
+        <div class="cc-act-meta">{{ act.tipo|upper }}{% if act.rpe %} · RPE {{ act.rpe }}{% endif %}</div>
+      </div>
+      <div class="cc-act-date">{{ act.fecha|date:"d M" }}</div>
     </div>
+    {% endfor %}
     {% else %}
-    <div class="text-center py-6 border border-dashed border-[var(--lol-border-subtle)] rounded-lg">
-        <i class="fas fa-history text-2xl text-[var(--lol-text-dim)] opacity-20 mb-2"></i>
-        <p class="text-xs text-[var(--lol-muted)]">Sin actividad reciente.</p>
-    </div>
+    <p style="text-align:center;padding:20px 0;font-size:12px;color:var(--ink-3);">Sin actividad reciente.</p>
     {% endif %}
+  </div>
 </div>
 
 <!-- ══════════════════════════════════════════════════
-     8. HAZAÑAS / LOGROS
+     8 · HAZAÑAS
 ══════════════════════════════════════════════════ -->
-<div class="mc p-5">
-    <div class="section-label"><i class="fas fa-star text-[var(--lol-gold-mid)]"></i> Hazañas / Logros</div>
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-        {% for logro in logros_completados %}
-        <div class="flex items-center gap-3 p-2.5 rounded-lg border transition-transform hover:translate-x-1"
-             style="border-color:var(--lol-gold-dark);background:rgba(200,170,110,.05)">
-            <div class="text-[var(--lol-gold-bright)] text-lg w-6 text-center">
-                <i class="{{ logro.prueba.icono|default:'fas fa-award' }}"></i>
-            </div>
-            <div>
-                <div class="font-display text-xs text-[var(--lol-gold-bright)] leading-tight">{{ logro.prueba.nombre }}</div>
-                <div class="text-[10px] text-[var(--lol-gold-mid)] opacity-75">{{ logro.prueba.descripcion }}</div>
-            </div>
-        </div>
-        {% endfor %}
-        {% for prueba in pruebas_activas %}
-        <div class="flex items-center gap-3 p-2.5 rounded-lg border opacity-25"
-             style="border-color:var(--lol-border-subtle)">
-            <div class="text-[var(--lol-text-dim)] text-lg w-6 text-center grayscale">
-                <i class="{{ prueba.icono|default:'fas fa-lock' }}"></i>
-            </div>
-            <div>
-                <div class="font-display text-xs text-[var(--lol-text-dim)] leading-tight">{{ prueba.nombre }}</div>
-                <div class="text-[10px] text-[var(--lol-muted)]">{{ prueba.descripcion }}</div>
-            </div>
-        </div>
-        {% endfor %}
-        {% if not logros_completados and not pruebas_activas %}
-        <div class="col-span-2 text-center py-5 border border-dashed border-[var(--lol-border-subtle)] rounded-lg">
-            <p class="text-xs text-[var(--lol-muted)]">Sin hazañas aún.</p>
-        </div>
-        {% endif %}
+<div class="cc-sec">
+  <div class="cc-sec-head">
+    <span class="cc-sec-num">07</span>
+    <h2 class="cc-sec-title">Hazañas / Logros</h2>
+    <div class="cc-sec-line"></div>
+  </div>
+  <div class="cc-card">
+    {% for logro in logros_completados %}
+    <div class="cc-logro">
+      <div class="cc-logro-icon"><i class="{{ logro.prueba.icono|default:'fas fa-award' }}"></i></div>
+      <div>
+        <div class="cc-logro-name">{{ logro.prueba.nombre }}</div>
+        <div class="cc-logro-desc">{{ logro.prueba.descripcion }}</div>
+      </div>
     </div>
+    {% endfor %}
+    {% for prueba in pruebas_activas %}
+    <div class="cc-logro cc-logro-locked">
+      <div class="cc-logro-icon"><i class="{{ prueba.icono|default:'fas fa-lock' }}"></i></div>
+      <div>
+        <div class="cc-logro-name">{{ prueba.nombre }}</div>
+        <div class="cc-logro-desc">{{ prueba.descripcion }}</div>
+      </div>
+    </div>
+    {% endfor %}
+    {% if not logros_completados and not pruebas_activas %}
+    <p style="text-align:center;padding:20px 0;font-size:12px;color:var(--ink-3);">Sin hazañas aún.</p>
+    {% endif %}
+  </div>
 </div>
 
-</div>
+</div><!-- cc-inner -->
+</div><!-- cc-wrap -->
 {% endblock %}
 
 {% block extra_js %}
 <script>
 window.perfilClienteData = {
     labels: {{ labels_grafico | safe }},
-    pesos: {{ pesos_grafico | safe }},
+    pesos:  {{ pesos_grafico  | safe }},
     grasas: {{ grasas_grafico | safe }}
 };
 </script>
