@@ -2677,6 +2677,16 @@ def detalle_cliente(request, cliente_id):
     except Exception:
         pass
 
+    # --- 6f2. DIARIO / REFLEXIÓN ESTOICA ---
+    reflexion_hoy = None
+    total_reflexiones = 0
+    try:
+        from estoico.models import ReflexionDiaria
+        reflexion_hoy = ReflexionDiaria.objects.filter(usuario=cliente.user, fecha=hoy).first()
+        total_reflexiones = ReflexionDiaria.objects.filter(usuario=cliente.user).count()
+    except Exception:
+        pass
+
     # --- 6g. GYM EXTERNAL LOAD ---
     gym_load = {'entrenos_count': 0, 'volumen_total_kg': 0, 'rpe_medio_gym': 0.0, 'fatiga_gym': 'Baja'}
     try:
@@ -2810,6 +2820,9 @@ def detalle_cliente(request, cliente_id):
         'pruebas_activas': pruebas_activas,
         # Timeline unificado
         'actividad_reciente': actividad_reciente,
+        # Diario/Estoico
+        'reflexion_hoy': reflexion_hoy,
+        'total_reflexiones': total_reflexiones,
     }
 
     return render(request, 'clientes/detalle.html', context)
