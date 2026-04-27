@@ -2566,6 +2566,79 @@ def detalle_cliente(request, cliente_id):
     todos_los_programas = Programa.objects.all()
     todas_las_rutinas = Rutina.objects.all()
 
+    # --- 6b. HYROX ---
+    hyrox_objetivo = None
+    hyrox_readiness = None
+    hyrox_dias_para_evento = None
+    try:
+        from hyrox.models import HyroxObjective, UserInjury
+        hyrox_objetivo = HyroxObjective.objects.filter(cliente=cliente, estado='activo').first()
+        if hyrox_objetivo:
+            hyrox_readiness = hyrox_objetivo.get_race_readiness_score()
+            hyrox_dias_para_evento = (hyrox_objetivo.fecha_evento - hoy).days
+    except Exception:
+        pass
+
+    # --- 6c. LESIÓN ACTIVA ---
+    lesion_activa = None
+    try:
+        from hyrox.models import UserInjury
+        lesion_activa = UserInjury.objects.filter(cliente=cliente).exclude(fase='RECUPERADO').order_by('-fecha_inicio').first()
+    except Exception:
+        pass
+
+    # --- 6d. ACWR ---
+    acwr_valor = None
+    acwr_zona = None
+    try:
+        from entrenos.services.services import EstadisticasService as _ES
+        from django.core.cache import cache
+        _key = f'detalle_acwr_{cliente.id}'
+        _acwr = cache.get(_key)
+        if _acwr is None:
+            _acwr = _ES.analizar_acwr_unificado(cliente)
+            cache.set(_key, _acwr, 900)
+        if _acwr:
+            acwr_valor = round(float(_acwr.get('acwr_actual', _acwr.get('acwr', 0)) or 0), 2)
+            if acwr_valor < 0.8:
+                acwr_zona = ('bajo', 'text-blue-400', 'Desentrenamiento')
+            elif acwr_valor <= 1.3:
+                acwr_zona = ('optimo', 'text-green-400', 'Zona óptima')
+            elif acwr_valor <= 1.5:
+                acwr_zona = ('alerta', 'text-yellow-400', 'Zona de alerta')
+            else:
+                acwr_zona = ('riesgo', 'text-red-400', 'Riesgo lesión')
+    except Exception:
+        pass
+
+    # --- 6e. NUTRICIÓN ---
+    perfil_nutricional = None
+    target_nutricional = None
+    try:
+        from nutricion_app_django.models import PerfilNutricional, TargetNutricionalDiario
+        perfil_nutricional = PerfilNutricional.objects.filter(cliente=cliente).first()
+        if perfil_nutricional:
+            target_nutricional = TargetNutricionalDiario.objects.filter(
+                perfil=perfil_nutricional, tipo_dia='gym'
+            ).first()
+    except Exception:
+        pass
+
+    # --- 6f. GAMIFICACIÓN ---
+    perfil_gamificacion = None
+    try:
+        from logros.models import PerfilGamificacion, PruebaUsuario, PruebaLegendaria
+        perfil_gamificacion = getattr(cliente, 'perfil_gamificacion', None)
+        logros_completados = PruebaUsuario.objects.filter(
+            usuario=cliente.user, completado=True
+        ).select_related('prueba')[:6]
+        pruebas_activas = PruebaLegendaria.objects.filter(
+            es_secreta=False
+        ).exclude(id__in=logros_completados.values_list('prueba_id', flat=True))[:4]
+    except Exception:
+        logros_completados = []
+        pruebas_activas = []
+
     # --- 6. CONSTRUIR EL CONTEXTO FINAL ---
     context = {
         'cliente': cliente,
@@ -2598,6 +2671,18 @@ def detalle_cliente(request, cliente_id):
         'todas_las_rutinas': todas_las_rutinas,
         'edad': edad,
         'records_prs': records_list,
+        # Nuevos
+        'hyrox_objetivo': hyrox_objetivo,
+        'hyrox_readiness': hyrox_readiness,
+        'hyrox_dias_para_evento': hyrox_dias_para_evento,
+        'lesion_activa': lesion_activa,
+        'acwr_valor': acwr_valor,
+        'acwr_zona': acwr_zona,
+        'perfil_nutricional': perfil_nutricional,
+        'target_nutricional': target_nutricional,
+        'perfil_gamificacion': perfil_gamificacion,
+        'logros_completados': logros_completados,
+        'pruebas_activas': pruebas_activas,
     }
 
     return render(request, 'clientes/detalle.html', context)
