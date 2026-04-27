@@ -2730,8 +2730,8 @@ class HyroxRaceIntelligence:
         return {
             'readiness':              readiness,
             'tsb':                    carga.get('tsb'),
-            'ctl':                    round(carga.get('ctl', 0), 1),
-            'atl':                    round(carga.get('atl', 0), 1),
+            'ctl':                    round(carga.get('ctl') or 0, 1),
+            'atl':                    round(carga.get('atl') or 0, 1),
             'acwr':                   acwr,
             'tiempo_estimado':        cls._fmt_time(tiempo_ajustado),
             'tiempo_base':            cls._fmt_time(tiempo_base_secs),

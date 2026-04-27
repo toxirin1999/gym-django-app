@@ -208,8 +208,8 @@ class HyroxLoadManager:
             return None
 
         carga = cls.calcular_ctl_atl_tsb(objetivo)
-        ctl = carga['ctl']
-        atl = carga['atl']
+        ctl = carga.get('ctl') or 0
+        atl = carga.get('atl') or 0
         if ctl <= 0:
             return None
         return round(atl / ctl, 2)
