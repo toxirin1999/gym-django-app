@@ -328,8 +328,10 @@ def hyrox_dashboard(request):
         puntos_ritmo = []     # [{fecha, secs, label}]
         km_por_semana = {}    # {iso_week_label: km}
         fc_puntos = []        # [{fecha, fc}]
+        total_runs = 0
 
         for act in runs_qs:
+            total_runs += 1
             m = act.data_metricas or {}
             fecha = act.sesion.fecha
             fecha_str = fecha.strftime('%d/%m')
@@ -385,7 +387,7 @@ def hyrox_dashboard(request):
             'tendencia': tendencia,
             'pace_objetivo_secs': pace_objetivo_secs,
             'total_km': round(sum(km_por_semana.values()), 1),
-            'num_sesiones': len(puntos_ritmo),
+            'num_sesiones': total_runs,
         }
 
     # ── EDAD DEL ATLETA ───────────────────────────────────────────────
@@ -761,7 +763,10 @@ def hyrox_dashboard(request):
     interferencia_index = []
     if objetivo_activo:
         from .services import InterferenceIndexService
-        interferencia_index = InterferenceIndexService.compute_for_objective(objetivo_activo)
+        try:
+            interferencia_index = InterferenceIndexService.compute_for_objective(objetivo_activo)
+        except Exception:
+            logger.exception("[HYROX] Error calculando interferencia_index")
 
     # ── RACE CARD TÁCTICA + MODO COMPETICIÓN ─────────────────────────────────
     race_card = None
@@ -769,7 +774,10 @@ def hyrox_dashboard(request):
     race_day_briefing = None
     if objetivo_activo and objetivo_activo.tiempo_5k_base:
         from .services import RaceCardService
-        race_card = RaceCardService.generate(objetivo_activo, splits_estaciones, interferencia_index)
+        try:
+            race_card = RaceCardService.generate(objetivo_activo, splits_estaciones, interferencia_index)
+        except Exception:
+            logger.exception("[HYROX] Error generando race_card")
         if race_card and race_card['es_race_week']:
             modo_competicion = True
             dias = race_card['dias_evento']
@@ -910,7 +918,7 @@ def hyrox_dashboard(request):
                         act.display_name = act.nombre_ejercicio
 
     # ── CURVAS DE PROGRESIÓN ──────────────────────────────────────────────────
-    curvas_progresion = None
+    curvas_progresion = {}
     if objetivo_activo:
         from .training_engine import HyroxLoadManager
         import json as _json
@@ -960,9 +968,7 @@ def hyrox_dashboard(request):
                     }
             except Exception:
                 pass
-        # Always expose the dict (even if all sin_datos) so the section renders
-        if curvas_progresion is None:
-            curvas_progresion = {}
+        pass  # curvas_progresion already initialized as dict
 
     context = {
         'competition_progress': competition_progress,

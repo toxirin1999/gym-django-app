@@ -114,7 +114,7 @@ def _calcular_y_guardar_carga(instance):
 
     # 3. CTL / ATL / TSB — sólo si tenemos TRIMP en alguna sesión
     carga = HyroxLoadManager.calcular_ctl_atl_tsb(objetivo)
-    if carga['ctl'] > 0 or trimp:
+    if (carga.get('ctl') or 0) > 0 or trimp:
         instance.ctl = carga['ctl']
         instance.atl = carga['atl']
         instance.tsb = carga['tsb']

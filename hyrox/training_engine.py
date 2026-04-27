@@ -691,7 +691,7 @@ class HyroxTrainingEngine:
 
         # TSB actual (Training Stress Balance) — señal objetiva de forma/fatiga
         carga_actual = HyroxLoadManager.calcular_ctl_atl_tsb(objective)
-        tsb_actual   = carga_actual['tsb'] if carga_actual['ctl'] > 0 else None
+        tsb_actual   = carga_actual['tsb'] if (carga_actual.get('ctl') or 0) > 0 else None
 
         # Penalización por sueño deficiente (últimos 7 días)
         sleep_penalty = HyroxLoadManager.get_sleep_penalty(objective)
