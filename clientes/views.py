@@ -773,8 +773,8 @@ def _ctx_hyrox(cliente, hoy):
     try:
         from hyrox.models import HyroxObjective, HyroxSession
         objetivo = (
-            HyroxObjective.objects.filter(cliente=cliente, estado='active').first()
-            or HyroxObjective.objects.filter(cliente=cliente, estado='activo').first()
+            HyroxObjective.objects.filter(cliente=cliente, estado='activo').first()
+            or HyroxObjective.objects.filter(cliente=cliente, estado='active').first()
         )
         proxima = None
         if objetivo:
@@ -782,7 +782,8 @@ def _ctx_hyrox(cliente, hoy):
                 objective=objetivo, estado='planificado', fecha__gte=hoy
             ).order_by('fecha').prefetch_related('activities').first()
         return objetivo, proxima
-    except Exception:
+    except Exception as e:
+        logger.warning("_ctx_hyrox error para cliente %s: %s", cliente.id, e)
         return None, None
 
 
@@ -1377,6 +1378,19 @@ def mockup_demo(request):
     ).first()
     context['checkin_hoy'] = checkin_hoy
     context['checkin_pendiente'] = checkin_hoy is None
+
+    # Garantiza que hyrox_objetivo esté en el contexto aunque _ctx_hyrox haya fallado.
+    # El toggle GYM/HYROX depende de este valor; sin él desaparece.
+    if not context.get('hyrox_objetivo'):
+        try:
+            from hyrox.models import HyroxObjective
+            context['hyrox_objetivo'] = (
+                HyroxObjective.objects.filter(cliente=cliente, estado='activo').first()
+                or HyroxObjective.objects.filter(cliente=cliente, estado='active').first()
+            )
+        except Exception:
+            context.setdefault('hyrox_objetivo', None)
+
     return render(request, 'clientes/mockup_demo.html', context)
 
 
