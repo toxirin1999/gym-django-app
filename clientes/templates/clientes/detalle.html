@@ -5,433 +5,496 @@
 {% block title %}{{ cliente.nombre }} - Perfil{% endblock %}
 
 {% block extra_css %}
-<!-- Add Google Fonts and LoL specific classes -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{% static 'css/variables-base.css' %}">
 <link rel="stylesheet" href="{% static 'css/entrenamiento_activo.css' %}">
-<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-
 <style>
-    .avatar-glow-ring {
-        padding: 4px;
-        border-radius: 50%;
-        background: linear-gradient(135deg, var(--lol-gold-dark), var(--lol-gold-mid), var(--lol-gold-dark));
-        background-size: 200% 200%;
-        animation: avatarGlow 4s ease infinite;
-    }
-
-    @keyframes avatarGlow {
-        0%, 100% { background-position: 0% 50%; }
-        50% { background-position: 100% 50%; }
-    }
-    
-    .profile-avatar {
-        border-radius: 50%;
-        width: 120px;
-        height: 120px;
-        object-fit: cover;
-        border: 3px solid var(--lol-deep);
-    }
-    .profile-avatar-placeholder {
-        border-radius: 50%;
-        width: 120px;
-        height: 120px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: var(--lol-deep);
-        color: var(--lol-gold-dark);
-        font-size: 3rem;
-        border: 3px solid var(--lol-gold-dark);
-    }
-
-    /* Override info-card margin/padding resets where needed */
-    .metric-card {
-        background: rgba(0, 0, 0, 0.4) !important;
-        backdrop-filter: blur(15px) saturate(180%) !important;
-        border: 1px solid var(--lol-border-subtle) !important;
-        box-shadow: 0 0 15px rgba(0,0,0,0.5), inset 0 0 8px rgba(200, 170, 110, 0.05) !important;
-        border-radius: 10px !important;
-    }
-    
-    /* CSS adicional para el Accordion */
-    .accordion-content.active {
-        display: block;
-    }
-    .accordion-header.active i.fa-chevron-down {
-        transform: rotate(180deg);
-    }
+.metric-card {
+    background: rgba(0,0,0,0.4) !important;
+    backdrop-filter: blur(15px) saturate(180%) !important;
+    border: 1px solid var(--lol-border-subtle) !important;
+    box-shadow: 0 0 15px rgba(0,0,0,0.5), inset 0 0 8px rgba(200,170,110,0.05) !important;
+    border-radius: 10px !important;
+}
+.avatar-glow-ring {
+    padding: 4px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--lol-gold-dark), var(--lol-gold-mid), var(--lol-gold-dark));
+    background-size: 200% 200%;
+    animation: avatarGlow 4s ease infinite;
+}
+@keyframes avatarGlow { 0%,100%{background-position:0% 50%} 50%{background-position:100% 50%} }
+.profile-avatar { border-radius:50%; width:110px; height:110px; object-fit:cover; border:3px solid var(--lol-deep); }
+.profile-avatar-placeholder { border-radius:50%; width:110px; height:110px; display:flex; align-items:center; justify-content:center; background:var(--lol-deep); color:var(--lol-gold-dark); font-size:2.8rem; border:3px solid var(--lol-gold-dark); }
+.module-card { transition: border-color .2s, transform .2s; }
+.module-card:hover { border-color: rgba(200,170,110,0.4) !important; transform: translateY(-1px); }
+.acwr-ring { width:80px; height:80px; }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="max-w-7xl mx-auto px-4 py-8 space-y-6">
+<div class="max-w-6xl mx-auto px-4 py-8 space-y-6">
 
-    <!-- HERO PROFILE CARD -->
-    <div class="metric-card mb-6">
-        <div class="flex flex-col md:flex-row items-center gap-6 relative z-10 p-5">
+    <!-- ═══════════════════════════════════════════════════════
+         HERO
+    ═══════════════════════════════════════════════════════ -->
+    <div class="metric-card p-5 md:p-6">
+        <div class="flex flex-col md:flex-row items-center gap-6">
             <!-- Avatar -->
             <div class="flex-shrink-0 avatar-glow-ring">
                 {% if cliente.foto %}
-                <img src="{{ cliente.foto.url }}" alt="Foto de perfil de {{ cliente.nombre }}" class="profile-avatar">
+                <img src="{{ cliente.foto.url }}" alt="{{ cliente.nombre }}" class="profile-avatar">
                 {% else %}
-                <div class="profile-avatar-placeholder" aria-label="Avatar por defecto">
-                    <i class="fas fa-user"></i>
+                <div class="profile-avatar-placeholder"><i class="fas fa-user"></i></div>
+                {% endif %}
+            </div>
+
+            <!-- Info principal -->
+            <div class="flex-grow text-center md:text-left">
+                <h1 class="font-display mb-0.5" style="font-size:2rem; color:var(--lol-gold-bright);">{{ cliente.nombre }}</h1>
+                <p class="font-data text-xs uppercase tracking-widest text-[var(--lol-text-dim)] mb-3">{{ cliente.email|default:"Sin email" }}{% if edad %} · {{ edad }} años{% endif %}</p>
+
+                <div class="flex flex-wrap gap-2 justify-center md:justify-start">
+                    <!-- Nivel gamificación -->
+                    {% if perfil_gamificacion and perfil_gamificacion.nivel_actual %}
+                    <span class="badge-lol flex items-center gap-1.5 text-xs px-3 py-1">
+                        <i class="fas fa-crown text-[var(--lol-gold-dark)]"></i>
+                        Nivel {{ perfil_gamificacion.nivel_actual.numero }}
+                        · {{ perfil_gamificacion.puntos_totales }} XP
+                        · <i class="fas fa-fire opacity-70"></i> {{ perfil_gamificacion.racha_actual|default:0 }}d
+                    </span>
+                    {% endif %}
+                    <!-- Objetivo principal -->
+                    <span class="badge-lol text-[10px] px-2 py-1" style="border-color:var(--lol-border-subtle); color:var(--lol-text-dim);">
+                        <i class="fas fa-bullseye mr-1 opacity-70"></i>{{ cliente.get_objetivo_principal_display|default:"Salud General" }}
+                    </span>
+                    <!-- Membresía -->
+                    {% if cliente.membresia_activa %}
+                    <span class="badge-lol text-[10px] px-2 py-1"><i class="fas fa-check-circle mr-1"></i>Membresía activa</span>
+                    {% else %}
+                    <span class="badge-lol-danger text-[10px] px-2 py-1"><i class="fas fa-times-circle mr-1"></i>Membresía inactiva</span>
+                    {% endif %}
+                    <!-- Lesión activa -->
+                    {% if lesion_activa %}
+                    <span class="badge-lol-danger flex items-center gap-1.5 text-[10px] px-2 py-1 animate-pulse">
+                        <i class="fas fa-shield-alt"></i>Lesión {{ lesion_activa.fase }} · {{ lesion_activa.zona_afectada|title }}
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Acciones rápidas -->
+            <div class="flex-shrink-0 flex flex-wrap gap-2 justify-center mt-4 md:mt-0">
+                <a href="{% url 'entrenos:timeline_atleta' cliente.id %}" class="btn-lol-primary text-xs px-3 py-2">
+                    <i class="fas fa-stream mr-1"></i>Timeline
+                </a>
+                <a href="{% url 'entrenos:registrar_actividad_libre' cliente.id %}" class="btn-lol-primary text-xs px-3 py-2" style="background:linear-gradient(135deg,#06b6d4,#0e7490);">
+                    <i class="fas fa-plus mr-1"></i>Actividad
+                </a>
+                {% if hyrox_objetivo %}
+                <a href="{% url 'hyrox:dashboard' %}" class="btn-lol-secondary text-xs px-3 py-2">
+                    <i class="fas fa-flag-checkered mr-1"></i>Hyrox
+                </a>
+                {% endif %}
+                <a href="{% url 'entrenos:dashboard_ejercicios' cliente.id %}" class="btn-lol-secondary text-xs px-3 py-2">
+                    <i class="fas fa-chart-line mr-1"></i>Analytics
+                </a>
+                <a href="{% url 'clientes:editar_cliente' cliente.id %}" class="btn-lol-secondary text-xs px-3 py-2">
+                    <i class="fas fa-pencil-alt mr-1"></i>Editar
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════
+         BLOQUE 1 — ESTADO ACTUAL (métricas clave de hoy)
+    ═══════════════════════════════════════════════════════ -->
+    <div>
+        <h2 class="font-display text-base text-[var(--lol-gold-mid)] uppercase tracking-widest mb-3 flex items-center gap-2">
+            <i class="fas fa-heartbeat text-red-400 text-xs"></i> Estado Actual
+        </h2>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+
+            <!-- Entrenos totales -->
+            <div class="metric-card p-4 text-center">
+                <div class="font-display text-3xl text-[var(--lol-gold-bright)]">{{ total_entrenos }}</div>
+                <div class="font-data text-[10px] text-[var(--lol-text-dim)] uppercase tracking-widest mt-1">Entrenos Totales</div>
+            </div>
+
+            <!-- Media semanal -->
+            <div class="metric-card p-4 text-center">
+                <div class="font-display text-3xl text-[var(--lol-gold-bright)]">{{ promedio_semanal }}</div>
+                <div class="font-data text-[10px] text-[var(--lol-text-dim)] uppercase tracking-widest mt-1">Entrenos / Semana</div>
+            </div>
+
+            <!-- Peso -->
+            <div class="metric-card p-4 text-center">
+                {% if ultima_revision.peso_corporal %}
+                <div class="font-display text-3xl text-[var(--lol-gold-bright)]">{{ ultima_revision.peso_corporal }}</div>
+                <div class="font-data text-[10px] text-[var(--lol-gold-mid)] uppercase tracking-widest mt-1">Peso kg</div>
+                {% if peso_30d %}
+                <div class="text-[10px] mt-1 {% if peso_30d < 0 %}text-green-400{% elif peso_30d > 0 %}text-red-400{% else %}text-slate-500{% endif %}">
+                    {% if peso_30d > 0 %}+{% endif %}{{ peso_30d }} kg / 30d
+                </div>
+                {% endif %}
+                {% else %}
+                <a href="{% url 'clientes:control_peso_cliente' cliente.id %}" class="btn-lol-secondary text-[10px] px-2 py-1 mt-2">
+                    <i class="fas fa-plus mr-1"></i>Añadir peso
+                </a>
+                {% endif %}
+            </div>
+
+            <!-- ACWR -->
+            <div class="metric-card p-4 text-center">
+                {% if acwr_valor %}
+                <div class="font-display text-3xl {{ acwr_zona.1 }}">{{ acwr_valor }}</div>
+                <div class="font-data text-[10px] uppercase tracking-widest mt-1 {{ acwr_zona.1 }}">ACWR · {{ acwr_zona.2 }}</div>
+                {% else %}
+                <div class="font-display text-xl text-[var(--lol-text-dim)]">—</div>
+                <div class="font-data text-[10px] text-[var(--lol-text-dim)] uppercase tracking-widest mt-1">ACWR sin datos</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════
+         BLOQUE 2 — MÓDULOS ACTIVOS
+    ═══════════════════════════════════════════════════════ -->
+    <div>
+        <h2 class="font-display text-base text-[var(--lol-gold-mid)] uppercase tracking-widest mb-3 flex items-center gap-2">
+            <i class="fas fa-th-large text-purple-400 text-xs"></i> Módulos Activos
+        </h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+            <!-- HYROX -->
+            {% if hyrox_objetivo %}
+            <a href="{% url 'hyrox:dashboard' %}" class="metric-card module-card p-5 block no-underline" style="border-color: rgba(6,182,212,0.3);">
+                <div class="flex items-center gap-3 mb-3">
+                    <div class="w-9 h-9 rounded-lg bg-cyan-600/20 flex items-center justify-center text-cyan-400">
+                        <i class="fas fa-flag-checkered"></i>
+                    </div>
+                    <div>
+                        <div class="font-display text-sm text-[var(--lol-gold-bright)] leading-tight">Hyrox</div>
+                        <div class="text-[10px] text-cyan-400 font-mono">{{ hyrox_objetivo.get_categoria_display }}</div>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="bg-black/20 rounded-lg p-2 text-center">
+                        <div class="font-display text-xl {% if hyrox_readiness >= 70 %}text-green-400{% elif hyrox_readiness >= 40 %}text-yellow-400{% else %}text-red-400{% endif %}">
+                            {{ hyrox_readiness|default:"—" }}{% if hyrox_readiness %}<span class="text-sm">%</span>{% endif %}
+                        </div>
+                        <div class="text-[9px] text-[var(--lol-text-dim)] uppercase tracking-wide">Readiness</div>
+                    </div>
+                    <div class="bg-black/20 rounded-lg p-2 text-center">
+                        <div class="font-display text-xl {% if hyrox_dias_para_evento <= 14 %}text-red-400{% elif hyrox_dias_para_evento <= 60 %}text-yellow-400{% else %}text-cyan-400{% endif %}">
+                            {{ hyrox_dias_para_evento }}
+                        </div>
+                        <div class="text-[9px] text-[var(--lol-text-dim)] uppercase tracking-wide">Días</div>
+                    </div>
+                </div>
+                <div class="text-[10px] text-[var(--lol-text-dim)] mt-2 text-right">
+                    Race Day: {{ hyrox_objetivo.fecha_evento|date:"d M Y" }}
+                </div>
+            </a>
+            {% else %}
+            <a href="{% url 'hyrox:crear_objetivo' %}" class="metric-card module-card p-5 block no-underline opacity-50 hover:opacity-80 border-dashed">
+                <div class="flex items-center gap-3 mb-2">
+                    <div class="w-9 h-9 rounded-lg bg-slate-700 flex items-center justify-center text-slate-400">
+                        <i class="fas fa-flag-checkered"></i>
+                    </div>
+                    <div class="font-display text-sm text-[var(--lol-text-dim)]">Hyrox</div>
+                </div>
+                <p class="text-[11px] text-[var(--lol-muted)]">Sin objetivo activo. Crea uno para activar el módulo.</p>
+                <span class="text-cyan-400 text-[11px] font-semibold">+ Crear objetivo →</span>
+            </a>
+            {% endif %}
+
+            <!-- NUTRICIÓN -->
+            {% if perfil_nutricional %}
+            <a href="{% url 'nutricion_app_django:dashboard_nutricional' %}" class="metric-card module-card p-5 block no-underline" style="border-color: rgba(16,185,129,0.3);">
+                <div class="flex items-center gap-3 mb-3">
+                    <div class="w-9 h-9 rounded-lg bg-emerald-600/20 flex items-center justify-center text-emerald-400">
+                        <i class="fas fa-apple-alt"></i>
+                    </div>
+                    <div>
+                        <div class="font-display text-sm text-[var(--lol-gold-bright)] leading-tight">Nutrición</div>
+                        <div class="text-[10px] text-emerald-400 font-mono capitalize">{{ perfil_nutricional.fase }}</div>
+                    </div>
+                </div>
+                {% if target_nutricional %}
+                <div class="grid grid-cols-3 gap-2 text-center">
+                    <div class="bg-black/20 rounded-lg p-2">
+                        <div class="font-display text-base text-blue-300">{{ target_nutricional.bloques_proteina }}</div>
+                        <div class="text-[9px] text-[var(--lol-text-dim)] uppercase">Prot</div>
+                    </div>
+                    <div class="bg-black/20 rounded-lg p-2">
+                        <div class="font-display text-base text-yellow-300">{{ target_nutricional.bloques_carbohidrato }}</div>
+                        <div class="text-[9px] text-[var(--lol-text-dim)] uppercase">Carbs</div>
+                    </div>
+                    <div class="bg-black/20 rounded-lg p-2">
+                        <div class="font-display text-base text-orange-300">{{ target_nutricional.bloques_grasa }}</div>
+                        <div class="text-[9px] text-[var(--lol-text-dim)] uppercase">Grasa</div>
+                    </div>
+                </div>
+                <div class="text-[9px] text-[var(--lol-text-dim)] mt-2 text-right">bloques por día gym</div>
+                {% endif %}
+            </a>
+            {% else %}
+            <a href="{% url 'nutricion_app_django:onboarding_nutricional' %}" class="metric-card module-card p-5 block no-underline opacity-50 hover:opacity-80 border-dashed">
+                <div class="flex items-center gap-3 mb-2">
+                    <div class="w-9 h-9 rounded-lg bg-slate-700 flex items-center justify-center text-slate-400">
+                        <i class="fas fa-apple-alt"></i>
+                    </div>
+                    <div class="font-display text-sm text-[var(--lol-text-dim)]">Nutrición</div>
+                </div>
+                <p class="text-[11px] text-[var(--lol-muted)]">Sin perfil nutricional configurado.</p>
+                <span class="text-emerald-400 text-[11px] font-semibold">+ Configurar →</span>
+            </a>
+            {% endif %}
+
+            <!-- LESIÓN ACTIVA o GYM STATS -->
+            {% if lesion_activa %}
+            <a href="{% url 'hyrox:test_recuperacion' lesion_activa.id %}" class="metric-card module-card p-5 block no-underline" style="border-color: rgba(239,68,68,0.4);">
+                <div class="flex items-center gap-3 mb-3">
+                    <div class="w-9 h-9 rounded-lg bg-red-600/20 flex items-center justify-center text-red-400 animate-pulse">
+                        <i class="fas fa-shield-alt"></i>
+                    </div>
+                    <div>
+                        <div class="font-display text-sm text-red-300 leading-tight">Lesión Activa</div>
+                        <div class="text-[10px] text-red-400 font-mono">Fase {{ lesion_activa.fase }}</div>
+                    </div>
+                </div>
+                <div class="space-y-1.5">
+                    <div class="flex justify-between text-[11px]">
+                        <span class="text-[var(--lol-text-dim)]">Zona:</span>
+                        <span class="text-red-300 font-semibold">{{ lesion_activa.zona_afectada|title }}</span>
+                    </div>
+                    <div class="flex justify-between text-[11px]">
+                        <span class="text-[var(--lol-text-dim)]">Desde:</span>
+                        <span class="text-[var(--lol-gold-mid)]">{{ lesion_activa.fecha_inicio|date:"d/m/Y" }}</span>
+                    </div>
+                    <div class="flex justify-between text-[11px]">
+                        <span class="text-[var(--lol-text-dim)]">Gravedad:</span>
+                        <span class="text-red-300">{{ lesion_activa.gravedad }}/10</span>
+                    </div>
+                </div>
+                <div class="text-[10px] text-red-400 font-semibold mt-3">→ Ver protocolo recuperación</div>
+            </a>
+            {% else %}
+            <div class="metric-card p-5" style="border-color: rgba(168,85,247,0.3);">
+                <div class="flex items-center gap-3 mb-3">
+                    <div class="w-9 h-9 rounded-lg bg-purple-600/20 flex items-center justify-center text-purple-400">
+                        <i class="fas fa-dumbbell"></i>
+                    </div>
+                    <div class="font-display text-sm text-[var(--lol-gold-bright)] leading-tight">Gym</div>
+                </div>
+                <div class="space-y-2">
+                    <div class="flex justify-between text-[11px]">
+                        <span class="text-[var(--lol-text-dim)]">Esta semana:</span>
+                        <span class="font-display text-[var(--lol-gold-bright)] text-base">{{ entrenos_esta_semana }}</span>
+                    </div>
+                    {% if ultimo_entreno %}
+                    <div class="flex justify-between text-[11px]">
+                        <span class="text-[var(--lol-text-dim)]">Último:</span>
+                        <span class="text-[var(--lol-gold-mid)]">{{ ultimo_entreno.fecha|date:"d M" }}</span>
+                    </div>
+                    {% endif %}
+                    {% if grasa_corporal %}
+                    <div class="flex justify-between text-[11px]">
+                        <span class="text-[var(--lol-text-dim)]">Grasa:</span>
+                        <span class="text-[var(--lol-gold-mid)]">{{ ultima_revision.grasa_corporal }}%</span>
+                    </div>
+                    {% endif %}
+                </div>
+                <a href="{% url 'entrenos:dashboard_ejercicios' cliente.id %}" class="text-purple-400 text-[10px] font-semibold mt-3 block">→ Ver analytics gym</a>
+            </div>
+            {% endif %}
+
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════
+         BLOQUE 3 — MARCAS + HAZAÑAS + HISTORIAL
+    ═══════════════════════════════════════════════════════ -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+        <!-- COLUMNA IZQUIERDA -->
+        <div class="space-y-6">
+
+            <!-- PRs / Mejores marcas -->
+            <div class="metric-card p-5">
+                <h3 class="font-display text-[1rem] text-[var(--lol-gold-bright)] mb-4 flex items-center gap-2">
+                    <i class="fas fa-medal text-[var(--lol-gold-mid)]"></i> Mejores Marcas
+                </h3>
+                {% if records_prs %}
+                <div class="space-y-2">
+                    {% for record in records_prs %}
+                    <div class="flex items-center justify-between p-2.5 bg-black/20 rounded-lg border border-[var(--lol-border-subtle)] hover:border-[var(--lol-gold-dark)] transition-colors">
+                        <div>
+                            <p class="font-data text-[10px] text-[var(--lol-text-dim)] uppercase tracking-wider mb-0.5">{{ record.ejercicio_nombre }}</p>
+                            <p class="font-display text-lg text-[var(--lol-gold-bright)] leading-none m-0">
+                                {{ record.valor }} <span class="font-ui text-[10px] text-[var(--lol-gold-mid)] normal-case">kg</span>
+                            </p>
+                        </div>
+                        <div class="text-right">
+                            <p class="font-data text-[10px] text-[var(--lol-muted)] uppercase">{{ record.fecha_logrado|date:"M Y" }}</p>
+                            <i class="fas fa-crown text-[var(--lol-gold-dark)] opacity-60 text-sm"></i>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-6 border border-dashed border-[var(--lol-border-subtle)] rounded-lg">
+                    <i class="fas fa-medal text-2xl text-[var(--lol-text-dim)] opacity-30 mb-2"></i>
+                    <p class="font-ui text-xs text-[var(--lol-muted)]">Sin marcas históricas.</p>
                 </div>
                 {% endif %}
             </div>
 
-            <!-- Client Info -->
-            <div class="flex-grow text-center md:text-left">
-                <h1 class="font-display mb-1" style="font-size: 2.25rem; color: var(--lol-gold-bright);">{{ cliente.nombre }}</h1>
-                <p class="font-data text-xs uppercase tracking-widest text-[var(--lol-text-dim)] mb-4">{{ cliente.email|default:"Sin email" }}</p>
-
-                <div class="flex flex-wrap items-center justify-center md:justify-start gap-4">
-                    {% if cliente.perfil_gamificacion and cliente.perfil_gamificacion.nivel_actual %}
-                    <span class="badge-lol flex items-center gap-2" style="font-size: 0.85rem; padding: 6px 12px;">
-                        <i class="fas fa-crown text-[var(--lol-gold-dark)]"></i> Nivel {{ cliente.perfil_gamificacion.nivel_actual.numero }}
-                    </span>
-                    <div class="flex gap-4 font-data text-xs text-[var(--lol-gold-mid)] uppercase tracking-wider">
-                        <span class="flex items-center gap-1.5"><i class="fas fa-fire opacity-70"></i> Racha: {{ cliente.perfil_gamificacion.racha_actual|default:"0" }} días</span>
-                        <span class="flex items-center gap-1.5"><i class="fas fa-star opacity-70"></i> {{ cliente.perfil_gamificacion.puntos_totales }} XP</span>
-                    </div>
-                    {% endif %}
-                </div>
-
-                <div class="flex flex-wrap gap-2 justify-center md:justify-start items-center mt-4">
-                    <span class="badge-lol" style="background: rgba(0,0,0,0.5); border-color: var(--lol-border-subtle); color: var(--lol-text-dim); padding: 4px 10px; font-size: 0.70rem;">
-                        <i class="fas fa-bullseye opacity-70 mr-1"></i>
-                        {{ cliente.get_objetivo_principal_display|default:"Salud General" }}
-                    </span>
-                    
-                    <!-- BIO-SAFE BADGE -->
-                    {% if bio_banner.injuries %}
-                    {% with fase=bio_banner.injuries.0.fase %}
-                    <span class="badge-lol-danger flex items-center gap-2 animate-pulse" 
-                          style="padding: 4px 10px; font-size: 0.70rem; {% if fase != 'AGUDA' %}border-color: var(--lol-gold-mid); color: var(--lol-gold-mid);{% endif %}">
-                        <i class="fas fa-shield-alt"></i>
-                        Biomecánica: Fase {{ fase }} ({{ bio_banner.injuries.0.zona|title }})
-                    </span>
-                    {% endwith %}
-                    {% endif %}
-                </div>
-            </div>
-
-            <!-- Action Buttons -->
-            <div class="flex-shrink-0 flex flex-col sm:flex-row gap-3 mt-4 md:mt-0 flex-wrap">
-                <a href="{% url 'entrenos:timeline_atleta' cliente.id %}" class="btn-lol-primary text-sm flex justify-center">
-                    <i class="fas fa-stream mr-2"></i> Timeline
-                </a>
-                <a href="{% url 'entrenos:registrar_actividad_libre' cliente.id %}" class="btn-lol-primary text-sm flex justify-center" style="background: linear-gradient(135deg, #06b6d4, #0e7490);">
-                    <i class="fas fa-plus mr-2"></i> Añadir actividad
-                </a>
-                <a href="{% url 'entrenos:dashboard_ejercicios' cliente.id %}" class="btn-lol-secondary text-sm flex justify-center">
-                    <i class="fas fa-chart-line mr-2"></i> Dashboard
-                </a>
-                <a href="{% url 'entrenos:vista_plan_anual' cliente.id %}" class="btn-lol-secondary text-sm flex justify-center">
-                    <i class="fas fa-calendar-alt mr-2"></i> Plan Anual
-                </a>
-                <a href="{% url 'clientes:editar_cliente' cliente.id %}" class="btn-lol-secondary text-sm flex justify-center">
-                    <i class="fas fa-pencil-alt mr-2"></i> Editar Perfil
-                </a>
-            </div>
-        </div>
-    </div>
-
-    <!-- STATS GRID -->
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <div class="metric-card p-4 text-center">
-            <div class="font-display text-2xl text-[var(--lol-gold-bright)]">{{ total_entrenos }}</div>
-            <div class="font-data text-xs text-[var(--lol-text-dim)] uppercase tracking-widest mt-1">Entrenos Totales</div>
-        </div>
-        <div class="metric-card p-4 text-center">
-            <div class="font-display text-2xl text-[var(--lol-gold-bright)]">{{ promedio_semanal }}</div>
-            <div class="font-data text-xs text-[var(--lol-text-dim)] uppercase tracking-widest mt-1">Entrenos / Semana</div>
-        </div>
-        <div class="metric-card p-4 text-center flex flex-col items-center justify-center">
-            {% if ultima_revision.peso_corporal %}
-            <div class="font-display text-2xl text-[var(--lol-gold-bright)]">{{ ultima_revision.peso_corporal }}</div>
-            <div class="font-data text-[10px] text-[var(--lol-gold-mid)] uppercase tracking-widest mt-1">Peso Actual (kg)</div>
-            {% else %}
-            <div class="font-ui text-xs text-[var(--lol-text-dim)] mb-2 italic">Sin datos de peso</div>
-            <a href="{% url 'clientes:control_peso_cliente' cliente.id %}" class="btn-lol-secondary" style="font-size: 0.65rem; padding: 4px 8px;">
-                <i class="fas fa-plus"></i> Añadir
-            </a>
-            {% endif %}
-        </div>
-        <div class="metric-card p-4 text-center flex flex-col items-center justify-center">
-            {% if ultima_revision.grasa_corporal %}
-            <div class="font-display text-2xl text-[var(--lol-gold-bright)]">{{ ultima_revision.grasa_corporal }}%</div>
-            <div class="font-data text-[10px] text-[var(--lol-gold-mid)] uppercase tracking-widest mt-1">Grasa Corporal</div>
-            {% else %}
-            <div class="font-ui text-xs text-[var(--lol-text-dim)] mb-2 italic">Sin datos de grasa</div>
-            <a href="{% url 'clientes:control_peso_cliente' cliente.id %}" class="btn-lol-secondary" style="font-size: 0.65rem; padding: 4px 8px;">
-                <i class="fas fa-plus"></i> Añadir
-            </a>
-            {% endif %}
-        </div>
-    </div>
-
-    <!-- HAZAÑAS SECTION -->
-    <div class="mb-6">
-        <h2 class="font-display text-lg text-[var(--lol-gold-bright)] mb-4 flex items-center gap-2">
-            <i class="fas fa-star text-[var(--lol-gold-mid)] text-sm"></i> ◆ HAZAÑAS
-        </h2>
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <!-- Logros Obtenidos -->
-            {% for logro in logros_completados %}
-            <div class="metric-card p-3 flex items-start gap-3 transition-transform duration-300 hover:translate-x-1" 
-                 style="border-color: var(--lol-gold-dark); background: rgba(200, 170, 110, 0.05);">
-                <div class="text-[var(--lol-gold-bright)] text-2xl mt-0.5" style="text-shadow: 0 0 10px rgba(200, 170, 110, 0.5);">
-                    <i class="{{ logro.prueba.icono|default:'fas fa-award' }}"></i>
-                </div>
-                <div>
-                    <div class="font-display text-sm text-[var(--lol-gold-bright)] mb-0.5 leading-tight">{{ logro.prueba.nombre }}</div>
-                    <div class="font-ui text-[11px] text-[var(--lol-gold-mid)] opacity-80 leading-snug">{{ logro.prueba.descripcion }}</div>
-                </div>
-            </div>
-            {% endfor %}
-            
-            <!-- Logros Pendientes -->
-            {% for prueba in pruebas_activas %}
-            <div class="metric-card p-3 flex items-start gap-4 transition-all duration-300" 
-                 style="opacity: 0.35; border-color: var(--lol-border-subtle); background: var(--lol-bg-dark);">
-                <div class="text-[var(--lol-text-dim)] text-2xl mt-0.5 grayscale">
-                    <i class="{{ prueba.icono|default:'fas fa-lock' }}"></i>
-                </div>
-                <div>
-                    <div class="font-display text-sm text-[var(--lol-text-dim)] mb-0.5 leading-tight">{{ prueba.nombre }}</div>
-                    <div class="font-ui text-[11px] text-[var(--lol-muted)] leading-snug">{{ prueba.descripcion }}</div>
-                </div>
-            </div>
-            {% endfor %}
-            
-            {% if not logros_completados and not pruebas_activas %}
-            <div class="col-span-1 md:col-span-2 lg:col-span-3 text-center py-6 border border-dashed border-[var(--lol-border-subtle)] rounded-lg bg-[var(--lol-bg-dark)]">
-                <i class="fas fa-scroll text-2xl text-[var(--lol-text-dim)] opacity-40 mb-2"></i>
-                <div class="font-display text-[var(--lol-gold-mid)] text-base">Códice Vacío</div>
-                <div class="font-ui text-xs text-[var(--lol-muted)] mt-1">Aún no hay hazañas registradas o pendientes.</div>
-            </div>
-            {% endif %}
-        </div>
-    </div>
-
-    <!-- MAIN CONTENT GRID -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <!-- LEFT COLUMN -->
-        <div class="space-y-6">
-            <!-- PERSONAL DATA COMPACTED -->
-            <div class="metric-card p-5">
-                <h3 class="font-display text-[1.1rem] text-[var(--lol-gold-bright)] mb-4 flex items-center gap-2">
-                    <i class="fas fa-id-card text-[var(--lol-gold-mid)]"></i> Datos Vitales
-                </h3>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
-                    <div class="flex justify-between border-b border-[var(--lol-border-subtle)] pb-2 text-sm">
-                        <span class="font-ui text-[var(--lol-text-dim)] text-xs">Edad:</span>
-                        <span class="font-data text-[var(--lol-gold-bright)]">
-                            {% if edad %}{{ edad }} años{% else %}No registrada{% endif %}
-                        </span>
-                    </div>
-                    <div class="flex justify-between border-b border-[var(--lol-border-subtle)] pb-2 text-sm">
-                        <span class="font-ui text-[var(--lol-text-dim)] text-xs">Ubicación:</span>
-                        <span class="font-data text-[var(--lol-gold-bright)]">{{ cliente.direccion|default:"No registrada" }}</span>
-                    </div>
-                    <div class="flex justify-between border-b border-[var(--lol-border-subtle)] pb-2 text-sm">
-                        <span class="font-ui text-[var(--lol-text-dim)] text-xs tracking-wide">Membresía:</span>
-                        {% if cliente.membresia_activa %}
-                        <span class="badge-lol px-2 py-0" style="font-size: 0.65rem; height: auto; min-height: 20px;">Activa</span>
-                        {% else %}
-                        <span class="badge-lol-danger px-2 py-0" style="font-size: 0.65rem; height: auto; min-height: 20px;">Inactiva</span>
-                        {% endif %}
-                    </div>
-                    <div class="flex justify-between border-b border-[var(--lol-border-subtle)] pb-2 text-sm">
-                        <span class="font-ui text-[var(--lol-text-dim)] text-xs">Vencimiento:</span>
-                        <span class="font-data text-[var(--lol-gold-bright)]">{{ cliente.fecha_vencimiento_membresia|date:"d/m/Y"|default:"No registrado" }}</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- PREFERENCES -->
-            <div class="metric-card p-5">
-                <h3 class="font-display text-[1.1rem] text-[var(--lol-gold-bright)] mb-2 flex items-center gap-2">
-                    <i class="fas fa-cogs text-[var(--lol-gold-mid)]"></i> Ajustes y Preferencias
-                </h3>
-                <p class="font-ui text-xs text-[var(--lol-text-dim)] mb-4 leading-relaxed">
-                    Configura tus días disponibles, ejercicios preferidos y otros ajustes para personalizar tu plan de
-                    entrenamiento.
-                </p>
-                <a href="{% url 'clientes:configurar_preferencias_helms' cliente.id %}" class="btn-lol-secondary w-full justify-center" style="font-size: 0.8rem;">
-                    <i class="fas fa-sliders-h mr-2"></i>
-                    Configurar Preferencias
-                </a>
-            </div>
-
-            <!-- OBJECTIVES -->
+            <!-- Objetivos gym -->
             <div class="metric-card p-5">
                 <div class="flex justify-between items-center mb-4">
-                    <h3 class="font-display text-[1.1rem] text-[var(--lol-gold-bright)] mb-0 flex items-center gap-2">
+                    <h3 class="font-display text-[1rem] text-[var(--lol-gold-bright)] flex items-center gap-2">
                         <i class="fas fa-bullseye text-[var(--lol-gold-mid)]"></i> Objetivos
                     </h3>
-                    <a href="{% url 'clientes:definir_objetivo' cliente.id %}" class="btn-lol-primary" style="padding: 4px 10px; font-size: 0.70rem; height: auto;">
+                    <a href="{% url 'clientes:definir_objetivo' cliente.id %}" class="btn-lol-primary text-[10px] px-2 py-1 h-auto min-h-0">
                         <i class="fas fa-plus"></i> Nuevo
                     </a>
                 </div>
                 {% if objetivos %}
-                <div class="space-y-3">
+                <div class="space-y-2">
                     {% for obj in objetivos %}
-                    <div class="bg-[rgba(0,0,0,0.2)] border border-[var(--lol-border-subtle)] rounded-lg p-3 flex justify-between items-center hover:border-[var(--lol-gold-mid)] transition-colors">
+                    <div class="bg-black/20 border border-[var(--lol-border-subtle)] rounded-lg p-2.5 flex justify-between items-center hover:border-[var(--lol-gold-mid)] transition-colors">
                         <span class="font-ui text-xs text-[var(--lol-text-dim)] uppercase tracking-wide">
                             {{ obj.get_medida_display }}:
-                            <span class="font-display text-[var(--lol-gold-bright)] ml-1 text-base normal-case">{{ obj.valor }}</span>
+                            <span class="font-display text-[var(--lol-gold-bright)] ml-1 text-sm normal-case">{{ obj.valor }}</span>
                         </span>
-                        <div class="flex gap-3">
-                            <a href="{% url 'clientes:editar_objetivo' obj.id %}" class="text-[var(--lol-gold-mid)] hover:text-white transition-colors" aria-label="Editar objetivo">
-                                <i class="fas fa-pencil-alt text-sm"></i>
-                            </a>
-                            <a href="{% url 'clientes:eliminar_objetivo' obj.id %}" class="text-[var(--lol-red)] hover:text-white transition-colors" onclick="return confirm('¿Eliminar este objetivo?');" aria-label="Eliminar objetivo">
-                                <i class="fas fa-trash text-sm"></i>
-                            </a>
+                        <div class="flex gap-2">
+                            <a href="{% url 'clientes:editar_objetivo' obj.id %}" class="text-[var(--lol-gold-mid)] hover:text-white transition-colors"><i class="fas fa-pencil-alt text-xs"></i></a>
+                            <a href="{% url 'clientes:eliminar_objetivo' obj.id %}" class="text-[var(--lol-red)] hover:text-white transition-colors" onclick="return confirm('¿Eliminar?');"><i class="fas fa-trash text-xs"></i></a>
                         </div>
                     </div>
                     {% endfor %}
                 </div>
                 {% else %}
-                <div class="text-center py-5 border border-dashed border-[var(--lol-border-subtle)] rounded-lg bg-[var(--lol-bg-dark)]">
-                    <i class="fas fa-bullseye text-2xl text-[var(--lol-text-dim)] opacity-40 mb-2"></i>
-                    <p class="font-ui text-xs text-[var(--lol-muted)] mb-3">No hay objetivos registrados</p>
-                    <a href="{% url 'clientes:definir_objetivo' cliente.id %}" class="btn-lol-primary" style="padding: 4px 12px; font-size: 0.70rem; height: auto;">
-                        <i class="fas fa-plus mr-1"></i> Crear objetivo
-                    </a>
+                <div class="text-center py-4 border border-dashed border-[var(--lol-border-subtle)] rounded-lg">
+                    <p class="font-ui text-xs text-[var(--lol-muted)]">Sin objetivos.</p>
                 </div>
                 {% endif %}
             </div>
 
-            <!-- WEIGHT CONTROL -->
-            <div class="metric-card p-5 text-center group cursor-pointer transition-all hover:border-[var(--lol-gold-mid)]" onclick="window.location.href='{% url 'clientes:control_peso_cliente' cliente.id %}'">
-                <i class="fas fa-weight text-3xl text-[var(--lol-gold-mid)] mb-3 group-hover:scale-110 transition-transform pt-2"></i>
-                <p class="font-display text-lg text-[var(--lol-gold-bright)] mb-0">Control de Peso</p>
-                <p class="font-ui text-[10px] uppercase tracking-widest text-[var(--lol-text-dim)] pb-2">Gestionar evolución</p>
-            </div>
-            
-            <!-- CHARTS SECTION -->
+            <!-- Accesos rápidos a módulos -->
             <div class="metric-card p-5">
-                <h3 class="font-display text-[1.1rem] text-[var(--lol-gold-bright)] mb-4 flex items-center gap-2">
-                    <i class="fas fa-chart-area text-[var(--lol-gold-mid)]"></i> Evolución Física
+                <h3 class="font-display text-[1rem] text-[var(--lol-gold-bright)] mb-4 flex items-center gap-2">
+                    <i class="fas fa-link text-[var(--lol-gold-mid)]"></i> Accesos Rápidos
                 </h3>
-                <div style="height: 250px; width: 100%;">
-                    <div class="metric-card bg-[var(--lol-bg-alt)] border border-[var(--lol-border-subtle)] p-4 rounded-sm shadow-xl relative overflow-hidden transition-all hover:border-[rgba(200,170,110,0.3)] hover:shadow-[0_0_15px_var(--lol-glow-gold)]">
-    <h4 class="font-display text-[0.65rem] text-[var(--lol-gold-mid)] uppercase tracking-wider mb-3">◆ PROGRESOGRAFICO</h4>
-    <canvas id="progresoGrafico"></canvas>
-</div>
+                <div class="grid grid-cols-2 gap-2">
+                    <a href="{% url 'clientes:control_peso_cliente' cliente.id %}" class="btn-lol-secondary text-[11px] py-2 justify-center"><i class="fas fa-weight mr-1"></i> Peso</a>
+                    <a href="{% url 'clientes:configurar_preferencias_helms' cliente.id %}" class="btn-lol-secondary text-[11px] py-2 justify-center"><i class="fas fa-sliders-h mr-1"></i> Preferencias</a>
+                    <a href="{% url 'entrenos:vista_plan_anual' cliente.id %}" class="btn-lol-secondary text-[11px] py-2 justify-center"><i class="fas fa-calendar-alt mr-1"></i> Plan Anual</a>
+                    <a href="{% url 'hyrox:dashboard' %}" class="btn-lol-secondary text-[11px] py-2 justify-center"><i class="fas fa-flag-checkered mr-1"></i> Hyrox</a>
+                    <a href="{% url 'nutricion_app_django:dashboard_nutricional' %}" class="btn-lol-secondary text-[11px] py-2 justify-center"><i class="fas fa-apple-alt mr-1"></i> Nutrición</a>
+                    <a href="{% url 'diario:dashboard_diario' %}" class="btn-lol-secondary text-[11px] py-2 justify-center"><i class="fas fa-book mr-1"></i> Diario</a>
                 </div>
             </div>
         </div>
 
-        <!-- RIGHT COLUMN -->
+        <!-- COLUMNA DERECHA -->
         <div class="space-y-6">
-            <!-- HISTORICAL RECORDS (PRs) -->
+
+            <!-- Hazañas -->
             <div class="metric-card p-5">
-                <h3 class="font-display text-[1.1rem] text-[var(--lol-gold-bright)] mb-4 flex items-center gap-2">
-                    <i class="fas fa-medal text-[var(--lol-gold-mid)]"></i> Mejores Marcas Históricas
+                <h3 class="font-display text-[1rem] text-[var(--lol-gold-bright)] mb-4 flex items-center gap-2">
+                    <i class="fas fa-star text-[var(--lol-gold-mid)]"></i> Hazañas
                 </h3>
-                {% if records_prs %}
-                <div class="grid grid-cols-1 gap-3">
-                    {% for record in records_prs %}
-                    <div class="flex items-center justify-between p-3 bg-[rgba(0,0,0,0.2)] rounded-lg border border-[var(--lol-border-subtle)] hover:border-[var(--lol-gold-dark)] transition-colors">
-                        <div>
-                            <p class="font-data text-[10px] text-[var(--lol-text-dim)] uppercase tracking-wider mb-0.5">{{ record.ejercicio_nombre }}</p>
-                            <p class="font-display text-xl text-[var(--lol-gold-bright)] leading-none m-0">
-                                {{ record.valor }} <span class="font-ui text-[10px] text-[var(--lol-gold-mid)] tracking-normal normal-case ml-0.5">kg</span>
-                            </p>
+                <div class="grid grid-cols-1 gap-2">
+                    {% for logro in logros_completados %}
+                    <div class="p-2.5 flex items-center gap-3 rounded-lg border transition-transform hover:translate-x-1"
+                         style="border-color:var(--lol-gold-dark); background:rgba(200,170,110,0.05);">
+                        <div class="text-[var(--lol-gold-bright)] text-xl w-7 text-center" style="text-shadow:0 0 10px rgba(200,170,110,0.5);">
+                            <i class="{{ logro.prueba.icono|default:'fas fa-award' }}"></i>
                         </div>
-                        <div class="text-right flex flex-col justify-between h-full">
-                            <p class="font-data text-[10px] text-[var(--lol-muted)] mb-1 uppercase tracking-wider">{{ record.fecha_logrado|date:"M Y" }}</p>
-                            <i class="fas fa-crown text-[var(--lol-gold-dark)] opacity-70"></i>
+                        <div>
+                            <div class="font-display text-xs text-[var(--lol-gold-bright)] leading-tight">{{ logro.prueba.nombre }}</div>
+                            <div class="font-ui text-[10px] text-[var(--lol-gold-mid)] opacity-80">{{ logro.prueba.descripcion }}</div>
                         </div>
                     </div>
                     {% endfor %}
+                    {% for prueba in pruebas_activas %}
+                    <div class="p-2.5 flex items-center gap-3 rounded-lg border opacity-30"
+                         style="border-color:var(--lol-border-subtle);">
+                        <div class="text-[var(--lol-text-dim)] text-xl w-7 text-center grayscale">
+                            <i class="{{ prueba.icono|default:'fas fa-lock' }}"></i>
+                        </div>
+                        <div>
+                            <div class="font-display text-xs text-[var(--lol-text-dim)] leading-tight">{{ prueba.nombre }}</div>
+                            <div class="font-ui text-[10px] text-[var(--lol-muted)]">{{ prueba.descripcion }}</div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% if not logros_completados and not pruebas_activas %}
+                    <div class="text-center py-5 border border-dashed border-[var(--lol-border-subtle)] rounded-lg">
+                        <i class="fas fa-scroll text-xl text-[var(--lol-text-dim)] opacity-30 mb-1"></i>
+                        <p class="font-ui text-xs text-[var(--lol-muted)]">Sin hazañas aún.</p>
+                    </div>
+                    {% endif %}
                 </div>
-                {% else %}
-                <div class="text-center py-5 border border-dashed border-[var(--lol-border-subtle)] rounded-lg bg-[var(--lol-bg-dark)]">
-                    <i class="fas fa-medal text-2xl text-[var(--lol-text-dim)] opacity-40 mb-2"></i>
-                    <p class="font-ui text-xs text-[var(--lol-muted)] italic m-0">Sin marcas históricas registradas.</p>
-                </div>
-                {% endif %}
             </div>
 
-            <!-- WORKOUT HISTORY -->
+            <!-- Historial unificado (gym + hyrox) -->
             <div class="metric-card p-5">
                 <div class="flex justify-between items-center mb-4">
-                    <h3 class="font-display text-[1.1rem] text-[var(--lol-gold-bright)] mb-0 flex items-center gap-2">
-                        <i class="fas fa-history text-[var(--lol-gold-mid)]"></i> Historial Completo
+                    <h3 class="font-display text-[1rem] text-[var(--lol-gold-bright)] flex items-center gap-2">
+                        <i class="fas fa-history text-[var(--lol-gold-mid)]"></i> Historial
                     </h3>
-                    <a href="{% url 'entrenos:lista_entrenamientos' %}" class="btn-lol-secondary" style="padding: 4px 10px; font-size: 0.70rem; height: auto;">
-                        Ver todo
-                    </a>
+                    <a href="{% url 'entrenos:timeline_atleta' cliente.id %}" class="btn-lol-secondary text-[10px] px-2 py-1 h-auto min-h-0">Ver todo</a>
                 </div>
-                
-                <div class="space-y-3">
+                <div class="space-y-2">
                     {% for semana, entrenos_semana in historial_agrupado.items %}
-                    <div class="accordion-item bg-[rgba(0,0,0,0.3)] border border-[var(--lol-border-subtle)] rounded-lg overflow-hidden">
-                        <div class="accordion-header p-3 flex justify-between items-center cursor-pointer hover:bg-[rgba(255,255,255,0.02)] transition-colors" role="button" aria-expanded="{% if forloop.first %}true{% else %}false{% endif %}" aria-controls="semana-{{ forloop.counter }}" tabindex="0" onclick="this.classList.toggle('active'); this.nextElementSibling.classList.toggle('hidden');">
-                            <h4 class="font-display text-sm text-[var(--lol-gold-bright)] m-0">
-                                Semana del {{ semana|date:"d M, Y" }}
-                            </h4>
-                            <div class="flex items-center gap-3">
-                                <div class="flex gap-1.5 opacity-80">
+                    <div class="bg-black/30 border border-[var(--lol-border-subtle)] rounded-lg overflow-hidden">
+                        <div class="p-2.5 flex justify-between items-center cursor-pointer hover:bg-white/[0.02] transition-colors"
+                             onclick="this.nextElementSibling.classList.toggle('hidden')">
+                            <span class="font-display text-xs text-[var(--lol-gold-bright)]">{{ semana|date:"d M, Y" }}</span>
+                            <div class="flex items-center gap-2">
+                                <div class="flex gap-1">
                                     {% for entreno in entrenos_semana %}
-                                        {% if 'hyrox' in entreno.rutina.nombre|lower or entreno.fuente_datos == 'hyrox' %}
-                                            <i class="fas fa-person-running text-[var(--lol-red)] text-xs" title="Hyrox Session"></i>
-                                        {% else %}
-                                            <i class="fas fa-dumbbell text-[var(--lol-gold-mid)] text-xs" title="Gym Session"></i>
-                                        {% endif %}
+                                    <i class="fas fa-dumbbell text-[var(--lol-gold-mid)] text-[9px]"></i>
                                     {% endfor %}
                                 </div>
-                                <span class="badge-lol px-1.5 py-0 min-w-0 h-auto font-data text-[10px]" style="border-radius: 4px;">{{ entrenos_semana|length }}</span>
-                                <i class="fas fa-chevron-down text-[var(--lol-muted)] text-[10px] transition-transform duration-300"></i>
+                                <span class="badge-lol text-[9px] px-1.5 py-0 h-auto">{{ entrenos_semana|length }}</span>
+                                <i class="fas fa-chevron-down text-[var(--lol-muted)] text-[9px]"></i>
                             </div>
                         </div>
-                        <div id="semana-{{ forloop.counter }}" class="accordion-content {% if not forloop.first %}hidden{% endif %} px-3 pb-3 pt-1 border-t border-[rgba(255,255,255,0.05)] transition-all duration-300">
+                        <div class="hidden px-3 pb-3 pt-1 border-t border-white/5">
                             {% for entreno in entrenos_semana %}
-                            <div class="border-l-[3px] {% if 'hyrox' in entreno.rutina.nombre|lower %}border-[var(--lol-red)] bg-[rgba(200,55,55,0.05)]{% else %}border-[var(--lol-gold-mid)] bg-[rgba(200,170,110,0.05)]{% endif %} rounded-r-md pl-3 py-2 mb-2 mt-2">
-                                <div class="flex justify-between items-start mb-1">
-                                    <p class="font-display text-sm text-[var(--lol-gold-bright)] m-0 leading-tight">
-                                        {{ entreno.rutina.nombre }}
-                                    </p>
-                                    <span class="font-data text-[9px] text-[var(--lol-text-dim)] uppercase tracking-wider">{{ entreno.fecha|date:"D, d M" }}</span>
+                            <div class="border-l-2 border-[var(--lol-gold-mid)] pl-3 py-1.5 mb-1.5 bg-black/10 rounded-r">
+                                <div class="flex justify-between items-start mb-0.5">
+                                    <p class="font-display text-xs text-[var(--lol-gold-bright)] m-0 leading-tight">{{ entreno.rutina.nombre }}</p>
+                                    <span class="font-data text-[9px] text-[var(--lol-text-dim)] uppercase">{{ entreno.fecha|date:"D d" }}</span>
                                 </div>
-                                
-                                <div class="flex flex-col gap-0.5">
-                                    {% for detalle in entreno.detalles_ejercicio.all %}
-                                    <div class="font-ui text-[11px] text-[var(--lol-muted)]">
-                                        <span class="text-[var(--lol-gold-mid)] font-bold opacity-80">{{ detalle.ejercicio.nombre }}:</span>
-                                        {{ detalle.series }}×{{ detalle.repeticiones }} @ {{ detalle.peso_kg }}kg
-                                    </div>
-                                    {% empty %}
-                                        {% for ej in entreno.ejercicios_realizados.all %}
-                                        <div class="font-ui text-[11px] text-[var(--lol-muted)]">
-                                            <span class="text-[var(--lol-gold-mid)] font-bold opacity-80">{{ ej.nombre_ejercicio }}:</span>
-                                            {{ ej.series }}×{{ ej.repeticiones }} @ {{ ej.peso_kg }}kg
-                                        </div>
-                                        {% endfor %}
-                                    {% endfor %}
+                                {% for detalle in entreno.detalles_ejercicio.all|slice:":3" %}
+                                <div class="font-ui text-[10px] text-[var(--lol-muted)]">
+                                    <span class="text-[var(--lol-gold-mid)] font-semibold opacity-80">{{ detalle.ejercicio.nombre }}:</span>
+                                    {{ detalle.series }}×{{ detalle.repeticiones }} @ {{ detalle.peso_kg }}kg
                                 </div>
+                                {% endfor %}
                             </div>
                             {% endfor %}
                         </div>
                     </div>
                     {% empty %}
-                    <div class="text-center py-5 border border-dashed border-[var(--lol-border-subtle)] rounded-lg bg-[var(--lol-bg-dark)]">
-                        <i class="fas fa-history text-2xl text-[var(--lol-text-dim)] opacity-40 mb-2"></i>
-                        <p class="font-ui text-xs text-[var(--lol-muted)] m-0">No hay historial de entrenamientos</p>
+                    <div class="text-center py-6 border border-dashed border-[var(--lol-border-subtle)] rounded-lg">
+                        <i class="fas fa-history text-xl text-[var(--lol-text-dim)] opacity-30 mb-1"></i>
+                        <p class="font-ui text-xs text-[var(--lol-muted)]">Sin historial.</p>
                     </div>
                     {% endfor %}
                 </div>
             </div>
+
         </div>
     </div>
+
 </div>
 {% endblock %}
 
@@ -439,11 +502,10 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="{% static 'clientes/js/detalle.js' %}"></script>
 <script>
-    // Pass backend data to JavaScript
-    window.perfilClienteData = {
-        labels: {{ labels_grafico | safe }},
-        pesos: {{ pesos_grafico | safe }},
-        grasas: {{ grasas_grafico | safe }}
-    };
+window.perfilClienteData = {
+    labels: {{ labels_grafico | safe }},
+    pesos: {{ pesos_grafico | safe }},
+    grasas: {{ grasas_grafico | safe }}
+};
 </script>
 {% endblock %}
