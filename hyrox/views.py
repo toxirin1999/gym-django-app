@@ -527,7 +527,7 @@ def hyrox_dashboard(request):
 
             total_est += running_secs
             # Mejor caso: usa el mejor ritmo real registrado si existe, si no aplica 3%
-            _mejor_pace = evolucion_carrera.get('mejor_ritmo', {}).get('secs') if evolucion_carrera else None
+            _mejor_pace = (evolucion_carrera.get('mejor_ritmo') or {}).get('secs') if evolucion_carrera else None
             if _mejor_pace:
                 total_mejor += _mejor_pace * 8
             else:
