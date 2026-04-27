@@ -1786,8 +1786,22 @@ class InterferenceIndexService:
             return round(sum(paces) / len(paces))
 
         # Fallback: usar tiempo_5k_base como ritmo base
+        # Aplica la misma heurística que _parse_5k_to_pace en views.py:
+        # MM >= 10 → tiempo total de 5K (dividir /5 para obtener ritmo/km)
+        # MM < 10 → ya es ritmo/km directamente
         if objetivo.tiempo_5k_base:
-            return cls._pace_to_secs(objetivo.tiempo_5k_base)
+            raw = str(objetivo.tiempo_5k_base)
+            try:
+                parts = raw.split(':')
+                if len(parts) == 3:
+                    total = int(parts[0]) * 3600 + int(parts[1]) * 60 + int(parts[2])
+                    return total // 5
+                mm = int(parts[0])
+                ss = int(parts[1])
+                total = mm * 60 + ss
+                return total // 5 if mm >= 10 else total
+            except Exception:
+                return cls._pace_to_secs(objetivo.tiempo_5k_base)
         return None
 
     @classmethod
