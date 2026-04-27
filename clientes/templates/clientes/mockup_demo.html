@@ -689,23 +689,11 @@ body {
     </div>
     {% endif %}
 
-    {% if hyrox_proxima_sesion.objective %}
-    <a href="{% url 'hyrox:registrar_entrenamiento' hyrox_proxima_sesion.objective.id %}" class="rb-cta">
+    <a href="{% url 'hyrox:dashboard' %}" class="rb-cta">
       <i class="fas fa-bolt"></i> Ejecutar Hyrox
     </a>
-    {% else %}
-    <a href="{% url 'hyrox:dashboard' %}" class="rb-cta">
-      <i class="fas fa-gauge-high"></i> Ver Dashboard Hyrox
-    </a>
-    {% endif %}
 
     <div style="margin-top:12px;display:grid;grid-template-columns:1fr 1fr;gap:6px;">
-      <a href="{% url 'hyrox:dashboard' %}" class="rb-btn rb-btn-ghost" style="justify-content:center;">
-        <i class="fas fa-chart-line"></i> Ver Plan
-      </a>
-      <a href="{% url 'entrenos:registrar_actividad_libre' cliente.id %}" class="rb-btn rb-btn-ghost" style="justify-content:center;">
-        <i class="fas fa-plus"></i> Añadir Actividad
-      </a>
       <a href="{% url 'hyrox:strava_reconciliacion' %}" class="rb-btn rb-btn-ghost" style="justify-content:center;grid-column:1/-1;color:#FC4C02;border-color:#FC4C02;">
         <i class="fab fa-strava"></i> Importar de Strava
       </a>
@@ -862,7 +850,7 @@ body {
       <i class="fas fa-fire-flame-curved"></i>
       Estoico
     </a>
-    <a href="/logros/" class="rb-bottom-btn" style="flex-direction:row;gap:6px;padding:10px 12px;">
+    <a href="{% url 'logros:ver_codice_completo' cliente.id %}" class="rb-bottom-btn" style="flex-direction:row;gap:6px;padding:10px 12px;">
       <i class="fas fa-trophy"></i>
       Logros
     </a>

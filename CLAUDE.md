@@ -4,6 +4,49 @@ This file provides context for AI assistants working on this codebase.
 
 ---
 
+## Quick Commands
+
+### Install
+```bash
+pip install -r requirements.txt
+```
+
+### Run (local)
+```bash
+python3 manage.py runserver --settings=gymproject.settings_local
+```
+
+### Run migrations
+```bash
+python3 manage.py migrate --settings=gymproject.settings_local
+```
+
+### Load initial data
+```bash
+python3 manage.py cargar_datos_estoicos --settings=gymproject.settings_local
+python3 manage.py seed_estiramientos --settings=gymproject.settings_local
+python3 manage.py crear_pruebas_epicas --settings=gymproject.settings_local
+```
+
+### Tests
+```bash
+python3 manage.py test --settings=gymproject.settings_local
+python3 manage.py test hyrox --settings=gymproject.settings_local
+```
+
+### Collect static files (producción)
+```bash
+python3 manage.py collectstatic --settings=gymproject.settings
+```
+
+### Celery (tareas async — requiere Redis)
+```bash
+celery -A gymproject worker --loglevel=info
+celery -A gymproject beat --loglevel=info
+```
+
+---
+
 ## Project Overview
 
 A comprehensive, multi-featured **Django gym and athletic training management platform** targeting personal trainers and athletes. The system combines training management, nutrition planning, AI coaching, gamification, stoic philosophy practice, and competition preparation.
