@@ -702,6 +702,44 @@ a.rb-dia:hover { background: var(--paper-2); text-decoration: none; }
   .rb-container { max-width: 760px; }
   .rb-strips { display: grid; grid-template-columns: repeat(3,1fr); }
 }
+
+/* ── HELP BUTTON ─────────────────────────────── */
+.rb-help-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 18px; height: 18px; border-radius: 50%;
+  border: 1px solid var(--line-2); background: transparent;
+  color: var(--ink-3); font-family: var(--font-mono); font-size: 10px;
+  font-weight: 700; cursor: pointer; flex-shrink: 0;
+  transition: background .15s, color .15s, border-color .15s;
+  line-height: 1; padding: 0;
+}
+.rb-help-btn:hover { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+
+/* ── HELP MODAL ──────────────────────────────── */
+#rb-help-overlay {
+  display: none; position: fixed; inset: 0; z-index: 10000;
+  background: rgba(15,15,14,0.72); backdrop-filter: blur(4px);
+  align-items: flex-end; justify-content: center;
+}
+#rb-help-overlay.open { display: flex; }
+#rb-help-sheet {
+  background: var(--paper); border: 2px solid var(--ink); border-bottom: none;
+  border-radius: 12px 12px 0 0; width: 100%; max-width: 560px;
+  max-height: 82vh; overflow-y: auto; padding: 0 0 40px;
+}
+#rb-help-header {
+  position: sticky; top: 0; background: var(--paper);
+  border-bottom: 1px solid var(--line); padding: 16px 20px;
+  display: flex; align-items: center; justify-content: space-between; z-index: 1;
+}
+#rb-help-close {
+  background: none; border: none; cursor: pointer;
+  font-size: 18px; color: var(--ink-3); padding: 4px 8px;
+}
+#rb-help-body { padding: 20px; font-size: 13px; line-height: 1.65; color: var(--ink-2); }
+#rb-help-body p { margin-bottom: 12px; }
+#rb-help-body ul { padding-left: 16px; display: flex; flex-direction: column; gap: 6px; }
+#rb-help-body li { line-height: 1.55; }
   </style>
 </head>
 <body>
@@ -898,7 +936,7 @@ a.rb-dia:hover { background: var(--paper-2); text-decoration: none; }
       <span class="rb-section-num">00</span>
       <h2 class="rb-section-title">Race Command</h2>
       <div class="rb-section-line"></div>
-      <button onclick="document.getElementById('modal-race-info').style.display='flex'" style="background:none;border:1px solid var(--border);border-radius:50%;width:20px;height:20px;cursor:pointer;font-size:11px;color:var(--ink-3);line-height:1;flex-shrink:0;" title="¿Qué significan estas métricas?">?</button>
+      <button class="rb-help-btn" onclick="openHelp('race-command')" title="¿Qué es este panel?">?</button>
     </div>
 
     <!-- Modal info Race Command -->
@@ -1113,6 +1151,7 @@ a.rb-dia:hover { background: var(--paper-2); text-decoration: none; }
       <span class="rb-section-num" style="font-size:10px;">ID</span>
       <h2 class="rb-section-title">Perfil Atlético</h2>
       <div class="rb-section-line"></div>
+      <button class="rb-help-btn" onclick="openHelp('perfil-atletico')" title="¿Qué es este panel?">?</button>
       <span style="font-family:var(--font-mono);font-size:10px;font-weight:700;padding:3px 8px;border-radius:4px;letter-spacing:.06em;
         {% if perfil_atletico.perfil == 'power' %}background:rgba(239,68,68,.12);color:#EF4444;border:1px solid rgba(239,68,68,.3);
         {% elif perfil_atletico.perfil == 'endurance' %}background:rgba(29,200,184,.12);color:#1DC8B8;border:1px solid rgba(29,200,184,.3);
@@ -1182,6 +1221,7 @@ a.rb-dia:hover { background: var(--paper-2); text-decoration: none; }
       <span class="rb-section-num">●</span>
       <h2 class="rb-section-title">Velocidad de Progresión</h2>
       <div class="rb-section-line"></div>
+      <button class="rb-help-btn" onclick="openHelp('progresion')" title="¿Qué es este panel?">?</button>
     </div>
 
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
@@ -1263,6 +1303,7 @@ a.rb-dia:hover { background: var(--paper-2); text-decoration: none; }
       <h2 class="rb-section-title">Macrociclo</h2>
       <div class="rb-section-line"></div>
       <span class="rb-section-right">{{ macro_data.semanas_restantes }} SEM</span>
+      <button class="rb-help-btn" onclick="openHelp('macrociclo')" title="¿Qué es este panel?">?</button>
     </div>
     <div class="rb-macro">
       <div class="rb-macro-top">
@@ -1293,6 +1334,7 @@ a.rb-dia:hover { background: var(--paper-2); text-decoration: none; }
       <span class="rb-section-num">02</span>
       <h2 class="rb-section-title">Recovery Mode</h2>
       <div class="rb-section-line"></div>
+      <button class="rb-help-btn" onclick="openHelp('recovery')" title="¿Qué es este panel?">?</button>
     </div>
     <div class="rb-recovery">
       <div class="rb-rc-head">
@@ -1357,6 +1399,7 @@ a.rb-dia:hover { background: var(--paper-2); text-decoration: none; }
       <span class="rb-section-num">{% if lesion_activa %}03{% else %}02{% endif %}</span>
       <h2 class="rb-section-title">Señales Vitales</h2>
       <div class="rb-section-line"></div>
+      <button class="rb-help-btn" onclick="openHelp('vitales')" title="¿Qué es este panel?">?</button>
     </div>
     <div class="rb-strips">
 
@@ -1449,6 +1492,7 @@ a.rb-dia:hover { background: var(--paper-2); text-decoration: none; }
       <h2 class="rb-section-title">Estándares Hyrox</h2>
       <div class="rb-section-line"></div>
       <span class="rb-section-right">{{ objetivo_activo.get_categoria_display|upper }}</span>
+      <button class="rb-help-btn" onclick="openHelp('estandares')" title="¿Qué es este panel?">?</button>
     </div>
 
     <div class="rb-std-global">
@@ -1488,6 +1532,7 @@ a.rb-dia:hover { background: var(--paper-2); text-decoration: none; }
       <h2 class="rb-section-title">Plan de entrenamiento</h2>
       <div class="rb-section-line"></div>
       <button type="button" class="rb-btn rb-btn-sm rb-btn-ghost" onclick="document.getElementById('modal-regen-plan').style.display='flex'"><i class="fas fa-sync-alt"></i> Regenerar</button>
+      <button class="rb-help-btn" onclick="openHelp('plan')" title="¿Qué es este panel?">?</button>
     </div>
 
     {% if estaciones_debiles %}
@@ -1663,6 +1708,7 @@ a.rb-dia:hover { background: var(--paper-2); text-decoration: none; }
       <h2 class="rb-section-title">Evolución Carrera</h2>
       <div class="rb-section-line"></div>
       <span class="rb-section-right">{{ evolucion_carrera.total_km }} KM TOTAL</span>
+      <button class="rb-help-btn" onclick="openHelp('carrera')" title="¿Qué es este panel?">?</button>
     </div>
 
     <!-- KPIs rápidos -->
@@ -1847,6 +1893,7 @@ a.rb-dia:hover { background: var(--paper-2); text-decoration: none; }
       <span class="rb-section-num">06</span>
       <h2 class="rb-section-title">Análisis de carrera</h2>
       <div class="rb-section-line"></div>
+      <button class="rb-help-btn" onclick="openHelp('analisis-carrera')" title="¿Qué es este panel?">?</button>
     </div>
 
     {% if race_prediction and race_prediction.tiene_datos %}
@@ -1936,6 +1983,7 @@ a.rb-dia:hover { background: var(--paper-2); text-decoration: none; }
       <span class="rb-section-right" style="font-size:9px;">
         {{ splits_categoria|default:"Open" }}{% if splits_edad %} · {{ splits_edad }} años{% endif %}
       </span>
+      <button class="rb-help-btn" onclick="openHelp('splits')" title="¿Qué es este panel?">?</button>
     </div>
     {% if splits_edad and splits_edad >= 40 %}
     <div style="font-family:var(--font-mono);font-size:9px;color:var(--ink-5);margin-bottom:8px;padding:6px 10px;background:var(--paper);border:1px solid var(--line);border-radius:6px;">
@@ -2050,6 +2098,7 @@ a.rb-dia:hover { background: var(--paper-2); text-decoration: none; }
       <span class="rb-section-num">IF</span>
       <h2 class="rb-section-title">Índice de Interferencia</h2>
       <div class="rb-section-line"></div>
+      <button class="rb-help-btn" onclick="openHelp('interferencia')" title="¿Qué es este panel?">?</button>
     </div>
 
     <div style="font-family:var(--font-body);font-size:11px;color:var(--ink-4);margin-bottom:12px;line-height:1.5;">
@@ -2101,6 +2150,7 @@ a.rb-dia:hover { background: var(--paper-2); text-decoration: none; }
         {% if race_card.es_race_week %}<span style="font-size:10px;color:#EF4444;font-family:var(--font-mono);margin-left:8px;">RACE WEEK</span>{% endif %}
       </h2>
       <div class="rb-section-line"></div>
+      <button class="rb-help-btn" onclick="openHelp('race-card')" title="¿Qué es este panel?">?</button>
     </div>
 
     {% if race_card.es_race_week %}
@@ -2186,6 +2236,7 @@ a.rb-dia:hover { background: var(--paper-2); text-decoration: none; }
       <span class="rb-section-num">{% if lesion_activa %}06{% else %}05{% endif %}</span>
       <h2 class="rb-section-title">Historial</h2>
       <div class="rb-section-line"></div>
+      <button class="rb-help-btn" onclick="openHelp('historial')" title="¿Qué es este panel?">?</button>
     </div>
     <div class="rb-hist-toggle" @click="open = !open">
       <div class="rb-hist-toggle-l">
@@ -2445,6 +2496,97 @@ a.rb-dia:hover { background: var(--paper-2); text-decoration: none; }
   </div>
 </div>
 {% endif %}
+
+<!-- ═══════════════════════════════════════════════
+     MODAL GLOBAL DE AYUDA
+     ═══════════════════════════════════════════════ -->
+<div id="rb-help-overlay" onclick="if(event.target===this)closeHelp()">
+  <div id="rb-help-sheet">
+    <div id="rb-help-header">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="width:3px;height:20px;background:var(--accent);border-radius:2px;"></div>
+        <span id="rb-help-title" style="font-family:var(--font-disp);font-size:14px;letter-spacing:0.1em;text-transform:uppercase;"></span>
+      </div>
+      <button id="rb-help-close" onclick="closeHelp()">✕</button>
+    </div>
+    <div id="rb-help-body"></div>
+  </div>
+</div>
+
+<script>
+const HELP_CONTENT = {
+  'race-command': {
+    title: 'Race Command',
+    body: `<p>Panel central de mando. Resume tu estado de preparación global para la competición:</p><ul><li><strong>Race Readiness Score</strong> — 40% capacidad técnica + 30% eficiencia de esfuerzo + 30% resistencia específica.</li><li><strong>Coach Briefing</strong> — Análisis automático generado con tus últimas sesiones y señales vitales. Cuantos más datos registres, más preciso.</li><li><strong>Cuenta atrás</strong> — Días restantes hasta tu evento objetivo.</li></ul>`
+  },
+  'perfil-atletico': {
+    title: 'Perfil Atlético',
+    body: `<p>Clasifica tu perfil en tres arquetipos según la distribución real de tu entrenamiento:</p><ul><li><strong>Power</strong> — Mayor volumen de fuerza (sentadilla, peso muerto, sled).</li><li><strong>Endurance</strong> — Mayor volumen aeróbico (carrera Z2, ergómetro).</li><li><strong>Hybrid</strong> — Equilibrio fuerza-resistencia. Perfil ideal para Hyrox.</li></ul><p>Este perfil calibra automáticamente los pesos, ritmos y volúmenes de tu plan de entrenamiento.</p>`
+  },
+  'progresion': {
+    title: 'Velocidad de Progresión',
+    body: `<p>Curvas de tendencia de tus métricas clave a lo largo del tiempo:</p><ul><li><strong>Carrera · Ritmo</strong> — Evolución de tu pace (min/km). ↑ MEJORA = vas más rápido.</li><li><strong>Sentadilla / Peso Muerto</strong> — Carga máxima registrada por sesión.</li><li><strong>Sled Push</strong> — Progresión del ejercicio más específico de Hyrox.</li></ul><p>Necesitas al menos 2 sesiones con cada métrica para ver la curva. Los badges ↑ MEJORA / → ESTABLE / ↓ REGRESA comparan los últimos dos puntos.</p>`
+  },
+  'macrociclo': {
+    title: 'Macrociclo',
+    body: `<p>Estructura periodizada de tu entrenamiento desde hoy hasta la carrera:</p><ul><li><strong>Adaptación</strong> — Base aeróbica y técnica. Cargas bajas, volumen progresivo.</li><li><strong>Acumulación</strong> — Aumento de volumen total. Deload automático cada 4ª semana (−40% carga).</li><li><strong>Intensificación</strong> — Cargas altas, menor volumen. Mayor especificidad Hyrox.</li><li><strong>Simulación</strong> — Bloques carrera + estación alternados.</li><li><strong>Taper</strong> — Últimas 2 semanas: volumen mínimo, activación. Llegas fresco al evento.</li></ul>`
+  },
+  'recovery': {
+    title: 'Recovery Mode',
+    body: `<p>Se activa automáticamente cuando tienes una lesión registrada.</p><ul><li>Filtra todos los ejercicios que intersecten con tus restricciones activas.</li><li>Sustituye ejercicios por alternativas de bajo impacto marcadas como <em>carga de recuperación</em>.</li><li>Muestra el protocolo por fase: Aguda → Sub-aguda → Retorno → Recuperado.</li><li>El cardio sustituto (fútbol, bici) sigue contando para tu crédito aeróbico en el plan.</li></ul>`
+  },
+  'vitales': {
+    title: 'Señales Vitales',
+    body: `<p>Tus métricas diarias de autorregulación. El sistema las usa para ajustar la intensidad propuesta:</p><ul><li><strong>Estrés</strong> — Nivel percibido (1–10). Valores >7 reducen la carga propuesta.</li><li><strong>Sueño</strong> — Calidad del sueño (1–10). <5 activa protocolo de recuperación activa.</li><li><strong>Energía</strong> — Disponibilidad energética subjetiva antes de entrenar.</li><li><strong>FC Basal</strong> — Si supera +7 lpm tu media habitual, se recomienda descanso.</li></ul><p>Regístralas en cada sesión para que el plan se adapte en tiempo real.</p>`
+  },
+  'estandares': {
+    title: 'Estándares Hyrox',
+    body: `<p>Benchmarks oficiales de Hyrox para tu categoría. Compara dónde estás vs. dónde necesitas llegar:</p><ul><li><strong>Verde</strong> — Superas el estándar de tu categoría.</li><li><strong>Amarillo</strong> — Dentro del rango competitivo.</li><li><strong>Rojo</strong> — Por debajo del estándar; el plan lo prioriza.</li></ul><p>Los estándares cambian según tu categoría (Open / Pro) y género. Actualiza tu objetivo si cambias de categoría.</p>`
+  },
+  'plan': {
+    title: 'Plan de Entrenamiento',
+    body: `<p>Tu plan semanal generado automáticamente. Se recalcula con cada sesión que registras:</p><ul><li><strong>DÍA 1 — Fuerza + MetCon</strong>: Sentadilla/Peso Muerto con % de tu RM real calculado.</li><li><strong>DÍA 2 — Motor aeróbico</strong>: Carrera Z2 con ritmo derivado de tu tiempo 5K y FC máxima.</li><li><strong>DÍA 3 — Estaciones Hyrox</strong>: Sled, Wall Balls, Burpees, Sandbag escalados a tu nivel.</li><li><strong>DÍA 4 — Simulación</strong>: Bloques carrera + estación alternados.</li></ul><p>Si actualizas tus RMs o tu tiempo 5K, pulsa <strong>Regenerar</strong> para reescribir el plan con los nuevos datos.</p>`
+  },
+  'carrera': {
+    title: 'Evolución Carrera',
+    body: `<p>Seguimiento de tu progresión aeróbica a lo largo del tiempo:</p><ul><li><strong>Ritmo medio</strong> — Pace promedio de cada sesión de carrera (min/km).</li><li><strong>Índice de eficiencia</strong> — Relación entre FC y pace. Mejora = mismo esfuerzo, más velocidad.</li><li><strong>Distribución de zonas</strong> — % del tiempo en cada zona de FC (Z1–Z5).</li><li><strong>KM totales</strong> — Volumen acumulado desde el inicio de tu plan.</li></ul><p>Las actividades cardio sustituto (fútbol, bici) también computan para tu crédito aeróbico semanal.</p>`
+  },
+  'analisis-carrera': {
+    title: 'Análisis de Carrera',
+    body: `<p>Desglose de tu rendimiento por segmentos en el formato de carrera Hyrox:</p><ul><li>El formato Hyrox alterna <strong>1 km de carrera</strong> con <strong>1 estación funcional</strong>, 8 veces.</li><li>Muestra si tu ritmo decae progresivamente (fatiga acumulada) o si mantienes el pace.</li><li>Identifica qué estaciones generan más pérdida de tiempo en la transición posterior.</li></ul>`
+  },
+  'splits': {
+    title: 'Mis Splits',
+    body: `<p>Tiempos detallados de cada estación y segmento de carrera en tus simulaciones completadas:</p><ul><li>Compara tus splits actuales con los objetivos de tu categoría.</li><li>Identifica qué estaciones consumen más tiempo relativo en tu carrera total.</li><li>Úsalos para diseñar tu estrategia de ritmo el día del evento.</li></ul><p>Cuantas más simulaciones completes, más precisos y representativos serán tus splits.</p>`
+  },
+  'interferencia': {
+    title: 'Índice de Interferencia',
+    body: `<p>Mide cuánto cae tu ritmo de carrera <strong>inmediatamente después</strong> de cada estación:</p><ul><li><strong>IF alto (>20%)</strong> — Esa estación te afecta mucho. El plan la trabaja con más frecuencia.</li><li><strong>IF bajo (<10%)</strong> — La transición es eficiente; recuperas el paso rápidamente.</li></ul><p>Un atleta Hyrox de nivel tiene IF <15% en todas las estaciones. El objetivo es que la fatiga de cada estación no destruya tu ritmo en el kilómetro siguiente.</p>`
+  },
+  'race-card': {
+    title: 'Race Card Táctica',
+    body: `<p>Tu hoja de ruta para el día de carrera, calculada desde tus datos reales:</p><ul><li><strong>Ritmo objetivo por km</strong> — Calculado para que llegues al final sin explotar (negative split).</li><li><strong>Tiempo objetivo por estación</strong> — Basado en tus mejores splits registrados.</li><li><strong>Estrategia de salida</strong> — Conservador los primeros km, aceleración en los últimos 2.</li></ul><p>En <strong>Race Week</strong> (últimos 7 días) esta tarjeta se activa en modo competición con recomendaciones de activación y nutrición pre-carrera.</p>`
+  },
+  'historial': {
+    title: 'Historial',
+    body: `<p>Registro cronológico de todas tus sesiones Hyrox completadas:</p><ul><li>Muestra fecha, tipo de sesión, RPE registrado y nivel de energía pre-entreno.</li><li>Cada sesión alimenta los algoritmos de progresión, Índice de Interferencia y análisis de carrera.</li><li>Cuantas más sesiones registres, más preciso será tu Race Readiness Score.</li></ul>`
+  }
+};
+
+function openHelp(key) {
+  const h = HELP_CONTENT[key];
+  if (!h) return;
+  document.getElementById('rb-help-title').textContent = h.title;
+  document.getElementById('rb-help-body').innerHTML = h.body;
+  document.getElementById('rb-help-overlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeHelp() {
+  document.getElementById('rb-help-overlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeHelp(); });
+</script>
 
 </body>
 </html>

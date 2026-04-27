@@ -19,6 +19,14 @@ def porcentaje(valor, total):
 
 
 @register.filter
+def mul(valor, factor):
+    try:
+        return float(valor) * float(factor)
+    except (ValueError, TypeError):
+        return 0
+
+
+@register.filter
 def add_days(date, days):
     return date + timedelta(days=days)
 

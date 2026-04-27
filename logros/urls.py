@@ -11,6 +11,7 @@ urlpatterns = [
     path('cliente/<int:cliente_id>/', views.perfil_gamificacion, name='perfil_gamificacion'),
 
     # Vistas de Arquetipos (antes Niveles)
+    path('arquetipos/', views.lista_arquetipos, name='lista_arquetipos'),
     path('cliente/<int:cliente_id>/arquetipo/<int:arquetipo_nivel>/', views.detalle_arquetipo,
          name='detalle_arquetipo'),
 
