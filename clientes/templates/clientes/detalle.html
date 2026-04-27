@@ -154,10 +154,11 @@ html { scroll-behavior: smooth; }
 .cc-act-row { display:flex; align-items:center; gap:12px; padding:9px 0;
   border-bottom:1px solid var(--line); }
 .cc-act-row:last-child { border-bottom:none; }
-.cc-act-icon { width:32px; height:32px; border-radius:4px; flex-shrink:0;
-  display:flex; align-items:center; justify-content:center; font-size:13px; }
-.cc-act-icon.gym   { background:rgba(124,58,237,.1); color:#7c3aed; }
-.cc-act-icon.hyrox { background:rgba(180,60,30,.1);  color:var(--accent); }
+.cc-act-icon { width:34px; height:34px; border-radius:4px; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center; font-size:14px;
+  border:1px solid; }
+.cc-act-icon.gym   { background:rgba(124,58,237,.08); color:#7c3aed; border-color:rgba(124,58,237,.2); }
+.cc-act-icon.hyrox { background:rgba(180,60,30,.08);  color:var(--accent); border-color:rgba(180,60,30,.2); }
 .cc-act-body { flex:1; min-width:0; }
 .cc-act-name { font-family:var(--font-d); font-size:13px; color:var(--ink);
   text-transform:uppercase; letter-spacing:-.01em; white-space:nowrap;
@@ -590,10 +591,16 @@ a:focus-visible, button:focus-visible {
         <span class="cc-card-label">Diario</span>
         <div class="cc-card-line"></div>
       </div>
+      {% if total_reflexiones > 0 %}
       <div style="text-align:center;margin-bottom:8px;">
         <div style="font-family:var(--font-d);font-size:32px;line-height:1;letter-spacing:-.03em;color:var(--ink);">{{ total_reflexiones }}</div>
         <div style="font-family:var(--font-m);font-size:9px;color:var(--ink-3);letter-spacing:.1em;text-transform:uppercase;margin-top:2px;">reflexiones</div>
       </div>
+      {% else %}
+      <div style="text-align:center;margin-bottom:8px;padding:4px 0;">
+        <div style="font-family:var(--font-m);font-size:10px;color:var(--ink-3);letter-spacing:.08em;line-height:1.5;">Empieza hoy tu<br>práctica estoica.</div>
+      </div>
+      {% endif %}
       {% if reflexion_hoy %}
       <div class="cc-note ok" style="font-size:10px;">
         <i class="fas fa-check" style="color:var(--ok);margin-right:4px;"></i>Reflexión de hoy completada
@@ -634,11 +641,14 @@ a:focus-visible, button:focus-visible {
           <div class="cc-pr-name">{{ record.ejercicio_nombre }}</div>
           <div class="cc-pr-date">{{ record.fecha_logrado|date:"M Y" }} · {{ record.get_tipo_record_display }}</div>
         </div>
-        <div class="cc-pr-val">{{ record.valor }}<span> {% if record.tipo_record == 'reps_maximas' %}reps{% else %}kg{% endif %}</span></div>
+        <div class="cc-pr-val">{{ record.valor|floatformat:0 }}<span> {% if record.tipo_record == 'reps_maximas' %}reps{% else %}kg{% endif %}</span></div>
       </div>
       {% endfor %}
       {% else %}
-      <p style="font-size:12px;color:var(--ink-3);padding:16px 0;text-align:center;">Sin marcas aún.</p>
+      <p style="font-size:12px;color:var(--ink-3);padding:20px 0;text-align:center;">
+        Sin marcas registradas aún.<br>
+        <a href="{% url 'entrenos:registrar_actividad_libre' cliente.id %}" style="color:var(--accent);font-family:var(--font-m);font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;">+ Registrar entreno →</a>
+      </p>
       {% endif %}
     </div>
 
@@ -662,12 +672,18 @@ a:focus-visible, button:focus-visible {
       {% endfor %}
       {% if hyrox_objetivo %}
       <div class="cc-stat">
-        <span class="sk" style="color:var(--accent);"><i class="fas fa-flag-checkered" style="margin-right:4px;"></i>Hyrox finish</span>
-        <span class="sv accent" style="font-size:12px;">{{ hyrox_objetivo.fecha_evento|date:"d M Y" }}</span>
+        <span class="sk"><i class="fas fa-flag-checkered" style="color:var(--accent);margin-right:4px;"></i>Hyrox finish</span>
+        <div style="text-align:right;">
+          <div class="sv accent" style="font-size:13px;">{{ hyrox_objetivo.fecha_evento|date:"d M Y" }}</div>
+          <div style="font-family:var(--font-m);font-size:9px;color:var(--ink-4);">{{ hyrox_dias_para_evento }}d restantes</div>
+        </div>
       </div>
       {% endif %}
       {% if not objetivos and not hyrox_objetivo %}
-      <p style="font-size:12px;color:var(--ink-3);padding:16px 0;text-align:center;">Sin objetivos.</p>
+      <div style="text-align:center;padding:20px 0;">
+        <p style="font-size:12px;color:var(--ink-3);margin-bottom:12px;">Sin objetivos definidos.</p>
+        <a href="{% url 'clientes:definir_objetivo' cliente.id %}" class="cc-btn cc-btn-ghost cc-btn-sm"><i class="fas fa-plus"></i>Añadir objetivo</a>
+      </div>
       {% endif %}
     </div>
   </div>
@@ -730,7 +746,11 @@ a:focus-visible, button:focus-visible {
     </div>
     {% endfor %}
     {% if not logros_completados and not pruebas_activas %}
-    <p style="text-align:center;padding:20px 0;font-size:12px;color:var(--ink-3);">Sin hazañas aún.</p>
+    <div style="text-align:center;padding:24px 16px;">
+      <div style="font-family:var(--font-m);font-size:10px;font-weight:700;letter-spacing:.14em;color:var(--ink-4);text-transform:uppercase;margin-bottom:8px;">Hazañas desbloqueables</div>
+      <p style="font-size:12px;color:var(--ink-3);line-height:1.55;margin-bottom:14px;">Completa desafíos épicos para desbloquear títulos y reconocimientos permanentes.</p>
+      <a href="{% url 'logros:lista_pruebas_legendarias' %}" class="cc-btn cc-btn-ghost cc-btn-sm"><i class="fas fa-trophy"></i>Ver desafíos disponibles</a>
+    </div>
     {% endif %}
   </div>
 </div>

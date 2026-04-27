@@ -2474,16 +2474,21 @@ def detalle_cliente(request, cliente_id):
         hoy = date.today()
         edad = hoy.year - cliente.fecha_nacimiento.year - ((hoy.month, hoy.day) < (cliente.fecha_nacimiento.month, cliente.fecha_nacimiento.day))
 
-    # Mejores marcas históricas (PRs) - Agrupamos por ejercicio y tomamos el máximo
-    records_brutos = RecordPersonal.objects.filter(cliente=cliente, superado=False).order_by('ejercicio_nombre', '-valor')
-    
-    # Aseguramos un record único por ejercicio (el más reciente o mayor)
+    # Mejores marcas históricas — solo 1RM y peso máximo (no volumen total ni reps)
+    # Prioridad: one_rep_max > peso_maximo. Se muestra 1 por ejercicio, máx 8.
+    TIPO_PRIORIDAD = {'one_rep_max': 0, 'peso_maximo': 1, 'reps_maximas': 2, 'volumen_total': 3}
+    records_brutos = RecordPersonal.objects.filter(
+        cliente=cliente, superado=False,
+        tipo_record__in=['one_rep_max', 'peso_maximo']
+    ).order_by('ejercicio_nombre', '-valor')
+
     records_prs = {}
     for r in records_brutos:
-        if r.ejercicio_nombre not in records_prs:
+        prev = records_prs.get(r.ejercicio_nombre)
+        if prev is None or TIPO_PRIORIDAD.get(r.tipo_record, 9) < TIPO_PRIORIDAD.get(prev.tipo_record, 9):
             records_prs[r.ejercicio_nombre] = r
-    
-    records_list = list(records_prs.values())
+
+    records_list = sorted(records_prs.values(), key=lambda r: float(r.valor), reverse=True)[:8]
 
     # --- 2. LÓGICA PARA GRÁFICOS Y MÉTRICAS SEMANALES ---
     historial_semanal = defaultdict(list)
