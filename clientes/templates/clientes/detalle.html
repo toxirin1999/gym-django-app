@@ -8,6 +8,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
+/* smooth scroll */
+html { scroll-behavior: smooth; }
+
 /* ═══════════════════════════════════════════════
    COMMAND CENTER — race-bib aesthetic
    ═══════════════════════════════════════════════ */
@@ -190,6 +193,43 @@
 .cc-riesgo { display:inline-flex; align-items:center; gap:6px; padding:5px 12px;
   border:1.5px solid; border-radius:2px; font-family:var(--font-m); font-size:9px;
   font-weight:700; letter-spacing:.14em; text-transform:uppercase; }
+
+/* ── AVATAR ─── */
+.cc-avatar { width:72px; height:72px; border-radius:50%; border:2px solid var(--ink);
+  flex-shrink:0; overflow:hidden; background:var(--paper-2);
+  display:flex; align-items:center; justify-content:center; }
+.cc-avatar img { width:100%; height:100%; object-fit:cover; display:block; }
+.cc-avatar-initial { font-family:var(--font-d); font-size:28px; color:var(--ink-3);
+  line-height:1; text-transform:uppercase; }
+
+/* ── HOVER states ─── */
+.cc-act-row { cursor:pointer; transition:background .15s; border-radius:4px; padding:9px 6px; }
+.cc-act-row:hover { background:var(--paper-2); }
+.cc-logro { cursor:default; transition:background .15s; }
+.cc-logro:not(.cc-logro-locked):hover { background:var(--paper); }
+
+/* ── FOCUS VISIBLE ─── */
+a:focus-visible, button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* ── TOUCH TARGETS ─── */
+@media (max-width: 768px) {
+  .cc-btn { min-height: 44px; padding: 10px 16px; font-size: 10px; }
+  .cc-btn-sm { min-height: 44px; padding: 10px 14px; }
+  .cc-grid2 { grid-template-columns: 1fr; }
+  .cc-modules-grid { grid-template-columns: 1fr !important; }
+  .cc-bib-name { font-size: clamp(1.8rem, 8vw, 2.8rem) !important; }
+  .cc-avatar { width: 56px; height: 56px; }
+  .cc-avatar-initial { font-size: 22px; }
+}
+
+/* ── REDUCED MOTION ─── */
+@media (prefers-reduced-motion: reduce) {
+  .cc-rd-fill, .cc-bar-fill, * { transition-duration: 0.01ms !important; }
+}
 </style>
 {% endblock %}
 
@@ -207,6 +247,14 @@
   </div>
 
   <div style="display:flex;align-items:flex-start;gap:16px;flex-wrap:wrap;">
+    <!-- Avatar -->
+    <div class="cc-avatar">
+      {% if cliente.foto %}
+        <img src="{{ cliente.foto.url }}" alt="Foto de {{ cliente.nombre }}">
+      {% else %}
+        <span class="cc-avatar-initial">{{ cliente.nombre|slice:":1" }}</span>
+      {% endif %}
+    </div>
     <div style="flex:1;min-width:0;">
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:4px;">
         <div class="cc-bib-name">{{ cliente.nombre }}</div>
@@ -482,7 +530,7 @@
     <h2 class="cc-sec-title">Módulos Activos</h2>
     <div class="cc-sec-line"></div>
   </div>
-  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
+  <div class="cc-modules-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
 
     <!-- Gym -->
     <div class="cc-card">
@@ -542,10 +590,19 @@
         <span class="cc-card-label">Diario</span>
         <div class="cc-card-line"></div>
       </div>
-      <div style="text-align:center;margin:10px 0 14px;">
-        <div style="font-size:30px;color:#4f46e5;margin-bottom:4px;"><i class="fas fa-book-open"></i></div>
-        <p style="font-size:11px;color:var(--ink-3);line-height:1.45;">Reflexiones, hábitos y áreas de vida.</p>
+      <div style="text-align:center;margin-bottom:8px;">
+        <div style="font-family:var(--font-d);font-size:32px;line-height:1;letter-spacing:-.03em;color:var(--ink);">{{ total_reflexiones }}</div>
+        <div style="font-family:var(--font-m);font-size:9px;color:var(--ink-3);letter-spacing:.1em;text-transform:uppercase;margin-top:2px;">reflexiones</div>
       </div>
+      {% if reflexion_hoy %}
+      <div class="cc-note ok" style="font-size:10px;">
+        <i class="fas fa-check" style="color:var(--ok);margin-right:4px;"></i>Reflexión de hoy completada
+      </div>
+      {% else %}
+      <div class="cc-note warn" style="font-size:10px;">
+        <i class="fas fa-pen" style="color:var(--warn);margin-right:4px;"></i>Sin reflexión hoy
+      </div>
+      {% endif %}
       <a href="{% url 'diario:dashboard_diario' %}" class="cc-btn cc-btn-ghost cc-btn-sm cc-btn-full">Ver diario</a>
     </div>
   </div>
@@ -575,9 +632,9 @@
       <div class="cc-pr-row">
         <div>
           <div class="cc-pr-name">{{ record.ejercicio_nombre }}</div>
-          <div class="cc-pr-date">{{ record.fecha_logrado|date:"M Y" }}</div>
+          <div class="cc-pr-date">{{ record.fecha_logrado|date:"M Y" }} · {{ record.get_tipo_record_display }}</div>
         </div>
-        <div class="cc-pr-val">{{ record.valor }}<span> kg</span></div>
+        <div class="cc-pr-val">{{ record.valor }}<span> {% if record.tipo_record == 'reps_maximas' %}reps{% else %}kg{% endif %}</span></div>
       </div>
       {% endfor %}
       {% else %}
@@ -624,7 +681,7 @@
     <span class="cc-sec-num">06</span>
     <h2 class="cc-sec-title">Historial Reciente</h2>
     <div class="cc-sec-line"></div>
-    <a href="{% url 'entrenos:timeline_atleta' cliente.id %}" style="font-family:var(--font-m);font-size:10px;font-weight:700;letter-spacing:.1em;color:var(--ink-3);text-decoration:none;text-transform:uppercase;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--ink-3)'">Timeline →</a>
+    <a href="{% url 'entrenos:timeline_atleta' cliente.id %}" class="cc-card-action">Timeline →</a>
   </div>
   <div class="cc-card">
     {% if actividad_reciente %}
