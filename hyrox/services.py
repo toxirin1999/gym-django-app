@@ -1820,18 +1820,22 @@ class InterferenceIndexService:
         ]
         Devuelve [] si no hay datos suficientes.
         """
+        import logging as _logging
+        _log = _logging.getLogger('hyrox.if_debug')
         from .models import HyroxActivity, HyroxSession
 
         baseline = cls._get_baseline_pace(objetivo)
+        _log.warning(f"[IF] baseline={baseline} tiempo_5k_base={objetivo.tiempo_5k_base}")
         if not baseline:
             return []
 
         # Cargar sesiones de simulación (tienen estaciones + carrera)
-        sim_sessions = (
+        sim_sessions = list(
             HyroxSession.objects
             .filter(objective=objetivo, estado='completado')
             .prefetch_related('activities')
         )
+        _log.warning(f"[IF] total sesiones completadas: {len(sim_sessions)}")
 
         # Acumular: {station_canon: [(if_pct, fecha), ...]}
         data_by_station = {}
@@ -1841,7 +1845,9 @@ class InterferenceIndexService:
         for session in sim_sessions:
             acts = sorted(session.activities.all(), key=lambda a: a.pk)
             tipos = {a.tipo_actividad for a in acts}
+            _log.warning(f"[IF] sesion {session.id} fecha={session.fecha} tipos={tipos}")
             if not (tipos & {'hyrox_station'} and tipos & RUNNING_TYPES):
+                _log.warning(f"[IF] sesion {session.id} SALTADA — falta hyrox_station o running")
                 continue
 
             # Detectar primer ritmo de carrera en la sesión como baseline local
@@ -1850,6 +1856,7 @@ class InterferenceIndexService:
                 if a.tipo_actividad in RUNNING_TYPES:
                     m = a.data_metricas or {}
                     s = cls._pace_to_secs(m.get('ritmo_real') or m.get('ritmo_objetivo'))
+                    _log.warning(f"[IF] act {a.id} tipo={a.tipo_actividad} ritmo_raw={m.get('ritmo_real') or m.get('ritmo_objetivo')} pace_secs={s}")
                     if s and 180 < s < 600:
                         local_baseline = s
                         break
@@ -1859,6 +1866,7 @@ class InterferenceIndexService:
                 if act.tipo_actividad != 'hyrox_station':
                     continue
                 canon = cls._canonize_station(act.nombre_ejercicio)
+                _log.warning(f"[IF] estacion act {act.id} nombre='{act.nombre_ejercicio}' canon={canon}")
                 if not canon:
                     continue
                 post_run = next(
@@ -1866,10 +1874,13 @@ class InterferenceIndexService:
                     None
                 )
                 if not post_run:
+                    _log.warning(f"[IF] no hay carrera post-estacion {canon}")
                     continue
                 m = post_run.data_metricas or {}
                 post_pace = cls._pace_to_secs(m.get('ritmo_real') or m.get('ritmo_objetivo'))
+                _log.warning(f"[IF] post_run act {post_run.id} ritmo_raw={m.get('ritmo_real') or m.get('ritmo_objetivo')} post_pace={post_pace} local_baseline={local_baseline}")
                 if not post_pace or not (180 < post_pace < 600):
+                    _log.warning(f"[IF] post_pace {post_pace} FUERA de rango — saltado")
                     continue
 
                 if_pct = ((post_pace - local_baseline) / local_baseline) * 100
