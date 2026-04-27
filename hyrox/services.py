@@ -1552,9 +1552,13 @@ class HyroxMacrocycleEngine:
             fase_numero = 4
 
         if return_metadata:
+            total_semanas = max(1, dias_totales // 7)
+            semana_actual = min(max(1, (dias_pasados // 7) + 1), total_semanas)
             return {
                 'fase': fase,
                 'semanas_restantes': semanas_restantes,
+                'semana_actual': semana_actual,
+                'total_semanas': total_semanas,
                 'dias_totales': dias_totales,
                 'dias_pasados': dias_pasados,
                 'pct_progreso': round(pct_progreso, 1),

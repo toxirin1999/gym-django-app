@@ -773,7 +773,7 @@ a.rb-dia:hover { background: var(--paper-2); text-decoration: none; }
         {% if macro_data %}
         <div>
           <div class="rb-bib-stat-label">Semana</div>
-          <div class="rb-bib-stat-val">{{ 12|add:"-"|add:macro_data.semanas_restantes }}/12</div>
+          <div class="rb-bib-stat-val">{{ macro_data.semana_actual }}/{{ macro_data.total_semanas }}</div>
         </div>
         <div>
           <div class="rb-bib-stat-label">Fase</div>

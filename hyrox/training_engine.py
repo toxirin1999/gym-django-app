@@ -129,7 +129,7 @@ class HyroxLoadManager:
         )
 
         if not sesiones:
-            return {'ctl': 0.0, 'atl': 0.0, 'tsb': 0.0}
+            return {'ctl': None, 'atl': None, 'tsb': None}
 
         # Construir mapa fecha → TRIMP total del día
         trimp_por_dia = {}
