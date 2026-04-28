@@ -1228,14 +1228,31 @@ def registrar_entrenamiento(request, objective_id, session_id=None):
             # Guardar tiempo por ejercicio (wizard timer → data_metricas['tiempo_s'])
             acts_ordered = list(sesion.activities.all().order_by('id'))
             for i, act in enumerate(acts_ordered, 1):
+                m = dict(act.data_metricas or {})
+                changed = False
                 t_s_raw = request.POST.get(f'act_tiempo_s_{i}')
                 if t_s_raw and t_s_raw.strip():
                     t_s = int(t_s_raw)
                     if t_s > 0:
-                        m = dict(act.data_metricas or {})
                         m['tiempo_s'] = t_s
-                        act.data_metricas = m
-                        act.save(update_fields=['data_metricas'])
+                        changed = True
+                reps_raw = request.POST.get(f'act_reps_st_{i}', '').strip()
+                kg_raw = request.POST.get(f'act_kg_st_{i}', '').strip()
+                if reps_raw:
+                    try:
+                        m['reps_total'] = int(reps_raw)
+                        changed = True
+                    except ValueError:
+                        pass
+                if kg_raw:
+                    try:
+                        m['peso_kg'] = float(kg_raw)
+                        changed = True
+                    except ValueError:
+                        pass
+                if changed:
+                    act.data_metricas = m
+                    act.save(update_fields=['data_metricas'])
 
             # --- CHECK BIO-SAFETY: VALIDACIÓN DE LESIONES ---
             # UserInjury ya está importado al inicio de la función
@@ -1601,7 +1618,7 @@ def editar_sesion_hyrox(request, session_id):
         # Procesar actividades directamente (sin re-parseo)
         _CARRERA_TIPOS = {'carrera', 'cardio_sustituto'}
         _ESTACION_TIPOS = {'hyrox_station', 'ergometro', 'isometrico', 'hiit', 'remo', 'skierg', 'bici', 'otro'}
-        _REPS_STATIONS = {'wall ball', 'wall balls', 'burpee broad jump', 'burpees broad jump'}
+        _REPS_STATIONS = {'wall ball', 'wall balls'}
         ids_borrar = set(request.POST.getlist('act_delete'))
         import logging as _logging
         _log = _logging.getLogger('hyrox.editar_sesion')
@@ -1687,7 +1704,7 @@ def editar_sesion_hyrox(request, session_id):
     TIPO_ACT_CARRERA = {'carrera', 'cardio_sustituto'}
     TIPO_ACT_ESTACION = {'hyrox_station', 'ergometro', 'isometrico', 'hiit', 'remo', 'skierg', 'bici', 'otro'}
     # Estaciones Hyrox que funcionan por reps+kg, no por distancia
-    ESTACIONES_REPS = {'wall ball', 'wall balls', 'burpee broad jump', 'burpees broad jump'}
+    ESTACIONES_REPS = {'wall ball', 'wall balls'}
 
     # Si no hay actividades pero hay notas_raw, intentar re-parsear
     if session.activities.count() == 0 and session.notas_raw:
@@ -1730,9 +1747,13 @@ def editar_sesion_hyrox(request, session_id):
             # Consolidar todas las series en total reps
             reps_total = sum(int(s.get('reps', 0)) for s in series)
 
+        import re as _re
+        _nombre_raw = act.nombre_ejercicio or act.get_tipo_actividad_display()
+        _nombre = _re.sub(r'\s*\[\d+s\]', '', _nombre_raw, flags=_re.IGNORECASE).strip()
+
         actividades_ctx.append({
             'id': act.id,
-            'nombre': act.nombre_ejercicio or act.get_tipo_actividad_display(),
+            'nombre': _nombre,
             'tipo': tipo,
             'tipo_actividad': ta,
             'km': m['distancia_km'] if 'distancia_km' in m else '',
