@@ -1005,6 +1005,25 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>MARCAR COMPLETADA
               </button>
 
+            {% elif act.data_metricas.reps_total %}
+              <div class="rb-cardio-grid">
+                <div>
+                  <div class="rb-biginput-label"><span>Reps totales</span><span>reps</span></div>
+                  <input type="number" class="rb-biginput rb-input-reps-st" id="rb-reps-st-{{ idx }}" value="{{ act.data_metricas.reps_total }}" step="1" min="0" inputmode="numeric">
+                </div>
+                {% if act.data_metricas.peso_kg %}
+                <div>
+                  <div class="rb-biginput-label"><span>Carga</span><span>kg</span></div>
+                  <input type="number" class="rb-biginput rb-input-kg-st" id="rb-kg-st-{{ idx }}" value="{{ act.data_metricas.peso_kg }}" step="0.5" min="0" inputmode="decimal">
+                </div>
+                {% endif %}
+              </div>
+              <input type="hidden" name="act_reps_st_{{ idx }}" id="act-reps-st-{{ idx }}">
+              <input type="hidden" name="act_kg_st_{{ idx }}" id="act-kg-st-{{ idx }}">
+              <button type="button" class="rb-done-btn" onclick="rbToggleDone('rb-card-{{ idx }}',this)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>MARCAR COMPLETADA
+              </button>
+
             {% else %}
               <button type="button" class="rb-done-btn" onclick="rbToggleDone('rb-card-{{ idx }}',this)">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>MARCAR COMPLETADA
@@ -1572,6 +1591,22 @@ function rbBuildNotasRaw() {
     const distM = card.querySelector('.rb-input-distm');
     const carga = card.querySelector('.rb-input-carga');
     if (distM) { let line = `${name} ${distM.value}m`; if (carga && carga.value) line += ` @${carga.value}kg`; line += timerSuffix; lines.push(line); return; }
+    const repsSt = card.querySelector('.rb-input-reps-st');
+    if (repsSt) {
+      const repsVal = repsSt.value.trim();
+      const kgSt = card.querySelector('.rb-input-kg-st');
+      const kgVal = kgSt ? kgSt.value.trim() : '';
+      const repsHidden = document.getElementById('act-reps-st-' + cardIdx);
+      const kgHidden = document.getElementById('act-kg-st-' + cardIdx);
+      if (repsHidden) repsHidden.value = repsVal;
+      if (kgHidden) kgHidden.value = kgVal;
+      let line = name;
+      if (repsVal) line += ': ' + repsVal + ' reps';
+      if (kgVal) line += ' @' + kgVal + 'kg';
+      line += timerSuffix;
+      lines.push(line);
+      return;
+    }
     if (card.classList.contains('done')) lines.push(`${name}${timerSuffix}`);
   });
   const extra = (document.getElementById('id_notas_extra')?.value || '').trim();
