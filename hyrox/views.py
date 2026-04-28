@@ -299,6 +299,8 @@ def hyrox_dashboard(request):
                 sesion__estado='completado',
                 tipo_actividad__in=['carrera', 'cardio_sustituto'],
             )
+            .exclude(sesion__titulo__icontains='caminata')
+            .exclude(nombre_ejercicio__icontains='caminata')
             .select_related('sesion')
             .order_by('sesion__fecha')
         )
