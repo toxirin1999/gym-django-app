@@ -1118,6 +1118,26 @@ def registrar_entrenamiento(request, objective_id, session_id=None):
             sesion.estado = 'planificado'
             sesion.save()
 
+            # Si el usuario eligió el plan original, restaurar actividades del snapshot
+            usar_plan_original = request.POST.get('usar_plan_original') == '1'
+            if usar_plan_original and '[AUTO-OVERRIDE]' in (sesion.titulo or ''):
+                primera_act = sesion.activities.first()
+                snapshot = []
+                if primera_act and primera_act.data_planificado:
+                    snapshot = primera_act.data_planificado.get('plan_original', [])
+                if snapshot:
+                    from hyrox.models import HyroxActivity
+                    sesion.activities.all().delete()
+                    for item in snapshot:
+                        HyroxActivity.objects.create(
+                            sesion=sesion,
+                            tipo_actividad=item.get('tipo', 'otro'),
+                            nombre_ejercicio=item.get('nombre', ''),
+                            data_metricas=item.get('metricas', {}) or {},
+                        )
+                    sesion.titulo = sesion.titulo.replace('[AUTO-OVERRIDE] ', '')
+                    sesion.save(update_fields=['titulo'])
+
             # Procesamiento de la IA
             if sesion.notas_raw:
                 sustituir_material = form.cleaned_data.get('sustituir_material', False)
@@ -1328,6 +1348,20 @@ def registrar_entrenamiento(request, objective_id, session_id=None):
             if primera_act and primera_act.data_planificado:
                 plan_original_snapshot = primera_act.data_planificado.get('plan_original', [])
 
+        # Si el usuario eligió usar el plan original, sustituir actividades_planificadas
+        plan_elegido = request.GET.get('plan', 'ajustado')
+        if es_override and plan_elegido == 'original' and plan_original_snapshot:
+            class _SnapshotAct:
+                def __init__(self, item):
+                    self.nombre_ejercicio = item.get('nombre', '')
+                    self.tipo_actividad = item.get('tipo', 'otro')
+                    self.data_metricas = item.get('metricas', {}) or {}
+                    self.data_planificado = {}
+                    self.series_processed = []
+                    self.display_name = self.nombre_ejercicio
+                    self.is_substituted = False
+            actividades_planificadas = [_SnapshotAct(item) for item in plan_original_snapshot]
+
         form = HyroxSessionNotesForm(initial={'titulo': titulo_limpio})
 
     return render(request, 'hyrox/registrar_entrenamiento.html', {
@@ -1339,6 +1373,7 @@ def registrar_entrenamiento(request, objective_id, session_id=None):
         'es_override': es_override if 'es_override' in locals() else False,
         'titulo_limpio': titulo_limpio if 'titulo_limpio' in locals() else '',
         'plan_original_snapshot': plan_original_snapshot if 'plan_original_snapshot' in locals() else [],
+        'plan_elegido': plan_elegido if 'plan_elegido' in locals() else 'ajustado',
     })
 
 from django.http import JsonResponse
