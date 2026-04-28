@@ -651,16 +651,23 @@
         </div>
 
         {% if es_override %}
-        <!-- Banner AUTO-OVERRIDE -->
-        <div style="background:rgba(139,92,246,.1);border:1px solid rgba(139,92,246,.35);border-radius:8px;padding:10px 12px;display:flex;gap:10px;align-items:flex-start;margin-bottom:4px;">
-          <svg style="width:16px;height:16px;flex-shrink:0;color:#8B5CF6;margin-top:1px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
-          <div>
-            <div style="font-size:11px;font-weight:700;color:#8B5CF6;letter-spacing:.05em;text-transform:uppercase;margin-bottom:2px;">Sesión ajustada automáticamente</div>
-            <div style="font-size:11px;color:var(--ink-3);line-height:1.5;">El sistema detectó fatiga elevada (TSB bajo) y modificó el plan de hoy. Abajo puedes ver qué cambió.</div>
+        <!-- Banner AUTO-OVERRIDE con toggle -->
+        <div style="background:rgba(139,92,246,.1);border:1px solid rgba(139,92,246,.35);border-radius:8px;padding:10px 12px;margin-bottom:4px;">
+          <div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:10px;">
+            <svg style="width:16px;height:16px;flex-shrink:0;color:#8B5CF6;margin-top:1px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+            <div>
+              <div style="font-size:11px;font-weight:700;color:#8B5CF6;letter-spacing:.05em;text-transform:uppercase;margin-bottom:2px;">Sesión ajustada automáticamente</div>
+              <div style="font-size:11px;color:var(--ink-3);line-height:1.5;">Fatiga elevada detectada (TSB bajo). Elige qué plan quieres hacer hoy.</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:6px;">
+            <a href="?plan=ajustado" style="flex:1;text-align:center;padding:7px 10px;border-radius:6px;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;text-decoration:none;transition:background .15s,color .15s;{% if plan_elegido != 'original' %}background:#8B5CF6;color:#fff;{% else %}background:rgba(139,92,246,.12);color:#8B5CF6;border:1px solid rgba(139,92,246,.3);{% endif %}">Plan ajustado</a>
+            <a href="?plan=original" style="flex:1;text-align:center;padding:7px 10px;border-radius:6px;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;text-decoration:none;transition:background .15s,color .15s;{% if plan_elegido == 'original' %}background:#8B5CF6;color:#fff;{% else %}background:rgba(139,92,246,.12);color:#8B5CF6;border:1px solid rgba(139,92,246,.3);{% endif %}">Plan original</a>
           </div>
         </div>
+        <input type="hidden" name="usar_plan_original" value="{% if plan_elegido == 'original' %}1{% else %}0{% endif %}">
 
-        {% if plan_original_snapshot %}
+        {% if plan_original_snapshot and plan_elegido != 'original' %}
         <!-- Plan original → Plan ajustado -->
         <div style="border:1px solid var(--line-2);border-radius:8px;overflow:hidden;margin-bottom:4px;">
           <div style="display:grid;grid-template-columns:1fr 1fr;">
