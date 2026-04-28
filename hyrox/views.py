@@ -1658,21 +1658,22 @@ def editar_sesion_hyrox(request, session_id):
                     secs = round((float(mins) * 60) / float(km))
                     m['ritmo_real'] = f"{secs // 60}:{str(secs % 60).zfill(2)}/km"
                     m['tiempo_minutos'] = float(mins)
-            elif is_fuerza:
-                series = m.get('series') or []
-                for i, serie in enumerate(series):
-                    reps = request.POST.get(f'act_reps_{act.id}_{i}')
-                    kg = request.POST.get(f'act_kg_serie_{act.id}_{i}')
-                    if reps: serie['reps'] = int(reps)
-                    if kg: serie['peso_kg'] = float(kg); serie['peso'] = float(kg)
-                m['series'] = series
-            elif is_reps_station:
+            elif is_reps_station:  # antes que is_fuerza: Wall Balls puede tener 'series' del plan
                 reps = request.POST.get(f'act_reps_total_{act.id}')
                 kg = request.POST.get(f'act_kg_{act.id}')
                 if reps:
                     peso = float(kg) if kg else None
                     m['series'] = [{'reps': int(reps), 'peso_kg': peso}] if peso else [{'reps': int(reps)}]
+                    m['reps_total'] = int(reps)
                 if kg: m['peso_kg'] = float(kg)
+            elif is_fuerza:
+                series = m.get('series') or []
+                for i, serie in enumerate(series):
+                    reps_f = request.POST.get(f'act_reps_{act.id}_{i}')
+                    kg_f = request.POST.get(f'act_kg_serie_{act.id}_{i}')
+                    if reps_f: serie['reps'] = int(reps_f)
+                    if kg_f: serie['peso_kg'] = float(kg_f); serie['peso'] = float(kg_f)
+                m['series'] = series
             else:
                 # estacion por distancia u otro
                 distm = request.POST.get(f'act_distm_{act.id}')
@@ -1698,7 +1699,7 @@ def editar_sesion_hyrox(request, session_id):
             import traceback as _tb
             _log.error(f'[EDIT session={session.id}] ERROR en session.save(): {e}\n{_tb.format_exc()}')
             # El save de actividades ya se completó — continuar con el redirect
-        messages.success(request, "Sesión actualizada. El plan se ha re-adaptado.")
+        messages.success(request, "Sesión actualizada correctamente.")
         return redirect('hyrox:dashboard')
 
     TIPO_ACT_CARRERA = {'carrera', 'cardio_sustituto'}
