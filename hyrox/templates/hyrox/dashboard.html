@@ -2296,7 +2296,12 @@ a.rb-dia:hover { background: var(--paper-2); text-decoration: none; }
         <!-- Bloque estación -->
         <div style="background:{% if fila.station_source == 'real' %}rgba(245,158,11,.08){% else %}rgba(255,255,255,.03){% endif %};border:1px solid {% if fila.station_source == 'real' %}rgba(245,158,11,.25){% else %}var(--border){% endif %};border-radius:0 6px 6px 0;padding:7px 10px;">
           <div style="display:flex;justify-content:space-between;align-items:center;">
-            <span style="font-size:9px;color:{% if fila.station_source == 'real' %}#F59E0B{% else %}var(--ink-4){% endif %};font-family:var(--font-body);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100px;" title="{{ fila.station }}">{{ fila.station }}</span>
+            <div style="display:flex;flex-direction:column;gap:2px;min-width:0;">
+              <span style="font-size:9px;color:{% if fila.station_source == 'real' %}#F59E0B{% else %}var(--ink-4){% endif %};font-family:var(--font-body);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100px;" title="{{ fila.station }}">{{ fila.station }}</span>
+              {% if fila.peso_no_oficial %}
+              <span title="Entrenado con {{ fila.peso_registrado }}kg · oficial {{ fila.peso_oficial }}kg" style="font-family:var(--font-mono);font-size:8px;font-weight:700;color:#EF4444;letter-spacing:0.05em;cursor:help;">⚠ {{ fila.peso_registrado|floatformat:0 }}kg <span style="font-weight:400;color:var(--ink-4);">vs {{ fila.peso_oficial|floatformat:0 }}kg ofic.</span></span>
+              {% endif %}
+            </div>
             <span style="font-family:var(--font-mono);font-size:14px;font-weight:700;color:{% if fila.station_source == 'real' %}#F59E0B{% else %}var(--ink-3){% endif %};">{{ fila.station_str }}
               {% if fila.station_source == 'ref' %}<span style="font-size:8px;color:var(--ink-4);font-weight:400;" title="Tiempo de referencia, sin datos reales tuyos">ref</span>{% endif %}
             </span>
@@ -2309,8 +2314,9 @@ a.rb-dia:hover { background: var(--paper-2); text-decoration: none; }
 
     <div style="margin-top:10px;font-size:10px;color:var(--ink-4);font-family:var(--font-body);line-height:1.5;">
       <i class="fas fa-info-circle" style="color:var(--accent);margin-right:3px;"></i>
-      Ritmos de carrera calculados desde tu pace base y el IF real de cada estación.
-      Tiempos marcados en <span style="color:#F59E0B;">naranja</span> son de tus sesiones reales; en gris son referencias de categoría.
+      Ritmos calculados desde tu pace base y el IF real por estación.
+      <span style="color:#F59E0B;">Naranja</span> = datos tuyos · gris = referencia de categoría ·
+      <span style="color:#EF4444;font-family:var(--font-mono);font-size:9px;">⚠ Xkg</span> = entrenado con peso distinto al oficial de competición.
     </div>
   </section>
   {% endif %}

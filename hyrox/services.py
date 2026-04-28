@@ -1988,6 +1988,33 @@ class RaceCardService:
         sp_lookup = {s['nombre']: s for s in (splits_estaciones or [])}
         ref_times = HyroxRaceSimulator.get_tiempos_categoria(objetivo.categoria)
 
+        # Pesos registrados por estación (para detectar entrenamientos con peso no oficial)
+        _PESO_KW = {
+            'Sled Push':      ['sled push'],
+            'Sled Pull':      ['sled pull'],
+            'Farmers Carry':  ['farmer'],
+            'Sandbag Lunges': ['sandbag'],
+            'Wall Balls':     ['wall ball', 'wall balls'],
+        }
+        estandares_cat = CompetitionStandardsService.ESTANDARES_OFICIALES.get(objetivo.categoria, {})
+        from .models import HyroxActivity as _HA
+        _peso_acum = {}
+        for act in _HA.objects.filter(
+            sesion__objective=objetivo,
+            sesion__estado='completado',
+        ).only('nombre_ejercicio', 'data_metricas'):
+            name_low = (act.nombre_ejercicio or '').lower()
+            for st_name, kws in _PESO_KW.items():
+                if any(kw in name_low for kw in kws):
+                    kg = (act.data_metricas or {}).get('peso_kg')
+                    if kg:
+                        try:
+                            _peso_acum.setdefault(st_name, []).append(float(kg))
+                        except (ValueError, TypeError):
+                            pass
+                    break
+        peso_real = {s: round(sum(v) / len(v), 1) for s, v in _peso_acum.items() if v}
+
         filas = []
         total_secs = 0
 
@@ -2016,6 +2043,15 @@ class RaceCardService:
                 station_source = 'ref'
             total_secs += station_secs
 
+            # Detectar si el peso registrado difiere del oficial de competición
+            _std = estandares_cat.get(station, {})
+            _oficial_kg = _std.get('kg') if isinstance(_std, dict) else None
+            _registrado_kg = peso_real.get(station) if station_source == 'real' else None
+            _peso_no_oficial = bool(
+                _oficial_kg and _registrado_kg
+                and abs(_registrado_kg - _oficial_kg) > 0.5
+            )
+
             filas.append({
                 'num':             i + 1,
                 'run_pace_secs':   run_pace,
@@ -2025,6 +2061,9 @@ class RaceCardService:
                 'station_secs':    station_secs,
                 'station_str':     cls._fmt(station_secs),
                 'station_source':  station_source,   # 'real' | 'ref'
+                'peso_no_oficial': _peso_no_oficial,
+                'peso_registrado': _registrado_kg,
+                'peso_oficial':    _oficial_kg,
             })
 
         # ── Tiempo total y desglose ───────────────────────────────────────────
