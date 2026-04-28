@@ -272,7 +272,7 @@
               <span class="rb-serie-sep">×</span>
               <div class="rb-serie-field">
                 <div class="rb-serie-field-lbl">KG</div>
-                <input type="number" name="act_kg_serie_{{ act.id }}_{{ forloop.counter0 }}" class="rb-serie-input" value="{{ serie.peso_kg|default:serie.peso|default:'' }}" step="0.5" min="0" inputmode="decimal">
+                <input type="number" name="act_kg_serie_{{ act.id }}_{{ forloop.counter0 }}" class="rb-serie-input" value="{{ serie.peso_kg|default:'' }}" step="0.5" min="0" inputmode="decimal">
               </div>
             </div>
             {% endfor %}
