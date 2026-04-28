@@ -1706,16 +1706,16 @@ def editar_sesion_hyrox(request, session_id):
 
         if ta in TIPO_ACT_CARRERA or m.get('distancia_km'):
             tipo = 'carrera'
+        elif es_reps_station:
+            # Wall Balls y similares: siempre reps_total + kg, aunque tengan series del plan
+            tipo = 'reps_kg'
         elif m.get('series'):
-            # Si ya tiene series guardadas, editar como fuerza independientemente del tipo
+            # Series guardadas → editar como fuerza
             tipo = 'fuerza'
         elif ta == 'fuerza':
             tipo = 'fuerza'
         elif ta in TIPO_ACT_ESTACION and m.get('distancia_m') is not None:
             tipo = 'estacion'
-        elif ta in TIPO_ACT_ESTACION and es_reps_station:
-            # Wall Balls y similares: reps + kg, aunque aún no tengan datos guardados
-            tipo = 'reps_kg'
         elif ta in TIPO_ACT_ESTACION:
             tipo = 'estacion'
         elif m.get('peso_kg') is not None:
