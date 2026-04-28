@@ -153,3 +153,19 @@ def sincronizar_hub_actividad(sender, instance, created, raw=False, **kwargs):
         _cache.delete(f'dashboard_gamif_{instance.cliente_id}')
     except Exception as e:
         print(f"❌ Hub ActividadRealizada error (entreno {instance.id}): {e}")
+
+
+@receiver(post_save, sender=EntrenoRealizado)
+def actualizar_decision_log(sender, instance, created, raw=False, **kwargs):
+    """Evalúa decisiones previas y genera nuevas al guardar un EntrenoRealizado."""
+    if raw:
+        return
+    try:
+        from entrenos.services.decision_log_service import (
+            evaluar_decisiones_para_entreno,
+            generar_decisiones_para_entreno,
+        )
+        evaluar_decisiones_para_entreno(instance)
+        generar_decisiones_para_entreno(instance)
+    except Exception as e:
+        print(f"⚠️ Decision log error (entreno {instance.id}): {e}")

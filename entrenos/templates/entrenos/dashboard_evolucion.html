@@ -407,6 +407,93 @@ body {
 /* ── ACTIONS BAR ─────────────────────────────── */
 .rb-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
 
+/* ── PLAN DE ACCIÓN ──────────────────────────── */
+.rb-plan { margin: 0 0 4px; }
+.rb-plan-blocked { opacity: .85; }
+.rb-plan-msg { font-size: 13px; color: var(--ink-2); padding: 8px 0 12px;
+  font-style: italic; }
+.rb-plan-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 10px; }
+.rb-plan-card { background: var(--surface); border: 1px solid var(--border);
+  border-radius: 6px; padding: 14px; display: flex; flex-direction: column; gap: 8px; }
+.rb-plan-card.rb-plan-critica { border-left: 3px solid var(--accent); }
+.rb-plan-card.rb-plan-alta    { border-left: 3px solid var(--ok); }
+.rb-plan-card.rb-plan-media   { border-left: 3px solid #f59e0b; }
+.rb-plan-card.rb-plan-baja    { border-left: 3px solid var(--ink-3); }
+.rb-plan-card-head { display: flex; align-items: center; gap: 8px; }
+.rb-plan-icon { font-size: 14px; flex-shrink: 0; }
+.rb-plan-card.rb-plan-critica .rb-plan-icon { color: var(--accent); }
+.rb-plan-card.rb-plan-alta    .rb-plan-icon { color: var(--ok); }
+.rb-plan-card.rb-plan-media   .rb-plan-icon { color: #f59e0b; }
+.rb-plan-card.rb-plan-baja    .rb-plan-icon { color: var(--ink-3); }
+.rb-plan-titulo { font-size: 13px; font-weight: 700; color: var(--ink); flex: 1; }
+.rb-plan-prio { font-size: 10px; font-weight: 700; letter-spacing: .05em;
+  text-transform: uppercase; padding: 2px 6px; border-radius: 20px; flex-shrink: 0; }
+.rb-prio-critica { background: rgba(183,28,28,.15); color: var(--accent); }
+.rb-prio-alta    { background: rgba(45,125,69,.12); color: var(--ok); }
+.rb-prio-media   { background: rgba(245,158,11,.12); color: #b45309; }
+.rb-prio-baja    { background: rgba(0,0,0,.06); color: var(--ink-3); }
+.rb-plan-detalle { font-size: 12px; color: var(--ink-2); line-height: 1.5; }
+.rb-plan-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+.rb-plan-tag { font-size: 10px; background: rgba(0,0,0,.06); color: var(--ink-2);
+  padding: 2px 7px; border-radius: 20px; font-family: var(--font-mono); }
+.rb-plan-resumen { margin-top: 14px; padding: 14px 16px;
+  background: rgba(0,0,0,.04); border: 1px solid var(--border); border-radius: 6px; }
+.rb-plan-resumen-title { font-size: 11px; font-weight: 700; letter-spacing: .06em;
+  text-transform: uppercase; color: var(--ink-3); margin-bottom: 8px;
+  display: flex; align-items: center; gap: 6px; }
+.rb-plan-resumen-list { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 5px; }
+.rb-plan-resumen-list li { font-size: 13px; color: var(--ink); font-weight: 500; line-height: 1.4; }
+
+/* ── DECISION SUMMARY (Coach IA) ─────────────── */
+.rb-decision-summary { margin-top: 12px; padding: 10px 14px;
+  background: rgba(0,0,0,.04); border-radius: 4px; }
+.rb-ds-title { font-size: 11px; font-weight: 700; letter-spacing: .06em;
+  text-transform: uppercase; color: var(--ink-3); margin-bottom: 6px; }
+.rb-ds-row { display: flex; gap: 6px; flex-wrap: wrap; }
+.rb-ds-chip { font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 20px;
+  display: inline-flex; align-items: center; gap: 4px; }
+.rb-ds-up { background: rgba(45,125,69,.15); color: var(--ok); }
+.rb-ds-down { background: rgba(183,28,28,.12); color: var(--accent); }
+.rb-ds-hold { background: rgba(0,0,0,.08); color: var(--ink-2); }
+.rb-ds-prec { background: rgba(59,130,246,.12); color: #3b82f6; }
+
+/* ── PRÓXIMA ACCIÓN (tabla) ──────────────────── */
+.rb-next-action { display: inline-flex; align-items: center; gap: 4px;
+  font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 20px;
+  white-space: nowrap; cursor: default; }
+.rb-na-subir_peso  { background: rgba(45,125,69,.15); color: var(--ok); }
+.rb-na-subir_reps  { background: rgba(45,125,69,.10); color: #2d7d45; }
+.rb-na-mantener    { background: rgba(0,0,0,.08); color: var(--ink-2); }
+.rb-na-bajar_peso  { background: rgba(183,28,28,.12); color: var(--accent); }
+.rb-na-deload      { background: rgba(245,158,11,.15); color: #b45309; }
+.rb-na-cambiar_variante { background: rgba(59,130,246,.12); color: #3b82f6; }
+.rb-na-conf { display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-left: 2px; }
+.rb-na-conf-alta   { background: var(--ok); }
+.rb-na-conf-media  { background: #f59e0b; }
+.rb-na-conf-baja   { background: var(--ink-3); }
+
+/* ── DECISION LOG LIST ───────────────────────── */
+.rb-decision-list { display: flex; flex-direction: column; gap: 0; }
+.rb-dlog-row { display: grid; grid-template-columns: 1fr 2fr auto;
+  gap: 10px; align-items: center; padding: 10px 14px;
+  border-bottom: 1px solid var(--border); }
+.rb-dlog-row:last-child { border-bottom: none; }
+.rb-dlog-left { display: flex; flex-direction: column; gap: 2px; }
+.rb-dlog-exer { font-size: 13px; font-weight: 700; color: var(--ink); }
+.rb-dlog-date { font-size: 10px; color: var(--ink-3); font-family: var(--font-mono); }
+.rb-dlog-center { display: flex; flex-direction: column; gap: 3px; }
+.rb-dlog-motivo { font-size: 11px; color: var(--ink-3); line-height: 1.3; }
+.rb-dlog-right { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.rb-conf-badge { font-size: 10px; letter-spacing: .1em; }
+.rb-conf-alta  { color: var(--ok); }
+.rb-conf-media { color: #f59e0b; }
+.rb-conf-baja  { color: var(--ink-3); }
+@media(max-width:600px) {
+  .rb-dlog-row { grid-template-columns: 1fr auto; }
+  .rb-dlog-center { display: none; }
+}
+
 /* ── SKIP LINK ───────────────────────────────── */
 .rb-skip { position: absolute; top: -40px; left: 0; background: var(--ink); color: var(--paper);
   padding: 8px 16px; font-family: var(--font-mono); font-size: 12px; z-index: 9999;
@@ -548,15 +635,83 @@ body {
           </div>
         </div>
         <div class="rb-coach-fullmsg">{{ coach_data.mensaje|safe }}</div>
+
+        {% if resumen_decisiones.total > 0 %}
+        <div class="rb-decision-summary">
+          <div class="rb-ds-title"><i class="fas fa-robot"></i> Ajustes automáticos recientes</div>
+          <div class="rb-ds-row">
+            <span class="rb-ds-chip rb-ds-up"><i class="fas fa-arrow-up"></i> {{ resumen_decisiones.subidas }} subidas</span>
+            <span class="rb-ds-chip rb-ds-down"><i class="fas fa-arrow-down"></i> {{ resumen_decisiones.reducciones }} reducciones</span>
+            <span class="rb-ds-chip rb-ds-hold"><i class="fas fa-minus"></i> {{ resumen_decisiones.mantenidos }} mantenidos</span>
+            {% if precision_sistema.totales > 0 %}
+            <span class="rb-ds-chip rb-ds-prec"><i class="fas fa-bullseye"></i> Precisión {{ precision_sistema.precision }}%</span>
+            {% endif %}
+          </div>
+        </div>
+        {% endif %}
       </div>
     </div>
   </div>
   {% endwith %}
 
-  <!-- ── TABS ── -->
+  <!-- ── PLAN DE ACCIÓN ── -->
+  {% if plan_accion %}
   <div class="rb-section" style="padding-bottom:0;">
     <div class="rb-section-head">
       <span class="rb-section-num">02</span>
+      <h2 class="rb-section-title">Próxima acción</h2>
+      <div class="rb-section-line"></div>
+      {% if plan_accion.bloqueado %}
+      <span class="rb-section-right" style="color:var(--accent);">BLOQUEADO</span>
+      {% else %}
+      <span class="rb-section-right" style="color:var(--ok);">ACTIVO</span>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="rb-plan {% if plan_accion.bloqueado %}rb-plan-blocked{% endif %}">
+    <div class="rb-plan-msg">{{ plan_accion.mensaje }}</div>
+
+    <div class="rb-plan-grid">
+      {% for accion in plan_accion.acciones %}
+      <div class="rb-plan-card rb-plan-{{ accion.prioridad }}">
+        <div class="rb-plan-card-head">
+          <span class="rb-plan-icon"><i class="{{ accion.icono }}"></i></span>
+          <span class="rb-plan-titulo">{{ accion.titulo }}</span>
+          <span class="rb-plan-prio rb-prio-{{ accion.prioridad }}">
+            {% if accion.prioridad == 'critica' %}Crítico
+            {% elif accion.prioridad == 'alta' %}Alta
+            {% elif accion.prioridad == 'media' %}Media
+            {% else %}OK{% endif %}
+          </span>
+        </div>
+        <div class="rb-plan-detalle">{{ accion.detalle }}</div>
+        {% if accion.ejercicios and accion.tipo != 'equilibrio' %}
+        <div class="rb-plan-tags">
+          {% for ej in accion.ejercicios %}<span class="rb-plan-tag">{{ ej }}</span>{% endfor %}
+        </div>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+
+    {% if plan_accion.resumen %}
+    <div class="rb-plan-resumen">
+      <div class="rb-plan-resumen-title"><i class="fas fa-list-check"></i> Plan para la próxima sesión</div>
+      <ol class="rb-plan-resumen-list">
+        {% for linea in plan_accion.resumen %}
+        <li>{{ linea }}</li>
+        {% endfor %}
+      </ol>
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <!-- ── TABS ── -->
+  <div class="rb-section" style="padding-bottom:0;">
+    <div class="rb-section-head">
+      <span class="rb-section-num">03</span>
       <h2 class="rb-section-title">Dashboard</h2>
       <div class="rb-section-line"></div>
     </div>
@@ -776,6 +931,7 @@ body {
               <th>Cambio</th>
               <th>%</th>
               <th>Tendencia</th>
+              <th>Próxima acción</th>
             </tr>
           </thead>
           <tbody>
@@ -799,12 +955,80 @@ body {
               {% elif prog.tendencia == 'bajando' %}<span class="rb-badge rb-badge-accent"><i class="fas fa-arrow-trend-down"></i> Bajando</span>
               {% else %}<span class="rb-badge rb-badge-muted"><i class="fas fa-arrows-left-right"></i> Estable</span>{% endif %}
             </td>
+            <td>
+              {% if prog.proxima_accion %}
+                {% with pa=prog.proxima_accion %}
+                <span class="rb-next-action rb-na-{{ pa.accion }}"
+                      title="{{ pa.motivo }} (confianza {{ pa.confianza }})">
+                  {% if pa.accion == 'subir_peso' %}<i class="fas fa-arrow-up"></i> +{{ pa.valor_cambio|floatformat:1 }}%
+                  {% elif pa.accion == 'subir_reps' %}<i class="fas fa-plus"></i> +reps
+                  {% elif pa.accion == 'bajar_peso' %}<i class="fas fa-arrow-down"></i> -{{ pa.valor_cambio|floatformat:1 }}%
+                  {% elif pa.accion == 'deload' %}<i class="fas fa-battery-quarter"></i> Deload
+                  {% elif pa.accion == 'cambiar_variante' %}<i class="fas fa-shuffle"></i> Variante
+                  {% else %}<i class="fas fa-minus"></i> Mantener{% endif %}
+                  <span class="rb-na-conf rb-na-conf-{{ pa.confianza }}"></span>
+                </span>
+                {% endwith %}
+              {% else %}
+                <span class="rb-badge rb-badge-muted">—</span>
+              {% endif %}
+            </td>
           </tr>
           {% endfor %}
           </tbody>
         </table>
       </div>
     </div>
+
+    {% if decision_logs %}
+    <div class="rb-card" style="margin-top:12px;">
+      <div class="rb-card-head">
+        <div class="rb-card-title"><i class="fas fa-clock-rotate-left"></i> Últimos ajustes automáticos</div>
+        {% if precision_sistema.totales > 0 %}
+        <span class="rb-chip rb-chip-ok" style="margin-left:auto;font-size:.75rem;">
+          <i class="fas fa-bullseye"></i> Precisión {{ precision_sistema.precision }}%
+          <span style="opacity:.6;font-size:.7rem;margin-left:4px;">({{ precision_sistema.validadas }}/{{ precision_sistema.totales }})</span>
+        </span>
+        {% endif %}
+      </div>
+      <div class="rb-decision-list">
+        {% for log in decision_logs %}
+        <div class="rb-dlog-row">
+          <div class="rb-dlog-left">
+            <span class="rb-dlog-exer">{{ log.ejercicio|title }}</span>
+            <span class="rb-dlog-date">{{ log.fecha_creacion|date:"d/m/Y" }}</span>
+          </div>
+          <div class="rb-dlog-center">
+            <span class="rb-next-action rb-na-{{ log.accion }}">
+              {% if log.accion == 'subir_peso' %}<i class="fas fa-arrow-up"></i> +{{ log.valor_cambio|floatformat:1 }}%
+              {% elif log.accion == 'subir_reps' %}<i class="fas fa-plus"></i> Subir reps
+              {% elif log.accion == 'bajar_peso' %}<i class="fas fa-arrow-down"></i> -{{ log.valor_cambio|floatformat:1 }}%
+              {% elif log.accion == 'deload' %}<i class="fas fa-battery-quarter"></i> Deload
+              {% else %}<i class="fas fa-minus"></i> Mantener{% endif %}
+            </span>
+            <span class="rb-dlog-motivo">{{ log.motivo }}</span>
+          </div>
+          <div class="rb-dlog-right">
+            {% if log.resultado == 'validada' %}
+            <span class="rb-badge rb-badge-ok" title="{{ log.notas_resultado }}"><i class="fas fa-check"></i> Validada</span>
+            {% elif log.resultado == 'fallida' %}
+            <span class="rb-badge rb-badge-accent" title="{{ log.notas_resultado }}"><i class="fas fa-xmark"></i> Fallida</span>
+            {% elif log.resultado == 'neutra' %}
+            <span class="rb-badge rb-badge-muted" title="{{ log.notas_resultado }}"><i class="fas fa-minus"></i> Neutra</span>
+            {% else %}
+            <span class="rb-badge rb-badge-muted" style="opacity:.5;">Pendiente</span>
+            {% endif %}
+            <span class="rb-conf-badge rb-conf-{{ log.confianza }}" title="Confianza {{ log.confianza }}">
+              {% if log.confianza == 'alta' %}●●●
+              {% elif log.confianza == 'media' %}●●○
+              {% else %}●○○{% endif %}
+            </span>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
   </div>
 
   <!-- RÉCORDS -->
