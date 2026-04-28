@@ -721,8 +721,8 @@
             </div>
           </div>
           <div style="display:flex;gap:6px;">
-            <a href="?plan=ajustado" style="flex:1;text-align:center;padding:7px 10px;border-radius:6px;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;text-decoration:none;transition:background .15s,color .15s;{% if plan_elegido != 'original' %}background:#8B5CF6;color:#fff;{% else %}background:rgba(139,92,246,.12);color:#8B5CF6;border:1px solid rgba(139,92,246,.3);{% endif %}">Plan ajustado</a>
             <a href="?plan=original" style="flex:1;text-align:center;padding:7px 10px;border-radius:6px;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;text-decoration:none;transition:background .15s,color .15s;{% if plan_elegido == 'original' %}background:#8B5CF6;color:#fff;{% else %}background:rgba(139,92,246,.12);color:#8B5CF6;border:1px solid rgba(139,92,246,.3);{% endif %}">Plan original</a>
+            <a href="?plan=ajustado" style="flex:1;text-align:center;padding:7px 10px;border-radius:6px;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;text-decoration:none;transition:background .15s,color .15s;{% if plan_elegido != 'original' %}background:#8B5CF6;color:#fff;{% else %}background:rgba(139,92,246,.12);color:#8B5CF6;border:1px solid rgba(139,92,246,.3);{% endif %}">Plan ajustado</a>
           </div>
         </div>
         <input type="hidden" name="usar_plan_original" value="{% if plan_elegido == 'original' %}1{% else %}0{% endif %}">
