@@ -2207,52 +2207,24 @@ class HyroxSessionOverrideEngine:
 
     @classmethod
     def _override_por_estacion(cls, estacion):
-        e = (estacion or '').lower()
+        from .station_intelligence import HyroxStationIntelligence
 
-        if 'sled pull' in e:
-            ejercicios = [
-                {
-                    'tipo_actividad': 'hyrox_station',
-                    'nombre_ejercicio': 'Sled Pull técnico',
-                    'data_metricas': {
-                        'override': True, 'distancia_m': 20,
-                        'series': [{'reps': 1}, {'reps': 1}, {'reps': 1}, {'reps': 1}],
-                        'rpe_objetivo': '5-6',
-                        'notas': 'Técnica: pies firmes, tirón con cadera, brazos largos. No buscar fallo.',
-                    },
-                },
-                {
-                    'tipo_actividad': 'carrera',
-                    'nombre_ejercicio': 'Transición Sled Pull → carrera suave',
-                    'data_metricas': {
-                        'override': True, 'distancia_km': 2.5, 'rpe_objetivo': '5',
-                        'notas': 'Objetivo: volver a correr sin hundirte, no hacer marca.',
-                    },
-                },
-            ]
-        elif 'sled push' in e:
-            ejercicios = [
-                {
-                    'tipo_actividad': 'hyrox_station',
-                    'nombre_ejercicio': 'Sled Push técnico',
-                    'data_metricas': {
-                        'override': True, 'distancia_m': 20,
-                        'series': [{'reps': 1}, {'reps': 1}, {'reps': 1}, {'reps': 1}],
-                        'rpe_objetivo': '5-6',
-                        'notas': 'Pasos cortos, cadera baja, brazos bloqueados. Técnica antes que peso.',
-                    },
-                },
-                {
-                    'tipo_actividad': 'carrera',
-                    'nombre_ejercicio': 'Transición Sled Push → carrera Z2',
-                    'data_metricas': {
-                        'override': True, 'distancia_km': 2.5, 'rpe_objetivo': '5',
-                        'notas': 'No acelerar. Enseñar al cuerpo a volver a correr.',
-                    },
-                },
-            ]
-        else:
-            ejercicios = [
+        corrective = HyroxStationIntelligence.get_corrective_session(estacion)
+        if corrective:
+            display_name = HyroxStationIntelligence.STATIONS[
+                HyroxStationIntelligence._resolve(estacion)
+            ]['display_name']
+            return {
+                'titulo': f'Técnica · {display_name}',
+                'fatiga': 'Media',
+                'actividades': corrective,
+            }
+
+        # Fallback genérico para estaciones sin inteligencia registrada
+        return {
+            'titulo': f'Ajuste Técnico · {estacion}',
+            'fatiga': 'Media',
+            'actividades': [
                 {
                     'tipo_actividad': 'hyrox_station',
                     'nombre_ejercicio': f'Técnica específica · {estacion}',
@@ -2269,12 +2241,7 @@ class HyroxSessionOverrideEngine:
                         'notas': 'Consolidar transición sin acumular fatiga excesiva.',
                     },
                 },
-            ]
-
-        return {
-            'titulo': f'Ajuste Técnico · {estacion}',
-            'fatiga': 'Media',
-            'actividades': ejercicios,
+            ],
         }
 
 

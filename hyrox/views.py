@@ -563,6 +563,26 @@ def hyrox_dashboard(request):
         ]
         estaciones_debiles.sort(key=lambda x: x['pct_ref'])  # peor primero
 
+    # ── POST-SESSION DIAGNOSIS (datos + percepción) ───────────────────────────
+    post_session_diagnosis = None
+    if objetivo_activo:
+        from django.utils import timezone as _tz
+        from .models import HyroxSession as _HS
+        from .diagnostic_engine import HyroxDiagnosticEngine as _DX
+        _hoy = _tz.localdate()
+        _sesion_hoy = (
+            _HS.objects
+            .filter(objective=objetivo_activo, estado='completado', fecha=_hoy)
+            .prefetch_related('activities')
+            .order_by('-fecha_actualizacion')
+            .first()
+        )
+        if _sesion_hoy and _sesion_hoy.station_feedback:
+            try:
+                post_session_diagnosis = _DX.evaluate_session(_sesion_hoy)
+            except Exception:
+                logger.exception("[HYROX] Error en DiagnosticEngine")
+
     # ── FASES TIMELINE ─────────────────────────────────────────────────────────
     fases_timeline = []
     if objetivo_activo and objetivo_activo.fecha_evento:
@@ -767,6 +787,37 @@ def hyrox_dashboard(request):
             interferencia_index = InterferenceIndexService.compute_for_objective(objetivo_activo)
         except Exception:
             logger.exception("[HYROX] Error calculando interferencia_index")
+
+    # ── STATION INTELLIGENCE DIAGNOSIS ────────────────────────────────────────
+    station_diagnosis = None
+    if objetivo_activo:
+        from .station_intelligence import HyroxStationIntelligence as _SI
+        _estacion_fuga = None
+        _is_interference = False
+        _sin_datos = False
+        if interferencia_index:
+            _estacion_fuga = interferencia_index[0].get('estacion')
+            _is_interference = True
+        elif estaciones_debiles:
+            _estacion_fuga = estaciones_debiles[0].get('nombre')
+        else:
+            # Sin datos históricos: mostrar guía de referencia con SkiErg
+            _estacion_fuga = 'SkiErg'
+            _sin_datos = True
+        if _estacion_fuga:
+            _tip = _SI.get_station_tip(_estacion_fuga)
+            _diag_text = _SI.get_diagnosis(_estacion_fuga, {'is_interference': _is_interference})
+            _corrective = _SI.get_corrective_session(_estacion_fuga) or []
+            if _tip:
+                station_diagnosis = {
+                    'estacion': _estacion_fuga,
+                    'display_name': _tip['display_name'],
+                    'causa': _diag_text,
+                    'corrective_work': _SI.get_common_mistakes(_estacion_fuga)[:2],
+                    'corrective_exercises': [a['nombre_ejercicio'] for a in _corrective],
+                    'sin_datos': _sin_datos,
+                    'technical_focus': _tip['technical_focus'],
+                }
 
     # ── RACE CARD TÁCTICA + MODO COMPETICIÓN ─────────────────────────────────
     race_card = None
@@ -1012,6 +1063,8 @@ def hyrox_dashboard(request):
         'perfil_atletico': perfil_atletico,
         'curvas_progresion': curvas_progresion,
         'checkin_hoy': _checkin_hoy(cliente),
+        'station_diagnosis': station_diagnosis,
+        'post_session_diagnosis': post_session_diagnosis,
     }
     return render(request, 'hyrox/dashboard.html', context)
 
@@ -1239,16 +1292,28 @@ def registrar_entrenamiento(request, objective_id, session_id=None):
 
                 sesion.save()
 
+                # Guardar station feedback del wizard de diagnóstico
+                sf_json = request.POST.get('station_feedback_json', '').strip()
+                if sf_json:
+                    try:
+                        import json as _json
+                        sf_data = _json.loads(sf_json)
+                        if isinstance(sf_data, list) and sf_data:
+                            sesion.station_feedback = sf_data
+                            sesion.save(update_fields=['station_feedback'])
+                    except (ValueError, KeyError):
+                        pass
+
                 # Phase 8 & 9 & 14: Bucle de Feedback Continuo Post-Procesamiento.
                 # 1. Ajuste de volumen inmediato por Energía Pre-Entreno
                 HyroxTrainingEngine.scale_volume_by_energy(sesion)
-                
+
                 # 2. Evaluamos la sesión completada (RPE, Volumen) y ajustamos la(s) siguiente(s)
                 alertas = HyroxTrainingEngine.apply_continuous_adaptation(sesion)
                 if alertas:
                      for alerta in alertas:
                           messages.info(request, f"⚡ {alerta}")
-                
+
             return redirect('hyrox:dashboard')
     else:
         # Phase 16: Bio-Safe Dynamic Substitution for Registration
@@ -1287,6 +1352,7 @@ def registrar_entrenamiento(request, objective_id, session_id=None):
             )
 
             # Prepare activities for the context to preserve display_name and is_substituted
+            from .station_intelligence import HyroxStationIntelligence as _SI
             actividades_planificadas = list(sesion_planificada.activities.all())
             for act in actividades_planificadas:
                 act.display_name = act.nombre_ejercicio # Default
@@ -1300,6 +1366,8 @@ def registrar_entrenamiento(request, objective_id, session_id=None):
                             m['coach_tip'] = tip
                             break
                     act.data_metricas = m
+                # Inject Station Intelligence technical focus
+                act.station_focus = _SI.get_station_tip(act.nombre_ejercicio)
                 # Build series_processed: unified peso_display handling legacy 'peso' key
                 # and injecting official weight for wall balls with no weight data
                 _wb_peso = _oficiales_pesos.get('wall_ball') if 'wall ball' in nombre_lower else None
@@ -1364,6 +1432,12 @@ def registrar_entrenamiento(request, objective_id, session_id=None):
 
         form = HyroxSessionNotesForm(initial={'titulo': titulo_limpio})
 
+    from .station_intelligence import HyroxStationIntelligence as _SI_reg
+    _sf_stations = [
+        {'key': k, 'name': v['display_name']}
+        for k, v in _SI_reg.STATIONS.items()
+    ]
+
     return render(request, 'hyrox/registrar_entrenamiento.html', {
         'form': form,
         'objetivo': objetivo,
@@ -1374,6 +1448,7 @@ def registrar_entrenamiento(request, objective_id, session_id=None):
         'titulo_limpio': titulo_limpio if 'titulo_limpio' in locals() else '',
         'plan_original_snapshot': plan_original_snapshot if 'plan_original_snapshot' in locals() else [],
         'plan_elegido': plan_elegido if 'plan_elegido' in locals() else 'ajustado',
+        'sf_stations': _sf_stations,
     })
 
 from django.http import JsonResponse

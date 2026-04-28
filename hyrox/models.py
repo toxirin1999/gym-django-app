@@ -333,6 +333,7 @@ class HyroxSession(models.Model):
     ai_evaluation_score = models.IntegerField(null=True, blank=True, help_text="Valor 1-100 calculado por IA basado en cumplimiento vs plan")
     muscle_fatigue_index = models.CharField(max_length=20, null=True, blank=True, choices=[('Baja', 'Baja'), ('Media', 'Media'), ('Alta', 'Alta')], help_text="Estimación de fatiga calculada por IA resumiendo el RPE/Volumen")
     fatiga_updated_at = models.DateTimeField(null=True, blank=True, help_text="Cuándo se inyectó la fatiga por última vez (para Fatigue Decay)")
+    station_feedback = models.JSONField(null=True, blank=True, help_text="Feedback por estación al final del entreno: [{estacion, pausas, fallos, sensacion}]")
 
     def save(self, *args, **kwargs):
         # Lógica de cambio de título según energía pre-entreno (Fase 14)
