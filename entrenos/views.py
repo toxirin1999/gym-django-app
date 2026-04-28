@@ -6385,6 +6385,42 @@ def dashboard_evolucion(request, cliente_id):
     # Fases históricas reales desde FaseCliente
     fases_historicas = EstadisticasService.obtener_fases_historicas(cliente, rango)
 
+    # ── Plan de acción para próxima sesión ───────────────────────────────────
+    from entrenos.services.action_plan_service import GymActionPlanService
+    coach_data_calc = EstadisticasService.analizar_estado_coach(
+        cliente,
+        acwr_data=acwr,
+        stats_globales=stats,
+        estancados=estancamientos,
+        equilibrio_data=balance,
+        volumen_optimo_data=vol_optimo
+    )
+    plan_accion = GymActionPlanService.generar(
+        cliente=cliente,
+        acwr=acwr,
+        coach_data=coach_data_calc,
+        estancamientos=estancamientos,
+        vol_optimo=vol_optimo,
+        balance=balance,
+    )
+
+    # ── Sistema de decisiones de progresión ──────────────────────────────────
+    from entrenos.services.decision_log_service import (
+        obtener_logs_recientes,
+        obtener_proximas_acciones,
+        calcular_precision_sistema,
+        resumen_decisiones_recientes,
+    )
+    decision_logs = obtener_logs_recientes(cliente, limit=10)
+    proximas_acciones = obtener_proximas_acciones(cliente)   # dict {nombre_lower: log}
+    precision_sistema = calcular_precision_sistema(cliente)
+    resumen_decisiones = resumen_decisiones_recientes(cliente)
+
+    # Enriquecer progresion_ejercicios con la próxima acción
+    for prog in progresion:
+        key = prog['nombre_ejercicio'].lower()
+        prog['proxima_accion'] = proximas_acciones.get(key)
+
     context = {
         'cliente': cliente,
         'rango_seleccionado': rango,
@@ -6416,15 +6452,16 @@ def dashboard_evolucion(request, cliente_id):
         # Gamificación perfil
         'perfil_gamificacion': perfil_gamificacion,
 
-        # AI Coach (usando datos ya calculados — evita recalcular)
-        'coach_data': EstadisticasService.analizar_estado_coach(
-            cliente,
-            acwr_data=acwr,
-            stats_globales=stats,
-            estancados=estancamientos,
-            equilibrio_data=balance,
-            volumen_optimo_data=vol_optimo
-        ),
+        # AI Coach
+        'coach_data': coach_data_calc,
+
+        # Plan de acción próxima sesión
+        'plan_accion': plan_accion,
+
+        # Sistema de decisiones de progresión
+        'decision_logs': decision_logs,
+        'precision_sistema': precision_sistema,
+        'resumen_decisiones': resumen_decisiones,
     }
 
     return render(request, 'entrenos/dashboard_evolucion.html', context)

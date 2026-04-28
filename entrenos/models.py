@@ -1106,3 +1106,91 @@ class ActividadRealizada(models.Model):
         if self.carga_ua is None:
             self.carga_ua = self.calcular_carga_ua()
         super().save(*args, **kwargs)
+
+
+class GymDecisionLog(models.Model):
+    ACCION_CHOICES = [
+        ('subir_peso', 'Subir peso'),
+        ('subir_reps', 'Subir repeticiones'),
+        ('mantener', 'Mantener'),
+        ('bajar_peso', 'Reducir peso'),
+        ('deload', 'Descarga'),
+        ('cambiar_variante', 'Cambiar variante'),
+    ]
+    RESULTADO_CHOICES = [
+        ('validada', 'Validada'),
+        ('fallida', 'Fallida'),
+        ('neutra', 'Neutra'),
+    ]
+    CONFIANZA_CHOICES = [
+        ('alta', 'Alta'),
+        ('media', 'Media'),
+        ('baja', 'Baja'),
+    ]
+
+    cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE, related_name='gym_decision_logs')
+    ejercicio = models.CharField(max_length=120)
+
+    peso_anterior = models.FloatField(null=True, blank=True)
+    reps_anteriores = models.PositiveIntegerField(null=True, blank=True)
+    rpe_anterior = models.FloatField(null=True, blank=True)
+
+    accion = models.CharField(max_length=30, choices=ACCION_CHOICES)
+    valor_cambio = models.FloatField(null=True, blank=True)
+    motivo = models.TextField()
+
+    resultado = models.CharField(max_length=20, choices=RESULTADO_CHOICES, null=True, blank=True)
+    notas_resultado = models.TextField(null=True, blank=True)
+
+    confianza = models.CharField(max_length=20, choices=CONFIANZA_CHOICES, default='media')
+
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    fecha_evaluacion = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-fecha_creacion']
+        verbose_name = "Decisión de Progresión"
+        verbose_name_plural = "Decisiones de Progresión"
+        indexes = [
+            models.Index(fields=['cliente', 'ejercicio'], name='decision_cliente_ejercicio_idx'),
+        ]
+
+    def __str__(self):
+        return f"{self.ejercicio} → {self.accion} ({self.fecha_creacion.date()})"
+
+    @property
+    def accion_label(self):
+        return dict(self.ACCION_CHOICES).get(self.accion, self.accion)
+
+    @property
+    def resultado_label(self):
+        return dict(self.RESULTADO_CHOICES).get(self.resultado, '') if self.resultado else 'Pendiente'
+
+
+class GymAdaptationProfile(models.Model):
+    cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE, related_name='gym_adaptation_profiles')
+    ejercicio = models.CharField(max_length=120)
+
+    incremento_peso_pct = models.FloatField(default=5.0, help_text="% de incremento preferido")
+    reduccion_peso_pct = models.FloatField(default=10.0, help_text="% de reducción preferida")
+
+    decisiones_totales = models.IntegerField(default=0)
+    decisiones_validadas = models.IntegerField(default=0)
+    decisiones_fallidas = models.IntegerField(default=0)
+
+    confianza = models.CharField(max_length=20, default='baja')
+    fecha_actualizacion = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = [('cliente', 'ejercicio')]
+        verbose_name = "Perfil de Adaptación"
+        verbose_name_plural = "Perfiles de Adaptación"
+
+    def __str__(self):
+        return f"{self.cliente} — {self.ejercicio}"
+
+    @property
+    def precision(self):
+        if self.decisiones_totales == 0:
+            return 0
+        return round((self.decisiones_validadas / self.decisiones_totales) * 100)
