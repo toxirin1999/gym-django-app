@@ -399,44 +399,20 @@ input{background:transparent!important;border:none!important;outline:none!import
   letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px;
 }
 
-/* BTN FINALIZAR — sticky, dos taps para evitar accionamiento accidental */
+/* BTN FINALIZAR */
 .btn-finalizar-wrap{
-  position:sticky; bottom:0; z-index:50;
-  background:linear-gradient(to top, var(--bg) 70%, transparent);
-  padding:8px 16px 20px;
+  padding:12px 16px 24px;
 }
-/* Estado colapsado: pequeño y semitransparente */
-.btn-final-collapsed{
-  width:100%;height:36px;
-  background:rgba(46,204,113,0.06);
-  border:1px solid rgba(46,204,113,0.20);border-radius:10px;
-  color:rgba(100,200,120,0.55);font-size:12px;font-weight:600;
-  cursor:pointer;transition:all .2s;letter-spacing:0.08em;
-  display:flex;align-items:center;justify-content:center;gap:6px;
-}
-.btn-final-collapsed:active{opacity:0.8;}
-/* Estado expandido */
-.btn-final-expanded{ display:none; }
 .btn-final{
   width:100%;height:52px;
-  background:rgba(46,204,113,0.15);
+  background:rgba(46,204,113,0.12);
   border:1.5px solid var(--green);border-radius:12px;
   color:var(--green);font-size:15px;font-weight:700;
   cursor:pointer;transition:all .15s;
   letter-spacing:0.04em;
-  animation:finalizarIn .2s ease both;
 }
-@keyframes finalizarIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
 .btn-final:hover{background:rgba(46,204,113,0.22);}
 .btn-final:active{opacity:0.7;}
-.btn-final-cancel{
-  width:100%;height:36px;
-  background:transparent;border:none;
-  color:var(--td);font-size:12px;font-weight:500;
-  cursor:pointer;letter-spacing:0.04em;margin-top:4px;
-  opacity:0.7;
-}
-.btn-final-cancel:active{opacity:0.5;}
 
 /* ── BANNER BIO-SAFETY ── */
 .bio-banner{
@@ -1396,19 +1372,11 @@ input{background:transparent!important;border:none!important;outline:none!import
 </div><!-- /cyber-ejercicio-card -->
 {% endfor %}
 
-<!-- BOTÓN FINALIZAR — dos taps para evitar accionamiento accidental -->
-<div class="btn-finalizar-wrap" id="finalizar-wrap">
-  <!-- Primer tap: pill pequeño y discreto -->
-  <button type="button" class="btn-final-collapsed" id="btn-final-trigger">
-    <i class="fas fa-flag-checkered"></i> Finalizar
+<!-- BOTÓN FINALIZAR -->
+<div class="btn-finalizar-wrap">
+  <button type="button" id="btn-mostrar-resumen" class="btn-final">
+    <i class="fas fa-flag-checkered"></i> Finalizar y Guardar
   </button>
-  <!-- Segundo tap: botón completo + cancelar -->
-  <div class="btn-final-expanded" id="btn-final-expanded">
-    <button type="button" id="btn-mostrar-resumen" class="btn-final">
-      <i class="fas fa-flag-checkered"></i> Finalizar y Guardar
-    </button>
-    <button type="button" class="btn-final-cancel" id="btn-final-cancel">Cancelar</button>
-  </div>
 </div>
 
 </form><!-- /workout-form -->
@@ -2442,23 +2410,7 @@ document.querySelectorAll('.weight-input').forEach(inp=>{
   inp.addEventListener('touchstart',function(e){e.preventDefault();this.blur();},{passive:false});
 });
 
-// ── FINALIZAR — dos taps ─────────────────────────────────────────────────
-let _finalizarCollapseTimer = null;
-function colapsarFinalizar() {
-  clearTimeout(_finalizarCollapseTimer);
-  document.getElementById('btn-final-trigger').style.display = '';
-  document.getElementById('btn-final-expanded').style.display = 'none';
-}
-document.getElementById('btn-final-trigger').addEventListener('click', () => {
-  document.getElementById('btn-final-trigger').style.display = 'none';
-  document.getElementById('btn-final-expanded').style.display = 'block';
-  // Auto-colapsa si el usuario no confirma en 5 segundos
-  _finalizarCollapseTimer = setTimeout(colapsarFinalizar, 5000);
-});
-document.getElementById('btn-final-cancel').addEventListener('click', colapsarFinalizar);
-
 document.getElementById('btn-mostrar-resumen').addEventListener('click',()=>{
-  clearTimeout(_finalizarCollapseTimer);
   let comp=0,total=0,vol=0,reps=0,rpes=[],ejComp=0,ejTot=0;
   document.querySelectorAll('.cyber-ejercicio-card').forEach(card=>{
     const fid=card.dataset.formId;
