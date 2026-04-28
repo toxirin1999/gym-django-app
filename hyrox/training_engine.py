@@ -944,7 +944,8 @@ class HyroxTrainingEngine:
                         is_mutated = True
 
                 if is_mutated:
-                    sesion_sig.titulo = (sesion_sig.titulo or 'Entrenamiento') + ' (Recuperación Activa)'
+                    titulo_base = (sesion_sig.titulo or 'Entrenamiento').replace(' (Recuperación Activa)', '')
+                    sesion_sig.titulo = titulo_base + ' (Recuperación Activa)'
                     sesion_sig.save()
                     mensajes_ui.append(
                         f"{nombre}, hoy has llegado al límite. He suavizado un 20 % la sesión del "

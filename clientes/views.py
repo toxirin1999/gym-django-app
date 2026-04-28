@@ -1166,6 +1166,11 @@ def _get_dashboard_context_data(request, cliente):
         activities = list(hyrox_proxima_sesion.activities.all())
         procesar_ejercicios(activities, is_model=True)
         hyrox_proxima_sesion.processed_activities = activities
+        # Normalize repeated suffix accumulated by training_engine bug
+        import re as _re
+        titulo_clean = hyrox_proxima_sesion.titulo or ''
+        titulo_clean = _re.sub(r'( \(Recuperación Activa\))+$', ' (Recuperación Activa)', titulo_clean)
+        hyrox_proxima_sesion.titulo = titulo_clean
 
     # --- CÁLCULO DE MÉTRICAS PARA EL RADAR Y FOCUS STATS ---
     try:
