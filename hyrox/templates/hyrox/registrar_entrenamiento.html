@@ -716,7 +716,8 @@
             <div class="rb-brief-body">
               <div class="rb-brief-name">{{ act.nombre_ejercicio }}</div>
               <div class="rb-brief-spec">
-                {% if act.series_processed %}{{ act.series_processed|length }}x{% with s=act.series_processed.0 %}{% if s.reps %} {{ s.reps }} reps{% endif %}{% if s.peso_display %} · {{ s.peso_display }} kg{% endif %}{% endwith %}
+                {% if act.series_processed %}{% with s=act.series_processed.0 %}{% if s.reps %}{{ s.reps }} reps{% endif %}{% if s.peso_display %} · {{ s.peso_display }} kg{% endif %}{% endwith %}
+                {% elif act.data_metricas.series %}{% with s=act.data_metricas.series.0 %}{% if s.reps %}{{ s.reps }} reps{% endif %}{% if s.peso_kg %} · {{ s.peso_kg }} kg{% endif %}{% endwith %}
                 {% elif act.data_metricas.distancia_km %}{{ act.data_metricas.distancia_km }} km{% if act.data_metricas.ritmo_objetivo %} · {{ act.data_metricas.ritmo_objetivo }}/km{% endif %}
                 {% elif act.data_metricas.distancia_m %}{{ act.data_metricas.distancia_m }} m{% if act.data_metricas.peso_kg %} · {{ act.data_metricas.peso_kg }} kg{% endif %}
                 {% elif act.data_metricas.duracion_min %}{{ act.data_metricas.duracion_min }} min{% endif %}
