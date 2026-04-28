@@ -382,6 +382,66 @@
     letter-spacing: 0.15em; color: var(--accent); display: block; margin-bottom: 2px;
   }
 
+  /* ── STATION FEEDBACK ────────────────────────── */
+  .sf-section-title { font-family:var(--font-disp); font-size:18px; font-weight:700; color:var(--ink-1); margin-bottom:4px; }
+  .sf-section-sub   { font-family:var(--font-body); font-size:12px; color:var(--ink-3); margin-bottom:20px; line-height:1.5; }
+  .sf-q-label { font-family:var(--font-mono); font-size:9px; font-weight:700; letter-spacing:.12em; color:var(--ink-3); text-transform:uppercase; margin-bottom:8px; }
+  .sf-chips { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:16px; }
+  .sf-chip {
+    padding:8px 14px; border-radius:20px; border:1.5px solid var(--line-2);
+    font-family:var(--font-body); font-size:12px; color:var(--ink-2);
+    background:transparent; cursor:pointer; transition:all .15s;
+  }
+  .sf-chip:active { transform:scale(.96); }
+  .sf-chip.sf-active { border-color:var(--accent); color:var(--accent); background:rgba(29,200,184,.08); font-weight:600; }
+  .sf-chip.sf-multi.sf-active { border-color:#8B5CF6; color:#8B5CF6; background:rgba(139,92,246,.08); }
+  .sf-detail { display:none; background:var(--paper-2); border-radius:8px; padding:14px; margin-bottom:16px; border:1px solid var(--line-2); }
+  .sf-detail-title { font-family:var(--font-mono); font-size:9px; font-weight:700; letter-spacing:.1em; color:var(--accent); text-transform:uppercase; margin-bottom:12px; }
+  .sf-add-btn {
+    display:flex; align-items:center; gap:8px; width:100%; padding:12px 14px;
+    border:1.5px dashed var(--line-2); border-radius:8px; background:transparent;
+    font-family:var(--font-body); font-size:12px; color:var(--ink-3); cursor:pointer;
+    margin-bottom:16px;
+  }
+  .sf-summary-card { background:rgba(29,200,184,.06); border:1px solid rgba(29,200,184,.2); border-radius:8px; padding:12px 14px; margin-bottom:10px; }
+  .sf-summary-station { font-family:var(--font-mono); font-size:9px; font-weight:700; letter-spacing:.1em; color:var(--accent); text-transform:uppercase; margin-bottom:4px; }
+  .sf-summary-text { font-family:var(--font-body); font-size:12px; color:var(--ink-2); line-height:1.5; }
+  .sf-summary-fix { font-family:var(--font-body); font-size:11px; color:var(--ink-3); margin-top:4px; line-height:1.4; }
+
+  /* ── STATION FOCUS ───────────────────────────── */
+  .rb-station-focus {
+    background: rgba(29,200,184,.06);
+    border: 1px solid rgba(29,200,184,.25);
+    border-radius: 6px;
+    padding: 10px 12px;
+    margin-bottom: 10px;
+  }
+  .rb-station-focus-hdr { margin-bottom: 8px; }
+  .rb-station-focus-label {
+    font-family: var(--font-mono); font-size: 9px; font-weight: 700;
+    letter-spacing: .12em; color: var(--accent);
+  }
+  .rb-station-focus-cols {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+  }
+  .rb-station-focus-col-title {
+    font-family: var(--font-mono); font-size: 9px; font-weight: 600;
+    color: var(--ink-3); letter-spacing: .08em; text-transform: uppercase;
+    margin-bottom: 5px;
+  }
+  .rb-station-focus-item {
+    display: flex; gap: 6px; align-items: flex-start;
+    font-family: var(--font-body); font-size: 11px; color: var(--ink-2);
+    line-height: 1.4; margin-bottom: 3px;
+  }
+  .rb-station-focus-num {
+    font-family: var(--font-mono); font-size: 9px; font-weight: 700;
+    color: var(--accent); flex-shrink: 0; min-width: 12px;
+  }
+  .rb-station-focus-dot {
+    font-size: 12px; color: var(--accent); flex-shrink: 0;
+  }
+
   /* ── SERIES ──────────────────────────────────── */
   .rb-series-hdr {
     display: flex; justify-content: space-between; align-items: baseline;
@@ -829,6 +889,33 @@
             {% if act.data_metricas.peso_kg and not act.series_processed %}<span class="rb-plan-chip outline">{{ act.data_metricas.peso_kg }} KG</span>{% endif %}
           </div>
 
+          {% if act.station_focus %}
+          <div class="rb-station-focus">
+            <div class="rb-station-focus-hdr">
+              <span class="rb-station-focus-label">FOCO TÉCNICO · {{ act.station_focus.display_name|upper }}</span>
+            </div>
+            <div class="rb-station-focus-cols">
+              <div class="rb-station-focus-col">
+                <div class="rb-station-focus-col-title">Hoy vigila</div>
+                {% for punto in act.station_focus.technical_focus %}
+                <div class="rb-station-focus-item">
+                  <span class="rb-station-focus-num">{{ forloop.counter }}</span>
+                  <span>{{ punto }}</span>
+                </div>
+                {% endfor %}
+              </div>
+              <div class="rb-station-focus-col">
+                <div class="rb-station-focus-col-title">Estrategia</div>
+                {% for linea in act.station_focus.strategy %}
+                <div class="rb-station-focus-item">
+                  <span class="rb-station-focus-dot">·</span>
+                  <span>{{ linea }}</span>
+                </div>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+          {% endif %}
           {% if act.data_metricas.coach_tip %}<div class="rb-tip"><span class="rb-tip-label">COACH TIP</span>{{ act.data_metricas.coach_tip }}</div>{% endif %}
 
           <!-- TIMER HERO -->
@@ -1039,6 +1126,112 @@
     </section>
 
     <!-- ══════════════════════════════ N+3 · INFORME ══════════════════════════════ -->
+    <!-- ══ STATION FEEDBACK PANEL ══ -->
+    <section class="rb-panel" data-step="station_feedback">
+      <div class="rb-wiz-top">
+        <button type="button" class="rb-back-sm" onclick="rbPrev()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>Atrás
+        </button>
+        <span class="rb-wiz-indicator">DIAGNÓSTICO</span>
+        <span style="min-width:60px"></span>
+      </div>
+      <div class="rb-panel-scroll" style="padding:0 20px;">
+        <div style="padding:20px 0 16px;">
+          <div class="sf-section-title">¿Qué estación te rompió más?</div>
+          <div class="sf-section-sub">Ayuda al sistema a entender dónde hubo más dificultad.</div>
+        </div>
+
+        <!-- SLOT 1: estación principal -->
+        <div class="sf-q-label">Estación principal</div>
+        <div class="sf-chips" id="sf-chips-1">
+          {% for est in sf_stations %}
+          <button type="button" class="sf-chip" data-station="{{ est.key }}" data-name="{{ est.name }}" onclick="sfSelect(this, 1)">{{ est.name }}</button>
+          {% endfor %}
+          <button type="button" class="sf-chip" data-station="" data-name="Ninguna" onclick="sfSelect(this, 1)">Ninguna</button>
+        </div>
+
+        <!-- DETALLE slot 1 -->
+        <div class="sf-detail" id="sf-detail-1">
+          <div class="sf-detail-title" id="sf-detail-1-name"></div>
+
+          <div class="sf-q-label">Pausas</div>
+          <div class="sf-chips" id="sf-pausas-1">
+            <button type="button" class="sf-chip" data-val="0" onclick="sfSingle(this,'sf-pausas-1','pausas',1)">0</button>
+            <button type="button" class="sf-chip" data-val="1-2" onclick="sfSingle(this,'sf-pausas-1','pausas',1)">1-2</button>
+            <button type="button" class="sf-chip" data-val="3+" onclick="sfSingle(this,'sf-pausas-1','pausas',1)">3+</button>
+          </div>
+
+          <div class="sf-q-label">¿Qué falló?</div>
+          <div class="sf-chips" id="sf-fallos-1">
+            <button type="button" class="sf-chip sf-multi" data-val="respiracion" onclick="sfMulti(this,'fallos',1)">Respiración</button>
+            <button type="button" class="sf-chip sf-multi" data-val="brazos" onclick="sfMulti(this,'fallos',1)">Brazos</button>
+            <button type="button" class="sf-chip sf-multi" data-val="piernas" onclick="sfMulti(this,'fallos',1)">Piernas</button>
+            <button type="button" class="sf-chip sf-multi" data-val="tecnica" onclick="sfMulti(this,'fallos',1)">Técnica</button>
+            <button type="button" class="sf-chip sf-multi" data-val="ritmo" onclick="sfMulti(this,'fallos',1)">Ritmo</button>
+            <button type="button" class="sf-chip sf-multi" data-val="no_se" onclick="sfMulti(this,'fallos',1)">No sé</button>
+          </div>
+
+          <div class="sf-q-label">Sensación técnica</div>
+          <div class="sf-chips" id="sf-sensacion-1">
+            <button type="button" class="sf-chip" data-val="fluida" onclick="sfSingle(this,'sf-sensacion-1','sensacion',1)">Fluida</button>
+            <button type="button" class="sf-chip" data-val="torpe" onclick="sfSingle(this,'sf-sensacion-1','sensacion',1)">Torpe</button>
+            <button type="button" class="sf-chip" data-val="muy_mala" onclick="sfSingle(this,'sf-sensacion-1','sensacion',1)">Muy mala</button>
+          </div>
+        </div>
+
+        <!-- AÑADIR SEGUNDA ESTACIÓN -->
+        <button type="button" class="sf-add-btn" id="sf-add-btn" onclick="sfShowSecond()" style="display:none;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Añadir otra estación problemática
+        </button>
+
+        <!-- SLOT 2: segunda estación (opcional) -->
+        <div id="sf-second-block" style="display:none;">
+          <div class="sf-q-label" style="margin-top:4px;">Otra estación</div>
+          <div class="sf-chips" id="sf-chips-2">
+            {% for est in sf_stations %}
+            <button type="button" class="sf-chip" data-station="{{ est.key }}" data-name="{{ est.name }}" onclick="sfSelect(this, 2)">{{ est.name }}</button>
+            {% endfor %}
+          </div>
+
+          <div class="sf-detail" id="sf-detail-2">
+            <div class="sf-detail-title" id="sf-detail-2-name"></div>
+
+            <div class="sf-q-label">Pausas</div>
+            <div class="sf-chips" id="sf-pausas-2">
+              <button type="button" class="sf-chip" data-val="0" onclick="sfSingle(this,'sf-pausas-2','pausas',2)">0</button>
+              <button type="button" class="sf-chip" data-val="1-2" onclick="sfSingle(this,'sf-pausas-2','pausas',2)">1-2</button>
+              <button type="button" class="sf-chip" data-val="3+" onclick="sfSingle(this,'sf-pausas-2','pausas',2)">3+</button>
+            </div>
+
+            <div class="sf-q-label">¿Qué falló?</div>
+            <div class="sf-chips" id="sf-fallos-2">
+              <button type="button" class="sf-chip sf-multi" data-val="respiracion" onclick="sfMulti(this,'fallos',2)">Respiración</button>
+              <button type="button" class="sf-chip sf-multi" data-val="brazos" onclick="sfMulti(this,'fallos',2)">Brazos</button>
+              <button type="button" class="sf-chip sf-multi" data-val="piernas" onclick="sfMulti(this,'fallos',2)">Piernas</button>
+              <button type="button" class="sf-chip sf-multi" data-val="tecnica" onclick="sfMulti(this,'fallos',2)">Técnica</button>
+              <button type="button" class="sf-chip sf-multi" data-val="ritmo" onclick="sfMulti(this,'fallos',2)">Ritmo</button>
+              <button type="button" class="sf-chip sf-multi" data-val="no_se" onclick="sfMulti(this,'fallos',2)">No sé</button>
+            </div>
+
+            <div class="sf-q-label">Sensación técnica</div>
+            <div class="sf-chips" id="sf-sensacion-2">
+              <button type="button" class="sf-chip" data-val="fluida" onclick="sfSingle(this,'sf-sensacion-2','sensacion',2)">Fluida</button>
+              <button type="button" class="sf-chip" data-val="torpe" onclick="sfSingle(this,'sf-sensacion-2','sensacion',2)">Torpe</button>
+              <button type="button" class="sf-chip" data-val="muy_mala" onclick="sfSingle(this,'sf-sensacion-2','sensacion',2)">Muy mala</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+      <div class="rb-panel-foot">
+        <button type="button" class="rb-wiz-btn" onclick="sfNext()" style="background:var(--accent);color:var(--paper);border:none;">
+          Siguiente →
+        </button>
+      </div>
+    </section>
+    <!-- ══ /STATION FEEDBACK PANEL ══ -->
+
     <section class="rb-panel" data-step="informe">
       <div class="rb-wiz-top">
         <button type="button" class="rb-back-sm" onclick="rbPrev()">
@@ -1052,6 +1245,8 @@
           <div class="rb-panel-section-title">Finish Line</div>
           <div class="rb-panel-section-sub">Un par de notas y guardamos la sesión.</div>
         </div>
+        <!-- Resumen de feedback de estaciones (generado por JS) -->
+        <div id="sf-summary-block" style="margin-bottom:12px;"></div>
         <div class="rb-alert" id="rb-biosafe-alert">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h16.9a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
           <div class="rb-alert-txt" id="rb-biosafe-msg"></div>
@@ -1076,6 +1271,7 @@
     </section>
 
   </div>
+  <input type="hidden" name="station_feedback_json" id="sf-hidden" value="">
 </form>
 
 <!-- CONFIRM MODAL -->
@@ -1403,6 +1599,7 @@ function rbSubmit() {
 function rbConfirmSave() {
   document.getElementById('rb-confirm-overlay').style.display = 'none';
   rbBuildNotasRaw();
+  sfSerialize();
   document.getElementById('rb-form').submit();
 }
 
@@ -1436,6 +1633,119 @@ function rbConfirmSave() {
 {% endif %}
 
 rbInit();
+
+/* ───── STATION FEEDBACK ───── */
+var _sfData = [{estacion:'',pausas:'',fallos:[],sensacion:''}, {estacion:'',pausas:'',fallos:[],sensacion:''}];
+
+// Diagnósticos inline (mirror de Python, sin llamada al servidor)
+var _sfDiag = {
+  'skierg':         {resumen:'SkiErg salió pesado',  fix:'Primeros 200m más suave, mantén 32–34 SPM.'},
+  'sled_push':      {resumen:'Sled Push fue duro',   fix:'Pasos cortos y cadera baja. No salgas al máximo.'},
+  'sled_pull':      {resumen:'Sled Pull costó',      fix:'Tirones constantes desde cadera, evita pausas largas.'},
+  'burpees':        {resumen:'Burpees te vaciaron',  fix:'Ritmo tipo metrónomo. No busques distancia máxima.'},
+  'rowing':         {resumen:'Remo fue ineficiente', fix:'Secuencia: piernas → cadera → brazos. No salgas fuerte.'},
+  'farmers_carry':  {resumen:'Farmer Carry te rompió', fix:'Postura erguida, pasos cortos, sin pausas.'},
+  'sandbag_lunges': {resumen:'Lunges te desgastaron', fix:'Ritmo constante. Evita fallo muscular.'},
+  'wall_balls':     {resumen:'Wall Balls fueron pesados', fix:'Series cortas. Sentadilla profunda. Evita el fallo.'},
+};
+var _sfKeyMap = {
+  'skierg':'skierg','ski erg':'skierg',
+  'sled push':'sled_push','sled pull':'sled_pull',
+  'burpee':'burpees','rowing':'rowing','remo':'rowing',
+  'farmer':'farmers_carry','carry':'farmers_carry',
+  'sandbag':'sandbag_lunges','lunge':'sandbag_lunges',
+  'wall ball':'wall_balls',
+};
+function _sfResolve(name) {
+  var n = (name||'').toLowerCase();
+  for (var kw in _sfKeyMap) { if (n.indexOf(kw) > -1) return _sfKeyMap[kw]; }
+  return null;
+}
+
+function sfSelect(el, slot) {
+  var i = slot - 1;
+  var parent = document.getElementById('sf-chips-' + slot);
+  parent.querySelectorAll('.sf-chip').forEach(function(c) { c.classList.remove('sf-active'); });
+  el.classList.add('sf-active');
+  _sfData[i].estacion = el.dataset.station;
+  _sfData[i].fallos = [];
+  var detail = document.getElementById('sf-detail-' + slot);
+  var nameEl = document.getElementById('sf-detail-' + slot + '-name');
+  if (el.dataset.station) {
+    detail.style.display = 'block';
+    nameEl.textContent = el.dataset.name;
+    // Reset detail chips
+    detail.querySelectorAll('.sf-chip').forEach(function(c) { c.classList.remove('sf-active'); });
+    if (slot === 1) document.getElementById('sf-add-btn').style.display = 'none';
+  } else {
+    detail.style.display = 'none';
+    if (slot === 1) {
+      document.getElementById('sf-add-btn').style.display = 'none';
+      document.getElementById('sf-second-block').style.display = 'none';
+    }
+  }
+}
+
+function sfSingle(el, groupId, field, slot) {
+  var i = slot - 1;
+  document.getElementById(groupId).querySelectorAll('.sf-chip').forEach(function(c) { c.classList.remove('sf-active'); });
+  el.classList.add('sf-active');
+  _sfData[i][field] = el.dataset.val;
+  // After answering sensacion, show the add-another button (slot 1 only)
+  if (field === 'sensacion' && slot === 1) {
+    document.getElementById('sf-add-btn').style.display = 'flex';
+  }
+}
+
+function sfMulti(el, field, slot) {
+  var i = slot - 1;
+  el.classList.toggle('sf-active');
+  var val = el.dataset.val;
+  var idx = _sfData[i][field].indexOf(val);
+  if (idx > -1) _sfData[i][field].splice(idx, 1);
+  else _sfData[i][field].push(val);
+}
+
+function sfShowSecond() {
+  document.getElementById('sf-add-btn').style.display = 'none';
+  document.getElementById('sf-second-block').style.display = 'block';
+}
+
+function sfBuildSummary() {
+  var block = document.getElementById('sf-summary-block');
+  if (!block) return;
+  var html = '';
+  _sfData.forEach(function(d) {
+    if (!d.estacion) return;
+    var key = _sfResolve(d.estacion) || d.estacion;
+    var info = _sfDiag[key] || {resumen: d.estacion + ' fue difícil', fix: 'Trabaja técnica básica.'};
+    var problems = [];
+    if (d.pausas && d.pausas !== '0') problems.push((d.pausas === '3+' ? 'muchas' : 'algunas') + ' pausas');
+    if (d.fallos && d.fallos.length) {
+      var labels = {respiracion:'respiración',brazos:'brazos',piernas:'piernas',tecnica:'técnica',ritmo:'ritmo',no_se:'causa incierta'};
+      problems.push(d.fallos.slice(0,2).map(function(f) { return labels[f]||f; }).join(' y '));
+    }
+    if (d.sensacion && d.sensacion !== 'fluida') problems.push('sensación ' + d.sensacion.replace('_',' '));
+    var resumen = info.resumen + (problems.length ? ' por ' + problems.join(', ') : '') + '.';
+    html += '<div class="sf-summary-card">'
+      + '<div class="sf-summary-station">' + (d.estacion||'').replace('_',' ').toUpperCase() + '</div>'
+      + '<div class="sf-summary-text">' + resumen + '</div>'
+      + '<div class="sf-summary-fix">Próxima vez: ' + info.fix + '</div>'
+      + '</div>';
+  });
+  block.innerHTML = html;
+}
+
+function sfSerialize() {
+  var filtered = _sfData.filter(function(d) { return d && d.estacion; });
+  document.getElementById('sf-hidden').value = filtered.length ? JSON.stringify(filtered) : '';
+}
+
+function sfNext() {
+  sfSerialize();
+  sfBuildSummary();
+  rbNext();
+}
 </script>
 </body>
 </html>
