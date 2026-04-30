@@ -41,7 +41,7 @@ class HyroxObjectiveForm(forms.ModelForm):
             'lesiones_previas', 'material_disponible', 'dias_preferidos',
         ]
         widgets = {
-            'fecha_evento': forms.DateInput(attrs={'type': 'date', 'class': 'form-control bg-slate-800 border-slate-700 text-slate-200'}),
+            'fecha_evento': forms.DateInput(format='%Y-%m-%d', attrs={'type': 'date', 'class': 'form-control bg-slate-800 border-slate-700 text-slate-200'}),
             'categoria': forms.Select(attrs={'class': 'form-select bg-slate-800 border-slate-700 text-slate-200'}),
             'objetivo_tiempo_carrera': forms.TextInput(attrs={'class': 'form-control bg-slate-800 border-slate-700 text-slate-200', 'placeholder': 'Ej. 1:15:00 (1h 15min)'}),
             'primer_hyrox': forms.CheckboxInput(attrs={'class': 'w-5 h-5 text-cyan-500 bg-slate-800 border-slate-700 rounded focus:ring-cyan-500'}),
