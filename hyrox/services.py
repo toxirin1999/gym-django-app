@@ -1393,7 +1393,8 @@ class HyroxRaceSimulator:
             penalizacion = 0.0  # porcentaje adicional de tiempo
 
             if estacion in ('Sled Push',):
-                std_peso = estandares.get('Sled Push', 152)
+                raw_std = estandares.get('Sled Push', 152)
+                std_peso = raw_std['kg'] if isinstance(raw_std, dict) else raw_std
                 pct_fuerza = min(rm_sq / std_peso, 1.0)
                 if pct_fuerza < 0.6:
                     penalizacion = (0.6 - pct_fuerza) * 1.5  # hasta +90% extra
@@ -1401,7 +1402,8 @@ class HyroxRaceSimulator:
                     penalizacion = (1.0 - pct_fuerza) * 0.5
 
             elif estacion in ('Sled Pull',):
-                std_peso = estandares.get('Sled Pull', 103)
+                raw_std = estandares.get('Sled Pull', 103)
+                std_peso = raw_std['kg'] if isinstance(raw_std, dict) else raw_std
                 pct_fuerza = min(rm_dl / std_peso, 1.0)
                 if pct_fuerza < 0.6:
                     penalizacion = (0.6 - pct_fuerza) * 1.5
@@ -1439,7 +1441,9 @@ class HyroxRaceSimulator:
         # --- Calculos narrativos para el coach ---
         pilar_mas_debil = max(desglose, key=lambda x: x['penalizacion_pct'])
         carrera_str = cls._segundos_a_tiempo_str(int(carrera_segundos))
-        rm_sq_objetivo = round(estandares.get('Sled Push', 152) * 0.85, 0)
+        raw_std_sq = estandares.get('Sled Push', 152)
+        std_sq = raw_std_sq['kg'] if isinstance(raw_std_sq, dict) else raw_std_sq
+        rm_sq_objetivo = round(std_sq * 0.85, 0)
 
         mensaje_coach = (
             f"{nombre}, con tu RM de sentadilla actual ({rm_sq}kg) y tu ritmo base de 5K ({t5k_str}), "
