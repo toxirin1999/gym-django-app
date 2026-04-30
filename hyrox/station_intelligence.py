@@ -67,37 +67,65 @@ class HyroxStationIntelligence:
         "sled_push": {
             "display_name": "Sled Push",
             "icon": "fa-truck-loading",
+            "description": (
+                "Estación 02 — 4 × 12,5 m (25 m totales). Llega tras el 2.º km de carrera. "
+                "Si el trineo se detiene, necesitas el doble de energía para arrancar de nuevo. "
+                "Sin fase excéntrica: puedes entrenarlo con frecuencia sin coste de recuperación elevado."
+            ),
+            "weights": {
+                "women_open": "102 kg",
+                "men_open": "152 kg",
+                "pro_men": "202 kg",
+                "pro_women": "152 kg",
+                "doubles_mixed_f": "102 kg",
+                "doubles_mixed_m": "152 kg",
+            },
             "technical_focus": [
-                "Cadera baja y alineada",
-                "Brazos bloqueados",
-                "Pasos cortos y constantes",
-                "Core firme",
+                "Posición de abrazo: antebrazos apoyados en postes, codos cerrados, manos como ganchos",
+                "Centro de masa bajo: cabeza y torso alineados con el centro del trineo",
+                "Pasos cortos y potentes, empujando con las puntas",
+                "Core firme transmitiendo fuerza de piernas al trineo",
+                "Salida explosiva: inclínate sobre el trineo y arranca como un sprint",
+                "Respiración continua: inhala y exhala por completo, no contengas el aliento",
+            ],
+            "positions": [
+                "Brazos extendidos: manos por encima del centro, muñeca-codo-hombro alineados. Mejor para atletas altos.",
+                "Abrazo (más común): antebrazos en postes, codos cerrados. Activa más cadena posterior. Mejor para atletas bajos.",
             ],
             "common_mistakes": [
-                "Empujar demasiado alto",
-                "Pasos largos",
-                "Pararse completamente",
-                "Perder tensión en core",
+                "Fuerza dirigida arriba o abajo — baja las manos, la presión va hacia adelante",
+                "Pasos demasiado largos — pierdes tracción y desperdicias energía",
+                "Codos abiertos y empuje con hombros — dispersa la fuerza y aumenta la fatiga",
+                "Contener la respiración — acelera la fatiga muscular",
+                "Dejar que el trineo se detenga — cuesta el doble volver a arrancarlo",
             ],
             "strategy": [
-                "No salir al máximo",
-                "Divide en bloques si es pesado",
-                "Ritmo constante > explosivo",
+                "Divide mentalmente en dos tramos de 12,5 m; usa la mitad como referencia",
+                "Cuenta tus pasos en entrenamiento para saber cuántos necesitas por tramo",
+                "Si el trineo se para: detente, reajusta postura y reinicia explosivo",
+                "Objetivo: trineo en movimiento constante — inercia > velocidad punta",
+            ],
+            "rules": [
+                "El trineo debe cruzar completamente la línea antes de cambiar dirección",
+                "No puedes soltar el trineo y descansar — movimiento continuo",
+                "Permanece dentro de tu carril asignado durante toda la estación",
+                "Entra por IN y sal por OUT de la Roxzone — error = penalización 2 min",
             ],
             "corrective_work": [
-                "4×20m trineo ligero técnico",
-                "Marcha pesada controlada",
-                "Trabajo core anti-extensión",
+                "Entrena con más carga que en competición (ej. +20%) para que el peso oficial se sienta manejable",
+                "Combina siempre trineo con carrera: 1 km antes + estación + 1 km después",
+                "Practica respiración bajo carga hasta que sea automática",
+                "Core antiextensión: plancha, dead bugs, pallof press",
             ],
             "corrective_activities": [
                 {
                     "tipo_actividad": "hyrox_station",
-                    "nombre_ejercicio": "Sled Push técnico · 4×20m",
+                    "nombre_ejercicio": "Sled Push técnico · 4×25m",
                     "data_metricas": {
                         "override": True,
-                        "series": [{"distancia_m": 20}, {"distancia_m": 20}, {"distancia_m": 20}, {"distancia_m": 20}],
-                        "rpe_objetivo": "5-6",
-                        "notas": "Peso al 60%. Ángulo correcto, pasos cortos, cadera baja. Técnica > velocidad.",
+                        "series": [{"distancia_m": 25}, {"distancia_m": 25}, {"distancia_m": 25}, {"distancia_m": 25}],
+                        "rpe_objetivo": "6-7",
+                        "notas": "Peso competición +20%. Posición de abrazo. Pasos cortos. Trineo en movimiento constante.",
                     },
                 },
                 {
@@ -105,17 +133,17 @@ class HyroxStationIntelligence:
                     "nombre_ejercicio": "Transición Sled Push → carrera Z2",
                     "data_metricas": {
                         "override": True,
-                        "distancia_km": 2.5,
+                        "distancia_km": 2,
                         "rpe_objetivo": "5",
-                        "notas": "Enseñar al cuerpo a volver a correr después del trineo.",
+                        "notas": "Recupera el patrón de carrera después del esfuerzo de empuje. Frecuencia antes que velocidad.",
                     },
                 },
             ],
             "diagnosis": {
-                "high_if": "El trineo te destruye para la carrera. Posible mala mecánica o exceso de intensidad.",
-                "high_rpe": "Esfuerzo alto. Ajusta posición y longitud de paso.",
-                "slow_time": "Falta eficiencia. No es solo fuerza.",
-                "general": "Trabaja postura de empuje y cadencia de pasos para mejorar el Sled Push.",
+                "high_if": "El trineo te destruye para la carrera. Revisa posición (¿codos abiertos?, ¿pasos largos?) o reduce intensidad de salida.",
+                "high_rpe": "Esfuerzo alto. Prueba posición de abrazo y cuenta pasos para mantener cadencia constante.",
+                "slow_time": "Falta eficiencia de empuje. No es solo fuerza — trabaja la mecánica de salida y respiración bajo carga.",
+                "general": "Combina trineo con carrera en cada sesión. La transferencia aeróbica es clave para rendir después de la estación.",
             },
         },
 
@@ -471,6 +499,10 @@ class HyroxStationIntelligence:
             "technical_focus": data["technical_focus"],
             "strategy": data["strategy"],
             "common_mistakes": data["common_mistakes"],
+            "description": data.get("description", ""),
+            "positions": data.get("positions", []),
+            "rules": data.get("rules", []),
+            "weights": data.get("weights", {}),
         }
 
     @classmethod
