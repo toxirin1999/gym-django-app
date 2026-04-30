@@ -1540,6 +1540,12 @@ def registrar_entrenamiento(request, objective_id, session_id=None):
                 for msg in mensajes_pace:
                     messages.success(request, f"🏃 {msg}")
 
+                # 5. Calibración de RPE personal — detección de sesgo sistemático
+                from .training_engine import RPECalibrator
+                mensajes_rpe = RPECalibrator.check_and_notify(sesion)
+                for msg in mensajes_rpe:
+                    messages.info(request, f"📊 {msg}")
+
                 # Hito: detectar tipo y lanzar adaptación del plan
                 tipo_hito_sesion = None
                 if sesion.titulo:
