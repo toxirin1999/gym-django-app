@@ -1323,6 +1323,7 @@ a.rb-dia:focus-visible {
       <span style="font-family:var(--font-mono);font-size:9px;font-weight:700;color:var(--ok);letter-spacing:.1em;text-transform:uppercase;background:oklch(0.55 0.15 145 / 0.12);border:1px solid oklch(0.55 0.15 145 / 0.25);padding:3px 8px;border-radius:4px;">Fuga principal</span>
       {% endif %}
       <span style="font-family:var(--font-disp);font-size:14px;font-weight:700;color:var(--ink-1);">{{ station_diagnosis.display_name }}</span>
+      <button onclick="document.getElementById('modal-station-info').style.display='flex'" style="margin-left:auto;background:none;border:1px solid var(--border);border-radius:50%;width:18px;height:18px;cursor:pointer;font-size:10px;color:var(--ink-3);line-height:1;flex-shrink:0;padding:0;" title="Cómo funciona este panel">?</button>
     </div>
     {% if station_diagnosis.sin_datos %}
     <p style="font-family:var(--font-body);font-size:11px;color:var(--ink-3);margin:0 0 10px;line-height:1.5;">
@@ -1358,6 +1359,31 @@ a.rb-dia:focus-visible {
     {% endif %}
     {% endif %}
   </section>
+
+  <!-- Modal: cómo funciona Guía técnica / Fuga principal -->
+  <div id="modal-station-info" style="display:none;position:fixed;inset:0;z-index:9999;align-items:flex-start;justify-content:center;background:rgba(0,0,0,.75);overflow-y:auto;padding:30px 16px;" onclick="if(event.target===this)this.style.display='none'">
+    <div style="background:#1e2235;border:1px solid #334155;border-radius:12px;padding:24px;max-width:420px;width:100%;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <span style="font-size:13px;font-weight:700;color:#e2e8f0;">Station Intelligence — Cómo funciona</span>
+        <button onclick="document.getElementById('modal-station-info').style.display='none'" style="background:none;border:none;color:#94a3b8;font-size:22px;cursor:pointer;line-height:1;padding:0 4px;">×</button>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div style="padding:10px 12px;border-radius:6px;background:rgba(255,255,255,.03);border:1px solid #334155;">
+          <div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px;">Modo: sin datos suficientes → Guía técnica</div>
+          <p style="font-size:11px;color:#94a3b8;margin:0;line-height:1.6;">Cuando hay menos de 3 sesiones registradas en esa estación, el sistema no puede detectar fugas estadísticamente. En su lugar muestra los <strong style="color:#e2e8f0;">puntos técnicos clave</strong> de referencia para esa estación (biomecánica, postura, activación muscular).</p>
+        </div>
+        <div style="padding:10px 12px;border-radius:6px;background:rgba(239,68,68,.05);border:1px solid rgba(239,68,68,.2);">
+          <div style="font-size:10px;font-weight:700;color:#f87171;text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px;">Modo: datos disponibles → Fuga principal</div>
+          <p style="font-size:11px;color:#94a3b8;margin:0;line-height:1.6;">Con 3+ sesiones, compara tu rendimiento actual en cada estación vs. tu mejor marca del bloque. La estación con mayor caída porcentual se identifica como <strong style="color:#e2e8f0;">"fuga"</strong> — el punto donde más tiempo estás perdiendo en carrera.</p>
+        </div>
+        <div style="padding:10px 12px;border-radius:6px;background:rgba(29,200,184,.05);border:1px solid rgba(29,200,184,.2);">
+          <div style="font-size:10px;font-weight:700;color:#2dd4bf;text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px;">Corrección dirigida</div>
+          <p style="font-size:11px;color:#94a3b8;margin:0;line-height:1.6;">Una vez detectada la fuga, el sistema sugiere la <strong style="color:#e2e8f0;">causa probable</strong> (fatiga de cuádriceps, debilidad de dorsales, ritmo de brazos…) y ejercicios correctivos específicos para esa estación.</p>
+        </div>
+        <p style="font-size:10px;color:#475569;margin:4px 0 0;line-height:1.5;">La estación mostrada es la que tiene mayor impacto potencial en tu tiempo de carrera según tus registros actuales.</p>
+      </div>
+    </div>
+  </div>
   {% endif %}
 
   <!-- ═══════════════ MODO COMPETICIÓN ═══════════════ -->
