@@ -894,6 +894,16 @@ def hyrox_dashboard(request):
             logger.exception("[HYROX RaceIntelligence] Error generando race_briefing")
             race_briefing = None
 
+    # Guardar tiempo estimado en el log de hoy para poder calcular tendencia mañana
+    if race_briefing and race_briefing.get('tiempo_estimado_seg'):
+        try:
+            from .models import HyroxReadinessLog
+            HyroxReadinessLog.objects.filter(
+                objective=objetivo_activo, fecha=timezone.now().date()
+            ).update(tiempo_estimado_seg=race_briefing['tiempo_estimado_seg'])
+        except Exception:
+            pass
+
     # ── SESSION OVERRIDE ENGINE ───────────────────────────────────────────────
     sesion_override = None
     if objetivo_activo and race_briefing:

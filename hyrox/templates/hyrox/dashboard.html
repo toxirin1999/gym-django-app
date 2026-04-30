@@ -1,4 +1,4 @@
-{% load static %}
+{% load static hyrox_tags %}
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -1007,17 +1007,59 @@ a.rb-dia:focus-visible {
 
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">
       <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px 12px;">
-        <div style="font-size:9px;color:var(--ink-4);font-family:var(--font-body);margin-bottom:2px;">Tiempo estimado hoy</div>
         {% if race_briefing.tiempo_estimado %}
-        <div style="font-family:var(--font-mono);font-size:20px;font-weight:700;color:var(--accent);">
-          {{ race_briefing.tiempo_estimado }}
-        </div>
-        {% if race_briefing.tiempo_rango_min %}
-        <div style="font-size:9px;color:var(--ink-4);font-family:var(--font-mono);margin-top:2px;">
-          {{ race_briefing.tiempo_rango_min }} – {{ race_briefing.tiempo_rango_max }}
-        </div>
-        {% endif %}
+          {% if race_briefing.tiempo_objetivo %}
+          <!-- Objetivo + comparativa -->
+          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;">
+            <span style="font-size:9px;color:var(--ink-4);font-family:var(--font-body);text-transform:uppercase;letter-spacing:.05em;">Objetivo</span>
+            <span style="font-family:var(--font-mono);font-size:13px;font-weight:600;color:var(--ink-3);">{{ race_briefing.tiempo_objetivo }}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:2px;">
+            <span style="font-size:9px;color:var(--ink-4);font-family:var(--font-body);text-transform:uppercase;letter-spacing:.05em;">Hoy</span>
+            <span style="font-family:var(--font-mono);font-size:20px;font-weight:700;color:var(--accent);">{{ race_briefing.tiempo_estimado }}</span>
+          </div>
+          {% if race_briefing.tiempo_rango_min %}
+          <div style="font-size:9px;color:var(--ink-4);font-family:var(--font-mono);text-align:right;margin-bottom:6px;">
+            {{ race_briefing.tiempo_rango_min }} – {{ race_briefing.tiempo_rango_max }}
+          </div>
+          {% endif %}
+          <div style="border-top:1px solid var(--border);padding-top:6px;display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-size:9px;color:var(--ink-4);font-family:var(--font-body);">Diferencia</span>
+            {% if race_briefing.diferencia_secs is not None %}
+              {% if race_briefing.diferencia_secs > 0 %}
+              <span style="font-family:var(--font-mono);font-size:12px;font-weight:700;color:#f59e0b;">
+                {{ race_briefing.diferencia_secs|fmt_diff_secs }}
+              </span>
+              {% elif race_briefing.diferencia_secs < 0 %}
+              <span style="font-family:var(--font-mono);font-size:12px;font-weight:700;color:#22c55e;">
+                {{ race_briefing.diferencia_secs|fmt_diff_secs }}
+              </span>
+              {% else %}
+              <span style="font-family:var(--font-mono);font-size:12px;font-weight:700;color:var(--ink-3);">En objetivo</span>
+              {% endif %}
+            {% endif %}
+            {% if race_briefing.tendencia_secs is not None %}
+            <span style="font-family:var(--font-mono);font-size:11px;color:{% if race_briefing.tendencia_secs < 0 %}#22c55e{% elif race_briefing.tendencia_secs > 0 %}#f59e0b{% else %}var(--ink-4){% endif %};">
+              {% if race_briefing.tendencia_secs < 0 %}↓{% elif race_briefing.tendencia_secs > 0 %}↑{% else %}→{% endif %}
+              {% if race_briefing.tendencia_secs != 0 %}{{ race_briefing.tendencia_secs|fmt_diff_secs }}{% endif %}
+            </span>
+            {% endif %}
+          </div>
+          {% else %}
+          <!-- Sin objetivo configurado: mostrar solo tiempo estimado -->
+          <div style="font-size:9px;color:var(--ink-4);font-family:var(--font-body);margin-bottom:2px;">Tiempo estimado hoy</div>
+          <div style="font-family:var(--font-mono);font-size:20px;font-weight:700;color:var(--accent);">{{ race_briefing.tiempo_estimado }}</div>
+          {% if race_briefing.tiempo_rango_min %}
+          <div style="font-size:9px;color:var(--ink-4);font-family:var(--font-mono);margin-top:2px;">
+            {{ race_briefing.tiempo_rango_min }} – {{ race_briefing.tiempo_rango_max }}
+          </div>
+          {% endif %}
+          <div style="font-size:9px;color:var(--ink-4);font-family:var(--font-body);margin-top:4px;">
+            <a href="{% url 'hyrox:crear_objetivo' %}" style="color:var(--accent);">Añade tu tiempo objetivo →</a>
+          </div>
+          {% endif %}
         {% else %}
+        <div style="font-size:9px;color:var(--ink-4);font-family:var(--font-body);margin-bottom:2px;">Tiempo estimado hoy</div>
         <div style="font-family:var(--font-mono);font-size:12px;color:var(--ink-4);margin-top:2px;">Pendiente de calibrar</div>
         <div style="font-size:9px;color:var(--ink-4);font-family:var(--font-body);margin-top:3px;line-height:1.4;">Añade tu tiempo de 5K en <a href="{% url 'hyrox:crear_objetivo' %}" style="color:var(--accent);text-decoration:underline;">Editar objetivo</a></div>
         {% endif %}
