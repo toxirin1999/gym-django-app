@@ -1541,10 +1541,15 @@ def registrar_entrenamiento(request, objective_id, session_id=None):
                     messages.success(request, f"🏃 {msg}")
 
                 # 5. Calibración de RPE personal — detección de sesgo sistemático
-                from .training_engine import RPECalibrator
+                from .training_engine import RPECalibrator, DeloadAutoTrigger
                 mensajes_rpe = RPECalibrator.check_and_notify(sesion)
                 for msg in mensajes_rpe:
                     messages.info(request, f"📊 {msg}")
+
+                # 6. Deload automático por TSB < -25
+                mensajes_deload = DeloadAutoTrigger.check_and_apply(sesion)
+                for msg in mensajes_deload:
+                    messages.warning(request, f"⚡ {msg}")
 
                 # Hito: detectar tipo y lanzar adaptación del plan
                 tipo_hito_sesion = None
