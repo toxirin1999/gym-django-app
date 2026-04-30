@@ -1810,3 +1810,283 @@ class HyroxTrainingEngine:
                     )
 
         return sesion
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# POST-MILESTONE ADAPTATION ENGINE
+# Cuando el usuario completa un hito, el sistema relee su estado real y ajusta
+# el plan restante. Este es el núcleo del "entrenador que aprende".
+# ══════════════════════════════════════════════════════════════════════════════
+
+class PostMilestoneEngine:
+    """
+    Adapta el plan de entrenamiento tras completar un hito del macrociclo.
+
+    - test_5k        → recalibra ritmos de carrera en todas las sesiones futuras
+    - sim_completa   → detecta estaciones débiles y añade sesiones específicas
+    - sim_peso_oficial → mismo análisis + resumen pre-race completo
+    """
+
+    # Estaciones Hyrox y sus tipos de actividad correspondientes
+    STATION_TYPES = {
+        'skierg':            'skierg',
+        'sled push':         'hyrox_station',
+        'sled pull':         'hyrox_station',
+        'burpee broad jumps':'hyrox_station',
+        'rowing':            'ergometro',
+        'farmers carry':     'hyrox_station',
+        'sandbag lunges':    'hyrox_station',
+        'wall balls':        'hyrox_station',
+    }
+
+    # Tiempos objetivo de referencia por estación (segundos) — categoría open
+    # Fuente: promedios HYROX Open. Usados para detectar debilidad relativa.
+    STATION_TARGET_SECS = {
+        'skierg':             270,   # ~4:30 para 1000m
+        'sled push':          120,   # ~2:00 para 50m
+        'sled pull':          120,
+        'burpee broad jumps': 180,   # ~3:00 para 80m
+        'rowing':             240,   # ~4:00 para 1000m
+        'farmers carry':       90,   # ~1:30 para 200m
+        'sandbag lunges':     150,   # ~2:30 para 100m
+        'wall balls':         240,   # ~4:00 para 100 reps
+    }
+
+    @classmethod
+    def adapt_after_milestone(cls, sesion: HyroxSession, tipo_hito: str) -> list[str]:
+        """
+        Punto de entrada principal. Llama al adaptador correcto según el hito.
+        Devuelve lista de mensajes para mostrar al usuario.
+        """
+        objetivo = sesion.objective
+        hoy = timezone.now().date()
+
+        if tipo_hito == 'test_5k':
+            return cls._adapt_after_test_5k(sesion, objetivo, hoy)
+        elif tipo_hito in ('sim_completa', 'sim_peso_oficial'):
+            return cls._adapt_after_simulation(sesion, objetivo, hoy, tipo_hito)
+        return []
+
+    @classmethod
+    def _adapt_after_test_5k(cls, sesion: HyroxSession, objetivo: HyroxObjective, hoy) -> list[str]:
+        """
+        Tras el Test 5K:
+        1. Recalibra los ritmos objetivo en TODAS las sesiones de carrera futuras
+        2. Actualiza la nota de la sesión con las nuevas zonas
+        """
+        mensajes = []
+        if not objetivo.tiempo_5k_base:
+            return mensajes
+
+        ritmos = HyroxTrainingEngine._calcular_ritmos_carrera(objetivo.tiempo_5k_base)
+        if not ritmos:
+            return mensajes
+
+        sesiones_futuras = HyroxSession.objects.filter(
+            objective=objetivo,
+            estado='planificado',
+            fecha__gt=hoy,
+        ).prefetch_related('activities')
+
+        actualizadas = 0
+        for ses in sesiones_futuras:
+            for act in ses.activities.all():
+                if act.tipo_actividad in ('carrera', 'cardio_sustituto'):
+                    m = dict(act.data_metricas or {})
+                    m['ritmo_objetivo'] = ritmos['ritmo_z2']
+                    m['notas'] = (
+                        f"[Recalibrado post-Test 5K {hoy.strftime('%d/%m')}] "
+                        f"Ritmo Z2: {ritmos['ritmo_z2']} · "
+                        f"Ritmo tempo: {ritmos['ritmo_tempo']} · "
+                        f"5K base: {objetivo.tiempo_5k_base}"
+                    )
+                    act.data_metricas = m
+                    act.save(update_fields=['data_metricas'])
+                    actualizadas += 1
+
+        if actualizadas:
+            mensajes.append(
+                f"Test 5K procesado: {objetivo.tiempo_5k_base}. "
+                f"Ritmo Z2 actualizado a {ritmos['ritmo_z2']} en {actualizadas} sesiones futuras de carrera."
+            )
+
+        # Detectar mejora/empeora respecto al tiempo previo (antes de este entreno)
+        sesiones_5k_previas = HyroxSession.objects.filter(
+            objective=objetivo,
+            estado='completado',
+            titulo__icontains='HITO:test_5k',
+        ).exclude(id=sesion.id).order_by('-fecha')
+
+        if not sesiones_5k_previas.exists():
+            mensajes.append("Primer Test 5K registrado. Este tiempo es tu línea base — el plan se ajustará a él.")
+
+        return mensajes
+
+    @classmethod
+    def _adapt_after_simulation(cls, sesion: HyroxSession, objetivo: HyroxObjective, hoy, tipo_hito: str) -> list[str]:
+        """
+        Tras una simulación completa:
+        1. Lee el tiempo real de cada estación (tiempo_s en data_metricas)
+        2. Compara con tiempos objetivo de referencia
+        3. Detecta las estaciones débiles (>25% sobre el objetivo)
+        4. Inserta sesiones específicas para esas estaciones en las próximas 2 semanas
+        """
+        mensajes = []
+        actividades = list(sesion.activities.all())
+
+        estaciones_debiles = []
+        for act in actividades:
+            nombre_lower = act.nombre_ejercicio.lower()
+            station_key = None
+            for key in cls.STATION_TARGET_SECS:
+                if key in nombre_lower:
+                    station_key = key
+                    break
+            if not station_key:
+                continue
+
+            tiempo_real = (act.data_metricas or {}).get('tiempo_s')
+            if not tiempo_real:
+                continue
+
+            target = cls.STATION_TARGET_SECS[station_key]
+            pct_sobre = (int(tiempo_real) - target) / target * 100
+
+            if pct_sobre > 25:
+                estaciones_debiles.append({
+                    'nombre': act.nombre_ejercicio,
+                    'key': station_key,
+                    'tiempo_real_s': int(tiempo_real),
+                    'target_s': target,
+                    'pct_sobre': round(pct_sobre),
+                    'tipo': cls.STATION_TYPES.get(station_key, 'hyrox_station'),
+                })
+
+        if not estaciones_debiles:
+            if tipo_hito == 'sim_peso_oficial':
+                mensajes.append("Simulación a peso oficial completada. Todos los tiempos dentro del objetivo. El plan mantiene la progresión actual.")
+            else:
+                mensajes.append("Primera simulación completada. Todas las estaciones dentro del objetivo. ¡Buen trabajo!")
+            return mensajes
+
+        # Añadir sesiones específicas para las estaciones débiles
+        # Las distribuimos en los próximos 10-14 días
+        sesiones_añadidas = 0
+        for i, debil in enumerate(estaciones_debiles[:3]):  # máx 3 para no saturar
+            fecha_sesion = hoy + timedelta(days=4 + i * 3)
+
+            # Verificar que no haya ya una sesión planificada ese día
+            if HyroxSession.objects.filter(objective=objetivo, fecha=fecha_sesion, estado='planificado').exists():
+                fecha_sesion = fecha_sesion + timedelta(days=1)
+
+            nueva_sesion = HyroxSession.objects.create(
+                objective=objetivo,
+                fecha=fecha_sesion,
+                titulo=f"[REFUERZO] {debil['nombre']} — Sesión correctiva",
+                estado='planificado',
+            )
+
+            pesos = HyroxTrainingEngine.PESOS_OFICIALES.get(objetivo.categoria, HyroxTrainingEngine.PESOS_OFICIALES['open_men'])
+            station_key = debil['key']
+
+            # Actividad de calentamiento + trabajo específico de la estación débil
+            HyroxActivity.objects.create(
+                sesion=nueva_sesion,
+                tipo_actividad='carrera',
+                nombre_ejercicio='Calentamiento 10 min suave',
+                data_metricas={'distancia_m': 1500, 'notas': 'Ritmo Z1, preparación para trabajo de estación.'},
+            )
+
+            if station_key == 'skierg':
+                HyroxActivity.objects.create(
+                    sesion=nueva_sesion,
+                    tipo_actividad='skierg',
+                    nombre_ejercicio='SkiErg — Trabajo técnico correctivo',
+                    data_metricas={
+                        'planificado': True,
+                        'notas': f"[Correctivo post-simulación: {debil['pct_sobre']}% sobre objetivo] 5×200m RPE 7-8. Foco en bisagra de cadera.",
+                        'series': [{'distancia_m': 200}] * 5,
+                    },
+                )
+            elif station_key in ('sled push', 'sled pull'):
+                tipo_mv = 'empuje' if station_key == 'sled push' else 'tracción'
+                peso_ref = pesos['sled_push'] if station_key == 'sled push' else pesos['sled_pull']
+                HyroxActivity.objects.create(
+                    sesion=nueva_sesion,
+                    tipo_actividad='hyrox_station',
+                    nombre_ejercicio=debil['nombre'] + ' — Trabajo correctivo',
+                    data_metricas={
+                        'planificado': True,
+                        'distancia_m': 50,
+                        'peso_kg': round(peso_ref * 0.85),
+                        'notas': f"[Correctivo post-simulación: {debil['pct_sobre']}% sobre objetivo] 4×25m al 85% del peso oficial. Foco en {tipo_mv} de pierna.",
+                    },
+                )
+            elif station_key == 'wall balls':
+                HyroxActivity.objects.create(
+                    sesion=nueva_sesion,
+                    tipo_actividad='hyrox_station',
+                    nombre_ejercicio='Wall Balls — Trabajo correctivo',
+                    data_metricas={
+                        'planificado': True,
+                        'notas': f"[Correctivo post-simulación: {debil['pct_sobre']}% sobre objetivo] 5×20 reps. Foco en ritmo constante sin pausa.",
+                        'series': [{'reps': 20, 'peso_kg': pesos['wall_ball']}] * 5,
+                    },
+                )
+            elif station_key == 'rowing':
+                HyroxActivity.objects.create(
+                    sesion=nueva_sesion,
+                    tipo_actividad='ergometro',
+                    nombre_ejercicio='Rowing — Trabajo correctivo',
+                    data_metricas={
+                        'planificado': True,
+                        'notas': f"[Correctivo post-simulación: {debil['pct_sobre']}% sobre objetivo] 4×250m con 90s descanso. Damper 4-5.",
+                        'series': [{'distancia_m': 250}] * 4,
+                    },
+                )
+            elif station_key == 'farmers carry':
+                HyroxActivity.objects.create(
+                    sesion=nueva_sesion,
+                    tipo_actividad='hyrox_station',
+                    nombre_ejercicio='Farmers Carry — Trabajo correctivo',
+                    data_metricas={
+                        'planificado': True,
+                        'distancia_m': 200,
+                        'peso_kg': pesos['farmers'],
+                        'notas': f"[Correctivo post-simulación: {debil['pct_sobre']}% sobre objetivo] 3×200m. Foco en paso constante sin soltar.",
+                    },
+                )
+            elif station_key == 'sandbag lunges':
+                HyroxActivity.objects.create(
+                    sesion=nueva_sesion,
+                    tipo_actividad='hyrox_station',
+                    nombre_ejercicio='Sandbag Lunges — Trabajo correctivo',
+                    data_metricas={
+                        'planificado': True,
+                        'distancia_m': 50,
+                        'peso_kg': pesos['sandbag'],
+                        'notas': f"[Correctivo post-simulación: {debil['pct_sobre']}% sobre objetivo] 4×25m. Foco en rodilla trasera controlada.",
+                    },
+                )
+            elif station_key == 'burpee broad jumps':
+                HyroxActivity.objects.create(
+                    sesion=nueva_sesion,
+                    tipo_actividad='hyrox_station',
+                    nombre_ejercicio='Burpee Broad Jumps — Trabajo correctivo',
+                    data_metricas={
+                        'planificado': True,
+                        'distancia_m': 40,
+                        'notas': f"[Correctivo post-simulación: {debil['pct_sobre']}% sobre objetivo] 4×10 reps ritmo constante. No explosivo, sostenible.",
+                    },
+                )
+
+            sesiones_añadidas += 1
+
+        nombres_debiles = ', '.join(d['nombre'] for d in estaciones_debiles[:3])
+        tipo_label = "a peso oficial" if tipo_hito == 'sim_peso_oficial' else "completa"
+        mensajes.append(
+            f"Simulación {tipo_label} analizada. Estaciones por encima del tiempo objetivo: {nombres_debiles}. "
+            f"Se han añadido {sesiones_añadidas} sesión(es) correctiva(s) a tu plan en los próximos días."
+        )
+
+        return mensajes
