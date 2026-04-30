@@ -73,7 +73,7 @@ def hyrox_dashboard(request):
         # Auto-ajuste de calendario (reprogramar sesiones perdidas críticas)
         HyroxTrainingEngine.auto_adjust(objetivo_activo)
         
-        sesiones_completadas = HyroxSession.objects.filter(objective=objetivo_activo, estado='completado').order_by('-fecha')
+        sesiones_completadas = list(HyroxSession.objects.filter(objective=objetivo_activo, estado='completado').order_by('-fecha'))
 
         # Sesiones futuras deduplicadas por fecha (evita duplicados del auto_adjust)
         todas_futuras = list(
@@ -1176,18 +1176,25 @@ def crear_objetivo(request):
     cliente = getattr(request.user, 'cliente_perfil', None)
     
     if request.method == 'POST':
-        form = HyroxObjectiveForm(request.POST)
+        objetivo_existente = HyroxObjective.objects.filter(cliente=cliente, estado='activo').first()
+        form = HyroxObjectiveForm(request.POST, instance=objetivo_existente)
         if form.is_valid():
             objetivo = form.save(commit=False)
             objetivo.cliente = cliente
-            # Desactivar cualquier objetivo activo previo
-            HyroxObjective.objects.filter(cliente=cliente, estado='activo').update(estado='cancelado')
+            objetivo.estado = 'activo'
             objetivo.save()
-            
-            # ¡Generar el plan inteligente de Hyrox!
+
+            # Solo regenerar sesiones planificadas futuras, nunca tocar las completadas
+            hoy = timezone.now().date()
+            HyroxSession.objects.filter(
+                objective=objetivo, estado='planificado', fecha__gte=hoy
+            ).delete()
             HyroxTrainingEngine.generate_training_plan(objetivo)
-            
-            messages.success(request, "Objetivo Hyrox creado y plan de entrenamiento generado correctamente. ¡A por todas!")
+
+            if objetivo_existente:
+                messages.success(request, "Objetivo actualizado. El plan de entrenamiento se ha regenerado desde hoy.")
+            else:
+                messages.success(request, "Objetivo Hyrox creado y plan de entrenamiento generado. ¡A por todas!")
             return redirect('hyrox:dashboard')
     else:
         # Pre-rellenar con los datos que ya tenemos del cliente o del objetivo activo si los hay
