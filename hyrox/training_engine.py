@@ -2090,3 +2090,161 @@ class PostMilestoneEngine:
         )
 
         return mensajes
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# RM AUTO-UPDATER — Gap 1 del "entrenador que aprende"
+# Cada vez que el usuario completa una sesión, escanea los pesos reales usados,
+# estima el nuevo 1RM y actualiza HyroxObjective si supera el registrado.
+# ══════════════════════════════════════════════════════════════════════════════
+
+class RMAutoUpdater:
+    """
+    Detecta nuevos máximos de fuerza en sesiones completadas y persiste
+    el RM actualizado en HyroxObjective para que el plan lo use.
+
+    Fórmula Epley (industria estándar):
+        1RM = peso × (1 + reps / 30)
+    Si reps == 1, el peso registrado ES el 1RM directamente.
+    """
+
+    # Patrones de nombre → campo del modelo
+    EJERCICIO_MAP = {
+        'sentadilla': 'rm_sentadilla',
+        'squat':      'rm_sentadilla',
+        'back squat': 'rm_sentadilla',
+        'front squat':'rm_sentadilla',
+        'peso muerto': 'rm_peso_muerto',
+        'deadlift':    'rm_peso_muerto',
+        'peso  muerto':'rm_peso_muerto',  # doble espacio defensivo
+    }
+
+    @classmethod
+    def epley(cls, peso_kg: float, reps: int) -> float:
+        if reps <= 0:
+            return peso_kg
+        if reps == 1:
+            return peso_kg
+        return round(peso_kg * (1 + reps / 30), 1)
+
+    @classmethod
+    def update_from_session(cls, sesion: HyroxSession) -> list[str]:
+        """
+        Analiza las actividades de fuerza de la sesión.
+        Devuelve lista de mensajes para el usuario si detecta mejoras.
+        """
+        objetivo = sesion.objective
+        mensajes = []
+        nuevos_valores = {}  # campo → nuevo_rm estimado
+
+        fuerza_acts = sesion.activities.filter(tipo_actividad='fuerza')
+        for act in fuerza_acts:
+            nombre_lower = act.nombre_ejercicio.lower()
+
+            campo = None
+            for keyword, field in cls.EJERCICIO_MAP.items():
+                if keyword in nombre_lower:
+                    campo = field
+                    break
+            if not campo:
+                continue
+
+            metricas = act.data_metricas or {}
+            series = metricas.get('series', [])
+
+            # Extraer el peso máximo real usado en esta actividad
+            max_rm_estimado = 0.0
+            for serie in series:
+                peso = float(serie.get('peso_kg', 0) or 0)
+                reps = int(serie.get('reps', 0) or 0)
+                if peso <= 0:
+                    continue
+                rm_estimado = cls.epley(peso, reps)
+                if rm_estimado > max_rm_estimado:
+                    max_rm_estimado = rm_estimado
+
+            if max_rm_estimado <= 0:
+                continue
+
+            rm_actual = float(getattr(objetivo, campo) or 0)
+
+            if max_rm_estimado > rm_actual * 1.02:  # umbral mínimo del 2% para evitar ruido
+                if campo not in nuevos_valores or max_rm_estimado > nuevos_valores[campo]:
+                    nuevos_valores[campo] = max_rm_estimado
+
+        if not nuevos_valores:
+            return mensajes
+
+        campos_actualizados = []
+        for campo, nuevo_rm in nuevos_valores.items():
+            rm_anterior = float(getattr(objetivo, campo) or 0)
+            setattr(objetivo, campo, nuevo_rm)
+            label = 'Sentadilla' if campo == 'rm_sentadilla' else 'Peso Muerto'
+            mejora = round(nuevo_rm - rm_anterior, 1)
+            if rm_anterior > 0:
+                mensajes.append(
+                    f"Nuevo RM detectado — {label}: {nuevo_rm} kg "
+                    f"(+{mejora} kg vs {rm_anterior} kg registrado). El plan se ajusta."
+                )
+            else:
+                mensajes.append(
+                    f"RM {label} registrado por primera vez: {nuevo_rm} kg. El plan ya puede escalar cargas."
+                )
+            campos_actualizados.append(campo)
+
+        if campos_actualizados:
+            objetivo.save(update_fields=campos_actualizados)
+
+            # Recalibrar las próximas sesiones de fuerza con los nuevos RMs
+            cls._recalibrar_sesiones_fuerza(objetivo, nuevos_valores)
+
+        return mensajes
+
+    @classmethod
+    def _recalibrar_sesiones_fuerza(cls, objetivo: HyroxObjective, nuevos_rms: dict):
+        """
+        Actualiza el peso objetivo en las próximas sesiones de fuerza planificadas
+        para reflejar el nuevo RM. Solo modifica series que tenían peso_kg calculado
+        desde el RM anterior (marcadas con 'porcentaje_rm' en data_metricas).
+        """
+        hoy = timezone.now().date()
+        sesiones_futuras = HyroxSession.objects.filter(
+            objective=objetivo,
+            estado='planificado',
+            fecha__gt=hoy,
+        ).prefetch_related('activities')
+
+        for ses in sesiones_futuras:
+            for act in ses.activities.filter(tipo_actividad='fuerza'):
+                m = dict(act.data_metricas or {})
+                pct_rm = m.get('porcentaje_rm')
+                if not pct_rm:
+                    continue
+
+                # Determinar qué RM aplica a este ejercicio
+                nombre_lower = act.nombre_ejercicio.lower()
+                campo = None
+                for keyword, field in cls.EJERCICIO_MAP.items():
+                    if keyword in nombre_lower:
+                        campo = field
+                        break
+                if not campo or campo not in nuevos_rms:
+                    continue
+
+                nuevo_rm = nuevos_rms[campo]
+                nuevo_peso = round(nuevo_rm * (pct_rm / 100))
+
+                series_actualizadas = []
+                for serie in m.get('series', []):
+                    serie = dict(serie)
+                    serie['peso_kg'] = nuevo_peso
+                    series_actualizadas.append(serie)
+
+                if series_actualizadas:
+                    m['series'] = series_actualizadas
+                    m['notas'] = (
+                        m.get('notas', '') +
+                        f" [Recalibrado: RM actualizado a {nuevo_rm} kg]"
+                    ).strip()
+                    act.data_metricas = m
+                    act.save(update_fields=['data_metricas'])
