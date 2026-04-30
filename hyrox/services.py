@@ -1523,48 +1523,65 @@ class HyroxMacrocycleEngine:
         from django.utils import timezone
         import datetime
 
-        # Fecha objetivo por defecto 19 Abril 2026, salvo que el objetivo tenga otra
-        fecha_evento_str = cls.EVENT_DATE
-        if objetivo and objetivo.fecha_evento:
-            fecha_evento_str = str(objetivo.fecha_evento)
+        # Sin objetivo o sin fecha de evento → no se puede calcular
+        if not objetivo or not objetivo.fecha_evento:
+            if return_metadata:
+                return {}
+            return ("Sin fecha de evento", 0)
 
-        try:
-            fecha_obj = datetime.datetime.strptime(fecha_evento_str, "%Y-%m-%d").date()
-        except ValueError:
-            return ("Fase de Base", 12) if not return_metadata else {}
+        fecha_obj = objetivo.fecha_evento
+        if isinstance(fecha_obj, str):
+            try:
+                fecha_obj = datetime.datetime.strptime(fecha_obj, "%Y-%m-%d").date()
+            except ValueError:
+                return {} if return_metadata else ("Sin fecha de evento", 0)
 
-        # Suponemos que el entrenamiento empezó aprox. 12 semanas antes (ej. finales de enero)
-        fecha_inicio_ciclo = datetime.date(2026, 1, 26) 
-        
         hoy = timezone.now().date()
         dias_restantes = (fecha_obj - hoy).days
         semanas_restantes = max(0, dias_restantes // 7)
-        
-        # Para la barra de progreso
-        dias_totales = (fecha_obj - fecha_inicio_ciclo).days if (fecha_obj - fecha_inicio_ciclo).days > 0 else 84
-        dias_pasados = (hoy - fecha_inicio_ciclo).days
-        pct_progreso = min(max((dias_pasados / dias_totales) * 100, 0), 100)
 
-        # Definición de las Fases del Macrociclo Hyrox
-        mantra = ""
-        fase = ""
-        fase_numero = 1
+        # Fecha de inicio del ciclo = fecha_creacion del objetivo
+        # (cuando el usuario configuró su preparación)
+        fecha_inicio_ciclo = objetivo.fecha_creacion.date() if hasattr(objetivo.fecha_creacion, 'date') else objetivo.fecha_creacion
 
+        dias_totales = max((fecha_obj - fecha_inicio_ciclo).days, 1)
+        dias_pasados = max((hoy - fecha_inicio_ciclo).days, 0)
+        pct_progreso = min((dias_pasados / dias_totales) * 100, 100)
+
+        # Estado post-evento
+        if dias_restantes < 0:
+            if return_metadata:
+                return {
+                    'fase': 'Evento completado',
+                    'fase_numero': 5,
+                    'semanas_restantes': 0,
+                    'semana_actual': dias_totales // 7,
+                    'total_semanas': dias_totales // 7,
+                    'dias_totales': dias_totales,
+                    'dias_pasados': dias_pasados,
+                    'pct_progreso': 100.0,
+                    'mantra': 'El trabajo está hecho. Descansa, analiza y planifica el próximo reto.',
+                    'evento_completado': True,
+                    'dias_desde_evento': abs(dias_restantes),
+                }
+            return ("Evento completado", 0)
+
+        # Fases alineadas con el training engine (is_taper cuando quedan ≤2 semanas)
         if semanas_restantes >= 9:
-            fase = "Fase de Base Estructural"
-            mantra = "Enfoque en técnica, volumen suave y corrección de desequilibrios."
+            fase = "Base Estructural"
+            mantra = "Técnica, volumen suave y corrección de desequilibrios."
             fase_numero = 1
         elif 5 <= semanas_restantes <= 8:
-            fase = "Fase de Potencia Específica"
-            mantra = "Construyendo la potencia pesada para dominar el Sled Push y Wall Balls."
+            fase = "Potencia Específica"
+            mantra = "Construyendo potencia para dominar el Sled Push y Wall Balls."
             fase_numero = 2
         elif 2 <= semanas_restantes <= 4:
-            fase = "Fase de Simulación Real"
-            mantra = "Carrera intervenida. Acostumbrando el cuerpo a correr bajo fatiga severa."
+            fase = "Simulación Real"
+            mantra = "Carrera intervenida. El cuerpo aprende a rendir bajo fatiga severa."
             fase_numero = 3
         else:
-            fase = "Fase de Tapering"
-            mantra = "Recuperación, afinación y puesta a punto. El trabajo ya está hecho."
+            fase = "Tapering"
+            mantra = "Reduce volumen, mantén intensidad. El trabajo ya está hecho."
             fase_numero = 4
 
         if return_metadata:
@@ -1579,9 +1596,11 @@ class HyroxMacrocycleEngine:
                 'dias_pasados': dias_pasados,
                 'pct_progreso': round(pct_progreso, 1),
                 'mantra': mantra,
-                'fase_numero': fase_numero
+                'fase_numero': fase_numero,
+                'evento_completado': False,
+                'dias_desde_evento': 0,
             }
-        
+
         return fase, semanas_restantes
 
     @classmethod
