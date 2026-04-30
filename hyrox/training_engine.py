@@ -2574,3 +2574,129 @@ class RPECalibrator:
             )
 
         return mensajes
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# DELOAD AUTO-TRIGGER — Gap 4 del "entrenador que aprende"
+# Detecta sobreentrenamiento sostenido (TSB < -25) y convierte las próximas
+# sesiones en una semana de deload sin que el usuario lo solicite.
+# ══════════════════════════════════════════════════════════════════════════════
+
+class DeloadAutoTrigger:
+    """
+    Vigilancia macro de la carga acumulada. A diferencia de apply_continuous_adaptation
+    (que reacciona sesión a sesión), este engine mira el TSB de los últimos 7 días
+    y actúa si el atleta lleva una semana completa en zona de sobreentrenamiento.
+
+    Umbrales:
+      TSB < -25  → sobreentrenamiento: insertar semana de deload
+      TSB < -15  → fatiga alta: solo avisar, no deload todavía
+    """
+
+    TSB_DELOAD     = -25   # umbral para activar deload
+    TSB_ALERTA     = -15   # umbral para avisar sin deload
+    DELOAD_FACTOR  = 0.55  # reducción de volumen/carga al 55% del original
+    COOLDOWN_DAYS  = 14    # no volver a insertar deload si ya se hizo hace <14 días
+
+    @classmethod
+    def _ya_hay_deload_reciente(cls, objetivo: HyroxObjective) -> bool:
+        """Evita insertar deloads en cascada."""
+        hoy = timezone.now().date()
+        hace_n_dias = hoy - timedelta(days=cls.COOLDOWN_DAYS)
+        return HyroxSession.objects.filter(
+            objective=objetivo,
+            titulo__icontains='[DELOAD AUTO]',
+            fecha__gte=hace_n_dias,
+        ).exists()
+
+    @classmethod
+    def _aplicar_deload_sesion(cls, sesion: HyroxSession):
+        """Reduce volumen y carga de una sesión planificada al 55%."""
+        titulo_base = (sesion.titulo or 'Entrenamiento').replace('[DELOAD AUTO] ', '')
+        sesion.titulo = f"[DELOAD AUTO] {titulo_base}"
+        sesion.save(update_fields=['titulo'])
+
+        for act in sesion.activities.all():
+            m = dict(act.data_metricas or {})
+            changed = False
+
+            # Reducir series con reps/peso
+            if 'series' in m:
+                nuevas = []
+                for serie in m['series']:
+                    s = dict(serie)
+                    if 'reps' in s:
+                        s['reps'] = max(1, round(int(s['reps']) * cls.DELOAD_FACTOR))
+                        changed = True
+                    if 'peso_kg' in s:
+                        s['peso_kg'] = round(float(s['peso_kg']) * cls.DELOAD_FACTOR, 1)
+                        changed = True
+                    nuevas.append(s)
+                m['series'] = nuevas
+
+            # Reducir distancia en carrera/ergómetro
+            for campo in ('distancia_km', 'distancia_m'):
+                if campo in m:
+                    m[campo] = round(float(m[campo]) * cls.DELOAD_FACTOR, 1)
+                    changed = True
+
+            if changed:
+                nota_actual = m.get('notas', '')
+                m['notas'] = f"[Deload automático por TSB bajo] {nota_actual}".strip()
+                act.data_metricas = m
+                act.save(update_fields=['data_metricas'])
+
+    @classmethod
+    def check_and_apply(cls, sesion: HyroxSession) -> list[str]:
+        """
+        Evalúa el TSB actual tras completar una sesión.
+        Aplica deload a las próximas 5 sesiones planificadas si TSB < -25.
+        Devuelve mensajes para el usuario.
+        """
+        objetivo = sesion.objective
+        mensajes = []
+        hoy = timezone.now().date()
+
+        carga = HyroxLoadManager.calcular_ctl_atl_tsb(objetivo)
+        tsb = carga.get('tsb')
+
+        if tsb is None:
+            return mensajes
+
+        if tsb >= cls.TSB_ALERTA:
+            return mensajes
+
+        if tsb < cls.TSB_DELOAD:
+            # Sobreentrenamiento sostenido — aplicar deload
+            if cls._ya_hay_deload_reciente(objetivo):
+                return mensajes  # ya hubo deload reciente, no apilar
+
+            sesiones_futuras = list(HyroxSession.objects.filter(
+                objective=objetivo,
+                estado='planificado',
+                fecha__gt=hoy,
+                fecha__lte=hoy + timedelta(days=9),  # próxima semana + buffer
+            ).order_by('fecha')[:5])
+
+            if not sesiones_futuras:
+                return mensajes
+
+            for ses in sesiones_futuras:
+                cls._aplicar_deload_sesion(ses)
+
+            mensajes.append(
+                f"Semana de deload activada automáticamente (TSB actual: {tsb}). "
+                f"Las próximas {len(sesiones_futuras)} sesiones se han reducido al 55% "
+                f"de volumen y carga. Tu cuerpo necesita supercompensar — "
+                f"entrena con control y duerme bien."
+            )
+
+        else:
+            # TSB entre -25 y -15: solo aviso, sin modificar sesiones
+            mensajes.append(
+                f"Fatiga acumulada elevada (TSB: {tsb}). "
+                f"Prioriza sueño y nutrición. Si el cansancio persiste, "
+                f"el plan activará una semana de descarga automáticamente."
+            )
+
+        return mensajes
