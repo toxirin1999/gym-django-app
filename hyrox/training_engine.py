@@ -112,41 +112,63 @@ class HyroxLoadManager:
     @classmethod
     def calcular_ctl_atl_tsb(cls, objetivo, hasta_fecha=None):
         """
-        CTL/ATL/TSB usando exponential weighted moving average (EWMA).
-        Constantes de tiempo: CTL=42 días, ATL=7 días.
-        TSB = CTL - ATL (Training Stress Balance = "forma").
+        CTL/ATL/TSB usando EWMA sobre carga unificada de TODAS las modalidades
+        del atleta (gym + hyrox + cualquier actividad registrada en el hub).
+
+        Fuente primaria: ActividadRealizada.carga_ua (sRPE = RPE × duración),
+        normalizado /10 para mantener escala compatible con TRIMP.
+        Fallback: HyroxSession.trimp (datos previos al hub o sin RPE/duración).
+
+        Constantes EWMA: CTL=42 días, ATL=7 días.
+        TSB = CTL − ATL.
         """
+        from entrenos.models import ActividadRealizada
+
         if hasta_fecha is None:
             hasta_fecha = timezone.now().date()
 
-        sesiones = list(
-            HyroxSession.objects.filter(
-                objective=objetivo,
-                estado='completado',
-                trimp__isnull=False,
+        # ── Fuente primaria: hub unificado ──────────────────────────────────
+        actividades = list(
+            ActividadRealizada.objects.filter(
+                cliente=objetivo.cliente,
+                carga_ua__isnull=False,
                 fecha__lte=hasta_fecha,
-            ).order_by('fecha').values('fecha', 'trimp')
+            ).order_by('fecha').values('fecha', 'carga_ua')
         )
 
-        if not sesiones:
-            return {'ctl': None, 'atl': None, 'tsb': None}
+        if actividades:
+            carga_por_dia = {}
+            for a in actividades:
+                d = a['fecha']
+                # sRPE /10 → escala comparable a TRIMP (mantiene thresholds TSB intactos)
+                carga_por_dia[d] = carga_por_dia.get(d, 0) + float(a['carga_ua']) / 10
+            desde = actividades[0]['fecha']
+        else:
+            # ── Fallback: sesiones Hyrox con TRIMP (histórico pre-hub) ──────
+            sesiones = list(
+                HyroxSession.objects.filter(
+                    objective=objetivo,
+                    estado='completado',
+                    trimp__isnull=False,
+                    fecha__lte=hasta_fecha,
+                ).order_by('fecha').values('fecha', 'trimp')
+            )
+            if not sesiones:
+                return {'ctl': None, 'atl': None, 'tsb': None}
+            carga_por_dia = {}
+            for s in sesiones:
+                d = s['fecha']
+                carga_por_dia[d] = carga_por_dia.get(d, 0) + s['trimp']
+            desde = sesiones[0]['fecha']
 
-        # Construir mapa fecha → TRIMP total del día
-        trimp_por_dia = {}
-        for s in sesiones:
-            d = s['fecha']
-            trimp_por_dia[d] = trimp_por_dia.get(d, 0) + s['trimp']
-
-        desde = sesiones[0]['fecha']
-        dias  = (hasta_fecha - desde).days + 1
-
+        dias = (hasta_fecha - desde).days + 1
         ctl = atl = 0.0
         k_ctl = 1 / 42.0
         k_atl = 1 / 7.0
 
         fecha_cursor = desde
         for _ in range(dias):
-            t = trimp_por_dia.get(fecha_cursor, 0)
+            t = carga_por_dia.get(fecha_cursor, 0)
             ctl = ctl + (t - ctl) * k_ctl
             atl = atl + (t - atl) * k_atl
             fecha_cursor += timedelta(days=1)
@@ -186,23 +208,36 @@ class HyroxLoadManager:
     @classmethod
     def get_acwr(cls, objetivo):
         """
-        Acute:Chronic Workload Ratio = ATL / CTL.
+        Acute:Chronic Workload Ratio = ATL / CTL sobre carga unificada.
         > 1.5  → zona roja (riesgo lesión por pico de carga)
         0.8-1.3 → zona óptima de rendimiento
         < 0.8  → desentrenamiento (carga insuficiente)
 
-        Requiere mínimo 28 días de historial: con menos datos el CTL es
-        demasiado pequeño y el ratio se dispara a valores sin sentido.
+        Requiere mínimo 28 días de historial para que el CTL sea fiable.
+        Usa el hub ActividadRealizada (todas las modalidades) como fuente
+        primaria; fallback a HyroxSession.trimp si el hub no tiene datos.
         """
-        primera = (
+        from entrenos.models import ActividadRealizada
+
+        primera_hub = (
+            ActividadRealizada.objects
+            .filter(cliente=objetivo.cliente, carga_ua__isnull=False)
+            .order_by('fecha')
+            .values_list('fecha', flat=True)
+            .first()
+        )
+        primera_hyrox = (
             HyroxSession.objects
             .filter(objective=objetivo, estado='completado', trimp__isnull=False)
             .order_by('fecha')
             .values_list('fecha', flat=True)
             .first()
         )
-        if not primera:
+        candidatas = [f for f in [primera_hub, primera_hyrox] if f]
+        if not candidatas:
             return None
+        primera = min(candidatas)
+
         dias_historial = (timezone.now().date() - primera).days
         if dias_historial < 28:
             return None
