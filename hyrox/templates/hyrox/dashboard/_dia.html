@@ -1,0 +1,30 @@
+{# Single day card for plan grid #}
+{% load static %}
+{% if dia.es_hoy %}
+<a href="{% if dia.sesion.id %}{% url 'hyrox:registrar_entrenamiento_session' objetivo_activo.id dia.sesion.id %}{% else %}{% url 'hyrox:registrar_entrenamiento' objetivo_activo.id %}{% endif %}" class="rb-dia hoy">
+{% elif dia.completada %}
+<a href="{% if dia.sesion.id %}{% url 'hyrox:editar_sesion' dia.sesion.id %}{% else %}{% url 'hyrox:registrar_entrenamiento' objetivo_activo.id %}{% endif %}" class="rb-dia done">
+{% else %}
+<a href="{% if dia.sesion.id %}{% url 'hyrox:registrar_entrenamiento_session' objetivo_activo.id dia.sesion.id %}{% else %}{% url 'hyrox:registrar_entrenamiento' objetivo_activo.id %}{% endif %}" class="rb-dia {% if dia.es_manana %}manana{% endif %}">
+{% endif %}
+  <div class="rb-dia-bib">
+    <div class="rb-dia-dow">{{ dia.dia_str|default:""|truncatechars:3|upper }}</div>
+    <div class="rb-dia-num">{{ dia.sesion.fecha|date:"j"|default:"—" }}</div>
+  </div>
+  <div class="rb-dia-body">
+    <div class="rb-dia-tipo">
+      <i class="fas fa-{{ dia.tipo_icon|default:'dumbbell' }}" style="font-size:9px;color:var(--accent);"></i>
+      {{ dia.tipo_label|default:"Entrenamiento"|upper }}
+    </div>
+    {% if dia.proposito %}
+    <div class="rb-dia-proposito">{{ dia.proposito|truncatechars:40 }}</div>
+    {% endif %}
+    <div class="rb-dia-title">{{ dia.sesion.titulo|default:"Sesión"|truncatechars:24|upper }}</div>
+    {% if dia.actividades_resumen %}
+    <div class="rb-dia-acts">{{ dia.actividades_resumen|join:", "|truncatechars:80 }}</div>
+    {% endif %}
+  </div>
+  <div class="rb-dia-tag {% if dia.es_hoy %}rb-tag-hoy{% elif dia.completada %}rb-tag-done{% elif dia.es_manana %}rb-tag-man{% else %}rb-tag-ver{% endif %}">
+    {% if dia.es_hoy %}HOY{% elif dia.completada %}<i class="fas fa-check"></i>{% elif dia.es_manana %}MAÑANA{% else %}VER{% endif %}
+  </div>
+</a>

@@ -1134,7 +1134,7 @@ a.rb-dia:focus-visible {
       <div>
         <div style="font-family:var(--font-mono);font-size:10px;font-weight:700;color:var(--deload);letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px;">Sesión modificada automáticamente</div>
         <div style="font-size:12px;color:var(--ink-2);font-family:var(--font-body);line-height:1.5;">
-          El sistema ha sustituido la sesión de hoy por: <strong style="color:var(--ink-1);">{{ sesion_override.titulo|slice:"16:" }}</strong>.
+          El sistema ha sustituido la sesión de hoy por: <strong style="color:var(--ink-1);">{{ sesion_override.titulo|default:""|slice:"16:" }}</strong>.
         </div>
       </div>
     </div>
@@ -1309,7 +1309,7 @@ a.rb-dia:focus-visible {
         {{ perfil_atletico.pct_comp_sled }}%
       </div>
     </div>
-    {% if perfil_atletico.necesita_fuerza_base %}
+    {% if perfil_atletico.necesita_fuerza_base and perfil_atletico.ajuste_plan %}
     <div style="font-size:10px;color:var(--warn);font-family:var(--font-body);margin-top:5px;padding-left:4px;line-height:1.4;">
       ⚠ {{ perfil_atletico.ajuste_plan.aviso }}
     </div>
@@ -1320,7 +1320,7 @@ a.rb-dia:focus-visible {
   {% endif %}
 
   <!-- ═══════════════ CURVAS DE PROGRESIÓN ═══════════════ -->
-  {% if objetivo_activo %}
+  {% if objetivo_activo and curvas_progresion %}
   <section class="rb-section rb-a2">
     <div class="rb-section-head">
       <span class="rb-section-num">●</span>
@@ -1567,6 +1567,7 @@ a.rb-dia:focus-visible {
       </div>
 
       <!-- Readiness breakdown -->
+      {% if readiness_breakdown %}
       <div class="rb-strip">
         <div class="rb-strip-head"><span class="dot"></span><span class="title">Desglose readiness</span><span class="line"></span></div>
         <div class="rb-brow">
@@ -1585,6 +1586,7 @@ a.rb-dia:focus-visible {
         <div class="rb-pace-note"><i class="fas fa-stopwatch"></i><span>{{ pace_prediction }}</span></div>
         {% endif %}
       </div>
+      {% endif %}
 
     </div>
   </section>

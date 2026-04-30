@@ -1,0 +1,65 @@
+{% extends 'logros/base_template.html' %}
+{% load static %}
+
+{% block title %}Ranking de Clientes{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1 fw-bold">Ranking de Clientes</h1>
+            <p class="text-muted mb-0">Clasificación por puntos totales</p>
+        </div>
+        <a href="{% url 'logros:perfil_gamificacion' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="fas fa-arrow-left me-1"></i> Volver al perfil
+        </a>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-0">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-3">#</th>
+                        <th>Cliente</th>
+                        <th>Arquetipo</th>
+                        <th class="text-end pe-3">Puntos</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for perfil in perfiles %}
+                    <tr {% if perfil.posicion <= 3 %}class="table-warning"{% endif %}>
+                        <td class="ps-3 fw-bold">
+                            {% if perfil.posicion == 1 %}🥇
+                            {% elif perfil.posicion == 2 %}🥈
+                            {% elif perfil.posicion == 3 %}🥉
+                            {% else %}{{ perfil.posicion }}
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{% url 'logros:perfil_gamificacion' %}">
+                                {{ perfil.cliente.nombre }}
+                            </a>
+                        </td>
+                        <td>
+                            {% if perfil.nivel_actual %}
+                            <span class="badge bg-primary">{{ perfil.nivel_actual.titulo_arquetipo }}</span>
+                            {% else %}
+                            <span class="text-muted">—</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end pe-3 fw-bold">{{ perfil.puntos_totales|floatformat:0 }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" class="text-center text-muted py-4">
+                            No hay clientes en el ranking todavía.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

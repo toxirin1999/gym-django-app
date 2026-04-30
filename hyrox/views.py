@@ -121,7 +121,14 @@ def hyrox_dashboard(request):
                 semana_num_actual = num_semana
             if num_semana != semana_num_actual:
                 if semana_buf:
-                    plan_semanas.append({'semana_idx': semana_num_actual, 'sesiones': semana_buf})
+                    plan_semanas.append({
+                        'semana_idx': semana_num_actual,
+                        'numero': semana_num_actual + 1,
+                        'fase': '',
+                        'sesiones': semana_buf,
+                        'dias': semana_buf,
+                        'completadas': sum(1 for d in semana_buf if d.get('completada')),
+                    })
                 semana_buf = []
                 semana_num_actual = num_semana
 
@@ -176,7 +183,14 @@ def hyrox_dashboard(request):
             })
 
         if semana_buf:
-            plan_semanas.append({'semana_idx': semana_num_actual, 'sesiones': semana_buf})
+            plan_semanas.append({
+                'semana_idx': semana_num_actual,
+                'numero': semana_num_actual + 1,
+                'fase': '',
+                'sesiones': semana_buf,
+                'dias': semana_buf,
+                'completadas': sum(1 for d in semana_buf if d.get('completada')),
+            })
         
         # Desglose de la semana actual
         start_of_week = hoy - timezone.timedelta(days=hoy.weekday())
@@ -286,7 +300,6 @@ def hyrox_dashboard(request):
     competition_progress = None
     macro_data = None
     lesion_activa = None
-    ultimo_reporte = None
     evolucion_carrera = None
 
     if objetivo_activo:
@@ -1029,7 +1042,6 @@ def hyrox_dashboard(request):
         'cliente': cliente,
         'objetivo_activo': objetivo_activo,
         'sesiones': sesiones_completadas,
-        'proximas_sesiones': sesiones_planificadas,
         'plan_semanas': plan_semanas if objetivo_activo else [],
         'stats_semana': stats_semana,
         'resumen_semanal': resumen_semanal,
@@ -1042,7 +1054,6 @@ def hyrox_dashboard(request):
         'daily_push': daily_push if objetivo_activo else None,
         'smart_alerts': smart_alerts if objetivo_activo else [],
         'lesion_activa': lesion_activa,
-        'ultimo_reporte': ultimo_reporte,
         'evolucion_carrera': evolucion_carrera,
         'splits_estaciones': splits_estaciones,
         'splits_categoria': objetivo_activo.get_categoria_display() if objetivo_activo else None,
@@ -1052,10 +1063,7 @@ def hyrox_dashboard(request):
         'estaciones_debiles': estaciones_debiles,
         'fases_timeline': fases_timeline,
         'milestones': milestones,
-        'coaching_estaciones': coaching_estaciones,
-        'race_day_strategy': race_day_strategy,
         'sustituciones_activas': sustituciones_activas if 'sustituciones_activas' in locals() else [],
-        'sustituciones_dict': sustituciones_dict if 'sustituciones_dict' in locals() else {},
         'interferencia_index': interferencia_index,
         'race_card': race_card,
         'modo_competicion': modo_competicion,

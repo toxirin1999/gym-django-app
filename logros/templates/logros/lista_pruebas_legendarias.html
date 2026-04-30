@@ -1,0 +1,107 @@
+{% extends 'logros/base_template.html' %}
+{% load static %}
+
+{% block title %}Pruebas Legendarias — Sistema de Gamificación{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1 fw-bold">Pruebas Legendarias</h1>
+            <p class="text-muted mb-0">Desafíos épicos del sistema de gamificación</p>
+        </div>
+        <a href="{% url 'logros:perfil_gamificacion' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="fas fa-arrow-left me-1"></i> Volver al perfil
+        </a>
+    </div>
+
+    <!-- Filtros -->
+    <form method="get" class="row g-2 mb-4 align-items-end">
+        <div class="col-auto">
+            <label class="form-label small">Arquetipo</label>
+            <select name="arquetipo" class="form-select form-select-sm">
+                <option value="">Todos</option>
+                {% for arq in arquetipos %}
+                <option value="{{ arq.nivel }}" {% if arquetipo_seleccionado == arq.nivel|stringformat:"s" %}selected{% endif %}>
+                    Nivel {{ arq.nivel }} — {{ arq.titulo_arquetipo }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-auto">
+            <div class="form-check mt-3">
+                <input class="form-check-input" type="checkbox" name="secretas" value="true"
+                       id="chkSecretas" {% if mostrar_secretas %}checked{% endif %}>
+                <label class="form-check-label small" for="chkSecretas">Mostrar secretas</label>
+            </div>
+        </div>
+        <div class="col-auto">
+            <button type="submit" class="btn btn-primary btn-sm">Filtrar</button>
+        </div>
+    </form>
+
+    <!-- Lista de pruebas -->
+    <div class="row g-3">
+        {% for prueba in page_obj %}
+        <div class="col-12 col-md-6">
+            <div class="card h-100 border-0 shadow-sm {% if prueba.es_secreta %}border-warning{% endif %}">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <h5 class="card-title fw-bold mb-0">{{ prueba.nombre }}</h5>
+                        {% if prueba.es_secreta %}
+                        <span class="badge bg-warning text-dark"><i class="fas fa-eye-slash me-1"></i>Secreta</span>
+                        {% endif %}
+                    </div>
+                    {% if prueba.arquetipo %}
+                    <p class="text-muted small mb-2">
+                        <i class="fas fa-layer-group me-1"></i>
+                        Arquetipo Nivel {{ prueba.arquetipo.nivel }} — {{ prueba.arquetipo.titulo_arquetipo }}
+                    </p>
+                    {% endif %}
+                    {% if prueba.descripcion %}
+                    <p class="card-text small">{{ prueba.descripcion }}</p>
+                    {% endif %}
+                    <p class="text-muted small mb-0">
+                        <i class="fas fa-key me-1"></i>
+                        <code>{{ prueba.clave_calculo }}</code>
+                    </p>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <div class="alert alert-info">No hay pruebas que coincidan con los filtros seleccionados.</div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Paginación -->
+    {% if page_obj.has_other_pages %}
+    <nav class="mt-4">
+        <ul class="pagination pagination-sm justify-content-center">
+            {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if arquetipo_seleccionado %}&arquetipo={{ arquetipo_seleccionado }}{% endif %}{% if mostrar_secretas %}&secretas=true{% endif %}">
+                    &laquo;
+                </a>
+            </li>
+            {% endif %}
+            {% for num in page_obj.paginator.page_range %}
+            <li class="page-item {% if page_obj.number == num %}active{% endif %}">
+                <a class="page-link" href="?page={{ num }}{% if arquetipo_seleccionado %}&arquetipo={{ arquetipo_seleccionado }}{% endif %}{% if mostrar_secretas %}&secretas=true{% endif %}">
+                    {{ num }}
+                </a>
+            </li>
+            {% endfor %}
+            {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if arquetipo_seleccionado %}&arquetipo={{ arquetipo_seleccionado }}{% endif %}{% if mostrar_secretas %}&secretas=true{% endif %}">
+                    &raquo;
+                </a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+</div>
+{% endblock %}
