@@ -2776,6 +2776,27 @@ class HyroxRaceIntelligence:
 
         razones_concretas = HyroxImpactEngine.build_razones_concretas(objective)
 
+        # ── Objetivo y diferencia ────────────────────────────────────────────
+        objetivo_secs = HyroxRaceSimulator._tiempo_str_a_segundos(
+            objective.objetivo_tiempo_carrera or ''
+        ) if objective.objetivo_tiempo_carrera else None
+
+        diferencia_secs = (tiempo_ajustado - objetivo_secs) if (tiempo_ajustado and objetivo_secs) else None
+
+        # Tendencia: tiempo estimado de ayer vs hoy (desde HyroxReadinessLog)
+        tendencia_secs = None
+        try:
+            from django.utils import timezone as _tz
+            from .models import HyroxReadinessLog
+            ayer = _tz.now().date() - timedelta(days=1)
+            log_ayer = HyroxReadinessLog.objects.filter(
+                objective=objective, fecha=ayer, tiempo_estimado_seg__isnull=False
+            ).first()
+            if log_ayer and tiempo_ajustado:
+                tendencia_secs = tiempo_ajustado - log_ayer.tiempo_estimado_seg
+        except Exception:
+            pass
+
         return {
             'readiness':              readiness,
             'tsb':                    carga.get('tsb'),
@@ -2783,10 +2804,14 @@ class HyroxRaceIntelligence:
             'atl':                    round(carga.get('atl') or 0, 1),
             'acwr':                   acwr,
             'tiempo_estimado':        cls._fmt_time(tiempo_ajustado),
+            'tiempo_estimado_seg':    tiempo_ajustado,
             'tiempo_base':            cls._fmt_time(tiempo_base_secs),
             'tiempo_rango_min':       cls._fmt_time(tiempo_ajustado - 90)  if tiempo_ajustado else None,
             'tiempo_rango_max':       cls._fmt_time(tiempo_ajustado + 150) if tiempo_ajustado else None,
             'ajuste_seg':             ajuste,
+            'tiempo_objetivo':        cls._fmt_time(objetivo_secs),
+            'diferencia_secs':        diferencia_secs,
+            'tendencia_secs':         tendencia_secs,
             'interferencia_principal': interferencia_principal,
             'decision':               decision,
             'impacto':                impacto,
