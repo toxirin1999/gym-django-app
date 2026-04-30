@@ -944,8 +944,11 @@ class HyroxTrainingEngine:
         if not rpe:
             return mensajes_ui
 
-        # --- TRIGGER 1: SOBREESFUERZO (RPE >= 9 O HR_Max > 185) ---
-        if rpe >= 9 or hr_max > 185:
+        # Aplicar calibración personal de RPE antes de evaluar triggers
+        rpe_efectivo = RPECalibrator.rpe_calibrado(rpe, sesion_completada.objective)
+
+        # --- TRIGGER 1: SOBREESFUERZO (RPE calibrado >= 9 O HR_Max > 185) ---
+        if rpe_efectivo >= 9 or hr_max > 185:
             target_date = sesion_completada.fecha + timedelta(days=2)
             # Ventana ±1 día: robustez ante calendarios con huecos
             sesion_sig = HyroxSession.objects.filter(
@@ -987,8 +990,8 @@ class HyroxTrainingEngine:
                         f"{sesion_sig.fecha.strftime('%d/%m')} para optimizar tu recuperación."
                     )
 
-        # --- TRIGGER 2: ESTANCAMIENTO (2 sesiones seguidas RPE <= 5 + validación curva progresión) ---
-        if rpe <= 5:
+        # --- TRIGGER 2: ESTANCAMIENTO (2 sesiones seguidas RPE calibrado <= 5) ---
+        if rpe_efectivo <= 5:
             tipos_actual = set(a.tipo_actividad for a in sesion_completada.activities.all())
             prev_sesion = HyroxSession.objects.filter(
                 objective=sesion_completada.objective,
@@ -996,7 +999,11 @@ class HyroxTrainingEngine:
                 fecha__lt=sesion_completada.fecha
             ).order_by('-fecha').first()
 
-            if prev_sesion and prev_sesion.rpe_global and prev_sesion.rpe_global <= 5:
+            prev_rpe_efectivo = (
+                RPECalibrator.rpe_calibrado(prev_sesion.rpe_global, sesion_completada.objective)
+                if prev_sesion and prev_sesion.rpe_global else None
+            )
+            if prev_sesion and prev_rpe_efectivo and prev_rpe_efectivo <= 5:
                 tipos_prev   = set(a.tipo_actividad for a in prev_sesion.activities.all())
                 common_types = tipos_actual.intersection(tipos_prev)
 
@@ -2430,6 +2437,140 @@ class PaceAutoUpdater:
             mensajes.append(
                 f"Primer ritmo 5K estimado desde carrera libre: {nuevo_tiempo_str}. "
                 f"El plan ya puede prescribir ritmos personalizados."
+            )
+
+        return mensajes
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# RPE CALIBRATOR — Gap 3 del "entrenador que aprende"
+# Detecta el sesgo sistemático del usuario al reportar RPE vs su FC real,
+# calibra su escala personal y ajusta los triggers de adaptación continua.
+# Sin campos nuevos en el modelo — todo cálculo dinámico desde sesiones.
+# ══════════════════════════════════════════════════════════════════════════════
+
+class RPECalibrator:
+    """
+    Analiza el historial de sesiones con RPE + FC y detecta si el usuario
+    tiende a sub o sobreestimar su esfuerzo percibido.
+
+    bias > 0  → subestima: reporta RPE bajo cuando su FC indica más intensidad
+    bias < 0  → sobreestima: reporta RPE alto con FC moderada
+    |bias| < 1 → calibración aceptable, no requiere acción
+    """
+
+    MIN_SESIONES = 5      # mínimo de sesiones con ambos datos para calibrar
+    SESIONES_VENTANA = 15  # ventana máxima de sesiones a analizar
+    UMBRAL_ALERTA = 1.5    # bias medio > 1.5 puntos RPE → avisar al usuario
+    UMBRAL_CORRECCION = 1.0  # bias > 1.0 → corregir internamente los triggers
+
+    # RPE esperado (midpoint) por zona cardíaca
+    RPE_ESPERADO_POR_ZONA = {
+        'Z1': 2.5,
+        'Z2': 5.0,
+        'Z3': 6.5,
+        'Z4': 8.0,
+        'Z5': 9.5,
+    }
+
+    @classmethod
+    def _zona_desde_fc(cls, hr_media: int, fc_max: int) -> str | None:
+        """Determina la zona cardíaca desde la FC media de la sesión."""
+        if not hr_media or not fc_max or fc_max <= 0:
+            return None
+        ratio = hr_media / fc_max
+        for zona, (low, high) in HyroxLoadManager.ZONAS_FC.items():
+            if low <= ratio < high:
+                return zona
+        return 'Z5' if ratio >= 0.90 else None
+
+    @classmethod
+    def get_bias(cls, objetivo: HyroxObjective) -> dict:
+        """
+        Calcula el sesgo RPE del usuario.
+        Devuelve dict con: bias (float), n_sesiones (int), nivel ('ok'|'leve'|'severo').
+        """
+        sesiones = list(HyroxSession.objects.filter(
+            objective=objetivo,
+            estado='completado',
+            rpe_global__isnull=False,
+            hr_media__isnull=False,
+        ).order_by('-fecha')[:cls.SESIONES_VENTANA])
+
+        if len(sesiones) < cls.MIN_SESIONES:
+            return {'bias': 0.0, 'n_sesiones': len(sesiones), 'nivel': 'insuficiente'}
+
+        fc_max = HyroxLoadManager.get_fc_max(objetivo)
+        deltas = []
+        for s in sesiones:
+            zona = cls._zona_desde_fc(s.hr_media, fc_max)
+            if not zona:
+                continue
+            rpe_esperado = cls.RPE_ESPERADO_POR_ZONA[zona]
+            delta = s.rpe_global - rpe_esperado  # positivo = reporta más de lo que hace
+            deltas.append(delta)
+
+        if not deltas:
+            return {'bias': 0.0, 'n_sesiones': 0, 'nivel': 'insuficiente'}
+
+        bias = round(sum(deltas) / len(deltas), 2)
+        abs_bias = abs(bias)
+        nivel = 'severo' if abs_bias >= cls.UMBRAL_ALERTA else ('leve' if abs_bias >= cls.UMBRAL_CORRECCION else 'ok')
+
+        return {
+            'bias': bias,
+            'n_sesiones': len(deltas),
+            'nivel': nivel,
+            'sobreestima': bias > 0,
+        }
+
+    @classmethod
+    def rpe_calibrado(cls, rpe_raw: int, objetivo: HyroxObjective) -> float:
+        """
+        Devuelve el RPE corregido con el bias del usuario.
+        Si el usuario sobreestima (bias +2), un RPE reportado de 8 equivale a un 6 real.
+        """
+        info = cls.get_bias(objetivo)
+        if info['nivel'] == 'insuficiente' or abs(info['bias']) < cls.UMBRAL_CORRECCION:
+            return float(rpe_raw)
+        return round(float(rpe_raw) - info['bias'], 1)
+
+    @classmethod
+    def check_and_notify(cls, sesion: HyroxSession) -> list[str]:
+        """
+        Tras completar una sesión, comprueba si el sesgo acumulado requiere
+        notificar al usuario. Solo alerta cuando el nivel es 'severo'.
+        Devuelve lista de mensajes para el UI.
+        """
+        objetivo = sesion.objetivo if hasattr(sesion, 'objetivo') else sesion.objective
+        mensajes = []
+
+        # Solo revisar si esta sesión tiene ambos datos
+        if not sesion.rpe_global or not sesion.hr_media:
+            return mensajes
+
+        info = cls.get_bias(objetivo)
+        if info['nivel'] != 'severo':
+            return mensajes
+
+        bias = info['bias']
+        n = info['n_sesiones']
+
+        if bias > 0:
+            # Usuario sobreestima: dice RPE 8 pero su FC indica un 6
+            mensajes.append(
+                f"Calibración de esfuerzo: en las últimas {n} sesiones tu RPE reportado "
+                f"supera tu FC real en ~{abs(bias):.1f} puntos. "
+                f"Es posible que percibas el esfuerzo más intenso de lo que es — "
+                f"el plan ajusta los umbrales de adaptación a tu escala real."
+            )
+        else:
+            # Usuario subestima: dice RPE 5 pero su FC indica un 8
+            mensajes.append(
+                f"Calibración de esfuerzo: en las últimas {n} sesiones tu FC real "
+                f"supera lo que indica tu RPE en ~{abs(bias):.1f} puntos. "
+                f"Entrenas más duro de lo que crees — el plan aumenta la precaución "
+                f"ante señales de sobrecarga."
             )
 
         return mensajes
