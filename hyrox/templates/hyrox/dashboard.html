@@ -2820,7 +2820,52 @@ const HELP_CONTENT = {
   },
   'perfil-atletico': {
     title: 'Perfil Atlético',
-    body: `<p>Clasifica tu perfil en tres arquetipos según la distribución real de tu entrenamiento:</p><ul><li><strong>Power</strong> — Mayor volumen de fuerza (sentadilla, peso muerto, sled).</li><li><strong>Endurance</strong> — Mayor volumen aeróbico (carrera Z2, ergómetro).</li><li><strong>Hybrid</strong> — Equilibrio fuerza-resistencia. Perfil ideal para Hyrox.</li></ul><p>Este perfil calibra automáticamente los pesos, ritmos y volúmenes de tu plan de entrenamiento.</p>`
+    body: `
+      <p style="font-size:11px;color:#94a3b8;margin:0 0 14px;line-height:1.6;">
+        Clasifica tu perfil atlético comparando tu capacidad de fuerza y tu capacidad aeróbica respecto a los estándares de tu categoría.
+      </p>
+
+      <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:14px;">
+
+        <div style="padding:10px 12px;border-radius:6px;background:rgba(255,255,255,.03);border:1px solid #334155;">
+          <div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px;">Score Fuerza</div>
+          <p style="font-size:11px;color:#94a3b8;margin:0;line-height:1.5;">
+            Media de tus RMs (sentadilla + peso muerto) ÷ RM de referencia de tu categoría × 100.<br>
+            <strong style="color:#e2e8f0;">Open Men: referencia 120 kg · Open Women: 70 kg · Pro Men: 150 kg</strong>
+          </p>
+        </div>
+
+        <div style="padding:10px 12px;border-radius:6px;background:rgba(255,255,255,.03);border:1px solid #334155;">
+          <div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px;">Score Carrera</div>
+          <p style="font-size:11px;color:#94a3b8;margin:0;line-height:1.5;">
+            Tiempo 5K de referencia de tu categoría ÷ tu tiempo 5K real × 100. Más rápido = más score.<br>
+            <strong style="color:#e2e8f0;">Open Men: ref 22:00 · Open Women: 26:00 · Pro Men: 18:00</strong>
+          </p>
+        </div>
+
+        <div style="padding:10px 12px;border-radius:6px;background:rgba(255,255,255,.03);border:1px solid #334155;">
+          <div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px;">Clasificación del perfil</div>
+          <p style="font-size:11px;color:#94a3b8;margin:0 0 6px;line-height:1.5;">ratio = Score Fuerza ÷ Score Carrera</p>
+          <ul style="margin:0;padding:0 0 0 12px;font-size:11px;color:#94a3b8;line-height:1.7;">
+            <li><strong style="color:#f97316;">Power</strong> — ratio ≥ 1.2: más fuerte que rápido. El plan añade volumen de carrera.</li>
+            <li><strong style="color:#22c55e;">Endurance</strong> — ratio ≤ 0.83: más rápido que fuerte. El plan prioriza fuerza en estaciones.</li>
+            <li><strong style="color:#f59e0b;">Hybrid</strong> — ratio entre 0.83–1.2: perfil equilibrado. El plan optimiza transiciones.</li>
+          </ul>
+        </div>
+
+        <div style="padding:10px 12px;border-radius:6px;background:rgba(245,158,11,.05);border:1px solid rgba(245,158,11,.2);">
+          <div style="font-size:10px;font-weight:700;color:#f59e0b;text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px;">Sled vs RM Sentadilla</div>
+          <p style="font-size:11px;color:#94a3b8;margin:0;line-height:1.5;">
+            Peso del Sled Push oficial (tu categoría) ÷ tu RM sentadilla × 100.<br>
+            Si el Sled supera el <strong style="color:#e2e8f0;">65% de tu RM</strong>, el plan activa progresión lineal de fuerza antes de trabajar velocidad en estaciones.
+          </p>
+        </div>
+
+      </div>
+      <p style="font-size:10px;color:#475569;margin:0;line-height:1.5;">
+        Actualiza tus RMs y tiempo 5K en <strong style="color:#64748b;">Editar objetivo</strong> para recalibrar el perfil. El plan se regenera con los nuevos datos.
+      </p>
+    `
   },
   'progresion': {
     title: 'Velocidad de Progresión',
