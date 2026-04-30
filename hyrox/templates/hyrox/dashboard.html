@@ -1326,10 +1326,12 @@ a.rb-dia:focus-visible {
       <button onclick="document.getElementById('modal-station-info').style.display='flex'" style="margin-left:auto;background:none;border:1px solid var(--border);border-radius:50%;width:18px;height:18px;cursor:pointer;font-size:10px;color:var(--ink-3);line-height:1;flex-shrink:0;padding:0;" title="Cómo funciona este panel">?</button>
     </div>
     {% if station_diagnosis.sin_datos %}
-    <p style="font-family:var(--font-body);font-size:11px;color:var(--ink-3);margin:0 0 10px;line-height:1.5;">
-      Sin sesiones suficientes para detectar fugas. Foco técnico de referencia:
-    </p>
-    <ul style="margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:4px;margin-bottom:10px;">
+    {% if station_diagnosis.description %}
+    <p style="font-family:var(--font-body);font-size:11px;color:var(--ink-3);margin:0 0 10px;line-height:1.5;">{{ station_diagnosis.description }}</p>
+    {% endif %}
+
+    <div style="font-family:var(--font-mono);font-size:9px;font-weight:700;color:var(--ink-3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px;">Técnica clave</div>
+    <ul style="margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:4px;margin-bottom:12px;">
       {% for punto in station_diagnosis.technical_focus %}
       <li style="display:flex;gap:7px;align-items:flex-start;font-family:var(--font-body);font-size:11px;color:var(--ink-2);line-height:1.4;">
         <span style="font-family:var(--font-mono);font-size:9px;font-weight:700;color:var(--ok);flex-shrink:0;min-width:12px;">{{ forloop.counter }}</span>
@@ -1337,6 +1339,30 @@ a.rb-dia:focus-visible {
       </li>
       {% endfor %}
     </ul>
+
+    {% if station_diagnosis.positions %}
+    <div style="font-family:var(--font-mono);font-size:9px;font-weight:700;color:var(--ink-3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px;">Posiciones eficaces</div>
+    <ul style="margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:4px;margin-bottom:12px;">
+      {% for pos in station_diagnosis.positions %}
+      <li style="display:flex;gap:7px;align-items:flex-start;font-family:var(--font-body);font-size:11px;color:var(--ink-2);line-height:1.4;">
+        <i class="fas fa-chevron-right" style="color:var(--ok);font-size:9px;margin-top:3px;flex-shrink:0;"></i>
+        {{ pos }}
+      </li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+
+    {% if station_diagnosis.rules %}
+    <div style="font-family:var(--font-mono);font-size:9px;font-weight:700;color:var(--ink-3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px;">Reglas oficiales</div>
+    <ul style="margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:4px;margin-bottom:10px;">
+      {% for regla in station_diagnosis.rules %}
+      <li style="display:flex;gap:7px;align-items:flex-start;font-family:var(--font-body);font-size:11px;color:var(--ink-2);line-height:1.4;">
+        <i class="fas fa-exclamation-circle" style="color:var(--warn);font-size:9px;margin-top:3px;flex-shrink:0;"></i>
+        {{ regla }}
+      </li>
+      {% endfor %}
+    </ul>
+    {% endif %}
     {% else %}
     {% if station_diagnosis.causa %}
     <div style="margin-bottom:10px;">

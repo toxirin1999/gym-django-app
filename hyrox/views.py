@@ -832,6 +832,10 @@ def hyrox_dashboard(request):
                     'corrective_exercises': [a['nombre_ejercicio'] for a in _corrective],
                     'sin_datos': _sin_datos,
                     'technical_focus': _tip['technical_focus'],
+                    'description': _tip.get('description', ''),
+                    'positions': _tip.get('positions', []),
+                    'rules': _tip.get('rules', []),
+                    'weights': _tip.get('weights', {}),
                 }
 
     # ── RACE CARD TÁCTICA + MODO COMPETICIÓN ─────────────────────────────────
