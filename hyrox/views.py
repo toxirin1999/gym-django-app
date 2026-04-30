@@ -1529,6 +1529,12 @@ def registrar_entrenamiento(request, objective_id, session_id=None):
                      for alerta in alertas:
                           messages.info(request, f"⚡ {alerta}")
 
+                # 3. Actualización automática de RMs — el entrenador aprende
+                from .training_engine import RMAutoUpdater
+                mensajes_rm = RMAutoUpdater.update_from_session(sesion)
+                for msg in mensajes_rm:
+                    messages.success(request, f"💪 {msg}")
+
                 # Hito: detectar tipo y lanzar adaptación del plan
                 tipo_hito_sesion = None
                 if sesion.titulo:
