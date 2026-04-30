@@ -439,26 +439,28 @@ class EstadisticasService:
         import math
 
         fecha_fin = timezone.now().date()
-        fecha_inicio = fecha_fin - timedelta(days=max(periodo_dias, 90))
 
+        # Sin límite inferior: el EWMA necesita toda la historia para que CTL
+        # converja al mismo valor que HyroxLoadManager (que tampoco acota por abajo).
         actividades = list(
             ActividadRealizada.objects.filter(
                 cliente=cliente,
-                fecha__gte=fecha_inicio,
                 fecha__lte=fecha_fin,
                 carga_ua__isnull=False,
-            ).order_by('fecha').values('fecha', 'fecha_realizado', 'carga_ua', 'tipo')
+            ).order_by('fecha').values('fecha', 'carga_ua', 'tipo')
         )
 
         if not actividades:
             return EstadisticasService.analizar_acwr(cliente, periodo_dias)
 
-        # Mapa fecha → carga diaria total (usar fecha real si disponible)
+        # Mapa fecha → carga diaria total.
+        # Usar 'fecha' (no fecha_realizado) para coincidir exactamente con
+        # HyroxLoadManager y producir el mismo ACWR en ambos sitios.
         carga_por_dia = {}
         desglose_tipos_7d = {}
         corte_7d = fecha_fin - timedelta(days=7)
         for a in actividades:
-            d = a['fecha_realizado'] or a['fecha']
+            d = a['fecha']
             carga_por_dia[d] = carga_por_dia.get(d, 0) + float(a['carga_ua'])
             if d >= corte_7d:
                 t = a['tipo']
