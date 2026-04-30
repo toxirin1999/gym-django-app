@@ -7202,6 +7202,8 @@ def timeline_atleta(request, cliente_id):
             a.duracion_minutos = getattr(a.sesion_hyrox, 'tiempo_total_minutos', None)
         # Fecha efectiva para agrupar en el timeline (cuándo se hizo realmente)
         a._fecha_efectiva = a.fecha_realizado or a.fecha
+        # carga normalizada /10 para mostrar en pantalla (escala sRPE legible)
+        a.carga_display = round(float(a.carga_ua) / 10, 1) if a.carga_ua else None
         actividades.append(a)
 
     bitacoras = list(
@@ -7252,6 +7254,33 @@ def timeline_atleta(request, cliente_id):
     dias_activos = sum(1 for d in dias if d['n_actividades'] > 0)
     carga_total = sum(d['carga_dia'] or 0 for d in dias)
 
+    # TSB/CTL/ATL desde el motor Hyrox (carga unificada de todas las modalidades)
+    tsb_data = None
+    try:
+        from hyrox.models import HyroxObjective
+        from hyrox.training_engine import HyroxLoadManager
+        objetivo = HyroxObjective.objects.filter(cliente=cliente).order_by('-fecha_evento').first()
+        if objetivo:
+            raw = HyroxLoadManager.calcular_ctl_atl_tsb(objetivo)
+            if raw.get('tsb') is not None:
+                tsb = raw['tsb']
+                if tsb >= 5:
+                    tsb_zona = 'fresco'
+                elif tsb >= -10:
+                    tsb_zona = 'optimo'
+                elif tsb >= -20:
+                    tsb_zona = 'fatigado'
+                else:
+                    tsb_zona = 'sobrecargado'
+                tsb_data = {
+                    'tsb': tsb,
+                    'ctl': raw['ctl'],
+                    'atl': raw['atl'],
+                    'zona': tsb_zona,
+                }
+    except Exception:
+        pass
+
     # Desglose calculado en Python desde datos ya cargados — sin query extra
     conteo_tipos = Counter(a.tipo for a in actividades)
     desglose = [
@@ -7263,6 +7292,7 @@ def timeline_atleta(request, cliente_id):
         'cliente': cliente,
         'dias': dias,
         'dias_rango': dias_rango,
+        'tsb_data': tsb_data,
         'acwr': acwr,
         'total_actividades': total_actividades,
         'dias_activos': dias_activos,

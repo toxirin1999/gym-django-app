@@ -427,70 +427,59 @@ class EstadisticasService:
     @staticmethod
     def analizar_acwr_unificado(cliente, periodo_dias=90):
         """
-        ACWR Multi-Modalidad: lee desde ActividadRealizada (hub central).
+        ACWR Multi-Modalidad usando EWMA (mismo algoritmo que HyroxLoadManager).
 
-        Métrica de carga: carga_ua = RPE × duración_minutos
-        Esto unifica gym, hyrox, fútbol, carrera y cualquier actividad libre
-        en una única escala de esfuerzo comparable.
+        Fuente: ActividadRealizada.carga_ua (sRPE = RPE × duración).
+        EWMA: ATL con constante 7d, CTL con constante 42d.
+        ACWR = ATL / CTL.
 
-        Fallback por actividad: si carga_ua es nula pero hay volumen_kg,
-        estima la carga como volumen_kg / 100 (equivalencia conservadora).
-
-        Devuelve el mismo formato que analizar_acwr() para compatibilidad.
+        Fallback al método legacy si el hub está vacío.
         """
         from entrenos.models import ActividadRealizada
-        try:
-            import pandas as pd
-        except ImportError:
-            return {'dataframe': [], 'acwr_actual': 0, 'zona_riesgo': 'desconocida'}
+        import math
 
         fecha_fin = timezone.now().date()
-        fecha_inicio = fecha_fin - timedelta(days=periodo_dias)
+        fecha_inicio = fecha_fin - timedelta(days=max(periodo_dias, 90))
 
-        actividades = ActividadRealizada.objects.filter(
-            cliente=cliente,
-            fecha__gte=fecha_inicio,
-            fecha__lte=fecha_fin,
-        ).order_by('fecha').values('fecha', 'fecha_realizado', 'carga_ua', 'volumen_kg', 'tipo')
+        actividades = list(
+            ActividadRealizada.objects.filter(
+                cliente=cliente,
+                fecha__gte=fecha_inicio,
+                fecha__lte=fecha_fin,
+                carga_ua__isnull=False,
+            ).order_by('fecha').values('fecha', 'fecha_realizado', 'carga_ua', 'tipo')
+        )
 
         if not actividades:
-            # Fallback al método legacy si el hub todavía está vacío
             return EstadisticasService.analizar_acwr(cliente, periodo_dias)
 
-        rows = []
+        # Mapa fecha → carga diaria total (usar fecha real si disponible)
+        carga_por_dia = {}
+        desglose_tipos_7d = {}
+        corte_7d = fecha_fin - timedelta(days=7)
         for a in actividades:
-            if a['carga_ua'] is not None:
-                carga = float(a['carga_ua'])
-            elif a['volumen_kg'] is not None:
-                carga = float(a['volumen_kg']) / 100
-            else:
-                carga = 0.0
-            # Usar fecha_realizado si existe (cuándo realmente se entrenó),
-            # si no, fallback a fecha (planificada)
-            fecha_carga = a['fecha_realizado'] or a['fecha']
-            rows.append({'fecha': fecha_carga, 'carga': carga, 'tipo': a['tipo']})
+            d = a['fecha_realizado'] or a['fecha']
+            carga_por_dia[d] = carga_por_dia.get(d, 0) + float(a['carga_ua'])
+            if d >= corte_7d:
+                t = a['tipo']
+                desglose_tipos_7d[t] = round(desglose_tipos_7d.get(t, 0) + float(a['carga_ua']), 1)
 
-        df = pd.DataFrame(rows)
-        df['fecha'] = pd.to_datetime(df['fecha'])
+        # EWMA — idéntico a HyroxLoadManager.calcular_ctl_atl_tsb
+        desde = min(carga_por_dia.keys())
+        n_dias = (fecha_fin - desde).days + 1
+        ctl = atl = 0.0
+        k_ctl = 1 / 42.0
+        k_atl = 1 / 7.0
+        cursor = desde
+        for _ in range(n_dias):
+            t = carga_por_dia.get(cursor, 0)
+            ctl = ctl + (t - ctl) * k_ctl
+            atl = atl + (t - atl) * k_atl
+            cursor += timedelta(days=1)
 
-        # Suma diaria de carga (puede haber varias actividades el mismo día)
-        df_diario = df.groupby('fecha')['carga'].sum().reset_index()
-        df_diario.rename(columns={'carga': 'carga_diaria'}, inplace=True)
-
-        # Rellenar días sin actividad con 0
-        idx = pd.date_range(start=fecha_inicio, end=fecha_fin)
-        df_diario = df_diario.set_index('fecha').reindex(idx, fill_value=0)
-
-        # Rolling averages
-        df_diario['carga_aguda']  = df_diario['carga_diaria'].rolling(window=7,  min_periods=1).mean()
-        df_diario['carga_cronica'] = df_diario['carga_diaria'].rolling(window=28, min_periods=1).mean()
-        df_diario['acwr'] = (
-            df_diario['carga_aguda'] / df_diario['carga_cronica']
-        ).fillna(0).replace([np.inf, -np.inf], 0)
-
-        acwr_actual = round(float(df_diario['acwr'].iloc[-1]), 2) if not df_diario.empty else 0
-        carga_aguda_actual  = round(float(df_diario['carga_aguda'].iloc[-1]), 1)  if not df_diario.empty else 0
-        carga_cronica_actual = round(float(df_diario['carga_cronica'].iloc[-1]), 1) if not df_diario.empty else 0
+        acwr_actual = round(atl / ctl, 2) if ctl > 0 else 0
+        carga_aguda_actual   = round(atl, 1)
+        carga_cronica_actual = round(ctl, 1)
 
         if 0.8 <= acwr_actual <= 1.3:
             zona_riesgo = 'optima'
@@ -498,42 +487,28 @@ class EstadisticasService:
             zona_riesgo = 'cuidado'
         elif acwr_actual >= 1.5:
             zona_riesgo = 'riesgo_alto'
-        else:
+        elif acwr_actual > 0:
             zona_riesgo = 'baja_carga'
+        else:
+            zona_riesgo = 'desconocida'
 
-        # Desglose por tipo de actividad en los últimos 7 días
-        df_tipos = df[df['fecha'] >= pd.Timestamp(fecha_fin - timedelta(days=7))]
-        desglose_tipos = {}
-        if not df_tipos.empty:
-            desglose_tipos = df_tipos.groupby('tipo')['carga'].sum().round(1).to_dict()
-
-        df_json = df_diario.reset_index().rename(columns={'index': 'fecha'})
-        df_json['fecha'] = df_json['fecha'].dt.strftime('%Y-%m-%d')
-
-        # Días de descanso para volver a zona verde (ACWR 0.8–1.3)
-        # Aproximación: media 7d rolling con 0 carga por día de descanso
-        # nueva_aguda = carga_aguda × (7-d)/7  →  ACWR_target = nueva_aguda / carga_cronica
-        # d = ceil(7 × (1 − ACWR_target/ACWR_actual))
         dias_descanso = None
         if carga_cronica_actual > 0:
-            import math
             if acwr_actual > 1.3:
                 d = 7 * (1 - 1.3 / acwr_actual)
                 dias_descanso = max(1, math.ceil(d))
-            elif acwr_actual < 0.8:
-                dias_descanso = 0  # ya bajo, entrenar más
             else:
-                dias_descanso = 0  # ya en verde
+                dias_descanso = 0
 
         return {
-            'dataframe': df_json.to_dict('records'),
+            'dataframe': [],  # EWMA no genera serie diaria completa
             'acwr_actual': acwr_actual,
             'zona_riesgo': zona_riesgo,
             'carga_aguda': carga_aguda_actual,
             'carga_cronica': carga_cronica_actual,
-            'desglose_tipos': desglose_tipos,
-            'dias_descanso': dias_descanso,  # días sin entrenar para volver a zona verde
-            'fuente': 'unificado',
+            'desglose_tipos': desglose_tipos_7d,
+            'dias_descanso': dias_descanso,
+            'fuente': 'unificado_ewma',
         }
 
     @staticmethod

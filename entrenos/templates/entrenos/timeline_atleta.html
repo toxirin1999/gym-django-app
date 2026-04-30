@@ -120,16 +120,24 @@
 .cv-red   { color: var(--tl-red);   }
 .cv-cyan  { color: var(--tl-cyan);  }
 
-.tl-acwr-badge {
+.tl-badges {
   margin-left: auto;
+  display: flex; gap: 6px; align-items: center; flex-shrink: 0;
+}
+.tl-acwr-badge, .tl-tsb-badge {
   font-size: 12px; font-weight: 600;
   padding: 3px 10px; border-radius: 999px;
-  white-space: nowrap; flex-shrink: 0;
+  white-space: nowrap;
 }
 .tl-acwr-ok   { background: rgba(184,255,0,.12); color: var(--tl-green); }
 .tl-acwr-warn { background: rgba(255,179,0,.12); color: var(--tl-yellow); }
 .tl-acwr-risk { background: rgba(255,61,26,.12);  color: var(--tl-red);   }
 .tl-acwr-none { background: rgba(255,255,255,.08);color: var(--tl-muted); }
+/* TSB badges */
+.tl-tsb-fresco      { background: rgba(0,212,160,.12); color: var(--tl-cyan); }
+.tl-tsb-optimo      { background: rgba(184,255,0,.12); color: var(--tl-green); }
+.tl-tsb-fatigado    { background: rgba(255,179,0,.12); color: var(--tl-yellow); }
+.tl-tsb-sobrecargado{ background: rgba(255,61,26,.12);  color: var(--tl-red); }
 
 /* ── Filter pills ── */
 .tl-filters-wrap {
@@ -382,19 +390,23 @@
       <span class="tl-stat-lbl">días activos</span>
     </div>
     <div class="tl-stat">
-      <span class="tl-stat-val cv-red">{{ carga_total }}</span>
-      <span class="tl-stat-lbl">UA total</span>
-    </div>
-    <div class="tl-stat">
       <span class="tl-stat-val cv-cyan">{{ total_actividades }}</span>
       <span class="tl-stat-lbl">actividades</span>
     </div>
-    <div class="tl-acwr-badge
-      {% if acwr.zona_riesgo == 'optima' %}tl-acwr-ok
-      {% elif acwr.zona_riesgo == 'cuidado' %}tl-acwr-warn
-      {% elif acwr.zona_riesgo == 'riesgo_alto' %}tl-acwr-risk
-      {% else %}tl-acwr-none{% endif %}">
-      ACWR {{ acwr.acwr_actual }}
+    <div class="tl-badges">
+      {% if tsb_data %}
+      <span class="tl-tsb-badge tl-tsb-{{ tsb_data.zona }}"
+            title="CTL {{ tsb_data.ctl }} · ATL {{ tsb_data.atl }}">
+        TSB {{ tsb_data.tsb }}
+      </span>
+      {% endif %}
+      <span class="tl-acwr-badge
+        {% if acwr.zona_riesgo == 'optima' %}tl-acwr-ok
+        {% elif acwr.zona_riesgo == 'cuidado' %}tl-acwr-warn
+        {% elif acwr.zona_riesgo == 'riesgo_alto' %}tl-acwr-risk
+        {% else %}tl-acwr-none{% endif %}">
+        ACWR {{ acwr.acwr_actual }}
+      </span>
     </div>
   </div>
 
@@ -464,8 +476,8 @@
             {% endif %}
           </div>
           <div class="tl-info-metric">
-            <span class="tl-metric-val">{% if actividad.distancia_metros %}{% widthratio actividad.distancia_metros 1000 1 %}{% elif actividad.calorias %}{{ actividad.calorias|floatformat:0 }}{% elif actividad.carga_ua %}{{ actividad.carga_ua|floatformat:0 }}{% elif actividad.volumen_kg %}{{ actividad.volumen_kg|floatformat:0 }}{% elif actividad.duracion_minutos %}{{ actividad.duracion_minutos }}{% elif actividad.rpe_medio %}{{ actividad.rpe_medio|floatformat:1 }}{% else %}—{% endif %}</span>
-            <span class="tl-metric-unit">{% if actividad.distancia_metros %}KM{% elif actividad.calorias %}CAL{% elif actividad.carga_ua %}UA{% elif actividad.volumen_kg %}KG{% elif actividad.duracion_minutos %}MIN{% elif actividad.rpe_medio %}RPE{% endif %}</span>
+            <span class="tl-metric-val">{% if actividad.distancia_metros %}{% widthratio actividad.distancia_metros 1000 1 %}{% elif actividad.calorias %}{{ actividad.calorias|floatformat:0 }}{% elif actividad.carga_display %}{{ actividad.carga_display|floatformat:0 }}{% elif actividad.volumen_kg %}{{ actividad.volumen_kg|floatformat:0 }}{% elif actividad.duracion_minutos %}{{ actividad.duracion_minutos }}{% elif actividad.rpe_medio %}{{ actividad.rpe_medio|floatformat:1 }}{% else %}—{% endif %}</span>
+            <span class="tl-metric-unit">{% if actividad.distancia_metros %}KM{% elif actividad.calorias %}CAL{% elif actividad.carga_display %}sRPE{% elif actividad.volumen_kg %}KG{% elif actividad.duracion_minutos %}MIN{% elif actividad.rpe_medio %}RPE{% endif %}</span>
           </div>
         </div>
 
