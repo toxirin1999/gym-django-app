@@ -968,17 +968,18 @@ class CompetitionStandardsService:
         },
     }
 
-    # Equivalencias de ejercicios (heurística)
+    # Equivalencias de ejercicios con factores ajustados por similitud biomecánica
+    # Factor < 1.0 = el gym no replica exactamente la estación → penalización de transferencia
     EQUIVALENCIAS = {
-        # Modo 'kg' (default): peso_max_serie × factor → kg_registrado
-        'Prensa de piernas': {'target': 'Sled Push',      'factor': 1.0,  'mode': 'kg'},
-        'Remo polea baja':   {'target': 'Sled Pull',      'factor': 1.0,  'mode': 'kg'},
-        'Zancadas':          {'target': 'Sandbag Lunges', 'factor': 0.7,  'mode': 'kg'},
-        'Thruster':          {'target': 'Wall Balls',     'factor': 1.0,  'mode': 'kg'},
-        'Paseo del Granjero': {'target': 'Farmers Carry',  'factor': 1.0,  'mode': 'kg'},
-        'Paseo granjero':    {'target': 'Farmers Carry',  'factor': 1.0,  'mode': 'kg'},
-        'Farmer walk':       {'target': 'Farmers Carry',  'factor': 1.0,  'mode': 'kg'},
-        'Remo':              {'target': 'Rowing',         'factor': 1.0,  'mode': 'vol'},
+        # Modo 'kg': peso_max_serie × factor → kg_registrado
+        'Prensa de piernas': {'target': 'Sled Push',      'factor': 0.6,  'mode': 'kg'},  # empuje vertical ≠ horizontal
+        'Remo polea baja':   {'target': 'Sled Pull',      'factor': 0.7,  'mode': 'kg'},  # tracción similar pero sin arrastre
+        'Zancadas':          {'target': 'Sandbag Lunges', 'factor': 0.7,  'mode': 'kg'},  # sin saco y sin fatiga de agarre
+        'Thruster':          {'target': 'Wall Balls',     'factor': 0.8,  'mode': 'kg'},  # patrón muy similar
+        'Paseo del Granjero': {'target': 'Farmers Carry', 'factor': 0.9,  'mode': 'kg'},  # casi idéntico
+        'Paseo granjero':    {'target': 'Farmers Carry',  'factor': 0.9,  'mode': 'kg'},
+        'Farmer walk':       {'target': 'Farmers Carry',  'factor': 0.9,  'mode': 'kg'},
+        'Remo':              {'target': 'Rowing',         'factor': 1.0,  'mode': 'vol'},  # mismo ergómetro
         # Modo 'reps_to_dist': total_reps × factor → vol_registrado (metros)
         'Burpees':             {'target': 'Burpee Broad Jumps', 'factor': 1.3, 'mode': 'reps_to_dist'},
         # Alias de nombre exacto guardado por el parser
@@ -1027,35 +1028,45 @@ class CompetitionStandardsService:
             for act in actividades_directas:
                 metricas = act.get('data_metricas', {}) or {}
                 series = metricas.get('series', [])
-                # Soportar distancia en clave 'distancia', 'distancia_m' o 'distancia_km'
-                distancia = float(metricas.get('distancia', 0) or 0)
-                if not distancia:
-                    distancia = float(metricas.get('distancia_m', 0) or 0)
-                if not distancia:
-                    distancia = float(metricas.get('distancia_km', 0) or 0) * 1000
+
+                # Distancia raíz (actividad completa sin series)
+                distancia_raiz = float(metricas.get('distancia', 0) or 0)
+                if not distancia_raiz:
+                    distancia_raiz = float(metricas.get('distancia_m', 0) or 0)
+                if not distancia_raiz:
+                    distancia_raiz = float(metricas.get('distancia_km', 0) or 0) * 1000
+
                 total_reps = 0
+                distancia_series = 0.0  # suma de distancias dentro de las series
 
                 if isinstance(series, list):
                     for serie in series:
                         peso_serie = float(serie.get('peso_kg', serie.get('peso', 0)) or 0)
                         reps_serie = float(serie.get('reps', 0) or 0)
+                        dist_serie = float(serie.get('distancia_m', serie.get('distancia', 0)) or 0)
                         kg_registrado = max(kg_registrado, peso_serie)
                         total_reps += reps_serie
+                        distancia_series += dist_serie
                 elif isinstance(series, dict):
                     peso_serie = float(series.get('peso_kg', series.get('peso', 0)) or 0)
                     reps_serie = float(series.get('reps', 0) or 0)
+                    dist_serie = float(series.get('distancia_m', series.get('distancia', 0)) or 0)
                     kg_registrado = max(kg_registrado, peso_serie)
                     total_reps = reps_serie
+                    distancia_series = dist_serie
 
                 # Fallback: peso_kg en nivel raíz (ej. Sandbag Lunges planificadas)
                 if not kg_registrado:
                     kg_registrado = max(kg_registrado, float(metricas.get('peso_kg', 0) or 0))
 
-                # Volumen acumulado
+                # Distancia efectiva: raíz si existe, si no suma de series
+                distancia_efectiva = distancia_raiz if distancia_raiz > 0 else distancia_series
+
+                # Mejor sesión completa (max entre sesiones, sum dentro de cada sesión)
                 if vol_unit == 'reps':
                     vol_registrado = max(vol_registrado, total_reps)
                 else:
-                    vol_registrado = max(vol_registrado, distancia)
+                    vol_registrado = max(vol_registrado, distancia_efectiva)
 
             # ── 2. Equivalencias ────────────────────────────────────────────
             for equiv_nombre, equiv_data in cls.EQUIVALENCIAS.items():
@@ -1098,10 +1109,11 @@ class CompetitionStandardsService:
             vol_registrado = round(vol_registrado, 1)
 
             # ── 3. Porcentaje ponderado ─────────────────────────────────────
+            # Dual: 60% peso (limitante físico) + 40% volumen (capacidad de trabajo)
             if es_dual:
                 pct_kg  = min((kg_registrado  / kg_objetivo)  * 100, 100) if kg_objetivo  > 0 else 0
                 pct_vol = min((vol_registrado / vol_objetivo) * 100, 100) if vol_objetivo > 0 else 0
-                porcentaje = int(pct_kg * 0.4 + pct_vol * 0.6)
+                porcentaje = int(pct_kg * 0.6 + pct_vol * 0.4)
             else:
                 # Solo distancia pura
                 pct_vol = min((vol_registrado / vol_objetivo) * 100, 100) if vol_objetivo > 0 else 0

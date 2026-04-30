@@ -2912,7 +2912,39 @@ const HELP_CONTENT = {
   },
   'estandares': {
     title: 'Estándares Hyrox',
-    body: `<p>Benchmarks oficiales de Hyrox para tu categoría. Compara dónde estás vs. dónde necesitas llegar:</p><ul><li><strong>Verde</strong> — Superas el estándar de tu categoría.</li><li><strong>Amarillo</strong> — Dentro del rango competitivo.</li><li><strong>Rojo</strong> — Por debajo del estándar; el plan lo prioriza.</li></ul><p>Los estándares cambian según tu categoría (Open / Pro) y género. Actualiza tu objetivo si cambias de categoría.</p>`
+    body: `
+      <p style="font-size:11px;color:#94a3b8;margin:0 0 14px;line-height:1.6;">
+        Compara tu mejor rendimiento registrado en cada estación vs. los estándares oficiales de tu categoría.
+      </p>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div style="padding:10px 12px;border-radius:6px;background:rgba(255,255,255,.03);border:1px solid #334155;">
+          <div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.1em;margin-bottom:5px;">Cómo se mide el progreso</div>
+          <ul style="margin:0;padding:0 0 0 12px;font-size:11px;color:#94a3b8;line-height:1.8;">
+            <li><strong style="color:#e2e8f0;">Distancia pura</strong> (SkiErg, Rowing, Burpee) — mejor sesión continua registrada vs. distancia oficial.</li>
+            <li><strong style="color:#e2e8f0;">Dual</strong> (Sled, Carry, Lunges, Wall Balls) — <strong style="color:#f59e0b;">60% peso alcanzado + 40% volumen</strong>. El peso es el factor limitante en carrera.</li>
+          </ul>
+        </div>
+        <div style="padding:10px 12px;border-radius:6px;background:rgba(255,255,255,.03);border:1px solid #334155;">
+          <div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.1em;margin-bottom:5px;">Ejercicios equivalentes del gym</div>
+          <p style="font-size:11px;color:#94a3b8;margin:0 0 6px;line-height:1.5;">Algunos ejercicios de gym cuentan con un factor de transferencia reducido:</p>
+          <ul style="margin:0;padding:0 0 0 12px;font-size:11px;color:#94a3b8;line-height:1.8;">
+            <li>Prensa de piernas → Sled Push <strong style="color:#e2e8f0;">×0.6</strong> (empuje vertical ≠ horizontal)</li>
+            <li>Remo polea baja → Sled Pull <strong style="color:#e2e8f0;">×0.7</strong></li>
+            <li>Thruster → Wall Balls <strong style="color:#e2e8f0;">×0.8</strong></li>
+            <li>Farmer's Carry gym → Farmers Carry <strong style="color:#e2e8f0;">×0.9</strong></li>
+          </ul>
+        </div>
+        <div style="padding:10px 12px;border-radius:6px;background:rgba(255,255,255,.03);border:1px solid #334155;">
+          <div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.1em;margin-bottom:5px;">Colores</div>
+          <ul style="margin:0;padding:0 0 0 12px;font-size:11px;color:#94a3b8;line-height:1.8;">
+            <li><strong style="color:#22c55e;">Verde / ✓</strong> — 100%: estándar superado</li>
+            <li><strong style="color:#f59e0b;">Amarillo</strong> — 50–99%: en progreso</li>
+            <li><strong style="color:#f97316;">Naranja/rojo</strong> — &lt;50%: el plan lo prioriza</li>
+          </ul>
+        </div>
+        <p style="font-size:10px;color:#475569;margin:0;line-height:1.5;">El progreso global es la media de los 8 porcentajes. Registra sesiones específicas de estación para verlo avanzar.</p>
+      </div>
+    `
   },
   'plan': {
     title: 'Plan de Entrenamiento',
