@@ -2132,6 +2132,13 @@ class HyroxSessionOverrideEngine:
         if tsb >= -10:
             return None
 
+        # TSB negativo es matemáticamente inevitable cuando ACWR > 1.0 y el CTL es alto.
+        # Si el ACWR está en zona óptima (≤ 1.3), el TSB refleja carga productiva, no
+        # sobrecarga. Solo forzar override "amarillo" cuando el ACWR confirma exceso real.
+        acwr = race_briefing.get('acwr')
+        if acwr is not None and acwr <= 1.3 and tsb >= -20:
+            return None
+
         sesion = (
             HyroxSession.objects
             .filter(objective=objective, fecha=hoy, estado='planificado')
