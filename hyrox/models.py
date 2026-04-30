@@ -237,17 +237,19 @@ class HyroxObjective(models.Model):
         """
         fuerza = self.get_race_readiness_score()
 
-        # Resistencia: 0 % de base, +6 % por cada sesión de carrera completada (máx 100 %)
+        # Resistencia: base 20 % si tiene tiempo 5K registrado, +5 % por sesión de carrera (máx 100 %)
         carrera_sessions = self.sessions.filter(
             estado='completado', activities__tipo_actividad='carrera'
         ).distinct().count()
-        resistencia = min(carrera_sessions * 6, 100)
+        base_resistencia = 20 if self.tiempo_5k_base else 0
+        resistencia = min(base_resistencia + carrera_sessions * 5, 100)
 
-        # Potencia: 0 % de base, +12 % por cada sesión de estaciones Hyrox (máx 100 %)
+        # Potencia: base 15 % si tiene RMs registrados, +10 % por sesión de estaciones Hyrox (máx 100 %)
+        base_potencia = 15 if (self.rm_sentadilla or self.rm_peso_muerto) else 0
         potencia_sessions = self.sessions.filter(
             estado='completado', activities__tipo_actividad='hyrox_station'
         ).distinct().count()
-        potencia = min(potencia_sessions * 12, 100)
+        potencia = min(base_potencia + potencia_sessions * 10, 100)
 
         return {
             "fuerza": fuerza,
