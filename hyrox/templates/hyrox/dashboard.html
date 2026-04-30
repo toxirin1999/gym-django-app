@@ -884,6 +884,7 @@ a.rb-dia:focus-visible {
         {% endif %}
         <a href="{% url 'hyrox:registrar_entrenamiento' objective_id=objetivo_activo.id %}" class="rb-btn rb-btn-primary"><i class="fas fa-plus"></i> Registrar Entreno</a>
         <a href="{% url 'hyrox:crear_objetivo' %}" class="rb-btn rb-btn-ghost"><i class="fas fa-pen"></i> Editar</a>
+        <a href="{% url 'hyrox:guia_tecnica' %}" class="rb-btn rb-btn-ghost"><i class="fas fa-book-open"></i> Guía técnica</a>
         <button type="button" class="rb-btn rb-btn-ghost" onclick="document.getElementById('modal-regen-plan').style.display='flex'">
           <i class="fas fa-sync-alt"></i> Regenerar plan
         </button>
