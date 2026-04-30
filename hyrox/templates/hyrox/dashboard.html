@@ -933,28 +933,77 @@ a.rb-dia:focus-visible {
   </div>
   {% endif %}
 
-  <!-- Weekly Flash -->
-  {% if resumen_semanal %}
-  <div class="rb-flash rb-a1">
-    <div class="rb-flash-head">
-      <i class="fas fa-star"></i> Resumen Dominical
+  <!-- ═══════════════ RESUMEN SEMANAL ═══════════════ -->
+  {% if resumen_semanal and resumen_semanal.tiene_datos %}
+  <section class="rb-section rb-a1" id="rb-weekly-summary">
+    <div class="rb-section-head">
+      <span class="rb-section-num">—</span>
+      <h2 class="rb-section-title">Resumen · últimos 7 días</h2>
+      <div class="rb-section-line"></div>
     </div>
-    <div class="rb-flash-title">¡Semana completada!</div>
-    <div class="rb-flash-stats">
-      <div class="rb-flash-stat">
-        <div class="rb-flash-stat-lbl">Volumen</div>
-        <div class="rb-flash-stat-val">{{ resumen_semanal.volumen_kg }}<span class="rb-flash-stat-unit">KG</span></div>
+
+    <!-- Métricas clave -->
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:10px;">
+      <div style="background:var(--bg-2,#f8fafc);border:1px solid var(--line-2);border-radius:6px;padding:8px;text-align:center;">
+        <div style="font-family:var(--font-mono);font-size:9px;color:var(--ink-4);text-transform:uppercase;">Sesiones</div>
+        <div style="font-family:var(--font-disp);font-size:20px;font-weight:700;color:var(--ink);line-height:1.1;">
+          {{ resumen_semanal.n_completadas }}<span style="font-size:11px;color:var(--ink-4);">/{{ resumen_semanal.n_planificadas }}</span>
+        </div>
+        <div style="font-family:var(--font-mono);font-size:8px;color:{% if resumen_semanal.cumplimiento_pct >= 80 %}var(--ok){% else %}#f59e0b{% endif %};">
+          {{ resumen_semanal.cumplimiento_pct }}% cumplimiento
+        </div>
       </div>
-      <div class="rb-flash-stat">
-        <div class="rb-flash-stat-lbl">Carrera</div>
-        <div class="rb-flash-stat-val">{{ resumen_semanal.distancia_km }}<span class="rb-flash-stat-unit">KM</span></div>
+      <div style="background:var(--bg-2,#f8fafc);border:1px solid var(--line-2);border-radius:6px;padding:8px;text-align:center;">
+        <div style="font-family:var(--font-mono);font-size:9px;color:var(--ink-4);text-transform:uppercase;">Carga</div>
+        <div style="font-family:var(--font-disp);font-size:20px;font-weight:700;color:var(--ink);line-height:1.1;">
+          {{ resumen_semanal.trimp_semana }}<span style="font-size:9px;color:var(--ink-4);"> TRIMP</span>
+        </div>
+        <div style="font-family:var(--font-mono);font-size:8px;color:var(--ink-4);">
+          RPE medio {% if resumen_semanal.rpe_medio %}{{ resumen_semanal.rpe_medio }}/10{% else %}—{% endif %}
+        </div>
       </div>
-      <div class="rb-flash-stat">
-        <div class="rb-flash-stat-lbl">RPE Med</div>
-        <div class="rb-flash-stat-val">{{ resumen_semanal.rpe_medio }}<span class="rb-flash-stat-unit">/10</span></div>
+      <div style="background:var(--bg-2,#f8fafc);border:1px solid var(--line-2);border-radius:6px;padding:8px;text-align:center;">
+        <div style="font-family:var(--font-mono);font-size:9px;color:var(--ink-4);text-transform:uppercase;">Forma</div>
+        <div style="font-family:var(--font-disp);font-size:14px;font-weight:700;line-height:1.2;
+          color:{% if resumen_semanal.tsb >= 0 %}var(--ok){% elif resumen_semanal.tsb >= -15 %}var(--accent){% else %}#ef4444{% endif %};">
+          {% if resumen_semanal.tsb is not None %}TSB {{ resumen_semanal.tsb }}{% else %}—{% endif %}
+        </div>
+        <div style="font-family:var(--font-mono);font-size:8px;color:var(--ink-4);">
+          {{ resumen_semanal.estado_forma.estado }}
+        </div>
       </div>
     </div>
-  </div>
+
+    <!-- Lo que aprendió el sistema -->
+    {% if resumen_semanal.aprendizajes %}
+    <div style="margin-bottom:8px;">
+      <div style="font-family:var(--font-mono);font-size:9px;color:var(--ink-4);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;">
+        <i class="fas fa-brain" style="margin-right:3px;"></i>Lo que aprendió el plan esta semana
+      </div>
+      {% for ap in resumen_semanal.aprendizajes %}
+      <div style="display:flex;gap:8px;align-items:flex-start;padding:5px 0;border-bottom:1px solid var(--line-2);">
+        <i class="fas {{ ap.icono }}" style="font-size:10px;color:{{ ap.color }};margin-top:2px;flex-shrink:0;"></i>
+        <span style="font-family:var(--font-mono);font-size:9px;color:var(--ink-3);line-height:1.4;">{{ ap.texto }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Próxima semana -->
+    {% if resumen_semanal.proxima_semana %}
+    <div>
+      <div style="font-family:var(--font-mono);font-size:9px;color:var(--ink-4);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">
+        <i class="fas fa-calendar-alt" style="margin-right:3px;"></i>Próxima semana
+      </div>
+      {% for ses in resumen_semanal.proxima_semana %}
+      <div style="font-family:var(--font-mono);font-size:9px;color:var(--ink-3);padding:2px 0;">
+        <span style="color:var(--ink-5);">{{ ses.fecha|date:"D d" }}</span> · {{ ses.titulo|default:"Entrenamiento" }}
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+  </section>
   {% endif %}
 
   <!-- ═══════════════ RACE INTELLIGENCE COMMAND ═══════════════ -->
