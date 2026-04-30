@@ -1005,94 +1005,163 @@ a.rb-dia:focus-visible {
       </div>
     </div>
 
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">
-      <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px 12px;">
+    <!-- ── RACE COMMAND VISUAL PANEL ─────────────────────────────────────── -->
+    <style>
+      .rc-panel{background:linear-gradient(135deg,rgba(255,255,255,.04) 0%,rgba(255,255,255,.01) 100%);border:1px solid rgba(255,255,255,.1);border-radius:12px;overflow:hidden;margin-bottom:12px;}
+      .rc-time-hero{padding:14px 16px 12px;position:relative;}
+      .rc-time-hero::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(239,68,68,.06) 0%,transparent 60%);pointer-events:none;}
+      .rc-label{font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.35);font-family:var(--font-body);margin-bottom:3px;}
+      .rc-time-main{font-family:var(--font-mono);font-size:36px;font-weight:800;letter-spacing:-.5px;line-height:1;color:var(--accent);}
+      .rc-time-range{font-family:var(--font-mono);font-size:10px;color:rgba(255,255,255,.3);margin-top:3px;}
+      .rc-obj-row{display:flex;align-items:center;gap:8px;margin-top:10px;}
+      .rc-obj-chip{font-family:var(--font-mono);font-size:11px;font-weight:600;padding:3px 8px;border-radius:4px;background:rgba(255,255,255,.07);color:rgba(255,255,255,.5);border:1px solid rgba(255,255,255,.1);}
+      .rc-diff-chip{font-family:var(--font-mono);font-size:12px;font-weight:800;padding:3px 9px;border-radius:4px;}
+      .rc-diff-over{background:rgba(245,158,11,.12);color:#f59e0b;border:1px solid rgba(245,158,11,.25);}
+      .rc-diff-under{background:rgba(34,197,94,.12);color:#22c55e;border:1px solid rgba(34,197,94,.25);}
+      .rc-diff-exact{background:rgba(20,184,166,.12);color:#14b8a6;border:1px solid rgba(20,184,166,.25);}
+      .rc-trend{font-family:var(--font-mono);font-size:11px;margin-left:auto;}
+      /* Progress bar toward goal */
+      .rc-progress-wrap{padding:0 16px 14px;}
+      .rc-progress-labels{display:flex;justify-content:space-between;margin-bottom:5px;}
+      .rc-progress-lbl{font-size:9px;color:rgba(255,255,255,.3);font-family:var(--font-body);}
+      .rc-progress-bar{height:4px;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden;}
+      .rc-progress-fill{height:100%;border-radius:2px;transition:width .8s cubic-bezier(.25,.46,.45,.94);}
+      /* Metrics row */
+      .rc-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:rgba(255,255,255,.07);border-top:1px solid rgba(255,255,255,.07);}
+      .rc-metric{padding:10px 12px;background:var(--card);display:flex;flex-direction:column;gap:4px;}
+      .rc-metric-val{font-family:var(--font-mono);font-size:18px;font-weight:800;line-height:1;}
+      .rc-metric-bar{height:3px;background:rgba(255,255,255,.08);border-radius:2px;margin-top:4px;overflow:hidden;}
+      .rc-metric-fill{height:100%;border-radius:2px;}
+      /* Decision strip */
+      .rc-decision{padding:11px 14px;border-top:1px solid rgba(255,255,255,.07);display:flex;align-items:flex-start;gap:10px;}
+      .rc-decision-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:3px;}
+      .rc-decision-body{flex:1;min-width:0;}
+      .rc-decision-title{font-size:12px;font-weight:700;color:rgba(255,255,255,.9);font-family:var(--font-body);margin-bottom:3px;}
+      .rc-decision-msg{font-size:11px;color:rgba(255,255,255,.45);font-family:var(--font-body);line-height:1.5;margin-bottom:4px;}
+      .rc-decision-action{font-size:11px;font-weight:600;font-family:var(--font-body);}
+    </style>
+
+    <div class="rc-panel">
+
+      <!-- TIME HERO -->
+      <div class="rc-time-hero">
+        <div class="rc-label">Tiempo estimado hoy</div>
         {% if race_briefing.tiempo_estimado %}
-          {% if race_briefing.tiempo_objetivo %}
-          <!-- Objetivo + comparativa -->
-          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;">
-            <span style="font-size:9px;color:var(--ink-4);font-family:var(--font-body);text-transform:uppercase;letter-spacing:.05em;">Objetivo</span>
-            <span style="font-family:var(--font-mono);font-size:13px;font-weight:600;color:var(--ink-3);">{{ race_briefing.tiempo_objetivo }}</span>
-          </div>
-          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:2px;">
-            <span style="font-size:9px;color:var(--ink-4);font-family:var(--font-body);text-transform:uppercase;letter-spacing:.05em;">Hoy</span>
-            <span style="font-family:var(--font-mono);font-size:20px;font-weight:700;color:var(--accent);">{{ race_briefing.tiempo_estimado }}</span>
-          </div>
+          <div class="rc-time-main">{{ race_briefing.tiempo_estimado }}</div>
           {% if race_briefing.tiempo_rango_min %}
-          <div style="font-size:9px;color:var(--ink-4);font-family:var(--font-mono);text-align:right;margin-bottom:6px;">
-            {{ race_briefing.tiempo_rango_min }} – {{ race_briefing.tiempo_rango_max }}
-          </div>
+          <div class="rc-time-range">{{ race_briefing.tiempo_rango_min }} – {{ race_briefing.tiempo_rango_max }}</div>
           {% endif %}
-          <div style="border-top:1px solid var(--border);padding-top:6px;display:flex;justify-content:space-between;align-items:center;">
-            <span style="font-size:9px;color:var(--ink-4);font-family:var(--font-body);">Diferencia</span>
+          {% if race_briefing.tiempo_objetivo %}
+          <div class="rc-obj-row">
+            <span class="rc-obj-chip">OBJ {{ race_briefing.tiempo_objetivo }}</span>
             {% if race_briefing.diferencia_secs is not None %}
               {% if race_briefing.diferencia_secs > 0 %}
-              <span style="font-family:var(--font-mono);font-size:12px;font-weight:700;color:#f59e0b;">
-                {{ race_briefing.diferencia_secs|fmt_diff_secs }}
-              </span>
+              <span class="rc-diff-chip rc-diff-over">{{ race_briefing.diferencia_secs|fmt_diff_secs }}</span>
               {% elif race_briefing.diferencia_secs < 0 %}
-              <span style="font-family:var(--font-mono);font-size:12px;font-weight:700;color:#22c55e;">
-                {{ race_briefing.diferencia_secs|fmt_diff_secs }}
-              </span>
+              <span class="rc-diff-chip rc-diff-under">{{ race_briefing.diferencia_secs|fmt_diff_secs }}</span>
               {% else %}
-              <span style="font-family:var(--font-mono);font-size:12px;font-weight:700;color:var(--ink-3);">En objetivo</span>
+              <span class="rc-diff-chip rc-diff-exact">En objetivo</span>
               {% endif %}
             {% endif %}
-            {% if race_briefing.tendencia_secs is not None %}
-            <span style="font-family:var(--font-mono);font-size:11px;color:{% if race_briefing.tendencia_secs < 0 %}#22c55e{% elif race_briefing.tendencia_secs > 0 %}#f59e0b{% else %}var(--ink-4){% endif %};">
-              {% if race_briefing.tendencia_secs < 0 %}↓{% elif race_briefing.tendencia_secs > 0 %}↑{% else %}→{% endif %}
-              {% if race_briefing.tendencia_secs != 0 %}{{ race_briefing.tendencia_secs|fmt_diff_secs }}{% endif %}
+            {% if race_briefing.tendencia_secs is not None and race_briefing.tendencia_secs != 0 %}
+            <span class="rc-trend" style="color:{% if race_briefing.tendencia_secs < 0 %}#22c55e{% else %}#f59e0b{% endif %};">
+              {% if race_briefing.tendencia_secs < 0 %}↓{% else %}↑{% endif %} {{ race_briefing.tendencia_secs|fmt_diff_secs }} hoy
             </span>
             {% endif %}
           </div>
-          {% else %}
-          <!-- Sin objetivo configurado: mostrar solo tiempo estimado -->
-          <div style="font-size:9px;color:var(--ink-4);font-family:var(--font-body);margin-bottom:2px;">Tiempo estimado hoy</div>
-          <div style="font-family:var(--font-mono);font-size:20px;font-weight:700;color:var(--accent);">{{ race_briefing.tiempo_estimado }}</div>
-          {% if race_briefing.tiempo_rango_min %}
-          <div style="font-size:9px;color:var(--ink-4);font-family:var(--font-mono);margin-top:2px;">
-            {{ race_briefing.tiempo_rango_min }} – {{ race_briefing.tiempo_rango_max }}
+          <!-- progress bar: how close to objective (capped 0–100%) -->
+          <div class="rc-progress-wrap" style="padding:10px 0 0;">
+            <div class="rc-progress-labels">
+              <span class="rc-progress-lbl">Progreso al objetivo</span>
+              <span class="rc-progress-lbl" style="color:{% if race_briefing.diferencia_secs and race_briefing.diferencia_secs <= 0 %}#22c55e{% elif race_briefing.diferencia_secs and race_briefing.diferencia_secs < 180 %}#f59e0b{% else %}rgba(255,255,255,.3){% endif %};">
+                {% if race_briefing.diferencia_secs is not None %}
+                  {% if race_briefing.diferencia_secs <= 0 %}META{% elif race_briefing.diferencia_secs < 60 %}&lt;1 min{% else %}{{ race_briefing.diferencia_secs|fmt_diff_secs }}{% endif %}
+                {% endif %}
+              </span>
+            </div>
+            <div class="rc-progress-bar">
+              <div class="rc-progress-fill" id="rc-prog-fill"
+                style="width:0%;background:{% if race_briefing.diferencia_secs and race_briefing.diferencia_secs <= 0 %}#22c55e{% elif race_briefing.diferencia_secs and race_briefing.diferencia_secs < 180 %}#f59e0b{% else %}#ef4444{% endif %};"
+                data-target="{% if race_briefing.diferencia_secs is not None %}{% if race_briefing.diferencia_secs <= 0 %}100{% else %}{{ race_briefing.diferencia_secs }}{% endif %}{% else %}50{% endif %}">
+              </div>
+            </div>
           </div>
-          {% endif %}
-          <div style="font-size:9px;color:var(--ink-4);font-family:var(--font-body);margin-top:4px;">
-            <a href="{% url 'hyrox:crear_objetivo' %}" style="color:var(--accent);">Añade tu tiempo objetivo →</a>
+          {% else %}
+          <div style="margin-top:8px;font-size:10px;color:rgba(255,255,255,.3);font-family:var(--font-body);">
+            <a href="{% url 'hyrox:crear_objetivo' %}" style="color:var(--accent);">+ Añade tu tiempo objetivo</a>
           </div>
           {% endif %}
         {% else %}
-        <div style="font-size:9px;color:var(--ink-4);font-family:var(--font-body);margin-bottom:2px;">Tiempo estimado hoy</div>
-        <div style="font-family:var(--font-mono);font-size:12px;color:var(--ink-4);margin-top:2px;">Pendiente de calibrar</div>
-        <div style="font-size:9px;color:var(--ink-4);font-family:var(--font-body);margin-top:3px;line-height:1.4;">Añade tu tiempo de 5K en <a href="{% url 'hyrox:crear_objetivo' %}" style="color:var(--accent);text-decoration:underline;">Editar objetivo</a></div>
+          <div style="font-family:var(--font-mono);font-size:14px;color:rgba(255,255,255,.3);margin:6px 0 4px;">Pendiente de calibrar</div>
+          <div style="font-size:10px;color:rgba(255,255,255,.25);font-family:var(--font-body);">
+            Añade tu tiempo de 5K en <a href="{% url 'hyrox:crear_objetivo' %}" style="color:var(--accent);">Editar objetivo</a>
+          </div>
         {% endif %}
       </div>
-      <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:6px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;">
-          <span style="font-size:9px;color:var(--ink-4);font-family:var(--font-body);">Readiness</span>
-          <span style="font-family:var(--font-mono);font-size:13px;font-weight:700;color:{% if race_briefing.readiness >= 70 %}var(--ok){% elif race_briefing.readiness >= 45 %}var(--warn){% else %}var(--accent){% endif %};">{{ race_briefing.readiness }}/100</span>
+
+      <!-- METRICS ROW -->
+      <div class="rc-metrics">
+        <!-- Readiness -->
+        <div class="rc-metric">
+          <span class="rc-label">Readiness</span>
+          <span class="rc-metric-val" style="color:{% if race_briefing.readiness >= 70 %}#22c55e{% elif race_briefing.readiness >= 45 %}#f59e0b{% else %}#ef4444{% endif %};">
+            {{ race_briefing.readiness }}<span style="font-size:11px;font-weight:400;color:rgba(255,255,255,.3);">/100</span>
+          </span>
+          <div class="rc-metric-bar">
+            <div class="rc-metric-fill" style="width:{{ race_briefing.readiness }}%;background:{% if race_briefing.readiness >= 70 %}#22c55e{% elif race_briefing.readiness >= 45 %}#f59e0b{% else %}#ef4444{% endif %};"></div>
+          </div>
         </div>
-        <div style="display:flex;justify-content:space-between;align-items:center;">
-          <span style="font-size:9px;color:var(--ink-4);font-family:var(--font-body);">TSB (forma)</span>
-          <span style="font-family:var(--font-mono);font-size:13px;font-weight:700;color:{% if race_briefing.tsb and race_briefing.tsb > 0 %}var(--ok){% elif race_briefing.tsb and race_briefing.tsb < -15 %}var(--accent){% else %}var(--warn){% endif %};">{{ race_briefing.tsb|default:"—" }}</span>
+        <!-- TSB -->
+        <div class="rc-metric">
+          <span class="rc-label">TSB · Forma</span>
+          <span class="rc-metric-val" style="color:{% if race_briefing.tsb and race_briefing.tsb > 0 %}#22c55e{% elif race_briefing.tsb and race_briefing.tsb < -15 %}#ef4444{% else %}#f59e0b{% endif %};">
+            {{ race_briefing.tsb|default:"—" }}
+          </span>
+          {% if race_briefing.tsb %}
+          <div class="rc-metric-bar">
+            <div class="rc-metric-fill" style="width:{% if race_briefing.tsb > 0 %}100{% elif race_briefing.tsb > -30 %}{{ race_briefing.tsb|add:30 }}{% else %}0{% endif %}%;background:{% if race_briefing.tsb > 0 %}#22c55e{% elif race_briefing.tsb > -15 %}#f59e0b{% else %}#ef4444{% endif %};"></div>
+          </div>
+          {% endif %}
         </div>
-        <div style="display:flex;justify-content:space-between;align-items:center;">
-          <span style="font-size:9px;color:var(--ink-4);font-family:var(--font-body);">ACWR</span>
+        <!-- ACWR -->
+        <div class="rc-metric">
+          <span class="rc-label">ACWR</span>
           {% if race_briefing.acwr %}
-          <span style="font-family:var(--font-mono);font-size:13px;font-weight:700;color:{% if race_briefing.acwr > 1.5 %}var(--accent){% elif race_briefing.acwr > 1.3 %}var(--warn){% else %}var(--ok){% endif %};">{{ race_briefing.acwr }}</span>
+          <span class="rc-metric-val" style="color:{% if race_briefing.acwr > 1.5 %}#ef4444{% elif race_briefing.acwr > 1.3 %}#f59e0b{% else %}#22c55e{% endif %};">
+            {{ race_briefing.acwr }}
+          </span>
+          <div class="rc-metric-bar">
+            <div class="rc-metric-fill" style="width:{% widthratio race_briefing.acwr 2 100 %}%;background:{% if race_briefing.acwr > 1.5 %}#ef4444{% elif race_briefing.acwr > 1.3 %}#f59e0b{% else %}#22c55e{% endif %};"></div>
+          </div>
           {% else %}
-          <span style="font-family:var(--font-mono);font-size:10px;color:var(--ink-4);" title="Necesitas 28+ días de historial para un ACWR fiable">— &lt;28d</span>
+          <span class="rc-metric-val" style="color:rgba(255,255,255,.2);">—</span>
+          <div style="font-size:9px;color:rgba(255,255,255,.2);margin-top:2px;">28d mín.</div>
           {% endif %}
         </div>
       </div>
+
+      <!-- DECISION STRIP -->
+      <div class="rc-decision">
+        <div class="rc-decision-dot" style="background:{% if race_briefing.decision.nivel == 'rojo' %}#ef4444{% elif race_briefing.decision.nivel == 'amarillo' %}#f59e0b{% else %}#22c55e{% endif %};box-shadow:0 0 6px {% if race_briefing.decision.nivel == 'rojo' %}#ef444480{% elif race_briefing.decision.nivel == 'amarillo' %}#f59e0b80{% else %}#22c55e80{% endif %};"></div>
+        <div class="rc-decision-body">
+          <div class="rc-decision-title">{{ race_briefing.decision.titulo }}</div>
+          <div class="rc-decision-msg">{{ race_briefing.decision.mensaje }}</div>
+          <div class="rc-decision-action" style="color:{% if race_briefing.decision.nivel == 'rojo' %}#ef4444{% elif race_briefing.decision.nivel == 'amarillo' %}#f59e0b{% else %}#22c55e{% endif %};">→ {{ race_briefing.decision.accion }}</div>
+        </div>
+      </div>
+
     </div>
 
-    <!-- Decisión del día -->
-    <div style="background:{% if race_briefing.decision.nivel == 'rojo' %}oklch(0.55 0.21 28 / 0.08){% elif race_briefing.decision.nivel == 'amarillo' %}oklch(0.72 0.17 70 / 0.08){% else %}oklch(0.55 0.15 145 / 0.08){% endif %};border:1px solid {% if race_briefing.decision.nivel == 'rojo' %}oklch(0.55 0.21 28 / 0.30){% elif race_briefing.decision.nivel == 'amarillo' %}oklch(0.72 0.17 70 / 0.30){% else %}oklch(0.55 0.15 145 / 0.30){% endif %};border-radius:8px;padding:10px 12px;">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
-        <i class="fas {% if race_briefing.decision.nivel == 'rojo' %}fa-exclamation-triangle{% elif race_briefing.decision.nivel == 'amarillo' %}fa-exclamation-circle{% else %}fa-check-circle{% endif %}" style="color:{% if race_briefing.decision.nivel == 'rojo' %}var(--accent){% elif race_briefing.decision.nivel == 'amarillo' %}var(--warn){% else %}var(--ok){% endif %};font-size:12px;"></i>
-        <span style="font-family:var(--font-disp);font-size:12px;font-weight:700;color:var(--ink-1);">{{ race_briefing.decision.titulo }}</span>
-      </div>
-      <p style="font-size:11px;color:var(--ink-3);font-family:var(--font-body);margin:0 0 6px;line-height:1.5;">{{ race_briefing.decision.mensaje }}</p>
-      <div style="font-size:11px;font-weight:700;color:var(--ink-1);font-family:var(--font-body);">→ {{ race_briefing.decision.accion }}</div>
-    </div>
+    <script>
+    (function(){
+      var fill = document.getElementById('rc-prog-fill');
+      if(!fill) return;
+      var diff = parseInt(fill.dataset.target) || 0;
+      // diff en segundos sobre el objetivo. 0=meta, 600=10min lejos → pct inverso
+      var pct = diff >= 600 ? 5 : diff <= 0 ? 100 : Math.round((1 - diff/600)*100);
+      setTimeout(function(){ fill.style.width = pct + '%'; }, 200);
+    })();
+    </script>
 
     {% if race_briefing.interferencia_principal %}
     <div style="margin-top:8px;font-size:10px;color:var(--ink-4);font-family:var(--font-body);line-height:1.5;padding:8px 10px;background:rgba(255,255,255,.03);border-radius:6px;border:1px solid var(--border);">
