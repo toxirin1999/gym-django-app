@@ -2700,3 +2700,157 @@ class DeloadAutoTrigger:
             )
 
         return mensajes
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# WEEKLY SUMMARY ENGINE — Gap 5 del "entrenador que aprende"
+# Genera el resumen semanal: qué hizo el usuario, qué aprendió el sistema
+# y qué cambió en el plan. Sin nuevos modelos — todo desde datos existentes.
+# ══════════════════════════════════════════════════════════════════════════════
+
+class WeeklySummaryEngine:
+    """
+    Compila el resumen de los últimos 7 días para mostrar al usuario
+    qué entrenó, qué detectó el sistema y cómo evolucionó su perfil.
+    """
+
+    @classmethod
+    def get_summary(cls, objetivo: HyroxObjective) -> dict:
+        hoy = timezone.now().date()
+        inicio_semana = hoy - timedelta(days=7)
+
+        # ── Sesiones de la semana ─────────────────────────────────────────────
+        sesiones_completadas = list(HyroxSession.objects.filter(
+            objective=objetivo,
+            estado='completado',
+            fecha__gte=inicio_semana,
+            fecha__lte=hoy,
+        ).prefetch_related('activities'))
+
+        sesiones_planificadas_semana = HyroxSession.objects.filter(
+            objective=objetivo,
+            fecha__gte=inicio_semana,
+            fecha__lte=hoy,
+        ).count()
+
+        n_completadas = len(sesiones_completadas)
+        cumplimiento_pct = round(
+            (n_completadas / sesiones_planificadas_semana * 100)
+            if sesiones_planificadas_semana else 0
+        )
+
+        # ── Carga semanal ─────────────────────────────────────────────────────
+        trimp_semana = sum(
+            (s.trimp or 0) for s in sesiones_completadas
+        )
+        rpe_medio = None
+        rpes = [s.rpe_global for s in sesiones_completadas if s.rpe_global]
+        if rpes:
+            rpe_medio = round(sum(rpes) / len(rpes), 1)
+
+        # ── TSB actual ───────────────────────────────────────────────────────
+        carga = HyroxLoadManager.calcular_ctl_atl_tsb(objetivo)
+        tsb = carga.get('tsb')
+        estado_forma = HyroxLoadManager.get_estado_forma(tsb)
+
+        # ── Breakdown por tipo de actividad ───────────────────────────────────
+        tipos_count = {}
+        for ses in sesiones_completadas:
+            for act in ses.activities.all():
+                tipo = act.tipo_actividad
+                tipos_count[tipo] = tipos_count.get(tipo, 0) + 1
+
+        # ── Adaptaciones automáticas detectadas esta semana ───────────────────
+        aprendizajes = []
+
+        # 1. Sesiones recalibradas (ritmo o RM)
+        sesiones_recalibradas = [
+            s for s in sesiones_completadas
+            if any(
+                'recalibrado' in (act.data_metricas or {}).get('notas', '').lower()
+                for act in s.activities.all()
+            )
+        ]
+        if sesiones_recalibradas:
+            aprendizajes.append({
+                'icono': 'fa-sliders-h',
+                'color': 'var(--accent)',
+                'texto': f"Ritmos de carrera recalibrados en {len(sesiones_recalibradas)} sesión(es) "
+                         f"con tu tiempo 5K actualizado ({objetivo.tiempo_5k_base or 'no registrado'}).",
+            })
+
+        # 2. Deload automático
+        sesiones_deload = HyroxSession.objects.filter(
+            objective=objetivo,
+            titulo__icontains='[DELOAD AUTO]',
+            fecha__gte=inicio_semana,
+        )
+        if sesiones_deload.exists():
+            aprendizajes.append({
+                'icono': 'fa-bed',
+                'color': '#f59e0b',
+                'texto': f"Semana de deload activada automáticamente por TSB bajo. "
+                         f"{sesiones_deload.count()} sesión(es) reducidas al 55% de carga.",
+            })
+
+        # 3. Sesiones correctivas por estación débil
+        sesiones_refuerzo = HyroxSession.objects.filter(
+            objective=objetivo,
+            titulo__icontains='[REFUERZO]',
+            fecha__gte=inicio_semana,
+        )
+        if sesiones_refuerzo.exists():
+            aprendizajes.append({
+                'icono': 'fa-bullseye',
+                'color': 'var(--ok)',
+                'texto': f"Sesión(es) correctiva(s) añadidas para estaciones débiles "
+                         f"detectadas en simulación.",
+            })
+
+        # 4. RMs actuales (estado del conocimiento del sistema)
+        rm_info = []
+        if objetivo.rm_sentadilla:
+            rm_info.append(f"Sentadilla {objetivo.rm_sentadilla} kg")
+        if objetivo.rm_peso_muerto:
+            rm_info.append(f"Peso muerto {objetivo.rm_peso_muerto} kg")
+        if objetivo.tiempo_5k_base:
+            rm_info.append(f"5K {objetivo.tiempo_5k_base}")
+        if rm_info:
+            aprendizajes.append({
+                'icono': 'fa-database',
+                'color': 'var(--ink-3)',
+                'texto': f"Perfil atlético conocido: {' · '.join(rm_info)}.",
+            })
+
+        # 5. Calibración RPE (si hay datos)
+        rpe_info = RPECalibrator.get_bias(objetivo)
+        if rpe_info['nivel'] not in ('insuficiente', 'ok'):
+            dir_bias = "sobreestimas" if rpe_info['bias'] > 0 else "subestimas"
+            aprendizajes.append({
+                'icono': 'fa-balance-scale',
+                'color': '#8b5cf6',
+                'texto': f"Sesgo RPE detectado: {dir_bias} el esfuerzo en ~{abs(rpe_info['bias']):.1f} puntos. "
+                         f"Los umbrales de adaptación se corrigen automáticamente.",
+            })
+
+        # ── Próxima semana ────────────────────────────────────────────────────
+        proxima_semana = list(HyroxSession.objects.filter(
+            objective=objetivo,
+            estado='planificado',
+            fecha__gt=hoy,
+            fecha__lte=hoy + timedelta(days=7),
+        ).order_by('fecha')[:5])
+
+        return {
+            'n_completadas': n_completadas,
+            'n_planificadas': sesiones_planificadas_semana,
+            'cumplimiento_pct': cumplimiento_pct,
+            'trimp_semana': round(trimp_semana, 1),
+            'rpe_medio': rpe_medio,
+            'tsb': tsb,
+            'estado_forma': estado_forma,
+            'tipos_count': tipos_count,
+            'aprendizajes': aprendizajes,
+            'proxima_semana': proxima_semana,
+            'tiene_datos': n_completadas > 0 or bool(aprendizajes),
+        }

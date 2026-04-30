@@ -294,7 +294,10 @@ def hyrox_dashboard(request):
             morning_briefing = "Hoy no entrenas para demostrar nada a nadie, entrenas para construir al David que tú quieres ser."
             
         daily_push = objetivo_activo.get_daily_push()
-        
+
+        from .training_engine import WeeklySummaryEngine
+        resumen_semanal = WeeklySummaryEngine.get_summary(objetivo_activo)
+
         smart_alerts = []
         last_session = objetivo_activo.sessions.filter(estado='completado').order_by('-fecha').first()
         if last_session:
