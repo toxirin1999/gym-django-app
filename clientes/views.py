@@ -1378,14 +1378,49 @@ def mockup_demo(request):
     cliente = get_object_or_404(Cliente, user=usuario)
     context = _get_dashboard_context_data(request, cliente)
     from datetime import date as _date
+    from diario.models import ProsocheDiario, SeguimientoVires
+    from nutricion_app_django.models import TargetNutricionalDiario
+    _hoy = _date.today()
+
     checkin_hoy = BitacoraDiaria.objects.filter(
-        cliente=cliente, fecha=_date.today(), fc_reposo__isnull=False
+        cliente=cliente, fecha=_hoy, fc_reposo__isnull=False
     ).first()
     context['checkin_hoy'] = checkin_hoy
     context['checkin_pendiente'] = checkin_hoy is None
 
+    # Bienestar widget — prosoche y vires del día
+    try:
+        context['prosoche_hoy'] = ProsocheDiario.objects.filter(
+            prosoche_mes__usuario=usuario, fecha=_hoy
+        ).first()
+    except Exception:
+        context['prosoche_hoy'] = None
+
+    try:
+        context['vires_hoy'] = SeguimientoVires.objects.filter(
+            usuario=usuario, fecha=_hoy
+        ).first()
+    except Exception:
+        context['vires_hoy'] = None
+
+    # Nutrición widget — target del día y porcentajes de barras
+    try:
+        nut_target = TargetNutricionalDiario.objects.filter(
+            cliente=cliente, fecha=_hoy
+        ).first()
+        context['nut_target'] = nut_target
+        if nut_target and nut_target.bloques_totales > 0:
+            _tot = nut_target.bloques_totales
+            context['nut_pct_p'] = round(nut_target.bloques_proteina / _tot * 100)
+            context['nut_pct_c'] = round(nut_target.bloques_carbos / _tot * 100)
+            context['nut_pct_g'] = round(nut_target.bloques_grasas / _tot * 100)
+        else:
+            context['nut_pct_p'] = context['nut_pct_c'] = context['nut_pct_g'] = 0
+    except Exception:
+        context['nut_target'] = None
+        context['nut_pct_p'] = context['nut_pct_c'] = context['nut_pct_g'] = 0
+
     # Garantiza que hyrox_objetivo esté en el contexto aunque _ctx_hyrox haya fallado.
-    # El toggle GYM/HYROX depende de este valor; sin él desaparece.
     if not context.get('hyrox_objetivo'):
         try:
             from hyrox.models import HyroxObjective
@@ -1397,6 +1432,50 @@ def mockup_demo(request):
             context.setdefault('hyrox_objetivo', None)
 
     return render(request, 'clientes/mockup_demo.html', context)
+
+
+def _calcular_estado_carga(acwr, readiness_score):
+    readiness_pct = round((readiness_score or 0) * 100)
+    if not acwr or acwr == 0:
+        if readiness_pct >= 70:
+            return {'estado': 'puedes_apretar', 'icon': '●', 'titulo': 'LISTO PARA ENTRENAR FUERTE',
+                    'subtitulo': 'Sin datos de carga recientes. Tu readiness es alto.',
+                    'detalle': None, 'color': 'ok'}
+        return {'estado': 'sin_datos', 'icon': '○', 'titulo': 'EVALÚA TU ESTADO HOY',
+                'subtitulo': 'Registra más sesiones para calcular tu carga de entrenamiento.',
+                'detalle': None, 'color': 'neutral'}
+    if acwr < 0.8:
+        return {'estado': 'subentreno', 'icon': '▼', 'titulo': 'CARGA BAJA',
+                'subtitulo': 'Estás entrenando por debajo de tu capacidad. Puedes aumentar volumen o intensidad hoy.',
+                'detalle': f'ACWR {acwr:.2f}', 'color': 'warn'}
+    elif acwr <= 1.3:
+        if readiness_pct >= 70:
+            return {'estado': 'puedes_apretar', 'icon': '●', 'titulo': 'LISTO PARA ENTRENAR FUERTE',
+                    'subtitulo': 'Puedes subir carga en varios ejercicios. Sin señales de fatiga acumulada.',
+                    'detalle': f'ACWR {acwr:.2f} · Readiness {readiness_pct}', 'color': 'ok'}
+        return {'estado': 'entreno_controlado', 'icon': '◐', 'titulo': 'ENTRENA CON CONTROL',
+                'subtitulo': 'ACWR en zona óptima pero readiness bajo. Mantén técnica, no fuerces la carga.',
+                'detalle': f'ACWR {acwr:.2f} · Readiness {readiness_pct}', 'color': 'warn'}
+    elif acwr <= 1.5:
+        return {'estado': 'fatiga_acumulada', 'icon': '▲', 'titulo': 'CARGA ELEVADA',
+                'subtitulo': 'Tu volumen está por encima de lo habitual. Reduce intensidad o arriesgas bajada de rendimiento.',
+                'detalle': f'ACWR {acwr:.2f}', 'color': 'warn'}
+    return {'estado': 'riesgo_alto', 'icon': '■', 'titulo': 'RIESGO DE SOBREENTRENO',
+            'subtitulo': 'Carga muy alta. Descansa o realiza sesión de recuperación activa solamente.',
+            'detalle': f'ACWR {acwr:.2f}', 'color': 'danger'}
+
+
+@login_required
+def panel_accion(request):
+    cliente = get_object_or_404(Cliente, user=request.user)
+    context = _get_dashboard_context_data(request, cliente)
+
+    acwr = context.get('acwr_actual') or 0.0
+    readiness = (context.get('bio_readiness') or {}).get('score', 1.0)
+    context['estado_carga'] = _calcular_estado_carga(acwr, readiness)
+    context['readiness_pct'] = round(readiness * 100)
+
+    return render(request, 'clientes/panel_accion.html', context)
 
 
 @login_required

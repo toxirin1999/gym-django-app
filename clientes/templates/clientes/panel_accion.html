@@ -1,0 +1,549 @@
+{% load static %}
+{% load clientes_filters %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Modo Acción · {{ cliente.user.get_full_name|default:cliente.user.username }}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { background: #EFEAE1; min-height: 100vh; }
+body {
+  --bg: #EFEAE1;
+  --ink: #0F0F0E;
+  --ink-2: #2A2926;
+  --ink-3: rgba(15,15,14,0.55);
+  --ink-4: rgba(15,15,14,0.28);
+  --line: rgba(15,15,14,0.12);
+  --line-2: rgba(15,15,14,0.25);
+  --paper: #F7F3EA;
+  --paper-2: #E4DED1;
+  --accent: oklch(0.55 0.21 28);
+  --accent-rgb: 193,53,21;
+  --ok: oklch(0.55 0.15 145);
+  --ok-rgb: 34,113,54;
+  --warn: oklch(0.72 0.17 70);
+  --danger: oklch(0.55 0.22 25);
+  --font-disp: 'Archivo Black','Archivo',sans-serif;
+  --font-body: 'Archivo',system-ui,sans-serif;
+  --font-mono: 'JetBrains Mono',ui-monospace,monospace;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  padding-bottom: 88px;
+}
+
+/* ── NAV ── */
+.pa-nav {
+  position: sticky; top: 0; z-index: 100;
+  background: var(--bg); border-bottom: 1px solid var(--line);
+  padding: 12px 20px;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.pa-brand {
+  display: flex; align-items: center; gap: 8px;
+  font-family: var(--font-disp); font-size: 11px; letter-spacing: 0.14em;
+  color: var(--ink-3); text-transform: uppercase; text-decoration: none;
+}
+.pa-brand i { font-size: 10px; }
+
+/* ── MODE TABS ── */
+.pa-tabs {
+  display: flex; gap: 4px;
+  background: var(--paper-2); border-radius: 4px; padding: 3px;
+}
+.pa-tab {
+  font-family: var(--font-mono); font-size: 9px; font-weight: 700;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  padding: 5px 12px; border-radius: 2px; border: none;
+  cursor: pointer; text-decoration: none; color: var(--ink-3);
+  background: transparent; transition: all .15s;
+}
+.pa-tab.active {
+  background: var(--paper); color: var(--ink);
+  box-shadow: 0 1px 3px rgba(0,0,0,.12);
+}
+
+/* ── WRAP ── */
+.pa-wrap { max-width: 560px; margin: 0 auto; padding: 0 20px; }
+
+/* ── STATE BLOCK ── */
+.pa-state {
+  margin: 20px 0 0;
+  border-radius: 6px; padding: 24px 20px;
+  position: relative; overflow: hidden;
+}
+.pa-state.ok   { background: rgba(var(--ok-rgb), 0.07); border: 1.5px solid rgba(var(--ok-rgb), 0.25); }
+.pa-state.warn { background: oklch(0.72 0.17 70 / 0.07); border: 1.5px solid oklch(0.72 0.17 70 / 0.30); }
+.pa-state.danger { background: oklch(0.55 0.22 25 / 0.07); border: 1.5px solid oklch(0.55 0.22 25 / 0.30); }
+.pa-state.neutral { background: var(--paper); border: 1.5px solid var(--line-2); }
+
+.pa-state-icon {
+  font-size: 22px; margin-bottom: 8px; display: block;
+}
+.pa-state.ok .pa-state-icon    { color: var(--ok); }
+.pa-state.warn .pa-state-icon  { color: var(--warn); }
+.pa-state.danger .pa-state-icon { color: var(--danger); }
+.pa-state.neutral .pa-state-icon { color: var(--ink-3); }
+
+.pa-state-title {
+  font-family: var(--font-disp); font-size: 19px; line-height: 1.1;
+  letter-spacing: 0.02em; margin-bottom: 8px;
+}
+.pa-state.ok .pa-state-title    { color: var(--ok); }
+.pa-state.warn .pa-state-title  { color: var(--warn); }
+.pa-state.danger .pa-state-title { color: var(--danger); }
+.pa-state.neutral .pa-state-title { color: var(--ink-2); }
+
+.pa-state-sub {
+  font-family: var(--font-body); font-size: 13px; line-height: 1.55;
+  color: var(--ink-2); margin-bottom: 12px;
+}
+.pa-state-detail {
+  font-family: var(--font-mono); font-size: 9px; font-weight: 700;
+  letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-3);
+}
+
+/* ── DIVIDER ── */
+.pa-divider {
+  border: none; border-top: 1px solid var(--line);
+  margin: 20px 0;
+}
+
+/* ── WORKOUT BLOCK ── */
+.pa-workout { background: var(--paper); border: 1px solid var(--line-2); border-radius: 6px; padding: 18px 16px; }
+.pa-workout-eyebrow {
+  font-family: var(--font-mono); font-size: 9px; font-weight: 700;
+  letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-3);
+  margin-bottom: 6px;
+}
+.pa-workout-title {
+  font-family: var(--font-disp); font-size: 20px; line-height: 1.1;
+  color: var(--ink); margin-bottom: 4px;
+}
+.pa-workout-meta {
+  font-family: var(--font-mono); font-size: 9px; font-weight: 500;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3);
+  margin-bottom: 14px;
+}
+.pa-objetivo {
+  font-family: var(--font-body); font-size: 11px; color: var(--ink-2);
+  line-height: 1.5; background: var(--paper-2); border-radius: 4px;
+  padding: 10px 12px; margin-bottom: 14px;
+}
+.pa-objetivo strong { color: var(--ink); }
+.pa-ex-list { display: flex; flex-direction: column; gap: 6px; }
+.pa-ex-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 7px 0; border-bottom: 1px solid var(--line);
+}
+.pa-ex-row:last-child { border-bottom: none; }
+.pa-ex-name {
+  font-family: var(--font-body); font-size: 13px; font-weight: 600;
+  color: var(--ink-2); flex: 1; min-width: 0; overflow: hidden;
+  text-overflow: ellipsis; white-space: nowrap; padding-right: 10px;
+}
+.pa-ex-sets {
+  font-family: var(--font-mono); font-size: 11px; font-weight: 700;
+  color: var(--ink-3); flex-shrink: 0;
+}
+.pa-ex-more {
+  font-family: var(--font-mono); font-size: 9px; font-weight: 700;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-4);
+  padding-top: 8px;
+}
+.pa-rest-day {
+  text-align: center; padding: 16px 0;
+}
+.pa-rest-day-icon { font-size: 28px; margin-bottom: 8px; opacity: 0.4; }
+.pa-rest-day-title {
+  font-family: var(--font-disp); font-size: 16px; color: var(--ink-3);
+}
+.pa-rest-day-sub {
+  font-family: var(--font-body); font-size: 12px; color: var(--ink-4);
+  margin-top: 4px;
+}
+
+/* ── CTA ── */
+.pa-cta-wrap { margin: 20px 0; }
+.pa-cta {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  width: 100%; padding: 18px 20px;
+  background: var(--accent); color: #fff;
+  font-family: var(--font-disp); font-size: 17px; letter-spacing: 0.03em;
+  text-decoration: none; border: none; cursor: pointer;
+  border-radius: 4px; transition: opacity .15s;
+}
+.pa-cta:hover { opacity: 0.9; }
+.pa-cta.done {
+  background: transparent; color: var(--ok);
+  border: 1.5px solid var(--ok);
+  font-size: 14px;
+}
+.pa-cta.hyrox {
+  background: oklch(0.55 0.28 295);
+}
+
+/* ── INSIGHT BLOCK ── */
+.pa-insight {
+  background: var(--paper); border: 1px solid var(--line);
+  border-radius: 6px; padding: 14px 16px;
+}
+.pa-insight-head {
+  font-family: var(--font-mono); font-size: 9px; font-weight: 700;
+  letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-3);
+  margin-bottom: 10px; display: flex; align-items: center; gap: 6px;
+}
+.pa-insight-head::after { content: ''; flex: 1; height: 1px; background: var(--line); }
+.pa-insight-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.pa-insight-label { font-family: var(--font-body); font-size: 12px; color: var(--ink-3); }
+.pa-insight-val { font-family: var(--font-mono); font-size: 12px; font-weight: 700; color: var(--ink-2); }
+.pa-insight-msg {
+  font-family: var(--font-body); font-size: 12px; color: var(--ink-2);
+  line-height: 1.5; padding-top: 8px; border-top: 1px solid var(--line); margin-top: 4px;
+}
+
+/* ── COLLAPSIBLE SECONDARY ── */
+.pa-secondary { margin-top: 20px; }
+.pa-secondary-toggle {
+  width: 100%; display: flex; align-items: center; gap: 8px;
+  background: transparent; border: none; border-top: 1px solid var(--line);
+  padding: 14px 0; cursor: pointer; text-align: left;
+}
+.pa-secondary-toggle-label {
+  font-family: var(--font-mono); font-size: 9px; font-weight: 700;
+  letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-3);
+  flex: 1;
+}
+.pa-secondary-toggle-icon { font-size: 10px; color: var(--ink-4); transition: transform .2s; }
+.pa-secondary-toggle.open .pa-secondary-toggle-icon { transform: rotate(180deg); }
+.pa-secondary-body { display: none; padding: 14px 0 0; }
+.pa-secondary-body.open { display: block; }
+
+.pa-metric-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+.pa-metric-card {
+  background: var(--paper); border: 1px solid var(--line); border-radius: 6px;
+  padding: 12px 14px;
+}
+.pa-metric-label {
+  font-family: var(--font-mono); font-size: 8px; font-weight: 700;
+  letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-4); margin-bottom: 4px;
+}
+.pa-metric-val {
+  font-family: var(--font-disp); font-size: 22px; color: var(--ink);
+}
+.pa-metric-sub { font-family: var(--font-body); font-size: 10px; color: var(--ink-3); margin-top: 2px; }
+
+.pa-session-list { display: flex; flex-direction: column; gap: 6px; }
+.pa-session-row {
+  display: flex; justify-content: space-between; align-items: center;
+  background: var(--paper); border: 1px solid var(--line); border-radius: 4px;
+  padding: 9px 12px;
+}
+.pa-session-name { font-family: var(--font-body); font-size: 12px; font-weight: 600; color: var(--ink-2); }
+.pa-session-date { font-family: var(--font-mono); font-size: 9px; font-weight: 700; color: var(--ink-4); }
+
+/* ── BOTTOM NAV ── */
+.pa-bottom-nav {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 90;
+  background: var(--bg); border-top: 1px solid var(--line);
+  display: flex; justify-content: space-around; align-items: center;
+  padding: 10px 0 max(10px, env(safe-area-inset-bottom));
+}
+.pa-nav-item {
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  text-decoration: none; color: var(--ink-3); min-width: 52px;
+}
+.pa-nav-item i { font-size: 16px; }
+.pa-nav-item span { font-family: var(--font-mono); font-size: 7px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+.pa-nav-item.active { color: var(--accent); }
+  </style>
+</head>
+<body>
+
+<!-- ── NAV ─────────────────────────────────────── -->
+<nav class="pa-nav">
+  <a class="pa-brand" href="{% url 'clientes:mockup_demo' %}">
+    <i class="fas fa-arrow-left"></i> Panel completo
+  </a>
+  <div class="pa-tabs">
+    <a href="?modo=gym" class="pa-tab {% if request.GET.modo != 'hyrox' %}active{% endif %}">GYM</a>
+    <a href="?modo=hyrox" class="pa-tab {% if request.GET.modo == 'hyrox' %}active{% endif %}">HYROX</a>
+  </div>
+</nav>
+
+<div class="pa-wrap">
+
+  <!-- ── 1. ESTADO ─────────────────────────────── -->
+  <div class="pa-state {{ estado_carga.color }}">
+    <span class="pa-state-icon">{{ estado_carga.icon }}</span>
+    <div class="pa-state-title">{{ estado_carga.titulo }}</div>
+    <div class="pa-state-sub">{{ estado_carga.subtitulo }}</div>
+    {% if estado_carga.detalle %}
+    <div class="pa-state-detail">{{ estado_carga.detalle }}</div>
+    {% endif %}
+  </div>
+
+  <hr class="pa-divider">
+
+  <!-- ── 2. HOY TOCA ──────────────────────────── -->
+  {% if request.GET.modo == 'hyrox' %}
+
+    {% if hyrox_proxima_sesion %}
+    <div class="pa-workout">
+      <div class="pa-workout-eyebrow">Hyrox · Sesión planificada</div>
+      <div class="pa-workout-title">{{ hyrox_proxima_sesion.titulo }}</div>
+      <div class="pa-workout-meta">
+        {{ hyrox_proxima_sesion.fecha|date:"D j N" }}
+        {% if hyrox_proxima_sesion.tipo_sesion %} · {{ hyrox_proxima_sesion.tipo_sesion|upper }}{% endif %}
+      </div>
+      {% if hyrox_proxima_sesion.processed_activities %}
+      <div class="pa-ex-list">
+        {% for act in hyrox_proxima_sesion.processed_activities|slice:":5" %}
+        <div class="pa-ex-row">
+          <span class="pa-ex-name">{{ act.nombre_ejercicio }}</span>
+          <span class="pa-ex-sets">
+            {% if act.duracion_minutos %}{{ act.duracion_minutos }} min{% elif act.distancia_metros %}{{ act.distancia_metros }} m{% endif %}
+          </span>
+        </div>
+        {% endfor %}
+        {% if hyrox_proxima_sesion.processed_activities|length > 5 %}
+        <div class="pa-ex-more">+ {{ hyrox_proxima_sesion.processed_activities|length|add:"-5" }} bloques más</div>
+        {% endif %}
+      </div>
+      {% endif %}
+    </div>
+    {% else %}
+    <div class="pa-workout">
+      <div class="pa-rest-day">
+        <div class="pa-rest-day-icon"><i class="fas fa-running"></i></div>
+        <div class="pa-rest-day-title">Sin sesión Hyrox hoy</div>
+        <div class="pa-rest-day-sub">Día de recuperación o entreno libre</div>
+      </div>
+    </div>
+    {% endif %}
+
+  {% else %}
+
+    {% if entreno_hoy_realizado or entreno_semana_realizado %}
+    <div class="pa-workout" style="border-left:3px solid var(--ok);">
+      <div class="pa-workout-eyebrow" style="color:var(--ok);">&#10003; Completado{% if entreno_realizado_fecha %} · {{ entreno_realizado_fecha|date:"j N" }}{% endif %}</div>
+      <div class="pa-workout-title">{{ proximo_entrenamiento.nombre|default:proximo_entrenamiento.rutina_nombre|default:"Sesión del día" }}</div>
+      {% if ejercicios_realizados_resumen %}
+      <div class="pa-ex-list" style="margin-top:10px;">
+        {% for ej in ejercicios_realizados_resumen %}
+        <div class="pa-ex-row">
+          <span class="pa-ex-name">{{ ej.nombre }}</span>
+          <span class="pa-ex-sets">{{ ej.series }} × {% if ej.peso_kg > 0 %}{{ ej.peso_kg|floatformat:"-1" }} kg{% else %}P.C.{% endif %}</span>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+
+    {% elif proximo_entrenamiento %}
+    <div class="pa-workout">
+      <div class="pa-workout-eyebrow">Hoy toca</div>
+      <div class="pa-workout-title">{{ proximo_entrenamiento.nombre|default:proximo_entrenamiento.rutina_nombre|default:"Sesión" }}</div>
+      <div class="pa-workout-meta">
+        {{ proximo_entrenamiento.objetivo|upper|default:"BASE" }}
+        {% if proximo_entrenamiento.semana_nombre %} · {{ proximo_entrenamiento.semana_nombre }}{% endif %}
+        {% if proximo_entrenamiento.dia %} · Día {{ proximo_entrenamiento.dia }}{% endif %}
+      </div>
+      {% if mesociclo_actual %}
+      <div class="pa-objetivo">
+        <strong>Objetivo:</strong> {{ mesociclo_actual.recomendacion|default:"Entrena con intensidad progresiva." }}
+      </div>
+      {% endif %}
+      {% if proximo_entrenamiento.ejercicios %}
+      <div class="pa-ex-list">
+        {% for ej in proximo_entrenamiento.ejercicios %}
+        <div class="pa-ex-row">
+          <span class="pa-ex-name">{{ ej.nombre }}</span>
+          <span class="pa-ex-sets">{{ ej.series|default:"4" }} × {{ ej.repeticiones|default:"—" }}</span>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+
+    {% else %}
+    <div class="pa-workout">
+      <div class="pa-rest-day">
+        <div class="pa-rest-day-icon"><i class="fas fa-bed"></i></div>
+        <div class="pa-rest-day-title">Día de Descanso</div>
+        <div class="pa-rest-day-sub">Recuperación activa · Movilidad</div>
+      </div>
+    </div>
+    {% endif %}
+
+  {% endif %}
+
+  <!-- ── 3. CTA ────────────────────────────────── -->
+  <div class="pa-cta-wrap">
+    {% if entreno_hoy_realizado or entreno_semana_realizado %}
+    <a href="{% url 'entrenos:vista_plan_anual' cliente.id %}" class="pa-cta done">
+      <i class="fas fa-check-circle"></i> Sesión completada · Ver plan
+    </a>
+    {% elif request.GET.modo == 'hyrox' and hyrox_proxima_sesion %}
+    <a href="{% url 'hyrox:registrar_entrenamiento_session' hyrox_objetivo.id hyrox_proxima_sesion.id %}" class="pa-cta hyrox">
+      <i class="fas fa-play"></i> Empezar sesión Hyrox
+    </a>
+    {% elif proximo_entrenamiento %}
+    <a href="{% url 'entrenos:entrenamiento_activo' cliente.id %}?fecha={{ hoy|date:'Y-m-d' }}&rutina_nombre={{ proximo_entrenamiento.rutina_nombre|urlencode }}&ejercicios={{ proximo_entrenamiento_json|urlencode }}" class="pa-cta">
+      <i class="fas fa-play"></i> Empezar entrenamiento
+    </a>
+    {% else %}
+    <a href="{% url 'entrenos:entrenamiento_activo' cliente.id %}?fecha={{ hoy|date:'Y-m-d' }}" class="pa-cta" style="background:var(--ink-3);">
+      <i class="fas fa-plus"></i> Registrar sesión libre
+    </a>
+    {% endif %}
+  </div>
+
+  <!-- ── 4. INSIGHT ────────────────────────────── -->
+  {% if entrenamientos_recientes %}
+  <div class="pa-insight">
+    <div class="pa-insight-head">Última sesión</div>
+    {% with last=entrenamientos_recientes.0 %}
+    <div class="pa-insight-row">
+      <span class="pa-insight-label">{{ last.rutina.nombre|default:"Sesión libre" }}</span>
+      <span class="pa-insight-val">{{ last.fecha|date:"j N" }}</span>
+    </div>
+    <div class="pa-insight-row">
+      <span class="pa-insight-label">Ejercicios</span>
+      <span class="pa-insight-val">{{ last.detalles_ejercicio.count }}</span>
+    </div>
+    {% endwith %}
+    <div class="pa-insight-msg">
+      {% if estado_carga.estado == 'puedes_apretar' %}
+        Estás en racha. Hoy puedes intentar superar marcas en los ejercicios principales.
+      {% elif estado_carga.estado == 'entreno_controlado' %}
+        Mantén la técnica impecable. Hoy prioriza calidad sobre cantidad.
+      {% elif estado_carga.estado == 'subentreno' %}
+        Llevas días con poca carga. Hoy es buen momento para dar un paso al frente.
+      {% elif estado_carga.estado == 'fatiga_acumulada' %}
+        Has entrenado mucho últimamente. Si entrenas, reduce el volumen un 20%.
+      {% elif estado_carga.estado == 'riesgo_alto' %}
+        Prioriza la recuperación sobre el rendimiento hoy.
+      {% else %}
+        Registra más sesiones para recibir análisis personalizados.
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- ── 5. SECUNDARIO (colapsable) ────────────── -->
+  <div class="pa-secondary">
+    <button class="pa-secondary-toggle" id="paSecondaryToggle" onclick="toggleSecondary()">
+      <span class="pa-secondary-toggle-label">Ver detalles — ACWR, historial, bienestar</span>
+      <i class="fas fa-chevron-down pa-secondary-toggle-icon" id="paSecondaryIcon"></i>
+    </button>
+    <div class="pa-secondary-body" id="paSecondaryBody">
+
+      <!-- Métricas rápidas -->
+      <div class="pa-metric-grid">
+        <div class="pa-metric-card">
+          <div class="pa-metric-label">Readiness</div>
+          <div class="pa-metric-val">{{ readiness_pct }}%</div>
+          <div class="pa-metric-sub">Score biométrico</div>
+        </div>
+        <div class="pa-metric-card">
+          <div class="pa-metric-label">ACWR</div>
+          <div class="pa-metric-val">{{ acwr_actual|floatformat:2|default:"—" }}</div>
+          <div class="pa-metric-sub">
+            {% if acwr_actual %}
+              {% if acwr_actual < 0.8 %}Bajo{% elif acwr_actual <= 1.3 %}Óptimo{% elif acwr_actual <= 1.5 %}Elevado{% else %}Riesgo{% endif %}
+            {% else %}Sin datos{% endif %}
+          </div>
+        </div>
+        <div class="pa-metric-card">
+          <div class="pa-metric-label">Esta semana</div>
+          <div class="pa-metric-val">{{ grafico_datos|last|default:"0" }}</div>
+          <div class="pa-metric-sub">Sesiones</div>
+        </div>
+        <div class="pa-metric-card">
+          <div class="pa-metric-label">Racha estoica</div>
+          <div class="pa-metric-val">{{ racha_reflexion|default:"0" }}</div>
+          <div class="pa-metric-sub">Días</div>
+        </div>
+      </div>
+
+      <!-- Últimas sesiones -->
+      {% if entrenamientos_recientes %}
+      <div style="margin-bottom:10px;">
+        <div style="font-family:var(--font-mono);font-size:9px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--ink-3);margin-bottom:8px;">Últimas sesiones</div>
+        <div class="pa-session-list">
+          {% for entreno in entrenamientos_recientes %}
+          <div class="pa-session-row">
+            <span class="pa-session-name">{{ entreno.rutina.nombre|default:"Sesión libre" }}</span>
+            <span class="pa-session-date">{{ entreno.fecha|date:"D j N" }}</span>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Bienestar -->
+      {% if checkin_hoy %}
+      <div class="pa-insight" style="margin-bottom:0;">
+        <div class="pa-insight-head">Bienestar hoy</div>
+        {% if checkin_hoy.energia_subjetiva %}
+        <div class="pa-insight-row">
+          <span class="pa-insight-label">Energía</span>
+          <span class="pa-insight-val">{{ checkin_hoy.energia_subjetiva }}/10</span>
+        </div>
+        {% endif %}
+        {% if checkin_hoy.horas_sueno %}
+        <div class="pa-insight-row">
+          <span class="pa-insight-label">Sueño</span>
+          <span class="pa-insight-val">{{ checkin_hoy.horas_sueno|floatformat:1 }}h</span>
+        </div>
+        {% endif %}
+      </div>
+      {% endif %}
+
+    </div>
+  </div>
+
+</div><!-- /pa-wrap -->
+
+<!-- ── BOTTOM NAV ─────────────────────────────── -->
+<nav class="pa-bottom-nav">
+  <a href="{% url 'clientes:panel_accion' %}" class="pa-nav-item active">
+    <i class="fas fa-bolt"></i>
+    <span>Acción</span>
+  </a>
+  <a href="{% url 'clientes:mockup_demo' %}" class="pa-nav-item">
+    <i class="fas fa-th-large"></i>
+    <span>Panel</span>
+  </a>
+  <a href="{% url 'entrenos:dashboard_evolucion' cliente.id %}" class="pa-nav-item">
+    <i class="fas fa-chart-line"></i>
+    <span>Evolución</span>
+  </a>
+  <a href="{% url 'logros:perfil_gamificacion' %}" class="pa-nav-item">
+    <i class="fas fa-trophy"></i>
+    <span>Logros</span>
+  </a>
+  <a href="{% url 'diario:prosoche_dashboard' %}" class="pa-nav-item">
+    <i class="fas fa-book-open"></i>
+    <span>Diario</span>
+  </a>
+</nav>
+
+<script>
+function toggleSecondary() {
+  const body = document.getElementById('paSecondaryBody');
+  const btn  = document.getElementById('paSecondaryToggle');
+  const icon = document.getElementById('paSecondaryIcon');
+  const open = body.classList.toggle('open');
+  btn.classList.toggle('open', open);
+}
+</script>
+</body>
+</html>

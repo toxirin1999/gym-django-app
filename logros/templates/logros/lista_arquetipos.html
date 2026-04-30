@@ -1,0 +1,58 @@
+{% extends 'logros/base_template.html' %}
+{% load static %}
+
+{% block title %}Arquetipos — Sistema de Gamificación{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1 fw-bold">Arquetipos</h1>
+            <p class="text-muted mb-0">Niveles de progresión del sistema de gamificación</p>
+        </div>
+        <a href="{% url 'logros:perfil_gamificacion' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="fas fa-arrow-left me-1"></i> Volver al perfil
+        </a>
+    </div>
+
+    <div class="row g-3">
+        {% for arquetipo in arquetipos %}
+        <div class="col-12 col-md-6 col-lg-4">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex align-items-center gap-3 mb-3">
+                        <div class="rounded-circle d-flex align-items-center justify-content-center"
+                             style="width:48px;height:48px;background:var(--primary-color,#6366f1);color:#fff;font-weight:700;font-size:1.2rem;">
+                            {{ arquetipo.nivel }}
+                        </div>
+                        <div>
+                            <h5 class="mb-0 fw-bold">{{ arquetipo.titulo_arquetipo }}</h5>
+                            <small class="text-muted">Nivel {{ arquetipo.nivel }}</small>
+                        </div>
+                    </div>
+                    <p class="text-muted small mb-2">
+                        <i class="fas fa-star text-warning me-1"></i>
+                        {{ arquetipo.puntos_requeridos|floatformat:0 }} puntos requeridos
+                    </p>
+                    {% if arquetipo.filosofia %}
+                    <blockquote class="blockquote mb-0">
+                        <p class="small fst-italic text-muted">"{{ arquetipo.filosofia }}"</p>
+                    </blockquote>
+                    {% endif %}
+                </div>
+                <div class="card-footer bg-transparent border-0">
+                    <a href="{% url 'logros:detalle_arquetipo' arquetipo_nivel=arquetipo.nivel %}"
+                       class="btn btn-sm btn-outline-primary w-100">
+                        Ver detalle
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <div class="alert alert-info">No hay arquetipos configurados todavía.</div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

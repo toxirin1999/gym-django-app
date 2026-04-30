@@ -1,0 +1,19 @@
+{% extends 'base.html' %}
+
+{% block title %}Sin datos — Analytics{% endblock %}
+
+{% block content %}
+<div class="container py-5 text-center">
+    <div class="py-5">
+        <div style="font-size:4rem;">📊</div>
+        <h2 class="mt-3 fw-bold">Sin datos disponibles</h2>
+        <p class="text-muted mt-2">
+            No hay clientes registrados en el sistema.<br>
+            Añade un cliente para comenzar a ver el dashboard de analytics.
+        </p>
+        <a href="{% url 'agregar_cliente' %}" class="btn btn-primary mt-3">
+            Añadir primer cliente
+        </a>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,498 @@
+
+
+
+{% if splits_estaciones %}
+<section class="rb-section rb-a3">
+  <div class="rb-section-head">
+    <span class="rb-section-num">03</span>
+    <h2 class="rb-section-title">ESTÁNDARES HYROX</h2>
+    <button class="rb-help-btn" data-help="standards" aria-label="Ayuda"><i class="fas fa-question"></i></button>
+    <span class="rb-section-line"></span>
+  </div>
+
+  {% if pace_prediction.std_global_pct %}
+  <div class="rb-std-global">
+    <div class="rb-std-global-pct">{{ pace_prediction.std_global_pct|floatformat:0 }}<span>%</span></div>
+    <div class="rb-std-global-lbl">PROGRESO<br>GLOBAL VS<br>ESTÁNDAR</div>
+  </div>
+  {% endif %}
+
+  <div class="rb-std-list">
+    {% for split in splits_estaciones|slice:":8" %}
+    {% with pct=split.progreso_pct|default:0 %}
+    <div class="rb-std-row {% if pct >= 100 %}done{% elif pct >= 60 %}prog{% endif %}">
+      <div class="rb-std-rank">{{ forloop.counter|stringformat:"02d" }}</div>
+      <div class="rb-std-body">
+        <div class="rb-std-name">{{ split.nombre|truncatechars:22|upper }}</div>
+        <div class="rb-std-meta">
+          {{ split.tiempo_actual|default:"—" }} · STD {{ split.tiempo_referencia|default:"—" }}
+        </div>
+      </div>
+      <div class="rb-std-pct">{{ pct|floatformat:0 }}<span>%</span></div>
+      <div class="rb-std-bar">
+        <div class="rb-std-bar-fill" style="width:{% if pct > 100 %}100{% else %}{{ pct|floatformat:0 }}{% endif %}%; height:100%; background:{% if pct >= 100 %}var(--ok){% elif pct >= 60 %}var(--accent){% else %}var(--line-2){% endif %};"></div>
+      </div>
+    </div>
+    {% endwith %}
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+
+{% if plan_semanas %}
+<section class="rb-section rb-a4">
+  <div class="rb-section-head">
+    <span class="rb-section-num">04</span>
+    <h2 class="rb-section-title">PLAN DE ENTRENAMIENTO</h2>
+    <button class="rb-help-btn" data-help="plan" aria-label="Ayuda"><i class="fas fa-question"></i></button>
+    <span class="rb-section-line"></span>
+    {% if objetivo_activo %}<a href="{% url 'hyrox:regenerar_plan' objetivo_activo.id %}" class="rb-btn rb-btn-sm rb-btn-ghost"><i class="fas fa-arrows-rotate"></i></a>{% endif %}
+  </div>
+
+  {% if estaciones_debiles %}
+  <div class="rb-weakness">
+    <div class="rb-weakness-title"><i class="fas fa-bullseye" style="margin-right:4px;"></i> ESTACIONES A REFORZAR</div>
+    <div class="rb-weakness-pills">
+      {% for est in estaciones_debiles|slice:":4" %}
+      <span class="rb-weakness-pill">{{ est.nombre|truncatechars:14 }}<span class="rb-weakness-pill-pct">{{ est.deficit_pct|default:0 }}%</span></span>
+      {% endfor %}
+    </div>
+    <div class="rb-weakness-note">El plan prioriza estas estaciones esta semana</div>
+  </div>
+  {% endif %}
+
+  {% for semana in plan_semanas|slice:":2" %}
+  <div style="margin-top: {% if forloop.counter0 > 0 %}20px{% else %}0{% endif %};">
+    <div class="rb-plan-head-bar">
+      <div class="rb-plan-semana {% if forloop.counter0 == 1 %}next{% endif %}">
+        SEM {{ semana.numero|default:"—" }} · {{ semana.fase|default:""|upper }}
+        {% if forloop.counter0 == 0 %}<span style="color:var(--ink-3);font-size:10px;margin-left:6px;">[ACTUAL]</span>{% endif %}
+      </div>
+      <div class="rb-plan-count">{{ semana.completadas|default:0 }}/{{ semana.dias|length }} HECHAS</div>
+    </div>
+
+    <div class="rb-dias">
+      {% for dia in semana.dias|slice:":4" %}
+      {% include "hyrox/dashboard/_dia.html" with dia=dia es_hoy=dia.es_hoy es_manana=dia.es_manana %}
+      {% endfor %}
+
+      {% if semana.dias|length > 4 %}
+      <button class="rb-more-toggle" data-rb-toggle="#sem-{{ semana.numero|default:forloop.counter }}-rest">
+        <span class="rb-toggle-label">VER MÁS</span> ({{ semana.dias|length|add:"-4" }} días) <i class="fas fa-chevron-down"></i>
+      </button>
+      <div id="sem-{{ semana.numero|default:forloop.counter }}-rest" style="display:none;display:flex;flex-direction:column;gap:8px;">
+        {% for dia in semana.dias|slice:"4:" %}
+        {% include "hyrox/dashboard/_dia.html" with dia=dia %}
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</section>
+{% endif %}
+
+
+{% if fases_timeline or milestones or evolucion_carrera %}
+<section class="rb-section rb-a4">
+  <div class="rb-section-head">
+    <span class="rb-section-num">05</span>
+    <h2 class="rb-section-title">HITOS · EVOLUCIÓN CARRERA</h2>
+    <button class="rb-help-btn" data-help="evolucion" aria-label="Ayuda"><i class="fas fa-question"></i></button>
+    <span class="rb-section-line"></span>
+  </div>
+
+  {% if fases_timeline %}
+  <div class="rb-block">
+    <div class="rb-block-title"><i class="fas fa-chart-bar"></i> FASES · TIMELINE</div>
+    <div class="rb-phases-timeline">
+      {% for fase in fases_timeline|slice:":12" %}
+      <div class="rb-phase-bar-wrap">
+        <div class="rb-phase-bar {% if fase.actual %}actual{% endif %} {% if fase.deload %}deload{% endif %}"
+             style="height: {{ fase.altura_pct|default:50 }}%; background: {{ fase.color|default:'var(--ink-3)' }};"></div>
+        <div class="rb-phase-lbl {% if fase.actual %}actual{% endif %}">S{{ fase.semana|default:forloop.counter }}</div>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="rb-legend-row">
+      <span><span class="swatch" style="background:var(--accent);"></span>Acum.</span>
+      <span><span class="swatch" style="background:var(--accent-2);"></span>Intens.</span>
+      <span><span class="swatch" style="background:var(--ok);"></span>Pico</span>
+      <span><span class="swatch" style="background:var(--deload);opacity:.6;"></span>Deload</span>
+    </div>
+  </div>
+  {% endif %}
+
+  {% if milestones %}
+  <div class="rb-block">
+    <div class="rb-block-title"><i class="fas fa-flag"></i> HITOS</div>
+    <div class="rb-milestones">
+      {% for m in milestones|slice:":4" %}
+      <div class="rb-milestone">
+        <div class="rb-milestone-dot {% if m.estado == 'done' %}done{% elif m.estado == 'active' %}active{% endif %}">
+          {% if m.estado == 'done' %}<i class="fas fa-check"></i>{% elif m.estado == 'active' %}<i class="fas fa-circle" style="font-size:6px;"></i>{% else %}<i class="far fa-circle" style="font-size:8px;color:var(--ink-4);"></i>{% endif %}
+        </div>
+        <div class="rb-milestone-body">
+          <div class="rb-milestone-title">{{ m.titulo|upper }}</div>
+          {% if m.descripcion %}<div class="rb-milestone-desc">{{ m.descripcion|truncatechars:60 }}</div>{% endif %}
+          {% if m.semana %}<div class="rb-milestone-sem">SEMANA {{ m.semana }}</div>{% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  {% if evolucion_carrera %}
+  <div class="rb-block" style="padding:0;background:transparent;border:none;margin-top:12px;">
+    {% if evolucion_carrera.kpis %}
+    <div class="rb-run-kpis">
+      {% for kpi in evolucion_carrera.kpis|slice:":3" %}
+      <div class="rb-run-kpi">
+        <div class="rb-run-kpi-val">{{ kpi.valor }}</div>
+        <div class="rb-run-kpi-lbl">{{ kpi.label|upper }}</div>
+        {% if kpi.trend %}
+        <div class="rb-run-kpi-trend {{ kpi.trend.dir|default:'flat' }}">
+          {% if kpi.trend.dir == 'up' %}↑{% elif kpi.trend.dir == 'down' %}↓{% else %}→{% endif %}
+          {{ kpi.trend.valor }}
+        </div>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if evolucion_carrera.ritmo_svg %}
+    <div class="rb-run-chart-wrap">
+      <div class="rb-run-chart-title">RITMO MEDIO · ÚLTIMAS SEMANAS</div>
+      <svg viewBox="0 0 100 30" preserveAspectRatio="none" style="width:100%;height:60px;">
+        <polyline fill="none" stroke="var(--accent)" stroke-width="1.5" points="{{ evolucion_carrera.ritmo_svg }}" />
+      </svg>
+    </div>
+    {% endif %}
+
+    {% if evolucion_carrera.km_semanas %}
+    <div class="rb-run-bars-wrap">
+      <div class="rb-run-chart-title">KM POR SEMANA</div>
+      <div class="rb-run-bars">
+        {% for semana in evolucion_carrera.km_semanas|slice:":8" %}
+        <div class="rb-run-bar-col">
+          <div class="rb-run-bar-area">
+            <div class="rb-run-bar-fill" style="height:{{ semana.altura_pct|default:50 }}%;"></div>
+          </div>
+          <div class="rb-run-bar-val">{{ semana.km|floatformat:0 }}</div>
+          <div class="rb-run-bar-lbl">S{{ semana.numero|default:forloop.counter }}</div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    {% if evolucion_carrera.fc_chips %}
+    <div class="rb-run-fc-row">
+      <div class="rb-run-fc-title">FC MEDIA</div>
+      <div class="rb-run-fc-list">
+        {% for chip in evolucion_carrera.fc_chips|slice:":6" %}
+        <span class="rb-chip">{{ chip.label }}: {{ chip.valor }}</span>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+</section>
+{% endif %}
+
+
+{% if race_prediction %}
+<section class="rb-section rb-a4">
+  <div class="rb-section-head">
+    <span class="rb-section-num">06</span>
+    <h2 class="rb-section-title">ANÁLISIS DE CARRERA</h2>
+    <button class="rb-help-btn" data-help="analisis" aria-label="Ayuda"><i class="fas fa-question"></i></button>
+    <span class="rb-section-line"></span>
+  </div>
+
+  <div class="rb-pred-card">
+    <div class="rb-pred-eyebrow">PREDICCIÓN DE TIEMPO FINAL</div>
+    <div class="rb-pred-times">
+      <div class="rb-pred-main">
+        <div class="rb-pred-lbl">ESTIMACIÓN ACTUAL</div>
+        <div class="rb-pred-val">{{ race_prediction.tiempo_estimado|default:"—" }}</div>
+        {% if race_prediction.delta_objetivo %}
+        <div class="rb-pred-mejora {% if race_prediction.delta_objetivo_signo == 'over' %}rb-pred-mejora-over{% else %}rb-pred-mejora-under{% endif %}">
+          {% if race_prediction.delta_objetivo_signo == 'over' %}+{% else %}-{% endif %}{{ race_prediction.delta_objetivo }} vs OBJETIVO
+        </div>
+        {% endif %}
+      </div>
+      <div class="rb-pred-range">
+        <div>
+          <div class="rb-pred-lbl">OBJETIVO</div>
+          <div class="rb-pred-secondary">{{ race_prediction.tiempo_objetivo|default:"—" }}</div>
+        </div>
+        {% if race_prediction.tiempo_optimista %}
+        <div>
+          <div class="rb-pred-lbl">MEJOR CASO</div>
+          <div class="rb-pred-secondary">{{ race_prediction.tiempo_optimista }}</div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    <div class="rb-pred-note">{{ race_prediction.nota|default:"Basado en tus mejores splits actuales" }}</div>
+  </div>
+
+  {% if top_perdidas %}
+  <div class="rb-losses">
+    <div class="rb-losses-title"><i class="fas fa-arrow-trend-down" style="color:var(--accent);"></i> DÓNDE PIERDES TIEMPO</div>
+    {% for loss in top_perdidas|slice:":5" %}
+    <div class="rb-loss-row">
+      <span class="rb-loss-rank">{{ forloop.counter }}</span>
+      <span class="rb-loss-name">{{ loss.estacion|truncatechars:18|upper }}</span>
+      <div class="rb-loss-bar-track"><div class="rb-loss-bar-fill" style="width: {{ loss.pct|default:50 }}%;"></div></div>
+      <span class="rb-loss-gap">+{{ loss.gap|default:"0:00" }}</span>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if splits_categoria %}
+  <div class="rb-breakdown">
+    <div class="rb-breakdown-title"><i class="fas fa-chart-bar" style="color:var(--accent-2);"></i> DESGLOSE POR CATEGORÍA</div>
+    {% for cat in splits_categoria|slice:":4" %}
+    <div class="rb-breakdown-row">
+      <div class="rb-breakdown-name">{{ cat.nombre|upper }}</div>
+      <div class="rb-breakdown-bars">
+        <div class="rb-breakdown-bar-track">
+          <div class="rb-breakdown-bar-you" style="width:{{ cat.tu_pct|default:50 }}%; background:var(--accent);"></div>
+        </div>
+      </div>
+      <div>
+        <div class="rb-breakdown-val">{{ cat.tu_tiempo|default:"—" }}</div>
+        <div class="rb-breakdown-ref-lbl">REF {{ cat.ref|default:"—" }}</div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+</section>
+{% endif %}
+
+
+{% if splits_estaciones %}
+<section class="rb-section rb-a5">
+  <div class="rb-section-head">
+    <span class="rb-section-num">07</span>
+    <h2 class="rb-section-title">MIS SPLITS</h2>
+    <button class="rb-help-btn" data-help="splits" aria-label="Ayuda"><i class="fas fa-question"></i></button>
+    <span class="rb-section-line"></span>
+  </div>
+
+  <div class="rb-splits-table">
+    {% for split in splits_estaciones %}
+    {% with pct=split.progreso_pct|default:0 %}
+    <div class="rb-split-row {% if not split.tiene_datos %}rb-split-row--empty{% endif %}">
+      <div class="rb-split-header">
+        <div class="rb-split-name">{{ split.nombre|upper }}</div>
+        {% if split.estado %}
+        <span class="rb-status-badge rb-status-{{ split.estado|default:'sin_datos' }}">{{ split.estado|default:""|upper }}</span>
+        {% endif %}
+        {% if split.gap %}
+        <span class="rb-split-gap {% if pct >= 100 %}rb-split-ok{% elif pct >= 70 %}rb-split-mid{% else %}rb-split-warn{% endif %}">{{ split.gap }}</span>
+        {% endif %}
+      </div>
+
+      <div class="rb-split-times">
+        <div class="rb-split-val {% if pct >= 100 %}rb-split-ok{% elif pct >= 70 %}rb-split-mid{% else %}rb-split-warn{% endif %}">
+          {{ split.tiempo_actual|default:"—" }}
+          <span class="rb-split-lbl">TU MEJOR</span>
+        </div>
+        <div class="rb-split-ref">
+          {{ split.tiempo_referencia|default:"—" }}
+          <span class="rb-split-lbl">REFERENCIA</span>
+        </div>
+      </div>
+
+      <div class="rb-split-prog">
+        <div class="rb-split-prog-header">
+          <span class="rb-split-prog-lbl">PROGRESO</span>
+          <span class="rb-split-prog-pct">{{ pct|floatformat:0 }}%</span>
+        </div>
+        <div class="rb-split-prog-track">
+          <div class="rb-split-prog-fill" style="width:{% if pct > 100 %}100{% else %}{{ pct|floatformat:0 }}{% endif %}%; background:{% if pct >= 100 %}var(--ok){% elif pct >= 70 %}var(--warn){% else %}var(--accent){% endif %};"></div>
+        </div>
+      </div>
+
+      {% if split.tendencia_semanal %}
+      <div class="rb-split-trend">
+        {% for h in split.tendencia_semanal|slice:":6" %}
+        <div class="rb-split-trend-bar" style="height: {{ h.altura_pct|default:50 }}%; background: {% if h.mejor %}var(--ok){% else %}var(--accent){% endif %};"></div>
+        {% endfor %}
+      </div>
+      <div class="rb-split-trend-labels">
+        {% for h in split.tendencia_semanal|slice:":6" %}
+        <div class="rb-split-trend-lbl">{{ h.label|default:forloop.counter }}</div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      {% if split.intentos or split.fecha_mejor %}
+      <div class="rb-split-meta">
+        {% if split.intentos %}<span>{{ split.intentos }} INTENTOS</span>{% endif %}
+        {% if split.fecha_mejor %}<span>MEJOR · {{ split.fecha_mejor }}</span>{% endif %}
+      </div>
+      {% endif %}
+    </div>
+    {% endwith %}
+    {% endfor %}
+  </div>
+
+  {% if splits_edad %}
+  <div class="rb-splits-note">
+    <i class="fas fa-info-circle" style="color:var(--accent);margin-right:5px;"></i>
+    REFERENCIAS PARA <strong>{{ splits_edad.categoria|upper }}</strong> · {{ splits_edad.nivel|upper }}
+  </div>
+  {% endif %}
+</section>
+{% endif %}
+
+
+{% if interferencia_index %}
+<section class="rb-section rb-a5">
+  <div class="rb-section-head">
+    <span class="rb-section-num">IF</span>
+    <h2 class="rb-section-title">ÍNDICE DE INTERFERENCIA</h2>
+    <button class="rb-help-btn" data-help="if" aria-label="Ayuda"><i class="fas fa-question"></i></button>
+    <span class="rb-section-line"></span>
+  </div>
+  <div class="rb-if-list">
+    {% for if_item in interferencia_index|slice:":8" %}
+    {% with nivel=if_item.nivel|default:"baja" %}
+    <div class="rb-if-row {{ nivel }}">
+      <div class="rb-if-row-head">
+        <div class="rb-if-name">{{ if_item.estacion|upper }}</div>
+        <div class="rb-if-row-meta">
+          {% if if_item.intentos %}<span style="color:var(--ink-4);">{{ if_item.intentos }} obs</span>{% endif %}
+          <span style="color:{% if nivel == 'alta' %}var(--accent){% elif nivel == 'media' %}var(--warn){% else %}var(--ok){% endif %};font-weight:700;letter-spacing:0.05em;">{{ nivel|upper }}</span>
+        </div>
+      </div>
+      <div class="rb-if-bar-row">
+        <div class="rb-if-bar-track">
+          <div class="rb-if-bar-fill" style="width:{{ if_item.pct|default:0 }}%; background:{% if nivel == 'alta' %}var(--accent){% elif nivel == 'media' %}var(--warn){% else %}var(--ok){% endif %};"></div>
+        </div>
+        <span class="rb-if-pct" style="color:{% if nivel == 'alta' %}var(--accent){% elif nivel == 'media' %}var(--warn){% else %}var(--ok){% endif %};">+{{ if_item.delta_seg|default:"—" }}s</span>
+        <span class="rb-if-delta">{{ if_item.delta_pct|default:"—" }}</span>
+      </div>
+    </div>
+    {% endwith %}
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+
+{% if race_card %}
+<section class="rb-section rb-a5">
+  <div class="rb-section-head">
+    <span class="rb-section-num">RC</span>
+    <h2 class="rb-section-title">RACE CARD TÁCTICA</h2>
+    <button class="rb-help-btn" data-help="racecard" aria-label="Ayuda"><i class="fas fa-question"></i></button>
+    <span class="rb-section-line"></span>
+  </div>
+
+  {% if race_card.summary %}
+  <div class="rb-race-summary">
+    <div class="rb-race-summary-tile">
+      <div class="rb-race-summary-val run">{{ race_card.summary.tiempo_run|default:"—" }}</div>
+      <div class="rb-race-summary-lbl">CARRERA · 8KM</div>
+    </div>
+    <div class="rb-race-summary-tile">
+      <div class="rb-race-summary-val sta">{{ race_card.summary.tiempo_estaciones|default:"—" }}</div>
+      <div class="rb-race-summary-lbl">ESTACIONES</div>
+    </div>
+    <div class="rb-race-summary-tile">
+      <div class="rb-race-summary-val tot">{{ race_card.summary.tiempo_total|default:"—" }}</div>
+      <div class="rb-race-summary-lbl">TOTAL</div>
+    </div>
+  </div>
+  {% endif %}
+
+  {% if race_card.confianza %}
+  <div class="rb-race-confidence">
+    <i class="fas fa-circle-info" style="color:var(--accent-2);margin-right:4px;"></i> {{ race_card.confianza }}
+  </div>
+  {% endif %}
+
+  <div class="rb-race-list">
+    {% for seg in race_card.segmentos|slice:":8" %}
+    <div class="rb-race-segment">
+      <div class="rb-race-num">{{ forloop.counter|stringformat:"02d" }}</div>
+      <div class="rb-race-block run">
+        <div class="rb-race-block-l">
+          <div class="rb-race-block-eyebrow">RUN · {{ seg.km|default:"1" }}KM</div>
+          <div class="rb-race-block-val">{{ seg.tiempo_run|default:"—" }}<span class="unit"> /km</span></div>
+        </div>
+        {% if seg.alerta_run %}<i class="fas fa-triangle-exclamation rb-race-warn" title="{{ seg.alerta_run }}"></i>{% endif %}
+      </div>
+      <div class="rb-race-connector"></div>
+      <div class="rb-race-block {% if seg.tiene_datos_estacion %}sta-real{% else %}sta-ref{% endif %}">
+        <div class="rb-race-block-l">
+          <div class="rb-race-block-eyebrow">{{ seg.estacion|truncatechars:14|upper|default:"—" }}</div>
+          <div class="rb-race-block-val">{{ seg.tiempo_estacion|default:"—" }}{% if not seg.tiene_datos_estacion %}<span class="ref"> ref</span>{% endif %}</div>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+
+{% if sesiones %}
+<section class="rb-section rb-a6">
+  <div class="rb-section-head">
+    <span class="rb-section-num">05b</span>
+    <h2 class="rb-section-title">HISTORIAL</h2>
+    <span class="rb-section-line"></span>
+  </div>
+
+  <button class="rb-hist-toggle" data-rb-toggle="#rb-hist-list">
+    <div class="rb-hist-toggle-l">
+      <i class="fas fa-clock-rotate-left"></i>
+      <div class="rb-hist-toggle-title">ÚLTIMAS SESIONES</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <span class="rb-hist-count">{{ sesiones|length }}</span>
+      <i class="fas fa-chevron-down" style="color:var(--ink-3);transition:transform .15s;"></i>
+    </div>
+  </button>
+
+  <div id="rb-hist-list" class="rb-hist-items" style="display:none;">
+    {% for s in sesiones|slice:":12" %}
+    <div class="rb-hist-item">
+      <div class="rb-hist-item-head">
+        <div>
+          <div class="rb-hist-title">{{ s.tipo|default:s.titulo|default:"SESIÓN"|truncatechars:30|upper }}</div>
+          <div class="rb-hist-date">{{ s.fecha|date:"j M Y"|upper }}</div>
+        </div>
+        <div style="display:flex;gap:4px;">
+          <a href="{% url 'hyrox:editar_sesion' s.id %}" class="rb-edit-btn" title="Editar"><i class="fas fa-pen" style="font-size:10px;"></i></a>
+          <a href="{% url 'hyrox:borrar_entrenamiento' s.id %}" class="rb-edit-btn" title="Borrar" style="color:var(--accent);"><i class="fas fa-trash" style="font-size:10px;"></i></a>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;font-family:var(--font-mono);font-size:10px;color:var(--ink-3);">
+        {% if s.duracion %}<span><i class="fas fa-clock" style="font-size:9px;"></i> {{ s.duracion }}</span>{% endif %}
+        {% if s.tss %}<span><i class="fas fa-bolt" style="font-size:9px;"></i> TSS {{ s.tss }}</span>{% endif %}
+        {% if s.rpe %}<span><i class="fas fa-gauge" style="font-size:9px;"></i> RPE {{ s.rpe }}</span>{% endif %}
+        {% if s.km %}<span><i class="fas fa-person-running" style="font-size:9px;"></i> {{ s.km|floatformat:1 }}km</span>{% endif %}
+      </div>
+      {% if s.feedback %}
+      <div class="rb-feedback">"{{ s.feedback|truncatechars:120 }}"</div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+<div style="height:40px;"></div>

@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+
+{% block title %}Tu Plan Nutricional{% endblock %}
+
+{% block content %}
+<div class="container py-4" style="max-width:700px;">
+    <div class="mb-4">
+        <a href="{% url 'calcular_plan_nutricional' %}" class="text-muted small">
+            <i class="fas fa-arrow-left me-1"></i> Calcular de nuevo
+        </a>
+        <h1 class="h3 mt-2 fw-bold">Tu Plan Nutricional</h1>
+        <p class="text-muted">Estimación basada en tus datos personales.</p>
+    </div>
+
+    <!-- Resumen de macros -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3">
+            <div class="card border-0 shadow-sm text-center h-100">
+                <div class="card-body">
+                    <div class="h4 fw-bold text-primary mb-0">{{ calorias_objetivo|floatformat:0 }}</div>
+                    <div class="small text-muted">kcal/día</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card border-0 shadow-sm text-center h-100">
+                <div class="card-body">
+                    <div class="h4 fw-bold text-danger mb-0">{{ gramos_proteinas|floatformat:0 }}g</div>
+                    <div class="small text-muted">Proteínas</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card border-0 shadow-sm text-center h-100">
+                <div class="card-body">
+                    <div class="h4 fw-bold text-warning mb-0">{{ gramos_grasas|floatformat:0 }}g</div>
+                    <div class="small text-muted">Grasas</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card border-0 shadow-sm text-center h-100">
+                <div class="card-body">
+                    <div class="h4 fw-bold text-success mb-0">{{ gramos_carbohidratos|floatformat:0 }}g</div>
+                    <div class="small text-muted">Carbohidratos</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Plan detallado -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-transparent fw-bold">Plan detallado</div>
+        <div class="card-body">
+            <pre style="white-space:pre-wrap;font-family:inherit;font-size:0.9rem;">{{ plan_generado }}</pre>
+        </div>
+    </div>
+
+    <div class="alert alert-warning mt-4 small">
+        <i class="fas fa-info-circle me-2"></i>
+        Este es un cálculo estimado. Consulta a un profesional de la nutrición para un plan personalizado.
+    </div>
+</div>
+{% endblock %}

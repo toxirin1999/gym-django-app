@@ -152,7 +152,6 @@ def perfil_gamificacion(request, cliente_id=None):
         'historial_reciente': historial_reciente,
         'notificaciones_no_leidas': notificaciones_no_leidas,
         'quests_activas': quests_activas,
-        'todos_los_clientes': Cliente.objects.all(),
     }
 
     return render(request, 'logros/perfil_gamificacion.html', context)
