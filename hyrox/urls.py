@@ -5,6 +5,7 @@ app_name = 'hyrox'
 
 urlpatterns = [
     path('dashboard/', views.hyrox_dashboard, name='dashboard'),
+    path('guia-tecnica/', views.guia_tecnica, name='guia_tecnica'),
     path('crear-objetivo/', views.crear_objetivo, name='crear_objetivo'),
     path('cancelar-objetivo/<int:objective_id>/', views.cancelar_objetivo, name='cancelar_objetivo'),
     path('registrar-entrenamiento/<int:objective_id>/', views.registrar_entrenamiento, name='registrar_entrenamiento'),

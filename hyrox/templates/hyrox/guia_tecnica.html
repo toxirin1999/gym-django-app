@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Guía Técnica — Estaciones HYROX{% endblock %}
+
+{% block content %}
+<div style="max-width:900px;margin:0 auto;padding:20px 16px 60px;">
+
+  <!-- HEADER -->
+  <div style="margin-bottom:28px;">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+      <a href="{% url 'hyrox:dashboard' %}" style="font-size:11px;color:var(--ink-3);text-decoration:none;font-family:var(--font-mono);">← Dashboard</a>
+    </div>
+    <h1 style="font-family:var(--font-disp);font-size:28px;font-weight:800;text-transform:uppercase;letter-spacing:-.5px;color:var(--ink-1);margin:0 0 6px;">Guía Técnica</h1>
+    <p style="font-family:var(--font-body);font-size:13px;color:var(--ink-3);margin:0;">Las 8 estaciones del circuito HYROX — técnica, errores y estrategia de carrera.</p>
+  </div>
+
+  <!-- GRID DE ESTACIONES -->
+  <div style="display:flex;flex-direction:column;gap:12px;">
+    {% for e in estaciones %}
+    <div style="border:1px solid var(--border);border-radius:10px;overflow:hidden;background:var(--card);">
+
+      <!-- CABECERA CLICKABLE -->
+      <button onclick="toggleStation('{{ e.key }}')"
+        style="width:100%;display:flex;align-items:center;gap:12px;padding:14px 16px;background:none;border:none;cursor:pointer;text-align:left;">
+        <span style="font-family:var(--font-mono);font-size:11px;font-weight:800;color:var(--ink-3);flex-shrink:0;min-width:24px;">{{ e.num }}</span>
+        <i class="fas {{ e.icon }}" style="color:var(--accent);font-size:16px;flex-shrink:0;width:20px;text-align:center;"></i>
+        <span style="font-family:var(--font-disp);font-size:17px;font-weight:800;color:var(--ink-1);text-transform:uppercase;flex:1;">{{ e.display_name }}</span>
+        {% if not e.completo %}
+        <span style="font-family:var(--font-mono);font-size:9px;font-weight:700;color:var(--warn);background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.25);border-radius:4px;padding:2px 7px;flex-shrink:0;">En progreso</span>
+        {% endif %}
+        <i class="fas fa-chevron-down station-chevron-{{ e.key }}" style="color:var(--ink-3);font-size:11px;transition:transform .2s;flex-shrink:0;"></i>
+      </button>
+
+      <!-- CONTENIDO EXPANDIBLE -->
+      <div id="station-{{ e.key }}" style="display:none;border-top:1px solid var(--border);padding:16px;">
+
+        {% if e.description %}
+        <p style="font-family:var(--font-body);font-size:12px;color:var(--ink-2);line-height:1.6;margin:0 0 16px;padding:10px 12px;background:rgba(var(--accent-rgb,99,102,241),.05);border-left:3px solid var(--accent);border-radius:0 6px 6px 0;">{{ e.description }}</p>
+        {% endif %}
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+
+          <!-- TÉCNICA CLAVE -->
+          {% if e.technical_focus %}
+          <div style="grid-column:{% if e.positions %}1{% else %}1 / -1{% endif %};">
+            <div style="font-family:var(--font-mono);font-size:9px;font-weight:700;color:var(--ok);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px;">Técnica clave</div>
+            <ul style="margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:5px;">
+              {% for punto in e.technical_focus %}
+              <li style="display:flex;gap:7px;align-items:flex-start;font-family:var(--font-body);font-size:11px;color:var(--ink-2);line-height:1.4;">
+                <span style="font-family:var(--font-mono);font-size:9px;font-weight:700;color:var(--ok);flex-shrink:0;min-width:14px;margin-top:1px;">{{ forloop.counter }}</span>
+                {{ punto }}
+              </li>
+              {% endfor %}
+            </ul>
+          </div>
+          {% endif %}
+
+          <!-- POSICIONES -->
+          {% if e.positions %}
+          <div>
+            <div style="font-family:var(--font-mono);font-size:9px;font-weight:700;color:var(--ink-3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px;">Posiciones eficaces</div>
+            <ul style="margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px;">
+              {% for pos in e.positions %}
+              <li style="padding:8px 10px;border-radius:6px;background:var(--paper,rgba(100,116,139,.06));border:1px solid var(--border);font-family:var(--font-body);font-size:11px;color:var(--ink-2);line-height:1.4;">{{ pos }}</li>
+              {% endfor %}
+            </ul>
+          </div>
+          {% endif %}
+
+          <!-- ERRORES COMUNES -->
+          {% if e.common_mistakes %}
+          <div>
+            <div style="font-family:var(--font-mono);font-size:9px;font-weight:700;color:var(--danger);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px;">Errores comunes</div>
+            <ul style="margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:5px;">
+              {% for err in e.common_mistakes %}
+              <li style="display:flex;gap:7px;align-items:flex-start;font-family:var(--font-body);font-size:11px;color:var(--ink-2);line-height:1.4;">
+                <i class="fas fa-times-circle" style="color:var(--danger);font-size:9px;margin-top:3px;flex-shrink:0;"></i>
+                {{ err }}
+              </li>
+              {% endfor %}
+            </ul>
+          </div>
+          {% endif %}
+
+          <!-- ESTRATEGIA -->
+          {% if e.strategy %}
+          <div>
+            <div style="font-family:var(--font-mono);font-size:9px;font-weight:700;color:var(--ink-3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px;">Estrategia de carrera</div>
+            <ul style="margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:5px;">
+              {% for tip in e.strategy %}
+              <li style="display:flex;gap:7px;align-items:flex-start;font-family:var(--font-body);font-size:11px;color:var(--ink-2);line-height:1.4;">
+                <i class="fas fa-chevron-right" style="color:var(--ok);font-size:9px;margin-top:3px;flex-shrink:0;"></i>
+                {{ tip }}
+              </li>
+              {% endfor %}
+            </ul>
+          </div>
+          {% endif %}
+
+          <!-- REGLAS OFICIALES -->
+          {% if e.rules %}
+          <div style="grid-column:1 / -1;">
+            <div style="font-family:var(--font-mono);font-size:9px;font-weight:700;color:var(--warn);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px;">Reglas oficiales</div>
+            <ul style="margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:5px;">
+              {% for regla in e.rules %}
+              <li style="display:flex;gap:7px;align-items:flex-start;font-family:var(--font-body);font-size:11px;color:var(--ink-2);line-height:1.4;">
+                <i class="fas fa-exclamation-circle" style="color:var(--warn);font-size:9px;margin-top:3px;flex-shrink:0;"></i>
+                {{ regla }}
+              </li>
+              {% endfor %}
+            </ul>
+          </div>
+          {% endif %}
+
+          <!-- PESOS POR CATEGORÍA -->
+          {% if e.weights %}
+          <div style="grid-column:1 / -1;">
+            <div style="font-family:var(--font-mono);font-size:9px;font-weight:700;color:var(--ink-3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px;">Pesos por categoría</div>
+            <div style="display:flex;flex-wrap:wrap;gap:6px;">
+              {% if e.weights.women_open %}<span style="font-family:var(--font-mono);font-size:10px;padding:4px 9px;border-radius:5px;background:rgba(244,114,182,.1);border:1px solid rgba(244,114,182,.25);color:var(--ink-2);">Women Open / Doubles W <strong>{{ e.weights.women_open }}</strong></span>{% endif %}
+              {% if e.weights.men_open %}<span style="font-family:var(--font-mono);font-size:10px;padding:4px 9px;border-radius:5px;background:rgba(99,102,241,.1);border:1px solid rgba(99,102,241,.25);color:var(--ink-2);">Men Open / Doubles M / Pro W <strong>{{ e.weights.men_open }}</strong></span>{% endif %}
+              {% if e.weights.pro_men %}<span style="font-family:var(--font-mono);font-size:10px;padding:4px 9px;border-radius:5px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);color:var(--ink-2);">Pro Men / Pro Doubles M <strong>{{ e.weights.pro_men }}</strong></span>{% endif %}
+            </div>
+          </div>
+          {% endif %}
+
+          <!-- ENTRENAMIENTO CORRECTIVO -->
+          {% if e.corrective_work %}
+          <div style="grid-column:1 / -1;margin-top:4px;padding-top:12px;border-top:1px solid var(--border);">
+            <div style="font-family:var(--font-mono);font-size:9px;font-weight:700;color:var(--ink-3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px;">Cómo entrenarlo</div>
+            <ul style="margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:5px;">
+              {% for item in e.corrective_work %}
+              <li style="display:flex;gap:7px;align-items:flex-start;font-family:var(--font-body);font-size:11px;color:var(--ink-2);line-height:1.4;">
+                <i class="fas fa-dumbbell" style="color:var(--accent);font-size:9px;margin-top:3px;flex-shrink:0;"></i>
+                {{ item }}
+              </li>
+              {% endfor %}
+            </ul>
+          </div>
+          {% endif %}
+
+        </div><!-- /grid -->
+      </div><!-- /contenido -->
+    </div><!-- /card -->
+    {% endfor %}
+  </div>
+
+</div>
+
+<script>
+function toggleStation(key) {
+  const body = document.getElementById('station-' + key);
+  const chevron = document.querySelector('.station-chevron-' + key);
+  const open = body.style.display !== 'none';
+  body.style.display = open ? 'none' : 'block';
+  if (chevron) chevron.style.transform = open ? '' : 'rotate(180deg)';
+}
+</script>
+{% endblock %}

@@ -2548,3 +2548,28 @@ def strava_importar_recientes(request):
     if nuevas:
         return JsonResponse({'ok': True, 'msg': f'{nuevas} actividad{"es" if nuevas != 1 else ""} importada{"s" if nuevas != 1 else ""}. Revísalas abajo.'})
     return JsonResponse({'ok': True, 'msg': 'No hay actividades nuevas en los últimos 30 días.'})
+
+
+@login_required
+def guia_tecnica(request):
+    from .station_intelligence import HyroxStationIntelligence as SI
+    orden = ['skierg', 'sled_push', 'sled_pull', 'burpees', 'rowing', 'farmers_carry', 'sandbag_lunges', 'wall_balls']
+    estaciones = []
+    for i, key in enumerate(orden, start=1):
+        data = SI.STATIONS.get(key, {})
+        estaciones.append({
+            'num': f'{i:02d}',
+            'key': key,
+            'display_name': data.get('display_name', key),
+            'icon': data.get('icon', 'fa-circle'),
+            'description': data.get('description', ''),
+            'technical_focus': data.get('technical_focus', []),
+            'positions': data.get('positions', []),
+            'common_mistakes': data.get('common_mistakes', []),
+            'strategy': data.get('strategy', []),
+            'rules': data.get('rules', []),
+            'weights': data.get('weights', {}),
+            'corrective_work': data.get('corrective_work', []),
+            'completo': bool(data.get('description') and data.get('positions') and data.get('rules')),
+        })
+    return render(request, 'hyrox/guia_tecnica.html', {'estaciones': estaciones})
