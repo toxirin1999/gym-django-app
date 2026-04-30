@@ -652,37 +652,101 @@ def hyrox_dashboard(request):
     # ── MILESTONES ─────────────────────────────────────────────────────────────
     milestones = []
     if objetivo_activo and objetivo_activo.fecha_evento:
+        import datetime as _dt
         _fe = objetivo_activo.fecha_evento
         _hoy_m = timezone.localdate()
-        _semanas = (_fe - _hoy_m).days // 7
+        _dias_restantes = (_fe - _hoy_m).days
+        _semanas_restantes = _dias_restantes // 7
+
+        # Use fecha_creacion to anchor milestones at fixed % of total plan duration
+        _fecha_inicio = objetivo_activo.fecha_creacion.date() if hasattr(objetivo_activo.fecha_creacion, 'date') else objetivo_activo.fecha_creacion
+        _total_dias = (_fe - _fecha_inicio).days
+        _total_semanas = max(_total_dias // 7, 1)
+
+        def _milestone_entry(pct, titulo, desc, icono, entreno, tipo_hito):
+            """Build a milestone dict anchored at pct% of total plan duration."""
+            dias_desde_inicio = int(_total_dias * pct)
+            fecha_hito = _fecha_inicio + _dt.timedelta(days=dias_desde_inicio)
+            semanas_desde_hoy = (fecha_hito - _hoy_m).days // 7
+            pasado = fecha_hito < _hoy_m
+            esta_semana = not pasado and 0 <= semanas_desde_hoy <= 1
+            return {
+                'semana_desde_hoy': semanas_desde_hoy,
+                'fecha': fecha_hito.strftime('%-d %b %Y'),
+                'titulo': titulo,
+                'desc': desc,
+                'icono': icono,
+                'pasado': pasado,
+                'esta_semana': esta_semana,
+                'tipo_hito': tipo_hito,
+                'entreno': entreno if esta_semana else None,
+            }
+
         milestones = [
+            _milestone_entry(
+                pct=0.25,
+                titulo='Test de ritmo 5K',
+                desc='Mide tu progreso en carrera y ajusta los ritmos del plan',
+                icono='fa-stopwatch',
+                tipo_hito='test_5k',
+                entreno={
+                    'nombre': 'Test 5K',
+                    'pasos': [
+                        '10 min de calentamiento a ritmo suave',
+                        'Corre 5K al máximo esfuerzo sostenible — registra el tiempo',
+                        '5 min de vuelta a la calma',
+                        'El tiempo se actualiza automáticamente en tu perfil atlético',
+                    ],
+                    'color': 'var(--accent)',
+                },
+            ),
+            _milestone_entry(
+                pct=0.50,
+                titulo='Primera simulación completa',
+                desc='Realiza las 8 estaciones seguidas por primera vez',
+                icono='fa-flag',
+                tipo_hito='sim_completa',
+                entreno={
+                    'nombre': 'Simulación 8 estaciones (70%)',
+                    'pasos': [
+                        '1 km de carrera suave de entrada',
+                        'SkiErg 1000m → carrera 1km → Sled Push 50m → carrera 1km',
+                        'Sled Pull 50m → carrera 1km → Burpee Broad Jumps 80m → carrera 1km',
+                        'Rowing 1000m → carrera 1km → Farmers Carry 200m → carrera 1km',
+                        'Sandbag Lunges 100m → carrera 1km → Wall Balls 100 reps',
+                        'Pesos al 70% del oficial — foco en ritmo y transiciones',
+                    ],
+                    'color': 'var(--ok)',
+                },
+            ),
+            _milestone_entry(
+                pct=0.75,
+                titulo='Simulación a peso oficial',
+                desc='Todas las estaciones al 100% de los pesos de competición',
+                icono='fa-medal',
+                tipo_hito='sim_peso_oficial',
+                entreno={
+                    'nombre': 'Simulación Race Day (100%)',
+                    'pasos': [
+                        '1 km de carrera — ritmo de competición',
+                        'Las 8 estaciones completas con pesos oficiales de tu categoría',
+                        '1km de carrera entre cada estación — sin reducir el ritmo',
+                        'Registra tiempo total y tiempo por estación',
+                        'Evalúa recuperación post-simulación durante 48h',
+                    ],
+                    'color': '#f59e0b',
+                },
+            ),
             {
-                'semana_desde_hoy': max(0, _semanas - round(_semanas * 0.75)),
-                'titulo': 'Test de ritmo 5K',
-                'desc': 'Mide tu progreso en carrera y ajusta los ritmos del plan',
-                'icono': 'fa-stopwatch',
-                'pasado': _semanas <= round(_semanas * 0.25),
-            },
-            {
-                'semana_desde_hoy': max(0, _semanas - round(_semanas * 0.50)),
-                'titulo': 'Primera simulación completa',
-                'desc': 'Realiza las 8 estaciones seguidas para primera vez',
-                'icono': 'fa-flag',
-                'pasado': _semanas <= round(_semanas * 0.50),
-            },
-            {
-                'semana_desde_hoy': max(0, _semanas - round(_semanas * 0.25)),
-                'titulo': 'Simulación a peso oficial',
-                'desc': 'Todas las estaciones al 100% de los pesos de competición',
-                'icono': 'fa-medal',
-                'pasado': _semanas <= round(_semanas * 0.15),
-            },
-            {
-                'semana_desde_hoy': 0,
+                'semana_desde_hoy': _semanas_restantes,
+                'fecha': _fe.strftime('%-d %b %Y'),
                 'titulo': 'Race Day',
-                'desc': objetivo_activo.fecha_evento.strftime('%d %b %Y'),
+                'desc': _fe.strftime('%-d %b %Y'),
                 'icono': 'fa-trophy',
-                'pasado': False,
+                'pasado': _dias_restantes < 0,
+                'esta_semana': 0 <= _dias_restantes <= 7,
+                'tipo_hito': None,
+                'entreno': None,
             },
         ]
 
@@ -1088,6 +1152,7 @@ def hyrox_dashboard(request):
         'estaciones_debiles': estaciones_debiles,
         'fases_timeline': fases_timeline,
         'milestones': milestones,
+        'objetivo_id': objetivo_activo.id if objetivo_activo else None,
         'sustituciones_activas': sustituciones_activas if 'sustituciones_activas' in locals() else [],
         'interferencia_index': interferencia_index,
         'race_card': race_card,
@@ -1159,6 +1224,104 @@ def cancelar_objetivo(request, objective_id):
     objetivo.delete()
     messages.success(request, "Entrenamientos y objetivo reseteados correctamente. ¡Pizarra limpia para empezar de cero!")
     return redirect('hyrox:dashboard')
+
+@login_required
+def iniciar_hito(request, objective_id, tipo_hito):
+    """Crea una HyroxSession pre-rellena para un hito del macrociclo y redirige al flujo de registro."""
+    objetivo = get_object_or_404(HyroxObjective, id=objective_id, cliente=request.user.cliente_perfil)
+    from .training_engine import HyroxTrainingEngine as _HTE
+    from .models import HyroxActivity
+
+    hoy = timezone.now().date()
+    pesos = _HTE.PESOS_OFICIALES.get(objetivo.categoria, _HTE.PESOS_OFICIALES['open_men'])
+
+    HITOS = {
+        'test_5k': {
+            'titulo': '[HITO:test_5k] Test de ritmo 5K',
+            'actividades': [
+                {'tipo': 'carrera', 'nombre': 'Calentamiento 10 min suave',
+                 'metricas': {'distancia_m': 1500, 'notas': 'Ritmo muy suave. Prepara el cuerpo.'}},
+                {'tipo': 'carrera', 'nombre': 'Test 5K — Máximo esfuerzo',
+                 'metricas': {'distancia_m': 5000, 'notas': 'Corre los 5 km al máximo esfuerzo sostenible. Registra el tiempo total exacto.'}},
+                {'tipo': 'carrera', 'nombre': 'Vuelta a la calma',
+                 'metricas': {'distancia_m': 800, 'notas': 'Ritmo muy suave, 5 min de recuperación activa.'}},
+            ],
+        },
+        'sim_completa': {
+            'titulo': '[HITO:sim_completa] Primera simulación completa (70%)',
+            'actividades': [
+                {'tipo': 'carrera', 'nombre': 'Carrera 1 km', 'metricas': {'distancia_m': 1000}},
+                {'tipo': 'skierg', 'nombre': 'SkiErg', 'metricas': {'distancia_m': 1000, 'notas': '70% potencia, 32-38 tirones/min.'}},
+                {'tipo': 'carrera', 'nombre': 'Carrera 1 km', 'metricas': {'distancia_m': 1000}},
+                {'tipo': 'hyrox_station', 'nombre': 'Sled Push', 'metricas': {'distancia_m': 50, 'peso_kg': round(pesos['sled_push'] * 0.7)}},
+                {'tipo': 'carrera', 'nombre': 'Carrera 1 km', 'metricas': {'distancia_m': 1000}},
+                {'tipo': 'hyrox_station', 'nombre': 'Sled Pull', 'metricas': {'distancia_m': 50, 'peso_kg': round(pesos['sled_pull'] * 0.7)}},
+                {'tipo': 'carrera', 'nombre': 'Carrera 1 km', 'metricas': {'distancia_m': 1000}},
+                {'tipo': 'hyrox_station', 'nombre': 'Burpee Broad Jumps', 'metricas': {'distancia_m': 80, 'notas': '80 m continuos, ritmo constante.'}},
+                {'tipo': 'carrera', 'nombre': 'Carrera 1 km', 'metricas': {'distancia_m': 1000}},
+                {'tipo': 'ergometro', 'nombre': 'Rowing 1000m', 'metricas': {'distancia_m': 1000, 'notas': 'Damper 4-5, ritmo sostenible.'}},
+                {'tipo': 'carrera', 'nombre': 'Carrera 1 km', 'metricas': {'distancia_m': 1000}},
+                {'tipo': 'hyrox_station', 'nombre': 'Farmers Carry', 'metricas': {'distancia_m': 200, 'peso_kg': round(pesos['farmers'] * 0.7)}},
+                {'tipo': 'carrera', 'nombre': 'Carrera 1 km', 'metricas': {'distancia_m': 1000}},
+                {'tipo': 'hyrox_station', 'nombre': 'Sandbag Lunges', 'metricas': {'distancia_m': 100, 'peso_kg': round(pesos['sandbag'] * 0.7)}},
+                {'tipo': 'carrera', 'nombre': 'Carrera 1 km', 'metricas': {'distancia_m': 1000}},
+                {'tipo': 'hyrox_station', 'nombre': 'Wall Balls', 'metricas': {'reps_total': 100, 'peso_kg': pesos['wall_ball'], 'notas': '70% esfuerzo, sets de 10-15 reps.'}},
+            ],
+        },
+        'sim_peso_oficial': {
+            'titulo': '[HITO:sim_peso_oficial] Simulación a peso oficial',
+            'actividades': [
+                {'tipo': 'carrera', 'nombre': 'Carrera 1 km', 'metricas': {'distancia_m': 1000}},
+                {'tipo': 'skierg', 'nombre': 'SkiErg', 'metricas': {'distancia_m': 1000, 'notas': 'Ritmo de competición.'}},
+                {'tipo': 'carrera', 'nombre': 'Carrera 1 km', 'metricas': {'distancia_m': 1000}},
+                {'tipo': 'hyrox_station', 'nombre': 'Sled Push', 'metricas': {'distancia_m': 50, 'peso_kg': pesos['sled_push']}},
+                {'tipo': 'carrera', 'nombre': 'Carrera 1 km', 'metricas': {'distancia_m': 1000}},
+                {'tipo': 'hyrox_station', 'nombre': 'Sled Pull', 'metricas': {'distancia_m': 50, 'peso_kg': pesos['sled_pull']}},
+                {'tipo': 'carrera', 'nombre': 'Carrera 1 km', 'metricas': {'distancia_m': 1000}},
+                {'tipo': 'hyrox_station', 'nombre': 'Burpee Broad Jumps', 'metricas': {'distancia_m': 80, 'notas': 'Ritmo de competición desde el inicio.'}},
+                {'tipo': 'carrera', 'nombre': 'Carrera 1 km', 'metricas': {'distancia_m': 1000}},
+                {'tipo': 'ergometro', 'nombre': 'Rowing 1000m', 'metricas': {'distancia_m': 1000, 'notas': 'Damper 4-5.'}},
+                {'tipo': 'carrera', 'nombre': 'Carrera 1 km', 'metricas': {'distancia_m': 1000}},
+                {'tipo': 'hyrox_station', 'nombre': 'Farmers Carry', 'metricas': {'distancia_m': 200, 'peso_kg': pesos['farmers']}},
+                {'tipo': 'carrera', 'nombre': 'Carrera 1 km', 'metricas': {'distancia_m': 1000}},
+                {'tipo': 'hyrox_station', 'nombre': 'Sandbag Lunges', 'metricas': {'distancia_m': 100, 'peso_kg': pesos['sandbag']}},
+                {'tipo': 'carrera', 'nombre': 'Carrera 1 km', 'metricas': {'distancia_m': 1000}},
+                {'tipo': 'hyrox_station', 'nombre': 'Wall Balls', 'metricas': {'reps_total': 100, 'peso_kg': pesos['wall_ball']}},
+            ],
+        },
+    }
+
+    config = HITOS.get(tipo_hito)
+    if not config:
+        messages.error(request, "Tipo de hito no reconocido.")
+        return redirect('hyrox:dashboard')
+
+    # Crear la sesión del hito (o reutilizar si ya existe para hoy)
+    sesion_existente = HyroxSession.objects.filter(
+        objective=objetivo, fecha=hoy,
+        titulo__startswith=f'[HITO:{tipo_hito}]',
+        estado='planificado'
+    ).first()
+
+    if sesion_existente:
+        sesion = sesion_existente
+    else:
+        sesion = HyroxSession.objects.create(
+            objective=objetivo,
+            fecha=hoy,
+            titulo=config['titulo'],
+            estado='planificado',
+        )
+        for act in config['actividades']:
+            HyroxActivity.objects.create(
+                sesion=sesion,
+                tipo_actividad=act['tipo'],
+                nombre_ejercicio=act['nombre'],
+                data_metricas=act['metricas'],
+            )
+
+    return redirect('hyrox:registrar_entrenamiento_session', objective_id=objetivo.id, session_id=sesion.id)
+
 
 @login_required
 def regenerar_plan(request, objective_id):
@@ -1365,6 +1528,32 @@ def registrar_entrenamiento(request, objective_id, session_id=None):
                 if alertas:
                      for alerta in alertas:
                           messages.info(request, f"⚡ {alerta}")
+
+                # Hito: detectar tipo y lanzar adaptación del plan
+                tipo_hito_sesion = None
+                if sesion.titulo:
+                    for _th in ('test_5k', 'sim_completa', 'sim_peso_oficial'):
+                        if f'[HITO:{_th}]' in sesion.titulo:
+                            tipo_hito_sesion = _th
+                            break
+
+                if tipo_hito_sesion == 'test_5k':
+                    # Actualizar tiempo_5k_base antes de llamar al engine
+                    act_5k = sesion.activities.filter(nombre_ejercicio='Test 5K — Máximo esfuerzo').first()
+                    if act_5k and act_5k.data_metricas:
+                        tiempo_s = act_5k.data_metricas.get('tiempo_s')
+                        if tiempo_s and int(tiempo_s) > 0:
+                            mins = int(tiempo_s) // 60
+                            segs = int(tiempo_s) % 60
+                            nuevo_tiempo = f"{mins}:{segs:02d}"
+                            objetivo.tiempo_5k_base = nuevo_tiempo
+                            objetivo.save(update_fields=['tiempo_5k_base'])
+
+                if tipo_hito_sesion:
+                    from .training_engine import PostMilestoneEngine
+                    mensajes_hito = PostMilestoneEngine.adapt_after_milestone(sesion, tipo_hito_sesion)
+                    for msg in mensajes_hito:
+                        messages.success(request, f"🎯 {msg}")
 
             return redirect('hyrox:dashboard')
     else:

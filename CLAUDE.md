@@ -4,6 +4,43 @@ This file provides context for AI assistants working on this codebase.
 
 ---
 
+## VISIÓN NUCLEAR — "Entrenador que aprende"
+
+**Esta es la directriz más importante de toda la app.** Antes de implementar cualquier feature, hacerse esta pregunta:
+
+> ¿Cómo alimenta este dato al plan? ¿Qué aprende el sistema de esta información?
+
+La app NO es un registrador de entrenos. Es un entrenador que mejora su conocimiento del usuario con cada sesión completada, cada test realizado, cada lesión reportada y cada dato biométrico introducido. Si una feature solo muestra datos sin retroalimentar el plan, está incompleta.
+
+### Bucles de aprendizaje activos (implementados)
+
+| Dato de entrada | Qué aprende/ajusta el sistema |
+|---|---|
+| RPE post-sesión | Reduce volumen si RPE ≥ 9; aumenta si RPE ≤ 5 dos sesiones seguidas |
+| Energía pre-entreno | Escala volumen de la sesión al momento |
+| Test 5K completado | Recalibra ritmos Z2/tempo en todas las sesiones futuras de carrera |
+| Simulación completa/oficial | Detecta estaciones >25% sobre objetivo → añade sesiones correctivas |
+| Lesión activa | Filtra ejercicios con tags incompatibles en tiempo real |
+| Sesiones completadas | Actualiza readiness breakdown (fuerza, resistencia, potencia) |
+| Actividades por estación | Alimenta CompetitionStandardsService para tracking vs estándares |
+
+### Gaps identificados — pendientes de implementar (por prioridad)
+
+1. **Actualización automática de RMs** — `rm_sentadilla`/`rm_peso_muerto` en `HyroxObjective` son estáticos. Si el usuario rompe un PR en sesión, el plan no lo sabe.
+2. **Tiempo 5K desde carreras libres** — `tiempo_5k_base` solo se actualiza desde el hito Test 5K. Una carrera mejor registrada en sesión normal no actualiza el plan.
+3. **Calibración de RPE personal** — usuario que reporta RPE 6 con FC de Z4 → el sistema debería detectar el patrón y calibrar su escala.
+4. **Deload automático por TSB** — si TSB < -30, insertar semana de deload sin que el usuario lo solicite.
+5. **Resumen semanal "qué aprendió el plan"** — el usuario no percibe el aprendizaje si no hay un mensaje explícito cada semana.
+6. **Cruce nutrición → Hyrox** — `CheckNutricionalDiario` tiene fatiga/sueño/energía no conectados a Hyrox readiness.
+7. **Cruce gym sessions → Hyrox** — volumen/RPE de `entrenos` app alimenta Hyrox readiness de forma básica. Mejorar.
+8. **Detección de estancamiento por estación** — sin mejora en 3 sesiones → cambiar estímulo automáticamente.
+9. **HRV diario** — añadir al checkin; es el mejor indicador de recuperación para ajustar carga.
+10. **Comparativa temporal propia** — "este mes tu Sled Push mejoró un 12%" para que el usuario perciba el aprendizaje.
+
+---
+
+---
+
 ## Quick Commands
 
 ### Install
