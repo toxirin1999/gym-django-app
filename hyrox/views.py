@@ -274,7 +274,18 @@ def hyrox_dashboard(request):
         
         pace_prediction = None
         if objetivo_activo.tiempo_5k_base:
-            pace_prediction = f"Basado en tu test de {objetivo_activo.tiempo_5k_base}, proyección recta: recortar 15 seg/km por semana para el sub-25:00."
+            objetivo_carrera = objetivo_activo.objetivo_tiempo_carrera or None
+            if objetivo_carrera:
+                pace_prediction = (
+                    f"5K actual: {objetivo_activo.tiempo_5k_base} · "
+                    f"Objetivo carrera: {objetivo_carrera}. "
+                    f"Recorta 10–15 seg/km cada semana con Z2 y series hasta alcanzar el ritmo objetivo."
+                )
+            else:
+                pace_prediction = (
+                    f"5K actual: {objetivo_activo.tiempo_5k_base}. "
+                    f"Añade tu tiempo objetivo en Editar objetivo para ver la proyección de mejora."
+                )
 
         # Phase 11: Identidad Consciente y Smart Alerts
         morning_briefing = None
