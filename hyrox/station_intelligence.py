@@ -12,55 +12,75 @@ class HyroxStationIntelligence:
         "skierg": {
             "display_name": "SkiErg",
             "icon": "fa-skiing",
+            "description": (
+                "Estación 01 — 1.000 m (igual para todas las divisiones). "
+                "Máquina de tracción vertical que simula el esquí de fondo. "
+                "Combina tracción de brazos con extensión de cadera y core: trabaja la cadena posterior completa. "
+                "Damper preajustado en nivel 6; puedes ajustarlo durante la ejecución."
+            ),
+            "rules": [
+                "Los pies deben permanecer sobre la plataforma — levantarlos está permitido, pero los talones no pueden tocar el suelo",
+                "Al completar los 1.000 m, levanta el brazo para confirmación del juez antes de abandonar la máquina",
+                "En modalidad parejas, no se pueden pasar los mangos entre compañeros",
+                "El equipo y carril son asignados por los jueces — no puedes elegir",
+            ],
             "technical_focus": [
-                "Cadera atrás (bisagra), no sentadilla",
-                "Dorsales activos desde el inicio",
-                "Core firme todo el recorrido",
-                "Brazos cerca del cuerpo",
+                "Salida: un brazo de distancia de la máquina, pies al ancho de hombros, mangos justo por encima de la cabeza",
+                "Bisagra de cadera: empuja caderas hacia atrás mientras llevas los codos hacia abajo — no es una sentadilla",
+                "Manos siguen la línea del torso hasta los muslos; pulgares al bolsillo al extender",
+                "Dorsales activos desde el inicio — no tirar solo con brazos",
+                "Brazos pegados al torso como si se deslizaran sobre un raíl — sin abrir en Y",
+                "Recuperación: mangos suben cerca de los costados para la siguiente repetición",
+                "Respiración: exhala al empujar, inhala al elevarse",
+            ],
+            "positions": [
+                "Posición estándar: cadera atrás (bisagra), hombros siempre por encima de caderas, ligera flexión de rodillas.",
+                "Ejercicio de activación: practica 4-5 reps enfocadas solo en el movimiento de cadera sin mover los brazos para sentir la bisagra correcta.",
             ],
             "common_mistakes": [
-                "Tirar solo con brazos",
-                "Bajar demasiado el torso",
-                "Abrir los brazos en Y",
-                "Perder tensión en core",
+                "Descenso excesivo del torso — hombros caen por debajo de caderas, pierdes palanca. Mantén hombros arriba.",
+                "Sentadilla excesiva — rodillas se doblan demasiado. Imagina golpear una pared con los glúteos hacia atrás.",
+                "Tirar solo con brazos — la cadera y el core no se activan y los brazos se fatigan antes de llegar al km 1.",
+                "Abrir los mangos en Y — reduce eficiencia. Imagina que los brazos se deslizan sobre un raíl pegado al torso.",
             ],
             "strategy": [
-                "Primeros 200m controla pulsaciones",
-                "Mantén 32–38 SPM",
-                "Últimos 100m reduce ligeramente",
+                "0–200 m: estabiliza ritmo cardíaco sin acelerar a tope — es la primera estación, el cuerpo aún está caliente",
+                "200–800 m: mantén 32–38 tirones por minuto sin disparar la FC",
+                "Últimos 100 m: afloja ligeramente para salir con el corazón más calmado y entrar mejor al 2.º km",
             ],
             "corrective_work": [
-                "3×15 reps solo cadera (sin brazos)",
-                "2×500m a 32–34 SPM",
-                "Respiración: exhala al tirar",
+                "Pull-ups estrictas (con calleras si es necesario) — fuerza de dorsales y agarre",
+                "Hip hinge con banda o sin carga — automatizar la bisagra correcta",
+                "Pull-down con goma o polea alta — patrón de tracción",
+                "Remo con mancuerna o barra bajo fatiga aeróbica — transferencia directa",
             ],
             "corrective_activities": [
                 {
                     "tipo_actividad": "skierg",
-                    "nombre_ejercicio": "SkiErg técnico · Patrón cadera",
+                    "nombre_ejercicio": "SkiErg técnico · 5×200m",
                     "data_metricas": {
                         "override": True,
-                        "series": [{"reps": 15}, {"reps": 15}, {"reps": 15}],
-                        "rpe_objetivo": "4-5",
-                        "notas": "Sin brazos o con cuerda. Foco total en bisagra de cadera. Dorsales activos.",
+                        "series": [{"distancia_m": 200}] * 5,
+                        "rpe_objetivo": "6-7",
+                        "notas": "80-85% potencia. 32-38 tirones/min. Descanso 90s. Foco en bisagra de cadera.",
                     },
                 },
                 {
                     "tipo_actividad": "skierg",
-                    "nombre_ejercicio": "SkiErg 2×500m técnico",
+                    "nombre_ejercicio": "SkiErg resistencia · 1×500m",
                     "data_metricas": {
                         "override": True,
-                        "series": [{"distancia_m": 500}, {"distancia_m": 500}],
+                        "series": [{"distancia_m": 500}],
                         "rpe_objetivo": "5-6",
-                        "notas": "32–34 SPM. Prioriza eficiencia técnica sobre velocidad.",
+                        "notas": "Ritmo constante y controlado. No acelerar los últimos 100m.",
                     },
                 },
             ],
             "diagnosis": {
-                "high_if": "Sales muy fatigado del SkiErg. Posible exceso de brazos o mala bisagra de cadera.",
-                "high_rpe": "El esfuerzo es alto. Revisa core y patrón de cadera.",
-                "slow_time": "Tiempo bajo. Prioriza eficiencia antes de intensidad.",
-                "general": "Trabaja patrón de cadera y dorsales para mejorar eficiencia en SkiErg.",
+                "high_if": "Sales muy fatigado del SkiErg. Probable exceso de brazos o bisagra de cadera incorrecta — la cadena posterior no absorbió la carga.",
+                "high_rpe": "Esfuerzo alto. Revisa que los hombros no bajen por debajo de las caderas y que los mangos no se abran en Y.",
+                "slow_time": "Tiempo lento. Prioriza eficiencia técnica antes que intensidad — trabaja el patrón de cadera sin brazos.",
+                "general": "Automatiza la bisagra de cadera y mantén 32-38 tirones/min en carrera.",
             },
         },
 
@@ -68,9 +88,10 @@ class HyroxStationIntelligence:
             "display_name": "Sled Push",
             "icon": "fa-truck-loading",
             "description": (
-                "Estación 02 — 4 × 12,5 m (25 m totales). Llega tras el 2.º km de carrera. "
-                "Si el trineo se detiene, necesitas el doble de energía para arrancar de nuevo. "
-                "Sin fase excéntrica: puedes entrenarlo con frecuencia sin coste de recuperación elevado."
+                "Estación 02 — 2 × 12,5 m (25 m totales). Llega tras el 2.º km de carrera. "
+                "Sin fase excéntrica: puedes entrenarlo con frecuencia sin coste de recuperación elevado. "
+                "Atención: la superficie importa — alfombra y tarima aumentan la resistencia respecto al suelo de gym. "
+                "Si el trineo se detiene, necesitas el doble de energía para arrancar de nuevo."
             ),
             "weights": {
                 "women_open": "102 kg",
@@ -119,23 +140,33 @@ class HyroxStationIntelligence:
             ],
             "corrective_activities": [
                 {
-                    "tipo_actividad": "hyrox_station",
-                    "nombre_ejercicio": "Sled Push técnico · 4×25m",
+                    "tipo_actividad": "carrera",
+                    "nombre_ejercicio": "Carrera previa · 400m",
                     "data_metricas": {
                         "override": True,
-                        "series": [{"distancia_m": 25}, {"distancia_m": 25}, {"distancia_m": 25}, {"distancia_m": 25}],
-                        "rpe_objetivo": "6-7",
+                        "distancia_km": 0.4,
+                        "rpe_objetivo": "6",
+                        "notas": "Simula llegada a la estación. Mantén ritmo de carrera hasta el trineo.",
+                    },
+                },
+                {
+                    "tipo_actividad": "hyrox_station",
+                    "nombre_ejercicio": "Sled Push · 25m",
+                    "data_metricas": {
+                        "override": True,
+                        "series": [{"distancia_m": 25}],
+                        "rpe_objetivo": "8",
                         "notas": "Peso competición +20%. Posición de abrazo. Pasos cortos. Trineo en movimiento constante.",
                     },
                 },
                 {
                     "tipo_actividad": "carrera",
-                    "nombre_ejercicio": "Transición Sled Push → carrera Z2",
+                    "nombre_ejercicio": "Carrera posterior · 400m",
                     "data_metricas": {
                         "override": True,
-                        "distancia_km": 2,
-                        "rpe_objetivo": "5",
-                        "notas": "Recupera el patrón de carrera después del esfuerzo de empuje. Frecuencia antes que velocidad.",
+                        "distancia_km": 0.4,
+                        "rpe_objetivo": "6",
+                        "notas": "Recupera patrón de carrera. Frecuencia antes que velocidad. Repite 4 rondas con 1:30 descanso.",
                     },
                 },
             ],
