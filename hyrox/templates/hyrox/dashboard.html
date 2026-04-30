@@ -1215,16 +1215,39 @@ a.rb-dia:focus-visible {
   </section>
   {% endif %}
 
-  <!-- Modal razones concretas -->
+  <!-- Modal razones concretas + cómo funciona -->
   {% if race_briefing.razones_concretas %}
   <div id="modal-razones" style="display:none;position:fixed;inset:0;z-index:9999;align-items:flex-start;justify-content:center;background:rgba(0,0,0,.75);overflow-y:auto;padding:30px 16px;" onclick="if(event.target===this)this.style.display='none'">
     <div style="background:#1e2235;border:1px solid #334155;border-radius:12px;padding:24px;max-width:420px;width:100%;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-        <span style="font-size:13px;font-weight:700;color:#e2e8f0;">¿Por qué estos números?</span>
+        <span style="font-size:13px;font-weight:700;color:#e2e8f0;">Impacto Competitivo — Cómo funciona</span>
         <button onclick="document.getElementById('modal-razones').style.display='none'" style="background:none;border:none;color:#94a3b8;font-size:22px;cursor:pointer;line-height:1;padding:0 4px;">×</button>
       </div>
-      <p style="font-size:11px;color:#64748b;margin:0 0 14px;line-height:1.5;">Basado en tus últimas sesiones registradas.</p>
-      <div style="display:flex;flex-direction:column;gap:10px;">
+
+      <!-- METODOLOGÍA -->
+      <div style="margin-bottom:18px;padding:12px;border-radius:8px;background:rgba(255,255,255,.03);border:1px solid #334155;">
+        <div style="font-size:10px;font-weight:700;color:#64748b;letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px;">Metodología</div>
+        <p style="font-size:11px;color:#94a3b8;margin:0 0 10px;line-height:1.6;">El panel evalúa 3 factores de fatiga y traduce su efecto a <strong style="color:#e2e8f0;">segundos de carrera</strong> perdidos o recuperados:</p>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <div style="padding:8px 10px;border-radius:6px;background:rgba(245,158,11,.06);border-left:3px solid #f59e0b;">
+            <div style="font-size:10px;font-weight:700;color:#f59e0b;margin-bottom:2px;">ACWR — Relación carga aguda/crónica</div>
+            <div style="font-size:10px;color:#94a3b8;line-height:1.5;">Mide si estás entrenando más rápido de lo que tu cuerpo asimila. <strong style="color:#e2e8f0;">ACWR &gt; 1.3</strong> → riesgo de fatiga acumulada (+75 s). <strong style="color:#e2e8f0;">ACWR &gt; 1.5</strong> → zona crítica (+150 s).</div>
+          </div>
+          <div style="padding:8px 10px;border-radius:6px;background:rgba(99,102,241,.06);border-left:3px solid #6366f1;">
+            <div style="font-size:10px;font-weight:700;color:#818cf8;margin-bottom:2px;">TSB — Training Stress Balance (Forma)</div>
+            <div style="font-size:10px;color:#94a3b8;line-height:1.5;">CTL − ATL. Negativo = estás acumulando más carga de la que recuperas. <strong style="color:#e2e8f0;">TSB &lt; −15</strong> → fatiga alta (+90 s). <strong style="color:#e2e8f0;">TSB &lt; −25</strong> → fatiga profunda (+180 s).</div>
+          </div>
+          <div style="padding:8px 10px;border-radius:6px;background:rgba(239,68,68,.06);border-left:3px solid #ef4444;">
+            <div style="font-size:10px;font-weight:700;color:#f87171;margin-bottom:2px;">Interferencia por estación</div>
+            <div style="font-size:10px;color:#94a3b8;line-height:1.5;">Compara tu rendimiento en cada estación Hyrox vs. tu mejor tiempo al inicio del bloque. Si caes &gt;15% en una estación clave, la "fuga" se convierte en segundos perdidos (hasta +240 s).</div>
+          </div>
+        </div>
+        <p style="font-size:10px;color:#475569;margin:10px 0 0;line-height:1.5;">Los números <strong style="color:#64748b;">Si ignoras</strong> y <strong style="color:#64748b;">Si sigues</strong> son estimaciones de modelo, no garantías. El beneficio de seguir el ajuste equivale al ~40% del riesgo calculado — porque el cuerpo no recupera linealmente.</p>
+      </div>
+
+      <!-- DATOS REALES -->
+      <div style="font-size:10px;font-weight:700;color:#64748b;letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px;">Tus datos — últimos 7 días</div>
+      <div style="display:flex;flex-direction:column;gap:8px;">
         {% for r in race_briefing.razones_concretas %}
         <div style="display:flex;gap:10px;align-items:flex-start;padding:8px 10px;border-radius:6px;background:{% if r.tipo == 'negativo' %}rgba(239,68,68,.08){% elif r.tipo == 'positivo' %}rgba(29,200,184,.08){% else %}rgba(255,255,255,.04){% endif %};border:1px solid {% if r.tipo == 'negativo' %}rgba(239,68,68,.2){% elif r.tipo == 'positivo' %}rgba(29,200,184,.2){% else %}rgba(255,255,255,.06){% endif %};">
           <span style="font-size:14px;flex-shrink:0;">{{ r.icono }}</span>
