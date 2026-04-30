@@ -2248,3 +2248,188 @@ class RMAutoUpdater:
                     ).strip()
                     act.data_metricas = m
                     act.save(update_fields=['data_metricas'])
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# PACE AUTO-UPDATER — Gap 2 del "entrenador que aprende"
+# Detecta un ritmo 5K mejor en cualquier sesión de carrera completada
+# y actualiza tiempo_5k_base + recalibra sesiones futuras.
+# ══════════════════════════════════════════════════════════════════════════════
+
+class PaceAutoUpdater:
+    """
+    Tras cualquier sesión de carrera completada, estima si el rendimiento
+    implica un nuevo mejor tiempo de 5K y actualiza el perfil del atleta.
+
+    Fuentes de datos admitidas (en orden de precisión):
+      1. tiempo_s + distancia_m  → pace exacto en seg/km
+      2. tiempo_minutos + distancia_km → pace en seg/km
+      3. ritmo_real (MM:SS/km) → directo
+    """
+
+    # Factor de corrección por distancia: correr 10K no implica poder bajar ese
+    # ritmo en 5K; usamos el modelo de Riegel (factor 1.06 por duplicar distancia).
+    RIEGEL_FACTOR = 1.06
+
+    @classmethod
+    def _parse_ritmo_str(cls, ritmo_str: str) -> float | None:
+        """MM:SS/km → segundos por km. None si no parseable."""
+        try:
+            partes = ritmo_str.replace('/km', '').strip().split(':')
+            return int(partes[0]) * 60 + int(partes[1])
+        except Exception:
+            return None
+
+    @classmethod
+    def _tiempo_5k_desde_pace(cls, pace_seg_km: float) -> str:
+        """Pace (seg/km) → tiempo 5K en MM:SS."""
+        total = int(pace_seg_km * 5)
+        return f"{total // 60}:{total % 60:02d}"
+
+    @classmethod
+    def _tiempo_5k_str_a_seg(cls, tiempo_str: str) -> float | None:
+        """MM:SS → segundos totales. None si falla."""
+        try:
+            partes = tiempo_str.strip().split(':')
+            return int(partes[0]) * 60 + int(partes[1])
+        except Exception:
+            return None
+
+    @classmethod
+    def _pace_desde_actividad(cls, act) -> float | None:
+        """
+        Extrae el pace (seg/km) de una actividad de carrera.
+        Devuelve None si no hay datos suficientes.
+        """
+        m = act.data_metricas or {}
+
+        # Fuente 1: tiempo_s + distancia_m (wizard de tiempos)
+        tiempo_s = m.get('tiempo_s')
+        distancia_m = m.get('distancia_m') or m.get('distancia', 0)
+        if tiempo_s and distancia_m and float(distancia_m) > 0:
+            km = float(distancia_m) / 1000
+            return float(tiempo_s) / km  # seg/km
+
+        # Fuente 2: tiempo_minutos + distancia_km
+        tiempo_min = m.get('tiempo_minutos')
+        distancia_km = m.get('distancia_km')
+        if tiempo_min and distancia_km and float(distancia_km) > 0:
+            return (float(tiempo_min) * 60) / float(distancia_km)
+
+        # Fuente 3: ritmo_real directo (MM:SS/km)
+        ritmo_real = m.get('ritmo_real', '')
+        if ritmo_real:
+            return cls._parse_ritmo_str(ritmo_real)
+
+        return None
+
+    @classmethod
+    def _distancia_km_actividad(cls, act) -> float:
+        """Extrae la distancia en km de una actividad."""
+        m = act.data_metricas or {}
+        if m.get('distancia_m'):
+            return float(m['distancia_m']) / 1000
+        if m.get('distancia'):
+            val = float(m['distancia'])
+            return val / 1000 if val > 100 else val  # >100 → metros
+        if m.get('distancia_km'):
+            return float(m['distancia_km'])
+        return 0.0
+
+    @classmethod
+    def update_from_session(cls, sesion: HyroxSession) -> list[str]:
+        """
+        Analiza las actividades de carrera de la sesión completada.
+        Devuelve mensajes si detecta un nuevo mejor ritmo 5K.
+        """
+        objetivo = sesion.objective
+        mensajes = []
+
+        # No procesar sesiones de hito test_5k (ya lo maneja PostMilestoneEngine)
+        if sesion.titulo and '[HITO:test_5k]' in sesion.titulo:
+            return mensajes
+
+        carrera_acts = sesion.activities.filter(
+            tipo_actividad__in=('carrera', 'cardio_sustituto')
+        )
+
+        mejor_pace_nuevo = None  # seg/km — el ritmo más rápido encontrado en esta sesión
+
+        for act in carrera_acts:
+            pace = cls._pace_desde_actividad(act)
+            if not pace or pace <= 0:
+                continue
+
+            distancia = cls._distancia_km_actividad(act)
+
+            # Actividades demasiado cortas (<1km) no son representativas
+            if distancia < 1.0 and distancia > 0:
+                continue
+
+            # Corrección Riegel si la distancia es mayor que 5K
+            # (nadie puede sostener el ritmo de una carrera larga en 5K exactamente)
+            if distancia > 5.5:
+                factor = (5.0 / distancia) ** (cls.RIEGEL_FACTOR - 1)
+                pace_5k_estimado = pace * factor
+            elif distancia >= 4.5:
+                # Entre 4.5 y 5.5km: medición directa (muy cercana a 5K real)
+                pace_5k_estimado = pace
+            else:
+                # 1-4.5km: el ritmo de entrenamiento no es representativo del 5K
+                # (puede ser un intervalo o calentamiento a ritmo alto o bajo)
+                continue
+
+            if mejor_pace_nuevo is None or pace_5k_estimado < mejor_pace_nuevo:
+                mejor_pace_nuevo = pace_5k_estimado
+
+        if mejor_pace_nuevo is None:
+            return mensajes
+
+        # Comparar con el tiempo 5K actual
+        tiempo_actual_s = cls._tiempo_5k_str_a_seg(objetivo.tiempo_5k_base or '')
+        nuevo_tiempo_5k_s = mejor_pace_nuevo * 5
+
+        # Solo actualizar si mejora al menos 5 segundos (evitar ruido de GPS/cronómetro)
+        if tiempo_actual_s and (tiempo_actual_s - nuevo_tiempo_5k_s) < 5:
+            return mensajes
+
+        nuevo_tiempo_str = cls._tiempo_5k_desde_pace(mejor_pace_nuevo)
+
+        # Guardar y recalibrar
+        tiempo_anterior = objetivo.tiempo_5k_base
+        objetivo.tiempo_5k_base = nuevo_tiempo_str
+        objetivo.save(update_fields=['tiempo_5k_base'])
+
+        # Reutilizar la lógica de recalibración del PostMilestoneEngine
+        ritmos = HyroxTrainingEngine._calcular_ritmos_carrera(nuevo_tiempo_str)
+        hoy = timezone.now().date()
+        if ritmos:
+            sesiones_futuras = HyroxSession.objects.filter(
+                objective=objetivo, estado='planificado', fecha__gt=hoy,
+            ).prefetch_related('activities')
+            actualizadas = 0
+            for ses in sesiones_futuras:
+                for act in ses.activities.filter(tipo_actividad__in=('carrera', 'cardio_sustituto')):
+                    m = dict(act.data_metricas or {})
+                    m['ritmo_objetivo'] = ritmos['ritmo_z2']
+                    m['notas'] = (
+                        f"[Recalibrado {hoy.strftime('%d/%m')} — carrera libre] "
+                        f"Ritmo Z2: {ritmos['ritmo_z2']} · Tempo: {ritmos['ritmo_tempo']}"
+                    )
+                    act.data_metricas = m
+                    act.save(update_fields=['data_metricas'])
+                    actualizadas += 1
+
+        if tiempo_anterior:
+            mejora_s = int(cls._tiempo_5k_str_a_seg(tiempo_anterior) - nuevo_tiempo_5k_s)
+            mensajes.append(
+                f"Ritmo 5K mejorado detectado en carrera libre: {nuevo_tiempo_str} "
+                f"(-{mejora_s}s vs {tiempo_anterior}). Plan de carrera recalibrado."
+            )
+        else:
+            mensajes.append(
+                f"Primer ritmo 5K estimado desde carrera libre: {nuevo_tiempo_str}. "
+                f"El plan ya puede prescribir ritmos personalizados."
+            )
+
+        return mensajes
