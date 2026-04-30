@@ -1597,9 +1597,19 @@ a.rb-dia:focus-visible {
       <button class="rb-help-btn" onclick="openHelp('macrociclo')" title="¿Qué es este panel?">?</button>
     </div>
     <div class="rb-macro">
+      {% if macro_data.evento_completado %}
+      <!-- POST-EVENTO -->
+      <div style="text-align:center;padding:12px 0 8px;">
+        <div style="font-family:var(--font-disp);font-size:32px;font-weight:800;color:var(--ok);">100<span style="font-size:16px;color:var(--ink-4);">%</span></div>
+        <div style="font-family:var(--font-mono);font-size:10px;font-weight:700;color:var(--ok);letter-spacing:.12em;text-transform:uppercase;margin-top:4px;">Evento completado</div>
+        <div style="font-family:var(--font-mono);font-size:9px;color:var(--ink-3);margin-top:3px;">Hace {{ macro_data.dias_desde_evento }} día{{ macro_data.dias_desde_evento|pluralize:"s" }}</div>
+      </div>
+      <div class="rb-mantra">"{{ macro_data.mantra }}"</div>
+      {% else %}
+      <!-- EN PREPARACIÓN -->
       <div class="rb-macro-top">
         <div>
-          <div class="rb-bib-stat-label">Progreso global</div>
+          <div class="rb-bib-stat-label">Progreso · Sem {{ macro_data.semana_actual }}/{{ macro_data.total_semanas }}</div>
           <div class="rb-macro-pct">{{ macro_data.pct_progreso }}<span>%</span></div>
         </div>
         <div class="rb-macro-fase">
@@ -1614,6 +1624,7 @@ a.rb-dia:focus-visible {
         <div class="rb-phase {% if macro_data.fase_numero == 4 %}active{% endif %}">④ Taper</div>
       </div>
       <div class="rb-mantra">"{{ macro_data.mantra }}"</div>
+      {% endif %}
     </div>
   </section>
   {% endif %}
@@ -2873,7 +2884,32 @@ const HELP_CONTENT = {
   },
   'macrociclo': {
     title: 'Macrociclo',
-    body: `<p>Estructura periodizada de tu entrenamiento desde hoy hasta la carrera:</p><ul><li><strong>Adaptación</strong> — Base aeróbica y técnica. Cargas bajas, volumen progresivo.</li><li><strong>Acumulación</strong> — Aumento de volumen total. Deload automático cada 4ª semana (−40% carga).</li><li><strong>Intensificación</strong> — Cargas altas, menor volumen. Mayor especificidad Hyrox.</li><li><strong>Simulación</strong> — Bloques carrera + estación alternados.</li><li><strong>Taper</strong> — Últimas 2 semanas: volumen mínimo, activación. Llegas fresco al evento.</li></ul>`
+    body: `
+      <p style="font-size:11px;color:#94a3b8;margin:0 0 14px;line-height:1.6;">
+        Estructura periodizada de tu preparación desde la fecha de creación del objetivo hasta el evento. El progreso % refleja el tiempo transcurrido sobre el total del ciclo.
+      </p>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;">
+        <div style="padding:9px 12px;border-radius:6px;background:rgba(255,255,255,.03);border-left:3px solid #6366f1;">
+          <div style="font-size:10px;font-weight:700;color:#818cf8;margin-bottom:3px;">① Base Estructural — ≥9 semanas para la carrera</div>
+          <p style="font-size:11px;color:#94a3b8;margin:0;line-height:1.4;">Técnica, volumen suave y corrección de desequilibrios. Deload automático cada 4ª semana (−40% carga).</p>
+        </div>
+        <div style="padding:9px 12px;border-radius:6px;background:rgba(255,255,255,.03);border-left:3px solid #f59e0b;">
+          <div style="font-size:10px;font-weight:700;color:#f59e0b;margin-bottom:3px;">② Potencia Específica — 5 a 8 semanas</div>
+          <p style="font-size:11px;color:#94a3b8;margin:0;line-height:1.4;">Cargas altas en Sled Push y Wall Balls. Series cortas, alta intensidad. Deload cada 4ª semana.</p>
+        </div>
+        <div style="padding:9px 12px;border-radius:6px;background:rgba(255,255,255,.03);border-left:3px solid #ef4444;">
+          <div style="font-size:10px;font-weight:700;color:#f87171;margin-bottom:3px;">③ Simulación Real — 2 a 4 semanas</div>
+          <p style="font-size:11px;color:#94a3b8;margin:0;line-height:1.4;">Bloques carrera + estación alternados. El cuerpo aprende a rendir bajo fatiga aeróbica acumulada.</p>
+        </div>
+        <div style="padding:9px 12px;border-radius:6px;background:rgba(255,255,255,.03);border-left:3px solid #22c55e;">
+          <div style="font-size:10px;font-weight:700;color:#22c55e;margin-bottom:3px;">④ Tapering — últimas 2 semanas</div>
+          <p style="font-size:11px;color:#94a3b8;margin:0;line-height:1.4;">Volumen mínimo, intensidad conservada. El plan genera trotes regenerativos y repasos técnicos. Llegas fresco.</p>
+        </div>
+      </div>
+      <p style="font-size:10px;color:#475569;margin:0;line-height:1.5;">
+        Cuando pasa la fecha del evento el panel muestra estado <strong style="color:#22c55e;">Completado</strong> con días transcurridos desde la carrera. Crea un nuevo objetivo para iniciar el siguiente ciclo.
+      </p>
+    `
   },
   'recovery': {
     title: 'Recovery Mode',
