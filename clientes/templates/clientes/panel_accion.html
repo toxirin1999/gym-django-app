@@ -289,6 +289,13 @@ body {
     {% endif %}
   </div>
 
+  <!-- Nombre del atleta — toque personal -->
+  <div style="font-family:var(--font-mono);font-size:9px;font-weight:700;letter-spacing:0.14em;
+              text-transform:uppercase;color:var(--ink-4);text-align:center;
+              padding:10px 0 0;">
+    {{ hoy|date:"l, j N" }} · {{ cliente.user.get_full_name|default:cliente.user.username }}
+  </div>
+
   <hr class="pa-divider">
 
   <!-- ── 2. HOY TOCA ──────────────────────────── -->
@@ -355,16 +362,36 @@ body {
         {% if proximo_entrenamiento.semana_nombre %} · {{ proximo_entrenamiento.semana_nombre }}{% endif %}
         {% if proximo_entrenamiento.dia %} · Día {{ proximo_entrenamiento.dia }}{% endif %}
       </div>
-      {% if mesociclo_actual %}
+      <!-- Objetivo accionable -->
       <div class="pa-objetivo">
+        {% if ejercicios_desafio %}
+        <strong>Objetivo hoy:</strong><br>
+        {% for nombre in ejercicios_desafio %}
+        {% if estado_carga.estado == 'puedes_apretar' or estado_carga.estado == 'subentreno' %}
+        · Subir carga en <strong>{{ nombre }}</strong><br>
+        {% else %}
+        · Mantener técnica en <strong>{{ nombre }}</strong><br>
+        {% endif %}
+        {% endfor %}
+        {% if proximo_entrenamiento.ejercicios|length > ejercicios_desafio|length %}
+        · Control técnico en el resto
+        {% endif %}
+        {% elif mesociclo_actual %}
         <strong>Objetivo:</strong> {{ mesociclo_actual.recomendacion|default:"Entrena con intensidad progresiva." }}
+        {% else %}
+        <strong>Objetivo:</strong> Ejecuta con técnica limpia. Calidad sobre cantidad.
+        {% endif %}
       </div>
-      {% endif %}
       {% if proximo_entrenamiento.ejercicios %}
       <div class="pa-ex-list">
         {% for ej in proximo_entrenamiento.ejercicios %}
-        <div class="pa-ex-row">
-          <span class="pa-ex-name">{{ ej.nombre }}</span>
+        <div class="pa-ex-row {% if ej.nombre in ejercicios_desafio %}pa-ex-row--highlight{% endif %}">
+          <span class="pa-ex-name">
+            {% if ej.nombre in ejercicios_desafio and estado_carga.estado == 'puedes_apretar' %}
+            <span style="color:var(--accent);margin-right:4px;font-size:9px;">↑</span>
+            {% endif %}
+            {{ ej.nombre }}
+          </span>
           <span class="pa-ex-sets">{{ ej.series|default:"4" }} × {{ ej.repeticiones|default:"—" }}</span>
         </div>
         {% endfor %}
@@ -384,7 +411,13 @@ body {
 
   {% endif %}
 
-  <!-- ── 3. CTA ────────────────────────────────── -->
+  <!-- ── 3. MICRO-FEEDBACK + CTA ──────────────── -->
+  {% if micro_feedback and not entreno_hoy_realizado and not entreno_semana_realizado %}
+  <div style="text-align:center;font-family:var(--font-body);font-size:12px;
+              color:var(--ink-3);line-height:1.5;padding:0 4px 14px;">
+    {{ micro_feedback }}
+  </div>
+  {% endif %}
   <div class="pa-cta-wrap">
     {% if entreno_hoy_realizado or entreno_semana_realizado %}
     <a href="{% url 'entrenos:vista_plan_anual' cliente.id %}" class="pa-cta done">
@@ -405,33 +438,34 @@ body {
     {% endif %}
   </div>
 
-  <!-- ── 4. INSIGHT ────────────────────────────── -->
+  <!-- ── 4. CONTINUIDAD ───────────────────────── -->
   {% if entrenamientos_recientes %}
   <div class="pa-insight">
-    <div class="pa-insight-head">Última sesión</div>
+    <div class="pa-insight-head">Sesión anterior</div>
     {% with last=entrenamientos_recientes.0 %}
     <div class="pa-insight-row">
       <span class="pa-insight-label">{{ last.rutina.nombre|default:"Sesión libre" }}</span>
       <span class="pa-insight-val">{{ last.fecha|date:"j N" }}</span>
     </div>
+    {% if continuidad %}
     <div class="pa-insight-row">
-      <span class="pa-insight-label">Ejercicios</span>
-      <span class="pa-insight-val">{{ last.detalles_ejercicio.count }}</span>
+      <span class="pa-insight-label">{{ continuidad.ejercicio }}</span>
+      <span class="pa-insight-val">{{ continuidad.series }} × {{ continuidad.peso|floatformat:"-1" }} kg</span>
     </div>
+    {% endif %}
     {% endwith %}
-    <div class="pa-insight-msg">
-      {% if estado_carga.estado == 'puedes_apretar' %}
-        Estás en racha. Hoy puedes intentar superar marcas en los ejercicios principales.
-      {% elif estado_carga.estado == 'entreno_controlado' %}
-        Mantén la técnica impecable. Hoy prioriza calidad sobre cantidad.
-      {% elif estado_carga.estado == 'subentreno' %}
-        Llevas días con poca carga. Hoy es buen momento para dar un paso al frente.
-      {% elif estado_carga.estado == 'fatiga_acumulada' %}
-        Has entrenado mucho últimamente. Si entrenas, reduce el volumen un 20%.
-      {% elif estado_carga.estado == 'riesgo_alto' %}
-        Prioriza la recuperación sobre el rendimiento hoy.
+    <div class="pa-insight-msg" style="border-top:1px solid var(--line);margin-top:8px;padding-top:10px;">
+      <strong style="color:var(--ink);">Hoy →</strong>
+      {% if continuidad and ejercicios_desafio %}
+        Intenta superar la marca en <strong>{{ ejercicios_desafio.0 }}</strong>.
+        {% if continuidad.ejercicio == ejercicios_desafio.0 %}
+        La última vez: {{ continuidad.series }} × {{ continuidad.peso|floatformat:"-1" }} kg.
+        {% endif %}
+      {% elif ejercicios_desafio %}
+        Enfócate en <strong>{{ ejercicios_desafio.0 }}</strong>
+        {% if ejercicios_desafio|length > 1 %} y <strong>{{ ejercicios_desafio.1 }}</strong>{% endif %}.
       {% else %}
-        Registra más sesiones para recibir análisis personalizados.
+        Ejecuta con técnica limpia y registra cada serie.
       {% endif %}
     </div>
   </div>
@@ -440,7 +474,7 @@ body {
   <!-- ── 5. SECUNDARIO (colapsable) ────────────── -->
   <div class="pa-secondary">
     <button class="pa-secondary-toggle" id="paSecondaryToggle" onclick="toggleSecondary()">
-      <span class="pa-secondary-toggle-label">Ver detalles — ACWR, historial, bienestar</span>
+      <span class="pa-secondary-toggle-label">Más datos de rendimiento</span>
       <i class="fas fa-chevron-down pa-secondary-toggle-icon" id="paSecondaryIcon"></i>
     </button>
     <div class="pa-secondary-body" id="paSecondaryBody">

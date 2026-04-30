@@ -1434,34 +1434,101 @@ def mockup_demo(request):
     return render(request, 'clientes/mockup_demo.html', context)
 
 
-def _calcular_estado_carga(acwr, readiness_score):
+_GRUPOS_MUSCULARES = {
+    'hombro': ['hombro', 'shoulder', 'deltoid', 'press militar', 'elevación lateral'],
+    'pecho': ['pecho', 'chest', 'press banca', 'banca', 'aperturas', 'flies'],
+    'espalda': ['espalda', 'back', 'jalón', 'remo', 'pull', 'dominada', 'trapecio'],
+    'pierna': ['pierna', 'leg', 'sentadilla', 'prensa', 'femoral', 'glúteo', 'zancada', 'hip thrust'],
+    'bíceps': ['bíceps', 'bicep', 'curl'],
+    'tríceps': ['tríceps', 'tricep', 'extensión'],
+    'core': ['core', 'abdomen', 'abdominal', 'plancha', 'oblicuo'],
+    'full body': ['full body', 'cuerpo completo', 'funcional'],
+}
+_COMPOUND_KW = ['press', 'sentadilla', 'peso muerto', 'remo', 'jalón', 'dominada',
+                'hip thrust', 'military', 'bench', 'squat', 'deadlift', 'row']
+
+
+def _detectar_grupo_muscular(nombre_rutina):
+    nombre = (nombre_rutina or '').lower()
+    for grupo, kws in _GRUPOS_MUSCULARES.items():
+        if any(kw in nombre for kw in kws):
+            return grupo
+    return None
+
+
+def _calcular_ejercicios_desafio(ejercicios_hoy):
+    """Selecciona hasta 2 ejercicios compuestos/principales del entreno."""
+    desafio = [ej.get('nombre') for ej in ejercicios_hoy
+               if any(kw in (ej.get('nombre') or '').lower() for kw in _COMPOUND_KW)]
+    if not desafio:
+        desafio = [ej.get('nombre') for ej in ejercicios_hoy if ej.get('nombre')]
+    return desafio[:2]
+
+
+def _calcular_continuidad(ejercicios_hoy, ejercicios_realizados):
+    """Busca coincidencias entre el último entreno y el de hoy."""
+    if not ejercicios_hoy or not ejercicios_realizados:
+        return None
+    nombres_hoy = {(ej.get('nombre') or '').lower() for ej in ejercicios_hoy}
+    for e in ejercicios_realizados:
+        if (e.get('nombre') or '').lower() in nombres_hoy and e.get('peso_kg', 0) > 0:
+            return {'ejercicio': e['nombre'], 'peso': e['peso_kg'], 'series': e.get('series', 0)}
+    return None
+
+
+def _calcular_micro_feedback(estado, desafio):
+    primero = desafio[0] if desafio else None
+    if estado == 'puedes_apretar':
+        return (f"Estás en racha. Hoy es buen día para superar la marca en {primero}."
+                if primero else "Estás en racha. Hoy es buen día para progresar.")
+    if estado == 'entreno_controlado':
+        return "Prioriza la técnica sobre el peso hoy. Un buen entreno controlado también suma."
+    if estado == 'subentreno':
+        return "Llevas días con poca carga. Hoy es el momento de dar un paso adelante."
+    if estado == 'fatiga_acumulada':
+        return "Entrena, pero con cabeza. Reduce volumen si sientes que te cuesta arrancar."
+    if estado == 'riesgo_alto':
+        return "Escucha al cuerpo. Si entrenas, que sea suave y técnico solamente."
+    return "Un buen entreno hoy refuerza el hábito."
+
+
+def _calcular_estado_carga(acwr, readiness_score, grupo_muscular=None, n_desafio=0):
     readiness_pct = round((readiness_score or 0) * 100)
+
+    def _desafio_txt():
+        if grupo_muscular and n_desafio > 0:
+            return (f"Hoy puedes subir carga en {n_desafio} ejercicio{'s' if n_desafio > 1 else ''} "
+                    f"de {grupo_muscular}.")
+        if n_desafio > 0:
+            return (f"Puedes subir carga en {n_desafio} ejercicio{'s' if n_desafio > 1 else ''} "
+                    f"del entreno de hoy.")
+        return "No hay señales de fatiga acumulada. Buen día para progresar."
+
     if not acwr or acwr == 0:
         if readiness_pct >= 70:
             return {'estado': 'puedes_apretar', 'icon': '●', 'titulo': 'LISTO PARA ENTRENAR FUERTE',
-                    'subtitulo': 'Sin datos de carga recientes. Tu readiness es alto.',
-                    'detalle': None, 'color': 'ok'}
+                    'subtitulo': _desafio_txt(), 'detalle': None, 'color': 'ok'}
         return {'estado': 'sin_datos', 'icon': '○', 'titulo': 'EVALÚA TU ESTADO HOY',
-                'subtitulo': 'Registra más sesiones para calcular tu carga de entrenamiento.',
+                'subtitulo': 'Registra más sesiones para que el sistema calcule tu carga óptima.',
                 'detalle': None, 'color': 'neutral'}
     if acwr < 0.8:
         return {'estado': 'subentreno', 'icon': '▼', 'titulo': 'CARGA BAJA',
-                'subtitulo': 'Estás entrenando por debajo de tu capacidad. Puedes aumentar volumen o intensidad hoy.',
+                'subtitulo': 'Estás entrenando por debajo de tu capacidad. Hoy puedes dar un paso al frente.',
                 'detalle': f'ACWR {acwr:.2f}', 'color': 'warn'}
     elif acwr <= 1.3:
         if readiness_pct >= 70:
             return {'estado': 'puedes_apretar', 'icon': '●', 'titulo': 'LISTO PARA ENTRENAR FUERTE',
-                    'subtitulo': 'Puedes subir carga en varios ejercicios. Sin señales de fatiga acumulada.',
+                    'subtitulo': _desafio_txt(),
                     'detalle': f'ACWR {acwr:.2f} · Readiness {readiness_pct}', 'color': 'ok'}
         return {'estado': 'entreno_controlado', 'icon': '◐', 'titulo': 'ENTRENA CON CONTROL',
                 'subtitulo': 'ACWR en zona óptima pero readiness bajo. Mantén técnica, no fuerces la carga.',
                 'detalle': f'ACWR {acwr:.2f} · Readiness {readiness_pct}', 'color': 'warn'}
     elif acwr <= 1.5:
         return {'estado': 'fatiga_acumulada', 'icon': '▲', 'titulo': 'CARGA ELEVADA',
-                'subtitulo': 'Tu volumen está por encima de lo habitual. Reduce intensidad o arriesgas bajada de rendimiento.',
+                'subtitulo': 'Tu volumen está por encima de lo habitual. Reduce intensidad hoy.',
                 'detalle': f'ACWR {acwr:.2f}', 'color': 'warn'}
     return {'estado': 'riesgo_alto', 'icon': '■', 'titulo': 'RIESGO DE SOBREENTRENO',
-            'subtitulo': 'Carga muy alta. Descansa o realiza sesión de recuperación activa solamente.',
+            'subtitulo': 'Carga muy alta. Descansa o haz solo recuperación activa hoy.',
             'detalle': f'ACWR {acwr:.2f}', 'color': 'danger'}
 
 
@@ -1472,8 +1539,23 @@ def panel_accion(request):
 
     acwr = context.get('acwr_actual') or 0.0
     readiness = (context.get('bio_readiness') or {}).get('score', 1.0)
-    context['estado_carga'] = _calcular_estado_carga(acwr, readiness)
-    context['readiness_pct'] = round(readiness * 100)
+    readiness_pct = round(readiness * 100)
+
+    proximo = context.get('proximo_entrenamiento') or {}
+    ejercicios_hoy = proximo.get('ejercicios') or []
+    rutina_hoy = proximo.get('nombre') or proximo.get('rutina_nombre', '')
+
+    grupo = _detectar_grupo_muscular(rutina_hoy)
+    desafio = _calcular_ejercicios_desafio(ejercicios_hoy)
+    continuidad = _calcular_continuidad(ejercicios_hoy, context.get('ejercicios_realizados_resumen') or [])
+
+    estado_carga = _calcular_estado_carga(acwr, readiness, grupo, len(desafio))
+
+    context['estado_carga'] = estado_carga
+    context['readiness_pct'] = readiness_pct
+    context['ejercicios_desafio'] = desafio
+    context['continuidad'] = continuidad
+    context['micro_feedback'] = _calcular_micro_feedback(estado_carga['estado'], desafio)
 
     return render(request, 'clientes/panel_accion.html', context)
 
