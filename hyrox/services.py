@@ -2729,8 +2729,25 @@ class HyroxRaceIntelligence:
                     tiempo_base_secs = int(parts[0]) * 3600 + int(parts[1]) * 60 + int(parts[2])
                 elif len(parts) == 2:
                     tiempo_base_secs = int(parts[0]) * 60 + int(parts[1])
-        except Exception:
-            pass
+            elif simulacion and 'error' in simulacion:
+                import logging
+                logging.getLogger(__name__).warning(
+                    "[RaceBriefing] simular() devolvió error: %s", simulacion['error']
+                )
+        except Exception as _e:
+            import logging
+            logging.getLogger(__name__).exception("[RaceBriefing] simular() lanzó excepción: %s", _e)
+
+        # Fallback directo desde tiempo_5k_base si el simulador falló.
+        # Fórmula simplificada: 8 km al ritmo 5K + 30 min de estaciones + 2 min transiciones.
+        if tiempo_base_secs is None and objective.tiempo_5k_base:
+            try:
+                t5k = HyroxRaceSimulator._tiempo_str_a_segundos(objective.tiempo_5k_base)
+                if t5k:
+                    ritmo_1km = t5k / 5.0
+                    tiempo_base_secs = int(ritmo_1km * 8 + 30 * 60 + 120)
+            except Exception:
+                pass
 
         # ── Ajuste por fatiga/readiness ─────────────────────────────────────
         ajuste = cls._calcular_ajuste_fatiga(readiness, carga, acwr)
