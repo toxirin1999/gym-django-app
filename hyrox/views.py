@@ -1174,9 +1174,9 @@ def hyrox_dashboard(request):
 @login_required
 def crear_objetivo(request):
     cliente = getattr(request.user, 'cliente_perfil', None)
-    
+    objetivo_existente = HyroxObjective.objects.filter(cliente=cliente, estado='activo').first()
+
     if request.method == 'POST':
-        objetivo_existente = HyroxObjective.objects.filter(cliente=cliente, estado='activo').first()
         form = HyroxObjectiveForm(request.POST, instance=objetivo_existente)
         if form.is_valid():
             objetivo = form.save(commit=False)
@@ -1184,7 +1184,6 @@ def crear_objetivo(request):
             objetivo.estado = 'activo'
             objetivo.save()
 
-            # Solo regenerar sesiones planificadas futuras, nunca tocar las completadas
             hoy = timezone.now().date()
             HyroxSession.objects.filter(
                 objective=objetivo, estado='planificado', fecha__gte=hoy
@@ -1192,37 +1191,25 @@ def crear_objetivo(request):
             HyroxTrainingEngine.generate_training_plan(objetivo)
 
             if objetivo_existente:
-                messages.success(request, "Objetivo actualizado. El plan de entrenamiento se ha regenerado desde hoy.")
+                messages.success(request, "Objetivo actualizado. El plan se ha regenerado desde hoy.")
             else:
-                messages.success(request, "Objetivo Hyrox creado y plan de entrenamiento generado. ¡A por todas!")
+                messages.success(request, "Objetivo Hyrox creado y plan generado. ¡A por todas!")
             return redirect('hyrox:dashboard')
+        else:
+            # Mostrar errores de validación explícitamente
+            for field, errs in form.errors.items():
+                for e in errs:
+                    messages.error(request, f"{field}: {e}")
     else:
-        # Pre-rellenar con los datos que ya tenemos del cliente o del objetivo activo si los hay
-        initial_data = {}
-        if cliente:
-            objetivo_actual = HyroxObjective.objects.filter(cliente=cliente, estado='activo').first()
-            if objetivo_actual:
-                initial_data = {
-                    'categoria': objetivo_actual.categoria,
-                    'fecha_evento': objetivo_actual.fecha_evento,
-                    'rm_peso_muerto': objetivo_actual.rm_peso_muerto,
-                    'rm_sentadilla': objetivo_actual.rm_sentadilla,
-                    'tiempo_5k_base': objetivo_actual.tiempo_5k_base,
-                    'nivel_experiencia': objetivo_actual.nivel_experiencia,
-                    'lesiones_previas': objetivo_actual.lesiones_previas,
-                    'material_disponible': objetivo_actual.material_disponible,
-                    'dias_preferidos': objetivo_actual.dias_preferidos,
-                    'objetivo_tiempo_carrera': objetivo_actual.objetivo_tiempo_carrera,
-                    'primer_hyrox': objetivo_actual.primer_hyrox,
-                    'peso_corporal': objetivo_actual.peso_corporal,
-                    'genero': objetivo_actual.genero,
-                    'fc_max_real': objetivo_actual.fc_max_real,
-                    'fc_reposo': objetivo_actual.fc_reposo,
-                }
-        form = HyroxObjectiveForm(initial=initial_data)
+        # GET: usar instance directamente si existe (pre-rellena todos los campos)
+        form = HyroxObjectiveForm(instance=objetivo_existente)
 
     dias_semana = [(0,'Lun'),(1,'Mar'),(2,'Mié'),(3,'Jue'),(4,'Vie'),(5,'Sáb'),(6,'Dom')]
-    return render(request, 'hyrox/crear_objetivo.html', {'form': form, 'dias_semana': dias_semana})
+    return render(request, 'hyrox/crear_objetivo.html', {
+        'form': form,
+        'dias_semana': dias_semana,
+        'es_edicion': objetivo_existente is not None,
+    })
 
 @login_required
 def cancelar_objetivo(request, objective_id):
