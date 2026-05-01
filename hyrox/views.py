@@ -45,7 +45,9 @@ def hyrox_dashboard(request):
     
     resumen_semanal = None
     readiness_svg_points = None
-    
+    current_score = 0
+    _recovery_delta = 0
+
     if objetivo_activo:
         from .models import HyroxReadinessLog
         hoy = timezone.now().date()
@@ -57,7 +59,53 @@ def hyrox_dashboard(request):
             current_score = log_hoy.score
         else:
             current_score = objetivo_activo.get_race_readiness_score()
-            HyroxReadinessLog.objects.create(objective=objetivo_activo, fecha=hoy, score=current_score)
+
+            # Cruzar con BitacoraDiaria del día para ajustar por recuperación real
+            _bitacora_fields = {}
+            _recovery_delta = 0
+            try:
+                from clientes.models import BitacoraDiaria
+                from datetime import timedelta
+                _bitacora = BitacoraDiaria.objects.filter(
+                    cliente=objetivo_activo.cliente,
+                    fecha__gte=hoy - timedelta(days=1),
+                ).order_by('-fecha').first()
+                if _bitacora:
+                    cal = _bitacora.calidad_sueno    # 0-100
+                    hrs = float(_bitacora.horas_sueno or 0)
+                    ene = _bitacora.energia_subjetiva  # 0-10
+
+                    # Penalización sueño calidad
+                    if cal is not None:
+                        if cal < 40:   _recovery_delta -= 10
+                        elif cal < 60: _recovery_delta -= 5
+
+                    # Penalización horas
+                    if hrs > 0:
+                        if hrs < 5:   _recovery_delta -= 10
+                        elif hrs < 6: _recovery_delta -= 5
+                        elif hrs < 7: _recovery_delta -= 2
+
+                    # Penalización energía
+                    if ene is not None:
+                        if ene < 4:   _recovery_delta -= 8
+                        elif ene < 6: _recovery_delta -= 3
+
+                    _bitacora_fields = {
+                        'calidad_sueno': cal,
+                        'horas_sueno': hrs if hrs > 0 else None,
+                    }
+            except Exception:
+                pass
+
+            _recovery_delta = max(_recovery_delta, -20)  # cap: nunca baja más de 20 pts
+            current_score = max(0, min(100, round(current_score + _recovery_delta)))
+            HyroxReadinessLog.objects.create(
+                objective=objetivo_activo,
+                fecha=hoy,
+                score=current_score,
+                **_bitacora_fields,
+            )
 
         # Generar puntos SVG para el mini-gráfico (ancho=100, alto=30)
         logs_list = list(HyroxReadinessLog.objects.filter(objective=objetivo_activo).order_by('fecha'))
@@ -1154,6 +1202,8 @@ def hyrox_dashboard(request):
         'stats_semana': stats_semana,
         'resumen_semanal': resumen_semanal,
         'readiness_svg_points': readiness_svg_points,
+        'readiness_score_hoy': current_score if objetivo_activo else None,
+        'readiness_recovery_delta': _recovery_delta,
         'mental_focus': mental_focus if objetivo_activo else None,
         'strength_balance': strength_balance if objetivo_activo else None,
         'readiness_breakdown': readiness_breakdown if objetivo_activo else None,

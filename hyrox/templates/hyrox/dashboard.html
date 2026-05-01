@@ -851,7 +851,7 @@ a.rb-dia:focus-visible {
         </div>
       </div>
 
-      {% with score=objetivo_activo.get_race_readiness_score %}
+      {% with score=readiness_score_hoy|default:objetivo_activo.get_race_readiness_score %}
       <div class="rb-readiness">
         <div class="rb-rd-top">
           <div>
@@ -867,6 +867,12 @@ a.rb-dia:focus-visible {
           </div>
         </div>
         <div class="rb-rd-bar"><div class="rb-rd-bar-fill" style="width:{{ score }}%;"></div></div>
+        {% if readiness_recovery_delta and readiness_recovery_delta < 0 %}
+        <div style="font-family:var(--font-mono);font-size:9px;color:var(--warn);margin-top:4px;display:flex;align-items:center;gap:4px;">
+          <i class="fas fa-moon"></i>
+          Sueño · {{ readiness_recovery_delta }} pts hoy
+        </div>
+        {% endif %}
         {% if readiness_svg_points %}
         <div class="rb-rd-trend">
           <span>TENDENCIA</span>
