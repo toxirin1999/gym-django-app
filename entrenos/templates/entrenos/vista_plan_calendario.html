@@ -4866,6 +4866,28 @@
                 </div>
             </div>
 
+            {% if rpe_reciente or rm_display %}
+            <div style="margin-top:14px;padding:10px 12px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;">
+                <div class="cp-label" style="margin-bottom:6px;display:flex;align-items:center;gap:6px;">
+                    <i class="fas fa-brain" style="color:var(--phase-primary,#C8AA6E);font-size:0.7rem;"></i>
+                    ¿Por qué esta fase?
+                </div>
+                <div style="font-size:0.78rem;color:rgba(255,255,255,0.55);line-height:1.5;">
+                    {% if rpe_reciente %}
+                        {% if rpe_reciente >= 8.5 %}
+                        El sistema detectó una media de RPE {{ rpe_reciente }} en tus últimas sesiones — carga alta sostenida. Esta fase mantiene el estímulo con rangos controlados para permitir supercompensación.
+                        {% elif rpe_reciente <= 6.0 %}
+                        Tu RPE medio reciente es {{ rpe_reciente }}, indicando margen de progresión. El plan incrementa la exigencia esta fase para seguir generando adaptación.
+                        {% else %}
+                        Con un RPE reciente de {{ rpe_reciente }}, estás en zona óptima de trabajo. Esta fase consolida ese estímulo y añade progresión gradual.
+                        {% endif %}
+                    {% else %}
+                        Fase seleccionada por el planificador Helms según tu objetivo y historial de entrenamiento.
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
             <div class="cp-progress-container">
                 <div class="cp-prog-header">
                     <span class="cp-label" style="margin-bottom:0;">Progreso de fase</span>
@@ -4932,6 +4954,28 @@
 
     </div>
 
+    {% if rm_display %}
+    <!-- PANEL: LO QUE EL PLAN SABE DE TI -->
+    <div style="margin-bottom:1.5rem;padding:16px 20px;background:rgba(10,22,40,0.7);backdrop-filter:blur(18px);border:1px solid rgba(200,170,110,0.15);border-radius:16px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+            <i class="fas fa-brain" style="color:#C8AA6E;font-size:0.9rem;"></i>
+            <span style="font-family:var(--font-mono);font-size:0.72rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:rgba(255,255,255,0.45);">Lo que el plan sabe de ti · Máximos registrados</span>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:10px;">
+            {% for rm in rm_display %}
+            <div style="display:flex;align-items:center;gap:8px;padding:8px 14px;background:rgba(255,255,255,0.04);border:1px solid rgba(200,170,110,0.12);border-radius:10px;">
+                <i class="fas {{ rm.icon }}" style="color:#C8AA6E;font-size:0.75rem;opacity:0.8;"></i>
+                <span style="font-size:0.8rem;color:rgba(255,255,255,0.6);">{{ rm.nombre }}</span>
+                <span style="font-family:var(--font-mono);font-size:0.9rem;font-weight:700;color:#C8AA6E;">{{ rm.rm }} kg</span>
+            </div>
+            {% endfor %}
+        </div>
+        <div style="margin-top:10px;font-size:0.72rem;color:rgba(255,255,255,0.3);line-height:1.4;">
+            Estos valores son tu máximo histórico registrado. El plan los usa para calcular cargas y proyectar objetivos de fase.
+            {% if rpe_reciente %}· RPE medio últimas sesiones: <span style="color:#C8AA6E;font-weight:700;">{{ rpe_reciente }}</span>{% endif %}
+        </div>
+    </div>
+    {% endif %}
 
     <!-- Contenedor Principal de Fases y Proyecciones -->
     <div id="projections-container" class="proj-panel"
@@ -4952,6 +4996,13 @@
         <div class="header-line"
             style="background: linear-gradient(90deg, {{ tema_fase.primary }} 0%, rgba(0,212,255,0.1) 60%, transparent 100%);">
         </div>
+
+        {% if proyecciones_fase %}
+        <div style="font-size:0.75rem;color:rgba(255,255,255,0.4);margin-bottom:12px;display:flex;align-items:center;gap:6px;">
+            <i class="fas fa-circle-info" style="font-size:0.7rem;"></i>
+            Objetivos calculados con incremento teórico Helms ({{ proyecciones_fase.0.incremento_porcentaje }}%) sobre tu máximo histórico registrado en cada ejercicio.
+        </div>
+        {% endif %}
 
         <div class="proj-cards" id="projections-cards" {% if not proyecciones_fase %}style="display: none;" {% endif %}>
             {% if proyecciones_fase %}
@@ -5370,7 +5421,7 @@
             const entrenamiento = entrenamientosCache[dateStr];
             renderWorkoutCard(entrenamiento, dateStr);
 
-            if (fromUserClick && entrenamiento) {
+            if (fromUserClick) {
                 openWorkoutModal(entrenamiento, dateStr);
             }
         }

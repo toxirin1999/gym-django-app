@@ -209,6 +209,12 @@ class DetalleEjercicioRealizado(models.Model):
 
 
 class SerieRealizada(models.Model):
+    TECNICA_CHOICES = [
+        ('buena', 'Buena'),
+        ('aceptable', 'Aceptable'),
+        ('comprometida', 'Comprometida'),
+    ]
+
     entreno = models.ForeignKey('EntrenoRealizado', on_delete=models.CASCADE, related_name='series')
     ejercicio = models.ForeignKey('rutinas.EjercicioBase', on_delete=models.CASCADE)
     serie_numero = models.PositiveIntegerField()
@@ -216,6 +222,10 @@ class SerieRealizada(models.Model):
     completado = models.BooleanField(default=False)
     peso_kg = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
     rpe_real = models.FloatField(null=True, blank=True, help_text="El RPE que el usuario sintió en esta serie")
+    tecnica_calidad = models.CharField(
+        max_length=15, choices=TECNICA_CHOICES, null=True, blank=True,
+        help_text="Calidad de técnica percibida en esta serie"
+    )
 
     def __str__(self):
         return f"{self.ejercicio.nombre}: Serie {self.serie_numero} - {self.repeticiones} reps @ {self.peso_kg} kg"
@@ -318,6 +328,10 @@ class EntrenoRealizado(models.Model):
     records_rotos = models.PositiveIntegerField(
         default=0,
         help_text="Número de récords personales rotos en este entrenamiento"
+    )
+    energia_pre_sesion = models.PositiveSmallIntegerField(
+        null=True, blank=True,
+        help_text="Energía percibida antes de la sesión (1-10)"
     )
 
     def calcular_volumen_total(self):
