@@ -2421,7 +2421,7 @@ a.rb-dia:focus-visible {
           </div>
           <div class="rb-split-ref">
             {{ split.ref_str }}
-            <span class="rb-split-lbl">estándar Open</span>
+            <span class="rb-split-lbl">estándar {{ splits_ref_label }}</span>
           </div>
           {% if split.gap_str %}
           <div class="rb-split-gap {% if split.gap_secs <= 0 %}rb-split-ok{% elif split.gap_secs > 30 %}rb-split-warn{% else %}rb-split-mid{% endif %}">
@@ -2508,6 +2508,11 @@ a.rb-dia:focus-visible {
             {% elif item.trend == 'estable' %}
             <span style="font-size:9px;color:var(--ink-4);font-family:var(--font-mono)"><i class="fas fa-minus"></i> estable</span>
             {% endif %}
+            {% if item.es_provisional %}
+            <span style="font-size:9px;color:var(--warn);font-family:var(--font-mono);background:oklch(0.72 0.17 70 / 0.12);padding:1px 5px;border-radius:3px;" title="Necesitas 3+ simulaciones para fiabilidad">provisional</span>
+            {% elif item.confianza == 'alta' %}
+            <span style="font-size:9px;color:var(--ok);font-family:var(--font-mono);background:oklch(0.55 0.15 145 / 0.12);padding:1px 5px;border-radius:3px;">confirmado</span>
+            {% endif %}
             <span style="font-family:var(--font-mono);font-size:9px;color:var(--ink-4)">{{ item.sesiones }}×</span>
           </div>
         </div>
@@ -2524,8 +2529,13 @@ a.rb-dia:focus-visible {
 
     <div style="margin-top:10px;font-size:10px;color:var(--ink-4);font-family:var(--font-body);line-height:1.4;">
       <i class="fas fa-info-circle" style="color:var(--accent);margin-right:3px;"></i>
-      Calculado comparando tu ritmo de carrera post-estación vs. tu pace base en sesiones de carrera pura.
-      Necesitas registrar sesiones de simulación (carrera + estaciones combinadas) para acumular datos.
+      {% with total_sims=interferencia_index|length %}
+      {% if interferencia_index.0.es_provisional %}
+      Datos <strong style="color:var(--warn);">provisionales</strong> — solo {{ interferencia_index.0.sesiones }} simulación registrada. Completa 2 más para confirmar el patrón.
+      {% else %}
+      Calculado con tus simulaciones completadas. Más sesiones aumentan la precisión del índice.
+      {% endif %}
+      {% endwith %}
     </div>
   </section>
   {% endif %}

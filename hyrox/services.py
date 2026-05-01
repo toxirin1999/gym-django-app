@@ -2009,12 +2009,39 @@ class RaceCardService:
         return f"{h}:{m:02d}:{s:02d}" if h else f"{m}:{s:02d}"
 
     @classmethod
+    def _get_race_pace(cls, objetivo):
+        """
+        Ritmo de competición estimado para la Race Card.
+        Prioridad: tiempo_5k_base (rendimiento validado) + ajuste Hyrox +10%
+        Fallback: promedio de sesiones de carrera pura.
+        El IF de entrenamiento usa un baseline diferente (_get_baseline_pace)
+        porque mide caída en sesiones Z2, no en carrera máxima.
+        """
+        if objetivo.tiempo_5k_base:
+            raw = str(objetivo.tiempo_5k_base)
+            try:
+                parts = raw.split(':')
+                if len(parts) == 3:
+                    total = int(parts[0]) * 3600 + int(parts[1]) * 60 + int(parts[2])
+                    pace_5k = total // 5
+                else:
+                    mm, ss = int(parts[0]), int(parts[1])
+                    total = mm * 60 + ss
+                    pace_5k = total // 5 if mm >= 10 else total
+                # +10%: en Hyrox se corre más lento que el pace 5K máximo
+                return round(pace_5k * 1.10)
+            except Exception:
+                pass
+        # Fallback a baseline de entrenamiento si no hay tiempo_5k_base
+        return InterferenceIndexService._get_baseline_pace(objetivo)
+
+    @classmethod
     def generate(cls, objetivo, splits_estaciones, interferencia_index):
         """
         Retorna un dict con la Race Card completa o None si faltan datos base.
         """
         # Pace base en segundos/km
-        pace_base = InterferenceIndexService._get_baseline_pace(objetivo)
+        pace_base = cls._get_race_pace(objetivo)
         if not pace_base:
             return None
 
