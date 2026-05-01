@@ -74,6 +74,35 @@ from .models import (
 )
 from .services.logros_service import LogrosService
 from .services.records_service import RecordsService
+from .models import GymDecisionLog
+
+
+def _tecnica_comprometida(entreno, nombre_ejercicio):
+    """True si alguna serie del ejercicio tuvo técnica comprometida en este entreno."""
+    from .models import SerieRealizada as _SR, EjercicioBase as _EB
+    ej_base = _EB.objects.filter(nombre__iexact=nombre_ejercicio).first()
+    if not ej_base:
+        return False
+    return _SR.objects.filter(
+        entreno=entreno,
+        ejercicio=ej_base,
+        tecnica_calidad='comprometida',
+    ).exists()
+
+
+def _reps_reales_tope(entreno, nombre_ejercicio, plan_reps):
+    """
+    Devuelve las reps reales del ejercicio que marcó tope en el entreno dado.
+    Usa max(reps_reales, plan_reps) para nunca retroceder respecto al plan.
+    """
+    from .models import EjercicioRealizado as _ER
+    ej = _ER.objects.filter(
+        entreno=entreno,
+        nombre_ejercicio__iexact=nombre_ejercicio,
+        es_tope_maquina=True,
+    ).first()
+    reps_reales = ej.repeticiones if ej and ej.repeticiones else 0
+    return max(reps_reales, plan_reps)
 
 
 # --- FUNCIÓN DE UTILIDAD PARA OBTENER DATOS DEL ENTRENAMIENTO ANTERIOR ---
@@ -123,7 +152,8 @@ def obtener_ultimo_peso_ejercicio(cliente_id, nombre_ejercicio, fecha_actual):
                 'fecha': ej.entreno.fecha,
                 'series': series,
                 'repeticiones': repeticiones,
-                'volumen': volumen
+                'volumen': volumen,
+                'es_tope_maquina': getattr(ej, 'es_tope_maquina', False),
             }
 
     # --- OPCIÓN 2: Buscar en EjercicioLiftinDetallado ---
@@ -900,13 +930,25 @@ def adaptar_plan_personalizado(entreno, ejercicios_forms, cliente, rutina, reque
                 ).exists()
 
                 # Lógica de adaptación
+                tecnica_ok = not _tecnica_comprometida(entreno, ejercicio_obj.nombre)
                 if fue_exitoso:
                     if es_tope:
-                        # Tope de máquina: congelar peso, progresar por reps (+1)
-                        plan.repeticiones_objetivo = plan.repeticiones_objetivo + 1
+                        # Tope de máquina: congelar peso, progresar por reps desde las reales (+1)
+                        base_reps = _reps_reales_tope(entreno, ejercicio_obj.nombre, plan.repeticiones_objetivo)
+                        plan.repeticiones_objetivo = base_reps + 1
                         plan.save()
                         registro['fallos_consecutivos'] = 0
                         print(f"🔒 TOPE MÁQUINA - Peso congelado en {float(peso_anterior)}kg | Reps → {plan.repeticiones_objetivo}")
+                    elif not tecnica_ok:
+                        # Técnica comprometida: consolidar sin subir peso
+                        registro['fallos_consecutivos'] = 0
+                        GymDecisionLog.objects.create(
+                            cliente=cliente,
+                            ejercicio=ejercicio_obj.nombre,
+                            accion='mantener',
+                            motivo='Técnica comprometida en al menos una serie — consolidar antes de progresar.',
+                            confianza='alta',
+                        )
                     else:
                         # Aumentar peso y reiniciar contador
                         nuevo_peso = (peso_anterior * Decimal('1.10')).quantize(Decimal('0.1'))
@@ -1527,10 +1569,12 @@ def adaptar_plan_personalizado_manual(entreno, request, cliente, rutina):
                 ).exists()
 
                 # Procesar adaptaciones según el resultado del entreno
+                tecnica_ok = not _tecnica_comprometida(entreno, asignacion['ej_nombre'])
                 if completado:
                     peso_anterior = plan.peso_objetivo
                     if es_tope:
-                        plan.repeticiones_objetivo = plan.repeticiones_objetivo + 1
+                        base_reps = _reps_reales_tope(entreno, asignacion['ej_nombre'], plan.repeticiones_objetivo)
+                        plan.repeticiones_objetivo = base_reps + 1
                         plan.save()
                         adaptaciones_positivas.append({
                             'ejercicio': asignacion['ej_nombre'],
@@ -1538,6 +1582,14 @@ def adaptar_plan_personalizado_manual(entreno, request, cliente, rutina):
                             'peso_nuevo': peso_anterior,
                             'tope_maquina': True,
                         })
+                    elif not tecnica_ok:
+                        GymDecisionLog.objects.create(
+                            cliente=cliente,
+                            ejercicio=asignacion['ej_nombre'],
+                            accion='mantener',
+                            motivo='Técnica comprometida en al menos una serie — consolidar antes de progresar.',
+                            confianza='alta',
+                        )
                     else:
                         # Éxito: aumentar peso
                         plan.peso_objetivo = round(float(peso_kg) * 1.05, 1)  # Incremento del 5%
@@ -1703,10 +1755,12 @@ def adaptar_plan_personalizado_seguro(entreno, ejercicios_forms, cliente_id, rut
                 ).exists()
 
                 # Procesar adaptaciones según el resultado del entreno
+                tecnica_ok = not _tecnica_comprometida(entreno, ejercicio_dict['nombre'])
                 if completado:
                     peso_anterior = plan.peso_objetivo
                     if es_tope:
-                        plan.repeticiones_objetivo = plan.repeticiones_objetivo + 1
+                        base_reps = _reps_reales_tope(entreno, ejercicio_dict['nombre'], plan.repeticiones_objetivo)
+                        plan.repeticiones_objetivo = base_reps + 1
                         plan.save()
                         adaptaciones_positivas.append({
                             'ejercicio': ejercicio_dict['nombre'],
@@ -1714,6 +1768,14 @@ def adaptar_plan_personalizado_seguro(entreno, ejercicios_forms, cliente_id, rut
                             'peso_nuevo': peso_anterior,
                             'tope_maquina': True,
                         })
+                    elif not tecnica_ok:
+                        GymDecisionLog.objects.create(
+                            cliente=cliente,
+                            ejercicio=ejercicio_dict['nombre'],
+                            accion='mantener',
+                            motivo='Técnica comprometida en al menos una serie — consolidar antes de progresar.',
+                            confianza='alta',
+                        )
                     else:
                         # Éxito: aumentar peso
                         plan.peso_objetivo = round(float(peso_kg) * 1.05, 1)  # Incremento del 5%
@@ -1883,10 +1945,12 @@ def adaptar_plan_personalizado_seguro(entreno, ejercicios_forms, cliente_id, rut
                 ).exists()
 
                 # Procesar adaptaciones según el resultado del entreno
+                tecnica_ok = not _tecnica_comprometida(entreno, ejercicio_dict['nombre'])
                 if completado:
                     peso_anterior = plan.peso_objetivo
                     if es_tope:
-                        plan.repeticiones_objetivo = plan.repeticiones_objetivo + 1
+                        base_reps = _reps_reales_tope(entreno, ejercicio_dict['nombre'], plan.repeticiones_objetivo)
+                        plan.repeticiones_objetivo = base_reps + 1
                         plan.save()
                         adaptaciones_positivas.append({
                             'ejercicio': ejercicio_dict['nombre'],
@@ -1894,6 +1958,14 @@ def adaptar_plan_personalizado_seguro(entreno, ejercicios_forms, cliente_id, rut
                             'peso_nuevo': peso_anterior,
                             'tope_maquina': True,
                         })
+                    elif not tecnica_ok:
+                        GymDecisionLog.objects.create(
+                            cliente=cliente,
+                            ejercicio=ejercicio_dict['nombre'],
+                            accion='mantener',
+                            motivo='Técnica comprometida en al menos una serie — consolidar antes de progresar.',
+                            confianza='alta',
+                        )
                     else:
                         # Éxito: aumentar peso
                         plan.peso_objetivo = round(float(peso_kg) * 1.05, 1)  # Incremento del 5%
@@ -3615,9 +3687,11 @@ def vista_entrenamiento_activo(request, cliente_id):
                 except:
                     peso_ant = 0.0
 
-                # Si hay peso anterior válido, úsalo como valor inicial (más “real”)
-                # Si no, usa el recomendado
-                if peso_ant > 0:
+                # Si la última vez fue tope de máquina, sugerir +2.5 kg
+                if datos_anterior.get('es_tope_maquina') and peso_ant > 0:
+                    ejercicio['peso_inicial_kg'] = round(peso_ant + 2.5, 1)
+                    ejercicio['sugerencia_tope'] = True
+                elif peso_ant > 0:
                     ejercicio['peso_inicial_kg'] = peso_ant
                 else:
                     ejercicio['peso_inicial_kg'] = peso_rec
@@ -3803,10 +3877,12 @@ def guardar_entrenamiento_activo(request, cliente_id):
                     peso_str = request.POST.get(peso_key, '0').replace(',', '.')
                     reps_str = request.POST.get(reps_key, '0')
                     rpe_str = request.POST.get(f"{form_id}_rpe_{i}", '')
+                    tecnica_str = request.POST.get(f"{form_id}_tecnica_{i}", '').strip()
 
                     peso = float(peso_str) if peso_str else 0.0
                     reps = int(reps_str) if reps_str else 0
                     rpe_real = float(rpe_str.replace(',', '.')) if rpe_str else None
+                    tecnica = tecnica_str if tecnica_str in ('buena', 'aceptable', 'comprometida') else None
 
                     serie_valida = (peso > 0 and reps > 0) if usa_peso else (reps > 0)
 
@@ -3819,7 +3895,7 @@ def guardar_entrenamiento_activo(request, cliente_id):
                             if rm_serie_actual > mejor_rm_ejercicio:
                                 mejor_rm_ejercicio = rm_serie_actual
                         series_data_para_guardar.append(
-                            {'peso': peso, 'reps': reps, 'rpe_real': rpe_real, 'tipo_progresion': tipo_progresion})
+                            {'peso': peso, 'reps': reps, 'rpe_real': rpe_real, 'tipo_progresion': tipo_progresion, 'tecnica': tecnica})
                         if rpe_real is not None:
                             todos_rpes_sesion.append(rpe_real)
 
@@ -3888,6 +3964,7 @@ def guardar_entrenamiento_activo(request, cliente_id):
                             repeticiones=int(s_data['reps']),
                             peso_kg=Decimal(str(s_data['peso'])),
                             rpe_real=s_data['rpe_real'],
+                            tecnica_calidad=s_data.get('tecnica'),
                             completado=True
                         )
 
@@ -3898,10 +3975,18 @@ def guardar_entrenamiento_activo(request, cliente_id):
         # =======================================================
         # ¡PASO 3: ACTUALIZAR EL ENTRENAMIENTO CON LOS TOTALES!
         # =======================================================
+        energia_pre_str = request.POST.get('energia_pre_sesion', '').strip()
+        energia_pre = int(energia_pre_str) if energia_pre_str.isdigit() and 1 <= int(energia_pre_str) <= 10 else None
+
+        update_fields = ['volumen_total_kg', 'numero_ejercicios']
         if ejercicios_procesados_count > 0:
             entreno.volumen_total_kg = volumen_total_entreno
             entreno.numero_ejercicios = ejercicios_procesados_count
-            entreno.save(update_fields=['volumen_total_kg', 'numero_ejercicios'])
+        if energia_pre is not None:
+            entreno.energia_pre_sesion = energia_pre
+            update_fields.append('energia_pre_sesion')
+        if update_fields:
+            entreno.save(update_fields=update_fields)
         # =======================================================
 
         # --- PASO 4: Actualizar el perfil del cliente con los nuevos 1RM ---
@@ -4487,6 +4572,29 @@ def vista_plan_anual(request, cliente_id):
         # --- PASO 7: Contexto LIGERO para la plantilla ---
         import json
 
+        # RPE medio de las últimas 4 sesiones (para explicar ajustes de fase)
+        from entrenos.models import ActividadRealizada as _AR2
+        _rpes = list(
+            _AR2.objects.filter(cliente=cliente_obj, rpe_medio__isnull=False)
+            .order_by('-fecha')
+            .values_list('rpe_medio', flat=True)[:4]
+        )
+        rpe_reciente = round(sum(_rpes) / len(_rpes), 1) if _rpes else None
+
+        # 1RMs conocidos por el sistema (ya calculados arriba, solo faltaba pasarlos)
+        rm_display = []
+        rm_labels = {
+            'Press Banca': ('Press Banca', 'fa-dumbbell'),
+            'Sentadilla': ('Sentadilla', 'fa-person-walking'),
+            'Peso Muerto': ('Peso Muerto', 'fa-weight-hanging'),
+            'Press Militar': ('Press Militar', 'fa-arrow-up'),
+            'Power Clean': ('Power Clean', 'fa-bolt'),
+        }
+        for nombre, (label, icon) in rm_labels.items():
+            peso = _pesos_max.get(nombre)
+            if peso:
+                rm_display.append({'nombre': label, 'icon': icon, 'rm': round(peso, 1)})
+
         # Preparar bloques para JSON (convertir dates a strings)
         bloques_para_json = [{
             'nombre': b.get('nombre'),
@@ -4531,6 +4639,9 @@ def vista_plan_anual(request, cliente_id):
             'proyecciones_json': json.dumps(proyecciones_totales),
             # Bloques en JSON para JavaScript
             'bloques_json': json.dumps(bloques_para_json),
+            # Datos de aprendizaje — lo que el plan sabe del atleta
+            'rpe_reciente': rpe_reciente,
+            'rm_display': rm_display,
         }
 
         return render(request, 'entrenos/vista_plan_calendario.html', context)

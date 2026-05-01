@@ -243,6 +243,22 @@ body {
   font-family: var(--font-mono); font-size: 11px; font-weight: 700; color: var(--ink-3); }
 .rb-session-check { color: var(--ok); font-size: 14px; }
 
+/* ── RESUMEN SEMANAL ─────────────────────────── */
+.rb-aprendio-card {
+  background: var(--paper); border: 1px solid var(--line);
+  border-radius: 4px; padding: 14px 16px; margin-top: 12px;
+}
+.rb-aprendio-item {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 12px;
+  font-family: var(--font-body); color: var(--ink-2); line-height: 1.4;
+}
+.rb-aprendio-item:last-child { border-bottom: none; padding-bottom: 0; }
+.rb-aprendio-icon { font-size: 14px; flex-shrink: 0; margin-top: 1px; }
+.rb-aprendio-text.ok  { color: var(--ok); }
+.rb-aprendio-text.warn { color: var(--warn, #F1C40F); }
+.rb-aprendio-text.info { color: var(--ink-2); }
+
 /* ── BIENESTAR ───────────────────────────────── */
 .rb-bio-card {
   background: var(--paper); border: 1px solid var(--line);
@@ -403,7 +419,7 @@ body {
               border:1px solid rgba(34,197,94,.3);border-radius:9999px;padding:4px 10px;
               cursor:pointer;outline:none;">
       <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-      CHECK-IN · {{ checkin_hoy.fc_reposo }} BPM · {{ checkin_hoy.horas_sueno }}H
+      CHECK-IN · {{ checkin_hoy.fc_reposo }} BPM · {{ checkin_hoy.horas_sueno }}H{% if checkin_hoy.hrv_ms %} · VFC {{ checkin_hoy.hrv_ms }}ms{% endif %}
     </button>
     {% else %}
     <button data-checkin-badge onclick="document.getElementById('rbCheckinModal').classList.add('open')"
@@ -524,7 +540,7 @@ body {
     <div class="rb-workout-card">
       <div class="rb-workout-eyebrow">Próximo Entrenamiento</div>
       <div class="rb-workout-title">{{ proximo_entrenamiento.nombre|default:proximo_entrenamiento.rutina_nombre|default:"Sesión" }}</div>
-      <div class="rb-workout-badge">Volumen: {% widthratio bio_readiness.volume_modifier|default:1 1 100 %}%</div>
+      <div class="rb-workout-badge">Vol. {% widthratio bio_readiness.volume_modifier|default:1 1 100 %}% · {{ bio_readiness_label|default:"Óptimo" }}</div>
       {% if proximo_entrenamiento.ejercicios %}
       <div class="rb-ex-list">
         {% for ej in proximo_entrenamiento.ejercicios|slice:":4" %}
@@ -568,7 +584,7 @@ body {
         <div class="rb-nut-block rb-nut-v">
           <div class="rb-nut-val">{{ nut_target.bloques_verduras }}</div>
           <div class="rb-nut-lbl">Verd.</div>
-          <div class="rb-nut-bar"><div class="rb-nut-bar-fill" style="width:0%"></div></div>
+          <div class="rb-nut-bar"><div class="rb-nut-bar-fill" style="width:{{ nut_pct_v }}%"></div></div>
         </div>
       </div>
       <div class="rb-nut-footer">
@@ -605,6 +621,30 @@ body {
     </a>
     {% endif %}
 
+    <!-- Resumen semanal: qué aprendió el plan -->
+    {% if resumen_semanal_gym %}
+    <div class="rb-aprendio-card">
+      <div class="rb-section-head" style="margin-bottom:8px;">
+        <div class="rb-section-num">SEM</div>
+        <h3 class="rb-section-title">Lo que aprendió el plan</h3>
+        <div class="rb-section-line"></div>
+        {% with meta=resumen_semanal_gym.0.meta %}
+        {% if meta %}
+        <span style="font-family:var(--font-mono);font-size:9px;color:var(--ink-4);white-space:nowrap;">
+          {{ meta.lunes|date:"d/m" }} – {{ meta.domingo|date:"d/m" }}
+        </span>
+        {% endif %}
+        {% endwith %}
+      </div>
+      {% for item in resumen_semanal_gym %}
+      <div class="rb-aprendio-item">
+        <span class="rb-aprendio-icon">{{ item.icono }}</span>
+        <span class="rb-aprendio-text {{ item.color }}">{{ item.texto }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
     <!-- Recent sessions -->
     {% if actividades_recientes_focus %}
     <div class="rb-section">
@@ -630,6 +670,7 @@ body {
             </div>
           </div>
           <div class="rb-session-right">
+            {% if act.rpe_medio %}<span style="font-family:var(--font-mono);font-size:9px;color:{% if act.rpe_medio >= 9 %}var(--danger){% elif act.rpe_medio >= 7 %}var(--warn){% else %}var(--ok){% endif %};">RPE {{ act.rpe_medio|floatformat:"0" }}</span>{% endif %}
             {% if act.duracion_minutos %}<span>{{ act.duracion_minutos }}m</span>{% endif %}
             <i class="fas fa-circle-check rb-session-check"></i>
           </div>
@@ -687,7 +728,7 @@ body {
         <div class="rb-nut-block rb-nut-v">
           <div class="rb-nut-val">{{ nut_target.bloques_verduras }}</div>
           <div class="rb-nut-lbl">Verd.</div>
-          <div class="rb-nut-bar"><div class="rb-nut-bar-fill" style="width:0%"></div></div>
+          <div class="rb-nut-bar"><div class="rb-nut-bar-fill" style="width:{{ nut_pct_v }}%"></div></div>
         </div>
       </div>
       <div class="rb-nut-footer">

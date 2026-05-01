@@ -1416,11 +1416,36 @@ def mockup_demo(request):
             context['nut_pct_p'] = round(nut_target.bloques_proteina / _tot * 100)
             context['nut_pct_c'] = round(nut_target.bloques_carbos / _tot * 100)
             context['nut_pct_g'] = round(nut_target.bloques_grasas / _tot * 100)
+            context['nut_pct_v'] = round(nut_target.bloques_verduras / _tot * 100) if hasattr(nut_target, 'bloques_verduras') and nut_target.bloques_verduras else 0
         else:
-            context['nut_pct_p'] = context['nut_pct_c'] = context['nut_pct_g'] = 0
+            context['nut_pct_p'] = context['nut_pct_c'] = context['nut_pct_g'] = context['nut_pct_v'] = 0
     except Exception:
         context['nut_target'] = None
-        context['nut_pct_p'] = context['nut_pct_c'] = context['nut_pct_g'] = 0
+        context['nut_pct_p'] = context['nut_pct_c'] = context['nut_pct_g'] = context['nut_pct_v'] = 0
+
+    # Label legible para el bio_readiness (basado en lesiones/dolor)
+    _br = context.get('bio_readiness') or {}
+    _vm = _br.get('volume_modifier', 1.0)
+    _src = _br.get('sources', {})
+    if _src.get('has_active_injuries'):
+        context['bio_readiness_label'] = 'Lesión activa'
+    elif _br.get('needs_deload'):
+        context['bio_readiness_label'] = 'Deload sugerido'
+    elif _vm >= 1.0:
+        context['bio_readiness_label'] = 'Óptimo'
+    elif _vm >= 0.85:
+        context['bio_readiness_label'] = 'Reducción leve'
+    elif _vm >= 0.70:
+        context['bio_readiness_label'] = 'Reducción moderada'
+    else:
+        context['bio_readiness_label'] = 'Reducción severa'
+
+    # ── Resumen semanal gym ───────────────────────────────────────
+    try:
+        from entrenos.services.resumen_semanal_service import get_resumen_semanal_gym
+        context['resumen_semanal_gym'] = get_resumen_semanal_gym(cliente)
+    except Exception:
+        context['resumen_semanal_gym'] = []
 
     # Garantiza que hyrox_objetivo esté en el contexto aunque _ctx_hyrox haya fallado.
     if not context.get('hyrox_objetivo'):

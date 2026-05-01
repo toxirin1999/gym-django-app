@@ -258,6 +258,14 @@ input{background:transparent!important;border:none!important;outline:none!import
 }
 .pd-ctrl-btn.mas{color:var(--green);}
 .pd-ctrl-btn:active{transform:scale(0.97);}
+/* Técnica */
+.pd-tecnica-wrap{margin-bottom:12px;}
+.pd-tecnica-lbl{font-family:var(--fm);font-size:10px;color:var(--td);letter-spacing:.5px;text-transform:uppercase;margin-bottom:8px;text-align:center;}
+.pd-tecnica-btns{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;}
+.btn-tecnica{height:46px;border-radius:12px;border:1.5px solid var(--bd,rgba(255,255,255,0.1));background:transparent;color:var(--td);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;font-family:var(--fu);}
+.btn-tecnica.sel-buena{background:rgba(46,204,113,0.18);color:#2ECC71;border-color:#2ECC71;}
+.btn-tecnica.sel-aceptable{background:rgba(241,196,15,0.18);color:#F1C40F;border-color:#F1C40F;}
+.btn-tecnica.sel-comprometida{background:rgba(231,76,60,0.18);color:#E74C3C;border-color:#E74C3C;}
 /* 6 — Botón saltar */
 .btn-saltar{
   width:100%;height:52px;border-radius:16px;border:none;
@@ -937,6 +945,7 @@ input{background:transparent!important;border:none!important;outline:none!import
 <input type="hidden" name="ejercicios_totales" id="hid-ej-tot">
 <input type="hidden" name="volumen_total_sesion" id="hid-volumen">
 <input type="hidden" name="rpe_medio_sesion" id="hid-rpe-medio">
+<input type="hidden" name="energia_pre_sesion" id="hid-energia-pre" value="">
 
 <!-- ══ TOPBAR ══ -->
 <div class="topbar">
@@ -1070,6 +1079,9 @@ input{background:transparent!important;border:none!important;outline:none!import
       <span class="exname-chip chip-n">{{ ejercicio.repeticiones }} reps</span>
       {% if ejercicio.peso_anterior_kg > 0 %}
       <span class="exname-chip chip-n">Última: {{ ejercicio.peso_anterior_kg }}kg</span>
+      {% endif %}
+      {% if ejercicio.sugerencia_tope %}
+      <span class="exname-chip" style="background:rgba(46,204,113,0.15);color:#2ECC71;border:1px solid rgba(46,204,113,0.3);" title="La última vez llegaste al tope — sugerimos subir 2.5 kg">🔝 +2.5 kg</span>
       {% endif %}
     </div>
   </div>
@@ -1337,6 +1349,19 @@ input{background:transparent!important;border:none!important;outline:none!import
       <div class="pd-prox-info" id="pd-prox-{{ ejercicio.form_id }}">—</div>
     </div>
 
+    <!-- Técnica de la serie que acaba de terminar -->
+    <div class="pd-tecnica-wrap">
+      <div class="pd-tecnica-lbl">¿Cómo fue la técnica?</div>
+      <div class="pd-tecnica-btns">
+        <button type="button" class="btn-tecnica" id="tec-buena-{{ ejercicio.form_id }}"
+                onclick="selTecnica('{{ ejercicio.form_id }}','buena')">Buena</button>
+        <button type="button" class="btn-tecnica" id="tec-aceptable-{{ ejercicio.form_id }}"
+                onclick="selTecnica('{{ ejercicio.form_id }}','aceptable')">Aceptable</button>
+        <button type="button" class="btn-tecnica" id="tec-comprometida-{{ ejercicio.form_id }}"
+                onclick="selTecnica('{{ ejercicio.form_id }}','comprometida')">Comprometida</button>
+      </div>
+    </div>
+
     <!-- Banner autoregulación (se muestra si procede) -->
     <div id="pd-sugerencia-{{ ejercicio.form_id }}" style="display:none;
          margin-bottom:10px;padding:10px 14px;border-radius:14px;
@@ -1572,6 +1597,21 @@ input{background:transparent!important;border:none!important;outline:none!import
     <div class="modal-desglose">
       <h3>Desglose</h3>
       <div id="modal-ejercicios-lista"></div>
+    </div>
+
+    <!-- ── Energía pre-sesión ── -->
+    <div class="mr-energia-wrap" style="margin:16px 0 0;padding:14px 16px;background:var(--surf2,rgba(255,255,255,0.05));border-radius:12px;">
+      <div style="font-family:var(--fm);font-size:11px;color:var(--td);letter-spacing:.5px;text-transform:uppercase;margin-bottom:10px;">¿Cómo llegaste al entreno?</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;">
+        {% for n in "1234567890" %}{% with val=forloop.counter %}
+        <button type="button" class="btn-energia-pre" data-val="{{ val }}"
+                onclick="selEnergiaPreSesion({{ val }})"
+                style="flex:1;min-width:28px;padding:7px 4px;border:1.5px solid var(--bd,rgba(255,255,255,0.1));border-radius:8px;background:transparent;color:var(--td);font-size:12px;font-family:var(--fu);cursor:pointer;transition:all .15s;">
+          {{ val }}
+        </button>
+        {% endwith %}{% endfor %}
+      </div>
+      <div id="energia-pre-label" style="font-size:11px;color:var(--td);margin-top:8px;text-align:center;min-height:16px;"></div>
     </div>
 
     <!-- Botones -->
@@ -1897,16 +1937,36 @@ function guardarSeriePanel(fid,sn,total){
   const cb=document.getElementById('check-'+fid+'-'+sn);
   if(cb)cb.checked=true;
 
-  STATE.seriesCompletadas[fid].push({peso,reps,rpe});
+  // Guardar técnica de la serie anterior como hidden input
+  const tecnicaSerie = _tecnicaActual[fid] || null;
+  const tecnicaInputId = 'tecnica-hid-'+fid+'-'+sn;
+  let tecnicaInput = document.getElementById(tecnicaInputId);
+  if(!tecnicaInput){
+    tecnicaInput = document.createElement('input');
+    tecnicaInput.type = 'hidden';
+    tecnicaInput.id = tecnicaInputId;
+    tecnicaInput.name = fid+'_tecnica_'+sn;
+    document.getElementById('workout-form').appendChild(tecnicaInput);
+  }
+  tecnicaInput.value = tecnicaSerie || '';
+
+  STATE.seriesCompletadas[fid].push({peso,reps,rpe,tecnica:tecnicaSerie});
 
   // Log visual
+  const tecnicaBadge = tecnicaSerie
+    ? (tecnicaSerie==='buena'
+        ? '<span style="font-size:10px;color:#2ECC71;margin-left:4px;">✔ buena</span>'
+        : tecnicaSerie==='aceptable'
+          ? '<span style="font-size:10px;color:#F1C40F;margin-left:4px;">~ aceptable</span>'
+          : '<span style="font-size:10px;color:#E74C3C;margin-left:4px;">⚠ comprometida</span>')
+    : '';
   const log=document.getElementById('log-'+fid);
   if(log){
     const row=document.createElement('div');
     row.className='serie-done';
     row.dataset.sn=sn;
     row.innerHTML='<div class="sd-check">✓</div>'
-      +'<div class="sd-info">Serie '+sn+' — <strong>'+peso+'kg × '+reps+' reps</strong></div>'
+      +'<div class="sd-info">Serie '+sn+' — <strong>'+peso+'kg × '+reps+' reps</strong>'+tecnicaBadge+'</div>'
       +'<div class="sd-rpe">RPE '+Math.round(rpe)+'</div>'
       +'<button type="button" class="sd-edit" onclick="editarSeriePanel(\''+fid+'\','+sn+','+total+')" title="Editar esta serie">✎</button>';
     log.appendChild(row);
@@ -2280,6 +2340,7 @@ function ajustarTimer(fid,delta){
 function saltarDescanso(fid){
   if(STATE.timers[fid])clearInterval(STATE.timers[fid].interval);
   document.getElementById('desc-'+fid).style.display='none';
+  _resetTecnica(fid);
 
   const t=STATE.timers[fid];
   const snActual=t?t.snActual:STATE.seriesCompletadas[fid].length;
@@ -2561,6 +2622,47 @@ function cerrarSwapMaquina() {
   _swapFormId = null;
   _swapNombreOriginal = null;
 }
+// ── Técnica por serie ────────────────────────────────────────────
+// Almacena la técnica seleccionada mientras el usuario está en la pantalla de descanso
+const _tecnicaActual = {};  // { fid: 'buena'|'aceptable'|'comprometida'|null }
+
+function selTecnica(fid, val){
+  _tecnicaActual[fid] = val;
+  ['buena','aceptable','comprometida'].forEach(v=>{
+    const btn = document.getElementById('tec-'+v+'-'+fid);
+    if(!btn) return;
+    btn.classList.remove('sel-buena','sel-aceptable','sel-comprometida');
+    if(v === val) btn.classList.add('sel-'+val);
+  });
+}
+
+function _resetTecnica(fid){
+  _tecnicaActual[fid] = null;
+  ['buena','aceptable','comprometida'].forEach(v=>{
+    const btn = document.getElementById('tec-'+v+'-'+fid);
+    if(btn) btn.classList.remove('sel-buena','sel-aceptable','sel-comprometida');
+  });
+}
+
+// ── Energía pre-sesión ──────────────────────────────────────────
+const ENERGIA_LABELS = {
+  1:'Agotado/a — cuerpo pesado',2:'Muy bajo',3:'Bajo',
+  4:'Regular','5':'Neutral',6:'Bien',7:'Bastante bien',
+  8:'Con energía',9:'Muy energético/a',10:'Al máximo'
+};
+function selEnergiaPreSesion(val){
+  document.querySelectorAll('.btn-energia-pre').forEach(b=>{
+    const active = parseInt(b.dataset.val)===val;
+    b.style.background = active ? 'var(--gb,#2ECC71)' : 'transparent';
+    b.style.color = active ? '#111' : 'var(--td)';
+    b.style.borderColor = active ? 'var(--gb,#2ECC71)' : 'var(--bd,rgba(255,255,255,0.1))';
+    b.style.fontWeight = active ? '700' : 'normal';
+  });
+  document.getElementById('hid-energia-pre').value = val;
+  const lbl = ENERGIA_LABELS[val] || '';
+  document.getElementById('energia-pre-label').textContent = lbl;
+}
+
 document.getElementById('btn-confirmar-guardar').addEventListener('click',()=>{
   document.getElementById('hid-duracion').value=Math.floor((Date.now()-t0)/1000/60);
   limpiarCheckpoint();
