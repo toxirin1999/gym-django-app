@@ -3735,6 +3735,20 @@ def vista_entrenamiento_activo(request, cliente_id):
                 ejercicio['pr_reps'] = 0
                 ejercicio['peso_inicial_kg'] = float(ejercicio.get('peso_recomendado_kg', 0) or 0)
 
+            # Detectar estancamiento previo (GymDecisionLog activo)
+            try:
+                from datetime import timedelta as _td
+                _nombre_ej = ejercicio.get('nombre', '')
+                ejercicio['estancado'] = GymDecisionLog.objects.filter(
+                    cliente=cliente,
+                    ejercicio__iexact=_nombre_ej,
+                    accion='cambiar_variante',
+                    fecha_creacion__date__gte=fecha_obj - _td(days=21),
+                    motivo__icontains='Sin progresión',
+                ).exists()
+            except Exception:
+                ejercicio['estancado'] = False
+
             # Calcular aproximaciones basadas en el peso de trabajo
             try:
                 peso_trabajo = float(ejercicio.get('peso_inicial_kg') or ejercicio.get('peso_recomendado_kg') or 0)

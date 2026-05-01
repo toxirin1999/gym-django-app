@@ -1,6 +1,15 @@
 from datetime import date, timedelta
 
 
+def _tipo_record_label(tipo):
+    return {
+        'peso_maximo': 'peso máximo',
+        'one_rep_max': '1RM estimado',
+        'reps_maximas': 'reps máximas',
+        'volumen_total': 'volumen total',
+    }.get(tipo, tipo)
+
+
 def get_resumen_semanal_gym(cliente):
     """
     Genera el resumen "qué aprendió el plan" de la semana anterior (lun–dom).
@@ -8,6 +17,7 @@ def get_resumen_semanal_gym(cliente):
     """
     from entrenos.models import (
         EntrenoRealizado, EjercicioRealizado, SerieRealizada, GymDecisionLog,
+        RecordPersonal,
     )
 
     hoy = date.today()
@@ -43,7 +53,28 @@ def get_resumen_semanal_gym(cliente):
         'meta': meta,
     })
 
-    # ── 2. Técnica comprometida ────────────────────────────────────
+    # ── 2. Récords personales de la semana ────────────────────────
+    records_semana = RecordPersonal.objects.filter(
+        cliente=cliente,
+        fecha_logrado__range=(lunes, domingo),
+    ).order_by('ejercicio_nombre', 'tipo_record')
+
+    if records_semana.exists():
+        # Agrupar por ejercicio para no repetir nombre
+        por_ejercicio = {}
+        for r in records_semana:
+            por_ejercicio.setdefault(r.ejercicio_nombre, []).append(
+                f'{_tipo_record_label(r.tipo_record)}: {r.valor}'
+            )
+        for ejercicio, detalles in list(por_ejercicio.items())[:3]:
+            items.append({
+                'tipo': 'record',
+                'icono': '🏆',
+                'texto': f'Nuevo PR en {ejercicio} — {" · ".join(detalles)}',
+                'color': 'ok',
+            })
+
+    # ── 4. Técnica comprometida ────────────────────────────────────
     series_comprometidas = SerieRealizada.objects.filter(
         entreno__in=entrenos, tecnica_calidad='comprometida'
     ).values('ejercicio__nombre').distinct()
@@ -69,7 +100,7 @@ def get_resumen_semanal_gym(cliente):
                 'color': 'ok',
             })
 
-    # ── 3. Topes de máquina ────────────────────────────────────────
+    # ── 5. Topes de máquina ────────────────────────────────────────
     topes = EjercicioRealizado.objects.filter(
         entreno__in=entrenos, es_tope_maquina=True
     ).values_list('nombre_ejercicio', flat=True).distinct()
@@ -143,13 +174,25 @@ def get_resumen_semanal_gym(cliente):
     decisiones = GymDecisionLog.objects.filter(
         cliente=cliente,
         fecha_creacion__date__range=(lunes, domingo),
-    ).order_by('-fecha_creacion')[:3]
+    ).order_by('-fecha_creacion')[:5]
     for dec in decisiones:
+        if 'Sin progresión' in (dec.motivo or ''):
+            icono, color = '📊', 'warn'
+            texto = f'{dec.ejercicio}: sin progresión en 3 sesiones — cambiar estímulo esta semana.'
+        elif 'Técnica comprometida' in (dec.motivo or ''):
+            icono, color = '⚠️', 'warn'
+            texto = f'{dec.ejercicio}: técnica comprometida — consolidar antes de subir peso.'
+        elif 'Molestia recurrente' in (dec.motivo or ''):
+            icono, color = '🩹', 'warn'
+            texto = f'{dec.ejercicio}: molestia recurrente — reducir carga en esa zona.'
+        else:
+            icono, color = '🧠', 'info'
+            texto = f'{dec.ejercicio}: {dec.motivo}'
         items.append({
             'tipo': 'decision',
-            'icono': '🧠',
-            'texto': f'{dec.ejercicio}: {dec.motivo}',
-            'color': 'info',
+            'icono': icono,
+            'texto': texto,
+            'color': color,
         })
 
     return items
