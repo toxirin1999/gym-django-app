@@ -473,10 +473,15 @@ class EstadisticasService:
         k_ctl = 1 / 42.0
         k_atl = 1 / 7.0
         cursor = desde
+        corte_serie = fecha_fin - timedelta(days=56)
+        serie_diaria = []
         for _ in range(n_dias):
             t = carga_por_dia.get(cursor, 0)
             ctl = ctl + (t - ctl) * k_ctl
             atl = atl + (t - atl) * k_atl
+            if cursor >= corte_serie:
+                acwr_dia = round(atl / ctl, 2) if ctl > 0 else 0
+                serie_diaria.append({'fecha': cursor.isoformat(), 'acwr': acwr_dia})
             cursor += timedelta(days=1)
 
         acwr_actual = round(atl / ctl, 2) if ctl > 0 else 0
@@ -503,7 +508,7 @@ class EstadisticasService:
                 dias_descanso = 0
 
         return {
-            'dataframe': [],  # EWMA no genera serie diaria completa
+            'dataframe': serie_diaria,
             'acwr_actual': acwr_actual,
             'zona_riesgo': zona_riesgo,
             'carga_aguda': carga_aguda_actual,
