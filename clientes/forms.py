@@ -19,18 +19,17 @@ from .models import BitacoraDiaria  # Asegúrate de que BitacoraDiaria esté en 
 class CheckinDiarioForm(forms.ModelForm):
     class Meta:
         model = BitacoraDiaria
-        # Seleccionamos solo los campos relevantes para el check-in
-        fields = ['energia_subjetiva', 'dolor_articular', 'horas_sueno']
+        fields = ['energia_subjetiva', 'dolor_articular', 'horas_sueno', 'hrv_ms']
 
-        # Widgets para hacerlos más amigables
         widgets = {
             'energia_subjetiva': forms.NumberInput(
                 attrs={'type': 'range', 'min': '1', 'max': '10', 'class': 'range-slider'}),
             'dolor_articular': forms.NumberInput(
                 attrs={'type': 'range', 'min': '1', 'max': '10', 'class': 'range-slider'}),
-            # --- CORRECCIÓN ---
             'horas_sueno': forms.NumberInput(
                 attrs={'type': 'range', 'min': '0', 'max': '12', 'step': '0.5', 'class': 'range-slider'}),
+            'hrv_ms': forms.NumberInput(
+                attrs={'class': 'form-control', 'placeholder': 'Ej. 62 (opcional — de tu Garmin/Apple Watch)'}),
         }
 
         labels = {

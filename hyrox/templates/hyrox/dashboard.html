@@ -868,9 +868,15 @@ a.rb-dia:focus-visible {
         </div>
         <div class="rb-rd-bar"><div class="rb-rd-bar-fill" style="width:{{ score }}%;"></div></div>
         {% if readiness_recovery_delta and readiness_recovery_delta < 0 %}
-        <div style="font-family:var(--font-mono);font-size:9px;color:var(--warn);margin-top:4px;display:flex;align-items:center;gap:4px;">
-          <i class="fas fa-moon"></i>
-          Sueño · {{ readiness_recovery_delta }} pts hoy
+        <div style="font-family:var(--font-mono);font-size:9px;color:var(--warn);margin-top:4px;display:flex;flex-direction:column;gap:3px;">
+          <span><i class="fas fa-moon" style="margin-right:3px;"></i>Sueño/energía · {{ readiness_recovery_delta }} pts</span>
+          {% if readiness_gym_nota %}
+          <span><i class="fas fa-dumbbell" style="margin-right:3px;"></i>{{ readiness_gym_nota }}</span>
+          {% endif %}
+        </div>
+        {% elif readiness_gym_nota %}
+        <div style="font-family:var(--font-mono);font-size:9px;color:var(--warn);margin-top:4px;">
+          <i class="fas fa-dumbbell" style="margin-right:3px;"></i>{{ readiness_gym_nota }}
         </div>
         {% endif %}
         {% if readiness_svg_points %}
@@ -2416,14 +2422,29 @@ a.rb-dia:focus-visible {
             {% else %}
             <span class="rb-status-badge rb-status-sin_datos">Sin datos</span>
             {% endif %}
+            {% if split.estancada %}
+            <span style="font-size:8px;color:var(--warn);font-family:var(--font-mono);background:oklch(0.72 0.17 70 / 0.12);padding:1px 5px;border-radius:3px;" title="{{ split.stagnation_sugerencia }}">plateau</span>
+            {% endif %}
           </div>
         </div>
+
+        {# ── Sugerencia de estancamiento ── #}
+        {% if split.estancada and split.stagnation_sugerencia %}
+        <div style="font-family:var(--font-body);font-size:10px;color:var(--warn);background:oklch(0.72 0.17 70 / 0.07);border-left:2px solid var(--warn);padding:5px 8px;border-radius:0 4px 4px 0;margin-bottom:6px;line-height:1.4;">
+          <i class="fas fa-lightbulb" style="margin-right:4px;"></i>{{ split.stagnation_sugerencia }}
+        </div>
+        {% endif %}
 
         {# ── Tiempos ── #}
         <div class="rb-split-times">
           <div class="rb-split-val {% if split.gap_secs is not None and split.gap_secs <= 0 %}rb-split-ok{% elif split.gap_secs and split.gap_secs > 30 %}rb-split-warn{% endif %}">
             {{ split.promedio_str|default:"--:--" }}
             <span class="rb-split-lbl">tu promedio</span>
+            {% if split.mejora_mes_pct is not None %}
+            <span style="font-family:var(--font-mono);font-size:8px;display:block;margin-top:2px;{% if split.mejora_mes_pct > 0 %}color:var(--ok){% elif split.mejora_mes_pct < 0 %}color:var(--accent){% else %}color:var(--ink-4){% endif %}">
+              {% if split.mejora_mes_pct > 0 %}+{% endif %}{{ split.mejora_mes_pct }}% vs mes ant.
+            </span>
+            {% endif %}
           </div>
           <div class="rb-split-ref">
             {{ split.ref_str }}
