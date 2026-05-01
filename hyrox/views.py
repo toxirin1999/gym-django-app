@@ -429,6 +429,7 @@ def hyrox_dashboard(request):
 
     # ── SPLITS POR ESTACIÓN ────────────────────────────────────────────
     splits_estaciones = []
+    splits_ref_label = 'Open'
     if objetivo_activo:
         import datetime as _dt
         from .models import HyroxActivity
@@ -445,17 +446,31 @@ def hyrox_dashboard(request):
             'wall ball': 'Wall Balls', 'wall balls': 'Wall Balls',
         }
         REFERENCIA = HyroxRaceSimulator.get_tiempos_categoria(objetivo_activo.categoria)
+        _cat_efectiva = objetivo_activo.categoria
+        if HyroxRaceSimulator.TIEMPOS_POR_CATEGORIA.get(_cat_efectiva) is None:
+            _cat_efectiva = 'open_women' if 'women' in _cat_efectiva else 'open_men'
+        _CAT_LABEL = {
+            'open_men': 'Open Masc.', 'open_women': 'Open Fem.',
+            'pro_men': 'Pro Masc.', 'pro_women': 'Pro Fem.',
+        }
+        splits_ref_label = _CAT_LABEL.get(_cat_efectiva, 'Open')
 
         tiempos_acum = {}       # {canon: [secs, ...]}
         tiempos_por_semana = {} # {canon: {(year, week): [secs, ...]}}
 
+        from django.db.models import Q as _Q
+        _STATION_TIPOS = ('hyrox_station', 'ergometro', 'skierg', 'remo')
         acts_timer = HyroxActivity.objects.filter(
             sesion__objective=objetivo_activo,
             sesion__estado='completado',
-        ).exclude(data_metricas__tiempo_segundos__isnull=True).select_related('sesion')
+            tipo_actividad__in=_STATION_TIPOS,
+        ).filter(
+            _Q(data_metricas__tiempo_segundos__isnull=False) |
+            _Q(data_metricas__tiempo_s__isnull=False)
+        ).select_related('sesion')
 
         for act in acts_timer:
-            secs = act.data_metricas.get('tiempo_segundos')
+            secs = act.data_metricas.get('tiempo_segundos') or act.data_metricas.get('tiempo_s')
             if not secs or secs <= 0:
                 continue
             nombre_lower = (act.nombre_ejercicio or '').lower().strip()
@@ -557,12 +572,13 @@ def hyrox_dashboard(request):
             total_ref = sum(s['ref_secs'] for s in splits_estaciones)
 
             total_est += running_secs
-            # Mejor caso: usa el mejor ritmo real registrado si existe, si no aplica 3%
+            # Mejor caso: usa el mejor ritmo real si existe, pero nunca peor que el estimado
             _mejor_pace = (evolucion_carrera.get('mejor_ritmo') or {}).get('secs') if evolucion_carrera else None
             if _mejor_pace:
-                total_mejor += _mejor_pace * 8
+                total_mejor += min(int(_mejor_pace * 8), int(running_secs * 0.97))
             else:
                 total_mejor += int(running_secs * 0.97)
+            total_mejor = min(total_mejor, total_est)  # mejor siempre ≤ estimado
             total_ref_total = total_ref + _run_ref
             stations_con_datos = sum(1 for s in splits_estaciones if s['tiene_datos'])
 
@@ -1149,6 +1165,7 @@ def hyrox_dashboard(request):
         'evolucion_carrera': evolucion_carrera,
         'splits_estaciones': splits_estaciones,
         'splits_categoria': objetivo_activo.get_categoria_display() if objetivo_activo else None,
+        'splits_ref_label': splits_ref_label,
         'splits_edad': edad_atleta,
         'race_prediction': race_prediction,
         'top_perdidas': top_perdidas,
