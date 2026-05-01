@@ -47,6 +47,7 @@ def hyrox_dashboard(request):
     readiness_svg_points = None
     current_score = 0
     _recovery_delta = 0
+    _gym_nota = None
 
     if objetivo_activo:
         from .models import HyroxReadinessLog
@@ -74,6 +75,7 @@ def hyrox_dashboard(request):
                     cal = _bitacora.calidad_sueno    # 0-100
                     hrs = float(_bitacora.horas_sueno or 0)
                     ene = _bitacora.energia_subjetiva  # 0-10
+                    hrv_hoy = _bitacora.hrv_ms
 
                     # Penalización sueño calidad
                     if cal is not None:
@@ -91,6 +93,28 @@ def hyrox_dashboard(request):
                         if ene < 4:   _recovery_delta -= 8
                         elif ene < 6: _recovery_delta -= 3
 
+                    # HRV: comparar con baseline personal (últimos 30 días)
+                    if hrv_hoy:
+                        _hrv_historial = list(
+                            BitacoraDiaria.objects
+                            .filter(
+                                cliente=objetivo_activo.cliente,
+                                hrv_ms__isnull=False,
+                                fecha__gte=hoy - timedelta(days=30),
+                                fecha__lt=hoy,
+                            )
+                            .values_list('hrv_ms', flat=True)
+                        )
+                        if len(_hrv_historial) >= 5:
+                            _hrv_baseline = sum(_hrv_historial) / len(_hrv_historial)
+                            _hrv_ratio = hrv_hoy / _hrv_baseline
+                            if _hrv_ratio < 0.80:
+                                _recovery_delta -= 10   # caída significativa
+                            elif _hrv_ratio < 0.90:
+                                _recovery_delta -= 5    # caída leve
+                            elif _hrv_ratio > 1.10:
+                                _recovery_delta += 3    # recuperación óptima
+
                     _bitacora_fields = {
                         'calidad_sueno': cal,
                         'horas_sueno': hrs if hrs > 0 else None,
@@ -98,7 +122,55 @@ def hyrox_dashboard(request):
             except Exception:
                 pass
 
-            _recovery_delta = max(_recovery_delta, -20)  # cap: nunca baja más de 20 pts
+            # Cruzar con sesiones de gym (entrenos app) — últimas 48h
+            _gym_delta = 0
+            _gym_nota = None
+            try:
+                from entrenos.models import EntrenoRealizado
+                from datetime import timedelta as _td
+                _LEGS_KW = {'pierna', 'cuadricep', 'isquio', 'gluteo', 'gemelo',
+                            'soleo', 'femoral', 'posterior'}
+                _entrenos_recientes = (
+                    EntrenoRealizado.objects
+                    .filter(
+                        cliente=objetivo_activo.cliente,
+                        fecha__gte=hoy - _td(days=2),
+                    )
+                    .prefetch_related('ejercicios_realizados', 'sesion_detalle')
+                )
+                for _e in _entrenos_recientes:
+                    _rpe = None
+                    try:
+                        _rpe = _e.sesion_detalle.rpe_medio
+                    except Exception:
+                        pass
+                    _vol = float(_e.volumen_total_kg or 0)
+
+                    # Detectar tren inferior
+                    _grupos = {
+                        (ej.grupo_muscular or '').lower()
+                        for ej in _e.ejercicios_realizados.all()
+                    }
+                    _es_pierna = any(
+                        any(kw in g for kw in _LEGS_KW) for g in _grupos
+                    )
+
+                    _carga_alta = (_rpe and _rpe >= 7) or _vol >= 5000
+                    if _es_pierna and _carga_alta:
+                        _gym_delta -= 10
+                        _gym_nota = f'Piernas intensas ({_e.fecha})'
+                    elif _carga_alta:
+                        _gym_delta -= 5
+                        _gym_nota = _gym_nota or f'Gym intenso ({_e.fecha})'
+                    elif _es_pierna:
+                        _gym_delta -= 4
+                        _gym_nota = _gym_nota or f'Trabajo de piernas ({_e.fecha})'
+
+                _gym_delta = max(_gym_delta, -12)  # cap gym
+            except Exception:
+                pass
+
+            _recovery_delta = max(_recovery_delta + _gym_delta, -25)  # cap total
             current_score = max(0, min(100, round(current_score + _recovery_delta)))
             HyroxReadinessLog.objects.create(
                 objective=objetivo_activo,
@@ -505,6 +577,7 @@ def hyrox_dashboard(request):
 
         tiempos_acum = {}       # {canon: [secs, ...]}
         tiempos_por_semana = {} # {canon: {(year, week): [secs, ...]}}
+        tiempos_por_mes = {}    # {canon: {(year, month): [secs, ...]}}
 
         from django.db.models import Q as _Q
         _STATION_TIPOS = ('hyrox_station', 'ergometro', 'skierg', 'remo')
@@ -515,7 +588,7 @@ def hyrox_dashboard(request):
         ).filter(
             _Q(data_metricas__tiempo_segundos__isnull=False) |
             _Q(data_metricas__tiempo_s__isnull=False)
-        ).select_related('sesion')
+        ).select_related('sesion').order_by('sesion__fecha', 'sesion__id')
 
         for act in acts_timer:
             secs = act.data_metricas.get('tiempo_segundos') or act.data_metricas.get('tiempo_s')
@@ -528,13 +601,19 @@ def hyrox_dashboard(request):
             secs = int(secs)
             tiempos_acum.setdefault(canon, []).append(secs)
             fecha_s = act.sesion.fecha or timezone.localdate()
-            iso_w = fecha_s.isocalendar()[:2]  # (year, week)
+            iso_w = fecha_s.isocalendar()[:2]
             tiempos_por_semana.setdefault(canon, {}).setdefault(iso_w, []).append(secs)
+            mes_key = (fecha_s.year, fecha_s.month)
+            tiempos_por_mes.setdefault(canon, {}).setdefault(mes_key, []).append(secs)
 
         hoy = timezone.localdate()
+        _mes_actual = (hoy.year, hoy.month)
+        _mes_ant = (hoy.year - 1, 12) if hoy.month == 1 else (hoy.year, hoy.month - 1)
+
         for nombre, ref in sorted(REFERENCIA.items()):
             lista = tiempos_acum.get(nombre, [])
             semanas_dict = tiempos_por_semana.get(nombre, {})
+            meses_dict = tiempos_por_mes.get(nombre, {})
 
             # Últimas 6 semanas para la tendencia
             tendencia = []
@@ -556,6 +635,16 @@ def hyrox_dashboard(request):
             else:
                 promedio = mejor = gap = pct_ref = None
                 gap_str = None
+
+            # Comparativa mensual
+            _vals_mes_act = meses_dict.get(_mes_actual, [])
+            _vals_mes_ant = meses_dict.get(_mes_ant, [])
+            mejora_mes_pct = None
+            if _vals_mes_act and _vals_mes_ant:
+                _avg_act = sum(_vals_mes_act) / len(_vals_mes_act)
+                _avg_ant = sum(_vals_mes_ant) / len(_vals_mes_ant)
+                if _avg_ant > 0:
+                    mejora_mes_pct = round((_avg_ant - _avg_act) / _avg_ant * 100, 1)
 
             # Status badge
             if not lista:
@@ -584,7 +673,17 @@ def hyrox_dashboard(request):
                 'tendencia': tendencia,
                 'tiene_datos': bool(lista),
                 'status': status,
+                'mejora_mes_pct': mejora_mes_pct,
             })
+
+    # ── DETECCIÓN DE ESTANCAMIENTO ────────────────────────────────────────────
+    if objetivo_activo and tiempos_acum:
+        from .training_engine import StagnationEngine
+        _stagnation = StagnationEngine.check(tiempos_acum)
+        for sp in splits_estaciones:
+            st = _stagnation.get(sp['nombre'], {})
+            sp['estancada'] = st.get('estancada', False)
+            sp['stagnation_sugerencia'] = st.get('sugerencia') if st.get('estancada') else None
 
     # Race prediction + time-loss analysis
     race_prediction = None
@@ -1204,6 +1303,7 @@ def hyrox_dashboard(request):
         'readiness_svg_points': readiness_svg_points,
         'readiness_score_hoy': current_score if objetivo_activo else None,
         'readiness_recovery_delta': _recovery_delta,
+        'readiness_gym_nota': _gym_nota,
         'mental_focus': mental_focus if objetivo_activo else None,
         'strength_balance': strength_balance if objetivo_activo else None,
         'readiness_breakdown': readiness_breakdown if objetivo_activo else None,

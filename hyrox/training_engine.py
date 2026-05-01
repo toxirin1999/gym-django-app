@@ -2833,6 +2833,70 @@ class WeeklySummaryEngine:
                          f"Los umbrales de adaptación se corrigen automáticamente.",
             })
 
+        # 6. Comparativa mensual por estación
+        try:
+            from .models import HyroxActivity
+            hoy_m = hoy
+            mes_actual = (hoy_m.year, hoy_m.month)
+            mes_ant = (hoy_m.year - 1, 12) if hoy_m.month == 1 else (hoy_m.year, hoy_m.month - 1)
+            _STATION_TIPOS_M = ('hyrox_station', 'ergometro', 'skierg', 'remo')
+            _acts_m = (
+                HyroxActivity.objects
+                .filter(
+                    sesion__objective=objetivo,
+                    sesion__estado='completado',
+                    tipo_actividad__in=_STATION_TIPOS_M,
+                )
+                .exclude(data_metricas={})
+                .select_related('sesion')
+            )
+            _NOMBRE_CANON_M = {
+                'skierg': 'SkiErg', 'sled push': 'Sled Push', 'sled pull': 'Sled Pull',
+                'burpee broad jump': 'Burpee Broad Jumps', 'rowing': 'Rowing', 'remo': 'Rowing',
+                'farmer': 'Farmers Carry', 'sandbag': 'Sandbag Lunges',
+                'wall ball': 'Wall Balls',
+            }
+            _tiempos_mes = {}
+            for _a in _acts_m:
+                _s = _a.data_metricas.get('tiempo_segundos') or _a.data_metricas.get('tiempo_s')
+                if not _s or int(_s) <= 0:
+                    continue
+                _nl = (_a.nombre_ejercicio or '').lower()
+                _c = next((v for k, v in _NOMBRE_CANON_M.items() if k in _nl), None)
+                if not _c:
+                    continue
+                _mk = (_a.sesion.fecha.year, _a.sesion.fecha.month)
+                _tiempos_mes.setdefault(_c, {}).setdefault(_mk, []).append(int(_s))
+
+            _mejoras = []
+            for _st, _mdict in _tiempos_mes.items():
+                _va = _mdict.get(mes_actual, [])
+                _vp = _mdict.get(mes_ant, [])
+                if _va and _vp:
+                    _avg_a = sum(_va) / len(_va)
+                    _avg_p = sum(_vp) / len(_vp)
+                    if _avg_p > 0:
+                        _pct = round((_avg_p - _avg_a) / _avg_p * 100, 1)
+                        if abs(_pct) >= 3:
+                            _mejoras.append((_st, _pct))
+
+            _mejoras.sort(key=lambda x: abs(x[1]), reverse=True)
+            for _st, _pct in _mejoras[:2]:
+                if _pct > 0:
+                    aprendizajes.append({
+                        'icono': 'fa-chart-line',
+                        'color': 'var(--ok)',
+                        'texto': f"{_st} mejoró un {_pct}% este mes vs el anterior.",
+                    })
+                else:
+                    aprendizajes.append({
+                        'icono': 'fa-chart-line',
+                        'color': 'var(--accent)',
+                        'texto': f"{_st} empeoró un {abs(_pct)}% este mes — revisa el estímulo.",
+                    })
+        except Exception:
+            pass
+
         # ── Próxima semana ────────────────────────────────────────────────────
         proxima_semana = list(HyroxSession.objects.filter(
             objective=objetivo,
@@ -2854,3 +2918,61 @@ class WeeklySummaryEngine:
             'proxima_semana': proxima_semana,
             'tiene_datos': n_completadas > 0 or bool(aprendizajes),
         }
+
+
+class StagnationEngine:
+    """
+    Detecta estancamiento por estación Hyrox.
+    Una estación está estancada si en las últimas 3 sesiones con dato
+    no hay mejora >5% respecto a las 3 sesiones anteriores (o al mejor tiempo).
+    Devuelve sugerencias de cambio de estímulo.
+    """
+
+    SUGERENCIAS = {
+        'SkiErg':             'Prueba intervalos de SkiErg: 8×30s al 90% con 30s descanso.',
+        'Sled Push':          'Incrementa el peso un 10% durante 3 sesiones y luego vuelve al oficial.',
+        'Sled Pull':          'Trabaja la posición y explosividad en el arranque: 5×10m al máximo.',
+        'Burpee Broad Jumps': 'Añade pliometría: 5×5 saltos máximos de longitud antes de la estación.',
+        'Rowing':             'Protocolo de remo: 5×500m con 2min descanso, foco en potencia por palada.',
+        'Farmers Carry':      'Añade 2kg por lado y trabaja velocidad de paso: 4×50m.',
+        'Sandbag Lunges':     'Alterna con sandbag al hombro (variante) para romper el patrón motor.',
+        'Wall Balls':         'Mejora la pausa en el fondo: 3×20 reps con 2s pausa en cuclillas.',
+    }
+
+    @classmethod
+    def check(cls, tiempos_acum: dict) -> dict:
+        """
+        Args:
+            tiempos_acum: {station_name: [secs, ...]} en orden cronológico
+
+        Returns:
+            {station_name: {'estancada': bool, 'sesiones_analizadas': int,
+                            'plateau_pct': float, 'sugerencia': str}}
+        """
+        resultado = {}
+        for station, tiempos in tiempos_acum.items():
+            if len(tiempos) < 3:
+                resultado[station] = {'estancada': False}
+                continue
+
+            ultimos_3 = tiempos[-3:]
+            avg_reciente = sum(ultimos_3) / len(ultimos_3)
+
+            # Base de comparación: las 3 sesiones anteriores o el mejor tiempo histórico
+            if len(tiempos) >= 6:
+                anteriores = tiempos[-6:-3]
+                avg_anterior = sum(anteriores) / len(anteriores)
+            else:
+                avg_anterior = min(tiempos[:-3]) if len(tiempos) > 3 else tiempos[0]
+
+            # Mejora = avg_reciente < avg_anterior (tiempos menores = más rápido)
+            mejora_pct = (avg_anterior - avg_reciente) / avg_anterior * 100
+            estancada = mejora_pct < 5.0  # menos de 5% de mejora = estancamiento
+
+            resultado[station] = {
+                'estancada': estancada,
+                'sesiones_analizadas': len(tiempos),
+                'plateau_pct': round(mejora_pct, 1),
+                'sugerencia': cls.SUGERENCIAS.get(station, 'Varía el estímulo: cambia volumen o intensidad.'),
+            }
+        return resultado
