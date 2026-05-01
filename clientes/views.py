@@ -552,12 +552,14 @@ def checkin_matutino(request):
     horas_sueno  = _float('horas_sueno')
     calidad      = _int('calidad_sueno', 0, 100)
     energia      = _int('energia_subjetiva', 1, 10)
+    hrv_ms       = _int('hrv_ms', 1, 300)
 
     bitacora, _ = BitacoraDiaria.objects.get_or_create(cliente=cliente, fecha=hoy)
-    if fc_reposo   is not None: bitacora.fc_reposo        = fc_reposo
-    if horas_sueno is not None: bitacora.horas_sueno      = horas_sueno
-    if calidad     is not None: bitacora.calidad_sueno    = calidad
+    if fc_reposo   is not None: bitacora.fc_reposo         = fc_reposo
+    if horas_sueno is not None: bitacora.horas_sueno       = horas_sueno
+    if calidad     is not None: bitacora.calidad_sueno     = calidad
     if energia     is not None: bitacora.energia_subjetiva = energia
+    if hrv_ms      is not None: bitacora.hrv_ms            = hrv_ms
     bitacora.save()
 
     # Sync to HyroxReadinessLog
