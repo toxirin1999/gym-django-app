@@ -1083,6 +1083,9 @@ input{background:transparent!important;border:none!important;outline:none!import
       {% if ejercicio.sugerencia_tope %}
       <span class="exname-chip" style="background:rgba(46,204,113,0.15);color:#2ECC71;border:1px solid rgba(46,204,113,0.3);" title="La última vez llegaste al tope — sugerimos subir 2.5 kg">🔝 +2.5 kg</span>
       {% endif %}
+      {% if ejercicio.estancado %}
+      <span class="exname-chip" style="background:rgba(241,196,15,0.15);color:#F1C40F;border:1px solid rgba(241,196,15,0.3);" title="Sin progresión en 3 sesiones — prueba una variante o cambia el rango de reps">⚡ Estancado</span>
+      {% endif %}
     </div>
   </div>
 

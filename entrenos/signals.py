@@ -201,6 +201,73 @@ def detectar_molestia_recurrente(sender, instance, created, raw=False, **kwargs)
 
 
 @receiver(post_save, sender=EntrenoRealizado)
+def detectar_estancamiento(sender, instance, created, raw=False, **kwargs):
+    """
+    Para cada ejercicio de la sesión, comprueba si las últimas 3 apariciones
+    tienen el mismo peso y reps (sin tope de máquina). Si es así → GymDecisionLog.
+    """
+    if raw:
+        return
+    try:
+        from entrenos.models import EjercicioRealizado, GymDecisionLog
+        from datetime import timedelta
+
+        ejercicios_sesion = instance.ejercicios_realizados.filter(
+            completado=True
+        ).values_list('nombre_ejercicio', flat=True).distinct()
+
+        for nombre in ejercicios_sesion:
+            ultimas = EjercicioRealizado.objects.filter(
+                entreno__cliente=instance.cliente,
+                nombre_ejercicio__iexact=nombre,
+                completado=True,
+                es_tope_maquina=False,
+                peso_kg__gt=0,
+            ).order_by('-entreno__fecha')[:3]
+
+            if len(ultimas) < 3:
+                continue
+
+            pesos = [float(e.peso_kg or 0) for e in ultimas]
+            reps  = [e.repeticiones or 0 for e in ultimas]
+
+            # Tolerancia: ±0.5 kg en peso, exacto en reps
+            mismo_peso = max(pesos) - min(pesos) <= 0.5
+            mismas_reps = len(set(reps)) == 1
+
+            if not (mismo_peso and mismas_reps):
+                continue
+
+            # No duplicar si ya hay un log reciente (últimos 14 días)
+            ventana = instance.fecha - timedelta(days=14)
+            ya_existe = GymDecisionLog.objects.filter(
+                cliente=instance.cliente,
+                ejercicio__iexact=nombre,
+                accion='cambiar_variante',
+                fecha_creacion__date__gte=ventana,
+            ).exists()
+            if ya_existe:
+                continue
+
+            GymDecisionLog.objects.create(
+                cliente=instance.cliente,
+                ejercicio=nombre,
+                accion='cambiar_variante',
+                motivo=(
+                    f'Sin progresión en 3 sesiones consecutivas '
+                    f'({pesos[0]} kg × {reps[0]} reps). '
+                    f'Cambiar estímulo: variante, rango de reps o tempo.'
+                ),
+                confianza='alta',
+                peso_anterior=pesos[0],
+                reps_anteriores=reps[0],
+            )
+
+    except Exception as e:
+        print(f"⚠️ Estancamiento check error (entreno {instance.id}): {e}")
+
+
+@receiver(post_save, sender=EntrenoRealizado)
 def actualizar_decision_log(sender, instance, created, raw=False, **kwargs):
     """Evalúa decisiones previas y genera nuevas al guardar un EntrenoRealizado."""
     if raw:
