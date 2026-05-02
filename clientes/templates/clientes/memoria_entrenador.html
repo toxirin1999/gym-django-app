@@ -310,6 +310,91 @@
   <div class="empty">Aún no hay suficientes datos. El sistema aprende con cada sesión completada.</div>
   {% endif %}
 
+  <!-- ── MODELO PROGRESIVO DEL USUARIO ─────────────────────────────── -->
+  {% if modelo and modelo.tiene_datos %}
+  <div class="sec-hdr"><span class="sec-tag">Lo que sé de cómo entrenas</span><div class="sec-line"></div></div>
+
+  {% if modelo.patron_semanal %}
+  <div class="row-item" style="flex-direction:column;align-items:flex-start;gap:4px;">
+    <div style="display:flex;align-items:center;gap:8px;">
+      <span style="font-size:16px;">📅</span>
+      <div class="row-name">Mejor día: {{ modelo.patron_semanal.dia_pico }}</div>
+    </div>
+    <div class="row-sub" style="padding-left:26px;">{{ modelo.patron_semanal.descripcion }}</div>
+  </div>
+  {% endif %}
+
+  {% if modelo.ventana_recuperacion %}
+  <div class="row-item" style="flex-direction:column;align-items:flex-start;gap:4px;">
+    <div style="display:flex;align-items:center;gap:8px;">
+      <span style="font-size:16px;">⏱️</span>
+      <div class="row-name">Recuperación óptima: {{ modelo.ventana_recuperacion.dias_optimos }} días</div>
+    </div>
+    <div class="row-sub" style="padding-left:26px;">{{ modelo.ventana_recuperacion.descripcion }}</div>
+  </div>
+  {% endif %}
+
+  {% if modelo.serie_critica_global %}
+  <div class="row-item" style="flex-direction:column;align-items:flex-start;gap:4px;">
+    <div style="display:flex;align-items:center;gap:8px;">
+      <span style="font-size:16px;">🎯</span>
+      <div class="row-name">Serie crítica: serie {{ modelo.serie_critica_global.serie }}</div>
+    </div>
+    <div class="row-sub" style="padding-left:26px;">{{ modelo.serie_critica_global.descripcion }}</div>
+  </div>
+  {% endif %}
+
+  {% if modelo.umbral_tecnico %}
+  <div class="sec-hdr" style="margin-top:12px;"><span class="sec-tag">Umbrales técnicos detectados</span><div class="sec-line"></div></div>
+  {% for u in modelo.umbral_tecnico %}
+  <div class="row-item" style="flex-direction:column;align-items:flex-start;gap:3px;">
+    <div class="row-name">{{ u.ejercicio }}{% if u.pct_rm %} · {{ u.pct_rm }}% RM{% endif %}</div>
+    <div class="row-sub">{{ u.descripcion }}</div>
+  </div>
+  {% endfor %}
+  {% endif %}
+
+  {% if modelo.grupos_musculares.rapidos or modelo.grupos_musculares.lentos %}
+  <div class="sec-hdr" style="margin-top:12px;"><span class="sec-tag">Progresión por grupo muscular</span><div class="sec-line"></div></div>
+  {% for g in modelo.grupos_musculares.rapidos %}
+  <div class="row-item">
+    <span style="font-size:14px;">📈</span>
+    <div><div class="row-name">{{ g.grupo }}</div><div class="row-sub">+{{ g.pct }}% en 90 días</div></div>
+  </div>
+  {% endfor %}
+  {% for g in modelo.grupos_musculares.lentos %}
+  <div class="row-item">
+    <span style="font-size:14px;">📉</span>
+    <div><div class="row-name">{{ g.grupo }}</div><div class="row-sub">{{ g.pct }}% en 90 días — cambiar estímulo</div></div>
+  </div>
+  {% endfor %}
+  {% endif %}
+
+  {% if modelo.hrv_patron %}
+  <div class="row-item" style="flex-direction:column;align-items:flex-start;gap:4px;">
+    <div style="display:flex;align-items:center;gap:8px;">
+      <span style="font-size:16px;">💓</span>
+      <div class="row-name">HRV y rendimiento (medio: {{ modelo.hrv_patron.hrv_medio }}ms)</div>
+    </div>
+    <div class="row-sub" style="padding-left:26px;">{{ modelo.hrv_patron.descripcion }}</div>
+  </div>
+  {% endif %}
+
+  {% if modelo.ejercicios_emblema %}
+  <div class="sec-hdr" style="margin-top:12px;"><span class="sec-tag">Tus mejores progresos (90 días)</span><div class="sec-line"></div></div>
+  {% for e in modelo.ejercicios_emblema %}
+  <div class="row-item">
+    <span style="font-size:14px;">🏆</span>
+    <div>
+      <div class="row-name">{{ e.ejercicio }} · +{{ e.pct }}%</div>
+      <div class="row-sub">{{ e.peso_antes }} kg → {{ e.peso_ahora }} kg</div>
+    </div>
+  </div>
+  {% endfor %}
+  {% endif %}
+
+  {% endif %}{# fin modelo.tiene_datos #}
+
 </div>
 </body>
 </html>
