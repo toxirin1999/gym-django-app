@@ -169,6 +169,30 @@
   .badge.tecnica    { color: var(--r);    border-color: rgba(231,76,60,.3);  background: rgba(231,76,60,.1); }
   .badge.molestia   { color: var(--warn); border-color: rgba(241,196,15,.3); background: rgba(241,196,15,.1); }
 
+  /* ── COMPARATIVA TEMPORAL ────────────────────── */
+  .comp-grid {
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .comp-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 14px; background: var(--surf);
+    border: 1px solid var(--bd); border-radius: 12px;
+    border-left: 3px solid var(--ok);
+  }
+  .comp-icon { font-size: 16px; flex-shrink: 0; }
+  .comp-body { flex: 1; min-width: 0; }
+  .comp-name {
+    font-size: 12px; font-weight: 700; color: var(--ink);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .comp-detail {
+    font-family: var(--fm); font-size: 10px; color: var(--td); margin-top: 2px;
+  }
+  .comp-pct {
+    font-family: var(--fm); font-size: 18px; font-weight: 700;
+    color: var(--ok); flex-shrink: 0;
+  }
+
   /* ── CTA ─────────────────────────────────────── */
   .cta-wrap {
     position: fixed; bottom: 0; left: 0; right: 0;
@@ -269,6 +293,26 @@
   </div>
   {% endif %}
 
+  <!-- EVOLUCIÓN 30 DÍAS -->
+  {% if briefing.comparativas %}
+  <div class="sec-hdr">
+    <span class="sec-tag">Tu progreso este mes</span>
+    <div class="sec-line"></div>
+  </div>
+  <div class="comp-grid">
+    {% for c in briefing.comparativas %}
+    <div class="comp-row">
+      <span class="comp-icon">📈</span>
+      <div class="comp-body">
+        <div class="comp-name">{{ c.ejercicio }}</div>
+        <div class="comp-detail">{{ c.peso_antes }} kg → {{ c.peso_ahora }} kg · últimos 30 días</div>
+      </div>
+      <span class="comp-pct">+{{ c.pct }}%</span>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
   <!-- PLAN DE SESIÓN -->
   {% if ejercicios %}
   <div class="sec-hdr">
@@ -307,8 +351,15 @@
     <svg viewBox="0 0 24 24" fill="currentColor">
       <polygon points="5,3 19,12 5,21"/>
     </svg>
-    Comenzar sesión
+    {% if briefing.necesita_deload %}Comenzar descarga{% else %}Comenzar sesión{% endif %}
   </a>
+  {% if briefing.necesita_deload %}
+  <div style="text-align:center;margin-top:8px;">
+    <a href="{{ url_sesion }}&forzar_plan=1" style="font-size:11px;color:rgba(240,238,232,0.35);text-decoration:underline;">
+      Ignorar descarga y seguir el plan original
+    </a>
+  </div>
+  {% endif %}
 </div>
 
 </body>

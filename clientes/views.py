@@ -1447,6 +1447,13 @@ def mockup_demo(request):
     except Exception:
         context['resumen_semanal_gym'] = []
 
+    # ── Alertas del sistema (panel unificado) ─────────────────────
+    try:
+        from entrenos.services.alertas_sistema_service import get_alertas_sistema
+        context['alertas_sistema'] = get_alertas_sistema(cliente)
+    except Exception:
+        context['alertas_sistema'] = []
+
     # Garantiza que hyrox_objetivo esté en el contexto aunque _ctx_hyrox haya fallado.
     if not context.get('hyrox_objetivo'):
         try:
@@ -4330,3 +4337,164 @@ def apple_health_token(request):
         'token': token,
         'endpoint': endpoint,
     })
+
+
+@login_required
+def memoria_entrenador(request, cliente_id):
+    """
+    'Lo que sé de ti' — agrega todo el conocimiento que el sistema ha aprendido del usuario.
+    """
+    from datetime import timedelta, date
+    from django.db.models import Avg, Max, Count
+
+    cliente = get_object_or_404(Cliente, id=cliente_id)
+    hoy = date.today()
+    hace_28 = hoy - timedelta(days=28)
+    hace_90 = hoy - timedelta(days=90)
+
+    # ── 1. PERFIL ATLÉTICO ────────────────────────────────────────────────────
+    one_rm = cliente.one_rm_data or {}
+    perfil_atletico = []
+    rm_labels = {
+        'sentadilla': 'Sentadilla', 'squat': 'Sentadilla',
+        'press banca': 'Press Banca', 'press_banca': 'Press Banca',
+        'peso muerto': 'Peso Muerto', 'peso_muerto': 'Peso Muerto',
+        'press militar': 'Press Militar', 'dominadas': 'Dominadas',
+    }
+    visto = set()
+    for key, val in sorted(one_rm.items(), key=lambda x: -x[1]):
+        label = rm_labels.get(key, key.replace('_', ' ').title())
+        if label not in visto:
+            visto.add(label)
+            perfil_atletico.append({'ejercicio': label, 'rm': val})
+
+    # ── 2. DATOS HYROX ────────────────────────────────────────────────────────
+    hyrox_obj = None
+    rpe_bias = None
+    estaciones_progreso = []
+    try:
+        from hyrox.models import HyroxObjective, HyroxActivity
+        from hyrox.training_engine import RPECalibrator, StagnationEngine
+
+        hyrox_obj = HyroxObjective.objects.filter(cliente=cliente, estado='activo').first()
+        if hyrox_obj:
+            # Calibración RPE
+            bias_info = RPECalibrator.get_bias(hyrox_obj)
+            if bias_info['nivel'] != 'insuficiente':
+                rpe_bias = bias_info
+
+            # Progreso por estación
+            _NOMBRE_CANON = {
+                'skierg': 'SkiErg', 'sled push': 'Sled Push', 'sled pull': 'Sled Pull',
+                'burpee broad jump': 'Burpee Broad Jumps', 'rowing': 'Rowing', 'remo': 'Rowing',
+                'farmer': 'Farmers Carry', 'sandbag': 'Sandbag Lunges', 'wall ball': 'Wall Balls',
+            }
+            _TIPOS = ('hyrox_station', 'ergometro', 'skierg', 'remo')
+            acts = (HyroxActivity.objects
+                    .filter(sesion__objective=hyrox_obj, sesion__estado='completado',
+                            tipo_actividad__in=_TIPOS)
+                    .exclude(data_metricas={})
+                    .select_related('sesion').order_by('sesion__fecha'))
+
+            tiempos_acum = {}
+            for a in acts:
+                t = a.data_metricas.get('tiempo_segundos') or a.data_metricas.get('tiempo_s')
+                if not t or int(t) <= 0:
+                    continue
+                nl = (a.nombre_ejercicio or '').lower()
+                canon = next((v for k, v in _NOMBRE_CANON.items() if k in nl), None)
+                if canon:
+                    tiempos_acum.setdefault(canon, []).append(int(t))
+
+            stag = StagnationEngine.check(tiempos_acum)
+            for station, tiempos in tiempos_acum.items():
+                if len(tiempos) < 2:
+                    continue
+                info = stag.get(station, {})
+                mejor = min(tiempos)
+                ultimo = tiempos[-1]
+                pct = round((tiempos[0] - ultimo) / tiempos[0] * 100, 1) if tiempos[0] > 0 else 0
+                estaciones_progreso.append({
+                    'estacion': station,
+                    'mejor_seg': mejor,
+                    'ultimo_seg': ultimo,
+                    'sesiones': len(tiempos),
+                    'mejora_pct': pct,
+                    'estancada': info.get('estancada', False),
+                    'sugerencia': info.get('sugerencia', ''),
+                })
+            estaciones_progreso.sort(key=lambda x: -x['sesiones'])
+    except Exception:
+        pass
+
+    # ── 3. DECISIONES DEL PLAN ────────────────────────────────────────────────
+    from entrenos.models import GymDecisionLog
+    decisiones = list(
+        GymDecisionLog.objects
+        .filter(cliente=cliente, fecha_creacion__date__gte=hace_90)
+        .order_by('-fecha_creacion')[:20]
+    )
+
+    decisiones_agrupadas = {}
+    for d in decisiones:
+        decisiones_agrupadas.setdefault(d.accion, []).append(d)
+
+    # ── 4. RÉCORDS PERSONALES ─────────────────────────────────────────────────
+    from entrenos.models import RecordPersonal
+    records = list(
+        RecordPersonal.objects
+        .filter(cliente=cliente, superado=False, tipo_record='peso_maximo')
+        .order_by('-valor')[:8]
+    )
+
+    # ── 5. PATRONES DE CARGA ─────────────────────────────────────────────────
+    from entrenos.models import EntrenoRealizado, EjercicioRealizado
+    entrenos_28 = EntrenoRealizado.objects.filter(cliente=cliente, fecha__range=(hace_28, hoy))
+    sesiones_semana = round(entrenos_28.count() / 4, 1)
+
+    rpes_gym = list(
+        EjercicioRealizado.objects
+        .filter(entreno__cliente=cliente, entreno__fecha__gte=hace_28, rpe__isnull=False)
+        .values_list('rpe', flat=True)
+    )
+    rpe_medio_gym = round(sum(float(r) for r in rpes_gym) / len(rpes_gym), 1) if rpes_gym else None
+
+    energias = list(
+        EntrenoRealizado.objects
+        .filter(cliente=cliente, fecha__gte=hace_28, energia_pre_sesion__isnull=False)
+        .values_list('energia_pre_sesion', flat=True)
+    )
+    energia_media = round(sum(energias) / len(energias), 1) if energias else None
+
+    # ── 6. ZONAS DE ATENCIÓN (molestias + lesiones) ───────────────────────────
+    zonas_atencion = list(
+        GymDecisionLog.objects
+        .filter(cliente=cliente, accion='cambiar_variante',
+                motivo__icontains='Molestia', fecha_creacion__date__gte=hace_90)
+        .values('ejercicio', 'motivo', 'fecha_creacion')
+        .order_by('-fecha_creacion')[:5]
+    )
+
+    lesiones_activas = []
+    try:
+        from hyrox.models import UserInjury
+        lesiones_activas = list(UserInjury.objects.filter(cliente=cliente, activa=True))
+    except Exception:
+        pass
+
+    context = {
+        'cliente': cliente,
+        'perfil_atletico': perfil_atletico,
+        'hyrox_obj': hyrox_obj,
+        'rpe_bias': rpe_bias,
+        'estaciones_progreso': estaciones_progreso,
+        'decisiones_agrupadas': decisiones_agrupadas,
+        'decisiones_total': len(decisiones),
+        'records': records,
+        'sesiones_semana': sesiones_semana,
+        'rpe_medio_gym': rpe_medio_gym,
+        'energia_media': energia_media,
+        'zonas_atencion': zonas_atencion,
+        'lesiones_activas': lesiones_activas,
+    }
+    return render(request, 'clientes/memoria_entrenador.html', context)

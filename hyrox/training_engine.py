@@ -605,6 +605,17 @@ class HyroxTrainingEngine:
 
         return round(distancia, 1)
 
+    _KEYWORDS_PIERNAS = {
+        'sentadilla', 'prensa', 'femoral', 'isquio', 'hip thrust', 'peso muerto',
+        'rumano', 'lunges', 'zancada', 'extensión', 'curl pierna', 'glúteo',
+        'abducción', 'aducción', 'pantorrilla', 'gemelo', 'squat', 'deadlift',
+    }
+    _KEYWORDS_TORSO = {
+        'press', 'remo', 'jalón', 'dominada', 'curl bícep', 'trícep', 'hombro',
+        'pec deck', 'apertura', 'fondos', 'pull', 'push', 'dips', 'face pull',
+        'elevación lateral', 'elevación frontal', 'encogimiento',
+    }
+
     @staticmethod
     def _get_gym_external_load(cliente, dias=7):
         """
@@ -613,37 +624,61 @@ class HyroxTrainingEngine:
         No escribe nada en entrenos; los dos módulos quedan desacoplados.
         """
         try:
-            from entrenos.models import ActividadRealizada
+            from entrenos.models import ActividadRealizada, EjercicioRealizado
             cutoff = (timezone.now() - timedelta(days=dias)).date()
             actividades = list(ActividadRealizada.objects.filter(
                 cliente=cliente,
                 tipo='gym',
                 fecha__gte=cutoff,
-            ))
+            ).select_related('sesion_gym'))
             count = len(actividades)
             if count == 0:
-                return {'entrenos_count': 0, 'volumen_total_kg': 0, 'rpe_medio_gym': 0.0, 'fatiga_gym': 'Baja'}
+                return {
+                    'entrenos_count': 0, 'volumen_total_kg': 0,
+                    'rpe_medio_gym': 0.0, 'fatiga_gym': 'Baja',
+                    'fatiga_piernas': False, 'fatiga_torso': False,
+                }
 
             volumen_total = sum(float(a.volumen_kg or 0) for a in actividades)
             rpes = [float(a.rpe_medio) for a in actividades if a.rpe_medio]
             rpe_medio = round(sum(rpes) / len(rpes), 1) if rpes else 0.0
 
-            # Alta: ≥3 sesiones en la semana, o volumen >15 000 kg, o RPE medio >7.5
-            if count >= 3 or volumen_total > 15000 or rpe_medio > 7.5:
+            # Umbrales realistas para atletas amateur/intermedio
+            # Alta: ≥3 sesiones, o volumen >6 000 kg, o RPE medio >8.0
+            if count >= 3 or volumen_total > 6000 or rpe_medio > 8.0:
                 fatiga_gym = 'Alta'
-            elif count >= 2 or volumen_total > 8000 or rpe_medio > 6.5:
+            elif count >= 2 or volumen_total > 3000 or rpe_medio > 7.0:
                 fatiga_gym = 'Media'
             else:
                 fatiga_gym = 'Baja'
+
+            # Detectar qué grupos musculares están fatigados (última sesión)
+            fatiga_piernas = False
+            fatiga_torso = False
+            ultima = next((a.sesion_gym for a in actividades if a.sesion_gym), None)
+            if ultima:
+                nombres = list(
+                    EjercicioRealizado.objects.filter(entreno=ultima)
+                    .values_list('nombre_ejercicio', flat=True)
+                )
+                nombres_lower = ' '.join(n.lower() for n in nombres)
+                fatiga_piernas = any(kw in nombres_lower for kw in HyroxTrainingEngine._KEYWORDS_PIERNAS)
+                fatiga_torso = any(kw in nombres_lower for kw in HyroxTrainingEngine._KEYWORDS_TORSO)
 
             return {
                 'entrenos_count': count,
                 'volumen_total_kg': round(volumen_total),
                 'rpe_medio_gym': rpe_medio,
                 'fatiga_gym': fatiga_gym,
+                'fatiga_piernas': fatiga_piernas,
+                'fatiga_torso': fatiga_torso,
             }
         except Exception:
-            return {'entrenos_count': 0, 'volumen_total_kg': 0, 'rpe_medio_gym': 0.0, 'fatiga_gym': 'Baja'}
+            return {
+                'entrenos_count': 0, 'volumen_total_kg': 0,
+                'rpe_medio_gym': 0.0, 'fatiga_gym': 'Baja',
+                'fatiga_piernas': False, 'fatiga_torso': False,
+            }
 
     # ─────────────────────────────────────────────────────────────────────────
     # GENERACIÓN DEL PLAN
@@ -2894,6 +2929,51 @@ class WeeklySummaryEngine:
                         'color': 'var(--accent)',
                         'texto': f"{_st} empeoró un {abs(_pct)}% este mes — revisa el estímulo.",
                     })
+        except Exception:
+            pass
+
+        # 7. Estancamiento por estación (StagnationEngine)
+        try:
+            from .models import HyroxActivity
+            _STATION_TIPOS_S = ('hyrox_station', 'ergometro', 'skierg', 'remo')
+            _NOMBRE_CANON_S = {
+                'skierg': 'SkiErg', 'sled push': 'Sled Push', 'sled pull': 'Sled Pull',
+                'burpee broad jump': 'Burpee Broad Jumps', 'rowing': 'Rowing', 'remo': 'Rowing',
+                'farmer': 'Farmers Carry', 'sandbag': 'Sandbag Lunges', 'wall ball': 'Wall Balls',
+            }
+            _acts_s = (
+                HyroxActivity.objects
+                .filter(sesion__objective=objetivo, sesion__estado='completado',
+                        tipo_actividad__in=_STATION_TIPOS_S)
+                .exclude(data_metricas={})
+                .select_related('sesion')
+                .order_by('sesion__fecha')
+            )
+            _tiempos_acum_s = {}
+            for _a in _acts_s:
+                _t = _a.data_metricas.get('tiempo_segundos') or _a.data_metricas.get('tiempo_s')
+                if not _t or int(_t) <= 0:
+                    continue
+                _nl = (_a.nombre_ejercicio or '').lower()
+                _c = next((v for k, v in _NOMBRE_CANON_S.items() if k in _nl), None)
+                if _c:
+                    _tiempos_acum_s.setdefault(_c, []).append(int(_t))
+
+            _stag_result = StagnationEngine.check(_tiempos_acum_s)
+            _estancadas = sorted(
+                [(st, info) for st, info in _stag_result.items()
+                 if info.get('estancada') and info.get('sesiones_analizadas', 0) >= 3],
+                key=lambda x: x[1].get('sesiones_analizadas', 0), reverse=True
+            )
+            for _st, _info in _estancadas[:2]:
+                aprendizajes.append({
+                    'icono': 'fa-exclamation-triangle',
+                    'color': '#f59e0b',
+                    'texto': (
+                        f"{_st}: sin mejora significativa en {_info['sesiones_analizadas']} sesiones "
+                        f"({_info['plateau_pct']:+.1f}%). {_info['sugerencia']}"
+                    ),
+                })
         except Exception:
             pass
 
