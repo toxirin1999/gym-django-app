@@ -2455,6 +2455,15 @@ a.rb-dia:focus-visible {
             {{ split.gap_str }}
           </div>
           {% endif %}
+          {% if split.rpe_medio %}
+          <div class="rb-split-val" title="{{ split.rpe_sesiones }} sesión{{ split.rpe_sesiones|pluralize:'es' }} con RPE registrado">
+            {{ split.rpe_medio }}
+            <span class="rb-split-lbl">RPE medio</span>
+            <span style="font-family:var(--font-mono);font-size:8px;display:block;margin-top:2px;{% if split.rpe_medio >= 9 %}color:var(--accent){% elif split.rpe_medio >= 7 %}color:var(--warn){% else %}color:var(--ok){% endif %}">
+              {% if split.rpe_medio >= 9 %}alta fatiga{% elif split.rpe_medio >= 7 %}zona óptima{% else %}margen disponible{% endif %}
+            </span>
+          </div>
+          {% endif %}
         </div>
 
         {# ── Barra progreso hacia estándar ── #}
@@ -2697,7 +2706,7 @@ a.rb-dia:focus-visible {
         </div>
         <div class="rb-chips">
           {% for act in sesion.activities.all %}
-          <span class="rb-chip"><i class="fas {{ act.get_icon_class }}"></i> {{ act.nombre_ejercicio }}</span>
+          <span class="rb-chip"><i class="fas {{ act.get_icon_class }}"></i> {{ act.nombre_ejercicio }}{% if act.data_metricas.rpe %} · <strong>RPE {{ act.data_metricas.rpe }}</strong>{% endif %}</span>
           {% endfor %}
         </div>
         {% if sesion.feedback_ia %}
