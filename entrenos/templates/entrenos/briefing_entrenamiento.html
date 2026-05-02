@@ -118,6 +118,33 @@
     letter-spacing: .08em; text-transform: uppercase; margin-top: 5px;
   }
 
+  /* ── PLAN DINÁMICO — cambios aplicados ──────── */
+  .plan-cambios {
+    background: rgba(0,200,255,0.06); border: 1px solid rgba(0,200,255,0.2);
+    border-radius: 12px; padding: 12px 14px; margin-bottom: 4px;
+  }
+  .plan-cambios-hdr {
+    display: flex; align-items: center; gap: 8px; margin-bottom: 8px;
+  }
+  .plan-cambios-hdr-icon { font-size: 13px; }
+  .plan-cambios-hdr-lbl {
+    font-family: var(--fm); font-size: 9px; font-weight: 700;
+    color: var(--accent); letter-spacing: .14em; text-transform: uppercase;
+  }
+  .cambio-row {
+    display: flex; align-items: flex-start; gap: 8px;
+    padding: 5px 0; border-top: 1px solid rgba(0,200,255,0.1);
+  }
+  .cambio-tipo {
+    font-family: var(--fm); font-size: 9px; font-weight: 700;
+    letter-spacing: .08em; text-transform: uppercase; flex-shrink: 0; min-width: 80px;
+  }
+  .cambio-tipo.estancamiento { color: var(--warn); }
+  .cambio-tipo.molestia      { color: var(--r); }
+  .cambio-tipo.deload        { color: var(--accent); }
+  .cambio-detalle { font-size: 11px; color: var(--td); line-height: 1.4; }
+  .cambio-arrow { color: var(--ok); font-weight: 700; }
+
   /* ── VOZ DEL ENTRENADOR (instrucciones) ─────── */
   .voz-card {
     background: var(--surf2); border: 1px solid rgba(255,255,255,0.12);
@@ -315,6 +342,38 @@
     </div>
   </div>
 
+  <!-- PLAN DINÁMICO — cambios aplicados automáticamente -->
+  {% if cambios_plan %}
+  <div class="plan-cambios">
+    <div class="plan-cambios-hdr">
+      <span class="plan-cambios-hdr-icon">⚙️</span>
+      <span class="plan-cambios-hdr-lbl">El plan ha cambiado {{ cambios_plan|length }} ejercicio{{ cambios_plan|length|pluralize:"s" }}</span>
+    </div>
+    {% for cambio in cambios_plan %}
+    <div class="cambio-row">
+      {% if cambio.tipo == 'sustitucion_estancamiento' %}
+      <span class="cambio-tipo estancamiento">Estancado</span>
+      <span class="cambio-detalle">
+        <s>{{ cambio.ejercicio_original }}</s>
+        <span class="cambio-arrow"> → </span>{{ cambio.ejercicio_nuevo }}
+        <br><span style="color:var(--tdm);">{{ cambio.razon }}</span>
+      </span>
+      {% elif cambio.tipo == 'sustitucion_molestia' %}
+      <span class="cambio-tipo molestia">Molestia</span>
+      <span class="cambio-detalle">
+        <s>{{ cambio.ejercicio_original }}</s>
+        <span class="cambio-arrow"> → </span>{{ cambio.ejercicio_nuevo }}
+        <br><span style="color:var(--tdm);">{{ cambio.razon }}</span>
+      </span>
+      {% elif cambio.tipo == 'deload' %}
+      <span class="cambio-tipo deload">Deload</span>
+      <span class="cambio-detalle">{{ cambio.razon }}</span>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
   <!-- VOZ DEL ENTRENADOR — instrucciones concretas -->
   {% if briefing.instrucciones %}
   <div class="voz-card">
@@ -384,11 +443,19 @@
     <div class="plan-row">
       <span class="plan-num">{{ forloop.counter|stringformat:"02d" }}</span>
       <div class="plan-body">
-        <div class="plan-name">{{ ej.nombre|default:"Ejercicio" }}</div>
+        <div class="plan-name">
+          {{ ej.nombre|default:"Ejercicio" }}
+          {% if ej.sustituido %}<span style="font-family:var(--fm);font-size:8px;color:var(--accent);letter-spacing:.08em;margin-left:6px;vertical-align:middle;">↔ CAMBIADO</span>{% endif %}
+          {% if ej.deload %}<span style="font-family:var(--fm);font-size:8px;color:var(--accent);letter-spacing:.08em;margin-left:6px;vertical-align:middle;">↓ DELOAD</span>{% endif %}
+        </div>
+        {% if ej.sustituido and ej.nombre_original %}
+        <div style="font-family:var(--fm);font-size:9px;color:var(--tdm);margin-bottom:2px;"><s>{{ ej.nombre_original }}</s></div>
+        {% endif %}
         <div class="plan-spec">
           {{ ej.series|default:"3" }} series
           {% if ej.repeticiones %} · {{ ej.repeticiones }} reps{% endif %}
           {% if ej.peso_recomendado_kg and ej.peso_recomendado_kg > 0 %} · {{ ej.peso_recomendado_kg }} kg{% endif %}
+          {% if ej.peso_kg and ej.peso_kg > 0 %} · {{ ej.peso_kg }} kg{% endif %}
         </div>
         {% if ej.alertas %}
         <div class="plan-badges">

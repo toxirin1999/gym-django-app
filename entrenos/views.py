@@ -7841,19 +7841,25 @@ def briefing_entrenamiento(request, cliente_id):
         ejercicios = []
 
     from entrenos.services.briefing_service import get_briefing_gym
-    briefing = get_briefing_gym(cliente, ejercicios, fecha_obj)
+    from entrenos.services.plan_dinamico_service import aplicar_plan_dinamico
+
+    # ── Capa 2: Plan dinámico — modificar ejercicios antes de mostrar ─────────
+    ejercicios_mod, cambios_plan = aplicar_plan_dinamico(cliente, ejercicios, fecha_obj)
+
+    briefing = get_briefing_gym(cliente, ejercicios_mod, fecha_obj)
 
     # Inyectar alertas en cada ejercicio para facilitar el template
-    for ej in ejercicios:
+    for ej in ejercicios_mod:
         ej['alertas'] = briefing['alertas_por_ejercicio'].get(ej.get('nombre', ''), [])
 
-    # Construir URL destino para el CTA "Comenzar"
+    # CTA apunta al plan modificado (no al original)
     from django.urls import reverse
     import urllib.parse
+    ejercicios_mod_json = json.dumps(ejercicios_mod)
     params = urllib.parse.urlencode({
         'fecha': fecha_str or fecha_obj.strftime('%Y-%m-%d'),
         'rutina_nombre': rutina_nombre,
-        'ejercicios': ejercicios_json,
+        'ejercicios': ejercicios_mod_json,
     })
     url_sesion = f"{reverse('entrenos:entrenamiento_activo', args=[cliente_id])}?{params}"
 
@@ -7861,7 +7867,8 @@ def briefing_entrenamiento(request, cliente_id):
         'cliente': cliente,
         'fecha': fecha_obj,
         'rutina_nombre': rutina_nombre,
-        'ejercicios': ejercicios,
+        'ejercicios': ejercicios_mod,
+        'cambios_plan': cambios_plan,
         'briefing': briefing,
         'url_sesion': url_sesion,
     })
