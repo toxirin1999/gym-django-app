@@ -887,6 +887,7 @@
             {% if act.data_metricas.distancia_km %}<span class="rb-plan-chip outline">{{ act.data_metricas.distancia_km }} KM PLAN</span>{% endif %}
             {% if act.data_metricas.distancia_m %}<span class="rb-plan-chip">{{ act.data_metricas.distancia_m }}M</span>{% endif %}
             {% if act.data_metricas.peso_kg and not act.series_processed %}<span class="rb-plan-chip outline">{{ act.data_metricas.peso_kg }} KG</span>{% endif %}
+            {% if act.data_metricas.rpe %}<span class="rb-plan-chip" style="background:var(--warn);color:#000;font-weight:700;">RPE {{ act.data_metricas.rpe }}</span>{% endif %}
           </div>
 
           {% if act.station_focus %}
@@ -1028,6 +1029,13 @@
               <button type="button" class="rb-done-btn" onclick="rbToggleDone('rb-card-{{ idx }}',this)">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>MARCAR COMPLETADA
               </button>
+            {% endif %}
+
+            {% if act.tipo_actividad in 'hyrox_station,ergometro,skierg,remo' %}
+            <div class="rb-rpe-station" style="margin-top:12px;display:flex;align-items:center;gap:10px;">
+              <span style="font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--ink-3);text-transform:uppercase;">RPE estación</span>
+              <input type="number" class="rb-biginput rb-input-rpe" min="1" max="10" step="1" inputmode="numeric" placeholder="—" style="width:72px;font-size:1.6rem;text-align:center;" title="Esfuerzo percibido en esta estación (1-10)">
+            </div>
             {% endif %}
           </article>
         </div>
@@ -1562,6 +1570,8 @@ function rbBuildNotasRaw() {
   document.querySelectorAll('.rb-card').forEach(card => {
     const name = card.dataset.name; if (!name) return;
     const cardIdx = card.id.split('-').pop();
+    const rpeInput = card.querySelector('.rb-input-rpe');
+    const rpeSuffix = (rpeInput && rpeInput.value) ? ` RPE ${rpeInput.value}` : '';
     const timerDisp = document.getElementById('rb-tdisp-' + cardIdx);
     const timerSecs = timerDisp ? parseInt(timerDisp.dataset.secs || '0') : 0;
     const timerSuffix = timerSecs > 0 ? ` [${timerSecs}s]` : '';
@@ -1590,7 +1600,7 @@ function rbBuildNotasRaw() {
     }
     const distM = card.querySelector('.rb-input-distm');
     const carga = card.querySelector('.rb-input-carga');
-    if (distM) { let line = `${name} ${distM.value}m`; if (carga && carga.value) line += ` @${carga.value}kg`; line += timerSuffix; lines.push(line); return; }
+    if (distM) { let line = `${name} ${distM.value}m`; if (carga && carga.value) line += ` @${carga.value}kg`; line += timerSuffix + rpeSuffix; lines.push(line); return; }
     const repsSt = card.querySelector('.rb-input-reps-st');
     if (repsSt) {
       const repsVal = repsSt.value.trim();
@@ -1603,11 +1613,11 @@ function rbBuildNotasRaw() {
       let line = name;
       if (repsVal) line += ': ' + repsVal + ' reps';
       if (kgVal) line += ' @' + kgVal + 'kg';
-      line += timerSuffix;
+      line += timerSuffix + rpeSuffix;
       lines.push(line);
       return;
     }
-    if (card.classList.contains('done')) lines.push(`${name}${timerSuffix}`);
+    if (card.classList.contains('done')) lines.push(`${name}${timerSuffix}${rpeSuffix}`);
   });
   const extra = (document.getElementById('id_notas_extra')?.value || '').trim();
   let raw = lines.join('\n');
