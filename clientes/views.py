@@ -1465,6 +1465,25 @@ def mockup_demo(request):
         except Exception:
             context.setdefault('hyrox_objetivo', None)
 
+    # ── Daily push Hyrox ──────────────────────────────────────────
+    try:
+        if context.get('hyrox_objetivo'):
+            context['daily_push_hyrox'] = context['hyrox_objetivo'].get_daily_push()
+        else:
+            context['daily_push_hyrox'] = None
+    except Exception:
+        context['daily_push_hyrox'] = None
+
+    # ── Resumen semanal Hyrox ─────────────────────────────────────
+    try:
+        if context.get('hyrox_objetivo'):
+            from hyrox.training_engine import WeeklySummaryEngine
+            context['resumen_semanal_hyrox'] = WeeklySummaryEngine.get_summary(context['hyrox_objetivo'])
+        else:
+            context['resumen_semanal_hyrox'] = None
+    except Exception:
+        context['resumen_semanal_hyrox'] = None
+
     return render(request, 'clientes/mockup_demo.html', context)
 
 
