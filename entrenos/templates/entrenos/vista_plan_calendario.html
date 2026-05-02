@@ -5373,7 +5373,7 @@
                     ${exerciseRowsHtml}
                 </div>
 
-                <a href="{% url 'entrenos:entrenamiento_activo' cliente.id %}?fecha=${fecha}&rutina_nombre=${encodeURIComponent(nombreRutina)}&ejercicios=${encodeURIComponent(JSON.stringify(ejercicios))}"
+                <a href="{% url 'entrenos:briefing_entrenamiento' cliente.id %}?fecha=${fecha}&rutina_nombre=${encodeURIComponent(nombreRutina)}&ejercicios=${encodeURIComponent(JSON.stringify(ejercicios))}"
                    class="action-button">
                     <i class="fas fa-play"></i>
                     Empezar Entrenamiento
@@ -5850,7 +5850,7 @@
         }, 500);
     });
 
-    const urlModal = "{% url 'entrenos:entrenamiento_activo' cliente.id %}";
+    const urlModal = "{% url 'entrenos:briefing_entrenamiento' cliente.id %}";
 
     let _modalCloseTimer = null;
 
