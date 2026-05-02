@@ -144,6 +144,8 @@ class HyroxParserService:
         re_tiempo_min = re.compile(r'(\d+(?:[.,]\d+)?)\s*min', re.IGNORECASE)
         # Tiempo del cronómetro: "[125s]" → int segundos
         re_timer_secs = re.compile(r'\[(\d+)s\]')
+        # RPE por estación: "RPE 9" · "rpe: 8" · "rpe9"
+        re_rpe = re.compile(r'\brpe\s*:?\s*(\d{1,2})\b', re.IGNORECASE)
 
         for raw_line in raw_text.splitlines():
             line = raw_line.strip().lstrip('-•·*').strip()
@@ -255,6 +257,9 @@ class HyroxParserService:
             timer_match = re_timer_secs.search(line)
             tiempo_segundos = int(timer_match.group(1)) if timer_match else None
 
+            rpe_match = re_rpe.search(line)
+            rpe_estacion = int(rpe_match.group(1)) if rpe_match else None
+
             act = {
                 'tipo_actividad': tipo,
                 'nombre_ejercicio': nombre,
@@ -265,6 +270,8 @@ class HyroxParserService:
                 act['carrera_data'] = carrera_data
             if tiempo_segundos:
                 act['tiempo_segundos'] = tiempo_segundos
+            if rpe_estacion is not None:
+                act['rpe'] = rpe_estacion
 
             actividades.append(act)
 
@@ -373,6 +380,9 @@ class HyroxParserService:
 
             if item.get("tiempo_segundos"):
                 data_metricas["tiempo_segundos"] = item["tiempo_segundos"]
+
+            if item.get("rpe") is not None:
+                data_metricas["rpe"] = item["rpe"]
 
             # ── Recuperar plan para esta actividad ──────────────────────────
             # 1) Matching por nombre (exacto o subcadena) — robusto ante actividades omitidas
