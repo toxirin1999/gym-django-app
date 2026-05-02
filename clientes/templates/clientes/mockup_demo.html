@@ -609,22 +609,22 @@ body {
     <!-- CTA: Ejecutar -->
     <!-- ══ PANEL UNIFICADO DE ALERTAS ══ -->
     {% if alertas_sistema %}
-    <div style="margin-bottom:12px;background:var(--surf-2);border:1px solid var(--bd);border-radius:14px;overflow:hidden;">
-      <div style="display:flex;align-items:center;gap:8px;padding:10px 14px 8px;border-bottom:1px solid var(--bd);">
+    <div style="margin-bottom:12px;background:var(--paper);border:1px solid var(--line-2);border-radius:14px;overflow:hidden;">
+      <div style="display:flex;align-items:center;gap:8px;padding:10px 14px 8px;border-bottom:1px solid var(--line);">
         <span style="font-size:14px;">🧠</span>
-        <span style="font-family:var(--font-mono);font-size:9px;font-weight:700;color:var(--ink-4);letter-spacing:.12em;text-transform:uppercase;">Estado del sistema · hoy</span>
+        <span style="font-family:var(--font-mono);font-size:9px;font-weight:700;color:var(--ink-3);letter-spacing:.12em;text-transform:uppercase;">Estado del sistema · hoy</span>
       </div>
       {% for alerta in alertas_sistema %}
-      <div style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;{% if not forloop.last %}border-bottom:1px solid var(--bd);{% endif %}">
+      <div style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;{% if not forloop.last %}border-bottom:1px solid var(--line);{% endif %}">
         <span style="font-size:15px;flex-shrink:0;margin-top:1px;">{{ alerta.icono }}</span>
         <div style="flex:1;min-width:0;">
-          <div style="font-size:12px;font-weight:700;color:{% if alerta.nivel == 'critico' %}#E74C3C{% elif alerta.nivel == 'alerta' %}#F1C40F{% elif alerta.nivel == 'positivo' %}#2ECC71{% else %}rgba(240,238,232,0.7){% endif %};">{{ alerta.titulo }}</div>
-          <div style="font-size:11px;color:rgba(240,238,232,0.45);line-height:1.4;margin-top:2px;">{{ alerta.texto }}</div>
+          <div style="font-size:12px;font-weight:700;color:{% if alerta.nivel == 'critico' %}var(--danger){% elif alerta.nivel == 'alerta' %}var(--warn){% elif alerta.nivel == 'positivo' %}var(--ok){% else %}var(--ink){% endif %};">{{ alerta.titulo }}</div>
+          <div style="font-size:11px;color:var(--ink-3);line-height:1.4;margin-top:2px;">{{ alerta.texto }}</div>
         </div>
       </div>
       {% endfor %}
       <div style="padding:8px 14px;">
-        <a href="{% url 'clientes:memoria_entrenador' cliente.id %}" style="font-family:var(--font-mono);font-size:9px;color:rgba(240,238,232,0.25);text-decoration:none;letter-spacing:.08em;">VER TODO LO QUE SÉ DE TI →</a>
+        <a href="{% url 'clientes:memoria_entrenador' cliente.id %}" style="font-family:var(--font-mono);font-size:9px;color:var(--ink-4);text-decoration:none;letter-spacing:.08em;">VER TODO LO QUE SÉ DE TI →</a>
       </div>
     </div>
     {% endif %}
@@ -667,15 +667,63 @@ body {
     </div>
     {% endif %}
 
+    <!-- Daily push Hyrox -->
+    {% if daily_push_hyrox %}
+    <div style="margin-bottom:12px;background:var(--paper);border:1px solid var(--line-2);border-radius:14px;overflow:hidden;">
+      <div style="display:flex;align-items:center;gap:8px;padding:10px 14px 8px;border-bottom:1px solid var(--line);">
+        <span style="font-size:14px;">🏁</span>
+        <span style="font-family:var(--font-mono);font-size:9px;font-weight:700;color:var(--ink-3);letter-spacing:.12em;text-transform:uppercase;">Hyrox · mensaje del día</span>
+      </div>
+      <div style="padding:12px 14px;font-size:13px;color:var(--ink-2);line-height:1.5;font-style:italic;">
+        "{{ daily_push_hyrox }}"
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Resumen semanal Hyrox -->
+    {% if resumen_semanal_hyrox and resumen_semanal_hyrox.tiene_datos %}
+    <div class="rb-aprendio-card" style="margin-bottom:12px;">
+      <div class="rb-section-head" style="margin-bottom:8px;">
+        <div class="rb-section-num">HYX</div>
+        <h3 class="rb-section-title">Hyrox · esta semana</h3>
+        <div class="rb-section-line"></div>
+      </div>
+      <!-- Métricas rápidas -->
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:10px;">
+        <div style="background:var(--paper-2);border:1px solid var(--line-2);border-radius:10px;padding:10px;text-align:center;">
+          <div style="font-family:var(--font-mono);font-size:18px;font-weight:700;color:var(--ink);">{{ resumen_semanal_hyrox.n_completadas }}/{{ resumen_semanal_hyrox.n_planificadas }}</div>
+          <div style="font-family:var(--font-mono);font-size:9px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.06em;margin-top:3px;">Sesiones</div>
+        </div>
+        <div style="background:var(--paper-2);border:1px solid var(--line-2);border-radius:10px;padding:10px;text-align:center;">
+          <div style="font-family:var(--font-mono);font-size:18px;font-weight:700;color:var(--ink);">{% if resumen_semanal_hyrox.rpe_medio %}{{ resumen_semanal_hyrox.rpe_medio }}{% else %}—{% endif %}</div>
+          <div style="font-family:var(--font-mono);font-size:9px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.06em;margin-top:3px;">RPE medio</div>
+        </div>
+        <div style="background:var(--paper-2);border:1px solid var(--line-2);border-radius:10px;padding:10px;text-align:center;">
+          <div style="font-family:var(--font-mono);font-size:18px;font-weight:700;color:{% if resumen_semanal_hyrox.tsb is not None and resumen_semanal_hyrox.tsb > 0 %}var(--ok){% elif resumen_semanal_hyrox.tsb is not None and resumen_semanal_hyrox.tsb < -10 %}var(--danger){% else %}var(--ink){% endif %};">{% if resumen_semanal_hyrox.tsb is not None %}{{ resumen_semanal_hyrox.tsb }}{% else %}—{% endif %}</div>
+          <div style="font-family:var(--font-mono);font-size:9px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.06em;margin-top:3px;">TSB</div>
+        </div>
+      </div>
+      <!-- Aprendizajes -->
+      {% if resumen_semanal_hyrox.aprendizajes %}
+      {% for ap in resumen_semanal_hyrox.aprendizajes|slice:":3" %}
+      <div class="rb-aprendio-item">
+        <span class="rb-aprendio-icon"><i class="fas {{ ap.icono }}" style="color:{{ ap.color }};font-size:13px;"></i></span>
+        <span class="rb-aprendio-text">{{ ap.texto }}</span>
+      </div>
+      {% endfor %}
+      {% endif %}
+    </div>
+    {% endif %}
+
     <!-- Lo que sé de ti -->
     <a href="{% url 'clientes:memoria_entrenador' cliente.id %}" style="display:block;text-decoration:none;">
-      <div style="margin-bottom:12px;padding:14px 16px;background:var(--surf-2);border:1px solid var(--bd);border-radius:14px;display:flex;align-items:center;gap:14px;">
-        <div style="width:40px;height:40px;border-radius:50%;background:rgba(0,200,255,0.1);border:1px solid rgba(0,200,255,0.2);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">🧠</div>
+      <div style="margin-bottom:12px;padding:14px 16px;background:var(--paper);border:1px solid var(--line-2);border-radius:14px;display:flex;align-items:center;gap:14px;">
+        <div style="width:40px;height:40px;border-radius:50%;background:var(--paper-2);border:1px solid var(--line-2);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">🧠</div>
         <div style="flex:1;">
           <div style="font-size:13px;font-weight:700;color:var(--ink);">Lo que sé de ti</div>
-          <div style="font-family:var(--font-mono);font-size:10px;color:var(--ink-4);margin-top:2px;">RMs · calibración RPE · estaciones · decisiones del plan</div>
+          <div style="font-family:var(--font-mono);font-size:10px;color:var(--ink-3);margin-top:2px;">RMs · calibración RPE · estaciones · decisiones del plan</div>
         </div>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(240,238,232,0.3)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink-3)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
       </div>
     </a>
 
