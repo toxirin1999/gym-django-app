@@ -105,6 +105,36 @@ def _elegir_alternativa(nombre_original, grupo, ejercicios_recientes_nombres):
     return None, None
 
 
+def _normalizar(nombre):
+    """Normaliza un nombre de ejercicio para comparación fuzzy."""
+    import unicodedata
+    s = unicodedata.normalize('NFD', nombre.lower())
+    s = ''.join(c for c in s if unicodedata.category(c) != 'Mn')  # quita tildes
+    # quita palabras genéricas que no aportan identidad
+    for stop in ('con', 'de', 'en', 'al', 'la', 'el', 'las', 'los', 'una', 'un'):
+        s = s.replace(f' {stop} ', ' ')
+    return s.strip()
+
+
+def _match_nombre(nombre_plan, nombre_log):
+    """
+    True si nombre_plan y nombre_log se refieren al mismo ejercicio.
+    Acepta variaciones como:
+      "Press Banca con Barra" ↔ "press banca"
+      "Jalón al Pecho"        ↔ "Jalon Pecho"
+      "Sentadilla con Barra"  ↔ "Sentadilla"
+    """
+    np = _normalizar(nombre_plan)
+    nl = _normalizar(nombre_log)
+    # Exacto después de normalizar
+    if np == nl:
+        return True
+    # Uno contiene al otro (el más corto dentro del más largo)
+    shorter, longer = (np, nl) if len(np) <= len(nl) else (nl, np)
+    # Solo si el fragmento más corto tiene ≥6 caracteres (evita falsos positivos)
+    return len(shorter) >= 6 and shorter in longer
+
+
 def _ejercicios_recientes(cliente, dias=21):
     """Nombres de ejercicios realizados en los últimos N días (para no repetir sustitución)."""
     try:
@@ -144,7 +174,6 @@ def aplicar_plan_dinamico(cliente, ejercicios, hoy=None):
         from entrenos.models import GymDecisionLog
         from entrenos.services.briefing_service import necesita_deload_gym
 
-        nombres_hoy = [ej.get('nombre', '') for ej in ejercicios_mod]
         recientes = _ejercicios_recientes(cliente)
 
         # ── Deload activo ─────────────────────────────────────────────────────
@@ -166,26 +195,29 @@ def aplicar_plan_dinamico(cliente, ejercicios, hoy=None):
                 'razon': 'Semana de descarga automática — series reducidas, RPE limitado a 7.',
             })
 
-        # ── Señales por ejercicio ─────────────────────────────────────────────
-        logs_estancados = set(
+        # ── Señales por ejercicio — fetch amplio + match normalizado ──────────
+        # Se traen todos los logs recientes sin filtrar por nombre exacto.
+        # El match se hace en Python con _match_nombre() para tolerar variaciones
+        # entre nombres del planificador ("Press Banca con Barra") y los almacenados
+        # en GymDecisionLog ("press banca", "Press de Banca", etc.).
+        logs_recientes = list(
             GymDecisionLog.objects
             .filter(cliente=cliente, accion='cambiar_variante',
-                    motivo__icontains='Sin progresión',
-                    fecha_creacion__date__gte=hace_21,
-                    ejercicio__in=nombres_hoy)
-            .values_list('ejercicio', flat=True)
-            .distinct()
+                    fecha_creacion__date__gte=hace_21)
+            .values('ejercicio', 'motivo')
         )
 
-        logs_molestia = set(
-            GymDecisionLog.objects
-            .filter(cliente=cliente, accion='cambiar_variante',
-                    motivo__icontains='Molestia',
-                    fecha_creacion__date__gte=hace_21,
-                    ejercicio__in=nombres_hoy)
-            .values_list('ejercicio', flat=True)
-            .distinct()
-        )
+        # Construir sets normalizados por tipo de señal
+        logs_estancados_norm = {
+            _normalizar(l['ejercicio'])
+            for l in logs_recientes
+            if 'Sin progresión' in l['motivo'] or 'sin progresion' in l['motivo'].lower()
+        }
+        logs_molestia_norm = {
+            _normalizar(l['ejercicio'])
+            for l in logs_recientes
+            if 'molestia' in l['motivo'].lower()
+        }
 
         for ej in ejercicios_mod:
             nombre = ej.get('nombre', '')
@@ -194,8 +226,18 @@ def aplicar_plan_dinamico(cliente, ejercicios, hoy=None):
             if not grupo:
                 continue
 
+            nombre_norm = _normalizar(nombre)
+            es_estancado = any(
+                _match_nombre(nombre_norm, log_norm)
+                for log_norm in logs_estancados_norm
+            )
+            es_molestia = any(
+                _match_nombre(nombre_norm, log_norm)
+                for log_norm in logs_molestia_norm
+            )
+
             # Estancamiento → sustituir ejercicio
-            if nombre in logs_estancados and nombre not in logs_molestia:
+            if es_estancado and not es_molestia:
                 alternativa, razon_alt = _elegir_alternativa(nombre, grupo, recientes)
                 if alternativa:
                     ej['nombre_original']    = nombre
@@ -211,8 +253,8 @@ def aplicar_plan_dinamico(cliente, ejercicios, hoy=None):
                         'razon': f'Sin progresión en 3+ sesiones → {razon_alt}.',
                     })
 
-            # Molestia → sustituir por variante más segura (mismo grupo, alta estabilidad)
-            elif nombre in logs_molestia:
+            # Molestia → sustituir por variante más segura
+            elif es_molestia:
                 alternativa, razon_alt = _elegir_alternativa(nombre, grupo, recientes)
                 if alternativa:
                     ej['nombre_original']    = nombre

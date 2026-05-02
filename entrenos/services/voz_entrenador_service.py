@@ -74,72 +74,88 @@ def get_instrucciones(cliente, nombres_hoy, hoy=None):
                 'razon': 'El sistema detecta fatiga acumulada. Menos series, más control técnico.',
             })
 
-        # ── 2. ESTANCAMIENTO POR EJERCICIO ───────────────────────────────────
-        estancados = (
+        # Fetch amplio de logs recientes — el match por nombre se hace en Python
+        # con _match_nombre() para tolerar variaciones ("Press Banca con Barra" ↔ "press banca")
+        logs_21 = list(
             GymDecisionLog.objects
             .filter(cliente=cliente, accion='cambiar_variante',
-                    motivo__icontains='Sin progresión',
-                    fecha_creacion__date__gte=hace_21,
-                    ejercicio__in=nombres_hoy)
+                    fecha_creacion__date__gte=hace_21)
             .order_by('ejercicio', '-fecha_creacion')
-            .distinct()
         )
+        topes_14 = list(
+            GymDecisionLog.objects
+            .filter(cliente=cliente, accion='subir_reps',
+                    motivo__icontains='tope',
+                    fecha_creacion__date__gte=hace_14)
+            .order_by('ejercicio', '-fecha_creacion')
+        )
+
+        def _nombre_coincide(nombre_plan, nombre_log):
+            import unicodedata
+            def norm(s):
+                s = unicodedata.normalize('NFD', s.lower())
+                s = ''.join(c for c in s if unicodedata.category(c) != 'Mn')
+                for w in (' con ', ' de ', ' al ', ' la ', ' el '):
+                    s = s.replace(w, ' ')
+                return s.strip()
+            np, nl = norm(nombre_plan), norm(nombre_log)
+            if np == nl:
+                return True
+            shorter, longer = (np, nl) if len(np) <= len(nl) else (nl, np)
+            return len(shorter) >= 6 and shorter in longer
+
+        def _match_para(nombre_plan, logs, motivo_contains):
+            return [
+                l for l in logs
+                if motivo_contains.lower() in l.motivo.lower()
+                and _nombre_coincide(nombre_plan, l.ejercicio)
+            ]
+
+        # ── 2. ESTANCAMIENTO POR EJERCICIO ───────────────────────────────────
         vistos = set()
-        for log in estancados:
-            if log.ejercicio in vistos:
+        for nombre in nombres_hoy:
+            matches = _match_para(nombre, logs_21, 'Sin progresión')
+            if not matches or nombre in vistos:
                 continue
-            vistos.add(log.ejercicio)
+            log = matches[0]
+            vistos.add(nombre)
             sesiones_str = _contar_sesiones_sin_progresion(cliente, log.ejercicio, hace_21)
-            tempo = _tempo_para(log.ejercicio)
-            variante = _variante_para(log.ejercicio)
+            tempo = _tempo_para(nombre)
+            variante = _variante_para(nombre)
             instrucciones.append({
                 'prioridad': 'alerta',
                 'icono': '📊',
-                'ejercicio': log.ejercicio,
+                'ejercicio': nombre,
                 'instruccion': f'Prueba tempo {tempo} en lugar de subir peso.',
                 'razon': f'{sesiones_str} sin progresar — cambia el estímulo: {variante}.',
             })
 
         # ── 3. MOLESTIA RECURRENTE ────────────────────────────────────────────
-        molestias = (
-            GymDecisionLog.objects
-            .filter(cliente=cliente, accion='cambiar_variante',
-                    motivo__icontains='Molestia',
-                    fecha_creacion__date__gte=hace_21,
-                    ejercicio__in=nombres_hoy)
-            .order_by('ejercicio', '-fecha_creacion')
-            .distinct()
-        )
-        for log in molestias:
-            if log.ejercicio in vistos:
+        for nombre in nombres_hoy:
+            matches = _match_para(nombre, logs_21, 'Molestia')
+            if not matches or nombre in vistos:
                 continue
-            vistos.add(log.ejercicio)
+            vistos.add(nombre)
             instrucciones.append({
                 'prioridad': 'alerta',
                 'icono': '⚠️',
-                'ejercicio': log.ejercicio,
+                'ejercicio': nombre,
                 'instruccion': 'Reduce el rango o baja el peso un escalón.',
                 'razon': 'Molestia recurrente detectada. Prioridad: no agravar.',
             })
 
         # ── 4. TOPE DE MÁQUINA ────────────────────────────────────────────────
-        topes = (
-            GymDecisionLog.objects
-            .filter(cliente=cliente, accion='subir_reps',
-                    motivo__icontains='tope',
-                    fecha_creacion__date__gte=hace_14,
-                    ejercicio__in=nombres_hoy)
-            .order_by('ejercicio', '-fecha_creacion')
-        )
-        for log in topes:
-            if log.ejercicio in vistos:
+        for nombre in nombres_hoy:
+            matches = [l for l in topes_14 if _nombre_coincide(nombre, l.ejercicio)]
+            if not matches or nombre in vistos:
                 continue
-            vistos.add(log.ejercicio)
+            log = matches[0]
+            vistos.add(nombre)
             reps_obj = int(log.reps_anteriores or 0) + 1
             instrucciones.append({
                 'prioridad': 'info',
                 'icono': '🔝',
-                'ejercicio': log.ejercicio,
+                'ejercicio': nombre,
                 'instruccion': f'Mismo peso — apunta a {reps_obj} reps.',
                 'razon': 'Llegaste al tope de la máquina. Progresión por reps hasta el siguiente salto.',
             })
