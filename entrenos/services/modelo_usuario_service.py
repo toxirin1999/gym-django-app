@@ -259,27 +259,42 @@ def _get_patron_semanal(cliente, hoy):
 def _get_ventana_recuperacion(cliente, hoy):
     """
     ¿Con cuántos días de descanso llega el usuario con mejor RPE?
-    Analiza RPE en función de días desde la sesión anterior.
+    Usa el RPE medio por sesión calculado desde EjercicioRealizado.
     """
     try:
-        from entrenos.models import EntrenoRealizado
+        from entrenos.models import EntrenoRealizado, EjercicioRealizado
+        from django.db.models import Avg
         hace_120 = hoy - timedelta(days=120)
 
         entrenos = list(
             EntrenoRealizado.objects
-            .filter(cliente=cliente, fecha__gte=hace_120, rpe_post__isnull=False)
+            .filter(cliente=cliente, fecha__gte=hace_120)
             .order_by('fecha')
-            .values('fecha', 'rpe_post')
+            .values('id', 'fecha')
         )
 
         if len(entrenos) < _MIN_SESIONES_CONFIANZA:
             return None
 
+        # Calcular RPE medio por sesión desde EjercicioRealizado
+        rpe_por_sesion = {}
+        for e in entrenos:
+            agg = EjercicioRealizado.objects.filter(
+                entreno_id=e['id'], rpe__isnull=False
+            ).aggregate(media=Avg('rpe'))
+            if agg['media']:
+                rpe_por_sesion[e['id']] = (e['fecha'], round(agg['media'], 1))
+
+        sesiones_con_rpe = sorted(rpe_por_sesion.values(), key=lambda x: x[0])
+
+        if len(sesiones_con_rpe) < _MIN_SESIONES_CONFIANZA:
+            return None
+
         intervalos_rpe = defaultdict(list)
-        for i in range(1, len(entrenos)):
-            dias = (entrenos[i]['fecha'] - entrenos[i-1]['fecha']).days
+        for i in range(1, len(sesiones_con_rpe)):
+            dias = (sesiones_con_rpe[i][0] - sesiones_con_rpe[i-1][0]).days
             if 1 <= dias <= 5:
-                intervalos_rpe[dias].append(entrenos[i]['rpe_post'])
+                intervalos_rpe[dias].append(sesiones_con_rpe[i][1])
 
         if len(intervalos_rpe) < 2:
             return None
@@ -288,7 +303,7 @@ def _get_ventana_recuperacion(cliente, hoy):
         if len(medias) < 2:
             return None
 
-        dias_optimo = min(medias, key=medias.get)  # menor RPE = más fresco
+        dias_optimo = min(medias, key=medias.get)
 
         return {
             'dias_optimos': dias_optimo,
@@ -436,17 +451,25 @@ def _get_hrv_patron(cliente, hoy):
         if len(bitacoras) < 7:
             return None
 
+        from entrenos.models import EntrenoRealizado, EjercicioRealizado
+        from django.db.models import Avg
+
         entrenos = list(
-            EntrenoRealizado.objects.filter(
-                cliente=cliente, fecha__gte=hace_60, rpe_post__isnull=False
-            ).values('fecha', 'rpe_post')
+            EntrenoRealizado.objects
+            .filter(cliente=cliente, fecha__gte=hace_60)
+            .values('id', 'fecha')
         )
 
         pares = []
         for e in entrenos:
             hrv = bitacoras.get(e['fecha'])
-            if hrv:
-                pares.append((hrv, e['rpe_post']))
+            if not hrv:
+                continue
+            agg = EjercicioRealizado.objects.filter(
+                entreno_id=e['id'], rpe__isnull=False
+            ).aggregate(media=Avg('rpe'))
+            if agg['media']:
+                pares.append((hrv, round(agg['media'], 1)))
 
         if len(pares) < 5:
             return None
