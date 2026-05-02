@@ -18,11 +18,21 @@ La app NO es un registrador de entrenos. Es un entrenador que mejora su conocimi
 |---|---|
 | RPE post-sesión | Reduce volumen si RPE ≥ 9; aumenta si RPE ≤ 5 dos sesiones seguidas |
 | Energía pre-entreno | Escala volumen de la sesión al momento |
+| Energía pre-sesión (1–10) | Persistida en `EntrenoRealizado.energia_pre_sesion`; aparece en resumen semanal |
+| Técnica por serie (Buena/Aceptable/Comprometida) | Si comprometida → bloquea subida de peso y crea `GymDecisionLog accion=mantener` |
+| Tope de máquina | Congela peso; progresa reps desde las reales (+1, no desde el plan); badge +2.5 kg siguiente sesión |
+| Molestia recurrente (misma zona ≥3 sesiones/21 días) | `GymDecisionLog accion=cambiar_variante` para reducir carga en esa zona |
+| Sin progresión en peso+reps (3 sesiones) | `GymDecisionLog accion=cambiar_variante`; badge ⚡ Estancado en entrenamiento activo |
+| Récords personales rotos | Aparecen en resumen semanal del panel principal |
 | Test 5K completado | Recalibra ritmos Z2/tempo en todas las sesiones futuras de carrera |
 | Simulación completa/oficial | Detecta estaciones >25% sobre objetivo → añade sesiones correctivas |
 | Lesión activa | Filtra ejercicios con tags incompatibles en tiempo real |
 | Sesiones completadas | Actualiza readiness breakdown (fuerza, resistencia, potencia) |
 | Actividades por estación | Alimenta CompetitionStandardsService para tracking vs estándares |
+
+### Resumen semanal — panel principal
+
+El card "Lo que aprendió el plan" (`entrenos/services/resumen_semanal_service.py`) agrega cada lunes la semana anterior y muestra en el dashboard: sesiones + volumen, PRs, técnica, topes, molestias, RPE medio, energía pre-sesión y decisiones del plan (`GymDecisionLog`). Solo aparece si hubo sesiones esa semana.
 
 ### Gaps identificados — pendientes de implementar (por prioridad)
 
