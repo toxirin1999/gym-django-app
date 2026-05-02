@@ -965,23 +965,36 @@ a.rb-dia:focus-visible {
           {{ resumen_semanal.cumplimiento_pct }}% cumplimiento
         </div>
       </div>
-      <div style="background:var(--bg-2,#f8fafc);border:1px solid var(--line-2);border-radius:6px;padding:8px;text-align:center;">
-        <div style="font-family:var(--font-mono);font-size:9px;color:var(--ink-4);text-transform:uppercase;">Carga</div>
+      <div style="background:var(--bg-2,#f8fafc);border:1px solid var(--line-2);border-radius:6px;padding:8px;text-align:center;" title="TRIMP (Training Impulse): carga semanal objetiva basada en FC y duración. Recreativo: 100–200 · Competición: 200–400 · Élite: 400+">
+        <div style="font-family:var(--font-mono);font-size:9px;color:var(--ink-4);text-transform:uppercase;">Carga semanal</div>
         <div style="font-family:var(--font-disp);font-size:20px;font-weight:700;color:var(--ink);line-height:1.1;">
           {{ resumen_semanal.trimp_semana }}<span style="font-size:9px;color:var(--ink-4);"> TRIMP</span>
+        </div>
+        <div style="font-family:var(--font-mono);font-size:8px;margin-top:2px;
+          color:{% if resumen_semanal.trimp_semana >= 400 %}#ef4444{% elif resumen_semanal.trimp_semana >= 200 %}var(--warn){% else %}var(--ok){% endif %};">
+          {% if resumen_semanal.trimp_semana >= 400 %}Carga de élite
+          {% elif resumen_semanal.trimp_semana >= 200 %}Carga de competición
+          {% elif resumen_semanal.trimp_semana >= 100 %}Carga recreativa
+          {% else %}Carga baja{% endif %}
         </div>
         <div style="font-family:var(--font-mono);font-size:8px;color:var(--ink-4);">
           RPE medio {% if resumen_semanal.rpe_medio %}{{ resumen_semanal.rpe_medio }}/10{% else %}—{% endif %}
         </div>
       </div>
-      <div style="background:var(--bg-2,#f8fafc);border:1px solid var(--line-2);border-radius:6px;padding:8px;text-align:center;">
-        <div style="font-family:var(--font-mono);font-size:9px;color:var(--ink-4);text-transform:uppercase;">Forma</div>
-        <div style="font-family:var(--font-disp);font-size:14px;font-weight:700;line-height:1.2;
-          color:{% if resumen_semanal.tsb >= 0 %}var(--ok){% elif resumen_semanal.tsb >= -15 %}var(--accent){% else %}#ef4444{% endif %};">
-          {% if resumen_semanal.tsb is not None %}TSB {{ resumen_semanal.tsb }}{% else %}—{% endif %}
+      <div style="background:var(--bg-2,#f8fafc);border:1px solid var(--line-2);border-radius:6px;padding:8px;text-align:center;" title="TSB (Training Stress Balance): fitness acumulado (42 días) menos fatiga reciente (7 días). Positivo = fresco. 0 a -10 = acumulando carga normal. -10 a -20 = fatiga alta. Menor de -20 = riesgo sobreentrenamiento.">
+        <div style="font-family:var(--font-mono);font-size:9px;color:var(--ink-4);text-transform:uppercase;">Forma · TSB</div>
+        <div style="font-family:var(--font-disp);font-size:20px;font-weight:700;line-height:1.1;
+          color:{% if resumen_semanal.tsb >= 0 %}var(--ok){% elif resumen_semanal.tsb >= -10 %}var(--ink){% elif resumen_semanal.tsb >= -20 %}var(--warn){% else %}#ef4444{% endif %};">
+          {% if resumen_semanal.tsb is not None %}{{ resumen_semanal.tsb }}{% else %}—{% endif %}
         </div>
-        <div style="font-family:var(--font-mono);font-size:8px;color:var(--ink-4);">
-          {{ resumen_semanal.estado_forma.estado }}
+        <div style="font-family:var(--font-mono);font-size:8px;margin-top:2px;
+          color:{% if resumen_semanal.tsb >= 0 %}var(--ok){% elif resumen_semanal.tsb >= -10 %}var(--ink-3){% elif resumen_semanal.tsb >= -20 %}var(--warn){% else %}#ef4444{% endif %};">
+          {% if resumen_semanal.tsb is None %}Sin datos suficientes
+          {% elif resumen_semanal.tsb >= 5 %}Fresco — puedes apretar
+          {% elif resumen_semanal.tsb >= 0 %}Equilibrado
+          {% elif resumen_semanal.tsb >= -10 %}Carga normal
+          {% elif resumen_semanal.tsb >= -20 %}Fatiga alta — vigila
+          {% else %}Riesgo sobreentrenamiento{% endif %}
         </div>
       </div>
     </div>
