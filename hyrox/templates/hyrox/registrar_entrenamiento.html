@@ -551,6 +551,39 @@
   .rb-done-btn.done { background: var(--ok); border-color: var(--ok); color: var(--paper); }
   .rb-done-btn svg { width: 14px; height: 14px; }
 
+  /* ── RPE ESTACIÓN ────────────────────────────── */
+  .rb-rpe-row {
+    margin-top: 16px; padding-top: 14px;
+    border-top: 1px solid var(--line-2);
+  }
+  .rb-rpe-label {
+    display: block; font-size: 10px; font-weight: 700;
+    letter-spacing: .1em; color: var(--ink-3);
+    text-transform: uppercase; margin-bottom: 8px;
+  }
+  .rb-rpe-btns {
+    display: flex; gap: 6px; flex-wrap: nowrap;
+  }
+  .rb-rpe-btn {
+    flex: 1; padding: 10px 4px;
+    background: var(--paper-2); color: var(--ink-2);
+    border: 1.5px solid var(--line-2); border-radius: 4px;
+    font-family: var(--font-disp); font-size: 15px; font-weight: 700;
+    cursor: pointer; transition: all 0.15s; text-align: center;
+  }
+  .rb-rpe-btn:active { transform: scale(.94); }
+  .rb-rpe-btn.selected {
+    background: var(--warn); border-color: var(--warn);
+    color: #000;
+  }
+  .rb-rpe-btn.rb-rpe-pulse {
+    animation: rpePulse 0.6s ease-in-out infinite alternate;
+  }
+  @keyframes rpePulse {
+    from { border-color: var(--warn); box-shadow: 0 0 0 0 rgba(245,158,11,.4); }
+    to   { border-color: var(--warn); box-shadow: 0 0 0 6px rgba(245,158,11,0); }
+  }
+
   /* ── METRICS STRIP ───────────────────────────── */
   .rb-metrics {
     display: grid; grid-template-columns: 1fr 1fr 1fr;
@@ -963,6 +996,20 @@
               <button type="button" class="rb-add" onclick="rbAddSerie('rb-series-{{ idx }}','rb-card-{{ idx }}')">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>AÑADIR SERIE
               </button>
+              {% if act.tipo_actividad in 'hyrox_station,ergometro,skierg,remo' %}
+              <div class="rb-rpe-row" id="rb-rpe-row-{{ idx }}">
+                <span class="rb-rpe-label">RPE ESTACIÓN</span>
+                <div class="rb-rpe-btns">
+                  <button type="button" class="rb-rpe-btn" onclick="rbSelectRpe('rb-card-{{ idx }}',5,this)">5</button>
+                  <button type="button" class="rb-rpe-btn" onclick="rbSelectRpe('rb-card-{{ idx }}',6,this)">6</button>
+                  <button type="button" class="rb-rpe-btn" onclick="rbSelectRpe('rb-card-{{ idx }}',7,this)">7</button>
+                  <button type="button" class="rb-rpe-btn" onclick="rbSelectRpe('rb-card-{{ idx }}',8,this)">8</button>
+                  <button type="button" class="rb-rpe-btn" onclick="rbSelectRpe('rb-card-{{ idx }}',9,this)">9</button>
+                  <button type="button" class="rb-rpe-btn" onclick="rbSelectRpe('rb-card-{{ idx }}',10,this)">10</button>
+                </div>
+                <input type="hidden" class="rb-input-rpe" value="">
+              </div>
+              {% endif %}
 
             {% elif act.data_metricas.distancia_km %}
               <div class="rb-cardio-grid">
@@ -985,6 +1032,20 @@
                   <div class="rb-pace-note" id="rb-pace-note-{{ idx }}"></div>
                 </div>
               </div>
+              {% if act.tipo_actividad in 'hyrox_station,ergometro,skierg,remo' %}
+              <div class="rb-rpe-row">
+                <span class="rb-rpe-label">RPE ESTACIÓN</span>
+                <div class="rb-rpe-btns">
+                  <button type="button" class="rb-rpe-btn" onclick="rbSelectRpe('rb-card-{{ idx }}',5,this)">5</button>
+                  <button type="button" class="rb-rpe-btn" onclick="rbSelectRpe('rb-card-{{ idx }}',6,this)">6</button>
+                  <button type="button" class="rb-rpe-btn" onclick="rbSelectRpe('rb-card-{{ idx }}',7,this)">7</button>
+                  <button type="button" class="rb-rpe-btn" onclick="rbSelectRpe('rb-card-{{ idx }}',8,this)">8</button>
+                  <button type="button" class="rb-rpe-btn" onclick="rbSelectRpe('rb-card-{{ idx }}',9,this)">9</button>
+                  <button type="button" class="rb-rpe-btn" onclick="rbSelectRpe('rb-card-{{ idx }}',10,this)">10</button>
+                </div>
+                <input type="hidden" class="rb-input-rpe" value="">
+              </div>
+              {% endif %}
               <button type="button" class="rb-done-btn" onclick="rbToggleDone('rb-card-{{ idx }}',this)">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>MARCAR COMPLETADA
               </button>
@@ -1002,6 +1063,20 @@
                 </div>
                 {% endif %}
               </div>
+              {% if act.tipo_actividad in 'hyrox_station,ergometro,skierg,remo' %}
+              <div class="rb-rpe-row">
+                <span class="rb-rpe-label">RPE ESTACIÓN</span>
+                <div class="rb-rpe-btns">
+                  <button type="button" class="rb-rpe-btn" onclick="rbSelectRpe('rb-card-{{ idx }}',5,this)">5</button>
+                  <button type="button" class="rb-rpe-btn" onclick="rbSelectRpe('rb-card-{{ idx }}',6,this)">6</button>
+                  <button type="button" class="rb-rpe-btn" onclick="rbSelectRpe('rb-card-{{ idx }}',7,this)">7</button>
+                  <button type="button" class="rb-rpe-btn" onclick="rbSelectRpe('rb-card-{{ idx }}',8,this)">8</button>
+                  <button type="button" class="rb-rpe-btn" onclick="rbSelectRpe('rb-card-{{ idx }}',9,this)">9</button>
+                  <button type="button" class="rb-rpe-btn" onclick="rbSelectRpe('rb-card-{{ idx }}',10,this)">10</button>
+                </div>
+                <input type="hidden" class="rb-input-rpe" value="">
+              </div>
+              {% endif %}
               <button type="button" class="rb-done-btn" onclick="rbToggleDone('rb-card-{{ idx }}',this)">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>MARCAR COMPLETADA
               </button>
@@ -1021,21 +1096,42 @@
               </div>
               <input type="hidden" name="act_reps_st_{{ idx }}" id="act-reps-st-{{ idx }}">
               <input type="hidden" name="act_kg_st_{{ idx }}" id="act-kg-st-{{ idx }}">
+              {% if act.tipo_actividad in 'hyrox_station,ergometro,skierg,remo' %}
+              <div class="rb-rpe-row">
+                <span class="rb-rpe-label">RPE ESTACIÓN</span>
+                <div class="rb-rpe-btns">
+                  <button type="button" class="rb-rpe-btn" onclick="rbSelectRpe('rb-card-{{ idx }}',5,this)">5</button>
+                  <button type="button" class="rb-rpe-btn" onclick="rbSelectRpe('rb-card-{{ idx }}',6,this)">6</button>
+                  <button type="button" class="rb-rpe-btn" onclick="rbSelectRpe('rb-card-{{ idx }}',7,this)">7</button>
+                  <button type="button" class="rb-rpe-btn" onclick="rbSelectRpe('rb-card-{{ idx }}',8,this)">8</button>
+                  <button type="button" class="rb-rpe-btn" onclick="rbSelectRpe('rb-card-{{ idx }}',9,this)">9</button>
+                  <button type="button" class="rb-rpe-btn" onclick="rbSelectRpe('rb-card-{{ idx }}',10,this)">10</button>
+                </div>
+                <input type="hidden" class="rb-input-rpe" value="">
+              </div>
+              {% endif %}
               <button type="button" class="rb-done-btn" onclick="rbToggleDone('rb-card-{{ idx }}',this)">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>MARCAR COMPLETADA
               </button>
 
             {% else %}
+              {% if act.tipo_actividad in 'hyrox_station,ergometro,skierg,remo' %}
+              <div class="rb-rpe-row">
+                <span class="rb-rpe-label">RPE ESTACIÓN</span>
+                <div class="rb-rpe-btns">
+                  <button type="button" class="rb-rpe-btn" onclick="rbSelectRpe('rb-card-{{ idx }}',5,this)">5</button>
+                  <button type="button" class="rb-rpe-btn" onclick="rbSelectRpe('rb-card-{{ idx }}',6,this)">6</button>
+                  <button type="button" class="rb-rpe-btn" onclick="rbSelectRpe('rb-card-{{ idx }}',7,this)">7</button>
+                  <button type="button" class="rb-rpe-btn" onclick="rbSelectRpe('rb-card-{{ idx }}',8,this)">8</button>
+                  <button type="button" class="rb-rpe-btn" onclick="rbSelectRpe('rb-card-{{ idx }}',9,this)">9</button>
+                  <button type="button" class="rb-rpe-btn" onclick="rbSelectRpe('rb-card-{{ idx }}',10,this)">10</button>
+                </div>
+                <input type="hidden" class="rb-input-rpe" value="">
+              </div>
+              {% endif %}
               <button type="button" class="rb-done-btn" onclick="rbToggleDone('rb-card-{{ idx }}',this)">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>MARCAR COMPLETADA
               </button>
-            {% endif %}
-
-            {% if act.tipo_actividad in 'hyrox_station,ergometro,skierg,remo' %}
-            <div class="rb-rpe-station" style="margin-top:12px;display:flex;align-items:center;gap:10px;">
-              <span style="font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--ink-3);text-transform:uppercase;">RPE estación</span>
-              <input type="number" class="rb-biginput rb-input-rpe" min="1" max="10" step="1" inputmode="numeric" placeholder="—" style="width:72px;font-size:1.6rem;text-align:center;" title="Esfuerzo percibido en esta estación (1-10)">
-            </div>
             {% endif %}
           </article>
         </div>
@@ -1443,7 +1539,27 @@ function rbSyncCard(card) {
   if (hi) hi.value = (done / total).toFixed(3);
   if (done === total) {
     rbTimerAutoStop(card.id);
-    setTimeout(rbNext, 700);
+    const rpeInput = card.querySelector('.rb-input-rpe');
+    if (rpeInput && !rpeInput.value) {
+      card.querySelectorAll('.rb-rpe-btn').forEach(b => b.classList.add('rb-rpe-pulse'));
+      card._rpeTimeout = setTimeout(() => {
+        card.querySelectorAll('.rb-rpe-btn').forEach(b => b.classList.remove('rb-rpe-pulse'));
+        rbNext();
+      }, 4000);
+    } else {
+      setTimeout(rbNext, 700);
+    }
+  }
+}
+function rbSelectRpe(cardId, val, btn) {
+  const card = document.getElementById(cardId);
+  card.querySelectorAll('.rb-rpe-btn').forEach(b => b.classList.remove('selected', 'rb-rpe-pulse'));
+  btn.classList.add('selected');
+  card.querySelector('.rb-input-rpe').value = val;
+  if (card._rpeTimeout) {
+    clearTimeout(card._rpeTimeout);
+    card._rpeTimeout = null;
+    setTimeout(rbNext, 500);
   }
 }
 function rbAddSerie(seriesId, cardId) {
