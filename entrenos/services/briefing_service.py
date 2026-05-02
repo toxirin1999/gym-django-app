@@ -24,8 +24,15 @@ def _get_rpe_bias(cliente):
 def necesita_deload_gym(cliente, hoy=None):
     """
     Retorna True si el cliente acumula suficiente fatiga para una semana de descarga.
-    Criterio A: RPE medio ≥ 8.5 últimas 2 semanas (≥4 sesiones) Y RPE ≥ 8.0 las 2 semanas previas.
-    Criterio B: Energía media ≤ 3.5 últimas 2 semanas (≥3 sesiones).
+
+    Criterio A: RPE medio ≥ 8.5 últimas 2 semanas (≥4 sesiones) Y ≥ 8.0 las 2 semanas previas.
+    Criterio B: Energía pre-sesión media ≤ 3.5 últimas 2 semanas (≥3 sesiones).
+
+    NOTA: No se aplica el bias de calibración RPE de Hyrox.
+    El RPE de gym (fuerza) y el de Hyrox (cardio/circuito) miden fenómenos
+    fisiológicos distintos: series pesadas al fallo pueden generar RPE 9-10
+    con FC moderada porque usan el sistema fosfágeno, no el aeróbico.
+    Corregir el RPE de gym con el sesgo detectado en carrera introduce ruido.
     """
     from entrenos.models import EntrenoRealizado, EjercicioRealizado
 
@@ -51,19 +58,12 @@ def necesita_deload_gym(cliente, hoy=None):
     energias = [e.energia_pre_sesion for e in recientes if e.energia_pre_sesion is not None]
     energia_media = sum(energias) / len(energias) if energias else None
 
-    # Criterio B: energía crónicamente baja
+    # Criterio B: energía crónicamente baja (subjetiva, válida para gym)
     if energia_media is not None and energia_media <= 3.5 and recientes.count() >= 3:
         return True
 
-    # Aplicar calibración personal de RPE (sesgo detectado desde sesiones Hyrox)
-    bias = _get_rpe_bias(cliente)
-    # bias > 0 → sobreestima: corregir restando el sesgo
-    def _rpe_calibrado(rpe_raw):
-        return rpe_raw - bias if abs(bias) >= 1.0 else rpe_raw
-
-    # Criterio A: RPE calibrado alto 2 semanas seguidas
-    rpe_rec_cal = _rpe_calibrado(rpe_rec) if rpe_rec is not None else None
-    if rpe_rec_cal is not None and rpe_rec_cal >= 8.5 and recientes.count() >= 4:
+    # Criterio A: RPE bruto de gym alto dos semanas consecutivas
+    if rpe_rec is not None and rpe_rec >= 8.5 and recientes.count() >= 4:
         previas = EntrenoRealizado.objects.filter(
             cliente=cliente, fecha__range=(hace_28, hace_14)
         ).prefetch_related('ejercicios_realizados')
@@ -74,7 +74,7 @@ def necesita_deload_gym(cliente, hoy=None):
             if ej.rpe is not None
         ]
         rpe_prev = sum(rpes_prev) / len(rpes_prev) if rpes_prev else None
-        if rpe_prev is not None and _rpe_calibrado(rpe_prev) >= 8.0:
+        if rpe_prev is not None and rpe_prev >= 8.0:
             return True
 
     return False
@@ -230,17 +230,19 @@ def get_briefing_gym(cliente, ejercicios_planificados, fecha):
             'texto': f'{nombres_str}: llegaste al tope de la máquina. Mismo peso — intenta hacer una rep más.',
         })
 
-    # Calibración RPE personal
+    # Calibración RPE — solo informativo para gym
+    # El bias se detecta desde sesiones Hyrox/cardio (FC objetiva).
+    # No se aplica al gym: series pesadas al fallo tienen FC moderada
+    # porque usan el sistema fosfágeno, no el aeróbico. Son escalas distintas.
     bias = _get_rpe_bias(cliente)
     if abs(bias) >= 1.5:
         dir_bias = "sobreestimas" if bias > 0 else "subestimas"
-        ajuste = "el plan sube los umbrales de carga" if bias > 0 else "el plan baja los umbrales de carga"
         mensajes.append({
             'icono': '⚖️',
             'tipo': 'ok',
             'texto': (
-                f"Tu escala RPE: {dir_bias} el esfuerzo en ~{abs(bias):.1f} puntos vs tu FC real. "
-                f"{ajuste.capitalize()} para compensar."
+                f"En cardio/Hyrox {dir_bias} el esfuerzo en ~{abs(bias):.1f} puntos vs FC real. "
+                f"En gym el RPE de fuerza es independiente — series al fallo con FC moderada es normal."
             ),
         })
 
