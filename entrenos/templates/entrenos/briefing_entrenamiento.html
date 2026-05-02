@@ -1,0 +1,315 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Briefing · {{ rutina_nombre|default:"Sesión" }}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; background: #0E0E0F; }
+  body {
+    --bg:      #0E0E0F;
+    --surf:    #161618;
+    --surf2:   #1E1E21;
+    --bd:      rgba(255,255,255,0.08);
+    --ink:     #F0EEE8;
+    --td:      rgba(240,238,232,0.5);
+    --tdm:     rgba(240,238,232,0.28);
+    --ok:      #2ECC71;
+    --warn:    #F1C40F;
+    --r:       #E74C3C;
+    --accent:  #00C8FF;
+    --fd: 'Archivo Black', sans-serif;
+    --fu: 'Archivo', sans-serif;
+    --fm: 'JetBrains Mono', monospace;
+    font-family: var(--fu);
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  /* ── LAYOUT ──────────────────────────────────── */
+  .wrap {
+    max-width: 480px; margin: 0 auto;
+    padding: 0 16px 120px;
+    min-height: 100vh;
+  }
+
+  /* ── TOPBAR ──────────────────────────────────── */
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 0 12px; gap: 12px;
+  }
+  .tb-back {
+    display: flex; align-items: center; gap: 6px;
+    font-family: var(--fm); font-size: 11px; font-weight: 700;
+    color: var(--td); text-decoration: none; letter-spacing: .05em;
+  }
+  .tb-back svg { width: 16px; height: 16px; }
+  .tb-label {
+    font-family: var(--fm); font-size: 10px; font-weight: 700;
+    color: var(--tdm); letter-spacing: .12em; text-transform: uppercase;
+  }
+
+  /* ── BIB ─────────────────────────────────────── */
+  .bib {
+    background: var(--surf); border: 1px solid var(--bd);
+    border-radius: 16px; padding: 20px;
+    margin-bottom: 16px; position: relative; overflow: hidden;
+  }
+  .bib::before {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(135deg, rgba(0,200,255,0.06) 0%, transparent 60%);
+    pointer-events: none;
+  }
+  .bib-meta {
+    display: flex; justify-content: space-between; align-items: center;
+    font-family: var(--fm); font-size: 10px; color: var(--tdm);
+    letter-spacing: .1em; text-transform: uppercase; margin-bottom: 14px;
+  }
+  .bib-num {
+    font-family: var(--fd); font-size: clamp(40px, 12vw, 64px);
+    color: var(--accent); line-height: 1; letter-spacing: -.02em;
+  }
+  .bib-body { display: flex; align-items: flex-end; gap: 16px; }
+  .bib-info { flex: 1; }
+  .bib-title {
+    font-family: var(--fd); font-size: 22px; line-height: 1.1;
+    color: var(--ink); letter-spacing: -.01em;
+  }
+  .bib-sub {
+    font-family: var(--fm); font-size: 11px; color: var(--td);
+    letter-spacing: .08em; text-transform: uppercase; margin-top: 6px;
+  }
+
+  /* ── SECCIÓN HEADER ──────────────────────────── */
+  .sec-hdr {
+    display: flex; align-items: center; gap: 10px;
+    margin: 20px 0 10px;
+  }
+  .sec-tag {
+    font-family: var(--fm); font-size: 9px; font-weight: 700;
+    color: var(--tdm); letter-spacing: .15em; text-transform: uppercase;
+    flex-shrink: 0;
+  }
+  .sec-line { flex: 1; height: 1px; background: var(--bd); }
+
+  /* ── ESTADO FÍSICO ───────────────────────────── */
+  .estado-grid {
+    display: grid; grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px; margin-bottom: 4px;
+  }
+  .estado-card {
+    background: var(--surf); border: 1px solid var(--bd);
+    border-radius: 12px; padding: 12px 10px; text-align: center;
+  }
+  .estado-val {
+    font-family: var(--fm); font-size: 22px; font-weight: 700;
+    color: var(--ink); line-height: 1;
+  }
+  .estado-val.warn { color: var(--warn); }
+  .estado-val.ok   { color: var(--ok); }
+  .estado-val.na   { color: var(--tdm); font-size: 16px; }
+  .estado-lbl {
+    font-family: var(--fm); font-size: 9px; color: var(--tdm);
+    letter-spacing: .08em; text-transform: uppercase; margin-top: 5px;
+  }
+
+  /* ── MENSAJES DEL ENTRENADOR ─────────────────── */
+  .msg-list { display: flex; flex-direction: column; gap: 8px; }
+  .msg-row {
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 12px 14px; border-radius: 12px;
+    background: var(--surf); border: 1px solid var(--bd);
+    border-left-width: 3px;
+  }
+  .msg-row.carga        { border-left-color: var(--r); }
+  .msg-row.energia      { border-left-color: var(--warn); }
+  .msg-row.estancamiento{ border-left-color: var(--warn); }
+  .msg-row.tecnica      { border-left-color: var(--r); }
+  .msg-row.tope         { border-left-color: var(--ok); }
+  .msg-row.ok           { border-left-color: var(--ok); }
+  .msg-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+  .msg-text {
+    font-size: 13px; line-height: 1.5; color: var(--ink);
+    font-family: var(--fu);
+  }
+
+  /* ── PLAN DE EJERCICIOS ──────────────────────── */
+  .plan-list { display: flex; flex-direction: column; gap: 6px; }
+  .plan-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 11px 14px; background: var(--surf);
+    border: 1px solid var(--bd); border-radius: 12px;
+  }
+  .plan-num {
+    font-family: var(--fm); font-size: 11px; font-weight: 700;
+    color: var(--tdm); flex-shrink: 0; width: 22px; text-align: right;
+  }
+  .plan-body { flex: 1; min-width: 0; }
+  .plan-name {
+    font-size: 13px; font-weight: 700; color: var(--ink);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .plan-spec {
+    font-family: var(--fm); font-size: 10px; color: var(--td);
+    margin-top: 2px;
+  }
+  .plan-badges { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 5px; }
+  .badge {
+    font-family: var(--fm); font-size: 9px; font-weight: 700;
+    padding: 2px 7px; border-radius: 6px; border: 1px solid;
+    letter-spacing: .04em; text-transform: uppercase;
+  }
+  .badge.estancado  { color: var(--warn); border-color: rgba(241,196,15,.3); background: rgba(241,196,15,.1); }
+  .badge.tope       { color: var(--ok);   border-color: rgba(46,204,113,.3); background: rgba(46,204,113,.1); }
+  .badge.tecnica    { color: var(--r);    border-color: rgba(231,76,60,.3);  background: rgba(231,76,60,.1); }
+  .badge.molestia   { color: var(--warn); border-color: rgba(241,196,15,.3); background: rgba(241,196,15,.1); }
+
+  /* ── CTA ─────────────────────────────────────── */
+  .cta-wrap {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    padding: 16px; background: linear-gradient(to top, var(--bg) 70%, transparent);
+    max-width: 480px; margin: 0 auto;
+  }
+  .btn-comenzar {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    width: 100%; height: 58px; border-radius: 16px; border: none;
+    background: var(--ok); color: #0E0E0F;
+    font-family: var(--fd); font-size: 16px; letter-spacing: .04em;
+    text-transform: uppercase; text-decoration: none;
+    cursor: pointer; transition: filter .15s;
+  }
+  .btn-comenzar:active { filter: brightness(.9); }
+  .btn-comenzar svg { width: 20px; height: 20px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <a href="{% url 'home' %}" class="tb-back">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M15 18l-6-6 6-6"/>
+      </svg>
+      Volver
+    </a>
+    <span class="tb-label">Briefing · Preparación</span>
+    <span style="min-width:48px;"></span>
+  </div>
+
+  <!-- BIB -->
+  <div class="bib">
+    <div class="bib-meta">
+      <span>SESIÓN GYM · {{ fecha|date:"D d M Y"|upper }}</span>
+      <span>{{ ejercicios|length }} EJERCICIOS</span>
+    </div>
+    <div class="bib-body">
+      <div class="bib-num">{{ fecha|date:"d" }}</div>
+      <div class="bib-info">
+        <div class="bib-title">{{ rutina_nombre|default:"Sesión de Fuerza" }}</div>
+        <div class="bib-sub">
+          {% if briefing.rpe_medio %}RPE medio 2 sem: {{ briefing.rpe_medio }}{% else %}Sin datos previos{% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ESTADO FÍSICO -->
+  <div class="sec-hdr">
+    <span class="sec-tag">Estado</span>
+    <div class="sec-line"></div>
+  </div>
+  <div class="estado-grid">
+    <div class="estado-card">
+      {% if briefing.rpe_medio %}
+        <div class="estado-val {% if briefing.rpe_medio >= 8.5 %}warn{% elif briefing.rpe_medio <= 6 %}ok{% endif %}">
+          {{ briefing.rpe_medio }}
+        </div>
+      {% else %}
+        <div class="estado-val na">—</div>
+      {% endif %}
+      <div class="estado-lbl">RPE Medio</div>
+    </div>
+    <div class="estado-card">
+      {% if briefing.energia_media %}
+        <div class="estado-val {% if briefing.energia_media <= 4 %}warn{% elif briefing.energia_media >= 7 %}ok{% endif %}">
+          {{ briefing.energia_media }}
+        </div>
+      {% else %}
+        <div class="estado-val na">—</div>
+      {% endif %}
+      <div class="estado-lbl">Energía</div>
+    </div>
+    <div class="estado-card">
+      <div class="estado-val {% if briefing.num_sesiones_recientes >= 4 %}ok{% endif %}">
+        {{ briefing.num_sesiones_recientes }}
+      </div>
+      <div class="estado-lbl">Sesiones/2sem</div>
+    </div>
+  </div>
+
+  <!-- VOZ DEL ENTRENADOR -->
+  {% if briefing.mensajes %}
+  <div class="sec-hdr">
+    <span class="sec-tag">El entrenador dice</span>
+    <div class="sec-line"></div>
+  </div>
+  <div class="msg-list">
+    {% for msg in briefing.mensajes %}
+    <div class="msg-row {{ msg.tipo }}">
+      <span class="msg-icon">{{ msg.icono }}</span>
+      <span class="msg-text">{{ msg.texto }}</span>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- PLAN DE SESIÓN -->
+  {% if ejercicios %}
+  <div class="sec-hdr">
+    <span class="sec-tag">Plan de sesión</span>
+    <div class="sec-line"></div>
+  </div>
+  <div class="plan-list">
+    {% for ej in ejercicios %}
+    <div class="plan-row">
+      <span class="plan-num">{{ forloop.counter|stringformat:"02d" }}</span>
+      <div class="plan-body">
+        <div class="plan-name">{{ ej.nombre|default:"Ejercicio" }}</div>
+        <div class="plan-spec">
+          {{ ej.series|default:"3" }} series
+          {% if ej.repeticiones %} · {{ ej.repeticiones }} reps{% endif %}
+          {% if ej.peso_recomendado_kg and ej.peso_recomendado_kg > 0 %} · {{ ej.peso_recomendado_kg }} kg{% endif %}
+        </div>
+        {% if ej.alertas %}
+        <div class="plan-badges">
+          {% for alerta in ej.alertas %}
+          <span class="badge {{ alerta.tipo }}">{{ alerta.icono }} {{ alerta.texto }}</span>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+</div>
+
+<!-- CTA FIJO -->
+<div class="cta-wrap">
+  <a href="{{ url_sesion }}" class="btn-comenzar">
+    <svg viewBox="0 0 24 24" fill="currentColor">
+      <polygon points="5,3 19,12 5,21"/>
+    </svg>
+    Comenzar sesión
+  </a>
+</div>
+
+</body>
+</html>

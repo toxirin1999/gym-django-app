@@ -612,7 +612,7 @@ body {
       <i class="fas fa-plus"></i> Hacer otro entreno
     </a>
     {% elif proximo_entrenamiento %}
-    <a href="{% url 'entrenos:entrenamiento_activo' cliente.id %}?fecha={{ hoy|date:'Y-m-d' }}&rutina_nombre={{ proximo_entrenamiento.rutina_nombre|urlencode }}&ejercicios={{ proximo_entrenamiento_json|urlencode }}" class="rb-cta">
+    <a href="{% url 'entrenos:briefing_entrenamiento' cliente.id %}?fecha={{ hoy|date:'Y-m-d' }}&rutina_nombre={{ proximo_entrenamiento.rutina_nombre|urlencode }}&ejercicios={{ proximo_entrenamiento_json|urlencode }}" class="rb-cta">
       <i class="fas fa-play"></i> Ejecutar Protocolo
     </a>
     {% else %}

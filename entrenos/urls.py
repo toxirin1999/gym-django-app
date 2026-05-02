@@ -26,6 +26,10 @@ urlpatterns = [
     # VISTAS DEL PLANIFICADOR Y ENTRENAMIENTO ACTIVO (SECCIÓN MODIFICADA)
     # ============================================================================
 
+    # Briefing pre-sesión
+    path('cliente/<int:cliente_id>/briefing/', views.briefing_entrenamiento,
+         name='briefing_entrenamiento'),
+
     # Muestra la página para registrar el entreno
     path('cliente/<int:cliente_id>/entrenamiento-activo/', views.vista_entrenamiento_activo,
          name='entrenamiento_activo'),

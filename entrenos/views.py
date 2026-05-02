@@ -7767,3 +7767,47 @@ def api_apple_health(request):
         'rpe_estimado': actividad.rpe_medio,
         'mensaje': f'Workout {"enriquecido" if accion == "enriched" else "guardado"}: {actividad.titulo}',
     }, status=200 if accion == 'enriched' else 201)
+
+
+def briefing_entrenamiento(request, cliente_id):
+    """Pantalla de briefing pre-sesión de gym — muestra plan, alertas y voz del entrenador."""
+    cliente = get_object_or_404(Cliente, id=cliente_id)
+
+    from datetime import datetime as _dt
+    from django.utils import timezone
+
+    fecha_str = request.GET.get('fecha')
+    fecha_obj = _dt.strptime(fecha_str, '%Y-%m-%d').date() if fecha_str else timezone.now().date()
+
+    rutina_nombre = request.GET.get('rutina_nombre', '')
+    ejercicios_json = request.GET.get('ejercicios', '[]')
+    try:
+        ejercicios = json.loads(ejercicios_json)
+    except Exception:
+        ejercicios = []
+
+    from entrenos.services.briefing_service import get_briefing_gym
+    briefing = get_briefing_gym(cliente, ejercicios, fecha_obj)
+
+    # Inyectar alertas en cada ejercicio para facilitar el template
+    for ej in ejercicios:
+        ej['alertas'] = briefing['alertas_por_ejercicio'].get(ej.get('nombre', ''), [])
+
+    # Construir URL destino para el CTA "Comenzar"
+    from django.urls import reverse
+    import urllib.parse
+    params = urllib.parse.urlencode({
+        'fecha': fecha_str or fecha_obj.strftime('%Y-%m-%d'),
+        'rutina_nombre': rutina_nombre,
+        'ejercicios': ejercicios_json,
+    })
+    url_sesion = f"{reverse('entrenos:entrenamiento_activo', args=[cliente_id])}?{params}"
+
+    return render(request, 'entrenos/briefing_entrenamiento.html', {
+        'cliente': cliente,
+        'fecha': fecha_obj,
+        'rutina_nombre': rutina_nombre,
+        'ejercicios': ejercicios,
+        'briefing': briefing,
+        'url_sesion': url_sesion,
+    })
