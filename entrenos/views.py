@@ -105,6 +105,29 @@ def _reps_reales_tope(entreno, nombre_ejercicio, plan_reps):
     return max(reps_reales, plan_reps)
 
 
+def _sincronizar_rms_hyrox(cliente, nuevos_rms: dict):
+    """Actualiza rm_sentadilla / rm_peso_muerto en HyroxObjective cuando hay un RM nuevo."""
+    try:
+        from hyrox.models import HyroxObjective
+        obj = HyroxObjective.objects.filter(cliente=cliente).order_by('-id').first()
+        if not obj:
+            return
+        campos = {}
+        for nombre, valor in nuevos_rms.items():
+            if 'sentadilla' in nombre or 'squat' in nombre:
+                if obj.rm_sentadilla is None or valor > obj.rm_sentadilla:
+                    campos['rm_sentadilla'] = float(valor)
+            if 'peso muerto' in nombre or 'peso_muerto' in nombre or 'deadlift' in nombre:
+                if obj.rm_peso_muerto is None or valor > obj.rm_peso_muerto:
+                    campos['rm_peso_muerto'] = float(valor)
+        if campos:
+            for k, v in campos.items():
+                setattr(obj, k, v)
+            obj.save(update_fields=list(campos.keys()))
+    except Exception:
+        pass
+
+
 # --- FUNCIÓN DE UTILIDAD PARA OBTENER DATOS DEL ENTRENAMIENTO ANTERIOR ---
 def obtener_ultimo_peso_ejercicio(cliente_id, nombre_ejercicio, fecha_actual):
     """
@@ -3687,9 +3710,11 @@ def vista_entrenamiento_activo(request, cliente_id):
                 except:
                     peso_ant = 0.0
 
-                # Si la última vez fue tope de máquina, sugerir +2.5 kg
+                # Tope de máquina: mismo peso, una rep más
                 if datos_anterior.get('es_tope_maquina') and peso_ant > 0:
-                    ejercicio['peso_inicial_kg'] = round(peso_ant + 2.5, 1)
+                    ejercicio['peso_inicial_kg'] = peso_ant
+                    reps_ant = datos_anterior.get('repeticiones') or 0
+                    ejercicio['reps_sugeridas_tope'] = int(reps_ant) + 1
                     ejercicio['sugerencia_tope'] = True
                 elif peso_ant > 0:
                     ejercicio['peso_inicial_kg'] = peso_ant
@@ -3769,6 +3794,33 @@ def vista_entrenamiento_activo(request, cliente_id):
         messages.error(request, f"Error al cargar los datos del entrenamiento: {e}")
         return redirect('entrenos:vista_plan_anual', cliente_id=cliente.id)
 
+    # ── DELOAD AUTOMÁTICO ─────────────────────────────────────────
+    from entrenos.services.briefing_service import necesita_deload_gym
+    forzar_plan = request.GET.get('forzar_plan') == '1'
+    deload_activo = (not forzar_plan) and necesita_deload_gym(cliente, fecha_obj)
+
+    if deload_activo:
+        for ejercicio in ejercicios_planificados:
+            ejercicio['series'] = max(2, int(ejercicio.get('series', 3)) - 1)
+            ejercicio['rpe_objetivo'] = min(int(ejercicio.get('rpe_objetivo', 8)), 7)
+
+        # Registrar decisión (evitar duplicados en los últimos 7 días)
+        from datetime import timedelta as _td7
+        ya_registrado = GymDecisionLog.objects.filter(
+            cliente=cliente,
+            accion='deload',
+            fecha_creacion__date__gte=fecha_obj - _td7(days=7),
+        ).exists()
+        if not ya_registrado:
+            GymDecisionLog.objects.create(
+                cliente=cliente,
+                ejercicio='(sesión completa)',
+                accion='deload',
+                motivo='RPE/energía acumulada alta — deload automático',
+                peso_anterior=None,
+                reps_anteriores=None,
+            )
+
     # Construir resumen bio para el banner del template
     bio_adjustments = []
     for ej in ejercicios_planificados:
@@ -3809,6 +3861,7 @@ def vista_entrenamiento_activo(request, cliente_id):
         'bio_score': bio_readiness.get('score', 100),
         'bio_adjustments': bio_adjustments,
         'has_bio_adjustments': vol_mod < 1.0 or bool(bio_adjustments),
+        'deload_activo': deload_activo,
     }
 
     # Añadir contexto de gamificación (sin cambios)
@@ -4010,6 +4063,7 @@ def guardar_entrenamiento_activo(request, cliente_id):
                 cliente.one_rm_data = {}
             cliente.one_rm_data.update(nuevos_rms_sesion)
             cliente.save(update_fields=['one_rm_data'])
+            _sincronizar_rms_hyrox(cliente, nuevos_rms_sesion)
             messages.info(request, "¡Récords de fuerza actualizados!")
 
         messages.success(request, "¡Entrenamiento guardado con éxito!")

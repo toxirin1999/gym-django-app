@@ -440,3 +440,120 @@ def revert_gym_impact_on_hyrox(sender, instance, **kwargs):
         import traceback
         print(f"Error revirtiendo SSoT Signal Gym -> Hyrox on delete: {e}")
         traceback.print_exc()
+
+
+# ── Helpers tiempo 5K ─────────────────────────────────────────────────────────
+
+def _segundos(tiempo_str: str):
+    """'MM:SS' o 'HH:MM:SS' → segundos. None si no parseable."""
+    try:
+        parts = str(tiempo_str).strip().split(':')
+        if len(parts) == 2:
+            return int(parts[0]) * 60 + int(parts[1])
+        if len(parts) == 3:
+            return int(parts[0]) * 3600 + int(parts[1]) * 60 + int(parts[2])
+    except Exception:
+        return None
+
+
+def _mmss(segundos: int) -> str:
+    return f"{segundos // 60:02d}:{segundos % 60:02d}"
+
+
+def _tiempo_5k_de_metricas(data: dict):
+    """
+    Extrae el tiempo en segundos de un bloque de carrera de ~5 km.
+    Acepta distancias 4.8–5.5 km. Retorna segundos o None.
+    """
+    dist = None
+    for key in ('distancia_km', 'distancia', 'km'):
+        if key in data:
+            try:
+                dist = float(data[key])
+                break
+            except Exception:
+                pass
+    if dist is None or not (4.8 <= dist <= 5.5):
+        return None
+
+    # Intentar extraer tiempo en distintos formatos
+    for key in ('tiempo', 'tiempo_total', 'duracion', 'tiempo_minutos'):
+        if key in data:
+            val = data[key]
+            # Si es "MM:SS"
+            secs = _segundos(str(val))
+            if secs:
+                return secs
+            # Si es float/int de minutos
+            try:
+                return int(float(val) * 60)
+            except Exception:
+                pass
+
+    # Intentar calcular desde ritmo × distancia
+    for key in ('ritmo_min_km', 'ritmo', 'pace'):
+        if key in data:
+            secs = _segundos(str(data[key]))
+            if secs and dist:
+                return int(secs * dist)
+
+    return None
+
+
+def _actualizar_5k_si_pr(objetivo, tiempo_seg: int):
+    """Actualiza tiempo_5k_base si tiempo_seg es un PR. Retorna True si actualizó."""
+    if not tiempo_seg or tiempo_seg <= 0:
+        return False
+    actual_seg = _segundos(objetivo.tiempo_5k_base) if objetivo.tiempo_5k_base else None
+    if actual_seg is None or tiempo_seg < actual_seg:
+        objetivo.tiempo_5k_base = _mmss(tiempo_seg)
+        objetivo.save(update_fields=['tiempo_5k_base'])
+        return True
+    return False
+
+
+# ── Signal: HyroxSession completada → detectar 5K ─────────────────────────────
+
+@receiver(post_save, sender=HyroxSession)
+def detectar_5k_desde_hyrox_session(sender, instance, created, raw=False, update_fields=None, **kwargs):
+    """Cuando una sesión Hyrox se completa, detecta si hay una carrera de ~5 km y actualiza tiempo_5k_base."""
+    if raw or instance.estado != 'completado':
+        return
+    try:
+        objetivo = instance.objective
+        for act in instance.activities.filter(tipo_actividad='carrera'):
+            tiempo_seg = _tiempo_5k_de_metricas(act.data_metricas or {})
+            if _actualizar_5k_si_pr(objetivo, tiempo_seg):
+                print(f"✅ tiempo_5k_base actualizado → {objetivo.tiempo_5k_base} (HyroxSession {instance.id})")
+                break
+    except Exception as e:
+        print(f"❌ detectar_5k_desde_hyrox_session: {e}")
+
+
+# ── Signal: ActividadRealizada (carreras libres) → detectar 5K ────────────────
+
+from entrenos.models import ActividadRealizada as _ActividadRealizada
+
+@receiver(post_save, sender=_ActividadRealizada)
+def detectar_5k_desde_actividad_libre(sender, instance, created, raw=False, **kwargs):
+    """Cuando se guarda una actividad libre de carrera con ~5 km, actualiza tiempo_5k_base si es PR."""
+    if raw or instance.tipo not in ('carrera', 'hyrox'):
+        return
+    try:
+        from hyrox.models import HyroxObjective
+        objetivo = HyroxObjective.objects.filter(
+            cliente=instance.cliente, estado='activo'
+        ).first()
+        if not objetivo:
+            return
+
+        dist_m = instance.distancia_metros or 0
+        dist_km = dist_m / 1000.0
+        dur = instance.duracion_minutos or 0
+
+        if 4800 <= dist_m <= 5500 and dur > 0:
+            tiempo_seg = int(dur * 60)
+            if _actualizar_5k_si_pr(objetivo, tiempo_seg):
+                print(f"✅ tiempo_5k_base actualizado → {objetivo.tiempo_5k_base} (ActividadLibre {instance.id})")
+    except Exception as e:
+        print(f"❌ detectar_5k_desde_actividad_libre: {e}")

@@ -1,0 +1,315 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Lo que sé de ti</title>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; background: #0E0E0F; }
+  body {
+    --bg: #0E0E0F; --surf: #161618; --surf2: #1E1E21;
+    --bd: rgba(255,255,255,0.08); --ink: #F0EEE8;
+    --td: rgba(240,238,232,0.5); --tdm: rgba(240,238,232,0.28);
+    --ok: #2ECC71; --warn: #F1C40F; --r: #E74C3C; --accent: #00C8FF;
+    --fd: 'Archivo Black', sans-serif; --fu: 'Archivo', sans-serif;
+    --fm: 'JetBrains Mono', monospace;
+    font-family: var(--fu); color: var(--ink);
+    -webkit-font-smoothing: antialiased; overflow-x: hidden;
+  }
+  .wrap { max-width: 480px; margin: 0 auto; padding: 0 16px 60px; }
+
+  /* TOPBAR */
+  .topbar { display: flex; align-items: center; justify-content: space-between; padding: 16px 0 12px; gap: 12px; }
+  .tb-back { display: flex; align-items: center; gap: 6px; font-family: var(--fm); font-size: 11px; font-weight: 700; color: var(--td); text-decoration: none; letter-spacing: .05em; }
+  .tb-back svg { width: 16px; height: 16px; }
+  .tb-label { font-family: var(--fm); font-size: 10px; font-weight: 700; color: var(--tdm); letter-spacing: .12em; text-transform: uppercase; }
+
+  /* HERO */
+  .hero { background: var(--surf); border: 1px solid var(--bd); border-radius: 16px; padding: 20px; margin-bottom: 16px; position: relative; overflow: hidden; }
+  .hero::before { content: ''; position: absolute; inset: 0; background: linear-gradient(135deg, rgba(0,200,255,0.06) 0%, transparent 60%); pointer-events: none; }
+  .hero-eyebrow { font-family: var(--fm); font-size: 10px; color: var(--tdm); letter-spacing: .12em; text-transform: uppercase; margin-bottom: 10px; }
+  .hero-title { font-family: var(--fd); font-size: 28px; color: var(--ink); line-height: 1.1; letter-spacing: -.01em; }
+  .hero-sub { font-family: var(--fm); font-size: 11px; color: var(--td); margin-top: 8px; letter-spacing: .04em; }
+
+  /* SEC HEADER */
+  .sec-hdr { display: flex; align-items: center; gap: 10px; margin: 20px 0 10px; }
+  .sec-tag { font-family: var(--fm); font-size: 9px; font-weight: 700; color: var(--tdm); letter-spacing: .15em; text-transform: uppercase; flex-shrink: 0; }
+  .sec-line { flex: 1; height: 1px; background: var(--bd); }
+
+  /* STAT GRID */
+  .stat-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 4px; }
+  .stat-card { background: var(--surf); border: 1px solid var(--bd); border-radius: 12px; padding: 12px 10px; text-align: center; }
+  .stat-val { font-family: var(--fm); font-size: 22px; font-weight: 700; color: var(--ink); line-height: 1; }
+  .stat-val.ok { color: var(--ok); }
+  .stat-val.warn { color: var(--warn); }
+  .stat-val.accent { color: var(--accent); }
+  .stat-val.na { color: var(--tdm); font-size: 16px; }
+  .stat-lbl { font-family: var(--fm); font-size: 9px; color: var(--tdm); letter-spacing: .08em; text-transform: uppercase; margin-top: 5px; }
+
+  /* LIST ROWS */
+  .row-list { display: flex; flex-direction: column; gap: 6px; }
+  .row { display: flex; align-items: center; gap: 12px; padding: 11px 14px; background: var(--surf); border: 1px solid var(--bd); border-radius: 12px; }
+  .row.ok   { border-left: 3px solid var(--ok); }
+  .row.warn { border-left: 3px solid var(--warn); }
+  .row.bad  { border-left: 3px solid var(--r); }
+  .row.muted{ border-left: 3px solid rgba(255,255,255,0.15); }
+  .row-icon { font-size: 16px; flex-shrink: 0; }
+  .row-body { flex: 1; min-width: 0; }
+  .row-name { font-size: 13px; font-weight: 700; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .row-sub  { font-family: var(--fm); font-size: 10px; color: var(--td); margin-top: 2px; line-height: 1.4; }
+  .row-val  { font-family: var(--fm); font-size: 14px; font-weight: 700; color: var(--ink); flex-shrink: 0; }
+  .row-val.ok   { color: var(--ok); }
+  .row-val.warn { color: var(--warn); }
+  .row-val.bad  { color: var(--r); }
+  .row-val.accent { color: var(--accent); }
+
+  /* BADGE */
+  .badge { display: inline-block; font-family: var(--fm); font-size: 9px; font-weight: 700; padding: 2px 7px; border-radius: 6px; border: 1px solid; letter-spacing: .04em; text-transform: uppercase; margin-top: 4px; }
+  .badge.ok   { color: var(--ok);   border-color: rgba(46,204,113,.3);  background: rgba(46,204,113,.1); }
+  .badge.warn { color: var(--warn); border-color: rgba(241,196,15,.3);  background: rgba(241,196,15,.1); }
+  .badge.bad  { color: var(--r);    border-color: rgba(231,76,60,.3);   background: rgba(231,76,60,.1); }
+
+  /* BIAS CARD */
+  .bias-card { background: var(--surf); border: 1px solid var(--bd); border-radius: 12px; padding: 14px 16px; }
+  .bias-num  { font-family: var(--fm); font-size: 32px; font-weight: 700; line-height: 1; }
+  .bias-label { font-family: var(--fm); font-size: 10px; color: var(--tdm); letter-spacing: .08em; text-transform: uppercase; margin-top: 4px; }
+  .bias-desc  { font-size: 12px; color: var(--td); margin-top: 8px; line-height: 1.5; }
+
+  /* EMPTY */
+  .empty { font-family: var(--fm); font-size: 11px; color: var(--tdm); text-align: center; padding: 16px; }
+
+  /* DECISIONES SUMMARY */
+  .dec-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .dec-card { background: var(--surf); border: 1px solid var(--bd); border-radius: 12px; padding: 12px; }
+  .dec-num  { font-family: var(--fm); font-size: 24px; font-weight: 700; }
+  .dec-lbl  { font-family: var(--fm); font-size: 10px; color: var(--tdm); text-transform: uppercase; letter-spacing: .08em; margin-top: 3px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <a href="javascript:history.back()" class="tb-back">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+      Volver
+    </a>
+    <span class="tb-label">Memoria · Sistema</span>
+    <span style="min-width:48px;"></span>
+  </div>
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-eyebrow">{{ cliente.nombre }}</div>
+    <div class="hero-title">Lo que sé<br>de ti</div>
+    <div class="hero-sub">Todo lo que el sistema ha aprendido de tus sesiones, patrones y respuestas.</div>
+  </div>
+
+  <!-- PATRONES DE CARGA -->
+  <div class="sec-hdr"><span class="sec-tag">Patrones de carga · 28 días</span><div class="sec-line"></div></div>
+  <div class="stat-grid">
+    <div class="stat-card">
+      {% if sesiones_semana %}
+        <div class="stat-val {% if sesiones_semana >= 3 %}ok{% elif sesiones_semana < 2 %}warn{% endif %}">{{ sesiones_semana }}</div>
+      {% else %}
+        <div class="stat-val na">—</div>
+      {% endif %}
+      <div class="stat-lbl">Sesiones/sem</div>
+    </div>
+    <div class="stat-card">
+      {% if rpe_medio_gym %}
+        <div class="stat-val {% if rpe_medio_gym >= 8.5 %}warn{% elif rpe_medio_gym <= 6 %}ok{% endif %}">{{ rpe_medio_gym }}</div>
+      {% else %}
+        <div class="stat-val na">—</div>
+      {% endif %}
+      <div class="stat-lbl">RPE medio gym</div>
+    </div>
+    <div class="stat-card">
+      {% if energia_media %}
+        <div class="stat-val {% if energia_media <= 4 %}warn{% elif energia_media >= 7 %}ok{% endif %}">{{ energia_media }}</div>
+      {% else %}
+        <div class="stat-val na">—</div>
+      {% endif %}
+      <div class="stat-lbl">Energía media</div>
+    </div>
+  </div>
+
+  <!-- PERFIL ATLÉTICO (1RM) -->
+  {% if perfil_atletico %}
+  <div class="sec-hdr"><span class="sec-tag">Perfil de fuerza</span><div class="sec-line"></div></div>
+  <div class="row-list">
+    {% for item in perfil_atletico %}
+    <div class="row ok">
+      <span class="row-icon">🏋️</span>
+      <div class="row-body">
+        <div class="row-name">{{ item.ejercicio }}</div>
+        <div class="row-sub">1RM estimado</div>
+      </div>
+      <span class="row-val accent">{{ item.rm }} kg</span>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- HYROX -->
+  {% if hyrox_obj %}
+
+  <!-- Perfil Hyrox -->
+  <div class="sec-hdr"><span class="sec-tag">Hyrox · perfil base</span><div class="sec-line"></div></div>
+  <div class="stat-grid">
+    <div class="stat-card">
+      {% if hyrox_obj.rm_sentadilla %}
+        <div class="stat-val ok">{{ hyrox_obj.rm_sentadilla }}</div>
+      {% else %}
+        <div class="stat-val na">—</div>
+      {% endif %}
+      <div class="stat-lbl">Squat RM kg</div>
+    </div>
+    <div class="stat-card">
+      {% if hyrox_obj.rm_peso_muerto %}
+        <div class="stat-val ok">{{ hyrox_obj.rm_peso_muerto }}</div>
+      {% else %}
+        <div class="stat-val na">—</div>
+      {% endif %}
+      <div class="stat-lbl">Deadlift RM kg</div>
+    </div>
+    <div class="stat-card">
+      {% if hyrox_obj.tiempo_5k_base %}
+        <div class="stat-val accent">{{ hyrox_obj.tiempo_5k_base }}</div>
+      {% else %}
+        <div class="stat-val na">—</div>
+      {% endif %}
+      <div class="stat-lbl">5K base</div>
+    </div>
+  </div>
+
+  <!-- Calibración RPE -->
+  {% if rpe_bias %}
+  <div class="sec-hdr"><span class="sec-tag">Calibración de esfuerzo</span><div class="sec-line"></div></div>
+  <div class="bias-card">
+    <div style="display:flex;align-items:flex-end;gap:12px;">
+      <div>
+        <div class="bias-num" style="color:{% if rpe_bias.bias > 0 %}var(--warn){% else %}var(--accent){% endif %}">
+          {% if rpe_bias.bias > 0 %}+{% endif %}{{ rpe_bias.bias }}
+        </div>
+        <div class="bias-label">Sesgo RPE · {{ rpe_bias.n_sesiones }} sesiones</div>
+      </div>
+      <span class="badge {% if rpe_bias.nivel == 'severo' %}bad{% else %}warn{% endif %}">{{ rpe_bias.nivel }}</span>
+    </div>
+    <div class="bias-desc">
+      {% if rpe_bias.bias > 0 %}
+        Tiendes a <strong>sobreestimar</strong> el esfuerzo: reportas más RPE del que indica tu FC. El plan ajusta los umbrales internamente.
+      {% else %}
+        Tiendes a <strong>subestimar</strong> el esfuerzo: tu FC real supera lo que indica tu RPE. Los triggers de adaptación se calibran a tu escala real.
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Estaciones Hyrox -->
+  {% if estaciones_progreso %}
+  <div class="sec-hdr"><span class="sec-tag">Progreso por estación</span><div class="sec-line"></div></div>
+  <div class="row-list">
+    {% for e in estaciones_progreso %}
+    <div class="row {% if e.estancada %}warn{% elif e.mejora_pct > 5 %}ok{% else %}muted{% endif %}">
+      <span class="row-icon">{% if e.estancada %}⚡{% elif e.mejora_pct > 5 %}📈{% else %}➡️{% endif %}</span>
+      <div class="row-body">
+        <div class="row-name">{{ e.estacion }}</div>
+        <div class="row-sub">
+          {{ e.sesiones }} sesiones · mejor {{ e.mejor_seg }}s
+          {% if e.estancada %}<br><em>{{ e.sugerencia }}</em>{% endif %}
+        </div>
+      </div>
+      <span class="row-val {% if e.estancada %}warn{% elif e.mejora_pct > 0 %}ok{% else %}bad{% endif %}">
+        {% if e.mejora_pct > 0 %}+{% endif %}{{ e.mejora_pct }}%
+      </span>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% endif %}{# /hyrox_obj #}
+
+  <!-- RÉCORDS PERSONALES -->
+  {% if records %}
+  <div class="sec-hdr"><span class="sec-tag">Récords personales</span><div class="sec-line"></div></div>
+  <div class="row-list">
+    {% for r in records %}
+    <div class="row ok">
+      <span class="row-icon">🏆</span>
+      <div class="row-body">
+        <div class="row-name">{{ r.ejercicio_nombre }}</div>
+        <div class="row-sub">{{ r.fecha_logrado|date:"d M Y" }}</div>
+      </div>
+      <span class="row-val ok">{{ r.valor }} kg</span>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- DECISIONES DEL PLAN -->
+  {% if decisiones_total > 0 %}
+  <div class="sec-hdr"><span class="sec-tag">Decisiones tomadas · 90 días</span><div class="sec-line"></div></div>
+  <div class="dec-grid">
+    {% if decisiones_agrupadas.deload %}
+    <div class="dec-card">
+      <div class="dec-num" style="color:var(--warn)">{{ decisiones_agrupadas.deload|length }}</div>
+      <div class="dec-lbl">Deloads</div>
+    </div>
+    {% endif %}
+    {% if decisiones_agrupadas.cambiar_variante %}
+    <div class="dec-card">
+      <div class="dec-num" style="color:var(--accent)">{{ decisiones_agrupadas.cambiar_variante|length }}</div>
+      <div class="dec-lbl">Variantes</div>
+    </div>
+    {% endif %}
+    {% if decisiones_agrupadas.mantener %}
+    <div class="dec-card">
+      <div class="dec-num" style="color:var(--td)">{{ decisiones_agrupadas.mantener|length }}</div>
+      <div class="dec-lbl">Mantenidos</div>
+    </div>
+    {% endif %}
+    {% if decisiones_agrupadas.subir_peso %}
+    <div class="dec-card">
+      <div class="dec-num" style="color:var(--ok)">{{ decisiones_agrupadas.subir_peso|length }}</div>
+      <div class="dec-lbl">Subidas</div>
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <!-- ZONAS DE ATENCIÓN -->
+  {% if zonas_atencion or lesiones_activas %}
+  <div class="sec-hdr"><span class="sec-tag">Zonas de atención</span><div class="sec-line"></div></div>
+  <div class="row-list">
+    {% for l in lesiones_activas %}
+    <div class="row bad">
+      <span class="row-icon">🩹</span>
+      <div class="row-body">
+        <div class="row-name">{{ l.zona_afectada }}</div>
+        <div class="row-sub">Lesión activa · fase {{ l.fase }}</div>
+      </div>
+    </div>
+    {% endfor %}
+    {% for z in zonas_atencion %}
+    <div class="row warn">
+      <span class="row-icon">⚠️</span>
+      <div class="row-body">
+        <div class="row-name">{{ z.ejercicio }}</div>
+        <div class="row-sub">{{ z.motivo|truncatechars:60 }}</div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if not perfil_atletico and not records and not estaciones_progreso and decisiones_total == 0 %}
+  <div class="empty">Aún no hay suficientes datos. El sistema aprende con cada sesión completada.</div>
+  {% endif %}
+
+</div>
+</body>
+</html>

@@ -980,6 +980,21 @@ input{background:transparent!important;border:none!important;outline:none!import
   <span class="tb-pct" id="tb-pct">0%</span>
 </div>
 
+<!-- ══ BANNER DELOAD ══ -->
+{% if deload_activo %}
+<div style="margin:0 16px 12px;padding:14px 16px;background:rgba(241,196,15,0.08);border:1px solid rgba(241,196,15,0.25);border-radius:12px;display:flex;align-items:flex-start;gap:12px;">
+  <span style="font-size:20px;flex-shrink:0;margin-top:1px;">🔄</span>
+  <div style="flex:1;">
+    <div style="font-size:13px;font-weight:700;color:#F1C40F;margin-bottom:3px;">Semana de descarga automática</div>
+    <div style="font-size:12px;color:rgba(240,238,232,0.6);line-height:1.4;">El sistema ha reducido 1 serie por ejercicio y el RPE máximo a 7. Recupera sin culpa — el plan lo sabe.</div>
+    <a href="?fecha={{ fecha }}&rutina_nombre={{ rutina_nombre|urlencode }}&ejercicios={{ request.GET.ejercicios|urlencode }}&forzar_plan=1"
+       style="display:inline-block;margin-top:8px;font-size:11px;color:rgba(240,238,232,0.4);text-decoration:underline;">
+      Ignorar y usar plan original
+    </a>
+  </div>
+</div>
+{% endif %}
+
 <!-- ══ BANNER BIO-SAFETY ══ -->
 {% if has_bio_adjustments %}
 <div class="bio-banner" id="bio-banner">
@@ -1045,7 +1060,7 @@ input{background:transparent!important;border:none!important;outline:none!import
   <input type="hidden" name="{{ ejercicio.form_id }}_molestia_severidad" id="mol-sev-{{ ejercicio.form_id }}" value="">
   <input type="hidden" name="{{ ejercicio.form_id }}_molestia_descripcion" id="mol-desc-{{ ejercicio.form_id }}" value="">
   <!-- Tope de máquina -->
-  <input type="hidden" name="{{ ejercicio.form_id }}_es_tope_maquina" id="tope-{{ ejercicio.form_id }}" value="false">
+  <input type="hidden" name="{{ ejercicio.form_id }}_es_tope_maquina" id="tope-{{ ejercicio.form_id }}" value="{% if ejercicio.sugerencia_tope %}true{% else %}false{% endif %}">
 
   <!-- NOMBRE -->
   <div class="exname">
@@ -1063,9 +1078,9 @@ input{background:transparent!important;border:none!important;outline:none!import
           Molestia
         </button>
         {% if ejercicio.usa_peso %}
-        <button type="button" class="btn-tope-maquina" id="tope-btn-{{ ejercicio.form_id }}"
+        <button type="button" class="btn-tope-maquina{% if ejercicio.sugerencia_tope %} activo{% endif %}" id="tope-btn-{{ ejercicio.form_id }}"
                 onclick="toggleTopeMaquina('{{ ejercicio.form_id }}')"
-                title="El peso de la máquina no llega al recomendado">
+                title="{% if ejercicio.sugerencia_tope %}Tope activado: progresa por reps, no por peso{% else %}El peso de la máquina no llega al recomendado{% endif %}">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>
           Tope
         </button>
@@ -1081,7 +1096,7 @@ input{background:transparent!important;border:none!important;outline:none!import
       <span class="exname-chip chip-n">Última: {{ ejercicio.peso_anterior_kg }}kg</span>
       {% endif %}
       {% if ejercicio.sugerencia_tope %}
-      <span class="exname-chip" style="background:rgba(46,204,113,0.15);color:#2ECC71;border:1px solid rgba(46,204,113,0.3);" title="La última vez llegaste al tope — sugerimos subir 2.5 kg">🔝 +2.5 kg</span>
+      <span class="exname-chip" style="background:rgba(46,204,113,0.15);color:#2ECC71;border:1px solid rgba(46,204,113,0.3);" title="La última vez llegaste al tope — mismo peso, una rep más">🔝 +1 rep{% if ejercicio.reps_sugeridas_tope %} ({{ ejercicio.reps_sugeridas_tope }}){% endif %}</span>
       {% endif %}
       {% if ejercicio.estancado %}
       <span class="exname-chip" style="background:rgba(241,196,15,0.15);color:#F1C40F;border:1px solid rgba(241,196,15,0.3);" title="Sin progresión en 3 sesiones — prueba una variante o cambia el rango de reps">⚡ Estancado</span>

@@ -163,15 +163,21 @@ class HyroxObjective(models.Model):
         # El floor artificial (max(score,25) si pct_tecnica>50) ha sido eliminado:
         # daba falsa sensación de preparación aunque el atleta no corriera ni simulara.
 
-        # ── Penalización por carga acumulada del gym (últimos 5 días) ──────
-        # Si el atleta viene de días pesados de gym, su readiness Hyrox baja.
+        # ── Penalización por carga acumulada del gym (últimos 7 días) ──────
         try:
             from hyrox.training_engine import HyroxTrainingEngine
-            gym_load = HyroxTrainingEngine._get_gym_external_load(self.cliente, dias=5)
+            gym_load = HyroxTrainingEngine._get_gym_external_load(self.cliente, dias=7)
             if gym_load['fatiga_gym'] == 'Alta':
-                score -= 8   # carga de gym muy alta: impacto directo en readiness
+                penalizacion = 10
+                # Piernas fatigadas impactan más (carrera + wall balls + sled)
+                if gym_load.get('fatiga_piernas'):
+                    penalizacion += 5
+                score -= penalizacion
             elif gym_load['fatiga_gym'] == 'Media':
-                score -= 4   # carga moderada: penalización menor
+                penalizacion = 5
+                if gym_load.get('fatiga_piernas'):
+                    penalizacion += 3
+                score -= penalizacion
         except Exception:
             pass
 
@@ -260,11 +266,11 @@ class HyroxObjective(models.Model):
     def get_daily_push(self):
         """
         Phase 11: Push Dinámico
-        Genera un mensaje diario personalizado basado en los días restantes al evento y el último RPE.
+        Genera un mensaje diario personalizado basado en el estado real del atleta.
         """
         from django.utils import timezone
-        
-        # Check active injury for safety message
+
+        # Lesión activa — prioridad máxima
         from hyrox.models import UserInjury
         lesion = UserInjury.objects.filter(cliente=self.cliente, activa=True).first()
         if lesion:
@@ -273,15 +279,93 @@ class HyroxObjective(models.Model):
             else:
                 return "Sesión adaptada por seguridad. Seguimos sumando sin comprometer tu recuperación a largo plazo."
 
+        # Fatiga de gym — cruce directo gym → Hyrox
+        try:
+            from hyrox.training_engine import HyroxTrainingEngine
+            gym_load = HyroxTrainingEngine._get_gym_external_load(self.cliente, dias=3)
+            if gym_load['fatiga_gym'] == 'Alta':
+                if gym_load.get('fatiga_piernas'):
+                    return (
+                        f"Llevas {gym_load['entrenos_count']} sesiones de gym esta semana con trabajo de piernas intenso "
+                        f"(RPE {gym_load['rpe_medio_gym']}). Hoy en Hyrox: reduce la carga en carrera y Wall Balls. "
+                        f"SkiErg y Remo pueden ir a tope."
+                    )
+                elif gym_load.get('fatiga_torso'):
+                    return (
+                        f"{gym_load['entrenos_count']} sesiones de gym con torso intenso esta semana "
+                        f"(RPE {gym_load['rpe_medio_gym']}). Hoy prioriza carrera y Sled. "
+                        f"Da margen al SkiErg y Remo."
+                    )
+                else:
+                    return (
+                        f"Alta carga de gym esta semana ({gym_load['entrenos_count']} sesiones, "
+                        f"RPE {gym_load['rpe_medio_gym']}). Sesión Hyrox al 70% hoy — calidad sobre cantidad."
+                    )
+            elif gym_load['fatiga_gym'] == 'Media' and gym_load.get('fatiga_piernas'):
+                return (
+                    f"Gym con piernas hace poco (RPE {gym_load['rpe_medio_gym']}). "
+                    f"Hoy en carrera baja el ritmo un escalón — deja que las piernas terminen de recuperar."
+                )
+        except Exception:
+            pass
+
+        # Estancamiento en estación de la sesión de hoy
+        try:
+            from hyrox.training_engine import StagnationEngine, HyroxTrainingEngine
+            hoy_date = timezone.now().date()
+            sesion_hoy = self.sessions.filter(fecha=hoy_date, estado='planificado').first()
+            if sesion_hoy:
+                _NOMBRE_CANON_D = {
+                    'skierg': 'SkiErg', 'sled push': 'Sled Push', 'sled pull': 'Sled Pull',
+                    'burpee broad jump': 'Burpee Broad Jumps', 'rowing': 'Rowing', 'remo': 'Rowing',
+                    'farmer': 'Farmers Carry', 'sandbag': 'Sandbag Lunges', 'wall ball': 'Wall Balls',
+                }
+                _TIPOS = ('hyrox_station', 'ergometro', 'skierg', 'remo')
+                _all_acts = HyroxActivity.objects.filter(  # HyroxActivity definida en este mismo módulo
+                    sesion__objective=self, sesion__estado='completado',
+                    tipo_actividad__in=_TIPOS,
+                ).exclude(data_metricas={}).select_related('sesion').order_by('sesion__fecha')
+
+                _tiempos = {}
+                for _a in _all_acts:
+                    _t = _a.data_metricas.get('tiempo_segundos') or _a.data_metricas.get('tiempo_s')
+                    if not _t or int(_t) <= 0:
+                        continue
+                    _nl = (_a.nombre_ejercicio or '').lower()
+                    _c = next((v for k, v in _NOMBRE_CANON_D.items() if k in _nl), None)
+                    if _c:
+                        _tiempos.setdefault(_c, []).append(int(_t))
+
+                # Estaciones planificadas para hoy
+                _estaciones_hoy = set()
+                for _act in sesion_hoy.activities.filter(tipo_actividad__in=_TIPOS):
+                    _nl = (_act.nombre_ejercicio or '').lower()
+                    _c = next((v for k, v in _NOMBRE_CANON_D.items() if k in _nl), None)
+                    if _c:
+                        _estaciones_hoy.add(_c)
+
+                _stag = StagnationEngine.check(_tiempos)
+                _estancadas_hoy = [
+                    (st, info) for st, info in _stag.items()
+                    if info.get('estancada') and st in _estaciones_hoy
+                    and info.get('sesiones_analizadas', 0) >= 3
+                ]
+                if _estancadas_hoy:
+                    _st, _info = _estancadas_hoy[0]
+                    return f"{_st} lleva {_info['sesiones_analizadas']} sesiones sin mejorar. Hoy: {_info['sugerencia']}"
+        except Exception:
+            pass
+
+        # RPE alto en última sesión Hyrox
         last_session = self.sessions.filter(estado='completado').order_by('-fecha').first()
         if last_session and last_session.rpe_global and last_session.rpe_global >= 9:
             return "Prioridad hoy: Recuperación estratégica. Tu cuerpo está asimilando el trabajo pesado de ayer."
-            
+
         if self.fecha_evento:
             days_left = (self.fecha_evento - timezone.now().date()).days
             if 0 < days_left < 30:
                 return f"Estamos a {days_left} días de la prueba. Cada bloque cuenta para el resultado final."
-                
+
         return "Hoy es un buen día para el orden y la disciplina. ¿Listo para sumar?"
 
 class HyroxSession(models.Model):

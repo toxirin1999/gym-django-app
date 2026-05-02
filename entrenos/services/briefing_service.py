@@ -1,6 +1,85 @@
 from datetime import date, timedelta
 
 
+def _get_rpe_bias(cliente):
+    """
+    Devuelve el sesgo RPE del usuario desde sus sesiones Hyrox.
+    bias > 0 → sobreestima (dice 8, es 6). bias < 0 → subestima.
+    Retorna 0.0 si no hay datos suficientes.
+    """
+    try:
+        from hyrox.models import HyroxObjective
+        from hyrox.training_engine import RPECalibrator
+        obj = HyroxObjective.objects.filter(cliente=cliente, estado='activo').first()
+        if not obj:
+            return 0.0
+        info = RPECalibrator.get_bias(obj)
+        if info['nivel'] == 'insuficiente':
+            return 0.0
+        return info['bias']
+    except Exception:
+        return 0.0
+
+
+def necesita_deload_gym(cliente, hoy=None):
+    """
+    Retorna True si el cliente acumula suficiente fatiga para una semana de descarga.
+    Criterio A: RPE medio ≥ 8.5 últimas 2 semanas (≥4 sesiones) Y RPE ≥ 8.0 las 2 semanas previas.
+    Criterio B: Energía media ≤ 3.5 últimas 2 semanas (≥3 sesiones).
+    """
+    from entrenos.models import EntrenoRealizado, EjercicioRealizado
+
+    hoy = hoy or date.today()
+    hace_14 = hoy - timedelta(days=14)
+    hace_28 = hoy - timedelta(days=28)
+
+    recientes = EntrenoRealizado.objects.filter(
+        cliente=cliente, fecha__range=(hace_14, hoy)
+    ).prefetch_related('ejercicios_realizados')
+
+    if recientes.count() < 3:
+        return False
+
+    rpes_rec = [
+        float(ej.rpe)
+        for e in recientes
+        for ej in e.ejercicios_realizados.all()
+        if ej.rpe is not None
+    ]
+    rpe_rec = sum(rpes_rec) / len(rpes_rec) if rpes_rec else None
+
+    energias = [e.energia_pre_sesion for e in recientes if e.energia_pre_sesion is not None]
+    energia_media = sum(energias) / len(energias) if energias else None
+
+    # Criterio B: energía crónicamente baja
+    if energia_media is not None and energia_media <= 3.5 and recientes.count() >= 3:
+        return True
+
+    # Aplicar calibración personal de RPE (sesgo detectado desde sesiones Hyrox)
+    bias = _get_rpe_bias(cliente)
+    # bias > 0 → sobreestima: corregir restando el sesgo
+    def _rpe_calibrado(rpe_raw):
+        return rpe_raw - bias if abs(bias) >= 1.0 else rpe_raw
+
+    # Criterio A: RPE calibrado alto 2 semanas seguidas
+    rpe_rec_cal = _rpe_calibrado(rpe_rec) if rpe_rec is not None else None
+    if rpe_rec_cal is not None and rpe_rec_cal >= 8.5 and recientes.count() >= 4:
+        previas = EntrenoRealizado.objects.filter(
+            cliente=cliente, fecha__range=(hace_28, hace_14)
+        ).prefetch_related('ejercicios_realizados')
+        rpes_prev = [
+            float(ej.rpe)
+            for e in previas
+            for ej in e.ejercicios_realizados.all()
+            if ej.rpe is not None
+        ]
+        rpe_prev = sum(rpes_prev) / len(rpes_prev) if rpes_prev else None
+        if rpe_prev is not None and _rpe_calibrado(rpe_prev) >= 8.0:
+            return True
+
+    return False
+
+
 def get_briefing_gym(cliente, ejercicios_planificados, fecha):
     """
     Genera el contenido del briefing pre-sesión de gym.
@@ -60,8 +139,8 @@ def get_briefing_gym(cliente, ejercicios_planificados, fecha):
             entreno__fecha__gte=dos_semanas,
         ).order_by('-entreno__fecha').first()
         if tope_ej:
-            peso_sugerido = round(float(tope_ej.peso_kg or 0) + 2.5, 1)
-            alertas.append({'tipo': 'tope', 'icono': '🔝', 'texto': f'Tope alcanzado — prueba {peso_sugerido} kg'})
+            reps_tope = int(tope_ej.repeticiones or 0)
+            alertas.append({'tipo': 'tope', 'icono': '🔝', 'texto': f'Tope de máquina — mismo peso, apunta a {reps_tope + 1} reps'})
 
         # Técnica comprometida reciente
         from entrenos.models import SerieRealizada, EjercicioBase
@@ -148,7 +227,31 @@ def get_briefing_gym(cliente, ejercicios_planificados, fecha):
         mensajes.append({
             'icono': '🔝',
             'tipo': 'tope',
-            'texto': f'{nombres_str}: llegaste al tope la última vez. Hoy sube el peso (+2.5 kg) y baja las reps.',
+            'texto': f'{nombres_str}: llegaste al tope de la máquina. Mismo peso — intenta hacer una rep más.',
+        })
+
+    # Calibración RPE personal
+    bias = _get_rpe_bias(cliente)
+    if abs(bias) >= 1.5:
+        dir_bias = "sobreestimas" if bias > 0 else "subestimas"
+        ajuste = "el plan sube los umbrales de carga" if bias > 0 else "el plan baja los umbrales de carga"
+        mensajes.append({
+            'icono': '⚖️',
+            'tipo': 'ok',
+            'texto': (
+                f"Tu escala RPE: {dir_bias} el esfuerzo en ~{abs(bias):.1f} puntos vs tu FC real. "
+                f"{ajuste.capitalize()} para compensar."
+            ),
+        })
+
+    # Deload automático
+    deload = necesita_deload_gym(cliente, hoy)
+    if deload:
+        razon = 'energía crónicamente baja' if (energia_media and energia_media <= 3.5) else f'RPE medio {rpe_medio} durante 4+ semanas'
+        mensajes.insert(0, {
+            'icono': '🔄',
+            'tipo': 'carga',
+            'texto': f'SEMANA DE DESCARGA — {razon}. El volumen se ha reducido automáticamente. Recupera sin culpa.',
         })
 
     # Sin alertas — sesión limpia
@@ -160,10 +263,57 @@ def get_briefing_gym(cliente, ejercicios_planificados, fecha):
                 'texto': 'Sin alertas activas. Sigue el plan — todo en orden.',
             })
 
+    # ── Comparativa temporal por ejercicio ────────────────────────
+    comparativas = _comparativa_temporal(cliente, nombres_hoy, hoy)
+
     return {
         'mensajes': mensajes,
         'rpe_medio': rpe_medio,
         'energia_media': energia_media,
         'num_sesiones_recientes': num_sesiones_recientes,
         'alertas_por_ejercicio': alertas_por_ejercicio,
+        'comparativas': comparativas,
+        'necesita_deload': deload,
     }
+
+
+def _comparativa_temporal(cliente, nombres, hoy):
+    """
+    Para cada ejercicio de la sesión, compara el mejor peso del último mes
+    con el del mes anterior. Devuelve lista de mejoras > 2%.
+    """
+    from entrenos.models import EjercicioRealizado
+    from django.db.models import Max
+
+    hace_30 = hoy - timedelta(days=30)
+    hace_60 = hoy - timedelta(days=60)
+
+    comparativas = []
+    for nombre in nombres:
+        qs = EjercicioRealizado.objects.filter(
+            entreno__cliente=cliente,
+            nombre_ejercicio__iexact=nombre,
+            peso_kg__gt=0,
+        )
+        mes_actual = qs.filter(
+            entreno__fecha__range=(hace_30, hoy)
+        ).aggregate(mx=Max('peso_kg'))['mx']
+
+        mes_anterior = qs.filter(
+            entreno__fecha__range=(hace_60, hace_30)
+        ).aggregate(mx=Max('peso_kg'))['mx']
+
+        if not mes_actual or not mes_anterior:
+            continue
+
+        pct = round((float(mes_actual) - float(mes_anterior)) / float(mes_anterior) * 100, 1)
+        if pct >= 2:
+            comparativas.append({
+                'ejercicio': nombre,
+                'pct': pct,
+                'peso_antes': float(mes_anterior),
+                'peso_ahora': float(mes_actual),
+            })
+
+    comparativas.sort(key=lambda x: x['pct'], reverse=True)
+    return comparativas[:3]  # máximo 3 para no saturar
