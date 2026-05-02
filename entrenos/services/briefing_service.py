@@ -266,8 +266,16 @@ def get_briefing_gym(cliente, ejercicios_planificados, fecha):
     # ── Comparativa temporal por ejercicio ────────────────────────
     comparativas = _comparativa_temporal(cliente, nombres_hoy, hoy)
 
+    # ── Voz del entrenador — instrucciones concretas ───────────────
+    try:
+        from entrenos.services.voz_entrenador_service import get_instrucciones
+        instrucciones = get_instrucciones(cliente, nombres_hoy, hoy)
+    except Exception:
+        instrucciones = []
+
     return {
         'mensajes': mensajes,
+        'instrucciones': instrucciones,
         'rpe_medio': rpe_medio,
         'energia_media': energia_media,
         'num_sesiones_recientes': num_sesiones_recientes,

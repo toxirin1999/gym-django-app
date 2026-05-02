@@ -118,6 +118,44 @@
     letter-spacing: .08em; text-transform: uppercase; margin-top: 5px;
   }
 
+  /* ── VOZ DEL ENTRENADOR (instrucciones) ─────── */
+  .voz-card {
+    background: var(--surf2); border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 14px; overflow: hidden; margin-bottom: 4px;
+  }
+  .voz-header {
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 14px 8px; border-bottom: 1px solid var(--bd);
+  }
+  .voz-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); flex-shrink:0; }
+  .voz-label {
+    font-family: var(--fm); font-size: 9px; font-weight: 700;
+    color: var(--accent); letter-spacing: .15em; text-transform: uppercase;
+  }
+  .voz-item {
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--bd);
+  }
+  .voz-item:last-child { border-bottom: none; }
+  .voz-icono { font-size: 17px; flex-shrink: 0; margin-top: 2px; }
+  .voz-body { flex: 1; min-width: 0; }
+  .voz-ejercicio {
+    font-family: var(--fm); font-size: 9px; font-weight: 700;
+    color: var(--td); letter-spacing: .1em; text-transform: uppercase;
+    margin-bottom: 3px;
+  }
+  .voz-instruccion {
+    font-size: 14px; font-weight: 700; color: var(--ink); line-height: 1.3;
+    margin-bottom: 3px;
+  }
+  .voz-razon {
+    font-size: 11px; color: var(--tdm); line-height: 1.4;
+  }
+  .voz-item.critica .voz-instruccion { color: var(--r); }
+  .voz-item.alerta  .voz-instruccion { color: var(--warn); }
+  .voz-item.positivo .voz-instruccion { color: var(--ok); }
+
   /* ── MENSAJES DEL ENTRENADOR ─────────────────── */
   .msg-list { display: flex; flex-direction: column; gap: 8px; }
   .msg-row {
@@ -277,10 +315,32 @@
     </div>
   </div>
 
-  <!-- VOZ DEL ENTRENADOR -->
+  <!-- VOZ DEL ENTRENADOR — instrucciones concretas -->
+  {% if briefing.instrucciones %}
+  <div class="voz-card">
+    <div class="voz-header">
+      <div class="voz-dot"></div>
+      <span class="voz-label">Tu entrenador dice</span>
+    </div>
+    {% for ins in briefing.instrucciones %}
+    <div class="voz-item {{ ins.prioridad }}">
+      <span class="voz-icono">{{ ins.icono }}</span>
+      <div class="voz-body">
+        {% if ins.ejercicio %}
+        <div class="voz-ejercicio">{{ ins.ejercicio }}</div>
+        {% endif %}
+        <div class="voz-instruccion">{{ ins.instruccion }}</div>
+        <div class="voz-razon">{{ ins.razon }}</div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- Contexto de estado -->
   {% if briefing.mensajes %}
   <div class="sec-hdr">
-    <span class="sec-tag">El entrenador dice</span>
+    <span class="sec-tag">Estado · últimas 2 semanas</span>
     <div class="sec-line"></div>
   </div>
   <div class="msg-list">
