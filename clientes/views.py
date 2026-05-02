@@ -4501,6 +4501,10 @@ def memoria_entrenador(request, cliente_id):
     except Exception:
         pass
 
+    # ── 7. MODELO PROGRESIVO DEL USUARIO (Capa 3) ────────────────────────────
+    from entrenos.services.modelo_usuario_service import get_modelo_usuario
+    modelo_usuario = get_modelo_usuario(cliente, hoy)
+
     context = {
         'cliente': cliente,
         'perfil_atletico': perfil_atletico,
@@ -4515,5 +4519,6 @@ def memoria_entrenador(request, cliente_id):
         'energia_media': energia_media,
         'zonas_atencion': zonas_atencion,
         'lesiones_activas': lesiones_activas,
+        'modelo': modelo_usuario,
     }
     return render(request, 'clientes/memoria_entrenador.html', context)
