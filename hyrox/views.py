@@ -578,6 +578,7 @@ def hyrox_dashboard(request):
         tiempos_acum = {}       # {canon: [secs, ...]}
         tiempos_por_semana = {} # {canon: {(year, week): [secs, ...]}}
         tiempos_por_mes = {}    # {canon: {(year, month): [secs, ...]}}
+        rpes_acum = {}          # {canon: [rpe, ...]}
 
         from django.db.models import Q as _Q
         _STATION_TIPOS = ('hyrox_station', 'ergometro', 'skierg', 'remo')
@@ -589,6 +590,20 @@ def hyrox_dashboard(request):
             _Q(data_metricas__tiempo_segundos__isnull=False) |
             _Q(data_metricas__tiempo_s__isnull=False)
         ).select_related('sesion').order_by('sesion__fecha', 'sesion__id')
+
+        # También recogemos actividades con RPE aunque no tengan tiempo
+        acts_rpe = HyroxActivity.objects.filter(
+            sesion__objective=objetivo_activo,
+            sesion__estado='completado',
+            tipo_actividad__in=_STATION_TIPOS,
+            data_metricas__rpe__isnull=False,
+        ).values('nombre_ejercicio', 'data_metricas__rpe')
+
+        for ar in acts_rpe:
+            nombre_lower = (ar['nombre_ejercicio'] or '').lower().strip()
+            canon = next((v for k, v in NOMBRE_CANON.items() if k in nombre_lower), None)
+            if canon and ar['data_metricas__rpe']:
+                rpes_acum.setdefault(canon, []).append(int(ar['data_metricas__rpe']))
 
         for act in acts_timer:
             secs = act.data_metricas.get('tiempo_segundos') or act.data_metricas.get('tiempo_s')
@@ -658,6 +673,9 @@ def hyrox_dashboard(request):
             else:
                 status = 'priority'
 
+            rpes = rpes_acum.get(nombre, [])
+            rpe_medio_station = round(sum(rpes) / len(rpes), 1) if rpes else None
+
             splits_estaciones.append({
                 'nombre': nombre,
                 'promedio_secs': promedio,
@@ -674,6 +692,8 @@ def hyrox_dashboard(request):
                 'tiene_datos': bool(lista),
                 'status': status,
                 'mejora_mes_pct': mejora_mes_pct,
+                'rpe_medio': rpe_medio_station,
+                'rpe_sesiones': len(rpes),
             })
 
     # ── DETECCIÓN DE ESTANCAMIENTO ────────────────────────────────────────────
