@@ -2122,11 +2122,35 @@ def editar_sesion_hyrox(request, session_id):
 
         session.estado = 'completado'
         try:
-            session.save()
+            # update_fields evita que los signals regeneren el plan futuro.
+            # Al editar una sesión pasada solo queremos recalcular la carga,
+            # no adaptar las sesiones planificadas.
+            campos_sesion = ['estado', 'rpe_global', 'tiempo_total_minutos', 'hr_media', 'hr_maxima']
+            session.save(update_fields=campos_sesion)
+
+            # Recalcular TRIMP / zona / CTL-ATL-TSB y sincronizar hub manualmente
+            try:
+                from hyrox.signals import _calcular_y_guardar_carga
+                _calcular_y_guardar_carga(session)
+            except Exception as e_carga:
+                _log.warning(f'[EDIT session={session.id}] No se pudo recalcular carga: {e_carga}')
+
+            try:
+                from entrenos.models import ActividadRealizada
+                carga_ua = None
+                if session.rpe_global and session.tiempo_total_minutos:
+                    carga_ua = round(session.rpe_global * session.tiempo_total_minutos, 1)
+                ActividadRealizada.objects.filter(sesion_hyrox=session).update(
+                    rpe_medio=session.rpe_global,
+                    duracion_minutos=session.tiempo_total_minutos,
+                    carga_ua=carga_ua,
+                )
+            except Exception as e_hub:
+                _log.warning(f'[EDIT session={session.id}] No se pudo actualizar hub: {e_hub}')
+
         except Exception as e:
             import traceback as _tb
             _log.error(f'[EDIT session={session.id}] ERROR en session.save(): {e}\n{_tb.format_exc()}')
-            # El save de actividades ya se completó — continuar con el redirect
         messages.success(request, "Sesión actualizada correctamente.")
         return redirect('hyrox:dashboard')
 
