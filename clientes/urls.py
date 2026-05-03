@@ -73,7 +73,6 @@ urlpatterns = [
     path('medidas/', views.lista_medidas, name='lista_medidas'),
     path('medidas/agregar/', views.agregar_medida, name='agregar_medida'),
     path('mockup-demo/', views.mockup_demo, name='mockup_demo'),
-    path('panel-accion/', views.panel_accion, name='panel_accion'),
     path('responder-sugerencia/', views.responder_sugerencia, name='responder_sugerencia'),
 
     # Historial

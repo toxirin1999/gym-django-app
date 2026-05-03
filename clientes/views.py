@@ -1586,32 +1586,6 @@ def _calcular_estado_carga(acwr, readiness_score, grupo_muscular=None, n_desafio
 
 
 @login_required
-def panel_accion(request):
-    cliente = get_object_or_404(Cliente, user=request.user)
-    context = _get_dashboard_context_data(request, cliente)
-
-    acwr = context.get('acwr_actual') or 0.0
-    readiness = (context.get('bio_readiness') or {}).get('score', 1.0)
-    readiness_pct = round(readiness * 100)
-
-    proximo = context.get('proximo_entrenamiento') or {}
-    ejercicios_hoy = proximo.get('ejercicios') or []
-    rutina_hoy = proximo.get('nombre') or proximo.get('rutina_nombre', '')
-
-    grupo = _detectar_grupo_muscular(rutina_hoy)
-    desafio = _calcular_ejercicios_desafio(ejercicios_hoy)
-    continuidad = _calcular_continuidad(ejercicios_hoy, context.get('ejercicios_realizados_resumen') or [])
-
-    estado_carga = _calcular_estado_carga(acwr, readiness, grupo, len(desafio))
-
-    context['estado_carga'] = estado_carga
-    context['readiness_pct'] = readiness_pct
-    context['ejercicios_desafio'] = desafio
-    context['continuidad'] = continuidad
-    context['micro_feedback'] = _calcular_micro_feedback(estado_carga['estado'], desafio)
-
-    return render(request, 'clientes/panel_accion.html', context)
-
 
 @login_required
 def widget_acwr(request, cliente_id):
