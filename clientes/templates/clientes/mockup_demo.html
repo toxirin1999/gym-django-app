@@ -473,8 +473,8 @@ body {
       </div>
     </div>
 
-    <!-- Bio readiness -->
-    {% if bio_readiness %}
+    <!-- Bio readiness — solo visible con lesión activa -->
+    {% if bio_readiness and bio_banner.has_restrictions %}
     <div class="rb-readiness">
       <div class="rb-rd-top">
         <div class="rb-rd-lbl">Bio Readiness</div>
