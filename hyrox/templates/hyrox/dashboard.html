@@ -2364,24 +2364,6 @@ a.rb-dia:focus-visible {
     </div>
     {% endif %}
 
-    <div class="rb-breakdown">
-      <div class="rb-breakdown-title"><i class="fas fa-chart-bar" style="margin-right:5px;color:var(--accent)"></i>Desglose por estación</div>
-      {% for sp in splits_estaciones %}
-      <div class="rb-breakdown-row">
-        <div class="rb-breakdown-name" title="{{ sp.nombre }}">{{ sp.nombre }}</div>
-        <div class="rb-breakdown-bars">
-          <div class="rb-breakdown-bar-track">
-            <div class="rb-breakdown-bar-you" style="width:{{ sp.pct_ref }}%;background:{% if sp.pct_ref >= 95 %}var(--ok){% elif sp.pct_ref >= 80 %}var(--ok){% elif sp.pct_ref >= 60 %}var(--warn){% else %}var(--accent){% endif %}"></div>
-          </div>
-        </div>
-        <div>
-          <div class="rb-breakdown-val">{% if sp.tiene_datos %}{{ sp.promedio_str }}{% else %}—{% endif %}</div>
-          <div class="rb-breakdown-ref-lbl">ref: {{ sp.ref_str }}</div>
-        </div>
-      </div>
-      {% endfor %}
-    </div>
-
   </section>
   {% endif %}
 
