@@ -1356,7 +1356,8 @@ def hyrox_dashboard(request):
         'station_diagnosis': station_diagnosis,
         'post_session_diagnosis': post_session_diagnosis,
     }
-    return render(request, 'hyrox/dashboard.html', context)
+    template = 'hyrox/dashboard_v2.html' if request.GET.get('v') == '2' else 'hyrox/dashboard.html'
+    return render(request, template, context)
 
 @login_required
 def crear_objetivo(request):
