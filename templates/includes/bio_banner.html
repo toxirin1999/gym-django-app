@@ -2,7 +2,7 @@
 Bio-Bridge Dashboard — v4. Siempre colapsado. Click para expandir.
 {% endcomment %}
 
-{% if bio_banner.has_restrictions or bio_readiness.score is not None %}
+{% if bio_banner.has_restrictions %}
 {% load clientes_filters %}
 
 {# ══════ LÍNEA COLAPSADA (siempre visible) ══════ #}
