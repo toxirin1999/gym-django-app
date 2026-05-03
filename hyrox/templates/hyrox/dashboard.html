@@ -1128,6 +1128,7 @@ a.rb-dia:focus-visible {
       <!-- TIME HERO -->
       <div class="rc-time-hero">
         <div class="rc-label">Tiempo estimado hoy</div>
+        <div style="font-family:var(--font-body);font-size:9px;color:var(--ink-4);margin-bottom:4px;">Ajustado por tu fatiga actual (TSB + readiness)</div>
         {% if race_briefing.tiempo_estimado %}
           <div class="rc-time-main">{{ race_briefing.tiempo_estimado }}</div>
           {% if race_briefing.tiempo_rango_min %}
@@ -2313,6 +2314,7 @@ a.rb-dia:focus-visible {
     {% if race_prediction and race_prediction.tiene_datos %}
     <div class="rb-pred-card">
       <div class="rb-pred-eyebrow">Predicción basada en tus splits actuales</div>
+      <div style="font-family:var(--font-body);font-size:9px;color:var(--ink-4);margin-bottom:6px;">Potencial técnico puro — sin ajuste de fatiga. Tu techo si estuvieras al 100%.</div>
       <div class="rb-pred-times">
         <div class="rb-pred-main">
           <div class="rb-pred-lbl">Tiempo estimado</div>
@@ -2596,6 +2598,7 @@ a.rb-dia:focus-visible {
       <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center;">
         <div style="font-family:var(--font-mono);font-size:18px;font-weight:700;color:var(--accent);">{{ race_card.total_str }}</div>
         <div style="font-size:9px;color:var(--ink-4);font-family:var(--font-body);margin-top:2px;">Tiempo objetivo</div>
+        <div style="font-size:8px;color:var(--ink-5);font-family:var(--font-body);margin-top:1px;">Realista en carrera — penaliza el ritmo tras cada estación</div>
       </div>
       <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center;">
         <div style="font-family:var(--font-mono);font-size:18px;font-weight:700;color:var(--ok);">{{ race_card.total_run_str }}</div>
