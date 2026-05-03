@@ -4,6 +4,36 @@ This file provides context for AI assistants working on this codebase.
 
 ---
 
+## AGENTES Y DELEGACIÓN DE COSTES
+
+Hay tres subagentes en `.claude/agents/`. Úsalos para optimizar coste y velocidad.
+
+### Reglas de delegación
+
+| Tarea | Agente | Cuándo NO usarlo |
+|---|---|---|
+| Buscar archivos, leer código, localizar una función, listar estructura | **haiku-explorer** | — |
+| Escribir/modificar vistas, modelos, servicios, templates, tests, bugfix | **sonnet-builder** | — |
+| Diseño de arquitectura multi-app, decisión irreversible de modelo de datos, trade-off crítico | **opus-architect** | Para cualquier tarea de código rutinario |
+
+### Regla de oro
+
+```
+¿Solo necesito leer o buscar?  → haiku-explorer
+¿Necesito escribir o cambiar código? → sonnet-builder
+¿La decisión incorrecta costaría días de refactoring? → opus-architect
+```
+
+**Opus solo se activa cuando:**
+- Se cambia el esquema de BD de forma irreversible
+- Se diseña un sistema que cruza ≥3 apps
+- Hay un trade-off de rendimiento/seguridad a largo plazo
+- Se evalúa si una feature encaja con la visión nuclear
+
+**Opus NO se activa para:** bugfixes, features nuevas bien definidas, templates, migraciones rutinarias, refactoring local.
+
+---
+
 ## VISIÓN NUCLEAR — "Entrenador que aprende"
 
 **Esta es la directriz más importante de toda la app.** Antes de implementar cualquier feature, hacerse esta pregunta:
