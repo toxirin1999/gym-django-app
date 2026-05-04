@@ -1581,6 +1581,23 @@ def registrar_entrenamiento(request, objective_id, session_id=None):
                     resultados_save = HyroxParserService.save_parsed_session(sesion, parsed_data)
                     actividades = resultados_save.get('activities', []) if isinstance(resultados_save, dict) else []
                     new_records = resultados_save.get('new_records', []) if isinstance(resultados_save, dict) else []
+
+                    # Override distancia_km from direct form fields — más fiable que el parser de texto
+                    _form_dists = {}
+                    for _k, _v in request.POST.items():
+                        if _k.startswith('act_dist_km_'):
+                            try:
+                                _form_dists[int(_k[12:])] = round(float(_v.replace(',', '.')), 2)
+                            except (ValueError, TypeError):
+                                pass
+                    if _form_dists:
+                        for _i, _act in enumerate(sesion.activities.order_by('id'), start=1):
+                            _dist = _form_dists.get(_i)
+                            if _dist and _dist > 0:
+                                _m = _act.data_metricas or {}
+                                _m['distancia_km'] = _dist
+                                _act.data_metricas = _m
+                                _act.save(update_fields=['data_metricas'])
                     
                     feedback_str = parsed_data.get('feedback', parsed_data.get('Feedback', ''))
                     
@@ -2826,6 +2843,15 @@ def strava_procesar(request, actividad_id):
             from .training_engine import HyroxLoadManager
             sesion.trimp = HyroxLoadManager.calcular_trimp(sesion.tiempo_total_minutos, sesion.hr_media, objetivo)
         sesion.save()
+        # Actualizar distancia de la actividad de carrera con el dato real de Strava
+        if act.distancia_metros:
+            strava_km = round(act.distancia_metros / 1000, 2)
+            carrera_act = sesion.activities.filter(tipo_actividad__in=['carrera', 'cardio_sustituto']).first()
+            if carrera_act:
+                _m = carrera_act.data_metricas or {}
+                _m['distancia_km'] = strava_km
+                carrera_act.data_metricas = _m
+                carrera_act.save(update_fields=['data_metricas'])
         act.estado = 'merged'
         act.hyrox_session = sesion
         act.save()

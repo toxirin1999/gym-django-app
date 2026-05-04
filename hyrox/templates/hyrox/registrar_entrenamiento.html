@@ -1015,7 +1015,7 @@
               <div class="rb-cardio-grid">
                 <div>
                   <div class="rb-biginput-label"><span>Distancia</span><span>km</span></div>
-                  <input type="number" class="rb-biginput rb-input-distkm" id="rb-dist-{{ idx }}" value="{{ act.data_metricas.distancia_km }}" step="0.1" min="0" inputmode="decimal" oninput="rbCalcPace({{ idx }})">
+                  <input type="number" class="rb-biginput rb-input-distkm" id="rb-dist-{{ idx }}" name="act_dist_km_{{ idx }}" value="{{ act.data_metricas.distancia_km }}" step="0.1" min="0" inputmode="decimal" oninput="rbCalcPace({{ idx }})">
                 </div>
                 <div>
                   <div class="rb-biginput-label"><span>Tiempo</span><span>min</span></div>
