@@ -513,10 +513,16 @@ body {
     <!-- Estado: ya completado (anticipado o hoy) -->
     <div class="rb-workout-card" style="border-left:3px solid var(--ok);">
       <div class="rb-workout-eyebrow" style="color:var(--ok);">
-        &#10003; COMPLETADO
+        {% if entreno_hoy_realizado %}&#10003; COMPLETADO HOY{% else %}&#8629; YA REALIZADO{% endif %}
         {% if entreno_realizado_fecha %}&nbsp;·&nbsp;{{ entreno_realizado_fecha|date:"l j N" }}{% endif %}
       </div>
-      <div class="rb-workout-title">{{ proximo_entrenamiento.nombre|default:proximo_entrenamiento.rutina_nombre|default:"Sesión" }}</div>
+      <div class="rb-workout-title">
+        {% if entreno_realizado_obj and entreno_realizado_obj.rutina %}
+          {{ entreno_realizado_obj.rutina.nombre }}
+        {% else %}
+          {{ proximo_entrenamiento.nombre|default:proximo_entrenamiento.rutina_nombre|default:"Sesión" }}
+        {% endif %}
+      </div>
       {% if ejercicios_realizados_resumen %}
       <div class="rb-ex-list" style="margin-top:10px;">
         {% for ej in ejercicios_realizados_resumen %}

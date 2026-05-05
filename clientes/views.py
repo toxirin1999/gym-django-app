@@ -1026,8 +1026,8 @@ def _get_dashboard_context_data(request, cliente):
     entreno_hoy_realizado = (
         EntrenoRealizado.objects.filter(cliente=cliente, fecha=hoy).exists()
         or _AR.objects.filter(
-            cliente=cliente, tipo='gym', fuente='manual',
-        ).filter(_Q2(fecha=hoy) | _Q2(fecha_realizado=hoy)).exists()
+            cliente=cliente, tipo='gym', fuente='manual', fecha=hoy,
+        ).exists()
     )
 
     # Nivel 2: hecho esta semana (para sesiones "anticipadas")
@@ -1269,6 +1269,7 @@ def _get_dashboard_context_data(request, cliente):
         'entreno_semana_realizado': entreno_semana_realizado,
         'ejercicios_realizados_resumen': ejercicios_realizados_resumen,
         'entreno_realizado_fecha': entreno_realizado_fecha,
+        'entreno_realizado_obj': entreno_realizado_obj,
         'proximo_entrenamiento': proximo_entrenamiento,
         'proximo_entrenamiento_json': json.dumps(proximo_entrenamiento.get("ejercicios", [])) if proximo_entrenamiento else "[]",
         'estadisticas_plan': estadisticas_plan,
