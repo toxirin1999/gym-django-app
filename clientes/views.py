@@ -1140,10 +1140,8 @@ def _get_dashboard_context_data(request, cliente):
     # Últimas actividades realizadas (para tira de historial en focus mode)
     _actividades_recientes_qs = _AR.objects.filter(
         cliente=cliente,
-    ).filter(
-        _Q(fecha_realizado__lte=_hoy) |
-        _Q(fecha_realizado__isnull=True, fecha__lte=_hoy)
-    ).select_related('entreno_gym__rutina').order_by('-fecha_realizado', '-fecha')[:4]
+        fecha__lte=_hoy,
+    ).select_related('entreno_gym__rutina').order_by('-fecha', '-fecha_realizado')[:4]
     actividades_recientes_focus = list(_actividades_recientes_qs)
     for _act in actividades_recientes_focus:
         _act.es_anticipada = bool(_act.fecha_realizado and _act.fecha_realizado != _act.fecha)

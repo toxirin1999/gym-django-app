@@ -4147,8 +4147,8 @@ def guardar_entrenamiento_activo(request, cliente_id):
                         if _update_fields:
                             # Recalcular carga_ua con los datos reales
                             _rpe = _act.rpe_medio or 5.0
-                            _dur = _act.duracion_minutos or 0
-                            if _dur:
+                            _dur = _act.duracion_minutos
+                            if _dur and _dur > 0:
                                 _act.carga_ua = round(_rpe * _dur, 1)
                                 _update_fields.append('carga_ua')
                             _act.save(update_fields=_update_fields)

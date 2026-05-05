@@ -111,9 +111,10 @@ def sincronizar_hub_actividad(sender, instance, created, raw=False, **kwargs):
     # 2. RPE por defecto (5.0 = moderado) × duración si no hay RPE
     # 3. Volumen / 100 como estimación mínima si no hay duración
     carga_ua = None
-    if rpe_medio and duracion:
+    dur_valida = duracion is not None and duracion > 0
+    if rpe_medio and dur_valida:
         carga_ua = round(float(rpe_medio) * duracion, 1)
-    elif duracion:
+    elif dur_valida:
         carga_ua = round(5.0 * duracion, 1)   # esfuerzo moderado por defecto
     elif instance.volumen_total_kg and instance.volumen_total_kg > 0:
         carga_ua = round(float(instance.volumen_total_kg) / 100, 1)
