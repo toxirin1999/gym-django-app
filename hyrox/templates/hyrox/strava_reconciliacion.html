@@ -237,13 +237,13 @@
               </tr>
             </thead>
             <tbody>
-              <!-- Tiempo -->
+              <!-- Tiempo — Strava por defecto -->
               <tr>
                 <td style="padding:5px 6px;font-weight:600;">Tiempo</td>
                 <td style="padding:5px 6px;text-align:center;">
                   <label style="display:flex;align-items:center;justify-content:center;gap:4px;cursor:pointer;">
                     <input type="radio" name="hyrox-{{ act.id }}-{{ s.id }}-tiempo"
-                      value="mine" {% if s.tiempo_total_minutos %}checked{% endif %}
+                      value="mine" {% if not act.duracion_minutos %}checked{% endif %}
                       style="accent-color:var(--ink);">
                     <span>{{ s.tiempo_total_minutos|default:"—" }} min</span>
                   </label>
@@ -251,19 +251,19 @@
                 <td style="padding:5px 6px;text-align:center;">
                   <label style="display:flex;align-items:center;justify-content:center;gap:4px;cursor:pointer;">
                     <input type="radio" name="hyrox-{{ act.id }}-{{ s.id }}-tiempo"
-                      value="strava" {% if not s.tiempo_total_minutos %}checked{% endif %}
+                      value="strava" {% if act.duracion_minutos %}checked{% endif %}
                       style="accent-color:#FC4C02;">
                     <span>{{ act.duracion_minutos }} min</span>
                   </label>
                 </td>
               </tr>
-              <!-- FC Media -->
+              <!-- FC Media — Strava por defecto -->
               <tr style="background:var(--paper-3);">
                 <td style="padding:5px 6px;font-weight:600;">FC Media</td>
                 <td style="padding:5px 6px;text-align:center;">
                   <label style="display:flex;align-items:center;justify-content:center;gap:4px;cursor:pointer;">
                     <input type="radio" name="hyrox-{{ act.id }}-{{ s.id }}-hr_media"
-                      value="mine" {% if s.hr_media %}checked{% endif %}
+                      value="mine" {% if not act.hr_media %}checked{% endif %}
                       {% if not s.hr_media and not act.hr_media %}disabled{% endif %}
                       style="accent-color:var(--ink);">
                     <span>{% if s.hr_media %}{{ s.hr_media }} bpm{% else %}—{% endif %}</span>
@@ -272,20 +272,20 @@
                 <td style="padding:5px 6px;text-align:center;">
                   <label style="display:flex;align-items:center;justify-content:center;gap:4px;cursor:pointer;">
                     <input type="radio" name="hyrox-{{ act.id }}-{{ s.id }}-hr_media"
-                      value="strava" {% if not s.hr_media and act.hr_media %}checked{% endif %}
+                      value="strava" {% if act.hr_media %}checked{% endif %}
                       {% if not act.hr_media %}disabled{% endif %}
                       style="accent-color:#FC4C02;">
                     <span>{% if act.hr_media %}{{ act.hr_media }} bpm{% else %}—{% endif %}</span>
                   </label>
                 </td>
               </tr>
-              <!-- FC Máxima -->
+              <!-- FC Máxima — Strava por defecto -->
               <tr>
                 <td style="padding:5px 6px;font-weight:600;">FC Máxima</td>
                 <td style="padding:5px 6px;text-align:center;">
                   <label style="display:flex;align-items:center;justify-content:center;gap:4px;cursor:pointer;">
                     <input type="radio" name="hyrox-{{ act.id }}-{{ s.id }}-hr_maxima"
-                      value="mine" {% if s.hr_maxima %}checked{% endif %}
+                      value="mine" {% if not act.hr_maxima %}checked{% endif %}
                       {% if not s.hr_maxima and not act.hr_maxima %}disabled{% endif %}
                       style="accent-color:var(--ink);">
                     <span>{% if s.hr_maxima %}{{ s.hr_maxima }} bpm{% else %}—{% endif %}</span>
@@ -294,7 +294,7 @@
                 <td style="padding:5px 6px;text-align:center;">
                   <label style="display:flex;align-items:center;justify-content:center;gap:4px;cursor:pointer;">
                     <input type="radio" name="hyrox-{{ act.id }}-{{ s.id }}-hr_maxima"
-                      value="strava" {% if not s.hr_maxima and act.hr_maxima %}checked{% endif %}
+                      value="strava" {% if act.hr_maxima %}checked{% endif %}
                       {% if not act.hr_maxima %}disabled{% endif %}
                       style="accent-color:#FC4C02;">
                     <span>{% if act.hr_maxima %}{{ act.hr_maxima }} bpm{% else %}—{% endif %}</span>
@@ -363,7 +363,7 @@
                 <td style="padding:5px 6px;text-align:center;">
                   <label style="display:flex;align-items:center;justify-content:center;gap:4px;cursor:pointer;">
                     <input type="radio" name="gym-{{ act.id }}-{{ e.id }}-tiempo"
-                      value="mine" {% if dur_gym %}checked{% endif %}
+                      value="mine" {% if not act.duracion_minutos %}checked{% endif %}
                       style="accent-color:var(--ink);">
                     <span>{{ dur_gym|default:"—" }} min</span>
                   </label>
@@ -371,7 +371,7 @@
                 <td style="padding:5px 6px;text-align:center;">
                   <label style="display:flex;align-items:center;justify-content:center;gap:4px;cursor:pointer;">
                     <input type="radio" name="gym-{{ act.id }}-{{ e.id }}-tiempo"
-                      value="strava" {% if not dur_gym %}checked{% endif %}
+                      value="strava" {% if act.duracion_minutos %}checked{% endif %}
                       style="accent-color:#FC4C02;">
                     <span>{{ act.duracion_minutos }} min</span>
                   </label>
