@@ -2749,22 +2749,27 @@ def strava_reconciliacion(request):
 
     objetivo = HyroxObjective.objects.filter(cliente=cliente, estado='activo').first()
 
+    from datetime import timedelta
+
     items = []
     for act in pendientes:
-        # Search BOTH HyroxSession and EntrenoRealizado on the same date
+        # Search BOTH HyroxSession and EntrenoRealizado on the same date ±1 day
+        # (handles workouts logged retroactively for a previous day)
+        fecha_min = act.fecha_actividad - timedelta(days=1)
+        fecha_max = act.fecha_actividad + timedelta(days=1)
         hyrox_matches = []
         gym_matches   = []
 
         if objetivo:
             hyrox_matches = list(HyroxSession.objects.filter(
                 objective=objetivo,
-                fecha=act.fecha_actividad,
+                fecha__range=(fecha_min, fecha_max),
                 estado='completado',
             ).order_by('id'))
 
         gym_matches = list(EntrenoRealizado.objects.filter(
             cliente=cliente,
-            fecha=act.fecha_actividad,
+            fecha__range=(fecha_min, fecha_max),
         ).order_by('id'))
 
         # Preselect best candidate based on Strava type
