@@ -4101,7 +4101,7 @@ def guardar_entrenamiento_activo(request, cliente_id):
                 except Exception as e:
                     logger.warning("Error calculando ACWR: %s", e)
 
-                duracion_guardada = int(duracion_real) if duracion_real else (entreno.duracion_minutos or 0)
+                duracion_guardada = int(duracion_real) if duracion_real and int(duracion_real) > 0 else (entreno.duracion_minutos or 0)
                 sesion_gam = SesionGamificacion.objects.create(
                     entreno=entreno,
                     duracion_minutos=duracion_guardada,
@@ -4119,6 +4119,9 @@ def guardar_entrenamiento_activo(request, cliente_id):
                 if duracion_guardada and not entreno.duracion_minutos:
                     entreno.duracion_minutos = duracion_guardada
                     entreno.save(update_fields=['duracion_minutos'])
+                elif not duracion_guardada and entreno.duracion_minutos:
+                    # El timer dio 0 (entreno retroactivo enviado rápido) pero ya tenemos duración real
+                    duracion_guardada = entreno.duracion_minutos
 
                 # Actualizar ActividadRealizada con la duración real y recalcular carga_ua
                 try:
