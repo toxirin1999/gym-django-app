@@ -259,13 +259,39 @@ input{background:transparent!important;border:none!important;outline:none!import
 .pd-ctrl-btn.mas{color:var(--green);}
 .pd-ctrl-btn:active{transform:scale(0.97);}
 /* Técnica */
-.pd-tecnica-wrap{margin-bottom:12px;}
-.pd-tecnica-lbl{font-family:var(--fm);font-size:10px;color:var(--td);letter-spacing:.5px;text-transform:uppercase;margin-bottom:8px;text-align:center;}
-.pd-tecnica-btns{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;}
-.btn-tecnica{height:46px;border-radius:12px;border:1.5px solid var(--bd,rgba(255,255,255,0.1));background:transparent;color:var(--td);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;font-family:var(--fu);}
-.btn-tecnica.sel-buena{background:rgba(46,204,113,0.18);color:#2ECC71;border-color:#2ECC71;}
-.btn-tecnica.sel-aceptable{background:rgba(241,196,15,0.18);color:#F1C40F;border-color:#F1C40F;}
-.btn-tecnica.sel-comprometida{background:rgba(231,76,60,0.18);color:#E74C3C;border-color:#E74C3C;}
+.pd-tecnica-wrap{
+  margin-bottom:16px;
+  background:var(--surf2,rgba(255,255,255,0.05));
+  border-radius:18px;
+  padding:14px 12px 12px;
+  border:1.5px solid rgba(255,255,255,0.08);
+}
+.pd-tecnica-lbl{
+  font-family:var(--fm);font-size:11px;font-weight:700;
+  color:#fff;letter-spacing:.8px;text-transform:uppercase;
+  margin-bottom:10px;text-align:center;
+}
+.pd-tecnica-btns{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
+.btn-tecnica{
+  height:64px;border-radius:14px;border:2px solid transparent;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+  font-size:10px;font-weight:700;cursor:pointer;transition:all .15s;
+  font-family:var(--fu);letter-spacing:.3px;text-transform:uppercase;
+}
+.btn-tecnica.tec-buena{
+  background:rgba(46,204,113,0.15);color:#2ECC71;border-color:rgba(46,204,113,0.35);
+}
+.btn-tecnica.tec-aceptable{
+  background:rgba(241,196,15,0.15);color:#F1C40F;border-color:rgba(241,196,15,0.35);
+}
+.btn-tecnica.tec-comprometida{
+  background:rgba(231,76,60,0.15);color:#E74C3C;border-color:rgba(231,76,60,0.35);
+}
+.btn-tecnica .tec-icon{font-size:22px;line-height:1;}
+.btn-tecnica.sel-buena{background:rgba(46,204,113,0.30);border-color:#2ECC71;box-shadow:0 0 12px rgba(46,204,113,0.4);transform:scale(1.04);}
+.btn-tecnica.sel-aceptable{background:rgba(241,196,15,0.30);border-color:#F1C40F;box-shadow:0 0 12px rgba(241,196,15,0.4);transform:scale(1.04);}
+.btn-tecnica.sel-comprometida{background:rgba(231,76,60,0.30);border-color:#E74C3C;box-shadow:0 0 12px rgba(231,76,60,0.4);transform:scale(1.04);}
+.btn-tecnica:active{transform:scale(0.97);}
 /* 6 — Botón saltar */
 .btn-saltar{
   width:100%;height:52px;border-radius:16px;border:none;
@@ -1371,12 +1397,18 @@ input{background:transparent!important;border:none!important;outline:none!import
     <div class="pd-tecnica-wrap">
       <div class="pd-tecnica-lbl">¿Cómo fue la técnica?</div>
       <div class="pd-tecnica-btns">
-        <button type="button" class="btn-tecnica" id="tec-buena-{{ ejercicio.form_id }}"
-                onclick="selTecnica('{{ ejercicio.form_id }}','buena')">Buena</button>
-        <button type="button" class="btn-tecnica" id="tec-aceptable-{{ ejercicio.form_id }}"
-                onclick="selTecnica('{{ ejercicio.form_id }}','aceptable')">Aceptable</button>
-        <button type="button" class="btn-tecnica" id="tec-comprometida-{{ ejercicio.form_id }}"
-                onclick="selTecnica('{{ ejercicio.form_id }}','comprometida')">Comprometida</button>
+        <button type="button" class="btn-tecnica tec-buena" id="tec-buena-{{ ejercicio.form_id }}"
+                onclick="selTecnica('{{ ejercicio.form_id }}','buena')">
+          <span class="tec-icon">✅</span>Buena
+        </button>
+        <button type="button" class="btn-tecnica tec-aceptable" id="tec-aceptable-{{ ejercicio.form_id }}"
+                onclick="selTecnica('{{ ejercicio.form_id }}','aceptable')">
+          <span class="tec-icon">🟡</span>Aceptable
+        </button>
+        <button type="button" class="btn-tecnica tec-comprometida" id="tec-comprometida-{{ ejercicio.form_id }}"
+                onclick="selTecnica('{{ ejercicio.form_id }}','comprometida')">
+          <span class="tec-icon">⚠️</span>Comprometida
+        </button>
       </div>
     </div>
 

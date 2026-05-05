@@ -328,7 +328,12 @@
           <div>
             <div style="font-weight:700;font-size:13px;">{{ e.nombre_rutina_liftin|default:e.rutina.nombre|default:"Entreno gym" }}</div>
             <div style="font-size:11px;color:var(--ink-3);">
-              {{ e.duracion_minutos|default:"—" }} min
+              {{ e.fecha|date:"l, d M Y" }}
+            </div>
+            <div style="font-size:11px;color:var(--ink-3);margin-top:2px;">
+              {% if e.duracion_minutos %}{{ e.duracion_minutos }} min · {% endif %}
+              {{ e.ejercicios_realizados.count }} ejercicio{{ e.ejercicios_realizados.count|pluralize:"s" }}
+              {% if e.rpe_medio %} · RPE {{ e.rpe_medio }}{% endif %}
               {% if e.frecuencia_cardiaca_promedio %} · {{ e.frecuencia_cardiaca_promedio }} bpm{% endif %}
             </div>
           </div>
