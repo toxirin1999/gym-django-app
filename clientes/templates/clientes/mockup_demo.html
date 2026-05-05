@@ -665,10 +665,17 @@ body {
         {% endwith %}
       </div>
       {% for item in resumen_semanal_gym %}
+      {% if item.tipo == 'seccion' %}
+      <div style="margin:8px 0 2px;padding:4px 0;border-top:1px solid var(--line-2);display:flex;align-items:center;gap:6px;">
+        <span style="font-size:12px;">{{ item.icono }}</span>
+        <span style="font-family:var(--font-mono);font-size:9px;font-weight:700;color:var(--ink-3);text-transform:uppercase;letter-spacing:.08em;">{{ item.texto }}</span>
+      </div>
+      {% else %}
       <div class="rb-aprendio-item">
         <span class="rb-aprendio-icon">{{ item.icono }}</span>
         <span class="rb-aprendio-text {{ item.color }}">{{ item.texto }}</span>
       </div>
+      {% endif %}
       {% endfor %}
     </div>
     {% endif %}
