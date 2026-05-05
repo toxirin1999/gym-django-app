@@ -1483,6 +1483,12 @@ def mockup_demo(request):
     except Exception:
         context['resumen_semanal_hyrox'] = None
 
+    try:
+        from entrenos.services.resumen_semanal_service import get_resumen_semanal_gym
+        context['resumen_semanal_gym'] = get_resumen_semanal_gym(cliente)
+    except Exception:
+        context['resumen_semanal_gym'] = []
+
     return render(request, 'clientes/mockup_demo.html', context)
 
 
