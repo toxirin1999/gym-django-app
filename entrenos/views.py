@@ -4058,13 +4058,18 @@ def guardar_entrenamiento_activo(request, cliente_id):
 
         # --- PASO 4: Actualizar el perfil del cliente con los nuevos 1RM ---
         if nuevos_rms_sesion:
-            # ... (lógica de actualización de one_rm_data sin cambios) ...
             if not cliente.one_rm_data:
                 cliente.one_rm_data = {}
-            cliente.one_rm_data.update(nuevos_rms_sesion)
-            cliente.save(update_fields=['one_rm_data'])
-            _sincronizar_rms_hyrox(cliente, nuevos_rms_sesion)
-            messages.info(request, "¡Récords de fuerza actualizados!")
+            rms_mejorados = {}
+            for ejercicio, nuevo_rm in nuevos_rms_sesion.items():
+                actual = cliente.one_rm_data.get(ejercicio, 0) or 0
+                if nuevo_rm > actual:
+                    cliente.one_rm_data[ejercicio] = nuevo_rm
+                    rms_mejorados[ejercicio] = nuevo_rm
+            if rms_mejorados:
+                cliente.save(update_fields=['one_rm_data'])
+                _sincronizar_rms_hyrox(cliente, rms_mejorados)
+                messages.info(request, "¡Récords de fuerza actualizados!")
 
         messages.success(request, "¡Entrenamiento guardado con éxito!")
 
