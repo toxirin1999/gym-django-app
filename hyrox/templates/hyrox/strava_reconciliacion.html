@@ -331,7 +331,9 @@
               {{ e.fecha|date:"l, d M Y" }}
             </div>
             <div style="font-size:11px;color:var(--ink-3);margin-top:2px;">
-              {% if e.duracion_minutos %}{{ e.duracion_minutos }} min · {% endif %}
+              {% with dur=e.duracion_minutos|default:e.sesion_detalle.duracion_minutos %}
+              {% if dur %}{{ dur }} min · {% endif %}
+              {% endwith %}
               {{ e.ejercicios_realizados.count }} ejercicio{{ e.ejercicios_realizados.count|pluralize:"s" }}
               {% if e.rpe_medio %} · RPE {{ e.rpe_medio }}{% endif %}
               {% if e.frecuencia_cardiaca_promedio %} · {{ e.frecuencia_cardiaca_promedio }} bpm{% endif %}
@@ -355,33 +357,36 @@
             </thead>
             <tbody>
               <!-- Tiempo -->
+              {% with dur_gym=e.duracion_minutos|default:e.sesion_detalle.duracion_minutos %}
               <tr>
                 <td style="padding:5px 6px;font-weight:600;">Tiempo</td>
                 <td style="padding:5px 6px;text-align:center;">
                   <label style="display:flex;align-items:center;justify-content:center;gap:4px;cursor:pointer;">
                     <input type="radio" name="gym-{{ act.id }}-{{ e.id }}-tiempo"
-                      value="mine" {% if e.duracion_minutos %}checked{% endif %}
+                      value="mine" {% if dur_gym %}checked{% endif %}
                       style="accent-color:var(--ink);">
-                    <span>{{ e.duracion_minutos|default:"—" }} min</span>
+                    <span>{{ dur_gym|default:"—" }} min</span>
                   </label>
                 </td>
                 <td style="padding:5px 6px;text-align:center;">
                   <label style="display:flex;align-items:center;justify-content:center;gap:4px;cursor:pointer;">
                     <input type="radio" name="gym-{{ act.id }}-{{ e.id }}-tiempo"
-                      value="strava" {% if not e.duracion_minutos %}checked{% endif %}
+                      value="strava" {% if not dur_gym %}checked{% endif %}
                       style="accent-color:#FC4C02;">
                     <span>{{ act.duracion_minutos }} min</span>
                   </label>
                 </td>
               </tr>
-              <!-- FC Media -->
+              {% endwith %}
+              <!-- FC Media — solo si hay algún dato -->
+              {% if e.frecuencia_cardiaca_promedio or act.hr_media %}
               <tr style="background:var(--paper-3);">
                 <td style="padding:5px 6px;font-weight:600;">FC Media</td>
                 <td style="padding:5px 6px;text-align:center;">
                   <label style="display:flex;align-items:center;justify-content:center;gap:4px;cursor:pointer;">
                     <input type="radio" name="gym-{{ act.id }}-{{ e.id }}-hr_media"
                       value="mine" {% if e.frecuencia_cardiaca_promedio %}checked{% endif %}
-                      {% if not e.frecuencia_cardiaca_promedio and not act.hr_media %}disabled{% endif %}
+                      {% if not e.frecuencia_cardiaca_promedio %}disabled{% endif %}
                       style="accent-color:var(--ink);">
                     <span>{% if e.frecuencia_cardiaca_promedio %}{{ e.frecuencia_cardiaca_promedio }} bpm{% else %}—{% endif %}</span>
                   </label>
@@ -389,21 +394,22 @@
                 <td style="padding:5px 6px;text-align:center;">
                   <label style="display:flex;align-items:center;justify-content:center;gap:4px;cursor:pointer;">
                     <input type="radio" name="gym-{{ act.id }}-{{ e.id }}-hr_media"
-                      value="strava" {% if not e.frecuencia_cardiaca_promedio and act.hr_media %}checked{% endif %}
-                      {% if not act.hr_media %}disabled{% endif %}
+                      value="strava" {% if act.hr_media %}checked{% endif %}
                       style="accent-color:#FC4C02;">
-                    <span>{% if act.hr_media %}{{ act.hr_media }} bpm{% else %}—{% endif %}</span>
+                    <span>{{ act.hr_media }} bpm</span>
                   </label>
                 </td>
               </tr>
-              <!-- FC Máxima -->
+              {% endif %}
+              <!-- FC Máxima — solo si hay algún dato -->
+              {% if e.frecuencia_cardiaca_maxima or act.hr_maxima %}
               <tr>
                 <td style="padding:5px 6px;font-weight:600;">FC Máxima</td>
                 <td style="padding:5px 6px;text-align:center;">
                   <label style="display:flex;align-items:center;justify-content:center;gap:4px;cursor:pointer;">
                     <input type="radio" name="gym-{{ act.id }}-{{ e.id }}-hr_maxima"
                       value="mine" {% if e.frecuencia_cardiaca_maxima %}checked{% endif %}
-                      {% if not e.frecuencia_cardiaca_maxima and not act.hr_maxima %}disabled{% endif %}
+                      {% if not e.frecuencia_cardiaca_maxima %}disabled{% endif %}
                       style="accent-color:var(--ink);">
                     <span>{% if e.frecuencia_cardiaca_maxima %}{{ e.frecuencia_cardiaca_maxima }} bpm{% else %}—{% endif %}</span>
                   </label>
@@ -411,13 +417,13 @@
                 <td style="padding:5px 6px;text-align:center;">
                   <label style="display:flex;align-items:center;justify-content:center;gap:4px;cursor:pointer;">
                     <input type="radio" name="gym-{{ act.id }}-{{ e.id }}-hr_maxima"
-                      value="strava" {% if not e.frecuencia_cardiaca_maxima and act.hr_maxima %}checked{% endif %}
-                      {% if not act.hr_maxima %}disabled{% endif %}
+                      value="strava" {% if act.hr_maxima %}checked{% endif %}
                       style="accent-color:#FC4C02;">
-                    <span>{% if act.hr_maxima %}{{ act.hr_maxima }} bpm{% else %}—{% endif %}</span>
+                    <span>{{ act.hr_maxima }} bpm</span>
                   </label>
                 </td>
               </tr>
+              {% endif %}
             </tbody>
           </table>
           <div style="margin-top:10px;display:flex;gap:8px;justify-content:flex-end;">
