@@ -698,24 +698,24 @@ class CalculadoraEjerciciosTabla:
         fecha_fin = ultimo_entreno.fecha if ultimo_entreno else timezone.now().date()
         fecha_inicio = fecha_fin - timedelta(days=periodo_dias)
 
-        entrenamientos = EntrenoRealizado.objects.filter(
+        from entrenos.models import ActividadRealizada as _AR
+        actividades = _AR.objects.filter(
             cliente=self.cliente,
             fecha__gte=fecha_inicio,
-            fecha__lte=fecha_fin
-        ).order_by('fecha').values('fecha', 'volumen_total_kg')
+            fecha__lte=fecha_fin,
+            carga_ua__isnull=False,
+        ).order_by('fecha').values('fecha', 'carga_ua')
 
-        if not entrenamientos:
+        if not actividades:
             return {'dataframe': [], 'acwr_actual': 0, 'zona_riesgo': 'muy_baja',
                     'recomendacion': 'No hay datos suficientes.'}
 
-        df = pd.DataFrame(list(entrenamientos))
+        df = pd.DataFrame(list(actividades))
         df['fecha'] = pd.to_datetime(df['fecha'])
+        df['carga_ua'] = df['carga_ua'].astype(float)
 
-        # Convertir Decimal a float aquí
-        df['volumen_total_kg'] = df['volumen_total_kg'].astype(float)
-
-        df = df.groupby('fecha')['volumen_total_kg'].sum().reset_index()
-        df['carga_diaria'] = df['volumen_total_kg'] / 1000
+        df = df.groupby('fecha')['carga_ua'].sum().reset_index()
+        df['carga_diaria'] = df['carga_ua']
 
         idx = pd.date_range(start=fecha_inicio, end=fecha_fin)
         df = df.set_index('fecha').reindex(idx, fill_value=0)

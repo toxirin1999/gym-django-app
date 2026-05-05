@@ -784,7 +784,7 @@ class AnalisisProgresionAvanzado:
         registros = EjercicioRealizado.objects.filter(
             entreno__cliente=self.cliente,
             nombre_ejercicio__iexact=ejercicio,
-            fecha_creacion__gte=fecha_inicio
+            entreno__fecha__gte=fecha_inicio
         )
 
         volumen_total = 0
@@ -994,7 +994,7 @@ class AnalisisProgresionAvanzado:
     def obtener_ejercicios_registrados(self, dias=180):
         ejercicios = (
             EjercicioRealizado.objects
-            .filter(entreno__cliente=self.cliente, fecha_creacion__gte=datetime.now().date() - timedelta(days=dias))
+            .filter(entreno__cliente=self.cliente, entreno__fecha__gte=datetime.now().date() - timedelta(days=dias))
             .values_list('nombre_ejercicio', flat=True)
             .distinct()
         )
