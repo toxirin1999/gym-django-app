@@ -33,7 +33,19 @@ class GymActionPlanService:
         desequilibrios = (coach_data or {}).get("desequilibrios") or 0
 
         # ── 1. ACWR: frena o acelera ──────────────────────────────────────────
-        if zona == "riesgo":
+        if zona == "insuficiente_historial":
+            acciones.append({
+                "tipo": "mantener",
+                "icono": "fas fa-hourglass-half",
+                "titulo": "Acumulando datos de carga",
+                "detalle": (
+                    f"Llevas {(acwr or {}).get('dias_historial', 0)} días registrados. "
+                    "El análisis ACWR necesita 28 días para ser fiable — sigue el plan habitual."
+                ),
+                "prioridad": "baja",
+            })
+
+        elif zona == "riesgo_alto":
             bloqueado = True
             acciones.append({
                 "tipo": "reducir_carga",
@@ -46,7 +58,7 @@ class GymActionPlanService:
                 "prioridad": "critica",
             })
 
-        elif zona == "precaucion":
+        elif zona == "cuidado":
             acciones.append({
                 "tipo": "precaucion_carga",
                 "icono": "fas fa-shield-halved",
@@ -59,7 +71,7 @@ class GymActionPlanService:
             })
 
         else:
-            # Zona óptima o baja → evaluar carga ejercicio a ejercicio
+            # Zona óptima o baja_carga → evaluar carga ejercicio a ejercicio
             ejs_subir = _ejercicios_para_subir(cliente, estancamientos)
 
             if ejs_subir:
@@ -71,7 +83,7 @@ class GymActionPlanService:
                     "ejercicios": ejs_subir[:5],
                     "prioridad": "alta",
                 })
-            elif zona == "baja" or (rpe_medio and rpe_medio <= 7.5):
+            elif zona == "baja_carga" or (rpe_medio and rpe_medio <= 7.5):
                 acciones.append({
                     "tipo": "subir_carga",
                     "icono": "fas fa-arrow-up",
@@ -151,8 +163,10 @@ class GymActionPlanService:
 # ─────────────────────────────────────────────────────────────
 
 def _ejercicios_para_subir(cliente, estancamientos):
-    """Ejercicios con RPE ≤ 7 en la última sesión Y que no estén estancados."""
-    from entrenos.models import EntrenoRealizado, EjercicioRealizado
+    """Ejercicios con RPE ≤ 7 en la última sesión, sin estancamiento y sin
+    decisión de GymDecisionLog pendiente que frene la progresión."""
+    from entrenos.models import EntrenoRealizado, EjercicioRealizado, GymDecisionLog
+
     ultimo = (
         EntrenoRealizado.objects
         .filter(cliente=cliente)
@@ -161,13 +175,27 @@ def _ejercicios_para_subir(cliente, estancamientos):
     )
     if not ultimo:
         return []
+
     candidatos = list(
         EjercicioRealizado.objects
         .filter(entreno=ultimo, completado=True, rpe__lte=7)
         .values_list("nombre_ejercicio", flat=True)
         .distinct()
     )
-    return [e for e in candidatos if not _esta_estancado(e, estancamientos)]
+
+    # Ejercicios con decisión pendiente que desaconseja subir carga
+    _ACCIONES_FRENO = {'mantener', 'bajar_peso', 'deload', 'cambiar_variante'}
+    frenos = set(
+        GymDecisionLog.objects
+        .filter(cliente=cliente, resultado__isnull=True, accion__in=_ACCIONES_FRENO)
+        .values_list('ejercicio', flat=True)
+    )
+
+    return [
+        e for e in candidatos
+        if not _esta_estancado(e, estancamientos)
+        and e.strip().lower() not in frenos
+    ]
 
 
 def _esta_estancado(nombre, estancamientos):
@@ -244,10 +272,12 @@ def _construir_resumen(acciones, bloqueado):
 def _generar_mensaje(zona, estancados, vol_problema, bloqueado):
     if bloqueado:
         return "Carga demasiado alta — semana de recuperación obligatoria."
-    if zona == "precaucion":
+    if zona == "cuidado":
         return "Consolida antes de subir. No añadas volumen esta semana."
+    if zona == "insuficiente_historial":
+        return "Datos insuficientes para análisis de carga — sigue el plan habitual."
     partes = []
-    if zona == "baja":
+    if zona == "baja_carga":
         partes.append("carga baja — hay margen para progresar")
     if estancados:
         partes.append(f"{estancados} ejercicio{'s' if estancados > 1 else ''} estancado{'s' if estancados > 1 else ''}")
