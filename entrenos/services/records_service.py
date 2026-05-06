@@ -36,17 +36,38 @@ class RecordsService:
         
         # 1. Recopilar todos los ejercicios de todas las fuentes posibles
         ejercicios_fuentes = []
-        
+
         # A. Ejercicios Realizados (Manuales / Genéricos)
         ejercicios_fuentes.extend(list(entreno.ejercicios_realizados.filter(completado=True)))
-        
+
         # B. Ejercicios Liftin Detallados
         if hasattr(entreno, 'ejercicios_liftin_detallados'):
             ejercicios_fuentes.extend(list(entreno.ejercicios_liftin_detallados.filter(completado=True)))
-            
+
         # C. Ejercicios Liftin Simples
         if hasattr(entreno, 'ejercicios_liftin'):
             ejercicios_fuentes.extend(list(entreno.ejercicios_liftin.filter(estado='completado')))
+
+        # Deduplicar por nombre+peso: si el mismo ejercicio viene de varias fuentes
+        # (EjercicioRealizado + EjercicioLiftinDetallado), conservar el de mayor peso.
+        _vistos: dict = {}
+        for ej in ejercicios_fuentes:
+            nom = getattr(ej, 'nombre_ejercicio', getattr(ej, 'nombre', ''))
+            if not nom:
+                continue
+            key = nom.strip().lower()
+            peso_ej = 0
+            for attr in ['peso_kg', 'weight_kg', 'peso']:
+                val = getattr(ej, attr, None)
+                if val is not None:
+                    try:
+                        peso_ej = float(val)
+                        break
+                    except (ValueError, TypeError):
+                        pass
+            if key not in _vistos or peso_ej > _vistos[key][1]:
+                _vistos[key] = (ej, peso_ej)
+        ejercicios_fuentes = [item[0] for item in _vistos.values()]
 
         for ejercicio in ejercicios_fuentes:
             # Obtener nombre de forma segura (algunos modelos usan 'nombre', otros 'nombre_ejercicio')
@@ -165,7 +186,12 @@ class RecordsService:
         Verifica si el volumen total es un récord personal
         """
         from entrenos.models import RecordPersonal
-        volumen_actual = Decimal(str(volumen_actual))
+        try:
+            volumen_actual = Decimal(str(volumen_actual))
+        except Exception:
+            return None
+        if volumen_actual <= 0:
+            return None
         
         # Buscar récord actual para este ejercicio
         record_actual = RecordPersonal.objects.filter(
@@ -243,7 +269,7 @@ class RecordsService:
             EjercicioRealizado.objects
             .filter(
                 entreno__cliente=cliente,
-                nombre_ejercicio__icontains=nombre_ejercicio,
+                nombre_ejercicio__iexact=nombre_ejercicio,
                 peso_kg__gt=0,
                 completado=True,
             )
