@@ -2,399 +2,510 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>Lo que sé de ti</title>
-  <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Lo que sé de ti · Memoria del entrenador</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet" />
 <style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body { height: 100%; background: #0E0E0F; }
-  body {
-    --bg: #0E0E0F; --surf: #161618; --surf2: #1E1E21;
-    --bd: rgba(255,255,255,0.08); --ink: #F0EEE8;
-    --td: rgba(240,238,232,0.5); --tdm: rgba(240,238,232,0.28);
-    --ok: #2ECC71; --warn: #F1C40F; --r: #E74C3C; --accent: #00C8FF;
-    --fd: 'Archivo Black', sans-serif; --fu: 'Archivo', sans-serif;
-    --fm: 'JetBrains Mono', monospace;
-    font-family: var(--fu); color: var(--ink);
-    -webkit-font-smoothing: antialiased; overflow-x: hidden;
+  :root{
+    --paper:#F1EEE2;
+    --ink:#121212;
+    --card:#F7F5EC;
+    --muted:#616161;
+    --rule:rgba(18,18,18,.12);
+    --accent:#D8FF00;
+    --highlight:#FF4F1A;
+    --success:#1F9D55;
+    --warning:#F59E0B;
+    --danger:#D72638;
+    --font-display:'Archivo Black',sans-serif;
+    --font-sans:'Archivo',sans-serif;
+    --font-mono:'JetBrains Mono',monospace;
   }
-  .wrap { max-width: 480px; margin: 0 auto; padding: 0 16px 60px; }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--paper);color:var(--ink);font-family:var(--font-sans);-webkit-font-smoothing:antialiased}
+  a,button{color:inherit;text-decoration:none;background:none;border:0;cursor:pointer;font:inherit}
+  .display{font-family:var(--font-display);letter-spacing:-.03em;line-height:.85}
+  .mono{font-family:var(--font-mono)}
+  .label{font-family:var(--font-mono);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.16em}
+  .marker{display:inline-block;background:var(--accent);padding:0 .15em;color:var(--ink)}
+  .muted{color:var(--muted)}
 
-  /* TOPBAR */
-  .topbar { display: flex; align-items: center; justify-content: space-between; padding: 16px 0 12px; gap: 12px; }
-  .tb-back { display: flex; align-items: center; gap: 6px; font-family: var(--fm); font-size: 11px; font-weight: 700; color: var(--td); text-decoration: none; letter-spacing: .05em; }
-  .tb-back svg { width: 16px; height: 16px; }
-  .tb-label { font-family: var(--fm); font-size: 10px; font-weight: 700; color: var(--tdm); letter-spacing: .12em; text-transform: uppercase; }
+  /* Marquee */
+  .marquee{background:var(--ink);color:var(--paper);border-bottom:1px solid var(--ink)}
+  .marquee-in{display:flex;justify-content:space-between;align-items:center;padding:6px 16px;font-family:var(--font-mono);font-size:10px;text-transform:uppercase;letter-spacing:.2em}
 
-  /* HERO */
-  .hero { background: var(--surf); border: 1px solid var(--bd); border-radius: 16px; padding: 20px; margin-bottom: 16px; position: relative; overflow: hidden; }
-  .hero::before { content: ''; position: absolute; inset: 0; background: linear-gradient(135deg, rgba(0,200,255,0.06) 0%, transparent 60%); pointer-events: none; }
-  .hero-eyebrow { font-family: var(--fm); font-size: 10px; color: var(--tdm); letter-spacing: .12em; text-transform: uppercase; margin-bottom: 10px; }
-  .hero-title { font-family: var(--fd); font-size: 28px; color: var(--ink); line-height: 1.1; letter-spacing: -.01em; }
-  .hero-sub { font-family: var(--fm); font-size: 11px; color: var(--td); margin-top: 8px; letter-spacing: .04em; }
+  .wrap{max-width:760px;margin:0 auto;padding:0 20px 96px}
+  header.top{display:flex;justify-content:space-between;align-items:center;padding:20px 0}
+  .icon-back{display:inline-flex;align-items:center;gap:8px}
+  .icon-back svg{width:14px;height:14px}
 
-  /* SEC HEADER */
-  .sec-hdr { display: flex; align-items: center; gap: 10px; margin: 20px 0 10px; }
-  .sec-tag { font-family: var(--fm); font-size: 9px; font-weight: 700; color: var(--tdm); letter-spacing: .15em; text-transform: uppercase; flex-shrink: 0; }
-  .sec-line { flex: 1; height: 1px; background: var(--bd); }
+  /* Masthead */
+  .mast{border-top:3px solid var(--ink);border-bottom:3px solid var(--ink);padding:24px 0}
+  .mast-row{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
+  .mast h1{font-family:var(--font-display);letter-spacing:-.03em;line-height:.85;font-size:88px;margin-top:12px;word-break:break-word}
+  .mast h1 .dot{color:var(--highlight)}
+  .mast-grid{display:grid;grid-template-columns:1.4fr 1fr;gap:12px;margin-top:20px;align-items:end}
+  .mast-grid p{font-size:13px;line-height:1.55;max-width:42ch}
+  .mast-grid .upd{font-family:var(--font-mono);font-size:11px;text-align:right;line-height:1.3}
 
-  /* STAT GRID */
-  .stat-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 4px; }
-  .stat-card { background: var(--surf); border: 1px solid var(--bd); border-radius: 12px; padding: 12px 10px; text-align: center; }
-  .stat-val { font-family: var(--fm); font-size: 22px; font-weight: 700; color: var(--ink); line-height: 1; }
-  .stat-val.ok { color: var(--ok); }
-  .stat-val.warn { color: var(--warn); }
-  .stat-val.accent { color: var(--accent); }
-  .stat-val.na { color: var(--tdm); font-size: 16px; }
-  .stat-lbl { font-family: var(--fm); font-size: 9px; color: var(--tdm); letter-spacing: .08em; text-transform: uppercase; margin-top: 5px; }
+  /* Sections */
+  section.sec{margin-top:56px}
+  .sec-head{display:flex;align-items:baseline;gap:16px;margin-bottom:12px;flex-wrap:wrap}
+  .sec-head .tag{font-family:var(--font-mono);font-size:11px;font-weight:700;opacity:.6;white-space:nowrap}
+  .sec-head h2{font-family:var(--font-display);font-size:20px;text-transform:uppercase;letter-spacing:-.02em;white-space:nowrap}
+  .rule-dashed{flex:1;height:1px;align-self:center;background-image:repeating-linear-gradient(to right,var(--ink) 0 6px,transparent 6px 12px)}
 
-  /* LIST ROWS */
-  .row-list { display: flex; flex-direction: column; gap: 6px; }
-  .row { display: flex; align-items: center; gap: 12px; padding: 11px 14px; background: var(--surf); border: 1px solid var(--bd); border-radius: 12px; }
-  .row.ok   { border-left: 3px solid var(--ok); }
-  .row.warn { border-left: 3px solid var(--warn); }
-  .row.bad  { border-left: 3px solid var(--r); }
-  .row.muted{ border-left: 3px solid rgba(255,255,255,0.15); }
-  .row-icon { font-size: 16px; flex-shrink: 0; }
-  .row-body { flex: 1; min-width: 0; }
-  .row-name { font-size: 13px; font-weight: 700; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .row-sub  { font-family: var(--fm); font-size: 10px; color: var(--td); margin-top: 2px; line-height: 1.4; }
-  .row-val  { font-family: var(--fm); font-size: 14px; font-weight: 700; color: var(--ink); flex-shrink: 0; }
-  .row-val.ok   { color: var(--ok); }
-  .row-val.warn { color: var(--warn); }
-  .row-val.bad  { color: var(--r); }
-  .row-val.accent { color: var(--accent); }
+  /* BigStat grid */
+  .stats{display:grid;grid-template-columns:repeat(3,1fr)}
+  .stat{padding:20px;border-top:1px solid var(--ink);border-bottom:1px solid var(--ink);border-right:1px solid var(--ink)}
+  .stat:last-child{border-right:0}
+  .stat:first-child{border-left:1px solid var(--ink)}
+  .stat-head{display:flex;justify-content:space-between}
+  .stat-val{font-family:var(--font-display);font-size:64px;line-height:.9;margin-top:12px}
+  .stat-val .u{font-family:var(--font-mono);font-size:13px;opacity:.6;margin-left:4px;font-weight:400}
+  .c-ok{color:var(--success)}.c-warn{color:var(--warning)}.c-hl{color:var(--highlight)}.c-bad{color:var(--danger)}.c-na{opacity:.3}
 
-  /* BADGE */
-  .badge { display: inline-block; font-family: var(--fm); font-size: 9px; font-weight: 700; padding: 2px 7px; border-radius: 6px; border: 1px solid; letter-spacing: .04em; text-transform: uppercase; margin-top: 4px; }
-  .badge.ok   { color: var(--ok);   border-color: rgba(46,204,113,.3);  background: rgba(46,204,113,.1); }
-  .badge.warn { color: var(--warn); border-color: rgba(241,196,15,.3);  background: rgba(241,196,15,.1); }
-  .badge.bad  { color: var(--r);    border-color: rgba(231,76,60,.3);   background: rgba(231,76,60,.1); }
+  /* Frame */
+  .frame{position:relative;border:1px solid var(--ink);background:var(--card)}
+  .frame::before,.frame::after,.frame .cb,.frame .cr{content:'';position:absolute;width:8px;height:8px;background:var(--ink);pointer-events:none}
+  .frame::before{top:-4px;left:-4px}
+  .frame::after{top:-4px;right:-4px}
+  .frame .cb{bottom:-4px;left:-4px}
+  .frame .cr{bottom:-4px;right:-4px}
 
-  /* BIAS CARD */
-  .bias-card { background: var(--surf); border: 1px solid var(--bd); border-radius: 12px; padding: 14px 16px; }
-  .bias-num  { font-family: var(--fm); font-size: 32px; font-weight: 700; line-height: 1; }
-  .bias-label { font-family: var(--fm); font-size: 10px; color: var(--tdm); letter-spacing: .08em; text-transform: uppercase; margin-top: 4px; }
-  .bias-desc  { font-size: 12px; color: var(--td); margin-top: 8px; line-height: 1.5; }
+  /* Calibración */
+  .calib{padding:24px;display:grid;grid-template-columns:1.3fr 1fr;gap:16px;align-items:start}
+  .calib .sep{border-left:1px solid var(--ink);padding-left:16px}
+  .calib .big{font-family:var(--font-display);font-size:96px;line-height:.85}
 
-  /* EMPTY */
-  .empty { font-family: var(--fm); font-size: 11px; color: var(--tdm); text-align: center; padding: 16px; }
+  /* Lista perfil — fuerza */
+  .row-list{border-top:1px solid var(--ink)}
+  .row{display:grid;grid-template-columns:24px 1fr auto auto;gap:12px;align-items:baseline;border-bottom:1px solid var(--ink);padding:16px 0}
+  .row .idx{font-family:var(--font-mono);font-size:11px;opacity:.5}
+  .row .name{font-family:var(--font-display);font-size:20px;text-transform:uppercase}
+  .row .delta{font-family:var(--font-mono);font-size:11px;font-weight:700;color:var(--success)}
+  .row .delta.neg{color:var(--danger)}
+  .row .v{font-family:var(--font-display);font-size:30px;text-align:right}
+  .row .v .u{font-family:var(--font-mono);font-size:12px;opacity:.5;margin-left:4px}
 
-  /* DECISIONES SUMMARY */
-  .dec-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-  .dec-card { background: var(--surf); border: 1px solid var(--bd); border-radius: 12px; padding: 12px; }
-  .dec-num  { font-family: var(--fm); font-size: 24px; font-weight: 700; }
-  .dec-lbl  { font-family: var(--fm); font-size: 10px; color: var(--tdm); text-transform: uppercase; letter-spacing: .08em; margin-top: 3px; }
+  /* Estaciones */
+  .est{border-bottom:1px solid var(--ink);padding:16px 0}
+  .est-r{display:grid;grid-template-columns:24px 1fr auto;gap:12px;align-items:baseline}
+  .est .name{font-family:var(--font-display);font-size:16px;text-transform:uppercase}
+  .est .meta{font-family:var(--font-mono);font-size:10px;opacity:.6;margin-top:4px;text-transform:uppercase;letter-spacing:.08em}
+  .est .pct{font-family:var(--font-display);font-size:30px;text-align:right}
+  .est .pct .u{font-size:14px;opacity:.6}
+  .est .note{margin-top:8px;margin-left:36px;display:inline-block}
+  .est .note span{background:var(--accent);padding:2px 6px;font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.08em}
+
+  /* Récords */
+  .records{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+  .rec{position:relative;padding:16px;background:var(--ink);color:var(--paper);border:1px solid var(--ink)}
+  .rec .date{font-family:var(--font-mono);font-size:10px;text-transform:uppercase;letter-spacing:.1em;opacity:.7}
+  .rec .v{font-family:var(--font-display);font-size:48px;line-height:1;margin-top:12px}
+  .rec .v .u{font-size:13px;opacity:.6;margin-left:4px}
+  .rec .ej{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.1em;margin-top:12px;opacity:.9}
+  .rec .arrow{position:absolute;top:10px;right:10px;width:16px;height:16px}
+
+  /* Decisiones */
+  .deci{display:grid;grid-template-columns:repeat(4,1fr);border:1px solid var(--ink)}
+  .deci > div{padding:20px;border-right:1px solid var(--ink)}
+  .deci > div:last-child{border-right:0}
+  .deci > div:first-child{background:var(--accent)}
+  .deci .v{font-family:var(--font-display);font-size:48px;line-height:1}
+
+  /* Alertas */
+  .alerts{display:flex;flex-direction:column;gap:8px}
+  .alert{display:flex;align-items:center;gap:16px;padding:14px 20px;border:1px solid var(--ink);background:var(--card)}
+  .alert.crit{background:var(--danger);color:var(--paper)}
+  .alert .dot{width:10px;height:10px;border-radius:50%;background:var(--warning);flex-shrink:0}
+  .alert.crit .dot{background:var(--paper)}
+  .alert .tipo{font-family:var(--font-mono);font-size:10px;text-transform:uppercase;letter-spacing:.16em;width:96px;flex-shrink:0;opacity:.85}
+  .alert .txt{font-family:var(--font-display);font-size:14px;text-transform:uppercase;letter-spacing:-.01em;flex:1}
+
+  /* Insights */
+  .ins{display:grid;grid-template-columns:repeat(2,1fr);border-top:1px solid var(--ink);border-left:1px solid var(--ink)}
+  .ins > div{border-right:1px solid var(--ink);border-bottom:1px solid var(--ink);padding:20px;background:var(--card)}
+  .ins-head{display:flex;justify-content:space-between;align-items:baseline}
+  .ins .v{font-family:var(--font-display);font-size:36px;line-height:1;margin-top:16px}
+  .ins .d{font-size:12px;line-height:1.5;margin-top:16px;opacity:.8}
+
+  /* Empty */
+  .empty{font-family:var(--font-mono);font-size:11px;text-align:center;padding:32px;opacity:.5;text-transform:uppercase;letter-spacing:.12em;border:1px dashed var(--ink)}
+
+  /* Footer */
+  footer.foot{margin-top:64px;border-top:3px solid var(--ink);padding-top:20px;display:flex;justify-content:space-between;align-items:center;font-family:var(--font-mono);font-size:10px;text-transform:uppercase;letter-spacing:.16em;opacity:.6}
+
+  @media(max-width:640px){
+    .mast h1{font-size:56px}
+    .mast-grid{grid-template-columns:1fr}
+    .mast-grid .upd{text-align:left}
+    .stats{grid-template-columns:1fr}
+    .stat{border-right:1px solid var(--ink)!important;border-left:1px solid var(--ink)!important;margin-bottom:-1px}
+    .calib{grid-template-columns:1fr}
+    .calib .sep{border-left:0;padding-left:0;border-top:1px solid var(--ink);padding-top:16px}
+    .calib .big{font-size:72px}
+    .records{grid-template-columns:1fr}
+    .deci{grid-template-columns:repeat(2,1fr)}
+    .deci > div:nth-child(2){border-right:0}
+    .ins{grid-template-columns:1fr}
+    .row{grid-template-columns:20px 1fr auto;gap:8px}
+    .row .delta{display:none}
+    footer.foot{flex-direction:column;gap:8px;text-align:center}
+  }
 </style>
 </head>
 <body>
+
+<div class="marquee">
+  <div class="marquee-in">
+    <span>● LIVE · EXPEDIENTE #{{ cliente.id }}</span>
+    <span class="mono" id="clock">--:--:--</span>
+  </div>
+</div>
+
 <div class="wrap">
 
-  <!-- TOPBAR -->
-  <div class="topbar">
-    <a href="javascript:history.back()" class="tb-back">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
-      Volver
+  <header class="top">
+    <a href="javascript:history.back()" class="label icon-back">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+      VOLVER
     </a>
-    <span class="tb-label">Memoria · Sistema</span>
-    <span style="min-width:48px;"></span>
-  </div>
+    <span class="label" style="opacity:.5">MEMORIA · v{% now "m.y" %}</span>
+  </header>
 
-  <!-- HERO -->
-  <div class="hero">
-    <div class="hero-eyebrow">{{ cliente.nombre }}</div>
-    <div class="hero-title">Lo que sé<br>de ti</div>
-    <div class="hero-sub">Todo lo que el sistema ha aprendido de tus sesiones, patrones y respuestas.</div>
-  </div>
-
-  <!-- PATRONES DE CARGA -->
-  <div class="sec-hdr"><span class="sec-tag">Patrones de carga · 28 días</span><div class="sec-line"></div></div>
-  <div class="stat-grid">
-    <div class="stat-card">
-      {% if sesiones_semana %}
-        <div class="stat-val {% if sesiones_semana >= 3 %}ok{% elif sesiones_semana < 2 %}warn{% endif %}">{{ sesiones_semana }}</div>
-      {% else %}
-        <div class="stat-val na">—</div>
-      {% endif %}
-      <div class="stat-lbl">Sesiones/sem</div>
+  {# ── MASTHEAD ── #}
+  <section class="mast">
+    <div class="mast-row">
+      <div class="label" style="opacity:.6">EXPEDIENTE<br/>ATLETA</div>
+      <div class="label" style="opacity:.6">CLIENTE · {{ cliente.id }} · DESDE {{ cliente.user.date_joined|date:"m·Y" }}</div>
     </div>
-    <div class="stat-card">
-      {% if rpe_medio_gym %}
-        <div class="stat-val {% if rpe_medio_gym >= 8.5 %}warn{% elif rpe_medio_gym <= 6 %}ok{% endif %}">{{ rpe_medio_gym }}</div>
-      {% else %}
-        <div class="stat-val na">—</div>
-      {% endif %}
-      <div class="stat-lbl">RPE medio gym</div>
-    </div>
-    <div class="stat-card">
-      {% if energia_media %}
-        <div class="stat-val {% if energia_media <= 4 %}warn{% elif energia_media >= 7 %}ok{% endif %}">{{ energia_media }}</div>
-      {% else %}
-        <div class="stat-val na">—</div>
-      {% endif %}
-      <div class="stat-lbl">Energía media</div>
-    </div>
-  </div>
-
-  <!-- PERFIL ATLÉTICO (1RM) -->
-  {% if perfil_atletico %}
-  <div class="sec-hdr"><span class="sec-tag">Perfil de fuerza</span><div class="sec-line"></div></div>
-  <div class="row-list">
-    {% for item in perfil_atletico %}
-    <div class="row ok">
-      <span class="row-icon">🏋️</span>
-      <div class="row-body">
-        <div class="row-name">{{ item.ejercicio }}</div>
-        <div class="row-sub">1RM estimado</div>
+    <h1>LO QUE<br/><span class="marker">SÉ</span> DE TI<span class="dot">.</span></h1>
+    <div class="mast-grid">
+      <p>Todo lo que el sistema ha aprendido de <strong>{{ cliente.nombre }}</strong> a partir de sus sesiones, patrones biométricos y respuestas subjetivas. Este expediente se actualiza tras cada entrenamiento.</p>
+      <div class="upd">
+        <div style="opacity:.6">ÚLT. ACTUALIZACIÓN</div>
+        <div><strong>{% now "d/m/Y · H:i" %}</strong></div>
       </div>
-      <span class="row-val accent">{{ item.rm }} kg</span>
     </div>
-    {% endfor %}
-  </div>
-  {% endif %}
+  </section>
 
-  <!-- HYROX -->
-  {% if hyrox_obj %}
+  {# ── §01 CARGA · 28 DÍAS ── #}
+  <section class="sec">
+    <div class="sec-head"><span class="tag">§01</span><h2>CARGA · 28 DÍAS</h2><div class="rule-dashed"></div></div>
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-head"><span class="label" style="opacity:.5">01</span><span class="label" style="opacity:.5">SESIONES/SEM</span></div>
+        <div class="stat-val {% if sesiones_semana >= 3 %}c-ok{% elif sesiones_semana and sesiones_semana < 2 %}c-warn{% else %}c-na{% endif %}">
+          {% if sesiones_semana %}{{ sesiones_semana }}{% else %}—{% endif %}
+        </div>
+      </div>
+      <div class="stat">
+        <div class="stat-head"><span class="label" style="opacity:.5">02</span><span class="label" style="opacity:.5">RPE MEDIO GYM</span></div>
+        <div class="stat-val {% if rpe_medio_gym and rpe_medio_gym >= 8.5 %}c-warn{% elif rpe_medio_gym and rpe_medio_gym <= 6 %}c-ok{% else %}c-na{% endif %}">
+          {% if rpe_medio_gym %}{{ rpe_medio_gym }}<span class="u">/10</span>{% else %}—{% endif %}
+        </div>
+      </div>
+      <div class="stat">
+        <div class="stat-head"><span class="label" style="opacity:.5">03</span><span class="label" style="opacity:.5">ENERGÍA MEDIA</span></div>
+        <div class="stat-val {% if energia_media and energia_media >= 7 %}c-ok{% elif energia_media and energia_media <= 4 %}c-warn{% else %}c-na{% endif %}">
+          {% if energia_media %}{{ energia_media }}<span class="u">/10</span>{% else %}—{% endif %}
+        </div>
+      </div>
+    </div>
+  </section>
 
-  <!-- Perfil Hyrox -->
-  <div class="sec-hdr"><span class="sec-tag">Hyrox · perfil base</span><div class="sec-line"></div></div>
-  <div class="stat-grid">
-    <div class="stat-card">
-      {% if hyrox_obj.rm_sentadilla %}
-        <div class="stat-val ok">{{ hyrox_obj.rm_sentadilla }}</div>
-      {% else %}
-        <div class="stat-val na">—</div>
-      {% endif %}
-      <div class="stat-lbl">Squat RM kg</div>
-    </div>
-    <div class="stat-card">
-      {% if hyrox_obj.rm_peso_muerto %}
-        <div class="stat-val ok">{{ hyrox_obj.rm_peso_muerto }}</div>
-      {% else %}
-        <div class="stat-val na">—</div>
-      {% endif %}
-      <div class="stat-lbl">Deadlift RM kg</div>
-    </div>
-    <div class="stat-card">
-      {% if hyrox_obj.tiempo_5k_base %}
-        <div class="stat-val accent">{{ hyrox_obj.tiempo_5k_base }}</div>
-      {% else %}
-        <div class="stat-val na">—</div>
-      {% endif %}
-      <div class="stat-lbl">5K base</div>
-    </div>
-  </div>
-
-  <!-- Calibración RPE -->
+  {# ── §02 CALIBRACIÓN RPE ── #}
   {% if rpe_bias %}
-  <div class="sec-hdr"><span class="sec-tag">Calibración de esfuerzo</span><div class="sec-line"></div></div>
-  <div class="bias-card">
-    <div style="display:flex;align-items:flex-end;gap:12px;">
-      <div>
-        <div class="bias-num" style="color:{% if rpe_bias.bias > 0 %}var(--warn){% else %}var(--accent){% endif %}">
-          {% if rpe_bias.bias > 0 %}+{% endif %}{{ rpe_bias.bias }}
+  <section class="sec">
+    <div class="sec-head"><span class="tag">§02</span><h2>CALIBRACIÓN DE ESFUERZO</h2><div class="rule-dashed"></div></div>
+    <div class="frame"><span class="cb"></span><span class="cr"></span>
+      <div class="calib">
+        <div>
+          <div class="label" style="opacity:.6;margin-bottom:8px">SESGO RPE VS FC</div>
+          <div class="big">{% if rpe_bias.bias > 0 %}+{% endif %}{{ rpe_bias.bias }}</div>
+          <div class="label" style="margin-top:8px">{{ rpe_bias.n_sesiones }} SESIONES · {{ rpe_bias.nivel }}</div>
         </div>
-        <div class="bias-label">Sesgo RPE · {{ rpe_bias.n_sesiones }} sesiones</div>
+        <div class="sep">
+          <div class="label" style="margin-bottom:8px">DIAGNÓSTICO</div>
+          <p style="font-size:13px;line-height:1.55">
+            {% if rpe_bias.bias > 0 %}
+              <strong>Sobreestimas</strong> el esfuerzo: reportas más RPE del que indica tu FC. El plan ajusta los umbrales internamente.
+            {% else %}
+              <strong>Subestimas</strong> el esfuerzo: tu FC real supera lo que indica tu RPE. Los triggers de adaptación se calibran a tu escala real.
+            {% endif %}
+          </p>
+        </div>
       </div>
-      <span class="badge {% if rpe_bias.nivel == 'severo' %}bad{% else %}warn{% endif %}">{{ rpe_bias.nivel }}</span>
     </div>
-    <div class="bias-desc">
-      {% if rpe_bias.bias > 0 %}
-        Tiendes a <strong>sobreestimar</strong> el esfuerzo: reportas más RPE del que indica tu FC. El plan ajusta los umbrales internamente.
-      {% else %}
-        Tiendes a <strong>subestimar</strong> el esfuerzo: tu FC real supera lo que indica tu RPE. Los triggers de adaptación se calibran a tu escala real.
+  </section>
+  {% endif %}
+
+  {# ── §03 PERFIL DE FUERZA ── #}
+  {% if perfil_atletico %}
+  <section class="sec">
+    <div class="sec-head"><span class="tag">§03</span><h2>PERFIL DE FUERZA · 1RM</h2><div class="rule-dashed"></div></div>
+    <div class="row-list">
+      {% for item in perfil_atletico %}
+      <div class="row">
+        <div class="idx">{{ forloop.counter|stringformat:"02d" }}</div>
+        <div class="name">{{ item.ejercicio }}</div>
+        <div class="delta"></div>
+        <div class="v">{{ item.rm }}<span class="u">KG</span></div>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+
+  {# ── §04 HYROX PERFIL BASE ── #}
+  {% if hyrox_obj %}
+  <section class="sec">
+    <div class="sec-head"><span class="tag">§04</span><h2>HYROX · PERFIL BASE</h2><div class="rule-dashed"></div></div>
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-head"><span class="label" style="opacity:.5">A</span><span class="label" style="opacity:.5">SQUAT 1RM</span></div>
+        <div class="stat-val {% if hyrox_obj.rm_sentadilla %}c-ok{% else %}c-na{% endif %}">
+          {% if hyrox_obj.rm_sentadilla %}{{ hyrox_obj.rm_sentadilla }}<span class="u">KG</span>{% else %}—{% endif %}
+        </div>
+      </div>
+      <div class="stat">
+        <div class="stat-head"><span class="label" style="opacity:.5">B</span><span class="label" style="opacity:.5">DEADLIFT 1RM</span></div>
+        <div class="stat-val {% if hyrox_obj.rm_peso_muerto %}c-ok{% else %}c-na{% endif %}">
+          {% if hyrox_obj.rm_peso_muerto %}{{ hyrox_obj.rm_peso_muerto }}<span class="u">KG</span>{% else %}—{% endif %}
+        </div>
+      </div>
+      <div class="stat">
+        <div class="stat-head"><span class="label" style="opacity:.5">C</span><span class="label" style="opacity:.5">5K BASE</span></div>
+        <div class="stat-val {% if hyrox_obj.tiempo_5k_base %}c-hl{% else %}c-na{% endif %}">
+          {% if hyrox_obj.tiempo_5k_base %}{{ hyrox_obj.tiempo_5k_base }}{% else %}—{% endif %}
+        </div>
+      </div>
+    </div>
+  </section>
+  {% endif %}
+
+  {# ── §05 ESTACIONES HYROX ── #}
+  {% if estaciones_progreso %}
+  <section class="sec">
+    <div class="sec-head"><span class="tag">§05</span><h2>PROGRESO POR ESTACIÓN</h2><div class="rule-dashed"></div></div>
+    <div style="border-top:1px solid var(--ink)">
+      {% for e in estaciones_progreso %}
+      <div class="est">
+        <div class="est-r">
+          <div class="idx mono" style="font-size:11px;opacity:.5">{{ forloop.counter|stringformat:"02d" }}</div>
+          <div>
+            <div class="name">{{ e.estacion }}</div>
+            <div class="meta">{{ e.sesiones }} sesiones · mejor {{ e.mejor_seg }}s</div>
+          </div>
+          <div class="pct {% if e.estancada %}c-warn{% elif e.mejora_pct > 0 %}c-ok{% elif e.mejora_pct < 0 %}c-bad{% endif %}">
+            {% if e.mejora_pct > 0 %}+{% endif %}{{ e.mejora_pct }}<span class="u">%</span>
+          </div>
+        </div>
+        {% if e.estancada and e.sugerencia %}
+        <div class="est note"><span>↳ {{ e.sugerencia }}</span></div>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+
+  {# ── §06 RÉCORDS PERSONALES ── #}
+  {% if records %}
+  <section class="sec">
+    <div class="sec-head"><span class="tag">§06</span><h2>RÉCORDS PERSONALES</h2><div class="rule-dashed"></div></div>
+    <div class="records">
+      {% for r in records %}
+      <div class="rec">
+        <div class="date">{{ r.fecha_logrado|date:"d M Y" }}</div>
+        <div class="v">{{ r.valor }}<span class="u">KG</span></div>
+        <div class="ej">{{ r.ejercicio_nombre }}</div>
+        <svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M7 7h10v10"/></svg>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+
+  {# ── §07 DECISIONES DEL PLAN ── #}
+  {% if decisiones_total > 0 %}
+  <section class="sec">
+    <div class="sec-head"><span class="tag">§07</span><h2>DECISIONES DEL PLAN · 90D</h2><div class="rule-dashed"></div></div>
+    <div class="deci">
+      {% if decisiones_agrupadas.subir_peso %}
+      <div>
+        <div class="v">{{ decisiones_agrupadas.subir_peso|length }}</div>
+        <div class="label" style="margin-top:12px">SUBIDAS DE PESO</div>
+      </div>
+      {% endif %}
+      {% if decisiones_agrupadas.cambiar_variante %}
+      <div>
+        <div class="v">{{ decisiones_agrupadas.cambiar_variante|length }}</div>
+        <div class="label" style="margin-top:12px">CAMBIOS ESTÍMULO</div>
+      </div>
+      {% endif %}
+      {% if decisiones_agrupadas.mantener %}
+      <div>
+        <div class="v">{{ decisiones_agrupadas.mantener|length }}</div>
+        <div class="label" style="margin-top:12px">CONSOLIDACIONES</div>
+      </div>
+      {% endif %}
+      {% if decisiones_agrupadas.deload %}
+      <div>
+        <div class="v">{{ decisiones_agrupadas.deload|length }}</div>
+        <div class="label" style="margin-top:12px">DESCARGAS</div>
+      </div>
       {% endif %}
     </div>
-  </div>
+  </section>
   {% endif %}
 
-  <!-- Estaciones Hyrox -->
-  {% if estaciones_progreso %}
-  <div class="sec-hdr"><span class="sec-tag">Progreso por estación</span><div class="sec-line"></div></div>
-  <div class="row-list">
-    {% for e in estaciones_progreso %}
-    <div class="row {% if e.estancada %}warn{% elif e.mejora_pct > 5 %}ok{% else %}muted{% endif %}">
-      <span class="row-icon">{% if e.estancada %}⚡{% elif e.mejora_pct > 5 %}📈{% else %}➡️{% endif %}</span>
-      <div class="row-body">
-        <div class="row-name">{{ e.estacion }}</div>
-        <div class="row-sub">
-          {{ e.sesiones }} sesiones · mejor {{ e.mejor_seg }}s
-          {% if e.estancada %}<br><em>{{ e.sugerencia }}</em>{% endif %}
+  {# ── §08 ZONAS DE ATENCIÓN ── #}
+  {% if zonas_atencion or lesiones_activas %}
+  <section class="sec">
+    <div class="sec-head"><span class="tag">§08</span><h2>ZONAS DE ATENCIÓN</h2><div class="rule-dashed"></div></div>
+    <div class="alerts">
+      {% for l in lesiones_activas %}
+      <div class="alert crit">
+        <span class="dot"></span>
+        <span class="tipo">LESIÓN</span>
+        <span class="txt">{{ l.zona_afectada }} — fase {{ l.fase }}</span>
+      </div>
+      {% endfor %}
+      {% for z in zonas_atencion %}
+      <div class="alert">
+        <span class="dot"></span>
+        <span class="tipo">MOLESTIA</span>
+        <span class="txt">{{ z.ejercicio }} — {{ z.motivo|truncatechars:55 }}</span>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+
+  {# ── §09 LO QUE SÉ DE CÓMO ENTRENAS ── #}
+  {% if modelo and modelo.tiene_datos %}
+  <section class="sec">
+    <div class="sec-head"><span class="tag">§09</span><h2>LO QUE SÉ DE CÓMO ENTRENAS</h2><div class="rule-dashed"></div></div>
+    <div class="ins">
+
+      {% if modelo.patron_semanal %}
+      <div>
+        <div class="ins-head"><span class="label" style="opacity:.5">N°01</span><span class="label">PATRÓN SEMANAL</span></div>
+        <div class="v"><span class="marker">{{ modelo.patron_semanal.dia_pico }}</span></div>
+        <div class="d">{{ modelo.patron_semanal.descripcion }}</div>
+      </div>
+      {% endif %}
+
+      {% if modelo.ventana_recuperacion %}
+      <div>
+        <div class="ins-head"><span class="label" style="opacity:.5">N°02</span><span class="label">RECUPERACIÓN</span></div>
+        <div class="v">{{ modelo.ventana_recuperacion.dias_optimos }}<span style="font-family:var(--font-mono);font-size:14px;opacity:.6"> días</span></div>
+        <div class="d">{{ modelo.ventana_recuperacion.descripcion }}</div>
+      </div>
+      {% endif %}
+
+      {% if modelo.serie_critica_global %}
+      <div>
+        <div class="ins-head"><span class="label" style="opacity:.5">N°03</span><span class="label">SERIE CRÍTICA</span></div>
+        <div class="v">S{{ modelo.serie_critica_global.serie }}</div>
+        <div class="d">{{ modelo.serie_critica_global.descripcion }}</div>
+      </div>
+      {% endif %}
+
+      {% if modelo.hrv_patron %}
+      <div>
+        <div class="ins-head"><span class="label" style="opacity:.5">N°04</span><span class="label">HRV MEDIO</span></div>
+        <div class="v">{{ modelo.hrv_patron.hrv_medio }}<span style="font-family:var(--font-mono);font-size:14px;opacity:.6"> ms</span></div>
+        <div class="d">{{ modelo.hrv_patron.descripcion }}</div>
+      </div>
+      {% endif %}
+
+      {% for e in modelo.ejercicios_emblema|slice:":4" %}
+      <div>
+        <div class="ins-head"><span class="label" style="opacity:.5">PR</span><span class="label">{{ e.ejercicio|upper|truncatechars:16 }}</span></div>
+        <div class="v"><span class="marker">+{{ e.pct }}%</span></div>
+        <div class="d">{{ e.peso_antes }} kg → {{ e.peso_ahora }} kg en 90 días</div>
+      </div>
+      {% endfor %}
+
+    </div>
+  </section>
+
+  {# Umbrales técnicos #}
+  {% if modelo.umbral_tecnico %}
+  <section class="sec">
+    <div class="sec-head"><span class="tag">§09b</span><h2>UMBRALES TÉCNICOS</h2><div class="rule-dashed"></div></div>
+    <div style="border-top:1px solid var(--ink)">
+      {% for u in modelo.umbral_tecnico %}
+      <div class="est">
+        <div class="est-r">
+          <div class="idx mono" style="font-size:11px;opacity:.5">{{ forloop.counter|stringformat:"02d" }}</div>
+          <div>
+            <div class="name">{{ u.ejercicio }}</div>
+            <div class="meta">{{ u.descripcion }}</div>
+          </div>
+          {% if u.pct_rm %}
+          <div class="pct c-warn">{{ u.pct_rm }}<span class="u">%RM</span></div>
+          {% endif %}
         </div>
       </div>
-      <span class="row-val {% if e.estancada %}warn{% elif e.mejora_pct > 0 %}ok{% else %}bad{% endif %}">
-        {% if e.mejora_pct > 0 %}+{% endif %}{{ e.mejora_pct }}%
-      </span>
+      {% endfor %}
     </div>
-    {% endfor %}
-  </div>
+  </section>
   {% endif %}
 
-  {% endif %}{# /hyrox_obj #}
-
-  <!-- RÉCORDS PERSONALES -->
-  {% if records %}
-  <div class="sec-hdr"><span class="sec-tag">Récords personales</span><div class="sec-line"></div></div>
-  <div class="row-list">
-    {% for r in records %}
-    <div class="row ok">
-      <span class="row-icon">🏆</span>
-      <div class="row-body">
-        <div class="row-name">{{ r.ejercicio_nombre }}</div>
-        <div class="row-sub">{{ r.fecha_logrado|date:"d M Y" }}</div>
-      </div>
-      <span class="row-val ok">{{ r.valor }} kg</span>
-    </div>
-    {% endfor %}
-  </div>
-  {% endif %}
-
-  <!-- DECISIONES DEL PLAN -->
-  {% if decisiones_total > 0 %}
-  <div class="sec-hdr"><span class="sec-tag">Decisiones tomadas · 90 días</span><div class="sec-line"></div></div>
-  <div class="dec-grid">
-    {% if decisiones_agrupadas.deload %}
-    <div class="dec-card">
-      <div class="dec-num" style="color:var(--warn)">{{ decisiones_agrupadas.deload|length }}</div>
-      <div class="dec-lbl">Deloads</div>
-    </div>
-    {% endif %}
-    {% if decisiones_agrupadas.cambiar_variante %}
-    <div class="dec-card">
-      <div class="dec-num" style="color:var(--accent)">{{ decisiones_agrupadas.cambiar_variante|length }}</div>
-      <div class="dec-lbl">Variantes</div>
-    </div>
-    {% endif %}
-    {% if decisiones_agrupadas.mantener %}
-    <div class="dec-card">
-      <div class="dec-num" style="color:var(--td)">{{ decisiones_agrupadas.mantener|length }}</div>
-      <div class="dec-lbl">Mantenidos</div>
-    </div>
-    {% endif %}
-    {% if decisiones_agrupadas.subir_peso %}
-    <div class="dec-card">
-      <div class="dec-num" style="color:var(--ok)">{{ decisiones_agrupadas.subir_peso|length }}</div>
-      <div class="dec-lbl">Subidas</div>
-    </div>
-    {% endif %}
-  </div>
-  {% endif %}
-
-  <!-- ZONAS DE ATENCIÓN -->
-  {% if zonas_atencion or lesiones_activas %}
-  <div class="sec-hdr"><span class="sec-tag">Zonas de atención</span><div class="sec-line"></div></div>
-  <div class="row-list">
-    {% for l in lesiones_activas %}
-    <div class="row bad">
-      <span class="row-icon">🩹</span>
-      <div class="row-body">
-        <div class="row-name">{{ l.zona_afectada }}</div>
-        <div class="row-sub">Lesión activa · fase {{ l.fase }}</div>
-      </div>
-    </div>
-    {% endfor %}
-    {% for z in zonas_atencion %}
-    <div class="row warn">
-      <span class="row-icon">⚠️</span>
-      <div class="row-body">
-        <div class="row-name">{{ z.ejercicio }}</div>
-        <div class="row-sub">{{ z.motivo|truncatechars:60 }}</div>
-      </div>
-    </div>
-    {% endfor %}
-  </div>
-  {% endif %}
-
-  {% if not perfil_atletico and not records and not estaciones_progreso and decisiones_total == 0 %}
-  <div class="empty">Aún no hay suficientes datos. El sistema aprende con cada sesión completada.</div>
-  {% endif %}
-
-  <!-- ── MODELO PROGRESIVO DEL USUARIO ─────────────────────────────── -->
-  {% if modelo and modelo.tiene_datos %}
-  <div class="sec-hdr"><span class="sec-tag">Lo que sé de cómo entrenas</span><div class="sec-line"></div></div>
-
-  {% if modelo.patron_semanal %}
-  <div class="row-item" style="flex-direction:column;align-items:flex-start;gap:4px;">
-    <div style="display:flex;align-items:center;gap:8px;">
-      <span style="font-size:16px;">📅</span>
-      <div class="row-name">Mejor día: {{ modelo.patron_semanal.dia_pico }}</div>
-    </div>
-    <div class="row-sub" style="padding-left:26px;">{{ modelo.patron_semanal.descripcion }}</div>
-  </div>
-  {% endif %}
-
-  {% if modelo.ventana_recuperacion %}
-  <div class="row-item" style="flex-direction:column;align-items:flex-start;gap:4px;">
-    <div style="display:flex;align-items:center;gap:8px;">
-      <span style="font-size:16px;">⏱️</span>
-      <div class="row-name">Recuperación óptima: {{ modelo.ventana_recuperacion.dias_optimos }} días</div>
-    </div>
-    <div class="row-sub" style="padding-left:26px;">{{ modelo.ventana_recuperacion.descripcion }}</div>
-  </div>
-  {% endif %}
-
-  {% if modelo.serie_critica_global %}
-  <div class="row-item" style="flex-direction:column;align-items:flex-start;gap:4px;">
-    <div style="display:flex;align-items:center;gap:8px;">
-      <span style="font-size:16px;">🎯</span>
-      <div class="row-name">Serie crítica: serie {{ modelo.serie_critica_global.serie }}</div>
-    </div>
-    <div class="row-sub" style="padding-left:26px;">{{ modelo.serie_critica_global.descripcion }}</div>
-  </div>
-  {% endif %}
-
-  {% if modelo.umbral_tecnico %}
-  <div class="sec-hdr" style="margin-top:12px;"><span class="sec-tag">Umbrales técnicos detectados</span><div class="sec-line"></div></div>
-  {% for u in modelo.umbral_tecnico %}
-  <div class="row-item" style="flex-direction:column;align-items:flex-start;gap:3px;">
-    <div class="row-name">{{ u.ejercicio }}{% if u.pct_rm %} · {{ u.pct_rm }}% RM{% endif %}</div>
-    <div class="row-sub">{{ u.descripcion }}</div>
-  </div>
-  {% endfor %}
-  {% endif %}
-
+  {# Grupos musculares #}
   {% if modelo.grupos_musculares.rapidos or modelo.grupos_musculares.lentos %}
-  <div class="sec-hdr" style="margin-top:12px;"><span class="sec-tag">Progresión por grupo muscular</span><div class="sec-line"></div></div>
-  {% for g in modelo.grupos_musculares.rapidos %}
-  <div class="row-item">
-    <span style="font-size:14px;">📈</span>
-    <div><div class="row-name">{{ g.grupo }}</div><div class="row-sub">+{{ g.pct }}% en 90 días</div></div>
-  </div>
-  {% endfor %}
-  {% for g in modelo.grupos_musculares.lentos %}
-  <div class="row-item">
-    <span style="font-size:14px;">📉</span>
-    <div><div class="row-name">{{ g.grupo }}</div><div class="row-sub">{{ g.pct }}% en 90 días — cambiar estímulo</div></div>
-  </div>
-  {% endfor %}
-  {% endif %}
-
-  {% if modelo.hrv_patron %}
-  <div class="row-item" style="flex-direction:column;align-items:flex-start;gap:4px;">
-    <div style="display:flex;align-items:center;gap:8px;">
-      <span style="font-size:16px;">💓</span>
-      <div class="row-name">HRV y rendimiento (medio: {{ modelo.hrv_patron.hrv_medio }}ms)</div>
+  <section class="sec">
+    <div class="sec-head"><span class="tag">§09c</span><h2>PROGRESIÓN MUSCULAR</h2><div class="rule-dashed"></div></div>
+    <div class="row-list">
+      {% for g in modelo.grupos_musculares.rapidos %}
+      <div class="row">
+        <div class="idx">{{ forloop.counter|stringformat:"02d" }}</div>
+        <div class="name">{{ g.grupo }}</div>
+        <div class="delta">+{{ g.pct }}%</div>
+        <div class="v c-ok">+{{ g.pct }}<span class="u">%</span></div>
+      </div>
+      {% endfor %}
+      {% for g in modelo.grupos_musculares.lentos %}
+      <div class="row">
+        <div class="idx">{{ forloop.counter|stringformat:"02d" }}</div>
+        <div class="name">{{ g.grupo }}</div>
+        <div class="delta neg">{{ g.pct }}%</div>
+        <div class="v c-warn">{{ g.pct }}<span class="u">%</span></div>
+      </div>
+      {% endfor %}
     </div>
-    <div class="row-sub" style="padding-left:26px;">{{ modelo.hrv_patron.descripcion }}</div>
-  </div>
+  </section>
   {% endif %}
 
-  {% if modelo.ejercicios_emblema %}
-  <div class="sec-hdr" style="margin-top:12px;"><span class="sec-tag">Tus mejores progresos (90 días)</span><div class="sec-line"></div></div>
-  {% for e in modelo.ejercicios_emblema %}
-  <div class="row-item">
-    <span style="font-size:14px;">🏆</span>
-    <div>
-      <div class="row-name">{{ e.ejercicio }} · +{{ e.pct }}%</div>
-      <div class="row-sub">{{ e.peso_antes }} kg → {{ e.peso_ahora }} kg</div>
-    </div>
-  </div>
-  {% endfor %}
+  {% endif %}{# /modelo.tiene_datos #}
+
+  {% if not perfil_atletico and not records and not estaciones_progreso and decisiones_total == 0 and not modelo.tiene_datos %}
+  <section class="sec">
+    <div class="empty">Aún no hay suficientes datos. El sistema aprende con cada sesión completada.</div>
+  </section>
   {% endif %}
 
-  {% endif %}{# fin modelo.tiene_datos #}
+  <footer class="foot">
+    <span>FIN DEL EXPEDIENTE</span>
+    <span>● APRENDIENDO CON CADA SESIÓN</span>
+    <span>{{ cliente.id }} / {% now "m·y" %}</span>
+  </footer>
 
 </div>
+
+<script>
+(function(){
+  var el=document.getElementById('clock');
+  function tick(){var d=new Date();el.textContent=d.toTimeString().slice(0,8);}
+  tick();setInterval(tick,1000);
+})();
+</script>
 </body>
 </html>
