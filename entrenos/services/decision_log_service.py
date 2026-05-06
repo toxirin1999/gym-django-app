@@ -43,12 +43,13 @@ def generar_decisiones_para_entreno(entreno):
             .select_related('entreno')[:5]
         )
 
-        # No generar decisión duplicada si ya existe una pendiente reciente (≤ 7 días)
+        # No generar decisión si ya hay una pendiente sin evaluar (cualquier antigüedad).
+        # Esto evita conflictos con decisiones generadas por detectar_estancamiento
+        # o detectar_molestia_recurrente que aún no han sido aplicadas.
         existe = GymDecisionLog.objects.filter(
             cliente=cliente,
             ejercicio__iexact=nombre,
             resultado__isnull=True,
-            fecha_creacion__gte=timezone.now() - timedelta(days=7),
         ).exists()
         if existe:
             continue
@@ -95,12 +96,34 @@ def generar_decisiones_para_entreno(entreno):
 def _decidir_accion(ej, historial, perfil, rpe, fallo, es_tope):
     """Devuelve (accion, valor_cambio, motivo) para un ejercicio dado."""
 
-    # 1. Fallo o RPE extremo → reducir
-    if fallo or (rpe is not None and rpe >= 9.5):
+    # 1. Fallo muscular — distinguir intencional (RIR=0) de exceso de carga
+    if fallo:
+        fallo_intencional = (ej.rir is not None and ej.rir == 0)
+        if fallo_intencional:
+            # Fallo buscado deliberadamente — consolidar sin penalizar
+            return (
+                'mantener',
+                None,
+                'Fallo muscular intencional (RIR=0) — consolidar antes de progresar',
+            )
+        if rpe is not None and rpe >= 9.5:
+            return (
+                'bajar_peso',
+                perfil.reduccion_peso_pct,
+                'Fallo muscular con RPE extremo (≥9.5) — carga excesiva',
+            )
+        return (
+            'mantener',
+            None,
+            'Fallo muscular sin RPE extremo — mantener carga y vigilar técnica',
+        )
+
+    # RPE extremo sin fallo → reducir
+    if rpe is not None and rpe >= 9.5:
         return (
             'bajar_peso',
             perfil.reduccion_peso_pct,
-            'Fallo muscular o RPE extremo (≥9.5) detectado',
+            'RPE extremo (≥9.5) detectado — reducir carga',
         )
 
     # 2. Tope de máquina → subir reps
@@ -245,15 +268,16 @@ def _actualizar_perfil(cliente, ejercicio):
     perfil.decisiones_validadas = validadas
     perfil.decisiones_fallidas = fallidas
 
-    # Ajustar incremento según últimas 3 subidas de peso
-    ultimas_subidas = logs.filter(accion='subir_peso').order_by('-fecha_creacion')[:3]
-    for decision in ultimas_subidas:
-        if decision.resultado == 'fallida':
-            # Reducir agresividad
-            perfil.incremento_peso_pct = max(perfil.incremento_peso_pct * 0.75, 2.5)
-        elif decision.resultado == 'validada':
-            # Aumentar agresividad (techo 7.5%)
-            perfil.incremento_peso_pct = min(perfil.incremento_peso_pct * 1.05, 7.5)
+    # Ajustar incremento según tendencia de las últimas 3 subidas de peso.
+    # Se aplica un único ajuste basado en la mayoría, no acumulativo.
+    ultimas_subidas = list(logs.filter(accion='subir_peso').order_by('-fecha_creacion')[:3])
+    if ultimas_subidas:
+        n_fallidas = sum(1 for d in ultimas_subidas if d.resultado == 'fallida')
+        n_validadas = sum(1 for d in ultimas_subidas if d.resultado == 'validada')
+        if n_fallidas >= 2:
+            perfil.incremento_peso_pct = max(perfil.incremento_peso_pct * 0.80, 2.5)
+        elif n_validadas >= 2:
+            perfil.incremento_peso_pct = min(perfil.incremento_peso_pct * 1.10, 7.5)
 
     # Confianza basada en total de logs
     if totales < 3:
