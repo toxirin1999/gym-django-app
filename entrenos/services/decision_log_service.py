@@ -279,6 +279,20 @@ def _actualizar_perfil(cliente, ejercicio):
         elif n_validadas >= 2:
             perfil.incremento_peso_pct = min(perfil.incremento_peso_pct * 1.10, 7.5)
 
+    # Ajustar reducción según tendencia de las últimas 3 bajadas de peso.
+    # Fallida/neutra → la reducción no fue suficiente → aumentar %.
+    # Validada → la reducción funcionó o fue excesiva → reducir %.
+    ultimas_bajadas = list(
+        logs.filter(accion__in=('bajar_peso', 'deload')).order_by('-fecha_creacion')[:3]
+    )
+    if ultimas_bajadas:
+        n_insuf = sum(1 for d in ultimas_bajadas if d.resultado in ('fallida', 'neutra'))
+        n_ok    = sum(1 for d in ultimas_bajadas if d.resultado == 'validada')
+        if n_insuf >= 2:
+            perfil.reduccion_peso_pct = min(perfil.reduccion_peso_pct * 1.20, 20.0)
+        elif n_ok >= 2:
+            perfil.reduccion_peso_pct = max(perfil.reduccion_peso_pct * 0.85, 5.0)
+
     # Confianza basada en total de logs
     if totales < 3:
         perfil.confianza = 'baja'
