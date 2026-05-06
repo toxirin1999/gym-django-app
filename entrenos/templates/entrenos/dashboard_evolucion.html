@@ -977,9 +977,9 @@ body {
                 {% with pa=prog.proxima_accion %}
                 <span class="rb-next-action rb-na-{{ pa.accion }}"
                       title="{{ pa.motivo }} (confianza {{ pa.confianza }})">
-                  {% if pa.accion == 'subir_peso' %}<i class="fas fa-arrow-up"></i> +{{ pa.valor_cambio|floatformat:1 }}%
+                  {% if pa.accion == 'subir_peso' %}<i class="fas fa-arrow-up"></i> {% if pa.peso_sugerido %}{{ pa.peso_sugerido }} kg{% else %}+{{ pa.valor_cambio|floatformat:1 }}%{% endif %}
                   {% elif pa.accion == 'subir_reps' %}<i class="fas fa-plus"></i> +reps
-                  {% elif pa.accion == 'bajar_peso' %}<i class="fas fa-arrow-down"></i> -{{ pa.valor_cambio|floatformat:1 }}%
+                  {% elif pa.accion == 'bajar_peso' %}<i class="fas fa-arrow-down"></i> {% if pa.peso_sugerido %}{{ pa.peso_sugerido }} kg{% else %}-{{ pa.valor_cambio|floatformat:1 }}%{% endif %}
                   {% elif pa.accion == 'deload' %}<i class="fas fa-battery-quarter"></i> Deload
                   {% elif pa.accion == 'cambiar_variante' %}<i class="fas fa-shuffle"></i> Variante
                   {% else %}<i class="fas fa-minus"></i> Mantener{% endif %}
@@ -1017,9 +1017,9 @@ body {
           </div>
           <div class="rb-dlog-center">
             <span class="rb-next-action rb-na-{{ log.accion }}">
-              {% if log.accion == 'subir_peso' %}<i class="fas fa-arrow-up"></i> +{{ log.valor_cambio|floatformat:1 }}%
+              {% if log.accion == 'subir_peso' %}<i class="fas fa-arrow-up"></i> {% if log.peso_sugerido %}{{ log.peso_sugerido }} kg{% else %}+{{ log.valor_cambio|floatformat:1 }}%{% endif %}
               {% elif log.accion == 'subir_reps' %}<i class="fas fa-plus"></i> Subir reps
-              {% elif log.accion == 'bajar_peso' %}<i class="fas fa-arrow-down"></i> -{{ log.valor_cambio|floatformat:1 }}%
+              {% elif log.accion == 'bajar_peso' %}<i class="fas fa-arrow-down"></i> {% if log.peso_sugerido %}{{ log.peso_sugerido }} kg{% else %}-{{ log.valor_cambio|floatformat:1 }}%{% endif %}
               {% elif log.accion == 'deload' %}<i class="fas fa-battery-quarter"></i> Deload
               {% else %}<i class="fas fa-minus"></i> Mantener{% endif %}
             </span>
