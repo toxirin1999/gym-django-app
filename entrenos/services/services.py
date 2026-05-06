@@ -453,6 +453,22 @@ class EstadisticasService:
         if not actividades:
             return EstadisticasService.analizar_acwr(cliente, periodo_dias)
 
+        # Guardia: historial insuficiente para que CTL converja (< 28 días).
+        primera_fecha = actividades[0]['fecha']
+        dias_historial = (fecha_fin - primera_fecha).days
+        if dias_historial < 28:
+            return {
+                'dataframe': [],
+                'acwr_actual': 0,
+                'zona_riesgo': 'insuficiente_historial',
+                'carga_aguda': 0,
+                'carga_cronica': 0,
+                'desglose_tipos': {},
+                'dias_descanso': None,
+                'fuente': 'unificado_ewma',
+                'dias_historial': dias_historial,
+            }
+
         # Mapa fecha → carga diaria total.
         # Usar 'fecha' (no fecha_realizado) para coincidir exactamente con
         # HyroxLoadManager y producir el mismo ACWR en ambos sitios.
@@ -502,8 +518,9 @@ class EstadisticasService:
         dias_descanso = None
         if carga_cronica_actual > 0:
             if acwr_actual > 1.3:
-                d = 7 * (1 - 1.3 / acwr_actual)
-                dias_descanso = max(1, math.ceil(d))
+                # Días necesarios para que ATL decaiga hasta CTL×1.3 con k=1/7
+                d = math.log(1.3 / acwr_actual) / math.log(6 / 7)
+                dias_descanso = max(1, math.ceil(abs(d)))
             else:
                 dias_descanso = 0
 
