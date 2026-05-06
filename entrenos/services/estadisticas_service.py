@@ -292,23 +292,30 @@ class EstadisticasService:
             completado=True
         ).values_list('ejercicio__nombre', flat=True).distinct())
 
-        # Normalizamos los nombres para agrupar correctamente
-        ejercicios_nombres = list(set([normalizar_nombre_ejercicio(n).lower() for n in nombres_manuales + nombres_liftin + nombres_nuevos if n]))
+        # Deduplicar usando nombre normalizado como clave, conservando el nombre raw original para querying.
+        # icontains con el nombre normalizado mezclaría ejercicios distintos (ej. "remo" matchea "remo con barra").
+        _seen_norm: dict = {}
+        for n in (nombres_manuales + nombres_liftin + nombres_nuevos):
+            if n:
+                norm = normalizar_nombre_ejercicio(n).lower()
+                if norm not in _seen_norm:
+                    _seen_norm[norm] = n  # conservar el nombre raw representativo
 
         progresiones = []
 
-        for nombre_ejercicio in ejercicios_nombres:
-            # Buscar en todas las tablas por aproximación de nombre (case-insensitive) y unir resultados
+        for nombre_ejercicio_raw in _seen_norm.values():
+            nombre_ejercicio = nombre_ejercicio_raw  # alias para legibilidad
+            # Búsqueda exacta (case-insensitive) para no mezclar variantes diferentes
             query_manual = EjercicioRealizado.objects.filter(
                 entreno__cliente=cliente,
-                nombre_ejercicio__icontains=nombre_ejercicio,
+                nombre_ejercicio__iexact=nombre_ejercicio,
                 completado=True,
                 entreno__fecha__gte=fecha_inicio
             ).values('entreno__fecha', 'peso_kg')
 
             query_liftin = EjercicioLiftinDetallado.objects.filter(
                 entreno__cliente=cliente,
-                nombre_ejercicio__icontains=nombre_ejercicio,
+                nombre_ejercicio__iexact=nombre_ejercicio,
                 completado=True,
                 entreno__fecha__gte=fecha_inicio
             ).values('entreno__fecha', 'peso_kg')
@@ -316,7 +323,7 @@ class EstadisticasService:
             # Para el nuevo modelo, buscamos el peso máximo levantado de ese ejercicio en ese entreno
             query_nuevo = SerieRealizada.objects.filter(
                 entreno__cliente=cliente,
-                ejercicio__nombre__icontains=nombre_ejercicio,
+                ejercicio__nombre__iexact=nombre_ejercicio,
                 completado=True,
                 entreno__fecha__gte=fecha_inicio
             ).values('entreno__fecha').annotate(
@@ -923,14 +930,20 @@ class EstadisticasService:
     @staticmethod
     def detectar_estancamientos(cliente):
         from entrenos.models import EjercicioRealizado
-        nombres = EjercicioRealizado.objects.filter(entreno__cliente=cliente).values_list('nombre_ejercicio',
-                                                                                          flat=True).distinct()
+        nombres = EjercicioRealizado.objects.filter(
+            entreno__cliente=cliente, completado=True, peso_kg__gt=0
+        ).values_list('nombre_ejercicio', flat=True).distinct()
         estancados = []
         for nombre in nombres:
-            registros = EjercicioRealizado.objects.filter(entreno__cliente=cliente, nombre_ejercicio=nombre,
-                                                          completado=True).order_by('-entreno__fecha')[:4]
+            registros = EjercicioRealizado.objects.filter(
+                entreno__cliente=cliente, nombre_ejercicio=nombre,
+                completado=True, peso_kg__isnull=False, peso_kg__gt=0
+            ).order_by('-entreno__fecha')[:4]
             if registros.count() < 3: continue
-            volumenes = [float(r.peso_kg) * r.repeticiones * r.series for r in registros]
+            try:
+                volumenes = [float(r.peso_kg) * (r.repeticiones or 1) * (r.series or 1) for r in registros]
+            except (TypeError, ValueError):
+                continue
             ultimo, anteriores = volumenes[0], volumenes[1:]
             promedio_anterior = sum(anteriores) / len(anteriores)
             if ultimo <= promedio_anterior * 1.02:
@@ -940,7 +953,9 @@ class EstadisticasService:
     @staticmethod
     def calcular_1rm_estimado_por_ejercicio(cliente):
         from entrenos.models import EjercicioRealizado
-        ejercicios = EjercicioRealizado.objects.filter(entreno__cliente=cliente, completado=True)
+        ejercicios = EjercicioRealizado.objects.filter(
+            entreno__cliente=cliente, completado=True, peso_kg__gt=0
+        )
         one_rm_finales = {}
         for e in ejercicios:
             try:
