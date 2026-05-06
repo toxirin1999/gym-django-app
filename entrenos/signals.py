@@ -111,17 +111,15 @@ def sincronizar_hub_actividad(sender, instance, created, raw=False, **kwargs):
             pass
 
     # Carga UA con fallbacks:
-    # 1. RPE × duración (estándar)
-    # 2. RPE por defecto (5.0 = moderado) × duración si no hay RPE
-    # 3. Volumen / 100 como estimación mínima si no hay duración
+    # 1. RPE × duración (estándar sRPE)
+    # 2. RPE estimado (6.5 = moderado-alto) × duración si no hay RPE
+    # Sin fallback por volumen: la escala volumen/100 ≠ sRPE → distorsiona el EWMA del ACWR
     carga_ua = None
     dur_valida = duracion is not None and duracion > 0
     if rpe_medio and dur_valida:
         carga_ua = round(float(rpe_medio) * duracion, 1)
     elif dur_valida:
-        carga_ua = round(5.0 * duracion, 1)   # esfuerzo moderado por defecto
-    elif instance.volumen_total_kg and instance.volumen_total_kg > 0:
-        carga_ua = round(float(instance.volumen_total_kg) / 100, 1)
+        carga_ua = round(6.5 * duracion, 1)   # RPE moderado-alto por defecto para sesiones gym
 
     from datetime import date as _date
     hoy = _date.today()
@@ -191,7 +189,7 @@ def detectar_molestia_recurrente(sender, instance, created, raw=False, **kwargs)
                     cliente=instance.cliente,
                     ejercicio=clave_zona,
                     accion='cambiar_variante',
-                    fecha_creacion__gte=instance.fecha,
+                    fecha_creacion__date__gte=ventana,
                 ).exists()
                 if not ya_existe:
                     GymDecisionLog.objects.create(
