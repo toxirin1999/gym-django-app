@@ -207,7 +207,7 @@ class EvaluacionProfesionalService:
             entreno__cliente=cliente,
             entreno__fecha__gte=fecha_inicio,
             completado=True
-        )
+        ).select_related('entreno')
         
         # Sesiones de entrenamiento
         sesiones = SesionEntrenamiento.objects.filter(
@@ -226,10 +226,10 @@ class EvaluacionProfesionalService:
             volumen_por_grupo[grupo] += float(ej.peso_kg or 0) * int(ej.series or 1) * int(ej.repeticiones or 1)
             frecuencia_por_grupo[grupo].add(ej.entreno.fecha)
         
-        # Convertir frecuencia a días únicos
-        dias_entrenamiento = set()
-        for e in entrenos:
-            dias_entrenamiento.add(e.fecha)
+        # Días únicos de entrenamiento (sin iterar objetos)
+        dias_entrenamiento = set(
+            entrenos.values_list('fecha', flat=True)
+        )
         
         # Calcular semanas en el período
         dias_periodo = (timezone.now().date() - fecha_inicio).days
@@ -264,7 +264,8 @@ class EvaluacionProfesionalService:
             'rpe_distribucion': EvaluacionProfesionalService._calcular_distribucion_rpe(rpe_values),
             'progresion_ejercicios': progresion_ejercicios,
             'acwr': EvaluacionProfesionalService._calcular_acwr_simple(cliente),
-            'fechas_entrenamiento': sorted(dias_entrenamiento)
+            'fechas_entrenamiento': sorted(dias_entrenamiento),
+            'dias_disponibles': getattr(cliente, 'dias_disponibles', 4) or 4,
         }
     
     @staticmethod
@@ -283,7 +284,8 @@ class EvaluacionProfesionalService:
         for ej_nombre in ejercicios_principales:
             registros = EjercicioRealizado.objects.filter(
                 entreno__cliente=cliente,
-                nombre_ejercicio__icontains=ej_nombre.split()[0],  # Buscar por palabra clave
+                nombre_ejercicio__icontains=ej_nombre,
+                entreno__fecha__gte=fecha_inicio,
                 completado=True,
                 peso_kg__gt=0
             ).order_by('entreno__fecha')
@@ -791,7 +793,7 @@ class EvaluacionProfesionalService:
         """Evalúa la consistencia en el entrenamiento."""
         fechas = metricas.get('fechas_entrenamiento', [])
         semanas = metricas.get('semanas_periodo', 1)
-        frecuencia_esperada = 4  # Asumimos objetivo de 4 días/semana
+        frecuencia_esperada = metricas.get('dias_disponibles', 4)
         
         if len(fechas) < 2:
             return {
