@@ -31,11 +31,19 @@
             <!-- Tarjeta 1: Medidor ACWR -->
             <div class="card">
                 <h2 class="card-title">Ratio ACWR Actual</h2>
+                {% if analisis_acwr.zona_riesgo == 'insuficiente_historial' %}
+                <div style="text-align:center;padding:20px 12px;color:#888;">
+                  <div style="font-size:24px;margin-bottom:8px;">📊</div>
+                  <div style="font-weight:700;margin-bottom:6px;">Historial insuficiente</div>
+                  <div style="font-size:12px;line-height:1.5;">Necesitas al menos 28 días de datos.<br>Llevas {{ analisis_acwr.dias_historial }} día{{ analisis_acwr.dias_historial|pluralize }} registrados.</div>
+                </div>
+                {% else %}
                 <div class="gauge-container zona-{{ analisis_acwr.zona_riesgo }}">
                     <div class="gauge-value">{{ analisis_acwr.acwr_actual|floatformat:2 }}</div>
                     <div class="gauge-label">Zona {{ analisis_acwr.zona_riesgo|replace:"_, "|title }}</div>
                     <div class="gauge-reco">{{ analisis_acwr.recomendacion }}</div>
                 </div>
+                {% endif %}
             </div>
 
             <!-- Tarjeta 2: Métricas Avanzadas (Monotonía y Strain) -->
