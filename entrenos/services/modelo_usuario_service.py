@@ -145,7 +145,7 @@ def _get_rm_ejercicio(cliente, nombre):
     try:
         from entrenos.models import RecordPersonal
         pr = (RecordPersonal.objects
-              .filter(cliente=cliente, ejercicio_nombre__icontains=nombre,
+              .filter(cliente=cliente, ejercicio_nombre__iexact=nombre,
                       tipo_record='peso_maximo', superado=False)
               .order_by('-valor').first())
         if pr:
@@ -322,31 +322,36 @@ def _get_ventana_recuperacion(cliente, hoy):
 def _get_grupos_musculares(cliente, hoy):
     """
     Qué grupos musculares progresan más rápido (>5% en 90 días)
-    y cuáles se estancan (GymDecisionLog cambiar_variante / Sin progresión).
+    y cuáles se estancan. Una sola query por ventana temporal.
     """
     resultado = {'rapidos': [], 'lentos': [], 'descripcion': ''}
 
     try:
-        from entrenos.models import EjercicioRealizado, GymDecisionLog
+        from entrenos.models import EjercicioRealizado
         from django.db.models import Max
-        hace_90 = hoy - timedelta(days=90)
+        hace_90  = hoy - timedelta(days=90)
         hace_180 = hoy - timedelta(days=180)
 
-        # Grupos con progresión en peso
-        nombres = list(
-            EjercicioRealizado.objects
-            .filter(entreno__cliente=cliente, entreno__fecha__gte=hace_90, peso_kg__gt=0)
-            .values_list('nombre_ejercicio', flat=True).distinct()
-        )
+        # Una query por ventana: max peso por ejercicio
+        def _max_por_ejercicio(fecha_ini, fecha_fin):
+            return dict(
+                EjercicioRealizado.objects
+                .filter(entreno__cliente=cliente, peso_kg__gt=0,
+                        entreno__fecha__range=(fecha_ini, fecha_fin))
+                .values('nombre_ejercicio')
+                .annotate(mx=Max('peso_kg'))
+                .values_list('nombre_ejercicio', 'mx')
+            )
+
+        ahora_map = _max_por_ejercicio(hace_90, hoy)
+        antes_map = _max_por_ejercicio(hace_180, hace_90)
 
         progresion_por_grupo = defaultdict(list)
-        for nombre in nombres[:20]:
-            qs = EjercicioRealizado.objects.filter(
-                entreno__cliente=cliente, nombre_ejercicio=nombre, peso_kg__gt=0)
-            ahora = qs.filter(entreno__fecha__range=(hace_90, hoy)).aggregate(mx=Max('peso_kg'))['mx']
-            antes  = qs.filter(entreno__fecha__range=(hace_180, hace_90)).aggregate(mx=Max('peso_kg'))['mx']
+        for nombre in list(ahora_map.keys())[:20]:
+            ahora = ahora_map.get(nombre)
+            antes  = antes_map.get(nombre)
             if ahora and antes and float(antes) > 0:
-                pct = (float(ahora) - float(antes)) / float(antes) * 100
+                pct   = (float(ahora) - float(antes)) / float(antes) * 100
                 grupo = _inferir_grupo(nombre)
                 if grupo:
                     progresion_por_grupo[grupo].append(pct)
@@ -404,18 +409,23 @@ def _get_ejercicios_emblema(cliente, hoy):
         hace_90 = hoy - timedelta(days=90)
         hace_180 = hoy - timedelta(days=180)
 
-        nombres = list(
-            EjercicioRealizado.objects
-            .filter(entreno__cliente=cliente, entreno__fecha__gte=hace_90, peso_kg__gt=0)
-            .values_list('nombre_ejercicio', flat=True).distinct()
-        )
+        def _max_por_ejercicio(fecha_ini, fecha_fin):
+            return dict(
+                EjercicioRealizado.objects
+                .filter(entreno__cliente=cliente, peso_kg__gt=0,
+                        entreno__fecha__range=(fecha_ini, fecha_fin))
+                .values('nombre_ejercicio')
+                .annotate(mx=Max('peso_kg'))
+                .values_list('nombre_ejercicio', 'mx')
+            )
+
+        ahora_map = _max_por_ejercicio(hace_90, hoy)
+        antes_map = _max_por_ejercicio(hace_180, hace_90)
 
         mejoras = []
-        for nombre in nombres[:20]:
-            qs = EjercicioRealizado.objects.filter(
-                entreno__cliente=cliente, nombre_ejercicio=nombre, peso_kg__gt=0)
-            ahora = qs.filter(entreno__fecha__range=(hace_90, hoy)).aggregate(mx=Max('peso_kg'))['mx']
-            antes  = qs.filter(entreno__fecha__range=(hace_180, hace_90)).aggregate(mx=Max('peso_kg'))['mx']
+        for nombre in list(ahora_map.keys())[:20]:
+            ahora = ahora_map.get(nombre)
+            antes  = antes_map.get(nombre)
             if ahora and antes and float(antes) > 0:
                 pct = (float(ahora) - float(antes)) / float(antes) * 100
                 if pct >= 3:
@@ -484,13 +494,23 @@ def _get_hrv_patron(cliente, hoy):
         rpe_hrv_bajo  = sum(p[1] for p in hrv_bajo)  / len(hrv_bajo)
         hrv_medio = round(sum(b for b in bitacoras.values()) / len(bitacoras))
 
+        # Umbral personalizado: media del propio usuario (no fijo a 50ms)
+        hrv_alto = [p for p in pares if p[0] >= hrv_medio]
+        hrv_bajo  = [p for p in pares if p[0] < hrv_medio]
+
+        if not hrv_alto or not hrv_bajo:
+            return None
+
+        rpe_hrv_alto = sum(p[1] for p in hrv_alto) / len(hrv_alto)
+        rpe_hrv_bajo  = sum(p[1] for p in hrv_bajo)  / len(hrv_bajo)
+
         return {
             'hrv_medio': hrv_medio,
             'rpe_hrv_alto': round(rpe_hrv_alto, 1),
             'rpe_hrv_bajo': round(rpe_hrv_bajo, 1),
             'n_datos': len(pares),
             'descripcion': (
-                f"Con HRV ≥50ms tu RPE post-sesión baja a {round(rpe_hrv_alto, 1)} de media. "
+                f"Con HRV ≥{hrv_medio}ms (tu media) el RPE post-sesión baja a {round(rpe_hrv_alto, 1)}. "
                 f"Con HRV bajo sube a {round(rpe_hrv_bajo, 1)}. "
                 f"Tu HRV medio es {hrv_medio}ms."
             ),
