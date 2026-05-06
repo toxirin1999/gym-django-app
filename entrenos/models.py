@@ -1180,6 +1180,20 @@ class GymDecisionLog(models.Model):
     def resultado_label(self):
         return dict(self.RESULTADO_CHOICES).get(self.resultado, '') if self.resultado else 'Pendiente'
 
+    @property
+    def peso_sugerido(self):
+        """Peso concreto recomendado para la próxima sesión (kg), o None si no aplica."""
+        if not self.peso_anterior or not self.valor_cambio:
+            return None
+        if self.accion == 'subir_peso':
+            raw = float(self.peso_anterior) * (1 + float(self.valor_cambio) / 100)
+        elif self.accion in ('bajar_peso', 'deload'):
+            raw = float(self.peso_anterior) * (1 - float(self.valor_cambio) / 100)
+        else:
+            return None
+        # Redondear al múltiplo de 2.5 kg más cercano (disco estándar)
+        return round(round(raw / 2.5) * 2.5, 1)
+
 
 class GymAdaptationProfile(models.Model):
     cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE, related_name='gym_adaptation_profiles')
