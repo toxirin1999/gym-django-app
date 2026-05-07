@@ -822,7 +822,8 @@ class EstadisticasService:
                 entreno__cliente=cliente,
                 nombre_ejercicio__in=nombres_variaciones_extendidos,
                 peso_kg__gt=0,
-                completado=True
+                completado=True,
+                repeticiones__isnull=False,
             ).order_by('entreno__fecha')
 
             if registros.count() < 3: continue
@@ -831,7 +832,7 @@ class EstadisticasService:
             marcas_diarias = {}
             for r in registros:
                 fecha = r.entreno.fecha
-                rm = float(r.peso_kg) * (1 + (r.repeticiones / 30))
+                rm = float(r.peso_kg) * (1 + ((r.repeticiones or 1) / 30))
                 if fecha not in marcas_diarias or rm > marcas_diarias[fecha]:
                     marcas_diarias[fecha] = rm
 
@@ -889,13 +890,16 @@ class EstadisticasService:
             registros = EjercicioRealizado.objects.filter(
                 entreno__cliente=cliente,
                 nombre_ejercicio=nombre,
-                completado=True
+                completado=True,
+                peso_kg__gt=0,
+                repeticiones__isnull=False,
+                series__isnull=False,
             ).order_by('-entreno__fecha')[:4]
 
             if registros.count() < 3: continue
 
             # Calcular volumen total por sesión (peso * reps * series)
-            volumenes = [float(r.peso_kg) * r.repeticiones * r.series for r in registros]
+            volumenes = [float(r.peso_kg) * (r.repeticiones or 1) * (r.series or 1) for r in registros]
 
             # Si el volumen del último es menor o igual al promedio de los 3 anteriores (con margen del 2%)
             ultimo = volumenes[0]
