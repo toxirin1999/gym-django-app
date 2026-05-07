@@ -1411,7 +1411,8 @@ class HyroxRaceSimulator:
         # --- Calcular tiempo de cada estación ---
         desglose = []
 
-        for estacion, tiempo_base in cls.TIEMPOS_BASE_OPEN_SEGUNDOS.items():
+        tiempos_categoria = cls.TIEMPOS_POR_CATEGORIA.get(categoria, cls.TIEMPOS_BASE_OPEN_SEGUNDOS)
+        for estacion, tiempo_base in tiempos_categoria.items():
             penalizacion = 0.0  # porcentaje adicional de tiempo
 
             if estacion in ('Sled Push',):
@@ -1452,7 +1453,8 @@ class HyroxRaceSimulator:
             })
 
         # --- Carrera: 8km al ritmo ajustado ---
-        carrera_segundos = ritmo_1km_seg * 8 * ajuste_resistencia
+        # Factor 1.12: fatiga acumulada de 8 estaciones eleva el ritmo real ~10-12% vs 5K limpio
+        carrera_segundos = ritmo_1km_seg * 8 * 1.12 * ajuste_resistencia
 
         # --- Transiciones: 2 min fijo ---
         transiciones_seg = 120
