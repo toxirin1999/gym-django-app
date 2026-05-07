@@ -101,7 +101,7 @@ class PlanificadorHelms(NewPlanificadorHelms):
                 if clave_sem not in ejercicios_semana:
                     ejercicios_semana[clave_sem] = []
                 ejercicios_semana[clave_sem].extend(entreno.get('ejercicios', []))
-            except:
+            except Exception:
                 continue
 
         return {
@@ -113,14 +113,36 @@ class PlanificadorHelms(NewPlanificadorHelms):
         }
 
     def validar_plan_existente(self, plan: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Stub de compatibilidad para validación de planes.
-        """
+        """Valida un plan contra principios Helms y devuelve score real."""
+        advertencias = []
+        mejoras_sugeridas = []
+        score = 100
+
+        fases = plan.get('fases') or plan.get('plan_por_bloques') or []
+        if not fases:
+            advertencias.append('El plan no tiene fases definidas.')
+            score -= 30
+
+        duracion = plan.get('duracion_total_semanas') or sum(f.get('duracion', 0) for f in fases)
+        if duracion < 8:
+            advertencias.append('Plan muy corto para generar adaptaciones (< 8 semanas).')
+            score -= 20
+
+        if fases and max((f.get('duracion', 0) for f in fases), default=0) > 6:
+            advertencias.append('Fase demasiado larga sin deload. Helms recomienda máx. 6 semanas.')
+            mejoras_sugeridas.append('Añadir semana de deload cada 4-6 semanas.')
+            score -= 15
+
+        objetivos = {f.get('objetivo', f.get('fase', '')) for f in fases}
+        if len(objetivos) < 2:
+            mejoras_sugeridas.append('Incluir al menos fases de hipertrofia y fuerza.')
+            score -= 10
+
         return {
-            'score_adherencia': 85,
+            'score_adherencia': max(0, score),
             'mejoras_aplicadas': [],
-            'advertencias': [],
-            'mejoras_sugeridas': []
+            'advertencias': advertencias,
+            'mejoras_sugeridas': mejoras_sugeridas,
         }
 
 # Funciones de utilidad para compatibilidad legacy

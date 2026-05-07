@@ -3662,16 +3662,25 @@ def vista_resumen_anual(request, cliente_id):
     if not one_rm_reales:
         one_rm_reales = {'Press de Banca': 80, 'Sentadilla': 100}
 
-    cliente_data = {"id": cliente.id, "nombre": cliente.nombre, "one_rm_estimados": one_rm_reales}
-    planificador = inicializar_planificador_helms(cliente)
-
-    # El método ahora devuelve un diccionario
-    plan_semanal, plan_por_bloques = planificador.generar_plan_completo()
+    perfil_data = {
+        'id': cliente.id,
+        'nombre': cliente.nombre,
+        'experiencia_años': getattr(cliente, 'experiencia_años', 0),
+        'objetivo_principal': getattr(cliente, 'objetivo_principal', 'hipertrofia'),
+        'dias_disponibles': getattr(cliente, 'dias_disponibles', 4),
+        'maximos_actuales': one_rm_reales,
+        'nivel_estres': 5,
+        'calidad_sueño': 7,
+        'nivel_energia': 7,
+    }
+    perfil = PerfilCliente(perfil_data)
+    planificador = PlanificadorHelms(perfil)
+    plan = planificador.generar_plan_completo()
 
     context = {
         'cliente': cliente,
-        'plan_por_bloques': plan_por_bloques,  # Usamos la variable directamente
-        'total_semanas': len(plan_semanal)  # Usamos la otra variable para el conteo
+        'plan_por_bloques': plan.get('fases', []),
+        'total_semanas': plan.get('duracion_total_semanas', 52),
     }
 
     return render(request, 'analytics/vista_resumen_anual.html', context)
