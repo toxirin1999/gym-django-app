@@ -110,16 +110,23 @@ def sincronizar_hub_actividad(sender, instance, created, raw=False, **kwargs):
         except Exception:
             pass
 
-    # Carga UA con fallbacks:
-    # 1. RPE × duración (estándar sRPE)
-    # 2. RPE estimado (6.5 = moderado-alto) × duración si no hay RPE
-    # Sin fallback por volumen: la escala volumen/100 ≠ sRPE → distorsiona el EWMA del ACWR
+    # Carga UA: TRIMP si hay FC (fisiológico), sRPE si hay RPE, fallback moderado si solo duración
+    hr_media = instance.frecuencia_cardiaca_promedio
+    hr_maxima = instance.frecuencia_cardiaca_maxima
     carga_ua = None
     dur_valida = duracion is not None and duracion > 0
-    if rpe_medio and dur_valida:
+    if hr_media and dur_valida:
+        try:
+            from hyrox.training_engine import HyroxLoadManager
+            from hyrox.models import HyroxObjective
+            objetivo = HyroxObjective.objects.filter(cliente=instance.cliente, estado='activo').first()
+            carga_ua = HyroxLoadManager.calcular_trimp(duracion, hr_media, objetivo)
+        except Exception:
+            pass
+    if carga_ua is None and rpe_medio and dur_valida:
         carga_ua = round(float(rpe_medio) * duracion, 1)
-    elif dur_valida:
-        carga_ua = round(6.5 * duracion, 1)   # RPE moderado-alto por defecto para sesiones gym
+    elif carga_ua is None and dur_valida:
+        carga_ua = round(6.5 * duracion, 1)   # fallback moderado-alto si no hay FC ni RPE
 
     from datetime import date as _date
     hoy = _date.today()
@@ -137,6 +144,8 @@ def sincronizar_hub_actividad(sender, instance, created, raw=False, **kwargs):
         'calorias': instance.calorias_quemadas,
         'rpe_medio': rpe_medio,
         'carga_ua': carga_ua,
+        'hr_media': hr_media,
+        'hr_maxima': hr_maxima,
         'fuente': 'liftin' if instance.fuente_datos == 'liftin' else 'manual',
     }
 
