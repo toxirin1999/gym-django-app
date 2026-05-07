@@ -1072,15 +1072,17 @@ class HyroxTrainingEngine:
                         if next_sesion:
                             is_mutated = False
                             for act in next_sesion.activities.filter(tipo_actividad=tipo):
+                                mutated_act = False
                                 if 'series' in act.data_metricas:
                                     for serie in act.data_metricas['series']:
                                         if 'peso_kg' in serie:
                                             serie['peso_kg'] = round(float(serie['peso_kg']) * 1.1)
-                                            is_mutated = True
-                                if is_mutated:
+                                            mutated_act = True
+                                if mutated_act:
                                     notas_actuales = act.data_metricas.get('notas', '')
                                     act.data_metricas['notas'] = notas_actuales + " | 🔄 Ajuste Estancamiento: +10 % Carga."
                                     act.save()
+                                    is_mutated = True
 
                             if is_mutated:
                                 mensajes_ui.append(
