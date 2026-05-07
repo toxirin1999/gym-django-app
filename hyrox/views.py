@@ -2819,28 +2819,13 @@ def strava_procesar(request, actividad_id):
         except (ValueError, TypeError):
             return None
 
-    def _rpe_from_fc(hr_media, hr_maxima_sesion=None):
-        """
-        Estima RPE desde FC media cuando el usuario no introduce RPE manual.
-        Usa la FC max del objetivo activo; si no, la FC max de la sesión; si no, 185.
-        Devuelve el punto medio del rango RPE para la zona calculada.
-        """
-        if not hr_media:
+    def _trimp_from_strava(hr_media, duracion_min):
+        """TRIMP de Banister a partir de FC media. Usa objetivo activo si existe; sino fc_max=185."""
+        if not hr_media or not duracion_min:
             return None
         from .training_engine import HyroxLoadManager
         objetivo = HyroxObjective.objects.filter(cliente=cliente, estado='activo').first()
-        if objetivo:
-            fc_max = HyroxLoadManager.get_fc_max(objetivo)
-        elif hr_maxima_sesion and hr_maxima_sesion > hr_media:
-            fc_max = hr_maxima_sesion
-        else:
-            fc_max = 185
-        ratio = hr_media / fc_max
-        for zona, (low, high) in HyroxLoadManager.ZONAS_FC.items():
-            if low <= ratio < high:
-                rpe_min, rpe_max = HyroxLoadManager.RPE_POR_ZONA[zona]
-                return round((rpe_min + rpe_max) / 2, 1)
-        return 8.0  # fallback Z5
+        return HyroxLoadManager.calcular_trimp(duracion_min, hr_media, objetivo)
 
     # ── IGNORAR ──────────────────────────────────────────────────────────────
     if accion == 'ignore':
@@ -2921,7 +2906,7 @@ def strava_procesar(request, actividad_id):
         if not objetivo:
             return JsonResponse({'ok': False, 'msg': 'No tienes un objetivo Hyrox activo.'}, status=400)
         tipo  = request.POST.get('tipo_actividad', act.tipo_hyrox())
-        rpe   = _rpe() or _rpe_from_fc(act.hr_media, act.hr_maxima)
+        rpe   = _rpe()
         from .training_engine import HyroxLoadManager
         trimp = HyroxLoadManager.calcular_trimp(int(duracion_min), act.hr_media, objetivo) if act.hr_media else None
         with transaction.atomic():
@@ -2945,34 +2930,45 @@ def strava_procesar(request, actividad_id):
         act.estado = 'created'
         act.hyrox_session = sesion
         act.save()
-        rpe_info = f' · RPE {rpe} estimado desde FC' if rpe else ' (sin FC — no computará en ACWR)'
-        return JsonResponse({'ok': True, 'msg': f'Nueva sesión Hyrox creada desde Strava{rpe_info}.'})
+        trimp_info = f' · TRIMP {trimp}' if trimp else (' · RPE {rpe}' if rpe else ' (sin FC ni RPE — ACWR sin carga)')
+        return JsonResponse({'ok': True, 'msg': f'Nueva sesión Hyrox creada desde Strava{trimp_info}.'})
 
     # ── CREAR GYM (ActividadRealizada directa) ───────────────────────────────
     if accion == 'create_gym':
+        _STRAVA_TO_TIPO = {
+            'Run': 'carrera', 'Walk': 'otro', 'Hike': 'otro',
+            'Ride': 'ciclismo', 'VirtualRide': 'ciclismo', 'EBikeRide': 'ciclismo',
+            'Rowing': 'remo', 'WeightTraining': 'gym', 'Workout': 'gym',
+            'Soccer': 'futbol', 'Football': 'futbol',
+            'Swim': 'natacion', 'Yoga': 'yoga',
+        }
+        tipo_actividad = _STRAVA_TO_TIPO.get(act.tipo_strava, 'otro')
         rpe_manual = _rpe()
-        rpe = rpe_manual or _rpe_from_fc(act.hr_media, act.hr_maxima)
-        carga_ua = round(rpe * duracion_min, 1) if rpe else None
+        # carga_ua: TRIMP (fisiológico, desde FC) si hay FC; sRPE si solo hay RPE manual
+        trimp = _trimp_from_strava(act.hr_media, duracion_min)
+        carga_ua = trimp or (round(rpe_manual * duracion_min, 1) if rpe_manual else None)
         ActividadRealizada.objects.create(
             cliente=cliente,
-            tipo='gym',
+            tipo=tipo_actividad,
             titulo=act.nombre_strava or f'Strava — {act.tipo_strava}',
             fecha=act.fecha_actividad,
             duracion_minutos=int(duracion_min),
-            rpe_medio=rpe,
+            rpe_medio=rpe_manual,
             carga_ua=carga_ua,
             distancia_metros=int(act.distancia_metros) if act.distancia_metros else None,
+            hr_media=act.hr_media,
+            hr_maxima=act.hr_maxima,
             fuente='strava',
         )
         act.estado = 'created'
         act.save()
-        if carga_ua and not rpe_manual:
-            acwr_info = f' · RPE {rpe} estimado desde FC ({act.hr_media} bpm) — computará en ACWR'
-        elif not carga_ua:
-            acwr_info = ' (sin FC ni RPE — no computará en ACWR)'
+        if trimp:
+            acwr_info = f' · TRIMP {trimp} (FC {act.hr_media} bpm) — computará en ACWR'
+        elif rpe_manual:
+            acwr_info = f' · RPE {rpe_manual} — computará en ACWR'
         else:
-            acwr_info = ''
-        return JsonResponse({'ok': True, 'msg': f'Actividad de gym registrada{acwr_info}.'})
+            acwr_info = ' (sin FC ni RPE — no computará en ACWR)'
+        return JsonResponse({'ok': True, 'msg': f'Actividad registrada{acwr_info}.'})
 
     return JsonResponse({'ok': False, 'msg': 'Acción no reconocida.'}, status=400)
 

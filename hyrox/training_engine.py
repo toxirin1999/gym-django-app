@@ -50,7 +50,9 @@ class HyroxLoadManager:
 
     @classmethod
     def get_fc_max(cls, objetivo):
-        """FC máxima: real si está registrada, sino 220-edad."""
+        """FC máxima: real si está registrada, sino 220-edad. Si objetivo es None devuelve 185."""
+        if objetivo is None:
+            return 185
         if objetivo.fc_max_real:
             return objetivo.fc_max_real
         try:
@@ -61,6 +63,8 @@ class HyroxLoadManager:
 
     @classmethod
     def get_fc_reposo(cls, objetivo):
+        if objetivo is None:
+            return 60
         return objetivo.fc_reposo if objetivo.fc_reposo is not None else 60
 
     @classmethod

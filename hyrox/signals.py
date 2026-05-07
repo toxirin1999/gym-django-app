@@ -380,9 +380,11 @@ def sincronizar_hyrox_al_hub(sender, instance, created, raw=False, update_fields
         cliente = instance.objective.cliente
         titulo = instance.titulo or f"Hyrox — {instance.fecha}"
 
-        # Carga UA: RPE × duración
+        # carga_ua: TRIMP si disponible (fisiológico); sRPE como fallback
         carga_ua = None
-        if instance.rpe_global and instance.tiempo_total_minutos:
+        if instance.trimp:
+            carga_ua = instance.trimp
+        elif instance.rpe_global and instance.tiempo_total_minutos:
             carga_ua = round(instance.rpe_global * instance.tiempo_total_minutos, 1)
 
         ActividadRealizada.objects.update_or_create(
@@ -395,6 +397,8 @@ def sincronizar_hyrox_al_hub(sender, instance, created, raw=False, update_fields
                 'duracion_minutos': instance.tiempo_total_minutos,
                 'rpe_medio': instance.rpe_global,
                 'carga_ua': carga_ua,
+                'hr_media': instance.hr_media,
+                'hr_maxima': instance.hr_maxima,
                 'fuente': 'hyrox_engine',
             }
         )
