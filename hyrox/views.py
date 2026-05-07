@@ -2888,17 +2888,33 @@ def strava_procesar(request, actividad_id):
         if ov_tiempo == 'strava' or not entreno.duracion_minutos:
             entreno.duracion_minutos = int(duracion_min)
         entreno.save()
-        # Actualizar carga_ua en ActividadRealizada hub si existe
+        # Actualizar hub ActividadRealizada con FC y recalcular carga_ua
         try:
             ar = ActividadRealizada.objects.get(entreno_gym=entreno)
-            if ar.rpe_medio and not ar.carga_ua:
+            hr_final = entreno.frecuencia_cardiaca_promedio
+            trimp = _trimp_from_strava(hr_final, ar.duracion_minutos or int(duracion_min))
+            update_fields = []
+            if act.hr_media and not ar.hr_media:
+                ar.hr_media = act.hr_media
+                update_fields.append('hr_media')
+            if act.hr_maxima and not ar.hr_maxima:
+                ar.hr_maxima = act.hr_maxima
+                update_fields.append('hr_maxima')
+            # TRIMP prevalece sobre sRPE; sRPE como fallback si no hay FC
+            if trimp:
+                ar.carga_ua = trimp
+                update_fields.append('carga_ua')
+            elif ar.rpe_medio and not ar.carga_ua:
                 ar.carga_ua = round(ar.rpe_medio * duracion_min, 1)
-                ar.save(update_fields=['carga_ua'])
+                update_fields.append('carga_ua')
+            if update_fields:
+                ar.save(update_fields=update_fields)
         except ActividadRealizada.DoesNotExist:
             pass
         act.estado = 'merged'
         act.save()
-        return JsonResponse({'ok': True, 'msg': f'Datos Strava fusionados con entreno de gym del {act.fecha_actividad}.'})
+        fc_info = f' · TRIMP calculado desde FC {act.hr_media} bpm' if act.hr_media else ''
+        return JsonResponse({'ok': True, 'msg': f'Datos Strava fusionados con entreno de gym del {act.fecha_actividad}{fc_info}.'})
 
     # ── CREAR HYROX ──────────────────────────────────────────────────────────
     if accion == 'create_hyrox':
