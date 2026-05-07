@@ -116,6 +116,7 @@ class SelectorEjercicios:
 
         # ── Seguridad biológica: obtener tags prohibidos ───────
         restricted_tags: Set[str] = set()
+        bio: dict = {}
         if cliente is not None:
             try:
                 from core.bio_context import BioContextProvider
