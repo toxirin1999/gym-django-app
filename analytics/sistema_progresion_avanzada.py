@@ -518,8 +518,8 @@ class SistemaProgresionAvanzada:
             'remo': 'remo_con_mancuerna'
         }
 
-        ejercicio_base = ejercicio.lower().replace('_', ' ')
-        nueva_variacion = variaciones.get(ejercicio, f"{ejercicio}_variacion")
+        ejercicio_normalizado = ejercicio.lower().replace(' ', '_')
+        nueva_variacion = variaciones.get(ejercicio_normalizado, f"{ejercicio}_variacion")
         
         peso_base = self._obtener_peso(ultima_sesion)
 
@@ -568,7 +568,7 @@ class SistemaProgresionAvanzada:
         estancamientos = self.detectar_estancamientos()
 
         return {
-            'cliente_id': self.cliente_id,
+            'cliente_id': self.cliente.id,
             'fecha_reporte': datetime.now().isoformat(),
             'metricas_por_ejercicio': {
                 ejercicio: {
@@ -598,7 +598,36 @@ def crear_sistema_progresion(cliente_id: int) -> SistemaProgresionAvanzada:
 
 
 def obtener_recomendaciones_progresion(cliente_id: int) -> Dict:
-    '''Función helper para obtener recomendaciones de progresión'''
+    '''Función helper para obtener recomendaciones de progresión cargando historial real de BD.'''
+    from entrenos.models import EjercicioRealizado
     sistema = SistemaProgresionAvanzada(cliente_id)
-    # En implementación real, cargaría datos desde base de datos
+
+    registros = (
+        EjercicioRealizado.objects
+        .filter(
+            entreno__cliente_id=cliente_id,
+            completado=True,
+            peso_kg__gt=0,
+            repeticiones__isnull=False,
+            series__isnull=False,
+        )
+        .select_related('entreno')
+        .order_by('entreno__fecha')
+    )
+
+    for r in registros:
+        sesion = RegistroSesion(
+            fecha=datetime.combine(r.entreno.fecha, datetime.min.time()),
+            ejercicio=r.nombre_ejercicio,
+            peso=float(r.peso_kg),
+            series=r.series or 1,
+            repeticiones_completadas=[r.repeticiones] * (r.series or 1),
+            repeticiones_planificadas=r.repeticiones,
+            rpe_planificado=int(r.rpe) if r.rpe else 7,
+            rpe_real=int(r.rpe) if r.rpe else 7,
+            tiempo_descanso=90,
+            notas=r.notas or '',
+        )
+        sistema.registrar_sesion(sesion)
+
     return sistema.generar_reporte_progresion()
