@@ -206,7 +206,7 @@ class PlanificadorHelms:
                         else REP_RANGE_AJUSTE_PEQUENOS.get(rep_range, rep_range)
                     )
 
-                    es_pesado = (int(rep_range_ej.split('-')[0]) <= 6 or rpe_objetivo >= 9)
+                    es_pesado = (int((rep_range_ej or '8-12').split('-')[0]) <= 6 or rpe_objetivo >= 9)
                     series_objetivo = max(2, min(4, math.ceil(vol_dia / len(candidatos[:2]))))
                     series_ajustadas = gestor_fatiga.ajustar_series_por_limite(
                         nombre, patron, tipo_ej, series_objetivo, es_pesado, grupo=grupo
