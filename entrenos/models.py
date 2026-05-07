@@ -1023,6 +1023,7 @@ class ActividadRealizada(models.Model):
         ('manual', 'Registro manual'),
         ('liftin', 'Importado de Liftin'),
         ('hyrox_engine', 'Motor Hyrox'),
+        ('strava', 'Importado de Strava'),
         ('auto', 'Generado automáticamente'),
     ]
 
@@ -1072,6 +1073,14 @@ class ActividadRealizada(models.Model):
         help_text="RPE medio de la sesión (escala 1-10)"
     )
     calorias = models.PositiveIntegerField(null=True, blank=True)
+    hr_media = models.PositiveIntegerField(
+        null=True, blank=True,
+        help_text="FC media de la sesión en lpm (fuente: Strava / dispositivo)"
+    )
+    hr_maxima = models.PositiveIntegerField(
+        null=True, blank=True,
+        help_text="FC máxima de la sesión en lpm (fuente: Strava / dispositivo)"
+    )
 
     # ── Punteros a modelos existentes (uno o ninguno) ───────────────────────────
     entreno_gym = models.OneToOneField(
