@@ -2110,9 +2110,10 @@ class DeteccionPatronesIA:
                     nombre_ejercicio=ejercicio['nombre_ejercicio']
                 ).order_by('entreno__fecha')
 
-                if registros.count() >= 4:
+                todos_registros = list(registros)
+                if len(todos_registros) >= 4:
                     # Analizar últimos registros
-                    ultimos_registros = list(registros[-4:])
+                    ultimos_registros = todos_registros[-4:]
                     pesos = [r.peso_kg for r in ultimos_registros]
 
                     # Verificar si hay estancamiento (sin mejora en últimos registros)
