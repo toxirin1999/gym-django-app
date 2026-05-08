@@ -5,6 +5,7 @@ from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
 from django.db import IntegrityError
 from django.db.models import Avg, Count, ExpressionWrapper, F, FloatField, Max, Q, Sum
+from django.db.models.functions import Coalesce
 from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -1141,7 +1142,9 @@ def _get_dashboard_context_data(request, cliente):
     _actividades_recientes_qs = _AR.objects.filter(
         cliente=cliente,
         fecha__lte=_hoy,
-    ).select_related('entreno_gym__rutina').order_by('-fecha', '-fecha_realizado')[:4]
+    ).select_related('entreno_gym__rutina').order_by(
+        Coalesce('fecha_realizado', 'fecha').desc()
+    )[:4]
     actividades_recientes_focus = list(_actividades_recientes_qs)
     for _act in actividades_recientes_focus:
         _act.es_anticipada = bool(_act.fecha_realizado and _act.fecha_realizado != _act.fecha)

@@ -229,7 +229,7 @@ def get_resumen_semanal_gym(cliente):
         items.append({
             'tipo': 'seccion',
             'icono': '📋',
-            'texto': 'Próxima semana — el plan sube carga en:',
+            'texto': 'Esta semana — el plan sube carga en:',
             'color': 'info',
         })
         for dec in progresiones[:5]:
