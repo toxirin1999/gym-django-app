@@ -4,157 +4,623 @@
 {% block title %}Guía Técnica — Estaciones HYROX{% endblock %}
 
 {% block content %}
-<div style="max-width:900px;margin:0 auto;padding:20px 16px 60px;">
+<style>
+  :root {
+    --gt-bg: #06070b;
+    --gt-surface: #11131a;
+    --gt-surface-2: #171a22;
+    --gt-glass: rgba(255,255,255,.055);
+    --gt-border: rgba(255,255,255,.12);
+    --gt-border-strong: rgba(255,255,255,.2);
 
-  <!-- HEADER -->
-  <div style="margin-bottom:28px;">
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
-      <a href="{% url 'hyrox:dashboard' %}" style="font-size:11px;color:var(--ink-3);text-decoration:none;font-family:var(--font-mono);">← Dashboard</a>
+    --gt-text: #f5f7ff;
+    --gt-body: rgba(233,238,255,.88);
+    --gt-muted: rgba(206,214,236,.66);
+
+    --gt-ring-red: #ff375f;
+    --gt-ring-green: #32d74b;
+    --gt-ring-cyan: #64d2ff;
+    --gt-ring-red-soft: rgba(255,55,95,.18);
+    --gt-ring-green-soft: rgba(50,215,75,.16);
+    --gt-ring-cyan-soft: rgba(100,210,255,.16);
+
+    --gt-ok: #34c759;
+    --gt-warn: #ffd60a;
+    --gt-danger: #ff453a;
+
+    --gt-radius-2xl: 26px;
+    --gt-radius-xl: 20px;
+    --gt-radius-lg: 16px;
+    --gt-radius-md: 12px;
+    --gt-radius-sm: 10px;
+    --gt-radius-pill: 999px;
+
+    --gt-shadow-hero: 0 28px 90px rgba(0,0,0,.5);
+    --gt-shadow-card: 0 12px 32px rgba(0,0,0,.35);
+
+    --gt-font-display: var(--font-disp);
+    --gt-font-body: var(--font-body);
+    --gt-font-mono: var(--font-mono);
+  }
+
+  .gt-wrap {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 24px 16px 72px;
+    color: var(--gt-text);
+  }
+
+  .gt-hero {
+    position: relative;
+    overflow: hidden;
+    border-radius: var(--gt-radius-2xl);
+    border: 1px solid var(--gt-border);
+    background:
+      radial-gradient(900px 280px at 8% -20%, rgba(255,55,95,.22), transparent 58%),
+      radial-gradient(860px 260px at 96% -30%, rgba(100,210,255,.2), transparent 62%),
+      radial-gradient(740px 240px at 50% 125%, rgba(50,215,75,.14), transparent 65%),
+      linear-gradient(160deg, rgba(255,255,255,.07), rgba(255,255,255,.025) 40%, rgba(255,255,255,.012) 100%);
+    box-shadow: var(--gt-shadow-hero);
+    padding: 18px;
+    margin-bottom: 18px;
+    backdrop-filter: blur(8px);
+  }
+
+  .gt-hero::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    border-radius: inherit;
+    background: linear-gradient(120deg, rgba(255,255,255,.09), transparent 32%, transparent 66%, rgba(255,255,255,.05));
+    mix-blend-mode: screen;
+  }
+
+  .gt-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+
+  .gt-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--gt-font-mono);
+    font-size: 11px;
+    letter-spacing: .03em;
+    color: var(--gt-muted);
+    text-decoration: none;
+    border: 1px solid var(--gt-border);
+    background: rgba(255,255,255,.03);
+    border-radius: var(--gt-radius-pill);
+    padding: 7px 11px;
+    transition: transform .16s ease, border-color .16s ease, color .16s ease, background .16s ease;
+  }
+
+  .gt-back:hover {
+    transform: translateY(-1px);
+    color: var(--gt-text);
+    border-color: var(--gt-border-strong);
+    background: rgba(255,255,255,.08);
+  }
+
+  .gt-rings {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .ring {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    position: relative;
+    box-shadow: inset 0 0 0 2px rgba(255,255,255,.06);
+  }
+
+  .ring::before {
+    content: "";
+    position: absolute;
+    inset: 3px;
+    border-radius: 50%;
+    background: #0a0b10;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.06);
+  }
+
+  .ring.red { background: conic-gradient(var(--gt-ring-red) 0 82%, rgba(255,255,255,.12) 82%); }
+  .ring.green { background: conic-gradient(var(--gt-ring-green) 0 74%, rgba(255,255,255,.12) 74%); }
+  .ring.cyan { background: conic-gradient(var(--gt-ring-cyan) 0 68%, rgba(255,255,255,.12) 68%); }
+
+  .gt-title {
+    margin: 0 0 6px;
+    font-family: var(--gt-font-display);
+    font-size: clamp(30px, 5vw, 44px);
+    font-weight: 900;
+    letter-spacing: -.02em;
+    line-height: .98;
+    text-transform: uppercase;
+  }
+
+  .gt-sub {
+    margin: 0;
+    max-width: 72ch;
+    font-family: var(--gt-font-body);
+    font-size: 14px;
+    line-height: 1.62;
+    color: var(--gt-body);
+  }
+
+  .gt-stats {
+    margin-top: 14px;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0,1fr));
+    gap: 10px;
+  }
+
+  .gt-stat {
+    border-radius: var(--gt-radius-lg);
+    border: 1px solid var(--gt-border);
+    background: linear-gradient(160deg, rgba(255,255,255,.08), rgba(255,255,255,.03));
+    padding: 11px 12px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .gt-stat::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,.45), transparent);
+    opacity: .55;
+  }
+
+  .gt-stat-label {
+    display: block;
+    font-family: var(--gt-font-mono);
+    font-size: 10px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--gt-muted);
+    margin-bottom: 6px;
+  }
+
+  .gt-stat-val {
+    font-family: var(--gt-font-display);
+    font-size: 22px;
+    line-height: 1;
+    font-weight: 850;
+    letter-spacing: -.01em;
+    color: var(--gt-text);
+  }
+
+  .gt-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .st-card {
+    border-radius: var(--gt-radius-xl);
+    border: 1px solid var(--gt-border);
+    background: linear-gradient(155deg, rgba(255,255,255,.055), rgba(255,255,255,.015) 55%, rgba(255,255,255,.01));
+    box-shadow: var(--gt-shadow-card);
+    overflow: hidden;
+    transition: border-color .22s ease, transform .2s ease, box-shadow .2s ease;
+  }
+
+  .st-card:hover {
+    transform: translateY(-1px);
+    border-color: var(--gt-border-strong);
+  }
+
+  .st-btn {
+    width: 100%;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+    text-align: left;
+    display: grid;
+    grid-template-columns: auto auto 1fr auto auto;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 14px;
+    color: inherit;
+    transition: background .2s ease;
+  }
+
+  .st-btn:hover { background: rgba(255,255,255,.03); }
+
+  .st-num {
+    font-family: var(--gt-font-mono);
+    font-size: 11px;
+    font-weight: 800;
+    color: var(--gt-muted);
+    min-width: 24px;
+  }
+
+  .st-icon {
+    width: 30px;
+    height: 30px;
+    border-radius: 10px;
+    display: grid;
+    place-items: center;
+    font-size: 13px;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.08);
+  }
+
+  .st-icon.red { background: var(--gt-ring-red-soft); color: var(--gt-ring-red); }
+  .st-icon.green { background: var(--gt-ring-green-soft); color: var(--gt-ring-green); }
+  .st-icon.cyan { background: var(--gt-ring-cyan-soft); color: var(--gt-ring-cyan); }
+
+  .st-name {
+    font-family: var(--gt-font-display);
+    font-size: clamp(16px, 2.3vw, 20px);
+    font-weight: 860;
+    text-transform: uppercase;
+    line-height: 1.1;
+    letter-spacing: -.01em;
+    color: var(--gt-text);
+  }
+
+  .st-progress {
+    font-family: var(--gt-font-mono);
+    font-size: 9px;
+    font-weight: 700;
+    color: var(--gt-warn);
+    background: color-mix(in srgb, var(--gt-warn) 15%, transparent);
+    border: 1px solid color-mix(in srgb, var(--gt-warn) 35%, transparent);
+    border-radius: 999px;
+    padding: 4px 8px;
+    white-space: nowrap;
+  }
+
+  .st-chevron {
+    color: var(--gt-muted);
+    font-size: 11px;
+    transition: transform .22s ease;
+  }
+
+  .st-body {
+    display: none;
+    border-top: 1px solid var(--gt-border);
+    padding: 15px;
+    background: linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.012));
+  }
+
+  .st-body.open { display: block; }
+
+  .st-desc {
+    margin: 0 0 14px;
+    border-radius: 0 12px 12px 0;
+    border: 1px solid rgba(100,210,255,.22);
+    border-left: 3px solid var(--gt-ring-cyan);
+    background: rgba(100,210,255,.1);
+    padding: 10px 12px;
+    font-family: var(--gt-font-body);
+    font-size: 13px;
+    line-height: 1.62;
+    color: var(--gt-body);
+  }
+
+  .st-sections {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .st-block {
+    border-radius: var(--gt-radius-md);
+    border: 1px solid var(--gt-border);
+    background: rgba(255,255,255,.02);
+    padding: 11px;
+    min-width: 0;
+  }
+
+  .st-block.full { grid-column: 1 / -1; }
+
+  .st-head {
+    font-family: var(--gt-font-mono);
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  .st-head.ok { color: var(--gt-ok); }
+  .st-head.warn { color: var(--gt-warn); }
+  .st-head.danger { color: var(--gt-danger); }
+  .st-head.muted { color: var(--gt-muted); }
+
+  .st-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 6px;
+  }
+
+  .st-item {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 7px;
+    align-items: start;
+    font-family: var(--gt-font-body);
+    font-size: 12px;
+    line-height: 1.52;
+    color: var(--gt-body);
+  }
+
+  .st-lead {
+    font-family: var(--gt-font-mono);
+    font-size: 10px;
+    font-weight: 800;
+    min-width: 14px;
+    margin-top: 1px;
+  }
+
+  .st-lead.ok { color: var(--gt-ok); }
+  .st-lead.danger { color: var(--gt-danger); }
+  .st-lead.warn { color: var(--gt-warn); }
+  .st-lead.accent { color: var(--gt-ring-cyan); }
+
+  .st-pos {
+    padding: 8px 10px;
+    border-radius: 9px;
+    border: 1px solid var(--gt-border);
+    background: rgba(255,255,255,.03);
+    font-family: var(--gt-font-body);
+    font-size: 12px;
+    line-height: 1.46;
+    color: var(--gt-body);
+  }
+
+  .st-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+  }
+
+  .st-tag {
+    font-family: var(--gt-font-mono);
+    font-size: 10px;
+    padding: 5px 9px;
+    border-radius: 999px;
+    border: 1px solid var(--gt-border);
+    color: var(--gt-body);
+    background: rgba(255,255,255,.04);
+  }
+
+  .st-tag.pink { background: rgba(255,55,95,.14); border-color: rgba(255,55,95,.35); }
+  .st-tag.indigo { background: rgba(100,210,255,.14); border-color: rgba(100,210,255,.35); }
+  .st-tag.red { background: rgba(255,69,58,.14); border-color: rgba(255,69,58,.35); }
+
+  .gt-footer-note {
+    margin-top: 14px;
+    border-radius: var(--gt-radius-lg);
+    border: 1px solid var(--gt-border);
+    padding: 12px;
+    background: linear-gradient(145deg, rgba(255,255,255,.045), rgba(255,255,255,.015));
+    color: var(--gt-muted);
+    font-family: var(--gt-font-body);
+    font-size: 12px;
+    line-height: 1.55;
+  }
+
+  @media (max-width: 920px) {
+    .st-sections { grid-template-columns: 1fr; }
+    .st-block.full { grid-column: auto; }
+  }
+
+  @media (max-width: 760px) {
+    .gt-wrap { padding: 18px 12px 58px; }
+    .gt-stats { grid-template-columns: 1fr; }
+
+    .st-btn {
+      grid-template-columns: auto auto 1fr auto;
+      gap: 10px;
+      padding: 13px 12px;
+    }
+
+    .st-progress { display: none; }
+    .gt-title { letter-spacing: -.01em; }
+  }
+</style>
+
+<div class="gt-wrap">
+  <header class="gt-hero">
+    <div class="gt-topbar">
+      <a href="{% url 'hyrox:dashboard' %}" class="gt-back">
+        <i class="fas fa-arrow-left"></i> Dashboard
+      </a>
+      <div class="gt-rings" aria-hidden="true">
+        <span class="ring red"></span>
+        <span class="ring green"></span>
+        <span class="ring cyan"></span>
+      </div>
     </div>
-    <h1 style="font-family:var(--font-disp);font-size:28px;font-weight:800;text-transform:uppercase;letter-spacing:-.5px;color:var(--ink-1);margin:0 0 6px;">Guía Técnica</h1>
-    <p style="font-family:var(--font-body);font-size:13px;color:var(--ink-3);margin:0;">Las 8 estaciones del circuito HYROX — técnica, errores y estrategia de carrera.</p>
-  </div>
 
-  <!-- GRID DE ESTACIONES -->
-  <div style="display:flex;flex-direction:column;gap:12px;">
+    <h1 class="gt-title">Guía Técnica</h1>
+    <p class="gt-sub">
+      Las 8 estaciones del circuito HYROX con foco en ejecución, eficiencia y decisiones de carrera.
+      Usa cada bloque como checklist antes de competir.
+    </p>
+
+    <div class="gt-stats">
+      <article class="gt-stat">
+        <span class="gt-stat-label">Estaciones</span>
+        <strong class="gt-stat-val">{{ estaciones|length }}</strong>
+      </article>
+      <article class="gt-stat">
+        <span class="gt-stat-label">Objetivo</span>
+        <strong class="gt-stat-val">Ritmo + Técnica</strong>
+      </article>
+      <article class="gt-stat">
+        <span class="gt-stat-label">Uso ideal</span>
+        <strong class="gt-stat-val">Pre-race review</strong>
+      </article>
+    </div>
+  </header>
+
+  <main class="gt-grid">
     {% for e in estaciones %}
-    <div style="border:1px solid var(--border);border-radius:10px;overflow:hidden;background:var(--card);">
+    <article class="st-card" id="card-{{ e.key }}">
+      <button class="st-btn" onclick="toggleStation('{{ e.key }}')">
+        <span class="st-num">{{ e.num }}</span>
 
-      <!-- CABECERA CLICKABLE -->
-      <button onclick="toggleStation('{{ e.key }}')"
-        style="width:100%;display:flex;align-items:center;gap:12px;padding:14px 16px;background:none;border:none;cursor:pointer;text-align:left;">
-        <span style="font-family:var(--font-mono);font-size:11px;font-weight:800;color:var(--ink-3);flex-shrink:0;min-width:24px;">{{ e.num }}</span>
-        <i class="fas {{ e.icon }}" style="color:var(--accent);font-size:16px;flex-shrink:0;width:20px;text-align:center;"></i>
-        <span style="font-family:var(--font-disp);font-size:17px;font-weight:800;color:var(--ink-1);text-transform:uppercase;flex:1;">{{ e.display_name }}</span>
+        <span class="st-icon {% cycle 'red' 'green' 'cyan' %}">
+          <i class="fas {{ e.icon }}"></i>
+        </span>
+
+        <span class="st-name">{{ e.display_name }}</span>
+
         {% if not e.completo %}
-        <span style="font-family:var(--font-mono);font-size:9px;font-weight:700;color:var(--warn);background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.25);border-radius:4px;padding:2px 7px;flex-shrink:0;">En progreso</span>
+        <span class="st-progress">En progreso</span>
         {% endif %}
-        <i class="fas fa-chevron-down station-chevron-{{ e.key }}" style="color:var(--ink-3);font-size:11px;transition:transform .2s;flex-shrink:0;"></i>
+
+        <i class="fas fa-chevron-down st-chevron station-chevron-{{ e.key }}"></i>
       </button>
 
-      <!-- CONTENIDO EXPANDIBLE -->
-      <div id="station-{{ e.key }}" style="display:none;border-top:1px solid var(--border);padding:16px;">
-
+      <section id="station-{{ e.key }}" class="st-body">
         {% if e.description %}
-        <p style="font-family:var(--font-body);font-size:12px;color:var(--ink-2);line-height:1.6;margin:0 0 16px;padding:10px 12px;background:rgba(var(--accent-rgb,99,102,241),.05);border-left:3px solid var(--accent);border-radius:0 6px 6px 0;">{{ e.description }}</p>
+        <p class="st-desc">{{ e.description }}</p>
         {% endif %}
 
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div class="st-sections">
 
-          <!-- TÉCNICA CLAVE -->
           {% if e.technical_focus %}
-          <div style="grid-column:{% if e.positions %}1{% else %}1 / -1{% endif %};">
-            <div style="font-family:var(--font-mono);font-size:9px;font-weight:700;color:var(--ok);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px;">Técnica clave</div>
-            <ul style="margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:5px;">
+          <div class="st-block {% if not e.positions %}full{% endif %}">
+            <div class="st-head ok">Técnica clave</div>
+            <ul class="st-list">
               {% for punto in e.technical_focus %}
-              <li style="display:flex;gap:7px;align-items:flex-start;font-family:var(--font-body);font-size:11px;color:var(--ink-2);line-height:1.4;">
-                <span style="font-family:var(--font-mono);font-size:9px;font-weight:700;color:var(--ok);flex-shrink:0;min-width:14px;margin-top:1px;">{{ forloop.counter }}</span>
-                {{ punto }}
+              <li class="st-item">
+                <span class="st-lead ok">{{ forloop.counter }}</span>
+                <span>{{ punto }}</span>
               </li>
               {% endfor %}
             </ul>
           </div>
           {% endif %}
 
-          <!-- POSICIONES -->
           {% if e.positions %}
-          <div>
-            <div style="font-family:var(--font-mono);font-size:9px;font-weight:700;color:var(--ink-3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px;">Posiciones eficaces</div>
-            <ul style="margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px;">
+          <div class="st-block">
+            <div class="st-head muted">Posiciones eficaces</div>
+            <ul class="st-list">
               {% for pos in e.positions %}
-              <li style="padding:8px 10px;border-radius:6px;background:var(--paper,rgba(100,116,139,.06));border:1px solid var(--border);font-family:var(--font-body);font-size:11px;color:var(--ink-2);line-height:1.4;">{{ pos }}</li>
+              <li class="st-pos">{{ pos }}</li>
               {% endfor %}
             </ul>
           </div>
           {% endif %}
 
-          <!-- ERRORES COMUNES -->
           {% if e.common_mistakes %}
-          <div>
-            <div style="font-family:var(--font-mono);font-size:9px;font-weight:700;color:var(--danger);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px;">Errores comunes</div>
-            <ul style="margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:5px;">
+          <div class="st-block">
+            <div class="st-head danger">Errores comunes</div>
+            <ul class="st-list">
               {% for err in e.common_mistakes %}
-              <li style="display:flex;gap:7px;align-items:flex-start;font-family:var(--font-body);font-size:11px;color:var(--ink-2);line-height:1.4;">
-                <i class="fas fa-times-circle" style="color:var(--danger);font-size:9px;margin-top:3px;flex-shrink:0;"></i>
-                {{ err }}
+              <li class="st-item">
+                <span class="st-lead danger"><i class="fas fa-times-circle"></i></span>
+                <span>{{ err }}</span>
               </li>
               {% endfor %}
             </ul>
           </div>
           {% endif %}
 
-          <!-- ESTRATEGIA -->
           {% if e.strategy %}
-          <div>
-            <div style="font-family:var(--font-mono);font-size:9px;font-weight:700;color:var(--ink-3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px;">Estrategia de carrera</div>
-            <ul style="margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:5px;">
+          <div class="st-block">
+            <div class="st-head muted">Estrategia de carrera</div>
+            <ul class="st-list">
               {% for tip in e.strategy %}
-              <li style="display:flex;gap:7px;align-items:flex-start;font-family:var(--font-body);font-size:11px;color:var(--ink-2);line-height:1.4;">
-                <i class="fas fa-chevron-right" style="color:var(--ok);font-size:9px;margin-top:3px;flex-shrink:0;"></i>
-                {{ tip }}
+              <li class="st-item">
+                <span class="st-lead accent"><i class="fas fa-chevron-right"></i></span>
+                <span>{{ tip }}</span>
               </li>
               {% endfor %}
             </ul>
           </div>
           {% endif %}
 
-          <!-- REGLAS OFICIALES -->
           {% if e.rules %}
-          <div style="grid-column:1 / -1;">
-            <div style="font-family:var(--font-mono);font-size:9px;font-weight:700;color:var(--warn);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px;">Reglas oficiales</div>
-            <ul style="margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:5px;">
+          <div class="st-block full">
+            <div class="st-head warn">Reglas oficiales</div>
+            <ul class="st-list">
               {% for regla in e.rules %}
-              <li style="display:flex;gap:7px;align-items:flex-start;font-family:var(--font-body);font-size:11px;color:var(--ink-2);line-height:1.4;">
-                <i class="fas fa-exclamation-circle" style="color:var(--warn);font-size:9px;margin-top:3px;flex-shrink:0;"></i>
-                {{ regla }}
+              <li class="st-item">
+                <span class="st-lead warn"><i class="fas fa-exclamation-circle"></i></span>
+                <span>{{ regla }}</span>
               </li>
               {% endfor %}
             </ul>
           </div>
           {% endif %}
 
-          <!-- PESOS POR CATEGORÍA -->
           {% if e.weights %}
-          <div style="grid-column:1 / -1;">
-            <div style="font-family:var(--font-mono);font-size:9px;font-weight:700;color:var(--ink-3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px;">Pesos por categoría</div>
-            <div style="display:flex;flex-wrap:wrap;gap:6px;">
-              {% if e.weights.women_open %}<span style="font-family:var(--font-mono);font-size:10px;padding:4px 9px;border-radius:5px;background:rgba(244,114,182,.1);border:1px solid rgba(244,114,182,.25);color:var(--ink-2);">Women Open / Doubles W <strong>{{ e.weights.women_open }}</strong></span>{% endif %}
-              {% if e.weights.men_open %}<span style="font-family:var(--font-mono);font-size:10px;padding:4px 9px;border-radius:5px;background:rgba(99,102,241,.1);border:1px solid rgba(99,102,241,.25);color:var(--ink-2);">Men Open / Doubles M / Pro W <strong>{{ e.weights.men_open }}</strong></span>{% endif %}
-              {% if e.weights.pro_men %}<span style="font-family:var(--font-mono);font-size:10px;padding:4px 9px;border-radius:5px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);color:var(--ink-2);">Pro Men / Pro Doubles M <strong>{{ e.weights.pro_men }}</strong></span>{% endif %}
+          <div class="st-block full">
+            <div class="st-head muted">Pesos por categoría</div>
+            <div class="st-tags">
+              {% if e.weights.women_open %}
+                <span class="st-tag pink">Women Open / Doubles W <strong>{{ e.weights.women_open }}</strong></span>
+              {% endif %}
+              {% if e.weights.men_open %}
+                <span class="st-tag indigo">Men Open / Doubles M / Pro W <strong>{{ e.weights.men_open }}</strong></span>
+              {% endif %}
+              {% if e.weights.pro_men %}
+                <span class="st-tag red">Pro Men / Pro Doubles M <strong>{{ e.weights.pro_men }}</strong></span>
+              {% endif %}
             </div>
           </div>
           {% endif %}
 
-          <!-- ENTRENAMIENTO CORRECTIVO -->
           {% if e.corrective_work %}
-          <div style="grid-column:1 / -1;margin-top:4px;padding-top:12px;border-top:1px solid var(--border);">
-            <div style="font-family:var(--font-mono);font-size:9px;font-weight:700;color:var(--ink-3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px;">Cómo entrenarlo</div>
-            <ul style="margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:5px;">
+          <div class="st-block full">
+            <div class="st-head muted">Cómo entrenarlo</div>
+            <ul class="st-list">
               {% for item in e.corrective_work %}
-              <li style="display:flex;gap:7px;align-items:flex-start;font-family:var(--font-body);font-size:11px;color:var(--ink-2);line-height:1.4;">
-                <i class="fas fa-dumbbell" style="color:var(--accent);font-size:9px;margin-top:3px;flex-shrink:0;"></i>
-                {{ item }}
+              <li class="st-item">
+                <span class="st-lead accent"><i class="fas fa-dumbbell"></i></span>
+                <span>{{ item }}</span>
               </li>
               {% endfor %}
             </ul>
           </div>
           {% endif %}
 
-        </div><!-- /grid -->
-      </div><!-- /contenido -->
-    </div><!-- /card -->
+        </div>
+      </section>
+    </article>
     {% endfor %}
-  </div>
+  </main>
 
+  <div class="gt-footer-note">
+    Consejo práctico: abre solo 1–2 estaciones clave antes de competir y repasa
+    “errores comunes + estrategia” para minimizar penalizaciones por fatiga.
+  </div>
 </div>
 
 <script>
-function toggleStation(key) {
-  const body = document.getElementById('station-' + key);
-  const chevron = document.querySelector('.station-chevron-' + key);
-  const open = body.style.display !== 'none';
-  body.style.display = open ? 'none' : 'block';
-  if (chevron) chevron.style.transform = open ? '' : 'rotate(180deg)';
-}
+  function toggleStation(key) {
+    const body = document.getElementById('station-' + key);
+    const chevron = document.querySelector('.station-chevron-' + key);
+    const card = document.getElementById('card-' + key);
+
+    const isOpen = body.classList.contains('open');
+    body.classList.toggle('open', !isOpen);
+
+    if (chevron) chevron.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(180deg)';
+
+    if (card) {
+      card.style.borderColor = isOpen
+        ? 'var(--gt-border)'
+        : 'rgba(100,210,255,.45)';
+      card.style.boxShadow = isOpen
+        ? 'var(--gt-shadow-card)'
+        : '0 16px 42px rgba(0,0,0,.45)';
+    }
+  }
 </script>
 {% endblock %}

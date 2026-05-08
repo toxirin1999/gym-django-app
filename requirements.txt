@@ -44,6 +44,8 @@ django-timezone-field==7.1
 # Google Gemini AI
 # ==============================
 google-generativeai==0.8.6
+# Anthropic (JOI messages via Claude Haiku)
+anthropic>=0.28.0
 google-api-core==2.30.0
 google-api-python-client==2.190.0
 google-auth==2.38.0

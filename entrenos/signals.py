@@ -166,6 +166,28 @@ def sincronizar_hub_actividad(sender, instance, created, raw=False, **kwargs):
     except Exception as e:
         print(f"❌ Hub ActividadRealizada error (entreno {instance.id}): {e}")
 
+    # Mensaje JOI post-entreno (solo al crear)
+    if created:
+        try:
+            from joi.services import generar_mensaje_joi
+            from entrenos.models import RecordPersonal
+            prs = list(
+                RecordPersonal.objects.filter(
+                    cliente=instance.cliente,
+                    fecha_logrado=instance.fecha,
+                ).values_list('ejercicio_nombre', flat=True)[:3]
+            )
+            generar_mensaje_joi(
+                cliente=instance.cliente,
+                trigger='entreno_completado',
+                datos_extra={
+                    'volumen_kg': float(instance.volumen_total_kg or 0),
+                    'prs': prs,
+                },
+            )
+        except Exception:
+            pass
+
 
 @receiver(post_save, sender=EntrenoRealizado)
 def detectar_molestia_recurrente(sender, instance, created, raw=False, **kwargs):
@@ -293,6 +315,26 @@ def actualizar_decision_log(sender, instance, created, raw=False, **kwargs):
         generar_decisiones_para_entreno(instance)
     except Exception as e:
         print(f"⚠️ Decision log error (entreno {instance.id}): {e}")
+
+
+@receiver(post_save, sender='entrenos.RecordPersonal')
+def joi_mensaje_pr(sender, instance, created, raw=False, **kwargs):
+    """Genera mensaje JOI cuando se rompe un récord personal."""
+    if raw or not created or instance.superado:
+        return
+    try:
+        from joi.services import generar_mensaje_joi
+        generar_mensaje_joi(
+            cliente=instance.cliente,
+            trigger='pr_roto',
+            datos_extra={
+                'ejercicio': instance.ejercicio_nombre,
+                'valor': str(instance.valor),
+                'tipo_record': instance.tipo_record,
+            },
+        )
+    except Exception:
+        pass
 
 
 @receiver(post_save, sender='entrenos.RecordPersonal')  # lazy string resuelto por Django apps registry

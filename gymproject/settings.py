@@ -307,6 +307,7 @@ GAMIFICACION_CONFIG = {
 
 # --- IA INTEGRATION ---
 GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
+ANTHROPIC_API_KEY = os.environ.get('ANTHROPIC_API_KEY', '')
 
 # --- STRAVA INTEGRATION ---
 STRAVA_CLIENT_ID     = os.environ.get('STRAVA_CLIENT_ID', '')
