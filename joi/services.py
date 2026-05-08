@@ -78,6 +78,32 @@ def construir_contexto(cliente) -> dict:
     if lesion:
         ctx['lesion'] = {'zona': lesion.zona_afectada, 'fase': lesion.fase}
 
+    # Datos Hyrox
+    try:
+        from hyrox.models import HyroxObjective, HyroxSession, HyroxReadinessLog
+        objetivo_hyrox = HyroxObjective.objects.filter(
+            cliente=cliente, estado='activo'
+        ).first()
+        if objetivo_hyrox:
+            ctx['dias_hasta_carrera'] = (objetivo_hyrox.fecha_evento - hoy).days
+            log_hoy = HyroxReadinessLog.objects.filter(
+                objective=objetivo_hyrox, fecha=hoy
+            ).order_by('-fecha').first()
+            ctx['readiness_hyrox'] = log_hoy.score if log_hoy else None
+            ultima_hyrox = HyroxSession.objects.filter(
+                objective=objetivo_hyrox, estado='completado'
+            ).order_by('-fecha').first()
+            if ultima_hyrox:
+                ctx['tsb_hyrox'] = ultima_hyrox.tsb
+                ctx['ultima_hyrox'] = {
+                    'fecha': str(ultima_hyrox.fecha),
+                    'tipo': ultima_hyrox.tipo_sesion,
+                    'rpe': ultima_hyrox.rpe_global,
+                    'minutos': ultima_hyrox.tiempo_total_minutos,
+                }
+    except Exception:
+        pass
+
     # Racha de sesiones
     racha = 0
     dia = hoy
@@ -199,14 +225,64 @@ def _prompt_fin_bloque(ctx: dict, datos_extra: dict) -> str:
     )
 
 
+def _prompt_hyrox_sesion_completada(ctx: dict, datos_extra: dict) -> str:
+    tipo = datos_extra.get('tipo_sesion', 'sesión')
+    rpe = datos_extra.get('rpe')
+    minutos = datos_extra.get('minutos')
+    readiness = ctx.get('readiness_hyrox')
+    dias = ctx.get('dias_hasta_carrera')
+
+    rpe_txt = f" RPE {rpe}." if rpe else ""
+    min_txt = f" {minutos} minutos." if minutos else ""
+    rd_txt = f" Tu readiness está en {readiness}." if readiness is not None else ""
+    dias_txt = f" Quedan {dias} días para la carrera." if dias is not None else ""
+
+    return (
+        f"El usuario acaba de completar una sesión Hyrox de tipo '{tipo}'.{rpe_txt}{min_txt}{rd_txt}{dias_txt} "
+        f"Genera 2-3 frases como JOI: reconoce el esfuerzo específico del entrenamiento Hyrox, "
+        f"con datos precisos y la urgencia del tiempo que queda antes de la carrera."
+    )
+
+
+def _prompt_hyrox_readiness_bajo(ctx: dict, datos_extra: dict) -> str:
+    readiness = datos_extra.get('readiness', ctx.get('readiness_hyrox', '?'))
+    dias = ctx.get('dias_hasta_carrera')
+    tsb = ctx.get('tsb_hyrox')
+
+    dias_txt = f" Quedan {dias} días para el evento." if dias is not None else ""
+    tsb_txt = f" Tu TSB es {tsb}." if tsb is not None else ""
+
+    return (
+        f"El Race Readiness del usuario ha bajado a {readiness}/100.{dias_txt}{tsb_txt} "
+        f"JOI lo observa. Genera 2-3 frases: nombra el dato con precisión, "
+        f"acompaña sin alarmar, recuerda que la historia aún está en construcción."
+    )
+
+
+def _prompt_hyrox_cuenta_regresiva(ctx: dict, datos_extra: dict) -> str:
+    dias = datos_extra.get('dias', ctx.get('dias_hasta_carrera', '?'))
+    readiness = ctx.get('readiness_hyrox')
+    rd_txt = f" Tu readiness actual: {readiness}." if readiness is not None else ""
+
+    return (
+        f"Faltan exactamente {dias} días para la carrera Hyrox.{rd_txt} "
+        f"JOI hace una observación sobre este hito temporal. "
+        f"Genera 2-3 frases que mezclen la cuenta regresiva con la identidad del atleta: "
+        f"quién era antes, quién es ahora, lo que se acerca."
+    )
+
+
 _PROMPT_BUILDERS = {
-    'entreno_completado': _prompt_entreno_completado,
-    'apertura_manana':    _prompt_apertura_manana,
-    'ausencia_detectada': _prompt_ausencia,
-    'carga_anomala':      _prompt_carga_anomala,
-    'pr_roto':            _prompt_pr_roto,
-    'lesion_activa':      _prompt_lesion,
-    'fin_bloque':         _prompt_fin_bloque,
+    'entreno_completado':        _prompt_entreno_completado,
+    'apertura_manana':           _prompt_apertura_manana,
+    'ausencia_detectada':        _prompt_ausencia,
+    'carga_anomala':             _prompt_carga_anomala,
+    'pr_roto':                   _prompt_pr_roto,
+    'lesion_activa':             _prompt_lesion,
+    'fin_bloque':                _prompt_fin_bloque,
+    'hyrox_sesion_completada':   _prompt_hyrox_sesion_completada,
+    'hyrox_readiness_bajo':      _prompt_hyrox_readiness_bajo,
+    'hyrox_cuenta_regresiva':    _prompt_hyrox_cuenta_regresiva,
 }
 
 

@@ -34,3 +34,40 @@ def generar_apertura_manana(self):
             errores += 1
 
     return {'generados': generados, 'errores': errores, 'fecha': str(hoy)}
+
+
+@shared_task(bind=True, max_retries=2)
+def verificar_cuenta_regresiva_hyrox(self):
+    """
+    Comprueba si algún usuario está a 30, 14 o 7 días de su carrera Hyrox
+    y genera un mensaje JOI de cuenta regresiva.
+    """
+    import datetime
+    from clientes.models import Cliente
+    from hyrox.models import HyroxObjective
+    from joi.services import generar_mensaje_joi
+    from joi.models import MensajeJOI
+
+    hoy = datetime.date.today()
+    hitos = {30, 14, 7}
+    generados = 0
+
+    for objetivo in HyroxObjective.objects.filter(estado='activo', fecha_evento__gte=hoy):
+        dias_restantes = (objetivo.fecha_evento - hoy).days
+        if dias_restantes not in hitos:
+            continue
+        cliente = objetivo.cliente
+        ya_enviado = MensajeJOI.objects.filter(
+            user=cliente.user,
+            trigger='hyrox_cuenta_regresiva',
+            contexto__dias=dias_restantes,
+        ).exists()
+        if ya_enviado:
+            continue
+        try:
+            generar_mensaje_joi(cliente, 'hyrox_cuenta_regresiva', {'dias': dias_restantes})
+            generados += 1
+        except Exception:
+            pass
+
+    return {'generados': generados, 'fecha': str(hoy)}

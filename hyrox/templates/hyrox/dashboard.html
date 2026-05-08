@@ -771,6 +771,62 @@ a.rb-dia:focus-visible {
 </head>
 <body>
 
+{% if joi_mensaje_pendiente %}
+<div id="joi-hyrox-banner" style="
+  background: var(--paper);
+  border-bottom: 2px solid var(--ink);
+  padding: 10px 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-family: var(--font-body);
+  position: relative;
+">
+  <span style="
+    font-family: var(--font-mono);
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--accent);
+    white-space: nowrap;
+  ">JOI</span>
+  <p style="
+    margin: 0;
+    font-size: 13px;
+    font-style: italic;
+    color: var(--ink-2);
+    line-height: 1.4;
+    flex: 1;
+  ">{{ joi_mensaje_pendiente.mensaje }}</p>
+  <button onclick="joiHyroxCerrar({{ joi_mensaje_pendiente.id }})" style="
+    background: none;
+    border: 1px solid var(--ink);
+    color: var(--ink);
+    padding: 2px 8px;
+    font-family: var(--font-mono);
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    border-radius: 2px;
+    white-space: nowrap;
+  ">✓ OK</button>
+</div>
+<script>
+function joiHyroxCerrar(id) {
+  fetch('/joi/mensaje/' + id + '/leido/', {
+    method: 'POST',
+    headers: {'X-CSRFToken': document.cookie.match(/csrftoken=([^;]+)/)?.[1] || ''},
+  }).then(() => {
+    const b = document.getElementById('joi-hyrox-banner');
+    if (b) { b.style.transition = 'opacity .3s'; b.style.opacity = '0'; setTimeout(() => b.remove(), 300); }
+  });
+}
+</script>
+{% endif %}
+
   <!-- NAV -->
   <nav class="rb-nav rb-a0">
     <div class="rb-brand"><span class="rb-brand-bar"></span>Protocolo HYROX</div>
