@@ -2767,10 +2767,15 @@ def strava_reconciliacion(request):
                 estado='completado',
             ).order_by('id'))
 
+        from django.db.models import Q
         gym_matches = list(EntrenoRealizado.objects.filter(
             cliente=cliente,
-            fecha__range=(fecha_min, fecha_max),
-        ).order_by('id'))
+        ).filter(
+            # Use fecha_realizado from hub when available (session done on a different day than planned)
+            Q(hub_actividad__fecha_realizado__range=(fecha_min, fecha_max)) |
+            Q(hub_actividad__fecha_realizado__isnull=True, fecha__range=(fecha_min, fecha_max)) |
+            Q(hub_actividad__isnull=True, fecha__range=(fecha_min, fecha_max))
+        ).distinct().order_by('id'))
 
         # Preselect best candidate based on Strava type
         tipo_hyrox = act.tipo_hyrox()

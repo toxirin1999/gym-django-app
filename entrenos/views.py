@@ -7393,6 +7393,15 @@ def timeline_atleta(request, cliente_id):
         a.carga_display = round(float(a.carga_ua) / 10, 1) if a.carga_ua else None
         actividades.append(a)
 
+    # Calcular ring_dash server-side (evita dependencia de JS para el anillo SVG)
+    CIRC = 119.38  # 2 * π * r=19
+    cargas = [float(a.carga_display or a.duracion_minutos or 0) for a in actividades]
+    max_carga = max(cargas) if cargas else 1
+    if max_carga == 0:
+        max_carga = 1
+    for a, carga in zip(actividades, cargas):
+        a.ring_dash = round((carga / max_carga) * CIRC, 2)
+
     bitacoras = list(
         BitacoraDiaria.objects
         .filter(cliente=cliente, fecha__range=(fecha_inicio, hoy))
@@ -7475,7 +7484,7 @@ def timeline_atleta(request, cliente_id):
         for tipo, total in conteo_tipos.most_common()
     ]
 
-    return render(request, 'entrenos/timeline_atleta.html', {
+    response = render(request, 'entrenos/timeline_atleta.html', {
         'cliente': cliente,
         'dias': dias,
         'dias_rango': dias_rango,
@@ -7487,6 +7496,8 @@ def timeline_atleta(request, cliente_id):
         'desglose': desglose,
         'rangos': [7, 30, 90],
     })
+    response['Cache-Control'] = 'no-store'
+    return response
 
 
 # ============================================================================

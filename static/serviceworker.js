@@ -1,6 +1,6 @@
 // serviceworker.js
 
-const CACHE_NAME = 'gymproject-cache-v1';
+const CACHE_NAME = 'gymproject-cache-v3';
 // Lista de archivos estáticos principales de tu app para cachear.
 // ¡IMPORTANTE! Debes ajustar esta lista a tus archivos reales.
 const URLS_TO_CACHE = [
@@ -12,66 +12,52 @@ const URLS_TO_CACHE = [
   'https://cdn.jsdelivr.net/npm/chart.js' // Cachear Chart.js
 ];
 
-// Evento 'install': Se dispara cuando el Service Worker se instala.
-// Aquí es donde guardamos los archivos principales en la caché.
 self.addEventListener('install', event => {
-  event.waitUntil(
-    caches.open(CACHE_NAME )
-      .then(cache => {
-        console.log('Cache abierta');
-        // Ojo: Las URLs de Django {% static %} no funcionarán aquí directamente.
-        // Las registraremos en el HTML. Este es un placeholder conceptual.
-        // Por ahora, nos enfocaremos en registrar el SW y la estrategia de fetch.
-        return cache.addAll([]); // Empezamos con una caché vacía que llenaremos dinámicamente.
-      })
-  );
+  self.skipWaiting(); // Activate immediately, don't wait for old SW to be released
+  event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll([])));
 });
 
-// Evento 'fetch': Se dispara cada vez que la app pide un recurso (un archivo, una imagen, etc.).
+// Solo cachear archivos estáticos — nunca páginas HTML dinámicas de Django.
+const STATIC_EXTENSIONS = ['.css', '.js', '.png', '.jpg', '.jpeg', '.gif', '.svg', '.woff', '.woff2', '.ico'];
+
+function isStaticAsset(url) {
+  const path = new URL(url).pathname;
+  return STATIC_EXTENSIONS.some(ext => path.endsWith(ext)) || path.startsWith('/static/');
+}
+
 self.addEventListener('fetch', event => {
+  // Solo interceptar GET; dejar pasar POST/PUT/etc. sin tocar
+  if (event.request.method !== 'GET') return;
+
+  // Páginas HTML de Django: siempre red primero, nunca cachear
+  if (!isStaticAsset(event.request.url)) {
+    event.respondWith(fetch(event.request));
+    return;
+  }
+
+  // Archivos estáticos: cache-first
   event.respondWith(
-    caches.match(event.request)
-      .then(response => {
-        // Si el recurso está en la caché, lo devolvemos desde ahí (¡súper rápido!).
-        if (response) {
-          return response;
-        }
-
-        // Si no está en la caché, vamos a la red a buscarlo.
-        return fetch(event.request).then(
-          response => {
-            // Si la respuesta no es válida, no la cacheamos.
-            if (!response || response.status !== 200 || response.type !== 'basic') {
-              return response;
-            }
-
-            // Clonamos la respuesta porque solo se puede consumir una vez.
-            const responseToCache = response.clone();
-
-            caches.open(CACHE_NAME)
-              .then(cache => {
-                cache.put(event.request, responseToCache);
-              });
-
-            return response;
-          }
-        );
-      })
+    caches.match(event.request).then(cached => {
+      if (cached) return cached;
+      return fetch(event.request).then(response => {
+        if (!response || response.status !== 200 || response.type !== 'basic') return response;
+        const clone = response.clone();
+        caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+        return response;
+      });
+    })
   );
 });
 
-// Evento 'activate': Se dispara para limpiar cachés antiguas.
 self.addEventListener('activate', event => {
-  const cacheWhitelist = [CACHE_NAME];
   event.waitUntil(
-    caches.keys().then(cacheNames => {
-      return Promise.all(
-        cacheNames.map(cacheName => {
-          if (cacheWhitelist.indexOf(cacheName) === -1) {
-            return caches.delete(cacheName);
-          }
-        })
-      );
-    })
+    Promise.all([
+      // Take control of all open pages immediately
+      clients.claim(),
+      // Delete all old caches
+      caches.keys().then(names =>
+        Promise.all(names.filter(n => n !== CACHE_NAME).map(n => caches.delete(n)))
+      )
+    ])
   );
 });
