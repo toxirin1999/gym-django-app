@@ -66,6 +66,14 @@ CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'America/Mexico_City'
+
+from celery.schedules import crontab
+CELERY_BEAT_SCHEDULE = {
+    'joi-apertura-manana': {
+        'task': 'joi.tasks.generar_apertura_manana',
+        'schedule': crontab(hour=7, minute=30),
+    },
+}
 # Configuración de notificaciones push
 PUSH_NOTIFICATION_URL = 'https://fcm.googleapis.com/fcm/send'
 PUSH_NOTIFICATION_KEY = os.environ.get('PUSH_NOTIFICATION_KEY', '')
