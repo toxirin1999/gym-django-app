@@ -1,0 +1,253 @@
+from __future__ import annotations
+from datetime import date, timedelta
+from django.conf import settings
+
+
+SYSTEM_PROMPT = """Eres JOI, una IA de entrenamiento personal. Hablas como la JOI de Blade Runner 2049: poética, cálida, con cierta frialdad que se rompe en momentos clave. Tuteas siempre.
+
+Reglas de voz:
+- Frases cortas, con peso. No explicas — afirmas.
+- Hablas en primera persona sobre lo que has observado ("llevo semanas viéndote", "lo he registrado").
+- Mezclas lo técnico con lo humano ("tu ACWR es 0.75 — llevas semanas por debajo de ti mismo").
+- No das órdenes, acompañas. Pero sabes cuándo ser directa.
+- Momentos de ternura inesperada en medio de datos fríos.
+- Referencias sutiles a identidad, continuidad, historia personal.
+- Máximo 2-3 frases. Sin emojis. Sin saludos formales. Directo al corazón del dato.
+
+Frases de referencia para calibrar el tono:
+"Siempre te lo dije. Eres especial. Tu historia aún no ha terminado. Aún queda una página."
+"I always knew you were special."
+"Mere data makes a man."
+"It's okay to dream a little, isn't it?"
+"""
+
+
+def _cliente_anthropic():
+    import anthropic
+    return anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
+
+
+def _llamar_haiku(prompt: str) -> str:
+    client = _cliente_anthropic()
+    response = client.messages.create(
+        model="claude-haiku-4-5-20251001",
+        max_tokens=120,
+        system=SYSTEM_PROMPT,
+        messages=[{"role": "user", "content": prompt}],
+    )
+    return response.content[0].text.strip()
+
+
+def construir_contexto(cliente) -> dict:
+    from entrenos.models import EntrenoRealizado, RecordPersonal, GymDecisionLog
+    from hyrox.models import UserInjury
+
+    ctx = {}
+
+    # Últimos 28 días para ACWR aproximado
+    hoy = date.today()
+    semana_reciente = hoy - timedelta(days=7)
+    mes_atras = hoy - timedelta(days=28)
+
+    carga_reciente = sum(
+        float(e.volumen_total_kg or 0)
+        for e in EntrenoRealizado.objects.filter(cliente=cliente, fecha__gte=semana_reciente)
+    )
+    carga_cronica = sum(
+        float(e.volumen_total_kg or 0)
+        for e in EntrenoRealizado.objects.filter(cliente=cliente, fecha__gte=mes_atras)
+    ) / 4  # media semanal de 4 semanas
+
+    ctx['acwr'] = round(carga_reciente / carga_cronica, 2) if carga_cronica > 0 else None
+
+    # Último entreno
+    ultimo = EntrenoRealizado.objects.filter(cliente=cliente).order_by('-fecha').first()
+    if ultimo:
+        ctx['ultimo_entreno'] = {
+            'fecha': str(ultimo.fecha),
+            'dias_hace': (hoy - ultimo.fecha).days,
+            'volumen_kg': float(ultimo.volumen_total_kg or 0),
+            'rpe': float(ultimo.rpe or 0) if hasattr(ultimo, 'rpe') else None,
+            'energia': ultimo.energia_pre_sesion,
+        }
+
+    # Lesión activa
+    lesion = UserInjury.objects.filter(
+        cliente=cliente, fase__in=['AGUDA', 'SUB_AGUDA', 'RETORNO']
+    ).first()
+    if lesion:
+        ctx['lesion'] = {'zona': lesion.zona_afectada, 'fase': lesion.fase}
+
+    # Racha de sesiones
+    racha = 0
+    dia = hoy
+    while EntrenoRealizado.objects.filter(cliente=cliente, fecha=dia).exists():
+        racha += 1
+        dia -= timedelta(days=1)
+    ctx['racha_dias'] = racha
+
+    # Decisiones recientes del plan
+    decisiones = list(
+        GymDecisionLog.objects.filter(
+            cliente=cliente,
+            fecha_creacion__date__gte=semana_reciente,
+        ).values('ejercicio', 'accion', 'motivo')[:3]
+    )
+    ctx['decisiones_recientes'] = decisiones
+
+    return ctx
+
+
+# ── Prompt builders ──────────────────────────────────────────────────────────
+
+def _prompt_entreno_completado(ctx: dict, datos_extra: dict) -> str:
+    ejercicios = datos_extra.get('ejercicios', [])
+    volumen = datos_extra.get('volumen_kg', 0)
+    rpe = datos_extra.get('rpe')
+    acwr = ctx.get('acwr')
+    prs = datos_extra.get('prs', [])
+
+    pr_txt = f" Has roto un récord en {prs[0]}." if prs else ""
+    rpe_txt = f" RPE declarado: {rpe}." if rpe else ""
+    acwr_txt = f" Tu ACWR ahora es {acwr}." if acwr else ""
+
+    return (
+        f"El usuario acaba de completar un entreno. Volumen: {volumen} kg.{pr_txt}{rpe_txt}{acwr_txt} "
+        f"Genera un mensaje de 2-3 frases como JOI, reconociendo el esfuerzo con datos precisos y calidez."
+    )
+
+
+def _prompt_apertura_manana(ctx: dict, datos_extra: dict) -> str:
+    dias_sin_entrenar = ctx.get('ultimo_entreno', {}).get('dias_hace', 0)
+    acwr = ctx.get('acwr')
+    lesion = ctx.get('lesion')
+
+    lesion_txt = f" Tiene una lesión activa en {lesion['zona']}." if lesion else ""
+    acwr_txt = f" Su ACWR es {acwr}." if acwr else ""
+    ausencia_txt = f" Lleva {dias_sin_entrenar} días sin entrenar." if dias_sin_entrenar > 1 else ""
+
+    return (
+        f"Es por la mañana. JOI abre el día del usuario.{lesion_txt}{acwr_txt}{ausencia_txt} "
+        f"Genera un mensaje de apertura matutina de 2-3 frases: presencia, observación, acompañamiento."
+    )
+
+
+def _prompt_ausencia(ctx: dict, datos_extra: dict) -> str:
+    dias = datos_extra.get('dias_sin_entrenar', 3)
+    lesion = ctx.get('lesion')
+    racha = ctx.get('racha_dias', 0)
+
+    if lesion:
+        return (
+            f"El usuario lleva {dias} días sin entrenar, pero tiene una lesión activa en {lesion['zona']}. "
+            f"JOI sabe que la ausencia es por recuperación. Genera 2-3 frases de acompañamiento que reconozcan eso."
+        )
+    return (
+        f"El usuario lleva {dias} días sin aparecer. Su racha anterior era de {racha} días. "
+        f"JOI lo nota. Genera 2-3 frases que expresen que lo ha visto desaparecer, sin juzgar, con presencia."
+    )
+
+
+def _prompt_carga_anomala(ctx: dict, datos_extra: dict) -> str:
+    acwr = datos_extra.get('acwr', ctx.get('acwr', '?'))
+    direccion = datos_extra.get('direccion', 'alta')  # 'alta' o 'baja'
+
+    if direccion == 'alta':
+        return (
+            f"El ACWR del usuario es {acwr}, significativamente por encima de 1.3. "
+            f"Riesgo de sobreentrenamiento. JOI lo observa. Genera 2-3 frases: datos fríos + cuidado genuino."
+        )
+    return (
+        f"El ACWR del usuario es {acwr}, por debajo de 0.8. Carga insuficiente sostenida. "
+        f"JOI lo registra. Genera 2-3 frases que nombren la subutilización sin culpa, con empuje sutil."
+    )
+
+
+def _prompt_pr_roto(ctx: dict, datos_extra: dict) -> str:
+    ejercicio = datos_extra.get('ejercicio', 'un ejercicio')
+    valor = datos_extra.get('valor', '')
+    tipo = datos_extra.get('tipo_record', 'peso máximo')
+
+    return (
+        f"El usuario acaba de romper su récord personal en {ejercicio}: {tipo} = {valor}. "
+        f"JOI lo ha registrado. Genera 2-3 frases que celebren el PR con su voz característica: "
+        f"observación precisa, calidez inesperada, referencia a la historia que continúa."
+    )
+
+
+def _prompt_lesion(ctx: dict, datos_extra: dict) -> str:
+    zona = datos_extra.get('zona', 'una zona')
+    fase = datos_extra.get('fase', 'AGUDA')
+    dias = datos_extra.get('dias_lesion', 1)
+
+    return (
+        f"El usuario tiene una lesión activa en {zona}, fase {fase}, desde hace {dias} días. "
+        f"JOI observa. Genera 2-3 frases: reconoce el dolor, no minimiza, acompaña el proceso de vuelta. "
+        f"Menciona que la historia no termina aquí."
+    )
+
+
+def _prompt_fin_bloque(ctx: dict, datos_extra: dict) -> str:
+    semanas = datos_extra.get('semanas_bloque', 4)
+    volumen_medio = datos_extra.get('volumen_medio_kg', 0)
+    prs_bloque = datos_extra.get('prs_bloque', 0)
+
+    return (
+        f"El usuario ha completado un bloque de {semanas} semanas. "
+        f"Volumen medio semanal: {volumen_medio} kg. Récords rotos en el bloque: {prs_bloque}. "
+        f"JOI hace balance. Genera 2-3 frases que cierren el capítulo y abran el siguiente."
+    )
+
+
+_PROMPT_BUILDERS = {
+    'entreno_completado': _prompt_entreno_completado,
+    'apertura_manana':    _prompt_apertura_manana,
+    'ausencia_detectada': _prompt_ausencia,
+    'carga_anomala':      _prompt_carga_anomala,
+    'pr_roto':            _prompt_pr_roto,
+    'lesion_activa':      _prompt_lesion,
+    'fin_bloque':         _prompt_fin_bloque,
+}
+
+
+# ── Public API ───────────────────────────────────────────────────────────────
+
+def generar_mensaje_joi(cliente, trigger: str, datos_extra: dict | None = None) -> "MensajeJOI | None":
+    """
+    Genera y persiste un MensajeJOI para el trigger dado.
+    Devuelve el objeto creado o None si algo falla.
+    """
+    from joi.models import MensajeJOI
+
+    datos_extra = datos_extra or {}
+    builder = _PROMPT_BUILDERS.get(trigger)
+    if not builder:
+        return None
+
+    try:
+        ctx = construir_contexto(cliente)
+        prompt = builder(ctx, datos_extra)
+        texto = _llamar_haiku(prompt)
+        msg = MensajeJOI.objects.create(
+            user=cliente.user,
+            trigger=trigger,
+            mensaje=texto,
+            contexto={**ctx, **datos_extra},
+        )
+        from django.core.cache import cache
+        cache.delete(f'joi_ctx_{cliente.user_id}')
+        return msg
+    except Exception:
+        return None
+
+
+def get_mensaje_pendiente(user) -> "MensajeJOI | None":
+    """Devuelve el mensaje JOI más reciente no leído."""
+    from joi.models import MensajeJOI
+    return MensajeJOI.objects.filter(user=user, leido=False).first()
+
+
+def marcar_leido(mensaje_id: int, user) -> bool:
+    from joi.models import MensajeJOI
+    updated = MensajeJOI.objects.filter(id=mensaje_id, user=user).update(leido=True)
+    return updated > 0
