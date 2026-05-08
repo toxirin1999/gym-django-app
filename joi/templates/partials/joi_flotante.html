@@ -181,13 +181,19 @@
 
 <div class="joi-flotante" data-momento="{{ joi_momento }}" data-estacion="{{ joi_estacion }}">
 
-    {% if frase_forma_joi %}
+    {% if joi_mensaje_pendiente %}
+    <div class="joi-bocadillo joi-proactivo" id="joi-proactivo-{{ joi_mensaje_pendiente.id }}" style="display:block; max-width:280px; border-color:#ff80ff;">
+      <p style="margin:0 0 6px; font-size:13px; line-height:1.5;">{{ joi_mensaje_pendiente.mensaje }}</p>
+      <button onclick="joiMarcarLeido({{ joi_mensaje_pendiente.id }}, this)" style="background:none;border:1px solid #f0f;color:#f0f;padding:2px 8px;border-radius:6px;font-size:11px;cursor:pointer;float:right;">
+        ✓ leído
+      </button>
+    </div>
+    {% elif frase_forma_joi %}
     {% if frase_estacional_joi %}
     <div class="joi-bocadillo mt-1 text-xs text-pink-300">
       <em>{{ frase_estacional_joi }}</em>
     </div>
     {% endif %}
-
     <div class="joi-bocadillo">{{ frase_forma_joi }}</div>
     {% endif %}
     {% if estado_joi == "triste" or estado_joi == "glitch" %}
@@ -206,5 +212,16 @@
     </div>
     {% endif %}
 
-
 </div>
+
+<script>
+function joiMarcarLeido(id, btn) {
+  fetch('/joi/mensaje/' + id + '/leido/', {
+    method: 'POST',
+    headers: {'X-CSRFToken': document.cookie.match(/csrftoken=([^;]+)/)?.[1] || ''},
+  }).then(() => {
+    const card = document.getElementById('joi-proactivo-' + id);
+    if (card) { card.style.transition='opacity .4s'; card.style.opacity = '0'; setTimeout(() => card.remove(), 400); }
+  });
+}
+</script>

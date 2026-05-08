@@ -14,4 +14,5 @@ urlpatterns = [
     path('entrenar/', entrenar_view, name='entrenar'),
     path('logros/', logros_view, name='logros'),
     path('recuerdos/', recuerdos_view, name='recuerdos'),
+    path('mensaje/<int:mensaje_id>/leido/', views.marcar_mensaje_leido, name='joi_marcar_leido'),
 ]

@@ -706,3 +706,18 @@ def frase_cambio_forma_joi(estado):
         'contemplativa': "No sé si es emoción o reflexión… pero algo cambió.",
     }
     return frases.get(estado, "")
+
+
+from django.http import JsonResponse
+from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_POST
+
+
+@login_required
+@require_POST
+def marcar_mensaje_leido(request, mensaje_id):
+    from joi.services import marcar_leido
+    ok = marcar_leido(mensaje_id, request.user)
+    from django.core.cache import cache
+    cache.delete(f'joi_ctx_{request.user.id}')
+    return JsonResponse({'ok': ok})

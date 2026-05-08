@@ -65,3 +65,28 @@ class MotivacionUsuario(models.Model):
 
     def __str__(self):
         return f"{self.user.username} — {self.fecha}"
+
+
+class MensajeJOI(models.Model):
+    TRIGGER_CHOICES = [
+        ('entreno_completado',  'Entreno completado'),
+        ('apertura_manana',     'Apertura matutina'),
+        ('ausencia_detectada',  'Ausencia sin lesión'),
+        ('carga_anomala',       'Carga anómala ACWR'),
+        ('pr_roto',             'Récord personal'),
+        ('lesion_activa',       'Lesión activa'),
+        ('fin_bloque',          'Fin de bloque'),
+    ]
+
+    user        = models.ForeignKey(User, on_delete=models.CASCADE, related_name='mensajes_joi')
+    trigger     = models.CharField(max_length=30, choices=TRIGGER_CHOICES)
+    mensaje     = models.TextField()
+    contexto    = models.JSONField(default=dict)   # datos que usó JOI para generar el mensaje
+    leido       = models.BooleanField(default=False)
+    creado_en   = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-creado_en']
+
+    def __str__(self):
+        return f"JOI → {self.user.username} [{self.trigger}] {self.creado_en.date()}"
