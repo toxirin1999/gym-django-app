@@ -73,6 +73,10 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'joi.tasks.generar_apertura_manana',
         'schedule': crontab(hour=7, minute=30),
     },
+    'joi-hyrox-cuenta-regresiva': {
+        'task': 'joi.tasks.verificar_cuenta_regresiva_hyrox',
+        'schedule': crontab(hour=8, minute=0),
+    },
 }
 # Configuración de notificaciones push
 PUSH_NOTIFICATION_URL = 'https://fcm.googleapis.com/fcm/send'
