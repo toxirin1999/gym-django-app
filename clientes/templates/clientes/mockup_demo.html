@@ -386,6 +386,25 @@ body {
 </head>
 <body>
 
+{% if joi_mensaje_pendiente %}
+<div id="joi-banner" style="position:fixed;top:0;left:0;right:0;z-index:9998;background:linear-gradient(90deg,rgba(15,10,25,0.97),rgba(30,10,40,0.97));border-bottom:1px solid rgba(200,100,255,0.25);padding:10px 20px;display:flex;align-items:center;gap:14px;backdrop-filter:blur(4px);animation:joiBannerIn .5s ease-out;">
+  <span style="color:rgba(200,100,255,0.6);font-size:12px;letter-spacing:.1em;text-transform:uppercase;white-space:nowrap;">JOI</span>
+  <p style="margin:0;color:#e8b4ff;font-style:italic;font-size:14px;line-height:1.5;flex:1;">{{ joi_mensaje_pendiente.mensaje }}</p>
+  <button onclick="joiBannerCerrar({{ joi_mensaje_pendiente.id }})" style="background:none;border:none;color:rgba(200,100,255,0.5);font-size:20px;cursor:pointer;padding:0 4px;line-height:1;" onmouseover="this.style.color='#e8b4ff'" onmouseout="this.style.color='rgba(200,100,255,0.5)'">×</button>
+</div>
+<style>
+@keyframes joiBannerIn { from{transform:translateY(-100%);opacity:0} to{transform:translateY(0);opacity:1} }
+</style>
+<script>
+function joiBannerCerrar(id) {
+  fetch('/joi/mensaje/'+id+'/leido/',{method:'POST',headers:{'X-CSRFToken':document.cookie.match(/csrftoken=([^;]+)/)?.[1]||''}});
+  const b=document.getElementById('joi-banner');
+  b.style.transition='transform .4s ease-in,opacity .4s';b.style.transform='translateY(-100%)';b.style.opacity='0';
+  setTimeout(()=>b.remove(),420);
+}
+</script>
+{% endif %}
+
 <!-- ── NAV ─────────────────────────────────────── -->
 <nav class="rb-nav">
   <a class="rb-brand" href="{% url 'clientes:panel_cliente' %}">

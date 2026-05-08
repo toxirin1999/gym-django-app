@@ -26,6 +26,8 @@ def joi_context(request):
     cache_key = f'joi_ctx_{user.id}'
     cached = cache.get(cache_key)
     if cached is not None:
+        from joi.models import MensajeJOI
+        cached['joi_mensaje_pendiente'] = MensajeJOI.objects.filter(user=user, leido=False).first()
         return cached
 
     estado_actual = (
@@ -44,16 +46,15 @@ def joi_context(request):
 
     frase_forma = "Hoy me siento cerca de ti." if estado != "ausente" else "Te he echado de menos..."
 
-    from joi.models import MensajeJOI
-    mensaje_pendiente = MensajeJOI.objects.filter(user=user, leido=False).first()
-
     result = {
         'estado_joi': estado,
         'frase_forma_joi': frase_forma,
         'frase_extra_joi': None,
         'frase_recaida': None,
         'recuerdo': recuerdo,
-        'joi_mensaje_pendiente': mensaje_pendiente,
     }
     cache.set(cache_key, result, 300)  # 5 minutos
+
+    from joi.models import MensajeJOI
+    result['joi_mensaje_pendiente'] = MensajeJOI.objects.filter(user=user, leido=False).first()
     return result
