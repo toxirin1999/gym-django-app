@@ -223,7 +223,6 @@ def construir_contexto(cliente) -> dict:
                     'rpe':      ultima_hyrox.rpe_global,
                     'minutos':  ultima_hyrox.tiempo_total_minutos,
                 }
-                # TSB solo si la sesión es reciente (≤14 días) — evita datos obsoletos
                 if (hoy - ultima_hyrox.fecha).days <= 14:
                     ctx['tsb_hyrox'] = ultima_hyrox.tsb
 
@@ -232,6 +231,62 @@ def construir_contexto(cliente) -> dict:
                 estado='completado',
                 fecha__gte=semana_reciente,
             ).count()
+
+            # ── Readiness interpretado ────────────────────────────────────────
+            scores_all = list(
+                HyroxReadinessLog.objects.filter(objective=objetivo_hyrox)
+                .order_by('-fecha').values_list('score', flat=True)[:14]
+            )
+            if scores_all:
+                score_actual = scores_all[0]
+
+                # Días en plateau (±2 puntos del score actual)
+                plateau = 0
+                for s in scores_all:
+                    if abs(s - score_actual) <= 2:
+                        plateau += 1
+                    else:
+                        break
+                ctx['readiness_plateau_dias'] = plateau
+
+                # Tendencia real: media últimos 3 vs 3 anteriores
+                if len(scores_all) >= 6:
+                    media_reciente  = sum(scores_all[:3]) / 3
+                    media_anterior  = sum(scores_all[3:6]) / 3
+                    diff = media_reciente - media_anterior
+                    ctx['readiness_trend'] = (
+                        'subiendo' if diff > 3
+                        else 'bajando' if diff < -3
+                        else 'estable'
+                    )
+                    ctx['readiness_trend_puntos'] = round(diff, 1)
+
+            # Benchmark esperado según fase de preparación
+            dias_carrera = ctx['dias_hasta_carrera']
+            if dias_carrera > 270:
+                benchmark, fase_nombre = 35, 'Adaptación'
+            elif dias_carrera > 180:
+                benchmark, fase_nombre = 50, 'Acumulación'
+            elif dias_carrera > 90:
+                benchmark, fase_nombre = 65, 'Intensificación'
+            elif dias_carrera > 30:
+                benchmark, fase_nombre = 78, 'Simulación'
+            else:
+                benchmark, fase_nombre = 88, 'Taper'
+
+            ctx['readiness_benchmark']   = benchmark
+            ctx['readiness_fase']        = fase_nombre
+            ctx['readiness_vs_benchmark'] = (ctx.get('readiness_hyrox') or 0) - benchmark
+
+            # Factor limitante del readiness (breakdown)
+            try:
+                breakdown = objetivo_hyrox.get_readiness_breakdown()
+                if breakdown:
+                    factor_min = min(breakdown, key=breakdown.get)
+                    ctx['readiness_factor_limitante'] = factor_min
+                    ctx['readiness_breakdown'] = breakdown
+            except Exception:
+                pass
     except Exception:
         pass
 
@@ -338,14 +393,36 @@ def _prompt_apertura_manana(ctx: dict, datos_extra: dict) -> str:
     rd_delta = ctx.get('readiness_delta')
     tsb = ctx.get('tsb_hyrox')
     if dias_carrera is not None:
-        hechos.append(f"Quedan {dias_carrera} días para la carrera Hyrox.")
+        fase = ctx.get('readiness_fase', '')
+        hechos.append(f"Quedan {dias_carrera} días para la carrera Hyrox (fase {fase}).")
     if readiness is not None:
-        tendencia = (
-            f", subiendo {rd_delta} pts esta semana" if rd_delta and rd_delta > 3
-            else f", bajando {abs(rd_delta)} pts esta semana" if rd_delta and rd_delta < -3
-            else ""
+        benchmark   = ctx.get('readiness_benchmark')
+        vs_bench    = ctx.get('readiness_vs_benchmark', 0)
+        plateau     = ctx.get('readiness_plateau_dias', 0)
+        trend       = ctx.get('readiness_trend', '')
+        factor      = ctx.get('readiness_factor_limitante', '')
+
+        bench_txt = ''
+        if benchmark:
+            if vs_bench >= 5:
+                bench_txt = f" (por encima del esperado {benchmark} para esta fase)"
+            elif vs_bench <= -5:
+                bench_txt = f" (por debajo del esperado {benchmark} para esta fase)"
+            else:
+                bench_txt = f" (en línea con el esperado {benchmark} para esta fase)"
+
+        plateau_txt = (
+            f" — lleva {plateau} días sin mejorar" if plateau >= 4 else ""
         )
-        hechos.append(f"Race Readiness: {readiness}/100{tendencia}.")
+        trend_txt = (
+            f", tendencia {trend}" if trend and trend != 'estable' else ""
+        )
+        factor_txt = (
+            f" Factor limitante: {factor}." if factor else ""
+        )
+        hechos.append(
+            f"Race Readiness: {readiness}/100{bench_txt}{plateau_txt}{trend_txt}.{factor_txt}"
+        )
     if tsb is not None:
         estado = "fresco" if tsb > 5 else "fatigado" if tsb < -10 else "equilibrado"
         hechos.append(f"TSB Hyrox: {round(tsb, 1)} ({estado}).")
@@ -454,17 +531,23 @@ def _prompt_hyrox_sesion_completada(ctx: dict, datos_extra: dict) -> str:
 
 
 def _prompt_hyrox_readiness_bajo(ctx: dict, datos_extra: dict) -> str:
-    readiness = datos_extra.get('readiness', ctx.get('readiness_hyrox', '?'))
-    dias = ctx.get('dias_hasta_carrera')
-    tsb = ctx.get('tsb_hyrox')
+    readiness  = datos_extra.get('readiness', ctx.get('readiness_hyrox', '?'))
+    dias       = ctx.get('dias_hasta_carrera')
+    tsb        = ctx.get('tsb_hyrox')
+    benchmark  = ctx.get('readiness_benchmark')
+    plateau    = ctx.get('readiness_plateau_dias', 0)
+    factor     = ctx.get('readiness_factor_limitante', '')
 
-    dias_txt = f" Quedan {dias} días para el evento." if dias is not None else ""
-    tsb_txt = f" Tu TSB es {tsb}." if tsb is not None else ""
+    dias_txt    = f" Quedan {dias} días." if dias is not None else ""
+    tsb_txt     = f" TSB: {tsb}." if tsb is not None else ""
+    bench_txt   = f" Esperado para esta fase: {benchmark}." if benchmark else ""
+    plateau_txt = f" Lleva {plateau} días sin mejorar." if plateau >= 4 else ""
+    factor_txt  = f" Factor que más lastra: {factor}." if factor else ""
 
     return (
-        f"El Race Readiness del usuario ha bajado a {readiness}/100.{dias_txt}{tsb_txt} "
+        f"El Race Readiness bajó a {readiness}/100.{bench_txt}{plateau_txt}{dias_txt}{tsb_txt}{factor_txt} "
         f"JOI lo observa. Genera 2-3 frases: nombra el dato con precisión, "
-        f"acompaña sin alarmar, recuerda que la historia aún está en construcción."
+        f"acompaña sin alarmar, señala qué palanca mover. La historia sigue en construcción."
     )
 
 
@@ -506,17 +589,24 @@ def _prompt_hyrox_simulacion_completada(ctx: dict, datos_extra: dict) -> str:
 
 
 def _prompt_hyrox_readiness_alto(ctx: dict, datos_extra: dict) -> str:
-    readiness = datos_extra.get('readiness', ctx.get('readiness_hyrox', '?'))
-    dias = ctx.get('dias_hasta_carrera')
-    tsb = ctx.get('tsb_hyrox')
+    readiness  = datos_extra.get('readiness', ctx.get('readiness_hyrox', '?'))
+    dias       = ctx.get('dias_hasta_carrera')
+    tsb        = ctx.get('tsb_hyrox')
+    benchmark  = ctx.get('readiness_benchmark')
+    vs_bench   = ctx.get('readiness_vs_benchmark', 0)
+    fase       = ctx.get('readiness_fase', '')
 
-    dias_txt = f" Quedan {dias} días para el evento." if dias is not None else ""
-    tsb_txt = f" Tu TSB es {tsb} — estás fresco." if tsb is not None and tsb > 0 else ""
+    dias_txt   = f" Quedan {dias} días." if dias is not None else ""
+    tsb_txt    = f" TSB {tsb} — fresco." if tsb is not None and tsb > 0 else ""
+    avance_txt = (
+        f" Vas {vs_bench} puntos por delante de lo esperado en fase {fase}."
+        if vs_bench >= 5 and fase else ""
+    )
 
     return (
-        f"El Race Readiness del usuario ha superado {readiness}/100.{dias_txt}{tsb_txt} "
-        f"JOI registra el momento de forma óptima. Genera 2-3 frases: "
-        f"nombra el dato con precisión, devuelve confianza, pero recuerda que la carrera aún no ha pasado."
+        f"El Race Readiness ha alcanzado {readiness}/100.{avance_txt}{dias_txt}{tsb_txt} "
+        f"JOI registra el momento. Genera 2-3 frases: nombra el dato con precisión, "
+        f"celebra el avance sobre el plan, pero recuerda que la carrera aún no ha pasado."
     )
 
 
