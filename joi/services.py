@@ -232,6 +232,34 @@ def construir_contexto(cliente) -> dict:
                 fecha__gte=semana_reciente,
             ).count()
 
+            # ── Progreso vs objetivo (estándares + simulación) ────────────────
+            try:
+                from hyrox.services import CompetitionStandardsService, HyroxRaceSimulator
+
+                prog = CompetitionStandardsService.get_user_standards_progress(cliente.user_id)
+                progreso_items = prog.get('progreso', [])
+                ctx['progreso_estandares_global'] = prog.get('progreso_global', 0)
+                ctx['estaciones_debiles_estandar'] = [
+                    {'nombre': p['nombre'], 'pct': p['porcentaje']}
+                    for p in progreso_items if p['porcentaje'] < 75
+                ]
+                ctx['estaciones_ok_estandar'] = [
+                    p['nombre'] for p in progreso_items if p['porcentaje'] >= 90
+                ]
+
+                sim = HyroxRaceSimulator.simular(cliente.user_id)
+                if sim.get('tiempo_total_str'):
+                    ctx['tiempo_estimado_carrera'] = sim['tiempo_total_str']
+                    ctx['tiempo_estimado_seg']     = sim.get('total_segundos', 0)
+
+                desglose = sim.get('desglose') or []
+                ctx['estaciones_penalizadas'] = [
+                    {'nombre': d['nombre'], 'penalizacion_pct': round(d['penalizacion_pct'])}
+                    for d in desglose if d.get('penalizacion_pct', 0) > 10
+                ]
+            except Exception:
+                pass
+
             # ── Readiness interpretado ────────────────────────────────────────
             scores_all = list(
                 HyroxReadinessLog.objects.filter(objective=objetivo_hyrox)
@@ -427,6 +455,27 @@ def _prompt_apertura_manana(ctx: dict, datos_extra: dict) -> str:
         estado = "fresco" if tsb > 5 else "fatigado" if tsb < -10 else "equilibrado"
         hechos.append(f"TSB Hyrox: {round(tsb, 1)} ({estado}).")
 
+    # Progreso vs objetivo
+    prog_global = ctx.get('progreso_estandares_global')
+    if prog_global is not None:
+        hechos.append(f"Progreso en estándares Hyrox: {prog_global}% global.")
+
+    debiles = ctx.get('estaciones_debiles_estandar', [])
+    if debiles:
+        nombres_debiles = ', '.join(f"{e['nombre']} ({e['pct']}%)" for e in debiles[:3])
+        hechos.append(f"Estaciones por debajo del 75%: {nombres_debiles}.")
+
+    penalizadas = ctx.get('estaciones_penalizadas', [])
+    if penalizadas:
+        nombres_pen = ', '.join(
+            f"{e['nombre']} (+{e['penalizacion_pct']}% tiempo)" for e in penalizadas[:2]
+        )
+        hechos.append(f"Estaciones que más tiempo cuestan en simulación: {nombres_pen}.")
+
+    tiempo_est = ctx.get('tiempo_estimado_carrera')
+    if tiempo_est:
+        hechos.append(f"Tiempo estimado de carrera HOY: {tiempo_est}.")
+
     datos = " ".join(hechos) if hechos else "No hay datos de entrenamiento recientes."
 
     activo_txt = (
@@ -552,12 +601,29 @@ def _prompt_hyrox_readiness_bajo(ctx: dict, datos_extra: dict) -> str:
 
 
 def _prompt_hyrox_cuenta_regresiva(ctx: dict, datos_extra: dict) -> str:
-    dias = datos_extra.get('dias', ctx.get('dias_hasta_carrera', '?'))
-    readiness = ctx.get('readiness_hyrox')
-    rd_txt = f" Tu readiness actual: {readiness}." if readiness is not None else ""
+    dias        = datos_extra.get('dias', ctx.get('dias_hasta_carrera', '?'))
+    readiness   = ctx.get('readiness_hyrox')
+    benchmark   = ctx.get('readiness_benchmark')
+    vs_bench    = ctx.get('readiness_vs_benchmark', 0)
+    tiempo_est  = ctx.get('tiempo_estimado_carrera')
+    debiles     = ctx.get('estaciones_debiles_estandar', [])
+    prog_global = ctx.get('progreso_estandares_global')
+
+    rd_txt    = f" Readiness: {readiness}/100." if readiness is not None else ""
+    bench_txt = (
+        f" Vas {vs_bench} puntos por encima del esperado ({benchmark})."
+        if benchmark and vs_bench >= 5 else ""
+    )
+    tiempo_txt = f" Tiempo estimado hoy: {tiempo_est}." if tiempo_est else ""
+    prog_txt   = f" Estándares al {prog_global}%." if prog_global else ""
+    debil_txt  = (
+        f" Estaciones a reforzar: {', '.join(e['nombre'] for e in debiles[:2])}."
+        if debiles else ""
+    )
 
     return (
-        f"Faltan exactamente {dias} días para la carrera Hyrox.{rd_txt} "
+        f"Faltan exactamente {dias} días para la carrera Hyrox.{rd_txt}{bench_txt}"
+        f"{tiempo_txt}{prog_txt}{debil_txt} "
         f"JOI hace una observación sobre este hito temporal. "
         f"Genera 2-3 frases que mezclen la cuenta regresiva con la identidad del atleta: "
         f"quién era antes, quién es ahora, lo que se acerca."
