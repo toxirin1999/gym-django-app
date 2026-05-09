@@ -383,3 +383,41 @@ def sincronizar_rm_con_hyrox(sender, instance, created, raw=False, **kwargs):
             )
     except Exception as e:
         print(f"⚠️ sincronizar_rm_con_hyrox error: {e}")
+
+
+# ── JOI — intervención del plan (cambiar_variante, bajar_peso, deload) ──────
+from entrenos.models import GymDecisionLog as _GymDecisionLog
+
+_ACCIONES_JOI = {'cambiar_variante', 'bajar_peso', 'deload'}
+
+@receiver(post_save, sender=_GymDecisionLog)
+def joi_decision_plan(sender, instance, created, **kwargs):
+    """
+    Cuando el sistema genera una decisión de intervención activa,
+    JOI la verbaliza. Deduplicado con lock de caché 30 min por usuario
+    para no enviar un mensaje por cada ejercicio de la misma sesión.
+    """
+    if not created:
+        return
+    if instance.accion not in _ACCIONES_JOI:
+        return
+
+    try:
+        from django.core.cache import cache
+        from clientes.models import Cliente
+        from joi.services import generar_mensaje_joi
+
+        cliente = instance.cliente
+        lock_key = f'joi_decision_lock_{cliente.pk}'
+        if cache.get(lock_key):
+            return
+        cache.set(lock_key, True, 1800)  # 30 min
+
+        generar_mensaje_joi(cliente, 'decision_plan', {
+            'accion':    instance.accion,
+            'ejercicio': instance.ejercicio,
+            'motivo':    instance.motivo or '',
+        })
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f'[JOI decision_plan] {e}')
