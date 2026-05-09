@@ -203,6 +203,58 @@
       color: rgba(100, 148, 220, 0.28);
       text-align: center;
     }
+
+    /* ── Input de mood ── */
+    .mood-zona {
+      position: fixed;
+      bottom: 4.2rem;
+      left: 50%;
+      transform: translateX(-50%);
+      width: min(320px, calc(100vw - 3rem));
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+      z-index: 10;
+    }
+
+    .mood-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      border-bottom: 1px solid rgba(100, 148, 220, 0.18);
+      color: rgba(200, 215, 240, 0.7);
+      font-size: 0.75rem;
+      font-family: inherit;
+      padding: 0.4rem 0.2rem;
+      outline: none;
+      transition: border-color 0.3s;
+      letter-spacing: 0.04em;
+    }
+    .mood-input::placeholder { color: rgba(100, 148, 220, 0.25); }
+    .mood-input:focus { border-bottom-color: rgba(100, 148, 220, 0.45); }
+
+    .mood-btn {
+      background: transparent;
+      border: none;
+      color: rgba(100, 148, 220, 0.3);
+      font-size: 0.7rem;
+      cursor: pointer;
+      font-family: inherit;
+      letter-spacing: 0.12em;
+      padding: 0.3rem 0;
+      transition: color 0.25s;
+    }
+    .mood-btn:hover { color: rgba(100, 148, 220, 0.7); }
+
+    .mood-confirmacion {
+      display: none;
+      font-size: 0.65rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: rgba(100, 148, 220, 0.35);
+      text-align: center;
+      animation: aparecer 0.6s ease forwards;
+    }
   </style>
 </head>
 <body>
@@ -247,6 +299,25 @@
 
 </div>
 
+<!-- Input de mood — siempre disponible en La Habitación -->
+<div class="mood-zona" id="mood-zona">
+  <input class="mood-input" id="mood-input" type="text"
+         placeholder="¿cómo vienes hoy?"
+         maxlength="300"
+         autocomplete="off">
+  <button class="mood-btn" onclick="enviarMood()">→</button>
+</div>
+<p class="mood-confirmacion" id="mood-confirmacion">recibido.</p>
+
+<a href="/panel/"
+   style="position:fixed;bottom:1.8rem;left:1.8rem;font-size:0.6rem;letter-spacing:0.2em;
+          text-transform:uppercase;color:rgba(100,148,220,0.22);text-decoration:none;
+          transition:color .25s;"
+   onmouseover="this.style.color='rgba(100,148,220,0.5)'"
+   onmouseout="this.style.color='rgba(100,148,220,0.22)'">
+  ← panel
+</a>
+
 <a href="/joi/manual/"
    style="position:fixed;bottom:1.8rem;right:1.8rem;font-size:0.6rem;letter-spacing:0.2em;
           text-transform:uppercase;color:rgba(100,148,220,0.22);text-decoration:none;
@@ -258,6 +329,29 @@
 
 <script>
 const CSRF = '{{ csrf_token }}';
+
+async function enviarMood() {
+  const input = document.getElementById('mood-input');
+  const texto = input.value.trim();
+  if (!texto) return;
+
+  input.disabled = true;
+  try {
+    await fetch('/joi/mood/', {
+      method:  'POST',
+      headers: { 'X-CSRFToken': CSRF, 'Content-Type': 'application/x-www-form-urlencoded' },
+      body:    `texto=${encodeURIComponent(texto)}`,
+    });
+  } catch (_) {}
+
+  document.getElementById('mood-zona').style.display = 'none';
+  const conf = document.getElementById('mood-confirmacion');
+  conf.style.display = 'block';
+}
+
+document.getElementById('mood-input')?.addEventListener('keydown', e => {
+  if (e.key === 'Enter') enviarMood();
+});
 
 async function enviarFeedback(tipo, mensajeId) {
   const zona   = document.getElementById('feedback-zona');

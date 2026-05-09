@@ -725,6 +725,21 @@ def marcar_mensaje_leido(request, mensaje_id):
 
 
 @login_required
+@require_POST
+def registrar_mood(request):
+    from joi.models import RecuerdoEmocional
+    texto = request.POST.get('texto', '').strip()[:300]
+    if texto:
+        RecuerdoEmocional.objects.create(
+            user=request.user,
+            contenido=texto,
+            contexto='mood_habitacion',
+        )
+        return JsonResponse({'ok': True})
+    return JsonResponse({'ok': False}, status=400)
+
+
+@login_required
 def poda_manual_joi(request):
     from joi.models import ManualDavid
     entradas = ManualDavid.objects.filter(user=request.user, activa=True)

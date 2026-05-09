@@ -1077,6 +1077,18 @@ def _leer_diario_reciente(user, dias: int = 7) -> str:
     except Exception:
         pass
 
+    try:
+        from joi.models import RecuerdoEmocional
+        moods = (
+            RecuerdoEmocional.objects
+            .filter(user=user, fecha__gte=limite)
+            .order_by('-fecha')
+            .values_list('contenido', flat=True)[:3]
+        )
+        fragmentos.extend(m[:200] for m in moods)
+    except Exception:
+        pass
+
     return '\n---\n'.join(fragmentos)
 
 
