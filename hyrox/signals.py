@@ -243,21 +243,43 @@ def autorregular_plan_futuro(sender, instance, created, update_fields=None, **kw
     # ── 6. JOI — mensaje proactivo post-sesión Hyrox ────────────────────────
     try:
         from joi.services import generar_mensaje_joi
-        cliente = instance.objective.cliente
-        generar_mensaje_joi(cliente, 'hyrox_sesion_completada', {
-            'tipo_sesion': instance.tipo_sesion,
-            'rpe': instance.rpe_global,
-            'minutos': instance.tiempo_total_minutos,
-        })
-        from hyrox.models import HyroxReadinessLog as _RLog
         import datetime
+        cliente = instance.objective.cliente
+        titulo = instance.titulo or ''
+        es_simulacion = 'simulaci' in titulo.lower()
+
+        if es_simulacion:
+            estaciones_debiles = []
+            if instance.station_feedback:
+                for sf in instance.station_feedback:
+                    if sf.get('sensacion') in ('mala', 'regular'):
+                        estaciones_debiles.append(sf.get('estacion', ''))
+            generar_mensaje_joi(cliente, 'hyrox_simulacion_completada', {
+                'titulo': titulo,
+                'rpe': instance.rpe_global,
+                'minutos': instance.tiempo_total_minutos,
+                'estaciones_debiles': [e for e in estaciones_debiles if e],
+            })
+        else:
+            generar_mensaje_joi(cliente, 'hyrox_sesion_completada', {
+                'titulo': titulo,
+                'rpe': instance.rpe_global,
+                'minutos': instance.tiempo_total_minutos,
+            })
+
+        from hyrox.models import HyroxReadinessLog as _RLog
         log_hoy = _RLog.objects.filter(
             objective=instance.objective, fecha=datetime.date.today()
         ).first()
-        if log_hoy and log_hoy.score < 40:
-            generar_mensaje_joi(cliente, 'hyrox_readiness_bajo', {
-                'readiness': log_hoy.score,
-            })
+        if log_hoy:
+            if log_hoy.score < 40:
+                generar_mensaje_joi(cliente, 'hyrox_readiness_bajo', {
+                    'readiness': log_hoy.score,
+                })
+            elif log_hoy.score >= 80:
+                generar_mensaje_joi(cliente, 'hyrox_readiness_alto', {
+                    'readiness': log_hoy.score,
+                })
     except Exception as e:
         logger.error(f"[JOI Hyrox signal] {e}")
 

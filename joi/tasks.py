@@ -71,3 +71,50 @@ def verificar_cuenta_regresiva_hyrox(self):
             pass
 
     return {'generados': generados, 'fecha': str(hoy)}
+
+
+@shared_task(bind=True, max_retries=2)
+def verificar_ausencia_hyrox(self):
+    """
+    Detecta usuarios con objetivo Hyrox activo que llevan 7+ días sin completar
+    una HyroxSession y genera un mensaje JOI de ausencia.
+    Se programa via Celery Beat cada día a las 09:00.
+    Solo genera si no hay ya un mensaje de ausencia hyrox en las últimas 48h.
+    """
+    import datetime
+    from hyrox.models import HyroxObjective, HyroxSession
+    from joi.services import generar_mensaje_joi
+    from joi.models import MensajeJOI
+
+    hoy = datetime.date.today()
+    umbral_ausencia = hoy - datetime.timedelta(days=7)
+    hace_48h = datetime.datetime.now() - datetime.timedelta(hours=48)
+    generados = 0
+
+    for objetivo in HyroxObjective.objects.filter(estado='activo').select_related('cliente__user'):
+        cliente = objetivo.cliente
+        ultima_sesion = HyroxSession.objects.filter(
+            objective=objetivo, estado='completado'
+        ).order_by('-fecha').first()
+
+        dias_sin_sesion = (hoy - ultima_sesion.fecha).days if ultima_sesion else None
+        if ultima_sesion and ultima_sesion.fecha > umbral_ausencia:
+            continue
+
+        ya_enviado = MensajeJOI.objects.filter(
+            user=cliente.user,
+            trigger='hyrox_ausencia',
+            creado_en__gte=hace_48h,
+        ).exists()
+        if ya_enviado:
+            continue
+
+        try:
+            generar_mensaje_joi(cliente, 'hyrox_ausencia', {
+                'dias_sin_sesion': dias_sin_sesion or 7,
+            })
+            generados += 1
+        except Exception:
+            pass
+
+    return {'generados': generados, 'fecha': str(hoy)}
