@@ -42,16 +42,79 @@ def _llamar_haiku(prompt: str) -> str:
 
 
 def construir_contexto(cliente) -> dict:
-    from django.db.models import Avg, Count
-    from entrenos.models import EntrenoRealizado, EjercicioRealizado, RecordPersonal, GymDecisionLog
+    """
+    Construye el contexto de datos para los prompts de JOI.
+
+    Fuentes y fiabilidad:
+    - ActividadRealizada (hub): última actividad, desglose semana, carga_ua, racha
+    - analizar_acwr_unificado: ACWR multi-modalidad (EWMA)
+    - EjercicioRealizado: RPE gym (gym-only, etiquetado explícitamente)
+    - RecordPersonal, GymDecisionLog, UserInjury: gym-specific, fiables
+    - HyroxObjective/Session/ReadinessLog: Hyrox-specific, fiables
+
+    Reglas de calidad:
+    - Las tendencias (carga, RPE) solo se incluyen si hay ≥2 semanas con datos
+    - TSB Hyrox solo si la última sesión es de ≤14 días
+    - readiness_delta solo si hay ≥2 puntos en 7 días
+    - Nada de EntrenoRealizado.fecha para calcular días (usa fecha del plan, no de realización)
+    """
+    from django.db.models import Avg, Count, Sum
+    from entrenos.models import (EntrenoRealizado, EjercicioRealizado,
+                                  RecordPersonal, GymDecisionLog, ActividadRealizada)
     from hyrox.models import UserInjury
 
     ctx = {}
     hoy = date.today()
     semana_reciente = hoy - timedelta(days=7)
-    mes_atras = hoy - timedelta(days=28)
 
-    # ── ACWR unificado (EWMA multi-modalidad, misma fuente que el dashboard) ──
+    # ── 1. ACTIVIDAD RECIENTE (hub ActividadRealizada — fuente canónica) ──────
+    ultima_actividad = (
+        ActividadRealizada.objects
+        .filter(cliente=cliente, tipo__in=['gym', 'hyrox', 'carrera'])
+        .order_by('-fecha').first()
+    )
+    if ultima_actividad:
+        ctx['ultima_actividad'] = {
+            'fecha':     str(ultima_actividad.fecha),
+            'dias_hace': (hoy - ultima_actividad.fecha).days,
+            'tipo':      ultima_actividad.tipo,
+            'titulo':    ultima_actividad.titulo or '',
+        }
+
+    acts_semana = (
+        ActividadRealizada.objects
+        .filter(cliente=cliente, fecha__gte=semana_reciente,
+                tipo__in=['gym', 'hyrox', 'carrera'])
+        .values('tipo').annotate(n=Count('id'))
+    )
+    ctx['actividad_semana']      = {a['tipo']: a['n'] for a in acts_semana}
+    ctx['sesiones_semana_total'] = sum(ctx['actividad_semana'].values())
+    ctx['sesiones_gym_semana']   = ctx['actividad_semana'].get('gym', 0)
+
+    # Racha: días consecutivos con cualquier actividad (hub, no solo gym)
+    racha = 0
+    dia = hoy
+    while ActividadRealizada.objects.filter(
+        cliente=cliente, fecha=dia, tipo__in=['gym', 'hyrox', 'carrera']
+    ).exists():
+        racha += 1
+        dia -= timedelta(days=1)
+    ctx['racha_dias'] = racha
+
+    # ── 2. CARGA UNIFICADA (carga_ua del hub — todas las modalidades) ─────────
+    carga_semanas = []
+    for i in range(3, -1, -1):
+        ini = hoy - timedelta(days=7 * (i + 1))
+        fin = hoy - timedelta(days=7 * i)
+        total = ActividadRealizada.objects.filter(
+            cliente=cliente, fecha__range=(ini, fin),
+            carga_ua__isnull=False, tipo__in=['gym', 'hyrox', 'carrera']
+        ).aggregate(total=Sum('carga_ua'))['total']
+        carga_semanas.append(round(total) if total else 0)
+    # Solo reportar si ≥2 semanas tienen datos reales
+    ctx['carga_semanas'] = carga_semanas if sum(1 for c in carga_semanas if c > 0) >= 2 else None
+
+    # ── 3. ACWR (analizar_acwr_unificado — misma fuente que el dashboard) ─────
     try:
         from entrenos.services.services import EstadisticasService
         acwr_data = EstadisticasService.analizar_acwr_unificado(cliente)
@@ -59,107 +122,46 @@ def construir_contexto(cliente) -> dict:
     except Exception:
         ctx['acwr'] = None
 
-    # ── Última actividad real (hub unificado) ────────────────────────────────
-    # ActividadRealizada agrega gym + hyrox + carrera con la fecha correcta
-    from entrenos.models import ActividadRealizada
-    ultima_actividad = (
-        ActividadRealizada.objects
-        .filter(cliente=cliente, tipo__in=['gym', 'hyrox', 'carrera'])
-        .order_by('-fecha')
-        .first()
-    )
-    if ultima_actividad:
-        ctx['ultima_actividad'] = {
-            'fecha': str(ultima_actividad.fecha),
-            'dias_hace': (hoy - ultima_actividad.fecha).days,
-            'tipo': ultima_actividad.tipo,
-            'titulo': ultima_actividad.titulo or '',
-        }
-
-    # ── Último entreno gym (para volumen, RPE y datos específicos de gym) ────
-    ultimo = EntrenoRealizado.objects.filter(cliente=cliente).order_by('-fecha').first()
-    if ultimo:
-        rpe_ultimo = EjercicioRealizado.objects.filter(
-            entreno=ultimo, rpe__isnull=False
-        ).aggregate(avg=Avg('rpe'))['avg']
-        ctx['ultimo_entreno'] = {
-            'fecha': str(ultimo.fecha),
-            'dias_hace': (hoy - ultimo.fecha).days,
-            'volumen_kg': float(ultimo.volumen_total_kg or 0),
-            'rpe': round(rpe_ultimo, 1) if rpe_ultimo else None,
-            'energia': ultimo.energia_pre_sesion,
-        }
-
-    # ── Tendencia volumen + RPE (4 semanas, más antigua → más reciente) ───────
-    vol_semanas, rpe_semanas = [], []
+    # ── 4. RPE GYM (EjercicioRealizado — gym-only, etiquetado como tal) ───────
+    rpe_gym = []
     for i in range(3, -1, -1):
         ini = hoy - timedelta(days=7 * (i + 1))
         fin = hoy - timedelta(days=7 * i)
         entrenos_sem = EntrenoRealizado.objects.filter(cliente=cliente, fecha__range=(ini, fin))
-        vol = sum(float(e.volumen_total_kg or 0) for e in entrenos_sem)
-        vol_semanas.append(round(vol))
         rpe_avg = EjercicioRealizado.objects.filter(
             entreno__in=entrenos_sem, rpe__isnull=False
         ).aggregate(avg=Avg('rpe'))['avg']
-        rpe_semanas.append(round(rpe_avg, 1) if rpe_avg else None)
-    ctx['volumen_semanas'] = vol_semanas   # [sem-4, sem-3, sem-2, sem-1]
-    ctx['rpe_semanas'] = rpe_semanas
+        rpe_gym.append(round(rpe_avg, 1) if rpe_avg else None)
+    # Solo reportar si ≥2 semanas tienen RPE registrado
+    ctx['rpe_gym_semanas'] = rpe_gym if sum(1 for r in rpe_gym if r is not None) >= 2 else None
 
-    # ── Sesiones esta semana (gym + total hub) ───────────────────────────────
-    ctx['sesiones_semana'] = EntrenoRealizado.objects.filter(
-        cliente=cliente, fecha__gte=semana_reciente
-    ).count()
-
-    from entrenos.models import ActividadRealizada
-    acts_semana = (
-        ActividadRealizada.objects
-        .filter(cliente=cliente, fecha__gte=semana_reciente,
-                tipo__in=['gym', 'hyrox', 'carrera'])
-        .values('tipo')
-        .annotate(n=Count('id'))
-    )
-    ctx['actividad_semana'] = {a['tipo']: a['n'] for a in acts_semana}
-    ctx['sesiones_semana_total'] = sum(ctx['actividad_semana'].values())
-
-    # ── PRs esta semana ───────────────────────────────────────────────────────
+    # ── 5. RÉCORDS PERSONALES (esta semana) ───────────────────────────────────
     ctx['prs_semana'] = list(
         RecordPersonal.objects.filter(
             cliente=cliente, fecha_logrado__gte=semana_reciente
         ).values_list('ejercicio_nombre', flat=True)[:5]
     )
 
-    # ── Decisiones del plan (últimos 30 días) ─────────────────────────────────
+    # ── 6. DECISIONES DEL PLAN GYM (GymDecisionLog — últimos 30 días) ─────────
     decisiones_qs = GymDecisionLog.objects.filter(
         cliente=cliente, fecha_creacion__date__gte=hoy - timedelta(days=30)
     )
-    por_accion = dict(
-        decisiones_qs.values('accion').annotate(n=Count('id')).values_list('accion', 'n')
-    )
     ctx['decisiones_plan'] = {
-        'total': decisiones_qs.count(),
-        'por_accion': por_accion,
-        'recientes': list(
-            decisiones_qs.order_by('-fecha_creacion')
-            .values('ejercicio', 'accion', 'motivo')[:3]
-        ),
+        'total':      decisiones_qs.count(),
+        'por_accion': dict(decisiones_qs.values('accion')
+                           .annotate(n=Count('id')).values_list('accion', 'n')),
+        'recientes':  list(decisiones_qs.order_by('-fecha_creacion')
+                           .values('ejercicio', 'accion', 'motivo')[:3]),
     }
 
-    # ── Lesión activa ─────────────────────────────────────────────────────────
+    # ── 7. LESIÓN ACTIVA ──────────────────────────────────────────────────────
     lesion = UserInjury.objects.filter(
         cliente=cliente, fase__in=['AGUDA', 'SUB_AGUDA', 'RETORNO']
     ).first()
     if lesion:
         ctx['lesion'] = {'zona': lesion.zona_afectada, 'fase': lesion.fase}
 
-    # ── Racha de sesiones ─────────────────────────────────────────────────────
-    racha = 0
-    dia = hoy
-    while EntrenoRealizado.objects.filter(cliente=cliente, fecha=dia).exists():
-        racha += 1
-        dia -= timedelta(days=1)
-    ctx['racha_dias'] = racha
-
-    # ── Hyrox ─────────────────────────────────────────────────────────────────
+    # ── 8. HYROX ──────────────────────────────────────────────────────────────
     try:
         from hyrox.models import HyroxObjective, HyroxSession, HyroxReadinessLog
         objetivo_hyrox = HyroxObjective.objects.filter(
@@ -173,27 +175,29 @@ def construir_contexto(cliente) -> dict:
             ).first()
             ctx['readiness_hyrox'] = log_hoy.score if log_hoy else None
 
-            # Tendencia readiness últimos 7 días
+            # Tendencia readiness: solo si ≥2 puntos en los últimos 7 días
             scores_7d = list(
                 HyroxReadinessLog.objects.filter(
                     objective=objetivo_hyrox, fecha__gte=semana_reciente
                 ).order_by('fecha').values_list('score', flat=True)
             )
-            ctx['readiness_tendencia'] = scores_7d
             if len(scores_7d) >= 2:
-                ctx['readiness_delta'] = scores_7d[-1] - scores_7d[0]
+                ctx['readiness_tendencia'] = scores_7d
+                ctx['readiness_delta']     = scores_7d[-1] - scores_7d[0]
 
             ultima_hyrox = HyroxSession.objects.filter(
                 objective=objetivo_hyrox, estado='completado'
             ).order_by('-fecha').first()
             if ultima_hyrox:
-                ctx['tsb_hyrox'] = ultima_hyrox.tsb
                 ctx['ultima_hyrox'] = {
-                    'fecha': str(ultima_hyrox.fecha),
-                    'titulo': ultima_hyrox.titulo or '',
-                    'rpe': ultima_hyrox.rpe_global,
-                    'minutos': ultima_hyrox.tiempo_total_minutos,
+                    'fecha':    str(ultima_hyrox.fecha),
+                    'titulo':   ultima_hyrox.titulo or '',
+                    'rpe':      ultima_hyrox.rpe_global,
+                    'minutos':  ultima_hyrox.tiempo_total_minutos,
                 }
+                # TSB solo si la sesión es reciente (≤14 días) — evita datos obsoletos
+                if (hoy - ultima_hyrox.fecha).days <= 14:
+                    ctx['tsb_hyrox'] = ultima_hyrox.tsb
 
             ctx['sesiones_hyrox_semana'] = HyroxSession.objects.filter(
                 objective=objetivo_hyrox,
@@ -251,25 +255,23 @@ def _prompt_apertura_manana(ctx: dict, datos_extra: dict) -> str:
         desglose = ', '.join(f"{v} {k}" for k, v in actividad.items() if v > 0)
         hechos.append(f"Esta semana: {total} sesiones en total ({desglose}).")
 
-    # Tendencia RPE (4 semanas)
-    rpe_s = [r for r in ctx.get('rpe_semanas', []) if r is not None]
+    # Tendencia RPE gym (solo si hay datos suficientes y está etiquetado como gym)
+    rpe_s = [r for r in (ctx.get('rpe_gym_semanas') or []) if r is not None]
     if len(rpe_s) >= 2:
         delta = round(rpe_s[-1] - rpe_s[0], 1)
         if delta >= 0.8:
-            hechos.append(f"El RPE medio ha subido {delta} puntos en 4 semanas — acumulando fatiga.")
+            hechos.append(f"RPE en gym: subió {delta} puntos en 4 semanas (mayor esfuerzo percibido).")
         elif delta <= -0.8:
-            hechos.append(f"El RPE medio ha bajado {abs(delta)} puntos en 4 semanas — ganando eficiencia.")
-        else:
-            hechos.append(f"RPE estable en torno a {rpe_s[-1]} esta semana.")
+            hechos.append(f"RPE en gym: bajó {abs(delta)} puntos en 4 semanas (mayor eficiencia).")
 
-    # Tendencia volumen
-    vol_s = [v for v in ctx.get('volumen_semanas', []) if v > 0]
-    if len(vol_s) >= 2:
-        pct = round((vol_s[-1] - vol_s[0]) / vol_s[0] * 100)
+    # Tendencia carga unificada (gym + hyrox + carrera — carga_ua)
+    carga_s = [c for c in (ctx.get('carga_semanas') or []) if c > 0]
+    if len(carga_s) >= 2:
+        pct = round((carga_s[-1] - carga_s[0]) / carga_s[0] * 100)
         if pct >= 20:
-            hechos.append(f"El volumen subió un {pct}% respecto a hace 4 semanas.")
+            hechos.append(f"Carga total (gym+Hyrox+carrera) subió un {pct}% en 4 semanas.")
         elif pct <= -20:
-            hechos.append(f"El volumen bajó un {abs(pct)}% respecto a hace 4 semanas.")
+            hechos.append(f"Carga total (gym+Hyrox+carrera) bajó un {abs(pct)}% en 4 semanas.")
 
     # ACWR
     acwr = ctx.get('acwr')
