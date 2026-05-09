@@ -34,13 +34,45 @@ Hay tres subagentes en `.claude/agents/`. Úsalos para optimizar coste y velocid
 
 ---
 
-## VISIÓN NUCLEAR — "Entrenador que aprende"
+## VISIÓN NUCLEAR — "App viva"
 
-**Esta es la directriz más importante de toda la app.** Antes de implementar cualquier feature, hacerse esta pregunta:
+**Esta es la directriz más importante de toda la app.** Tiene dos dimensiones inseparables:
+
+### 1. Entrenador que aprende (backend invisible)
+
+Antes de implementar cualquier feature, hacerse esta pregunta:
 
 > ¿Cómo alimenta este dato al plan? ¿Qué aprende el sistema de esta información?
 
 La app NO es un registrador de entrenos. Es un entrenador que mejora su conocimiento del usuario con cada sesión completada, cada test realizado, cada lesión reportada y cada dato biométrico introducido. Si una feature solo muestra datos sin retroalimentar el plan, está incompleta.
+
+### 2. Entrenador que habla — JOI (frontend visible)
+
+**El usuario tiene que percibir que la app está viva.** No basta con que el sistema aprenda si el usuario no lo nota. JOI es la voz visible de esa inteligencia.
+
+**Principio arquitectónico de JOI:**
+
+> Cuando el sistema aprende algo relevante → JOI lo verbaliza.
+
+JOI NO es un sistema de notificaciones con voz poética. Es la consecuencia visible del aprendizaje. La diferencia:
+
+| ❌ Notificación reactiva | ✅ Voz del aprendizaje |
+|---|---|
+| "El usuario completó un entreno → enviar mensaje" | "El sistema detectó RPE en descenso 3 sesiones → JOI habla de ello" |
+| "Son las 07:30 → enviar apertura" | "Al abrir la app → JOI sintetiza lo que el sistema sabe hoy" |
+| Solo habla si hay acción del usuario | Existe independientemente de la actividad del usuario |
+
+**Regla de JOI:** Si el sistema toma una decisión (`GymDecisionLog`, ajuste de fatiga, readiness bajo, estancamiento detectado), JOI debe verbalizarla. El usuario no debería ver el dato en silencio — debería escuchar a JOI nombrarlo.
+
+**JOI siempre está presente al abrir la app.** Si no hay mensaje del día, el context processor lo genera en demanda con todo el contexto disponible. No depende de que Celery haya corrido.
+
+### Orden de implementación JOI (prioridad)
+
+1. **Context processor on-demand** — `joi_context` genera `apertura_manana` síncronamente si no hay mensaje del día. Celery lo pre-genera antes para evitar latencia; si no corrió, el context processor es el fallback. ✅ Base de todo.
+2. **Enriquecer `construir_contexto`** — añadir tendencias (RPE últimas 4 semanas, readiness trend, GymDecisionLog recientes, estancamientos activos). Sin contexto rico, los mensajes son genéricos.
+3. **GymDecisionLog → JOI** — cuando el sistema crea un `GymDecisionLog` (cambia variante, mantiene peso, detecta estancamiento), JOI verbaliza esa decisión inmediatamente.
+4. **Apertura con inteligencia real** — reescribir el prompt `_prompt_apertura_manana` para que use el contexto enriquecido y haga una síntesis real de lo que el sistema sabe.
+5. **Resumen semanal como mensaje JOI** — los lunes, en vez de solo el card estático, JOI genera un mensaje que narra lo que aprendió el plan esa semana.
 
 ### Bucles de aprendizaje activos (implementados)
 
