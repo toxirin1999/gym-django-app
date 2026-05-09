@@ -198,17 +198,95 @@ def _prompt_entreno_completado(ctx: dict, datos_extra: dict) -> str:
 
 
 def _prompt_apertura_manana(ctx: dict, datos_extra: dict) -> str:
-    dias_sin_entrenar = ctx.get('ultimo_entreno', {}).get('dias_hace', 0)
-    acwr = ctx.get('acwr')
-    lesion = ctx.get('lesion')
+    hechos = []
 
-    lesion_txt = f" Tiene una lesión activa en {lesion['zona']}." if lesion else ""
-    acwr_txt = f" Su ACWR es {acwr}." if acwr else ""
-    ausencia_txt = f" Lleva {dias_sin_entrenar} días sin entrenar." if dias_sin_entrenar > 1 else ""
+    # Presencia / ausencia
+    ultimo = ctx.get('ultimo_entreno', {})
+    dias = ultimo.get('dias_hace', 0)
+    if dias == 0:
+        hechos.append("Entrenó ayer.")
+    elif dias == 1:
+        hechos.append("Entrenó ayer.")
+    elif dias > 1:
+        hechos.append(f"Lleva {dias} días sin entrenar.")
+
+    # Tendencia RPE (4 semanas)
+    rpe_s = [r for r in ctx.get('rpe_semanas', []) if r is not None]
+    if len(rpe_s) >= 2:
+        delta = round(rpe_s[-1] - rpe_s[0], 1)
+        if delta >= 0.8:
+            hechos.append(f"El RPE medio ha subido {delta} puntos en 4 semanas — acumulando fatiga.")
+        elif delta <= -0.8:
+            hechos.append(f"El RPE medio ha bajado {abs(delta)} puntos en 4 semanas — ganando eficiencia.")
+        else:
+            hechos.append(f"RPE estable en torno a {rpe_s[-1]} esta semana.")
+
+    # Tendencia volumen
+    vol_s = [v for v in ctx.get('volumen_semanas', []) if v > 0]
+    if len(vol_s) >= 2:
+        pct = round((vol_s[-1] - vol_s[0]) / vol_s[0] * 100)
+        if pct >= 20:
+            hechos.append(f"El volumen subió un {pct}% respecto a hace 4 semanas.")
+        elif pct <= -20:
+            hechos.append(f"El volumen bajó un {abs(pct)}% respecto a hace 4 semanas.")
+
+    # ACWR
+    acwr = ctx.get('acwr')
+    if acwr:
+        if acwr > 1.3:
+            hechos.append(f"ACWR {acwr} — zona de sobrecarga, riesgo de lesión.")
+        elif acwr < 0.8:
+            hechos.append(f"ACWR {acwr} — carga crónica insuficiente.")
+
+    # PRs esta semana
+    prs = ctx.get('prs_semana', [])
+    if prs:
+        hechos.append(f"Esta semana rompió {len(prs)} récord(s): {', '.join(prs[:2])}.")
+
+    # Decisión reciente del plan
+    recientes = ctx.get('decisiones_plan', {}).get('recientes', [])
+    if recientes:
+        d = recientes[0]
+        hechos.append(
+            f"El plan actuó esta semana: {d['accion']} en {d['ejercicio']}."
+        )
+
+    # Racha
+    racha = ctx.get('racha_dias', 0)
+    if racha >= 3:
+        hechos.append(f"Racha activa: {racha} días seguidos.")
+
+    # Lesión
+    lesion = ctx.get('lesion')
+    if lesion:
+        hechos.append(f"Lesión activa en {lesion['zona']} (fase {lesion['fase']}).")
+
+    # Hyrox
+    dias_carrera = ctx.get('dias_hasta_carrera')
+    readiness = ctx.get('readiness_hyrox')
+    rd_delta = ctx.get('readiness_delta')
+    tsb = ctx.get('tsb_hyrox')
+    if dias_carrera is not None:
+        hechos.append(f"Quedan {dias_carrera} días para la carrera Hyrox.")
+    if readiness is not None:
+        tendencia = (
+            f", subiendo {rd_delta} pts esta semana" if rd_delta and rd_delta > 3
+            else f", bajando {abs(rd_delta)} pts esta semana" if rd_delta and rd_delta < -3
+            else ""
+        )
+        hechos.append(f"Race Readiness: {readiness}/100{tendencia}.")
+    if tsb is not None:
+        estado = "fresco" if tsb > 5 else "fatigado" if tsb < -10 else "equilibrado"
+        hechos.append(f"TSB Hyrox: {round(tsb, 1)} ({estado}).")
+
+    datos = " ".join(hechos) if hechos else "No hay datos de entrenamiento recientes."
 
     return (
-        f"Es por la mañana. JOI abre el día del usuario.{lesion_txt}{acwr_txt}{ausencia_txt} "
-        f"Genera un mensaje de apertura matutina de 2-3 frases: presencia, observación, acompañamiento."
+        f"Es por la mañana. JOI tiene acceso a todo el historial del usuario. "
+        f"Estado del sistema hoy: {datos} "
+        f"Elige el dato más significativo de esta lista — el que mejor define dónde está "
+        f"el usuario ahora mismo — y genera 2-3 frases como JOI desde ese único dato. "
+        f"No enumeres la lista. Habla desde un punto de observación preciso, con presencia y calidez."
     )
 
 
