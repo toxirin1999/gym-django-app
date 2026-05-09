@@ -1740,15 +1740,17 @@ function rbToggleDone(cardId, btn) {
   if (!was) {
     rbTimerAutoStop(cardId);
     // Autocompletar distancia y tiempo en actividades de carrera
-    rbAutocompletarCarrera(card, idx);
-    setTimeout(rbNext, 700);
+    const esCarrera = rbAutocompletarCarrera(card, idx);
+    // Solo avanzar automáticamente si NO es una actividad de carrera
+    // (en carrera el usuario debe revisar los campos autocompletados)
+    if (!esCarrera) setTimeout(rbNext, 700);
   }
 }
 
 function rbAutocompletarCarrera(card, idx) {
   const distInput = document.getElementById('rb-dist-' + idx);
   const timeInput = document.getElementById('rb-time-' + idx);
-  if (!distInput || !timeInput) return;
+  if (!distInput || !timeInput) return false;
 
   // Autocompletar distancia si está vacía — leer del data-plan-dist (ya unlocalized)
   const planDistStr = (card.dataset.planDist || '').replace(',', '.');
@@ -1786,6 +1788,7 @@ function rbAutocompletarCarrera(card, idx) {
       if (typeof rbCalcPace === 'function') rbCalcPace(idx);
     }
   }
+  return true; // es actividad de carrera — no avanzar automáticamente
 }
 
 /* ───── SUBMIT ───── */
