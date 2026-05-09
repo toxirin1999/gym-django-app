@@ -1034,7 +1034,7 @@
 
           <!-- DATOS -->
           <input type="hidden" name="act_done_{{ idx }}" id="act-done-{{ idx }}" value="0">
-          <article class="rb-card" id="rb-card-{{ idx }}" data-name="{{ act.nombre_ejercicio }}" data-type="{{ act.tipo_actividad }}" data-plan-pace="{{ act.data_metricas.ritmo_objetivo|default:'' }}">
+          <article class="rb-card" id="rb-card-{{ idx }}" data-name="{{ act.nombre_ejercicio }}" data-type="{{ act.tipo_actividad }}" data-plan-pace="{{ act.data_metricas.ritmo_objetivo|default:'' }}" data-plan-dist="{{ act.data_metricas.distancia_km|unlocalize|default:'' }}">
 
             {% if act.series_processed %}
               <div class="rb-series-hdr">
@@ -1079,7 +1079,7 @@
               <div class="rb-cardio-grid">
                 <div>
                   <div class="rb-biginput-label"><span>Distancia</span><span>km</span></div>
-                  <input type="number" class="rb-biginput rb-input-distkm" id="rb-dist-{{ idx }}" name="act_dist_km_{{ idx }}" value="{{ act.data_metricas.distancia_km }}" step="0.1" min="0" inputmode="decimal" oninput="rbCalcPace({{ idx }})">
+                  <input type="number" class="rb-biginput rb-input-distkm" id="rb-dist-{{ idx }}" name="act_dist_km_{{ idx }}" value="{{ act.data_metricas.distancia_km|unlocalize }}" step="0.1" min="0" inputmode="decimal" oninput="rbCalcPace({{ idx }})">
                 </div>
                 <div>
                   <div class="rb-biginput-label"><span>Tiempo</span><span>min</span></div>
@@ -1750,14 +1750,15 @@ function rbAutocompletarCarrera(card, idx) {
   const timeInput = document.getElementById('rb-time-' + idx);
   if (!distInput || !timeInput) return;
 
-  // Autocompletar distancia si está vacía (usar el valor del plan)
-  const planDist = distInput.defaultValue;
-  if (!distInput.value && planDist) {
+  // Autocompletar distancia si está vacía — leer del data-plan-dist (ya unlocalized)
+  const planDistStr = (card.dataset.planDist || '').replace(',', '.');
+  const planDist = parseFloat(planDistStr);
+  if ((!distInput.value || parseFloat(distInput.value) === 0) && planDist > 0) {
     distInput.value = planDist;
   }
 
   // Autocompletar tiempo si está vacío y hay pace del plan
-  if (!timeInput.value || timeInput.value === '0') {
+  if (!timeInput.value || parseFloat(timeInput.value) === 0) {
     const planPaceStr = (card.dataset.planPace || '').replace('/km','').trim();
     const dist = parseFloat(distInput.value);
     if (planPaceStr && dist > 0) {
@@ -1767,7 +1768,6 @@ function rbAutocompletarCarrera(card, idx) {
         const totalMin = Math.round((dist * paceSec) / 60);
         if (totalMin > 0) {
           timeInput.value = totalMin;
-          // Recalcular el pace display
           if (typeof rbCalcPace === 'function') rbCalcPace(idx);
         }
       }
