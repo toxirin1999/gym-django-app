@@ -1761,14 +1761,14 @@ function rbAutocompletarCarrera(card, idx) {
   if (!timeInput.value || parseFloat(timeInput.value) === 0) {
     let totalMin = 0;
 
-    // 1. Prioridad: tiempo real del cronómetro de la sesión
+    // 1. Prioridad: tiempo real del cronómetro (si corrió ≥60 s)
     const timerDisp = document.getElementById('rb-tdisp-' + idx);
     const timerSecs = timerDisp ? parseInt(timerDisp.dataset.secs || '0') : 0;
-    if (timerSecs > 0) {
+    if (timerSecs >= 60) {
       totalMin = Math.round(timerSecs / 60);
     }
 
-    // 2. Fallback: calcular desde distancia × pace del plan
+    // 2. Fallback: dist × pace del plan (cronómetro no usado o < 1 min)
     if (!totalMin) {
       const planPaceStr = (card.dataset.planPace || '').replace('/km','').trim();
       const dist = parseFloat(distInput.value);
