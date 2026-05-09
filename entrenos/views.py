@@ -3911,7 +3911,7 @@ def guardar_entrenamiento_activo(request, cliente_id):
 
         entreno = EntrenoRealizado.objects.create(
             cliente=cliente, fecha=fecha, rutina=rutina_obj, fuente_datos='manual',
-            duracion_minutos=request.POST.get('duracion_minutos') or None,
+            duracion_minutos=request.POST.get('duracion_minutos_real') or None,
             calorias_quemadas=request.POST.get('calorias_quemadas') or None,
             notas_liftin=request.POST.get('notas_liftin', '').strip()
         )

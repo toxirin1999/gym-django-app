@@ -142,6 +142,41 @@ def construir_contexto(cliente) -> dict:
     # Solo reportar si ≥2 semanas tienen RPE registrado
     ctx['rpe_gym_semanas'] = rpe_gym if sum(1 for r in rpe_gym if r is not None) >= 2 else None
 
+    # Tendencia RPE: dirección y magnitud del cambio en las 4 semanas
+    if ctx.get('rpe_gym_semanas'):
+        rpe_validos = [r for r in ctx['rpe_gym_semanas'] if r is not None]
+        if len(rpe_validos) >= 2:
+            rpe_delta = round(rpe_validos[-1] - rpe_validos[0], 1)
+            ctx['rpe_tendencia'] = (
+                'subiendo' if rpe_delta > 0.5
+                else 'bajando' if rpe_delta < -0.5
+                else 'estable'
+            )
+            ctx['rpe_delta'] = rpe_delta
+
+    # ── 4b. ENERGÍA PRE-SESIÓN (proxy readiness gym — últimas 4 semanas) ──────
+    # Fuente: EntrenoRealizado.energia_pre_sesion (1-10, auto-reporte)
+    energia_gym = []
+    for i in range(3, -1, -1):
+        ini = hoy - timedelta(days=7 * (i + 1))
+        fin = hoy - timedelta(days=7 * i)
+        avg = EntrenoRealizado.objects.filter(
+            cliente=cliente, fecha__range=(ini, fin), energia_pre_sesion__isnull=False
+        ).aggregate(avg=Avg('energia_pre_sesion'))['avg']
+        energia_gym.append(round(avg, 1) if avg else None)
+
+    if sum(1 for e in energia_gym if e is not None) >= 2:
+        ctx['energia_pre_semanas'] = energia_gym
+        validos_e = [e for e in energia_gym if e is not None]
+        if len(validos_e) >= 2:
+            delta_e = round(validos_e[-1] - validos_e[0], 1)
+            ctx['energia_tendencia'] = (
+                'subiendo' if delta_e > 0.3
+                else 'bajando' if delta_e < -0.3
+                else 'estable'
+            )
+            ctx['energia_delta'] = delta_e
+
     # ── 5. RÉCORDS PERSONALES (esta semana) ───────────────────────────────────
     ctx['prs_semana'] = list(
         RecordPersonal.objects.filter(
@@ -153,12 +188,15 @@ def construir_contexto(cliente) -> dict:
     decisiones_qs = GymDecisionLog.objects.filter(
         cliente=cliente, fecha_creacion__date__gte=hoy - timedelta(days=30)
     )
+    total_evaluadas = decisiones_qs.filter(resultado__in=['validada', 'fallida']).count()
+    validadas = decisiones_qs.filter(resultado='validada').count()
     ctx['decisiones_plan'] = {
-        'total':      decisiones_qs.count(),
-        'por_accion': dict(decisiones_qs.values('accion')
-                           .annotate(n=Count('id')).values_list('accion', 'n')),
-        'recientes':  list(decisiones_qs.order_by('-fecha_creacion')
-                           .values('ejercicio', 'accion', 'motivo')[:3]),
+        'total':             decisiones_qs.count(),
+        'por_accion':        dict(decisiones_qs.values('accion')
+                                  .annotate(n=Count('id')).values_list('accion', 'n')),
+        'recientes':         list(decisiones_qs.order_by('-fecha_creacion')
+                                  .values('ejercicio', 'accion', 'motivo', 'resultado')[:5]),
+        'precision_sistema': round(validadas / total_evaluadas * 100) if total_evaluadas >= 3 else None,
     }
 
     # ── 7. LESIÓN ACTIVA ──────────────────────────────────────────────────────
@@ -188,6 +226,41 @@ def construir_contexto(cliente) -> dict:
             'ignorado': ignorado,
         })
     ctx['historial_joi'] = historial
+
+    # ── 8b. ESTANCAMIENTOS ACTIVOS (ejercicios sin progresión en 3 sesiones) ──
+    # Un ejercicio está estancado si las últimas 3 veces registradas tienen
+    # exactamente el mismo peso promedio y las mismas reps promedio.
+    try:
+        fecha_limite_estanc = hoy - timedelta(days=28)
+        candidatos = (
+            EjercicioRealizado.objects
+            .filter(entreno__cliente=cliente, entreno__fecha__gte=fecha_limite_estanc,
+                    completado=True, es_tope_maquina=False, peso_kg__gt=0)
+            .values('nombre_ejercicio').annotate(n=Count('id')).filter(n__gte=3)
+            .values_list('nombre_ejercicio', flat=True)
+        )
+        estancamientos = []
+        for nombre_ej in candidatos:
+            ultimas = list(
+                EjercicioRealizado.objects
+                .filter(entreno__cliente=cliente, entreno__fecha__gte=fecha_limite_estanc,
+                        nombre_ejercicio=nombre_ej, completado=True)
+                .order_by('-entreno__fecha')
+                .values('peso_kg', 'repeticiones')[:3]
+            )
+            if len(ultimas) >= 3:
+                pesos = [float(u['peso_kg'] or 0) for u in ultimas]
+                reps  = [u['repeticiones'] for u in ultimas]
+                if len(set(pesos)) == 1 and len(set(reps)) == 1 and pesos[0] > 0:
+                    estancamientos.append({
+                        'ejercicio': nombre_ej,
+                        'peso':      pesos[0],
+                        'reps':      reps[0],
+                    })
+        if estancamientos:
+            ctx['estancamientos_activos'] = estancamientos[:5]
+    except Exception:
+        pass
 
     # ── 9. HYROX ──────────────────────────────────────────────────────────────
     try:
