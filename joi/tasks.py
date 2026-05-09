@@ -74,6 +74,120 @@ def verificar_cuenta_regresiva_hyrox(self):
 
 
 @shared_task(bind=True, max_retries=2)
+def generar_resumen_semanal_joi(self):
+    """
+    Cada lunes genera un mensaje JOI de resumen de la semana anterior
+    usando get_resumen_semanal_gym. Solo genera si no hay ya uno del día.
+    """
+    import datetime
+    from clientes.models import Cliente
+    from joi.models import MensajeJOI
+    from joi.services import generar_mensaje_joi
+    from entrenos.services.resumen_semanal_service import get_resumen_semanal_gym
+    from django.db.models import Avg
+
+    hoy = datetime.date.today()
+    if hoy.weekday() != 0:  # Solo lunes
+        return {'omitido': 'no es lunes', 'fecha': str(hoy)}
+
+    generados = 0
+    for cliente in Cliente.objects.select_related('user').all():
+        try:
+            ya_tiene = MensajeJOI.objects.filter(
+                user=cliente.user,
+                trigger='resumen_semanal',
+                creado_en__date=hoy,
+            ).exists()
+            if ya_tiene:
+                continue
+
+            items = get_resumen_semanal_gym(cliente)
+            if not items:
+                continue
+
+            # Extraer datos estructurados de los items
+            sesiones = next((i['texto'] for i in items if i['tipo'] == 'sesiones'), '')
+            num_sesiones = 0
+            volumen_kg = 0
+            if sesiones:
+                import re
+                m = re.search(r'(\d+) sesion', sesiones)
+                if m:
+                    num_sesiones = int(m.group(1))
+                m2 = re.search(r'([\d,]+) kg', sesiones)
+                if m2:
+                    volumen_kg = float(m2.group(1).replace(',', ''))
+
+            prs = [i['texto'].replace('Nuevo PR en ', '').split(' —')[0]
+                   for i in items if i['tipo'] == 'record']
+
+            rpe_item = next((i for i in items if i['tipo'] == 'rpe'), None)
+            rpe_medio = None
+            if rpe_item:
+                m = re.search(r'RPE medio ([\d.]+)', rpe_item['texto'])
+                if m:
+                    rpe_medio = float(m.group(1))
+
+            tecnica_ok = any(
+                i['tipo'] == 'tecnica' and 'limpia' in i['texto']
+                for i in items
+            )
+
+            molestias = []
+            mol_item = next((i for i in items if i['tipo'] == 'molestia'), None)
+            if mol_item:
+                m = re.search(r'en (.+?) —', mol_item['texto'])
+                if m:
+                    molestias = [z.strip() for z in m.group(1).split(',')]
+
+            energia_media = None
+            en_item = next((i for i in items if i['tipo'] == 'energia'), None)
+            if en_item:
+                m = re.search(r'media: ([\d.]+)', en_item['texto'])
+                if m:
+                    energia_media = float(m.group(1))
+
+            decisiones = [
+                {'ejercicio': i.get('texto', '').split(':')[0],
+                 'accion': i.get('accion', '')}
+                for i in items if i['tipo'] in ('decision', 'progresion')
+            ][:3]
+
+            hyrox_sesiones = 0
+            try:
+                from hyrox.models import HyroxObjective, HyroxSession
+                objetivo = HyroxObjective.objects.filter(
+                    cliente=cliente, estado='activo'
+                ).first()
+                if objetivo:
+                    lunes = hoy - datetime.timedelta(days=7)
+                    hyrox_sesiones = HyroxSession.objects.filter(
+                        objective=objetivo,
+                        estado='completado',
+                        fecha__range=(lunes, hoy - datetime.timedelta(days=1)),
+                    ).count()
+            except Exception:
+                pass
+
+            generar_mensaje_joi(cliente, 'resumen_semanal', {
+                'sesiones':      num_sesiones,
+                'volumen_kg':    volumen_kg,
+                'prs':           prs,
+                'rpe_medio':     rpe_medio,
+                'decisiones':    decisiones,
+                'tecnica_ok':    tecnica_ok,
+                'molestias':     molestias,
+                'energia_media': energia_media,
+                'hyrox_sesiones': hyrox_sesiones,
+            })
+            generados += 1
+        except Exception:
+            pass
+
+    return {'generados': generados, 'fecha': str(hoy)}
+
+
+@shared_task(bind=True, max_retries=2)
 def verificar_ausencia_hyrox(self):
     """
     Detecta usuarios con objetivo Hyrox activo que llevan 7+ días sin completar

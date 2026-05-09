@@ -81,6 +81,10 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'joi.tasks.verificar_ausencia_hyrox',
         'schedule': crontab(hour=9, minute=0),
     },
+    'joi-resumen-semanal': {
+        'task': 'joi.tasks.generar_resumen_semanal_joi',
+        'schedule': crontab(hour=8, minute=30, day_of_week=1),  # lunes 08:30
+    },
 }
 # Configuración de notificaciones push
 PUSH_NOTIFICATION_URL = 'https://fcm.googleapis.com/fcm/send'
