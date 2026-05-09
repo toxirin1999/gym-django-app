@@ -51,16 +51,13 @@ def construir_contexto(cliente) -> dict:
     semana_reciente = hoy - timedelta(days=7)
     mes_atras = hoy - timedelta(days=28)
 
-    # ── ACWR ─────────────────────────────────────────────────────────────────
-    carga_reciente = sum(
-        float(e.volumen_total_kg or 0)
-        for e in EntrenoRealizado.objects.filter(cliente=cliente, fecha__gte=semana_reciente)
-    )
-    carga_cronica = sum(
-        float(e.volumen_total_kg or 0)
-        for e in EntrenoRealizado.objects.filter(cliente=cliente, fecha__gte=mes_atras)
-    ) / 4
-    ctx['acwr'] = round(carga_reciente / carga_cronica, 2) if carga_cronica > 0 else None
+    # ── ACWR unificado (EWMA multi-modalidad, misma fuente que el dashboard) ──
+    try:
+        from entrenos.services.services import EstadisticasService
+        acwr_data = EstadisticasService.analizar_acwr_unificado(cliente)
+        ctx['acwr'] = round(acwr_data['acwr_actual'], 2) if acwr_data.get('acwr_actual') else None
+    except Exception:
+        ctx['acwr'] = None
 
     # ── Última actividad real (hub unificado) ────────────────────────────────
     # ActividadRealizada agrega gym + hyrox + carrera con la fecha correcta
