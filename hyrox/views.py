@@ -1691,6 +1691,11 @@ def registrar_entrenamiento(request, objective_id, session_id=None):
 
             if not bloqueado_por_bio_safety:
                 sesion.estado = 'completado'
+                # Si la sesión estaba planificada para el futuro, usar la fecha real de realización
+                from django.utils.timezone import now as _now
+                hoy_real = _now().date()
+                if sesion.fecha > hoy_real:
+                    sesion.fecha = hoy_real
 
                 # Calculate cumplimiento_ratio from per-activity hidden inputs
                 acts_for_compl = list(sesion.activities.all().order_by('id'))
@@ -1981,6 +1986,11 @@ def registrar_entrenamiento_ia(request, session_id):
                     })
 
             sesion.estado = 'completado'
+            # Si la sesión estaba planificada para el futuro, usar la fecha real de realización
+            from django.utils.timezone import now as _now
+            hoy_real = _now().date()
+            if sesion.fecha > hoy_real:
+                sesion.fecha = hoy_real
             # Save final to trigger any post_save signals (like the one we just made)
             sesion.save()
             
