@@ -17,4 +17,6 @@ urlpatterns = [
     path('mensaje/<int:mensaje_id>/leido/', views.marcar_mensaje_leido, name='joi_marcar_leido'),
     path('habitacion/', views.habitacion_joi, name='joi_habitacion'),
     path('mensaje/<int:mensaje_id>/feedback/', views.feedback_joi, name='joi_feedback'),
+    path('manual/', views.poda_manual_joi, name='joi_manual'),
+    path('manual/<int:entrada_id>/desactivar/', views.desactivar_entrada_manual, name='joi_desactivar_entrada'),
 ]

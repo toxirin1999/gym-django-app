@@ -725,6 +725,21 @@ def marcar_mensaje_leido(request, mensaje_id):
 
 
 @login_required
+def poda_manual_joi(request):
+    from joi.models import ManualDavid
+    entradas = ManualDavid.objects.filter(user=request.user, activa=True)
+    return render(request, 'joi/manual_poda.html', {'entradas': entradas})
+
+
+@login_required
+@require_POST
+def desactivar_entrada_manual(request, entrada_id):
+    from joi.models import ManualDavid
+    updated = ManualDavid.objects.filter(id=entrada_id, user=request.user).update(activa=False)
+    return JsonResponse({'ok': bool(updated)})
+
+
+@login_required
 def habitacion_joi(request):
     from clientes.models import Cliente
     from django.utils import timezone
@@ -763,6 +778,11 @@ def feedback_joi(request, mensaje_id):
         mensaje.feedback = feedback
         mensaje.save(update_fields=['feedback'])
         cache.delete(f'joi_ctx_{request.user.id}')
+
+        if feedback == 'equivocado':
+            from joi.services import generar_entrada_manual_desde_error
+            generar_entrada_manual_desde_error(mensaje)
+
         respuesta = (
             'Seguiré mirando.'
             if feedback == 'clavado'

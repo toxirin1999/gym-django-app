@@ -1,0 +1,221 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#090910">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="manifest" href="{% static 'manifest.json' %}">
+  <title>Lo que sé de ti — JOI</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%;
+      background: #090910;
+      color: rgba(210, 220, 235, 0.88);
+      font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .poda-wrap {
+      min-height: 100svh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 4rem 1.5rem 3rem;
+      max-width: 560px;
+      margin: 0 auto;
+    }
+
+    /* Cabecera */
+    .poda-header {
+      text-align: center;
+      margin-bottom: 3.5rem;
+    }
+
+    .poda-linea-top {
+      width: 1px;
+      height: 48px;
+      background: linear-gradient(to bottom, transparent, rgba(100, 148, 220, 0.35));
+      margin: 0 auto 2rem;
+    }
+
+    .poda-titulo {
+      font-size: 0.65rem;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      color: rgba(100, 148, 220, 0.45);
+      margin-bottom: 1rem;
+    }
+
+    .poda-subtitulo {
+      font-size: clamp(0.95rem, 2.5vw, 1.1rem);
+      line-height: 1.7;
+      color: rgba(190, 205, 230, 0.7);
+      font-weight: 300;
+    }
+
+    /* Lista de entradas */
+    .poda-lista {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 1.2rem;
+    }
+
+    .poda-entrada {
+      display: flex;
+      align-items: flex-start;
+      gap: 1rem;
+      padding: 1.1rem 1.2rem;
+      border: 1px solid rgba(100, 148, 220, 0.12);
+      border-radius: 2px;
+      transition: opacity 0.5s ease, transform 0.4s ease;
+    }
+
+    .poda-entrada.eliminando {
+      opacity: 0;
+      transform: translateX(12px);
+      pointer-events: none;
+    }
+
+    .poda-entrada-texto {
+      flex: 1;
+      font-size: 0.92rem;
+      line-height: 1.6;
+      color: rgba(200, 215, 240, 0.8);
+      font-weight: 300;
+    }
+
+    .poda-entrada-fecha {
+      font-size: 0.6rem;
+      letter-spacing: 0.15em;
+      color: rgba(100, 148, 220, 0.28);
+      margin-top: 0.4rem;
+      text-transform: uppercase;
+    }
+
+    .poda-btn-borrar {
+      flex-shrink: 0;
+      background: transparent;
+      border: 1px solid rgba(100, 148, 220, 0.18);
+      border-radius: 2px;
+      color: rgba(100, 148, 220, 0.35);
+      font-size: 0.6rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      padding: 0.4rem 0.7rem;
+      cursor: pointer;
+      font-family: inherit;
+      transition: border-color 0.25s, color 0.25s;
+      white-space: nowrap;
+      margin-top: 0.15rem;
+    }
+
+    .poda-btn-borrar:hover {
+      border-color: rgba(180, 100, 100, 0.5);
+      color: rgba(220, 130, 130, 0.75);
+    }
+
+    /* Estado vacío */
+    .poda-vacia {
+      text-align: center;
+      margin-top: 2rem;
+    }
+
+    .poda-vacia-texto {
+      font-size: 0.85rem;
+      color: rgba(140, 170, 215, 0.35);
+      letter-spacing: 0.08em;
+      line-height: 1.8;
+    }
+
+    /* Volver */
+    .poda-volver {
+      margin-top: 3rem;
+      font-size: 0.65rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: rgba(100, 148, 220, 0.3);
+      text-decoration: none;
+      transition: color 0.25s;
+    }
+    .poda-volver:hover { color: rgba(100, 148, 220, 0.6); }
+  </style>
+</head>
+<body>
+<div class="poda-wrap">
+
+  <div class="poda-header">
+    <div class="poda-linea-top" aria-hidden="true"></div>
+    <p class="poda-titulo">Manual de David</p>
+    <p class="poda-subtitulo">
+      Lo que creo saber de cómo leerte.<br>
+      Si algo ya no es verdad, dímelo.
+    </p>
+  </div>
+
+  {% if entradas %}
+    <ul class="poda-lista" id="lista-manual" style="list-style:none; width:100%;">
+      {% for entrada in entradas %}
+      <li class="poda-entrada" id="entrada-{{ entrada.id }}">
+        <div style="flex:1;">
+          <p class="poda-entrada-texto">{{ entrada.entrada }}</p>
+          <p class="poda-entrada-fecha">{{ entrada.creado_en|date:"j N Y" }}</p>
+        </div>
+        <button class="poda-btn-borrar"
+                onclick="desactivar({{ entrada.id }})">
+          ya no es verdad
+        </button>
+      </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <div class="poda-vacia" id="poda-vacia">
+      <p class="poda-vacia-texto">
+        El manual está en blanco.<br>
+        Aún no he aprendido nada sobre tus señales.<br>
+        Empezamos de cero.
+      </p>
+    </div>
+  {% endif %}
+
+  <a href="/joi/habitacion/" class="poda-volver">← volver</a>
+
+</div>
+
+<script>
+const CSRF = '{{ csrf_token }}';
+
+async function desactivar(entradaId) {
+  const el = document.getElementById('entrada-' + entradaId);
+  el.classList.add('eliminando');
+
+  try {
+    await fetch(`/joi/manual/${entradaId}/desactivar/`, {
+      method: 'POST',
+      headers: { 'X-CSRFToken': CSRF },
+    });
+  } catch (_) {}
+
+  setTimeout(() => {
+    el.remove();
+    const lista = document.getElementById('lista-manual');
+    if (lista && lista.children.length === 0) {
+      lista.remove();
+      const vacia = document.createElement('div');
+      vacia.className = 'poda-vacia';
+      vacia.innerHTML = '<p class="poda-vacia-texto">El manual está en blanco.<br>Empezamos de cero.</p>';
+      document.querySelector('.poda-wrap').insertBefore(
+        vacia,
+        document.querySelector('.poda-volver')
+      );
+    }
+  }, 500);
+}
+</script>
+</body>
+</html>
