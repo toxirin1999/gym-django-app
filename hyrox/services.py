@@ -1411,7 +1411,7 @@ class HyroxRaceSimulator:
         # --- Calcular tiempo de cada estación ---
         desglose = []
 
-        tiempos_categoria = cls.TIEMPOS_POR_CATEGORIA.get(categoria, cls.TIEMPOS_BASE_OPEN_SEGUNDOS)
+        tiempos_categoria = cls.get_tiempos_categoria(categoria)
         for estacion, tiempo_base in tiempos_categoria.items():
             penalizacion = 0.0  # porcentaje adicional de tiempo
 
