@@ -558,6 +558,56 @@ def _prompt_hyrox_ausencia(ctx: dict, datos_extra: dict) -> str:
     )
 
 
+def _prompt_hyrox_estancamiento_estacion(ctx: dict, datos_extra: dict) -> str:
+    estaciones = datos_extra.get('estaciones', [])
+    sesiones   = datos_extra.get('sesiones_analizadas', 3)
+    dias       = ctx.get('dias_hasta_carrera')
+
+    nombres = ', '.join(estaciones) if estaciones else 'una estación'
+    dias_txt = f" Quedan {dias} días para la carrera." if dias else ""
+
+    return (
+        f"El sistema ha detectado estancamiento en {nombres}: misma sensación negativa "
+        f"en las últimas {sesiones} sesiones consecutivas.{dias_txt} "
+        f"JOI lo ha registrado. Genera 2-3 frases que nombren el patrón con precisión — "
+        f"no es fracaso, es información. El sistema ahora sabe qué cambiar. "
+        f"Habla desde la observación fría y la certeza de que el dato tiene solución."
+    )
+
+
+def _prompt_hyrox_deload_automatico(ctx: dict, datos_extra: dict) -> str:
+    tsb         = datos_extra.get('tsb', ctx.get('tsb_hyrox', '?'))
+    sesiones_d  = datos_extra.get('sesiones_modificadas', 0)
+    dias        = ctx.get('dias_hasta_carrera')
+
+    dias_txt = f" Quedan {dias} días para la carrera." if dias else ""
+    mod_txt  = f" Se han ajustado {sesiones_d} sesiones próximas a modo deload." if sesiones_d else ""
+
+    return (
+        f"El TSB ha caído a {tsb} — fatiga acumulada por encima del umbral de riesgo.{mod_txt}{dias_txt} "
+        f"JOI lo ha visto. Genera 2-3 frases que expliquen que el sistema decidió pausar la carga "
+        f"porque el cuerpo lo necesita — no como derrota, sino como parte del plan. "
+        f"El descanso también es entrenamiento."
+    )
+
+
+def _prompt_rpe_calibracion(ctx: dict, datos_extra: dict) -> str:
+    sesiones    = datos_extra.get('sesiones_analizadas', 3)
+    rpe_medio   = datos_extra.get('rpe_medio_reportado', '?')
+    zona_fc     = datos_extra.get('zona_fc_real', 'Z4')
+    diferencia  = datos_extra.get('diferencia_estimada', '~2 puntos')
+
+    return (
+        f"En las últimas {sesiones} sesiones el usuario reportó RPE medio {rpe_medio} "
+        f"pero su frecuencia cardíaca estuvo en {zona_fc}. "
+        f"El sistema detecta una discordancia de {diferencia} entre el esfuerzo percibido "
+        f"y el esfuerzo real. JOI lo ha registrado y calibrado internamente. "
+        f"Genera 2-3 frases que nombren este hallazgo sin culpar al usuario — "
+        f"el cuerpo y la mente a veces no hablan el mismo idioma, y JOI acaba de aprender "
+        f"a traducir entre los dos."
+    )
+
+
 _PROMPT_BUILDERS = {
     'entreno_completado':        _prompt_entreno_completado,
     'apertura_manana':           _prompt_apertura_manana,
@@ -574,6 +624,9 @@ _PROMPT_BUILDERS = {
     'hyrox_ausencia':              _prompt_hyrox_ausencia,
     'decision_plan':               _prompt_decision_plan,
     'resumen_semanal':             _prompt_resumen_semanal,
+    'hyrox_estancamiento_estacion': _prompt_hyrox_estancamiento_estacion,
+    'hyrox_deload_automatico':      _prompt_hyrox_deload_automatico,
+    'rpe_calibracion':             _prompt_rpe_calibracion,
 }
 
 

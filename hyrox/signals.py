@@ -87,6 +87,49 @@ def sueno_to_hyrox_fatiga(sender, instance, created, update_fields=None, **kwarg
         traceback.print_exc()
 
 
+def _detectar_estancamiento_estaciones(instance):
+    """
+    Retorna lista de estaciones con sensación negativa en las 3 últimas sesiones
+    completadas (incluida la actual). Umbral: 'torpe', 'mala' o 'regular'.
+    """
+    if not instance.station_feedback:
+        return []
+
+    NEGATIVAS = {'torpe', 'mala', 'regular'}
+
+    # Estaciones con sensación negativa en esta sesión
+    malas_hoy = {
+        sf['estacion']
+        for sf in instance.station_feedback
+        if sf.get('sensacion') in NEGATIVAS and sf.get('estacion')
+    }
+    if not malas_hoy:
+        return []
+
+    sesiones_previas = (
+        HyroxSession.objects.filter(
+            objective=instance.objective,
+            estado='completado',
+            station_feedback__isnull=False,
+        )
+        .exclude(pk=instance.pk)
+        .order_by('-fecha')[:2]
+    )
+
+    estancadas = []
+    for estacion in malas_hoy:
+        conteo = 1  # esta sesión ya cuenta
+        for s in sesiones_previas:
+            for sf in (s.station_feedback or []):
+                if sf.get('estacion') == estacion and sf.get('sensacion') in NEGATIVAS:
+                    conteo += 1
+                    break
+        if conteo >= 3:
+            estancadas.append(estacion)
+
+    return estancadas
+
+
 def _calcular_y_guardar_carga(instance):
     """
     Calcula TRIMP, zona cardíaca, CTL/ATL/TSB al completar una sesión.
@@ -280,8 +323,52 @@ def autorregular_plan_futuro(sender, instance, created, update_fields=None, **kw
                 generar_mensaje_joi(cliente, 'hyrox_readiness_alto', {
                     'readiness': log_hoy.score,
                 })
+
+        # Estancamiento por estación
+        estancadas = _detectar_estancamiento_estaciones(instance)
+        if estancadas:
+            generar_mensaje_joi(cliente, 'hyrox_estancamiento_estacion', {
+                'estaciones': estancadas,
+                'sesiones_analizadas': 3,
+            })
+
     except Exception as e:
         logger.error(f"[JOI Hyrox signal] {e}")
+
+    # ── 7. Deload automático por TSB < -30 ────────────────────────────────────
+    if tsb_actual is not None and tsb_actual < -30:
+        try:
+            from joi.services import generar_mensaje_joi
+            from django.utils import timezone as _tz
+            hoy_d = _tz.now().date()
+            limite = hoy_d + timedelta(days=14)
+            proximas = HyroxSession.objects.filter(
+                objective=instance.objective,
+                estado='planificado',
+                fecha__range=(hoy_d, limite),
+            ).order_by('fecha')
+
+            modificadas = 0
+            for s in proximas:
+                titulo_actual = s.titulo or ''
+                if '[DELOAD]' not in titulo_actual:
+                    s.titulo = f"[DELOAD] {titulo_actual}".strip()
+                    s.muscle_fatigue_index = 'Alta'
+                    s.fatiga_updated_at = _tz.now()
+                    s.save(update_fields=['titulo', 'muscle_fatigue_index', 'fatiga_updated_at'])
+                    modificadas += 1
+
+            cliente = instance.objective.cliente
+            generar_mensaje_joi(cliente, 'hyrox_deload_automatico', {
+                'tsb': round(tsb_actual, 1),
+                'sesiones_modificadas': modificadas,
+            })
+            logger.info(
+                f"[HYROX Deload] TSB {tsb_actual:.1f} < -30 → {modificadas} sesiones "
+                f"marcadas como deload para {cliente.user.username}"
+            )
+        except Exception as e:
+            logger.error(f"[HYROX Deload automático] {e}")
 
 
 # ==============================================================================
