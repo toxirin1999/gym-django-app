@@ -1083,7 +1083,7 @@
                 </div>
                 <div>
                   <div class="rb-biginput-label"><span>Tiempo</span><span>min</span></div>
-                  <input type="number" class="rb-biginput rb-input-time" id="rb-time-{{ idx }}" placeholder="0" min="0" step="1" inputmode="numeric" oninput="rbCalcPace({{ idx }})">
+                  <input type="number" class="rb-biginput rb-input-time" id="rb-time-{{ idx }}" placeholder="0" min="0" step="0.1" inputmode="decimal" oninput="rbCalcPace({{ idx }})">
                 </div>
               </div>
               <div class="rb-pace" id="rb-pace-{{ idx }}">
@@ -1767,7 +1767,7 @@ function rbAutocompletarCarrera(card, idx) {
     const timerDisp = document.getElementById('rb-tdisp-' + idx);
     const timerSecs = timerDisp ? parseInt(timerDisp.dataset.secs || '0') : 0;
     if (timerSecs >= 60) {
-      totalMin = Math.round(timerSecs / 60);
+      totalMin = parseFloat((timerSecs / 60).toFixed(1));
     }
 
     // 2. Fallback: dist × pace del plan (cronómetro no usado o < 1 min)
