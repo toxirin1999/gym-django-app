@@ -69,17 +69,23 @@ class MotivacionUsuario(models.Model):
 
 class MensajeJOI(models.Model):
     TRIGGER_CHOICES = [
-        ('entreno_completado',  'Entreno completado'),
-        ('apertura_manana',     'Apertura matutina'),
-        ('ausencia_detectada',  'Ausencia sin lesión'),
-        ('carga_anomala',       'Carga anómala ACWR'),
-        ('pr_roto',             'Récord personal'),
-        ('lesion_activa',       'Lesión activa'),
-        ('fin_bloque',          'Fin de bloque'),
+        ('entreno_completado',          'Entreno completado'),
+        ('apertura_manana',             'Apertura matutina'),
+        ('ausencia_detectada',          'Ausencia sin lesión'),
+        ('carga_anomala',               'Carga anómala ACWR'),
+        ('pr_roto',                     'Récord personal'),
+        ('lesion_activa',               'Lesión activa'),
+        ('fin_bloque',                  'Fin de bloque'),
+        ('hyrox_sesion_completada',     'Hyrox — sesión completada'),
+        ('hyrox_readiness_bajo',        'Hyrox — readiness bajo'),
+        ('hyrox_readiness_alto',        'Hyrox — readiness alto'),
+        ('hyrox_cuenta_regresiva',      'Hyrox — cuenta regresiva'),
+        ('hyrox_simulacion_completada', 'Hyrox — simulación completada'),
+        ('hyrox_ausencia',              'Hyrox — ausencia detectada'),
     ]
 
     user        = models.ForeignKey(User, on_delete=models.CASCADE, related_name='mensajes_joi')
-    trigger     = models.CharField(max_length=30, choices=TRIGGER_CHOICES)
+    trigger     = models.CharField(max_length=40, choices=TRIGGER_CHOICES)
     mensaje     = models.TextField()
     contexto    = models.JSONField(default=dict)   # datos que usó JOI para generar el mensaje
     leido       = models.BooleanField(default=False)

@@ -226,7 +226,7 @@ def _prompt_fin_bloque(ctx: dict, datos_extra: dict) -> str:
 
 
 def _prompt_hyrox_sesion_completada(ctx: dict, datos_extra: dict) -> str:
-    tipo = datos_extra.get('tipo_sesion', 'sesión')
+    tipo = datos_extra.get('titulo', datos_extra.get('tipo_sesion', 'sesión'))
     rpe = datos_extra.get('rpe')
     minutos = datos_extra.get('minutos')
     readiness = ctx.get('readiness_hyrox')
@@ -272,6 +272,64 @@ def _prompt_hyrox_cuenta_regresiva(ctx: dict, datos_extra: dict) -> str:
     )
 
 
+def _prompt_hyrox_simulacion_completada(ctx: dict, datos_extra: dict) -> str:
+    rpe = datos_extra.get('rpe')
+    minutos = datos_extra.get('minutos')
+    estaciones_debiles = datos_extra.get('estaciones_debiles', [])
+    readiness = ctx.get('readiness_hyrox')
+    dias = ctx.get('dias_hasta_carrera')
+
+    rpe_txt = f" RPE {rpe}." if rpe else ""
+    min_txt = f" Duración: {minutos} minutos." if minutos else ""
+    rd_txt = f" Readiness post-simulación: {readiness}." if readiness is not None else ""
+    dias_txt = f" Quedan {dias} días para la carrera." if dias is not None else ""
+    debiles_txt = (
+        f" Estaciones con margen de mejora: {', '.join(estaciones_debiles)}."
+        if estaciones_debiles else ""
+    )
+
+    return (
+        f"El usuario acaba de completar una simulación completa de Hyrox.{rpe_txt}{min_txt}"
+        f"{debiles_txt}{rd_txt}{dias_txt} "
+        f"JOI lo ha visto correr la prueba completa. Genera 2-3 frases que celebren el hito, "
+        f"nombren lo que el dato revela sobre el atleta, y señalen el camino que queda."
+    )
+
+
+def _prompt_hyrox_readiness_alto(ctx: dict, datos_extra: dict) -> str:
+    readiness = datos_extra.get('readiness', ctx.get('readiness_hyrox', '?'))
+    dias = ctx.get('dias_hasta_carrera')
+    tsb = ctx.get('tsb_hyrox')
+
+    dias_txt = f" Quedan {dias} días para el evento." if dias is not None else ""
+    tsb_txt = f" Tu TSB es {tsb} — estás fresco." if tsb is not None and tsb > 0 else ""
+
+    return (
+        f"El Race Readiness del usuario ha superado {readiness}/100.{dias_txt}{tsb_txt} "
+        f"JOI registra el momento de forma óptima. Genera 2-3 frases: "
+        f"nombra el dato con precisión, devuelve confianza, pero recuerda que la carrera aún no ha pasado."
+    )
+
+
+def _prompt_hyrox_ausencia(ctx: dict, datos_extra: dict) -> str:
+    dias = datos_extra.get('dias_sin_sesion', 7)
+    readiness = ctx.get('readiness_hyrox')
+    dias_carrera = ctx.get('dias_hasta_carrera')
+
+    rd_txt = f" Tu readiness actual: {readiness}." if readiness is not None else ""
+    urgencia_txt = (
+        f" Quedan solo {dias_carrera} días para la carrera."
+        if dias_carrera is not None and dias_carrera <= 30
+        else ""
+    )
+
+    return (
+        f"El usuario lleva {dias} días sin completar una sesión Hyrox.{rd_txt}{urgencia_txt} "
+        f"JOI lo nota. Genera 2-3 frases que expresen que ha visto el silencio, "
+        f"sin juzgar, con la certeza de quien sabe que la historia continúa."
+    )
+
+
 _PROMPT_BUILDERS = {
     'entreno_completado':        _prompt_entreno_completado,
     'apertura_manana':           _prompt_apertura_manana,
@@ -280,9 +338,12 @@ _PROMPT_BUILDERS = {
     'pr_roto':                   _prompt_pr_roto,
     'lesion_activa':             _prompt_lesion,
     'fin_bloque':                _prompt_fin_bloque,
-    'hyrox_sesion_completada':   _prompt_hyrox_sesion_completada,
-    'hyrox_readiness_bajo':      _prompt_hyrox_readiness_bajo,
-    'hyrox_cuenta_regresiva':    _prompt_hyrox_cuenta_regresiva,
+    'hyrox_sesion_completada':     _prompt_hyrox_sesion_completada,
+    'hyrox_readiness_bajo':        _prompt_hyrox_readiness_bajo,
+    'hyrox_readiness_alto':        _prompt_hyrox_readiness_alto,
+    'hyrox_cuenta_regresiva':      _prompt_hyrox_cuenta_regresiva,
+    'hyrox_simulacion_completada': _prompt_hyrox_simulacion_completada,
+    'hyrox_ausencia':              _prompt_hyrox_ausencia,
 }
 
 
