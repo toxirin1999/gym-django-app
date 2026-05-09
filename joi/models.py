@@ -88,6 +88,7 @@ class MensajeJOI(models.Model):
         ('hyrox_deload_automatico',      'Hyrox — deload automático por TSB'),
         ('rpe_calibracion',             'Calibración RPE personal'),
         ('sintesis_joi',                'Síntesis autónoma — JOI en su propio tiempo'),
+        ('poda_manual',                 'Poda mensual del Manual de David'),
     ]
 
     FEEDBACK_CHOICES = [
