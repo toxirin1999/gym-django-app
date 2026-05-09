@@ -329,6 +329,12 @@ GAMIFICACION_CONFIG = {
 GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
 ANTHROPIC_API_KEY = os.environ.get('ANTHROPIC_API_KEY', '')
 
+# Sobreescribe con secretos locales del servidor si existen (no en git)
+try:
+    from gymproject.secrets_pa import *  # noqa
+except ImportError:
+    pass
+
 # --- STRAVA INTEGRATION ---
 STRAVA_CLIENT_ID     = os.environ.get('STRAVA_CLIENT_ID', '')
 STRAVA_CLIENT_SECRET = os.environ.get('STRAVA_CLIENT_SECRET', '')
