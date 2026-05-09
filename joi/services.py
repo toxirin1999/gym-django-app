@@ -62,7 +62,24 @@ def construir_contexto(cliente) -> dict:
     ) / 4
     ctx['acwr'] = round(carga_reciente / carga_cronica, 2) if carga_cronica > 0 else None
 
-    # ── Último entreno ────────────────────────────────────────────────────────
+    # ── Última actividad real (hub unificado) ────────────────────────────────
+    # ActividadRealizada agrega gym + hyrox + carrera con la fecha correcta
+    from entrenos.models import ActividadRealizada
+    ultima_actividad = (
+        ActividadRealizada.objects
+        .filter(cliente=cliente, tipo__in=['gym', 'hyrox', 'carrera'])
+        .order_by('-fecha')
+        .first()
+    )
+    if ultima_actividad:
+        ctx['ultima_actividad'] = {
+            'fecha': str(ultima_actividad.fecha),
+            'dias_hace': (hoy - ultima_actividad.fecha).days,
+            'tipo': ultima_actividad.tipo,
+            'titulo': ultima_actividad.titulo or '',
+        }
+
+    # ── Último entreno gym (para volumen, RPE y datos específicos de gym) ────
     ultimo = EntrenoRealizado.objects.filter(cliente=cliente).order_by('-fecha').first()
     if ultimo:
         rpe_ultimo = EjercicioRealizado.objects.filter(
@@ -203,15 +220,17 @@ def _prompt_entreno_completado(ctx: dict, datos_extra: dict) -> str:
 def _prompt_apertura_manana(ctx: dict, datos_extra: dict) -> str:
     hechos = []
 
-    # Presencia / ausencia
-    ultimo = ctx.get('ultimo_entreno', {})
-    dias = ultimo.get('dias_hace', 0)
+    # Presencia / ausencia — usar hub real (gym + hyrox + carrera)
+    ultima = ctx.get('ultima_actividad') or ctx.get('ultimo_entreno', {})
+    dias = ultima.get('dias_hace', 0)
+    tipo_act = ultima.get('tipo', 'gym')
+    tipo_txt = {'hyrox': 'sesión Hyrox', 'carrera': 'carrera', 'gym': 'entreno'}.get(tipo_act, 'entreno')
     if dias == 0:
-        hechos.append("Entrenó ayer.")
+        hechos.append(f"Hizo {tipo_txt} hoy.")
     elif dias == 1:
-        hechos.append("Entrenó ayer.")
+        hechos.append(f"Hizo {tipo_txt} ayer.")
     elif dias > 1:
-        hechos.append(f"Lleva {dias} días sin entrenar.")
+        hechos.append(f"Lleva {dias} días sin actividad registrada.")
 
     # Tendencia RPE (4 semanas)
     rpe_s = [r for r in ctx.get('rpe_semanas', []) if r is not None]
