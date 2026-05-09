@@ -989,6 +989,164 @@ def generar_mensaje_joi(cliente, trigger: str, datos_extra: dict | None = None) 
         return None
 
 
+# ── Síntesis autónoma (JOI en su propio tiempo) ──────────────────────────────
+
+def _leer_diario_reciente(user, dias: int = 7) -> str:
+    """Extrae texto libre de entradas de diario recientes."""
+    from django.utils import timezone as tz
+    limite = tz.now() - timedelta(days=dias)
+    fragmentos = []
+
+    try:
+        from diario.models import EjercicioArete
+        reflexiones = (
+            EjercicioArete.objects
+            .filter(usuario=user, fecha_completado__gte=limite,
+                    reflexiones__isnull=False)
+            .exclude(reflexiones='')
+            .order_by('-fecha_completado')
+            .values_list('reflexiones', flat=True)[:3]
+        )
+        fragmentos.extend(r[:200] for r in reflexiones)
+    except Exception:
+        pass
+
+    try:
+        from diario.models import TriggerHabito
+        aprendizajes = (
+            TriggerHabito.objects
+            .filter(habito__usuario=user, fecha_creacion__gte=limite)
+            .exclude(aprendizaje='')
+            .order_by('-fecha_creacion')
+            .values_list('aprendizaje', flat=True)[:3]
+        )
+        fragmentos.extend(a[:200] for a in aprendizajes)
+    except Exception:
+        pass
+
+    return '\n---\n'.join(fragmentos)
+
+
+def _llamar_haiku_sintesis(prompt: str) -> "str | None":
+    """Como _llamar_haiku pero devuelve None si el LLM elige [SILENCE]."""
+    client = _cliente_anthropic()
+    response = client.messages.create(
+        model="claude-haiku-4-5-20251001",
+        max_tokens=200,
+        system=SYSTEM_PROMPT,
+        messages=[{"role": "user", "content": prompt}],
+    )
+    texto = response.content[0].text.strip()
+    return None if '[SILENCE]' in texto else texto
+
+
+def _prompt_sintesis(ctx: dict, datos_extra: dict) -> str:
+    lineas = [
+        "INSTRUCCIÓN: Lee el siguiente contexto. Si no hay una síntesis genuinamente valiosa "
+        "— si solo repetirías datos obvios o ya lo observaste recientemente — responde "
+        "exactamente con el código [SILENCE] y nada más. "
+        "Si hay algo que vale la pena nombrar, escríbelo directamente. Sin introducción.",
+        '',
+        '── DATOS FÍSICOS ──',
+    ]
+
+    ultima = ctx.get('ultima_actividad')
+    if ultima:
+        lineas.append(f"Última actividad: {ultima['tipo']} hace {ultima['dias_hace']} días.")
+
+    rpe = ctx.get('rpe_gym_semanas')
+    if rpe:
+        rpe_str = ' → '.join(str(r) if r is not None else '?' for r in rpe)
+        tend = ctx.get('rpe_tendencia', '')
+        lineas.append(f"RPE gym 4 semanas: {rpe_str}" + (f" ({tend})" if tend else ''))
+
+    acwr = ctx.get('acwr')
+    if acwr:
+        zona = ' (zona de riesgo)' if acwr > 1.5 or acwr < 0.8 else ''
+        lineas.append(f"ACWR: {acwr}{zona}.")
+
+    energia = ctx.get('energia_pre_semanas')
+    if energia and any(e for e in energia if e is not None):
+        e_str = ' → '.join(str(e) if e is not None else '?' for e in energia)
+        tend_e = ctx.get('energia_tendencia', '')
+        lineas.append(f"Energía pre-sesión 4 semanas: {e_str}" + (f" ({tend_e})" if tend_e else ''))
+
+    estanc = ctx.get('estancamientos_activos')
+    if estanc:
+        lineas.append(f"Sin progresión en 3 sesiones: {', '.join(e['ejercicio'] for e in estanc)}.")
+
+    prs = ctx.get('prs_semana')
+    if prs:
+        lineas.append(f"Récords esta semana: {', '.join(prs)}.")
+
+    lesion = ctx.get('lesion')
+    if lesion:
+        lineas.append(f"Lesión activa: {lesion['zona']} ({lesion['fase']}).")
+
+    decisiones = ctx.get('decisiones_plan', {})
+    recientes = decisiones.get('recientes', [])
+    for d in recientes[:3]:
+        resultado = d.get('resultado') or 'pendiente'
+        lineas.append(f"Plan: {d.get('accion')} en {d.get('ejercicio')} [{resultado}].")
+
+    precision = decisiones.get('precision_sistema')
+    if precision is not None:
+        lineas.append(f"Precisión del sistema: {precision}%.")
+
+    dias_carrera = ctx.get('dias_hasta_carrera')
+    if dias_carrera is not None:
+        readiness = ctx.get('readiness_hyrox')
+        trend_r = ctx.get('readiness_trend', '')
+        lineas.append(f"Hyrox en {dias_carrera} días. Readiness: {readiness or '?'}/100" +
+                      (f" ({trend_r})" if trend_r else '') + '.')
+
+    diario = datos_extra.get('diario_texto', '').strip()
+    if diario:
+        lineas += ['', '── DIARIO RECIENTE ──', diario[:600]]
+
+    lineas += [
+        '',
+        "Recuerda: [SILENCE] si no hay síntesis valiosa. Si hablas: máximo 3 frases, "
+        "voz de testigo — observas, no mandas.",
+    ]
+    return '\n'.join(lineas)
+
+
+def generar_sintesis_joi(cliente) -> "MensajeJOI | None":
+    """
+    Ciclo autónomo de síntesis: JOI decide si tiene algo que decir.
+    Devuelve MensajeJOI creado, o None si JOI eligió [SILENCE].
+    """
+    from joi.models import MensajeJOI
+
+    try:
+        ctx = construir_contexto(cliente)
+        diario_texto = _leer_diario_reciente(cliente.user)
+        datos_extra = {'diario_texto': diario_texto}
+
+        prompt = _bloque_memoria(ctx) + _prompt_sintesis(ctx, datos_extra)
+        texto = _llamar_haiku_sintesis(prompt)
+
+        if texto is None:
+            logger.info(f"[JOI síntesis] {cliente.user.username} → [SILENCE]")
+            return None
+
+        msg = MensajeJOI.objects.create(
+            user=cliente.user,
+            trigger='sintesis_joi',
+            mensaje=texto,
+            contexto={**ctx, 'diario_texto': diario_texto[:300] if diario_texto else ''},
+        )
+        from django.core.cache import cache
+        cache.delete(f'joi_ctx_{cliente.user_id}')
+        logger.info(f"[JOI síntesis] {cliente.user.username} → mensaje generado (id={msg.id})")
+        return msg
+
+    except Exception as e:
+        logger.error(f"[JOI] generar_sintesis_joi falló: {e}", exc_info=True)
+        return None
+
+
 def get_mensaje_pendiente(user) -> "MensajeJOI | None":
     """Devuelve el mensaje JOI más reciente no leído."""
     from joi.models import MensajeJOI
