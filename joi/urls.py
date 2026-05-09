@@ -19,4 +19,5 @@ urlpatterns = [
     path('mensaje/<int:mensaje_id>/feedback/', views.feedback_joi, name='joi_feedback'),
     path('manual/', views.poda_manual_joi, name='joi_manual'),
     path('manual/<int:entrada_id>/desactivar/', views.desactivar_entrada_manual, name='joi_desactivar_entrada'),
+    path('mood/', views.registrar_mood, name='joi_mood'),
 ]
