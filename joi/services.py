@@ -39,16 +39,16 @@ def _llamar_haiku(prompt: str) -> str:
 
 
 def construir_contexto(cliente) -> dict:
-    from entrenos.models import EntrenoRealizado, RecordPersonal, GymDecisionLog
+    from django.db.models import Avg, Count
+    from entrenos.models import EntrenoRealizado, EjercicioRealizado, RecordPersonal, GymDecisionLog
     from hyrox.models import UserInjury
 
     ctx = {}
-
-    # Últimos 28 días para ACWR aproximado
     hoy = date.today()
     semana_reciente = hoy - timedelta(days=7)
     mes_atras = hoy - timedelta(days=28)
 
+    # ── ACWR ─────────────────────────────────────────────────────────────────
     carga_reciente = sum(
         float(e.volumen_total_kg or 0)
         for e in EntrenoRealizado.objects.filter(cliente=cliente, fecha__gte=semana_reciente)
@@ -56,55 +56,74 @@ def construir_contexto(cliente) -> dict:
     carga_cronica = sum(
         float(e.volumen_total_kg or 0)
         for e in EntrenoRealizado.objects.filter(cliente=cliente, fecha__gte=mes_atras)
-    ) / 4  # media semanal de 4 semanas
-
+    ) / 4
     ctx['acwr'] = round(carga_reciente / carga_cronica, 2) if carga_cronica > 0 else None
 
-    # Último entreno
+    # ── Último entreno ────────────────────────────────────────────────────────
     ultimo = EntrenoRealizado.objects.filter(cliente=cliente).order_by('-fecha').first()
     if ultimo:
+        rpe_ultimo = EjercicioRealizado.objects.filter(
+            entreno=ultimo, rpe__isnull=False
+        ).aggregate(avg=Avg('rpe'))['avg']
         ctx['ultimo_entreno'] = {
             'fecha': str(ultimo.fecha),
             'dias_hace': (hoy - ultimo.fecha).days,
             'volumen_kg': float(ultimo.volumen_total_kg or 0),
-            'rpe': float(ultimo.rpe or 0) if hasattr(ultimo, 'rpe') else None,
+            'rpe': round(rpe_ultimo, 1) if rpe_ultimo else None,
             'energia': ultimo.energia_pre_sesion,
         }
 
-    # Lesión activa
+    # ── Tendencia volumen + RPE (4 semanas, más antigua → más reciente) ───────
+    vol_semanas, rpe_semanas = [], []
+    for i in range(3, -1, -1):
+        ini = hoy - timedelta(days=7 * (i + 1))
+        fin = hoy - timedelta(days=7 * i)
+        entrenos_sem = EntrenoRealizado.objects.filter(cliente=cliente, fecha__range=(ini, fin))
+        vol = sum(float(e.volumen_total_kg or 0) for e in entrenos_sem)
+        vol_semanas.append(round(vol))
+        rpe_avg = EjercicioRealizado.objects.filter(
+            entreno__in=entrenos_sem, rpe__isnull=False
+        ).aggregate(avg=Avg('rpe'))['avg']
+        rpe_semanas.append(round(rpe_avg, 1) if rpe_avg else None)
+    ctx['volumen_semanas'] = vol_semanas   # [sem-4, sem-3, sem-2, sem-1]
+    ctx['rpe_semanas'] = rpe_semanas
+
+    # ── Sesiones esta semana ──────────────────────────────────────────────────
+    ctx['sesiones_semana'] = EntrenoRealizado.objects.filter(
+        cliente=cliente, fecha__gte=semana_reciente
+    ).count()
+
+    # ── PRs esta semana ───────────────────────────────────────────────────────
+    ctx['prs_semana'] = list(
+        RecordPersonal.objects.filter(
+            cliente=cliente, fecha_logrado__gte=semana_reciente
+        ).values_list('ejercicio_nombre', flat=True)[:5]
+    )
+
+    # ── Decisiones del plan (últimos 30 días) ─────────────────────────────────
+    decisiones_qs = GymDecisionLog.objects.filter(
+        cliente=cliente, fecha_creacion__date__gte=hoy - timedelta(days=30)
+    )
+    por_accion = dict(
+        decisiones_qs.values('accion').annotate(n=Count('id')).values_list('accion', 'n')
+    )
+    ctx['decisiones_plan'] = {
+        'total': decisiones_qs.count(),
+        'por_accion': por_accion,
+        'recientes': list(
+            decisiones_qs.order_by('-fecha_creacion')
+            .values('ejercicio', 'accion', 'motivo')[:3]
+        ),
+    }
+
+    # ── Lesión activa ─────────────────────────────────────────────────────────
     lesion = UserInjury.objects.filter(
         cliente=cliente, fase__in=['AGUDA', 'SUB_AGUDA', 'RETORNO']
     ).first()
     if lesion:
         ctx['lesion'] = {'zona': lesion.zona_afectada, 'fase': lesion.fase}
 
-    # Datos Hyrox
-    try:
-        from hyrox.models import HyroxObjective, HyroxSession, HyroxReadinessLog
-        objetivo_hyrox = HyroxObjective.objects.filter(
-            cliente=cliente, estado='activo'
-        ).first()
-        if objetivo_hyrox:
-            ctx['dias_hasta_carrera'] = (objetivo_hyrox.fecha_evento - hoy).days
-            log_hoy = HyroxReadinessLog.objects.filter(
-                objective=objetivo_hyrox, fecha=hoy
-            ).order_by('-fecha').first()
-            ctx['readiness_hyrox'] = log_hoy.score if log_hoy else None
-            ultima_hyrox = HyroxSession.objects.filter(
-                objective=objetivo_hyrox, estado='completado'
-            ).order_by('-fecha').first()
-            if ultima_hyrox:
-                ctx['tsb_hyrox'] = ultima_hyrox.tsb
-                ctx['ultima_hyrox'] = {
-                    'fecha': str(ultima_hyrox.fecha),
-                    'tipo': ultima_hyrox.tipo_sesion,
-                    'rpe': ultima_hyrox.rpe_global,
-                    'minutos': ultima_hyrox.tiempo_total_minutos,
-                }
-    except Exception:
-        pass
-
-    # Racha de sesiones
+    # ── Racha de sesiones ─────────────────────────────────────────────────────
     racha = 0
     dia = hoy
     while EntrenoRealizado.objects.filter(cliente=cliente, fecha=dia).exists():
@@ -112,14 +131,49 @@ def construir_contexto(cliente) -> dict:
         dia -= timedelta(days=1)
     ctx['racha_dias'] = racha
 
-    # Decisiones recientes del plan
-    decisiones = list(
-        GymDecisionLog.objects.filter(
-            cliente=cliente,
-            fecha_creacion__date__gte=semana_reciente,
-        ).values('ejercicio', 'accion', 'motivo')[:3]
-    )
-    ctx['decisiones_recientes'] = decisiones
+    # ── Hyrox ─────────────────────────────────────────────────────────────────
+    try:
+        from hyrox.models import HyroxObjective, HyroxSession, HyroxReadinessLog
+        objetivo_hyrox = HyroxObjective.objects.filter(
+            cliente=cliente, estado='activo'
+        ).first()
+        if objetivo_hyrox:
+            ctx['dias_hasta_carrera'] = (objetivo_hyrox.fecha_evento - hoy).days
+
+            log_hoy = HyroxReadinessLog.objects.filter(
+                objective=objetivo_hyrox, fecha=hoy
+            ).first()
+            ctx['readiness_hyrox'] = log_hoy.score if log_hoy else None
+
+            # Tendencia readiness últimos 7 días
+            scores_7d = list(
+                HyroxReadinessLog.objects.filter(
+                    objective=objetivo_hyrox, fecha__gte=semana_reciente
+                ).order_by('fecha').values_list('score', flat=True)
+            )
+            ctx['readiness_tendencia'] = scores_7d
+            if len(scores_7d) >= 2:
+                ctx['readiness_delta'] = scores_7d[-1] - scores_7d[0]
+
+            ultima_hyrox = HyroxSession.objects.filter(
+                objective=objetivo_hyrox, estado='completado'
+            ).order_by('-fecha').first()
+            if ultima_hyrox:
+                ctx['tsb_hyrox'] = ultima_hyrox.tsb
+                ctx['ultima_hyrox'] = {
+                    'fecha': str(ultima_hyrox.fecha),
+                    'titulo': ultima_hyrox.titulo or '',
+                    'rpe': ultima_hyrox.rpe_global,
+                    'minutos': ultima_hyrox.tiempo_total_minutos,
+                }
+
+            ctx['sesiones_hyrox_semana'] = HyroxSession.objects.filter(
+                objective=objetivo_hyrox,
+                estado='completado',
+                fecha__gte=semana_reciente,
+            ).count()
+    except Exception:
+        pass
 
     return ctx
 
