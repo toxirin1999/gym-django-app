@@ -84,6 +84,9 @@ class MensajeJOI(models.Model):
         ('hyrox_ausencia',              'Hyrox — ausencia detectada'),
         ('decision_plan',               'Decisión del plan — intervención'),
         ('resumen_semanal',             'Resumen semanal — qué aprendió el plan'),
+        ('hyrox_estancamiento_estacion', 'Hyrox — estancamiento por estación'),
+        ('hyrox_deload_automatico',      'Hyrox — deload automático por TSB'),
+        ('rpe_calibracion',             'Calibración RPE personal'),
     ]
 
     user        = models.ForeignKey(User, on_delete=models.CASCADE, related_name='mensajes_joi')

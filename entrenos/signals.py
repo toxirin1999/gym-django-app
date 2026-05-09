@@ -421,3 +421,108 @@ def joi_decision_plan(sender, instance, created, **kwargs):
     except Exception as e:
         import logging
         logging.getLogger(__name__).error(f'[JOI decision_plan] {e}')
+
+
+# ── Calibración RPE personal ──────────────────────────────────────────────────
+from django.db.models import Avg as _Avg
+
+@receiver(post_save, sender=EntrenoRealizado)
+def calibrar_rpe_personal(sender, instance, created, raw=False, update_fields=None, **kwargs):
+    """
+    Detecta discordancia persistente entre RPE reportado y zona FC real.
+    Patrón: avg_RPE ≤ 6.5 pero FC ≥ 80 % FC_max (zona Z4) en 3+ sesiones.
+    Cuando se confirma, guarda el bias en one_rm_data['_rpe_bias'] y dispara JOI.
+    """
+    if raw or update_fields is not None:
+        return
+    if not instance.frecuencia_cardiaca_promedio:
+        return
+
+    try:
+        from django.core.cache import cache
+        from joi.services import generar_mensaje_joi
+
+        cliente = instance.cliente
+        lock_key = f'rpe_cal_lock_{cliente.pk}'
+        if cache.get(lock_key):
+            return
+
+        # FC máxima del usuario (desde HyroxObjective si existe, sino 220-edad)
+        fc_max = 185  # default
+        try:
+            from hyrox.models import HyroxObjective
+            from hyrox.training_engine import HyroxLoadManager
+            obj = HyroxObjective.objects.filter(cliente=cliente, estado='activo').first()
+            if obj:
+                fc_max = HyroxLoadManager.get_fc_max(obj)
+            elif cliente.fecha_nacimiento:
+                from django.utils import timezone as _tz
+                edad = (_tz.now().date() - cliente.fecha_nacimiento).days // 365
+                fc_max = max(150, 220 - edad)
+        except Exception:
+            pass
+
+        umbral_z4 = fc_max * 0.80
+
+        # Analizar las últimas 3 sesiones con FC y RPE
+        sesiones = (
+            EntrenoRealizado.objects
+            .filter(cliente=cliente, frecuencia_cardiaca_promedio__isnull=False)
+            .order_by('-fecha')[:3]
+        )
+        if sesiones.count() < 3:
+            return
+
+        discordantes = 0
+        rpcs_reportados, rpcs_estimados = [], []
+        for s in sesiones:
+            avg_rpe = EjercicioRealizado.objects.filter(
+                entreno=s, rpe__isnull=False
+            ).aggregate(avg=_Avg('rpe'))['avg']
+            if avg_rpe is None:
+                continue
+            zona_fc = s.frecuencia_cardiaca_promedio
+            rpe_estimado = round(6 + (zona_fc - fc_max * 0.6) / (fc_max * 0.4) * 4, 1)
+            rpe_estimado = max(1, min(10, rpe_estimado))
+            if avg_rpe <= 6.5 and zona_fc >= umbral_z4:
+                discordantes += 1
+                rpcs_reportados.append(avg_rpe)
+                rpcs_estimados.append(rpe_estimado)
+
+        if discordantes < 3:
+            return
+
+        # Calcular bias y guardar en one_rm_data
+        rpe_reportado_medio = round(sum(rpcs_reportados) / len(rpcs_reportados), 1)
+        rpe_estimado_medio  = round(sum(rpcs_estimados) / len(rpcs_estimados), 1)
+        bias = round(rpe_estimado_medio - rpe_reportado_medio, 1)
+
+        one_rm = cliente.one_rm_data or {}
+        bias_anterior = one_rm.get('_rpe_bias', 0)
+        # Solo actualizar y notificar si el bias cambió significativamente
+        if abs(bias - bias_anterior) < 0.5:
+            return
+
+        one_rm['_rpe_bias'] = bias
+        cliente.one_rm_data = one_rm
+        cliente.save(update_fields=['one_rm_data'])
+
+        cache.set(lock_key, True, 86400)  # 24h — un aviso al día máximo
+
+        zona_fc_str = 'Z4' if (sum(s.frecuencia_cardiaca_promedio for s in sesiones) / 3) < fc_max * 0.90 else 'Z5'
+        generar_mensaje_joi(cliente, 'rpe_calibracion', {
+            'sesiones_analizadas': 3,
+            'rpe_medio_reportado': rpe_reportado_medio,
+            'zona_fc_real': zona_fc_str,
+            'diferencia_estimada': f'+{bias} puntos',
+        })
+
+        import logging
+        logging.getLogger(__name__).info(
+            f"[RPE Calibración] {cliente.user.username}: bias={bias} "
+            f"(reportado {rpe_reportado_medio} vs estimado {rpe_estimado_medio})"
+        )
+
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"[RPE calibracion] {e}")
