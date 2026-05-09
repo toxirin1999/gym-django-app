@@ -82,6 +82,7 @@ class MensajeJOI(models.Model):
         ('hyrox_cuenta_regresiva',      'Hyrox — cuenta regresiva'),
         ('hyrox_simulacion_completada', 'Hyrox — simulación completada'),
         ('hyrox_ausencia',              'Hyrox — ausencia detectada'),
+        ('decision_plan',               'Decisión del plan — intervención'),
     ]
 
     user        = models.ForeignKey(User, on_delete=models.CASCADE, related_name='mensajes_joi')

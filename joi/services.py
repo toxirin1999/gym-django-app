@@ -365,6 +365,29 @@ def _prompt_hyrox_readiness_alto(ctx: dict, datos_extra: dict) -> str:
     )
 
 
+def _prompt_decision_plan(ctx: dict, datos_extra: dict) -> str:
+    accion    = datos_extra.get('accion', '')
+    ejercicio = datos_extra.get('ejercicio', 'un ejercicio')
+    motivo    = datos_extra.get('motivo', '')
+    dias      = ctx.get('dias_hasta_carrera')
+
+    accion_txt = {
+        'cambiar_variante': f"ha decidido cambiar la variante de {ejercicio}",
+        'bajar_peso':       f"ha reducido la carga en {ejercicio}",
+        'deload':           f"ha insertado una semana de deload",
+    }.get(accion, f"ha tomado una decisión sobre {ejercicio}")
+
+    motivo_txt = f" Motivo: {motivo}." if motivo else ""
+    hyrox_txt  = f" Quedan {dias} días para la carrera." if dias else ""
+
+    return (
+        f"El plan de entrenamiento {accion_txt}.{motivo_txt}{hyrox_txt} "
+        f"JOI lo ha observado y registrado. Genera 2-3 frases que nombren esta intervención "
+        f"del sistema con precisión — el plan cambió porque aprendió algo sobre el usuario. "
+        f"Mezcla el dato técnico con la continuidad de la historia."
+    )
+
+
 def _prompt_hyrox_ausencia(ctx: dict, datos_extra: dict) -> str:
     dias = datos_extra.get('dias_sin_sesion', 7)
     readiness = ctx.get('readiness_hyrox')
@@ -398,6 +421,7 @@ _PROMPT_BUILDERS = {
     'hyrox_cuenta_regresiva':      _prompt_hyrox_cuenta_regresiva,
     'hyrox_simulacion_completada': _prompt_hyrox_simulacion_completada,
     'hyrox_ausencia':              _prompt_hyrox_ausencia,
+    'decision_plan':               _prompt_decision_plan,
 }
 
 
