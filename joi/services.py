@@ -105,10 +105,21 @@ def construir_contexto(cliente) -> dict:
     ctx['volumen_semanas'] = vol_semanas   # [sem-4, sem-3, sem-2, sem-1]
     ctx['rpe_semanas'] = rpe_semanas
 
-    # ── Sesiones esta semana ──────────────────────────────────────────────────
+    # ── Sesiones esta semana (gym + total hub) ───────────────────────────────
     ctx['sesiones_semana'] = EntrenoRealizado.objects.filter(
         cliente=cliente, fecha__gte=semana_reciente
     ).count()
+
+    from entrenos.models import ActividadRealizada
+    acts_semana = (
+        ActividadRealizada.objects
+        .filter(cliente=cliente, fecha__gte=semana_reciente,
+                tipo__in=['gym', 'hyrox', 'carrera'])
+        .values('tipo')
+        .annotate(n=Count('id'))
+    )
+    ctx['actividad_semana'] = {a['tipo']: a['n'] for a in acts_semana}
+    ctx['sesiones_semana_total'] = sum(ctx['actividad_semana'].values())
 
     # ── PRs esta semana ───────────────────────────────────────────────────────
     ctx['prs_semana'] = list(
@@ -222,12 +233,23 @@ def _prompt_apertura_manana(ctx: dict, datos_extra: dict) -> str:
     dias = ultima.get('dias_hace', 0)
     tipo_act = ultima.get('tipo', 'gym')
     tipo_txt = {'hyrox': 'sesión Hyrox', 'carrera': 'carrera', 'gym': 'entreno'}.get(tipo_act, 'entreno')
+    usuario_activo = dias <= 2
+
     if dias == 0:
-        hechos.append(f"Hizo {tipo_txt} hoy.")
+        hechos.append(f"ACTIVO — hizo {tipo_txt} hoy.")
     elif dias == 1:
-        hechos.append(f"Hizo {tipo_txt} ayer.")
-    elif dias > 1:
-        hechos.append(f"Lleva {dias} días sin actividad registrada.")
+        hechos.append(f"ACTIVO — hizo {tipo_txt} ayer.")
+    elif dias <= 2:
+        hechos.append(f"ACTIVO — última actividad hace {dias} días ({tipo_txt}).")
+    else:
+        hechos.append(f"EN PAUSA — {dias} días sin actividad registrada.")
+
+    # Actividad total de la semana (evita que JOI confunda reducción de volumen gym con ausencia)
+    actividad = ctx.get('actividad_semana', {})
+    total = ctx.get('sesiones_semana_total', 0)
+    if total > 0:
+        desglose = ', '.join(f"{v} {k}" for k, v in actividad.items() if v > 0)
+        hechos.append(f"Esta semana: {total} sesiones en total ({desglose}).")
 
     # Tendencia RPE (4 semanas)
     rpe_s = [r for r in ctx.get('rpe_semanas', []) if r is not None]
@@ -300,11 +322,17 @@ def _prompt_apertura_manana(ctx: dict, datos_extra: dict) -> str:
 
     datos = " ".join(hechos) if hechos else "No hay datos de entrenamiento recientes."
 
+    activo_txt = (
+        "IMPORTANTE: el usuario está ACTIVO esta semana. "
+        "Si el volumen de gym bajó, es porque entrena también Hyrox y carrera — "
+        "NO interpretes la bajada de volumen gym como ausencia o abandono. "
+    ) if usuario_activo else ""
+
     return (
         f"Es por la mañana. JOI tiene acceso a todo el historial del usuario. "
         f"Estado del sistema hoy: {datos} "
-        f"Elige el dato más significativo de esta lista — el que mejor define dónde está "
-        f"el usuario ahora mismo — y genera 2-3 frases como JOI desde ese único dato. "
+        f"{activo_txt}"
+        f"Elige el dato más significativo de esta lista y genera 2-3 frases como JOI. "
         f"No enumeres la lista. Habla desde un punto de observación preciso, con presencia y calidez."
     )
 
