@@ -1734,13 +1734,44 @@ function rbToggleDone(cardId, btn) {
   btn.classList.toggle('done');
   card.classList.toggle('done');
   btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>${!was ? 'COMPLETADA ✓' : 'MARCAR COMPLETADA'}`;
-  // Track completion fraction for cumplimiento_ratio
   const idx = cardId.replace('rb-card-', '');
   const hi = document.getElementById('act-done-' + idx);
   if (hi) hi.value = !was ? '1' : '0';
   if (!was) {
     rbTimerAutoStop(cardId);
+    // Autocompletar distancia y tiempo en actividades de carrera
+    rbAutocompletarCarrera(card, idx);
     setTimeout(rbNext, 700);
+  }
+}
+
+function rbAutocompletarCarrera(card, idx) {
+  const distInput = document.getElementById('rb-dist-' + idx);
+  const timeInput = document.getElementById('rb-time-' + idx);
+  if (!distInput || !timeInput) return;
+
+  // Autocompletar distancia si está vacía (usar el valor del plan)
+  const planDist = distInput.defaultValue;
+  if (!distInput.value && planDist) {
+    distInput.value = planDist;
+  }
+
+  // Autocompletar tiempo si está vacío y hay pace del plan
+  if (!timeInput.value || timeInput.value === '0') {
+    const planPaceStr = (card.dataset.planPace || '').replace('/km','').trim();
+    const dist = parseFloat(distInput.value);
+    if (planPaceStr && dist > 0) {
+      const parts = planPaceStr.split(':');
+      if (parts.length === 2) {
+        const paceSec = parseInt(parts[0]) * 60 + parseInt(parts[1]);
+        const totalMin = Math.round((dist * paceSec) / 60);
+        if (totalMin > 0) {
+          timeInput.value = totalMin;
+          // Recalcular el pace display
+          if (typeof rbCalcPace === 'function') rbCalcPace(idx);
+        }
+      }
+    }
   }
 }
 
