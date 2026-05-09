@@ -1757,20 +1757,33 @@ function rbAutocompletarCarrera(card, idx) {
     distInput.value = planDist;
   }
 
-  // Autocompletar tiempo si está vacío y hay pace del plan
+  // Autocompletar tiempo si está vacío
   if (!timeInput.value || parseFloat(timeInput.value) === 0) {
-    const planPaceStr = (card.dataset.planPace || '').replace('/km','').trim();
-    const dist = parseFloat(distInput.value);
-    if (planPaceStr && dist > 0) {
-      const parts = planPaceStr.split(':');
-      if (parts.length === 2) {
-        const paceSec = parseInt(parts[0]) * 60 + parseInt(parts[1]);
-        const totalMin = Math.round((dist * paceSec) / 60);
-        if (totalMin > 0) {
-          timeInput.value = totalMin;
-          if (typeof rbCalcPace === 'function') rbCalcPace(idx);
+    let totalMin = 0;
+
+    // 1. Prioridad: tiempo real del cronómetro de la sesión
+    const timerDisp = document.getElementById('rb-tdisp-' + idx);
+    const timerSecs = timerDisp ? parseInt(timerDisp.dataset.secs || '0') : 0;
+    if (timerSecs > 0) {
+      totalMin = Math.round(timerSecs / 60);
+    }
+
+    // 2. Fallback: calcular desde distancia × pace del plan
+    if (!totalMin) {
+      const planPaceStr = (card.dataset.planPace || '').replace('/km','').trim();
+      const dist = parseFloat(distInput.value);
+      if (planPaceStr && dist > 0) {
+        const parts = planPaceStr.split(':');
+        if (parts.length === 2) {
+          const paceSec = parseInt(parts[0]) * 60 + parseInt(parts[1]);
+          totalMin = Math.round((dist * paceSec) / 60);
         }
       }
+    }
+
+    if (totalMin > 0) {
+      timeInput.value = totalMin;
+      if (typeof rbCalcPace === 'function') rbCalcPace(idx);
     }
   }
 }
