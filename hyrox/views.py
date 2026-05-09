@@ -2765,6 +2765,9 @@ def strava_reconciliacion(request):
                 objective=objetivo,
                 fecha__range=(fecha_min, fecha_max),
                 estado='completado',
+            ).exclude(
+                # Excluir sesiones Hyrox que ya tienen una actividad Strava procesada
+                strava_sources__estado__in=['merged', 'created']
             ).order_by('id'))
 
         from django.db.models import Q
@@ -2775,6 +2778,9 @@ def strava_reconciliacion(request):
             Q(hub_actividad__fecha_realizado__range=(fecha_min, fecha_max)) |
             Q(hub_actividad__fecha_realizado__isnull=True, fecha__range=(fecha_min, fecha_max)) |
             Q(hub_actividad__isnull=True, fecha__range=(fecha_min, fecha_max))
+        ).exclude(
+            # Excluir entrenos que ya tienen una actividad Strava procesada
+            strava_sources__estado__in=['merged', 'created']
         ).distinct().order_by('id'))
 
         # Preselect best candidate based on Strava type
@@ -2916,7 +2922,8 @@ def strava_procesar(request, actividad_id):
                 ar.save(update_fields=update_fields)
         except ActividadRealizada.DoesNotExist:
             pass
-        act.estado = 'merged'
+        act.estado     = 'merged'
+        act.entreno_gym = entreno
         act.save()
         fc_info = f' · TRIMP calculado desde FC {act.hr_media} bpm' if act.hr_media else ''
         return JsonResponse({'ok': True, 'msg': f'Datos Strava fusionados con entreno de gym del {act.fecha_actividad}{fc_info}.'})

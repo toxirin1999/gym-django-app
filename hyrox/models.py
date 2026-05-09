@@ -681,6 +681,10 @@ class StravaActivityRaw(models.Model):
         'HyroxSession', null=True, blank=True,
         on_delete=models.SET_NULL, related_name='strava_sources'
     )
+    entreno_gym = models.ForeignKey(
+        'entrenos.EntrenoRealizado', null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='strava_sources'
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
