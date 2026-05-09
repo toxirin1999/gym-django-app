@@ -278,7 +278,17 @@
 
     <p class="joi-meta">{{ mensaje.creado_en|date:"j N · H:i" }}</p>
 
-    {% if mensaje.feedback %}
+    {% if mensaje.trigger == 'poda_manual' %}
+      <a href="/joi/manual/"
+         style="display:inline-block;font-size:0.7rem;letter-spacing:0.18em;
+                text-transform:uppercase;padding:0.55rem 1.4rem;border-radius:2px;
+                border:1px solid rgba(100,148,220,0.35);color:rgba(140,175,225,0.7);
+                text-decoration:none;transition:border-color .3s,color .3s;"
+         onmouseover="this.style.borderColor='rgba(100,148,220,0.7)';this.style.color='rgba(180,210,245,.95)'"
+         onmouseout="this.style.borderColor='rgba(100,148,220,0.35)';this.style.color='rgba(140,175,225,0.7)'">
+        revisar el manual →
+      </a>
+    {% elif mensaje.feedback %}
       <p class="joi-feedback-pasado">
         {% if mensaje.feedback == 'clavado' %}Lo has clavado{% else %}Te has equivocado{% endif %}
       </p>

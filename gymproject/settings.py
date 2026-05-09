@@ -89,6 +89,10 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'joi.tasks.ciclo_sintesis_joi',
         'schedule': crontab(hour='7,11,15,19,23', minute=0),  # 5 veces al día
     },
+    'joi-poda-mensual': {
+        'task': 'joi.tasks.generar_poda_mensual',
+        'schedule': crontab(hour=9, minute=0, day_of_month=1),  # día 1 de cada mes
+    },
 }
 # Configuración de notificaciones push
 PUSH_NOTIFICATION_URL = 'https://fcm.googleapis.com/fcm/send'

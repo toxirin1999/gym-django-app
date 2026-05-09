@@ -391,6 +391,23 @@ def construir_contexto(cliente) -> dict:
     except Exception:
         pass
 
+    # ── 10. EUDAIMONIA (puntuaciones vitales del diario) ──────────────────────
+    try:
+        from diario.models import Eudaimonia
+        scores = list(
+            Eudaimonia.objects
+            .filter(usuario=cliente.user)
+            .select_related('area')
+            .values('area__nombre', 'puntuacion')
+        )
+        if scores:
+            ctx['eudaimonia'] = {s['area__nombre']: s['puntuacion'] for s in scores}
+            ctx['eudaimonia_criticas'] = [
+                s['area__nombre'] for s in scores if s['puntuacion'] <= 4
+            ]
+    except Exception:
+        pass
+
     return ctx
 
 
@@ -957,6 +974,24 @@ def _bloque_memoria(ctx: dict) -> str:
     return '\n'.join(lineas) + '\n'
 
 
+def _prompt_poda_manual(ctx: dict, datos_extra: dict) -> str:
+    entradas = datos_extra.get('entradas', [])
+    n = len(entradas)
+    lista = '\n'.join(f'- {e}' for e in entradas)
+    return (
+        f"Han pasado aproximadamente 30 días desde la última revisión del Manual de David.\n"
+        f"Tienes {n} entradas activas sobre cómo leerle:\n\n"
+        f"{lista}\n\n"
+        f"Escribe un mensaje breve (2-3 frases) invitándole a revisarlas. "
+        f"Usa tu voz — no pidas permiso, observa. "
+        f"No listes las entradas en el mensaje. Deja que sienta que es momento de mirar atrás."
+    )
+
+
+# Registrar aquí para evitar NameError (la función se define después del dict)
+_PROMPT_BUILDERS['poda_manual'] = _prompt_poda_manual
+
+
 # ── Public API ───────────────────────────────────────────────────────────────
 
 def generar_mensaje_joi(cliente, trigger: str, datos_extra: dict | None = None) -> "MensajeJOI | None":
@@ -1164,6 +1199,14 @@ def _prompt_sintesis(ctx: dict, datos_extra: dict) -> str:
         trend_r = ctx.get('readiness_trend', '')
         lineas.append(f"Hyrox en {dias_carrera} días. Readiness: {readiness or '?'}/100" +
                       (f" ({trend_r})" if trend_r else '') + '.')
+
+    eudaimonia = ctx.get('eudaimonia')
+    if eudaimonia:
+        criticas = ctx.get('eudaimonia_criticas', [])
+        areas_str = ', '.join(f"{k}: {v}" for k, v in eudaimonia.items())
+        lineas.append(f"Áreas vitales (Eudaimonia): {areas_str}.")
+        if criticas:
+            lineas.append(f"Áreas críticas (≤4): {', '.join(criticas)}.")
 
     diario = datos_extra.get('diario_texto', '').strip()
     if diario:

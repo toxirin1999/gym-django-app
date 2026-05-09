@@ -331,3 +331,43 @@ def ciclo_sintesis_joi(self):
         'saltados':    saltados,
         'fecha':       str(ahora.date()),
     }
+
+
+@shared_task(bind=True, max_retries=2)
+def generar_poda_mensual(self):
+    """
+    El 1 de cada mes, JOI invita al usuario a revisar el Manual de David.
+    Solo genera el mensaje si hay entradas activas en el manual.
+    """
+    from clientes.models import Cliente
+    from joi.models import MensajeJOI, ManualDavid
+    from joi.services import generar_mensaje_joi
+
+    hoy = datetime.date.today()
+    generados = 0
+
+    for cliente in Cliente.objects.select_related('user').all():
+        try:
+            entradas = list(
+                ManualDavid.objects
+                .filter(user=cliente.user, activa=True)
+                .values_list('entrada', flat=True)
+            )
+            if not entradas:
+                continue
+
+            ya_enviado = MensajeJOI.objects.filter(
+                user=cliente.user,
+                trigger='poda_manual',
+                creado_en__year=hoy.year,
+                creado_en__month=hoy.month,
+            ).exists()
+            if ya_enviado:
+                continue
+
+            generar_mensaje_joi(cliente, 'poda_manual', {'entradas': entradas})
+            generados += 1
+        except Exception:
+            pass
+
+    return {'generados': generados, 'fecha': str(hoy)}
