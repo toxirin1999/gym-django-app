@@ -1358,6 +1358,25 @@ def hyrox_dashboard(request):
     }
     return render(request, 'hyrox/dashboard.html', context)
 
+
+def _corregir_fecha_sesion_completada(sesion):
+    """
+    Si la sesión completada tenía fecha futura (planificada para mañana
+    pero ejecutada hoy), actualiza tanto HyroxSession.fecha como el
+    registro en ActividadRealizada (hub) para que aparezca en los paneles.
+    """
+    from django.utils.timezone import now as _now
+    from entrenos.models import ActividadRealizada
+    hoy = _now().date()
+    if sesion.fecha <= hoy:
+        return
+    sesion.fecha = hoy
+    try:
+        ActividadRealizada.objects.filter(sesion_hyrox=sesion).update(fecha=hoy)
+    except Exception:
+        pass
+
+
 @login_required
 def crear_objetivo(request):
     cliente = getattr(request.user, 'cliente_perfil', None)
@@ -1691,11 +1710,7 @@ def registrar_entrenamiento(request, objective_id, session_id=None):
 
             if not bloqueado_por_bio_safety:
                 sesion.estado = 'completado'
-                # Si la sesión estaba planificada para el futuro, usar la fecha real de realización
-                from django.utils.timezone import now as _now
-                hoy_real = _now().date()
-                if sesion.fecha > hoy_real:
-                    sesion.fecha = hoy_real
+                _corregir_fecha_sesion_completada(sesion)
 
                 # Calculate cumplimiento_ratio from per-activity hidden inputs
                 acts_for_compl = list(sesion.activities.all().order_by('id'))
@@ -1986,11 +2001,7 @@ def registrar_entrenamiento_ia(request, session_id):
                     })
 
             sesion.estado = 'completado'
-            # Si la sesión estaba planificada para el futuro, usar la fecha real de realización
-            from django.utils.timezone import now as _now
-            hoy_real = _now().date()
-            if sesion.fecha > hoy_real:
-                sesion.fecha = hoy_real
+            _corregir_fecha_sesion_completada(sesion)
             # Save final to trigger any post_save signals (like the one we just made)
             sesion.save()
             
