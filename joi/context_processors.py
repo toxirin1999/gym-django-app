@@ -44,16 +44,34 @@ def _apertura_on_demand(user):
         return None
 
 
-def _get_mensaje_pendiente(user):
+def _get_mensaje_gym(user):
     """
-    Devuelve el mensaje JOI sin leer más reciente.
-    Si no hay ninguno, intenta generar la apertura del día on-demand.
+    Mensaje sin leer más reciente de triggers NO-Hyrox (gym, apertura, resumen...).
+    Si no hay ninguno, intenta generar apertura_manana on-demand.
     """
     from joi.models import MensajeJOI
-    mensaje = MensajeJOI.objects.filter(user=user, leido=False).first()
+    mensaje = (
+        MensajeJOI.objects
+        .filter(user=user, leido=False)
+        .exclude(trigger__startswith='hyrox_')
+        .first()
+    )
     if mensaje:
         return mensaje
     return _apertura_on_demand(user)
+
+
+def _get_mensaje_hyrox(user):
+    """
+    Mensaje sin leer más reciente de triggers Hyrox.
+    No genera on-demand — los mensajes Hyrox los crean signals y tareas Celery.
+    """
+    from joi.models import MensajeJOI
+    return (
+        MensajeJOI.objects
+        .filter(user=user, leido=False, trigger__startswith='hyrox_')
+        .first()
+    )
 
 
 def joi_context(request):
@@ -64,7 +82,8 @@ def joi_context(request):
     cache_key = f'joi_ctx_{user.id}'
     cached = cache.get(cache_key)
     if cached is not None:
-        cached['joi_mensaje_pendiente'] = _get_mensaje_pendiente(user)
+        cached['joi_mensaje_pendiente'] = _get_mensaje_gym(user)
+        cached['joi_mensaje_hyrox']     = _get_mensaje_hyrox(user)
         return cached
 
     estado_actual = (
@@ -81,12 +100,13 @@ def joi_context(request):
     frase_forma = "Hoy me siento cerca de ti." if estado != "ausente" else "Te he echado de menos..."
 
     result = {
-        'estado_joi': estado,
+        'estado_joi':      estado,
         'frase_forma_joi': frase_forma,
         'frase_extra_joi': None,
-        'frase_recaida': None,
-        'recuerdo': recuerdo,
+        'frase_recaida':   None,
+        'recuerdo':        recuerdo,
     }
     cache.set(cache_key, result, 300)
-    result['joi_mensaje_pendiente'] = _get_mensaje_pendiente(user)
+    result['joi_mensaje_pendiente'] = _get_mensaje_gym(user)
+    result['joi_mensaje_hyrox']     = _get_mensaje_hyrox(user)
     return result
