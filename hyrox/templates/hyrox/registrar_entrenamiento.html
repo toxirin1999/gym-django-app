@@ -706,7 +706,7 @@
   <textarea name="notas_raw" id="id_notas_raw" style="display:none"></textarea>
 
   <!-- ── JOI banner ─────────────────────────────────────────────────────── -->
-  {% if joi_mensaje_pendiente %}
+  {% if joi_mensaje_hyrox %}
   <div id="joi-rb-banner" style="
     flex-shrink: 0;
     background: var(--paper);
@@ -733,8 +733,8 @@
       color: var(--ink-2);
       line-height: 1.4;
       flex: 1;
-    ">{{ joi_mensaje_pendiente.mensaje }}</p>
-    <button type="button" onclick="joiRbCerrar({{ joi_mensaje_pendiente.id }})" style="
+    ">{{ joi_mensaje_hyrox.mensaje }}</p>
+    <button type="button" onclick="joiRbCerrar({{ joi_mensaje_hyrox.id }})" style="
       background: none;
       border: 1px solid var(--ink-4);
       color: var(--ink-3);

@@ -771,7 +771,7 @@ a.rb-dia:focus-visible {
 </head>
 <body>
 
-{% if joi_mensaje_pendiente %}
+{% if joi_mensaje_hyrox %}
 <div id="joi-hyrox-banner" style="
   background: var(--paper);
   border-bottom: 2px solid var(--ink);
@@ -798,8 +798,8 @@ a.rb-dia:focus-visible {
     color: var(--ink-2);
     line-height: 1.4;
     flex: 1;
-  ">{{ joi_mensaje_pendiente.mensaje }}</p>
-  <button onclick="joiHyroxCerrar({{ joi_mensaje_pendiente.id }})" style="
+  ">{{ joi_mensaje_hyrox.mensaje }}</p>
+  <button onclick="joiHyroxCerrar({{ joi_mensaje_hyrox.id }})" style="
     background: none;
     border: 1px solid var(--ink);
     color: var(--ink);
