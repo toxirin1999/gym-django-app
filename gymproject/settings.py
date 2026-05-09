@@ -85,6 +85,10 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'joi.tasks.generar_resumen_semanal_joi',
         'schedule': crontab(hour=8, minute=30, day_of_week=1),  # lunes 08:30
     },
+    'joi-sintesis-autonoma': {
+        'task': 'joi.tasks.ciclo_sintesis_joi',
+        'schedule': crontab(hour='7,11,15,19,23', minute=0),  # 5 veces al día
+    },
 }
 # Configuración de notificaciones push
 PUSH_NOTIFICATION_URL = 'https://fcm.googleapis.com/fcm/send'

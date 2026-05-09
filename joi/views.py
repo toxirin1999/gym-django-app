@@ -711,6 +711,7 @@ def frase_cambio_forma_joi(estado):
 from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
+from django.shortcuts import get_object_or_404
 
 
 @login_required
@@ -721,3 +722,51 @@ def marcar_mensaje_leido(request, mensaje_id):
     from django.core.cache import cache
     cache.delete(f'joi_ctx_{request.user.id}')
     return JsonResponse({'ok': ok})
+
+
+@login_required
+def habitacion_joi(request):
+    from clientes.models import Cliente
+    from django.utils import timezone
+    from .models import MensajeJOI
+
+    cliente = get_object_or_404(Cliente, user=request.user)
+
+    # Mensaje más reciente de los últimos 7 días
+    mensaje = (
+        MensajeJOI.objects
+        .filter(user=request.user,
+                creado_en__gte=timezone.now() - timedelta(days=7))
+        .order_by('-creado_en')
+        .first()
+    )
+
+    if mensaje and not mensaje.leido:
+        mensaje.leido = True
+        mensaje.save(update_fields=['leido'])
+
+    return render(request, 'joi/habitacion.html', {
+        'mensaje': mensaje,
+        'estado':  'habla' if mensaje else 'calla',
+    })
+
+
+@login_required
+@require_POST
+def feedback_joi(request, mensaje_id):
+    from .models import MensajeJOI
+    from django.core.cache import cache
+
+    mensaje = get_object_or_404(MensajeJOI, id=mensaje_id, user=request.user)
+    feedback = request.POST.get('feedback')
+    if feedback in ('clavado', 'equivocado'):
+        mensaje.feedback = feedback
+        mensaje.save(update_fields=['feedback'])
+        cache.delete(f'joi_ctx_{request.user.id}')
+        respuesta = (
+            'Seguiré mirando.'
+            if feedback == 'clavado'
+            else 'He interpretado mal tu señal. Reajustando mi lente.'
+        )
+        return JsonResponse({'ok': True, 'respuesta': respuesta})
+    return JsonResponse({'ok': False}, status=400)

@@ -87,6 +87,12 @@ class MensajeJOI(models.Model):
         ('hyrox_estancamiento_estacion', 'Hyrox — estancamiento por estación'),
         ('hyrox_deload_automatico',      'Hyrox — deload automático por TSB'),
         ('rpe_calibracion',             'Calibración RPE personal'),
+        ('sintesis_joi',                'Síntesis autónoma — JOI en su propio tiempo'),
+    ]
+
+    FEEDBACK_CHOICES = [
+        ('clavado',    'Lo has clavado'),
+        ('equivocado', 'Te has equivocado'),
     ]
 
     user        = models.ForeignKey(User, on_delete=models.CASCADE, related_name='mensajes_joi')
@@ -94,6 +100,7 @@ class MensajeJOI(models.Model):
     mensaje     = models.TextField()
     contexto    = models.JSONField(default=dict)   # datos que usó JOI para generar el mensaje
     leido       = models.BooleanField(default=False)
+    feedback    = models.CharField(max_length=20, choices=FEEDBACK_CHOICES, null=True, blank=True)
     creado_en   = models.DateTimeField(auto_now_add=True)
 
     class Meta:

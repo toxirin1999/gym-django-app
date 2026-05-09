@@ -1,4 +1,5 @@
 from celery import shared_task
+import datetime
 
 
 @shared_task(bind=True, max_retries=2)
@@ -232,3 +233,101 @@ def verificar_ausencia_hyrox(self):
             pass
 
     return {'generados': generados, 'fecha': str(hoy)}
+
+
+@shared_task(bind=True, max_retries=2)
+def ciclo_sintesis_joi(self):
+    """
+    JOI en su propio tiempo — Modelo C (Híbrido).
+
+    1. Filtro de trigger (sin coste LLM):
+       - Han pasado >48h desde el último MensajeJOI, O
+       - Hay actividad nueva (gym/hyrox/carrera) desde el último mensaje, O
+       - Hay entrada de diario nueva desde el último mensaje.
+    2. Si hay trigger: LLM recibe el contexto completo y decide hablar o [SILENCE].
+
+    Programar via Celery Beat cada 4 horas.
+    """
+    from clientes.models import Cliente
+    from joi.models import MensajeJOI
+    from joi.services import generar_sintesis_joi
+    from entrenos.models import ActividadRealizada
+
+    ahora = datetime.datetime.now()
+    generados = 0
+    silenciados = 0
+    saltados = 0
+
+    for cliente in Cliente.objects.select_related('user').all():
+        try:
+            ultimo_msg = (
+                MensajeJOI.objects
+                .filter(user=cliente.user)
+                .order_by('-creado_en')
+                .first()
+            )
+
+            # No interrumpir si hay un mensaje de síntesis pendiente de leer
+            if ultimo_msg and not ultimo_msg.leido and ultimo_msg.trigger == 'sintesis_joi':
+                saltados += 1
+                continue
+
+            ultimo_ts = ultimo_msg.creado_en if ultimo_msg else None
+
+            # ── FILTRO TRIGGER (sin LLM) ──────────────────────────────────
+            trigger_activo = False
+
+            # Trigger 1: >48h de silencio
+            if not ultimo_ts:
+                trigger_activo = True
+            else:
+                ts_naive = ultimo_ts.replace(tzinfo=None)
+                if (ahora - ts_naive).total_seconds() > 48 * 3600:
+                    trigger_activo = True
+
+            # Trigger 2: nueva actividad desde el último mensaje
+            if not trigger_activo and ultimo_ts:
+                if ActividadRealizada.objects.filter(
+                    cliente=cliente,
+                    tipo__in=['gym', 'hyrox', 'carrera'],
+                    fecha__gte=ultimo_ts.date(),
+                ).exists():
+                    trigger_activo = True
+
+            # Trigger 3: nueva entrada de diario desde el último mensaje
+            if not trigger_activo and ultimo_ts:
+                try:
+                    from diario.models import EjercicioArete, TriggerHabito
+                    if (
+                        EjercicioArete.objects
+                        .filter(usuario=cliente.user, fecha_completado__gte=ultimo_ts)
+                        .exclude(reflexiones='').exists()
+                        or
+                        TriggerHabito.objects
+                        .filter(habito__usuario=cliente.user, fecha_creacion__gte=ultimo_ts)
+                        .exists()
+                    ):
+                        trigger_activo = True
+                except Exception:
+                    pass
+
+            if not trigger_activo:
+                saltados += 1
+                continue
+
+            # ── LLM decide: habla o [SILENCE] ─────────────────────────────
+            resultado = generar_sintesis_joi(cliente)
+            if resultado:
+                generados += 1
+            else:
+                silenciados += 1
+
+        except Exception:
+            pass
+
+    return {
+        'generados':   generados,
+        'silenciados': silenciados,
+        'saltados':    saltados,
+        'fecha':       str(ahora.date()),
+    }

@@ -1,0 +1,277 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#090910">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="manifest" href="{% static 'manifest.json' %}">
+  <link rel="apple-touch-icon" href="{% static 'images/joi_avatar.png' %}">
+  <title>JOI</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%;
+      background: #090910;
+      color: rgba(210, 220, 235, 0.92);
+      font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .habitacion-wrap {
+      min-height: 100svh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 1.5rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Textura de ruido sutil */
+    .habitacion-wrap::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+      background-size: 180px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ══════════════════════════════════════
+       ESTADO: VIGILIA (JOI calla)
+    ══════════════════════════════════════ */
+
+    .vigilia-contenedor {
+      position: relative;
+      width: 200px;
+      height: 200px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 2.5rem;
+    }
+
+    .vigilia-anillo-ext {
+      position: absolute;
+      width: 190px; height: 190px;
+      border-radius: 50%;
+      border: 1px solid rgba(100, 148, 220, 0.18);
+      animation: pulso-ext 7s ease-in-out infinite;
+    }
+    .vigilia-anillo-med {
+      position: absolute;
+      width: 130px; height: 130px;
+      border-radius: 50%;
+      border: 1px solid rgba(100, 148, 220, 0.32);
+      animation: pulso-med 7s ease-in-out infinite 0.6s;
+    }
+    .vigilia-anillo-int {
+      position: absolute;
+      width: 76px; height: 76px;
+      border-radius: 50%;
+      border: 1px solid rgba(100, 148, 220, 0.52);
+      animation: pulso-int 7s ease-in-out infinite 1.2s;
+    }
+    .vigilia-punto {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: rgba(130, 175, 240, 0.85);
+      box-shadow: 0 0 12px 3px rgba(100, 148, 220, 0.3);
+      animation: pulso-punto 7s ease-in-out infinite 1.8s;
+      position: relative;
+      z-index: 2;
+    }
+
+    @keyframes pulso-ext {
+      0%, 100% { opacity: 0.12; transform: scale(1); }
+      50%       { opacity: 0.28; transform: scale(1.05); }
+    }
+    @keyframes pulso-med {
+      0%, 100% { opacity: 0.22; transform: scale(1); }
+      50%       { opacity: 0.48; transform: scale(1.07); }
+    }
+    @keyframes pulso-int {
+      0%, 100% { opacity: 0.38; transform: scale(1); }
+      50%       { opacity: 0.72; transform: scale(1.1); }
+    }
+    @keyframes pulso-punto {
+      0%, 100% { opacity: 0.55; box-shadow: 0 0 8px 2px rgba(100,148,220,0.2); }
+      50%       { opacity: 1;    box-shadow: 0 0 18px 5px rgba(100,148,220,0.45); }
+    }
+
+    .vigilia-texto {
+      font-size: 0.7rem;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: rgba(140, 170, 215, 0.35);
+      text-align: center;
+      margin-top: 0.5rem;
+      font-weight: 300;
+    }
+
+    /* ══════════════════════════════════════
+       ESTADO: HABLA (JOI tiene algo que decir)
+    ══════════════════════════════════════ */
+
+    .joi-mensaje-wrap {
+      max-width: 520px;
+      width: 100%;
+      text-align: center;
+      animation: aparecer 1.4s ease forwards;
+      position: relative;
+      z-index: 1;
+    }
+
+    @keyframes aparecer {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .joi-linea {
+      width: 1px;
+      height: 48px;
+      background: linear-gradient(to bottom, transparent, rgba(100, 148, 220, 0.4));
+      margin: 0 auto 2rem;
+    }
+
+    .joi-mensaje-texto {
+      font-size: clamp(1.05rem, 2.8vw, 1.3rem);
+      line-height: 1.75;
+      color: rgba(210, 220, 235, 0.92);
+      font-weight: 300;
+      letter-spacing: 0.01em;
+      margin-bottom: 2.5rem;
+    }
+
+    .joi-meta {
+      font-size: 0.65rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: rgba(100, 148, 220, 0.3);
+      margin-bottom: 2.5rem;
+    }
+
+    .joi-feedback-zona {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .joi-btn-feedback {
+      font-size: 0.7rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      padding: 0.55rem 1.4rem;
+      border-radius: 2px;
+      border: 1px solid rgba(100, 148, 220, 0.25);
+      background: transparent;
+      color: rgba(140, 175, 225, 0.55);
+      cursor: pointer;
+      transition: border-color 0.3s, color 0.3s;
+      font-family: inherit;
+    }
+    .joi-btn-feedback:hover {
+      border-color: rgba(100, 148, 220, 0.6);
+      color: rgba(180, 210, 245, 0.9);
+    }
+    .joi-btn-feedback.ya-enviado {
+      pointer-events: none;
+      opacity: 0.3;
+    }
+
+    .joi-respuesta-feedback {
+      display: none;
+      font-size: 0.78rem;
+      letter-spacing: 0.12em;
+      color: rgba(100, 148, 220, 0.6);
+      margin-top: 1.5rem;
+      font-style: italic;
+      animation: aparecer 0.8s ease forwards;
+    }
+
+    .joi-feedback-pasado {
+      font-size: 0.65rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: rgba(100, 148, 220, 0.28);
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+<div class="habitacion-wrap">
+
+  {% if estado == 'calla' %}
+  <div class="vigilia-contenedor" aria-label="JOI presente en silencio">
+    <div class="vigilia-anillo-ext"></div>
+    <div class="vigilia-anillo-med"></div>
+    <div class="vigilia-anillo-int"></div>
+    <div class="vigilia-punto"></div>
+  </div>
+  <p class="vigilia-texto">Presente. Observando.</p>
+
+  {% else %}
+  <div class="joi-mensaje-wrap">
+
+    <div class="joi-linea" aria-hidden="true"></div>
+
+    <p class="joi-mensaje-texto">{{ mensaje.mensaje }}</p>
+
+    <p class="joi-meta">{{ mensaje.creado_en|date:"j N · H:i" }}</p>
+
+    {% if mensaje.feedback %}
+      <p class="joi-feedback-pasado">
+        {% if mensaje.feedback == 'clavado' %}Lo has clavado{% else %}Te has equivocado{% endif %}
+      </p>
+    {% else %}
+      <div class="joi-feedback-zona" id="feedback-zona">
+        <button class="joi-btn-feedback" onclick="enviarFeedback('clavado', {{ mensaje.id }})">
+          Lo has clavado
+        </button>
+        <button class="joi-btn-feedback" onclick="enviarFeedback('equivocado', {{ mensaje.id }})">
+          Te has equivocado
+        </button>
+      </div>
+      <p class="joi-respuesta-feedback" id="joi-respuesta"></p>
+    {% endif %}
+
+  </div>
+  {% endif %}
+
+</div>
+
+<script>
+const CSRF = '{{ csrf_token }}';
+
+async function enviarFeedback(tipo, mensajeId) {
+  const zona   = document.getElementById('feedback-zona');
+  const respEl = document.getElementById('joi-respuesta');
+
+  zona.querySelectorAll('button').forEach(b => b.classList.add('ya-enviado'));
+
+  try {
+    const res = await fetch(`/joi/mensaje/${mensajeId}/feedback/`, {
+      method:  'POST',
+      headers: { 'X-CSRFToken': CSRF, 'Content-Type': 'application/x-www-form-urlencoded' },
+      body:    `feedback=${tipo}`,
+    });
+    const data = await res.json();
+    if (data.ok) {
+      zona.style.display = 'none';
+      respEl.textContent = data.respuesta;
+      respEl.style.display = 'block';
+    }
+  } catch (_) {
+    zona.querySelectorAll('button').forEach(b => b.classList.remove('ya-enviado'));
+  }
+}
+</script>
+</body>
+</html>
