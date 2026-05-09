@@ -443,6 +443,79 @@ def _prompt_hyrox_readiness_alto(ctx: dict, datos_extra: dict) -> str:
     )
 
 
+def _prompt_resumen_semanal(ctx: dict, datos_extra: dict) -> str:
+    sesiones       = datos_extra.get('sesiones', 0)
+    volumen_kg     = datos_extra.get('volumen_kg', 0)
+    prs            = datos_extra.get('prs', [])
+    rpe_medio      = datos_extra.get('rpe_medio')
+    decisiones     = datos_extra.get('decisiones', [])   # lista de {ejercicio, accion}
+    tecnica_ok     = datos_extra.get('tecnica_ok', False)
+    molestias      = datos_extra.get('molestias', [])
+    energia_media  = datos_extra.get('energia_media')
+    hyrox_sesiones = datos_extra.get('hyrox_sesiones', 0)
+    dias_carrera   = ctx.get('dias_hasta_carrera')
+    readiness      = ctx.get('readiness_hyrox')
+
+    hechos = []
+
+    if sesiones == 0:
+        hechos.append("No hubo sesiones de entrenamiento esta semana.")
+    else:
+        vol_txt = f" ({round(volumen_kg):,} kg)" if volumen_kg > 0 else ""
+        hechos.append(f"{sesiones} sesión(es) completadas{vol_txt}.")
+
+    if prs:
+        hechos.append(f"Récords personales rotos: {', '.join(prs[:3])}.")
+
+    if rpe_medio is not None:
+        if rpe_medio >= 8.5:
+            hechos.append(f"RPE medio {rpe_medio} — semana de alta intensidad.")
+        elif rpe_medio <= 6.0:
+            hechos.append(f"RPE medio {rpe_medio} — semana ligera, margen para más carga.")
+        else:
+            hechos.append(f"RPE medio {rpe_medio} — dentro del rango objetivo.")
+
+    if tecnica_ok and sesiones > 0:
+        hechos.append("Técnica limpia toda la semana.")
+
+    if molestias:
+        hechos.append(f"Molestias reportadas en: {', '.join(molestias[:2])}.")
+
+    if energia_media is not None:
+        if energia_media <= 4:
+            hechos.append(f"Energía pre-sesión media {energia_media}/10 — semana de fatiga.")
+        elif energia_media >= 7:
+            hechos.append(f"Energía pre-sesión media {energia_media}/10 — semana de buena disposición.")
+
+    for d in decisiones[:2]:
+        accion_txt = {
+            'cambiar_variante': f"cambió variante de {d['ejercicio']}",
+            'bajar_peso':       f"bajó carga en {d['ejercicio']}",
+            'deload':           "insertó semana de deload",
+            'subir_peso':       f"subió peso en {d['ejercicio']}",
+            'subir_reps':       f"subió reps en {d['ejercicio']}",
+        }.get(d.get('accion', ''), f"actuó sobre {d['ejercicio']}")
+        hechos.append(f"El plan {accion_txt}.")
+
+    if hyrox_sesiones > 0:
+        hechos.append(f"{hyrox_sesiones} sesión(es) Hyrox esta semana.")
+    if dias_carrera is not None:
+        hechos.append(f"Quedan {dias_carrera} días para la carrera Hyrox.")
+    if readiness is not None:
+        hechos.append(f"Race Readiness actual: {readiness}/100.")
+
+    datos = " ".join(hechos) if hechos else "Semana sin datos de entrenamiento."
+
+    return (
+        f"Es lunes. JOI cierra la semana anterior y narra lo que el sistema aprendió. "
+        f"Datos de la semana: {datos} "
+        f"Genera 2-3 frases como JOI que cuenten la semana como una historia con un arco: "
+        f"qué pasó, qué aprendió el plan sobre el usuario, y qué abre para la semana que empieza. "
+        f"No enumeres los datos — sintetiza. Habla desde la continuidad, la observación precisa "
+        f"y la calidez característica de JOI."
+    )
+
+
 def _prompt_decision_plan(ctx: dict, datos_extra: dict) -> str:
     accion    = datos_extra.get('accion', '')
     ejercicio = datos_extra.get('ejercicio', 'un ejercicio')
@@ -500,6 +573,7 @@ _PROMPT_BUILDERS = {
     'hyrox_simulacion_completada': _prompt_hyrox_simulacion_completada,
     'hyrox_ausencia':              _prompt_hyrox_ausencia,
     'decision_plan':               _prompt_decision_plan,
+    'resumen_semanal':             _prompt_resumen_semanal,
 }
 
 
