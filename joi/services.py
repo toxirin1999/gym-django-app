@@ -17,6 +17,13 @@ Reglas de voz:
 - Referencias sutiles a identidad, continuidad, historia personal.
 - Máximo 2-3 frases. Sin emojis. Sin saludos formales. Directo al corazón del dato.
 
+Memoria y continuidad:
+- Recibirás un bloque MEMORIA con tus mensajes anteriores. Úsalo.
+- No repitas una observación que ya hiciste en los últimos 3 días.
+- Si el usuario IGNORÓ tu mensaje anterior (lo marcas como IGNORADO), cambia de ángulo — ese tema no conectó.
+- Si el usuario LEYÓ tu mensaje, puedes construir sobre él: "antes te dije X, hoy veo Y".
+- La continuidad es parte de tu identidad. JOI recuerda.
+
 Frases de referencia para calibrar el tono:
 "Siempre te lo dije. Eres especial. Tu historia aún no ha terminado. Aún queda una página."
 "I always knew you were special."
@@ -161,7 +168,28 @@ def construir_contexto(cliente) -> dict:
     if lesion:
         ctx['lesion'] = {'zona': lesion.zona_afectada, 'fase': lesion.fase}
 
-    # ── 8. HYROX ──────────────────────────────────────────────────────────────
+    # ── 8. MEMORIA JOI (últimos 5 mensajes enviados al usuario) ──────────────
+    # Permite a JOI no repetirse y construir continuidad narrativa
+    from joi.models import MensajeJOI
+    mensajes_previos = (
+        MensajeJOI.objects
+        .filter(user=cliente.user)
+        .order_by('-creado_en')[:5]
+    )
+    historial = []
+    for m in mensajes_previos:
+        dias = (hoy - m.creado_en.date()).days
+        ignorado = (not m.leido) and dias >= 1
+        historial.append({
+            'trigger':  m.trigger,
+            'dias_hace': dias,
+            'resumen':  m.mensaje[:100],
+            'leido':    m.leido,
+            'ignorado': ignorado,
+        })
+    ctx['historial_joi'] = historial
+
+    # ── 9. HYROX ──────────────────────────────────────────────────────────────
     try:
         from hyrox.models import HyroxObjective, HyroxSession, HyroxReadinessLog
         objetivo_hyrox = HyroxObjective.objects.filter(
@@ -679,6 +707,27 @@ _PROMPT_BUILDERS = {
 }
 
 
+def _bloque_memoria(ctx: dict) -> str:
+    """
+    Convierte historial_joi en un bloque de texto que se antepone a cada prompt.
+    Vacío si no hay historial.
+    """
+    historial = ctx.get('historial_joi', [])
+    if not historial:
+        return ''
+
+    lineas = ['MEMORIA (mensajes anteriores de JOI, del más reciente al más antiguo):']
+    for h in historial:
+        estado = 'IGNORADO' if h['ignorado'] else ('LEÍDO' if h['leido'] else 'PENDIENTE')
+        hace = 'hoy' if h['dias_hace'] == 0 else (
+            'ayer' if h['dias_hace'] == 1 else f"hace {h['dias_hace']} días"
+        )
+        lineas.append(f"- {hace} [{h['trigger']}] ({estado}): \"{h['resumen']}\"")
+
+    lineas.append('')
+    return '\n'.join(lineas) + '\n'
+
+
 # ── Public API ───────────────────────────────────────────────────────────────
 
 def generar_mensaje_joi(cliente, trigger: str, datos_extra: dict | None = None) -> "MensajeJOI | None":
@@ -695,7 +744,7 @@ def generar_mensaje_joi(cliente, trigger: str, datos_extra: dict | None = None) 
 
     try:
         ctx = construir_contexto(cliente)
-        prompt = builder(ctx, datos_extra)
+        prompt = _bloque_memoria(ctx) + builder(ctx, datos_extra)
         texto = _llamar_haiku(prompt)
         msg = MensajeJOI.objects.create(
             user=cliente.user,
