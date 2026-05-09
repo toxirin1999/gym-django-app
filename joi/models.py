@@ -108,3 +108,32 @@ class MensajeJOI(models.Model):
 
     def __str__(self):
         return f"JOI → {self.user.username} [{self.trigger}] {self.creado_en.date()}"
+
+
+class ManualDavid(models.Model):
+    """
+    Lo que JOI ha aprendido sobre cómo leer al usuario.
+    Se actualiza cuando el usuario corrige una interpretación errónea.
+    Se poda mensualmente: el usuario decide qué sigue siendo verdad.
+    """
+    ORIGEN_CHOICES = [
+        ('feedback_error',   'Corrección de interpretación'),
+        ('patron_detectado', 'Patrón deducido por JOI'),
+    ]
+
+    user           = models.ForeignKey(User, on_delete=models.CASCADE, related_name='manual_david')
+    entrada        = models.TextField(help_text="Lo que JOI aprendió, en una frase.")
+    origen         = models.CharField(max_length=20, choices=ORIGEN_CHOICES)
+    activa         = models.BooleanField(default=True)
+    fuente_mensaje = models.ForeignKey(
+        'MensajeJOI', null=True, blank=True, on_delete=models.SET_NULL,
+        related_name='entradas_manual',
+    )
+    creado_en      = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['creado_en']
+
+    def __str__(self):
+        estado = 'activa' if self.activa else 'podada'
+        return f"Manual [{self.origen}] {self.user.username}: {self.entrada[:60]} ({estado})"

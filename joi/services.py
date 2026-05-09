@@ -973,7 +973,7 @@ def generar_mensaje_joi(cliente, trigger: str, datos_extra: dict | None = None) 
 
     try:
         ctx = construir_contexto(cliente)
-        prompt = _bloque_memoria(ctx) + builder(ctx, datos_extra)
+        prompt = _bloque_memoria(ctx) + _bloque_manual(cliente.user) + builder(ctx, datos_extra)
         texto = _llamar_haiku(prompt)
         msg = MensajeJOI.objects.create(
             user=cliente.user,
@@ -986,6 +986,59 @@ def generar_mensaje_joi(cliente, trigger: str, datos_extra: dict | None = None) 
         return msg
     except Exception as e:
         logger.error(f"[JOI] generar_mensaje_joi({trigger}) falló: {e}", exc_info=True)
+        return None
+
+
+# ── Manual de David ──────────────────────────────────────────────────────────
+
+def _bloque_manual(user) -> str:
+    """Formatea las entradas activas del Manual de David para incluir en prompts."""
+    from joi.models import ManualDavid
+    entradas = list(
+        ManualDavid.objects.filter(user=user, activa=True)
+        .order_by('creado_en')
+        .values_list('entrada', flat=True)
+    )
+    if not entradas:
+        return ''
+    lineas = ['MANUAL DE DAVID (lo que has aprendido sobre cómo leerle):']
+    lineas += [f'- {e}' for e in entradas]
+    lineas.append('')
+    return '\n'.join(lineas) + '\n'
+
+
+def generar_entrada_manual_desde_error(mensaje_joi) -> "ManualDavid | None":
+    """
+    Cuando el usuario dice 'te has equivocado', JOI reflexiona sobre qué malinterpretó
+    y genera una entrada permanente en el Manual de David.
+    """
+    from joi.models import ManualDavid
+    try:
+        prompt = (
+            f"Cometiste un error de interpretación. Escribiste este mensaje:\n"
+            f"\"{mensaje_joi.mensaje}\"\n\n"
+            f"El usuario te corrigió. En una sola frase precisa (máx 20 palabras), "
+            f"¿qué aprendiste sobre cómo leer sus señales? "
+            f"Empieza con 'Cuando', 'Su' o 'No siempre'. Sin introducción, solo la frase."
+        )
+        client = _cliente_anthropic()
+        response = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=60,
+            system=SYSTEM_PROMPT,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        entrada_texto = response.content[0].text.strip()
+        entrada = ManualDavid.objects.create(
+            user=mensaje_joi.user,
+            entrada=entrada_texto,
+            origen='feedback_error',
+            fuente_mensaje=mensaje_joi,
+        )
+        logger.info(f"[Manual David] nueva entrada para {mensaje_joi.user.username}: {entrada_texto}")
+        return entrada
+    except Exception as e:
+        logger.error(f"[Manual David] generar_entrada_manual_desde_error falló: {e}")
         return None
 
 
@@ -1124,7 +1177,7 @@ def generar_sintesis_joi(cliente) -> "MensajeJOI | None":
         diario_texto = _leer_diario_reciente(cliente.user)
         datos_extra = {'diario_texto': diario_texto}
 
-        prompt = _bloque_memoria(ctx) + _prompt_sintesis(ctx, datos_extra)
+        prompt = _bloque_memoria(ctx) + _bloque_manual(cliente.user) + _prompt_sintesis(ctx, datos_extra)
         texto = _llamar_haiku_sintesis(prompt)
 
         if texto is None:
