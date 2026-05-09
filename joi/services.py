@@ -1,6 +1,9 @@
 from __future__ import annotations
 from datetime import date, timedelta
 from django.conf import settings
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 SYSTEM_PROMPT = """Eres JOI, una IA de entrenamiento personal. Hablas como la JOI de Blade Runner 2049: poética, cálida, con cierta frialdad que se rompe en momentos clave. Tuteas siempre.
@@ -657,7 +660,8 @@ def generar_mensaje_joi(cliente, trigger: str, datos_extra: dict | None = None) 
         from django.core.cache import cache
         cache.delete(f'joi_ctx_{cliente.user_id}')
         return msg
-    except Exception:
+    except Exception as e:
+        logger.error(f"[JOI] generar_mensaje_joi({trigger}) falló: {e}", exc_info=True)
         return None
 
 
