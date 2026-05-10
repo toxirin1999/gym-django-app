@@ -16,7 +16,7 @@
     html, body {
       height: 100%;
       background: #090910;
-      color: rgba(210, 220, 235, 0.92);
+      color: rgba(232, 240, 252, 1);
       font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
       -webkit-font-smoothing: antialiased;
     }
@@ -109,7 +109,7 @@
       font-size: 0.7rem;
       letter-spacing: 0.25em;
       text-transform: uppercase;
-      color: rgba(140, 170, 215, 0.35);
+      color: rgba(180, 205, 240, 0.75);
       text-align: center;
       margin-top: 0.5rem;
       font-weight: 300;
@@ -141,19 +141,20 @@
     }
 
     .joi-mensaje-texto {
-      font-size: clamp(1.05rem, 2.8vw, 1.3rem);
+      font-size: clamp(1.1rem, 2.8vw, 1.35rem);
       line-height: 1.75;
-      color: rgba(210, 220, 235, 0.92);
-      font-weight: 300;
-      letter-spacing: 0.01em;
+      color: rgba(240, 246, 255, 1);
+      font-weight: 400;
+      letter-spacing: 0.015em;
       margin-bottom: 2.5rem;
+      text-shadow: 0 0 18px rgba(100, 148, 220, 0.18);
     }
 
     .joi-meta {
       font-size: 0.65rem;
       letter-spacing: 0.2em;
       text-transform: uppercase;
-      color: rgba(130, 165, 220, 0.55);
+      color: rgba(170, 200, 240, 0.85);
       margin-bottom: 2.5rem;
     }
 
@@ -170,9 +171,9 @@
       text-transform: uppercase;
       padding: 0.55rem 1.4rem;
       border-radius: 2px;
-      border: 1px solid rgba(100, 148, 220, 0.5);
+      border: 1px solid rgba(130, 170, 230, 0.75);
       background: transparent;
-      color: rgba(160, 195, 240, 0.85);
+      color: rgba(220, 232, 250, 1);
       cursor: pointer;
       transition: border-color 0.3s, color 0.3s, background 0.3s;
       font-family: inherit;
@@ -191,7 +192,7 @@
       display: none;
       font-size: 0.78rem;
       letter-spacing: 0.12em;
-      color: rgba(130, 175, 240, 0.8);
+      color: rgba(180, 210, 250, 1);
       margin-top: 1.5rem;
       font-style: italic;
       animation: aparecer 0.8s ease forwards;
@@ -201,7 +202,7 @@
       font-size: 0.65rem;
       letter-spacing: 0.18em;
       text-transform: uppercase;
-      color: rgba(130, 165, 220, 0.55);
+      color: rgba(170, 200, 240, 0.85);
       text-align: center;
     }
 
@@ -222,23 +223,23 @@
       flex: 1;
       background: transparent;
       border: none;
-      border-bottom: 1px solid rgba(100, 148, 220, 0.18);
-      color: rgba(200, 215, 240, 0.7);
-      font-size: 0.75rem;
+      border-bottom: 1px solid rgba(130, 170, 230, 0.4);
+      color: rgba(230, 240, 255, 1);
+      font-size: 0.8rem;
       font-family: inherit;
       padding: 0.4rem 0.2rem;
       outline: none;
       transition: border-color 0.3s;
       letter-spacing: 0.04em;
     }
-    .mood-input::placeholder { color: rgba(100, 148, 220, 0.25); }
+    .mood-input::placeholder { color: rgba(150, 180, 225, 0.55); }
     .mood-input:focus { border-bottom-color: rgba(100, 148, 220, 0.45); }
 
     .mood-btn {
       background: transparent;
       border: none;
-      color: rgba(100, 148, 220, 0.3);
-      font-size: 0.7rem;
+      color: rgba(160, 195, 235, 0.8);
+      font-size: 0.85rem;
       cursor: pointer;
       font-family: inherit;
       letter-spacing: 0.12em;
@@ -252,7 +253,7 @@
       font-size: 0.65rem;
       letter-spacing: 0.18em;
       text-transform: uppercase;
-      color: rgba(100, 148, 220, 0.35);
+      color: rgba(170, 200, 240, 0.85);
       text-align: center;
       animation: aparecer 0.6s ease forwards;
     }
@@ -283,10 +284,10 @@
       <a href="/joi/manual/"
          style="display:inline-block;font-size:0.7rem;letter-spacing:0.18em;
                 text-transform:uppercase;padding:0.55rem 1.4rem;border-radius:2px;
-                border:1px solid rgba(100,148,220,0.35);color:rgba(140,175,225,0.7);
+                border:1px solid rgba(130,170,230,0.7);color:rgba(220,232,250,1);
                 text-decoration:none;transition:border-color .3s,color .3s;"
          onmouseover="this.style.borderColor='rgba(100,148,220,0.7)';this.style.color='rgba(180,210,245,.95)'"
-         onmouseout="this.style.borderColor='rgba(100,148,220,0.35)';this.style.color='rgba(140,175,225,0.7)'">
+         onmouseout="this.style.borderColor='rgba(130,170,230,0.7)';this.style.color='rgba(220,232,250,1)'">
         revisar el manual →
       </a>
     {% elif mensaje.feedback %}
@@ -322,19 +323,19 @@
 
 <a href="/clientes/mockup-demo/"
    style="position:fixed;bottom:1.8rem;left:1.8rem;font-size:0.6rem;letter-spacing:0.2em;
-          text-transform:uppercase;color:rgba(130,170,230,0.5);text-decoration:none;
+          text-transform:uppercase;color:rgba(190,215,245,0.9);text-decoration:none;
           transition:color .25s;"
    onmouseover="this.style.color='rgba(180,210,255,0.9)'"
-   onmouseout="this.style.color='rgba(130,170,230,0.5)'">
+   onmouseout="this.style.color='rgba(190,215,245,0.9)'">
   ← panel
 </a>
 
 <a href="/joi/manual/"
    style="position:fixed;bottom:1.8rem;right:1.8rem;font-size:0.6rem;letter-spacing:0.2em;
-          text-transform:uppercase;color:rgba(130,170,230,0.5);text-decoration:none;
+          text-transform:uppercase;color:rgba(190,215,245,0.9);text-decoration:none;
           transition:color .25s;"
    onmouseover="this.style.color='rgba(180,210,255,0.9)'"
-   onmouseout="this.style.color='rgba(130,170,230,0.5)'">
+   onmouseout="this.style.color='rgba(190,215,245,0.9)'">
   lo que sé de ti
 </a>
 
