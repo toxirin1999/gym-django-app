@@ -1077,6 +1077,58 @@ def generar_entrada_manual_desde_error(mensaje_joi) -> "ManualDavid | None":
         return None
 
 
+def generar_tema_abierto(user, mensaje_joi) -> "ManualDavid | None":
+    """
+    Cuando JOI genera una síntesis con carga emocional significativa,
+    extrae el tema central y lo persiste en el Manual de David como
+    asunto abierto — sin expiración, hasta que el usuario lo pode.
+
+    A diferencia de generar_entrada_manual_desde_error (que aprende de
+    errores de JOI), esta función captura temas del usuario que JOI
+    debe seguir recordando aunque salgan de la ventana de 7 días.
+    """
+    from joi.models import ManualDavid
+    try:
+        prompt = (
+            f"JOI acaba de generar este mensaje tras analizar el diario:\n"
+            f"\"{mensaje_joi.mensaje}\"\n\n"
+            f"¿Identifica este mensaje un tema emocional abierto o un patrón no resuelto "
+            f"(conflicto, discrepancia persistente, asunto pendiente de procesar)?\n\n"
+            f"Si sí: escribe UNA frase que empiece con 'Tema abierto:' y resuma el asunto "
+            f"en máx 20 palabras. Esta frase quedará en memoria indefinidamente.\n"
+            f"Si no hay nada significativo: responde exactamente [SKIP]."
+        )
+        client = _cliente_anthropic()
+        response = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=60,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        texto = response.content[0].text.strip()
+
+        if '[SKIP]' in texto or not texto.startswith('Tema'):
+            return None
+
+        # Evitar duplicados: no añadir si ya hay una entrada activa muy similar
+        ya_existe = ManualDavid.objects.filter(
+            user=user, activa=True, entrada__icontains=texto[12:35]
+        ).exists()
+        if ya_existe:
+            return None
+
+        entrada = ManualDavid.objects.create(
+            user=user,
+            entrada=texto,
+            origen='patron_detectado',
+            fuente_mensaje=mensaje_joi,
+        )
+        logger.info(f"[Manual David] tema abierto para {user.username}: {texto}")
+        return entrada
+    except Exception as e:
+        logger.error(f"[Manual David] generar_tema_abierto falló: {e}")
+        return None
+
+
 # ── Síntesis autónoma (JOI en su propio tiempo) ──────────────────────────────
 
 _MESES_ES = {
@@ -1675,6 +1727,11 @@ def generar_sintesis_joi(cliente) -> "MensajeJOI | None":
 
         try:
             extraer_entidades_simbiosis(cliente.user)
+        except Exception:
+            pass
+
+        try:
+            generar_tema_abierto(cliente.user, msg)
         except Exception:
             pass
 
