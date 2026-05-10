@@ -1206,13 +1206,49 @@ def _sintetizador_contexto_vital(user) -> dict:
             if habitos_pos:
                 dias_rango = list(range(max(1, hoy.day - 6), hoy.day + 1))
                 total_posible = len(habitos_pos) * len(dias_rango)
-                completados = ProsocheHabitoDia.objects.filter(
+                completados_total = ProsocheHabitoDia.objects.filter(
                     habito__in=habitos_pos,
                     dia__in=dias_rango,
                     completado=True,
                 ).count()
                 if total_posible > 0:
-                    resultado['habitos_pct'] = round(completados / total_posible * 100)
+                    resultado['habitos_pct'] = round(completados_total / total_posible * 100)
+
+                # Detalle por hábito: racha actual + días fallados esta semana
+                detalle = []
+                for habito in habitos_pos:
+                    # Todos los días completados del mes
+                    dias_ok = set(
+                        ProsocheHabitoDia.objects
+                        .filter(habito=habito, completado=True)
+                        .values_list('dia', flat=True)
+                    )
+                    # Racha actual: días consecutivos hacia atrás desde hoy
+                    racha = 0
+                    d = hoy.day
+                    while d >= 1 and d in dias_ok:
+                        racha += 1
+                        d -= 1
+
+                    # Días fallados en la última semana
+                    fallados_semana = [
+                        dia for dia in dias_rango if dia not in dias_ok
+                    ]
+                    # Días completados en la última semana
+                    completados_semana = [
+                        dia for dia in dias_rango if dia in dias_ok
+                    ]
+
+                    detalle.append({
+                        'nombre': habito.nombre,
+                        'racha': racha,
+                        'completados_semana': completados_semana,
+                        'fallados_semana': fallados_semana,
+                        'pct_semana': round(
+                            len(completados_semana) / len(dias_rango) * 100
+                        ) if dias_rango else 0,
+                    })
+                resultado['habitos_detalle'] = detalle
     except Exception:
         pass
 
@@ -1706,11 +1742,18 @@ def _prompt_sintesis(ctx: dict, datos_extra: dict) -> str:
         if objetivos:
             lineas.append(f"OBJETIVOS DEL MES: {' | '.join(o[:80] for o in objetivos)}")
 
-        pct = vital.get('habitos_pct')
-        habitos_activos = vital.get('habitos_activos', [])
-        if pct is not None:
-            habitos_str = f" ({', '.join(habitos_activos[:4])})" if habitos_activos else ''
-            lineas.append(f"HÁBITOS: {pct}% cumplimiento últimos 7 días{habitos_str}.")
+        detalle = vital.get('habitos_detalle', [])
+        if detalle:
+            lineas.append('HÁBITOS (últimos 7 días):')
+            for h in detalle:
+                racha_str = f"racha {h['racha']}d" if h['racha'] > 0 else "racha rota"
+                fallados = h['fallados_semana']
+                fallados_str = f" | fallado días: {fallados}" if fallados else " | sin fallos"
+                lineas.append(
+                    f"  - {h['nombre']}: {h['pct_semana']}% — {racha_str}{fallados_str}"
+                )
+        elif vital.get('habitos_pct') is not None:
+            lineas.append(f"HÁBITOS: {vital['habitos_pct']}% cumplimiento últimos 7 días.")
 
         tareas_pct = vital.get('tareas_hoy_pct')
         if tareas_pct is not None:
