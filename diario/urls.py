@@ -35,22 +35,13 @@ urlpatterns = [
     path('eudaimonia/actualizar/', views.eudaimonia_actualizar, name='eudaimonia_actualizar'),
     path('eudaimonia/crear/', views.eudaimonia_crear_area, name='eudaimonia_crear_area'),
     # ========================================
-    # ARETÉ - Desarrollo Personal
-    # ========================================
-    path('arete/', views.arete_dashboard, name='arete_dashboard'),
-    path('arete/ejercicio/<int:ejercicio_id>/', views.arete_ejercicio_actualizar, name='arete_ejercicio_actualizar'),
-
-    # ========================================
-    # GNOSIS - Gestión de Conocimiento
-    # ========================================
-    path('gnosis/', views.gnosis_dashboard, name='gnosis_dashboard'),
-    path('gnosis/crear/', views.gnosis_crear, name='gnosis_crear'),
-
-    # ========================================
-    # VIRES - Salud y Deporte
-    # ========================================
-    path('vires/', views.vires_dashboard, name='vires_dashboard'),
-    path('vires/seguimiento/crear/', views.vires_seguimiento_crear, name='vires_seguimiento_crear'),
+    # ARETÉ, GNOSIS, VIRES — ocultos (datos preservados, UI desactivada)
+    # path('arete/', views.arete_dashboard, name='arete_dashboard'),
+    # path('arete/ejercicio/<int:ejercicio_id>/', views.arete_ejercicio_actualizar, name='arete_ejercicio_actualizar'),
+    # path('gnosis/', views.gnosis_dashboard, name='gnosis_dashboard'),
+    # path('gnosis/crear/', views.gnosis_crear, name='gnosis_crear'),
+    # path('vires/', views.vires_dashboard, name='vires_dashboard'),
+    # path('vires/seguimiento/crear/', views.vires_seguimiento_crear, name='vires_seguimiento_crear'),
 
     # ========================================
     # KAIROS - Calendario y Eventos

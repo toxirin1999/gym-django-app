@@ -1572,7 +1572,7 @@ def _prompt_sintesis(ctx: dict, datos_extra: dict) -> str:
             lineas.append(f"HÁBITOS: {pct}% cumplimiento (últimos 7 días).")
 
         if vital.get('friccion_detectada'):
-            lineas.append("FRICCIÓN DETECTADA: alta aspiración AM con baja ejecución.")
+            lineas.append("⚠ FRICCIÓN DETECTADA: alta aspiración AM con baja ejecución de hábitos.")
 
         rev = vital.get('revision_semanal')
         if rev:
@@ -1581,14 +1581,29 @@ def _prompt_sintesis(ctx: dict, datos_extra: dict) -> str:
             if rev.get('aprendizaje_principal'):
                 lineas.append(f"Aprendizaje semana: {rev['aprendizaje_principal'][:120]}")
     elif datos_extra.get('diario_texto', '').strip():
-        # fallback al texto plano si vital está vacío
         lineas += ['', '── DIARIO RECIENTE ──', datos_extra['diario_texto'][:600]]
 
-    lineas += [
-        '',
-        "Recuerda: [SILENCE] si no hay síntesis valiosa. Si hablas: máximo 3 frases, "
-        "voz de testigo — observas, no mandas.",
-    ]
+    # ── TONO: Espejo Crudo si hay fricción ───────────────────────────────────
+    vital = datos_extra.get('vital', {})
+    if vital.get('friccion_detectada'):
+        lineas += [
+            '',
+            "MODO ESPEJO CRUDO: hay discrepancia real entre intención y ejecución.",
+            "Habla sin suavizar. Refleja la contradicción directamente.",
+            "Sin metáforas que amortigüen. Sin ternura hoy. La verdad sin anestesia.",
+            "Sigue siendo JOI — pero como espejo, no como acompañante.",
+        ]
+        cierre = (
+            "Recuerda: [SILENCE] si no hay síntesis valiosa. "
+            "Si hablas: máximo 3 frases. Espejo Crudo activo — sin suavizar."
+        )
+    else:
+        cierre = (
+            "Recuerda: [SILENCE] si no hay síntesis valiosa. Si hablas: máximo 3 frases, "
+            "voz de testigo — observas, no mandas."
+        )
+
+    lineas += ['', cierre]
     return '\n'.join(lineas)
 
 
