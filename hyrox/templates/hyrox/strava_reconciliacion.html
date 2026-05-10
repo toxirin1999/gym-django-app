@@ -440,6 +440,57 @@
     </div>
     {% endif %}
 
+    <!-- BÚSQUEDA MANUAL: todos los entrenos no sincronizados -->
+    <div style="margin-bottom:10px;">
+      <button type="button"
+        onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'"
+        style="font-family:var(--font-mono);font-size:9px;font-weight:700;letter-spacing:.1em;
+               text-transform:uppercase;color:var(--ink-3);background:none;border:none;
+               cursor:pointer;padding:0;display:flex;align-items:center;gap:5px;margin-bottom:6px;">
+        <i class="fas fa-search"></i> Buscar entreno manualmente ({{ gym_sin_sync|length }} sin sincronizar)
+      </button>
+      <div style="display:none;max-height:220px;overflow-y:auto;border:1px solid var(--line);border-radius:3px;padding:6px;">
+        {% for e in gym_sin_sync %}
+        <div style="display:flex;align-items:center;justify-content:space-between;
+                    padding:6px 8px;border-bottom:1px solid var(--line);gap:8px;">
+          <div style="flex:1;min-width:0;">
+            <span style="font-weight:600;font-size:12px;display:block;">
+              {{ e.nombre_rutina_liftin|default:e.rutina.nombre|default:"Entreno gym" }}
+            </span>
+            <span style="font-family:var(--font-mono);font-size:10px;color:var(--ink-3);">
+              {{ e.fecha|date:"D d/m/Y" }}
+              {% if e.duracion_minutos %} · {{ e.duracion_minutos }} min{% endif %}
+              · {{ e.ejercicios_realizados.count }} ejerc.
+            </span>
+          </div>
+          <button type="button" class="rb-btn rb-btn-ok"
+            style="font-size:9px;padding:4px 8px;white-space:nowrap;flex-shrink:0;"
+            onclick="toggleMergePanel('gym-{{ act.id }}-manual-{{ e.id }}')">
+            <i class="fas fa-code-merge"></i> Fusionar
+          </button>
+        </div>
+        <!-- Panel fusión manual -->
+        <div id="merge-panel-gym-{{ act.id }}-manual-{{ e.id }}"
+             style="display:none;padding:8px;background:var(--paper-2);border-bottom:1px solid var(--line);">
+          <div style="font-family:var(--font-mono);font-size:9px;font-weight:700;color:var(--ink-3);margin-bottom:6px;">
+            Fusionar "{{ e.nombre_rutina_liftin|default:e.rutina.nombre|default:'Entreno gym' }}" ({{ e.fecha|date:"d/m/Y" }}) con esta actividad Strava
+          </div>
+          <button class="rb-btn rb-btn-ok" style="font-size:10px;"
+            onclick="procesarActividad({{ act.id }}, 'merge_gym', {
+              entreno_id: '{{ e.id }}',
+              override_tiempo: 'strava',
+              override_hr_media: 'strava',
+              override_hr_maxima: 'strava'
+            })">
+            <i class="fas fa-check"></i> Confirmar fusión
+          </button>
+        </div>
+        {% empty %}
+        <p style="font-size:11px;color:var(--ink-3);padding:8px;">No hay entrenos pendientes de sincronizar.</p>
+        {% endfor %}
+      </div>
+    </div>
+
     <!-- CREATE ACTIONS -->
     <div style="font-family:var(--font-mono);font-size:9px;font-weight:700;letter-spacing:.1em;
                 text-transform:uppercase;color:var(--ink-3);margin-bottom:8px;">
