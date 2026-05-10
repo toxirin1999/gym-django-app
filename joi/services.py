@@ -1080,47 +1080,90 @@ def generar_entrada_manual_desde_error(mensaje_joi) -> "ManualDavid | None":
 # ── Síntesis autónoma (JOI en su propio tiempo) ──────────────────────────────
 
 def _leer_diario_reciente(user, dias: int = 7) -> str:
-    """Extrae texto libre de entradas de diario recientes."""
+    """
+    Extrae texto libre de las partes del diario que el usuario realmente usa:
+    - ProsocheDiario: journaling mañana + noche (últimos N días)
+    - RevisionSemanal: revisión semanal más reciente
+    - ReflexionLibre: reflexiones de Logos (últimas N)
+    - RecuerdoEmocional: mood input de La Habitación
+    """
     from django.utils import timezone as tz
     limite = tz.now() - timedelta(days=dias)
     fragmentos = []
 
+    # ── Prosoche: journaling diario (mañana + noche) ──────────────────────────
     try:
-        from diario.models import EjercicioArete
-        reflexiones = (
-            EjercicioArete.objects
-            .filter(usuario=user, fecha_completado__gte=limite,
-                    reflexiones__isnull=False)
-            .exclude(reflexiones='')
-            .order_by('-fecha_completado')
-            .values_list('reflexiones', flat=True)[:3]
+        from diario.models import ProsocheDiario
+        entradas = (
+            ProsocheDiario.objects
+            .filter(prosoche_mes__usuario=user, fecha__gte=limite.date())
+            .order_by('-fecha')[:3]
         )
-        fragmentos.extend(r[:200] for r in reflexiones)
+        for e in entradas:
+            partes = []
+            if e.persona_quiero_ser:
+                partes.append(f"Quiero ser: {e.persona_quiero_ser[:150]}")
+            gratitudes = [g for g in [e.gratitud_1, e.gratitud_2, e.gratitud_3] if g]
+            if gratitudes:
+                partes.append(f"Gratitud: {', '.join(gratitudes)[:150]}")
+            if e.felicidad:
+                partes.append(f"Felicidad: {e.felicidad[:150]}")
+            if e.que_puedo_mejorar:
+                partes.append(f"Mejorar: {e.que_puedo_mejorar[:150]}")
+            if e.reflexiones_dia:
+                partes.append(f"Reflexión: {e.reflexiones_dia[:200]}")
+            if partes:
+                fragmentos.append(f"[{e.fecha}] " + ' | '.join(partes))
     except Exception:
         pass
 
+    # ── Revisión semanal más reciente ─────────────────────────────────────────
     try:
-        from diario.models import TriggerHabito
-        aprendizajes = (
-            TriggerHabito.objects
-            .filter(habito__usuario=user, fecha_creacion__gte=limite)
-            .exclude(aprendizaje='')
+        from diario.models import RevisionSemanal
+        revision = (
+            RevisionSemanal.objects
+            .filter(usuario=user, fecha_creacion__gte=limite)
             .order_by('-fecha_creacion')
-            .values_list('aprendizaje', flat=True)[:3]
+            .first()
         )
-        fragmentos.extend(a[:200] for a in aprendizajes)
+        if revision:
+            partes = []
+            if revision.logro_principal:
+                partes.append(f"Logro: {revision.logro_principal[:150]}")
+            if revision.obstaculo_principal:
+                partes.append(f"Obstáculo: {revision.obstaculo_principal[:150]}")
+            if revision.aprendizaje_principal:
+                partes.append(f"Aprendizaje: {revision.aprendizaje_principal[:150]}")
+            if partes:
+                fragmentos.append('[revisión semanal] ' + ' | '.join(partes))
     except Exception:
         pass
 
+    # ── Logos: reflexiones libres ─────────────────────────────────────────────
+    try:
+        from diario.models import ReflexionLibre
+        reflexiones = (
+            ReflexionLibre.objects
+            .filter(usuario=user, fecha__gte=limite)
+            .exclude(contenido='')
+            .order_by('-fecha')[:2]
+        )
+        for r in reflexiones:
+            titulo = f"[{r.titulo}] " if r.titulo else ''
+            fragmentos.append(f"{titulo}{r.contenido[:300]}")
+    except Exception:
+        pass
+
+    # ── Mood input de La Habitación ───────────────────────────────────────────
     try:
         from joi.models import RecuerdoEmocional
         moods = (
             RecuerdoEmocional.objects
             .filter(user=user, fecha__gte=limite)
             .order_by('-fecha')
-            .values_list('contenido', flat=True)[:3]
+            .values_list('contenido', flat=True)[:2]
         )
-        fragmentos.extend(m[:200] for m in moods)
+        fragmentos.extend(moods)
     except Exception:
         pass
 
