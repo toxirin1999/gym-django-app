@@ -2946,7 +2946,8 @@ def strava_procesar(request, actividad_id):
         if ov_tiempo == 'strava' or not entreno.duracion_minutos:
             entreno.duracion_minutos = int(duracion_min)
         entreno.save()
-        # Actualizar hub ActividadRealizada con FC y recalcular carga_ua
+        # Actualizar hub ActividadRealizada con FC, RPE y recalcular carga_ua
+        rpe_manual = _rpe()
         try:
             ar = ActividadRealizada.objects.get(entreno_gym=entreno)
             hr_final = entreno.frecuencia_cardiaca_promedio
@@ -2958,12 +2959,17 @@ def strava_procesar(request, actividad_id):
             if act.hr_maxima and not ar.hr_maxima:
                 ar.hr_maxima = act.hr_maxima
                 update_fields.append('hr_maxima')
-            # TRIMP prevalece sobre sRPE; sRPE como fallback si no hay FC
+            # Guardar RPE manual si el usuario lo seleccionó
+            if rpe_manual and not ar.rpe_medio:
+                ar.rpe_medio = rpe_manual
+                update_fields.append('rpe_medio')
+            # TRIMP prevalece; sRPE como fallback si no hay FC
             if trimp:
                 ar.carga_ua = trimp
                 update_fields.append('carga_ua')
-            elif ar.rpe_medio and not ar.carga_ua:
-                ar.carga_ua = round(ar.rpe_medio * duracion_min, 1)
+            elif (ar.rpe_medio or rpe_manual) and not ar.carga_ua:
+                rpe_carga = ar.rpe_medio or rpe_manual
+                ar.carga_ua = round(rpe_carga * duracion_min, 1)
                 update_fields.append('carga_ua')
             if update_fields:
                 ar.save(update_fields=update_fields)
