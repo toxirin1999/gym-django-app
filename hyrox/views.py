@@ -2419,6 +2419,83 @@ class GetGreetingView(View):
             return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
 
 @login_required
+@require_POST
+def api_registro_recuperacion(request, lesion_id):
+    """AJAX — registra el estado diario de recuperación y devuelve el nuevo estado."""
+    from .models import UserInjury, DailyRecoveryEntry
+    from .services import InjuryPhaseManager
+
+    lesion = get_object_or_404(UserInjury, id=lesion_id, cliente=request.user.cliente_perfil)
+    try:
+        dolor_reposo      = max(0, min(10, int(request.POST.get('dolor_reposo', 0))))
+        dolor_movimiento  = max(0, min(10, int(request.POST.get('dolor_movimiento', 0))))
+        inflamacion       = max(1, min(10, int(request.POST.get('inflamacion', 1))))
+        rango             = max(1, min(10, int(request.POST.get('rango', 5))))
+        notas             = request.POST.get('notas', '').strip()[:300]
+
+        from datetime import date as _date
+        entry, _ = DailyRecoveryEntry.objects.update_or_create(
+            lesion=lesion,
+            fecha=_date.today(),
+            defaults={
+                'dolor_reposo':        dolor_reposo,
+                'dolor_movimiento':    dolor_movimiento,
+                'inflamacion_percibida': inflamacion,
+                'rango_movimiento':    rango,
+                'notas_usuario':       notas or None,
+            }
+        )
+
+        # Evaluar transición de fase automáticamente
+        InjuryPhaseManager.evaluate_phase_transition(lesion)
+        lesion.refresh_from_db()
+
+        # ¿Puede marcarse como recuperada ya?
+        puede_alta = (
+            dolor_reposo == 0 and dolor_movimiento <= 1
+            and inflamacion == 1 and rango >= 8
+        )
+
+        return JsonResponse({
+            'ok': True,
+            'fase': lesion.fase,
+            'activa': lesion.activa,
+            'puede_alta': puede_alta,
+            'msg': f'Registrado. Fase actual: {lesion.fase}.'
+                   + (' Puedes marcar alta.' if puede_alta else ''),
+        })
+    except Exception as e:
+        return JsonResponse({'ok': False, 'msg': str(e)}, status=400)
+
+
+@login_required
+@require_POST
+def api_marcar_recuperada(request, lesion_id):
+    """AJAX — marca la lesión como recuperada."""
+    from .models import UserInjury
+    from django.utils import timezone as tz
+
+    lesion = get_object_or_404(UserInjury, id=lesion_id, cliente=request.user.cliente_perfil)
+    lesion.fase = 'RECUPERADO'
+    lesion.activa = False
+    lesion.fecha_resolucion = tz.now().date()
+    lesion.save()
+
+    from django.core.cache import cache
+    cache.set(f"bio_needs_regen_{lesion.cliente.id}", True, timeout=3600)
+    request.session.pop(f'plan_anual_{lesion.cliente.id}', None)
+    request.session.modified = True
+
+    try:
+        from core.bio_context import BioContextProvider
+        BioContextProvider.force_clean_future_workouts(lesion.cliente)
+    except Exception:
+        pass
+
+    return JsonResponse({'ok': True, 'msg': '¡Recuperado! Las restricciones han desaparecido.'})
+
+
+@login_required
 def reportar_lesion(request):
     cliente = getattr(request.user, 'cliente_perfil', None)
     if not cliente:

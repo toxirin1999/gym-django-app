@@ -1486,6 +1486,14 @@ def mockup_demo(request):
     except Exception:
         context['resumen_semanal_hyrox'] = None
 
+    # ── Sliders lesión para el panel inline ──────────────────────────
+    context['lesion_sliders'] = [
+        {'name': 'dolor_reposo',     'label': 'Dolor en reposo (0=ninguno)', 'min': 0, 'max': 10, 'val': 0},
+        {'name': 'dolor_movimiento', 'label': 'Dolor al mover (0=ninguno)',  'min': 0, 'max': 10, 'val': 0},
+        {'name': 'inflamacion',      'label': 'Inflamación (1=ninguna)',      'min': 1, 'max': 10, 'val': 1},
+        {'name': 'rango',            'label': 'Rango de movimiento (10=completo)', 'min': 1, 'max': 10, 'val': 5},
+    ]
+
     return render(request, 'clientes/mockup_demo.html', context)
 
 

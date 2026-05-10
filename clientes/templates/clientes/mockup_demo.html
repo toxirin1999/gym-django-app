@@ -655,7 +655,62 @@ function joiBannerCerrar(id) {
         <div style="flex:1;min-width:0;">
           <div style="font-size:12px;font-weight:700;color:{% if alerta.nivel == 'critico' %}var(--danger){% elif alerta.nivel == 'alerta' %}var(--warn){% elif alerta.nivel == 'positivo' %}var(--ok){% else %}var(--ink){% endif %};">{{ alerta.titulo }}</div>
           <div style="font-size:11px;color:var(--ink-3);line-height:1.4;margin-top:2px;">{{ alerta.texto }}</div>
-          {% if alerta.url %}
+          {% if alerta.url and alerta.url_label == 'Gestionar lesión' %}
+          {# ── Panel inline de gestión de lesión ── #}
+          {% with lesion=lesion_activa %}
+          <div style="margin-top:8px;">
+            <button onclick="toggleLesionPanel()"
+                    style="font-family:var(--font-mono);font-size:9px;font-weight:700;letter-spacing:.1em;
+                           text-transform:uppercase;padding:4px 10px;border:1.5px solid var(--danger);
+                           background:transparent;color:var(--danger);cursor:pointer;">
+              GESTIONAR LESIÓN ▾
+            </button>
+            <div id="lesion-panel" style="display:none;margin-top:10px;padding:12px;
+                                          background:var(--paper-2);border:1px solid var(--line);
+                                          border-left:2px solid var(--danger);">
+
+              <div style="font-family:var(--font-mono);font-size:9px;color:var(--ink-3);
+                          letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px;">
+                Registro diario · {{ lesion.zona_afectada|title }} · {{ lesion.fase }}
+              </div>
+
+<div style="display:grid;gap:10px;">
+                {% for campo in lesion_sliders %}
+                <label style="display:grid;grid-template-columns:140px 1fr 24px;gap:8px;align-items:center;">
+                  <span style="font-size:10px;color:var(--ink-3);">{{ campo.label }}</span>
+                  <input type="range" id="les-{{ campo.name }}"
+                         min="{{ campo.min }}" max="{{ campo.max }}" value="{{ campo.val }}"
+                         oninput="document.getElementById('val-{{ campo.name }}').textContent=this.value"
+                         style="accent-color:var(--danger);width:100%;">
+                  <span id="val-{{ campo.name }}" style="font-family:var(--font-mono);font-size:11px;font-weight:700;color:var(--ink);text-align:right;">{{ campo.val }}</span>
+                </label>
+                {% endfor %}
+              </div>
+
+              <div style="margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                <button onclick="guardarRegistroLesion({{ lesion.id }})"
+                        style="font-family:var(--font-mono);font-size:9px;font-weight:700;
+                               letter-spacing:.1em;text-transform:uppercase;padding:5px 12px;
+                               background:var(--ink);color:var(--paper);border:none;cursor:pointer;">
+                  GUARDAR HOY
+                </button>
+                <div id="lesion-msg" style="font-size:10px;color:var(--ok);display:none;"></div>
+              </div>
+
+              <div id="lesion-alta-btn" style="display:none;margin-top:8px;padding-top:8px;
+                                                border-top:1px solid var(--line);">
+                <button onclick="marcarRecuperada({{ lesion.id }})"
+                        style="font-family:var(--font-mono);font-size:9px;font-weight:700;
+                               letter-spacing:.1em;text-transform:uppercase;padding:5px 12px;
+                               background:transparent;color:var(--ok);border:1.5px solid var(--ok);
+                               cursor:pointer;">
+                  ✓ MARCAR COMO RECUPERADO
+                </button>
+              </div>
+            </div>
+          </div>
+          {% endwith %}
+          {% elif alerta.url %}
           <a href="{{ alerta.url }}"
              style="display:inline-block;margin-top:6px;font-family:var(--font-mono);font-size:9px;
                     font-weight:700;letter-spacing:.1em;text-transform:uppercase;
@@ -1333,6 +1388,44 @@ function rbSubmitCheckin() {
     errEl.textContent = 'Error de conexión. Intenta de nuevo.';
     errEl.style.display = 'block';
   });
+}
+</script>
+
+<script>
+function toggleLesionPanel(){
+  var p=document.getElementById('lesion-panel');
+  if(p) p.style.display=p.style.display==='none'?'block':'none';
+}
+
+async function guardarRegistroLesion(lesionId){
+  var csrf='{{ csrf_token }}';
+  var data=new URLSearchParams({
+    dolor_reposo:    document.getElementById('les-dolor_reposo').value,
+    dolor_movimiento:document.getElementById('les-dolor_movimiento').value,
+    inflamacion:     document.getElementById('les-inflamacion').value,
+    rango:           document.getElementById('les-rango').value,
+  });
+  var res=await fetch('/hyrox/api/lesion/'+lesionId+'/registro/',{
+    method:'POST',headers:{'X-CSRFToken':csrf},body:data
+  });
+  var d=await res.json();
+  var msg=document.getElementById('lesion-msg');
+  msg.textContent=d.msg;
+  msg.style.display='block';
+  msg.style.color=d.ok?'var(--ok)':'var(--danger)';
+  if(d.ok && d.puede_alta){
+    document.getElementById('lesion-alta-btn').style.display='block';
+  }
+}
+
+async function marcarRecuperada(lesionId){
+  if(!confirm('¿Confirmas que estás recuperado/a?'))return;
+  var csrf='{{ csrf_token }}';
+  var res=await fetch('/hyrox/api/lesion/'+lesionId+'/marcar-recuperada/',{
+    method:'POST',headers:{'X-CSRFToken':csrf}
+  });
+  var d=await res.json();
+  if(d.ok) location.reload();
 }
 </script>
 
