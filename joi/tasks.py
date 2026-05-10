@@ -297,14 +297,18 @@ def ciclo_sintesis_joi(self):
             # Trigger 3: nueva entrada de diario desde el último mensaje
             if not trigger_activo and ultimo_ts:
                 try:
-                    from diario.models import EjercicioArete, TriggerHabito
+                    from diario.models import ProsocheDiario, ReflexionLibre
+                    limite_fecha = ultimo_ts.date() if hasattr(ultimo_ts, 'date') else ultimo_ts
                     if (
-                        EjercicioArete.objects
-                        .filter(usuario=cliente.user, fecha_completado__gte=ultimo_ts)
-                        .exclude(reflexiones='').exists()
+                        # Journaling Prosoche (AM o PM) escrito después del último mensaje
+                        ProsocheDiario.objects
+                        .filter(prosoche_mes__usuario=cliente.user,
+                                fecha__gte=limite_fecha)
+                        .exists()
                         or
-                        TriggerHabito.objects
-                        .filter(habito__usuario=cliente.user, fecha_creacion__gte=ultimo_ts)
+                        # Reflexión libre (Logos)
+                        ReflexionLibre.objects
+                        .filter(usuario=cliente.user, fecha__gte=ultimo_ts)
                         .exists()
                     ):
                         trigger_activo = True
