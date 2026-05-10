@@ -1152,6 +1152,9 @@ def _sintetizador_contexto_vital(user) -> dict:
         'habitos_activos': [],
         'friccion_detectada': False,
         'revision_semanal': None,
+        'objetivos_mes': [],       # 3 objetivos del mes actual
+        'revision_mes': None,      # revisión de fin de mes (si existe)
+        'tareas_hoy_pct': None,    # % tareas completadas hoy
     }
 
     # ── Intenciones AM y realidad PM ─────────────────────────────────────────
@@ -1210,6 +1213,49 @@ def _sintetizador_contexto_vital(user) -> dict:
                 ).count()
                 if total_posible > 0:
                     resultado['habitos_pct'] = round(completados / total_posible * 100)
+    except Exception:
+        pass
+
+    # ── Objetivos del mes + revisión de fin de mes ───────────────────────────
+    try:
+        from diario.models import ProsocheMes
+        mes_nombre = _MESES_ES[hoy.month]
+        mes_obj = ProsocheMes.objects.filter(
+            usuario=user, mes=mes_nombre, año=hoy.year
+        ).first()
+        if mes_obj:
+            objetivos = [o for o in [
+                mes_obj.objetivo_mes_1,
+                mes_obj.objetivo_mes_2,
+                mes_obj.objetivo_mes_3,
+            ] if o]
+            resultado['objetivos_mes'] = objetivos
+
+            # Revisión de fin de mes (si ya se completó)
+            if mes_obj.logro_principal or mes_obj.aprendizaje_principal:
+                resultado['revision_mes'] = {
+                    'logro':      mes_obj.logro_principal or '',
+                    'obstaculo':  mes_obj.obstaculo_principal or '',
+                    'aprendizaje': mes_obj.aprendizaje_principal or '',
+                    'felicidad':  mes_obj.momento_felicidad or '',
+                }
+    except Exception:
+        pass
+
+    # ── Tareas del día: % completadas ────────────────────────────────────────
+    try:
+        from diario.models import ProsocheDiario as PD2
+        entrada_hoy = PD2.objects.filter(
+            prosoche_mes__usuario=user, fecha=hoy
+        ).first()
+        if entrada_hoy and entrada_hoy.tareas_dia:
+            tareas = entrada_hoy.tareas_dia
+            if isinstance(tareas, list) and tareas:
+                completadas = sum(
+                    1 for t in tareas
+                    if isinstance(t, dict) and t.get('completado')
+                )
+                resultado['tareas_hoy_pct'] = round(completadas / len(tareas) * 100)
     except Exception:
         pass
 
@@ -1655,19 +1701,37 @@ def _prompt_sintesis(ctx: dict, datos_extra: dict) -> str:
             if ultimo_pm.get('reflexion'):
                 lineas.append(f"Reflexión noche: {ultimo_pm['reflexion'][:150]}")
 
+        # Objetivos del mes — el norte que no cambia hasta el 1 del próximo mes
+        objetivos = vital.get('objetivos_mes', [])
+        if objetivos:
+            lineas.append(f"OBJETIVOS DEL MES: {' | '.join(o[:80] for o in objetivos)}")
+
         pct = vital.get('habitos_pct')
+        habitos_activos = vital.get('habitos_activos', [])
         if pct is not None:
-            lineas.append(f"HÁBITOS: {pct}% cumplimiento (últimos 7 días).")
+            habitos_str = f" ({', '.join(habitos_activos[:4])})" if habitos_activos else ''
+            lineas.append(f"HÁBITOS: {pct}% cumplimiento últimos 7 días{habitos_str}.")
+
+        tareas_pct = vital.get('tareas_hoy_pct')
+        if tareas_pct is not None:
+            lineas.append(f"TAREAS HOY: {tareas_pct}% completadas.")
 
         if vital.get('friccion_detectada'):
             lineas.append("⚠ FRICCIÓN DETECTADA: alta aspiración AM con baja ejecución de hábitos.")
 
         rev = vital.get('revision_semanal')
-        if rev:
+        if rev and any(rev.values()):
             if rev.get('obstaculo_principal'):
                 lineas.append(f"Obstáculo semana: {rev['obstaculo_principal'][:120]}")
             if rev.get('aprendizaje_principal'):
                 lineas.append(f"Aprendizaje semana: {rev['aprendizaje_principal'][:120]}")
+
+        rev_mes = vital.get('revision_mes')
+        if rev_mes:
+            if rev_mes.get('logro'):
+                lineas.append(f"Logro del mes: {rev_mes['logro'][:120]}")
+            if rev_mes.get('aprendizaje'):
+                lineas.append(f"Aprendizaje del mes: {rev_mes['aprendizaje'][:120]}")
     elif datos_extra.get('diario_texto', '').strip():
         lineas += ['', '── DIARIO RECIENTE ──', datos_extra['diario_texto'][:600]]
 
