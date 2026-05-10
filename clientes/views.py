@@ -1456,6 +1456,15 @@ def mockup_demo(request):
     except Exception:
         context['alertas_sistema'] = []
 
+    # ── Lesión activa (para panel inline de gestión) ───────────────
+    try:
+        from hyrox.models import UserInjury
+        context['lesion_activa'] = UserInjury.objects.filter(
+            cliente=cliente, activa=True
+        ).order_by('-fecha_inicio').first()
+    except Exception:
+        context['lesion_activa'] = None
+
     # Garantiza que hyrox_objetivo esté en el contexto aunque _ctx_hyrox haya fallado.
     if not context.get('hyrox_objetivo'):
         try:
