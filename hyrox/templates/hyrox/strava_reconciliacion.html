@@ -215,6 +215,7 @@
           <div>
             <div style="font-weight:700;font-size:13px;">{{ s.titulo|default:"Sesión Hyrox" }}</div>
             <div style="font-size:11px;color:var(--ink-3);">
+              {{ s.fecha|date:"D d/m/Y" }} ·
               {{ s.tiempo_total_minutos|default:"—" }} min
               {% if s.hr_media %} · {{ s.hr_media }} bpm{% endif %}
               {% if s.rpe_global %} · RPE {{ s.rpe_global }}{% endif %}

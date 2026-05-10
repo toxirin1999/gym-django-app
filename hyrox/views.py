@@ -2772,46 +2772,62 @@ def strava_reconciliacion(request):
 
     from datetime import timedelta
 
-    # Todos los entrenos de gym no sincronizados (para búsqueda manual)
-    from django.db.models import Q as _Q
+    from django.db.models import Q
     from entrenos.models import EntrenoRealizado as _ER
+
+    # IDs explícitos ya vinculados a Strava — fuente de verdad fiable
+    # (el reverso strava_sources falla cuando entreno_gym_id quedó a None)
+    gym_ids_sync = set(
+        StravaActivityRaw.objects.filter(
+            cliente=cliente,
+            estado__in=['merged', 'created'],
+            entreno_gym__isnull=False,
+        ).values_list('entreno_gym_id', flat=True)
+    )
+    hyrox_ids_sync = set(
+        StravaActivityRaw.objects.filter(
+            cliente=cliente,
+            estado__in=['merged', 'created'],
+            hyrox_session__isnull=False,
+        ).values_list('hyrox_session_id', flat=True)
+    )
+
+    # Entrenos de gym no sincronizados (para búsqueda manual — últimos 90 días)
+    from datetime import date as _date
+    hace_90 = _date.today() - timedelta(days=90)
     gym_sin_sync = list(
-        _ER.objects.filter(cliente=cliente)
-        .exclude(strava_sources__estado__in=['merged', 'created'])
-        .order_by('-fecha')[:60]
+        _ER.objects.filter(cliente=cliente, fecha__gte=hace_90)
+        .exclude(id__in=gym_ids_sync)
+        .order_by('-fecha')
     )
 
     items = []
     for act in pendientes:
-        # Search BOTH HyroxSession and EntrenoRealizado on the same date ±1 day
-        # (handles workouts logged retroactively for a previous day)
         fecha_min = act.fecha_actividad - timedelta(days=1)
         fecha_max = act.fecha_actividad + timedelta(days=1)
         hyrox_matches = []
         gym_matches   = []
 
         if objetivo:
-            hyrox_matches = list(HyroxSession.objects.filter(
-                objective=objetivo,
-                fecha__range=(fecha_min, fecha_max),
-                estado='completado',
-            ).exclude(
-                # Excluir sesiones Hyrox que ya tienen una actividad Strava procesada
-                strava_sources__estado__in=['merged', 'created']
-            ).order_by('id'))
+            hyrox_matches = list(
+                HyroxSession.objects.filter(
+                    objective=objetivo,
+                    fecha__range=(fecha_min, fecha_max),
+                    estado='completado',
+                ).exclude(id__in=hyrox_ids_sync)
+                .order_by('id')
+            )
 
-        from django.db.models import Q
-        gym_matches = list(EntrenoRealizado.objects.filter(
-            cliente=cliente,
-        ).filter(
-            # Use fecha_realizado from hub when available (session done on a different day than planned)
-            Q(hub_actividad__fecha_realizado__range=(fecha_min, fecha_max)) |
-            Q(hub_actividad__fecha_realizado__isnull=True, fecha__range=(fecha_min, fecha_max)) |
-            Q(hub_actividad__isnull=True, fecha__range=(fecha_min, fecha_max))
-        ).exclude(
-            # Excluir entrenos que ya tienen una actividad Strava procesada
-            strava_sources__estado__in=['merged', 'created']
-        ).distinct().order_by('id'))
+        gym_matches = list(
+            _ER.objects.filter(cliente=cliente)
+            .filter(
+                Q(hub_actividad__fecha_realizado__range=(fecha_min, fecha_max)) |
+                Q(hub_actividad__fecha_realizado__isnull=True, fecha__range=(fecha_min, fecha_max)) |
+                Q(hub_actividad__isnull=True, fecha__range=(fecha_min, fecha_max))
+            )
+            .exclude(id__in=gym_ids_sync)
+            .distinct().order_by('id')
+        )
 
         # Preselect best candidate based on Strava type
         tipo_hyrox = act.tipo_hyrox()
