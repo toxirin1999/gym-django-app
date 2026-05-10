@@ -1132,9 +1132,9 @@ def generar_tema_abierto(user, mensaje_joi) -> "ManualDavid | None":
 # ── Síntesis autónoma (JOI en su propio tiempo) ──────────────────────────────
 
 _MESES_ES = {
-    1: 'Enero', 2: 'Febrero', 3: 'Marzo', 4: 'Abril',
-    5: 'Mayo', 6: 'Junio', 7: 'Julio', 8: 'Agosto',
-    9: 'Septiembre', 10: 'Octubre', 11: 'Noviembre', 12: 'Diciembre',
+    1: 'January', 2: 'February', 3: 'March', 4: 'April',
+    5: 'May', 6: 'June', 7: 'July', 8: 'August',
+    9: 'September', 10: 'October', 11: 'November', 12: 'December',
 }
 
 
@@ -1253,7 +1253,7 @@ def _sintetizador_contexto_vital(user) -> dict:
             if isinstance(tareas, list) and tareas:
                 completadas = sum(
                     1 for t in tareas
-                    if isinstance(t, dict) and t.get('completado')
+                    if isinstance(t, dict) and (t.get('completada') or t.get('completado'))
                 )
                 resultado['tareas_hoy_pct'] = round(completadas / len(tareas) * 100)
     except Exception:
