@@ -103,6 +103,28 @@ def construir_contexto(cliente) -> dict:
     ctx['sesiones_semana_total'] = sum(ctx['actividad_semana'].values())
     ctx['sesiones_gym_semana']   = ctx['actividad_semana'].get('gym', 0)
 
+    # Sesiones recientes con detalle (últimas 7 — para que JOI hable con nombres reales)
+    sesiones_recientes = list(
+        ActividadRealizada.objects
+        .filter(cliente=cliente, tipo__in=['gym', 'hyrox', 'carrera'])
+        .order_by('-fecha')[:7]
+        .values('fecha', 'tipo', 'titulo', 'rpe_medio', 'duracion_minutos', 'carga_ua')
+    )
+    # Agrupar las del mismo día (dobles sesiones)
+    from collections import defaultdict
+    por_dia = defaultdict(list)
+    for s in sesiones_recientes:
+        por_dia[str(s['fecha'])].append({
+            'tipo':    s['tipo'],
+            'titulo':  (s['titulo'] or '').strip(),
+            'rpe':     s['rpe_medio'],
+            'min':     s['duracion_minutos'],
+        })
+    ctx['sesiones_recientes'] = [
+        {'fecha': fecha, 'sesiones': sess}
+        for fecha, sess in sorted(por_dia.items(), reverse=True)
+    ]
+
     # Racha: días consecutivos con cualquier actividad (hub, no solo gym)
     racha = 0
     dia = hoy
@@ -1761,16 +1783,26 @@ def _prompt_sintesis(ctx: dict, datos_extra: dict) -> str:
         '── DATOS FÍSICOS ──',
     ]
 
-    ultima = ctx.get('ultima_actividad')
-    if ultima:
-        lineas.append(f"Última actividad: {ultima['tipo']} hace {ultima['dias_hace']} días.")
-
     racha = ctx.get('racha_dias', 0)
     racha_previa = ctx.get('racha_dias_previa')
     if racha > 0:
         lineas.append(f"Racha actual: {racha} días consecutivos con actividad.")
     elif racha_previa:
         lineas.append(f"Hoy es día de descanso. Racha anterior: {racha_previa} días consecutivos.")
+
+    sesiones = ctx.get('sesiones_recientes', [])
+    if sesiones:
+        lineas.append('Sesiones recientes:')
+        for dia in sesiones[:5]:
+            for s in dia['sesiones']:
+                titulo = s['titulo'] or s['tipo']
+                rpe_str = f" RPE {s['rpe']}" if s['rpe'] else ''
+                min_str = f" {s['min']}min" if s['min'] else ''
+                # Detectar doble sesión
+                if len(dia['sesiones']) > 1:
+                    lineas.append(f"  {dia['fecha']} [DOBLE] {titulo}{rpe_str}{min_str}")
+                else:
+                    lineas.append(f"  {dia['fecha']} {titulo}{rpe_str}{min_str}")
 
     rpe = ctx.get('rpe_gym_semanas')
     if rpe:
