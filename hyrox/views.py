@@ -2772,6 +2772,15 @@ def strava_reconciliacion(request):
 
     from datetime import timedelta
 
+    # Todos los entrenos de gym no sincronizados (para búsqueda manual)
+    from django.db.models import Q as _Q
+    from entrenos.models import EntrenoRealizado as _ER
+    gym_sin_sync = list(
+        _ER.objects.filter(cliente=cliente)
+        .exclude(strava_sources__estado__in=['merged', 'created'])
+        .order_by('-fecha')[:60]
+    )
+
     items = []
     for act in pendientes:
         # Search BOTH HyroxSession and EntrenoRealizado on the same date ±1 day
@@ -2820,9 +2829,10 @@ def strava_reconciliacion(request):
         })
 
     return render(request, 'hyrox/strava_reconciliacion.html', {
-        'items':       items,
-        'objetivo':    objetivo,
-        'tiene_token': StravaToken.objects.filter(cliente=cliente).exists(),
+        'items':        items,
+        'objetivo':     objetivo,
+        'tiene_token':  StravaToken.objects.filter(cliente=cliente).exists(),
+        'gym_sin_sync': gym_sin_sync,
     })
 
 
