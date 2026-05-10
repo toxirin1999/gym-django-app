@@ -1079,6 +1079,301 @@ def generar_entrada_manual_desde_error(mensaje_joi) -> "ManualDavid | None":
 
 # ── Síntesis autónoma (JOI en su propio tiempo) ──────────────────────────────
 
+_MESES_ES = {
+    1: 'Enero', 2: 'Febrero', 3: 'Marzo', 4: 'Abril',
+    5: 'Mayo', 6: 'Junio', 7: 'Julio', 8: 'Agosto',
+    9: 'Septiembre', 10: 'Octubre', 11: 'Noviembre', 12: 'Diciembre',
+}
+
+
+def _sintetizador_contexto_vital(user) -> dict:
+    """
+    Lee los últimos 7 días del diario y devuelve un dict estructurado
+    con intenciones AM, realidad PM, hábitos y revisión semanal.
+    Si cualquier query falla, ese campo queda en su valor por defecto.
+    """
+    hoy = date.today()
+    resultado = {
+        'intencion_am': [],
+        'realidad_pm': [],
+        'habitos_pct': None,
+        'habitos_activos': [],
+        'friccion_detectada': False,
+        'revision_semanal': None,
+    }
+
+    # ── Intenciones AM y realidad PM ─────────────────────────────────────────
+    try:
+        from diario.models import ProsocheDiario
+        limite = hoy - timedelta(days=6)
+        entradas = (
+            ProsocheDiario.objects
+            .filter(prosoche_mes__usuario=user, fecha__gte=limite)
+            .order_by('-fecha')[:7]
+        )
+        for e in entradas:
+            gratitudes = [
+                g for g in [e.gratitud_1, e.gratitud_2, e.gratitud_3,
+                             e.gratitud_4, e.gratitud_5] if g
+            ]
+            if e.persona_quiero_ser or gratitudes or e.estado_animo:
+                resultado['intencion_am'].append({
+                    'fecha': str(e.fecha),
+                    'quiero_ser': e.persona_quiero_ser or '',
+                    'gratitudes': gratitudes,
+                    'estado_animo': e.estado_animo,
+                })
+            if e.felicidad or e.que_puedo_mejorar or e.reflexiones_dia:
+                resultado['realidad_pm'].append({
+                    'fecha': str(e.fecha),
+                    'felicidad': e.felicidad or '',
+                    'mejorar': e.que_puedo_mejorar or '',
+                    'reflexion': e.reflexiones_dia or '',
+                })
+    except Exception:
+        pass
+
+    # ── Hábitos positivos del mes actual ─────────────────────────────────────
+    try:
+        from diario.models import ProsocheMes, ProsocheHabito, ProsocheHabitoDia
+        mes_nombre = _MESES_ES[hoy.month]
+        mes_obj = ProsocheMes.objects.filter(
+            usuario=user, mes=mes_nombre, año=hoy.year
+        ).first()
+        if mes_obj:
+            habitos_pos = list(
+                ProsocheHabito.objects.filter(
+                    prosoche_mes=mes_obj, tipo_habito='positivo'
+                )
+            )
+            resultado['habitos_activos'] = [h.nombre for h in habitos_pos]
+
+            if habitos_pos:
+                dias_rango = list(range(max(1, hoy.day - 6), hoy.day + 1))
+                total_posible = len(habitos_pos) * len(dias_rango)
+                completados = ProsocheHabitoDia.objects.filter(
+                    habito__in=habitos_pos,
+                    dia__in=dias_rango,
+                    completado=True,
+                ).count()
+                if total_posible > 0:
+                    resultado['habitos_pct'] = round(completados / total_posible * 100)
+    except Exception:
+        pass
+
+    # ── Fricción AM vs ejecución ──────────────────────────────────────────────
+    pct = resultado['habitos_pct']
+    tiene_intencion = any(e.get('quiero_ser') for e in resultado['intencion_am'])
+    if pct is not None and pct < 50 and tiene_intencion:
+        resultado['friccion_detectada'] = True
+
+    # ── Revisión semanal reciente ─────────────────────────────────────────────
+    try:
+        from diario.models import RevisionSemanal
+        from django.utils import timezone as tz
+        limite_rev = tz.now() - timedelta(days=7)
+        rev = (
+            RevisionSemanal.objects
+            .filter(usuario=user, fecha_creacion__gte=limite_rev)
+            .order_by('-fecha_creacion')
+            .first()
+        )
+        if rev:
+            resultado['revision_semanal'] = {
+                'logro_principal': rev.logro_principal or '',
+                'obstaculo_principal': rev.obstaculo_principal or '',
+                'aprendizaje_principal': rev.aprendizaje_principal or '',
+            }
+    except Exception:
+        pass
+
+    return resultado
+
+
+def calcular_eudaimonia_joi(user) -> dict:
+    """
+    Calcula puntuaciones de Eudaimonia desde datos del diario y actualizadas en BD.
+    Devuelve {nombre_area: score} de lo actualizado.
+    """
+    try:
+        from diario.models import AreaVida, Eudaimonia as EudaimoniaModel
+
+        vital = _sintetizador_contexto_vital(user)
+        ctx = construir_contexto(_get_cliente_for_user(user))
+
+        actualizados = {}
+
+        # Salud Física: ACWR si hay, o habitos_pct como fallback
+        try:
+            area_salud = AreaVida.objects.get(nombre='Salud Física')
+            acwr = ctx.get('acwr')
+            if acwr is not None:
+                score_salud = min(10, round(acwr * 6))
+            else:
+                pct = vital.get('habitos_pct')
+                score_salud = round(pct / 10) if pct is not None else None
+            if score_salud is not None:
+                EudaimoniaModel.objects.update_or_create(
+                    usuario=user, area=area_salud,
+                    defaults={'puntuacion': score_salud},
+                )
+                actualizados['Salud Física'] = score_salud
+        except Exception:
+            pass
+
+        # Bienestar Mental: promedio estado_animo (1-5 → 1-10)
+        try:
+            area_mental = AreaVida.objects.get(nombre='Bienestar Mental')
+            animos = [e['estado_animo'] for e in vital.get('intencion_am', [])
+                      if e.get('estado_animo')]
+            if animos:
+                score_mental = round(sum(animos) / len(animos) * 2)
+                EudaimoniaModel.objects.update_or_create(
+                    usuario=user, area=area_mental,
+                    defaults={'puntuacion': score_mental},
+                )
+                actualizados['Bienestar Mental'] = score_mental
+        except Exception:
+            pass
+
+        # Desarrollo Personal: habitos_pct / 10
+        try:
+            area_dev = AreaVida.objects.get(nombre='Desarrollo Personal')
+            pct = vital.get('habitos_pct')
+            if pct is not None:
+                score_dev = round(pct / 10)
+                EudaimoniaModel.objects.update_or_create(
+                    usuario=user, area=area_dev,
+                    defaults={'puntuacion': score_dev},
+                )
+                actualizados['Desarrollo Personal'] = score_dev
+        except Exception:
+            pass
+
+        return actualizados
+
+    except Exception:
+        return {}
+
+
+def _get_cliente_for_user(user):
+    """Obtiene el Cliente asociado al User; devuelve un objeto mínimo si no existe."""
+    try:
+        from clientes.models import Cliente
+        return Cliente.objects.get(user=user)
+    except Exception:
+        return None
+
+
+def extraer_entidades_simbiosis(user) -> list:
+    """
+    Usa Haiku para detectar nombres propios en el diario reciente y
+    registrarlos en PersonaImportante + Interaccion si no existen ya.
+    """
+    import json
+    hoy = date.today()
+
+    try:
+        from diario.models import ProsocheDiario, ReflexionLibre, PersonaImportante, Interaccion
+        from django.utils import timezone as tz
+
+        limite = tz.now() - timedelta(days=7)
+
+        # Concatenar reflexiones PM y reflexiones libres
+        fragmentos = []
+
+        try:
+            entradas = (
+                ProsocheDiario.objects
+                .filter(prosoche_mes__usuario=user, fecha__gte=limite.date())
+                .exclude(reflexiones_dia='')
+                .order_by('-fecha')[:7]
+            )
+            for e in entradas:
+                if e.reflexiones_dia:
+                    fragmentos.append(e.reflexiones_dia[:300])
+        except Exception:
+            pass
+
+        try:
+            reflexiones = (
+                ReflexionLibre.objects
+                .filter(usuario=user, fecha__gte=limite)
+                .exclude(contenido='')
+                .order_by('-fecha')[:3]
+            )
+            for r in reflexiones:
+                fragmentos.append(r.contenido[:300])
+        except Exception:
+            pass
+
+        texto = '\n\n'.join(fragmentos).strip()
+        if not texto:
+            return []
+
+        prompt = (
+            "Analiza este texto de diario personal. Extrae SOLO personas mencionadas por nombre propio "
+            "(no pronombres genéricos). Para cada una, indica:\n"
+            "- nombre: el nombre tal como aparece\n"
+            "- emocion: 'positiva', 'negativa' o 'neutra'\n"
+            "- contexto: máx 15 palabras describiendo la relación o situación\n\n"
+            "Responde en JSON válido: [{\"nombre\": \"...\", \"emocion\": \"...\", \"contexto\": \"...\"}]\n"
+            "Si no hay nombres propios, responde: []\n\n"
+            f"TEXTO:\n{texto[:1500]}"
+        )
+
+        client = _cliente_anthropic()
+        response = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=300,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        raw = response.content[0].text.strip()
+
+        try:
+            entidades = json.loads(raw)
+        except Exception:
+            return []
+
+        if not isinstance(entidades, list):
+            return []
+
+        for entidad in entidades:
+            nombre = entidad.get('nombre', '').strip()
+            if not nombre:
+                continue
+            try:
+                persona, _ = PersonaImportante.objects.get_or_create(
+                    usuario=user,
+                    nombre=nombre,
+                    defaults={'notas': 'Detectado por JOI'},
+                )
+                tipo_interaccion = (
+                    'positiva' if entidad.get('emocion') == 'positiva'
+                    else 'negativa' if entidad.get('emocion') == 'negativa'
+                    else 'neutra'
+                )
+                interaccion, creada = Interaccion.objects.get_or_create(
+                    usuario=user,
+                    fecha=hoy,
+                    titulo=f"JOI detectó: {nombre}",
+                    defaults={
+                        'descripcion': 'Detectado automáticamente por JOI en diario.',
+                        'mi_sentir': entidad.get('contexto', ''),
+                        'tipo_interaccion': tipo_interaccion,
+                    },
+                )
+                if creada:
+                    interaccion.personas.add(persona)
+            except Exception:
+                continue
+
+        return entidades
+
+    except Exception:
+        return []
+
+
 def _leer_diario_reciente(user, dias: int = 7) -> str:
     """
     Extrae texto libre de las partes del diario que el usuario realmente usa:
@@ -1251,9 +1546,43 @@ def _prompt_sintesis(ctx: dict, datos_extra: dict) -> str:
         if criticas:
             lineas.append(f"Áreas críticas (≤4): {', '.join(criticas)}.")
 
-    diario = datos_extra.get('diario_texto', '').strip()
-    if diario:
-        lineas += ['', '── DIARIO RECIENTE ──', diario[:600]]
+    vital = datos_extra.get('vital', {})
+    if vital:
+        lineas.append('')
+        lineas.append('── TRIÁNGULO DE LA VERDAD ──')
+
+        intencion = vital.get('intencion_am', [])
+        if intencion:
+            ultimo_am = intencion[0]
+            if ultimo_am.get('quiero_ser'):
+                lineas.append(f"INTENCIÓN (AM): quiere ser → {ultimo_am['quiero_ser'][:120]}")
+            if ultimo_am.get('gratitudes'):
+                lineas.append(f"Gratitud: {', '.join(ultimo_am['gratitudes'][:3])}")
+
+        realidad = vital.get('realidad_pm', [])
+        if realidad:
+            ultimo_pm = realidad[0]
+            if ultimo_pm.get('mejorar'):
+                lineas.append(f"REALIDAD (PM): mejorar → {ultimo_pm['mejorar'][:120]}")
+            if ultimo_pm.get('reflexion'):
+                lineas.append(f"Reflexión noche: {ultimo_pm['reflexion'][:150]}")
+
+        pct = vital.get('habitos_pct')
+        if pct is not None:
+            lineas.append(f"HÁBITOS: {pct}% cumplimiento (últimos 7 días).")
+
+        if vital.get('friccion_detectada'):
+            lineas.append("FRICCIÓN DETECTADA: alta aspiración AM con baja ejecución.")
+
+        rev = vital.get('revision_semanal')
+        if rev:
+            if rev.get('obstaculo_principal'):
+                lineas.append(f"Obstáculo semana: {rev['obstaculo_principal'][:120]}")
+            if rev.get('aprendizaje_principal'):
+                lineas.append(f"Aprendizaje semana: {rev['aprendizaje_principal'][:120]}")
+    elif datos_extra.get('diario_texto', '').strip():
+        # fallback al texto plano si vital está vacío
+        lineas += ['', '── DIARIO RECIENTE ──', datos_extra['diario_texto'][:600]]
 
     lineas += [
         '',
@@ -1272,8 +1601,9 @@ def generar_sintesis_joi(cliente) -> "MensajeJOI | None":
 
     try:
         ctx = construir_contexto(cliente)
+        vital = _sintetizador_contexto_vital(cliente.user)
         diario_texto = _leer_diario_reciente(cliente.user)
-        datos_extra = {'diario_texto': diario_texto}
+        datos_extra = {'diario_texto': diario_texto, 'vital': vital}
 
         prompt = _bloque_memoria(ctx) + _bloque_manual(cliente.user) + _prompt_sintesis(ctx, datos_extra)
         texto = _llamar_haiku_sintesis(prompt)
@@ -1291,6 +1621,12 @@ def generar_sintesis_joi(cliente) -> "MensajeJOI | None":
         from django.core.cache import cache
         cache.delete(f'joi_ctx_{cliente.user_id}')
         logger.info(f"[JOI síntesis] {cliente.user.username} → mensaje generado (id={msg.id})")
+
+        try:
+            extraer_entidades_simbiosis(cliente.user)
+        except Exception:
+            pass
+
         return msg
 
     except Exception as e:
