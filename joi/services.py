@@ -1312,23 +1312,39 @@ def extraer_entidades_simbiosis(user) -> list:
             return []
 
         prompt = (
-            "Analiza este texto de diario personal. Extrae SOLO personas mencionadas por nombre propio "
-            "(no pronombres genéricos). Para cada una, indica:\n"
-            "- nombre: el nombre tal como aparece\n"
-            "- emocion: 'positiva', 'negativa' o 'neutra'\n"
-            "- contexto: máx 15 palabras describiendo la relación o situación\n\n"
-            "Responde en JSON válido: [{\"nombre\": \"...\", \"emocion\": \"...\", \"contexto\": \"...\"}]\n"
-            "Si no hay nombres propios, responde: []\n\n"
+            "Analiza este texto de diario personal. "
+            "Extrae SOLO personas reales mencionadas por nombre propio (no pronombres, no lugares, no marcas).\n\n"
+            "Para cada persona, responde con este JSON exacto:\n"
+            "[\n"
+            "  {\n"
+            "    \"nombre\": \"nombre como aparece en el texto\",\n"
+            "    \"tipo_relacion\": \"familia|pareja|amigo|mentor|colega|otro\",\n"
+            "    \"emocion\": \"positiva|negativa|neutra\",\n"
+            "    \"salud_relacion\": 1-5,\n"
+            "    \"descripcion\": \"qué sucedió o se mencionó, máx 25 palabras\",\n"
+            "    \"mi_sentir\": \"cómo afectó emocionalmente al escritor, máx 20 palabras\",\n"
+            "    \"aprendizaje\": \"qué revela esta mención sobre la relación, máx 20 palabras\",\n"
+            "    \"notas\": \"resumen de quién es esta persona para el escritor, máx 15 palabras\"\n"
+            "  }\n"
+            "]\n\n"
+            "Criterios para salud_relacion: 5=muy positiva y nutritiva, 3=neutra/ambigua, 1=conflictiva o drenante.\n"
+            "Si no hay nombres propios de personas reales, responde exactamente: []\n\n"
             f"TEXTO:\n{texto[:1500]}"
         )
 
         client = _cliente_anthropic()
         response = client.messages.create(
             model="claude-haiku-4-5-20251001",
-            max_tokens=300,
+            max_tokens=600,
             messages=[{"role": "user", "content": prompt}],
         )
         raw = response.content[0].text.strip()
+
+        # Limpiar markdown si Haiku envuelve en ```json
+        if raw.startswith('```'):
+            raw = raw.split('```')[1]
+            if raw.startswith('json'):
+                raw = raw[4:]
 
         try:
             entidades = json.loads(raw)
@@ -1340,14 +1356,33 @@ def extraer_entidades_simbiosis(user) -> list:
 
         for entidad in entidades:
             nombre = entidad.get('nombre', '').strip()
-            if not nombre:
+            if not nombre or len(nombre) < 2:
                 continue
             try:
-                persona, _ = PersonaImportante.objects.get_or_create(
+                tipo_rel = entidad.get('tipo_relacion', 'otro')
+                if tipo_rel not in ('familia', 'pareja', 'amigo', 'mentor', 'colega', 'otro'):
+                    tipo_rel = 'otro'
+
+                salud = entidad.get('salud_relacion', 3)
+                try:
+                    salud = max(1, min(5, int(salud)))
+                except (TypeError, ValueError):
+                    salud = 3
+
+                persona, creada_persona = PersonaImportante.objects.get_or_create(
                     usuario=user,
                     nombre=nombre,
-                    defaults={'notas': 'Detectado por JOI'},
+                    defaults={
+                        'tipo_relacion': tipo_rel,
+                        'salud_relacion': salud,
+                        'notas': entidad.get('notas', ''),
+                    },
                 )
+                # Actualizar notas si la persona ya existía y las notas estaban vacías
+                if not creada_persona and not persona.notas and entidad.get('notas'):
+                    persona.notas = entidad['notas']
+                    persona.save(update_fields=['notas'])
+
                 tipo_interaccion = (
                     'positiva' if entidad.get('emocion') == 'positiva'
                     else 'negativa' if entidad.get('emocion') == 'negativa'
@@ -1356,10 +1391,11 @@ def extraer_entidades_simbiosis(user) -> list:
                 interaccion, creada = Interaccion.objects.get_or_create(
                     usuario=user,
                     fecha=hoy,
-                    titulo=f"JOI detectó: {nombre}",
+                    titulo=f"JOI: {nombre}",
                     defaults={
-                        'descripcion': 'Detectado automáticamente por JOI en diario.',
-                        'mi_sentir': entidad.get('contexto', ''),
+                        'descripcion':      entidad.get('descripcion', ''),
+                        'mi_sentir':        entidad.get('mi_sentir', ''),
+                        'aprendizaje':      entidad.get('aprendizaje', ''),
                         'tipo_interaccion': tipo_interaccion,
                     },
                 )
