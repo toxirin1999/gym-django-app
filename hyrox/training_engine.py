@@ -1600,9 +1600,22 @@ class HyroxTrainingEngine:
                 'flexion_plantar', 'carga_distal_pierna', 'estabilidad_gemelo'
             }
             if restricted_tags and any(tag in restricted_tags for tag in restricciones_pierna):
-                ejercicio    = 'Press Militar Sentado / Remo con Mancuerna (Tren Superior)'
-                peso_trabajo = 0
-                notas_ej     = f'⛔ {notas_ej} -> Modificado a Tren Superior por restricciones biomecánicas (Lesión activa).'
+                ejercicio = 'Press Militar Sentado / Remo con Mancuerna (Tren Superior)'
+                # Buscar RM de tren superior en one_rm_data del cliente
+                one_rm = getattr(objective.cliente, 'one_rm_data', {}) or {}
+                claves_ts = ['press militar', 'press banca', 'remo con barra', 'remo mancuerna',
+                             'press hombros', 'overhead press', 'military press']
+                rm_ts = next(
+                    (float(v) for k, v in one_rm.items() if any(c in k.lower() for c in claves_ts)),
+                    None
+                )
+                if rm_ts:
+                    peso_trabajo = round(rm_ts * porcentaje_rm)
+                else:
+                    # Estimación: tren superior ≈ 35% del RM de sentadilla
+                    rm_ref = objective.rm_sentadilla or objective.rm_peso_muerto or 80
+                    peso_trabajo = round(rm_ref * 0.35 * porcentaje_rm)
+                notas_ej = f'⛔ {notas_ej} -> Modificado a Tren Superior por restricciones biomecánicas (Lesión activa).'
 
             # Sustitución por material disponible (sin barra → mancuernas)
             material  = (objective.material_disponible or '').lower()
