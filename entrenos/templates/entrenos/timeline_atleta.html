@@ -1,696 +1,640 @@
-{% extends 'base.html' %}
 {% load entreno_tags static %}
-{% block title %}Timeline · {{ cliente.nombre }}{% endblock %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Timeline · {{ cliente.nombre }}</title>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
 
-{% block extra_css %}
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
-<style>
-/* ═══════════════════════════════════════════════
-   TIMELINE · BRUTALIST EDITORIAL DOSSIER v3.0
-═══════════════════════════════════════════════ */
+    <style>
+    /* ═══════════════════════════════════════════════
+       TIMELINE · BRUTALIST EDITORIAL DOSSIER v3.0
+    ═══════════════════════════════════════════════ */
+    :root {
+        --paper:  #EFEBDC;
+        --ink:    #131313;
+        --card:   #F6F2E3;
+        --rule:   rgba(19,19,19,.12);
+        --accent: #C8FF00;
+        --hi:     #FF4719;
+        --ok:     #228B45;
+        --warn:   #E08A00;
+        --bad:    #C8242C;
+        --mono:   'JetBrains Mono', ui-monospace, monospace;
+        --display:'Archivo Black', sans-serif;
+        --sans:   'Archivo', system-ui, sans-serif;
+    }
 
-/* ── Override base.html dark theme for this page ── */
-body, html {
-  background-color: #EFEBDC !important;
-  color: #131313 !important;
-}
-#tsparticles canvas { display: none !important; }
-.page-wrapper { background: #EFEBDC !important; }
+    body {
+        margin: 0;
+        padding: 0;
+        background: var(--paper);
+        color: var(--ink);
+        font-family: var(--sans);
+        -webkit-font-smoothing: antialiased;
+    }
 
-/* ── Neutralize variables-base.css global h1/h2 color overrides ──
-   variables-base.css sets h1,h2 { color: #F0E6D3 !important } (near-cream)
-   which makes headings invisible on our paper background.
-   We must be more specific AND use !important to win. ── */
-.tl-shell h1,
-.tl-shell h2,
-.tl-shell h3,
-.tl-shell .tl-h1,
-.tl-shell .tl-section-title,
-.tl-shell .page-title,
-.tl-shell .section-title {
-  color: #131313 !important;
-  -webkit-text-fill-color: #131313 !important;
-}
-/* All text inside shell defaults to ink */
-.tl-shell { color: #131313; }
-/* Coloured metric overrides (must re-declare after the blanket rule above) */
-.tl-shell .tl-stat-val.ok   { color: #228B45 !important; -webkit-text-fill-color: #228B45 !important; }
-.tl-shell .tl-stat-val.warn { color: #E08A00 !important; -webkit-text-fill-color: #E08A00 !important; }
-.tl-shell .tl-stat-val.bad  { color: #C8242C !important; -webkit-text-fill-color: #C8242C !important; }
-.tl-shell .tl-row[data-tipo="hyrox"]    .tl-info-metric { color: #FF4719 !important; -webkit-text-fill-color: #FF4719 !important; }
-.tl-shell .tl-row[data-tipo="carrera"]  .tl-info-metric,
-.tl-shell .tl-row[data-tipo="ciclismo"] .tl-info-metric { color: #1f6fcf !important; -webkit-text-fill-color: #1f6fcf !important; }
-.tl-shell .tl-action-btn.del { color: #C8242C !important; }
+    .tl-shell {
+        min-height: 100vh;
+        max-width: 760px;
+        margin: 0 auto;
+        padding: 0 20px 96px;
+    }
 
-.tl-shell {
-  --paper:  #EFEBDC;
-  --ink:    #131313;
-  --card:   #F6F2E3;
-  --rule:   rgba(19,19,19,.12);
-  --accent: #C8FF00;
-  --hi:     #FF4719;
-  --ok:     #228B45;
-  --warn:   #E08A00;
-  --bad:    #C8242C;
-  --mono:   'JetBrains Mono', ui-monospace, monospace;
-  --display:'Archivo Black', sans-serif;
-  --sans:   'Archivo', system-ui, sans-serif;
+    .tl-shell *, .tl-shell *::before, .tl-shell *::after { box-sizing: border-box; }
 
-  background: var(--paper);
-  color: var(--ink);
-  font-family: var(--sans);
-  -webkit-font-smoothing: antialiased;
-  min-height: 100vh;
-  max-width: 760px;
-  margin: 0 auto;
-  padding: 0 20px 96px;
-}
-.tl-shell *, .tl-shell *::before, .tl-shell *::after { box-sizing: border-box; }
+    /* ── Marquee ── */
+    .tl-marquee {
+        margin: 0 -20px;
+        background: var(--ink); color: var(--paper);
+        font-family: var(--mono);
+        font-size: 10px; letter-spacing: .2em; text-transform: uppercase;
+        padding: 6px 16px;
+        display: flex; justify-content: space-between; align-items: center;
+        border-bottom: 1px solid var(--ink);
+    }
 
-/* ── Marquee ── */
-.tl-marquee {
-  margin: 0 -20px;
-  background: var(--ink); color: var(--paper);
-  font-family: var(--mono);
-  font-size: 10px; letter-spacing: .2em; text-transform: uppercase;
-  padding: 6px 16px;
-  display: flex; justify-content: space-between; align-items: center;
-  border-bottom: 1px solid var(--ink);
-}
+    /* ── Topbar ── */
+    .tl-topbar {
+        display: flex; justify-content: space-between; align-items: center;
+        padding: 20px 0;
+    }
+    .tl-back {
+        display: inline-flex; align-items: center; gap: 6px;
+        background: none; border: 0; cursor: pointer;
+        font-family: var(--mono); font-size: 10px; font-weight: 700;
+        letter-spacing: .16em; text-transform: uppercase;
+        color: var(--ink); text-decoration: none;
+    }
+    .tl-back:hover { opacity: .6; }
+    .tl-version {
+        font-family: var(--mono); font-size: 10px; font-weight: 700;
+        letter-spacing: .16em; text-transform: uppercase;
+        opacity: .5;
+    }
 
-/* ── Topbar ── */
-.tl-topbar {
-  display: flex; justify-content: space-between; align-items: center;
-  padding: 20px 0;
-}
-.tl-back {
-  display: inline-flex; align-items: center; gap: 6px;
-  background: none; border: 0; cursor: pointer;
-  font-family: var(--mono); font-size: 10px; font-weight: 700;
-  letter-spacing: .16em; text-transform: uppercase;
-  color: var(--ink); text-decoration: none;
-}
-.tl-back:hover { opacity: .6; }
-.tl-version {
-  font-family: var(--mono); font-size: 10px; font-weight: 700;
-  letter-spacing: .16em; text-transform: uppercase;
-  opacity: .5;
-}
+    /* ── Masthead ── */
+    .tl-masthead {
+        border-top: 3px solid var(--ink);
+        border-bottom: 3px solid var(--ink);
+        padding: 24px 0;
+    }
+    .tl-masthead-row {
+        display: grid; grid-template-columns: repeat(12, 1fr);
+        gap: 12px; align-items: end;
+        font-family: var(--mono); font-size: 10px; font-weight: 700;
+        letter-spacing: .16em; text-transform: uppercase; opacity: .6;
+    }
+    .tl-masthead-row .l { grid-column: span 5; line-height: 1.2; }
+    .tl-masthead-row .r { grid-column: span 7; text-align: right; }
+    .tl-h1 {
+        font-family: var(--display); letter-spacing: -.03em;
+        font-size: clamp(56px, 13vw, 96px);
+        line-height: .85; margin: 12px 0 0; word-break: break-word;
+    }
+    .tl-h1 .mark {
+        background: var(--accent); padding: 0 .15em;
+        -webkit-box-decoration-break: clone; box-decoration-break: clone;
+    }
+    .tl-h1 .dot { color: var(--hi); }
 
-/* ── Masthead ── */
-.tl-masthead {
-  border-top: 3px solid var(--ink);
-  border-bottom: 3px solid var(--ink);
-  padding: 24px 0;
-}
-.tl-masthead-row {
-  display: grid; grid-template-columns: repeat(12, 1fr);
-  gap: 12px; align-items: end;
-  font-family: var(--mono); font-size: 10px; font-weight: 700;
-  letter-spacing: .16em; text-transform: uppercase; opacity: .6;
-}
-.tl-masthead-row .l { grid-column: span 5; line-height: 1.2; }
-.tl-masthead-row .r { grid-column: span 7; text-align: right; }
-.tl-h1 {
-  font-family: var(--display); letter-spacing: -.03em;
-  font-size: clamp(56px, 13vw, 96px);
-  line-height: .85; margin: 12px 0 0; word-break: break-word;
-}
-.tl-h1 .mark {
-  background: var(--accent); padding: 0 .15em;
-  -webkit-box-decoration-break: clone; box-decoration-break: clone;
-}
-.tl-h1 .dot { color: var(--hi); }
+    /* ── Range ── */
+    .tl-range {
+        display: flex; gap: 8px; align-items: center;
+        margin-top: 24px; flex-wrap: wrap;
+    }
+    .tl-range-lbl {
+        font-family: var(--mono); font-size: 10px; font-weight: 700;
+        letter-spacing: .16em; text-transform: uppercase; opacity: .5;
+        margin-right: 4px;
+    }
+    .tl-range-btn {
+        padding: 6px 12px; border: 1px solid var(--ink);
+        background: transparent; cursor: pointer;
+        font-family: var(--mono); font-size: 10px; font-weight: 700;
+        letter-spacing: .16em; text-transform: uppercase;
+        color: var(--ink); text-decoration: none;
+        transition: background .15s, color .15s;
+    }
+    .tl-range-btn:hover { background: rgba(19,19,19,.08); }
+    .tl-range-btn.active { background: var(--ink); color: var(--paper); }
 
-/* ── Range ── */
-.tl-range {
-  display: flex; gap: 8px; align-items: center;
-  margin-top: 24px; flex-wrap: wrap;
-}
-.tl-range-lbl {
-  font-family: var(--mono); font-size: 10px; font-weight: 700;
-  letter-spacing: .16em; text-transform: uppercase; opacity: .5;
-  margin-right: 4px;
-}
-.tl-range-btn {
-  padding: 6px 12px; border: 1px solid var(--ink);
-  background: transparent; cursor: pointer;
-  font-family: var(--mono); font-size: 10px; font-weight: 700;
-  letter-spacing: .16em; text-transform: uppercase;
-  color: var(--ink); text-decoration: none;
-  transition: background .15s, color .15s;
-}
-.tl-range-btn:hover { background: rgba(19,19,19,.08); }
-.tl-range-btn.active { background: var(--ink); color: var(--paper); }
+    /* ── Stats grid ── */
+    .tl-stats {
+        margin-top: 40px;
+        display: grid; grid-template-columns: repeat(4, 1fr);
+        border: 1px solid var(--ink);
+    }
+    .tl-stat {
+        padding: 16px;
+        border-right: 1px solid var(--ink);
+    }
+    .tl-stat:last-child { border-right: 0; }
+    .tl-stat-warn { background: rgba(224,138,0,.15); }
+    .tl-stat-bad  { background: rgba(200,36,44,.15); }
+    .tl-stat-lbl {
+        font-family: var(--mono); font-size: 10px; font-weight: 700;
+        letter-spacing: .16em; text-transform: uppercase; opacity: .55;
+    }
+    .tl-stat-val {
+        font-family: var(--display); font-size: 48px;
+        line-height: .9; margin-top: 8px; letter-spacing: -.02em;
+        font-variant-numeric: tabular-nums;
+    }
+    .tl-stat-val.warn { color: var(--warn); }
+    .tl-stat-val.bad  { color: var(--bad); }
+    .tl-stat-val.ok   { color: var(--ok); }
+    .tl-stat-sub {
+        font-family: var(--mono); font-size: 10px; opacity: .6; margin-top: 8px;
+    }
 
-/* ── Stats grid ── */
-.tl-stats {
-  margin-top: 40px;
-  display: grid; grid-template-columns: repeat(4, 1fr);
-  border: 1px solid var(--ink);
-}
-.tl-stat {
-  padding: 16px;
-  border-right: 1px solid var(--ink);
-}
-.tl-stat:last-child { border-right: 0; }
-.tl-stat-warn { background: rgba(224,138,0,.15); }
-.tl-stat-bad  { background: rgba(200,36,44,.15); }
-.tl-stat-lbl {
-  font-family: var(--mono); font-size: 10px; font-weight: 700;
-  letter-spacing: .16em; text-transform: uppercase; opacity: .55;
-}
-.tl-stat-val {
-  font-family: var(--display); font-size: 48px;
-  line-height: .9; margin-top: 8px; letter-spacing: -.02em;
-  font-variant-numeric: tabular-nums;
-}
-.tl-stat-val.warn { color: var(--warn); }
-.tl-stat-val.bad  { color: var(--bad); }
-.tl-stat-val.ok   { color: var(--ok); }
-.tl-stat-sub {
-  font-family: var(--mono); font-size: 10px; opacity: .6; margin-top: 8px;
-}
+    /* ── Section header ── */
+    .tl-section { margin-top: 40px; }
+    .tl-section-hdr {
+        display: flex; align-items: baseline; gap: 12px; margin-bottom: 12px;
+    }
+    .tl-section-tag {
+        font-family: var(--mono); font-size: 11px; font-weight: 700; opacity: .6;
+    }
+    .tl-section-title {
+        font-family: var(--display); font-size: 20px; text-transform: uppercase;
+        letter-spacing: -.02em; margin: 0;
+    }
+    .tl-rule {
+        flex: 1; height: 1px; align-self: center;
+        background-image: repeating-linear-gradient(to right, var(--ink) 0 6px, transparent 6px 12px);
+    }
 
-/* ── Section header ── */
-.tl-section { margin-top: 40px; }
-.tl-section-hdr {
-  display: flex; align-items: baseline; gap: 12px; margin-bottom: 12px;
-}
-.tl-section-tag {
-  font-family: var(--mono); font-size: 11px; font-weight: 700; color: rgba(19,19,19,.7);
-}
-.tl-section-title {
-  font-family: var(--display); font-size: 20px; text-transform: uppercase;
-  letter-spacing: -.02em; margin: 0;
-}
-.tl-rule {
-  flex: 1; height: 1px; align-self: center;
-  background-image: repeating-linear-gradient(to right, var(--ink) 0 6px, transparent 6px 12px);
-}
+    /* ── Filter pills ── */
+    .tl-filters {
+        display: flex; flex-wrap: wrap; gap: 0;
+        border: 1px solid var(--ink);
+    }
+    .tl-filter-btn {
+        padding: 8px 14px;
+        border: 0; border-right: 1px solid var(--ink);
+        background: transparent; cursor: pointer;
+        font-family: var(--mono); font-size: 10px; font-weight: 700;
+        letter-spacing: .16em; text-transform: uppercase;
+        color: var(--ink);
+    }
+    .tl-filter-btn:last-child { border-right: 0; }
+    .tl-filter-btn:hover { background: rgba(19,19,19,.06); }
+    .tl-filter-btn.active { background: var(--accent); }
 
-/* ── Filter pills ── */
-.tl-filters {
-  display: flex; flex-wrap: wrap; gap: 0;
-  border: 1px solid var(--ink);
-}
-.tl-filter-btn {
-  padding: 8px 14px;
-  border: 0; border-right: 1px solid var(--ink);
-  background: transparent; cursor: pointer;
-  font-family: var(--mono); font-size: 10px; font-weight: 700;
-  letter-spacing: .16em; text-transform: uppercase;
-  color: var(--ink);
-}
-.tl-filter-btn:last-child { border-right: 0; }
-.tl-filter-btn:hover { background: rgba(19,19,19,.06); }
-.tl-filter-btn.active { background: var(--accent); }
+    /* ── CTA ── */
+    .tl-cta {
+        display: flex; align-items: center; justify-content: center; gap: 10px;
+        width: 100%; margin-top: 24px;
+        padding: 16px;
+        background: var(--hi); color: #fff;
+        border: 2px solid var(--ink); cursor: pointer;
+        font-family: var(--display); font-size: 18px;
+        text-transform: uppercase; letter-spacing: .02em;
+        text-decoration: none;
+        box-shadow: 4px 4px 0 var(--ink);
+        transition: transform .12s, box-shadow .12s;
+    }
+    .tl-cta:hover { transform: translate(2px,2px); box-shadow: 2px 2px 0 var(--ink); }
+    .tl-cta:active { transform: translate(4px,4px); box-shadow: none; }
 
-/* ── CTA ── */
-.tl-cta {
-  display: flex; align-items: center; justify-content: center; gap: 10px;
-  width: 100%; margin-top: 24px;
-  padding: 16px;
-  background: var(--hi); color: #fff;
-  border: 2px solid var(--ink); cursor: pointer;
-  font-family: var(--display); font-size: 18px;
-  text-transform: uppercase; letter-spacing: .02em;
-  text-decoration: none;
-  box-shadow: 4px 4px 0 var(--ink);
-  transition: transform .12s, box-shadow .12s;
-}
-.tl-cta:hover { transform: translate(2px,2px); box-shadow: 2px 2px 0 var(--ink); }
-.tl-cta:active { transform: translate(4px,4px); box-shadow: none; }
+    /* ── Timeline list ── */
+    .tl-list { border-top: 1px solid var(--ink); }
+    .tl-day-hdr {
+        display: flex; justify-content: space-between; align-items: baseline;
+        padding: 8px 4px; border-bottom: 1px solid var(--ink);
+        background: rgba(19,19,19,.04);
+        font-family: var(--mono); font-size: 11px; font-weight: 700;
+        text-transform: uppercase; letter-spacing: .08em;
+    }
+    .tl-day-hdr .num { opacity: .5; margin-right: 8px; }
 
-/* ── Timeline list ── */
-.tl-list { border-top: 1px solid var(--ink); }
-.tl-day-hdr {
-  display: flex; justify-content: space-between; align-items: baseline;
-  padding: 8px 4px; border-bottom: 1px solid var(--ink);
-  background: rgba(19,19,19,.08);
-  font-family: var(--mono); font-size: 11px; font-weight: 700;
-  text-transform: uppercase; letter-spacing: .08em;
-}
-.tl-day-hdr .num { opacity: .7; margin-right: 8px; }
-.tl-day-hdr-today { background: var(--accent); }
+    /* Activity row */
+    .tl-row {
+        display: flex; align-items: center; gap: 16px;
+        padding: 16px 8px;
+        border-bottom: 1px solid var(--ink);
+        cursor: pointer;
+        transition: background .12s;
+        animation: tlFade .3s ease both;
+    }
+    .tl-row:hover { background: rgba(19,19,19,.04); }
 
-/* Activity row */
-.tl-row {
-  display: flex; align-items: center; gap: 16px;
-  padding: 16px 8px;
-  border-bottom: 1px solid var(--ink);
-  cursor: pointer;
-  transition: background .12s;
-  animation: tlFade .3s ease both;
-}
-.tl-row:hover { background: rgba(19,19,19,.04); }
+    .tl-ring { position: relative; width: 46px; height: 46px; flex-shrink: 0; }
+    .tl-ring rect { fill: var(--card); }
 
-.tl-ring { position: relative; width: 46px; height: 46px; flex-shrink: 0; }
-.tl-ring rect { fill: var(--card); }
+    .tl-info { flex: 1; min-width: 0; }
+    .tl-info-meta {
+        display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+        font-family: var(--mono); font-size: 10px; font-weight: 700;
+        letter-spacing: .12em; text-transform: uppercase; opacity: .65;
+    }
+    .tl-plan {
+        background: var(--accent); padding: 1px 6px;
+        font-weight: 700;
+    }
+    .tl-info-metric {
+        font-family: var(--display); font-size: 30px; line-height: 1;
+        margin-top: 4px; letter-spacing: -.02em;
+        font-variant-numeric: tabular-nums;
+    }
+    .tl-info-metric .unit {
+        font-family: var(--mono); font-size: 12px; font-weight: 700;
+        margin-left: 6px; opacity: .6;
+    }
+    .tl-row[data-tipo="hyrox"]   .tl-info-metric { color: var(--hi); }
+    .tl-row[data-tipo="carrera"] .tl-info-metric,
+    .tl-row[data-tipo="ciclismo"] .tl-info-metric { color: #1f6fcf; }
 
-.tl-info { flex: 1; min-width: 0; }
-.tl-info-meta {
-  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
-  font-family: var(--mono); font-size: 10px; font-weight: 700;
-  letter-spacing: .12em; text-transform: uppercase;
-  color: rgba(19,19,19,.75);
-}
-.tl-plan {
-  background: var(--accent); padding: 1px 6px;
-  font-weight: 700;
-}
-.tl-info-metric {
-  font-family: var(--display); font-size: 30px; line-height: 1;
-  margin-top: 4px; letter-spacing: -.02em;
-  font-variant-numeric: tabular-nums;
-}
-.tl-info-metric .unit {
-  font-family: var(--mono); font-size: 12px; font-weight: 700;
-  margin-left: 6px; opacity: .6;
-}
-.tl-row[data-tipo="hyrox"]   .tl-info-metric { color: var(--hi); }
-.tl-row[data-tipo="carrera"] .tl-info-metric,
-.tl-row[data-tipo="ciclismo"] .tl-info-metric { color: #1f6fcf; }
+    .tl-sub {
+        font-family: var(--mono); font-size: 10px; font-weight: 700;
+        letter-spacing: .12em; text-transform: uppercase; opacity: .6;
+        text-align: right; flex-shrink: 0;
+    }
 
-.tl-sub {
-  font-family: var(--mono); font-size: 10px; font-weight: 700;
-  letter-spacing: .12em; text-transform: uppercase; opacity: .6;
-  text-align: right; flex-shrink: 0;
-}
+    /* Expandable actions */
+    .tl-actions {
+        display: none;
+        border-bottom: 1px solid var(--ink);
+        background: rgba(19,19,19,.04);
+    }
+    .tl-actions.open { display: flex; }
+    .tl-action-btn {
+        flex: 1; padding: 12px;
+        background: transparent; border: 0; cursor: pointer;
+        font-family: var(--mono); font-size: 10px; font-weight: 700;
+        letter-spacing: .16em; text-transform: uppercase;
+        color: var(--ink);
+        display: flex; align-items: center; justify-content: center; gap: 6px;
+        border-right: 1px solid var(--ink);
+        transition: background .12s, color .12s;
+    }
+    .tl-action-btn:last-child { border-right: 0; }
+    .tl-action-btn:hover { background: rgba(19,19,19,.08); }
+    .tl-action-btn.del { color: var(--bad); }
+    .tl-action-btn.del:hover { background: var(--bad); color: #fff; }
+    .tl-confirm { display: none; flex: 1; align-items: center; justify-content: center;
+        font-family: var(--mono); font-size: 10px; font-weight: 700;
+        letter-spacing: .16em; text-transform: uppercase; color: var(--bad);
+    }
+    .tl-confirm.show { display: flex; }
+    .tl-normal.hide  { display: none; }
 
-/* Expandable actions */
-.tl-actions {
-  display: none;
-  border-bottom: 1px solid var(--ink);
-  background: rgba(19,19,19,.04);
-}
-.tl-actions.open { display: flex; }
-.tl-action-btn {
-  flex: 1; padding: 12px;
-  background: transparent; border: 0; cursor: pointer;
-  font-family: var(--mono); font-size: 10px; font-weight: 700;
-  letter-spacing: .16em; text-transform: uppercase;
-  color: var(--ink);
-  display: flex; align-items: center; justify-content: center; gap: 6px;
-  border-right: 1px solid var(--ink);
-  transition: background .12s, color .12s;
-}
-.tl-action-btn:last-child { border-right: 0; }
-.tl-action-btn:hover { background: rgba(19,19,19,.08); }
-.tl-action-btn.del { color: var(--bad); }
-.tl-action-btn.del:hover { background: var(--bad); color: #fff; }
-.tl-confirm {
-  display: none; flex: 1; align-items: center; justify-content: center;
-  font-family: var(--mono); font-size: 10px; font-weight: 700;
-  letter-spacing: .16em; text-transform: uppercase; color: var(--bad);
-}
-.tl-confirm.show { display: flex; }
-.tl-normal.hide  { display: none; }
+    /* Bitácora */
+    .tl-row-log {
+        display: flex; gap: 16px; align-items: flex-start;
+        padding: 16px 8px;
+        border-bottom: 1px solid var(--ink);
+        background: rgba(200,255,0,.18);
+    }
+    .tl-log-icon {
+        width: 46px; height: 46px;
+        border: 1px solid var(--ink);
+        background: var(--card);
+        display: flex; align-items: center; justify-content: center;
+        font-size: 22px; flex-shrink: 0;
+    }
+    .tl-log-body { flex: 1; min-width: 0; }
+    .tl-log-hdr {
+        font-family: var(--mono); font-size: 10px; font-weight: 700;
+        letter-spacing: .16em; text-transform: uppercase; opacity: .6; margin-bottom: 4px;
+    }
+    .tl-log-text { font-size: 13px; line-height: 1.55; }
+    .tl-log-energy { text-align: right; font-family: var(--mono); font-size: 11px; }
+    .tl-log-energy b { font-family: var(--display); font-size: 22px; display: block; line-height: 1; }
 
-/* Bitácora */
-.tl-row-log {
-  display: flex; gap: 16px; align-items: flex-start;
-  padding: 16px 8px;
-  border-bottom: 1px solid var(--ink);
-  background: rgba(200,255,0,.18);
-}
-.tl-log-icon {
-  width: 46px; height: 46px;
-  border: 1px solid var(--ink);
-  background: var(--card);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 22px; flex-shrink: 0;
-}
-.tl-log-body { flex: 1; min-width: 0; }
-.tl-log-hdr {
-  font-family: var(--mono); font-size: 10px; font-weight: 700;
-  letter-spacing: .16em; text-transform: uppercase; opacity: .6; margin-bottom: 4px;
-}
-.tl-log-text { font-size: 13px; line-height: 1.55; }
-.tl-log-energy { text-align: right; font-family: var(--mono); font-size: 11px; }
-.tl-log-energy b { font-family: var(--display); font-size: 22px; display: block; line-height: 1; }
+    /* Empty state */
+    .tl-empty {
+        border: 1px solid var(--ink);
+        padding: 56px 24px; text-align: center; margin-top: 16px;
+    }
+    .tl-empty-num {
+        font-family: var(--display); font-size: 96px;
+        line-height: 1; opacity: .12;
+    }
+    .tl-empty-msg {
+        font-family: var(--mono); font-size: 11px; font-weight: 700;
+        letter-spacing: .2em; text-transform: uppercase; opacity: .6;
+    }
 
-/* Empty state */
-.tl-empty {
-  border: 1px solid var(--ink);
-  padding: 56px 24px; text-align: center; margin-top: 16px;
-}
-.tl-empty-num {
-  font-family: var(--display); font-size: 96px;
-  line-height: 1; opacity: .12;
-}
-.tl-empty-msg {
-  font-family: var(--mono); font-size: 11px; font-weight: 700;
-  letter-spacing: .2em; text-transform: uppercase; opacity: .6;
-}
+    /* Footer */
+    .tl-footer {
+        margin-top: 56px; padding-top: 20px;
+        border-top: 3px solid var(--ink);
+        display: flex; justify-content: space-between;
+        font-family: var(--mono); font-size: 10px; font-weight: 700;
+        letter-spacing: .16em; text-transform: uppercase; opacity: .6;
+    }
 
-/* Footer */
-.tl-footer {
-  margin-top: 56px; padding-top: 20px;
-  border-top: 3px solid var(--ink);
-  display: flex; justify-content: space-between;
-  font-family: var(--mono); font-size: 10px; font-weight: 700;
-  letter-spacing: .16em; text-transform: uppercase; opacity: .6;
-}
+    @keyframes tlFade {
+        from { opacity: 0; transform: translateY(4px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
 
-@keyframes tlFade {
-  from { opacity: 0; transform: translateY(4px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
+    /* Responsive */
+    @media (max-width: 640px) {
+        .tl-stats { grid-template-columns: repeat(2, 1fr); }
+        .tl-stat:nth-child(2) { border-right: 0; }
+        .tl-stat:nth-child(1), .tl-stat:nth-child(2) { border-bottom: 1px solid var(--ink); }
+        .tl-footer { flex-direction: column; gap: 6px; text-align: center; }
+    }
+    </style>
+</head>
+<body>
 
-/* Responsive */
-@media (max-width: 640px) {
-  .tl-stats { grid-template-columns: repeat(2, 1fr); }
-  .tl-stat:nth-child(2) { border-right: 0; }
-  .tl-stat:nth-child(1), .tl-stat:nth-child(2) { border-bottom: 1px solid var(--ink); }
-  .tl-footer { flex-direction: column; gap: 6px; text-align: center; }
-}
-</style>
-{% endblock %}
-
-{% block content %}
 <div class="tl-shell" id="tl-shell" data-cliente="{{ cliente.id }}">
 
-  <!-- ═══ MARQUEE ═══ -->
-  <div class="tl-marquee">
-    <span>● LIVE · TIMELINE #{{ cliente.id }}</span>
-    <span id="tl-clock">--:--:--</span>
-  </div>
-
-  <!-- ═══ TOPBAR ═══ -->
-  <div class="tl-topbar">
-    <a href="{% url 'clientes:panel_cliente' %}" class="tl-back">‹ VOLVER</a>
-    <span class="tl-version">TIMELINE · v04.26</span>
-  </div>
-
-  <!-- ═══ MASTHEAD ═══ -->
-  <section class="tl-masthead">
-    <div class="tl-masthead-row">
-      <div class="l">REGISTRO<br>ACTIVIDAD</div>
-      <div class="r">CLIENTE · CL-{{ cliente.id }} · {{ cliente.nombre|upper }}</div>
-    </div>
-    <h1 class="tl-h1">HIS<span class="mark">TO</span>RIAL<span class="dot">.</span></h1>
-
-    <div class="tl-range" role="group" aria-label="Rango de fechas">
-      <span class="tl-range-lbl">RANGO →</span>
-      {% for r in rangos %}
-      <a href="?dias={{ r }}"
-         class="tl-range-btn {% if dias_rango == r %}active{% endif %}"
-         {% if dias_rango == r %}aria-current="page"{% endif %}>
-        {% if r == 7 %}07D{% elif r == 30 %}30D{% else %}90D{% endif %}
-      </a>
-      {% endfor %}
-    </div>
-  </section>
-
-  <!-- ═══ STATS ═══ -->
-  <section class="tl-stats">
-    <div class="tl-stat">
-      <div class="tl-stat-lbl">DÍAS ACTIVOS</div>
-      <div class="tl-stat-val">{{ dias_activos }}</div>
-    </div>
-    <div class="tl-stat">
-      <div class="tl-stat-lbl">ACTIVIDADES</div>
-      <div class="tl-stat-val">{{ total_actividades }}</div>
-    </div>
-    {% if tsb_data %}
-    <div class="tl-stat {% if tsb_data.zona == 'sobrecargado' %}tl-stat-bad{% elif tsb_data.zona == 'fatigado' %}tl-stat-warn{% endif %}">
-      <div class="tl-stat-lbl">TSB · {{ tsb_data.zona|upper }}</div>
-      <div class="tl-stat-val {% if tsb_data.zona == 'sobrecargado' %}bad{% elif tsb_data.zona == 'fatigado' %}warn{% elif tsb_data.zona == 'optimo' or tsb_data.zona == 'fresco' %}ok{% endif %}">{{ tsb_data.tsb }}</div>
-      <div class="tl-stat-sub">CTL {{ tsb_data.ctl }} · ATL {{ tsb_data.atl }}</div>
-    </div>
-    {% else %}
-    <div class="tl-stat">
-      <div class="tl-stat-lbl">TSB</div>
-      <div class="tl-stat-val">—</div>
-    </div>
-    {% endif %}
-    <div class="tl-stat {% if acwr.zona_riesgo == 'cuidado' %}tl-stat-warn{% elif acwr.zona_riesgo == 'riesgo_alto' %}tl-stat-bad{% endif %}">
-      <div class="tl-stat-lbl">ACWR ·
-        {% if acwr.zona_riesgo == 'optima' %}ÓPTIMA
-        {% elif acwr.zona_riesgo == 'baja_carga' %}BAJA
-        {% elif acwr.zona_riesgo == 'cuidado' %}CUIDADO
-        {% elif acwr.zona_riesgo == 'riesgo_alto' %}RIESGO
-        {% else %}—{% endif %}
-      </div>
-      <div class="tl-stat-val {% if acwr.zona_riesgo == 'optima' %}ok{% elif acwr.zona_riesgo == 'cuidado' %}warn{% elif acwr.zona_riesgo == 'riesgo_alto' %}bad{% endif %}">{{ acwr.acwr_actual }}</div>
-    </div>
-  </section>
-
-  <!-- ═══ FILTERS ═══ -->
-  <section class="tl-section">
-    <div class="tl-section-hdr">
-      <span class="tl-section-tag">§01</span>
-      <h2 class="tl-section-title">Filtrar por disciplina</h2>
-      <div class="tl-rule"></div>
-    </div>
-    <div class="tl-filters" role="group" aria-label="Filtrar por tipo">
-      <button class="tl-filter-btn active" data-filter="all">TODO · {{ total_actividades }}</button>
-      {% for d in desglose %}
-      <button class="tl-filter-btn" data-filter="{{ d.tipo }}">
-        {{ d.icono }} {{ d.tipo|upper }} · {{ d.total }}
-      </button>
-      {% endfor %}
-    </div>
-  </section>
-
-  <!-- ═══ CTA ═══ -->
-  <a href="{% url 'entrenos:registrar_actividad_libre' cliente.id %}" class="tl-cta">
-    <span style="font-size:22px;font-weight:900;line-height:1">+</span> REGISTRAR ACTIVIDAD
-  </a>
-
-  <!-- ═══ TIMELINE ═══ -->
-  <section class="tl-section">
-    <div class="tl-section-hdr">
-      <span class="tl-section-tag">§02</span>
-      <h2 class="tl-section-title">Secuencia · {{ dias_rango }}D</h2>
-      <div class="tl-rule"></div>
+    <!-- ═══ MARQUEE ═══ -->
+    <div class="tl-marquee">
+        <span>● LIVE · TIMELINE #{{ cliente.id }}</span>
+        <span id="tl-clock">--:--:--</span>
     </div>
 
-    <div class="tl-list" id="tl-list">
-      {% for dia in dias %}
-      {% if dia.n_actividades > 0 or dia.bitacora %}
+    <!-- ═══ TOPBAR ═══ -->
+    <div class="tl-topbar">
+        <a href="{% url 'clientes:panel_cliente' %}" class="tl-back">‹ VOLVER</a>
+        <span class="tl-version">TIMELINE · v04.26</span>
+    </div>
 
-        <!-- Day header -->
-        <div class="tl-day-hdr {% if dia.es_hoy %}tl-day-hdr-today{% endif %}">
-          <span>
-            <span class="num">D{{ forloop.counter|stringformat:"02d" }}</span>
-            {{ dia.dia_semana|upper }} {{ dia.fecha|date:"d M" }}{% if dia.es_hoy %} · HOY{% endif %}
-          </span>
-          {% if dia.energia %}
-          <span>ENERGÍA <b style="font-family:var(--display);font-size:14px;">{{ dia.energia }}</b>/10 {{ dia.humor_emoji }}</span>
-          {% endif %}
+    <!-- ═══ MASTHEAD ═══ -->
+    <section class="tl-masthead">
+        <div class="tl-masthead-row">
+            <div class="l">REGISTRO<br>ACTIVIDAD</div>
+            <div class="r">CLIENTE · CL-{{ cliente.id }} · {{ cliente.nombre|upper }}</div>
         </div>
+        <h1 class="tl-h1">HIS<span class="mark">TO</span>RIAL<span class="dot">.</span></h1>
 
-        {% for actividad in dia.actividades %}
-        <div class="tl-row"
-             data-tipo="{{ actividad.tipo }}"
-             data-carga="{{ actividad.carga_display|default:actividad.duracion_minutos|default:0 }}"
-             data-id="{{ actividad.id }}"
-             onclick="tlToggleRow(this)">
-
-          <div class="tl-ring">
-            <svg viewBox="0 0 46 46" width="46" height="46">
-              <rect x="1" y="1" width="44" height="44" stroke="#131313" stroke-width="1" fill="#F6F2E3"/>
-              <circle cx="23" cy="23" r="19" fill="none" stroke="rgba(19,19,19,.15)" stroke-width="3"/>
-              <circle cx="23" cy="23" r="19" fill="none"
-                      stroke="#131313" stroke-width="3"
-                      stroke-dasharray="{{ actividad.ring_dash }} 119.38"
-                      transform="rotate(-90 23 23)"/>
-            </svg>
-          </div>
-
-          <div class="tl-info">
-            <div class="tl-info-meta">
-              <span>
-                {% if actividad.tipo == 'gym' %}🏋{% elif actividad.tipo == 'hyrox' %}⚡{% elif actividad.tipo == 'carrera' %}🏃{% elif actividad.tipo == 'ciclismo' %}🚴{% elif actividad.tipo == 'natacion' %}🏊{% elif actividad.tipo == 'remo' %}🚣{% elif actividad.tipo == 'yoga' or actividad.tipo == 'estiramientos' %}🧘{% elif actividad.tipo == 'futbol' %}⚽{% else %}🎯{% endif %}
-                {{ actividad.tipo|upper }}{% if actividad.titulo %} · {{ actividad.titulo }}{% endif %}
-              </span>
-              {% if actividad.fuente == 'strava' %}<span style="background:#FC4C02;color:#fff;padding:1px 6px;font-size:9px;">STRAVA</span>{% endif %}
-              {% if actividad.fecha_realizado and actividad.fecha_realizado != actividad.fecha %}
-              <span class="tl-plan" title="Sesión planificada para {{ actividad.fecha }}">📅 PLAN {{ actividad.fecha|date:"d/m" }}</span>
-              {% endif %}
-            </div>
-            <div class="tl-info-metric">
-              {% if actividad.distancia_metros %}
-                {% widthratio actividad.distancia_metros 1000 1 %}<span class="unit">KM</span>
-              {% elif actividad.calorias %}
-                {{ actividad.calorias|floatformat:0 }}<span class="unit">CAL</span>
-              {% elif actividad.carga_display %}
-                {{ actividad.carga_display|floatformat:0 }}<span class="unit">sRPE</span>
-              {% elif actividad.volumen_kg %}
-                {{ actividad.volumen_kg|floatformat:0 }}<span class="unit">KG</span>
-              {% elif actividad.duracion_minutos %}
-                {{ actividad.duracion_minutos }}<span class="unit">MIN</span>
-              {% elif actividad.rpe_medio %}
-                {{ actividad.rpe_medio|floatformat:1 }}<span class="unit">RPE</span>
-              {% else %}—{% endif %}
-            </div>
-          </div>
-
-          <div class="tl-sub">
-            {% if actividad.distancia_metros and actividad.duracion_minutos %}{{ actividad.duracion_minutos }} MIN{% endif %}
-            {% if not actividad.distancia_metros and actividad.rpe_medio %}RPE {{ actividad.rpe_medio|floatformat:1 }}{% endif %}
-            {% if actividad.hr_media %}<br>{{ actividad.hr_media }} BPM{% endif %}
-          </div>
+        <div class="tl-range" role="group" aria-label="Rango de fechas">
+            <span class="tl-range-lbl">RANGO →</span>
+            {% for r in rangos %}
+            <a href="?dias={{ r }}"
+                class="tl-range-btn {% if dias_rango == r %}active{% endif %}"
+                {% if dias_rango == r %}aria-current="page"{% endif %}>
+                {% if r == 7 %}07D{% elif r == 30 %}30D{% else %}90D{% endif %}
+            </a>
+            {% endfor %}
         </div>
+    </section>
 
-        <!-- Expandable actions -->
-        <div class="tl-actions" id="tl-actions-{{ actividad.id }}">
-          <div class="tl-normal" id="tl-normal-{{ actividad.id }}" style="display:flex;flex:1;">
-            <button class="tl-action-btn" onclick="tlEditActivity('{{ actividad.id }}', event)">✏ EDITAR</button>
-            <button class="tl-action-btn del" onclick="tlConfirmDelete('{{ actividad.id }}', event)">🗑 ELIMINAR</button>
-          </div>
-          <div class="tl-confirm" id="tl-confirm-{{ actividad.id }}" style="flex:1;">
-            <span style="flex:1;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.16em;color:var(--bad)">¿ELIMINAR?</span>
-            <button class="tl-action-btn del" onclick="tlDeleteActivity('{{ actividad.id }}', event)">SÍ</button>
-            <button class="tl-action-btn" onclick="tlCancelDelete('{{ actividad.id }}', event)">NO</button>
-          </div>
+    <!-- ═══ STATS ═══ -->
+    <section class="tl-stats">
+        <div class="tl-stat">
+            <div class="tl-stat-lbl">DÍAS ACTIVOS</div>
+            <div class="tl-stat-val">{{ dias_activos }}</div>
         </div>
-        {% endfor %}
-
-        {% if dia.bitacora %}
-        <div class="tl-row-log">
-          <div class="tl-log-icon">{{ dia.humor_emoji|default:"📓" }}</div>
-          <div class="tl-log-body">
-            <div class="tl-log-hdr">BITÁCORA · {{ dia.dia_semana|upper }} {{ dia.fecha|date:"d M" }}</div>
-            <div class="tl-log-text">
-              {% if dia.emocion_dia %}"{{ dia.emocion_dia }}"{% endif %}
-              {% if dia.nota %}{% if dia.emocion_dia %} — {% endif %}{{ dia.nota }}{% endif %}
-            </div>
-          </div>
-          {% if dia.energia %}
-          <div class="tl-log-energy">
-            <b>{{ dia.energia }}</b>/10
-          </div>
-          {% endif %}
+        <div class="tl-stat">
+            <div class="tl-stat-lbl">ACTIVIDADES</div>
+            <div class="tl-stat-val">{{ total_actividades }}</div>
+        </div>
+        {% if tsb_data %}
+        <div class="tl-stat
+            {% if tsb_data.zona == 'sobrecargado' %}tl-stat-bad
+            {% elif tsb_data.zona == 'fatigado' %}tl-stat-warn{% endif %}">
+            <div class="tl-stat-lbl">TSB · {{ tsb_data.zona|upper }}</div>
+            <div class="tl-stat-val
+                {% if tsb_data.zona == 'sobrecargado' %}bad
+                {% elif tsb_data.zona == 'fatigado' %}warn
+                {% else %}ok{% endif %}">{{ tsb_data.tsb }}</div>
+            <div class="tl-stat-sub">CTL {{ tsb_data.ctl }} · ATL {{ tsb_data.atl }}</div>
+        </div>
+        {% else %}
+        <div class="tl-stat">
+            <div class="tl-stat-lbl">TSB</div>
+            <div class="tl-stat-val">—</div>
         </div>
         {% endif %}
-
-      {% endif %}
-      {% empty %}
-        <div class="tl-empty">
-          <div class="tl-empty-num">00</div>
-          <div class="tl-empty-msg">SIN ACTIVIDADES EN ESTE PERIODO</div>
+        <div class="tl-stat
+            {% if acwr.zona_riesgo == 'cuidado' %}tl-stat-warn
+            {% elif acwr.zona_riesgo == 'riesgo_alto' %}tl-stat-bad{% endif %}">
+            <div class="tl-stat-lbl">ACWR ·
+                {% if acwr.zona_riesgo == 'optima' %}ÓPTIMA
+                {% elif acwr.zona_riesgo == 'cuidado' %}CUIDADO
+                {% elif acwr.zona_riesgo == 'riesgo_alto' %}RIESGO
+                {% else %}—{% endif %}
+            </div>
+            <div class="tl-stat-val
+                {% if acwr.zona_riesgo == 'optima' %}ok
+                {% elif acwr.zona_riesgo == 'cuidado' %}warn
+                {% elif acwr.zona_riesgo == 'riesgo_alto' %}bad{% endif %}">{{ acwr.acwr_actual }}</div>
         </div>
-      {% endfor %}
-    </div>
-  </section>
+    </section>
 
-  <!-- ═══ FOOTER ═══ -->
-  <footer class="tl-footer">
-    <span>FIN DEL HISTORIAL</span>
-    <span>● ACTUALIZADO EN VIVO</span>
-    <span>CL-{{ cliente.id }}</span>
-  </footer>
+    <!-- ═══ FILTERS ═══ -->
+    <section class="tl-section">
+        <div class="tl-section-hdr">
+            <span class="tl-section-tag">§01</span>
+            <h2 class="tl-section-title">Filtrar por disciplina</h2>
+            <div class="tl-rule"></div>
+        </div>
+        <div class="tl-filters" role="group" aria-label="Filtrar por tipo">
+            <button class="tl-filter-btn active" data-filter="all">TODO · {{ total_actividades }}</button>
+            {% for d in desglose %}
+            <button class="tl-filter-btn" data-filter="{{ d.tipo }}">
+                {{ d.icono }} {{ d.tipo|upper }}{% if d.n %} · {{ d.n }}{% endif %}
+            </button>
+            {% endfor %}
+        </div>
+    </section>
+
+    <!-- ═══ CTA ═══ -->
+    <a href="{% url 'entrenos:registrar_actividad_libre' cliente.id %}" class="tl-cta">
+        <span style="font-size:22px;font-weight:900;line-height:1">+</span> REGISTRAR ACTIVIDAD
+    </a>
+
+    <!-- ═══ TIMELINE ═══ -->
+    <section class="tl-section">
+        <div class="tl-section-hdr">
+            <span class="tl-section-tag">§02</span>
+            <h2 class="tl-section-title">Secuencia · {{ dias_rango }}D</h2>
+            <div class="tl-rule"></div>
+        </div>
+
+        <div class="tl-list" id="tl-list">
+            {% for dia in dias %}
+
+                <!-- Day header -->
+                <div class="tl-day-hdr">
+                    <span><span class="num">D{{ forloop.counter|stringformat:"02d" }}</span>{{ dia.dia_semana|upper }} {{ dia.fecha|date:"d M" }}</span>
+                    {% if dia.energia %}
+                    <span>ENERGÍA <b style="font-family:var(--display);font-size:14px;">{{ dia.energia }}</b>/10 {{ dia.humor_emoji|default:"" }}</span>
+                    {% endif %}
+                </div>
+
+                {% for actividad in dia.actividades %}
+                <div class="tl-row"
+                        data-tipo="{{ actividad.tipo }}"
+                        data-carga="{{ actividad.carga_ua|default:actividad.volumen_kg|default:actividad.duracion_minutos|default:0 }}"
+                        data-id="{{ actividad.id }}"
+                        onclick="tlToggleRow(this)">
+
+                    <div class="tl-ring">
+                        <svg viewBox="0 0 46 46" width="46" height="46">
+                            <rect x="1" y="1" width="44" height="44" stroke="#131313" stroke-width="1"/>
+                            <circle cx="23" cy="23" r="19" fill="none" stroke="rgba(19,19,19,.15)" stroke-width="3"/>
+                            <circle cx="23" cy="23" r="19" fill="none"
+                                    stroke="#131313" stroke-width="3"
+                                    stroke-dasharray="0 119.38"
+                                    transform="rotate(-90 23 23)"
+                                    class="tl-ring-arc"/>
+                        </svg>
+                    </div>
+
+                    <div class="tl-info">
+                        <div class="tl-info-meta">
+                            <span>{% if actividad.tipo == 'gym' %}🏋{% elif actividad.tipo == 'hyrox' %}⚡{% elif actividad.tipo == 'carrera' %}🏃{% elif actividad.tipo == 'ciclismo' %}🚴{% elif actividad.tipo == 'natacion' %}🏊{% elif actividad.tipo == 'remo' %}🚣{% elif actividad.tipo == 'yoga' or actividad.tipo == 'estiramientos' %}🧘{% elif actividad.tipo == 'futbol' %}⚽{% else %}🎯{% endif %} {{ actividad.tipo|upper }}{% if actividad.titulo %} · {{ actividad.titulo }}{% endif %}</span>
+                            {% if actividad.fecha_realizado and actividad.fecha_realizado != actividad.fecha %}
+                            <span class="tl-plan" title="Sesión planificada para {{ actividad.fecha }}">📅 PLAN {{ actividad.fecha|date:"d/m" }}</span>
+                            {% endif %}
+                        </div>
+                        <div class="tl-info-metric">
+                            {% if actividad.distancia_metros %}{% widthratio actividad.distancia_metros 1000 1 %}<span class="unit">KM</span>
+                            {% elif actividad.calorias %}{{ actividad.calorias|floatformat:0 }}<span class="unit">CAL</span>
+                            {% elif actividad.carga_display %}{{ actividad.carga_display|floatformat:0 }}<span class="unit">sRPE</span>
+                            {% elif actividad.volumen_kg %}{{ actividad.volumen_kg|floatformat:0 }}<span class="unit">KG</span>
+                            {% elif actividad.duracion_minutos %}{{ actividad.duracion_minutos }}<span class="unit">MIN</span>
+                            {% elif actividad.rpe_medio %}{{ actividad.rpe_medio|floatformat:1 }}<span class="unit">RPE</span>
+                            {% else %}—{% endif %}
+                        </div>
+                    </div>
+
+                    <div class="tl-sub">
+                        {% if actividad.distancia_metros and actividad.duracion_minutos %}{{ actividad.duracion_minutos }} MIN{% endif %}
+                        {% if not actividad.distancia_metros and actividad.rpe_medio %}RPE {{ actividad.rpe_medio|floatformat:1 }}{% endif %}
+                    </div>
+                </div>
+
+                <!-- Expandable actions -->
+                <div class="tl-actions" id="tl-actions-{{ actividad.id }}">
+                    <div class="tl-normal" id="tl-normal-{{ actividad.id }}" style="display:flex;flex:1;">
+                        <button class="tl-action-btn" onclick="tlEditActivity('{{ actividad.id }}')">✏ EDITAR</button>
+                        <button class="tl-action-btn del" onclick="tlConfirmDelete('{{ actividad.id }}', event)">🗑 ELIMINAR</button>
+                    </div>
+                    <div class="tl-confirm" id="tl-confirm-{{ actividad.id }}" style="flex:1;">
+                        <span style="flex:1;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.16em;color:var(--bad)">¿ELIMINAR?</span>
+                        <button class="tl-action-btn del" onclick="tlDeleteActivity('{{ actividad.id }}', event)">SÍ</button>
+                        <button class="tl-action-btn" onclick="tlCancelDelete('{{ actividad.id }}', event)">NO</button>
+                    </div>
+                </div>
+                {% endfor %}
+
+                {% if dia.bitacora %}
+                <div class="tl-row-log">
+                    <div class="tl-log-icon">{{ dia.humor_emoji|default:"📓" }}</div>
+                    <div class="tl-log-body">
+                        <div class="tl-log-hdr">BITÁCORA · {{ dia.dia_semana|upper }} {{ dia.fecha|date:"d M" }}</div>
+                        <div class="tl-log-text">
+                            {% if dia.emocion_dia %}"{{ dia.emocion_dia }}"{% endif %}
+                            {% if dia.nota %}{% if dia.emocion_dia %} — {% endif %}{{ dia.nota }}{% endif %}
+                        </div>
+                    </div>
+                    {% if dia.energia %}
+                    <div class="tl-log-energy">
+                        <b>{{ dia.energia }}</b>/10
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+            {% empty %}
+                <div class="tl-empty">
+                    <div class="tl-empty-num">00</div>
+                    <div class="tl-empty-msg">SIN ACTIVIDADES EN ESTE PERIODO</div>
+                </div>
+            {% endfor %}
+        </div>
+    </section>
+
+    <!-- ═══ FOOTER ═══ -->
+    <footer class="tl-footer">
+        <span>FIN DEL HISTORIAL</span>
+        <span>● ACTUALIZADO EN VIVO</span>
+        <span>CL-{{ cliente.id }}</span>
+    </footer>
 
 </div>
-{% endblock %}
 
-{% block extra_js %}
-<script>
-/* Kill dark theme particles & atmosphere for this page */
-document.addEventListener('DOMContentLoaded', function () {
-  // Force cream background on body in case CSS specificity lost
-  document.body.style.setProperty('background-color', '#EFEBDC', 'important');
-  document.body.style.setProperty('background-image', 'none', 'important');
-  document.documentElement.style.setProperty('background-color', '#EFEBDC', 'important');
-
-  // Disable BladeRunner particles (appended as position:fixed divs on body)
-  if (typeof bladeRunnerParticles !== 'undefined' && bladeRunnerParticles.isActive) {
-    try { bladeRunnerParticles.toggle(); } catch(e) {}
-  }
-  // Hide atmosphere container
-  const atm = document.getElementById('bladeRunnerAtmosphere');
-  if (atm) atm.style.display = 'none';
-
-  // Fallback: find and hide any fixed full-screen div injected into body
-  // (particleContainer has no class/id, detect by position:fixed + z-index)
-  document.querySelectorAll('body > div').forEach(function(el) {
-    const s = el.style;
-    if (s.position === 'fixed' && s.zIndex === '5' && s.pointerEvents === 'none') {
-      el.style.display = 'none';
-    }
-  });
-});
-</script>
 <script>
 (function () {
 'use strict';
 
 /* CLOCK */
 function tickClock() {
-  const el = document.getElementById('tl-clock');
-  if (!el) return;
-  el.textContent = new Date().toTimeString().slice(0, 8);
+    const el = document.getElementById('tl-clock');
+    if (!el) return;
+    el.textContent = new Date().toTimeString().slice(0, 8);
 }
 setInterval(tickClock, 1000); tickClock();
 
 /* RINGS */
 const CIRC = 2 * Math.PI * 19;
 function initRings() {
-  const rows = document.querySelectorAll('.tl-row[data-carga]');
-  let max = 1;
-  rows.forEach(r => { const v = parseFloat(r.dataset.carga) || 0; if (v > max) max = v; });
-  rows.forEach((row, i) => {
-    const arc = row.querySelector('.tl-ring-arc');
-    if (!arc) return;
-    const c = parseFloat(row.dataset.carga) || 0;
-    const dash = Math.min(c / max, 1) * CIRC;
-    setTimeout(() => {
-      arc.style.transition = 'stroke-dasharray .9s cubic-bezier(.25,.46,.45,.94)';
-      arc.setAttribute('stroke-dasharray', dash.toFixed(2) + ' ' + CIRC.toFixed(2));
-    }, 80 + i * 40);
-  });
+    const rows = document.querySelectorAll('.tl-row[data-carga]');
+    let max = 1;
+    rows.forEach(r => { const v = parseFloat(r.dataset.carga) || 0; if (v > max) max = v; });
+    rows.forEach((row, i) => {
+        const arc = row.querySelector('.tl-ring-arc');
+        if (!arc) return;
+        const c = parseFloat(row.dataset.carga) || 0;
+        const dash = Math.min(c / max, 1) * CIRC;
+        setTimeout(() => {
+            arc.style.transition = 'stroke-dasharray .9s cubic-bezier(.25,.46,.45,.94)';
+            arc.setAttribute('stroke-dasharray', dash.toFixed(2) + ' ' + CIRC.toFixed(2));
+        }, 80 + i * 40);
+    });
 }
 
 /* FILTERS */
 function initFilters() {
-  document.querySelectorAll('.tl-filter-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.tl-filter-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      const f = btn.dataset.filter;
-      document.querySelectorAll('#tl-list .tl-row, #tl-list .tl-actions').forEach(el => {
-        const tipo = el.dataset.tipo;
-        const show = (f === 'all') || tipo === f;
-        el.style.display = show ? '' : 'none';
-      });
+    document.querySelectorAll('.tl-filter-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.tl-filter-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            const f = btn.dataset.filter;
+            document.querySelectorAll('#tl-list .tl-row').forEach(el => {
+                const tipo = el.dataset.tipo;
+                const show = (f === 'all') || tipo === f;
+                el.style.display = show ? '' : 'none';
+                const id = el.dataset.id;
+                const act = id ? document.getElementById('tl-actions-' + id) : null;
+                if (act) act.style.display = show ? '' : 'none';
+            });
+        });
     });
-  });
 }
 
 /* ROW TOGGLE */
 let openRow = null;
 function tlToggleRow(rowEl) {
-  const id = rowEl.dataset.id;
-  const actions = document.getElementById('tl-actions-' + id);
-  if (!actions) return;
-  if (openRow && openRow !== id) {
-    const prev = document.getElementById('tl-actions-' + openRow);
-    if (prev) prev.classList.remove('open');
-    cancelDeleteUI(openRow);
-  }
-  actions.classList.toggle('open');
-  openRow = actions.classList.contains('open') ? id : null;
+    const id = rowEl.dataset.id;
+    const actions = document.getElementById('tl-actions-' + id);
+    if (!actions) return;
+    if (openRow && openRow !== id) {
+        const prev = document.getElementById('tl-actions-' + openRow);
+        if (prev) prev.classList.remove('open');
+        cancelDeleteUI(openRow);
+    }
+    actions.classList.toggle('open');
+    openRow = actions.classList.contains('open') ? id : null;
 }
 window.tlToggleRow = tlToggleRow;
 
 /* EDIT */
-function tlEditActivity(id, e) {
-  e.stopPropagation();
-  const c = document.getElementById('tl-shell').dataset.cliente;
-  window.location.href = '/entrenos/cliente/' + c + '/actividad/' + id + '/editar/';
+function tlEditActivity(id) {
+    const c = document.getElementById('tl-shell').dataset.cliente;
+    window.location.href = '/entrenos/cliente/' + c + '/actividad/' + id + '/editar/';
 }
 window.tlEditActivity = tlEditActivity;
 
 /* DELETE */
 function tlConfirmDelete(id, e) {
-  e.stopPropagation();
-  document.getElementById('tl-normal-' + id).classList.add('hide');
-  document.getElementById('tl-confirm-' + id).classList.add('show');
+    e.stopPropagation();
+    document.getElementById('tl-normal-' + id).classList.add('hide');
+    document.getElementById('tl-confirm-' + id).classList.add('show');
 }
 window.tlConfirmDelete = tlConfirmDelete;
 
@@ -698,31 +642,30 @@ function tlCancelDelete(id, e) { e.stopPropagation(); cancelDeleteUI(id); }
 window.tlCancelDelete = tlCancelDelete;
 
 function cancelDeleteUI(id) {
-  const n = document.getElementById('tl-normal-' + id);
-  const c = document.getElementById('tl-confirm-' + id);
-  if (n) n.classList.remove('hide');
-  if (c) c.classList.remove('show');
+    const n = document.getElementById('tl-normal-' + id);
+    const c = document.getElementById('tl-confirm-' + id);
+    if (n) n.classList.remove('hide');
+    if (c) c.classList.remove('show');
 }
 
 function tlDeleteActivity(id, e) {
-  e.stopPropagation();
-  const c = document.getElementById('tl-shell').dataset.cliente;
-  const csrf = (document.cookie.match(/csrftoken=([^;]+)/) || [])[1] || '';
-  fetch('/entrenos/cliente/' + c + '/actividad/' + id + '/eliminar/', {
-    method: 'POST',
-    headers: { 'X-CSRFToken': csrf, 'Content-Type': 'application/json' }
-  })
-    .then(r => r.ok ? location.reload() : alert('Error al eliminar'))
-    .catch(() => alert('Error de conexión'));
+    e.stopPropagation();
+    const c = document.getElementById('tl-shell').dataset.cliente;
+    const csrf = (document.cookie.match(/csrftoken=([^;]+)/) || [])[1] || '';
+    fetch('/entrenos/cliente/' + c + '/actividad/' + id + '/eliminar/', {
+        method: 'POST',
+        headers: { 'X-CSRFToken': csrf, 'Content-Type': 'application/json' }
+    })
+        .then(r => r.ok ? location.reload() : alert('Error al eliminar'))
+        .catch(() => alert('Error de conexión'));
 }
 window.tlDeleteActivity = tlDeleteActivity;
 
-// Safe init: works whether DOM already ready or not
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => { initRings(); initFilters(); });
-} else {
-  initRings(); initFilters();
-}
+document.addEventListener('DOMContentLoaded', () => { initRings(); initFilters(); });
 })();
 </script>
-{% endblock %}
+
+
+{% include 'includes/_joi_fab.html' %}
+</body>
+</html>
