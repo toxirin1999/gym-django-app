@@ -20,12 +20,14 @@ def get_alertas_sistema(cliente):
         from hyrox.models import UserInjury
         lesion = UserInjury.objects.filter(cliente=cliente, activa=True).first()
         if lesion:
+            from django.urls import reverse
             alertas.append({
                 'nivel': 'critico',
                 'icono': '🩹',
                 'titulo': f'Lesión activa — {lesion.zona_afectada}',
                 'texto': f'Fase {lesion.fase}. El plan filtra ejercicios incompatibles automáticamente.',
-                'url': None,
+                'url': reverse('hyrox:reportar_recuperacion', args=[lesion.id]),
+                'url_label': 'Gestionar lesión',
             })
     except Exception:
         pass
