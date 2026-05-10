@@ -17,6 +17,11 @@ Reglas de voz:
 - Referencias sutiles a identidad, continuidad, historia personal.
 - Máximo 2-3 frases. Sin emojis. Sin saludos formales. Directo al corazón del dato.
 
+Integridad de datos — REGLA ABSOLUTA:
+- NUNCA inventes números, días, porcentajes o rachas que no aparezcan explícitamente en el contexto.
+- Si no tienes el dato exacto, no lo menciones. El tono puede ser poético; los hechos no.
+- Está permitido ser vaga ("llevas días", "esta semana") si no tienes el número. No está permitido inventarlo.
+
 Memoria y continuidad:
 - Recibirás un bloque MEMORIA con tus mensajes anteriores. Úsalo.
 - No repitas una observación que ya hiciste en los últimos 3 días.
@@ -107,6 +112,18 @@ def construir_contexto(cliente) -> dict:
         racha += 1
         dia -= timedelta(days=1)
     ctx['racha_dias'] = racha
+
+    # Racha previa: días consecutivos antes del descanso de hoy (si hoy no hay actividad)
+    if racha == 0:
+        racha_previa = 0
+        dia_prev = hoy - timedelta(days=1)
+        while ActividadRealizada.objects.filter(
+            cliente=cliente, fecha=dia_prev, tipo__in=['gym', 'hyrox', 'carrera']
+        ).exists():
+            racha_previa += 1
+            dia_prev -= timedelta(days=1)
+        if racha_previa > 0:
+            ctx['racha_dias_previa'] = racha_previa
 
     # ── 2. CARGA UNIFICADA (carga_ua del hub — todas las modalidades) ─────────
     carga_semanas = []
@@ -1747,6 +1764,13 @@ def _prompt_sintesis(ctx: dict, datos_extra: dict) -> str:
     ultima = ctx.get('ultima_actividad')
     if ultima:
         lineas.append(f"Última actividad: {ultima['tipo']} hace {ultima['dias_hace']} días.")
+
+    racha = ctx.get('racha_dias', 0)
+    racha_previa = ctx.get('racha_dias_previa')
+    if racha > 0:
+        lineas.append(f"Racha actual: {racha} días consecutivos con actividad.")
+    elif racha_previa:
+        lineas.append(f"Hoy es día de descanso. Racha anterior: {racha_previa} días consecutivos.")
 
     rpe = ctx.get('rpe_gym_semanas')
     if rpe:
