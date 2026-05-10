@@ -1155,6 +1155,8 @@ def _sintetizador_contexto_vital(user) -> dict:
         'objetivos_mes': [],       # 3 objetivos del mes actual
         'revision_mes': None,      # revisión de fin de mes (si existe)
         'tareas_hoy_pct': None,    # % tareas completadas hoy
+        'habitos_negativos': [],   # hábitos negativos + análisis de impulsos
+        'impulsos_semana': None,   # resumen global de impulsos
     }
 
     # ── Intenciones AM y realidad PM ─────────────────────────────────────────
@@ -1318,6 +1320,90 @@ def _sintetizador_contexto_vital(user) -> dict:
                 'obstaculo_principal': rev.obstaculo_principal or '',
                 'aprendizaje_principal': rev.aprendizaje_principal or '',
             }
+    except Exception:
+        pass
+
+    # ── Hábitos negativos + impulsos (TriggerHabito) ─────────────────────────
+    try:
+        from diario.models import ProsocheHabito, TriggerHabito
+        from django.utils import timezone as tz
+        from django.db.models import Avg, Count
+
+        limite_7 = hoy - timedelta(days=7)
+        mes_nombre_neg = _MESES_ES[hoy.month]
+
+        habitos_neg = list(
+            ProsocheHabito.objects.filter(
+                prosoche_mes__usuario=user,
+                prosoche_mes__mes=mes_nombre_neg,
+                prosoche_mes__año=hoy.year,
+                tipo_habito='negativo',
+            )
+        )
+
+        if habitos_neg:
+            detalle_neg = []
+            for h in habitos_neg:
+                triggers = TriggerHabito.objects.filter(habito=h)
+                triggers_sem = triggers.filter(fecha__gte=limite_7)
+
+                total_sem   = triggers_sem.count()
+                cediste_sem = triggers_sem.filter(cediste=True).count()
+                resist_sem  = total_sem - cediste_sem
+
+                # Emoción más común en recaídas de siempre
+                emocion_peligrosa = (
+                    triggers.filter(cediste=True)
+                    .values('emocion_previa')
+                    .annotate(n=Count('id'))
+                    .order_by('-n')
+                    .first()
+                )
+                intensidad_prom = triggers.aggregate(avg=Avg('intensidad_deseo'))['avg']
+
+                # Racha sin recaer (días consecutivos hacia atrás desde hoy)
+                racha = 0
+                d = hoy
+                while d >= hoy - timedelta(days=30):
+                    if triggers.filter(fecha=d, cediste=True).exists():
+                        break
+                    racha += 1
+                    d -= timedelta(days=1)
+
+                detalle_neg.append({
+                    'nombre':           h.nombre,
+                    'racha':            racha,
+                    'impulsos_semana':  total_sem,
+                    'cediste_semana':   cediste_sem,
+                    'resististe_semana': resist_sem,
+                    'tasa_exito':       round(resist_sem / total_sem * 100) if total_sem else None,
+                    'emocion_gatillo':  emocion_peligrosa['emocion_previa'] if emocion_peligrosa else None,
+                    'intensidad_prom':  round(intensidad_prom, 1) if intensidad_prom else None,
+                })
+
+            resultado['habitos_negativos'] = detalle_neg
+
+            # Resumen global de impulsos de la semana
+            all_triggers_sem = TriggerHabito.objects.filter(
+                habito__prosoche_mes__usuario=user,
+                habito__tipo_habito='negativo',
+                fecha__gte=limite_7,
+            )
+            total_imp = all_triggers_sem.count()
+            if total_imp:
+                cediste_total = all_triggers_sem.filter(cediste=True).count()
+                emociones = list(
+                    all_triggers_sem.values('emocion_previa')
+                    .annotate(n=Count('id'))
+                    .order_by('-n')
+                    .values_list('emocion_previa', flat=True)[:3]
+                )
+                resultado['impulsos_semana'] = {
+                    'total':      total_imp,
+                    'cediste':    cediste_total,
+                    'resististe': total_imp - cediste_total,
+                    'emociones':  emociones,
+                }
     except Exception:
         pass
 
@@ -1761,6 +1847,25 @@ def _prompt_sintesis(ctx: dict, datos_extra: dict) -> str:
 
         if vital.get('friccion_detectada'):
             lineas.append("⚠ FRICCIÓN DETECTADA: alta aspiración AM con baja ejecución de hábitos.")
+
+        # Hábitos negativos e impulsos
+        hab_neg = vital.get('habitos_negativos', [])
+        if hab_neg:
+            lineas.append('HÁBITOS NEGATIVOS:')
+            for h in hab_neg:
+                racha_str = f"racha {h['racha']}d sin recaer" if h['racha'] > 0 else "racha rota"
+                tasa = f" | éxito {h['tasa_exito']}%" if h['tasa_exito'] is not None else ''
+                gatillo = f" | gatillo: {h['emocion_gatillo']}" if h['emocion_gatillo'] else ''
+                cediste = f" | cedió {h['cediste_semana']}x esta semana" if h['cediste_semana'] else ''
+                lineas.append(f"  - {h['nombre']}: {racha_str}{tasa}{gatillo}{cediste}")
+
+        impulsos = vital.get('impulsos_semana')
+        if impulsos and impulsos['total'] > 0:
+            lineas.append(
+                f"IMPULSOS semana: {impulsos['total']} total — "
+                f"resistió {impulsos['resististe']}, cedió {impulsos['cediste']}."
+                + (f" Emociones: {', '.join(impulsos['emociones'])}." if impulsos['emociones'] else '')
+            )
 
         rev = vital.get('revision_semanal')
         if rev and any(rev.values()):
