@@ -259,27 +259,57 @@ class HyroxStationIntelligence:
         "burpees": {
             "display_name": "Burpee Broad Jump",
             "icon": "fa-person-falling",
+            "description": (
+                "Estación 4 — tras 4 kilómetros de carrera. Combina un burpee con contacto completo "
+                "de pecho y caderas en el suelo, seguido de un salto horizontal hacia adelante. "
+                "La distancia total es 80 metros divididos en dos tramos de 40 m. "
+                "Es la estación más exigente mentalmente: el ritmo interno lo es todo."
+            ),
+            "rules": [
+                "Pecho Y caderas deben tocar el suelo en cada repetición",
+                "Salto y aterrizaje con ambos pies simultáneamente",
+                "Las manos no deben alejarse más de 30 cm de los pies al aterrizar",
+                "Los pies no pueden superar la posición de las manos al levantarse",
+                "Si aterrizas sobre la línea sin superarla, la repetición no cuenta",
+                "No se permiten pasos intermedios entre aterrizaje y siguiente bajada",
+                "Opción de bajar/subir con salto o paso (ambas válidas)",
+            ],
+            "positions": [
+                "Manos cerca del cuerpo al bajar — no las alejes",
+                "Pies hacia atrás con salto o paso hasta tocar pecho y caderas",
+                "Empujar el suelo y llevar pies hacia delante antes de saltar",
+                "Salto horizontal tipo 'rana' — no vertical",
+                "Tren superior bajo durante toda la estación",
+                "Tres variantes según energía: salto puro · paso · combinación",
+            ],
             "technical_focus": [
-                "Movimiento fluido continuo",
-                "Salto controlado, no máximo",
-                "Respiración constante",
-                "Aterrizaje estable",
+                "Salto horizontal, no vertical — el vertical consume el doble de energía",
+                "Transición suelo-pie: la zona donde más tiempo se pierde",
+                "Movimiento continuo — no incorporarse completamente entre reps",
+                "Respiración coordinada con el ritmo, no con el esfuerzo",
+                "Aterrizaje equilibrado para evitar pasos de corrección",
             ],
             "common_mistakes": [
-                "Saltar demasiado lejos",
-                "Pararse entre repeticiones",
-                "Perder ritmo",
-                "Fatiga descontrolada",
+                "Solo contacto de pecho sin caderas — repetición inválida",
+                "Separar excesivamente las manos del cuerpo",
+                "Saltos muy verticales — desgastan sin avanzar",
+                "Incorporarse completamente entre repeticiones",
+                "Aterrizajes desequilibrados que fuerzan pasos de corrección",
+                "Ir al fallo total sin gestionar bloques de descanso",
             ],
             "strategy": [
-                "Ritmo constante tipo metrónomo",
-                "No buscar distancia máxima",
-                "Mantener respiración estable",
+                "Planificar bloques de reps antes de empezar (ej: 10+10+10)",
+                "Descansar de pie 5 segundos entre bloques — no en el suelo",
+                "Cambiar a variante de paso si la respiración se dispara",
+                "Evitar el fallo total: parar antes y recuperar activamente",
+                "Acelerar la transición suelo-pie — ahí se recuperan segundos",
+                "Mantener distancia de salto constante y corta, no máxima",
             ],
             "corrective_work": [
-                "Series de burpees a ritmo fijo",
-                "Trabajo de pacing",
-                "Entrenamiento de respiración",
+                "4 rondas: 400m a ritmo competitivo + 20 BBJ en bloques de 5 (5s descanso de pie) · 1:30 entre rondas",
+                "Series de BBJ a ritmo fijo con metrónomo",
+                "Trabajo de salto horizontal: long jumps progresivos",
+                "Práctica de transición suelo-pie aislada",
             ],
             "corrective_activities": [
                 {
