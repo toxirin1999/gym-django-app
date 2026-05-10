@@ -411,6 +411,16 @@ function joiBannerCerrar(id) {
     <div class="rb-brand-bar"></div>
     GYM PANEL
   </a>
+  <a href="/joi/habitacion/"
+     style="display:inline-flex;align-items:center;gap:6px;font-family:var(--font-mono);
+            font-size:9px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;
+            color:var(--ink-3);border:1.5px solid var(--line-2);border-radius:2px;
+            padding:4px 10px;text-decoration:none;transition:all .15s;"
+     onmouseover="this.style.borderColor='var(--ink)';this.style.color='var(--ink)'"
+     onmouseout="this.style.borderColor='var(--line-2)';this.style.color='var(--ink-3)'">
+    <span style="width:5px;height:5px;border-radius:50%;background:{% if joi_mensaje_pendiente %}#6494dc{% else %}rgba(100,148,220,.35){% endif %};{% if joi_mensaje_pendiente %}box-shadow:0 0 6px rgba(100,148,220,.6);{% endif %}display:inline-block;"></span>
+    JOI
+  </a>
   <div style="display:flex;align-items:center;gap:10px;">
     <a href="{% url 'hyrox:strava_reconciliacion' %}"
        style="display:inline-flex;align-items:center;gap:5px;font-family:var(--font-mono);
@@ -1317,5 +1327,6 @@ function rbSubmitCheckin() {
 }
 </script>
 
+{% include 'includes/_joi_fab.html' %}
 </body>
 </html>
