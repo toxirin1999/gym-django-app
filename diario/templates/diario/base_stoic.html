@@ -65,51 +65,21 @@
     </ul>
   </li>
 
-  <!-- CUERPO (Vires) -->
-  <li class="nav-item">
-    <a class="nav-link {% if 'vires' in request.path %}active{% endif %}"
-       href="{% url 'diario:vires_dashboard' %}">
-      <i class="fas fa-dumbbell me-1"></i> Cuerpo
-    </a>
-  </li>
-
   <!-- MÁS -->
   <li class="nav-item dropdown">
-    <a class="nav-link dropdown-toggle {% if 'kairos' in request.path or 'arete' in request.path or 'virtudes' in request.path or 'eudaimonia' in request.path or 'gnosis' in request.path or 'simbiosis' in request.path %}active{% endif %}"
+    <a class="nav-link dropdown-toggle {% if 'kairos' in request.path or 'simbiosis' in request.path %}active{% endif %}"
        href="#" role="button" data-bs-toggle="dropdown">
       <i class="fas fa-layer-group me-1"></i> Más
     </a>
     <ul class="dropdown-menu">
       <li>
         <a class="dropdown-item" href="{% url 'diario:kairos_dashboard' %}">
-          <i class="fas fa-calendar-alt me-2"></i> Tiempo (Kairos)
-        </a>
-      </li>
-      <li><hr class="dropdown-divider"></li>
-      <li>
-        <a class="dropdown-item" href="{% url 'diario:arete_dashboard' %}">
-          <i class="fas fa-mountain me-2"></i> Disciplina (Areté)
-        </a>
-      </li>
-      <li>
-        <a class="dropdown-item" href="{% url 'diario:virtudes_dashboard' %}">
-          <i class="fas fa-medal me-2"></i> Virtudes
-        </a>
-      </li>
-      <li>
-        <a class="dropdown-item" href="{% url 'diario:eudaimonia_dashboard' %}">
-          <i class="fas fa-balance-scale me-2"></i> Equilibrio (Eudaimonia)
-        </a>
-      </li>
-      <li><hr class="dropdown-divider"></li>
-      <li>
-        <a class="dropdown-item" href="{% url 'diario:gnosis_dashboard' %}">
-          <i class="fas fa-brain me-2"></i> Conocimiento (Gnosis)
+          <i class="fas fa-calendar-alt me-2"></i> Kairos
         </a>
       </li>
       <li>
         <a class="dropdown-item" href="{% url 'diario:simbiosis_dashboard' %}">
-          <i class="fas fa-users me-2"></i> Relaciones (Simbiosis)
+          <i class="fas fa-users me-2"></i> Simbiosis
         </a>
       </li>
     </ul>
