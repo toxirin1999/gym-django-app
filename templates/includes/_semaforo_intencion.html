@@ -1,0 +1,107 @@
+{% comment %}
+Semáforo de Intención — partial reutilizable.
+Hereda las CSS variables del template anfitrión (--ink, --paper, --ok, --warn, --danger,
+--font-mono, --font-disp). Los fallbacks oscuros sirven para La Habitación.
+{% endcomment %}
+{% if semaforo %}
+{% with r=semaforo.datos_raw estado=semaforo.estado %}
+
+<div class="rb-sema rb-sema--{{ estado }}">
+
+  <div class="rb-sema-head">
+    <span class="rb-sema-dot rb-sema-dot--{{ estado }}"></span>
+    <span class="rb-sema-label">{{ semaforo.titulo }}</span>
+    {% if semaforo.paradoja %}
+      <span class="rb-sema-paradoja">
+        {% if semaforo.paradoja == 'A' %}CABEZA VS CUERPO{% else %}POSIBLE FLOJERA{% endif %}
+      </span>
+    {% endif %}
+  </div>
+
+  <p class="rb-sema-msg">{{ semaforo.mensaje }}</p>
+
+  <div class="rb-sema-data">
+    {% if r.acwr    %}<span>ACWR {{ r.acwr }}</span>{% endif %}
+    {% if r.tsb != None %}<span>TSB {{ r.tsb }}</span>{% endif %}
+    <span>Readiness {{ r.readiness_pct|floatformat:0 }}%</span>
+    {% if r.hrv_ms  %}<span>HRV {{ r.hrv_ms }} ms{% if r.hrv_hundido %} ↓{% endif %}</span>{% endif %}
+    {% if r.energia %}<span>Energía {{ r.energia }}/10</span>{% endif %}
+  </div>
+
+</div>
+
+<style>
+/* ── Semáforo de Intención ── hereda variables del host */
+.rb-sema {
+  padding: 12px 14px;
+  border-left: 3px solid;
+  border-radius: 2px;
+  margin-bottom: 16px;
+  background: var(--paper-2, rgba(8,12,22,0.72));
+}
+.rb-sema--verde    { border-color: var(--ok,     oklch(0.55 0.15 145)); }
+.rb-sema--amarillo { border-color: var(--warn,   oklch(0.72 0.17 70)); }
+.rb-sema--naranja  { border-color: var(--accent-2, oklch(0.62 0.18 60)); }
+.rb-sema--rojo     { border-color: var(--danger, oklch(0.55 0.22 25)); }
+
+.rb-sema-head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 6px;
+  flex-wrap: wrap;
+}
+.rb-sema-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.rb-sema-dot--verde    { background: var(--ok,      oklch(0.55 0.15 145)); }
+.rb-sema-dot--amarillo { background: var(--warn,    oklch(0.72 0.17 70)); }
+.rb-sema-dot--naranja  { background: var(--accent-2, oklch(0.62 0.18 60)); }
+.rb-sema-dot--rojo     {
+  background: var(--danger, oklch(0.55 0.22 25));
+  animation: sema-pulso 1.4s ease-in-out infinite;
+}
+@keyframes sema-pulso { 0%,100%{opacity:1} 50%{opacity:.35} }
+
+.rb-sema-label {
+  font-family: var(--font-mono, ui-monospace);
+  font-size: 9px; font-weight: 700;
+  letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--ink-3, rgba(15,15,14,0.55));
+}
+.rb-sema-paradoja {
+  font-family: var(--font-mono, ui-monospace);
+  font-size: 8px; font-weight: 700;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--accent-2, oklch(0.62 0.18 60));
+  padding: 1px 5px;
+  border: 1px solid var(--accent-2, oklch(0.62 0.18 60));
+  border-radius: 2px;
+  opacity: 0.85;
+}
+
+.rb-sema-msg {
+  font-family: var(--font-body, sans-serif);
+  font-size: 13px; line-height: 1.55;
+  color: var(--ink, #0F0F0E);
+  margin: 0 0 8px;
+}
+
+.rb-sema-data {
+  display: flex; flex-wrap: wrap; gap: 5px;
+}
+.rb-sema-data span {
+  font-family: var(--font-mono, ui-monospace);
+  font-size: 9px; font-weight: 700;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--ink-4, rgba(15,15,14,0.28));
+  padding: 2px 5px;
+  border: 1px solid var(--line, rgba(15,15,14,0.12));
+  border-radius: 2px;
+}
+</style>
+
+{% endwith %}
+{% endif %}

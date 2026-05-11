@@ -1356,6 +1356,20 @@ def hyrox_dashboard(request):
         'station_diagnosis': station_diagnosis,
         'post_session_diagnosis': post_session_diagnosis,
     }
+
+    # ── Semáforo de Intención ─────────────────────────────────────
+    from django.core.cache import cache as _cache
+    _semaforo_key = f'semaforo_{cliente.pk}'
+    semaforo = _cache.get(_semaforo_key)
+    if semaforo is None:
+        try:
+            from core.daily_decision import DailyDecisionEngine
+            semaforo = DailyDecisionEngine.get_estado_hoy(cliente)
+            _cache.set(_semaforo_key, semaforo, 1800)
+        except Exception:
+            semaforo = None
+    context['semaforo'] = semaforo
+
     return render(request, 'hyrox/dashboard.html', context)
 
 

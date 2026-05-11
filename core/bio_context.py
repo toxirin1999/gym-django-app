@@ -85,7 +85,56 @@ class BioContextProvider:
         }
 
     # ──────────────────────────────────────────────────────────
-    #  2) READINESS SCORE
+    #  2) BIO SIGNALS (checkin matutino)
+    # ──────────────────────────────────────────────────────────
+
+    @staticmethod
+    def get_bio_signals(cliente) -> Dict[str, Any]:
+        """
+        Devuelve los datos más recientes del checkin matutino (BitacoraDiaria)
+        dentro de una ventana de 3 días. Si no hay registro en ese periodo,
+        todos los campos son None (no se penaliza la ausencia).
+
+        Returns:
+            dict con:
+                energia        – int 1-10 (energía subjetiva)
+                horas_sueno    – float
+                calidad_sueno  – int 0-100
+                dolor          – int 0-10 (dolor articular)
+                fc_reposo      – int bpm
+                hrv_ms         – int ms
+                freshness_days – int (0=hoy, 1=ayer, 2=anteayer, None=sin dato)
+                has_data       – bool
+        """
+        from clientes.models import BitacoraDiaria
+        from django.utils import timezone
+
+        hoy = timezone.now().date()
+        entrada = (
+            BitacoraDiaria.objects
+            .filter(cliente=cliente, fecha__gte=hoy - timezone.timedelta(days=3), fecha__lte=hoy)
+            .order_by('-fecha')
+            .first()
+        )
+        if not entrada:
+            return {
+                'energia': None, 'horas_sueno': None, 'calidad_sueno': None,
+                'dolor': None, 'fc_reposo': None, 'hrv_ms': None,
+                'freshness_days': None, 'has_data': False,
+            }
+        return {
+            'energia':       entrada.energia_subjetiva,
+            'horas_sueno':   float(entrada.horas_sueno) if entrada.horas_sueno else None,
+            'calidad_sueno': entrada.calidad_sueno,
+            'dolor':         entrada.dolor_articular,
+            'fc_reposo':     entrada.fc_reposo,
+            'hrv_ms':        entrada.hrv_ms,
+            'freshness_days': (hoy - entrada.fecha).days,
+            'has_data':      True,
+        }
+
+    # ──────────────────────────────────────────────────────────
+    #  3) READINESS SCORE
     # ──────────────────────────────────────────────────────────
 
     @staticmethod
@@ -152,22 +201,45 @@ class BioContextProvider:
             # Sin datos de dolor → asumimos 0 (sin dolor conocido)
             pain_score = 0.0
 
-        # ── Mapear datos de DRE a inputs de Helms ───────────────
+        # ── Bio signals del checkin matutino (3-day proxy) ──────
+        _bio_empty = {
+            'has_data': False, 'energia': None, 'horas_sueno': None,
+            'calidad_sueno': None, 'dolor': None, 'fc_reposo': None,
+            'hrv_ms': None, 'freshness_days': None,
+        }
+        try:
+            bio = BioContextProvider.get_bio_signals(cliente)
+        except Exception:
+            bio = _bio_empty
+
+        # ── Mapear datos a inputs de Helms ───────────────────────
         # OptimizadorRecuperacion espera (nivel_estres, calidad_sueño,
         # nivel_energia) en escala 1-10.
         #
-        # Mapeamos:
-        #   dolor promedio (0-10)          → nivel_estres         (directo)
-        #   inflamacion_percibida (1-10)   → calidad_sueño inv.   (11 - inflam)
-        #   rango_movimiento (1-10)        → nivel_energia        (directo)
+        # Prioridad: DailyRecoveryEntry (lesión) > BitacoraDiaria (checkin) > defaults neutros
 
         if has_pain_data:
-            last = recent_entries[0]  # Más reciente
+            last = recent_entries[0]
             nivel_estres   = max(1, min(10, round(pain_score)))
             calidad_sueño  = max(1, min(10, 11 - last.inflamacion_percibida))
             nivel_energia  = max(1, min(10, last.rango_movimiento))
+            # Refinar calidad de sueño con checkin si está disponible
+            if bio['has_data'] and bio['calidad_sueno'] is not None:
+                calidad_sueño = max(1, min(10, round(bio['calidad_sueno'] / 10)))
+            elif bio['has_data'] and bio['horas_sueno'] is not None:
+                calidad_sueño = max(1, min(10, round(bio['horas_sueno'] * 10 / 8)))
+        elif bio['has_data']:
+            # Sin lesión: usar checkin matutino como fuente primaria
+            nivel_estres  = max(1, min(10, bio['dolor'] or 2))
+            if bio['calidad_sueno'] is not None:
+                calidad_sueño = max(1, min(10, round(bio['calidad_sueno'] / 10)))
+            elif bio['horas_sueno'] is not None:
+                calidad_sueño = max(1, min(10, round(bio['horas_sueno'] * 10 / 8)))
+            else:
+                calidad_sueño = 7
+            nivel_energia = bio['energia'] if bio['energia'] is not None else 7
         else:
-            # Defaults neutros
+            # Sin ningún dato: defaults neutros (no penalizar)
             nivel_estres  = 3
             calidad_sueño = 7
             nivel_energia = 7
@@ -185,6 +257,22 @@ class BioContextProvider:
         helms_component = (helms_factor - 0.7) / 0.6          # 0.0 – 1.0
         pain_component  = max(0.0, (10.0 - pain_score) / 10.0)  # 0.0 – 1.0
 
+        # Cuando no hay lesión, sustituir pain_component por señales del checkin
+        lifestyle_score = None
+        if not has_pain_data and bio['has_data']:
+            components = []
+            if bio['energia'] is not None:
+                components.append(bio['energia'] / 10.0)
+            if bio['horas_sueno'] is not None:
+                components.append(min(1.0, bio['horas_sueno'] / 8.0))
+            if bio['calidad_sueno'] is not None:
+                components.append(bio['calidad_sueno'] / 100.0)
+            if bio['dolor'] is not None:
+                components.append(max(0.0, (10.0 - bio['dolor']) / 10.0))
+            if components:
+                lifestyle_score = sum(components) / len(components)
+                pain_component = lifestyle_score  # reemplaza el 1.0 optimista
+
         # Penalización por fase aguda
         phase_penalty = 0.0
         if has_injuries:
@@ -194,7 +282,7 @@ class BioContextProvider:
                 elif inj.fase == UserInjury.Fase.SUB_AGUDA:
                     phase_penalty = max(phase_penalty, 0.15)
 
-        # Ponderación: Helms 40% + Pain 40% + Fase 20% (como penalización)
+        # Ponderación: Helms 40% + Pain/Lifestyle 40% + Fase 20%
         raw_score = (helms_component * 0.4) + (pain_component * 0.4) + ((1.0 - phase_penalty) * 0.2)
         score = max(0.0, min(1.0, raw_score))
 
@@ -261,6 +349,8 @@ class BioContextProvider:
             'max_rpe': max_rpe,
             'is_in_transition': is_in_transition,
             'transition_days_left': transition_days_left,
+            'lifestyle_score': round(lifestyle_score, 3) if lifestyle_score is not None else None,
+            'bio_signals': bio,
             'sources': {
                 'has_pain_data': has_pain_data,
                 'pain_entries_count': len(recent_entries),
