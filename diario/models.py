@@ -647,11 +647,9 @@ class ProsocheHabito(models.Model):
         return self.dias_completados.filter(completado=True).count()
     
     def get_dias_sin_habito(self):
-        """Para hábitos negativos: días SIN hacer el hábito"""
+        """Para hábitos negativos: días SIN hacer el hábito (marcados completado=True = evitado con éxito)"""
         if self.tipo_habito == 'negativo':
-            total_dias = self.dias_completados.count()
-            dias_con_habito = self.get_dias_completados()
-            return total_dias - dias_con_habito
+            return self.dias_completados.filter(completado=True).count()
         return 0
     
     def get_porcentaje_exito(self):
@@ -673,7 +671,7 @@ class ProsocheHabito(models.Model):
         if self.tipo_habito == 'negativo':
             racha = 0
             for dia in dias:
-                if not dia.completado:
+                if dia.completado:
                     racha += 1
                 else:
                     break

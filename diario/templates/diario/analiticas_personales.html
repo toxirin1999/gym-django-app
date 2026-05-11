@@ -40,10 +40,7 @@
                 </div>
                 <div class="card-body">
                     <div class="chart-container">
-                        <div class="metric-card bg-[var(--lol-bg-alt)] border border-[var(--lol-border-subtle)] p-4 rounded-sm shadow-xl relative overflow-hidden transition-all hover:border-[rgba(200,170,110,0.3)] hover:shadow-[0_0_15px_var(--lol-glow-gold)]">
-    <h4 class="font-display text-[0.65rem] text-[var(--lol-gold-mid)] uppercase tracking-wider mb-3">◆ ANIMO</h4>
-    <canvas id="animoChart"></canvas>
-</div>
+                        <canvas id="animoChart"></canvas>
                     </div>
                 </div>
             </div>
@@ -57,10 +54,7 @@
                 </div>
                 <div class="card-body">
                     <div class="chart-container">
-                        <div class="metric-card bg-[var(--lol-bg-alt)] border border-[var(--lol-border-subtle)] p-4 rounded-sm shadow-xl relative overflow-hidden transition-all hover:border-[rgba(200,170,110,0.3)] hover:shadow-[0_0_15px_var(--lol-glow-gold)]">
-    <h4 class="font-display text-[0.65rem] text-[var(--lol-gold-mid)] uppercase tracking-wider mb-3">◆ PESO</h4>
-    <canvas id="pesoChart"></canvas>
-</div>
+                        <canvas id="pesoChart"></canvas>
                     </div>
                 </div>
             </div>
@@ -72,10 +66,7 @@
             </div>
             <div class="cyber-card-body">
                 <div class="chart-container">
-                    <div class="metric-card bg-[var(--lol-bg-alt)] border border-[var(--lol-border-subtle)] p-4 rounded-sm shadow-xl relative overflow-hidden transition-all hover:border-[rgba(200,170,110,0.3)] hover:shadow-[0_0_15px_var(--lol-glow-gold)]">
-    <h4 class="font-display text-[0.65rem] text-[var(--lol-gold-mid)] uppercase tracking-wider mb-3">◆ RECUPERACION</h4>
-    <canvas id="recuperacionChart"></canvas>
-</div>
+                    <canvas id="recuperacionChart"></canvas>
                 </div>
             </div>
         </div>
@@ -167,61 +158,62 @@
                 }
             });
         }
-    });
-      const ctxRecuperacion = document.getElementById('recuperacionChart').getContext('2d');
-    new Chart(ctxRecuperacion, {
-        type: 'line',
-        data: {
-            labels: chartData.labels,
-            datasets: [
-                {
-                    label: 'Horas de Sueño',
-                    data: chartData.sueno_data,
-                    borderColor: 'rgba(87, 123, 255, 0.8)',
-                    yAxisID: 'yHoras', // Asignar a un eje Y específico
-                    tension: 0.3,
+
+        const ctxRecuperacion = document.getElementById('recuperacionChart');
+        if (ctxRecuperacion) {
+            new Chart(ctxRecuperacion.getContext('2d'), {
+                type: 'line',
+                data: {
+                    labels: chartData.labels,
+                    datasets: [
+                        {
+                            label: 'Horas de Sueño',
+                            data: chartData.sueno_data,
+                            borderColor: 'rgba(87, 123, 255, 0.8)',
+                            yAxisID: 'yHoras',
+                            tension: 0.3,
+                        },
+                        {
+                            label: 'Energía (1-5)',
+                            data: chartData.energia_data,
+                            borderColor: 'rgba(46, 204, 113, 0.8)',
+                            yAxisID: 'yNivel',
+                            tension: 0.3,
+                        },
+                        {
+                            label: 'Estrés (1-5)',
+                            data: chartData.estres_data,
+                            borderColor: 'rgba(231, 76, 60, 0.8)',
+                            yAxisID: 'yNivel',
+                            tension: 0.3,
+                        }
+                    ]
                 },
-                {
-                    label: 'Energía (1-5)',
-                    data: chartData.energia_data,
-                    borderColor: 'rgba(46, 204, 113, 0.8)',
-                    yAxisID: 'yNivel', // Asignar al otro eje Y
-                    tension: 0.3,
-                },
-                {
-                    label: 'Estrés (1-5)',
-                    data: chartData.estres_data,
-                    borderColor: 'rgba(231, 76, 60, 0.8)',
-                    yAxisID: 'yNivel', // Asignar al otro eje Y
-                    tension: 0.3,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    scales: {
+                        x: { ticks: { color: '#aaa' } },
+                        yHoras: {
+                            type: 'linear',
+                            position: 'left',
+                            beginAtZero: true,
+                            max: 12,
+                            grid: { drawOnChartArea: false },
+                            ticks: { color: 'rgba(87, 123, 255, 1)' }
+                        },
+                        yNivel: {
+                            type: 'linear',
+                            position: 'right',
+                            beginAtZero: true,
+                            max: 5.5,
+                            ticks: { color: '#aaa' }
+                        }
+                    },
+                    plugins: { legend: { position: 'top' } }
                 }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            interaction: { mode: 'index', intersect: false },
-            scales: {
-                x: { ticks: { color: '#aaa' } },
-                // Eje Y para Horas de Sueño
-                yHoras: {
-                    type: 'linear',
-                    position: 'left',
-                    beginAtZero: true,
-                    max: 12,
-                    grid: { drawOnChartArea: false }, // Solo mostrar la rejilla principal
-                    ticks: { color: 'rgba(87, 123, 255, 1)' }
-                },
-                // Eje Y para Energía y Estrés (1-5)
-                yNivel: {
-                    type: 'linear',
-                    position: 'right',
-                    beginAtZero: true,
-                    max: 5.5,
-                    ticks: { color: '#aaa' }
-                }
-            },
-            plugins: { legend: { position: 'top' } }
+            });
         }
     });
 </script>

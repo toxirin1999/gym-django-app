@@ -25,7 +25,7 @@ class HabitosService:
             return {
                 'tipo': 'eliminacion',
                 'dias_sin_habito': dias_sin_habito,
-                'dias_recaida': dias_completados,
+                'dias_recaida': total_dias_trackeados - dias_sin_habito,
                 'total_dias_trackeados': total_dias_trackeados,
                 'porcentaje_exito': porcentaje,
                 'racha_actual': racha,
