@@ -385,26 +385,31 @@ def sincronizar_rm_con_hyrox(sender, instance, created, raw=False, **kwargs):
         print(f"⚠️ sincronizar_rm_con_hyrox error: {e}")
 
 
-# ── JOI — intervención del plan (cambiar_variante, bajar_peso, deload) ──────
+# ── JOI — intervención del plan ──────────────────────────────────────────────
 from entrenos.models import GymDecisionLog as _GymDecisionLog
 
-_ACCIONES_JOI = {'cambiar_variante', 'bajar_peso', 'deload'}
+# Acciones que representan una decisión activa del sistema (el plan aprendió algo).
+# 'subir_peso'/'subir_reps' se omiten — son progresión normal, no intervención.
+_ACCIONES_JOI = {'cambiar_variante', 'bajar_peso', 'deload', 'mantener'}
 
 @receiver(post_save, sender=_GymDecisionLog)
 def joi_decision_plan(sender, instance, created, **kwargs):
     """
-    Cuando el sistema genera una decisión de intervención activa,
-    JOI la verbaliza. Deduplicado con lock de caché 30 min por usuario
-    para no enviar un mensaje por cada ejercicio de la misma sesión.
+    Cuando el plan toma una decisión de intervención activa, JOI la verbaliza.
+    Lock de 30 min por usuario: evita spam si la misma sesión genera varios logs.
     """
     if not created:
         return
     if instance.accion not in _ACCIONES_JOI:
         return
+    # 'mantener' solo interesa cuando la causa es técnica o molestia, no rutina
+    if instance.accion == 'mantener':
+        motivo_lower = (instance.motivo or '').lower()
+        if not any(k in motivo_lower for k in ('técnica', 'tecnica', 'molestia', 'dolor', 'comprometida')):
+            return
 
     try:
         from django.core.cache import cache
-        from clientes.models import Cliente
         from joi.services import generar_mensaje_joi
 
         cliente = instance.cliente
@@ -414,9 +419,13 @@ def joi_decision_plan(sender, instance, created, **kwargs):
         cache.set(lock_key, True, 1800)  # 30 min
 
         generar_mensaje_joi(cliente, 'decision_plan', {
-            'accion':    instance.accion,
-            'ejercicio': instance.ejercicio,
-            'motivo':    instance.motivo or '',
+            'accion':        instance.accion,
+            'ejercicio':     instance.ejercicio,
+            'motivo':        instance.motivo or '',
+            'peso_anterior': instance.peso_anterior,
+            'rpe_anterior':  instance.rpe_anterior,
+            'valor_cambio':  instance.valor_cambio,
+            'confianza':     instance.confianza,
         })
     except Exception as e:
         import logging

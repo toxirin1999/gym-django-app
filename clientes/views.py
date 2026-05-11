@@ -563,6 +563,14 @@ def checkin_matutino(request):
     if hrv_ms      is not None: bitacora.hrv_ms            = hrv_ms
     bitacora.save()
 
+    # Detector de patrón de resistencia (solo cuando energía es baja)
+    if energia is not None and energia <= 4:
+        try:
+            from core.daily_decision import detectar_patron_resistencia
+            detectar_patron_resistencia(cliente)
+        except Exception:
+            pass
+
     # Sync to HyroxReadinessLog
     try:
         from hyrox.models import HyroxObjective, HyroxReadinessLog
@@ -1502,6 +1510,19 @@ def mockup_demo(request):
         {'name': 'inflamacion',      'label': 'Inflamación (1=ninguna)',      'min': 1, 'max': 10, 'val': 1},
         {'name': 'rango',            'label': 'Rango de movimiento (10=completo)', 'min': 1, 'max': 10, 'val': 5},
     ]
+
+    # ── Semáforo de Intención ─────────────────────────────────────
+    from django.core.cache import cache as _cache
+    _cache_key = f'semaforo_{cliente.pk}'
+    semaforo = _cache.get(_cache_key)
+    if semaforo is None:
+        try:
+            from core.daily_decision import DailyDecisionEngine
+            semaforo = DailyDecisionEngine.get_estado_hoy(cliente)
+            _cache.set(_cache_key, semaforo, 1800)
+        except Exception:
+            semaforo = None
+    context['semaforo'] = semaforo
 
     return render(request, 'clientes/mockup_demo.html', context)
 

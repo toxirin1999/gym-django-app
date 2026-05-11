@@ -447,6 +447,39 @@ def construir_contexto(cliente) -> dict:
     except Exception:
         pass
 
+    # ── 11. SEMÁFORO DE INTENCIÓN (DailyDecisionEngine) ──────────────────────
+    try:
+        from core.daily_decision import DailyDecisionEngine
+        estado_hoy = DailyDecisionEngine.get_estado_hoy(cliente)
+        ctx['semaforo'] = estado_hoy
+    except Exception:
+        pass
+
+    # ── 12. BIO SIGNALS del checkin matutino ─────────────────────────────────
+    # Conecta BitacoraDiaria (energía, sueño, FC, HRV) al contexto de JOI.
+    # Proxy de 3 días: si no hay registro hoy, usa el más reciente.
+    try:
+        from core.bio_context import BioContextProvider
+        bio = BioContextProvider.get_bio_signals(cliente)
+        if bio['has_data']:
+            ctx['bio_signals'] = bio
+
+            # Detectar fatiga extragym: ACWR bajo + señales vitales malas
+            # Condición: carga mecánica insuficiente PERO el cuerpo reporta agotamiento
+            acwr = ctx.get('acwr')
+            energia_baja = bio['energia'] is not None and bio['energia'] <= 4
+            sueno_malo   = bio['horas_sueno'] is not None and bio['horas_sueno'] < 6
+            if acwr is not None and acwr < 0.8 and (energia_baja or sueno_malo):
+                ctx['fatiga_extragym'] = {
+                    'acwr':    acwr,
+                    'energia': bio['energia'],
+                    'sueno':   bio['horas_sueno'],
+                    'fc':      bio['fc_reposo'],
+                    'hrv':     bio['hrv_ms'],
+                }
+    except Exception:
+        pass
+
     return ctx
 
 
@@ -471,6 +504,67 @@ def _prompt_entreno_completado(ctx: dict, datos_extra: dict) -> str:
 
 def _prompt_apertura_manana(ctx: dict, datos_extra: dict) -> str:
     hechos = []
+
+    # ── Semáforo de Intención (prioridad absoluta) ───────────────
+    semaforo = ctx.get('semaforo')
+    if semaforo:
+        estado    = semaforo['estado']
+        tipo      = semaforo['tipo_fatiga']
+        paradoja  = semaforo.get('paradoja')
+        raw       = semaforo.get('datos_raw', {})
+
+        if paradoja == 'A':
+            hechos.append(
+                f"PARADOJA A — las métricas dicen ROJO/AMARILLO pero el usuario reporta energía alta "
+                f"({raw.get('energia')}/10). La cabeza quiere seguir; el cuerpo necesita parar."
+            )
+        elif paradoja == 'B':
+            # Buscar si hay patrón de resistencia ya registrado en el Manual
+            patron_previo = None
+            try:
+                from joi.models import ManualDavid
+                patron_previo = (
+                    ManualDavid.objects
+                    .filter(
+                        user=cliente.user,
+                        origen='patron_detectado',
+                        entrada__contains='resistencia psicológica',
+                        activa=True,
+                    )
+                    .order_by('-creado_en')
+                    .values_list('entrada', flat=True)
+                    .first()
+                )
+            except Exception:
+                pass
+
+            if patron_previo:
+                hechos.append(
+                    f"PARADOJA B CON PATRÓN CONFIRMADO — métricas en VERDE, energía "
+                    f"subjetiva {raw.get('energia')}/10. El Manual ya registró este patrón: "
+                    f"\"{patron_previo[:120]}\". "
+                    f"JOI debe confrontar citando el patrón por su nombre, no consolarlo."
+                )
+            else:
+                hechos.append(
+                    f"PARADOJA B — todas las métricas en VERDE pero energía subjetiva "
+                    f"{raw.get('energia')}/10. No es cansancio físico. Primera detección."
+                )
+        else:
+            estado_txt = {
+                'verde':    "SISTEMA NOMINAL — hardware y software alineados",
+                'amarillo': "GESTIÓN DE DAÑOS — carga mecánica alta, entrenar con cuidado",
+                'naranja':  "DRENAJE VITAL — subutilización crónica, riesgo de fragilidad",
+                'rojo':     "PARADA TÉCNICA — cuerpo al límite, no negociar",
+            }.get(estado, estado)
+            tipo_txt = {
+                'mecanica':   "Origen: fatiga mecánica (ACWR/TSB).",
+                'vital':      "Origen: fatiga vital (sueño/HRV/readiness).",
+                'fragilidad': "Origen: desentrenamiento — cuerpo fresco pero frágil.",
+                'flojera':    "Origen: mental — métricas en verde, motivación baja.",
+                'alineado':   "",
+            }.get(tipo, "")
+            hechos.append(f"ESTADO HOY: {estado_txt}. {tipo_txt}".strip())
 
     # Presencia / ausencia — usar hub real (gym + hyrox + carrera)
     ultima = ctx.get('ultima_actividad') or ctx.get('ultimo_entreno', {})
@@ -513,13 +607,48 @@ def _prompt_apertura_manana(ctx: dict, datos_extra: dict) -> str:
         elif pct <= -20:
             hechos.append(f"Carga total (gym+Hyrox+carrera) bajó un {abs(pct)}% en 4 semanas.")
 
-    # ACWR
-    acwr = ctx.get('acwr')
-    if acwr:
-        if acwr > 1.3:
-            hechos.append(f"ACWR {acwr} — zona de sobrecarga, riesgo de lesión.")
-        elif acwr < 0.8:
-            hechos.append(f"ACWR {acwr} — carga crónica insuficiente.")
+    # Fatiga extragym: ACWR bajo + señales vitales malas (el cuerpo agotado por la vida, no el entreno)
+    fatiga_extragym = ctx.get('fatiga_extragym')
+    if fatiga_extragym:
+        energia = fatiga_extragym.get('energia')
+        sueno   = fatiga_extragym.get('sueno')
+        acwr_v  = fatiga_extragym.get('acwr')
+        bio_detalles = []
+        if energia is not None:
+            bio_detalles.append(f"energía subjetiva {energia}/10")
+        if sueno is not None:
+            bio_detalles.append(f"{sueno}h de sueño")
+        detalles_txt = " y ".join(bio_detalles)
+        hechos.append(
+            f"PARADOJA VITAL — ACWR {acwr_v} (carga mecánica baja, el entrenamiento no es el problema) "
+            f"pero el checkin matutino reporta {detalles_txt}. "
+            f"La fatiga viene de fuera del gimnasio."
+        )
+    else:
+        # ACWR estándar solo cuando no hay paradoja
+        acwr = ctx.get('acwr')
+        if acwr:
+            if acwr > 1.3:
+                hechos.append(f"ACWR {acwr} — zona de sobrecarga, riesgo de lesión.")
+            elif acwr < 0.8:
+                hechos.append(f"ACWR {acwr} — carga crónica insuficiente.")
+
+    # Bio signals (checkin de hoy o proxy de hasta 3 días)
+    bio = ctx.get('bio_signals')
+    if bio and not fatiga_extragym:
+        señales = []
+        if bio['energia'] is not None and bio['energia'] <= 4:
+            señales.append(f"energía baja ({bio['energia']}/10)")
+        if bio['horas_sueno'] is not None and bio['horas_sueno'] < 6:
+            señales.append(f"sueño insuficiente ({bio['horas_sueno']}h)")
+        if bio['hrv_ms'] is not None:
+            señales.append(f"HRV {bio['hrv_ms']} ms")
+        if bio['fc_reposo'] is not None:
+            señales.append(f"FC reposo {bio['fc_reposo']} lpm")
+        if señales:
+            freshness = bio.get('freshness_days', 0)
+            ref_tiempo = "esta mañana" if freshness == 0 else f"hace {freshness} día{'s' if freshness > 1 else ''}"
+            hechos.append(f"Checkin ({ref_tiempo}): {', '.join(señales)}.")
 
     # PRs esta semana
     prs = ctx.get('prs_semana', [])
@@ -879,26 +1008,61 @@ def _prompt_resumen_semanal(ctx: dict, datos_extra: dict) -> str:
 
 
 def _prompt_decision_plan(ctx: dict, datos_extra: dict) -> str:
-    accion    = datos_extra.get('accion', '')
-    ejercicio = datos_extra.get('ejercicio', 'un ejercicio')
-    motivo    = datos_extra.get('motivo', '')
-    dias      = ctx.get('dias_hasta_carrera')
+    accion        = datos_extra.get('accion', '')
+    ejercicio     = datos_extra.get('ejercicio', 'un ejercicio')
+    motivo        = datos_extra.get('motivo', '')
+    peso_ant      = datos_extra.get('peso_anterior')
+    rpe_ant       = datos_extra.get('rpe_anterior')
+    valor_cambio  = datos_extra.get('valor_cambio')
+    confianza     = datos_extra.get('confianza', 'media')
+    dias          = ctx.get('dias_hasta_carrera')
 
-    accion_txt = {
-        'cambiar_variante': f"ha decidido cambiar la variante de {ejercicio}",
-        'bajar_peso':       f"ha reducido la carga en {ejercicio}",
-        'deload':           f"ha insertado una semana de deload",
-    }.get(accion, f"ha tomado una decisión sobre {ejercicio}")
+    # Contexto numérico para que JOI no hable en abstracto
+    peso_txt = f" Carga previa: {peso_ant} kg." if peso_ant else ""
+    rpe_txt  = f" RPE registrado: {rpe_ant}." if rpe_ant else ""
+    hyrox_txt = f" Quedan {dias} días para la carrera." if dias else ""
+    confianza_txt = " Confianza del sistema: alta." if confianza == 'alta' else ""
 
-    motivo_txt = f" Motivo: {motivo}." if motivo else ""
-    hyrox_txt  = f" Quedan {dias} días para la carrera." if dias else ""
+    narrativas = {
+        'cambiar_variante': (
+            f"El sistema detectó un patrón de molestia recurrente en {ejercicio} "
+            f"y decidió cambiar de variante para proteger la zona afectada.{peso_txt}{rpe_txt} "
+            f"Motivo registrado: {motivo}."
+            f"{hyrox_txt} "
+            f"JOI observa esta intervención. Genera 2-3 frases desde la perspectiva de La Testigo: "
+            f"el plan no retrocedió, reorientó. Nombra el aprendizaje concreto del sistema "
+            f"(zona protegida, patrón detectado), sin dramatismo ni falso optimismo."
+        ),
+        'bajar_peso': (
+            f"El sistema redujo la carga en {ejercicio}.{peso_txt}{rpe_txt} "
+            f"Motivo: {motivo}.{hyrox_txt} "
+            f"JOI observa. Genera 2-3 frases: el plan ajustó porque leyó algo real en los datos, "
+            f"no porque el usuario falló. Nombra qué señal leyó el sistema. "
+            f"Voz de testigo, sin consuelo ni discurso motivacional."
+        ),
+        'mantener': (
+            f"El sistema bloqueó la progresión en {ejercicio} y mantuvo el peso.{peso_txt}{rpe_txt} "
+            f"Causa: {motivo}. "
+            f"El plan prefirió consolidar antes de escalar — la técnica o la molestia dieron una señal.{hyrox_txt} "
+            f"JOI lo observa. Genera 2-3 frases: nómbralo con precisión. "
+            f"No es un fracaso, es el sistema reconociendo un límite real. Voz directa, sin suavizar."
+        ),
+        'deload': (
+            f"El sistema ha insertado una semana de deload.{rpe_txt} "
+            f"Motivo: {motivo}.{confianza_txt}{hyrox_txt} "
+            f"JOI lo observa. Genera 2-3 frases: el plan no paró, bajó la intensidad porque "
+            f"acumulaste suficiente estrés para que valga la pena recuperar. "
+            f"Nombra la lógica del sistema. Sin alarma, sin motivación forzada."
+        ),
+    }
 
-    return (
-        f"El plan de entrenamiento {accion_txt}.{motivo_txt}{hyrox_txt} "
-        f"JOI lo ha observado y registrado. Genera 2-3 frases que nombren esta intervención "
-        f"del sistema con precisión — el plan cambió porque aprendió algo sobre el usuario. "
-        f"Mezcla el dato técnico con la continuidad de la historia."
+    narrativa = narrativas.get(
+        accion,
+        f"El plan tomó una decisión sobre {ejercicio}: {accion}. Motivo: {motivo}.{hyrox_txt} "
+        f"JOI lo observa. Genera 2-3 frases nombrando qué aprendió el sistema."
     )
+
+    return narrativa
 
 
 def _prompt_hyrox_ausencia(ctx: dict, datos_extra: dict) -> str:

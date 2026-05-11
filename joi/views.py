@@ -1,3 +1,5 @@
+import logging
+logger = logging.getLogger(__name__)
 from django.shortcuts import render
 from .forms import EstadoEmocionalForm, EntrenamientoForm
 from .models import EstadoEmocional, Entrenamiento
@@ -759,6 +761,8 @@ def habitacion_joi(request):
     from clientes.models import Cliente
     from django.utils import timezone
     from .models import MensajeJOI
+    from core.daily_decision import DailyDecisionEngine
+    from entrenos.models import ActividadRealizada
 
     cliente = get_object_or_404(Cliente, user=request.user)
 
@@ -771,13 +775,54 @@ def habitacion_joi(request):
         .first()
     )
 
+    # ── Regeneración condicional ──────────────────────────────────
+    # Si hay actividad nueva registrada DESPUÉS del último mensaje, JOI
+    # actualiza su síntesis. Así el usuario nunca lee "no has entrenado"
+    # tras haber completado una sesión.
+    regenerado = False
+    if mensaje:
+        ultima_actividad = (
+            ActividadRealizada.objects
+            .filter(cliente=cliente, tipo__in=['gym', 'hyrox', 'carrera'])
+            .order_by('-fecha', '-id')
+            .first()
+        )
+        hay_actividad_nueva = (
+            ultima_actividad is not None
+            and ultima_actividad.fecha > mensaje.creado_en.date()
+        )
+        if hay_actividad_nueva:
+            try:
+                from joi.services import generar_mensaje_joi
+                nuevo = generar_mensaje_joi(cliente, 'apertura_manana', {})
+                if nuevo:
+                    mensaje    = nuevo
+                    regenerado = True
+            except Exception as e:
+                logger.warning('Regeneración JOI fallida: %s', e)
+
     if mensaje and not mensaje.leido:
         mensaje.leido = True
         mensaje.save(update_fields=['leido'])
 
+    # Semáforo de Intención — cacheado 30 min
+    from django.core.cache import cache
+    cache_key = f'semaforo_{cliente.pk}'
+    semaforo = cache.get(cache_key)
+    if semaforo is None:
+        try:
+            semaforo = DailyDecisionEngine.get_estado_hoy(cliente)
+        except Exception as e:
+            logger.warning('DailyDecisionEngine error: %s', e)
+            semaforo = None
+        if semaforo:
+            cache.set(cache_key, semaforo, 1800)
+
     return render(request, 'joi/habitacion.html', {
-        'mensaje': mensaje,
-        'estado':  'habla' if mensaje else 'calla',
+        'mensaje':    mensaje,
+        'estado':     'habla' if mensaje else 'calla',
+        'semaforo':   semaforo,
+        'regenerado': regenerado,
     })
 
 
