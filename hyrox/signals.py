@@ -500,7 +500,11 @@ def sincronizar_hyrox_al_hub(sender, instance, created, raw=False, update_fields
     Cuando una HyroxSession pasa a 'completado', crea o actualiza su registro
     en el hub ActividadRealizada.
     """
-    if raw or update_fields is not None or instance.estado != 'completado':
+    if raw or instance.estado != 'completado':
+        return
+    # Solo skip si update_fields no incluye 'estado' ni 'fecha' — si el save es
+    # un update parcial que no toca estado/fecha, el hub ya tiene el dato correcto.
+    if update_fields is not None and 'estado' not in update_fields and 'fecha' not in update_fields:
         return
 
     try:
