@@ -80,23 +80,30 @@ def construir_contexto(cliente) -> dict:
     semana_reciente = hoy - timedelta(days=7)
 
     # ── 1. ACTIVIDAD RECIENTE (hub ActividadRealizada — fuente canónica) ──────
+    # Ordenar por fecha_realizado cuando existe (sesiones anticipadas/retrasadas),
+    # con fallback a fecha planificada. Evita que un entreno hecho el día 10
+    # aparezca como "día 6" porque el plan lo ponía ahí.
+    from django.db.models.functions import Coalesce
     ultima_actividad = (
         ActividadRealizada.objects
         .filter(cliente=cliente, tipo__in=['gym', 'hyrox', 'carrera'])
-        .order_by('-fecha').first()
+        .annotate(fecha_efectiva=Coalesce('fecha_realizado', 'fecha'))
+        .order_by('-fecha_efectiva').first()
     )
     if ultima_actividad:
+        fecha_ef = ultima_actividad.fecha_realizado or ultima_actividad.fecha
         ctx['ultima_actividad'] = {
-            'fecha':     str(ultima_actividad.fecha),
-            'dias_hace': (hoy - ultima_actividad.fecha).days,
+            'fecha':     str(fecha_ef),
+            'dias_hace': (hoy - fecha_ef).days,
             'tipo':      ultima_actividad.tipo,
             'titulo':    ultima_actividad.titulo or '',
         }
 
     acts_semana = (
         ActividadRealizada.objects
-        .filter(cliente=cliente, fecha__gte=semana_reciente,
-                tipo__in=['gym', 'hyrox', 'carrera'])
+        .filter(cliente=cliente, tipo__in=['gym', 'hyrox', 'carrera'])
+        .annotate(fecha_ef=Coalesce('fecha_realizado', 'fecha'))
+        .filter(fecha_ef__gte=semana_reciente)
         .values('tipo').annotate(n=Count('id'))
     )
     ctx['actividad_semana']      = {a['tipo']: a['n'] for a in acts_semana}
@@ -107,14 +114,15 @@ def construir_contexto(cliente) -> dict:
     sesiones_recientes = list(
         ActividadRealizada.objects
         .filter(cliente=cliente, tipo__in=['gym', 'hyrox', 'carrera'])
-        .order_by('-fecha')[:7]
-        .values('fecha', 'tipo', 'titulo', 'rpe_medio', 'duracion_minutos', 'carga_ua')
+        .annotate(fecha_efectiva=Coalesce('fecha_realizado', 'fecha'))
+        .order_by('-fecha_efectiva')[:7]
+        .values('fecha_efectiva', 'tipo', 'titulo', 'rpe_medio', 'duracion_minutos', 'carga_ua')
     )
     # Agrupar las del mismo día (dobles sesiones)
     from collections import defaultdict
     por_dia = defaultdict(list)
     for s in sesiones_recientes:
-        por_dia[str(s['fecha'])].append({
+        por_dia[str(s['fecha_efectiva'])].append({
             'tipo':    s['tipo'],
             'titulo':  (s['titulo'] or '').strip(),
             'rpe':     s['rpe_medio'],
@@ -125,23 +133,23 @@ def construir_contexto(cliente) -> dict:
         for fecha, sess in sorted(por_dia.items(), reverse=True)
     ]
 
-    # Racha: días consecutivos con cualquier actividad (hub, no solo gym)
+    # Racha: días consecutivos con cualquier actividad — usando fecha_realizado si existe
+    def _tiene_actividad_en(d):
+        return ActividadRealizada.objects.filter(
+            cliente=cliente, tipo__in=['gym', 'hyrox', 'carrera']
+        ).annotate(fecha_ef=Coalesce('fecha_realizado', 'fecha')).filter(fecha_ef=d).exists()
+
     racha = 0
     dia = hoy
-    while ActividadRealizada.objects.filter(
-        cliente=cliente, fecha=dia, tipo__in=['gym', 'hyrox', 'carrera']
-    ).exists():
+    while _tiene_actividad_en(dia):
         racha += 1
         dia -= timedelta(days=1)
     ctx['racha_dias'] = racha
 
-    # Racha previa: días consecutivos antes del descanso de hoy (si hoy no hay actividad)
     if racha == 0:
         racha_previa = 0
         dia_prev = hoy - timedelta(days=1)
-        while ActividadRealizada.objects.filter(
-            cliente=cliente, fecha=dia_prev, tipo__in=['gym', 'hyrox', 'carrera']
-        ).exists():
+        while _tiene_actividad_en(dia_prev):
             racha_previa += 1
             dia_prev -= timedelta(days=1)
         if racha_previa > 0:
