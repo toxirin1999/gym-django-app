@@ -3142,10 +3142,27 @@ def strava_procesar(request, actividad_id):
             'Run': 'carrera', 'Walk': 'otro', 'Hike': 'otro',
             'Ride': 'ciclismo', 'VirtualRide': 'ciclismo', 'EBikeRide': 'ciclismo',
             'Rowing': 'remo', 'WeightTraining': 'gym', 'Workout': 'gym',
-            'Soccer': 'futbol', 'Football': 'futbol',
+            'Soccer': 'cardio_sustituto', 'Football': 'cardio_sustituto',
             'Swim': 'natacion', 'Yoga': 'yoga',
         }
+        # Workout con sport_type de alta intensidad → cardio_sustituto, no gym
+        _HIIT_SPORT_TYPES = {
+            'HighIntensityIntervalTraining', 'Soccer', 'Football',
+            'Crossfit', 'Elliptical', 'StairStepper',
+        }
+        raw_sport_type = ''
+        if act.raw_json and isinstance(act.raw_json, dict):
+            raw_sport_type = act.raw_json.get('sport_type', '')
+        elif act.raw_json:
+            import json as _j
+            try:
+                raw_sport_type = _j.loads(act.raw_json).get('sport_type', '')
+            except Exception:
+                pass
+
         tipo_actividad = _STRAVA_TO_TIPO.get(act.tipo_strava, 'otro')
+        if raw_sport_type in _HIIT_SPORT_TYPES:
+            tipo_actividad = 'cardio_sustituto'
         rpe_manual = _rpe()
         # carga_ua: TRIMP (fisiológico, desde FC) si hay FC; sRPE si solo hay RPE manual
         trimp = _trimp_from_strava(act.hr_media, duracion_min)

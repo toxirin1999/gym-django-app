@@ -1119,6 +1119,74 @@ class RachaEscritura(models.Model):
 
 
 # ============================================
+# SIMBIOSIS SOMBRA — Perfiles fantasma de JOI
+# ============================================
+
+class PersonaInterina(models.Model):
+    """
+    Perfil fantasma: persona detectada por JOI en el texto libre
+    pero aún no validada por el usuario en Simbiosis.
+    JOI la observa en silencio hasta que se repite.
+    """
+    ESTADO_CHOICES = [
+        ('sombra',     'En la Sombra'),
+        ('radar',      'En el Radar de JOI'),
+        ('promovida',  'Promovida a Simbiosis'),
+        ('descartada', 'Descartada'),
+    ]
+
+    usuario             = models.ForeignKey(User, on_delete=models.CASCADE, related_name='personas_interinas')
+    nombre              = models.CharField(max_length=100)
+    estado              = models.CharField(max_length=12, choices=ESTADO_CHOICES, default='sombra')
+    veces_mencionada    = models.PositiveIntegerField(default=1)
+    primera_deteccion   = models.DateField(auto_now_add=True)
+    ultima_deteccion    = models.DateField(auto_now=True)
+    persona_importante  = models.ForeignKey(
+        PersonaImportante, null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='origen_interino',
+    )
+
+    class Meta:
+        unique_together = ['usuario', 'nombre']
+        ordering = ['-ultima_deteccion']
+        verbose_name = 'Persona Interina'
+        verbose_name_plural = 'Personas Interinas'
+
+    def __str__(self):
+        return f"[{self.get_estado_display()}] {self.nombre} ({self.usuario.username}) x{self.veces_mencionada}"
+
+
+class InteraccionSombra(models.Model):
+    """
+    Interacción registrada con un perfil fantasma.
+    Solo JOI la ve — no aparece en el dashboard principal de Simbiosis.
+    """
+    TIPO_CHOICES = [
+        ('positiva', 'Positiva'),
+        ('negativa', 'Negativa'),
+        ('neutra',   'Neutra'),
+        ('conflicto','Conflicto'),
+        ('apoyo',    'Apoyo'),
+    ]
+
+    persona_interina = models.ForeignKey(PersonaInterina, on_delete=models.CASCADE, related_name='interacciones')
+    fecha            = models.DateField(auto_now_add=True)
+    descripcion      = models.TextField()
+    mi_sentir        = models.TextField(blank=True)
+    aprendizaje      = models.TextField(blank=True)
+    tipo_interaccion = models.CharField(max_length=12, choices=TIPO_CHOICES, default='neutra')
+    friccion_no      = models.IntegerField(null=True, blank=True, help_text="Fricción del No registrada ese día")
+
+    class Meta:
+        ordering = ['-fecha']
+        verbose_name = 'Interacción Sombra'
+        verbose_name_plural = 'Interacciones Sombra'
+
+    def __str__(self):
+        return f"Sombra: {self.persona_interina.nombre} — {self.fecha} ({self.tipo_interaccion})"
+
+
+# ============================================
 # SEÑALES PARA CREAR VIRTUDES AUTOMÁTICAMENTE
 # ============================================
 
