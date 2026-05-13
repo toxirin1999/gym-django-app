@@ -1072,10 +1072,67 @@
 </div>
 {% endfor %}
 {% endif %}
+
+<!-- Botón flotante de Pánico -->
+<button id="panico-btn" onclick="activarPanico()" style="
+    position: fixed;
+    bottom: 24px; right: 24px;
+    width: 56px; height: 56px;
+    background: #EF4444;
+    border: none;
+    border-radius: 50%;
+    color: white;
+    font-size: 1.4rem;
+    cursor: pointer;
+    box-shadow: 0 4px 20px rgba(239,68,68,0.4);
+    z-index: 1000;
+    display: flex; align-items: center; justify-content: center;
+    transition: transform 0.15s;
+" title="Pánico de impulso — llama a JOI">⚡</button>
+
+<div id="panico-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:2000; align-items:center; justify-content:center;">
+    <div style="background:#1C1917; color:#F5F0EB; border-radius:20px; padding:2rem; max-width:360px; margin:1rem; font-family:'Urbanist',sans-serif;">
+        <div style="font-size:0.7rem; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:#78716C; margin-bottom:0.75rem;">JOI</div>
+        <div id="panico-msg" style="font-size:1.05rem; line-height:1.65; font-style:italic; min-height:60px;">
+            <span style="color:#78716C;">Conectando con JOI...</span>
+        </div>
+        <button onclick="cerrarPanico()" style="margin-top:1.5rem; background:#3F3C37; border:none; border-radius:12px; padding:0.75rem 1.5rem; color:#F5F0EB; font-family:'Urbanist',sans-serif; font-size:0.9rem; cursor:pointer; width:100%;">Entendido</button>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block extra_js %}
 <script>
+function activarPanico() {
+    document.getElementById('panico-modal').style.display = 'flex';
+    document.getElementById('panico-msg').innerHTML = '<span style="color:#78716C;">Conectando con JOI...</span>';
+
+    fetch("{% url 'diario:panico_impulso_api' %}", {
+        method: 'POST',
+        headers: {'X-CSRFToken': '{{ csrf_token }}', 'Content-Type': 'application/json'},
+        body: JSON.stringify({})
+    })
+    .then(r => r.json())
+    .then(data => {
+        document.getElementById('panico-msg').textContent = data.mensaje || 'Para. Respira.';
+    })
+    .catch(() => {
+        document.getElementById('panico-msg').textContent = 'Para. Respira. ¿Esto lo decide tu mejor versión?';
+    });
+}
+
+function cerrarPanico() {
+    document.getElementById('panico-modal').style.display = 'none';
+}
+
+document.getElementById('panico-btn').addEventListener('mouseenter', function() {
+    this.style.transform = 'scale(1.1)';
+});
+document.getElementById('panico-btn').addEventListener('mouseleave', function() {
+    this.style.transform = 'scale(1)';
+});
+
     // Mood selector
     document.querySelectorAll('.mood-option').forEach(option => {
         option.addEventListener('click', function () {

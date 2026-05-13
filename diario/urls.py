@@ -93,4 +93,12 @@ urlpatterns = [
     path('habitos/toggle-dia/', views_habitos.habito_toggle_dia, name='habito_toggle_dia'),
     path('habitos/eliminar/<int:habito_id>/', views_habitos.habito_eliminar, name='habito_eliminar'),
 
+    # ========================================
+    # PRESENCIA — Ritual unificado
+    # ========================================
+    path('presencia/apertura/', views.presencia_apertura, name='presencia_apertura'),
+    path('presencia/cierre/', views.presencia_cierre, name='presencia_cierre'),
+    path('presencia/panico/', views.panico_impulso_api, name='panico_impulso_api'),
+    path('presencia/promover-interina/', views.promover_persona_interina, name='promover_persona_interina'),
+
 ]

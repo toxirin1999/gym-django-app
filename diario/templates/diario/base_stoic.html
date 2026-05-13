@@ -45,6 +45,26 @@
     </a>
   </li>
 
+  <!-- PRESENCIA -->
+  <li class="nav-item dropdown">
+    <a class="nav-link dropdown-toggle {% if 'presencia' in request.path %}active{% endif %}"
+       href="#" role="button" data-bs-toggle="dropdown">
+      <i class="fas fa-sun me-1"></i> Presencia
+    </a>
+    <ul class="dropdown-menu">
+      <li>
+        <a class="dropdown-item" href="{% url 'diario:presencia_apertura' %}">
+          <i class="fas fa-sunrise me-2"></i> Apertura
+        </a>
+      </li>
+      <li>
+        <a class="dropdown-item" href="{% url 'diario:presencia_cierre' %}">
+          <i class="fas fa-moon me-2"></i> Cierre
+        </a>
+      </li>
+    </ul>
+  </li>
+
   <!-- DIARIO (Prosoche + Logos dentro) -->
   <li class="nav-item dropdown">
     <a class="nav-link dropdown-toggle {% if 'prosoche' in request.path or 'logos' in request.path %}active{% endif %}"

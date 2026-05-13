@@ -3,7 +3,10 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse
 import random
+import logging
 from django.utils import timezone
+
+logger = logging.getLogger(__name__)
 from django.db.models import Q, Count
 from datetime import datetime, timedelta, date
 import json
@@ -3488,3 +3491,445 @@ def prosoche_entrada_rapida(request):
         return redirect("diario:dashboard_diario")
 
     return render(request, "diario/prosoche_entrada_rapida.html", {"fecha": fecha})
+
+
+# ========================================
+# PRESENCIA — Ritual unificado apertura/cierre
+# ========================================
+
+@login_required
+def presencia_apertura(request):
+    """Ritual de apertura: JOI pregunta + intención + gratitud + tareas + biometría."""
+    hoy = timezone.now().date()
+    mes_nombre = hoy.strftime('%B')
+    año = hoy.year
+
+    prosoche_mes, _ = ProsocheMes.objects.get_or_create(
+        usuario=request.user, mes=mes_nombre, año=año
+    )
+    entrada, _ = ProsocheDiario.objects.get_or_create(
+        prosoche_mes=prosoche_mes, fecha=hoy
+    )
+    vires, _ = SeguimientoVires.objects.get_or_create(
+        usuario=request.user, fecha=hoy
+    )
+
+    if request.method == 'POST':
+        entrada.persona_quiero_ser = request.POST.get('intencion', '')
+        entrada.estado_animo = int(request.POST.get('estado_animo', 4))
+        entrada.gratitud_1 = request.POST.get('gratitud_1', '')
+        soberania_text = request.POST.get('soberania', '').strip()
+        if soberania_text:
+            entrada.tareas_dia = [{"texto": soberania_text, "completada": False, "es_soberania": True}]
+        else:
+            entrada.tareas_dia = []
+        entrada.save()
+
+        energia = request.POST.get('nivel_energia')
+        sueno = request.POST.get('calidad_sueno')
+        if energia:
+            vires.nivel_energia = int(energia)
+        if sueno:
+            vires.calidad_sueno = int(sueno)
+        vires.save()
+
+        messages.success(request, 'Día comenzado.')
+        return redirect('diario:dashboard_diario')
+
+    try:
+        cliente = request.user.cliente
+    except Exception:
+        cliente = None
+
+    pregunta_identidad = None
+    semaforo = None
+    apertura_texto = None
+
+    if cliente:
+        try:
+            from core.daily_decision import DailyDecisionEngine
+            from django.core.cache import cache as _cache
+            _key = f'semaforo_{cliente.pk}'
+            semaforo = _cache.get(_key)
+            if semaforo is None:
+                semaforo = DailyDecisionEngine.get_estado_hoy(cliente)
+                _cache.set(_key, semaforo, 1800)
+        except Exception:
+            pass
+
+        try:
+            from joi.services import generar_pregunta_identidad
+            pregunta_identidad = generar_pregunta_identidad(cliente)
+        except Exception:
+            pass
+
+    try:
+        from joi.models import MensajeJOI
+        msg_apertura = (
+            MensajeJOI.objects
+            .filter(user=request.user, trigger='apertura_manana', creado_en__date=hoy)
+            .order_by('-creado_en').first()
+        )
+        if msg_apertura:
+            apertura_texto = msg_apertura.mensaje
+    except Exception:
+        pass
+
+    # Radar de Intrusos: personas interinas en estado 'radar'
+    from diario.models import PersonaInterina
+    radar_personas = list(
+        PersonaInterina.objects
+        .filter(usuario=request.user, estado='radar')
+        .order_by('-veces_mencionada')[:3]
+    )
+
+    context = {
+        'entrada': entrada,
+        'vires': vires,
+        'pregunta_identidad': pregunta_identidad,
+        'semaforo': semaforo,
+        'apertura_manana': apertura_texto,
+        'hoy': hoy,
+        'radar_personas': radar_personas,
+    }
+    return render(request, 'diario/presencia_apertura.html', context)
+
+
+def _generar_pregunta_simbiosis(persona_nombre, request):
+    try:
+        from joi.services import _llamar_haiku, SYSTEM_PROMPT
+        prompt = (
+            f"David ha mencionado a '{persona_nombre}' en su diario 3 días seguidos.\n\n"
+            f"Genera UNA sola pregunta que le obligue a reflexionar:\n"
+            f"'¿Qué quieres de {persona_nombre} que no te estés dando a ti mismo?'\n\n"
+            f"La pregunta debe ser incómoda, directa, sin suavizar. Máximo 20 palabras. "
+            f"Varía el enfoque — no uses siempre la misma frase. Solo la pregunta."
+        )
+        return _llamar_haiku(prompt)
+    except Exception:
+        return f"¿Qué necesitas de {persona_nombre} que aún no te das a ti mismo?"
+
+
+@login_required
+def presencia_cierre(request):
+    """Ritual de cierre: texto libre + hábitos del día. JOI parsea el texto."""
+    hoy = timezone.now().date()
+    mes_nombre = hoy.strftime('%B')
+    año = hoy.year
+
+    prosoche_mes, _ = ProsocheMes.objects.get_or_create(
+        usuario=request.user, mes=mes_nombre, año=año
+    )
+    entrada, _ = ProsocheDiario.objects.get_or_create(
+        prosoche_mes=prosoche_mes, fecha=hoy
+    )
+
+    habitos = ProsocheHabito.objects.filter(prosoche_mes=prosoche_mes)
+    dia_num = hoy.day
+    habitos_con_estado = []
+    for h in habitos:
+        dia_obj = ProsocheHabitoDia.objects.filter(habito=h, dia=dia_num).first()
+        habitos_con_estado.append({
+            'habito': h,
+            'completado': dia_obj.completado if dia_obj else False,
+        })
+
+    if request.method == 'POST':
+        texto_libre = request.POST.get('reflexion_libre', '').strip()
+
+        # Fricción del No → nivel_estres
+        friccion_raw = request.POST.get('friccion_no')
+        if friccion_raw:
+            try:
+                vires, _ = SeguimientoVires.objects.get_or_create(usuario=request.user, fecha=hoy)
+                vires.nivel_estres = int(friccion_raw)
+                vires.save()
+            except (ValueError, TypeError):
+                pass
+
+        personas_detectadas = []
+
+        if texto_libre:
+            entrada.reflexiones_dia = texto_libre
+            entrada.save()
+
+            reflexion_obj = None
+            try:
+                from joi.services import parsear_cierre_diario, enriquecer_cierre
+
+                # ── Parseo básico ──────────────────────────────────────────
+                resultado = parsear_cierre_diario(texto_libre)
+                estado_animo = resultado.get('estado_animo', 3)
+                if estado_animo and 1 <= estado_animo <= 5:
+                    entrada.estado_animo = estado_animo
+                etiquetas_nuevas = resultado.get('etiquetas', [])
+                personas_detectadas = resultado.get('personas', [])
+
+                etiquetas_str = 'cierre_dia'
+                if personas_detectadas:
+                    etiquetas_str += ',' + ','.join([p.lower()[:20] for p in personas_detectadas])
+
+                # ── Enriquecimiento: Logos + ManualDavid + Simbiosis ───────
+                enriq = enriquecer_cierre(texto_libre, personas_detectadas)
+                titulo_logos = enriq.get('titulo_logos') or ''
+                categoria_estoica = enriq.get('categoria_estoica') or ''
+                micro_verdad = enriq.get('micro_verdad')
+                interacciones_data = enriq.get('interacciones') or []
+
+                if categoria_estoica:
+                    etiquetas_str += f',{categoria_estoica}'
+
+                # Crear ReflexionLibre con título generado por JOI
+                reflexion_obj = ReflexionLibre.objects.create(
+                    usuario=request.user,
+                    contenido=texto_libre,
+                    tipo='espontanea',
+                    titulo=titulo_logos,
+                    etiquetas=etiquetas_str,
+                )
+
+                if etiquetas_nuevas:
+                    entrada.etiquetas = ','.join(etiquetas_nuevas)
+                entrada.save()
+
+                # ── ManualDavid: micro-verdad ──────────────────────────────
+                if micro_verdad and len(micro_verdad.strip()) > 5:
+                    from joi.models import ManualDavid
+                    ya_existe = ManualDavid.objects.filter(
+                        user=request.user,
+                        entrada__icontains=micro_verdad[:30],
+                        activa=True,
+                    ).exists()
+                    if not ya_existe:
+                        ManualDavid.objects.create(
+                            user=request.user,
+                            entrada=micro_verdad.strip(),
+                            origen='patron_detectado',
+                        )
+
+                # ── Simbiosis: personas conocidas → Interaccion real ──────
+                # ── Personas desconocidas → perfil fantasma (PersonaInterina) ──
+                if interacciones_data:
+                    from diario.models import (
+                        PersonaImportante, Interaccion,
+                        PersonaInterina, InteraccionSombra,
+                    )
+                    from joi.models import ManualDavid
+                    tipos_validos = {c[0] for c in Interaccion.TIPO_INTERACCION_CHOICES}
+                    friccion_hoy = int(request.POST.get('friccion_no', 0) or 0)
+
+                    for item in interacciones_data:
+                        nombre = item.get('persona', '').strip()
+                        if not nombre:
+                            continue
+                        tipo = item.get('tipo', 'neutra')
+                        if tipo not in tipos_validos:
+                            tipo = 'neutra'
+
+                        persona_obj = (
+                            PersonaImportante.objects
+                            .filter(usuario=request.user, nombre__iexact=nombre)
+                            .first()
+                        )
+
+                        if persona_obj:
+                            # Persona conocida → Interaccion en Simbiosis
+                            interaccion = Interaccion.objects.create(
+                                usuario=request.user,
+                                titulo=item.get('titulo', f'Interacción con {nombre}')[:200],
+                                descripcion=item.get('descripcion', ''),
+                                mi_sentir=item.get('mi_sentir', ''),
+                                aprendizaje=item.get('aprendizaje', ''),
+                                tipo_interaccion=tipo,
+                            )
+                            interaccion.personas.add(persona_obj)
+                        else:
+                            # Persona desconocida → perfil fantasma
+                            interina, creada = PersonaInterina.objects.get_or_create(
+                                usuario=request.user,
+                                nombre__iexact=nombre,
+                                defaults={'nombre': nombre},
+                            )
+                            if not creada:
+                                PersonaInterina.objects.filter(pk=interina.pk).update(
+                                    veces_mencionada=interina.veces_mencionada + 1
+                                )
+                                interina.refresh_from_db()
+
+                            InteraccionSombra.objects.create(
+                                persona_interina=interina,
+                                descripcion=item.get('descripcion', ''),
+                                mi_sentir=item.get('mi_sentir', ''),
+                                aprendizaje=item.get('aprendizaje', ''),
+                                tipo_interaccion=tipo,
+                                friccion_no=friccion_hoy or None,
+                            )
+
+                            if creada:
+                                # Primera detección → nota en Manual de David
+                                ManualDavid.objects.create(
+                                    user=request.user,
+                                    entrada=(
+                                        f"Entidad nueva detectada: '{nombre}'. "
+                                        f"Pendiente de validación si se repite."
+                                    ),
+                                    origen='patron_detectado',
+                                )
+
+                            # Si aparece 2+ veces → activar radar de JOI
+                            if interina.veces_mencionada >= 2 and interina.estado == 'sombra':
+                                PersonaInterina.objects.filter(pk=interina.pk).update(estado='radar')
+
+            except Exception as exc:
+                logger.warning(f"[presencia_cierre] enriquecimiento falló: {exc}")
+                if reflexion_obj is None:
+                    ReflexionLibre.objects.create(
+                        usuario=request.user,
+                        contenido=texto_libre,
+                        tipo='espontanea',
+                        etiquetas='cierre_dia',
+                    )
+
+        habitos_ids_raw = request.POST.get('habitos_completados', '[]')
+        try:
+            habitos_completados_ids = json.loads(habitos_ids_raw)
+        except (json.JSONDecodeError, ValueError):
+            habitos_completados_ids = []
+
+        for h in habitos:
+            completado = h.id in habitos_completados_ids
+            dia_obj, _ = ProsocheHabitoDia.objects.get_or_create(habito=h, dia=dia_num)
+            dia_obj.completado = completado
+            dia_obj.save()
+
+        # Simbiosis_respuesta guard — save if provided (re-submission after simbiosis block)
+        simbiosis_respuesta = request.POST.get('simbiosis_respuesta', '').strip()
+        if simbiosis_respuesta:
+            ReflexionLibre.objects.create(
+                usuario=request.user,
+                contenido=simbiosis_respuesta,
+                titulo='Reflexión Simbiosis',
+                tipo='crisis',
+                etiquetas='simbiosis_respuesta',
+            )
+
+        # Simbiosis check: misma persona mencionada 3+ días consecutivos
+        simbiosis_bloqueo = None
+        simbiosis_pregunta = None
+        if personas_detectadas and not simbiosis_respuesta:
+            for persona_nombre in personas_detectadas:
+                dias_con_mencion = 0
+                for delta in range(1, 3):
+                    dia_pasado = hoy - timedelta(days=delta)
+                    mencionado = ReflexionLibre.objects.filter(
+                        usuario=request.user,
+                        fecha__date=dia_pasado,
+                        etiquetas__icontains=persona_nombre.lower()[:10]
+                    ).exists()
+                    if mencionado:
+                        dias_con_mencion += 1
+                if dias_con_mencion >= 2:
+                    simbiosis_bloqueo = persona_nombre
+                    break
+
+        if simbiosis_bloqueo:
+            simbiosis_pregunta = _generar_pregunta_simbiosis(simbiosis_bloqueo, request)
+            ReflexionLibre.objects.create(
+                usuario=request.user,
+                contenido=simbiosis_pregunta,
+                titulo=f'Simbiosis: {simbiosis_bloqueo}',
+                tipo='crisis',
+                etiquetas='simbiosis_joi',
+            )
+            context = {
+                'entrada': entrada,
+                'habitos_con_estado': habitos_con_estado,
+                'hoy': hoy,
+                'dia_num': dia_num,
+                'simbiosis_bloqueo': simbiosis_bloqueo,
+                'simbiosis_pregunta': simbiosis_pregunta,
+            }
+            return render(request, 'diario/presencia_cierre.html', context)
+
+        messages.success(request, 'Día cerrado.')
+        return redirect('diario:dashboard_diario')
+
+    context = {
+        'entrada': entrada,
+        'habitos_con_estado': habitos_con_estado,
+        'hoy': hoy,
+        'dia_num': dia_num,
+    }
+    return render(request, 'diario/presencia_cierre.html', context)
+
+
+@login_required
+@require_http_methods(["POST"])
+def promover_persona_interina(request):
+    """
+    AJAX: promueve una PersonaInterina a PersonaImportante (accion=promover)
+    o la descarta (accion=descartar).
+    """
+    from diario.models import PersonaInterina, PersonaImportante, Interaccion, InteraccionSombra
+    try:
+        data = json.loads(request.body)
+        interina = PersonaInterina.objects.get(id=data['id'], usuario=request.user)
+        accion = data.get('accion', 'descartar')
+
+        if accion == 'promover':
+            persona_real, _ = PersonaImportante.objects.get_or_create(
+                usuario=request.user,
+                nombre=interina.nombre,
+                defaults={'tipo_relacion': 'otro'},
+            )
+            # Migrar interacciones sombra → Interaccion real
+            for sombra in interina.interacciones.all():
+                interaccion = Interaccion.objects.create(
+                    usuario=request.user,
+                    titulo=f'[Sombra] Interacción con {interina.nombre}',
+                    descripcion=sombra.descripcion,
+                    mi_sentir=sombra.mi_sentir,
+                    aprendizaje=sombra.aprendizaje,
+                    tipo_interaccion=sombra.tipo_interaccion,
+                    fecha=sombra.fecha,
+                )
+                interaccion.personas.add(persona_real)
+            interina.estado = 'promovida'
+            interina.persona_importante = persona_real
+            interina.save()
+
+        elif accion == 'descartar':
+            interina.estado = 'descartada'
+            interina.save()
+
+        return JsonResponse({'ok': True})
+    except Exception as e:
+        return JsonResponse({'ok': False, 'error': str(e)}, status=400)
+
+
+@login_required
+@require_http_methods(["POST"])
+def panico_impulso_api(request):
+    """AJAX: genera un dardo preventivo de JOI ante un impulso."""
+    try:
+        cliente = request.user.cliente
+    except Exception:
+        return JsonResponse({'error': 'Sin cliente'}, status=400)
+
+    try:
+        from joi.services import construir_contexto, _llamar_haiku
+        ctx = construir_contexto(cliente)
+        semaforo = ctx.get('semaforo') or {}
+        estado = semaforo.get('estado', 'verde')
+
+        prompt = (
+            f"David está a punto de actuar por impulso — posiblemente escribir a alguien "
+            f"buscando validación, o caer en un hábito que quiere eliminar.\n\n"
+            f"Estado físico actual: semáforo {estado.upper()}.\n\n"
+            f"Genera UN dardo preventivo. Directo, sin consuelo. Que le haga pausar. "
+            f"Máximo 2 frases. Sin emojis. Que duela un poco si hace falta."
+        )
+        mensaje = _llamar_haiku(prompt)
+        return JsonResponse({'mensaje': mensaje})
+    except Exception:
+        return JsonResponse({'mensaje': 'Para. Respira. ¿Esto lo decide tu mejor versión o tu necesidad?'})

@@ -2,6 +2,7 @@ from __future__ import annotations
 from datetime import date, timedelta
 from django.conf import settings
 import logging
+import random
 
 logger = logging.getLogger(__name__)
 
@@ -2192,3 +2193,154 @@ def marcar_leido(mensaje_id: int, user) -> bool:
     from joi.models import MensajeJOI
     updated = MensajeJOI.objects.filter(id=mensaje_id, user=user).update(leido=True)
     return updated > 0
+
+
+def generar_pregunta_identidad(cliente) -> str:
+    """
+    Genera una Pregunta de Identidad para la apertura del día.
+    Usa semáforo actual + Manual de David para personalizarla.
+    """
+    try:
+        ctx = construir_contexto(cliente)
+        manual = _bloque_manual(cliente.user)
+
+        semaforo = ctx.get('semaforo') or {}
+        estado = semaforo.get('estado', 'verde')
+        tipo_fatiga = semaforo.get('tipo_fatiga', 'alineado')
+
+        ultima = ctx.get('ultima_actividad') or {}
+        dias_inactivo = ultima.get('dias_hace', 0)
+
+        estado_txt = {
+            'verde': 'cuerpo en forma, energía disponible',
+            'amarillo': 'carga alta, energía limitada',
+            'naranja': 'desentrenamiento, cuerpo inactivo',
+            'rojo': 'parada técnica, cuerpo al límite',
+        }.get(estado, estado)
+
+        prompt = (
+            f"Es la apertura del día de David.\n\n"
+            f"ESTADO FÍSICO HOY:\n"
+            f"- Semáforo: {estado.upper()} ({estado_txt})\n"
+            f"- Tipo de fatiga: {tipo_fatiga}\n"
+            f"- Días desde última actividad: {dias_inactivo}\n\n"
+            f"{manual}"
+            f"Genera UNA Pregunta de Identidad para David.\n"
+            f"La pregunta debe:\n"
+            f"- Nacer del estado físico de hoy\n"
+            f"- Conectar con algo del Manual de David si hay algo relevante\n"
+            f"- Ser sobre quién quiere ser, no sobre qué debe hacer\n"
+            f"- Máximo 25 palabras. Solo la pregunta. Sin introducción ni explicación."
+        )
+
+        if random.random() < 0.3 and estado != 'rojo':
+            prompt += (
+                "\n\nRegla del 30%: genera una pregunta que cuestione en lugar de apoyar. "
+                "Por ejemplo: '¿Estás usando [X] como excusa para evitar [Y]?' "
+                "o '¿Es fatiga real o es que el reto del día te incomoda?' "
+                "La pregunta debe incomodar, no consolar."
+            )
+
+        return _llamar_haiku(prompt)
+    except Exception as e:
+        logger.error(f"[JOI] generar_pregunta_identidad falló: {e}")
+        return "¿Quién quieres ser hoy con lo que tienes?"
+
+
+def parsear_cierre_diario(texto: str) -> dict:
+    """
+    Parsea el texto libre del cierre nocturno.
+    Extrae: estado_animo (1-5), impulsos detectados, personas mencionadas, etiquetas.
+    """
+    if not texto or not texto.strip():
+        return {'estado_animo': 3, 'impulsos': [], 'personas': [], 'etiquetas': []}
+
+    prompt = (
+        f"Analiza este texto de diario nocturno:\n\n"
+        f"\"{texto[:1500]}\"\n\n"
+        f"Responde SOLO con un JSON válido, sin markdown:\n"
+        f'{{"estado_animo": <1-5>, '
+        f'"impulsos": [{{"tipo": "controlado", "descripcion": "<breve>"}}], '
+        f'"personas": ["<nombre>"], '
+        f'"etiquetas": ["<tag>"]}}\n\n'
+        f"Reglas:\n"
+        f"- estado_animo: 1=muy mal, 2=mal, 3=neutral, 4=bien, 5=excelente\n"
+        f"- impulsos: solo si el texto menciona explícitamente resistir o ceder ante un hábito negativo. "
+        f"tipo puede ser 'controlado' o 'cediste'\n"
+        f"- personas: nombres propios de personas mencionadas\n"
+        f"- etiquetas: 2-4 palabras clave que resumen el día\n"
+        f"- Si no hay impulsos o personas, usa []\n"
+        f"SOLO el JSON, sin ningún texto adicional."
+    )
+
+    try:
+        client = _cliente_anthropic()
+        response = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=300,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        raw = response.content[0].text.strip()
+        if raw.startswith('```'):
+            raw = raw.split('\n', 1)[1].rsplit('```', 1)[0].strip()
+        import json as _json
+        return _json.loads(raw)
+    except Exception as e:
+        logger.error(f"[JOI] parsear_cierre_diario falló: {e}")
+        return {'estado_animo': 3, 'impulsos': [], 'personas': [], 'etiquetas': []}
+
+
+def enriquecer_cierre(texto: str, personas_detectadas: list) -> dict:
+    """
+    Una sola llamada a Claude que enriquece el cierre con tres cosas:
+    1. Título corto para Logos (≤5 palabras) + categoría estoica
+    2. Micro-verdad para el Manual de David (si hay lección aprendida)
+    3. Resumen estructurado de cada interacción mencionada
+
+    Devuelve dict con claves: titulo_logos, categoria_estoica, micro_verdad, interacciones
+    """
+    if not texto or not texto.strip():
+        return {'titulo_logos': None, 'categoria_estoica': None, 'micro_verdad': None, 'interacciones': []}
+
+    personas_str = ', '.join(personas_detectadas) if personas_detectadas else 'ninguna'
+
+    prompt = (
+        f"Analiza este diario nocturno de David:\n\n"
+        f"\"{texto[:1800]}\"\n\n"
+        f"Personas mencionadas: {personas_str}\n\n"
+        f"Devuelve SOLO un JSON válido sin markdown con esta estructura exacta:\n"
+        f'{{"titulo_logos": "<máx 5 palabras que capturen la esencia del día>", '
+        f'"categoria_estoica": "<una de: sabiduria|coraje|justicia|templanza>", '
+        f'"micro_verdad": "<frase concisa de lección aprendida, o null si no hay ninguna clara>", '
+        f'"interacciones": ['
+        f'{{"persona": "<nombre exacto de la lista de personas mencionadas>", '
+        f'"titulo": "<qué pasó en 6 palabras>", '
+        f'"descripcion": "<resumen de la interacción en 2-3 frases>", '
+        f'"mi_sentir": "<cómo se sintió David, inferido del texto>", '
+        f'"aprendizaje": "<qué aprendió David de esta interacción>", '
+        f'"tipo": "<positiva|negativa|neutra|conflicto|apoyo>"}}'
+        f']}}\n\n'
+        f"Reglas:\n"
+        f"- titulo_logos: evocador, no descriptivo. Ej: 'La tarde que no cedí'\n"
+        f"- micro_verdad: solo si hay una lección genuina y específica. Empieza con 'Cuando' o 'Mi'. "
+        f"Máximo 20 palabras. Si no hay lección clara, pon null\n"
+        f"- interacciones: una entrada por cada persona de la lista que aparezca en el texto. "
+        f"Si no hay personas o no hay interacción real, usa []\n"
+        f"SOLO el JSON, sin explicación."
+    )
+
+    try:
+        client = _cliente_anthropic()
+        response = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=600,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        raw = response.content[0].text.strip()
+        if raw.startswith('```'):
+            raw = raw.split('\n', 1)[1].rsplit('```', 1)[0].strip()
+        import json as _json
+        return _json.loads(raw)
+    except Exception as e:
+        logger.error(f"[JOI] enriquecer_cierre falló: {e}")
+        return {'titulo_logos': None, 'categoria_estoica': None, 'micro_verdad': None, 'interacciones': []}

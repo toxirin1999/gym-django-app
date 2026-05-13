@@ -1,0 +1,408 @@
+{% extends 'diario/base_stoic.html' %}
+{% load static %}
+
+{% block title %}Apertura del día{% endblock %}
+
+{% block extra_css %}
+<link href="https://fonts.googleapis.com/css2?family=Urbanist:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400&display=swap" rel="stylesheet">
+<style>
+:root {
+    --bg: #F7F4EF;
+    --card: #FFFFFF;
+    --border: #E8E3DC;
+    --text: #1C1917;
+    --muted: #78716C;
+    --accent: #C2410C;
+    --accent-light: #FFF7ED;
+    --green: #15803D;
+    --green-light: #F0FDF4;
+    --radius: 16px;
+    --shadow: 0 2px 16px rgba(0,0,0,0.06);
+}
+* { box-sizing: border-box; }
+body { background: var(--bg) !important; font-family: 'Urbanist', sans-serif !important; }
+
+.presencia-wrap {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 1.5rem 1rem 4rem;
+}
+
+/* ── JOI block ── */
+.joi-block {
+    background: var(--text);
+    color: #F5F0EB;
+    border-radius: var(--radius);
+    padding: 1.75rem;
+    margin-bottom: 1.5rem;
+    position: relative;
+    overflow: hidden;
+}
+.joi-block::before {
+    content: '';
+    position: absolute;
+    top: -30px; right: -30px;
+    width: 120px; height: 120px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.04);
+}
+.joi-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: rgba(245,240,235,0.45);
+    margin-bottom: 0.5rem;
+}
+.joi-msg {
+    font-size: 0.95rem;
+    line-height: 1.65;
+    color: rgba(245,240,235,0.8);
+    margin-bottom: 1.25rem;
+    font-style: italic;
+}
+.joi-question {
+    font-size: 1.25rem;
+    font-weight: 600;
+    line-height: 1.4;
+    color: #F5F0EB;
+    border-top: 1px solid rgba(255,255,255,0.12);
+    padding-top: 1rem;
+}
+
+/* ── Semáforo badge ── */
+.semaforo-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 0.3rem 0.75rem;
+    border-radius: 100px;
+    margin-bottom: 1rem;
+}
+.semaforo-verde  { background: rgba(21,128,61,0.2);  color: #BBF7D0; }
+.semaforo-amarillo { background: rgba(161,98,7,0.2); color: #FEF08A; }
+.semaforo-naranja  { background: rgba(194,65,12,0.2); color: #FDBA74; }
+.semaforo-rojo     { background: rgba(185,28,28,0.2); color: #FCA5A5; }
+.semaforo-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    display: inline-block;
+}
+.semaforo-verde  .semaforo-dot  { background: #4ADE80; }
+.semaforo-amarillo .semaforo-dot { background: #FACC15; }
+.semaforo-naranja  .semaforo-dot { background: #FB923C; }
+.semaforo-rojo     .semaforo-dot { background: #F87171; }
+
+/* ── Cards ── */
+.section-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+    box-shadow: var(--shadow);
+}
+.section-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 1rem;
+}
+.section-subtitle {
+    font-size: 0.78rem;
+    color: var(--muted);
+    margin-top: -0.6rem;
+    margin-bottom: 1rem;
+}
+
+/* ── Mood selector (4 opciones) ── */
+.mood-row {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: space-between;
+}
+.mood-btn {
+    flex: 1;
+    aspect-ratio: 1;
+    border: 2px solid var(--border);
+    background: transparent;
+    border-radius: 12px;
+    font-size: 1.4rem;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.2rem;
+    padding: 0.5rem;
+}
+.mood-btn span.label { font-size: 0.6rem; color: var(--muted); font-weight: 500; }
+.mood-btn:hover, .mood-btn.selected {
+    border-color: var(--accent);
+    background: var(--accent-light);
+    transform: scale(1.05);
+}
+.mood-btn.selected { box-shadow: 0 0 0 3px rgba(194,65,12,0.15); }
+
+/* ── Sliders ── */
+.slider-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+.slider-group label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 0.5rem;
+    display: block;
+}
+.slider-group input[type=range] {
+    width: 100%;
+    accent-color: var(--accent);
+}
+.slider-value {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--accent);
+    text-align: center;
+    margin-top: 0.25rem;
+}
+
+/* ── Inputs de texto ── */
+.gratitud-input {
+    width: 100%;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0.7rem 1rem;
+    font-family: 'Urbanist', sans-serif;
+    font-size: 0.95rem;
+    color: var(--text);
+    background: #FAFAFA;
+    transition: border-color 0.15s;
+    outline: none;
+}
+.gratitud-input:focus { border-color: var(--accent); background: #fff; }
+.gratitud-input::placeholder { color: var(--muted); }
+
+.soberania-input {
+    width: 100%;
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    padding: 0.7rem 1rem;
+    font-family: 'Urbanist', sans-serif;
+    font-size: 0.95rem;
+    color: var(--text);
+    background: #FAFAFA;
+    transition: border-color 0.15s;
+    outline: none;
+}
+.soberania-input:focus { border-color: var(--accent); background: #fff; }
+.soberania-input::placeholder { color: var(--muted); }
+.soberania-input.error { border-color: #EF4444; }
+
+/* ── Intención ── */
+textarea.intencion {
+    width: 100%;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1rem;
+    font-family: 'Urbanist', sans-serif;
+    font-size: 1rem;
+    line-height: 1.6;
+    color: var(--text);
+    background: #FAFAFA;
+    resize: none;
+    outline: none;
+    min-height: 90px;
+    transition: border-color 0.15s;
+}
+textarea.intencion:focus { border-color: var(--accent); background: #fff; }
+
+/* ── Submit ── */
+.submit-btn {
+    width: 100%;
+    background: var(--text);
+    color: #F5F0EB;
+    border: none;
+    border-radius: var(--radius);
+    padding: 1rem;
+    font-family: 'Urbanist', sans-serif;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    letter-spacing: 0.03em;
+    margin-top: 0.5rem;
+    transition: background 0.15s;
+}
+.submit-btn:hover { background: #374151; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="presencia-wrap">
+
+    <!-- Radar de Intrusos -->
+    {% if radar_personas %}
+    <div style="background:#1C1917; border:1.5px solid #EF4444; border-radius:16px; padding:1.25rem; margin-bottom:1rem;">
+        <div style="font-size:0.68rem; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:#EF4444; margin-bottom:0.75rem;">⚠ Radar de JOI</div>
+        {% for p in radar_personas %}
+        <div style="display:flex; align-items:center; justify-content:space-between; padding:0.6rem 0; border-bottom:1px solid rgba(239,68,68,0.15);">
+            <div>
+                <span style="color:#F5F0EB; font-weight:600; font-size:0.9rem;">{{ p.nombre }}</span>
+                <span style="color:#78716C; font-size:0.78rem; margin-left:0.5rem;">mencionada {{ p.veces_mencionada }}× — no está en Simbiosis</span>
+            </div>
+            <div style="display:flex; gap:0.4rem;">
+                <button onclick="promoverPersona({{ p.id }}, '{{ p.nombre }}')"
+                    style="background:#15803D; border:none; border-radius:8px; padding:0.3rem 0.7rem; color:white; font-size:0.75rem; font-family:'Urbanist',sans-serif; cursor:pointer;">
+                    Subir
+                </button>
+                <button onclick="descartarPersona({{ p.id }})"
+                    style="background:#3F3C37; border:none; border-radius:8px; padding:0.3rem 0.7rem; color:#78716C; font-size:0.75rem; font-family:'Urbanist',sans-serif; cursor:pointer;">
+                    Ignorar
+                </button>
+            </div>
+        </div>
+        {% endfor %}
+        <p style="color:#78716C; font-size:0.75rem; font-style:italic; margin:0.75rem 0 0;">"Subir" la añade a Simbiosis y vincula las interacciones registradas. "Ignorar" la descarta.</p>
+    </div>
+    {% endif %}
+
+    <!-- JOI block -->
+    <div class="joi-block">
+        {% if semaforo %}
+            <div class="semaforo-badge semaforo-{{ semaforo.estado }}">
+                <span class="semaforo-dot"></span>
+                {{ semaforo.estado|upper }}
+            </div>
+        {% endif %}
+
+        {% if apertura_manana %}
+            <div class="joi-label">JOI</div>
+            <div class="joi-msg">{{ apertura_manana }}</div>
+        {% endif %}
+
+        {% if pregunta_identidad %}
+            <div class="joi-question">{{ pregunta_identidad }}</div>
+        {% else %}
+            <div class="joi-question">¿Quién quieres ser hoy con lo que tienes?</div>
+        {% endif %}
+    </div>
+
+    <form method="post" id="apertura-form">
+        {% csrf_token %}
+        <input type="hidden" name="estado_animo" id="estado_animo_input" value="{{ entrada.estado_animo|default:4 }}">
+
+        <!-- Estado de ánimo (4 opciones, sin Neutral) -->
+        <div class="section-card">
+            <div class="section-label">¿Cómo estás?</div>
+            <div class="mood-row">
+                <button type="button" class="mood-btn {% if entrada.estado_animo == 1 %}selected{% endif %}" data-val="1">😔<span class="label">Mal</span></button>
+                <button type="button" class="mood-btn {% if entrada.estado_animo == 2 %}selected{% endif %}" data-val="2">😞<span class="label">Flojo</span></button>
+                <button type="button" class="mood-btn {% if entrada.estado_animo == 4 or not entrada.estado_animo %}selected{% endif %}" data-val="4">🙂<span class="label">Bien</span></button>
+                <button type="button" class="mood-btn {% if entrada.estado_animo == 5 %}selected{% endif %}" data-val="5">😊<span class="label">Pleno</span></button>
+            </div>
+        </div>
+
+        <!-- Biometría -->
+        <div class="section-card">
+            <div class="section-label">Cuerpo</div>
+            <div class="slider-row">
+                <div class="slider-group">
+                    <label>Energía</label>
+                    <input type="range" name="nivel_energia" id="energia_slider" min="1" max="5" step="1" value="{{ vires.nivel_energia|default:3 }}">
+                    <div class="slider-value" id="energia_val">{{ vires.nivel_energia|default:3 }}</div>
+                </div>
+                <div class="slider-group">
+                    <label>Sueño</label>
+                    <input type="range" name="calidad_sueno" id="sueno_slider" min="1" max="5" step="1" value="{{ vires.calidad_sueno|default:3 }}">
+                    <div class="slider-value" id="sueno_val">{{ vires.calidad_sueno|default:3 }}</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Un acierto de hoy -->
+        <div class="section-card">
+            <div class="section-label">Un acierto de hoy</div>
+            <input type="text" name="gratitud_1" class="gratitud-input" placeholder="Algo real que salió bien..." value="{{ entrada.gratitud_1 }}">
+        </div>
+
+        <!-- Intención -->
+        <div class="section-card">
+            <div class="section-label">Tu respuesta — intención del día</div>
+            <textarea name="intencion" class="intencion" placeholder="Escribe tu intención...">{{ entrada.persona_quiero_ser }}</textarea>
+        </div>
+
+        <!-- Acto de Soberanía -->
+        <div class="section-card">
+            <div class="section-label">Acto de Soberanía</div>
+            <p class="section-subtitle">Algo que harás SOLO para ti. No para nadie más.</p>
+            <input type="text" name="soberania" id="soberania_input" class="soberania-input" placeholder="Tu acto de hoy...">
+        </div>
+
+        <button type="submit" class="submit-btn">Comenzar el día</button>
+    </form>
+</div>
+
+<script>
+// ── Mood selector ──
+document.querySelectorAll('.mood-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('.mood-btn').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+        document.getElementById('estado_animo_input').value = btn.dataset.val;
+    });
+});
+
+// ── Sliders ──
+const energiaSlider = document.getElementById('energia_slider');
+const energiaVal = document.getElementById('energia_val');
+energiaSlider.addEventListener('input', () => energiaVal.textContent = energiaSlider.value);
+
+const suenoSlider = document.getElementById('sueno_slider');
+const suenoVal = document.getElementById('sueno_val');
+suenoSlider.addEventListener('input', () => suenoVal.textContent = suenoSlider.value);
+
+// ── Validación Soberanía ──
+document.getElementById('apertura-form').addEventListener('submit', function(e) {
+    const soberania = document.getElementById('soberania_input');
+    if (!soberania.value.trim()) {
+        soberania.classList.add('error');
+        soberania.focus();
+        e.preventDefault();
+        return false;
+    }
+    soberania.classList.remove('error');
+});
+
+// ── Radar de Intrusos ──
+function promoverPersona(id, nombre) {
+    if (!confirm(`¿Añadir a "${nombre}" a Simbiosis?`)) return;
+    fetch("{% url 'diario:promover_persona_interina' %}", {
+        method: 'POST',
+        headers: {'X-CSRFToken': '{{ csrf_token }}', 'Content-Type': 'application/json'},
+        body: JSON.stringify({id: id, accion: 'promover'})
+    }).then(r => r.json()).then(d => {
+        if (d.ok) location.reload();
+        else alert('Error al promover.');
+    });
+}
+
+function descartarPersona(id) {
+    fetch("{% url 'diario:promover_persona_interina' %}", {
+        method: 'POST',
+        headers: {'X-CSRFToken': '{{ csrf_token }}', 'Content-Type': 'application/json'},
+        body: JSON.stringify({id: id, accion: 'descartar'})
+    }).then(r => r.json()).then(d => {
+        if (d.ok) location.reload();
+    });
+}
+</script>
+{% endblock %}
