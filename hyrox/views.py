@@ -601,25 +601,38 @@ def hyrox_dashboard(request):
 
         for ar in acts_rpe:
             nombre_lower = (ar['nombre_ejercicio'] or '').lower().strip()
-            canon = next((v for k, v in NOMBRE_CANON.items() if k in nombre_lower), None)
-            if canon and ar['data_metricas__rpe']:
-                rpes_acum.setdefault(canon, []).append(int(ar['data_metricas__rpe']))
+            canones_rpe = list(dict.fromkeys(
+                v for k, v in NOMBRE_CANON.items() if k in nombre_lower
+            ))
+            for canon in canones_rpe:
+                if ar['data_metricas__rpe']:
+                    rpes_acum.setdefault(canon, []).append(int(ar['data_metricas__rpe']))
 
         for act in acts_timer:
-            secs = act.data_metricas.get('tiempo_segundos') or act.data_metricas.get('tiempo_s')
-            if not secs or secs <= 0:
+            raw_secs = act.data_metricas.get('tiempo_segundos') or act.data_metricas.get('tiempo_s')
+            mins     = act.data_metricas.get('tiempo_minutos')
+            if not raw_secs or raw_secs <= 0:
                 continue
+            # Sanity check: si tiempo_segundos es muy inferior a tiempo_minutos*60
+            # (ej. se guardó un pace en vez del tiempo total), reconstruir desde minutos.
+            if mins and float(mins) > 0 and int(raw_secs) < float(mins) * 60 * 0.5:
+                raw_secs = round(float(mins) * 60)
+            secs = int(raw_secs)
+
             nombre_lower = (act.nombre_ejercicio or '').lower().strip()
-            canon = next((v for k, v in NOMBRE_CANON.items() if k in nombre_lower), None)
-            if not canon:
+            # Recopilar TODOS los cánones que matcheen (ej. 'SkiErg / Remo Z2' → SkiErg + Rowing)
+            canones = list(dict.fromkeys(
+                v for k, v in NOMBRE_CANON.items() if k in nombre_lower
+            ))
+            if not canones:
                 continue
-            secs = int(secs)
-            tiempos_acum.setdefault(canon, []).append(secs)
             fecha_s = act.sesion.fecha or timezone.localdate()
-            iso_w = fecha_s.isocalendar()[:2]
-            tiempos_por_semana.setdefault(canon, {}).setdefault(iso_w, []).append(secs)
+            iso_w   = fecha_s.isocalendar()[:2]
             mes_key = (fecha_s.year, fecha_s.month)
-            tiempos_por_mes.setdefault(canon, {}).setdefault(mes_key, []).append(secs)
+            for canon in canones:
+                tiempos_acum.setdefault(canon, []).append(secs)
+                tiempos_por_semana.setdefault(canon, {}).setdefault(iso_w, []).append(secs)
+                tiempos_por_mes.setdefault(canon, {}).setdefault(mes_key, []).append(secs)
 
         hoy = timezone.localdate()
         _mes_actual = (hoy.year, hoy.month)
