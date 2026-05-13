@@ -4417,27 +4417,50 @@ def memoria_entrenador(request, cliente_id):
                 rpe_bias = bias_info
 
             # Progreso por estación
-            _NOMBRE_CANON = {
-                'skierg': 'SkiErg', 'sled push': 'Sled Push', 'sled pull': 'Sled Pull',
-                'burpee broad jump': 'Burpee Broad Jumps', 'rowing': 'Rowing', 'remo': 'Rowing',
-                'farmer': 'Farmers Carry', 'sandbag': 'Sandbag Lunges', 'wall ball': 'Wall Balls',
+            _ALIAS_NOMBRES = {
+                'Rowing':            ['rowing', 'remo z', '/ remo', 'remo /'],
+                'SkiErg':            ['skierg', 'ski erg', 'ski-erg'],
+                'Sled Push':         ['sled push', 'empuje de trineo', 'empuje trineo'],
+                'Sled Pull':         ['sled pull', 'jalón de trineo', 'jalon trineo'],
+                'Burpee Broad Jumps': ['burpee broad jump', 'burpee salto', 'burpee con salto'],
+                'Farmers Carry':     ['farmers carry', 'caminata de granjero'],
+                'Sandbag Lunges':    ['sandbag lunges', 'zancadas con saco'],
+                'Wall Balls':        ['wall balls', 'wall ball', 'balón al muro'],
             }
-            _TIPOS = ('hyrox_station', 'ergometro', 'skierg', 'remo')
+            _DIST_OFICIAL_M = {'SkiErg': 1000, 'Rowing': 1000}
+            _TIPOS_ESTACION = ['hyrox_station', 'cardio_sustituto', 'ergometro', 'skierg', 'remo', 'hiit']
             acts = (HyroxActivity.objects
                     .filter(sesion__objective=hyrox_obj, sesion__estado='completado',
-                            tipo_actividad__in=_TIPOS)
+                            tipo_actividad__in=_TIPOS_ESTACION)
                     .exclude(data_metricas={})
                     .select_related('sesion').order_by('sesion__fecha'))
 
             tiempos_acum = {}
             for a in acts:
-                t = a.data_metricas.get('tiempo_segundos') or a.data_metricas.get('tiempo_s')
-                if not t or int(t) <= 0:
+                raw_secs = a.data_metricas.get('tiempo_segundos') or a.data_metricas.get('tiempo_s')
+                mins = a.data_metricas.get('tiempo_minutos')
+                if not raw_secs or int(raw_secs) <= 0:
                     continue
-                nl = (a.nombre_ejercicio or '').lower()
-                canon = next((v for k, v in _NOMBRE_CANON.items() if k in nl), None)
-                if canon:
-                    tiempos_acum.setdefault(canon, []).append(int(t))
+                if mins and float(mins) > 0 and int(raw_secs) < float(mins) * 60 * 0.5:
+                    raw_secs = round(float(mins) * 60)
+                secs = int(raw_secs)
+                nl = (a.nombre_ejercicio or '').lower().strip()
+                canones = list(dict.fromkeys(
+                    canon for canon, aliases in _ALIAS_NOMBRES.items()
+                    if any(alias in nl for alias in aliases)
+                ))
+                for canon in canones:
+                    secs_canon = secs
+                    dist_oficial = _DIST_OFICIAL_M.get(canon)
+                    if dist_oficial:
+                        dist_m = (
+                            float(a.data_metricas.get('distancia_m') or 0)
+                            or float(a.data_metricas.get('distancia_km') or 0) * 1000
+                            or float(a.data_metricas.get('distancia') or 0)
+                        )
+                        if dist_m > 0 and abs(dist_m - dist_oficial) > dist_oficial * 0.1:
+                            secs_canon = round(secs * dist_oficial / dist_m)
+                    tiempos_acum.setdefault(canon, []).append(secs_canon)
 
             stag = StagnationEngine.check(tiempos_acum)
             for station, tiempos in tiempos_acum.items():
@@ -4481,9 +4504,14 @@ def memoria_entrenador(request, cliente_id):
     )
 
     # ── 5. PATRONES DE CARGA ─────────────────────────────────────────────────
-    from entrenos.models import EntrenoRealizado, EjercicioRealizado
-    entrenos_28 = EntrenoRealizado.objects.filter(cliente=cliente, fecha__range=(hace_28, hoy))
-    sesiones_semana = round(entrenos_28.count() / 4, 1)
+    from entrenos.models import EntrenoRealizado, EjercicioRealizado, ActividadRealizada
+    from django.db.models.functions import Coalesce as _Coalesce
+    from django.db.models import F as _F
+    acts_28 = (ActividadRealizada.objects
+               .filter(cliente=cliente, tipo__in=['gym', 'hyrox', 'carrera'])
+               .annotate(fecha_ef=_Coalesce('fecha_realizado', 'fecha'))
+               .filter(fecha_ef__gte=hace_28))
+    sesiones_semana = round(acts_28.count() / 4, 1)
 
     rpes_gym = list(
         EjercicioRealizado.objects
@@ -4519,6 +4547,59 @@ def memoria_entrenador(request, cliente_id):
     from entrenos.services.modelo_usuario_service import get_modelo_usuario
     modelo_usuario = get_modelo_usuario(cliente, hoy)
 
+    # ── 8. BIO SIGNALS · 14 DÍAS ─────────────────────────────────────────────
+    bio_resumen = None
+    try:
+        from clientes.models import BitacoraDiaria
+        from django.db.models import Avg as _Avg
+        hace_14 = hoy - timedelta(days=14)
+        bio_qs = BitacoraDiaria.objects.filter(cliente=cliente, fecha__gte=hace_14)
+        bio_resumen = bio_qs.aggregate(
+            hrv_medio=_Avg('hrv_ms'),
+            fc_media=_Avg('fc_reposo'),
+            sueno_medio=_Avg('horas_sueno'),
+            energia_media_bio=_Avg('energia_subjetiva'),
+            calidad_sueno_media=_Avg('calidad_sueno'),
+        )
+        bio_resumen['dias_con_dato'] = bio_qs.exclude(hrv_ms__isnull=True).count()
+        hrv_reciente = bio_qs.filter(fecha__gte=hoy - timedelta(days=7)).aggregate(avg=_Avg('hrv_ms'))['avg']
+        hrv_anterior = bio_qs.filter(fecha__lt=hoy - timedelta(days=7)).aggregate(avg=_Avg('hrv_ms'))['avg']
+        if hrv_reciente and hrv_anterior and hrv_anterior > 0:
+            bio_resumen['hrv_tendencia_pct'] = round((hrv_reciente - hrv_anterior) / hrv_anterior * 100, 1)
+        else:
+            bio_resumen['hrv_tendencia_pct'] = None
+        for k in ('hrv_medio', 'fc_media', 'sueno_medio', 'energia_media_bio', 'calidad_sueno_media'):
+            if bio_resumen[k]:
+                bio_resumen[k] = round(float(bio_resumen[k]), 1)
+    except Exception:
+        bio_resumen = None
+
+    # ── 9. MANUAL DE DAVID ────────────────────────────────────────────────────
+    manual_patrones = []
+    try:
+        from joi.models import ManualDavid
+        manual_patrones = list(
+            ManualDavid.objects
+            .filter(user=cliente.user, activa=True)
+            .order_by('-creado_en')[:10]
+            .values('entrada', 'origen', 'creado_en')
+        )
+    except Exception:
+        pass
+
+    # ── 10. SEMÁFORO DE INTENCIÓN ─────────────────────────────────────────────
+    semaforo = None
+    try:
+        from django.core.cache import cache as _cache
+        _semaforo_key = f'semaforo_{cliente.pk}'
+        semaforo = _cache.get(_semaforo_key)
+        if semaforo is None:
+            from core.daily_decision import DailyDecisionEngine
+            semaforo = DailyDecisionEngine.get_estado_hoy(cliente)
+            _cache.set(_semaforo_key, semaforo, 1800)
+    except Exception:
+        pass
+
     context = {
         'cliente': cliente,
         'perfil_atletico': perfil_atletico,
@@ -4534,5 +4615,8 @@ def memoria_entrenador(request, cliente_id):
         'zonas_atencion': zonas_atencion,
         'lesiones_activas': lesiones_activas,
         'modelo': modelo_usuario,
+        'bio_resumen': bio_resumen,
+        'manual_patrones': manual_patrones,
+        'semaforo': semaforo,
     }
     return render(request, 'clientes/memoria_entrenador.html', context)

@@ -193,6 +193,32 @@
     </div>
   </section>
 
+  {# ── §00 ESTADO HOY ── #}
+  {% if semaforo %}
+  <section class="sec">
+    <div class="sec-head"><span class="tag">§00</span><h2>ESTADO HOY</h2><div class="rule-dashed"></div></div>
+    <div class="frame" style="border-left:4px solid {% if semaforo.estado == 'verde' %}#4ade80{% elif semaforo.estado == 'amarillo' %}#facc15{% elif semaforo.estado == 'naranja' %}#fb923c{% else %}#f87171{% endif %}; padding:20px 24px;">
+      <span class="cb"></span><span class="cr"></span>
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">
+        <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:{% if semaforo.estado == 'verde' %}#4ade80{% elif semaforo.estado == 'amarillo' %}#facc15{% elif semaforo.estado == 'naranja' %}#fb923c{% else %}#f87171{% endif %};"></span>
+        <span class="label" style="letter-spacing:.2em;">{{ semaforo.titulo }}</span>
+        {% if semaforo.paradoja %}
+        <span class="label" style="opacity:.5;font-size:9px;letter-spacing:.15em;">PARADOJA {{ semaforo.paradoja }}</span>
+        {% endif %}
+      </div>
+      <p style="font-size:13px;line-height:1.6;margin-bottom:12px;">{{ semaforo.mensaje }}</p>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;">
+        {% with r=semaforo.datos_raw %}
+          {% if r.acwr %}<span class="label" style="opacity:.5;font-size:9px;border:1px solid currentColor;padding:2px 6px;">ACWR {{ r.acwr }}</span>{% endif %}
+          {% if r.tsb is not None %}<span class="label" style="opacity:.5;font-size:9px;border:1px solid currentColor;padding:2px 6px;">TSB {{ r.tsb }}</span>{% endif %}
+          <span class="label" style="opacity:.5;font-size:9px;border:1px solid currentColor;padding:2px 6px;">Readiness {{ r.readiness_pct|floatformat:0 }}%</span>
+          {% if r.hrv_ms %}<span class="label" style="opacity:.5;font-size:9px;border:1px solid currentColor;padding:2px 6px;">HRV {{ r.hrv_ms }} ms</span>{% endif %}
+        {% endwith %}
+      </div>
+    </div>
+  </section>
+  {% endif %}
+
   {# ── §01 CARGA · 28 DÍAS ── #}
   <section class="sec">
     <div class="sec-head"><span class="tag">§01</span><h2>CARGA · 28 DÍAS</h2><div class="rule-dashed"></div></div>
@@ -485,6 +511,76 @@
   {% endif %}
 
   {% endif %}{# /modelo.tiene_datos #}
+
+  {# ── §10 BIOMETRÍA · 14 DÍAS ── #}
+  {% if bio_resumen and bio_resumen.sueno_medio %}
+  <section class="sec">
+    <div class="sec-head"><span class="tag">§10</span><h2>BIOMETRÍA · 14 DÍAS</h2><div class="rule-dashed"></div></div>
+    <div class="stats">
+      {% if bio_resumen.hrv_medio %}
+      <div class="stat">
+        <div class="stat-head"><span class="label" style="opacity:.5">HRV</span><span class="label" style="opacity:.5">MEDIA</span></div>
+        <div class="stat-val {% if bio_resumen.hrv_tendencia_pct and bio_resumen.hrv_tendencia_pct > 0 %}c-ok{% elif bio_resumen.hrv_tendencia_pct and bio_resumen.hrv_tendencia_pct < -10 %}c-warn{% endif %}">
+          {{ bio_resumen.hrv_medio|floatformat:0 }}<span class="u">ms</span>
+          {% if bio_resumen.hrv_tendencia_pct is not None %}
+          <div style="font-size:9px;font-family:var(--font-mono);opacity:.6;margin-top:4px;">{% if bio_resumen.hrv_tendencia_pct > 0 %}↑{% elif bio_resumen.hrv_tendencia_pct < 0 %}↓{% endif %}{{ bio_resumen.hrv_tendencia_pct|floatformat:1 }}% vs sem. ant.</div>
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
+      {% if bio_resumen.fc_media %}
+      <div class="stat">
+        <div class="stat-head"><span class="label" style="opacity:.5">FC</span><span class="label" style="opacity:.5">REPOSO MEDIA</span></div>
+        <div class="stat-val">{{ bio_resumen.fc_media|floatformat:0 }}<span class="u">lpm</span></div>
+      </div>
+      {% endif %}
+      {% if bio_resumen.sueno_medio %}
+      <div class="stat">
+        <div class="stat-head"><span class="label" style="opacity:.5">SUEÑO</span><span class="label" style="opacity:.5">MEDIO</span></div>
+        <div class="stat-val {% if bio_resumen.sueno_medio >= 7.5 %}c-ok{% elif bio_resumen.sueno_medio < 6 %}c-warn{% endif %}">
+          {{ bio_resumen.sueno_medio|floatformat:1 }}<span class="u">h</span>
+        </div>
+      </div>
+      {% endif %}
+      {% if bio_resumen.calidad_sueno_media %}
+      <div class="stat">
+        <div class="stat-head"><span class="label" style="opacity:.5">CALIDAD</span><span class="label" style="opacity:.5">SUEÑO</span></div>
+        <div class="stat-val {% if bio_resumen.calidad_sueno_media >= 75 %}c-ok{% elif bio_resumen.calidad_sueno_media < 50 %}c-warn{% endif %}">
+          {{ bio_resumen.calidad_sueno_media|floatformat:0 }}<span class="u">/100</span>
+        </div>
+      </div>
+      {% endif %}
+      {% if bio_resumen.energia_media_bio %}
+      <div class="stat">
+        <div class="stat-head"><span class="label" style="opacity:.5">ENERGÍA</span><span class="label" style="opacity:.5">CHECKIN</span></div>
+        <div class="stat-val {% if bio_resumen.energia_media_bio >= 7 %}c-ok{% elif bio_resumen.energia_media_bio <= 4 %}c-warn{% endif %}">
+          {{ bio_resumen.energia_media_bio|floatformat:1 }}<span class="u">/10</span>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </section>
+  {% endif %}
+
+  {# ── §11 MANUAL DE DAVID ── #}
+  {% if manual_patrones %}
+  <section class="sec">
+    <div class="sec-head"><span class="tag">§11</span><h2>MANUAL DE DAVID</h2><div class="rule-dashed"></div></div>
+    <div style="border-top:1px solid var(--ink)">
+      {% for p in manual_patrones %}
+      <div class="est">
+        <div class="est-r">
+          <div class="idx mono" style="font-size:10px;opacity:.4;">{% if p.origen == 'patron_detectado' %}PAT{% else %}ERR{% endif %}</div>
+          <div>
+            <div class="name" style="font-size:12px;line-height:1.5;">{{ p.entrada }}</div>
+            <div class="meta">{{ p.creado_en|date:"d/m/Y" }}</div>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
 
   {% if not perfil_atletico and not records and not estaciones_progreso and decisiones_total == 0 and not modelo.tiene_datos %}
   <section class="sec">
