@@ -565,6 +565,10 @@ def hyrox_dashboard(request):
             'sandbag': 'Sandbag Lunges', 'sandbag lunge': 'Sandbag Lunges',
             'wall ball': 'Wall Balls', 'wall balls': 'Wall Balls',
         }
+        # Estaciones de distancia pura: el tiempo se normaliza a la distancia oficial
+        # si el entreno se hizo a una distancia diferente.
+        # La fórmula asume ritmo constante: t_norm = t_entreno / d_entreno × d_oficial
+        _DIST_OFICIAL_M = {'SkiErg': 1000, 'Rowing': 1000}
         REFERENCIA = HyroxRaceSimulator.get_tiempos_categoria(objetivo_activo.categoria)
         _cat_efectiva = objetivo_activo.categoria
         if HyroxRaceSimulator.TIEMPOS_POR_CATEGORIA.get(_cat_efectiva) is None:
@@ -630,9 +634,21 @@ def hyrox_dashboard(request):
             iso_w   = fecha_s.isocalendar()[:2]
             mes_key = (fecha_s.year, fecha_s.month)
             for canon in canones:
-                tiempos_acum.setdefault(canon, []).append(secs)
-                tiempos_por_semana.setdefault(canon, {}).setdefault(iso_w, []).append(secs)
-                tiempos_por_mes.setdefault(canon, {}).setdefault(mes_key, []).append(secs)
+                secs_canon = secs
+                # Normalizar a distancia oficial para SkiErg y Rowing
+                dist_oficial = _DIST_OFICIAL_M.get(canon)
+                if dist_oficial:
+                    dist_m = (
+                        float(act.data_metricas.get('distancia_m') or 0)
+                        or float(act.data_metricas.get('distancia_km') or 0) * 1000
+                        or float(act.data_metricas.get('distancia') or 0)
+                    )
+                    # Solo normalizar si la distancia es significativamente distinta
+                    if dist_m > 0 and abs(dist_m - dist_oficial) > dist_oficial * 0.1:
+                        secs_canon = round(secs * dist_oficial / dist_m)
+                tiempos_acum.setdefault(canon, []).append(secs_canon)
+                tiempos_por_semana.setdefault(canon, {}).setdefault(iso_w, []).append(secs_canon)
+                tiempos_por_mes.setdefault(canon, {}).setdefault(mes_key, []).append(secs_canon)
 
         hoy = timezone.localdate()
         _mes_actual = (hoy.year, hoy.month)
@@ -707,6 +723,8 @@ def hyrox_dashboard(request):
                 'mejora_mes_pct': mejora_mes_pct,
                 'rpe_medio': rpe_medio_station,
                 'rpe_sesiones': len(rpes),
+                'normalizado_dist': nombre in _DIST_OFICIAL_M,
+                'dist_oficial_m': _DIST_OFICIAL_M.get(nombre),
             })
 
     # ── DETECCIÓN DE ESTANCAMIENTO ────────────────────────────────────────────

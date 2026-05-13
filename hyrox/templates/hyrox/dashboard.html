@@ -2494,7 +2494,7 @@ function joiHyroxCerrar(id) {
         <div class="rb-split-times">
           <div class="rb-split-val {% if split.gap_secs is not None and split.gap_secs <= 0 %}rb-split-ok{% elif split.gap_secs and split.gap_secs > 30 %}rb-split-warn{% endif %}">
             {{ split.promedio_str|default:"--:--" }}
-            <span class="rb-split-lbl">tu promedio</span>
+            <span class="rb-split-lbl">tu promedio{% if split.normalizado_dist and split.tiene_datos %} · equiv. {{ split.dist_oficial_m }}m{% endif %}</span>
             {% if split.mejora_mes_pct is not None %}
             <span style="font-family:var(--font-mono);font-size:8px;display:block;margin-top:2px;{% if split.mejora_mes_pct > 0 %}color:var(--ok){% elif split.mejora_mes_pct < 0 %}color:var(--accent){% else %}color:var(--ink-4){% endif %}">
               {% if split.mejora_mes_pct > 0 %}+{% endif %}{{ split.mejora_mes_pct }}% vs mes ant.
