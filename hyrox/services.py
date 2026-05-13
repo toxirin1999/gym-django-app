@@ -1030,9 +1030,34 @@ class CompetitionStandardsService:
             vol_registrado = 0.0
 
             # ── 1. Buscar actividades directas ──────────────────────────────
+            # Aliases bilingües: el plan genera nombres en español/combinados
+            # (ej. "SkiErg / Remo Z2") que no coinciden con los estándares en inglés.
+            # IMPORTANTE: filtrar también por tipo_actividad para no capturar
+            # ejercicios de gym con nombre similar (ej. "Remo con Mancuerna").
+            _ALIAS_NOMBRES = {
+                'Rowing':            ['rowing', 'remo z', '/ remo', 'remo /'],
+                'SkiErg':            ['skierg', 'ski erg', 'ski-erg'],
+                'Sled Push':         ['sled push', 'empuje de trineo', 'empuje trineo'],
+                'Sled Pull':         ['sled pull', 'jalón de trineo', 'jalon trineo'],
+                'Burpee Broad Jump': ['burpee broad jump', 'burpee salto', 'burpee con salto'],
+                'Kettlebell Lunges': ['kettlebell lunges', 'zancadas con kettlebell'],
+                'Farmers Carry':     ['farmers carry', 'caminata de granjero'],
+                'Wall Balls':        ['wall balls', 'wall ball', 'balón al muro'],
+                'Sandbag Lunges':    ['sandbag lunges', 'zancadas con saco'],
+            }
+            _TIPOS_ESTACION = [
+                'hyrox_station', 'cardio_sustituto', 'ergometro',
+                'skierg', 'remo', 'hiit',
+            ]
+            from django.db.models import Q as _Q
+            _terminos = [estandar_nombre] + _ALIAS_NOMBRES.get(estandar_nombre, [])
+            _q = _Q()
+            for _t in _terminos:
+                _q |= _Q(nombre_ejercicio__icontains=_t)
             actividades_directas = HyroxActivity.objects.filter(
+                _q,
                 sesion__objective=objetivo,
-                nombre_ejercicio__icontains=estandar_nombre
+                tipo_actividad__in=_TIPOS_ESTACION,
             ).values('data_metricas')
 
             for act in actividades_directas:
