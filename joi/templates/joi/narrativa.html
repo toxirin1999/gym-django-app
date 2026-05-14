@@ -1,0 +1,281 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#090910">
+  <title>JOI — postura</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%;
+      background: #090910;
+      color: rgba(232, 240, 252, 1);
+      font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .narrativa-wrap {
+      min-height: 100svh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 5rem 1.8rem 8rem;
+      max-width: 560px;
+      margin: 0 auto;
+    }
+
+    /* Ruido sutil de fondo */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+      background-size: 180px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .narrativa-wrap > * { position: relative; z-index: 1; }
+
+    /* Header */
+    .narrativa-header {
+      font-size: 0.6rem;
+      letter-spacing: 0.28em;
+      text-transform: uppercase;
+      color: rgba(160, 195, 235, 0.45);
+      margin-bottom: 4rem;
+      text-align: center;
+    }
+
+    /* Capas */
+    .capa {
+      width: 100%;
+      margin-bottom: 3rem;
+      animation: aparecer 1s ease forwards;
+      opacity: 0;
+    }
+    .capa:nth-child(2) { animation-delay: 0.1s; }
+    .capa:nth-child(3) { animation-delay: 0.35s; }
+    .capa:nth-child(4) { animation-delay: 0.6s; }
+
+    @keyframes aparecer {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .capa-etiqueta {
+      font-size: 0.58rem;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: rgba(130, 170, 225, 0.4);
+      margin-bottom: 0.85rem;
+    }
+
+    .capa-texto {
+      font-size: clamp(1rem, 2.5vw, 1.2rem);
+      line-height: 1.8;
+      color: rgba(235, 243, 255, 0.92);
+      font-weight: 400;
+      letter-spacing: 0.01em;
+    }
+
+    /* Separador entre capas */
+    .capa-sep {
+      width: 1px;
+      height: 36px;
+      background: linear-gradient(to bottom, rgba(100, 148, 220, 0.2), transparent);
+      margin: 0 auto 3rem;
+    }
+
+    /* Estado vacío */
+    .narrativa-vacia {
+      font-size: 0.9rem;
+      color: rgba(160, 195, 235, 0.45);
+      font-style: italic;
+      text-align: center;
+      margin-top: 4rem;
+      line-height: 1.7;
+    }
+
+    /* Zona de diálogo */
+    .dialogo-zona {
+      width: 100%;
+      margin-top: 4rem;
+      border-top: 1px solid rgba(100, 148, 220, 0.1);
+      padding-top: 2rem;
+      animation: aparecer 1s ease 0.8s forwards;
+      opacity: 0;
+    }
+
+    .dialogo-prompt {
+      font-size: 0.6rem;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: rgba(130, 170, 225, 0.35);
+      margin-bottom: 1rem;
+    }
+
+    .dialogo-input-wrap {
+      display: flex;
+      gap: 0.5rem;
+      align-items: flex-end;
+    }
+
+    .dialogo-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      border-bottom: 1px solid rgba(100, 148, 220, 0.2);
+      color: rgba(220, 235, 255, 0.9);
+      font-size: 0.85rem;
+      font-family: inherit;
+      padding: 0.4rem 0.1rem;
+      outline: none;
+      resize: none;
+      min-height: 1.5rem;
+      max-height: 6rem;
+      letter-spacing: 0.025em;
+      transition: border-color 0.3s;
+      overflow-y: hidden;
+    }
+    .dialogo-input::placeholder { color: rgba(120, 160, 215, 0.3); }
+    .dialogo-input:focus { border-bottom-color: rgba(100, 148, 220, 0.38); }
+
+    .dialogo-btn {
+      background: transparent;
+      border: none;
+      color: rgba(130, 170, 215, 0.35);
+      font-size: 0.8rem;
+      cursor: pointer;
+      font-family: inherit;
+      letter-spacing: 0.1em;
+      padding: 0.2rem 0;
+      transition: color 0.25s, opacity 0.25s;
+    }
+    .dialogo-input-wrap:focus-within .dialogo-btn {
+      color: rgba(130, 170, 215, 0.75);
+    }
+    .dialogo-btn:hover { color: rgba(100, 148, 220, 0.9); }
+
+    /* Navegación */
+    .nav-link {
+      position: fixed;
+      bottom: 1.8rem;
+      font-size: 0.6rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: rgba(190, 215, 245, 0.5);
+      text-decoration: none;
+      transition: color 0.25s;
+    }
+    .nav-link:hover { color: rgba(190, 215, 245, 0.85); }
+    .nav-link.left  { left: 1.8rem; }
+    .nav-link.right { right: 1.8rem; }
+  </style>
+</head>
+<body>
+<div class="narrativa-wrap">
+
+  <p class="narrativa-header">lo que JOI cree que está pasando</p>
+
+  {% if narrativa %}
+
+    {% if narrativa.capa_larga %}
+    <section class="capa">
+      <p class="capa-etiqueta">patrón profundo</p>
+      <p class="capa-texto">{{ narrativa.capa_larga }}</p>
+    </section>
+    {% if narrativa.capa_media or narrativa.capa_corta %}
+    <div class="capa-sep"></div>
+    {% endif %}
+    {% endif %}
+
+    {% if narrativa.capa_media %}
+    <section class="capa">
+      <p class="capa-etiqueta">esta fase</p>
+      <p class="capa-texto">{{ narrativa.capa_media }}</p>
+    </section>
+    {% if narrativa.capa_corta %}
+    <div class="capa-sep"></div>
+    {% endif %}
+    {% endif %}
+
+    {% if narrativa.capa_corta %}
+    <section class="capa">
+      <p class="capa-etiqueta">ahora mismo</p>
+      <p class="capa-texto">{{ narrativa.capa_corta }}</p>
+    </section>
+    {% endif %}
+
+    {% if narrativa.capa_corta or narrativa.capa_media or narrativa.capa_larga %}
+    <div class="dialogo-zona" id="dialogo-zona">
+      <p class="dialogo-prompt">algo no cuadra, o sigue siendo cierto</p>
+      <div class="dialogo-input-wrap">
+        <textarea class="dialogo-input"
+                  id="dialogo-input"
+                  placeholder="escribe aquí…"
+                  maxlength="500"
+                  rows="1"
+                  autocomplete="off"></textarea>
+        <button class="dialogo-btn" onclick="enviarDialogo()">→</button>
+      </div>
+    </div>
+    {% endif %}
+
+  {% else %}
+    <p class="narrativa-vacia">
+      JOI todavía está construyendo una lectura de ti.<br>
+      Aparecerá cuando haya suficiente para decir.
+    </p>
+  {% endif %}
+
+</div>
+
+<a href="/joi/habitacion/" class="nav-link left">← habitación</a>
+<a href="/joi/manual/" class="nav-link right">lo que sé de ti</a>
+
+<script>
+const CSRF = '{{ csrf_token }}';
+
+const dialogoInput = document.getElementById('dialogo-input');
+if (dialogoInput) {
+  dialogoInput.addEventListener('input', function() {
+    this.style.height = 'auto';
+    this.style.height = Math.min(this.scrollHeight, 96) + 'px';
+  });
+  dialogoInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      enviarDialogo();
+    }
+  });
+}
+
+async function enviarDialogo() {
+  const input = document.getElementById('dialogo-input');
+  if (!input) return;
+  const texto = input.value.trim();
+  if (!texto) return;
+
+  input.disabled = true;
+  try {
+    await fetch('/joi/narrativa/dialogo/', {
+      method:  'POST',
+      headers: { 'X-CSRFToken': CSRF, 'Content-Type': 'application/x-www-form-urlencoded' },
+      body:    `texto=${encodeURIComponent(texto)}`,
+    });
+  } catch (_) {}
+
+  const zona = document.getElementById('dialogo-zona');
+  if (zona) {
+    zona.style.transition = 'opacity 1.4s ease';
+    zona.style.opacity = '0';
+    setTimeout(() => { zona.style.display = 'none'; }, 1400);
+  }
+}
+</script>
+</body>
+</html>
