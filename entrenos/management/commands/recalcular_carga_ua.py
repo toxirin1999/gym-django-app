@@ -89,9 +89,8 @@ class Command(BaseCommand):
                 pendientes.append(act)
 
         if not dry_run and pendientes:
-            ActividadRealizada.objects.bulk_update(
-                pendientes, list(update_fields_set), batch_size=500
-            )
+            fields = ['carga_ua', 'rpe_medio'] if with_hr else ['carga_ua']
+            ActividadRealizada.objects.bulk_update(pendientes, fields, batch_size=500)
 
         prefijo = '[DRY-RUN] ' if dry_run else ''
         self.stdout.write(self.style.SUCCESS(

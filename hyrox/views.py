@@ -2884,6 +2884,7 @@ def strava_webhook(request):
 def strava_reconciliacion(request):
     """List pending Strava activities and let the user decide what to do."""
     from entrenos.models import EntrenoRealizado
+    from .training_engine import HyroxLoadManager
 
     cliente = request.user.cliente_perfil
     pendientes = StravaActivityRaw.objects.filter(
@@ -2960,7 +2961,6 @@ def strava_reconciliacion(request):
 
         rpe_estimado = None
         if act.hr_media and objetivo:
-            from .training_engine import HyroxLoadManager
             rpe_estimado = HyroxLoadManager.estimar_rpe_desde_fc(act.hr_media, objetivo)
 
         items.append({
@@ -3194,8 +3194,8 @@ def strava_procesar(request, actividad_id):
         )
         act.estado = 'created'
         act.save()
-        origen_rpe = 'manual' if rpe_manual else ('estimado desde FC' if rpe_efectivo else 'fallback')
-        return JsonResponse({'ok': True, 'msg': f'Actividad registrada · RPE {rpe_efectivo or "N/A"} ({origen_rpe}) · carga_ua={carga_ua}'})
+        origen = 'RPE estimado desde FC' if not rpe_manual and rpe_efectivo else ('RPE manual' if rpe_manual else 'sin RPE')
+        return JsonResponse({'ok': True, 'msg': f'Actividad registrada · {origen}'})
 
     return JsonResponse({'ok': False, 'msg': 'Acción no reconocida.'}, status=400)
 
