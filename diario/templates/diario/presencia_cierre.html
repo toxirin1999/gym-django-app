@@ -219,6 +219,63 @@ body { background: var(--bg) !important; font-family: 'Urbanist', sans-serif !im
     <div style="background:#1E1B27; border:1px solid #2E2A3A; border-radius:16px; padding:1.75rem; margin-bottom:1.5rem; box-shadow:0 2px 20px rgba(0,0,0,0.3);">
         <div style="font-size:0.68rem; font-weight:700; letter-spacing:0.14em; text-transform:uppercase; color:#7C7590; margin-bottom:0.9rem;">JOI</div>
         <div style="font-size:1.1rem; font-style:italic; line-height:1.7; color:#EDE9E3;">{{ joi_respuesta }}</div>
+
+        {% if propuesta_habito %}
+        <div id="habito-invitacion" style="margin-top:1.25rem; padding-top:1.25rem; border-top:1px solid rgba(167,139,250,0.2);">
+            <div style="font-size:0.68rem; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:#7C7590; margin-bottom:0.6rem;">Invitación de JOI</div>
+            <button id="btn-habito" onclick="aceptarHabito()" style="
+                width:100%;
+                background: linear-gradient(135deg, #7C3AED, #A78BFA);
+                border:none; border-radius:12px; padding:0.9rem 1rem;
+                color:white; font-family:'Urbanist',sans-serif;
+                font-size:0.9rem; font-weight:600; cursor:pointer;
+                animation: pulse-habito 2s ease-in-out infinite;
+                text-align:left; display:flex; align-items:center; gap:0.75rem;
+            ">
+                <span style="font-size:1.1rem;">＋</span>
+                <div>
+                    <div>{{ propuesta_habito.nombre }}</div>
+                    <div style="font-size:0.75rem; opacity:0.75; font-weight:400; margin-top:0.2rem;">{{ propuesta_habito.descripcion }}</div>
+                </div>
+            </button>
+            <div id="habito-ok" style="display:none; text-align:center; color:#A78BFA; font-size:0.85rem; padding:0.5rem; font-style:italic;">Añadido a tus hábitos del mes ✓</div>
+        </div>
+
+        <style>
+        @keyframes pulse-habito {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(167,139,250,0.4); }
+            50% { box-shadow: 0 0 0 8px rgba(167,139,250,0); }
+        }
+        </style>
+
+        <script>
+        function aceptarHabito() {
+            document.getElementById('btn-habito').disabled = true;
+            document.getElementById('btn-habito').style.opacity = '0.6';
+            fetch("{% url 'diario:aceptar_habito_invitacion' %}", {
+                method: 'POST',
+                headers: {'X-CSRFToken': '{{ csrf_token }}', 'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    nombre: "{{ propuesta_habito.nombre|escapejs }}",
+                    descripcion: "{{ propuesta_habito.descripcion|escapejs }}",
+                    tipo: "{{ propuesta_habito.tipo }}"
+                })
+            })
+            .then(r => r.json())
+            .then(d => {
+                if (d.ok) {
+                    document.getElementById('btn-habito').style.display = 'none';
+                    document.getElementById('habito-ok').style.display = 'block';
+                }
+            })
+            .catch(() => {
+                document.getElementById('btn-habito').disabled = false;
+                document.getElementById('btn-habito').style.opacity = '1';
+            });
+        }
+        </script>
+        {% endif %}
+
         <a href="{% url 'diario:dashboard_diario' %}" style="display:block; margin-top:1.5rem; background:#2E2A3A; border:none; border-radius:12px; padding:0.85rem; color:#A78BFA; font-family:'Urbanist',sans-serif; font-size:0.9rem; font-weight:600; text-align:center; text-decoration:none; transition:background 0.15s;">
             Continuar →
         </a>

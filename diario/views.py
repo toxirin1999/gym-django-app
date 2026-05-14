@@ -3853,17 +3853,28 @@ def presencia_cierre(request):
 
         # ── Respuesta visible de JOI ──────────────────────────────────────
         joi_respuesta = None
+        propuesta_habito = None
         if texto_libre:
             try:
                 from joi.services import generar_respuesta_cierre
+                _enriq = enriq if 'enriq' in locals() else {}
                 datos_para_joi = {
                     'estado_animo': entrada.estado_animo,
                     'etiquetas': (entrada.etiquetas or '').split(','),
                     'personas': personas_detectadas,
-                    'micro_verdad': enriq.get('micro_verdad') if 'enriq' in dir() else None,
+                    'micro_verdad': _enriq.get('micro_verdad'),
                     'friccion_no': int(request.POST.get('friccion_no', 0) or 0),
                 }
                 joi_respuesta = generar_respuesta_cierre(texto_libre, datos_para_joi, request.user.cliente)
+
+                propuesta_habito = _enriq.get('propuesta_habito')
+                if propuesta_habito and propuesta_habito.get('nombre'):
+                    ya_existe = ProsocheHabito.objects.filter(
+                        prosoche_mes=prosoche_mes,
+                        nombre__iexact=propuesta_habito['nombre'],
+                    ).exists()
+                    if ya_existe:
+                        propuesta_habito = None
             except Exception:
                 pass
 
@@ -3873,6 +3884,7 @@ def presencia_cierre(request):
             'hoy': hoy,
             'dia_num': dia_num,
             'joi_respuesta': joi_respuesta,
+            'propuesta_habito': propuesta_habito,
         }
         return render(request, 'diario/presencia_cierre.html', context)
 
@@ -3925,6 +3937,41 @@ def promover_persona_interina(request):
             interina.save()
 
         return JsonResponse({'ok': True})
+    except Exception as e:
+        return JsonResponse({'ok': False, 'error': str(e)}, status=400)
+
+
+@login_required
+@require_http_methods(["POST"])
+def aceptar_habito_invitacion(request):
+    """AJAX: crea un ProsocheHabito desde la invitación de JOI."""
+    try:
+        data = json.loads(request.body)
+        nombre = data.get('nombre', '').strip()[:100]
+        descripcion = data.get('descripcion', '').strip()
+        tipo = data.get('tipo', 'positivo')
+        if tipo not in ('positivo', 'negativo'):
+            tipo = 'positivo'
+        if not nombre:
+            return JsonResponse({'ok': False, 'error': 'Sin nombre'}, status=400)
+
+        hoy = timezone.now().date()
+        mes_nombre = hoy.strftime('%B')
+        año = hoy.year
+        prosoche_mes, _ = ProsocheMes.objects.get_or_create(
+            usuario=request.user, mes=mes_nombre, año=año
+        )
+        habito, creado = ProsocheHabito.objects.get_or_create(
+            prosoche_mes=prosoche_mes,
+            nombre=nombre,
+            defaults={
+                'descripcion': descripcion,
+                'tipo_habito': tipo,
+                'objetivo_dias': 30,
+                'identidad_objetivo': f'Hábito propuesto por JOI el {hoy}',
+            },
+        )
+        return JsonResponse({'ok': True, 'creado': creado, 'id': habito.id})
     except Exception as e:
         return JsonResponse({'ok': False, 'error': str(e)}, status=400)
 

@@ -2395,15 +2395,16 @@ def generar_respuesta_cierre(texto: str, datos_parseo: dict, cliente) -> str:
 
 def enriquecer_cierre(texto: str, personas_detectadas: list) -> dict:
     """
-    Una sola llamada a Claude que enriquece el cierre con tres cosas:
+    Una sola llamada a Claude que enriquece el cierre con cuatro cosas:
     1. Título corto para Logos (≤5 palabras) + categoría estoica
     2. Micro-verdad para el Manual de David (si hay lección aprendida)
     3. Resumen estructurado de cada interacción mencionada
+    4. Propuesta de micro-hábito (solo si el texto expresa intención clara de cambio)
 
-    Devuelve dict con claves: titulo_logos, categoria_estoica, micro_verdad, interacciones
+    Devuelve dict con claves: titulo_logos, categoria_estoica, micro_verdad, interacciones, propuesta_habito
     """
     if not texto or not texto.strip():
-        return {'titulo_logos': None, 'categoria_estoica': None, 'micro_verdad': None, 'interacciones': []}
+        return {'titulo_logos': None, 'categoria_estoica': None, 'micro_verdad': None, 'interacciones': [], 'propuesta_habito': None}
 
     personas_str = ', '.join(personas_detectadas) if personas_detectadas else 'ninguna'
 
@@ -2421,14 +2422,20 @@ def enriquecer_cierre(texto: str, personas_detectadas: list) -> dict:
         f'"descripcion": "<resumen de la interacción en 2-3 frases>", '
         f'"mi_sentir": "<cómo se sintió David, inferido del texto>", '
         f'"aprendizaje": "<qué aprendió David de esta interacción>", '
-        f'"tipo": "<positiva|negativa|neutra|conflicto|apoyo>"}}'
-        f']}}\n\n'
+        f'"tipo": "<positiva|negativa|neutra|conflicto|apoyo>"}}], '
+        f'"propuesta_habito": {{"nombre": "<nombre del hábito, ≤6 palabras>", "descripcion": "<acción concreta, ≤10 palabras>", "tipo": "<positivo|negativo>"}} or null'
+        f'}}\n\n'
         f"Reglas:\n"
         f"- titulo_logos: evocador, no descriptivo. Ej: 'La tarde que no cedí'\n"
         f"- micro_verdad: solo si hay una lección genuina y específica. Empieza con 'Cuando' o 'Mi'. "
         f"Máximo 20 palabras. Si no hay lección clara, pon null\n"
         f"- interacciones: una entrada por cada persona de la lista que aparezca en el texto. "
         f"Si no hay personas o no hay interacción real, usa []\n"
+        f"- propuesta_habito: solo si el texto expresa CLARAMENTE un deseo de cambiar o mejorar algo específico. "
+        f"El hábito debe ser ≤5 minutos, concreto e inmediatamente accionable "
+        f"(ej: '2 min de respiración antes de dormir', 'leer 1 página antes de levantarme'). "
+        f"tipo 'positivo' = hábito a formar, 'negativo' = hábito a eliminar. "
+        f"Si no hay intención clara de cambio, pon null\n"
         f"SOLO el JSON, sin explicación."
     )
 
@@ -2436,7 +2443,7 @@ def enriquecer_cierre(texto: str, personas_detectadas: list) -> dict:
         client = _cliente_anthropic()
         response = client.messages.create(
             model="claude-haiku-4-5-20251001",
-            max_tokens=600,
+            max_tokens=800,
             messages=[{"role": "user", "content": prompt}],
         )
         raw = response.content[0].text.strip()
@@ -2446,4 +2453,4 @@ def enriquecer_cierre(texto: str, personas_detectadas: list) -> dict:
         return _json.loads(raw)
     except Exception as e:
         logger.error(f"[JOI] enriquecer_cierre falló: {e}")
-        return {'titulo_logos': None, 'categoria_estoica': None, 'micro_verdad': None, 'interacciones': []}
+        return {'titulo_logos': None, 'categoria_estoica': None, 'micro_verdad': None, 'interacciones': [], 'propuesta_habito': None}
