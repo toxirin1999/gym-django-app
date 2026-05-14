@@ -68,6 +68,18 @@ class HyroxLoadManager:
         return objetivo.fc_reposo if objetivo.fc_reposo is not None else 60
 
     @classmethod
+    def estimar_rpe_desde_fc(cls, hr_media, objetivo=None):
+        """RPE estimado por HRR%: (hr_media - fc_reposo) / (fc_max - fc_reposo) × 10."""
+        if not hr_media:
+            return None
+        fc_max = (objetivo.fc_max_real if objetivo and objetivo.fc_max_real else 185)
+        fc_reposo = (objetivo.fc_reposo if objetivo and objetivo.fc_reposo else 60)
+        if fc_max <= fc_reposo:
+            return None
+        rpe = ((hr_media - fc_reposo) / (fc_max - fc_reposo)) * 10
+        return round(max(1.0, min(10.0, rpe)), 1)
+
+    @classmethod
     def get_zonas_absolutas(cls, objetivo):
         """Devuelve rangos de FC en lpm para cada zona, calibrados al atleta."""
         fc_max = cls.get_fc_max(objetivo)

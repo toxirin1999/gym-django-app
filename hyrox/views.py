@@ -2958,12 +2958,19 @@ def strava_reconciliacion(request):
         else:
             preselect = ('gym', gym_matches[0].id) if gym_matches else ('hyrox', hyrox_matches[0].id) if hyrox_matches else None
 
+        rpe_estimado = None
+        if act.hr_media and objetivo:
+            from .training_engine import HyroxLoadManager
+            rpe_estimado = HyroxLoadManager.estimar_rpe_desde_fc(act.hr_media, objetivo)
+
         items.append({
-            'actividad':      act,
-            'hyrox_matches':  hyrox_matches,
-            'gym_matches':    gym_matches,
-            'total_matches':  len(hyrox_matches) + len(gym_matches),
-            'preselect':      preselect,
+            'actividad':          act,
+            'hyrox_matches':      hyrox_matches,
+            'gym_matches':        gym_matches,
+            'total_matches':      len(hyrox_matches) + len(gym_matches),
+            'preselect':          preselect,
+            'rpe_estimado':       rpe_estimado,
+            'rpe_estimado_int':   round(rpe_estimado) if rpe_estimado else None,
         })
 
     return render(request, 'hyrox/strava_reconciliacion.html', {
@@ -3164,16 +3171,21 @@ def strava_procesar(request, actividad_id):
         if raw_sport_type in _HIIT_SPORT_TYPES:
             tipo_actividad = 'cardio_sustituto'
         rpe_manual = _rpe()
-        # carga_ua: TRIMP (fisiológico, desde FC) si hay FC; sRPE si solo hay RPE manual
-        trimp = _trimp_from_strava(act.hr_media, duracion_min)
-        carga_ua = trimp or (round(rpe_manual * duracion_min, 1) if rpe_manual else None)
+        rpe_efectivo = rpe_manual
+        if not rpe_efectivo and act.hr_media:
+            from .training_engine import HyroxLoadManager
+            objetivo_local = HyroxObjective.objects.filter(cliente=cliente, estado='activo').first()
+            rpe_efectivo = HyroxLoadManager.estimar_rpe_desde_fc(act.hr_media, objetivo_local)
+
+        carga_ua = round(float(rpe_efectivo) * duracion_min, 1) if rpe_efectivo else (round(6.5 * duracion_min, 1) if duracion_min else None)
+
         ActividadRealizada.objects.create(
             cliente=cliente,
             tipo=tipo_actividad,
             titulo=act.nombre_strava or f'Strava — {act.tipo_strava}',
             fecha=act.fecha_actividad,
             duracion_minutos=int(duracion_min),
-            rpe_medio=rpe_manual,
+            rpe_medio=rpe_efectivo,
             carga_ua=carga_ua,
             distancia_metros=int(act.distancia_metros) if act.distancia_metros else None,
             hr_media=act.hr_media,
@@ -3182,13 +3194,8 @@ def strava_procesar(request, actividad_id):
         )
         act.estado = 'created'
         act.save()
-        if trimp:
-            acwr_info = f' · TRIMP {trimp} (FC {act.hr_media} bpm) — computará en ACWR'
-        elif rpe_manual:
-            acwr_info = f' · RPE {rpe_manual} — computará en ACWR'
-        else:
-            acwr_info = ' (sin FC ni RPE — no computará en ACWR)'
-        return JsonResponse({'ok': True, 'msg': f'Actividad registrada{acwr_info}.'})
+        origen_rpe = 'manual' if rpe_manual else ('estimado desde FC' if rpe_efectivo else 'fallback')
+        return JsonResponse({'ok': True, 'msg': f'Actividad registrada · RPE {rpe_efectivo or "N/A"} ({origen_rpe}) · carga_ua={carga_ua}'})
 
     return JsonResponse({'ok': False, 'msg': 'Acción no reconocida.'}, status=400)
 

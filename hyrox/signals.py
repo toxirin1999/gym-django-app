@@ -514,12 +514,18 @@ def sincronizar_hyrox_al_hub(sender, instance, created, raw=False, update_fields
         cliente = instance.objective.cliente
         titulo = instance.titulo or f"Hyrox — {instance.fecha}"
 
-        # carga_ua: TRIMP si disponible (fisiológico); sRPE como fallback
+        # carga_ua: sRPE × minutos. Si no hay RPE manual, estimar desde FC.
+        rpe_efectivo = instance.rpe_global
+        if not rpe_efectivo and instance.hr_media and instance.tiempo_total_minutos:
+            from .training_engine import HyroxLoadManager
+            objetivo = instance.objective if hasattr(instance, 'objective') else None
+            rpe_efectivo = HyroxLoadManager.estimar_rpe_desde_fc(instance.hr_media, objetivo)
+
         carga_ua = None
-        if instance.trimp:
-            carga_ua = instance.trimp
-        elif instance.rpe_global and instance.tiempo_total_minutos:
-            carga_ua = round(instance.rpe_global * instance.tiempo_total_minutos, 1)
+        if rpe_efectivo and instance.tiempo_total_minutos:
+            carga_ua = round(float(rpe_efectivo) * instance.tiempo_total_minutos, 1)
+        elif instance.tiempo_total_minutos:
+            carga_ua = round(6.5 * instance.tiempo_total_minutos, 1)
 
         ActividadRealizada.objects.update_or_create(
             sesion_hyrox=instance,
