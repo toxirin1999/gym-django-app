@@ -786,14 +786,14 @@
             <p class="stat-label">Logros</p>
         </div>
         <div class="stat-card">
-            <i class="fas fa-fire stat-icon" style="color: #ff6347;"></i>
-            <span class="stat-number" data-target="{{ logros.racha_actual|default:0 }}">0</span>
-            <p class="stat-label">Racha Actual</p>
+            <i class="fas fa-redo stat-icon" style="color: #ff6347;"></i>
+            <span class="stat-number" data-target="{{ logros.entrenos_totales|default:0 }}">0</span>
+            <p class="stat-label">Retornos</p>
         </div>
         <div class="stat-card">
-            <i class="fas fa-crown stat-icon" style="color: #8e44ad;"></i>
-            <span class="stat-number" data-target="{{ logros.racha_maxima|default:0 }}">0</span>
-            <p class="stat-label">Racha Máxima</p>
+            <i class="fas fa-fire stat-icon" style="color: #8e44ad;"></i>
+            <span class="stat-number" data-target="{{ logros.racha_actual|default:0 }}">0</span>
+            <p class="stat-label">Días seguidos</p>
         </div>
         <div class="stat-card">
             <i class="fas fa-level-up-alt stat-icon" style="color: #32ff00;"></i>
@@ -839,11 +839,11 @@
                 </div>
             </div>
             <div class="logro-card">
-                <div class="logro-icon"><i class="fas fa-fire" style="color: #e67e22;"></i></div>
+                <div class="logro-icon"><i class="fas fa-redo" style="color: #e67e22;"></i></div>
                 <div>
-                    <div class="logro-number" data-target="{{ logros.racha_actual|default:0 }}">0</div>
-                    <div class="logro-label">Racha Actual</div>
-                    <div class="logro-label">Máx: {{ logros.racha_maxima|default:0 }} días</div>
+                    <div class="logro-number" data-target="{{ logros.entrenos_totales|default:0 }}">0</div>
+                    <div class="logro-label">Retornos</div>
+                    <div class="logro-label">Ahora: {{ logros.racha_actual|default:0 }} días seguidos</div>
                 </div>
             </div>
         </div>

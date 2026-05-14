@@ -995,7 +995,9 @@ def gamificacion_resumen_json(request, cliente_id):
             'puntos_actuales': perfil.puntos_totales,
             'puntos_siguiente': siguiente_nivel.puntos_requeridos if siguiente_nivel else perfil.puntos_totales,
             'porcentaje_progreso': round(porcentaje_progreso, 1),
-            'racha_actual': perfil.racha_actual,
+            'retornos': perfil.entrenos_totales,           # veces que ha vuelto — métrica principal
+            'racha_actual': perfil.racha_actual,           # días consecutivos — dato secundario
+            'racha_maxima': perfil.racha_maxima,           # histórico
             'entrenamientos_totales': perfil.entrenamientos_totales,
             'records_totales': perfil.records_totales,
         }

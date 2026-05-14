@@ -1194,8 +1194,9 @@
                             <span class="hero-stat-label">Entrenamientos</span>
                         </div>
                         <div class="hero-stat-item">
-                            <span class="hero-stat-value" id="hero-racha">🔥 0</span>
-                            <span class="hero-stat-label">Racha</span>
+                            <span class="hero-stat-value" id="hero-racha">0</span>
+                            <span class="hero-stat-label">Retornos</span>
+                            <span class="hero-stat-sublabel" id="hero-racha-dias" style="font-size:0.65em;opacity:0.5;display:block;margin-top:1px;"></span>
                         </div>
                     </div>
                     <div class="hero-actions">
@@ -1349,7 +1350,11 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('hero-character-name').textContent = data.nivel_actual || 'Aspirante';
             document.getElementById('hero-level-badge').textContent = `NIVEL ${data.nivel_numero || 1}`;
             document.getElementById('hero-entrenamientos').textContent = data.total_entrenamientos || 0;
-            document.getElementById('hero-racha').innerHTML = `🔥 ${data.racha_actual || 0}`;
+            document.getElementById('hero-racha').textContent = data.retornos || 0;
+            if (data.racha_actual > 1) {
+                const subEl = document.getElementById('hero-racha-dias');
+                if (subEl) subEl.textContent = `${data.racha_actual}d seguidos`;
+            }
 
             // Barra de progreso
             const porcentaje = data.porcentaje_progreso || 0;
@@ -1687,14 +1692,7 @@ class CodicePanelWidget {
         const racha = document.getElementById('codice-racha');
 
         if (entrenamientos) entrenamientos.textContent = data.total_entrenamientos || 0;
-        if (racha) racha.textContent = data.racha_actual || 0;
-
-        // Efectos especiales para rachas altas
-        if (data.racha_actual >= 7) {
-            racha.classList.add('codice-fire-effect');
-        } else {
-            racha.classList.remove('codice-fire-effect');
-        }
+        if (racha) racha.textContent = data.retornos || 0;
 
         console.log('✅ Widget del Códice actualizado');
     }

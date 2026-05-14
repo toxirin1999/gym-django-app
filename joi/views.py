@@ -742,6 +742,19 @@ def registrar_mood(request):
 
 
 @login_required
+def narrativa_joi_view(request):
+    from .models import NarrativaActiva
+    narrativa = None
+    try:
+        narrativa = NarrativaActiva.objects.get(
+            user=request.user, estado__in=('borrador', 'activa')
+        )
+    except NarrativaActiva.DoesNotExist:
+        pass
+    return render(request, 'joi/narrativa.html', {'narrativa': narrativa})
+
+
+@login_required
 def poda_manual_joi(request):
     from joi.models import ManualDavid
     entradas = ManualDavid.objects.filter(user=request.user, activa=True)
