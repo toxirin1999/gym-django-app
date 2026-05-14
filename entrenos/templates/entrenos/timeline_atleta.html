@@ -5,343 +5,508 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Timeline · {{ cliente.nombre }}</title>
-    
-    <!-- Fonts -->
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;900&family=Barlow:wght@300;400;500&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
 
     <style>
     /* ═══════════════════════════════════════════════
-       TIMELINE · BRUTALIST EDITORIAL DOSSIER v3.0
+       TIMELINE · DARK ATHLETIC v1.0
     ═══════════════════════════════════════════════ */
     :root {
-        --paper:  #EFEBDC;
-        --ink:    #131313;
-        --card:   #F6F2E3;
-        --rule:   rgba(19,19,19,.12);
-        --accent: #C8FF00;
-        --hi:     #FF4719;
-        --ok:     #228B45;
-        --warn:   #E08A00;
-        --bad:    #C8242C;
-        --mono:   'JetBrains Mono', ui-monospace, monospace;
-        --display:'Archivo Black', sans-serif;
-        --sans:   'Archivo', system-ui, sans-serif;
+        --bg:      #ffffff;
+        --s1:      #f8f9fa;
+        --s2:      #f1f3f5;
+        --s3:      #e9ecef;
+        --line:    rgba(0,0,0,.07);
+        --line2:   rgba(0,0,0,.12);
+        --txt:     #111318;
+        --muted:   rgba(17,19,24,.5);
+        --dim:     rgba(17,19,24,.3);
+
+        /* tipo colors */
+        --c-gym:      #22c55e;
+        --c-hyrox:    #ff4719;
+        --c-carrera:  #3b82f6;
+        --c-ciclismo: #a855f7;
+        --c-remo:     #06b6d4;
+        --c-cardio:   #f59e0b;
+        --c-natacion: #22d3ee;
+        --c-yoga:     #f472b6;
+        --c-otro:     #94a3b8;
+
+        /* status */
+        --ok:   #22c55e;
+        --warn: #f59e0b;
+        --bad:  #ef4444;
+
+        --accent: #c8ff00;
+        --hi:     #ff4719;
+
+        --mono:    'JetBrains Mono', ui-monospace, monospace;
+        --display: 'Barlow Condensed', sans-serif;
+        --sans:    'Barlow', system-ui, sans-serif;
     }
 
+    *, *::before, *::after { box-sizing: border-box; }
+
     body {
-        margin: 0;
-        padding: 0;
-        background: var(--paper);
-        color: var(--ink);
+        margin: 0; padding: 0;
+        background: var(--bg);
+        color: var(--txt);
         font-family: var(--sans);
         -webkit-font-smoothing: antialiased;
     }
 
     .tl-shell {
         min-height: 100vh;
-        max-width: 760px;
+        max-width: 780px;
         margin: 0 auto;
         padding: 0 20px 96px;
     }
 
-    .tl-shell *, .tl-shell *::before, .tl-shell *::after { box-sizing: border-box; }
-
     /* ── Marquee ── */
     .tl-marquee {
         margin: 0 -20px;
-        background: var(--ink); color: var(--paper);
+        background: var(--s3);
+        border-bottom: 1px solid var(--line2);
         font-family: var(--mono);
         font-size: 10px; letter-spacing: .2em; text-transform: uppercase;
-        padding: 6px 16px;
+        padding: 7px 16px;
         display: flex; justify-content: space-between; align-items: center;
-        border-bottom: 1px solid var(--ink);
+        color: var(--muted);
+    }
+    .tl-marquee .live-dot {
+        display: inline-block; width: 6px; height: 6px;
+        background: var(--ok); border-radius: 50%;
+        margin-right: 6px;
+        animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+        0%,100% { opacity: 1; } 50% { opacity: .3; }
     }
 
     /* ── Topbar ── */
     .tl-topbar {
         display: flex; justify-content: space-between; align-items: center;
-        padding: 20px 0;
+        padding: 18px 0;
     }
     .tl-back {
         display: inline-flex; align-items: center; gap: 6px;
-        background: none; border: 0; cursor: pointer;
+        background: var(--s2); border: 1px solid var(--line2);
+        padding: 7px 14px; cursor: pointer;
         font-family: var(--mono); font-size: 10px; font-weight: 700;
         letter-spacing: .16em; text-transform: uppercase;
-        color: var(--ink); text-decoration: none;
+        color: var(--muted); text-decoration: none;
+        transition: color .15s, border-color .15s;
     }
-    .tl-back:hover { opacity: .6; }
+    .tl-back:hover { color: var(--txt); border-color: var(--line2); }
     .tl-version {
-        font-family: var(--mono); font-size: 10px; font-weight: 700;
+        font-family: var(--mono); font-size: 10px;
         letter-spacing: .16em; text-transform: uppercase;
-        opacity: .5;
+        color: var(--dim);
     }
 
     /* ── Masthead ── */
     .tl-masthead {
-        border-top: 3px solid var(--ink);
-        border-bottom: 3px solid var(--ink);
-        padding: 24px 0;
+        border-top: 1px solid var(--line2);
+        border-bottom: 1px solid var(--line);
+        padding: 28px 0 24px;
     }
     .tl-masthead-row {
-        display: grid; grid-template-columns: repeat(12, 1fr);
-        gap: 12px; align-items: end;
         font-family: var(--mono); font-size: 10px; font-weight: 700;
-        letter-spacing: .16em; text-transform: uppercase; opacity: .6;
+        letter-spacing: .16em; text-transform: uppercase;
+        color: var(--dim);
+        display: flex; justify-content: space-between;
     }
-    .tl-masthead-row .l { grid-column: span 5; line-height: 1.2; }
-    .tl-masthead-row .r { grid-column: span 7; text-align: right; }
     .tl-h1 {
-        font-family: var(--display); letter-spacing: -.03em;
-        font-size: clamp(56px, 13vw, 96px);
-        line-height: .85; margin: 12px 0 0; word-break: break-word;
+        font-family: var(--display); font-weight: 900;
+        letter-spacing: -.01em;
+        font-size: clamp(64px, 15vw, 112px);
+        line-height: .88; margin: 10px 0 0;
+        text-transform: uppercase;
     }
     .tl-h1 .mark {
-        background: var(--accent); padding: 0 .15em;
-        -webkit-box-decoration-break: clone; box-decoration-break: clone;
+        color: var(--accent);
     }
     .tl-h1 .dot { color: var(--hi); }
 
     /* ── Range ── */
     .tl-range {
-        display: flex; gap: 8px; align-items: center;
-        margin-top: 24px; flex-wrap: wrap;
+        display: flex; gap: 6px; align-items: center;
+        margin-top: 20px; flex-wrap: wrap;
     }
     .tl-range-lbl {
         font-family: var(--mono); font-size: 10px; font-weight: 700;
-        letter-spacing: .16em; text-transform: uppercase; opacity: .5;
+        letter-spacing: .16em; text-transform: uppercase; color: var(--dim);
         margin-right: 4px;
     }
     .tl-range-btn {
-        padding: 6px 12px; border: 1px solid var(--ink);
+        padding: 7px 14px;
+        border: 1px solid var(--line2);
         background: transparent; cursor: pointer;
         font-family: var(--mono); font-size: 10px; font-weight: 700;
         letter-spacing: .16em; text-transform: uppercase;
-        color: var(--ink); text-decoration: none;
-        transition: background .15s, color .15s;
+        color: var(--muted); text-decoration: none;
+        transition: background .15s, color .15s, border-color .15s;
     }
-    .tl-range-btn:hover { background: rgba(19,19,19,.08); }
-    .tl-range-btn.active { background: var(--ink); color: var(--paper); }
+    .tl-range-btn:hover { background: var(--s2); color: var(--txt); }
+    .tl-range-btn.active {
+        background: var(--accent); color: #08090c;
+        border-color: var(--accent);
+    }
 
     /* ── Stats grid ── */
     .tl-stats {
-        margin-top: 40px;
+        margin-top: 20px;
         display: grid; grid-template-columns: repeat(4, 1fr);
-        border: 1px solid var(--ink);
+        background: var(--s1);
+        border: 1px solid var(--line2);
+        border-radius: 4px;
+        overflow: hidden;
     }
     .tl-stat {
-        padding: 16px;
-        border-right: 1px solid var(--ink);
+        padding: 20px 18px;
+        border-right: 1px solid var(--line);
+        position: relative;
     }
     .tl-stat:last-child { border-right: 0; }
-    .tl-stat-warn { background: rgba(224,138,0,.15); }
-    .tl-stat-bad  { background: rgba(200,36,44,.15); }
+    .tl-stat-warn { background: rgba(245,158,11,.08); }
+    .tl-stat-bad  { background: rgba(239,68,68,.08); }
+    .tl-stat-ok   { background: rgba(34,197,94,.06); }
+    .tl-stat::before {
+        content: '';
+        position: absolute; top: 0; left: 0; right: 0;
+        height: 2px;
+    }
+    .tl-stat-ok::before   { background: var(--ok); }
+    .tl-stat-warn::before { background: var(--warn); }
+    .tl-stat-bad::before  { background: var(--bad); }
     .tl-stat-lbl {
-        font-family: var(--mono); font-size: 10px; font-weight: 700;
-        letter-spacing: .16em; text-transform: uppercase; opacity: .55;
+        font-family: var(--mono); font-size: 9px; font-weight: 700;
+        letter-spacing: .18em; text-transform: uppercase; color: var(--muted);
     }
     .tl-stat-val {
-        font-family: var(--display); font-size: 48px;
-        line-height: .9; margin-top: 8px; letter-spacing: -.02em;
+        font-family: var(--display); font-weight: 900;
+        font-size: 52px; line-height: .9;
+        margin-top: 10px; letter-spacing: -.01em;
         font-variant-numeric: tabular-nums;
+        color: var(--txt);
     }
     .tl-stat-val.warn { color: var(--warn); }
     .tl-stat-val.bad  { color: var(--bad); }
     .tl-stat-val.ok   { color: var(--ok); }
     .tl-stat-sub {
-        font-family: var(--mono); font-size: 10px; opacity: .6; margin-top: 8px;
+        font-family: var(--mono); font-size: 9px; color: var(--dim);
+        margin-top: 8px; letter-spacing: .06em;
     }
 
     /* ── Section header ── */
-    .tl-section { margin-top: 40px; }
+    .tl-section { margin-top: 24px; }
     .tl-section-hdr {
-        display: flex; align-items: baseline; gap: 12px; margin-bottom: 12px;
+        display: flex; align-items: center; gap: 10px; margin-bottom: 14px;
     }
     .tl-section-tag {
-        font-family: var(--mono); font-size: 11px; font-weight: 700; opacity: .6;
+        font-family: var(--mono); font-size: 10px; font-weight: 700;
+        color: var(--dim); letter-spacing: .12em;
     }
     .tl-section-title {
-        font-family: var(--display); font-size: 20px; text-transform: uppercase;
-        letter-spacing: -.02em; margin: 0;
+        font-family: var(--display); font-weight: 700; font-size: 18px;
+        text-transform: uppercase; letter-spacing: .04em; margin: 0;
+        color: var(--txt);
     }
     .tl-rule {
-        flex: 1; height: 1px; align-self: center;
-        background-image: repeating-linear-gradient(to right, var(--ink) 0 6px, transparent 6px 12px);
+        flex: 1; height: 1px;
+        background: var(--line);
     }
 
     /* ── Filter pills ── */
     .tl-filters {
-        display: flex; flex-wrap: wrap; gap: 0;
-        border: 1px solid var(--ink);
+        display: flex; flex-wrap: wrap; gap: 6px;
     }
     .tl-filter-btn {
-        padding: 8px 14px;
-        border: 0; border-right: 1px solid var(--ink);
-        background: transparent; cursor: pointer;
+        padding: 7px 14px;
+        border: 1px solid var(--line2);
+        background: var(--s1); cursor: pointer;
         font-family: var(--mono); font-size: 10px; font-weight: 700;
-        letter-spacing: .16em; text-transform: uppercase;
-        color: var(--ink);
+        letter-spacing: .14em; text-transform: uppercase;
+        color: var(--muted);
+        border-radius: 2px;
+        transition: background .15s, color .15s, border-color .15s;
     }
-    .tl-filter-btn:last-child { border-right: 0; }
-    .tl-filter-btn:hover { background: rgba(19,19,19,.06); }
-    .tl-filter-btn.active { background: var(--accent); }
+    .tl-filter-btn:hover { background: var(--s2); color: var(--txt); }
+    .tl-filter-btn.active {
+        background: var(--s3); color: var(--txt);
+        border-color: var(--line2);
+    }
 
     /* ── CTA ── */
     .tl-cta {
         display: flex; align-items: center; justify-content: center; gap: 10px;
-        width: 100%; margin-top: 24px;
-        padding: 16px;
+        width: 100%; margin-top: 20px; padding: 16px;
         background: var(--hi); color: #fff;
-        border: 2px solid var(--ink); cursor: pointer;
-        font-family: var(--display); font-size: 18px;
-        text-transform: uppercase; letter-spacing: .02em;
-        text-decoration: none;
-        box-shadow: 4px 4px 0 var(--ink);
-        transition: transform .12s, box-shadow .12s;
+        border: 0; cursor: pointer;
+        font-family: var(--display); font-size: 20px; font-weight: 700;
+        text-transform: uppercase; letter-spacing: .06em;
+        text-decoration: none; border-radius: 2px;
+        transition: opacity .15s, transform .1s;
     }
-    .tl-cta:hover { transform: translate(2px,2px); box-shadow: 2px 2px 0 var(--ink); }
-    .tl-cta:active { transform: translate(4px,4px); box-shadow: none; }
+    .tl-cta:hover { opacity: .9; transform: translateY(-1px); }
+    .tl-cta:active { transform: translateY(0); opacity: 1; }
 
     /* ── Timeline list ── */
-    .tl-list { border-top: 1px solid var(--ink); }
+    .tl-list { margin-top: 4px; }
+
+    /* Day header */
     .tl-day-hdr {
-        display: flex; justify-content: space-between; align-items: baseline;
-        padding: 8px 4px; border-bottom: 1px solid var(--ink);
-        background: rgba(19,19,19,.04);
-        font-family: var(--mono); font-size: 11px; font-weight: 700;
-        text-transform: uppercase; letter-spacing: .08em;
+        display: flex; justify-content: space-between; align-items: center;
+        padding: 22px 0 10px;
+        margin-top: 8px;
+        border-top: 1px solid var(--line);
     }
-    .tl-day-hdr .num { opacity: .5; margin-right: 8px; }
+    .tl-day-hdr:first-child { border-top: 0; margin-top: 0; }
+    .tl-day-label {
+        display: flex; align-items: baseline; gap: 10px;
+    }
+    .tl-day-num {
+        font-family: var(--mono); font-size: 9px; font-weight: 700;
+        letter-spacing: .18em; color: var(--dim); text-transform: uppercase;
+    }
+    .tl-day-name {
+        font-family: var(--display); font-weight: 900;
+        font-size: 28px; letter-spacing: -.01em;
+        text-transform: uppercase; color: var(--txt);
+        line-height: 1;
+    }
+    .tl-day-date {
+        font-family: var(--mono); font-size: 11px; font-weight: 700;
+        letter-spacing: .1em; color: var(--muted); text-transform: uppercase;
+    }
+    .tl-day-energy {
+        font-family: var(--mono); font-size: 10px; color: var(--muted);
+        display: flex; align-items: center; gap: 6px;
+    }
+    .tl-day-energy-val {
+        font-family: var(--display); font-weight: 700; font-size: 20px;
+        color: var(--txt);
+    }
 
     /* Activity row */
     .tl-row {
-        display: flex; align-items: center; gap: 16px;
-        padding: 16px 8px;
-        border-bottom: 1px solid var(--ink);
+        display: flex; align-items: center; gap: 14px;
+        padding: 14px 14px;
+        margin-bottom: 6px;
+        background: var(--s1);
+        border: 1px solid var(--line);
+        border-left: 3px solid var(--c-otro);
+        border-radius: 3px;
         cursor: pointer;
-        transition: background .12s;
-        animation: tlFade .3s ease both;
+        transition: background .12s, border-color .12s;
+        animation: tlFade .25s ease both;
+        position: relative;
     }
-    .tl-row:hover { background: rgba(19,19,19,.04); }
+    .tl-row:hover { background: var(--s2); }
 
-    .tl-ring { position: relative; width: 46px; height: 46px; flex-shrink: 0; }
-    .tl-ring rect { fill: var(--card); }
+    /* Type-specific left borders */
+    .tl-row[data-tipo="gym"]          { border-left-color: var(--c-gym); }
+    .tl-row[data-tipo="hyrox"]        { border-left-color: var(--c-hyrox); }
+    .tl-row[data-tipo="carrera"]      { border-left-color: var(--c-carrera); }
+    .tl-row[data-tipo="ciclismo"]     { border-left-color: var(--c-ciclismo); }
+    .tl-row[data-tipo="remo"]         { border-left-color: var(--c-remo); }
+    .tl-row[data-tipo="cardio_sustituto"],
+    .tl-row[data-tipo="futbol"],
+    .tl-row[data-tipo="hiit"]         { border-left-color: var(--c-cardio); }
+    .tl-row[data-tipo="natacion"]     { border-left-color: var(--c-natacion); }
+    .tl-row[data-tipo="yoga"],
+    .tl-row[data-tipo="estiramientos"]{ border-left-color: var(--c-yoga); }
 
+    /* SVG Ring */
+    .tl-ring { position: relative; width: 48px; height: 48px; flex-shrink: 0; }
+
+    .tl-ring-track { stroke: rgba(255,255,255,.08); }
+    .tl-ring-arc   { stroke: var(--c-otro); }
+
+    .tl-row[data-tipo="gym"]          .tl-ring-arc { stroke: var(--c-gym); }
+    .tl-row[data-tipo="hyrox"]        .tl-ring-arc { stroke: var(--c-hyrox); }
+    .tl-row[data-tipo="carrera"]      .tl-ring-arc { stroke: var(--c-carrera); }
+    .tl-row[data-tipo="ciclismo"]     .tl-ring-arc { stroke: var(--c-ciclismo); }
+    .tl-row[data-tipo="remo"]         .tl-ring-arc { stroke: var(--c-remo); }
+    .tl-row[data-tipo="cardio_sustituto"] .tl-ring-arc,
+    .tl-row[data-tipo="futbol"]       .tl-ring-arc,
+    .tl-row[data-tipo="hiit"]         .tl-ring-arc { stroke: var(--c-cardio); }
+    .tl-row[data-tipo="natacion"]     .tl-ring-arc { stroke: var(--c-natacion); }
+    .tl-row[data-tipo="yoga"]         .tl-ring-arc,
+    .tl-row[data-tipo="estiramientos"].tl-ring-arc { stroke: var(--c-yoga); }
+
+    .tl-ring-center {
+        position: absolute; inset: 0;
+        display: flex; align-items: center; justify-content: center;
+        font-family: var(--mono); font-size: 8px; font-weight: 700;
+        color: var(--muted); text-transform: uppercase;
+    }
+
+    /* Info */
     .tl-info { flex: 1; min-width: 0; }
     .tl-info-meta {
-        display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
-        font-family: var(--mono); font-size: 10px; font-weight: 700;
-        letter-spacing: .12em; text-transform: uppercase; opacity: .65;
+        display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+        font-family: var(--mono); font-size: 9px; font-weight: 700;
+        letter-spacing: .14em; text-transform: uppercase; color: var(--muted);
+        margin-bottom: 3px;
     }
+    .tl-tipo-badge {
+        font-family: var(--mono); font-size: 9px; font-weight: 700;
+        letter-spacing: .14em; text-transform: uppercase;
+        padding: 2px 6px; border-radius: 2px;
+        background: rgba(255,255,255,.06);
+    }
+    .tl-row[data-tipo="gym"]          .tl-tipo-badge { color: var(--c-gym); }
+    .tl-row[data-tipo="hyrox"]        .tl-tipo-badge { color: var(--c-hyrox); }
+    .tl-row[data-tipo="carrera"]      .tl-tipo-badge { color: var(--c-carrera); }
+    .tl-row[data-tipo="ciclismo"]     .tl-tipo-badge { color: var(--c-ciclismo); }
+    .tl-row[data-tipo="remo"]         .tl-tipo-badge { color: var(--c-remo); }
+    .tl-row[data-tipo="cardio_sustituto"] .tl-tipo-badge,
+    .tl-row[data-tipo="futbol"]       .tl-tipo-badge,
+    .tl-row[data-tipo="hiit"]         .tl-tipo-badge { color: var(--c-cardio); }
+
     .tl-plan {
-        background: var(--accent); padding: 1px 6px;
-        font-weight: 700;
+        background: var(--accent); color: #08090c;
+        padding: 2px 6px; border-radius: 2px;
+        font-weight: 700; font-size: 9px; letter-spacing: .1em;
+    }
+    .tl-info-title {
+        font-family: var(--sans); font-size: 12px; font-weight: 400;
+        color: var(--muted); margin-top: 1px;
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
     .tl-info-metric {
-        font-family: var(--display); font-size: 30px; line-height: 1;
-        margin-top: 4px; letter-spacing: -.02em;
+        font-family: var(--display); font-weight: 900;
+        font-size: 38px; line-height: 1;
+        margin-top: 2px; letter-spacing: -.01em;
         font-variant-numeric: tabular-nums;
+        color: var(--txt);
     }
     .tl-info-metric .unit {
-        font-family: var(--mono); font-size: 12px; font-weight: 700;
-        margin-left: 6px; opacity: .6;
+        font-family: var(--mono); font-size: 11px; font-weight: 700;
+        margin-left: 4px; color: var(--muted); letter-spacing: .08em;
     }
-    .tl-row[data-tipo="hyrox"]   .tl-info-metric { color: var(--hi); }
-    .tl-row[data-tipo="carrera"] .tl-info-metric,
-    .tl-row[data-tipo="ciclismo"] .tl-info-metric { color: #1f6fcf; }
 
+    /* Right side */
     .tl-sub {
-        font-family: var(--mono); font-size: 10px; font-weight: 700;
-        letter-spacing: .12em; text-transform: uppercase; opacity: .6;
         text-align: right; flex-shrink: 0;
+        font-family: var(--mono); font-size: 10px; font-weight: 700;
+        letter-spacing: .1em; text-transform: uppercase; color: var(--muted);
+        line-height: 1.7;
+    }
+    .tl-sub .rpe-val {
+        font-family: var(--display); font-weight: 900;
+        font-size: 22px; color: var(--txt);
+        display: block; line-height: 1;
     }
 
     /* Expandable actions */
     .tl-actions {
         display: none;
-        border-bottom: 1px solid var(--ink);
-        background: rgba(19,19,19,.04);
+        background: var(--s2);
+        border: 1px solid var(--line);
+        border-top: 0;
+        border-radius: 0 0 3px 3px;
+        margin-top: -6px;
+        margin-bottom: 6px;
     }
     .tl-actions.open { display: flex; }
     .tl-action-btn {
         flex: 1; padding: 12px;
         background: transparent; border: 0; cursor: pointer;
         font-family: var(--mono); font-size: 10px; font-weight: 700;
-        letter-spacing: .16em; text-transform: uppercase;
-        color: var(--ink);
+        letter-spacing: .14em; text-transform: uppercase;
+        color: var(--muted);
         display: flex; align-items: center; justify-content: center; gap: 6px;
-        border-right: 1px solid var(--ink);
+        border-right: 1px solid var(--line);
         transition: background .12s, color .12s;
     }
     .tl-action-btn:last-child { border-right: 0; }
-    .tl-action-btn:hover { background: rgba(19,19,19,.08); }
+    .tl-action-btn:hover { background: var(--s3); color: var(--txt); }
     .tl-action-btn.del { color: var(--bad); }
-    .tl-action-btn.del:hover { background: var(--bad); color: #fff; }
-    .tl-confirm { display: none; flex: 1; align-items: center; justify-content: center;
+    .tl-action-btn.del:hover { background: rgba(239,68,68,.15); }
+    .tl-confirm {
+        display: none; flex: 1; align-items: center; justify-content: center;
         font-family: var(--mono); font-size: 10px; font-weight: 700;
-        letter-spacing: .16em; text-transform: uppercase; color: var(--bad);
+        letter-spacing: .14em; text-transform: uppercase; color: var(--bad);
     }
     .tl-confirm.show { display: flex; }
     .tl-normal.hide  { display: none; }
 
     /* Bitácora */
     .tl-row-log {
-        display: flex; gap: 16px; align-items: flex-start;
-        padding: 16px 8px;
-        border-bottom: 1px solid var(--ink);
-        background: rgba(200,255,0,.18);
+        display: flex; gap: 14px; align-items: flex-start;
+        padding: 14px;
+        margin-bottom: 6px;
+        background: rgba(200,255,0,.04);
+        border: 1px solid rgba(200,255,0,.12);
+        border-left: 3px solid var(--accent);
+        border-radius: 3px;
     }
     .tl-log-icon {
         width: 46px; height: 46px;
-        border: 1px solid var(--ink);
-        background: var(--card);
+        background: var(--s2); border: 1px solid var(--line2);
         display: flex; align-items: center; justify-content: center;
-        font-size: 22px; flex-shrink: 0;
+        font-size: 20px; flex-shrink: 0; border-radius: 2px;
     }
     .tl-log-body { flex: 1; min-width: 0; }
     .tl-log-hdr {
-        font-family: var(--mono); font-size: 10px; font-weight: 700;
-        letter-spacing: .16em; text-transform: uppercase; opacity: .6; margin-bottom: 4px;
+        font-family: var(--mono); font-size: 9px; font-weight: 700;
+        letter-spacing: .16em; text-transform: uppercase; color: var(--dim);
+        margin-bottom: 5px;
     }
-    .tl-log-text { font-size: 13px; line-height: 1.55; }
-    .tl-log-energy { text-align: right; font-family: var(--mono); font-size: 11px; }
-    .tl-log-energy b { font-family: var(--display); font-size: 22px; display: block; line-height: 1; }
+    .tl-log-text { font-size: 13px; line-height: 1.6; color: var(--muted); }
+    .tl-log-energy {
+        text-align: right; flex-shrink: 0;
+        font-family: var(--mono); font-size: 9px; color: var(--dim);
+        letter-spacing: .1em; text-transform: uppercase;
+    }
+    .tl-log-energy b {
+        font-family: var(--display); font-weight: 900;
+        font-size: 28px; color: var(--txt);
+        display: block; line-height: 1;
+    }
 
     /* Empty state */
     .tl-empty {
-        border: 1px solid var(--ink);
+        background: var(--s1); border: 1px solid var(--line);
         padding: 56px 24px; text-align: center; margin-top: 16px;
+        border-radius: 4px;
     }
     .tl-empty-num {
-        font-family: var(--display); font-size: 96px;
-        line-height: 1; opacity: .12;
+        font-family: var(--display); font-weight: 900; font-size: 96px;
+        line-height: 1; color: var(--dim);
     }
     .tl-empty-msg {
         font-family: var(--mono); font-size: 11px; font-weight: 700;
-        letter-spacing: .2em; text-transform: uppercase; opacity: .6;
+        letter-spacing: .2em; text-transform: uppercase; color: var(--muted);
     }
 
     /* Footer */
     .tl-footer {
         margin-top: 56px; padding-top: 20px;
-        border-top: 3px solid var(--ink);
+        border-top: 1px solid var(--line);
         display: flex; justify-content: space-between;
         font-family: var(--mono); font-size: 10px; font-weight: 700;
-        letter-spacing: .16em; text-transform: uppercase; opacity: .6;
+        letter-spacing: .16em; text-transform: uppercase; color: var(--dim);
     }
 
     @keyframes tlFade {
-        from { opacity: 0; transform: translateY(4px); }
+        from { opacity: 0; transform: translateY(6px); }
         to   { opacity: 1; transform: translateY(0); }
     }
 
-    /* Responsive */
     @media (max-width: 640px) {
         .tl-stats { grid-template-columns: repeat(2, 1fr); }
         .tl-stat:nth-child(2) { border-right: 0; }
-        .tl-stat:nth-child(1), .tl-stat:nth-child(2) { border-bottom: 1px solid var(--ink); }
+        .tl-stat:nth-child(1), .tl-stat:nth-child(2) { border-bottom: 1px solid var(--line); }
         .tl-footer { flex-direction: column; gap: 6px; text-align: center; }
+        .tl-info-metric { font-size: 30px; }
+        .tl-day-name { font-size: 22px; }
     }
     </style>
 </head>
@@ -349,23 +514,23 @@
 
 <div class="tl-shell" id="tl-shell" data-cliente="{{ cliente.id }}">
 
-    <!-- ═══ MARQUEE ═══ -->
+    <!-- MARQUEE -->
     <div class="tl-marquee">
-        <span>● LIVE · TIMELINE #{{ cliente.id }}</span>
+        <span><span class="live-dot"></span>LIVE · TIMELINE #{{ cliente.id }}</span>
         <span id="tl-clock">--:--:--</span>
     </div>
 
-    <!-- ═══ TOPBAR ═══ -->
+    <!-- TOPBAR -->
     <div class="tl-topbar">
         <a href="{% url 'clientes:panel_cliente' %}" class="tl-back">‹ VOLVER</a>
         <span class="tl-version">TIMELINE · v04.26</span>
     </div>
 
-    <!-- ═══ MASTHEAD ═══ -->
+    <!-- MASTHEAD -->
     <section class="tl-masthead">
         <div class="tl-masthead-row">
-            <div class="l">REGISTRO<br>ACTIVIDAD</div>
-            <div class="r">CLIENTE · CL-{{ cliente.id }} · {{ cliente.nombre|upper }}</div>
+            <span>REGISTRO DE ACTIVIDAD</span>
+            <span>CL-{{ cliente.id }} · {{ cliente.nombre|upper }}</span>
         </div>
         <h1 class="tl-h1">HIS<span class="mark">TO</span>RIAL<span class="dot">.</span></h1>
 
@@ -381,11 +546,12 @@
         </div>
     </section>
 
-    <!-- ═══ STATS ═══ -->
+    <!-- STATS -->
     <section class="tl-stats">
         <div class="tl-stat">
             <div class="tl-stat-lbl">DÍAS ACTIVOS</div>
             <div class="tl-stat-val">{{ dias_activos }}</div>
+            <div class="tl-stat-sub">de {{ dias_rango }} días</div>
         </div>
         <div class="tl-stat">
             <div class="tl-stat-lbl">ACTIVIDADES</div>
@@ -394,7 +560,8 @@
         {% if tsb_data %}
         <div class="tl-stat
             {% if tsb_data.zona == 'sobrecargado' %}tl-stat-bad
-            {% elif tsb_data.zona == 'fatigado' %}tl-stat-warn{% endif %}">
+            {% elif tsb_data.zona == 'fatigado' %}tl-stat-warn
+            {% else %}tl-stat-ok{% endif %}">
             <div class="tl-stat-lbl">TSB · {{ tsb_data.zona|upper }}</div>
             <div class="tl-stat-val
                 {% if tsb_data.zona == 'sobrecargado' %}bad
@@ -405,11 +572,12 @@
         {% else %}
         <div class="tl-stat">
             <div class="tl-stat-lbl">TSB</div>
-            <div class="tl-stat-val">—</div>
+            <div class="tl-stat-val" style="color:var(--dim)">—</div>
         </div>
         {% endif %}
         <div class="tl-stat
-            {% if acwr.zona_riesgo == 'cuidado' %}tl-stat-warn
+            {% if acwr.zona_riesgo == 'optima' %}tl-stat-ok
+            {% elif acwr.zona_riesgo == 'cuidado' %}tl-stat-warn
             {% elif acwr.zona_riesgo == 'riesgo_alto' %}tl-stat-bad{% endif %}">
             <div class="tl-stat-lbl">ACWR ·
                 {% if acwr.zona_riesgo == 'optima' %}ÓPTIMA
@@ -424,29 +592,30 @@
         </div>
     </section>
 
-    <!-- ═══ FILTERS ═══ -->
+    <!-- FILTERS -->
     <section class="tl-section">
         <div class="tl-section-hdr">
             <span class="tl-section-tag">§01</span>
-            <h2 class="tl-section-title">Filtrar por disciplina</h2>
+            <h2 class="tl-section-title">Filtrar</h2>
             <div class="tl-rule"></div>
         </div>
         <div class="tl-filters" role="group" aria-label="Filtrar por tipo">
             <button class="tl-filter-btn active" data-filter="all">TODO · {{ total_actividades }}</button>
             {% for d in desglose %}
             <button class="tl-filter-btn" data-filter="{{ d.tipo }}">
-                {{ d.icono }} {{ d.tipo|upper }}{% if d.n %} · {{ d.n }}{% endif %}
+                {{ d.label }}{% if d.n %} · {{ d.n }}{% endif %}
             </button>
             {% endfor %}
         </div>
     </section>
 
-    <!-- ═══ CTA ═══ -->
+    <!-- CTA -->
     <a href="{% url 'entrenos:registrar_actividad_libre' cliente.id %}" class="tl-cta">
-        <span style="font-size:22px;font-weight:900;line-height:1">+</span> REGISTRAR ACTIVIDAD
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        REGISTRAR ACTIVIDAD
     </a>
 
-    <!-- ═══ TIMELINE ═══ -->
+    <!-- TIMELINE -->
     <section class="tl-section">
         <div class="tl-section-hdr">
             <span class="tl-section-tag">§02</span>
@@ -459,9 +628,16 @@
 
                 <!-- Day header -->
                 <div class="tl-day-hdr">
-                    <span><span class="num">D{{ forloop.counter|stringformat:"02d" }}</span>{{ dia.dia_semana|upper }} {{ dia.fecha|date:"d M" }}</span>
+                    <div class="tl-day-label">
+                        <span class="tl-day-num">D{{ forloop.counter|stringformat:"02d" }}</span>
+                        <span class="tl-day-name">{{ dia.dia_semana|upper }} <span class="tl-day-date">{{ dia.fecha|date:"d M" }}</span></span>
+                    </div>
                     {% if dia.energia %}
-                    <span>ENERGÍA <b style="font-family:var(--display);font-size:14px;">{{ dia.energia }}</b>/10 {{ dia.humor_emoji|default:"" }}</span>
+                    <div class="tl-day-energy">
+                        <span>ENERGÍA</span>
+                        <span class="tl-day-energy-val">{{ dia.energia }}</span>
+                        <span>/10 {{ dia.humor_emoji|default:"" }}</span>
+                    </div>
                     {% endif %}
                 </div>
 
@@ -472,23 +648,39 @@
                         data-id="{{ actividad.id }}"
                         onclick="tlToggleRow(this)">
 
+                    <!-- Ring -->
                     <div class="tl-ring">
-                        <svg viewBox="0 0 46 46" width="46" height="46">
-                            <rect x="1" y="1" width="44" height="44" stroke="#131313" stroke-width="1"/>
-                            <circle cx="23" cy="23" r="19" fill="none" stroke="rgba(19,19,19,.15)" stroke-width="3"/>
-                            <circle cx="23" cy="23" r="19" fill="none"
-                                    stroke="#131313" stroke-width="3"
-                                    stroke-dasharray="0 119.38"
-                                    transform="rotate(-90 23 23)"
-                                    class="tl-ring-arc"/>
+                        <svg viewBox="0 0 48 48" width="48" height="48">
+                            <circle cx="24" cy="24" r="20" fill="none" class="tl-ring-track" stroke-width="3"/>
+                            <circle cx="24" cy="24" r="20" fill="none"
+                                    class="tl-ring-arc"
+                                    stroke-width="3"
+                                    stroke-dasharray="0 125.66"
+                                    stroke-linecap="round"
+                                    transform="rotate(-90 24 24)"
+                                    />
                         </svg>
+                        <div class="tl-ring-center">
+                            {% if actividad.tipo == 'gym' %}GYM
+                            {% elif actividad.tipo == 'hyrox' %}HYX
+                            {% elif actividad.tipo == 'carrera' %}RUN
+                            {% elif actividad.tipo == 'ciclismo' %}BIK
+                            {% elif actividad.tipo == 'remo' %}ROW
+                            {% elif actividad.tipo == 'cardio_sustituto' or actividad.tipo == 'futbol' %}CRD
+                            {% elif actividad.tipo == 'natacion' %}SWM
+                            {% else %}ACT{% endif %}
+                        </div>
                     </div>
 
+                    <!-- Info -->
                     <div class="tl-info">
                         <div class="tl-info-meta">
-                            <span>{% if actividad.tipo == 'gym' %}🏋{% elif actividad.tipo == 'hyrox' %}⚡{% elif actividad.tipo == 'carrera' %}🏃{% elif actividad.tipo == 'ciclismo' %}🚴{% elif actividad.tipo == 'natacion' %}🏊{% elif actividad.tipo == 'remo' %}🚣{% elif actividad.tipo == 'yoga' or actividad.tipo == 'estiramientos' %}🧘{% elif actividad.tipo == 'futbol' %}⚽{% else %}🎯{% endif %} {{ actividad.tipo|upper }}{% if actividad.titulo %} · {{ actividad.titulo }}{% endif %}</span>
+                            <span class="tl-tipo-badge">{{ actividad.tipo|upper }}</span>
+                            {% if actividad.titulo %}
+                            <span class="tl-info-title">{{ actividad.titulo }}</span>
+                            {% endif %}
                             {% if actividad.fecha_realizado and actividad.fecha_realizado != actividad.fecha %}
-                            <span class="tl-plan" title="Sesión planificada para {{ actividad.fecha }}">📅 PLAN {{ actividad.fecha|date:"d/m" }}</span>
+                            <span class="tl-plan">PLAN {{ actividad.fecha|date:"d/m" }}</span>
                             {% endif %}
                         </div>
                         <div class="tl-info-metric">
@@ -502,20 +694,32 @@
                         </div>
                     </div>
 
+                    <!-- Right: RPE + duration -->
                     <div class="tl-sub">
-                        {% if actividad.distancia_metros and actividad.duracion_minutos %}{{ actividad.duracion_minutos }} MIN{% endif %}
-                        {% if not actividad.distancia_metros and actividad.rpe_medio %}RPE {{ actividad.rpe_medio|floatformat:1 }}{% endif %}
+                        {% if actividad.rpe_medio %}
+                        <span class="rpe-val">{{ actividad.rpe_medio|floatformat:1 }}</span>
+                        RPE
+                        {% endif %}
+                        {% if actividad.duracion_minutos %}
+                        {{ actividad.duracion_minutos }}min
+                        {% endif %}
                     </div>
                 </div>
 
                 <!-- Expandable actions -->
                 <div class="tl-actions" id="tl-actions-{{ actividad.id }}">
                     <div class="tl-normal" id="tl-normal-{{ actividad.id }}" style="display:flex;flex:1;">
-                        <button class="tl-action-btn" onclick="tlEditActivity('{{ actividad.id }}')">✏ EDITAR</button>
-                        <button class="tl-action-btn del" onclick="tlConfirmDelete('{{ actividad.id }}', event)">🗑 ELIMINAR</button>
+                        <button class="tl-action-btn" onclick="tlEditActivity('{{ actividad.id }}')">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                            EDITAR
+                        </button>
+                        <button class="tl-action-btn del" onclick="tlConfirmDelete('{{ actividad.id }}', event)">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+                            ELIMINAR
+                        </button>
                     </div>
                     <div class="tl-confirm" id="tl-confirm-{{ actividad.id }}" style="flex:1;">
-                        <span style="flex:1;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.16em;color:var(--bad)">¿ELIMINAR?</span>
+                        <span style="flex:1;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.14em;color:var(--bad)">¿ELIMINAR?</span>
                         <button class="tl-action-btn del" onclick="tlDeleteActivity('{{ actividad.id }}', event)">SÍ</button>
                         <button class="tl-action-btn" onclick="tlCancelDelete('{{ actividad.id }}', event)">NO</button>
                     </div>
@@ -534,7 +738,7 @@
                     </div>
                     {% if dia.energia %}
                     <div class="tl-log-energy">
-                        <b>{{ dia.energia }}</b>/10
+                        ENERGÍA<b>{{ dia.energia }}</b>/10
                     </div>
                     {% endif %}
                 </div>
@@ -549,10 +753,10 @@
         </div>
     </section>
 
-    <!-- ═══ FOOTER ═══ -->
+    <!-- FOOTER -->
     <footer class="tl-footer">
         <span>FIN DEL HISTORIAL</span>
-        <span>● ACTUALIZADO EN VIVO</span>
+        <span>ACTUALIZADO EN VIVO</span>
         <span>CL-{{ cliente.id }}</span>
     </footer>
 
@@ -571,7 +775,7 @@ function tickClock() {
 setInterval(tickClock, 1000); tickClock();
 
 /* RINGS */
-const CIRC = 2 * Math.PI * 19;
+const CIRC = 2 * Math.PI * 20;
 function initRings() {
     const rows = document.querySelectorAll('.tl-row[data-carga]');
     let max = 1;
@@ -664,7 +868,6 @@ window.tlDeleteActivity = tlDeleteActivity;
 document.addEventListener('DOMContentLoaded', () => { initRings(); initFilters(); });
 })();
 </script>
-
 
 {% include 'includes/_joi_fab.html' %}
 </body>

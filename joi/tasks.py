@@ -298,26 +298,75 @@ def ciclo_sintesis_joi(self):
     """
     JOI en su propio tiempo — Modelo C (Híbrido).
 
-    1. Filtro de trigger (sin coste LLM):
-       - Han pasado >48h desde el último MensajeJOI, O
-       - Hay actividad nueva (gym/hyrox/carrera) desde el último mensaje, O
-       - Hay entrada de diario nueva desde el último mensaje.
-    2. Si hay trigger: LLM recibe el contexto completo y decide hablar o [SILENCE].
+    Cada ejecución tiene dos modos independientes:
+
+    MODO REVISIÓN (siempre corre, sin generar mensaje):
+    - Evalúa hipótesis del ManualDavid contra contexto actual
+    - Actualiza confianza/estado de cada entrada
+    - Reescribe NarrativaActiva si hay hipótesis suficientes
+
+    MODO GENERACIÓN (solo si hay trigger, decide LLM):
+    - Trigger 1: >48h desde el último MensajeJOI
+    - Trigger 2: actividad nueva (gym/hyrox/carrera) desde el último mensaje
+    - Trigger 3: entrada de diario nueva desde el último mensaje
+    - Si trigger activo: LLM recibe contexto completo y decide hablar o [SILENCE]
 
     Programar via Celery Beat cada 4 horas.
     """
     from clientes.models import Cliente
-    from joi.models import MensajeJOI
-    from joi.services import generar_sintesis_joi
+    from joi.models import MensajeJOI, NarrativaActiva
+    from joi.services import (generar_sintesis_joi, revisar_manual_david,
+                               _hay_contexto_para_revision, _revision_antigua,
+                               _actualizar_narrativa_activa, construir_contexto,
+                               procesar_dialogo_narrativa)
     from entrenos.models import ActividadRealizada
 
     ahora = datetime.datetime.now()
     generados = 0
     silenciados = 0
     saltados = 0
+    revisiones = 0
+    dialogos_procesados = 0
 
     for cliente in Cliente.objects.select_related('user').all():
         try:
+            # ── DIÁLOGOS PENDIENTES: procesar antes que revisión ─────────────
+            try:
+                resultado_dialogos = procesar_dialogo_narrativa(cliente)
+                dialogos_procesados += resultado_dialogos.get('procesados', 0)
+            except Exception:
+                pass
+
+            # ── MODO REVISIÓN: solo si hay contexto nuevo o revisión antigua ──
+            try:
+                ultima_revision = None
+                try:
+                    narrativa = NarrativaActiva.objects.get(user=cliente.user)
+                    ultima_revision = narrativa.ultima_revision_manual
+                except NarrativaActiva.DoesNotExist:
+                    pass
+
+                debe_revisar = (
+                    _revision_antigua(ultima_revision, dias=7)
+                    or _hay_contexto_para_revision(cliente, ultima_revision)
+                )
+
+                if debe_revisar:
+                    resultado_revision = revisar_manual_david(cliente)
+                    revisiones += 1
+
+                    if resultado_revision.get('cambio_significativo'):
+                        try:
+                            ctx = construir_contexto(cliente)
+                            _actualizar_narrativa_activa(
+                                cliente, ctx,
+                                cambio_significativo=True,
+                            )
+                        except Exception:
+                            pass
+            except Exception:
+                pass
+
             ultimo_msg = (
                 MensajeJOI.objects
                 .filter(user=cliente.user)
@@ -358,13 +407,11 @@ def ciclo_sintesis_joi(self):
                     from diario.models import ProsocheDiario, ReflexionLibre
                     limite_fecha = ultimo_ts.date() if hasattr(ultimo_ts, 'date') else ultimo_ts
                     if (
-                        # Journaling Prosoche (AM o PM) escrito después del último mensaje
                         ProsocheDiario.objects
                         .filter(prosoche_mes__usuario=cliente.user,
                                 fecha__gte=limite_fecha)
                         .exists()
                         or
-                        # Reflexión libre (Logos)
                         ReflexionLibre.objects
                         .filter(usuario=cliente.user, fecha__gte=ultimo_ts)
                         .exists()
@@ -377,7 +424,7 @@ def ciclo_sintesis_joi(self):
                 saltados += 1
                 continue
 
-            # ── LLM decide: habla o [SILENCE] ─────────────────────────────
+            # ── MODO GENERACIÓN: LLM decide hablar o [SILENCE] ────────────
             resultado = generar_sintesis_joi(cliente)
             if resultado:
                 generados += 1
@@ -388,10 +435,12 @@ def ciclo_sintesis_joi(self):
             pass
 
     return {
-        'generados':   generados,
-        'silenciados': silenciados,
-        'saltados':    saltados,
-        'fecha':       str(ahora.date()),
+        'generados':            generados,
+        'silenciados':          silenciados,
+        'saltados':             saltados,
+        'revisiones':           revisiones,
+        'dialogos_procesados':  dialogos_procesados,
+        'fecha':                str(ahora.date()),
     }
 
 
