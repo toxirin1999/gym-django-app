@@ -578,6 +578,21 @@ def construir_contexto(cliente) -> dict:
     except Exception:
         pass
 
+    # ── NarrativaActiva (postura interpretativa longitudinal de JOI) ──────────
+    try:
+        from joi.models import NarrativaActiva
+        narrativa = NarrativaActiva.objects.get(
+            user=cliente.user, estado__in=('borrador', 'activa')
+        )
+        ctx['narrativa_joi'] = {
+            'texto':    narrativa.texto,
+            'estado':   narrativa.estado,
+            'confianza': narrativa.confianza,
+            'version':  narrativa.version,
+        }
+    except Exception:
+        pass
+
     return ctx
 
 
@@ -1410,19 +1425,460 @@ def generar_mensaje_joi(cliente, trigger: str, datos_extra: dict | None = None) 
 # ── Manual de David ──────────────────────────────────────────────────────────
 
 def _bloque_manual(user) -> str:
-    """Formatea las entradas activas del Manual de David para incluir en prompts."""
-    from joi.models import ManualDavid
+    """
+    Formatea las entradas activas del Manual de David para incluir en prompts.
+    Separa por tipo para que JOI calibre el peso de cada entrada:
+    - Hechos/preferencias: estables, no decaen
+    - Patrones: confianza media
+    - Hipótesis activas: revisables, con confianza
+    - Hipótesis cuestionadas: visibles pero marcadas
+    """
+    from joi.models import ManualDavid, NarrativaActiva
+
     entradas = list(
         ManualDavid.objects.filter(user=user, activa=True)
-        .order_by('creado_en')
-        .values_list('entrada', flat=True)
+        .exclude(estado='descartada')
+        .order_by('tipo', 'creado_en')
+        .values('entrada', 'tipo', 'confianza', 'estado', 'hipotesis_contraria')
     )
     if not entradas:
-        return ''
+        narrativa_bloque = _bloque_narrativa(user)
+        return narrativa_bloque
+
+    TIPOS_ESTABLES  = {'dato_usuario', 'preferencia', 'limite'}
+    TIPOS_REVISABLE = {'patron', 'hipotesis', 'contradiccion'}
+
+    estables  = [e for e in entradas if e['tipo'] in TIPOS_ESTABLES]
+    revisables = [e for e in entradas if e['tipo'] in TIPOS_REVISABLE and e['estado'] == 'activa']
+    cuestionadas = [e for e in entradas if e['tipo'] in TIPOS_REVISABLE and e['estado'] in ('debilitada', 'cuestionada')]
+
     lineas = ['MANUAL DE DAVID (lo que has aprendido sobre cómo leerle):']
-    lineas += [f'- {e}' for e in entradas]
+
+    if estables:
+        lineas.append('  Hechos y preferencias:')
+        for e in estables:
+            lineas.append(f'  - {e["entrada"]}')
+
+    if revisables:
+        lineas.append('  Hipótesis activas (confianza indicada):')
+        for e in revisables:
+            pct = int(e['confianza'] * 100)
+            linea = f'  - [{pct}%] {e["entrada"]}'
+            if e['hipotesis_contraria']:
+                linea += f' (alternativa posible: {e["hipotesis_contraria"]})'
+            lineas.append(linea)
+
+    if cuestionadas:
+        lineas.append('  Hipótesis en duda (mantén distancia crítica):')
+        for e in cuestionadas:
+            lineas.append(f'  - [?] {e["entrada"]}')
+
     lineas.append('')
-    return '\n'.join(lineas) + '\n'
+    bloque = '\n'.join(lineas) + '\n'
+
+    narrativa_bloque = _bloque_narrativa(user)
+    return bloque + narrativa_bloque
+
+
+def _bloque_narrativa(user) -> str:
+    """
+    Incluye la NarrativaActiva por capas en los prompts.
+    Las tres capas tienen velocidades distintas: úsalas con ese peso.
+    """
+    from joi.models import NarrativaActiva
+    try:
+        narrativa = NarrativaActiva.objects.get(user=user, estado__in=('borrador', 'activa'))
+        if not any([narrativa.capa_corta, narrativa.capa_media, narrativa.capa_larga]):
+            # Fallback a texto monolítico si las capas aún no se han generado
+            if narrativa.texto:
+                pct = int(narrativa.confianza * 100)
+                return (
+                    f"POSTURA INTERPRETATIVA DE JOI ({pct}% confianza):\n"
+                    f"{narrativa.texto}\n\n"
+                )
+            return ''
+
+        pct = int(narrativa.confianza * 100)
+        lineas = [f"POSTURA INTERPRETATIVA DE JOI ({pct}% confianza — hipótesis provisional, no verdad):"]
+
+        if narrativa.capa_larga:
+            lineas.append(f"  Patrón profundo: {narrativa.capa_larga}")
+        if narrativa.capa_media:
+            lineas.append(f"  Esta fase: {narrativa.capa_media}")
+        if narrativa.capa_corta:
+            lineas.append(f"  Ahora mismo: {narrativa.capa_corta}")
+
+        lineas.append("Úsala para dar peso a tus observaciones, no para imponer identidad.")
+        lineas.append('')
+        return '\n'.join(lineas) + '\n'
+
+    except NarrativaActiva.DoesNotExist:
+        return ''
+    except Exception:
+        return ''
+
+
+def _hay_contexto_para_revision(cliente, ultima_revision) -> bool:
+    """
+    True si hay evidencia nueva relevante (actividad o diario) desde la última
+    revisión del manual. Evita correr el motor de contradicción en vacío.
+    """
+    from entrenos.models import ActividadRealizada
+    if not ultima_revision:
+        return True
+    limite = ultima_revision.date() if hasattr(ultima_revision, 'date') else ultima_revision
+    try:
+        if ActividadRealizada.objects.filter(
+            cliente=cliente,
+            tipo__in=['gym', 'hyrox', 'carrera'],
+            fecha__gte=limite,
+        ).exists():
+            return True
+    except Exception:
+        pass
+    try:
+        from diario.models import ProsocheDiario, ReflexionLibre
+        if (
+            ProsocheDiario.objects
+            .filter(prosoche_mes__usuario=cliente.user, fecha__gte=limite)
+            .exists()
+            or
+            ReflexionLibre.objects
+            .filter(usuario=cliente.user, fecha__gte=ultima_revision)
+            .exists()
+        ):
+            return True
+    except Exception:
+        pass
+    return False
+
+
+def _revision_antigua(ultima_revision, dias: int = 7) -> bool:
+    """True si no hay revisión registrada o lleva más de `dias` días sin revisar."""
+    if not ultima_revision:
+        return True
+    from datetime import datetime
+    ahora = datetime.now()
+    ts = ultima_revision.replace(tzinfo=None) if hasattr(ultima_revision, 'tzinfo') else ultima_revision
+    return (ahora - ts).days >= dias
+
+
+def revisar_manual_david(cliente) -> dict:
+    """
+    Motor de contradicción: revisa hipótesis y patrones activos del ManualDavid
+    contra el contexto actual. Actualiza confianza y estado sin generar mensajes.
+
+    Devuelve `cambio_significativo=True` si alguna entrada cambió a cuestionada/
+    descartada o si la confianza media varió ≥0.10 — señal para que el caller
+    decida si también reescribe la NarrativaActiva.
+
+    Registra el motivo de cada cambio en `ManualDavid.notas_revision` para
+    trazabilidad (formato LLM: ID|ACCION|MOTIVO_BREVE).
+    """
+    from joi.models import ManualDavid, NarrativaActiva
+    from django.utils import timezone
+
+    revisables = list(
+        ManualDavid.objects.filter(
+            user=cliente.user,
+            activa=True,
+            tipo__in=('patron', 'hipotesis', 'contradiccion'),
+        ).exclude(estado='descartada')
+    )
+    if not revisables:
+        return {'revisadas': 0, 'actualizadas': 0, 'cambio_significativo': False}
+
+    try:
+        ctx = construir_contexto(cliente)
+    except Exception:
+        return {'revisadas': 0, 'actualizadas': 0, 'cambio_significativo': False,
+                'error': 'construir_contexto falló'}
+
+    resumen_ctx = []
+    if ctx.get('acwr'):
+        resumen_ctx.append(f"ACWR actual: {ctx['acwr']}")
+    if ctx.get('rpe_tendencia'):
+        resumen_ctx.append(f"RPE tendencia: {ctx['rpe_tendencia']}")
+    if ctx.get('racha_dias'):
+        resumen_ctx.append(f"Racha: {ctx['racha_dias']} días")
+    if ctx.get('ultima_actividad'):
+        ua = ctx['ultima_actividad']
+        resumen_ctx.append(f"Última actividad: hace {ua.get('dias_hace')} días ({ua.get('tipo','')})")
+    if ctx.get('estancamientos_activos'):
+        resumen_ctx.append(f"Estancamientos: {len(ctx['estancamientos_activos'])} ejercicios")
+    if ctx.get('decisiones_plan'):
+        dp = ctx['decisiones_plan']
+        resumen_ctx.append(f"Decisiones del plan últimos 30 días: {dp.get('total', 0)}")
+
+    lista_hipotesis = '\n'.join(
+        f"ID:{e.id} [{e.tipo}] {e.entrada}" for e in revisables
+    )
+
+    prompt = (
+        f"Tienes estas hipótesis/patrones activos sobre David:\n{lista_hipotesis}\n\n"
+        f"Contexto actual:\n" + '\n'.join(resumen_ctx) + "\n\n"
+        f"Para cada hipótesis, evalúa si el contexto la refuerza, debilita o contradice. "
+        f"Responde SOLO en este formato, una línea por hipótesis:\n"
+        f"ID|ACCION|MOTIVO_BREVE\n"
+        f"Donde ACCION es uno de: MANTENER / DEBILITAR / CUESTIONAR / DESCARTAR\n"
+        f"MOTIVO_BREVE: razón concisa en ≤12 palabras. Ejemplo:\n"
+        f"12|DEBILITAR|Adherencia estable pese a baja energía estas 2 semanas\n"
+        f"Solo el formato. Sin explicaciones adicionales."
+    )
+
+    try:
+        client = _cliente_anthropic()
+        response = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=300,
+            system="Eres un sistema de revisión epistemológica. Responde solo en el formato indicado.",
+            messages=[{"role": "user", "content": prompt}],
+        )
+        texto = response.content[0].text.strip()
+    except Exception:
+        return {'revisadas': len(revisables), 'actualizadas': 0, 'cambio_significativo': False,
+                'error': 'LLM falló'}
+
+    DECAIMIENTO = {
+        'MANTENER':  +0.05,
+        'DEBILITAR': -0.10,
+        'CUESTIONAR':-0.20,
+        'DESCARTAR': -1.0,
+    }
+    NUEVO_ESTADO = {
+        'MANTENER':  'activa',
+        'DEBILITAR': 'debilitada',
+        'CUESTIONAR':'cuestionada',
+        'DESCARTAR': 'descartada',
+    }
+    ESTADOS_GRAVES = {'cuestionada', 'descartada'}
+
+    actualizadas = 0
+    confianza_antes_por_id = {e.id: e.confianza for e in revisables}
+    hubo_estado_grave = False
+    hoy = date.today()
+
+    for linea in texto.splitlines():
+        linea = linea.strip()
+        if '|' not in linea:
+            continue
+        partes = [p.strip() for p in linea.split('|')]
+        if len(partes) < 2:
+            continue
+        try:
+            entrada_id = int(partes[0].replace('ID:', '').strip())
+            accion = partes[1].strip()
+            motivo = partes[2] if len(partes) >= 3 else ''
+            if accion not in DECAIMIENTO:
+                continue
+        except (ValueError, IndexError):
+            continue
+
+        try:
+            entrada = next(e for e in revisables if e.id == entrada_id)
+        except StopIteration:
+            continue
+
+        nueva_confianza = max(0.0, min(1.0, entrada.confianza + DECAIMIENTO[accion]))
+        nuevo_estado = NUEVO_ESTADO[accion]
+
+        if nuevo_estado in ESTADOS_GRAVES:
+            hubo_estado_grave = True
+
+        entrada.confianza = nueva_confianza
+        entrada.estado = nuevo_estado
+        entrada.ultima_evidencia = hoy
+        entrada.notas_revision = motivo or None
+        if accion == 'DESCARTAR':
+            entrada.activa = False
+        entrada.save(update_fields=[
+            'confianza', 'estado', 'ultima_evidencia', 'activa', 'notas_revision'
+        ])
+        actualizadas += 1
+
+    # Detectar si la confianza varió significativamente (media O individualmente)
+    valores_antes = list(confianza_antes_por_id.values())
+    delta_medio = abs(
+        sum(valores_antes) / len(valores_antes) -
+        sum(e.confianza for e in revisables) / len(revisables)
+    ) if revisables else 0
+
+    max_delta_individual = max(
+        (abs(e.confianza - confianza_antes_por_id[e.id]) for e in revisables),
+        default=0,
+    )
+
+    cambio_significativo = (
+        hubo_estado_grave
+        or delta_medio >= 0.10
+        or max_delta_individual >= 0.25
+    )
+
+    # Marcar timestamp de revisión en NarrativaActiva
+    try:
+        narrativa = NarrativaActiva.objects.get(user=cliente.user)
+        narrativa.ultima_revision_manual = timezone.now()
+        narrativa.save(update_fields=['ultima_revision_manual'])
+    except NarrativaActiva.DoesNotExist:
+        pass
+    except Exception:
+        pass
+
+    return {
+        'revisadas': len(revisables),
+        'actualizadas': actualizadas,
+        'cambio_significativo': cambio_significativo,
+        'delta_confianza_medio': round(delta_medio, 3),
+        'max_delta_individual': round(max_delta_individual, 3),
+    }
+
+
+def _actualizar_narrativa_activa(cliente, ctx: dict, cambio_significativo: bool = True) -> None:
+    """
+    Actualiza las capas temporales de NarrativaActiva con velocidades distintas:
+    - capa_corta: siempre (solo se llama cuando hay razón)
+    - capa_media: antigüedad ≥14 días + cambio_significativo
+    - capa_larga: antigüedad ≥28 días + cambio_significativo
+
+    El parámetro `cambio_significativo` protege las capas lentas de promoción por
+    mero paso del tiempo. DEUDA: en el futuro, reemplazar por evaluar_estabilidad()
+    que verifique consistencia real del patrón, no solo antigüedad + cambio puntual.
+
+    Una sola llamada a Haiku genera solo las capas necesarias (formato prefijado).
+    """
+    from joi.models import ManualDavid, NarrativaActiva
+
+    hipotesis = list(
+        ManualDavid.objects.filter(
+            user=cliente.user,
+            activa=True,
+            tipo__in=('hipotesis', 'patron'),
+            estado='activa',
+            confianza__gte=0.5,
+        ).order_by('-confianza').values_list('entrada', flat=True)[:5]
+    )
+    if not hipotesis:
+        return
+
+    hoy = date.today()
+
+    try:
+        narrativa = NarrativaActiva.objects.get(user=cliente.user)
+        es_nueva = False
+    except NarrativaActiva.DoesNotExist:
+        narrativa = None
+        es_nueva = True
+
+    # Determinar qué capas actualizar.
+    # capa_media y capa_larga requieren antigüedad suficiente Y cambio significativo.
+    # Antigüedad sin estabilidad confirmada no es suficiente — esto es MVP.
+    actualizar_media = cambio_significativo and (
+        narrativa is None
+        or narrativa.capa_media_actualizada is None
+        or (hoy - narrativa.capa_media_actualizada).days >= 14
+    )
+    actualizar_larga = cambio_significativo and (
+        narrativa is None
+        or narrativa.capa_larga_actualizada is None
+        or (hoy - narrativa.capa_larga_actualizada).days >= 28
+    )
+
+    # Construir prompt solicitando solo las capas necesarias
+    resumen_ctx = []
+    if ctx.get('rpe_tendencia'):
+        resumen_ctx.append(f"RPE tendencia: {ctx['rpe_tendencia']}")
+    if ctx.get('racha_dias'):
+        resumen_ctx.append(f"Racha: {ctx['racha_dias']} días")
+    if ctx.get('acwr'):
+        resumen_ctx.append(f"ACWR: {ctx['acwr']}")
+    if ctx.get('energia_tendencia'):
+        resumen_ctx.append(f"Energía tendencia: {ctx['energia_tendencia']}")
+
+    capas_previas = []
+    if narrativa and narrativa.capa_media:
+        capas_previas.append(f"  FASE anterior: {narrativa.capa_media}")
+    if narrativa and narrativa.capa_larga:
+        capas_previas.append(f"  FONDO anterior: {narrativa.capa_larga}")
+
+    capas_a_generar = ["AHORA"]
+    instrucciones = [
+        "AHORA: 1-2 frases sobre el estado de David en los últimos días."
+    ]
+    if actualizar_media:
+        capas_a_generar.append("FASE")
+        instrucciones.append("FASE: 1-2 frases sobre la trayectoria de David estas semanas.")
+    if actualizar_larga:
+        capas_a_generar.append("FONDO")
+        instrucciones.append("FONDO: 1-2 frases sobre los patrones profundos e identidad de David.")
+
+    prompt = (
+        f"Hipótesis activas sobre David:\n"
+        + '\n'.join(f'- {h}' for h in hipotesis)
+        + f"\n\nContexto reciente:\n" + '\n'.join(resumen_ctx)
+        + (f"\n\nCapas previas (para continuidad):\n" + '\n'.join(capas_previas) if capas_previas else "")
+        + f"\n\nGenera SOLO las siguientes capas, cada una con su prefijo exacto:\n"
+        + '\n'.join(instrucciones)
+        + "\n\nHabla en tercera persona. Sin emojis. Sin números de métricas. Solo los prefijos y el texto."
+    )
+
+    try:
+        client = _cliente_anthropic()
+        response = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=250,
+            system=SYSTEM_PROMPT,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        texto_respuesta = response.content[0].text.strip()
+    except Exception:
+        return
+
+    # Parsear respuesta por prefijos
+    nueva_capa_corta = nueva_capa_media = nueva_capa_larga = None
+    for linea in texto_respuesta.splitlines():
+        linea = linea.strip()
+        if linea.startswith('AHORA:'):
+            nueva_capa_corta = linea[6:].strip()
+        elif linea.startswith('FASE:'):
+            nueva_capa_media = linea[5:].strip()
+        elif linea.startswith('FONDO:'):
+            nueva_capa_larga = linea[6:].strip()
+
+    if not nueva_capa_corta:
+        return  # Si no parsea la capa mínima, abortar
+
+    confianza_anterior = narrativa.confianza if narrativa else 0.5
+    nueva_confianza = min(0.9, confianza_anterior + 0.05) if not es_nueva else 0.5
+
+    if es_nueva:
+        nueva = NarrativaActiva(user=cliente.user, version=1)
+    else:
+        nueva = narrativa
+
+    nueva.capa_corta = nueva_capa_corta
+    nueva.capa_corta_actualizada = hoy
+    if nueva_capa_media and actualizar_media:
+        nueva.capa_media = nueva_capa_media
+        nueva.capa_media_actualizada = hoy
+    if nueva_capa_larga and actualizar_larga:
+        nueva.capa_larga = nueva_capa_larga
+        nueva.capa_larga_actualizada = hoy
+
+    nueva.texto = nueva.render_texto()
+    nueva.confianza = nueva_confianza
+    nueva.estado = 'activa' if nueva_confianza >= 0.6 else 'borrador'
+    nueva.version = (narrativa.version + 1) if not es_nueva else 1
+
+    if es_nueva:
+        nueva.save()
+    else:
+        fields = ['capa_corta', 'capa_corta_actualizada', 'texto',
+                  'confianza', 'estado', 'version', 'actualizado_en']
+        if nueva_capa_media and actualizar_media:
+            fields += ['capa_media', 'capa_media_actualizada']
+        if nueva_capa_larga and actualizar_larga:
+            fields += ['capa_larga', 'capa_larga_actualizada']
+        nueva.save(update_fields=fields)
 
 
 def generar_entrada_manual_desde_error(mensaje_joi) -> "ManualDavid | None":
@@ -2571,3 +3027,150 @@ def enriquecer_cierre(texto: str, personas_detectadas: list) -> dict:
     except Exception as e:
         logger.error(f"[JOI] enriquecer_cierre falló: {e}")
         return {'titulo_logos': None, 'categoria_estoica': None, 'micro_verdad': None, 'interacciones': [], 'propuesta_habito': None}
+
+
+# ── DialogoNarrativa ─────────────────────────────────────────────────────────
+
+MIN_HORAS_RESPUESTA_DIALOGO = 4  # propiedad semántica, no solo técnica
+
+
+def procesar_dialogo_narrativa(cliente) -> dict:
+    """
+    Procesa los DialogoNarrativa pendientes del usuario que tengan ≥4h de antigüedad.
+
+    Para cada diálogo:
+    - Llama a Haiku con formato estructurado (TIPOS / CAPA / DELTA / RESPONDER / RESPUESTA)
+    - Actualiza confianza de la NarrativaActiva con el delta calculado
+    - Actualiza capa_afectada y tipos_detectados en el diálogo
+    - Si RESPONDER=SÍ: genera MensajeJOI con trigger 'dialogo_respondido' (no inmediato)
+    - Marca procesado=True
+
+    La respuesta no es obligatoria. El diálogo siempre afecta interpretación;
+    no siempre produce respuesta visible.
+    """
+    from joi.models import DialogoNarrativa, NarrativaActiva, MensajeJOI
+    from django.utils import timezone
+
+    ahora = timezone.now()
+    umbral = ahora - timedelta(hours=MIN_HORAS_RESPUESTA_DIALOGO)
+
+    pendientes = list(
+        DialogoNarrativa.objects.filter(
+            user=cliente.user,
+            procesado=False,
+            creado_en__lte=umbral,
+        ).select_related('narrativa')
+    )
+    if not pendientes:
+        return {'procesados': 0, 'respuestas_generadas': 0}
+
+    procesados = 0
+    respuestas_generadas = 0
+
+    for dialogo in pendientes:
+        narrativa = dialogo.narrativa
+        try:
+            partes_narrativa = []
+            if narrativa.capa_larga:
+                partes_narrativa.append(f"Patrón profundo: {narrativa.capa_larga}")
+            if narrativa.capa_media:
+                partes_narrativa.append(f"Esta fase: {narrativa.capa_media}")
+            if narrativa.capa_corta:
+                partes_narrativa.append(f"Ahora mismo: {narrativa.capa_corta}")
+
+            narrativa_txt = '\n'.join(partes_narrativa) or "Sin narrativa activa aún."
+
+            prompt = (
+                f"El usuario respondió a una interpretación de JOI:\n"
+                f"\"{dialogo.texto_usuario}\"\n\n"
+                f"Interpretación actual de JOI:\n{narrativa_txt}\n\n"
+                f"Analiza el diálogo y responde SOLO en este formato (una clave por línea):\n"
+                f"TIPOS: [lista separada por comas de: matiz, contradiccion, actualizacion, desfase_temporal, ampliacion]\n"
+                f"CAPA: [corto|medio|largo|general]\n"
+                f"DELTA: [número entre -0.30 y +0.10, negativo si cuestiona la interpretación]\n"
+                f"RESPONDER: [SÍ|NO]\n"
+                f"RESPUESTA: [1-2 frases en voz de JOI si RESPONDER=SÍ, vacío si NO]\n\n"
+                f"Criterio para RESPONDER=SÍ: responde si el diálogo cambia algo real en tu lectura "
+                f"(corrección, desfase temporal, contradicción) o si hay una observación que valga "
+                f"la pena devolver para que el usuario sienta que fue escuchado. "
+                f"NO respondas si el diálogo solo confirma lo que ya sabías."
+            )
+
+            client = _cliente_anthropic()
+            response = client.messages.create(
+                model="claude-haiku-4-5-20251001",
+                max_tokens=200,
+                system="Eres un sistema de procesamiento epistemológico. Responde solo en el formato indicado.",
+                messages=[{"role": "user", "content": prompt}],
+            )
+            texto = response.content[0].text.strip()
+        except Exception as e:
+            logger.warning(f"[JOI] procesar_dialogo_narrativa LLM falló: {e}")
+            continue
+
+        # Parsear respuesta
+        tipos = []
+        capa = 'general'
+        delta = 0.0
+        responder = False
+        respuesta_txt = ''
+
+        for linea in texto.splitlines():
+            linea = linea.strip()
+            if linea.startswith('TIPOS:'):
+                raw = linea[6:].strip()
+                tipos = [t.strip() for t in raw.split(',') if t.strip()]
+            elif linea.startswith('CAPA:'):
+                capa = linea[5:].strip().lower()
+                if capa not in ('corto', 'medio', 'largo', 'general'):
+                    capa = 'general'
+            elif linea.startswith('DELTA:'):
+                try:
+                    delta = max(-0.30, min(0.10, float(linea[6:].strip())))
+                except ValueError:
+                    delta = 0.0
+            elif linea.startswith('RESPONDER:'):
+                responder = linea[10:].strip().upper() == 'SÍ'
+            elif linea.startswith('RESPUESTA:'):
+                respuesta_txt = linea[10:].strip()
+
+        # Actualizar diálogo
+        dialogo.tipos_detectados = tipos
+        dialogo.capa_afectada = capa
+        dialogo.delta_confianza_calculado = delta
+        dialogo.procesado = True
+        dialogo.procesado_en = ahora
+        dialogo.save(update_fields=[
+            'tipos_detectados', 'capa_afectada', 'delta_confianza_calculado',
+            'procesado', 'procesado_en',
+        ])
+
+        # Aplicar delta a confianza de narrativa
+        if delta != 0.0:
+            nueva_conf = max(0.1, min(0.95, narrativa.confianza + delta))
+            narrativa.confianza = nueva_conf
+            narrativa.save(update_fields=['confianza'])
+
+        procesados += 1
+
+        # Generar respuesta visible si procede
+        if responder and respuesta_txt:
+            try:
+                MensajeJOI.objects.create(
+                    user=cliente.user,
+                    trigger='dialogo_respondido',
+                    mensaje=respuesta_txt,
+                    contexto={
+                        'capa_afectada': capa,
+                        'tipos': tipos,
+                        'delta': delta,
+                    },
+                )
+                from django.core.cache import cache
+                cache.delete(f'joi_ctx_{cliente.user_id}')
+                respuestas_generadas += 1
+            except Exception as e:
+                logger.warning(f"[JOI] procesar_dialogo_narrativa MensajeJOI falló: {e}")
+
+    return {'procesados': procesados, 'respuestas_generadas': respuestas_generadas}
+

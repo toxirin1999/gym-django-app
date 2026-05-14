@@ -4,20 +4,38 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#090910">
+  <meta name="theme-color" content="#06070b">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <link rel="manifest" href="{% static 'manifest.json' %}">
   <title>Lo que sé de ti — JOI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+    :root {
+      --bg: #06070b;
+      --bg-soft: #0d0f17;
+      --ink: rgba(236, 242, 255, 0.96);
+      --ink-soft: rgba(210, 222, 240, 0.78);
+      --ink-mute: rgba(170, 188, 215, 0.55);
+      --accent: rgba(140, 200, 230, 0.85);
+      --accent-soft: rgba(110, 170, 210, 0.35);
+      --line: rgba(150, 180, 220, 0.12);
+    }
+
     html, body {
-      height: 100%;
-      background: #090910;
-      color: rgba(232, 240, 252, 1);
-      font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+      min-height: 100%;
+      background:
+        radial-gradient(ellipse at 50% 0%, rgba(60, 100, 150, 0.10), transparent 60%),
+        radial-gradient(ellipse at 50% 100%, rgba(40, 80, 130, 0.08), transparent 55%),
+        var(--bg);
+      color: var(--ink);
+      font-family: 'Inter', -apple-system, sans-serif;
       -webkit-font-smoothing: antialiased;
+      letter-spacing: 0.01em;
     }
 
     .poda-wrap {
@@ -25,37 +43,88 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 4rem 1.5rem 3rem;
-      max-width: 560px;
+      padding: 5rem 1.5rem 3rem;
+      max-width: 600px;
       margin: 0 auto;
     }
 
     /* Cabecera */
     .poda-header {
       text-align: center;
-      margin-bottom: 3.5rem;
+      margin-bottom: 4rem;
+      width: 100%;
     }
 
-    .poda-linea-top {
-      width: 1px;
-      height: 48px;
-      background: linear-gradient(to bottom, transparent, rgba(100, 148, 220, 0.35));
-      margin: 0 auto 2rem;
+    .poda-orbita {
+      width: 38px; height: 38px;
+      margin: 0 auto 1.8rem;
+      border-radius: 50%;
+      border: 1px solid var(--accent-soft);
+      position: relative;
+      animation: pulse 4s ease-in-out infinite;
+    }
+    .poda-orbita::before {
+      content: '';
+      position: absolute; inset: 8px;
+      border-radius: 50%;
+      background: radial-gradient(circle, var(--accent) 0%, transparent 70%);
+      opacity: 0.5;
+    }
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); opacity: 0.85; }
+      50% { transform: scale(1.08); opacity: 1; }
+    }
+
+    .poda-eyebrow {
+      font-size: 0.62rem;
+      letter-spacing: 0.42em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 1.2rem;
+      font-weight: 500;
     }
 
     .poda-titulo {
-      font-size: 0.65rem;
-      letter-spacing: 0.3em;
-      text-transform: uppercase;
-      color: rgba(170, 200, 240, 0.9);
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(1.8rem, 5vw, 2.4rem);
+      font-weight: 300;
+      letter-spacing: 0.01em;
+      color: var(--ink);
       margin-bottom: 1rem;
+      line-height: 1.15;
     }
 
     .poda-subtitulo {
-      font-size: clamp(0.95rem, 2.5vw, 1.1rem);
+      font-size: 0.92rem;
       line-height: 1.7;
-      color: rgba(225, 235, 250, 1);
-      font-weight: 400;
+      color: var(--ink-soft);
+      font-weight: 300;
+      max-width: 420px;
+      margin: 0 auto;
+    }
+    .poda-subtitulo em {
+      font-family: 'Cormorant Garamond', serif;
+      font-style: italic;
+      font-size: 1.05rem;
+      color: var(--ink);
+    }
+
+    /* Contador */
+    .poda-meta {
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+      width: 100%;
+      margin-bottom: 1.5rem;
+      font-size: 0.6rem;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: var(--ink-mute);
+    }
+    .poda-meta-line {
+      flex: 1;
+      height: 1px;
+      background: var(--line);
     }
 
     /* Lista de entradas */
@@ -63,113 +132,163 @@
       width: 100%;
       display: flex;
       flex-direction: column;
-      gap: 1.2rem;
+      gap: 0.6rem;
     }
 
     .poda-entrada {
-      display: flex;
-      align-items: flex-start;
-      gap: 1rem;
-      padding: 1.1rem 1.2rem;
-      border: 1px solid rgba(130, 170, 230, 0.3);
+      position: relative;
+      padding: 1.4rem 1.4rem 1.4rem 1.6rem;
+      background: linear-gradient(180deg, rgba(20, 26, 40, 0.55), rgba(12, 16, 26, 0.4));
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      transition: opacity 0.5s ease, transform 0.4s ease, border-color 0.3s, background 0.3s;
+      overflow: hidden;
+    }
+    .poda-entrada::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 1.4rem; bottom: 1.4rem;
+      width: 2px;
+      background: var(--accent);
+      opacity: 0.6;
       border-radius: 2px;
-      transition: opacity 0.5s ease, transform 0.4s ease;
+    }
+    .poda-entrada:hover {
+      border-color: rgba(150, 180, 220, 0.22);
+      background: linear-gradient(180deg, rgba(24, 32, 48, 0.65), rgba(14, 20, 32, 0.5));
     }
 
     .poda-entrada.eliminando {
       opacity: 0;
-      transform: translateX(12px);
+      transform: translateX(16px);
       pointer-events: none;
+    }
+
+    .poda-entrada-cuerpo {
+      display: flex;
+      align-items: flex-start;
+      gap: 1rem;
     }
 
     .poda-entrada-texto {
       flex: 1;
-      font-size: 0.92rem;
-      line-height: 1.6;
-      color: rgba(238, 244, 255, 1);
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.15rem;
+      line-height: 1.55;
+      color: var(--ink);
       font-weight: 400;
     }
 
     .poda-entrada-fecha {
-      font-size: 0.6rem;
-      letter-spacing: 0.15em;
-      color: rgba(160, 195, 235, 0.8);
-      margin-top: 0.4rem;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.58rem;
+      letter-spacing: 0.22em;
+      color: var(--ink-mute);
+      margin-top: 0.9rem;
       text-transform: uppercase;
+      font-weight: 500;
     }
 
     .poda-btn-borrar {
       flex-shrink: 0;
       background: transparent;
-      border: 1px solid rgba(130, 170, 230, 0.55);
-      border-radius: 2px;
-      color: rgba(200, 220, 245, 0.95);
-      font-size: 0.6rem;
-      letter-spacing: 0.15em;
+      border: 1px solid rgba(150, 180, 220, 0.2);
+      border-radius: 999px;
+      color: var(--ink-soft);
+      font-family: 'Inter', sans-serif;
+      font-size: 0.58rem;
+      letter-spacing: 0.18em;
       text-transform: uppercase;
-      padding: 0.4rem 0.7rem;
+      padding: 0.5rem 0.85rem;
       cursor: pointer;
-      font-family: inherit;
-      transition: border-color 0.25s, color 0.25s;
+      transition: all 0.25s ease;
       white-space: nowrap;
-      margin-top: 0.15rem;
+      font-weight: 500;
     }
-
     .poda-btn-borrar:hover {
-      border-color: rgba(180, 100, 100, 0.5);
-      color: rgba(220, 130, 130, 0.75);
+      border-color: rgba(220, 140, 140, 0.55);
+      color: rgba(240, 180, 180, 0.95);
+      background: rgba(80, 30, 40, 0.18);
     }
 
     /* Estado vacío */
     .poda-vacia {
       text-align: center;
-      margin-top: 2rem;
+      padding: 3rem 1rem;
+      border: 1px dashed var(--line);
+      border-radius: 6px;
+      width: 100%;
     }
-
     .poda-vacia-texto {
-      font-size: 0.85rem;
-      color: rgba(200, 220, 245, 0.9);
-      letter-spacing: 0.08em;
+      font-family: 'Cormorant Garamond', serif;
+      font-style: italic;
+      font-size: 1.1rem;
+      color: var(--ink-soft);
       line-height: 1.8;
     }
 
     /* Volver */
     .poda-volver {
-      margin-top: 3rem;
-      font-size: 0.65rem;
-      letter-spacing: 0.2em;
+      margin-top: 4rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.62rem;
+      letter-spacing: 0.28em;
       text-transform: uppercase;
-      color: rgba(180, 210, 245, 0.9);
+      color: var(--accent);
       text-decoration: none;
-      transition: color 0.25s;
+      padding: 0.7rem 1.2rem;
+      border: 1px solid var(--accent-soft);
+      border-radius: 999px;
+      transition: all 0.25s;
+      font-weight: 500;
     }
-    .poda-volver:hover { color: rgba(220, 235, 255, 1); }
+    .poda-volver:hover {
+      color: var(--ink);
+      border-color: var(--accent);
+      background: rgba(140, 200, 230, 0.06);
+    }
+
+    @media (max-width: 480px) {
+      .poda-wrap { padding: 3.5rem 1.2rem 2rem; }
+      .poda-entrada-cuerpo { flex-direction: column; }
+      .poda-btn-borrar { align-self: flex-start; margin-top: 0.5rem; }
+    }
   </style>
 </head>
 <body>
 <div class="poda-wrap">
 
   <div class="poda-header">
-    <div class="poda-linea-top" aria-hidden="true"></div>
-    <p class="poda-titulo">Manual de David</p>
+    <div class="poda-orbita" aria-hidden="true"></div>
+    <p class="poda-eyebrow">Manual de David</p>
+    <h1 class="poda-titulo">Lo que creo saber de ti</h1>
     <p class="poda-subtitulo">
-      Lo que creo saber de cómo leerte.<br>
-      Si algo ya no es verdad, dímelo.
+      Esto es lo que he aprendido leyéndote.<br>
+      Si algo ya <em>no es verdad</em>, dímelo y lo suelto.
     </p>
   </div>
 
   {% if entradas %}
-    <ul class="poda-lista" id="lista-manual" style="list-style:none; width:100%;">
+    <div class="poda-meta">
+      <span>Notas vivas</span>
+      <span class="poda-meta-line"></span>
+      <span>{{ entradas|length }}</span>
+    </div>
+
+    <ul class="poda-lista" id="lista-manual" style="list-style:none;">
       {% for entrada in entradas %}
       <li class="poda-entrada" id="entrada-{{ entrada.id }}">
-        <div style="flex:1;">
-          <p class="poda-entrada-texto">{{ entrada.entrada }}</p>
-          <p class="poda-entrada-fecha">{{ entrada.creado_en|date:"j N Y" }}</p>
+        <div class="poda-entrada-cuerpo">
+          <div style="flex:1;">
+            <p class="poda-entrada-texto">{{ entrada.entrada }}</p>
+            <p class="poda-entrada-fecha">{{ entrada.creado_en|date:"j N Y" }}</p>
+          </div>
+          <button class="poda-btn-borrar" onclick="desactivar({{ entrada.id }})">
+            ya no es verdad
+          </button>
         </div>
-        <button class="poda-btn-borrar"
-                onclick="desactivar({{ entrada.id }})">
-          ya no es verdad
-        </button>
       </li>
       {% endfor %}
     </ul>
@@ -177,13 +296,12 @@
     <div class="poda-vacia" id="poda-vacia">
       <p class="poda-vacia-texto">
         El manual está en blanco.<br>
-        Aún no he aprendido nada sobre tus señales.<br>
         Empezamos de cero.
       </p>
     </div>
   {% endif %}
 
-  <a href="/joi/habitacion/" class="poda-volver">← volver</a>
+  <a href="/joi/habitacion/" class="poda-volver">← volver a la habitación</a>
 
 </div>
 
@@ -206,6 +324,7 @@ async function desactivar(entradaId) {
     const lista = document.getElementById('lista-manual');
     if (lista && lista.children.length === 0) {
       lista.remove();
+      document.querySelector('.poda-meta')?.remove();
       const vacia = document.createElement('div');
       vacia.className = 'poda-vacia';
       vacia.innerHTML = '<p class="poda-vacia-texto">El manual está en blanco.<br>Empezamos de cero.</p>';

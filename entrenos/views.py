@@ -7420,6 +7420,13 @@ def timeline_atleta(request, cliente_id):
         'gym': '🏋️', 'hyrox': '⚡', 'carrera': '🏃', 'ciclismo': '🚴',
         'remo': '🚣', 'futbol': '⚽', 'natacion': '🏊',
         'yoga': '🧘', 'estiramientos': '🤸', 'otro': '🎯',
+        'cardio_sustituto': '🔥', 'hiit': '⚡',
+    }
+    LABELS = {
+        'gym': 'GYM', 'hyrox': 'HYROX', 'carrera': 'CARRERA',
+        'ciclismo': 'BICI', 'remo': 'REMO', 'futbol': 'FÚTBOL',
+        'natacion': 'NATACIÓN', 'yoga': 'YOGA', 'estiramientos': 'STRETCHING',
+        'cardio_sustituto': 'CARDIO', 'hiit': 'HIIT', 'otro': 'OTRO',
     }
     HUMOR_EMOJI = {'verde': '😊', 'amarillo': '😐', 'rojo': '😞'}
     DIAS_ES = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
@@ -7483,7 +7490,7 @@ def timeline_atleta(request, cliente_id):
     # Desglose calculado en Python desde datos ya cargados — sin query extra
     conteo_tipos = Counter(a.tipo for a in actividades)
     desglose = [
-        {'tipo': tipo, 'icono': ICONOS.get(tipo, '🎯'), 'total': total}
+        {'tipo': tipo, 'label': LABELS.get(tipo, tipo.upper()), 'icono': ICONOS.get(tipo, '🎯'), 'n': total}
         for tipo, total in conteo_tipos.most_common()
     ]
 

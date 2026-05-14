@@ -818,11 +818,22 @@ def habitacion_joi(request):
         if semaforo:
             cache.set(cache_key, semaforo, 1800)
 
+    # NarrativaActiva — para mostrar fragmento y habilitar DialogoNarrativa
+    narrativa = None
+    try:
+        from .models import NarrativaActiva
+        narrativa = NarrativaActiva.objects.get(
+            user=request.user, estado__in=('borrador', 'activa')
+        )
+    except Exception:
+        pass
+
     return render(request, 'joi/habitacion.html', {
         'mensaje':    mensaje,
         'estado':     'habla' if mensaje else 'calla',
         'semaforo':   semaforo,
         'regenerado': regenerado,
+        'narrativa':  narrativa,
     })
 
 
@@ -850,3 +861,27 @@ def feedback_joi(request, mensaje_id):
         )
         return JsonResponse({'ok': True, 'respuesta': respuesta})
     return JsonResponse({'ok': False}, status=400)
+
+
+@login_required
+@require_POST
+def crear_dialogo_narrativa(request):
+    """
+    El usuario deja algo en la habitación sobre la narrativa de JOI.
+    No hay confirmación inmediata. El procesamiento ocurre ≥4h después
+    en ciclo_sintesis_joi(). La respuesta, si existe, llega como MensajeJOI.
+    """
+    from .models import NarrativaActiva, DialogoNarrativa
+    texto = request.POST.get('texto', '').strip()[:500]
+    if not texto:
+        return JsonResponse({'ok': False}, status=400)
+    try:
+        narrativa = NarrativaActiva.objects.get(user=request.user)
+        DialogoNarrativa.objects.create(
+            user=request.user,
+            narrativa=narrativa,
+            texto_usuario=texto,
+        )
+        return JsonResponse({'ok': True})
+    except NarrativaActiva.DoesNotExist:
+        return JsonResponse({'ok': False, 'motivo': 'sin_narrativa'}, status=404)

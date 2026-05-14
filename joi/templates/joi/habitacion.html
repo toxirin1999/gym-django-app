@@ -206,6 +206,78 @@
       text-align: center;
     }
 
+    /* ── Zona de diálogo con la narrativa ── */
+    .postura-zona {
+      width: 100%;
+      max-width: 480px;
+      margin: 3rem auto 0;
+      opacity: 0.72;
+      transition: opacity 0.4s;
+    }
+    .postura-zona:focus-within { opacity: 1; }
+
+    .postura-fragmento {
+      font-size: 0.72rem;
+      line-height: 1.65;
+      color: rgba(170, 200, 240, 0.7);
+      font-style: italic;
+      letter-spacing: 0.02em;
+      margin-bottom: 0.9rem;
+      border-left: 1px solid rgba(100, 148, 220, 0.2);
+      padding-left: 0.9rem;
+    }
+
+    .postura-input-wrap {
+      display: flex;
+      gap: 0.4rem;
+      align-items: flex-end;
+    }
+
+    .postura-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      border-bottom: 1px solid rgba(100, 148, 220, 0.25);
+      color: rgba(220, 235, 255, 0.9);
+      font-size: 0.78rem;
+      font-family: inherit;
+      padding: 0.35rem 0.1rem;
+      outline: none;
+      resize: none;
+      min-height: 1.4rem;
+      max-height: 5rem;
+      letter-spacing: 0.03em;
+      transition: border-color 0.3s;
+      overflow-y: hidden;
+    }
+    .postura-input::placeholder { color: rgba(130, 165, 215, 0.4); }
+    .postura-input:focus { border-bottom-color: rgba(100, 148, 220, 0.4); }
+
+    .postura-btn {
+      background: transparent;
+      border: none;
+      color: rgba(130, 170, 215, 0.5);
+      font-size: 0.75rem;
+      cursor: pointer;
+      font-family: inherit;
+      letter-spacing: 0.1em;
+      padding: 0.2rem 0;
+      transition: color 0.25s, opacity 0.25s;
+      opacity: 0.25; /* visible pero discreto — invita sin forzar */
+    }
+    .postura-input-wrap:focus-within .postura-btn { opacity: 1; }
+    .postura-btn:hover { color: rgba(100, 148, 220, 0.8); }
+
+    .postura-recibido {
+      display: none;
+      font-size: 0.6rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: rgba(140, 175, 225, 0.5);
+      margin-top: 0.6rem;
+      animation: aparecer 0.6s ease forwards;
+    }
+
     /* ── Input de mood ── */
     .mood-zona {
       position: fixed;
@@ -380,6 +452,23 @@
 
 </div>
 
+{% if narrativa and narrativa.capa_corta %}
+<!-- Zona de diálogo con la narrativa — correspondencia, no chat -->
+<div class="postura-zona" id="postura-zona">
+  <p class="postura-fragmento">{{ narrativa.capa_corta }}</p>
+  <div class="postura-input-wrap">
+    <textarea class="postura-input"
+              id="postura-input"
+              placeholder="algo no encaja, o sigue siendo cierto…"
+              maxlength="500"
+              rows="1"
+              autocomplete="off"></textarea>
+    <button class="postura-btn" onclick="enviarDialogo()">→</button>
+  </div>
+  <p class="postura-recibido" id="postura-recibido">quedará aquí.</p>
+</div>
+{% endif %}
+
 <!-- Input de mood — siempre disponible en La Habitación -->
 <div class="mood-zona" id="mood-zona">
   <input class="mood-input" id="mood-input" type="text"
@@ -433,6 +522,47 @@ async function enviarMood() {
 document.getElementById('mood-input')?.addEventListener('keydown', e => {
   if (e.key === 'Enter') enviarMood();
 });
+
+// Auto-resize textarea del diálogo
+const posturaInput = document.getElementById('postura-input');
+if (posturaInput) {
+  posturaInput.addEventListener('input', function() {
+    this.style.height = 'auto';
+    this.style.height = Math.min(this.scrollHeight, 80) + 'px';
+  });
+  posturaInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      enviarDialogo();
+    }
+  });
+}
+
+async function enviarDialogo() {
+  const input = document.getElementById('postura-input');
+  if (!input) return;
+  const texto = input.value.trim();
+  if (!texto) return;
+
+  input.disabled = true;
+  try {
+    await fetch('/joi/narrativa/dialogo/', {
+      method:  'POST',
+      headers: { 'X-CSRFToken': CSRF, 'Content-Type': 'application/x-www-form-urlencoded' },
+      body:    `texto=${encodeURIComponent(texto)}`,
+    });
+  } catch (_) {}
+
+  // Sin confirmación agresiva — solo el input desaparece silenciosamente
+  const zona = document.getElementById('postura-zona');
+  if (zona) {
+    zona.style.transition = 'opacity 1.2s ease';
+    zona.style.opacity = '0';
+    setTimeout(() => {
+      zona.style.display = 'none';
+    }, 1200);
+  }
+}
 
 async function enviarFeedback(tipo, mensajeId) {
   const zona   = document.getElementById('feedback-zona');
