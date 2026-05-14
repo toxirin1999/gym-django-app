@@ -170,6 +170,63 @@ def generar_resumen_semanal_joi(self):
             except Exception:
                 pass
 
+            # ── Datos del diario Presencia (semana anterior) ─────────────
+            diario_semana = {}
+            try:
+                from diario.models import ProsocheDiario, ProsocheMes, SeguimientoVires, ReflexionLibre
+                lunes_sem = hoy - datetime.timedelta(days=7)
+                domingo_sem = hoy - datetime.timedelta(days=1)
+
+                # Entradas del cierre esta semana
+                meses = ProsocheMes.objects.filter(usuario=cliente.user)
+                entradas = ProsocheDiario.objects.filter(
+                    prosoche_mes__in=meses,
+                    fecha__range=(lunes_sem, domingo_sem),
+                ).exclude(reflexiones_dia='').order_by('fecha')
+
+                if entradas.exists():
+                    # Fricción del No media
+                    vires = SeguimientoVires.objects.filter(
+                        usuario=cliente.user,
+                        fecha__range=(lunes_sem, domingo_sem),
+                        nivel_estres__isnull=False,
+                    )
+                    friccion_media = None
+                    if vires.exists():
+                        total = sum(v.nivel_estres for v in vires if v.nivel_estres)
+                        friccion_media = round(total / vires.count(), 1)
+
+                    # Actos de Soberanía completados
+                    actos = []
+                    for e in entradas:
+                        for t in (e.tareas_dia or []):
+                            if isinstance(t, dict) and t.get('es_soberania') and t.get('texto'):
+                                actos.append(t['texto'])
+
+                    # Micro-verdades de la semana (ManualDavid origen patron_detectado esta semana)
+                    from joi.models import ManualDavid
+                    micro_verdades = list(
+                        ManualDavid.objects.filter(
+                            user=cliente.user,
+                            origen='patron_detectado',
+                            creado_en__date__range=(lunes_sem, domingo_sem),
+                        ).values_list('entrada', flat=True)[:3]
+                    )
+
+                    # Estado de ánimo medio
+                    estados = [e.estado_animo for e in entradas if e.estado_animo]
+                    estado_animo_medio = round(sum(estados) / len(estados), 1) if estados else None
+
+                    diario_semana = {
+                        'dias_con_cierre':    entradas.count(),
+                        'friccion_media':     friccion_media,
+                        'actos_soberania':    actos[:3],
+                        'micro_verdades':     micro_verdades,
+                        'estado_animo_medio': estado_animo_medio,
+                    }
+            except Exception:
+                pass
+
             generar_mensaje_joi(cliente, 'resumen_semanal', {
                 'sesiones':      num_sesiones,
                 'volumen_kg':    volumen_kg,
@@ -180,6 +237,7 @@ def generar_resumen_semanal_joi(self):
                 'molestias':     molestias,
                 'energia_media': energia_media,
                 'hyrox_sesiones': hyrox_sesiones,
+                'diario_semana': diario_semana,
             })
             generados += 1
         except Exception:

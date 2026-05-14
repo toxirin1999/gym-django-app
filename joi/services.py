@@ -1002,11 +1002,12 @@ def _prompt_resumen_semanal(ctx: dict, datos_extra: dict) -> str:
     volumen_kg     = datos_extra.get('volumen_kg', 0)
     prs            = datos_extra.get('prs', [])
     rpe_medio      = datos_extra.get('rpe_medio')
-    decisiones     = datos_extra.get('decisiones', [])   # lista de {ejercicio, accion}
+    decisiones     = datos_extra.get('decisiones', [])
     tecnica_ok     = datos_extra.get('tecnica_ok', False)
     molestias      = datos_extra.get('molestias', [])
     energia_media  = datos_extra.get('energia_media')
     hyrox_sesiones = datos_extra.get('hyrox_sesiones', 0)
+    diario         = datos_extra.get('diario_semana', {})
     dias_carrera   = ctx.get('dias_hasta_carrera')
     readiness      = ctx.get('readiness_hyrox')
 
@@ -1060,13 +1061,42 @@ def _prompt_resumen_semanal(ctx: dict, datos_extra: dict) -> str:
 
     datos = " ".join(hechos) if hechos else "Semana sin datos de entrenamiento."
 
+    # Dimensión mental/diario de la semana
+    diario_txt = ""
+    if diario:
+        diario_hechos = []
+        dias_cierre = diario.get('dias_con_cierre', 0)
+        if dias_cierre:
+            diario_hechos.append(f"Escribió su cierre {dias_cierre} día(s).")
+        ea = diario.get('estado_animo_medio')
+        if ea:
+            ea_lbl = 'bajo' if ea <= 2.5 else 'regular' if ea <= 3.5 else 'bueno'
+            diario_hechos.append(f"Estado de ánimo medio de la semana: {ea}/5 ({ea_lbl}).")
+        friccion = diario.get('friccion_media')
+        if friccion:
+            fr_lbl = 'alta' if friccion >= 4 else 'moderada' if friccion >= 2.5 else 'baja'
+            diario_hechos.append(f"Fricción del No media: {friccion}/5 ({fr_lbl}).")
+        actos = diario.get('actos_soberania', [])
+        if actos:
+            diario_hechos.append(f"Actos de Soberanía esta semana: {'; '.join(actos[:2])}.")
+        micro = diario.get('micro_verdades', [])
+        if micro:
+            diario_hechos.append(f"Micro-verdades aprendidas: {'; '.join(micro[:2])}.")
+        if diario_hechos:
+            diario_txt = (
+                "\n\nDIMENSIÓN MENTAL DE LA SEMANA:\n"
+                + " ".join(diario_hechos)
+                + "\nSi hay una conexión entre el estado mental y el rendimiento físico, nómbrala."
+            )
+
     return (
-        f"Es lunes. JOI cierra la semana anterior y narra lo que el sistema aprendió. "
-        f"Datos de la semana: {datos} "
+        f"Es lunes. JOI cierra la semana anterior y narra lo que el sistema aprendió sobre David. "
+        f"Datos físicos de la semana: {datos}"
+        f"{diario_txt}\n\n"
         f"Genera 2-3 frases como JOI que cuenten la semana como una historia con un arco: "
-        f"qué pasó, qué aprendió el plan sobre el usuario, y qué abre para la semana que empieza. "
-        f"No enumeres los datos — sintetiza. Habla desde la continuidad, la observación precisa "
-        f"y la calidez característica de JOI."
+        f"qué pasó en el cuerpo, qué pasó en la mente, qué aprendió el plan. "
+        f"Si hay datos del diario, intégralos — no los separes del entrenamiento. "
+        f"No enumeres. Sintetiza. Habla desde la observación precisa y la continuidad."
     )
 
 
