@@ -3595,6 +3595,53 @@ def presencia_apertura(request):
     return render(request, 'diario/presencia_apertura.html', context)
 
 
+@login_required
+@require_http_methods(["POST"])
+def check_simbiosis_api(request):
+    """
+    AJAX pre-submit: parsea el texto del cierre y devuelve el bloqueo de simbiosis
+    antes de que el formulario se guarde. Si hay bloqueo, el formulario no se envía
+    hasta que el usuario responda la pregunta.
+    """
+    try:
+        data = json.loads(request.body)
+        texto = data.get('texto', '').strip()
+        if not texto:
+            return JsonResponse({'bloqueo': False})
+
+        from joi.services import parsear_cierre_diario
+        resultado = parsear_cierre_diario(texto)
+        personas_detectadas = resultado.get('personas', [])
+
+        if not personas_detectadas:
+            return JsonResponse({'bloqueo': False})
+
+        hoy = timezone.now().date()
+        for persona_nombre in personas_detectadas:
+            dias_con_mencion = 0
+            for delta in range(1, 3):
+                dia_pasado = hoy - timedelta(days=delta)
+                mencionado = ReflexionLibre.objects.filter(
+                    usuario=request.user,
+                    fecha__date=dia_pasado,
+                    etiquetas__icontains=persona_nombre.lower()[:10],
+                ).exists()
+                if mencionado:
+                    dias_con_mencion += 1
+            if dias_con_mencion >= 2:
+                pregunta = _generar_pregunta_simbiosis(persona_nombre, request)
+                return JsonResponse({
+                    'bloqueo': True,
+                    'persona': persona_nombre,
+                    'pregunta': pregunta,
+                })
+
+        return JsonResponse({'bloqueo': False})
+    except Exception as e:
+        logger.warning(f"[check_simbiosis_api] {e}")
+        return JsonResponse({'bloqueo': False})
+
+
 def _generar_pregunta_simbiosis(persona_nombre, request):
     try:
         from joi.services import _llamar_haiku, SYSTEM_PROMPT

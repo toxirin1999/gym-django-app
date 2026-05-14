@@ -344,15 +344,19 @@ body { background: var(--bg) !important; font-family: 'Urbanist', sans-serif !im
             <p class="friccion-hint">¿Cuánto te costó hoy decir no o poner límites?</p>
         </div>
 
-        <!-- Simbiosis detectada (se muestra si JOI la detecta tras el primer envío) -->
-        {% if simbiosis_bloqueo %}
-        <div style="background:#1E1B27; border:1.5px solid #7C3AED; border-radius:16px; padding:1.5rem; margin-bottom:1rem;">
-            <div style="font-size:0.7rem; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:#7C3AED; margin-bottom:0.75rem;">JOI — Simbiosis detectada</div>
-            <div style="font-size:1rem; font-style:italic; color:#EDE9E3; line-height:1.6; margin-bottom:1rem;">{{ simbiosis_pregunta }}</div>
-            <div style="font-size:0.75rem; color:#7C7590; margin-bottom:0.5rem;">Tu respuesta (obligatoria para cerrar el día):</div>
-            <textarea name="simbiosis_respuesta" style="width:100%; background:#13111A; border:1px solid #2E2A3A; border-radius:10px; padding:0.75rem; color:#EDE9E3; font-family:'Urbanist',sans-serif; font-size:0.9rem; min-height:80px; outline:none; resize:none;" placeholder="Escribe tu respuesta..." required></textarea>
+        <!-- Bloqueo de simbiosis — aparece inline ANTES de guardar -->
+        <input type="hidden" name="simbiosis_checked" id="simbiosis_checked" value="0">
+        <input type="hidden" name="simbiosis_respuesta" id="simbiosis_respuesta_input" value="">
+
+        <div id="simbiosis-block" style="display:none; background:#1E1B27; border:1.5px solid #7C3AED; border-radius:16px; padding:1.5rem; margin-bottom:1rem;">
+            <div style="font-size:0.68rem; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:#7C3AED; margin-bottom:0.75rem;">JOI — Antes de cerrar el día</div>
+            <div id="simbiosis-pregunta" style="font-size:1rem; font-style:italic; color:#EDE9E3; line-height:1.6; margin-bottom:1rem;"></div>
+            <div style="font-size:0.75rem; color:#7C7590; margin-bottom:0.5rem;">Responde antes de cerrar el día:</div>
+            <textarea id="simbiosis-textarea" style="width:100%; background:#13111A; border:1px solid #2E2A3A; border-radius:10px; padding:0.75rem; color:#EDE9E3; font-family:'Urbanist',sans-serif; font-size:0.9rem; min-height:80px; outline:none; resize:none;" placeholder="Escribe tu respuesta..."></textarea>
+            <button type="button" onclick="confirmarSimbiosis()" style="margin-top:0.75rem; width:100%; background:#7C3AED; border:none; border-radius:10px; padding:0.75rem; color:white; font-family:'Urbanist',sans-serif; font-size:0.9rem; font-weight:600; cursor:pointer;">
+                Respondido — cerrar el día
+            </button>
         </div>
-        {% endif %}
 
         <button type="submit" class="submit-btn" id="submit-btn">Cerrar el día</button>
     </form>
@@ -361,7 +365,6 @@ body { background: var(--bg) !important; font-family: 'Urbanist', sans-serif !im
 <script>
 const completados = new Set();
 
-// Inicializar con los ya completados
 {% for item in habitos_con_estado %}
 {% if item.completado %}completados.add({{ item.habito.id }});{% endif %}
 {% endfor %}
@@ -388,16 +391,68 @@ document.querySelectorAll('.habito-chip').forEach(chip => {
 
 syncHabitos();
 
-// Fricción slider
 const friccionSlider = document.getElementById('friccion_slider');
 const friccionVal = document.getElementById('friccion_val');
 friccionSlider.addEventListener('input', () => friccionVal.textContent = friccionSlider.value);
 
-// Submit feedback
-document.getElementById('cierre-form').addEventListener('submit', () => {
+function confirmarSimbiosis() {
+    const respuesta = document.getElementById('simbiosis-textarea').value.trim();
+    if (!respuesta) {
+        document.getElementById('simbiosis-textarea').style.borderColor = '#EF4444';
+        return;
+    }
+    document.getElementById('simbiosis_respuesta_input').value = respuesta;
+    document.getElementById('simbiosis_checked').value = '1';
+    document.getElementById('simbiosis-block').style.display = 'none';
+    // Submit real
     const btn = document.getElementById('submit-btn');
     btn.disabled = true;
     btn.textContent = 'Guardando...';
+    document.getElementById('cierre-form').submit();
+}
+
+document.getElementById('cierre-form').addEventListener('submit', function(e) {
+    if (document.getElementById('simbiosis_checked').value === '1') {
+        return; // ya comprobado, dejar pasar
+    }
+
+    const texto = document.querySelector('[name="reflexion_libre"]').value.trim();
+    if (!texto) return; // sin texto no hay que comprobar
+
+    e.preventDefault();
+    const btn = document.getElementById('submit-btn');
+    btn.disabled = true;
+    btn.textContent = 'JOI está leyendo...';
+
+    fetch("{% url 'diario:check_simbiosis_api' %}", {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({texto: texto}),
+    })
+    .then(r => r.json())
+    .then(d => {
+        if (!d.bloqueo) {
+            document.getElementById('simbiosis_checked').value = '1';
+            btn.textContent = 'Guardando...';
+            document.getElementById('cierre-form').submit();
+        } else {
+            // Mostrar bloqueo inline
+            document.getElementById('simbiosis-pregunta').textContent = d.pregunta;
+            document.getElementById('simbiosis-block').style.display = 'block';
+            document.getElementById('simbiosis-block').scrollIntoView({behavior: 'smooth', block: 'center'});
+            btn.disabled = false;
+            btn.textContent = 'Cerrar el día';
+        }
+    })
+    .catch(() => {
+        // Si falla la comprobación, dejar pasar
+        document.getElementById('simbiosis_checked').value = '1';
+        btn.textContent = 'Guardando...';
+        document.getElementById('cierre-form').submit();
+    });
 });
 </script>
 {% endblock %}
