@@ -518,7 +518,7 @@ def sincronizar_hyrox_al_hub(sender, instance, created, raw=False, update_fields
         rpe_efectivo = instance.rpe_global
         if not rpe_efectivo and instance.hr_media and instance.tiempo_total_minutos:
             from .training_engine import HyroxLoadManager
-            objetivo = instance.objective if hasattr(instance, 'objective') else None
+            objetivo = instance.objective
             rpe_efectivo = HyroxLoadManager.estimar_rpe_desde_fc(instance.hr_media, objetivo)
 
         carga_ua = None
