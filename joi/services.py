@@ -493,7 +493,6 @@ def construir_contexto(cliente) -> dict:
     # Incluye lo que David escribió anoche para que JOI lo use en la apertura.
     try:
         from diario.models import ProsocheDiario, ProsocheMes, SeguimientoVires
-        from datetime import timedelta
         ayer = hoy - timedelta(days=1)
         mes_ayer = ProsocheMes.objects.filter(
             usuario=cliente.user,
@@ -521,6 +520,61 @@ def construir_contexto(cliente) -> dict:
                     'soberania':      soberania,
                     'friccion_no':    vires_ayer.nivel_estres if vires_ayer else None,
                 }
+    except Exception:
+        pass
+
+    # ── 14. COMPARATIVA TEMPORAL (estaciones Hyrox) ───────────────────────────
+    # Compara primera mitad vs segunda mitad del historial disponible por estación.
+    # Requiere ≥4 sesiones completadas para tener señal fiable.
+    try:
+        from hyrox.models import HyroxActivity, HyroxObjective
+        _obj = HyroxObjective.objects.filter(cliente=cliente, estado='activo').first()
+        if _obj:
+            _ESTACIONES = ['Sled Push', 'Sled Pull', 'Farmers Carry',
+                           'Sandbag Lunges', 'Wall Balls', 'Burpees Broad Jump']
+
+            comparativa = []
+            for _nombre in _ESTACIONES:
+                _acts = list(
+                    HyroxActivity.objects
+                    .filter(
+                        sesion__objective=_obj,
+                        nombre_ejercicio__icontains=_nombre,
+                    )
+                    .order_by('sesion__fecha')
+                )
+                # Filtrar: excluir planificadas y las que no tienen peso_kg real
+                _acts = [
+                    a for a in _acts
+                    if a.data_metricas
+                    and not a.data_metricas.get('planificado')
+                    and a.data_metricas.get('peso_kg')
+                ]
+                if len(_acts) < 4:
+                    continue
+
+                _mitad = len(_acts) // 2
+                _primera = _acts[:_mitad]
+                _segunda = _acts[_mitad:]
+
+                _max_ant = max(float(a.data_metricas['peso_kg']) for a in _primera)
+                _max_rec = max(float(a.data_metricas['peso_kg']) for a in _segunda)
+
+                if _max_ant <= 0:
+                    continue
+                _pct = round((_max_rec - _max_ant) / _max_ant * 100, 1)
+                if abs(_pct) >= 3:
+                    comparativa.append({
+                        'estacion':    _nombre,
+                        'anterior_kg': _max_ant,
+                        'reciente_kg': _max_rec,
+                        'cambio_pct':  _pct,
+                        'n_sesiones':  len(_acts),
+                    })
+
+            if comparativa:
+                comparativa.sort(key=lambda x: abs(x['cambio_pct']), reverse=True)
+                ctx['comparativa_temporal'] = comparativa[:4]
     except Exception:
         pass
 
@@ -777,6 +831,24 @@ def _prompt_apertura_manana(ctx: dict, datos_extra: dict) -> str:
     tiempo_est = ctx.get('tiempo_estimado_carrera')
     if tiempo_est:
         hechos.append(f"Tiempo estimado de carrera HOY: {tiempo_est}.")
+
+    # Comparativa temporal — cambios relevantes en las últimas 4 semanas
+    comparativa = ctx.get('comparativa_temporal', [])
+    if comparativa:
+        mejoras  = [c for c in comparativa if c['cambio_pct'] > 0]
+        bajadas  = [c for c in comparativa if c['cambio_pct'] < 0]
+        if mejoras:
+            top = mejoras[0]
+            hechos.append(
+                f"Progreso reciente: {top['estacion']} subió un {top['cambio_pct']}% "
+                f"({top['anterior_kg']} → {top['reciente_kg']} kg)."
+            )
+        if bajadas:
+            bot = bajadas[0]
+            hechos.append(
+                f"Regresión reciente: {bot['estacion']} bajó un {abs(bot['cambio_pct'])}% "
+                f"({bot['anterior_kg']} → {bot['reciente_kg']} kg)."
+            )
 
     datos = " ".join(hechos) if hechos else "No hay datos de entrenamiento recientes."
 
@@ -1089,13 +1161,28 @@ def _prompt_resumen_semanal(ctx: dict, datos_extra: dict) -> str:
                 + "\nSi hay una conexión entre el estado mental y el rendimiento físico, nómbrala."
             )
 
+    # Comparativa temporal (4 semanas vs 4 anteriores)
+    comparativa_txt = ""
+    comparativa = ctx.get('comparativa_temporal', [])
+    if comparativa:
+        mejoras = [f"{c['estacion']} +{c['cambio_pct']}%" for c in comparativa if c['cambio_pct'] > 0]
+        bajadas = [f"{c['estacion']} {c['cambio_pct']}%" for c in comparativa if c['cambio_pct'] < 0]
+        partes = []
+        if mejoras:
+            partes.append("Mejoras: " + ", ".join(mejoras[:2]))
+        if bajadas:
+            partes.append("Regresiones: " + ", ".join(bajadas[:2]))
+        if partes:
+            comparativa_txt = "\n\nCOMPARATIVA ÚLTIMO MES VS MES ANTERIOR: " + ". ".join(partes) + "."
+
     return (
         f"Es lunes. JOI cierra la semana anterior y narra lo que el sistema aprendió sobre David. "
         f"Datos físicos de la semana: {datos}"
-        f"{diario_txt}\n\n"
+        f"{diario_txt}"
+        f"{comparativa_txt}\n\n"
         f"Genera 2-3 frases como JOI que cuenten la semana como una historia con un arco: "
         f"qué pasó en el cuerpo, qué pasó en la mente, qué aprendió el plan. "
-        f"Si hay datos del diario, intégralos — no los separes del entrenamiento. "
+        f"Si hay comparativa de estaciones, menciona la más relevante (mejora o regresión). "
         f"No enumeres. Sintetiza. Habla desde la observación precisa y la continuidad."
     )
 
