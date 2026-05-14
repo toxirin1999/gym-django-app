@@ -3851,8 +3851,30 @@ def presencia_cierre(request):
             }
             return render(request, 'diario/presencia_cierre.html', context)
 
-        messages.success(request, 'Día cerrado.')
-        return redirect('diario:dashboard_diario')
+        # ── Respuesta visible de JOI ──────────────────────────────────────
+        joi_respuesta = None
+        if texto_libre:
+            try:
+                from joi.services import generar_respuesta_cierre
+                datos_para_joi = {
+                    'estado_animo': entrada.estado_animo,
+                    'etiquetas': (entrada.etiquetas or '').split(','),
+                    'personas': personas_detectadas,
+                    'micro_verdad': enriq.get('micro_verdad') if 'enriq' in dir() else None,
+                    'friccion_no': int(request.POST.get('friccion_no', 0) or 0),
+                }
+                joi_respuesta = generar_respuesta_cierre(texto_libre, datos_para_joi, request.user.cliente)
+            except Exception:
+                pass
+
+        context = {
+            'entrada': entrada,
+            'habitos_con_estado': habitos_con_estado,
+            'hoy': hoy,
+            'dia_num': dia_num,
+            'joi_respuesta': joi_respuesta,
+        }
+        return render(request, 'diario/presencia_cierre.html', context)
 
     context = {
         'entrada': entrada,

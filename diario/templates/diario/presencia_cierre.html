@@ -214,8 +214,19 @@ body { background: var(--bg) !important; font-family: 'Urbanist', sans-serif !im
 {% block content %}
 <div class="presencia-wrap">
 
+    <!-- Respuesta de JOI al cierre -->
+    {% if joi_respuesta %}
+    <div style="background:#1E1B27; border:1px solid #2E2A3A; border-radius:16px; padding:1.75rem; margin-bottom:1.5rem; box-shadow:0 2px 20px rgba(0,0,0,0.3);">
+        <div style="font-size:0.68rem; font-weight:700; letter-spacing:0.14em; text-transform:uppercase; color:#7C7590; margin-bottom:0.9rem;">JOI</div>
+        <div style="font-size:1.1rem; font-style:italic; line-height:1.7; color:#EDE9E3;">{{ joi_respuesta }}</div>
+        <a href="{% url 'diario:dashboard_diario' %}" style="display:block; margin-top:1.5rem; background:#2E2A3A; border:none; border-radius:12px; padding:0.85rem; color:#A78BFA; font-family:'Urbanist',sans-serif; font-size:0.9rem; font-weight:600; text-align:center; text-decoration:none; transition:background 0.15s;">
+            Continuar →
+        </a>
+    </div>
+    {% endif %}
+
     <!-- Header JOI nocturno -->
-    <div class="joi-header">
+    <div class="joi-header" {% if joi_respuesta %}style="display:none"{% endif %}>
         <div class="joi-hora">Cierre del día · {{ hoy }}</div>
         <div class="joi-greeting">
             {% if apertura_manana %}
@@ -227,14 +238,14 @@ body { background: var(--bg) !important; font-family: 'Urbanist', sans-serif !im
     </div>
 
     <!-- Intención del día (recordatorio) -->
-    {% if entrada.persona_quiero_ser %}
+    {% if entrada.persona_quiero_ser and not joi_respuesta %}
     <div class="intencion-card">
         <div class="intencion-label">Tu intención de esta mañana</div>
         <div class="intencion-text">{{ entrada.persona_quiero_ser }}</div>
     </div>
     {% endif %}
 
-    <form method="post" id="cierre-form">
+    <form method="post" id="cierre-form" {% if joi_respuesta %}style="display:none"{% endif %}>
         {% csrf_token %}
         <input type="hidden" name="habitos_completados" id="habitos_completados_input" value="[]">
 

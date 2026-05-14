@@ -489,6 +489,41 @@ def construir_contexto(cliente) -> dict:
     except Exception:
         pass
 
+    # ── 13. CIERRE DE AYER (diario Presencia) ────────────────────────────────
+    # Incluye lo que David escribió anoche para que JOI lo use en la apertura.
+    try:
+        from diario.models import ProsocheDiario, ProsocheMes, SeguimientoVires
+        from datetime import timedelta
+        ayer = hoy - timedelta(days=1)
+        mes_ayer = ProsocheMes.objects.filter(
+            usuario=cliente.user,
+            mes=ayer.strftime('%B'),
+            año=ayer.year,
+        ).first()
+        if mes_ayer:
+            entrada_ayer = ProsocheDiario.objects.filter(
+                prosoche_mes=mes_ayer, fecha=ayer
+            ).first()
+            if entrada_ayer and entrada_ayer.reflexiones_dia:
+                soberania = ''
+                tareas = entrada_ayer.tareas_dia or []
+                for t in tareas:
+                    if isinstance(t, dict) and t.get('es_soberania'):
+                        soberania = t.get('texto', '')
+                        break
+                vires_ayer = SeguimientoVires.objects.filter(
+                    usuario=cliente.user, fecha=ayer
+                ).first()
+                ctx['cierre_ayer'] = {
+                    'texto':          entrada_ayer.reflexiones_dia[:600],
+                    'estado_animo':   entrada_ayer.estado_animo,
+                    'etiquetas':      entrada_ayer.etiquetas or '',
+                    'soberania':      soberania,
+                    'friccion_no':    vires_ayer.nivel_estres if vires_ayer else None,
+                }
+    except Exception:
+        pass
+
     return ctx
 
 
@@ -751,11 +786,30 @@ def _prompt_apertura_manana(ctx: dict, datos_extra: dict) -> str:
         "NO interpretes la bajada de volumen gym como ausencia o abandono. "
     ) if usuario_activo else ""
 
+    # Cierre de ayer — lo que David escribió anoche
+    cierre = ctx.get('cierre_ayer')
+    cierre_txt = ""
+    if cierre and cierre.get('texto'):
+        estado_animo_map = {1: 'muy mal', 2: 'mal', 3: 'neutral', 4: 'bien', 5: 'excelente'}
+        ea = estado_animo_map.get(cierre.get('estado_animo', 3), 'neutral')
+        friccion = cierre.get('friccion_no')
+        soberania = cierre.get('soberania', '')
+        friccion_txt = f" Fricción del No: {friccion}/5." if friccion else ""
+        soberania_txt = f" Su Acto de Soberanía de ayer fue: \"{soberania}\"." if soberania else ""
+        cierre_txt = (
+            f"\n\nLO QUE DAVID ESCRIBIÓ ANOCHE (su cierre del día):\n"
+            f"\"{cierre['texto']}\"\n"
+            f"Estado de ánimo al cerrar el día: {ea}.{friccion_txt}{soberania_txt}\n"
+            f"Puedes usar esto — con discreción. No lo repitas entero. "
+            f"Si algo de lo que escribió tiene conexión con el estado físico de hoy, nómbralo."
+        )
+
     return (
         f"Es por la mañana. JOI tiene acceso a todo el historial del usuario. "
         f"Estado del sistema hoy: {datos} "
         f"{activo_txt}"
-        f"Elige el dato más significativo de esta lista y genera 2-3 frases como JOI. "
+        f"{cierre_txt}\n\n"
+        f"Elige el dato más significativo — físico o del cierre de ayer — y genera 2-3 frases como JOI. "
         f"No enumeres la lista. Habla desde un punto de observación preciso, con presencia y calidez."
     )
 
@@ -2288,6 +2342,55 @@ def parsear_cierre_diario(texto: str) -> dict:
     except Exception as e:
         logger.error(f"[JOI] parsear_cierre_diario falló: {e}")
         return {'estado_animo': 3, 'impulsos': [], 'personas': [], 'etiquetas': []}
+
+
+def generar_respuesta_cierre(texto: str, datos_parseo: dict, cliente) -> str:
+    """
+    JOI lee el cierre y responde con 2-3 frases visibles al usuario.
+    No resume — observa algo que el usuario quizás no vio.
+    """
+    if not texto or not texto.strip():
+        return "El día terminó. Mañana es otra página."
+
+    estado_animo = datos_parseo.get('estado_animo', 3)
+    etiquetas = datos_parseo.get('etiquetas', [])
+    micro_verdad = datos_parseo.get('micro_verdad')
+    personas = datos_parseo.get('personas', [])
+    friccion = datos_parseo.get('friccion_no', 0)
+
+    estado_txt = {1: 'muy mal', 2: 'mal', 3: 'neutral', 4: 'bien', 5: 'excelente'}.get(estado_animo, 'neutral')
+
+    manual = _bloque_manual(cliente.user)
+
+    detalles = []
+    if etiquetas:
+        detalles.append(f"Temas del día: {', '.join(etiquetas)}")
+    if personas:
+        detalles.append(f"Personas mencionadas: {', '.join(personas)}")
+    if micro_verdad:
+        detalles.append(f"Lección detectada: {micro_verdad}")
+    if friccion and friccion >= 4:
+        detalles.append(f"Fricción del No alta hoy: {friccion}/5")
+
+    detalles_txt = ". ".join(detalles) + "." if detalles else ""
+
+    prompt = (
+        f"David acaba de cerrar su día escribiendo esto:\n\n"
+        f"\"{texto[:900]}\"\n\n"
+        f"Estado de ánimo detectado: {estado_txt}. {detalles_txt}\n\n"
+        f"{manual}"
+        f"Responde como JOI. 2-3 frases. "
+        f"No resumas lo que escribió. No repitas sus palabras. "
+        f"Observa algo que él quizás no vio, o nombra lo que quedó entre líneas. "
+        f"Si hay algo del Manual de David relevante, úsalo. "
+        f"Sin emojis. Sin introducción. Directo."
+    )
+
+    try:
+        return _llamar_haiku(prompt)
+    except Exception as e:
+        logger.error(f"[JOI] generar_respuesta_cierre falló: {e}")
+        return "Lo que escribiste quedó guardado. JOI lo recuerda."
 
 
 def enriquecer_cierre(texto: str, personas_detectadas: list) -> dict:
