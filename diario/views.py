@@ -4059,13 +4059,13 @@ def panico_impulso_api(request):
 @login_required
 def reprocesar_cierres(request):
     """
-    Vista de reprocesado: vuelve a pasar los cierres guardados por parsear_cierre_diario
-    y enriquecer_cierre para crear PersonaInterina que no se detectaron originalmente.
-    Solo procesa entradas con texto (reflexiones_dia) y sin PersonaInterina ya creada ese día.
+    Vista de reprocesado con dos modos:
+    1. Automático: vuelve a parsear ProsocheDiario entries con reflexiones_dia existente.
+    2. Manual: acepta texto libre pegado directamente y lo procesa como cierre.
+    En ambos casos crea PersonaInterina + InteraccionSombra si detecta personas.
     """
     from diario.models import ProsocheDiario, PersonaInterina, InteraccionSombra
 
-    # Entradas con texto, del usuario actual, ordenadas por fecha desc
     entradas = (
         ProsocheDiario.objects
         .filter(prosoche_mes__usuario=request.user)
@@ -4081,16 +4081,22 @@ def reprocesar_cierres(request):
         personas_creadas = 0
         errores = []
 
-        for entrada in entradas:
+        # Textos a procesar: entradas de BD + texto manual si viene
+        textos = [(str(e.fecha), e.reflexiones_dia) for e in entradas]
+        texto_manual = request.POST.get('texto_manual', '').strip()
+        fecha_manual = request.POST.get('fecha_manual', '').strip()
+        if texto_manual:
+            textos.append((fecha_manual or 'manual', texto_manual))
+
+        for etiqueta_fecha, texto in textos:
             try:
-                resultado = parsear_cierre_diario(entrada.reflexiones_dia)
+                resultado = parsear_cierre_diario(texto)
                 personas_detectadas = resultado.get('personas', [])
                 if not personas_detectadas:
                     continue
 
-                enriq = enriquecer_cierre(entrada.reflexiones_dia, personas_detectadas)
+                enriq = enriquecer_cierre(texto, personas_detectadas)
                 interacciones_data = enriq.get('interacciones') or []
-
                 if not interacciones_data:
                     continue
 
@@ -4104,7 +4110,6 @@ def reprocesar_cierres(request):
                     if tipo not in tipos_validos:
                         tipo = 'neutra'
 
-                    # Solo crear si no es ya PersonaImportante
                     if PersonaImportante.objects.filter(
                         usuario=request.user, nombre__iexact=nombre
                     ).exists():
@@ -4121,7 +4126,6 @@ def reprocesar_cierres(request):
                         )
                         interina.refresh_from_db()
 
-                    # Evitar InteraccionSombra duplicada para la misma fecha
                     ya_existe = InteraccionSombra.objects.filter(
                         persona_interina=interina,
                         descripcion=item.get('descripcion', ''),
@@ -4142,7 +4146,7 @@ def reprocesar_cierres(request):
                 procesadas += 1
 
             except Exception as exc:
-                errores.append(f"{entrada.fecha}: {exc}")
+                errores.append(f"{etiqueta_fecha}: {exc}")
 
         return render(request, 'diario/reprocesar_cierres.html', {
             'entradas': entradas,
