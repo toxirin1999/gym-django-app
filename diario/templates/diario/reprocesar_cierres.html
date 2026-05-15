@@ -6,10 +6,10 @@
 
   <div class="card shadow-soft mb-4">
     <div class="card-body p-4">
-      <h2 class="mb-1">Recuperar personas de cierres anteriores</h2>
+      <h2 class="mb-1">Recuperar personas de cierres</h2>
       <p class="text-muted small mb-0">
-        JOI volverá a leer los cierres guardados para detectar personas que no se procesaron en su momento.
-        Las personas nuevas aparecerán en el radar de Simbiosis.
+        JOI detecta personas mencionadas en tus cierres y las añade al radar de Simbiosis.
+        Puedes reprocesar entradas guardadas o pegar texto directamente.
       </p>
     </div>
   </div>
@@ -17,7 +17,7 @@
   {% if resultado %}
     <div class="alert {% if resultado.errores %}alert-warning{% else %}alert-success{% endif %} mb-4">
       <strong>Listo.</strong>
-      {{ resultado.procesadas }} cierre{% if resultado.procesadas != 1 %}s{% endif %} procesado{% if resultado.procesadas != 1 %}s{% endif %},
+      {{ resultado.procesadas }} texto{% if resultado.procesadas != 1 %}s{% endif %} procesado{% if resultado.procesadas != 1 %}s{% endif %},
       {{ resultado.personas_creadas }} entrada{% if resultado.personas_creadas != 1 %}s{% endif %} de Simbiosis creada{% if resultado.personas_creadas != 1 %}s{% endif %}.
       {% if resultado.errores %}
         <ul class="mt-2 mb-0 small">
@@ -27,36 +27,54 @@
     </div>
     <div class="text-center">
       <a href="{% url 'diario:simbiosis_dashboard' %}" class="btn btn-primary">Ver Simbiosis →</a>
+      <a href="{% url 'diario:reprocesar_cierres' %}" class="btn btn-outline-secondary ms-2">Añadir más texto</a>
     </div>
 
   {% else %}
-    <div class="card shadow-sm mb-4">
-      <div class="card-header"><h6 class="mb-0">Cierres con texto ({{ entradas.count }})</h6></div>
-      <ul class="list-group list-group-flush">
-        {% for e in entradas %}
-        <li class="list-group-item d-flex justify-content-between align-items-center">
-          <span>{{ e.fecha|date:"j N Y" }}</span>
-          <span class="text-muted small">{{ e.reflexiones_dia|truncatewords:10 }}</span>
-        </li>
-        {% empty %}
-        <li class="list-group-item text-muted">No hay cierres con texto guardado.</li>
-        {% endfor %}
-      </ul>
-    </div>
 
-    {% if entradas %}
     <form method="post">
       {% csrf_token %}
+
+      {% if entradas %}
+      <div class="card shadow-sm mb-4">
+        <div class="card-header"><h6 class="mb-0">Cierres guardados con texto ({{ entradas.count }})</h6></div>
+        <ul class="list-group list-group-flush">
+          {% for e in entradas %}
+          <li class="list-group-item d-flex justify-content-between align-items-center">
+            <span>{{ e.fecha|date:"j N Y" }}</span>
+            <span class="text-muted small">{{ e.reflexiones_dia|truncatewords:10 }}</span>
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% endif %}
+
+      <!-- Texto manual -->
+      <div class="card shadow-sm mb-4">
+        <div class="card-header"><h6 class="mb-0">Pegar texto de cierre manualmente</h6></div>
+        <div class="card-body">
+          <div class="mb-3">
+            <label class="form-label small text-muted">Fecha aproximada (opcional)</label>
+            <input type="date" name="fecha_manual" class="form-control form-control-sm" style="max-width:200px;">
+          </div>
+          <div class="mb-0">
+            <label class="form-label small text-muted">Texto del cierre</label>
+            <textarea name="texto_manual" class="form-control" rows="8"
+              placeholder="Pega aquí el texto que escribiste en tu diario (día 13, día 14, etc.)..."></textarea>
+          </div>
+        </div>
+      </div>
+
       <div class="d-grid">
         <button type="submit" class="btn btn-primary btn-lg">
-          Reprocesar {{ entradas.count }} cierre{% if entradas.count != 1 %}s{% endif %}
+          Procesar{% if entradas %} ({{ entradas.count }} guardado{% if entradas.count != 1 %}s{% endif %} + texto manual){% endif %}
         </button>
       </div>
       <p class="text-muted small text-center mt-2">
-        Esto puede tardar unos segundos. No cierres la página.
+        Puede tardar unos segundos. No cierres la página.
       </p>
     </form>
-    {% endif %}
+
   {% endif %}
 
 </div>
