@@ -102,5 +102,5 @@ urlpatterns = [
     path('presencia/habito-invitacion/', views.aceptar_habito_invitacion, name='aceptar_habito_invitacion'),
     path('presencia/panico/', views.panico_impulso_api, name='panico_impulso_api'),
     path('presencia/promover-interina/', views.promover_persona_interina, name='promover_persona_interina'),
-
+    path('reprocesar-cierres/', views.reprocesar_cierres, name='reprocesar_cierres'),
 ]

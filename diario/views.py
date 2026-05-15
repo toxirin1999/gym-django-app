@@ -4054,3 +4054,103 @@ def panico_impulso_api(request):
         return JsonResponse({'mensaje': mensaje})
     except Exception:
         return JsonResponse({'mensaje': 'Para. Respira. ¿Esto lo decide tu mejor versión o tu necesidad?'})
+
+
+@login_required
+def reprocesar_cierres(request):
+    """
+    Vista de reprocesado: vuelve a pasar los cierres guardados por parsear_cierre_diario
+    y enriquecer_cierre para crear PersonaInterina que no se detectaron originalmente.
+    Solo procesa entradas con texto (reflexiones_dia) y sin PersonaInterina ya creada ese día.
+    """
+    from diario.models import ProsocheDiario, PersonaInterina, InteraccionSombra
+
+    # Entradas con texto, del usuario actual, ordenadas por fecha desc
+    entradas = (
+        ProsocheDiario.objects
+        .filter(prosoche_mes__usuario=request.user)
+        .exclude(reflexiones_dia__isnull=True)
+        .exclude(reflexiones_dia='')
+        .order_by('-fecha')
+    )
+
+    if request.method == 'POST':
+        from joi.services import parsear_cierre_diario, enriquecer_cierre
+
+        procesadas = 0
+        personas_creadas = 0
+        errores = []
+
+        for entrada in entradas:
+            try:
+                resultado = parsear_cierre_diario(entrada.reflexiones_dia)
+                personas_detectadas = resultado.get('personas', [])
+                if not personas_detectadas:
+                    continue
+
+                enriq = enriquecer_cierre(entrada.reflexiones_dia, personas_detectadas)
+                interacciones_data = enriq.get('interacciones') or []
+
+                if not interacciones_data:
+                    continue
+
+                tipos_validos = {c[0] for c in Interaccion.TIPO_INTERACCION_CHOICES}
+
+                for item in interacciones_data:
+                    nombre = item.get('persona', '').strip()
+                    if not nombre:
+                        continue
+                    tipo = item.get('tipo', 'neutra')
+                    if tipo not in tipos_validos:
+                        tipo = 'neutra'
+
+                    # Solo crear si no es ya PersonaImportante
+                    if PersonaImportante.objects.filter(
+                        usuario=request.user, nombre__iexact=nombre
+                    ).exists():
+                        continue
+
+                    interina, creada = PersonaInterina.objects.get_or_create(
+                        usuario=request.user,
+                        nombre__iexact=nombre,
+                        defaults={'nombre': nombre},
+                    )
+                    if not creada:
+                        PersonaInterina.objects.filter(pk=interina.pk).update(
+                            veces_mencionada=interina.veces_mencionada + 1
+                        )
+                        interina.refresh_from_db()
+
+                    # Evitar InteraccionSombra duplicada para la misma fecha
+                    ya_existe = InteraccionSombra.objects.filter(
+                        persona_interina=interina,
+                        descripcion=item.get('descripcion', ''),
+                    ).exists()
+                    if not ya_existe:
+                        InteraccionSombra.objects.create(
+                            persona_interina=interina,
+                            descripcion=item.get('descripcion', ''),
+                            mi_sentir=item.get('mi_sentir', ''),
+                            aprendizaje=item.get('aprendizaje', ''),
+                            tipo_interaccion=tipo,
+                        )
+                        personas_creadas += 1
+
+                    if interina.veces_mencionada >= 2 and interina.estado == 'sombra':
+                        PersonaInterina.objects.filter(pk=interina.pk).update(estado='radar')
+
+                procesadas += 1
+
+            except Exception as exc:
+                errores.append(f"{entrada.fecha}: {exc}")
+
+        return render(request, 'diario/reprocesar_cierres.html', {
+            'entradas': entradas,
+            'resultado': {
+                'procesadas': procesadas,
+                'personas_creadas': personas_creadas,
+                'errores': errores,
+            },
+        })
+
+    return render(request, 'diario/reprocesar_cierres.html', {'entradas': entradas})
