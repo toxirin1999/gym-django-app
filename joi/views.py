@@ -841,12 +841,38 @@ def habitacion_joi(request):
     except Exception:
         pass
 
+    # ── Estado: habla solo si hay mensaje SIN feedback aún ───────────────────
+    # Después de dar feedback, la habitación entra en vigilia (anillos, silencio)
+    # hasta que JOI tenga algo nuevo que decir.
+    tiene_mensaje_activo = mensaje and not mensaje.feedback
+    estado = 'habla' if tiene_mensaje_activo else 'calla'
+
+    # ── Señal de sedimento: algo cambió desde la última visita ───────────────
+    from django.core.cache import cache as _cache
+    last_visit_key = f'joi_hab_lastvisit_{request.user.id}'
+    last_visit = _cache.get(last_visit_key)
+    _cache.set(last_visit_key, timezone.now(), 60 * 60 * 24 * 30)
+
+    hay_sedimento = False
+    if last_visit:
+        try:
+            from .models import DialogoNarrativa
+            if narrativa and narrativa.actualizado_en and narrativa.actualizado_en > last_visit:
+                hay_sedimento = True
+            if not hay_sedimento:
+                hay_sedimento = DialogoNarrativa.objects.filter(
+                    user=request.user, procesado=True, procesado_en__gt=last_visit
+                ).exists()
+        except Exception:
+            pass
+
     return render(request, 'joi/habitacion.html', {
-        'mensaje':    mensaje,
-        'estado':     'habla' if mensaje else 'calla',
-        'semaforo':   semaforo,
-        'regenerado': regenerado,
-        'narrativa':  narrativa,
+        'mensaje':       mensaje,
+        'estado':        estado,
+        'semaforo':      semaforo,
+        'regenerado':    regenerado,
+        'narrativa':     narrativa,
+        'hay_sedimento': hay_sedimento,
     })
 
 

@@ -115,6 +115,45 @@
       font-weight: 300;
     }
 
+    /* ── Sedimento: algo sedimentó desde la última visita ── */
+
+    /* Vigilia con sedimento: anillos más lentos y hondo */
+    .sedimento .vigilia-anillo-ext { animation-duration: 10s; border-color: rgba(100,148,220,0.24); }
+    .sedimento .vigilia-anillo-med { animation-duration: 10s; animation-delay: 0.9s; border-color: rgba(100,148,220,0.42); }
+    .sedimento .vigilia-anillo-int { animation-duration: 10s; animation-delay: 1.8s; border-color: rgba(100,148,220,0.65); }
+    .sedimento .vigilia-punto {
+      background: rgba(140,185,248,0.92);
+      box-shadow: 0 0 18px 6px rgba(100,148,220,0.38);
+      animation: pulso-punto-sedimento 10s ease-in-out infinite 2.7s;
+    }
+    @keyframes pulso-punto-sedimento {
+      0%,100% { opacity:0.62; box-shadow:0 0 12px 4px rgba(100,148,220,0.28); }
+      50%      { opacity:1;    box-shadow:0 0 26px 8px rgba(100,148,220,0.55); }
+    }
+    /* Cuarto anillo exterior — casi invisible */
+    .vigilia-anillo-ext-2 {
+      position:absolute; width:240px; height:240px;
+      border-radius:50%; border:1px solid rgba(100,148,220,0.07);
+      animation:pulso-ext-2 10s ease-in-out infinite 3.6s;
+    }
+    @keyframes pulso-ext-2 {
+      0%,100% { opacity:0; transform:scale(0.97); }
+      40%,60% { opacity:1; transform:scale(1.03); }
+    }
+
+    /* Shimmer de entrada — 2.4s, luego desaparece. Para ambos estados. */
+    .sedimento-shimmer {
+      position:fixed; inset:0; pointer-events:none; z-index:0;
+      background:radial-gradient(ellipse 60% 40% at 50% 50%, rgba(100,148,220,0.04) 0%, transparent 70%);
+      opacity:0;
+      animation:shimmer-entrada 2.4s ease forwards;
+    }
+    @keyframes shimmer-entrada {
+      0%   { opacity:0; }
+      30%  { opacity:1; }
+      100% { opacity:0; }
+    }
+
     /* ══════════════════════════════════════
        ESTADO: HABLA (JOI tiene algo que decir)
     ══════════════════════════════════════ */
@@ -388,6 +427,10 @@
 <body>
 <div class="habitacion-wrap">
 
+  {% if hay_sedimento %}
+  <div class="sedimento-shimmer" aria-hidden="true"></div>
+  {% endif %}
+
   {% if semaforo %}
   <div class="semaforo-strip">
     <div class="semaforo-estado">
@@ -399,10 +442,12 @@
   {% endif %}
 
   {% if estado == 'calla' %}
-  <div class="vigilia-contenedor" aria-label="JOI presente en silencio">
+  <div class="vigilia-contenedor {% if hay_sedimento %}sedimento{% endif %}"
+       aria-label="JOI presente en silencio">
     <div class="vigilia-anillo-ext"></div>
     <div class="vigilia-anillo-med"></div>
     <div class="vigilia-anillo-int"></div>
+    {% if hay_sedimento %}<div class="vigilia-anillo-ext-2" aria-hidden="true"></div>{% endif %}
     <div class="vigilia-punto"></div>
   </div>
   <p class="vigilia-texto">Presente. Observando.</p>
@@ -562,6 +607,18 @@ async function enviarDialogo() {
     }, 1200);
   }
 }
+
+// Shimmer solo en la primera carga de la sesión
+(function() {
+  const shimmer = document.querySelector('.sedimento-shimmer');
+  if (!shimmer) return;
+  const key = 'joi_shimmer_{{ request.user.id }}';
+  if (sessionStorage.getItem(key)) {
+    shimmer.style.display = 'none';
+  } else {
+    sessionStorage.setItem(key, '1');
+  }
+})();
 
 async function enviarFeedback(tipo, mensajeId) {
   const zona   = document.getElementById('feedback-zona');
