@@ -9,9 +9,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <link rel="manifest" href="{% static 'manifest.json' %}">
   <link rel="apple-touch-icon" href="{% static 'images/joi_avatar.png' %}">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&display=swap" rel="stylesheet">
+
   <title>JOI</title>
   <style>
     :root {
@@ -32,7 +30,7 @@
         radial-gradient(ellipse 60% 30% at 50% 100%, rgba(35, 70, 130, 0.07), transparent 55%),
         var(--bg);
       color: var(--ink);
-      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif;
       -webkit-font-smoothing: antialiased;
     }
 
@@ -155,9 +153,8 @@
     }
 
     .joi-mensaje-texto {
-      font-style: italic;
       font-weight: 300;
-      font-size: clamp(1.3rem, 3.5vw, 1.65rem);
+      font-size: clamp(1.1rem, 3vw, 1.35rem);
       line-height: 1.7;
       color: var(--ink);
       letter-spacing: 0.01em;
@@ -179,7 +176,7 @@
     }
 
     .joi-btn-feedback {
-      font-family: 'Cormorant Garamond', serif;
+      font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
       font-style: italic;
       font-weight: 300;
       font-size: 0.95rem;
@@ -237,7 +234,7 @@
       flex: 1; background: transparent;
       border: none; border-bottom: 1px solid rgba(0, 220, 255, 0.18);
       color: var(--ink-soft);
-      font-family: 'Cormorant Garamond', serif;
+      font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
       font-style: italic; font-weight: 300; font-size: 1rem;
       padding: 0.35rem 0.1rem; outline: none;
       resize: none; min-height: 1.5rem; max-height: 5rem;
@@ -273,7 +270,7 @@
       flex: 1; background: transparent;
       border: none; border-bottom: 1px solid rgba(130,170,230,0.2);
       color: var(--ink);
-      font-family: 'Cormorant Garamond', serif;
+      font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
       font-style: italic; font-weight: 300; font-size: 1rem;
       padding: 0.4rem 0.1rem; outline: none;
       transition: border-color 0.3s; letter-spacing: 0.02em;
