@@ -4,56 +4,65 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#090910">
+  <meta name="theme-color" content="#06070b">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&display=swap" rel="stylesheet">
   <title>JOI — postura</title>
   <style>
+    :root {
+      --bg: #06070b;
+      --ink: rgba(236, 242, 255, 0.94);
+      --ink-soft: rgba(205, 218, 240, 0.70);
+      --ink-mute: rgba(155, 178, 215, 0.40);
+      --accent: rgba(120, 178, 225, 0.75);
+      --line: rgba(130, 162, 205, 0.09);
+    }
+
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     html, body {
-      height: 100%;
-      background: #090910;
-      color: rgba(232, 240, 252, 1);
-      font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+      min-height: 100%;
+      background:
+        radial-gradient(ellipse 80% 40% at 50% 0%, rgba(50, 90, 150, 0.09), transparent 60%),
+        radial-gradient(ellipse 60% 30% at 50% 100%, rgba(35, 70, 130, 0.07), transparent 55%),
+        var(--bg);
+      color: var(--ink);
+      font-family: 'Cormorant Garamond', Georgia, serif;
       -webkit-font-smoothing: antialiased;
+    }
+
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+      background-size: 180px;
+      pointer-events: none; z-index: 0;
     }
 
     .narrativa-wrap {
       min-height: 100svh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 5rem 1.8rem 8rem;
-      max-width: 560px;
-      margin: 0 auto;
+      display: flex; flex-direction: column; align-items: flex-start;
+      padding: max(5rem, env(safe-area-inset-top, 4rem)) 2rem max(8rem, env(safe-area-inset-bottom, 6rem));
+      max-width: 580px; margin: 0 auto;
+      position: relative; z-index: 1;
     }
 
-    /* Ruido sutil de fondo */
-    body::before {
-      content: '';
-      position: fixed;
-      inset: 0;
-      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
-      background-size: 180px;
-      pointer-events: none;
-      z-index: 0;
-    }
-
-    .narrativa-wrap > * { position: relative; z-index: 1; }
-
-    /* Header */
     .narrativa-header {
-      font-size: 0.6rem;
-      letter-spacing: 0.28em;
+      font-size: 0.52rem;
+      letter-spacing: 0.32em;
       text-transform: uppercase;
-      color: rgba(160, 195, 235, 0.45);
-      margin-bottom: 4rem;
-      text-align: center;
+      color: var(--ink-mute);
+      margin-bottom: 5rem;
+      width: 100%;
     }
 
     /* Capas */
     .capa {
       width: 100%;
-      margin-bottom: 3rem;
+      margin-bottom: 3.5rem;
       animation: aparecer 1s ease forwards;
       opacity: 0;
     }
@@ -67,113 +76,89 @@
     }
 
     .capa-etiqueta {
-      font-size: 0.58rem;
-      letter-spacing: 0.22em;
+      font-size: 0.5rem;
+      letter-spacing: 0.3em;
       text-transform: uppercase;
-      color: rgba(130, 170, 225, 0.4);
-      margin-bottom: 0.85rem;
+      color: var(--ink-mute);
+      margin-bottom: 1rem;
+      font-weight: 400;
     }
 
     .capa-texto {
-      font-size: clamp(1rem, 2.5vw, 1.2rem);
-      line-height: 1.8;
-      color: rgba(235, 243, 255, 0.92);
-      font-weight: 400;
+      font-style: italic;
+      font-weight: 300;
+      font-size: clamp(1.2rem, 3vw, 1.5rem);
+      line-height: 1.75;
+      color: var(--ink);
       letter-spacing: 0.01em;
     }
 
-    /* Separador entre capas */
     .capa-sep {
-      width: 1px;
-      height: 36px;
-      background: linear-gradient(to bottom, rgba(100, 148, 220, 0.2), transparent);
-      margin: 0 auto 3rem;
+      width: 28px; height: 1px;
+      background: var(--line);
+      margin: 0 0 3.5rem 0;
     }
 
-    /* Estado vacío */
     .narrativa-vacia {
-      font-size: 0.9rem;
-      color: rgba(160, 195, 235, 0.45);
-      font-style: italic;
-      text-align: center;
+      font-style: italic; font-weight: 300;
+      font-size: 1.1rem; line-height: 1.85;
+      color: var(--ink-mute);
       margin-top: 4rem;
-      line-height: 1.7;
     }
 
-    /* Zona de diálogo */
+    /* Diálogo */
     .dialogo-zona {
       width: 100%;
-      margin-top: 4rem;
-      border-top: 1px solid rgba(100, 148, 220, 0.1);
-      padding-top: 2rem;
+      margin-top: 5rem;
+      padding-top: 2.5rem;
+      border-top: 1px solid var(--line);
       animation: aparecer 1s ease 0.8s forwards;
       opacity: 0;
     }
 
     .dialogo-prompt {
-      font-size: 0.6rem;
-      letter-spacing: 0.22em;
+      font-size: 0.5rem;
+      letter-spacing: 0.28em;
       text-transform: uppercase;
-      color: rgba(130, 170, 225, 0.35);
-      margin-bottom: 1rem;
+      color: var(--ink-mute);
+      margin-bottom: 1.2rem;
     }
 
-    .dialogo-input-wrap {
-      display: flex;
-      gap: 0.5rem;
-      align-items: flex-end;
-    }
+    .dialogo-input-wrap { display:flex; gap:0.5rem; align-items:flex-end; }
 
     .dialogo-input {
-      flex: 1;
-      background: transparent;
-      border: none;
-      border-bottom: 1px solid rgba(100, 148, 220, 0.2);
-      color: rgba(220, 235, 255, 0.9);
-      font-size: 0.85rem;
-      font-family: inherit;
-      padding: 0.4rem 0.1rem;
-      outline: none;
-      resize: none;
-      min-height: 1.5rem;
-      max-height: 6rem;
-      letter-spacing: 0.025em;
-      transition: border-color 0.3s;
-      overflow-y: hidden;
+      flex: 1; background: transparent;
+      border: none; border-bottom: 1px solid rgba(100,148,220,0.14);
+      color: var(--ink-soft);
+      font-family: 'Cormorant Garamond', serif;
+      font-style: italic; font-weight: 300; font-size: 1.05rem;
+      padding: 0.4rem 0.1rem; outline: none;
+      resize: none; min-height: 1.8rem; max-height: 6rem;
+      transition: border-color 0.3s; overflow-y: hidden;
     }
-    .dialogo-input::placeholder { color: rgba(120, 160, 215, 0.3); }
-    .dialogo-input:focus { border-bottom-color: rgba(100, 148, 220, 0.38); }
+    .dialogo-input::placeholder { color:var(--ink-mute); font-style:italic; }
+    .dialogo-input:focus { border-bottom-color:rgba(100,148,220,0.28); }
 
     .dialogo-btn {
-      background: transparent;
-      border: none;
-      color: rgba(130, 170, 215, 0.35);
-      font-size: 0.8rem;
-      cursor: pointer;
-      font-family: inherit;
-      letter-spacing: 0.1em;
-      padding: 0.2rem 0;
-      transition: color 0.25s, opacity 0.25s;
+      background: transparent; border: none;
+      color: var(--ink-mute); font-size: 1rem; cursor: pointer;
+      padding: 0.3rem 0; opacity: 0.28;
+      transition: opacity 0.25s, color 0.25s;
     }
-    .dialogo-input-wrap:focus-within .dialogo-btn {
-      color: rgba(130, 170, 215, 0.75);
-    }
-    .dialogo-btn:hover { color: rgba(100, 148, 220, 0.9); }
+    .dialogo-input-wrap:focus-within .dialogo-btn { opacity: 0.75; }
 
-    /* Navegación */
+    /* Nav */
     .nav-link {
       position: fixed;
-      bottom: 1.8rem;
-      font-size: 0.6rem;
-      letter-spacing: 0.2em;
-      text-transform: uppercase;
-      color: rgba(190, 215, 245, 0.5);
-      text-decoration: none;
-      transition: color 0.25s;
+      bottom: max(1.6rem, env(safe-area-inset-bottom, 1.2rem));
+      font-size: 0.52rem; letter-spacing: 0.24em; text-transform: uppercase;
+      color: rgba(160, 190, 230, 0.32);
+      text-decoration: none; transition: color 0.25s;
+      padding: 0.5rem;
     }
-    .nav-link:hover { color: rgba(190, 215, 245, 0.85); }
-    .nav-link.left  { left: 1.8rem; }
-    .nav-link.right { right: 1.8rem; }
+    .nav-link:hover { color: rgba(160, 190, 230, 0.65); }
+    .nav-link.left  { left: 1.2rem; }
+    .nav-link.right { right: 1.2rem; }
   </style>
 </head>
 <body>
@@ -259,7 +244,6 @@ async function enviarDialogo() {
   if (!input) return;
   const texto = input.value.trim();
   if (!texto) return;
-
   input.disabled = true;
   try {
     await fetch('/joi/narrativa/dialogo/', {
@@ -268,7 +252,6 @@ async function enviarDialogo() {
       body:    `texto=${encodeURIComponent(texto)}`,
     });
   } catch (_) {}
-
   const zona = document.getElementById('dialogo-zona');
   if (zona) {
     zona.style.transition = 'opacity 1.4s ease';

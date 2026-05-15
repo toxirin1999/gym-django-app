@@ -4,20 +4,35 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#090910">
+  <meta name="theme-color" content="#06070b">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <link rel="manifest" href="{% static 'manifest.json' %}">
   <link rel="apple-touch-icon" href="{% static 'images/joi_avatar.png' %}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&display=swap" rel="stylesheet">
   <title>JOI</title>
   <style>
+    :root {
+      --bg: #06070b;
+      --ink: rgba(236, 242, 255, 0.94);
+      --ink-soft: rgba(205, 218, 240, 0.70);
+      --ink-mute: rgba(155, 178, 215, 0.40);
+      --accent: rgba(120, 178, 225, 0.75);
+      --line: rgba(130, 162, 205, 0.09);
+    }
+
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     html, body {
       height: 100%;
-      background: #090910;
-      color: rgba(232, 240, 252, 1);
-      font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+      background:
+        radial-gradient(ellipse 80% 40% at 50% 0%, rgba(50, 90, 150, 0.09), transparent 60%),
+        radial-gradient(ellipse 60% 30% at 50% 100%, rgba(35, 70, 130, 0.07), transparent 55%),
+        var(--bg);
+      color: var(--ink);
+      font-family: 'Cormorant Garamond', Georgia, serif;
       -webkit-font-smoothing: antialiased;
     }
 
@@ -27,30 +42,24 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: max(3rem, env(safe-area-inset-top, 2rem)) 1.5rem max(8rem, env(safe-area-inset-bottom, 6rem));
+      padding: max(3rem, env(safe-area-inset-top, 2rem)) 2rem max(8rem, env(safe-area-inset-bottom, 6rem));
       position: relative;
       overflow: hidden;
     }
 
-    /* Textura de ruido sutil */
     .habitacion-wrap::before {
       content: '';
-      position: fixed;
-      inset: 0;
-      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+      position: fixed; inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
       background-size: 180px;
       pointer-events: none;
       z-index: 0;
     }
 
-    /* ══════════════════════════════════════
-       ESTADO: VIGILIA (JOI calla)
-    ══════════════════════════════════════ */
-
+    /* ── VIGILIA ── */
     .vigilia-contenedor {
       position: relative;
-      width: 200px;
-      height: 200px;
+      width: 200px; height: 200px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -58,324 +67,248 @@
     }
 
     .vigilia-anillo-ext {
-      position: absolute;
-      width: 190px; height: 190px;
-      border-radius: 50%;
-      border: 1px solid rgba(100, 148, 220, 0.18);
+      position: absolute; width: 190px; height: 190px;
+      border-radius: 50%; border: 1px solid rgba(100,148,220,0.18);
       animation: pulso-ext 7s ease-in-out infinite;
     }
     .vigilia-anillo-med {
-      position: absolute;
-      width: 130px; height: 130px;
-      border-radius: 50%;
-      border: 1px solid rgba(100, 148, 220, 0.32);
+      position: absolute; width: 130px; height: 130px;
+      border-radius: 50%; border: 1px solid rgba(100,148,220,0.32);
       animation: pulso-med 7s ease-in-out infinite 0.6s;
     }
     .vigilia-anillo-int {
-      position: absolute;
-      width: 76px; height: 76px;
-      border-radius: 50%;
-      border: 1px solid rgba(100, 148, 220, 0.52);
+      position: absolute; width: 76px; height: 76px;
+      border-radius: 50%; border: 1px solid rgba(100,148,220,0.52);
       animation: pulso-int 7s ease-in-out infinite 1.2s;
     }
     .vigilia-punto {
-      width: 7px; height: 7px;
-      border-radius: 50%;
-      background: rgba(130, 175, 240, 0.85);
-      box-shadow: 0 0 12px 3px rgba(100, 148, 220, 0.3);
+      width: 7px; height: 7px; border-radius: 50%;
+      background: rgba(130,175,240,0.85);
+      box-shadow: 0 0 12px 3px rgba(100,148,220,0.3);
       animation: pulso-punto 7s ease-in-out infinite 1.8s;
-      position: relative;
-      z-index: 2;
+      position: relative; z-index: 2;
     }
 
-    @keyframes pulso-ext {
-      0%, 100% { opacity: 0.12; transform: scale(1); }
-      50%       { opacity: 0.28; transform: scale(1.05); }
-    }
-    @keyframes pulso-med {
-      0%, 100% { opacity: 0.22; transform: scale(1); }
-      50%       { opacity: 0.48; transform: scale(1.07); }
-    }
-    @keyframes pulso-int {
-      0%, 100% { opacity: 0.38; transform: scale(1); }
-      50%       { opacity: 0.72; transform: scale(1.1); }
-    }
+    @keyframes pulso-ext  { 0%,100%{opacity:.12;transform:scale(1)}  50%{opacity:.28;transform:scale(1.05)} }
+    @keyframes pulso-med  { 0%,100%{opacity:.22;transform:scale(1)}  50%{opacity:.48;transform:scale(1.07)} }
+    @keyframes pulso-int  { 0%,100%{opacity:.38;transform:scale(1)}  50%{opacity:.72;transform:scale(1.1)} }
     @keyframes pulso-punto {
-      0%, 100% { opacity: 0.55; box-shadow: 0 0 8px 2px rgba(100,148,220,0.2); }
-      50%       { opacity: 1;    box-shadow: 0 0 18px 5px rgba(100,148,220,0.45); }
+      0%,100%{opacity:.55;box-shadow:0 0 8px 2px rgba(100,148,220,.2)}
+      50%{opacity:1;box-shadow:0 0 18px 5px rgba(100,148,220,.45)}
     }
 
     .vigilia-texto {
-      font-size: 0.7rem;
-      letter-spacing: 0.25em;
-      text-transform: uppercase;
-      color: rgba(180, 205, 240, 0.75);
-      text-align: center;
-      margin-top: 0.5rem;
+      font-style: italic;
       font-weight: 300;
+      font-size: 1.05rem;
+      letter-spacing: 0.06em;
+      color: var(--ink-mute);
+      text-align: center;
+      margin-top: 0.8rem;
     }
 
-    /* ── Sedimento: algo sedimentó desde la última visita ── */
-
-    /* Vigilia con sedimento: anillos más lentos y hondo */
-    .sedimento .vigilia-anillo-ext { animation-duration: 10s; border-color: rgba(100,148,220,0.24); }
-    .sedimento .vigilia-anillo-med { animation-duration: 10s; animation-delay: 0.9s; border-color: rgba(100,148,220,0.42); }
-    .sedimento .vigilia-anillo-int { animation-duration: 10s; animation-delay: 1.8s; border-color: rgba(100,148,220,0.65); }
+    /* ── SEDIMENTO ── */
+    .sedimento .vigilia-anillo-ext { animation-duration:10s; border-color:rgba(100,148,220,0.24); }
+    .sedimento .vigilia-anillo-med { animation-duration:10s; animation-delay:0.9s; border-color:rgba(100,148,220,0.42); }
+    .sedimento .vigilia-anillo-int { animation-duration:10s; animation-delay:1.8s; border-color:rgba(100,148,220,0.65); }
     .sedimento .vigilia-punto {
-      background: rgba(140,185,248,0.92);
-      box-shadow: 0 0 18px 6px rgba(100,148,220,0.38);
-      animation: pulso-punto-sedimento 10s ease-in-out infinite 2.7s;
+      background:rgba(140,185,248,0.92);
+      box-shadow:0 0 18px 6px rgba(100,148,220,0.38);
+      animation:pulso-punto-sedimento 10s ease-in-out infinite 2.7s;
     }
     @keyframes pulso-punto-sedimento {
-      0%,100% { opacity:0.62; box-shadow:0 0 12px 4px rgba(100,148,220,0.28); }
-      50%      { opacity:1;    box-shadow:0 0 26px 8px rgba(100,148,220,0.55); }
+      0%,100%{opacity:.62;box-shadow:0 0 12px 4px rgba(100,148,220,.28)}
+      50%{opacity:1;box-shadow:0 0 26px 8px rgba(100,148,220,.55)}
     }
-    /* Cuarto anillo exterior — casi invisible */
     .vigilia-anillo-ext-2 {
       position:absolute; width:240px; height:240px;
       border-radius:50%; border:1px solid rgba(100,148,220,0.07);
       animation:pulso-ext-2 10s ease-in-out infinite 3.6s;
     }
     @keyframes pulso-ext-2 {
-      0%,100% { opacity:0; transform:scale(0.97); }
-      40%,60% { opacity:1; transform:scale(1.03); }
+      0%,100%{opacity:0;transform:scale(.97)} 40%,60%{opacity:1;transform:scale(1.03)}
     }
-
-    /* Shimmer de entrada — 2.4s, luego desaparece. Para ambos estados. */
     .sedimento-shimmer {
       position:fixed; inset:0; pointer-events:none; z-index:0;
-      background:radial-gradient(ellipse 60% 40% at 50% 50%, rgba(100,148,220,0.04) 0%, transparent 70%);
-      opacity:0;
-      animation:shimmer-entrada 2.4s ease forwards;
+      background:radial-gradient(ellipse 60% 40% at 50% 50%,rgba(100,148,220,0.04) 0%,transparent 70%);
+      opacity:0; animation:shimmer-entrada 2.4s ease forwards;
     }
-    @keyframes shimmer-entrada {
-      0%   { opacity:0; }
-      30%  { opacity:1; }
-      100% { opacity:0; }
-    }
+    @keyframes shimmer-entrada { 0%{opacity:0} 30%{opacity:1} 100%{opacity:0} }
 
-    /* ══════════════════════════════════════
-       ESTADO: HABLA (JOI tiene algo que decir)
-    ══════════════════════════════════════ */
-
+    /* ── HABLA ── */
     .joi-mensaje-wrap {
-      max-width: 520px;
-      width: 100%;
+      max-width: 480px; width: 100%;
       text-align: center;
-      animation: aparecer 1.4s ease forwards;
-      position: relative;
-      z-index: 1;
+      animation: aparecer 1.6s ease forwards;
+      position: relative; z-index: 1;
     }
 
     @keyframes aparecer {
-      from { opacity: 0; transform: translateY(12px); }
-      to   { opacity: 1; transform: translateY(0); }
+      from { opacity:0; transform:translateY(10px); }
+      to   { opacity:1; transform:translateY(0); }
     }
 
     .joi-linea {
-      width: 1px;
-      height: 48px;
-      background: linear-gradient(to bottom, transparent, rgba(100, 148, 220, 0.4));
-      margin: 0 auto 2rem;
+      width: 1px; height: 52px;
+      background: linear-gradient(to bottom, transparent, rgba(100,148,220,0.25));
+      margin: 0 auto 2.5rem;
     }
 
     .joi-mensaje-texto {
-      font-size: clamp(1.1rem, 2.8vw, 1.35rem);
-      line-height: 1.75;
-      color: rgba(240, 246, 255, 1);
-      font-weight: 400;
-      letter-spacing: 0.015em;
+      font-style: italic;
+      font-weight: 300;
+      font-size: clamp(1.3rem, 3.5vw, 1.65rem);
+      line-height: 1.7;
+      color: var(--ink);
+      letter-spacing: 0.01em;
       margin-bottom: 2.5rem;
-      text-shadow: 0 0 18px rgba(100, 148, 220, 0.18);
     }
 
     .joi-meta {
-      font-size: 0.65rem;
-      letter-spacing: 0.2em;
+      font-size: 0.55rem;
+      letter-spacing: 0.26em;
       text-transform: uppercase;
-      color: rgba(170, 200, 240, 0.85);
+      color: var(--ink-mute);
       margin-bottom: 2.5rem;
     }
 
     .joi-feedback-zona {
-      display: flex;
-      gap: 0;
-      justify-content: center;
-      align-items: center;
+      display: flex; gap: 0;
+      justify-content: center; align-items: center;
     }
 
-    /* Botones como texto — área táctil generosa, apariencia mínima */
     .joi-btn-feedback {
-      font-size: 0.62rem;
-      letter-spacing: 0.13em;
-      text-transform: lowercase;
-      padding: 0.85rem 1.5rem;      /* ~44px touch target vertical */
+      font-family: 'Cormorant Garamond', serif;
+      font-style: italic;
+      font-weight: 300;
+      font-size: 0.95rem;
+      letter-spacing: 0.03em;
+      padding: 0.85rem 1.5rem;
       min-height: 44px;
-      display: inline-flex;
-      align-items: center;
-      border: none;
-      background: transparent;
-      color: rgba(160, 195, 240, 0.38);
-      cursor: pointer;
-      transition: color 0.25s;
-      font-family: inherit;
+      display: inline-flex; align-items: center;
+      border: none; background: transparent;
+      color: var(--ink-mute);
+      cursor: pointer; transition: color 0.25s;
       -webkit-tap-highlight-color: transparent;
     }
     .joi-btn-feedback:hover,
-    .joi-btn-feedback:active { color: rgba(200, 225, 255, 0.75); }
-    .joi-btn-feedback.ya-enviado { pointer-events: none; opacity: 0.15; }
+    .joi-btn-feedback:active { color: var(--ink-soft); }
+    .joi-btn-feedback.ya-enviado { pointer-events:none; opacity:0.15; }
 
-    /* Separador entre botones */
     .joi-btn-sep {
-      width: 1px;
-      height: 10px;
-      background: rgba(100, 140, 200, 0.2);
-      flex-shrink: 0;
+      width: 1px; height: 10px;
+      background: var(--line); flex-shrink: 0;
     }
 
     .joi-respuesta-feedback {
       display: none;
-      font-size: 0.72rem;
-      letter-spacing: 0.1em;
-      color: rgba(180, 210, 250, 0.7);
+      font-style: italic; font-weight: 300; font-size: 1rem;
+      color: var(--ink-soft);
       margin-top: 1rem;
-      font-style: italic;
       animation: aparecer 0.8s ease forwards;
     }
 
     .joi-feedback-pasado {
-      font-size: 0.6rem;
-      letter-spacing: 0.16em;
-      text-transform: lowercase;
-      color: rgba(150, 185, 230, 0.5);
-      text-align: center;
-      padding: 0.5rem 0;
+      font-style: italic; font-weight: 300; font-size: 0.9rem;
+      color: var(--ink-mute);
+      text-align: center; padding: 0.5rem 0;
     }
 
-    /* ── Zona de diálogo con la narrativa ── */
+    /* ── POSTURA (DialogoNarrativa) ── */
     .postura-zona {
-      width: 100%;
-      max-width: 480px;
-      margin: 3rem auto 0;
-      opacity: 0.72;
-      transition: opacity 0.4s;
+      width: 100%; max-width: 440px;
+      margin: 3.5rem auto 0;
+      opacity: 0.65; transition: opacity 0.4s;
     }
     .postura-zona:focus-within { opacity: 1; }
 
     .postura-fragmento {
-      font-size: 0.72rem;
-      line-height: 1.65;
-      color: rgba(170, 200, 240, 0.7);
-      font-style: italic;
-      letter-spacing: 0.02em;
-      margin-bottom: 0.9rem;
-      border-left: 1px solid rgba(100, 148, 220, 0.2);
+      font-style: italic; font-weight: 300; font-size: 0.9rem;
+      line-height: 1.7; color: var(--ink-mute);
+      margin-bottom: 0.85rem;
       padding-left: 0.9rem;
+      border-left: 1px solid var(--line);
     }
 
-    .postura-input-wrap {
-      display: flex;
-      gap: 0.4rem;
-      align-items: flex-end;
-    }
+    .postura-input-wrap { display:flex; gap:0.4rem; align-items:flex-end; }
 
     .postura-input {
-      flex: 1;
-      background: transparent;
-      border: none;
-      border-bottom: 1px solid rgba(100, 148, 220, 0.25);
-      color: rgba(220, 235, 255, 0.9);
-      font-size: 0.78rem;
-      font-family: inherit;
-      padding: 0.35rem 0.1rem;
-      outline: none;
-      resize: none;
-      min-height: 1.4rem;
-      max-height: 5rem;
-      letter-spacing: 0.03em;
-      transition: border-color 0.3s;
-      overflow-y: hidden;
+      flex: 1; background: transparent;
+      border: none; border-bottom: 1px solid rgba(100,148,220,0.14);
+      color: var(--ink-soft);
+      font-family: 'Cormorant Garamond', serif;
+      font-style: italic; font-weight: 300; font-size: 1rem;
+      padding: 0.35rem 0.1rem; outline: none;
+      resize: none; min-height: 1.5rem; max-height: 5rem;
+      transition: border-color 0.3s; overflow-y: hidden;
     }
-    .postura-input::placeholder { color: rgba(130, 165, 215, 0.4); }
-    .postura-input:focus { border-bottom-color: rgba(100, 148, 220, 0.4); }
+    .postura-input::placeholder { color:var(--ink-mute); font-style:italic; }
+    .postura-input:focus { border-bottom-color:rgba(100,148,220,0.28); }
 
     .postura-btn {
-      background: transparent;
-      border: none;
-      color: rgba(130, 170, 215, 0.5);
-      font-size: 0.75rem;
-      cursor: pointer;
-      font-family: inherit;
-      letter-spacing: 0.1em;
-      padding: 0.2rem 0;
-      transition: color 0.25s, opacity 0.25s;
-      opacity: 0.25; /* visible pero discreto — invita sin forzar */
+      background: transparent; border: none;
+      color: var(--ink-mute); font-size: 1rem; cursor: pointer;
+      padding: 0.2rem 0; opacity: 0.25;
+      transition: opacity 0.25s, color 0.25s;
     }
-    .postura-input-wrap:focus-within .postura-btn { opacity: 1; }
-    .postura-btn:hover { color: rgba(100, 148, 220, 0.8); }
+    .postura-input-wrap:focus-within .postura-btn { opacity: 0.75; }
 
     .postura-recibido {
-      display: none;
-      font-size: 0.6rem;
-      letter-spacing: 0.2em;
-      text-transform: uppercase;
-      color: rgba(140, 175, 225, 0.5);
-      margin-top: 0.6rem;
-      animation: aparecer 0.6s ease forwards;
+      display: none; font-size: 0.55rem; letter-spacing: 0.2em;
+      text-transform: uppercase; color: var(--ink-mute); margin-top: 0.6rem;
     }
 
-    /* ── Input de mood ── */
+    /* ── MOOD ── */
     .mood-zona {
       position: fixed;
-      bottom: 4.2rem;
-      left: 50%;
-      transform: translateX(-50%);
-      width: min(320px, calc(100vw - 3rem));
-      display: flex;
-      gap: 0.5rem;
-      align-items: center;
+      bottom: max(2.8rem, env(safe-area-inset-bottom, 2rem));
+      left: 50%; transform: translateX(-50%);
+      width: min(300px, calc(100vw - 3rem));
+      display: flex; gap: 0.5rem; align-items: center;
       z-index: 10;
     }
 
     .mood-input {
-      flex: 1;
-      background: transparent;
-      border: none;
-      border-bottom: 1px solid rgba(130, 170, 230, 0.4);
-      color: rgba(230, 240, 255, 1);
-      font-size: 0.8rem;
-      font-family: inherit;
-      padding: 0.4rem 0.2rem;
-      outline: none;
-      transition: border-color 0.3s;
-      letter-spacing: 0.04em;
+      flex: 1; background: transparent;
+      border: none; border-bottom: 1px solid rgba(130,170,230,0.2);
+      color: var(--ink);
+      font-family: 'Cormorant Garamond', serif;
+      font-style: italic; font-weight: 300; font-size: 1rem;
+      padding: 0.4rem 0.1rem; outline: none;
+      transition: border-color 0.3s; letter-spacing: 0.02em;
     }
-    .mood-input::placeholder { color: rgba(150, 180, 225, 0.55); }
-    .mood-input:focus { border-bottom-color: rgba(100, 148, 220, 0.45); }
+    .mood-input::placeholder { color:var(--ink-mute); font-style:italic; }
+    .mood-input:focus { border-bottom-color:rgba(100,148,220,0.3); }
 
     .mood-btn {
-      background: transparent;
-      border: none;
-      color: rgba(160, 195, 235, 0.8);
-      font-size: 0.85rem;
-      cursor: pointer;
-      font-family: inherit;
-      letter-spacing: 0.12em;
-      padding: 0.3rem 0;
-      transition: color 0.25s;
+      background: transparent; border: none;
+      color: var(--ink-mute); font-size: 0.9rem; cursor: pointer;
+      padding: 0.3rem 0; transition: color 0.25s;
     }
-    .mood-btn:hover { color: rgba(100, 148, 220, 0.7); }
+    .mood-btn:hover { color: var(--accent); }
 
     .mood-confirmacion {
       display: none;
-      font-size: 0.65rem;
-      letter-spacing: 0.18em;
-      text-transform: uppercase;
-      color: rgba(170, 200, 240, 0.85);
-      text-align: center;
-      animation: aparecer 0.6s ease forwards;
+      font-style: italic; font-weight: 300; font-size: 0.9rem;
+      color: var(--ink-mute); text-align: center;
+      position: fixed;
+      bottom: max(2.8rem, env(safe-area-inset-bottom, 2rem));
+      left: 50%; transform: translateX(-50%);
     }
 
+    /* ── NAV ── */
+    .nav-fijo {
+      position: fixed;
+      bottom: max(1.6rem, env(safe-area-inset-bottom, 1.2rem));
+      font-size: 0.52rem; letter-spacing: 0.24em; text-transform: uppercase;
+      color: rgba(160, 190, 230, 0.32);
+      text-decoration: none; transition: color 0.25s;
+      -webkit-tap-highlight-color: transparent;
+      padding: 0.5rem;
+    }
+    .nav-fijo:hover { color: rgba(160, 190, 230, 0.65); }
+    .nav-fijo.left  { left: 1.2rem; }
+    .nav-fijo.right { right: 1.2rem; }
   </style>
 </head>
 <body>
@@ -405,22 +338,21 @@
 
     <p class="joi-meta">
       {{ mensaje.creado_en|date:"j N · H:i" }}
-      {% if regenerado %}<span style="margin-left:0.6rem;font-size:0.6rem;letter-spacing:0.15em;opacity:0.5;">· actualizado</span>{% endif %}
+      {% if regenerado %}<span style="margin-left:0.6rem;opacity:0.5;">· actualizado</span>{% endif %}
     </p>
 
     {% if mensaje.trigger == 'poda_manual' %}
       <a href="/joi/manual/"
-         style="display:inline-block;font-size:0.7rem;letter-spacing:0.18em;
-                text-transform:uppercase;padding:0.55rem 1.4rem;border-radius:2px;
-                border:1px solid rgba(130,170,230,0.7);color:rgba(220,232,250,1);
-                text-decoration:none;transition:border-color .3s,color .3s;"
-         onmouseover="this.style.borderColor='rgba(100,148,220,0.7)';this.style.color='rgba(180,210,245,.95)'"
-         onmouseout="this.style.borderColor='rgba(130,170,230,0.7)';this.style.color='rgba(220,232,250,1)'">
+         style="font-style:italic;font-weight:300;font-size:1rem;
+                color:var(--ink-soft);text-decoration:none;
+                padding:0.75rem 0;display:inline-block;transition:color .3s;"
+         onmouseover="this.style.color='var(--ink)'"
+         onmouseout="this.style.color='var(--ink-soft)'">
         revisar el manual →
       </a>
     {% elif mensaje.feedback %}
       <p class="joi-feedback-pasado">
-        {% if mensaje.feedback == 'clavado' %}Lo has clavado{% else %}Te has equivocado{% endif %}
+        {% if mensaje.feedback == 'clavado' %}lo has leído bien{% else %}no ha encajado{% endif %}
       </p>
     {% else %}
       <div class="joi-feedback-zona" id="feedback-zona">
@@ -441,7 +373,6 @@
 </div>
 
 {% if narrativa and narrativa.capa_corta %}
-<!-- Zona de diálogo con la narrativa — correspondencia, no chat -->
 <div class="postura-zona" id="postura-zona">
   <p class="postura-fragmento">{{ narrativa.capa_corta }}</p>
   <div class="postura-input-wrap">
@@ -457,33 +388,16 @@
 </div>
 {% endif %}
 
-<!-- Input de mood — siempre disponible en La Habitación -->
 <div class="mood-zona" id="mood-zona">
   <input class="mood-input" id="mood-input" type="text"
          placeholder="¿cómo vienes hoy?"
-         maxlength="300"
-         autocomplete="off">
+         maxlength="300" autocomplete="off">
   <button class="mood-btn" onclick="enviarMood()">→</button>
 </div>
 <p class="mood-confirmacion" id="mood-confirmacion">recibido.</p>
 
-<a href="/clientes/mockup-demo/"
-   style="position:fixed;bottom:1.8rem;left:1.8rem;font-size:0.6rem;letter-spacing:0.2em;
-          text-transform:uppercase;color:rgba(190,215,245,0.9);text-decoration:none;
-          transition:color .25s;"
-   onmouseover="this.style.color='rgba(180,210,255,0.9)'"
-   onmouseout="this.style.color='rgba(190,215,245,0.9)'">
-  ← panel
-</a>
-
-<a href="/joi/narrativa/"
-   style="position:fixed;bottom:1.8rem;right:1.8rem;font-size:0.6rem;letter-spacing:0.2em;
-          text-transform:uppercase;color:rgba(190,215,245,0.9);text-decoration:none;
-          transition:color .25s;"
-   onmouseover="this.style.color='rgba(180,210,255,0.9)'"
-   onmouseout="this.style.color='rgba(190,215,245,0.9)'">
-  cómo me lees →
-</a>
+<a href="/clientes/mockup-demo/" class="nav-fijo left">← panel</a>
+<a href="/joi/narrativa/" class="nav-fijo right">cómo me lees →</a>
 
 <script>
 const CSRF = '{{ csrf_token }}';
@@ -492,7 +406,6 @@ async function enviarMood() {
   const input = document.getElementById('mood-input');
   const texto = input.value.trim();
   if (!texto) return;
-
   input.disabled = true;
   try {
     await fetch('/joi/mood/', {
@@ -501,17 +414,14 @@ async function enviarMood() {
       body:    `texto=${encodeURIComponent(texto)}`,
     });
   } catch (_) {}
-
   document.getElementById('mood-zona').style.display = 'none';
-  const conf = document.getElementById('mood-confirmacion');
-  conf.style.display = 'block';
+  document.getElementById('mood-confirmacion').style.display = 'block';
 }
 
 document.getElementById('mood-input')?.addEventListener('keydown', e => {
   if (e.key === 'Enter') enviarMood();
 });
 
-// Auto-resize textarea del diálogo
 const posturaInput = document.getElementById('postura-input');
 if (posturaInput) {
   posturaInput.addEventListener('input', function() {
@@ -519,10 +429,7 @@ if (posturaInput) {
     this.style.height = Math.min(this.scrollHeight, 80) + 'px';
   });
   posturaInput.addEventListener('keydown', e => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      enviarDialogo();
-    }
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); enviarDialogo(); }
   });
 }
 
@@ -531,7 +438,6 @@ async function enviarDialogo() {
   if (!input) return;
   const texto = input.value.trim();
   if (!texto) return;
-
   input.disabled = true;
   try {
     await fetch('/joi/narrativa/dialogo/', {
@@ -540,19 +446,14 @@ async function enviarDialogo() {
       body:    `texto=${encodeURIComponent(texto)}`,
     });
   } catch (_) {}
-
-  // Sin confirmación agresiva — solo el input desaparece silenciosamente
   const zona = document.getElementById('postura-zona');
   if (zona) {
     zona.style.transition = 'opacity 1.2s ease';
     zona.style.opacity = '0';
-    setTimeout(() => {
-      zona.style.display = 'none';
-    }, 1200);
+    setTimeout(() => { zona.style.display = 'none'; }, 1200);
   }
 }
 
-// Shimmer solo en la primera carga de la sesión
 (function() {
   const shimmer = document.querySelector('.sedimento-shimmer');
   if (!shimmer) return;
@@ -567,9 +468,7 @@ async function enviarDialogo() {
 async function enviarFeedback(tipo, mensajeId) {
   const zona   = document.getElementById('feedback-zona');
   const respEl = document.getElementById('joi-respuesta');
-
   zona.querySelectorAll('button').forEach(b => b.classList.add('ya-enviado'));
-
   try {
     const res = await fetch(`/joi/mensaje/${mensajeId}/feedback/`, {
       method:  'POST',
