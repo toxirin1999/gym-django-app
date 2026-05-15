@@ -4088,15 +4088,26 @@ def reprocesar_cierres(request):
         if texto_manual:
             textos.append((fecha_manual or 'manual', texto_manual))
 
+        # Diagnóstico visible
+        diagnostico = []
+        diagnostico.append(f"Textos a procesar: {len(textos)}")
+        if texto_manual:
+            diagnostico.append(f"Texto manual recibido: {len(texto_manual)} caracteres")
+        else:
+            diagnostico.append("Texto manual: vacío o no recibido")
+
         for etiqueta_fecha, texto in textos:
             try:
                 resultado = parsear_cierre_diario(texto)
                 personas_detectadas = resultado.get('personas', [])
+                diagnostico.append(f"[{etiqueta_fecha}] personas detectadas: {personas_detectadas}")
                 if not personas_detectadas:
+                    diagnostico.append(f"  → sin personas, saltando")
                     continue
 
                 enriq = enriquecer_cierre(texto, personas_detectadas)
                 interacciones_data = enriq.get('interacciones') or []
+                diagnostico.append(f"  → interacciones: {len(interacciones_data)}")
                 if not interacciones_data:
                     continue
 
@@ -4154,6 +4165,7 @@ def reprocesar_cierres(request):
                 'procesadas': procesadas,
                 'personas_creadas': personas_creadas,
                 'errores': errores,
+                'diagnostico': diagnostico,
             },
         })
 
