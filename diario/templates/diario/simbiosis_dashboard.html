@@ -23,6 +23,83 @@
         </div>
     </div>
 
+    {% if personas_radar %}
+    <!-- Radar JOI: personas detectadas automáticamente en cierres -->
+    <div class="card shadow-sm mb-4 border-0" style="background:rgba(99,102,241,0.06); border-left:3px solid rgba(99,102,241,0.4) !important;">
+        <div class="card-body p-4">
+            <div class="d-flex align-items-center mb-3">
+                <span style="font-size:0.65rem;letter-spacing:0.2em;text-transform:uppercase;color:rgba(99,102,241,0.7);font-weight:600;">JOI detectó estas personas en tus cierres</span>
+            </div>
+            <div class="row g-3">
+                {% for p in personas_radar %}
+                <div class="col-md-6 col-lg-4">
+                    <div class="d-flex align-items-start gap-3 p-3 rounded-3" style="background:rgba(255,255,255,0.04);">
+                        <div class="flex-shrink-0">
+                            <span class="badge rounded-pill {% if p.estado == 'radar' %}bg-warning text-dark{% else %}bg-secondary{% endif %}" style="font-size:0.6rem;letter-spacing:0.05em;">
+                                {% if p.estado == 'radar' %}radar{% else %}mención{% endif %}
+                            </span>
+                        </div>
+                        <div class="flex-grow-1 min-w-0">
+                            <div class="fw-semibold text-truncate">{{ p.nombre }}</div>
+                            <small class="text-muted">
+                                {{ p.veces_mencionada }} vez{% if p.veces_mencionada != 1 %}es{% endif %} ·
+                                última: {{ p.ultima_deteccion|date:"j M" }}
+                            </small>
+                        </div>
+                        <div class="flex-shrink-0">
+                            <button class="btn btn-sm btn-outline-primary border-0 promover-btn"
+                                    data-nombre="{{ p.nombre }}"
+                                    data-id="{{ p.id }}"
+                                    title="Añadir a Mi Círculo"
+                                    style="font-size:0.75rem;padding:0.25rem 0.5rem;">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-secondary border-0 descartar-btn"
+                                    data-id="{{ p.id }}"
+                                    title="Descartar"
+                                    style="font-size:0.75rem;padding:0.25rem 0.5rem;">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <script>
+    const CSRF = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '{{ csrf_token }}';
+
+    document.querySelectorAll('.promover-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const nombre = this.dataset.nombre;
+            const id = this.dataset.id;
+            fetch("{% url 'diario:promover_persona_interina' %}", {
+                method: 'POST',
+                headers: {'X-CSRFToken': CSRF, 'Content-Type': 'application/json'},
+                body: JSON.stringify({id: id, accion: 'promover', nombre: nombre})
+            }).then(r => r.json()).then(d => {
+                if (d.ok || d.status === 'ok') location.reload();
+            }).catch(() => location.reload());
+        });
+    });
+
+    document.querySelectorAll('.descartar-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const id = this.dataset.id;
+            fetch("{% url 'diario:promover_persona_interina' %}", {
+                method: 'POST',
+                headers: {'X-CSRFToken': CSRF, 'Content-Type': 'application/json'},
+                body: JSON.stringify({id: id, accion: 'descartar'})
+            }).then(r => r.json()).then(d => {
+                if (d.ok || d.status === 'ok' || d.status === 'descartado') location.reload();
+            }).catch(() => location.reload());
+        });
+    });
+    </script>
+    {% endif %}
+
     <div class="row">
         <!-- Columna Izquierda: Personas Importantes -->
         <div class="col-lg-5 mb-4 mb-lg-0">

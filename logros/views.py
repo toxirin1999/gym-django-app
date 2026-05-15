@@ -536,9 +536,9 @@ def leaderboard_view(request):
     # Obtener posición del usuario actual (si está logueado)
     posicion_usuario = None
     liga_usuario = None
-    if request.user.is_authenticated and hasattr(request.user, 'cliente'):
+    if request.user.is_authenticated and hasattr(request.user, 'cliente_perfil'):
         try:
-            perfil = PerfilGamificacion.objects.get(cliente=request.user.cliente)
+            perfil = PerfilGamificacion.objects.get(cliente=request.user.cliente_perfil)
             posicion_usuario = RankingEntry.objects.filter(
                 perfil=perfil,
                 temporada=temporada_actual,
