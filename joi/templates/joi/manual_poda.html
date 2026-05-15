@@ -8,9 +8,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <link rel="manifest" href="{% static 'manifest.json' %}">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&display=swap" rel="stylesheet">
+
   <title>Lo que sé de ti — JOI</title>
   <style>
     :root {
@@ -32,7 +30,7 @@
         radial-gradient(ellipse 60% 30% at 50% 100%, rgba(35, 70, 130, 0.07), transparent 55%),
         var(--bg);
       color: var(--ink);
-      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif;
       -webkit-font-smoothing: antialiased;
     }
 
@@ -89,9 +87,8 @@
     }
 
     .poda-titulo {
-      font-style: italic;
       font-weight: 300;
-      font-size: clamp(1.8rem, 5vw, 2.4rem);
+      font-size: clamp(1.6rem, 4.5vw, 2.2rem);
       color: var(--ink);
       margin-bottom: 1rem;
       line-height: 1.15;
@@ -149,9 +146,8 @@
     .poda-entrada-contenido { flex: 1; }
 
     .poda-entrada-texto {
-      font-style: italic;
-      font-weight: 300;
-      font-size: 1.15rem;
+      font-weight: 400;
+      font-size: 1.05rem;
       line-height: 1.6;
       color: var(--ink);
       text-shadow: 0 0 18px rgba(0, 220, 255, 0.25);
@@ -179,7 +175,7 @@
     .poda-btn-borrar {
       flex-shrink: 0;
       background: transparent; border: none;
-      font-family: 'Cormorant Garamond', serif;
+      font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
       font-style: italic; font-weight: 300;
       font-size: 0.85rem;
       color: var(--ink-mute);
