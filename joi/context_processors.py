@@ -3,6 +3,16 @@ from .models import EstadoEmocional, RecuerdoEmocional, Entrenamiento
 import datetime
 from django.core.cache import cache
 
+# Triggers que solo deben aparecer en /joi/habitacion/.
+# No se inyectan en el context processor global — permanecen en la habitación.
+# Razón: tratan ausencia, retorno o interpretación personal profunda.
+# JOI permanece; no aparece por toda la app reclamando presencia.
+TRIGGERS_SOLO_HABITACION = frozenset({
+    'ausencia_detectada',
+    'hyrox_ausencia',
+    'dialogo_respondido',
+})
+
 
 def utility_functions(request):
     def string_replace(value, old, new):
@@ -47,13 +57,17 @@ def _apertura_on_demand(user):
 def _get_mensaje_gym(user):
     """
     Mensaje sin leer más reciente de triggers NO-Hyrox (gym, apertura, resumen...).
+    Excluye TRIGGERS_SOLO_HABITACION: esos mensajes solo se muestran en /joi/habitacion/.
     Si no hay ninguno, intenta generar apertura_manana on-demand.
     """
     from joi.models import MensajeJOI
+    # Triggers a excluir: hyrox_* y los de solo habitación sin prefijo hyrox_
+    excluir_triggers = [t for t in TRIGGERS_SOLO_HABITACION if not t.startswith('hyrox_')]
     mensaje = (
         MensajeJOI.objects
         .filter(user=user, leido=False)
         .exclude(trigger__startswith='hyrox_')
+        .exclude(trigger__in=excluir_triggers)
         .first()
     )
     if mensaje:
@@ -64,12 +78,15 @@ def _get_mensaje_gym(user):
 def _get_mensaje_hyrox(user):
     """
     Mensaje sin leer más reciente de triggers Hyrox.
+    Excluye hyrox_ausencia: pertenece a la habitación, no debe aparecer fuera.
     No genera on-demand — los mensajes Hyrox los crean signals y tareas Celery.
     """
     from joi.models import MensajeJOI
+    hyrox_solo_habitacion = [t for t in TRIGGERS_SOLO_HABITACION if t.startswith('hyrox_')]
     return (
         MensajeJOI.objects
         .filter(user=user, leido=False, trigger__startswith='hyrox_')
+        .exclude(trigger__in=hyrox_solo_habitacion)
         .first()
     )
 
