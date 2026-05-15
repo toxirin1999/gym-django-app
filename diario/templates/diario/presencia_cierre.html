@@ -214,6 +214,14 @@ body { background: var(--bg) !important; font-family: 'Urbanist', sans-serif !im
 {% block content %}
 <div class="presencia-wrap">
 
+    <!-- Estado guardado sin respuesta de JOI -->
+    {% if guardado and not joi_respuesta %}
+    <div style="text-align:center; padding:2.5rem 1rem; color:rgba(200,195,215,0.6);">
+        <div style="font-size:0.65rem; letter-spacing:0.22em; text-transform:uppercase; margin-bottom:0.6rem;">el cierre quedó registrado.</div>
+        <a href="/diario/" style="font-size:0.7rem; letter-spacing:0.15em; text-transform:uppercase; color:rgba(167,139,250,0.7); text-decoration:none;">← volver al diario</a>
+    </div>
+    {% endif %}
+
     <!-- Respuesta de JOI al cierre -->
     {% if joi_respuesta %}
     <div style="background:#1E1B27; border:1px solid #2E2A3A; border-radius:16px; padding:1.75rem; margin-bottom:1.5rem; box-shadow:0 2px 20px rgba(0,0,0,0.3);">

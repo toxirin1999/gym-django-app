@@ -1783,18 +1783,22 @@ def analiticas_personales(request):
 def simbiosis_dashboard(request):
     """Dashboard de Simbiosis (VERSIÓN OPTIMIZADA)"""
 
-    # OPTIMIZACIÓN: No hay mucho que optimizar aquí ya que son dos listas separadas,
-    # pero es una buena práctica ser explícito.
     personas = PersonaImportante.objects.filter(usuario=request.user).order_by('tipo_relacion', 'nombre')
 
-    # OPTIMIZACIÓN: Usamos prefetch_related para cargar las personas asociadas a cada interacción.
     ultimas_interacciones = Interaccion.objects.filter(
         usuario=request.user
     ).prefetch_related('personas').order_by('-fecha')[:10]
 
+    # Personas detectadas automáticamente por JOI en el cierre — aún sin confirmar
+    from diario.models import PersonaInterina
+    personas_radar = PersonaInterina.objects.filter(
+        usuario=request.user
+    ).order_by('-ultima_deteccion')
+
     context = {
         'personas': personas,
         'ultimas_interacciones': ultimas_interacciones,
+        'personas_radar': personas_radar,
     }
     return render(request, 'diario/simbiosis_dashboard.html', context)
 
@@ -3537,7 +3541,7 @@ def presencia_apertura(request):
         return redirect('diario:dashboard_diario')
 
     try:
-        cliente = request.user.cliente
+        cliente = request.user.cliente_perfil
     except Exception:
         cliente = None
 
@@ -3912,7 +3916,7 @@ def presencia_cierre(request):
                     'micro_verdad': _enriq.get('micro_verdad'),
                     'friccion_no': int(request.POST.get('friccion_no', 0) or 0),
                 }
-                joi_respuesta = generar_respuesta_cierre(texto_libre, datos_para_joi, request.user.cliente)
+                joi_respuesta = generar_respuesta_cierre(texto_libre, datos_para_joi, request.user.cliente_perfil)
 
                 propuesta_habito = _enriq.get('propuesta_habito')
                 if propuesta_habito and propuesta_habito.get('nombre'):
@@ -3932,6 +3936,7 @@ def presencia_cierre(request):
             'dia_num': dia_num,
             'joi_respuesta': joi_respuesta,
             'propuesta_habito': propuesta_habito,
+            'guardado': True,
         }
         return render(request, 'diario/presencia_cierre.html', context)
 
@@ -4028,7 +4033,7 @@ def aceptar_habito_invitacion(request):
 def panico_impulso_api(request):
     """AJAX: genera un dardo preventivo de JOI ante un impulso."""
     try:
-        cliente = request.user.cliente
+        cliente = request.user.cliente_perfil
     except Exception:
         return JsonResponse({'error': 'Sin cliente'}, status=400)
 
