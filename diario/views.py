@@ -3809,9 +3809,9 @@ def presencia_cierre(request):
 
                             InteraccionSombra.objects.create(
                                 persona_interina=interina,
-                                descripcion=item.get('descripcion', ''),
-                                mi_sentir=item.get('mi_sentir', ''),
-                                aprendizaje=item.get('aprendizaje', ''),
+                                descripcion=item.get('descripcion') or '',
+                                mi_sentir=item.get('mi_sentir') or '',
+                                aprendizaje=item.get('aprendizaje') or '',
                                 tipo_interaccion=tipo,
                                 friccion_no=friccion_hoy or None,
                             )
@@ -4096,25 +4096,6 @@ def reprocesar_cierres(request):
         else:
             diagnostico.append("Texto manual: vacío o no recibido")
 
-        # Test directo a Haiku para verificar que la API funciona
-        try:
-            from joi.services import _cliente_anthropic
-            import json as _json_test
-            _client = _cliente_anthropic()
-            _resp = _client.messages.create(
-                model="claude-haiku-4-5-20251001",
-                max_tokens=80,
-                messages=[{"role": "user", "content": 'Responde SOLO con este JSON sin markdown: {"test": "ok", "nombres": ["Alba", "Laura"]}'}],
-            )
-            _raw = _resp.content[0].text.strip()
-            diagnostico.append(f"Test Haiku API: OK — respuesta raw: {repr(_raw[:120])}")
-            try:
-                _parsed = _json_test.loads(_raw)
-                diagnostico.append(f"Test JSON parse: OK — {_parsed}")
-            except Exception as je:
-                diagnostico.append(f"Test JSON parse: FALLO — {je} — raw={repr(_raw[:200])}")
-        except Exception as ae:
-            diagnostico.append(f"Test Haiku API: FALLO — {ae}")
 
         for etiqueta_fecha, texto in textos:
             try:
@@ -4157,16 +4138,17 @@ def reprocesar_cierres(request):
                         )
                         interina.refresh_from_db()
 
+                    desc = item.get('descripcion') or ''
                     ya_existe = InteraccionSombra.objects.filter(
                         persona_interina=interina,
-                        descripcion=item.get('descripcion', ''),
+                        descripcion=desc,
                     ).exists()
                     if not ya_existe:
                         InteraccionSombra.objects.create(
                             persona_interina=interina,
-                            descripcion=item.get('descripcion', ''),
-                            mi_sentir=item.get('mi_sentir', ''),
-                            aprendizaje=item.get('aprendizaje', ''),
+                            descripcion=desc,
+                            mi_sentir=item.get('mi_sentir') or '',
+                            aprendizaje=item.get('aprendizaje') or '',
                             tipo_interaccion=tipo,
                         )
                         personas_creadas += 1
