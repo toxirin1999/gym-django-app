@@ -16,11 +16,11 @@
   <style>
     :root {
       --bg: #06070b;
-      --ink: rgba(180, 235, 255, 0.97);
-      --ink-soft: rgba(120, 205, 252, 0.85);
-      --ink-mute: rgba(75, 170, 235, 0.62);
-      --accent: rgba(120, 178, 225, 0.75);
-      --line: rgba(130, 162, 205, 0.09);
+      --ink: #c8f0ff;
+      --ink-soft: #5dd8ff;
+      --ink-mute: rgba(0, 195, 255, 0.52);
+      --accent: #00e5ff;
+      --line: rgba(0, 210, 255, 0.16);
     }
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -68,23 +68,23 @@
 
     .vigilia-anillo-ext {
       position: absolute; width: 190px; height: 190px;
-      border-radius: 50%; border: 1px solid rgba(100,148,220,0.18);
+      border-radius: 50%; border: 1px solid rgba(0, 220, 255, 0.22);
       animation: pulso-ext 7s ease-in-out infinite;
     }
     .vigilia-anillo-med {
       position: absolute; width: 130px; height: 130px;
-      border-radius: 50%; border: 1px solid rgba(100,148,220,0.32);
+      border-radius: 50%; border: 1px solid rgba(0, 220, 255, 0.42);
       animation: pulso-med 7s ease-in-out infinite 0.6s;
     }
     .vigilia-anillo-int {
       position: absolute; width: 76px; height: 76px;
-      border-radius: 50%; border: 1px solid rgba(100,148,220,0.52);
+      border-radius: 50%; border: 1px solid rgba(0, 220, 255, 0.65);
       animation: pulso-int 7s ease-in-out infinite 1.2s;
     }
     .vigilia-punto {
       width: 7px; height: 7px; border-radius: 50%;
-      background: rgba(130,175,240,0.85);
-      box-shadow: 0 0 12px 3px rgba(100,148,220,0.3);
+      background: #00e5ff;
+      box-shadow: 0 0 16px 4px rgba(0, 220, 255, 0.7), 0 0 32px 8px rgba(0, 220, 255, 0.3);
       animation: pulso-punto 7s ease-in-out infinite 1.8s;
       position: relative; z-index: 2;
     }
@@ -93,8 +93,8 @@
     @keyframes pulso-med  { 0%,100%{opacity:.22;transform:scale(1)}  50%{opacity:.48;transform:scale(1.07)} }
     @keyframes pulso-int  { 0%,100%{opacity:.38;transform:scale(1)}  50%{opacity:.72;transform:scale(1.1)} }
     @keyframes pulso-punto {
-      0%,100%{opacity:.55;box-shadow:0 0 8px 2px rgba(100,148,220,.2)}
-      50%{opacity:1;box-shadow:0 0 18px 5px rgba(100,148,220,.45)}
+      0%,100%{opacity:.55;box-shadow:0 0 8px 2px rgba(0, 220, 255, .22)}
+      50%{opacity:1;box-shadow:0 0 18px 5px rgba(0, 220, 255, .55)}
     }
 
     .vigilia-texto {
@@ -108,21 +108,21 @@
     }
 
     /* ── SEDIMENTO ── */
-    .sedimento .vigilia-anillo-ext { animation-duration:10s; border-color:rgba(100,148,220,0.24); }
-    .sedimento .vigilia-anillo-med { animation-duration:10s; animation-delay:0.9s; border-color:rgba(100,148,220,0.42); }
-    .sedimento .vigilia-anillo-int { animation-duration:10s; animation-delay:1.8s; border-color:rgba(100,148,220,0.65); }
+    .sedimento .vigilia-anillo-ext { animation-duration:10s; border-color:rgba(0, 220, 255, 0.28); }
+    .sedimento .vigilia-anillo-med { animation-duration:10s; animation-delay:0.9s; border-color:rgba(0, 220, 255, 0.52); }
+    .sedimento .vigilia-anillo-int { animation-duration:10s; animation-delay:1.8s; border-color:rgba(0, 220, 255, 0.75); }
     .sedimento .vigilia-punto {
       background:rgba(140,185,248,0.92);
-      box-shadow:0 0 18px 6px rgba(100,148,220,0.38);
+      box-shadow:0 0 18px 6px rgba(0, 220, 255, 0.50);
       animation:pulso-punto-sedimento 10s ease-in-out infinite 2.7s;
     }
     @keyframes pulso-punto-sedimento {
-      0%,100%{opacity:.62;box-shadow:0 0 12px 4px rgba(100,148,220,.28)}
-      50%{opacity:1;box-shadow:0 0 26px 8px rgba(100,148,220,.55)}
+      0%,100%{opacity:.62;box-shadow:0 0 12px 4px rgba(0, 220, 255, .32)}
+      50%{opacity:1;box-shadow:0 0 26px 8px rgba(0, 220, 255, .65)}
     }
     .vigilia-anillo-ext-2 {
       position:absolute; width:240px; height:240px;
-      border-radius:50%; border:1px solid rgba(100,148,220,0.07);
+      border-radius:50%; border:1px solid rgba(0, 220, 255, 0.09);
       animation:pulso-ext-2 10s ease-in-out infinite 3.6s;
     }
     @keyframes pulso-ext-2 {
@@ -130,7 +130,7 @@
     }
     .sedimento-shimmer {
       position:fixed; inset:0; pointer-events:none; z-index:0;
-      background:radial-gradient(ellipse 60% 40% at 50% 50%,rgba(100,148,220,0.04) 0%,transparent 70%);
+      background:radial-gradient(ellipse 60% 40% at 50% 50%,rgba(0, 220, 255, 0.05) 0%,transparent 70%);
       opacity:0; animation:shimmer-entrada 2.4s ease forwards;
     }
     @keyframes shimmer-entrada { 0%{opacity:0} 30%{opacity:1} 100%{opacity:0} }
@@ -150,7 +150,7 @@
 
     .joi-linea {
       width: 1px; height: 52px;
-      background: linear-gradient(to bottom, transparent, rgba(100,148,220,0.25));
+      background: linear-gradient(to bottom, transparent, rgba(0, 220, 255, 0.28));
       margin: 0 auto 2.5rem;
     }
 
@@ -162,6 +162,7 @@
       color: var(--ink);
       letter-spacing: 0.01em;
       margin-bottom: 2.5rem;
+      text-shadow: 0 0 24px rgba(0, 220, 255, 0.35);
     }
 
     .joi-meta {
@@ -234,7 +235,7 @@
 
     .postura-input {
       flex: 1; background: transparent;
-      border: none; border-bottom: 1px solid rgba(100,148,220,0.14);
+      border: none; border-bottom: 1px solid rgba(0, 220, 255, 0.18);
       color: var(--ink-soft);
       font-family: 'Cormorant Garamond', serif;
       font-style: italic; font-weight: 300; font-size: 1rem;
@@ -243,7 +244,7 @@
       transition: border-color 0.3s; overflow-y: hidden;
     }
     .postura-input::placeholder { color:var(--ink-mute); font-style:italic; }
-    .postura-input:focus { border-bottom-color:rgba(100,148,220,0.28); }
+    .postura-input:focus { border-bottom-color:rgba(0, 220, 255, 0.30); }
 
     .postura-btn {
       background: transparent; border: none;
@@ -278,7 +279,7 @@
       transition: border-color 0.3s; letter-spacing: 0.02em;
     }
     .mood-input::placeholder { color:var(--ink-mute); font-style:italic; }
-    .mood-input:focus { border-bottom-color:rgba(100,148,220,0.3); }
+    .mood-input:focus { border-bottom-color:rgba(0, 220, 255, 0.35); }
 
     .mood-btn {
       background: transparent; border: none;
