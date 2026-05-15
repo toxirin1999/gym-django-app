@@ -818,18 +818,6 @@ def habitacion_joi(request):
         mensaje.leido = True
         mensaje.save(update_fields=['leido'])
 
-    # Semáforo de Intención — cacheado 30 min
-    from django.core.cache import cache
-    cache_key = f'semaforo_{cliente.pk}'
-    semaforo = cache.get(cache_key)
-    if semaforo is None:
-        try:
-            semaforo = DailyDecisionEngine.get_estado_hoy(cliente)
-        except Exception as e:
-            logger.warning('DailyDecisionEngine error: %s', e)
-            semaforo = None
-        if semaforo:
-            cache.set(cache_key, semaforo, 1800)
 
     # NarrativaActiva — para mostrar fragmento y habilitar DialogoNarrativa
     narrativa = None
@@ -869,7 +857,6 @@ def habitacion_joi(request):
     return render(request, 'joi/habitacion.html', {
         'mensaje':       mensaje,
         'estado':        estado,
-        'semaforo':      semaforo,
         'regenerado':    regenerado,
         'narrativa':     narrativa,
         'hay_sedimento': hay_sedimento,
