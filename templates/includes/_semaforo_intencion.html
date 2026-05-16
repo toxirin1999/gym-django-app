@@ -10,15 +10,33 @@ Hereda las CSS variables del template anfitrión (--ink, --paper, --ok, --warn, 
 
   <div class="rb-sema-head">
     <span class="rb-sema-dot rb-sema-dot--{{ estado }}"></span>
+    <span class="rb-sema-eyebrow">HOY</span>
     <span class="rb-sema-label">{{ semaforo.titulo }}</span>
     {% if semaforo.paradoja %}
       <span class="rb-sema-paradoja">
-        {% if semaforo.paradoja == 'A' %}CABEZA VS CUERPO{% else %}POSIBLE FLOJERA{% endif %}
+        {% if semaforo.paradoja == 'A' %}CABEZA VS CUERPO{% else %}BAJA MOTIVACIÓN{% endif %}
       </span>
     {% endif %}
   </div>
 
   <p class="rb-sema-msg">{{ semaforo.mensaje }}</p>
+
+  {% if semaforo.recomendacion_gym or semaforo.recomendacion_hyrox %}
+  <div class="rb-sema-rec">
+    {% if semaforo.recomendacion_gym %}
+    <div class="rb-sema-rec-item">
+      <span class="rb-sema-rec-lbl">Gym</span>
+      <span class="rb-sema-rec-txt">{{ semaforo.recomendacion_gym }}</span>
+    </div>
+    {% endif %}
+    {% if semaforo.recomendacion_hyrox %}
+    <div class="rb-sema-rec-item">
+      <span class="rb-sema-rec-lbl">Hyrox</span>
+      <span class="rb-sema-rec-txt">{{ semaforo.recomendacion_hyrox }}</span>
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
 
   <div class="rb-sema-data">
     {% if r.acwr    %}<span>ACWR {{ r.acwr }}</span>{% endif %}
@@ -26,6 +44,7 @@ Hereda las CSS variables del template anfitrión (--ink, --paper, --ok, --warn, 
     <span>Readiness {{ r.readiness_pct|floatformat:0 }}%</span>
     {% if r.hrv_ms  %}<span>HRV {{ r.hrv_ms }} ms{% if r.hrv_hundido %} ↓{% endif %}</span>{% endif %}
     {% if r.energia %}<span>Energía {{ r.energia }}/10</span>{% endif %}
+    {% if r.ausencia_dias and r.ausencia_dias > 0 %}<span>{{ r.ausencia_dias }}d pausa</span>{% endif %}
   </div>
 
 </div>
@@ -39,10 +58,10 @@ Hereda las CSS variables del template anfitrión (--ink, --paper, --ok, --warn, 
   margin-bottom: 16px;
   background: var(--paper-2, rgba(8,12,22,0.72));
 }
-.rb-sema--verde    { border-color: var(--ok,     oklch(0.55 0.15 145)); }
-.rb-sema--amarillo { border-color: var(--warn,   oklch(0.72 0.17 70)); }
-.rb-sema--naranja  { border-color: var(--accent-2, oklch(0.62 0.18 60)); }
-.rb-sema--rojo     { border-color: var(--danger, oklch(0.55 0.22 25)); }
+.rb-sema--empujar  { border-color: var(--ok,      oklch(0.55 0.15 145)); }
+.rb-sema--sostener { border-color: var(--warn,    oklch(0.72 0.17 70)); }
+.rb-sema--recuperar{ border-color: var(--danger,  oklch(0.55 0.22 25)); }
+.rb-sema--volver   { border-color: var(--accent,  oklch(0.65 0.14 220)); }
 
 .rb-sema-head {
   display: flex;
@@ -56,28 +75,34 @@ Hereda las CSS variables del template anfitrión (--ink, --paper, --ok, --warn, 
   border-radius: 50%;
   flex-shrink: 0;
 }
-.rb-sema-dot--verde    { background: var(--ok,      oklch(0.55 0.15 145)); }
-.rb-sema-dot--amarillo { background: var(--warn,    oklch(0.72 0.17 70)); }
-.rb-sema-dot--naranja  { background: var(--accent-2, oklch(0.62 0.18 60)); }
-.rb-sema-dot--rojo     {
+.rb-sema-dot--empujar  { background: var(--ok,     oklch(0.55 0.15 145)); }
+.rb-sema-dot--sostener { background: var(--warn,   oklch(0.72 0.17 70)); }
+.rb-sema-dot--recuperar{
   background: var(--danger, oklch(0.55 0.22 25));
   animation: sema-pulso 1.4s ease-in-out infinite;
 }
+.rb-sema-dot--volver   { background: var(--accent, oklch(0.65 0.14 220)); }
 @keyframes sema-pulso { 0%,100%{opacity:1} 50%{opacity:.35} }
 
+.rb-sema-eyebrow {
+  font-family: var(--font-mono, ui-monospace);
+  font-size: 8px; font-weight: 700;
+  letter-spacing: 0.2em; text-transform: uppercase;
+  color: var(--ink-4, rgba(15,15,14,0.28));
+}
 .rb-sema-label {
   font-family: var(--font-mono, ui-monospace);
-  font-size: 9px; font-weight: 700;
+  font-size: 11px; font-weight: 700;
   letter-spacing: 0.16em; text-transform: uppercase;
-  color: var(--ink-3, rgba(15,15,14,0.55));
+  color: var(--ink, #0F0F0E);
 }
 .rb-sema-paradoja {
   font-family: var(--font-mono, ui-monospace);
   font-size: 8px; font-weight: 700;
   letter-spacing: 0.12em; text-transform: uppercase;
-  color: var(--accent-2, oklch(0.62 0.18 60));
+  color: var(--warn, oklch(0.72 0.17 70));
   padding: 1px 5px;
-  border: 1px solid var(--accent-2, oklch(0.62 0.18 60));
+  border: 1px solid var(--warn, oklch(0.72 0.17 70));
   border-radius: 2px;
   opacity: 0.85;
 }
@@ -87,6 +112,27 @@ Hereda las CSS variables del template anfitrión (--ink, --paper, --ok, --warn, 
   font-size: 13px; line-height: 1.55;
   color: var(--ink, #0F0F0E);
   margin: 0 0 8px;
+}
+
+.rb-sema-rec {
+  display: flex; flex-direction: column; gap: 4px;
+  margin-bottom: 8px;
+}
+.rb-sema-rec-item {
+  display: flex; align-items: baseline; gap: 6px;
+}
+.rb-sema-rec-lbl {
+  font-family: var(--font-mono, ui-monospace);
+  font-size: 8px; font-weight: 700;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--ink-3, rgba(15,15,14,0.45));
+  flex-shrink: 0;
+  min-width: 38px;
+}
+.rb-sema-rec-txt {
+  font-family: var(--font-body, sans-serif);
+  font-size: 11px; line-height: 1.4;
+  color: var(--ink-2, rgba(15,15,14,0.65));
 }
 
 .rb-sema-data {

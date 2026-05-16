@@ -3,7 +3,8 @@
 """
 DailyDecisionEngine — Semáforo de Intención.
 
-Funde ACWR, TSB, Readiness, HRV y energía subjetiva en un único estado accionable.
+Funde ACWR, TSB, Readiness, HRV, energía subjetiva y ausencia en
+cuatro estados accionables: empujar / sostener / recuperar / volver.
 El usuario nunca ve los números; ve el veredicto.
 """
 from __future__ import annotations
@@ -15,50 +16,103 @@ logger = logging.getLogger(__name__)
 
 class DailyDecisionEngine:
 
-    VERDE    = 'verde'
-    AMARILLO = 'amarillo'
-    NARANJA  = 'naranja'
-    ROJO     = 'rojo'
+    EMPUJAR  = 'empujar'
+    SOSTENER = 'sostener'
+    RECUPERAR = 'recuperar'
+    VOLVER   = 'volver'
 
     _TITULOS = {
-        'verde':    'SISTEMA NOMINAL',
-        'amarillo': 'GESTIÓN DE DAÑOS',
-        'naranja':  'DRENAJE VITAL',
-        'rojo':     'PARADA TÉCNICA',
+        'empujar':  'EMPUJAR',
+        'sostener': 'SOSTENER',
+        'recuperar': 'RECUPERAR',
+        'volver':   'VOLVER',
     }
 
-    # Mensajes base (sin paradoja)
+    # Mensajes base por estado (sin paradoja)
+    # recuperar tiene dos variantes según tipo_recuperar
     _MENSAJES = {
-        'verde':    "Hoy eres peligroso. Tienes permiso para romper tus límites. No te guardes nada.",
-        'amarillo': "Estás en el filo. Puedes entrenar, pero no busques récords hoy. Escucha a tu cuerpo, no a tu ego.",
-        'naranja':  "Te estás volviendo blando. Has bajado tanto el ritmo que el próximo esfuerzo fuerte te puede romper. Muévete ya.",
-        'rojo':     "Hoy el gimnasio es tu enemigo. Si vas, te vas a lesionar. Tu única tarea hoy es descansar y habitar el vacío.",
+        'empujar':             "Tus señales acompañan. Hoy puedes entrenar con intensidad.",
+        'sostener':            "Hay margen, pero no sobra. Haz la sesión, sin perseguir el límite.",
+        'recuperar_movimiento': "El cuerpo pide bajar intensidad. Puedes moverte, pero no apretar.",
+        'recuperar_descanso':  "Hoy el progreso probablemente está en recuperar, no en forzar.",
+        'volver':              "No tienes que compensar la pausa. Haz algo posible y deja que la historia continúe.",
     }
 
-    # Paradoja A: cabeza dice "sigue" / cuerpo dice "para"
+    _RECOMENDACIONES_GYM = {
+        'empujar':             "Progresión posible. Carga objetivo, rango completo.",
+        'sostener':            "Versión normal sin llegar al fallo. Técnica primero.",
+        'recuperar_movimiento': "Tren superior ligero o movilidad. Evita carga pesada.",
+        'recuperar_descanso':  "Movilidad o descanso activo.",
+        'volver':              "Una sesión mínima posible. Sin deuda, sin compensación.",
+    }
+
+    _RECOMENDACIONES_HYROX = {
+        'empujar':             "Buen día para intensidad o umbral.",
+        'sostener':            "Técnica de estaciones y carrera controlada.",
+        'recuperar_movimiento': "Zona 2 suave o técnica sin carga.",
+        'recuperar_descanso':  "Pausa. Zona 2 muy suave si necesitas moverte.",
+        'volver':              "Carrera suave o técnica básica. Recupera el ritmo.",
+    }
+
+    # Paradoja A: estado pide calma pero energía subjetiva alta
     _PARADOJA_A = (
-        "Esa voz que te pide seguir no es disciplina, es miedo a perder el control. "
-        "Para ahora o el cuerpo parará por ti con una lesión."
+        "Esa energía que sientes hoy puede ser real. "
+        "Pero los datos piden calma. Escucha a ambos."
     )
 
-    # Paradoja B: cabeza dice "para" / cuerpo dice "sigue"
+    # Paradoja B: estado pide moverse pero energía subjetiva baja
     _PARADOJA_B = (
-        "Tus datos dicen que estás perfecto. No estás cansado, estás aburrido o complaciente. "
-        "Ve al gimnasio y cumple."
+        "Los números dicen que estás bien. "
+        "Si no te apetece, está bien también. Muévete, aunque sea poco."
     )
 
     @classmethod
-    def get_estado_hoy(cls, cliente) -> Dict[str, Any]:
+    def _calcular_ausencia_dias(cls, cliente) -> int:
+        """
+        Días transcurridos desde la última ActividadRealizada del cliente.
+        Devuelve 0 si el cliente no tiene ninguna actividad registrada
+        (usuario nuevo — no disparar 'volver' en ese caso).
+        """
+        try:
+            from entrenos.models import ActividadRealizada
+            from django.utils import timezone
+
+            ultima = (
+                ActividadRealizada.objects
+                .filter(cliente=cliente)
+                .order_by('-fecha')
+                .values_list('fecha', flat=True)
+                .first()
+            )
+            if ultima is None:
+                return 0
+            hoy = timezone.now().date()
+            delta = (hoy - ultima).days
+            return max(delta, 0)
+        except Exception:
+            return 0
+
+    @classmethod
+    def get_estado_hoy(cls, cliente, es_descanso_plan: bool = None) -> Dict[str, Any]:
         """
         Devuelve el estado unificado del día.
 
+        Parámetro opcional:
+            es_descanso_plan – True si el plan gym marca hoy como descanso.
+                               None = no se conoce (no fuerza el estado).
+
         Returns dict con:
-            estado       – verde / amarillo / naranja / rojo
-            titulo       – etiqueta corta para el UI
-            tipo_fatiga  – alineado / mecanica / vital / fragilidad / flojera
-            mensaje      – lo que JOI dice (incluye paradoja si aplica)
-            paradoja     – 'A' | 'B' | None
-            datos_raw    – números técnicos ocultos al usuario (para JOI context)
+            estado           – empujar / sostener / recuperar / volver
+            titulo           – etiqueta corta para el UI
+            causa            – lesion | descanso_plan | ausencia | fatiga |
+                               fragilidad | carga | normal
+            tipo_fatiga      – alineado / mecanica / vital / fragilidad / retorno
+            tipo_recuperar   – 'movimiento' | 'descanso' | 'lesion' | None
+            mensaje          – decisión final (incluye paradoja si aplica)
+            recomendacion_gym    – acción concreta para el gimnasio
+            recomendacion_hyrox  – acción concreta para Hyrox
+            paradoja         – 'A' | 'B' | None
+            datos_raw        – números técnicos (para JOI context)
         """
         from core.bio_context import BioContextProvider
 
@@ -112,70 +166,151 @@ class DailyDecisionEngine:
             except Exception:
                 pass
 
-        energia = bio.get('energia')  # 1-10 subjetivo
+        energia = bio.get('energia')  # 1–10 subjetivo
 
-        # ── 5. Lógica de estados (prioridad: ROJO > NARANJA > AMARILLO > VERDE) ──
+        # ── 5. Ausencia ───────────────────────────────────────────
+        ausencia_dias = cls._calcular_ausencia_dias(cliente)
 
-        # ROJO: cuerpo al límite — no negociar
-        cond_rojo = (
+        # ── 6. Lesión activa ──────────────────────────────────────
+        lesion_aguda = False
+        lesion_zona  = None
+        try:
+            from hyrox.models import UserInjury
+            lesion = (
+                UserInjury.objects
+                .filter(cliente=cliente, fase__in=('AGUDA', 'SUB_AGUDA'))
+                .first()
+            )
+            if lesion:
+                lesion_aguda = True
+                lesion_zona  = getattr(lesion, 'zona_afectada', None)
+        except Exception:
+            pass
+
+        # ── 7. Clasificación de condiciones ───────────────────────
+
+        # recuperar/descanso: cuerpo al límite fisiológico
+        cond_recuperar_descanso = (
             readiness_pct < 40
             or (hrv_hundido and tsb is not None and tsb < -25)
             or (readiness_pct < 50 and tsb is not None and tsb < -20)
         )
 
-        # AMARILLO: carga mecánica alta — entrenar con cuidado
-        cond_amarillo = (
-            (acwr is not None and acwr > 1.5)
-            or (tsb is not None and tsb < -20)
-        )
-
-        # NARANJA: subutilización + cuerpo fresco — riesgo de fragilidad
-        cond_naranja = (
+        # recuperar/movimiento: fragilidad por subutilización
+        cond_recuperar_movimiento = (
             acwr is not None
             and acwr < 0.7
             and readiness_pct > 60
         )
 
-        if cond_rojo:
-            estado     = cls.ROJO
-            tipo       = 'mecanica' if (tsb is not None and tsb < -20) else 'vital'
-        elif cond_amarillo:
-            estado     = cls.AMARILLO
-            tipo       = 'mecanica'
-        elif cond_naranja:
-            estado     = cls.NARANJA
-            tipo       = 'fragilidad'
-        else:
-            estado     = cls.VERDE
-            tipo       = 'alineado'
+        # sostener: carga mecánica alta
+        cond_sostener = (
+            (acwr is not None and acwr > 1.5)
+            or (tsb is not None and tsb < -20)
+        )
 
-        # ── 6. Detección de paradojas ─────────────────────────────
+        # ── 8. Prioridad de estados (causa soberana) ──────────────
+        # Lesión → Descanso plan → Ausencia → Fatiga → Carga → Normal
+        tipo_recuperar = None
+        causa = 'normal'
+
+        if lesion_aguda:
+            estado = cls.RECUPERAR
+            tipo   = 'vital'
+            tipo_recuperar = 'lesion'
+            causa  = 'lesion'
+        elif es_descanso_plan:
+            estado = cls.RECUPERAR
+            tipo   = 'vital'
+            tipo_recuperar = 'movimiento'
+            causa  = 'descanso_plan'
+        elif ausencia_dias >= 5:
+            estado = cls.VOLVER
+            tipo   = 'retorno'
+            causa  = 'ausencia'
+        elif cond_recuperar_descanso:
+            estado = cls.RECUPERAR
+            tipo   = 'mecanica' if (tsb is not None and tsb < -20) else 'vital'
+            tipo_recuperar = 'descanso'
+            causa  = 'fatiga'
+        elif cond_recuperar_movimiento:
+            estado = cls.RECUPERAR
+            tipo   = 'fragilidad'
+            tipo_recuperar = 'movimiento'
+            causa  = 'fragilidad'
+        elif cond_sostener:
+            estado = cls.SOSTENER
+            tipo   = 'mecanica'
+            causa  = 'carga'
+        else:
+            estado = cls.EMPUJAR
+            tipo   = 'alineado'
+
+        # ── 8. Detección de paradojas (solo cuando no es 'volver') ──
         paradoja = None
 
-        # Paradoja A: métricas dicen STOP, cabeza quiere seguir (energía reportada alta)
-        if estado in (cls.ROJO, cls.AMARILLO) and energia is not None and energia >= 7:
-            paradoja = 'A'
-            tipo     = 'mecanica'
+        # Las causas determinísticas no se anulan con paradojas
+        _causa_deterministica = causa in ('lesion', 'descanso_plan')
 
-        # Paradoja B: métricas dicen GO, cabeza quiere parar (energía baja pero números verdes)
-        if estado == cls.VERDE and energia is not None and energia <= 4:
-            paradoja = 'B'
-            tipo     = 'flojera'
+        if estado != cls.VOLVER and not _causa_deterministica:
+            # Paradoja A: métricas piden calma, energía subjetiva alta
+            if estado in (cls.RECUPERAR, cls.SOSTENER) and energia is not None and energia >= 7:
+                paradoja = 'A'
+                if estado == cls.RECUPERAR and tipo_recuperar != 'descanso':
+                    tipo = 'mecanica'
 
-        # ── 7. Mensaje final ──────────────────────────────────────
+            # Paradoja B: métricas dicen GO, energía subjetiva baja
+            if estado == cls.EMPUJAR and energia is not None and energia <= 4:
+                paradoja = 'B'
+                tipo = 'flojera'
+
+        # ── 10. Mensaje y recomendaciones según causa ────────────────
+        _mensajes_causa = {
+            'lesion':       f"{'Lesión activa en ' + lesion_zona + '. ' if lesion_zona else ''}El sistema ha ajustado la sesión para proteger la zona.",
+            'descanso_plan': "El plan marca descanso hoy. Movilidad o recuperación activa.",
+        }
+        _gym_causa = {
+            'lesion':       f"Tren compatible con la lesión.{' Evita carga en ' + lesion_zona + '.' if lesion_zona else ''}",
+            'descanso_plan': "Movilidad o descanso activo. No hay entreno programado.",
+        }
+        _hyrox_causa = {
+            'lesion':       f"{'Evitar estaciones que carguen ' + lesion_zona + '.' if lesion_zona else 'Técnica sin carga.'} Zona 2 si necesitas moverte.",
+            'descanso_plan': "Sesión de recuperación o descanso. Sin intensidad.",
+        }
+
         if paradoja == 'A':
             mensaje = cls._PARADOJA_A
         elif paradoja == 'B':
             mensaje = cls._PARADOJA_B
+        elif causa in _mensajes_causa:
+            mensaje = _mensajes_causa[causa]
+        elif estado == cls.RECUPERAR:
+            clave_msg = f'recuperar_{tipo_recuperar}'
+            mensaje = cls._MENSAJES.get(clave_msg, cls._MENSAJES['recuperar_descanso'])
         else:
-            mensaje = cls._MENSAJES[estado]
+            mensaje = cls._MENSAJES.get(estado, '')
+
+        if causa in _gym_causa:
+            recomendacion_gym   = _gym_causa[causa]
+            recomendacion_hyrox = _hyrox_causa[causa]
+        elif estado == cls.RECUPERAR:
+            clave_rec = f'recuperar_{tipo_recuperar}'
+            recomendacion_gym   = cls._RECOMENDACIONES_GYM.get(clave_rec, '')
+            recomendacion_hyrox = cls._RECOMENDACIONES_HYROX.get(clave_rec, '')
+        else:
+            recomendacion_gym   = cls._RECOMENDACIONES_GYM.get(estado, '')
+            recomendacion_hyrox = cls._RECOMENDACIONES_HYROX.get(estado, '')
 
         return {
-            'estado':      estado,
-            'titulo':      cls._TITULOS[estado],
-            'tipo_fatiga': tipo,
-            'mensaje':     mensaje,
-            'paradoja':    paradoja,
+            'estado':            estado,
+            'titulo':            cls._TITULOS[estado],
+            'causa':             causa,
+            'tipo_fatiga':       tipo,
+            'tipo_recuperar':    tipo_recuperar,
+            'mensaje':           mensaje,
+            'recomendacion_gym':   recomendacion_gym,
+            'recomendacion_hyrox': recomendacion_hyrox,
+            'paradoja':          paradoja,
             'datos_raw': {
                 'acwr':          round(acwr, 2) if acwr is not None else None,
                 'tsb':           round(tsb, 1) if tsb is not None else None,
@@ -184,6 +319,8 @@ class DailyDecisionEngine:
                 'hrv_hundido':   hrv_hundido,
                 'energia':       energia,
                 'horas_sueno':   bio.get('horas_sueno'),
+                'ausencia_dias': ausencia_dias,
+                'lesion_zona':   lesion_zona,
             },
         }
 
@@ -193,7 +330,7 @@ def detectar_patron_resistencia(cliente) -> bool:
     Detector de resistencia psicológica al entrenamiento.
 
     Condición de disparo:
-      - Hoy hay paradoja B (semáforo verde + energía subjetiva ≤ 4)
+      - Hoy hay paradoja B (estado empujar + energía subjetiva ≤ 4)
       - En los últimos 14 días hay ≥ 3 entradas en BitacoraDiaria con energía ≤ 4
       - No existe ya un patrón similar en ManualDavid (últimos 30 días)
 
@@ -264,7 +401,7 @@ def detectar_patron_resistencia(cliente) -> bool:
 
     entrada = (
         f"Patrón detectado: reporte de energía baja ({energia_media}/10 de media) "
-        f"con semáforo en VERDE — {n} veces en 14 días.{dia_txt}{sueno_txt} "
+        f"con semáforo en EMPUJAR — {n} veces en 14 días.{dia_txt}{sueno_txt} "
         f"Los datos objetivos no respaldan el cansancio declarado. "
         f"Posible resistencia psicológica al entrenamiento."
     )
