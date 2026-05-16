@@ -476,15 +476,94 @@
           <div style="font-family:var(--font-mono);font-size:9px;font-weight:700;color:var(--ink-3);margin-bottom:6px;">
             Fusionar "{{ e.nombre_rutina_liftin|default:e.rutina.nombre|default:'Entreno gym' }}" ({{ e.fecha|date:"d/m/Y" }}) con esta actividad Strava
           </div>
-          <button class="rb-btn rb-btn-ok" style="font-size:10px;"
-            onclick="procesarActividad({{ act.id }}, 'merge_gym', {
-              entreno_id: '{{ e.id }}',
-              override_tiempo: 'strava',
-              override_hr_media: 'strava',
-              override_hr_maxima: 'strava'
-            })">
-            <i class="fas fa-check"></i> Confirmar fusión
-          </button>
+          <div style="font-family:var(--font-mono);font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);margin-bottom:8px;">Elige qué guardar por campo</div>
+          <table style="width:100%;border-collapse:collapse;font-size:11px;">
+            <thead>
+              <tr>
+                <td style="padding:4px 6px;color:var(--ink-3);font-weight:700;">Campo</td>
+                <td style="padding:4px 6px;text-align:center;color:var(--ink-3);font-weight:700;">Tu dato</td>
+                <td style="padding:4px 6px;text-align:center;color:#FC4C02;font-weight:700;">Strava</td>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Tiempo -->
+              {% with dur_gym=e.duracion_minutos|default:e.sesion_detalle.duracion_minutos %}
+              <tr>
+                <td style="padding:5px 6px;font-weight:600;">Tiempo</td>
+                <td style="padding:5px 6px;text-align:center;">
+                  <label style="display:flex;align-items:center;justify-content:center;gap:4px;cursor:pointer;">
+                    <input type="radio" name="gym-{{ act.id }}-manual-{{ e.id }}-tiempo"
+                      value="mine" {% if not act.duracion_minutos %}checked{% endif %}
+                      style="accent-color:var(--ink);">
+                    <span>{{ dur_gym|default:"—" }} min</span>
+                  </label>
+                </td>
+                <td style="padding:5px 6px;text-align:center;">
+                  <label style="display:flex;align-items:center;justify-content:center;gap:4px;cursor:pointer;">
+                    <input type="radio" name="gym-{{ act.id }}-manual-{{ e.id }}-tiempo"
+                      value="strava" {% if act.duracion_minutos %}checked{% endif %}
+                      style="accent-color:#FC4C02;">
+                    <span>{{ act.duracion_minutos }} min</span>
+                  </label>
+                </td>
+              </tr>
+              {% endwith %}
+              <!-- FC Media — solo si hay algún dato -->
+              {% if e.frecuencia_cardiaca_promedio or act.hr_media %}
+              <tr style="background:var(--paper-3);">
+                <td style="padding:5px 6px;font-weight:600;">FC Media</td>
+                <td style="padding:5px 6px;text-align:center;">
+                  <label style="display:flex;align-items:center;justify-content:center;gap:4px;cursor:pointer;">
+                    <input type="radio" name="gym-{{ act.id }}-manual-{{ e.id }}-hr_media"
+                      value="mine" {% if e.frecuencia_cardiaca_promedio %}checked{% endif %}
+                      {% if not e.frecuencia_cardiaca_promedio %}disabled{% endif %}
+                      style="accent-color:var(--ink);">
+                    <span>{% if e.frecuencia_cardiaca_promedio %}{{ e.frecuencia_cardiaca_promedio }} bpm{% else %}—{% endif %}</span>
+                  </label>
+                </td>
+                <td style="padding:5px 6px;text-align:center;">
+                  <label style="display:flex;align-items:center;justify-content:center;gap:4px;cursor:pointer;">
+                    <input type="radio" name="gym-{{ act.id }}-manual-{{ e.id }}-hr_media"
+                      value="strava" {% if act.hr_media %}checked{% endif %}
+                      style="accent-color:#FC4C02;">
+                    <span>{{ act.hr_media }} bpm</span>
+                  </label>
+                </td>
+              </tr>
+              {% endif %}
+              <!-- FC Máxima — solo si hay algún dato -->
+              {% if e.frecuencia_cardiaca_maxima or act.hr_maxima %}
+              <tr>
+                <td style="padding:5px 6px;font-weight:600;">FC Máxima</td>
+                <td style="padding:5px 6px;text-align:center;">
+                  <label style="display:flex;align-items:center;justify-content:center;gap:4px;cursor:pointer;">
+                    <input type="radio" name="gym-{{ act.id }}-manual-{{ e.id }}-hr_maxima"
+                      value="mine" {% if e.frecuencia_cardiaca_maxima %}checked{% endif %}
+                      {% if not e.frecuencia_cardiaca_maxima %}disabled{% endif %}
+                      style="accent-color:var(--ink);">
+                    <span>{% if e.frecuencia_cardiaca_maxima %}{{ e.frecuencia_cardiaca_maxima }} bpm{% else %}—{% endif %}</span>
+                  </label>
+                </td>
+                <td style="padding:5px 6px;text-align:center;">
+                  <label style="display:flex;align-items:center;justify-content:center;gap:4px;cursor:pointer;">
+                    <input type="radio" name="gym-{{ act.id }}-manual-{{ e.id }}-hr_maxima"
+                      value="strava" {% if act.hr_maxima %}checked{% endif %}
+                      style="accent-color:#FC4C02;">
+                    <span>{{ act.hr_maxima }} bpm</span>
+                  </label>
+                </td>
+              </tr>
+              {% endif %}
+            </tbody>
+          </table>
+          <div style="margin-top:10px;display:flex;gap:8px;justify-content:flex-end;">
+            <button type="button" class="rb-btn" style="font-size:10px;padding:5px 10px;background:var(--paper-3);"
+              onclick="toggleMergePanel('gym-{{ act.id }}-manual-{{ e.id }}')">Cancelar</button>
+            <button type="button" class="rb-btn rb-btn-ok" style="font-size:10px;padding:5px 10px;"
+              onclick="confirmarMergeGymManual({{ act.id }}, '{{ e.id }}')">
+              <i class="fas fa-check"></i> Confirmar fusión
+            </button>
+          </div>
         </div>
         {% empty %}
         <p style="font-size:11px;color:var(--ink-3);padding:8px;">No hay entrenos pendientes de sincronizar.</p>
@@ -612,6 +691,17 @@ function confirmarMergeHyrox(actId, sessionId) {
 
 function confirmarMergeGym(actId, entrId) {
   const key = `gym-${actId}-${entrId}`;
+  const extra = {
+    entreno_id: entrId,
+    override_tiempo:   _getRadio(`${key}-tiempo`),
+    override_hr_media: _getRadio(`${key}-hr_media`),
+    override_hr_maxima:_getRadio(`${key}-hr_maxima`),
+  };
+  procesarActividad(actId, 'merge_gym', extra);
+}
+
+function confirmarMergeGymManual(actId, entrId) {
+  const key = `gym-${actId}-manual-${entrId}`;
   const extra = {
     entreno_id: entrId,
     override_tiempo:   _getRadio(`${key}-tiempo`),

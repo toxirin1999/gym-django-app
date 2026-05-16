@@ -3107,8 +3107,19 @@ def strava_procesar(request, actividad_id):
         act.estado     = 'merged'
         act.entreno_gym = entreno
         act.save()
-        fc_info = f' · TRIMP calculado desde FC {act.hr_media} bpm' if act.hr_media else ''
-        return JsonResponse({'ok': True, 'msg': f'Datos Strava fusionados con entreno de gym del {act.fecha_actividad}{fc_info}.'})
+        detalles = []
+        if ov_tiempo == 'strava' or not entreno.duracion_minutos:
+            detalles.append(f'{int(duracion_min)} min (Strava)')
+        if ov_hr_media == 'strava' and act.hr_media:
+            detalles.append(f'FC med {act.hr_media} bpm (Strava)')
+        elif entreno.frecuencia_cardiaca_promedio:
+            detalles.append(f'FC med {entreno.frecuencia_cardiaca_promedio} bpm (tu dato)')
+        if ov_hr_maxima == 'strava' and act.hr_maxima:
+            detalles.append(f'FC máx {act.hr_maxima} bpm (Strava)')
+        elif entreno.frecuencia_cardiaca_maxima:
+            detalles.append(f'FC máx {entreno.frecuencia_cardiaca_maxima} bpm (tu dato)')
+        resumen = ' · '.join(detalles) if detalles else 'sin nuevos datos'
+        return JsonResponse({'ok': True, 'msg': f'Fusionado: {resumen}.'})
 
     # ── CREAR HYROX ──────────────────────────────────────────────────────────
     if accion == 'create_hyrox':

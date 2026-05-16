@@ -256,44 +256,6 @@
       text-transform: uppercase; color: var(--ink-mute); margin-top: 0.6rem;
     }
 
-    /* ── MOOD ── */
-    .mood-zona {
-      position: fixed;
-      bottom: max(2.8rem, env(safe-area-inset-bottom, 2rem));
-      left: 50%; transform: translateX(-50%);
-      width: min(300px, calc(100vw - 3rem));
-      display: flex; gap: 0.5rem; align-items: center;
-      z-index: 10;
-    }
-
-    .mood-input {
-      flex: 1; background: transparent;
-      border: none; border-bottom: 1px solid rgba(130,170,230,0.2);
-      color: var(--ink);
-      font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
-      font-style: italic; font-weight: 300; font-size: 1rem;
-      padding: 0.4rem 0.1rem; outline: none;
-      transition: border-color 0.3s; letter-spacing: 0.02em;
-    }
-    .mood-input::placeholder { color:var(--ink-mute); font-style:italic; }
-    .mood-input:focus { border-bottom-color:rgba(0, 220, 255, 0.35); }
-
-    .mood-btn {
-      background: transparent; border: none;
-      color: var(--ink-mute); font-size: 0.9rem; cursor: pointer;
-      padding: 0.3rem 0; transition: color 0.25s;
-    }
-    .mood-btn:hover { color: var(--accent); }
-
-    .mood-confirmacion {
-      display: none;
-      font-style: italic; font-weight: 300; font-size: 0.9rem;
-      color: var(--ink-mute); text-align: center;
-      position: fixed;
-      bottom: max(2.8rem, env(safe-area-inset-bottom, 2rem));
-      left: 50%; transform: translateX(-50%);
-    }
-
     /* ── NAV ── */
     .nav-fijo {
       position: fixed;
@@ -386,13 +348,6 @@
 </div>
 {% endif %}
 
-<div class="mood-zona" id="mood-zona">
-  <input class="mood-input" id="mood-input" type="text"
-         placeholder="¿cómo vienes hoy?"
-         maxlength="300" autocomplete="off">
-  <button class="mood-btn" onclick="enviarMood()">→</button>
-</div>
-<p class="mood-confirmacion" id="mood-confirmacion">recibido.</p>
 
 <a href="/clientes/mockup-demo/" class="nav-fijo left">← panel</a>
 <a href="/joi/narrativa/" class="nav-fijo right">cómo me lees →</a>
@@ -400,25 +355,6 @@
 <script>
 const CSRF = '{{ csrf_token }}';
 
-async function enviarMood() {
-  const input = document.getElementById('mood-input');
-  const texto = input.value.trim();
-  if (!texto) return;
-  input.disabled = true;
-  try {
-    await fetch('/joi/mood/', {
-      method:  'POST',
-      headers: { 'X-CSRFToken': CSRF, 'Content-Type': 'application/x-www-form-urlencoded' },
-      body:    `texto=${encodeURIComponent(texto)}`,
-    });
-  } catch (_) {}
-  document.getElementById('mood-zona').style.display = 'none';
-  document.getElementById('mood-confirmacion').style.display = 'block';
-}
-
-document.getElementById('mood-input')?.addEventListener('keydown', e => {
-  if (e.key === 'Enter') enviarMood();
-});
 
 const posturaInput = document.getElementById('postura-input');
 if (posturaInput) {
