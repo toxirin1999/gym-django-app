@@ -500,6 +500,10 @@ class HyroxReadinessLog(models.Model):
         null=True, blank=True,
         help_text="Calidad subjetiva del sueño (1-10)"
     )
+    hrv_ms = models.PositiveSmallIntegerField(
+        null=True, blank=True,
+        help_text="HRV al despertar en ms (de BitacoraDiaria)"
+    )
 
     class Meta:
         ordering = ['fecha']
