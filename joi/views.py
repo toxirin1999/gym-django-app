@@ -483,7 +483,7 @@ def generar_mensaje_motivacional(user):
     elif dias_pasados <= 2:
         return f"Último logro: '{ultimo_logro.nombre_logro}' hace {dias_pasados} día(s). ¡Sigamos construyendo! 🔁"
     elif dias_pasados <= 6:
-        return f"Llevas {dias_pasados} días sin un nuevo logro… ¿Vamos a por uno hoy? 🧠"
+        return f"Hace {dias_pasados} días que no desbloqueamos uno nuevo. Hoy puede ser diferente."
     else:
         return f"Han pasado {dias_pasados} días desde tu último logro. Reiniciamos el impulso hoy 💪 (tienes {total} logros en total)"
 
@@ -865,13 +865,24 @@ def habitacion_joi(request):
     else:
         texto_vigilia = "Presente. Observando."
 
+    # ── Retorno discreto (solo en ausencia) ─────────────────────────────────
+    entrenos_totales = None
+    if _ausencia:
+        try:
+            from logros.models import PerfilGamificacion
+            perfil_gam = PerfilGamificacion.objects.get(cliente=cliente)
+            entrenos_totales = perfil_gam.entrenos_totales
+        except Exception:
+            pass
+
     return render(request, 'joi/habitacion.html', {
-        'mensaje':        mensaje,
-        'estado':         estado,
-        'regenerado':     regenerado,
-        'narrativa':      narrativa,
-        'hay_sedimento':  hay_sedimento,
-        'texto_vigilia':  texto_vigilia,
+        'mensaje':          mensaje,
+        'estado':           estado,
+        'regenerado':       regenerado,
+        'narrativa':        narrativa,
+        'hay_sedimento':    hay_sedimento,
+        'texto_vigilia':    texto_vigilia,
+        'entrenos_totales': entrenos_totales,
     })
 
 
