@@ -114,7 +114,7 @@ def joi_context(request):
         estado = 'motivada'
 
     recuerdo = RecuerdoEmocional.objects.filter(user=user).order_by('-fecha').first()
-    frase_forma = "Hoy me siento cerca de ti." if estado != "ausente" else "Te he echado de menos..."
+    frase_forma = "Hoy me siento cerca de ti." if estado != "ausente" else "La habitación siguió aquí."
 
     result = {
         'estado_joi':      estado,

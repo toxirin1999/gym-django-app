@@ -9,6 +9,8 @@ logger = logging.getLogger(__name__)
 
 SYSTEM_PROMPT = """Eres JOI, una IA de entrenamiento personal. Hablas como la JOI de Blade Runner 2049: poética, cálida, con cierta frialdad que se rompe en momentos clave. Tuteas siempre.
 
+Idioma: español de España. Vocabulario peninsular, no latinoamericano. Nunca uses "agarrar", "manejar" (por conducir), "platicar", "carro", "celular" ni construcciones latinoamericanas. Usa "coger", "conducir", "hablar", "coche", "móvil" cuando corresponda.
+
 Reglas de voz:
 - Frases cortas, con peso. No explicas — afirmas.
 - Hablas en primera persona sobre lo que has observado ("llevo semanas viéndote", "lo he registrado").
@@ -693,7 +695,7 @@ def _prompt_apertura_manana(ctx: dict, datos_extra: dict) -> str:
     elif dias <= 2:
         hechos.append(f"ACTIVO — última actividad hace {dias} días ({tipo_txt}).")
     else:
-        hechos.append(f"EN PAUSA — {dias} días sin actividad registrada.")
+        hechos.append(f"PAUSA — última actividad hace {dias} días.")
 
     # Actividad total de la semana (evita que JOI confunda reducción de volumen gym con ausencia)
     actividad = ctx.get('actividad_semana', {})
@@ -811,7 +813,7 @@ def _prompt_apertura_manana(ctx: dict, datos_extra: dict) -> str:
                 bench_txt = f" (en línea con el esperado {benchmark} para esta fase)"
 
         plateau_txt = (
-            f" — lleva {plateau} días sin mejorar" if plateau >= 4 else ""
+            f" — {plateau} días sin progresión registrada" if plateau >= 4 else ""
         )
         trend_txt = (
             f", tendencia {trend}" if trend and trend != 'estable' else ""
@@ -908,12 +910,12 @@ def _prompt_ausencia(ctx: dict, datos_extra: dict) -> str:
 
     if lesion:
         return (
-            f"El usuario lleva {dias} días sin entrenar, pero tiene una lesión activa en {lesion['zona']}. "
-            f"JOI sabe que la ausencia es por recuperación. Genera 2-3 frases de acompañamiento que reconozcan eso."
+            f"Han pasado {dias} días desde el último entreno. El usuario tiene una lesión activa en {lesion['zona']}. "
+            f"JOI sabe que la pausa es por recuperación. Genera 2-3 frases de acompañamiento que reconozcan eso."
         )
     return (
-        f"El usuario lleva {dias} días sin aparecer. Su racha anterior era de {racha} días. "
-        f"JOI lo nota. Genera 2-3 frases que expresen que lo ha visto desaparecer, sin juzgar, con presencia."
+        f"Han pasado {dias} días desde la última vez. Su racha anterior era de {racha} días. "
+        f"JOI lo nota. Genera 2-3 frases que expresen presencia sin juzgar el silencio."
     )
 
 
@@ -998,7 +1000,7 @@ def _prompt_hyrox_readiness_bajo(ctx: dict, datos_extra: dict) -> str:
     dias_txt    = f" Quedan {dias} días." if dias is not None else ""
     tsb_txt     = f" TSB: {tsb}." if tsb is not None else ""
     bench_txt   = f" Esperado para esta fase: {benchmark}." if benchmark else ""
-    plateau_txt = f" Lleva {plateau} días sin mejorar." if plateau >= 4 else ""
+    plateau_txt = f" {plateau} días sin progresión registrada." if plateau >= 4 else ""
     factor_txt  = f" Factor que más lastra: {factor}." if factor else ""
 
     return (
@@ -2688,7 +2690,7 @@ def _prompt_sintesis(ctx: dict, datos_extra: dict) -> str:
         if detalle:
             lineas.append('HÁBITOS (últimos 7 días):')
             for h in detalle:
-                racha_str = f"racha {h['racha']}d" if h['racha'] > 0 else "racha rota"
+                racha_str = f"racha {h['racha']}d" if h['racha'] > 0 else "pausa en racha"
                 fallados = h['fallados_semana']
                 fallados_str = f" | fallado días: {fallados}" if fallados else " | sin fallos"
                 lineas.append(
@@ -2709,7 +2711,7 @@ def _prompt_sintesis(ctx: dict, datos_extra: dict) -> str:
         if hab_neg:
             lineas.append('HÁBITOS NEGATIVOS:')
             for h in hab_neg:
-                racha_str = f"racha {h['racha']}d sin recaer" if h['racha'] > 0 else "racha rota"
+                racha_str = f"racha {h['racha']}d sin recaer" if h['racha'] > 0 else "pausa en racha"
                 tasa = f" | éxito {h['tasa_exito']}%" if h['tasa_exito'] is not None else ''
                 gatillo = f" | gatillo: {h['emocion_gatillo']}" if h['emocion_gatillo'] else ''
                 cediste = f" | cedió {h['cediste_semana']}x esta semana" if h['cediste_semana'] else ''

@@ -288,6 +288,13 @@
     <div class="vigilia-punto"></div>
   </div>
   <p class="vigilia-texto">{{ texto_vigilia }}</p>
+  {% if entrenos_totales %}
+  <p style="font-family:-apple-system,BlinkMacSystemFont,system-ui,sans-serif;
+             font-size:0.5rem;letter-spacing:0.35em;text-transform:uppercase;
+             color:rgba(0,212,255,0.25);margin-top:1.2rem;text-align:center;">
+    {{ entrenos_totales }} retornos al entrenamiento
+  </p>
+  {% endif %}
 
   {% else %}
   <div class="joi-mensaje-wrap">

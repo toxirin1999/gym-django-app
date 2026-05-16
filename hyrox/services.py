@@ -802,9 +802,9 @@ Si el usuario ha completado algún estándar recientemente o lo ves en la lista 
         if preguntar_bool:
             alerta_inactividad = "\n⚠️ INSTRUCCIÓN CRÍTICA: El atleta no tiene registros de carrera recientes. Pregúntale amigablemente: 'David, no veo carreras registradas últimamente, ¿has estado activo con el fútbol o alguna otra actividad aeróbica?'."
         elif inactivo_run and not tiene_credito_futbol:
-            alerta_inactividad = f"\n⚠️ ALERTA DE INACTIVIDAD AERÓBICA: Lleva {dias_run} días sin correr ni compensar con fútbol. DEBES dedicar tu mensaje a recordarle estrictamente que el motor aeróbico es crítico para el 19 de Abril."
+            alerta_inactividad = f"\nNOTA: Han pasado {dias_run} días desde la última carrera y no hay actividad aeróbica compensatoria. El motor aeróbico necesita estímulo. Menciona esto con naturalidad, sin urgencia ni alarmismo."
         elif inactivo_run and tiene_credito_futbol:
-            alerta_inactividad = f"\n⚠️ ALERTA MITIGADA: Lleva {dias_run} días sin correr, pero el FÚTBOL está manteniendo su base aeróbica. Recuérdale que el fútbol ayuda, pero pronto hay que volver a correr."
+            alerta_inactividad = f"\nNOTA: Han pasado {dias_run} días sin carrera, pero el fútbol está manteniendo la base aeróbica. Reconócelo, y sugiere retomar la carrera pronto con calma."
             
         alerta_gym = ""
         if sesion_hoy and sesion_hoy.muscle_fatigue_index and sesion_hoy.fatiga_updated_at:
