@@ -70,8 +70,8 @@ JOI NO es un sistema de notificaciones con voz poética. Es la consecuencia visi
 
 1. **Context processor on-demand** ✅ — `joi_context` genera `apertura_manana` síncronamente si no hay mensaje del día. Celery lo pre-genera antes para evitar latencia; si no corrió, el context processor es el fallback.
 2. **Enriquecer `construir_contexto`** ✅ — tendencias de RPE, readiness trend, GymDecisionLog recientes, estancamientos activos, ACWR implementados en `joi/services.py`.
-3. **GymDecisionLog → JOI** ⏳ — cuando el sistema crea un `GymDecisionLog` (cambia variante, mantiene peso, detecta estancamiento), JOI debería verbalizarlo inmediatamente. Hoy entra en el contexto general pero no hay trigger en el momento de creación.
-4. **Apertura con inteligencia real** ⏳ — reescribir el prompt `_prompt_apertura_manana` para que use el contexto enriquecido y haga una síntesis real de lo que el sistema sabe hoy.
+3. **GymDecisionLog → JOI** ✅ — Signal `joi_decision_plan` en `entrenos/signals.py` dispara `generar_mensaje_joi` con trigger `decision_plan` al crear el log. Lock 30 min para evitar spam por sesión.
+4. **Apertura con inteligencia real** ✅ — `_prompt_apertura_manana` usa semáforo de intención, paradojas A/B, ACWR, HRV, FC reposo, tendencia RPE 4 semanas, carga unificada, PRs, decisiones del plan, lesión y readiness Hyrox.
 5. **Resumen semanal como mensaje JOI** ✅ — Celery task `generar_resumen_semanal_joi` en `joi/tasks.py` genera el mensaje los lunes con datos de `resumen_semanal_service.py`.
 
 ### Bucles de aprendizaje activos (implementados)
@@ -113,8 +113,7 @@ El card "Lo que aprendió el plan" (`entrenos/services/resumen_semanal_service.p
 
 ### Pendiente real
 
-- **JOI ítem 3** — `GymDecisionLog` no dispara JOI en el momento de creación; entra en el contexto general pero no hay trigger inmediato.
-- **JOI ítem 4** — Prompt `_prompt_apertura_manana` pendiente de reescribir para aprovechar el contexto enriquecido disponible.
+Todos los gaps identificados están implementados (mayo 2026). El backlog está limpio.
 
 ---
 
