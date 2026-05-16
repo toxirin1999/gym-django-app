@@ -759,7 +759,8 @@ function joiBannerCerrar(id) {
         {% endif %}
         {% endwith %}
       </div>
-      {% for item in resumen_semanal_gym %}
+      <!-- Primeros 3 items siempre visibles (datos clave y primera sección) -->
+      {% for item in resumen_semanal_gym|slice:":3" %}
       {% if item.tipo == 'seccion' %}
       <div style="margin:8px 0 2px;padding:4px 0;border-top:1px solid var(--line-2);display:flex;align-items:center;gap:6px;">
         <span style="font-size:12px;">{{ item.icono }}</span>
@@ -772,6 +773,27 @@ function joiBannerCerrar(id) {
       </div>
       {% endif %}
       {% endfor %}
+      <!-- Resto colapsado -->
+      {% if resumen_semanal_gym|length > 3 %}
+      <details style="margin-top:4px;">
+        <summary style="font-family:var(--font-mono);font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-4);cursor:pointer;list-style:none;padding:6px 0;">
+          ver detalle · {{ resumen_semanal_gym|length|add:"-3" }} más
+        </summary>
+        {% for item in resumen_semanal_gym|slice:"3:" %}
+        {% if item.tipo == 'seccion' %}
+        <div style="margin:8px 0 2px;padding:4px 0;border-top:1px solid var(--line-2);display:flex;align-items:center;gap:6px;">
+          <span style="font-size:12px;">{{ item.icono }}</span>
+          <span style="font-family:var(--font-mono);font-size:9px;font-weight:700;color:var(--ink-3);text-transform:uppercase;letter-spacing:.08em;">{{ item.texto }}</span>
+        </div>
+        {% else %}
+        <div class="rb-aprendio-item">
+          <span class="rb-aprendio-icon">{{ item.icono }}</span>
+          <span class="rb-aprendio-text {{ item.color }}">{{ item.texto }}</span>
+        </div>
+        {% endif %}
+        {% endfor %}
+      </details>
+      {% endif %}
     </div>
     {% endif %}
 
@@ -1011,25 +1033,31 @@ function joiBannerCerrar(id) {
     </div>
   </div>
 
-  <!-- ── ACWR WIDGET (HTMX lazy) ──────────────── -->
-  <div class="rb-section">
-    <div class="rb-section-head">
+  <!-- ── ACWR WIDGET (colapsado por defecto) ──── -->
+  <details class="rb-section" style="margin-top:20px;">
+    <summary style="display:flex;align-items:center;gap:8px;cursor:pointer;list-style:none;margin-bottom:0;">
       <div class="rb-section-num">CARGA</div>
-      <h3 class="rb-section-title">Ratio Carga ACWR</h3>
+      <h3 class="rb-section-title" style="margin:0;">Ratio Carga ACWR</h3>
       <div class="rb-section-line"></div>
+      <span style="font-family:var(--font-mono);font-size:9px;font-weight:700;color:var(--ink-4);white-space:nowrap;">
+        {% if acwr_actual %}{{ acwr_actual|floatformat:2 }}{% else %}—{% endif %}
+        · ver gráfica
+      </span>
+    </summary>
+    <div style="margin-top:12px;display:flex;align-items:center;gap:6px;margin-bottom:10px;">
       <button onclick="document.getElementById('rbAcwrModal').classList.add('open')"
               class="rb-btn rb-btn-ghost rb-btn-sm" style="flex-shrink:0;">
-        <i class="fas fa-circle-info"></i>
+        <i class="fas fa-circle-info"></i> ¿Qué es?
       </button>
     </div>
     <div class="rb-acwr-container"
          id="acwr-widget-container"
          hx-get="{% url 'clientes:widget_acwr' cliente.id %}"
-         hx-trigger="load"
+         hx-trigger="revealed"
          hx-swap="innerHTML">
       <div class="rb-skeleton"></div>
     </div>
-  </div>
+  </details>
 
   <!-- ── STATS BAR ─────────────────────────────── -->
   <div class="rb-stats-bar">
