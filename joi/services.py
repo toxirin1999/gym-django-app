@@ -43,11 +43,11 @@ def _cliente_anthropic():
     return anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
 
 
-def _llamar_haiku(prompt: str) -> str:
+def _llamar_haiku(prompt: str, max_tokens: int = 120) -> str:
     client = _cliente_anthropic()
     response = client.messages.create(
         model="claude-haiku-4-5-20251001",
-        max_tokens=120,
+        max_tokens=max_tokens,
         system=SYSTEM_PROMPT,
         messages=[{"role": "user", "content": prompt}],
     )
@@ -2960,7 +2960,7 @@ def generar_respuesta_cierre(texto: str, datos_parseo: dict, cliente) -> str:
     )
 
     try:
-        return _llamar_haiku(prompt)
+        return _llamar_haiku(prompt, max_tokens=350)
     except Exception as e:
         logger.error(f"[JOI] generar_respuesta_cierre falló: {e}")
         return "Lo que escribiste quedó guardado. JOI lo recuerda."
