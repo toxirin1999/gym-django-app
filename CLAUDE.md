@@ -68,11 +68,11 @@ JOI NO es un sistema de notificaciones con voz poética. Es la consecuencia visi
 
 ### Orden de implementación JOI (prioridad)
 
-1. **Context processor on-demand** — `joi_context` genera `apertura_manana` síncronamente si no hay mensaje del día. Celery lo pre-genera antes para evitar latencia; si no corrió, el context processor es el fallback. ✅ Base de todo.
-2. **Enriquecer `construir_contexto`** — añadir tendencias (RPE últimas 4 semanas, readiness trend, GymDecisionLog recientes, estancamientos activos). Sin contexto rico, los mensajes son genéricos.
-3. **GymDecisionLog → JOI** — cuando el sistema crea un `GymDecisionLog` (cambia variante, mantiene peso, detecta estancamiento), JOI verbaliza esa decisión inmediatamente.
-4. **Apertura con inteligencia real** — reescribir el prompt `_prompt_apertura_manana` para que use el contexto enriquecido y haga una síntesis real de lo que el sistema sabe.
-5. **Resumen semanal como mensaje JOI** — los lunes, en vez de solo el card estático, JOI genera un mensaje que narra lo que aprendió el plan esa semana.
+1. **Context processor on-demand** ✅ — `joi_context` genera `apertura_manana` síncronamente si no hay mensaje del día. Celery lo pre-genera antes para evitar latencia; si no corrió, el context processor es el fallback.
+2. **Enriquecer `construir_contexto`** ✅ — tendencias de RPE, readiness trend, GymDecisionLog recientes, estancamientos activos, ACWR implementados en `joi/services.py`.
+3. **GymDecisionLog → JOI** ⏳ — cuando el sistema crea un `GymDecisionLog` (cambia variante, mantiene peso, detecta estancamiento), JOI debería verbalizarlo inmediatamente. Hoy entra en el contexto general pero no hay trigger en el momento de creación.
+4. **Apertura con inteligencia real** ⏳ — reescribir el prompt `_prompt_apertura_manana` para que use el contexto enriquecido y haga una síntesis real de lo que el sistema sabe hoy.
+5. **Resumen semanal como mensaje JOI** ✅ — Celery task `generar_resumen_semanal_joi` en `joi/tasks.py` genera el mensaje los lunes con datos de `resumen_semanal_service.py`.
 
 ### Bucles de aprendizaje activos (implementados)
 
@@ -96,18 +96,25 @@ JOI NO es un sistema de notificaciones con voz poética. Es la consecuencia visi
 
 El card "Lo que aprendió el plan" (`entrenos/services/resumen_semanal_service.py`) agrega cada lunes la semana anterior y muestra en el dashboard: sesiones + volumen, PRs, técnica, topes, molestias, RPE medio, energía pre-sesión y decisiones del plan (`GymDecisionLog`). Solo aparece si hubo sesiones esa semana.
 
-### Gaps identificados — pendientes de implementar (por prioridad)
+### Gaps identificados — estado actual (mayo 2026)
 
-1. **Actualización automática de RMs** — `rm_sentadilla`/`rm_peso_muerto` en `HyroxObjective` son estáticos. Si el usuario rompe un PR en sesión, el plan no lo sabe.
-2. **Tiempo 5K desde carreras libres** — `tiempo_5k_base` solo se actualiza desde el hito Test 5K. Una carrera mejor registrada en sesión normal no actualiza el plan.
-3. **Calibración de RPE personal** — usuario que reporta RPE 6 con FC de Z4 → el sistema debería detectar el patrón y calibrar su escala.
-4. **Deload automático por TSB** — si TSB < -30, insertar semana de deload sin que el usuario lo solicite.
-5. **Resumen semanal "qué aprendió el plan"** — el usuario no percibe el aprendizaje si no hay un mensaje explícito cada semana.
-6. **Cruce nutrición → Hyrox** — `CheckNutricionalDiario` tiene fatiga/sueño/energía no conectados a Hyrox readiness.
-7. **Cruce gym sessions → Hyrox** — volumen/RPE de `entrenos` app alimenta Hyrox readiness de forma básica. Mejorar.
-8. **Detección de estancamiento por estación** — sin mejora en 3 sesiones → cambiar estímulo automáticamente.
-9. **HRV diario** — añadir al checkin; es el mejor indicador de recuperación para ajustar carga.
-10. **Comparativa temporal propia** — "este mes tu Sled Push mejoró un 12%" para que el usuario perciba el aprendizaje.
+| # | Gap | Estado | Notas |
+|---|---|---|---|
+| 1 | Actualización automática de RMs | ✅ | Signal `sincronizar_rm_con_hyrox` en `entrenos/signals.py` → actualiza `HyroxObjective` |
+| 2 | Tiempo 5K desde carreras libres | ✅ | Dos signals en `hyrox/signals.py` cubren HyroxSession + carrera libre |
+| 3 | Calibración de RPE personal | ✅ | Signal `calibrar_rpe_personal` detecta bias RPE vs FC, guarda en `Cliente.one_rm_data['_rpe_bias']` |
+| 4 | Deload automático por TSB | ✅ | `DeloadAutoTrigger` en `hyrox/training_engine.py`; umbral TSB < -25, cooldown 14 días |
+| 5 | Resumen semanal JOI | ✅ | Celery task `generar_resumen_semanal_joi` en `joi/tasks.py` |
+| 6 | Cruce nutrición → Hyrox | — | Nutrición no está en uso activo; pospuesto |
+| 7 | Cruce gym sessions → Hyrox | ✅ | Gym penaliza readiness score hasta -12 pts vía TSB y detección de tren inferior (últimas 48h) |
+| 8 | Detección estancamiento por estación | ✅ | `StagnationEngine` en `hyrox/training_engine.py` + signal en `hyrox/signals.py` |
+| 9 | HRV diario en checkin | ✅ | `hrv_ms` guardado en `HyroxReadinessLog` desde `BitacoraDiaria`; ya influye en el score |
+| 10 | Comparativa temporal propia | ✅ | `StagnationEngine` calcula mejora % por estación (mes actual vs anterior) |
+
+### Pendiente real
+
+- **JOI ítem 3** — `GymDecisionLog` no dispara JOI en el momento de creación; entra en el contexto general pero no hay trigger inmediato.
+- **JOI ítem 4** — Prompt `_prompt_apertura_manana` pendiente de reescribir para aprovechar el contexto enriquecido disponible.
 
 ---
 
