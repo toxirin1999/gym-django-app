@@ -118,6 +118,8 @@ def hyrox_dashboard(request):
                     _bitacora_fields = {
                         'calidad_sueno': cal,
                         'horas_sueno': hrs if hrs > 0 else None,
+                        'fc_reposo': _bitacora.fc_reposo,
+                        'hrv_ms': hrv_hoy,
                     }
             except Exception:
                 pass
