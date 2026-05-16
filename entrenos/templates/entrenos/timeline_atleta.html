@@ -4,221 +4,321 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Timeline · {{ cliente.nombre }}</title>
+    <title>TIMELINE.EXE · {{ cliente.nombre }}</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;900&family=Barlow:wght@300;400;500&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=VT323&family=IBM+Plex+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 
     <style>
     /* ═══════════════════════════════════════════════
-       TIMELINE · DARK ATHLETIC v1.0
+       TIMELINE.EXE · MS-DOS TERMINAL v04.26
+       Norton Commander / Turbo Vision palette
     ═══════════════════════════════════════════════ */
     :root {
-        --bg:      #ffffff;
-        --s1:      #f8f9fa;
-        --s2:      #f1f3f5;
-        --s3:      #e9ecef;
-        --line:    rgba(0,0,0,.07);
-        --line2:   rgba(0,0,0,.12);
-        --txt:     #111318;
-        --muted:   rgba(17,19,24,.5);
-        --dim:     rgba(17,19,24,.3);
+        /* CGA/EGA-inspired palette */
+        --bg:      #0000AA;   /* classic DOS blue */
+        --s1:      #0000AA;
+        --s2:      #000080;   /* deeper blue panel */
+        --s3:      #00007A;
+        --line:    #5555FF;
+        --line2:   #AAAAFF;
+        --txt:     #FFFFFF;
+        --muted:   #AAAAAA;
+        --dim:     #5555FF;
 
-        /* tipo colors */
-        --c-gym:      #22c55e;
-        --c-hyrox:    #ff4719;
-        --c-carrera:  #3b82f6;
-        --c-ciclismo: #a855f7;
-        --c-remo:     #06b6d4;
-        --c-cardio:   #f59e0b;
-        --c-natacion: #22d3ee;
-        --c-yoga:     #f472b6;
-        --c-otro:     #94a3b8;
+        /* tipo colors — CGA bright */
+        --c-gym:      #55FF55;  /* bright green */
+        --c-hyrox:    #FF5555;  /* bright red */
+        --c-carrera:  #55FFFF;  /* bright cyan */
+        --c-ciclismo: #FF55FF;  /* bright magenta */
+        --c-remo:     #55FFFF;  /* cyan */
+        --c-cardio:   #FFAA00;  /* orange */
+        --c-natacion: #55FFFF;  /* cyan */
+        --c-yoga:     #FF55FF;  /* magenta */
+        --c-otro:     #AAAAAA;  /* light grey */
 
         /* status */
-        --ok:   #22c55e;
-        --warn: #f59e0b;
-        --bad:  #ef4444;
+        --ok:   #55FF55;
+        --warn: #FFFF55;
+        --bad:  #FF5555;
 
-        --accent: #c8ff00;
-        --hi:     #ff4719;
+        --accent: #FFFF55;     /* amber/yellow */
+        --hi:     #FF5555;     /* red */
 
-        --mono:    'JetBrains Mono', ui-monospace, monospace;
-        --display: 'Barlow Condensed', sans-serif;
-        --sans:    'Barlow', system-ui, sans-serif;
+        --mono:    'IBM Plex Mono', 'JetBrains Mono', ui-monospace, monospace;
+        --display: 'VT323', 'IBM Plex Mono', monospace;
+        --sans:    'IBM Plex Mono', ui-monospace, monospace;
     }
 
     *, *::before, *::after { box-sizing: border-box; }
 
-    body {
+    html, body {
         margin: 0; padding: 0;
-        background: var(--bg);
+        background: #000000;
         color: var(--txt);
-        font-family: var(--sans);
-        -webkit-font-smoothing: antialiased;
+        font-family: var(--mono);
+        font-size: 14px;
+        -webkit-font-smoothing: none;
+        font-smooth: never;
+    }
+
+    /* CRT scanline + flicker overlay on the whole page */
+    body::before {
+        content: '';
+        position: fixed; inset: 0;
+        pointer-events: none;
+        background: repeating-linear-gradient(
+            0deg,
+            rgba(0,0,0,.15) 0px,
+            rgba(0,0,0,.15) 1px,
+            transparent 1px,
+            transparent 3px
+        );
+        z-index: 9999;
+        mix-blend-mode: multiply;
+    }
+    body::after {
+        content: '';
+        position: fixed; inset: 0;
+        pointer-events: none;
+        background: radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,.45) 100%);
+        z-index: 9998;
     }
 
     .tl-shell {
         min-height: 100vh;
-        max-width: 780px;
+        max-width: 880px;
         margin: 0 auto;
-        padding: 0 20px 96px;
+        padding: 0;
+        background: var(--bg);
+        border-left: 2px solid #000;
+        border-right: 2px solid #000;
+        position: relative;
     }
 
-    /* ── Marquee ── */
-    .tl-marquee {
-        margin: 0 -20px;
-        background: var(--s3);
-        border-bottom: 1px solid var(--line2);
+    /* ── DOS TITLE BAR (Turbo Vision style) ── */
+    .dos-titlebar {
+        background: var(--txt);
+        color: var(--s2);
+        padding: 2px 10px;
         font-family: var(--mono);
-        font-size: 10px; letter-spacing: .2em; text-transform: uppercase;
-        padding: 7px 16px;
+        font-size: 13px;
+        font-weight: 700;
         display: flex; justify-content: space-between; align-items: center;
-        color: var(--muted);
+        letter-spacing: 0;
+    }
+    .dos-titlebar .dos-close {
+        background: var(--s2);
+        color: var(--txt);
+        padding: 0 6px;
+        font-weight: 700;
+    }
+    .dos-titlebar-center { letter-spacing: .05em; }
+
+    /* ── MENU BAR ── */
+    .dos-menubar {
+        background: var(--muted);
+        color: #000;
+        padding: 2px 10px;
+        font-family: var(--mono); font-size: 13px;
+        display: flex; gap: 18px;
+        border-bottom: 1px solid #000;
+    }
+    .dos-menubar span b { color: var(--hi); }
+
+    /* ── Inner padding ── */
+    .tl-inner { padding: 14px 18px 70px; }
+
+    /* ── PROMPT LINE ── */
+    .dos-prompt {
+        font-family: var(--mono);
+        font-size: 14px;
+        color: var(--ok);
+        padding: 8px 0 6px;
+        display: flex; align-items: center; gap: 0;
+    }
+    .dos-prompt .path { color: var(--accent); }
+    .dos-prompt .gt   { color: var(--txt); margin: 0 6px 0 4px; }
+    .dos-prompt .cmd  { color: var(--txt); }
+    .blink {
+        display: inline-block;
+        width: 9px; height: 16px;
+        background: var(--txt);
+        margin-left: 4px;
+        vertical-align: middle;
+        animation: blink 1s steps(2) infinite;
+    }
+    @keyframes blink { 50% { background: transparent; } }
+
+    /* ── ASCII Box helpers ── */
+    .dos-box {
+        border: 2px solid var(--line2);
+        background: var(--s2);
+        padding: 0;
+        margin: 10px 0;
+        position: relative;
+    }
+    .dos-box-title {
+        position: absolute;
+        top: -10px; left: 14px;
+        background: var(--bg);
+        color: var(--accent);
+        padding: 0 8px;
+        font-family: var(--mono); font-size: 13px; font-weight: 700;
+        letter-spacing: .05em;
+    }
+    .dos-box-title::before { content: '┤ '; color: var(--line2); }
+    .dos-box-title::after  { content: ' ├'; color: var(--line2); }
+    .dos-box-body { padding: 16px 14px 14px; }
+
+    /* ── MARQUEE / Status strip ── */
+    .tl-marquee {
+        background: var(--s2);
+        color: var(--ok);
+        font-family: var(--mono); font-size: 13px;
+        padding: 4px 12px;
+        display: flex; justify-content: space-between; align-items: center;
+        border-bottom: 1px solid var(--line);
     }
     .tl-marquee .live-dot {
-        display: inline-block; width: 6px; height: 6px;
-        background: var(--ok); border-radius: 50%;
-        margin-right: 6px;
-        animation: pulse 2s infinite;
+        display: inline-block; width: 8px; height: 8px;
+        background: var(--ok); margin-right: 6px;
+        animation: pulse 1s steps(2) infinite;
+        vertical-align: middle;
     }
     @keyframes pulse {
-        0%,100% { opacity: 1; } 50% { opacity: .3; }
+        50% { background: transparent; }
     }
+    .tl-marquee .clock { color: var(--accent); }
 
-    /* ── Topbar ── */
+    /* ── Topbar (back / version) ── */
     .tl-topbar {
         display: flex; justify-content: space-between; align-items: center;
-        padding: 18px 0;
+        padding: 10px 0 6px;
+        font-family: var(--mono); font-size: 13px;
     }
     .tl-back {
-        display: inline-flex; align-items: center; gap: 6px;
-        background: var(--s2); border: 1px solid var(--line2);
-        padding: 7px 14px; cursor: pointer;
-        font-family: var(--mono); font-size: 10px; font-weight: 700;
-        letter-spacing: .16em; text-transform: uppercase;
-        color: var(--muted); text-decoration: none;
-        transition: color .15s, border-color .15s;
+        color: var(--accent);
+        text-decoration: none;
+        padding: 2px 8px;
+        background: var(--s2);
+        border: 1px solid var(--accent);
     }
-    .tl-back:hover { color: var(--txt); border-color: var(--line2); }
-    .tl-version {
-        font-family: var(--mono); font-size: 10px;
-        letter-spacing: .16em; text-transform: uppercase;
-        color: var(--dim);
-    }
+    .tl-back:hover { background: var(--accent); color: #000; }
+    .tl-back::before { content: '['; color: var(--txt); margin-right: 4px; }
+    .tl-back::after  { content: ']'; color: var(--txt); margin-left: 4px; }
+    .tl-version { color: var(--muted); }
+    .tl-version b { color: var(--ok); }
 
-    /* ── Masthead ── */
+    /* ── MASTHEAD (ASCII art title) ── */
     .tl-masthead {
-        border-top: 1px solid var(--line2);
-        border-bottom: 1px solid var(--line);
-        padding: 28px 0 24px;
+        background: var(--s2);
+        border: 2px solid var(--line2);
+        padding: 12px 14px;
+        margin: 8px 0;
+        position: relative;
     }
     .tl-masthead-row {
-        font-family: var(--mono); font-size: 10px; font-weight: 700;
-        letter-spacing: .16em; text-transform: uppercase;
-        color: var(--dim);
+        font-family: var(--mono); font-size: 12px;
+        color: var(--muted);
         display: flex; justify-content: space-between;
     }
+    .tl-masthead-row .lbl { color: var(--accent); }
     .tl-h1 {
-        font-family: var(--display); font-weight: 900;
-        letter-spacing: -.01em;
-        font-size: clamp(64px, 15vw, 112px);
-        line-height: .88; margin: 10px 0 0;
-        text-transform: uppercase;
+        font-family: var(--display); font-weight: 400;
+        font-size: clamp(56px, 13vw, 96px);
+        line-height: 1; margin: 6px 0 4px;
+        letter-spacing: .02em;
+        color: var(--txt);
+        text-shadow: 2px 0 var(--c-hyrox), -2px 0 var(--c-carrera);
     }
-    .tl-h1 .mark {
-        color: var(--accent);
+    .tl-h1 .mark { color: var(--accent); }
+    .tl-h1 .dot  { color: var(--c-hyrox); }
+    .tl-subtitle {
+        font-family: var(--mono); font-size: 13px;
+        color: var(--c-carrera);
     }
-    .tl-h1 .dot { color: var(--hi); }
 
-    /* ── Range ── */
+    /* ── Range buttons ── */
     .tl-range {
-        display: flex; gap: 6px; align-items: center;
-        margin-top: 20px; flex-wrap: wrap;
+        display: flex; gap: 8px; align-items: center;
+        margin-top: 10px; flex-wrap: wrap;
+        font-family: var(--mono); font-size: 13px;
     }
     .tl-range-lbl {
-        font-family: var(--mono); font-size: 10px; font-weight: 700;
-        letter-spacing: .16em; text-transform: uppercase; color: var(--dim);
-        margin-right: 4px;
+        color: var(--accent);
     }
     .tl-range-btn {
-        padding: 7px 14px;
+        padding: 1px 10px;
         border: 1px solid var(--line2);
-        background: transparent; cursor: pointer;
-        font-family: var(--mono); font-size: 10px; font-weight: 700;
-        letter-spacing: .16em; text-transform: uppercase;
-        color: var(--muted); text-decoration: none;
-        transition: background .15s, color .15s, border-color .15s;
+        background: var(--s3); cursor: pointer;
+        font-family: var(--mono); font-size: 13px; font-weight: 700;
+        color: var(--txt); text-decoration: none;
     }
-    .tl-range-btn:hover { background: var(--s2); color: var(--txt); }
+    .tl-range-btn:hover { background: var(--accent); color: #000; }
     .tl-range-btn.active {
-        background: var(--accent); color: #08090c;
+        background: var(--accent); color: #000;
         border-color: var(--accent);
     }
 
-    /* ── Stats grid ── */
+    /* ── STATS grid ── */
     .tl-stats {
-        margin-top: 20px;
+        margin-top: 16px;
         display: grid; grid-template-columns: repeat(4, 1fr);
-        background: var(--s1);
-        border: 1px solid var(--line2);
-        border-radius: 4px;
-        overflow: hidden;
+        gap: 0;
+        border: 2px solid var(--line2);
+        background: var(--s2);
     }
     .tl-stat {
-        padding: 20px 18px;
+        padding: 10px 12px 12px;
         border-right: 1px solid var(--line);
         position: relative;
     }
     .tl-stat:last-child { border-right: 0; }
-    .tl-stat-warn { background: rgba(245,158,11,.08); }
-    .tl-stat-bad  { background: rgba(239,68,68,.08); }
-    .tl-stat-ok   { background: rgba(34,197,94,.06); }
-    .tl-stat::before {
-        content: '';
-        position: absolute; top: 0; left: 0; right: 0;
-        height: 2px;
-    }
-    .tl-stat-ok::before   { background: var(--ok); }
-    .tl-stat-warn::before { background: var(--warn); }
-    .tl-stat-bad::before  { background: var(--bad); }
+    .tl-stat-warn { background: rgba(255,255,85,.08); }
+    .tl-stat-bad  { background: rgba(255,85,85,.10); }
+    .tl-stat-ok   { background: rgba(85,255,85,.06); }
     .tl-stat-lbl {
-        font-family: var(--mono); font-size: 9px; font-weight: 700;
-        letter-spacing: .18em; text-transform: uppercase; color: var(--muted);
+        font-family: var(--mono); font-size: 11px; font-weight: 700;
+        color: var(--accent);
     }
+    .tl-stat-lbl::before { content: '> '; color: var(--ok); }
     .tl-stat-val {
-        font-family: var(--display); font-weight: 900;
-        font-size: 52px; line-height: .9;
-        margin-top: 10px; letter-spacing: -.01em;
+        font-family: var(--display);
+        font-size: 56px; line-height: 1;
+        margin-top: 4px;
         font-variant-numeric: tabular-nums;
-        color: var(--txt);
+        color: var(--c-carrera);
     }
     .tl-stat-val.warn { color: var(--warn); }
-    .tl-stat-val.bad  { color: var(--bad); }
+    .tl-stat-val.bad  { color: var(--bad); text-shadow: 1px 0 #000; }
     .tl-stat-val.ok   { color: var(--ok); }
     .tl-stat-sub {
-        font-family: var(--mono); font-size: 9px; color: var(--dim);
-        margin-top: 8px; letter-spacing: .06em;
+        font-family: var(--mono); font-size: 11px;
+        color: var(--muted);
+        margin-top: 4px;
     }
 
     /* ── Section header ── */
-    .tl-section { margin-top: 24px; }
+    .tl-section { margin-top: 18px; }
     .tl-section-hdr {
-        display: flex; align-items: center; gap: 10px; margin-bottom: 14px;
+        display: flex; align-items: center; gap: 8px; margin-bottom: 10px;
+        font-family: var(--mono); font-size: 13px;
     }
     .tl-section-tag {
-        font-family: var(--mono); font-size: 10px; font-weight: 700;
-        color: var(--dim); letter-spacing: .12em;
+        color: var(--c-ciclismo); font-weight: 700;
     }
     .tl-section-title {
-        font-family: var(--display); font-weight: 700; font-size: 18px;
-        text-transform: uppercase; letter-spacing: .04em; margin: 0;
-        color: var(--txt);
+        font-family: var(--mono); font-weight: 700; font-size: 14px;
+        color: var(--accent); margin: 0; text-transform: uppercase;
+        letter-spacing: .04em;
     }
+    .tl-section-title::before { content: '['; color: var(--txt); }
+    .tl-section-title::after  { content: ']'; color: var(--txt); }
     .tl-rule {
-        flex: 1; height: 1px;
-        background: var(--line);
+        flex: 1; height: 0;
+        border-top: 1px dashed var(--line2);
     }
 
     /* ── Filter pills ── */
@@ -226,87 +326,98 @@
         display: flex; flex-wrap: wrap; gap: 6px;
     }
     .tl-filter-btn {
-        padding: 7px 14px;
+        padding: 2px 10px;
         border: 1px solid var(--line2);
-        background: var(--s1); cursor: pointer;
-        font-family: var(--mono); font-size: 10px; font-weight: 700;
-        letter-spacing: .14em; text-transform: uppercase;
-        color: var(--muted);
-        border-radius: 2px;
-        transition: background .15s, color .15s, border-color .15s;
+        background: var(--s2); cursor: pointer;
+        font-family: var(--mono); font-size: 12px; font-weight: 500;
+        color: var(--txt);
     }
-    .tl-filter-btn:hover { background: var(--s2); color: var(--txt); }
+    .tl-filter-btn:hover { background: var(--c-carrera); color: #000; }
     .tl-filter-btn.active {
-        background: var(--s3); color: var(--txt);
-        border-color: var(--line2);
+        background: var(--c-carrera); color: #000;
+        border-color: var(--c-carrera);
     }
 
     /* ── CTA ── */
     .tl-cta {
         display: flex; align-items: center; justify-content: center; gap: 10px;
-        width: 100%; margin-top: 20px; padding: 16px;
-        background: var(--hi); color: #fff;
-        border: 0; cursor: pointer;
-        font-family: var(--display); font-size: 20px; font-weight: 700;
-        text-transform: uppercase; letter-spacing: .06em;
-        text-decoration: none; border-radius: 2px;
-        transition: opacity .15s, transform .1s;
+        width: 100%; margin-top: 14px; padding: 10px;
+        background: var(--hi); color: #FFFFFF;
+        border: 2px solid var(--accent);
+        cursor: pointer;
+        font-family: var(--mono); font-size: 15px; font-weight: 700;
+        text-transform: uppercase; letter-spacing: .08em;
+        text-decoration: none;
+        box-shadow: 4px 4px 0 #000;
     }
-    .tl-cta:hover { opacity: .9; transform: translateY(-1px); }
-    .tl-cta:active { transform: translateY(0); opacity: 1; }
+    .tl-cta:hover { background: var(--accent); color: #000; }
+    .tl-cta:active { box-shadow: 0 0 0 #000; transform: translate(4px, 4px); }
+    .tl-cta::before { content: 'F2 ►'; color: var(--accent); margin-right: 6px; }
+    .tl-cta:hover::before { color: var(--hi); }
 
-    /* ── Timeline list ── */
-    .tl-list { margin-top: 4px; }
-
-    /* Day header */
+    /* ── Day header ── */
     .tl-day-hdr {
         display: flex; justify-content: space-between; align-items: center;
-        padding: 22px 0 10px;
-        margin-top: 8px;
-        border-top: 1px solid var(--line);
+        padding: 10px 10px 6px;
+        margin-top: 10px;
+        background: var(--s2);
+        border-top: 1px solid var(--line2);
+        border-left: 4px solid var(--accent);
     }
-    .tl-day-hdr:first-child { border-top: 0; margin-top: 0; }
+    .tl-day-hdr:first-child { margin-top: 0; }
     .tl-day-label {
         display: flex; align-items: baseline; gap: 10px;
+        font-family: var(--mono);
     }
     .tl-day-num {
-        font-family: var(--mono); font-size: 9px; font-weight: 700;
-        letter-spacing: .18em; color: var(--dim); text-transform: uppercase;
+        font-size: 13px; font-weight: 700;
+        color: var(--c-ciclismo);
     }
     .tl-day-name {
-        font-family: var(--display); font-weight: 900;
-        font-size: 28px; letter-spacing: -.01em;
-        text-transform: uppercase; color: var(--txt);
+        font-family: var(--display);
+        font-size: 28px;
+        color: var(--accent);
         line-height: 1;
     }
     .tl-day-date {
-        font-family: var(--mono); font-size: 11px; font-weight: 700;
-        letter-spacing: .1em; color: var(--muted); text-transform: uppercase;
+        font-family: var(--mono); font-size: 13px;
+        color: var(--c-carrera);
     }
     .tl-day-energy {
-        font-family: var(--mono); font-size: 10px; color: var(--muted);
+        font-family: var(--mono); font-size: 12px; color: var(--muted);
         display: flex; align-items: center; gap: 6px;
     }
     .tl-day-energy-val {
-        font-family: var(--display); font-weight: 700; font-size: 20px;
-        color: var(--txt);
+        font-family: var(--display);
+        font-size: 22px;
+        color: var(--ok);
     }
 
-    /* Activity row */
+    /* ── Activity row ── */
     .tl-row {
         display: flex; align-items: center; gap: 14px;
-        padding: 14px 14px;
-        margin-bottom: 6px;
-        background: var(--s1);
+        padding: 10px 12px;
+        margin: 2px 0 0;
+        background: var(--s2);
         border: 1px solid var(--line);
-        border-left: 3px solid var(--c-otro);
-        border-radius: 3px;
+        border-left: 4px solid var(--c-otro);
         cursor: pointer;
-        transition: background .12s, border-color .12s;
-        animation: tlFade .25s ease both;
         position: relative;
     }
-    .tl-row:hover { background: var(--s2); }
+    .tl-row:hover {
+        background: var(--s3);
+        outline: 1px solid var(--accent);
+        outline-offset: -2px;
+    }
+    .tl-row::before {
+        content: '►';
+        color: var(--accent);
+        position: absolute; left: -2px; top: 50%;
+        transform: translateY(-50%);
+        opacity: 0;
+        font-size: 12px;
+    }
+    .tl-row:hover::before { opacity: 1; left: -14px; }
 
     /* Type-specific left borders */
     .tl-row[data-tipo="gym"]          { border-left-color: var(--c-gym); }
@@ -323,8 +434,7 @@
 
     /* SVG Ring */
     .tl-ring { position: relative; width: 48px; height: 48px; flex-shrink: 0; }
-
-    .tl-ring-track { stroke: rgba(255,255,255,.08); }
+    .tl-ring-track { stroke: rgba(255,255,255,.12); }
     .tl-ring-arc   { stroke: var(--c-otro); }
 
     .tl-row[data-tipo="gym"]          .tl-ring-arc { stroke: var(--c-gym); }
@@ -342,23 +452,23 @@
     .tl-ring-center {
         position: absolute; inset: 0;
         display: flex; align-items: center; justify-content: center;
-        font-family: var(--mono); font-size: 8px; font-weight: 700;
-        color: var(--muted); text-transform: uppercase;
+        font-family: var(--mono); font-size: 10px; font-weight: 700;
+        color: var(--accent);
     }
 
     /* Info */
     .tl-info { flex: 1; min-width: 0; }
     .tl-info-meta {
-        display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
-        font-family: var(--mono); font-size: 9px; font-weight: 700;
-        letter-spacing: .14em; text-transform: uppercase; color: var(--muted);
-        margin-bottom: 3px;
+        display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+        font-family: var(--mono); font-size: 11px; font-weight: 700;
+        color: var(--muted);
+        margin-bottom: 2px;
     }
     .tl-tipo-badge {
-        font-family: var(--mono); font-size: 9px; font-weight: 700;
-        letter-spacing: .14em; text-transform: uppercase;
-        padding: 2px 6px; border-radius: 2px;
-        background: rgba(255,255,255,.06);
+        font-family: var(--mono); font-size: 11px; font-weight: 700;
+        padding: 0 6px;
+        background: #000;
+        border: 1px solid currentColor;
     }
     .tl-row[data-tipo="gym"]          .tl-tipo-badge { color: var(--c-gym); }
     .tl-row[data-tipo="hyrox"]        .tl-tipo-badge { color: var(--c-hyrox); }
@@ -368,136 +478,164 @@
     .tl-row[data-tipo="cardio_sustituto"] .tl-tipo-badge,
     .tl-row[data-tipo="futbol"]       .tl-tipo-badge,
     .tl-row[data-tipo="hiit"]         .tl-tipo-badge { color: var(--c-cardio); }
+    .tl-row[data-tipo="natacion"]     .tl-tipo-badge { color: var(--c-natacion); }
+    .tl-row[data-tipo="yoga"]         .tl-tipo-badge,
+    .tl-row[data-tipo="estiramientos"].tl-tipo-badge { color: var(--c-yoga); }
 
     .tl-plan {
-        background: var(--accent); color: #08090c;
-        padding: 2px 6px; border-radius: 2px;
-        font-weight: 700; font-size: 9px; letter-spacing: .1em;
+        background: var(--accent); color: #000;
+        padding: 0 6px;
+        font-weight: 700; font-size: 11px;
     }
     .tl-info-title {
-        font-family: var(--sans); font-size: 12px; font-weight: 400;
-        color: var(--muted); margin-top: 1px;
+        font-family: var(--mono); font-size: 12px; font-weight: 400;
+        color: var(--txt); margin-top: 0;
         white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
+    .tl-info-title::before { content: '" '; color: var(--c-carrera); }
+    .tl-info-title::after  { content: ' "'; color: var(--c-carrera); }
     .tl-info-metric {
-        font-family: var(--display); font-weight: 900;
-        font-size: 38px; line-height: 1;
-        margin-top: 2px; letter-spacing: -.01em;
+        font-family: var(--display);
+        font-size: 40px; line-height: 1;
+        margin-top: 2px;
         font-variant-numeric: tabular-nums;
-        color: var(--txt);
+        color: var(--ok);
     }
     .tl-info-metric .unit {
-        font-family: var(--mono); font-size: 11px; font-weight: 700;
-        margin-left: 4px; color: var(--muted); letter-spacing: .08em;
+        font-family: var(--mono); font-size: 12px; font-weight: 700;
+        margin-left: 4px; color: var(--accent);
     }
 
     /* Right side */
     .tl-sub {
         text-align: right; flex-shrink: 0;
-        font-family: var(--mono); font-size: 10px; font-weight: 700;
-        letter-spacing: .1em; text-transform: uppercase; color: var(--muted);
-        line-height: 1.7;
+        font-family: var(--mono); font-size: 11px; font-weight: 700;
+        color: var(--muted);
+        line-height: 1.5;
     }
     .tl-sub .rpe-val {
-        font-family: var(--display); font-weight: 900;
-        font-size: 22px; color: var(--txt);
+        font-family: var(--display);
+        font-size: 24px;
+        color: var(--c-hyrox);
         display: block; line-height: 1;
     }
 
     /* Expandable actions */
     .tl-actions {
         display: none;
-        background: var(--s2);
-        border: 1px solid var(--line);
+        background: #000;
+        border: 1px solid var(--accent);
         border-top: 0;
-        border-radius: 0 0 3px 3px;
-        margin-top: -6px;
-        margin-bottom: 6px;
+        margin-top: -1px;
     }
     .tl-actions.open { display: flex; }
     .tl-action-btn {
-        flex: 1; padding: 12px;
+        flex: 1; padding: 6px 12px;
         background: transparent; border: 0; cursor: pointer;
-        font-family: var(--mono); font-size: 10px; font-weight: 700;
-        letter-spacing: .14em; text-transform: uppercase;
-        color: var(--muted);
+        font-family: var(--mono); font-size: 12px; font-weight: 700;
+        color: var(--accent);
         display: flex; align-items: center; justify-content: center; gap: 6px;
         border-right: 1px solid var(--line);
-        transition: background .12s, color .12s;
     }
     .tl-action-btn:last-child { border-right: 0; }
-    .tl-action-btn:hover { background: var(--s3); color: var(--txt); }
+    .tl-action-btn:hover { background: var(--accent); color: #000; }
     .tl-action-btn.del { color: var(--bad); }
-    .tl-action-btn.del:hover { background: rgba(239,68,68,.15); }
+    .tl-action-btn.del:hover { background: var(--bad); color: #000; }
     .tl-confirm {
         display: none; flex: 1; align-items: center; justify-content: center;
-        font-family: var(--mono); font-size: 10px; font-weight: 700;
-        letter-spacing: .14em; text-transform: uppercase; color: var(--bad);
+        font-family: var(--mono); font-size: 12px; font-weight: 700;
+        color: var(--bad);
     }
     .tl-confirm.show { display: flex; }
     .tl-normal.hide  { display: none; }
 
     /* Bitácora */
     .tl-row-log {
-        display: flex; gap: 14px; align-items: flex-start;
-        padding: 14px;
-        margin-bottom: 6px;
-        background: rgba(200,255,0,.04);
-        border: 1px solid rgba(200,255,0,.12);
-        border-left: 3px solid var(--accent);
-        border-radius: 3px;
+        display: flex; gap: 12px; align-items: flex-start;
+        padding: 10px 12px;
+        margin-top: 2px;
+        background: #000;
+        border: 1px solid var(--accent);
+        border-left: 4px solid var(--accent);
+        color: var(--accent);
     }
     .tl-log-icon {
-        width: 46px; height: 46px;
-        background: var(--s2); border: 1px solid var(--line2);
+        width: 42px; height: 42px;
+        background: var(--s2); border: 1px solid var(--accent);
         display: flex; align-items: center; justify-content: center;
-        font-size: 20px; flex-shrink: 0; border-radius: 2px;
+        font-size: 18px; flex-shrink: 0;
     }
     .tl-log-body { flex: 1; min-width: 0; }
     .tl-log-hdr {
-        font-family: var(--mono); font-size: 9px; font-weight: 700;
-        letter-spacing: .16em; text-transform: uppercase; color: var(--dim);
-        margin-bottom: 5px;
+        font-family: var(--mono); font-size: 11px; font-weight: 700;
+        color: var(--c-ciclismo);
+        margin-bottom: 4px;
     }
-    .tl-log-text { font-size: 13px; line-height: 1.6; color: var(--muted); }
+    .tl-log-hdr::before { content: 'REM '; color: var(--accent); }
+    .tl-log-text {
+        font-family: var(--mono); font-size: 13px;
+        line-height: 1.5; color: var(--txt);
+    }
     .tl-log-energy {
         text-align: right; flex-shrink: 0;
-        font-family: var(--mono); font-size: 9px; color: var(--dim);
-        letter-spacing: .1em; text-transform: uppercase;
+        font-family: var(--mono); font-size: 11px;
+        color: var(--muted);
     }
     .tl-log-energy b {
-        font-family: var(--display); font-weight: 900;
-        font-size: 28px; color: var(--txt);
+        font-family: var(--display);
+        font-size: 28px; color: var(--ok);
         display: block; line-height: 1;
     }
 
     /* Empty state */
     .tl-empty {
-        background: var(--s1); border: 1px solid var(--line);
-        padding: 56px 24px; text-align: center; margin-top: 16px;
-        border-radius: 4px;
+        background: var(--s2); border: 2px dashed var(--line2);
+        padding: 40px 24px; text-align: center; margin-top: 12px;
     }
     .tl-empty-num {
-        font-family: var(--display); font-weight: 900; font-size: 96px;
-        line-height: 1; color: var(--dim);
+        font-family: var(--display); font-size: 96px;
+        line-height: 1; color: var(--c-hyrox);
     }
     .tl-empty-msg {
-        font-family: var(--mono); font-size: 11px; font-weight: 700;
-        letter-spacing: .2em; text-transform: uppercase; color: var(--muted);
+        font-family: var(--mono); font-size: 13px; font-weight: 700;
+        color: var(--accent);
     }
+    .tl-empty-msg::before, .tl-empty-msg::after { content: ' ── '; color: var(--muted); }
 
     /* Footer */
     .tl-footer {
-        margin-top: 56px; padding-top: 20px;
-        border-top: 1px solid var(--line);
+        margin-top: 30px; padding: 8px 0;
+        border-top: 1px dashed var(--line2);
         display: flex; justify-content: space-between;
-        font-family: var(--mono); font-size: 10px; font-weight: 700;
-        letter-spacing: .16em; text-transform: uppercase; color: var(--dim);
+        font-family: var(--mono); font-size: 12px;
+        color: var(--muted);
     }
+    .tl-footer b { color: var(--ok); }
 
-    @keyframes tlFade {
-        from { opacity: 0; transform: translateY(6px); }
-        to   { opacity: 1; transform: translateY(0); }
+    /* ── F-key bar (DOS-style status bar at bottom) ── */
+    .dos-fbar {
+        position: fixed;
+        left: 0; right: 0; bottom: 0;
+        background: #000;
+        color: var(--txt);
+        font-family: var(--mono); font-size: 12px;
+        padding: 4px 8px;
+        display: flex; justify-content: center; gap: 14px;
+        z-index: 100;
+        border-top: 1px solid var(--line2);
+        overflow-x: auto;
+        white-space: nowrap;
+    }
+    .dos-fbar .fk {
+        display: inline-flex; align-items: center; gap: 4px;
+    }
+    .dos-fbar .fkey {
+        color: var(--txt);
+    }
+    .dos-fbar .flbl {
+        background: var(--c-carrera);
+        color: #000;
+        padding: 0 6px;
     }
 
     @media (max-width: 640px) {
@@ -505,8 +643,9 @@
         .tl-stat:nth-child(2) { border-right: 0; }
         .tl-stat:nth-child(1), .tl-stat:nth-child(2) { border-bottom: 1px solid var(--line); }
         .tl-footer { flex-direction: column; gap: 6px; text-align: center; }
-        .tl-info-metric { font-size: 30px; }
+        .tl-info-metric { font-size: 32px; }
         .tl-day-name { font-size: 22px; }
+        .dos-fbar { font-size: 11px; gap: 8px; }
     }
     </style>
 </head>
@@ -514,252 +653,293 @@
 
 <div class="tl-shell" id="tl-shell" data-cliente="{{ cliente.id }}">
 
+    <!-- DOS TITLE BAR -->
+    <div class="dos-titlebar">
+        <span><span class="dos-close">■</span> &nbsp;TIMELINE.EXE</span>
+        <span class="dos-titlebar-center">─ [ CL-{{ cliente.id }} · {{ cliente.nombre|upper }} ] ─</span>
+        <span>[▼][▲][X]</span>
+    </div>
+
+    <!-- DOS MENU BAR -->
+    <div class="dos-menubar">
+        <span><b>F</b>ile</span>
+        <span><b>E</b>dit</span>
+        <span><b>V</b>iew</span>
+        <span><b>R</b>egistro</span>
+        <span><b>O</b>ptions</span>
+        <span><b>H</b>elp</span>
+    </div>
+
     <!-- MARQUEE -->
     <div class="tl-marquee">
-        <span><span class="live-dot"></span>LIVE · TIMELINE #{{ cliente.id }}</span>
-        <span id="tl-clock">--:--:--</span>
+        <span><span class="live-dot"></span>LIVE :: PID #{{ cliente.id }} :: REGISTRO DE ACTIVIDAD</span>
+        <span class="clock" id="tl-clock">--:--:--</span>
     </div>
 
-    <!-- TOPBAR -->
-    <div class="tl-topbar">
-        <a href="{% url 'clientes:panel_cliente' %}" class="tl-back">‹ VOLVER</a>
-        <span class="tl-version">TIMELINE · v04.26</span>
-    </div>
+    <div class="tl-inner">
 
-    <!-- MASTHEAD -->
-    <section class="tl-masthead">
-        <div class="tl-masthead-row">
-            <span>REGISTRO DE ACTIVIDAD</span>
-            <span>CL-{{ cliente.id }} · {{ cliente.nombre|upper }}</span>
+        <!-- TOPBAR -->
+        <div class="tl-topbar">
+            <a href="{% url 'clientes:panel_cliente' %}" class="tl-back">&lt; CD ..\PANEL</a>
+            <span class="tl-version">BUILD <b>v04.26</b> · DOS-MODE</span>
         </div>
-        <h1 class="tl-h1">HIS<span class="mark">TO</span>RIAL<span class="dot">.</span></h1>
 
-        <div class="tl-range" role="group" aria-label="Rango de fechas">
-            <span class="tl-range-lbl">RANGO →</span>
-            {% for r in rangos %}
-            <a href="?dias={{ r }}"
-                class="tl-range-btn {% if dias_rango == r %}active{% endif %}"
-                {% if dias_rango == r %}aria-current="page"{% endif %}>
-                {% if r == 7 %}07D{% elif r == 30 %}30D{% else %}90D{% endif %}
-            </a>
-            {% endfor %}
+        <!-- PROMPT -->
+        <div class="dos-prompt">
+            <span class="path">C:\ATLETA\{{ cliente.nombre|upper }}</span>
+            <span class="gt">&gt;</span>
+            <span class="cmd">TYPE HISTORIAL.LOG /RANGE={{ dias_rango }}D</span>
+            <span class="blink"></span>
         </div>
-    </section>
 
-    <!-- STATS -->
-    <section class="tl-stats">
-        <div class="tl-stat">
-            <div class="tl-stat-lbl">DÍAS ACTIVOS</div>
-            <div class="tl-stat-val">{{ dias_activos }}</div>
-            <div class="tl-stat-sub">de {{ dias_rango }} días</div>
-        </div>
-        <div class="tl-stat">
-            <div class="tl-stat-lbl">ACTIVIDADES</div>
-            <div class="tl-stat-val">{{ total_actividades }}</div>
-        </div>
-        {% if tsb_data %}
-        <div class="tl-stat
-            {% if tsb_data.zona == 'sobrecargado' %}tl-stat-bad
-            {% elif tsb_data.zona == 'fatigado' %}tl-stat-warn
-            {% else %}tl-stat-ok{% endif %}">
-            <div class="tl-stat-lbl">TSB · {{ tsb_data.zona|upper }}</div>
-            <div class="tl-stat-val
-                {% if tsb_data.zona == 'sobrecargado' %}bad
-                {% elif tsb_data.zona == 'fatigado' %}warn
-                {% else %}ok{% endif %}">{{ tsb_data.tsb }}</div>
-            <div class="tl-stat-sub">CTL {{ tsb_data.ctl }} · ATL {{ tsb_data.atl }}</div>
-        </div>
-        {% else %}
-        <div class="tl-stat">
-            <div class="tl-stat-lbl">TSB</div>
-            <div class="tl-stat-val" style="color:var(--dim)">—</div>
-        </div>
-        {% endif %}
-        <div class="tl-stat
-            {% if acwr.zona_riesgo == 'optima' %}tl-stat-ok
-            {% elif acwr.zona_riesgo == 'cuidado' %}tl-stat-warn
-            {% elif acwr.zona_riesgo == 'riesgo_alto' %}tl-stat-bad{% endif %}">
-            <div class="tl-stat-lbl">ACWR ·
-                {% if acwr.zona_riesgo == 'optima' %}ÓPTIMA
-                {% elif acwr.zona_riesgo == 'cuidado' %}CUIDADO
-                {% elif acwr.zona_riesgo == 'riesgo_alto' %}RIESGO
-                {% else %}—{% endif %}
+        <!-- MASTHEAD -->
+        <section class="tl-masthead">
+            <div class="tl-masthead-row">
+                <span class="lbl">► REGISTRO DE ACTIVIDAD</span>
+                <span>CL-{{ cliente.id }} · {{ cliente.nombre|upper }}</span>
             </div>
-            <div class="tl-stat-val
-                {% if acwr.zona_riesgo == 'optima' %}ok
-                {% elif acwr.zona_riesgo == 'cuidado' %}warn
-                {% elif acwr.zona_riesgo == 'riesgo_alto' %}bad{% endif %}">{{ acwr.acwr_actual }}</div>
-        </div>
-    </section>
+            <h1 class="tl-h1">HIS<span class="mark">TO</span>RIAL<span class="dot">_</span></h1>
+            <div class="tl-subtitle">// últimos {{ dias_rango }} días // ventana {{ dias_activos }}/{{ dias_rango }} activos //</div>
 
-    <!-- FILTERS -->
-    <section class="tl-section">
-        <div class="tl-section-hdr">
-            <span class="tl-section-tag">§01</span>
-            <h2 class="tl-section-title">Filtrar</h2>
-            <div class="tl-rule"></div>
-        </div>
-        <div class="tl-filters" role="group" aria-label="Filtrar por tipo">
-            <button class="tl-filter-btn active" data-filter="all">TODO · {{ total_actividades }}</button>
-            {% for d in desglose %}
-            <button class="tl-filter-btn" data-filter="{{ d.tipo }}">
-                {{ d.label }}{% if d.n %} · {{ d.n }}{% endif %}
-            </button>
-            {% endfor %}
-        </div>
-    </section>
-
-    <!-- CTA -->
-    <a href="{% url 'entrenos:registrar_actividad_libre' cliente.id %}" class="tl-cta">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        REGISTRAR ACTIVIDAD
-    </a>
-
-    <!-- TIMELINE -->
-    <section class="tl-section">
-        <div class="tl-section-hdr">
-            <span class="tl-section-tag">§02</span>
-            <h2 class="tl-section-title">Secuencia · {{ dias_rango }}D</h2>
-            <div class="tl-rule"></div>
-        </div>
-
-        <div class="tl-list" id="tl-list">
-            {% for dia in dias %}
-
-                <!-- Day header -->
-                <div class="tl-day-hdr">
-                    <div class="tl-day-label">
-                        <span class="tl-day-num">D{{ forloop.counter|stringformat:"02d" }}</span>
-                        <span class="tl-day-name">{{ dia.dia_semana|upper }} <span class="tl-day-date">{{ dia.fecha|date:"d M" }}</span></span>
-                    </div>
-                    {% if dia.energia %}
-                    <div class="tl-day-energy">
-                        <span>ENERGÍA</span>
-                        <span class="tl-day-energy-val">{{ dia.energia }}</span>
-                        <span>/10 {{ dia.humor_emoji|default:"" }}</span>
-                    </div>
-                    {% endif %}
-                </div>
-
-                {% for actividad in dia.actividades %}
-                <div class="tl-row"
-                        data-tipo="{{ actividad.tipo }}"
-                        data-carga="{{ actividad.carga_ua|default:actividad.volumen_kg|default:actividad.duracion_minutos|default:0 }}"
-                        data-id="{{ actividad.id }}"
-                        onclick="tlToggleRow(this)">
-
-                    <!-- Ring -->
-                    <div class="tl-ring">
-                        <svg viewBox="0 0 48 48" width="48" height="48">
-                            <circle cx="24" cy="24" r="20" fill="none" class="tl-ring-track" stroke-width="3"/>
-                            <circle cx="24" cy="24" r="20" fill="none"
-                                    class="tl-ring-arc"
-                                    stroke-width="3"
-                                    stroke-dasharray="0 125.66"
-                                    stroke-linecap="round"
-                                    transform="rotate(-90 24 24)"
-                                    />
-                        </svg>
-                        <div class="tl-ring-center">
-                            {% if actividad.tipo == 'gym' %}GYM
-                            {% elif actividad.tipo == 'hyrox' %}HYX
-                            {% elif actividad.tipo == 'carrera' %}RUN
-                            {% elif actividad.tipo == 'ciclismo' %}BIK
-                            {% elif actividad.tipo == 'remo' %}ROW
-                            {% elif actividad.tipo == 'cardio_sustituto' or actividad.tipo == 'futbol' %}CRD
-                            {% elif actividad.tipo == 'natacion' %}SWM
-                            {% else %}ACT{% endif %}
-                        </div>
-                    </div>
-
-                    <!-- Info -->
-                    <div class="tl-info">
-                        <div class="tl-info-meta">
-                            <span class="tl-tipo-badge">{{ actividad.tipo|upper }}</span>
-                            {% if actividad.titulo %}
-                            <span class="tl-info-title">{{ actividad.titulo }}</span>
-                            {% endif %}
-                            {% if actividad.fecha_realizado and actividad.fecha_realizado != actividad.fecha %}
-                            <span class="tl-plan">PLAN {{ actividad.fecha|date:"d/m" }}</span>
-                            {% endif %}
-                        </div>
-                        <div class="tl-info-metric">
-                            {% if actividad.distancia_metros %}{% widthratio actividad.distancia_metros 1000 1 %}<span class="unit">KM</span>
-                            {% elif actividad.calorias %}{{ actividad.calorias|floatformat:0 }}<span class="unit">CAL</span>
-                            {% elif actividad.carga_display %}{{ actividad.carga_display|floatformat:0 }}<span class="unit">sRPE</span>
-                            {% elif actividad.volumen_kg %}{{ actividad.volumen_kg|floatformat:0 }}<span class="unit">KG</span>
-                            {% elif actividad.duracion_minutos %}{{ actividad.duracion_minutos }}<span class="unit">MIN</span>
-                            {% elif actividad.rpe_medio %}{{ actividad.rpe_medio|floatformat:1 }}<span class="unit">RPE</span>
-                            {% else %}—{% endif %}
-                        </div>
-                    </div>
-
-                    <!-- Right: RPE + duration -->
-                    <div class="tl-sub">
-                        {% if actividad.rpe_medio %}
-                        <span class="rpe-val">{{ actividad.rpe_medio|floatformat:1 }}</span>
-                        RPE
-                        {% endif %}
-                        {% if actividad.duracion_minutos %}
-                        {{ actividad.duracion_minutos }}min
-                        {% endif %}
-                    </div>
-                </div>
-
-                <!-- Expandable actions -->
-                <div class="tl-actions" id="tl-actions-{{ actividad.id }}">
-                    <div class="tl-normal" id="tl-normal-{{ actividad.id }}" style="display:flex;flex:1;">
-                        <button class="tl-action-btn" onclick="tlEditActivity('{{ actividad.id }}')">
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                            EDITAR
-                        </button>
-                        <button class="tl-action-btn del" onclick="tlConfirmDelete('{{ actividad.id }}', event)">
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
-                            ELIMINAR
-                        </button>
-                    </div>
-                    <div class="tl-confirm" id="tl-confirm-{{ actividad.id }}" style="flex:1;">
-                        <span style="flex:1;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.14em;color:var(--bad)">¿ELIMINAR?</span>
-                        <button class="tl-action-btn del" onclick="tlDeleteActivity('{{ actividad.id }}', event)">SÍ</button>
-                        <button class="tl-action-btn" onclick="tlCancelDelete('{{ actividad.id }}', event)">NO</button>
-                    </div>
-                </div>
+            <div class="tl-range" role="group" aria-label="Rango de fechas">
+                <span class="tl-range-lbl">RANGE:</span>
+                {% for r in rangos %}
+                <a href="?dias={{ r }}"
+                    class="tl-range-btn {% if dias_rango == r %}active{% endif %}"
+                    {% if dias_rango == r %}aria-current="page"{% endif %}>
+                    {% if r == 7 %}07D{% elif r == 30 %}30D{% else %}90D{% endif %}
+                </a>
                 {% endfor %}
+            </div>
+        </section>
 
-                {% if dia.bitacora %}
-                <div class="tl-row-log">
-                    <div class="tl-log-icon">{{ dia.humor_emoji|default:"📓" }}</div>
-                    <div class="tl-log-body">
-                        <div class="tl-log-hdr">BITÁCORA · {{ dia.dia_semana|upper }} {{ dia.fecha|date:"d M" }}</div>
-                        <div class="tl-log-text">
-                            {% if dia.emocion_dia %}"{{ dia.emocion_dia }}"{% endif %}
-                            {% if dia.nota %}{% if dia.emocion_dia %} — {% endif %}{{ dia.nota }}{% endif %}
+        <!-- STATS -->
+        <section class="tl-stats">
+            <div class="tl-stat">
+                <div class="tl-stat-lbl">DIAS_ACTIVOS</div>
+                <div class="tl-stat-val">{{ dias_activos }}</div>
+                <div class="tl-stat-sub">de {{ dias_rango }} dias</div>
+            </div>
+            <div class="tl-stat">
+                <div class="tl-stat-lbl">ACTIVIDADES</div>
+                <div class="tl-stat-val">{{ total_actividades }}</div>
+                <div class="tl-stat-sub">total registros</div>
+            </div>
+            {% if tsb_data %}
+            <div class="tl-stat
+                {% if tsb_data.zona == 'sobrecargado' %}tl-stat-bad
+                {% elif tsb_data.zona == 'fatigado' %}tl-stat-warn
+                {% else %}tl-stat-ok{% endif %}">
+                <div class="tl-stat-lbl">TSB :: {{ tsb_data.zona|upper }}</div>
+                <div class="tl-stat-val
+                    {% if tsb_data.zona == 'sobrecargado' %}bad
+                    {% elif tsb_data.zona == 'fatigado' %}warn
+                    {% else %}ok{% endif %}">{{ tsb_data.tsb }}</div>
+                <div class="tl-stat-sub">CTL {{ tsb_data.ctl }} · ATL {{ tsb_data.atl }}</div>
+            </div>
+            {% else %}
+            <div class="tl-stat">
+                <div class="tl-stat-lbl">TSB</div>
+                <div class="tl-stat-val" style="color:var(--dim)">--</div>
+                <div class="tl-stat-sub">sin datos</div>
+            </div>
+            {% endif %}
+            <div class="tl-stat
+                {% if acwr.zona_riesgo == 'optima' %}tl-stat-ok
+                {% elif acwr.zona_riesgo == 'cuidado' %}tl-stat-warn
+                {% elif acwr.zona_riesgo == 'riesgo_alto' %}tl-stat-bad{% endif %}">
+                <div class="tl-stat-lbl">ACWR ::
+                    {% if acwr.zona_riesgo == 'optima' %}OPTIMA
+                    {% elif acwr.zona_riesgo == 'cuidado' %}CUIDADO
+                    {% elif acwr.zona_riesgo == 'riesgo_alto' %}RIESGO
+                    {% else %}--{% endif %}
+                </div>
+                <div class="tl-stat-val
+                    {% if acwr.zona_riesgo == 'optima' %}ok
+                    {% elif acwr.zona_riesgo == 'cuidado' %}warn
+                    {% elif acwr.zona_riesgo == 'riesgo_alto' %}bad{% endif %}">{{ acwr.acwr_actual }}</div>
+                <div class="tl-stat-sub">ratio aguda/cronica</div>
+            </div>
+        </section>
+
+        <!-- FILTERS -->
+        <section class="tl-section">
+            <div class="tl-section-hdr">
+                <span class="tl-section-tag">§01</span>
+                <h2 class="tl-section-title">FILTRAR</h2>
+                <div class="tl-rule"></div>
+            </div>
+            <div class="tl-filters" role="group" aria-label="Filtrar por tipo">
+                <button class="tl-filter-btn active" data-filter="all">*.* · {{ total_actividades }}</button>
+                {% for d in desglose %}
+                <button class="tl-filter-btn" data-filter="{{ d.tipo }}">
+                    {{ d.label }}{% if d.n %} · {{ d.n }}{% endif %}
+                </button>
+                {% endfor %}
+            </div>
+        </section>
+
+        <!-- CTA -->
+        <a href="{% url 'entrenos:registrar_actividad_libre' cliente.id %}" class="tl-cta">
+            REGISTRAR.ACTIVIDAD /NEW
+        </a>
+
+        <!-- TIMELINE -->
+        <section class="tl-section">
+            <div class="tl-section-hdr">
+                <span class="tl-section-tag">§02</span>
+                <h2 class="tl-section-title">SECUENCIA · {{ dias_rango }}D</h2>
+                <div class="tl-rule"></div>
+            </div>
+
+            <div class="tl-list" id="tl-list">
+                {% for dia in dias %}
+
+                    <!-- Day header -->
+                    <div class="tl-day-hdr">
+                        <div class="tl-day-label">
+                            <span class="tl-day-num">[D{{ forloop.counter|stringformat:"02d" }}]</span>
+                            <span class="tl-day-name">{{ dia.dia_semana|upper }} <span class="tl-day-date">// {{ dia.fecha|date:"d M" }}</span></span>
+                        </div>
+                        {% if dia.energia %}
+                        <div class="tl-day-energy">
+                            <span>ENG:</span>
+                            <span class="tl-day-energy-val">{{ dia.energia }}</span>
+                            <span>/10 {{ dia.humor_emoji|default:"" }}</span>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    {% for actividad in dia.actividades %}
+                    <div class="tl-row"
+                            data-tipo="{{ actividad.tipo }}"
+                            data-carga="{{ actividad.carga_ua|default:actividad.volumen_kg|default:actividad.duracion_minutos|default:0 }}"
+                            data-id="{{ actividad.id }}"
+                            onclick="tlToggleRow(this)">
+
+                        <!-- Ring -->
+                        <div class="tl-ring">
+                            <svg viewBox="0 0 48 48" width="48" height="48">
+                                <circle cx="24" cy="24" r="20" fill="none" class="tl-ring-track" stroke-width="3"/>
+                                <circle cx="24" cy="24" r="20" fill="none"
+                                        class="tl-ring-arc"
+                                        stroke-width="3"
+                                        stroke-dasharray="0 125.66"
+                                        stroke-linecap="butt"
+                                        transform="rotate(-90 24 24)"
+                                        />
+                            </svg>
+                            <div class="tl-ring-center">
+                                {% if actividad.tipo == 'gym' %}GYM
+                                {% elif actividad.tipo == 'hyrox' %}HYX
+                                {% elif actividad.tipo == 'carrera' %}RUN
+                                {% elif actividad.tipo == 'ciclismo' %}BIK
+                                {% elif actividad.tipo == 'remo' %}ROW
+                                {% elif actividad.tipo == 'cardio_sustituto' or actividad.tipo == 'futbol' %}CRD
+                                {% elif actividad.tipo == 'natacion' %}SWM
+                                {% else %}ACT{% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Info -->
+                        <div class="tl-info">
+                            <div class="tl-info-meta">
+                                <span class="tl-tipo-badge">{{ actividad.tipo|upper }}</span>
+                                {% if actividad.titulo %}
+                                <span class="tl-info-title">{{ actividad.titulo }}</span>
+                                {% endif %}
+                                {% if actividad.fecha_realizado and actividad.fecha_realizado != actividad.fecha %}
+                                <span class="tl-plan">PLAN {{ actividad.fecha|date:"d/m" }}</span>
+                                {% endif %}
+                            </div>
+                            <div class="tl-info-metric">
+                                {% if actividad.distancia_metros %}{% widthratio actividad.distancia_metros 1000 1 %}<span class="unit">KM</span>
+                                {% elif actividad.calorias %}{{ actividad.calorias|floatformat:0 }}<span class="unit">CAL</span>
+                                {% elif actividad.carga_display %}{{ actividad.carga_display|floatformat:0 }}<span class="unit">sRPE</span>
+                                {% elif actividad.volumen_kg %}{{ actividad.volumen_kg|floatformat:0 }}<span class="unit">KG</span>
+                                {% elif actividad.duracion_minutos %}{{ actividad.duracion_minutos }}<span class="unit">MIN</span>
+                                {% elif actividad.rpe_medio %}{{ actividad.rpe_medio|floatformat:1 }}<span class="unit">RPE</span>
+                                {% else %}--{% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Right: RPE + duration -->
+                        <div class="tl-sub">
+                            {% if actividad.rpe_medio %}
+                            <span class="rpe-val">{{ actividad.rpe_medio|floatformat:1 }}</span>
+                            RPE
+                            {% endif %}
+                            {% if actividad.duracion_minutos %}
+                            {{ actividad.duracion_minutos }}min
+                            {% endif %}
                         </div>
                     </div>
-                    {% if dia.energia %}
-                    <div class="tl-log-energy">
-                        ENERGÍA<b>{{ dia.energia }}</b>/10
+
+                    <!-- Expandable actions -->
+                    <div class="tl-actions" id="tl-actions-{{ actividad.id }}">
+                        <div class="tl-normal" id="tl-normal-{{ actividad.id }}" style="display:flex;flex:1;">
+                            <button class="tl-action-btn" onclick="tlEditActivity('{{ actividad.id }}')">
+                                ►&nbsp; EDIT.EXE
+                            </button>
+                            <button class="tl-action-btn del" onclick="tlConfirmDelete('{{ actividad.id }}', event)">
+                                ►&nbsp; DEL.EXE
+                            </button>
+                        </div>
+                        <div class="tl-confirm" id="tl-confirm-{{ actividad.id }}" style="flex:1;">
+                            <span style="flex:1;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:12px;font-weight:700;color:var(--bad)">!! CONFIRMAR DELETE ?</span>
+                            <button class="tl-action-btn del" onclick="tlDeleteActivity('{{ actividad.id }}', event)">[Y] SI</button>
+                            <button class="tl-action-btn" onclick="tlCancelDelete('{{ actividad.id }}', event)">[N] NO</button>
+                        </div>
+                    </div>
+                    {% endfor %}
+
+                    {% if dia.bitacora %}
+                    <div class="tl-row-log">
+                        <div class="tl-log-icon">{{ dia.humor_emoji|default:"$" }}</div>
+                        <div class="tl-log-body">
+                            <div class="tl-log-hdr">BITACORA.TXT · {{ dia.dia_semana|upper }} {{ dia.fecha|date:"d M" }}</div>
+                            <div class="tl-log-text">
+                                {% if dia.emocion_dia %}"{{ dia.emocion_dia }}"{% endif %}
+                                {% if dia.nota %}{% if dia.emocion_dia %} — {% endif %}{{ dia.nota }}{% endif %}
+                            </div>
+                        </div>
+                        {% if dia.energia %}
+                        <div class="tl-log-energy">
+                            ENG<b>{{ dia.energia }}</b>/10
+                        </div>
+                        {% endif %}
                     </div>
                     {% endif %}
-                </div>
-                {% endif %}
 
-            {% empty %}
-                <div class="tl-empty">
-                    <div class="tl-empty-num">00</div>
-                    <div class="tl-empty-msg">SIN ACTIVIDADES EN ESTE PERIODO</div>
-                </div>
-            {% endfor %}
-        </div>
-    </section>
+                {% empty %}
+                    <div class="tl-empty">
+                        <div class="tl-empty-num">00</div>
+                        <div class="tl-empty-msg">NOT FOUND :: SIN ACTIVIDADES EN ESTE PERIODO</div>
+                    </div>
+                {% endfor %}
+            </div>
+        </section>
 
-    <!-- FOOTER -->
-    <footer class="tl-footer">
-        <span>FIN DEL HISTORIAL</span>
-        <span>ACTUALIZADO EN VIVO</span>
-        <span>CL-{{ cliente.id }}</span>
-    </footer>
+        <!-- FOOTER -->
+        <footer class="tl-footer">
+            <span>EOF :: FIN.DEL.HISTORIAL</span>
+            <span>&lt;LIVE&gt; <b>ACTUALIZADO</b></span>
+            <span>CL-{{ cliente.id }}</span>
+        </footer>
 
+    </div>
+
+</div>
+
+<!-- F-KEY STATUS BAR -->
+<div class="dos-fbar">
+    <span class="fk"><span class="fkey">F1</span><span class="flbl">Help</span></span>
+    <span class="fk"><span class="fkey">F2</span><span class="flbl">New</span></span>
+    <span class="fk"><span class="fkey">F3</span><span class="flbl">Filter</span></span>
+    <span class="fk"><span class="fkey">F4</span><span class="flbl">Edit</span></span>
+    <span class="fk"><span class="fkey">F5</span><span class="flbl">Reload</span></span>
+    <span class="fk"><span class="fkey">F8</span><span class="flbl">Del</span></span>
+    <span class="fk"><span class="fkey">F10</span><span class="flbl">Quit</span></span>
 </div>
 
 <script>
@@ -786,7 +966,7 @@ function initRings() {
         const c = parseFloat(row.dataset.carga) || 0;
         const dash = Math.min(c / max, 1) * CIRC;
         setTimeout(() => {
-            arc.style.transition = 'stroke-dasharray .9s cubic-bezier(.25,.46,.45,.94)';
+            arc.style.transition = 'stroke-dasharray .9s steps(12)';
             arc.setAttribute('stroke-dasharray', dash.toFixed(2) + ' ' + CIRC.toFixed(2));
         }, 80 + i * 40);
     });

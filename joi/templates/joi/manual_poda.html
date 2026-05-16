@@ -148,14 +148,24 @@
     .poda-entrada-texto {
       font-weight: 400;
       font-size: 1.05rem;
-      line-height: 1.6;
+      line-height: 1.55;
       color: var(--ink);
-      text-shadow: 0 0 18px rgba(0, 220, 255, 0.25);
+      text-shadow: 0 0 18px rgba(0, 220, 255, 0.2);
+      margin-bottom: 0.4rem;
+    }
+
+    .poda-entrada-subtexto {
+      font-weight: 300;
+      font-size: 0.88rem;
+      line-height: 1.6;
+      color: var(--ink-mute);
+      font-style: italic;
+      margin-bottom: 0.5rem;
     }
 
     .poda-entrada-meta {
-      display: flex; align-items: center; gap: 0.6rem;
-      margin-top: 0.6rem;
+      display: flex; align-items: center; gap: 0.5rem;
+      margin-top: 0.4rem;
     }
 
     .poda-tipo {
@@ -225,9 +235,9 @@
   <div class="poda-header">
     <div class="poda-orbita" aria-hidden="true"></div>
     <p class="poda-eyebrow">Manual de David</p>
-    <h1 class="poda-titulo">Lo que creo saber de ti</h1>
+    <h1 class="poda-titulo">Lo que voy entendiendo de ti</h1>
     <p class="poda-subtitulo">
-      Esto es lo que he aprendido leyéndote.<br>
+      Esto es lo que he creído entender leyéndote.<br>
       Si algo ya <em>no es verdad</em>, dímelo y lo suelto.
     </p>
   </div>
@@ -245,8 +255,12 @@
         <div class="poda-entrada-cuerpo">
           <div class="poda-entrada-contenido">
             <p class="poda-entrada-texto">{{ entrada.entrada }}</p>
+            {% if entrada.hipotesis_contraria %}
+            <p class="poda-entrada-subtexto">{{ entrada.hipotesis_contraria }}</p>
+            {% endif %}
             <div class="poda-entrada-meta">
               <span class="poda-tipo">{{ entrada.get_tipo_display }}</span>
+              <span class="poda-tipo" style="opacity:0.4;">·</span>
               <span class="poda-entrada-fecha">{{ entrada.creado_en|date:"j N Y" }}</span>
             </div>
           </div>

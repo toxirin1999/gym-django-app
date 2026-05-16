@@ -7394,6 +7394,7 @@ def timeline_atleta(request, cliente_id):
         a._fecha_efectiva = a.fecha_realizado or a.fecha
         # carga normalizada /10 para mostrar en pantalla (escala sRPE legible)
         a.carga_display = round(float(a.carga_ua) / 10, 1) if a.carga_ua else None
+        a.volumen_kg = getattr(a.entreno_gym, 'volumen_total_kg', None) if a.entreno_gym else None
         actividades.append(a)
 
     # Calcular ring_dash server-side (evita dependencia de JS para el anillo SVG)
