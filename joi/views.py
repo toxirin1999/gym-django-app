@@ -854,12 +854,24 @@ def habitacion_joi(request):
         except Exception:
             pass
 
+    # ── Texto de vigilia: cambia con el estado de la relación, no con datos ──
+    _ausencia = last_visit is not None and (timezone.now() - last_visit).days > 5
+    if narrativa and getattr(narrativa, 'estado', None) == 'borrador':
+        texto_vigilia = "Todavía no voy a nombrarlo."
+    elif hay_sedimento:
+        texto_vigilia = "Algo ha quedado aquí."
+    elif _ausencia:
+        texto_vigilia = "La habitación siguió aquí."
+    else:
+        texto_vigilia = "Presente. Observando."
+
     return render(request, 'joi/habitacion.html', {
-        'mensaje':       mensaje,
-        'estado':        estado,
-        'regenerado':    regenerado,
-        'narrativa':     narrativa,
-        'hay_sedimento': hay_sedimento,
+        'mensaje':        mensaje,
+        'estado':         estado,
+        'regenerado':     regenerado,
+        'narrativa':      narrativa,
+        'hay_sedimento':  hay_sedimento,
+        'texto_vigilia':  texto_vigilia,
     })
 
 
