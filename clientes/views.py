@@ -1512,16 +1512,14 @@ def mockup_demo(request):
     ]
 
     # ── Semáforo de Intención ─────────────────────────────────────
-    from django.core.cache import cache as _cache
-    _cache_key = f'semaforo_{cliente.pk}'
-    semaforo = _cache.get(_cache_key)
-    if semaforo is None:
-        try:
-            from core.daily_decision import DailyDecisionEngine
-            semaforo = DailyDecisionEngine.get_estado_hoy(cliente)
-            _cache.set(_cache_key, semaforo, 1800)
-        except Exception:
-            semaforo = None
+    # es_descanso_plan: True si el plan gym no tiene sesión hoy (próximo día > hoy)
+    try:
+        from core.daily_decision import DailyDecisionEngine
+        _prox = context.get('proximo_entrenamiento') or {}
+        _es_descanso_plan = bool(_prox.get('es_descanso')) or _prox.get('dias_hasta', 0) > 0
+        semaforo = DailyDecisionEngine.get_estado_hoy(cliente, es_descanso_plan=_es_descanso_plan)
+    except Exception:
+        semaforo = None
     context['semaforo'] = semaforo
 
     return render(request, 'clientes/mockup_demo.html', context)

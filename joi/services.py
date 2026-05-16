@@ -2834,17 +2834,17 @@ def generar_pregunta_identidad(cliente) -> str:
         manual = _bloque_manual(cliente.user)
 
         semaforo = ctx.get('semaforo') or {}
-        estado = semaforo.get('estado', 'verde')
+        estado = semaforo.get('estado', 'empujar')
         tipo_fatiga = semaforo.get('tipo_fatiga', 'alineado')
 
         ultima = ctx.get('ultima_actividad') or {}
         dias_inactivo = ultima.get('dias_hace', 0)
 
         estado_txt = {
-            'verde': 'cuerpo en forma, energía disponible',
-            'amarillo': 'carga alta, energía limitada',
-            'naranja': 'desentrenamiento, cuerpo inactivo',
-            'rojo': 'parada técnica, cuerpo al límite',
+            'empujar':  'cuerpo en forma, energía disponible',
+            'sostener': 'carga alta, energía limitada',
+            'recuperar': 'señales de fatiga, bajar intensidad',
+            'volver':   'reincorporación tras pausa prolongada',
         }.get(estado, estado)
 
         prompt = (
@@ -2862,7 +2862,7 @@ def generar_pregunta_identidad(cliente) -> str:
             f"- Máximo 25 palabras. Solo la pregunta. Sin introducción ni explicación."
         )
 
-        if random.random() < 0.3 and estado != 'rojo':
+        if random.random() < 0.3 and estado != 'recuperar':
             prompt += (
                 "\n\nRegla del 30%: genera una pregunta que cuestione en lugar de apoyar. "
                 "Por ejemplo: '¿Estás usando [X] como excusa para evitar [Y]?' "

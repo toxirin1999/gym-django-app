@@ -197,10 +197,10 @@
   {% if semaforo %}
   <section class="sec">
     <div class="sec-head"><span class="tag">§00</span><h2>ESTADO HOY</h2><div class="rule-dashed"></div></div>
-    <div class="frame" style="border-left:4px solid {% if semaforo.estado == 'verde' %}#4ade80{% elif semaforo.estado == 'amarillo' %}#facc15{% elif semaforo.estado == 'naranja' %}#fb923c{% else %}#f87171{% endif %}; padding:20px 24px;">
+    <div class="frame" style="border-left:4px solid {% if semaforo.estado == 'empujar' %}#4ade80{% elif semaforo.estado == 'sostener' %}#facc15{% elif semaforo.estado == 'recuperar' %}#fb923c{% else %}#f87171{% endif %}; padding:20px 24px;">
       <span class="cb"></span><span class="cr"></span>
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">
-        <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:{% if semaforo.estado == 'verde' %}#4ade80{% elif semaforo.estado == 'amarillo' %}#facc15{% elif semaforo.estado == 'naranja' %}#fb923c{% else %}#f87171{% endif %};"></span>
+        <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:{% if semaforo.estado == 'empujar' %}#4ade80{% elif semaforo.estado == 'sostener' %}#facc15{% elif semaforo.estado == 'recuperar' %}#fb923c{% else %}#f87171{% endif %};"></span>
         <span class="label" style="letter-spacing:.2em;">{{ semaforo.titulo }}</span>
         {% if semaforo.paradoja %}
         <span class="label" style="opacity:.5;font-size:9px;letter-spacing:.15em;">PARADOJA {{ semaforo.paradoja }}</span>

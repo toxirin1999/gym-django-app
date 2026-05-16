@@ -4041,7 +4041,7 @@ def panico_impulso_api(request):
         from joi.services import construir_contexto, _llamar_haiku
         ctx = construir_contexto(cliente)
         semaforo = ctx.get('semaforo') or {}
-        estado = semaforo.get('estado', 'verde')
+        estado = semaforo.get('estado', 'empujar')
 
         prompt = (
             f"David está a punto de actuar por impulso — posiblemente escribir a alguien "
