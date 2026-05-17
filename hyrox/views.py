@@ -99,6 +99,61 @@ def _build_race_goal_delta(objetivo_activo, estimacion_str):
     }
 
 
+def _build_hyrox_system_reading(hyrox_decision=None, race_goal_delta=None, race_briefing=None):
+    """
+    Lectura narrativa breve del estado Hyrox.
+    Integra decisión soberana, objetivo y limitador — sin llamada a IA.
+    Python decide qué se dice; JOI puede después reformular cómo suena.
+    """
+    partes = []
+
+    if hyrox_decision:
+        causa = hyrox_decision.get('causa')
+        if causa == 'lesion':
+            partes.append("La preparación sigue activa, pero hoy la lesión manda sobre el plan.")
+        elif hyrox_decision.get('estado') == 'recuperar':
+            partes.append("Hoy no toca demostrar forma: toca absorber carga y proteger continuidad.")
+        elif hyrox_decision.get('estado') == 'sostener':
+            partes.append("El sistema permite entrenar, pero sin perseguir el límite.")
+        elif hyrox_decision.get('estado') == 'empujar':
+            partes.append("Tus señales permiten una sesión con intención competitiva.")
+        elif hyrox_decision.get('mensaje'):
+            partes.append(hyrox_decision['mensaje'])
+
+    if race_goal_delta:
+        estado_obj = race_goal_delta.get('estado')
+        delta = race_goal_delta.get('delta_str')
+        if estado_obj == 'margen':
+            partes.append(f"La estimación actual está dentro del objetivo, con {delta} de margen.")
+        elif estado_obj == 'deficit':
+            partes.append(f"La estimación actual está fuera del objetivo por {delta}.")
+        elif estado_obj == 'sin_objetivo':
+            partes.append("Aún falta definir un objetivo total para medir el margen real.")
+
+    limitador = None
+    if isinstance(race_briefing, dict):
+        lim = race_briefing.get('interferencia_principal')
+        if isinstance(lim, dict):
+            limitador = lim.get('estacion')
+        elif lim:
+            limitador = str(lim)
+    else:
+        lim = getattr(race_briefing, 'interferencia_principal', None)
+        if isinstance(lim, dict):
+            limitador = lim.get('estacion')
+        elif lim:
+            limitador = str(lim)
+    if limitador:
+        partes.append(f"El limitador competitivo principal sigue siendo {limitador}.")
+
+    if hyrox_decision and not hyrox_decision.get('puede_ejecutar_plan', True):
+        partes.append("Hoy el objetivo no es mejorar marca: es conservar continuidad sin agravar la señal activa.")
+    else:
+        partes.append("La prioridad es ejecutar el plan, registrar sensaciones y alimentar la siguiente decisión.")
+
+    return ' '.join(partes[:4])
+
+
 # ── Tags de riesgo por estación Hyrox (vocabulario real del sistema) ──────────
 _HYROX_STATION_RISK_TAGS = {
     'Sled Push':          {'triple_extension_explosiva', 'flexion_rodilla_profunda'},
@@ -1604,6 +1659,14 @@ def hyrox_dashboard(request):
         lesion_activa=context.get('lesion_activa'),
     )
     context['hyrox_decision'] = hyrox_decision
+
+    # ── Lectura del sistema (determinística, después de hyrox_decision) ───────
+    hyrox_system_reading = _build_hyrox_system_reading(
+        hyrox_decision=hyrox_decision,
+        race_goal_delta=race_goal_delta,
+        race_briefing=context.get('race_briefing'),
+    )
+    context['hyrox_system_reading'] = hyrox_system_reading
 
     # ── Semáforo de Intención ─────────────────────────────────────
     try:
