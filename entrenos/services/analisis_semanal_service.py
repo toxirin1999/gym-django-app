@@ -254,6 +254,214 @@ def _recopilar_semanas(cliente, n_semanas, fecha_ref):
     return semanas
 
 
+_DIAS_SEMANA = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
+
+
+def analizar_distribucion_semanal(cliente, num_semanas=6, fecha_ref=None):
+    """
+    Phase 16 — Detects structural mismatches between the configured plan and real behavior.
+
+    CONTRACT:
+    - Reads only persisted records (SesionProgramada, EntrenoRealizado, ActividadRealizada).
+    - Does NOT call PlanificadorHelms.
+    - Returns observations, never automatic changes.
+    - Minimum 3 weeks of data required per pattern (avoid false positives).
+
+    Patterns detected:
+    - dia_pospone_frecuente: a weekday where sessions are skipped/omitted >60%
+    - dias_reales_menores: user consistently trains fewer days than configured
+    - esenciales_concentradas: essential mode clusters on specific weekdays
+    - pierna_tras_futbol: leg sessions often become essential within 48h of football
+    """
+    import math
+    from collections import defaultdict
+    from entrenos.models import EntrenoRealizado, SesionProgramada
+
+    fecha_ref = fecha_ref or timezone.localdate()
+    fecha_inicio = fecha_ref - timedelta(weeks=num_semanas)
+
+    observaciones = []
+    UMBRAL_SEMANAS = math.ceil(num_semanas / 2)  # at least half the weeks
+
+    # ── 1. Día que se pospone/omite con frecuencia ────────────────────────────
+    sp_qs = SesionProgramada.objects.filter(
+        cliente=cliente,
+        fecha_prevista__gte=fecha_inicio,
+        fecha_prevista__lt=fecha_ref,
+    )
+
+    conteo_por_dia = defaultdict(lambda: {'total': 0, 'caidas': 0})
+    for sp in sp_qs:
+        dow = sp.fecha_prevista.weekday()
+        conteo_por_dia[dow]['total'] += 1
+        if sp.estado in (SesionProgramada.ESTADO_SALTADA_USUARIO,
+                         SesionProgramada.ESTADO_OMITIDA_SISTEMA):
+            conteo_por_dia[dow]['caidas'] += 1
+
+    for dow, datos in conteo_por_dia.items():
+        if datos['total'] >= UMBRAL_SEMANAS and datos['caidas'] / datos['total'] >= 0.6:
+            nombre_dia = _DIAS_SEMANA[dow]
+            observaciones.append({
+                'patron': 'dia_pospone_frecuente',
+                'texto': (
+                    f"Las sesiones del {nombre_dia} caen con frecuencia "
+                    f"({datos['caidas']} de {datos['total']} veces). "
+                    f"Puede que el {nombre_dia} no sea un buen día real de entrenamiento."
+                ),
+                'dato': {'dia': nombre_dia, 'total': datos['total'], 'caidas': datos['caidas']},
+            })
+
+    # ── 2. Días reales vs configurados ───────────────────────────────────────
+    dias_config = getattr(cliente, 'dias_disponibles', 4) or 4
+    if dias_config > 1:
+        sesiones_por_semana = []
+        fecha_iter = fecha_inicio + timedelta(days=-fecha_inicio.weekday())  # start of first week
+        while fecha_iter < fecha_ref - timedelta(weeks=1):  # exclude current week
+            lunes = fecha_iter
+            domingo = lunes + timedelta(days=6)
+            count = EntrenoRealizado.objects.filter(
+                cliente=cliente, fecha__range=(lunes, domingo)
+            ).count()
+            if count > 0:
+                sesiones_por_semana.append(count)
+            fecha_iter += timedelta(weeks=1)
+
+        if len(sesiones_por_semana) >= UMBRAL_SEMANAS:
+            promedio = sum(sesiones_por_semana) / len(sesiones_por_semana)
+            if promedio < dias_config - 0.9:  # consistently at least 1 less
+                observaciones.append({
+                    'patron': 'dias_reales_menores',
+                    'texto': (
+                        f"Las últimas {len(sesiones_por_semana)} semanas promedian "
+                        f"{promedio:.1f} sesiones, aunque el plan está configurado para {dias_config}. "
+                        f"Puede que la semana real sea de {round(promedio)} días, no de {dias_config}."
+                    ),
+                    'dato': {'promedio': round(promedio, 1), 'configurado': dias_config},
+                })
+
+    # ── 3. Versiones esenciales concentradas en cierto día ───────────────────
+    esenciales_por_dia = defaultdict(lambda: {'total': 0, 'esenciales': 0})
+    for er in EntrenoRealizado.objects.filter(
+        cliente=cliente, fecha__gte=fecha_inicio, fecha__lt=fecha_ref,
+    ):
+        dow = er.fecha.weekday()
+        esenciales_por_dia[dow]['total'] += 1
+        if er.modo_reducido:
+            esenciales_por_dia[dow]['esenciales'] += 1
+
+    for dow, datos in esenciales_por_dia.items():
+        if datos['total'] >= UMBRAL_SEMANAS and datos['esenciales'] / datos['total'] >= 0.6:
+            nombre_dia = _DIAS_SEMANA[dow]
+            observaciones.append({
+                'patron': 'esenciales_concentradas',
+                'texto': (
+                    f"Las versiones esenciales se concentran los {nombre_dia}s "
+                    f"({datos['esenciales']} de {datos['total']}). "
+                    f"Puede que el {nombre_dia} tenga condicionantes físicos o de agenda que conviene revisar."
+                ),
+                'dato': {'dia': nombre_dia, 'total': datos['total'], 'esenciales': datos['esenciales']},
+            })
+
+    # ── 4. Pierna tras fútbol → versión esencial ─────────────────────────────
+    try:
+        from entrenos.models import ActividadRealizada
+        futbol_fechas = set(
+            ActividadRealizada.objects.filter(
+                cliente=cliente, tipo='futbol',
+                fecha__gte=fecha_inicio, fecha__lt=fecha_ref,
+            ).values_list('fecha', flat=True)
+        )
+        if len(futbol_fechas) >= 2:
+            pierna_tras_futbol = 0
+            total_pierna_futbol = 0
+            for er in EntrenoRealizado.objects.filter(
+                cliente=cliente, fecha__gte=fecha_inicio, fecha__lt=fecha_ref,
+            ):
+                nombre = (er.rutina.nombre if er.rutina_id else '').lower()
+                es_pierna = any(kw in nombre for kw in ['pierna', 'piernas', 'leg', 'quad'])
+                if es_pierna:
+                    cerca_futbol = any(
+                        abs((er.fecha - f).days) <= 2 for f in futbol_fechas
+                    )
+                    if cerca_futbol:
+                        total_pierna_futbol += 1
+                        if er.modo_reducido:
+                            pierna_tras_futbol += 1
+
+            if total_pierna_futbol >= 2 and pierna_tras_futbol / total_pierna_futbol >= 0.6:
+                observaciones.append({
+                    'patron': 'pierna_tras_futbol',
+                    'texto': (
+                        f"Las sesiones de pierna cerca del fútbol tienden a acabar en versión esencial "
+                        f"({pierna_tras_futbol} de {total_pierna_futbol}). "
+                        f"Conviene separar pierna y fútbol al menos 2 días."
+                    ),
+                    'dato': {'pierna_esencial': pierna_tras_futbol, 'total': total_pierna_futbol},
+                })
+    except Exception:
+        pass
+
+    return observaciones
+
+
+_SUGERENCIAS_DISTRIBUCION = {
+    'dia_pospone_frecuente':     'Probar mover esa sesión a un día con mayor cumplimiento real durante 2 semanas.',
+    'dias_reales_menores':       'Probar una estructura de menos días durante 2 semanas para ver si la continuidad mejora.',
+    'esenciales_concentradas':   'Hacer ese día más ligero o mover los accesorios a otra sesión.',
+    'pierna_tras_futbol':        'Separar la sesión de pierna del fútbol al menos 2 días durante 2 semanas.',
+}
+
+
+def get_sugerencia_distribucion_activa(cliente, fecha_ref=None):
+    """
+    Phase 17 — Returns the active SugerenciaPlan for distribution patterns, or None.
+    Checks if there's a cooldown-free pending suggestion for any distribution pattern.
+    Creates one lazily if a pattern is detected and no suggestion exists.
+    """
+    from entrenos.models import SugerenciaPlan
+
+    fecha_ref = fecha_ref or timezone.localdate()
+    observaciones = analizar_distribucion_semanal(cliente, num_semanas=6, fecha_ref=fecha_ref)
+    if not observaciones:
+        return None
+
+    obs = observaciones[0]  # highest priority observation
+    patron_clave = f'distribucion_{obs["patron"]}'
+    texto_sugerencia = _SUGERENCIAS_DISTRIBUCION.get(obs['patron'])
+    if not texto_sugerencia:
+        return None
+
+    existente = (
+        SugerenciaPlan.objects
+        .filter(cliente=cliente, patron=patron_clave)
+        .order_by('-fecha_generada')
+        .first()
+    )
+
+    if existente:
+        if existente.estado == SugerenciaPlan.ESTADO_DESCARTADA:
+            return None
+        if existente.estado == SugerenciaPlan.ESTADO_IGNORADA:
+            if existente.cooldown_hasta and existente.cooldown_hasta > fecha_ref:
+                return None
+            existente.estado = SugerenciaPlan.ESTADO_PENDIENTE
+            existente.cooldown_hasta = None
+            existente.save(update_fields=['estado', 'cooldown_hasta'])
+        if existente.estado in (SugerenciaPlan.ESTADO_ACEPTADA, SugerenciaPlan.ESTADO_APLICADA):
+            return None
+        return existente
+
+    try:
+        return SugerenciaPlan.objects.create(
+            cliente=cliente,
+            patron=patron_clave,
+            texto=texto_sugerencia,
+            estado=SugerenciaPlan.ESTADO_PENDIENTE,
+        )
+    except Exception:
+        return None
+
+
 def obtener_sugerencia_con_patron(cliente, n_semanas=3, fecha_ref=None):
     """
     Returns {'patron': str, 'texto': str} for the most important detected pattern, or None.

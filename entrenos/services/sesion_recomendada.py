@@ -387,6 +387,103 @@ def posponer_entrenamiento_hoy(cliente, fecha_hoy):
     )
 
 
+def _aplicar_efecto_distribucion(cliente, decision, fecha_hoy):
+    """
+    Phase 19 — Adds contextual aviso when a distribution trial is active.
+
+    Does NOT silently change the session. Instead, adds 'distribucion_aviso' to
+    the decision dict so the panel can show a relevant proposal at the right moment.
+
+    Tipos de aviso:
+    - redistrib_dia_frecuente: today is the problematic day → suggest considering postponing
+    - redistrib_pierna_futbol: leg session + recent football → suggest postponing
+    - redistrib_aligerar_dia: this is the day that concentrates esencials → mark as lite
+    - redistrib_dias_menores: normal-priority sessions deprioritized
+    """
+    try:
+        from entrenos.models import IntervencionPlan
+        _REDISTRIB = {
+            IntervencionPlan.TIPO_REDISTRIB_DIA,
+            IntervencionPlan.TIPO_REDISTRIB_DIAS,
+            IntervencionPlan.TIPO_REDISTRIB_PIERNA,
+            IntervencionPlan.TIPO_REDISTRIB_LIGERO,
+        }
+        intervencion = (
+            IntervencionPlan.objects
+            .filter(
+                cliente=cliente, tipo__in=_REDISTRIB,
+                estado=IntervencionPlan.ESTADO_ACTIVA,
+                fecha_inicio__lte=fecha_hoy, fecha_fin__gte=fecha_hoy,
+            )
+            .order_by('-creada_en')
+            .first()
+        )
+        if not intervencion:
+            return decision
+
+        tipo = intervencion.tipo
+
+        if tipo == IntervencionPlan.TIPO_REDISTRIB_DIA:
+            dia_problema = (intervencion.origen_patron or '').lower()
+            nombre_hoy = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'][fecha_hoy.weekday()]
+            if nombre_hoy in dia_problema or not dia_problema:
+                decision['distribucion_aviso'] = {
+                    'tipo': tipo,
+                    'texto': (
+                        f"Este día está en prueba. "
+                        f"Puedes mantener la sesión hoy o posponerla y observar si el patrón mejora."
+                    ),
+                    'accion_sugerida': 'posponer_opcional',
+                }
+
+        elif tipo == IntervencionPlan.TIPO_REDISTRIB_PIERNA:
+            # Check if today has a leg session near recent football
+            ctx = decision.get('contexto_fisico', {})
+            if ctx.get('futbol_reciente'):
+                entrenamiento = decision.get('entrenamiento') or {}
+                ejercicios = entrenamiento.get('ejercicios', [])
+                es_pierna = any(
+                    any(kw in ej.get('nombre', '').lower() for kw in ['pierna', 'quad', 'sentadilla', 'prensa'])
+                    for ej in ejercicios
+                )
+                if es_pierna:
+                    decision['distribucion_aviso'] = {
+                        'tipo': tipo,
+                        'texto': (
+                            "Prueba activa: separar pierna del fútbol. "
+                            "Hay actividad de fútbol reciente. Considera posponer pierna un día más."
+                        ),
+                        'accion_sugerida': 'posponer_recomendado',
+                    }
+
+        elif tipo == IntervencionPlan.TIPO_REDISTRIB_LIGERO:
+            decision['distribucion_aviso'] = {
+                'tipo': tipo,
+                'texto': (
+                    "Prueba activa: día más ligero. "
+                    "Los accesorios de hoy son opcionales como parte del experimento de distribución."
+                ),
+                'accion_sugerida': 'accesorios_opcionales',
+            }
+
+        elif tipo == IntervencionPlan.TIPO_REDISTRIB_DIAS:
+            sp = decision.get('sesion_programada')
+            if sp and sp.prioridad == SesionProgramada.PRIORIDAD_NORMAL:
+                decision['distribucion_aviso'] = {
+                    'tipo': tipo,
+                    'texto': (
+                        "Prueba de días menores activa. Esta sesión es secundaria; "
+                        "el plan prioriza el bloque principal si hay límite de tiempo o energía."
+                    ),
+                    'accion_sugerida': 'version_esencial_sugerida',
+                }
+
+    except Exception:
+        logger.warning('_aplicar_efecto_distribucion: error inesperado')
+
+    return decision
+
+
 def cerrar_sesion_programada(sesion_programada_id, entreno_realizado):
     """
     Closes a SesionProgramada when the user completes it.
@@ -535,9 +632,11 @@ def obtener_sesion_recomendada_hoy(cliente, fecha_hoy=None):
             'mensaje': f'{contexto_tiempo} Sigue siendo la siguiente pieza útil del plan.',
             'causa_principal': None,
             'modo_reducido': False,
+            'distribucion_aviso': None,
         }
         contexto = _obtener_contexto_fisico(cliente, fecha_hoy)
-        return _aplicar_contexto(decision_base, contexto, fecha_hoy)
+        decision = _aplicar_contexto(decision_base, contexto, fecha_hoy)
+        return _aplicar_efecto_distribucion(cliente, decision, fecha_hoy)
 
     try:
         planificador = _build_planificador(cliente)
@@ -576,6 +675,8 @@ def obtener_sesion_recomendada_hoy(cliente, fecha_hoy=None):
         'mensaje': 'Esta es la sesión prevista para hoy.',
         'causa_principal': None,
         'modo_reducido': False,
+        'distribucion_aviso': None,
     }
     contexto = _obtener_contexto_fisico(cliente, fecha_hoy)
-    return _aplicar_contexto(decision_base, contexto, fecha_hoy)
+    decision = _aplicar_contexto(decision_base, contexto, fecha_hoy)
+    return _aplicar_efecto_distribucion(cliente, decision, fecha_hoy)

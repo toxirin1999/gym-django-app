@@ -613,6 +613,11 @@ function joiBannerCerrar(id) {
       {% if mensaje_entreno and causa_entreno != 'sesion_hoy' %}
       <div style="font-size:11px;color:var(--td);opacity:0.72;margin-top:4px;margin-bottom:2px;font-style:italic;line-height:1.45;">{{ mensaje_entreno }}</div>
       {% endif %}
+      {% if distribucion_aviso %}
+      <div style="margin-top:6px;padding:7px 10px;background:rgba(255,160,80,0.07);border-left:2px solid rgba(255,160,80,0.4);border-radius:0 7px 7px 0;font-size:11px;color:rgba(255,160,80,0.85);line-height:1.4;">
+        {{ distribucion_aviso.texto }}
+      </div>
+      {% endif %}
       <div class="rb-workout-badge">Vol. {% widthratio bio_readiness.volume_modifier|default:1 1 100 %}% · {{ bio_readiness_label|default:"Óptimo" }}</div>
       {% if proximo_entrenamiento.ejercicios %}
       <div class="rb-ex-list">
@@ -849,15 +854,17 @@ function joiBannerCerrar(id) {
     </a>
     {% endif %}
 
-    <!-- Phase 5 — Lectura semanal del plan -->
+    {# ── BLOQUE DE APRENDIZAJE (Phase 14B — jerarquía consolidada) ── #}
+
+    {# Tarjeta 1: "Esta semana" — datos + lectura del momento actual #}
     {% if analisis_semanal and analisis_semanal.hay_datos %}
     <div class="rb-aprendio-card" style="border-left:3px solid rgba(150,180,255,0.3);">
       <div class="rb-section-head" style="margin-bottom:8px;">
-        <div class="rb-section-num">HOY</div>
+        <div class="rb-section-num">SEM</div>
         <h3 class="rb-section-title">Esta semana</h3>
         <div class="rb-section-line"></div>
       </div>
-      <div style="display:flex;gap:12px;margin-bottom:12px;flex-wrap:wrap;">
+      <div style="display:flex;gap:12px;margin-bottom:10px;flex-wrap:wrap;">
         {% if analisis_semanal.sesiones_completadas %}
         <div style="font-size:11px;color:var(--td);opacity:0.8;">
           <span style="font-weight:700;font-size:15px;color:var(--ok);">{{ analisis_semanal.sesiones_completadas }}</span>
@@ -867,7 +874,7 @@ function joiBannerCerrar(id) {
         {% if analisis_semanal.sesiones_esenciales %}
         <div style="font-size:11px;color:rgba(255,200,100,0.8);">
           <span style="font-weight:700;font-size:15px;">{{ analisis_semanal.sesiones_esenciales }}</span>
-          esencial{{ analisis_semanal.sesiones_esenciales|pluralize:"es" }}
+          versión esencial{{ analisis_semanal.sesiones_esenciales|pluralize:"es" }}
         </div>
         {% endif %}
         {% if analisis_semanal.sesiones_saltadas %}
@@ -883,74 +890,31 @@ function joiBannerCerrar(id) {
         {% endif %}
       </div>
       {% if analisis_semanal.lectura_textual %}
-      <div style="font-size:12px;color:var(--td);opacity:0.75;line-height:1.55;font-style:italic;">
+      <div style="font-size:12px;color:var(--td);opacity:0.72;line-height:1.55;font-style:italic;">
         {{ analisis_semanal.lectura_textual }}
       </div>
       {% endif %}
     </div>
     {% endif %}
 
-    <!-- Phase 12/13 — Evaluación e intervención anterior + recomendación de continuidad -->
-    {% if evaluacion_intervencion and patron_multisemanal %}
-    <div class="rb-aprendio-card" style="border-left:3px solid {% if evaluacion_intervencion.resultado == 'favorable' %}rgba(46,204,113,0.4){% else %}rgba(180,140,255,0.3){% endif %};">
-      <div class="rb-section-head" style="margin-bottom:8px;">
-        <div class="rb-section-num" style="color:rgba(180,140,255,0.7);">EVA</div>
-        <h3 class="rb-section-title">Semana anterior — intervención</h3>
-        <div class="rb-section-line"></div>
-      </div>
-      <div style="font-size:12px;color:var(--td);opacity:0.8;line-height:1.55;{% if recomendacion_continuidad %}margin-bottom:12px;{% endif %}">
-        {{ evaluacion_intervencion.lectura }}
-      </div>
-      {% if recomendacion_continuidad %}
-      <div style="padding:10px 12px;background:rgba(180,140,255,0.06);border:1px solid rgba(180,140,255,0.15);border-radius:10px;margin-bottom:10px;">
-        <div style="font-size:9px;font-weight:700;color:rgba(180,140,255,0.7);letter-spacing:0.14em;text-transform:uppercase;margin-bottom:5px;">
-          {% if recomendacion_continuidad.accion == 'repetir' %}Continuar intervención{% else %}Ajuste más profundo{% endif %}
-        </div>
-        <div style="font-size:12px;color:var(--td);opacity:0.75;line-height:1.45;">{{ recomendacion_continuidad.texto }}</div>
-      </div>
-      <div style="display:flex;gap:8px;">
-        {% if recomendacion_continuidad.accion == 'repetir' %}
-        <form method="post" action="{% url 'clientes:repetir_intervencion' %}" style="flex:1;">
-          {% csrf_token %}
-          <input type="hidden" name="tipo_intervencion" value="{{ recomendacion_continuidad.tipo_intervencion }}">
-          <button type="submit" style="width:100%;padding:8px;border-radius:10px;background:rgba(180,140,255,0.15);border:1px solid rgba(180,140,255,0.35);color:rgba(180,140,255,0.9);font-size:11px;font-weight:600;cursor:pointer;">
-            Repetir esta semana
-          </button>
-        </form>
-        {% endif %}
-        <form method="post" action="{% url 'clientes:ignorar_recomendacion' %}" style="flex:1;">
-          {% csrf_token %}
-          <input type="hidden" name="tipo_intervencion" value="{{ recomendacion_continuidad.tipo_intervencion }}">
-          <button type="submit" style="width:100%;padding:8px;border-radius:10px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.10);color:var(--td);font-size:11px;cursor:pointer;opacity:0.65;">
-            No por ahora
-          </button>
-        </form>
-      </div>
-      {% endif %}
-    </div>
-    {% endif %}
-
-    <!-- Phase 8 — Lo que el plan está observando (solo si hay patrón multisemanal) -->
+    {# Tarjeta 2: "Lo que el plan observa" — patrón + sugerencia + evaluación pasada (solo si hay patrón) #}
     {% if patron_multisemanal %}
     <div class="rb-aprendio-card" style="border-left:3px solid rgba(180,140,255,0.35);">
       <div class="rb-section-head" style="margin-bottom:8px;">
         <div class="rb-section-num" style="color:rgba(180,140,255,0.7);">OBS</div>
-        <h3 class="rb-section-title">Lo que el plan está observando</h3>
+        <h3 class="rb-section-title">Lo que el plan observa</h3>
         <div class="rb-section-line"></div>
       </div>
-      {% if analisis_semanal and analisis_semanal.lectura_textual and analisis_semanal.hay_datos %}
-      <div style="font-size:11px;color:var(--td);opacity:0.6;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:4px;">Esta semana</div>
-      <div style="font-size:12px;color:var(--td);opacity:0.8;line-height:1.55;margin-bottom:12px;">
-        {{ analisis_semanal.lectura_textual }}
-      </div>
-      {% endif %}
-      <div style="font-size:11px;color:rgba(180,140,255,0.7);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:4px;">Últimas semanas</div>
-      <div style="font-size:12px;color:var(--td);opacity:0.75;line-height:1.55;font-style:italic;margin-bottom:{% if sugerencia_plan %}12px{% else %}0{% endif %};">
+
+      {# Observación de patrón multisemanal #}
+      <div style="font-size:12px;color:var(--td);opacity:0.75;line-height:1.55;font-style:italic;">
         {{ patron_multisemanal }}
       </div>
+
+      {# Sugerencia accionable (si existe) #}
       {% if sugerencia_activa %}
       <div style="padding:10px 12px;background:rgba(180,140,255,0.06);border:1px solid rgba(180,140,255,0.18);border-radius:10px;margin-top:12px;">
-        <div style="font-size:9px;font-weight:700;color:rgba(180,140,255,0.7);letter-spacing:0.14em;text-transform:uppercase;margin-bottom:6px;">Sugerencia del plan</div>
+        <div style="font-size:9px;font-weight:700;color:rgba(180,140,255,0.7);letter-spacing:0.14em;text-transform:uppercase;margin-bottom:6px;">Sugerencia</div>
         <div style="font-size:12px;color:var(--td);opacity:0.8;line-height:1.5;margin-bottom:10px;">{{ sugerencia_activa.texto }}</div>
         <div style="display:flex;gap:8px;">
           <form method="post" action="{% url 'clientes:aceptar_sugerencia' sugerencia_activa.id %}" style="flex:1;">
@@ -968,9 +932,194 @@ function joiBannerCerrar(id) {
         </div>
       </div>
       {% endif %}
+
+      {# Evaluación de la intervención anterior + recomendación de continuidad #}
+      {% if evaluacion_intervencion %}
+      <div style="margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.07);">
+        <div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:5px;
+                    color:{% if evaluacion_intervencion.resultado == 'favorable' %}rgba(46,204,113,0.75){% else %}rgba(180,140,255,0.6){% endif %};">
+          Semana anterior
+        </div>
+        <div style="font-size:12px;color:var(--td);opacity:0.75;line-height:1.5;{% if recomendacion_continuidad %}margin-bottom:10px;{% endif %}">
+          {{ evaluacion_intervencion.lectura }}
+        </div>
+        {% if recomendacion_continuidad %}
+        <div style="padding:9px 11px;background:rgba(180,140,255,0.05);border:1px solid rgba(180,140,255,0.13);border-radius:9px;margin-bottom:8px;">
+          <div style="font-size:9px;font-weight:700;color:rgba(180,140,255,0.65);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:4px;">
+            {% if recomendacion_continuidad.accion == 'repetir' %}Repetir ajuste{% else %}Profundizar{% endif %}
+          </div>
+          <div style="font-size:11px;color:var(--td);opacity:0.7;line-height:1.4;">{{ recomendacion_continuidad.texto }}</div>
+        </div>
+        <div style="display:flex;gap:8px;">
+          {% if recomendacion_continuidad.accion == 'repetir' %}
+          <form method="post" action="{% url 'clientes:repetir_intervencion' %}" style="flex:1;">
+            {% csrf_token %}
+            <input type="hidden" name="tipo_intervencion" value="{{ recomendacion_continuidad.tipo_intervencion }}">
+            <button type="submit" style="width:100%;padding:7px;border-radius:9px;background:rgba(180,140,255,0.12);border:1px solid rgba(180,140,255,0.30);color:rgba(180,140,255,0.85);font-size:10px;font-weight:600;cursor:pointer;">
+              Repetir esta semana
+            </button>
+          </form>
+          {% endif %}
+          <form method="post" action="{% url 'clientes:ignorar_recomendacion' %}" style="flex:1;">
+            {% csrf_token %}
+            <input type="hidden" name="tipo_intervencion" value="{{ recomendacion_continuidad.tipo_intervencion }}">
+            <button type="submit" style="width:100%;padding:7px;border-radius:9px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);color:var(--td);font-size:10px;cursor:pointer;opacity:0.55;">
+              No por ahora
+            </button>
+          </form>
+        </div>
+        {% endif %}
+      </div>
+      {% endif %}
+
     </div>
-    {% elif analisis_semanal and analisis_semanal.hay_datos and analisis_semanal.estado_semana != 'sin_datos' %}
-    {# No multiweek pattern — "Esta semana" card already shows the weekly reading. Nothing extra needed. #}
+    {% endif %}
+
+    <!-- Phase 18B/20 — Prueba de distribución activa o evaluación reciente -->
+    {% if intervencion_distribucion %}
+    <div class="rb-aprendio-card" style="border-left:3px solid rgba(255,160,80,0.5);">
+      <div class="rb-section-head" style="margin-bottom:6px;">
+        <div class="rb-section-num" style="color:rgba(255,160,80,0.7);">PRU</div>
+        <h3 class="rb-section-title">Prueba de distribución activa</h3>
+        <div class="rb-section-line"></div>
+      </div>
+      <div style="font-size:12px;color:var(--td);opacity:0.75;line-height:1.5;">
+        El plan está en una prueba de distribución hasta el <strong>{{ intervencion_distribucion.fecha_fin|date:"j N" }}</strong>.
+        Observa si la semana fluye mejor.
+      </div>
+    </div>
+    {% elif evaluacion_distribucion %}
+    {# Phase 20/21 — Prueba terminada → evaluación + posible continuidad #}
+    <div class="rb-aprendio-card" style="border-left:3px solid {% if evaluacion_distribucion.resultado == 'favorable' %}rgba(46,204,113,0.4){% else %}rgba(255,160,80,0.35){% endif %};">
+      <div class="rb-section-head" style="margin-bottom:6px;">
+        <div class="rb-section-num" style="color:rgba(255,160,80,0.7);">EVA</div>
+        <h3 class="rb-section-title">Prueba de distribución — resultado</h3>
+        <div class="rb-section-line"></div>
+      </div>
+      <div style="font-size:12px;color:var(--td);opacity:0.8;line-height:1.55;{% if continuidad_distribucion %}margin-bottom:10px;{% endif %}">
+        {{ evaluacion_distribucion.lectura }}
+      </div>
+      {% if continuidad_distribucion %}
+      <div style="padding:8px 11px;background:rgba(46,204,113,0.05);border:1px solid rgba(46,204,113,0.15);border-radius:9px;margin-bottom:8px;">
+        <div style="font-size:9px;font-weight:700;color:rgba(46,204,113,0.7);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:4px;">Una vuelta más</div>
+        <div style="font-size:11px;color:var(--td);opacity:0.72;line-height:1.4;">{{ continuidad_distribucion.texto }}</div>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <form method="post" action="{% url 'clientes:repetir_prueba_distribucion' %}" style="flex:1;">
+          {% csrf_token %}
+          <input type="hidden" name="tipo_intervencion" value="{{ continuidad_distribucion.tipo_intervencion }}">
+          <button type="submit" style="width:100%;padding:7px;border-radius:9px;background:rgba(46,204,113,0.12);border:1px solid rgba(46,204,113,0.30);color:rgba(46,204,113,0.85);font-size:10px;font-weight:600;cursor:pointer;">
+            Repetir 2 semanas
+          </button>
+        </form>
+        <form method="post" action="{% url 'clientes:ignorar_continuidad_distribucion' %}" style="flex:1;">
+          {% csrf_token %}
+          <input type="hidden" name="tipo_intervencion" value="{{ continuidad_distribucion.tipo_intervencion }}">
+          <button type="submit" style="width:100%;padding:7px;border-radius:9px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);color:var(--td);font-size:10px;cursor:pointer;opacity:0.55;">
+            No por ahora
+          </button>
+        </form>
+      </div>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Phase 16 — Distribución semanal: dónde el plan no encaja con la vida real -->
+    {% if distribucion_semanal and not intervencion_distribucion %}
+    <div class="rb-aprendio-card" style="border-left:3px solid rgba(255,160,80,0.35);">
+      <div class="rb-section-head" style="margin-bottom:8px;">
+        <div class="rb-section-num" style="color:rgba(255,160,80,0.7);">DIS</div>
+        <h3 class="rb-section-title">Distribución del plan</h3>
+        <div class="rb-section-line"></div>
+      </div>
+      {% for obs in distribucion_semanal|slice:":2" %}
+      <div style="font-size:12px;color:var(--td);opacity:0.75;line-height:1.55;font-style:italic;margin-bottom:8px;">
+        {{ obs.texto }}
+      </div>
+      {% endfor %}
+      {% if sugerencia_distribucion %}
+      <div style="margin-top:4px;padding:9px 11px;background:rgba(255,160,80,0.06);border:1px solid rgba(255,160,80,0.18);border-radius:9px;margin-bottom:8px;">
+        <div style="font-size:9px;font-weight:700;color:rgba(255,160,80,0.7);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:4px;">Prueba de 2 semanas</div>
+        <div style="font-size:11px;color:var(--td);opacity:0.75;line-height:1.4;">{{ sugerencia_distribucion.texto }}</div>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <form method="post" action="{% url 'clientes:aceptar_sugerencia' sugerencia_distribucion.id %}" style="flex:1;">
+          {% csrf_token %}
+          <button type="submit" style="width:100%;padding:7px;border-radius:9px;background:rgba(255,160,80,0.12);border:1px solid rgba(255,160,80,0.30);color:rgba(255,160,80,0.85);font-size:10px;font-weight:600;cursor:pointer;">
+            Probar 2 semanas
+          </button>
+        </form>
+        <form method="post" action="{% url 'clientes:ignorar_sugerencia' sugerencia_distribucion.id %}" style="flex:1;">
+          {% csrf_token %}
+          <button type="submit" style="width:100%;padding:7px;border-radius:9px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);color:var(--td);font-size:10px;cursor:pointer;opacity:0.55;">
+            No por ahora
+          </button>
+        </form>
+      </div>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Phase 15 — Calendario / memoria visual del plan -->
+    {% if calendario_plan %}
+    <div class="rb-aprendio-card" style="border-left:3px solid rgba(120,120,120,0.25);">
+      <div class="rb-section-head" style="margin-bottom:10px;">
+        <div class="rb-section-num" style="color:rgba(200,200,200,0.5);">MEM</div>
+        <h3 class="rb-section-title">Memoria del plan</h3>
+        <div class="rb-section-line"></div>
+      </div>
+
+      {# Leyenda compacta #}
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;font-size:10px;color:var(--td);opacity:0.55;">
+        <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:rgba(46,204,113,0.8);margin-right:3px;vertical-align:middle;"></span>Completada</span>
+        <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:rgba(255,200,100,0.8);margin-right:3px;vertical-align:middle;"></span>Esencial</span>
+        <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:rgba(100,160,255,0.7);margin-right:3px;vertical-align:middle;"></span>Pendiente</span>
+        <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:rgba(180,180,180,0.4);margin-right:3px;vertical-align:middle;"></span>Saltada / Sistema</span>
+      </div>
+
+      {# Días de la semana header #}
+      <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:4px;">
+        {% for d in "LMXJVSD" %}<div style="text-align:center;font-size:9px;color:var(--td);opacity:0.4;font-weight:600;">{{ d }}</div>{% endfor %}
+      </div>
+
+      {# Dot grid — 4 semanas #}
+      {% for semana in calendario_plan %}
+      <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:4px;">
+        {% for dia in semana.dias %}
+        <div style="display:flex;align-items:center;justify-content:center;height:28px;position:relative;"
+             title="{% if dia.detalle.nombre_sesion %}{{ dia.detalle.nombre_sesion }} — {% endif %}{{ dia.fecha|date:'d N' }}{% if dia.estado == 'completada_esencial' %} (esencial){% elif dia.estado == 'saltada' %} (saltada){% elif dia.estado == 'omitida_sistema' %} (omitida){% elif dia.estado == 'pendiente' %} (pendiente){% endif %}"
+             onclick="mostrarDetalleDia(this, '{{ dia.fecha|date:'d N' }}', '{{ dia.detalle.nombre_sesion|default:'' }}', '{{ dia.estado }}', '{{ dia.detalle.fecha_realizada|date:'d N'|default:'' }}', {{ dia.detalle.modo_reducido|yesno:'true,false' }}, {{ dia.carga_mantenida|yesno:'true,false' }})">
+          {% if dia.estado == 'completada_normal' %}
+          <span style="display:block;width:10px;height:10px;border-radius:50%;background:rgba(46,204,113,0.85);{% if dia.es_hoy %}box-shadow:0 0 0 2px rgba(46,204,113,0.3);{% endif %}cursor:pointer;"></span>
+          {% elif dia.estado == 'completada_esencial' %}
+          <span style="display:block;width:10px;height:10px;border-radius:50%;background:rgba(255,200,100,0.85);cursor:pointer;"></span>
+          {% elif dia.estado == 'saltada' %}
+          <span style="display:block;width:8px;height:8px;border-radius:50%;background:rgba(180,180,180,0.45);cursor:pointer;"></span>
+          {% elif dia.estado == 'omitida_sistema' %}
+          <span style="display:block;width:6px;height:6px;border-radius:50%;background:rgba(140,140,140,0.25);cursor:pointer;"></span>
+          {% elif dia.estado == 'pendiente' %}
+          <span style="display:block;width:9px;height:9px;border-radius:50%;background:rgba(100,160,255,0.6);cursor:pointer;"></span>
+          {% elif dia.estado == 'pospuesta' %}
+          <span style="display:block;width:8px;height:8px;border-radius:50%;border:1.5px solid rgba(100,160,255,0.5);cursor:pointer;"></span>
+          {% elif dia.es_hoy %}
+          <span style="display:block;width:6px;height:6px;border-radius:50%;border:1.5px solid rgba(255,255,255,0.2);"></span>
+          {% else %}
+          <span style="display:block;width:3px;height:3px;border-radius:50%;background:rgba(255,255,255,0.07);"></span>
+          {% endif %}
+          {% if dia.intervencion_activa %}
+          <span style="position:absolute;top:3px;right:3px;width:4px;height:4px;border-radius:50%;background:rgba(180,140,255,0.7);" title="Intervención activa"></span>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      {% endfor %}
+
+      {# Panel de detalle del día (inicialmente oculto) #}
+      <div id="cal-detalle" style="display:none;margin-top:10px;padding:10px 12px;background:rgba(255,255,255,0.04);border-radius:10px;font-size:12px;color:var(--td);">
+        <div id="cal-detalle-fecha" style="font-weight:700;margin-bottom:4px;opacity:0.9;"></div>
+        <div id="cal-detalle-cuerpo" style="opacity:0.7;line-height:1.5;"></div>
+      </div>
+    </div>
     {% endif %}
 
     <!-- Resumen semanal: qué aprendió el plan -->
@@ -1685,6 +1834,36 @@ async function marcarRecuperada(lesionId){
   });
   var d=await res.json();
   if(d.ok) location.reload();
+}
+
+// Phase 15 — Calendar day detail
+function mostrarDetalleDia(el, fecha, nombre, estado, fechaReal, esEsencial, cargaMantenida) {
+  var panel = document.getElementById('cal-detalle');
+  var panelFecha = document.getElementById('cal-detalle-fecha');
+  var panelCuerpo = document.getElementById('cal-detalle-cuerpo');
+  if (!panel) return;
+
+  var estadoTexto = {
+    'completada_normal': 'Completada',
+    'completada_esencial': 'Versión esencial completada',
+    'saltada': 'Saltada por el usuario',
+    'omitida_sistema': 'Omitida por el sistema',
+    'pendiente': 'Pendiente',
+    'pospuesta': 'Pospuesta',
+    'sin_registro': 'Sin actividad registrada',
+    'futuro': ''
+  }[estado] || estado;
+
+  var lineas = [];
+  if (nombre) lineas.push('<strong>' + nombre + '</strong>');
+  if (estadoTexto) lineas.push(estadoTexto);
+  if (esEsencial) lineas.push('Versión esencial activa');
+  if (cargaMantenida) lineas.push('Carga mantenida (freno contextual)');
+  if (fechaReal && fechaReal !== fecha) lineas.push('Realizada el ' + fechaReal);
+
+  panelFecha.textContent = fecha;
+  panelCuerpo.innerHTML = lineas.join('<br>');
+  panel.style.display = 'block';
 }
 </script>
 

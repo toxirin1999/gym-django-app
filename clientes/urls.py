@@ -111,4 +111,8 @@ urlpatterns = [
     # Phase 13 — Continuation recommendation actions
     path('intervencion/repetir/', views.repetir_intervencion_view, name='repetir_intervencion'),
     path('recomendacion/ignorar/', views.ignorar_recomendacion_view, name='ignorar_recomendacion'),
+
+    # Phase 21 — Distribution probe continuation
+    path('distribucion/repetir/', views.repetir_prueba_distribucion_view, name='repetir_prueba_distribucion'),
+    path('distribucion/ignorar/', views.ignorar_continuidad_distribucion_view, name='ignorar_continuidad_distribucion'),
 ]

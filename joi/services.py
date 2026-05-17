@@ -595,15 +595,14 @@ def construir_contexto(cliente) -> dict:
     except Exception:
         pass
 
-    # ── Phase 6.1/7 — Gym weekly & multiweek signals ─────────────────────────
+    # ── Phase 6.1/7/16 — Gym weekly, multiweek & distribution signals ────────
     # CONTRACT: ephemeral context only — NEVER writes to ManualDavid.
-    # One week = signal (bloque_semanal_gym).
-    # Several weeks = observable pattern (patron_multisemanal_gym). Pattern ≠ identity.
-    # Both degrade gracefully: JOI works without them.
+    # One week = signal. Several weeks = pattern. Pattern ≠ identity. Distribution = structure.
     try:
         from entrenos.services.analisis_semanal_service import (
             bloque_semanal_para_joi,
             detectar_patron_multisemanal,
+            analizar_distribucion_semanal,
         )
         bloque = bloque_semanal_para_joi(cliente)
         if bloque:
@@ -611,6 +610,9 @@ def construir_contexto(cliente) -> dict:
         patron = detectar_patron_multisemanal(cliente)
         if patron:
             ctx['patron_multisemanal_gym'] = patron
+        distribucion = analizar_distribucion_semanal(cliente)
+        if distribucion:
+            ctx['distribucion_semanal_gym'] = distribucion[0]['texto']  # first observation
     except Exception:
         pass
 
@@ -886,12 +888,15 @@ def _prompt_apertura_manana(ctx: dict, datos_extra: dict) -> str:
                 f"({bot['anterior_kg']} → {bot['reciente_kg']} kg)."
             )
 
-    # Phase 6.1/7 — Gym weekly/multiweek signal
+    # Phase 6.1/7/16 — Gym weekly/multiweek/distribution signals
     # Label is intentional: tells the model this is recent context, not stable identity.
     # Empty string or None → no section in prompt (no phantom context).
     bloque_semanal = ctx.get('bloque_semanal_gym') or ctx.get('patron_multisemanal_gym')
     if bloque_semanal:
         hechos.append(f"[Señal semanal gym — contexto reciente, no patrón de identidad]: {bloque_semanal}")
+    distribucion = ctx.get('distribucion_semanal_gym')
+    if distribucion:
+        hechos.append(f"[Distribución semanal — estructura, no identidad]: {distribucion}")
 
     datos = " ".join(hechos) if hechos else "No hay datos de entrenamiento recientes."
 
