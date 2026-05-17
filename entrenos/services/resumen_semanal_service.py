@@ -49,10 +49,12 @@ def get_resumen_semanal_gym(cliente):
     plural = 'sesiones' if num_sesiones != 1 else 'sesión'
     volumen_total = sum(float(e.volumen_total_kg or 0) for e in entrenos)
     volumen_str = f' · {round(volumen_total):,} kg movidos' if volumen_total > 0 else ''
+    num_esenciales = sum(1 for e in entrenos if getattr(e, 'modo_reducido', False))
+    esencial_str = f' ({num_esenciales} esencial{"es" if num_esenciales != 1 else ""})' if num_esenciales else ''
     items.append({
         'tipo': 'sesiones',
         'icono': '📅',
-        'texto': f'{num_sesiones} {plural} completadas{volumen_str}',
+        'texto': f'{num_sesiones} {plural} completadas{esencial_str}{volumen_str}',
         'color': 'ok',
         'meta': meta,
     })

@@ -819,6 +819,46 @@ def _ctx_lesiones_activas(cliente):
         return []
 
 
+def _ctx_analisis_semanal(cliente, fecha_ref):
+    try:
+        from entrenos.services.analisis_semanal_service import analizar_semana_entrenamiento
+        return analizar_semana_entrenamiento(cliente, fecha_ref)
+    except Exception:
+        return None
+
+
+def _ctx_patron_multisemanal(cliente, fecha_ref):
+    try:
+        from entrenos.services.analisis_semanal_service import detectar_patron_multisemanal
+        return detectar_patron_multisemanal(cliente, n_semanas=3, fecha_ref=fecha_ref)
+    except Exception:
+        return None
+
+
+def _ctx_recomendacion_continuidad(cliente, fecha_ref):
+    try:
+        from entrenos.services.sugerencias_service import generar_recomendacion_continuidad
+        return generar_recomendacion_continuidad(cliente, fecha_ref)
+    except Exception:
+        return None
+
+
+def _ctx_evaluacion_intervencion(cliente, fecha_ref):
+    try:
+        from entrenos.services.sugerencias_service import evaluar_intervencion_semana
+        return evaluar_intervencion_semana(cliente, fecha_ref)
+    except Exception:
+        return None
+
+
+def _ctx_sugerencia_activa(cliente, fecha_ref):
+    try:
+        from entrenos.services.sugerencias_service import get_sugerencia_activa
+        return get_sugerencia_activa(cliente, fecha_ref=fecha_ref)
+    except Exception:
+        return None
+
+
 def _get_dashboard_context_data(request, cliente):
     usuario = request.user
     hoy = timezone.now().date()
@@ -1026,7 +1066,9 @@ def _get_dashboard_context_data(request, cliente):
 
         estancamientos_detectados = sistema_progresion.detectar_estancamientos()
         cache.set(_estanc_cache_key, estancamientos_detectados, 900)
-    proximo_entrenamiento = obtener_proximo_entrenamiento_simplificado(cliente)
+    from entrenos.services.sesion_recomendada import obtener_sesion_recomendada_hoy as _get_sesion_hoy
+    _decision_entreno = _get_sesion_hoy(cliente, hoy)
+    proximo_entrenamiento = _decision_entreno['entrenamiento']
 
     # ── Comprobar si el entreno de hoy (o el próximo) ya fue realizado ──────
     # Nivel 1: hecho exactamente hoy (fecha o fecha_realizado = hoy)
@@ -1070,6 +1112,7 @@ def _get_dashboard_context_data(request, cliente):
 
     # Construir lista de ejercicios con peso medio para mostrar en el panel
     ejercicios_realizados_resumen = []
+    bloque_esencial_resumen = None
     if entreno_realizado_obj:
         for _ej in entreno_realizado_obj.ejercicios_realizados.all():
             ejercicios_realizados_resumen.append({
@@ -1078,36 +1121,32 @@ def _get_dashboard_context_data(request, cliente):
                 'peso_kg': float(_ej.peso_kg or 0),
             })
         entreno_realizado_fecha = entreno_realizado_obj.fecha
+        if getattr(entreno_realizado_obj, 'modo_reducido', False):
+            from entrenos.services.sesion_recomendada import calcular_bloque_esencial
+            bloque_esencial_resumen = calcular_bloque_esencial(entreno_realizado_obj)
     else:
         entreno_realizado_fecha = None
 
     hyrox_objetivo, hyrox_proxima_sesion = _ctx_hyrox(cliente, hoy)
     bio_readiness, restricciones_bio = _ctx_bio(cliente)
 
+    pierna_bloqueada = '__aguda_tren_inferior' in restricciones_bio.get('tags', set())
+    _sesion_programada = _decision_entreno['sesion_programada']
     sesion_pendiente = None
-    try:
-        pierna_bloqueada = '__aguda_tren_inferior' in restricciones_bio.get('tags', set())
-
-        if not proximo_entrenamiento or not proximo_entrenamiento.get('ejercicios'):
-            perfil_p = crear_perfil_desde_cliente(cliente)
-            perfil_p.maximos_actuales = cliente.one_rm_data or {}
-            planificador_p = PlanificadorHelms(perfil_p)
-            inicio_semana = hoy - timedelta(days=hoy.weekday())
-
-            for dia_offset in range(0, hoy.weekday()):
-                fecha_check = inicio_semana + timedelta(days=dia_offset)
-                if not EntrenoRealizado.objects.filter(cliente=cliente, fecha=fecha_check).exists():
-                    plan_dia = planificador_p.generar_entrenamiento_para_fecha(fecha_check)
-                    if plan_dia and plan_dia.get('ejercicios'):
-                        es_pierna = any(any(kw in ej.get('nombre', '').lower() for kw in ['pierna', 'quad', 'sentadilla', 'prensa']) for ej in plan_dia.get('ejercicios', []))
-                        sesion_pendiente = {
-                            'fecha': fecha_check,
-                            'entrenamiento': plan_dia,
-                            'es_pierna': es_pierna,
-                            'sugerir_torso': es_pierna and pierna_bloqueada,
-                        }
-                        break
-    except Exception: pass
+    if _decision_entreno['tipo'] == 'pendiente' and _sesion_programada:
+        _ent_p = _decision_entreno['entrenamiento'] or {}
+        _ejercicios_p = _ent_p.get('ejercicios', [])
+        _es_pierna = any(
+            any(kw in ej.get('nombre', '').lower()
+                for kw in ['pierna', 'quad', 'sentadilla', 'prensa'])
+            for ej in _ejercicios_p
+        )
+        sesion_pendiente = {
+            'fecha': _sesion_programada.fecha_prevista,
+            'entrenamiento': _ent_p,
+            'es_pierna': _es_pierna,
+            'sugerir_torso': _es_pierna and pierna_bloqueada,
+        }
 
     _stats_cache_key = f'dashboard_stats_{cliente.id}'
     _stats_cached = cache.get(_stats_cache_key)
@@ -1297,6 +1336,18 @@ def _get_dashboard_context_data(request, cliente):
         'hyrox_proxima_sesion': hyrox_proxima_sesion,
         'bio_readiness': bio_readiness,
         'sesion_pendiente': sesion_pendiente,
+        'sesion_programada': _sesion_programada,
+        'tipo_entreno': _decision_entreno['tipo'],
+        'estado_entreno': _decision_entreno.get('estado', 'entrenar'),
+        'causa_entreno': _decision_entreno.get('causa_principal'),
+        'modo_reducido': _decision_entreno.get('modo_reducido', False),
+        'mensaje_entreno': _decision_entreno['mensaje'],
+        'bloque_esencial_resumen': bloque_esencial_resumen,
+        'analisis_semanal': _ctx_analisis_semanal(cliente, hoy),
+        'patron_multisemanal': _ctx_patron_multisemanal(cliente, hoy),
+        'sugerencia_activa': _ctx_sugerencia_activa(cliente, hoy),
+        'evaluacion_intervencion': _ctx_evaluacion_intervencion(cliente, hoy),
+        'recomendacion_continuidad': _ctx_recomendacion_continuidad(cliente, hoy),
         'restricciones_bio': restricciones_bio,
         'hoy': timezone.now().date(),
         'lesiones_activas': _ctx_lesiones_activas(cliente),
@@ -4618,3 +4669,110 @@ def memoria_entrenador(request, cliente_id):
         'semaforo': semaforo,
     }
     return render(request, 'clientes/memoria_entrenador.html', context)
+
+
+# ── Phase 1.3 — Acciones sobre SesionProgramada ──────────────────────────────
+
+@login_required
+@require_POST
+def saltar_sesion_view(request, sesion_id):
+    """Marks a pending session as skipped by the user and redirects to the panel."""
+    from entrenos.models import SesionProgramada
+    from entrenos.services.sesion_recomendada import saltar_sesion_programada
+
+    sesion = get_object_or_404(
+        SesionProgramada,
+        id=sesion_id,
+        cliente__user=request.user,
+        estado=SesionProgramada.ESTADO_PENDIENTE,
+    )
+    saltar_sesion_programada(sesion)
+    messages.info(request, "He dejado caer esta sesión. El plan continúa desde la siguiente pieza útil.")
+    return redirect('clientes:panel_cliente')
+
+
+@login_required
+@require_POST
+def posponer_sesion_view(request, sesion_id):
+    """'Hoy no puedo entrenar' — postpones ALL visible pending sessions until tomorrow."""
+    from entrenos.models import SesionProgramada
+    from entrenos.services.sesion_recomendada import posponer_entrenamiento_hoy
+
+    # Verify ownership (the sesion_id is just used for ownership check)
+    get_object_or_404(
+        SesionProgramada,
+        id=sesion_id,
+        cliente__user=request.user,
+        estado=SesionProgramada.ESTADO_PENDIENTE,
+    )
+    cliente = get_object_or_404(Cliente, user=request.user)
+    posponer_entrenamiento_hoy(cliente, timezone.localdate())
+    messages.info(request, "La sesión sigue aquí. Hoy no hace falta forzarla.")
+    return redirect('clientes:panel_cliente')
+
+
+# ── Phase 10B — Plan suggestion responses ────────────────────────────────────
+
+@login_required
+@require_POST
+def aceptar_sugerencia_view(request, sugerencia_id):
+    """User accepted the suggestion: 'Aplicar esta semana'. Records intent, does NOT auto-modify plan."""
+    from entrenos.models import SugerenciaPlan
+    from entrenos.services.sugerencias_service import aceptar_sugerencia
+
+    sugerencia = get_object_or_404(
+        SugerenciaPlan,
+        id=sugerencia_id,
+        cliente__user=request.user,
+        estado=SugerenciaPlan.ESTADO_PENDIENTE,
+    )
+    aceptar_sugerencia(sugerencia)
+    messages.info(request, "Tendremos en cuenta la sugerencia esta semana.")
+    return redirect('clientes:panel_cliente')
+
+
+@login_required
+@require_POST
+def ignorar_sugerencia_view(request, sugerencia_id):
+    """User dismissed the suggestion for now. Cooldown applied."""
+    from entrenos.models import SugerenciaPlan
+    from entrenos.services.sugerencias_service import ignorar_sugerencia
+
+    sugerencia = get_object_or_404(
+        SugerenciaPlan,
+        id=sugerencia_id,
+        cliente__user=request.user,
+        estado=SugerenciaPlan.ESTADO_PENDIENTE,
+    )
+    ignorar_sugerencia(sugerencia)
+    messages.info(request, "La sugerencia descansará unos días.")
+    return redirect('clientes:panel_cliente')
+
+
+# ── Phase 13 — Intervention continuation ─────────────────────────────────────
+
+@login_required
+@require_POST
+def repetir_intervencion_view(request):
+    """User accepted 'Repetir esta semana'. Creates new IntervencionPlan same type."""
+    tipo = request.POST.get('tipo_intervencion', '').strip()
+    from entrenos.models import IntervencionPlan
+    if tipo not in (IntervencionPlan.TIPO_NO_SUBIR, IntervencionPlan.TIPO_REDUCIR):
+        messages.error(request, "Tipo de intervención no válido.")
+        return redirect('clientes:panel_cliente')
+
+    cliente = get_object_or_404(Cliente, user=request.user)
+    from entrenos.services.sugerencias_service import repetir_intervencion
+    repetir_intervencion(cliente, tipo, fecha_ref=timezone.localdate())
+    messages.info(request, "Intervención renovada para esta semana.")
+    return redirect('clientes:panel_cliente')
+
+
+@login_required
+@require_POST
+def ignorar_recomendacion_view(request):
+    """User dismissed the continuation recommendation. No cooldown model needed — just redirect."""
+    # Phase 13: no persistence needed for ignoring a recommendation
+    # (it will regenerate next time if the conditions are still met)
+    messages.info(request, "Recomendación descartada. El plan seguirá observando.")
+    return redirect('clientes:panel_cliente')

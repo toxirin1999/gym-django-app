@@ -251,6 +251,7 @@ class PlanificadorHelms:
                         'descanso_minutos': descanso,
                         'patron': patron,
                         'tipo_progresion': ej.get('tipo_progresion', 'peso_reps'),
+                        'tipo_ejercicio': tipo_ej,
                     })
 
                     patron_manager.registrar_uso_patron(patron, idx_dia, grupo)

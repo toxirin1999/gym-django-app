@@ -54,6 +54,11 @@ class EjercicioRealizado(models.Model):
     )
     molestia_descripcion = models.TextField(blank=True)
 
+    es_bloque_principal = models.BooleanField(
+        null=True, blank=True,
+        help_text="True=bloque principal, False=opcional, None=sesión normal (no esencial).",
+    )
+
     fuente_datos = models.CharField(max_length=20, default='manual')
     fecha_creacion = models.DateTimeField(auto_now_add=True)
 
@@ -332,6 +337,19 @@ class EntrenoRealizado(models.Model):
     energia_pre_sesion = models.PositiveSmallIntegerField(
         null=True, blank=True,
         help_text="Energía percibida antes de la sesión (1-10)"
+    )
+
+    modo_reducido = models.BooleanField(
+        default=False,
+        help_text="True si la sesión se realizó en modo esencial (solo bloque principal).",
+    )
+    principales_planificados = models.PositiveSmallIntegerField(
+        null=True, blank=True,
+        help_text="Nº de ejercicios principales planificados en modo esencial.",
+    )
+    opcionales_planificados = models.PositiveSmallIntegerField(
+        null=True, blank=True,
+        help_text="Nº de ejercicios opcionales planificados en modo esencial.",
     )
 
     def calcular_volumen_total(self):
@@ -1231,3 +1249,181 @@ class GymAdaptationProfile(models.Model):
         if self.decisiones_totales == 0:
             return 0
         return round((self.decisiones_validadas / self.decisiones_totales) * 100)
+
+
+class SesionProgramada(models.Model):
+    ESTADO_PENDIENTE = "pendiente"
+    ESTADO_COMPLETADA = "completada"
+    ESTADO_SALTADA_USUARIO = "saltada_usuario"
+    ESTADO_OMITIDA_SISTEMA = "omitida_sistema"
+    ESTADO_CANCELADA_LESION = "cancelada_lesion"
+
+    PRIORIDAD_ALTA = "alta"
+    PRIORIDAD_NORMAL = "normal"
+
+    ESTADOS = [
+        (ESTADO_PENDIENTE, "Pendiente"),
+        (ESTADO_COMPLETADA, "Completada"),
+        (ESTADO_SALTADA_USUARIO, "Saltada por usuario"),
+        (ESTADO_OMITIDA_SISTEMA, "Omitida por sistema"),
+        (ESTADO_CANCELADA_LESION, "Cancelada por lesión"),
+    ]
+
+    PRIORIDADES = [
+        (PRIORIDAD_ALTA, "Alta"),
+        (PRIORIDAD_NORMAL, "Normal"),
+    ]
+
+    cliente = models.ForeignKey(
+        "clientes.Cliente",
+        on_delete=models.CASCADE,
+        related_name="sesiones_programadas",
+    )
+
+    fecha_prevista = models.DateField(db_index=True)
+    fecha_realizada = models.DateField(null=True, blank=True)
+
+    estado = models.CharField(
+        max_length=20,
+        choices=ESTADOS,
+        default=ESTADO_PENDIENTE,
+        db_index=True,
+    )
+
+    prioridad = models.CharField(
+        max_length=10,
+        choices=PRIORIDADES,
+        default=PRIORIDAD_ALTA,
+    )
+
+    nombre_sesion = models.CharField(max_length=200, blank=True)
+    bloque_nombre = models.CharField(max_length=100, blank=True)
+    dia_numero = models.PositiveSmallIntegerField(null=True, blank=True)
+
+    pospuesta_hasta = models.DateField(
+        null=True, blank=True, db_index=True,
+        help_text="Si está presente, la sesión no se muestra como pendiente hasta esa fecha.",
+    )
+
+    entreno_realizado = models.ForeignKey(
+        "entrenos.EntrenoRealizado",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="sesiones_programadas",
+    )
+
+    motivo_estado = models.TextField(blank=True)
+
+    creada_en = models.DateTimeField(auto_now_add=True)
+    actualizada_en = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["fecha_prevista", "id"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["cliente", "fecha_prevista"],
+                name="unique_sesion_cliente_fecha",
+            )
+        ]
+        indexes = [
+            models.Index(fields=["cliente", "estado", "fecha_prevista"]),
+        ]
+
+    def __str__(self):
+        return f"{self.cliente} - {self.fecha_prevista} - {self.nombre_sesion} - {self.estado}"
+
+
+class SugerenciaPlan(models.Model):
+    """
+    Phase 10B — Records user responses to plan suggestions.
+
+    CONTRACT:
+    - Created lazily when a suggestion is first displayed.
+    - A ignored suggestion respects cooldown_hasta before reappearing.
+    - An accepted/applied suggestion does NOT auto-modify the plan.
+    - Never shows the same suggestion twice within the cooldown window.
+    """
+    ESTADO_PENDIENTE  = 'pendiente'
+    ESTADO_ACEPTADA   = 'aceptada'
+    ESTADO_IGNORADA   = 'ignorada'
+    ESTADO_APLICADA   = 'aplicada'
+    ESTADO_DESCARTADA = 'descartada'
+
+    ESTADOS = [
+        ('pendiente',  'Pendiente'),
+        ('aceptada',   'Aceptada'),
+        ('ignorada',   'Ignorada por ahora'),
+        ('aplicada',   'Aplicada'),
+        ('descartada', 'Descartada'),
+    ]
+
+    COOLDOWN_DIAS = 7  # days before an ignored suggestion reappears
+
+    cliente       = models.ForeignKey('clientes.Cliente', on_delete=models.CASCADE, related_name='sugerencias_plan')
+    patron        = models.CharField(max_length=60, db_index=True)  # e.g. 'carga_alta_sostenida'
+    texto         = models.TextField()
+    estado        = models.CharField(max_length=20, choices=ESTADOS, default=ESTADO_PENDIENTE, db_index=True)
+    cooldown_hasta = models.DateField(null=True, blank=True, db_index=True)
+    fecha_generada = models.DateTimeField(auto_now_add=True)
+    fecha_respuesta = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-fecha_generada']
+        indexes = [
+            models.Index(fields=['cliente', 'patron', 'estado']),
+        ]
+
+    def __str__(self):
+        return f"{self.cliente} — {self.patron} ({self.estado})"
+
+
+class IntervencionPlan(models.Model):
+    """
+    Phase 10C — Temporary plan policy created when the user accepts a suggestion.
+
+    CONTRACT:
+    - Created when SugerenciaPlan.estado transitions to 'aceptada'.
+    - Active while estado='activa' and fecha_inicio <= today <= fecha_fin.
+    - evaluar_permiso_progresion reads this FIRST, overriding pattern detection.
+    - Does NOT modify the annual plan or PlanificadorHelms.
+    - Expires automatically at end of the current week (Sunday).
+    - Safe types only: 'no_subir_cargas' and 'reducir_accesorios'.
+    """
+    TIPO_NO_SUBIR   = 'no_subir_cargas'
+    TIPO_REDUCIR    = 'reducir_accesorios'
+    TIPO_MANTENER   = 'mantener_estructura'  # records acceptance, no-op on freno
+
+    TIPOS = [
+        ('no_subir_cargas',     'No subir cargas'),
+        ('reducir_accesorios',  'Reducir accesorios'),
+        ('mantener_estructura', 'Mantener estructura'),
+    ]
+
+    ESTADO_ACTIVA   = 'activa'
+    ESTADO_EXPIRADA = 'expirada'
+    ESTADO_CANCELADA = 'cancelada'
+
+    ESTADOS = [
+        ('activa',    'Activa'),
+        ('expirada',  'Expirada'),
+        ('cancelada', 'Cancelada'),
+    ]
+
+    cliente         = models.ForeignKey('clientes.Cliente', on_delete=models.CASCADE, related_name='intervenciones_plan')
+    sugerencia      = models.ForeignKey(SugerenciaPlan, on_delete=models.SET_NULL, null=True, blank=True, related_name='intervenciones')
+    tipo            = models.CharField(max_length=30, choices=TIPOS, db_index=True)
+    origen_patron   = models.CharField(max_length=60, blank=True)
+    fecha_inicio    = models.DateField(db_index=True)
+    fecha_fin       = models.DateField(db_index=True)
+    estado          = models.CharField(max_length=20, choices=ESTADOS, default=ESTADO_ACTIVA, db_index=True)
+    creada_en       = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-creada_en']
+        indexes = [
+            models.Index(fields=['cliente', 'estado', 'fecha_fin']),
+        ]
+
+    def __str__(self):
+        return f"{self.cliente} — {self.tipo} ({self.fecha_inicio} → {self.fecha_fin})"

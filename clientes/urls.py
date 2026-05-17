@@ -99,4 +99,16 @@ urlpatterns = [
 
     # Apple Health token
     path('apple-health/token/', views.apple_health_token, name='apple_health_token'),
+
+    # Acciones sobre SesionProgramada (Phase 1.3)
+    path('sesion/<int:sesion_id>/saltar/', views.saltar_sesion_view, name='saltar_sesion'),
+    path('sesion/<int:sesion_id>/posponer/', views.posponer_sesion_view, name='posponer_sesion'),
+
+    # Acciones sobre SugerenciaPlan (Phase 10B)
+    path('sugerencia/<int:sugerencia_id>/aceptar/', views.aceptar_sugerencia_view, name='aceptar_sugerencia'),
+    path('sugerencia/<int:sugerencia_id>/ignorar/', views.ignorar_sugerencia_view, name='ignorar_sugerencia'),
+
+    # Phase 13 — Continuation recommendation actions
+    path('intervencion/repetir/', views.repetir_intervencion_view, name='repetir_intervencion'),
+    path('recomendacion/ignorar/', views.ignorar_recomendacion_view, name='ignorar_recomendacion'),
 ]
