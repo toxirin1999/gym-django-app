@@ -920,6 +920,7 @@ function joiBannerCerrar(id) {
         {% endif %}
         <form method="post" action="{% url 'clientes:ignorar_recomendacion' %}" style="flex:1;">
           {% csrf_token %}
+          <input type="hidden" name="tipo_intervencion" value="{{ recomendacion_continuidad.tipo_intervencion }}">
           <button type="submit" style="width:100%;padding:8px;border-radius:10px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.10);color:var(--td);font-size:11px;cursor:pointer;opacity:0.65;">
             No por ahora
           </button>

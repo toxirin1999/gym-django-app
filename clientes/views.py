@@ -4771,8 +4771,25 @@ def repetir_intervencion_view(request):
 @login_required
 @require_POST
 def ignorar_recomendacion_view(request):
-    """User dismissed the continuation recommendation. No cooldown model needed — just redirect."""
-    # Phase 13: no persistence needed for ignoring a recommendation
-    # (it will regenerate next time if the conditions are still met)
-    messages.info(request, "Recomendación descartada. El plan seguirá observando.")
+    """User dismissed the continuation recommendation. Phase 13.1: 7-day cooldown via SugerenciaPlan."""
+    from entrenos.models import SugerenciaPlan
+    from entrenos.models import IntervencionPlan
+    from datetime import timedelta
+
+    tipo = request.POST.get('tipo_intervencion', '').strip()
+    patron_clave = f'continuidad_{tipo}' if tipo else 'continuidad'
+
+    cliente = get_object_or_404(Cliente, user=request.user)
+    manana = timezone.localdate() + timedelta(days=7)
+
+    # Reuse SugerenciaPlan as a cooldown record for continuation recommendations
+    SugerenciaPlan.objects.create(
+        cliente=cliente,
+        patron=patron_clave,
+        texto='Recomendación de continuidad ignorada por el usuario.',
+        estado=SugerenciaPlan.ESTADO_IGNORADA,
+        cooldown_hasta=manana,
+    )
+
+    messages.info(request, "La recomendación descansará unos días.")
     return redirect('clientes:panel_cliente')
