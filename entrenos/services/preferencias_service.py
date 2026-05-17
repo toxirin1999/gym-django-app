@@ -37,7 +37,7 @@ _DESCRIPCION_PREFERENCIA = {
     PreferenciaPlanAprendida.TIPO_MENOS_DIAS:
         'El plan tomará como referencia real la estructura de menos días semanales.',
     PreferenciaPlanAprendida.TIPO_ALIGERAR_DIA:
-        'El plan marcará los accesorios como opcionales en el día que concentraba versiones esenciales.',
+        'El plan intentará marcar los accesorios como opcionales en el día que concentraba versiones esenciales.',
 }
 
 
