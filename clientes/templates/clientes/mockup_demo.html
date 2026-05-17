@@ -651,7 +651,7 @@ function joiBannerCerrar(id) {
         <span style="font-size:14px;">🧠</span>
         <span style="font-family:var(--font-mono);font-size:9px;font-weight:700;color:var(--ink-3);letter-spacing:.12em;text-transform:uppercase;">Estado del sistema · hoy</span>
       </div>
-      {% for alerta in alertas_sistema %}
+      {% for alerta in alertas_sistema|slice:":3" %}
       <div style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;{% if not forloop.last %}border-bottom:1px solid var(--line);{% endif %}">
         <span style="font-size:15px;flex-shrink:0;margin-top:1px;">{{ alerta.icono }}</span>
         <div style="flex:1;min-width:0;">
@@ -724,6 +724,22 @@ function joiBannerCerrar(id) {
         </div>
       </div>
       {% endfor %}
+      {% if alertas_sistema|length > 3 %}
+      <details style="border-top:1px solid var(--line);">
+        <summary style="padding:8px 14px;font-family:var(--font-mono);font-size:9px;font-weight:700;color:var(--ink-4);letter-spacing:.1em;text-transform:uppercase;cursor:pointer;list-style:none;">
+          {{ alertas_sistema|length|add:"-3" }} señal{{ alertas_sistema|length|add:"-3"|pluralize:"es" }} más
+        </summary>
+        {% for alerta in alertas_sistema|slice:"3:" %}
+        <div style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;border-top:1px solid var(--line);">
+          <span style="font-size:15px;flex-shrink:0;margin-top:1px;">{{ alerta.icono }}</span>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:12px;font-weight:700;color:{% if alerta.nivel == 'critico' %}var(--danger){% elif alerta.nivel == 'alerta' %}var(--warn){% elif alerta.nivel == 'positivo' %}var(--ok){% else %}var(--ink){% endif %};">{{ alerta.titulo }}</div>
+            <div style="font-size:11px;color:var(--ink-3);line-height:1.4;margin-top:2px;">{{ alerta.texto }}</div>
+          </div>
+        </div>
+        {% endfor %}
+      </details>
+      {% endif %}
       <div style="padding:8px 14px;">
         <a href="{% url 'clientes:memoria_entrenador' cliente.id %}" style="font-family:var(--font-mono);font-size:9px;color:var(--ink-4);text-decoration:none;letter-spacing:.08em;">VER TODO LO QUE SÉ DE TI →</a>
       </div>
@@ -850,7 +866,7 @@ function joiBannerCerrar(id) {
       <div style="margin-bottom:12px;padding:14px 16px;background:var(--paper);border:1px solid var(--line-2);border-radius:14px;display:flex;align-items:center;gap:14px;">
         <div style="width:40px;height:40px;border-radius:50%;background:var(--paper-2);border:1px solid var(--line-2);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">🧠</div>
         <div style="flex:1;">
-          <div style="font-size:13px;font-weight:700;color:var(--ink);">Lo que sé de ti</div>
+          <div style="font-size:13px;font-weight:700;color:var(--ink);">Lo que voy entendiendo de ti</div>
           <div style="font-family:var(--font-mono);font-size:10px;color:var(--ink-3);margin-top:2px;">RMs · calibración RPE · estaciones · decisiones del plan</div>
         </div>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink-3)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
