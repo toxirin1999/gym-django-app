@@ -290,6 +290,112 @@ class TestEvaluacionDistribucion(DistribucionBase):
             self.assertTrue(usa_prudente, msg=f"Lectura sin lenguaje prudente: {result['lectura']}")
 
 
+class TestContinuidadDistribucion(DistribucionBase):
+    """Phase 21.1: generar_recomendacion_continuidad_distribucion behavior."""
+
+    def _mock_eval(self, resultado, tipo='redistrib_dias_menores'):
+        return {'resultado': resultado, 'tipo': tipo, 'lectura': 'Prueba de test.'}
+
+    def test_favorable_propone_repetir(self):
+        from entrenos.services.sugerencias_service import generar_recomendacion_continuidad_distribucion
+        from unittest.mock import patch
+
+        with patch('entrenos.services.sugerencias_service.evaluar_prueba_distribucion',
+                   return_value=self._mock_eval('favorable')):
+            result = generar_recomendacion_continuidad_distribucion(self.cliente, self.hoy)
+
+        self.assertIsNotNone(result)
+        self.assertEqual(result['accion'], 'repetir')
+
+    def test_neutral_no_propone(self):
+        from entrenos.services.sugerencias_service import generar_recomendacion_continuidad_distribucion
+        from unittest.mock import patch
+
+        with patch('entrenos.services.sugerencias_service.evaluar_prueba_distribucion',
+                   return_value=self._mock_eval('neutral')):
+            result = generar_recomendacion_continuidad_distribucion(self.cliente, self.hoy)
+        self.assertIsNone(result)
+
+    def test_sin_evaluacion_devuelve_none(self):
+        from entrenos.services.sugerencias_service import generar_recomendacion_continuidad_distribucion
+        from unittest.mock import patch
+
+        with patch('entrenos.services.sugerencias_service.evaluar_prueba_distribucion', return_value=None):
+            result = generar_recomendacion_continuidad_distribucion(self.cliente, self.hoy)
+        self.assertIsNone(result)
+
+    def test_repetir_crea_intervencion_14_dias(self):
+        from entrenos.models import IntervencionPlan
+        from entrenos.services.sugerencias_service import repetir_prueba_distribucion
+
+        repetir_prueba_distribucion(self.cliente, IntervencionPlan.TIPO_REDISTRIB_DIAS, fecha_ref=self.hoy)
+
+        ip = IntervencionPlan.objects.filter(cliente=self.cliente).first()
+        self.assertIsNotNone(ip)
+        self.assertEqual(ip.tipo, IntervencionPlan.TIPO_REDISTRIB_DIAS)
+        self.assertEqual(ip.fecha_fin, self.hoy + timedelta(days=14))
+        self.assertEqual(ip.origen_patron, 'continuidad_fase21')
+
+    def test_no_por_ahora_crea_cooldown_7_dias(self):
+        from entrenos.models import SugerenciaPlan
+
+        # Simulate what ignorar_continuidad_distribucion_view does
+        tipo = 'redistrib_dias_menores'
+        patron_cooldown = f'continuidad_distribucion_{tipo}'
+        SugerenciaPlan.objects.create(
+            cliente=self.cliente, patron=patron_cooldown,
+            texto='Ignorada.', estado=SugerenciaPlan.ESTADO_IGNORADA,
+            cooldown_hasta=self.hoy + timedelta(days=7),
+        )
+
+        from entrenos.services.sugerencias_service import generar_recomendacion_continuidad_distribucion
+        from unittest.mock import patch
+
+        mock_eval = self._mock_eval('favorable', 'redistrib_dias_menores')
+        with patch('entrenos.services.sugerencias_service.evaluar_prueba_distribucion', return_value=mock_eval):
+            result = generar_recomendacion_continuidad_distribucion(self.cliente, self.hoy)
+
+        self.assertIsNone(result)  # cooldown active → silent
+
+    def test_cooldown_especifico_por_tipo(self):
+        """Cooldown for redistrib_dias_menores does NOT block redistrib_dia_frecuente."""
+        from entrenos.models import SugerenciaPlan
+
+        SugerenciaPlan.objects.create(
+            cliente=self.cliente, patron='continuidad_distribucion_redistrib_dias_menores',
+            texto='Ignorada.', estado=SugerenciaPlan.ESTADO_IGNORADA,
+            cooldown_hasta=self.hoy + timedelta(days=5),
+        )
+
+        from entrenos.services.sugerencias_service import generar_recomendacion_continuidad_distribucion
+        from unittest.mock import patch
+
+        # But the evaluation is for redistrib_dia_frecuente → different type
+        mock_eval = self._mock_eval('favorable', 'redistrib_dia_frecuente')
+        with patch('entrenos.services.sugerencias_service.evaluar_prueba_distribucion', return_value=mock_eval):
+            result = generar_recomendacion_continuidad_distribucion(self.cliente, self.hoy)
+
+        self.assertIsNotNone(result)  # different type → not blocked
+
+    def test_no_apila_si_ya_hay_activa(self):
+        from entrenos.models import IntervencionPlan
+
+        IntervencionPlan.objects.create(
+            cliente=self.cliente, tipo=IntervencionPlan.TIPO_REDISTRIB_DIAS,
+            origen_patron='test', fecha_inicio=self.hoy,
+            fecha_fin=self.hoy + timedelta(days=7), estado=IntervencionPlan.ESTADO_ACTIVA,
+        )
+
+        from entrenos.services.sugerencias_service import generar_recomendacion_continuidad_distribucion
+        from unittest.mock import patch
+
+        with patch('entrenos.services.sugerencias_service.evaluar_prueba_distribucion',
+                   return_value=self._mock_eval('favorable')):
+            result = generar_recomendacion_continuidad_distribucion(self.cliente, self.hoy)
+
+        self.assertIsNone(result)  # active probe already exists
+
+
 class TestSinDatos(DistribucionBase):
     def test_sin_datos_devuelve_lista_vacia(self):
         obs = analizar_distribucion_semanal(self.cliente, num_semanas=6, fecha_ref=self.hoy)
