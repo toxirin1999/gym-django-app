@@ -971,7 +971,7 @@ function joiHyroxCerrar(id) {
     color: var(--ink);
   }
   @media (max-width: 400px) { .hd-decision-grid { grid-template-columns: 1fr; } }
-  .rb-dia-locked { opacity: .78; border-left-color: var(--danger) !important; box-shadow: none !important; pointer-events: none; }
+  .rb-dia-locked { opacity: .78; border-left-color: var(--danger) !important; box-shadow: none !important; }
   .rb-dia-locked .rb-dia-bib { border-color: rgba(200,40,40,.35) !important; }
   .rb-tag-locked { background: rgba(200,40,40,.08); color: var(--danger); border: 1px solid rgba(200,40,40,.35); }
   </style>
@@ -2300,7 +2300,7 @@ function joiHyroxCerrar(id) {
       </div>
       {% else %}
       {% if hyrox_decision and not hyrox_decision.puede_ejecutar_plan and item.es_hoy %}
-      <a class="rb-dia hoy rb-dia-locked" href="#">
+      <a class="rb-dia hoy rb-dia-locked" href="{% url 'hyrox:registrar_entrenamiento_session' objective_id=objetivo_activo.id session_id=item.sesion.id %}">
       {% else %}
       <a class="rb-dia {% if item.es_hoy %}hoy{% elif item.es_manana %}manana{% endif %}" href="{% url 'hyrox:registrar_entrenamiento_session' objective_id=objetivo_activo.id session_id=item.sesion.id %}">
       {% endif %}
