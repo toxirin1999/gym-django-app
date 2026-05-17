@@ -871,6 +871,96 @@ function joiHyroxCerrar(id) {
 
   {% include "includes/_semaforo_intencion.html" %}
 
+  <!-- ═══════════════ DECISIÓN SOBERANA ═══════════════ -->
+  {% if hyrox_decision %}
+  <section class="hd-decision hd-decision--{{ hyrox_decision.estado }}" style="margin:0 0 16px;">
+    <div class="hd-decision-kicker">
+      <span class="hd-decision-dot"></span>
+      Decisión del día
+    </div>
+    <h2 class="hd-decision-title">{{ hyrox_decision.titulo }}</h2>
+    <p class="hd-decision-sub">{{ hyrox_decision.subtitulo }}</p>
+    <p class="hd-decision-msg">{{ hyrox_decision.mensaje }}</p>
+    {% if hyrox_decision.permitido or hyrox_decision.evitar %}
+    <div class="hd-decision-grid">
+      {% if hyrox_decision.permitido %}
+      <div>
+        <div class="hd-mini-lbl">Permitido</div>
+        {% for item in hyrox_decision.permitido %}
+        <div class="hd-mini-ok">→ {{ item }}</div>
+        {% endfor %}
+      </div>
+      {% endif %}
+      {% if hyrox_decision.evitar %}
+      <div>
+        <div class="hd-mini-lbl">Evitar hoy</div>
+        {% for item in hyrox_decision.evitar %}
+        <div class="hd-mini-bad">× {{ item }}</div>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+    {% endif %}
+    <div class="hd-decision-action">{{ hyrox_decision.accion_label }}</div>
+  </section>
+  <style>
+  .hd-decision {
+    padding: 16px;
+    background: var(--paper, #EFEAE1);
+    border: 1px solid var(--line, rgba(15,15,14,.12));
+    border-left: 4px solid var(--accent);
+    border-radius: 4px;
+  }
+  .hd-decision--recuperar { border-left-color: var(--danger, oklch(0.55 0.22 25)); }
+  .hd-decision--sostener  { border-left-color: var(--warn, oklch(0.72 0.17 70)); }
+  .hd-decision--empujar   { border-left-color: var(--ok,   oklch(0.55 0.15 145)); }
+  .hd-decision--volver    { border-left-color: oklch(0.65 0.14 220); }
+  .hd-decision-kicker {
+    display: flex; align-items: center; gap: 6px;
+    font-family: var(--font-mono); font-size: 9px; font-weight: 700;
+    letter-spacing: .16em; text-transform: uppercase;
+    color: var(--ink-3, rgba(15,15,14,.45)); margin-bottom: 6px;
+  }
+  .hd-decision-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: currentColor; flex-shrink: 0;
+  }
+  .hd-decision-title {
+    font-family: var(--font-disp, 'Archivo Black', sans-serif);
+    font-size: 22px; text-transform: uppercase;
+    letter-spacing: .02em; margin: 0 0 2px;
+    color: var(--ink, #0F0F0E);
+  }
+  .hd-decision-sub {
+    font-family: var(--font-mono); font-size: 9px; font-weight: 700;
+    letter-spacing: .14em; text-transform: uppercase;
+    color: var(--ink-3, rgba(15,15,14,.45)); margin: 0 0 8px;
+  }
+  .hd-decision-msg {
+    font-size: 13px; line-height: 1.5;
+    color: var(--ink-2, rgba(15,15,14,.7)); margin: 0 0 12px;
+  }
+  .hd-decision-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;
+  }
+  .hd-mini-lbl {
+    font-family: var(--font-mono); font-size: 9px; font-weight: 700;
+    letter-spacing: .14em; text-transform: uppercase;
+    color: var(--ink-4, rgba(15,15,14,.28)); margin-bottom: 5px;
+  }
+  .hd-mini-ok  { font-family: var(--font-mono); font-size: 10px; line-height: 1.7; color: var(--ok); }
+  .hd-mini-bad { font-family: var(--font-mono); font-size: 10px; line-height: 1.7; color: var(--danger); }
+  .hd-decision-action {
+    display: inline-flex; padding: 5px 10px;
+    border: 1px solid var(--ink, #0F0F0E);
+    font-family: var(--font-mono); font-size: 9px; font-weight: 700;
+    letter-spacing: .14em; text-transform: uppercase;
+    color: var(--ink);
+  }
+  @media (max-width: 400px) { .hd-decision-grid { grid-template-columns: 1fr; } }
+  </style>
+  {% endif %}
+
   <!-- ═══════════════ BIB HERO ═══════════════ -->
   <section class="rb-a0">
     <div class="rb-bib">

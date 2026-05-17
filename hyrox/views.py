@@ -25,6 +25,132 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 from .models import HyroxObjective, HyroxSession, HyroxActivity, UserInjury, DailyRecoveryEntry
 
+# ── Tags de riesgo por estación Hyrox (vocabulario real del sistema) ──────────
+_HYROX_STATION_RISK_TAGS = {
+    'Sled Push':          {'triple_extension_explosiva', 'flexion_rodilla_profunda'},
+    'Sled Pull':          {'triple_extension_explosiva', 'flexion_rodilla_profunda'},
+    'Burpee Broad Jumps': {'impacto_vertical', 'triple_extension_explosiva'},
+    'Sandbag Lunges':     {'triple_extension_explosiva', 'flexion_rodilla_profunda', 'impacto_vertical'},
+    'Wall Balls':         {'impacto_vertical', 'triple_extension_explosiva', 'flexion_rodilla_profunda'},
+    'Rowing':             {'flexion_rodilla_profunda'},
+    'Running (1 km)':     {'impacto_vertical'},
+}
+
+
+def _normalizar_tags_restringidos(lesion_activa):
+    if not lesion_activa:
+        return []
+    raw = getattr(lesion_activa, 'tags_restringidos', None)
+    if not raw:
+        return []
+    if isinstance(raw, str):
+        return [t.strip() for t in raw.split(',') if t.strip()]
+    if isinstance(raw, (list, tuple, set)):
+        return [str(t).strip() for t in raw if str(t).strip()]
+    return []
+
+
+def _estaciones_bloqueadas_por_tags(tags):
+    tags = set(tags or [])
+    return [
+        estacion for estacion, risk in _HYROX_STATION_RISK_TAGS.items()
+        if tags.intersection(risk)
+    ]
+
+
+def _crear_hyrox_decision(current_score, resumen_semanal=None, lesion_activa=None):
+    """
+    Devuelve el objeto de decisión soberana del día para el panel Hyrox.
+    Prioridad: lesión > fatiga (TSB) > carga (ACWR) > readiness > normal.
+    """
+    if lesion_activa:
+        tags = _normalizar_tags_restringidos(lesion_activa)
+        estaciones = _estaciones_bloqueadas_por_tags(tags)
+        zona = getattr(lesion_activa, 'zona_afectada', None) or 'zona lesionada'
+        return {
+            'estado': 'recuperar',
+            'causa': 'lesion',
+            'titulo': 'Recuperar',
+            'subtitulo': f'Lesión activa en {zona}',
+            'mensaje': f'El sistema ha ajustado la sesión para proteger {zona}.',
+            'accion_label': 'Sesión adaptada',
+            'puede_ejecutar_plan': False,
+            'permitido': ['Trabajo sin dolor', 'Movilidad controlada', 'Cardio de bajo impacto si no molesta'],
+            'evitar': estaciones or ['Ejercicios asociados a la lesión activa'],
+            'tags_restringidos': tags,
+            'estaciones_bloqueadas': estaciones,
+        }
+
+    tsb = None
+    acwr = None
+    if resumen_semanal:
+        if isinstance(resumen_semanal, dict):
+            tsb  = resumen_semanal.get('tsb')
+            acwr = resumen_semanal.get('acwr')
+        else:
+            tsb  = getattr(resumen_semanal, 'tsb', None)
+            acwr = getattr(resumen_semanal, 'acwr', None)
+
+    if tsb is not None and tsb <= -20:
+        return {
+            'estado': 'recuperar',
+            'causa': 'fatiga',
+            'titulo': 'Recuperar',
+            'subtitulo': 'Fatiga acumulada alta',
+            'mensaje': 'La carga reciente pesa demasiado. Hoy conviene bajar intensidad y conservar continuidad.',
+            'accion_label': 'Recuperación activa',
+            'puede_ejecutar_plan': False,
+            'permitido': ['Zona 2 suave', 'Movilidad', 'Técnica sin fatiga'],
+            'evitar': ['Series duras', 'Simulación', 'Trabajo al fallo'],
+            'tags_restringidos': [],
+            'estaciones_bloqueadas': [],
+        }
+
+    if acwr is not None and acwr >= 1.5:
+        return {
+            'estado': 'recuperar',
+            'causa': 'carga',
+            'titulo': 'Recuperar',
+            'subtitulo': 'Carga aguda elevada',
+            'mensaje': 'La carga de esta semana ha subido demasiado respecto a tu base. Mejor absorber que añadir.',
+            'accion_label': 'Bajar carga',
+            'puede_ejecutar_plan': False,
+            'permitido': ['Cardio bajo impacto', 'Movilidad', 'Técnica suave'],
+            'evitar': ['Volumen extra', 'Sled pesado', 'Compromised Running intenso'],
+            'tags_restringidos': [],
+            'estaciones_bloqueadas': [],
+        }
+
+    if current_score and current_score < 45:
+        return {
+            'estado': 'sostener',
+            'causa': 'readiness_bajo',
+            'titulo': 'Sostener',
+            'subtitulo': 'Readiness limitado',
+            'mensaje': 'Puedes entrenar, pero sin perseguir el límite. El objetivo es cumplir sin acumular deuda.',
+            'accion_label': 'Sesión moderada',
+            'puede_ejecutar_plan': True,
+            'permitido': ['Sesión planificada con RPE controlado', 'Recortar volumen si hace falta'],
+            'evitar': ['Competir contra el reloj', 'Añadir trabajo extra'],
+            'tags_restringidos': [],
+            'estaciones_bloqueadas': [],
+        }
+
+    return {
+        'estado': 'empujar',
+        'causa': 'normal',
+        'titulo': 'Empujar',
+        'subtitulo': 'Señales favorables',
+        'mensaje': 'Tus señales acompañan. Hoy puedes ejecutar la sesión con intención.',
+        'accion_label': 'Ejecutar plan',
+        'puede_ejecutar_plan': True,
+        'permitido': ['Sesión planificada', 'Intensidad prevista', 'Registrar RPE al final'],
+        'evitar': ['Improvisar volumen innecesario'],
+        'tags_restringidos': [],
+        'estaciones_bloqueadas': [],
+    }
+
+
 @login_required
 def hyrox_dashboard(request):
     cliente = getattr(request.user, 'cliente_perfil', None)
@@ -1390,17 +1516,20 @@ def hyrox_dashboard(request):
         'post_session_diagnosis': post_session_diagnosis,
     }
 
+    # ── Decisión soberana Hyrox ───────────────────────────────────
+    hyrox_decision = _crear_hyrox_decision(
+        current_score=context.get('readiness_score_hoy'),
+        resumen_semanal=context.get('resumen_semanal'),
+        lesion_activa=context.get('lesion_activa'),
+    )
+    context['hyrox_decision'] = hyrox_decision
+
     # ── Semáforo de Intención ─────────────────────────────────────
-    from django.core.cache import cache as _cache
-    _semaforo_key = f'semaforo_{cliente.pk}'
-    semaforo = _cache.get(_semaforo_key)
-    if semaforo is None:
-        try:
-            from core.daily_decision import DailyDecisionEngine
-            semaforo = DailyDecisionEngine.get_estado_hoy(cliente)
-            _cache.set(_semaforo_key, semaforo, 1800)
-        except Exception:
-            semaforo = None
+    try:
+        from core.daily_decision import DailyDecisionEngine
+        semaforo = DailyDecisionEngine.get_estado_hoy(cliente)
+    except Exception:
+        semaforo = None
     context['semaforo'] = semaforo
 
     return render(request, 'hyrox/dashboard.html', context)
