@@ -958,6 +958,9 @@ function joiHyroxCerrar(id) {
     color: var(--ink);
   }
   @media (max-width: 400px) { .hd-decision-grid { grid-template-columns: 1fr; } }
+  .rb-dia-locked { opacity: .78; border-left-color: var(--danger) !important; box-shadow: none !important; pointer-events: none; }
+  .rb-dia-locked .rb-dia-bib { border-color: rgba(200,40,40,.35) !important; }
+  .rb-tag-locked { background: rgba(200,40,40,.08); color: var(--danger); border: 1px solid rgba(200,40,40,.35); }
   </style>
   {% endif %}
 
@@ -1050,7 +1053,11 @@ function joiHyroxCerrar(id) {
         {% if not lesion_activa %}
         <a href="{% url 'hyrox:reportar_lesion' %}" class="rb-btn rb-btn-ghost"><i class="fas fa-heartbeat"></i> Lesión</a>
         {% endif %}
+        {% if hyrox_decision and not hyrox_decision.puede_ejecutar_plan %}
+        <a href="{% url 'hyrox:reportar_lesion' %}" class="rb-btn rb-btn-primary" style="background:var(--danger);border-color:var(--danger);"><i class="fas fa-shield-heart"></i> Registrar Recuperación</a>
+        {% else %}
         <a href="{% url 'hyrox:registrar_entrenamiento' objective_id=objetivo_activo.id %}" class="rb-btn rb-btn-primary"><i class="fas fa-plus"></i> Registrar Entreno</a>
+        {% endif %}
         <a href="{% url 'hyrox:crear_objetivo' %}" class="rb-btn rb-btn-ghost"><i class="fas fa-pen"></i> Editar</a>
         <a href="{% url 'hyrox:guia_tecnica' %}" class="rb-btn rb-btn-ghost"><i class="fas fa-book-open"></i> Guía técnica</a>
         <button type="button" class="rb-btn rb-btn-ghost" onclick="document.getElementById('modal-regen-plan').style.display='flex'">
@@ -2117,7 +2124,9 @@ function joiHyroxCerrar(id) {
         </a>
       </div>
       {% else %}
-      <a class="rb-dia {% if item.es_hoy %}hoy{% elif item.es_manana %}manana{% endif %}" href="{% url 'hyrox:registrar_entrenamiento_session' objective_id=objetivo_activo.id session_id=item.sesion.id %}">
+      {% with locked=hyrox_decision and not hyrox_decision.puede_ejecutar_plan and item.es_hoy %}
+      <a class="rb-dia {% if item.es_hoy %}hoy{% elif item.es_manana %}manana{% endif %}{% if locked %} rb-dia-locked{% endif %}"
+         href="{% if locked %}#{% else %}{% url 'hyrox:registrar_entrenamiento_session' objective_id=objetivo_activo.id session_id=item.sesion.id %}{% endif %}">
         <div class="rb-dia-bib">
           <div class="rb-dia-dow">{{ item.dia_str|slice:":3"|upper }}</div>
           <div class="rb-dia-num">{{ item.sesion.fecha|date:"d" }}</div>
@@ -2131,9 +2140,11 @@ function joiHyroxCerrar(id) {
           </div>
           <div class="rb-dia-acts">{% for act_str in item.actividades_resumen|slice:"1:4" %}{{ act_str }}{% if not forloop.last %} · {% endif %}{% endfor %}</div>
         </div>
-        {% if item.es_hoy %}<span class="rb-dia-tag rb-tag-hoy">HOY</span>
+        {% if locked %}<span class="rb-dia-tag rb-tag-locked">PROTEGIDO</span>
+        {% elif item.es_hoy %}<span class="rb-dia-tag rb-tag-hoy">HOY</span>
         {% elif item.es_manana %}<span class="rb-dia-tag rb-tag-man">MAÑ</span>
         {% else %}<span class="rb-dia-tag rb-tag-ver">VER</span>{% endif %}
+      {% endwith %}
       </a>
       {% endif %}
       {% endfor %}
