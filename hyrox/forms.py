@@ -31,11 +31,14 @@ class HyroxObjectiveForm(forms.ModelForm):
     def clean_objetivo_tiempo_carrera(self):
         return self._clean_tiempo('objetivo_tiempo_carrera', 'H:MM:SS (ej. 1:15:00) o MM:SS')
 
+    def clean_objetivo_tiempo_total(self):
+        return self._clean_tiempo('objetivo_tiempo_total', 'H:MM:SS (ej. 1:40:00)')
+
     class Meta:
         model = HyroxObjective
         fields = [
             'categoria', 'fecha_evento',
-            'objetivo_tiempo_carrera', 'primer_hyrox',
+            'objetivo_tiempo_total', 'objetivo_tiempo_carrera', 'primer_hyrox',
             'rm_peso_muerto', 'rm_sentadilla', 'tiempo_5k_base', 'peso_corporal',
             'nivel_experiencia', 'genero', 'fc_max_real', 'fc_reposo',
             'lesiones_previas', 'material_disponible', 'dias_preferidos',
@@ -43,7 +46,8 @@ class HyroxObjectiveForm(forms.ModelForm):
         widgets = {
             'fecha_evento': forms.DateInput(format='%Y-%m-%d', attrs={'type': 'date', 'class': 'form-control bg-slate-800 border-slate-700 text-slate-200'}),
             'categoria': forms.Select(attrs={'class': 'form-select bg-slate-800 border-slate-700 text-slate-200'}),
-            'objetivo_tiempo_carrera': forms.TextInput(attrs={'class': 'form-control bg-slate-800 border-slate-700 text-slate-200', 'placeholder': 'Ej. 1:15:00 (1h 15min)'}),
+            'objetivo_tiempo_total': forms.TextInput(attrs={'class': 'form-control bg-slate-800 border-slate-700 text-slate-200', 'placeholder': 'Ej. 1:40:00 (tiempo total Hyrox)'}),
+            'objetivo_tiempo_carrera': forms.TextInput(attrs={'class': 'form-control bg-slate-800 border-slate-700 text-slate-200', 'placeholder': 'Ej. 40:00 (carrera parcial)'}),
             'primer_hyrox': forms.CheckboxInput(attrs={'class': 'w-5 h-5 text-cyan-500 bg-slate-800 border-slate-700 rounded focus:ring-cyan-500'}),
             'rm_peso_muerto': forms.NumberInput(attrs={'class': 'form-control bg-slate-800 border-slate-700 text-slate-200', 'placeholder': 'Ej. 120'}),
             'rm_sentadilla': forms.NumberInput(attrs={'class': 'form-control bg-slate-800 border-slate-700 text-slate-200', 'placeholder': 'Ej. 100'}),
