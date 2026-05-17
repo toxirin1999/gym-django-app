@@ -1613,20 +1613,26 @@ class HyroxTrainingEngine:
             }
             if restricted_tags and any(tag in restricted_tags for tag in restricciones_pierna):
                 ejercicio = 'Press Militar Sentado / Remo con Mancuerna (Tren Superior)'
-                # Buscar RM de tren superior en one_rm_data del cliente
+                # Buscar RM de press militar específicamente antes de otros movimientos
                 one_rm = getattr(objective.cliente, 'one_rm_data', {}) or {}
-                claves_ts = ['press militar', 'press banca', 'remo con barra', 'remo mancuerna',
-                             'press hombros', 'overhead press', 'military press']
+                # Prioridad 1: press militar o overhead press (el ejercicio que se va a hacer)
+                claves_militar = ['press militar', 'overhead press', 'military press', 'press hombros']
+                # Prioridad 2: fallback a press banca u otros empujes solo si no hay dato de hombros
+                claves_fallback = ['press banca', 'remo con barra', 'remo mancuerna']
                 rm_ts = next(
-                    (float(v) for k, v in one_rm.items() if any(c in k.lower() for c in claves_ts)),
+                    (float(v) for k, v in one_rm.items() if any(c in k.lower() for c in claves_militar)),
+                    None
+                ) or next(
+                    (float(v) for k, v in one_rm.items() if any(c in k.lower() for c in claves_fallback)),
                     None
                 )
                 if rm_ts:
                     peso_trabajo = round(rm_ts * porcentaje_rm)
                 else:
-                    # Estimación: tren superior ≈ 35% del RM de sentadilla
+                    # Estimación: press militar ≈ 40% del peso corporal o 35% del RM de sentadilla
+                    pc = float(getattr(objective, 'peso_corporal', None) or 0)
                     rm_ref = objective.rm_sentadilla or objective.rm_peso_muerto or 80
-                    peso_trabajo = round(rm_ref * 0.35 * porcentaje_rm)
+                    peso_trabajo = round(max(pc * 0.40, rm_ref * 0.35) * porcentaje_rm)
                 notas_ej = f'⛔ {notas_ej} -> Modificado a Tren Superior por restricciones biomecánicas (Lesión activa).'
 
             # Sustitución por material disponible (sin barra → mancuernas)
