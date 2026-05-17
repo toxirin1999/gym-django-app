@@ -1271,11 +1271,16 @@ function joiHyroxCerrar(id) {
       .rc-metric-fill{height:100%;border-radius:2px;}
       /* Decision strip */
       .rc-decision{padding:11px 14px;border-top:1px solid var(--border);display:flex;align-items:flex-start;gap:10px;background:rgba(100,116,139,.04);}
+      .rc-decision-protected{background:rgba(239,68,68,.06);border-top-color:rgba(239,68,68,.35);}
       .rc-decision-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:3px;}
       .rc-decision-body{flex:1;min-width:0;}
+      .rc-decision-kicker{font-family:var(--font-mono);font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#ef4444;margin-bottom:5px;display:flex;align-items:center;gap:5px;}
       .rc-decision-title{font-size:12px;font-weight:700;color:var(--text,#0f172a);font-family:var(--font-body);margin-bottom:3px;}
-      .rc-decision-msg{font-size:11px;color:#475569;font-family:var(--font-body);line-height:1.5;margin-bottom:4px;}
+      .rc-decision-msg{font-size:11px;color:#475569;font-family:var(--font-body);line-height:1.5;margin-bottom:6px;}
       .rc-decision-action{font-size:11px;font-weight:600;font-family:var(--font-body);}
+      .rc-blocked-inline{margin-top:6px;margin-bottom:6px;display:flex;flex-wrap:wrap;align-items:center;gap:5px;}
+      .rc-blocked-lbl{font-family:var(--font-mono);font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(239,68,68,.6);}
+      .rc-blocked-tag{font-family:var(--font-mono);font-size:9px;padding:2px 6px;border:1px solid rgba(239,68,68,.35);color:#ef4444;background:rgba(239,68,68,.06);border-radius:2px;}
     </style>
 
     <div class="rc-panel">
@@ -1378,7 +1383,26 @@ function joiHyroxCerrar(id) {
         </div>
       </div>
 
-      <!-- DECISION STRIP -->
+      <!-- DECISION STRIP — subordinado a hyrox_decision -->
+      {% if hyrox_decision and not hyrox_decision.puede_ejecutar_plan %}
+      <div class="rc-decision rc-decision-protected">
+        <div class="rc-decision-dot" style="background:#ef4444;box-shadow:0 0 6px #ef444480;"></div>
+        <div class="rc-decision-body">
+          <div class="rc-decision-kicker"><i class="fas fa-shield-heart"></i> Decisión superior activa</div>
+          <div class="rc-decision-title">{{ hyrox_decision.titulo }} — Sesión protegida</div>
+          <div class="rc-decision-msg">{{ hyrox_decision.mensaje }}</div>
+          {% if hyrox_decision.estaciones_bloqueadas %}
+          <div class="rc-blocked-inline">
+            <span class="rc-blocked-lbl">Race Command bloquea hoy:</span>
+            {% for est in hyrox_decision.estaciones_bloqueadas %}
+            <span class="rc-blocked-tag">{{ est }}</span>
+            {% endfor %}
+          </div>
+          {% endif %}
+          <div class="rc-decision-action" style="color:#ef4444;">→ {{ hyrox_decision.accion_label }}</div>
+        </div>
+      </div>
+      {% else %}
       <div class="rc-decision">
         <div class="rc-decision-dot" style="background:{% if race_briefing.decision.nivel == 'rojo' %}#ef4444{% elif race_briefing.decision.nivel == 'amarillo' %}#f59e0b{% else %}#22c55e{% endif %};box-shadow:0 0 6px {% if race_briefing.decision.nivel == 'rojo' %}#ef444480{% elif race_briefing.decision.nivel == 'amarillo' %}#f59e0b80{% else %}#22c55e80{% endif %};"></div>
         <div class="rc-decision-body">
@@ -1387,6 +1411,7 @@ function joiHyroxCerrar(id) {
           <div class="rc-decision-action" style="color:{% if race_briefing.decision.nivel == 'rojo' %}#ef4444{% elif race_briefing.decision.nivel == 'amarillo' %}#f59e0b{% else %}#22c55e{% endif %};">→ {{ race_briefing.decision.accion }}</div>
         </div>
       </div>
+      {% endif %}
 
     </div>
 
