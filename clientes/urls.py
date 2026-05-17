@@ -115,4 +115,8 @@ urlpatterns = [
     # Phase 21 — Distribution probe continuation
     path('distribucion/repetir/', views.repetir_prueba_distribucion_view, name='repetir_prueba_distribucion'),
     path('distribucion/ignorar/', views.ignorar_continuidad_distribucion_view, name='ignorar_continuidad_distribucion'),
+
+    # Phase 22 — Learned preferences
+    path('preferencia/convertir/', views.convertir_en_preferencia_view, name='convertir_preferencia'),
+    path('preferencia/<int:preferencia_id>/revocar/', views.revocar_preferencia_view, name='revocar_preferencia'),
 ]

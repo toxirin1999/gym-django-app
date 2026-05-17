@@ -1437,3 +1437,56 @@ class IntervencionPlan(models.Model):
 
     def __str__(self):
         return f"{self.cliente} — {self.tipo} ({self.fecha_inicio} → {self.fecha_fin})"
+
+
+class PreferenciaPlanAprendida(models.Model):
+    """
+    Phase 22 — A soft plan preference learned from repeated favorable probes.
+
+    CONTRACT:
+    - Created only when the SAME probe type was favorable ≥ 2 times AND user consented.
+    - Represents an inclination, not a rule. The motor may respect it when possible.
+    - NEVER silently reprograms the plan. Always visible to the user.
+    - Reversible: user can suspend or revoke at any time.
+    - Does NOT write to ManualDavid automatically.
+
+    Hierarchy: Preferencia > IntervencionPlan activa > patrón inferido.
+    """
+    TIPO_EVITAR_PIERNA_FUTBOL = 'evitar_pierna_tras_futbol'
+    TIPO_EVITAR_DIA            = 'evitar_dia_frecuente'
+    TIPO_MENOS_DIAS            = 'preferir_menos_dias'
+    TIPO_ALIGERAR_DIA          = 'aligerar_dia_concreto'
+
+    TIPOS = [
+        ('evitar_pierna_tras_futbol', 'Evitar pierna cerca del fútbol'),
+        ('evitar_dia_frecuente',      'Evitar sesión principal en día problemático'),
+        ('preferir_menos_dias',       'Preferir estructura real de menos días'),
+        ('aligerar_dia_concreto',     'Aligerar accesorios en un día concreto'),
+    ]
+
+    ESTADO_ACTIVA    = 'activa'
+    ESTADO_SUSPENDIDA = 'suspendida'
+    ESTADO_REVOCADA  = 'revocada'
+
+    ESTADOS = [
+        ('activa',     'Activa'),
+        ('suspendida', 'Suspendida'),
+        ('revocada',   'Revocada'),
+    ]
+
+    cliente              = models.ForeignKey('clientes.Cliente', on_delete=models.CASCADE, related_name='preferencias_plan')
+    tipo                 = models.CharField(max_length=40, choices=TIPOS, db_index=True)
+    estado               = models.CharField(max_length=20, choices=ESTADOS, default=ESTADO_ACTIVA, db_index=True)
+    evidencia_count      = models.PositiveSmallIntegerField(default=2, help_text="Number of favorable probes that originated this preference.")
+    origen_patron        = models.CharField(max_length=60, blank=True, help_text="e.g. 'redistrib_pierna_futbol'")
+    descripcion          = models.TextField(blank=True, help_text="Human-readable description shown to the user.")
+    fecha_inicio         = models.DateField()
+    ultima_confirmacion  = models.DateField()
+    metadata             = models.JSONField(default=dict, blank=True, help_text="Extra info: e.g. {dia: 'lunes', umbral_horas: 48}")
+
+    class Meta:
+        ordering = ['-fecha_inicio']
+        unique_together = [('cliente', 'tipo', 'estado')]
+
+    def __str__(self):
+        return f"{self.cliente} — {self.tipo} ({self.estado})"
