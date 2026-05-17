@@ -49,13 +49,20 @@
                 </div>
 
                 <!-- Objetivo de tiempo + primer hyrox -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
                     <div>
                         <label class="block text-sm font-bold text-slate-400 mb-2 uppercase tracking-wide">
-                            <i class="fas fa-stopwatch text-yellow-400 mr-1"></i> Objetivo de Carrera
+                            <i class="fas fa-trophy text-accent mr-1"></i> Objetivo Total Hyrox
+                        </label>
+                        {{ form.objetivo_tiempo_total }}
+                        <p class="text-xs text-slate-500 mt-1">Ej. 1:40:00. Tiempo total de carrera completa. Usado para calcular margen real.</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-slate-400 mb-2 uppercase tracking-wide">
+                            <i class="fas fa-stopwatch text-yellow-400 mr-1"></i> Objetivo Carrera Parcial
                         </label>
                         {{ form.objetivo_tiempo_carrera }}
-                        <p class="text-xs text-slate-500 mt-1">Ej. 1:15:00 (1h 15min). El plan se calibra hacia este tiempo.</p>
+                        <p class="text-xs text-slate-500 mt-1">Ej. 40:00. Solo la parte de correr (8 km). No confundir con el total.</p>
                     </div>
                     <div class="flex flex-col justify-center">
                         <label class="block text-sm font-bold text-slate-400 mb-3 uppercase tracking-wide">
