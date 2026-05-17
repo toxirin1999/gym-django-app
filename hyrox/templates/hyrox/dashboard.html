@@ -713,6 +713,11 @@ a.rb-dia:hover { background: var(--paper-2); text-decoration: none; }
   .rb-container { max-width: 760px; }
   .rb-strips { display: grid; grid-template-columns: repeat(3,1fr); }
 }
+/* Race Card 3-col → 1-col en pantallas pequeñas */
+@media (max-width: 480px) {
+  .rb-race-grid-3 { grid-template-columns: 1fr !important; }
+  .hd-decision-grid { grid-template-columns: 1fr !important; }
+}
 
 /* ── REDUCED MOTION ──────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
@@ -739,6 +744,13 @@ a.rb-dia:focus-visible {
   font-weight: 700; cursor: pointer; flex-shrink: 0;
   transition: background .15s, color .15s, border-color .15s;
   line-height: 1; padding: 0;
+  /* Tap area 44×44px sin cambiar tamaño visual */
+  position: relative;
+}
+.rb-help-btn::after {
+  content: ''; position: absolute;
+  inset: -13px; /* (44-18)/2 = 13 */
+  border-radius: 50%;
 }
 .rb-help-btn:hover { background: var(--ink); color: var(--paper); border-color: var(--ink); }
 
@@ -864,7 +876,7 @@ function joiHyroxCerrar(id) {
               letter-spacing:0.06em;color:var(--warn);background:oklch(0.72 0.17 70 / 0.10);
               border:1px solid oklch(0.72 0.17 70 / 0.25);border-radius:9999px;padding:4px 10px;
               text-decoration:none;">
-      ⚡ CHECK-IN PENDIENTE
+      <i class="fas fa-circle-exclamation" style="margin-right:4px;font-size:10px;"></i> CHECK-IN PENDIENTE
     </a>
     {% endif %}
   </div>
@@ -1939,7 +1951,7 @@ function joiHyroxCerrar(id) {
     {% endif %}
 
     <!-- Resumen global -->
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px;">
+    <div class="rb-race-grid-3" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px;">
       <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center;">
         <div style="font-family:var(--font-mono);font-size:18px;font-weight:700;color:var(--accent);">{{ race_card.total_str }}</div>
         <div style="font-size:9px;color:var(--ink-4);font-family:var(--font-body);margin-top:2px;">Tiempo objetivo</div>
@@ -1956,7 +1968,7 @@ function joiHyroxCerrar(id) {
     </div>
 
     <!-- Confianza de la predicción -->
-    <div style="font-size:10px;color:var(--ink-4);font-family:var(--font-body);margin-bottom:12px;">
+    <div style="font-size:10px;color:var(--ink-4);font-family:var(--font-body);margin-bottom:12px;line-height:1.55;">
       <i class="fas fa-circle" style="font-size:7px;color:{% if race_card.confianza == 'alta' %}var(--ok){% elif race_card.confianza == 'media' %}var(--warn){% else %}var(--ink-4){% endif %};margin-right:5px;"></i>
       Confianza <strong>{{ race_card.confianza }}</strong> — {{ race_card.stations_reales }}/8 estaciones con datos reales tuyos.
       Tu pace base: <span style="font-family:var(--font-mono);color:var(--ink-1);">{{ race_card.pace_base_str }}/km</span>
