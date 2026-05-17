@@ -117,6 +117,40 @@ Todos los gaps identificados están implementados (mayo 2026). El backlog está 
 
 ---
 
+## Dashboard Hyrox — arquitectura de decisión (mayo 2026)
+
+### `hyrox_decision` — variable de autoridad soberana
+
+Calculada en `hyrox/views.py` por `_crear_hyrox_decision()`. Prioridad:
+1. **Lesión activa** (AGUDA/SUB_AGUDA) → siempre `recuperar`, bloquea el plan
+2. **Fatiga fisiológica** (TSB ≤ -20) → `recuperar`
+3. **Carga aguda alta** (ACWR ≥ 1.5) → `recuperar`
+4. **Readiness bajo** (score < 45) → `sostener`
+5. **Normal** → `empujar`
+
+Campos clave: `estado`, `causa`, `puede_ejecutar_plan`, `permitido`, `evitar`, `estaciones_bloqueadas`, `tags_restringidos`.
+
+### Tags de lesión → estaciones bloqueadas
+
+`_normalizar_tags_restringidos()` lee `UserInjury.tags_restringidos` (JSON real de la BD).
+`_estaciones_bloqueadas_por_tags()` mapea contra `_HYROX_STATION_RISK_TAGS` usando el vocabulario real:
+- `flexion_rodilla_profunda`, `impacto_vertical`, `triple_extension_explosiva`
+
+### Qué se subordina cuando `puede_ejecutar_plan=False`
+- **Tarjeta superior**: RECUPERAR con estaciones a evitar
+- **Race Command**: decision strip reemplazado por "Sesión protegida"
+- **Hero CTA**: "Registrar Recuperación" (→ `reportar_lesion`)
+- **Plan semanal**: día de hoy marcado PROTEGIDO, no clicable
+- **Morning briefing + smart_alerts**: suprimidos
+
+### Otros campos añadidos
+- `HyroxObjective.objetivo_tiempo_total` — objetivo personal de tiempo total Hyrox completo (CharField). Separado de `objetivo_tiempo_carrera` (parcial).
+- `_build_race_goal_delta()` — calcula margen/déficit contra objetivo total.
+- `_build_hyrox_system_reading()` — lectura narrativa determinística (Python, sin IA): integra decisión + objetivo + limitador.
+- `HyroxReadinessLog.hrv_ms` — HRV del día guardado junto al score de readiness.
+
+---
+
 ---
 
 ## Quick Commands
