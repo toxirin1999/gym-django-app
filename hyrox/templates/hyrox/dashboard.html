@@ -19,6 +19,7 @@
 
 html, body {
   background: #EFEAE1;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
   min-height: 100vh;
 }
 
@@ -1541,21 +1542,20 @@ function joiHyroxCerrar(id) {
   </section>
   <style>
   .rb-system-reading {
-    background: var(--paper, #EFEAE1);
-    border: 1px solid var(--line, rgba(15,15,14,.12));
-    border-left: 4px solid var(--ink, #0F0F0E);
+    background: var(--ink, #0F0F0E);
+    border: none;
     border-radius: 4px;
-    padding: 14px;
+    padding: 16px;
   }
   .rb-system-reading-kicker {
     display: flex; align-items: center; gap: 6px;
     font-family: var(--font-mono); font-size: 9px; font-weight: 700;
     letter-spacing: .14em; text-transform: uppercase;
-    color: var(--ink-3, rgba(15,15,14,.45)); margin-bottom: 8px;
+    color: rgba(247,243,234,0.40); margin-bottom: 8px;
   }
   .rb-system-reading p {
-    font-size: 13px; line-height: 1.55;
-    color: var(--ink-2, rgba(15,15,14,.7)); margin: 0;
+    font-size: 14px; line-height: 1.65;
+    color: rgba(247,243,234,0.85); margin: 0;
   }
   </style>
   {% endif %}
