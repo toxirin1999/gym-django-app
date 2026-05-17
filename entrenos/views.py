@@ -3497,6 +3497,8 @@ def vista_entrenamiento_activo(request, cliente_id):
         fecha_para_template = fecha_obj.strftime('%Y-%m-%d')
 
         rutina_nombre = request.GET.get('rutina_nombre')
+        sesion_programada_id = request.GET.get('sesion_programada_id', '').strip()
+        modo_reducido = request.GET.get('modo_reducido') == '1'
         ejercicios_planificados_json = request.GET.get('ejercicios', '[]')
         ejercicios_planificados = json.loads(ejercicios_planificados_json)
 
@@ -3517,9 +3519,23 @@ def vista_entrenamiento_activo(request, cliente_id):
         bio_rest = BioContextProvider.get_current_restrictions(cliente)
         tags_bloqueados = bio_rest.get('tags', set())
 
+        # Phase 4A: In modo_reducido, sort principales first then opcionales
+        if modo_reducido:
+            ejercicios_planificados.sort(
+                key=lambda e: 0 if e.get('tipo_ejercicio') == 'compuesto_principal' else 1
+            )
+
         # --- INICIO DE LA MODIFICACIÓN CLAVE ---
         for i, ejercicio in enumerate(ejercicios_planificados):
             ejercicio['form_id'] = f'ejercicio_{i}'
+            ejercicio['es_principal'] = ejercicio.get('tipo_ejercicio') == 'compuesto_principal'
+            # Phase 11.1: set/merge origen_opcional for non-principal exercises
+            if modo_reducido and not ejercicio.get('es_principal'):
+                existing = ejercicio.get('origen_opcional')
+                if existing == 'intervencion_reducir_accesorios':
+                    ejercicio['origen_opcional'] = 'ambos'
+                else:
+                    ejercicio['origen_opcional'] = 'modo_reducido'
 
             # --- Ajuste de Volumen (Bio-Safety) ---
             try:
@@ -3846,6 +3862,14 @@ def vista_entrenamiento_activo(request, cliente_id):
         rutina_dia = ''
         rutina_tipo = rutina_nombre
 
+    # Phase 11: compute permiso_progresion for the template (for reducir_accesorios banner)
+    _permiso_prog_template = None
+    try:
+        from entrenos.services.progresion_contextual_service import evaluar_permiso_progresion
+        _permiso_prog_template = evaluar_permiso_progresion(cliente, fecha_obj)
+    except Exception:
+        pass
+
     context = {
         'cliente': cliente,
         'fecha': fecha_para_template,
@@ -3862,6 +3886,10 @@ def vista_entrenamiento_activo(request, cliente_id):
         'bio_adjustments': bio_adjustments,
         'has_bio_adjustments': vol_mod < 1.0 or bool(bio_adjustments),
         'deload_activo': deload_activo,
+        'sesion_programada_id': sesion_programada_id,
+        'modo_reducido': modo_reducido,
+        'num_principales': sum(1 for e in ejercicios_planificados if e.get('es_principal')) if modo_reducido else 0,
+        'permiso_progresion': _permiso_prog_template,
     }
 
     # Añadir contexto de gamificación (sin cambios)
@@ -4007,6 +4035,12 @@ def guardar_entrenamiento_activo(request, cliente_id):
                 molestia_severidad = int(molestia_sev_str) if molestia_sev_str.isdigit() else None
                 molestia_descripcion = request.POST.get(f'{form_id}_molestia_descripcion', '')
 
+                # Bloque esencial: None=sesión normal, True/False=modo_reducido
+                _es_principal_str = request.POST.get(f'{form_id}_es_principal', '').strip()
+                _es_bloque_principal = None
+                if _modo_reducido and _es_principal_str in ('1', '0'):
+                    _es_bloque_principal = (_es_principal_str == '1')
+
                 ej_realizado = EjercicioRealizado.objects.create(
                     entreno=entreno, nombre_ejercicio=ejercicio_nombre,
                     peso_kg=peso_promedio, series=len(series_data_para_guardar),
@@ -4019,6 +4053,7 @@ def guardar_entrenamiento_activo(request, cliente_id):
                     molestia_zona=molestia_zona,
                     molestia_severidad=molestia_severidad,
                     molestia_descripcion=molestia_descripcion,
+                    es_bloque_principal=_es_bloque_principal,
                 )
 
                 # CREAR SERIES REALIZADAS INDIVIDUALES (Importante para gráficas de detalle)
@@ -4071,7 +4106,30 @@ def guardar_entrenamiento_activo(request, cliente_id):
                 _sincronizar_rms_hyrox(cliente, rms_mejorados)
                 messages.info(request, "¡Récords de fuerza actualizados!")
 
-        messages.success(request, "¡Entrenamiento guardado con éxito!")
+        _modo_reducido = request.POST.get('modo_reducido') == '1'
+        if _modo_reducido:
+            entreno.modo_reducido = True
+            # Compute planned totals from all form_ids present in POST
+            _all_form_ids = [k.replace('_es_principal', '') for k in request.POST if k.endswith('_es_principal')]
+            entreno.principales_planificados = sum(
+                1 for fid in _all_form_ids if request.POST.get(f'{fid}_es_principal') == '1'
+            )
+            entreno.opcionales_planificados = sum(
+                1 for fid in _all_form_ids if request.POST.get(f'{fid}_es_principal') == '0'
+            )
+            entreno.save(update_fields=['modo_reducido', 'principales_planificados', 'opcionales_planificados'])
+            messages.success(request, "Versión esencial completada. El bloque principal ya es suficiente para hoy.")
+        else:
+            messages.success(request, "¡Entrenamiento guardado con éxito!")
+
+        # Cerrar SesionProgramada pendiente si el usuario completó desde una sesión pendiente
+        _sesion_prog_id = request.POST.get('sesion_programada_id', '').strip()
+        if _sesion_prog_id:
+            try:
+                from entrenos.services.sesion_recomendada import cerrar_sesion_programada
+                cerrar_sesion_programada(_sesion_prog_id, entreno)
+            except Exception:
+                pass
 
         # ============================================================================
         # INTEGRACIÓN SISTEMA DE GAMIFICACIÓN
@@ -7886,11 +7944,17 @@ def briefing_entrenamiento(request, cliente_id):
     from django.urls import reverse
     import urllib.parse
     ejercicios_mod_json = json.dumps(ejercicios_mod)
-    params = urllib.parse.urlencode({
+    params_dict = {
         'fecha': fecha_str or fecha_obj.strftime('%Y-%m-%d'),
         'rutina_nombre': rutina_nombre,
         'ejercicios': ejercicios_mod_json,
-    })
+    }
+    sesion_programada_id = request.GET.get('sesion_programada_id', '').strip()
+    if sesion_programada_id:
+        params_dict['sesion_programada_id'] = sesion_programada_id
+    if request.GET.get('modo_reducido') == '1':
+        params_dict['modo_reducido'] = '1'
+    params = urllib.parse.urlencode(params_dict)
     url_sesion = f"{reverse('entrenos:entrenamiento_activo', args=[cliente_id])}?{params}"
 
     return render(request, 'entrenos/briefing_entrenamiento.html', {

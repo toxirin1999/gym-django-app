@@ -972,6 +972,8 @@ input{background:transparent!important;border:none!important;outline:none!import
 <input type="hidden" name="volumen_total_sesion" id="hid-volumen">
 <input type="hidden" name="rpe_medio_sesion" id="hid-rpe-medio">
 <input type="hidden" name="energia_pre_sesion" id="hid-energia-pre" value="">
+<input type="hidden" name="sesion_programada_id" value="{{ sesion_programada_id|default:'' }}">
+<input type="hidden" name="modo_reducido" value="{{ modo_reducido|yesno:'1,0' }}">
 
 <!-- ══ TOPBAR ══ -->
 <div class="topbar">
@@ -1005,6 +1007,28 @@ input{background:transparent!important;border:none!important;outline:none!import
   <div class="tb-track"><div class="tb-fill" id="tb-fill" style="width:0%"></div></div>
   <span class="tb-pct" id="tb-pct">0%</span>
 </div>
+
+<!-- ══ BANNER VERSIÓN ESENCIAL ══ -->
+{% if modo_reducido %}
+<div style="margin:0 16px 12px;padding:14px 16px;background:rgba(255,200,100,0.07);border:1px solid rgba(255,200,100,0.22);border-radius:12px;display:flex;align-items:flex-start;gap:12px;">
+  <span style="font-size:20px;flex-shrink:0;margin-top:1px;">⚡</span>
+  <div>
+    <div style="font-size:11px;font-weight:700;color:rgba(255,200,100,0.9);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:4px;">Versión esencial activa</div>
+    <div style="font-size:12px;color:var(--td);opacity:0.75;line-height:1.5;">Prioriza los ejercicios <strong>principales</strong>. Si el tiempo o la energía no alcanzan, los accesorios pueden quedar fuera hoy.</div>
+  </div>
+</div>
+{% endif %}
+
+<!-- ══ BANNER REDUCIR ACCESORIOS — Phase 11 ══ -->
+{% if not modo_reducido and permiso_progresion and permiso_progresion.accion == 'reducir_accesorios' %}
+<div style="margin:0 16px 12px;padding:14px 16px;background:rgba(180,140,255,0.07);border:1px solid rgba(180,140,255,0.22);border-radius:12px;display:flex;align-items:flex-start;gap:12px;">
+  <span style="font-size:20px;flex-shrink:0;margin-top:1px;">📉</span>
+  <div>
+    <div style="font-size:11px;font-weight:700;color:rgba(180,140,255,0.9);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:4px;">Accesorios opcionales esta semana</div>
+    <div style="font-size:12px;color:var(--td);opacity:0.75;line-height:1.5;">Los ejercicios marcados <strong>OPCIONAL</strong> pueden quedarse fuera sin afectar la continuidad del plan.</div>
+  </div>
+</div>
+{% endif %}
 
 <!-- ══ BANNER DELOAD ══ -->
 {% if deload_activo %}
@@ -1049,10 +1073,18 @@ input{background:transparent!important;border:none!important;outline:none!import
   <button type="button" class="nav-btn btn-ej-prev" onclick="navEjercicio(-1)">‹ Anterior</button>
   <div class="nav-centro">
     {% for ejercicio in ejercicios_planificados %}
+    {% if modo_reducido and num_principales > 0 and forloop.counter == num_principales %}
     <div class="ej-dot {% if forloop.first %}activo{% endif %}"
          id="dot-{{ forloop.counter0 }}"
          onclick="irEjercicio({{ forloop.counter0 }})"
          title="{{ ejercicio.nombre|truncatechars:20 }}"></div>
+    <div style="width:1px;background:rgba(255,200,100,0.35);align-self:stretch;flex-shrink:0;margin:2px 3px;" title="Fin de bloque principal"></div>
+    {% else %}
+    <div class="ej-dot {% if forloop.first %}activo{% endif %}"
+         id="dot-{{ forloop.counter0 }}"
+         onclick="irEjercicio({{ forloop.counter0 }})"
+         title="{{ ejercicio.nombre|truncatechars:20 }}"></div>
+    {% endif %}
     {% endfor %}
   </div>
   <button type="button" class="nav-btn btn-ej-next" onclick="navEjercicio(1)">Siguiente ›</button>
@@ -1060,6 +1092,11 @@ input{background:transparent!important;border:none!important;outline:none!import
 
 <!-- ══ EJERCICIOS ══ -->
 {% for ejercicio in ejercicios_planificados %}
+{% if modo_reducido and not ejercicio.es_principal and forloop.counter == num_principales|add:1 %}
+<div id="separador-opcional" style="display:none;margin:0 4px 12px;padding:10px 14px;background:rgba(255,200,100,0.05);border:1px solid rgba(255,200,100,0.18);border-radius:10px;text-align:center;">
+  <span style="font-size:10px;font-weight:700;color:rgba(255,200,100,0.7);letter-spacing:0.14em;text-transform:uppercase;">Bloque opcional — si te queda energía</span>
+</div>
+{% endif %}
 <div class="cyber-ejercicio-card" id="card-{{ ejercicio.form_id }}"
      data-form-id="{{ ejercicio.form_id }}"
      data-rpe-target="{{ ejercicio.rpe_objetivo|default:8 }}"
@@ -1073,6 +1110,7 @@ input{background:transparent!important;border:none!important;outline:none!import
      style="display:{% if forloop.first %}block{% else %}none{% endif %};">
 
   <input type="hidden" name="{{ ejercicio.form_id }}_nombre" value="{{ ejercicio.nombre }}">
+  <input type="hidden" name="{{ ejercicio.form_id }}_es_principal" value="{{ ejercicio.es_principal|yesno:'1,0,' }}">
   <input type="hidden" class="ejercicio-historial"
          data-ejercicio-id="{{ ejercicio.form_id }}"
          data-peso-anterior="{{ ejercicio.peso_anterior_kg|default:0 }}"
@@ -1092,6 +1130,11 @@ input{background:transparent!important;border:none!important;outline:none!import
   <div class="exname">
     <div class="exname-toprow">
       <span class="exname-counter">{{ forloop.counter }} de {{ ejercicios_planificados|length }}</span>
+      {% if ejercicio.tipo_ejercicio != 'compuesto_principal' %}
+        {% if modo_reducido or ejercicio.motivo_bloqueo == 'intervencion_reducir_accesorios' %}
+        <span style="font-size:9px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:rgba(255,200,100,0.7);border:1px solid rgba(255,200,100,0.3);border-radius:6px;padding:2px 7px;flex-shrink:0;">OPCIONAL</span>
+        {% endif %}
+      {% endif %}
       <div style="display:flex;gap:6px;align-items:center;">
         <button type="button" class="btn-swap-maquina"
                 onclick="abrirSwapMaquina('{{ ejercicio.form_id }}','{{ ejercicio.nombre|escapejs }}','{{ ejercicio.grupo_muscular|escapejs }}')"
@@ -1114,6 +1157,25 @@ input{background:transparent!important;border:none!important;outline:none!import
       </div>
     </div>
     <h2 class="cyber-ejercicio-nombre">{{ ejercicio.nombre|upper }}</h2>
+
+    {# Phase 10A — Progression brake notice #}
+    {% if ejercicio.progresion_bloqueada and ejercicio.peso_kg_propuesto %}
+    <div style="margin:6px 0 8px;padding:8px 12px;background:rgba(180,140,255,0.07);border-left:3px solid rgba(180,140,255,0.4);border-radius:0 8px 8px 0;">
+      <div style="font-size:9px;font-weight:700;color:rgba(180,140,255,0.8);letter-spacing:0.14em;text-transform:uppercase;margin-bottom:3px;">Carga mantenida</div>
+      <div style="font-size:11px;color:var(--td);opacity:0.75;line-height:1.45;">
+        El plan proponía <strong>{{ ejercicio.peso_kg_propuesto|floatformat:"-1" }} kg</strong> →
+        conserva <strong>{{ ejercicio.peso_kg|floatformat:"-1" }} kg</strong> hoy.
+        {% if ejercicio.motivo_bloqueo == 'carga_alta_sostenida' %}Carga acumulada en semanas recientes.
+        {% elif ejercicio.motivo_bloqueo == 'carga_alta_semanal' %}Carga alta esta semana.
+        {% elif ejercicio.motivo_bloqueo == 'bloque_parcial_repetido' %}El bloque principal no se completa regularmente.
+        {% elif ejercicio.motivo_bloqueo == 'esenciales_frecuentes' %}Las versiones esenciales se repiten.
+        {% elif ejercicio.motivo_bloqueo == 'margen_bajo_repetido' %}Margen accesorio bajo estas semanas.
+        {% elif ejercicio.motivo_bloqueo == 'modo_reducido' %}La sesión anterior fue en versión esencial.
+        {% else %}El plan frena la subida esta semana.{% endif %}
+      </div>
+    </div>
+    {% endif %}
+
     <div class="exname-meta">
       <span class="exname-chip chip-g">{{ ejercicio.series }} series</span>
       <span class="exname-chip chip-g">RPE {{ ejercicio.rpe_objetivo }}</span>
@@ -1844,6 +1906,11 @@ function irEjercicio(idx){
   actualizarSticky();
   actualizarDots();
   window.scrollTo({top:0,behavior:'smooth'});
+  {% if modo_reducido and num_principales > 0 %}
+  // Show optional block separator when entering the optional section
+  const sep=document.getElementById('separador-opcional');
+  if(sep) sep.style.display = (idx >= {{ num_principales }}) ? 'block' : 'none';
+  {% endif %}
 }
 
 function actualizarDots(){
