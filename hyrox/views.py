@@ -145,6 +145,12 @@ def _build_hyrox_system_reading(hyrox_decision=None, race_goal_delta=None, race_
             limitador = str(lim)
     if limitador:
         partes.append(f"El limitador competitivo principal sigue siendo {limitador}.")
+    elif hyrox_decision and hyrox_decision.get('causa') == 'lesion':
+        zona = hyrox_decision.get('subtitulo', '').replace('Lesión activa en ', '').strip() or None
+        if zona:
+            partes.append(f"El foco competitivo queda en pausa hasta que {zona} deje de condicionar la sesión.")
+        else:
+            partes.append("El foco competitivo queda en pausa hasta que la lesión deje de condicionar la sesión.")
 
     if hyrox_decision and not hyrox_decision.get('puede_ejecutar_plan', True):
         partes.append("Hoy el objetivo no es mejorar marca: es conservar continuidad sin agravar la señal activa.")
