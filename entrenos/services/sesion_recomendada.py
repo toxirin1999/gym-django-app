@@ -201,10 +201,14 @@ def _obtener_contexto_fisico(cliente, fecha_hoy):
     Gathers physical context for the daily decision.
     All lookups are wrapped in try/except — missing models degrade gracefully.
 
+    Phase 22E: If a learned preference is active and the corresponding condition
+    triggers, the preference reinforces the signal (stronger than neutral observation).
+
     Returns:
         lesion_activa (bool), lesion_fase (str|None),
         futbol_reciente (bool), energia_baja (bool), energia_valor (int|None),
-        readiness_bajo (bool), readiness_valor (int|None)
+        readiness_bajo (bool), readiness_valor (int|None),
+        preferencias_activas (list[str])  — active preference types
     """
     ctx = {
         'lesion_activa': False,
@@ -214,7 +218,15 @@ def _obtener_contexto_fisico(cliente, fecha_hoy):
         'energia_valor': None,
         'readiness_bajo': False,
         'readiness_valor': None,
+        'preferencias_activas': [],
     }
+
+    # Phase 22E: load active preferences as soft signals
+    try:
+        from entrenos.services.preferencias_service import get_preferencias_activas
+        ctx['preferencias_activas'] = [p.tipo for p in get_preferencias_activas(cliente)]
+    except Exception:
+        pass
 
     # 1. Lesión activa (AGUDA o SUB_AGUDA)
     try:
@@ -447,13 +459,17 @@ def _aplicar_efecto_distribucion(cliente, decision, fecha_hoy):
                     for ej in ejercicios
                 )
                 if es_pierna:
+                    # Phase 22E: if preference active, signal is stronger
+                    tiene_preferencia = 'evitar_pierna_tras_futbol' in ctx.get('preferencias_activas', [])
                     decision['distribucion_aviso'] = {
                         'tipo': tipo,
                         'texto': (
-                            "Prueba activa: separar pierna del fútbol. "
-                            "Hay actividad de fútbol reciente. Considera posponer pierna un día más."
+                            ("Preferencia del plan: " if tiene_preferencia else "Prueba activa: ")
+                            + "separar pierna del fútbol. "
+                            "Hay actividad de fútbol reciente. "
+                            + ("El plan recomienda posponer pierna." if tiene_preferencia else "Considera posponer pierna un día más.")
                         ),
-                        'accion_sugerida': 'posponer_recomendado',
+                        'accion_sugerida': 'posponer_recomendado' if tiene_preferencia else 'posponer_opcional',
                     }
 
         elif tipo == IntervencionPlan.TIPO_REDISTRIB_LIGERO:

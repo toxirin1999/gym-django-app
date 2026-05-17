@@ -819,6 +819,22 @@ def _ctx_lesiones_activas(cliente):
         return []
 
 
+def _ctx_candidata_preferencia(cliente, fecha_ref):
+    try:
+        from entrenos.services.preferencias_service import detectar_candidata_preferencia
+        return detectar_candidata_preferencia(cliente, fecha_ref)
+    except Exception:
+        return None
+
+
+def _ctx_preferencias_activas(cliente):
+    try:
+        from entrenos.services.preferencias_service import get_preferencias_activas
+        return get_preferencias_activas(cliente)
+    except Exception:
+        return []
+
+
 def _ctx_continuidad_distribucion(cliente, fecha_ref):
     try:
         from entrenos.services.sugerencias_service import generar_recomendacion_continuidad_distribucion
@@ -1412,6 +1428,8 @@ def _get_dashboard_context_data(request, cliente):
         'intervencion_distribucion': _ctx_intervencion_distribucion(cliente, hoy),
         'evaluacion_distribucion': _ctx_evaluacion_distribucion(cliente, hoy),
         'continuidad_distribucion': _ctx_continuidad_distribucion(cliente, hoy),
+        'candidata_preferencia': _ctx_candidata_preferencia(cliente, hoy),
+        'preferencias_activas': _ctx_preferencias_activas(cliente),
         'patron_multisemanal': _ctx_patron_multisemanal(cliente, hoy),
         'sugerencia_activa': _ctx_sugerencia_activa(cliente, hoy),
         'evaluacion_intervencion': _ctx_evaluacion_intervencion(cliente, hoy),
@@ -4860,6 +4878,43 @@ def ignorar_recomendacion_view(request):
     )
 
     messages.info(request, "La recomendación descansará unos días.")
+    return redirect('clientes:panel_cliente')
+
+
+# ── Phase 22 — Learned preferences ───────────────────────────────────────────
+
+@login_required
+@require_POST
+def convertir_en_preferencia_view(request):
+    """User accepted 'Convertir en preferencia'. Creates PreferenciaPlanAprendida."""
+    tipo_pref = request.POST.get('tipo_preferencia', '').strip()
+    tipo_int = request.POST.get('tipo_intervencion', '').strip()
+    from entrenos.models import PreferenciaPlanAprendida
+    if tipo_pref not in dict(PreferenciaPlanAprendida.TIPOS):
+        messages.error(request, "Tipo de preferencia no válido.")
+        return redirect('clientes:panel_cliente')
+
+    cliente = get_object_or_404(Cliente, user=request.user)
+    from entrenos.services.preferencias_service import crear_preferencia
+    crear_preferencia(cliente, tipo_pref, tipo_int, fecha_ref=timezone.localdate())
+    messages.success(request, "Preferencia registrada. El plan la tendrá en cuenta cuando sea posible.")
+    return redirect('clientes:panel_cliente')
+
+
+@login_required
+@require_POST
+def revocar_preferencia_view(request, preferencia_id):
+    """User revoked an active preference."""
+    from entrenos.models import PreferenciaPlanAprendida
+    pref = get_object_or_404(
+        PreferenciaPlanAprendida,
+        id=preferencia_id,
+        cliente__user=request.user,
+        estado=PreferenciaPlanAprendida.ESTADO_ACTIVA,
+    )
+    pref.estado = PreferenciaPlanAprendida.ESTADO_REVOCADA
+    pref.save(update_fields=['estado'])
+    messages.info(request, "Preferencia revocada. El plan dejará de aplicarla.")
     return redirect('clientes:panel_cliente')
 
 
