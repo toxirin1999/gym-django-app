@@ -1070,7 +1070,8 @@ function joiHyroxCerrar(id) {
     </div>
   </section>
 
-  <!-- Alerts -->
+  <!-- Alerts — suprimidos cuando la decisión soberana bloquea el plan -->
+  {% if not hyrox_decision or hyrox_decision.puede_ejecutar_plan %}
   {% if morning_briefing or smart_alerts or mental_focus %}
   <div class="rb-alert-stack rb-a1">
     {% if morning_briefing %}
@@ -1098,6 +1099,7 @@ function joiHyroxCerrar(id) {
     </div>
     {% endif %}
   </div>
+  {% endif %}
   {% endif %}
 
   <!-- ═══════════════ RESUMEN SEMANAL ═══════════════ -->
