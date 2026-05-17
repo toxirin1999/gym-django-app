@@ -1312,37 +1312,11 @@ function joiHyroxCerrar(id) {
           {% if race_briefing.tiempo_objetivo %}
           <div class="rc-obj-row">
             <span class="rc-obj-chip">OBJ CARRERA {{ race_briefing.tiempo_objetivo }}</span>
-            {% if race_briefing.diferencia_secs is not None %}
-              {% if race_briefing.diferencia_secs > 0 %}
-              <span class="rc-diff-chip rc-diff-over">{{ race_briefing.diferencia_secs|fmt_diff_secs }}</span>
-              {% elif race_briefing.diferencia_secs < 0 %}
-              <span class="rc-diff-chip rc-diff-under">{{ race_briefing.diferencia_secs|fmt_diff_secs }}</span>
-              {% else %}
-              <span class="rc-diff-chip rc-diff-exact">En objetivo</span>
-              {% endif %}
-            {% endif %}
             {% if race_briefing.tendencia_secs is not None and race_briefing.tendencia_secs != 0 %}
             <span class="rc-trend" style="color:{% if race_briefing.tendencia_secs < 0 %}#22c55e{% else %}#f59e0b{% endif %};">
               {% if race_briefing.tendencia_secs < 0 %}↓{% else %}↑{% endif %} {{ race_briefing.tendencia_secs|fmt_diff_secs }} hoy
             </span>
             {% endif %}
-          </div>
-          <!-- progress bar: how close to objective (capped 0–100%) -->
-          <div class="rc-progress-wrap" style="padding:10px 0 0;">
-            <div class="rc-progress-labels">
-              <span class="rc-progress-lbl">Progreso al objetivo</span>
-              <span class="rc-progress-lbl" style="color:{% if race_briefing.diferencia_secs and race_briefing.diferencia_secs <= 0 %}#22c55e{% elif race_briefing.diferencia_secs and race_briefing.diferencia_secs < 180 %}#f59e0b{% else %}rgba(255,255,255,.3){% endif %};">
-                {% if race_briefing.diferencia_secs is not None %}
-                  {% if race_briefing.diferencia_secs <= 0 %}META{% elif race_briefing.diferencia_secs < 60 %}&lt;1 min{% else %}{{ race_briefing.diferencia_secs|fmt_diff_secs }}{% endif %}
-                {% endif %}
-              </span>
-            </div>
-            <div class="rc-progress-bar">
-              <div class="rc-progress-fill" id="rc-prog-fill"
-                style="width:0%;background:{% if race_briefing.diferencia_secs and race_briefing.diferencia_secs <= 0 %}#22c55e{% elif race_briefing.diferencia_secs and race_briefing.diferencia_secs < 180 %}#f59e0b{% else %}#ef4444{% endif %};"
-                data-target="{% if race_briefing.diferencia_secs is not None %}{% if race_briefing.diferencia_secs <= 0 %}100{% else %}{{ race_briefing.diferencia_secs }}{% endif %}{% else %}50{% endif %}">
-              </div>
-            </div>
           </div>
           {% else %}
           <div style="margin-top:8px;font-size:10px;color:rgba(255,255,255,.3);font-family:var(--font-body);">
