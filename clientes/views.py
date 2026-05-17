@@ -819,6 +819,67 @@ def _ctx_lesiones_activas(cliente):
         return []
 
 
+def _ctx_continuidad_distribucion(cliente, fecha_ref):
+    try:
+        from entrenos.services.sugerencias_service import generar_recomendacion_continuidad_distribucion
+        return generar_recomendacion_continuidad_distribucion(cliente, fecha_ref)
+    except Exception:
+        return None
+
+
+def _ctx_evaluacion_distribucion(cliente, fecha_ref):
+    try:
+        from entrenos.services.sugerencias_service import evaluar_prueba_distribucion
+        return evaluar_prueba_distribucion(cliente, fecha_ref)
+    except Exception:
+        return None
+
+
+def _ctx_intervencion_distribucion(cliente, fecha_ref):
+    """Returns active distribution IntervencionPlan if one exists, for Phase 18B display."""
+    try:
+        from entrenos.models import IntervencionPlan
+        _REDISTRIB = {
+            IntervencionPlan.TIPO_REDISTRIB_DIA,
+            IntervencionPlan.TIPO_REDISTRIB_DIAS,
+            IntervencionPlan.TIPO_REDISTRIB_PIERNA,
+            IntervencionPlan.TIPO_REDISTRIB_LIGERO,
+        }
+        return IntervencionPlan.objects.filter(
+            cliente=cliente,
+            tipo__in=_REDISTRIB,
+            estado=IntervencionPlan.ESTADO_ACTIVA,
+            fecha_inicio__lte=fecha_ref,
+            fecha_fin__gte=fecha_ref,
+        ).order_by('-creada_en').first()
+    except Exception:
+        return None
+
+
+def _ctx_sugerencia_distribucion(cliente, fecha_ref):
+    try:
+        from entrenos.services.analisis_semanal_service import get_sugerencia_distribucion_activa
+        return get_sugerencia_distribucion_activa(cliente, fecha_ref)
+    except Exception:
+        return None
+
+
+def _ctx_distribucion_semanal(cliente, fecha_ref):
+    try:
+        from entrenos.services.analisis_semanal_service import analizar_distribucion_semanal
+        return analizar_distribucion_semanal(cliente, num_semanas=6, fecha_ref=fecha_ref)
+    except Exception:
+        return []
+
+
+def _ctx_calendario_plan(cliente, fecha_ref):
+    try:
+        from entrenos.services.calendario_plan_service import generar_calendario_plan
+        return generar_calendario_plan(cliente, num_semanas=4, fecha_ref=fecha_ref)
+    except Exception:
+        return []
+
+
 def _ctx_analisis_semanal(cliente, fecha_ref):
     try:
         from entrenos.services.analisis_semanal_service import analizar_semana_entrenamiento
@@ -1342,8 +1403,15 @@ def _get_dashboard_context_data(request, cliente):
         'causa_entreno': _decision_entreno.get('causa_principal'),
         'modo_reducido': _decision_entreno.get('modo_reducido', False),
         'mensaje_entreno': _decision_entreno['mensaje'],
+        'distribucion_aviso': _decision_entreno.get('distribucion_aviso'),
         'bloque_esencial_resumen': bloque_esencial_resumen,
         'analisis_semanal': _ctx_analisis_semanal(cliente, hoy),
+        'calendario_plan': _ctx_calendario_plan(cliente, hoy),
+        'distribucion_semanal': _ctx_distribucion_semanal(cliente, hoy),
+        'sugerencia_distribucion': _ctx_sugerencia_distribucion(cliente, hoy),
+        'intervencion_distribucion': _ctx_intervencion_distribucion(cliente, hoy),
+        'evaluacion_distribucion': _ctx_evaluacion_distribucion(cliente, hoy),
+        'continuidad_distribucion': _ctx_continuidad_distribucion(cliente, hoy),
         'patron_multisemanal': _ctx_patron_multisemanal(cliente, hoy),
         'sugerencia_activa': _ctx_sugerencia_activa(cliente, hoy),
         'evaluacion_intervencion': _ctx_evaluacion_intervencion(cliente, hoy),
@@ -4791,5 +4859,47 @@ def ignorar_recomendacion_view(request):
         cooldown_hasta=manana,
     )
 
+    messages.info(request, "La recomendación descansará unos días.")
+    return redirect('clientes:panel_cliente')
+
+
+# ── Phase 21 — Distribution probe continuation ───────────────────────────────
+
+@login_required
+@require_POST
+def repetir_prueba_distribucion_view(request):
+    """User accepted 'Repetir 2 semanas' for a distribution probe."""
+    tipo = request.POST.get('tipo_intervencion', '').strip()
+    from entrenos.models import IntervencionPlan
+    _REDISTRIB = {
+        IntervencionPlan.TIPO_REDISTRIB_DIA, IntervencionPlan.TIPO_REDISTRIB_DIAS,
+        IntervencionPlan.TIPO_REDISTRIB_PIERNA, IntervencionPlan.TIPO_REDISTRIB_LIGERO,
+    }
+    if tipo not in _REDISTRIB:
+        messages.error(request, "Tipo de prueba no válido.")
+        return redirect('clientes:panel_cliente')
+
+    cliente = get_object_or_404(Cliente, user=request.user)
+    from entrenos.services.sugerencias_service import repetir_prueba_distribucion
+    repetir_prueba_distribucion(cliente, tipo, fecha_ref=timezone.localdate())
+    messages.info(request, "Prueba renovada por 2 semanas más.")
+    return redirect('clientes:panel_cliente')
+
+
+@login_required
+@require_POST
+def ignorar_continuidad_distribucion_view(request):
+    """User dismissed the distribution probe continuation recommendation."""
+    tipo = request.POST.get('tipo_intervencion', '').strip()
+    patron_cooldown = f'continuidad_distribucion_{tipo}' if tipo else 'continuidad_distribucion'
+
+    cliente = get_object_or_404(Cliente, user=request.user)
+    SugerenciaPlan.objects.create(
+        cliente=cliente,
+        patron=patron_cooldown,
+        texto='Continuidad de distribución ignorada.',
+        estado=SugerenciaPlan.ESTADO_IGNORADA,
+        cooldown_hasta=timezone.localdate() + timedelta(days=7),
+    )
     messages.info(request, "La recomendación descansará unos días.")
     return redirect('clientes:panel_cliente')

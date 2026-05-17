@@ -46,3 +46,4 @@ dist/
 .DS_Store
 Thumbs.db
 gymproject/secrets_pa.py
+gymproject/settings_local.py

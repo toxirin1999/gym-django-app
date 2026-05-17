@@ -1394,10 +1394,20 @@ class IntervencionPlan(models.Model):
     TIPO_REDUCIR    = 'reducir_accesorios'
     TIPO_MANTENER   = 'mantener_estructura'  # records acceptance, no-op on freno
 
+    # Phase 18 — Distribution interventions (2-week window)
+    TIPO_REDISTRIB_DIA     = 'redistrib_dia_frecuente'
+    TIPO_REDISTRIB_DIAS    = 'redistrib_dias_menores'
+    TIPO_REDISTRIB_PIERNA  = 'redistrib_pierna_futbol'
+    TIPO_REDISTRIB_LIGERO  = 'redistrib_aligerar_dia'
+
     TIPOS = [
-        ('no_subir_cargas',     'No subir cargas'),
-        ('reducir_accesorios',  'Reducir accesorios'),
-        ('mantener_estructura', 'Mantener estructura'),
+        ('no_subir_cargas',          'No subir cargas'),
+        ('reducir_accesorios',       'Reducir accesorios'),
+        ('mantener_estructura',      'Mantener estructura'),
+        ('redistrib_dia_frecuente',  'Redistribuir día con muchas caídas'),
+        ('redistrib_dias_menores',   'Probar semana con menos días'),
+        ('redistrib_pierna_futbol',  'Separar pierna de fútbol'),
+        ('redistrib_aligerar_dia',   'Aligerar día con versiones esenciales'),
     ]
 
     ESTADO_ACTIVA   = 'activa'
