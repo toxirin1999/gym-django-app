@@ -25,6 +25,80 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 from .models import HyroxObjective, HyroxSession, HyroxActivity, UserInjury, DailyRecoveryEntry
 
+def _parse_tiempo_a_segundos(tiempo_str):
+    """Convierte '1:40:00' o '40:00' a segundos. Devuelve None si inválido."""
+    if not tiempo_str:
+        return None
+    partes = tiempo_str.strip().split(':')
+    try:
+        if len(partes) == 2:
+            return int(partes[0]) * 60 + int(partes[1])
+        elif len(partes) == 3:
+            return int(partes[0]) * 3600 + int(partes[1]) * 60 + int(partes[2])
+    except (ValueError, IndexError):
+        pass
+    return None
+
+
+def _segundos_a_tiempo(segundos):
+    """Convierte segundos a string legible: '1:37:25' o '45:30'."""
+    if segundos is None or segundos < 0:
+        return '—'
+    h = segundos // 3600
+    m = (segundos % 3600) // 60
+    s = segundos % 60
+    if h > 0:
+        return f"{h}:{m:02d}:{s:02d}"
+    return f"{m}:{s:02d}"
+
+
+def _build_race_goal_delta(objetivo_activo, estimacion_str):
+    """
+    Calcula el margen/déficit del atleta contra su objetivo_tiempo_total.
+    Devuelve dict con estado, label, delta_str y datos para el template.
+    """
+    estimacion_seg = _parse_tiempo_a_segundos(estimacion_str)
+    objetivo_total = getattr(objetivo_activo, 'objetivo_tiempo_total', None)
+    objetivo_seg = _parse_tiempo_a_segundos(objetivo_total)
+
+    if not objetivo_seg:
+        return {
+            'estado': 'sin_objetivo',
+            'label': 'Objetivo total pendiente',
+            'mensaje': 'Define tu objetivo total HYROX para ver el margen real.',
+            'objetivo_str': None,
+            'estimacion_str': estimacion_str,
+            'delta_str': None,
+        }
+
+    if estimacion_seg is None:
+        return {
+            'estado': 'sin_estimacion',
+            'label': 'Estimación no disponible',
+            'mensaje': 'Añade tu tiempo 5K base para calibrar la estimación.',
+            'objetivo_str': objetivo_total,
+            'estimacion_str': None,
+            'delta_str': None,
+        }
+
+    delta_seg = abs(objetivo_seg - estimacion_seg)
+    if estimacion_seg <= objetivo_seg:
+        return {
+            'estado': 'margen',
+            'label': 'Margen sobre objetivo',
+            'objetivo_str': objetivo_total,
+            'estimacion_str': estimacion_str,
+            'delta_str': '+' + _segundos_a_tiempo(delta_seg),
+        }
+    return {
+        'estado': 'deficit',
+        'label': 'Déficit contra objetivo',
+        'objetivo_str': objetivo_total,
+        'estimacion_str': estimacion_str,
+        'delta_str': '−' + _segundos_a_tiempo(delta_seg),
+    }
+
+
 # ── Tags de riesgo por estación Hyrox (vocabulario real del sistema) ──────────
 _HYROX_STATION_RISK_TAGS = {
     'Sled Push':          {'triple_extension_explosiva', 'flexion_rodilla_profunda'},
@@ -1515,6 +1589,13 @@ def hyrox_dashboard(request):
         'station_diagnosis': station_diagnosis,
         'post_session_diagnosis': post_session_diagnosis,
     }
+
+    # ── Margen contra objetivo total ─────────────────────────────
+    race_goal_delta = None
+    if objetivo_activo:
+        estimacion = race_briefing.get('tiempo_estimado') if isinstance(race_briefing, dict) else getattr(race_briefing, 'tiempo_estimado', None)
+        race_goal_delta = _build_race_goal_delta(objetivo_activo, estimacion)
+    context['race_goal_delta'] = race_goal_delta
 
     # ── Decisión soberana Hyrox ───────────────────────────────────
     hyrox_decision = _crear_hyrox_decision(

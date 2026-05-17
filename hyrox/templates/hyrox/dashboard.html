@@ -1296,7 +1296,7 @@ function joiHyroxCerrar(id) {
           {% endif %}
           {% if race_briefing.tiempo_objetivo %}
           <div class="rc-obj-row">
-            <span class="rc-obj-chip">OBJ {{ race_briefing.tiempo_objetivo }}</span>
+            <span class="rc-obj-chip">OBJ CARRERA {{ race_briefing.tiempo_objetivo }}</span>
             {% if race_briefing.diferencia_secs is not None %}
               {% if race_briefing.diferencia_secs > 0 %}
               <span class="rc-diff-chip rc-diff-over">{{ race_briefing.diferencia_secs|fmt_diff_secs }}</span>
@@ -1341,6 +1341,36 @@ function joiHyroxCerrar(id) {
           </div>
         {% endif %}
       </div>
+
+      <!-- OBJETIVO TOTAL / MARGEN -->
+      {% if race_goal_delta %}
+      <div style="padding:10px 14px;border-top:1px solid rgba(255,255,255,.08);">
+        {% if race_goal_delta.estado == 'sin_objetivo' %}
+        <div style="font-family:var(--font-mono);font-size:9px;color:rgba(255,255,255,.3);letter-spacing:.1em;text-transform:uppercase;">
+          Objetivo total HYROX
+        </div>
+        <div style="font-size:11px;color:rgba(255,255,255,.35);margin-top:3px;">
+          Pendiente de definir ·
+          <a href="{% url 'hyrox:crear_objetivo' %}" style="color:var(--accent);">+ Añadir</a>
+        </div>
+        {% else %}
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">
+          <div>
+            <div style="font-family:var(--font-mono);font-size:9px;color:rgba(255,255,255,.4);letter-spacing:.1em;text-transform:uppercase;">OBJ TOTAL</div>
+            <div style="font-family:var(--font-body);font-size:18px;font-weight:700;color:rgba(255,255,255,.85);margin-top:2px;">{{ race_goal_delta.objetivo_str }}</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-family:var(--font-mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:{% if race_goal_delta.estado == 'margen' %}#22c55e{% else %}#ef4444{% endif %};">
+              {{ race_goal_delta.label }}
+            </div>
+            <div style="font-family:var(--font-body);font-size:22px;font-weight:700;color:{% if race_goal_delta.estado == 'margen' %}#22c55e{% else %}#ef4444{% endif %};margin-top:2px;">
+              {{ race_goal_delta.delta_str }}
+            </div>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+      {% endif %}
 
       <!-- METRICS ROW -->
       <div class="rc-metrics">

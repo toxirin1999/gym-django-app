@@ -41,7 +41,10 @@ class HyroxObjective(models.Model):
 
     # Objetivo de carrera
     objetivo_tiempo_carrera = models.CharField(max_length=10, blank=True, null=True,
-        help_text="Tiempo objetivo para acabar la carrera (H:MM:SS o MM:SS)")
+        help_text="Tiempo objetivo para la carrera parcial (H:MM:SS o MM:SS)")
+    objetivo_tiempo_total = models.CharField(max_length=10, blank=True, null=True,
+        help_text="Objetivo personal de tiempo total HYROX completo. Ej: 1:40:00. "
+                  "No confundir con objetivo de carrera parcial.")
     primer_hyrox = models.BooleanField(default=True, help_text="¿Es la primera vez que compite en Hyrox?")
     peso_corporal = models.FloatField(null=True, blank=True, help_text="Peso corporal en kg (para escalar cargas relativas)")
 
