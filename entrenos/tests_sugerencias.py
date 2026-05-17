@@ -564,6 +564,71 @@ class TestIntervencionPlan(SugerenciasBase):
             result = generar_recomendacion_continuidad(self.cliente, self.hoy)
         self.assertIsNone(result)
 
+    # ── Phase 13.1 — Cooldown de "No por ahora" ───────────────────────────────
+
+    def test_ignorar_recomendacion_crea_cooldown(self):
+        from entrenos.models import IntervencionPlan, SugerenciaPlan
+
+        # Simulate what ignorar_recomendacion_view does
+        tipo = IntervencionPlan.TIPO_NO_SUBIR
+        patron_clave = f'continuidad_{tipo}'
+        manana = self.hoy + timedelta(days=7)
+        SugerenciaPlan.objects.create(
+            cliente=self.cliente, patron=patron_clave,
+            texto='Ignorada.', estado=SugerenciaPlan.ESTADO_IGNORADA,
+            cooldown_hasta=manana,
+        )
+
+        from entrenos.services.sugerencias_service import generar_recomendacion_continuidad
+        from unittest.mock import patch
+
+        mock_eval = {'resultado': 'favorable', 'tipo_intervencion': tipo, 'lectura': 'ok'}
+        with patch('entrenos.services.sugerencias_service.evaluar_intervencion_semana', return_value=mock_eval):
+            result = generar_recomendacion_continuidad(self.cliente, self.hoy)
+
+        self.assertIsNone(result)  # cooldown active → silent
+
+    def test_cooldown_expirado_muestra_recomendacion(self):
+        from entrenos.models import IntervencionPlan, SugerenciaPlan
+
+        tipo = IntervencionPlan.TIPO_NO_SUBIR
+        patron_clave = f'continuidad_{tipo}'
+        SugerenciaPlan.objects.create(
+            cliente=self.cliente, patron=patron_clave,
+            texto='Ignorada.', estado=SugerenciaPlan.ESTADO_IGNORADA,
+            cooldown_hasta=self.hoy - timedelta(days=1),  # expired
+        )
+
+        from entrenos.services.sugerencias_service import generar_recomendacion_continuidad
+        from unittest.mock import patch
+
+        mock_eval = {'resultado': 'favorable', 'tipo_intervencion': tipo, 'lectura': 'ok'}
+        with patch('entrenos.services.sugerencias_service.evaluar_intervencion_semana', return_value=mock_eval):
+            result = generar_recomendacion_continuidad(self.cliente, self.hoy)
+
+        self.assertIsNotNone(result)  # cooldown expired → recommendation reappears
+
+    def test_cooldown_solo_afecta_mismo_tipo(self):
+        """Cooldown for no_subir_cargas should NOT block reducir_accesorios recommendation."""
+        from entrenos.models import IntervencionPlan, SugerenciaPlan
+
+        # Ignore no_subir_cargas recommendation
+        SugerenciaPlan.objects.create(
+            cliente=self.cliente, patron='continuidad_no_subir_cargas',
+            texto='Ignorada.', estado=SugerenciaPlan.ESTADO_IGNORADA,
+            cooldown_hasta=self.hoy + timedelta(days=5),
+        )
+
+        from entrenos.services.sugerencias_service import generar_recomendacion_continuidad
+        from unittest.mock import patch
+
+        # But evaluation is for reducir_accesorios
+        mock_eval = {'resultado': 'favorable', 'tipo_intervencion': IntervencionPlan.TIPO_REDUCIR, 'lectura': 'ok'}
+        with patch('entrenos.services.sugerencias_service.evaluar_intervencion_semana', return_value=mock_eval):
+            result = generar_recomendacion_continuidad(self.cliente, self.hoy)
+
+        self.assertIsNotNone(result)  # different type → not blocked
+
     def test_get_intervencion_activa_expira_stale(self):
         from entrenos.models import IntervencionPlan
         from entrenos.services.sugerencias_service import get_intervencion_activa

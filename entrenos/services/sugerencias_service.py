@@ -242,12 +242,13 @@ def generar_recomendacion_continuidad(cliente, fecha_ref=None):
     """
     Phase 13 — Generates a continuation recommendation based on last week's evaluation.
 
-    CONTRACT:
-    - Returns None if no evaluation, or if there's already an active intervention.
+    CONTRACT (Phase 13.1 update):
+    - Returns None if no evaluation, active intervention, or user dismissed recently.
     - 'repetir': the same intervention type, applied this week.
     - 'profundizar': a different, deeper suggestion.
     - NEVER auto-applies. Waits for user consent.
     - A favorable intervention is NOT made permanent; it becomes a candidate to repeat.
+    - If user dismisses "No por ahora": cooldown 7 days via SugerenciaPlan patron='continuidad_X'.
     """
     fecha_ref = fecha_ref or timezone.localdate()
 
@@ -257,6 +258,18 @@ def generar_recomendacion_continuidad(cliente, fecha_ref=None):
 
     evaluacion = evaluar_intervencion_semana(cliente, fecha_ref)
     if not evaluacion:
+        return None
+
+    # Phase 13.1: check cooldown from "No por ahora" dismissal
+    tipo_eval = evaluacion.get('tipo_intervencion', '')
+    patron_clave = f'continuidad_{tipo_eval}'
+    cooldown_activo = SugerenciaPlan.objects.filter(
+        cliente=cliente,
+        patron=patron_clave,
+        estado=SugerenciaPlan.ESTADO_IGNORADA,
+        cooldown_hasta__gt=fecha_ref,
+    ).exists()
+    if cooldown_activo:
         return None
 
     tipo = evaluacion.get('tipo_intervencion')
