@@ -1409,7 +1409,7 @@ def generar_mensaje_joi(cliente, trigger: str, datos_extra: dict | None = None) 
     try:
         ctx = construir_contexto(cliente)
         prompt = _bloque_memoria(ctx) + _bloque_manual(cliente.user) + builder(ctx, datos_extra)
-        texto = _llamar_haiku(prompt)
+        texto = _llamar_haiku(prompt, max_tokens=400)
         msg = MensajeJOI.objects.create(
             user=cliente.user,
             trigger=trigger,
