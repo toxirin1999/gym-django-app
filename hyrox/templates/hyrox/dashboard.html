@@ -1916,6 +1916,101 @@ function joiHyroxCerrar(id) {
   </script>
   {% endif %}
 
+  <!-- ═══════════════ RACE CARD ═══════════════ -->
+  {% if objetivo_activo and race_card %}
+  <section class="rb-section rb-a6 {% if race_card.es_race_week %}rb-race-week{% endif %}">
+    <div class="rb-section-head">
+      <span class="rb-section-num" style="{% if race_card.es_race_week %}color:var(--accent);{% endif %}">RC</span>
+      <h2 class="rb-section-title">Race Card Táctica
+        {% if race_card.es_race_week %}<span style="font-size:10px;color:var(--accent);font-family:var(--font-mono);margin-left:8px;">RACE WEEK</span>{% endif %}
+      </h2>
+      <div class="rb-section-line"></div>
+      <button class="rb-help-btn" onclick="openHelp('race-card')" title="¿Qué es este panel?">?</button>
+    </div>
+
+    {% if race_card.es_race_week %}
+    <div style="background:oklch(0.55 0.21 28 / 0.08);border:1px solid oklch(0.55 0.21 28 / 0.30);border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:11px;color:var(--accent);font-family:var(--font-body);line-height:1.5;">
+      <i class="fas fa-flag-checkered" style="margin-right:5px;"></i>
+      <strong>Faltan {{ race_card.dias_evento }} día{{ race_card.dias_evento|pluralize }}.</strong>
+      Esta es tu tarjeta táctica. Memoriza los ritmos, no los improvises en el muro del km 5.
+    </div>
+    {% endif %}
+
+    <!-- Resumen global -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px;">
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center;">
+        <div style="font-family:var(--font-mono);font-size:18px;font-weight:700;color:var(--accent);">{{ race_card.total_str }}</div>
+        <div style="font-size:9px;color:var(--ink-4);font-family:var(--font-body);margin-top:2px;">Tiempo objetivo</div>
+        <div style="font-size:8px;color:var(--ink-5);font-family:var(--font-body);margin-top:1px;">Realista en carrera — penaliza el ritmo tras cada estación</div>
+      </div>
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center;">
+        <div style="font-family:var(--font-mono);font-size:18px;font-weight:700;color:var(--ok);">{{ race_card.total_run_str }}</div>
+        <div style="font-size:9px;color:var(--ink-4);font-family:var(--font-body);margin-top:2px;">Tiempo corriendo</div>
+      </div>
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center;">
+        <div style="font-family:var(--font-mono);font-size:18px;font-weight:700;color:var(--warn);">{{ race_card.total_sta_str }}</div>
+        <div style="font-size:9px;color:var(--ink-4);font-family:var(--font-body);margin-top:2px;">Tiempo en estaciones</div>
+      </div>
+    </div>
+
+    <!-- Confianza de la predicción -->
+    <div style="font-size:10px;color:var(--ink-4);font-family:var(--font-body);margin-bottom:12px;">
+      <i class="fas fa-circle" style="font-size:7px;color:{% if race_card.confianza == 'alta' %}var(--ok){% elif race_card.confianza == 'media' %}var(--warn){% else %}var(--ink-4){% endif %};margin-right:5px;"></i>
+      Confianza <strong>{{ race_card.confianza }}</strong> — {{ race_card.stations_reales }}/8 estaciones con datos reales tuyos.
+      Tu pace base: <span style="font-family:var(--font-mono);color:var(--ink-1);">{{ race_card.pace_base_str }}/km</span>
+    </div>
+
+    <!-- Tabla de la Race Card -->
+    <div style="display:flex;flex-direction:column;gap:4px;">
+      {% for fila in race_card.filas %}
+      <div style="display:grid;grid-template-columns:24px 1fr 8px 1fr;gap:0;align-items:stretch;">
+
+        <!-- Número de km -->
+        <div style="display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:9px;color:var(--ink-4);padding-right:4px;">
+          {{ fila.num }}
+        </div>
+
+        <!-- Bloque carrera -->
+        <div style="background:oklch(0.55 0.15 145 / 0.08);border:1px solid oklch(0.55 0.15 145 / 0.20);border-radius:6px 0 0 6px;padding:7px 10px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-size:9px;color:var(--ok);font-family:var(--font-body);"><i class="fas fa-running" style="margin-right:3px;font-size:8px;"></i>Km {{ fila.num }}</span>
+            <span style="font-family:var(--font-mono);font-size:14px;font-weight:700;color:var(--ok);">{{ fila.run_pace_str }}<span style="font-size:9px;color:var(--ink-4);font-weight:400;">/km</span></span>
+          </div>
+        </div>
+
+        <!-- Conector -->
+        <div style="display:flex;align-items:center;justify-content:center;">
+          <div style="width:1px;height:100%;background:var(--border);"></div>
+        </div>
+
+        <!-- Bloque estación -->
+        <div style="background:{% if fila.station_source == 'real' %}oklch(0.72 0.17 70 / 0.08){% else %}rgba(255,255,255,.03){% endif %};border:1px solid {% if fila.station_source == 'real' %}oklch(0.72 0.17 70 / 0.25){% else %}var(--line){% endif %};border-radius:0 6px 6px 0;padding:7px 10px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <div style="display:flex;flex-direction:column;gap:2px;min-width:0;">
+              <span style="font-size:9px;color:{% if fila.station_source == 'real' %}var(--warn){% else %}var(--ink-4){% endif %};font-family:var(--font-body);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100px;" title="{{ fila.station }}">{{ fila.station }}</span>
+              {% if fila.peso_no_oficial %}
+              <span title="Entrenado con {{ fila.peso_registrado }}kg · oficial {{ fila.peso_oficial }}kg" style="font-family:var(--font-mono);font-size:8px;font-weight:700;color:var(--accent);letter-spacing:0.05em;cursor:help;">⚠ {{ fila.peso_registrado|floatformat:0 }}kg <span style="font-weight:400;color:var(--ink-4);">vs {{ fila.peso_oficial|floatformat:0 }}kg ofic.</span></span>
+              {% endif %}
+            </div>
+            <span style="font-family:var(--font-mono);font-size:14px;font-weight:700;color:{% if fila.station_source == 'real' %}var(--warn){% else %}var(--ink-3){% endif %};">{{ fila.station_str }}
+              {% if fila.station_source == 'ref' %}<span style="font-size:8px;color:var(--ink-4);font-weight:400;" title="Tiempo de referencia, sin datos reales tuyos">ref</span>{% endif %}
+            </span>
+          </div>
+        </div>
+
+      </div>
+      {% endfor %}
+    </div>
+
+    <div style="margin-top:10px;font-size:10px;color:var(--ink-4);font-family:var(--font-body);line-height:1.5;">
+      <i class="fas fa-info-circle" style="color:var(--accent);margin-right:3px;"></i>
+      Ritmos calculados desde tu pace base y el IF real por estación.
+      <span style="color:var(--warn);">Naranja</span> = datos tuyos · gris = referencia de categoría ·
+      <span style="color:var(--accent);font-family:var(--font-mono);font-size:9px;">⚠ Xkg</span> = entrenado con peso distinto al oficial de competición.
+    </div>
+  </section>
+  {% endif %}
+
   <!-- ═══════════════ MACROCICLO ═══════════════ -->
   {% if macro_data and not modo_competicion %}
   <section class="rb-section rb-a2">
@@ -2821,101 +2916,6 @@ function joiHyroxCerrar(id) {
       Calculado con tus simulaciones completadas. Más sesiones aumentan la precisión del índice.
       {% endif %}
       {% endwith %}
-    </div>
-  </section>
-  {% endif %}
-
-  <!-- ═══════════════ RACE CARD ═══════════════ -->
-  {% if objetivo_activo and race_card %}
-  <section class="rb-section rb-a6 {% if race_card.es_race_week %}rb-race-week{% endif %}">
-    <div class="rb-section-head">
-      <span class="rb-section-num" style="{% if race_card.es_race_week %}color:var(--accent);{% endif %}">RC</span>
-      <h2 class="rb-section-title">Race Card Táctica
-        {% if race_card.es_race_week %}<span style="font-size:10px;color:var(--accent);font-family:var(--font-mono);margin-left:8px;">RACE WEEK</span>{% endif %}
-      </h2>
-      <div class="rb-section-line"></div>
-      <button class="rb-help-btn" onclick="openHelp('race-card')" title="¿Qué es este panel?">?</button>
-    </div>
-
-    {% if race_card.es_race_week %}
-    <div style="background:oklch(0.55 0.21 28 / 0.08);border:1px solid oklch(0.55 0.21 28 / 0.30);border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:11px;color:var(--accent);font-family:var(--font-body);line-height:1.5;">
-      <i class="fas fa-flag-checkered" style="margin-right:5px;"></i>
-      <strong>Faltan {{ race_card.dias_evento }} día{{ race_card.dias_evento|pluralize }}.</strong>
-      Esta es tu tarjeta táctica. Memoriza los ritmos, no los improvises en el muro del km 5.
-    </div>
-    {% endif %}
-
-    <!-- Resumen global -->
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px;">
-      <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center;">
-        <div style="font-family:var(--font-mono);font-size:18px;font-weight:700;color:var(--accent);">{{ race_card.total_str }}</div>
-        <div style="font-size:9px;color:var(--ink-4);font-family:var(--font-body);margin-top:2px;">Tiempo objetivo</div>
-        <div style="font-size:8px;color:var(--ink-5);font-family:var(--font-body);margin-top:1px;">Realista en carrera — penaliza el ritmo tras cada estación</div>
-      </div>
-      <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center;">
-        <div style="font-family:var(--font-mono);font-size:18px;font-weight:700;color:var(--ok);">{{ race_card.total_run_str }}</div>
-        <div style="font-size:9px;color:var(--ink-4);font-family:var(--font-body);margin-top:2px;">Tiempo corriendo</div>
-      </div>
-      <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center;">
-        <div style="font-family:var(--font-mono);font-size:18px;font-weight:700;color:var(--warn);">{{ race_card.total_sta_str }}</div>
-        <div style="font-size:9px;color:var(--ink-4);font-family:var(--font-body);margin-top:2px;">Tiempo en estaciones</div>
-      </div>
-    </div>
-
-    <!-- Confianza de la predicción -->
-    <div style="font-size:10px;color:var(--ink-4);font-family:var(--font-body);margin-bottom:12px;">
-      <i class="fas fa-circle" style="font-size:7px;color:{% if race_card.confianza == 'alta' %}var(--ok){% elif race_card.confianza == 'media' %}var(--warn){% else %}var(--ink-4){% endif %};margin-right:5px;"></i>
-      Confianza <strong>{{ race_card.confianza }}</strong> — {{ race_card.stations_reales }}/8 estaciones con datos reales tuyos.
-      Tu pace base: <span style="font-family:var(--font-mono);color:var(--ink-1);">{{ race_card.pace_base_str }}/km</span>
-    </div>
-
-    <!-- Tabla de la Race Card -->
-    <div style="display:flex;flex-direction:column;gap:4px;">
-      {% for fila in race_card.filas %}
-      <div style="display:grid;grid-template-columns:24px 1fr 8px 1fr;gap:0;align-items:stretch;">
-
-        <!-- Número de km -->
-        <div style="display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:9px;color:var(--ink-4);padding-right:4px;">
-          {{ fila.num }}
-        </div>
-
-        <!-- Bloque carrera -->
-        <div style="background:oklch(0.55 0.15 145 / 0.08);border:1px solid oklch(0.55 0.15 145 / 0.20);border-radius:6px 0 0 6px;padding:7px 10px;">
-          <div style="display:flex;justify-content:space-between;align-items:center;">
-            <span style="font-size:9px;color:var(--ok);font-family:var(--font-body);"><i class="fas fa-running" style="margin-right:3px;font-size:8px;"></i>Km {{ fila.num }}</span>
-            <span style="font-family:var(--font-mono);font-size:14px;font-weight:700;color:var(--ok);">{{ fila.run_pace_str }}<span style="font-size:9px;color:var(--ink-4);font-weight:400;">/km</span></span>
-          </div>
-        </div>
-
-        <!-- Conector -->
-        <div style="display:flex;align-items:center;justify-content:center;">
-          <div style="width:1px;height:100%;background:var(--border);"></div>
-        </div>
-
-        <!-- Bloque estación -->
-        <div style="background:{% if fila.station_source == 'real' %}oklch(0.72 0.17 70 / 0.08){% else %}rgba(255,255,255,.03){% endif %};border:1px solid {% if fila.station_source == 'real' %}oklch(0.72 0.17 70 / 0.25){% else %}var(--line){% endif %};border-radius:0 6px 6px 0;padding:7px 10px;">
-          <div style="display:flex;justify-content:space-between;align-items:center;">
-            <div style="display:flex;flex-direction:column;gap:2px;min-width:0;">
-              <span style="font-size:9px;color:{% if fila.station_source == 'real' %}var(--warn){% else %}var(--ink-4){% endif %};font-family:var(--font-body);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100px;" title="{{ fila.station }}">{{ fila.station }}</span>
-              {% if fila.peso_no_oficial %}
-              <span title="Entrenado con {{ fila.peso_registrado }}kg · oficial {{ fila.peso_oficial }}kg" style="font-family:var(--font-mono);font-size:8px;font-weight:700;color:var(--accent);letter-spacing:0.05em;cursor:help;">⚠ {{ fila.peso_registrado|floatformat:0 }}kg <span style="font-weight:400;color:var(--ink-4);">vs {{ fila.peso_oficial|floatformat:0 }}kg ofic.</span></span>
-              {% endif %}
-            </div>
-            <span style="font-family:var(--font-mono);font-size:14px;font-weight:700;color:{% if fila.station_source == 'real' %}var(--warn){% else %}var(--ink-3){% endif %};">{{ fila.station_str }}
-              {% if fila.station_source == 'ref' %}<span style="font-size:8px;color:var(--ink-4);font-weight:400;" title="Tiempo de referencia, sin datos reales tuyos">ref</span>{% endif %}
-            </span>
-          </div>
-        </div>
-
-      </div>
-      {% endfor %}
-    </div>
-
-    <div style="margin-top:10px;font-size:10px;color:var(--ink-4);font-family:var(--font-body);line-height:1.5;">
-      <i class="fas fa-info-circle" style="color:var(--accent);margin-right:3px;"></i>
-      Ritmos calculados desde tu pace base y el IF real por estación.
-      <span style="color:var(--warn);">Naranja</span> = datos tuyos · gris = referencia de categoría ·
-      <span style="color:var(--accent);font-family:var(--font-mono);font-size:9px;">⚠ Xkg</span> = entrenado con peso distinto al oficial de competición.
     </div>
   </section>
   {% endif %}
