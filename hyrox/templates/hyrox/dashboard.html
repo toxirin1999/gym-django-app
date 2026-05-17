@@ -1509,6 +1509,43 @@ function joiHyroxCerrar(id) {
   </section>
   {% endif %}
 
+  <!-- ═══════════════ LECTURA DEL SISTEMA ═══════════════ -->
+  {% if hyrox_system_reading %}
+  <section class="rb-section rb-a2">
+    <div class="rb-section-head">
+      <span class="rb-section-num">LEE</span>
+      <h2 class="rb-section-title">Lectura del sistema</h2>
+      <span class="rb-section-line"></span>
+    </div>
+    <div class="rb-system-reading">
+      <div class="rb-system-reading-kicker">
+        <i class="fas fa-brain"></i>
+        Race Engine
+      </div>
+      <p>{{ hyrox_system_reading }}</p>
+    </div>
+  </section>
+  <style>
+  .rb-system-reading {
+    background: var(--paper, #EFEAE1);
+    border: 1px solid var(--line, rgba(15,15,14,.12));
+    border-left: 4px solid var(--ink, #0F0F0E);
+    border-radius: 4px;
+    padding: 14px;
+  }
+  .rb-system-reading-kicker {
+    display: flex; align-items: center; gap: 6px;
+    font-family: var(--font-mono); font-size: 9px; font-weight: 700;
+    letter-spacing: .14em; text-transform: uppercase;
+    color: var(--ink-3, rgba(15,15,14,.45)); margin-bottom: 8px;
+  }
+  .rb-system-reading p {
+    font-size: 13px; line-height: 1.55;
+    color: var(--ink-2, rgba(15,15,14,.7)); margin: 0;
+  }
+  </style>
+  {% endif %}
+
   <!-- Modal razones concretas + cómo funciona -->
   {% if race_briefing.razones_concretas %}
   <div id="modal-razones" style="display:none;position:fixed;inset:0;z-index:9999;align-items:flex-start;justify-content:center;background:rgba(0,0,0,.75);overflow-y:auto;padding:30px 16px;" onclick="if(event.target===this)this.style.display='none'">
