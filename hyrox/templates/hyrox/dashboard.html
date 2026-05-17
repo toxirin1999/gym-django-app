@@ -2124,9 +2124,11 @@ function joiHyroxCerrar(id) {
         </a>
       </div>
       {% else %}
-      {% with locked=hyrox_decision and not hyrox_decision.puede_ejecutar_plan and item.es_hoy %}
-      <a class="rb-dia {% if item.es_hoy %}hoy{% elif item.es_manana %}manana{% endif %}{% if locked %} rb-dia-locked{% endif %}"
-         href="{% if locked %}#{% else %}{% url 'hyrox:registrar_entrenamiento_session' objective_id=objetivo_activo.id session_id=item.sesion.id %}{% endif %}">
+      {% if hyrox_decision and not hyrox_decision.puede_ejecutar_plan and item.es_hoy %}
+      <a class="rb-dia hoy rb-dia-locked" href="#">
+      {% else %}
+      <a class="rb-dia {% if item.es_hoy %}hoy{% elif item.es_manana %}manana{% endif %}" href="{% url 'hyrox:registrar_entrenamiento_session' objective_id=objetivo_activo.id session_id=item.sesion.id %}">
+      {% endif %}
         <div class="rb-dia-bib">
           <div class="rb-dia-dow">{{ item.dia_str|slice:":3"|upper }}</div>
           <div class="rb-dia-num">{{ item.sesion.fecha|date:"d" }}</div>
@@ -2140,11 +2142,10 @@ function joiHyroxCerrar(id) {
           </div>
           <div class="rb-dia-acts">{% for act_str in item.actividades_resumen|slice:"1:4" %}{{ act_str }}{% if not forloop.last %} · {% endif %}{% endfor %}</div>
         </div>
-        {% if locked %}<span class="rb-dia-tag rb-tag-locked">PROTEGIDO</span>
+        {% if hyrox_decision and not hyrox_decision.puede_ejecutar_plan and item.es_hoy %}<span class="rb-dia-tag rb-tag-locked">PROTEGIDO</span>
         {% elif item.es_hoy %}<span class="rb-dia-tag rb-tag-hoy">HOY</span>
         {% elif item.es_manana %}<span class="rb-dia-tag rb-tag-man">MAÑ</span>
         {% else %}<span class="rb-dia-tag rb-tag-ver">VER</span>{% endif %}
-      {% endwith %}
       </a>
       {% endif %}
       {% endfor %}
