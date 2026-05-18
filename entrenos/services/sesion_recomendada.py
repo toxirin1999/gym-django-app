@@ -500,6 +500,116 @@ def _aplicar_efecto_distribucion(cliente, decision, fecha_hoy):
     return decision
 
 
+# ── Phase 28 — Injury safety layer ───────────────────────────────────────────
+
+_FASE_LABELS = {
+    'AGUDA':     'fase aguda',
+    'SUB_AGUDA': 'fase sub-aguda',
+    'RETORNO':   'fase de retorno',
+}
+
+
+def _detectar_riesgo_lesion(cliente, entrenamiento):
+    """
+    Phase 28A — Cross-references active injuries with session exercises.
+
+    Returns a lesion_aviso dict or None.
+
+    Rules:
+    - Fires for ANY active injury (all phases), not just RETORNO.
+      AGUDA/SUB_AGUDA: motor already blocks training — aviso shows WHICH exercises.
+      RETORNO: motor does NOT block — aviso warns without stopping the session.
+    - Never changes estado or causa_principal.
+    - Degrades silently if any model is missing.
+    """
+    try:
+        from hyrox.models import UserInjury
+        from rutinas.models import EjercicioBase
+
+        if not entrenamiento:
+            return None
+
+        ejercicios = entrenamiento.get('ejercicios', [])
+        if not ejercicios:
+            return None
+
+        lesiones = list(UserInjury.objects.filter(
+            cliente=cliente, activa=True,
+        ).exclude(fase='RECUPERADO'))
+        if not lesiones:
+            return None
+
+        # Build risk_tags map from exercise dicts first
+        tags_por_nombre = {}
+        for ej in ejercicios:
+            nombre = (ej.get('nombre') or '').strip()
+            if nombre:
+                tags_por_nombre[nombre] = set(ej.get('risk_tags') or [])
+
+        # DB fallback for exercises without tags in dict
+        sin_tags = [n for n, t in tags_por_nombre.items() if not t]
+        if sin_tags:
+            for db_ej in EjercicioBase.objects.filter(nombre__in=sin_tags).values('nombre', 'risk_tags'):
+                n = db_ej['nombre']
+                if n in tags_por_nombre:
+                    tags_por_nombre[n] = set(db_ej['risk_tags'] or [])
+
+        for lesion in lesiones:
+            restringidos = set(lesion.tags_restringidos or [])
+            if not restringidos:
+                continue
+
+            en_riesgo = [
+                nombre for nombre, ej_tags in tags_por_nombre.items()
+                if ej_tags & restringidos
+            ]
+            if not en_riesgo:
+                continue
+
+            zona = lesion.zona_afectada
+            fase = _FASE_LABELS.get(lesion.fase, lesion.fase.lower())
+            es_bloqueante = lesion.fase in ('AGUDA', 'SUB_AGUDA')
+
+            if es_bloqueante:
+                mensaje = (
+                    f"En {fase} la {zona} necesita reposo relativo. "
+                    f"Si decides entrenar, estos ejercicios tienen riesgo: "
+                    f"{', '.join(en_riesgo[:3])}. Reduce rango y detente ante cualquier dolor."
+                )
+            else:
+                mensaje = (
+                    f"En {fase}, la {zona} puede tolerar carga progresiva. "
+                    f"Algunos ejercicios de hoy requieren atención: "
+                    f"{', '.join(en_riesgo[:3])}. "
+                    f"Reduce rango de movimiento y detente si aparece dolor."
+                )
+
+            return {
+                'zona':                zona,
+                'fase':                lesion.fase,
+                'es_bloqueante':       es_bloqueante,
+                'ejercicios_en_riesgo': en_riesgo,
+                'mensaje':             mensaje,
+                'accion_sugerida':     'version_esencial_recomendada' if es_bloqueante else 'revisar_antes_de_entrenar',
+            }
+
+    except Exception:
+        logger.warning('_detectar_riesgo_lesion: error inesperado')
+
+    return None
+
+
+def _aplicar_aviso_lesion(cliente, decision, fecha_hoy):
+    """
+    Phase 28B — Adds lesion_aviso to the decision without changing its outcome.
+    """
+    entrenamiento = decision.get('entrenamiento') or {}
+    aviso = _detectar_riesgo_lesion(cliente, entrenamiento)
+    if aviso:
+        decision['lesion_aviso'] = aviso
+    return decision
+
+
 # ── Phase 24 — Preference as secondary cause ─────────────────────────────────
 
 _CAUSA_SEGURIDAD = {'lesion', 'fatiga_alta'}
@@ -775,7 +885,8 @@ def obtener_sesion_recomendada_hoy(cliente, fecha_hoy=None):
         contexto = _obtener_contexto_fisico(cliente, fecha_hoy)
         decision = _aplicar_contexto(decision_base, contexto, fecha_hoy)
         decision = _aplicar_efecto_distribucion(cliente, decision, fecha_hoy)
-        return _aplicar_preferencia_activa(cliente, decision, fecha_hoy)
+        decision = _aplicar_preferencia_activa(cliente, decision, fecha_hoy)
+        return _aplicar_aviso_lesion(cliente, decision, fecha_hoy)
 
     try:
         planificador = _build_planificador(cliente)
@@ -819,4 +930,5 @@ def obtener_sesion_recomendada_hoy(cliente, fecha_hoy=None):
     contexto = _obtener_contexto_fisico(cliente, fecha_hoy)
     decision = _aplicar_contexto(decision_base, contexto, fecha_hoy)
     decision = _aplicar_efecto_distribucion(cliente, decision, fecha_hoy)
-    return _aplicar_preferencia_activa(cliente, decision, fecha_hoy)
+    decision = _aplicar_preferencia_activa(cliente, decision, fecha_hoy)
+    return _aplicar_aviso_lesion(cliente, decision, fecha_hoy)

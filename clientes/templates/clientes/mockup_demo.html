@@ -619,6 +619,30 @@ function joiBannerCerrar(id) {
       </div>
       {% endif %}
 
+      {# Phase 28 — Aviso de lesión activa con ejercicios en riesgo #}
+      {% if lesion_aviso %}
+      <div style="margin-top:8px;padding:9px 12px;
+                  background:{% if lesion_aviso.es_bloqueante %}rgba(239,68,68,0.07){% else %}rgba(245,158,11,0.07){% endif %};
+                  border-left:2px solid {% if lesion_aviso.es_bloqueante %}rgba(239,68,68,0.45){% else %}rgba(245,158,11,0.40){% endif %};
+                  border-radius:0 8px 8px 0;">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+          <span style="font-size:11px;">{% if lesion_aviso.es_bloqueante %}🛑{% else %}⚠️{% endif %}</span>
+          <span style="font-family:var(--font-mono);font-size:8px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;
+                       color:{% if lesion_aviso.es_bloqueante %}rgba(239,68,68,0.75){% else %}rgba(245,158,11,0.75){% endif %};">
+            Revisar · {{ lesion_aviso.zona }}
+          </span>
+        </div>
+        <div style="font-size:11px;color:var(--td);opacity:0.82;line-height:1.45;">
+          {{ lesion_aviso.mensaje }}
+        </div>
+        {% if lesion_aviso.ejercicios_en_riesgo %}
+        <div style="margin-top:5px;font-size:9px;color:var(--td);opacity:0.55;font-style:italic;">
+          Ejercicios a revisar: {{ lesion_aviso.ejercicios_en_riesgo|join:", " }}
+        </div>
+        {% endif %}
+      </div>
+      {% endif %}
+
       {# Phase 25 — Preferencia activa como referencia secundaria #}
       {% if preferencia_aplicada and estado_entreno != 'recuperar' %}
       <div style="margin-top:8px;padding:8px 11px;background:rgba(20,184,166,0.06);border-left:2px solid rgba(20,184,166,0.35);border-radius:0 8px 8px 0;">
