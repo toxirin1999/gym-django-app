@@ -7250,6 +7250,42 @@ def api_alternativas_maquina(request, cliente_id):
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
 
 
+@require_POST
+def api_alternativas_lesion(request, cliente_id):
+    """
+    Phase 29B — Returns safe alternatives for an injury-flagged exercise.
+
+    Body: { ejercicio_nombre, grupo_muscular, tags_restringidos, fase_lesion }
+
+    The system does NOT substitute automatically. It returns candidate exercises
+    that the user reviews and optionally accepts via the existing hot-swap flow.
+    """
+    try:
+        data = json.loads(request.body)
+        nombre = data.get('ejercicio_nombre', '').strip()
+        grupo = data.get('grupo_muscular', '').strip()
+        tags = data.get('tags_restringidos', [])
+        fase = data.get('fase_lesion', 'RETORNO')
+
+        if not nombre or not grupo:
+            return JsonResponse({'status': 'error', 'message': 'Faltan campos'}, status=400)
+
+        from entrenos.services.alternativas_lesion_service import (
+            buscar_alternativas_lesion, nota_prudente_lesion,
+        )
+        alternativas = buscar_alternativas_lesion(nombre, grupo, tags, fase)
+
+        return JsonResponse({
+            'status': 'ok',
+            'alternativas': alternativas,
+            'nota_general': nota_prudente_lesion(fase),
+        })
+
+    except Exception as e:
+        logger.warning('api_alternativas_lesion: %s', e)
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # MOLESTIA EN TIEMPO REAL
 # ─────────────────────────────────────────────────────────────────────────────

@@ -1161,7 +1161,7 @@ input{background:transparent!important;border:none!important;outline:none!import
     {# Phase 10A / 28.2 — Progression brake notice (contextual + lesión) #}
     {% if ejercicio.progresion_bloqueada and ejercicio.peso_kg_propuesto %}
     {% if ejercicio.motivo_bloqueo == 'lesion_activa' %}
-    {# Phase 28.2 — Lesión activa (AGUDA/SUB_AGUDA): rojo #}
+    {# Phase 28.2/29 — Lesión activa (AGUDA/SUB_AGUDA): rojo #}
     <div style="margin:6px 0 8px;padding:8px 12px;background:rgba(239,68,68,0.07);border-left:3px solid rgba(239,68,68,0.45);border-radius:0 8px 8px 0;">
       <div style="font-size:9px;font-weight:700;color:rgba(239,68,68,0.85);letter-spacing:0.14em;text-transform:uppercase;margin-bottom:3px;">🛑 Carga mantenida · lesión activa</div>
       <div style="font-size:11px;color:var(--td);opacity:0.78;line-height:1.45;">
@@ -1169,9 +1169,14 @@ input{background:transparent!important;border:none!important;outline:none!import
         conserva <strong>{{ ejercicio.peso_kg|floatformat:"-1" }} kg</strong> hoy.
         La zona afectada está en fase aguda. Reduce el rango de movimiento y detente ante cualquier dolor.
       </div>
+      <button type="button"
+              onclick="abrirAlternativasLesion('{{ ejercicio.nombre|escapejs }}','{{ ejercicio.grupo_muscular|escapejs }}','{{ ejercicio.risk_tags|join:"," }}','lesion_activa','{{ ejercicio.form_id }}')"
+              style="margin-top:7px;padding:4px 10px;border-radius:6px;background:rgba(239,68,68,0.10);border:1px solid rgba(239,68,68,0.25);color:rgba(239,68,68,0.80);font-size:9px;font-weight:600;cursor:pointer;letter-spacing:0.06em;">
+        Ver alternativas →
+      </button>
     </div>
     {% elif ejercicio.motivo_bloqueo == 'lesion_retorno' %}
-    {# Phase 28.2 — Lesión en retorno (RETORNO): ámbar #}
+    {# Phase 28.2/29 — Lesión en retorno (RETORNO): ámbar #}
     <div style="margin:6px 0 8px;padding:8px 12px;background:rgba(245,158,11,0.06);border-left:3px solid rgba(245,158,11,0.40);border-radius:0 8px 8px 0;">
       <div style="font-size:9px;font-weight:700;color:rgba(245,158,11,0.85);letter-spacing:0.14em;text-transform:uppercase;margin-bottom:3px;">⚠️ Carga mantenida · fase de retorno</div>
       <div style="font-size:11px;color:var(--td);opacity:0.78;line-height:1.45;">
@@ -1179,6 +1184,11 @@ input{background:transparent!important;border:none!important;outline:none!import
         conserva <strong>{{ ejercicio.peso_kg|floatformat:"-1" }} kg</strong> hoy.
         La articulación puede tolerar carga progresiva. Reduce el rango y detente si aparece dolor.
       </div>
+      <button type="button"
+              onclick="abrirAlternativasLesion('{{ ejercicio.nombre|escapejs }}','{{ ejercicio.grupo_muscular|escapejs }}','{{ ejercicio.risk_tags|join:"," }}','lesion_retorno','{{ ejercicio.form_id }}')"
+              style="margin-top:7px;padding:4px 10px;border-radius:6px;background:rgba(245,158,11,0.10);border:1px solid rgba(245,158,11,0.28);color:rgba(245,158,11,0.85);font-size:9px;font-weight:600;cursor:pointer;letter-spacing:0.06em;">
+        Ver alternativas →
+      </button>
     </div>
     {% else %}
     {# Phase 10A — Freno contextual: violeta #}
@@ -1548,6 +1558,17 @@ input{background:transparent!important;border:none!important;outline:none!import
     <div class="modal-swap-sub" id="swap-sub-text">Elige una alternativa para continuar</div>
     <div id="swap-alternativas-lista"></div>
     <button class="swap-cancel" onclick="cerrarSwapMaquina()">Cancelar</button>
+  </div>
+</div>
+
+<!-- ══ Phase 29 — MODAL ALTERNATIVAS LESIÓN ══ -->
+<div id="modal-alt-lesion-overlay" style="position:fixed;inset:0;background:rgba(0,0,0,0.75);backdrop-filter:blur(4px);z-index:9100;display:none;align-items:center;justify-content:center;padding:16px;">
+  <div style="background:#111;border:1px solid rgba(245,158,11,0.25);border-radius:16px;padding:22px;width:100%;max-width:380px;">
+    <div style="font-size:12px;font-weight:700;color:#fff;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:3px;" id="alt-lesion-titulo">Alternativas a valorar</div>
+    <div style="font-size:10px;color:rgba(255,255,255,0.4);margin-bottom:6px;" id="alt-lesion-ejercicio">—</div>
+    <div style="font-size:10px;color:rgba(245,158,11,0.75);font-style:italic;margin-bottom:14px;line-height:1.5;" id="alt-lesion-nota">Revísalas antes de aplicar. No son sustituciones automáticas.</div>
+    <div id="alt-lesion-lista" style="margin-bottom:14px;"></div>
+    <button onclick="cerrarAltLesion()" style="width:100%;padding:9px;border-radius:9px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.10);color:rgba(255,255,255,0.55);font-size:11px;cursor:pointer;">Cerrar</button>
   </div>
 </div>
 
@@ -2762,6 +2783,70 @@ function cerrarSwapMaquina() {
   _swapFormId = null;
   _swapNombreOriginal = null;
 }
+
+// ── Phase 29 — Alternativas por lesión ────────────────────────────────────
+let _altLesionFormId = null;
+
+async function abrirAlternativasLesion(nombre, grupo, tagsStr, fase, formId) {
+  _altLesionFormId = formId;
+  document.getElementById('alt-lesion-ejercicio').textContent = nombre;
+  document.getElementById('alt-lesion-lista').innerHTML = '<div style="font-size:11px;color:rgba(255,255,255,0.4);padding:8px 0;">Buscando alternativas...</div>';
+  document.getElementById('modal-alt-lesion-overlay').style.display = 'flex';
+
+  const tags = tagsStr ? tagsStr.split(',').filter(t => t.trim()) : [];
+  try {
+    const resp = await fetch('{% url "entrenos:api_alternativas_lesion" cliente.id %}', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+      body: JSON.stringify({ ejercicio_nombre: nombre, grupo_muscular: grupo, tags_restringidos: tags, fase_lesion: fase }),
+    });
+    const data = await resp.json();
+    document.getElementById('alt-lesion-nota').textContent = data.nota_general || '';
+    const lista = document.getElementById('alt-lesion-lista');
+    if (!data.alternativas || !data.alternativas.length) {
+      lista.innerHTML = '<div style="font-size:11px;color:rgba(255,255,255,0.35);font-style:italic;padding:8px 0;">No se encontraron alternativas sin riesgo para este ejercicio en tu biblioteca.</div>';
+      return;
+    }
+    lista.innerHTML = data.alternativas.map(alt => `
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-radius:9px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);margin-bottom:7px;">
+        <div style="flex:1;">
+          <div style="font-size:12px;font-weight:600;color:#fff;">${alt.nombre}</div>
+          <div style="font-size:9px;color:rgba(255,255,255,0.35);">${alt.grupo_muscular}</div>
+        </div>
+        <button onclick="seleccionarAltLesion('${alt.nombre.replace(/'/g,"\\'")}','${nombre.replace(/'/g,"\\'")}','${formId}')"
+                style="padding:5px 10px;border-radius:7px;background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.35);color:rgba(245,158,11,0.9);font-size:9px;font-weight:700;cursor:pointer;margin-left:8px;flex-shrink:0;">
+          Usar
+        </button>
+      </div>`).join('');
+  } catch(e) {
+    document.getElementById('alt-lesion-lista').innerHTML = '<div style="font-size:11px;color:rgba(239,68,68,0.6);">Error al buscar alternativas.</div>';
+  }
+}
+
+function seleccionarAltLesion(nombreNuevo, nombreOriginal, formId) {
+  // Update the visible exercise name in the card
+  const spanNombre = document.getElementById('ej-nombre-' + formId);
+  if (spanNombre) spanNombre.textContent = nombreNuevo;
+  const hidNombre = document.getElementById('hid-nombre-' + formId);
+  if (hidNombre) hidNombre.value = nombreNuevo;
+
+  // Persist via hot-swap endpoint (motivo = lesion)
+  const fechaInput = document.getElementById('hid-fecha');
+  const fecha = fechaInput ? fechaInput.value : '';
+  fetch('{% url "entrenos:api_save_hot_swap" cliente.id %}', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+    body: JSON.stringify({ original_name: nombreOriginal, substitute_name: nombreNuevo, fecha: fecha }),
+  });
+
+  cerrarAltLesion();
+}
+
+function cerrarAltLesion() {
+  document.getElementById('modal-alt-lesion-overlay').style.display = 'none';
+  _altLesionFormId = null;
+}
+
 // ── Técnica por serie ────────────────────────────────────────────
 // Almacena la técnica seleccionada mientras el usuario está en la pantalla de descanso
 const _tecnicaActual = {};  // { fid: 'buena'|'aceptable'|'comprometida'|null }
