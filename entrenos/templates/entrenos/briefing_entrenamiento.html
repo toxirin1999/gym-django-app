@@ -462,7 +462,15 @@
           {{ ej.nombre|default:"Ejercicio" }}
           {% if ej.sustituido %}<span style="font-family:var(--fm);font-size:8px;color:var(--accent);letter-spacing:.08em;margin-left:6px;vertical-align:middle;">↔ CAMBIADO</span>{% endif %}
           {% if ej.deload %}<span style="font-family:var(--fm);font-size:8px;color:var(--accent);letter-spacing:.08em;margin-left:6px;vertical-align:middle;">↓ DELOAD</span>{% endif %}
-          {% if ej.progresion_bloqueada %}<span style="font-family:var(--fm);font-size:8px;color:rgba(180,140,255,0.8);letter-spacing:.08em;margin-left:6px;vertical-align:middle;">= MANTIENE</span>{% endif %}
+          {% if ej.progresion_bloqueada %}
+            {% if ej.motivo_bloqueo == 'lesion_activa' %}
+              <span style="font-family:var(--fm);font-size:8px;color:rgba(239,68,68,0.85);letter-spacing:.08em;margin-left:6px;vertical-align:middle;">= MANTIENE · LESIÓN</span>
+            {% elif ej.motivo_bloqueo == 'lesion_retorno' %}
+              <span style="font-family:var(--fm);font-size:8px;color:rgba(245,158,11,0.85);letter-spacing:.08em;margin-left:6px;vertical-align:middle;">= MANTIENE · RETORNO</span>
+            {% else %}
+              <span style="font-family:var(--fm);font-size:8px;color:rgba(180,140,255,0.8);letter-spacing:.08em;margin-left:6px;vertical-align:middle;">= MANTIENE</span>
+            {% endif %}
+          {% endif %}
         </div>
         {% if ej.sustituido and ej.nombre_original %}
         <div style="font-family:var(--fm);font-size:9px;color:var(--tdm);margin-bottom:2px;"><s>{{ ej.nombre_original }}</s></div>
@@ -472,7 +480,7 @@
           {% if ej.repeticiones %} · {{ ej.repeticiones }} reps{% endif %}
           {% if ej.progresion_bloqueada and ej.peso_kg_propuesto %}
           <s style="color:var(--tdm);opacity:0.5;">{{ ej.peso_kg_propuesto|floatformat:"-1" }} kg</s> →
-          <span style="color:rgba(180,140,255,0.8);">{{ ej.peso_kg|floatformat:"-1" }} kg</span>
+          <span style="color:{% if ej.motivo_bloqueo == 'lesion_activa' %}rgba(239,68,68,0.85){% elif ej.motivo_bloqueo == 'lesion_retorno' %}rgba(245,158,11,0.85){% else %}rgba(180,140,255,0.8){% endif %};">{{ ej.peso_kg|floatformat:"-1" }} kg</span>
           {% elif ej.peso_recomendado_kg and ej.peso_recomendado_kg > 0 %} · {{ ej.peso_recomendado_kg }} kg
           {% elif ej.peso_kg and ej.peso_kg > 0 %} · {{ ej.peso_kg }} kg
           {% endif %}
