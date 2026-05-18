@@ -57,11 +57,40 @@ def _normalizar_entrenamiento(entrenamiento):
     return entrenamiento
 
 
+def _buscar_entreno_rutina_en_ventana(cliente, nombre_rutina, fecha_desde, fecha_hasta):
+    """
+    Returns the first EntrenoRealizado within [fecha_desde, fecha_hasta] whose rutina
+    name matches the pending session name. Used to close pending sessions when the user
+    does them on a different date than originally planned.
+
+    Only matches if there's exactly one candidate (avoids false closes when the same
+    routine appears multiple times in the window).
+    """
+    if not nombre_rutina:
+        return None
+    try:
+        candidatos = EntrenoRealizado.objects.filter(
+            cliente=cliente,
+            fecha__gte=fecha_desde,
+            fecha__lte=fecha_hasta,
+            rutina__nombre__iexact=nombre_rutina,
+        ).order_by('fecha')
+        return candidatos.first() if candidatos.count() == 1 else None
+    except Exception:
+        return None
+
+
 def _marcar_completadas(cliente, fecha_hoy):
     """
     Fast, always-run step: close any pending sessions that now have a logged session.
     Runs on every call to obtener_sesion_recomendada_hoy — not cached — so completing
     a session is reflected immediately on the next panel load.
+
+    Two matching strategies (in order):
+    1. Exact date: EntrenoRealizado on sp.fecha_prevista (original logic).
+    2. Same routine within 7 days after the pending date: catches the case where the
+       user does a pending session on a later date (e.g., pending May 15, done May 18).
+       Only closes if there's exactly ONE matching entreno in the window (no ambiguity).
     """
     fecha_inicio = fecha_hoy - timedelta(days=14)
     for sp in SesionProgramada.objects.filter(
@@ -70,10 +99,26 @@ def _marcar_completadas(cliente, fecha_hoy):
         fecha_prevista__gte=fecha_inicio,
         fecha_prevista__lt=fecha_hoy,
     ):
+        # Strategy 1: exact date match
         if _fecha_completada(cliente, sp.fecha_prevista):
             sp.estado = SesionProgramada.ESTADO_COMPLETADA
             sp.fecha_realizada = sp.fecha_prevista
             sp.save(update_fields=['estado', 'fecha_realizada', 'actualizada_en'])
+            continue
+
+        # Strategy 2: same routine done within 7 days after the pending date
+        if sp.nombre_sesion:
+            ventana_hasta = min(sp.fecha_prevista + timedelta(days=7), fecha_hoy)
+            entreno = _buscar_entreno_rutina_en_ventana(
+                cliente, sp.nombre_sesion,
+                fecha_desde=sp.fecha_prevista + timedelta(days=1),
+                fecha_hasta=ventana_hasta,
+            )
+            if entreno:
+                sp.estado = SesionProgramada.ESTADO_COMPLETADA
+                sp.fecha_realizada = entreno.fecha
+                sp.entreno_realizado = entreno
+                sp.save(update_fields=['estado', 'fecha_realizada', 'entreno_realizado', 'actualizada_en'])
 
 
 def _reconciliar_pendientes_semana(cliente, fecha_hoy):
