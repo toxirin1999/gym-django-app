@@ -124,6 +124,17 @@ entrenos/tests_joi_preferencias.py       13  signal, lock, prompt, contexto JOI
 entrenos/tests_auditoria_semantica.py    17  sin identidad, sin ManualDavid, etiqueta
 entrenos/tests_preferencia_motor.py      21  motor, jerarquía, lenguaje, PlanificadorHelms
 entrenos/tests_preferencia_ui.py         14  template, guard recuperar, hints, contexto
+
+— Ciclo de lesión (Phase 28–29.1) —
+entrenos/tests_lesion_aviso.py           20  aviso visual: zona, fase, ejercicios afectados
+entrenos/tests_freno_lesion.py           18  freno per-ejercicio (congela peso_kg afectados)
+entrenos/tests_freno_lesion_ui.py        12  UI diferenciada: rojo/ámbar/violeta por causa
+entrenos/tests_convivencia_frenos.py     15  jerarquía auditada: contextual vs lesión vs preferencia
+entrenos/tests_alternativas_lesion.py    12  service + API de alternativas revisables
+entrenos/tests_cierre_lesion.py          16  checklist cierre: 10 items (sin prescripción médica)
+
+— Sesiones pendientes —
+entrenos/tests_marcar_completadas.py      9  detecta sesiones hechas en fecha posterior (7 días)
 ```
 
 ---
@@ -187,6 +198,50 @@ plan normal → entrenar
 | `evitar_dia_frecuente` | weekday = `metadata.dia_semana` |
 | `preferir_menos_dias` | sesión de `PRIORIDAD_NORMAL` |
 | `aligerar_dia_concreto` | cualquier sesión con ejercicios |
+
+---
+
+---
+
+## Capa de seguridad por lesión (Phase 28–29.1)
+
+> Ante lesión, el plan no decide por el cuerpo; reduce riesgo, muestra contexto y deja la elección visible.
+
+### Qué hace
+
+- **Detecta** ejercicios sensibles cruzando `UserInjury.tags_restringidos` con `EjercicioBase.risk_tags`.
+- **Frena progresión** per-ejercicio: solo congela el peso en los ejercicios afectados (no toda la sesión).
+- **Diferencia por fase**: AGUDA/SUB_AGUDA → bloqueante (rojo), RETORNO → carga conservadora (ámbar).
+- **Muestra alternativas revisables**: ejercicios del mismo grupo sin tags restringidos. El usuario elige, no el sistema.
+- **Explica el motivo**: en briefing y entrenamiento activo, con tono y color distintos al freno contextual.
+
+### Qué NO hace
+
+- ❌ No diagnostica la lesión — eso es del médico.
+- ❌ No sustituye ejercicios automáticamente.
+- ❌ No garantiza seguridad en ningún caso.
+- ❌ No modifica `PlanificadorHelms`.
+- ❌ No elimina ejercicios sin elección explícita del usuario.
+- ❌ No usa lenguaje absoluto: sin "prohibido", "nunca", "debes", "seguro".
+
+### Jerarquía de frenos
+
+```
+1. aplicar_freno_contextual  → intervención / modo_esencial / carga/patrón semanal
+2. aplicar_freno_lesion      → solo ejercicios con tags coincidentes (no sobreescribe el contextual)
+Paralelo: lesion_aviso, preferencia_aplicada (siempre secundarios, no cambian estado)
+```
+
+### Cómo poblar risk_tags
+
+```bash
+python manage.py seed_risk_tags               # preview
+python manage.py seed_risk_tags --dry-run     # aplicar
+python manage.py seed_risk_tags --overwrite   # forzar actualización
+```
+
+21 ejercicios cubiertos: sentadilla, prensa, zancadas, hack, búlgara, sissy, saltos,
+press militar, elevaciones, face pull, peso muerto, curl femoral, etc.
 
 ---
 
