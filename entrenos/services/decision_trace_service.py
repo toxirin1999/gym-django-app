@@ -12,8 +12,103 @@ CONTRACT:
 """
 
 import logging
+from datetime import date
 
 logger = logging.getLogger(__name__)
+
+# ── Humanización del trace ────────────────────────────────────────────────────
+
+_ESTADO_LABELS = {
+    'entrenar':        'Sesión del plan',
+    'recuperar':       'Recuperación recomendada',
+    'posponer':        'Sesión propuesta para otro momento',
+    'version_reducida':'Versión esencial',
+    'descanso':        'Día de descanso',
+}
+
+_CAPA_LABELS = {
+    'lesion_aviso':        'lesión activa',
+    'preferencia_aplicada':'preferencia aprendida',
+    'distribucion_aviso':  'aviso de distribución',
+    'modo_reducido':       'modo esencial',
+    'freno_progresion':    'freno de progresión',
+}
+
+_SUPRESION_RAZON = {
+    'distribucion_aviso': (
+        'Se omitió el aviso temporal de distribución porque una preferencia '
+        'aprendida ya cubría la misma idea con más solidez.'
+    ),
+}
+
+
+def humanizar_trace(trace) -> dict | None:
+    """
+    Converts a GymDecisionTrace into a human-readable dict.
+
+    Rules:
+    - No JSON raw, no technical field names.
+    - No None / [] / {} shown to the user.
+    - Language already audited by Phase 31 (senales from explicacion_decision).
+    """
+    if trace is None:
+        return None
+
+    # Fecha en español legible
+    DIAS = ['lunes','martes','miércoles','jueves','viernes','sábado','domingo']
+    MESES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic']
+    dia = DIAS[trace.fecha.weekday()]
+    mes = MESES[trace.fecha.month - 1]
+    fecha_label = f"{dia} {trace.fecha.day} {mes}"
+
+    decision_label = _ESTADO_LABELS.get(trace.decision_estado, '')
+
+    explicacion = trace.get_explicacion_humana()
+
+    capas_usadas = [
+        _CAPA_LABELS[c] for c in (trace.capas_visibles or [])
+        if c in _CAPA_LABELS
+    ]
+
+    supresion_razon = None
+    for suprimida in (trace.capas_suprimidas or []):
+        razon = _SUPRESION_RAZON.get(suprimida)
+        if razon:
+            supresion_razon = razon
+            break
+
+    lesion_label = ''
+    ctx = trace.lesion_contexto or {}
+    if ctx.get('zona') and ctx.get('fase'):
+        fase_map = {'AGUDA': 'fase aguda', 'SUB_AGUDA': 'fase sub-aguda', 'RETORNO': 'fase de retorno'}
+        fase = fase_map.get(ctx['fase'], ctx['fase'].lower())
+        lesion_label = f"{ctx['zona']} en {fase}"
+
+    return {
+        'fecha':           trace.fecha,
+        'fecha_label':     fecha_label,
+        'decision_label':  decision_label,
+        'explicacion':     explicacion,
+        'capas_usadas':    capas_usadas,
+        'supresion_razon': supresion_razon,
+        'lesion_label':    lesion_label,
+        'tiene_detalles':  bool(capas_usadas or supresion_razon or lesion_label),
+    }
+
+
+def get_traces_recientes(cliente, n: int = 5) -> list[dict]:
+    """Returns last n humanized traces for the client (newest first)."""
+    try:
+        from entrenos.models import GymDecisionTrace
+        qs = GymDecisionTrace.objects.filter(cliente=cliente).order_by('-fecha')[:n]
+        result = []
+        for t in qs:
+            h = humanizar_trace(t)
+            if h:
+                result.append(h)
+        return result
+    except Exception:
+        return []
 
 
 def _extraer_senales_motor(decision: dict) -> dict:

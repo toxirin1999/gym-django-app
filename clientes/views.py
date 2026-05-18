@@ -5063,6 +5063,14 @@ def plan_decisiones_view(request):
         ).order_by('-fecha')[:5]
     )
 
+    # Phase 33 — Historial humanizado de decisiones recientes
+    traces_recientes = []
+    try:
+        from entrenos.services.decision_trace_service import get_traces_recientes
+        traces_recientes = get_traces_recientes(cliente, n=7)
+    except Exception:
+        pass
+
     return render(request, 'clientes/plan_decisiones.html', {
         'cliente': cliente,
         'hoy': hoy,
@@ -5073,4 +5081,5 @@ def plan_decisiones_view(request):
         'analisis_semanal': analisis_semanal,
         'decisiones_carga': decisiones_carga,
         'sesiones_esenciales': sesiones_esenciales,
+        'traces_recientes': traces_recientes,
     })
