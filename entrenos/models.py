@@ -1490,3 +1490,58 @@ class PreferenciaPlanAprendida(models.Model):
 
     def __str__(self):
         return f"{self.cliente} — {self.tipo} ({self.estado})"
+
+
+class GymDecisionTrace(models.Model):
+    """
+    Phase 32 — Memoria de decisiones del plan.
+
+    Stores a structured trace of why the motor made a specific decision on a given day.
+    One trace per (cliente, fecha) — updated in place if the decision changes.
+
+    CONTRACT:
+    - Saved asynchronously (after the panel response) to avoid latency.
+    - Never stores absolute/identity/diagnostic language (enforced by Phase 31 audit).
+    - Does NOT replace GymDecisionLog (which records load decisions per exercise).
+      This records the DAILY PANEL DECISION: why today looks like it does.
+    - explicacion_senales mirrors construir_explicacion_decision().senales_activas.
+    """
+    cliente             = models.ForeignKey('clientes.Cliente', on_delete=models.CASCADE, related_name='decision_traces')
+    fecha               = models.DateField(db_index=True)
+    sesion_programada   = models.ForeignKey('entrenos.SesionProgramada', null=True, blank=True, on_delete=models.SET_NULL)
+
+    decision_estado     = models.CharField(max_length=50)   # entrenar / recuperar / posponer / descanso
+    causa_principal     = models.CharField(max_length=80, blank=True)
+
+    # Raw signals from _obtener_contexto_fisico and decision dict
+    senales_motor       = models.JSONField(default=dict)
+
+    # Signals visible/hidden in the panel
+    capas_visibles      = models.JSONField(default=list)    # ['lesion_aviso', 'preferencia_aplicada', ...]
+    capas_suprimidas    = models.JSONField(default=list)    # ['distribucion_aviso'] when preference wins
+
+    # Human-readable signal list from construir_explicacion_decision
+    explicacion_senales = models.JSONField(default=list)
+
+    # Active influencers at the time of the decision
+    preferencias_activas    = models.JSONField(default=list)    # [tipo_str, ...]
+    intervenciones_activas  = models.JSONField(default=list)    # [tipo_str, ...]
+    lesion_contexto         = models.JSONField(default=dict)    # {zona, fase, es_bloqueante, ejercicios}
+
+    creado_en   = models.DateTimeField(auto_now_add=True)
+    actualizado_en = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-fecha', '-creado_en']
+        unique_together = [('cliente', 'fecha')]
+        indexes = [models.Index(fields=['cliente', 'fecha'])]
+
+    def __str__(self):
+        return f"{self.cliente} — {self.fecha} — {self.decision_estado} ({self.causa_principal})"
+
+    def get_explicacion_humana(self) -> str:
+        """Returns a single-sentence human-readable explanation of this decision."""
+        if not self.explicacion_senales:
+            return f"Sesión normal el {self.fecha}."
+        lineas = '. '.join(s.rstrip('.') for s in self.explicacion_senales[:3])
+        return f"{lineas}."
