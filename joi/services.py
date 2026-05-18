@@ -616,6 +616,22 @@ def construir_contexto(cliente) -> dict:
     except Exception:
         pass
 
+    # ── 15. PREFERENCIAS DEL PLAN (Phase 23C) ────────────────────────────────
+    try:
+        from entrenos.models import PreferenciaPlanAprendida
+        prefs = list(
+            PreferenciaPlanAprendida.objects.filter(
+                cliente=cliente, estado=PreferenciaPlanAprendida.ESTADO_ACTIVA,
+            ).values('tipo', 'descripcion', 'evidencia_count')
+        )
+        if prefs:
+            ctx['preferencias_plan_activas'] = [
+                {'tipo': p['tipo'], 'descripcion': p['descripcion'], 'evidencia': p['evidencia_count']}
+                for p in prefs
+            ]
+    except Exception:
+        pass
+
     return ctx
 
 
@@ -1345,6 +1361,29 @@ def _prompt_hyrox_deload_automatico(ctx: dict, datos_extra: dict) -> str:
     )
 
 
+def _prompt_preferencia_aprendida(ctx: dict, datos_extra: dict) -> str:
+    tipo        = datos_extra.get('tipo_preferencia', '')
+    descripcion = datos_extra.get('descripcion', '')
+    evidencia   = datos_extra.get('evidencia_count', 2)
+
+    _NOMBRES = {
+        'evitar_pierna_tras_futbol': 'evitar pierna el día después del fútbol',
+        'evitar_dia':                'evitar un día concreto de la semana',
+        'menos_dias':                'reducir los días semanales de entreno',
+        'aligerar_dia':              'aligerar un día de accesorios opcionales',
+    }
+    nombre = _NOMBRES.get(tipo, tipo.replace('_', ' '))
+
+    return (
+        f"Después de {evidencia} pruebas, el sistema ha consolidado una preferencia blanda: {nombre}. "
+        f"Descripción registrada: {descripcion} "
+        f"JOI lo observa. Genera 2-3 frases desde La Testigo: el plan no impuso nada, "
+        f"escuchó un patrón real del usuario y ahora lo guarda como inclinación — "
+        f"no como regla. Nombra qué aprendió el sistema concretamente. "
+        f"Sin celebración forzada. Voz directa, cálida y precisa."
+    )
+
+
 def _prompt_rpe_calibracion(ctx: dict, datos_extra: dict) -> str:
     sesiones    = datos_extra.get('sesiones_analizadas', 3)
     rpe_medio   = datos_extra.get('rpe_medio_reportado', '?')
@@ -1381,6 +1420,7 @@ _PROMPT_BUILDERS = {
     'hyrox_estancamiento_estacion': _prompt_hyrox_estancamiento_estacion,
     'hyrox_deload_automatico':      _prompt_hyrox_deload_automatico,
     'rpe_calibracion':             _prompt_rpe_calibracion,
+    'preferencia_aprendida':       _prompt_preferencia_aprendida,
 }
 
 
