@@ -978,4 +978,11 @@ def obtener_sesion_recomendada_hoy(cliente, fecha_hoy=None):
     decision = _aplicar_contexto(decision_base, contexto, fecha_hoy)
     decision = _aplicar_efecto_distribucion(cliente, decision, fecha_hoy)
     decision = _aplicar_preferencia_activa(cliente, decision, fecha_hoy)
-    return _aplicar_aviso_lesion(cliente, decision, fecha_hoy)
+    decision = _aplicar_aviso_lesion(cliente, decision, fecha_hoy)
+    # Phase 32 — trace decision (non-blocking, degrades silently)
+    try:
+        from entrenos.services.decision_trace_service import registrar_decision_trace
+        registrar_decision_trace(cliente, decision, fecha_hoy)
+    except Exception:
+        pass
+    return decision
