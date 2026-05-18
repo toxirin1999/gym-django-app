@@ -119,4 +119,7 @@ urlpatterns = [
     # Phase 22 — Learned preferences
     path('preferencia/convertir/', views.convertir_en_preferencia_view, name='convertir_preferencia'),
     path('preferencia/<int:preferencia_id>/revocar/', views.revocar_preferencia_view, name='revocar_preferencia'),
+
+    # Phase 26 — Decision center
+    path('plan/decisiones/', views.plan_decisiones_view, name='plan_decisiones'),
 ]
