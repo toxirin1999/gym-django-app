@@ -613,7 +613,7 @@ function joiBannerCerrar(id) {
       {% if mensaje_entreno and causa_entreno != 'sesion_hoy' %}
       <div style="font-size:11px;color:var(--td);opacity:0.72;margin-top:4px;margin-bottom:2px;font-style:italic;line-height:1.45;">{{ mensaje_entreno }}</div>
       {% endif %}
-      {% if distribucion_aviso %}
+      {% if distribucion_aviso and not explicacion_decision.distribucion_aviso_suprimido %}
       <div style="margin-top:6px;padding:7px 10px;background:rgba(255,160,80,0.07);border-left:2px solid rgba(255,160,80,0.4);border-radius:0 7px 7px 0;font-size:11px;color:rgba(255,160,80,0.85);line-height:1.4;">
         {{ distribucion_aviso.texto }}
       </div>
@@ -681,6 +681,29 @@ function joiBannerCerrar(id) {
         {% if proximo_entrenamiento.ejercicios|length > 4 %}
         <div class="rb-ex-more">+ {{ proximo_entrenamiento.ejercicios|length|add:"-4" }} ejercicio{{ proximo_entrenamiento.ejercicios|length|add:"-4"|pluralize:"s" }} más</div>
         {% endif %}
+      </div>
+      {% endif %}
+
+      {# Phase 30 — ¿Por qué hoy? — explicación unificada colapsable #}
+      {% if explicacion_decision and not explicacion_decision.todo_limpio %}
+      <div style="margin-top:10px;border-top:1px solid var(--line);padding-top:8px;">
+        <button type="button"
+          onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none';this.querySelector('.pq-arrow').textContent=this.nextElementSibling.style.display==='none'?'↓':'↑'"
+          style="display:flex;align-items:center;gap:6px;background:none;border:none;cursor:pointer;padding:0;width:100%;">
+          <span style="font-family:var(--font-mono);font-size:8px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--ink-3);">¿Por qué hoy?</span>
+          <span class="pq-arrow" style="font-size:9px;color:var(--ink-3);margin-left:auto;">↓</span>
+        </button>
+        <div style="display:none;margin-top:7px;">
+          <div style="font-size:9px;color:var(--ink-3);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:5px;">
+            {{ explicacion_decision.causa_label }}
+          </div>
+          {% for senal in explicacion_decision.senales_activas %}
+          <div style="display:flex;gap:6px;padding:4px 0;{% if not forloop.last %}border-bottom:1px solid var(--line);{% endif %}">
+            <span style="color:var(--ink-3);font-size:9px;flex-shrink:0;margin-top:1px;">·</span>
+            <span style="font-size:11px;color:var(--td);opacity:0.75;line-height:1.45;">{{ senal }}</span>
+          </div>
+          {% endfor %}
+        </div>
       </div>
       {% endif %}
     </div>
