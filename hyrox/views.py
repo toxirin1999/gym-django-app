@@ -3528,14 +3528,13 @@ def strava_importar_recientes(request):
         except Exception as e:
             return JsonResponse({'ok': False, 'msg': f'Error renovando token: {e}'}, status=400)
 
-    # Use datetime.combine for reliable UTC timestamp (avoids strftime('%s') portability issues)
-    after_ts = int(_dt.combine(_date.today() - _td(days=14), _dt.min.time()).timestamp())
+    after_ts = int(_dt.combine(_date.today() - _td(days=7), _dt.min.time()).timestamp())
 
     try:
         resp = _req.get(
             'https://www.strava.com/api/v3/athlete/activities',
             headers={'Authorization': f'Bearer {token.access_token}'},
-            params={'after': after_ts, 'per_page': 200},  # 200 = Strava API max
+            params={'after': after_ts, 'per_page': 100},
             timeout=15,
         )
         resp.raise_for_status()
