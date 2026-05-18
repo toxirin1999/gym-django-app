@@ -851,13 +851,14 @@ def obtener_sesion_recomendada_hoy(cliente, fecha_hoy=None):
             # Pending sessions from esencial mode don't auto-progress
             try:
                 from entrenos.services.progresion_contextual_service import (
-                    evaluar_permiso_progresion, aplicar_freno_contextual,
+                    evaluar_permiso_progresion, aplicar_freno_contextual, aplicar_freno_lesion,
                 )
                 permiso = evaluar_permiso_progresion(cliente, fecha_hoy)
                 entrenamiento = aplicar_freno_contextual(
                     cliente, entrenamiento, permiso,
                     modo_reducido=getattr(pendiente, 'modo_reducido_origen', False),
                 )
+                entrenamiento = aplicar_freno_lesion(cliente, entrenamiento)  # Phase 28.1
             except Exception:
                 logger.warning('obtener_sesion_recomendada_hoy: freno contextual falló, sin efecto')
         except Exception:
@@ -896,10 +897,11 @@ def obtener_sesion_recomendada_hoy(cliente, fecha_hoy=None):
         # Phase 9.2: apply contextual progression brake to today's session too
         try:
             from entrenos.services.progresion_contextual_service import (
-                evaluar_permiso_progresion, aplicar_freno_contextual,
+                evaluar_permiso_progresion, aplicar_freno_contextual, aplicar_freno_lesion,
             )
             permiso = evaluar_permiso_progresion(cliente, fecha_hoy)
             entrenamiento_hoy = aplicar_freno_contextual(cliente, entrenamiento_hoy, permiso)
+            entrenamiento_hoy = aplicar_freno_lesion(cliente, entrenamiento_hoy)  # Phase 28.1
         except Exception:
             logger.warning('obtener_sesion_recomendada_hoy: freno contextual falló para sesión de hoy')
     except Exception:
