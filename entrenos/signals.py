@@ -433,6 +433,45 @@ def joi_decision_plan(sender, instance, created, **kwargs):
         logging.getLogger(__name__).error(f'[JOI decision_plan] {e}')
 
 
+# ── Phase 23A — JOI verbaliza preferencia aprendida ──────────────────────────
+from entrenos.models import PreferenciaPlanAprendida as _PreferenciaPlanAprendida
+
+@receiver(post_save, sender=_PreferenciaPlanAprendida)
+def joi_preferencia_aprendida(sender, instance, created, **kwargs):
+    """
+    Cuando el plan consolida una preferencia nueva (o reactiva una suspendida),
+    JOI la verbaliza. Cada preferencia por tipo se genera una sola vez.
+    """
+    if instance.estado != _PreferenciaPlanAprendida.ESTADO_ACTIVA:
+        return
+    # Solo al crear (primera vez) o al reactivar desde suspendida
+    if not created:
+        # update_fields check: only fire if 'estado' was explicitly saved
+        update_fields = kwargs.get('update_fields')
+        if update_fields is None or 'estado' not in update_fields:
+            return
+
+    try:
+        from joi.services import generar_mensaje_joi
+        from django.core.cache import cache
+
+        cliente = instance.cliente
+        # Lock per (cliente, tipo) — one message per preference type
+        lock_key = f'joi_preferencia_lock_{cliente.pk}_{instance.tipo}'
+        if cache.get(lock_key):
+            return
+        cache.set(lock_key, True, 86400)  # 24h — one message per activation
+
+        generar_mensaje_joi(cliente, 'preferencia_aprendida', {
+            'tipo_preferencia': instance.tipo,
+            'descripcion':      instance.descripcion or '',
+            'evidencia_count':  instance.evidencia_count,
+        })
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f'[JOI preferencia_aprendida] {e}')
+
+
 # ── Calibración RPE personal ──────────────────────────────────────────────────
 from django.db.models import Avg as _Avg
 
