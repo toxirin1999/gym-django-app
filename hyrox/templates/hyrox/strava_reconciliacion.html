@@ -569,6 +569,40 @@
         <p style="font-size:11px;color:var(--ink-3);padding:8px;">No hay entrenos pendientes de sincronizar.</p>
         {% endfor %}
       </div>
+
+      {# Actividades "añadir actividad libre" sin EntrenoRealizado vinculado #}
+      {% if actividades_gym_sin_sync %}
+      <div style="margin-top:6px;">
+        <button type="button"
+          onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'"
+          style="font-family:var(--font-mono);font-size:9px;font-weight:700;letter-spacing:.1em;
+                 text-transform:uppercase;color:rgba(245,158,11,0.75);background:none;border:none;
+                 cursor:pointer;padding:0;display:flex;align-items:center;gap:5px;margin-bottom:6px;">
+          <i class="fas fa-bolt"></i> Actividades directas gym ({{ actividades_gym_sin_sync|length }})
+        </button>
+        <div style="display:none;max-height:180px;overflow-y:auto;border:1px solid rgba(245,158,11,0.2);border-radius:3px;padding:6px;">
+          <p style="font-size:10px;color:rgba(245,158,11,0.65);font-style:italic;margin-bottom:6px;">
+            Registradas via "Añadir actividad" — sin ejercicios detallados.
+            Usa "Crear desde Strava" para enriquecerlas con los datos de Strava.
+          </p>
+          {% for ar in actividades_gym_sin_sync %}
+          <div style="display:flex;align-items:center;justify-content:space-between;
+                      padding:6px 8px;border-bottom:1px solid var(--line);gap:8px;">
+            <div style="flex:1;min-width:0;">
+              <span style="font-weight:600;font-size:12px;display:block;">
+                {{ ar.titulo|default:"Actividad gym" }}
+              </span>
+              <span style="font-family:var(--font-mono);font-size:10px;color:var(--ink-3);">
+                {{ ar.fecha|date:"D d/m/Y" }}
+                {% if ar.duracion_minutos %} · {{ ar.duracion_minutos }} min{% endif %}
+              </span>
+            </div>
+            <span style="font-size:9px;color:rgba(245,158,11,0.6);white-space:nowrap;">sin ej.</span>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
     </div>
 
     <!-- CREATE ACTIONS -->
