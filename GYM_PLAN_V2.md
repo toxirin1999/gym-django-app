@@ -1,6 +1,6 @@
-# Gym Plan V2 — Sesiones vivas
+# Gym Plan V2 — Sesiones vivas + Preferencias aprendidas
 
-> Phase 1–21.1 — Mayo 2026 — ESTADO ESTABLE
+> Phase 1–25 — Mayo 2026 — ESTADO ESTABLE · 82 tests de preferencias · ~250+ tests total
 
 ---
 
@@ -30,13 +30,14 @@
 - Calendario/memoria visual: dot grid 4 semanas con estados por color
 - JOI recibe señales semanales, multisemana y distribución (una por tipo, no lista)
 
+- ✅ Preferencias aprendidas del plan (Phase 22–25)
+
 ## Lo que el sistema NO hace todavía (intencionalmente)
 
-- ❌ No convierte pruebas favorables en preferencias permanentes (Phase 22)
-- ❌ No modifica PlanificadorHelms automáticamente
-- ❌ No reemplaza ejercicios por lesión activa
+- ❌ No modifica `PlanificadorHelms` automáticamente
+- ❌ No reemplaza ejercicios por lesión activa (solo filtra en UI)
 - ❌ No reorganiza la semana en silencio
-- ❌ No escribe en ManualDavid desde el análisis semanal
+- ❌ No escribe en `ManualDavid` desde el análisis semanal
 - ❌ No usa IA generativa para decidir sesiones
 
 ---
@@ -107,7 +108,7 @@ joi/services.py                 Inyecta bloque semanal + patrón + distribución
 
 ---
 
-## Tests (~170+)
+## Tests (~252+)
 
 ```
 entrenos/tests_sesion_programada.py      76  sesiones, contexto, esencial, análisis, JOI
@@ -116,27 +117,89 @@ entrenos/tests_sugerencias.py            38  sugerencias, intervenciones, evalua
 entrenos/tests_distribucion_semanal.py   24  distribución, Phase 20/21
 clientes/tests_panel_ux.py               17  regresión del contexto del panel
 joi/tests_bloque_semanal.py              29  integración JOI, lenguaje
+
+— Ciclo de preferencias (Phase 22–25) —
+entrenos/tests_preferencias.py           17  modelo, detección, creación, revocación
+entrenos/tests_joi_preferencias.py       13  signal, lock, prompt, contexto JOI
+entrenos/tests_auditoria_semantica.py    17  sin identidad, sin ManualDavid, etiqueta
+entrenos/tests_preferencia_motor.py      21  motor, jerarquía, lenguaje, PlanificadorHelms
+entrenos/tests_preferencia_ui.py         14  template, guard recuperar, hints, contexto
 ```
 
 ---
 
-## Próxima fase: Phase 22 — Preferencias aprendidas
+## Ciclo completo de preferencias aprendidas (Phase 22–25)
 
-**Pregunta filosófica antes de implementar:**
-> ¿Cuánta evidencia necesita el sistema antes de dejar de "probar" y empezar a "preferir"?
+```
+Pruebas favorables repetidas del mismo tipo
+    ↓
+detectar_candidata_preferencia() → candidata propuesta
+    ↓ usuario acepta
+crear_preferencia() → PreferenciaPlanAprendida(estado=ACTIVA)
+    ↓ signal post_save
+joi_preferencia_aprendida() → generar_mensaje_joi('preferencia_aprendida')
+    ↓
+JOI verbaliza con tono protegido (sujeto: "el plan", no el usuario)
+    ↓
+apertura_mañana() conoce preferencias como [Memoria operativa del plan]
+    ↓
+_obtener_contexto_fisico() carga preferencias_activas
+    ↓
+_aplicar_preferencia_activa() → preferencia_aplicada (causa secundaria)
+    ↓ solo si causa_principal no es 'lesion' ni 'fatiga_alta'
+UI: bloque PRF en workout card (teal, lenguaje blando)
+    ↓
+Usuario mantiene agencia: puede entrenar, posponer o revocar la preferencia
+```
 
-**Condición mínima propuesta:**
-- Misma prueba favorable ≥ 2 veces
-- Usuario aceptó repetir o consolidar ambas veces
-- Sin cooldown activo de ese tipo
+### Jerarquía de decisión
 
-**Modelo conceptual:** `PreferenciaPlanAprendida` (nueva tabla)
+```
+lesión activa → recuperar (bloquea todo)
+    ↓
+intervención explícita aceptada (IntervencionPlan)
+    ↓
+fatiga / readiness_bajo → recuperar
+    ↓
+energía baja → version_reducida
+    ↓
+fútbol reciente → posponer
+    ↓
+[preferencia_aplicada] (secundaria — no cambia estado ni causa_principal)
+    ↓
+plan normal → entrenar
+```
 
-**Regla madre de Phase 22:**
-> Una preferencia aprendida no es una orden; es una inclinación del plan basada en evidencia repetida y aceptada.
+### Qué es una preferencia aprendida
 
-**Orden de implementación:**
-- Phase 22A: modelo + flujo de aceptación
-- Phase 22B: mostrar "Preferencia activa"
-- Phase 22C: señal blanda en el motor (no cambia plan)
-- Phase 22D: afecta generación de sesiones (Phase futura)
+- Una inclinación blanda. No una regla.
+- Sujeto siempre es "el plan", nunca el usuario.
+- Sin absolutos: sin "siempre", "nunca", "debes".
+- Revocable en un clic. Estado: `ACTIVA | SUSPENDIDA | REVOCADA`.
+- No escribe en `ManualDavid`. No toca `PlanificadorHelms`.
+- Lock JOI 24h por `(cliente, tipo)`: un mensaje por activación.
+
+### Tipos disponibles
+
+| Tipo | Condición motor |
+|---|---|
+| `evitar_pierna_tras_futbol` | `futbol_reciente=True` + sesión de pierna |
+| `evitar_dia_frecuente` | weekday = `metadata.dia_semana` |
+| `preferir_menos_dias` | sesión de `PRIORIDAD_NORMAL` |
+| `aligerar_dia_concreto` | cualquier sesión con ejercicios |
+
+---
+
+## Próxima fase: Phase 26 — Centro de decisiones del plan
+
+> Un sistema inteligente no solo decide; permite ver qué evidencia está usando para decidir.
+
+**Objetivo:** pantalla "Por qué el plan decide así" — auditabilidad completa.
+
+**Secciones propuestas:**
+- Preferencias activas (con revocación)
+- Intervenciones activas (carga + distribución)
+- Pruebas de distribución recientes + evaluación
+- Patrones observados (multisemana)
+- Últimas decisiones de carga (`GymDecisionLog`)
+- Sesiones en modo esencial recientes
