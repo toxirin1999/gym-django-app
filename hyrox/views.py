@@ -3506,9 +3506,15 @@ def strava_procesar(request, actividad_id):
 @login_required
 @require_POST
 def strava_importar_recientes(request):
-    """Fetch last 30 days of activities from Strava API and stage them as pending."""
+    """Fetch last 14 days of activities from Strava API and stage them as pending.
+
+    Bug fix: Strava returns activities ASCENDING (oldest first) when using 'after'.
+    With per_page=50 and a 30-day window, activities after day ~15 never appeared.
+    Fix: use 14-day window + per_page=200 (API max) so all recent activities fit in
+    one page, and today's session is always included.
+    """
     import requests as _req
-    from datetime import date as _date, timedelta as _td
+    from datetime import date as _date, timedelta as _td, datetime as _dt
 
     cliente = request.user.cliente_perfil
     try:
@@ -3522,14 +3528,14 @@ def strava_importar_recientes(request):
         except Exception as e:
             return JsonResponse({'ok': False, 'msg': f'Error renovando token: {e}'}, status=400)
 
-    after_ts = int((_date.today() - _td(days=30)).strftime('%s') if hasattr(_date.today(), 'strftime') else
-                   (__import__('datetime').datetime.combine(_date.today() - _td(days=30), __import__('datetime').time.min)).timestamp())
+    # Use datetime.combine for reliable UTC timestamp (avoids strftime('%s') portability issues)
+    after_ts = int(_dt.combine(_date.today() - _td(days=14), _dt.min.time()).timestamp())
 
     try:
         resp = _req.get(
             'https://www.strava.com/api/v3/athlete/activities',
             headers={'Authorization': f'Bearer {token.access_token}'},
-            params={'after': after_ts, 'per_page': 50},
+            params={'after': after_ts, 'per_page': 200},  # 200 = Strava API max
             timeout=15,
         )
         resp.raise_for_status()
