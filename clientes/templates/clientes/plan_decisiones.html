@@ -9,23 +9,21 @@
   <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg:      #0d0f14;
-      --paper:   #13161e;
-      --ink:     #e8e6e0;
-      --ink-2:   #9a97920;
-      --ink-3:   #6b6860;
-      --line:    rgba(255,255,255,0.06);
-      --ok:      #22c55e;
-      --warn:    #f59e0b;
-      --danger:  #ef4444;
-      --teal:    rgba(20,184,166,1);
-      --teal-bg: rgba(20,184,166,0.07);
-      --teal-border: rgba(20,184,166,0.30);
-      --violet:  rgba(139,92,246,1);
-      --orange:  rgba(255,160,80,1);
+      --bg:     #0d0f14;
+      --paper:  #13161e;
+      --ink:    #e8e6e0;
+      --ink-3:  #6b6860;
+      --line:   rgba(255,255,255,0.06);
+      --line-2: rgba(255,255,255,0.10);
+      --teal:   rgba(20,184,166,0.9);
+      --teal-b: rgba(20,184,166,0.28);
+      --teal-bg:rgba(20,184,166,0.07);
+      --amber:  rgba(245,158,11,0.9);
+      --amber-b:rgba(245,158,11,0.28);
+      --amber-bg:rgba(245,158,11,0.06);
       --font-mono: 'JetBrains Mono', monospace;
     }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    * { box-sizing:border-box; margin:0; padding:0; }
     body {
       background: var(--bg);
       color: var(--ink);
@@ -34,225 +32,340 @@
       padding: 0 0 5rem;
     }
 
-    /* ── top bar ── */
-    .dc-topbar {
-      display: flex; align-items: center; gap: 12px;
-      padding: 14px 16px 12px;
-      border-bottom: 1px solid var(--line);
-      background: var(--paper);
-      position: sticky; top: 0; z-index: 10;
+    /* ── topbar ── */
+    .dc-top {
+      display:flex; align-items:center; gap:12px;
+      padding:14px 16px 12px;
+      border-bottom:1px solid var(--line);
+      background:var(--paper);
+      position:sticky; top:0; z-index:10;
     }
     .dc-back {
-      display: flex; align-items: center; gap: 6px;
-      font-size: 13px; font-weight: 700; color: var(--ink-3);
-      text-decoration: none;
+      font-size:13px; font-weight:700; color:var(--ink-3);
+      text-decoration:none; display:flex; align-items:center; gap:4px;
     }
-    .dc-back:hover { color: var(--ink); }
-    .dc-topbar-title {
-      font-family: var(--font-mono);
-      font-size: 10px; font-weight: 700;
-      letter-spacing: 0.12em; text-transform: uppercase;
-      color: var(--ink-3); flex: 1; text-align: center;
+    .dc-back:hover { color:var(--ink); }
+    .dc-top-title {
+      flex:1; text-align:center;
+      font-family:var(--font-mono); font-size:10px;
+      font-weight:700; letter-spacing:0.12em; text-transform:uppercase;
+      color:var(--ink-3);
     }
-    .dc-topbar-right { width: 60px; }
+    .dc-top-right { width:60px; }
 
     /* ── container ── */
-    .dc-container { max-width: 520px; margin: 0 auto; padding: 20px 16px; }
+    .dc-wrap { max-width:520px; margin:0 auto; padding:20px 16px; }
 
-    /* ── intro ── */
-    .dc-intro {
-      margin-bottom: 24px;
-      padding-bottom: 16px;
-      border-bottom: 1px solid var(--line);
+    /* ── hero: activo ahora ── */
+    .dc-hero {
+      border-radius:14px;
+      border:1px solid var(--line-2);
+      padding:16px;
+      margin-bottom:24px;
+      background:var(--paper);
     }
-    .dc-intro-title {
-      font-size: 20px; font-weight: 800; margin-bottom: 6px;
+    .dc-hero-label {
+      font-family:var(--font-mono); font-size:8px; font-weight:700;
+      letter-spacing:0.14em; text-transform:uppercase; color:var(--ink-3);
+      margin-bottom:10px;
     }
-    .dc-intro-sub {
-      font-size: 12px; color: var(--ink-3); line-height: 1.5;
+    .dc-hero-row {
+      display:flex; gap:10px;
+    }
+    .dc-hero-stat {
+      flex:1; padding:10px 12px; border-radius:10px;
+      text-align:center;
+    }
+    .dc-hero-stat.perm {
+      background:var(--teal-bg); border:1px solid var(--teal-b);
+    }
+    .dc-hero-stat.temp {
+      background:var(--amber-bg); border:1px solid var(--amber-b);
+    }
+    .dc-hero-stat.none {
+      background:rgba(255,255,255,0.03); border:1px solid var(--line);
+    }
+    .dc-hero-n {
+      font-size:22px; font-weight:800; line-height:1;
+      margin-bottom:3px;
+    }
+    .dc-hero-n.perm { color:var(--teal); }
+    .dc-hero-n.temp { color:var(--amber); }
+    .dc-hero-n.none { color:var(--ink-3); }
+    .dc-hero-lbl {
+      font-size:10px; color:var(--ink-3); line-height:1.3;
     }
 
     /* ── section ── */
-    .dc-section { margin-bottom: 20px; }
+    .dc-section { margin-bottom:20px; }
     .dc-section-head {
-      display: flex; align-items: center; gap: 8px;
-      margin-bottom: 10px;
+      display:flex; align-items:center; gap:8px; margin-bottom:10px;
     }
-    .dc-section-num {
-      font-family: var(--font-mono);
-      font-size: 8px; font-weight: 700;
-      letter-spacing: 0.12em; text-transform: uppercase;
-      color: var(--ink-3); flex-shrink: 0;
+    .dc-section-dot {
+      width:6px; height:6px; border-radius:50%; flex-shrink:0;
     }
+    .dc-section-dot.perm  { background:var(--teal); }
+    .dc-section-dot.temp  { background:var(--amber); }
+    .dc-section-dot.obs   { background:rgba(255,255,255,0.2); }
     .dc-section-title {
-      font-size: 11px; font-weight: 700;
-      letter-spacing: 0.05em; text-transform: uppercase;
-      color: var(--ink); flex-shrink: 0;
+      font-size:11px; font-weight:700; letter-spacing:0.04em;
+      text-transform:uppercase; color:var(--ink); flex-shrink:0;
     }
-    .dc-section-line {
-      flex: 1; height: 1px; background: var(--line);
-    }
+    .dc-line { flex:1; height:1px; background:var(--line); }
 
     /* ── card ── */
     .dc-card {
-      background: var(--paper);
-      border: 1px solid var(--line);
-      border-radius: 12px;
-      padding: 12px 14px;
-      margin-bottom: 8px;
+      background:var(--paper);
+      border:1px solid var(--line);
+      border-radius:12px;
+      padding:13px 15px;
+      margin-bottom:8px;
     }
-    .dc-card-label {
-      font-family: var(--font-mono);
-      font-size: 8px; font-weight: 700;
-      letter-spacing: 0.12em; text-transform: uppercase;
-      margin-bottom: 5px;
+    .dc-card.perm { border-left:2px solid var(--teal-b); }
+    .dc-card.temp { border-left:2px solid var(--amber-b); }
+    .dc-card.obs  { border-left:2px solid var(--line-2); }
+
+    .dc-pill {
+      display:inline-flex; align-items:center; gap:4px;
+      padding:2px 8px; border-radius:99px;
+      font-size:9px; font-weight:700; letter-spacing:0.08em;
+      margin-bottom:6px;
     }
-    .dc-card-text {
-      font-size: 12px; color: var(--ink); line-height: 1.5;
+    .dc-pill.perm {
+      background:var(--teal-bg); border:1px solid var(--teal-b);
+      color:var(--teal);
     }
-    .dc-card-meta {
-      font-size: 10px; color: var(--ink-3); margin-top: 4px;
+    .dc-pill.temp {
+      background:var(--amber-bg); border:1px solid var(--amber-b);
+      color:var(--amber);
     }
-    .dc-card-action {
-      margin-top: 8px;
+    .dc-pill-dot {
+      width:4px; height:4px; border-radius:50%; background:currentColor;
     }
+
+    .dc-card-text { font-size:13px; color:var(--ink); line-height:1.5; }
+    .dc-card-meta { font-size:10px; color:var(--ink-3); margin-top:5px; }
+    .dc-card-note {
+      font-size:10px; color:var(--ink-3); margin-top:6px;
+      padding-top:6px; border-top:1px solid var(--line);
+      font-style:italic;
+    }
+
     .dc-btn-revoke {
-      padding: 4px 10px; border-radius: 6px;
-      background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.25);
-      color: rgba(239,68,68,0.75); font-size: 10px; font-weight: 600;
-      cursor: pointer;
+      margin-top:9px;
+      display:inline-block;
+      padding:5px 11px; border-radius:7px;
+      background:rgba(239,68,68,0.07); border:1px solid rgba(239,68,68,0.20);
+      color:rgba(239,68,68,0.70); font-size:10px; font-weight:600;
+      cursor:pointer;
     }
-    .dc-badge {
-      display: inline-block;
-      padding: 2px 7px; border-radius: 99px;
-      font-size: 9px; font-weight: 700; letter-spacing: 0.08em;
+
+    .dc-badge-ok {
+      display:inline-block; padding:2px 7px; border-radius:99px;
+      font-size:9px; font-weight:700;
+      background:rgba(34,197,94,0.12); color:#22c55e;
     }
-    .dc-badge-ok    { background: rgba(34,197,94,0.12); color: var(--ok); }
-    .dc-badge-warn  { background: rgba(245,158,11,0.12); color: var(--warn); }
-    .dc-badge-neutral { background: rgba(255,255,255,0.07); color: var(--ink-3); }
+    .dc-badge-neu {
+      display:inline-block; padding:2px 7px; border-radius:99px;
+      font-size:9px; font-weight:700;
+      background:rgba(255,255,255,0.06); color:var(--ink-3);
+    }
 
     /* ── empty state ── */
     .dc-empty {
-      text-align: center; padding: 16px;
-      font-size: 11px; color: var(--ink-3); font-style: italic;
+      padding:14px 16px; border-radius:10px;
+      border:1px dashed var(--line);
+      font-size:11px; color:var(--ink-3); font-style:italic;
+      line-height:1.5;
     }
 
-    /* ── color accents ── */
-    .dc-teal   { color: var(--teal); }
-    .dc-violet { color: var(--violet); }
-    .dc-orange { color: var(--orange); }
-    .dc-ok     { color: var(--ok); }
-    .dc-warn   { color: var(--warn); }
-    .dc-danger { color: var(--danger); }
+    /* ── historial (collapsed) ── */
+    .dc-hist-toggle {
+      width:100%; display:flex; align-items:center; justify-content:space-between;
+      padding:11px 14px; border-radius:10px;
+      background:var(--paper); border:1px solid var(--line);
+      color:var(--ink-3); font-size:11px; font-weight:600;
+      cursor:pointer; margin-bottom:0; text-align:left;
+    }
+    .dc-hist-toggle:hover { border-color:var(--line-2); color:var(--ink); }
+    .dc-hist-toggle .arrow { transition:transform .25s; }
+    .dc-hist-body { display:none; margin-top:8px; }
+    .dc-hist-body.open { display:block; }
 
-    .dc-card.pref   { border-left: 2px solid var(--teal-border); }
-    .dc-card.int    { border-left: 2px solid rgba(245,158,11,0.35); }
-    .dc-card.prueba { border-left: 2px solid rgba(139,92,246,0.35); }
-    .dc-card.carga  { border-left: 2px solid rgba(255,255,255,0.12); }
-    .dc-card.esencial { border-left: 2px solid rgba(255,200,100,0.35); }
+    /* ── historial cards ── */
+    .dc-card.hist {
+      border-left:none; opacity:0.8;
+    }
+    .dc-card.hist:hover { opacity:1; }
+    .dc-hist-label {
+      font-family:var(--font-mono); font-size:8px; font-weight:700;
+      letter-spacing:0.1em; text-transform:uppercase;
+      color:var(--ink-3); margin-bottom:4px;
+    }
   </style>
 </head>
 <body>
 
-<div class="dc-topbar">
+<div class="dc-top">
   <a href="{% url 'clientes:mockup_demo' %}" class="dc-back">← Volver</a>
-  <div class="dc-topbar-title">Por qué el plan decide así</div>
-  <div class="dc-topbar-right"></div>
+  <div class="dc-top-title">Por qué decide así</div>
+  <div class="dc-top-right"></div>
 </div>
 
-<div class="dc-container">
+<div class="dc-wrap">
 
-  <div class="dc-intro">
-    <div class="dc-intro-title">Evidencia activa del plan</div>
-    <div class="dc-intro-sub">
-      Todo lo que el plan está usando hoy para tomar decisiones.
-      Puedes revocar preferencias, ver el resultado de las pruebas
-      y entender qué señales tiene en cuenta.
+  {# ── HERO: activo ahora ── #}
+  <div class="dc-hero">
+    <div class="dc-hero-label">Activo ahora mismo</div>
+    <div class="dc-hero-row">
+      <div class="dc-hero-stat {% if preferencias_activas %}perm{% else %}none{% endif %}">
+        <div class="dc-hero-n {% if preferencias_activas %}perm{% else %}none{% endif %}">
+          {{ preferencias_activas|length }}
+        </div>
+        <div class="dc-hero-lbl">
+          {% if preferencias_activas|length == 1 %}preferencia aprendida{% else %}preferencias aprendidas{% endif %}
+        </div>
+      </div>
+      <div class="dc-hero-stat {% if intervenciones_activas %}temp{% else %}none{% endif %}">
+        <div class="dc-hero-n {% if intervenciones_activas %}temp{% else %}none{% endif %}">
+          {{ intervenciones_activas|length }}
+        </div>
+        <div class="dc-hero-lbl">
+          {% if intervenciones_activas|length == 1 %}ajuste activo{% else %}ajustes activos{% endif %}
+        </div>
+      </div>
     </div>
   </div>
 
 
-  {# ── 1. PREFERENCIAS ACTIVAS ── #}
+  {# ── SECCIÓN 1: Lo que el plan recuerda (permanente) ── #}
   <div class="dc-section">
     <div class="dc-section-head">
-      <div class="dc-section-num dc-teal">PRF</div>
-      <div class="dc-section-title">Preferencias aprendidas</div>
-      <div class="dc-section-line"></div>
+      <div class="dc-section-dot perm"></div>
+      <div class="dc-section-title" style="color:var(--teal);">Lo que el plan recuerda</div>
+      <div class="dc-line"></div>
     </div>
 
     {% if preferencias_activas %}
       {% for pref in preferencias_activas %}
-      <div class="dc-card pref">
-        <div class="dc-card-label dc-teal">Activa · {{ pref.evidencia_count }} prueba{{ pref.evidencia_count|pluralize:"s" }}</div>
+      <div class="dc-card perm">
+        <span class="dc-pill perm">
+          <span class="dc-pill-dot"></span>
+          permanente · revocable
+        </span>
         <div class="dc-card-text">{{ pref.descripcion }}</div>
         <div class="dc-card-meta">
-          Aprendida el {{ pref.fecha_inicio|date:"j N Y" }}
-          {% if pref.ultima_confirmacion and pref.ultima_confirmacion != pref.fecha_inicio %}
-          · Confirmada el {{ pref.ultima_confirmacion|date:"j N" }}
-          {% endif %}
+          Basado en {{ pref.evidencia_count }} prueba{{ pref.evidencia_count|pluralize:"s" }} favorables.
+          {% if pref.ultima_confirmacion %}Confirmado el {{ pref.ultima_confirmacion|date:"j N" }}.{% endif %}
         </div>
-        <div class="dc-card-action">
-          <form method="post" action="{% url 'clientes:revocar_preferencia' pref.id %}" style="display:inline;">
-            {% csrf_token %}
-            <button type="submit" class="dc-btn-revoke">Revocar preferencia</button>
-          </form>
+        <div class="dc-card-note">
+          No es una regla. El plan lo usará cuando el contexto lo permita. Puedes borrarlo en cualquier momento.
         </div>
+        <form method="post" action="{% url 'clientes:revocar_preferencia' pref.id %}" style="display:inline;">
+          {% csrf_token %}
+          <button type="submit" class="dc-btn-revoke">Dejar de aplicar</button>
+        </form>
       </div>
       {% endfor %}
     {% else %}
-      <div class="dc-empty">No hay preferencias activas. Se crean cuando el plan detecta un patrón favorable repetido y el usuario lo confirma.</div>
+      <div class="dc-empty">
+        Ninguna todavía. Las preferencias se crean cuando aceptas convertir un patrón favorable
+        repetido en una inclinación del plan.
+      </div>
     {% endif %}
   </div>
 
 
-  {# ── 2. INTERVENCIONES ACTIVAS ── #}
+  {# ── SECCIÓN 2: Ajuste activo de esta semana (temporal) ── #}
   <div class="dc-section">
     <div class="dc-section-head">
-      <div class="dc-section-num dc-orange">INT</div>
-      <div class="dc-section-title">Intervenciones activas</div>
-      <div class="dc-section-line"></div>
+      <div class="dc-section-dot temp"></div>
+      <div class="dc-section-title" style="color:var(--amber);">Ajuste activo de esta semana</div>
+      <div class="dc-line"></div>
     </div>
 
     {% if intervenciones_activas %}
-      {% for int in intervenciones_activas %}
-      <div class="dc-card int">
-        <div class="dc-card-label dc-orange">{{ int.get_tipo_display }} · activa hasta {{ int.fecha_fin|date:"j N" }}</div>
-        <div class="dc-card-text">
-          {% if int.origen_patron %}Patrón origen: {{ int.origen_patron }}.{% endif %}
-          Válida desde {{ int.fecha_inicio|date:"j N" }}.
-        </div>
-        <div class="dc-card-meta dc-orange" style="opacity:0.65;">
-          El plan respeta esta intervención por encima del patrón inferido.
+      {% for iv in intervenciones_activas %}
+      <div class="dc-card temp">
+        <span class="dc-pill temp">
+          <span class="dc-pill-dot"></span>
+          temporal · hasta el {{ iv.fecha_fin|date:"j N" }}
+        </span>
+        <div class="dc-card-text">{{ iv.get_tipo_display }}</div>
+        {% if iv.origen_patron %}
+        <div class="dc-card-meta">Origen: {{ iv.origen_patron }}.</div>
+        {% endif %}
+        <div class="dc-card-note">
+          Expira automáticamente. El plan lo aplica por encima de cualquier patrón inferido.
+          No necesitas hacer nada para cancelarlo.
         </div>
       </div>
       {% endfor %}
     {% else %}
-      <div class="dc-empty">No hay intervenciones activas. Se activan cuando el usuario acepta una sugerencia del plan.</div>
+      <div class="dc-empty">
+        Ningún ajuste activo. Se activan cuando aceptas una sugerencia del plan
+        y duran hasta el final de la semana o de la prueba de distribución.
+      </div>
     {% endif %}
   </div>
 
 
-  {# ── 3. PRUEBAS DE DISTRIBUCIÓN RECIENTES ── #}
+  {# ── SECCIÓN 3: Lo que el plan está viendo (observación) ── #}
+  {% if patron_multisemanal or analisis_semanal %}
   <div class="dc-section">
     <div class="dc-section-head">
-      <div class="dc-section-num dc-violet">PRB</div>
-      <div class="dc-section-title">Pruebas de distribución</div>
-      <div class="dc-section-line"></div>
+      <div class="dc-section-dot obs"></div>
+      <div class="dc-section-title">Lo que el plan está viendo</div>
+      <div class="dc-line"></div>
     </div>
 
-    {% if pruebas_recientes %}
+    {% if patron_multisemanal %}
+    <div class="dc-card obs">
+      <div class="dc-card-meta" style="margin-bottom:4px;text-transform:uppercase;letter-spacing:0.08em;">Patrón de varias semanas</div>
+      <div class="dc-card-text">{{ patron_multisemanal }}</div>
+    </div>
+    {% endif %}
+
+    {% if analisis_semanal %}
+    <div class="dc-card obs">
+      <div class="dc-card-meta" style="margin-bottom:4px;text-transform:uppercase;letter-spacing:0.08em;">Esta semana</div>
+      <div class="dc-card-text">
+        {% if analisis_semanal.estado_semana %}{{ analisis_semanal.estado_semana|capfirst }}.{% endif %}
+        {% if analisis_semanal.sesiones_completadas is not None %}
+        {{ analisis_semanal.sesiones_completadas }} sesión{{ analisis_semanal.sesiones_completadas|pluralize:"es" }} completada{{ analisis_semanal.sesiones_completadas|pluralize:"s" }}
+        {% if analisis_semanal.sesiones_objetivo %} de {{ analisis_semanal.sesiones_objetivo }} previstas{% endif %}.
+        {% endif %}
+      </div>
+      <div class="dc-card-note">Solo observación. El plan actúa cuando el patrón se repite varias semanas seguidas.</div>
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+
+  {# ── HISTORIAL COLAPSADO: Pruebas + Decisiones + Esenciales ── #}
+  {% if pruebas_recientes or decisiones_carga or sesiones_esenciales %}
+  <div class="dc-section" style="margin-bottom:0;">
+    <button class="dc-hist-toggle" onclick="toggleHistorial(this)">
+      <span>Historial de decisiones recientes</span>
+      <span class="arrow">↓</span>
+    </button>
+    <div class="dc-hist-body" id="dc-historial">
+
+      {% if pruebas_recientes %}
+      <div style="margin-top:12px;margin-bottom:6px;font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink-3);">Pruebas de distribución</div>
       {% for item in pruebas_recientes %}
-      <div class="dc-card prueba">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
-          <div class="dc-card-label dc-violet" style="margin-bottom:0;">{{ item.intervencion.get_tipo_display }}</div>
+      <div class="dc-card hist">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px;">
+          <div class="dc-hist-label">{{ item.intervencion.get_tipo_display }}</div>
           {% if item.evaluacion %}
             {% if item.evaluacion.resultado == 'favorable' %}
-              <span class="dc-badge dc-badge-ok">Favorable</span>
+              <span class="dc-badge-ok">Favorable</span>
             {% else %}
-              <span class="dc-badge dc-badge-neutral">Neutral</span>
+              <span class="dc-badge-neu">Neutral</span>
             {% endif %}
           {% else %}
-            <span class="dc-badge dc-badge-neutral">Sin eval.</span>
+            <span class="dc-badge-neu">Sin resultado</span>
           {% endif %}
         </div>
         <div class="dc-card-meta">
@@ -260,114 +373,52 @@
           · {{ item.intervencion.get_estado_display }}
         </div>
         {% if item.evaluacion and item.evaluacion.lectura %}
-        <div class="dc-card-text" style="margin-top:5px;font-size:11px;opacity:0.75;">
-          {{ item.evaluacion.lectura }}
-        </div>
+        <div class="dc-card-text" style="margin-top:5px;font-size:11px;opacity:0.72;">{{ item.evaluacion.lectura }}</div>
         {% endif %}
       </div>
       {% endfor %}
-    {% else %}
-      <div class="dc-empty">No hay pruebas de distribución en los últimos 60 días.</div>
-    {% endif %}
-  </div>
-
-
-  {# ── 4. PATRÓN OBSERVADO ── #}
-  <div class="dc-section">
-    <div class="dc-section-head">
-      <div class="dc-section-num" style="color:rgba(148,163,184,0.6);">PAT</div>
-      <div class="dc-section-title">Patrón observado</div>
-      <div class="dc-section-line"></div>
-    </div>
-
-    {% if patron_multisemanal or analisis_semanal %}
-      {% if patron_multisemanal %}
-      <div class="dc-card">
-        <div class="dc-card-label" style="color:rgba(148,163,184,0.6);">Multisemanal</div>
-        <div class="dc-card-text">{{ patron_multisemanal }}</div>
-      </div>
       {% endif %}
-      {% if analisis_semanal %}
-      <div class="dc-card">
-        <div class="dc-card-label" style="color:rgba(148,163,184,0.6);">Esta semana</div>
-        <div class="dc-card-text">
-          {% if analisis_semanal.estado_semana %}Estado: {{ analisis_semanal.estado_semana }}.{% endif %}
-          {% if analisis_semanal.sesiones_completadas is not None %}
-            {{ analisis_semanal.sesiones_completadas }} sesiones completadas
-            {% if analisis_semanal.sesiones_objetivo %} de {{ analisis_semanal.sesiones_objetivo }} previstas{% endif %}.
-          {% endif %}
-        </div>
-      </div>
-      {% endif %}
-    {% else %}
-      <div class="dc-empty">No hay datos suficientes para detectar patrón multisemanal aún.</div>
-    {% endif %}
-  </div>
 
-
-  {# ── 5. DECISIONES DE CARGA ── #}
-  <div class="dc-section">
-    <div class="dc-section-head">
-      <div class="dc-section-num" style="color:rgba(255,255,255,0.35);">DEC</div>
-      <div class="dc-section-title">Decisiones de carga</div>
-      <div class="dc-section-line"></div>
-    </div>
-
-    {% if decisiones_carga %}
+      {% if decisiones_carga %}
+      <div style="margin-top:12px;margin-bottom:6px;font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink-3);">Decisiones de carga</div>
       {% for d in decisiones_carga %}
-      <div class="dc-card carga">
+      <div class="dc-card hist">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px;">
-          <div class="dc-card-label" style="color:rgba(255,255,255,0.35);margin-bottom:0;">{{ d.ejercicio }}</div>
-          <span class="dc-badge
-            {% if d.accion == 'cambiar_variante' %}dc-badge-warn
-            {% elif d.accion == 'deload' %}dc-badge-warn
-            {% elif d.accion == 'bajar_peso' %}dc-badge-neutral
-            {% else %}dc-badge-neutral{% endif %}">
-            {{ d.get_accion_display }}
-          </span>
+          <div class="dc-hist-label">{{ d.ejercicio }}</div>
+          <span class="dc-badge-neu">{{ d.get_accion_display }}</span>
         </div>
         <div class="dc-card-text" style="font-size:11px;opacity:0.75;">{{ d.motivo }}</div>
-        <div class="dc-card-meta">
-          {{ d.fecha_creacion|date:"j N" }}
-          {% if d.peso_anterior %} · {{ d.peso_anterior }} kg ant.{% endif %}
-          · confianza {{ d.confianza }}
-        </div>
+        <div class="dc-card-meta">{{ d.fecha_creacion|date:"j N" }}{% if d.peso_anterior %} · {{ d.peso_anterior }} kg ant.{% endif %}</div>
       </div>
       {% endfor %}
-    {% else %}
-      <div class="dc-empty">No hay decisiones de carga activas en los últimos 30 días.</div>
-    {% endif %}
-  </div>
+      {% endif %}
 
-
-  {# ── 6. SESIONES ESENCIALES RECIENTES ── #}
-  <div class="dc-section">
-    <div class="dc-section-head">
-      <div class="dc-section-num" style="color:rgba(255,200,100,0.6);">ESN</div>
-      <div class="dc-section-title">Sesiones en modo esencial</div>
-      <div class="dc-section-line"></div>
-    </div>
-
-    {% if sesiones_esenciales %}
+      {% if sesiones_esenciales %}
+      <div style="margin-top:12px;margin-bottom:6px;font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink-3);">Sesiones en modo esencial</div>
       {% for s in sesiones_esenciales %}
-      <div class="dc-card esencial">
-        <div class="dc-card-label" style="color:rgba(255,200,100,0.7);margin-bottom:3px;">
-          Esencial · {{ s.fecha|date:"j N" }}
-        </div>
+      <div class="dc-card hist">
+        <div class="dc-hist-label">{{ s.fecha|date:"j N" }}</div>
         <div class="dc-card-text">
           {% if s.rutina %}{{ s.rutina.nombre }}{% else %}Sesión sin nombre{% endif %}
-          {% if s.principales_planificados %}
-          · {{ s.principales_planificados }} ejercicio{{ s.principales_planificados|pluralize:"s" }} principal{{ s.principales_planificados|pluralize:"es" }}
-          {% endif %}
         </div>
       </div>
       {% endfor %}
-    {% else %}
-      <div class="dc-empty">No hay sesiones en modo esencial en los últimos 30 días.</div>
-    {% endif %}
+      {% endif %}
+
+    </div>
   </div>
+  {% endif %}
 
 </div>
+
+<script>
+function toggleHistorial(btn) {
+  const body = document.getElementById('dc-historial');
+  const arrow = btn.querySelector('.arrow');
+  const open = body.classList.toggle('open');
+  arrow.textContent = open ? '↑' : '↓';
+}
+</script>
 
 {% include 'includes/_joi_fab.html' %}
 </body>

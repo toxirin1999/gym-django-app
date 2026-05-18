@@ -212,17 +212,15 @@ class TestCase9_TemplateSmokeTest(PlanDecisionesBase):
         self._crear_decision()
         response = self._get()
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'Evidencia activa del plan')
-        self.assertContains(response, 'Preferencias aprendidas')
-        self.assertContains(response, 'Intervenciones activas')
-        self.assertContains(response, 'Decisiones de carga')
-        self.assertContains(response, 'Sesiones en modo esencial')
+        self.assertContains(response, 'Activo ahora mismo')
+        self.assertContains(response, 'Lo que el plan recuerda')
+        self.assertContains(response, 'Ajuste activo de esta semana')
 
     def test_template_renders_with_empty_data(self):
         response = self._get()
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'No hay preferencias activas')
-        self.assertContains(response, 'No hay intervenciones activas')
+        self.assertContains(response, 'Lo que el plan recuerda')
+        self.assertContains(response, 'Ninguna todavía')
 
 
 # ── Case 10: URL resolution ───────────────────────────────────────────────────
