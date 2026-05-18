@@ -45,6 +45,9 @@ urlpatterns = [
     # API para alternativas cuando máquina ocupada
     path('api/cliente/<int:cliente_id>/alternativas-maquina/', views.api_alternativas_maquina, name='api_alternativas_maquina'),
 
+    # Phase 29 — Alternativas revisables por lesión (no sustitución automática)
+    path('api/cliente/<int:cliente_id>/alternativas-lesion/', views.api_alternativas_lesion, name='api_alternativas_lesion'),
+
     # API para reportar molestia intra-entreno
     path('api/cliente/<int:cliente_id>/reportar-molestia/', views.api_reportar_molestia, name='api_reportar_molestia'),
 
