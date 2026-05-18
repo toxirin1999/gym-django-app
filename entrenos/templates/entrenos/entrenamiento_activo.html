@@ -1158,8 +1158,30 @@ input{background:transparent!important;border:none!important;outline:none!import
     </div>
     <h2 class="cyber-ejercicio-nombre">{{ ejercicio.nombre|upper }}</h2>
 
-    {# Phase 10A — Progression brake notice #}
+    {# Phase 10A / 28.2 — Progression brake notice (contextual + lesión) #}
     {% if ejercicio.progresion_bloqueada and ejercicio.peso_kg_propuesto %}
+    {% if ejercicio.motivo_bloqueo == 'lesion_activa' %}
+    {# Phase 28.2 — Lesión activa (AGUDA/SUB_AGUDA): rojo #}
+    <div style="margin:6px 0 8px;padding:8px 12px;background:rgba(239,68,68,0.07);border-left:3px solid rgba(239,68,68,0.45);border-radius:0 8px 8px 0;">
+      <div style="font-size:9px;font-weight:700;color:rgba(239,68,68,0.85);letter-spacing:0.14em;text-transform:uppercase;margin-bottom:3px;">🛑 Carga mantenida · lesión activa</div>
+      <div style="font-size:11px;color:var(--td);opacity:0.78;line-height:1.45;">
+        El plan proponía <strong>{{ ejercicio.peso_kg_propuesto|floatformat:"-1" }} kg</strong> →
+        conserva <strong>{{ ejercicio.peso_kg|floatformat:"-1" }} kg</strong> hoy.
+        La zona afectada está en fase aguda. Reduce el rango de movimiento y detente ante cualquier dolor.
+      </div>
+    </div>
+    {% elif ejercicio.motivo_bloqueo == 'lesion_retorno' %}
+    {# Phase 28.2 — Lesión en retorno (RETORNO): ámbar #}
+    <div style="margin:6px 0 8px;padding:8px 12px;background:rgba(245,158,11,0.06);border-left:3px solid rgba(245,158,11,0.40);border-radius:0 8px 8px 0;">
+      <div style="font-size:9px;font-weight:700;color:rgba(245,158,11,0.85);letter-spacing:0.14em;text-transform:uppercase;margin-bottom:3px;">⚠️ Carga mantenida · fase de retorno</div>
+      <div style="font-size:11px;color:var(--td);opacity:0.78;line-height:1.45;">
+        El plan proponía <strong>{{ ejercicio.peso_kg_propuesto|floatformat:"-1" }} kg</strong> →
+        conserva <strong>{{ ejercicio.peso_kg|floatformat:"-1" }} kg</strong> hoy.
+        La articulación puede tolerar carga progresiva. Reduce el rango y detente si aparece dolor.
+      </div>
+    </div>
+    {% else %}
+    {# Phase 10A — Freno contextual: violeta #}
     <div style="margin:6px 0 8px;padding:8px 12px;background:rgba(180,140,255,0.07);border-left:3px solid rgba(180,140,255,0.4);border-radius:0 8px 8px 0;">
       <div style="font-size:9px;font-weight:700;color:rgba(180,140,255,0.8);letter-spacing:0.14em;text-transform:uppercase;margin-bottom:3px;">Carga mantenida</div>
       <div style="font-size:11px;color:var(--td);opacity:0.75;line-height:1.45;">
@@ -1174,6 +1196,7 @@ input{background:transparent!important;border:none!important;outline:none!import
         {% else %}El plan frena la subida esta semana.{% endif %}
       </div>
     </div>
+    {% endif %}
     {% endif %}
 
     <div class="exname-meta">
