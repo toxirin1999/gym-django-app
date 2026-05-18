@@ -1094,6 +1094,7 @@ function joiBannerCerrar(id) {
         <div class="rb-section-num" style="color:rgba(46,204,113,0.7);">PRF</div>
         <h3 class="rb-section-title">Preferencias del plan</h3>
         <div class="rb-section-line"></div>
+        <a href="{% url 'clientes:plan_decisiones' %}" style="flex-shrink:0;font-size:9px;color:rgba(46,204,113,0.55);text-decoration:none;font-weight:600;letter-spacing:0.06em;">Ver todo →</a>
       </div>
       {% for pref in preferencias_activas %}
       <div style="display:flex;align-items:flex-start;gap:10px;{% if not forloop.last %}margin-bottom:10px;{% endif %}">

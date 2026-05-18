@@ -4959,3 +4959,108 @@ def ignorar_continuidad_distribucion_view(request):
     )
     messages.info(request, "La recomendación descansará unos días.")
     return redirect('clientes:panel_cliente')
+
+
+# ── Phase 26 — Centro de decisiones del plan ─────────────────────────────────
+
+@login_required
+def plan_decisiones_view(request):
+    """
+    Phase 26 — 'Por qué el plan decide así' — auditabilidad completa.
+
+    Shows in one screen all the evidence the plan is currently using:
+    active preferences, active interventions, recent probes with evaluation,
+    multiweek pattern, recent load decisions, and essential-mode sessions.
+    """
+    from entrenos.models import (
+        IntervencionPlan, GymDecisionLog, EntrenoRealizado, PreferenciaPlanAprendida,
+    )
+
+    cliente = get_object_or_404(Cliente, user=request.user)
+    hoy = timezone.localdate()
+    hace_60 = hoy - timedelta(days=60)
+    hace_30 = hoy - timedelta(days=30)
+
+    # 1. Preferencias activas
+    preferencias_activas = list(
+        PreferenciaPlanAprendida.objects.filter(
+            cliente=cliente, estado=PreferenciaPlanAprendida.ESTADO_ACTIVA,
+        ).order_by('-ultima_confirmacion')
+    )
+
+    # 2. Intervenciones activas (carga + distribución)
+    intervenciones_activas = list(
+        IntervencionPlan.objects.filter(
+            cliente=cliente,
+            estado=IntervencionPlan.ESTADO_ACTIVA,
+            fecha_fin__gte=hoy,
+        ).order_by('-creada_en')
+    )
+
+    # 3. Pruebas de distribución recientes (últimas 5 — activas o expiradas)
+    _REDISTRIB = [
+        IntervencionPlan.TIPO_REDISTRIB_DIA,
+        IntervencionPlan.TIPO_REDISTRIB_DIAS,
+        IntervencionPlan.TIPO_REDISTRIB_PIERNA,
+        IntervencionPlan.TIPO_REDISTRIB_LIGERO,
+    ]
+    pruebas_raw = list(
+        IntervencionPlan.objects.filter(
+            cliente=cliente,
+            tipo__in=_REDISTRIB,
+            fecha_inicio__gte=hace_60,
+        ).order_by('-creada_en')[:5]
+    )
+    pruebas_recientes = []
+    for p in pruebas_raw:
+        evaluacion = None
+        try:
+            from entrenos.services.sugerencias_service import evaluar_prueba_distribucion
+            mock_fecha = p.fecha_fin + timedelta(days=1)
+            evaluacion = evaluar_prueba_distribucion(cliente, mock_fecha)
+        except Exception:
+            pass
+        pruebas_recientes.append({'intervencion': p, 'evaluacion': evaluacion})
+
+    # 4. Patrón multisemanal y análisis semanal
+    patron_multisemanal = None
+    analisis_semanal = None
+    try:
+        from entrenos.services.analisis_semanal_service import (
+            detectar_patron_multisemanal, analizar_semana_entrenamiento,
+        )
+        patron_multisemanal = detectar_patron_multisemanal(cliente)
+        analisis_semanal = analizar_semana_entrenamiento(cliente, hoy)
+    except Exception:
+        pass
+
+    # 5. Decisiones de carga recientes (GymDecisionLog — intervenciones activas)
+    _ACCIONES_ACTIVAS = {'cambiar_variante', 'bajar_peso', 'deload', 'mantener'}
+    decisiones_carga = list(
+        GymDecisionLog.objects.filter(
+            cliente=cliente,
+            accion__in=_ACCIONES_ACTIVAS,
+            fecha_creacion__date__gte=hace_30,
+        ).order_by('-fecha_creacion')[:10]
+    )
+
+    # 6. Sesiones en modo esencial recientes
+    sesiones_esenciales = list(
+        EntrenoRealizado.objects.filter(
+            cliente=cliente,
+            modo_reducido=True,
+            fecha__gte=hace_30,
+        ).order_by('-fecha')[:5]
+    )
+
+    return render(request, 'clientes/plan_decisiones.html', {
+        'cliente': cliente,
+        'hoy': hoy,
+        'preferencias_activas': preferencias_activas,
+        'intervenciones_activas': intervenciones_activas,
+        'pruebas_recientes': pruebas_recientes,
+        'patron_multisemanal': patron_multisemanal,
+        'analisis_semanal': analisis_semanal,
+        'decisiones_carga': decisiones_carga,
+        'sesiones_esenciales': sesiones_esenciales,
+    })
