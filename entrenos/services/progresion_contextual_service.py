@@ -43,6 +43,9 @@ _MENSAJES_PROGRESION = {
     'carga_alta_semanal':            'El plan detecta carga alta esta semana. No se sube peso.',
     'intervencion_no_subir_cargas':  'Intervención activa: decidiste no subir cargas esta semana.',
     'intervencion_reducir_accesorios': 'Intervención activa: decidiste reducir el volumen accesorio esta semana.',
+    # Phase 28.1 — per-exercise injury brake
+    'lesion_activa':  'Carga mantenida por lesión activa en esta zona.',
+    'lesion_retorno': 'Carga mantenida por fase de retorno. La articulación necesita progresión gradual.',
 }
 
 # GRUPOS_GRANDES proxy (avoids importing planificador config in tests)
@@ -220,4 +223,84 @@ def aplicar_freno_contextual(cliente, entrenamiento, permiso, modo_reducido=Fals
     entrenamiento = dict(entrenamiento)
     entrenamiento['ejercicios'] = ejercicios_modificados
     entrenamiento['permiso_progresion'] = permiso
+    return entrenamiento
+
+
+# ── Phase 28.1 — Per-exercise injury brake ────────────────────────────────────
+
+def _obtener_info_lesion(cliente):
+    """Returns [{tags, motivo, fase, zona}] for active injuries with restricted tags."""
+    try:
+        from hyrox.models import UserInjury
+        result = []
+        for lesion in UserInjury.objects.filter(cliente=cliente, activa=True).exclude(fase='RECUPERADO'):
+            tags = set(lesion.tags_restringidos or [])
+            if not tags:
+                continue
+            motivo = (
+                'lesion_activa' if lesion.fase in ('AGUDA', 'SUB_AGUDA')
+                else 'lesion_retorno'
+            )
+            result.append({'tags': tags, 'motivo': motivo, 'fase': lesion.fase, 'zona': lesion.zona_afectada})
+        return result
+    except Exception:
+        return []
+
+
+def aplicar_freno_lesion(cliente, entrenamiento):
+    """
+    Phase 28.1 — Per-exercise progression brake based on active injuries.
+
+    CONTRACT:
+    - Only acts on exercises whose risk_tags intersect with an injury's tags_restringidos.
+    - Does NOT change exercises already blocked by aplicar_freno_contextual.
+    - Does NOT substitute exercises. Does NOT change the session structure.
+    - AGUDA/SUB_AGUDA → motivo_bloqueo = 'lesion_activa'
+    - RETORNO         → motivo_bloqueo = 'lesion_retorno'
+    - Sets motivo_bloqueo_lesion=True for UI to distinguish from contextual brake.
+    - Preserves peso_kg_propuesto for audit.
+    - If no last logged weight found, keeps the proposed weight (no increase implied).
+    """
+    if not entrenamiento or not entrenamiento.get('ejercicios'):
+        return entrenamiento
+
+    info_lesiones = _obtener_info_lesion(cliente)
+    if not info_lesiones:
+        return entrenamiento
+
+    ejercicios_modificados = []
+    for ej in entrenamiento['ejercicios']:
+        ej_mod = dict(ej)
+
+        # Respect contextual brake — don't overwrite its decision
+        if ej_mod.get('progresion_bloqueada'):
+            ejercicios_modificados.append(ej_mod)
+            continue
+
+        ej_tags = set(ej_mod.get('risk_tags') or [])
+
+        matched = False
+        for info in info_lesiones:
+            if not (ej_tags & info['tags']):
+                continue
+            # Intersection found — freeze this exercise
+            peso_propuesto = ej_mod.get('peso_kg')
+            peso_actual = _obtener_peso_actual(cliente, ej_mod.get('nombre', ''))
+            ej_mod['peso_kg_propuesto'] = peso_propuesto
+            ej_mod['peso_kg'] = peso_actual if peso_actual is not None else peso_propuesto
+            ej_mod['progresion_bloqueada'] = True
+            ej_mod['motivo_bloqueo'] = info['motivo']
+            ej_mod['motivo_bloqueo_lesion'] = True
+            matched = True
+            break  # first matching injury is sufficient
+
+        if not matched:
+            ej_mod.setdefault('progresion_bloqueada', False)
+            ej_mod.setdefault('motivo_bloqueo', None)
+            ej_mod.setdefault('motivo_bloqueo_lesion', False)
+
+        ejercicios_modificados.append(ej_mod)
+
+    entrenamiento = dict(entrenamiento)
+    entrenamiento['ejercicios'] = ejercicios_modificados
     return entrenamiento
