@@ -3205,6 +3205,16 @@ def strava_reconciliacion(request):
         .order_by('-fecha')
     )
 
+    # ActividadRealizada de gym sin EntrenoRealizado vinculado (registradas vía
+    # "añadir actividad libre"). Útil cuando no hay EntrenoRealizado para hacer match.
+    from entrenos.models import ActividadRealizada as _AR
+    actividades_gym_sin_sync = list(
+        _AR.objects.filter(
+            cliente=cliente, tipo='gym', fecha__gte=hace_90,
+            entreno_gym__isnull=True,  # sin EntrenoRealizado vinculado
+        ).order_by('-fecha')
+    )
+
     items = []
     for act in pendientes:
         fecha_min = act.fecha_actividad - timedelta(days=1)
@@ -3255,10 +3265,11 @@ def strava_reconciliacion(request):
         })
 
     return render(request, 'hyrox/strava_reconciliacion.html', {
-        'items':        items,
-        'objetivo':     objetivo,
-        'tiene_token':  StravaToken.objects.filter(cliente=cliente).exists(),
-        'gym_sin_sync': gym_sin_sync,
+        'items':              items,
+        'objetivo':           objetivo,
+        'tiene_token':        StravaToken.objects.filter(cliente=cliente).exists(),
+        'gym_sin_sync':       gym_sin_sync,
+        'actividades_gym_sin_sync': actividades_gym_sin_sync,
     })
 
 
