@@ -618,6 +618,33 @@ function joiBannerCerrar(id) {
         {{ distribucion_aviso.texto }}
       </div>
       {% endif %}
+
+      {# Phase 25 — Preferencia activa como referencia secundaria #}
+      {% if preferencia_aplicada and estado_entreno != 'recuperar' %}
+      <div style="margin-top:8px;padding:8px 11px;background:rgba(20,184,166,0.06);border-left:2px solid rgba(20,184,166,0.35);border-radius:0 8px 8px 0;">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+          <span style="font-family:var(--font-mono);font-size:8px;font-weight:700;color:rgba(20,184,166,0.7);letter-spacing:0.12em;text-transform:uppercase;">PRF</span>
+          <span style="font-size:10px;color:rgba(20,184,166,0.65);font-weight:600;">Preferencia del plan</span>
+        </div>
+        <div style="font-size:11px;color:var(--td);opacity:0.82;line-height:1.45;">
+          {{ preferencia_aplicada.mensaje }}
+        </div>
+        {% if preferencia_aplicada.accion_sugerida == 'posponer_recomendado' %}
+        <div style="margin-top:5px;font-size:9px;color:rgba(20,184,166,0.55);font-style:italic;">
+          El plan lo toma como referencia. Puedes entrenar o posponer igualmente.
+        </div>
+        {% elif preferencia_aplicada.accion_sugerida == 'accesorios_opcionales' %}
+        <div style="margin-top:5px;font-size:9px;color:rgba(20,184,166,0.55);font-style:italic;">
+          Los accesorios de hoy son opcionales como referencia, no como regla.
+        </div>
+        {% elif preferencia_aplicada.accion_sugerida == 'version_esencial_sugerida' %}
+        <div style="margin-top:5px;font-size:9px;color:rgba(20,184,166,0.55);font-style:italic;">
+          Puedes hacer la versión esencial si tienes menos margen hoy.
+        </div>
+        {% endif %}
+      </div>
+      {% endif %}
+
       <div class="rb-workout-badge">Vol. {% widthratio bio_readiness.volume_modifier|default:1 1 100 %}% · {{ bio_readiness_label|default:"Óptimo" }}</div>
       {% if proximo_entrenamiento.ejercicios %}
       <div class="rb-ex-list">

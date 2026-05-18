@@ -1420,6 +1420,7 @@ def _get_dashboard_context_data(request, cliente):
         'modo_reducido': _decision_entreno.get('modo_reducido', False),
         'mensaje_entreno': _decision_entreno['mensaje'],
         'distribucion_aviso': _decision_entreno.get('distribucion_aviso'),
+        'preferencia_aplicada': _decision_entreno.get('preferencia_aplicada'),
         'bloque_esencial_resumen': bloque_esencial_resumen,
         'analisis_semanal': _ctx_analisis_semanal(cliente, hoy),
         'calendario_plan': _ctx_calendario_plan(cliente, hoy),
