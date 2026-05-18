@@ -500,6 +500,128 @@ def _aplicar_efecto_distribucion(cliente, decision, fecha_hoy):
     return decision
 
 
+# ── Phase 24 — Preference as secondary cause ─────────────────────────────────
+
+_CAUSA_SEGURIDAD = {'lesion', 'fatiga_alta'}
+
+_PREF_MENSAJES = {
+    'evitar_pierna_tras_futbol': (
+        'El plan recuerda que separar pierna del fútbol te dio más margen. Hoy lo usa como referencia.'
+    ),
+    'evitar_dia_frecuente': (
+        'El plan ha aprendido que este día suele dar menos margen. Lo tiene en cuenta como referencia.'
+    ),
+    'preferir_menos_dias': (
+        'Esta sesión es secundaria según la preferencia del plan. '
+        'Puedes priorizarla si tienes energía o posponerla sin perder el hilo.'
+    ),
+    'aligerar_dia_concreto': (
+        'El plan ha aprendido que este suele ser tu día de menor margen. '
+        'Los accesorios de hoy son opcionales como referencia, no como regla.'
+    ),
+}
+
+_PREF_ACCION = {
+    'evitar_pierna_tras_futbol': 'posponer_recomendado',
+    'evitar_dia_frecuente':      'posponer_recomendado',
+    'preferir_menos_dias':       'version_esencial_sugerida',
+    'aligerar_dia_concreto':     'accesorios_opcionales',
+}
+
+
+def _es_sesion_pierna(entrenamiento):
+    """Returns True if the session has leg exercises (by name or muscle group)."""
+    if not entrenamiento:
+        return False
+    _PIERNA_KW = ('pierna', 'quad', 'sentadilla', 'squat', 'prensa', 'isquio', 'glut', 'femoral', 'lunges', 'zancada')
+    for ej in entrenamiento.get('ejercicios', []):
+        nombre = ej.get('nombre', '').lower()
+        grupo  = ej.get('grupo_muscular', '').lower()
+        if any(kw in nombre or kw in grupo for kw in _PIERNA_KW):
+            return True
+    return False
+
+
+def _aplicar_preferencia_activa(cliente, decision, fecha_hoy):
+    """
+    Phase 24 — Adds 'preferencia_aplicada' to the decision when an active preference
+    matches the current session context.
+
+    CONTRACT:
+    - Does NOT change estado, causa_principal, or entrenamiento.
+    - Does NOT fire when causa_principal is in _CAUSA_SEGURIDAD (safety wins).
+    - Each preference fires independently of the dominant cause (secondary layer).
+    - Returns decision unchanged if no preference fires.
+    """
+    causa = decision.get('causa_principal')
+    if causa in _CAUSA_SEGURIDAD:
+        return decision
+
+    ctx = decision.get('contexto_fisico', {})
+    prefs_activas = ctx.get('preferencias_activas', [])
+    if not prefs_activas:
+        return decision
+
+    entrenamiento = decision.get('entrenamiento') or {}
+    aplicada = None
+
+    # evitar_pierna_tras_futbol: condition = leg session + recent football
+    if (
+        'evitar_pierna_tras_futbol' in prefs_activas
+        and ctx.get('futbol_reciente')
+        and _es_sesion_pierna(entrenamiento)
+    ):
+        aplicada = 'evitar_pierna_tras_futbol'
+
+    # evitar_dia_frecuente: condition = today's weekday matches origen_patron of the preference
+    if aplicada is None and 'evitar_dia_frecuente' in prefs_activas:
+        try:
+            from entrenos.models import PreferenciaPlanAprendida
+            pref = PreferenciaPlanAprendida.objects.filter(
+                cliente=cliente,
+                tipo=PreferenciaPlanAprendida.TIPO_EVITAR_DIA,
+                estado=PreferenciaPlanAprendida.ESTADO_ACTIVA,
+            ).first()
+            if pref and pref.metadata:
+                dia_evitar = (pref.metadata.get('dia_semana') or '').lower()
+                nombre_hoy = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'][fecha_hoy.weekday()]
+                if dia_evitar and dia_evitar in nombre_hoy:
+                    aplicada = 'evitar_dia_frecuente'
+        except Exception:
+            pass
+
+    # preferir_menos_dias: condition = session is normal priority (accessory)
+    if aplicada is None and 'preferir_menos_dias' in prefs_activas:
+        sp = decision.get('sesion_programada')
+        if sp and getattr(sp, 'prioridad', None) == SesionProgramada.PRIORIDAD_NORMAL:
+            aplicada = 'preferir_menos_dias'
+
+    # aligerar_dia_concreto: always applies when active (any session with exercises)
+    if aplicada is None and 'aligerar_dia_concreto' in prefs_activas:
+        if entrenamiento.get('ejercicios'):  # there's something to lighten
+            aplicada = 'aligerar_dia_concreto'
+
+    if aplicada:
+        from entrenos.models import PreferenciaPlanAprendida as _PP
+        desc = ''
+        try:
+            p = _PP.objects.filter(
+                cliente=cliente, tipo=aplicada, estado=_PP.ESTADO_ACTIVA
+            ).values_list('descripcion', flat=True).first()
+            desc = p or ''
+        except Exception:
+            pass
+
+        decision['preferencia_aplicada'] = {
+            'tipo':            aplicada,
+            'descripcion':     desc,
+            'mensaje':         _PREF_MENSAJES.get(aplicada, ''),
+            'accion_sugerida': _PREF_ACCION.get(aplicada, ''),
+        }
+
+    return decision
+
+
 def cerrar_sesion_programada(sesion_programada_id, entreno_realizado):
     """
     Closes a SesionProgramada when the user completes it.
@@ -652,7 +774,8 @@ def obtener_sesion_recomendada_hoy(cliente, fecha_hoy=None):
         }
         contexto = _obtener_contexto_fisico(cliente, fecha_hoy)
         decision = _aplicar_contexto(decision_base, contexto, fecha_hoy)
-        return _aplicar_efecto_distribucion(cliente, decision, fecha_hoy)
+        decision = _aplicar_efecto_distribucion(cliente, decision, fecha_hoy)
+        return _aplicar_preferencia_activa(cliente, decision, fecha_hoy)
 
     try:
         planificador = _build_planificador(cliente)
@@ -695,4 +818,5 @@ def obtener_sesion_recomendada_hoy(cliente, fecha_hoy=None):
     }
     contexto = _obtener_contexto_fisico(cliente, fecha_hoy)
     decision = _aplicar_contexto(decision_base, contexto, fecha_hoy)
-    return _aplicar_efecto_distribucion(cliente, decision, fecha_hoy)
+    decision = _aplicar_efecto_distribucion(cliente, decision, fecha_hoy)
+    return _aplicar_preferencia_activa(cliente, decision, fecha_hoy)
