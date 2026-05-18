@@ -914,6 +914,16 @@ def _prompt_apertura_manana(ctx: dict, datos_extra: dict) -> str:
     if distribucion:
         hechos.append(f"[Distribución semanal — estructura, no identidad]: {distribucion}")
 
+    # Phase 23 — Preferencias operativas del plan (soft, no identidad)
+    # Label is mandatory: prevents the model from converting operational memory into identity.
+    prefs_activas = ctx.get('preferencias_plan_activas', [])
+    if prefs_activas:
+        pref_txt = '; '.join(p['descripcion'] for p in prefs_activas[:2] if p.get('descripcion'))
+        if pref_txt:
+            hechos.append(
+                f"[Memoria operativa del plan — inclinaciones aprendidas, no rasgos del usuario]: {pref_txt}"
+            )
+
     datos = " ".join(hechos) if hechos else "No hay datos de entrenamiento recientes."
 
     activo_txt = (
