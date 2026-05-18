@@ -819,6 +819,14 @@ def _ctx_lesiones_activas(cliente):
         return []
 
 
+def _ctx_explicacion_decision(decision):
+    try:
+        from entrenos.services.explicacion_decision_service import construir_explicacion_decision
+        return construir_explicacion_decision(decision)
+    except Exception:
+        return None
+
+
 def _ctx_candidata_preferencia(cliente, fecha_ref):
     try:
         from entrenos.services.preferencias_service import detectar_candidata_preferencia
@@ -1422,6 +1430,7 @@ def _get_dashboard_context_data(request, cliente):
         'distribucion_aviso': _decision_entreno.get('distribucion_aviso'),
         'preferencia_aplicada': _decision_entreno.get('preferencia_aplicada'),
         'lesion_aviso': _decision_entreno.get('lesion_aviso'),
+        'explicacion_decision': _ctx_explicacion_decision(_decision_entreno),
         'bloque_esencial_resumen': bloque_esencial_resumen,
         'analisis_semanal': _ctx_analisis_semanal(cliente, hoy),
         'calendario_plan': _ctx_calendario_plan(cliente, hoy),
