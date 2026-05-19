@@ -207,7 +207,11 @@ LOGIN_REDIRECT_URL = '/'
 LOGIN_REDIRECT_URL = '/redirigir/'  # Ruta intermedia para decidir a dónde ir
 
 LOGIN_URL = '/login/'
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+# CompressedManifest requiere collectstatic y mucho espacio en disco.
+# En producción con cuota limitada, usar StaticFilesStorage + mapeo en PythonAnywhere.
+# Descomenta CompressedManifest cuando tengas suficiente cuota o cambies de hosting.
+STATICFILES_STORAGE = 'whitenoise.storage.StaticFilesStorage'
+# STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 ANALYTICS_CONFIG = {
     'CACHE_TIMEOUT': 3600,  # 1 hora
