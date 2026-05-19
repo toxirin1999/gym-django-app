@@ -362,6 +362,32 @@
   </div>
   {% endif %}
 
+  {# Phase 45 — Lectura JOI semanal completa en el Centro (no se duplica con panel) #}
+  {% if lectura_semanal_joi and lectura_semanal_joi.texto %}
+  <div class="dc-section" style="margin-top:12px;">
+    <div class="dc-section-head">
+      <div class="dc-section-dot obs" style="background:rgba(139,92,246,0.5);"></div>
+      <div class="dc-section-title" style="color:rgba(139,92,246,0.75);">Lectura de la semana</div>
+      <div class="dc-line"></div>
+    </div>
+    <div class="dc-card obs" style="border-left:2px solid rgba(139,92,246,0.25);font-style:italic;">
+      <div style="font-size:12px;color:var(--ink);line-height:1.6;">
+        {{ lectura_semanal_joi.texto }}
+      </div>
+      {% if lectura_semanal_joi.estado %}
+      <div style="margin-top:6px;font-size:9px;color:var(--ink-3);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:0.08em;">
+        Presencia:
+        {% if lectura_semanal_joi.estado == 'serena' %}calma y continuidad
+        {% elif lectura_semanal_joi.estado == 'observadora' %}observando sin concluir
+        {% elif lectura_semanal_joi.estado == 'acompañante' %}presente, sin urgencia
+        {% else %}lectura mínima
+        {% endif %}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
   {# Phase 33 — Historial reciente de decisiones (humanizado) #}
   {% if traces_recientes %}
   <div class="dc-section" style="margin-top:12px;">

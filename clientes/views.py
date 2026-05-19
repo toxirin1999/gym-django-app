@@ -819,6 +819,14 @@ def _ctx_lesiones_activas(cliente):
         return []
 
 
+def _ctx_joi_semanal(cliente):
+    try:
+        from joi.lectura_joi_presencia import get_lectura_joi_para_mostrar
+        return get_lectura_joi_para_mostrar(cliente)
+    except Exception:
+        return None
+
+
 def _ctx_explicacion_decision(decision):
     try:
         from entrenos.services.explicacion_decision_service import construir_explicacion_decision
@@ -1448,6 +1456,8 @@ def _get_dashboard_context_data(request, cliente):
         'restricciones_bio': restricciones_bio,
         'hoy': timezone.now().date(),
         'lesiones_activas': _ctx_lesiones_activas(cliente),
+        # Phase 45 — JOI semanal: frase breve si hay señal y no se mostró hoy
+        'joi_semanal': _ctx_joi_semanal(cliente),
     }
 
 
@@ -5155,6 +5165,23 @@ def plan_decisiones_view(request):
     except Exception:
         pass
 
+    # Phase 45 — Lectura JOI semanal completa para el Centro
+    lectura_semanal_joi = None
+    try:
+        from entrenos.services.lectura_semanal_service import construir_lectura_semanal_memoria
+        from joi.validador_salida import validar_salida_presencia_joi
+        _lect = construir_lectura_semanal_memoria(cliente)
+        if _lect.get('hay_datos') and _lect.get('texto_joi'):
+            _estado = _lect.get('estado_joi', {}).get('estado', 'minima')
+            _val = validar_salida_presencia_joi(_lect['texto_joi'], _estado)
+            if _val['texto_seguro']:
+                lectura_semanal_joi = {
+                    'texto':  _val['texto_seguro'],
+                    'estado': _estado,
+                }
+    except Exception:
+        pass
+
     # Phase 36 + 38 — Hipótesis abiertas con gobernanza de ciclo de vida
     hipotesis_abiertas = []
     try:
@@ -5187,7 +5214,8 @@ def plan_decisiones_view(request):
         'analisis_semanal': analisis_semanal,
         'decisiones_carga': decisiones_carga,
         'sesiones_esenciales': sesiones_esenciales,
-        'traces_recientes': traces_recientes,
-        'hipotesis_abiertas':   hipotesis_abiertas,
+        'traces_recientes':    traces_recientes,
+        'hipotesis_abiertas':  hipotesis_abiertas,
         'sugerencia_hipotesis': sugerencia_hipotesis,
+        'lectura_semanal_joi': lectura_semanal_joi,
     })
