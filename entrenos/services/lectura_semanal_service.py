@@ -110,49 +110,81 @@ def _vacio():
 
 
 def _construir_texto(n, balance, positivas, no_captadas, n_hip, n_pref) -> str:
-    """Builds a tentative, JOI-ready weekly summary. No verdicts."""
-    lineas = []
+    """
+    Builds a JOI-voice weekly summary. Not a report — a reading.
 
-    # Decisiones
-    lineas.append(f"Esta semana el plan registró {n} decisión{'es' if n > 1 else ''}.")
+    Rule: lead with the most significant signal, connect naturally,
+    don't enumerate everything mechanically. End with open threads.
+    """
+    if n == 0:
+        return ''
 
-    # Balance de estados (solo los relevantes)
-    if balance.get('recuperar', 0) > 0 or balance.get('posponer', 0) > 0:
-        partes = []
-        if balance.get('recuperar', 0):
-            partes.append(f"{balance['recuperar']} recuperación{'es' if balance['recuperar'] > 1 else ''}")
-        if balance.get('posponer', 0):
-            partes.append(f"{balance['posponer']} pospuesta{'s' if balance['posponer'] > 1 else ''}")
-        lineas.append(f"De ellas: {', '.join(partes)}.")
+    partes = []
 
-    # Señales positivas
-    if positivas > 0:
-        lineas.append(
-            f"En {positivas} decisión{'es' if positivas > 1 else ''} aparecieron "
-            f"señales de margen liberado."
+    # ── Señal dominante de la semana ──────────────────────────────────────────
+    pausas = balance.get('recuperar', 0) + balance.get('posponer', 0)
+
+    if positivas > 0 and no_captadas == 0:
+        # Good week: margin appeared
+        if positivas >= 2:
+            partes.append(
+                f"Esta semana el margen apareció en {positivas} de las {n} decisiones. "
+                f"Una señal de continuidad."
+            )
+        else:
+            partes.append(
+                f"Esta semana hubo margen suficiente en la decisión que importaba."
+            )
+
+    elif no_captadas > 0 and positivas == 0:
+        # Signal not captured, nothing positive
+        if no_captadas >= 2:
+            partes.append(
+                f"Esta semana aparecieron {no_captadas} señales que quizá el sistema "
+                f"no captó bien antes de decidir."
+            )
+        else:
+            partes.append(
+                f"Esta semana apareció una señal que quizá el sistema no captó del todo."
+            )
+
+    elif positivas > 0 and no_captadas > 0:
+        # Mixed week
+        partes.append(
+            f"Esta semana el plan dejó señales mixtas: "
+            f"hubo margen en {positivas} {'decisión' if positivas == 1 else 'decisiones'}, "
+            f"pero también apareció una señal que quizá merece observarse mejor."
         )
 
-    # Señales no captadas
-    if no_captadas > 0:
-        lineas.append(
-            f"En {no_captadas} decisión{'es' if no_captadas > 1 else ''} apareció "
-            f"una señal que quizá no se captó antes. "
-            f"{'El sistema ya lo tiene anotado.' if no_captadas >= 2 else ''}"
+    else:
+        # Neutral: just count
+        if pausas > 0:
+            partes.append(
+                f"Esta semana el plan priorizó {'el descanso o la pausa' if pausas == n else 'pausar en algún momento'}. "
+                f"Sin señal clara en ningún sentido."
+            )
+        else:
+            partes.append(
+                f"Esta semana el plan tomó {n} decisión{'es' if n > 1 else ''} sin señales llamativas."
+            )
+
+    # ── Hilo abierto: hipótesis ────────────────────────────────────────────────
+    if n_hip >= 1:
+        if n_hip == 1:
+            partes.append(
+                "Sigue abierta una hipótesis que el sistema está observando, "
+                "pendiente de que decidas si vale la pena convertirla en experimento."
+            )
+        else:
+            partes.append(
+                f"Hay {n_hip} hipótesis abiertas que el sistema mantiene anotadas."
+            )
+
+    # ── Preferencias como contexto de fondo ───────────────────────────────────
+    if n_pref > 0 and len(partes) < 2:  # solo si la lectura es corta
+        partes.append(
+            f"El plan sigue usando {'una preferencia aprendida' if n_pref == 1 else f'{n_pref} preferencias'} "
+            f"como referencia de fondo."
         )
 
-    # Hipótesis abiertas
-    if n_hip > 0:
-        lineas.append(
-            f"{'Hay' if n_hip == 1 else 'Siguen abiertas'} {n_hip} "
-            f"hipótesis{'s' if n_hip > 1 else ''} acumulada{'s' if n_hip > 1 else ''} "
-            f"pendiente{'s' if n_hip > 1 else ''} de valorar."
-        )
-
-    # Preferencias activas
-    if n_pref > 0:
-        lineas.append(
-            f"El plan mantiene {n_pref} preferencia{'s' if n_pref > 1 else ''} "
-            f"aprendida{'s' if n_pref > 1 else ''} como referencia."
-        )
-
-    return ' '.join(lineas)
+    return ' '.join(partes)
