@@ -103,6 +103,7 @@ urlpatterns = [
     # Acciones sobre SesionProgramada (Phase 1.3)
     path('sesion/<int:sesion_id>/saltar/', views.saltar_sesion_view, name='saltar_sesion'),
     path('sesion/<int:sesion_id>/posponer/', views.posponer_sesion_view, name='posponer_sesion'),
+    path('sesion/hoy/posponer/', views.posponer_sesion_hoy_view, name='posponer_sesion_hoy'),
 
     # Acciones sobre SugerenciaPlan (Phase 10B)
     path('sugerencia/<int:sugerencia_id>/aceptar/', views.aceptar_sugerencia_view, name='aceptar_sugerencia'),
