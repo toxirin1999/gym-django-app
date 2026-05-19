@@ -18,6 +18,86 @@ from datetime import timedelta
 logger = logging.getLogger(__name__)
 
 
+def calcular_estado_joi_semanal(lectura: dict) -> dict:
+    """
+    Phase 42 — Determines JOI's narrative state based on weekly memory reading.
+
+    JOI must not speak more because it knows more; it should adjust its
+    presence to the quality of the signal.
+
+    States:
+        serena      — clean week, margin appeared, no open threads
+        observadora — open hypothesis or repeated missed signal
+        acompañante — recovery/pause-heavy week, injury context
+        minima      — insufficient data, too few decisions to read
+
+    Returns:
+        estado:       str
+        debe_hablar:  bool  — False means JOI stays silent or uses one line
+        nota_tono:    str   — instruction for JOI prompt (tentative)
+        intensidad:   str   — 'alta' | 'media' | 'baja'
+    """
+    if not lectura.get('hay_datos') or lectura.get('n_decisiones', 0) < 2:
+        return {
+            'estado':      'minima',
+            'debe_hablar': False,
+            'nota_tono':   'Sin suficientes datos esta semana. Si JOI habla, que sea una sola frase tranquila.',
+            'intensidad':  'baja',
+        }
+
+    n          = lectura['n_decisiones']
+    positivas  = lectura['senales_positivas']
+    no_captadas = lectura['senales_no_captadas']
+    n_hip       = lectura['n_hipotesis_abiertas']
+    balance     = lectura['balance_estados']
+    pausas      = balance.get('recuperar', 0) + balance.get('posponer', 0)
+
+    # Acompañante: semana pesada (más de la mitad con pausa/recuperación)
+    if pausas > 0 and pausas >= n / 2:
+        return {
+            'estado':      'acompañante',
+            'debe_hablar': True,
+            'nota_tono':   (
+                'Semana con mucha pausa o recuperación. JOI acompaña sin dramatizar. '
+                'Tono tranquilo, presente, sin urgencia. No enumera señales; solo nombra que ve la semana.'
+            ),
+            'intensidad':  'media',
+        }
+
+    # Observadora: hipótesis abierta o señal repetida
+    if n_hip > 0 or no_captadas >= 2:
+        return {
+            'estado':      'observadora',
+            'debe_hablar': True,
+            'nota_tono':   (
+                'El sistema tiene algo que no ha captado bien todavía. JOI lo nombra con calma, '
+                'como quien señala algo sin concluir nada. Tono observador, no alarmante.'
+            ),
+            'intensidad':  'media',
+        }
+
+    # Serena: margen apareció, sin hilos abiertos
+    if positivas > 0 and no_captadas == 0 and n_hip == 0:
+        intensidad = 'alta' if positivas >= 2 else 'media'
+        return {
+            'estado':      'serena',
+            'debe_hablar': True,
+            'nota_tono':   (
+                'Semana con margen. JOI puede hablar desde la calma y la continuidad. '
+                'Breve. Sin celebración forzada. Solo nombra que la semana tuvo espacio.'
+            ),
+            'intensidad':  intensidad,
+        }
+
+    # Default: semana neutral, habla mínimo
+    return {
+        'estado':      'minima',
+        'debe_hablar': n >= 3,  # only if there's enough data
+        'nota_tono':   'Semana sin señal dominante. Si JOI habla, que sea una observación simple.',
+        'intensidad':  'baja',
+    }
+
+
 def construir_lectura_semanal_memoria(cliente, fecha_ref=None) -> dict:
     """
     Phase 40 — Builds a weekly memory reading for the client.
@@ -85,7 +165,7 @@ def construir_lectura_semanal_memoria(cliente, fecha_ref=None) -> dict:
             senales_no_captadas, n_hipotesis, n_pref,
         )
 
-        return {
+        lectura = {
             'n_decisiones':          n_decisiones,
             'balance_estados':       balance,
             'senales_positivas':     senales_positivas,
@@ -95,6 +175,8 @@ def construir_lectura_semanal_memoria(cliente, fecha_ref=None) -> dict:
             'texto_joi':             texto,
             'hay_datos':             True,
         }
+        lectura['estado_joi'] = calcular_estado_joi_semanal(lectura)
+        return lectura
 
     except Exception as e:
         logger.warning('construir_lectura_semanal_memoria falló: %s', e)
@@ -102,11 +184,13 @@ def construir_lectura_semanal_memoria(cliente, fecha_ref=None) -> dict:
 
 
 def _vacio():
-    return {
+    vacio = {
         'n_decisiones': 0, 'balance_estados': {}, 'senales_positivas': 0,
         'senales_no_captadas': 0, 'n_hipotesis_abiertas': 0,
         'n_preferencias_activas': 0, 'texto_joi': '', 'hay_datos': False,
     }
+    vacio['estado_joi'] = calcular_estado_joi_semanal(vacio)
+    return vacio
 
 
 def _construir_texto(n, balance, positivas, no_captadas, n_hip, n_pref) -> str:
