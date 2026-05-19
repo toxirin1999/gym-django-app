@@ -1545,3 +1545,45 @@ class GymDecisionTrace(models.Model):
             return f"Sesión normal el {self.fecha}."
         lineas = '. '.join(s.rstrip('.') for s in self.explicacion_senales[:3])
         return f"{lineas}."
+
+
+class GymDecisionTraceEvaluation(models.Model):
+    """
+    Phase 34 — Seguimiento posterior de decisiones.
+
+    Reviews observable signals after a decision to detect whether it seemed to
+    release margin, was neutral, or missed a prior signal.
+
+    CONTRACT:
+    - Does NOT evaluate whether the motor was right.
+    - Does NOT score the motor or punish the user.
+    - Does NOT claim strong causality.
+    - Language: "parece", "puede", "señal", "provisionalmente".
+    - Runs automatically 2+ days after the decision (auto-evaluated).
+    - One evaluation per trace (OneToOne).
+    """
+    LIBERO_MARGEN     = 'libero_margen'
+    NEUTRO            = 'neutral'
+    SENAL_NO_CAPTADA  = 'senal_no_captada'
+    INSUFICIENTE      = 'datos_insuficientes'
+
+    RESULTADOS = [
+        ('libero_margen',      'Pareció liberar margen'),
+        ('neutral',            'Sin señal clara posterior'),
+        ('senal_no_captada',   'Quizá faltó captar una señal previa'),
+        ('datos_insuficientes','Datos posteriores insuficientes'),
+    ]
+
+    trace               = models.OneToOneField(
+        GymDecisionTrace, on_delete=models.CASCADE, related_name='evaluacion',
+    )
+    resultado           = models.CharField(max_length=50, choices=RESULTADOS)
+    resumen             = models.TextField(blank=True)
+    senales_posteriores = models.JSONField(default=dict)
+    creado_en           = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-creado_en']
+
+    def __str__(self):
+        return f"{self.trace} → {self.resultado}"
