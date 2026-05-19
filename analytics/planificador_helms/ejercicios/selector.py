@@ -225,7 +225,7 @@ class SelectorEjercicios:
                 # ── PROTOCOLO DE PIVOTAJE (Hot-Pivot Engine) ──
                 # Si no hay NADA seguro en ninguna categoría de este grupo muscular (bloqueo total)
                 if not ej1 and not pool_principal_safe and not pool_secundario_safe and not pool_aislamiento_safe and pool_principal:
-                    logger.warning("BioContext: Bloqueo TOTAL en grupo '%s'. Iniciando Pivotaje Sistémico.", grupo)
+                    logger.debug("BioContext: Bloqueo TOTAL en grupo '%s'. Iniciando Pivotaje Sistémico.", grupo)
                     
                     pivot_ej = _pivotar_a_universal_safe(restricted_tags, grupo)
                     if pivot_ej:
