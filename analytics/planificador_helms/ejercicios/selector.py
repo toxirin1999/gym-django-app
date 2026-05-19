@@ -257,7 +257,7 @@ class SelectorEjercicios:
                             'injury_zone': injury_zona,
                             'pivot_group': grupo
                         }
-                        logger.info("BioContext: Pivotaje exitoso a '%s' (universal_safe)", extraer_nombre_ejercicio(ej1))
+                        logger.debug("BioContext: Pivotaje exitoso a '%s' (universal_safe)", extraer_nombre_ejercicio(ej1))
 
                 if ej1:
                     seleccion_grupo.append(ej1)
