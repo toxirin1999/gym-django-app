@@ -5155,11 +5155,13 @@ def plan_decisiones_view(request):
     except Exception:
         pass
 
-    # Phase 36 — Hipótesis abiertas desde senal_no_captada repetida
+    # Phase 36 + 38 — Hipótesis abiertas con gobernanza de ciclo de vida
     hipotesis_abiertas = []
     try:
         from entrenos.services.hipotesis_service import detectar_hipotesis_abiertas
-        hipotesis_abiertas = detectar_hipotesis_abiertas(cliente)
+        from entrenos.services.gobernanza_service import aplicar_gobernanza_hipotesis
+        hipotesis_raw = detectar_hipotesis_abiertas(cliente)
+        hipotesis_abiertas = aplicar_gobernanza_hipotesis(cliente, hipotesis_raw, hoy)
     except Exception:
         pass
 
