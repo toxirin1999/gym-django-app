@@ -632,6 +632,17 @@ def construir_contexto(cliente) -> dict:
     except Exception:
         pass
 
+    # ── 16. LECTURA SEMANAL DE MEMORIA (Phase 40) ─────────────────────────────
+    try:
+        from entrenos.services.lectura_semanal_service import construir_lectura_semanal_memoria
+        lectura = construir_lectura_semanal_memoria(cliente)
+        if lectura.get('hay_datos') and lectura.get('texto_joi'):
+            ctx['lectura_semanal_memoria'] = lectura['texto_joi']
+            ctx['lectura_semanal_senales_no_captadas'] = lectura['senales_no_captadas']
+            ctx['lectura_semanal_hipotesis'] = lectura['n_hipotesis_abiertas']
+    except Exception:
+        pass
+
     return ctx
 
 
@@ -923,6 +934,11 @@ def _prompt_apertura_manana(ctx: dict, datos_extra: dict) -> str:
             hechos.append(
                 f"[Memoria operativa del plan — inclinaciones aprendidas, no rasgos del usuario]: {pref_txt}"
             )
+
+    # Phase 40 — Lectura semanal de memoria (señales no captadas + hipótesis)
+    lectura_memoria = ctx.get('lectura_semanal_memoria')
+    if lectura_memoria:
+        hechos.append(f"[Lectura semanal de memoria — qué decidió el plan, qué señales apareció, tentativo]: {lectura_memoria}")
 
     datos = " ".join(hechos) if hechos else "No hay datos de entrenamiento recientes."
 
