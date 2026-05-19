@@ -1,13 +1,19 @@
 import os
 import json
 import re
-import google.generativeai as genai
 from django.conf import settings
 
-# Intentamos obtener la API key del settings, o del entorno
+# Gemini opcional — puede no estar instalado en producción con cuota limitada
+try:
+    import google.generativeai as genai
+    GEMINI_AVAILABLE = True
+except ImportError:
+    genai = None
+    GEMINI_AVAILABLE = False
+
 GEMINI_API_KEY = getattr(settings, 'GEMINI_API_KEY', os.environ.get('GEMINI_API_KEY'))
 
-if GEMINI_API_KEY:
+if GEMINI_AVAILABLE and GEMINI_API_KEY:
     genai.configure(api_key=GEMINI_API_KEY)
 
 def calcular_rm_estimado(peso: float, reps: int) -> float:
