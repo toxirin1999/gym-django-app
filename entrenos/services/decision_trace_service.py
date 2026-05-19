@@ -41,6 +41,21 @@ _SUPRESION_RAZON = {
     ),
 }
 
+# Phase 35 — human-readable labels for evaluation results
+# NOT verdicts. Secondary signals, provisional readings.
+_EVAL_LABELS = {
+    'libero_margen':    'Después: pareció liberar margen',
+    'neutral':          'Después: sin señal clara posterior',
+    'senal_no_captada': 'Hipótesis abierta: quizá faltó una señal previa',
+    # datos_insuficientes → NOT shown (no useful signal to display)
+}
+
+_EVAL_INTRO = {
+    'libero_margen':    'Señal posterior: ',
+    'neutral':          'Señal posterior: ',
+    'senal_no_captada': 'Hipótesis abierta: ',
+}
+
 
 def humanizar_trace(trace) -> dict | None:
     """
@@ -84,15 +99,28 @@ def humanizar_trace(trace) -> dict | None:
         fase = fase_map.get(ctx['fase'], ctx['fase'].lower())
         lesion_label = f"{ctx['zona']} en {fase}"
 
+    # Phase 35 — include evaluation if it exists and is informative
+    evaluacion_label = None
+    evaluacion_resumen = None
+    try:
+        ev = trace.evaluacion  # OneToOne — raises if absent
+        if ev.resultado in _EVAL_LABELS:  # skip datos_insuficientes
+            evaluacion_label   = _EVAL_LABELS[ev.resultado]
+            evaluacion_resumen = ev.resumen
+    except Exception:
+        pass
+
     return {
-        'fecha':           trace.fecha,
-        'fecha_label':     fecha_label,
-        'decision_label':  decision_label,
-        'explicacion':     explicacion,
-        'capas_usadas':    capas_usadas,
-        'supresion_razon': supresion_razon,
-        'lesion_label':    lesion_label,
-        'tiene_detalles':  bool(capas_usadas or supresion_razon or lesion_label),
+        'fecha':              trace.fecha,
+        'fecha_label':        fecha_label,
+        'decision_label':     decision_label,
+        'explicacion':        explicacion,
+        'capas_usadas':       capas_usadas,
+        'supresion_razon':    supresion_razon,
+        'lesion_label':       lesion_label,
+        'tiene_detalles':     bool(capas_usadas or supresion_razon or lesion_label),
+        'evaluacion_label':   evaluacion_label,
+        'evaluacion_resumen': evaluacion_resumen,
     }
 
 
