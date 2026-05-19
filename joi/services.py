@@ -632,7 +632,7 @@ def construir_contexto(cliente) -> dict:
     except Exception:
         pass
 
-    # ── 16. LECTURA SEMANAL DE MEMORIA (Phase 40) ─────────────────────────────
+    # ── 16. LECTURA SEMANAL DE MEMORIA + ESTADO JOI (Phase 40/42) ────────────
     try:
         from entrenos.services.lectura_semanal_service import construir_lectura_semanal_memoria
         lectura = construir_lectura_semanal_memoria(cliente)
@@ -640,6 +640,11 @@ def construir_contexto(cliente) -> dict:
             ctx['lectura_semanal_memoria'] = lectura['texto_joi']
             ctx['lectura_semanal_senales_no_captadas'] = lectura['senales_no_captadas']
             ctx['lectura_semanal_hipotesis'] = lectura['n_hipotesis_abiertas']
+        estado_joi = lectura.get('estado_joi', {})
+        if estado_joi:
+            ctx['estado_joi_semanal'] = estado_joi.get('estado', 'minima')
+            ctx['joi_debe_hablar_semanal'] = estado_joi.get('debe_hablar', False)
+            ctx['joi_nota_tono_semanal'] = estado_joi.get('nota_tono', '')
     except Exception:
         pass
 
@@ -935,12 +940,31 @@ def _prompt_apertura_manana(ctx: dict, datos_extra: dict) -> str:
                 f"[Memoria operativa del plan — inclinaciones aprendidas, no rasgos del usuario]: {pref_txt}"
             )
 
-    # Phase 40 — Lectura semanal de memoria (señales no captadas + hipótesis)
+    # Phase 40 — Lectura semanal de memoria
     lectura_memoria = ctx.get('lectura_semanal_memoria')
     if lectura_memoria:
         hechos.append(f"[Lectura semanal de memoria — qué decidió el plan, qué señales apareció, tentativo]: {lectura_memoria}")
 
     datos = " ".join(hechos) if hechos else "No hay datos de entrenamiento recientes."
+
+    # Phase 42 — Nota de tono JOI semanal (instrucción de presencia)
+    nota_tono = ctx.get('joi_nota_tono_semanal', '')
+    debe_hablar = ctx.get('joi_debe_hablar_semanal', True)
+    estado_joi = ctx.get('estado_joi_semanal', 'minima')
+
+    if not debe_hablar:
+        nota_presencia = (
+            "JOI tiene muy pocos datos esta semana. Si genera algo, que sea una sola frase tranquila "
+            "sin intentar leer lo que no está. El silencio también es una respuesta válida."
+        )
+    elif estado_joi == 'acompañante':
+        nota_presencia = nota_tono or "Tono tranquilo, presente, sin urgencia."
+    elif estado_joi == 'observadora':
+        nota_presencia = nota_tono or "Tono observador, no alarmante. Señala sin concluir."
+    elif estado_joi == 'serena':
+        nota_presencia = nota_tono or "Semana con espacio. JOI puede hablar desde la calma."
+    else:
+        nota_presencia = ""
 
     activo_txt = (
         "IMPORTANTE: el usuario está ACTIVO esta semana. "
@@ -966,11 +990,14 @@ def _prompt_apertura_manana(ctx: dict, datos_extra: dict) -> str:
             f"Si algo de lo que escribió tiene conexión con el estado físico de hoy, nómbralo."
         )
 
+    tono_txt = f"\n\nNOTA DE PRESENCIA SEMANAL: {nota_presencia}" if nota_presencia else ""
+
     return (
         f"Es por la mañana. JOI tiene acceso a todo el historial del usuario. "
         f"Estado del sistema hoy: {datos} "
         f"{activo_txt}"
-        f"{cierre_txt}\n\n"
+        f"{cierre_txt}"
+        f"{tono_txt}\n\n"
         f"Elige el dato más significativo — físico o del cierre de ayer — y genera 2-3 frases como JOI. "
         f"No enumeres la lista. Habla desde un punto de observación preciso, con presencia y calidez."
     )
