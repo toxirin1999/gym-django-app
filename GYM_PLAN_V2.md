@@ -339,3 +339,36 @@ entrenos/tests_hipotesis_sugerencia.py   16  Propuesta experimental: ciclo compl
 entrenos/tests_gobernanza.py             13  Gobernanza: silencio, max, cooldowns
 entrenos/tests_auditoria_narrativa.py    26  Auditoría: sin absolutos, sin culpa, sin identidad
 ```
+
+---
+
+## Auditoría de integración global (Phase 46)
+
+> El sistema ya tiene muchas capas. Ahora debe demostrar que juntas no pesan más que la decisión que ayudan a tomar.
+
+### Tests automáticos — `entrenos/tests_integracion_global.py` (15 tests)
+
+| Contrato | Verificado |
+|---|---|
+| `vigilar_senal` nunca afecta cargas | ✓ |
+| JOI silencio si texto vacío | ✓ |
+| Panel ≤3 señales en día complejo | ✓ |
+| Distribución suprimida por PRF mismo patrón | ✓ |
+| `¿Por qué hoy?` no renderiza en día limpio | ✓ |
+| Centro sin historial si no hay traces | ✓ |
+| `datos_insuficientes` no aparece en Centro | ✓ |
+| Hipótesis stale (>30 días) silenciada | ✓ |
+| Sin lenguaje prohibido en motor | ✓ |
+| Fallo en capas no rompe panel ni Centro | ✓ |
+
+### Checklist visual (manual — aplicar con el sistema real)
+
+```
+¿Entiendo qué toca hoy en 5 segundos?
+¿Entiendo por qué sin abrir 3 secciones?
+¿JOI suma o distrae?
+¿El Centro ordena o abruma?
+¿Hay alguna frase que suene demasiado segura?
+¿Hay algo repetido en panel + Centro?
+¿Hay tarjetas vacías?
+```
