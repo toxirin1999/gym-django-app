@@ -421,6 +421,30 @@
       Cuando la misma señal no captada aparece varias veces, el sistema la anota
       como hipótesis abierta — no como corrección automática.
     </div>
+    {# Phase 37 — Sugerencia experimental activa (solo una) #}
+    {% if sugerencia_hipotesis %}
+    <div class="dc-card" style="border-left:2px solid rgba(245,158,11,0.50);background:rgba(245,158,11,0.05);margin-bottom:10px;">
+      <div style="font-family:var(--font-mono);font-size:8px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:rgba(245,158,11,0.80);margin-bottom:6px;">
+        Propuesta de experimento
+      </div>
+      <div style="font-size:12px;color:var(--ink);line-height:1.6;margin-bottom:10px;white-space:pre-line;">{{ sugerencia_hipotesis.texto }}</div>
+      <div style="display:flex;gap:8px;">
+        <form method="post" action="{% url 'clientes:aceptar_hipotesis' sugerencia_hipotesis.id %}" style="flex:1;">
+          {% csrf_token %}
+          <button type="submit" style="width:100%;padding:8px;border-radius:9px;background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.40);color:rgba(245,158,11,0.90);font-size:11px;font-weight:600;cursor:pointer;">
+            Probar 2 semanas
+          </button>
+        </form>
+        <form method="post" action="{% url 'clientes:ignorar_hipotesis' sugerencia_hipotesis.id %}" style="flex:1;">
+          {% csrf_token %}
+          <button type="submit" style="width:100%;padding:8px;border-radius:9px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.10);color:var(--ink-3);font-size:11px;cursor:pointer;opacity:0.60;">
+            No por ahora
+          </button>
+        </form>
+      </div>
+    </div>
+    {% endif %}
+
     {% for h in hipotesis_abiertas %}
     <div class="dc-card obs" style="border-left:2px solid rgba(245,158,11,0.25);margin-bottom:8px;">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">

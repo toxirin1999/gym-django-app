@@ -662,7 +662,8 @@ def get_intervencion_activa(cliente, fecha_ref=None):
             fecha_inicio__lte=fecha_ref,
             fecha_fin__gte=fecha_ref,
         )
-        .exclude(tipo=IntervencionPlan.TIPO_MANTENER)  # mantener_estructura = no freno effect
+        .exclude(tipo=IntervencionPlan.TIPO_MANTENER)   # mantener_estructura = no freno effect
+        .exclude(tipo=IntervencionPlan.TIPO_VIGILAR_SENAL)  # vigilar_senal = observation only, no load change
         .order_by('-creada_en')
         .first()
     )

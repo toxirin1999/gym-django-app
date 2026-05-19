@@ -5025,6 +5025,39 @@ def ignorar_continuidad_distribucion_view(request):
 # ── Phase 26 — Centro de decisiones del plan ─────────────────────────────────
 
 @login_required
+@require_POST
+def aceptar_hipotesis_view(request, sugerencia_id):
+    """Phase 37 — User accepts hypothesis experiment ('Probar 2 semanas')."""
+    from entrenos.models import SugerenciaPlan
+    from entrenos.services.hipotesis_service import aceptar_sugerencia_hipotesis
+    cliente = get_object_or_404(Cliente, user=request.user)
+    sugerencia = get_object_or_404(
+        SugerenciaPlan, id=sugerencia_id, cliente=cliente,
+        estado=SugerenciaPlan.ESTADO_PENDIENTE,
+    )
+    aceptar_sugerencia_hipotesis(sugerencia, fecha_ref=timezone.localdate())
+    messages.success(request, "Experimento activo. El plan observará esta señal durante 2 semanas.")
+    return redirect('clientes:plan_decisiones')
+
+
+@login_required
+@require_POST
+def ignorar_hipotesis_view(request, sugerencia_id):
+    """Phase 37 — User dismisses hypothesis suggestion ('No por ahora')."""
+    from entrenos.models import SugerenciaPlan
+    cliente = get_object_or_404(Cliente, user=request.user)
+    sugerencia = get_object_or_404(
+        SugerenciaPlan, id=sugerencia_id, cliente=cliente,
+        estado=SugerenciaPlan.ESTADO_PENDIENTE,
+    )
+    sugerencia.estado = SugerenciaPlan.ESTADO_IGNORADA
+    sugerencia.cooldown_hasta = timezone.localdate() + timedelta(days=7)
+    sugerencia.save(update_fields=['estado', 'cooldown_hasta'])
+    messages.info(request, "La sugerencia descansará 7 días.")
+    return redirect('clientes:plan_decisiones')
+
+
+@login_required
 def plan_decisiones_view(request):
     """
     Phase 26 — 'Por qué el plan decide así' — auditabilidad completa.
@@ -5130,6 +5163,18 @@ def plan_decisiones_view(request):
     except Exception:
         pass
 
+    # Phase 37 — Sugerencia experimental activa (solo una a la vez)
+    sugerencia_hipotesis = None
+    try:
+        from entrenos.services.hipotesis_service import (
+            get_sugerencia_hipotesis_activa, generar_sugerencia_hipotesis,
+        )
+        sugerencia_hipotesis = get_sugerencia_hipotesis_activa(cliente)
+        if not sugerencia_hipotesis and hipotesis_abiertas:
+            sugerencia_hipotesis = generar_sugerencia_hipotesis(cliente, hoy)
+    except Exception:
+        pass
+
     return render(request, 'clientes/plan_decisiones.html', {
         'cliente': cliente,
         'hoy': hoy,
@@ -5141,5 +5186,6 @@ def plan_decisiones_view(request):
         'decisiones_carga': decisiones_carga,
         'sesiones_esenciales': sesiones_esenciales,
         'traces_recientes': traces_recientes,
-        'hipotesis_abiertas': hipotesis_abiertas,
+        'hipotesis_abiertas':   hipotesis_abiertas,
+        'sugerencia_hipotesis': sugerencia_hipotesis,
     })
