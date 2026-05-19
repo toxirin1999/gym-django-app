@@ -1400,6 +1400,9 @@ class IntervencionPlan(models.Model):
     TIPO_REDISTRIB_PIERNA  = 'redistrib_pierna_futbol'
     TIPO_REDISTRIB_LIGERO  = 'redistrib_aligerar_dia'
 
+    # Phase 37 — Hypothesis experiment: watch a signal for 14 days (no load change)
+    TIPO_VIGILAR_SENAL     = 'vigilar_senal'
+
     TIPOS = [
         ('no_subir_cargas',          'No subir cargas'),
         ('reducir_accesorios',       'Reducir accesorios'),
@@ -1408,6 +1411,7 @@ class IntervencionPlan(models.Model):
         ('redistrib_dias_menores',   'Probar semana con menos días'),
         ('redistrib_pierna_futbol',  'Separar pierna de fútbol'),
         ('redistrib_aligerar_dia',   'Aligerar día con versiones esenciales'),
+        ('vigilar_senal',            'Observar señal durante 2 semanas'),
     ]
 
     ESTADO_ACTIVA   = 'activa'

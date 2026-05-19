@@ -123,4 +123,8 @@ urlpatterns = [
 
     # Phase 26 — Decision center
     path('plan/decisiones/', views.plan_decisiones_view, name='plan_decisiones'),
+
+    # Phase 37 — Hypothesis experiment
+    path('hipotesis/<int:sugerencia_id>/probar/', views.aceptar_hipotesis_view, name='aceptar_hipotesis'),
+    path('hipotesis/<int:sugerencia_id>/ignorar/', views.ignorar_hipotesis_view, name='ignorar_hipotesis'),
 ]
