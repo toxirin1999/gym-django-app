@@ -963,6 +963,11 @@ function joiBannerCerrar(id) {
     {% endif %}
 
     {% else %}
+    {% if mensaje_entreno %}
+    <div style="padding:12px 14px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.10);border-radius:12px;margin-bottom:10px;font-size:12px;color:var(--td);opacity:0.80;line-height:1.5;font-style:italic;">
+      {{ mensaje_entreno }}
+    </div>
+    {% endif %}
     <a href="{% url 'estoico:dashboard' %}" class="rb-cta rb-cta-rest">
       <i class="fas fa-sun"></i> Ver Estoico
     </a>
