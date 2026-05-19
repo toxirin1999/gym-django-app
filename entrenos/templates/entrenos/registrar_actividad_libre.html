@@ -413,11 +413,18 @@
         </div>
       </div>
 
-      <!-- Calorías -->
-      <div class="ra-field">
-        <div class="ra-field-lbl">Calorías <span class="ra-optional">(opcional)</span></div>
-        <input type="number" name="calorias" min="0"
-               placeholder="400" class="ra-input">
+      <!-- Calorías + FC -->
+      <div class="ra-grid-2">
+        <div class="ra-field">
+          <div class="ra-field-lbl">Calorías <span class="ra-optional">(opcional)</span></div>
+          <input type="number" name="calorias" min="0"
+                 placeholder="400" class="ra-input">
+        </div>
+        <div class="ra-field">
+          <div class="ra-field-lbl">FC media (lpm) <span class="ra-optional">(opcional)</span></div>
+          <input type="number" name="hr_media" min="40" max="220"
+                 placeholder="155" class="ra-input">
+        </div>
       </div>
 
       <!-- Notas -->
