@@ -82,6 +82,13 @@ class PlanificadorHelms:
         }
 
     def generar_plan_anual(self) -> Dict[str, Any]:
+        from django.core.cache import cache as _djcache
+        _año = getattr(self.perfil, 'año_planificacion', None) or datetime.now().year
+        _ck = f'plan_anual_{self.perfil.id}_{self.dias_disponibles}_{self.objetivo_principal}_{_año}'
+        _cached = _djcache.get(_ck)
+        if _cached is not None:
+            return _cached
+
         periodizacion = GeneradorPeriodizacion.generar_periodizacion_anual()
         entrenos_por_fecha = {}
         plan_por_bloques = []
@@ -144,7 +151,7 @@ class PlanificadorHelms:
             })
             if semana_global > 52: break
 
-        return {
+        _result = {
             "cliente_id": self.perfil.id,
             "plan_por_bloques": plan_por_bloques,
             "entrenos_por_fecha": entrenos_por_fecha,
@@ -154,6 +161,8 @@ class PlanificadorHelms:
                 "año_planificacion": año_planificacion,
             },
         }
+        _djcache.set(_ck, _result, 3600)  # 1 hora
+        return _result
 
     def _generar_semana_especifica(self, bloque: Dict[str, Any], numero_bloque: int) -> Dict[str, List[Dict[str, Any]]]:
         _cache_key = (numero_bloque, bloque.get('fase', ''), bloque.get('volumen_multiplicador', 1.0))
