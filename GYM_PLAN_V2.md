@@ -245,16 +245,97 @@ press militar, elevaciones, face pull, peso muerto, curl femoral, etc.
 
 ---
 
-## Próxima fase: Phase 26 — Centro de decisiones del plan
+---
 
-> Un sistema inteligente no solo decide; permite ver qué evidencia está usando para decidir.
+## Bloque 26–39 — Centro de decisiones, memoria y gobernanza
 
-**Objetivo:** pantalla "Por qué el plan decide así" — auditabilidad completa.
+> El sistema no muestra todo lo que sabe; muestra primero lo que puede ayudarte a decidir.
 
-**Secciones propuestas:**
-- Preferencias activas (con revocación)
-- Intervenciones activas (carga + distribución)
-- Pruebas de distribución recientes + evaluación
-- Patrones observados (multisemana)
-- Últimas decisiones de carga (`GymDecisionLog`)
-- Sesiones en modo esencial recientes
+### Capas del Centro de decisiones (`/clientes/plan/decisiones/`)
+
+| Capa | Qué muestra | Cuándo aparece |
+|---|---|---|
+| Hero | Contadores: preferencias + ajustes + hipótesis | Siempre |
+| Propuesta de experimento | Sugerencia experimental activa | Solo si existe |
+| Lo que el plan recuerda | Preferencias aprendidas activas | Solo si hay |
+| Ajuste activo | IntervencionPlan activa | Solo si hay |
+| Señales acumuladas | Hipótesis desde senal_no_captada | Solo si hay (gobernada) |
+| Por qué decidió así | Historial humanizado + evaluación | Solo si hay traces |
+| Historial técnico | Pruebas + decisiones + esenciales | Colapsado |
+
+### Ciclo completo de memoria (Phase 32–39)
+
+```
+dato → motor → decisión
+                  ↓
+               GymDecisionTrace (Phase 32)
+                  ↓
+               GymDecisionTraceEvaluation (Phase 34)
+                  ↓                    ↓
+            libero_margen          senal_no_captada ×3
+            neutral                     ↓
+            insuficiente          hipótesis acumulada (Phase 36)
+                  ↓                     ↓
+         Centro humanizado       sugerencia experimental (Phase 37)
+         (Phase 33/35)                  ↓ usuario acepta
+                             IntervencionPlan(vigilar_senal, 14 días)
+                                         ↓
+                             evaluar_fin_experimento → atenuada/persiste
+```
+
+### Gobernanza del silencio (Phase 38)
+
+El sistema aprende cuándo dejar de insistir:
+
+| Regla | Umbral | Resultado |
+|---|---|---|
+| Sin ocurrencias recientes | > 30 días | Silencio |
+| Hipótesis demasiado antigua | > 60 días sin experimento | Silencio |
+| Experimento atenuado reciente | < 45 días | Cooldown |
+| Ignorada demasiadas veces | ≥ 2 en < 21 días | Pausa |
+| Exceso de hipótesis | > 2 activas | Solo las más repetidas |
+
+**Fallback**: si la gobernanza falla, devuelve hipótesis sin filtrar (no rompe el Centro).
+
+### `vigilar_senal` — el tipo que no manda
+
+`IntervencionPlan.TIPO_VIGILAR_SENAL = 'vigilar_senal'`:
+- Creado cuando el usuario acepta una propuesta experimental.
+- Solo observa. NO modifica cargas, distribución ni progresión.
+- Explícitamente excluido de `get_intervencion_activa` y `evaluar_permiso_progresion`.
+- Dura 14 días. Al expirar, `evaluar_fin_experimento` lee si la señal disminuyó.
+
+> Una hipótesis puede ganar derecho a ser observada, no derecho a mandar.
+
+### Evaluación posterior — vocabulario sellado (Phase 34, auditado Phase 31)
+
+| Resultado | Cuándo | Lenguaje |
+|---|---|---|
+| `libero_margen` | Señal positiva posterior | "pareció", "señal refuerza provisionalmente" |
+| `neutral` | Sin evidencia clara | "inconcluso", "sin señal clara" |
+| `senal_no_captada` | Señal negativa posterior | "quizá", "puede que", "no hay suficiente evidencia" |
+| `datos_insuficientes` | Sin sesión posterior | Silencio — no se muestra en Centro |
+
+**Nunca**: "acertó", "falló", "correcto", "incorrecto", "el motor falló".
+
+### Reglas narrativas permanentes (Phase 31 — 26 tests, 6ms, sin BD)
+
+Auditadas en cada commit. Aplican a todos los mensajes del motor:
+- Sin absolutos: "siempre", "nunca", "debes", "tienes que"
+- Sin identidad: "eres alguien que", "esto te define"
+- Sin diagnóstico: "garantizado", "sustitución segura", "esto es peligroso"
+- Sin culpa: "no cumpliste", "fallaste", "incumplimiento"
+
+### Tests del bloque (Phase 26–39)
+
+```
+clientes/tests_plan_decisiones.py        19  Centro: acceso, contexto, filtros
+clientes/tests_trace_historial.py        14  Historial humanizado: sin JSON, sin técnico
+clientes/tests_evaluacion_centro.py      12  Evaluación en Centro: sin veredicto
+entrenos/tests_decision_trace.py         16  GymDecisionTrace: creación, campos, sin culpa
+entrenos/tests_evaluacion_trace.py       16  Evaluación posterior: 4 resultados, vocabulario
+entrenos/tests_hipotesis.py              12  Hipótesis acumuladas: detección, gobernanza
+entrenos/tests_hipotesis_sugerencia.py   16  Propuesta experimental: ciclo completo
+entrenos/tests_gobernanza.py             13  Gobernanza: silencio, max, cooldowns
+entrenos/tests_auditoria_narrativa.py    26  Auditoría: sin absolutos, sin culpa, sin identidad
+```
