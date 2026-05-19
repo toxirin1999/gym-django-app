@@ -4957,14 +4957,14 @@ def plan_decisiones_view(request):
     except Exception:
         pass
 
-    # 5. Decisiones de carga recientes (GymDecisionLog — intervenciones activas)
-    _ACCIONES_ACTIVAS = {'cambiar_variante', 'bajar_peso', 'deload', 'mantener'}
+    # 5. Decisiones de carga recientes (todas: mantener, subir, bajar, deload)
+    _ACCIONES_TODAS = {'cambiar_variante', 'bajar_peso', 'deload', 'mantener', 'subir_peso'}
     decisiones_carga = list(
         GymDecisionLog.objects.filter(
             cliente=cliente,
-            accion__in=_ACCIONES_ACTIVAS,
+            accion__in=_ACCIONES_TODAS,
             fecha_creacion__date__gte=hace_30,
-        ).order_by('-fecha_creacion')[:10]
+        ).order_by('-fecha_creacion')[:15]
     )
 
     # 6. Sesiones en modo esencial recientes
