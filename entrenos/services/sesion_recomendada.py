@@ -954,6 +954,26 @@ def obtener_sesion_recomendada_hoy(cliente, fecha_hoy=None):
         decision = _aplicar_preferencia_activa(cliente, decision, fecha_hoy)
         return _aplicar_aviso_lesion(cliente, decision, fecha_hoy)
 
+    # Phase 52 — Si el usuario pospuso explícitamente hoy, no generar nueva sesión
+    from django.db.models import Q as _Q52
+    hoy_pospuesto = SesionProgramada.objects.filter(
+        cliente=cliente,
+        fecha_prevista=fecha_hoy,
+        estado=SesionProgramada.ESTADO_PENDIENTE,
+        pospuesta_hasta__gt=fecha_hoy,
+    ).exists()
+    if hoy_pospuesto:
+        return {
+            'tipo': 'descanso',
+            'estado': 'descanso',
+            'sesion_programada': None,
+            'entrenamiento': None,
+            'mensaje': 'La sesión está guardada para mañana. Hoy descansas.',
+            'causa_principal': 'pospuesto_usuario',
+            'modo_reducido': False,
+            'distribucion_aviso': None,
+        }
+
     try:
         planificador = _build_planificador(cliente)
         entrenamiento_hoy = _normalizar_entrenamiento(
