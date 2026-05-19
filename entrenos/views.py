@@ -7675,6 +7675,7 @@ def registrar_actividad_libre(request, cliente_id):
             distancia = request.POST.get('distancia_metros', '') or None
             rpe = request.POST.get('rpe_medio', '') or None
             calorias = request.POST.get('calorias', '') or None
+            hr_media = request.POST.get('hr_media', '') or None
             notas = request.POST.get('notas', '').strip()
 
             # Normalizar título si es nombre de ejercicio
@@ -7694,6 +7695,7 @@ def registrar_actividad_libre(request, cliente_id):
             distancia = int(distancia) if distancia else None
             rpe = float(rpe) if rpe else None
             calorias = int(calorias) if calorias else None
+            hr_media = int(hr_media) if hr_media else None
 
             carga_ua = round(rpe * duracion, 1) if (rpe and duracion) else None
 
@@ -7703,12 +7705,13 @@ def registrar_actividad_libre(request, cliente_id):
                 tipo=tipo,
                 titulo=titulo,
                 fecha=fecha,
-                fecha_realizado=_date_today.today(),  # siempre hoy (cuándo se registra)
+                fecha_realizado=_date_today.today(),
                 hora_inicio=hora,
                 duracion_minutos=duracion,
                 distancia_metros=distancia,
                 rpe_medio=rpe,
                 calorias=calorias,
+                hr_media=hr_media,
                 carga_ua=carga_ua,
                 notas=notas,
                 fuente='manual',
