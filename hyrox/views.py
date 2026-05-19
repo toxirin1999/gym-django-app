@@ -3205,13 +3205,12 @@ def strava_reconciliacion(request):
         .order_by('-fecha')
     )
 
-    # ActividadRealizada de gym sin EntrenoRealizado vinculado (registradas vía
-    # "añadir actividad libre"). Útil cuando no hay EntrenoRealizado para hacer match.
+    # Todas las ActividadRealizada sin sync (cualquier tipo — gym, fútbol, natación…)
     from entrenos.models import ActividadRealizada as _AR
     actividades_gym_sin_sync = list(
         _AR.objects.filter(
-            cliente=cliente, tipo='gym', fecha__gte=hace_90,
-            entreno_gym__isnull=True,  # sin EntrenoRealizado vinculado
+            cliente=cliente, fecha__gte=hace_90,
+            entreno_gym__isnull=True,
         ).order_by('-fecha')
     )
 
@@ -3452,12 +3451,12 @@ def strava_procesar(request, actividad_id):
             'Run': 'carrera', 'Walk': 'otro', 'Hike': 'otro',
             'Ride': 'ciclismo', 'VirtualRide': 'ciclismo', 'EBikeRide': 'ciclismo',
             'Rowing': 'remo', 'WeightTraining': 'gym', 'Workout': 'gym',
-            'Soccer': 'cardio_sustituto', 'Football': 'cardio_sustituto',
+            'Soccer': 'futbol', 'Football': 'futbol',
             'Swim': 'natacion', 'Yoga': 'yoga',
         }
         # Workout con sport_type de alta intensidad → cardio_sustituto, no gym
         _HIIT_SPORT_TYPES = {
-            'HighIntensityIntervalTraining', 'Soccer', 'Football',
+            'HighIntensityIntervalTraining',
             'Crossfit', 'Elliptical', 'StairStepper',
         }
         raw_sport_type = ''
