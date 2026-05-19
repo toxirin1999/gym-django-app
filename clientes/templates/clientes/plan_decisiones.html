@@ -409,6 +409,38 @@
   </div>
   {% endif %}
 
+  {# Phase 36 — Hipótesis abiertas desde senal_no_captada repetida #}
+  {% if hipotesis_abiertas %}
+  <div class="dc-section" style="margin-top:12px;">
+    <div class="dc-section-head">
+      <div class="dc-section-dot obs"></div>
+      <div class="dc-section-title" style="color:rgba(245,158,11,0.7);">Señales acumuladas</div>
+      <div class="dc-line"></div>
+    </div>
+    <div style="margin-bottom:10px;font-size:10px;color:var(--ink-3);font-style:italic;line-height:1.5;">
+      Cuando la misma señal no captada aparece varias veces, el sistema la anota
+      como hipótesis abierta — no como corrección automática.
+    </div>
+    {% for h in hipotesis_abiertas %}
+    <div class="dc-card obs" style="border-left:2px solid rgba(245,158,11,0.25);margin-bottom:8px;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">
+        <span style="font-family:var(--font-mono);font-size:8px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:rgba(245,158,11,0.65);">
+          Hipótesis · {{ h.ocurrencias }} veces
+        </span>
+      </div>
+      <div style="font-size:12px;color:var(--ink);line-height:1.5;">
+        {{ h.texto }}
+      </div>
+      {% if h.fechas %}
+      <div style="margin-top:5px;font-size:9px;color:var(--ink-3);">
+        Fechas: {% for f in h.fechas %}{{ f|date:"j N" }}{% if not forloop.last %}, {% endif %}{% endfor %}
+      </div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
   {# Phase 33 — Historial reciente de decisiones (humanizado) #}
   {% if traces_recientes %}
   <div class="dc-section" style="margin-top:12px;">

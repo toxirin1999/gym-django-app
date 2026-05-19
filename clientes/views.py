@@ -5122,6 +5122,14 @@ def plan_decisiones_view(request):
     except Exception:
         pass
 
+    # Phase 36 — Hipótesis abiertas desde senal_no_captada repetida
+    hipotesis_abiertas = []
+    try:
+        from entrenos.services.hipotesis_service import detectar_hipotesis_abiertas
+        hipotesis_abiertas = detectar_hipotesis_abiertas(cliente)
+    except Exception:
+        pass
+
     return render(request, 'clientes/plan_decisiones.html', {
         'cliente': cliente,
         'hoy': hoy,
@@ -5133,4 +5141,5 @@ def plan_decisiones_view(request):
         'decisiones_carga': decisiones_carga,
         'sesiones_esenciales': sesiones_esenciales,
         'traces_recientes': traces_recientes,
+        'hipotesis_abiertas': hipotesis_abiertas,
     })
