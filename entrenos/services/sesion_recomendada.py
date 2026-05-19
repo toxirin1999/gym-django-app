@@ -348,8 +348,27 @@ def _aplicar_contexto(decision_base, contexto, fecha_hoy):
 
     # Determine causa and estado from context (priority order)
     if contexto['lesion_activa']:
-        causa = 'lesion'
-        estado = 'recuperar'
+        # Phase 28 fix: only block if the session actually conflicts with the injury.
+        # An AGUDA knee injury should NOT block a pure upper-body session.
+        # _detectar_riesgo_lesion checks risk_tags intersection per exercise.
+        entrenamiento = decision_base.get('entrenamiento') or {}
+        lesion_conflicto = False
+        try:
+            cliente = contexto.get('_cliente')  # passed by caller when available
+            if cliente:
+                aviso = _detectar_riesgo_lesion(cliente, entrenamiento)
+                lesion_conflicto = aviso is not None
+            else:
+                lesion_conflicto = True  # safe default: block when no client context
+        except Exception:
+            lesion_conflicto = True  # safe default on error
+        if lesion_conflicto:
+            causa = 'lesion'
+            estado = 'recuperar'
+        else:
+            # Lesion activa but session is safe — allow training with warnings (lesion_aviso)
+            causa = 'sesion_hoy'
+            estado = 'entrenar'
     elif contexto['readiness_bajo']:
         causa = 'fatiga_alta'
         estado = 'recuperar'
@@ -929,6 +948,7 @@ def obtener_sesion_recomendada_hoy(cliente, fecha_hoy=None):
             'distribucion_aviso': None,
         }
         contexto = _obtener_contexto_fisico(cliente, fecha_hoy)
+        contexto['_cliente'] = cliente  # for injury-session conflict check in _aplicar_contexto
         decision = _aplicar_contexto(decision_base, contexto, fecha_hoy)
         decision = _aplicar_efecto_distribucion(cliente, decision, fecha_hoy)
         decision = _aplicar_preferencia_activa(cliente, decision, fecha_hoy)
@@ -975,6 +995,7 @@ def obtener_sesion_recomendada_hoy(cliente, fecha_hoy=None):
         'distribucion_aviso': None,
     }
     contexto = _obtener_contexto_fisico(cliente, fecha_hoy)
+    contexto['_cliente'] = cliente  # for injury-session conflict check
     decision = _aplicar_contexto(decision_base, contexto, fecha_hoy)
     decision = _aplicar_efecto_distribucion(cliente, decision, fecha_hoy)
     decision = _aplicar_preferencia_activa(cliente, decision, fecha_hoy)
