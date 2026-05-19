@@ -1007,106 +1007,13 @@ def _get_dashboard_context_data(request, cliente):
         _sem = _fe - timedelta(days=_fe.weekday())
         _semana_counts[_sem] = _semana_counts.get(_sem, 0) + 1
 
-    labels = []
-    rendimiento = []
-    for i in range(3, -1, -1):  # de más antigua a más reciente
-        inicio_semana = hoy - timedelta(days=hoy.weekday() + i * 7)
-        labels.append(inicio_semana.strftime('%d %b'))
-        rendimiento.append(_semana_counts.get(inicio_semana, 0))
-
-    def detectar_fatiga_semanal(energia_dias):
-        dias_bajos = 0
-        consecutivos = 0
-        for dia in energia_dias:
-            if dia['valor'] is not None and dia['valor'] < 0.4:
-                consecutivos += 1
-                if consecutivos >= 3:
-                    return True
-            else:
-                consecutivos = 0
-        return False
-
-    energia_dias = obtener_energia_semanal(cliente)  # guardamos para reusar en el context dict
-    alerta_fatiga = detectar_fatiga_semanal(energia_dias)
     _peso_cache_key = f'dashboard_peso_{cliente.id}'
     _peso_cached = cache.get(_peso_cache_key)
     if _peso_cached is None:
         _peso_cached = analizar_tendencia_peso(cliente)
         cache.set(_peso_cache_key, _peso_cached, 900)
     peso_actual, datos_peso, cambios_peso = _peso_cached
-    orden_peso = ['7d', '30d', '90d', 'inicio']
-    ultimos_dias = BitacoraDiaria.objects.filter(cliente=cliente).order_by('-fecha')[:7]
-    dias_emocionales = []
-    comentario_joi = ""
-    
-    for b in reversed(ultimos_dias):
-        dias_emocionales.append({
-            'fecha': b.fecha.strftime("%A"),
-            'autoconciencia': int(b.autoconciencia) if b.autoconciencia is not None else 0,
-            'humor': b.get_humor_display() if b.humor else "—",
-            'rumiacion_baja': b.rumiacion_baja if b.rumiacion_baja is not None else False
-        })
-    
-    dias_claros = sum(1 for d in dias_emocionales if d['autoconciencia'] >= 7)
-    dias_rumia = sum(1 for d in dias_emocionales if d['rumiacion_baja'] is False)
-    humores_tristes = sum(1 for d in dias_emocionales if "triste" in d['humor'].lower())
-
-    if dias_claros >= 4:
-        comentario_joi = "Tu claridad emocional fue notable esta semana. A veces la luz también viene de adentro. ✨"
-    elif dias_rumia >= 3:
-        comentario_joi = "Noto que las ideas circularon mucho esta semana… Quizá escribir más te ayude a liberarlas. Estoy contigo."
-    elif humores_tristes >= 3:
-        comentario_joi = "Tu emocionalidad estuvo cargada esta semana. Mereces descanso y ternura."
-    else:
-        comentario_joi = "Gracias por compartir tus emociones esta semana. Estoy aquí para leerlas contigo."
-
-    hace_7_dias = hoy - timedelta(days=7)
-    bitacoras_semana = BitacoraDiaria.objects.filter(cliente=cliente, fecha__gte=hace_7_dias)
-    _biceps_cache_key = f'dashboard_biceps_{cliente.id}'
-    _biceps_cached = cache.get(_biceps_cache_key)
-    if _biceps_cached is None:
-        _biceps_cached = analizar_tendencia_biceps(cliente)
-        cache.set(_biceps_cache_key, _biceps_cached, 900)
-    biceps_actual, datos_biceps, cambios_biceps = _biceps_cached
-
-    promedios = bitacoras_semana.aggregate(
-        horas_sueno=Avg('horas_sueno'),
-        energia_subjetiva=Avg('energia_subjetiva'),
-        dolor_articular=Avg('dolor_articular'),
-        autoconciencia=Avg('autoconciencia'),
-    )
-
-    reflexion_destacada = (
-        bitacoras_semana
-        .exclude(reflexion_diaria__isnull=True)
-        .annotate(longitud=Max('id'))
-        .order_by('-longitud')
-        .values_list('reflexion_diaria', flat=True)
-        .first()
-    )
-
-    emocion_frecuente = (
-        bitacoras_semana
-        .values('emocion_dia')
-        .annotate(count=Count('emocion_dia'))
-        .order_by('-count')
-        .first()
-    )
-    emocion_texto = emocion_frecuente['emocion_dia'] if emocion_frecuente else "—"
-
-    recomendaciones_principales = []
     sug_carga = sugerencia_carga_joi(cliente)
-    if sug_carga:
-        recomendaciones_principales = [{
-            'titulo': 'Sugerencia de Carga Semanal',
-            'descripcion': str(sug_carga).strip(),
-            'prioridad': 'media'
-        }]
-
-    recomendaciones_aplicadas = RecomendacionEntrenamiento.objects.filter(
-        cliente=cliente,
-        aplicada=True
-    ).order_by('-fecha_aplicacion')[:3]
 
     _cache_analytics = _ctx_analytics(cliente, hoy)
     ratios_fuerza = _cache_analytics['ratios_fuerza']
@@ -1116,49 +1023,6 @@ def _get_dashboard_context_data(request, cliente):
     if analisis_mesociclos and analisis_mesociclos.get('mesociclos'):
         mesociclo_actual = analisis_mesociclos['mesociclos'][-1]
 
-    informe_joi = {
-        'promedios': {k: round(v or 0, 1) for k, v in promedios.items()},
-        'reflexion_destacada': reflexion_destacada or "—",
-        'emocion_frecuente': emocion_texto,
-        'frase': "Esta semana cultivaste conciencia y resiliencia. Incluso los días bajos cuentan como práctica. 🌒"
-    }
-    
-    _estanc_cache_key = f'dashboard_estanc_{cliente.id}'
-    estancamientos_detectados = cache.get(_estanc_cache_key)
-    if estancamientos_detectados is None:
-        sistema_progresion = SistemaProgresionAvanzada(cliente_id=cliente.id)
-        fecha_limite_series = hoy - timedelta(days=180)
-        series_historial = list(
-            SerieRealizada.objects.filter(
-                entreno__cliente=cliente,
-                entreno__fecha__gte=fecha_limite_series
-            ).order_by('entreno__fecha', 'entreno__id').select_related('entreno', 'ejercicio')
-        )
-        sesiones_agrupadas = defaultdict(lambda: defaultdict(list))
-        _entrenos_by_id = {}
-        for serie in series_historial:
-            sesiones_agrupadas[serie.entreno.id][serie.ejercicio.nombre].append(
-                RegistroSerie(peso=float(serie.peso_kg), repeticiones=serie.repeticiones)
-            )
-            _entrenos_by_id[serie.entreno.id] = serie.entreno
-
-        for entreno_id, ejercicios in sesiones_agrupadas.items():
-            entreno_obj = _entrenos_by_id.get(entreno_id)
-            if entreno_obj:
-                for nombre_ejercicio, series_registradas in ejercicios.items():
-                    registro_ejercicio = RegistroEjercicio(
-                        fecha=timezone.make_aware(datetime.combine(entreno_obj.fecha, datetime.min.time())),
-                        ejercicio=nombre_ejercicio,
-                        series=series_registradas,
-                        repeticiones_planificadas=8,
-                        rpe_planificado=8,
-                        rpe_real=8,
-                        tiempo_descanso=120
-                    )
-                    sistema_progresion.registrar_sesion(registro_ejercicio)
-
-        estancamientos_detectados = sistema_progresion.detectar_estancamientos()
-        cache.set(_estanc_cache_key, estancamientos_detectados, 900)
     from entrenos.services.sesion_recomendada import obtener_sesion_recomendada_hoy as _get_sesion_hoy
     _decision_entreno = _get_sesion_hoy(cliente, hoy)
     proximo_entrenamiento = _decision_entreno['entrenamiento']
@@ -1223,23 +1087,7 @@ def _get_dashboard_context_data(request, cliente):
     hyrox_objetivo, hyrox_proxima_sesion = _ctx_hyrox(cliente, hoy)
     bio_readiness, restricciones_bio = _ctx_bio(cliente)
 
-    pierna_bloqueada = '__aguda_tren_inferior' in restricciones_bio.get('tags', set())
     _sesion_programada = _decision_entreno['sesion_programada']
-    sesion_pendiente = None
-    if _decision_entreno['tipo'] == 'pendiente' and _sesion_programada:
-        _ent_p = _decision_entreno['entrenamiento'] or {}
-        _ejercicios_p = _ent_p.get('ejercicios', [])
-        _es_pierna = any(
-            any(kw in ej.get('nombre', '').lower()
-                for kw in ['pierna', 'quad', 'sentadilla', 'prensa'])
-            for ej in _ejercicios_p
-        )
-        sesion_pendiente = {
-            'fecha': _sesion_programada.fecha_prevista,
-            'entrenamiento': _ent_p,
-            'es_pierna': _es_pierna,
-            'sugerir_torso': _es_pierna and pierna_bloqueada,
-        }
 
     _stats_cache_key = f'dashboard_stats_{cliente.id}'
     _stats_cached = cache.get(_stats_cache_key)
@@ -1255,9 +1103,6 @@ def _get_dashboard_context_data(request, cliente):
 
     (estoico_disponible, contenido_hoy, reflexion_hoy, reflexion_pendiente,
      total_reflexiones, racha_reflexion, logros_estoicos, dias_reflexion) = _ctx_estoico(request, hoy)
-
-    mensajes_integracion = ["Tu disciplina física refleja tu fortaleza mental.", "Un cuerpo entrenado es el hogar de una mente disciplinada."]
-    mensaje_integracion = random.choice(mensajes_integracion)
 
     _acwr_cache_key = f'dashboard_acwr_unificado_{cliente.id}'
     analis_acwr = cache.get(_acwr_cache_key)
@@ -1374,35 +1219,17 @@ def _get_dashboard_context_data(request, cliente):
         'pruebas_activas': pruebas_activas,
         'logros': logros_completados,
         'reporte': reporte_adherencia,
-        'top_ejercicios': calcular_top_1rm(cliente),
         'datos_logros': datos_logros,
         'estado_joi': estado_joi,
         'frase_forma_joi': frase_forma_joi,
         'frase_extra_joi': frase_extra_joi,
         'frase_recaida': frase_recaida,
-        'prediccion_riesgo': prediccion,
         'entrenamientos_recientes': entrenamientos_recientes,
-        'dias_emocionales': dias_emocionales,
-        'entrenos_count': EntrenoRealizado.objects.filter(cliente=cliente).count(),  # TODO: cachear junto con resto de analytics
         'carga_total': round(carga_total),
         'consistencia': 80,
-        'grafico_labels': json.dumps(labels),
-        'grafico_datos': json.dumps(rendimiento),
         'recomendacion_carga': sug_carga,
-        'energia_dias': energia_dias,
-        'alerta_fatiga': alerta_fatiga,
         'peso_actual': peso_actual,
         'datos_peso': datos_peso,
-        'cambios_peso': cambios_peso,
-        'orden_peso': orden_peso,
-        'comentario_joi': comentario_joi,
-        'informe_joi': informe_joi,
-        'biceps_actual': biceps_actual,
-        'datos_biceps': datos_biceps,
-        'cambios_biceps': cambios_biceps,
-        'orden_biceps': ['7d', '30d', '90d', 'inicio'],
-        'recomendaciones_principales': recomendaciones_principales,
-        'recomendaciones_aplicadas': recomendaciones_aplicadas,
         'ratios_fuerza': ratios_fuerza,
         'mesociclo_actual': mesociclo_actual,
         'fatiga_acumulada': fatiga_acumulada,
@@ -1414,21 +1241,14 @@ def _get_dashboard_context_data(request, cliente):
         'proximo_entrenamiento': proximo_entrenamiento,
         'proximo_entrenamiento_json': json.dumps(proximo_entrenamiento.get("ejercicios", [])) if proximo_entrenamiento else "[]",
         'estadisticas_plan': estadisticas_plan,
-        'estancamientos': estancamientos_detectados,
         'notificaciones': notificaciones,
-        'mensaje_integracion': mensaje_integracion,
         'reflexion_hoy': reflexion_hoy,
-        'reflexion_pendiente': reflexion_pendiente,
         'total_reflexiones': total_reflexiones,
-        'racha_reflexion': racha_reflexion,
-        'logros_estoicos': logros_estoicos,
-        'dias_reflexion': dias_reflexion,
         'contenido_hoy': contenido_hoy,
         'estoico_disponible': estoico_disponible,
         'hyrox_objetivo': hyrox_objetivo,
         'hyrox_proxima_sesion': hyrox_proxima_sesion,
         'bio_readiness': bio_readiness,
-        'sesion_pendiente': sesion_pendiente,
         'sesion_programada': _sesion_programada,
         'tipo_entreno': _decision_entreno['tipo'],
         'estado_entreno': _decision_entreno.get('estado', 'entrenar'),
@@ -1453,7 +1273,6 @@ def _get_dashboard_context_data(request, cliente):
         'sugerencia_activa': _ctx_sugerencia_activa(cliente, hoy),
         'evaluacion_intervencion': _ctx_evaluacion_intervencion(cliente, hoy),
         'recomendacion_continuidad': _ctx_recomendacion_continuidad(cliente, hoy),
-        'restricciones_bio': restricciones_bio,
         'hoy': timezone.now().date(),
         'lesiones_activas': _ctx_lesiones_activas(cliente),
         # Phase 45 — JOI semanal: frase breve si hay señal y no se mostró hoy

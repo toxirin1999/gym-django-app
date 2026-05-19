@@ -1011,6 +1011,18 @@ function joiBannerCerrar(id) {
     </div>
     {% endif %}
 
+    {# Señal de carga semanal — solo cuando el sistema detecta patrón de fatiga u oportunidad #}
+    {% if recomendacion_carga %}
+    <div class="rb-aprendio-card" style="border-left:3px solid rgba(100,200,150,0.4);">
+      <div class="rb-section-head" style="margin-bottom:6px;">
+        <div class="rb-section-num" style="color:rgba(100,200,150,0.7);">CARGA</div>
+        <h3 class="rb-section-title">Señal de carga</h3>
+        <div class="rb-section-line"></div>
+      </div>
+      <div style="font-size:12px;color:var(--td);opacity:0.78;line-height:1.5;">{{ recomendacion_carga }}</div>
+    </div>
+    {% endif %}
+
     {# Tarjeta 2: "Lo que el plan observa" — patrón + sugerencia + evaluación pasada (solo si hay patrón) #}
     {% if patron_multisemanal %}
     <div class="rb-aprendio-card" style="border-left:3px solid rgba(180,140,255,0.35);">
