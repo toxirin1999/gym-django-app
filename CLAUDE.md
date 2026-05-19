@@ -8,6 +8,12 @@ This file provides context for AI assistants working on this codebase.
 
 Hay tres subagentes en `.claude/agents/`. Úsalos para optimizar coste y velocidad.
 
+| Agente | Modelo | Coste relativo |
+|---|---|---|
+| `haiku-explorer` | claude-haiku-4-5 | ~20× más barato que Opus |
+| `sonnet-builder` | claude-sonnet-4-6 | ~4× más barato que Opus |
+| `opus-architect` | claude-opus-4-7 | Máximo coste — reservar |
+
 ### Reglas de delegación
 
 | Tarea | Agente | Cuándo NO usarlo |
@@ -24,13 +30,27 @@ Hay tres subagentes en `.claude/agents/`. Úsalos para optimizar coste y velocid
 ¿La decisión incorrecta costaría días de refactoring? → opus-architect
 ```
 
+### Ejemplos concretos de este proyecto
+
+| Petición | Agente correcto |
+|---|---|
+| "¿Dónde está la función `construir_contexto`?" | haiku-explorer |
+| "Lista todos los signals de entrenos" | haiku-explorer |
+| "¿Qué campos tiene `GymDecisionTrace`?" | haiku-explorer |
+| "Añade `evaluacion_resultado` a la vista del Centro" | sonnet-builder |
+| "Escribe tests para `evaluar_trace_decision`" | sonnet-builder |
+| "Corrige el bug del botón 'Hoy no puedo'" | sonnet-builder |
+| "¿Cómo modelar el historial de preferencias sin romper la jerarquía?" | opus-architect |
+| "¿Merece la pena añadir un modelo separado para evaluaciones o extender GymDecisionTrace?" | opus-architect |
+| "¿Cómo diseñar Phase 35 si cruza entrenos + hyrox + joi?" | opus-architect |
+
 **Opus solo se activa cuando:**
 - Se cambia el esquema de BD de forma irreversible
 - Se diseña un sistema que cruza ≥3 apps
 - Hay un trade-off de rendimiento/seguridad a largo plazo
 - Se evalúa si una feature encaja con la visión nuclear
 
-**Opus NO se activa para:** bugfixes, features nuevas bien definidas, templates, migraciones rutinarias, refactoring local.
+**Opus NO se activa para:** bugfixes, features nuevas bien definidas, templates, migraciones rutinarias, refactoring local, tests.
 
 ---
 
