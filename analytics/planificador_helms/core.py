@@ -156,6 +156,12 @@ class PlanificadorHelms:
         }
 
     def _generar_semana_especifica(self, bloque: Dict[str, Any], numero_bloque: int) -> Dict[str, List[Dict[str, Any]]]:
+        _cache_key = (numero_bloque, bloque.get('fase', ''), bloque.get('volumen_multiplicador', 1.0))
+        if not hasattr(self, '_semana_cache'):
+            self._semana_cache = {}
+        if _cache_key in self._semana_cache:
+            return self._semana_cache[_cache_key]
+
         fase = bloque.get('fase', 'hipertrofia')
         vol_mult = bloque.get('volumen_multiplicador', 1.0)
         rpe_objetivo = (bloque.get('intensidad_rpe') or (7,))[0]
@@ -260,6 +266,7 @@ class PlanificadorHelms:
             if ejercicios_dia:
                 semana_planificada[dia_key] = ejercicios_dia
 
+        self._semana_cache[_cache_key] = semana_planificada
         return semana_planificada
 
     def _determinar_tipo_ejercicio_completo(self, grupo: str, nombre: str) -> str:
