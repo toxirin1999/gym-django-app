@@ -489,8 +489,6 @@
   </div>
   {% endif %}
 
-</div>
-
   {# ── Decisiones por ejercicio (GymDecisionLog) ── #}
   {% if decisiones_carga %}
   <div class="dc-section" style="margin-top:12px;">
@@ -512,8 +510,8 @@
       </div>
       <div style="text-align:right;flex-shrink:0;margin-left:12px;">
         <span style="font-size:9px;padding:2px 8px;border-radius:99px;
-          background:{% if d.accion == 'mantener' %}rgba(245,158,11,0.12){% elif d.accion == 'bajar_peso' %}rgba(239,68,68,0.10){% elif d.accion == 'deload' %}rgba(139,92,246,0.10){% else %}rgba(255,255,255,0.06){% endif %};
-          color:{% if d.accion == 'mantener' %}rgba(245,158,11,0.8){% elif d.accion == 'bajar_peso' %}rgba(239,68,68,0.7){% elif d.accion == 'deload' %}rgba(139,92,246,0.7){% else %}var(--ink-3){% endif %};">
+          background:{% if d.accion == 'mantener' %}rgba(245,158,11,0.12){% elif d.accion == 'bajar_peso' %}rgba(239,68,68,0.10){% elif d.accion == 'deload' %}rgba(139,92,246,0.10){% elif d.accion == 'subir_peso' %}rgba(34,197,94,0.10){% else %}rgba(255,255,255,0.06){% endif %};
+          color:{% if d.accion == 'mantener' %}rgba(245,158,11,0.8){% elif d.accion == 'bajar_peso' %}rgba(239,68,68,0.7){% elif d.accion == 'deload' %}rgba(139,92,246,0.7){% elif d.accion == 'subir_peso' %}rgba(34,197,94,0.8){% else %}var(--ink-3){% endif %};">
           {{ d.get_accion_display }}
         </span>
         <div style="font-size:9px;color:var(--ink-3);margin-top:4px;font-family:var(--font-mono);">{{ d.fecha_creacion|date:"d M" }}</div>
@@ -522,6 +520,8 @@
     {% endfor %}
   </div>
   {% endif %}
+
+</div>
 
 <script>
 function toggleHistorial(btn) {

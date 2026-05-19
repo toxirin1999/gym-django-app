@@ -1545,10 +1545,27 @@ class GymDecisionTrace(models.Model):
 
     def get_explicacion_humana(self) -> str:
         """Returns a single-sentence human-readable explanation of this decision."""
-        if not self.explicacion_senales:
-            return f"Sesión normal el {self.fecha}."
-        lineas = '. '.join(s.rstrip('.') for s in self.explicacion_senales[:3])
-        return f"{lineas}."
+        if self.explicacion_senales:
+            lineas = '. '.join(s.rstrip('.') for s in self.explicacion_senales[:3])
+            return f"{lineas}."
+        _CAUSA_TEXTO = {
+            'lesion':          'Descanso recomendado — lesión activa en ese momento.',
+            'fatiga':          'Descanso recomendado — fatiga acumulada elevada.',
+            'acwr_alto':       'Descanso recomendado — carga aguda/crónica fuera de rango seguro.',
+            'readiness_bajo':  'Recuperación recomendada — readiness bajo.',
+            'pospuesto_usuario': 'El usuario indicó que ese día no podía entrenar.',
+            'sesion_hoy':      'Sesión del plan ejecutada sin adaptaciones.',
+            'pendiente':       'Sesión pendiente de días anteriores.',
+            'descanso_plan':   'Día de descanso según el plan.',
+        }
+        causa = self.causa_principal or ''
+        if causa in _CAUSA_TEXTO:
+            return _CAUSA_TEXTO[causa]
+        if self.decision_estado == 'recuperar':
+            return 'Recuperación recomendada por el motor.'
+        if self.decision_estado == 'descanso':
+            return 'Día de descanso.'
+        return 'Sesión del plan.'
 
 
 class GymDecisionTraceEvaluation(models.Model):
