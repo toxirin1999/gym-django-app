@@ -226,9 +226,8 @@ ANALYTICS_CONFIG = {
 # Configuración de cache para IA (opcional pero recomendado)
 CACHES = {
     'default': {
-        'BACKEND': 'django.core.cache.backends.filebased.FileBasedCache',
-        'LOCATION': BASE_DIR / 'django_cache',
-        'TIMEOUT': 300,  # 5 minutos por defecto
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'TIMEOUT': 900,
         'OPTIONS': {
             'MAX_ENTRIES': 1000,
         }
