@@ -4790,6 +4790,57 @@ def saltar_sesion_view(request, sesion_id):
 
 @login_required
 @require_POST
+def posponer_sesion_hoy_view(request):
+    """
+    'Hoy no puedo' for sessions generated on-the-fly (tipo='programada_hoy',
+    sesion_programada=None). Creates a SesionProgramada for today if needed,
+    then postpones it to tomorrow via posponer_entrenamiento_hoy().
+
+    This handles the case where no SesionProgramada exists yet for today
+    (session comes directly from PlanificadorHelms without DB backing).
+    """
+    from entrenos.models import SesionProgramada
+    from entrenos.services.sesion_recomendada import (
+        obtener_sesion_recomendada_hoy, posponer_entrenamiento_hoy, inferir_prioridad_sesion,
+    )
+
+    cliente = get_object_or_404(Cliente, user=request.user)
+    hoy = timezone.localdate()
+
+    # Create a SesionProgramada for today if the plan has a session but no DB record
+    if not SesionProgramada.objects.filter(
+        cliente=cliente, fecha_prevista=hoy, estado=SesionProgramada.ESTADO_PENDIENTE,
+    ).exists():
+        try:
+            decision = obtener_sesion_recomendada_hoy(cliente, hoy)
+            entreno = decision.get('entrenamiento') or {}
+            if entreno.get('ejercicios'):
+                nombre = (
+                    entreno.get('rutina_nombre') or
+                    entreno.get('nombre_rutina') or
+                    entreno.get('nombre') or ''
+                )
+                prioridad = inferir_prioridad_sesion(entreno) or SesionProgramada.PRIORIDAD_ALTA
+                SesionProgramada.objects.get_or_create(
+                    cliente=cliente,
+                    fecha_prevista=hoy,
+                    estado=SesionProgramada.ESTADO_PENDIENTE,
+                    defaults={
+                        'nombre_sesion': nombre,
+                        'prioridad': prioridad,
+                        'motivo_estado': 'Sesión del plan de hoy registrada al posponer.',
+                    },
+                )
+        except Exception:
+            pass
+
+    posponer_entrenamiento_hoy(cliente, hoy)
+    messages.info(request, "La sesión sigue aquí. Hoy no hace falta forzarla.")
+    return redirect('clientes:panel_cliente')
+
+
+@login_required
+@require_POST
 def posponer_sesion_view(request, sesion_id):
     """'Hoy no puedo entrenar' — postpones ALL visible pending sessions until tomorrow."""
     from entrenos.models import SesionProgramada

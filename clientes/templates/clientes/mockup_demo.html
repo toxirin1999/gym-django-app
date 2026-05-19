@@ -882,6 +882,14 @@ function joiBannerCerrar(id) {
     <a href="{% url 'entrenos:briefing_entrenamiento' cliente.id %}?fecha={{ hoy|date:'Y-m-d' }}&rutina_nombre={{ proximo_entrenamiento.rutina_nombre|urlencode }}&ejercicios={{ proximo_entrenamiento_json|urlencode }}{% if sesion_programada %}&sesion_programada_id={{ sesion_programada.id }}{% endif %}" style="display:block;text-align:center;font-size:11px;color:var(--td);opacity:0.45;text-decoration:none;padding:6px 0;">
       Empezar igualmente →
     </a>
+    {% else %}
+    {# Sin SesionProgramada en estado recuperar: ofrecer guardar para mañana #}
+    <form method="post" action="{% url 'clientes:posponer_sesion_hoy' %}" style="margin-bottom:8px;">
+      {% csrf_token %}
+      <button type="submit" class="rb-cta" style="width:100%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.18);color:var(--td);">
+        <i class="fas fa-moon"></i> Guardar sesión para mañana
+      </button>
+    </form>
     {% endif %}
 
     {% elif estado_entreno == 'posponer' %}
@@ -904,8 +912,8 @@ function joiBannerCerrar(id) {
       {% if modo_reducido %}<i class="fas fa-compress-arrows-alt"></i> Empezar versión esencial
       {% else %}<i class="fas fa-play"></i> Ejecutar Protocolo{% endif %}
     </a>
-    {% if sesion_programada %}
     <div style="display:flex;gap:8px;margin-top:8px;">
+      {% if sesion_programada %}
       <form method="post" action="{% url 'clientes:posponer_sesion' sesion_programada.id %}" style="flex:1;">
         {% csrf_token %}
         <button type="submit" style="width:100%;padding:10px;border-radius:12px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);color:var(--td);font-size:12px;cursor:pointer;">
@@ -918,8 +926,16 @@ function joiBannerCerrar(id) {
           Saltar sesión
         </button>
       </form>
+      {% else %}
+      {# Sin SesionProgramada: sesión de hoy generada on-the-fly — usar endpoint genérico #}
+      <form method="post" action="{% url 'clientes:posponer_sesion_hoy' %}" style="flex:1;">
+        {% csrf_token %}
+        <button type="submit" style="width:100%;padding:10px;border-radius:12px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);color:var(--td);font-size:12px;cursor:pointer;">
+          Hoy no puedo
+        </button>
+      </form>
+      {% endif %}
     </div>
-    {% endif %}
     {% endif %}
 
     {% else %}
