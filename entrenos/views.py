@@ -3502,14 +3502,6 @@ def vista_entrenamiento_activo(request, cliente_id):
         ejercicios_planificados_json = request.GET.get('ejercicios', '[]')
         ejercicios_planificados = json.loads(ejercicios_planificados_json)
 
-        leyenda_rpe = {
-            "10": "Máximo esfuerzo, no podrías hacer ni una repetición más.",
-            "9": "Muy intenso, podrías hacer 1 repetición más como máximo.",
-            "8": "Intenso, podrías hacer 2-3 repeticiones más.",
-            "7": "Moderado, podrías hacer 3-4 repeticiones más.",
-            "6": "Fácil, podrías hacer muchas repeticiones más.",
-        }
-
         # --- BIO-BRIDGE: VALIDACIÓN EN TIEMPO REAL Y AJUSTE DE CARGA ---
         from core.bio_context import BioContextProvider
 
@@ -3877,7 +3869,6 @@ def vista_entrenamiento_activo(request, cliente_id):
         'rutina_dia': rutina_dia,
         'rutina_tipo': rutina_tipo,
         'ejercicios_planificados': ejercicios_planificados,
-        'leyenda_rpe': leyenda_rpe,
         'is_in_transition': bio_readiness.get('is_in_transition', False),
         'transition_days_left': bio_readiness.get('transition_days_left', 0),
         'vol_mod': vol_mod,
@@ -3891,15 +3882,6 @@ def vista_entrenamiento_activo(request, cliente_id):
         'num_principales': sum(1 for e in ejercicios_planificados if e.get('es_principal')) if modo_reducido else 0,
         'permiso_progresion': _permiso_prog_template,
     }
-
-    # Añadir contexto de gamificación (sin cambios)
-    try:
-        from .gamificacion_service import EntrenamientoGamificacionService
-        resumen_gamificacion = EntrenamientoGamificacionService.obtener_resumen_gamificacion(cliente)
-        context['resumen_gamificacion'] = resumen_gamificacion
-    except Exception as e:
-        logger.warning("Error obteniendo resumen gamificación: %s", e)
-        context['resumen_gamificacion'] = {'tiene_perfil': False}
 
     return render(request, 'entrenos/entrenamiento_activo.html', context)
 
