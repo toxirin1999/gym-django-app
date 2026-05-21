@@ -3931,6 +3931,7 @@ def guardar_entrenamiento_activo(request, cliente_id):
         volumen_total_entreno = Decimal('0.0')
         ejercicios_procesados_count = 0
         todos_rpes_sesion = []
+        _modo_reducido = request.POST.get('modo_reducido') == '1'
 
         ejercicio_form_ids = [k.replace('_nombre', '') for k in request.POST if k.endswith('_nombre')]
         for form_id in ejercicio_form_ids:

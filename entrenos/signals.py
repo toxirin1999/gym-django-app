@@ -76,7 +76,11 @@ def sincronizar_hub_actividad(sender, instance, created, raw=False, **kwargs):
         pass
 
     # Duración: si no está en el entreno, buscar en sesion_detalle
-    duracion = instance.duracion_minutos
+    _dur_raw = instance.duracion_minutos
+    try:
+        duracion = int(_dur_raw) if _dur_raw is not None else None
+    except (TypeError, ValueError):
+        duracion = None
     if not duracion:
         try:
             duracion = instance.sesion_detalle.duracion_minutos or None
