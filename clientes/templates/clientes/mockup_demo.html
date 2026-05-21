@@ -582,6 +582,8 @@ function joiBannerCerrar(id) {
       <div class="rb-workout-title">
         {% if entreno_realizado_obj and entreno_realizado_obj.rutina %}
           {{ entreno_realizado_obj.rutina.nombre }}
+        {% elif entreno_hoy_realizado %}
+          Sesión completada
         {% else %}
           {{ proximo_entrenamiento.nombre|default:proximo_entrenamiento.rutina_nombre|default:"Sesión" }}
         {% endif %}
