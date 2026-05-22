@@ -1050,9 +1050,15 @@ input{background:transparent!important;border:none!important;outline:none!import
 <div style="margin:0 16px 12px;padding:14px 16px;background:rgba(34,211,238,0.07);border:1px solid rgba(34,211,238,0.20);border-radius:12px;display:flex;align-items:flex-start;gap:12px;">
   <span style="font-size:20px;flex-shrink:0;margin-top:1px;">🌱</span>
   <div>
-    <div style="font-size:13px;font-weight:700;color:rgba(34,211,238,0.85);margin-bottom:3px;">En fase de retorno</div>
+    <div style="font-size:13px;font-weight:700;color:rgba(34,211,238,0.85);margin-bottom:3px;">Lesión en retorno</div>
     <div style="font-size:12px;color:rgba(240,238,232,0.6);line-height:1.4;">
-      Quedan {{ transition_days_left }} día{{ transition_days_left|pluralize:"s" }} de adaptación progresiva. Las cargas están ajustadas automáticamente.
+      {% if has_bio_adjustments %}
+        Quedan {{ transition_days_left }} día{{ transition_days_left|pluralize:"s" }}. Algunos ejercicios han sido adaptados por precaución.
+        {% if vol_mod < 1.0 %} Volumen al {{ vol_mod_pct }}% (los pesos se mantienen).{% endif %}
+      {% else %}
+        Lesión en retorno registrada. No afecta a los ejercicios de esta sesión.
+        {% if vol_mod < 1.0 %} Volumen ligeramente reducido al {{ vol_mod_pct }}%.{% endif %}
+      {% endif %}
     </div>
   </div>
 </div>

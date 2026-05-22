@@ -894,19 +894,19 @@ function joiBannerCerrar(id) {
     {% elif proximo_entrenamiento %}
 
     {% if estado_entreno == 'recuperar' %}
-    {# Motor recomienda no entrenar — CTA principal es conservar el descanso #}
+    {# Motor recomienda descanso — es recomendación, no bloqueo #}
     <div style="padding:14px 0 4px;font-size:11px;color:var(--td);opacity:0.65;text-align:center;line-height:1.5;">
-      El sistema prioriza recuperación para proteger el progreso.
+      El plan recomienda descanso hoy para proteger el progreso. Puedes entrenar si te encuentras bien.
     </div>
     {% if sesion_programada %}
     <form method="post" action="{% url 'clientes:posponer_sesion' sesion_programada.id %}" style="margin-bottom:8px;">
       {% csrf_token %}
       <button type="submit" class="rb-cta" style="width:100%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.18);color:var(--td);">
-        <i class="fas fa-moon"></i> Mantener en pausa hasta mañana
+        <i class="fas fa-moon"></i> Posponer hasta mañana
       </button>
     </form>
-    <a href="{% url 'entrenos:briefing_entrenamiento' cliente.id %}?fecha={{ hoy|date:'Y-m-d' }}&rutina_nombre={{ proximo_entrenamiento.rutina_nombre|urlencode }}&ejercicios={{ proximo_entrenamiento_json|urlencode }}{% if sesion_programada %}&sesion_programada_id={{ sesion_programada.id }}{% endif %}" style="display:block;text-align:center;font-size:11px;color:var(--td);opacity:0.45;text-decoration:none;padding:6px 0;">
-      Empezar igualmente →
+    <a href="{% url 'entrenos:briefing_entrenamiento' cliente.id %}?fecha={{ hoy|date:'Y-m-d' }}&rutina_nombre={{ proximo_entrenamiento.rutina_nombre|urlencode }}&ejercicios={{ proximo_entrenamiento_json|urlencode }}{% if sesion_programada %}&sesion_programada_id={{ sesion_programada.id }}{% endif %}" class="rb-cta" style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.12);color:var(--td);text-decoration:none;">
+      <i class="fas fa-play"></i> Entrenar igualmente
     </a>
     {% else %}
     {# Sin SesionProgramada en estado recuperar: ofrecer guardar para mañana #}
