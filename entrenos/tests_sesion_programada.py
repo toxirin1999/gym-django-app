@@ -1019,9 +1019,11 @@ class TestPhase3A_AplicarContexto(SesionProgramadaBase):
         self.assertEqual(d['causa_principal'], 'energia_baja')
         self.assertTrue(d['modo_reducido'])
 
-    def test_futbol_da_posponer(self):
+    def test_futbol_da_version_reducida(self):
+        # Fútbol reciente → versión reducida (no posponer). El usuario puede entrenar
+        # pero con menos volumen para respetar la recuperación muscular.
         d = _aplicar_contexto(self._base(), self._ctx(futbol_reciente=True), self.hoy)
-        self.assertEqual(d['estado'], 'posponer')
+        self.assertEqual(d['estado'], 'version_reducida')
         self.assertEqual(d['causa_principal'], 'futbol_reciente')
 
     def test_lesion_tiene_prioridad_sobre_futbol(self):
