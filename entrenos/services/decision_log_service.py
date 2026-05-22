@@ -43,13 +43,12 @@ def generar_decisiones_para_entreno(entreno):
             .select_related('entreno')[:5]
         )
 
-        # No generar decisión si ya hay una pendiente sin evaluar (cualquier antigüedad).
-        # Esto evita conflictos con decisiones generadas por detectar_estancamiento
-        # o detectar_molestia_recurrente que aún no han sido aplicadas.
+        # No generar decisión si ya hay una para este ejercicio hoy
+        # (evita duplicados cuando entreno.save() dispara el signal más de una vez)
         existe = GymDecisionLog.objects.filter(
             cliente=cliente,
             ejercicio__iexact=nombre,
-            resultado__isnull=True,
+            fecha_creacion__date=timezone.localdate(),
         ).exists()
         if existe:
             continue
