@@ -377,7 +377,7 @@ def _aplicar_contexto(decision_base, contexto, fecha_hoy):
         estado = 'version_reducida'
     elif contexto['futbol_reciente']:
         causa = 'futbol_reciente'
-        estado = 'posponer'
+        estado = 'version_reducida'
     elif decision['tipo'] == 'pendiente':
         sp = decision.get('sesion_programada')
         if sp and sp.prioridad == SesionProgramada.PRIORIDAD_ALTA:
