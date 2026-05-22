@@ -1056,3 +1056,103 @@ class TestPhase3A_AplicarContexto(SesionProgramadaBase):
         d = _aplicar_contexto(self._base(), ctx, self.hoy)
         self.assertIn('contexto_fisico', d)
         self.assertEqual(d['contexto_fisico']['energia_valor'], 2)
+
+
+class TestPhase56_1_VentanaFutbol(SesionProgramadaBase):
+    """
+    Phase 56.1 — Ventana temporal de actividad de fútbol/hyrox.
+    Frase de cierre: 'Fútbol reciente puede reducir la sesión; no puede secuestrar la semana.'
+    """
+
+    def _base(self, tipo='programada_hoy'):
+        return {
+            'tipo': tipo,
+            'estado': 'entrenar',
+            'sesion_programada': None,
+            'entrenamiento': {'ejercicios': [], 'rutina_nombre': 'Test'},
+            'mensaje': 'base',
+            'causa_principal': None,
+            'modo_reducido': False,
+        }
+
+    def _crear_actividad_futbol(self, fecha):
+        from entrenos.models import ActividadRealizada
+        return ActividadRealizada.objects.create(
+            cliente=self.cliente,
+            tipo='futbol',
+            fecha=fecha,
+            fecha_realizado=fecha,
+            fuente='manual',
+            titulo='Partido',
+        )
+
+    def _obtener_contexto(self, fecha=None):
+        from entrenos.services.sesion_recomendada import _obtener_contexto_fisico
+        return _obtener_contexto_fisico(self.cliente, fecha or self.hoy)
+
+    # ── Tests de ventana temporal ─────────────────────────────────────────────
+
+    def test_futbol_hace_menos_de_24h_activa_futbol_reciente(self):
+        """Fútbol ayer → dentro de ventana 48h → futbol_reciente=True."""
+        self._crear_actividad_futbol(self.hoy - timedelta(days=1))
+        ctx = self._obtener_contexto()
+        self.assertTrue(ctx['futbol_reciente'])
+
+    def test_futbol_hace_48h_exacto_activa_futbol_reciente(self):
+        """Fútbol hace exactamente 2 días → aún dentro de ventana → True."""
+        self._crear_actividad_futbol(self.hoy - timedelta(days=2))
+        ctx = self._obtener_contexto()
+        self.assertTrue(ctx['futbol_reciente'])
+
+    def test_futbol_hace_mas_de_48h_no_activa_futbol_reciente(self):
+        """Fútbol hace 3 días → fuera de ventana 48h → futbol_reciente=False.
+        Test clave: previene el bug de 'señal pegada' visto en Phase 56."""
+        self._crear_actividad_futbol(self.hoy - timedelta(days=3))
+        ctx = self._obtener_contexto()
+        self.assertFalse(ctx['futbol_reciente'],
+            msg='Fútbol hace 3 días no debe contaminar la señal de actividad reciente.')
+
+    def test_futbol_reciente_da_version_reducida_no_posponer(self):
+        """Fútbol reciente → version_reducida, nunca posponer."""
+        self._crear_actividad_futbol(self.hoy - timedelta(days=1))
+        ctx = self._obtener_contexto()
+        d = _aplicar_contexto(self._base(), ctx, self.hoy)
+        self.assertEqual(d['estado'], 'version_reducida',
+            msg='Fútbol reciente debe dar versión reducida, no posponer.')
+        self.assertNotEqual(d['estado'], 'posponer')
+        self.assertEqual(d['causa_principal'], 'futbol_reciente')
+
+    def test_futbol_antiguo_no_activa_version_reducida(self):
+        """Fútbol hace 3 días → no debe afectar el estado de la sesión."""
+        self._crear_actividad_futbol(self.hoy - timedelta(days=3))
+        ctx = self._obtener_contexto()
+        d = _aplicar_contexto(self._base(), ctx, self.hoy)
+        self.assertNotEqual(d['causa_principal'], 'futbol_reciente',
+            msg='Fútbol hace 3 días no puede contaminar la causa de la decisión.')
+        self.assertNotEqual(d['estado'], 'version_reducida')
+
+    def test_lesion_activa_tiene_prioridad_sobre_futbol_reciente(self):
+        """Si hay lesión activa + fútbol reciente → lesión gana semánticamente."""
+        self._crear_actividad_futbol(self.hoy - timedelta(days=1))
+        ctx = self._obtener_contexto()
+        ctx['lesion_activa'] = True
+        ctx['lesion_fase'] = 'AGUDA'
+        d = _aplicar_contexto(self._base(), ctx, self.hoy)
+        self.assertEqual(d['causa_principal'], 'lesion',
+            msg='La lesión activa debe tener prioridad sobre el fútbol reciente.')
+        self.assertNotEqual(d['causa_principal'], 'futbol_reciente')
+
+    def test_sesion_pospuesta_no_arrastra_causa_futbol_si_ya_no_aplica(self):
+        """Sesión pospuesta de ayer + fútbol hace 3 días → hoy no debe tener causa futbol.
+        Previene el bug de 'causa pegada' detectado en Phase 56."""
+        self._crear_actividad_futbol(self.hoy - timedelta(days=3))
+        SesionProgramada.objects.create(
+            cliente=self.cliente,
+            fecha_prevista=self.hoy - timedelta(days=1),
+            estado=SesionProgramada.ESTADO_PENDIENTE,
+            pospuesta_hasta=self.hoy,
+            prioridad=SesionProgramada.PRIORIDAD_ALTA,
+        )
+        ctx = self._obtener_contexto()
+        self.assertFalse(ctx['futbol_reciente'],
+            msg='Fútbol de hace 3 días no debe arrastrar causa al día siguiente.')
