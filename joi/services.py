@@ -653,15 +653,13 @@ def construir_contexto(cliente) -> dict:
 
 # ── Prompt builders ──────────────────────────────────────────────────────────
 
-def _prompt_entreno_completado(ctx: dict, datos_extra: dict) -> str:
-    rpe = datos_extra.get('rpe')
-    acwr = ctx.get('acwr')
-    readiness = ctx.get('readiness_hyrox') or ctx.get('readiness_score')
-    prs = datos_extra.get('prs', [])
-    en_retorno = ctx.get('is_in_transition', False)
-
-    # ── Lectura interna (estructura antes de voz) ─────────────────
-    # INTENSIDAD
+def _construir_lectura_corporal(rpe, readiness, acwr, en_retorno, prs, lesion_zona=None) -> dict:
+    """
+    Phase 56.8 — Estructura antes de voz.
+    Convierte datos crudos en lectura corporal con vocabulario controlado.
+    JOI habla desde esta lectura, nunca desde los datos directamente.
+    """
+    # INTENSIDAD (desde RPE)
     if rpe is None:
         intensidad = 'desconocida'
     elif rpe <= 6:
@@ -671,44 +669,136 @@ def _prompt_entreno_completado(ctx: dict, datos_extra: dict) -> str:
     else:
         intensidad = 'alta'
 
-    # RECUPERACIÓN
+    # RECUPERACIÓN (desde readiness)
     if readiness is None:
-        recuperacion = 'sin datos'
+        recuperacion = 'sin_datos'
     elif readiness >= 80:
         recuperacion = 'buena'
     elif readiness >= 60:
-        recuperacion = 'media — no plena pero funcional'
+        recuperacion = 'media'
     else:
         recuperacion = 'limitada'
 
-    # DIRECCIÓN
-    if en_retorno and intensidad in ('baja', 'moderada'):
-        direccion = 'mantener sin forzar — el cuerpo aún se consolida'
-    elif intensidad == 'alta' and recuperacion == 'limitada':
-        direccion = 'observar — el esfuerzo fue elevado con recuperación baja'
-    elif prs:
-        direccion = 'seguir — hay progresión real'
-    elif intensidad == 'baja':
-        direccion = 'puedes apretar un poco más la próxima vez'
+    # ESTADO CORPORAL (vocabulario cerrado: 7 estados)
+    if en_retorno:
+        estado = 'en_recuperacion'
+    elif recuperacion == 'limitada' and intensidad == 'alta':
+        estado = 'cargado'
+    elif recuperacion == 'limitada':
+        estado = 'fatigado'
+    elif recuperacion == 'buena' and intensidad in ('baja', 'moderada'):
+        estado = 'fresco'
+    elif recuperacion == 'media' and intensidad in ('baja', 'moderada'):
+        estado = 'disponible_con_reserva'
+    elif recuperacion == 'buena' and intensidad == 'alta':
+        estado = 'disponible'
     else:
-        direccion = 'seguir construyendo al mismo ritmo'
+        estado = 'disponible_con_reserva'
 
-    # Contexto adicional sin números crudos
-    pr_txt = f" Se rompió un récord en {prs[0]}." if prs else ""
-    acwr_txt = " La carga acumulada está alta." if acwr and acwr > 1.3 else ""
+    # RIESGO
+    if acwr and acwr > 1.3:
+        riesgo = 'moderado'
+    elif intensidad == 'alta' and recuperacion == 'limitada':
+        riesgo = 'moderado'
+    else:
+        riesgo = 'bajo'
+
+    # DIRECCIÓN (vocabulario cerrado: 6 direcciones)
+    if en_retorno and intensidad in ('baja', 'moderada'):
+        direccion = 'mantener_sin_forzar'
+    elif estado == 'cargado':
+        direccion = 'recuperar'
+    elif estado == 'fatigado':
+        direccion = 'reducir'
+    elif prs and recuperacion in ('buena', 'media'):
+        direccion = 'mantener'
+    elif intensidad == 'baja' and recuperacion == 'buena':
+        direccion = 'apretar_un_poco'
+    elif acwr and acwr > 1.3:
+        direccion = 'observar'
+    else:
+        direccion = 'mantener'
+
+    # QUÉ VIGILAR
+    vigilar = []
+    if en_retorno and lesion_zona:
+        vigilar.append(f"respuesta de {lesion_zona} mañana")
+    if intensidad == 'alta':
+        vigilar.append("fatiga acumulada en próximas 24h")
+    if acwr and acwr > 1.3:
+        vigilar.append("señales de sobrecarga")
+    if prs:
+        vigilar.append("que la calidad técnica se mantenga")
+
+    return {
+        'estado': estado,
+        'intensidad': intensidad,
+        'recuperacion': recuperacion,
+        'riesgo': riesgo,
+        'direccion': direccion,
+        'vigilar': vigilar,
+        'hay_progresion': bool(prs),
+    }
+
+
+_ESTADO_CORPORAL_TEXTO = {
+    'fresco':               'Tu cuerpo parece fresco y disponible.',
+    'disponible':           'Tu cuerpo parece disponible.',
+    'disponible_con_reserva': 'Tu cuerpo parece disponible, aunque no completamente fresco.',
+    'cargado':              'Tu cuerpo parece cargado — el trabajo acumulado se nota.',
+    'fatigado':             'Tu cuerpo parece fatigado.',
+    'en_recuperacion':      'Tu cuerpo parece en proceso de consolidación.',
+    'alerta':               'Tu cuerpo está enviando señales de alerta.',
+}
+
+_DIRECCION_TEXTO = {
+    'apretar_un_poco':    'La próxima sesión puede aceptar algo más de intensidad.',
+    'mantener':           'Sigue al mismo ritmo.',
+    'mantener_sin_forzar': 'Sigue construyendo sin necesidad de forzar más.',
+    'reducir':            'Próxima sesión: reduce volumen o intensidad.',
+    'recuperar':          'La siguiente prioridad es recuperación, no carga.',
+    'observar':           'Observa cómo responde el cuerpo antes de añadir más.',
+}
+
+
+def _prompt_entreno_completado(ctx: dict, datos_extra: dict) -> str:
+    rpe       = datos_extra.get('rpe')
+    acwr      = ctx.get('acwr')
+    readiness = ctx.get('readiness_hyrox') or ctx.get('readiness_score')
+    prs       = datos_extra.get('prs', [])
+    en_retorno = ctx.get('is_in_transition', False)
+    lesion_zona = datos_extra.get('lesion_zona')
+
+    lectura = _construir_lectura_corporal(rpe, readiness, acwr, en_retorno, prs, lesion_zona)
+
+    estado_txt   = _ESTADO_CORPORAL_TEXTO.get(lectura['estado'], 'Tu cuerpo completó la sesión.')
+    dir_txt      = _DIRECCION_TEXTO.get(lectura['direccion'], 'Sigue al ritmo actual.')
+    vigilar_txt  = (f" Vigila: {', '.join(lectura['vigilar'])}." if lectura['vigilar'] else "")
+    pr_txt       = f" Hubo progresión real hoy." if prs else ""
+    intensidad_humana = {
+        'baja': 'ligero', 'moderada': 'moderado', 'alta': 'exigente', 'desconocida': 'sin datos'
+    }.get(lectura['intensidad'], 'moderado')
+
+    # Fallback determinista — siempre funciona aunque la IA falle
+    fallback = (
+        f"{estado_txt} El esfuerzo fue {intensidad_humana}.{pr_txt} {dir_txt}{vigilar_txt}"
+    )
 
     return (
         f"El usuario acaba de completar un entreno. "
-        f"Intensidad percibida: {intensidad}. "
-        f"Estado de recuperación: {recuperacion}."
-        f"{pr_txt}{acwr_txt} "
-        f"Contexto adicional: {'en fase de retorno post-lesión' if en_retorno else 'sin restricciones activas'}. "
-        f"\n\nGenera un mensaje de 2-3 frases como JOI. "
-        f"REGLAS ESTRICTAS: "
-        f"(1) No incluyas ningún número crudo (RPE, readiness, ACWR, kg, días). "
-        f"(2) La última frase debe dar una dirección práctica clara: {direccion}. "
-        f"(3) Si la frase final no puede responder a '¿qué hago con esto?', reemplázala por el fallback: "
-        f"'Sesión {intensidad}, recuperación {recuperacion}. {direccion.capitalize()}.'"
+        f"Lectura corporal calculada:\n"
+        f"- Estado: {lectura['estado']} ({estado_txt})\n"
+        f"- Intensidad: {lectura['intensidad']}\n"
+        f"- Recuperación: {lectura['recuperacion']}\n"
+        f"- Dirección: {lectura['direccion']} ({dir_txt})\n"
+        f"- Qué vigilar: {', '.join(lectura['vigilar']) if lectura['vigilar'] else 'nada específico'}\n"
+        f"\nGenera un mensaje de 2-3 frases como JOI. "
+        f"CONTRATO ESTRICTO:\n"
+        f"(1) No incluyas ningún número crudo (RPE, readiness, kg, días, %).\n"
+        f"(2) Primera frase: describe cómo parece estar el cuerpo en lenguaje natural.\n"
+        f"(3) Última frase: dirección práctica clara. Debe responder '¿qué hago con esto?'\n"
+        f"(4) Puedes usar metáfora SOLO si primero has dado claridad práctica.\n"
+        f"(5) Si no puedes dar dirección clara, usa el fallback literalmente: '{fallback}'"
     )
 
 
