@@ -809,10 +809,16 @@ def _prompt_apertura_manana(ctx: dict, datos_extra: dict) -> str:
             señales.append(f"energía baja ({bio['energia']}/10)")
         if bio['horas_sueno'] is not None and bio['horas_sueno'] < 6:
             señales.append(f"sueño insuficiente ({bio['horas_sueno']}h)")
-        if bio['hrv_ms'] is not None:
-            señales.append(f"HRV {bio['hrv_ms']} ms")
-        if bio['fc_reposo'] is not None:
-            señales.append(f"FC reposo {bio['fc_reposo']} lpm")
+        hrv = bio['hrv_ms']
+        if hrv is not None:
+            if hrv < 30:
+                señales.append("VFC muy baja — sistema nervioso bajo estrés")
+            elif hrv < 50:
+                señales.append("VFC baja — recuperación incompleta")
+            # VFC normal o alta: no mencionar, no hay señal de alerta
+        fc = bio['fc_reposo']
+        if fc is not None and fc > 72:
+            señales.append("FC reposo elevada — posible fatiga acumulada")
         if señales:
             freshness = bio.get('freshness_days', 0)
             ref_tiempo = "esta mañana" if freshness == 0 else f"hace {freshness} día{'s' if freshness > 1 else ''}"
@@ -1098,7 +1104,8 @@ def _prompt_hyrox_readiness_bajo(ctx: dict, datos_extra: dict) -> str:
     factor     = ctx.get('readiness_factor_limitante', '')
 
     dias_txt    = f" Quedan {dias} días." if dias is not None else ""
-    tsb_txt     = f" TSB: {tsb}." if tsb is not None else ""
+    tsb_estado  = "fatigado" if tsb is not None and tsb < -10 else "equilibrado" if tsb is not None and tsb >= -10 else None
+    tsb_txt     = f" Carga acumulada: {tsb_estado}." if tsb_estado else ""
     bench_txt   = f" Esperado para esta fase: {benchmark}." if benchmark else ""
     plateau_txt = f" {plateau} días sin progresión registrada." if plateau >= 4 else ""
     factor_txt  = f" Factor que más lastra: {factor}." if factor else ""
@@ -1173,7 +1180,7 @@ def _prompt_hyrox_readiness_alto(ctx: dict, datos_extra: dict) -> str:
     fase       = ctx.get('readiness_fase', '')
 
     dias_txt   = f" Quedan {dias} días." if dias is not None else ""
-    tsb_txt    = f" TSB {tsb} — fresco." if tsb is not None and tsb > 0 else ""
+    tsb_txt    = " Carga acumulada: fresca." if tsb is not None and tsb > 0 else ""
     avance_txt = (
         f" Vas {vs_bench} puntos por delante de lo esperado en fase {fase}."
         if vs_bench >= 5 and fase else ""
