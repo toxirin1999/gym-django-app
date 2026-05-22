@@ -654,19 +654,61 @@ def construir_contexto(cliente) -> dict:
 # ── Prompt builders ──────────────────────────────────────────────────────────
 
 def _prompt_entreno_completado(ctx: dict, datos_extra: dict) -> str:
-    ejercicios = datos_extra.get('ejercicios', [])
-    volumen = datos_extra.get('volumen_kg', 0)
     rpe = datos_extra.get('rpe')
     acwr = ctx.get('acwr')
+    readiness = ctx.get('readiness_hyrox') or ctx.get('readiness_score')
     prs = datos_extra.get('prs', [])
+    en_retorno = ctx.get('is_in_transition', False)
 
-    pr_txt = f" Has roto un récord en {prs[0]}." if prs else ""
-    rpe_txt = f" RPE declarado: {rpe}." if rpe else ""
-    acwr_txt = f" Tu ACWR ahora es {acwr}." if acwr else ""
+    # ── Lectura interna (estructura antes de voz) ─────────────────
+    # INTENSIDAD
+    if rpe is None:
+        intensidad = 'desconocida'
+    elif rpe <= 6:
+        intensidad = 'baja'
+    elif rpe <= 8:
+        intensidad = 'moderada'
+    else:
+        intensidad = 'alta'
+
+    # RECUPERACIÓN
+    if readiness is None:
+        recuperacion = 'sin datos'
+    elif readiness >= 80:
+        recuperacion = 'buena'
+    elif readiness >= 60:
+        recuperacion = 'media — no plena pero funcional'
+    else:
+        recuperacion = 'limitada'
+
+    # DIRECCIÓN
+    if en_retorno and intensidad in ('baja', 'moderada'):
+        direccion = 'mantener sin forzar — el cuerpo aún se consolida'
+    elif intensidad == 'alta' and recuperacion == 'limitada':
+        direccion = 'observar — el esfuerzo fue elevado con recuperación baja'
+    elif prs:
+        direccion = 'seguir — hay progresión real'
+    elif intensidad == 'baja':
+        direccion = 'puedes apretar un poco más la próxima vez'
+    else:
+        direccion = 'seguir construyendo al mismo ritmo'
+
+    # Contexto adicional sin números crudos
+    pr_txt = f" Se rompió un récord en {prs[0]}." if prs else ""
+    acwr_txt = " La carga acumulada está alta." if acwr and acwr > 1.3 else ""
 
     return (
-        f"El usuario acaba de completar un entreno. Volumen: {volumen} kg.{pr_txt}{rpe_txt}{acwr_txt} "
-        f"Genera un mensaje de 2-3 frases como JOI, reconociendo el esfuerzo con datos precisos y calidez."
+        f"El usuario acaba de completar un entreno. "
+        f"Intensidad percibida: {intensidad}. "
+        f"Estado de recuperación: {recuperacion}."
+        f"{pr_txt}{acwr_txt} "
+        f"Contexto adicional: {'en fase de retorno post-lesión' if en_retorno else 'sin restricciones activas'}. "
+        f"\n\nGenera un mensaje de 2-3 frases como JOI. "
+        f"REGLAS ESTRICTAS: "
+        f"(1) No incluyas ningún número crudo (RPE, readiness, ACWR, kg, días). "
+        f"(2) La última frase debe dar una dirección práctica clara: {direccion}. "
+        f"(3) Si la frase final no puede responder a '¿qué hago con esto?', reemplázala por el fallback: "
+        f"'Sesión {intensidad}, recuperación {recuperacion}. {direccion.capitalize()}.'"
     )
 
 
