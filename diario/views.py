@@ -3840,9 +3840,10 @@ def presencia_cierre(request):
                                 defaults={'nombre': nombre},
                             )
                             if not creada:
-                                PersonaInterina.objects.filter(pk=interina.pk).update(
-                                    veces_mencionada=interina.veces_mencionada + 1
-                                )
+                                update_kw = {'veces_mencionada': interina.veces_mencionada + 1}
+                                if interina.estado == 'descartada':
+                                    update_kw['menciones_desde_descarte'] = interina.menciones_desde_descarte + 1
+                                PersonaInterina.objects.filter(pk=interina.pk).update(**update_kw)
                                 interina.refresh_from_db()
 
                             InteraccionSombra.objects.create(
@@ -3865,13 +3866,14 @@ def presencia_cierre(request):
                                     origen='patron_detectado',
                                 )
 
-                            # Reaparecer: ignorada con ≥4 menciones vuelve a sombra
-                            if interina.estado == 'descartada' and interina.veces_mencionada >= 4:
-                                PersonaInterina.objects.filter(pk=interina.pk).update(estado='sombra')
+                            # Reaparece solo si tiene ≥2 menciones nuevas después de ser ignorada
+                            if interina.estado == 'descartada' and interina.menciones_desde_descarte >= 2:
+                                PersonaInterina.objects.filter(pk=interina.pk).update(
+                                    estado='sombra', menciones_desde_descarte=0
+                                )
                                 interina.refresh_from_db()
-
-                            # 2+ menciones en sombra → radar
-                            if interina.veces_mencionada >= 2 and interina.estado == 'sombra':
+                            # 2+ menciones en sombra → radar (elif: no solapar con reaparecer)
+                            elif interina.veces_mencionada >= 2 and interina.estado == 'sombra':
                                 PersonaInterina.objects.filter(pk=interina.pk).update(estado='radar')
 
             except Exception as exc:
@@ -4055,6 +4057,7 @@ def promover_persona_interina(request):
 
         elif accion == 'descartar':
             interina.estado = 'descartada'
+            interina.menciones_desde_descarte = 0
             interina.save()
 
         return JsonResponse({'ok': True})
@@ -4202,9 +4205,10 @@ def reprocesar_cierres(request):
                         defaults={'nombre': nombre},
                     )
                     if not creada:
-                        PersonaInterina.objects.filter(pk=interina.pk).update(
-                            veces_mencionada=interina.veces_mencionada + 1
-                        )
+                        update_kw = {'veces_mencionada': interina.veces_mencionada + 1}
+                        if interina.estado == 'descartada':
+                            update_kw['menciones_desde_descarte'] = interina.menciones_desde_descarte + 1
+                        PersonaInterina.objects.filter(pk=interina.pk).update(**update_kw)
                         interina.refresh_from_db()
 
                     desc = item.get('descripcion') or ''
@@ -4222,12 +4226,14 @@ def reprocesar_cierres(request):
                         )
                         personas_creadas += 1
 
-                    # Reaparecer: ignorada con ≥4 menciones vuelve a sombra
-                    if interina.estado == 'descartada' and interina.veces_mencionada >= 4:
-                        PersonaInterina.objects.filter(pk=interina.pk).update(estado='sombra')
+                    # Reaparece solo si tiene ≥2 menciones nuevas después de ser ignorada
+                    if interina.estado == 'descartada' and interina.menciones_desde_descarte >= 2:
+                        PersonaInterina.objects.filter(pk=interina.pk).update(
+                            estado='sombra', menciones_desde_descarte=0
+                        )
                         interina.refresh_from_db()
-
-                    if interina.veces_mencionada >= 2 and interina.estado == 'sombra':
+                    # 2+ menciones en sombra → radar (elif: no solapar con reaparecer)
+                    elif interina.veces_mencionada >= 2 and interina.estado == 'sombra':
                         PersonaInterina.objects.filter(pk=interina.pk).update(estado='radar')
 
                 procesadas += 1

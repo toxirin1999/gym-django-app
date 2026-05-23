@@ -1172,9 +1172,10 @@ class PersonaInterina(models.Model):
     usuario             = models.ForeignKey(User, on_delete=models.CASCADE, related_name='personas_interinas')
     nombre              = models.CharField(max_length=100)
     estado              = models.CharField(max_length=12, choices=ESTADO_CHOICES, default='sombra')
-    veces_mencionada    = models.PositiveIntegerField(default=1)
-    primera_deteccion   = models.DateField(auto_now_add=True)
-    ultima_deteccion    = models.DateField(auto_now=True)
+    veces_mencionada             = models.PositiveIntegerField(default=1)
+    menciones_desde_descarte     = models.PositiveIntegerField(default=0)
+    primera_deteccion            = models.DateField(auto_now_add=True)
+    ultima_deteccion             = models.DateField(auto_now=True)
     persona_importante  = models.ForeignKey(
         PersonaImportante, null=True, blank=True,
         on_delete=models.SET_NULL, related_name='origen_interino',
