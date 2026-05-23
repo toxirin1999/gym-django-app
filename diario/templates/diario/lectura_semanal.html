@@ -158,6 +158,37 @@ body { background: var(--bg) !important; font-family: -apple-system, BlinkMacSys
         {% endif %}
     </div>
 
+    <!-- Señal vs entreno — Phase 3.3 -->
+    {% if datos.contrastes %}
+    <div class="sim-section">
+        <div class="sim-section-label">Señal del diario vs entreno</div>
+        {% for c in datos.contrastes %}
+        <div style="padding:0.65rem 0;{% if not forloop.last %}border-bottom:1px solid var(--border);{% endif %}">
+            <div style="font-size:0.62rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:0.3rem;">
+                {{ c.fecha|date:"E j" }}
+            </div>
+            <div style="font-size:0.82rem;color:var(--text);line-height:1.5;
+                        {% if c.tipo == 'alineado' %}opacity:0.85;{% else %}opacity:0.70;{% endif %}">
+                {{ c.texto }}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Tendencia corporal — Phase 3.4 -->
+    {% if tendencia_corporal.hay_tendencia %}
+    <div class="sim-section" style="border-color: rgba(167,139,250,{% if tendencia_corporal.nivel == 'notable' %}0.3{% else %}0.15{% endif %});">
+        <div class="sim-section-label">Tendencia corporal</div>
+        <div style="font-size:0.85rem;color:var(--text);opacity:{% if tendencia_corporal.nivel == 'notable' %}0.85{% else %}0.72{% endif %};line-height:1.55;">
+            {{ tendencia_corporal.texto }}
+        </div>
+        <div style="margin-top:0.6rem;font-size:0.7rem;color:var(--muted);font-style:italic;">
+            Una señal diaria informa; una repetición empieza a merecer vigilancia.
+        </div>
+    </div>
+    {% endif %}
+
     <!-- Lectura JOI -->
     {% if lectura_encuadre %}
     <div class="sim-section" style="border-color: rgba(167,139,250,0.2);">

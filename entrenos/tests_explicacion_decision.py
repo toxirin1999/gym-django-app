@@ -193,3 +193,54 @@ class TestPermisoProgresion(TestCase):
         })
         result = construir_explicacion_decision(decision)
         self.assertFalse(any('Progresión autorizada' in s for s in result['senales_activas']))
+
+
+# ── Phase 3.1 — Señal corporal del diario en ¿Por qué hoy? ──────────────────
+
+def _senal(intensidad):
+    _textos = {
+        'suave':    'Algo de carga corporal en los últimos días.',
+        'moderada': 'Varios cierres recientes con cuerpo cargado o apagado.',
+        'alta':     'El cuerpo ha registrado dolor en los últimos días.',
+    }
+    return {'hay_senal': True, 'intensidad': intensidad, 'texto': _textos[intensidad]}
+
+
+class TestSenalDiarioEnExplicacion(TestCase):
+
+    def test_sin_senal_diario_todo_limpio(self):
+        result = construir_explicacion_decision(_decision(), senal_diario={'hay_senal': False})
+        self.assertTrue(result['todo_limpio'])
+        self.assertEqual(result['senales_activas'], [])
+
+    def test_senal_suave_aparece_en_senales_activas(self):
+        result = construir_explicacion_decision(_decision(), senal_diario=_senal('suave'))
+        self.assertFalse(result['todo_limpio'])
+        self.assertTrue(any('carga corporal' in s.lower() for s in result['senales_activas']))
+
+    def test_senal_moderada_aparece_en_senales_activas(self):
+        result = construir_explicacion_decision(_decision(), senal_diario=_senal('moderada'))
+        self.assertTrue(any('cargado' in s.lower() or 'apagado' in s.lower() for s in result['senales_activas']))
+
+    def test_senal_alta_aparece_en_senales_activas(self):
+        result = construir_explicacion_decision(_decision(), senal_diario=_senal('alta'))
+        self.assertTrue(any('dolor' in s.lower() for s in result['senales_activas']))
+
+    def test_senal_diario_es_ultima_senal(self):
+        decision = _decision(modo_reducido=True)
+        result = construir_explicacion_decision(decision, senal_diario=_senal('moderada'))
+        ultima = result['senales_activas'][-1].lower()
+        self.assertIn('cargado', ultima)
+
+    def test_senal_diario_no_menciona_bloqueo_ni_cambio_obligatorio(self):
+        for intensidad in ('suave', 'moderada', 'alta'):
+            result = construir_explicacion_decision(_decision(), senal_diario=_senal(intensidad))
+            for senal in result['senales_activas']:
+                texto = senal.lower()
+                self.assertNotIn('bloquea', texto)
+                self.assertNotIn('prohibido', texto)
+                self.assertNotIn('debes', texto)
+
+    def test_senal_diario_none_no_rompe(self):
+        result = construir_explicacion_decision(_decision(), senal_diario=None)
+        self.assertTrue(result['todo_limpio'])

@@ -835,6 +835,14 @@ def _ctx_senal_corporal_diario(cliente):
         return {'hay_senal': False}
 
 
+def _ctx_sugerencia_diario(cliente):
+    try:
+        from diario.services.sugerencias_diario import get_sugerencia_diario
+        return get_sugerencia_diario(cliente)
+    except Exception:
+        return None
+
+
 def _ctx_explicacion_decision(decision, senal_diario=None):
     try:
         from entrenos.services.explicacion_decision_service import construir_explicacion_decision
@@ -1303,6 +1311,8 @@ def _get_dashboard_context_data(request, cliente):
         'joi_semanal': _ctx_joi_semanal(cliente),
         # Phase 3.0 — Señal corporal del diario (informativa, no bloquea)
         'senal_corporal_diario': _senal_diario,
+        # Phase 3.5 — Sugerencia de vigilancia corporal (propuesta revisable)
+        'sugerencia_diario': _ctx_sugerencia_diario(cliente),
     }
 
 
