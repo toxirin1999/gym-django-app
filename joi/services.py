@@ -776,19 +776,30 @@ def _prompt_entreno_completado(ctx: dict, datos_extra: dict) -> str:
     vigilar_txt  = (f" Vigila: {', '.join(lectura['vigilar'])}." if lectura['vigilar'] else "")
     pr_txt       = f" Hubo progresión real hoy." if prs else ""
     intensidad_humana = {
-        'baja': 'ligero', 'moderada': 'moderado', 'alta': 'exigente', 'desconocida': 'sin datos'
+        'baja': 'ligero', 'moderada': 'moderado', 'alta': 'exigente', 'desconocida': 'sin datos de esfuerzo'
     }.get(lectura['intensidad'], 'moderado')
 
-    # Fallback determinista — siempre funciona aunque la IA falle
-    fallback = (
-        f"{estado_txt} El esfuerzo fue {intensidad_humana}.{pr_txt} {dir_txt}{vigilar_txt}"
+    sin_datos = lectura['intensidad'] == 'desconocida'
+    nota_datos = (
+        " (El RPE de esta sesión no llegó al sistema — la lectura es parcial.)"
+        if sin_datos else ""
     )
+
+    # Fallback determinista — siempre funciona aunque la IA falle
+    if sin_datos:
+        fallback = (
+            f"{estado_txt} No tengo RPE registrado de esta sesión, así que solo puedo leerla parcialmente. {dir_txt}"
+        )
+    else:
+        fallback = (
+            f"{estado_txt} El esfuerzo fue {intensidad_humana}.{pr_txt} {dir_txt}{vigilar_txt}"
+        )
 
     return (
         f"El usuario acaba de completar un entreno. "
         f"Lectura corporal calculada:\n"
         f"- Estado: {lectura['estado']} ({estado_txt})\n"
-        f"- Intensidad: {lectura['intensidad']}\n"
+        f"- Intensidad: {lectura['intensidad']}{nota_datos}\n"
         f"- Recuperación: {lectura['recuperacion']}\n"
         f"- Dirección: {lectura['direccion']} ({dir_txt})\n"
         f"- Qué vigilar: {', '.join(lectura['vigilar']) if lectura['vigilar'] else 'nada específico'}\n"
@@ -796,6 +807,7 @@ def _prompt_entreno_completado(ctx: dict, datos_extra: dict) -> str:
         f"CONTRATO ESTRICTO:\n"
         f"(1) No incluyas ningún número crudo (RPE, readiness, kg, días, %).\n"
         f"(2) Primera frase: describe cómo parece estar el cuerpo en lenguaje natural.\n"
+        f"{'(2b) Si faltan datos de esfuerzo, nómbralo con honestidad: no inventes sensación, pero sí da dirección.' + chr(10) if sin_datos else ''}"
         f"(3) Última frase: dirección práctica clara. Debe responder '¿qué hago con esto?'\n"
         f"(4) Puedes usar metáfora SOLO si primero has dado claridad práctica.\n"
         f"(5) Si no puedes dar dirección clara, usa el fallback literalmente: '{fallback}'"

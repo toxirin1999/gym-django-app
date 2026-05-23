@@ -779,14 +779,24 @@ def habitacion_joi(request):
 
     cliente = get_object_or_404(Cliente, user=request.user)
 
-    # Mensaje más reciente de los últimos 7 días
-    mensaje = (
-        MensajeJOI.objects
-        .filter(user=request.user,
-                creado_en__gte=timezone.now() - timedelta(days=7))
-        .order_by('-creado_en')
-        .first()
-    )
+    # Si viene desde un popup con id concreto, mostrar ese mensaje
+    _msg_id = request.GET.get('mensaje')
+    if _msg_id:
+        mensaje = MensajeJOI.objects.filter(
+            id=_msg_id, user=request.user
+        ).first()
+    else:
+        mensaje = None
+
+    if not mensaje:
+        # Mensaje más reciente de los últimos 7 días
+        mensaje = (
+            MensajeJOI.objects
+            .filter(user=request.user,
+                    creado_en__gte=timezone.now() - timedelta(days=7))
+            .order_by('-creado_en')
+            .first()
+        )
 
     # ── Regeneración condicional ──────────────────────────────────
     # Si hay actividad nueva registrada DESPUÉS del último mensaje, JOI

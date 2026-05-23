@@ -3476,7 +3476,17 @@ import json
 from datetime import datetime  # Asegúrate de que este import esté presente
 
 
-# en entrenos/views.py
+def _bio_score_label(score_pct: int) -> str:
+    if score_pct >= 80:
+        return 'Disponibilidad alta'
+    if score_pct >= 65:
+        return 'Disponibilidad media-alta'
+    if score_pct >= 50:
+        return 'Disponibilidad media'
+    if score_pct >= 35:
+        return 'Disponibilidad reducida'
+    return 'Carga acumulada alta'
+
 
 def vista_entrenamiento_activo(request, cliente_id):
     """
@@ -3507,6 +3517,8 @@ def vista_entrenamiento_activo(request, cliente_id):
 
         bio_readiness = BioContextProvider.get_readiness_score(cliente)
         vol_mod = bio_readiness.get('volume_modifier', 1.0)
+        vol_mod_base = bio_readiness.get('volume_modifier_base', vol_mod)
+        _is_in_transition = bio_readiness.get('is_in_transition', False)
 
         bio_rest = BioContextProvider.get_current_restrictions(cliente)
         tags_bloqueados = bio_rest.get('tags', set())
@@ -3529,21 +3541,13 @@ def vista_entrenamiento_activo(request, cliente_id):
                 else:
                     ejercicio['origen_opcional'] = 'modo_reducido'
 
-            # --- Ajuste de Volumen (Bio-Safety) ---
-            try:
-                series_orig = int(ejercicio.get('series', 3))
-                # Si vol_mod < 1.0, reducimos las series de forma proporcional
-                series_adj = max(1, round(series_orig * vol_mod))
-                ejercicio['series'] = series_adj
-            except ValueError:
-                pass
-
-            # --- Validación en Tiempo Real (Bio-Safety) ---
+            # --- Validación en Tiempo Real (Bio-Safety) + Ajuste de Volumen ---
             ejercicio['is_bio_blocked'] = False
             ejercicio['bio_blocked_tag'] = ""
             ejercicio['is_hot_substituted'] = False
+            _ej_conflicta_lesion = False
+
             if tags_bloqueados:
-                # Buscar el ejercicio en la BD de Helms para cruzar tags
                 nombre_ej = ejercicio.get('nombre', '')
                 from analytics.planificador_helms.utils.helpers import buscar_ejercicio_por_nombre, \
                     obtener_sustituto_en_caliente
@@ -3552,7 +3556,7 @@ def vista_entrenamiento_activo(request, cliente_id):
                     ej_tags = set(ej_db.get('risk_tags', []))
                     interseccion = ej_tags.intersection(tags_bloqueados)
                     if interseccion:
-                        # Intentar sustitución en caliente
+                        _ej_conflicta_lesion = True
                         sustituto = obtener_sustituto_en_caliente(nombre_ej, tags_bloqueados)
                         if sustituto:
                             ejercicio['is_hot_substituted'] = True
@@ -3563,6 +3567,19 @@ def vista_entrenamiento_activo(request, cliente_id):
                         else:
                             ejercicio['is_bio_blocked'] = True
                             ejercicio['bio_blocked_tag'] = list(interseccion)[0].replace('_', ' ').title()
+
+            # Ajuste de series: si la reducción es solo por transición post-lesión,
+            # no aplicarla a ejercicios que no tocan la zona lesionada.
+            try:
+                series_orig = int(ejercicio.get('series', 3))
+                if _is_in_transition and not _ej_conflicta_lesion:
+                    _ej_vol = vol_mod_base  # Reducción por fatiga, sin cap de lesión
+                else:
+                    _ej_vol = vol_mod
+                series_adj = max(1, round(series_orig * _ej_vol))
+                ejercicio['series'] = series_adj
+            except ValueError:
+                pass
 
             # ── Bio-Safe Substitute detection ──
             ejercicio['is_bio_substitute'] = ejercicio.get('was_bio_substituted', False)
@@ -3873,7 +3890,8 @@ def vista_entrenamiento_activo(request, cliente_id):
         'transition_days_left': bio_readiness.get('transition_days_left', 0),
         'vol_mod': vol_mod,
         'vol_mod_pct': vol_mod_pct,
-        'bio_score': bio_readiness.get('score', 100),
+        'bio_score': int(bio_readiness.get('score', 1.0) * 100),
+        'bio_score_label': _bio_score_label(int(bio_readiness.get('score', 1.0) * 100)),
         'bio_adjustments': bio_adjustments,
         'has_bio_adjustments': vol_mod < 1.0 or bool(bio_adjustments),
         'deload_activo': deload_activo,
