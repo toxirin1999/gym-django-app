@@ -59,189 +59,30 @@ from .insights_engine import generar_insights_semanales
 
 @login_required
 def dashboard_diario(request):
-    """
-    Dashboard principal del diario con diseño inspirado en freud v2.
-    Versión simplificada y guiada para uso diario.
-    """
+    """Phase Diario 2.1 — Portada viva del Diario."""
+    from diario.services.estado_diario import calcular_estado_diario_hoy
+    from diario.services.lectura_semanal import agregar_semana
+    from diario.models import PersonaInterina
+
     hoy = timezone.now().date()
-    hora_actual = timezone.now().hour
-    inicio_semana = hoy - timedelta(days=hoy.weekday())
-    fin_semana = inicio_semana + timedelta(days=6)
-
-    # --- 1. LÓGICA DE LOS 6 PILARES ---
-    mentalidad_activa = EjercicioArete.objects.filter(
-        usuario=request.user,
-        estado='completado',
-        fecha_completado__range=[inicio_semana, fin_semana]
-    ).exists()
-
-    dominio_fisico_activo = SeguimientoVires.objects.filter(
-        usuario=request.user,
-        fecha__range=[inicio_semana, fin_semana],
-        entrenamiento_realizado=True
-    ).exists()
-
-    brujula_activa = ProsocheDiario.objects.filter(
-        prosoche_mes__usuario=request.user,
-        fecha__range=[inicio_semana, fin_semana]
-    ).exists()
-
-    lazos_activos = Interaccion.objects.filter(
-        usuario=request.user,
-        fecha__range=[inicio_semana, fin_semana]
-    ).exists()
-
-    maestria_activa = brujula_activa  # Simplificación
-
-    relatos_activos = Gnosis.objects.filter(
-        usuario=request.user,
-        estado='finalizado',
-        fecha_fin__range=[inicio_semana, fin_semana]
-    ).exists()
-
-    pilares_status = [
-        {'nombre': 'Mentalidad', 'icono': 'fas fa-shield-alt', 'activo': mentalidad_activa},
-        {'nombre': 'Dominio Físico', 'icono': 'fas fa-dumbbell', 'activo': dominio_fisico_activo},
-        {'nombre': 'Brújula Vital', 'icono': 'fas fa-compass', 'activo': brujula_activa},
-        {'nombre': 'Lazos de Hierro', 'icono': 'fas fa-users', 'activo': lazos_activos},
-        {'nombre': 'Maestría Personal', 'icono': 'fas fa-tasks', 'activo': maestria_activa},
-        {'nombre': 'Relatos de Poder', 'icono': 'fas fa-book-open', 'activo': relatos_activos},
-    ]
-
-    # Contar pilares activos
-    pilares_activos = sum(1 for p in pilares_status if p['activo'])
-
-    # --- 2. DATOS PARA LOS WIDGETS ---
     entrada_hoy = ProsocheDiario.objects.filter(
         prosoche_mes__usuario=request.user,
         fecha=hoy
-    ).select_related('prosoche_mes').first()
-
-    seguimiento_vires_hoy = SeguimientoVires.objects.filter(
-        usuario=request.user,
-        fecha=hoy
     ).first()
 
-    # --- 3. LÓGICA DEL "PRÓXIMO PASO" ---
-    proximo_paso = None
-    if not entrada_hoy:
-        proximo_paso = {
-            'titulo': '¿Cuál es tu propósito para hoy?',
-            'descripcion': '"Una vida sin examen no merece ser vivida." Dedica un momento a la reflexión matutina.',
-            'texto_boton': 'Crear Entrada',
-            'url_boton': reverse('diario:prosoche_nueva_entrada'),
-            'icono': 'fa-pen-nib'
-        }
-    elif hoy.weekday() in [0, 6]:  # Lunes o Domingo
-        proximo_paso = {
-            'titulo': 'Es hora de reflexionar',
-            'descripcion': 'Revisa tus avances de la semana y establece nuevos objetivos.',
-            'texto_boton': 'Revisión Semanal',
-            'url_boton': reverse('diario:prosoche_revision_semanal'),
-            'icono': 'fa-calendar-check'
-        }
-    elif not seguimiento_vires_hoy:
-        proximo_paso = {
-            'titulo': '¿Cómo te encuentras hoy?',
-            'descripcion': 'Registra tus métricas de salud y bienestar.',
-            'texto_boton': 'Registrar Vires',
-            'url_boton': reverse('diario:vires_seguimiento_crear'),
-            'icono': 'fa-heartbeat'
-        }
-    elif entrada_hoy and not entrada_hoy.felicidad:
-        proximo_paso = {
-            'titulo': 'Termina tu día con gratitud',
-            'descripcion': 'Reflexiona sobre lo que ha ido bien y lo que has aprendido.',
-            'texto_boton': 'Reflexión Nocturna',
-            'url_boton': reverse('diario:prosoche_editar_entrada', args=[entrada_hoy.id]),
-            'icono': 'fa-moon'
-        }
-    elif entrada_hoy:
-        proximo_paso = {
-            'titulo': 'Día en marcha',
-            'descripcion': 'Recuerda tu foco principal para hoy:',
-            'foco_del_dia': f'"{entrada_hoy.persona_quiero_ser}"' if entrada_hoy.persona_quiero_ser else '"Mantener el rumbo."',
-            'texto_boton': 'Ver Entrada',
-            'url_boton': reverse('diario:prosoche_editar_entrada', args=[entrada_hoy.id]),
-            'icono': 'fa-bullseye'
-        }
-    else:
-        proximo_paso = {
-            'titulo': '¡Todo en orden!',
-            'descripcion': 'Has completado tus tareas clave. Disfruta de tu tiempo.',
-            'texto_boton': 'Explorar',
-            'url_boton': reverse('diario:dashboard_diario'),
-            'icono': 'fa-check-circle'
-        }
+    estado_dia = calcular_estado_diario_hoy(entrada_hoy)
+    datos_semana = agregar_semana(request.user)
+    n_radar = PersonaInterina.objects.filter(
+        usuario=request.user, estado__in=['sombra', 'radar']
+    ).count()
 
-    # --- 4. DATOS DE LA SEMANA ---
-    dias_semana = []
-    nombres_dias = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
-
-    # Obtener entradas de la semana
-    entradas_semana = ProsocheDiario.objects.filter(
-        prosoche_mes__usuario=request.user,
-        fecha__range=[inicio_semana, fin_semana]
-    ).values_list('fecha', flat=True)
-    entradas_set = set(entradas_semana)
-
-    dias_completados_semana = 0
-
-    for i in range(7):
-        dia_fecha = inicio_semana + timedelta(days=i)
-        completado = dia_fecha in entradas_set
-        if completado:
-            dias_completados_semana += 1
-
-        dias_semana.append({
-            'nombre_corto': nombres_dias[i],
-            'numero': dia_fecha.day,
-            'fecha': dia_fecha,
-            'es_hoy': dia_fecha == hoy,
-            'completado': completado,
-        })
-
-    # --- 5. RACHA Y ESTADÍSTICAS ---
-    racha, _ = RachaEscritura.objects.get_or_create(usuario=request.user)
-
-    # --- 6. VIRTUDES ---
-    virtudes = Virtud.objects.filter(usuario=request.user).order_by('tipo')
-
-    # --- 7. REFLEXIÓN DEL DÍA ---
-    reflexion_del_dia = ReflexionGuiadaTema.objects.filter(
-        activa=True,
-        fecha_activacion=hoy
-    ).first()
-
-    if not reflexion_del_dia:
-        reflexion_del_dia = ReflexionGuiadaTema.objects.filter(
-            activa=True,
-            fecha_activacion__month=hoy.month,
-            fecha_activacion__day__lte=hoy.day
-        ).order_by('-fecha_activacion').first()
-
-    # --- 8. INSIGNIAS NUEVAS ---
-    insignias_nuevas = InsigniaUsuario.objects.filter(
-        usuario=request.user,
-        vista=False
-    ).select_related('insignia')
-
-    # --- 9. CONTEXTO FINAL ---
     context = {
         'hoy': hoy,
-        'pilares_status': pilares_status,
-        'pilares_activos': pilares_activos,
-        'proximo_paso': proximo_paso,
         'entrada_hoy': entrada_hoy,
-        'seguimiento_vires_hoy': seguimiento_vires_hoy,
-        'dias_semana': dias_semana,
-        'dias_completados_semana': dias_completados_semana,
-        'racha': racha,
-        'virtudes': virtudes,
-        'reflexion_del_dia': reflexion_del_dia,
-        'insignias_nuevas': insignias_nuevas,
+        'estado_dia': estado_dia,
+        'datos_semana': datos_semana,
+        'n_radar': n_radar,
     }
-
     return render(request, 'diario/dashboard.html', context)
 
 
