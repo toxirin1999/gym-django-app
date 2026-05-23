@@ -1229,8 +1229,20 @@ def _get_dashboard_context_data(request, cliente):
     import json as _json
     acwr_data_json = _json.dumps(analis_acwr.get('dataframe', [])) if analis_acwr else '[]'
 
-    # Phase 3.0 — señal corporal del diario (computada antes del dict para pasarla a explicacion)
-    _senal_diario = _ctx_senal_corporal_diario(cliente)
+    # Phase 3.0 — señal corporal del diario (5 min cache — cambia máx cada cierre)
+    _senal_key = f'dashboard_senal_diario_{cliente.id}'
+    _senal_diario = cache.get(_senal_key)
+    if _senal_diario is None:
+        _senal_diario = _ctx_senal_corporal_diario(cliente)
+        cache.set(_senal_key, _senal_diario, 300)
+
+    # Phase 3.5 — sugerencia diario (5 min cache — solo cambia al aceptar/ignorar)
+    _MISSING = object.__new__(object)
+    _sug_key = f'dashboard_sug_diario_{cliente.id}'
+    _sugerencia_diario_cached = cache.get(_sug_key, _MISSING)
+    if _sugerencia_diario_cached is _MISSING:
+        _sugerencia_diario_cached = _ctx_sugerencia_diario(cliente)
+        cache.set(_sug_key, _sugerencia_diario_cached, 300)
 
     return {
         'usuario': usuario,
@@ -1311,8 +1323,8 @@ def _get_dashboard_context_data(request, cliente):
         'joi_semanal': _ctx_joi_semanal(cliente),
         # Phase 3.0 — Señal corporal del diario (informativa, no bloquea)
         'senal_corporal_diario': _senal_diario,
-        # Phase 3.5 — Sugerencia de vigilancia corporal (propuesta revisable)
-        'sugerencia_diario': _ctx_sugerencia_diario(cliente),
+        # Phase 3.5 — Sugerencia de vigilancia corporal (5 min cache — cambia solo al aceptar/ignorar)
+        'sugerencia_diario': _sugerencia_diario_cached,
     }
 
 
@@ -1471,14 +1483,24 @@ def mockup_demo(request):
     # ── Resumen semanal gym ───────────────────────────────────────
     try:
         from entrenos.services.resumen_semanal_service import get_resumen_semanal_gym
-        context['resumen_semanal_gym'] = get_resumen_semanal_gym(cliente)
+        _resumen_key = f'dashboard_resumen_gym_{cliente.id}'
+        _resumen = cache.get(_resumen_key)
+        if _resumen is None:
+            _resumen = get_resumen_semanal_gym(cliente)
+            cache.set(_resumen_key, _resumen, 900)
+        context['resumen_semanal_gym'] = _resumen
     except Exception:
         context['resumen_semanal_gym'] = []
 
     # ── Alertas del sistema (panel unificado) ─────────────────────
     try:
         from entrenos.services.alertas_sistema_service import get_alertas_sistema
-        context['alertas_sistema'] = get_alertas_sistema(cliente)
+        _alertas_key = f'dashboard_alertas_{cliente.id}'
+        _alertas = cache.get(_alertas_key)
+        if _alertas is None:
+            _alertas = get_alertas_sistema(cliente)
+            cache.set(_alertas_key, _alertas, 300)
+        context['alertas_sistema'] = _alertas
     except Exception:
         context['alertas_sistema'] = []
 

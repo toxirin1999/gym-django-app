@@ -1,11 +1,9 @@
 {% extends 'diario/base_stoic.html' %}
 {% load static %}
 
-{% block title %}{% if habito.id %}Editar{% else %}Crear{% endif %} Hábito - Diario Estoico{% endblock %}
+{% block title %}{% if habito.id %}Editar gesto{% else %}Nuevo gesto{% endif %} — Diario{% endblock %}
 
 {% block extra_css %}
-<link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@300;400;500;600;700;800&display=swap"
-    rel="stylesheet">
 <style>
     :root {
         --bg-primary: #F8F5F1;
@@ -15,7 +13,7 @@
         --accent-orange: #F49459;
         --accent-orange-dark: #E67E22;
         --accent-green: #00B894;
-        --accent-red: #FF7675;
+        --accent-purple: #A29BFE;
         --border-color: #E8E4E0;
         --shadow-soft: 0 2px 20px rgba(0, 0, 0, 0.05);
         --radius-md: 16px;
@@ -23,7 +21,7 @@
     }
 
     body {
-        font-family: 'Urbanist', sans-serif !important;
+        font-family: -apple-system, BlinkMacSystemFont, sans-serif !important;
         background: var(--bg-primary) !important;
     }
 
@@ -75,7 +73,7 @@
         padding: 0.75rem 1rem;
         border: 1px solid var(--border-color);
         border-radius: var(--radius-md);
-        font-family: 'Urbanist', sans-serif;
+        font-family: -apple-system, BlinkMacSystemFont, sans-serif;
         font-size: 0.95rem;
         transition: all 0.3s ease;
         background: white;
@@ -131,8 +129,9 @@
     }
 
     .type-icon {
-        font-size: 2rem;
+        font-size: 1.5rem;
         margin-bottom: 0.5rem;
+        color: var(--text-secondary);
     }
 
     .type-name {
@@ -192,72 +191,68 @@
     <div class="form-card">
         <div class="form-header">
             <h1 class="form-title">
-                {% if habito.id %}
-                ✏️ Editar Hábito
-                {% else %}
-                ✨ Crear Nuevo Hábito
-                {% endif %}
+                {% if habito.id %}Editar gesto{% else %}Nuevo gesto{% endif %}
             </h1>
-            <p class="form-subtitle">Define tu hábito y comienza tu transformación</p>
+            <p class="form-subtitle">¿Qué gesto quieres que el diario recuerde?</p>
         </div>
 
         <form method="post">
             {% csrf_token %}
 
-            <!-- Tipo de Hábito -->
+            <!-- Tipo de gesto -->
             <div class="form-group">
-                <label class="form-label">Tipo de Hábito</label>
+                <label class="form-label">¿Cómo lo describes?</label>
                 <div class="type-selector">
                     <label
                         class="type-option {% if form.tipo_habito.value == 'positivo' or not form.tipo_habito.value %}selected{% endif %}">
                         <input type="radio" name="tipo_habito" value="positivo"
                         {% if form.tipo_habito.value == 'positivo' or not form.tipo_habito.value %}checked{% endif %}>
-                        <div class="type-icon">✅</div>
-                        <div class="type-name">Hábito Positivo</div>
-                        <div class="type-desc">Quiero formarlo</div>
+                        <div class="type-icon">↑</div>
+                        <div class="type-name">Gesto que cultivo</div>
+                        <div class="type-desc">Algo que quiero que esté más presente</div>
                     </label>
                     <label class="type-option {% if form.tipo_habito.value == 'negativo' %}selected{% endif %}">
                         <input type="radio" name="tipo_habito" value="negativo"
                         {% if form.tipo_habito.value == 'negativo' %}checked{% endif %}>
-                        <div class="type-icon">🛡️</div>
-                        <div class="type-name">Hábito Negativo</div>
-                        <div class="type-desc">Quiero eliminarlo</div>
+                        <div class="type-icon">↓</div>
+                        <div class="type-name">Gesto que suelto</div>
+                        <div class="type-desc">Algo que quiero que esté menos presente</div>
                     </label>
                 </div>
             </div>
 
             <!-- Nombre -->
             <div class="form-group">
-                <label class="form-label" for="id_nombre">Nombre del Hábito</label>
+                <label class="form-label" for="id_nombre">Nombre del gesto</label>
                 {{ form.nombre }}
-                <div class="form-help">Ej: "Hacer ejercicio", "Dejar de fumar"</div>
+                <div class="form-help">Ej: "Leer antes de dormir", "Abrir el móvil al levantarme"</div>
             </div>
 
             <!-- Descripción -->
             <div class="form-group">
-                <label class="form-label" for="id_descripcion">Descripción (opcional)</label>
+                <label class="form-label" for="id_descripcion">Contexto (opcional)</label>
                 {{ form.descripcion }}
-                <div class="form-help">¿Por qué es importante este hábito para ti?</div>
+                <div class="form-help">¿Por qué aparece este gesto en tu día a día?</div>
             </div>
 
             <!-- Objetivo Días -->
             <div class="form-group">
-                <label class="form-label" for="id_objetivo_dias">Días Objetivo</label>
+                <label class="form-label" for="id_objetivo_dias">Período de observación</label>
                 {{ form.objetivo_dias }}
-                <div class="form-help">21 días para formar, 66 para consolidar, 90 para eliminar</div>
+                <div class="form-help">Cuántos días quieres registrar este gesto</div>
             </div>
 
             <!-- Color -->
             <div class="form-group">
                 <label class="form-label" for="id_color">Color</label>
                 {{ form.color }}
-                <div class="form-help">Elige un color para identificar tu hábito</div>
+                <div class="form-help">Para identificarlo en el calendario</div>
             </div>
 
             <!-- Botones -->
             <button type="submit" class="btn-submit">
                 <i class="fas fa-check me-2"></i>
-                {% if habito.id %}Guardar Cambios{% else %}Crear Hábito{% endif %}
+                {% if habito.id %}Guardar{% else %}Registrar gesto{% endif %}
             </button>
             <a href="{% url 'diario:habitos_dashboard' %}" class="btn-cancel"
                 style="display: block; text-align: center; text-decoration: none;">
@@ -268,7 +263,6 @@
 </div>
 
 <script>
-    // Type selector interaction
     document.querySelectorAll('.type-option').forEach(option => {
         option.addEventListener('click', function () {
             document.querySelectorAll('.type-option').forEach(opt => opt.classList.remove('selected'));
