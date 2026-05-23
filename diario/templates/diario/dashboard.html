@@ -132,17 +132,17 @@ body { background: var(--bg) !important; font-family: -apple-system, BlinkMacSys
             {% endif %}
         </div>
         <div class="hoy-cta">
-            {% if not estado_dia.manana_hecha %}
+            {% if estado_dia.estado == 'sin_entrada' %}
             <a href="{% url 'diario:presencia_apertura' %}" class="hoy-btn primary">Abrir el día</a>
-            {% elif not estado_dia.noche_hecha %}
+            {% elif estado_dia.estado == 'manana_hecha' %}
             <a href="{% url 'diario:presencia_cierre' %}" class="hoy-btn primary">Cerrar el día</a>
+            <a href="{% url 'diario:presencia_apertura' %}" class="hoy-btn secondary">Ver apertura</a>
+            {% elif estado_dia.estado == 'solo_noche' %}
+            <a href="{% url 'diario:presencia_cierre' %}" class="hoy-btn primary">Ver cierre</a>
             {% elif estado_dia.tiene_lectura_joi %}
             <a href="{% url 'diario:presencia_cierre' %}" class="hoy-btn primary">Ver lectura JOI</a>
             {% else %}
             <a href="{% url 'diario:presencia_cierre' %}" class="hoy-btn primary">Ver cierre</a>
-            {% endif %}
-            {% if estado_dia.manana_hecha and not estado_dia.noche_hecha %}
-            <a href="{% url 'diario:presencia_apertura' %}" class="hoy-btn secondary">Ver apertura</a>
             {% endif %}
         </div>
     </div>
