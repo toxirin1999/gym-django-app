@@ -50,6 +50,18 @@ def agregar_semana(usuario, dias=7):
     conteo_personas = Counter(sombras_semana)
     personas_repetidas = [nombre for nombre, n in conteo_personas.items() if n >= 2]
 
+    # Phase 3.3 — contraste señal diario vs entreno completado
+    from diario.services.senales_entrenamiento import contrastar_senal_vs_entreno
+    from datetime import date as date_type
+    contrastes = []
+    fecha_iter = inicio
+    while fecha_iter <= hoy:
+        c = contrastar_senal_vs_entreno(usuario, fecha_iter)
+        if c:
+            contrastes.append({'fecha': fecha_iter, **c})
+        fecha_iter = date_type(fecha_iter.year, fecha_iter.month, fecha_iter.day)
+        fecha_iter = fecha_iter + timedelta(days=1)
+
     hay_datos = (n_aperturas + n_cierres) > 0
 
     return {
@@ -61,6 +73,7 @@ def agregar_semana(usuario, dias=7):
         'cuerpos': dict(cuerpos),
         'cuerpo_frecuente': cuerpo_frecuente,
         'personas_repetidas': personas_repetidas,
+        'contrastes': contrastes,
         'hay_datos': hay_datos,
         'inicio': inicio,
         'fin': hoy,

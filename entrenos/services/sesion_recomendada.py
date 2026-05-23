@@ -494,10 +494,10 @@ def _aplicar_efecto_distribucion(cliente, decision, fecha_hoy):
             .order_by('-creada_en')
             .first()
         )
-        if not intervencion:
-            return decision
-
-        tipo = intervencion.tipo
+        if intervencion:
+            tipo = intervencion.tipo
+        else:
+            tipo = None
 
         if tipo == IntervencionPlan.TIPO_REDISTRIB_DIA:
             dia_problema = (intervencion.origen_patron or '').lower()
@@ -560,6 +560,33 @@ def _aplicar_efecto_distribucion(cliente, decision, fecha_hoy):
 
     except Exception:
         logger.warning('_aplicar_efecto_distribucion: error inesperado')
+
+    # Phase 3.5 — Vigilancia de señal corporal del diario (observación, sin cambio de carga)
+    try:
+        from entrenos.models import IntervencionPlan as _IP
+        if decision.get('causa_principal') not in _CAUSA_SEGURIDAD and not decision.get('distribucion_aviso'):
+            _vigilar = (
+                _IP.objects
+                .filter(
+                    cliente=cliente,
+                    tipo=_IP.TIPO_VIGILAR_SENAL,
+                    estado=_IP.ESTADO_ACTIVA,
+                    fecha_inicio__lte=fecha_hoy, fecha_fin__gte=fecha_hoy,
+                )
+                .first()
+            )
+            if _vigilar:
+                decision['distribucion_aviso'] = {
+                    'tipo': 'vigilar_senal',
+                    'texto': (
+                        'Señal corporal del diario bajo vigilancia. '
+                        'El plan observa si la carga corporal coincide con el entreno. '
+                        'No cambia la sesión por sí solo.'
+                    ),
+                    'accion_sugerida': 'observar',
+                }
+    except Exception:
+        logger.warning('_aplicar_efecto_distribucion: error en vigilar_senal')
 
     return decision
 

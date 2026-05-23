@@ -105,11 +105,14 @@ _PATRON_A_INTERVENCION = {
     'distribucion_dias_reales_menores':      'redistrib_dias_menores',
     'distribucion_pierna_tras_futbol':       'redistrib_pierna_futbol',
     'distribucion_esenciales_concentradas':  'redistrib_aligerar_dia',
+    # Diario corporal patterns (observe 14 days, no load change — Phase 3.5)
+    'diario_tendencia_corporal': 'vigilar_senal',
 }
 
 _DISTRIBUCION_PATRONES = {
     'redistrib_dia_frecuente', 'redistrib_dias_menores',
     'redistrib_pierna_futbol', 'redistrib_aligerar_dia',
+    'vigilar_senal',  # 14-day observation window, no load change
 }
 
 

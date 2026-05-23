@@ -1718,16 +1718,15 @@ def interaccion_crear_editar(request, interaccion_id=None):
 def lectura_semanal(request):
     """Phase Diario 2.0 — Lectura semanal prudente."""
     from diario.services.lectura_semanal import agregar_semana, generar_lectura_joi
-    try:
-        cliente = request.user.cliente
-    except Exception:
-        cliente = None
+    from diario.services.senales_entrenamiento import calcular_tendencia_senal
     datos = agregar_semana(request.user)
     lectura_encuadre, lectura_señales = generar_lectura_joi(datos)
+    tendencia_corporal = calcular_tendencia_senal(request.user)
     return render(request, 'diario/lectura_semanal.html', {
         'datos': datos,
         'lectura_encuadre': lectura_encuadre,
         'lectura_señales': lectura_señales,
+        'tendencia_corporal': tendencia_corporal,
     })
 
 
