@@ -1,181 +1,365 @@
 {% extends 'diario/base_stoic.html' %}
 {% load static %}
 {% load custom_filters %}
-{% block title %}Simbiosis - Relaciones{% endblock %}
+{% block title %}Simbiosis{% endblock %}
+
+{% block extra_css %}
+<style>
+:root {
+    --bg:     #13111A;
+    --card:   #1E1B27;
+    --border: #2E2A3A;
+    --text:   #EDE9E3;
+    --muted:  #7C7590;
+    --accent: #A78BFA;
+    --accent-light: rgba(167,139,250,0.12);
+    --green:  #34D399;
+    --green-light: rgba(52,211,153,0.12);
+    --radius: 16px;
+    --shadow: 0 2px 20px rgba(0,0,0,0.3);
+}
+* { box-sizing: border-box; }
+body { background: var(--bg) !important; font-family: -apple-system, BlinkMacSystemFont, sans-serif !important; color: var(--text); }
+
+.sim-wrap { max-width: 680px; margin: 0 auto; padding: 1.5rem 1rem 4rem; }
+
+/* ── Header ── */
+.sim-header { margin-bottom: 1.75rem; }
+.sim-title {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 0.35rem;
+    letter-spacing: -0.01em;
+}
+.sim-subtitle {
+    font-size: 0.9rem;
+    color: var(--muted);
+    line-height: 1.5;
+    margin-bottom: 1rem;
+}
+.sim-boundary {
+    font-size: 0.78rem;
+    color: rgba(167,139,250,0.6);
+    font-style: italic;
+    padding: 0.6rem 0.85rem;
+    border-left: 2px solid rgba(167,139,250,0.3);
+    margin-bottom: 1.25rem;
+}
+.sim-metrics {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+.sim-metric {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.sim-metric-val {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1;
+}
+.sim-metric-label {
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+}
+
+/* ── Section card ── */
+.sim-section {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+    box-shadow: var(--shadow);
+}
+.sim-section-label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 0.35rem;
+}
+.sim-section-hint {
+    font-size: 0.78rem;
+    color: var(--muted);
+    line-height: 1.5;
+    margin-bottom: 1.25rem;
+}
+
+/* ── Radar personas ── */
+.radar-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--border);
+}
+.radar-item:last-child { border-bottom: none; padding-bottom: 0; }
+.radar-item:first-child { padding-top: 0; }
+.radar-dot {
+    width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+    background: var(--accent);
+    box-shadow: 0 0 6px var(--accent);
+}
+.radar-dot.sombra { background: var(--muted); box-shadow: none; }
+.radar-name { font-weight: 600; font-size: 0.95rem; color: var(--text); flex: 1; }
+.radar-meta { font-size: 0.75rem; color: var(--muted); }
+.radar-actions { display: flex; gap: 0.5rem; flex-shrink: 0; }
+.radar-btn {
+    padding: 0.3rem 0.75rem;
+    border-radius: 100px;
+    border: 1.5px solid var(--border);
+    font-size: 0.75rem;
+    font-weight: 600;
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    cursor: pointer;
+    transition: all 0.15s;
+    background: transparent;
+}
+.radar-btn.add {
+    color: var(--green);
+    border-color: rgba(52,211,153,0.3);
+}
+.radar-btn.add:hover {
+    background: var(--green-light);
+    border-color: var(--green);
+}
+.radar-btn.ignore {
+    color: var(--muted);
+    border-color: var(--border);
+}
+.radar-btn.ignore:hover {
+    border-color: var(--muted);
+    color: var(--text);
+}
+
+/* ── Círculo ── */
+.circulo-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.65rem 0;
+    border-bottom: 1px solid var(--border);
+    text-decoration: none;
+    color: inherit;
+    transition: background 0.1s;
+}
+.circulo-item:last-child { border-bottom: none; }
+.circulo-item:hover { color: var(--accent); }
+.circulo-name { font-weight: 600; font-size: 0.9rem; flex: 1; }
+.circulo-tipo {
+    font-size: 0.72rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+.salud-bar {
+    width: 40px; height: 3px; border-radius: 2px;
+    background: var(--border); overflow: hidden; flex-shrink: 0;
+}
+.salud-fill { height: 100%; background: var(--accent); border-radius: 2px; }
+
+/* ── Interacciones ── */
+.interaccion-item {
+    display: flex;
+    gap: 0.75rem;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--border);
+}
+.interaccion-item:last-child { border-bottom: none; }
+.interaccion-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); flex-shrink: 0; margin-top: 0.45rem; }
+.interaccion-titulo {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text);
+    text-decoration: none;
+    display: block;
+    margin-bottom: 2px;
+}
+.interaccion-titulo:hover { color: var(--accent); }
+.interaccion-desc { font-size: 0.78rem; color: var(--muted); line-height: 1.5; }
+.interaccion-meta { font-size: 0.7rem; color: rgba(124,117,144,0.6); margin-top: 3px; }
+
+/* ── Empty states ── */
+.sim-empty { font-size: 0.85rem; color: var(--muted); font-style: italic; text-align: center; padding: 1rem 0; }
+
+/* ── CTA link ── */
+.sim-cta {
+    display: inline-flex; align-items: center; gap: 0.4rem;
+    font-size: 0.75rem; font-weight: 600;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--accent);
+    text-decoration: none;
+    margin-top: 1rem;
+    padding: 0.5rem 0;
+    border-top: 1px solid var(--border);
+    width: 100%;
+    justify-content: center;
+}
+.sim-cta:hover { color: var(--text); }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="fade-in-up">
-    <!-- Encabezado -->
-    <div class="card shadow-soft mb-4">
-        <div class="card-body p-4">
-            <div class="row align-items-center">
-                <div class="col-md-8">
-                    <h1 class="text-gradient mb-2"><i class="fas fa-users me-2"></i>Simbiosis - Mis Relaciones</h1>
-                    <blockquote class="border-0 p-0 m-0 bg-transparent">
-                        <p class="lead mb-1">"Nacimos para la comunidad. Nuestra sociedad es una bóveda de piedras que se derrumbaría si las piedras no se sostuvieran mutuamente."</p>
-                        <footer>— Séneca</footer>
-                    </blockquote>
-                </div>
-                <div class="col-md-4 text-center text-md-end mt-3 mt-md-0">
-                    <i class="fas fa-people-arrows fa-3x text-muted opacity-50"></i>
-                </div>
+{% csrf_token %}
+<div class="sim-wrap">
+
+    <!-- ── Header ── -->
+    <div class="sim-header">
+        <h1 class="sim-title">Simbiosis</h1>
+        <p class="sim-subtitle">Lo que está apareciendo en tus vínculos.</p>
+        <div class="sim-boundary">
+            JOI no decide quién importa. Solo muestra lo que se repite.
+        </div>
+        <div class="sim-metrics">
+            <div class="sim-metric">
+                <span class="sim-metric-val">{{ n_confirmadas }}</span>
+                <span class="sim-metric-label">Confirmadas</span>
+            </div>
+            <div class="sim-metric">
+                <span class="sim-metric-val">{{ n_radar }}</span>
+                <span class="sim-metric-label">En radar</span>
+            </div>
+            <div class="sim-metric">
+                <span class="sim-metric-val">{{ n_interacciones }}</span>
+                <span class="sim-metric-label">Interacciones</span>
             </div>
         </div>
     </div>
 
+    <!-- ── Radar (prioridad 1 — requiere decisión) ── -->
     {% if personas_radar %}
-    <!-- Radar JOI: personas detectadas automáticamente en cierres -->
-    <div class="card shadow-sm mb-4 border-0" style="background:rgba(99,102,241,0.06); border-left:3px solid rgba(99,102,241,0.4) !important;">
-        <div class="card-body p-4">
-            <div class="d-flex align-items-center mb-3">
-                <span style="font-size:0.65rem;letter-spacing:0.2em;text-transform:uppercase;color:rgba(99,102,241,0.7);font-weight:600;">JOI detectó estas personas en tus cierres</span>
-            </div>
-            <div class="row g-3">
-                {% for p in personas_radar %}
-                <div class="col-md-6 col-lg-4">
-                    <div class="d-flex align-items-start gap-3 p-3 rounded-3" style="background:rgba(255,255,255,0.04);">
-                        <div class="flex-shrink-0">
-                            <span class="badge rounded-pill {% if p.estado == 'radar' %}bg-warning text-dark{% else %}bg-secondary{% endif %}" style="font-size:0.6rem;letter-spacing:0.05em;">
-                                {% if p.estado == 'radar' %}radar{% else %}mención{% endif %}
-                            </span>
-                        </div>
-                        <div class="flex-grow-1 min-w-0">
-                            <div class="fw-semibold text-truncate">{{ p.nombre }}</div>
-                            <small class="text-muted">
-                                {{ p.veces_mencionada }} vez{% if p.veces_mencionada != 1 %}es{% endif %} ·
-                                última: {{ p.ultima_deteccion|date:"j M" }}
-                            </small>
-                        </div>
-                        <div class="flex-shrink-0">
-                            <button class="btn btn-sm btn-outline-primary border-0 promover-btn"
-                                    data-nombre="{{ p.nombre }}"
-                                    data-id="{{ p.id }}"
-                                    title="Añadir a Mi Círculo"
-                                    style="font-size:0.75rem;padding:0.25rem 0.5rem;">
-                                <i class="fas fa-plus"></i>
-                            </button>
-                            <button class="btn btn-sm btn-outline-secondary border-0 descartar-btn"
-                                    data-id="{{ p.id }}"
-                                    title="Descartar"
-                                    style="font-size:0.75rem;padding:0.25rem 0.5rem;">
-                                <i class="fas fa-times"></i>
-                            </button>
-                        </div>
-                    </div>
+    <div class="sim-section" style="border-color: rgba(167,139,250,0.25);">
+        <div class="sim-section-label">Personas que están apareciendo</div>
+        <div class="sim-section-hint">
+            JOI las ha visto repetirse en tus cierres. Tú decides si forman parte de tu círculo o si solo fueron presencia puntual.
+        </div>
+        <div id="radar-list">
+        {% for p in personas_radar %}
+        {% with ultima_sombra=p.interacciones.all|first %}
+        <div class="radar-item" id="radar-{{ p.id }}">
+            <div class="radar-dot {% if p.estado == 'sombra' %}sombra{% endif %}"></div>
+            <div style="flex:1;min-width:0;">
+                <div class="radar-name">{{ p.nombre }}</div>
+                <div class="radar-meta">
+                    {{ p.veces_mencionada }} vez{% if p.veces_mencionada != 1 %}es{% endif %} &middot;
+                    última {{ p.ultima_deteccion|date:"j M" }}
+                    {% if p.estado == 'sombra' %}&middot; <span style="color:rgba(124,117,144,0.7);">mención detectada</span>{% endif %}
+                    {% if p.estado == 'radar' %}&middot; <span style="color:var(--accent);">en el radar</span>{% endif %}
                 </div>
-                {% endfor %}
+                {% if ultima_sombra and ultima_sombra.descripcion %}
+                <div style="font-size:0.72rem;color:rgba(124,117,144,0.55);margin-top:3px;font-style:italic;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                    "{{ ultima_sombra.descripcion|truncatechars:70 }}"
+                </div>
+                {% endif %}
+            </div>
+            <div class="radar-actions" style="flex-direction:column;align-items:flex-end;gap:0.35rem;">
+                <button class="radar-btn add promover-btn" data-id="{{ p.id }}" data-nombre="{{ p.nombre }}">Añadir</button>
+                <button class="radar-btn ignore descartar-btn" data-id="{{ p.id }}" title="Se ocultará. Puede reaparecer si sigue mencionándose.">Ignorar</button>
             </div>
         </div>
+        {% endwith %}
+        {% endfor %}
+        </div>
+        <div style="font-size:0.68rem;color:rgba(124,117,144,0.5);font-style:italic;margin-top:0.75rem;">
+            Ignorar oculta la persona. Si sigue apareciendo en tus cierres, puede reaparecer aquí.
+        </div>
     </div>
-
-    <script>
-    const CSRF = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '{{ csrf_token }}';
-
-    document.querySelectorAll('.promover-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const nombre = this.dataset.nombre;
-            const id = this.dataset.id;
-            fetch("{% url 'diario:promover_persona_interina' %}", {
-                method: 'POST',
-                headers: {'X-CSRFToken': CSRF, 'Content-Type': 'application/json'},
-                body: JSON.stringify({id: id, accion: 'promover', nombre: nombre})
-            }).then(r => r.json()).then(d => {
-                if (d.ok || d.status === 'ok') location.reload();
-            }).catch(() => location.reload());
-        });
-    });
-
-    document.querySelectorAll('.descartar-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const id = this.dataset.id;
-            fetch("{% url 'diario:promover_persona_interina' %}", {
-                method: 'POST',
-                headers: {'X-CSRFToken': CSRF, 'Content-Type': 'application/json'},
-                body: JSON.stringify({id: id, accion: 'descartar'})
-            }).then(r => r.json()).then(d => {
-                if (d.ok || d.status === 'ok' || d.status === 'descartado') location.reload();
-            }).catch(() => location.reload());
-        });
-    });
-    </script>
     {% endif %}
 
-    <div class="row">
-        <!-- Columna Izquierda: Personas Importantes -->
-        <div class="col-lg-5 mb-4 mb-lg-0">
-            <div class="card shadow-sm h-100">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">Mi Círculo</h5>
-                    <a href="{% url 'diario:persona_crear' %}" class="btn btn-sm btn-primary">
-                        <i class="fas fa-plus me-1"></i> Añadir Persona
-                    </a>
-
-                </div>
-                <div class="card-body">
-                    {% if personas %}
-                    <ul class="list-group list-group-flush">
-                        {% for persona in personas %}
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            <div>
-                                <h6 class="mb-0">
-                                    <a href="{% url 'diario:persona_detalle' persona.id %}" class="text-dark stretched-link">{{ persona.nombre }}</a>
-                                </h6>
-
-                                <small class="text-muted">{{ persona.get_tipo_relacion_display }}</small>
-                            </div>
-                            <div class="d-flex align-items-center">
-                                <div class="progress me-3" style="width: 80px; height: 8px;">
-                                    <div class="progress-bar" role="progressbar" style="width: {{ persona.salud_relacion|mul:20 }}%;" aria-valuenow="{{ persona.salud_relacion }}"></div>
-                                </div>
-                                <a href="#" class="btn btn-sm btn-outline-secondary border-0 disabled"><i class="fas fa-edit"></i></a>
-                            </div>
-                        </li>
-                        {% endfor %}
-                    </ul>
-                    {% else %}
-                    <div class="text-center p-4">
-                        <p class="text-muted">Aún no has añadido a nadie a tu círculo.</p>
-                        <p class="text-muted small">Empieza por añadir a las personas importantes de tu vida.</p>
-                    </div>
-                    {% endif %}
-                </div>
-            </div>
+    <!-- ── Círculo confirmado ── -->
+    <div class="sim-section">
+        <div class="sim-section-label">Círculo confirmado</div>
+        <div class="sim-section-hint" style="margin-bottom:{% if personas %}1rem{% else %}0{% endif %};">
+            Personas que JOI puede usar como contexto estable.
         </div>
-
-        <!-- Columna Derecha: Interacciones Recientes -->
-        <div class="col-lg-7">
-            <div class="card shadow-sm h-100">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">Interacciones Recientes</h5>
-                    <a href="{% url 'diario:interaccion_crear' %}" class="btn btn-sm btn-primary">
-                        <i class="fas fa-plus me-1"></i> Registrar Interacción
-                    </a>
-
-                </div>
-                <div class="card-body">
-                    {% if ultimas_interacciones %}
-                    {% for interaccion in ultimas_interacciones %}
-                    <div class="d-flex position-relative mb-3">
-                        <i class="fas fa-quote-left fa-2x text-muted opacity-25 me-3"></i>
-                        <div>
-                            <h6 class="mb-1">
-                                <a href="{% url 'diario:interaccion_editar' interaccion.id %}" class="text-dark stretched-link">{{ interaccion.titulo }}</a>
-
-                            </h6>
-                            <p class="mb-1 small text-muted">{{ interaccion.descripcion|truncatewords:20 }}</p>
-                            <small class="text-muted">{{ interaccion.fecha|date:"d M Y" }}</small>
-                        </div>
-                    </div>
-                    {% endfor %}
-                    {% else %}
-                    <div class="text-center p-4">
-                        <p class="text-muted">No has registrado ninguna interacción.</p>
-                        <p class="text-muted small">Anota las conversaciones o momentos importantes para poder reflexionar sobre ellos.</p>
-                    </div>
-                    {% endif %}
-                </div>
+        {% if personas %}
+        {% for persona in personas %}
+        <a href="{% url 'diario:persona_detalle' persona.id %}" class="circulo-item">
+            <div class="circulo-name">{{ persona.nombre }}</div>
+            <div class="circulo-tipo">
+                {% if persona.tipo_relacion == 'otro' %}Sin clasificar{% else %}{{ persona.get_tipo_relacion_display }}{% endif %}
             </div>
-        </div>
+            <div class="salud-bar">
+                <div class="salud-fill" style="width:{{ persona.salud_relacion|mul:20 }}%;"></div>
+            </div>
+        </a>
+        {% endfor %}
+        {% else %}
+        <p class="sim-empty">Ninguna persona confirmada todavía.</p>
+        {% endif %}
+        <a href="{% url 'diario:persona_crear' %}" class="sim-cta">+ Añadir persona manualmente</a>
     </div>
+
+    <!-- ── Interacciones recientes ── -->
+    <div class="sim-section">
+        <div class="sim-section-label">Interacciones recientes</div>
+        {% if ultimas_interacciones %}
+        {% for interaccion in ultimas_interacciones %}
+        <div class="interaccion-item">
+            <div class="interaccion-dot"></div>
+            <div>
+                <a href="{% url 'diario:interaccion_editar' interaccion.id %}" class="interaccion-titulo">{{ interaccion.titulo }}</a>
+                {% if interaccion.descripcion %}
+                <div class="interaccion-desc">{{ interaccion.descripcion|truncatewords:18 }}</div>
+                {% endif %}
+                <div class="interaccion-meta">
+                    {{ interaccion.fecha|date:"j M Y" }}
+                    {% with personas_list=interaccion.personas.all %}
+                    {% if personas_list %}
+                    &middot; {{ personas_list|join:", " }}
+                    {% endif %}
+                    {% endwith %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+        {% else %}
+        <p class="sim-empty">Sin interacciones registradas todavía.</p>
+        {% endif %}
+        <a href="{% url 'diario:interaccion_crear' %}" class="sim-cta">+ Registrar interacción</a>
+    </div>
+
 </div>
+
+<script>
+const CSRF = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '{{ csrf_token }}';
+
+document.querySelectorAll('.promover-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        const id = this.dataset.id;
+        const nombre = this.dataset.nombre;
+        this.textContent = '...';
+        this.disabled = true;
+        fetch("{% url 'diario:promover_persona_interina' %}", {
+            method: 'POST',
+            headers: {'X-CSRFToken': CSRF, 'Content-Type': 'application/json'},
+            body: JSON.stringify({id, accion: 'promover', nombre})
+        }).then(r => r.json()).then(() => location.reload()).catch(() => location.reload());
+    });
+});
+
+document.querySelectorAll('.descartar-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        const id = this.dataset.id;
+        const row = document.getElementById('radar-' + id);
+        if (row) row.style.opacity = '0.4';
+        fetch("{% url 'diario:promover_persona_interina' %}", {
+            method: 'POST',
+            headers: {'X-CSRFToken': CSRF, 'Content-Type': 'application/json'},
+            body: JSON.stringify({id, accion: 'descartar'})
+        }).then(r => r.json()).then(() => {
+            if (row) row.remove();
+        }).catch(() => location.reload());
+    });
+});
+</script>
 {% endblock %}

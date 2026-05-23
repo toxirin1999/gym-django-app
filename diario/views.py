@@ -1781,24 +1781,30 @@ def analiticas_personales(request):
 
 @login_required
 def simbiosis_dashboard(request):
-    """Dashboard de Simbiosis (VERSIÓN OPTIMIZADA)"""
+    """Dashboard de Simbiosis."""
+    from diario.models import PersonaInterina
 
-    personas = PersonaImportante.objects.filter(usuario=request.user).order_by('tipo_relacion', 'nombre')
+    personas = PersonaImportante.objects.filter(
+        usuario=request.user
+    ).order_by('tipo_relacion', 'nombre')
 
     ultimas_interacciones = Interaccion.objects.filter(
         usuario=request.user
-    ).prefetch_related('personas').order_by('-fecha')[:10]
+    ).prefetch_related('personas').order_by('-fecha')[:8]
 
-    # Personas detectadas automáticamente por JOI en el cierre — aún sin confirmar
-    from diario.models import PersonaInterina
+    # Solo sombra y radar — excluir promovidas y descartadas
     personas_radar = PersonaInterina.objects.filter(
-        usuario=request.user
-    ).order_by('-ultima_deteccion')
+        usuario=request.user,
+        estado__in=['sombra', 'radar'],
+    ).prefetch_related('interacciones').order_by('-veces_mencionada', '-ultima_deteccion')
 
     context = {
         'personas': personas,
         'ultimas_interacciones': ultimas_interacciones,
         'personas_radar': personas_radar,
+        'n_confirmadas': personas.count(),
+        'n_radar': personas_radar.count(),
+        'n_interacciones': ultimas_interacciones.count(),
     }
     return render(request, 'diario/simbiosis_dashboard.html', context)
 
@@ -3843,7 +3849,12 @@ def presencia_cierre(request):
                                     origen='patron_detectado',
                                 )
 
-                            # Si aparece 2+ veces → activar radar de JOI
+                            # Reaparecer: ignorada con ≥4 menciones vuelve a sombra
+                            if interina.estado == 'descartada' and interina.veces_mencionada >= 4:
+                                PersonaInterina.objects.filter(pk=interina.pk).update(estado='sombra')
+                                interina.refresh_from_db()
+
+                            # 2+ menciones en sombra → radar
                             if interina.veces_mencionada >= 2 and interina.estado == 'sombra':
                                 PersonaInterina.objects.filter(pk=interina.pk).update(estado='radar')
 
@@ -4014,7 +4025,7 @@ def promover_persona_interina(request):
             for sombra in interina.interacciones.all():
                 interaccion = Interaccion.objects.create(
                     usuario=request.user,
-                    titulo=f'[Sombra] Interacción con {interina.nombre}',
+                    titulo=f'Mención detectada · {interina.nombre}',
                     descripcion=sombra.descripcion,
                     mi_sentir=sombra.mi_sentir,
                     aprendizaje=sombra.aprendizaje,
@@ -4194,6 +4205,11 @@ def reprocesar_cierres(request):
                             tipo_interaccion=tipo,
                         )
                         personas_creadas += 1
+
+                    # Reaparecer: ignorada con ≥4 menciones vuelve a sombra
+                    if interina.estado == 'descartada' and interina.veces_mencionada >= 4:
+                        PersonaInterina.objects.filter(pk=interina.pk).update(estado='sombra')
+                        interina.refresh_from_db()
 
                     if interina.veces_mencionada >= 2 and interina.estado == 'sombra':
                         PersonaInterina.objects.filter(pk=interina.pk).update(estado='radar')
