@@ -1053,11 +1053,10 @@ input{background:transparent!important;border:none!important;outline:none!import
     <div style="font-size:13px;font-weight:700;color:rgba(34,211,238,0.85);margin-bottom:3px;">Lesión en retorno</div>
     <div style="font-size:12px;color:rgba(240,238,232,0.6);line-height:1.4;">
       {% if has_bio_adjustments %}
-        Quedan {{ transition_days_left }} día{{ transition_days_left|pluralize:"s" }}. Algunos ejercicios han sido adaptados por precaución.
-        {% if vol_mod < 1.0 %} Volumen al {{ vol_mod_pct }}% (los pesos se mantienen).{% endif %}
+        Quedan {{ transition_days_left }} día{{ transition_days_left|pluralize:"s" }}. Ejercicios de la zona afectada han sido adaptados.
+        {% if vol_mod < 1.0 %} Series reducidas al {{ vol_mod_pct }}% en los ejercicios de esa zona — los pesos no cambian.{% endif %}
       {% else %}
-        Lesión en retorno registrada. No afecta a los ejercicios de esta sesión.
-        {% if vol_mod < 1.0 %} Volumen ligeramente reducido al {{ vol_mod_pct }}%.{% endif %}
+        Lesión en retorno. No afecta a los ejercicios de esta sesión.
       {% endif %}
     </div>
   </div>
@@ -1076,7 +1075,7 @@ input{background:transparent!important;border:none!important;outline:none!import
     <div class="bio-banner-title">Bio-Safety activo</div>
     <div class="bio-banner-items">
       {% if vol_mod < 1.0 %}
-      <div class="bio-item volumen">Volumen al {{ vol_mod_pct }}% · Readiness {{ bio_score }}%</div>
+      <div class="bio-item volumen">Series reducidas al {{ vol_mod_pct }}% · {{ bio_score_label }}</div>
       {% endif %}
       {% for adj in bio_adjustments %}
       <div class="bio-item {{ adj.tipo }}">{{ adj.mensaje }}</div>
@@ -2381,7 +2380,8 @@ function guardarCheckpoint(){
     localStorage.setItem(STORAGE_KEY,JSON.stringify({
       ejActual:STATE.ejActual,
       seriesCompletadas:STATE.seriesCompletadas,
-      ts:Date.now()
+      ts:Date.now(),
+      url:window.location.href  // Para poder recuperar la sesión desde el dashboard
     }));
   }catch(e){}
 }
@@ -2907,18 +2907,26 @@ function selEnergiaPreSesion(val){
   document.getElementById('energia-pre-label').textContent = lbl;
 }
 
+let _sessionGuardada = false;
+
 document.getElementById('btn-confirmar-guardar').addEventListener('click',()=>{
+  _sessionGuardada = true;
   document.getElementById('hid-duracion').value=Math.floor((Date.now()-t0)/1000/60);
   limpiarCheckpoint();
-
-  // Limpiar timestamp del localStorage antes de guardar
   localStorage.removeItem(_WK_KEY);
-
-  // Mostrar overlay de guardando
   const ov = document.getElementById('saving-overlay');
   if (ov) ov.style.display = 'flex';
-
   document.getElementById('workout-form').submit();
+});
+
+// Aviso al salir sin guardar
+window.addEventListener('beforeunload', (e) => {
+  if (_sessionGuardada) return;
+  const haySeries = Object.values(STATE.seriesCompletadas || {}).some(s => s && s.length > 0);
+  if (haySeries) {
+    e.preventDefault();
+    return e.returnValue = '¿Salir sin guardar el entreno? Los datos quedan en borrador local.';
+  }
 });
 
 // ── SWIPE PARA NAVEGAR ───────────────────────────────────────────

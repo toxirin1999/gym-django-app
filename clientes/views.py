@@ -827,10 +827,18 @@ def _ctx_joi_semanal(cliente):
         return None
 
 
-def _ctx_explicacion_decision(decision):
+def _ctx_senal_corporal_diario(cliente):
+    try:
+        from diario.services.senales_entrenamiento import obtener_senal_corporal_diario
+        return obtener_senal_corporal_diario(cliente.user)
+    except Exception:
+        return {'hay_senal': False}
+
+
+def _ctx_explicacion_decision(decision, senal_diario=None):
     try:
         from entrenos.services.explicacion_decision_service import construir_explicacion_decision
-        return construir_explicacion_decision(decision)
+        return construir_explicacion_decision(decision, senal_diario=senal_diario)
     except Exception:
         return None
 
@@ -1034,8 +1042,8 @@ def _get_dashboard_context_data(request, cliente):
     entreno_hoy_realizado = (
         EntrenoRealizado.objects.filter(cliente=cliente, fecha=hoy).exists()
         or _AR.objects.filter(
-            cliente=cliente, tipo='gym', fuente='manual', fecha=hoy,
-        ).exists()
+            cliente=cliente, tipo='gym', fuente='manual',
+        ).filter(_Q2(fecha=hoy) | _Q2(fecha_realizado=hoy)).exists()
     )
 
     # Nivel 2: hecho esta semana (para sesiones "anticipadas")
@@ -1066,6 +1074,19 @@ def _get_dashboard_context_data(request, cliente):
         entreno_realizado_obj = EntrenoRealizado.objects.filter(
             cliente=cliente, fecha=hoy,
         ).prefetch_related('ejercicios_realizados').order_by('-fecha').first()
+        if not entreno_realizado_obj:
+            # Sesión guardada hoy pero con fecha planificada distinta (e.g. recuperar sesión pasada)
+            _ar_hoy = _AR.objects.filter(
+                cliente=cliente, tipo='gym', fuente='manual', fecha_realizado=hoy,
+                entreno_gym__isnull=False,
+            ).order_by('-id').first()
+            if _ar_hoy:
+                entreno_realizado_obj = (
+                    EntrenoRealizado.objects
+                    .filter(id=_ar_hoy.entreno_gym_id)
+                    .prefetch_related('ejercicios_realizados')
+                    .first()
+                )
 
     # Construir lista de ejercicios con peso medio para mostrar en el panel
     ejercicios_realizados_resumen = []
@@ -1200,6 +1221,9 @@ def _get_dashboard_context_data(request, cliente):
     import json as _json
     acwr_data_json = _json.dumps(analis_acwr.get('dataframe', [])) if analis_acwr else '[]'
 
+    # Phase 3.0 — señal corporal del diario (computada antes del dict para pasarla a explicacion)
+    _senal_diario = _ctx_senal_corporal_diario(cliente)
+
     return {
         'usuario': usuario,
         'cliente': cliente,
@@ -1258,7 +1282,7 @@ def _get_dashboard_context_data(request, cliente):
         'distribucion_aviso': _decision_entreno.get('distribucion_aviso'),
         'preferencia_aplicada': _decision_entreno.get('preferencia_aplicada'),
         'lesion_aviso': _decision_entreno.get('lesion_aviso'),
-        'explicacion_decision': _ctx_explicacion_decision(_decision_entreno),
+        'explicacion_decision': _ctx_explicacion_decision(_decision_entreno, _senal_diario),
         'bloque_esencial_resumen': bloque_esencial_resumen,
         'analisis_semanal': _ctx_analisis_semanal(cliente, hoy),
         'calendario_plan': _ctx_calendario_plan(cliente, hoy),
@@ -1277,6 +1301,8 @@ def _get_dashboard_context_data(request, cliente):
         'lesiones_activas': _ctx_lesiones_activas(cliente),
         # Phase 45 — JOI semanal: frase breve si hay señal y no se mostró hoy
         'joi_semanal': _ctx_joi_semanal(cliente),
+        # Phase 3.0 — Señal corporal del diario (informativa, no bloquea)
+        'senal_corporal_diario': _senal_diario,
     }
 
 

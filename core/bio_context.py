@@ -305,6 +305,7 @@ class BioContextProvider:
         hoy = timezone.now().date()
         is_in_transition = False
         transition_days_left = 0
+        volume_modifier_base = volume_modifier  # Pre-transition cap (same when no transition)
 
         # Buscar lesiones recientemente recuperadas (últimos 7 días)
         lesiones_recientes = UserInjury.objects.filter(
@@ -346,6 +347,7 @@ class BioContextProvider:
             'pain_score': round(pain_score, 2),
             'needs_deload': needs_deload,
             'volume_modifier': volume_modifier,
+            'volume_modifier_base': volume_modifier_base,
             'max_rpe': max_rpe,
             'is_in_transition': is_in_transition,
             'transition_days_left': transition_days_left,

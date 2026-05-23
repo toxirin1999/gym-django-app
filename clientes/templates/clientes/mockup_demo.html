@@ -1,5 +1,6 @@
 {% load static %}
 {% load clientes_filters %}
+{% load i18n %}
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -390,6 +391,7 @@ body {
 <div id="joi-banner" style="position:fixed;top:0;left:0;right:0;z-index:9998;background:linear-gradient(90deg,rgba(15,10,25,0.97),rgba(30,10,40,0.97));border-bottom:1px solid rgba(200,100,255,0.25);padding:10px 20px;display:flex;align-items:center;gap:14px;backdrop-filter:blur(4px);animation:joiBannerIn .5s ease-out;">
   <span style="color:rgba(200,100,255,0.6);font-size:12px;letter-spacing:.1em;text-transform:uppercase;white-space:nowrap;">JOI</span>
   <p style="margin:0;color:#e8b4ff;font-style:italic;font-size:14px;line-height:1.5;flex:1;">{{ joi_mensaje_pendiente.mensaje }}</p>
+  <a href="/joi/habitacion/?mensaje={{ joi_mensaje_pendiente.id }}" style="color:rgba(200,100,255,0.5);font-size:13px;text-decoration:none;padding:0 6px;white-space:nowrap;transition:color .2s;" onmouseover="this.style.color='#e8b4ff'" onmouseout="this.style.color='rgba(200,100,255,0.5)'">→</a>
   <button onclick="joiBannerCerrar({{ joi_mensaje_pendiente.id }})" style="background:none;border:none;color:rgba(200,100,255,0.5);font-size:20px;cursor:pointer;padding:0 4px;line-height:1;" onmouseover="this.style.color='#e8b4ff'" onmouseout="this.style.color='rgba(200,100,255,0.5)'">×</button>
 </div>
 <style>
@@ -403,6 +405,14 @@ function joiBannerCerrar(id) {
   setTimeout(()=>b.remove(),420);
 }
 </script>
+{% endif %}
+
+{% if messages %}
+{% for msg in messages %}
+<div style="position:fixed;top:{% if joi_mensaje_pendiente %}52px{% else %}0{% endif %};left:0;right:0;z-index:9997;background:{% if msg.tags == 'error' %}rgba(220,38,38,0.95){% else %}rgba(22,163,74,0.95){% endif %};color:#fff;padding:10px 20px;font-size:12px;text-align:center;backdrop-filter:blur(4px);">
+  {{ msg }}
+</div>
+{% endfor %}
 {% endif %}
 
 <!-- ── NAV ─────────────────────────────────────── -->
@@ -628,12 +638,16 @@ function joiBannerCerrar(id) {
     </div>
     {% elif proximo_entrenamiento %}
     <div class="rb-workout-card">
-      <div class="rb-workout-eyebrow">
-        {% if estado_entreno == 'recuperar' %}Recuperación recomendada
-        {% elif estado_entreno == 'version_reducida' %}Versión esencial
-        {% elif estado_entreno == 'posponer' %}Sesión en pausa
-        {% elif tipo_entreno == 'pendiente' %}Sesión Pendiente
-        {% else %}Próximo Entrenamiento{% endif %}
+      <div class="rb-workout-eyebrow" style="display:flex;align-items:center;gap:8px;">
+        <span>
+          {% if estado_entreno == 'recuperar' %}Recuperación recomendada
+          {% elif estado_entreno == 'descanso' %}Día de descanso
+          {% elif estado_entreno == 'version_reducida' %}Versión esencial
+          {% elif estado_entreno == 'posponer' %}Sesión en pausa
+          {% elif tipo_entreno == 'pendiente' %}Sesión Pendiente
+          {% else %}Próximo Entrenamiento{% endif %}
+        </span>
+        <span style="font-family:var(--font-mono);font-size:8px;font-weight:700;letter-spacing:0.1em;color:var(--ink-4);text-transform:uppercase;background:rgba(255,255,255,0.06);padding:2px 5px;border-radius:3px;">GYM</span>
       </div>
       <div class="rb-workout-title">{{ proximo_entrenamiento.nombre|default:proximo_entrenamiento.rutina_nombre|default:"Sesión" }}</div>
       {% if mensaje_entreno and causa_entreno != 'sesion_hoy' %}
@@ -732,6 +746,29 @@ function joiBannerCerrar(id) {
         </div>
       </div>
       {% endif %}
+
+      {# Phase 3.0 — Señal corporal del diario: badge informativo, nunca bloquea #}
+      {% if senal_corporal_diario.hay_senal %}
+      <div style="margin-top:10px;padding:8px 11px;
+                  background:rgba(167,139,250,0.06);
+                  border-left:2px solid rgba(167,139,250,0.35);
+                  border-radius:0 8px 8px 0;">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">
+          <span style="font-family:var(--font-mono);font-size:8px;font-weight:700;
+                       letter-spacing:0.12em;text-transform:uppercase;
+                       color:rgba(167,139,250,0.6);">DIARIO · Cuerpo</span>
+        </div>
+        <div style="font-size:11px;color:var(--td);opacity:0.80;line-height:1.45;">
+          {{ senal_corporal_diario.texto }}
+        </div>
+        {% if senal_corporal_diario.sugerencia %}
+        <div style="margin-top:5px;font-size:10px;color:rgba(167,139,250,0.65);font-style:italic;line-height:1.4;">
+          {{ senal_corporal_diario.sugerencia }}
+        </div>
+        {% endif %}
+      </div>
+      {% endif %}
+
     </div>
     {% endif %}
 
@@ -893,7 +930,16 @@ function joiBannerCerrar(id) {
     </a>
     {% elif proximo_entrenamiento %}
 
-    {% if estado_entreno == 'recuperar' %}
+    {% if estado_entreno == 'descanso' %}
+    {# Día de descanso real — sin ejercicios planificados, no ofrecer "Ejecutar Protocolo" #}
+    <div style="padding:14px 0 8px;font-size:11px;color:var(--td);opacity:0.65;text-align:center;line-height:1.5;">
+      Hoy es día de descanso. El plan no tiene sesión programada.
+    </div>
+    <a href="{% url 'entrenos:vista_plan_anual' cliente.id %}" class="rb-cta" style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.12);color:var(--td);text-decoration:none;">
+      <i class="fas fa-calendar-alt"></i> Ver plan para entrenar igualmente
+    </a>
+
+    {% elif estado_entreno == 'recuperar' %}
     {# Motor recomienda descanso — es recomendación, no bloqueo #}
     <div style="padding:14px 0 4px;font-size:11px;color:var(--td);opacity:0.65;text-align:center;line-height:1.5;">
       El plan recomienda descanso hoy para proteger el progreso. Puedes entrenar si te encuentras bien.
@@ -2109,6 +2155,43 @@ function mostrarDetalleDia(el, fecha, nombre, estado, fechaReal, esEsencial, car
 }
 </script>
 
-{% include 'includes/_joi_fab.html' %}
+{% include 'includes/_joi_fab.html' with hide_banner=True %}
+
+<div id="entreno-recovery-banner" style="display:none;position:fixed;bottom:80px;left:0;right:0;z-index:8000;padding:0 16px;">
+  <div style="background:rgba(15,10,25,0.97);border:1px solid rgba(255,160,40,0.4);border-radius:12px;padding:12px 16px;display:flex;align-items:center;gap:12px;box-shadow:0 4px 20px rgba(0,0,0,0.5);">
+    <span style="font-size:18px;flex-shrink:0;">⚠️</span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:12px;font-weight:700;color:rgba(255,160,40,0.9);margin-bottom:2px;">Entreno sin guardar</div>
+      <div style="font-size:11px;color:var(--td);opacity:0.75;">Tienes series registradas que no se guardaron.</div>
+    </div>
+    <a id="entreno-recovery-link" href="#" style="font-family:var(--font-mono);font-size:9px;font-weight:700;letter-spacing:0.1em;color:rgba(255,160,40,0.9);border:1px solid rgba(255,160,40,0.4);border-radius:4px;padding:5px 10px;text-decoration:none;white-space:nowrap;">RETOMAR →</a>
+    <button onclick="this.closest('#entreno-recovery-banner').style.display='none'" style="background:none;border:none;color:var(--td);opacity:0.4;font-size:16px;cursor:pointer;padding:0 4px;flex-shrink:0;">×</button>
+  </div>
+</div>
+<script>
+(function(){
+  const clienteId = {{ cliente.id }};
+  const prefix = 'entreno_activo_' + clienteId + '_';
+  let pendiente = null;
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (k && k.startsWith(prefix)) {
+      try {
+        const data = JSON.parse(localStorage.getItem(k));
+        const haySeries = data && data.seriesCompletadas &&
+          Object.values(data.seriesCompletadas).some(s => s && s.length > 0);
+        const reciente = data && data.ts && (Date.now() - data.ts) < 86400000;
+        if (haySeries && reciente) { pendiente = data; break; }
+      } catch(e) {}
+    }
+  }
+  if (pendiente) {
+    const banner = document.getElementById('entreno-recovery-banner');
+    const link = document.getElementById('entreno-recovery-link');
+    if (pendiente.url) link.href = pendiente.url;
+    banner.style.display = 'block';
+  }
+})();
+</script>
 </body>
 </html>
