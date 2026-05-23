@@ -1875,19 +1875,35 @@ def interaccion_crear_editar(request, interaccion_id=None):
 
 @login_required
 def persona_detalle(request, persona_id):
-    """
-    Muestra el perfil de una PersonaImportante y todas las interacciones asociadas.
-    """
+    """Perfil de vínculo legible — Phase Simbiosis 1.3."""
     persona = get_object_or_404(PersonaImportante, id=persona_id, usuario=request.user)
+    interacciones = persona.interaccion_set.all().order_by('-fecha')
 
-    # Obtenemos todas las interacciones donde esta persona estuvo involucrada
-    interacciones_con_persona = persona.interaccion_set.all().order_by('-fecha')
+    origen_interino = persona.origen_interino.first()
+    interacciones_anotadas = [
+        {'obj': i, 'es_migrada': i.titulo.startswith('Mención detectada ·')}
+        for i in interacciones
+    ]
 
     context = {
         'persona': persona,
-        'interacciones': interacciones_con_persona,
+        'interacciones': interacciones_anotadas,
+        'n_interacciones': interacciones.count(),
+        'ultima_interaccion': interacciones.first(),
+        'origen_interino': origen_interino,
+        'origen': 'radar' if origen_interino else 'manual',
     }
     return render(request, 'diario/persona_detalle.html', context)
+
+
+@login_required
+@require_http_methods(["POST"])
+def eliminar_persona(request, persona_id):
+    """Elimina una PersonaImportante y envía su interina de vuelta a sombra."""
+    persona = get_object_or_404(PersonaImportante, id=persona_id, usuario=request.user)
+    persona.origen_interino.all().update(estado='sombra', persona_importante=None)
+    persona.delete()
+    return redirect('diario:simbiosis_dashboard')
 
 
 # ============================================

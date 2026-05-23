@@ -1,65 +1,256 @@
 {% extends 'diario/base_stoic.html' %}
+{% load static %}
 {% load custom_filters %}
-{% block title %}Perfil de {{ persona.nombre }}{% endblock %}
+{% block title %}{{ persona.nombre }} — Simbiosis{% endblock %}
+
+{% block extra_css %}
+<style>
+:root {
+    --bg:     #13111A;
+    --card:   #1E1B27;
+    --border: #2E2A3A;
+    --text:   #EDE9E3;
+    --muted:  #7C7590;
+    --accent: #A78BFA;
+    --accent-light: rgba(167,139,250,0.12);
+    --green:  #34D399;
+    --red:    #F87171;
+    --red-light: rgba(248,113,113,0.1);
+    --radius: 16px;
+    --shadow: 0 2px 20px rgba(0,0,0,0.3);
+}
+* { box-sizing: border-box; }
+body { background: var(--bg) !important; font-family: -apple-system, BlinkMacSystemFont, sans-serif !important; color: var(--text); }
+
+.perf-wrap { max-width: 680px; margin: 0 auto; padding: 1.5rem 1rem 4rem; }
+
+.back-link {
+    display: inline-flex; align-items: center; gap: 0.4rem;
+    font-size: 0.72rem; font-weight: 600; letter-spacing: 0.08em;
+    color: var(--muted); text-decoration: none; text-transform: uppercase;
+    margin-bottom: 1.5rem;
+}
+.back-link:hover { color: var(--text); }
+
+.perf-header { margin-bottom: 1.75rem; }
+.perf-nombre { font-size: 2rem; font-weight: 700; letter-spacing: -0.02em; color: var(--text); margin-bottom: 0.5rem; line-height: 1.1; }
+.perf-badges { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.85rem; }
+.perf-badge {
+    font-size: 0.68rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+    padding: 0.25rem 0.65rem; border-radius: 100px;
+    border: 1.5px solid var(--border); color: var(--muted);
+}
+.perf-badge.tipo { color: var(--accent); border-color: rgba(167,139,250,0.3); background: var(--accent-light); }
+.perf-badge.radar { color: var(--green); border-color: rgba(52,211,153,0.3); background: rgba(52,211,153,0.08); }
+.perf-boundary {
+    font-size: 0.78rem; color: rgba(167,139,250,0.6); font-style: italic;
+    padding: 0.6rem 0.85rem; border-left: 2px solid rgba(167,139,250,0.3);
+}
+
+.sim-section {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 1.25rem 1.5rem;
+    margin-bottom: 1rem; box-shadow: var(--shadow);
+}
+.sim-section-label {
+    font-size: 0.68rem; font-weight: 700; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--muted); margin-bottom: 0.85rem;
+}
+
+.perf-stats { display: flex; gap: 1.5rem; flex-wrap: wrap; }
+.perf-stat { display: flex; flex-direction: column; gap: 2px; }
+.perf-stat-val { font-size: 1.3rem; font-weight: 700; color: var(--text); line-height: 1; }
+.perf-stat-label { font-size: 0.62rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+
+.int-item {
+    display: flex; gap: 0.75rem; padding: 0.75rem 0;
+    border-bottom: 1px solid var(--border);
+}
+.int-item:last-child { border-bottom: none; padding-bottom: 0; }
+.int-item:first-child { padding-top: 0; }
+.int-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); flex-shrink: 0; margin-top: 0.45rem; }
+.int-dot.joi { background: var(--accent); }
+.int-title { font-size: 0.88rem; font-weight: 600; color: var(--text); display: block; margin-bottom: 2px; text-decoration: none; }
+.int-title:hover { color: var(--accent); }
+.int-desc { font-size: 0.75rem; color: var(--muted); line-height: 1.4; }
+.int-meta { font-size: 0.68rem; color: rgba(124,117,144,0.6); margin-top: 3px; display: flex; align-items: center; gap: 0.5rem; }
+.int-tag {
+    font-size: 0.58rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+    padding: 0.1rem 0.4rem; border-radius: 3px;
+}
+.int-tag.joi { color: var(--accent); background: var(--accent-light); }
+.int-tag.manual { color: var(--muted); background: rgba(124,117,144,0.1); }
+
+.accion-list { display: flex; flex-direction: column; gap: 0.5rem; }
+.accion-btn {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0.75rem 1rem; border-radius: 10px;
+    border: 1.5px solid var(--border); font-size: 0.85rem; font-weight: 600;
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    color: var(--text); background: transparent; text-decoration: none;
+    cursor: pointer; transition: all 0.15s; width: 100%; text-align: left;
+}
+.accion-btn:hover { border-color: var(--accent); color: var(--accent); }
+.accion-btn.danger { color: var(--red); border-color: rgba(248,113,113,0.2); }
+.accion-btn.danger:hover { background: var(--red-light); border-color: var(--red); }
+.accion-btn-arrow { font-size: 0.75rem; color: var(--muted); }
+
+.confirm-box {
+    background: var(--card); border: 1.5px solid rgba(248,113,113,0.3);
+    border-radius: var(--radius); padding: 1.25rem 1.5rem; margin-bottom: 1rem;
+}
+.confirm-msg { font-size: 0.88rem; color: var(--text); margin-bottom: 0.85rem; line-height: 1.5; }
+.confirm-actions { display: flex; gap: 0.75rem; }
+.btn-confirmar {
+    padding: 0.5rem 1.25rem; border-radius: 100px; border: none;
+    background: var(--red); color: #fff; font-size: 0.82rem; font-weight: 700;
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif; cursor: pointer;
+}
+.btn-cancelar {
+    padding: 0.5rem 1rem; border-radius: 100px; border: 1.5px solid var(--border);
+    background: transparent; color: var(--muted); font-size: 0.82rem; font-weight: 600;
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif; cursor: pointer;
+}
+.notas-text { font-size: 0.9rem; color: var(--text); line-height: 1.6; }
+.notas-empty { font-size: 0.85rem; color: var(--muted); font-style: italic; }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="fade-in-up">
-    <!-- Encabezado del Perfil -->
-    <div class="card shadow-soft mb-4">
-        <div class="card-body p-4">
-            <div class="d-flex justify-content-between align-items-start">
-                <div>
-                    <h1 class="text-gradient mb-1">{{ persona.nombre }}</h1>
-                    <span class="badge bg-primary">{{ persona.get_tipo_relacion_display }}</span>
-                </div>
-                <a href="{% url 'diario:persona_editar' persona.id %}" class="btn btn-sm btn-outline-secondary">
-                    <i class="fas fa-edit me-1"></i> Editar Persona
-                </a>
-            </div>
-            <hr>
-            <div class="row">
-                <div class="col-md-6">
-                    <h6 class="text-muted">Salud de la Relación</h6>
-                    <div class="progress" style="height: 10px;">
-                        <div class="progress-bar" role="progressbar" style="width: {{ persona.salud_relacion|mul:20 }}%;" aria-valuenow="{{ persona.salud_relacion }}"></div>
-                    </div>
-                    <p class="small text-muted mt-1">
-                        {{ persona.salud_relacion }}/5 -
-                        {% for i in persona.salud_relacion|get_range %}⭐{% endfor %}
-                    </p>
+<div class="perf-wrap">
 
-                </div>
-                <div class="col-md-6">
-                    <h6 class="text-muted">Notas</h6>
-                    <p class="small fst-italic">{{ persona.notas|default:"Sin notas." }}</p>
-                </div>
-            </div>
+    <a href="{% url 'diario:simbiosis_dashboard' %}" class="back-link">← Simbiosis</a>
+
+    <!-- Header -->
+    <div class="perf-header">
+        <div class="perf-nombre">{{ persona.nombre }}</div>
+        <div class="perf-badges">
+            <span class="perf-badge tipo">
+                {% if persona.tipo_relacion == 'otro' %}Sin clasificar{% else %}{{ persona.get_tipo_relacion_display }}{% endif %}
+            </span>
+            {% if origen == 'radar' %}
+            <span class="perf-badge radar">Desde el radar</span>
+            {% else %}
+            <span class="perf-badge">Añadida manualmente</span>
+            {% endif %}
+        </div>
+        <div class="perf-boundary">
+            JOI registra apariciones y contexto. No decide la importancia real del vínculo.
         </div>
     </div>
 
-    <!-- Historial de Interacciones -->
-    <div class="card shadow-sm">
-        <div class="card-header">
-            <h5 class="mb-0">Historial de Interacciones con {{ persona.nombre }}</h5>
-        </div>
-        <div class="card-body">
-            {% if interacciones %}
-            {% for interaccion in interacciones %}
-            <div class="card mb-3">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between">
-                        <h6 class="card-title">{{ interaccion.titulo }}</h6>
-                        <small class="text-muted">{{ interaccion.fecha|date:"d M, Y" }}</small>
-                    </div>
-                    <p class="card-text small">{{ interaccion.descripcion }}</p>
-                    <a href="{% url 'diario:interaccion_editar' interaccion.id %}" class="btn btn-sm btn-outline-primary">Ver/Editar Reflexión</a>
-                </div>
+    <!-- Resumen -->
+    <div class="sim-section">
+        <div class="sim-section-label">Resumen</div>
+        <div class="perf-stats">
+            <div class="perf-stat">
+                <span class="perf-stat-val">{{ n_interacciones }}</span>
+                <span class="perf-stat-label">Interacciones</span>
             </div>
-            {% endfor %}
+            {% if ultima_interaccion %}
+            <div class="perf-stat">
+                <span class="perf-stat-val">{{ ultima_interaccion.fecha|date:"j M" }}</span>
+                <span class="perf-stat-label">Última aparición</span>
+            </div>
+            {% endif %}
+            {% if origen == 'radar' and origen_interino %}
+            <div class="perf-stat">
+                <span class="perf-stat-val">{{ origen_interino.veces_mencionada }}</span>
+                <span class="perf-stat-label">Menciones JOI</span>
+            </div>
+            <div class="perf-stat">
+                <span class="perf-stat-val">{{ origen_interino.primera_deteccion|date:"j M" }}</span>
+                <span class="perf-stat-label">Primera detección</span>
+            </div>
             {% else %}
-            <p class="text-muted text-center">Aún no has registrado interacciones con {{ persona.nombre }}.</p>
+            <div class="perf-stat">
+                <span class="perf-stat-val">{{ persona.fecha_creacion|date:"j M" }}</span>
+                <span class="perf-stat-label">Añadida el</span>
+            </div>
             {% endif %}
         </div>
     </div>
+
+    <!-- Interacciones -->
+    <div class="sim-section">
+        <div class="sim-section-label">Interacciones</div>
+        {% if interacciones %}
+        {% for item in interacciones %}
+        <div class="int-item">
+            <div class="int-dot {% if item.es_migrada %}joi{% endif %}"></div>
+            <div style="flex:1;min-width:0;">
+                <a href="{% url 'diario:interaccion_editar' item.obj.id %}" class="int-title">{{ item.obj.titulo }}</a>
+                {% if item.obj.descripcion %}
+                <div class="int-desc">{{ item.obj.descripcion|truncatewords:14 }}</div>
+                {% endif %}
+                <div class="int-meta">
+                    <span>{{ item.obj.fecha|date:"j M Y" }}</span>
+                    {% if item.es_migrada %}
+                    <span class="int-tag joi">JOI</span>
+                    {% else %}
+                    <span class="int-tag manual">Manual</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+        {% else %}
+        <p style="font-size:0.85rem;color:var(--muted);font-style:italic;text-align:center;padding:0.75rem 0;margin:0;">
+            Sin interacciones registradas.
+        </p>
+        {% endif %}
+    </div>
+
+    <!-- Notas -->
+    <div class="sim-section">
+        <div class="sim-section-label">Notas personales</div>
+        {% if persona.notas %}
+        <p class="notas-text">{{ persona.notas }}</p>
+        {% else %}
+        <p class="notas-empty">Sin notas. Solo tú decides qué guardar aquí.</p>
+        {% endif %}
+    </div>
+
+    <!-- Acciones -->
+    <div class="sim-section">
+        <div class="sim-section-label">Acciones</div>
+        <div class="accion-list">
+            <a href="{% url 'diario:persona_editar' persona.id %}" class="accion-btn">
+                <span>Editar tipo y notas</span>
+                <span class="accion-btn-arrow">→</span>
+            </a>
+            <button class="accion-btn danger" id="btn-eliminar">
+                <span>Eliminar del círculo</span>
+                <span class="accion-btn-arrow">→</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Confirm eliminar (oculto hasta clic) -->
+    <div id="confirm-eliminar" class="confirm-box" style="display:none;">
+        <p class="confirm-msg">
+            Eliminar a <strong>{{ persona.nombre }}</strong> del círculo confirmado.
+            Las interacciones registradas se perderán. ¿Continuar?
+        </p>
+        <div class="confirm-actions">
+            <form method="post" action="{% url 'diario:eliminar_persona' persona.id %}" style="margin:0;">
+                {% csrf_token %}
+                <button type="submit" class="btn-confirmar">Sí, eliminar</button>
+            </form>
+            <button class="btn-cancelar" id="btn-cancelar">Cancelar</button>
+        </div>
+    </div>
+
 </div>
+
+<script>
+document.getElementById('btn-eliminar').addEventListener('click', function() {
+    document.getElementById('confirm-eliminar').style.display = 'block';
+    this.style.display = 'none';
+});
+document.getElementById('btn-cancelar').addEventListener('click', function() {
+    document.getElementById('confirm-eliminar').style.display = 'none';
+    document.getElementById('btn-eliminar').style.display = 'flex';
+});
+</script>
 {% endblock %}
