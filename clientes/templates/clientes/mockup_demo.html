@@ -1530,72 +1530,104 @@ function joiBannerCerrar(id) {
   </div>
   {% endif %}
 
-  <!-- ── BIENESTAR ─────────────────────────────── -->
+  <!-- ── DIARIO ─────────────────────────────────── -->
   <div class="rb-section">
     <div class="rb-section-head">
       <div class="rb-section-num">BIO</div>
-      <h3 class="rb-section-title">Bienestar Hoy</h3>
+      <h3 class="rb-section-title">Diario Hoy</h3>
       <div class="rb-section-line"></div>
     </div>
     <div class="rb-bio-card">
-      {% if prosoche_hoy or vires_hoy %}
-      <div class="rb-bio-grid">
-        {% if vires_hoy.nivel_energia is not None %}
-        <div class="rb-bio-item">
-          <div class="rb-bio-val" style="color:oklch(0.72 0.17 70);">{{ vires_hoy.nivel_energia }}</div>
-          <div class="rb-bio-lbl">Energía</div>
+
+      <!-- Estado mañana / noche -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;margin-bottom:14px;">
+        <div style="padding:10px 12px;border-right:1px solid var(--line);">
+          <div style="font-family:var(--font-mono);font-size:8px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--ink-4);margin-bottom:6px;">Mañana</div>
+          {% if manana_hecha %}
+            <div style="display:flex;align-items:center;gap:6px;">
+              <span style="width:7px;height:7px;border-radius:50%;background:var(--ok);display:inline-block;flex-shrink:0;box-shadow:0 0 4px var(--ok);"></span>
+              <span style="font-family:var(--font-mono);font-size:11px;color:var(--ok);font-weight:700;">Registrada</span>
+            </div>
+          {% else %}
+            <div style="display:flex;align-items:center;gap:6px;">
+              <span style="width:7px;height:7px;border-radius:50%;border:1.5px solid var(--ink-3);display:inline-block;flex-shrink:0;"></span>
+              <span style="font-family:var(--font-mono);font-size:11px;color:var(--ink-2);font-weight:700;">Pendiente</span>
+            </div>
+          {% endif %}
         </div>
-        {% endif %}
-        {% if vires_hoy.horas_sueno %}
-        <div class="rb-bio-item">
-          <div class="rb-bio-val" style="color:oklch(0.55 0.15 265);">{{ vires_hoy.horas_sueno }}h</div>
-          <div class="rb-bio-lbl">Sueño</div>
+        <div style="padding:10px 12px;">
+          <div style="font-family:var(--font-mono);font-size:8px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--ink-4);margin-bottom:6px;">Noche</div>
+          {% if noche_hecha %}
+            <div style="display:flex;align-items:center;gap:6px;">
+              <span style="width:7px;height:7px;border-radius:50%;background:var(--ok);display:inline-block;flex-shrink:0;box-shadow:0 0 4px var(--ok);"></span>
+              <span style="font-family:var(--font-mono);font-size:11px;color:var(--ok);font-weight:700;">Registrada</span>
+            </div>
+          {% else %}
+            <div style="display:flex;align-items:center;gap:6px;">
+              <span style="width:7px;height:7px;border-radius:50%;border:1.5px solid var(--ink-3);display:inline-block;flex-shrink:0;"></span>
+              <span style="font-family:var(--font-mono);font-size:11px;color:var(--ink-2);font-weight:700;">Pendiente</span>
+            </div>
+          {% endif %}
         </div>
-        {% endif %}
-        {% if prosoche_hoy.estado_animo %}
-        <div class="rb-bio-item">
-          <div class="rb-bio-val {% if prosoche_hoy.estado_animo >= 4 %}ok{% elif prosoche_hoy.estado_animo == 3 %}warn{% else %}danger{% endif %}">
-            {{ prosoche_hoy.estado_animo }}/5
+      </div>
+
+      <!-- Separador + mensaje + botones -->
+      <div style="border-top:1px solid var(--line);padding-top:14px;">
+        {% if estado == 'dia_completo' %}
+          {% if tiene_lectura_joi %}
+            <p style="font-family:var(--font-body);font-size:12px;color:var(--ink-2);line-height:1.6;margin-bottom:14px;">El día quedó registrado. Hay una lectura de JOI disponible.</p>
+            <div style="display:flex;gap:6px;">
+              <a href="{% url 'diario:presencia_cierre' %}" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 12px;font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink);border:1.5px solid var(--ink-3);border-radius:3px;text-decoration:none;background:var(--paper);">
+                <i class="fas fa-eye" style="font-size:10px;"></i> Ver lectura
+              </a>
+              <a href="{% url 'diario:dashboard_diario' %}" style="display:flex;align-items:center;justify-content:center;padding:9px 12px;font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink-3);border:1.5px solid var(--line);border-radius:3px;text-decoration:none;">
+                Diario
+              </a>
+            </div>
+          {% else %}
+            <p style="font-family:var(--font-body);font-size:12px;color:var(--ink-2);line-height:1.6;margin-bottom:14px;">El día quedó registrado.</p>
+            <div style="display:flex;gap:6px;">
+              <a href="{% url 'diario:dashboard_diario' %}" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 12px;font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink);border:1.5px solid var(--line);border-radius:3px;text-decoration:none;background:var(--paper);">
+                <i class="fas fa-book" style="font-size:10px;"></i> Diario
+              </a>
+            </div>
+          {% endif %}
+
+        {% elif estado == 'manana_hecha' %}
+          <p style="font-family:var(--font-body);font-size:12px;color:var(--ink-2);line-height:1.6;margin-bottom:14px;">La mañana ya dejó una señal. Esta noche podrás cerrar el día sin reconstruirlo todo.</p>
+          <div style="display:flex;gap:6px;">
+            <a href="{% url 'diario:presencia_cierre' %}" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 12px;font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink);border:1.5px solid var(--ink-3);border-radius:3px;text-decoration:none;background:var(--paper);">
+              <i class="fas fa-moon" style="font-size:10px;"></i> Cerrar el día
+            </a>
+            <a href="{% url 'diario:dashboard_diario' %}" style="display:flex;align-items:center;justify-content:center;padding:9px 12px;font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink-3);border:1.5px solid var(--line);border-radius:3px;text-decoration:none;">
+              Diario
+            </a>
           </div>
-          <div class="rb-bio-lbl">Ánimo</div>
-        </div>
-        {% endif %}
-        {% if vires_hoy.nivel_estres is not None %}
-        <div class="rb-bio-item">
-          <div class="rb-bio-val {% if vires_hoy.nivel_estres <= 2 %}ok{% elif vires_hoy.nivel_estres == 3 %}warn{% else %}danger{% endif %}">
-            {{ vires_hoy.nivel_estres }}
+
+        {% elif estado == 'solo_noche' %}
+          <p style="font-family:var(--font-body);font-size:12px;color:var(--ink-2);line-height:1.6;margin-bottom:14px;">Hoy no se abrió por la mañana, pero el cierre dejó una señal.</p>
+          <div style="display:flex;gap:6px;">
+            <a href="{% url 'diario:prosoche_editar_entrada' prosoche_hoy.id %}" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 12px;font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink);border:1.5px solid var(--line);border-radius:3px;text-decoration:none;background:var(--paper);">
+              <i class="fas fa-eye" style="font-size:10px;"></i> Ver cierre
+            </a>
+            <a href="{% url 'diario:dashboard_diario' %}" style="display:flex;align-items:center;justify-content:center;padding:9px 12px;font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink-3);border:1.5px solid var(--line);border-radius:3px;text-decoration:none;">
+              Diario
+            </a>
           </div>
-          <div class="rb-bio-lbl">Estrés</div>
-        </div>
+
+        {% else %}
+          <p style="font-family:var(--font-body);font-size:12px;color:var(--ink-2);line-height:1.6;margin-bottom:14px;">La mañana abre el día. Empieza antes de que coja forma.</p>
+          <div style="display:flex;gap:6px;">
+            <a href="{% url 'diario:presencia_apertura' %}" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 12px;font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink);border:1.5px solid var(--ink-3);border-radius:3px;text-decoration:none;background:var(--paper);">
+              <i class="fas fa-sun" style="font-size:10px;"></i> Abrir el día
+            </a>
+            <a href="{% url 'diario:dashboard_diario' %}" style="display:flex;align-items:center;justify-content:center;padding:9px 12px;font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink-3);border:1.5px solid var(--line);border-radius:3px;text-decoration:none;">
+              Diario
+            </a>
+          </div>
         {% endif %}
-        {% if prosoche_hoy %}
-        <div class="rb-bio-item">
-          <div class="rb-bio-val">{{ prosoche_hoy.get_tareas_completadas }}/{{ prosoche_hoy.get_total_tareas }}</div>
-          <div class="rb-bio-lbl">Tareas</div>
-        </div>
-        {% endif %}
       </div>
-      <div class="rb-bio-actions">
-        <a href="{% url 'diario:prosoche_nueva_entrada' %}" class="rb-btn rb-btn-ghost rb-btn-sm">
-          <i class="fas fa-pen"></i> Registrar
-        </a>
-        <a href="{% url 'diario:dashboard_diario' %}" class="rb-btn rb-btn-ghost rb-btn-sm">
-          <i class="fas fa-book"></i> Diario
-        </a>
-      </div>
-      {% else %}
-      <div style="padding:8px 0;">
-        <p style="font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--ink-4);margin-bottom:10px;">Check-in pendiente · ¿Cómo estás hoy?</p>
-        <div style="display:flex;gap:6px;">
-          <a href="{% url 'diario:prosoche_nueva_entrada' %}" class="rb-btn rb-btn-ghost rb-btn-sm">
-            <i class="fas fa-pen"></i> Registrar
-          </a>
-          <a href="{% url 'diario:dashboard_diario' %}" class="rb-btn rb-btn-ghost rb-btn-sm">
-            <i class="fas fa-book"></i> Diario
-          </a>
-        </div>
-      </div>
-      {% endif %}
+
     </div>
   </div>
 

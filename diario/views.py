@@ -405,7 +405,7 @@ def prosoche_entrada_form(request, entrada_id=None):
             'form': type('Form', (), form_data)(),
             'entrada_existente': entrada_existente,
             'es_edicion': entrada_existente is not None,
-            'sugerencia_reflexion': sugerencia_actual,  # ¡AHORA SÍ SE PASA!
+            'sugerencia_reflexion': sugerencia_actual,
         }
 
         return render(request, 'diario/prosoche_entrada_form.html', context)
@@ -3535,10 +3535,16 @@ def presencia_apertura(request):
             vires.nivel_energia = int(energia)
         if sueno:
             vires.calidad_sueno = int(sueno)
+        molestia_zona = request.POST.get('molestia_zona', '').strip()
+        molestia_nota = request.POST.get('molestia_nota', '').strip()
+        if molestia_zona:
+            vires.molestia_zona = molestia_zona
+        if molestia_nota:
+            vires.molestia_nota = molestia_nota
         vires.save()
 
         messages.success(request, 'Día comenzado.')
-        return redirect('diario:dashboard_diario')
+        return redirect('clientes:mockup_demo')
 
     try:
         cliente = request.user.cliente_perfil
@@ -3563,7 +3569,13 @@ def presencia_apertura(request):
 
         try:
             from joi.services import generar_pregunta_identidad
-            pregunta_identidad = generar_pregunta_identidad(cliente)
+            from diario.services.intensidad_apertura import (
+                calcular_intensidad_pregunta_apertura,
+                construir_contexto_intensidad,
+            )
+            ctx_intensidad = construir_contexto_intensidad(cliente, vires, semaforo)
+            intensidad = calcular_intensidad_pregunta_apertura(ctx_intensidad)
+            pregunta_identidad = generar_pregunta_identidad(cliente, intensidad=intensidad)
         except Exception:
             pass
 
@@ -3688,12 +3700,16 @@ def presencia_cierre(request):
     if request.method == 'POST':
         texto_libre = request.POST.get('reflexion_libre', '').strip()
 
-        # Fricción del No → nivel_estres
+        # Límites de hoy → nivel_estres; cuerpo al cierre → cuerpo_cierre
         friccion_raw = request.POST.get('friccion_no')
-        if friccion_raw:
+        cuerpo_raw = request.POST.get('cuerpo_cierre', '').strip()
+        if friccion_raw or cuerpo_raw:
             try:
                 vires, _ = SeguimientoVires.objects.get_or_create(usuario=request.user, fecha=hoy)
-                vires.nivel_estres = int(friccion_raw)
+                if friccion_raw:
+                    vires.nivel_estres = int(friccion_raw)
+                if cuerpo_raw:
+                    vires.cuerpo_cierre = cuerpo_raw
                 vires.save()
             except (ValueError, TypeError):
                 pass
@@ -3918,6 +3934,11 @@ def presencia_cierre(request):
                 }
                 joi_respuesta = generar_respuesta_cierre(texto_libre, datos_para_joi, request.user.cliente_perfil)
 
+                if joi_respuesta:
+                    entrada.respuesta_joi_cierre = joi_respuesta
+                    entrada.respuesta_joi_cierre_generada_en = timezone.now()
+                    entrada.save()
+
                 propuesta_habito = _enriq.get('propuesta_habito')
                 if propuesta_habito and propuesta_habito.get('nombre'):
                     ya_existe = ProsocheHabito.objects.filter(
@@ -3940,11 +3961,32 @@ def presencia_cierre(request):
         }
         return render(request, 'diario/presencia_cierre.html', context)
 
+    apertura_texto = None
+    try:
+        from joi.models import MensajeJOI
+        msg = (
+            MensajeJOI.objects
+            .filter(user=request.user, trigger='apertura_manana', creado_en__date=hoy)
+            .order_by('-creado_en').first()
+        )
+        if msg:
+            apertura_texto = msg.mensaje
+    except Exception:
+        pass
+
+    vires, _ = SeguimientoVires.objects.get_or_create(usuario=request.user, fecha=hoy)
+
+    # Si ya se generó respuesta de JOI hoy, mostrarla directamente (no regenerar)
+    joi_respuesta_guardada = entrada.respuesta_joi_cierre or None
+
     context = {
         'entrada': entrada,
         'habitos_con_estado': habitos_con_estado,
         'hoy': hoy,
         'dia_num': dia_num,
+        'apertura_manana': apertura_texto,
+        'vires': vires,
+        'joi_respuesta': joi_respuesta_guardada,
     }
     return render(request, 'diario/presencia_cierre.html', context)
 

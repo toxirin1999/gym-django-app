@@ -3087,11 +3087,32 @@ def marcar_leido(mensaje_id: int, user) -> bool:
     return updated > 0
 
 
-def generar_pregunta_identidad(cliente) -> str:
+_PREGUNTAS_SUAVES = [
+    "¿Qué es lo más pequeño que puedes cuidar hoy?",
+    "¿Qué no necesitas probar hoy?",
+    "¿Qué quieres sostener, no conquistar?",
+    "¿Qué merece atención sin urgencia?",
+    "¿Cómo quieres moverte hoy, no cuánto?",
+    "¿Qué puedes soltar antes de empezar?",
+    "¿Qué parte de ti merece espacio hoy?",
+    "¿Qué quieres hacer sin prisas hoy?",
+    "¿Desde dónde quieres empezar, no adónde quieres llegar?",
+    "¿Qué quieres cuidar sin que nadie lo vea?",
+]
+
+
+def generar_pregunta_identidad(cliente, intensidad: str = 'media') -> str:
     """
     Genera una Pregunta de Identidad para la apertura del día.
-    Usa semáforo actual + Manual de David para personalizarla.
+
+    intensidad: 'suave' | 'media' | 'afilada'
+    - suave: banco estático sin llamada AI (sin lenguaje de presión)
+    - media: AI sin regla del 30%
+    - afilada: AI con regla del 30% posible
     """
+    if intensidad == 'suave':
+        return random.choice(_PREGUNTAS_SUAVES)
+
     try:
         ctx = construir_contexto(cliente)
         manual = _bloque_manual(cliente.user)
@@ -3125,7 +3146,7 @@ def generar_pregunta_identidad(cliente) -> str:
             f"- Máximo 25 palabras. Solo la pregunta. Sin introducción ni explicación."
         )
 
-        if random.random() < 0.3 and estado != 'recuperar':
+        if intensidad == 'afilada' and random.random() < 0.3:
             prompt += (
                 "\n\nRegla del 30%: genera una pregunta que cuestione en lugar de apoyar. "
                 "Por ejemplo: '¿Estás usando [X] como excusa para evitar [Y]?' "
