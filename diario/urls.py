@@ -6,6 +6,7 @@ app_name = 'diario'
 urlpatterns = [
     # Dashboard principal
     path('', views.dashboard_diario, name='dashboard_diario'),
+    path('lectura/semana/', views.lectura_semanal, name='lectura_semanal'),
 
     # ========================================
     # PROSOCHE - Diario Mensual

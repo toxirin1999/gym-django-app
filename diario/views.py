@@ -1874,6 +1874,23 @@ def interaccion_crear_editar(request, interaccion_id=None):
 # diario/views.py
 
 @login_required
+def lectura_semanal(request):
+    """Phase Diario 2.0 — Lectura semanal prudente."""
+    from diario.services.lectura_semanal import agregar_semana, generar_lectura_joi
+    try:
+        cliente = request.user.cliente
+    except Exception:
+        cliente = None
+    datos = agregar_semana(request.user)
+    lectura_encuadre, lectura_señales = generar_lectura_joi(datos)
+    return render(request, 'diario/lectura_semanal.html', {
+        'datos': datos,
+        'lectura_encuadre': lectura_encuadre,
+        'lectura_señales': lectura_señales,
+    })
+
+
+@login_required
 def persona_detalle(request, persona_id):
     """Perfil de vínculo legible — Phase Simbiosis 1.3."""
     persona = get_object_or_404(PersonaImportante, id=persona_id, usuario=request.user)
