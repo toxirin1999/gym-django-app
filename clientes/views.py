@@ -1385,6 +1385,11 @@ def mockup_demo(request):
     except Exception:
         context['prosoche_hoy'] = None
 
+    # Estado diario: mañana (apertura) y noche (cierre)
+    from diario.services.estado_diario import calcular_estado_diario_hoy
+    _estado_diario = calcular_estado_diario_hoy(context['prosoche_hoy'])
+    context.update(_estado_diario)
+
     try:
         context['vires_hoy'] = SeguimientoVires.objects.filter(
             usuario=usuario, fecha=_hoy

@@ -218,6 +218,31 @@ class SeguimientoVires(models.Model):
                                        help_text="Nivel de estrés percibido (1-5)")
     pasos = models.PositiveIntegerField(null=True, blank=True, help_text="Pasos totales del día")
 
+    MOLESTIA_ZONAS = [
+        ('ninguna', 'Ninguna'),
+        ('rodilla', 'Rodilla'),
+        ('espalda', 'Espalda'),
+        ('hombro', 'Hombro'),
+        ('cuello', 'Cuello'),
+        ('otra', 'Otra'),
+    ]
+    molestia_zona = models.CharField(
+        max_length=50, blank=True, choices=MOLESTIA_ZONAS,
+        help_text="Zona corporal con molestia al empezar el día"
+    )
+    molestia_nota = models.TextField(blank=True, help_text="Nota libre sobre la molestia")
+
+    CUERPO_CIERRE_CHOICES = [
+        ('ligero', 'Ligero'),
+        ('cargado', 'Cargado'),
+        ('dolorido', 'Dolorido'),
+        ('apagado', 'Apagado'),
+    ]
+    cuerpo_cierre = models.CharField(
+        max_length=20, blank=True, choices=CUERPO_CIERRE_CHOICES,
+        help_text="Lectura corporal al cerrar el día"
+    )
+
     class Meta:
         unique_together = ['usuario', 'fecha']
         ordering = ['-fecha']
@@ -483,6 +508,15 @@ class ProsocheDiario(models.Model):
     reflexiones_dia = models.TextField(
         blank=True,
         help_text="Reflexiones del día"
+    )
+
+    respuesta_joi_cierre = models.TextField(
+        blank=True,
+        help_text="Respuesta de JOI generada al cerrar el día"
+    )
+    respuesta_joi_cierre_generada_en = models.DateTimeField(
+        null=True, blank=True,
+        help_text="Timestamp de generación de la respuesta de cierre"
     )
 
     fecha_creacion = models.DateTimeField(auto_now_add=True)

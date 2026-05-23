@@ -4,7 +4,6 @@
 {% block title %}Cierre del día{% endblock %}
 
 {% block extra_css %}
-<link href="https://fonts.googleapis.com/css2?family=Urbanist:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400&display=swap" rel="stylesheet">
 <style>
 :root {
     --bg: #13111A;
@@ -18,7 +17,7 @@
     --shadow: 0 2px 20px rgba(0,0,0,0.3);
 }
 * { box-sizing: border-box; }
-body { background: var(--bg) !important; font-family: 'Urbanist', sans-serif !important; color: var(--text); }
+body { background: var(--bg) !important; font-family: -apple-system, BlinkMacSystemFont, sans-serif !important; color: var(--text); }
 
 .presencia-wrap {
     max-width: 600px;
@@ -56,7 +55,7 @@ body { background: var(--bg) !important; font-family: 'Urbanist', sans-serif !im
     border: 1px solid var(--border);
     border-radius: var(--radius);
     padding: 1.5rem;
-    font-family: 'Urbanist', sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
     font-size: 1.05rem;
     line-height: 1.75;
     color: var(--text);
@@ -175,7 +174,7 @@ body { background: var(--bg) !important; font-family: 'Urbanist', sans-serif !im
     border: none;
     border-radius: var(--radius);
     padding: 1rem;
-    font-family: 'Urbanist', sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
     font-size: 1rem;
     font-weight: 700;
     cursor: pointer;
@@ -218,7 +217,7 @@ body { background: var(--bg) !important; font-family: 'Urbanist', sans-serif !im
     {% if guardado and not joi_respuesta %}
     <div style="text-align:center; padding:2.5rem 1rem; color:rgba(200,195,215,0.6);">
         <div style="font-size:0.65rem; letter-spacing:0.22em; text-transform:uppercase; margin-bottom:0.6rem;">el cierre quedó registrado.</div>
-        <a href="/diario/" style="font-size:0.7rem; letter-spacing:0.15em; text-transform:uppercase; color:rgba(167,139,250,0.7); text-decoration:none;">← volver al diario</a>
+        <a href="{% url 'clientes:mockup_demo' %}" style="font-size:0.7rem; letter-spacing:0.15em; text-transform:uppercase; color:rgba(167,139,250,0.7); text-decoration:none;">← volver</a>
     </div>
     {% endif %}
 
@@ -235,7 +234,7 @@ body { background: var(--bg) !important; font-family: 'Urbanist', sans-serif !im
                 width:100%;
                 background: linear-gradient(135deg, #7C3AED, #A78BFA);
                 border:none; border-radius:12px; padding:0.9rem 1rem;
-                color:white; font-family:'Urbanist',sans-serif;
+                color:white; font-family:-apple-system,BlinkMacSystemFont,sans-serif;
                 font-size:0.9rem; font-weight:600; cursor:pointer;
                 animation: pulse-habito 2s ease-in-out infinite;
                 text-align:left; display:flex; align-items:center; gap:0.75rem;
@@ -284,7 +283,7 @@ body { background: var(--bg) !important; font-family: 'Urbanist', sans-serif !im
         </script>
         {% endif %}
 
-        <a href="{% url 'diario:dashboard_diario' %}" style="display:block; margin-top:1.5rem; background:#2E2A3A; border:none; border-radius:12px; padding:0.85rem; color:#A78BFA; font-family:'Urbanist',sans-serif; font-size:0.9rem; font-weight:600; text-align:center; text-decoration:none; transition:background 0.15s;">
+        <a href="{% url 'clientes:mockup_demo' %}" style="display:block; margin-top:1.5rem; background:#2E2A3A; border:none; border-radius:12px; padding:0.85rem; color:#A78BFA; font-family:-apple-system,BlinkMacSystemFont,sans-serif; font-size:0.9rem; font-weight:600; text-align:center; text-decoration:none; transition:background 0.15s;">
             Continuar →
         </a>
     </div>
@@ -305,7 +304,7 @@ body { background: var(--bg) !important; font-family: 'Urbanist', sans-serif !im
     <!-- Intención del día (recordatorio) -->
     {% if entrada.persona_quiero_ser and not joi_respuesta %}
     <div class="intencion-card">
-        <div class="intencion-label">Tu intención de esta mañana</div>
+        <div class="intencion-label">Lo que traías esta mañana</div>
         <div class="intencion-text">{{ entrada.persona_quiero_ser }}</div>
     </div>
     {% endif %}
@@ -324,7 +323,7 @@ body { background: var(--bg) !important; font-family: 'Urbanist', sans-serif !im
 
         <!-- Hábitos del día -->
         {% if habitos_con_estado %}
-        <div class="section-label">Hábitos de hoy</div>
+        <div class="section-label">Gestos de hoy</div>
         <div class="habitos-grid" id="habitos-grid">
             {% for item in habitos_con_estado %}
             <div class="habito-chip {% if item.habito.tipo_habito == 'negativo' %}negativo{% endif %} {% if item.completado %}completado{% endif %}"
@@ -333,23 +332,39 @@ body { background: var(--bg) !important; font-family: 'Urbanist', sans-serif !im
                 <span class="habito-check">{% if item.completado %}✓{% else %}○{% endif %}</span>
                 {{ item.habito.nombre }}
                 {% if item.habito.tipo_habito == 'negativo' %}
-                    <span class="habito-tipo-badge badge-negativo">evitar</span>
+                    <span class="habito-tipo-badge badge-negativo">cuidar</span>
                 {% endif %}
             </div>
             {% endfor %}
         </div>
         {% endif %}
 
-        <!-- Fricción del No -->
+        <!-- Límites de hoy -->
         <div class="friccion-card">
-            <div class="section-label">Fricción del No</div>
+            <div class="section-label">Límites de hoy</div>
             <div class="friccion-labels">
-                <span>Sin fricción</span>
+                <span>Sin peso</span>
                 <span>Muy costoso</span>
             </div>
             <input type="range" name="friccion_no" id="friccion_slider" class="friccion-slider" min="1" max="5" step="1" value="3">
             <div class="friccion-value" id="friccion_val">3</div>
-            <p class="friccion-hint">¿Cuánto te costó hoy decir no o poner límites?</p>
+            <p class="friccion-hint">¿Hubo algo que te costó sostener, decir o no cargar?</p>
+        </div>
+
+        <!-- Cuerpo al cierre -->
+        <div class="friccion-card" style="padding-bottom:1.25rem;">
+            <div class="section-label">Cuerpo al cierre</div>
+            <div style="display:flex;gap:0.6rem;flex-wrap:wrap;" id="cuerpo-chips">
+                {% for val, label in vires.CUERPO_CIERRE_CHOICES %}
+                <button type="button"
+                    class="cuerpo-chip"
+                    data-val="{{ val }}"
+                    style="padding:0.45rem 1rem;border-radius:100px;border:1.5px solid var(--border);background:{% if vires.cuerpo_cierre == val %}var(--accent-light){% else %}transparent{% endif %};color:{% if vires.cuerpo_cierre == val %}var(--accent){% else %}var(--muted){% endif %};font-size:0.85rem;cursor:pointer;font-family:-apple-system,BlinkMacSystemFont,sans-serif;transition:all 0.15s;">
+                    {{ label }}
+                </button>
+                {% endfor %}
+            </div>
+            <input type="hidden" name="cuerpo_cierre" id="cuerpo_cierre_input" value="{{ vires.cuerpo_cierre|default:'' }}">
         </div>
 
         <!-- Bloqueo de simbiosis — aparece inline ANTES de guardar -->
@@ -360,8 +375,8 @@ body { background: var(--bg) !important; font-family: 'Urbanist', sans-serif !im
             <div style="font-size:0.68rem; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:#7C3AED; margin-bottom:0.75rem;">JOI — Antes de cerrar el día</div>
             <div id="simbiosis-pregunta" style="font-size:1rem; font-style:italic; color:#EDE9E3; line-height:1.6; margin-bottom:1rem;"></div>
             <div style="font-size:0.75rem; color:#7C7590; margin-bottom:0.5rem;">Responde antes de cerrar el día:</div>
-            <textarea id="simbiosis-textarea" style="width:100%; background:#13111A; border:1px solid #2E2A3A; border-radius:10px; padding:0.75rem; color:#EDE9E3; font-family:'Urbanist',sans-serif; font-size:0.9rem; min-height:80px; outline:none; resize:none;" placeholder="Escribe tu respuesta..."></textarea>
-            <button type="button" onclick="confirmarSimbiosis()" style="margin-top:0.75rem; width:100%; background:#7C3AED; border:none; border-radius:10px; padding:0.75rem; color:white; font-family:'Urbanist',sans-serif; font-size:0.9rem; font-weight:600; cursor:pointer;">
+            <textarea id="simbiosis-textarea" style="width:100%; background:#13111A; border:1px solid #2E2A3A; border-radius:10px; padding:0.75rem; color:#EDE9E3; font-family:-apple-system,BlinkMacSystemFont,sans-serif; font-size:0.9rem; min-height:80px; outline:none; resize:none;" placeholder="Escribe tu respuesta..."></textarea>
+            <button type="button" onclick="confirmarSimbiosis()" style="margin-top:0.75rem; width:100%; background:#7C3AED; border:none; border-radius:10px; padding:0.75rem; color:white; font-family:-apple-system,BlinkMacSystemFont,sans-serif; font-size:0.9rem; font-weight:600; cursor:pointer;">
                 Respondido — cerrar el día
             </button>
         </div>
@@ -402,6 +417,23 @@ syncHabitos();
 const friccionSlider = document.getElementById('friccion_slider');
 const friccionVal = document.getElementById('friccion_val');
 friccionSlider.addEventListener('input', () => friccionVal.textContent = friccionSlider.value);
+
+// ── Cuerpo al cierre chips ──
+const cuerpoInput = document.getElementById('cuerpo_cierre_input');
+document.querySelectorAll('.cuerpo-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+        const val = chip.dataset.val;
+        cuerpoInput.value = val;
+        document.querySelectorAll('.cuerpo-chip').forEach(c => {
+            c.style.borderColor = 'var(--border)';
+            c.style.background = 'transparent';
+            c.style.color = 'var(--muted)';
+        });
+        chip.style.borderColor = 'var(--accent)';
+        chip.style.background = 'var(--accent-light)';
+        chip.style.color = 'var(--accent)';
+    });
+});
 
 function confirmarSimbiosis() {
     const respuesta = document.getElementById('simbiosis-textarea').value.trim();

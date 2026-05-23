@@ -4,7 +4,6 @@
 {% block title %}Apertura del día{% endblock %}
 
 {% block extra_css %}
-<link href="https://fonts.googleapis.com/css2?family=Urbanist:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400&display=swap" rel="stylesheet">
 <style>
 :root {
     --bg: #F7F4EF;
@@ -20,7 +19,7 @@
     --shadow: 0 2px 16px rgba(0,0,0,0.06);
 }
 * { box-sizing: border-box; }
-body { background: var(--bg) !important; font-family: 'Urbanist', sans-serif !important; }
+body { background: var(--bg) !important; font-family: -apple-system, BlinkMacSystemFont, sans-serif !important; }
 
 .presencia-wrap {
     max-width: 600px;
@@ -182,7 +181,7 @@ body { background: var(--bg) !important; font-family: 'Urbanist', sans-serif !im
     border: 1px solid var(--border);
     border-radius: 10px;
     padding: 0.7rem 1rem;
-    font-family: 'Urbanist', sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
     font-size: 0.95rem;
     color: var(--text);
     background: #FAFAFA;
@@ -197,7 +196,7 @@ body { background: var(--bg) !important; font-family: 'Urbanist', sans-serif !im
     border: 1.5px solid var(--border);
     border-radius: 10px;
     padding: 0.7rem 1rem;
-    font-family: 'Urbanist', sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
     font-size: 0.95rem;
     color: var(--text);
     background: #FAFAFA;
@@ -214,7 +213,7 @@ textarea.intencion {
     border: 1px solid var(--border);
     border-radius: 12px;
     padding: 1rem;
-    font-family: 'Urbanist', sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
     font-size: 1rem;
     line-height: 1.6;
     color: var(--text);
@@ -234,7 +233,7 @@ textarea.intencion:focus { border-color: var(--accent); background: #fff; }
     border: none;
     border-radius: var(--radius);
     padding: 1rem;
-    font-family: 'Urbanist', sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
     font-size: 1rem;
     font-weight: 600;
     cursor: pointer;
@@ -261,11 +260,11 @@ textarea.intencion:focus { border-color: var(--accent); background: #fff; }
             </div>
             <div style="display:flex; gap:0.4rem;">
                 <button onclick="promoverPersona({{ p.id }}, '{{ p.nombre }}')"
-                    style="background:#15803D; border:none; border-radius:8px; padding:0.3rem 0.7rem; color:white; font-size:0.75rem; font-family:'Urbanist',sans-serif; cursor:pointer;">
+                    style="background:#15803D; border:none; border-radius:8px; padding:0.3rem 0.7rem; color:white; font-size:0.75rem; font-family:-apple-system,BlinkMacSystemFont,sans-serif; cursor:pointer;">
                     Subir
                 </button>
                 <button onclick="descartarPersona({{ p.id }})"
-                    style="background:#3F3C37; border:none; border-radius:8px; padding:0.3rem 0.7rem; color:#78716C; font-size:0.75rem; font-family:'Urbanist',sans-serif; cursor:pointer;">
+                    style="background:#3F3C37; border:none; border-radius:8px; padding:0.3rem 0.7rem; color:#78716C; font-size:0.75rem; font-family:-apple-system,BlinkMacSystemFont,sans-serif; cursor:pointer;">
                     Ignorar
                 </button>
             </div>
@@ -304,7 +303,7 @@ textarea.intencion:focus { border-color: var(--accent); background: #fff; }
         <div class="section-card">
             <div class="section-label">¿Cómo estás?</div>
             <div class="mood-row">
-                <button type="button" class="mood-btn {% if entrada.estado_animo == 1 %}selected{% endif %}" data-val="1">😔<span class="label">Mal</span></button>
+                <button type="button" class="mood-btn {% if entrada.estado_animo == 1 %}selected{% endif %}" data-val="1">😔<span class="label">Bajo</span></button>
                 <button type="button" class="mood-btn {% if entrada.estado_animo == 2 %}selected{% endif %}" data-val="2">😞<span class="label">Flojo</span></button>
                 <button type="button" class="mood-btn {% if entrada.estado_animo == 4 or not entrada.estado_animo %}selected{% endif %}" data-val="4">🙂<span class="label">Bien</span></button>
                 <button type="button" class="mood-btn {% if entrada.estado_animo == 5 %}selected{% endif %}" data-val="5">😊<span class="label">Pleno</span></button>
@@ -318,32 +317,57 @@ textarea.intencion:focus { border-color: var(--accent); background: #fff; }
                 <div class="slider-group">
                     <label>Energía</label>
                     <input type="range" name="nivel_energia" id="energia_slider" min="1" max="5" step="1" value="{{ vires.nivel_energia|default:3 }}">
-                    <div class="slider-value" id="energia_val">{{ vires.nivel_energia|default:3 }}</div>
+                    <div style="display:flex;justify-content:space-between;margin-top:2px;">
+                        <span style="font-size:0.65rem;color:var(--muted);">Agotado</span>
+                        <span class="slider-value" id="energia_val" style="font-size:1rem;">{{ vires.nivel_energia|default:3 }}</span>
+                        <span style="font-size:0.65rem;color:var(--muted);">100%</span>
+                    </div>
                 </div>
                 <div class="slider-group">
                     <label>Sueño</label>
                     <input type="range" name="calidad_sueno" id="sueno_slider" min="1" max="5" step="1" value="{{ vires.calidad_sueno|default:3 }}">
-                    <div class="slider-value" id="sueno_val">{{ vires.calidad_sueno|default:3 }}</div>
+                    <div style="display:flex;justify-content:space-between;margin-top:2px;">
+                        <span style="font-size:0.65rem;color:var(--muted);">Malo</span>
+                        <span class="slider-value" id="sueno_val" style="font-size:1rem;">{{ vires.calidad_sueno|default:3 }}</span>
+                        <span style="font-size:0.65rem;color:var(--muted);">Perfecto</span>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- Un acierto de hoy -->
+        <!-- Punto de apoyo -->
         <div class="section-card">
-            <div class="section-label">Un acierto de hoy</div>
-            <input type="text" name="gratitud_1" class="gratitud-input" placeholder="Algo real que salió bien..." value="{{ entrada.gratitud_1 }}">
+            <div class="section-label">Punto de apoyo</div>
+            <input type="text" name="gratitud_1" class="gratitud-input" placeholder="Algo que no empieza desde cero..." value="{{ entrada.gratitud_1 }}">
         </div>
 
-        <!-- Intención -->
+        <!-- Molestias -->
         <div class="section-card">
-            <div class="section-label">Tu respuesta — intención del día</div>
-            <textarea name="intencion" class="intencion" placeholder="Escribe tu intención...">{{ entrada.persona_quiero_ser }}</textarea>
+            <div class="section-label">Molestias hoy</div>
+            <div style="display:flex;flex-wrap:wrap;gap:0.5rem;margin-bottom:0.75rem;" id="molestia-chips">
+                {% for val, label in vires.MOLESTIA_ZONAS %}
+                <button type="button"
+                    class="molestia-chip {% if vires.molestia_zona == val %}active{% endif %}"
+                    data-val="{{ val }}"
+                    style="padding:0.45rem 0.9rem;border-radius:100px;border:1.5px solid var(--border);background:{% if vires.molestia_zona == val %}var(--accent-light){% else %}transparent{% endif %};color:{% if vires.molestia_zona == val %}var(--accent){% else %}var(--muted){% endif %};font-size:0.85rem;cursor:pointer;font-family:-apple-system,BlinkMacSystemFont,sans-serif;transition:all 0.15s;">
+                    {{ label }}
+                </button>
+                {% endfor %}
+            </div>
+            <input type="hidden" name="molestia_zona" id="molestia_zona_input" value="{{ vires.molestia_zona|default:'' }}">
+            <input type="text" name="molestia_nota" class="gratitud-input" placeholder="Nota breve sobre el cuerpo..." value="{{ vires.molestia_nota|default:'' }}" id="molestia-nota-field" style="{% if not vires.molestia_zona or vires.molestia_zona == 'ninguna' %}display:none;{% endif %}">
+        </div>
+
+        <!-- Dirección del día -->
+        <div class="section-card">
+            <div class="section-label">Dirección del día</div>
+            <textarea name="intencion" class="intencion" placeholder="¿Qué quieres cuidar hoy?">{{ entrada.persona_quiero_ser }}</textarea>
         </div>
 
         <!-- Acto de Soberanía -->
         <div class="section-card">
             <div class="section-label">Acto de Soberanía</div>
-            <p class="section-subtitle">Algo que harás SOLO para ti. No para nadie más.</p>
+            <p class="section-subtitle">Algo que harás solo para ti. No para rendir. No para demostrar.</p>
             <input type="text" name="soberania" id="soberania_input" class="soberania-input" placeholder="Tu acto de hoy...">
         </div>
 
@@ -352,6 +376,26 @@ textarea.intencion:focus { border-color: var(--accent); background: #fff; }
 </div>
 
 <script>
+// ── Molestias chips ──
+const molestiaInput = document.getElementById('molestia_zona_input');
+const molestiaNotaField = document.getElementById('molestia-nota-field');
+document.querySelectorAll('.molestia-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+        const val = chip.dataset.val;
+        molestiaInput.value = val;
+        document.querySelectorAll('.molestia-chip').forEach(c => {
+            c.style.borderColor = 'var(--border)';
+            c.style.background = 'transparent';
+            c.style.color = 'var(--muted)';
+        });
+        chip.style.borderColor = 'var(--accent)';
+        chip.style.background = 'var(--accent-light)';
+        chip.style.color = 'var(--accent)';
+        molestiaNotaField.style.display = val && val !== 'ninguna' ? 'block' : 'none';
+        if (val === 'ninguna') molestiaNotaField.value = '';
+    });
+});
+
 // ── Mood selector ──
 document.querySelectorAll('.mood-btn').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -370,17 +414,6 @@ const suenoSlider = document.getElementById('sueno_slider');
 const suenoVal = document.getElementById('sueno_val');
 suenoSlider.addEventListener('input', () => suenoVal.textContent = suenoSlider.value);
 
-// ── Validación Soberanía ──
-document.getElementById('apertura-form').addEventListener('submit', function(e) {
-    const soberania = document.getElementById('soberania_input');
-    if (!soberania.value.trim()) {
-        soberania.classList.add('error');
-        soberania.focus();
-        e.preventDefault();
-        return false;
-    }
-    soberania.classList.remove('error');
-});
 
 // ── Radar de Intrusos ──
 function promoverPersona(id, nombre) {
