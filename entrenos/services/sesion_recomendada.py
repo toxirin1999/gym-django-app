@@ -91,16 +91,62 @@ def _marcar_completadas(cliente, fecha_hoy):
     2. Same routine within 7 days after the pending date: catches the case where the
        user does a pending session on a later date (e.g., pending May 15, done May 18).
        Only closes if there's exactly ONE matching entreno in the window (no ambiguity).
+
+    Batch-optimized: prefetches all entrenos and actividades in the window in 2-3 queries
+    instead of 1-2 per pending session.
     """
+    from collections import defaultdict
+
     fecha_inicio = fecha_hoy - timedelta(days=14)
-    for sp in SesionProgramada.objects.filter(
+
+    pendientes = list(SesionProgramada.objects.filter(
         cliente=cliente,
         estado=SesionProgramada.ESTADO_PENDIENTE,
         fecha_prevista__gte=fecha_inicio,
         fecha_prevista__lt=fecha_hoy,
-    ):
+    ))
+    if not pendientes:
+        return
+
+    # Strategy 1 batch: dates with any completed gym session in the window
+    fechas_entrenos = set(
+        EntrenoRealizado.objects.filter(
+            cliente=cliente,
+            fecha__gte=fecha_inicio,
+            fecha__lt=fecha_hoy,
+        ).values_list('fecha', flat=True)
+    )
+    fechas_actividades: set = set()
+    try:
+        fechas_actividades = set(
+            ActividadRealizada.objects.filter(
+                cliente=cliente,
+                tipo='gym',
+                fecha__gte=fecha_inicio,
+                fecha__lt=fecha_hoy,
+            ).values_list('fecha', flat=True)
+        )
+    except Exception:
+        pass
+    fechas_completadas = fechas_entrenos | fechas_actividades
+
+    # Strategy 2 batch: entrenos with rutina name in the full window (includes today)
+    entrenos_con_rutina = list(
+        EntrenoRealizado.objects.filter(
+            cliente=cliente,
+            fecha__gte=fecha_inicio,
+            fecha__lte=fecha_hoy,
+            rutina__isnull=False,
+        ).select_related('rutina').order_by('fecha')
+    )
+    rutina_a_entrenos: dict = defaultdict(list)
+    for e in entrenos_con_rutina:
+        if e.rutina and e.rutina.nombre:
+            rutina_a_entrenos[e.rutina.nombre.lower()].append(e)
+
+    for sp in pendientes:
         # Strategy 1: exact date match
-        if _fecha_completada(cliente, sp.fecha_prevista):
+        if sp.fecha_prevista in fechas_completadas:
             sp.estado = SesionProgramada.ESTADO_COMPLETADA
             sp.fecha_realizada = sp.fecha_prevista
             sp.save(update_fields=['estado', 'fecha_realizada', 'actualizada_en'])
@@ -108,13 +154,15 @@ def _marcar_completadas(cliente, fecha_hoy):
 
         # Strategy 2: same routine done within 7 days after the pending date
         if sp.nombre_sesion:
+            fecha_desde = sp.fecha_prevista + timedelta(days=1)
             ventana_hasta = min(sp.fecha_prevista + timedelta(days=7), fecha_hoy)
-            entreno = _buscar_entreno_rutina_en_ventana(
-                cliente, sp.nombre_sesion,
-                fecha_desde=sp.fecha_prevista + timedelta(days=1),
-                fecha_hasta=ventana_hasta,
-            )
-            if entreno:
+            nombre_lower = sp.nombre_sesion.lower()
+            candidatos = [
+                e for e in rutina_a_entrenos.get(nombre_lower, [])
+                if fecha_desde <= e.fecha <= ventana_hasta
+            ]
+            if len(candidatos) == 1:
+                entreno = candidatos[0]
                 sp.estado = SesionProgramada.ESTADO_COMPLETADA
                 sp.fecha_realizada = entreno.fecha
                 sp.entreno_realizado = entreno
@@ -875,9 +923,29 @@ def sincronizar_pendientes_recientes(cliente, fecha_hoy):
             ).values_list('fecha_prevista', flat=True)
         )
 
+        # Batch: dates with any completed gym session in the window (avoids 1 query/day)
+        completadas = set(
+            EntrenoRealizado.objects.filter(
+                cliente=cliente,
+                fecha__gte=fecha_inicio,
+                fecha__lte=fecha_fin,
+            ).values_list('fecha', flat=True)
+        )
+        try:
+            completadas |= set(
+                ActividadRealizada.objects.filter(
+                    cliente=cliente,
+                    tipo='gym',
+                    fecha__gte=fecha_inicio,
+                    fecha__lte=fecha_fin,
+                ).values_list('fecha', flat=True)
+            )
+        except Exception:
+            pass
+
         fecha = fecha_inicio
         while fecha <= fecha_fin:
-            if fecha not in tracked and not _fecha_completada(cliente, fecha):
+            if fecha not in tracked and fecha not in completadas:
                 entrenamiento = planificador.generar_entrenamiento_para_fecha(fecha)
                 if not _es_descanso(entrenamiento):
                     prioridad = inferir_prioridad_sesion(entrenamiento) or SesionProgramada.PRIORIDAD_ALTA
