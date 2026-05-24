@@ -190,3 +190,137 @@ class RecalcularCargaUaTests(TestCase):
         self._run_cmd()
         act.refresh_from_db()
         self.assertIsNone(act.carga_ua)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Phase Hyrox-Gym 1.0 — Estado global compartido de descanso
+# ─────────────────────────────────────────────────────────────────────────────
+from hyrox.views import _crear_hyrox_decision, _leer_senales_secundarias
+
+
+class TestHyroxDecisionDescansoGlobal(TestCase):
+    """_crear_hyrox_decision respeta el estado de descanso global del plan gym."""
+
+    def _decision(self, **kwargs):
+        defaults = dict(current_score=89, resumen_semanal={'tsb': 4.5, 'acwr': 0.9})
+        defaults.update(kwargs)
+        return _crear_hyrox_decision(**defaults)
+
+    def test_es_descanso_plan_true_no_devuelve_empujar(self):
+        d = self._decision(es_descanso_plan=True)
+        self.assertNotEqual(d['estado'], 'empujar')
+
+    def test_estado_entreno_descanso_no_devuelve_empujar(self):
+        d = self._decision(estado_entreno='descanso')
+        self.assertNotEqual(d['estado'], 'empujar')
+
+    def test_readiness_alto_tsb_positivo_pero_descanso_global_gana(self):
+        d = self._decision(current_score=95, resumen_semanal={'tsb': 10, 'acwr': 0.8}, es_descanso_plan=True)
+        self.assertEqual(d['causa'], 'descanso_plan')
+        self.assertFalse(d['puede_ejecutar_plan'])
+
+    def test_sin_descanso_global_decide_por_metricas(self):
+        d = self._decision(es_descanso_plan=False, estado_entreno='entrenar')
+        self.assertEqual(d['estado'], 'empujar')
+        self.assertTrue(d['puede_ejecutar_plan'])
+
+    def test_mensaje_explica_descanso_plan_no_metricas(self):
+        d = self._decision(es_descanso_plan=True)
+        self.assertEqual(d['estado'], 'recuperar')
+        self.assertIn('plan', d['mensaje'].lower())
+
+    def test_semaforo_hereda_descanso_global(self):
+        d = self._decision(es_descanso_plan=True)
+        self.assertFalse(d['puede_ejecutar_plan'])
+        self.assertEqual(d['causa'], 'descanso_plan')
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Phase Hyrox-Gym 1.1 — Señales secundarias del diario
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _senal(intensidad):
+    return {'senal_corporal': {'hay_senal': True, 'intensidad': intensidad, 'texto': 'Señal test.'}}
+
+def _senal_vacia():
+    return {'senal_corporal': {'hay_senal': False}, 'vigilar_senal_activa': False, 'futbol_reciente': False}
+
+
+class TestHyroxDecisionSenalesSecundarias(TestCase):
+    """Señales del diario modulan solo el resultado 'empujar'; respetan tiers 1 y 2."""
+
+    _BUENAS = dict(current_score=88, resumen_semanal={'tsb': 5, 'acwr': 0.85})
+
+    def _empujar_con(self, **sec_kwargs):
+        ss = {**_senal_vacia(), **sec_kwargs}
+        return _crear_hyrox_decision(**self._BUENAS, senales_secundarias=ss)
+
+    def test_senal_alta_nudge_a_sostener(self):
+        d = self._empujar_con(**_senal('alta'))
+        self.assertEqual(d['estado'], 'sostener')
+        self.assertEqual(d['causa'], 'senal_corporal')
+
+    def test_senal_moderada_nudge_a_sostener(self):
+        d = self._empujar_con(**_senal('moderada'))
+        self.assertEqual(d['estado'], 'sostener')
+
+    def test_senal_suave_no_cambia_estado(self):
+        d = self._empujar_con(**_senal('suave'))
+        self.assertEqual(d['estado'], 'empujar')
+
+    def test_futbol_reciente_nudge_a_sostener(self):
+        d = self._empujar_con(futbol_reciente=True)
+        self.assertEqual(d['estado'], 'sostener')
+        self.assertEqual(d['causa'], 'actividad_reciente')
+
+    def test_vigilar_senal_solo_no_cambia_estado(self):
+        d = self._empujar_con(vigilar_senal_activa=True)
+        self.assertEqual(d['estado'], 'empujar')
+
+    def test_secundaria_no_supera_descanso_global_tier1(self):
+        ss = {**_senal('alta'), 'futbol_reciente': True, 'vigilar_senal_activa': True}
+        d = _crear_hyrox_decision(**self._BUENAS, es_descanso_plan=True, senales_secundarias=ss)
+        self.assertEqual(d['causa'], 'descanso_plan')
+
+    def test_secundaria_no_supera_tsb_alto_tier2(self):
+        ss = {**_senal('alta')}
+        d = _crear_hyrox_decision(
+            current_score=80,
+            resumen_semanal={'tsb': -22, 'acwr': 0.9},
+            senales_secundarias=ss,
+        )
+        self.assertEqual(d['causa'], 'fatiga')
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Phase Hyrox-Gym 1.2 — Explicación visible de señales compartidas
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestHyroxDecisionExplicacionModulacion(TestCase):
+    """explicacion_modulacion aparece solo cuando hay modulación real."""
+
+    _BUENAS = dict(current_score=88, resumen_semanal={'tsb': 5, 'acwr': 0.85})
+
+    def test_explicacion_presente_en_senal_alta(self):
+        ss = {**_senal_vacia(), **_senal('alta')}
+        d = _crear_hyrox_decision(**self._BUENAS, senales_secundarias=ss)
+        self.assertIn('explicacion_modulacion', d)
+        exp = d['explicacion_modulacion']
+        self.assertIn('bullets', exp)
+        self.assertTrue(len(exp['bullets']) >= 1)
+        self.assertIn('cierre', exp)
+
+    def test_explicacion_contiene_futbol_si_aplica(self):
+        ss = {**_senal_vacia(), 'futbol_reciente': True}
+        d = _crear_hyrox_decision(**self._BUENAS, senales_secundarias=ss)
+        bullets = d['explicacion_modulacion']['bullets']
+        self.assertTrue(any('fútbol' in b.lower() or 'futbol' in b.lower() for b in bullets))
+
+    def test_sin_modulacion_no_hay_explicacion(self):
+        d = _crear_hyrox_decision(**self._BUENAS, senales_secundarias=_senal_vacia())
+        self.assertNotIn('explicacion_modulacion', d)
+
+    def test_descanso_plan_no_genera_explicacion_modulacion(self):
+        ss = {**_senal('alta')}
+        d = _crear_hyrox_decision(**self._BUENAS, es_descanso_plan=True, senales_secundarias=ss)
+        self.assertNotIn('explicacion_modulacion', d)
