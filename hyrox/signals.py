@@ -379,120 +379,87 @@ from hyrox.models import HyroxObjective
 
 @receiver(post_save, sender=EntrenoRealizado)
 def sync_gym_impact_to_hyrox(sender, instance, created, raw=False, **kwargs):
+    """
+    Signal transversal: Gym → Hyrox.
+    Delega al bridge toda la lógica de sincronización.
+    Ver entrenos/services/hyrox_bridge.py para el contrato completo.
+    """
     if raw:
         return
-    """
-    Signal transversal que se dispara cuando el usuario guarda un entrenamiento
-    en el módulo general (Gym/Liftin).
-    
-    Responsabilidades:
-    1. Sincronizar RMs (peso máximo) hacia el objetivo de Hyrox (Sentadilla/Peso Muerto).
-    2. Inyectar fatiga (muscle_fatigue_index) en la próxima sesión de Hyrox si hay volumen pesado de piernas.
-    """
     try:
         objetivo = HyroxObjective.objects.filter(cliente=instance.cliente, estado='activo').first()
         if not objetivo:
-            return # Si no está entrenando para Hyrox, salimos
+            return
 
-        # Usar el mapeador central (El puente de idiomas)
-        from entrenos.services.services import MAPEO_EJERCICIOS_A_PRINCIPAL
-        
-        hubo_actualizacion_rm = False
-        volumen_pierna_kg = 0
+        from entrenos.services.services import MAPEO_EJERCICIOS_A_PRINCIPAL, MAPEO_MUSCULAR
+        from entrenos.services.hyrox_bridge import campo_rm_para_ejercicio, sync_rm_to_hyrox, sync_gym_fatigue
 
-        # Para los ejercicios, revisamos EjercicioRealizado y EjercicioLiftinDetallado
         ejercicios_list = list(instance.ejercicios_realizados.filter(completado=True))
         if hasattr(instance, 'ejercicios_liftin_detallados'):
             ejercicios_list.extend(list(instance.ejercicios_liftin_detallados.filter(completado=True)))
 
+        volumen_pierna_kg = 0
+        nombres_ejercicios = []
+
         for ej in ejercicios_list:
-            # Normalizar nombre
             nombre_raw = getattr(ej, 'nombre_ejercicio', getattr(ej, 'nombre', ''))
             nombre_norm = nombre_raw.lower().strip()
-            
-            # 1. TRADUCCIÓN: ¿Qué ejercicio es realmente?
+            nombres_ejercicios.append(nombre_norm)
+
             slug = MAPEO_EJERCICIOS_A_PRINCIPAL.get(nombre_norm)
-            
             peso_lift = float(getattr(ej, 'peso_kg', 0) or 0)
             reps_lift = int(getattr(ej, 'repeticiones', getattr(ej, 'series_realizadas', 1)) or 1)
-            
-            # --- Lógica de RM ---
-            if peso_lift > 0 and slug in ['Sentadilla', 'Peso Muerto']:
-                rm_estimado = calcular_rm_estimado(peso_lift, reps_lift)
-                
-                if slug == 'Sentadilla':
-                    if not objetivo.rm_sentadilla or rm_estimado > objetivo.rm_sentadilla:
-                        objetivo.rm_sentadilla = round(rm_estimado, 1)
-                        hubo_actualizacion_rm = True
-                
-                elif slug == 'Peso Muerto':
-                    if not objetivo.rm_peso_muerto or rm_estimado > objetivo.rm_peso_muerto:
-                        objetivo.rm_peso_muerto = round(rm_estimado, 1)
-                        hubo_actualizacion_rm = True
 
-            # --- Lógica de Fatiga / Volumen de Piernas ---
-            # Si el slug es Sentadilla, o si el grupo muscular en BD es Cuádriceps/Isquios
+            # ── RM (estimación Brzycki) ──────────────────────────────────────
+            campo = campo_rm_para_ejercicio(nombre_raw)
+            if campo and peso_lift > 0:
+                rm_estimado = calcular_rm_estimado(peso_lift, reps_lift)
+                sync_rm_to_hyrox(objetivo, campo, rm_estimado)
+
+            # ── Volumen de piernas ───────────────────────────────────────────
             grupo_bd = getattr(ej, 'grupo_muscular', None)
-            from entrenos.services.services import MAPEO_MUSCULAR
             grupo_calc = MAPEO_MUSCULAR.get(nombre_norm, grupo_bd)
-            
-            if slug == 'Sentadilla' or slug == 'Peso Muerto' or (grupo_calc in ['Cuádriceps', 'Isquios']):
+            if slug in ('Sentadilla', 'Peso Muerto') or grupo_calc in ('Cuádriceps', 'Isquios'):
                 try:
-                    vol_ej = float(getattr(ej, 'volumen_ejercicio', peso_lift * reps_lift * int(getattr(ej, 'series', 1) or 1)))
+                    vol_ej = float(getattr(
+                        ej, 'volumen_ejercicio',
+                        peso_lift * reps_lift * int(getattr(ej, 'series', 1) or 1)
+                    ))
                     volumen_pierna_kg += vol_ej
-                except:
+                except Exception:
                     pass
 
-        if hubo_actualizacion_rm:
-            objetivo.save(update_fields=['rm_sentadilla', 'rm_peso_muerto'])
-
-        # --- REFINAMIENTO DEL TRIGGER Y FÚTBOL ---
-        nombres_ejercicios = [getattr(e, 'nombre_ejercicio', getattr(e, 'nombre', '')).lower() for e in ejercicios_list]
-        es_futbol = any('futbol' in n or 'fútbol' in n for n in nombres_ejercicios)
-        
-        # Obtener RPE global de la sesión si existe
+        # ── RPE de sesión ────────────────────────────────────────────────────
         rpe_medio = 0
         if hasattr(instance, 'sesion_entrenamiento') and instance.sesion_entrenamiento:
             rpe_medio = instance.sesion_entrenamiento.rpe_medio or 0
         elif hasattr(instance, 'esfuerzo_percibido'):
             rpe_medio = instance.esfuerzo_percibido or 0
 
-        # Lógica de Inyección de Fatiga
-        fatiga_inyectada = None
-        motivo_fatiga = ""
+        # ── Fatiga (bridge) ──────────────────────────────────────────────────
+        es_futbol = any('futbol' in n or 'fútbol' in n for n in nombres_ejercicios)
+        fatiga_nivel = None
+        motivo = ''
 
         if es_futbol:
             if rpe_medio >= 9:
-                fatiga_inyectada = 'Alta'
-                motivo_fatiga = f"El fútbol de ayer fue de máxima exigencia (RPE {rpe_medio}). Priorizamos descanso total o movilidad para proteger articulaciones."
+                fatiga_nivel = 'Alta'
+                motivo = f"Fútbol de máxima exigencia (RPE {rpe_medio}). Descanso o movilidad."
             elif rpe_medio >= 8:
-                fatiga_inyectada = 'Alta'
-                motivo_fatiga = f"Partido intenso de fútbol ayer (RPE {rpe_medio}). Tus cuádriceps están comprometidos, hoy evitamos Sled y Squats pesados."
-        else:
-            if volumen_pierna_kg > 2500 or rpe_medio >= 8.5:
-                fatiga_inyectada = 'Alta'
-                motivo_fatiga = (
-                    "El coach ha detectado un impacto estructural tras tu sesión pesada "
-                    f"de piernas ayer ({int(volumen_pierna_kg)}kg movidos, RPE {rpe_medio}). "
-                    "Hoy adaptaremos los ritmos."
-                )
+                fatiga_nivel = 'Alta'
+                motivo = f"Partido intenso de fútbol (RPE {rpe_medio}). Evitar Sled y Squats."
+        elif volumen_pierna_kg > 2500 or rpe_medio >= 8.5:
+            fatiga_nivel = 'Alta'
+            motivo = (
+                f"Sesión pesada de piernas ({int(volumen_pierna_kg)} kg movidos, "
+                f"RPE {rpe_medio}). Adaptaremos ritmos."
+            )
 
-        if fatiga_inyectada:
-            proxima = HyroxSession.objects.filter(
-                objective=objetivo, 
-                fecha__gte=instance.fecha, 
-                estado='planificado'
-            ).order_by('fecha').first()
-            
-            if proxima:
-                proxima.muscle_fatigue_index = fatiga_inyectada
-                proxima.fatiga_updated_at = timezone.now()
-                proxima.save(update_fields=['muscle_fatigue_index', 'fatiga_updated_at'])
-                
+        if fatiga_nivel:
+            sync_gym_fatigue(objetivo, fatiga_nivel, motivo, instance.fecha)
+
     except Exception as e:
-        import traceback
-        print(f"Error en el SSoT Signal Gym -> Hyrox: {e}")
-        traceback.print_exc()
+        logger.error('sync_gym_impact_to_hyrox error: %s', e)
 
 @receiver(post_save, sender=HyroxSession)
 def sincronizar_hyrox_al_hub(sender, instance, created, raw=False, update_fields=None, **kwargs):

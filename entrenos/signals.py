@@ -1,9 +1,13 @@
+import logging
+
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from entrenos.models import EntrenoRealizado, EjercicioLiftinDetallado, ActividadRealizada
 from entrenos.utils.utils import parse_reps_and_series
 from django.utils.timezone import make_aware
 from datetime import datetime
+
+logger = logging.getLogger(__name__)
 
 # Keywords que mapean un ejercicio de gym a un RM de HyroxObjective
 _SENTADILLA_KW = ('sentadilla', 'squat', 'goblet', 'hack squat', 'front squat')
@@ -345,49 +349,32 @@ def joi_mensaje_pr(sender, instance, created, raw=False, **kwargs):
 @receiver(post_save, sender='entrenos.RecordPersonal')  # lazy string resuelto por Django apps registry
 def sincronizar_rm_con_hyrox(sender, instance, created, raw=False, **kwargs):
     """
-    Cuando se establece un nuevo récord de peso máximo en gym,
-    actualiza rm_sentadilla / rm_peso_muerto en el HyroxObjective activo
-    si el nuevo valor supera al almacenado.
-    Solo actúa sobre récords vigentes (superado=False) y de tipo peso_maximo.
+    Cuando se establece un nuevo récord oficial de peso máximo,
+    actualiza rm_sentadilla / rm_peso_muerto en el HyroxObjective activo.
+    Fuente: PR oficial (exacto). Delegado a hyrox_bridge.sync_rm_to_hyrox.
     """
     if raw or instance.superado:
         return
     if instance.tipo_record not in ('peso_maximo', 'one_rep_max'):
         return
 
-    nombre = (instance.ejercicio_nombre or '').lower()
-    nuevo_valor = float(instance.valor)
-
-    if any(kw in nombre for kw in _SENTADILLA_KW):
-        campo = 'rm_sentadilla'
-    elif any(kw in nombre for kw in _PESO_MUERTO_KW):
-        campo = 'rm_peso_muerto'
-    else:
-        return
-
     try:
         from hyrox.models import HyroxObjective
-        from django.core.cache import cache as _cache
+        from entrenos.services.hyrox_bridge import campo_rm_para_ejercicio, sync_rm_to_hyrox
+
+        campo = campo_rm_para_ejercicio(instance.ejercicio_nombre)
+        if not campo:
+            return
 
         objetivo = HyroxObjective.objects.filter(
-            cliente=instance.cliente,
-            estado='activo',
+            cliente=instance.cliente, estado='activo',
         ).first()
         if not objetivo:
             return
 
-        actual = getattr(objetivo, campo) or 0
-        if nuevo_valor > actual:
-            setattr(objetivo, campo, nuevo_valor)
-            objetivo.save(update_fields=[campo])
-            _cache.delete(f'hyrox_readiness_{objetivo.pk}')
-            _cache.delete(f'dashboard_acwr_unificado_{instance.cliente_id}')
-            print(
-                f"🏋️ Hyrox RM actualizado: {instance.ejercicio_nombre} → "
-                f"{campo}={nuevo_valor} kg (anterior: {actual} kg)"
-            )
+        sync_rm_to_hyrox(objetivo, campo, float(instance.valor))
     except Exception as e:
-        print(f"⚠️ sincronizar_rm_con_hyrox error: {e}")
+        logger.error('sincronizar_rm_con_hyrox error: %s', e)
 
 
 # ── JOI — intervención del plan ──────────────────────────────────────────────
