@@ -34,30 +34,7 @@ from .models import EstadoEmocional
 
 User = get_user_model()
 
-
-def distorsionar_frase(texto):
-    sustituciones = {
-        'a': ['a', 'á', '@', '∂'],
-        'e': ['e', 'ë', '3', '€'],
-        'i': ['i', 'ï', '1', '|'],
-        'o': ['o', 'ø', '0', '¤'],
-        'u': ['u', 'ü', 'µ'],
-        't': ['t', '†', '+'],
-        'c': ['c', 'ç', '¢'],
-        's': ['s', '$', '§'],
-        'd': ['d', 'ð'],
-        'n': ['n', 'ñ']
-    }
-
-    salida = ""
-    for char in texto:
-        if random.random() < 0.12 and char.lower() in sustituciones:
-            salida += random.choice(sustituciones[char.lower()])
-        elif random.random() < 0.04:
-            salida += random.choice(['…', '—', ' ', '', '', ''])  # glitch visual
-        else:
-            salida += char
-    return salida
+from .utils import distorsionar_frase, generar_sugerencia_joi, obtener_estado_joi
 
 
 def recuperar_frase_de_recaida(usuario):
@@ -76,29 +53,6 @@ def recuperar_frase_de_recaida(usuario):
             frase_original = f"La última vez que estuviste así te dije: “{recuerdo.contenido}”"
             return distorsionar_frase(frase_original)
     return None
-
-
-def obtener_estado_joi(usuario):
-    hoy = now().date()
-    semana = hoy - timedelta(days=6)
-    emociones = EstadoEmocional.objects.filter(user=usuario, fecha__range=(semana, hoy))
-
-    emociones_texto = [e.emocion.lower() for e in emociones]
-    if not emociones_texto:
-        return 'ausente'
-
-    if emociones_texto.count("feliz") >= 2:
-        return 'feliz'
-    if emociones_texto.count("triste") >= 2 or emociones_texto.count("agotado") >= 2:
-        return 'triste'
-    if emociones_texto.count("estresado") >= 2:
-        return 'glitch'
-    if emociones_texto.count("motivado") >= 2:
-        return 'motivada'
-    if emociones_texto.count("neutral") >= 2:
-        return 'contemplativa'
-
-    return 'ausente'
 
 
 def recuerdos_view(request):
@@ -176,47 +130,6 @@ def detectar_logros_nuevos(user):
     add("🚀", "7 días seguidos", seguidos >= 7)
 
     return logros_nuevos
-
-
-def generar_sugerencia_joi(user):
-    hoy = now().date()
-    semana = hoy - timedelta(days=6)
-    ayer = hoy - timedelta(days=1)
-
-    emociones = EstadoEmocional.objects.filter(user=user, fecha__range=(semana, hoy))
-    entrenos = Entrenamiento.objects.filter(user=user, fecha__range=(semana, hoy))
-    entreno_ayer = Entrenamiento.objects.filter(user=user, fecha=ayer).first()
-
-    dias_triste = sum(1 for e in emociones if 'triste' in e.emocion.lower())
-    dias_estresado = sum(1 for e in emociones if 'estresado' in e.emocion.lower())
-    dias_entreno = entrenos.count()
-
-    # 🧠 Aprendizaje simple de comportamiento
-    nota_adaptacion = ""
-    if entreno_ayer:
-        reco = entreno_ayer.recomendacion_joi or ""
-        tipo_real = entreno_ayer.tipo.lower()
-
-        if reco and reco.lower() not in tipo_real:
-            nota_adaptacion = " (nota: ayer no seguiste mi sugerencia)"
-
-    if dias_entreno == 0:
-        return "Hoy podrías hacer una rutina ligera o de activación rápida 💫" + nota_adaptacion
-
-    if dias_estresado >= 3:
-        return "Te recomiendo una rutina de movilidad o respiración para soltar tensión 🧘" + nota_adaptacion
-
-    if dias_triste >= 2:
-        return "Una rutina enfocada en empoderarte, algo de torso o fuerza controlada 🖤" + nota_adaptacion
-
-    if dias_entreno >= 5:
-        return "¡Estás on fire! Puedes probar una rutina de fuerza o intensidad progresiva 💪" + nota_adaptacion
-    # 🔮 Revisar si hay recuerdos replicantes
-    recuerdo_replicante = RecuerdoEmocional.objects.filter(user=user, contexto='modo_replicante').order_by('?').first()
-    if recuerdo_replicante and (dias_triste >= 1 or dias_entreno <= 2):
-        return f"{recuerdo_replicante.contenido}\nHoy podrías hacer algo suave, pero significativo 🌘"
-
-    return "Una rutina básica o de mantenimiento sería ideal hoy 🌱" + nota_adaptacion
 
 
 def detectar_avatar(emocion):

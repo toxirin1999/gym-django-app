@@ -3,18 +3,7 @@ import json
 import re
 from django.conf import settings
 
-# Gemini opcional — puede no estar instalado en producción con cuota limitada
-try:
-    import google.generativeai as genai
-    GEMINI_AVAILABLE = True
-except ImportError:
-    genai = None
-    GEMINI_AVAILABLE = False
-
-GEMINI_API_KEY = getattr(settings, 'GEMINI_API_KEY', os.environ.get('GEMINI_API_KEY'))
-
-if GEMINI_AVAILABLE and GEMINI_API_KEY:
-    genai.configure(api_key=GEMINI_API_KEY)
+from core.ai.gemini_client import generate_text as _gemini_generate, is_available as _gemini_available
 
 def calcular_rm_estimado(peso: float, reps: int) -> float:
     """
@@ -531,9 +520,9 @@ class HyroxCoachService:
 
     @staticmethod
     def _clasificar_intencion(texto_usuario, contexto, history=None):
-        if not GEMINI_API_KEY:
-             raise ValueError("GEMINI_API_KEY no está configurada")
-             
+        if not _gemini_available():
+            return "registro"
+
         system_prompt = f"""
 Eres clasificador de intenciones para un sistema de entrenamiento HYROX.
 
@@ -549,28 +538,23 @@ Responde ÚNICAMENTE con un JSON válido:
     "razon": "Breve justificación de por qué"
 }}
 """
-        model = genai.GenerativeModel('gemini-2.5-flash', system_instruction=system_prompt)
-        try:
-            response = model.generate_content(texto_usuario)
-            response_text = response.text.strip()
-            
-            start_idx = response_text.find('{')
-            end_idx = response_text.rfind('}')
-            
-            if start_idx != -1 and end_idx != -1 and end_idx > start_idx:
-                json_str = response_text[start_idx:end_idx+1]
-                data = json.loads(json_str)
-                return data.get("intencion", "registro") # Por defecto registro si hay dudas
-            return "registro"
-        except Exception as e:
-            print(f"Error en clasificación de intención: {e}")
-            return "registro"
+        response_text = _gemini_generate(texto_usuario, system_instruction=system_prompt, fallback='')
+        if response_text:
+            try:
+                start_idx = response_text.find('{')
+                end_idx = response_text.rfind('}')
+                if start_idx != -1 and end_idx != -1 and end_idx > start_idx:
+                    data = json.loads(response_text[start_idx:end_idx + 1])
+                    return data.get("intencion", "registro")
+            except Exception:
+                pass
+        return "registro"
 
     @staticmethod
     def _generar_respuesta_charla(texto_usuario, contexto, history=None):
         from .models import HyroxObjective
-        if not GEMINI_API_KEY:
-             raise ValueError("GEMINI_API_KEY no está configurada")
+        if not _gemini_available():
+            return "Parece que hay un problema con la IA ahora mismo. Descansa y vuelve más tarde."
 
         # ── Análisis de tendencia RPE vs cargas ──────────────────────────────
         tendencia_nota = ""
@@ -626,14 +610,11 @@ El usuario NO te está registrando un entreno ahora mismo, te está hablando sob
 RESPONDE DIRECTAMENTE AL USUARIO. Sé conciso, no te enrolles. Usa un tono motivador y estratégico. Si menciona dolor/lesión, recuérdale la importancia de la recuperación.
 Si el usuario ha completado algún estándar recientemente o lo ves en la lista de Estándares Completados, fíjate si no lo habías felicitado y haz una breve mención tipo "Un pilar de la reconstrucción completado".
 """
-        model = genai.GenerativeModel('gemini-2.5-flash', system_instruction=system_prompt)
-        
-        try:
-            response = model.generate_content(texto_usuario)
-            return response.text.strip()
-        except Exception as e:
-            print(f"Error generando respuesta de charla: {e}")
-            return "Parece que hay un problema con la IA ahora mismo. Descansa y vuelve más tarde."
+        return _gemini_generate(
+            texto_usuario,
+            system_instruction=system_prompt,
+            fallback="Parece que hay un problema con la IA ahora mismo. Descansa y vuelve más tarde.",
+        )
 
 
     @staticmethod
@@ -862,9 +843,10 @@ Si el usuario ha completado algún estándar recientemente o lo ves en la lista 
                 alerta_lesion = "\n✅ FASE DE TRANSICIÓN: Usa EXACTAMENTE esta frase en tu saludo: '✅ Test superado, David. Has vuelto a la carga máxima, pero durante esta primera semana limitaremos tu volumen al 85% como medida de precaución biomecánica'"
 
         
-        if not GEMINI_API_KEY:
-             raise ValueError("GEMINI_API_KEY no está configurada")
-             
+        _fallback_saludo = f"Hola {contexto.get('nombre', 'Atleta')}. {texto_sesion} ¡A por el día!"
+        if not _gemini_available():
+            return _fallback_saludo
+
         system_prompt = f"""
 Eres un entrenador de vanguardia de HYROX. Empático pero enfocado en la disciplina.
 Tu tarea es generar un ÚNICO mensaje de saludo inicial (máximo 3 líneas) para cuando tu atleta abre la app hoy.
@@ -883,19 +865,13 @@ Instrucciones:
 4. Si la fatiga es "Alta" y no hay alerta específica, recuérdale cuidar el cuerpo.
 5. NO añadas comillas, no saludes dos veces ni uses prefijos como "Coach:". Solo el mensaje directo de 2-3 frases.
 """
-        model = genai.GenerativeModel('gemini-2.5-flash', system_instruction=system_prompt)
-        try:
-            # Mandamos un trigger vacío, todo el contexto está en el prompt de sistema
-            response = model.generate_content("Genera el saludo del día")
-            saludo = response.text.strip()
-            
-            # Guardamos el resultado en caché por 3600 segundos (1 hora)
-            cache.set(cache_key, saludo, timeout=3600)
-            
-            return saludo
-        except Exception as e:
-            print(f"Error generando saludo inicial: {e}")
-            return f"Hola {contexto.get('nombre', 'Atleta')}. {texto_sesion} ¡A por el día!"
+        saludo = _gemini_generate(
+            "Genera el saludo del día",
+            system_instruction=system_prompt,
+            fallback=_fallback_saludo,
+        )
+        cache.set(cache_key, saludo, timeout=3600)
+        return saludo
 
 class CompetitionStandardsService:
     # Estándares oficiales por categoría de HYROX.

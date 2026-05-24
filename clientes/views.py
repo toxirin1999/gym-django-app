@@ -54,6 +54,7 @@ from .forms import (BitacoraDiariaForm, CheckinDiarioForm, ClienteForm,
 from .models import (BitacoraDiaria, Cliente, EstadoSemanal, Medida,
                      ObjetivoCliente, ObjetivoPeso, PesoDiario, PlanNutricional,
                      RevisionProgreso, SugerenciaAceptada)
+from .utils import get_cliente_actual
 from analytics.planificador_helms_completo import PlanificadorHelms, crear_perfil_desde_cliente
 from analytics.sistema_progresion_avanzada import SistemaProgresionAvanzada
 
@@ -499,7 +500,7 @@ def registrar_bitacora(request):
         saludo_joi = "🌤 A mitad de camino. ¿Qué intención quieres sostener?"
     else:
         saludo_joi = "🌙 Hora de cerrar el día. ¿Qué aprendiste hoy sobre ti?"
-    cliente = Cliente.objects.get(user=request.user)
+    cliente = get_cliente_actual(request.user)
 
     respuesta_joi = None
     if request.method == "GET":
@@ -629,7 +630,7 @@ def registrar_emocion(request):
     if emocion:
         EstadoEmocional.objects.create(user=user, emocion=emocion)
 
-    cliente = Cliente.objects.get(user=user)
+    cliente = get_cliente_actual(user)
     emociones = EstadoEmocional.objects.filter(user=user).order_by('-fecha')[:5]
     entrenos = Entrenamiento.objects.filter(user=user).order_by('-fecha')[:5]
     recuerdo = RecuerdoEmocional.objects.filter(user=user).order_by('-fecha').first()

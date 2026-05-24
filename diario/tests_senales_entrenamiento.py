@@ -6,6 +6,7 @@ from datetime import date, timedelta
 from django.contrib.auth.models import User
 from django.test import TestCase
 
+from clientes.utils import get_cliente_actual
 from diario.models import SeguimientoVires
 from diario.services.senales_entrenamiento import (
     obtener_senal_corporal_diario,
@@ -166,8 +167,7 @@ class ContrastesenalVsEntrenoTest(TestCase):
 
     def setUp(self):
         self.user = User.objects.create_user('test_contraste', password='x')
-        from clientes.models import Cliente
-        self.cliente = Cliente.objects.get(user=self.user)
+        self.cliente = get_cliente_actual(self.user)
 
     def test_sin_senal_retorna_none(self):
         # Solo un día cargado → sin señal (umbral no alcanzado)
@@ -240,8 +240,7 @@ class TendenciaSenalTest(TestCase):
 
     def setUp(self):
         self.user = User.objects.create_user('test_tendencia', password='x')
-        from clientes.models import Cliente
-        self.cliente = Cliente.objects.get(user=self.user)
+        self.cliente = get_cliente_actual(self.user)
 
     def _dia_cargado_con_entreno_exigente(self, dias_atras):
         """3 días cargados previos + entreno de RPE alto en la fecha."""

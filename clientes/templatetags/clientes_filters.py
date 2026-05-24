@@ -81,11 +81,6 @@ def multiply(value, arg):
 
 
 @register.filter
-def get_item(dictionary, key):
-    return dictionary.get(key)
-
-
-@register.filter
 def horas_a_horas_minutos(valor):
     try:
         valor = float(valor)

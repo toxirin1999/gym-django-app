@@ -67,11 +67,6 @@ def absval(value):
 
 
 @register.filter
-def get_item(dictionary, key):
-    return dictionary.get(key)
-
-
-@register.filter
 def floatdiv(value, divisor):
     try:
         return float(value) / float(divisor)
