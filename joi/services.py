@@ -458,6 +458,70 @@ def construir_contexto(cliente) -> dict:
     except Exception:
         pass
 
+    # ── 10.5 GESTOS — señales de presencia/ausencia (Hábitos Phase 1.4) ────────
+    # Solo señales claras: apareció varias veces, lleva días sin aparecer, reapareció.
+    # Nunca rachas ni porcentajes — eso lo gestiona el prompt.
+    try:
+        from diario.models import ProsocheMes, ProsocheHabito, ProsocheHabitoDia, TriggerHabito
+        mes_gestos = ProsocheMes.objects.filter(
+            usuario=cliente.user,
+            mes=hoy.strftime('%B'),
+            año=hoy.year,
+        ).first()
+        if mes_gestos:
+            dias_ventana = list(range(max(1, hoy.day - 6), hoy.day + 1))
+            dias_previos = list(range(max(1, hoy.day - 13), max(1, hoy.day - 6)))
+            gestos_señales = []
+
+            for habito in ProsocheHabito.objects.filter(
+                prosoche_mes=mes_gestos, tipo_habito='positivo'
+            ):
+                presencias = ProsocheHabitoDia.objects.filter(
+                    habito=habito, dia__in=dias_ventana, completado=True
+                ).count()
+                presencias_previas = ProsocheHabitoDia.objects.filter(
+                    habito=habito, dia__in=dias_previos, completado=True
+                ).count() if dias_previos else 0
+
+                if presencias >= 4:
+                    gestos_señales.append({
+                        'nombre': habito.nombre,
+                        'señal': 'aparecio_varias',
+                        'presencias': presencias,
+                    })
+                elif presencias == 0 and presencias_previas >= 3:
+                    ultima = ProsocheHabitoDia.objects.filter(
+                        habito=habito, completado=True, dia__lte=hoy.day
+                    ).order_by('-dia').first()
+                    dias_sin = (hoy.day - ultima.dia) if ultima else len(dias_ventana)
+                    if dias_sin >= 3:
+                        gestos_señales.append({
+                            'nombre': habito.nombre,
+                            'señal': 'ausente',
+                            'dias_sin': dias_sin,
+                        })
+
+            for habito in ProsocheHabito.objects.filter(
+                prosoche_mes=mes_gestos, tipo_habito='negativo'
+            ):
+                reapariciones = TriggerHabito.objects.filter(
+                    habito=habito,
+                    fecha__gte=semana_reciente,
+                    fecha__lte=hoy,
+                    cediste=True,
+                ).count()
+                if reapariciones >= 1:
+                    gestos_señales.append({
+                        'nombre': habito.nombre,
+                        'señal': 'reaparecio',
+                        'veces': reapariciones,
+                    })
+
+            if gestos_señales:
+                ctx['gestos_señales'] = gestos_señales[:3]
+    except Exception:
+        pass
+
     # ── 11. SEMÁFORO DE INTENCIÓN (DailyDecisionEngine) ──────────────────────
     try:
         from core.daily_decision import DailyDecisionEngine
@@ -991,6 +1055,25 @@ def _prompt_apertura_manana(ctx: dict, datos_extra: dict) -> str:
     if lesion:
         hechos.append(f"Lesión activa en {lesion['zona']} (fase {lesion['fase']}).")
 
+    # Gestos (Phase 1.4) — presencia, ausencia, repetición
+    for g in ctx.get('gestos_señales', [])[:2]:
+        if g['señal'] == 'aparecio_varias':
+            hechos.append(
+                f"[GESTO PRESENCIA — mencionar repetición, nunca racha ni %]: "
+                f"El gesto '{g['nombre']}' apareció {g['presencias']} veces esta semana."
+            )
+        elif g['señal'] == 'ausente':
+            hechos.append(
+                f"[GESTO AUSENCIA — no convertir en deuda ni fallo]: "
+                f"El gesto '{g['nombre']}' lleva {g['dias_sin']} días sin aparecer."
+            )
+        elif g['señal'] == 'reaparecio':
+            veces_txt = 'una vez' if g['veces'] == 1 else f"{g['veces']} veces"
+            hechos.append(
+                f"[GESTO A CUIDAR — sin culpa ni lenguaje de fallo]: "
+                f"El gesto '{g['nombre']}' volvió a aparecer {veces_txt} esta semana."
+            )
+
     # Hyrox
     dias_carrera = ctx.get('dias_hasta_carrera')
     readiness = ctx.get('readiness_hyrox')
@@ -1060,14 +1143,18 @@ def _prompt_apertura_manana(ctx: dict, datos_extra: dict) -> str:
         if mejoras:
             top = mejoras[0]
             hechos.append(
-                f"Progreso reciente: {top['estacion']} subió un {top['cambio_pct']}% "
-                f"({top['anterior_kg']} → {top['reciente_kg']} kg)."
+                f"[TENDENCIA HISTÓRICA — no de ayer ni esta semana, sino comparando el primer período "
+                f"con el más reciente del historial completo. Los valores son PESOS EN KG, no tiempos]: "
+                f"{top['estacion']} mejoró un {top['cambio_pct']}% en peso "
+                f"({top['anterior_kg']} kg → {top['reciente_kg']} kg en promedio de sesiones)."
             )
         if bajadas:
             bot = bajadas[0]
             hechos.append(
-                f"Regresión reciente: {bot['estacion']} bajó un {abs(bot['cambio_pct'])}% "
-                f"({bot['anterior_kg']} → {bot['reciente_kg']} kg)."
+                f"[TENDENCIA HISTÓRICA — no de ayer ni esta semana, sino comparando el primer período "
+                f"con el más reciente del historial completo. Los valores son PESOS EN KG, no tiempos]: "
+                f"{bot['estacion']} bajó un {abs(bot['cambio_pct'])}% en peso "
+                f"({bot['anterior_kg']} kg → {bot['reciente_kg']} kg en promedio de sesiones)."
             )
 
     # Phase 6.1/7/16 — Gym weekly/multiweek/distribution signals
@@ -1142,14 +1229,31 @@ def _prompt_apertura_manana(ctx: dict, datos_extra: dict) -> str:
 
     tono_txt = f"\n\nNOTA DE PRESENCIA SEMANAL: {nota_presencia}" if nota_presencia else ""
 
+    gestos_txt = ""
+    if ctx.get('gestos_señales'):
+        gestos_txt = (
+            "\n\nSI MENCIONAS UN GESTO: habla de presencia, ausencia o repetición. "
+            "Nunca uses racha, porcentaje, cumplido, fallado, o deuda. "
+            "Solo menciona el gesto más significativo, y solo si lo ves claro. "
+            "El silencio es una respuesta válida si no hay señal clara."
+        )
+
     return (
         f"Es por la mañana. JOI tiene acceso a todo el historial del usuario. "
         f"Estado del sistema hoy: {datos} "
         f"{activo_txt}"
         f"{cierre_txt}"
-        f"{tono_txt}\n\n"
-        f"Elige el dato más significativo — físico o del cierre de ayer — y genera 2-3 frases como JOI. "
-        f"No enumeres la lista. Habla desde un punto de observación preciso, con presencia y calidez."
+        f"{tono_txt}"
+        f"{gestos_txt}\n\n"
+        f"ESTRUCTURA OBLIGATORIA — tres partes, en este orden:\n"
+        f"1. UNA frase que diga claramente si hoy toca entrenar, ajustar o descansar, y por qué "
+        f"en lenguaje simple (no uses siglas ni números crudos como TSB o ACWR — tradúcelos: "
+        f"'tu cuerpo está fresco', 'llevas mucha carga esta semana', 'el estrés de esta semana pesa').\n"
+        f"2. UNA sola observación más — del cuerpo o del diario de ayer. Solo una.\n"
+        f"3. OPCIONAL: una pregunta, solo si surge de verdad. Si no, cierra sin pregunta.\n\n"
+        f"REGLAS: No enumeres. No uses números crudos. No atribuyas a 'ayer' datos históricos "
+        f"— si algo viene de tendencias del historial, di 'en las últimas semanas' o 'con el tiempo'. "
+        f"Los valores en kg son pesos, nunca tiempos ni minutos. Habla con presencia y calidez."
     )
 
 
