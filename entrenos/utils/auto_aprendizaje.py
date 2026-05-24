@@ -1,11 +1,5 @@
-try:
-    import google.generativeai as genai
-    GEMINI_AVAILABLE = True
-except ImportError:
-    genai = None
-    GEMINI_AVAILABLE = False
-from django.conf import settings
 from django.core.cache import cache
+from core.ai.gemini_client import generate_text as _gemini_generate, is_available as _gemini_available
 import json
 
 CATEGORIAS_BASE = [
@@ -34,11 +28,7 @@ def clasificar_ejercicio_dinamico(nombre_original, default_return=None):
     
     # Si no en caché, llama a gemini
     try:
-        # Verificar que la API KEY está configurada
-        GEMINI_API_KEY = getattr(settings, 'GEMINI_API_KEY', None)
-        if GEMINI_API_KEY:
-            genai.configure(api_key=GEMINI_API_KEY)
-        elif not genai._client_api_key:
+        if not _gemini_available():
             return default_return or nombre_original.title()
 
         prompt = f"""
@@ -58,18 +48,16 @@ def clasificar_ejercicio_dinamico(nombre_original, default_return=None):
         if cache.get('api_rate_limit_hit'):
             return default_return or nombre_original.title()
 
-        model = genai.GenerativeModel('gemini-2.5-flash', system_instruction=prompt)
-        
-        # Intentar llamar a la API sin reintentos automáticos
-        try:
-            response = model.generate_content("¿A qué categoría base pertenece este ejercicio?", request_options={"retry": None, "timeout": 5.0})
-        except Exception as api_err:
-            print(f"[AutoLearn] API Rate Limit o Error: {api_err}")
-            cache.set('api_rate_limit_hit', True, timeout=90) # Bloquear TODO auto_aprendizaje por 90s
-            cache.set(cache_key, "DESCONOCIDO", timeout=86400) # Cachear este ejercicio
+        resultado = _gemini_generate(
+            "¿A qué categoría base pertenece este ejercicio?",
+            system_instruction=prompt,
+            fallback='',
+            timeout=5.0,
+        )
+        if not resultado:
+            cache.set('api_rate_limit_hit', True, timeout=90)
+            cache.set(cache_key, "DESCONOCIDO", timeout=86400)
             return default_return or nombre_original.title()
-
-        resultado = response.text.strip()
         
         # Validar consistencia
         for cat in CATEGORIAS_BASE:

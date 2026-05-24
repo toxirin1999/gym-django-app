@@ -1791,42 +1791,6 @@ def calcular_nivel_y_progreso(puntos_totales):
     }
 
 
-def calcular_estadisticas_principales(entrenamientos_base):
-    """
-    Calcula las estadísticas principales del dashboard
-    """
-    try:
-        # Total de entrenamientos
-        total_entrenamientos = entrenamientos_base.count()
-
-        # Entrenamientos por fuente
-        entrenamientos_liftin = entrenamientos_base.filter(fuente_datos='liftin').count()
-        entrenamientos_manual = total_entrenamientos - entrenamientos_liftin
-
-        # Calorías totales de Liftin
-        calorias_totales = entrenamientos_base.filter(
-            fuente_datos='liftin'
-        ).aggregate(
-            total=Sum('calorias_quemadas')
-        )['total'] or 0
-
-        return {
-            'total_entrenamientos': total_entrenamientos,
-            'entrenamientos_liftin': entrenamientos_liftin,
-            'entrenamientos_manual': entrenamientos_manual,
-            'calorias_totales': int(calorias_totales),
-        }
-
-    except Exception as e:
-        logger.error(f"Error calculando estadísticas principales: {str(e)}")
-        return {
-            'total_entrenamientos': 0,
-            'entrenamientos_liftin': 0,
-            'entrenamientos_manual': 0,
-            'calorias_totales': 0,
-        }
-
-
 def calcular_progreso_nivel(cliente_seleccionado):
     """Calcular progreso de nivel del cliente"""
 

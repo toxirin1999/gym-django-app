@@ -9,14 +9,14 @@ from django.contrib.auth.models import User
 from django.test import TestCase
 from unittest.mock import patch
 
+from clientes.utils import get_cliente_actual
 from diario.services.sugerencias_diario import get_sugerencia_diario
 from entrenos.models import IntervencionPlan, SugerenciaPlan
 
 
 def _cliente(username='test_sug_diario'):
     user = User.objects.create_user(username, password='x')
-    from clientes.models import Cliente
-    return Cliente.objects.get(user=user)
+    return get_cliente_actual(user)
 
 
 def _tendencia_notable():

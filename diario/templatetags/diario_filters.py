@@ -17,9 +17,3 @@ def add(value, arg):
     except (ValueError, TypeError):
         return value
 
-@register.filter
-def get_item(dictionary, key):
-    """Obtener item de diccionario"""
-    if hasattr(dictionary, 'get'):
-        return dictionary.get(key, '')
-    return ''

@@ -217,3 +217,157 @@ ya cubierto por Phase 1.0 tests. Lo que cambia es el template, no la lógica.
 | `SugerenciaPlan` desde señal corporal en contexto Hyrox | La señal corporal ya llega; falta definir qué tipo de sugerencia tendría sentido aquí. |
 | Race Card integrando señal corporal | Requiere primero estabilizar la predicción de tiempo. |
 | Simbiosis × Hyrox | Simbiosis no tiene puente con ningún módulo de entrenamiento todavía. |
+
+---
+
+## Contrato de Signals — Capa de Sincronización (mayo 2026)
+
+Este bloque documenta el ciclo de sincronización real entre `entrenos` y `hyrox` a nivel de signals de Django. Es la fuente de verdad antes de tocar cualquier schema relacionado.
+
+### Regla madre
+
+> Entrenos y Hyrox pueden sincronizar **hechos**, pero no **decidir el estado global del otro**.
+
+- Entrenos puede decirle a Hyrox: "este fue mi RM en sentadilla" (hecho).
+- Hyrox puede decirle a Entrenos: "esta sesión ocurrió" (hecho para el hub).
+- Hyrox **no puede** decirle a Entrenos qué hacer mañana.
+- Entrenos **no puede** invalidar un plan Hyrox en curso.
+
+### Regla específica
+
+> Hyrox puede registrar o interpretar actividad, pero debe heredar `es_descanso_plan` antes de recomendar intensidad.
+
+`sync_gym_impact_to_hyrox` puede inyectar fatiga (hecho: "tus piernas están cargadas"), pero la decisión final de si ejecutar el plan fluye por `_crear_hyrox_decision()` que comprueba `es_descanso_plan` primero. La fatiga inyectada informa; no manda.
+
+---
+
+### ENTRENOS → HYROX
+
+#### `sincronizar_rm_con_hyrox` — `entrenos/signals.py:346`
+
+| Campo | Valor |
+|---|---|
+| Trigger | `post_save(RecordPersonal)` |
+| Condición | `superado=False` AND `tipo_record in ('peso_maximo', 'one_rep_max')` |
+| Escribe en | `HyroxObjective.rm_sentadilla` o `HyroxObjective.rm_peso_muerto` |
+| Condición de escritura | Solo si el nuevo valor supera al almacenado |
+| Invalida caché | `hyrox_readiness_{objetivo.pk}`, `dashboard_acwr_unificado_{cliente_id}` |
+| **Nunca escribe** | `HyroxSession`, `HyroxReadinessLog`, `HyroxObjective.objetivo_tiempo_*` |
+
+#### `sincronizar_hub_actividad` — `entrenos/signals.py:50`
+
+| Campo | Valor |
+|---|---|
+| Trigger | `post_save(EntrenoRealizado)` |
+| Lee de hyrox | `HyroxObjective` y `HyroxLoadManager.estimar_rpe_desde_fc()` solo para estimar RPE desde FC si no hay RPE manual |
+| Escribe en | `entrenos.ActividadRealizada` (campo `entreno_gym=instance`) |
+| **Nunca escribe** | Ningún modelo de hyrox |
+
+#### `calibrar_rpe_personal` — `entrenos/signals.py:483`
+
+| Campo | Valor |
+|---|---|
+| Trigger | `post_save(EntrenoRealizado)` con FC disponible |
+| Lee de hyrox | `HyroxObjective`, `HyroxLoadManager.get_fc_max()` solo para calcular FC_max |
+| Escribe en | `Cliente.one_rm_data['_rpe_bias']` |
+| **Nunca escribe** | Ningún modelo de hyrox |
+
+---
+
+### HYROX → ENTRENOS
+
+#### `sync_gym_impact_to_hyrox` — `hyrox/signals.py:380`
+
+| Campo | Valor |
+|---|---|
+| Trigger | `post_save(EntrenoRealizado)` (hyrox escucha un modelo de entrenos) |
+| Lee de entrenos | `EjercicioRealizado`, `EjercicioLiftinDetallado`, `MAPEO_EJERCICIOS_A_PRINCIPAL`, `MAPEO_MUSCULAR` de `entrenos.services.services` |
+| Escribe en hyrox | `HyroxObjective.rm_sentadilla`, `HyroxObjective.rm_peso_muerto` (estimación Brzycki), `HyroxSession.muscle_fatigue_index`, `HyroxSession.fatiga_updated_at` (próxima sesión planificada) |
+| **Nunca escribe** | `EntrenoRealizado`, `EjercicioRealizado`, `GymDecisionLog`, `RecordPersonal` |
+
+⚠️ **Conflicto conocido — doble escritura de RM**: tanto este signal como `sincronizar_rm_con_hyrox` (entrenos) pueden actualizar `rm_sentadilla`/`rm_peso_muerto`. El de entrenos usa el `RecordPersonal` oficial; este usa estimación Brzycki. Ambos solo suben (nunca bajan). No hay rollback entre ellos.
+
+#### `sincronizar_hyrox_al_hub` — `hyrox/signals.py:497`
+
+| Campo | Valor |
+|---|---|
+| Trigger | `post_save(HyroxSession)`, `estado=='completado'` |
+| Escribe en entrenos | `entrenos.ActividadRealizada` (campo `sesion_hyrox=instance`) |
+| **Nunca escribe** | `EntrenoRealizado`, `EjercicioRealizado`, `GymDecisionLog` |
+
+#### `revert_gym_impact_on_hyrox` — `hyrox/signals.py:553`
+
+| Campo | Valor |
+|---|---|
+| Trigger | `post_delete(EntrenoRealizado)` |
+| Escribe en hyrox | `HyroxSession.muscle_fatigue_index = 'Baja'`, `HyroxSession.fatiga_updated_at = None` |
+| Limitación | No recalcula RMs (pesado; se actualizará en el próximo sync) |
+| **Nunca escribe** | Modelos de entrenos |
+
+#### `sueno_to_hyrox_fatiga` — `hyrox/signals.py:17`
+
+| Campo | Valor |
+|---|---|
+| Trigger | `post_save(clientes.BitacoraDiaria)` |
+| Condición | `horas_sueno < 6` OR `energia_subjetiva < 4` |
+| Escribe en hyrox | `HyroxSession.muscle_fatigue_index`, `HyroxSession.fatiga_updated_at` (próxima sesión planificada) |
+| **Nunca escribe** | Modelos de entrenos |
+
+#### `detectar_5k_desde_actividad_libre` — `hyrox/signals.py:681`
+
+| Campo | Valor |
+|---|---|
+| Trigger | `post_save(ActividadRealizada)`, `tipo in ('carrera', 'hyrox')`, distancia 4800–5500 m |
+| Escribe en hyrox | `HyroxObjective.tiempo_5k_base` (solo si es PR) |
+| **Nunca escribe** | Modelos de entrenos |
+
+---
+
+### Hub `ActividadRealizada` — dos escritores
+
+`ActividadRealizada` vive en `entrenos` pero es el punto de encuentro de ambas apps.
+
+| Escritor | FK usada | Condición |
+|---|---|---|
+| `sincronizar_hub_actividad` (entrenos) | `entreno_gym=instance` | Siempre al guardar `EntrenoRealizado` |
+| `sincronizar_hyrox_al_hub` (hyrox) | `sesion_hyrox=instance` | Solo cuando `HyroxSession.estado == 'completado'` |
+
+Los dos usan FKs distintas → no sobreescriben el mismo registro. No hay conflicto de escritura concurrente en condiciones normales.
+
+---
+
+### Campos que ningún signal debe tocar nunca
+
+| Campo | Propietario | Por qué |
+|---|---|---|
+| `HyroxSession.estado` | `autorregular_plan_futuro` | Solo ese signal marca `completado`; los demás signals no deben cambiar el estado de ejecución |
+| `HyroxObjective.objetivo_tiempo_carrera` / `objetivo_tiempo_total` | Vista manual / usuario | Son objetivos personales; los signals solo leen, nunca sobreescriben |
+| `HyroxReadinessLog.score` | `autorregular_plan_futuro` | El score se calcula desde el engine, no desde signals externos |
+| `EntrenoRealizado.*` | App entrenos | Hyrox es lector de hechos de gym, nunca editor |
+| `GymDecisionLog` | App entrenos | Las decisiones del plan gym pertenecen al dominio entrenos exclusivamente |
+| `EjercicioRealizado.*` | App entrenos | Hyrox puede leer ejercicios; nunca modificarlos |
+
+---
+
+### Protocolo antes de cambiar un schema relacionado
+
+Si vas a modificar cualquier modelo que aparezca en las tablas anteriores:
+
+1. **Grep de signals**: `grep -r "NombreModelo\|nombre_campo" entrenos/signals.py hyrox/signals.py`
+2. **Identificar lectores y escritores** usando este documento.
+3. **Coordinar migración**: entrenos y hyrox deben migrarse en el mismo deploy si el campo es cross-app.
+4. **No renombrar campos sin actualizar ambos signals**. Los signals leen campos por nombre (`getattr`, filtros ORM, `update_fields`).
+5. **Actualizar este documento** si el cambio añade, elimina o modifica un flujo de sincronización.
+
+---
+
+### Tests que protegen el ciclo (estado mayo 2026)
+
+| Test | Archivo | Cubre |
+|---|---|---|
+| `TestHyroxDecisionDescansoGlobal` (6 tests) | `hyrox/tests.py` | Que `es_descanso_plan` domina sobre métricas |
+| `TestHyroxDecisionSenalesSecundarias` (7 tests) | `hyrox/tests.py` | Que señales secundarias no pisan tiers 1–4 |
+| `TestHyroxDecisionExplicacionModulacion` (4 tests) | `hyrox/tests.py` | Que la explicación solo aparece cuando hay modulación real |
+| `test_integracion_helms.py` | `entrenos/test_integracion_helms.py` | Lógica de progresión en entrenos; no cubre el ciclo cross-app |
+
+**Gap conocido**: no hay tests que verifiquen el comportamiento conjunto cuando ambos signals se disparan en la misma operación (ej: guardar un `EntrenoRealizado` con RM alto activa tanto `sincronizar_rm_con_hyrox` como `sync_gym_impact_to_hyrox`). Candidato para Arquitectura 2.x.

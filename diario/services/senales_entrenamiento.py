@@ -2,6 +2,7 @@ from datetime import timedelta
 
 from django.utils import timezone
 
+from clientes.utils import get_cliente_actual
 from diario.models import SeguimientoVires
 
 # ── helpers internos para computar señal desde listas en memoria ─────────────
@@ -136,9 +137,8 @@ def contrastar_senal_vs_entreno(usuario, fecha):
         return None
 
     try:
-        from clientes.models import Cliente
         from entrenos.models import EntrenoRealizado
-        cliente = Cliente.objects.get(user=usuario)
+        cliente = get_cliente_actual(usuario)
         entreno = EntrenoRealizado.objects.filter(cliente=cliente, fecha=fecha).first()
     except Exception:
         return None
@@ -200,9 +200,8 @@ def calcular_tendencia_senal(usuario, n_semanas=4, n_dias_senal=5):
     )
 
     try:
-        from clientes.models import Cliente
         from entrenos.models import EntrenoRealizado
-        cliente = Cliente.objects.get(user=usuario)
+        cliente = get_cliente_actual(usuario)
         entrenos_map = {
             e.fecha: list(e.ejercicios_realizados.all())
             for e in EntrenoRealizado.objects

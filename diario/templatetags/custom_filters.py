@@ -42,13 +42,6 @@ def add(value, arg):
         return value
 
 
-@register.filter
-def get_item(dictionary, key):
-    """Obtener item de diccionario"""
-    if hasattr(dictionary, 'get'):
-        return dictionary.get(key, '')
-    return ''
-
 
 @register.filter(name='mul')
 def mul(value, arg):

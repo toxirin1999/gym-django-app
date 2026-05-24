@@ -726,8 +726,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db import transaction
 
-# --- ¡IMPORTA EL MODELO CLIENTE! ---
-from clientes.models import Cliente
+from clientes.utils import get_cliente_actual
 from .models import UserProfile
 from .forms import UserProfileForm
 
@@ -752,8 +751,7 @@ def configurar_perfil(request):
 
                 # --- INICIO DE LA LÓGICA DE ENLACE ---
                 try:
-                    # Buscamos el perfil de Cliente asociado a este usuario
-                    cliente = Cliente.objects.get(user=request.user)
+                    cliente = get_cliente_actual(request.user)
                     # Enlazamos el perfil de nutrición recién creado/guardado al cliente
                     cliente.perfil_nutricion = nuevo_perfil_nutricion
                     cliente.save(update_fields=['perfil_nutricion'])  # Más eficiente
