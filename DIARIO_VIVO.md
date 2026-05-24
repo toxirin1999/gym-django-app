@@ -165,3 +165,4 @@ joi/tests.py
 | Informe semanal de gestos para JOI | Se añadiría cuando haya patrón claro en los datos reales |
 | Cruce Simbiosis × estado del diario | Simbiosis está estable pero sin puente con el plan todavía |
 | JOI integra tendencia corporal multi-semana | `calcular_tendencia_senal()` existe; pendiente de inyección en `construir_contexto` |
+| Panel de sueño / histórico nocturno | `horas_sueno` y `calidad_sueno` ya existen en `BitacoraDiaria` y entran en JOI/semáforo. Aplazar hasta tener ≥4 semanas de datos reales. Antes de construirlo, comprobar si JOI ya nombra el sueño cuando hay señal clara. Si no lo traduce bien, primero mejorar la traducción en JOI; después, si sigue faltando, Phase Sueño 1.0 (histórico 7/14/30 días + horas + calidad + relación con energía del día siguiente + mensaje determinista). Sin score de sueño, sin consejos genéricos, sin medicalizar. |
