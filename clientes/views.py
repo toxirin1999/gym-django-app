@@ -1556,7 +1556,11 @@ def mockup_demo(request):
     try:
         from core.daily_decision import DailyDecisionEngine
         _prox = context.get('proximo_entrenamiento') or {}
-        _es_descanso_plan = bool(_prox.get('es_descanso')) or _prox.get('dias_hasta', 0) > 0
+        _es_descanso_plan = (
+            bool(_prox.get('es_descanso'))
+            or _prox.get('dias_hasta', 0) > 0
+            or context.get('estado_entreno') == 'descanso'
+        )
         semaforo = DailyDecisionEngine.get_estado_hoy(cliente, es_descanso_plan=_es_descanso_plan)
     except Exception:
         semaforo = None
