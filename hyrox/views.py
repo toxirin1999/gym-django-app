@@ -193,10 +193,57 @@ def _estaciones_bloqueadas_por_tags(tags):
     ]
 
 
-def _crear_hyrox_decision(current_score, resumen_semanal=None, lesion_activa=None):
+def _leer_senales_secundarias(cliente):
+    """
+    Lee señales secundarias del diario y actividad reciente.
+    Sólo modulan la decisión Hyrox si el resultado base es 'empujar'.
+    No pueden sobreescribir lesión, descanso global ni fatiga fisiológica.
+    """
+    resultado = {
+        'senal_corporal': {'hay_senal': False},
+        'vigilar_senal_activa': False,
+        'futbol_reciente': False,
+    }
+    try:
+        from diario.services.senales_entrenamiento import obtener_senal_corporal_diario
+        resultado['senal_corporal'] = obtener_senal_corporal_diario(cliente.usuario)
+    except Exception:
+        pass
+
+    try:
+        from entrenos.models import IntervencionPlan
+        hoy = timezone.now().date()
+        resultado['vigilar_senal_activa'] = IntervencionPlan.objects.filter(
+            cliente=cliente,
+            tipo=IntervencionPlan.TIPO_VIGILAR_SENAL,
+            estado=IntervencionPlan.ESTADO_ACTIVA,
+            fecha_inicio__lte=hoy,
+            fecha_fin__gte=hoy,
+        ).exists()
+    except Exception:
+        pass
+
+    try:
+        from entrenos.models import ActividadRealizada
+        from datetime import timedelta
+        hoy = timezone.now().date()
+        resultado['futbol_reciente'] = ActividadRealizada.objects.filter(
+            cliente=cliente,
+            tipo='futbol',
+            fecha__gte=hoy - timedelta(days=2),
+        ).exists()
+    except Exception:
+        pass
+
+    return resultado
+
+
+def _crear_hyrox_decision(current_score, resumen_semanal=None, lesion_activa=None,
+                          es_descanso_plan=False, estado_entreno=None,
+                          senales_secundarias=None):
     """
     Devuelve el objeto de decisión soberana del día para el panel Hyrox.
-    Prioridad: lesión > fatiga (TSB) > carga (ACWR) > readiness > normal.
+    Prioridad: lesión > descanso global > fatiga (TSB) > carga (ACWR) > readiness > normal.
     """
     if lesion_activa:
         tags = _normalizar_tags_restringidos(lesion_activa)
@@ -214,6 +261,21 @@ def _crear_hyrox_decision(current_score, resumen_semanal=None, lesion_activa=Non
             'evitar': estaciones or ['Ejercicios asociados a la lesión activa'],
             'tags_restringidos': tags,
             'estaciones_bloqueadas': estaciones,
+        }
+
+    if es_descanso_plan or estado_entreno == 'descanso':
+        return {
+            'estado': 'recuperar',
+            'causa': 'descanso_plan',
+            'titulo': 'Descanso',
+            'subtitulo': 'El plan global marca descanso hoy',
+            'mensaje': 'Tus señales Hyrox acompañan, pero el plan de entrenamiento tiene asignado hoy como día de recuperación. Mañana con más intención.',
+            'accion_label': 'Día de descanso',
+            'puede_ejecutar_plan': False,
+            'permitido': ['Movilidad suave', 'Paseo tranquilo', 'Técnica sin carga'],
+            'evitar': ['Sesión intensa', 'Series Hyrox', 'Trabajo al límite'],
+            'tags_restringidos': [],
+            'estaciones_bloqueadas': [],
         }
 
     tsb = None
@@ -271,7 +333,7 @@ def _crear_hyrox_decision(current_score, resumen_semanal=None, lesion_activa=Non
             'estaciones_bloqueadas': [],
         }
 
-    return {
+    decision_base = {
         'estado': 'empujar',
         'causa': 'normal',
         'titulo': 'Empujar',
@@ -284,6 +346,40 @@ def _crear_hyrox_decision(current_score, resumen_semanal=None, lesion_activa=Non
         'tags_restringidos': [],
         'estaciones_bloqueadas': [],
     }
+
+    # ── Señales secundarias (tier 3) — solo modulan si el resultado base es 'empujar' ──
+    if senales_secundarias:
+        sc = senales_secundarias.get('senal_corporal', {})
+        intensidad = sc.get('intensidad') if sc.get('hay_senal') else None
+        futbol = senales_secundarias.get('futbol_reciente', False)
+        vigilar = senales_secundarias.get('vigilar_senal_activa', False)
+
+        if intensidad in ('alta', 'moderada') or futbol:
+            causa_sec = 'senal_corporal' if intensidad in ('alta', 'moderada') else 'actividad_reciente'
+            bullets = []
+            if intensidad in ('alta', 'moderada'):
+                bullets.append(f'Diario: {sc.get("texto", "Carga corporal registrada en los últimos días.")}')
+            if futbol:
+                bullets.append('Fútbol reciente: las piernas ya recibieron carga en los últimos dos días.')
+            decision_base.update({
+                'estado': 'sostener',
+                'causa': causa_sec,
+                'titulo': 'Sostener',
+                'subtitulo': 'Señal corporal reciente',
+                'mensaje': 'Las métricas Hyrox acompañan, pero el sistema detecta carga reciente. Hoy conviene ejecutar con margen.',
+                'accion_label': 'Sesión con margen',
+                'evitar': ['Perseguir récords', 'Añadir volumen extra'],
+                'explicacion_modulacion': {
+                    'intro': 'Tus métricas Hyrox permitirían empujar, pero el sistema detecta carga reciente:',
+                    'bullets': bullets,
+                    'cierre': 'Hoy no se cancela el plan; se reduce la intención.',
+                },
+            })
+        elif intensidad == 'suave' or vigilar:
+            nota_extra = ' El plan observa una señal activa.' if vigilar else ''
+            decision_base['mensaje'] += f' El diario apunta algo de carga corporal.{nota_extra} Observa cómo responde el cuerpo.'
+
+    return decision_base
 
 
 @login_required
@@ -1658,11 +1754,33 @@ def hyrox_dashboard(request):
         race_goal_delta = _build_race_goal_delta(objetivo_activo, estimacion)
     context['race_goal_delta'] = race_goal_delta
 
+    # ── Estado global del plan gym (descanso heredado) ────────────
+    _es_descanso_plan = False
+    _estado_entreno = None
+    try:
+        from entrenos.services.sesion_recomendada import obtener_sesion_recomendada_hoy
+        from django.utils import timezone as _tz
+        _decision_gym = obtener_sesion_recomendada_hoy(cliente, _tz.now().date())
+        _estado_entreno = (_decision_gym or {}).get('estado', 'entrenar')
+        _es_descanso_plan = _estado_entreno == 'descanso'
+    except Exception:
+        pass
+
+    # ── Señales secundarias del diario (tier 3) ──────────────────
+    _senales_secundarias = None
+    try:
+        _senales_secundarias = _leer_senales_secundarias(cliente)
+    except Exception:
+        pass
+
     # ── Decisión soberana Hyrox ───────────────────────────────────
     hyrox_decision = _crear_hyrox_decision(
         current_score=context.get('readiness_score_hoy'),
         resumen_semanal=context.get('resumen_semanal'),
         lesion_activa=context.get('lesion_activa'),
+        es_descanso_plan=_es_descanso_plan,
+        estado_entreno=_estado_entreno,
+        senales_secundarias=_senales_secundarias,
     )
     context['hyrox_decision'] = hyrox_decision
 
@@ -1677,7 +1795,7 @@ def hyrox_dashboard(request):
     # ── Semáforo de Intención ─────────────────────────────────────
     try:
         from core.daily_decision import DailyDecisionEngine
-        semaforo = DailyDecisionEngine.get_estado_hoy(cliente)
+        semaforo = DailyDecisionEngine.get_estado_hoy(cliente, es_descanso_plan=_es_descanso_plan)
     except Exception:
         semaforo = None
     context['semaforo'] = semaforo

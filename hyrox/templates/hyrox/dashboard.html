@@ -894,6 +894,15 @@ function joiHyroxCerrar(id) {
     <h2 class="hd-decision-title">{{ hyrox_decision.titulo }}</h2>
     <p class="hd-decision-sub">{{ hyrox_decision.subtitulo }}</p>
     <p class="hd-decision-msg">{{ hyrox_decision.mensaje }}</p>
+    {% if hyrox_decision.explicacion_modulacion %}
+    <div class="hd-modulacion">
+      <p class="hd-modulacion-intro">{{ hyrox_decision.explicacion_modulacion.intro }}</p>
+      {% for bullet in hyrox_decision.explicacion_modulacion.bullets %}
+      <div class="hd-modulacion-bullet">· {{ bullet }}</div>
+      {% endfor %}
+      <p class="hd-modulacion-cierre">{{ hyrox_decision.explicacion_modulacion.cierre }}</p>
+    </div>
+    {% endif %}
     {% if hyrox_decision.permitido or hyrox_decision.evitar %}
     <div class="hd-decision-grid">
       {% if hyrox_decision.permitido %}
@@ -914,7 +923,11 @@ function joiHyroxCerrar(id) {
       {% endif %}
     </div>
     {% endif %}
-    <div class="hd-decision-action">{{ hyrox_decision.accion_label }}</div>
+    {% if hyrox_decision.puede_ejecutar_plan and objetivo_activo %}
+    <a href="{% url 'hyrox:registrar_entrenamiento' objective_id=objetivo_activo.id %}" class="hd-decision-action">{{ hyrox_decision.accion_label }}</a>
+    {% else %}
+    <div class="hd-decision-action" style="opacity:.5;cursor:default;">{{ hyrox_decision.accion_label }}</div>
+    {% endif %}
   </section>
   <style>
   .hd-decision {
@@ -963,12 +976,31 @@ function joiHyroxCerrar(id) {
   }
   .hd-mini-ok  { font-family: var(--font-mono); font-size: 10px; line-height: 1.7; color: var(--ok); }
   .hd-mini-bad { font-family: var(--font-mono); font-size: 10px; line-height: 1.7; color: var(--danger); }
+  .hd-modulacion {
+    background: rgba(15,15,14,.04);
+    border-left: 2px solid var(--warn, oklch(0.72 0.17 70));
+    padding: 10px 12px; margin: 0 0 12px;
+    border-radius: 0 3px 3px 0;
+  }
+  .hd-modulacion-intro {
+    font-size: 11px; line-height: 1.4;
+    color: var(--ink-2, rgba(15,15,14,.7)); margin: 0 0 6px;
+  }
+  .hd-modulacion-bullet {
+    font-family: var(--font-mono); font-size: 10px; line-height: 1.8;
+    color: var(--ink-2, rgba(15,15,14,.7));
+  }
+  .hd-modulacion-cierre {
+    font-family: var(--font-mono); font-size: 9px; font-weight: 700;
+    letter-spacing: .1em; text-transform: uppercase;
+    color: var(--ink-3, rgba(15,15,14,.45)); margin: 8px 0 0;
+  }
   .hd-decision-action {
     display: inline-flex; padding: 5px 10px;
     border: 1px solid var(--ink, #0F0F0E);
     font-family: var(--font-mono); font-size: 9px; font-weight: 700;
     letter-spacing: .14em; text-transform: uppercase;
-    color: var(--ink);
+    color: var(--ink); text-decoration: none;
   }
   @media (max-width: 400px) { .hd-decision-grid { grid-template-columns: 1fr; } }
   .rb-dia-locked { opacity: .78; border-left-color: var(--danger) !important; box-shadow: none !important; }
@@ -976,6 +1008,31 @@ function joiHyroxCerrar(id) {
   .rb-tag-locked { background: rgba(200,40,40,.08); color: var(--danger); border: 1px solid rgba(200,40,40,.35); }
   </style>
   {% endif %}
+
+  {% if hyrox_decision and not hyrox_decision.puede_ejecutar_plan and hyrox_system_reading %}
+  <section class="hd-lectura-pinned" style="margin:0 0 16px;">
+    <div class="rb-system-reading">
+      <div class="rb-system-reading-kicker"><i class="fas fa-brain"></i> Lectura del sistema</div>
+      <p>{{ hyrox_system_reading }}</p>
+    </div>
+  </section>
+  {% endif %}
+
+  <style>
+  .rb-rest-collapsed { margin: 0 0 8px; }
+  .rb-rest-summary {
+    padding: 10px 14px; margin: 0 0 8px;
+    font-family: var(--font-mono); font-size: 9px; font-weight: 700;
+    letter-spacing: .14em; text-transform: uppercase;
+    color: var(--ink-3, rgba(15,15,14,.45));
+    background: var(--paper, #EFEAE1);
+    border: 1px solid var(--line, rgba(15,15,14,.12));
+    border-radius: 4px; cursor: pointer; list-style: none;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .rb-rest-summary::-webkit-details-marker { display: none; }
+  .rb-rest-summary i { color: var(--ink-4, rgba(15,15,14,.28)); }
+  </style>
 
   <!-- ═══════════════ BIB HERO ═══════════════ -->
   <section class="rb-a0">
@@ -1201,6 +1258,11 @@ function joiHyroxCerrar(id) {
   </section>
   {% endif %}
 
+  {% if hyrox_decision and not hyrox_decision.puede_ejecutar_plan %}
+  <details class="rb-rest-collapsed">
+  <summary class="rb-rest-summary"><i class="fas fa-chart-line"></i> Análisis de rendimiento y Race Command</summary>
+  {% endif %}
+
   <!-- ═══════════════ RACE INTELLIGENCE COMMAND ═══════════════ -->
   {% if race_briefing and not modo_competicion %}
   <section class="rb-section rb-a2">
@@ -1302,8 +1364,13 @@ function joiHyroxCerrar(id) {
 
       <!-- TIME HERO -->
       <div class="rc-time-hero">
+        {% if hyrox_decision and not hyrox_decision.puede_ejecutar_plan %}
+        <div class="rc-label">Última estimación disponible</div>
+        <div style="font-family:var(--font-body);font-size:9px;color:var(--ink-4);margin-bottom:4px;">Hoy no se recalcula rendimiento: el objetivo es absorber carga.</div>
+        {% else %}
         <div class="rc-label">Tiempo estimado hoy</div>
         <div style="font-family:var(--font-body);font-size:9px;color:var(--ink-4);margin-bottom:4px;">Ajustado por tu fatiga actual (TSB + readiness)</div>
+        {% endif %}
         {% if race_briefing.tiempo_estimado %}
           <div class="rc-time-main">{{ race_briefing.tiempo_estimado }}</div>
           {% if race_briefing.tiempo_rango_min %}
@@ -2241,6 +2308,10 @@ function joiHyroxCerrar(id) {
   </section>
   {% endif %}
 
+  {% if hyrox_decision and not hyrox_decision.puede_ejecutar_plan %}
+  </details>
+  {% endif %}
+
   <!-- ═══════════════ PLAN ═══════════════ -->
   {% if plan_semanas %}
   <section class="rb-section rb-a5">
@@ -2448,6 +2519,11 @@ function joiHyroxCerrar(id) {
     {% endif %}
 
   </section>
+  {% endif %}
+
+  {% if hyrox_decision and not hyrox_decision.puede_ejecutar_plan %}
+  <details class="rb-rest-collapsed">
+  <summary class="rb-rest-summary"><i class="fas fa-chart-bar"></i> Historial y análisis de carrera</summary>
   {% endif %}
 
   <!-- ═══════════════ EVOLUCIÓN CARRERA ═══════════════ -->
@@ -2954,6 +3030,10 @@ function joiHyroxCerrar(id) {
       {% endfor %}
     </div>
   </section>
+  {% endif %}
+
+  {% if hyrox_decision and not hyrox_decision.puede_ejecutar_plan %}
+  </details>
   {% endif %}
 
   {% endif %}
