@@ -48,6 +48,9 @@ def _cliente_anthropic():
 
 
 def _llamar_haiku(prompt: str, max_tokens: int = 120) -> str:
+    import sys
+    if 'test' in sys.argv or getattr(settings, 'JOI_DISABLE_API', False):
+        return ''
     client = _cliente_anthropic()
     response = client.messages.create(
         model="claude-haiku-4-5-20251001",
