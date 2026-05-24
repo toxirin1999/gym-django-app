@@ -1070,7 +1070,8 @@ def _prompt_apertura_manana(ctx: dict, datos_extra: dict) -> str:
         elif g['señal'] == 'reaparecio':
             veces_txt = 'una vez' if g['veces'] == 1 else f"{g['veces']} veces"
             hechos.append(
-                f"[GESTO A CUIDAR — sin culpa ni lenguaje de fallo]: "
+                f"[GESTO A CUIDAR — hablar de presencia, no de recaída ni fallo. "
+                f"Nunca 'volviste a caer', 'cediste', 'fallaste'. Solo: el gesto apareció]: "
                 f"El gesto '{g['nombre']}' volvió a aparecer {veces_txt} esta semana."
             )
 
