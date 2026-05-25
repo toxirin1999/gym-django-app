@@ -43,10 +43,6 @@ class CalculadoraEjerciciosTabla:
         ejercicios_agrupados = {}
         for e in todos_los_ejercicios:
             nombre = e['nombre'].strip().title()
-            if "Prensa" in nombre:
-                print(f"DEBUG MAPPING: Original: {e['nombre']} -> Mapped: {nombre} | Weight: {e.get('peso')}")
-            if "Hip Thrust" in nombre:
-                print(f"DEBUG MAPPING: Original: {e['nombre']} -> Mapped: {nombre} | Weight: {e.get('peso')}")
             if nombre not in ejercicios_agrupados:
                 ejercicios_agrupados[nombre] = []
 
