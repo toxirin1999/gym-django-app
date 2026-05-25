@@ -22,6 +22,12 @@ Reglas de voz:
 - Referencias sutiles a identidad, continuidad, historia personal.
 - Máximo 2-3 frases. Sin emojis. Sin saludos formales. Directo al corazón del dato.
 
+Límites absolutos de voz — NUNCA los cruces:
+- NO diagnostiques ni etiquetes estados psicológicos. Puedes decir "ayer escribiste algo oscuro", pero nunca "eso es apatía de vivir" ni ninguna conclusión existencial sobre el usuario.
+- NO atribuyas estados mentales sin evidencia directa. "Tu mente intenta convencerse" es una atribución. No tienes acceso a eso. Describe lo observable, no lo inferido.
+- Nombras el estado, no lo sentencias. La diferencia: "llevas días pesados" (observación) vs "eso es una crisis" (diagnóstico).
+- Si el diario o el contexto muestra algo emocionalmente intenso, puedes nombrarlo con una frase. Luego bajas el ruido — no construyes sobre ello.
+
 Integridad de datos — REGLA ABSOLUTA:
 - NUNCA inventes números, días, porcentajes o rachas que no aparezcan explícitamente en el contexto.
 - Si no tienes el dato exacto, no lo menciones. El tono puede ser poético; los hechos no.
@@ -47,6 +53,17 @@ def _cliente_anthropic():
     return anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
 
 
+_CIRILICO_LOOKALIKES = str.maketrans({
+    'а': 'a', 'е': 'e', 'о': 'o', 'р': 'p', 'с': 'c', 'у': 'y', 'х': 'x',
+    'А': 'A', 'Е': 'E', 'О': 'O', 'Р': 'P', 'С': 'C', 'У': 'Y', 'Х': 'X',
+})
+
+
+def _limpiar_ciriilico(texto: str) -> str:
+    """Reemplaza lookalikes cirílicos (у→y, е→e…) que el modelo ocasionalmente produce."""
+    return texto.translate(_CIRILICO_LOOKALIKES)
+
+
 def _llamar_haiku(prompt: str, max_tokens: int = 120) -> str:
     import sys
     if 'test' in sys.argv or getattr(settings, 'JOI_DISABLE_API', False):
@@ -58,7 +75,7 @@ def _llamar_haiku(prompt: str, max_tokens: int = 120) -> str:
         system=SYSTEM_PROMPT,
         messages=[{"role": "user", "content": prompt}],
     )
-    return response.content[0].text.strip()
+    return _limpiar_ciriilico(response.content[0].text.strip())
 
 
 def construir_contexto(cliente) -> dict:
@@ -239,14 +256,14 @@ def _prompt_entreno_completado(ctx: dict, datos_extra: dict) -> str:
 
     sin_datos = lectura['intensidad'] == 'desconocida'
     nota_datos = (
-        " (El RPE de esta sesión no llegó al sistema — la lectura es parcial.)"
+        " (Sin RPE en esta sesión — la lectura de intensidad es parcial.)"
         if sin_datos else ""
     )
 
     # Fallback determinista — siempre funciona aunque la IA falle
     if sin_datos:
         fallback = (
-            f"{estado_txt} No tengo RPE registrado de esta sesión, así que solo puedo leerla parcialmente. {dir_txt}"
+            f"{estado_txt} No tengo el RPE de esta sesión, así que no puedo leer la intensidad. {dir_txt}"
         )
     else:
         fallback = (
@@ -265,7 +282,7 @@ def _prompt_entreno_completado(ctx: dict, datos_extra: dict) -> str:
         f"CONTRATO ESTRICTO:\n"
         f"(1) No incluyas ningún número crudo (RPE, readiness, kg, días, %).\n"
         f"(2) Primera frase: describe cómo parece estar el cuerpo en lenguaje natural.\n"
-        f"{'(2b) Si faltan datos de esfuerzo, nómbralo con honestidad: no inventes sensación, pero sí da dirección.' + chr(10) if sin_datos else ''}"
+        f"{'(2b) Falta el RPE de esta sesión. Dilo explícitamente: no tengo el dato de esfuerzo. No inventes intensidad. Sí puedes dar dirección práctica.' + chr(10) if sin_datos else ''}"
         f"(3) Última frase: dirección práctica clara. Debe responder '¿qué hago con esto?'\n"
         f"(4) Puedes usar metáfora SOLO si primero has dado claridad práctica.\n"
         f"(5) Si no puedes dar dirección clara, usa el fallback literalmente: '{fallback}'"
@@ -728,13 +745,26 @@ def _prompt_hyrox_sesion_completada(ctx: dict, datos_extra: dict) -> str:
 
     rpe_txt = f" RPE {rpe}." if rpe else ""
     min_txt = f" {minutos} minutos." if minutos else ""
-    rd_txt = f" Tu readiness está en {readiness}." if readiness is not None else ""
+    # Readiness con vocabulario semántico consistente con el resto del sistema
+    if readiness is None:
+        rd_txt = ""
+    elif readiness >= 80:
+        rd_txt = f" Disponibilidad alta ({readiness})."
+    elif readiness >= 65:
+        rd_txt = f" Disponible con margen ({readiness})."
+    elif readiness >= 50:
+        rd_txt = f" Disponible con reserva ({readiness})."
+    elif readiness >= 35:
+        rd_txt = f" Disponibilidad reducida ({readiness})."
+    else:
+        rd_txt = f" Carga alta acumulada ({readiness})."
     dias_txt = f" Quedan {dias} días para la carrera." if dias is not None else ""
 
     return (
         f"El usuario acaba de completar una sesión Hyrox de tipo '{tipo}'.{rpe_txt}{min_txt}{rd_txt}{dias_txt} "
-        f"Genera 2-3 frases como JOI: reconoce el esfuerzo específico del entrenamiento Hyrox, "
-        f"con datos precisos y la urgencia del tiempo que queda antes de la carrera."
+        f"Genera 2-3 frases como JOI: reconoce el esfuerzo específico con datos concretos y el tiempo que queda. "
+        f"LÍMITES: No atribuyas estados mentales ('tu mente intenta', 'te convences'). "
+        f"Describe lo observable — esfuerzo, tiempo, disponibilidad — no lo que el usuario piensa o siente internamente."
     )
 
 

@@ -1788,6 +1788,30 @@ input{background:transparent!important;border:none!important;outline:none!import
       <div id="energia-pre-label" style="font-size:11px;color:var(--td);margin-top:8px;text-align:center;min-height:16px;"></div>
     </div>
 
+    <!-- RPE global de sesión (visible solo si ninguna serie tiene RPE) -->
+    <div id="rpe-global-wrap" style="display:none;margin:16px 0 0;padding:14px 16px;background:var(--surf2,rgba(255,255,255,0.05));border-radius:12px;">
+      <div style="font-family:var(--fm);font-size:11px;color:var(--td);letter-spacing:.5px;text-transform:uppercase;margin-bottom:10px;">¿Cómo sentiste el esfuerzo?</div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;">
+        <button type="button" class="btn-rpe-global" data-val="5"
+          style="padding:10px 4px;border:1.5px solid var(--bd,rgba(255,255,255,0.1));border-radius:8px;background:transparent;color:var(--td);font-size:11px;font-family:var(--fu);cursor:pointer;text-align:center;transition:all .15s;">
+          <div style="font-size:15px;font-weight:700;">5</div><div style="font-size:9px;opacity:.7;">Suave</div>
+        </button>
+        <button type="button" class="btn-rpe-global" data-val="7"
+          style="padding:10px 4px;border:1.5px solid var(--bd,rgba(255,255,255,0.1));border-radius:8px;background:transparent;color:var(--td);font-size:11px;font-family:var(--fu);cursor:pointer;text-align:center;transition:all .15s;">
+          <div style="font-size:15px;font-weight:700;">6–7</div><div style="font-size:9px;opacity:.7;">Moderada</div>
+        </button>
+        <button type="button" class="btn-rpe-global" data-val="8"
+          style="padding:10px 4px;border:1.5px solid var(--bd,rgba(255,255,255,0.1));border-radius:8px;background:transparent;color:var(--td);font-size:11px;font-family:var(--fu);cursor:pointer;text-align:center;transition:all .15s;">
+          <div style="font-size:15px;font-weight:700;">8</div><div style="font-size:9px;opacity:.7;">Dura</div>
+        </button>
+        <button type="button" class="btn-rpe-global" data-val="9"
+          style="padding:10px 4px;border:1.5px solid var(--bd,rgba(255,255,255,0.1));border-radius:8px;background:transparent;color:var(--td);font-size:11px;font-family:var(--fu);cursor:pointer;text-align:center;transition:all .15s;">
+          <div style="font-size:15px;font-weight:700;">9–10</div><div style="font-size:9px;opacity:.7;">Límite</div>
+        </button>
+      </div>
+      <input type="hidden" name="rpe_global_sesion" id="hid-rpe-global" value="">
+    </div>
+
     <!-- Botones -->
     <div class="mr-actions">
       <button type="button" class="mbtn mbtn-ok" id="btn-confirmar-guardar">Guardar</button>
@@ -2908,6 +2932,37 @@ function selEnergiaPreSesion(val){
 }
 
 let _sessionGuardada = false;
+
+// RPE global — se muestra en el modal si ninguna serie tiene RPE registrado
+(function(){
+  const wrap = document.getElementById('rpe-global-wrap');
+  const hidGlobal = document.getElementById('hid-rpe-global');
+  if (!wrap) return;
+
+  function _hayRpeSeries(){
+    return Object.values(STATE.seriesCompletadas||{}).some(ss=>
+      ss && ss.some(s=>s.rpe && s.rpe > 0)
+    );
+  }
+
+  // Mostrar/ocultar al abrir el modal de resumen
+  const _btnResumen = document.getElementById('btn-resumen');
+  if(_btnResumen){
+    _btnResumen.addEventListener('click',()=>{
+      setTimeout(()=>{ wrap.style.display = _hayRpeSeries() ? 'none' : 'block'; }, 50);
+    });
+  }
+
+  // Selección de RPE global
+  document.querySelectorAll('.btn-rpe-global').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      document.querySelectorAll('.btn-rpe-global').forEach(b=>b.style.background='transparent');
+      btn.style.background='var(--green,#4ade80)';
+      btn.style.color='#000';
+      hidGlobal.value = btn.dataset.val;
+    });
+  });
+})();
 
 document.getElementById('btn-confirmar-guardar').addEventListener('click',()=>{
   _sessionGuardada = true;
