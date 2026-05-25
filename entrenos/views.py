@@ -4150,9 +4150,14 @@ def guardar_entrenamiento_activo(request, cliente_id):
             if todos_rpes_sesion:
                 rpe_medio_calculado = sum(todos_rpes_sesion) / len(todos_rpes_sesion)
 
-            # Usar el calculado si existe, si no intentar con el del POST
-            rpe_final = rpe_medio_calculado if rpe_medio_calculado is not None else (
-                float(rpe_medio) if rpe_medio else None)
+            # Usar el calculado si existe; fallback: rpe_global_sesion (picker de resumen)
+            rpe_global_sesion = request.POST.get('rpe_global_sesion')
+            rpe_final = (
+                rpe_medio_calculado
+                if rpe_medio_calculado is not None
+                else float(rpe_global_sesion) if rpe_global_sesion
+                else (float(rpe_medio) if rpe_medio else None)
+            )
 
             # Solo si tenemos datos mínimos, creamos la sesión de gamificación
             if any([series_comp, series_tot, ejs_comp, volumen_sesion]):
