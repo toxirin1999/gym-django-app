@@ -4227,6 +4227,33 @@ def guardar_entrenamiento_activo(request, cliente_id):
                 if records_nuevos:
                     messages.success(request, f"🏆 ¡HAS LOGRADO {len(records_nuevos)} NUEVOS RÉCORDS PERSONALES!")
 
+                # JOI post-entreno: se genera aquí para tener rpe_final disponible.
+                # El signal no lo genera porque los ejercicios aún no existen en ese momento.
+                try:
+                    from joi.services import generar_mensaje_joi as _joi_gen
+                    _prs = [getattr(r, 'ejercicio_nombre', str(r)) for r in records_nuevos[:3]]
+                    _lesion_zona = None
+                    try:
+                        from hyrox.models import UserInjury as _UI
+                        _inj = _UI.objects.filter(cliente=cliente).exclude(fase='RECUPERADO').first()
+                        if _inj:
+                            _tags = _inj.tags_restringidos or []
+                            _lesion_zona = _tags[0] if _tags else None
+                    except Exception:
+                        pass
+                    _joi_gen(
+                        cliente=cliente,
+                        trigger='entreno_completado',
+                        datos_extra={
+                            'volumen_kg': float(entreno.volumen_total_kg or 0),
+                            'prs': _prs,
+                            'rpe': rpe_final,
+                            'lesion_zona': _lesion_zona,
+                        },
+                    )
+                except Exception as _joi_err:
+                    logger.warning("Error generando JOI post-entreno: %s", _joi_err)
+
                 # 2. Verificar Logros
                 logros_nuevos = LogrosService.verificar_logros_sesion(sesion_gam)
                 for logro in logros_nuevos:

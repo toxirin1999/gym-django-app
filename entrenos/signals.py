@@ -175,27 +175,8 @@ def sincronizar_hub_actividad(sender, instance, created, raw=False, **kwargs):
     except Exception as e:
         print(f"❌ Hub ActividadRealizada error (entreno {instance.id}): {e}")
 
-    # Mensaje JOI post-entreno (solo al crear)
-    if created:
-        try:
-            from joi.services import generar_mensaje_joi
-            from entrenos.models import RecordPersonal
-            prs = list(
-                RecordPersonal.objects.filter(
-                    cliente=instance.cliente,
-                    fecha_logrado=instance.fecha,
-                ).values_list('ejercicio_nombre', flat=True)[:3]
-            )
-            generar_mensaje_joi(
-                cliente=instance.cliente,
-                trigger='entreno_completado',
-                datos_extra={
-                    'volumen_kg': float(instance.volumen_total_kg or 0),
-                    'prs': prs,
-                },
-            )
-        except Exception:
-            pass
+    # JOI post-entreno se genera en guardar_entrenamiento_activo (views.py) para
+    # poder incluir rpe_final, que se calcula DESPUÉS de crear los ejercicios.
 
 
 @receiver(post_save, sender=EntrenoRealizado)
