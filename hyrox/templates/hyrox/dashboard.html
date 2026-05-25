@@ -605,16 +605,64 @@ a.rb-dia:hover { background: var(--bg-3); text-decoration: none; }
 @media (min-width: 720px) {
   .rb-strips { display: grid; grid-template-columns: repeat(3,1fr); }
 }
+
 @media (max-width: 640px) {
-  .rb-nav { padding: 14px 20px; }
-  .rb-section-editorial { padding: 40px 20px; }
-  .rb-section { padding: 22px 20px 4px; }
+  /* --- Nav --- */
+  .rb-nav { padding: 12px 16px; gap: 10px; }
+
+  /* --- CSS-class based paddings --- */
+  .rb-section-editorial { padding: 28px 16px; }
+  .rb-section { padding: 18px 16px 4px; }
   .rb-bib { padding: 16px 16px 20px; }
+
+  /* --- All inline-style <section> horizontal padding ---
+       !important overrides inline styles in the browser cascade */
+  main > section {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+  }
+  /* Reduce tall editorial sections top/bottom too */
+  main > section[style*="padding:60px"] {
+    padding-top: 40px !important;
+    padding-bottom: 40px !important;
+  }
+
+  /* --- Wrapper divs that carry 40px h-padding (check-in, decision, system reading) --- */
+  #joi-hyrox-banner { padding-left: 16px !important; padding-right: 16px !important; }
+  main > div[style*="40px"] {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+  }
+
+  /* --- 2-col grids → single column --- */
+  div[style*="grid-template-columns:1fr 1fr"] {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+  }
+
+  /* --- 3-col metric grids → 2-col on medium mobile --- */
+  .rb-flash-stats,
+  .rb-metrics3 { grid-template-columns: 1fr 1fr !important; }
+  .rc-metrics   { grid-template-columns: 1fr 1fr !important; }
+  .rb-run-kpis  { grid-template-columns: 1fr 1fr !important; }
+
+  /* --- Strips: always single column (never 3-col on mobile) --- */
+  .rb-strips { display: flex !important; flex-direction: column !important; }
+
+  /* --- Section header: allow stacking when space is tight --- */
+  .rb-section-header { flex-direction: column; align-items: flex-start; gap: 12px; }
 }
+
 @media (max-width: 480px) {
+  /* Collapse everything to 1-col on very small phones */
   .rb-race-grid-3 { grid-template-columns: 1fr !important; }
   .hd-decision-grid { grid-template-columns: 1fr !important; }
+  .rb-flash-stats,
+  .rb-metrics3,
+  .rc-metrics,
+  .rb-run-kpis { grid-template-columns: 1fr !important; }
 }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
 }
