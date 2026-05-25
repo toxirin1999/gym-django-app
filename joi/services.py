@@ -64,7 +64,11 @@ def _limpiar_ciriilico(texto: str) -> str:
     return texto.translate(_CIRILICO_LOOKALIKES)
 
 
-def _llamar_haiku(prompt: str, max_tokens: int = 120) -> str:
+def _llamar_haiku(prompt: str, max_tokens: int = 120, _modulo: str = 'auto') -> str:
+    """
+    Puerta universal de voz JOI. Todo texto generado pasa por aquí:
+    filtro cirílico + validador semántico antes de salir.
+    """
     import sys
     if 'test' in sys.argv or getattr(settings, 'JOI_DISABLE_API', False):
         return ''
@@ -75,7 +79,10 @@ def _llamar_haiku(prompt: str, max_tokens: int = 120) -> str:
         system=SYSTEM_PROMPT,
         messages=[{"role": "user", "content": prompt}],
     )
-    return _limpiar_ciriilico(response.content[0].text.strip())
+    texto = _limpiar_ciriilico(response.content[0].text.strip())
+    from joi.validador_semantico import validar_semantica_joi
+    validar_semantica_joi(texto, modulo=_modulo)
+    return texto
 
 
 def construir_contexto(cliente) -> dict:
@@ -1440,7 +1447,7 @@ def revisar_manual_david(cliente) -> dict:
             system="Eres un sistema de revisión epistemológica. Responde solo en el formato indicado.",
             messages=[{"role": "user", "content": prompt}],
         )
-        texto = response.content[0].text.strip()
+        texto = _limpiar_ciriilico(response.content[0].text.strip())
     except Exception:
         return {'revisadas': len(revisables), 'actualizadas': 0, 'cambio_significativo': False,
                 'error': 'LLM falló'}
@@ -1635,7 +1642,7 @@ def _actualizar_narrativa_activa(cliente, ctx: dict, cambio_significativo: bool 
             system=SYSTEM_PROMPT,
             messages=[{"role": "user", "content": prompt}],
         )
-        texto_respuesta = response.content[0].text.strip()
+        texto_respuesta = _limpiar_ciriilico(response.content[0].text.strip())
     except Exception:
         return
 
@@ -1693,6 +1700,7 @@ def generar_entrada_manual_desde_error(mensaje_joi) -> "ManualDavid | None":
     y genera una entrada permanente en el Manual de David.
     """
     from joi.models import ManualDavid
+    from joi.validador_semantico import validar_semantica_joi
     try:
         prompt = (
             f"Cometiste un error de interpretación. Escribiste este mensaje:\n"
@@ -1708,7 +1716,8 @@ def generar_entrada_manual_desde_error(mensaje_joi) -> "ManualDavid | None":
             system=SYSTEM_PROMPT,
             messages=[{"role": "user", "content": prompt}],
         )
-        entrada_texto = response.content[0].text.strip()
+        entrada_texto = _limpiar_ciriilico(response.content[0].text.strip())
+        validar_semantica_joi(entrada_texto, modulo='diario')
         entrada = ManualDavid.objects.create(
             user=mensaje_joi.user,
             entrada=entrada_texto,
@@ -1749,7 +1758,7 @@ def generar_tema_abierto(user, mensaje_joi) -> "ManualDavid | None":
             max_tokens=60,
             messages=[{"role": "user", "content": prompt}],
         )
-        texto = response.content[0].text.strip()
+        texto = _limpiar_ciriilico(response.content[0].text.strip())
 
         if '[SKIP]' in texto or not texto.startswith('Tema'):
             return None
@@ -2374,8 +2383,12 @@ def _llamar_haiku_sintesis(prompt: str) -> "str | None":
         system=SYSTEM_PROMPT,
         messages=[{"role": "user", "content": prompt}],
     )
-    texto = response.content[0].text.strip()
-    return None if '[SILENCE]' in texto else texto
+    texto = _limpiar_ciriilico(response.content[0].text.strip())
+    if '[SILENCE]' in texto:
+        return None
+    from joi.validador_semantico import validar_semantica_joi
+    validar_semantica_joi(texto, modulo='auto')
+    return texto
 
 
 def _prompt_sintesis(ctx: dict, datos_extra: dict) -> str:
@@ -2845,7 +2858,7 @@ def enriquecer_cierre(texto: str, personas_detectadas: list) -> dict:
             max_tokens=800,
             messages=[{"role": "user", "content": prompt}],
         )
-        raw = response.content[0].text.strip()
+        raw = _limpiar_ciriilico(response.content[0].text.strip())
         if raw.startswith('```'):
             raw = raw.split('\n', 1)[1].rsplit('```', 1)[0].strip()
         import json as _json
@@ -2875,6 +2888,7 @@ def procesar_dialogo_narrativa(cliente) -> dict:
     no siempre produce respuesta visible.
     """
     from joi.models import DialogoNarrativa, NarrativaActiva, MensajeJOI
+    from joi.validador_semantico import validar_semantica_joi
     from django.utils import timezone
 
     ahora = timezone.now()
@@ -2929,7 +2943,7 @@ def procesar_dialogo_narrativa(cliente) -> dict:
                 system="Eres un sistema de procesamiento epistemológico. Responde solo en el formato indicado.",
                 messages=[{"role": "user", "content": prompt}],
             )
-            texto = response.content[0].text.strip()
+            texto = _limpiar_ciriilico(response.content[0].text.strip())
         except Exception as e:
             logger.warning(f"[JOI] procesar_dialogo_narrativa LLM falló: {e}")
             continue
@@ -2981,6 +2995,8 @@ def procesar_dialogo_narrativa(cliente) -> dict:
 
         # Generar respuesta visible si procede
         if responder and respuesta_txt:
+            respuesta_txt = _limpiar_ciriilico(respuesta_txt)
+            validar_semantica_joi(respuesta_txt, modulo='diario')
             try:
                 MensajeJOI.objects.create(
                     user=cliente.user,
