@@ -1563,6 +1563,10 @@ def mockup_demo(request):
             or context.get('estado_entreno') == 'descanso'
         )
         semaforo = DailyDecisionEngine.get_estado_hoy(cliente, es_descanso_plan=_es_descanso_plan)
+        # Cuando el plan prescribe versión esencial, la recomendación gym del semáforo
+        # no puede decir "Progresión posible / carga objetivo" — contradicción UX.
+        if semaforo and context.get('modo_reducido'):
+            semaforo['recomendacion_gym'] = 'Versión esencial activa. Principales primero, accesorios opcionales.'
     except Exception:
         semaforo = None
     context['semaforo'] = semaforo
