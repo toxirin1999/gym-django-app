@@ -2065,7 +2065,7 @@ def registrar_entrenamiento(request, objective_id, session_id=None):
                     feedback_str = parsed_data.get('feedback', parsed_data.get('Feedback', ''))
                     
                     if actividades:
-                        messages.success(request, f"Se han extraído mágicamente {len(actividades)} bloques de tu entrenamiento.")
+                        messages.success(request, f"Sesión guardada. {len(actividades)} bloques registrados.")
                         
                         if new_records:
                             for record in new_records:
