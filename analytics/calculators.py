@@ -73,43 +73,18 @@ class CalculadoraEjerciciosTabla:
         return one_rm_finales
 
     def obtener_ejercicios_tabla(self, fecha_inicio=None, fecha_fin=None):
-        """
-        Obtiene todos los ejercicios realizados por el cliente con una consulta
-        única y optimizada, asegurando que los filtros de fecha se apliquen correctamente.
-        VERSIÓN DE DEPURACIÓN
-        """
-        print("\n--- INICIANDO DEPURACIÓN DE obtener_ejercicios_tabla ---")
-
-        # 1. Verificamos el cliente
-        print(f"1. Buscando ejercicios para el cliente: {self.cliente.nombre} (ID: {self.cliente.id})")
-
-        # 2. Construimos la consulta base
+        """Devuelve lista de dicts con ejercicios realizados del cliente, opcionalmente filtrados por fecha."""
         query = EjercicioRealizado.objects.filter(entreno__cliente=self.cliente)
-        print(f"2. Consulta inicial encontró: {query.count()} registros de EjercicioRealizado para este cliente.")
-
-        # 3. Aplicamos filtros de fecha (si existen)
         if fecha_inicio:
             query = query.filter(entreno__fecha__gte=fecha_inicio)
-            print(f"3. Después de filtro de fecha de inicio ({fecha_inicio}), quedan: {query.count()} registros.")
         if fecha_fin:
             query = query.filter(entreno__fecha__lte=fecha_fin)
-            print(f"3. Después de filtro de fecha de fin ({fecha_fin}), quedan: {query.count()} registros.")
 
-        # 4. Seleccionamos los campos
         ejercicios_qs = query.select_related('entreno').values(
             'nombre_ejercicio', 'grupo_muscular', 'peso_kg', 'series', 'repeticiones',
             'completado', 'entreno__fecha', 'entreno__id'
         )
-        print(f"4. La consulta final con .values() tiene {len(ejercicios_qs)} elementos.")
-
-        # 5. Mostramos los primeros 3 registros crudos que se obtuvieron
-        if ejercicios_qs:
-            print("5. Primeros 3 registros crudos de la base de datos:")
-            for e_raw in list(ejercicios_qs)[:3]:
-                print(f"   - {e_raw}")
-
-        # 6. Construimos la lista final
-        ejercicios = [
+        return [
             {
                 'nombre': e['nombre_ejercicio'], 'grupo': e['grupo_muscular'],
                 'peso': e['peso_kg'] or 0, 'series': e['series'] or 1,
@@ -119,10 +94,6 @@ class CalculadoraEjerciciosTabla:
             }
             for e in ejercicios_qs
         ]
-        print(f"6. Se ha construido la lista final 'ejercicios' con {len(ejercicios)} diccionarios.")
-        print("--- FIN DE DEPURACIÓN ---\n")
-
-        return ejercicios
 
     def calcular_metricas_principales(self, fecha_inicio=None, fecha_fin=None):
         """
