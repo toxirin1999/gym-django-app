@@ -89,6 +89,7 @@ class PlanificadorHelms:
         if _cached is not None:
             return _cached
 
+        self._precargar_historial_ejercicios()
         periodizacion = GeneradorPeriodizacion.generar_periodizacion_anual()
         entrenos_por_fecha = {}
         plan_por_bloques = []
@@ -180,12 +181,13 @@ class PlanificadorHelms:
         volumen_semanal_base = VOLUMENES_BASE.get(nivel, VOLUMENES_BASE['principiante'])
         distribucion_volumen = DISTRIBUCION_DIAS.get(self.dias_disponibles, DISTRIBUCION_DIAS[4])
         # Bug 8 fix: pasar objeto cliente para que BioContext filtre ejercicios con lesiones activas
-        cliente_obj = None
-        try:
-            from clientes.models import Cliente
-            cliente_obj = Cliente.objects.get(pk=self.perfil.id)
-        except Exception:
-            pass
+        if not hasattr(self, '_cliente_obj'):
+            try:
+                from clientes.models import Cliente
+                self._cliente_obj = Cliente.objects.get(pk=self.perfil.id)
+            except Exception:
+                self._cliente_obj = None
+        cliente_obj = self._cliente_obj
         ejercicios_bloque = SelectorEjercicios.seleccionar_ejercicios_para_bloque(
             numero_bloque, fase, self.ejercicios_evitar, cliente=cliente_obj
         )
@@ -286,18 +288,45 @@ class PlanificadorHelms:
                     return tipo
         return 'aislamiento'
 
+    def _precargar_historial_ejercicios(self):
+        """Carga el historial de ejercicios del cliente con una única consulta DB."""
+        try:
+            from entrenos.models import EjercicioRealizado
+            self._historial_ejercicios_raw = list(
+                EjercicioRealizado.objects.filter(
+                    entreno__cliente_id=self.perfil.id
+                ).order_by('-entreno__fecha', '-id').values(
+                    'nombre_ejercicio', 'peso_kg', 'rpe'
+                )
+            )
+        except Exception as e:
+            logger.warning("Error precargando historial de ejercicios: %s", e)
+            self._historial_ejercicios_raw = []
+
     def _obtener_historial_ejercicio(self, nombre_ejercicio: str) -> dict:
         """
-        Devuelve el peso medio ponderado real (EjercicioRealizado)
-        y el RPE medio real (SerieRealizada) de la última sesión del ejercicio.
-        Filtra por cliente para evitar mezclar datos entre usuarios.
+        Devuelve el peso y RPE de la última sesión del ejercicio.
+        Usa la caché en memoria si está disponible (cargada por _precargar_historial_ejercicios).
         """
         resultado = {'peso_real': None, 'rpe_real': None}
         try:
-            from entrenos.models import EjercicioRealizado, SerieRealizada
             nombre_lower = nombre_ejercicio.lower()
 
-            # Peso: media ponderada de la última sesión (EjercicioRealizado)
+            if hasattr(self, '_historial_ejercicios_raw'):
+                match = next(
+                    (e for e in self._historial_ejercicios_raw
+                     if nombre_lower in (e['nombre_ejercicio'] or '').lower()),
+                    None
+                )
+                if match:
+                    if match['peso_kg']:
+                        resultado['peso_real'] = float(match['peso_kg'])
+                    if match['rpe'] is not None:
+                        resultado['rpe_real'] = float(match['rpe'])
+                return resultado
+
+            # Fallback: consultas individuales si la precarga no se ejecutó
+            from entrenos.models import EjercicioRealizado, SerieRealizada
             ej = EjercicioRealizado.objects.filter(
                 nombre_ejercicio__icontains=nombre_lower,
                 entreno__cliente_id=self.perfil.id
@@ -306,7 +335,6 @@ class PlanificadorHelms:
             if ej and ej.peso_kg:
                 resultado['peso_real'] = float(ej.peso_kg)
 
-            # RPE: media de las series de ese mismo entreno
             if ej:
                 series = SerieRealizada.objects.filter(
                     entreno=ej.entreno,
@@ -317,8 +345,6 @@ class PlanificadorHelms:
                 if rpes:
                     resultado['rpe_real'] = sum(rpes) / len(rpes)
                 elif ej.rpe is not None:
-                    # Fallback: SerieRealizada no existe (EjercicioBase sin match exacto),
-                    # usar el RPE promedio guardado directamente en EjercicioRealizado
                     resultado['rpe_real'] = float(ej.rpe)
         except Exception as e:
             logger.warning("Error al obtener historial del ejercicio '%s': %s", nombre_ejercicio, e)
