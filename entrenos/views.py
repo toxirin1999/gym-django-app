@@ -3477,15 +3477,8 @@ from datetime import datetime  # Asegúrate de que este import esté presente
 
 
 def _bio_score_label(score_pct: int) -> str:
-    if score_pct >= 80:
-        return 'Disponibilidad alta'
-    if score_pct >= 65:
-        return 'Disponibilidad media-alta'
-    if score_pct >= 50:
-        return 'Disponibilidad media'
-    if score_pct >= 35:
-        return 'Disponibilidad reducida'
-    return 'Carga acumulada alta'
+    from joi.validador_semantico import readiness_etiqueta
+    return readiness_etiqueta(score_pct)
 
 
 def vista_entrenamiento_activo(request, cliente_id):
