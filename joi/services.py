@@ -745,19 +745,11 @@ def _prompt_hyrox_sesion_completada(ctx: dict, datos_extra: dict) -> str:
 
     rpe_txt = f" RPE {rpe}." if rpe else ""
     min_txt = f" {minutos} minutos." if minutos else ""
-    # Readiness con vocabulario semántico consistente con el resto del sistema
-    if readiness is None:
-        rd_txt = ""
-    elif readiness >= 80:
-        rd_txt = f" Disponibilidad alta ({readiness})."
-    elif readiness >= 65:
-        rd_txt = f" Disponible con margen ({readiness})."
-    elif readiness >= 50:
-        rd_txt = f" Disponible con reserva ({readiness})."
-    elif readiness >= 35:
-        rd_txt = f" Disponibilidad reducida ({readiness})."
+    if readiness is not None:
+        from joi.validador_semantico import readiness_descripcion_corta
+        rd_txt = f" {readiness_descripcion_corta(int(readiness))} (readiness {readiness})."
     else:
-        rd_txt = f" Carga alta acumulada ({readiness})."
+        rd_txt = ""
     dias_txt = f" Quedan {dias} días para la carrera." if dias is not None else ""
 
     return (
@@ -1214,6 +1206,14 @@ def generar_mensaje_joi(cliente, trigger: str, datos_extra: dict | None = None) 
         ctx = construir_contexto(cliente)
         prompt = _bloque_memoria(ctx) + _bloque_manual(cliente.user) + builder(ctx, datos_extra)
         texto = _llamar_haiku(prompt, max_tokens=400)
+        # Validar contrato semántico (log de violaciones, no bloquea)
+        from joi.validador_semantico import validar_semantica_joi
+        _modulo = (
+            'hyrox' if trigger.startswith('hyrox') else
+            'diario' if trigger in ('apertura_manana', 'resumen_semanal') else
+            'gym'
+        )
+        validar_semantica_joi(texto, modulo=_modulo)
         msg = MensajeJOI.objects.create(
             user=cliente.user,
             trigger=trigger,
