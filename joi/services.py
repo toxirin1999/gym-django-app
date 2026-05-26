@@ -657,17 +657,31 @@ def _prompt_apertura_manana(ctx: dict, datos_extra: dict) -> str:
             "El silencio es una respuesta válida si no hay señal clara."
         )
 
+    ctx_temporal = datos_extra.get('_ctx_temporal', {})
+    momento = ctx_temporal.get('momento', 'manana')
+    _apertura_momento_txt = {
+        'manana': 'Es por la mañana.',
+        'tarde':  'El día empezó hace horas.',
+        'noche':  'El día ya terminó.',
+    }.get(momento, 'Es por la mañana.')
+
+    prescripcion_txt = (
+        "1. UNA frase que diga claramente si hoy toca entrenar, ajustar o descansar, y por qué "
+        "en lenguaje simple (no uses siglas ni números crudos como TSB o ACWR — tradúcelos: "
+        "'tu cuerpo está fresco', 'llevas mucha carga esta semana', 'el estrés de esta semana pesa').\n"
+        if ctx_temporal.get('puede_prescribir_hoy', True) else
+        "1. UNA frase que lea lo que ocurrió en el día — sin prescribir sobre un día que ya pasó.\n"
+    )
+
     return (
-        f"Es por la mañana. JOI tiene acceso a todo el historial del usuario. "
+        f"{_apertura_momento_txt} JOI tiene acceso a todo el historial del usuario. "
         f"Estado del sistema hoy: {datos} "
         f"{activo_txt}"
         f"{cierre_txt}"
         f"{tono_txt}"
         f"{gestos_txt}\n\n"
         f"ESTRUCTURA OBLIGATORIA — tres partes, en este orden:\n"
-        f"1. UNA frase que diga claramente si hoy toca entrenar, ajustar o descansar, y por qué "
-        f"en lenguaje simple (no uses siglas ni números crudos como TSB o ACWR — tradúcelos: "
-        f"'tu cuerpo está fresco', 'llevas mucha carga esta semana', 'el estrés de esta semana pesa').\n"
+        f"{prescripcion_txt}"
         f"2. UNA sola observación más — del cuerpo o del diario de ayer. Solo una.\n"
         f"3. OPCIONAL: una pregunta, solo si surge de verdad. Si no, cierra sin pregunta.\n\n"
         f"REGLAS: No enumeres. No uses números crudos. No atribuyas a 'ayer' datos históricos "
@@ -1133,6 +1147,123 @@ def _prompt_rpe_calibracion(ctx: dict, datos_extra: dict) -> str:
     )
 
 
+# ── Phase 56.13 — Conciencia temporal JOI ──────────────────────────────────
+#
+# JOI no solo debe saber qué ocurrió — debe saber desde qué parte del día
+# está mirando. Sin esto, puede dar consejos para un día que ya terminó.
+#
+# momento_del_dia:
+#   manana          → 05:00-11:59 — el día no ha empezado, puede orientar hacia adelante
+#   tarde           → 12:00-18:59 — parte del día ya ocurrió
+#   noche           → 19:00-04:59 — el día terminó, no prescribir para hoy
+#   post_entreno    → justo después de guardar entreno gym
+#   post_sesion_hyrox → justo después de guardar sesión hyrox
+
+_TEMPORAL_PROMPTS = {
+    'manana': (
+        "CONTEXTO TEMPORAL: Es por la mañana. El día no ha comenzado. "
+        "Puedes mirar lo que pasó ayer y orientar lo que está por venir. "
+        "No hables como si el día ya hubiera terminado."
+    ),
+    'tarde': (
+        "CONTEXTO TEMPORAL: Es media tarde. Parte del día ya ocurrió. "
+        "Si orientas, hazlo solo sobre lo que queda. No digas 'empieza el día'."
+    ),
+    'noche': (
+        "CONTEXTO TEMPORAL: Es de noche. El día ya terminó. "
+        "PROHIBIDO: 'descansa hoy', 'entrena hoy', 'esta tarde', 'considera hacer'. "
+        "Habla en pasado o hacia mañana. Integra lo vivido. No reabras decisiones del día."
+    ),
+    'post_entreno': (
+        "CONTEXTO TEMPORAL: El usuario acaba de terminar la sesión. "
+        "No recomiendes cómo hacer el entreno que ya terminó. "
+        "Lee cómo respondió el cuerpo y qué conviene vigilar después."
+    ),
+    'post_sesion_hyrox': (
+        "CONTEXTO TEMPORAL: El usuario acaba de terminar una sesión Hyrox. "
+        "Lee el esfuerzo específico y tradúcelo a aprendizaje o familiaridad acumulada. "
+        "No conviertas el resultado en identidad ni en épica desproporcionada."
+    ),
+}
+
+
+def resolver_contexto_temporal(trigger: str = None) -> dict:
+    """
+    Resuelve el momento del día a partir del trigger y la hora real.
+
+    Triggers con momento forzado:
+      entreno_completado / hyrox_sesion_* → post_sesion (el día no importa)
+
+    Resto: se deriva de la hora local.
+    """
+    from django.utils import timezone as _tz
+
+    # Forzados por tipo de trigger
+    if trigger == 'entreno_completado':
+        return {
+            'momento': 'post_entreno',
+            'puede_prescribir_hoy': False,
+            'tiempo_verbal': 'pasado_reciente',
+            'orientacion': 'leer_sesion',
+            'generado_en_hora_prevista': True,
+        }
+    if trigger and trigger.startswith('hyrox_sesion'):
+        return {
+            'momento': 'post_sesion_hyrox',
+            'puede_prescribir_hoy': False,
+            'tiempo_verbal': 'pasado_reciente',
+            'orientacion': 'leer_sesion_hyrox',
+            'generado_en_hora_prevista': True,
+        }
+
+    hora = _tz.localtime().hour
+
+    if 5 <= hora < 12:
+        return {
+            'momento': 'manana',
+            'puede_prescribir_hoy': True,
+            'tiempo_verbal': 'futuro_cercano',
+            'orientacion': 'abrir_dia',
+            'generado_en_hora_prevista': trigger == 'apertura_manana',
+        }
+    if 12 <= hora < 19:
+        return {
+            'momento': 'tarde',
+            'puede_prescribir_hoy': True,
+            'tiempo_verbal': 'presente',
+            'orientacion': 'actualizar_dia',
+            # apertura generada a mediodía → fuera de hora
+            'generado_en_hora_prevista': trigger != 'apertura_manana',
+        }
+    # 19:00–04:59
+    return {
+        'momento': 'noche',
+        'puede_prescribir_hoy': False,
+        'tiempo_verbal': 'pasado',
+        'orientacion': 'cerrar_dia',
+        'generado_en_hora_prevista': True,
+    }
+
+
+def _bloque_temporal(ctx_temporal: dict) -> str:
+    """Bloque de restricciones temporales que se antepone a cada prompt."""
+    momento = ctx_temporal.get('momento', 'manana')
+    bloque = _TEMPORAL_PROMPTS.get(momento, '')
+    if not bloque:
+        return ''
+
+    # Apertura generada tarde: advertencia adicional
+    if momento == 'tarde' and not ctx_temporal.get('generado_en_hora_prevista', True):
+        bloque += (
+            " Este mensaje corresponde a la apertura diaria pero se genera con el día"
+            " ya empezado. No uses tono de primera hora del día."
+        )
+
+    return f"{bloque}\n\n"
+
+
+# ── Fin Phase 56.13 helpers ──────────────────────────────────────────────────
+
 _PROMPT_BUILDERS = {
     'entreno_completado':        _prompt_entreno_completado,
     'apertura_manana':           _prompt_apertura_manana,
@@ -1211,7 +1342,14 @@ def generar_mensaje_joi(cliente, trigger: str, datos_extra: dict | None = None) 
 
     try:
         ctx = construir_contexto(cliente)
-        prompt = _bloque_memoria(ctx) + _bloque_manual(cliente.user) + builder(ctx, datos_extra)
+        ctx_temporal = resolver_contexto_temporal(trigger)
+        datos_extra = {**datos_extra, '_ctx_temporal': ctx_temporal}
+        prompt = (
+            _bloque_memoria(ctx)
+            + _bloque_manual(cliente.user)
+            + _bloque_temporal(ctx_temporal)
+            + builder(ctx, datos_extra)
+        )
         texto = _llamar_haiku(prompt, max_tokens=400)
         # Validar contrato semántico (log de violaciones, no bloquea)
         from joi.validador_semantico import validar_semantica_joi
@@ -2594,7 +2732,14 @@ def generar_sintesis_joi(cliente) -> "MensajeJOI | None":
         diario_texto = _leer_diario_reciente(cliente.user)
         datos_extra = {'diario_texto': diario_texto, 'vital': vital}
 
-        prompt = _bloque_memoria(ctx) + _bloque_manual(cliente.user) + _prompt_sintesis(ctx, datos_extra)
+        # La síntesis se genera tras la reflexión nocturna — siempre es noche.
+        ctx_temporal = resolver_contexto_temporal('sintesis_joi')
+        prompt = (
+            _bloque_memoria(ctx)
+            + _bloque_manual(cliente.user)
+            + _bloque_temporal(ctx_temporal)
+            + _prompt_sintesis(ctx, datos_extra)
+        )
         texto = _llamar_haiku_sintesis(prompt)
 
         if texto is None:
