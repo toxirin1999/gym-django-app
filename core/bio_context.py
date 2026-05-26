@@ -286,6 +286,12 @@ class BioContextProvider:
         raw_score = (helms_component * 0.4) + (pain_component * 0.4) + ((1.0 - phase_penalty) * 0.2)
         score = max(0.0, min(1.0, raw_score))
 
+        # Phase 56.14 — score excluyendo la penalización por fase de lesión.
+        # Se usa para ejercicios que NO tienen conflicto de risk_tags con la lesión:
+        # la rodilla no debe reducir volumen en press de hombro.
+        raw_score_excl_lesion_fase = (helms_component * 0.4) + (pain_component * 0.4) + 0.2
+        score_excl_lesion_fase = max(0.0, min(1.0, raw_score_excl_lesion_fase))
+
         # ── Volume modifier & Max RPE ───────────────────────────
         # Traducción directa del score a un multiplicador de volumen y límite de intensidad
         max_rpe = 10
@@ -299,6 +305,16 @@ class BioContextProvider:
         else:
             volume_modifier = 0.50      # Reducción severa
             max_rpe = 7                 # Cap de intensidad
+
+        # Modifier sin penalización de fase (para ejercicios no conflictivos)
+        if score_excl_lesion_fase >= 0.8:
+            volume_modifier_excl_lesion_fase = 1.0
+        elif score_excl_lesion_fase >= 0.6:
+            volume_modifier_excl_lesion_fase = 0.85
+        elif score_excl_lesion_fase >= 0.4:
+            volume_modifier_excl_lesion_fase = 0.70
+        else:
+            volume_modifier_excl_lesion_fase = 0.50
 
         # ── Phase 13: Load Transition Phase (Post-Injury) ────────
         from django.utils import timezone
@@ -348,6 +364,8 @@ class BioContextProvider:
             'needs_deload': needs_deload,
             'volume_modifier': volume_modifier,
             'volume_modifier_base': volume_modifier_base,
+            'volume_modifier_excl_lesion_fase': volume_modifier_excl_lesion_fase,
+            'has_active_injuries': has_injuries,
             'max_rpe': max_rpe,
             'is_in_transition': is_in_transition,
             'transition_days_left': transition_days_left,

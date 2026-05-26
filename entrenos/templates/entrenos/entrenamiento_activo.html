@@ -1074,8 +1074,10 @@ input{background:transparent!important;border:none!important;outline:none!import
   <div class="bio-banner-content">
     <div class="bio-banner-title">Bio-Safety activo</div>
     <div class="bio-banner-items">
-      {% if vol_mod < 1.0 %}
-      <div class="bio-item volumen">Series reducidas al {{ vol_mod_pct }}% · {{ bio_score_label }}</div>
+      {% if bio_lesion_nota %}
+        <div class="bio-item {% if bio_lesion_nota.tipo == 'conflicto' %}lesion{% else %}seguimiento{% endif %}">{{ bio_lesion_nota.mensaje }}</div>
+      {% elif vol_mod < 1.0 %}
+        <div class="bio-item volumen">Series reducidas al {{ vol_mod_pct }}% · {{ bio_score_label }}</div>
       {% endif %}
       {% for adj in bio_adjustments %}
       <div class="bio-item {{ adj.tipo }}">{{ adj.mensaje }}</div>
