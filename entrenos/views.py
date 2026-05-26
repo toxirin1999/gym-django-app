@@ -3653,10 +3653,14 @@ def vista_entrenamiento_activo(request, cliente_id):
             ejercicio['tipo_progresion'] = tipo_prog or 'peso_reps'
 
             # Flags de conveniencia para el template
-            ejercicio['usa_peso'] = ejercicio['tipo_progresion'] in ('peso_reps', 'peso_corporal_lastre')
             ejercicio['usa_tiempo'] = ejercicio['tipo_progresion'] == 'progresion_tiempo'
             ejercicio['usa_distancia'] = ejercicio['tipo_progresion'] == 'progresion_distancia'
             ejercicio['solo_reps'] = ejercicio['tipo_progresion'] in ('progresion_reps', 'progresion_variante')
+            # Distancia con carga externa (Farmer Walk, Sled, etc.): usa_distancia=True Y usa_peso=True
+            ejercicio['usa_peso'] = (
+                ejercicio['tipo_progresion'] in ('peso_reps', 'peso_corporal_lastre')
+                or (ejercicio['usa_distancia'] and float(ejercicio.get('peso_recomendado_kg') or 0) > 0)
+            )
 
             # Detección automática del tipo de equipo por palabras clave en el nombre
             _nombre_lower = ejercicio.get('nombre', '').lower()
@@ -3995,6 +3999,7 @@ def guardar_entrenamiento_activo(request, cliente_id):
 
             tipo_progresion = request.POST.get(f'{form_id}_tipo_progresion', 'peso_reps')
             usa_peso = tipo_progresion in ('peso_reps', 'peso_corporal_lastre')
+            es_distancia = tipo_progresion == 'progresion_distancia'
 
             for i in range(1, 11):
                 peso_key, reps_key = f"{form_id}_peso_{i}", f"{form_id}_reps_{i}"
@@ -4011,7 +4016,10 @@ def guardar_entrenamiento_activo(request, cliente_id):
                     rpe_real = float(rpe_str.replace(',', '.')) if rpe_str else None
                     tecnica = tecnica_str if tecnica_str in ('buena', 'aceptable', 'comprometida') else None
 
-                    serie_valida = (peso > 0 and reps > 0) if usa_peso else (reps > 0)
+                    # Distancia: válida con metros > 0; el peso es opcional pero se guarda si > 0
+                    serie_valida = (reps > 0) if es_distancia else (
+                        (peso > 0 and reps > 0) if usa_peso else (reps > 0)
+                    )
 
                     if serie_valida:
                         if peso > 0:
