@@ -40,7 +40,8 @@ _MENSAJES_PROGRESION = {
     'mantener_carga':                'El plan frena la subida de cargas esta semana.',
     'reducir_accesorios':            'El volumen accesorio no cabe esta semana. Los ejercicios principales pueden progresar.',
     'modo_reducido':                 'La sesión fue versión esencial. No se aplica progresión automática.',
-    'carga_alta_semanal':            'El plan detecta carga alta esta semana. No se sube peso.',
+    'carga_alta_semanal':            'El plan detecta carga alta esta semana (bloque principal incompleto). No se sube peso.',
+    'prudencia_semanal':             'El plan operó en modo esencial. La progresión sigue abierta si los patrones lo permiten.',
     'intervencion_no_subir_cargas':  'Intervención activa: decidiste no subir cargas esta semana.',
     'intervencion_reducir_accesorios': 'Intervención activa: decidiste reducir el volumen accesorio esta semana.',
     # Phase 28.1 — per-exercise injury brake
@@ -96,6 +97,9 @@ def evaluar_permiso_progresion(cliente, fecha_ref=None):
         estado = semana.get('estado_semana', 'sin_datos')
         if estado == 'carga_alta':
             return _permiso('mantener_carga', 'carga_alta_semanal', hay_datos=True)
+        if estado == 'prudencia_semanal':
+            # Plan activated esencial mode; no physiological overload evidence → allow progression
+            pass
         if estado == 'margen_extra':
             return _permiso('progresion_permitida', 'ok', hay_datos=True)
 

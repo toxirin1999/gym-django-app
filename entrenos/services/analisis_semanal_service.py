@@ -132,7 +132,7 @@ def analizar_semana_entrenamiento(cliente, fecha_ref=None):
         'lectura_textual': lectura,
         'hay_datos': hay_datos,
         # Phase 6 — semantic state for JOI and future learning
-        'estado_semana': estado_semana,   # 'solida' | 'carga_alta' | 'margen_extra' | 'parcial' | 'sin_datos'
+        'estado_semana': estado_semana,   # 'solida' | 'carga_alta' | 'prudencia_semanal' | 'margen_extra' | 'parcial' | 'sin_datos'
         'continuidad': continuidad,        # 'alta' | 'media' | 'baja'
         'suficiencia': suficiencia,        # 'completa' | 'parcial'
         'margen': margen,                  # 'alto' | 'medio' | 'bajo'
@@ -141,8 +141,11 @@ def analizar_semana_entrenamiento(cliente, fecha_ref=None):
 
 _LECTURAS_JOI = {
     # (estado_semana, suficiencia) → JOI-appropriate text
-    ('carga_alta', 'completa'): 'Esta semana el plan acusó carga, pero lo principal se sostuvo.',
+    ('carga_alta', 'completa'): 'Esta semana la carga desbordó el bloque principal. El plan no pudo completarse del todo.',
     ('carga_alta', 'parcial'):  'Esta semana la carga desbordó el plan. El bloque principal no se completó del todo.',
+    # prudencia_semanal: el plan activó esencial pero el usuario cumplió todo — no es carga alta objetiva
+    ('prudencia_semanal', 'completa'): 'Esta semana el plan activó versión esencial en todas las sesiones. El bloque principal se completó en todas. La continuidad sigue intacta.',
+    ('prudencia_semanal', 'parcial'):  'Esta semana el plan operó en modo prudente. Parte del bloque principal no se completó.',
     ('margen_extra', 'completa'): 'Esta semana el plan encontró margen: se completó también el volumen accesorio.',
     ('solida', 'completa'):     'Semana sólida: continuidad sin adaptaciones.',
     ('parcial', 'parcial'):     'La semana fue irregular. No todo lo planificado encontró su momento.',
@@ -558,9 +561,13 @@ def _clasificar_estado(
 
     # Estado semana
     if bloques_principales_parciales > 0:
+        # El usuario no completó el bloque principal — evidencia real de sobrecarga
         estado = 'carga_alta'
     elif sesiones_esenciales > 0 and sesiones_normales == 0:
-        estado = 'carga_alta'
+        # El plan activó versión esencial en todas las sesiones y el usuario las completó.
+        # No es carga alta objetiva: el plan fue prudente, no el cuerpo sobrecargado.
+        # Usar 'prudencia_semanal' evita la tautología: plan decide esencial → lo llama carga alta.
+        estado = 'prudencia_semanal'
     elif pct_opcional_medio is not None and pct_opcional_medio >= 75 and sesiones_normales > 0:
         estado = 'margen_extra'
     elif bloques_principales_completos > 0 or sesiones_normales > 0:
@@ -635,10 +642,10 @@ def _generar_lectura(
             "Puede ser señal de carga alta. Conviene observar si se repite la semana siguiente."
         )
 
-    # All esencial, all principals complete
+    # All esencial, all principals complete — plan fue prudente, no evidencia de carga alta objetiva
     if sesiones_esenciales > 0 and sesiones_normales == 0:
         return (
-            f"Esta semana el cuerpo pidió versión esencial en "
+            f"Esta semana el plan activó versión esencial en "
             f"{sesiones_esenciales} "
             f"{_pl(sesiones_esenciales, 'sesión', 'sesiones')}. "
             "El bloque principal se completó en todas. La continuidad sigue intacta."
