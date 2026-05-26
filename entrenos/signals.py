@@ -172,6 +172,7 @@ def sincronizar_hub_actividad(sender, instance, created, raw=False, **kwargs):
         from django.core.cache import cache as _cache
         _cache.delete(f'dashboard_acwr_unificado_{instance.cliente_id}')
         _cache.delete(f'dashboard_gamif_{instance.cliente_id}')
+        _cache.delete(f'dashboard_stats_{instance.cliente_id}')
     except Exception as e:
         print(f"❌ Hub ActividadRealizada error (entreno {instance.id}): {e}")
 
