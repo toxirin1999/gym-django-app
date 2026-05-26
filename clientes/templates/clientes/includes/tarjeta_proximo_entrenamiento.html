@@ -227,7 +227,7 @@
             Ver Sesión Realizada
         </a>
         {% else %}
-        <a href="{% url 'entrenos:entrenamiento_activo' cliente.id %}"
+        <a href="{% url 'entrenos:entrenamiento_activo' cliente.id %}?fecha={{ hoy|date:'Y-m-d' }}&rutina_nombre={{ proximo_entrenamiento.rutina_nombre|urlencode }}&ejercicios={{ proximo_entrenamiento_json|urlencode }}"
            class="btn-accion btn-iniciar">
             <i class="fas fa-play mr-2"></i>
             Iniciar Entrenamiento
@@ -288,7 +288,7 @@
             </div>
 
             <div class="mt-6 flex space-x-2">
-                <a href="{% url 'entrenos:entrenamiento_activo' cliente.id %}"
+                <a href="{% url 'entrenos:entrenamiento_activo' cliente.id %}?fecha={{ hoy|date:'Y-m-d' }}&rutina_nombre={{ proximo_entrenamiento.rutina_nombre|urlencode }}&ejercicios={{ proximo_entrenamiento_json|urlencode }}"
                    class="flex-1 bg-green-600 hover:bg-green-500 text-white px-4 py-2 rounded text-center transition-colors">
                     Iniciar Ahora
                 </a>

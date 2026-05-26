@@ -4089,7 +4089,7 @@ def guardar_entrenamiento_activo(request, cliente_id):
         # 2. Procesar cada ejercicio realizado
         volumen_total_entreno = Decimal('0.0')
         ejercicios_procesados_count = 0
-        ejercicio_form_ids = {key.replace('_nombre', '') for key in request.POST if key.endswith('_nombre')}
+        ejercicio_form_ids = {key.replace('_nombre', '') for key in request.POST if key.endswith('_nombre') and key != 'rutina_nombre'}
 
         for form_id in ejercicio_form_ids:
             ejercicio_nombre = request.POST.get(f'{form_id}_nombre', '').strip().title()
