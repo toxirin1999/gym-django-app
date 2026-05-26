@@ -1287,7 +1287,8 @@ input{background:transparent!important;border:none!important;outline:none!import
        style="display:{% if forloop.first %}block{% else %}none{% endif %};"
        data-rpe-obj="{{ ejercicio.rpe_objetivo }}"
        data-reps-obj="{{ ejercicio.reps_objetivo }}"
-       data-usa-peso="{% if ejercicio.usa_peso %}1{% else %}0{% endif %}">
+       data-usa-peso="{% if ejercicio.usa_peso %}1{% else %}0{% endif %}"
+       data-usa-distancia="{% if ejercicio.usa_distancia %}1{% else %}0{% endif %}">
     {% if not forloop.first %}
     <div id="sugerencia-{{ ejercicio.form_id }}-{{ sn }}"
          style="display:none;margin:8px 16px 0;padding:8px 12px;
@@ -1300,7 +1301,7 @@ input{background:transparent!important;border:none!important;outline:none!import
         <span class="sa-num">SERIE {{ sn }} DE {{ ejercicio.series }}</span>
         <div class="sa-obj-wrap">
           {% if ejercicio.usa_peso %}
-            <span class="sa-obj-plan">🎯 {{ ejercicio.peso_recomendado_kg }}kg × {{ ejercicio.reps_objetivo }} reps</span>
+            <span class="sa-obj-plan">🎯 {{ ejercicio.peso_recomendado_kg }}kg{% if ejercicio.usa_distancia %} · {{ ejercicio.reps_objetivo }}m{% else %} × {{ ejercicio.reps_objetivo }} reps{% endif %}</span>
             {% if ejercicio.peso_anterior_kg > 0 %}
               {% if ejercicio.peso_recomendado_kg > ejercicio.peso_anterior_kg %}
                 <span class="sa-obj-diff mas">▲ +{{ ejercicio.peso_recomendado_kg|subtract:ejercicio.peso_anterior_kg }}kg vs última</span>
@@ -2170,8 +2171,12 @@ function guardarSeriePanel(fid,sn,total){
     const row=document.createElement('div');
     row.className='serie-done';
     row.dataset.sn=sn;
+    const usaDistLog = document.getElementById('reg-'+fid+'-'+sn)?.dataset.usaDistancia === '1';
+    const resumenSerie = usaDistLog
+      ? (peso > 0 ? peso+'kg | '+reps+'m' : reps+'m')
+      : peso+'kg × '+reps+' reps';
     row.innerHTML='<div class="sd-check">✓</div>'
-      +'<div class="sd-info">Serie '+sn+' — <strong>'+peso+'kg × '+reps+' reps</strong>'+tecnicaBadge+'</div>'
+      +'<div class="sd-info">Serie '+sn+' — <strong>'+resumenSerie+'</strong>'+tecnicaBadge+'</div>'
       +'<div class="sd-rpe">RPE '+Math.round(rpe)+'</div>'
       +'<button type="button" class="sd-edit" onclick="editarSeriePanel(\''+fid+'\','+sn+','+total+')" title="Editar esta serie">✎</button>';
     log.appendChild(row);
@@ -2198,10 +2203,15 @@ function guardarSeriePanel(fid,sn,total){
   // Info próxima serie
   const proxEl=document.getElementById('pd-prox-'+fid);
   if(proxEl){
+    const usaDistProx = document.getElementById('reg-'+fid+'-'+(sn+1))?.dataset.usaDistancia === '1';
+    const recPeso = document.getElementById('peso-'+fid+'-'+(sn+1))?.dataset.recWeight || peso;
+    const recReps = document.getElementById('reps-hid-'+fid+'-'+(sn+1))?.value || reps;
+    const proxResumen = usaDistProx
+      ? (recPeso > 0 ? '<span class="pd-prox-kg">'+recPeso+'kg</span> | '+recReps+'m' : recReps+'m')
+      : '<span class="pd-prox-kg">'+recPeso+'kg</span> × '+recReps+' reps';
     proxEl.innerHTML=sn>=total
       ?'<span style="color:var(--ok)">✓ Ejercicio completado</span>'
-      :'Serie <span class="pd-prox-kg">'+(sn+1)+'</span> de '+total
-        +' — <span class="pd-prox-kg">'+peso+'kg</span> × '+reps+' reps';
+      :'Serie <span class="pd-prox-kg">'+(sn+1)+'</span> de '+total+' — '+proxResumen;
   }
 
   calcularDiscos(fid,peso);
