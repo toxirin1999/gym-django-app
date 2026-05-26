@@ -3986,7 +3986,7 @@ def guardar_entrenamiento_activo(request, cliente_id):
         todos_rpes_sesion = []
         _modo_reducido = request.POST.get('modo_reducido') == '1'
 
-        ejercicio_form_ids = [k.replace('_nombre', '') for k in request.POST if k.endswith('_nombre')]
+        ejercicio_form_ids = [k.replace('_nombre', '') for k in request.POST if k.endswith('_nombre') and k != 'rutina_nombre']
         for form_id in ejercicio_form_ids:
             ejercicio_nombre = request.POST.get(f'{form_id}_nombre', '').strip().title()
             if not ejercicio_nombre: continue
@@ -4198,8 +4198,8 @@ def guardar_entrenamiento_activo(request, cliente_id):
                 else (float(rpe_medio) if rpe_medio else None)
             )
 
-            # Solo si tenemos datos mínimos, creamos la sesión de gamificación
-            if any([series_comp, series_tot, ejs_comp, volumen_sesion]):
+            # Crear sesión de gamificación siempre que haya ejercicios guardados
+            if ejercicios_procesados_count > 0 or any([series_comp, series_tot, ejs_comp, volumen_sesion]):
                 # Calcular ACWR real usando el servicio de estadísticas
                 acwr_actual = 1.0
                 try:
@@ -4210,16 +4210,40 @@ def guardar_entrenamiento_activo(request, cliente_id):
                     logger.warning("Error calculando ACWR: %s", e)
 
                 duracion_guardada = int(duracion_real) if duracion_real and int(duracion_real) > 0 else (entreno.duracion_minutos or 0)
-                sesion_gam = SesionGamificacion.objects.create(
+
+                # Fallback: si el JS envió 0 (usuario no marcó series una a una),
+                # calculamos desde los EjercicioRealizado ya guardados
+                _series_js = int(series_comp) if series_comp else 0
+                _series_tot_js = int(series_tot) if series_tot else 0
+                if _series_js == 0 and ejercicios_procesados_count > 0:
+                    from entrenos.models import EjercicioRealizado as _EjR
+                    _series_js = sum(
+                        ej.series for ej in _EjR.objects.filter(entreno=entreno)
+                    )
+                    _series_tot_js = _series_js
+
+                _vol_js = Decimal(str(volumen_sesion)) if volumen_sesion else Decimal('0')
+                _volumen_final = _vol_js if _vol_js > 0 else (entreno.volumen_total_kg or Decimal('0'))
+
+                _ejs_comp = int(ejs_comp) if ejs_comp else 0
+                _ejs_tot = int(ejs_tot) if ejs_tot else 0
+                if _ejs_tot == 0:
+                    _ejs_tot = ejercicios_procesados_count
+                if _ejs_comp == 0:
+                    _ejs_comp = ejercicios_procesados_count
+
+                sesion_gam, _ = SesionGamificacion.objects.update_or_create(
                     entreno=entreno,
-                    duracion_minutos=duracion_guardada,
-                    series_completadas=int(series_comp) if series_comp else 0,
-                    series_totales=int(series_tot) if series_tot else 0,
-                    ejercicios_completados=int(ejs_comp) if ejs_comp else 0,
-                    ejercicios_totales=int(ejs_tot) if ejs_tot else 0,
-                    volumen_sesion=Decimal(str(volumen_sesion)) if volumen_sesion else (entreno.volumen_total_kg or 0),
-                    rpe_medio=rpe_final,
-                    acwr=acwr_actual
+                    defaults={
+                        'duracion_minutos': duracion_guardada,
+                        'series_completadas': _series_js,
+                        'series_totales': _series_tot_js,
+                        'ejercicios_completados': _ejs_comp,
+                        'ejercicios_totales': _ejs_tot,
+                        'volumen_sesion': _volumen_final,
+                        'rpe_medio': rpe_final,
+                        'acwr': acwr_actual,
+                    }
                 )
 
                 # Propagar duración a EntrenoRealizado y ActividadRealizada para que
