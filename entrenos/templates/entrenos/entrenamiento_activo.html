@@ -1218,7 +1218,7 @@ input{background:transparent!important;border:none!important;outline:none!import
         El plan proponía <strong>{{ ejercicio.peso_kg_propuesto|floatformat:"-1" }} kg</strong> →
         conserva <strong>{{ ejercicio.peso_kg|floatformat:"-1" }} kg</strong> hoy.
         {% if ejercicio.motivo_bloqueo == 'carga_alta_sostenida' %}Carga acumulada en semanas recientes.
-        {% elif ejercicio.motivo_bloqueo == 'carga_alta_semanal' %}Carga alta esta semana.
+        {% elif ejercicio.motivo_bloqueo == 'carga_alta_semanal' %}El plan detecta carga alta esta semana (bloque principal incompleto alguna sesión). No se sube peso.
         {% elif ejercicio.motivo_bloqueo == 'bloque_parcial_repetido' %}El bloque principal no se completa regularmente.
         {% elif ejercicio.motivo_bloqueo == 'esenciales_frecuentes' %}Las versiones esenciales se repiten.
         {% elif ejercicio.motivo_bloqueo == 'margen_bajo_repetido' %}Margen accesorio bajo estas semanas.
