@@ -3511,7 +3511,9 @@ def vista_entrenamiento_activo(request, cliente_id):
         bio_readiness = BioContextProvider.get_readiness_score(cliente)
         vol_mod = bio_readiness.get('volume_modifier', 1.0)
         vol_mod_base = bio_readiness.get('volume_modifier_base', vol_mod)
+        vol_mod_excl_lesion = bio_readiness.get('volume_modifier_excl_lesion_fase', vol_mod)
         _is_in_transition = bio_readiness.get('is_in_transition', False)
+        _hay_lesion_activa = bio_readiness.get('has_active_injuries', False)
 
         bio_rest = BioContextProvider.get_current_restrictions(cliente)
         tags_bloqueados = bio_rest.get('tags', set())
@@ -3561,14 +3563,24 @@ def vista_entrenamiento_activo(request, cliente_id):
                             ejercicio['is_bio_blocked'] = True
                             ejercicio['bio_blocked_tag'] = list(interseccion)[0].replace('_', ' ').title()
 
-            # Ajuste de series: si la reducción es solo por transición post-lesión,
-            # no aplicarla a ejercicios que no tocan la zona lesionada.
+            # Phase 56.14 — Ajuste de series por zona real de conflicto.
+            # La penalización de fase (AGUDA/SUB_AGUDA) solo debe reducir volumen
+            # en ejercicios que realmente tocan la zona lesionada. Un press de hombro
+            # no debe verse afectado por una lesión de rodilla.
             try:
                 series_orig = int(ejercicio.get('series', 3))
-                if _is_in_transition and not _ej_conflicta_lesion:
-                    _ej_vol = vol_mod_base  # Reducción por fatiga, sin cap de lesión
+                if _hay_lesion_activa and not _ej_conflicta_lesion:
+                    # Usar modifier sin penalización de fase — fatiga/carga sí, lesión no
+                    _ej_vol = vol_mod_excl_lesion
+                    ejercicio['reduccion_fuente'] = 'carga' if vol_mod_excl_lesion < 1.0 else None
+                elif _is_in_transition and not _ej_conflicta_lesion:
+                    _ej_vol = vol_mod_base
+                    ejercicio['reduccion_fuente'] = 'transicion' if vol_mod_base < 1.0 else None
                 else:
                     _ej_vol = vol_mod
+                    ejercicio['reduccion_fuente'] = 'lesion' if (_ej_conflicta_lesion and vol_mod < 1.0) else (
+                        'carga' if vol_mod < 1.0 else None
+                    )
                 series_adj = max(1, round(series_orig * _ej_vol))
                 ejercicio['series'] = series_adj
             except ValueError:
@@ -3841,6 +3853,7 @@ def vista_entrenamiento_activo(request, cliente_id):
 
     # Construir resumen bio para el banner del template
     bio_adjustments = []
+    _hay_conflicto_real = False
     for ej in ejercicios_planificados:
         if ej.get('is_hot_substituted'):
             bio_adjustments.append({
@@ -3852,6 +3865,24 @@ def vista_entrenamiento_activo(request, cliente_id):
                 'tipo': 'bloqueo',
                 'mensaje': f"{ej.get('nombre', '')} bloqueado por restricción: {ej.get('bio_blocked_tag', '')}"
             })
+        if ej.get('reduccion_fuente') == 'lesion':
+            _hay_conflicto_real = True
+
+    # Phase 56.14 — nota de lesión para el template.
+    # Distingue entre "la lesión afecta esta sesión" vs "la lesión está en seguimiento".
+    _bio_lesion_nota = None
+    if _hay_lesion_activa:
+        if _hay_conflicto_real:
+            _bio_lesion_nota = {
+                'tipo': 'conflicto',
+                'mensaje': 'Bio-Safety activo: series reducidas en ejercicios que implican la zona lesionada. Los pesos se mantienen.',
+            }
+        else:
+            _bio_lesion_nota = {
+                'tipo': 'seguimiento',
+                'mensaje': 'Lesión en seguimiento. Hoy no afecta de forma relevante a esta sesión.',
+            }
+
     vol_mod_pct = int(vol_mod * 100)
 
     # Separar "DÍA 3 - DESCARGA ACTIVA" en dos partes para el header
@@ -3886,7 +3917,14 @@ def vista_entrenamiento_activo(request, cliente_id):
         'bio_score': int(bio_readiness.get('score', 1.0) * 100),
         'bio_score_label': _bio_score_label(int(bio_readiness.get('score', 1.0) * 100)),
         'bio_adjustments': bio_adjustments,
-        'has_bio_adjustments': vol_mod < 1.0 or bool(bio_adjustments),
+        'bio_lesion_nota': _bio_lesion_nota,
+        # Phase 56.14: el banner se muestra si hay ajuste real (no solo lesión en seguimiento)
+        'has_bio_adjustments': (
+            bool(bio_adjustments)
+            or (_bio_lesion_nota and _bio_lesion_nota['tipo'] == 'conflicto')
+            or (vol_mod < 1.0 and not _hay_lesion_activa)  # fatiga global sin lesión
+            or (vol_mod_excl_lesion < 1.0)  # reducción por carga legítima
+        ),
         'deload_activo': deload_activo,
         'sesion_programada_id': sesion_programada_id,
         'modo_reducido': modo_reducido,
