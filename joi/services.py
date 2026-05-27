@@ -5,6 +5,11 @@ import logging
 import random
 
 from clientes.utils import get_cliente_actual
+from joi.context_builders.continuidad_context import (
+    build_continuidad_context,
+    _bloque_continuidad,
+)
+from joi.validador_semantico import validar_semantica_joi
 
 logger = logging.getLogger(__name__)
 
@@ -1344,15 +1349,17 @@ def generar_mensaje_joi(cliente, trigger: str, datos_extra: dict | None = None) 
         ctx = construir_contexto(cliente)
         ctx_temporal = resolver_contexto_temporal(trigger)
         datos_extra = {**datos_extra, '_ctx_temporal': ctx_temporal}
+        continuidad_ctx = build_continuidad_context(cliente)
+        bloque_cont = _bloque_continuidad(continuidad_ctx)
         prompt = (
             _bloque_memoria(ctx)
             + _bloque_manual(cliente.user)
             + _bloque_temporal(ctx_temporal)
+            + (bloque_cont + '\n\n' if bloque_cont else '')
             + builder(ctx, datos_extra)
         )
         texto = _llamar_haiku(prompt, max_tokens=400)
         # Validar contrato semántico (log de violaciones, no bloquea)
-        from joi.validador_semantico import validar_semantica_joi
         _modulo = (
             'hyrox' if trigger.startswith('hyrox') else
             'diario' if trigger in ('apertura_manana', 'resumen_semanal') else
