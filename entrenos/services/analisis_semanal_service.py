@@ -27,7 +27,7 @@ from datetime import timedelta
 
 from django.utils import timezone
 
-from entrenos.models import EntrenoRealizado, SesionProgramada
+from entrenos.models import EntrenoRealizado, SesionEntrenamiento, SesionProgramada
 from entrenos.services.sesion_recomendada import calcular_bloque_esencial
 
 
@@ -116,6 +116,15 @@ def analizar_semana_entrenamiento(cliente, fecha_ref=None):
         pct_opcional_medio=pct_opcional_medio,
     )
 
+    # Phase 56.13 — carga_alta_objetiva: external physiological signals.
+    # INVARIANT: versión esencial repetida alone cannot prove high load.
+    rpe_semana = _rpe_medio_semana(entrenos_semana)
+    carga_alta_objetiva, motivo_carga = _evaluar_carga_alta_objetiva(
+        bloques_principales_parciales=bloques_principales_parciales,
+        rpe_medio_semana=rpe_semana,
+    )
+    es_prudencia_semanal = estado_semana == 'prudencia_semanal'
+
     return {
         'lunes': lunes,
         'domingo': domingo,
@@ -136,6 +145,11 @@ def analizar_semana_entrenamiento(cliente, fecha_ref=None):
         'continuidad': continuidad,        # 'alta' | 'media' | 'baja'
         'suficiencia': suficiencia,        # 'completa' | 'parcial'
         'margen': margen,                  # 'alto' | 'medio' | 'bajo'
+        # Phase 56.13 — objective load classification
+        'carga_alta_objetiva': carga_alta_objetiva,  # bool: external signal present
+        'prudencia_semanal': es_prudencia_semanal,   # bool: esencial but blocks complete
+        'motivo_carga': motivo_carga,                # str | None: 'bloque_incompleto' | 'rpe_alto'
+        'rpe_medio_semana': rpe_semana,              # float | None
     }
 
 
@@ -545,6 +559,39 @@ def detectar_patron_multisemanal(cliente, n_semanas=3, fecha_ref=None):
         f"[Últimas {n_con_datos} semanas con datos] "
         + " ".join(observaciones[:2])
     )
+
+
+_RPE_CARGA_ALTA = 8.0  # threshold: RPE medio semana >= this → carga_alta_objetiva
+
+
+def _rpe_medio_semana(entrenos):
+    """Compute average RPE from SesionEntrenamiento records for a list of entrenos."""
+    if not entrenos:
+        return None
+    entreno_ids = [e.id for e in entrenos]
+    rpes = list(
+        SesionEntrenamiento.objects.filter(
+            entreno_id__in=entreno_ids,
+            rpe_medio__isnull=False,
+        ).values_list('rpe_medio', flat=True)
+    )
+    return round(sum(rpes) / len(rpes), 2) if rpes else None
+
+
+def _evaluar_carga_alta_objetiva(bloques_principales_parciales, rpe_medio_semana):
+    """
+    Returns (carga_alta_objetiva: bool, motivo_carga: str | None).
+
+    INVARIANT: versión esencial repetida alone is NOT a valid cause.
+    External signals required:
+        - bloques_principales_parciales > 0  (structural: user couldn't finish minimum)
+        - rpe_medio_semana >= _RPE_CARGA_ALTA (physiological: subjective effort high)
+    """
+    if bloques_principales_parciales > 0:
+        return True, 'bloque_incompleto'
+    if rpe_medio_semana is not None and rpe_medio_semana >= _RPE_CARGA_ALTA:
+        return True, 'rpe_alto'
+    return False, None
 
 
 def _clasificar_estado(
