@@ -281,7 +281,8 @@ _MENSAJES_POR_CAUSA = {
     'lesion':             'La sesión sigue en el mapa, pero hoy no debe pasar por encima de tu lesión.',
     'fatiga_alta':        'El plan sigue aquí, pero hoy no necesita que lo fuerces.',
     'energia_baja':       'Hoy hay margen para hacer la versión mínima. No hace falta completar todo.',
-    'futbol_reciente':    'Tus piernas ya recibieron carga. Hoy conviene no confundir esfuerzo con progreso.',
+    'futbol_reciente':    'Tus piernas ya recibieron carga del fútbol. Hoy conviene no confundir esfuerzo con progreso.',
+    'hyrox_reciente':     'El Hyrox reciente dejó carga real. Los principales primero; accesorios opcionales.',
     'pendiente_prioritaria': 'Esta sesión sostiene el bloque. Sigue siendo la siguiente pieza útil.',
     'pendiente_normal':   'Esta sesión quedó pendiente. El plan conserva el hilo.',
     'sesion_hoy':         'Esta es la sesión prevista para hoy.',
@@ -307,6 +308,7 @@ def _obtener_contexto_fisico(cliente, fecha_hoy):
         'lesion_activa': False,
         'lesion_fase': None,
         'futbol_reciente': False,
+        'hyrox_reciente': False,
         'energia_baja': False,
         'energia_valor': None,
         'readiness_bajo': False,
@@ -335,15 +337,21 @@ def _obtener_contexto_fisico(cliente, fecha_hoy):
     except Exception:
         pass
 
-    # 2. Fútbol u otro deporte intenso en las últimas 48 h
+    # 2. Actividad intensa de piernas en las últimas 48 h
+    # Fútbol siempre cuenta; Hyrox solo si rpe_medio >= 7 (sesiones de recuperación no bloquean).
     try:
         hace_48h = fecha_hoy - timedelta(days=2)
-        ctx['futbol_reciente'] = ActividadRealizada.objects.filter(
-            cliente=cliente,
-            tipo__in=['futbol', 'hyrox'],
-            fecha__gte=hace_48h,
-            fecha__lt=fecha_hoy,
+        hay_futbol = ActividadRealizada.objects.filter(
+            cliente=cliente, tipo='futbol',
+            fecha__gte=hace_48h, fecha__lt=fecha_hoy,
         ).exists()
+        hay_hyrox_intenso = ActividadRealizada.objects.filter(
+            cliente=cliente, tipo='hyrox',
+            fecha__gte=hace_48h, fecha__lt=fecha_hoy,
+            rpe_medio__gte=7,
+        ).exists()
+        ctx['futbol_reciente'] = hay_futbol
+        ctx['hyrox_reciente'] = hay_hyrox_intenso
     except Exception:
         pass
 
@@ -425,6 +433,9 @@ def _aplicar_contexto(decision_base, contexto, fecha_hoy):
         estado = 'version_reducida'
     elif contexto['futbol_reciente']:
         causa = 'futbol_reciente'
+        estado = 'version_reducida'
+    elif contexto.get('hyrox_reciente'):
+        causa = 'hyrox_reciente'
         estado = 'version_reducida'
     elif decision['tipo'] == 'pendiente':
         sp = decision.get('sesion_programada')
@@ -561,9 +572,9 @@ def _aplicar_efecto_distribucion(cliente, decision, fecha_hoy):
                 }
 
         elif tipo == IntervencionPlan.TIPO_REDISTRIB_PIERNA:
-            # Check if today has a leg session near recent football
+            # Check if today has a leg session near recent football or intense Hyrox
             ctx = decision.get('contexto_fisico', {})
-            if ctx.get('futbol_reciente'):
+            if ctx.get('futbol_reciente') or ctx.get('hyrox_reciente'):
                 entrenamiento = decision.get('entrenamiento') or {}
                 ejercicios = entrenamiento.get('ejercicios', [])
                 es_pierna = any(
@@ -814,10 +825,10 @@ def _aplicar_preferencia_activa(cliente, decision, fecha_hoy):
     entrenamiento = decision.get('entrenamiento') or {}
     aplicada = None
 
-    # evitar_pierna_tras_futbol: condition = leg session + recent football
+    # evitar_pierna_tras_futbol: condition = leg session + recent football or intense Hyrox
     if (
         'evitar_pierna_tras_futbol' in prefs_activas
-        and ctx.get('futbol_reciente')
+        and (ctx.get('futbol_reciente') or ctx.get('hyrox_reciente'))
         and _es_sesion_pierna(entrenamiento)
     ):
         aplicada = 'evitar_pierna_tras_futbol'
