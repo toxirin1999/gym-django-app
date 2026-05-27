@@ -115,7 +115,17 @@
   animation: joiBannerIn .5s ease-out;
 ">
   <span style="color: rgba(200,100,255,0.6); font-size: 13px; letter-spacing:.05em; text-transform:uppercase; white-space:nowrap;">JOI</span>
-  <p style="margin:0; color: #e8b4ff; font-style: italic; font-size: 14px; line-height: 1.5; flex:1;">{{ joi_mensaje_pendiente.mensaje|truncatechars:120 }}</p>
+  <p id="joi-banner-texto" style="margin:0; color: #e8b4ff; font-style: italic; font-size: 14px; line-height: 1.5; flex:1;">{{ joi_mensaje_pendiente.mensaje|truncatechars:120 }}</p>
+  <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+    <button onclick="joiDarFeedback({{ joi_mensaje_pendiente.id }}, 'clavado')" title="Lo has leído bien"
+      style="background:none;border:none;color:rgba(200,100,255,0.45);font-size:11px;letter-spacing:.08em;
+             text-transform:uppercase;cursor:pointer;padding:2px 4px;line-height:1;transition:color .2s;white-space:nowrap;"
+      onmouseover="this.style.color='rgba(160,255,180,0.9)'" onmouseout="this.style.color='rgba(200,100,255,0.45)'">✓</button>
+    <button onclick="joiDarFeedback({{ joi_mensaje_pendiente.id }}, 'equivocado')" title="No ha encajado"
+      style="background:none;border:none;color:rgba(200,100,255,0.45);font-size:11px;letter-spacing:.08em;
+             text-transform:uppercase;cursor:pointer;padding:2px 4px;line-height:1;transition:color .2s;white-space:nowrap;"
+      onmouseover="this.style.color='rgba(255,140,140,0.9)'" onmouseout="this.style.color='rgba(200,100,255,0.45)'">✗</button>
+  </div>
   <a href="/joi/habitacion/" style="
     color: rgba(200,100,255,0.6); font-size: 11px; letter-spacing:.12em;
     text-transform:uppercase; text-decoration:none; white-space:nowrap;
@@ -144,6 +154,22 @@ function joiBannerCerrar(id) {
   banner.style.transform = 'translateY(-100%)';
   banner.style.opacity = '0';
   setTimeout(() => banner.remove(), 420);
+}
+function joiDarFeedback(id, tipo) {
+  fetch('/joi/mensaje/' + id + '/feedback/', {
+    method: 'POST',
+    headers: {
+      'X-CSRFToken': document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '',
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: 'feedback=' + tipo,
+  }).then(r => r.json()).then(data => {
+    if (data.ok) {
+      const txt = document.getElementById('joi-banner-texto');
+      if (txt) { txt.style.fontStyle = 'normal'; txt.textContent = data.respuesta; }
+    }
+    setTimeout(() => joiBannerCerrar(id), 1800);
+  }).catch(() => joiBannerCerrar(id));
 }
 </script>
 {% endif %}
