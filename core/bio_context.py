@@ -333,7 +333,7 @@ class BioContextProvider:
         if lesiones_recientes.exists():
             lesion_transicion = lesiones_recientes.first()
             dias_desde_resolucion = (hoy - lesion_transicion.fecha_resolucion).days
-            
+
             # Verificar salida anticipada (>= 3 sesiones y dolor = 0)
             from hyrox.models import HyroxSession
             sesiones_post_recuperacion = HyroxSession.objects.filter(
@@ -341,11 +341,11 @@ class BioContextProvider:
                 estado='completado',
                 fecha__gte=lesion_transicion.fecha_resolucion
             ).count()
-            
+
             ultimo_reporte = DailyRecoveryEntry.objects.filter(
                 lesion=lesion_transicion
             ).order_by('-fecha').first()
-            
+
             dolor_cero = ultimo_reporte and ultimo_reporte.dolor_movimiento == 0
 
             # Si se cumplen las condiciones de salida anticipada, anulamos la transición
@@ -355,6 +355,17 @@ class BioContextProvider:
                 is_in_transition = True
                 transition_days_left = 7 - dias_desde_resolucion
                 # Capar máximo a 0.85 incluso si el score es perfecto
+                volume_modifier = min(volume_modifier, 0.85)
+        else:
+            # Lesión activa en fase RETORNO: mostrar banner sin countdown de días
+            lesion_retorno = UserInjury.objects.filter(
+                cliente=cliente,
+                fase=UserInjury.Fase.RETORNO,
+                activa=True
+            ).first()
+            if lesion_retorno:
+                is_in_transition = True
+                transition_days_left = None  # Sin countdown: fase activa sin fecha de resolución
                 volume_modifier = min(volume_modifier, 0.85)
 
         return {

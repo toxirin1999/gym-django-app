@@ -1046,14 +1046,14 @@ input{background:transparent!important;border:none!important;outline:none!import
 {% endif %}
 
 <!-- ══ BANNER TRANSICIÓN BIO ══ -->
-{% if is_in_transition and transition_days_left %}
+{% if is_in_transition %}
 <div style="margin:0 16px 12px;padding:14px 16px;background:rgba(34,211,238,0.07);border:1px solid rgba(34,211,238,0.20);border-radius:12px;display:flex;align-items:flex-start;gap:12px;">
   <span style="font-size:20px;flex-shrink:0;margin-top:1px;">🌱</span>
   <div>
     <div style="font-size:13px;font-weight:700;color:rgba(34,211,238,0.85);margin-bottom:3px;">Lesión en retorno</div>
     <div style="font-size:12px;color:rgba(240,238,232,0.6);line-height:1.4;">
       {% if has_bio_adjustments %}
-        Quedan {{ transition_days_left }} día{{ transition_days_left|pluralize:"s" }}. Ejercicios de la zona afectada han sido adaptados.
+        {% if transition_days_left %}Quedan {{ transition_days_left }} día{{ transition_days_left|pluralize:"s" }}. {% endif %}Ejercicios de la zona afectada han sido adaptados.
         {% if vol_mod < 1.0 %} Series reducidas al {{ vol_mod_pct }}% en los ejercicios de esa zona — los pesos no cambian.{% endif %}
       {% else %}
         Lesión en retorno. No afecta a los ejercicios de esta sesión.
