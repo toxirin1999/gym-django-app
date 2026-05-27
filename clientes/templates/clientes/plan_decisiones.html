@@ -274,9 +274,9 @@
       {% endif %}
       <div style="font-size:11px;color:var(--ink-3);margin-left:auto;">
         <span style="padding:2px 8px;border-radius:99px;font-size:9px;font-weight:700;
-          background:{% if analisis_semanal.estado_semana == 'solida' %}rgba(34,197,94,0.12){% elif analisis_semanal.estado_semana == 'carga_alta' %}rgba(239,68,68,0.10){% elif analisis_semanal.estado_semana == 'prudencia_semanal' %}rgba(245,158,11,0.10){% else %}rgba(255,255,255,0.06){% endif %};
-          color:{% if analisis_semanal.estado_semana == 'solida' %}rgba(34,197,94,0.8){% elif analisis_semanal.estado_semana == 'carga_alta' %}rgba(239,68,68,0.7){% elif analisis_semanal.estado_semana == 'prudencia_semanal' %}rgba(245,158,11,0.8){% else %}var(--ink-3){% endif %};">
-          {% if analisis_semanal.estado_semana == 'prudencia_semanal' %}MARGEN PROTEGIDO{% else %}{{ analisis_semanal.estado_semana|upper }}{% endif %}
+          background:{% if analisis_semanal.carga_alta_objetiva %}rgba(239,68,68,0.10){% elif analisis_semanal.prudencia_semanal %}rgba(245,158,11,0.10){% elif analisis_semanal.estado_semana == 'solida' %}rgba(34,197,94,0.12){% else %}rgba(255,255,255,0.06){% endif %};
+          color:{% if analisis_semanal.carga_alta_objetiva %}rgba(239,68,68,0.7){% elif analisis_semanal.prudencia_semanal %}rgba(245,158,11,0.8){% elif analisis_semanal.estado_semana == 'solida' %}rgba(34,197,94,0.8){% else %}var(--ink-3){% endif %};">
+          {% if analisis_semanal.carga_alta_objetiva %}CARGA ALTA{% elif analisis_semanal.prudencia_semanal %}MARGEN PROTEGIDO{% elif analisis_semanal.estado_semana == 'solida' %}SÓLIDA{% elif analisis_semanal.estado_semana == 'margen_extra' %}MARGEN EXTRA{% elif analisis_semanal.estado_semana == 'parcial' %}PARCIAL{% else %}{{ analisis_semanal.estado_semana|upper }}{% endif %}
         </span>
       </div>
     </div>
