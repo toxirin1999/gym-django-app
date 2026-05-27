@@ -40,7 +40,7 @@ class PlanDecisionesBase(TestCase):
         self.cliente, _ = Cliente.objects.get_or_create(
             user=self.user, defaults={'nombre': 'TestDC26', 'dias_disponibles': 4},
         )
-        self.hoy = date(2026, 5, 22)
+        self.hoy = date.today()
         cache.clear()
 
     def tearDown(self):
@@ -219,8 +219,11 @@ class TestCase9_TemplateSmokeTest(PlanDecisionesBase):
     def test_template_renders_with_empty_data(self):
         response = self._get()
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'Lo que el plan recuerda')
-        self.assertContains(response, 'Ninguna todavía')
+        # Sin datos, el hero "Activo ahora mismo" siempre aparece
+        self.assertContains(response, 'Activo ahora mismo')
+        # Las secciones con preferencias/intervenciones no aparecen si no hay datos
+        self.assertNotContains(response, 'Lo que el plan recuerda')
+        self.assertNotContains(response, 'Ajuste activo de esta semana')
 
 
 # ── Case 10: URL resolution ───────────────────────────────────────────────────
