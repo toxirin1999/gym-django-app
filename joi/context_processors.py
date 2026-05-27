@@ -68,6 +68,7 @@ def _get_mensaje_gym(user):
         .filter(user=user, leido=False)
         .exclude(trigger__startswith='hyrox_')
         .exclude(trigger__in=excluir_triggers)
+        .order_by('-creado_en')
         .first()
     )
     if mensaje:
