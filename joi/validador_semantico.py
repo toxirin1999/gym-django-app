@@ -54,6 +54,17 @@ _READINESS_BAJO_INCORRECTO = [
     r'readiness\s+\d+[.,]\s*(bajo|reducido)',
 ]
 
+# Declaraciones de necesidad corporal — JOI lee márgenes, no prescribe necesidades.
+# "tu cuerpo necesita X" / "necesitas descansar" / "debes entrenar" → autoridad no trazable.
+# Excepción: señal crítica explícita (RPE extremo, lesión) — el validador no tiene contexto
+# para distinguirla, así que solo registra la violación; no bloquea.
+_NECESIDAD_CORPORAL = [
+    r'tu\s+cuerpo\s+necesita',
+    r'el\s+cuerpo\s+necesita',
+    r'necesitas\s+(descansar|parar|entrenar|moverte|recuperar)',
+    r'debes\s+(descansar|parar|entrenar|moverte|recuperar)',
+]
+
 
 def _compilar(patrones: list) -> list:
     return [re.compile(p, re.IGNORECASE) for p in patrones]
@@ -62,6 +73,7 @@ def _compilar(patrones: list) -> list:
 _RE_DIAGNOSTICOS          = _compilar(_DIAGNOSTICOS)
 _RE_ATRIBUCIONES_MENTALES = _compilar(_ATRIBUCIONES_MENTALES)
 _RE_READINESS_BAJO        = _compilar(_READINESS_BAJO_INCORRECTO)
+_RE_NECESIDAD_CORPORAL    = _compilar(_NECESIDAD_CORPORAL)
 
 
 def _tiene_ciriilicos(texto: str) -> bool:
@@ -99,6 +111,10 @@ def validar_semantica_joi(texto: str, modulo: str = 'desconocido') -> dict:
     for pat in _RE_READINESS_BAJO:
         if pat.search(texto):
             violaciones.append(f'readiness_bajo_incorrecto:{pat.pattern}')
+
+    for pat in _RE_NECESIDAD_CORPORAL:
+        if pat.search(texto):
+            violaciones.append(f'necesidad_corporal:{pat.pattern}')
 
     if _tiene_ciriilicos(texto):
         violaciones.append('ciriilico_detectado')
