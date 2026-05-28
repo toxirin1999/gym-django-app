@@ -303,17 +303,32 @@ def _crear_hyrox_decision(current_score, resumen_semanal=None, lesion_activa=Non
             'estaciones_bloqueadas': [],
         }
 
-    if acwr is not None and acwr >= 1.5:
+    if acwr is not None and acwr > 1.7:
         return {
             'estado': 'recuperar',
             'causa': 'carga',
             'titulo': 'Recuperar',
-            'subtitulo': 'Carga aguda elevada',
-            'mensaje': 'La carga de esta semana ha subido demasiado respecto a tu base. Mejor absorber que añadir.',
-            'accion_label': 'Bajar carga',
+            'subtitulo': 'Carga aguda muy elevada',
+            'mensaje': 'La carga acumulada supera claramente tu base crónica. Añadir sesión hoy aumenta el riesgo de lesión.',
+            'accion_label': 'Descanso activo',
             'puede_ejecutar_plan': False,
-            'permitido': ['Cardio bajo impacto', 'Movilidad', 'Técnica suave'],
-            'evitar': ['Volumen extra', 'Sled pesado', 'Compromised Running intenso'],
+            'permitido': ['Cardio bajo impacto', 'Movilidad', 'Técnica sin carga'],
+            'evitar': ['Volumen extra', 'Sled pesado', 'Compromised Running intenso', 'Sesión Hyrox completa'],
+            'tags_restringidos': [],
+            'estaciones_bloqueadas': [],
+        }
+
+    if acwr is not None and acwr >= 1.5:
+        return {
+            'estado': 'sesion_protegida',
+            'causa': 'carga_elevada',
+            'titulo': 'Sesión Protegida',
+            'subtitulo': 'Carga reciente por encima de tu línea habitual',
+            'mensaje': 'La carga reciente ha cruzado una zona de prudencia. Hoy conviene mantener movimiento, pero reducir volumen e intensidad.',
+            'accion_label': 'Sesión reducida',
+            'puede_ejecutar_plan': True,
+            'permitido': ['Técnica sin carga extra', 'Cardio de baja intensidad', 'Movilidad', 'Volumen reducido (−30 %)'],
+            'evitar': ['Intensidad alta', 'Series al límite', 'Sled pesado', 'Piernas con carga alta'],
             'tags_restringidos': [],
             'estaciones_bloqueadas': [],
         }
@@ -329,6 +344,21 @@ def _crear_hyrox_decision(current_score, resumen_semanal=None, lesion_activa=Non
             'puede_ejecutar_plan': True,
             'permitido': ['Sesión planificada con RPE controlado', 'Recortar volumen si hace falta'],
             'evitar': ['Competir contra el reloj', 'Añadir trabajo extra'],
+            'tags_restringidos': [],
+            'estaciones_bloqueadas': [],
+        }
+
+    if current_score and current_score < 70:
+        return {
+            'estado': 'ejecutar_con_margen',
+            'causa': 'readiness_reducido',
+            'titulo': 'Ejecutar con margen',
+            'subtitulo': 'Disponibilidad fisiológica por debajo de tu línea habitual',
+            'mensaje': 'Las señales no piden parar, pero el margen no es amplio. Ejecuta lo previsto sin buscar límite.',
+            'accion_label': 'Sesión con margen',
+            'puede_ejecutar_plan': True,
+            'permitido': ['Sesión planificada', 'RPE controlado', 'Recortar accesorios si hace falta'],
+            'evitar': ['Perseguir récords', 'Añadir series extra', 'Competir contra el reloj'],
             'tags_restringidos': [],
             'estaciones_bloqueadas': [],
         }
@@ -421,36 +451,26 @@ def hyrox_dashboard(request):
             # Cruzar con BitacoraDiaria del día para ajustar por recuperación real
             _bitacora_fields = {}
             _recovery_delta = 0
+            _hrv_estado = 'sin_dato'
+            _energia_checkin = None
             try:
                 from clientes.models import BitacoraDiaria
                 from datetime import timedelta
+                from hyrox.services import calcular_delta_readiness_checkin
+
                 _bitacora = BitacoraDiaria.objects.filter(
                     cliente=objetivo_activo.cliente,
                     fecha__gte=hoy - timedelta(days=1),
                 ).order_by('-fecha').first()
                 if _bitacora:
-                    cal = _bitacora.calidad_sueno    # 0-100
+                    cal = _bitacora.calidad_sueno
                     hrs = float(_bitacora.horas_sueno or 0)
-                    ene = _bitacora.energia_subjetiva  # 0-10
+                    ene = _bitacora.energia_subjetiva
                     hrv_hoy = _bitacora.hrv_ms
+                    _energia_checkin = ene
 
-                    # Penalización sueño calidad
-                    if cal is not None:
-                        if cal < 40:   _recovery_delta -= 10
-                        elif cal < 60: _recovery_delta -= 5
-
-                    # Penalización horas
-                    if hrs > 0:
-                        if hrs < 5:   _recovery_delta -= 10
-                        elif hrs < 6: _recovery_delta -= 5
-                        elif hrs < 7: _recovery_delta -= 2
-
-                    # Penalización energía
-                    if ene is not None:
-                        if ene < 4:   _recovery_delta -= 8
-                        elif ene < 6: _recovery_delta -= 3
-
-                    # HRV: comparar con baseline personal (últimos 30 días)
+                    _hrv_baseline = None
+                    _hrv_ultimos_5 = []
                     if hrv_hoy:
                         _hrv_historial = list(
                             BitacoraDiaria.objects
@@ -460,17 +480,21 @@ def hyrox_dashboard(request):
                                 fecha__gte=hoy - timedelta(days=30),
                                 fecha__lt=hoy,
                             )
+                            .order_by('-fecha')
                             .values_list('hrv_ms', flat=True)
                         )
                         if len(_hrv_historial) >= 5:
                             _hrv_baseline = sum(_hrv_historial) / len(_hrv_historial)
-                            _hrv_ratio = hrv_hoy / _hrv_baseline
-                            if _hrv_ratio < 0.80:
-                                _recovery_delta -= 10   # caída significativa
-                            elif _hrv_ratio < 0.90:
-                                _recovery_delta -= 5    # caída leve
-                            elif _hrv_ratio > 1.10:
-                                _recovery_delta += 3    # recuperación óptima
+                            _hrv_ultimos_5 = list(_hrv_historial[:5])
+
+                    _recovery_delta, _hrv_estado = calcular_delta_readiness_checkin(
+                        calidad_sueno=cal,
+                        horas_sueno=hrs,
+                        energia=ene,
+                        hrv_hoy=hrv_hoy,
+                        hrv_baseline=_hrv_baseline,
+                        hrv_ultimos_5=_hrv_ultimos_5,
+                    )
 
                     _bitacora_fields = {
                         'calidad_sueno': cal,
@@ -1784,6 +1808,28 @@ def hyrox_dashboard(request):
     )
     context['hyrox_decision'] = hyrox_decision
 
+    # ── Lectura cualitativa de disponibilidad — panel "Estado de hoy" ─────────
+    try:
+        from hyrox.services import construir_lectura_disponibilidad
+        _tsb = None
+        _rs = context.get('resumen_semanal')
+        if isinstance(_rs, dict):
+            _tsb = _rs.get('tsb')
+        elif _rs:
+            _tsb = getattr(_rs, 'tsb', None)
+        context['lectura_disponibilidad'] = construir_lectura_disponibilidad(
+            estado=hyrox_decision.get('estado', 'empujar'),
+            calidad_sueno=_bitacora_fields.get('calidad_sueno'),
+            horas_sueno=_bitacora_fields.get('horas_sueno'),
+            energia=_energia_checkin,
+            hrv_estado=_hrv_estado,
+            gym_nota=_gym_nota,
+            gym_delta=_gym_delta,
+            tsb=_tsb,
+        )
+    except Exception:
+        context['lectura_disponibilidad'] = None
+
     # ── Lectura del sistema (determinística, después de hyrox_decision) ───────
     hyrox_system_reading = _build_hyrox_system_reading(
         hyrox_decision=hyrox_decision,
@@ -2377,6 +2423,7 @@ def registrar_entrenamiento(request, objective_id, session_id=None):
         'plan_original_snapshot': plan_original_snapshot if 'plan_original_snapshot' in locals() else [],
         'plan_elegido': plan_elegido if 'plan_elegido' in locals() else 'ajustado',
         'sf_stations': _sf_stations,
+        'modo_protegida': request.GET.get('modo') == 'protegida',
     })
 
 from django.http import JsonResponse

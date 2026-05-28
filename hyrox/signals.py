@@ -324,6 +324,20 @@ def autorregular_plan_futuro(sender, instance, created, update_fields=None, **kw
                     'readiness': log_hoy.score,
                 })
 
+        # JOI para estados intermedios: sesion_protegida y ejecutar_con_margen
+        try:
+            acwr = HyroxLoadManager.get_acwr(instance.objective)
+            if acwr is not None and 1.5 <= acwr <= 1.7:
+                generar_mensaje_joi(cliente, 'hyrox_sesion_protegida', {
+                    'acwr': round(acwr, 2),
+                })
+            elif log_hoy and 45 <= log_hoy.score < 70:
+                generar_mensaje_joi(cliente, 'hyrox_ejecutar_con_margen', {
+                    'readiness': log_hoy.score,
+                })
+        except Exception:
+            pass
+
         # Estancamiento por estación
         estancadas = _detectar_estancamiento_estaciones(instance)
         if estancadas:

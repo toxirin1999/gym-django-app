@@ -324,3 +324,237 @@ class TestHyroxDecisionExplicacionModulacion(TestCase):
         ss = {**_senal('alta')}
         d = _crear_hyrox_decision(**self._BUENAS, es_descanso_plan=True, senales_secundarias=ss)
         self.assertNotIn('explicacion_modulacion', d)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# calcular_delta_readiness_checkin — función pura
+# ─────────────────────────────────────────────────────────────────────────────
+from hyrox.services import calcular_delta_readiness_checkin
+
+
+def _baseline(valor=60.0):
+    return valor
+
+
+def _ultimos5(valor=60):
+    return [valor] * 5
+
+
+class TestCalcularDeltaReadinessCheckin(TestCase):
+    """calcular_delta_readiness_checkin es pura: sin ORM, sin efectos."""
+
+    # ── Sueño ──
+
+    def test_sueno_sin_datos_delta_cero(self):
+        delta, _ = calcular_delta_readiness_checkin(None, None, None, None, None, [])
+        self.assertEqual(delta, 0)
+
+    def test_sueno_menos_5h_penaliza_10(self):
+        delta, _ = calcular_delta_readiness_checkin(None, 4.5, None, None, None, [])
+        self.assertEqual(delta, -10)
+
+    def test_sueno_5h_a_6h_penaliza_5(self):
+        delta, _ = calcular_delta_readiness_checkin(None, 5.5, None, None, None, [])
+        self.assertEqual(delta, -5)
+
+    def test_sueno_6h_a_7h_penaliza_2(self):
+        delta, _ = calcular_delta_readiness_checkin(None, 6.5, None, None, None, [])
+        self.assertEqual(delta, -2)
+
+    def test_sueno_7h_o_mas_no_penaliza(self):
+        delta, _ = calcular_delta_readiness_checkin(None, 8.0, None, None, None, [])
+        self.assertEqual(delta, 0)
+
+    # ── Calidad sueño ──
+
+    def test_calidad_menos_40_penaliza_10(self):
+        delta, _ = calcular_delta_readiness_checkin(30, None, None, None, None, [])
+        self.assertEqual(delta, -10)
+
+    def test_calidad_40_a_60_penaliza_5(self):
+        delta, _ = calcular_delta_readiness_checkin(55, None, None, None, None, [])
+        self.assertEqual(delta, -5)
+
+    def test_calidad_60_o_mas_no_penaliza(self):
+        delta, _ = calcular_delta_readiness_checkin(75, None, None, None, None, [])
+        self.assertEqual(delta, 0)
+
+    # ── Energía ──
+
+    def test_energia_menos_4_penaliza_8(self):
+        delta, _ = calcular_delta_readiness_checkin(None, None, 3, None, None, [])
+        self.assertEqual(delta, -8)
+
+    def test_energia_4_a_6_penaliza_3(self):
+        delta, _ = calcular_delta_readiness_checkin(None, None, 5, None, None, [])
+        self.assertEqual(delta, -3)
+
+    def test_energia_6_o_mas_no_penaliza(self):
+        delta, _ = calcular_delta_readiness_checkin(None, None, 7, None, None, [])
+        self.assertEqual(delta, 0)
+
+    # ── HRV: sin dato suficiente ──
+
+    def test_hrv_sin_baseline_no_penaliza(self):
+        delta, estado = calcular_delta_readiness_checkin(None, None, None, 45, None, [])
+        self.assertEqual(delta, 0)
+        self.assertEqual(estado, 'sin_dato')
+
+    def test_hrv_menos_de_5_dias_no_penaliza(self):
+        delta, estado = calcular_delta_readiness_checkin(None, None, None, 45, 60.0, [50, 55, 48])
+        self.assertEqual(delta, 0)
+        self.assertEqual(estado, 'sin_dato')
+
+    # ── HRV: sin freno (> 110%) ──
+
+    def test_hrv_alta_no_bonifica(self):
+        # HRV hoy = 72 (120% de baseline 60) → sin penalización, sin bonus
+        delta, estado = calcular_delta_readiness_checkin(None, None, None, 72, 60.0, _ultimos5(60))
+        self.assertEqual(delta, 0)
+        self.assertEqual(estado, 'sin_freno')
+
+    # ── HRV: normal (90–110%) ──
+
+    def test_hrv_normal_no_penaliza(self):
+        delta, estado = calcular_delta_readiness_checkin(None, None, None, 57, 60.0, _ultimos5(60))
+        self.assertEqual(delta, 0)
+        self.assertEqual(estado, 'normal')
+
+    # ── HRV: leve (80–90%, 1 día) ──
+
+    def test_hrv_leve_un_dia_penaliza_2(self):
+        # Hoy = 51 (85%), últimos 5 todos normales (100%)
+        delta, estado = calcular_delta_readiness_checkin(None, None, None, 51, 60.0, _ultimos5(60))
+        self.assertEqual(delta, -2)
+        self.assertEqual(estado, 'leve')
+
+    # ── HRV: leve con tendencia (80–90%, ≥2 días) ──
+
+    def test_hrv_moderada_por_tendencia_penaliza_5(self):
+        # Hoy = 51 (85%), 3 de los 5 días anteriores también por debajo de 90%
+        ultimos5 = [51, 52, 53, 62, 63]  # 3 < 90% de baseline 60
+        delta, estado = calcular_delta_readiness_checkin(None, None, None, 51, 60.0, ultimos5)
+        self.assertEqual(delta, -5)
+        self.assertEqual(estado, 'moderada')
+
+    # ── HRV: caída fuerte (70–80%, 1 día) ──
+
+    def test_hrv_fuerte_un_dia_penaliza_5(self):
+        # Hoy = 45 (75%), últimos 5 normales
+        delta, estado = calcular_delta_readiness_checkin(None, None, None, 45, 60.0, _ultimos5(60))
+        self.assertEqual(delta, -5)
+        self.assertEqual(estado, 'moderada')
+
+    # ── HRV: caída fuerte con tendencia (70–80%, ≥2 días) ──
+
+    def test_hrv_marcada_por_tendencia_penaliza_10(self):
+        # Hoy = 45 (75%), 2 de los 5 días también < 80%
+        ultimos5 = [44, 45, 62, 63, 64]  # 2 < 80% de baseline 60
+        delta, estado = calcular_delta_readiness_checkin(None, None, None, 45, 60.0, ultimos5)
+        self.assertEqual(delta, -10)
+        self.assertEqual(estado, 'marcada')
+
+    # ── HRV: caída muy marcada (< 70%) ──
+
+    def test_hrv_menos_70_penaliza_10_aunque_sea_1_dia(self):
+        # Hoy = 38 (63%), últimos 5 normales — caída fuerte: no necesita tendencia
+        delta, estado = calcular_delta_readiness_checkin(None, None, None, 38, 60.0, _ultimos5(60))
+        self.assertEqual(delta, -10)
+        self.assertEqual(estado, 'marcada')
+
+    # ── Stacking con cap implícito ──
+
+    def test_stacking_severo_acumula_correctamente(self):
+        # 4h30 sueño (-10) + energía 3 (-8) + HRV 62% un día (-10)
+        delta, _ = calcular_delta_readiness_checkin(None, 4.5, 3, 37, 60.0, _ultimos5(60))
+        self.assertEqual(delta, -28)
+
+    def test_hrv_alta_no_compensa_sueno_malo(self):
+        # HRV alta no debe subir el delta; el sueño malo sigue penalizando
+        delta, estado = calcular_delta_readiness_checkin(None, 4.5, None, 72, 60.0, _ultimos5(60))
+        self.assertEqual(delta, -10)
+        self.assertEqual(estado, 'sin_freno')
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# _crear_hyrox_decision — estado ejecutar_con_margen
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestHyroxDecisionEjecutarConMargen(TestCase):
+    """readiness 45-69 produce estado ejecutar_con_margen."""
+
+    _BASE = dict(resumen_semanal={'tsb': 2, 'acwr': 0.9})
+
+    def test_score_45_produce_ejecutar_con_margen(self):
+        d = _crear_hyrox_decision(current_score=45, **self._BASE)
+        self.assertEqual(d['estado'], 'ejecutar_con_margen')
+
+    def test_score_69_produce_ejecutar_con_margen(self):
+        d = _crear_hyrox_decision(current_score=69, **self._BASE)
+        self.assertEqual(d['estado'], 'ejecutar_con_margen')
+
+    def test_score_70_produce_empujar(self):
+        d = _crear_hyrox_decision(current_score=70, **self._BASE)
+        self.assertEqual(d['estado'], 'empujar')
+
+    def test_score_44_produce_sostener(self):
+        d = _crear_hyrox_decision(current_score=44, **self._BASE)
+        self.assertEqual(d['estado'], 'sostener')
+
+    def test_ejecutar_con_margen_puede_ejecutar_plan(self):
+        d = _crear_hyrox_decision(current_score=60, **self._BASE)
+        self.assertTrue(d['puede_ejecutar_plan'])
+
+    def test_tsb_bajo_gana_a_ejecutar_con_margen(self):
+        # TSB ≤ -20 siempre produce recuperar, aunque score sea 60
+        d = _crear_hyrox_decision(current_score=60, resumen_semanal={'tsb': -22, 'acwr': 0.9})
+        self.assertEqual(d['estado'], 'recuperar')
+        self.assertEqual(d['causa'], 'fatiga')
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# _crear_hyrox_decision — sesion_protegida (ACWR 1.5–1.7)
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestHyroxDecisionSesionProtegida(TestCase):
+    """ACWR 1.5–1.7 produce sesion_protegida. ACWR > 1.7 produce recuperar."""
+
+    def _d(self, acwr, tsb=-5, score=80):
+        return _crear_hyrox_decision(current_score=score, resumen_semanal={'tsb': tsb, 'acwr': acwr})
+
+    def test_acwr_1_5_produce_sesion_protegida(self):
+        self.assertEqual(self._d(acwr=1.5)['estado'], 'sesion_protegida')
+
+    def test_acwr_1_7_produce_sesion_protegida(self):
+        self.assertEqual(self._d(acwr=1.7)['estado'], 'sesion_protegida')
+
+    def test_acwr_encima_1_7_produce_recuperar(self):
+        d = self._d(acwr=1.71)
+        self.assertEqual(d['estado'], 'recuperar')
+        self.assertEqual(d['causa'], 'carga')
+
+    def test_sesion_protegida_puede_ejecutar_plan(self):
+        self.assertTrue(self._d(acwr=1.6)['puede_ejecutar_plan'])
+
+    def test_recuperar_por_carga_no_puede_ejecutar_plan(self):
+        self.assertFalse(self._d(acwr=1.8)['puede_ejecutar_plan'])
+
+    def test_tsb_critico_gana_a_sesion_protegida(self):
+        d = self._d(acwr=1.6, tsb=-22)
+        self.assertEqual(d['estado'], 'recuperar')
+        self.assertEqual(d['causa'], 'fatiga')
+
+    def test_acwr_bajo_1_5_no_activa_sesion_protegida(self):
+        self.assertNotEqual(self._d(acwr=1.49)['estado'], 'sesion_protegida')
+
+    def test_lesion_gana_a_sesion_protegida(self):
+        from unittest.mock import MagicMock
+        lesion = MagicMock()
+        lesion.zona_afectada = 'rodilla'
+        lesion.tags_restringidos = []
+        d = _crear_hyrox_decision(
+            current_score=80,
+            resumen_semanal={'tsb': -5, 'acwr': 1.6},
+            lesion_activa=lesion,
+        )
+        self.assertEqual(d['causa'], 'lesion')
