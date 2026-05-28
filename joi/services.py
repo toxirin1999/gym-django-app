@@ -634,6 +634,20 @@ def _prompt_apertura_manana(ctx: dict, datos_extra: dict) -> str:
         "NO interpretes la bajada de volumen gym como ausencia o abandono. "
     ) if usuario_activo else ""
 
+    # Presencia relacional — personas que reaparecen en el diario reciente
+    # Label obligatorio: JOI observa frecuencia, no interpreta ni etiqueta.
+    for p in ctx.get('presencia_relacional', []):
+        if p['dias_desde'] <= 3:
+            ref_tiempo = "recientemente"
+        elif p['dias_desde'] <= 7:
+            ref_tiempo = "esta semana"
+        else:
+            ref_tiempo = f"hace {p['dias_desde']} días"
+        hechos.append(
+            f"[Presencia relacional — frecuencia en diario, no juicio sobre la persona ni sobre el usuario]: "
+            f"{p['nombre']} aparece {p['veces']}x en el diario reciente (última vez {ref_tiempo})."
+        )
+
     # Cierre de ayer — lo que David escribió anoche
     cierre = ctx.get('cierre_ayer')
     cierre_txt = ""

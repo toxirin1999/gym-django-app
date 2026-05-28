@@ -3539,13 +3539,62 @@ def check_simbiosis_api(request):
 
 def _generar_pregunta_simbiosis(persona_nombre, request):
     try:
-        from joi.services import _llamar_haiku, SYSTEM_PROMPT
+        from joi.services import _llamar_haiku
+        from datetime import date as _date, timedelta as _td
+
+        hace_30 = _date.today() - _td(days=30)
+
+        # Cierres recientes donde aparece esta persona
+        entradas = (
+            ProsocheDiario.objects
+            .filter(
+                prosoche_mes__usuario=request.user,
+                fecha__gte=hace_30,
+                reflexiones_dia__icontains=persona_nombre,
+            )
+            .exclude(reflexiones_dia='')
+            .order_by('-fecha')[:3]
+        )
+        fragmentos_cierres = [
+            f"- [{e.fecha}]: {e.reflexiones_dia[:200]}"
+            for e in entradas
+        ]
+
+        # Respuestas anteriores del usuario al bloqueo sobre esta persona
+        respuestas_previas = (
+            ReflexionLibre.objects
+            .filter(usuario=request.user, titulo__startswith=f'Simbiosis: {persona_nombre}')
+            .order_by('-fecha')[:2]
+        )
+        fragmentos_respuestas = [
+            f"- [{r.fecha.date()}]: {r.contenido[:200]}"
+            for r in respuestas_previas
+        ]
+
+        contexto_historico = ''
+        if fragmentos_cierres:
+            contexto_historico += (
+                f"\nApariciones recientes de {persona_nombre} en los cierres de David:\n"
+                + "\n".join(fragmentos_cierres)
+            )
+        if fragmentos_respuestas:
+            contexto_historico += (
+                f"\n\nRespuestas anteriores de David al bloqueo sobre {persona_nombre}:\n"
+                + "\n".join(fragmentos_respuestas)
+            )
+
+        instruccion_historial = (
+            "Usa el historial: no repitas preguntas anteriores y nota si hay un patrón "
+            "(espera, nostalgia, conflicto sin cerrar, búsqueda de validación, etc.)."
+            if contexto_historico else
+            "No hay historial previo. Genera una pregunta directa e incómoda."
+        )
+
         prompt = (
-            f"David ha mencionado a '{persona_nombre}' en su diario 3 días seguidos.\n\n"
-            f"Genera UNA sola pregunta que le obligue a reflexionar:\n"
-            f"'¿Qué quieres de {persona_nombre} que no te estés dando a ti mismo?'\n\n"
-            f"La pregunta debe ser incómoda, directa, sin suavizar. Máximo 20 palabras. "
-            f"Varía el enfoque — no uses siempre la misma frase. Solo la pregunta."
+            f"David ha mencionado a '{persona_nombre}' en su cierre de hoy.\n"
+            f"{contexto_historico}\n\n"
+            f"Genera UNA sola pregunta de reflexión. {instruccion_historial}\n"
+            f"Máximo 20 palabras. Solo la pregunta, sin explicación."
         )
         return _llamar_haiku(prompt)
     except Exception:
