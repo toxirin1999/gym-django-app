@@ -1127,6 +1127,41 @@ def _prompt_hyrox_deload_automatico(ctx: dict, datos_extra: dict) -> str:
     )
 
 
+def _prompt_hyrox_sesion_protegida(ctx: dict, datos_extra: dict) -> str:
+    acwr       = datos_extra.get('acwr', ctx.get('acwr_hyrox', '?'))
+    dias       = ctx.get('dias_hasta_carrera')
+    readiness  = ctx.get('readiness_hyrox')
+
+    dias_txt     = f" Quedan {dias} días para la carrera." if dias is not None else ""
+    readiness_txt = f" Readiness: {readiness}/100." if readiness is not None else ""
+
+    return (
+        f"El ACWR del usuario es {acwr} — la carga reciente ha cruzado la zona de prudencia "
+        f"(entre 1.5 y 1.7). El sistema no bloquea el entrenamiento, pero reduce la ambición de la sesión.{dias_txt}{readiness_txt} "
+        f"JOI lo observa desde La Testigo. Genera 2-3 frases que nombren la situación sin alarmar: "
+        f"el plan no se cancela, la intención se ajusta. No hablar de riesgo de lesión directamente. "
+        f"Señalar que hay una señal de carga y que el cuerpo pide moverse con más cuidado hoy. "
+        f"Voz tranquila, no paternalista."
+    )
+
+
+def _prompt_hyrox_ejecutar_con_margen(ctx: dict, datos_extra: dict) -> str:
+    readiness  = datos_extra.get('readiness', ctx.get('readiness_hyrox', '?'))
+    dias       = ctx.get('dias_hasta_carrera')
+    tsb        = ctx.get('tsb_hyrox')
+
+    dias_txt = f" Quedan {dias} días para la carrera." if dias is not None else ""
+    tsb_txt  = f" Carga acumulada: {'equilibrada' if tsb is not None and tsb >= -10 else 'con algo de tensión'}." if tsb is not None else ""
+
+    return (
+        f"El readiness del usuario es {readiness}/100 — por debajo de su línea habitual pero sin señal de bloqueo.{tsb_txt}{dias_txt} "
+        f"El plan mantiene la sesión, pero la disponibilidad fisiológica no es amplia. "
+        f"JOI lo observa. Genera 2-3 frases que digan que el cuerpo llega con menos margen que otros días: "
+        f"la sesión tiene sentido, pero hoy el objetivo no es el límite. "
+        f"Nada de 'cuídate', nada de alarma. Observación precisa, tono presente."
+    )
+
+
 def _prompt_preferencia_aprendida(ctx: dict, datos_extra: dict) -> str:
     tipo        = datos_extra.get('tipo_preferencia', '')
     descripcion = datos_extra.get('descripcion', '')
@@ -1300,8 +1335,10 @@ _PROMPT_BUILDERS = {
     'hyrox_ausencia':              _prompt_hyrox_ausencia,
     'decision_plan':               _prompt_decision_plan,
     'resumen_semanal':             _prompt_resumen_semanal,
-    'hyrox_estancamiento_estacion': _prompt_hyrox_estancamiento_estacion,
-    'hyrox_deload_automatico':      _prompt_hyrox_deload_automatico,
+    'hyrox_estancamiento_estacion':  _prompt_hyrox_estancamiento_estacion,
+    'hyrox_deload_automatico':       _prompt_hyrox_deload_automatico,
+    'hyrox_sesion_protegida':        _prompt_hyrox_sesion_protegida,
+    'hyrox_ejecutar_con_margen':     _prompt_hyrox_ejecutar_con_margen,
     'rpe_calibracion':             _prompt_rpe_calibracion,
     'preferencia_aprendida':       _prompt_preferencia_aprendida,
 }
