@@ -162,4 +162,28 @@ def build_life_context(cliente, hoy: date, semana_reciente: date, acwr=None) -> 
     except Exception:
         pass
 
+    # Presencia relacional — personas recurrentes en el diario reciente
+    try:
+        from diario.models import PersonaImportante
+        hace_14 = hoy - timedelta(days=14)
+        personas = list(
+            PersonaImportante.objects
+            .filter(usuario=cliente.user, veces_mencionada__gte=2, ultima_deteccion__gte=hace_14)
+            .order_by('-veces_mencionada', '-ultima_deteccion')
+            [:3]
+            .values('nombre', 'veces_mencionada', 'ultima_deteccion', 'tipo_relacion')
+        )
+        if personas:
+            ctx['presencia_relacional'] = [
+                {
+                    'nombre':           p['nombre'],
+                    'veces':            p['veces_mencionada'],
+                    'dias_desde':       (hoy - p['ultima_deteccion']).days,
+                    'tipo_relacion':    p['tipo_relacion'],
+                }
+                for p in personas
+            ]
+    except Exception:
+        pass
+
     return ctx
