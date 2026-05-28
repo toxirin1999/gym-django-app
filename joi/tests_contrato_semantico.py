@@ -163,3 +163,41 @@ class TestContratoSemanticoJOI(TestCase):
         txt = "Llevas días con algo encima."
         r = validar_semantica_joi(txt, modulo='diario')
         self.assertEqual(r['texto'], txt)
+
+
+# ── 8. Necesidad corporal como autoridad (Phase 56.16) ───────────────────────
+
+class ContratoNecesidadCorporal(TestCase):
+    """
+    JOI no declara necesidades del cuerpo como autoridad.
+    Lee márgenes; no prescribe.
+
+    Rule: "tu cuerpo necesita X" → violación necesidad_corporal.
+          "hay margen para moverse" → válido.
+    """
+
+    def test_tu_cuerpo_necesita_es_violacion(self):
+        """'Tu cuerpo necesita movimiento' prescribe — debe detectarse."""
+        txt = "Tu cuerpo necesita movimiento después de días de carga baja."
+        r = validar_semantica_joi(txt, modulo='gym')
+        self.assertFalse(r['valida'])
+        self.assertTrue(any('necesidad_corporal' in v for v in r['violaciones']))
+
+    def test_necesitas_descansar_es_violacion(self):
+        """'Necesitas descansar' es autoridad directa — debe detectarse."""
+        txt = "Necesitas descansar hoy; el plan lo confirma."
+        r = validar_semantica_joi(txt, modulo='gym')
+        self.assertFalse(r['valida'])
+        self.assertTrue(any('necesidad_corporal' in v for v in r['violaciones']))
+
+    def test_hay_margen_para_moverse_es_valido(self):
+        """'Hay margen para moverse' es lectura — no es violación."""
+        txt = "Después de días con carga más contenida, hay margen para moverte sin forzar."
+        r = validar_semantica_joi(txt, modulo='gym')
+        self.assertTrue(r['valida'], msg=f"Violaciones inesperadas: {r['violaciones']}")
+
+    def test_el_plan_ve_margen_es_valido(self):
+        """'El plan ve margen' es observacional — no es violación."""
+        txt = "El plan ve margen para entrenar hoy. El cuerpo parece disponible."
+        r = validar_semantica_joi(txt, modulo='gym')
+        self.assertTrue(r['valida'], msg=f"Violaciones inesperadas: {r['violaciones']}")
