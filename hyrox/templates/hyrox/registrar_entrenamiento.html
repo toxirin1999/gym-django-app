@@ -700,6 +700,12 @@
 </head>
 <body>
 
+{% if modo_protegida %}
+<div style="background:oklch(0.72 0.17 70);color:#0F0F0E;padding:7px 16px;font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;display:flex;align-items:center;gap:8px;flex-shrink:0;">
+  <span>⚠</span>
+  <span>Sesión protegida — Reduce volumen e intensidad. La carga reciente supera tu línea habitual.</span>
+</div>
+{% endif %}
 <form method="post" id="rb-form" class="rb-stage">
   {% csrf_token %}
   <div style="display:none">{{ form.titulo }}</div>

@@ -2973,3 +2973,153 @@ class HyroxRaceIntelligence:
             'mensaje': 'Tus métricas permiten entrenar con intención. Mantén el plan y respeta el RPE previsto.',
             'accion': 'Ejecuta la sesión planificada.',
         }
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Readiness checkin delta — función pura, testeable sin ORM
+# ─────────────────────────────────────────────────────────────────────────────
+
+def calcular_delta_readiness_checkin(
+    calidad_sueno,   # int 0-100 or None
+    horas_sueno,     # float or None
+    energia,         # int 0-10 or None
+    hrv_hoy,         # int ms or None
+    hrv_baseline,    # float or None — media 30 días previos
+    hrv_ultimos_5,   # list[int] — HRV de los 5 días previos (sin incluir hoy)
+):
+    """
+    Calcula el delta de penalización sobre el Race Readiness Score a partir del
+    check-in matutino. Devuelve (delta: int, hrv_estado: str).
+
+    hrv_estado: 'sin_dato' | 'sin_freno' | 'normal' | 'leve' | 'moderada' | 'marcada'
+
+    Reglas HRV:
+    - ratio ≥ 0.90 → sin penalización ('sin_freno' si > 1.10, 'normal' si 0.90–1.10)
+    - 0.80 ≤ ratio < 0.90 → -2 (1 día) / -5 (≥2 de últimos 5 por debajo de 0.90)
+    - 0.70 ≤ ratio < 0.80 → -5 (1 día) / -10 (≥2 de últimos 5 por debajo de 0.80)
+    - ratio < 0.70 → -10 siempre (caída marcada, no necesita tendencia)
+    """
+    delta = 0
+
+    if calidad_sueno is not None:
+        if calidad_sueno < 40:
+            delta -= 10
+        elif calidad_sueno < 60:
+            delta -= 5
+
+    if horas_sueno and horas_sueno > 0:
+        if horas_sueno < 5:
+            delta -= 10
+        elif horas_sueno < 6:
+            delta -= 5
+        elif horas_sueno < 7:
+            delta -= 2
+
+    if energia is not None:
+        if energia < 4:
+            delta -= 8
+        elif energia < 6:
+            delta -= 3
+
+    hrv_estado = 'sin_dato'
+    if hrv_hoy and hrv_baseline and hrv_baseline > 0 and len(hrv_ultimos_5) >= 5:
+        ratio = hrv_hoy / hrv_baseline
+
+        if ratio > 1.10:
+            hrv_estado = 'sin_freno'
+        elif ratio >= 0.90:
+            hrv_estado = 'normal'
+        elif ratio >= 0.80:
+            dias_bajo = sum(1 for v in hrv_ultimos_5 if v / hrv_baseline < 0.90)
+            if dias_bajo >= 2:
+                delta -= 5
+                hrv_estado = 'moderada'
+            else:
+                delta -= 2
+                hrv_estado = 'leve'
+        elif ratio >= 0.70:
+            dias_bajo = sum(1 for v in hrv_ultimos_5 if v / hrv_baseline < 0.80)
+            if dias_bajo >= 2:
+                delta -= 10
+                hrv_estado = 'marcada'
+            else:
+                delta -= 5
+                hrv_estado = 'moderada'
+        else:
+            delta -= 10
+            hrv_estado = 'marcada'
+
+    return delta, hrv_estado
+
+
+def construir_lectura_disponibilidad(
+    estado,         # str: estado de hyrox_decision
+    calidad_sueno,  # int 0-100 or None
+    horas_sueno,    # float or None
+    energia,        # int 0-10 or None
+    hrv_estado,     # str: de calcular_delta_readiness_checkin
+    gym_nota,       # str or None
+    gym_delta,      # int ≤ 0
+    tsb,            # float or None
+):
+    """
+    Devuelve la lectura cualitativa del día para el panel 'Estado de hoy'.
+    Sin números crudos. Primera capa: frase + señales legibles.
+    """
+    _FRASES = {
+        'recuperar':          'Las señales de recuperación están por debajo del umbral mínimo. El cuerpo no llega listo para carga.',
+        'sesion_protegida':   'La carga acumulada cruza tu línea habitual. El cuerpo puede moverse, pero no absorber más tensión hoy.',
+        'sostener':           'El margen fisiológico es estrecho. Las señales no bloquean, pero tampoco sobran.',
+        'ejecutar_con_margen':'Las señales no piden parar, pero el margen no es amplio. El cuerpo llega con menos holgura de lo habitual.',
+        'empujar':            'Las señales de recuperación acompañan. El cuerpo llega sin restricción fisiológica aparente.',
+    }
+    frase = _FRASES.get(estado, 'Señales recogidas.')
+
+    senales = []
+
+    if horas_sueno and horas_sueno > 0:
+        if horas_sueno < 5:
+            senales.append({'label': 'Sueño', 'valor': 'Muy corto', 'nivel': 'bajo'})
+        elif horas_sueno < 6:
+            senales.append({'label': 'Sueño', 'valor': 'Corto', 'nivel': 'bajo'})
+        elif horas_sueno < 7:
+            senales.append({'label': 'Sueño', 'valor': 'Reducido', 'nivel': 'medio'})
+        else:
+            senales.append({'label': 'Sueño', 'valor': 'Adecuado', 'nivel': 'ok'})
+    elif calidad_sueno is not None:
+        if calidad_sueno < 40:
+            senales.append({'label': 'Sueño', 'valor': 'Mala calidad', 'nivel': 'bajo'})
+        elif calidad_sueno < 60:
+            senales.append({'label': 'Sueño', 'valor': 'Calidad reducida', 'nivel': 'medio'})
+        else:
+            senales.append({'label': 'Sueño', 'valor': 'Buena calidad', 'nivel': 'ok'})
+
+    if energia is not None:
+        if energia < 4:
+            senales.append({'label': 'Energía', 'valor': 'Baja', 'nivel': 'bajo'})
+        elif energia < 6:
+            senales.append({'label': 'Energía', 'valor': 'Media', 'nivel': 'medio'})
+        else:
+            senales.append({'label': 'Energía', 'valor': 'Buena', 'nivel': 'ok'})
+
+    _HRV_LABELS = {
+        'sin_freno': ('Por encima de tu línea', 'ok'),
+        'normal':    ('En tu línea habitual',   'ok'),
+        'leve':      ('Ligeramente bajo tu línea', 'medio'),
+        'moderada':  ('Por debajo de tu línea reciente', 'bajo'),
+        'marcada':   ('Caída notable respecto a tu línea', 'bajo'),
+    }
+    if hrv_estado in _HRV_LABELS:
+        valor, nivel = _HRV_LABELS[hrv_estado]
+        senales.append({'label': 'HRV', 'valor': valor, 'nivel': nivel})
+
+    if gym_delta and gym_delta <= -8:
+        senales.append({'label': 'Carga reciente', 'valor': 'Alta', 'nivel': 'bajo'})
+    elif gym_nota or (tsb is not None and tsb <= -10):
+        senales.append({'label': 'Carga reciente', 'valor': 'Elevada', 'nivel': 'medio'})
+    elif tsb is not None and tsb <= -5:
+        senales.append({'label': 'Carga reciente', 'valor': 'Moderada', 'nivel': 'medio'})
+    else:
+        senales.append({'label': 'Carga reciente', 'valor': 'Controlada', 'nivel': 'ok'})
+
+    return {'frase': frase, 'senales': senales}

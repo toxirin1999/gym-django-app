@@ -12,7 +12,7 @@ Hay tres subagentes en `.claude/agents/`. Úsalos para optimizar coste y velocid
 |---|---|---|
 | `haiku-explorer` | claude-haiku-4-5 | ~20× más barato que Opus |
 | `sonnet-builder` | claude-sonnet-4-6 | ~4× más barato que Opus |
-| `opus-architect` | claude-opus-4-7 | Máximo coste — reservar |
+| `opus-architect` | claude-opus-4-8 | Máximo coste — reservar |
 
 ### Reglas de delegación
 

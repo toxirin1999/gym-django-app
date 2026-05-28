@@ -547,16 +547,27 @@ a.rb-dia:hover { background: var(--bg-3); text-decoration: none; }
 
 /* ── HYROX DECISION ──────────────────────────── */
 .hd-decision { padding: 16px; background: var(--bg-2); border: 1px solid var(--line); border-left: 4px solid var(--accent); border-radius: 2px; }
-.hd-decision--recuperar { border-left-color: var(--danger); }
-.hd-decision--sostener  { border-left-color: var(--warn); }
-.hd-decision--empujar   { border-left-color: var(--ok); }
-.hd-decision--volver    { border-left-color: #60a5fa; }
+.hd-decision--recuperar        { border-left-color: var(--danger); }
+.hd-decision--sesion_protegida { border-left-color: #f97316; }
+.hd-decision--sostener         { border-left-color: var(--warn); }
+.hd-decision--ejecutar_con_margen { border-left-color: #64748b; }
+.hd-decision--empujar          { border-left-color: var(--ok); }
+.hd-decision--volver           { border-left-color: #60a5fa; }
 .hd-decision-kicker { display: flex; align-items: center; gap: 6px; font-family: var(--font-mono); font-size: 9px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--fg-mute); margin-bottom: 6px; }
 .hd-decision-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
 .hd-decision-title { font-family: var(--font-disp); font-size: 22px; text-transform: uppercase; letter-spacing: .02em; margin: 0 0 2px; color: var(--fg); }
 .hd-decision-sub { font-family: var(--font-mono); font-size: 9px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--fg-mute); margin: 0 0 8px; }
 .hd-decision-msg { font-size: 13px; line-height: 1.5; color: var(--fg-dim); margin: 0 0 12px; }
 .hd-decision-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+.hd-senales { display: flex; flex-direction: column; gap: 6px; margin: 0 0 14px; }
+.hd-senal-row { display: flex; justify-content: space-between; align-items: baseline; padding: 4px 0; border-bottom: 1px solid var(--line); }
+.hd-senal-row:last-child { border-bottom: none; }
+.hd-senal-label { font-family: var(--font-mono); font-size: 10px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--fg-mute); }
+.hd-senal-valor { font-family: var(--font-body); font-size: 12px; }
+.hd-senal--ok   { color: #22c55e; }
+.hd-senal--medio { color: #f59e0b; }
+.hd-senal--bajo  { color: #f97316; }
+.hd-senal-sep { height: 1px; background: var(--line); margin: 10px 0 14px; }
 .hd-mini-lbl { font-family: var(--font-mono); font-size: 9px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--fg-mute); margin-bottom: 5px; }
 .hd-mini-ok  { font-family: var(--font-mono); font-size: 10px; line-height: 1.7; color: var(--ok); }
 .hd-mini-bad { font-family: var(--font-mono); font-size: 10px; line-height: 1.7; color: var(--danger); }
@@ -742,8 +753,24 @@ function joiHyroxCerrar(id) {
 <section class="hd-decision hd-decision--{{ hyrox_decision.estado }}">
   <div class="hd-decision-kicker">
     <span class="hd-decision-dot"></span>
-    Decisión del día
+    Estado de hoy
   </div>
+
+  {% if lectura_disponibilidad %}
+  <p class="hd-decision-msg">{{ lectura_disponibilidad.frase }}</p>
+  {% if lectura_disponibilidad.senales %}
+  <div class="hd-senales">
+    {% for s in lectura_disponibilidad.senales %}
+    <div class="hd-senal-row">
+      <span class="hd-senal-label">{{ s.label }}</span>
+      <span class="hd-senal-valor hd-senal--{{ s.nivel }}">{{ s.valor }}</span>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+  <div class="hd-senal-sep"></div>
+  {% endif %}
+
   <h2 class="hd-decision-title">{{ hyrox_decision.titulo }}</h2>
   <p class="hd-decision-sub">{{ hyrox_decision.subtitulo }}</p>
   <p class="hd-decision-msg">{{ hyrox_decision.mensaje }}</p>
@@ -760,7 +787,7 @@ function joiHyroxCerrar(id) {
   <div class="hd-decision-grid">
     {% if hyrox_decision.permitido %}
     <div>
-      <div class="hd-mini-lbl">Permitido</div>
+      <div class="hd-mini-lbl">Hoy conviene</div>
       {% for item in hyrox_decision.permitido %}
       <div class="hd-mini-ok">→ {{ item }}</div>
       {% endfor %}
@@ -777,7 +804,7 @@ function joiHyroxCerrar(id) {
   </div>
   {% endif %}
   {% if hyrox_decision.puede_ejecutar_plan and objetivo_activo %}
-  <a href="{% url 'hyrox:registrar_entrenamiento' objective_id=objetivo_activo.id %}" class="hd-decision-action">{{ hyrox_decision.accion_label }}</a>
+  <a href="{% url 'hyrox:registrar_entrenamiento' objective_id=objetivo_activo.id %}{% if hyrox_decision.estado == 'sesion_protegida' %}?modo=protegida{% endif %}" class="hd-decision-action">{{ hyrox_decision.accion_label }}</a>
   {% else %}
   <div class="hd-decision-action" style="opacity:.5;cursor:default;">{{ hyrox_decision.accion_label }}</div>
   {% endif %}
