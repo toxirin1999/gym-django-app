@@ -314,6 +314,19 @@ def joi_mensaje_pr(sender, instance, created, raw=False, **kwargs):
     if raw or not created or instance.superado:
         return
     try:
+        from django.core.cache import cache as _cache
+        import datetime as _dt
+        _fecha = getattr(instance, 'fecha', None) or _dt.date.today()
+        _lock = (
+            f'joi_pr_lock_{instance.cliente_id}'
+            f'_{instance.ejercicio_nombre}'
+            f'_{_fecha}'
+            f'_{instance.valor}'
+        )
+        if _cache.get(_lock):
+            return
+        _cache.set(_lock, True, 86400)  # 24h — un PR concreto solo genera 1 mensaje al día
+
         from joi.services import generar_mensaje_joi
         generar_mensaje_joi(
             cliente=instance.cliente,

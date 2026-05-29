@@ -210,3 +210,40 @@ class TestEscenario10_LenguajeGeneral(PanelUXBase):
         for clave, texto in _MENSAJES_PROGRESION.items():
             for termino in ['fallaste', 'fracaso', 'incumpliste', 'modo_reducido']:
                 self.assertNotIn(termino, texto.lower(), msg=f"Mensaje '{clave}' contiene '{termino}'")
+
+
+# ── Escenario 11: Bib card — métricas career (Phase 56.17) ───────────────────
+
+class TestEscenario11_BibSesiones(PanelUXBase):
+    """
+    The bib card must show the real career session count, not 0.
+    entrenos_count must be in the view context whenever there are sessions.
+    """
+
+    def _get(self):
+        from django.test import Client as DjangoClient
+        from django.urls import reverse
+        c = DjangoClient()
+        c.login(username='tester_ux14', password='x')
+        return c.get(reverse('clientes:mockup_demo'))
+
+    def test_entrenos_count_en_contexto_sin_sesiones(self):
+        """Con 0 entrenos, entrenos_count=0 en contexto (no ausente)."""
+        response = self._get()
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('entrenos_count', response.context,
+                      "entrenos_count debe estar siempre en el contexto del bib")
+        self.assertEqual(response.context['entrenos_count'], 0)
+
+    def test_entrenos_count_refleja_sesiones_reales(self):
+        """Con 2 entrenos creados, entrenos_count=2."""
+        from entrenos.models import EntrenoRealizado
+        from rutinas.models import Rutina
+        rutina, _ = Rutina.objects.get_or_create(nombre='_test_bib56')
+        EntrenoRealizado.objects.create(cliente=self.cliente, rutina=rutina, fecha=self.hoy)
+        EntrenoRealizado.objects.create(cliente=self.cliente, rutina=rutina,
+                                        fecha=self.hoy - __import__('datetime').timedelta(days=1))
+        response = self._get()
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['entrenos_count'], 2,
+                         "entrenos_count debe reflejar las sesiones reales, no mostrar 0")
