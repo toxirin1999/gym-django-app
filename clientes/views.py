@@ -1571,6 +1571,10 @@ def mockup_demo(request):
         semaforo = None
     context['semaforo'] = semaforo
 
+    # Bib stats — career totals
+    from entrenos.models import EntrenoRealizado as _ER
+    context['entrenos_count'] = _ER.objects.filter(cliente=cliente).count()
+
     return render(request, 'clientes/mockup_demo.html', context)
 
 
