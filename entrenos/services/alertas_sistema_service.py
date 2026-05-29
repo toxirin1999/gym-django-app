@@ -121,9 +121,11 @@ def get_alertas_sistema(cliente):
                 'farmer': 'Farmers Carry', 'sandbag': 'Sandbag Lunges', 'wall ball': 'Wall Balls',
             }
             _TIPOS = ('hyrox_station', 'ergometro', 'skierg', 'remo')
+            _hace_8_semanas = hoy - timedelta(weeks=8)
             acts = (HyroxActivity.objects
                     .filter(sesion__objective=obj, sesion__estado='completado',
-                            tipo_actividad__in=_TIPOS)
+                            tipo_actividad__in=_TIPOS,
+                            sesion__fecha__gte=_hace_8_semanas)
                     .exclude(data_metricas={})
                     .select_related('sesion').order_by('sesion__fecha'))
             tiempos = {}

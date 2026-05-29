@@ -201,3 +201,42 @@ class ContratoNecesidadCorporal(TestCase):
         txt = "El plan ve margen para entrenar hoy. El cuerpo parece disponible."
         r = validar_semantica_joi(txt, modulo='gym')
         self.assertTrue(r['valida'], msg=f"Violaciones inesperadas: {r['violaciones']}")
+
+
+# ── 9. Vocabulario de alarma para readiness medio (Phase 56.18) ──────────────
+
+class ContratoVocabularioAlarmaReadiness(TestCase):
+    """
+    Readiness 55-79 ('disponible con reserva' / 'disponible con margen') no es alarma.
+    Frases como 'sin colchón', 'llega justo', 'al límite' son inapropiadas sin señal fuerte
+    concurrente.
+    """
+
+    def test_sin_colchon_es_violacion(self):
+        """'Sin colchón' describe escasez donde hay reserva moderada — debe detectarse."""
+        txt = "Readiness a 69: estás sin colchón para aguantar la sesión."
+        r = validar_semantica_joi(txt, modulo='hyrox')
+        self.assertFalse(r['valida'])
+        self.assertTrue(any('vocabulario_alarma_readiness' in v for v in r['violaciones']))
+
+    def test_llega_justo_es_violacion(self):
+        txt = "Con 67 de readiness, llegas justo para completar el entreno."
+        r = validar_semantica_joi(txt, modulo='hyrox')
+        self.assertFalse(r['valida'])
+        self.assertTrue(any('vocabulario_alarma_readiness' in v for v in r['violaciones']))
+
+    def test_al_limite_es_violacion(self):
+        txt = "Estás al límite de lo que el cuerpo puede dar hoy."
+        r = validar_semantica_joi(txt, modulo='gym')
+        self.assertFalse(r['valida'])
+        self.assertTrue(any('vocabulario_alarma_readiness' in v for v in r['violaciones']))
+
+    def test_disponible_con_reserva_es_valido(self):
+        txt = "Readiness en rango medio: disponible con reserva. El plan lo recoge así."
+        r = validar_semantica_joi(txt, modulo='hyrox')
+        self.assertTrue(r['valida'], msg=f"Violaciones inesperadas: {r['violaciones']}")
+
+    def test_margen_moderado_es_valido(self):
+        txt = "Hay margen moderado hoy. No el mejor momento para un pico, pero la sesión tiene base."
+        r = validar_semantica_joi(txt, modulo='gym')
+        self.assertTrue(r['valida'], msg=f"Violaciones inesperadas: {r['violaciones']}")
