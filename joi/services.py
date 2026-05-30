@@ -1384,37 +1384,65 @@ def _prompt_poda_manual(ctx: dict, datos_extra: dict) -> str:
 _PROMPT_BUILDERS['poda_manual'] = _prompt_poda_manual
 
 
+_ACCION_HUMANA = {
+    'subir_peso':        'subió el peso',
+    'mantener':          'mantuvo la carga',
+    'cambiar_variante':  'cambió el ejercicio',
+    'reducir_volumen':   'redujo el volumen',
+    'reducir_carga':     'bajó la carga',
+    'aumentar_reps':     'aumentó las repeticiones',
+    'bloquear_subida':   'bloqueó la progresión',
+}
+
+_TEND_HUMANA = {
+    'subiendo': 'el esfuerzo percibido lleva semanas subiendo — el cuerpo acumula',
+    'bajando':  'el esfuerzo percibido lleva semanas bajando — puede ser adaptación o que el cuerpo ya no grita',
+    'estable':  'el esfuerzo percibido se mantiene constante',
+}
+
+
 def _prompt_lectura_plan(ctx: dict, datos_extra: dict) -> str:
-    rpe_sem   = ctx.get('rpe_gym_semanas') or []
     rpe_tend  = ctx.get('rpe_tendencia', '')
     estanc    = ctx.get('estancamientos_activos') or []
     prs       = ctx.get('prs_semana') or []
     dec       = (ctx.get('decisiones_plan') or {}).get('recientes') or []
 
     bloques = []
-    if rpe_sem:
-        vals = [str(r) if r else '—' for r in rpe_sem]
-        bloques.append(f"RPE las últimas semanas: {' → '.join(vals)} ({rpe_tend or 'estable'})")
+
+    if rpe_tend and rpe_tend != 'estable':
+        bloques.append(_TEND_HUMANA.get(rpe_tend, ''))
+
     if prs:
-        bloques.append(f"Récords esta semana: {', '.join(str(p) for p in prs[:3])}")
+        bloques.append(f"Esta semana se rompieron marcas personales en: {', '.join(str(p) for p in prs[:3])}")
+
     if estanc:
         nombres = ', '.join(e.get('ejercicio', '') for e in estanc[:3] if e.get('ejercicio'))
         if nombres:
-            bloques.append(f"Ejercicios estancados: {nombres}")
-    if dec:
-        dec_texts = [f"{d['accion']} en {d['ejercicio']}" for d in dec[:4] if d.get('ejercicio') and d.get('accion')]
-        if dec_texts:
-            bloques.append(f"Decisiones recientes del plan: {'; '.join(dec_texts)}")
+            bloques.append(f"Sin progresión desde hace semanas en: {nombres}")
 
+    if dec:
+        ajustes = [
+            f"{_ACCION_HUMANA.get(d['accion'], d['accion'])} en {d['ejercicio']}"
+            for d in dec[:4] if d.get('ejercicio') and d.get('accion')
+        ]
+        if ajustes:
+            bloques.append(f"El plan ajustó esta semana: {'; '.join(ajustes)}")
+
+    bloques = [b for b in bloques if b]
     if not bloques:
         return "No hay datos suficientes de entrenamiento. Escribe exactamente [SILENCIO]."
 
     datos = '\n'.join(f'- {b}' for b in bloques)
     return (
-        f"Datos del plan gym de las últimas semanas:\n{datos}\n\n"
-        f"Observa estos patrones en 2-3 frases. No das consejo ni orden — observas desde dentro. "
-        f"Usa tu voz: lo que ves, no lo que el usuario debe hacer. "
-        f"Si no hay nada que valga la pena nombrar, escribe exactamente [SILENCIO]."
+        f"Lo que he observado en el plan de las últimas semanas:\n{datos}\n\n"
+        f"Escribe 2-3 frases en tu voz sobre lo que ves. Reglas estrictas:\n"
+        f"1. No uses estas palabras: RPE, readiness, ACWR, TSB, kg, series, repeticiones, "
+        f"decisiones del plan, señales, GymDecisionLog. Si necesitas hablar de esfuerzo di "
+        f"'el esfuerzo que percibes' o 'cómo carga el cuerpo'.\n"
+        f"2. Nombra en qué te basas de forma humana: 'mirando las últimas semanas', "
+        f"'lo que registraste', 'lo que he visto en el plan'.\n"
+        f"3. Observas, no aconsejas. No usas 'deberías', 'necesitas', 'tienes que'.\n"
+        f"4. Si no hay nada que valga la pena nombrar, escribe exactamente [SILENCIO]."
     )
 
 
