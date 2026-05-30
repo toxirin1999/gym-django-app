@@ -256,6 +256,30 @@
       text-transform: uppercase; color: var(--ink-mute); margin-top: 0.6rem;
     }
 
+    /* ── NARRATIVA FONDO ── */
+    .narrativa-fondo {
+      width: 100%; max-width: 480px;
+      margin: 3rem auto 0;
+      display: flex; flex-direction: column; gap: 1.1rem;
+      position: relative; z-index: 1;
+    }
+    .narrativa-capa {
+      font-style: italic; font-weight: 300;
+      line-height: 1.75;
+      text-align: center;
+      letter-spacing: 0.01em;
+    }
+    .narrativa-larga {
+      font-size: 0.78rem;
+      color: var(--ink);
+      opacity: 0.14;
+    }
+    .narrativa-media {
+      font-size: 0.84rem;
+      color: var(--ink);
+      opacity: 0.25;
+    }
+
     /* ── NAV ── */
     .nav-fijo {
       position: fixed;
@@ -338,6 +362,17 @@
   {% endif %}
 
 </div>
+
+{% if narrativa and narrativa.capa_larga or narrativa and narrativa.capa_media %}
+<div class="narrativa-fondo" aria-label="Lo que JOI lleva viendo">
+  {% if narrativa.capa_larga %}
+  <p class="narrativa-capa narrativa-larga">{{ narrativa.capa_larga }}</p>
+  {% endif %}
+  {% if narrativa.capa_media %}
+  <p class="narrativa-capa narrativa-media">{{ narrativa.capa_media }}</p>
+  {% endif %}
+</div>
+{% endif %}
 
 {% if narrativa and narrativa.capa_corta %}
 <div class="postura-zona" id="postura-zona">
