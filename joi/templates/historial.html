@@ -20,6 +20,8 @@
     <ul>
         {% for e in emociones_raw %}
         <li class="list-item">{{ e.fecha }} — <strong>{{ e.emocion }}</strong> {% if e.nota %} ({{ e.nota }}) {% endif %}</li>
+        {% empty %}
+        <li class="list-item" style="color:#aaa;">Sin registros emocionales esta semana.</li>
         {% endfor %}
     </ul>
 </div>
@@ -28,15 +30,13 @@
     <h2>🏋️‍♀️ Entrenos</h2>
     <ul>
         {% for e in entrenos_raw %}
-        <li class="list-item">{{ e.fecha }} — {{ e.tipo }} ({{ e.duracion }} min)</li>
+        <li class="list-item">{{ e.fecha }} — {{ e.tipo }} ({{ e.duracion }} min)
+            {% if e.recomendacion_joi %}<br><em style="color:#32FF00">→ Joi sugirió: {{ e.recomendacion_joi }}</em>{% endif %}
+        </li>
+        {% empty %}
+        <li class="list-item" style="color:#aaa;">Sin entrenos registrados esta semana.</li>
         {% endfor %}
     </ul>
-    <li class="list-item">
-        {{ e.fecha }} — {{ e.tipo }} ({{ e.duracion }} min)
-        {% if e.recomendacion_joi %}
-        <br><em style="color:#32FF00">→ Joi sugirió: {{ e.recomendacion_joi }}</em>
-        {% endif %}
-    </li>
 
 </div>
 

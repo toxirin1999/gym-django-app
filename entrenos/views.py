@@ -2,7 +2,7 @@ from datetime import date, timedelta
 from django.core.cache import cache
 from django.views.decorators.http import require_POST, require_GET
 from decimal import Decimal, ROUND_HALF_UP
-from django.db.models import Avg, Count, Sum, Max, F, ExpressionWrapper, fields
+from django.db.models import Avg, Count, Sum, Max, F, ExpressionWrapper, fields, Prefetch
 from analytics.sistema_educacion_helms import agregar_educacion_a_plan
 
 from collections import defaultdict
@@ -2056,7 +2056,16 @@ def hacer_entreno(request):
     Returns:
         HttpResponse con la plantilla renderizada
     """
-    clientes = Cliente.objects.select_related('programa', 'rutina_actual').all()
+    from rutinas.models import Rutina as _Rutina
+    clientes = Cliente.objects.select_related(
+        'programa', 'rutina_actual'
+    ).prefetch_related(
+        Prefetch(
+            'programa__rutina_set',
+            queryset=_Rutina.objects.order_by('orden', 'id'),
+            to_attr='rutinas_lista',
+        )
+    ).all()
     return render(request, 'entrenos/hacer_entreno.html', {
         'clientes': clientes
     })

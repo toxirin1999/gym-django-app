@@ -58,12 +58,16 @@
         <h3>{{ nombre }}</h3>
         <p>{% if estado %}¡Desbloqueado!{% else %}Aún bloqueado{% endif %}</p>
     </div>
+    {% empty %}
+    <p style="color:#aaa;">Aún no hay logros registrados.</p>
     {% endfor %}
 </div>
 <h2>📅 Últimos logros desbloqueados</h2>
 <ul>
     {% for evento in eventos_recientes %}
     <li>{{ evento.fecha }} — {{ evento.icono }} {{ evento.nombre_logro }}</li>
+    {% empty %}
+    <li style="color:#aaa;">Sin actividad reciente.</li>
     {% endfor %}
 </ul>
 

@@ -15,7 +15,7 @@
           font-family: 'Inter', sans-serif;
           color: #e2e8f0;
         }
-        .container { max-width: 480px; margin: 0 auto; }
+        .container { max-width: 480px; margin: 0 auto; padding: 0 0.75rem; }
 
         /* header */
         .joi-header {
@@ -108,6 +108,11 @@
           opacity: 0; pointer-events: none; transition: opacity 0.3s;
         }
         #ci-toast.show { opacity: 1; }
+
+        @media (max-width: 350px) {
+          .checkin-done { grid-template-columns: repeat(2, 1fr); }
+          .ci-form { grid-template-columns: 1fr; }
+        }
     </style>
 </head>
 <body>
@@ -130,7 +135,7 @@
 
     <div class="joi-header">
         <h1>Hola{% if request.user.first_name %}, {{ request.user.first_name }}{% endif %}</h1>
-        <p class="joi-dialog">{{ saludo_joi|default:"Un nuevo día, una nueva oportunidad." }}</p>
+        {% if saludo_joi %}<p class="joi-dialog">{{ saludo_joi }}</p>{% endif %}
     </div>
 
     <!-- ── CHECK-IN MATUTINO ─────────────────────────── -->

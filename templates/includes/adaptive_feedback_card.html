@@ -56,7 +56,7 @@
     <!-- FOOTER CTA -->
     {% if bio_banner.injuries %}
     <div style="border-top: 1px solid rgba(200,170,110,0.08); padding: 10px 16px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
-        <p style="font-family: 'Share Tech Mono', monospace; font-size: 0.62rem; color: #785A28; letter-spacing: 0.1em; margin: 0;">¿Listo para volver al protocolo completo?</p>
+        <p style="font-family: 'Share Tech Mono', monospace; font-size: 0.62rem; color: #785A28; letter-spacing: 0.1em; margin: 0;">¿Volver al plan completo?</p>
         <div style="display: flex; gap: 6px; flex-wrap: wrap;">
             {% for inj in bio_banner.injuries %}
             <a href="{% url 'hyrox:test_recuperacion' inj.id %}"
