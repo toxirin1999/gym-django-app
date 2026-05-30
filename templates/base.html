@@ -100,79 +100,7 @@
 </head>
 <body class="min-h-screen">
 
-{% if joi_mensaje_pendiente %}
-<div id="joi-banner" style="
-  position: fixed;
-  top: 0; left: 0; right: 0;
-  z-index: 9998;
-  background: linear-gradient(90deg, rgba(15,10,25,0.97) 0%, rgba(30,10,40,0.97) 100%);
-  border-bottom: 1px solid rgba(200,100,255,0.25);
-  padding: 10px 20px;
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  backdrop-filter: blur(4px);
-  animation: joiBannerIn .5s ease-out;
-">
-  <span style="color: rgba(200,100,255,0.6); font-size: 13px; letter-spacing:.05em; text-transform:uppercase; white-space:nowrap;">JOI</span>
-  <p id="joi-banner-texto" style="margin:0; color: #e8b4ff; font-style: italic; font-size: 14px; line-height: 1.5; flex:1;">{{ joi_mensaje_pendiente.mensaje|truncatechars:120 }}</p>
-  <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
-    <button onclick="joiDarFeedback({{ joi_mensaje_pendiente.id }}, 'clavado')" title="Lo has leído bien"
-      style="background:none;border:none;color:rgba(200,100,255,0.45);font-size:11px;letter-spacing:.08em;
-             text-transform:uppercase;cursor:pointer;padding:2px 4px;line-height:1;transition:color .2s;white-space:nowrap;"
-      onmouseover="this.style.color='rgba(160,255,180,0.9)'" onmouseout="this.style.color='rgba(200,100,255,0.45)'">✓</button>
-    <button onclick="joiDarFeedback({{ joi_mensaje_pendiente.id }}, 'equivocado')" title="No ha encajado"
-      style="background:none;border:none;color:rgba(200,100,255,0.45);font-size:11px;letter-spacing:.08em;
-             text-transform:uppercase;cursor:pointer;padding:2px 4px;line-height:1;transition:color .2s;white-space:nowrap;"
-      onmouseover="this.style.color='rgba(255,140,140,0.9)'" onmouseout="this.style.color='rgba(200,100,255,0.45)'">✗</button>
-  </div>
-  <a href="/joi/habitacion/" style="
-    color: rgba(200,100,255,0.6); font-size: 11px; letter-spacing:.12em;
-    text-transform:uppercase; text-decoration:none; white-space:nowrap;
-    transition: color .2s; padding: 0 4px;
-  " onmouseover="this.style.color='#e8b4ff'" onmouseout="this.style.color='rgba(200,100,255,0.6)'">→</a>
-  <button onclick="joiBannerCerrar({{ joi_mensaje_pendiente.id }})" style="
-    background: none; border: none; color: rgba(200,100,255,0.5);
-    font-size: 18px; cursor: pointer; padding: 0 4px; line-height:1;
-    transition: color .2s;
-  " onmouseover="this.style.color='#e8b4ff'" onmouseout="this.style.color='rgba(200,100,255,0.5)'">×</button>
-</div>
-<style>
-@keyframes joiBannerIn {
-  from { transform: translateY(-100%); opacity: 0; }
-  to   { transform: translateY(0);     opacity: 1; }
-}
-</style>
-<script>
-function joiBannerCerrar(id) {
-  fetch('/joi/mensaje/' + id + '/leido/', {
-    method: 'POST',
-    headers: {'X-CSRFToken': document.cookie.match(/csrftoken=([^;]+)/)?.[1] || ''},
-  });
-  const banner = document.getElementById('joi-banner');
-  banner.style.transition = 'transform .4s ease-in, opacity .4s';
-  banner.style.transform = 'translateY(-100%)';
-  banner.style.opacity = '0';
-  setTimeout(() => banner.remove(), 420);
-}
-function joiDarFeedback(id, tipo) {
-  fetch('/joi/mensaje/' + id + '/feedback/', {
-    method: 'POST',
-    headers: {
-      'X-CSRFToken': document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '',
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
-    body: 'feedback=' + tipo,
-  }).then(r => r.json()).then(data => {
-    if (data.ok) {
-      const txt = document.getElementById('joi-banner-texto');
-      if (txt) { txt.style.fontStyle = 'normal'; txt.textContent = data.respuesta; }
-    }
-    setTimeout(() => joiBannerCerrar(id), 1800);
-  }).catch(() => joiBannerCerrar(id));
-}
-</script>
-{% endif %}
+{% include 'includes/_joi_fab.html' %}
 
   <style>
   html {
@@ -752,41 +680,6 @@ function joiDarFeedback(id, tipo) {
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
 }
 
-.joi-btn {
-  position: fixed;
-  top: 72px;
-  left: 20px;
-  width: 42px;
-  height: 42px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(9, 9, 16, 0.85);
-  border: 1px solid rgba(100, 148, 220, 0.25);
-  text-decoration: none;
-  z-index: 1000;
-  transition: border-color 0.3s, box-shadow 0.3s;
-}
-.joi-btn:hover {
-  border-color: rgba(100, 148, 220, 0.6);
-  box-shadow: 0 0 12px rgba(100, 148, 220, 0.2);
-}
-.joi-btn-punto {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: rgba(100, 148, 220, 0.55);
-}
-.joi-btn-punto.activo {
-  background: rgba(130, 175, 240, 0.9);
-  box-shadow: 0 0 8px rgba(100, 148, 220, 0.5);
-  animation: joi-pulso-btn 3s ease-in-out infinite;
-}
-@keyframes joi-pulso-btn {
-  0%, 100% { opacity: 0.6; transform: scale(1); }
-  50%       { opacity: 1;   transform: scale(1.3); }
-}
 
 
       /* Optimizaciones móviles para efectos Blade Runner */
@@ -1008,11 +901,6 @@ function joiDarFeedback(id, tipo) {
   🏠
 </a>
 
-<a href="/joi/habitacion/"
-   class="joi-btn"
-   aria-label="La Habitación de JOI">
-  <span class="joi-btn-punto {% if joi_mensaje_pendiente %}activo{% endif %}"></span>
-</a>
 
   <!-- Contenido principal -->
   <main style="position: relative; z-index: 10;" role="main">
