@@ -73,23 +73,16 @@
       to   { opacity: 1; transform: translateY(0); }
     }
 
-    .capa-etiqueta {
-      font-size: 0.5rem;
-      letter-spacing: 0.3em;
-      text-transform: uppercase;
-      color: var(--ink-mute);
-      margin-bottom: 1rem;
-      font-weight: 400;
-    }
-
     .capa-texto {
       font-weight: 300;
-      font-size: clamp(1.05rem, 2.8vw, 1.3rem);
       line-height: 1.75;
       color: var(--ink);
       letter-spacing: 0.01em;
       text-shadow: 0 0 20px rgba(0, 220, 255, 0.30);
     }
+    .capa-larga  .capa-texto { font-size: clamp(0.88rem, 2.2vw, 1.05rem); opacity: 0.72; }
+    .capa-media  .capa-texto { font-size: clamp(0.98rem, 2.5vw, 1.18rem); opacity: 0.86; }
+    .capa-corta  .capa-texto { font-size: clamp(1.08rem, 2.8vw, 1.30rem); opacity: 1.00; }
 
     .capa-sep {
       width: 28px; height: 1px;
@@ -169,8 +162,7 @@
   {% if narrativa %}
 
     {% if narrativa.capa_larga %}
-    <section class="capa">
-      <p class="capa-etiqueta">patrón profundo</p>
+    <section class="capa capa-larga">
       <p class="capa-texto">{{ narrativa.capa_larga }}</p>
     </section>
     {% if narrativa.capa_media or narrativa.capa_corta %}
@@ -179,8 +171,7 @@
     {% endif %}
 
     {% if narrativa.capa_media %}
-    <section class="capa">
-      <p class="capa-etiqueta">esta fase</p>
+    <section class="capa capa-media">
       <p class="capa-texto">{{ narrativa.capa_media }}</p>
     </section>
     {% if narrativa.capa_corta %}
@@ -189,8 +180,7 @@
     {% endif %}
 
     {% if narrativa.capa_corta %}
-    <section class="capa">
-      <p class="capa-etiqueta">ahora mismo</p>
+    <section class="capa capa-corta">
       <p class="capa-texto">{{ narrativa.capa_corta }}</p>
     </section>
     {% endif %}
