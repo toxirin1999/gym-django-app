@@ -685,10 +685,16 @@ a.rb-dia:hover { background: var(--bg-3); text-decoration: none; }
 <body>
 
 {% if joi_mensaje_hyrox %}
-<div id="joi-hyrox-banner" style="background:var(--bg-2);border-bottom:2px solid var(--fg);padding:10px 40px;display:flex;align-items:center;gap:12px;font-family:var(--font-body);position:relative;">
-  <span style="font-family:var(--font-mono);font-size:9px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;color:var(--accent);white-space:nowrap;">JOI</span>
-  <p style="margin:0;font-size:13px;font-style:italic;color:var(--fg-dim);line-height:1.4;flex:1;">{{ joi_mensaje_hyrox.mensaje }}</p>
-  <button onclick="joiHyroxCerrar({{ joi_mensaje_hyrox.id }})" style="background:none;border:1px solid var(--fg);color:var(--fg);padding:2px 8px;font-family:var(--font-mono);font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;border-radius:2px;white-space:nowrap;">OK</button>
+<div id="joi-hyrox-banner" style="background:var(--bg-2);border-bottom:1px solid rgba(100,148,220,0.2);padding:8px 20px;display:flex;align-items:center;gap:10px;">
+  <span style="font-family:var(--font-mono);font-size:9px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;color:var(--accent);flex-shrink:0;">JOI</span>
+  <a href="/joi/habitacion/?mensaje={{ joi_mensaje_hyrox.id }}"
+     style="font-size:12px;font-style:italic;color:var(--fg-dim);text-decoration:none;flex:1;transition:color .2s;"
+     onmouseover="this.style.color='var(--fg)'" onmouseout="this.style.color='var(--fg-dim)'">
+    hay una lectura pendiente →
+  </a>
+  <button onclick="joiHyroxCerrar({{ joi_mensaje_hyrox.id }})"
+          style="background:none;border:none;color:var(--fg-dim);font-size:16px;cursor:pointer;padding:0 4px;line-height:1;transition:color .2s;"
+          onmouseover="this.style.color='var(--fg)'" onmouseout="this.style.color='var(--fg-dim)'">×</button>
 </div>
 <script>
 function joiHyroxCerrar(id) {
