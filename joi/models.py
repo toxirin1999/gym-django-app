@@ -266,3 +266,37 @@ class DialogoNarrativa(models.Model):
     def __str__(self):
         estado = 'procesado' if self.procesado else 'pendiente'
         return f"Diálogo [{estado}] {self.user.username}: {self.texto_usuario[:60]}"
+
+
+class JoiSintesisLog(models.Model):
+    """
+    Registro auditable de cada ejecución del ciclo de síntesis JOI.
+    Permite rastrear qué cambió en ManualDavid y NarrativaActiva, por qué,
+    y qué evidencia usó el sistema — antes de automatizar el ciclo.
+    """
+    TIPO_CHOICES = [
+        ('manual', 'Manual'),
+        ('auto',   'Automático — Celery'),
+    ]
+
+    user                  = models.ForeignKey(User, on_delete=models.CASCADE,
+                                               related_name='joi_sintesis_logs')
+    creado_en             = models.DateTimeField(auto_now_add=True)
+    tipo                  = models.CharField(max_length=10, choices=TIPO_CHOICES,
+                                              default='manual')
+    cambio_significativo  = models.BooleanField(default=False)
+    narrativa_existia     = models.BooleanField(default=False)
+    capas_antes           = models.JSONField(default=dict)
+    capas_despues         = models.JSONField(default=dict)
+    capas_modificadas     = models.JSONField(default=list)
+    manual_david_cambios  = models.JSONField(default=list)
+    evidencia_usada       = models.JSONField(default=list)
+    decision              = models.CharField(max_length=50, blank=True)
+    motivo_breve          = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ['-creado_en']
+
+    def __str__(self):
+        accion = 'actualizado' if self.capas_modificadas else 'sin cambio'
+        return f"SintesisLog [{self.tipo}/{accion}] {self.user.username} {self.creado_en.date()}"
