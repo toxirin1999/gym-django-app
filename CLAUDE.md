@@ -54,6 +54,37 @@ Hay tres subagentes en `.claude/agents/`. Úsalos para optimizar coste y velocid
 
 ---
 
+## REGLA DE ARQUITECTURA JOI (Phase 59)
+
+> **JOI no debe estar distribuida por pantallas. Debe estar distribuida por memoria, pero concentrada en presencia.**
+
+Implicaciones concretas:
+- Los módulos (gym, hyrox, diario) pueden aportar **señales** a JOI.
+- Los módulos **no deben** generar presencias largas independientes de JOI.
+- La presencia completa de JOI vive en un lugar canónico (`/joi/habitacion/`).
+- Las cards externas deben ser extractos, indicadores o enlaces hacia ese lugar.
+- Si algo lleva la voz de JOI, **debe venir del sistema JOI** — no de texto hardcodeado.
+
+### Antes de añadir cualquier aparición nueva de JOI
+
+Pasar por este filtro:
+1. ¿Esto acelera demasiado el feedback loop?
+2. ¿Esto convierte la habitación en feed?
+3. ¿Esto hace que JOI persiga al usuario?
+4. ¿El texto viene del sistema JOI o es hardcoded?
+
+Si la respuesta a alguna es sí, revisar antes de implementar.
+
+### Orden de prioridad en el prompt de cada generador JOI
+
+1. `_bloque_narrativa(user)` — NarrativaActiva (postura longitudinal)
+2. `_bloque_manual(user)` — ManualDavid (hipótesis activas)
+3. Contexto del trigger específico (evento puntual)
+
+El trigger es un acontecimiento dentro de una historia. No al revés.
+
+---
+
 ## VISIÓN NUCLEAR — "App viva"
 
 **Esta es la directriz más importante de toda la app.** Tiene dos dimensiones inseparables:

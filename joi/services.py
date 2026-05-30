@@ -1469,13 +1469,15 @@ def generar_mensaje_joi(cliente, trigger: str, datos_extra: dict | None = None) 
         datos_extra = {**datos_extra, '_ctx_temporal': ctx_temporal}
         continuidad_ctx = build_continuidad_context(cliente)
         bloque_cont = _bloque_continuidad(continuidad_ctx)
-        prompt = (
-            _bloque_memoria(ctx)
-            + _bloque_manual(cliente.user)
-            + _bloque_temporal(ctx_temporal)
-            + (bloque_cont + '\n\n' if bloque_cont else '')
-            + builder(ctx, datos_extra)
-        )
+        bloques = [
+            _bloque_marco_narrativo(cliente.user),
+            _bloque_memoria(ctx),
+            _bloque_manual(cliente.user),
+            _bloque_temporal(ctx_temporal),
+            bloque_cont,
+            builder(ctx, datos_extra),
+        ]
+        prompt = "\n\n".join(b for b in bloques if b)
         texto = _llamar_haiku(prompt, max_tokens=400)
         # Validar contrato semántico (log de violaciones, no bloquea)
         _modulo = (
@@ -1608,6 +1610,90 @@ def _bloque_narrativa(user) -> str:
         return ''
     except Exception:
         return ''
+
+
+def _bloque_marco_narrativo(user) -> str:
+    """
+    Marco inicial del prompt: sitúa el evento dentro de la narrativa activa de JOI.
+
+    El evento no es el protagonista por defecto — es una evidencia posible
+    dentro de una historia en curso. Esta función coloca esa continuidad
+    antes de que el trigger específico aparezca, para que el modelo llegue
+    al dato ya encuadrado, no que descubra el encuadre al final.
+
+    No sustituye a _bloque_manual (que sigue con ManualDavid + NarrativaActiva
+    como contexto detallado). Este bloque da la instrucción de encuadre
+    explícita ANTES de cualquier otro contexto.
+
+    Devuelve '' si NarrativaActiva no existe o está vacía.
+    """
+    from joi.models import NarrativaActiva
+    try:
+        n = NarrativaActiva.objects.get(user=user, estado__in=('borrador', 'activa'))
+    except NarrativaActiva.DoesNotExist:
+        return ''
+
+    partes = []
+    if n.capa_larga:
+        partes.append(f"[Patrón profundo]\n{n.capa_larga}")
+    if n.capa_media:
+        partes.append(f"[Esta fase]\n{n.capa_media}")
+    if n.capa_corta:
+        partes.append(f"[Ahora mismo]\n{n.capa_corta}")
+
+    if not partes:
+        return ''
+
+    return (
+        "[MARCO NARRATIVO ACTIVO]\n"
+        "Antes de interpretar el evento puntual, sitúalo dentro de esta continuidad.\n"
+        "El evento no es el protagonista por defecto: es una evidencia posible dentro de una historia en curso.\n"
+        "No uses esta narrativa como frase final decorativa; úsala para decidir el encuadre inicial del mensaje.\n"
+        "Si el evento es menor, no fuerces una lectura profunda: puedes callar o responder de forma breve.\n\n"
+        + "\n\n".join(partes)
+        + "\n\n"
+    )
+
+
+def registrar_sintesis_log(
+    cliente,
+    tipo: str,
+    resultado_revision: dict,
+    narrativa_existia: bool,
+    capas_antes: dict,
+    capas_despues: dict,
+) -> None:
+    """
+    Persiste un registro auditable de cada ejecución del ciclo de síntesis.
+    Llamar después de revisar_manual_david + _actualizar_narrativa_activa.
+    """
+    from joi.models import JoiSintesisLog
+
+    capas_modificadas = [
+        capa for capa in ('capa_corta', 'capa_media', 'capa_larga')
+        if capas_antes.get(capa) != capas_despues.get(capa)
+        and capas_despues.get(capa)
+    ]
+
+    decision = 'sin_cambio'
+    if capas_modificadas:
+        decision = 'narrativa_creada' if not narrativa_existia else 'narrativa_actualizada'
+    elif resultado_revision.get('cambio_significativo'):
+        decision = 'manual_actualizado'
+
+    JoiSintesisLog.objects.create(
+        user=cliente.user,
+        tipo=tipo,
+        cambio_significativo=resultado_revision.get('cambio_significativo', False),
+        narrativa_existia=narrativa_existia,
+        capas_antes=capas_antes,
+        capas_despues=capas_despues,
+        capas_modificadas=capas_modificadas,
+        manual_david_cambios=resultado_revision.get('cambios_detalle', []),
+        evidencia_usada=resultado_revision.get('evidencia_usada', []),
+        decision=decision,
+        motivo_breve=f"Δ_medio={resultado_revision.get('delta_confianza_medio', 0):.2f}",
+    )
 
 
 def _hay_contexto_para_revision(cliente, ultima_revision) -> bool:
@@ -1816,12 +1902,28 @@ def revisar_manual_david(cliente) -> dict:
     except Exception:
         pass
 
+    cambios_detalle = [
+        {
+            'hipotesis': e.entrada[:80],
+            'antes_confianza': round(confianza_antes_por_id[e.id], 2),
+            'despues_confianza': round(e.confianza, 2),
+            'antes_estado': 'activa',  # todas empezaban activas en esta revisión
+            'despues_estado': e.estado,
+            'motivo': e.notas_revision or '',
+        }
+        for e in revisables
+        if abs(e.confianza - confianza_antes_por_id[e.id]) > 0.01
+        or e.estado != 'activa'
+    ]
+
     return {
         'revisadas': len(revisables),
         'actualizadas': actualizadas,
         'cambio_significativo': cambio_significativo,
         'delta_confianza_medio': round(delta_medio, 3),
         'max_delta_individual': round(max_delta_individual, 3),
+        'cambios_detalle': cambios_detalle,
+        'evidencia_usada': resumen_ctx,
     }
 
 
@@ -2875,12 +2977,14 @@ def generar_sintesis_joi(cliente) -> "MensajeJOI | None":
 
         # La síntesis se genera tras la reflexión nocturna — siempre es noche.
         ctx_temporal = resolver_contexto_temporal('sintesis_joi')
-        prompt = (
-            _bloque_memoria(ctx)
-            + _bloque_manual(cliente.user)
-            + _bloque_temporal(ctx_temporal)
-            + _prompt_sintesis(ctx, datos_extra)
-        )
+        bloques = [
+            _bloque_marco_narrativo(cliente.user),
+            _bloque_memoria(ctx),
+            _bloque_manual(cliente.user),
+            _bloque_temporal(ctx_temporal),
+            _prompt_sintesis(ctx, datos_extra),
+        ]
+        prompt = "\n\n".join(b for b in bloques if b)
         texto = _llamar_haiku_sintesis(prompt)
 
         if texto is None:

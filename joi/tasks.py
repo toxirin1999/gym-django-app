@@ -316,6 +316,7 @@ def ciclo_sintesis_joi(self):
     from clientes.models import Cliente
     from joi.models import MensajeJOI, NarrativaActiva
     from joi.services import (generar_sintesis_joi, revisar_manual_david,
+                               registrar_sintesis_log,
                                _hay_contexto_para_revision, _revision_antigua,
                                _actualizar_narrativa_activa, construir_contexto,
                                procesar_dialogo_narrativa)
@@ -352,10 +353,27 @@ def ciclo_sintesis_joi(self):
                 )
 
                 if debe_revisar:
+                    narrativa_existia = NarrativaActiva.objects.filter(
+                        user=cliente.user
+                    ).exists()
+                    capas_antes = {}
+                    try:
+                        n = NarrativaActiva.objects.get(user=cliente.user)
+                        capas_antes = {
+                            'capa_corta': n.capa_corta or '',
+                            'capa_media': n.capa_media or '',
+                            'capa_larga': n.capa_larga or '',
+                        }
+                    except NarrativaActiva.DoesNotExist:
+                        pass
+
                     resultado_revision = revisar_manual_david(cliente)
                     revisiones += 1
 
-                    if resultado_revision.get('cambio_significativo'):
+                    narrativa_existe = NarrativaActiva.objects.filter(
+                        user=cliente.user
+                    ).exists()
+                    if resultado_revision.get('cambio_significativo') or not narrativa_existe:
                         try:
                             ctx = construir_contexto(cliente)
                             _actualizar_narrativa_activa(
@@ -364,6 +382,28 @@ def ciclo_sintesis_joi(self):
                             )
                         except Exception:
                             pass
+
+                    try:
+                        n = NarrativaActiva.objects.get(user=cliente.user)
+                        capas_despues = {
+                            'capa_corta': n.capa_corta or '',
+                            'capa_media': n.capa_media or '',
+                            'capa_larga': n.capa_larga or '',
+                        }
+                    except NarrativaActiva.DoesNotExist:
+                        capas_despues = {}
+
+                    try:
+                        registrar_sintesis_log(
+                            cliente=cliente,
+                            tipo='auto',
+                            resultado_revision=resultado_revision,
+                            narrativa_existia=narrativa_existia,
+                            capas_antes=capas_antes,
+                            capas_despues=capas_despues,
+                        )
+                    except Exception:
+                        pass
             except Exception:
                 pass
 
