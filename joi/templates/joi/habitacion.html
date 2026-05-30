@@ -259,7 +259,7 @@
     /* ── NARRATIVA FONDO ── */
     .narrativa-fondo {
       width: 100%; max-width: 480px;
-      margin: 3rem auto 0;
+      margin: 2rem auto 0;
       display: flex; flex-direction: column; gap: 1.1rem;
       position: relative; z-index: 1;
     }
@@ -270,14 +270,14 @@
       letter-spacing: 0.01em;
     }
     .narrativa-larga {
-      font-size: 0.78rem;
+      font-size: 0.82rem;
       color: var(--ink);
-      opacity: 0.30;
+      opacity: 0.62;
     }
     .narrativa-media {
-      font-size: 0.84rem;
+      font-size: 0.9rem;
       color: var(--ink);
-      opacity: 0.48;
+      opacity: 0.80;
     }
 
     /* ── NAV ── */
@@ -361,18 +361,18 @@
   </div>
   {% endif %}
 
-</div>
+  {% if narrativa and narrativa.capa_larga or narrativa and narrativa.capa_media %}
+  <div class="narrativa-fondo" aria-label="Lo que JOI lleva viendo">
+    {% if narrativa.capa_larga %}
+    <p class="narrativa-capa narrativa-larga">{{ narrativa.capa_larga }}</p>
+    {% endif %}
+    {% if narrativa.capa_media %}
+    <p class="narrativa-capa narrativa-media">{{ narrativa.capa_media }}</p>
+    {% endif %}
+  </div>
+  {% endif %}
 
-{% if narrativa and narrativa.capa_larga or narrativa and narrativa.capa_media %}
-<div class="narrativa-fondo" aria-label="Lo que JOI lleva viendo">
-  {% if narrativa.capa_larga %}
-  <p class="narrativa-capa narrativa-larga">{{ narrativa.capa_larga }}</p>
-  {% endif %}
-  {% if narrativa.capa_media %}
-  <p class="narrativa-capa narrativa-media">{{ narrativa.capa_media }}</p>
-  {% endif %}
 </div>
-{% endif %}
 
 {% if narrativa and narrativa.capa_corta %}
 <div class="postura-zona" id="postura-zona">
