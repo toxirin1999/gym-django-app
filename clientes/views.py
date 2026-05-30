@@ -1575,6 +1575,13 @@ def mockup_demo(request):
     from entrenos.models import EntrenoRealizado as _ER
     context['entrenos_count'] = _ER.objects.filter(cliente=cliente).count()
 
+    # JOI — lectura del plan (Phase 58.5)
+    try:
+        from joi.services import generar_lectura_plan
+        context['lectura_plan_joi'] = generar_lectura_plan(cliente)
+    except Exception:
+        context['lectura_plan_joi'] = None
+
     return render(request, 'clientes/mockup_demo.html', context)
 
 
