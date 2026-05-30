@@ -1406,10 +1406,10 @@ function joiBannerCerrar(id) {
 
     <!-- JOI — lectura del plan (Phase 58.5) -->
     {% if lectura_plan_joi and lectura_plan_joi.mensaje != '[SILENCIO]' %}
-    <div style="background:var(--bg-2,#1a2235);border:1px solid var(--line,#1e293b);border-radius:12px;padding:16px 18px;margin-bottom:16px;">
-      <div style="font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3,#64748b);margin-bottom:10px;">JOI · el plan</div>
-      <p style="font-size:13px;line-height:1.65;color:var(--ink-1,#e2e8f0);margin:0;font-style:italic;">{{ lectura_plan_joi.mensaje }}</p>
-      <div style="font-size:10px;color:var(--ink-4,#475569);margin-top:8px;">{{ lectura_plan_joi.creado_en|timesince }} atrás</div>
+    <div style="margin-bottom:10px;padding:10px 14px;background:rgba(139,92,246,0.05);border-left:2px solid rgba(139,92,246,0.25);border-radius:0 10px 10px 0;">
+      <div style="font-family:var(--font-mono);font-size:8px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:rgba(139,92,246,0.55);margin-bottom:5px;">JOI · el plan</div>
+      <div style="font-size:12px;color:var(--td);opacity:0.82;line-height:1.55;font-style:italic;">{{ lectura_plan_joi.mensaje }}</div>
+      <div style="font-size:9px;color:var(--td);opacity:0.35;margin-top:5px;">{{ lectura_plan_joi.creado_en|timesince }} atrás</div>
     </div>
     {% endif %}
 
