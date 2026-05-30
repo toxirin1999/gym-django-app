@@ -109,6 +109,49 @@ class TestBloqueMarcoNarrativo(TestCase):
         self.assertIn('En construcción.', resultado)
 
 
+class TestReglaDePresicion(TestCase):
+    """Phase 59D.0.1 — Bisturí, no martillo.
+    Verifica que el marco contiene la regla explícita contra absolutismo."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(username='tester_precision', password='x')
+
+    def _crear_narrativa(self):
+        NarrativaActiva.objects.create(
+            user=self.user,
+            estado='activa',
+            capa_corta='Algo concreto.',
+        )
+
+    def test_marco_exige_evidencia_concreta(self):
+        self._crear_narrativa()
+        resultado = _bloque_marco_narrativo(self.user)
+        self.assertIn('evidencia concreta', resultado)
+
+    def test_marco_prohíbe_absolutos_sin_evidencia(self):
+        self._crear_narrativa()
+        resultado = _bloque_marco_narrativo(self.user)
+        self.assertIn('no agrupes en absolutos', resultado.lower())
+
+    def test_marco_exige_nombrar_habito_concreto(self):
+        self._crear_narrativa()
+        resultado = _bloque_marco_narrativo(self.user)
+        self.assertIn('hábito concreto', resultado)
+
+    def test_marco_contiene_regla_bisturi(self):
+        self._crear_narrativa()
+        resultado = _bloque_marco_narrativo(self.user)
+        self.assertIn('bisturí', resultado)
+        self.assertIn('martillo', resultado)
+
+    def test_marco_lista_absolutos_prohibidos(self):
+        self._crear_narrativa()
+        resultado = _bloque_marco_narrativo(self.user)
+        for absoluto in ("'cero'", "'nunca'", "'todo'", "'nada'"):
+            self.assertIn(absoluto, resultado,
+                          f"El marco debe mencionar '{absoluto}' como absoluto a evitar")
+
+
 class TestOrdenPromptConMarco(TestCase):
     """Verifica que el marco aparece ANTES del builder en el prompt ensamblado."""
 

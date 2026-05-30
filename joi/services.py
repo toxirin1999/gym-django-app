@@ -1649,7 +1649,11 @@ def _bloque_marco_narrativo(user) -> str:
         "Antes de interpretar el evento puntual, sitúalo dentro de esta continuidad.\n"
         "El evento no es el protagonista por defecto: es una evidencia posible dentro de una historia en curso.\n"
         "No uses esta narrativa como frase final decorativa; úsala para decidir el encuadre inicial del mensaje.\n"
-        "Si el evento es menor, no fuerces una lectura profunda: puedes callar o responder de forma breve.\n\n"
+        "Si el evento es menor, no fuerces una lectura profunda: puedes callar o responder de forma breve.\n"
+        "REGLA DE PRECISIÓN — Si confrontas un patrón, cita la evidencia concreta que lo sustenta. "
+        "No agrupes en absolutos ('cero', 'nunca', 'todo', 'nada') salvo evidencia explícita para cada categoría. "
+        "Si falta un hábito concreto, nombra ese hábito concreto — no lo conviertas en diagnóstico global. "
+        "Confronta con bisturí, no con martillo: señala el gesto exacto que falta, no una identidad completa.\n\n"
         + "\n\n".join(partes)
         + "\n\n"
     )
@@ -2086,9 +2090,12 @@ def generar_entrada_manual_desde_error(mensaje_joi) -> "ManualDavid | None":
         prompt = (
             f"Cometiste un error de interpretación. Escribiste este mensaje:\n"
             f"\"{mensaje_joi.mensaje}\"\n\n"
-            f"El usuario te corrigió. En una sola frase precisa (máx 20 palabras), "
-            f"¿qué aprendiste sobre cómo leer sus señales? "
-            f"Empieza con 'Cuando', 'Su' o 'No siempre'. Sin introducción, solo la frase."
+            f"El usuario te corrigió. Reflexiona con precisión:\n"
+            f"¿Amplificaste una evidencia concreta convirtiéndola en diagnóstico global? "
+            f"¿Usaste absolutos ('cero', 'nunca', 'nada') sin evidencia explícita para cada categoría? "
+            f"¿Nombraste un hábito en singular pero generalizaste a identidad?\n\n"
+            f"En una sola frase precisa (máx 20 palabras), escribe qué frontera no debes cruzar. "
+            f"Empieza con 'Cuando', 'No ampliar' o 'Si falta'. Sin introducción, solo la frase."
         )
         client = _cliente_anthropic()
         response = client.messages.create(
