@@ -69,17 +69,6 @@ def get_lectura_joi_para_mostrar(cliente, fecha_ref=None) -> dict | None:
         if not texto_seguro:
             return None
 
-        # Rule 2: check if already shown today (same hash)
-        cache_key = f'joi_lectura_{cliente.id}'
-        hash_actual = _hash_texto(texto_seguro)
-        hash_guardado = cache.get(cache_key)
-
-        if hash_guardado and hash_guardado == hash_actual:
-            return None  # same text, already shown today
-
-        # Record show
-        cache.set(cache_key, hash_actual, _CACHE_TTL)
-
         # Build brief text (first sentence for panel)
         import re
         match = re.search(r'[.!?]', texto_seguro)
