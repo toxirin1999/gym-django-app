@@ -492,14 +492,6 @@ def registrar_bitacora(request):
     else:
         form = BitacoraDiariaForm(instance=bitacora_existente)
 
-    # Mensaje de bienvenida de Joi según la hora del día
-    hora_actual = datetime.now().hour
-    if 5 <= hora_actual < 12:
-        saludo_joi = "🌅 Nuevo día. ¿Qué tipo de alma vas a cultivar hoy?"
-    elif 12 <= hora_actual < 20:
-        saludo_joi = "🌤 A mitad de camino. ¿Qué intención quieres sostener?"
-    else:
-        saludo_joi = "🌙 Hora de cerrar el día. ¿Qué aprendiste hoy sobre ti?"
     cliente = get_cliente_actual(request.user)
 
     respuesta_joi = None
@@ -515,7 +507,6 @@ def registrar_bitacora(request):
     return render(request, 'clientes/registrar_bitacora.html', {
         'form': form,
         'cliente': cliente,
-        'saludo_joi': saludo_joi,
         'respuesta_joi': respuesta_joi,
         'actividades_hoy': actividades_hoy,
     })
