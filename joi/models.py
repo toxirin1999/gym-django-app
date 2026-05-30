@@ -90,6 +90,7 @@ class MensajeJOI(models.Model):
         ('sintesis_joi',                'Síntesis autónoma — JOI en su propio tiempo'),
         ('poda_manual',                 'Poda mensual del Manual de David'),
         ('dialogo_respondido',          'Respuesta a diálogo de narrativa'),
+        ('lectura_plan',                'Lectura del plan — estado de las rutinas'),
     ]
 
     FEEDBACK_CHOICES = [

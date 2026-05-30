@@ -1384,6 +1384,43 @@ def _prompt_poda_manual(ctx: dict, datos_extra: dict) -> str:
 _PROMPT_BUILDERS['poda_manual'] = _prompt_poda_manual
 
 
+def _prompt_lectura_plan(ctx: dict, datos_extra: dict) -> str:
+    rpe_sem   = ctx.get('rpe_gym_semanas') or []
+    rpe_tend  = ctx.get('rpe_tendencia', '')
+    estanc    = ctx.get('estancamientos_activos') or []
+    prs       = ctx.get('prs_semana') or []
+    dec       = (ctx.get('decisiones_plan') or {}).get('recientes') or []
+
+    bloques = []
+    if rpe_sem:
+        vals = [str(r) if r else '—' for r in rpe_sem]
+        bloques.append(f"RPE las últimas semanas: {' → '.join(vals)} ({rpe_tend or 'estable'})")
+    if prs:
+        bloques.append(f"Récords esta semana: {', '.join(str(p) for p in prs[:3])}")
+    if estanc:
+        nombres = ', '.join(e.get('ejercicio', '') for e in estanc[:3] if e.get('ejercicio'))
+        if nombres:
+            bloques.append(f"Ejercicios estancados: {nombres}")
+    if dec:
+        dec_texts = [f"{d['accion']} en {d['ejercicio']}" for d in dec[:4] if d.get('ejercicio') and d.get('accion')]
+        if dec_texts:
+            bloques.append(f"Decisiones recientes del plan: {'; '.join(dec_texts)}")
+
+    if not bloques:
+        return "No hay datos suficientes de entrenamiento. Escribe exactamente [SILENCIO]."
+
+    datos = '\n'.join(f'- {b}' for b in bloques)
+    return (
+        f"Datos del plan gym de las últimas semanas:\n{datos}\n\n"
+        f"Observa estos patrones en 2-3 frases. No das consejo ni orden — observas desde dentro. "
+        f"Usa tu voz: lo que ves, no lo que el usuario debe hacer. "
+        f"Si no hay nada que valga la pena nombrar, escribe exactamente [SILENCIO]."
+    )
+
+
+_PROMPT_BUILDERS['lectura_plan'] = _prompt_lectura_plan
+
+
 # ── Public API ───────────────────────────────────────────────────────────────
 
 def generar_mensaje_joi(cliente, trigger: str, datos_extra: dict | None = None) -> "MensajeJOI | None":
@@ -1431,6 +1468,22 @@ def generar_mensaje_joi(cliente, trigger: str, datos_extra: dict | None = None) 
     except Exception as e:
         logger.error(f"[JOI] generar_mensaje_joi({trigger}) falló: {e}", exc_info=True)
         return None
+
+
+def generar_lectura_plan(cliente) -> "MensajeJOI | None":
+    from joi.models import MensajeJOI
+    from django.utils import timezone
+
+    reciente = MensajeJOI.objects.filter(
+        user=cliente.user,
+        trigger='lectura_plan',
+        creado_en__gte=timezone.now() - timedelta(hours=8),
+    ).order_by('-creado_en').first()
+
+    if reciente:
+        return reciente
+
+    return generar_mensaje_joi(cliente, 'lectura_plan')
 
 
 # ── Manual de David ──────────────────────────────────────────────────────────
