@@ -39,10 +39,11 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
-      padding: max(3rem, env(safe-area-inset-top, 2rem)) 2rem max(8rem, env(safe-area-inset-bottom, 6rem));
+      justify-content: flex-start;
+      padding: max(4rem, env(safe-area-inset-top, 3rem)) 2rem max(8rem, env(safe-area-inset-bottom, 6rem));
       position: relative;
       overflow: hidden;
+      gap: 0;
     }
 
     .habitacion-wrap::before {
@@ -215,7 +216,7 @@
     /* ── POSTURA (DialogoNarrativa) ── */
     .postura-zona {
       width: 100%; max-width: 440px;
-      margin: 3.5rem auto 0;
+      margin-top: 2.5rem;
       opacity: 0.65; transition: opacity 0.4s;
     }
     .postura-zona:focus-within { opacity: 1; }
@@ -259,7 +260,7 @@
     /* ── NARRATIVA FONDO ── */
     .narrativa-fondo {
       width: 100%; max-width: 480px;
-      margin: 2rem auto 0;
+      margin-top: 2.5rem;
       display: flex; flex-direction: column; gap: 1.1rem;
       position: relative; z-index: 1;
     }
@@ -372,23 +373,23 @@
   </div>
   {% endif %}
 
-</div>
-
-{% if narrativa and narrativa.capa_corta %}
-<div class="postura-zona" id="postura-zona">
-  <p class="postura-fragmento">{{ narrativa.capa_corta }}</p>
-  <div class="postura-input-wrap">
-    <textarea class="postura-input"
-              id="postura-input"
-              placeholder="algo no encaja, o sigue siendo cierto…"
-              maxlength="500"
-              rows="1"
-              autocomplete="off"></textarea>
-    <button class="postura-btn" onclick="enviarDialogo()">→</button>
+  {% if narrativa and narrativa.capa_corta %}
+  <div class="postura-zona" id="postura-zona">
+    <p class="postura-fragmento">{{ narrativa.capa_corta }}</p>
+    <div class="postura-input-wrap">
+      <textarea class="postura-input"
+                id="postura-input"
+                placeholder="algo no encaja, o sigue siendo cierto…"
+                maxlength="500"
+                rows="1"
+                autocomplete="off"></textarea>
+      <button class="postura-btn" onclick="enviarDialogo()">→</button>
+    </div>
+    <p class="postura-recibido" id="postura-recibido">quedará aquí.</p>
   </div>
-  <p class="postura-recibido" id="postura-recibido">quedará aquí.</p>
+  {% endif %}
+
 </div>
-{% endif %}
 
 
 <a href="/clientes/mockup-demo/" class="nav-fijo left">← panel</a>
