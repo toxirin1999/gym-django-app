@@ -181,6 +181,10 @@
             <td>{{ item.programa__nombre }}</td>
             <td>{{ item.count }}</td>
         </tr>
+        {% empty %}
+        <tr>
+            <td colspan="2" class="text-center text-muted py-2">Sin programas asignados todavía.</td>
+        </tr>
         {% endfor %}
         </tbody>
     </table>

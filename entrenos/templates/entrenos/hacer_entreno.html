@@ -58,7 +58,7 @@
                         </td>
                         <td>
                             {% if cliente.programa %}
-                            {% with rutina=cliente.programa.rutinas.first %}
+                            {% with rutina=cliente.programa.rutinas_lista.0 %}
                             {% if rutina %}
                             <a href="{% url 'entreno_anterior' cliente.id rutina.id %}?cliente_id={{ cliente.id }}"
                                class="fitness-button small"
@@ -70,10 +70,14 @@
                             {% endif %}
                             {% endwith %}
                             {% else %}
-                            <span class="text-muted">N/A</span>
+                            <span class="text-muted">Sin programa asignado</span>
                             {% endif %}
 
                         </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" class="text-center text-muted py-3">Aún no hay clientes registrados.</td>
                     </tr>
                     {% endfor %}
                     </tbody>

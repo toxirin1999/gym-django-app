@@ -60,6 +60,18 @@
         0% { transform: translateY(0); }
         100% { transform: translateY(-10px); }
     }
+
+    @media (max-width: 480px) {
+        .joi-contenedor {
+            flex-direction: column;
+            align-items: center;
+            gap: 1em;
+        }
+        .joi-bocadillo {
+            max-width: 100%;
+            font-size: 1.1em;
+        }
+    }
 </style>
 
 {% if respuesta_joi_ia %}
