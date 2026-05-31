@@ -369,7 +369,7 @@ class HyroxObjective(models.Model):
             if 0 < days_left < 30:
                 return f"Estamos a {days_left} días de la prueba. Cada bloque cuenta para el resultado final."
 
-        return "Hoy es un buen día para el orden y la disciplina. ¿Listo para sumar?"
+        return None
 
 class HyroxSession(models.Model):
     ESTADO_CHOICES = [
