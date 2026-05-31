@@ -574,6 +574,11 @@ body {
           {{ proximo_entrenamiento.nombre|default:proximo_entrenamiento.rutina_nombre|default:"Sesión" }}
         {% endif %}
       </div>
+      {% if estado_entreno == 'recuperar' and entreno_hoy_realizado %}
+      <div style="margin-top:8px;font-size:11px;color:var(--ink-3);line-height:1.5;">
+        El plan marcaba recuperación. Has completado una sesión de baja exigencia — el día sigue contando como descarga.
+      </div>
+      {% endif %}
       {% if bloque_esencial_resumen %}
       <div style="margin-top:10px;padding:10px 12px;background:rgba(255,200,100,0.06);border:1px solid rgba(255,200,100,0.18);border-radius:10px;">
         <div style="font-size:10px;font-weight:700;color:rgba(255,200,100,0.8);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:6px;">Versión esencial</div>
@@ -1385,24 +1390,23 @@ body {
     </div>
     {% endif %}
 
-    <!-- JOI — lectura del plan (Phase 58.5) -->
+    <!-- JOI — lectura del plan → indicador CTA (Phase 60E) -->
     {% if lectura_plan_joi and lectura_plan_joi.mensaje != '[SILENCIO]' %}
-    <div style="margin-bottom:10px;padding:10px 14px;background:rgba(139,92,246,0.05);border-left:2px solid rgba(139,92,246,0.25);border-radius:0 10px 10px 0;">
-      <div style="font-family:var(--font-mono);font-size:8px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:rgba(139,92,246,0.55);margin-bottom:5px;">JOI · el plan</div>
-      <div style="font-size:12px;color:var(--td);opacity:0.82;line-height:1.55;font-style:italic;">{{ lectura_plan_joi.mensaje }}</div>
-      <div style="font-size:9px;color:var(--td);opacity:0.35;margin-top:5px;">{{ lectura_plan_joi.creado_en|timesince }} atrás</div>
+    <div style="margin-bottom:10px;padding:10px 14px;background:rgba(139,92,246,0.05);border-left:2px solid rgba(139,92,246,0.25);border-radius:0 10px 10px 0;display:flex;align-items:center;justify-content:space-between;gap:12px;">
+      <div style="font-family:var(--font-mono);font-size:8px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:rgba(139,92,246,0.55);flex-shrink:0;">JOI · el plan</div>
+      <a href="{% url 'joi:joi_habitacion' %}" style="font-size:11px;color:rgba(139,92,246,0.65);text-decoration:none;white-space:nowrap;transition:color .2s;" onmouseover="this.style.color='rgba(139,92,246,1)'" onmouseout="this.style.color='rgba(139,92,246,0.65)'">hay una lectura →</a>
     </div>
     {% endif %}
 
-    <!-- Daily push Hyrox -->
+    <!-- Daily push Hyrox → orientación operativa (Phase 60E) -->
     {% if daily_push_hyrox %}
     <div style="margin-bottom:12px;background:var(--paper);border:1px solid var(--line-2);border-radius:14px;overflow:hidden;">
       <div style="display:flex;align-items:center;gap:8px;padding:10px 14px 8px;border-bottom:1px solid var(--line);">
         <span style="font-size:14px;">🏁</span>
-        <span style="font-family:var(--font-mono);font-size:9px;font-weight:700;color:var(--ink-3);letter-spacing:.12em;text-transform:uppercase;">Hyrox · mensaje del día</span>
+        <span style="font-family:var(--font-mono);font-size:9px;font-weight:700;color:var(--ink-3);letter-spacing:.12em;text-transform:uppercase;">Hyrox · orientación</span>
       </div>
-      <div style="padding:12px 14px;font-size:13px;color:var(--ink-2);line-height:1.5;font-style:italic;">
-        "{{ daily_push_hyrox }}"
+      <div style="padding:10px 14px;font-size:12px;color:var(--ink-2);line-height:1.5;">
+        {{ daily_push_hyrox }}
       </div>
     </div>
     {% endif %}
