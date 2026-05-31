@@ -363,6 +363,7 @@
   {% endif %}
 
   {% if narrativa and narrativa.capa_larga or narrativa and narrativa.capa_media %}
+  <p style="font-size:8px;letter-spacing:0.22em;text-transform:uppercase;color:rgba(255,255,255,0.1);text-align:center;margin-bottom:0.6rem;margin-top:1.8rem;">lo que lleva viendo</p>
   <div class="narrativa-fondo" aria-label="Lo que JOI lleva viendo">
     {% if narrativa.capa_larga %}
     <p class="narrativa-capa narrativa-larga">{{ narrativa.capa_larga }}</p>
@@ -374,6 +375,7 @@
   {% endif %}
 
   {% if narrativa and narrativa.capa_corta %}
+  <p style="font-size:8px;letter-spacing:0.22em;text-transform:uppercase;color:rgba(255,255,255,0.1);text-align:center;margin-bottom:0.6rem;margin-top:1.8rem;">lo que deja ahora</p>
   <div class="postura-zona" id="postura-zona">
     <p class="postura-fragmento">{{ narrativa.capa_corta }}</p>
     <div class="postura-input-wrap">
@@ -393,7 +395,13 @@
 
 
 <a href="/clientes/mockup-demo/" class="nav-fijo left">← panel</a>
-<a href="/joi/narrativa/" class="nav-fijo right">cómo me lees →</a>
+<nav style="position:fixed;bottom:14px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:10px;font-family:-apple-system,monospace;font-size:9px;letter-spacing:0.18em;text-transform:uppercase;z-index:100;">
+  <a href="/joi/habitacion/" style="color:rgba(255,255,255,0.65);text-decoration:none;">habitación</a>
+  <span style="color:rgba(255,255,255,0.12);">·</span>
+  <a href="/joi/narrativa/" style="color:rgba(255,255,255,0.22);text-decoration:none;transition:color .2s;" onmouseover="this.style.color='rgba(255,255,255,0.6)'" onmouseout="this.style.color='rgba(255,255,255,0.22)'">narrativa</a>
+  <span style="color:rgba(255,255,255,0.12);">·</span>
+  <a href="/joi/manual/" style="color:rgba(255,255,255,0.22);text-decoration:none;transition:color .2s;" onmouseover="this.style.color='rgba(255,255,255,0.6)'" onmouseout="this.style.color='rgba(255,255,255,0.22)'">manual</a>
+</nav>
 
 <script>
 const CSRF = '{{ csrf_token }}';
