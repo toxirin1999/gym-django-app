@@ -151,6 +151,12 @@ class TestReglaDePresicion(TestCase):
             self.assertIn(absoluto, resultado,
                           f"El marco debe mencionar '{absoluto}' como absoluto a evitar")
 
+    def test_marco_exige_formulacion_temporal_no_absoluta(self):
+        self._crear_narrativa()
+        resultado = _bloque_marco_narrativo(self.user)
+        self.assertIn('N días sin', resultado)
+        self.assertIn('observación', resultado.lower())
+
     def test_marco_exige_presencia_no_informe(self):
         self._crear_narrativa()
         resultado = _bloque_marco_narrativo(self.user)
