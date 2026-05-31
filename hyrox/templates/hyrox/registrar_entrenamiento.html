@@ -711,57 +711,15 @@
   <div style="display:none">{{ form.titulo }}</div>
   <textarea name="notas_raw" id="id_notas_raw" style="display:none"></textarea>
 
-  <!-- ── JOI banner ─────────────────────────────────────────────────────── -->
+  <!-- ── JOI indicador ─────────────────────────────────────────────────── -->
   {% if joi_mensaje_hyrox %}
-  <div id="joi-rb-banner" style="
-    flex-shrink: 0;
-    background: var(--paper);
-    border-bottom: 1px solid var(--line-2);
-    padding: 10px 16px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    animation: joiRbIn .4s ease-out;
-  ">
-    <span style="
-      font-family: var(--font-mono);
-      font-size: 9px;
-      font-weight: 700;
-      letter-spacing: 0.15em;
-      text-transform: uppercase;
-      color: var(--accent);
-      white-space: nowrap;
-    ">JOI</span>
-    <p style="
-      margin: 0;
-      font-size: 13px;
-      font-style: italic;
-      color: var(--ink-2);
-      line-height: 1.4;
-      flex: 1;
-    ">{{ joi_mensaje_hyrox.mensaje }}</p>
-    <button type="button" onclick="joiRbCerrar({{ joi_mensaje_hyrox.id }})" style="
-      background: none;
-      border: 1px solid var(--ink-4);
-      color: var(--ink-3);
-      padding: 2px 8px;
-      font-family: var(--font-mono);
-      font-size: 9px;
-      font-weight: 700;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      cursor: pointer;
-      border-radius: 2px;
-      white-space: nowrap;
-      flex-shrink: 0;
-    ">✓ OK</button>
+  <div id="joi-rb-banner" style="flex-shrink:0;background:var(--paper);border-bottom:1px solid var(--line-2);padding:8px 16px;display:flex;align-items:center;gap:10px;">
+    <span style="font-family:var(--font-mono);font-size:9px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--accent);flex-shrink:0;">JOI</span>
+    <a href="/joi/habitacion/?mensaje={{ joi_mensaje_hyrox.id }}"
+       style="font-size:12px;font-style:italic;color:var(--ink-2);text-decoration:none;flex:1;transition:color .2s;"
+       onmouseover="this.style.color='var(--fg)'" onmouseout="this.style.color='var(--ink-2)'">hay una lectura sobre esta sesión →</a>
+    <button type="button" onclick="joiRbCerrar({{ joi_mensaje_hyrox.id }})" style="background:none;border:none;color:var(--ink-3);font-size:16px;cursor:pointer;padding:0 4px;line-height:1;flex-shrink:0;">×</button>
   </div>
-  <style>
-  @keyframes joiRbIn {
-    from { opacity: 0; transform: translateY(-6px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
-  </style>
   <script>
   function joiRbCerrar(id) {
     fetch('/joi/mensaje/' + id + '/leido/', {
