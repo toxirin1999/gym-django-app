@@ -1333,7 +1333,7 @@ input{background:transparent!important;border:none!important;outline:none!import
                    class="peso-input weight-input"
                    id="peso-{{ ejercicio.form_id }}-{{ sn }}"
                    name="{{ ejercicio.form_id }}_peso_{{ sn }}"
-                   value="{{ ejercicio.peso_recomendado_kg|stringformat:'.1f' }}"
+                   value="{{ ejercicio.peso_inicial_kg|default:ejercicio.peso_recomendado_kg|stringformat:'.1f' }}"
                    data-rec-weight="{{ ejercicio.peso_recomendado_kg|stringformat:'.1f' }}"
                    data-eq-name="{{ ejercicio.nombre|lower }}">
             <span class="peso-kg">kg</span>
@@ -1398,7 +1398,7 @@ input{background:transparent!important;border:none!important;outline:none!import
                     data-hid="reps-hid-{{ ejercicio.form_id }}-{{ sn }}"
                     data-delta="-1" data-min="1" data-max="50"
                     data-fid="{{ ejercicio.form_id }}" data-sn="{{ sn }}">−</button>
-            <span class="picker-val" id="reps-disp-{{ ejercicio.form_id }}-{{ sn }}">{{ ejercicio.reps_objetivo }}</span>
+            <span class="picker-val" id="reps-disp-{{ ejercicio.form_id }}-{{ sn }}">{% if ejercicio.sugerencia_tope and ejercicio.reps_sugeridas_tope %}{{ ejercicio.reps_sugeridas_tope }}{% else %}{{ ejercicio.reps_objetivo }}{% endif %}</span>
             <button type="button" class="picker-btn mas"
                     data-disp="reps-disp-{{ ejercicio.form_id }}-{{ sn }}"
                     data-hid="reps-hid-{{ ejercicio.form_id }}-{{ sn }}"
@@ -1426,7 +1426,7 @@ input{background:transparent!important;border:none!important;outline:none!import
         </div>
 
         <input type="number" style="display:none;" id="reps-hid-{{ ejercicio.form_id }}-{{ sn }}"
-               name="{{ ejercicio.form_id }}_reps_{{ sn }}" value="{{ ejercicio.reps_objetivo }}">
+               name="{{ ejercicio.form_id }}_reps_{{ sn }}" value="{% if ejercicio.sugerencia_tope and ejercicio.reps_sugeridas_tope %}{{ ejercicio.reps_sugeridas_tope }}{% else %}{{ ejercicio.reps_objetivo }}{% endif %}">
         <input type="number" style="display:none;" id="rpe-hid-{{ ejercicio.form_id }}-{{ sn }}"
                name="{{ ejercicio.form_id }}_rpe_{{ sn }}" value="{{ ejercicio.rpe_objetivo }}">
         <input type="hidden" name="{{ ejercicio.form_id }}_rpe_obj_{{ sn }}" value="{{ ejercicio.rpe_objetivo }}">
@@ -2077,6 +2077,22 @@ function aplicarSugerenciaSiguienteSerie(fid, snActual, total, peso, rpe, reps) 
   const repsObj = parseFloat(panelSig.dataset.repsObj || reps);
   const usaPeso = panelSig.dataset.usaPeso === '1';
   if (!usaPeso) return;
+
+  // Tope activo: congelar peso, no sugerir subida
+  const topeInput = document.getElementById('tope-'+fid);
+  const topeActivo = topeInput && topeInput.value === 'true';
+  if (topeActivo) {
+    if (bannerDescanso) bannerDescanso.style.display = 'none';
+    const pesoInput = document.getElementById('peso-'+fid+'-'+snSig);
+    if (pesoInput) {
+      pesoInput.value = peso.toFixed(1);
+      calcularDiscosInline(fid, snSig, peso);
+      detectarPR(fid, snSig, peso);
+    }
+    const bannerSig = document.getElementById('sugerencia-'+fid+'-'+snSig);
+    if (bannerSig) bannerSig.style.display = 'none';
+    return;
+  }
 
   const resultado = calcularPesoSiguienteSerie(peso, rpe, reps, rpeObj, repsObj);
 
