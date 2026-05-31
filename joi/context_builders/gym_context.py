@@ -4,7 +4,7 @@ estancamientos, señales semanales y preferencias aprendidas.
 """
 from datetime import date, timedelta
 
-from django.db.models import Avg, Count
+from django.db.models import Avg, Count, Q
 
 from entrenos.models import (
     EntrenoRealizado, EjercicioRealizado,
@@ -163,6 +163,32 @@ def build_gym_context(cliente, hoy: date, semana_reciente: date) -> dict:
             ctx['estado_joi_semanal'] = estado_joi.get('estado', 'minima')
             ctx['joi_debe_hablar_semanal'] = estado_joi.get('debe_hablar', False)
             ctx['joi_nota_tono_semanal'] = estado_joi.get('nota_tono', '')
+    except Exception:
+        pass
+
+    # ── FASE DEL PLAN ACTUAL ─────────────────────────────────────────────────
+    try:
+        from clientes.models import FaseCliente
+        fase_actual = (
+            FaseCliente.objects
+            .filter(
+                cliente=cliente,
+            )
+            .filter(Q(fecha_fin__isnull=True) | Q(fecha_fin__gte=hoy))
+            .order_by('-fecha_inicio')
+            .first()
+        )
+        if fase_actual:
+            dias_en_fase = (hoy - fase_actual.fecha_inicio).days
+            fase_info = {
+                'tipo': fase_actual.fase,
+                'nombre': fase_actual.get_fase_display(),
+                'dias_en_fase': dias_en_fase,
+                'es_descarga': fase_actual.fase == 'descarga',
+            }
+            if fase_actual.fecha_fin:
+                fase_info['dias_restantes'] = (fase_actual.fecha_fin - hoy).days
+            ctx['fase_plan'] = fase_info
     except Exception:
         pass
 
