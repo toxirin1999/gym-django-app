@@ -151,6 +151,13 @@ class TestReglaDePresicion(TestCase):
             self.assertIn(absoluto, resultado,
                           f"El marco debe mencionar '{absoluto}' como absoluto a evitar")
 
+    def test_marco_exige_presencia_no_informe(self):
+        self._crear_narrativa()
+        resultado = _bloque_marco_narrativo(self.user)
+        self.assertIn('card de analytics', resultado)
+        self.assertIn('informe', resultado.lower())
+        self.assertIn('narrativa viva', resultado)
+
 
 class TestOrdenPromptConMarco(TestCase):
     """Verifica que el marco aparece ANTES del builder en el prompt ensamblado."""
