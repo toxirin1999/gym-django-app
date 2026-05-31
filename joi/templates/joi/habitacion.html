@@ -329,7 +329,7 @@
     <p class="joi-mensaje-texto">{{ mensaje.mensaje }}</p>
 
     <p class="joi-meta">
-      {{ mensaje.creado_en|date:"j N · H:i" }}
+      {{ mensaje.creado_en|date:"j N" }}
       {% if regenerado %}<span style="margin-left:0.6rem;opacity:0.5;">· actualizado</span>{% endif %}
     </p>
 
