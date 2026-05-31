@@ -58,23 +58,23 @@
     }
 
     .poda-orbita {
-      width: 36px; height: 36px;
+      width: 32px; height: 32px;
       margin: 0 auto 2rem;
       border-radius: 50%;
-      border: 1px solid rgba(120, 178, 225, 0.3);
+      border: 1px solid rgba(180, 200, 215, 0.22);
       position: relative;
-      animation: orbita-pulso 5s ease-in-out infinite;
+      animation: orbita-pulso 8s ease-in-out infinite;
     }
     .poda-orbita::before {
       content: '';
-      position: absolute; inset: 9px;
+      position: absolute; inset: 8px;
       border-radius: 50%;
-      background: radial-gradient(circle, rgba(120,178,225,0.7) 0%, transparent 70%);
-      opacity: 0.45;
+      background: radial-gradient(circle, rgba(185, 210, 228, 0.55) 0%, transparent 70%);
+      opacity: 0.55;
     }
     @keyframes orbita-pulso {
-      0%,100% { transform:scale(1); opacity:0.8; }
-      50% { transform:scale(1.1); opacity:1; }
+      0%,100% { transform:scale(1); opacity:0.65; }
+      50% { transform:scale(1.08); opacity:0.90; }
     }
 
     .poda-eyebrow {
@@ -126,12 +126,25 @@
 
     .poda-entrada {
       position: relative;
-      padding: 1.6rem 0;
-      border-bottom: 1px solid var(--line);
+      padding: 1.6rem 0 1.6rem 2.4rem;
+      border-bottom: 1px solid rgba(0, 180, 220, 0.12);
       transition: opacity 0.5s ease, transform 0.4s ease;
       overflow: hidden;
+      counter-increment: entrada-counter;
     }
-    .poda-entrada:first-child { border-top: 1px solid var(--line); }
+    .poda-entrada:first-child { border-top: 1px solid rgba(0, 180, 220, 0.12); }
+    .poda-lista { counter-reset: entrada-counter; }
+
+    .poda-entrada::before {
+      content: counter(entrada-counter, decimal-leading-zero);
+      position: absolute;
+      left: 0;
+      top: 1.85rem;
+      font-size: 0.42rem;
+      letter-spacing: 0.18em;
+      color: rgba(140, 195, 230, 0.22);
+      font-weight: 400;
+    }
 
     .poda-entrada.eliminando {
       opacity: 0;
