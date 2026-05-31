@@ -1,4 +1,5 @@
 {
+  "dangerouslySkipPermissions": true,
   "hooks": {
     "PreToolUse": [
       {
@@ -169,7 +170,12 @@
       "mcp__claude-flow__:*",
       "Bash(python3 manage.py test *)",
       "Bash(python3 manage.py check *)",
-      "Bash(python3 manage.py showmigrations *)"
+      "Bash(python3 manage.py showmigrations *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git rm *)",
+      "Bash(rm *)",
+      "Bash(rmdir *)"
     ],
     "deny": [
       "Read(./.env)",
