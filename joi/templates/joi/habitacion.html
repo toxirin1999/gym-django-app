@@ -281,6 +281,31 @@
       opacity: 0.80;
     }
 
+    /* ── LIQUID GLASS — mensaje panel ── */
+    .joi-mensaje-wrap {
+      backdrop-filter: blur(16px) saturate(1.4);
+      -webkit-backdrop-filter: blur(16px) saturate(1.4);
+      background: rgba(6, 7, 14, 0.35);
+      border: 1px solid rgba(140, 195, 230, 0.09);
+      border-radius: 20px;
+      padding: 2.2rem 1.8rem 1.8rem;
+    }
+
+    /* ── REDUCED MOTION ── */
+    @media (prefers-reduced-motion: reduce) {
+      .vigilia-anillo-ext, .vigilia-anillo-med, .vigilia-anillo-int,
+      .vigilia-anillo-ext-2, .vigilia-punto, .sedimento-shimmer,
+      .joi-mensaje-wrap { animation: none !important; opacity: 1 !important; }
+    }
+
+    /* ── NAV COORDS ── */
+    .joi-coords { display:flex;align-items:center;gap:10px;font-family:-apple-system,monospace;font-size:9px;letter-spacing:0.18em;text-transform:uppercase; }
+    .joi-coords a { text-decoration:none; transition: color .2s; }
+    .joi-coords a.activa { color:rgba(255,255,255,0.65); }
+    .joi-coords a:not(.activa) { color:rgba(255,255,255,0.22); }
+    .joi-coords a:not(.activa):hover { color:rgba(255,255,255,0.6); }
+    .joi-coords span { color:rgba(255,255,255,0.12); }
+
     /* ── NAV ── */
     .nav-fijo {
       position: fixed;
@@ -395,12 +420,12 @@
 
 
 <a href="/clientes/mockup-demo/" class="nav-fijo left">← panel</a>
-<nav style="position:fixed;bottom:14px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:10px;font-family:-apple-system,monospace;font-size:9px;letter-spacing:0.18em;text-transform:uppercase;z-index:100;">
-  <a href="/joi/habitacion/" style="color:rgba(255,255,255,0.65);text-decoration:none;">habitación</a>
-  <span style="color:rgba(255,255,255,0.12);">·</span>
-  <a href="/joi/narrativa/" style="color:rgba(255,255,255,0.22);text-decoration:none;transition:color .2s;" onmouseover="this.style.color='rgba(255,255,255,0.6)'" onmouseout="this.style.color='rgba(255,255,255,0.22)'">narrativa</a>
-  <span style="color:rgba(255,255,255,0.12);">·</span>
-  <a href="/joi/manual/" style="color:rgba(255,255,255,0.22);text-decoration:none;transition:color .2s;" onmouseover="this.style.color='rgba(255,255,255,0.6)'" onmouseout="this.style.color='rgba(255,255,255,0.22)'">manual</a>
+<nav class="joi-coords" style="position:fixed;bottom:14px;left:50%;transform:translateX(-50%);z-index:100;">
+  <a href="/joi/habitacion/" class="activa">habitación</a>
+  <span>·</span>
+  <a href="/joi/narrativa/">narrativa</a>
+  <span>·</span>
+  <a href="/joi/manual/">manual</a>
 </nav>
 
 <script>

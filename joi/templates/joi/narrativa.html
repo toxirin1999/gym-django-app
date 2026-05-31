@@ -141,6 +141,20 @@
     }
     .dialogo-input-wrap:focus-within .dialogo-btn { opacity: 0.75; }
 
+    /* ── REDUCED MOTION ── */
+    @media (prefers-reduced-motion: reduce) {
+      .capa { animation: none !important; opacity: 1 !important; transform: none !important; }
+      .dialogo-zona { animation: none !important; opacity: 1 !important; }
+    }
+
+    /* ── NAV COORDS ── */
+    .joi-coords { display:flex;align-items:center;gap:10px;font-family:-apple-system,monospace;font-size:9px;letter-spacing:0.18em;text-transform:uppercase; }
+    .joi-coords a { text-decoration:none; transition: color .2s; }
+    .joi-coords a.activa { color:rgba(255,255,255,0.65); }
+    .joi-coords a:not(.activa) { color:rgba(255,255,255,0.22); }
+    .joi-coords a:not(.activa):hover { color:rgba(255,255,255,0.6); }
+    .joi-coords span { color:rgba(255,255,255,0.12); }
+
     /* Nav */
     .nav-link {
       position: fixed;
@@ -254,12 +268,12 @@ async function enviarDialogo() {
   }
 }
 </script>
-<nav style="position:fixed;bottom:14px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:10px;font-family:-apple-system,monospace;font-size:9px;letter-spacing:0.18em;text-transform:uppercase;z-index:100;">
-  <a href="/joi/habitacion/" style="color:rgba(255,255,255,0.22);text-decoration:none;transition:color .2s;" onmouseover="this.style.color='rgba(255,255,255,0.6)'" onmouseout="this.style.color='rgba(255,255,255,0.22)'">habitación</a>
-  <span style="color:rgba(255,255,255,0.12);">·</span>
-  <a href="/joi/narrativa/" style="color:rgba(255,255,255,0.65);text-decoration:none;">narrativa</a>
-  <span style="color:rgba(255,255,255,0.12);">·</span>
-  <a href="/joi/manual/" style="color:rgba(255,255,255,0.22);text-decoration:none;transition:color .2s;" onmouseover="this.style.color='rgba(255,255,255,0.6)'" onmouseout="this.style.color='rgba(255,255,255,0.22)'">manual</a>
+<nav class="joi-coords" style="position:fixed;bottom:14px;left:50%;transform:translateX(-50%);z-index:100;">
+  <a href="/joi/habitacion/">habitación</a>
+  <span>·</span>
+  <a href="/joi/narrativa/" class="activa">narrativa</a>
+  <span>·</span>
+  <a href="/joi/manual/">manual</a>
 </nav>
 </body>
 </html>

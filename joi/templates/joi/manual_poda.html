@@ -228,6 +228,23 @@
       color: var(--ink-mute);
     }
 
+    /* ── REDUCED MOTION ── */
+    @media (prefers-reduced-motion: reduce) {
+      .poda-orbita { animation: none !important; opacity: 0.8; }
+      .poda-entrada { transition: none !important; }
+    }
+
+    /* ── CURSOR ── */
+    .poda-btn-borrar, .poda-volver { cursor: pointer; }
+
+    /* ── NAV COORDS ── */
+    .joi-coords { display:flex;align-items:center;gap:10px;font-family:-apple-system,monospace;font-size:9px;letter-spacing:0.18em;text-transform:uppercase; }
+    .joi-coords a { text-decoration:none; transition: color .2s; cursor: pointer; }
+    .joi-coords a.activa { color:rgba(255,255,255,0.65); }
+    .joi-coords a:not(.activa) { color:rgba(255,255,255,0.22); }
+    .joi-coords a:not(.activa):hover { color:rgba(255,255,255,0.6); }
+    .joi-coords span { color:rgba(255,255,255,0.12); }
+
     /* Volver */
     .poda-volver {
       margin-top: 5rem;
@@ -298,12 +315,12 @@
     </div>
   {% endif %}
 
-  <nav style="display:flex;align-items:center;justify-content:center;gap:10px;font-family:-apple-system,monospace;font-size:9px;letter-spacing:0.18em;text-transform:uppercase;margin-top:2rem;padding-bottom:2rem;">
-    <a href="/joi/habitacion/" style="color:rgba(255,255,255,0.22);text-decoration:none;transition:color .2s;" onmouseover="this.style.color='rgba(255,255,255,0.6)'" onmouseout="this.style.color='rgba(255,255,255,0.22)'">habitación</a>
-    <span style="color:rgba(255,255,255,0.12);">·</span>
-    <a href="/joi/narrativa/" style="color:rgba(255,255,255,0.22);text-decoration:none;transition:color .2s;" onmouseover="this.style.color='rgba(255,255,255,0.6)'" onmouseout="this.style.color='rgba(255,255,255,0.22)'">narrativa</a>
-    <span style="color:rgba(255,255,255,0.12);">·</span>
-    <a href="/joi/manual/" style="color:rgba(255,255,255,0.65);text-decoration:none;">manual</a>
+  <nav class="joi-coords" style="justify-content:center;margin-top:2rem;padding-bottom:2rem;">
+    <a href="/joi/habitacion/">habitación</a>
+    <span>·</span>
+    <a href="/joi/narrativa/">narrativa</a>
+    <span>·</span>
+    <a href="/joi/manual/" class="activa">manual</a>
   </nav>
 
 </div>
