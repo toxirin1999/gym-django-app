@@ -63,10 +63,14 @@
       margin-bottom: 3.5rem;
       animation: aparecer 1s ease forwards;
       opacity: 0;
+      padding-left: 1.4rem;
+      border-left: 1px solid rgba(100, 180, 220, 0.10);
+      transition: border-color 0.4s;
     }
+    .capa:hover { border-left-color: rgba(100, 180, 220, 0.22); }
     .capa:nth-child(2) { animation-delay: 0.1s; }
-    .capa:nth-child(3) { animation-delay: 0.35s; }
-    .capa:nth-child(4) { animation-delay: 0.6s; }
+    .capa:nth-child(3) { animation-delay: 0.35s; border-left-color: rgba(100, 180, 220, 0.15); }
+    .capa:nth-child(4) { animation-delay: 0.6s;  border-left-color: rgba(100, 180, 220, 0.22); }
 
     @keyframes aparecer {
       from { opacity: 0; transform: translateY(8px); }
@@ -75,19 +79,18 @@
 
     .capa-texto {
       font-weight: 300;
-      line-height: 1.75;
+      line-height: 1.82;
       color: var(--ink);
       letter-spacing: 0.01em;
-      text-shadow: 0 0 20px rgba(0, 220, 255, 0.30);
     }
-    .capa-larga  .capa-texto { font-size: clamp(0.88rem, 2.2vw, 1.05rem); opacity: 0.72; }
-    .capa-media  .capa-texto { font-size: clamp(0.98rem, 2.5vw, 1.18rem); opacity: 0.86; }
-    .capa-corta  .capa-texto { font-size: clamp(1.08rem, 2.8vw, 1.30rem); opacity: 1.00; }
+    .capa-larga  .capa-texto { font-size: clamp(0.88rem, 2.2vw, 1.02rem); opacity: 0.68; }
+    .capa-media  .capa-texto { font-size: clamp(0.96rem, 2.5vw, 1.15rem); opacity: 0.84; }
+    .capa-corta  .capa-texto { font-size: clamp(1.06rem, 2.8vw, 1.28rem); opacity: 1.00; }
 
     .capa-sep {
-      width: 28px; height: 1px;
-      background: var(--line);
-      margin: 0 0 3.5rem 0;
+      width: 1px; height: 2.5rem;
+      background: linear-gradient(to bottom, rgba(100,180,220,0.12), transparent);
+      margin: 0 0 3.5rem 1.4rem;
     }
 
     .narrativa-vacia {
