@@ -1,7 +1,11 @@
 {% comment %}
 Partial: botón flotante de La Habitación + banner JOI.
-Incluir justo antes de </body> en cualquier template que no extienda base.html.
-Requiere que el context processor joi.context_processors.joi_context esté activo (lo está globalmente).
+
+REGLA DE ARQUITECTURA (Phase 60E):
+El FAB anuncia presencia. NO consume mensajes.
+Descartar el banner solo lo oculta en esta sesión (sessionStorage).
+El mensaje sigue sin leer hasta que el usuario entra en la habitación.
+La habitación es el único lugar donde una lectura se considera recibida.
 {% endcomment %}
 <style>
 .joi-fab{position:fixed;top:72px;left:20px;width:42px;height:42px;border-radius:50%;
@@ -28,42 +32,34 @@ Requiere que el context processor joi.context_processors.joi_context esté activ
 
 {% if joi_mensaje_pendiente and not hide_banner %}
 <div id="joi-fab-banner">
-  <span style="color:rgba(200,100,255,.6);font-size:13px;letter-spacing:.05em;text-transform:uppercase;white-space:nowrap;">JOI</span>
-  <p id="joi-fab-banner-texto" style="margin:0;color:#e8b4ff;font-style:italic;font-size:14px;line-height:1.5;flex:1;">{{ joi_mensaje_pendiente.mensaje|truncatechars:120 }}</p>
-  <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
-    <button onclick="joiFabFeedback({{ joi_mensaje_pendiente.id }},'clavado')" title="Lo has leído bien"
-      style="background:none;border:none;color:rgba(200,100,255,.45);font-size:11px;cursor:pointer;padding:2px 4px;line-height:1;transition:color .2s;white-space:nowrap;"
-      onmouseover="this.style.color='rgba(160,255,180,.9)'" onmouseout="this.style.color='rgba(200,100,255,.45)'">✓</button>
-    <button onclick="joiFabFeedback({{ joi_mensaje_pendiente.id }},'equivocado')" title="No ha encajado"
-      style="background:none;border:none;color:rgba(200,100,255,.45);font-size:11px;cursor:pointer;padding:2px 4px;line-height:1;transition:color .2s;white-space:nowrap;"
-      onmouseover="this.style.color='rgba(255,140,140,.9)'" onmouseout="this.style.color='rgba(200,100,255,.45)'">✗</button>
-  </div>
-  <a href="/joi/habitacion/" style="color:rgba(200,100,255,.6);font-size:11px;letter-spacing:.12em;text-transform:uppercase;text-decoration:none;padding:0 4px;transition:color .2s;"
-     onmouseover="this.style.color='#e8b4ff'" onmouseout="this.style.color='rgba(200,100,255,.6)'">→</a>
-  <button onclick="joiFabCerrar({{ joi_mensaje_pendiente.id }})"
+  <span style="color:rgba(200,100,255,.6);font-size:13px;letter-spacing:.05em;text-transform:uppercase;white-space:nowrap;flex-shrink:0;">JOI</span>
+  <a href="/joi/habitacion/?mensaje={{ joi_mensaje_pendiente.id }}"
+     style="margin:0;font-size:14px;font-style:italic;color:#e8b4ff;line-height:1.5;flex:1;text-decoration:none;transition:color .2s;"
+     onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#e8b4ff'">
+    hay una lectura pendiente →
+  </a>
+  <button onclick="joiFabOcultar({{ joi_mensaje_pendiente.id }})"
           style="background:none;border:none;color:rgba(200,100,255,.5);font-size:18px;cursor:pointer;padding:0 4px;line-height:1;transition:color .2s;"
           onmouseover="this.style.color='#e8b4ff'" onmouseout="this.style.color='rgba(200,100,255,.5)'">×</button>
 </div>
 <script>
-function joiFabCerrar(id){
-  fetch('/joi/mensaje/'+id+'/leido/',{method:'POST',headers:{'X-CSRFToken':document.cookie.match(/csrftoken=([^;]+)/)?.[1]||''}});
-  const b=document.getElementById('joi-fab-banner');
-  b.style.transition='transform .4s ease-in,opacity .4s';
-  b.style.transform='translateY(-100%)';b.style.opacity='0';
-  setTimeout(()=>b.remove(),420);
-}
-function joiFabFeedback(id,tipo){
-  fetch('/joi/mensaje/'+id+'/feedback/',{
-    method:'POST',
-    headers:{'X-CSRFToken':document.cookie.match(/csrftoken=([^;]+)/)?.[1]||'','Content-Type':'application/x-www-form-urlencoded'},
-    body:'feedback='+tipo,
-  }).then(r=>r.json()).then(data=>{
-    if(data.ok){
-      const txt=document.getElementById('joi-fab-banner-texto');
-      if(txt){txt.style.fontStyle='normal';txt.textContent=data.respuesta;}
-    }
-    setTimeout(()=>joiFabCerrar(id),1800);
-  }).catch(()=>joiFabCerrar(id));
+(function() {
+  var bannerId = {{ joi_mensaje_pendiente.id }};
+  if (sessionStorage.getItem('joi_banner_oculto_' + bannerId)) {
+    var b = document.getElementById('joi-fab-banner');
+    if (b) b.style.display = 'none';
+  }
+})();
+
+function joiFabOcultar(id) {
+  sessionStorage.setItem('joi_banner_oculto_' + id, '1');
+  var b = document.getElementById('joi-fab-banner');
+  if (b) {
+    b.style.transition = 'transform .4s ease-in, opacity .4s';
+    b.style.transform = 'translateY(-100%)';
+    b.style.opacity = '0';
+    setTimeout(function() { b.remove(); }, 420);
+  }
 }
 </script>
 {% endif %}
