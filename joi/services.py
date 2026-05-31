@@ -367,6 +367,25 @@ def _prompt_apertura_manana(ctx: dict, datos_extra: dict) -> str:
             }.get(tipo, "")
             hechos.append(f"ESTADO HOY: {estado_txt}. {tipo_txt}".strip())
 
+    # ── FASE DEL PLAN (contexto previo a métricas) ──────────────────────────
+    fase_plan = ctx.get('fase_plan')
+    if fase_plan:
+        tipo_fase = fase_plan['tipo']
+        nombre_fase = fase_plan['nombre']
+        dias_en_fase = fase_plan['dias_en_fase']
+        if fase_plan.get('es_descarga'):
+            hechos.append(
+                f"FASE DEL PLAN: DESCARGA — lleva {dias_en_fase} días en semana de descarga. "
+                f"El volumen e intensidad bajos son INTENCIONALES. No los interpretes como pérdida de rendimiento, "
+                f"fatiga excesiva ni desmotivación. El RPE bajo es el resultado esperado del plan."
+                + (f" Quedan {fase_plan['dias_restantes']} días para terminar la descarga." if fase_plan.get('dias_restantes') else "")
+            )
+        else:
+            hechos.append(
+                f"FASE DEL PLAN: {nombre_fase.upper()} — lleva {dias_en_fase} días en esta fase. "
+                f"Interpreta métricas dentro del objetivo de esta fase."
+            )
+
     # Presencia / ausencia — usar hub real (gym + hyrox + carrera)
     ultima = ctx.get('ultima_actividad') or ctx.get('ultimo_entreno', {})
     dias = ultima.get('dias_hace', 0)
