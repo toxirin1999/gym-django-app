@@ -1716,18 +1716,25 @@ def generar_razon_legible(narrativa, manual_activo: list, ultimo_log) -> str:
     prompt = (
         "JOI tiene esta postura sobre David:\n"
         + "\n".join(f"- {p}" for p in partes_narrativa)
-        + "\n\nEsta postura se formó a partir de estas observaciones acumuladas:\n"
+        + "\n\nObservaciones acumuladas que llevaron a esta postura:\n"
         + "\n".join(f"- {h}" for h in hipotesis_activas)
-        + ("\n\nDatos recientes que alimentaron la última revisión:\n"
+        + ("\n\nSeñales recientes:\n"
            + "\n".join(f"- {e}" for e in evidencia_trigger)
            if evidencia_trigger else "")
-        + "\n\nEscribe en 2-3 párrafos breves (máx 50 palabras cada uno) "
-        "por qué JOI lee el momento actual de David de esta manera. "
-        "No menciones métricas en bruto (ACWR, TSB, RPE como número). "
-        "No uses vocabulario técnico de la app. "
-        "Habla de señales, patrones y lo que el sistema ha observado repetidamente. "
-        "Termina con la hipótesis central que JOI mantiene abierta. "
-        "Tono: La Testigo — observa sin juzgar, nombra sin sentenciar."
+        + "\n\nEscribe EXACTAMENTE TRES PÁRRAFOS CORTOS con esta estructura:\n\n"
+        "PÁRRAFO 1 — QUÉ SEÑAL SE REPITE: solo lo observable. Combina datos sin interpretación interna. "
+        "Máx 40 palabras.\n\n"
+        "PÁRRAFO 2 — QUÉ HIPÓTESIS ABRE: UNA hipótesis, con lenguaje provisional. "
+        "OBLIGATORIO usar 'quizá', 'podría ser' o 'abre la pregunta de'. "
+        "NUNCA afirmes estados internos ('sabes', 'esperas', 'buscas') como hechos. Máx 50 palabras.\n\n"
+        "PÁRRAFO 3 — QUÉ LÍMITE RECONOCE JOI: qué JOI NO puede ver en los datos. "
+        "Qué sigue siendo pregunta sin respuesta. Termina con una pregunta abierta o una incertidumbre explícita. "
+        "Máx 40 palabras.\n\n"
+        "REGLAS ESTRICTAS:\n"
+        "- No menciones ACWR, TSB, RPE como números.\n"
+        "- No uses 'Esperas que te absuelva', 'El cuerpo ya está listo' ni ninguna afirmación de estado interno.\n"
+        "- El párrafo 3 DEBE reconocer el límite de JOI, no cerrar la interpretación.\n"
+        "- Tono: La Testigo — observa sin sentenciar."
     )
 
     try:

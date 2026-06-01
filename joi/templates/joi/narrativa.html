@@ -274,15 +274,14 @@
       <button class="rastro-toggle" onclick="toggleRastro()">ver rastro técnico</button>
       <div class="rastro-contenido" id="rastro-contenido">
         {% if ultimo_log and ultimo_log.evidencia_usada %}
-        <p class="rastro-trigger">evidencia: {{ ultimo_log.evidencia_usada|join:" · " }}</p>
+        <p class="rastro-trigger">señales usadas: {{ ultimo_log.evidencia_usada|join:" · " }}</p>
         {% endif %}
         {% for entrada in manual_activo %}
-        <div class="rastro-item {% if entrada.estado == 'cuestionada' %}cuestionada{% endif %}">
-          {{ entrada.entrada }}
-          {% if entrada.notas_revision %}
-          <p class="rastro-motivo">↳ {{ entrada.notas_revision }}</p>
+          {% if not entrada.entrada|slice:":7" == "Entidad" %}
+          <div class="rastro-item {% if entrada.estado == 'cuestionada' %}cuestionada{% endif %}">
+            {{ entrada.entrada|truncatechars:90 }}
+          </div>
           {% endif %}
-        </div>
         {% endfor %}
       </div>
       {% endif %}
