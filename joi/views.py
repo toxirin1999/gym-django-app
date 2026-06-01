@@ -681,7 +681,7 @@ def narrativa_joi_view(request):
     )
 
     from django.core.cache import cache
-    cache_key = f'joi_razon_legible_v2_{request.user.id}_{narrativa.version if narrativa else 0}'
+    cache_key = f'joi_razon_legible_v3_{request.user.id}_{narrativa.version if narrativa else 0}'
     razon_legible = cache.get(cache_key)
     if not razon_legible and narrativa:
         from joi.services import generar_razon_legible

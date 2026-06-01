@@ -1721,19 +1721,18 @@ def generar_razon_legible(narrativa, manual_activo: list, ultimo_log) -> str:
         + ("\n\nSeñales recientes:\n"
            + "\n".join(f"- {e}" for e in evidencia_trigger)
            if evidencia_trigger else "")
-        + "\n\nEscribe EXACTAMENTE TRES PÁRRAFOS CORTOS con esta estructura:\n\n"
-        "PÁRRAFO 1 — QUÉ SEÑAL SE REPITE: solo lo observable. Combina datos sin interpretación interna. "
-        "Máx 40 palabras.\n\n"
-        "PÁRRAFO 2 — QUÉ HIPÓTESIS ABRE: UNA hipótesis, con lenguaje provisional. "
+        + "\n\nEscribe tres párrafos separados por una línea en blanco. SIN TÍTULOS NI ETIQUETAS en el texto.\n\n"
+        "Párrafo 1: solo lo observable. Qué combinación de señales se repite, sin interpretación interna. Máx 40 palabras.\n\n"
+        "Párrafo 2: una sola hipótesis con lenguaje provisional. "
         "OBLIGATORIO usar 'quizá', 'podría ser' o 'abre la pregunta de'. "
         "NUNCA afirmes estados internos ('sabes', 'esperas', 'buscas') como hechos. Máx 50 palabras.\n\n"
-        "PÁRRAFO 3 — QUÉ LÍMITE RECONOCE JOI: qué JOI NO puede ver en los datos. "
-        "Qué sigue siendo pregunta sin respuesta. Termina con una pregunta abierta o una incertidumbre explícita. "
-        "Máx 40 palabras.\n\n"
+        "Párrafo 3: qué JOI NO puede ver en los datos. Qué sigue siendo pregunta sin respuesta. "
+        "Termina con una pregunta abierta o incertidumbre explícita. Máx 40 palabras.\n\n"
         "REGLAS ESTRICTAS:\n"
+        "- Cero títulos, etiquetas ni encabezados en el texto.\n"
         "- No menciones ACWR, TSB, RPE como números.\n"
-        "- No uses 'Esperas que te absuelva', 'El cuerpo ya está listo' ni ninguna afirmación de estado interno.\n"
-        "- El párrafo 3 DEBE reconocer el límite de JOI, no cerrar la interpretación.\n"
+        "- No afirmes estados internos como hechos.\n"
+        "- El párrafo 3 reconoce el límite de JOI, no cierra la interpretación.\n"
         "- Tono: La Testigo — observa sin sentenciar."
     )
 
