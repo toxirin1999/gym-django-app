@@ -515,6 +515,20 @@ body {
     {% endif %}
   </div>
 
+  {% if joi_narrativa_hoy %}
+  <div style="margin:10px 0 6px;padding:8px 14px;
+              border-left:1px solid rgba(100,148,220,0.20);
+              opacity:0.72;">
+    <div style="font-family:var(--font-mono);font-size:7px;font-weight:700;
+                letter-spacing:0.14em;text-transform:uppercase;
+                color:rgba(100,148,220,0.55);margin-bottom:4px;">JOI</div>
+    <div style="font-size:11px;color:var(--td);line-height:1.5;font-style:italic;
+                font-family:-apple-system,BlinkMacSystemFont,system-ui,sans-serif;font-weight:300;">
+      {{ joi_narrativa_hoy }}
+    </div>
+  </div>
+  {% endif %}
+
   <!-- ── TOGGLE GYM / HYROX ──────────────────── -->
   {% if hyrox_objetivo %}
   <div class="rb-toggle" id="modeSwitcherRb">
