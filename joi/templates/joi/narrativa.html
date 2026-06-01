@@ -152,9 +152,14 @@
       font-size: 0.45rem; letter-spacing: 0.32em; text-transform: uppercase;
       color: var(--ink-mute); opacity: 0.5; margin-bottom: 2rem;
     }
+    .por-que-seccion {
+      font-size: 0.45rem; letter-spacing: 0.28em; text-transform: uppercase;
+      color: var(--ink-mute); opacity: 0.45; margin-bottom: 0.6rem; margin-top: 1.8rem;
+    }
+    .por-que-seccion:first-of-type { margin-top: 0; }
     .por-que-texto {
       font-size: 0.92rem; font-weight: 300; line-height: 1.8;
-      color: var(--ink); opacity: 0.80; margin-bottom: 1.2rem;
+      color: var(--ink); opacity: 0.80; margin-bottom: 0.4rem;
     }
 
     /* Acordeón rastro técnico */
@@ -266,23 +271,33 @@
     <div class="por-que-zona">
       <p class="por-que-label">por qué JOI lo lee así</p>
 
-      {% if razon_legible %}
-      <div class="por-que-texto" style="white-space:pre-line;">{{ razon_legible }}</div>
+      {% if razon_partes %}
+      {% if razon_partes.p1 %}
+      <p class="por-que-seccion">lo que se repite</p>
+      <p class="por-que-texto">{{ razon_partes.p1 }}</p>
+      {% endif %}
+      {% if razon_partes.p2 %}
+      <p class="por-que-seccion">la pregunta que abre</p>
+      <p class="por-que-texto">{{ razon_partes.p2 }}</p>
+      {% endif %}
+      {% if razon_partes.p3 %}
+      <p class="por-que-seccion">lo que todavía no sé</p>
+      <p class="por-que-texto">{{ razon_partes.p3 }}</p>
+      {% endif %}
       {% endif %}
 
-      {% if manual_activo or ultimo_log %}
+      {% if categorias_hipotesis or ultimo_log %}
       <button class="rastro-toggle" onclick="toggleRastro()">ver rastro técnico</button>
       <div class="rastro-contenido" id="rastro-contenido">
         {% if ultimo_log and ultimo_log.evidencia_usada %}
         <p class="rastro-trigger">señales usadas: {{ ultimo_log.evidencia_usada|join:" · " }}</p>
         {% endif %}
-        {% for entrada in manual_activo %}
-          {% if not entrada.entrada|slice:":7" == "Entidad" %}
-          <div class="rastro-item {% if entrada.estado == 'cuestionada' %}cuestionada{% endif %}">
-            {{ entrada.entrada|truncatechars:90 }}
-          </div>
-          {% endif %}
+        {% if categorias_hipotesis %}
+        <p class="rastro-trigger" style="margin-top:0.8rem;">hipótesis relacionadas:</p>
+        {% for cat in categorias_hipotesis %}
+        <div class="rastro-item">{{ cat }}</div>
         {% endfor %}
+        {% endif %}
       </div>
       {% endif %}
     </div>

@@ -681,19 +681,39 @@ def narrativa_joi_view(request):
     )
 
     from django.core.cache import cache
-    cache_key = f'joi_razon_legible_v3_{request.user.id}_{narrativa.version if narrativa else 0}'
-    razon_legible = cache.get(cache_key)
-    if not razon_legible and narrativa:
+    cache_key = f'joi_razon_legible_v4_{request.user.id}_{narrativa.version if narrativa else 0}'
+    razon_partes = cache.get(cache_key)
+    if not razon_partes and narrativa:
         from joi.services import generar_razon_legible
-        razon_legible = generar_razon_legible(narrativa, manual_activo, ultimo_log)
-        if razon_legible:
-            cache.set(cache_key, razon_legible, 60 * 60 * 6)
+        razon_partes = generar_razon_legible(narrativa, manual_activo, ultimo_log)
+        if razon_partes:
+            cache.set(cache_key, razon_partes, 60 * 60 * 6)
+
+    # Extraer categorías resumidas del ManualDavid para el rastro técnico
+    _PREFIJOS = ['Tema abierto: ', 'Cuando ', 'Si ', 'Al ', 'No ']
+    categorias = []
+    for e in manual_activo:
+        if e.entrada.startswith('Entidad'):
+            continue
+        label = e.entrada
+        for p in _PREFIJOS:
+            if label.startswith(p):
+                label = label[len(p):]
+                break
+        for sep in [',', ';', '—', ':', '.', ' que ', ' pero ']:
+            if sep in label[:50]:
+                label = label[:label.index(sep, 0, 50)].strip()
+                break
+        label = label[:45].strip()
+        if label:
+            categorias.append(label.lower())
 
     return render(request, 'joi/narrativa.html', {
         'narrativa': narrativa,
         'manual_activo': manual_activo,
         'ultimo_log': ultimo_log,
-        'razon_legible': razon_legible or '',
+        'razon_partes': razon_partes or {},
+        'categorias_hipotesis': categorias,
     })
 
 
