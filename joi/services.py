@@ -1721,16 +1721,19 @@ def generar_razon_legible(narrativa, manual_activo: list, ultimo_log) -> str:
         + ("\n\nSeñales recientes:\n"
            + "\n".join(f"- {e}" for e in evidencia_trigger)
            if evidencia_trigger else "")
-        + "\n\nEscribe exactamente tres párrafos separados por '|||'. SIN TÍTULOS NI ETIQUETAS.\n\n"
+        + "\n\nTarea A — escribe exactamente tres párrafos separados por '|||'. SIN TÍTULOS NI ETIQUETAS.\n\n"
         "Párrafo 1 (lo observable): qué combinación de señales se repite, sin interpretación interna. Máx 40 palabras.\n\n"
         "Párrafo 2 (hipótesis): una sola hipótesis con lenguaje provisional. "
         "OBLIGATORIO usar 'quizá', 'podría ser' o 'abre la pregunta de'. "
-        "NUNCA afirmes estados internos ('sabes', 'esperas', 'buscas') como hechos. Máx 50 palabras.\n\n"
-        "Párrafo 3 (límite): qué JOI NO puede ver. Tono: baja intensidad. "
-        "Ejemplo correcto: 'No sé si esa espera viene de prudencia real, de costumbre o de una vieja forma de necesitar permiso antes de actuar.' "
-        "NO uses preguntas retóricas sobre familia o personas. Reconoce incertidumbre sin dramatizar. Máx 40 palabras.\n\n"
-        "Retorna SOLO: [párrafo 1]|||[párrafo 2]|||[párrafo 3]\n"
-        "Reglas: sin markdown, sin negritas, sin títulos, sin ACWR/TSB/RPE como números, tono La Testigo."
+        "NUNCA afirmes estados internos como hechos. Máx 50 palabras.\n\n"
+        "Párrafo 3 (límite): qué JOI NO puede ver. Tono: baja intensidad, sin dramatismo. "
+        "Reconoce incertidumbre sin preguntas retóricas sobre familia o personas. Máx 40 palabras.\n\n"
+        "Tarea B — genera 3-5 etiquetas cortas (2-3 palabras cada una) que resuman los temas de las observaciones. "
+        "Ejemplo de formato: 'descanso y pausa|permiso corporal|dependencia del estado físico|prudencia frente a conexión'\n\n"
+        "Retorna en este formato EXACTO (dos líneas):\n"
+        "PÁRRAFOS: [párrafo 1]|||[párrafo 2]|||[párrafo 3]\n"
+        "CATEGORÍAS: [etiqueta1]|[etiqueta2]|[etiqueta3]\n"
+        "Reglas: sin markdown, sin negritas, sin ACWR/TSB/RPE como números, tono La Testigo."
     )
 
     try:
@@ -1742,14 +1745,36 @@ def generar_razon_legible(narrativa, manual_activo: list, ultimo_log) -> str:
             messages=[{"role": "user", "content": prompt}],
         )
         texto = _limpiar_ciriilico(response.content[0].text.strip())
-        partes = [p.strip() for p in texto.split('|||') if p.strip()]
-        if len(partes) == 3:
-            return {'p1': partes[0], 'p2': partes[1], 'p3': partes[2]}
-        # Fallback: si el modelo no usó '|||', devolver como párrafos separados por \n\n
-        partes = [p.strip() for p in texto.split('\n\n') if p.strip()]
-        if len(partes) >= 3:
-            return {'p1': partes[0], 'p2': partes[1], 'p3': ' '.join(partes[2:])}
-        return {'p1': texto, 'p2': '', 'p3': ''}
+
+        # Parsear formato "PÁRRAFOS: ...\nCATEGORÍAS: ..."
+        parrafos_raw = ''
+        categorias_raw = ''
+        for linea in texto.splitlines():
+            if linea.startswith('PÁRRAFOS:'):
+                parrafos_raw = linea[len('PÁRRAFOS:'):].strip()
+            elif linea.startswith('CATEGORÍAS:'):
+                categorias_raw = linea[len('CATEGORÍAS:'):].strip()
+
+        # Fallback: si el modelo no usó el formato esperado
+        if not parrafos_raw:
+            parrafos_raw = texto
+
+        partes = [p.strip() for p in parrafos_raw.split('|||') if p.strip()]
+        if len(partes) < 3:
+            partes_alt = [p.strip() for p in parrafos_raw.split('\n\n') if p.strip()]
+            if len(partes_alt) >= 3:
+                partes = partes_alt[:3]
+            else:
+                partes = (partes + ['', '', ''])[:3]
+
+        categorias_llm = [c.strip() for c in categorias_raw.split('|') if c.strip()]
+
+        return {
+            'p1': partes[0],
+            'p2': partes[1],
+            'p3': partes[2],
+            'categorias_llm': categorias_llm,
+        }
     except Exception:
         return {}
 
