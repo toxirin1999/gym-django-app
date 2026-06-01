@@ -681,7 +681,7 @@ def narrativa_joi_view(request):
     )
 
     from django.core.cache import cache
-    cache_key = f'joi_razon_legible_v4_{request.user.id}_{narrativa.version if narrativa else 0}'
+    cache_key = f'joi_razon_legible_v5_{request.user.id}_{narrativa.version if narrativa else 0}'
     razon_partes = cache.get(cache_key)
     if not razon_partes and narrativa:
         from joi.services import generar_razon_legible
@@ -720,12 +720,16 @@ def narrativa_joi_view(request):
             categorias.append(label)
             _vistos.add(label)
 
+    # Preferir categorías del LLM si están disponibles
+    categorias_llm = (razon_partes or {}).get('categorias_llm', [])
+    categorias_finales = categorias_llm if categorias_llm else categorias
+
     return render(request, 'joi/narrativa.html', {
         'narrativa': narrativa,
         'manual_activo': manual_activo,
         'ultimo_log': ultimo_log,
         'razon_partes': razon_partes or {},
-        'categorias_hipotesis': categorias,
+        'categorias_hipotesis': categorias_finales,
     })
 
 
