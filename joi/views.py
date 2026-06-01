@@ -656,7 +656,8 @@ def registrar_mood(request):
 
 @login_required
 def narrativa_joi_view(request):
-    from .models import NarrativaActiva
+    from .models import NarrativaActiva, ManualDavid, JoiSintesisLog
+
     narrativa = None
     try:
         narrativa = NarrativaActiva.objects.get(
@@ -664,7 +665,26 @@ def narrativa_joi_view(request):
         )
     except NarrativaActiva.DoesNotExist:
         pass
-    return render(request, 'joi/narrativa.html', {'narrativa': narrativa})
+
+    manual_activo = list(
+        ManualDavid.objects
+        .filter(user=request.user, activa=True)
+        .exclude(estado='descartada')
+        .order_by('-confianza', 'creado_en')[:8]
+    )
+
+    ultimo_log = (
+        JoiSintesisLog.objects
+        .filter(user=request.user)
+        .order_by('-creado_en')
+        .first()
+    )
+
+    return render(request, 'joi/narrativa.html', {
+        'narrativa': narrativa,
+        'manual_activo': manual_activo,
+        'ultimo_log': ultimo_log,
+    })
 
 
 @login_required
