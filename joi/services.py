@@ -1721,19 +1721,16 @@ def generar_razon_legible(narrativa, manual_activo: list, ultimo_log) -> str:
         + ("\n\nSeñales recientes:\n"
            + "\n".join(f"- {e}" for e in evidencia_trigger)
            if evidencia_trigger else "")
-        + "\n\nEscribe tres párrafos separados por una línea en blanco. SIN TÍTULOS NI ETIQUETAS en el texto.\n\n"
-        "Párrafo 1: solo lo observable. Qué combinación de señales se repite, sin interpretación interna. Máx 40 palabras.\n\n"
-        "Párrafo 2: una sola hipótesis con lenguaje provisional. "
+        + "\n\nEscribe exactamente tres párrafos separados por '|||'. SIN TÍTULOS NI ETIQUETAS.\n\n"
+        "Párrafo 1 (lo observable): qué combinación de señales se repite, sin interpretación interna. Máx 40 palabras.\n\n"
+        "Párrafo 2 (hipótesis): una sola hipótesis con lenguaje provisional. "
         "OBLIGATORIO usar 'quizá', 'podría ser' o 'abre la pregunta de'. "
         "NUNCA afirmes estados internos ('sabes', 'esperas', 'buscas') como hechos. Máx 50 palabras.\n\n"
-        "Párrafo 3: qué JOI NO puede ver en los datos. Qué sigue siendo pregunta sin respuesta. "
-        "Termina con una pregunta abierta o incertidumbre explícita. Máx 40 palabras.\n\n"
-        "REGLAS ESTRICTAS:\n"
-        "- Cero títulos, etiquetas ni encabezados en el texto.\n"
-        "- No menciones ACWR, TSB, RPE como números.\n"
-        "- No afirmes estados internos como hechos.\n"
-        "- El párrafo 3 reconoce el límite de JOI, no cierra la interpretación.\n"
-        "- Tono: La Testigo — observa sin sentenciar."
+        "Párrafo 3 (límite): qué JOI NO puede ver. Tono: baja intensidad. "
+        "Ejemplo correcto: 'No sé si esa espera viene de prudencia real, de costumbre o de una vieja forma de necesitar permiso antes de actuar.' "
+        "NO uses preguntas retóricas sobre familia o personas. Reconoce incertidumbre sin dramatizar. Máx 40 palabras.\n\n"
+        "Retorna SOLO: [párrafo 1]|||[párrafo 2]|||[párrafo 3]\n"
+        "Reglas: sin markdown, sin negritas, sin títulos, sin ACWR/TSB/RPE como números, tono La Testigo."
     )
 
     try:
@@ -1744,9 +1741,17 @@ def generar_razon_legible(narrativa, manual_activo: list, ultimo_log) -> str:
             system=SYSTEM_PROMPT,
             messages=[{"role": "user", "content": prompt}],
         )
-        return _limpiar_ciriilico(response.content[0].text.strip())
+        texto = _limpiar_ciriilico(response.content[0].text.strip())
+        partes = [p.strip() for p in texto.split('|||') if p.strip()]
+        if len(partes) == 3:
+            return {'p1': partes[0], 'p2': partes[1], 'p3': partes[2]}
+        # Fallback: si el modelo no usó '|||', devolver como párrafos separados por \n\n
+        partes = [p.strip() for p in texto.split('\n\n') if p.strip()]
+        if len(partes) >= 3:
+            return {'p1': partes[0], 'p2': partes[1], 'p3': ' '.join(partes[2:])}
+        return {'p1': texto, 'p2': '', 'p3': ''}
     except Exception:
-        return ''
+        return {}
 
 
 def registrar_sintesis_log(
