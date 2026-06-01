@@ -141,6 +141,34 @@
     }
     .dialogo-input-wrap:focus-within .dialogo-btn { opacity: 0.75; }
 
+    /* ── EVIDENCIA ── */
+    .evidencia-zona {
+      width: 100%; margin-top: 5rem;
+      padding-top: 2rem;
+      border-top: 1px solid rgba(100, 180, 220, 0.08);
+      animation: aparecer 1s ease 1.1s forwards; opacity: 0;
+    }
+    .evidencia-label {
+      font-size: 0.45rem; letter-spacing: 0.32em; text-transform: uppercase;
+      color: var(--ink-mute); opacity: 0.45; margin-bottom: 1.8rem;
+    }
+    .evidencia-item {
+      font-size: 0.82rem; font-weight: 300; font-style: italic;
+      line-height: 1.65; color: var(--ink); opacity: 0.42;
+      margin-bottom: 0.9rem;
+      padding-left: 1rem;
+      border-left: 1px solid rgba(100, 180, 220, 0.08);
+    }
+    .evidencia-item.cuestionada { opacity: 0.22; }
+    .evidencia-motivo {
+      font-size: 0.72rem; color: var(--ink-mute); opacity: 0.55;
+      margin-top: 0.2rem; padding-left: 0.5rem;
+    }
+    .evidencia-trigger {
+      font-size: 0.45rem; letter-spacing: 0.22em; text-transform: uppercase;
+      color: var(--ink-mute); opacity: 0.35; margin-bottom: 1.2rem;
+    }
+
     /* ── REDUCED MOTION ── */
     @media (prefers-reduced-motion: reduce) {
       .capa { animation: none !important; opacity: 1 !important; transform: none !important; }
@@ -215,6 +243,25 @@
                   autocomplete="off"></textarea>
         <button class="dialogo-btn" onclick="enviarDialogo()">→</button>
       </div>
+    </div>
+    {% endif %}
+
+    {% if manual_activo %}
+    <div class="evidencia-zona">
+      <p class="evidencia-label">cómo se formó esta lectura</p>
+
+      {% if ultimo_log and ultimo_log.evidencia_usada %}
+      <p class="evidencia-trigger">última revisión usó: {{ ultimo_log.evidencia_usada|join:" · " }}</p>
+      {% endif %}
+
+      {% for entrada in manual_activo %}
+      <div class="evidencia-item {% if entrada.estado == 'cuestionada' %}cuestionada{% endif %}">
+        {{ entrada.entrada }}
+        {% if entrada.notas_revision %}
+        <p class="evidencia-motivo">↳ {{ entrada.notas_revision }}</p>
+        {% endif %}
+      </div>
+      {% endfor %}
     </div>
     {% endif %}
 
