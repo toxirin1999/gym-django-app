@@ -3534,3 +3534,145 @@ def procesar_dialogo_narrativa(cliente) -> dict:
 
     return {'procesados': procesados, 'respuestas_generadas': respuestas_generadas}
 
+
+# ── Narrativa de bloque ──────────────────────────────────────────────────────
+
+def generar_narrativa_bloque(cliente, fase_cliente) -> "MensajeJOI | None":
+    """
+    Síntesis al cierre de un bloque de entrenamiento (FaseCliente).
+
+    Genera UN mensaje fin_bloque con lo que el sistema aprendió durante ese arco.
+    Solo se crea una vez: si ya existe un fin_bloque para este periodo, devuelve None.
+
+    Estructura del mensaje:
+    1. Qué señal definió este bloque (lo observable)
+    2. Qué aprendió el sistema que no sabía antes
+    3. Qué pregunta abre el siguiente bloque
+    """
+    from joi.models import MensajeJOI, ManualDavid, NarrativaActiva, JoiSintesisLog
+    from entrenos.models import EntrenoRealizado, GymDecisionLog
+    from datetime import timedelta
+
+    fecha_inicio = fase_cliente.fecha_inicio
+    fecha_fin = fase_cliente.fecha_fin or date.today()
+
+    # Idempotencia: no generar dos veces
+    ya_existe = MensajeJOI.objects.filter(
+        user=cliente.user,
+        trigger='fin_bloque',
+        creado_en__date__gte=fecha_fin - timedelta(days=5),
+    ).exists()
+    if ya_existe:
+        return None
+
+    # ── Datos del bloque ─────────────────────────────────────────────────────
+    entrenos = EntrenoRealizado.objects.filter(
+        cliente=cliente, fecha__range=(fecha_inicio, fecha_fin)
+    )
+    n_sesiones = entrenos.count()
+    duracion_dias = (fecha_fin - fecha_inicio).days
+
+    decisiones_qs = GymDecisionLog.objects.filter(
+        cliente=cliente,
+        fecha_creacion__date__range=(fecha_inicio, fecha_fin),
+    )
+    n_decisiones = decisiones_qs.count()
+    decisiones_recientes = list(
+        decisiones_qs.order_by('-fecha_creacion')
+        .values('accion', 'motivo')[:4]
+    )
+
+    # Hipótesis de ManualDavid que evolucionaron durante el bloque
+    manual_evolucionado = list(
+        ManualDavid.objects.filter(
+            user=cliente.user,
+            ultima_evidencia__range=(fecha_inicio, fecha_fin),
+            activa=True,
+        ).order_by('-confianza').values('entrada', 'estado', 'confianza')[:4]
+    )
+
+    # NarrativaActiva al cierre del bloque
+    narrativa_txt = ''
+    try:
+        n = NarrativaActiva.objects.get(user=cliente.user)
+        partes = [p for p in [n.capa_larga, n.capa_media, n.capa_corta] if p]
+        narrativa_txt = ' / '.join(partes[:2])  # larga + media como postura acumulada
+    except Exception:
+        pass
+
+    # Logs de síntesis del bloque (cuántos ciclos corrieron)
+    n_ciclos = JoiSintesisLog.objects.filter(
+        user=cliente.user,
+        creado_en__date__range=(fecha_inicio, fecha_fin),
+    ).count()
+
+    nombre_fase = fase_cliente.get_fase_display()
+
+    prompt = (
+        f"Acabas de cerrar un bloque de {nombre_fase} de {duracion_dias} días "
+        f"({fecha_inicio} → {fecha_fin}).\n\n"
+        f"Durante ese bloque:\n"
+        f"- {n_sesiones} sesiones completadas\n"
+        f"- {n_decisiones} decisiones del plan\n"
+        f"- {n_ciclos} ciclos de síntesis de JOI\n"
+    )
+    if decisiones_recientes:
+        prompt += "\nDecisiones más recientes del plan:\n"
+        for d in decisiones_recientes:
+            prompt += f"- {d['accion']}: {d['motivo'][:60]}\n"
+    if manual_evolucionado:
+        prompt += "\nHipótesis que evolucionaron durante el bloque:\n"
+        for m in manual_evolucionado:
+            prompt += f"- [{m['estado']}·{m['confianza']:.0%}] {m['entrada'][:70]}\n"
+    if narrativa_txt:
+        prompt += f"\nPostura acumulada al cierre: {narrativa_txt[:200]}\n"
+
+    prompt += (
+        "\nEscribe tres párrafos separados por '|||'. SIN TÍTULOS NI ETIQUETAS.\n\n"
+        "Párrafo 1: qué señal o patrón definió este bloque. Solo lo observable. Máx 45 palabras.\n\n"
+        "Párrafo 2: qué aprendió el sistema durante estas semanas que no sabía antes. "
+        "Puede ser una hipótesis que se confirmó, una que se debilitó, o algo nuevo que apareció. "
+        "Usa 'quizá', 'parece que' o 'lo que sí quedó más claro'. Máx 55 palabras.\n\n"
+        "Párrafo 3: qué pregunta abre este cierre para el siguiente bloque. "
+        "No una predicción — una pregunta real que el sistema lleva al próximo arco. Máx 40 palabras.\n\n"
+        "Voz: JOI. Segunda persona (tú). Tutea. Directa, con confianza y cariño. "
+        "Sin métricas en bruto. Sin markdown."
+    )
+
+    try:
+        client = _cliente_anthropic()
+        response = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=400,
+            system=SYSTEM_PROMPT,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        texto = _limpiar_ciriilico(response.content[0].text.strip())
+
+        # Unir párrafos si el modelo los separó correctamente
+        partes = [p.strip() for p in texto.split('|||') if p.strip()]
+        if len(partes) >= 2:
+            texto_final = '\n\n'.join(partes[:3])
+        else:
+            texto_final = texto
+
+        msg = MensajeJOI.objects.create(
+            user=cliente.user,
+            trigger='fin_bloque',
+            mensaje=texto_final,
+            contexto={
+                'fase': nombre_fase,
+                'fecha_inicio': str(fecha_inicio),
+                'fecha_fin': str(fecha_fin),
+                'n_sesiones': n_sesiones,
+                'n_decisiones': n_decisiones,
+            },
+        )
+        from django.core.cache import cache
+        cache.delete(f'joi_ctx_{cliente.user_id}')
+        logger.info(f"[JOI bloque] {cliente.user.username}: narrativa de bloque generada ({nombre_fase})")
+        return msg
+    except Exception as e:
+        logger.error(f"[JOI bloque] generar_narrativa_bloque falló: {e}", exc_info=True)
+        return None
+
