@@ -691,7 +691,9 @@ def narrativa_joi_view(request):
 
     # Extraer categorías resumidas del ManualDavid para el rastro técnico
     _PREFIJOS = ['Tema abierto: ', 'Cuando ', 'Si ', 'Al ', 'No ']
+    _VERBOS_INICIO = {'esperas', 'asumo', 'asumes', 'priorizamos', 'confundas', 'honrarlo', 'escucharlo'}
     categorias = []
+    _vistos = set()
     for e in manual_activo:
         if e.entrada.startswith('Entidad'):
             continue
@@ -700,13 +702,23 @@ def narrativa_joi_view(request):
             if label.startswith(p):
                 label = label[len(p):]
                 break
-        for sep in [',', ';', '—', ':', '.', ' que ', ' pero ']:
-            if sep in label[:50]:
-                label = label[:label.index(sep, 0, 50)].strip()
+        # Saltar verbo inicial si procede
+        palabras = label.split()
+        if palabras and palabras[0].lower().rstrip('.,;') in _VERBOS_INICIO:
+            palabras = palabras[1:]
+        # Tomar hasta 4 palabras con corte en separadores
+        frase = ' '.join(palabras)
+        for sep in [',', ';', '—', ':', '.', ' para ', ' pero ', ' versus ', ' sobre ']:
+            if sep in frase[:45]:
+                frase = frase[:frase.index(sep, 0, 45)].strip()
                 break
-        label = label[:45].strip()
-        if label:
-            categorias.append(label.lower())
+        # Truncar en frontera de palabra (no a mitad de palabra)
+        if len(frase) > 38:
+            frase = frase[:38].rsplit(' ', 1)[0]
+        label = frase.strip().lower()
+        if label and label not in _vistos:
+            categorias.append(label)
+            _vistos.add(label)
 
     return render(request, 'joi/narrativa.html', {
         'narrativa': narrativa,
