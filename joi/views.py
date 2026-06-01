@@ -680,10 +680,20 @@ def narrativa_joi_view(request):
         .first()
     )
 
+    from django.core.cache import cache
+    cache_key = f'joi_razon_legible_{request.user.id}_{narrativa.version if narrativa else 0}'
+    razon_legible = cache.get(cache_key)
+    if not razon_legible and narrativa:
+        from joi.services import generar_razon_legible
+        razon_legible = generar_razon_legible(narrativa, manual_activo, ultimo_log)
+        if razon_legible:
+            cache.set(cache_key, razon_legible, 60 * 60 * 6)
+
     return render(request, 'joi/narrativa.html', {
         'narrativa': narrativa,
         'manual_activo': manual_activo,
         'ultimo_log': ultimo_log,
+        'razon_legible': razon_legible or '',
     })
 
 

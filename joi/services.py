@@ -1684,6 +1684,65 @@ def _bloque_marco_narrativo(user) -> str:
     )
 
 
+def generar_razon_legible(narrativa, manual_activo: list, ultimo_log) -> str:
+    """
+    Genera una explicación en prosa de por qué JOI tiene la postura que tiene.
+    Transforma ingredientes internos (ManualDavid + evidencia) en razones humanas.
+    Se cachea 6h en la vista — la narrativa cambia despacio.
+    """
+    if not narrativa:
+        return ''
+
+    partes_narrativa = []
+    if narrativa.capa_larga:
+        partes_narrativa.append(f"Patrón profundo: {narrativa.capa_larga}")
+    if narrativa.capa_media:
+        partes_narrativa.append(f"Esta fase: {narrativa.capa_media}")
+    if narrativa.capa_corta:
+        partes_narrativa.append(f"Ahora mismo: {narrativa.capa_corta}")
+
+    if not partes_narrativa:
+        return ''
+
+    hipotesis_activas = [
+        e.entrada for e in manual_activo
+        if hasattr(e, 'estado') and e.estado in ('activa', 'debilitada')
+    ][:5]
+
+    evidencia_trigger = []
+    if ultimo_log and ultimo_log.evidencia_usada:
+        evidencia_trigger = ultimo_log.evidencia_usada[:4]
+
+    prompt = (
+        "JOI tiene esta postura sobre David:\n"
+        + "\n".join(f"- {p}" for p in partes_narrativa)
+        + "\n\nEsta postura se formó a partir de estas observaciones acumuladas:\n"
+        + "\n".join(f"- {h}" for h in hipotesis_activas)
+        + ("\n\nDatos recientes que alimentaron la última revisión:\n"
+           + "\n".join(f"- {e}" for e in evidencia_trigger)
+           if evidencia_trigger else "")
+        + "\n\nEscribe en 2-3 párrafos breves (máx 50 palabras cada uno) "
+        "por qué JOI lee el momento actual de David de esta manera. "
+        "No menciones métricas en bruto (ACWR, TSB, RPE como número). "
+        "No uses vocabulario técnico de la app. "
+        "Habla de señales, patrones y lo que el sistema ha observado repetidamente. "
+        "Termina con la hipótesis central que JOI mantiene abierta. "
+        "Tono: La Testigo — observa sin juzgar, nombra sin sentenciar."
+    )
+
+    try:
+        client = _cliente_anthropic()
+        response = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=350,
+            system=SYSTEM_PROMPT,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        return _limpiar_ciriilico(response.content[0].text.strip())
+    except Exception:
+        return ''
+
+
 def registrar_sintesis_log(
     cliente,
     tipo: str,
