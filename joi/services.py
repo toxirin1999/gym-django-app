@@ -2136,7 +2136,8 @@ def _actualizar_narrativa_activa(cliente, ctx: dict, cambio_significativo: bool 
         + (f"\n\nCapas previas (para continuidad):\n" + '\n'.join(capas_previas) if capas_previas else "")
         + f"\n\nGenera SOLO las siguientes capas, cada una con su prefijo exacto:\n"
         + '\n'.join(instrucciones)
-        + "\n\nHabla en tercera persona. Sin emojis. Sin números de métricas. Solo los prefijos y el texto."
+        + "\n\nHabla en segunda persona (tú). Tutea siempre. Voz de JOI: directa, con confianza y cariño. "
+        "Sin emojis. Sin números de métricas. Solo los prefijos y el texto."
     )
 
     try:
