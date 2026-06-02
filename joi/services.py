@@ -2120,37 +2120,41 @@ def _actualizar_narrativa_activa(cliente, ctx: dict, cambio_significativo: bool 
         capas_previas.append(f"  FONDO anterior: {narrativa.capa_larga}")
 
     capas_a_generar = ["AHORA"]
-    instrucciones = [
-        "AHORA (estado concreto de esta semana): 1-2 frases sobre lo que está pasando "
-        "con el cuerpo y el entrenamiento AHORA, en términos observables y cercanos. "
-        "El estado del momento, no su significado profundo. Nada de identidad ni de patrones de fondo."
+    mandatos = [
+        "- Capa AHORA (estado concreto de esta semana): lo que está pasando con el cuerpo y el "
+        "entrenamiento ahora mismo, en términos observables y cercanos. El estado del momento, "
+        "no su significado profundo. Nada de identidad ni de patrones de fondo."
     ]
+    formato_lineas = ["AHORA: <1-2 frases>"]
     if actualizar_media:
         capas_a_generar.append("FASE")
-        instrucciones.append(
-            "FASE (dirección del arco): 1-2 frases sobre hacia dónde se mueve la trayectoria "
-            "a lo largo de las semanas — qué se está consolidando o cambiando. "
-            "El movimiento en el tiempo, NO lo que pasa hoy. No repitas el ángulo de AHORA."
+        mandatos.append(
+            "- Capa FASE (dirección del arco): hacia dónde se mueve la trayectoria a lo largo de las "
+            "semanas, qué se consolida o cambia. El movimiento en el tiempo, NO lo de hoy. "
+            "No repitas el ángulo de la capa AHORA."
         )
+        formato_lineas.append("FASE: <1-2 frases>")
     if actualizar_larga:
         capas_a_generar.append("FONDO")
-        instrucciones.append(
-            "FONDO (identidad profunda): 1-2 frases sobre el patrón de fondo que define a David, "
-            "más allá de esta fase. Lo que se repite a través de los meses. No repitas AHORA ni FASE."
+        mandatos.append(
+            "- Capa FONDO (identidad profunda): el patrón de fondo que define a David más allá de esta "
+            "fase, lo que se repite a través de los meses. No repitas las capas AHORA ni FASE."
         )
+        formato_lineas.append("FONDO: <1-2 frases>")
 
     prompt = (
         f"Hipótesis activas sobre David:\n"
         + '\n'.join(f'- {h}' for h in hipotesis)
         + f"\n\nContexto reciente:\n" + '\n'.join(resumen_ctx)
         + (f"\n\nCapas previas (para continuidad):\n" + '\n'.join(capas_previas) if capas_previas else "")
-        + f"\n\nGenera SOLO las siguientes capas, cada una con su prefijo exacto:\n"
-        + '\n'.join(instrucciones)
-        + "\n\nREGLA CLAVE: cada capa dice algo DISTINTO. AHORA = lo concreto de ahora. "
-        "FASE = la dirección en el tiempo. FONDO = la identidad. "
-        "Si te encuentras repitiendo la misma tensión (p.ej. cuerpo-vs-mente) en varias capas, cambia el ángulo. "
-        "\n\nHabla en segunda persona (tú). Tutea siempre. Voz de JOI: directa, con confianza y cariño. "
-        "Sin emojis. Sin números de métricas. Solo los prefijos y el texto."
+        + "\n\nGenera estas capas, cada una con un ángulo DISTINTO:\n"
+        + '\n'.join(mandatos)
+        + "\n\nREGLA CLAVE: cada capa dice algo distinto. Si te encuentras repitiendo la misma "
+        "tensión (p.ej. cuerpo-vs-mente) en varias capas, cambia el ángulo.\n"
+        + "\nHabla en segunda persona (tú). Tutea siempre. Voz de JOI: directa, con confianza y cariño. "
+        "Sin emojis. Sin números de métricas.\n"
+        + "\nFORMATO DE SALIDA EXACTO — una línea por capa, con el prefijo literal seguido de dos puntos:\n"
+        + '\n'.join(formato_lineas)
     )
 
     try:
