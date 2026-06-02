@@ -1071,6 +1071,20 @@ body {
     </div>
     {% endif %}
 
+    {% if joi_narrativa_plan %}
+    <div style="margin-bottom:10px;padding:10px 14px;
+                border-left:1px solid rgba(100,148,220,0.20);
+                opacity:0.72;">
+      <div style="font-family:var(--font-mono);font-size:7px;font-weight:700;
+                  letter-spacing:0.14em;text-transform:uppercase;
+                  color:rgba(100,148,220,0.55);margin-bottom:4px;">JOI · esta fase</div>
+      <div style="font-size:11px;color:var(--td);line-height:1.5;font-style:italic;
+                  font-family:-apple-system,BlinkMacSystemFont,system-ui,sans-serif;font-weight:300;">
+        {{ joi_narrativa_plan }}
+      </div>
+    </div>
+    {% endif %}
+
     {# Tarjeta 2: "Lo que el plan observa" — patrón + sugerencia + evaluación pasada (solo si hay patrón) #}
     {% if patron_multisemanal %}
     <div class="rb-aprendio-card" style="border-left:3px solid rgba(180,140,255,0.35);">

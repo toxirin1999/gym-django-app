@@ -1573,15 +1573,17 @@ def mockup_demo(request):
     except Exception:
         context['lectura_plan_joi'] = None
 
-    # JOI — capa_corta de NarrativaActiva como encuadre del día
+    # JOI — capa_corta (HOY) y capa_media (PLAN) de NarrativaActiva
     try:
         from joi.models import NarrativaActiva
         narrativa = NarrativaActiva.objects.get(
             user=usuario, estado__in=('borrador', 'activa')
         )
         context['joi_narrativa_hoy'] = narrativa.capa_corta or ''
+        context['joi_narrativa_plan'] = narrativa.capa_media or ''
     except Exception:
         context['joi_narrativa_hoy'] = ''
+        context['joi_narrativa_plan'] = ''
 
     return render(request, 'clientes/mockup_demo.html', context)
 
