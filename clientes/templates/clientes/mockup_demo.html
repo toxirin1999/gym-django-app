@@ -144,26 +144,26 @@ body {
 /* ── BIB HERO ────────────────────────────────── */
 .rb-bib {
   background: var(--bg-2); border: 2px solid var(--fg); border-radius: 2px;
-  padding: 20px 24px 24px; margin-top: 18px; position: relative;
+  padding: 14px 20px 16px; margin-top: 14px; position: relative;
 }
 .rb-bib-meta { display: flex; justify-content: space-between; align-items: center;
   font-family: var(--font-mono); font-size: 10px; font-weight: 700;
-  letter-spacing: 0.12em; color: var(--fg-mute); text-transform: uppercase; margin-bottom: 6px; }
-.rb-bib-name { font-family: 'Archivo Black',sans-serif; font-size: clamp(28px,8vw,52px);
-  line-height: 0.88; letter-spacing: -0.04em; color: var(--fg); text-transform: uppercase; }
+  letter-spacing: 0.12em; color: var(--fg-mute); text-transform: uppercase; margin-bottom: 4px; }
+.rb-bib-name { font-family: 'Archivo Black',sans-serif; font-size: clamp(24px,6vw,38px);
+  line-height: 0.9; letter-spacing: -0.04em; color: var(--fg); text-transform: uppercase; }
 .rb-bib-workout { font-family: 'Archivo Black',sans-serif; font-size: clamp(18px,4vw,28px);
   color: var(--accent); letter-spacing: -0.01em; text-transform: uppercase; line-height: 1.02; margin-top: 10px; }
 .rb-bib-sub { font-family: var(--font-mono); font-size: 10px; font-weight: 700;
   letter-spacing: 0.18em; color: var(--fg-mute); text-transform: uppercase; margin-top: 4px; }
 .rb-bib-divider {
   display: grid; grid-template-columns: repeat(4, 1fr);
-  margin-top: 14px; border-top: 1.5px dashed var(--fg); padding-top: 12px; gap: 0;
+  margin-top: 12px; border-top: 1px dashed var(--fg); padding-top: 10px; gap: 0;
 }
 .rb-bib-stat { text-align: center; border-right: 1px solid var(--line); padding: 0 4px; }
 .rb-bib-stat:last-child { border-right: none; }
 .rb-bib-stat-label { font-family: var(--font-mono); font-size: 8px; font-weight: 700;
   letter-spacing: 0.12em; color: var(--fg-mute); text-transform: uppercase; margin-bottom: 2px; }
-.rb-bib-stat-val { font-family: var(--font-mono); font-size: 18px; font-weight: 700;
+.rb-bib-stat-val { font-family: var(--font-mono); font-size: 15px; font-weight: 700;
   color: var(--fg); letter-spacing: -0.02em; font-variant-numeric: tabular-nums; line-height: 1; }
 .rb-bib-stat-val.ok { color: var(--ok); }
 .rb-bib-stat-val.warn { color: var(--warn); }
@@ -472,10 +472,9 @@ body {
     </div>
     <div class="rb-bib-name">{{ cliente.user.get_full_name|default:cliente.user.username }}</div>
 
-    <!-- Workout name -->
+    {# Título de la sesión vive en la card de sesión — no duplicar aquí. Solo fase. #}
     {% if proximo_entrenamiento %}
-    <div class="rb-bib-workout">{{ proximo_entrenamiento.nombre|default:proximo_entrenamiento.rutina_nombre|default:"Sesión" }}</div>
-    <div class="rb-bib-sub">
+    <div class="rb-bib-sub" style="margin-top:6px;">
       {% if estado_entreno == 'recuperar' %}RECUPERAR
       {% elif estado_entreno == 'version_reducida' %}VERSIÓN ESENCIAL
       {% elif estado_entreno == 'posponer' %}POSPONER
@@ -483,8 +482,7 @@ body {
       · {{ proximo_entrenamiento.semana_nombre|default:"Semana" }} · Día {{ proximo_entrenamiento.dia|default:"1" }}
     </div>
     {% else %}
-    <div class="rb-bib-workout">Día de Descanso</div>
-    <div class="rb-bib-sub">Recuperación activa · Movilidad</div>
+    <div class="rb-bib-sub" style="margin-top:6px;">Día de descanso · Recuperación activa</div>
     {% endif %}
 
     <!-- Stats divider -->
@@ -801,13 +799,8 @@ body {
         <a href="{% url 'nutricion_app_django:dashboard_nutricional' %}" class="rb-btn rb-btn-ghost rb-btn-sm">Ver</a>
       </div>
     </div>
-    {% else %}
-    <div style="margin-top:12px;">
-      <a href="{% url 'nutricion_app_django:dashboard_nutricional' %}" class="rb-btn rb-btn-ghost" style="width:100%;justify-content:center;">
-        <i class="fas fa-leaf"></i> Mi Nutrición
-      </a>
-    </div>
     {% endif %}
+    {# 'Mi Nutrición' vacío eliminado — sin datos, no se muestra promesa sin contenido #}
 
     <!-- CTA: Ejecutar -->
     <!-- ══ PANEL UNIFICADO DE ALERTAS ══ -->
