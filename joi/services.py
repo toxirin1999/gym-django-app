@@ -2051,7 +2051,8 @@ def revisar_manual_david(cliente) -> dict:
     }
 
 
-def _actualizar_narrativa_activa(cliente, ctx: dict, cambio_significativo: bool = True) -> None:
+def _actualizar_narrativa_activa(cliente, ctx: dict, cambio_significativo: bool = True,
+                                 forzar: bool = False) -> None:
     """
     Actualiza las capas temporales de NarrativaActiva con velocidades distintas:
     - capa_corta: siempre (solo se llama cuando hay razón)
@@ -2090,16 +2091,16 @@ def _actualizar_narrativa_activa(cliente, ctx: dict, cambio_significativo: bool 
     # Determinar qué capas actualizar.
     # capa_media y capa_larga requieren antigüedad suficiente Y cambio significativo.
     # Antigüedad sin estabilidad confirmada no es suficiente — esto es MVP.
-    actualizar_media = cambio_significativo and (
+    actualizar_media = forzar or (cambio_significativo and (
         narrativa is None
         or narrativa.capa_media_actualizada is None
         or (hoy - narrativa.capa_media_actualizada).days >= 14
-    )
-    actualizar_larga = cambio_significativo and (
+    ))
+    actualizar_larga = forzar or (cambio_significativo and (
         narrativa is None
         or narrativa.capa_larga_actualizada is None
         or (hoy - narrativa.capa_larga_actualizada).days >= 28
-    )
+    ))
 
     # Construir prompt solicitando solo las capas necesarias
     resumen_ctx = []
@@ -2120,14 +2121,23 @@ def _actualizar_narrativa_activa(cliente, ctx: dict, cambio_significativo: bool 
 
     capas_a_generar = ["AHORA"]
     instrucciones = [
-        "AHORA: 1-2 frases sobre el estado de David en los últimos días."
+        "AHORA (estado concreto de esta semana): 1-2 frases sobre lo que está pasando "
+        "con el cuerpo y el entrenamiento AHORA, en términos observables y cercanos. "
+        "El estado del momento, no su significado profundo. Nada de identidad ni de patrones de fondo."
     ]
     if actualizar_media:
         capas_a_generar.append("FASE")
-        instrucciones.append("FASE: 1-2 frases sobre la trayectoria de David estas semanas.")
+        instrucciones.append(
+            "FASE (dirección del arco): 1-2 frases sobre hacia dónde se mueve la trayectoria "
+            "a lo largo de las semanas — qué se está consolidando o cambiando. "
+            "El movimiento en el tiempo, NO lo que pasa hoy. No repitas el ángulo de AHORA."
+        )
     if actualizar_larga:
         capas_a_generar.append("FONDO")
-        instrucciones.append("FONDO: 1-2 frases sobre los patrones profundos e identidad de David.")
+        instrucciones.append(
+            "FONDO (identidad profunda): 1-2 frases sobre el patrón de fondo que define a David, "
+            "más allá de esta fase. Lo que se repite a través de los meses. No repitas AHORA ni FASE."
+        )
 
     prompt = (
         f"Hipótesis activas sobre David:\n"
@@ -2136,7 +2146,10 @@ def _actualizar_narrativa_activa(cliente, ctx: dict, cambio_significativo: bool 
         + (f"\n\nCapas previas (para continuidad):\n" + '\n'.join(capas_previas) if capas_previas else "")
         + f"\n\nGenera SOLO las siguientes capas, cada una con su prefijo exacto:\n"
         + '\n'.join(instrucciones)
-        + "\n\nHabla en segunda persona (tú). Tutea siempre. Voz de JOI: directa, con confianza y cariño. "
+        + "\n\nREGLA CLAVE: cada capa dice algo DISTINTO. AHORA = lo concreto de ahora. "
+        "FASE = la dirección en el tiempo. FONDO = la identidad. "
+        "Si te encuentras repitiendo la misma tensión (p.ej. cuerpo-vs-mente) en varias capas, cambia el ángulo. "
+        "\n\nHabla en segunda persona (tú). Tutea siempre. Voz de JOI: directa, con confianza y cariño. "
         "Sin emojis. Sin números de métricas. Solo los prefijos y el texto."
     )
 

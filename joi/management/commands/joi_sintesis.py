@@ -37,6 +37,9 @@ class Command(BaseCommand):
                             help='Ejecutar solo para un usuario concreto (username)')
         parser.add_argument('--solo-narrativa', action='store_true',
                             help='Solo revisar ManualDavid y NarrativaActiva, sin generar mensaje.')
+        parser.add_argument('--forzar-capas', action='store_true',
+                            help='Regenera capa_media y capa_larga saltando el bloqueo de 14/28 días. '
+                                 'Uso puntual de migración, no operación normal.')
 
     def handle(self, *args, **options):
         from entrenos.models import ActividadRealizada
@@ -82,10 +85,11 @@ class Command(BaseCommand):
                         user=cliente.user
                     ).exists()
 
-                    if resultado_revision.get('cambio_significativo') or not narrativa_existe_ahora:
+                    _forzar = options.get('forzar_capas', False)
+                    if resultado_revision.get('cambio_significativo') or not narrativa_existe_ahora or _forzar:
                         try:
                             ctx = construir_contexto(cliente)
-                            _actualizar_narrativa_activa(cliente, ctx, cambio_significativo=True)
+                            _actualizar_narrativa_activa(cliente, ctx, cambio_significativo=True, forzar=_forzar)
                         except Exception as e:
                             self.stdout.write(
                                 self.style.ERROR(
