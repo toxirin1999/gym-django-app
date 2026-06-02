@@ -70,8 +70,10 @@ class Command(BaseCommand):
                 except NarrativaActiva.DoesNotExist:
                     pass
 
+                _forzar = options.get('forzar_capas', False)
                 debe_revisar = (
-                    _revision_antigua(ultima_revision, dias=7)
+                    _forzar
+                    or _revision_antigua(ultima_revision, dias=7)
                     or _hay_contexto_para_revision(cliente, ultima_revision)
                 )
 
@@ -85,7 +87,6 @@ class Command(BaseCommand):
                         user=cliente.user
                     ).exists()
 
-                    _forzar = options.get('forzar_capas', False)
                     if resultado_revision.get('cambio_significativo') or not narrativa_existe_ahora or _forzar:
                         try:
                             ctx = construir_contexto(cliente)
