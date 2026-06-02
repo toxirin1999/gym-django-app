@@ -803,9 +803,108 @@ body {
     {# 'Mi Nutrición' vacío eliminado — sin datos, no se muestra promesa sin contenido #}
 
     <!-- CTA: Ejecutar -->
-    <!-- ══ PANEL UNIFICADO DE ALERTAS ══ -->
+    {# ── Estado del sistema: movido tras EMPEZAR ENTRENO (Phase 62) ── #}
+
+    {% if entreno_hoy_realizado or entreno_semana_realizado %}
+    <a href="{% url 'entrenos:vista_plan_anual' cliente.id %}" class="rb-cta" style="background:rgba(var(--accent-rgb),0.08);border:1.5px solid var(--accent);color:var(--accent);">
+      <i class="fas fa-plus"></i> Hacer otro entreno
+    </a>
+    {% elif proximo_entrenamiento %}
+
+    {% if estado_entreno == 'descanso' %}
+    {# Día de descanso real — solo información, sin invitar a saltarse el plan #}
+    <div style="padding:14px 0 8px;font-size:11px;color:var(--td);opacity:0.65;text-align:center;line-height:1.5;">
+      Hoy es día de descanso. El plan no tiene sesión programada.
+    </div>
+    <a href="{% url 'entrenos:vista_plan_anual' cliente.id %}" class="rb-cta" style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.12);color:var(--td);text-decoration:none;opacity:0.7;">
+      <i class="fas fa-calendar-alt"></i> Ver plan de la semana
+    </a>
+
+    {% elif estado_entreno == 'recuperar' %}
+    {# Motor recomienda descanso — es recomendación, no bloqueo #}
+    <div style="padding:14px 0 4px;font-size:11px;color:var(--td);opacity:0.65;text-align:center;line-height:1.5;">
+      El plan recomienda descanso hoy para proteger el progreso. Puedes entrenar si te encuentras bien.
+    </div>
+    {% if sesion_programada %}
+    <form method="post" action="{% url 'clientes:posponer_sesion' sesion_programada.id %}" style="margin-bottom:8px;">
+      {% csrf_token %}
+      <button type="submit" class="rb-cta" style="width:100%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.18);color:var(--td);">
+        <i class="fas fa-moon"></i> Posponer hasta mañana
+      </button>
+    </form>
+    <a href="{% url 'entrenos:briefing_entrenamiento' cliente.id %}?fecha={{ hoy|date:'Y-m-d' }}&rutina_nombre={{ proximo_entrenamiento.rutina_nombre|urlencode }}&ejercicios={{ proximo_entrenamiento_json|urlencode }}{% if sesion_programada %}&sesion_programada_id={{ sesion_programada.id }}{% endif %}" class="rb-cta" style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.12);color:var(--td);text-decoration:none;">
+      <i class="fas fa-play"></i> Entrenar igualmente
+    </a>
+    {% else %}
+    {# Sin SesionProgramada en estado recuperar: ofrecer guardar para mañana #}
+    <form method="post" action="{% url 'clientes:posponer_sesion_hoy' %}" style="margin-bottom:8px;">
+      {% csrf_token %}
+      <button type="submit" class="rb-cta" style="width:100%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.18);color:var(--td);">
+        <i class="fas fa-moon"></i> Guardar sesión para mañana
+      </button>
+    </form>
+    {% endif %}
+
+    {% elif estado_entreno == 'posponer' %}
+    {# Motor recomienda posponer — CTA secundario con opción de empezar #}
+    {% if sesion_programada %}
+    <form method="post" action="{% url 'clientes:posponer_sesion' sesion_programada.id %}" style="margin-bottom:8px;">
+      {% csrf_token %}
+      <button type="submit" class="rb-cta" style="width:100%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.18);color:var(--td);">
+        <i class="fas fa-clock"></i> Posponer hasta mañana
+      </button>
+    </form>
+    <a href="{% url 'entrenos:briefing_entrenamiento' cliente.id %}?fecha={{ hoy|date:'Y-m-d' }}&rutina_nombre={{ proximo_entrenamiento.rutina_nombre|urlencode }}&ejercicios={{ proximo_entrenamiento_json|urlencode }}{% if sesion_programada %}&sesion_programada_id={{ sesion_programada.id }}{% endif %}" style="display:block;text-align:center;font-size:11px;color:var(--td);opacity:0.45;text-decoration:none;padding:6px 0;">
+      Empezar igualmente →
+    </a>
+    {% endif %}
+
+    {% else %}
+    {# Estado normal (entrenar / version_reducida): CTA principal activo #}
+    <a href="{% url 'entrenos:briefing_entrenamiento' cliente.id %}?fecha={{ hoy|date:'Y-m-d' }}&rutina_nombre={{ proximo_entrenamiento.rutina_nombre|urlencode }}&ejercicios={{ proximo_entrenamiento_json|urlencode }}{% if sesion_programada %}&sesion_programada_id={{ sesion_programada.id }}{% endif %}{% if modo_reducido %}&modo_reducido=1{% endif %}" class="rb-cta">
+      {% if modo_reducido %}<i class="fas fa-compress-arrows-alt"></i> Empezar versión esencial
+      {% else %}<i class="fas fa-play"></i> Empezar entreno{% endif %}
+    </a>
+    <div style="display:flex;gap:8px;margin-top:8px;">
+      {% if sesion_programada %}
+      <form method="post" action="{% url 'clientes:posponer_sesion' sesion_programada.id %}" style="flex:1;">
+        {% csrf_token %}
+        <button type="submit" style="width:100%;padding:10px;border-radius:12px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);color:var(--td);font-size:12px;cursor:pointer;">
+          Posponer sesión
+        </button>
+      </form>
+      <form method="post" action="{% url 'clientes:saltar_sesion' sesion_programada.id %}" style="flex:1;">
+        {% csrf_token %}
+        <button type="submit" style="width:100%;padding:10px;border-radius:12px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);color:var(--td);font-size:12px;cursor:pointer;">
+          Saltar sesión
+        </button>
+      </form>
+      {% else %}
+      {# Sin SesionProgramada: sesión de hoy generada on-the-fly — usar endpoint genérico #}
+      <form method="post" action="{% url 'clientes:posponer_sesion_hoy' %}" style="flex:1;">
+        {% csrf_token %}
+        <button type="submit" style="width:100%;padding:10px;border-radius:12px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);color:var(--td);font-size:12px;cursor:pointer;">
+          Posponer sesión
+        </button>
+      </form>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    {% else %}
+    {% if mensaje_entreno %}
+    <div style="padding:12px 14px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.10);border-radius:12px;margin-bottom:10px;font-size:12px;color:var(--td);opacity:0.80;line-height:1.5;font-style:italic;">
+      {{ mensaje_entreno }}
+    </div>
+    {% endif %}
+    <a href="{% url 'estoico:dashboard' %}" class="rb-cta rb-cta-rest">
+      <i class="fas fa-sun"></i> Ver Estoico
+    </a>
+    {% endif %}
+
+    <!-- ══ ESTADO DEL SISTEMA (tras EMPEZAR ENTRENO — Phase 62) ══ -->
     {% if alertas_sistema %}
-    <div style="margin-bottom:12px;background:var(--paper);border:1px solid var(--line-2);border-radius:14px;overflow:hidden;">
+    <div style="margin-top:6px;margin-bottom:12px;background:var(--paper);border:1px solid var(--line-2);border-radius:14px;overflow:hidden;">
       <div style="display:flex;align-items:center;gap:8px;padding:10px 14px 8px;border-bottom:1px solid var(--line);">
         <span style="font-size:14px;">🧠</span>
         <span style="font-family:var(--font-mono);font-size:9px;font-weight:700;color:var(--ink-3);letter-spacing:.12em;text-transform:uppercase;">Estado del sistema · hoy</span>
@@ -903,103 +1002,6 @@ body {
         <a href="{% url 'clientes:memoria_entrenador' cliente.id %}" style="font-family:var(--font-mono);font-size:9px;color:var(--ink-4);text-decoration:none;letter-spacing:.08em;">VER TODO LO QUE SÉ DE TI →</a>
       </div>
     </div>
-    {% endif %}
-
-    {% if entreno_hoy_realizado or entreno_semana_realizado %}
-    <a href="{% url 'entrenos:vista_plan_anual' cliente.id %}" class="rb-cta" style="background:rgba(var(--accent-rgb),0.08);border:1.5px solid var(--accent);color:var(--accent);">
-      <i class="fas fa-plus"></i> Hacer otro entreno
-    </a>
-    {% elif proximo_entrenamiento %}
-
-    {% if estado_entreno == 'descanso' %}
-    {# Día de descanso real — solo información, sin invitar a saltarse el plan #}
-    <div style="padding:14px 0 8px;font-size:11px;color:var(--td);opacity:0.65;text-align:center;line-height:1.5;">
-      Hoy es día de descanso. El plan no tiene sesión programada.
-    </div>
-    <a href="{% url 'entrenos:vista_plan_anual' cliente.id %}" class="rb-cta" style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.12);color:var(--td);text-decoration:none;opacity:0.7;">
-      <i class="fas fa-calendar-alt"></i> Ver plan de la semana
-    </a>
-
-    {% elif estado_entreno == 'recuperar' %}
-    {# Motor recomienda descanso — es recomendación, no bloqueo #}
-    <div style="padding:14px 0 4px;font-size:11px;color:var(--td);opacity:0.65;text-align:center;line-height:1.5;">
-      El plan recomienda descanso hoy para proteger el progreso. Puedes entrenar si te encuentras bien.
-    </div>
-    {% if sesion_programada %}
-    <form method="post" action="{% url 'clientes:posponer_sesion' sesion_programada.id %}" style="margin-bottom:8px;">
-      {% csrf_token %}
-      <button type="submit" class="rb-cta" style="width:100%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.18);color:var(--td);">
-        <i class="fas fa-moon"></i> Posponer hasta mañana
-      </button>
-    </form>
-    <a href="{% url 'entrenos:briefing_entrenamiento' cliente.id %}?fecha={{ hoy|date:'Y-m-d' }}&rutina_nombre={{ proximo_entrenamiento.rutina_nombre|urlencode }}&ejercicios={{ proximo_entrenamiento_json|urlencode }}{% if sesion_programada %}&sesion_programada_id={{ sesion_programada.id }}{% endif %}" class="rb-cta" style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.12);color:var(--td);text-decoration:none;">
-      <i class="fas fa-play"></i> Entrenar igualmente
-    </a>
-    {% else %}
-    {# Sin SesionProgramada en estado recuperar: ofrecer guardar para mañana #}
-    <form method="post" action="{% url 'clientes:posponer_sesion_hoy' %}" style="margin-bottom:8px;">
-      {% csrf_token %}
-      <button type="submit" class="rb-cta" style="width:100%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.18);color:var(--td);">
-        <i class="fas fa-moon"></i> Guardar sesión para mañana
-      </button>
-    </form>
-    {% endif %}
-
-    {% elif estado_entreno == 'posponer' %}
-    {# Motor recomienda posponer — CTA secundario con opción de empezar #}
-    {% if sesion_programada %}
-    <form method="post" action="{% url 'clientes:posponer_sesion' sesion_programada.id %}" style="margin-bottom:8px;">
-      {% csrf_token %}
-      <button type="submit" class="rb-cta" style="width:100%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.18);color:var(--td);">
-        <i class="fas fa-clock"></i> Posponer hasta mañana
-      </button>
-    </form>
-    <a href="{% url 'entrenos:briefing_entrenamiento' cliente.id %}?fecha={{ hoy|date:'Y-m-d' }}&rutina_nombre={{ proximo_entrenamiento.rutina_nombre|urlencode }}&ejercicios={{ proximo_entrenamiento_json|urlencode }}{% if sesion_programada %}&sesion_programada_id={{ sesion_programada.id }}{% endif %}" style="display:block;text-align:center;font-size:11px;color:var(--td);opacity:0.45;text-decoration:none;padding:6px 0;">
-      Empezar igualmente →
-    </a>
-    {% endif %}
-
-    {% else %}
-    {# Estado normal (entrenar / version_reducida): CTA principal activo #}
-    <a href="{% url 'entrenos:briefing_entrenamiento' cliente.id %}?fecha={{ hoy|date:'Y-m-d' }}&rutina_nombre={{ proximo_entrenamiento.rutina_nombre|urlencode }}&ejercicios={{ proximo_entrenamiento_json|urlencode }}{% if sesion_programada %}&sesion_programada_id={{ sesion_programada.id }}{% endif %}{% if modo_reducido %}&modo_reducido=1{% endif %}" class="rb-cta">
-      {% if modo_reducido %}<i class="fas fa-compress-arrows-alt"></i> Empezar versión esencial
-      {% else %}<i class="fas fa-play"></i> Empezar entreno{% endif %}
-    </a>
-    <div style="display:flex;gap:8px;margin-top:8px;">
-      {% if sesion_programada %}
-      <form method="post" action="{% url 'clientes:posponer_sesion' sesion_programada.id %}" style="flex:1;">
-        {% csrf_token %}
-        <button type="submit" style="width:100%;padding:10px;border-radius:12px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);color:var(--td);font-size:12px;cursor:pointer;">
-          Posponer sesión
-        </button>
-      </form>
-      <form method="post" action="{% url 'clientes:saltar_sesion' sesion_programada.id %}" style="flex:1;">
-        {% csrf_token %}
-        <button type="submit" style="width:100%;padding:10px;border-radius:12px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);color:var(--td);font-size:12px;cursor:pointer;">
-          Saltar sesión
-        </button>
-      </form>
-      {% else %}
-      {# Sin SesionProgramada: sesión de hoy generada on-the-fly — usar endpoint genérico #}
-      <form method="post" action="{% url 'clientes:posponer_sesion_hoy' %}" style="flex:1;">
-        {% csrf_token %}
-        <button type="submit" style="width:100%;padding:10px;border-radius:12px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);color:var(--td);font-size:12px;cursor:pointer;">
-          Posponer sesión
-        </button>
-      </form>
-      {% endif %}
-    </div>
-    {% endif %}
-
-    {% else %}
-    {% if mensaje_entreno %}
-    <div style="padding:12px 14px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.10);border-radius:12px;margin-bottom:10px;font-size:12px;color:var(--td);opacity:0.80;line-height:1.5;font-style:italic;">
-      {{ mensaje_entreno }}
-    </div>
-    {% endif %}
-    <a href="{% url 'estoico:dashboard' %}" class="rb-cta rb-cta-rest">
-      <i class="fas fa-sun"></i> Ver Estoico
-    </a>
     {% endif %}
 
     {# ── BLOQUE DE APRENDIZAJE — colapsado por defecto (densidad) ── #}
