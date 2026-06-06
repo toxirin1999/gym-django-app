@@ -1210,6 +1210,16 @@ input{background:transparent!important;border:none!important;outline:none!import
         Ver alternativas →
       </button>
     </div>
+    {% elif ejercicio.motivo_bloqueo == 'retorno_pausa' %}
+    {# Phase Continuidad 1.2 — Retorno tras pausa: azul calmo (no es lesión) #}
+    <div style="margin:6px 0 8px;padding:8px 12px;background:rgba(96,165,250,0.06);border-left:3px solid rgba(96,165,250,0.40);border-radius:0 8px 8px 0;">
+      <div style="font-size:9px;font-weight:700;color:rgba(96,165,250,0.90);letter-spacing:0.14em;text-transform:uppercase;margin-bottom:3px;">↩ Carga mantenida · retorno tras pausa</div>
+      <div style="font-size:11px;color:var(--td);opacity:0.78;line-height:1.45;">
+        El plan proponía <strong>{{ ejercicio.peso_kg_propuesto|floatformat:"-1" }} kg</strong> →
+        conserva <strong>{{ ejercicio.peso_kg|floatformat:"-1" }} kg</strong> hoy.
+        Vuelves de una pausa: subir vendrá después, sin compensar de golpe.
+      </div>
+    </div>
     {% else %}
     {# Phase 10A — Freno contextual: violeta #}
     <div style="margin:6px 0 8px;padding:8px 12px;background:rgba(180,140,255,0.07);border-left:3px solid rgba(180,140,255,0.4);border-radius:0 8px 8px 0;">
