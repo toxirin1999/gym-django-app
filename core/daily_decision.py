@@ -35,6 +35,9 @@ class DailyDecisionEngine:
         'sostener':            "Hay margen, pero no sobra. Haz la sesión, sin perseguir el límite.",
         'recuperar_movimiento': "El cuerpo pide bajar intensidad. Puedes moverte, pero no apretar.",
         'recuperar_descanso':  "Hoy el progreso probablemente está en recuperar, no en forzar.",
+        # Phase 59X.0: fragilidad = subutilización (ACWR bajo, estás fresco), no
+        # fatiga. Marco de retorno, no de calma.
+        'recuperar_fragilidad': "Vienes de menos carga de la habitual. La energía juega a favor: úsala para volver con margen, no para compensar de golpe.",
         'volver':              "No tienes que compensar la pausa. Haz algo posible y deja que la historia continúe.",
     }
 
@@ -43,6 +46,7 @@ class DailyDecisionEngine:
         'sostener':            "Versión normal sin llegar al fallo. Técnica primero.",
         'recuperar_movimiento': "Tren superior ligero o movilidad. Evita carga pesada.",
         'recuperar_descanso':  "Movilidad o descanso activo.",
+        'recuperar_fragilidad': "Sesión ligera para recuperar el patrón. Sube carga poco a poco, sin saltos.",
         'volver':              "Una sesión mínima posible. Sin deuda, sin compensación.",
     }
 
@@ -51,6 +55,7 @@ class DailyDecisionEngine:
         'sostener':            "Técnica de estaciones y carrera controlada.",
         'recuperar_movimiento': "Zona 2 suave o técnica sin carga.",
         'recuperar_descanso':  "Pausa. Zona 2 muy suave si necesitas moverte.",
+        'recuperar_fragilidad': "Zona 2 o técnica para reenganchar. Recupera ritmo sin forzar.",
         'volver':              "Carrera suave o técnica básica. Recupera el ritmo.",
     }
 
@@ -236,7 +241,10 @@ class DailyDecisionEngine:
         elif cond_recuperar_movimiento:
             estado = cls.RECUPERAR
             tipo   = 'fragilidad'
-            tipo_recuperar = 'movimiento'
+            # Phase 59X.0: tipo_recuperar propio 'fragilidad' (antes reutilizaba
+            # 'movimiento', que daba copy de fatiga "el cuerpo pide bajar
+            # intensidad" a alguien fresco/subutilizado).
+            tipo_recuperar = 'fragilidad'
             causa  = 'fragilidad'
         elif cond_sostener:
             estado = cls.SOSTENER
@@ -253,8 +261,14 @@ class DailyDecisionEngine:
         _causa_deterministica = causa in ('lesion', 'descanso_plan')
 
         if estado != cls.VOLVER and not _causa_deterministica:
-            # Paradoja A: métricas piden calma, energía subjetiva alta
-            if estado in (cls.RECUPERAR, cls.SOSTENER) and energia is not None and energia >= 7:
+            # Paradoja A: métricas piden calma, energía subjetiva alta.
+            # Phase 59X.0: NO aplica a 'fragilidad' — ahí las métricas NO piden
+            # calma (estás fresco/subutilizado); "datos piden calma" sería al
+            # revés. La energía alta en fragilidad refuerza el retorno, no lo
+            # contradice.
+            if (estado in (cls.RECUPERAR, cls.SOSTENER)
+                    and causa != 'fragilidad'
+                    and energia is not None and energia >= 7):
                 paradoja = 'A'
                 if estado == cls.RECUPERAR and tipo_recuperar != 'descanso':
                     tipo = 'mecanica'

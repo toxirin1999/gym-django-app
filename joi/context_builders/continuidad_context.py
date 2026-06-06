@@ -128,7 +128,10 @@ def _calcular_referencias_bloqueadas(cliente, hoy, ctx, dias_ventana):
 
     try:
         from hyrox.models import HyroxActivity, HyroxObjective
-        obj = HyroxObjective.objects.filter(cliente=cliente, activo=True).first()
+        # Phase 59X.0: antes filtraba por un campo booleano inexistente en
+        # HyroxObjective; el except lo tragaba y referencias_bloqueadas quedaba
+        # mudo en silencio. El campo real es 'estado'.
+        obj = HyroxObjective.objects.filter(cliente=cliente, estado='activo').first()
         if not obj:
             ctx['referencias_bloqueadas'] = []
             return ctx
