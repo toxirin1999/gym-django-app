@@ -77,23 +77,16 @@ class DailyDecisionEngine:
         Días transcurridos desde la última ActividadRealizada del cliente.
         Devuelve 0 si el cliente no tiene ninguna actividad registrada
         (usuario nuevo — no disparar 'volver' en ese caso).
+
+        Phase Continuidad 1.0: consolidado. La lógica de ausencia vive ahora en
+        core.continuidad (fuente única); este método delega para no mantener un
+        cálculo paralelo. La salida visible del semáforo no cambia: usa
+        'dias_sin_actividad' (cualquier tipo), idéntico al cálculo anterior.
         """
         try:
-            from entrenos.models import ActividadRealizada
-            from django.utils import timezone
-
-            ultima = (
-                ActividadRealizada.objects
-                .filter(cliente=cliente)
-                .order_by('-fecha')
-                .values_list('fecha', flat=True)
-                .first()
-            )
-            if ultima is None:
-                return 0
-            hoy = timezone.now().date()
-            delta = (hoy - ultima).days
-            return max(delta, 0)
+            from core.continuidad import evaluar_continuidad_entrenamiento
+            lectura = evaluar_continuidad_entrenamiento(cliente)
+            return lectura.get('dias_sin_actividad') or 0
         except Exception:
             return 0
 
