@@ -137,6 +137,14 @@ def construir_contexto(cliente) -> dict:
     except Exception as e:
         logger.error('[construir_contexto] build_life_context falló: %s', e)
 
+    # Phase Continuidad 1.4: lectura de pausa (con motivo declarado) para que el
+    # prompt de JOI la verbalice cocinada, no como días crudos.
+    try:
+        from core.continuidad import evaluar_continuidad_entrenamiento
+        ctx['continuidad_pausa'] = evaluar_continuidad_entrenamiento(cliente, fecha_ref=hoy)
+    except Exception as e:
+        logger.error('[construir_contexto] continuidad_pausa falló: %s', e)
+
     return ctx
 
 
@@ -400,7 +408,31 @@ def _prompt_apertura_manana(ctx: dict, datos_extra: dict) -> str:
     elif dias <= 2:
         hechos.append(f"ACTIVO — última actividad hace {dias} días ({tipo_txt}).")
     else:
-        hechos.append(f"PAUSA — última actividad hace {dias} días.")
+        # Phase Continuidad 1.4: señal COCINADA de pausa de gym (nivel + motivo
+        # declarado + marco de retorno), no días crudos. La app NO inventa el
+        # motivo; si no se declaró, se le dice a JOI que no asuma causa.
+        _cont_hecho = None
+        try:
+            cont = ctx.get('continuidad_pausa') or {}
+            if cont.get('activar_narrativa_pausa'):
+                _motivo_txt = {
+                    'desconocido':        'motivo no declarado (no asumir causa)',
+                    'enfermedad':         'motivo: enfermedad',
+                    'molestia_lesion':    'motivo: molestia/lesión',
+                    'vacaciones_viaje':   'motivo: vacaciones/viaje',
+                    'trabajo_no_pude':    'motivo: trabajo/no pudo',
+                    'descanso_decidido':  'motivo: descanso decidido',
+                    'otro':               'motivo: otro',
+                    'prefiero_no_decirlo':'el usuario prefiere no decir el motivo',
+                }.get(cont.get('motivo'), 'motivo no declarado (no asumir causa)')
+                _cont_hecho = (
+                    f"[Continuidad] Pausa {cont['nivel']} — {cont['dias_sin_gym']} días sin gym. "
+                    f"El plan ya frena la subida de cargas (retorno con margen, sin compensar). "
+                    f"{_motivo_txt}."
+                )
+        except Exception:
+            _cont_hecho = None
+        hechos.append(_cont_hecho or f"PAUSA — última actividad hace {dias} días.")
 
     # Actividad total de la semana (evita que JOI confunda reducción de volumen gym con ausencia)
     actividad = ctx.get('actividad_semana', {})
