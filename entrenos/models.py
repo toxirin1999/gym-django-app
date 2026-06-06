@@ -1608,3 +1608,54 @@ class GymDecisionTraceEvaluation(models.Model):
 
     def __str__(self):
         return f"{self.trace} → {self.resultado}"
+
+
+class PausaEntrenamiento(models.Model):
+    """Phase Continuidad 1.3 — registro de una pausa de entrenamiento.
+
+    "La pausa no es deuda". Se persiste SOLO cuando la pausa es significativa
+    (nivel >= clara, ≥6 días sin gym), no por cada hueco de 2 días. El motivo lo
+    declara el usuario una sola vez; la app nunca lo inventa. Es la fuente única
+    del motivo para que JOI y el resto de la app lo consuman vía core.continuidad.
+
+    Regla madre: la duración manda la prudencia física; el motivo modula la
+    narrativa. desconocido (no contestó) ≠ prefiero_no_decirlo (contestó que no).
+    """
+    MOTIVO_DESCONOCIDO = 'desconocido'
+    MOTIVO_CHOICES = [
+        (MOTIVO_DESCONOCIDO,    'Desconocido'),
+        ('enfermedad',          'Enfermedad'),
+        ('molestia_lesion',     'Molestia / lesión'),
+        ('vacaciones_viaje',    'Vacaciones / viaje'),
+        ('trabajo_no_pude',     'Trabajo / no pude'),
+        ('descanso_decidido',   'Descanso decidido'),
+        ('otro',                'Otro'),
+        ('prefiero_no_decirlo', 'Prefiero no decirlo'),
+    ]
+    NIVEL_CHOICES = [
+        ('clara',         'Pausa clara'),
+        ('larga',         'Pausa larga'),
+        ('recalibracion', 'Recalibración'),
+    ]
+
+    cliente = models.ForeignKey(
+        Cliente, on_delete=models.CASCADE, related_name='pausas_entrenamiento',
+        db_index=True,
+    )
+    fecha_inicio = models.DateField(help_text="Primer día de la pausa (último gym + 1).")
+    fecha_fin = models.DateField(null=True, blank=True, help_text="Día en que se retomó. Null = pausa abierta.")
+    dias_sin_gym = models.PositiveIntegerField(default=0)
+    nivel = models.CharField(max_length=20, choices=NIVEL_CHOICES)
+    motivo = models.CharField(max_length=40, choices=MOTIVO_CHOICES, default=MOTIVO_DESCONOCIDO)
+    motivo_preguntado = models.BooleanField(default=False)
+    motivo_respondido = models.BooleanField(default=False)
+    creada_en = models.DateTimeField(auto_now_add=True)
+    actualizada_en = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-fecha_inicio']
+        indexes = [models.Index(fields=['cliente', 'fecha_fin'])]
+
+    def __str__(self):
+        estado = 'abierta' if self.fecha_fin is None else f'cerrada {self.fecha_fin}'
+        return f"Pausa {self.cliente_id} {self.nivel} ({estado})"
