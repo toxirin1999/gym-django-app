@@ -8,7 +8,6 @@ from clientes import views as clientes_views
 from .views import historial_cliente, redirigir_usuario, panel_cliente, checkin_matutino
 from django.contrib.auth.decorators import login_required
 from joi import views as joi_views
-from .views import recuerdos_semanales
 
 # =================================================================
 # ### AÑADE ESTA LÍNEA ###
@@ -63,7 +62,7 @@ urlpatterns = [
 
     # Nutrición
     path('nutricion/calcular/', views.calcular_plan_nutricional, name='calcular_plan_nutricional'),
-    path('recuerdos/semana/', recuerdos_semanales, name='recuerdos_semanales'),
+    # Phase 59E.2: ruta recuerdos/semana/ eliminada (pantalla JOI fósil retirada).
 
     # Inicio Joi personalizado
     # path('mockup_inicio/', views.inicio_cliente, name='inicio_cliente'),
