@@ -3896,18 +3896,9 @@ def presencia_cierre(request):
         }
         return render(request, 'diario/presencia_cierre.html', context)
 
-    apertura_texto = None
-    try:
-        from joi.models import MensajeJOI
-        msg = (
-            MensajeJOI.objects
-            .filter(user=request.user, trigger='apertura_manana', creado_en__date=hoy)
-            .order_by('-creado_en').first()
-        )
-        if msg:
-            apertura_texto = msg.mensaje
-    except Exception:
-        pass
+    # Phase Cierre Menor 1: el cierre NO debe traer el mensaje de apertura de
+    # mañana (incoherencia temporal: mensaje matutino en pantalla nocturna).
+    # El cierre solo muestra su propia lectura (respuesta_joi_cierre) si existe.
 
     vires, _ = SeguimientoVires.objects.get_or_create(usuario=request.user, fecha=hoy)
 
@@ -3919,7 +3910,6 @@ def presencia_cierre(request):
         'habitos_con_estado': habitos_con_estado,
         'hoy': hoy,
         'dia_num': dia_num,
-        'apertura_manana': apertura_texto,
         'vires': vires,
         'joi_respuesta': joi_respuesta_guardada,
     }
