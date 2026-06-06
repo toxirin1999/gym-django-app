@@ -5003,6 +5003,16 @@ def plan_decisiones_view(request):
     except Exception:
         pass
 
+    # Phase Continuidad 1.4: lectura de continuidad para el Centro (read-only).
+    continuidad = None
+    try:
+        from core.continuidad import evaluar_continuidad_entrenamiento
+        _c = evaluar_continuidad_entrenamiento(cliente)
+        if _c.get('hay_pausa_significativa'):
+            continuidad = _c
+    except Exception:
+        continuidad = None
+
     return render(request, 'clientes/plan_decisiones.html', {
         'cliente': cliente,
         'hoy': hoy,
@@ -5017,4 +5027,5 @@ def plan_decisiones_view(request):
         'hipotesis_abiertas':  hipotesis_abiertas,
         'sugerencia_hipotesis': sugerencia_hipotesis,
         'lectura_semanal_joi': lectura_semanal_joi,
+        'continuidad': continuidad,
     })

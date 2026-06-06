@@ -288,6 +288,34 @@
   </div>
   {% endif %}
 
+  {# ── Phase Continuidad 1.4: pausa reciente (solo si es significativa) ── #}
+  {% if continuidad %}
+  <div class="dc-section">
+    <div class="dc-section-head">
+      <div class="dc-section-dot obs"></div>
+      <div class="dc-section-title" style="color:rgba(96,165,250,0.85);">Continuidad reciente</div>
+      <div class="dc-line"></div>
+    </div>
+    <div class="dc-card" style="border-left:2px solid rgba(96,165,250,0.45);background:rgba(96,165,250,0.05);">
+      <div style="font-size:12px;color:var(--ink-3);line-height:1.5;">
+        Pausa <strong>{{ continuidad.nivel }}</strong> · {{ continuidad.dias_sin_gym }} días sin gym.
+        El plan frena la subida de cargas y prioriza un retorno con margen, sin compensar de golpe.
+      </div>
+      <div style="font-size:11px;color:var(--ink-3);margin-top:6px;">
+        Motivo:
+        {% if continuidad.motivo == 'enfermedad' %}enfermedad
+        {% elif continuidad.motivo == 'molestia_lesion' %}molestia / lesión
+        {% elif continuidad.motivo == 'vacaciones_viaje' %}vacaciones / viaje
+        {% elif continuidad.motivo == 'trabajo_no_pude' %}trabajo / no pude
+        {% elif continuidad.motivo == 'descanso_decidido' %}descanso decidido
+        {% elif continuidad.motivo == 'otro' %}otro
+        {% elif continuidad.motivo == 'prefiero_no_decirlo' %}<em>prefiere no decirlo</em>
+        {% else %}<em>no declarado</em>{% endif %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
   {# ── Phase 37: Propuesta de experimento — PRIMERO (más accionable) ── #}
   {% if sugerencia_hipotesis %}
   <div class="dc-section">
