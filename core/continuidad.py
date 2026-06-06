@@ -144,9 +144,22 @@ def evaluar_continuidad_entrenamiento(cliente, fecha_ref=None, es_descanso_plan=
     hay_pausa_significativa = nivel in _NIVELES_PAUSA
     es_descanso_planificado = bool(es_descanso_plan)
 
-    # tipo de pausa (en 1.0 el motivo aún no se captura → nunca 'pausa_declarada')
+    # Motivo persistido (READ-ONLY; lo declara el usuario en 1.3). Fuente única:
+    # PausaEntrenamiento. Sin registro o sin declarar → 'desconocido'. Esto hace
+    # que el motivo viaje a JOI/semáforo/Centro vía esta misma lectura.
+    motivo = 'desconocido'
+    motivo_respondido = False
+    if hay_pausa_significativa:
+        p = get_pausa_abierta(cliente)
+        if p:
+            motivo = p.motivo
+            motivo_respondido = p.motivo_respondido
+
+    # tipo de pausa
     if es_descanso_planificado:
         tipo = 'descanso_planificado'
+    elif hay_pausa_significativa and motivo_respondido:
+        tipo = 'pausa_declarada'
     elif hay_pausa_significativa:
         tipo = 'pausa_no_declarada'
     else:
@@ -166,12 +179,66 @@ def evaluar_continuidad_entrenamiento(cliente, fecha_ref=None, es_descanso_plan=
         'tipo': tipo,
         'activar_narrativa_pausa': activar_narrativa_pausa,
         'aplicar_prudencia_retorno': aplicar_prudencia_retorno,
-        # ── acción (DESCRIPTIVO en 1.0; ejecuta 1.1+) ──
+        # ── acción (DESCRIPTIVO; ejecuta el motor en 1.1+) ──
         'congelar_progresion': hay_pausa_significativa,
         'factor_volumen': _FACTOR_VOLUMEN[nivel],
         'factor_carga': _FACTOR_CARGA[nivel],
         'bloquear_pr': hay_pausa_significativa,
-        # ── motivo (lo declara el usuario en 1.3; aquí siempre desconocido) ──
-        'motivo': 'desconocido',
+        # ── motivo declarado por el usuario (1.3) ──
+        'motivo': motivo,
+        'motivo_respondido': motivo_respondido,
         'fuente': 'continuidad_service',
     }
+
+
+def get_pausa_abierta(cliente):
+    """Pausa abierta (fecha_fin=None) más reciente, o None. Read-only y seguro."""
+    try:
+        from entrenos.models import PausaEntrenamiento
+        return (
+            PausaEntrenamiento.objects
+            .filter(cliente=cliente, fecha_fin__isnull=True)
+            .order_by('-fecha_inicio')
+            .first()
+        )
+    except Exception:
+        return None
+
+
+def registrar_o_actualizar_pausa(cliente, fecha_ref=None, es_descanso_plan=None):
+    """WRITE: gestiona el ciclo de vida de la pausa actual (fuente única).
+
+    - Pausa significativa (nivel>=clara): crea/actualiza la pausa abierta.
+      Se persiste SOLO desde nivel clara (no por huecos de pocos días).
+    - Sin pausa significativa: cierra cualquier pausa abierta (el usuario retomó).
+
+    Devuelve la PausaEntrenamiento abierta tras la operación, o None.
+    No toca el motivo (lo declara el usuario aparte): create lo deja en
+    'desconocido' y update preserva el que hubiera.
+    """
+    from datetime import timedelta
+    from entrenos.models import PausaEntrenamiento
+
+    hoy = fecha_ref or timezone.now().date()
+    lectura = evaluar_continuidad_entrenamiento(cliente, fecha_ref=hoy, es_descanso_plan=es_descanso_plan)
+    abierta = get_pausa_abierta(cliente)
+
+    if lectura['hay_pausa_significativa']:
+        dias = lectura['dias_sin_gym'] or 0
+        if abierta:
+            abierta.dias_sin_gym = dias
+            abierta.nivel = lectura['nivel']
+            abierta.save(update_fields=['dias_sin_gym', 'nivel', 'actualizada_en'])
+            return abierta
+        return PausaEntrenamiento.objects.create(
+            cliente=cliente,
+            fecha_inicio=hoy - timedelta(days=dias) + timedelta(days=1),  # último gym + 1
+            dias_sin_gym=dias,
+            nivel=lectura['nivel'],
+        )
+
+    # retomó (o nunca hubo pausa significativa) → cerrar la abierta
+    if abierta:
+        abierta.fecha_fin = hoy
+        abierta.save(update_fields=['fecha_fin', 'actualizada_en'])
+    return None
