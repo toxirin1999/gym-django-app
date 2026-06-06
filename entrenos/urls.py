@@ -14,6 +14,7 @@ urlpatterns = [
     # URLs ORIGINALES (Se mantienen)
     # ============================================================================
     path('resumen/<int:pk>/', views.resumen_entreno, name='resumen_entreno'),
+    path('pausa/<int:pausa_id>/motivo/', views.guardar_motivo_pausa, name='guardar_motivo_pausa'),
     path('gamificacion-resumen/<int:cliente_id>/', views.gamificacion_resumen, name='gamificacion_resumen'),
     path('resumen/<str:rango>/', views.entrenos_filtrados, name='entrenos_filtrados_rango'),
     path('plan-anual/<int:cliente_id>/', views.vista_plan_anual, name='vista_plan_anual'),

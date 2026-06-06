@@ -8106,6 +8106,26 @@ def briefing_entrenamiento(request, cliente_id):
     params = urllib.parse.urlencode(params_dict)
     url_sesion = f"{reverse('entrenos:entrenamiento_activo', args=[cliente_id])}?{params}"
 
+    # ── Phase Continuidad 1.3b: registrar pausa y preguntar el motivo UNA vez ──
+    # Reactivo (solo al abrir el briefing). write-on-load idiomático (precedente
+    # get_or_create en estas vistas). La pregunta es opcional y no reaparece.
+    pausa_pregunta = None
+    motivo_choices = []
+    try:
+        from core.continuidad import registrar_o_actualizar_pausa, get_pausa_abierta
+        from entrenos.models import PausaEntrenamiento
+        registrar_o_actualizar_pausa(cliente, fecha_ref=fecha_obj)
+        _pausa = get_pausa_abierta(cliente)
+        if _pausa and not _pausa.motivo_preguntado:
+            pausa_pregunta = _pausa
+            motivo_choices = [c for c in PausaEntrenamiento.MOTIVO_CHOICES
+                              if c[0] != PausaEntrenamiento.MOTIVO_DESCONOCIDO]
+            # se muestra una sola vez: marcar como preguntada ya
+            _pausa.motivo_preguntado = True
+            _pausa.save(update_fields=['motivo_preguntado', 'actualizada_en'])
+    except Exception:
+        pass  # nunca romper el briefing por esto
+
     return render(request, 'entrenos/briefing_entrenamiento.html', {
         'cliente': cliente,
         'fecha': fecha_obj,
@@ -8114,4 +8134,26 @@ def briefing_entrenamiento(request, cliente_id):
         'cambios_plan': cambios_plan,
         'briefing': briefing,
         'url_sesion': url_sesion,
+        'pausa_pregunta': pausa_pregunta,
+        'motivo_choices': motivo_choices,
     })
+
+
+@require_POST
+def guardar_motivo_pausa(request, pausa_id):
+    """Phase Continuidad 1.3b: guarda el motivo declarado de una pausa.
+
+    Opcional: si el motivo no es válido se ignora (queda 'desconocido'). No se
+    re-pregunta (motivo_preguntado ya quedó True al mostrarse). Distingue
+    'prefiero_no_decirlo' (respondido) de 'desconocido' (no contestó).
+    """
+    from entrenos.models import PausaEntrenamiento
+    pausa = get_object_or_404(PausaEntrenamiento, id=pausa_id)
+    motivo = (request.POST.get('motivo') or '').strip()
+    validos = {c[0] for c in PausaEntrenamiento.MOTIVO_CHOICES}
+    if motivo in validos and motivo != PausaEntrenamiento.MOTIVO_DESCONOCIDO:
+        pausa.motivo = motivo
+        pausa.motivo_respondido = True
+        pausa.motivo_preguntado = True
+        pausa.save(update_fields=['motivo', 'motivo_respondido', 'motivo_preguntado', 'actualizada_en'])
+    return redirect(request.META.get('HTTP_REFERER') or 'panel_cliente')

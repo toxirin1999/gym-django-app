@@ -291,6 +291,28 @@
     <span style="min-width:48px;"></span>
   </div>
 
+  {% if pausa_pregunta %}
+  <!-- Phase Continuidad 1.3b — pregunta única del motivo de pausa (opcional) -->
+  <form method="post" action="{% url 'entrenos:guardar_motivo_pausa' pausa_pregunta.id %}"
+        style="margin:14px 0;padding:14px 16px;background:rgba(96,165,250,0.05);border:1px solid rgba(96,165,250,0.25);border-radius:12px;">
+    {% csrf_token %}
+    <div style="font-family:var(--fm);font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:rgba(96,165,250,0.9);margin-bottom:6px;">↩ Retorno</div>
+    <div style="font-size:13px;color:var(--td);line-height:1.5;margin-bottom:10px;">
+      Hubo una pausa de {{ pausa_pregunta.dias_sin_gym }} días. El plan retoma con margen.
+      ¿Quieres indicar qué tipo de pausa fue?
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;">
+      {% for val, label in motivo_choices %}
+      <button type="submit" name="motivo" value="{{ val }}"
+              style="font-family:var(--fm);font-size:11px;padding:6px 11px;border-radius:8px;cursor:pointer;color:var(--td);
+                     background:{% if val == 'prefiero_no_decirlo' %}transparent{% else %}rgba(96,165,250,0.10){% endif %};
+                     border:1px solid rgba(96,165,250,0.28);">{{ label }}</button>
+      {% endfor %}
+    </div>
+    <div style="font-family:var(--fm);font-size:10px;color:var(--tdm);margin-top:8px;">Solo ajusta cómo interpreta el plan la vuelta. No es obligatorio.</div>
+  </form>
+  {% endif %}
+
   <!-- BIB -->
   <div class="bib">
     <div class="bib-meta">
