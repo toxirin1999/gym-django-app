@@ -47,6 +47,8 @@ _MENSAJES_PROGRESION = {
     # Phase 28.1 — per-exercise injury brake
     'lesion_activa':  'Carga mantenida por lesión activa en esta zona.',
     'lesion_retorno': 'Carga mantenida por fase de retorno. La articulación necesita progresión gradual.',
+    # Phase Continuidad 1.1 — freno por pausa de entrenamiento
+    'retorno_pausa':  'Vienes de una pausa. El plan mantiene cargas y no sube esta sesión: volver con margen, sin compensar de golpe.',
 }
 
 # GRUPOS_GRANDES proxy (avoids importing planificador config in tests)
@@ -77,6 +79,18 @@ def evaluar_permiso_progresion(cliente, fecha_ref=None):
                     else 'reducir_accesorios'
                 )
                 return _permiso(accion, f'intervencion_{intervencion.tipo}', hay_datos=True)
+        except Exception:
+            pass  # degrade silently
+
+        # Phase Continuidad 1.1: una pausa de entrenamiento (≥6 días sin gym)
+        # congela la subida de cargas — prudencia física por duración. La
+        # intervención explícita del usuario (arriba) manda sobre la pausa; la
+        # lesión se aplica por-ejercicio en aplicar_freno_contextual (encima).
+        try:
+            from core.continuidad import evaluar_continuidad_entrenamiento
+            cont = evaluar_continuidad_entrenamiento(cliente, fecha_ref=fecha_ref)
+            if cont.get('congelar_progresion'):
+                return _permiso('mantener_carga', 'retorno_pausa', hay_datos=True)
         except Exception:
             pass  # degrade silently
 
