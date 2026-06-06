@@ -337,66 +337,11 @@ def evaluar_retos(cliente):
 # (nunca se llamaba) con frases JOI poéticas hardcodeadas fuera del sistema JOI.
 
 
-@login_required
-def recuerdos_semanales(request):
-    cliente = request.user.cliente_perfil
-    estados = EstadoSemanal.objects.filter(cliente=cliente).order_by('-semana_inicio')
-    return render(request, 'clientes/recuerdos_semanales.html', {'estados': estados})
-
-
-from collections import Counter
-from datetime import timedelta, date
-from .models import EstadoSemanal, BitacoraDiaria
-
-
-def crear_estado_semanal(cliente):
-    hoy = date.today()
-    lunes = hoy - timedelta(days=hoy.weekday())
-    domingo = lunes + timedelta(days=6)
-
-    if EstadoSemanal.objects.filter(cliente=cliente, semana_inicio=lunes).exists():
-        return
-
-    semana = BitacoraDiaria.objects.filter(cliente=cliente, fecha__range=(lunes, domingo))
-    if not semana.exists():
-        return
-
-    sueño = [float(b.horas_sueno) for b in semana]
-    rpe = [b.rpe for b in semana]
-    humores = [b.humor for b in semana]
-
-    promedio_sueno = round(sum(sueño) / len(sueño), 1)
-    promedio_rpe = round(sum(rpe) / len(rpe), 1)
-    humor_dominante = Counter(humores).most_common(1)[0][0]
-
-    # Mensaje Joi
-    if humor_dominante == 'verde' and promedio_sueno >= 7:
-        mensaje = "Semana excelente. Estás en un estado óptimo para progresar 💚"
-    elif humor_dominante == 'rojo':
-        mensaje = "Semana difícil… Joi te acompaña en la sombra 🌒"
-    else:
-        mensaje = "Semana estable. Escuchemos lo que tu cuerpo dice 🤖"
-
-    # Sugerencia funcional
-    if humor_dominante == 'rojo' or promedio_sueno < 6:
-        sugerencia = "📥 Esta semana dormiste poco o estuviste emocionalmente bajo. Prioriza descanso activo o movilidad."
-    elif promedio_rpe >= 8:
-        sugerencia = "⚠️ Tu esfuerzo fue muy alto. Hoy sería ideal reducir volumen o hacer técnica controlada."
-    elif humor_dominante == 'verde' and promedio_sueno >= 7:
-        sugerencia = "🚀 Semana verde. Puedes aumentar un 10 % la carga en el próximo entreno si te sientes fuerte."
-    else:
-        sugerencia = None
-
-    EstadoSemanal.objects.create(
-        cliente=cliente,
-        semana_inicio=lunes,
-        semana_fin=domingo,
-        promedio_sueno=promedio_sueno,
-        promedio_rpe=promedio_rpe,
-        humor_dominante=humor_dominante,
-        mensaje_joi=mensaje,
-        sugerencia=sugerencia,
-    )
+# Phase 59E.2: eliminadas la vista recuerdos_semanales() y la función muerta
+# crear_estado_semanal() (productor de EstadoSemanal.mensaje_joi sin callers).
+# La pantalla "Memorias semanales con Joi" presentaba dato fósil como voz JOI
+# viva y duplicaba la habitación JOI. El modelo EstadoSemanal se conserva como
+# tabla histórica (limpieza de modelo aplazada a una fase posterior).
 
 
 def resumen_bitacora(cliente):

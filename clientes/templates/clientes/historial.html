@@ -16,8 +16,9 @@
     <div class="alert alert-info bg-dark text-white mt-3 p-3 small">
         🧠 <strong>{{ estados.0.semana_inicio|date:"d M" }} → {{ estados.0.semana_fin|date:"d M" }}</strong> —
         {% if estados.0.humor_dominante == "verde" %}🟢 Óptima{% elif estados.0.humor_dominante == "amarillo" %}⚖️ Neutra{% else %}🔴 Fatiga{% endif %}
-        — {{ estados.0.promedio_sueno }} h — RPE {{ estados.0.promedio_rpe }}<br>
-        <em class="text-cyan-200">{{ estados.0.mensaje_joi }}</em>
+        — {{ estados.0.promedio_sueno }} h — RPE {{ estados.0.promedio_rpe }}
+        {# Phase 59E.2: línea mensaje_joi (voz JOI fósil) eliminada. Si una
+           pantalla no es JOI, no lleva decoración JOI fósil. #}
     </div>
     {% endif %}
 
