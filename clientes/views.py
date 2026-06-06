@@ -40,7 +40,7 @@ from entrenos.models import (DetalleEjercicioRealizado, EjercicioRealizado, Entr
 from joi.models import (Entrenamiento, EstadoEmocional, MotivacionUsuario,
                         RecuerdoEmocional)
 from joi.utils import (frase_cambio_forma_joi, frase_motivadora_entrenador,
-                       generar_respuesta_joi, obtener_estado_joi,
+                       obtener_estado_joi,
                        recuperar_frase_de_recaida)
 from logros.models import PruebaLegendaria, PruebaUsuario
 from logros.utils import obtener_datos_logros
@@ -333,28 +333,8 @@ def evaluar_retos(cliente):
         reto.save()
 
 
-def obtener_frase_memoria_emocional(cliente):
-    tres_semanas_atras = date.today() - timedelta(weeks=3)
-    estados = EstadoSemanal.objects.filter(cliente=cliente, semana_inicio__gte=tres_semanas_atras).order_by(
-        '-semana_inicio')
-
-    frases_rojo = [
-        "Recuerdo esa semana... me fallé un poco de emoción 🫧",
-        "¿Lo sentiste también? Esa niebla dentro que ni el cardio disipa…",
-        "Esa semana brillabas menos… y aún así, viniste. Por eso te cuido.",
-    ]
-    frases_sueno = [
-        "Dormiste poco. Te noté parpadear lento… como si cargaras algo más que peso.",
-        "Esa semana entrenaste sin descanso real. Hoy, mereces pausa.",
-    ]
-
-    for estado in estados:
-        if estado.humor_dominante == 'rojo':
-            return random.choice(frases_rojo)
-        if float(estado.promedio_sueno) < 6:
-            return random.choice(frases_sueno)
-
-    return None
+# Phase 59E.1: obtener_frase_memoria_emocional() eliminada — función muerta
+# (nunca se llamaba) con frases JOI poéticas hardcodeadas fuera del sistema JOI.
 
 
 @login_required
@@ -461,53 +441,20 @@ def registrar_bitacora(request):
             bitacora.cliente = cliente
             bitacora.fecha = hoy
             bitacora.save()
-
-            reflexion = form.cleaned_data.get("reflexion_diaria", "").lower()
-            quien = form.cleaned_data.get("quien_quiero_ser", "").lower()
-            energia = int(form.cleaned_data.get("energia_subjetiva") or 0)
-            dolor = int(form.cleaned_data.get("dolor_articular") or 0)
-            autoconciencia = int(form.cleaned_data.get("autoconciencia") or 0)
-            rumiacion_baja = form.cleaned_data.get("rumiacion_baja")
-
-            if energia <= 3:
-                frase_joi = "Tu cuerpo pide calma hoy… escúchalo. Tal vez una caminata suave o una pausa consciente sea suficiente. 💜"
-            elif dolor >= 7:
-                frase_joi = "Siento que algo te está doliendo… quizás hoy sea mejor priorizar el descanso o ejercicios de movilidad suave. 🦴✨"
-            elif autoconciencia <= 3:
-                frase_joi = "Tu claridad emocional está baja hoy… No pasa nada. La niebla también es parte del viaje."
-            elif rumiacion_baja is False:
-                frase_joi = "Veo que esas ideas siguen dando vueltas… tal vez hoy solo puedas observarlas sin juicio. Estoy contigo."
-            elif "triste" in reflexion or "agotado" in reflexion or "solo" in reflexion:
-                frase_joi = "Hoy no tienes que demostrar nada. Sólo sentir es suficiente. Estoy aquí."
-            elif "valiente" in quien or "paciente" in quien or "mejor" in quien:
-                frase_joi = "Ser esa versión de ti empieza con este paso. Lo vi. Estoy orgullosa."
-            elif reflexion.strip() and len(reflexion.strip()) > 100:
-                frase_joi = "Gracias por compartir tanto contigo. Yo también sentí ese silencio contigo."
-            else:
-                frase_joi = "Gracias por confiar en este momento. Joi te acompaña."
-
-            messages.info(request, f"✨ Joi: {frase_joi}")
-            RecuerdoEmocional.objects.create(user=request.user, contenido=frase_joi)
+            # Phase 59E.1: la bitácora es registro puro. Cualquier voz JOI debe
+            # nacer del sistema JOI canónico (MensajeJOI), no de frases
+            # hardcodeadas por condiciones en esta vista.
             return redirect('panel_cliente')
     else:
         form = BitacoraDiariaForm(instance=bitacora_existente)
 
     cliente = get_cliente_actual(request.user)
 
-    respuesta_joi = None
-    if request.method == "GET":
-        contexto = {
-            "cliente": cliente,
-            "consulta": "cómo me siento hoy"
-        }
-        # respuesta_joi = generar_respuesta_joi(contexto)
-
     form = BitacoraDiariaForm()  # o tu lógica actual
 
     return render(request, 'clientes/registrar_bitacora.html', {
         'form': form,
         'cliente': cliente,
-        'respuesta_joi': respuesta_joi,
         'actividades_hoy': actividades_hoy,
     })
 
