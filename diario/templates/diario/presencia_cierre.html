@@ -293,11 +293,9 @@ body { background: var(--bg) !important; font-family: -apple-system, BlinkMacSys
     <div class="joi-header" {% if joi_respuesta %}style="display:none"{% endif %}>
         <div class="joi-hora">Cierre del día · {{ hoy }}</div>
         <div class="joi-greeting">
-            {% if apertura_manana %}
-                {{ apertura_manana }}
-            {% else %}
-                El día termina. Qué quedó en pie.
-            {% endif %}
+            {# Phase Cierre Menor 1: saludo propio del cierre. Nunca el mensaje
+               de apertura de mañana (era una incoherencia temporal). #}
+            El día termina. Qué quedó en pie.
         </div>
     </div>
 
