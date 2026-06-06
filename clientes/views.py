@@ -293,7 +293,9 @@ def responder_sugerencia(request):
     })
 
 
-def sugerencia_carga_joi(cliente):
+def consejo_carga(cliente):
+    # Phase Cierre Menor 1: renombrado desde sugerencia_carga_joi. Es consejo de
+    # carga funcional (motor), no voz de JOI; el nombre no debe atribuirlo a JOI.
     estado = EstadoSemanal.objects.filter(cliente=cliente).order_by('-semana_inicio').first()
     if not estado:
         return None
@@ -913,7 +915,7 @@ def _get_dashboard_context_data(request, cliente):
         _peso_cached = analizar_tendencia_peso(cliente)
         cache.set(_peso_cache_key, _peso_cached, 900)
     peso_actual, datos_peso, cambios_peso = _peso_cached
-    sug_carga = sugerencia_carga_joi(cliente)
+    sug_carga = consejo_carga(cliente)
 
     _cache_analytics = _ctx_analytics(cliente, hoy)
     ratios_fuerza = _cache_analytics['ratios_fuerza']
