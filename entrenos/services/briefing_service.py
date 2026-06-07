@@ -180,11 +180,41 @@ def get_briefing_gym(cliente, ejercicios_planificados, fecha):
                 'texto': f'Llevas 2 semanas con RPE medio {rpe_medio} — sesión intensa. Hoy para en RIR 2, no vayas al fallo.',
             })
         elif rpe_medio <= 6.0:
-            mensajes.append({
-                'icono': '⚡',
-                'tipo': 'carga',
-                'texto': f'RPE medio {rpe_medio} las últimas 2 semanas — tienes margen. Puedes intentar subir peso en el primer ejercicio.',
-            })
+            # No contradecir el freno del motor: si la progresión de los
+            # principales está congelada (pausa, carga alta, intervención), no
+            # prometer una subida que el motor no va a ejecutar. Fuente única:
+            # evaluar_permiso_progresion.
+            _frenado = False
+            _razon = 'el plan mantiene la carga hoy'
+            try:
+                from entrenos.services.progresion_contextual_service import evaluar_permiso_progresion
+                _permiso = evaluar_permiso_progresion(cliente, hoy)
+                if _permiso.get('aplica_a_principales'):
+                    _frenado = True
+                    _razon = {
+                        'retorno_pausa':                'vienes de una pausa',
+                        'carga_alta_semanal':           'la carga reciente ha sido alta',
+                        'carga_alta_sostenida':         'la carga reciente ha sido alta',
+                        'intervencion_no_subir_cargas': 'lo decidiste así esta semana',
+                        'bloque_parcial_repetido':      'el plan operó en modo esencial',
+                        'esenciales_frecuentes':        'el plan operó en modo esencial',
+                        'modo_reducido':                'el plan operó en modo esencial',
+                    }.get(_permiso.get('motivo'), 'el plan mantiene la carga hoy')
+            except Exception:
+                pass
+
+            if _frenado:
+                mensajes.append({
+                    'icono': '⚡',
+                    'tipo': 'carga',
+                    'texto': f'RPE medio {rpe_medio} — tendrías margen para subir, pero hoy el plan mantiene la carga ({_razon}).',
+                })
+            else:
+                mensajes.append({
+                    'icono': '⚡',
+                    'tipo': 'carga',
+                    'texto': f'RPE medio {rpe_medio} las últimas 2 semanas — tienes margen. Puedes intentar subir peso en el primer ejercicio.',
+                })
 
     # Energía baja
     if energia_media is not None and energia_media <= 4:

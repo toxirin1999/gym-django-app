@@ -127,8 +127,13 @@ class TestConsolidacionSemaforo(ContinuidadBase):
 
     def test_paridad_ausencia_dias(self):
         # Misma salida que el cálculo histórico: días desde la última actividad.
-        self._act(8, tipo='gym')
-        self._act(3, tipo='futbol')
+        # _calcular_ausencia_dias usa la fecha REAL de hoy (no REF), así que
+        # creamos las actividades relativas a hoy para no romper al cambiar de día.
+        hoy = date.today()
+        ActividadRealizada.objects.create(cliente=self.cliente, tipo='gym',
+                                          fecha=hoy - timedelta(days=8))
+        ActividadRealizada.objects.create(cliente=self.cliente, tipo='futbol',
+                                          fecha=hoy - timedelta(days=3))
         self.assertEqual(DDE._calcular_ausencia_dias(self.cliente), 3)
 
     def test_semaforo_conserva_mensaje_no_compensar(self):
