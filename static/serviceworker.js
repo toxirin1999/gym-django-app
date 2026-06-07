@@ -6,7 +6,6 @@ const CACHE_NAME = 'gymproject-cache-v3';
 const URLS_TO_CACHE = [
   '/', // La página de inicio
   '{% static "css/dashboard_bladestyle.css" %}',
-  '{% static "css/blade-runner-atmosphere.css" %}',
   '{% static "js/cronometros.js" %}', // Ejemplo, añade tus JS importantes
   'https://cdn.tailwindcss.com', // Cachear Tailwind
   'https://cdn.jsdelivr.net/npm/chart.js' // Cachear Chart.js
