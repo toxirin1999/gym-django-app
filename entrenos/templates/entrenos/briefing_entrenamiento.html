@@ -5,26 +5,28 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Briefing · {{ rutina_nombre|default:"Sesión" }}</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  {# Phase UI 1 (JDS): tipografía del sistema, sin Google Fonts. #}
+  <link rel="stylesheet" href="{% static 'css/jds.css' %}">
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body { height: 100%; background: #0E0E0F; }
+  html, body { height: 100%; background: var(--jds-bg); }
   body {
-    --bg:      #0E0E0F;
-    --surf:    #161618;
-    --surf2:   #1E1E21;
-    --bd:      rgba(255,255,255,0.08);
-    --ink:     #F0EEE8;
-    --td:      rgba(240,238,232,0.5);
-    --tdm:     rgba(240,238,232,0.28);
-    --ok:      #2ECC71;
-    --warn:    #F1C40F;
-    --r:       #E74C3C;
-    --accent:  #00C8FF;
-    --fd: 'Archivo Black', sans-serif;
-    --fu: 'Archivo', sans-serif;
-    --fm: 'JetBrains Mono', monospace;
+    /* JDS — las vars locales del briefing ahora apuntan al sistema único.
+       Migración por aliasing: re-skinea la pantalla sin reescribir los inline. */
+    --bg:      var(--jds-bg);
+    --surf:    var(--jds-surface);
+    --surf2:   var(--jds-surface-strong);
+    --bd:      var(--jds-border);
+    --ink:     var(--jds-text);
+    --td:      var(--jds-text-soft);
+    --tdm:     var(--jds-text-faint);
+    --ok:      var(--jds-good);
+    --warn:    var(--jds-warning);
+    --r:       var(--jds-danger);
+    --accent:  var(--jds-accent);
+    --fd: var(--jds-font);
+    --fu: var(--jds-font);
+    --fm: var(--jds-mono);
     font-family: var(--fu);
     color: var(--ink);
     -webkit-font-smoothing: antialiased;

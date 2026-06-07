@@ -1,0 +1,113 @@
+/* ==========================================================================
+   JDS — JOI Design System
+   La ÚNICA estética con permiso para sobrevivir.
+   Dark premium · -apple-system/SF · mono técnica · cyan sistema · violeta JOI.
+
+   Guardarraíl: NO imponer global sobre base.html (guerra de especificidad con
+   el sistema LoL legacy). Cargar por pantalla, empezando por standalone.
+   ========================================================================== */
+
+/* ── 1. TOKENS ──────────────────────────────────────────────────────────── */
+:root {
+  /* Base */
+  --jds-bg:             #05070a;
+  --jds-bg-soft:        #080b10;
+  --jds-surface:        rgba(255, 255, 255, 0.055);
+  --jds-surface-strong: rgba(255, 255, 255, 0.09);
+  --jds-surface-subtle: rgba(255, 255, 255, 0.035);
+  --jds-border:         rgba(244, 247, 251, 0.08);   /* hairline neutro */
+  --jds-border-strong:  rgba(244, 247, 251, 0.14);
+
+  /* Text */
+  --jds-text:           #f4f7fb;
+  --jds-text-muted:     rgba(244, 247, 251, 0.68);
+  --jds-text-soft:      rgba(244, 247, 251, 0.44);
+  --jds-text-faint:     rgba(244, 247, 251, 0.28);
+
+  /* Accent (sistema / datos / acción) */
+  --jds-accent:         #38bdf8;
+  --jds-accent-soft:    rgba(56, 189, 248, 0.16);
+  --jds-accent-border:  rgba(56, 189, 248, 0.34);
+
+  /* JOI (presencia / lectura) — reservado, no invade la UI */
+  --jds-joi:            #a78bfa;
+  --jds-joi-soft:       rgba(167, 139, 250, 0.16);
+  --jds-joi-border:     rgba(167, 139, 250, 0.32);
+
+  /* Signals */
+  --jds-good:           #22c55e;
+  --jds-good-soft:      rgba(34, 197, 94, 0.15);
+  --jds-warning:        #f59e0b;
+  --jds-warning-soft:   rgba(245, 158, 11, 0.16);
+  --jds-danger:         #ef4444;
+  --jds-danger-soft:    rgba(239, 68, 68, 0.16);
+
+  /* Shape */
+  --jds-radius-xl: 28px;
+  --jds-radius-lg: 22px;
+  --jds-radius-md: 16px;
+  --jds-radius-sm: 12px;
+
+  /* Shadow */
+  --jds-shadow-soft: 0 24px 80px rgba(0, 0, 0, 0.42);
+
+  /* Type */
+  --jds-font: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif;
+  --jds-mono: "SF Mono", ui-monospace, Menlo, Monaco, Consolas, monospace;
+}
+
+/* ── 2. UTILIDADES ──────────────────────────────────────────────────────── */
+/* Mono SOLO para datos/etiquetas/códigos de señal — nunca como idioma global. */
+.jds-mono   { font-family: var(--jds-mono); font-variant-numeric: tabular-nums; }
+.jds-label  { font-family: var(--jds-mono); font-size: 10px; font-weight: 700;
+              letter-spacing: .14em; text-transform: uppercase; color: var(--jds-text-soft); }
+.jds-muted  { color: var(--jds-text-muted); }
+.jds-soft   { color: var(--jds-text-soft); }
+
+/* ── 3. CARD ────────────────────────────────────────────────────────────── */
+.jds-card {
+  background: var(--jds-surface);
+  border: 1px solid var(--jds-border);
+  border-radius: var(--jds-radius-md);
+  padding: 14px 16px;
+}
+.jds-card--strong { background: var(--jds-surface-strong); }
+
+/* ── 4. CHIP de señal ───────────────────────────────────────────────────── */
+.jds-chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-family: var(--jds-mono); font-size: 10px; font-weight: 700;
+  letter-spacing: .08em; text-transform: uppercase;
+  padding: 4px 10px; border-radius: 99px;
+  background: var(--jds-surface-strong); color: var(--jds-text-soft);
+  border: 1px solid var(--jds-border);
+}
+.jds-chip--accent  { background: var(--jds-accent-soft);  color: var(--jds-accent);  border-color: var(--jds-accent-border); }
+.jds-chip--joi     { background: var(--jds-joi-soft);     color: var(--jds-joi);     border-color: var(--jds-joi-border); }
+.jds-chip--good    { background: var(--jds-good-soft);    color: var(--jds-good); }
+.jds-chip--warning { background: var(--jds-warning-soft); color: var(--jds-warning); }
+.jds-chip--danger  { background: var(--jds-danger-soft);  color: var(--jds-danger); }
+
+/* ── 5. BUTTON ──────────────────────────────────────────────────────────── */
+.jds-btn {
+  font-family: var(--jds-font); font-size: 14px; font-weight: 600;
+  padding: 12px 18px; border-radius: var(--jds-radius-sm);
+  border: 1px solid var(--jds-border); background: var(--jds-surface);
+  color: var(--jds-text); cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.jds-btn--accent  { background: var(--jds-accent); color: #05070a; border-color: transparent; font-weight: 700; }
+.jds-btn--ghost   { background: transparent; }
+
+/* ── 6. STAT (número grande + etiqueta mono) ────────────────────────────── */
+.jds-stat       { display: flex; flex-direction: column; gap: 2px; }
+.jds-stat-n     { font-family: var(--jds-mono); font-size: 22px; font-weight: 700; color: var(--jds-text); }
+.jds-stat-label { font-family: var(--jds-mono); font-size: 9px; font-weight: 700;
+                  letter-spacing: .14em; text-transform: uppercase; color: var(--jds-text-faint); }
+
+/* ── 7. JOI (línea de presencia) ────────────────────────────────────────── */
+.jds-joi-line {
+  border-left: 2px solid var(--jds-joi-border);
+  background: var(--jds-joi-soft);
+  padding: 10px 14px; border-radius: 0 var(--jds-radius-sm) var(--jds-radius-sm) 0;
+  color: var(--jds-text-muted); font-size: 13px; line-height: 1.5;
+}
