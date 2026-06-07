@@ -1,6 +1,7 @@
 {% load static %}
 {% load clientes_filters %}
 {% load i18n %}
+{% load humanize %}
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -60,6 +61,10 @@ body {
   font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
   padding-bottom: 80px;
+  /* Phase UI 3.1: columna de app móvil — no estirar en desktop/tablet.
+     A 390px no afecta (mobile-first intacto); solo evita el sprawl. */
+  max-width: 480px;
+  margin-inline: auto;
 }
 
 ::selection { background: var(--accent); color: #fff; }
@@ -145,7 +150,8 @@ body {
 
 /* ── BIB HERO ────────────────────────────────── */
 .rb-bib {
-  background: var(--bg-2); border: 2px solid var(--fg); border-radius: 2px;
+  /* Phase UI 3.1: superficie elevada con hairline sutil, no marco blanco. */
+  background: var(--bg-2); border: 1px solid var(--jds-border-strong); border-radius: var(--jds-radius-md);
   padding: 14px 20px 16px; margin-top: 14px; position: relative;
 }
 .rb-bib-meta { display: flex; justify-content: space-between; align-items: center;
@@ -159,7 +165,7 @@ body {
   letter-spacing: 0.18em; color: var(--fg-mute); text-transform: uppercase; margin-top: 4px; }
 .rb-bib-divider {
   display: grid; grid-template-columns: repeat(4, 1fr);
-  margin-top: 12px; border-top: 1px dashed var(--fg); padding-top: 10px; gap: 0;
+  margin-top: 12px; border-top: 1px dashed var(--jds-border-strong); padding-top: 10px; gap: 0;
 }
 .rb-bib-stat { text-align: center; border-right: 1px solid var(--line); padding: 0 4px; }
 .rb-bib-stat:last-child { border-right: none; }
@@ -204,14 +210,14 @@ body {
   letter-spacing: 0.1em; text-transform: uppercase; }
 
 /* ── TOGGLE ──────────────────────────────────── */
-.rb-toggle { display: flex; border: 1.5px solid var(--fg); border-radius: 2px; overflow: hidden; margin-top: 16px; width: 100%; }
+.rb-toggle { display: flex; border: 1px solid var(--jds-border); border-radius: var(--jds-radius-sm); overflow: hidden; margin-top: 16px; width: 100%; }
 .rb-toggle-btn { flex: 1; padding: 10px 8px; background: transparent; border: none;
   font-family: var(--font-mono); font-size: 10px; font-weight: 700; letter-spacing: 0.14em;
   text-transform: uppercase; color: var(--fg-dim); cursor: pointer; transition: all .15s;
   border-right: 1px solid var(--line); }
 .rb-toggle-btn:last-child { border-right: none; }
-.rb-toggle-btn.active { background: var(--fg); color: var(--bg); }
-.rb-toggle-btn.active-hyrox { background: var(--accent); color: #fff; }
+.rb-toggle-btn.active { background: var(--jds-accent-soft); color: var(--jds-accent); }
+.rb-toggle-btn.active-hyrox { background: var(--jds-accent-soft); color: var(--jds-accent); }
 
 /* ── WORKOUT CARD ────────────────────────────── */
 .rb-workout-card {
@@ -495,7 +501,7 @@ body {
       </div>
       <div class="rb-bib-stat">
         <div class="rb-bib-stat-label">Carga</div>
-        <div class="rb-bib-stat-val">{{ carga_total_acumulada|default:"0" }}</div>
+        <div class="rb-bib-stat-val">{{ carga_total_acumulada|default:0|intcomma }}</div>
       </div>
       <div class="rb-bib-stat">
         <div class="rb-bib-stat-label">Consist.</div>
