@@ -51,6 +51,11 @@ body {
   --paper: var(--bg-2);
   --paper-2: var(--bg-3);
   --td: var(--fg-dim);
+  /* Phase UI 3.3 — jerarquía de contraste: texto humano/interpretativo
+     necesita más presencia que metadata técnica. No usar --td-strong
+     para labels/hints; eso sigue siendo --td o --fg-mute. */
+  --td-strong: rgba(244, 247, 251, 0.84);
+  --joi-text: rgba(167, 139, 250, 0.82);
 
   --font-disp: var(--jds-font);
   --font-body: var(--jds-font);
@@ -148,16 +153,30 @@ body {
   font-size: 14px; letter-spacing: 0.06em; color: var(--fg); text-transform: uppercase; }
 .rb-section-line { flex: 1; height: 1px; background: var(--line); }
 
+/* Phase UI 4 — summary reutilizable para sub-paneles colapsables (patrón ACWR) */
+.rb-collapse-summary {
+  display: flex; align-items: center; gap: 8px; cursor: pointer;
+  list-style: none; user-select: none;
+}
+.rb-collapse-summary::-webkit-details-marker { display: none; }
+.rb-collapse-summary::before { content: '▸'; font-size: 9px; opacity: 0.55; flex-shrink: 0; }
+details[open] > .rb-collapse-summary::before { content: '▾'; }
+.rb-collapse-hint {
+  font-family: var(--font-mono); font-size: 9px; font-weight: 700;
+  color: var(--ink-4); white-space: nowrap; overflow: hidden;
+  text-overflow: ellipsis; max-width: 48%;
+}
+
 /* ── BIB HERO ────────────────────────────────── */
 .rb-bib {
   /* Phase UI 3.1: superficie elevada con hairline sutil, no marco blanco. */
   background: var(--bg-2); border: 1px solid var(--jds-border-strong); border-radius: var(--jds-radius-md);
-  padding: 14px 20px 16px; margin-top: 14px; position: relative;
+  padding: 12px 20px 14px; margin-top: 14px; position: relative;
 }
 .rb-bib-meta { display: flex; justify-content: space-between; align-items: center;
   font-family: var(--font-mono); font-size: 10px; font-weight: 700;
   letter-spacing: 0.12em; color: var(--fg-mute); text-transform: uppercase; margin-bottom: 4px; }
-.rb-bib-name { font-family: var(--jds-font); font-size: clamp(24px,6vw,38px);
+.rb-bib-name { font-family: var(--jds-font); font-size: clamp(22px,5.5vw,34px);
   line-height: 0.9; letter-spacing: -0.04em; color: var(--fg); text-transform: uppercase; }
 .rb-bib-workout { font-family: var(--jds-font); font-size: clamp(18px,4vw,28px);
   color: var(--accent); letter-spacing: -0.01em; text-transform: uppercase; line-height: 1.02; margin-top: 10px; }
@@ -165,7 +184,7 @@ body {
   letter-spacing: 0.18em; color: var(--fg-mute); text-transform: uppercase; margin-top: 4px; }
 .rb-bib-divider {
   display: grid; grid-template-columns: repeat(4, 1fr);
-  margin-top: 12px; border-top: 1px dashed var(--jds-border-strong); padding-top: 10px; gap: 0;
+  margin-top: 10px; border-top: 1px dashed var(--jds-border-strong); padding-top: 8px; gap: 0;
 }
 .rb-bib-stat { text-align: center; border-right: 1px solid var(--line); padding: 0 4px; }
 .rb-bib-stat:last-child { border-right: none; }
@@ -226,8 +245,8 @@ body {
 }
 .rb-workout-eyebrow { font-family: var(--font-mono); font-size: 9px; font-weight: 700;
   letter-spacing: 0.2em; color: var(--fg-mute); text-transform: uppercase; margin-bottom: 4px; }
-.rb-workout-title { font-family: var(--jds-font); font-size: clamp(20px,5vw,32px);
-  color: var(--fg); letter-spacing: -0.02em; text-transform: uppercase; line-height: 1.02; }
+.rb-workout-title { font-family: var(--jds-font); font-size: clamp(18px,4.5vw,28px);
+  color: var(--fg); letter-spacing: -0.02em; text-transform: uppercase; line-height: 0.95; }
 .rb-workout-badge {
   display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px;
   border: 1px solid var(--line-2); background: var(--bg-3); border-radius: 2px; margin-top: 8px;
@@ -434,9 +453,9 @@ body {
     <a href="{% url 'hyrox:strava_reconciliacion' %}"
        style="display:inline-flex;align-items:center;gap:5px;font-family:var(--font-mono);
               font-size:9px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;
-              color:#FC4C02;border:1.5px solid #FC4C02;border-radius:2px;
+              color:rgba(252,76,2,.55);border:1px solid rgba(252,76,2,.22);border-radius:2px;
               padding:4px 9px;text-decoration:none;white-space:nowrap;">
-      <i class="fab fa-strava"></i> Importar de Strava
+      <i class="fab fa-strava"></i> Strava
     </a>
     <div class="rb-live">
       <div class="rb-live-dot"></div>
@@ -462,8 +481,8 @@ body {
     {% else %}
     <button data-checkin-badge onclick="document.getElementById('rbCheckinModal').classList.add('open')"
        style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;
-              letter-spacing:0.06em;color:#f59e0b;background:rgba(245,158,11,.1);
-              border:1px solid rgba(245,158,11,.3);border-radius:9999px;padding:4px 10px;
+              letter-spacing:0.06em;color:rgba(245,158,11,.78);background:rgba(245,158,11,.06);
+              border:1px solid rgba(245,158,11,.2);border-radius:9999px;padding:4px 10px;
               cursor:pointer;outline:none;">
       ⚡ CHECK-IN PENDIENTE
     </button>
@@ -538,13 +557,12 @@ body {
 
   {% if joi_narrativa_hoy %}
   <div style="margin:10px 0 6px;padding:8px 14px;
-              border-left:1px solid rgba(100,148,220,0.20);
-              opacity:0.72;">
+              border-left:1px solid var(--jds-joi-border);">
     <div style="font-family:var(--font-mono);font-size:7px;font-weight:700;
                 letter-spacing:0.14em;text-transform:uppercase;
-                color:rgba(100,148,220,0.55);margin-bottom:4px;">JOI</div>
-    <div style="font-size:11px;color:var(--td);line-height:1.5;font-style:italic;
-                font-family:-apple-system,BlinkMacSystemFont,system-ui,sans-serif;font-weight:300;">
+                color:var(--jds-joi);opacity:0.7;margin-bottom:4px;">JOI</div>
+    <div style="font-size:11px;color:var(--joi-text);line-height:1.55;font-style:italic;
+                font-family:-apple-system,BlinkMacSystemFont,system-ui,sans-serif;font-weight:400;">
       {{ joi_narrativa_hoy }}
     </div>
   </div>
@@ -588,7 +606,7 @@ body {
         {% endif %}
       </div>
       {% if estado_entreno == 'recuperar' and entreno_hoy_realizado %}
-      <div style="margin-top:8px;font-size:11px;color:var(--ink-3);line-height:1.5;">
+      <div style="margin-top:8px;font-size:11px;color:var(--td-strong);line-height:1.5;">
         El plan marcaba recuperación. Has completado una sesión de baja exigencia — el día sigue contando como descarga.
       </div>
       {% endif %}
@@ -645,7 +663,7 @@ body {
       </div>
       <div class="rb-workout-title">{{ proximo_entrenamiento.nombre|default:proximo_entrenamiento.rutina_nombre|default:"Sesión" }}</div>
       {% if mensaje_entreno and causa_entreno != 'sesion_hoy' %}
-      <div style="font-size:11px;color:var(--td);opacity:0.72;margin-top:4px;margin-bottom:2px;font-style:italic;line-height:1.45;">{{ mensaje_entreno }}</div>
+      <div style="font-size:11px;color:var(--td-strong);margin-top:4px;margin-bottom:2px;font-style:italic;line-height:1.45;">{{ mensaje_entreno }}</div>
       {% endif %}
       {% if distribucion_aviso and not explicacion_decision.distribucion_aviso_suprimido %}
       <div style="margin-top:6px;padding:7px 10px;background:rgba(255,160,80,0.07);border-left:2px solid rgba(255,160,80,0.4);border-radius:0 7px 7px 0;font-size:11px;color:rgba(255,160,80,0.85);line-height:1.4;">
@@ -901,7 +919,7 @@ body {
 
     {% else %}
     {% if mensaje_entreno %}
-    <div style="padding:12px 14px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.10);border-radius:12px;margin-bottom:10px;font-size:12px;color:var(--td);opacity:0.80;line-height:1.5;font-style:italic;">
+    <div style="padding:12px 14px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.10);border-radius:12px;margin-bottom:10px;font-size:12px;color:var(--td-strong);line-height:1.5;font-style:italic;">
       {{ mensaje_entreno }}
     </div>
     {% endif %}
@@ -922,7 +940,7 @@ body {
         <span style="font-size:15px;flex-shrink:0;margin-top:1px;">{{ alerta.icono }}</span>
         <div style="flex:1;min-width:0;">
           <div style="font-size:12px;font-weight:700;color:{% if alerta.nivel == 'critico' %}var(--danger){% elif alerta.nivel == 'alerta' %}var(--warn){% elif alerta.nivel == 'positivo' %}var(--ok){% else %}var(--ink){% endif %};">{{ alerta.titulo }}</div>
-          <div style="font-size:11px;color:var(--ink-3);line-height:1.4;margin-top:2px;">{{ alerta.texto }}</div>
+          <div style="font-size:11px;color:var(--td-strong);line-height:1.4;margin-top:2px;">{{ alerta.texto }}</div>
           {% if alerta.url and alerta.url_label == 'Gestionar lesión' %}
           {# ── Panel inline de gestión de lesión ── #}
           {% with lesion=lesion_activa %}
@@ -1000,7 +1018,7 @@ body {
           <span style="font-size:15px;flex-shrink:0;margin-top:1px;">{{ alerta.icono }}</span>
           <div style="flex:1;min-width:0;">
             <div style="font-size:12px;font-weight:700;color:{% if alerta.nivel == 'critico' %}var(--danger){% elif alerta.nivel == 'alerta' %}var(--warn){% elif alerta.nivel == 'positivo' %}var(--ok){% else %}var(--ink){% endif %};">{{ alerta.titulo }}</div>
-            <div style="font-size:11px;color:var(--ink-3);line-height:1.4;margin-top:2px;">{{ alerta.texto }}</div>
+            <div style="font-size:11px;color:var(--td-strong);line-height:1.4;margin-top:2px;">{{ alerta.texto }}</div>
           </div>
         </div>
         {% endfor %}
@@ -1014,7 +1032,18 @@ body {
 
     {# ── BLOQUE DE APRENDIZAJE — colapsado por defecto (densidad) ── #}
     <details class="rb-plan-detalle">
-      <summary>El plan en detalle</summary>
+      <summary>
+        El plan en detalle
+        <span style="margin-left:auto;font-weight:400;letter-spacing:0;text-transform:none;opacity:0.65;">
+          {% if sugerencia_activa %}· 1 sugerencia activa
+          {% elif intervencion_distribucion %}· prueba en curso
+          {% elif evaluacion_distribucion %}· prueba evaluada
+          {% elif candidata_preferencia %}· preferencia detectada
+          {% elif distribucion_semanal %}· una observación de distribución
+          {% elif patron_multisemanal %}· nueva observación
+          {% else %}· sin novedades esta semana{% endif %}
+        </span>
+      </summary>
 
     {# Tarjeta 1: "Esta semana" — datos + lectura del momento actual #}
     {% if analisis_semanal and analisis_semanal.hay_datos %}
@@ -1050,7 +1079,7 @@ body {
         {% endif %}
       </div>
       {% if analisis_semanal.lectura_textual %}
-      <div style="font-size:12px;color:var(--td);opacity:0.72;line-height:1.55;font-style:italic;">
+      <div style="font-size:12px;color:var(--td-strong);line-height:1.55;font-style:italic;">
         {{ analisis_semanal.lectura_textual }}
       </div>
       {% endif %}
@@ -1085,12 +1114,14 @@ body {
 
     {# Tarjeta 2: "Lo que el plan observa" — patrón + sugerencia + evaluación pasada (solo si hay patrón) #}
     {% if patron_multisemanal %}
-    <div class="rb-aprendio-card" style="border-left:3px solid rgba(180,140,255,0.35);">
-      <div class="rb-section-head" style="margin-bottom:8px;">
+    <details class="rb-aprendio-card" style="border-left:3px solid rgba(180,140,255,0.35);">
+      <summary class="rb-collapse-summary" style="margin-bottom:0;">
         <div class="rb-section-num" style="color:rgba(180,140,255,0.7);">OBS</div>
         <h3 class="rb-section-title">Lo que el plan observa</h3>
         <div class="rb-section-line"></div>
-      </div>
+        <span class="rb-collapse-hint">{{ patron_multisemanal|truncatewords:5 }}{% if sugerencia_activa %} · sugerencia{% endif %}</span>
+      </summary>
+      <div style="margin-top:12px;">
 
       {# Observación de patrón multisemanal #}
       <div style="font-size:12px;color:var(--td);opacity:0.75;line-height:1.55;font-style:italic;">
@@ -1158,37 +1189,40 @@ body {
       </div>
       {% endif %}
 
-    </div>
+      </div>
+    </details>
     {% endif %}
 
     <!-- Phase 18B/20 — Prueba de distribución activa o evaluación reciente -->
     {% if intervencion_distribucion %}
-    <div class="rb-aprendio-card" style="border-left:3px solid rgba(255,160,80,0.5);">
-      <div class="rb-section-head" style="margin-bottom:6px;">
+    <details class="rb-aprendio-card" style="border-left:3px solid rgba(255,160,80,0.5);">
+      <summary class="rb-collapse-summary" style="margin-bottom:0;">
         <div class="rb-section-num" style="color:rgba(255,160,80,0.7);">PRU</div>
         <h3 class="rb-section-title">Prueba de distribución activa</h3>
         <div class="rb-section-line"></div>
-      </div>
-      <div style="font-size:12px;color:var(--td);opacity:0.75;line-height:1.5;">
+        <span class="rb-collapse-hint">hasta {{ intervencion_distribucion.fecha_fin|date:"j N" }}</span>
+      </summary>
+      <div style="font-size:12px;color:var(--td);opacity:0.75;line-height:1.5;margin-top:12px;">
         El plan está en una prueba de distribución hasta el <strong>{{ intervencion_distribucion.fecha_fin|date:"j N" }}</strong>.
         Observa si la semana fluye mejor.
       </div>
-    </div>
+    </details>
     {% elif evaluacion_distribucion %}
     {# Phase 20/21 — Prueba terminada → evaluación + posible continuidad #}
-    <div class="rb-aprendio-card" style="border-left:3px solid {% if evaluacion_distribucion.resultado == 'favorable' %}rgba(46,204,113,0.4){% else %}rgba(255,160,80,0.35){% endif %};">
-      <div class="rb-section-head" style="margin-bottom:6px;">
+    <details class="rb-aprendio-card" style="border-left:3px solid {% if evaluacion_distribucion.resultado == 'favorable' %}rgba(46,204,113,0.4){% else %}rgba(255,160,80,0.35){% endif %};">
+      <summary class="rb-collapse-summary" style="margin-bottom:0;">
         <div class="rb-section-num" style="color:rgba(255,160,80,0.7);">EVA</div>
         <h3 class="rb-section-title">Prueba de distribución — resultado</h3>
         <div class="rb-section-line"></div>
-      </div>
-      <div style="font-size:12px;color:var(--td);opacity:0.8;line-height:1.55;{% if continuidad_distribucion %}margin-bottom:10px;{% endif %}">
+        <span class="rb-collapse-hint">{{ evaluacion_distribucion.lectura|truncatewords:5 }}</span>
+      </summary>
+      <div style="font-size:12px;color:var(--td-strong);line-height:1.55;margin-top:12px;{% if continuidad_distribucion %}margin-bottom:10px;{% endif %}">
         {{ evaluacion_distribucion.lectura }}
       </div>
       {% if continuidad_distribucion %}
       <div style="padding:8px 11px;background:rgba(46,204,113,0.05);border:1px solid rgba(46,204,113,0.15);border-radius:9px;margin-bottom:8px;">
         <div style="font-size:9px;font-weight:700;color:rgba(46,204,113,0.7);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:4px;">Una vuelta más</div>
-        <div style="font-size:11px;color:var(--td);opacity:0.72;line-height:1.4;">{{ continuidad_distribucion.texto }}</div>
+        <div style="font-size:11px;color:var(--td-strong);line-height:1.4;">{{ continuidad_distribucion.texto }}</div>
       </div>
       <div style="display:flex;gap:8px;">
         <form method="post" action="{% url 'clientes:repetir_prueba_distribucion' %}" style="flex:1;">
@@ -1207,17 +1241,19 @@ body {
         </form>
       </div>
       {% endif %}
-    </div>
+    </details>
     {% endif %}
 
     <!-- Phase 16 — Distribución semanal: dónde el plan no encaja con la vida real -->
     {% if distribucion_semanal and not intervencion_distribucion %}
-    <div class="rb-aprendio-card" style="border-left:3px solid rgba(255,160,80,0.35);">
-      <div class="rb-section-head" style="margin-bottom:8px;">
+    <details class="rb-aprendio-card" style="border-left:3px solid rgba(255,160,80,0.35);">
+      <summary class="rb-collapse-summary" style="margin-bottom:0;">
         <div class="rb-section-num" style="color:rgba(255,160,80,0.7);">DIS</div>
         <h3 class="rb-section-title">Distribución del plan</h3>
         <div class="rb-section-line"></div>
-      </div>
+        <span class="rb-collapse-hint">{{ distribucion_semanal.0.texto|truncatewords:5 }}{% if sugerencia_distribucion %} · prueba sugerida{% endif %}</span>
+      </summary>
+      <div style="margin-top:12px;">
       {% for obs in distribucion_semanal|slice:":2" %}
       <div style="font-size:12px;color:var(--td);opacity:0.75;line-height:1.55;font-style:italic;margin-bottom:8px;">
         {{ obs.texto }}
@@ -1243,7 +1279,8 @@ body {
         </form>
       </div>
       {% endif %}
-    </div>
+      </div>
+    </details>
     {% endif %}
 
     <!-- Phase 22D — Preferencias activas del plan -->
@@ -1303,12 +1340,14 @@ body {
 
     <!-- Phase 15 — Calendario / memoria visual del plan -->
     {% if calendario_plan %}
-    <div class="rb-aprendio-card" style="border-left:3px solid rgba(120,120,120,0.25);">
-      <div class="rb-section-head" style="margin-bottom:10px;">
+    <details class="rb-aprendio-card" style="border-left:3px solid rgba(120,120,120,0.25);">
+      <summary class="rb-collapse-summary" style="margin-bottom:0;">
         <div class="rb-section-num" style="color:rgba(200,200,200,0.5);">MEM</div>
         <h3 class="rb-section-title">Memoria del plan</h3>
         <div class="rb-section-line"></div>
-      </div>
+        <span class="rb-collapse-hint">{{ calendario_plan|length }} semana{{ calendario_plan|length|pluralize }} registradas · ver calendario</span>
+      </summary>
+      <div style="margin-top:10px;">
 
       {# Leyenda compacta #}
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;font-size:10px;color:var(--td);opacity:0.55;">
@@ -1360,24 +1399,27 @@ body {
         <div id="cal-detalle-fecha" style="font-weight:700;margin-bottom:4px;opacity:0.9;"></div>
         <div id="cal-detalle-cuerpo" style="opacity:0.7;line-height:1.5;"></div>
       </div>
-    </div>
+      </div>
+    </details>
     {% endif %}
 
     <!-- Resumen semanal: qué aprendió el plan -->
     {% if resumen_semanal_gym %}
-    <div class="rb-aprendio-card">
-      <div class="rb-section-head" style="margin-bottom:8px;">
+    <details class="rb-aprendio-card">
+      <summary class="rb-collapse-summary" style="margin-bottom:0;">
         <div class="rb-section-num">SEM</div>
         <h3 class="rb-section-title">Lo que aprendió el plan</h3>
         <div class="rb-section-line"></div>
-        {% with meta=resumen_semanal_gym.0.meta %}
-        {% if meta %}
-        <span style="font-family:var(--font-mono);font-size:9px;color:var(--ink-4);white-space:nowrap;">
-          {{ meta.lunes|date:"d/m" }} – {{ meta.domingo|date:"d/m" }}
-        </span>
-        {% endif %}
-        {% endwith %}
+        <span class="rb-collapse-hint">{{ resumen_semanal_gym.0.texto|truncatewords:7 }}</span>
+      </summary>
+      <div style="margin-top:8px;">
+      {% with meta=resumen_semanal_gym.0.meta %}
+      {% if meta %}
+      <div style="font-family:var(--font-mono);font-size:9px;color:var(--ink-4);white-space:nowrap;margin-bottom:8px;">
+        {{ meta.lunes|date:"d/m" }} – {{ meta.domingo|date:"d/m" }}
       </div>
+      {% endif %}
+      {% endwith %}
       <!-- Primeros 3 items siempre visibles (datos clave y primera sección) -->
       {% for item in resumen_semanal_gym|slice:":3" %}
       {% if item.tipo == 'seccion' %}
@@ -1413,7 +1455,8 @@ body {
         {% endfor %}
       </details>
       {% endif %}
-    </div>
+      </div>
+    </details>
     {% endif %}
 
     {# JOI · el plan consolidado: el FAB ya cubre el indicador "hay una lectura pendiente" #}
@@ -1433,12 +1476,14 @@ body {
 
     <!-- Resumen semanal Hyrox -->
     {% if resumen_semanal_hyrox and resumen_semanal_hyrox.tiene_datos %}
-    <div class="rb-aprendio-card" style="margin-bottom:12px;">
-      <div class="rb-section-head" style="margin-bottom:8px;">
+    <details class="rb-aprendio-card" style="margin-bottom:12px;">
+      <summary class="rb-collapse-summary" style="margin-bottom:0;">
         <div class="rb-section-num">HYX</div>
         <h3 class="rb-section-title">Hyrox · esta semana</h3>
         <div class="rb-section-line"></div>
-      </div>
+        <span class="rb-collapse-hint">{{ resumen_semanal_hyrox.n_completadas }}/{{ resumen_semanal_hyrox.n_planificadas }} sesiones · TSB {% if resumen_semanal_hyrox.tsb is not None %}{{ resumen_semanal_hyrox.tsb }}{% else %}—{% endif %}</span>
+      </summary>
+      <div style="margin-top:10px;">
       <!-- Métricas rápidas -->
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:10px;">
         <div style="background:var(--paper-2);border:1px solid var(--line-2);border-radius:10px;padding:10px;text-align:center;">
@@ -1463,7 +1508,8 @@ body {
       </div>
       {% endfor %}
       {% endif %}
-    </div>
+      </div>
+    </details>
     {% endif %}
 
     <!-- Lo que sé de ti -->
@@ -1480,12 +1526,13 @@ body {
 
     <!-- Recent sessions -->
     {% if actividades_recientes_focus %}
-    <div class="rb-section">
-      <div class="rb-section-head">
+    <details class="rb-section">
+      <summary class="rb-collapse-summary" style="margin-bottom:12px;">
         <div class="rb-section-num">LOG</div>
         <h3 class="rb-section-title">Últimas Sesiones</h3>
         <div class="rb-section-line"></div>
-      </div>
+        <span class="rb-collapse-hint">{% with primero=actividades_recientes_focus.0 %}{% if primero.titulo %}{{ primero.titulo }}{% elif primero.entreno_gym %}{{ primero.entreno_gym.rutina.nombre|default:"Entreno" }}{% else %}{{ primero.get_tipo_display }}{% endif %}{% endwith %} · {{ actividades_recientes_focus|length }} reciente{{ actividades_recientes_focus|length|pluralize }}</span>
+      </summary>
       <div class="rb-sessions">
         {% for act in actividades_recientes_focus %}
         <div class="rb-session-row">
@@ -1510,7 +1557,7 @@ body {
         </div>
         {% endfor %}
       </div>
-    </div>
+    </details>
     {% endif %}
 
     </details>
@@ -1577,9 +1624,9 @@ body {
       <i class="fas fa-bolt"></i> Ejecutar Hyrox
     </a>
 
-    <div style="margin-top:12px;display:grid;grid-template-columns:1fr 1fr;gap:6px;">
-      <a href="{% url 'hyrox:strava_reconciliacion' %}" class="rb-btn rb-btn-ghost" style="justify-content:center;grid-column:1/-1;color:#FC4C02;border-color:#FC4C02;">
-        <i class="fab fa-strava"></i> Importar de Strava
+    <div style="text-align:center;margin-top:10px;">
+      <a href="{% url 'hyrox:strava_reconciliacion' %}" style="display:inline-flex;align-items:center;gap:5px;font-family:var(--font-mono);font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:rgba(252,76,2,.55);text-decoration:none;">
+        <i class="fab fa-strava"></i> Importar actividad de Strava →
       </a>
     </div>
 
