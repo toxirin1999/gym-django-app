@@ -1243,9 +1243,11 @@ input{background:transparent!important;border:none!important;outline:none!import
     <div class="exname-meta">
       <span class="exname-chip chip-g">{{ ejercicio.series }} series</span>
       <span class="exname-chip chip-g">RPE {{ ejercicio.rpe_objetivo }}</span>
-      <span class="exname-chip chip-n">{{ ejercicio.repeticiones }} reps</span>
+      {% if ejercicio.usa_tiempo %}<span class="exname-chip chip-n">{{ ejercicio.repeticiones }} seg</span>{% else %}<span class="exname-chip chip-n">{{ ejercicio.repeticiones }} reps</span>{% endif %}
       {% if ejercicio.peso_anterior_kg > 0 %}
       <span class="exname-chip chip-n">Última: {{ ejercicio.peso_anterior_kg }}kg</span>
+      {% elif ejercicio.usa_tiempo and ejercicio.repeticiones_anterior > 0 %}
+      <span class="exname-chip chip-n">Última: {{ ejercicio.repeticiones_anterior }}s</span>
       {% endif %}
       {% if ejercicio.sugerencia_tope %}
       <span class="exname-chip" style="background:rgba(46,204,113,0.15);color:#2ECC71;border:1px solid rgba(46,204,113,0.3);" title="La última vez llegaste al tope — mismo peso, una rep más">🔝 +1 rep{% if ejercicio.reps_sugeridas_tope %} ({{ ejercicio.reps_sugeridas_tope }}){% endif %}</span>
@@ -1299,7 +1301,8 @@ input{background:transparent!important;border:none!important;outline:none!import
        data-rpe-obj="{{ ejercicio.rpe_objetivo }}"
        data-reps-obj="{{ ejercicio.reps_objetivo }}"
        data-usa-peso="{% if ejercicio.usa_peso %}1{% else %}0{% endif %}"
-       data-usa-distancia="{% if ejercicio.usa_distancia %}1{% else %}0{% endif %}">
+       data-usa-distancia="{% if ejercicio.usa_distancia %}1{% else %}0{% endif %}"
+       data-usa-tiempo="{% if ejercicio.usa_tiempo %}1{% else %}0{% endif %}">
     {% if not forloop.first %}
     <div id="sugerencia-{{ ejercicio.form_id }}-{{ sn }}"
          style="display:none;margin:8px 16px 0;padding:8px 12px;
@@ -1447,7 +1450,7 @@ input{background:transparent!important;border:none!important;outline:none!import
                name="{{ ejercicio.form_id }}_completado_{{ sn }}" value="1">
       </div>
 
-      {% if ejercicio.peso_anterior_kg > 0 %}
+      {% if ejercicio.peso_anterior_kg > 0 or ejercicio.repeticiones_anterior > 0 %}
       <div class="historial-zona">
         Última vez ({{ ejercicio.fecha_anterior|date:"d/m" }}):
         {% if ejercicio.usa_peso %}
@@ -1456,8 +1459,10 @@ input{background:transparent!important;border:none!important;outline:none!import
           <span>{{ ejercicio.repeticiones_anterior }}s</span>
         {% elif ejercicio.usa_distancia %}
           <span>{{ ejercicio.repeticiones_anterior }}m</span>
-        {% else %}
+        {% elif ejercicio.solo_reps %}
           <span>{{ ejercicio.repeticiones_anterior }} reps</span>
+        {% else %}
+          <span>{{ ejercicio.peso_anterior_kg }}kg × {{ ejercicio.repeticiones_anterior }} reps</span>
         {% endif %}
       </div>
       {% endif %}
@@ -2198,10 +2203,14 @@ function guardarSeriePanel(fid,sn,total){
     const row=document.createElement('div');
     row.className='serie-done';
     row.dataset.sn=sn;
-    const usaDistLog = document.getElementById('reg-'+fid+'-'+sn)?.dataset.usaDistancia === '1';
+    const _regEl = document.getElementById('reg-'+fid+'-'+sn);
+    const usaDistLog = _regEl?.dataset.usaDistancia === '1';
+    const usaTiempoLog = _regEl?.dataset.usaTiempo === '1';
     const resumenSerie = usaDistLog
       ? (peso > 0 ? peso+'kg | '+reps+'m' : reps+'m')
-      : peso+'kg × '+reps+' reps';
+      : usaTiempoLog
+        ? reps+'s'
+        : peso+'kg × '+reps+' reps';
     row.innerHTML='<div class="sd-check">✓</div>'
       +'<div class="sd-info">Serie '+sn+' — <strong>'+resumenSerie+'</strong>'+tecnicaBadge+'</div>'
       +'<div class="sd-rpe">RPE '+Math.round(rpe)+'</div>'
@@ -2230,12 +2239,16 @@ function guardarSeriePanel(fid,sn,total){
   // Info próxima serie
   const proxEl=document.getElementById('pd-prox-'+fid);
   if(proxEl){
-    const usaDistProx = document.getElementById('reg-'+fid+'-'+(sn+1))?.dataset.usaDistancia === '1';
+    const _regProxEl = document.getElementById('reg-'+fid+'-'+(sn+1));
+    const usaDistProx = _regProxEl?.dataset.usaDistancia === '1';
+    const usaTiempoProx = _regProxEl?.dataset.usaTiempo === '1';
     const recPeso = document.getElementById('peso-'+fid+'-'+(sn+1))?.dataset.recWeight || peso;
     const recReps = document.getElementById('reps-hid-'+fid+'-'+(sn+1))?.value || reps;
     const proxResumen = usaDistProx
       ? (recPeso > 0 ? '<span class="pd-prox-kg">'+recPeso+'kg</span> | '+recReps+'m' : recReps+'m')
-      : '<span class="pd-prox-kg">'+recPeso+'kg</span> × '+recReps+' reps';
+      : usaTiempoProx
+        ? recReps+'s'
+        : '<span class="pd-prox-kg">'+recPeso+'kg</span> × '+recReps+' reps';
     proxEl.innerHTML=sn>=total
       ?'<span style="color:var(--ok)">✓ Ejercicio completado</span>'
       :'Serie <span class="pd-prox-kg">'+(sn+1)+'</span> de '+total+' — '+proxResumen;
