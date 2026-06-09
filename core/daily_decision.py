@@ -11,6 +11,11 @@ from __future__ import annotations
 from typing import Any, Dict
 import logging
 
+# Phase 59X.B: imports al nivel de módulo para que los tests puedan
+# parchear correctamente con @patch('core.daily_decision.<nombre>').
+from core.bio_context import BioContextProvider
+from core.context.actividad_context import get_actividad_context
+
 logger = logging.getLogger(__name__)
 
 
@@ -112,7 +117,8 @@ class DailyDecisionEngine:
             paradoja         – 'A' | 'B' | None
             datos_raw        – números técnicos (para JOI context)
         """
-        from core.bio_context import BioContextProvider
+        # ── 0. Actividad context (Phase 59X.B) ───────────────────
+        act_ctx = get_actividad_context(cliente)
 
         # ── 1. Bio signals ────────────────────────────────────────
         bio = BioContextProvider.get_bio_signals(cliente)
@@ -222,7 +228,9 @@ class DailyDecisionEngine:
             tipo   = 'vital'
             tipo_recuperar = 'movimiento'
             causa  = 'descanso_plan'
-        elif ausencia_dias >= 5:
+        elif ausencia_dias >= 5 and not (
+            act_ctx.get('fase_plan') and act_ctx['fase_plan'].get('es_descarga')
+        ):
             estado = cls.VOLVER
             tipo   = 'retorno'
             causa  = 'ausencia'
@@ -319,15 +327,20 @@ class DailyDecisionEngine:
             'recomendacion_hyrox': recomendacion_hyrox,
             'paradoja':          paradoja,
             'datos_raw': {
-                'acwr':          round(acwr, 2) if acwr is not None else None,
-                'tsb':           round(tsb, 1) if tsb is not None else None,
-                'readiness_pct': round(readiness_pct, 1),
-                'hrv_ms':        bio.get('hrv_ms'),
-                'hrv_hundido':   hrv_hundido,
-                'energia':       energia,
-                'horas_sueno':   bio.get('horas_sueno'),
-                'ausencia_dias': ausencia_dias,
-                'lesion_zona':   lesion_zona,
+                'acwr':               round(acwr, 2) if acwr is not None else None,
+                'tsb':                round(tsb, 1) if tsb is not None else None,
+                'readiness_pct':      round(readiness_pct, 1),
+                'hrv_ms':             bio.get('hrv_ms'),
+                'hrv_hundido':        hrv_hundido,
+                'energia':            energia,
+                'horas_sueno':        bio.get('horas_sueno'),
+                'ausencia_dias':      ausencia_dias,
+                'lesion_zona':        lesion_zona,
+                # Phase 59X.B — actividad context
+                'sesiones_gym_semana':   act_ctx.get('sesiones_gym_semana', 0),
+                'sesiones_hyrox_semana': act_ctx.get('sesiones_hyrox_semana', 0),
+                'racha_dias':            act_ctx.get('racha_dias', 0),
+                'fase_plan':             act_ctx.get('fase_plan'),
             },
         }
 
