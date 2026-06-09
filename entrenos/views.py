@@ -3803,6 +3803,23 @@ def vista_entrenamiento_activo(request, cliente_id):
                 ejercicio['pr_reps'] = 0
                 ejercicio['peso_inicial_kg'] = float(ejercicio.get('peso_recomendado_kg', 0) or 0)
 
+            # --- PROGRESIÓN PARA EJERCICIOS DE TIEMPO ---
+            # Si hay dato anterior: propone anterior+1s (éxito) o anterior-1s (no completado).
+            # "Éxito" = llegó al mínimo del rango objetivo.
+            if ejercicio.get('usa_tiempo'):
+                t_anterior = int(ejercicio.get('repeticiones_anterior') or 0)
+                if t_anterior > 0:
+                    try:
+                        reps_str = str(ejercicio.get('repeticiones', '8'))
+                        partes = [int(x.strip()) for x in reps_str.split('-')]
+                        reps_min = partes[0]
+                    except (ValueError, AttributeError):
+                        reps_min = 8
+                    if t_anterior >= reps_min:
+                        ejercicio['reps_objetivo'] = t_anterior + 1
+                    else:
+                        ejercicio['reps_objetivo'] = max(reps_min, t_anterior - 1)
+
             # Detectar estancamiento previo (GymDecisionLog activo)
             try:
                 from datetime import timedelta as _td
