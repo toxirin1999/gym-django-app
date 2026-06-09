@@ -133,6 +133,8 @@ class TestGetReadinessScore(TestCase):
         # No injuries
         qs_inj = MagicMock()
         qs_inj.exclude.return_value = qs_inj
+        qs_inj.order_by.return_value = qs_inj
+        qs_inj.first.return_value = None
         qs_inj.exists.return_value = False
         qs_inj.count.return_value = 0
         MockUI.objects.filter.return_value = qs_inj
@@ -166,6 +168,11 @@ class TestGetReadinessScore(TestCase):
         qs_inj.exists.return_value = True
         qs_inj.count.return_value = 1
         qs_inj.__iter__ = lambda s: iter([inj])
+        # order_by is used for the "recently recovered" sub-query → return empty
+        qs_ordered = MagicMock()
+        qs_ordered.exists.return_value = False
+        qs_ordered.first.return_value = None
+        qs_inj.order_by.return_value = qs_ordered
         MockUI.objects.filter.return_value = qs_inj
         MockUI.Fase = MagicMock()
         MockUI.Fase.RECUPERADO = 'RECUPERADO'

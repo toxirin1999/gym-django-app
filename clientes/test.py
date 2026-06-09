@@ -7,12 +7,11 @@ from .models import Cliente
 class TestClienteHelmsFields(TestCase):
     def setUp(self):
         self.user = User.objects.create_user('testuser', 'test@test.com', 'pass')
-        self.cliente = Cliente.objects.create(
-            user=self.user,
-            nombre='Cliente Test',
-            experiencia_años=2.5,
-            objetivo_principal='hipertrofia'
-        )
+        # La señal estoico/signals.py crea el Cliente automáticamente al crear el User
+        self.cliente = Cliente.objects.get(user=self.user)
+        self.cliente.experiencia_años = 2.5
+        self.cliente.objetivo_principal = 'hipertrofia'
+        self.cliente.save()
 
     def test_valores_por_defecto(self):
         """Verificar que los valores por defecto se asignan correctamente"""
