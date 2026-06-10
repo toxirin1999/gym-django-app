@@ -15,12 +15,23 @@ CONTRATO:
       quedan en None / lista vacía — la plantilla guarda silencio.
 """
 
+from datetime import timedelta
+
+from django.utils import timezone
+
 from entrenos.models import EjercicioRealizado, GymDecisionLog
 from entrenos.services.progresion_contextual_service import (
     evaluar_permiso_progresion,
     _MENSAJES_PROGRESION,
 )
 from joi.models import MensajeJOI
+
+
+# Phase 62F.2 — el cierre pertenece al momento de guardar, no solo a la fecha
+# histórica del entreno. Si JOI generó un mensaje cerca del guardado (p.ej.
+# entreno registrado en retroactivo), ese mensaje es el del cierre aunque su
+# creado_en no coincida con entreno.fecha.
+_VENTANA_JOI_RECIENTE = timedelta(hours=2)
 
 
 # Phase 62F — copy "próxima vez" por motivo de freno. Mismo vocabulario que
@@ -148,6 +159,35 @@ def _cambios_relevantes(cliente, entreno, ejercicios):
     return cambios
 
 
+def _joi_mensaje_cierre(cliente, entreno):
+    """
+    Recupera el mensaje JOI (trigger='entreno_completado') para el cierre.
+
+    MensajeJOI no tiene FK al entreno/sesión, así que se busca por:
+        1. Mensaje generado en _VENTANA_JOI_RECIENTE — cerca del guardado
+           actual, independientemente de entreno.fecha (cubre el registro
+           retroactivo: el entreno es de hace días, pero JOI habló ahora).
+        2. Si no hay nada reciente, fallback al mismo día que entreno.fecha
+           (comportamiento previo, para revisitas al cierre).
+        3. Si no hay nada, silencio.
+    """
+    base = MensajeJOI.objects.filter(user=cliente.user, trigger='entreno_completado')
+
+    reciente = (
+        base.filter(creado_en__gte=timezone.now() - _VENTANA_JOI_RECIENTE)
+        .order_by('-creado_en')
+        .first()
+    )
+    if reciente:
+        return reciente.mensaje
+
+    del_dia = base.filter(creado_en__date=entreno.fecha).order_by('-creado_en').first()
+    if del_dia:
+        return del_dia.mensaje
+
+    return None
+
+
 def construir_contexto_cierre(cliente, entreno):
     """
     Returns:
@@ -182,15 +222,7 @@ def construir_contexto_cierre(cliente, entreno):
         .distinct()
     )
 
-    joi_mensaje = None
-    mensaje_joi = (
-        MensajeJOI.objects
-        .filter(user=cliente.user, trigger='entreno_completado', creado_en__date=entreno.fecha)
-        .order_by('-creado_en')
-        .first()
-    )
-    if mensaje_joi:
-        joi_mensaje = mensaje_joi.mensaje
+    joi_mensaje = _joi_mensaje_cierre(cliente, entreno)
 
     return {
         'resumen': _resumen_sesion(entreno, ejercicios),
