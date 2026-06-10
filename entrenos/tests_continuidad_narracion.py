@@ -6,7 +6,7 @@ la sesión debe explicarlo con marco de retorno, distinto de lesión.
 
 Contrato testeado (templates):
   - entrenamiento_activo.html tiene rama 'retorno_pausa' con copy de retorno.
-  - briefing_entrenamiento.html tiene badge '= MANTIENE · PAUSA'.
+  - briefing_entrenamiento.html tiene badge '= MANTIENE · VUELTA'.
   - El copy no usa lenguaje de deuda.
 """
 
@@ -29,7 +29,7 @@ class TestNarracionRetornoPausa(TestCase):
     def test_briefing_tiene_badge_pausa(self):
         tpl = _leer('entrenos/templates/entrenos/briefing_entrenamiento.html')
         self.assertIn("motivo_bloqueo == 'retorno_pausa'", tpl)
-        self.assertIn('= MANTIENE · PAUSA', tpl)
+        self.assertIn('= MANTIENE · VUELTA', tpl)
 
     def test_copy_retorno_sin_deuda(self):
         frase = "Vuelves de una pausa: subir vendrá después, sin compensar de golpe."
