@@ -40,11 +40,12 @@ class DailyDecisionEngine:
     }
 
     # Mensajes base por estado (sin paradoja)
-    # recuperar tiene dos variantes según tipo_recuperar
+    # recuperar tiene variantes según tipo_recuperar
+    # (Phase 62D: 'recuperar_movimiento' eliminado — causa='descanso_plan'
+    # siempre se intercepta antes en _mensajes_causa, esa clave era inalcanzable)
     _MENSAJES = {
         'empujar':             "Tus señales acompañan. Hoy puedes entrenar con intensidad.",
         'sostener':            "Hay margen, pero no sobra. Haz la sesión, sin perseguir el límite.",
-        'recuperar_movimiento': "El cuerpo pide bajar intensidad. Puedes moverte, pero no apretar.",
         'recuperar_descanso':  "Hoy el progreso probablemente está en recuperar, no en forzar.",
         # Phase 59X.0: fragilidad = subutilización (ACWR bajo, estás fresco), no
         # fatiga. Marco de retorno, no de calma.
@@ -55,7 +56,6 @@ class DailyDecisionEngine:
     _RECOMENDACIONES_GYM = {
         'empujar':             "Progresión posible. Carga objetivo, rango completo.",
         'sostener':            "Versión normal sin llegar al fallo. Técnica primero.",
-        'recuperar_movimiento': "Tren superior ligero o movilidad. Evita carga pesada.",
         'recuperar_descanso':  "Movilidad o descanso activo.",
         'recuperar_fragilidad': "Sesión ligera para recuperar el patrón. Sube carga poco a poco, sin saltos.",
         'volver':              "Una sesión mínima posible. Sin deuda, sin compensación.",
@@ -64,7 +64,6 @@ class DailyDecisionEngine:
     _RECOMENDACIONES_HYROX = {
         'empujar':             "Buen día para intensidad o umbral.",
         'sostener':            "Técnica de estaciones y carrera controlada.",
-        'recuperar_movimiento': "Zona 2 suave o técnica sin carga.",
         'recuperar_descanso':  "Pausa. Zona 2 muy suave si necesitas moverte.",
         'recuperar_fragilidad': "Zona 2 o técnica para reenganchar. Recupera ritmo sin forzar.",
         'volver':              "Carrera suave o técnica básica. Recupera el ritmo.",
@@ -88,16 +87,21 @@ class DailyDecisionEngine:
         "No hay nada que recuperar."
     )
 
-    # Paradoja A: estado pide calma pero energía subjetiva alta
-    _PARADOJA_A = (
-        "Esa energía que sientes hoy puede ser real. "
-        "Pero los datos piden calma. Escucha a ambos."
+    # Phase 62D: Paradoja A dividida por estado — copy accionable, no
+    # solo "escucha a ambos".
+    _PARADOJA_A_RECUPERAR = (
+        "Esa energía puede ser real, pero el cuerpo pide bajar el ritmo hoy. "
+        "Movilidad o descanso activo — la fuerza no se pierde en un día, vuelve mañana."
+    )
+    _PARADOJA_A_SOSTENER = (
+        "La energía acompaña, pero la carga reciente pide margen. "
+        "Haz la sesión normal sin perseguir el fallo — hoy guarda algo para mañana."
     )
 
     # Paradoja B: estado pide moverse pero energía subjetiva baja
     _PARADOJA_B = (
-        "Los números dicen que estás bien. "
-        "Si no te apetece, está bien también. Muévete, aunque sea poco."
+        "Los datos dicen que hoy puedes empujar. Si no te apetece del todo, "
+        "muévete igual aunque sea poco — el cuerpo a veces sigue a la acción, no al revés."
     )
 
     @classmethod
@@ -321,7 +325,10 @@ class DailyDecisionEngine:
         }
 
         if paradoja == 'A':
-            mensaje = cls._PARADOJA_A
+            mensaje = (
+                cls._PARADOJA_A_SOSTENER if estado == cls.SOSTENER
+                else cls._PARADOJA_A_RECUPERAR
+            )
         elif paradoja == 'B':
             mensaje = cls._PARADOJA_B
         elif causa in _mensajes_causa:
