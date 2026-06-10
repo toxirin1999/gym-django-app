@@ -391,10 +391,10 @@ input{background:transparent!important;border:none!important;outline:none!import
 
 /* ── APROXIMACIONES ── */
 .aprox-toggle-btn{
-  width:calc(100% - 32px);margin:0 16px 8px;height:44px;
-  background:var(--surf2);border:none;border-radius:14px;
-  color:var(--td);font-size:11px;font-weight:600;letter-spacing:0.15em;text-transform:uppercase;
-  display:flex;align-items:center;justify-content:space-between;padding:0 16px;cursor:pointer;
+  width:calc(100% - 32px);margin:0 16px 8px;height:32px;
+  background:var(--surf2);border:none;border-radius:10px;
+  color:var(--td);font-size:10px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;
+  display:flex;align-items:center;justify-content:space-between;padding:0 14px;cursor:pointer;
 }
 .aprox-toggle-btn:hover{color:#fff;}
 /* Body de aproximaciones: unida al botón toggle como card */
@@ -812,7 +812,7 @@ input{background:transparent!important;border:none!important;outline:none!import
   .historial-zona { font-size: 12px; }
 
   /* Aproximaciones */
-  .aprox-toggle-btn { height: 44px; font-size: 12px; }
+  .aprox-toggle-btn { height: 32px; font-size: 10px; }
   .aprox-row { font-size: 12px; gap: 4px; }
 
   /* Modal no desborde */
@@ -1172,7 +1172,7 @@ input{background:transparent!important;border:none!important;outline:none!import
                 onclick="toggleTopeMaquina('{{ ejercicio.form_id }}')"
                 title="{% if ejercicio.sugerencia_tope %}Tope activado: progresa por reps, no por peso{% else %}El peso de la máquina no llega al recomendado{% endif %}">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>
-          Tope
+          Tope kg
         </button>
         {% endif %}
       </div>
@@ -1214,7 +1214,7 @@ input{background:transparent!important;border:none!important;outline:none!import
     {% elif ejercicio.motivo_bloqueo == 'retorno_pausa' %}
     {# Phase Continuidad 1.2 — Retorno tras pausa: azul calmo (no es lesión) #}
     <div style="margin:6px 0 8px;padding:8px 12px;background:rgba(96,165,250,0.06);border-left:3px solid rgba(96,165,250,0.40);border-radius:0 8px 8px 0;">
-      <div style="font-size:9px;font-weight:700;color:rgba(96,165,250,0.90);letter-spacing:0.14em;text-transform:uppercase;margin-bottom:3px;">↩ Carga mantenida · retorno tras pausa</div>
+      <div style="font-size:9px;font-weight:700;color:rgba(96,165,250,0.90);letter-spacing:0.14em;text-transform:uppercase;margin-bottom:3px;">↩ Carga mantenida · vuelta tras pausa</div>
       <div style="font-size:11px;color:var(--td);opacity:0.78;line-height:1.45;">
         El plan proponía <strong>{{ ejercicio.peso_kg_propuesto|floatformat:"-1" }} kg</strong> →
         conserva <strong>{{ ejercicio.peso_kg|floatformat:"-1" }} kg</strong> hoy.
@@ -1244,11 +1244,6 @@ input{background:transparent!important;border:none!important;outline:none!import
       <span class="exname-chip chip-g">{{ ejercicio.series }} series</span>
       <span class="exname-chip chip-g">RPE {{ ejercicio.rpe_objetivo }}</span>
       {% if ejercicio.usa_tiempo %}<span class="exname-chip chip-n">{{ ejercicio.repeticiones }} seg</span>{% else %}<span class="exname-chip chip-n">{{ ejercicio.repeticiones }} reps</span>{% endif %}
-      {% if ejercicio.peso_anterior_kg > 0 %}
-      <span class="exname-chip chip-n">Última: {{ ejercicio.peso_anterior_kg }}kg</span>
-      {% elif ejercicio.usa_tiempo and ejercicio.repeticiones_anterior > 0 %}
-      <span class="exname-chip chip-n">Última: {{ ejercicio.repeticiones_anterior }}s</span>
-      {% endif %}
       {% if ejercicio.sugerencia_tope %}
       <span class="exname-chip" style="background:rgba(46,204,113,0.15);color:#2ECC71;border:1px solid rgba(46,204,113,0.3);" title="La última vez llegaste al tope — mismo peso, una rep más">🔝 +1 rep{% if ejercicio.reps_sugeridas_tope %} ({{ ejercicio.reps_sugeridas_tope }}){% endif %}</span>
       {% endif %}
@@ -1582,7 +1577,7 @@ input{background:transparent!important;border:none!important;outline:none!import
 <!-- BOTÓN FINALIZAR -->
 <div class="btn-finalizar-wrap">
   <button type="button" id="btn-mostrar-resumen" class="btn-final">
-    <i class="fas fa-flag-checkered"></i> Finalizar y Guardar
+    <i class="fas fa-flag-checkered"></i> Finalizar entrenamiento
   </button>
 </div>
 
