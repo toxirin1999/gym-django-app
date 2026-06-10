@@ -33,6 +33,12 @@ class DailyDecisionEngine:
         'volver':   'VOLVER',
     }
 
+    # Phase 59X.D: título override por causa (no cambia 'estado', solo la
+    # etiqueta visible). Fragilidad = subutilización/margen, no "recuperar".
+    _TITULOS_POR_CAUSA = {
+        'fragilidad': 'EJECUTAR CON MARGEN',
+    }
+
     # Mensajes base por estado (sin paradoja)
     # recuperar tiene dos variantes según tipo_recuperar
     _MENSAJES = {
@@ -63,6 +69,24 @@ class DailyDecisionEngine:
         'recuperar_fragilidad': "Zona 2 o técnica para reenganchar. Recupera ritmo sin forzar.",
         'volver':              "Carrera suave o técnica básica. Recupera el ritmo.",
     }
+
+    # Phase 59X.D: copy reasegurador para RECUPERAR durante una descarga
+    # planificada (fase_plan.es_descarga=True). Sustituye al copy de
+    # fatiga/fragilidad sin cambiar estado/causa/tipo_recuperar — evita
+    # lenguaje de abandono, compensación o "volver con margen".
+    _MENSAJE_RECUPERAR_DESCARGA_PLAN = (
+        "Esta semana de descarga está calculada por el plan — no es una "
+        "pausa que tengas que recuperar. Aprovecha el margen para "
+        "consolidar lo trabajado, sin buscar compensar nada."
+    )
+    _RECOMENDACION_GYM_DESCARGA_PLAN = (
+        "Sigue la sesión de descarga marcada por el plan: técnica y "
+        "volumen reducido, sin buscar el límite."
+    )
+    _RECOMENDACION_HYROX_DESCARGA_PLAN = (
+        "Zona 2 suave o técnica ligera según la descarga del plan. "
+        "No hay nada que recuperar."
+    )
 
     # Paradoja A: estado pide calma pero energía subjetiva alta
     _PARADOJA_A = (
@@ -119,6 +143,9 @@ class DailyDecisionEngine:
         """
         # ── 0. Actividad context (Phase 59X.B) ───────────────────
         act_ctx = get_actividad_context(cliente)
+        es_descarga_plan = bool(
+            act_ctx.get('fase_plan') and act_ctx['fase_plan'].get('es_descarga')
+        )
 
         # ── 1. Bio signals ────────────────────────────────────────
         bio = BioContextProvider.get_bio_signals(cliente)
@@ -299,6 +326,10 @@ class DailyDecisionEngine:
             mensaje = cls._PARADOJA_B
         elif causa in _mensajes_causa:
             mensaje = _mensajes_causa[causa]
+        elif estado == cls.RECUPERAR and es_descarga_plan:
+            # Phase 59X.D: descarga planificada — copy reasegurador,
+            # no el de fatiga/fragilidad (evita lenguaje de abandono).
+            mensaje = cls._MENSAJE_RECUPERAR_DESCARGA_PLAN
         elif estado == cls.RECUPERAR:
             clave_msg = f'recuperar_{tipo_recuperar}'
             mensaje = cls._MENSAJES.get(clave_msg, cls._MENSAJES['recuperar_descanso'])
@@ -308,6 +339,9 @@ class DailyDecisionEngine:
         if causa in _gym_causa:
             recomendacion_gym   = _gym_causa[causa]
             recomendacion_hyrox = _hyrox_causa[causa]
+        elif estado == cls.RECUPERAR and es_descarga_plan:
+            recomendacion_gym   = cls._RECOMENDACION_GYM_DESCARGA_PLAN
+            recomendacion_hyrox = cls._RECOMENDACION_HYROX_DESCARGA_PLAN
         elif estado == cls.RECUPERAR:
             clave_rec = f'recuperar_{tipo_recuperar}'
             recomendacion_gym   = cls._RECOMENDACIONES_GYM.get(clave_rec, '')
@@ -318,7 +352,7 @@ class DailyDecisionEngine:
 
         return {
             'estado':            estado,
-            'titulo':            cls._TITULOS[estado],
+            'titulo':            cls._TITULOS_POR_CAUSA.get(causa, cls._TITULOS[estado]),
             'causa':             causa,
             'tipo_fatiga':       tipo,
             'tipo_recuperar':    tipo_recuperar,
