@@ -3998,10 +3998,13 @@ def guardar_entrenamiento_activo(request, cliente_id):
         rutina_nombre = request.POST.get('rutina_nombre')
         rutina_obj, _ = Rutina.objects.get_or_create(nombre=rutina_nombre)
 
+        _duracion_raw = request.POST.get('duracion_minutos_real')
+        _calorias_raw = request.POST.get('calorias_quemadas')
+
         entreno = EntrenoRealizado.objects.create(
             cliente=cliente, fecha=fecha, rutina=rutina_obj, fuente_datos='manual',
-            duracion_minutos=request.POST.get('duracion_minutos_real') or None,
-            calorias_quemadas=request.POST.get('calorias_quemadas') or None,
+            duracion_minutos=int(_duracion_raw) if _duracion_raw and _duracion_raw.isdigit() else None,
+            calorias_quemadas=int(_calorias_raw) if _calorias_raw and _calorias_raw.isdigit() else None,
             notas_liftin=request.POST.get('notas_liftin', '').strip()
         )
 
