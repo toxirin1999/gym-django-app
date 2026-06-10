@@ -199,3 +199,38 @@ class TestAplicarFrenoContextual(TestCase):
         permiso = _permiso_mock('progresion_permitida', 'ok')
         resultado = aplicar_freno_contextual(self.cliente, ent, permiso)
         self.assertFalse(resultado['ejercicios'][0]['progresion_bloqueada'])
+
+
+class TestFrenoEsTechoNoSustitucion(TestCase):
+    """
+    El freno congela la progresión, pero nunca debe SUBIR el peso por
+    encima de lo que el plan ya proponía para hoy. Si el plan ya bajó
+    (p.ej. por RPE alto o recalibración), esa bajada se respeta —
+    "conserva X" debe cumplir siempre X <= peso_kg_propuesto.
+    """
+    def setUp(self):
+        self.user = User.objects.create_user(username='tester_freno_techo', password='x')
+        self.cliente, _ = Cliente.objects.get_or_create(
+            user=self.user,
+            defaults={'nombre': 'TestFrenoTecho', 'dias_disponibles': 4},
+        )
+
+    def test_no_sube_si_propuesto_ya_es_menor_que_ultimo_registrado(self):
+        ent = _entrenamiento([{**EJ_PRINCIPAL, 'peso_kg': 52.5}])
+        permiso = _permiso_mock('mantener_carga', 'retorno_pausa')
+        with patch('entrenos.services.progresion_contextual_service._obtener_peso_actual',
+                   return_value=53.8):
+            resultado = aplicar_freno_contextual(self.cliente, ent, permiso)
+        ej = resultado['ejercicios'][0]
+        self.assertEqual(ej['peso_kg_propuesto'], 52.5)
+        self.assertEqual(ej['peso_kg'], 52.5)
+
+    def test_capa_a_ultimo_registrado_si_propuesto_es_mayor(self):
+        ent = _entrenamiento([{**EJ_PRINCIPAL, 'peso_kg': 55.0}])
+        permiso = _permiso_mock('mantener_carga', 'retorno_pausa')
+        with patch('entrenos.services.progresion_contextual_service._obtener_peso_actual',
+                   return_value=52.5):
+            resultado = aplicar_freno_contextual(self.cliente, ent, permiso)
+        ej = resultado['ejercicios'][0]
+        self.assertEqual(ej['peso_kg_propuesto'], 55.0)
+        self.assertEqual(ej['peso_kg'], 52.5)
