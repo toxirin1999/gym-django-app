@@ -416,3 +416,59 @@ class TestJoiMensaje(CierreEntrenamientoBase):
             ctx = construir_contexto_cierre(self.cliente, entreno)
 
         self.assertIsNone(ctx['joi_mensaje'])
+
+
+# ── Caso 6b (Phase 62F.2): JOI en registros retroactivos ─────────────────────
+
+class TestJoiMensajeRetroactivo(CierreEntrenamientoBase):
+    """
+    Si el entreno se registra con fecha pasada (p.ej. ayer), el mensaje JOI
+    se genera "ahora" (al guardar) — no en la fecha histórica del entreno.
+    El cierre debe encontrarlo por proximidad temporal al guardado, no solo
+    por entreno.fecha.
+    """
+
+    def test_entreno_de_hoy_mensaje_de_hoy_aparece(self):
+        hoy = timezone.localdate()
+        entreno = self._crear_entreno(hoy)
+        self._crear_ejercicio(entreno)
+        MensajeJOI.objects.create(
+            user=self.user, trigger='entreno_completado', mensaje='Mensaje recién generado.',
+        )
+
+        with patch('entrenos.services.cierre_entrenamiento_service.evaluar_permiso_progresion',
+                   return_value=_permiso('progresion_permitida')):
+            ctx = construir_contexto_cierre(self.cliente, entreno)
+
+        self.assertEqual(ctx['joi_mensaje'], 'Mensaje recién generado.')
+
+    def test_entreno_retroactivo_con_mensaje_reciente_aparece(self):
+        hace_dos_dias = timezone.localdate() - timedelta(days=2)
+        entreno = self._crear_entreno(hace_dos_dias)
+        self._crear_ejercicio(entreno)
+        MensajeJOI.objects.create(
+            user=self.user, trigger='entreno_completado', mensaje='El cuerpo está gastado, sin alarma.',
+        )
+
+        with patch('entrenos.services.cierre_entrenamiento_service.evaluar_permiso_progresion',
+                   return_value=_permiso('progresion_permitida')):
+            ctx = construir_contexto_cierre(self.cliente, entreno)
+
+        self.assertEqual(ctx['joi_mensaje'], 'El cuerpo está gastado, sin alarma.')
+
+    def test_mensaje_antiguo_de_otra_sesion_no_contamina_retroactivo(self):
+        hace_dos_dias = timezone.localdate() - timedelta(days=2)
+        entreno = self._crear_entreno(hace_dos_dias)
+        self._crear_ejercicio(entreno)
+        msg = MensajeJOI.objects.create(
+            user=self.user, trigger='entreno_completado', mensaje='Mensaje viejo de otra sesión.',
+        )
+        MensajeJOI.objects.filter(id=msg.id).update(
+            creado_en=timezone.now() - timedelta(hours=5)
+        )
+
+        with patch('entrenos.services.cierre_entrenamiento_service.evaluar_permiso_progresion',
+                   return_value=_permiso('progresion_permitida')):
+            ctx = construir_contexto_cierre(self.cliente, entreno)
+
+        self.assertIsNone(ctx['joi_mensaje'])
