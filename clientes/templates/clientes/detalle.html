@@ -523,7 +523,7 @@ a:focus-visible, button:focus-visible {
 </div>
 
 <!-- ══════════════════════════════════════════════════
-     5 · GYM + NUTRICIÓN + DIARIO
+     5 · GYM + DIARIO
 ══════════════════════════════════════════════════ -->
 <div class="cc-sec">
   <div class="cc-sec-head">
@@ -531,7 +531,7 @@ a:focus-visible, button:focus-visible {
     <h2 class="cc-sec-title">Módulos Activos</h2>
     <div class="cc-sec-line"></div>
   </div>
-  <div class="cc-modules-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
+  <div class="cc-modules-grid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;">
 
     <!-- Gym -->
     <div class="cc-card">
@@ -557,31 +557,6 @@ a:focus-visible, button:focus-visible {
         <span class="sv {% if gym_load.fatiga_gym == 'Alta' %}danger{% elif gym_load.fatiga_gym == 'Media' %}warn{% else %}ok{% endif %}" style="font-size:12px;">{{ gym_load.fatiga_gym }}</span>
       </div>
       <a href="{% url 'entrenos:dashboard_ejercicios' cliente.id %}" class="cc-btn cc-btn-ghost cc-btn-sm cc-btn-full">Analytics</a>
-    </div>
-
-    <!-- Nutrición -->
-    <div class="cc-card">
-      <div class="cc-card-head">
-        <div class="cc-card-dot" style="background:var(--ok);"></div>
-        <span class="cc-card-label">Nutrición</span>
-        <div class="cc-card-line"></div>
-      </div>
-      {% if perfil_nutricional %}
-      <div style="text-align:center;margin-bottom:10px;">
-        <div style="font-family:var(--font-d);font-size:18px;line-height:1;color:var(--accent);text-transform:uppercase;letter-spacing:.02em;">{{ perfil_nutricional.fase }}</div>
-        <div style="font-family:var(--font-m);font-size:9px;color:var(--ink-3);letter-spacing:.1em;text-transform:uppercase;margin-top:2px;">fase actual</div>
-      </div>
-      {% if target_nutricional %}
-      <div class="cc-grid3" style="margin-bottom:0;">
-        <div class="cc-g3cell" style="padding:8px 4px;"><div class="cc-g3-lbl" style="font-size:8px;">Prot</div><div class="cc-g3-val" style="font-size:20px;color:#1d4ed8;">{{ target_nutricional.bloques_proteina }}</div></div>
-        <div class="cc-g3cell" style="padding:8px 4px;"><div class="cc-g3-lbl" style="font-size:8px;">Carbs</div><div class="cc-g3-val" style="font-size:20px;color:var(--accent-2);">{{ target_nutricional.bloques_carbohidrato }}</div></div>
-        <div class="cc-g3cell" style="padding:8px 4px;"><div class="cc-g3-lbl" style="font-size:8px;">Grasa</div><div class="cc-g3-val" style="font-size:20px;color:var(--accent);">{{ target_nutricional.bloques_grasa }}</div></div>
-      </div>
-      {% endif %}
-      {% else %}
-      <p style="font-size:11px;color:var(--ink-3);text-align:center;padding:10px 0;">Sin perfil.</p>
-      {% endif %}
-      <a href="{% url 'nutricion_app_django:dashboard_nutricional' %}" class="cc-btn cc-btn-ghost cc-btn-sm cc-btn-full">Ver dieta</a>
     </div>
 
     <!-- Diario -->

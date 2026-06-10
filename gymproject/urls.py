@@ -29,7 +29,7 @@ urlpatterns = [
     path('joi/', include('joi.urls')),
     path('estoico/', include('estoico.urls')),
     path('analytics/', include('analytics.urls')),
-    path('nutricion/', include('nutricion_app_django.urls')),
+    # path('nutricion/', include('nutricion_app_django.urls')),  # Oculto: nutrición no se usa (junio 2026)
     path('hyrox/', include('hyrox.urls')), # <-- Módulo Hyrox
 
     # --- APIs ---

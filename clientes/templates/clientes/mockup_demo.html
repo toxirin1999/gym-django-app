@@ -784,50 +784,6 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
     </div>
     {% endif %}
 
-    <!-- Nutrition widget -->
-    {% if nut_target %}
-    <div class="rb-nut-card">
-      <div class="rb-section-head" style="margin-bottom:0;">
-        <div class="rb-section-num">NUT</div>
-        <h3 class="rb-section-title">Nutrición Hoy</h3>
-        <div class="rb-section-line"></div>
-      </div>
-      <div class="rb-nut-grid">
-        <div class="rb-nut-block rb-nut-p">
-          <div class="rb-nut-val">{{ nut_target.bloques_proteina }}</div>
-          <div class="rb-nut-lbl">Prot.</div>
-          <div class="rb-nut-bar"><div class="rb-nut-bar-fill" style="width:{{ nut_pct_p }}%"></div></div>
-        </div>
-        <div class="rb-nut-block rb-nut-c">
-          <div class="rb-nut-val">{{ nut_target.bloques_carbos }}</div>
-          <div class="rb-nut-lbl">Carbos</div>
-          <div class="rb-nut-bar"><div class="rb-nut-bar-fill" style="width:{{ nut_pct_c }}%"></div></div>
-        </div>
-        <div class="rb-nut-block rb-nut-g">
-          <div class="rb-nut-val">{{ nut_target.bloques_grasas }}</div>
-          <div class="rb-nut-lbl">Grasas</div>
-          <div class="rb-nut-bar"><div class="rb-nut-bar-fill" style="width:{{ nut_pct_g }}%"></div></div>
-        </div>
-        <div class="rb-nut-block rb-nut-v">
-          <div class="rb-nut-val">{{ nut_target.bloques_verduras }}</div>
-          <div class="rb-nut-lbl">Verd.</div>
-          <div class="rb-nut-bar"><div class="rb-nut-bar-fill" style="width:{{ nut_pct_v }}%"></div></div>
-        </div>
-      </div>
-      <div class="rb-nut-footer">
-        <span class="rb-nut-tipo">{{ nut_target.get_tipo_sesion_display|upper }}</span>
-        <span class="rb-nut-hint">
-          {% if nut_target.tipo_sesion == 'hyrox' %}PRE: 3C + 2P
-          {% elif nut_target.tipo_dia == 'carga' %}POST: 5P + 4C
-          {% elif nut_target.tipo_dia == 'descarga' %}CENA: 5P + 1G
-          {% else %}Equilibra macros{% endif %}
-        </span>
-        <a href="{% url 'nutricion_app_django:dashboard_nutricional' %}" class="rb-btn rb-btn-ghost rb-btn-sm">Ver</a>
-      </div>
-    </div>
-    {% endif %}
-    {# 'Mi Nutrición' vacío eliminado — sin datos, no se muestra promesa sin contenido #}
-
     <!-- CTA: Ejecutar -->
     {# ── Estado del sistema: movido tras EMPEZAR ENTRENO (Phase 62) ── #}
 
@@ -1580,43 +1536,6 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
       <div class="rb-workout-eyebrow">Hyrox</div>
       <div class="rb-workout-title">Sin sesión programada</div>
       <div class="rb-bib-sub" style="margin-top:6px;">Recuperación activa</div>
-    </div>
-    {% endif %}
-
-    {% if nut_target %}
-    <div class="rb-nut-card">
-      <div class="rb-section-head" style="margin-bottom:0;">
-        <div class="rb-section-num">NUT</div>
-        <h3 class="rb-section-title">Nutrición Hyrox</h3>
-        <div class="rb-section-line"></div>
-      </div>
-      <div class="rb-nut-grid">
-        <div class="rb-nut-block rb-nut-p">
-          <div class="rb-nut-val">{{ nut_target.bloques_proteina }}</div>
-          <div class="rb-nut-lbl">Prot.</div>
-          <div class="rb-nut-bar"><div class="rb-nut-bar-fill" style="width:{{ nut_pct_p }}%"></div></div>
-        </div>
-        <div class="rb-nut-block rb-nut-c">
-          <div class="rb-nut-val">{{ nut_target.bloques_carbos }}</div>
-          <div class="rb-nut-lbl">Carbos</div>
-          <div class="rb-nut-bar"><div class="rb-nut-bar-fill" style="width:{{ nut_pct_c }}%"></div></div>
-        </div>
-        <div class="rb-nut-block rb-nut-g">
-          <div class="rb-nut-val">{{ nut_target.bloques_grasas }}</div>
-          <div class="rb-nut-lbl">Grasas</div>
-          <div class="rb-nut-bar"><div class="rb-nut-bar-fill" style="width:{{ nut_pct_g }}%"></div></div>
-        </div>
-        <div class="rb-nut-block rb-nut-v">
-          <div class="rb-nut-val">{{ nut_target.bloques_verduras }}</div>
-          <div class="rb-nut-lbl">Verd.</div>
-          <div class="rb-nut-bar"><div class="rb-nut-bar-fill" style="width:{{ nut_pct_v }}%"></div></div>
-        </div>
-      </div>
-      <div class="rb-nut-footer">
-        <span class="rb-nut-tipo">PRE-HYROX</span>
-        <span class="rb-nut-hint">PRE: 3C + 2P</span>
-        <a href="{% url 'nutricion_app_django:dashboard_nutricional' %}" class="rb-btn rb-btn-ghost rb-btn-sm">Ver</a>
-      </div>
     </div>
     {% endif %}
 
