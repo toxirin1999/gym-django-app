@@ -1,0 +1,262 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Cierre · {{ resumen.titulo|default:"Entreno" }}</title>
+  <link rel="stylesheet" href="{% static 'css/jds.css' %}">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; background: var(--jds-bg); }
+  body {
+    /* JDS — aliasing igual que briefing_entrenamiento.html */
+    --bg:      var(--jds-bg);
+    --surf:    var(--jds-surface);
+    --surf2:   var(--jds-surface-strong);
+    --bd:      var(--jds-border);
+    --ink:     var(--jds-text);
+    --td:      var(--jds-text-soft);
+    --tdm:     var(--jds-text-faint);
+    --ok:      var(--jds-good);
+    --warn:    var(--jds-warning);
+    --r:       var(--jds-danger);
+    --accent:  var(--jds-accent);
+    --joi-text: rgba(167, 139, 250, 0.82);
+    --fd: var(--jds-font);
+    --fu: var(--jds-font);
+    --fm: var(--jds-mono);
+    font-family: var(--fu);
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  /* ── LAYOUT ──────────────────────────────────── */
+  .wrap {
+    max-width: 480px; margin: 0 auto;
+    padding: 0 16px 140px;
+    min-height: 100vh;
+  }
+
+  /* ── TOPBAR ──────────────────────────────────── */
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 0 12px; gap: 12px;
+  }
+  .tb-back {
+    display: flex; align-items: center; gap: 6px;
+    font-family: var(--fm); font-size: 11px; font-weight: 700;
+    color: var(--td); text-decoration: none; letter-spacing: .05em;
+  }
+  .tb-back svg { width: 16px; height: 16px; }
+  .tb-label {
+    font-family: var(--fm); font-size: 10px; font-weight: 700;
+    color: var(--tdm); letter-spacing: .12em; text-transform: uppercase;
+  }
+
+  /* ── BIB ─────────────────────────────────────── */
+  .bib {
+    background: var(--surf); border: 1px solid var(--bd);
+    border-radius: 16px; padding: 20px;
+    margin-bottom: 16px; position: relative; overflow: hidden;
+  }
+  .bib::before {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(135deg, rgba(34,197,94,0.06) 0%, transparent 60%);
+    pointer-events: none;
+  }
+  .bib-meta {
+    display: flex; justify-content: space-between; align-items: center;
+    font-family: var(--fm); font-size: 10px; color: var(--tdm);
+    letter-spacing: .1em; text-transform: uppercase; margin-bottom: 14px;
+  }
+  .bib-num {
+    font-family: var(--fd); font-size: clamp(36px, 11vw, 56px);
+    color: var(--ok); line-height: 1; letter-spacing: -.02em;
+  }
+  .bib-body { display: flex; align-items: flex-end; gap: 16px; }
+  .bib-info { flex: 1; }
+  .bib-title {
+    font-family: var(--fd); font-size: 22px; line-height: 1.1;
+    color: var(--ink); letter-spacing: -.01em;
+  }
+  .bib-sub {
+    font-family: var(--fm); font-size: 11px; color: var(--td);
+    letter-spacing: .04em; margin-top: 6px;
+  }
+
+  /* ── SECCIÓN HEADER ──────────────────────────── */
+  .sec-hdr {
+    display: flex; align-items: center; gap: 10px;
+    margin: 20px 0 10px;
+  }
+  .sec-tag {
+    font-family: var(--fm); font-size: 9px; font-weight: 700;
+    color: var(--tdm); letter-spacing: .15em; text-transform: uppercase;
+    flex-shrink: 0;
+  }
+  .sec-line { flex: 1; height: 1px; background: var(--bd); }
+
+  /* ── CARD genérica de sección ─────────────────── */
+  .card {
+    background: var(--surf); border: 1px solid var(--bd);
+    border-radius: 14px; padding: 14px 16px;
+  }
+  .card p {
+    font-size: 13px; color: var(--td); line-height: 1.55;
+  }
+
+  /* ── CAMBIOS RELEVANTES ────────────────────────── */
+  .cambio-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 0;
+  }
+  .cambio-row + .cambio-row { border-top: 1px solid var(--bd); }
+  .cambio-nombre { font-size: 13px; color: var(--ink); }
+  .cambio-detalle {
+    font-family: var(--fm); font-size: 11px; font-weight: 700;
+    flex-shrink: 0; margin-left: 12px; text-align: right;
+  }
+  .cambio-detalle.subida   { color: var(--ok); }
+  .cambio-detalle.bajada   { color: var(--warn); }
+  .cambio-detalle.tope     { color: var(--accent); }
+  .cambio-detalle.mantenida{ color: var(--tdm); }
+
+  /* ── RÉCORDS ───────────────────────────────────── */
+  .pr-row {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 13px; color: var(--ink); padding: 6px 0;
+  }
+  .pr-row + .pr-row { border-top: 1px solid var(--bd); }
+
+  /* ── JOI ──────────────────────────────────────── */
+  .joi-card {
+    margin: 18px 0 6px; padding: 8px 14px;
+    border-left: 1px solid var(--jds-joi-border);
+  }
+  .joi-label {
+    font-family: var(--fm); font-size: 7px; font-weight: 700;
+    letter-spacing: .14em; text-transform: uppercase;
+    color: var(--jds-joi); opacity: .7; margin-bottom: 4px;
+  }
+  .joi-msg {
+    font-size: 11px; color: var(--joi-text); line-height: 1.55;
+    font-style: italic; font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    font-weight: 400;
+  }
+
+  /* ── CTA ─────────────────────────────────────── */
+  .cta-wrap {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    padding: 16px; background: linear-gradient(to top, var(--bg) 70%, transparent);
+    max-width: 480px; margin: 0 auto;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .btn-volver {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    width: 100%; height: 54px; border-radius: 16px; border: none;
+    background: var(--ok); color: #0E0E0F;
+    font-family: var(--fd); font-size: 15px; letter-spacing: .04em;
+    text-transform: uppercase; text-decoration: none;
+    cursor: pointer; transition: filter .15s;
+  }
+  .btn-volver:active { filter: brightness(.9); }
+  .btn-analisis {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    width: 100%; height: 46px; border-radius: 14px;
+    background: transparent; border: 1px solid var(--bd); color: var(--td);
+    font-family: var(--fm); font-size: 11px; letter-spacing: .08em;
+    text-transform: uppercase; text-decoration: none;
+    cursor: pointer; transition: border-color .15s;
+  }
+  .btn-analisis:active { border-color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <a href="{% url 'home' %}" class="tb-back">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M15 18l-6-6 6-6"/>
+      </svg>
+      Volver
+    </a>
+    <span class="tb-label">Cierre · Entreno</span>
+    <span style="min-width:48px;"></span>
+  </div>
+
+  <!-- ENTRENO GUARDADO -->
+  <div class="bib">
+    <div class="bib-meta">
+      <span>ENTRENO GUARDADO · {{ entreno.fecha|date:"D d M Y"|upper }}</span>
+      <span>{{ resumen.n_ejercicios }} EJERCICIO{{ resumen.n_ejercicios|pluralize }}</span>
+    </div>
+    <div class="bib-body">
+      <div class="bib-num">✓</div>
+      <div class="bib-info">
+        <div class="bib-title">{{ resumen.titulo|default:"Sesión" }}</div>
+        <div class="bib-sub">
+          {{ resumen.n_series }} serie{{ resumen.n_series|pluralize }}{% if resumen.duracion_minutos %} · {{ resumen.duracion_minutos }} min{% endif %}{% if resumen.rpe_medio %} · RPE {{ resumen.rpe_medio }}{% endif %}{% if resumen.volumen_kg %} · {{ resumen.volumen_kg|floatformat:0 }} kg{% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {% if prs %}
+  <!-- RÉCORDS -->
+  <div class="sec-hdr"><span class="sec-tag">Récords</span><div class="sec-line"></div></div>
+  <div class="card">
+    {% for nombre in prs %}
+    <div class="pr-row">🏆 Nuevo récord · {{ nombre }}</div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if lectura_plan %}
+  <!-- LECTURA DEL PLAN -->
+  <div class="sec-hdr"><span class="sec-tag">Lectura del plan</span><div class="sec-line"></div></div>
+  <div class="card">
+    <p>{{ lectura_plan }}</p>
+  </div>
+  {% endif %}
+
+  {% if cambios_relevantes %}
+  <!-- CAMBIOS RELEVANTES -->
+  <div class="sec-hdr"><span class="sec-tag">Cambios relevantes</span><div class="sec-line"></div></div>
+  <div class="card">
+    {% for cambio in cambios_relevantes %}
+    <div class="cambio-row">
+      <span class="cambio-nombre">{{ cambio.nombre }}</span>
+      <span class="cambio-detalle {{ cambio.tipo }}">{{ cambio.detalle }}</span>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if proxima_vez %}
+  <!-- PRÓXIMA VEZ -->
+  <div class="sec-hdr"><span class="sec-tag">Próxima vez</span><div class="sec-line"></div></div>
+  <div class="card">
+    <p>{{ proxima_vez }}</p>
+  </div>
+  {% endif %}
+
+  {% if joi_mensaje %}
+  <div class="joi-card">
+    <div class="joi-label">JOI</div>
+    <div class="joi-msg">{{ joi_mensaje }}</div>
+  </div>
+  {% endif %}
+
+</div>
+
+<!-- CTA -->
+<div class="cta-wrap">
+  <a href="{% url 'home' %}" class="btn-volver">Volver al panel</a>
+  <a href="{% url 'entrenos:dashboard_evolucion' cliente_id=cliente.id %}" class="btn-analisis">Ver análisis completo</a>
+</div>
+</body>
+</html>

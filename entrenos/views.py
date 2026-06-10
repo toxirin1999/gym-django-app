@@ -4393,7 +4393,7 @@ def guardar_entrenamiento_activo(request, cliente_id):
             # No bloqueamos el flujo principal si falla algo de gamificación
         # ============================================================================
 
-        return redirect('entrenos:dashboard_evolucion', cliente_id=cliente.id)
+        return redirect('entrenos:post_entreno_resumen', cliente_id=cliente.id, entreno_id=entreno.id)
 
     except Exception as e:
         # ... (manejo de errores sin cambios) ...
@@ -6676,6 +6676,31 @@ def api_obtener_perfil(request):
             'success': False,
             'error': f'Error interno: {str(e)}'
         }, status=500)
+
+
+# ============================================================================
+# PHASE 62F — CIERRE DE ENTRENAMIENTO (post-entreno)
+# ============================================================================
+
+def post_entreno_resumen(request, cliente_id, entreno_id):
+    """
+    Pantalla de cierre tras guardar una sesión: qué se hizo, cómo lo leyó
+    el plan, qué cambió y qué espera para la próxima vez. Reemplaza al
+    dashboard de evolución como destino inmediato post-entreno; el dashboard
+    sigue accesible desde aquí vía CTA "Ver análisis completo".
+    """
+    from .services.cierre_entrenamiento_service import construir_contexto_cierre
+
+    cliente = get_object_or_404(Cliente, id=cliente_id)
+    entreno = get_object_or_404(EntrenoRealizado, id=entreno_id, cliente=cliente)
+
+    contexto = construir_contexto_cierre(cliente, entreno)
+
+    return render(request, 'entrenos/post_entreno_resumen.html', {
+        'cliente': cliente,
+        'entreno': entreno,
+        **contexto,
+    })
 
 
 # ============================================================================
