@@ -175,6 +175,19 @@ def _obtener_peso_actual(cliente, nombre_ejercicio):
         return None
 
 
+def _peso_congelado(peso_actual, peso_propuesto):
+    """
+    El freno es un techo, no una sustitución: nunca debe subir el peso por
+    encima de lo que el plan ya proponía para hoy. Si el plan ya bajó (p.ej.
+    por RPE alto o recalibración), esa bajada se respeta.
+    """
+    if peso_actual is None:
+        return peso_propuesto
+    if peso_propuesto is None:
+        return peso_actual
+    return min(peso_actual, peso_propuesto)
+
+
 def aplicar_freno_contextual(cliente, entrenamiento, permiso, modo_reducido=False):
     """
     Post-processes planificador exercise list to apply the progression brake.
@@ -224,7 +237,7 @@ def aplicar_freno_contextual(cliente, entrenamiento, permiso, modo_reducido=Fals
             peso_propuesto = ej_mod.get('peso_kg')
             peso_actual = _obtener_peso_actual(cliente, ej_mod.get('nombre', ''))
             ej_mod['peso_kg_propuesto'] = peso_propuesto
-            ej_mod['peso_kg'] = peso_actual if peso_actual is not None else peso_propuesto
+            ej_mod['peso_kg'] = _peso_congelado(peso_actual, peso_propuesto)
             ej_mod['progresion_bloqueada'] = True
             ej_mod['motivo_bloqueo'] = motivo
             # Phase 11.1: track the origin of optional treatment
@@ -305,7 +318,7 @@ def aplicar_freno_lesion(cliente, entrenamiento):
             peso_propuesto = ej_mod.get('peso_kg')
             peso_actual = _obtener_peso_actual(cliente, ej_mod.get('nombre', ''))
             ej_mod['peso_kg_propuesto'] = peso_propuesto
-            ej_mod['peso_kg'] = peso_actual if peso_actual is not None else peso_propuesto
+            ej_mod['peso_kg'] = _peso_congelado(peso_actual, peso_propuesto)
             ej_mod['progresion_bloqueada'] = True
             ej_mod['motivo_bloqueo'] = info['motivo']
             ej_mod['motivo_bloqueo_lesion'] = True

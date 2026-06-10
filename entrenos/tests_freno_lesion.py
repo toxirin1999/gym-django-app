@@ -20,6 +20,7 @@ Checklist:
 """
 
 from datetime import date
+from unittest.mock import patch
 
 from django.contrib.auth.models import User
 from django.core.cache import cache
@@ -237,3 +238,32 @@ class TestCase12_SinEjercicios(FrenoLesionBase):
         self._crear_lesion()
         result = aplicar_freno_lesion(self.cliente, None)
         self.assertIsNone(result)
+
+
+# ── Case 13: el freno es un techo, no una sustitución ────────────────────────
+
+class TestCase13_FrenoEsTechoNoSustitucion(FrenoLesionBase):
+    """
+    'conserva X' debe cumplir siempre X <= peso_kg_propuesto. Si el plan ya
+    propuso un peso menor que el último registrado (p.ej. RPE alto), el
+    freno por lesión no debe revertir esa bajada.
+    """
+    def test_no_sube_si_propuesto_ya_es_menor_que_ultimo_registrado(self):
+        self._crear_lesion(fase='RETORNO')
+        entreno = self._entrenam([self._ej(peso_kg=52.5, risk_tags=['flexion_rodilla_profunda'])])
+        with patch('entrenos.services.progresion_contextual_service._obtener_peso_actual',
+                   return_value=53.8):
+            result = aplicar_freno_lesion(self.cliente, entreno)
+        ej = result['ejercicios'][0]
+        self.assertEqual(ej['peso_kg_propuesto'], 52.5)
+        self.assertEqual(ej['peso_kg'], 52.5)
+
+    def test_capa_a_ultimo_registrado_si_propuesto_es_mayor(self):
+        self._crear_lesion(fase='RETORNO')
+        entreno = self._entrenam([self._ej(peso_kg=55.0, risk_tags=['flexion_rodilla_profunda'])])
+        with patch('entrenos.services.progresion_contextual_service._obtener_peso_actual',
+                   return_value=52.5):
+            result = aplicar_freno_lesion(self.cliente, entreno)
+        ej = result['ejercicios'][0]
+        self.assertEqual(ej['peso_kg_propuesto'], 55.0)
+        self.assertEqual(ej['peso_kg'], 52.5)
