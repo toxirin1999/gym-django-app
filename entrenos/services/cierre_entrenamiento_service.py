@@ -15,7 +15,7 @@ CONTRATO:
       quedan en None / lista vacía — la plantilla guarda silencio.
 """
 
-from entrenos.models import EjercicioRealizado
+from entrenos.models import EjercicioRealizado, GymDecisionLog
 from entrenos.services.progresion_contextual_service import (
     evaluar_permiso_progresion,
     _MENSAJES_PROGRESION,
@@ -38,6 +38,57 @@ _PROXIMA_VEZ = {
     'intervencion_no_subir_cargas': 'La progresión vuelve cuando termine la intervención activa.',
     'intervencion_reducir_accesorios': 'El volumen accesorio vuelve cuando termine la intervención activa.',
 }
+
+
+# Phase 62F.1 — copy "próxima vez" derivada de GymDecisionLog cuando no hay
+# freno de plan activo. Agrupa ejercicios por accion para no repetir frase.
+_PROXIMA_VEZ_ACCION = {
+    'mantener': 'el plan mantiene la carga en {ejercicios}',
+    'subir_peso': 'el plan propondrá subir peso en {ejercicios}',
+    'subir_reps': 'el plan propondrá subir repeticiones en {ejercicios}',
+    'bajar_peso': 'el plan reducirá la carga en {ejercicios}',
+    'deload': 'el plan aplicará una descarga en {ejercicios}',
+    'cambiar_variante': 'el plan propondrá cambiar de variante en {ejercicios}',
+}
+
+
+def _proxima_vez_decisiones(cliente, ejercicios):
+    """
+    Deriva "próxima vez" de las decisiones de progresión (GymDecisionLog)
+    pendientes (resultado=None) para los ejercicios de esta sesión, generadas
+    por actualizar_decision_log al guardar el entreno. Solo se usa cuando no
+    hay freno de plan activo (ver construir_contexto_cierre).
+    """
+    nombres = [ej.nombre_ejercicio.strip().lower() for ej in ejercicios if ej.nombre_ejercicio.strip()]
+    if not nombres:
+        return None
+
+    logs = (
+        GymDecisionLog.objects
+        .filter(cliente=cliente, ejercicio__in=nombres, resultado__isnull=True)
+        .order_by('ejercicio', '-fecha_creacion')
+    )
+
+    ultimo_por_ejercicio = {}
+    for log in logs:
+        ultimo_por_ejercicio.setdefault(log.ejercicio, log)
+
+    grupos = {}
+    for log in ultimo_por_ejercicio.values():
+        plantilla = _PROXIMA_VEZ_ACCION.get(log.accion)
+        if not plantilla:
+            continue
+        grupos.setdefault(log.accion, []).append(log.ejercicio.title())
+
+    if not grupos:
+        return None
+
+    frases = [
+        _PROXIMA_VEZ_ACCION[accion].format(ejercicios=', '.join(nombres_ej))
+        for accion, nombres_ej in grupos.items()
+    ]
+    frase = '; '.join(frases)
+    return frase[0].upper() + frase[1:] + '.'
 
 
 def _resumen_sesion(entreno, ejercicios):
@@ -120,6 +171,9 @@ def construir_contexto_cierre(cliente, entreno):
     if accion != 'progresion_permitida':
         lectura_plan = _MENSAJES_PROGRESION.get(motivo)
         proxima_vez = _PROXIMA_VEZ.get(motivo)
+
+    if proxima_vez is None:
+        proxima_vez = _proxima_vez_decisiones(cliente, ejercicios)
 
     prs = list(
         entreno.records_establecidos

@@ -23,7 +23,7 @@ from django.test import TestCase
 from django.utils import timezone
 
 from clientes.models import Cliente
-from entrenos.models import EntrenoRealizado, EjercicioRealizado, SesionEntrenamiento, RecordPersonal
+from entrenos.models import EntrenoRealizado, EjercicioRealizado, GymDecisionLog, SesionEntrenamiento, RecordPersonal
 from entrenos.services.cierre_entrenamiento_service import construir_contexto_cierre
 from joi.models import MensajeJOI
 from rutinas.models import Rutina
@@ -234,6 +234,94 @@ class TestLecturaPlanYProximaVez(CierreEntrenamientoBase):
 
         self.assertIsNone(ctx['lectura_plan'])
         self.assertIsNone(ctx['proxima_vez'])
+
+
+# ── Caso 4b (Phase 62F.1): próxima vez derivada de GymDecisionLog ────────────
+
+class TestProximaVezDecisiones(CierreEntrenamientoBase):
+    def _crear_log(self, ejercicio, accion, resultado=None):
+        return GymDecisionLog.objects.create(
+            cliente=self.cliente, ejercicio=ejercicio, accion=accion,
+            motivo='test', resultado=resultado,
+        )
+
+    def test_decision_pendiente_genera_proxima_vez_sin_freno(self):
+        entreno = self._crear_entreno(date(2026, 6, 1))
+        self._crear_ejercicio(entreno, nombre_ejercicio='Press banca')
+        self._crear_log('press banca', 'mantener')
+
+        with patch('entrenos.services.cierre_entrenamiento_service.evaluar_permiso_progresion',
+                   return_value=_permiso('progresion_permitida')):
+            ctx = construir_contexto_cierre(self.cliente, entreno)
+
+        self.assertIsNone(ctx['lectura_plan'])
+        self.assertIsNotNone(ctx['proxima_vez'])
+        self.assertIn('Press Banca', ctx['proxima_vez'])
+        self.assertIn('mantiene', ctx['proxima_vez'].lower())
+
+    def test_sin_decisiones_pendientes_proxima_vez_es_none(self):
+        entreno = self._crear_entreno(date(2026, 6, 1))
+        self._crear_ejercicio(entreno, nombre_ejercicio='Press banca')
+
+        with patch('entrenos.services.cierre_entrenamiento_service.evaluar_permiso_progresion',
+                   return_value=_permiso('progresion_permitida')):
+            ctx = construir_contexto_cierre(self.cliente, entreno)
+
+        self.assertIsNone(ctx['proxima_vez'])
+
+    def test_decision_ya_evaluada_no_se_usa(self):
+        entreno = self._crear_entreno(date(2026, 6, 1))
+        self._crear_ejercicio(entreno, nombre_ejercicio='Press banca')
+        self._crear_log('press banca', 'mantener', resultado='validada')
+
+        with patch('entrenos.services.cierre_entrenamiento_service.evaluar_permiso_progresion',
+                   return_value=_permiso('progresion_permitida')):
+            ctx = construir_contexto_cierre(self.cliente, entreno)
+
+        self.assertIsNone(ctx['proxima_vez'])
+
+    def test_agrupa_ejercicios_con_misma_accion(self):
+        entreno = self._crear_entreno(date(2026, 6, 1))
+        self._crear_ejercicio(entreno, nombre_ejercicio='Press banca')
+        self._crear_ejercicio(entreno, nombre_ejercicio='Fondos en paralelas', orden=1)
+        self._crear_log('press banca', 'mantener')
+        self._crear_log('fondos en paralelas', 'mantener')
+
+        with patch('entrenos.services.cierre_entrenamiento_service.evaluar_permiso_progresion',
+                   return_value=_permiso('progresion_permitida')):
+            ctx = construir_contexto_cierre(self.cliente, entreno)
+
+        self.assertIn('Press Banca', ctx['proxima_vez'])
+        self.assertIn('Fondos En Paralelas', ctx['proxima_vez'])
+        # Una sola frase para "mantener", no una por ejercicio.
+        self.assertEqual(ctx['proxima_vez'].lower().count('mantiene'), 1)
+
+    def test_subir_peso_y_deload_usan_redaccion_propia(self):
+        entreno = self._crear_entreno(date(2026, 6, 1))
+        self._crear_ejercicio(entreno, nombre_ejercicio='Press banca')
+        self._crear_ejercicio(entreno, nombre_ejercicio='Sentadilla', orden=1)
+        self._crear_log('press banca', 'subir_peso')
+        self._crear_log('sentadilla', 'deload')
+
+        with patch('entrenos.services.cierre_entrenamiento_service.evaluar_permiso_progresion',
+                   return_value=_permiso('progresion_permitida')):
+            ctx = construir_contexto_cierre(self.cliente, entreno)
+
+        proxima = ctx['proxima_vez'].lower()
+        self.assertIn('subir', proxima)
+        self.assertIn('descarga', proxima)
+
+    def test_freno_de_plan_tiene_prioridad_sobre_decisiones(self):
+        entreno = self._crear_entreno(date(2026, 6, 1))
+        self._crear_ejercicio(entreno, nombre_ejercicio='Press banca')
+        self._crear_log('press banca', 'subir_peso')
+
+        with patch('entrenos.services.cierre_entrenamiento_service.evaluar_permiso_progresion',
+                   return_value=_permiso('mantener_carga', 'retorno_pausa')):
+            ctx = construir_contexto_cierre(self.cliente, entreno)
+
+        self.assertIn('pausa', ctx['lectura_plan'].lower())
+        self.assertNotIn('propondrá subir', ctx['proxima_vez'].lower())
 
 
 # ── Caso 5: PRs ────────────────────────────────────────────────────────────────
