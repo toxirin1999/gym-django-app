@@ -377,7 +377,7 @@
       <div class="estado-val {% if briefing.num_sesiones_recientes >= 4 %}ok{% endif %}">
         {{ briefing.num_sesiones_recientes }}
       </div>
-      <div class="estado-lbl">Sesiones/2sem</div>
+      <div class="estado-lbl">2 semanas</div>
     </div>
   </div>
 
@@ -492,7 +492,7 @@
             {% elif ej.motivo_bloqueo == 'lesion_retorno' %}
               <span style="font-family:var(--fm);font-size:8px;color:rgba(245,158,11,0.85);letter-spacing:.08em;margin-left:6px;vertical-align:middle;">= MANTIENE · RETORNO</span>
             {% elif ej.motivo_bloqueo == 'retorno_pausa' %}
-              <span style="font-family:var(--fm);font-size:8px;color:rgba(96,165,250,0.90);letter-spacing:.08em;margin-left:6px;vertical-align:middle;">= MANTIENE · PAUSA</span>
+              <span style="font-family:var(--fm);font-size:8px;color:rgba(96,165,250,0.90);letter-spacing:.08em;margin-left:6px;vertical-align:middle;">= MANTIENE · VUELTA</span>
             {% else %}
               <span style="font-family:var(--fm);font-size:8px;color:rgba(180,140,255,0.8);letter-spacing:.08em;margin-left:6px;vertical-align:middle;">= MANTIENE</span>
             {% endif %}
@@ -505,7 +505,7 @@
           {{ ej.series|default:"3" }} series
           {% if ej.repeticiones %} · {{ ej.repeticiones }} reps{% endif %}
           {% if ej.progresion_bloqueada and ej.peso_kg_propuesto %}
-          <s style="color:var(--tdm);opacity:0.5;">{{ ej.peso_kg_propuesto|floatformat:"-1" }} kg</s> →
+          <s style="color:var(--tdm);">{{ ej.peso_kg_propuesto|floatformat:"-1" }} kg</s> →
           <span style="color:{% if ej.motivo_bloqueo == 'lesion_activa' %}rgba(239,68,68,0.85){% elif ej.motivo_bloqueo == 'lesion_retorno' %}rgba(245,158,11,0.85){% elif ej.motivo_bloqueo == 'retorno_pausa' %}rgba(96,165,250,0.90){% else %}rgba(180,140,255,0.8){% endif %};">{{ ej.peso_kg|floatformat:"-1" }} kg</span>
           {% elif ej.peso_recomendado_kg and ej.peso_recomendado_kg > 0 %} · {{ ej.peso_recomendado_kg }} kg
           {% elif ej.peso_kg and ej.peso_kg > 0 %} · {{ ej.peso_kg }} kg
