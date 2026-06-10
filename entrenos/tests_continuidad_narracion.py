@@ -24,7 +24,7 @@ class TestNarracionRetornoPausa(TestCase):
     def test_workout_card_tiene_rama_retorno_pausa(self):
         tpl = _leer('entrenos/templates/entrenos/entrenamiento_activo.html')
         self.assertIn("motivo_bloqueo == 'retorno_pausa'", tpl)
-        self.assertIn('Carga mantenida · retorno tras pausa', tpl)
+        self.assertIn('Carga mantenida · vuelta tras pausa', tpl)
 
     def test_briefing_tiene_badge_pausa(self):
         tpl = _leer('entrenos/templates/entrenos/briefing_entrenamiento.html')
