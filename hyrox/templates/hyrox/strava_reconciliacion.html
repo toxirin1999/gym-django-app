@@ -173,11 +173,9 @@
           {% if act.tipo_strava == 'Walk' or act.tipo_strava == 'Hike' %}
           <span class="act-pill" style="background:rgba(15,15,14,.08);color:var(--ink-3);border:1px solid var(--line-2);">💡 Caminata — considera ignorar</span>
           {% endif %}
-          {% if item.total_matches %}
-          <span class="act-pill" style="background:rgba(0,180,100,.12);color:#00b464;border:1px solid rgba(0,180,100,.3);">
-            ✓ {{ item.total_matches }} coincidencia{{ item.total_matches|pluralize:"s" }} ese día
+          <span class="act-pill" id="match-pill-{{ act.id }}" style="background:rgba(0,180,100,.12);color:#00b464;border:1px solid rgba(0,180,100,.3);{% if not item.total_matches %}display:none;{% endif %}">
+            ✓ <span id="match-count-{{ act.id }}">{{ item.total_matches }}</span> <span id="match-word-{{ act.id }}">coincidencia{{ item.total_matches|pluralize:"s" }}</span> ese día
           </span>
-          {% endif %}
         </div>
         <div class="act-title">{{ act.nombre_strava|default:"Sin nombre" }}</div>
         <div class="act-date">{{ act.fecha_actividad|date:"l, d M Y" }}</div>
@@ -210,7 +208,7 @@
       <div style="font-family:var(--font-mono);font-size:9px;font-weight:700;letter-spacing:.1em;
                   text-transform:uppercase;color:var(--accent);margin-bottom:6px;">Sesiones Hyrox ese día</div>
       {% for s in item.hyrox_matches %}
-      <div style="background:var(--paper-2);border-radius:3px;padding:10px 12px;margin-bottom:6px;">
+      <div style="background:var(--paper-2);border-radius:3px;padding:10px 12px;margin-bottom:6px;" data-match-hyrox-id="{{ s.id }}">
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
           <div>
             <div style="font-weight:700;font-size:13px;">{{ s.titulo|default:"Sesión Hyrox" }}</div>
@@ -324,7 +322,7 @@
       <div style="font-family:var(--font-mono);font-size:9px;font-weight:700;letter-spacing:.1em;
                   text-transform:uppercase;color:var(--ink-3);margin-bottom:6px;">Entrenos de gym ese día</div>
       {% for e in item.gym_matches %}
-      <div style="background:var(--paper-2);border-radius:3px;padding:10px 12px;margin-bottom:6px;">
+      <div style="background:var(--paper-2);border-radius:3px;padding:10px 12px;margin-bottom:6px;" data-match-gym-id="{{ e.id }}">
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
           <div>
             <div style="font-weight:700;font-size:13px;">{{ e.nombre_rutina_liftin|default:e.rutina.nombre|default:"Entreno gym" }}</div>
@@ -448,12 +446,12 @@
         style="font-family:var(--font-mono);font-size:9px;font-weight:700;letter-spacing:.1em;
                text-transform:uppercase;color:var(--ink-3);background:none;border:none;
                cursor:pointer;padding:0;display:flex;align-items:center;gap:5px;margin-bottom:6px;">
-        <i class="fas fa-search"></i> Buscar entreno manualmente ({{ gym_sin_sync|length }} sin sincronizar)
+        <i class="fas fa-search"></i> Buscar entreno manualmente (<span id="manual-count-{{ act.id }}">{{ gym_sin_sync|length }}</span> sin sincronizar)
       </button>
       <div style="display:none;max-height:220px;overflow-y:auto;border:1px solid var(--line);border-radius:3px;padding:6px;">
         {% for e in gym_sin_sync %}
         <div style="display:flex;align-items:center;justify-content:space-between;
-                    padding:6px 8px;border-bottom:1px solid var(--line);gap:8px;">
+                    padding:6px 8px;border-bottom:1px solid var(--line);gap:8px;" data-manual-gym-id="{{ e.id }}" data-manual-row="1">
           <div style="flex:1;min-width:0;">
             <span style="font-weight:600;font-size:12px;display:block;">
               {{ e.nombre_rutina_liftin|default:e.rutina.nombre|default:"Entreno gym" }}
@@ -471,7 +469,7 @@
           </button>
         </div>
         <!-- Panel fusión manual -->
-        <div id="merge-panel-gym-{{ act.id }}-manual-{{ e.id }}"
+        <div id="merge-panel-gym-{{ act.id }}-manual-{{ e.id }}" data-manual-gym-id="{{ e.id }}"
              style="display:none;padding:8px;background:var(--paper-2);border-bottom:1px solid var(--line);">
           <div style="font-family:var(--font-mono);font-size:9px;font-weight:700;color:var(--ink-3);margin-bottom:6px;">
             Fusionar "{{ e.nombre_rutina_liftin|default:e.rutina.nombre|default:'Entreno gym' }}" ({{ e.fecha|date:"d/m/Y" }}) con esta actividad Strava
@@ -760,11 +758,64 @@ function procesarActividad(id, accion, extra) {
       card.style.pointerEvents = 'none';
       setTimeout(() => card.remove(), 600);
       showToast(d.msg);
+      if (accion === 'merge_gym' && extra.entreno_id) {
+        removeFusionadoEnOtrasTarjetas('gym', extra.entreno_id, id);
+      } else if (accion === 'merge_hyrox' && extra.session_id) {
+        removeFusionadoEnOtrasTarjetas('hyrox', extra.session_id, id);
+      }
     } else {
       showToast('Error: ' + d.msg, true);
     }
   })
   .catch(() => showToast('Error de conexión', true));
+}
+
+// Tras una fusión, quita esa misma sesión/entreno de las listas de
+// candidatos en el resto de tarjetas pendientes (sin recargar la página).
+function removeFusionadoEnOtrasTarjetas(tipo, id, skipActId) {
+  const matchAttr = tipo === 'gym' ? 'data-match-gym-id' : 'data-match-hyrox-id';
+
+  document.querySelectorAll(`[${matchAttr}="${id}"]`).forEach(el => {
+    const card = el.closest('.act-card');
+    if (card && card.id === 'act-' + skipActId) return;
+    el.style.transition = 'opacity .3s';
+    el.style.opacity = '0';
+    setTimeout(() => {
+      el.remove();
+      if (card) updateMatchCount(card.id.replace('act-', ''), -1);
+    }, 300);
+  });
+
+  if (tipo === 'gym') {
+    document.querySelectorAll(`[data-manual-gym-id="${id}"]`).forEach(el => {
+      const card = el.closest('.act-card');
+      if (card && card.id === 'act-' + skipActId) return;
+      const isRow = el.hasAttribute('data-manual-row');
+      el.style.transition = 'opacity .3s';
+      el.style.opacity = '0';
+      setTimeout(() => {
+        el.remove();
+        if (card && isRow) decrementManualCount(card.id.replace('act-', ''));
+      }, 300);
+    });
+  }
+}
+
+function updateMatchCount(actId, delta) {
+  const countEl = document.getElementById('match-count-' + actId);
+  if (!countEl) return;
+  const n = Math.max(0, parseInt(countEl.textContent, 10) + delta);
+  countEl.textContent = n;
+  const wordEl = document.getElementById('match-word-' + actId);
+  if (wordEl) wordEl.textContent = n === 1 ? 'coincidencia' : 'coincidencias';
+  const pillEl = document.getElementById('match-pill-' + actId);
+  if (pillEl) pillEl.style.display = n > 0 ? '' : 'none';
+}
+
+function decrementManualCount(actId) {
+  const el = document.getElementById('manual-count-' + actId);
+  if (!el) return;
+  el.textContent = Math.max(0, parseInt(el.textContent, 10) - 1);
 }
 
 function importarRecientes(btn) {
