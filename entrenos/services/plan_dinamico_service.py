@@ -15,6 +15,8 @@ justo antes de que el usuario vea el briefing y la sesión.
 import copy
 from datetime import date, timedelta
 
+from django.utils import timezone
+
 # ── Alternativas por grupo muscular y patrón ─────────────────────────────────
 # Estructura: grupo_muscular → lista de candidatos (nombre, razon_cambio)
 _ALTERNATIVAS = {
@@ -151,6 +153,22 @@ def _ejercicios_recientes(cliente, dias=21):
         return set()
 
 
+def _persistir_estado_aplicacion(log, nuevo_estado, nuevo_motivo):
+    """
+    Phase 62I — persiste si esta progresión se aplicó o se pospuso la última
+    vez que se calculó el plan, para que la transparencia (plan_decisiones)
+    pueda mostrarlo sin recalcular el freno contextual fuera de contexto.
+
+    Solo escribe si algo cambió, para no tocar `fecha_aplicacion` en cada
+    render del briefing mientras el estado se mantiene igual.
+    """
+    if log.estado_aplicacion != nuevo_estado or log.motivo_postergacion != nuevo_motivo:
+        log.estado_aplicacion = nuevo_estado
+        log.motivo_postergacion = nuevo_motivo
+        log.fecha_aplicacion = timezone.now()
+        log.save(update_fields=['estado_aplicacion', 'motivo_postergacion', 'fecha_aplicacion'])
+
+
 def _aplicar_progresion_ejecutiva(cliente, ejercicios_mod, hoy, cambios):
     """
     Phase 62H — Progresión ejecutiva.
@@ -211,6 +229,7 @@ def _aplicar_progresion_ejecutiva(cliente, ejercicios_mod, hoy, cambios):
                 'peso_sugerido': peso_sugerido,
                 'razon': log.motivo,
             })
+            _persistir_estado_aplicacion(log, 'aplicada', None)
             continue
 
         # subir_peso → respeta freno contextual (asimétrico: bajar_peso no se frena)
@@ -233,6 +252,7 @@ def _aplicar_progresion_ejecutiva(cliente, ejercicios_mod, hoy, cambios):
                 'peso_sugerido': peso_sugerido,
                 'razon': permiso['mensaje'],
             })
+            _persistir_estado_aplicacion(log, 'pospuesta', permiso['mensaje'])
         else:
             ej['peso_kg'] = peso_sugerido
             ej['progresion_aplicada'] = True
@@ -246,6 +266,7 @@ def _aplicar_progresion_ejecutiva(cliente, ejercicios_mod, hoy, cambios):
                 'peso_sugerido': peso_sugerido,
                 'razon': log.motivo,
             })
+            _persistir_estado_aplicacion(log, 'aplicada', None)
 
 
 def aplicar_plan_dinamico(cliente, ejercicios, hoy=None):

@@ -510,15 +510,22 @@
     <div class="dc-group">
       <div class="dc-group-head">
         <div class="dc-group-title">{{ g.label }}</div>
-        <span class="dc-group-count
-          {% if g.accion == 'mantener' %}mantener
-          {% elif g.accion == 'bajar_peso' %}bajar
-          {% elif g.accion == 'cambiar_variante' %}variante
-          {% elif g.accion == 'deload' %}deload
-          {% elif g.accion == 'subir_peso' or g.accion == 'subir_reps' %}subir
-          {% else %}neutro{% endif %}">
-          {{ g.count }} ejercicio{{ g.count|pluralize }}
-        </span>
+        <div style="display:flex;align-items:center;gap:6px;">
+          {% if g.pospuestas_count %}
+          <span class="dc-pill temp" style="margin-bottom:0;">
+            <span class="dc-pill-dot"></span>{{ g.pospuestas_count }} pospuesta{{ g.pospuestas_count|pluralize }}
+          </span>
+          {% endif %}
+          <span class="dc-group-count
+            {% if g.accion == 'mantener' %}mantener
+            {% elif g.accion == 'bajar_peso' %}bajar
+            {% elif g.accion == 'cambiar_variante' %}variante
+            {% elif g.accion == 'deload' %}deload
+            {% elif g.accion == 'subir_peso' or g.accion == 'subir_reps' %}subir
+            {% else %}neutro{% endif %}">
+            {{ g.count }} ejercicio{{ g.count|pluralize }}
+          </span>
+        </div>
       </div>
       <div class="dc-group-detail">{{ g.ejercicios|join:", " }}</div>
       {% if g.motivo_principal %}
@@ -614,12 +621,15 @@
             {% if d.motivo %}
             <div style="font-size:10px;color:var(--ink-3);margin-top:2px;font-style:italic;">{{ d.motivo }}</div>
             {% endif %}
+            {% if d.accion == 'subir_peso' and d.estado_aplicacion == 'pospuesta' and d.motivo_postergacion %}
+            <div style="font-size:10px;color:rgba(245,158,11,0.8);margin-top:2px;font-style:italic;">{{ d.motivo_postergacion }}</div>
+            {% endif %}
           </div>
           <div style="text-align:right;flex-shrink:0;margin-left:12px;">
             <span style="font-size:9px;padding:2px 8px;border-radius:99px;
-              background:{% if d.accion == 'mantener' %}rgba(245,158,11,0.12){% elif d.accion == 'bajar_peso' %}rgba(239,68,68,0.10){% elif d.accion == 'deload' %}rgba(139,92,246,0.10){% elif d.accion == 'subir_peso' %}rgba(34,197,94,0.10){% else %}rgba(255,255,255,0.06){% endif %};
-              color:{% if d.accion == 'mantener' %}rgba(245,158,11,0.8){% elif d.accion == 'bajar_peso' %}rgba(239,68,68,0.7){% elif d.accion == 'deload' %}rgba(139,92,246,0.7){% elif d.accion == 'subir_peso' %}rgba(34,197,94,0.8){% else %}var(--ink-3){% endif %};">
-              {% if d.accion == 'subir_peso' %}Progresión sugerida{% else %}{{ d.get_accion_display }}{% endif %}
+              background:{% if d.accion == 'subir_peso' and d.estado_aplicacion == 'pospuesta' %}rgba(245,158,11,0.12){% elif d.accion == 'mantener' %}rgba(245,158,11,0.12){% elif d.accion == 'bajar_peso' %}rgba(239,68,68,0.10){% elif d.accion == 'deload' %}rgba(139,92,246,0.10){% elif d.accion == 'subir_peso' %}rgba(34,197,94,0.10){% else %}rgba(255,255,255,0.06){% endif %};
+              color:{% if d.accion == 'subir_peso' and d.estado_aplicacion == 'pospuesta' %}rgba(245,158,11,0.8){% elif d.accion == 'mantener' %}rgba(245,158,11,0.8){% elif d.accion == 'bajar_peso' %}rgba(239,68,68,0.7){% elif d.accion == 'deload' %}rgba(139,92,246,0.7){% elif d.accion == 'subir_peso' %}rgba(34,197,94,0.8){% else %}var(--ink-3){% endif %};">
+              {% if d.accion == 'subir_peso' %}{% if d.estado_aplicacion == 'pospuesta' %}Subida pospuesta{% else %}Progresión sugerida{% endif %}{% else %}{{ d.get_accion_display }}{% endif %}
             </span>
             <div style="font-size:9px;color:var(--ink-3);margin-top:4px;font-family:var(--font-mono);">{{ d.fecha_creacion|date:"d M" }}</div>
           </div>

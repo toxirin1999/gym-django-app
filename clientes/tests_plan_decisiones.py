@@ -67,10 +67,13 @@ class PlanDecisionesBase(TestCase):
             estado=estado,
         )
 
-    def _crear_decision(self, accion='deload'):
+    def _crear_decision(self, accion='deload', estado_aplicacion='pendiente',
+                         motivo_postergacion=None):
         return GymDecisionLog.objects.create(
             cliente=self.cliente, ejercicio='Sentadilla',
             accion=accion, motivo='Fatiga acumulada detectada.',
+            estado_aplicacion=estado_aplicacion,
+            motivo_postergacion=motivo_postergacion,
         )
 
 
@@ -256,3 +259,32 @@ class TestCase11_SubirPesoAgrupado(PlanDecisionesBase):
         self._crear_decision(accion='subir_peso')
         response = self._get()
         self.assertContains(response, 'Subir peso')
+
+
+# ── Case 12: Phase 62I — estado operativo de progresiones ────────────────────
+
+class TestCase12_EstadoOperativoProgresiones(PlanDecisionesBase):
+    def test_subir_peso_pospuesto_aparece_en_pospuestas_count(self):
+        self._crear_decision(
+            accion='subir_peso', estado_aplicacion='pospuesta',
+            motivo_postergacion='El plan detecta carga alta esta semana. No se sube peso.',
+        )
+        response = self._get()
+        grupos = {g['accion']: g for g in response.context['decisiones_agrupadas']}
+        self.assertEqual(grupos['subir_peso']['pospuestas_count'], 1)
+
+    def test_subir_peso_pospuesto_se_renderiza_en_template(self):
+        self._crear_decision(
+            accion='subir_peso', estado_aplicacion='pospuesta',
+            motivo_postergacion='El plan detecta carga alta esta semana. No se sube peso.',
+        )
+        response = self._get()
+        self.assertContains(response, 'pospuesta')
+        self.assertContains(response, 'El plan detecta carga alta esta semana. No se sube peso.')
+
+    def test_subir_peso_aplicado_no_cuenta_como_pospuesta(self):
+        self._crear_decision(accion='subir_peso', estado_aplicacion='aplicada')
+        response = self._get()
+        grupos = {g['accion']: g for g in response.context['decisiones_agrupadas']}
+        self.assertEqual(grupos['subir_peso']['pospuestas_count'], 0)
+        self.assertNotContains(response, 'pospuesta')

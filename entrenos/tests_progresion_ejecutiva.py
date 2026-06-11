@@ -94,8 +94,8 @@ class ProgresionEjecutivaBase(TestCase):
 
 class TestCase1_SubirPesoAplica(ProgresionEjecutivaBase):
     def test_subir_peso_pendiente_aplica_peso_sugerido(self):
-        self._log_pendiente('subir_peso', peso_anterior=80.0, valor_cambio=5.0,
-                             motivo='RPE bajo dos sesiones seguidas — sube carga.')
+        log = self._log_pendiente('subir_peso', peso_anterior=80.0, valor_cambio=5.0,
+                                   motivo='RPE bajo dos sesiones seguidas — sube carga.')
         ejercicios = [self._ejercicio(peso_kg=80.0)]
 
         with patch(_PERMISO_PATH, return_value=PERMISO_PERMITIDO), \
@@ -108,13 +108,18 @@ class TestCase1_SubirPesoAplica(ProgresionEjecutivaBase):
         self.assertEqual(ej['peso_kg'], 85.0)  # 80 * 1.05 → redondeo a 2.5
         self.assertTrue(any(c['tipo'] == 'progresion_aplicada' for c in cambios))
 
+        log.refresh_from_db()
+        self.assertEqual(log.estado_aplicacion, 'aplicada')
+        self.assertIsNone(log.motivo_postergacion)
+        self.assertIsNotNone(log.fecha_aplicacion)
+
 
 # ── Case 2: bajar_peso pendiente aplica peso_sugerido ────────────────────────
 
 class TestCase2_BajarPesoAplica(ProgresionEjecutivaBase):
     def test_bajar_peso_pendiente_aplica_peso_sugerido(self):
-        self._log_pendiente('bajar_peso', peso_anterior=80.0, valor_cambio=10.0,
-                             motivo='RPE muy alto sin fallo — reduce carga.')
+        log = self._log_pendiente('bajar_peso', peso_anterior=80.0, valor_cambio=10.0,
+                                   motivo='RPE muy alto sin fallo — reduce carga.')
         ejercicios = [self._ejercicio(peso_kg=80.0)]
 
         with patch(_DELOAD_PATH, return_value=False):
@@ -125,6 +130,10 @@ class TestCase2_BajarPesoAplica(ProgresionEjecutivaBase):
         self.assertEqual(ej['progresion_accion'], 'bajar_peso')
         self.assertEqual(ej['peso_kg'], 72.5)  # 80 * 0.9 → redondeo a 2.5
         self.assertTrue(any(c['tipo'] == 'progresion_aplicada' for c in cambios))
+
+        log.refresh_from_db()
+        self.assertEqual(log.estado_aplicacion, 'aplicada')
+        self.assertIsNone(log.motivo_postergacion)
 
 
 # ── Case 3: mantener pendiente no toca peso ──────────────────────────────────
@@ -185,8 +194,8 @@ class TestCase5_LogYaEvaluadoNoAplica(ProgresionEjecutivaBase):
 
 class TestCase6_FrenoPosponeSubirPeso(ProgresionEjecutivaBase):
     def test_mantener_carga_pospone_subir_peso(self):
-        self._log_pendiente('subir_peso', peso_anterior=80.0, valor_cambio=5.0,
-                             motivo='RPE bajo dos sesiones seguidas — sube carga.')
+        log = self._log_pendiente('subir_peso', peso_anterior=80.0, valor_cambio=5.0,
+                                   motivo='RPE bajo dos sesiones seguidas — sube carga.')
         ejercicios = [self._ejercicio(peso_kg=80.0)]
 
         with patch(_PERMISO_PATH, return_value=PERMISO_MANTENER_CARGA), \
@@ -200,13 +209,27 @@ class TestCase6_FrenoPosponeSubirPeso(ProgresionEjecutivaBase):
         self.assertEqual(ej['progresion_motivo'], PERMISO_MANTENER_CARGA['mensaje'])
         self.assertTrue(any(c['tipo'] == 'progresion_pospuesta' for c in cambios))
 
+        log.refresh_from_db()
+        self.assertEqual(log.estado_aplicacion, 'pospuesta')
+        self.assertEqual(log.motivo_postergacion, PERMISO_MANTENER_CARGA['mensaje'])
+        primera_fecha = log.fecha_aplicacion
+        self.assertIsNotNone(primera_fecha)
+
+        # Segunda llamada con el mismo freno: no debe reescribir fecha_aplicacion
+        with patch(_PERMISO_PATH, return_value=PERMISO_MANTENER_CARGA), \
+                patch(_DELOAD_PATH, return_value=False):
+            aplicar_plan_dinamico(self.cliente, ejercicios, self.hoy)
+
+        log.refresh_from_db()
+        self.assertEqual(log.fecha_aplicacion, primera_fecha)
+
 
 # ── Case 7: freno contextual NO bloquea bajar_peso (regla asimétrica) ───────
 
 class TestCase7_FrenoNoBloqueaBajarPeso(ProgresionEjecutivaBase):
     def test_mantener_carga_no_bloquea_bajar_peso(self):
-        self._log_pendiente('bajar_peso', peso_anterior=80.0, valor_cambio=10.0,
-                             motivo='RPE muy alto sin fallo — reduce carga.')
+        log = self._log_pendiente('bajar_peso', peso_anterior=80.0, valor_cambio=10.0,
+                                   motivo='RPE muy alto sin fallo — reduce carga.')
         ejercicios = [self._ejercicio(peso_kg=80.0)]
 
         with patch(_PERMISO_PATH, return_value=PERMISO_MANTENER_CARGA), \
@@ -218,6 +241,10 @@ class TestCase7_FrenoNoBloqueaBajarPeso(ProgresionEjecutivaBase):
         self.assertEqual(ej['progresion_accion'], 'bajar_peso')
         self.assertFalse(ej.get('progresion_pospuesta', False))
         self.assertEqual(ej['peso_kg'], 72.5)
+
+        log.refresh_from_db()
+        self.assertEqual(log.estado_aplicacion, 'aplicada')
+        self.assertIsNone(log.motivo_postergacion)
 
 
 # ── Case 8: cambiar_variante sigue funcionando como antes ───────────────────

@@ -1185,6 +1185,20 @@ class GymDecisionLog(models.Model):
 
     confianza = models.CharField(max_length=20, choices=CONFIANZA_CHOICES, default='media')
 
+    # Phase 62I — estado operativo: ¿se aplicó esta progresión al plan la
+    # última vez que se calculó, o el freno contextual la pospuso?
+    # Ortogonal a `resultado` (que evalúa si la decisión funcionó después).
+    ESTADO_APLICACION_CHOICES = [
+        ('pendiente', 'Pendiente'),
+        ('aplicada', 'Aplicada'),
+        ('pospuesta', 'Pospuesta'),
+    ]
+    estado_aplicacion = models.CharField(
+        max_length=20, choices=ESTADO_APLICACION_CHOICES, default='pendiente',
+    )
+    motivo_postergacion = models.TextField(null=True, blank=True)
+    fecha_aplicacion = models.DateTimeField(null=True, blank=True)
+
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     fecha_evaluacion = models.DateTimeField(null=True, blank=True)
 
