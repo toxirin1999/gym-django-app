@@ -179,4 +179,4 @@ class TestCase8_CentroConLectura(PresenciaBase):
             response = c.get(reverse('clientes:plan_decisiones'))
         self.assertEqual(response.status_code, 200)
         # lectura_semanal_joi section should not appear (graceful fallback)
-        self.assertContains(response, 'Activo ahora mismo')
+        self.assertContains(response, 'Activo ahora')

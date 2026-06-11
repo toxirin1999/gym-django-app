@@ -164,7 +164,7 @@ class TestCase7_FalloSilencioso(EvalCentroBase):
         self._trace()  # no evaluation created
         response = self._get_centro()
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'Por qué decidió así recientemente')
+        self.assertContains(response, 'Qué decidió últimamente')
 
     def test_humanizar_trace_sin_evaluacion_devuelve_none(self):
         trace = self._trace()

@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Por qué el plan decide así · Gym</title>
+  <title>Por qué el plan propone esto · Gym</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
   <style>
@@ -53,10 +53,17 @@
     }
     .dc-top-right { width:60px; }
 
-    /* ── container ── */
-    .dc-wrap { max-width:520px; margin:0 auto; padding:20px 16px; }
+    /* ── declaración de propósito ── */
+    .dc-purpose {
+      max-width:520px; margin:0 auto;
+      padding:12px 16px 0;
+      font-size:11px; color:var(--ink-3); line-height:1.5;
+    }
 
-    /* ── hero: activo ahora ── */
+    /* ── container ── */
+    .dc-wrap { max-width:520px; margin:0 auto; padding:14px 16px 20px; }
+
+    /* ── hero: el plan, ahora mismo ── */
     .dc-hero {
       border-radius:14px;
       border:1px solid var(--line-2);
@@ -68,6 +75,10 @@
       font-family:var(--font-mono); font-size:8px; font-weight:700;
       letter-spacing:0.14em; text-transform:uppercase; color:var(--ink-3);
       margin-bottom:10px;
+    }
+    .dc-hero-narrativa {
+      font-size:14px; line-height:1.5; color:var(--ink);
+      margin-bottom:14px;
     }
     .dc-hero-row {
       display:flex; gap:10px;
@@ -160,17 +171,6 @@
       cursor:pointer;
     }
 
-    .dc-badge-ok {
-      display:inline-block; padding:2px 7px; border-radius:99px;
-      font-size:9px; font-weight:700;
-      background:rgba(34,197,94,0.12); color:#22c55e;
-    }
-    .dc-badge-neu {
-      display:inline-block; padding:2px 7px; border-radius:99px;
-      font-size:9px; font-weight:700;
-      background:rgba(255,255,255,0.06); color:var(--ink-3);
-    }
-
     /* ── empty state ── */
     .dc-empty {
       padding:14px 16px; border-radius:10px;
@@ -179,44 +179,87 @@
       line-height:1.5;
     }
 
-    /* ── historial (collapsed) ── */
-    .dc-hist-toggle {
-      width:100%; display:flex; align-items:center; justify-content:space-between;
+    /* ── grouped item (decisiones / traces agrupados) ── */
+    .dc-group {
+      background:var(--paper);
+      border:1px solid var(--line);
+      border-radius:12px;
+      padding:13px 15px;
+      margin-bottom:8px;
+    }
+    .dc-group-head {
+      display:flex; align-items:center; justify-content:space-between;
+      margin-bottom:5px; gap:8px;
+    }
+    .dc-group-title {
+      font-size:13px; font-weight:700; color:var(--ink);
+    }
+    .dc-group-count {
+      font-size:9px; padding:2px 8px; border-radius:99px;
+      font-weight:700; letter-spacing:0.04em; flex-shrink:0;
+      white-space:nowrap;
+    }
+    .dc-group-count.mantener  { background:rgba(245,158,11,0.12); color:rgba(245,158,11,0.8); }
+    .dc-group-count.subir     { background:rgba(34,197,94,0.10); color:rgba(34,197,94,0.8); }
+    .dc-group-count.bajar     { background:rgba(239,68,68,0.10); color:rgba(239,68,68,0.7); }
+    .dc-group-count.variante  { background:rgba(139,92,246,0.10); color:rgba(139,92,246,0.7); }
+    .dc-group-count.deload    { background:rgba(139,92,246,0.10); color:rgba(139,92,246,0.7); }
+    .dc-group-count.neutro    { background:rgba(255,255,255,0.06); color:var(--ink-3); }
+    .dc-group-detail {
+      font-size:11px; color:var(--ink-3); line-height:1.5;
+    }
+    .dc-group-meta {
+      font-size:9px; color:var(--ink-3); margin-top:6px;
+      font-family:var(--font-mono); opacity:0.8;
+    }
+
+    /* ── accordion (detalle completo) ── */
+    .dc-accordion {
+      margin-bottom:8px;
+    }
+    .dc-accordion summary {
+      list-style:none; cursor:pointer;
+      display:flex; align-items:center; justify-content:space-between;
       padding:11px 14px; border-radius:10px;
       background:var(--paper); border:1px solid var(--line);
       color:var(--ink-3); font-size:11px; font-weight:600;
-      cursor:pointer; margin-bottom:0; text-align:left;
     }
-    .dc-hist-toggle:hover { border-color:var(--line-2); color:var(--ink); }
-    .dc-hist-toggle .arrow { transition:transform .25s; }
-    .dc-hist-body { display:none; margin-top:8px; }
-    .dc-hist-body.open { display:block; }
-
-    /* ── historial cards ── */
-    .dc-card.hist {
-      border-left:none; opacity:0.8;
+    .dc-accordion summary::-webkit-details-marker { display:none; }
+    .dc-accordion summary:hover { border-color:var(--line-2); color:var(--ink); }
+    .dc-accordion[open] summary {
+      border-radius:10px 10px 0 0; border-bottom:1px solid var(--line);
+      color:var(--ink);
     }
-    .dc-card.hist:hover { opacity:1; }
-    .dc-hist-label {
-      font-family:var(--font-mono); font-size:8px; font-weight:700;
-      letter-spacing:0.1em; text-transform:uppercase;
-      color:var(--ink-3); margin-bottom:4px;
+    .dc-accordion summary .arrow { transition:transform .2s; font-size:10px; }
+    .dc-accordion[open] summary .arrow { transform:rotate(180deg); }
+    .dc-accordion-body {
+      padding:12px 14px; border:1px solid var(--line); border-top:none;
+      border-radius:0 0 10px 10px; background:rgba(255,255,255,0.012);
     }
+    .dc-accordion-body .dc-card,
+    .dc-accordion-body .dc-group { margin-bottom:8px; }
+    .dc-accordion-body .dc-card:last-child,
+    .dc-accordion-body .dc-group:last-child { margin-bottom:0; }
   </style>
 </head>
 <body>
 
 <div class="dc-top">
   <a href="{% url 'clientes:mockup_demo' %}" class="dc-back">← Volver</a>
-  <div class="dc-top-title">Por qué decide así</div>
+  <div class="dc-top-title">Por qué propone esto</div>
   <div class="dc-top-right"></div>
+</div>
+
+<div class="dc-purpose">
+  Aquí puedes ver qué señales sigue teniendo en cuenta el plan antes de proponerte entrenar, mantener, reducir o descansar.
 </div>
 
 <div class="dc-wrap">
 
-  {# ── HERO: activo ahora (3 contadores) ── #}
+  {# ── HERO: el plan, ahora mismo ── #}
   <div class="dc-hero">
-    <div class="dc-hero-label">Activo ahora mismo</div>
+    <div class="dc-hero-label">El plan, ahora mismo</div>
+    <div class="dc-hero-narrativa">{{ estado_plan.narrativa }}</div>
     <div class="dc-hero-row">
       <div class="dc-hero-stat {% if preferencias_activas %}perm{% else %}none{% endif %}">
         <div class="dc-hero-n {% if preferencias_activas %}perm{% else %}none{% endif %}">
@@ -243,15 +286,9 @@
         </div>
       </div>
     </div>
-    {# Estado limpio: cuando no hay nada activo #}
-    {% if not preferencias_activas and not intervenciones_activas and not hipotesis_abiertas %}
-    <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--line);font-size:11px;color:var(--ink-3);font-style:italic;text-align:center;">
-      Sin adaptaciones persistentes activas. Las decisiones de hoy aparecen abajo.
-    </div>
-    {% endif %}
   </div>
 
-  {# ── Esta semana (analisis_semanal) ── #}
+  {# ── Esta semana ── #}
   {% if analisis_semanal and analisis_semanal.hay_datos %}
   <div class="dc-section">
     <div class="dc-section-head">
@@ -288,35 +325,7 @@
   </div>
   {% endif %}
 
-  {# ── Phase Continuidad 1.4: pausa reciente (solo si es significativa) ── #}
-  {% if continuidad %}
-  <div class="dc-section">
-    <div class="dc-section-head">
-      <div class="dc-section-dot obs"></div>
-      <div class="dc-section-title" style="color:rgba(96,165,250,0.85);">Continuidad reciente</div>
-      <div class="dc-line"></div>
-    </div>
-    <div class="dc-card" style="border-left:2px solid rgba(96,165,250,0.45);background:rgba(96,165,250,0.05);">
-      <div style="font-size:12px;color:var(--ink-3);line-height:1.5;">
-        Pausa <strong>{{ continuidad.nivel }}</strong> · {{ continuidad.dias_sin_gym }} días sin gym.
-        El plan frena la subida de cargas y prioriza un retorno con margen, sin compensar de golpe.
-      </div>
-      <div style="font-size:11px;color:var(--ink-3);margin-top:6px;">
-        Motivo:
-        {% if continuidad.motivo == 'enfermedad' %}enfermedad
-        {% elif continuidad.motivo == 'molestia_lesion' %}molestia / lesión
-        {% elif continuidad.motivo == 'vacaciones_viaje' %}vacaciones / viaje
-        {% elif continuidad.motivo == 'trabajo_no_pude' %}trabajo / no pude
-        {% elif continuidad.motivo == 'descanso_decidido' %}descanso decidido
-        {% elif continuidad.motivo == 'otro' %}otro
-        {% elif continuidad.motivo == 'prefiero_no_decirlo' %}<em>prefiere no decirlo</em>
-        {% else %}<em>no declarado</em>{% endif %}
-      </div>
-    </div>
-  </div>
-  {% endif %}
-
-  {# ── Phase 37: Propuesta de experimento — PRIMERO (más accionable) ── #}
+  {# ── Propuesta de experimento (accionable) ── #}
   {% if sugerencia_hipotesis %}
   <div class="dc-section">
     <div class="dc-section-head">
@@ -344,92 +353,99 @@
   </div>
   {% endif %}
 
-  {# ── SECCIÓN 1: Lo que el plan recuerda — solo si hay preferencias ── #}
-  {% if preferencias_activas %}
+  {# ── Activo ahora: preferencias / ajustes / hipótesis / continuidad, unificado ── #}
   <div class="dc-section">
     <div class="dc-section-head">
       <div class="dc-section-dot perm"></div>
-      <div class="dc-section-title" style="color:var(--teal);">Lo que el plan recuerda</div>
+      <div class="dc-section-title" style="color:var(--teal);">Activo ahora</div>
       <div class="dc-line"></div>
     </div>
-    {% for pref in preferencias_activas %}
-    <div class="dc-card perm">
-      <span class="dc-pill perm">
-        <span class="dc-pill-dot"></span>
-        permanente · revocable
-      </span>
-      <div class="dc-card-text">{{ pref.descripcion }}</div>
-      <div class="dc-card-meta">
-        Basado en {{ pref.evidencia_count }} prueba{{ pref.evidencia_count|pluralize:"s" }} favorables.
-        {% if pref.ultima_confirmacion %}Confirmado el {{ pref.ultima_confirmacion|date:"j N" }}.{% endif %}
-      </div>
-      <div class="dc-card-note">
-        No es una regla. El plan lo usará cuando el contexto lo permita.
-      </div>
-      <form method="post" action="{% url 'clientes:revocar_preferencia' pref.id %}" style="display:inline;">
-        {% csrf_token %}
-        <button type="submit" class="dc-btn-revoke">Dejar de aplicar</button>
-      </form>
-    </div>
-    {% endfor %}
-  </div>
-  {% endif %}
 
-  {# ── SECCIÓN 2: Ajuste activo — solo si hay intervenciones ── #}
-  {% if intervenciones_activas %}
-  <div class="dc-section">
-    <div class="dc-section-head">
-      <div class="dc-section-dot temp"></div>
-      <div class="dc-section-title" style="color:var(--amber);">Ajuste activo de esta semana</div>
-      <div class="dc-line"></div>
+    {% if not preferencias_activas and not intervenciones_activas and not hipotesis_abiertas and not continuidad %}
+    <div class="dc-empty">
+      Sin adaptaciones persistentes activas — sin preferencias aprendidas, ajustes temporales ni hipótesis abiertas.
     </div>
-    {% for iv in intervenciones_activas %}
-    <div class="dc-card temp">
-      <span class="dc-pill temp">
-        <span class="dc-pill-dot"></span>
-        temporal · hasta el {{ iv.fecha_fin|date:"j N" }}
-      </span>
-      <div class="dc-card-text">{{ iv.get_tipo_display }}</div>
-      {% if iv.origen_patron %}
-      <div class="dc-card-meta">Origen: {{ iv.origen_patron }}.</div>
-      {% endif %}
-      <div class="dc-card-note">
-        Expira automáticamente. No necesitas hacer nada para cancelarlo.
-      </div>
-    </div>
-    {% endfor %}
-  </div>
-  {% endif %}
+    {% else %}
 
-  {# Phase 36 — Señales acumuladas — solo si hay hipótesis #}
-  {% if hipotesis_abiertas %}
-  <div class="dc-section">
-    <div class="dc-section-head">
-      <div class="dc-section-dot obs"></div>
-      <div class="dc-section-title" style="color:rgba(245,158,11,0.7);">Señales acumuladas</div>
-      <div class="dc-line"></div>
-    </div>
-    {% for h in hipotesis_abiertas %}
-    <div class="dc-card obs" style="border-left:2px solid rgba(245,158,11,0.25);margin-bottom:8px;">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">
-        <span style="font-family:var(--font-mono);font-size:8px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:rgba(245,158,11,0.65);">
-          Hipótesis · {{ h.ocurrencias }} veces
+      {% for pref in preferencias_activas %}
+      <div class="dc-card perm">
+        <span class="dc-pill perm">
+          <span class="dc-pill-dot"></span>
+          permanente · revocable
         </span>
+        <div class="dc-card-text">{{ pref.descripcion }}</div>
+        <div class="dc-card-meta">
+          Basado en {{ pref.evidencia_count }} prueba{{ pref.evidencia_count|pluralize:"s" }} favorables.
+          {% if pref.ultima_confirmacion %}Confirmado el {{ pref.ultima_confirmacion|date:"j N" }}.{% endif %}
+        </div>
+        <div class="dc-card-note">
+          No es una regla. El plan lo usará cuando el contexto lo permita.
+        </div>
+        <form method="post" action="{% url 'clientes:revocar_preferencia' pref.id %}" style="display:inline;">
+          {% csrf_token %}
+          <button type="submit" class="dc-btn-revoke">Dejar de aplicar</button>
+        </form>
       </div>
-      <div style="font-size:12px;color:var(--ink);line-height:1.5;">{{ h.texto }}</div>
-      {% if h.fechas %}
-      <div style="margin-top:5px;font-size:9px;color:var(--ink-3);">
-        Fechas: {% for f in h.fechas %}{{ f|date:"j N" }}{% if not forloop.last %}, {% endif %}{% endfor %}
+      {% endfor %}
+
+      {% for iv in intervenciones_activas %}
+      <div class="dc-card temp">
+        <span class="dc-pill temp">
+          <span class="dc-pill-dot"></span>
+          temporal · hasta el {{ iv.fecha_fin|date:"j N" }}
+        </span>
+        <div class="dc-card-text">{{ iv.get_tipo_display }}</div>
+        {% if iv.origen_patron %}
+        <div class="dc-card-meta">Origen: {{ iv.origen_patron }}.</div>
+        {% endif %}
+        <div class="dc-card-note">
+          Expira automáticamente. No necesitas hacer nada para cancelarlo.
+        </div>
+      </div>
+      {% endfor %}
+
+      {% for h in hipotesis_abiertas %}
+      <div class="dc-card obs" style="border-left:2px solid rgba(245,158,11,0.25);">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">
+          <span style="font-family:var(--font-mono);font-size:8px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:rgba(245,158,11,0.65);">
+            Hipótesis · {{ h.ocurrencias }} veces
+          </span>
+        </div>
+        <div style="font-size:12px;color:var(--ink);line-height:1.5;">{{ h.texto }}</div>
+        {% if h.fechas %}
+        <div style="margin-top:5px;font-size:9px;color:var(--ink-3);">
+          Fechas: {% for f in h.fechas %}{{ f|date:"j N" }}{% if not forloop.last %}, {% endif %}{% endfor %}
+        </div>
+        {% endif %}
+      </div>
+      {% endfor %}
+
+      {% if continuidad %}
+      <div class="dc-card" style="border-left:2px solid rgba(96,165,250,0.45);background:rgba(96,165,250,0.05);">
+        <div style="font-size:12px;color:var(--ink-3);line-height:1.5;">
+          Pausa <strong>{{ continuidad.nivel }}</strong> · {{ continuidad.dias_sin_gym }} días sin gym.
+          El plan frena la subida de cargas y prioriza un retorno con margen, sin compensar de golpe.
+        </div>
+        <div style="font-size:11px;color:var(--ink-3);margin-top:6px;">
+          Motivo:
+          {% if continuidad.motivo == 'enfermedad' %}enfermedad
+          {% elif continuidad.motivo == 'molestia_lesion' %}molestia / lesión
+          {% elif continuidad.motivo == 'vacaciones_viaje' %}vacaciones / viaje
+          {% elif continuidad.motivo == 'trabajo_no_pude' %}trabajo / no pude
+          {% elif continuidad.motivo == 'descanso_decidido' %}descanso decidido
+          {% elif continuidad.motivo == 'otro' %}otro
+          {% elif continuidad.motivo == 'prefiero_no_decirlo' %}<em>prefiere no decirlo</em>
+          {% else %}<em>no declarado</em>{% endif %}
+        </div>
       </div>
       {% endif %}
-    </div>
-    {% endfor %}
-  </div>
-  {% endif %}
 
-  {# Phase 45 — Lectura JOI semanal completa en el Centro (no se duplica con panel) #}
+    {% endif %}
+  </div>
+
+  {# ── Lectura de la semana (JOI) ── #}
   {% if lectura_semanal_joi and lectura_semanal_joi.texto %}
-  <div class="dc-section" style="margin-top:12px;">
+  <div class="dc-section">
     <div class="dc-section-head">
       <div class="dc-section-dot obs" style="background:rgba(139,92,246,0.5);"></div>
       <div class="dc-section-title" style="color:rgba(139,92,246,0.75);">Lectura de la semana</div>
@@ -453,112 +469,190 @@
   </div>
   {% endif %}
 
-  {# Phase 33 — Historial reciente de decisiones (humanizado) #}
-  {% if traces_recientes %}
-  <div class="dc-section" style="margin-top:12px;">
+  {# ── Qué decidió últimamente (agrupado, Phase 62G.2) ── #}
+  <div class="dc-section">
     <div class="dc-section-head">
       <div class="dc-section-dot obs"></div>
-      <div class="dc-section-title">Por qué decidió así recientemente</div>
+      <div class="dc-section-title">Qué decidió últimamente</div>
       <div class="dc-line"></div>
     </div>
 
-    {% for t in traces_recientes %}
-    <div class="dc-card obs" style="margin-bottom:10px;">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
-        <div style="font-family:var(--font-mono);font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink-3);">
-          {{ t.fecha_label }}
-        </div>
-        {% if t.decision_label %}
-        <span style="font-size:9px;padding:2px 8px;border-radius:99px;background:rgba(255,255,255,0.06);color:var(--ink-3);">
-          {{ t.decision_label }}
+    {% for g in traces_agrupados %}
+    <div class="dc-group" {% if g.lesion_label %}style="border-left:2px solid rgba(96,165,250,0.45);background:rgba(96,165,250,0.05);"{% endif %}>
+      <div class="dc-group-head">
+        <div class="dc-group-title">{{ g.decision_label }} · {{ g.count }} {% if g.count == 1 %}vez{% else %}veces{% endif %}</div>
+        <span class="dc-group-count neutro">
+          {% if g.lesion_label %}lesión{% else %}{{ g.count }} sesi{{ g.count|pluralize:"ón,ones" }}{% endif %}
         </span>
-        {% endif %}
       </div>
-
-      <div style="font-size:12px;color:var(--ink);line-height:1.55;margin-bottom:{% if t.tiene_detalles or t.evaluacion_label %}8px{% else %}0{% endif %};">
-        {{ t.explicacion }}
+      <div class="dc-group-detail">{{ g.explicacion }}</div>
+      <div class="dc-group-meta">
+        {% if g.count > 1 %}Última vez: {{ g.fecha_label }}{% else %}{{ g.fecha_label|capfirst }}{% endif %}
       </div>
-
-      {# Phase 35 — evaluación posterior como línea secundaria, no veredicto #}
-      {% if t.evaluacion_label %}
-      <div style="margin-bottom:6px;padding:6px 9px;background:rgba(255,255,255,0.03);border-left:2px solid rgba(255,255,255,0.12);border-radius:0 7px 7px 0;">
-        <div style="font-size:9px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;
-                    color:{% if 'margen' in t.evaluacion_label %}rgba(34,197,94,0.6){% elif 'hipótesis' in t.evaluacion_label %}rgba(245,158,11,0.6){% else %}rgba(148,163,184,0.5){% endif %};
-                    margin-bottom:3px;">
-          {{ t.evaluacion_label }}
-        </div>
-        {% if t.evaluacion_resumen %}
-        <div style="font-size:10px;color:var(--ink-3);line-height:1.45;font-style:italic;">
-          {{ t.evaluacion_resumen }}
-        </div>
-        {% endif %}
-      </div>
-      {% endif %}
-
-      {% if t.capas_usadas %}
-      <div style="font-size:10px;color:var(--ink-3);margin-bottom:4px;">
-        Influyó: {{ t.capas_usadas|join:", " }}.
-      </div>
-      {% endif %}
-
-      {% if t.supresion_razon %}
-      <div style="font-size:10px;color:var(--ink-3);font-style:italic;opacity:0.75;">
-        {{ t.supresion_razon }}
-      </div>
-      {% endif %}
-
-      {% if t.lesion_label %}
-      <div style="margin-top:4px;font-size:10px;color:rgba(245,158,11,0.7);">
-        Lesión: {{ t.lesion_label }}.
-      </div>
-      {% endif %}
     </div>
+    {% empty %}
+    <div class="dc-empty">Sin decisiones recientes registradas.</div>
     {% endfor %}
   </div>
-  {% endif %}
 
-  {# ── Decisiones por ejercicio (GymDecisionLog) ── #}
-  {% if decisiones_carga %}
-  <div class="dc-section" style="margin-top:12px;">
+  {# ── Carga por ejercicio (agrupado, Phase 62G.2) ── #}
+  <div class="dc-section">
     <div class="dc-section-head">
       <div class="dc-section-dot obs"></div>
-      <div class="dc-section-title">Decisiones de carga recientes</div>
+      <div class="dc-section-title">Carga por ejercicio</div>
       <div class="dc-line"></div>
     </div>
     <div style="font-size:10px;color:var(--ink-3);margin-bottom:10px;font-style:italic;">
       Qué decidió el plan para cada ejercicio en los últimos 30 días.
     </div>
-    {% for d in decisiones_carga %}
-    <div class="dc-card obs" style="margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;">
-      <div>
-        <div style="font-size:12px;color:var(--ink);font-weight:600;">{{ d.ejercicio }}</div>
-        {% if d.motivo %}
-        <div style="font-size:10px;color:var(--ink-3);margin-top:2px;font-style:italic;">{{ d.motivo }}</div>
-        {% endif %}
-      </div>
-      <div style="text-align:right;flex-shrink:0;margin-left:12px;">
-        <span style="font-size:9px;padding:2px 8px;border-radius:99px;
-          background:{% if d.accion == 'mantener' %}rgba(245,158,11,0.12){% elif d.accion == 'bajar_peso' %}rgba(239,68,68,0.10){% elif d.accion == 'deload' %}rgba(139,92,246,0.10){% elif d.accion == 'subir_peso' %}rgba(34,197,94,0.10){% else %}rgba(255,255,255,0.06){% endif %};
-          color:{% if d.accion == 'mantener' %}rgba(245,158,11,0.8){% elif d.accion == 'bajar_peso' %}rgba(239,68,68,0.7){% elif d.accion == 'deload' %}rgba(139,92,246,0.7){% elif d.accion == 'subir_peso' %}rgba(34,197,94,0.8){% else %}var(--ink-3){% endif %};">
-          {% if d.accion == 'subir_peso' %}Progresión sugerida{% else %}{{ d.get_accion_display }}{% endif %}
+
+    {% for g in decisiones_agrupadas %}
+    <div class="dc-group">
+      <div class="dc-group-head">
+        <div class="dc-group-title">{{ g.label }}</div>
+        <span class="dc-group-count
+          {% if g.accion == 'mantener' %}mantener
+          {% elif g.accion == 'bajar_peso' %}bajar
+          {% elif g.accion == 'cambiar_variante' %}variante
+          {% elif g.accion == 'deload' %}deload
+          {% elif g.accion == 'subir_peso' or g.accion == 'subir_reps' %}subir
+          {% else %}neutro{% endif %}">
+          {{ g.count }} ejercicio{{ g.count|pluralize }}
         </span>
-        <div style="font-size:9px;color:var(--ink-3);margin-top:4px;font-family:var(--font-mono);">{{ d.fecha_creacion|date:"d M" }}</div>
       </div>
+      <div class="dc-group-detail">{{ g.ejercicios|join:", " }}</div>
+      {% if g.motivo_principal %}
+      <div class="dc-group-meta">{{ g.motivo_principal }}</div>
+      {% endif %}
     </div>
+    {% empty %}
+    <div class="dc-empty">Sin decisiones de carga registradas en los últimos 30 días.</div>
     {% endfor %}
   </div>
-  {% endif %}
+
+  {# ── Detalle completo: acordeones técnicos (Phase 62G.2) ── #}
+  <div class="dc-section">
+    <div class="dc-section-head">
+      <div class="dc-section-dot obs"></div>
+      <div class="dc-section-title">Detalle completo</div>
+      <div class="dc-line"></div>
+    </div>
+
+    {% if traces_recientes %}
+    <details class="dc-accordion">
+      <summary>
+        <span>Ver historial completo ({{ traces_recientes|length }} sesi{{ traces_recientes|length|pluralize:"ón,ones" }})</span>
+        <span class="arrow">▾</span>
+      </summary>
+      <div class="dc-accordion-body">
+        {% for t in traces_recientes %}
+        <div class="dc-card obs">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+            <div style="font-family:var(--font-mono);font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink-3);">
+              {{ t.fecha_label }}
+            </div>
+            {% if t.decision_label %}
+            <span style="font-size:9px;padding:2px 8px;border-radius:99px;background:rgba(255,255,255,0.06);color:var(--ink-3);">
+              {{ t.decision_label }}
+            </span>
+            {% endif %}
+          </div>
+
+          <div style="font-size:12px;color:var(--ink);line-height:1.55;margin-bottom:{% if t.tiene_detalles or t.evaluacion_label %}8px{% else %}0{% endif %};">
+            {{ t.explicacion }}
+          </div>
+
+          {% if t.evaluacion_label %}
+          <div style="margin-bottom:6px;padding:6px 9px;background:rgba(255,255,255,0.03);border-left:2px solid rgba(255,255,255,0.12);border-radius:0 7px 7px 0;">
+            <div style="font-size:9px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;
+                        color:{% if 'margen' in t.evaluacion_label %}rgba(34,197,94,0.6){% elif 'hipótesis' in t.evaluacion_label %}rgba(245,158,11,0.6){% else %}rgba(148,163,184,0.5){% endif %};
+                        margin-bottom:3px;">
+              {{ t.evaluacion_label }}
+            </div>
+            {% if t.evaluacion_resumen %}
+            <div style="font-size:10px;color:var(--ink-3);line-height:1.45;font-style:italic;">
+              {{ t.evaluacion_resumen }}
+            </div>
+            {% endif %}
+          </div>
+          {% endif %}
+
+          {% if t.capas_usadas %}
+          <div style="font-size:10px;color:var(--ink-3);margin-bottom:4px;">
+            Influyó: {{ t.capas_usadas|join:", " }}.
+          </div>
+          {% endif %}
+
+          {% if t.supresion_razon %}
+          <div style="font-size:10px;color:var(--ink-3);font-style:italic;opacity:0.75;">
+            {{ t.supresion_razon }}
+          </div>
+          {% endif %}
+
+          {% if t.lesion_label %}
+          <div style="margin-top:4px;font-size:10px;color:rgba(245,158,11,0.7);">
+            Lesión: {{ t.lesion_label }}.
+          </div>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+    </details>
+    {% endif %}
+
+    {% if decisiones_carga %}
+    <details class="dc-accordion">
+      <summary>
+        <span>Ver decisiones por ejercicio ({{ decisiones_carga|length }})</span>
+        <span class="arrow">▾</span>
+      </summary>
+      <div class="dc-accordion-body">
+        {% for d in decisiones_carga %}
+        <div class="dc-card obs" style="display:flex;align-items:center;justify-content:space-between;">
+          <div>
+            <div style="font-size:12px;color:var(--ink);font-weight:600;">{{ d.ejercicio }}</div>
+            {% if d.motivo %}
+            <div style="font-size:10px;color:var(--ink-3);margin-top:2px;font-style:italic;">{{ d.motivo }}</div>
+            {% endif %}
+          </div>
+          <div style="text-align:right;flex-shrink:0;margin-left:12px;">
+            <span style="font-size:9px;padding:2px 8px;border-radius:99px;
+              background:{% if d.accion == 'mantener' %}rgba(245,158,11,0.12){% elif d.accion == 'bajar_peso' %}rgba(239,68,68,0.10){% elif d.accion == 'deload' %}rgba(139,92,246,0.10){% elif d.accion == 'subir_peso' %}rgba(34,197,94,0.10){% else %}rgba(255,255,255,0.06){% endif %};
+              color:{% if d.accion == 'mantener' %}rgba(245,158,11,0.8){% elif d.accion == 'bajar_peso' %}rgba(239,68,68,0.7){% elif d.accion == 'deload' %}rgba(139,92,246,0.7){% elif d.accion == 'subir_peso' %}rgba(34,197,94,0.8){% else %}var(--ink-3){% endif %};">
+              {% if d.accion == 'subir_peso' %}Progresión sugerida{% else %}{{ d.get_accion_display }}{% endif %}
+            </span>
+            <div style="font-size:9px;color:var(--ink-3);margin-top:4px;font-family:var(--font-mono);">{{ d.fecha_creacion|date:"d M" }}</div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </details>
+    {% endif %}
+
+    {% if sesiones_esenciales %}
+    <details class="dc-accordion">
+      <summary>
+        <span>Ver sesiones esenciales ({{ sesiones_esenciales|length }})</span>
+        <span class="arrow">▾</span>
+      </summary>
+      <div class="dc-accordion-body">
+        {% for s in sesiones_esenciales %}
+        <div class="dc-card obs">
+          <div style="font-size:12px;color:var(--ink);">
+            {{ s.fecha|date:"j M" }} · {{ s.rutina.nombre|default:"Sesión" }} — accesorios opcionales
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </details>
+    {% endif %}
+
+    {% if not traces_recientes and not decisiones_carga and not sesiones_esenciales %}
+    <div class="dc-empty">Sin historial técnico todavía.</div>
+    {% endif %}
+  </div>
 
 </div>
-
-<script>
-function toggleHistorial(btn) {
-  const body = document.getElementById('dc-historial');
-  const arrow = btn.querySelector('.arrow');
-  const open = body.classList.toggle('open');
-  arrow.textContent = open ? '↑' : '↓';
-}
-</script>
 
 {% include 'includes/_joi_fab.html' %}
 </body>

@@ -4878,6 +4878,9 @@ def plan_decisiones_view(request):
     from entrenos.models import (
         IntervencionPlan, GymDecisionLog, EntrenoRealizado, PreferenciaPlanAprendida,
     )
+    from entrenos.services.centro_decisiones_service import (
+        agrupar_decisiones_carga, agrupar_traces_recientes, construir_estado_plan,
+    )
 
     cliente = get_object_or_404(Cliente, user=request.user)
     hoy = timezone.localdate()
@@ -5013,6 +5016,11 @@ def plan_decisiones_view(request):
     except Exception:
         continuidad = None
 
+    # Phase 62G.2 — agrupadores y narrativa del hero para el Centro 2.0
+    estado_plan = construir_estado_plan(preferencias_activas, intervenciones_activas, hipotesis_abiertas)
+    traces_agrupados = agrupar_traces_recientes(traces_recientes)
+    decisiones_agrupadas = agrupar_decisiones_carga(decisiones_carga)
+
     return render(request, 'clientes/plan_decisiones.html', {
         'cliente': cliente,
         'hoy': hoy,
@@ -5028,6 +5036,9 @@ def plan_decisiones_view(request):
         'sugerencia_hipotesis': sugerencia_hipotesis,
         'lectura_semanal_joi': lectura_semanal_joi,
         'continuidad': continuidad,
+        'estado_plan': estado_plan,
+        'traces_agrupados': traces_agrupados,
+        'decisiones_agrupadas': decisiones_agrupadas,
     })
 
 
