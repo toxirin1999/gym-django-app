@@ -7,6 +7,7 @@ y aplica modificaciones automáticas basadas en las señales acumuladas:
   - Estancamiento (3+ sesiones sin progresión)  → sustituye el ejercicio
   - Molestia recurrente                          → sustituye por variante más segura
   - Deload activo                                → reduce series y capa RPE
+  - Progresión ejecutiva (Phase 62H)             → aplica/pospone subir_peso y bajar_peso
 
 El plan original en BD no se toca. Las modificaciones ocurren en memoria
 justo antes de que el usuario vea el briefing y la sesión.
@@ -150,6 +151,103 @@ def _ejercicios_recientes(cliente, dias=21):
         return set()
 
 
+def _aplicar_progresion_ejecutiva(cliente, ejercicios_mod, hoy, cambios):
+    """
+    Phase 62H — Progresión ejecutiva.
+
+    Regla madre: si el sistema calcula un peso_sugerido (GymDecisionLog
+    pendiente de evaluar, accion subir_peso/bajar_peso), la siguiente sesión
+    debe usarlo — salvo que un freno contextual tenga una razón explícita
+    para posponerlo.
+
+    - bajar_peso: ajuste de seguridad (RPE alto, fallo, fatiga). Se aplica
+      siempre, no se pospone por freno contextual.
+    - subir_peso: se pospone si el freno contextual frena la progresión esta
+      semana (mantener_carga / reducir_accesorios según tipo de ejercicio).
+    - mantener / cambiar_variante / deload: no se tocan aquí.
+    """
+    from entrenos.models import GymDecisionLog
+    from entrenos.services.progresion_contextual_service import (
+        evaluar_permiso_progresion, _es_ejercicio_principal,
+    )
+
+    logs_pendientes = list(
+        GymDecisionLog.objects
+        .filter(cliente=cliente, accion__in=('subir_peso', 'bajar_peso'), resultado__isnull=True)
+        .order_by('-fecha_creacion')
+    )
+    if not logs_pendientes:
+        return
+
+    permiso = None  # calculado solo si hace falta (subir_peso)
+
+    for ej in ejercicios_mod:
+        nombre = ej.get('nombre', '')
+        if not nombre:
+            continue
+        nombre_norm = _normalizar(nombre)
+
+        log = next(
+            (l for l in logs_pendientes if _match_nombre(nombre_norm, _normalizar(l.ejercicio))),
+            None,
+        )
+        if not log:
+            continue
+
+        peso_sugerido = log.peso_sugerido
+        if peso_sugerido is None:
+            continue
+
+        if log.accion == 'bajar_peso':
+            ej['peso_kg'] = peso_sugerido
+            ej['progresion_aplicada'] = True
+            ej['progresion_accion'] = 'bajar_peso'
+            ej['progresion_motivo'] = log.motivo
+            cambios.append({
+                'tipo': 'progresion_aplicada',
+                'ejercicio_original': nombre,
+                'ejercicio_nuevo': None,
+                'accion': 'bajar_peso',
+                'peso_sugerido': peso_sugerido,
+                'razon': log.motivo,
+            })
+            continue
+
+        # subir_peso → respeta freno contextual (asimétrico: bajar_peso no se frena)
+        if permiso is None:
+            permiso = evaluar_permiso_progresion(cliente, hoy)
+
+        bloquea = (
+            permiso['aplica_a_principales']
+            or (permiso['aplica_a_accesorios'] and not _es_ejercicio_principal(ej))
+        )
+        if bloquea:
+            ej['progresion_pospuesta'] = True
+            ej['progresion_accion'] = 'subir_peso'
+            ej['progresion_motivo'] = permiso['mensaje']
+            cambios.append({
+                'tipo': 'progresion_pospuesta',
+                'ejercicio_original': nombre,
+                'ejercicio_nuevo': None,
+                'accion': 'subir_peso',
+                'peso_sugerido': peso_sugerido,
+                'razon': permiso['mensaje'],
+            })
+        else:
+            ej['peso_kg'] = peso_sugerido
+            ej['progresion_aplicada'] = True
+            ej['progresion_accion'] = 'subir_peso'
+            ej['progresion_motivo'] = log.motivo
+            cambios.append({
+                'tipo': 'progresion_aplicada',
+                'ejercicio_original': nombre,
+                'ejercicio_nuevo': None,
+                'accion': 'subir_peso',
+                'peso_sugerido': peso_sugerido,
+                'razon': log.motivo,
+            })
+
+
 def aplicar_plan_dinamico(cliente, ejercicios, hoy=None):
     """
     Modifica la lista de ejercicios del plan basándose en señales del sistema.
@@ -175,6 +273,9 @@ def aplicar_plan_dinamico(cliente, ejercicios, hoy=None):
         from entrenos.services.briefing_service import necesita_deload_gym
 
         recientes = _ejercicios_recientes(cliente)
+
+        # ── Progresión ejecutiva (Phase 62H) ────────────────────────────────────
+        _aplicar_progresion_ejecutiva(cliente, ejercicios_mod, hoy, cambios)
 
         # ── Deload activo ─────────────────────────────────────────────────────
         deload = necesita_deload_gym(cliente, hoy)

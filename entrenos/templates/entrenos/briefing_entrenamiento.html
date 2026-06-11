@@ -144,6 +144,8 @@
   .cambio-tipo.estancamiento { color: var(--warn); }
   .cambio-tipo.molestia      { color: var(--r); }
   .cambio-tipo.deload        { color: var(--accent); }
+  .cambio-tipo.progresion    { color: var(--ok); }
+  .cambio-tipo.pospuesta     { color: var(--tdm); }
   .cambio-detalle { font-size: 11px; color: var(--td); line-height: 1.4; }
   .cambio-arrow { color: var(--ok); font-weight: 700; }
 
@@ -407,6 +409,18 @@
       {% elif cambio.tipo == 'deload' %}
       <span class="cambio-tipo deload">Deload</span>
       <span class="cambio-detalle">{{ cambio.razon }}</span>
+      {% elif cambio.tipo == 'progresion_aplicada' %}
+      <span class="cambio-tipo progresion">{% if cambio.accion == 'bajar_peso' %}Ajuste{% else %}Progresión{% endif %}</span>
+      <span class="cambio-detalle">
+        {{ cambio.ejercicio_original }}{% if cambio.peso_sugerido %} <span class="cambio-arrow">→ {{ cambio.peso_sugerido }} kg</span>{% endif %}
+        <br><span style="color:var(--tdm);">{{ cambio.razon }}</span>
+      </span>
+      {% elif cambio.tipo == 'progresion_pospuesta' %}
+      <span class="cambio-tipo pospuesta">Progresión pospuesta</span>
+      <span class="cambio-detalle">
+        {{ cambio.ejercicio_original }}
+        <br><span style="color:var(--tdm);">{{ cambio.razon }}</span>
+      </span>
       {% endif %}
     </div>
     {% endfor %}

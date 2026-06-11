@@ -3803,6 +3803,11 @@ def vista_entrenamiento_activo(request, cliente_id):
                 ejercicio['pr_reps'] = 0
                 ejercicio['peso_inicial_kg'] = float(ejercicio.get('peso_recomendado_kg', 0) or 0)
 
+            # --- Phase 62H: progresión ejecutiva — el peso sugerido por el
+            # plan manda sobre el carry-forward de la sesión anterior ---
+            if ejercicio.get('progresion_aplicada'):
+                ejercicio['peso_inicial_kg'] = float(ejercicio.get('peso_recomendado_kg', 0) or 0)
+
             # --- PROGRESIÓN PARA EJERCICIOS DE TIEMPO ---
             # Si hay dato anterior: propone anterior+1s (éxito) o anterior-1s (no completado).
             # "Éxito" = llegó al mínimo del rango objetivo.
