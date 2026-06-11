@@ -71,8 +71,6 @@ input{background:transparent!important;border:none!important;outline:none!import
 .tb-dia{font-size:11px;font-weight:600;color:var(--td);letter-spacing:0.2em;text-transform:uppercase;}
 /* "DESCARGA ACTIVA" — h1 style: bold/extrabold, tracking negativo */
 .tb-tipo{font-size:20px;font-weight:700;color:#fff;line-height:1.1;letter-spacing:-0.02em;}
-.tb-right{display:flex;align-items:center;gap:6px;}
-.tb-timer-icon{color:var(--td);}
 /* progress bar debajo del topbar */
 .tb-progress-wrap{position:sticky;top:58px;z-index:49;background:var(--bg);padding:0 16px 10px;display:flex;align-items:center;gap:10px;}
 .tb-track{flex:1;height:3px;background:rgba(255,255,255,0.08);border-radius:99px;overflow:hidden;}
@@ -558,18 +556,6 @@ input{background:transparent!important;border:none!important;outline:none!import
 }
 .pr-badge.visible{display:flex;}
 
-/* ── DESCANSO GLOBAL (topbar) ── */
-.tb-rest-ctrl{display:flex;align-items:center;gap:8px;}
-.tb-rest-btn{
-  width:34px;height:34px;border-radius:50%;border:none;
-  background:var(--surf2);color:#fff;font-size:20px;font-weight:600;
-  display:flex;align-items:center;justify-content:center;cursor:pointer;
-  transition:all .15s;flex-shrink:0;
-}
-.tb-rest-btn:active{background:var(--surf3);}
-.tb-rest-lbl{display:none;}
-.tb-rest-offset{font-size:15px;font-weight:700;color:#fff;min-width:38px;text-align:center;}
-
 /* ── MENSAJE MOTIVACIONAL ── */
 .msg-motivacional{
   padding:14px 16px;border-top:1px solid var(--bd);
@@ -728,24 +714,6 @@ input{background:transparent!important;border:none!important;outline:none!import
 
 /* ── BADGE MOLESTIA EN LOG ── */
 .sd-molestia{font-size:11px;font-weight:500;color:#ff6b6b;background:rgba(231,76,60,0.12);padding:3px 8px;border-radius:6px;border:none;}
-
-/* ── NOTAS POR SERIE ── */
-.nota-serie-wrap{margin:0 16px 10px;background:var(--surf2);border-radius:14px;overflow:hidden;}
-.nota-serie-toggle{
-  width:100%;background:none;border:none;
-  color:var(--td);font-size:14px;font-weight:400;
-  cursor:pointer;text-align:left;
-  display:flex;align-items:center;gap:10px;
-  padding:16px;
-}
-.nota-serie-toggle:hover{color:#fff;}
-.nota-serie-input{
-  display:none;width:100%;
-  background:transparent!important;border:none!important;border-top:1px solid var(--border)!important;
-  color:#fff!important;font-family:var(--jds-font)!important;font-size:14px;
-  padding:12px 16px;resize:none;outline:none;
-}
-.nota-serie-input.open{display:block;}
 
 /* ══════════════════════════════════════════════════════════════════
    MOBILE OPTIMIZATIONS — max-width: 480px
@@ -988,18 +956,6 @@ input{background:transparent!important;border:none!important;outline:none!import
     <div>
       <div class="tb-dia">{{ rutina_dia }}</div>
       <div class="tb-tipo">{{ rutina_tipo }}</div>
-    </div>
-  </div>
-  <div class="tb-right">
-    <div class="tb-rest-ctrl" title="Ajuste global del tiempo de descanso">
-      <span class="tb-timer-icon">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2"/><path d="M9 1h6"/><path d="M12 1v3"/>
-        </svg>
-      </span>
-      <button type="button" class="tb-rest-btn" onclick="ajustarDescansoGlobal(-30)">−</button>
-      <span class="tb-rest-offset" id="tb-rest-offset">+0s</span>
-      <button type="button" class="tb-rest-btn" onclick="ajustarDescansoGlobal(30)">+</button>
     </div>
   </div>
 </div>
@@ -1469,17 +1425,6 @@ input{background:transparent!important;border:none!important;outline:none!import
       <div class="pd-calc-txt" id="calc-inline-txt-{{ ejercicio.form_id }}-{{ sn }}"></div>
     </div>
     {% endif %}
-    <div class="nota-serie-wrap">
-      <button type="button" class="nota-serie-toggle"
-              onclick="toggleNotaSerie(this)">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.5;flex-shrink:0;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-        Añadir nota...
-      </button>
-      <textarea class="nota-serie-input"
-                id="nota-{{ ejercicio.form_id }}-{{ sn }}"
-                name="{{ ejercicio.form_id }}_nota_{{ sn }}"
-                rows="2" placeholder="Observaciones de esta serie…"></textarea>
-    </div>
     <button type="button" class="btn-guardar"
             onclick="guardarSeriePanel('{{ ejercicio.form_id }}',{{ sn }},{{ ejercicio.series }})">
       Guardar serie
@@ -1868,7 +1813,6 @@ input{background:transparent!important;border:none!important;outline:none!import
 // ── CONSTANTES RPE ───────────────────────────────────────────────
 const RPE_DESC={5:'Muy fácil — muchas reps en reserva',6:'Fácil — 4-5 reps en reserva',7:'Moderado — 3 reps en reserva',8:'Intenso — 2 reps en reserva',9:'Muy duro — 1 rep en reserva',10:'Máximo — sin reserva'};
 const STORAGE_KEY='entreno_activo_{{ cliente.id }}_{{ fecha }}';
-let descansoOffset=0; // segundos globales añadidos/quitados a todos los descansos
 
 // ── FRASES MOTIVACIONALES ────────────────────────────────────────
 const FRASES_MOTI={
@@ -2335,18 +2279,6 @@ function detectarPR(fid,sn,peso){
   }
 }
 
-// ── DESCANSO GLOBAL ──────────────────────────────────────────────
-function ajustarDescansoGlobal(delta){
-  descansoOffset=Math.max(-120,Math.min(300,descansoOffset+delta));
-  const el=document.getElementById('tb-rest-offset');
-  if(el){
-    const sign=descansoOffset>=0?'+':'-';
-    el.textContent=sign+Math.abs(descansoOffset)+'s';
-    el.style.color=descansoOffset>0?'var(--ok)':descansoOffset<0?'var(--rl)':'var(--td)';
-  }
-  if(navigator.vibrate)navigator.vibrate(10);
-}
-
 // ── MENSAJE MOTIVACIONAL AL COMPLETAR EJERCICIO ──────────────────
 function mostrarMensajeEjercicio(card,fid){
   const scs=STATE.seriesCompletadas[fid]||[];
@@ -2436,15 +2368,6 @@ document.querySelectorAll('.rpe-picker-grid').forEach(grid=>{
   if(desc){desc.textContent=RPE_DESC[val]||'';desc.style.color=val>=9?'var(--rl)':val>=7?'var(--g)':'var(--td)';}
 });
 
-// ── NOTAS OPCIONALES POR SERIE ───────────────────────────────────
-function toggleNotaSerie(btn){
-  const textarea=btn.nextElementSibling;
-  textarea.classList.toggle('open');
-  const arrow=btn.querySelector('span:last-child');
-  if(arrow)arrow.textContent=textarea.classList.contains('open')?'▴':'▾';
-  if(textarea.classList.contains('open'))textarea.focus();
-}
-
 // ── CHECKPOINT localStorage ──────────────────────────────────────
 function guardarCheckpoint(){
   try{
@@ -2533,7 +2456,7 @@ function initSeriePanel(fid,sn){
 
 function iniciarDescanso(fid,totalSeg,snActual,totalSeries){
   if(STATE.timers[fid])clearInterval(STATE.timers[fid].interval);
-  const segAjustado=Math.max(5,totalSeg+descansoOffset);
+  const segAjustado=Math.max(5,totalSeg);
   const endTs=Date.now()+segAjustado*1000;  // timestamp absoluto de fin
   STATE.timers[fid]={seg:segAjustado,total:segAjustado,endTs:endTs,interval:null,snActual:snActual,totalSeries:totalSeries};
   // Actualizar label "DE X:XX" con el tiempo ajustado
@@ -3279,6 +3202,5 @@ document.getElementById('mol-overlay').addEventListener('click', e => {
 });
 </script>
 
-{% include 'includes/_joi_fab.html' %}
 </body>
 </html>
