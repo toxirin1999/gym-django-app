@@ -88,6 +88,13 @@ def agrupar_decisiones_carga(decisiones: list) -> list[dict]:
         if nombre not in grupo['ejercicios']:
             grupo['ejercicios'].append(nombre)
 
+    # Phase 62I — cuántas de las decisiones del grupo quedaron pospuestas
+    # por el freno contextual la última vez que se calculó el plan.
+    for grupo in grupos.values():
+        grupo['pospuestas_count'] = sum(
+            1 for it in grupo['items'] if it.estado_aplicacion == 'pospuesta'
+        )
+
     return [grupos[accion] for accion in orden]
 
 
