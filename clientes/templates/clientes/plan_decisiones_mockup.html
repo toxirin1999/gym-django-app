@@ -1,0 +1,551 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Centro de decisiones 2.0 · MOCKUP</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:     #0d0f14;
+      --paper:  #13161e;
+      --ink:    #e8e6e0;
+      --ink-3:  #6b6860;
+      --line:   rgba(255,255,255,0.06);
+      --line-2: rgba(255,255,255,0.10);
+      --teal:   rgba(20,184,166,0.9);
+      --teal-b: rgba(20,184,166,0.28);
+      --teal-bg:rgba(20,184,166,0.07);
+      --amber:  rgba(245,158,11,0.9);
+      --amber-b:rgba(245,158,11,0.28);
+      --amber-bg:rgba(245,158,11,0.06);
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body {
+      background: var(--bg);
+      color: var(--ink);
+      font-family: 'Archivo', sans-serif;
+      min-height: 100vh;
+      padding: 0 0 5rem;
+    }
+
+    /* ── topbar ── */
+    .dc-top {
+      display:flex; align-items:center; gap:12px;
+      padding:14px 16px 12px;
+      border-bottom:1px solid var(--line);
+      background:var(--paper);
+      position:sticky; top:0; z-index:10;
+    }
+    .dc-back {
+      font-size:13px; font-weight:700; color:var(--ink-3);
+      text-decoration:none; display:flex; align-items:center; gap:4px;
+    }
+    .dc-back:hover { color:var(--ink); }
+    .dc-top-title {
+      flex:1; text-align:center;
+      font-family:var(--font-mono); font-size:10px;
+      font-weight:700; letter-spacing:0.12em; text-transform:uppercase;
+      color:var(--ink-3);
+    }
+    .dc-top-right { width:60px; }
+
+    /* ── mockup banner ── */
+    .dc-mockup-banner {
+      background:rgba(245,158,11,0.10); border-bottom:1px solid rgba(245,158,11,0.25);
+      color:rgba(245,158,11,0.85); font-size:10px; font-weight:700;
+      letter-spacing:0.08em; text-transform:uppercase; text-align:center;
+      padding:6px 12px; font-family:var(--font-mono);
+    }
+
+    /* ── container ── */
+    .dc-wrap { max-width:520px; margin:0 auto; padding:20px 16px; }
+
+    /* ── hero: qué está usando el plan ── */
+    .dc-hero {
+      border-radius:14px;
+      border:1px solid var(--line-2);
+      padding:16px;
+      margin-bottom:24px;
+      background:var(--paper);
+    }
+    .dc-hero-label {
+      font-family:var(--font-mono); font-size:8px; font-weight:700;
+      letter-spacing:0.14em; text-transform:uppercase; color:var(--ink-3);
+      margin-bottom:10px;
+    }
+    .dc-hero-narrativa {
+      font-size:14px; line-height:1.5; color:var(--ink);
+      margin-bottom:14px;
+    }
+    .dc-hero-narrativa strong { color:var(--teal); }
+    .dc-hero-row {
+      display:flex; gap:10px;
+    }
+    .dc-hero-stat {
+      flex:1; padding:10px 12px; border-radius:10px;
+      text-align:center;
+    }
+    .dc-hero-stat.perm {
+      background:var(--teal-bg); border:1px solid var(--teal-b);
+    }
+    .dc-hero-stat.temp {
+      background:var(--amber-bg); border:1px solid var(--amber-b);
+    }
+    .dc-hero-stat.none {
+      background:rgba(255,255,255,0.03); border:1px solid var(--line);
+    }
+    .dc-hero-n {
+      font-size:22px; font-weight:800; line-height:1;
+      margin-bottom:3px;
+    }
+    .dc-hero-n.perm { color:var(--teal); }
+    .dc-hero-n.temp { color:var(--amber); }
+    .dc-hero-n.none { color:var(--ink-3); }
+    .dc-hero-lbl {
+      font-size:10px; color:var(--ink-3); line-height:1.3;
+    }
+
+    /* ── section ── */
+    .dc-section { margin-bottom:20px; }
+    .dc-section-head {
+      display:flex; align-items:center; gap:8px; margin-bottom:10px;
+    }
+    .dc-section-dot {
+      width:6px; height:6px; border-radius:50%; flex-shrink:0;
+    }
+    .dc-section-dot.perm  { background:var(--teal); }
+    .dc-section-dot.temp  { background:var(--amber); }
+    .dc-section-dot.obs   { background:rgba(255,255,255,0.2); }
+    .dc-section-title {
+      font-size:11px; font-weight:700; letter-spacing:0.04em;
+      text-transform:uppercase; color:var(--ink); flex-shrink:0;
+    }
+    .dc-line { flex:1; height:1px; background:var(--line); }
+
+    /* ── card ── */
+    .dc-card {
+      background:var(--paper);
+      border:1px solid var(--line);
+      border-radius:12px;
+      padding:13px 15px;
+      margin-bottom:8px;
+    }
+    .dc-card.perm { border-left:2px solid var(--teal-b); }
+    .dc-card.temp { border-left:2px solid var(--amber-b); }
+    .dc-card.obs  { border-left:2px solid var(--line-2); }
+
+    .dc-pill {
+      display:inline-flex; align-items:center; gap:4px;
+      padding:2px 8px; border-radius:99px;
+      font-size:9px; font-weight:700; letter-spacing:0.08em;
+      margin-bottom:6px;
+    }
+    .dc-pill.perm {
+      background:var(--teal-bg); border:1px solid var(--teal-b);
+      color:var(--teal);
+    }
+    .dc-pill.temp {
+      background:var(--amber-bg); border:1px solid var(--amber-b);
+      color:var(--amber);
+    }
+    .dc-pill-dot {
+      width:4px; height:4px; border-radius:50%; background:currentColor;
+    }
+
+    .dc-card-text { font-size:13px; color:var(--ink); line-height:1.5; }
+    .dc-card-meta { font-size:10px; color:var(--ink-3); margin-top:5px; }
+    .dc-card-note {
+      font-size:10px; color:var(--ink-3); margin-top:6px;
+      padding-top:6px; border-top:1px solid var(--line);
+      font-style:italic;
+    }
+
+    .dc-badge-ok {
+      display:inline-block; padding:2px 7px; border-radius:99px;
+      font-size:9px; font-weight:700;
+      background:rgba(34,197,94,0.12); color:#22c55e;
+    }
+
+    /* ── empty state ── */
+    .dc-empty {
+      padding:14px 16px; border-radius:10px;
+      border:1px dashed var(--line);
+      font-size:11px; color:var(--ink-3); font-style:italic;
+      line-height:1.5;
+    }
+
+    /* ── grouped item (decisiones / traces agrupados) ── */
+    .dc-group {
+      background:var(--paper);
+      border:1px solid var(--line);
+      border-radius:12px;
+      padding:13px 15px;
+      margin-bottom:8px;
+    }
+    .dc-group-head {
+      display:flex; align-items:center; justify-content:space-between;
+      margin-bottom:5px; gap:8px;
+    }
+    .dc-group-title {
+      font-size:13px; font-weight:700; color:var(--ink);
+    }
+    .dc-group-count {
+      font-size:9px; padding:2px 8px; border-radius:99px;
+      font-weight:700; letter-spacing:0.04em; flex-shrink:0;
+      white-space:nowrap;
+    }
+    .dc-group-count.mantener  { background:rgba(245,158,11,0.12); color:rgba(245,158,11,0.8); }
+    .dc-group-count.subir     { background:rgba(34,197,94,0.10); color:rgba(34,197,94,0.8); }
+    .dc-group-count.bajar     { background:rgba(239,68,68,0.10); color:rgba(239,68,68,0.7); }
+    .dc-group-count.variante  { background:rgba(139,92,246,0.10); color:rgba(139,92,246,0.7); }
+    .dc-group-count.deload    { background:rgba(139,92,246,0.10); color:rgba(139,92,246,0.7); }
+    .dc-group-count.neutro    { background:rgba(255,255,255,0.06); color:var(--ink-3); }
+    .dc-group-detail {
+      font-size:11px; color:var(--ink-3); line-height:1.5;
+    }
+    .dc-group-meta {
+      font-size:9px; color:var(--ink-3); margin-top:6px;
+      font-family:var(--font-mono); opacity:0.8;
+    }
+
+    /* ── accordion (acordeones técnicos) ── */
+    .dc-accordion {
+      margin-bottom:8px;
+    }
+    .dc-accordion summary {
+      list-style:none; cursor:pointer;
+      display:flex; align-items:center; justify-content:space-between;
+      padding:11px 14px; border-radius:10px;
+      background:var(--paper); border:1px solid var(--line);
+      color:var(--ink-3); font-size:11px; font-weight:600;
+    }
+    .dc-accordion summary::-webkit-details-marker { display:none; }
+    .dc-accordion summary:hover { border-color:var(--line-2); color:var(--ink); }
+    .dc-accordion[open] summary {
+      border-radius:10px 10px 0 0; border-bottom:1px solid var(--line);
+      color:var(--ink);
+    }
+    .dc-accordion summary .arrow { transition:transform .2s; font-size:10px; }
+    .dc-accordion[open] summary .arrow { transform:rotate(180deg); }
+    .dc-accordion-body {
+      padding:12px 14px; border:1px solid var(--line); border-top:none;
+      border-radius:0 0 10px 10px; background:rgba(255,255,255,0.012);
+    }
+    .dc-accordion-body .dc-card,
+    .dc-accordion-body .dc-group { margin-bottom:8px; }
+    .dc-accordion-body .dc-card:last-child,
+    .dc-accordion-body .dc-group:last-child { margin-bottom:0; }
+
+    .dc-mock-note {
+      font-size:9px; color:rgba(245,158,11,0.6); font-family:var(--font-mono);
+      text-transform:uppercase; letter-spacing:0.06em; margin-bottom:8px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="dc-mockup-banner">Mockup 62G.0 — datos de ejemplo, sin lógica nueva</div>
+
+<div class="dc-top">
+  <a href="{% url 'clientes:plan_decisiones' %}" class="dc-back">← Volver</a>
+  <div class="dc-top-title">Centro de decisiones</div>
+  <div class="dc-top-right"></div>
+</div>
+
+<div class="dc-wrap">
+
+  {% comment %}
+  ══════════════════════════════════════════════════════════════════
+  1. HERO — qué está usando el plan ahora mismo
+  ══════════════════════════════════════════════════════════════════
+  {% endcomment %}
+  <div class="dc-hero">
+    <div class="dc-hero-label">El plan, ahora mismo</div>
+
+    {# Caso A: nada activo — narrativa explica el cero #}
+    <div class="dc-hero-narrativa">
+      El plan opera en <strong>modo normal</strong>. No hay preferencias, ajustes ni hipótesis activas — las decisiones de hoy se basan solo en lo que pasó esta semana.
+    </div>
+
+    {% comment %}
+    Caso B (comentado): si hubiera señales activas, la narrativa cambiaría a algo así:
+    <div class="dc-hero-narrativa">
+      El plan está usando <strong>2 señales activas</strong>: margen protegido esta semana y una preferencia aprendida (evitar pierna tras fútbol).
+    </div>
+    {% endcomment %}
+
+    <div class="dc-hero-row">
+      <div class="dc-hero-stat none">
+        <div class="dc-hero-n none">0</div>
+        <div class="dc-hero-lbl">preferencias aprendidas</div>
+      </div>
+      <div class="dc-hero-stat none">
+        <div class="dc-hero-n none">0</div>
+        <div class="dc-hero-lbl">ajustes activos</div>
+      </div>
+      <div class="dc-hero-stat none">
+        <div class="dc-hero-n none">0</div>
+        <div class="dc-hero-lbl">hipótesis abiertas</div>
+      </div>
+    </div>
+  </div>
+
+  {% comment %}
+  ══════════════════════════════════════════════════════════════════
+  2. ESTA SEMANA — se mantiene tal cual (ya validado)
+  ══════════════════════════════════════════════════════════════════
+  {% endcomment %}
+  <div class="dc-section">
+    <div class="dc-section-head">
+      <div class="dc-section-dot obs"></div>
+      <div class="dc-section-title">Esta semana</div>
+      <div class="dc-line"></div>
+    </div>
+    <div style="display:flex;gap:12px;margin-bottom:8px;flex-wrap:wrap;">
+      <div style="font-size:11px;color:var(--ink-3);">
+        <span style="font-size:18px;font-weight:700;color:var(--teal);">4</span>
+        sesiones
+      </div>
+      <div style="font-size:11px;color:var(--ink-3);margin-left:auto;">
+        <span style="padding:2px 8px;border-radius:99px;font-size:9px;font-weight:700;background:rgba(34,197,94,0.12);color:rgba(34,197,94,0.8);">
+          SÓLIDA
+        </span>
+      </div>
+    </div>
+    <div style="font-size:12px;color:var(--ink-3);font-style:italic;line-height:1.5;">
+      Semana completa: 4 sesiones sin adaptaciones. La continuidad sigue sólida.
+    </div>
+  </div>
+
+  {% comment %}
+  ══════════════════════════════════════════════════════════════════
+  3. ACTIVO AHORA — preferencias / ajustes / hipótesis / continuidad,
+     unificado en una sola sección. Si todo está vacío (caso real
+     actual), un único empty state honesto en vez de 3-4 secciones
+     cada una con su propio "no hay nada".
+  ══════════════════════════════════════════════════════════════════
+  {% endcomment %}
+  <div class="dc-section">
+    <div class="dc-section-head">
+      <div class="dc-section-dot perm"></div>
+      <div class="dc-section-title" style="color:var(--teal);">Activo ahora</div>
+      <div class="dc-line"></div>
+    </div>
+
+    {# Caso real actual: todo vacío #}
+    <div class="dc-empty">
+      Sin adaptaciones persistentes activas — sin preferencias aprendidas, ajustes temporales ni hipótesis abiertas.
+    </div>
+
+    {% comment %}
+    Si hubiera datos, aparecerían aquí cards .dc-card.perm / .temp / obs
+    (preferencias, intervenciones, hipótesis, continuidad) — mismo
+    formato que la versión actual, solo agrupadas bajo un título común.
+    {% endcomment %}
+  </div>
+
+  {% comment %}
+  ══════════════════════════════════════════════════════════════════
+  4. QUÉ DECIDIÓ ÚLTIMAMENTE — traces agrupados por patrón, no uno
+     por sesión. Cada grupo: título + detalle + última fecha.
+  ══════════════════════════════════════════════════════════════════
+  {% endcomment %}
+  <div class="dc-section">
+    <div class="dc-section-head">
+      <div class="dc-section-dot obs"></div>
+      <div class="dc-section-title">Qué decidió últimamente</div>
+      <div class="dc-line"></div>
+    </div>
+
+    <div class="dc-group">
+      <div class="dc-group-head">
+        <div class="dc-group-title">Versión esencial · 4 veces</div>
+        <span class="dc-group-count neutro">4 sesiones</span>
+      </div>
+      <div class="dc-group-detail">
+        El plan priorizó ejercicios principales y dejó los accesorios como opcionales.
+      </div>
+      <div class="dc-group-meta">Última vez: jueves 28 may</div>
+    </div>
+
+    <div class="dc-group">
+      <div class="dc-group-head">
+        <div class="dc-group-title">Sesión del plan sin adaptaciones · 2 veces</div>
+        <span class="dc-group-count neutro">2 sesiones</span>
+      </div>
+      <div class="dc-group-detail">
+        El plan se ejecutó tal cual estaba previsto, sin ajustes.
+      </div>
+      <div class="dc-group-meta">Última vez: martes 19 may</div>
+    </div>
+
+    <div class="dc-group" style="border-left:2px solid rgba(96,165,250,0.45);background:rgba(96,165,250,0.05);">
+      <div class="dc-group-head">
+        <div class="dc-group-title">Recuperación recomendada · 1 vez</div>
+        <span class="dc-group-count neutro">lesión</span>
+      </div>
+      <div class="dc-group-detail">
+        Descanso recomendado — había una lesión activa en ese momento.
+      </div>
+      <div class="dc-group-meta">Lunes 18 may</div>
+    </div>
+  </div>
+
+  {% comment %}
+  ══════════════════════════════════════════════════════════════════
+  5. CARGA POR EJERCICIO — agrupado por acción, con ejemplos, no
+     una card por ejercicio.
+  ══════════════════════════════════════════════════════════════════
+  {% endcomment %}
+  <div class="dc-section">
+    <div class="dc-section-head">
+      <div class="dc-section-dot obs"></div>
+      <div class="dc-section-title">Carga por ejercicio</div>
+      <div class="dc-line"></div>
+    </div>
+    <div style="font-size:10px;color:var(--ink-3);margin-bottom:10px;font-style:italic;">
+      Qué decidió el plan para cada ejercicio en los últimos 30 días.
+    </div>
+
+    <div class="dc-group">
+      <div class="dc-group-head">
+        <div class="dc-group-title">Mantener carga</div>
+        <span class="dc-group-count mantener">7 ejercicios</span>
+      </div>
+      <div class="dc-group-detail">
+        Press banca con mancuernas, fondos en paralelas, press banca, curl femoral tumbado, elevación de gemelos en prensa, y-raises, encogimientos con barra.
+      </div>
+      <div class="dc-group-meta">Parámetros estables — enfocar en técnica</div>
+    </div>
+
+    <div class="dc-group">
+      <div class="dc-group-head">
+        <div class="dc-group-title">Reducir peso</div>
+        <span class="dc-group-count bajar">1 ejercicio</span>
+      </div>
+      <div class="dc-group-detail">
+        Machine shoulder press — RPE alto sostenido en múltiples sesiones consecutivas.
+      </div>
+      <div class="dc-group-meta">23 May</div>
+    </div>
+
+    <div class="dc-group">
+      <div class="dc-group-head">
+        <div class="dc-group-title">Cambiar variante</div>
+        <span class="dc-group-count variante">1 ejercicio</span>
+      </div>
+      <div class="dc-group-detail">
+        Curl martillo con mancuernas — sin progresión en 3 sesiones consecutivas (15.0 kg × 10 reps). Cambio de estímulo: variante, rango de reps o tempo.
+      </div>
+      <div class="dc-group-meta">26 May</div>
+    </div>
+  </div>
+
+  {% comment %}
+  ══════════════════════════════════════════════════════════════════
+  6. ACORDEONES TÉCNICOS — todo lo detallado/histórico, colapsado
+     por defecto.
+  ══════════════════════════════════════════════════════════════════
+  {% endcomment %}
+  <div class="dc-section">
+    <div class="dc-section-head">
+      <div class="dc-section-dot obs"></div>
+      <div class="dc-section-title">Detalle completo</div>
+      <div class="dc-line"></div>
+    </div>
+
+    <details class="dc-accordion">
+      <summary>
+        <span>Ver historial completo (7 sesiones)</span>
+        <span class="arrow">▾</span>
+      </summary>
+      <div class="dc-accordion-body">
+        <div class="dc-card obs" style="margin-bottom:8px;">
+          <div style="font-family:var(--font-mono);font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink-3);margin-bottom:6px;">
+            Jueves 28 may
+          </div>
+          <div style="font-size:12px;color:var(--ink);line-height:1.55;">
+            Sesión en versión esencial: accesorios opcionales, principales primero.
+          </div>
+          <div style="font-size:10px;color:var(--ink-3);margin-top:4px;">Influyó: modo esencial.</div>
+        </div>
+        <div class="dc-card obs" style="margin-bottom:8px;">
+          <div style="font-family:var(--font-mono);font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink-3);margin-bottom:6px;">
+            Miércoles 27 may
+          </div>
+          <div style="font-size:12px;color:var(--ink);line-height:1.55;">
+            Sesión en versión esencial: accesorios opcionales, principales primero.
+          </div>
+          <div style="font-size:10px;color:var(--ink-3);margin-top:4px;">Influyó: modo esencial.</div>
+        </div>
+        <div class="dc-card obs">
+          <div style="font-family:var(--font-mono);font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink-3);margin-bottom:6px;">
+            Lunes 18 may
+          </div>
+          <div style="font-size:12px;color:var(--ink);line-height:1.55;">
+            Descanso recomendado — lesión activa en ese momento.
+          </div>
+        </div>
+      </div>
+    </details>
+
+    <details class="dc-accordion">
+      <summary>
+        <span>Ver decisiones por ejercicio (9)</span>
+        <span class="arrow">▾</span>
+      </summary>
+      <div class="dc-accordion-body">
+        <div class="dc-card obs" style="display:flex;align-items:center;justify-content:space-between;">
+          <div>
+            <div style="font-size:12px;color:var(--ink);font-weight:600;">Press banca con mancuernas</div>
+            <div style="font-size:10px;color:var(--ink-3);margin-top:2px;font-style:italic;">Parámetros estables — mantener y enfocar en técnica</div>
+          </div>
+          <div style="text-align:right;flex-shrink:0;margin-left:12px;">
+            <span style="font-size:9px;padding:2px 8px;border-radius:99px;background:rgba(245,158,11,0.12);color:rgba(245,158,11,0.8);">Mantener</span>
+            <div style="font-size:9px;color:var(--ink-3);margin-top:4px;font-family:var(--font-mono);">10 Jun</div>
+          </div>
+        </div>
+        <div class="dc-card obs" style="display:flex;align-items:center;justify-content:space-between;margin-top:8px;">
+          <div>
+            <div style="font-size:12px;color:var(--ink);font-weight:600;">Fondos en paralelas (con lastre)</div>
+            <div style="font-size:10px;color:var(--ink-3);margin-top:2px;font-style:italic;">Parámetros estables — mantener y enfocar en técnica</div>
+          </div>
+          <div style="text-align:right;flex-shrink:0;margin-left:12px;">
+            <span style="font-size:9px;padding:2px 8px;border-radius:99px;background:rgba(245,158,11,0.12);color:rgba(245,158,11,0.8);">Mantener</span>
+            <div style="font-size:9px;color:var(--ink-3);margin-top:4px;font-family:var(--font-mono);">10 Jun</div>
+          </div>
+        </div>
+        <div style="font-size:10px;color:var(--ink-3);text-align:center;margin-top:8px;font-style:italic;">
+          ··· 7 más
+        </div>
+      </div>
+    </details>
+
+    <details class="dc-accordion">
+      <summary>
+        <span>Ver sesiones esenciales (4)</span>
+        <span class="arrow">▾</span>
+      </summary>
+      <div class="dc-accordion-body">
+        <div class="dc-card obs">
+          <div style="font-size:12px;color:var(--ink);">28 may · Push Day — accesorios opcionales</div>
+        </div>
+        <div class="dc-card obs" style="margin-top:8px;">
+          <div style="font-size:12px;color:var(--ink);">27 may · Pull Day — accesorios opcionales</div>
+        </div>
+        <div style="font-size:10px;color:var(--ink-3);text-align:center;margin-top:8px;font-style:italic;">
+          ··· 2 más
+        </div>
+      </div>
+    </details>
+  </div>
+
+</div>
+
+{% include 'includes/_joi_fab.html' %}
+</body>
+</html>
