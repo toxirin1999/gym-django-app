@@ -176,5 +176,5 @@ class TestCase10_CentroMuestra(HipotesisBase):
             self._trace_eval(estado='posponer', dias_atras=i+2)
         response = self._get_centro()
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'Señales acumuladas')
+        self.assertContains(response, 'Activo ahora')
         self.assertContains(response, 'Hipótesis ·')

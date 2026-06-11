@@ -212,18 +212,18 @@ class TestCase9_TemplateSmokeTest(PlanDecisionesBase):
         self._crear_decision()
         response = self._get()
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'Activo ahora mismo')
-        self.assertContains(response, 'Lo que el plan recuerda')
-        self.assertContains(response, 'Ajuste activo de esta semana')
+        self.assertContains(response, 'Activo ahora')
+        self.assertContains(response, 'permanente · revocable')
+        self.assertContains(response, 'temporal · hasta el')
 
     def test_template_renders_with_empty_data(self):
         response = self._get()
         self.assertEqual(response.status_code, 200)
-        # Sin datos, el hero "Activo ahora mismo" siempre aparece
-        self.assertContains(response, 'Activo ahora mismo')
-        # Las secciones con preferencias/intervenciones no aparecen si no hay datos
-        self.assertNotContains(response, 'Lo que el plan recuerda')
-        self.assertNotContains(response, 'Ajuste activo de esta semana')
+        # Sin datos, la sección "Activo ahora" siempre aparece
+        self.assertContains(response, 'Activo ahora')
+        # Las cards de preferencias/intervenciones no aparecen si no hay datos
+        self.assertNotContains(response, 'permanente · revocable')
+        self.assertNotContains(response, 'temporal · hasta el')
 
 
 # ── Case 10: URL resolution ───────────────────────────────────────────────────
