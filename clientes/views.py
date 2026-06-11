@@ -4941,7 +4941,8 @@ def plan_decisiones_view(request):
         pass
 
     # 5. Decisiones de carga recientes (todas: mantener, subir, bajar, deload)
-    _ACCIONES_TODAS = {'cambiar_variante', 'bajar_peso', 'deload', 'mantener'}
+    # Phase 62G.3 — subir_peso es ejecutivo desde 62H, debe ser transparente.
+    _ACCIONES_TODAS = {'cambiar_variante', 'bajar_peso', 'deload', 'mantener', 'subir_peso'}
     decisiones_carga = list(
         GymDecisionLog.objects.filter(
             cliente=cliente,

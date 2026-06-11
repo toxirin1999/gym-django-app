@@ -153,12 +153,14 @@ class TestCase6_DecisionesCarga(PlanDecisionesBase):
         self.assertEqual(len(decs), 1)
         self.assertEqual(decs[0].accion, 'deload')
 
-    def test_subir_peso_no_aparece_como_decision_activa(self):
+    def test_subir_peso_aparece_como_decision_de_carga(self):
+        # Phase 62G.3 — subir_peso es ejecutivo desde 62H (peso_sugerido se
+        # aplica a la siguiente sesión), debe ser visible en transparencia.
         self._crear_decision(accion='subir_peso')
         response = self._get()
         decs = list(response.context['decisiones_carga'])
-        # 'subir_peso' is normal progression, not an intervention action
-        self.assertEqual(len(decs), 0)
+        self.assertEqual(len(decs), 1)
+        self.assertEqual(decs[0].accion, 'subir_peso')
 
     def test_multiples_decisiones_ordenadas_por_fecha(self):
         for accion in ['deload', 'bajar_peso', 'cambiar_variante']:
@@ -236,3 +238,21 @@ class TestCase10_URLResolution(PlanDecisionesBase):
     def test_volver_link_goes_to_mockup(self):
         response = self._get()
         self.assertContains(response, '/clientes/mockup-demo/')
+
+
+# ── Case 11: Phase 62G.3 — subir_peso agrupado en "Carga por ejercicio" ──────
+
+class TestCase11_SubirPesoAgrupado(PlanDecisionesBase):
+    def test_subir_peso_aparece_agrupado(self):
+        self._crear_decision(accion='subir_peso')
+        response = self._get()
+        grupos = {g['accion']: g for g in response.context['decisiones_agrupadas']}
+        self.assertIn('subir_peso', grupos)
+        self.assertEqual(grupos['subir_peso']['label'], 'Subir peso')
+        self.assertEqual(grupos['subir_peso']['count'], 1)
+        self.assertIn('Sentadilla', grupos['subir_peso']['ejercicios'])
+
+    def test_subir_peso_se_renderiza_en_template(self):
+        self._crear_decision(accion='subir_peso')
+        response = self._get()
+        self.assertContains(response, 'Subir peso')
