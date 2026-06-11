@@ -5029,3 +5029,16 @@ def plan_decisiones_view(request):
         'lectura_semanal_joi': lectura_semanal_joi,
         'continuidad': continuidad,
     })
+
+
+@login_required
+def plan_decisiones_mockup_view(request):
+    """
+    Phase 62G.0 — Mockup estático del Centro de decisiones 2.0.
+
+    Sin lógica nueva: solo HTML/CSS con datos de ejemplo, para validar la
+    jerarquía visual propuesta (hero narrativo, "activo ahora" unificado,
+    decisiones agrupadas, acordeones técnicos) antes de construir los
+    agrupadores reales en 62G.1.
+    """
+    return render(request, 'clientes/plan_decisiones_mockup.html', {})
