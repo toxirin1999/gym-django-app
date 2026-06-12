@@ -946,12 +946,11 @@ def _get_dashboard_context_data(request, cliente):
     entreno_semana_realizado = False
     entreno_realizado_obj = None  # El EntrenoRealizado concreto, si ya fue hecho
     if _rutina_hoy and not entreno_hoy_realizado:
-        # Busca por nombre de rutina en los EntrenoRealizado de esta semana
-        entreno_realizado_obj = EntrenoRealizado.objects.filter(
-            cliente=cliente,
-            fecha__gte=_lunes_semana,
-            rutina__nombre__iexact=_rutina_hoy,
-        ).prefetch_related('ejercicios_realizados').order_by('-fecha').first()
+        # Busca por nombre de rutina en los EntrenoRealizado de esta semana,
+        # descartando catch-ups tardíos de la sesión "Día N" de OTRA semana
+        # de periodización con el mismo nombre (Phase 62J).
+        from entrenos.services.sesion_recomendada import buscar_entreno_realizado_esta_semana
+        entreno_realizado_obj = buscar_entreno_realizado_esta_semana(cliente, hoy, _rutina_hoy)
         entreno_semana_realizado = entreno_realizado_obj is not None
         if not entreno_semana_realizado:
             # Busca en ActividadRealizada por título (sesiones anticipadas)

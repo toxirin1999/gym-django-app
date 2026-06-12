@@ -79,6 +79,7 @@ class PlanificadorHelms:
             "bloque": bloque_actual['nombre'],
             "dia": idx_en_offset + 1,
             "semana_nombre": f"Semana {semana_en_bloque}",
+            "semana_en_bloque": semana_en_bloque,
         }
 
     def generar_plan_anual(self) -> Dict[str, Any]:
