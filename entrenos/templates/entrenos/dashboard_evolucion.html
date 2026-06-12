@@ -382,6 +382,8 @@ body {
 .rb-tl-chip { font-family: var(--font-mono); font-size: 10px; font-weight: 700;
   padding: 3px 7px; background: var(--paper-2); border-radius: 2px; color: var(--ink-3);
   display: inline-flex; align-items: center; gap: 4px; }
+.rb-tl-chip-muted { font-family: inherit; font-weight: 500; font-size: 11px;
+  letter-spacing: normal; text-transform: none; }
 
 /* ── HEATMAP ─────────────────────────────────── */
 .rb-heatmap-wrap { overflow-x: auto; padding-bottom: 8px; }
@@ -1236,6 +1238,9 @@ body {
               </div>
               <div class="rb-tl-date">{{ sesion.entreno.fecha|date:"d M Y"|upper }}</div>
               <div class="rb-tl-chips">
+                {% if sesion.entreno.es_sesion_incompleta %}
+                <span class="rb-tl-chip rb-tl-chip-muted"><i class="fas fa-circle-info"></i> Sesión abierta sin ejercicios registrados</span>
+                {% else %}
                 <span class="rb-tl-chip"><i class="fas fa-clock"></i> {{ sesion.duracion_minutos }} min</span>
                 <span class="rb-tl-chip"><i class="fas fa-dumbbell"></i> {{ sesion.ejercicios_completados }}/{{ sesion.ejercicios_totales }}</span>
                 <span class="rb-tl-chip"><i class="fas fa-weight-hanging"></i> {{ sesion.volumen_sesion|floatformat:0 }} kg</span>
@@ -1243,6 +1248,7 @@ body {
                 <span class="rb-tl-chip" style="background:rgba(193,53,21,0.10);color:var(--accent);">
                   <i class="fas fa-heart"></i> RPE {{ sesion.rpe_medio|floatformat:1 }}
                 </span>
+                {% endif %}
                 {% endif %}
               </div>
             </div>
@@ -1257,6 +1263,7 @@ body {
         <div class="rb-card-head">
           <div class="rb-card-title t-ok"><i class="fas fa-calendar-days"></i> Actividad Anual</div>
         </div>
+        {% if actividad_anual_data %}
         <div class="rb-heatmap-wrap">
           <div id="ev-heatmap"></div>
           <div class="rb-hm-legend">
@@ -1269,6 +1276,9 @@ body {
             <span class="rb-hm-lbl">Más</span>
           </div>
         </div>
+        {% else %}
+        <div class="rb-empty"><i class="fas fa-calendar-xmark"></i><p>Sin actividad registrada este año</p></div>
+        {% endif %}
       </div>
 
     </div>
