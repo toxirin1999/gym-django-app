@@ -152,6 +152,7 @@ body {
 .rb-card-title.t-warn  { color: var(--warn); }
 .rb-card-foot { font-family: var(--font-mono); font-size: 10px; color: var(--ink-4);
   letter-spacing: 0.05em; margin-top: 10px; display: flex; align-items: center; gap: 6px; }
+.rb-card-secondary { background: var(--paper-2); }
 
 /* ── GRID LAYOUTS ────────────────────────────── */
 .rb-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
@@ -305,6 +306,7 @@ body {
 .rb-forecast-top strong { font-size: 12px; font-weight: 700; color: var(--ink); line-height: 1.3; }
 .rb-conf-badge { font-family: var(--font-mono); font-size: 10px; font-weight: 700;
   color: var(--ok); white-space: nowrap; }
+.rb-conf-badge-muted { color: var(--ink-3) !important; }
 .rb-frow { display: flex; justify-content: space-between; align-items: center;
   padding: 5px 0; border-bottom: 1px solid var(--line); font-size: 12px; color: var(--ink-3); }
 .rb-frow:last-child { border-bottom: none; }
@@ -834,6 +836,7 @@ body {
 
   <!-- GENERAL -->
   <div id="rb-tab-overview" class="rb-tab-panel">
+    <p class="rb-lectura-desc" style="margin-bottom:12px;">{{ lectura_periodo }}</p>
     <div class="rb-grid-2">
 
       <div class="rb-card">
@@ -869,6 +872,7 @@ body {
 
   <!-- CARGA -->
   <div id="rb-tab-carga" class="rb-tab-panel" style="display:none;">
+    <p class="rb-lectura-desc" style="margin-bottom:12px;">{{ lectura_carga_tab }}</p>
     <div class="rb-stack">
 
       <div class="rb-card">
@@ -922,16 +926,6 @@ body {
 
       <div class="rb-card">
         <div class="rb-card-head">
-          <div class="rb-card-title t-warn"><i class="fas fa-scale-balanced"></i> Equilibrio Muscular</div>
-        </div>
-        <div class="rb-chart-box radar">
-          <canvas id="balanceRadarChart" data-radar='{{ equilibrio_radar_json|safe }}'></canvas>
-        </div>
-        <div class="rb-card-foot"><i class="fas fa-info-circle"></i> Ratio de fuerza por patrón (1RM estimado)</div>
-      </div>
-
-      <div class="rb-card">
-        <div class="rb-card-head">
           <div class="rb-card-title t-warn"><i class="fas fa-fire-flame-curved"></i> Series Semanales por Grupo
             <a href="#glosario-mapeo" style="color:var(--ink-4);font-size:11px;margin-left:4px;">
               <i class="fas fa-circle-question"></i>
@@ -942,6 +936,16 @@ body {
           <canvas id="volumenOptimoChart" data-vol-optimo='{{ volumen_optimo_json|safe }}'></canvas>
         </div>
         <div class="rb-card-foot"><i class="fas fa-lightbulb"></i> Rango recomendado: 10–20 series efectivas / grupo / semana</div>
+      </div>
+
+      <div class="rb-card">
+        <div class="rb-card-head">
+          <div class="rb-card-title t-warn"><i class="fas fa-scale-balanced"></i> Equilibrio Muscular</div>
+        </div>
+        <div class="rb-chart-box radar">
+          <canvas id="balanceRadarChart" data-radar='{{ equilibrio_radar_json|safe }}'></canvas>
+        </div>
+        <div class="rb-card-foot"><i class="fas fa-info-circle"></i> Ratio de fuerza por patrón (1RM estimado)</div>
       </div>
 
       <div class="rb-card">
@@ -959,38 +963,75 @@ body {
 
   <!-- PROGRESIÓN -->
   <div id="rb-tab-progresion" class="rb-tab-panel" style="display:none;">
+    <p class="rb-lectura-desc" style="margin-bottom:12px;">{{ lectura_progresion_tab }}</p>
     <div class="rb-stack">
 
       <div class="rb-card">
         <div class="rb-card-head">
-          <div class="rb-card-title"><i class="fas fa-wand-magic-sparkles"></i> Proyecciones IA — 1RM Futuro</div>
+          <div class="rb-card-title t-ok"><i class="fas fa-chart-column"></i> Progresión de Ejercicios</div>
         </div>
-        <div class="rb-forecast-grid">
-          {% if predicciones_ia %}
-          {% for pred in predicciones_ia %}
-          <div class="rb-forecast-item">
-            <div class="rb-forecast-top">
-              <strong>{{ pred.nombre }}</strong>
-              <span class="rb-conf-badge"><i class="fas fa-chart-line"></i> {{ pred.confianza }}%</span>
-            </div>
-            <div class="rb-frow"><span>Actual</span><span class="rb-fval-now">{{ pred.actual }} kg</span></div>
-            <div class="rb-frow"><span>+4 semanas</span><span class="rb-fval-ok">{{ pred.p4_semanas }} kg</span></div>
-            <div class="rb-frow"><span>+8 semanas</span><span class="rb-fval-warn">{{ pred.p8_semanas }} kg</span></div>
-            <div class="rb-forecast-bar"><div class="rb-forecast-fill" style="width:{{ pred.confianza }}%"></div></div>
-          </div>
-          {% endfor %}
-          {% else %}
-          <div class="rb-empty" style="grid-column:1/-1;">
-            <i class="fas fa-dumbbell"></i>
-            <p>Entrena más en los "3 Grandes" para generar proyecciones</p>
-          </div>
-          {% endif %}
+        <div class="rb-table-wrap">
+          <table class="rb-table">
+            <thead>
+              <tr>
+                <th>Ejercicio</th>
+                <th>Inicial</th>
+                <th>Actual</th>
+                <th>Cambio</th>
+                <th>%</th>
+                <th>Tendencia</th>
+                <th>Próxima acción</th>
+              </tr>
+            </thead>
+            <tbody>
+            {% for prog in progresion_ejercicios %}
+            <tr>
+              <td class="rb-td-name">{{ prog.nombre_ejercicio }}</td>
+              <td class="rb-td-mono">{{ prog.peso_inicial }} kg</td>
+              <td class="rb-td-mono">{{ prog.peso_actual }} kg</td>
+              <td>
+                {% if prog.progresion_kg > 0 %}<span class="rb-badge rb-badge-ok"><i class="fas fa-arrow-up"></i> +{{ prog.progresion_kg }} kg</span>
+                {% elif prog.progresion_kg < 0 %}<span class="rb-badge rb-badge-accent"><i class="fas fa-arrow-down"></i> {{ prog.progresion_kg|floatformat:1 }} kg</span>
+                {% else %}<span class="rb-badge rb-badge-muted"><i class="fas fa-minus"></i> 0 kg</span>{% endif %}
+              </td>
+              <td>
+                {% if prog.progresion_porcentaje > 0 %}<span class="rb-badge rb-badge-ok">+{{ prog.progresion_porcentaje }}%</span>
+                {% elif prog.progresion_porcentaje < 0 %}<span class="rb-badge rb-badge-accent">{{ prog.progresion_porcentaje }}%</span>
+                {% else %}<span class="rb-badge rb-badge-muted">0%</span>{% endif %}
+              </td>
+              <td>
+                {% if prog.tendencia == 'subiendo' %}<span class="rb-badge rb-badge-ok"><i class="fas fa-arrow-trend-up"></i> Subiendo</span>
+                {% elif prog.tendencia == 'bajando' %}<span class="rb-badge rb-badge-accent"><i class="fas fa-arrow-trend-down"></i> Bajando</span>
+                {% else %}<span class="rb-badge rb-badge-muted"><i class="fas fa-arrows-left-right"></i> Estable</span>{% endif %}
+              </td>
+              <td>
+                {% if prog.proxima_accion %}
+                  {% with pa=prog.proxima_accion %}
+                  <span class="rb-next-action rb-na-{{ pa.accion }}"
+                        title="{{ pa.motivo }} (confianza {{ pa.confianza }})">
+                    {% if pa.accion == 'subir_peso' %}<i class="fas fa-arrow-up"></i> {% if pa.peso_sugerido %}{{ pa.peso_sugerido }} kg{% else %}+{{ pa.valor_cambio|floatformat:1 }}%{% endif %}
+                    {% elif pa.accion == 'subir_reps' %}<i class="fas fa-plus"></i> +reps
+                    {% elif pa.accion == 'bajar_peso' %}<i class="fas fa-arrow-down"></i> {% if pa.peso_sugerido %}{{ pa.peso_sugerido }} kg{% else %}-{{ pa.valor_cambio|floatformat:1 }}%{% endif %}
+                    {% elif pa.accion == 'deload' %}<i class="fas fa-battery-quarter"></i> Deload
+                    {% elif pa.accion == 'cambiar_variante' %}<i class="fas fa-shuffle"></i> Variante
+                    {% else %}<i class="fas fa-minus"></i> Mantener{% endif %}
+                    <span class="rb-na-conf rb-na-conf-{{ pa.confianza }}"></span>
+                  </span>
+                  {% endwith %}
+                {% else %}
+                  <span class="rb-badge rb-badge-muted">—</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+            </tbody>
+          </table>
         </div>
       </div>
 
       <div class="rb-card">
         <div class="rb-card-head">
-          <div class="rb-card-title t-accent"><i class="fas fa-triangle-exclamation"></i> Detector de Estancamientos</div>
+          <div class="rb-card-title t-accent"><i class="fas fa-triangle-exclamation"></i> Ejercicios a Vigilar</div>
           {% if estancamientos %}
           <span class="rb-count-badge rb-count-warn">{{ estancamientos|length }}</span>
           {% endif %}
@@ -1018,120 +1059,88 @@ body {
         </div>
       </div>
 
-    </div>
-
-    <div class="rb-card" style="margin-top:12px;">
-      <div class="rb-card-head">
-        <div class="rb-card-title t-ok"><i class="fas fa-chart-column"></i> Progresión de Ejercicios</div>
-      </div>
-      <div class="rb-table-wrap">
-        <table class="rb-table">
-          <thead>
-            <tr>
-              <th>Ejercicio</th>
-              <th>Inicial</th>
-              <th>Actual</th>
-              <th>Cambio</th>
-              <th>%</th>
-              <th>Tendencia</th>
-              <th>Próxima acción</th>
-            </tr>
-          </thead>
-          <tbody>
-          {% for prog in progresion_ejercicios %}
-          <tr>
-            <td class="rb-td-name">{{ prog.nombre_ejercicio }}</td>
-            <td class="rb-td-mono">{{ prog.peso_inicial }} kg</td>
-            <td class="rb-td-mono">{{ prog.peso_actual }} kg</td>
-            <td>
-              {% if prog.progresion_kg > 0 %}<span class="rb-badge rb-badge-ok"><i class="fas fa-arrow-up"></i> +{{ prog.progresion_kg }} kg</span>
-              {% elif prog.progresion_kg < 0 %}<span class="rb-badge rb-badge-accent"><i class="fas fa-arrow-down"></i> {{ prog.progresion_kg|floatformat:1 }} kg</span>
-              {% else %}<span class="rb-badge rb-badge-muted"><i class="fas fa-minus"></i> 0 kg</span>{% endif %}
-            </td>
-            <td>
-              {% if prog.progresion_porcentaje > 0 %}<span class="rb-badge rb-badge-ok">+{{ prog.progresion_porcentaje }}%</span>
-              {% elif prog.progresion_porcentaje < 0 %}<span class="rb-badge rb-badge-accent">{{ prog.progresion_porcentaje }}%</span>
-              {% else %}<span class="rb-badge rb-badge-muted">0%</span>{% endif %}
-            </td>
-            <td>
-              {% if prog.tendencia == 'subiendo' %}<span class="rb-badge rb-badge-ok"><i class="fas fa-arrow-trend-up"></i> Subiendo</span>
-              {% elif prog.tendencia == 'bajando' %}<span class="rb-badge rb-badge-accent"><i class="fas fa-arrow-trend-down"></i> Bajando</span>
-              {% else %}<span class="rb-badge rb-badge-muted"><i class="fas fa-arrows-left-right"></i> Estable</span>{% endif %}
-            </td>
-            <td>
-              {% if prog.proxima_accion %}
-                {% with pa=prog.proxima_accion %}
-                <span class="rb-next-action rb-na-{{ pa.accion }}"
-                      title="{{ pa.motivo }} (confianza {{ pa.confianza }})">
-                  {% if pa.accion == 'subir_peso' %}<i class="fas fa-arrow-up"></i> {% if pa.peso_sugerido %}{{ pa.peso_sugerido }} kg{% else %}+{{ pa.valor_cambio|floatformat:1 }}%{% endif %}
-                  {% elif pa.accion == 'subir_reps' %}<i class="fas fa-plus"></i> +reps
-                  {% elif pa.accion == 'bajar_peso' %}<i class="fas fa-arrow-down"></i> {% if pa.peso_sugerido %}{{ pa.peso_sugerido }} kg{% else %}-{{ pa.valor_cambio|floatformat:1 }}%{% endif %}
-                  {% elif pa.accion == 'deload' %}<i class="fas fa-battery-quarter"></i> Deload
-                  {% elif pa.accion == 'cambiar_variante' %}<i class="fas fa-shuffle"></i> Variante
-                  {% else %}<i class="fas fa-minus"></i> Mantener{% endif %}
-                  <span class="rb-na-conf rb-na-conf-{{ pa.confianza }}"></span>
-                </span>
-                {% endwith %}
-              {% else %}
-                <span class="rb-badge rb-badge-muted">—</span>
-              {% endif %}
-            </td>
-          </tr>
-          {% endfor %}
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    {% if decision_logs %}
-    <div class="rb-card" style="margin-top:12px;">
-      <div class="rb-card-head">
-        <div class="rb-card-title"><i class="fas fa-clock-rotate-left"></i> Últimos ajustes automáticos</div>
-        {% if precision_sistema.totales > 0 %}
-        <span class="rb-chip rb-chip-ok" style="margin-left:auto;font-size:.75rem;">
-          <i class="fas fa-bullseye"></i> Precisión {{ precision_sistema.precision }}%
-          <span style="opacity:.6;font-size:.7rem;margin-left:4px;">({{ precision_sistema.validadas }}/{{ precision_sistema.totales }})</span>
-        </span>
-        {% endif %}
-      </div>
-      <div class="rb-decision-list">
-        {% for log in decision_logs %}
-        <div class="rb-dlog-row">
-          <div class="rb-dlog-left">
-            <span class="rb-dlog-exer">{{ log.ejercicio|title }}</span>
-            <span class="rb-dlog-date">{{ log.fecha_creacion|date:"d/m/Y" }}</span>
-          </div>
-          <div class="rb-dlog-center">
-            <span class="rb-next-action rb-na-{{ log.accion }}">
-              {% if log.accion == 'subir_peso' %}<i class="fas fa-arrow-up"></i> {% if log.peso_sugerido %}{{ log.peso_sugerido }} kg{% else %}+{{ log.valor_cambio|floatformat:1 }}%{% endif %}
-              {% elif log.accion == 'subir_reps' %}<i class="fas fa-plus"></i> Subir reps
-              {% elif log.accion == 'bajar_peso' %}<i class="fas fa-arrow-down"></i> {% if log.peso_sugerido %}{{ log.peso_sugerido }} kg{% else %}-{{ log.valor_cambio|floatformat:1 }}%{% endif %}
-              {% elif log.accion == 'deload' %}<i class="fas fa-battery-quarter"></i> Deload
-              {% else %}<i class="fas fa-minus"></i> Mantener{% endif %}
-            </span>
-            <span class="rb-dlog-motivo">{{ log.motivo }}</span>
-          </div>
-          <div class="rb-dlog-right">
-            {% if log.resultado == 'validada' %}
-            <span class="rb-badge rb-badge-ok" title="{{ log.notas_resultado }}"><i class="fas fa-check"></i> Validada</span>
-            {% elif log.resultado == 'fallida' %}
-            <span class="rb-badge rb-badge-accent" title="{{ log.notas_resultado }}"><i class="fas fa-xmark"></i> Fallida</span>
-            {% elif log.resultado == 'neutra' %}
-            <span class="rb-badge rb-badge-muted" title="{{ log.notas_resultado }}"><i class="fas fa-minus"></i> Neutra</span>
-            {% else %}
-            <span class="rb-badge rb-badge-muted" style="opacity:.5;">Pendiente</span>
-            {% endif %}
-            <span class="rb-conf-badge rb-conf-{{ log.confianza }}" title="Confianza {{ log.confianza }}">
-              {% if log.confianza == 'alta' %}●●●
-              {% elif log.confianza == 'media' %}●●○
-              {% else %}●○○{% endif %}
-            </span>
-          </div>
+      {% if decision_logs %}
+      <div class="rb-card">
+        <div class="rb-card-head">
+          <div class="rb-card-title"><i class="fas fa-clock-rotate-left"></i> Últimos ajustes automáticos</div>
+          {% if precision_sistema.totales > 0 %}
+          <span class="rb-chip rb-chip-ok" style="margin-left:auto;font-size:.75rem;">
+            <i class="fas fa-bullseye"></i> Precisión {{ precision_sistema.precision }}%
+            <span style="opacity:.6;font-size:.7rem;margin-left:4px;">({{ precision_sistema.validadas }}/{{ precision_sistema.totales }})</span>
+          </span>
+          {% endif %}
         </div>
-        {% endfor %}
+        <div class="rb-decision-list">
+          {% for log in decision_logs %}
+          <div class="rb-dlog-row">
+            <div class="rb-dlog-left">
+              <span class="rb-dlog-exer">{{ log.ejercicio|title }}</span>
+              <span class="rb-dlog-date">{{ log.fecha_creacion|date:"d/m/Y" }}</span>
+            </div>
+            <div class="rb-dlog-center">
+              <span class="rb-next-action rb-na-{{ log.accion }}">
+                {% if log.accion == 'subir_peso' %}<i class="fas fa-arrow-up"></i> {% if log.peso_sugerido %}{{ log.peso_sugerido }} kg{% else %}+{{ log.valor_cambio|floatformat:1 }}%{% endif %}
+                {% elif log.accion == 'subir_reps' %}<i class="fas fa-plus"></i> Subir reps
+                {% elif log.accion == 'bajar_peso' %}<i class="fas fa-arrow-down"></i> {% if log.peso_sugerido %}{{ log.peso_sugerido }} kg{% else %}-{{ log.valor_cambio|floatformat:1 }}%{% endif %}
+                {% elif log.accion == 'deload' %}<i class="fas fa-battery-quarter"></i> Deload
+                {% else %}<i class="fas fa-minus"></i> Mantener{% endif %}
+              </span>
+              <span class="rb-dlog-motivo">{{ log.motivo }}</span>
+            </div>
+            <div class="rb-dlog-right">
+              {% if log.resultado == 'validada' %}
+              <span class="rb-badge rb-badge-ok" title="{{ log.notas_resultado }}"><i class="fas fa-check"></i> Validada</span>
+              {% elif log.resultado == 'fallida' %}
+              <span class="rb-badge rb-badge-accent" title="{{ log.notas_resultado }}"><i class="fas fa-xmark"></i> Fallida</span>
+              {% elif log.resultado == 'neutra' %}
+              <span class="rb-badge rb-badge-muted" title="{{ log.notas_resultado }}"><i class="fas fa-minus"></i> Neutra</span>
+              {% else %}
+              <span class="rb-badge rb-badge-muted" style="opacity:.5;">Pendiente</span>
+              {% endif %}
+              <span class="rb-conf-badge rb-conf-{{ log.confianza }}" title="Confianza {{ log.confianza }}">
+                {% if log.confianza == 'alta' %}●●●
+                {% elif log.confianza == 'media' %}●●○
+                {% else %}●○○{% endif %}
+              </span>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
       </div>
+      {% endif %}
+
+      <div class="rb-card rb-card-secondary">
+        <div class="rb-card-head">
+          <div class="rb-card-title"><i class="fas fa-wand-magic-sparkles"></i> Proyecciones IA — 1RM Futuro</div>
+        </div>
+        <div class="rb-card-foot" style="margin-bottom:8px;"><i class="fas fa-circle-info"></i> Estimación basada en la tendencia reciente — no sustituye al plan.</div>
+        <div class="rb-forecast-grid">
+          {% if predicciones_ia %}
+          {% for pred in predicciones_ia %}
+          <div class="rb-forecast-item">
+            <div class="rb-forecast-top">
+              <strong>{{ pred.nombre }}</strong>
+              <div style="text-align:right;">
+                <span class="rb-conf-badge rb-conf-badge-muted"><i class="fas fa-chart-line"></i> {{ pred.confianza }}%</span>
+                <div style="font-size:9px;color:var(--ink-4);margin-top:2px;">si se mantiene la tendencia</div>
+              </div>
+            </div>
+            <div class="rb-frow"><span>Actual</span><span class="rb-fval-now">{{ pred.actual }} kg</span></div>
+            <div class="rb-frow"><span>+4 semanas</span><span class="rb-fval-ok">{{ pred.p4_semanas }} kg</span></div>
+            <div class="rb-frow"><span>+8 semanas</span><span class="rb-fval-warn">{{ pred.p8_semanas }} kg</span></div>
+            <div class="rb-forecast-bar"><div class="rb-forecast-fill" style="width:{{ pred.confianza }}%"></div></div>
+          </div>
+          {% endfor %}
+          {% else %}
+          <div class="rb-empty" style="grid-column:1/-1;">
+            <i class="fas fa-dumbbell"></i>
+            <p>Entrena más en los "3 Grandes" para generar proyecciones</p>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
     </div>
-    {% endif %}
   </div>
 
   <!-- RÉCORDS -->
@@ -1158,6 +1167,7 @@ body {
         </div>
       </div>
 
+      {% if desafios_activos %}
       <div class="rb-card">
         <div class="rb-card-head">
           <div class="rb-card-title"><i class="fas fa-crosshairs"></i> Desafíos Semanales</div>
@@ -1178,32 +1188,34 @@ body {
             </div>
           </div>
         </div>
-        {% empty %}
-        <div class="rb-empty"><i class="fas fa-flag-checkered"></i><p>No hay desafíos activos</p></div>
         {% endfor %}
       </div>
+      {% endif %}
 
     </div>
 
-    <div class="rb-card" style="margin-top:12px;">
-      <div class="rb-card-head">
-        <div class="rb-card-title t-warn"><i class="fas fa-medal"></i> Logros Desbloqueados</div>
-        <span class="rb-count-badge rb-count-ok">{{ logros_desbloqueados|length }}</span>
-      </div>
-      <div class="rb-achievement-grid">
-        {% for clitlogro in logros_desbloqueados %}
-        <div class="rb-achievement" title="{{ clitlogro.logro.descripcion }}">
-          <div class="rb-achievement-icon">{{ clitlogro.logro.icono }}</div>
-          <div class="rb-achievement-name">{{ clitlogro.logro.nombre }}</div>
-          <div class="rb-achievement-date">{{ clitlogro.fecha_desbloqueo|date:"d/m/Y" }}</div>
+    <details class="rb-details-plan" style="margin-top:12px;">
+      <summary>Ver logros desbloqueados ({{ logros_desbloqueados|length }})</summary>
+      <div class="rb-card">
+        <div class="rb-card-head">
+          <div class="rb-card-title t-warn"><i class="fas fa-medal"></i> Logros Desbloqueados</div>
+          <span class="rb-count-badge rb-count-ok">{{ logros_desbloqueados|length }}</span>
         </div>
-        {% empty %}
-        <div class="rb-empty" style="grid-column:1/-1;">
-          <i class="fas fa-award"></i><p>Sigue entrenando para desbloquear tu primer logro</p>
+        <div class="rb-achievement-grid">
+          {% for clitlogro in logros_desbloqueados %}
+          <div class="rb-achievement" title="{{ clitlogro.logro.descripcion }}">
+            <div class="rb-achievement-icon">{{ clitlogro.logro.icono }}</div>
+            <div class="rb-achievement-name">{{ clitlogro.logro.nombre }}</div>
+            <div class="rb-achievement-date">{{ clitlogro.fecha_desbloqueo|date:"d/m/Y" }}</div>
+          </div>
+          {% empty %}
+          <div class="rb-empty" style="grid-column:1/-1;">
+            <i class="fas fa-award"></i><p>Sigue entrenando para desbloquear tu primer logro</p>
+          </div>
+          {% endfor %}
         </div>
-        {% endfor %}
       </div>
-    </div>
+    </details>
   </div>
 
   <!-- HISTORIAL -->
@@ -1263,29 +1275,25 @@ body {
   </div>
 
   <!-- ── GLOSARIO ── -->
-  <div id="glosario-mapeo" class="rb-section">
-    <div class="rb-section-head">
-      <span class="rb-section-num">03</span>
-      <h2 class="rb-section-title">Glosario Muscular</h2>
-      <div class="rb-section-line"></div>
-    </div>
-  </div>
-  <div class="rb-card rb-glosario">
-    <p class="rb-glosario-sub">Ejercicios contabilizados por grupo muscular en el gráfico de series semanales.</p>
-    <div class="rb-glosario-grid">
-      {% for grupo, ejercicios in glosario.items %}
-      <div class="rb-glosario-item">
-        <div class="rb-glosario-head">
-          <span class="rb-glosario-dot"></span>
-          <strong>{{ grupo }}</strong>
+  <details class="rb-details-plan" id="glosario-mapeo" style="margin-top:20px;">
+    <summary>Ver Glosario Muscular</summary>
+    <div class="rb-card rb-glosario">
+      <p class="rb-glosario-sub">Ejercicios contabilizados por grupo muscular en el gráfico de series semanales.</p>
+      <div class="rb-glosario-grid">
+        {% for grupo, ejercicios in glosario.items %}
+        <div class="rb-glosario-item">
+          <div class="rb-glosario-head">
+            <span class="rb-glosario-dot"></span>
+            <strong>{{ grupo }}</strong>
+          </div>
+          <ul class="rb-glosario-list">
+            {% for ej in ejercicios %}<li>{{ ej }}</li>{% endfor %}
+          </ul>
         </div>
-        <ul class="rb-glosario-list">
-          {% for ej in ejercicios %}<li>{{ ej }}</li>{% endfor %}
-        </ul>
+        {% endfor %}
       </div>
-      {% endfor %}
     </div>
-  </div>
+  </details>
 
 </div><!-- /rb-container -->
 

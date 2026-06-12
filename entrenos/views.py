@@ -6859,6 +6859,27 @@ def dashboard_evolucion(request, cliente_id):
         'baja_carga': 'Carga baja · margen',
     }.get(zona_riesgo)
 
+    # ── Phase Evolución UI 2: tabs como relatos separados ────────────────────
+    partes_carga = [zona_riesgo_legible or "Carga sin datos suficientes"]
+    desequilibrios = coach_data_calc.get('desequilibrios', 0)
+    if desequilibrios > 0:
+        partes_carga.append(f"{desequilibrios} desequilibrio{'s' if desequilibrios != 1 else ''} de fuerza")
+    if grupos_volumen_bajo > 0:
+        partes_carga.append(f"volumen bajo en {grupos_volumen_bajo} grupo{'s' if grupos_volumen_bajo != 1 else ''}")
+    lectura_carga_tab = " · ".join(partes_carga)
+
+    partes_progresion = []
+    if resumen_decisiones['subidas'] > 0:
+        n = resumen_decisiones['subidas']
+        partes_progresion.append(f"{n} subida{'s' if n != 1 else ''} reciente{'s' if n != 1 else ''}")
+    ejercicios_estancados = coach_data_calc['ejercicios_estancados']
+    if ejercicios_estancados > 0:
+        partes_progresion.append(f"{ejercicios_estancados} ejercicio{'s' if ejercicios_estancados != 1 else ''} a vigilar")
+    if resumen_decisiones['reducciones'] > 0:
+        n = resumen_decisiones['reducciones']
+        partes_progresion.append(f"{n} reducción{'es' if n != 1 else ''} de carga")
+    lectura_progresion_tab = " · ".join(partes_progresion) if partes_progresion else "Sin cambios relevantes en el periodo"
+
     context = {
         'cliente': cliente,
         'rango_seleccionado': rango,
@@ -6905,6 +6926,10 @@ def dashboard_evolucion(request, cliente_id):
         'grupos_volumen_bajo': grupos_volumen_bajo,
         'lectura_periodo': lectura_periodo,
         'zona_riesgo_legible': zona_riesgo_legible,
+
+        # Phase Evolución UI 2: tabs como relatos separados
+        'lectura_carga_tab': lectura_carga_tab,
+        'lectura_progresion_tab': lectura_progresion_tab,
     }
 
     return render(request, 'entrenos/dashboard_evolucion.html', context)
