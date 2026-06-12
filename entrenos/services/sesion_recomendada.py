@@ -36,6 +36,75 @@ def _es_descanso(entrenamiento):
     return not entrenamiento.get('ejercicios')
 
 
+def _semana_en_bloque(cliente, fecha):
+    """
+    Devuelve el número de semana dentro del bloque de periodización para
+    `fecha` (1-indexed), o None si es día de descanso o no se pudo calcular.
+
+    Usa `año_planificacion=fecha.year` explícitamente (en vez del fallback
+    `datetime.now().year` de generar_entrenamiento_para_fecha) para que dos
+    fechas del mismo año sean siempre comparables entre sí.
+    """
+    try:
+        from analytics.planificador_helms.core import PlanificadorHelms
+        from analytics.planificador_helms.models.perfil_cliente import PerfilCliente
+
+        perfil = PerfilCliente({
+            'id': cliente.id,
+            'dias_disponibles': getattr(cliente, 'dias_disponibles', 4),
+            'año_planificacion': fecha.year,
+        })
+        entrenamiento = PlanificadorHelms(perfil).generar_entrenamiento_para_fecha(fecha)
+    except Exception:
+        logger.warning("Error calculando semana_en_bloque para %s", fecha, exc_info=True)
+        return None
+
+    if not entrenamiento or not entrenamiento.get('ejercicios'):
+        return None
+    return entrenamiento.get('semana_en_bloque')
+
+
+def buscar_entreno_realizado_esta_semana(cliente, hoy, rutina_nombre):
+    """
+    Busca un EntrenoRealizado de esta semana (>= lunes de `hoy`) cuyo
+    rutina.nombre coincide (case-insensitive) con `rutina_nombre`, Y que
+    además corresponda a la MISMA semana de periodización que `hoy`.
+
+    Sin esta segunda condición, un catch-up tardío de la sesión "Día N" de la
+    SEMANA ANTERIOR (mismo nombre de rutina, pesos sin progresar) se confunde
+    con la sesión "Día N" de HOY (semana actual, pesos progresados) — porque
+    `generar_entrenamiento_para_fecha` no incluye ningún identificador de
+    semana/ciclo en `rutina_nombre`.
+
+    Para cada candidato, la "fecha de referencia" para calcular su semana de
+    bloque es `SesionProgramada.fecha_prevista` si está vinculado a una (i.e.
+    fue un catch-up de esa fecha), o su propia `fecha` si no.
+
+    Devuelve el EntrenoRealizado o None.
+    """
+    if not rutina_nombre:
+        return None
+
+    lunes_semana = hoy - timedelta(days=hoy.weekday())
+    semana_hoy = _semana_en_bloque(cliente, hoy)
+
+    candidatos = EntrenoRealizado.objects.filter(
+        cliente=cliente,
+        fecha__gte=lunes_semana,
+        rutina__nombre__iexact=rutina_nombre,
+    ).prefetch_related('ejercicios_realizados').order_by('-fecha')
+
+    for candidato in candidatos:
+        sesion_programada = candidato.sesiones_programadas.first()
+        fecha_referencia = sesion_programada.fecha_prevista if sesion_programada else candidato.fecha
+        semana_candidato = _semana_en_bloque(cliente, fecha_referencia)
+
+        if semana_hoy is None or semana_candidato is None or semana_candidato == semana_hoy:
+            return candidato
+
+    return None
+
+
 def _fecha_completada(cliente, fecha):
     if EntrenoRealizado.objects.filter(cliente=cliente, fecha=fecha).exists():
         return True
