@@ -6829,6 +6829,36 @@ def dashboard_evolucion(request, cliente_id):
         key = prog['nombre_ejercicio'].lower()
         prog['proxima_accion'] = proximas_acciones.get(key)
 
+    # ── Phase Evolución UI 1: jerarquía analítica mínima ─────────────────────
+    grupos_volumen_bajo = sum(
+        1 for s in vol_optimo['series_reales'] if 0 < s < vol_optimo['min_recomendado']
+    )
+
+    zona_riesgo = acwr['zona_riesgo']
+    if zona_riesgo in ('baja_carga', 'insuficiente_historial', 'desconocida'):
+        lectura_carga = "Carga contenida"
+    elif zona_riesgo == 'optima':
+        lectura_carga = "Carga en rango óptimo"
+    else:
+        lectura_carga = "Carga elevada"
+
+    partes_lectura = [lectura_carga]
+    if coach_data_calc['ejercicios_estancados'] > 0:
+        if resumen_decisiones['subidas'] > 0:
+            partes_lectura.append("margen para progresar")
+        else:
+            partes_lectura.append("varios ejercicios estancados")
+    if grupos_volumen_bajo > 0:
+        partes_lectura.append(f"volumen bajo en {grupos_volumen_bajo} grupo{'s' if grupos_volumen_bajo != 1 else ''}")
+    lectura_periodo = " · ".join(partes_lectura)
+
+    zona_riesgo_legible = {
+        'optima': 'Óptima',
+        'cuidado': 'Cuidado',
+        'riesgo_alto': 'Riesgo alto',
+        'baja_carga': 'Carga baja · margen',
+    }.get(zona_riesgo)
+
     context = {
         'cliente': cliente,
         'rango_seleccionado': rango,
@@ -6870,6 +6900,11 @@ def dashboard_evolucion(request, cliente_id):
         'decision_logs': decision_logs,
         'precision_sistema': precision_sistema,
         'resumen_decisiones': resumen_decisiones,
+
+        # Phase Evolución UI 1: jerarquía analítica mínima
+        'grupos_volumen_bajo': grupos_volumen_bajo,
+        'lectura_periodo': lectura_periodo,
+        'zona_riesgo_legible': zona_riesgo_legible,
     }
 
     return render(request, 'entrenos/dashboard_evolucion.html', context)
