@@ -6892,7 +6892,7 @@ def dashboard_evolucion(request, cliente_id):
         'volumen_semanal_data': json.dumps(vol_semanal['data']),
         'volumen_semanal_rpe': json.dumps(rpe_semanal),
         'volumen_semanal_fases': json.dumps(fases_historicas),
-        'actividad_anual_data': json.dumps(heatmap),
+        'actividad_anual_data': [{'fecha': k, 'count': v} for k, v in heatmap.items()],
         'logros_desbloqueados': logros_desbloqueados,
         'records_personales': records_vigentes,
         'ultimas_sesiones': ultimas_sesiones,

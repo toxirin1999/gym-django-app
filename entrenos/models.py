@@ -352,6 +352,11 @@ class EntrenoRealizado(models.Model):
         help_text="Nº de ejercicios opcionales planificados en modo esencial.",
     )
 
+    @property
+    def es_sesion_incompleta(self):
+        """True si la sesión se registró sin ningún EjercicioRealizado (numero_ejercicios=0 y volumen_total_kg=0)."""
+        return (self.numero_ejercicios or 0) == 0 and (self.volumen_total_kg or 0) == 0
+
     def calcular_volumen_total(self):
         '''Calcula el volumen total del entrenamiento de todas las fuentes disponibles'''
         total = 0
