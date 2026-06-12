@@ -134,6 +134,8 @@ body {
 .rb-bib-stat-val { font-family: var(--font-mono); font-size: 20px; font-weight: 700;
   color: var(--ink); letter-spacing: -0.02em; font-variant-numeric: tabular-nums; line-height: 1; }
 .rb-bib-stat-val.accent { color: var(--accent); }
+.rb-bib-lectura { font-size: 12px; color: var(--ink-2); line-height: 1.5;
+  margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
 
 /* ── CARDS ───────────────────────────────────── */
 .rb-card {
@@ -165,25 +167,7 @@ body {
 .rb-chart-box.horiz { height: 200px; }
 .rb-chart-box canvas { width: 100% !important; }
 
-/* ── COACH BLOCK ─────────────────────────────── */
-.rb-coach { background: var(--paper); border: 1.5px solid var(--line-2);
-  border-radius: 4px; margin-bottom: 12px; overflow: hidden; }
-.rb-coach-header { display: flex; align-items: flex-start; gap: 12px; padding: 14px 16px;
-  cursor: pointer; user-select: none; }
-.rb-coach-icon { width: 36px; height: 36px; border-radius: 50%;
-  border: 1.5px solid var(--line-2); display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0; font-size: 14px; color: var(--ink-3); }
-.rb-coach-text { flex: 1; min-width: 0; }
-.rb-coach-eyebrow { font-family: var(--font-mono); font-size: 9px; font-weight: 700;
-  letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-4); margin-bottom: 3px; }
-.rb-coach-msg { font-size: 13px; color: var(--ink-2); line-height: 1.45;
-  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.rb-coach-chevron { margin-left: auto; font-size: 12px; color: var(--ink-4);
-  transition: transform .2s; flex-shrink: 0; padding-top: 4px; }
-.rb-coach.open .rb-coach-chevron { transform: rotate(180deg); }
-.rb-coach-body { max-height: 0; overflow: hidden; transition: max-height .3s ease; }
-.rb-coach.open .rb-coach-body { max-height: 600px; }
-.rb-coach-inner { padding: 0 16px 16px; border-top: 1px solid var(--line); }
+/* ── COACH ACWR / MENSAJE (dentro de details técnico) ────────────── */
 .rb-coach-fullmsg { font-size: 13px; color: var(--ink-2); line-height: 1.6; margin-top: 12px; }
 .rb-coach-acwr-wrap { display: flex; gap: 16px; align-items: center; margin-top: 12px; }
 .rb-coach-acwr-num { font-family: var(--font-mono); font-size: 28px; font-weight: 700;
@@ -192,6 +176,44 @@ body {
   letter-spacing: 0.14em; color: var(--ink-4); text-transform: uppercase; margin-top: 2px; }
 .rb-coach-acwr-bar { flex: 1; height: 4px; background: var(--line); border-radius: 2px; overflow: hidden; }
 .rb-coach-acwr-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width .6s ease; }
+
+/* ── LECTURA DEL PERIODO (cards) ─────────────── */
+.rb-lectura-grid { display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px; }
+@media(min-width:640px) { .rb-lectura-grid { flex-direction: row; } }
+.rb-lectura-card { flex: 1; background: var(--paper); border: 1.5px solid var(--line-2);
+  border-radius: 4px; padding: 14px 16px; }
+.rb-lectura-title { font-size: 13px; font-weight: 700; color: var(--ink); margin-bottom: 6px; }
+.rb-lectura-desc { font-size: 12px; color: var(--ink-2); line-height: 1.5; }
+
+/* ── DERIVADO DEL ANÁLISIS ────────────────────── */
+.rb-derivado { background: var(--paper); border: 1.5px solid var(--line-2);
+  border-radius: 4px; padding: 14px 16px; margin-bottom: 12px; }
+.rb-derivado-title { font-size: 11px; font-weight: 700; letter-spacing: .06em;
+  text-transform: uppercase; color: var(--ink-3); margin-bottom: 8px;
+  display: flex; align-items: center; gap: 6px; }
+.rb-derivado-list { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 5px; }
+.rb-derivado-list li { font-size: 13px; color: var(--ink); font-weight: 500; line-height: 1.4; }
+.rb-derivado-bloqueado { font-size: 12px; color: var(--accent); font-weight: 600;
+  margin-top: 8px; }
+
+/* ── DETAILS NATIVOS ──────────────────────────── */
+.rb-details-tech, .rb-details-plan { margin-top: 4px; margin-bottom: 12px; }
+.rb-details-tech summary, .rb-details-plan summary {
+  font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+  letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3);
+  cursor: pointer; padding: 8px 0; user-select: none; }
+.rb-details-tech summary:hover, .rb-details-plan summary:hover { color: var(--ink); }
+.rb-details-tech[open] summary, .rb-details-plan[open] summary { margin-bottom: 8px; }
+
+/* ── RESUMEN EJECUTIVO (cards KPI) ────────────── */
+.rb-resumen-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 10px; }
+.rb-resumen-card { background: var(--paper); border: 1.5px solid var(--line-2);
+  border-radius: 4px; padding: 12px 14px; }
+.rb-resumen-label { font-family: var(--font-mono); font-size: 9px; font-weight: 700;
+  letter-spacing: 0.12em; color: var(--ink-3); text-transform: uppercase; margin-bottom: 4px; }
+.rb-resumen-val { font-family: var(--font-mono); font-size: 22px; font-weight: 700;
+  color: var(--ink); letter-spacing: -0.02em; line-height: 1; }
+.rb-resumen-sub { font-size: 10px; color: var(--ink-3); margin-top: 4px; }
 
 /* ACWR track */
 .rb-track { margin: 12px 0 8px; }
@@ -519,8 +541,6 @@ body {
 /* ── REDUCED MOTION ──────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   .rb-live-dot { animation: none; opacity: 1; }
-  .rb-coach-body { transition: none; }
-  .rb-coach-chevron { transition: none; }
   .rb-progress-fill { transition: none; }
   .rb-coach-acwr-fill { transition: none; }
   *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
@@ -592,6 +612,9 @@ body {
         <div class="rb-bib-stat-val accent stat-value" data-count="{{ estadisticas_globales.porcentaje_perfeccion }}">{{ estadisticas_globales.porcentaje_perfeccion }}%</div>
       </div>
     </div>
+    {% if lectura_periodo %}
+    <div class="rb-bib-lectura">{{ lectura_periodo }}</div>
+    {% endif %}
   </div>
 
   <!-- ── ACCIONES ── -->
@@ -613,117 +636,172 @@ body {
     </a>
   </div>
 
-  <!-- ── COACH IA ── -->
+  <!-- ── LECTURA DEL PERIODO ── -->
   {% with coach_data=coach_data %}
   <div class="rb-section">
     <div class="rb-section-head">
       <span class="rb-section-num">01</span>
-      <h2 class="rb-section-title">Coach IA</h2>
+      <h2 class="rb-section-title">Lectura del periodo</h2>
       <div class="rb-section-line"></div>
-      <span class="rb-section-right">{{ coach_data.estado|upper }}</span>
     </div>
   </div>
 
-  <div class="rb-coach {% if coach_data.estado == 'riesgo' or coach_data.estado == 'cuidado' %}open{% endif %}"
-       id="coachBlock">
-    <div class="rb-coach-header" onclick="toggleCoach()" aria-expanded="false">
-      <div class="rb-coach-icon"><i class="{{ coach_data.icono }}"></i></div>
-      <div class="rb-coach-text">
-        <div class="rb-coach-eyebrow">Diagnóstico · {{ coach_data.estado|title }}</div>
-        <div class="rb-coach-msg">{{ coach_data.mensaje|safe|truncatechars:160 }}</div>
-      </div>
-      <div class="rb-chips" style="margin:0;flex-shrink:0;">
-        <span class="rb-chip rb-chip-ok">RPE {{ coach_data.rpe_medio|floatformat:1 }}</span>
-        {% if coach_data.ejercicios_estancados > 0 %}
-        <span class="rb-chip rb-chip-warn">{{ coach_data.ejercicios_estancados }} estancados</span>
-        {% endif %}
-      </div>
-      <div class="rb-coach-chevron"><i class="fas fa-chevron-down"></i></div>
-    </div>
-    <div class="rb-coach-body">
-      <div class="rb-coach-inner">
-        <div class="rb-coach-acwr-wrap">
-          <div>
-            <div class="rb-coach-acwr-num">{{ coach_data.acwr|floatformat:2 }}</div>
-            <div class="rb-coach-acwr-lbl">Ratio ACWR</div>
-          </div>
-          <div class="rb-coach-acwr-bar">
-            <div class="rb-coach-acwr-fill" style="width:{{ coach_data.acwr|floatformat:2|default:'0' }}%"></div>
-          </div>
-        </div>
-        <div class="rb-coach-fullmsg">{{ coach_data.mensaje|safe }}</div>
-
-        {% if resumen_decisiones.total > 0 %}
-        <div class="rb-decision-summary">
-          <div class="rb-ds-title"><i class="fas fa-robot"></i> Ajustes automáticos recientes</div>
-          <div class="rb-ds-row">
-            <span class="rb-ds-chip rb-ds-up"><i class="fas fa-arrow-up"></i> {{ resumen_decisiones.subidas }} subidas</span>
-            <span class="rb-ds-chip rb-ds-down"><i class="fas fa-arrow-down"></i> {{ resumen_decisiones.reducciones }} reducciones</span>
-            <span class="rb-ds-chip rb-ds-hold"><i class="fas fa-minus"></i> {{ resumen_decisiones.mantenidos }} mantenidos</span>
-            {% if precision_sistema.totales > 0 %}
-            <span class="rb-ds-chip rb-ds-prec"><i class="fas fa-bullseye"></i> Precisión {{ precision_sistema.precision }}%</span>
-            {% endif %}
-          </div>
-        </div>
-        {% endif %}
-      </div>
-    </div>
-  </div>
-  {% endwith %}
-
-  <!-- ── PLAN DE ACCIÓN ── -->
-  {% if plan_accion %}
-  <div class="rb-section" style="padding-bottom:0;">
-    <div class="rb-section-head">
-      <span class="rb-section-num">02</span>
-      <h2 class="rb-section-title">Próxima acción</h2>
-      <div class="rb-section-line"></div>
-      {% if plan_accion.bloqueado %}
-      <span class="rb-section-right" style="color:var(--accent);">BLOQUEADO</span>
+  <div class="rb-lectura-grid">
+    <div class="rb-lectura-card">
+      {% if resumen_decisiones.subidas > 0 %}
+      <div class="rb-lectura-title">{{ resumen_decisiones.subidas }} subida{{ resumen_decisiones.subidas|pluralize }} reciente{{ resumen_decisiones.subidas|pluralize }}</div>
+      <div class="rb-lectura-desc">El sistema ha encontrado margen de progresión en varios ejercicios.</div>
       {% else %}
-      <span class="rb-section-right" style="color:var(--ok);">ACTIVO</span>
+      <div class="rb-lectura-title">Sin subidas recientes</div>
+      <div class="rb-lectura-desc">El plan no ha encontrado margen de progresión este periodo.</div>
+      {% endif %}
+    </div>
+
+    <div class="rb-lectura-card">
+      {% if coach_data.ejercicios_estancados > 0 %}
+      <div class="rb-lectura-title">{{ coach_data.ejercicios_estancados }} ejercicio{{ coach_data.ejercicios_estancados|pluralize }} estancado{{ coach_data.ejercicios_estancados|pluralize }}</div>
+      <div class="rb-lectura-desc">
+        Hay movimientos que llevan varias sesiones sin progreso significativo{% if estancamientos.0.nombre %}, como {{ estancamientos.0.nombre }}{% endif %}.
+      </div>
+      {% else %}
+      <div class="rb-lectura-title">Sin ejercicios estancados</div>
+      <div class="rb-lectura-desc">No hay ejercicios estancados detectados en este periodo.</div>
+      {% endif %}
+    </div>
+
+    <div class="rb-lectura-card">
+      {% if grupos_volumen_bajo > 0 %}
+      <div class="rb-lectura-title">Volumen bajo en {{ grupos_volumen_bajo }} grupo{{ grupos_volumen_bajo|pluralize }}</div>
+      <div class="rb-lectura-desc">El periodo muestra margen para construir más volumen útil.</div>
+      {% else %}
+      <div class="rb-lectura-title">Volumen dentro de rango</div>
+      <div class="rb-lectura-desc">El volumen por grupo muscular está dentro del rango recomendado.</div>
       {% endif %}
     </div>
   </div>
 
-  <div class="rb-plan {% if plan_accion.bloqueado %}rb-plan-blocked{% endif %}">
-    <div class="rb-plan-msg">{{ plan_accion.mensaje }}</div>
+  {% if plan_accion %}
+  <div class="rb-derivado">
+    <div class="rb-derivado-title"><i class="fas fa-list-check"></i> Derivado del análisis</div>
+    {% if plan_accion.resumen %}
+    <ol class="rb-derivado-list">
+      {% for linea in plan_accion.resumen|slice:":3" %}
+      <li>{{ linea }}</li>
+      {% endfor %}
+    </ol>
+    {% endif %}
+    {% if plan_accion.bloqueado %}
+    <div class="rb-derivado-bloqueado"><i class="fas fa-lock"></i> Plan protegido: {{ plan_accion.mensaje|truncatechars:120 }}</div>
+    {% endif %}
+  </div>
 
-    <div class="rb-plan-grid">
-      {% for accion in plan_accion.acciones %}
-      <div class="rb-plan-card rb-plan-{{ accion.prioridad }}">
-        <div class="rb-plan-card-head">
-          <span class="rb-plan-icon"><i class="{{ accion.icono }}"></i></span>
-          <span class="rb-plan-titulo">{{ accion.titulo }}</span>
-          <span class="rb-plan-prio rb-prio-{{ accion.prioridad }}">
-            {% if accion.prioridad == 'critica' %}Crítico
-            {% elif accion.prioridad == 'alta' %}Alta
-            {% elif accion.prioridad == 'media' %}Media
-            {% else %}OK{% endif %}
-          </span>
+  <details class="rb-details-plan">
+    <summary>Ver plan de acción completo</summary>
+    <div class="rb-plan {% if plan_accion.bloqueado %}rb-plan-blocked{% endif %}">
+      <div class="rb-plan-msg">{{ plan_accion.mensaje }}</div>
+
+      <div class="rb-plan-grid">
+        {% for accion in plan_accion.acciones %}
+        <div class="rb-plan-card rb-plan-{{ accion.prioridad }}">
+          <div class="rb-plan-card-head">
+            <span class="rb-plan-icon"><i class="{{ accion.icono }}"></i></span>
+            <span class="rb-plan-titulo">{{ accion.titulo }}</span>
+            <span class="rb-plan-prio rb-prio-{{ accion.prioridad }}">
+              {% if accion.prioridad == 'critica' %}Crítico
+              {% elif accion.prioridad == 'alta' %}Alta
+              {% elif accion.prioridad == 'media' %}Media
+              {% else %}OK{% endif %}
+            </span>
+          </div>
+          <div class="rb-plan-detalle">{{ accion.detalle }}</div>
+          {% if accion.ejercicios and accion.tipo != 'equilibrio' %}
+          <div class="rb-plan-tags">
+            {% for ej in accion.ejercicios %}<span class="rb-plan-tag">{{ ej }}</span>{% endfor %}
+          </div>
+          {% endif %}
         </div>
-        <div class="rb-plan-detalle">{{ accion.detalle }}</div>
-        {% if accion.ejercicios and accion.tipo != 'equilibrio' %}
-        <div class="rb-plan-tags">
-          {% for ej in accion.ejercicios %}<span class="rb-plan-tag">{{ ej }}</span>{% endfor %}
-        </div>
+        {% endfor %}
+      </div>
+
+      {% if plan_accion.resumen %}
+      <div class="rb-plan-resumen">
+        <div class="rb-plan-resumen-title"><i class="fas fa-list-check"></i> Plan para la próxima sesión</div>
+        <ol class="rb-plan-resumen-list">
+          {% for linea in plan_accion.resumen %}
+          <li>{{ linea }}</li>
+          {% endfor %}
+        </ol>
+      </div>
+      {% endif %}
+    </div>
+  </details>
+  {% endif %}
+
+  <details class="rb-details-tech">
+    <summary>Ver detalle técnico del análisis</summary>
+    <div class="rb-coach-acwr-wrap">
+      <div>
+        <div class="rb-coach-acwr-num">{{ coach_data.acwr|floatformat:2 }}</div>
+        <div class="rb-coach-acwr-lbl">Ratio ACWR</div>
+      </div>
+      <div class="rb-coach-acwr-bar">
+        <div class="rb-coach-acwr-fill" style="width:{{ coach_data.acwr|floatformat:2|default:'0' }}%"></div>
+      </div>
+    </div>
+    <div class="rb-coach-fullmsg">{{ coach_data.mensaje|safe }}</div>
+
+    {% if resumen_decisiones.total > 0 %}
+    <div class="rb-decision-summary">
+      <div class="rb-ds-title"><i class="fas fa-robot"></i> Ajustes automáticos recientes</div>
+      <div class="rb-ds-row">
+        <span class="rb-ds-chip rb-ds-up"><i class="fas fa-arrow-up"></i> {{ resumen_decisiones.subidas }} subidas</span>
+        <span class="rb-ds-chip rb-ds-down"><i class="fas fa-arrow-down"></i> {{ resumen_decisiones.reducciones }} reducciones</span>
+        <span class="rb-ds-chip rb-ds-hold"><i class="fas fa-minus"></i> {{ resumen_decisiones.mantenidos }} mantenidos</span>
+        {% if precision_sistema.totales > 0 %}
+        <span class="rb-ds-chip rb-ds-prec"><i class="fas fa-bullseye"></i> Precisión {{ precision_sistema.precision }}%</span>
         {% endif %}
       </div>
-      {% endfor %}
     </div>
+    {% endif %}
+  </details>
+  {% endwith %}
 
-    {% if plan_accion.resumen %}
-    <div class="rb-plan-resumen">
-      <div class="rb-plan-resumen-title"><i class="fas fa-list-check"></i> Plan para la próxima sesión</div>
-      <ol class="rb-plan-resumen-list">
-        {% for linea in plan_accion.resumen %}
-        <li>{{ linea }}</li>
-        {% endfor %}
-      </ol>
+  <!-- ── RESUMEN EJECUTIVO ── -->
+  <div class="rb-section">
+    <div class="rb-section-head">
+      <span class="rb-section-num">02</span>
+      <h2 class="rb-section-title">Resumen ejecutivo</h2>
+      <div class="rb-section-line"></div>
+    </div>
+  </div>
+
+  <div class="rb-resumen-grid">
+    {% if zona_riesgo_legible %}
+    <div class="rb-resumen-card">
+      <div class="rb-resumen-label">ACWR</div>
+      <div class="rb-resumen-val">{{ acwr.acwr_actual|floatformat:2 }}</div>
+      <div class="rb-resumen-sub">{{ zona_riesgo_legible }}</div>
+    </div>
+    {% endif %}
+    <div class="rb-resumen-card">
+      <div class="rb-resumen-label">RPE medio</div>
+      <div class="rb-resumen-val">{{ coach_data.rpe_medio|floatformat:1 }}</div>
+    </div>
+    <div class="rb-resumen-card">
+      <div class="rb-resumen-label">Estancados</div>
+      <div class="rb-resumen-val">{{ coach_data.ejercicios_estancados }}</div>
+    </div>
+    <div class="rb-resumen-card">
+      <div class="rb-resumen-label">Volumen bajo</div>
+      <div class="rb-resumen-val">{{ grupos_volumen_bajo }}</div>
+    </div>
+    {% if precision_sistema.totales > 0 %}
+    <div class="rb-resumen-card">
+      <div class="rb-resumen-label">Precisión sistema</div>
+      <div class="rb-resumen-val">{{ precision_sistema.precision }}%</div>
     </div>
     {% endif %}
   </div>
-  {% endif %}
 
   <!-- ── TABS ── -->
   <div class="rb-section" style="padding-bottom:0;">
@@ -1235,12 +1313,6 @@ const csrftoken = getCookie('csrftoken');
 
 function parseAttr(el, attr) {
   try { return JSON.parse(el.getAttribute(attr) || 'null'); } catch { return null; }
-}
-
-/* ── COACH TOGGLE ─────────────────────────── */
-function toggleCoach() {
-  const block = document.getElementById('coachBlock');
-  block.classList.toggle('open');
 }
 
 /* ── TAB NAVIGATION ───────────────────────── */
