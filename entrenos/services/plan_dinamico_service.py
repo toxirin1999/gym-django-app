@@ -180,13 +180,17 @@ def _aplicar_progresion_ejecutiva(cliente, ejercicios_mod, hoy, cambios):
 
     - bajar_peso: ajuste de seguridad (RPE alto, fallo, fatiga). Se aplica
       siempre, no se pospone por freno contextual.
-    - subir_peso: se pospone si el freno contextual frena la progresión esta
-      semana (mantener_carga / reducir_accesorios según tipo de ejercicio).
+    - subir_peso: se pospone si el freno contextual semanal frena la
+      progresión (mantener_carga / reducir_accesorios según tipo de
+      ejercicio) o si el freno local por ejercicio detecta deload activo,
+      fallo repetido no controlado, técnica comprometida o molestia reciente
+      en ESTE ejercicio (Phase 62K).
     - mantener / cambiar_variante / deload: no se tocan aquí.
     """
     from entrenos.models import GymDecisionLog
     from entrenos.services.progresion_contextual_service import (
         evaluar_permiso_progresion, _es_ejercicio_principal,
+        evaluar_permiso_local_ejercicio,
     )
 
     logs_pendientes = list(
@@ -232,27 +236,37 @@ def _aplicar_progresion_ejecutiva(cliente, ejercicios_mod, hoy, cambios):
             _persistir_estado_aplicacion(log, 'aplicada', None)
             continue
 
-        # subir_peso → respeta freno contextual (asimétrico: bajar_peso no se frena)
+        # subir_peso → respeta freno contextual semanal + freno local por ejercicio
         if permiso is None:
             permiso = evaluar_permiso_progresion(cliente, hoy)
 
-        bloquea = (
+        bloquea_semanal = (
             permiso['aplica_a_principales']
             or (permiso['aplica_a_accesorios'] and not _es_ejercicio_principal(ej))
         )
+
+        permiso_local = evaluar_permiso_local_ejercicio(cliente, nombre, hoy)
+        bloquea_local = not permiso_local['puede_subir']
+
+        bloquea = bloquea_semanal or bloquea_local
+
         if bloquea:
+            motivo_texto = permiso_local['mensaje'] if bloquea_local else permiso['mensaje']
+
             ej['progresion_pospuesta'] = True
             ej['progresion_accion'] = 'subir_peso'
-            ej['progresion_motivo'] = permiso['mensaje']
+            ej['progresion_motivo'] = motivo_texto
+            if bloquea_local:
+                ej['progresion_motivo_local'] = permiso_local['motivo']
             cambios.append({
                 'tipo': 'progresion_pospuesta',
                 'ejercicio_original': nombre,
                 'ejercicio_nuevo': None,
                 'accion': 'subir_peso',
                 'peso_sugerido': peso_sugerido,
-                'razon': permiso['mensaje'],
+                'razon': motivo_texto,
             })
-            _persistir_estado_aplicacion(log, 'pospuesta', permiso['mensaje'])
+            _persistir_estado_aplicacion(log, 'pospuesta', motivo_texto)
         else:
             ej['peso_kg'] = peso_sugerido
             ej['progresion_aplicada'] = True
