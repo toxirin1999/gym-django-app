@@ -30,6 +30,7 @@ from django.utils.dateformat import DateFormat
 from django.utils.translation import gettext as _
 from .utils.utils import normalizar_nombre_ejercicio, nombres_ejercicio_equivalentes, parsear_ejercicios_de_notas, parse_reps_and_series
 from .services.tempo_service import resolver_tempo_sesion
+from .services.calentamiento_service import get_aproximaciones_calentamiento
 from types import SimpleNamespace
 import copy
 from types import SimpleNamespace
@@ -3849,18 +3850,11 @@ def vista_entrenamiento_activo(request, cliente_id):
             # Calcular aproximaciones basadas en el peso de trabajo
             try:
                 peso_trabajo = float(ejercicio.get('peso_inicial_kg') or ejercicio.get('peso_recomendado_kg') or 0)
-                if peso_trabajo > 0 and ejercicio.get('usa_peso', True):
-                    def redondear_peso(p):
-                        return round(round(p / 2.5) * 2.5, 1)
-                    ejercicio['aproximaciones'] = {
-                        'peso1': redondear_peso(peso_trabajo * 0.50),
-                        'peso2': redondear_peso(peso_trabajo * 0.70),
-                        'peso3': redondear_peso(peso_trabajo * 0.85),
-                    }
-                else:
-                    ejercicio['aproximaciones'] = None
-            except Exception:
-                ejercicio['aproximaciones'] = None
+            except (TypeError, ValueError):
+                peso_trabajo = 0
+            ejercicio['aproximaciones'] = get_aproximaciones_calentamiento(
+                peso_trabajo, ejercicio.get('usa_peso', True)
+            )
 
     except Exception as e:
         messages.error(request, f"Error al cargar los datos del entrenamiento: {e}")

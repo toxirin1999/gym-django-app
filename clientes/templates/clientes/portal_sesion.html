@@ -98,6 +98,16 @@
     opacity: 0.75;
     margin-top: 0.2rem;
 }
+.aprox-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.35rem 0;
+    font-family: monospace;
+}
+.aprox-row .detail-motivo {
+    margin-top: 0;
+}
 .detail-value {
     font-size: 1.25rem;
     font-weight: 700;
@@ -499,6 +509,24 @@ body {
         <!-- ======================================================= -->
         <!-- FIN DE LA SECCIÓN DE DETALLES -->
         <!-- ======================================================= -->
+
+        {% if ejercicio.aproximaciones %}
+        <div class="detail-box mb-6">
+            <div class="detail-label mb-2">Calentamiento sugerido</div>
+            <div class="aprox-row">
+                <strong>{{ ejercicio.aproximaciones.peso1|stringformat:'.1f' }} kg</strong> × 5-8 reps
+                <span class="detail-motivo">RPE 4-5</span>
+            </div>
+            <div class="aprox-row">
+                <strong>{{ ejercicio.aproximaciones.peso2|stringformat:'.1f' }} kg</strong> × 3-5 reps
+                <span class="detail-motivo">RPE 6-7</span>
+            </div>
+            <div class="aprox-row">
+                <strong>{{ ejercicio.aproximaciones.peso3|stringformat:'.1f' }} kg</strong> × 1-2 reps
+                <span class="detail-motivo">RPE 8</span>
+            </div>
+        </div>
+        {% endif %}
 
         <table class="exercise-table">
             <thead>
