@@ -335,3 +335,111 @@ def aplicar_freno_lesion(cliente, entrenamiento):
     entrenamiento = dict(entrenamiento)
     entrenamiento['ejercicios'] = ejercicios_modificados
     return entrenamiento
+
+
+# ── Phase 62K — Freno local por ejercicio para subir_peso ────────────────────
+
+_MENSAJES_FRENO_LOCAL = {
+    'deload':                       'Semana de descarga activa — no se sube peso en este ejercicio.',
+    'fallo_repetido_no_controlado': 'Fallo muscular sin control aparente en las últimas 2 sesiones — consolidar antes de subir.',
+    'tecnica_comprometida':         'Técnica comprometida en la última sesión — prioriza forma antes de subir peso.',
+    'molestia_reciente':            'Molestia reportada en las últimas sesiones de este ejercicio — no se sube peso por seguridad.',
+}
+
+
+def evaluar_permiso_local_ejercicio(cliente, nombre_ejercicio, hoy=None):
+    """
+    Phase 62K — Freno local por ejercicio para subir_peso.
+
+    Complementa evaluar_permiso_progresion() (que solo mira patrones semanales
+    de carga/RPE) con señales específicas de ESTE ejercicio: deload activo,
+    fallo muscular repetido, técnica comprometida, molestia reciente.
+
+    Returns:
+        {'puede_subir': bool, 'motivo': str | None, 'mensaje': str | None}
+
+    motivo ∈ {'deload', 'fallo_repetido_no_controlado', 'tecnica_comprometida',
+              'molestia_reciente', None}
+
+    Prioridad si hay varias señales (la más severa gana):
+        1. deload                       — global, corta todo
+        2. fallo_repetido_no_controlado — 2 sesiones consecutivas, fallo no controlado
+        3. tecnica_comprometida          — última sesión de este ejercicio
+        4. molestia_reciente             — última o penúltima sesión de este ejercicio
+    """
+    hoy = hoy or timezone.localdate()
+
+    try:
+        # Deliberadamente recalculado por ejercicio (no se pasa como parámetro):
+        # mantiene esta función autocontenida y testeable de forma independiente.
+        # Coste aceptado: con varios subir_peso pendientes en el mismo ciclo,
+        # necesita_deload_gym() se evalúa una vez por ejercicio + una vez más
+        # en aplicar_plan_dinamico() (línea 302).
+        from entrenos.services.briefing_service import necesita_deload_gym
+        if necesita_deload_gym(cliente, hoy):
+            return {'puede_subir': False, 'motivo': 'deload',
+                    'mensaje': _MENSAJES_FRENO_LOCAL['deload']}
+    except Exception:
+        pass  # degradación silenciosa, igual que evaluar_permiso_progresion
+
+    try:
+        from entrenos.models import EjercicioRealizado, SerieRealizada
+        from rutinas.models import EjercicioBase
+
+        # TODO: sustituir por matching normalizado compartido (_normalizar/_match_nombre
+        # de plan_dinamico_service) cuando se unifique identidad de ejercicios. Con
+        # icontains=nombre[:18], nombres como "Press Banca" / "Press Banca Inclinado"
+        # pueden cruzarse — deuda conocida, igual que en _obtener_peso_actual().
+        sesiones = list(
+            EjercicioRealizado.objects
+            .filter(
+                entreno__cliente=cliente,
+                nombre_ejercicio__icontains=nombre_ejercicio[:18],
+                completado=True,
+            )
+            .select_related('entreno')
+            .order_by('-entreno__fecha', '-id')[:2]
+        )
+        if not sesiones:
+            return {'puede_subir': True, 'motivo': None, 'mensaje': None}
+
+        ultima = sesiones[0]
+
+        # 2. fallo_repetido_no_controlado — últimas 2 sesiones, ambas con fallo
+        # sin control aparente. NOTA: "rir == 0" se usa como proxy de "fallo
+        # intencional" (heurística, no un campo explícito — RIR=0 también puede
+        # significar "me quedé sin margen sin buscarlo"). Aceptado para 62K;
+        # si se necesita precisión real, añadir un campo explícito
+        # fallo_intencional en EjercicioRealizado en una fase futura.
+        def _fallo_no_controlado(ej):
+            fallo_intencional = (ej.rir is not None and ej.rir == 0)
+            return ej.fallo_muscular and not fallo_intencional and not ej.es_tope_maquina
+
+        if len(sesiones) >= 2 and all(_fallo_no_controlado(s) for s in sesiones):
+            return {'puede_subir': False, 'motivo': 'fallo_repetido_no_controlado',
+                    'mensaje': _MENSAJES_FRENO_LOCAL['fallo_repetido_no_controlado']}
+
+        # 3. tecnica_comprometida — alguna serie comprometida en la última sesión
+        ej_base = EjercicioBase.objects.filter(
+            nombre__icontains=nombre_ejercicio[:18]
+        ).first()
+        if ej_base:
+            tecnica_mala = SerieRealizada.objects.filter(
+                entreno=ultima.entreno,
+                ejercicio=ej_base,
+                tecnica_calidad='comprometida',
+            ).exists()
+            if tecnica_mala:
+                return {'puede_subir': False, 'motivo': 'tecnica_comprometida',
+                        'mensaje': _MENSAJES_FRENO_LOCAL['tecnica_comprometida']}
+
+        # 4. molestia_reciente — última o penúltima sesión de este ejercicio
+        if any(s.molestia_reportada for s in sesiones):
+            return {'puede_subir': False, 'motivo': 'molestia_reciente',
+                    'mensaje': _MENSAJES_FRENO_LOCAL['molestia_reciente']}
+
+        return {'puede_subir': True, 'motivo': None, 'mensaje': None}
+
+    except Exception:
+        logger.exception('evaluar_permiso_local_ejercicio: error para cliente %s', cliente.id)
+        return {'puede_subir': True, 'motivo': None, 'mensaje': None}
