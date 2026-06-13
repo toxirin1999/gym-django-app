@@ -3922,6 +3922,7 @@ def portal_sesion_unificado(request, cliente_id):
         if rutina_planificada:
             from entrenos.services.descanso_service import get_descanso_sugerido
             from entrenos.services.tempo_service import resolver_tempo_sesion
+            from entrenos.services.calentamiento_service import get_aproximaciones_calentamiento
             from entrenos.views import obtener_ultimo_peso_ejercicio
             rutina_ajustada = rutina_planificada.copy()
             for ejercicio in rutina_ajustada['ejercicios']:
@@ -3953,6 +3954,12 @@ def portal_sesion_unificado(request, cliente_id):
                 )
                 ejercicio['descanso_label'] = _descanso_info['label']
                 ejercicio['descanso_motivo'] = _descanso_info['motivo']
+
+                _usa_peso = ejercicio.get('tipo_progresion', 'peso_reps') in ('peso_reps', 'peso_corporal_lastre')
+                _es_principal = ejercicio.get('tipo_ejercicio') == 'compuesto_principal'
+                ejercicio['aproximaciones'] = get_aproximaciones_calentamiento(
+                    ejercicio.get('peso_recomendado_kg', 0), usa_peso=(_usa_peso and _es_principal)
+                )
 
     context = {
         'cliente': cliente,
