@@ -3920,6 +3920,8 @@ def portal_sesion_unificado(request, cliente_id):
             sueno=bitacora_hoy.horas_sueno
         )
         if rutina_planificada:
+            from entrenos.services.tempo_service import resolver_tempo_sesion
+            from entrenos.views import obtener_ultimo_peso_ejercicio
             rutina_ajustada = rutina_planificada.copy()
             for ejercicio in rutina_ajustada['ejercicios']:
                 ejercicio['rpe_objetivo'] += ajuste_sesion.modificacion_rpe
@@ -3930,7 +3932,17 @@ def portal_sesion_unificado(request, cliente_id):
                     ejercicio['reps_objetivo'] = int(reps_str.split('-')[0].strip())
                 except:
                     ejercicio['reps_objetivo'] = 8
-                ejercicio['tempo'] = ejercicio.get('tempo', '2-0-X-0')
+
+                datos_anterior = obtener_ultimo_peso_ejercicio(
+                    cliente_id=cliente.id,
+                    nombre_ejercicio=ejercicio.get('nombre', ''),
+                    fecha_actual=hoy
+                )
+                tempo_registrado = datos_anterior.get('tempo') if datos_anterior else None
+                ejercicio['tempo'], ejercicio['tempo_fuente'] = resolver_tempo_sesion(
+                    ejercicio.get('nombre', ''), tempo_registrado
+                )
+
                 ejercicio['descanso_minutos'] = ejercicio.get('descanso_minutos', 2)
                 ejercicio['peso_recomendado_kg'] = ejercicio.get('peso_kg', 0.0)
 
