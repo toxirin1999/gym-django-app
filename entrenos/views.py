@@ -29,6 +29,7 @@ from .forms import (
 from django.utils.dateformat import DateFormat
 from django.utils.translation import gettext as _
 from .utils.utils import normalizar_nombre_ejercicio, nombres_ejercicio_equivalentes, parsear_ejercicios_de_notas, parse_reps_and_series
+from .services.tempo_service import resolver_tempo_sesion
 from types import SimpleNamespace
 import copy
 from types import SimpleNamespace
@@ -177,6 +178,7 @@ def obtener_ultimo_peso_ejercicio(cliente_id, nombre_ejercicio, fecha_actual):
                 'repeticiones': repeticiones,
                 'volumen': volumen,
                 'es_tope_maquina': getattr(ej, 'es_tope_maquina', False),
+                'tempo': ej.tempo,
             }
 
     # --- OPCIÓN 2: Buscar en EjercicioLiftinDetallado ---
@@ -3731,7 +3733,6 @@ def vista_entrenamiento_activo(request, cliente_id):
             max_rpe = int(bio_readiness.get('max_rpe', 10))
             ejercicio['rpe_objetivo'] = min(base_rpe, max_rpe)
 
-            ejercicio['tempo'] = ejercicio.get('tempo', '2-0-X-0')
             ejercicio['descanso_minutos'] = ejercicio.get('descanso_minutos', 2)
 
             # --- OBTENER DATOS DEL ENTRENAMIENTO ANTERIOR ---
@@ -3740,6 +3741,12 @@ def vista_entrenamiento_activo(request, cliente_id):
                 nombre_ejercicio=ejercicio.get('nombre', ''),
                 fecha_actual=fecha_obj
             )
+
+            tempo_registrado = datos_anterior.get('tempo') if datos_anterior else None
+            ejercicio['tempo'], ejercicio['tempo_fuente'] = resolver_tempo_sesion(
+                ejercicio.get('nombre', ''), tempo_registrado
+            )
+
             if datos_anterior:
                 ejercicio['peso_anterior_kg'] = datos_anterior['peso']
                 # --- PESO INICIAL PARA INPUTS (prioriza última vez si existe) ---

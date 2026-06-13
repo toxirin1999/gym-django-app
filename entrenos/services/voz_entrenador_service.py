@@ -14,13 +14,9 @@ La diferencia con briefing.mensajes (descriptivo):
 """
 from datetime import date, timedelta
 
-_PRIORIDAD = {'critica': 0, 'alerta': 1, 'info': 2, 'positivo': 3}
+from entrenos.services.tempo_service import get_tempo_sugerido
 
-_TEMPO_SUGERIDO = {
-    'sentadilla': '3-1-2', 'press banca': '3-1-2', 'peso muerto': '2-1-3',
-    'press militar': '2-1-2', 'remo': '2-1-2', 'jalón': '2-1-2',
-    'hip thrust': '2-1-2', 'zancada': '2-1-2', 'prensa': '3-1-2',
-}
+_PRIORIDAD = {'critica': 0, 'alerta': 1, 'info': 2, 'positivo': 3}
 
 _VARIANTE_SUGERIDA = {
     'sentadilla': 'sentadilla búlgara o sentadilla pausa', 'press banca': 'press inclinado o press pausa',
@@ -28,14 +24,6 @@ _VARIANTE_SUGERIDA = {
     'remo': 'remo unilateral o cable', 'jalón': 'dominada o jalón neutro',
     'curl': 'curl martillo o curl concentrado', 'extensión': 'fondos o cable press abajo',
 }
-
-
-def _tempo_para(nombre):
-    nl = nombre.lower()
-    for k, v in _TEMPO_SUGERIDO.items():
-        if k in nl:
-            return v
-    return '3-1-2'
 
 
 def _variante_para(nombre):
@@ -120,7 +108,7 @@ def get_instrucciones(cliente, nombres_hoy, hoy=None):
             log = matches[0]
             vistos.add(nombre)
             sesiones_str = _contar_sesiones_sin_progresion(cliente, log.ejercicio, hace_21)
-            tempo = _tempo_para(nombre)
+            tempo = get_tempo_sugerido(nombre)
             variante = _variante_para(nombre)
             instrucciones.append({
                 'prioridad': 'alerta',
