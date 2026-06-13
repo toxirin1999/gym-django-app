@@ -19,6 +19,7 @@ from .calculo.fatiga import GestorFatiga
 from .ejercicios.selector import SelectorEjercicios
 from .ejercicios.patrones import PatronManager
 from .utils.helpers import normalizar_nombre, extraer_nombre_ejercicio, extraer_patron_ejercicio
+from entrenos.services.descanso_service import get_descanso_sugerido
 
 
 class PlanificadorHelms:
@@ -355,6 +356,4 @@ class PlanificadorHelms:
         return self._obtener_historial_ejercicio(nombre_ejercicio)['rpe_real']
 
     def _calcular_descanso_pormenorizado(self, nombre: str, rpe: int, tipo: str) -> int:
-        if tipo == 'compuesto_principal':
-            return 4 if rpe >= 8 else 3
-        return 2 if rpe >= 8 else 1
+        return get_descanso_sugerido(tipo_ejercicio=tipo, rpe_objetivo=rpe)['minutos']

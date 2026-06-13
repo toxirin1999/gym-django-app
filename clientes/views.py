@@ -3920,6 +3920,7 @@ def portal_sesion_unificado(request, cliente_id):
             sueno=bitacora_hoy.horas_sueno
         )
         if rutina_planificada:
+            from entrenos.services.descanso_service import get_descanso_sugerido
             from entrenos.services.tempo_service import resolver_tempo_sesion
             from entrenos.views import obtener_ultimo_peso_ejercicio
             rutina_ajustada = rutina_planificada.copy()
@@ -3945,6 +3946,13 @@ def portal_sesion_unificado(request, cliente_id):
 
                 ejercicio['descanso_minutos'] = ejercicio.get('descanso_minutos', 2)
                 ejercicio['peso_recomendado_kg'] = ejercicio.get('peso_kg', 0.0)
+
+                _descanso_info = get_descanso_sugerido(
+                    tipo_ejercicio=ejercicio.get('tipo_ejercicio'),
+                    rpe_objetivo=ejercicio.get('rpe_objetivo'),
+                )
+                ejercicio['descanso_label'] = _descanso_info['label']
+                ejercicio['descanso_motivo'] = _descanso_info['motivo']
 
     context = {
         'cliente': cliente,
