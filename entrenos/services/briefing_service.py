@@ -1,5 +1,7 @@
 from datetime import date, timedelta
 
+from entrenos.services.tempo_service import get_mensaje_tempo
+
 
 def _get_rpe_bias(cliente):
     """
@@ -257,7 +259,7 @@ def get_briefing_gym(cliente, ejercicios_planificados, fecha):
         mensajes.append({
             'icono': '📊',
             'tipo': 'estancamiento',
-            'texto': f'{nombres_str}: sin progresión en 3 sesiones. Prueba cambiar el tempo (3-1-2) o el rango de reps.',
+            'texto': f'{nombres_str}: sin progresión en 3 sesiones. Prueba {get_mensaje_tempo(estancados_hoy[0])} o el rango de reps.',
         })
 
     # Técnica comprometida reciente en ejercicios de hoy

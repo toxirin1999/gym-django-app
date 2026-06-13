@@ -475,7 +475,11 @@ body {
                 <div class="detail-value text-fuchsia-400">{{ ejercicio.rpe_objetivo }}</div>
             </div>
             <div class="detail-box">
-                <div class="detail-label">Tempo</div>
+                <div class="detail-label">
+                    {% if ejercicio.tempo_fuente == 'registrado' %}Tempo registrado
+                    {% elif ejercicio.tempo_fuente == 'sugerido' %}Tempo sugerido
+                    {% else %}Tempo{% endif %}
+                </div>
                 <div class="detail-value text-yellow-400">{{ ejercicio.tempo }}</div>
             </div>
             <div class="detail-box">
