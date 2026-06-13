@@ -117,7 +117,10 @@ def get_briefing_gym(cliente, ejercicios_planificados, fecha):
     num_sesiones_recientes = entrenos_recientes.count()
 
     # ── Alertas por ejercicio ──────────────────────────────────────
+    from entrenos.services.progresion_contextual_service import evaluar_permiso_local_ejercicio
+
     alertas_por_ejercicio = {}
+    permisos_locales_por_ejercicio = {}
     for nombre in nombres_hoy:
         alertas = []
 
@@ -165,6 +168,12 @@ def get_briefing_gym(cliente, ejercicios_planificados, fecha):
         if molestia_ej and molestia_ej.molestia_zona:
             alertas.append({'tipo': 'molestia', 'icono': '🩹', 'texto': f'Molestia en {molestia_ej.molestia_zona} reportada — vigila el rango de movimiento'})
 
+        # Freno local (Phase 62K): fallo muscular repetido sin control
+        permiso_local = evaluar_permiso_local_ejercicio(cliente, nombre, hoy)
+        permisos_locales_por_ejercicio[nombre] = permiso_local
+        if permiso_local['motivo'] == 'fallo_repetido_no_controlado':
+            alertas.append({'tipo': 'fallo_repetido', 'icono': '🛑', 'texto': permiso_local['mensaje']})
+
         if alertas:
             alertas_por_ejercicio[nombre] = alertas
 
@@ -202,6 +211,21 @@ def get_briefing_gym(cliente, ejercicios_planificados, fecha):
                     }.get(_permiso.get('motivo'), 'el plan mantiene la carga hoy')
             except Exception:
                 pass
+
+            # Freno local (Phase 62K) del primer ejercicio: si la progresión
+            # semanal está libre pero el motor pospondrá subir_peso en el
+            # primer ejercicio por deload/técnica/molestia/fallo repetido,
+            # no prometer la subida.
+            if not _frenado and nombres_hoy:
+                permiso_local_primero = permisos_locales_por_ejercicio.get(nombres_hoy[0])
+                if permiso_local_primero and permiso_local_primero['motivo']:
+                    _frenado = True
+                    _razon = {
+                        'deload':                       'esta semana es de descarga',
+                        'fallo_repetido_no_controlado': 'el primer ejercicio tuvo fallo sin control las últimas 2 sesiones',
+                        'tecnica_comprometida':         'la técnica del primer ejercicio fue comprometida la última vez',
+                        'molestia_reciente':            'hubo molestia reciente en el primer ejercicio',
+                    }.get(permiso_local_primero['motivo'], 'el plan mantiene la carga en el primer ejercicio')
 
             if _frenado:
                 mensajes.append({
@@ -246,6 +270,18 @@ def get_briefing_gym(cliente, ejercicios_planificados, fecha):
             'icono': '⚠️',
             'tipo': 'tecnica',
             'texto': f'{nombres_str}: técnica comprometida la última vez. Baja el ego — misma carga, mejor ejecución.',
+        })
+
+    # Fallo muscular repetido sin control (Phase 62K.1)
+    fallo_repetido_hoy = [n for n in nombres_hoy if any(
+        a['tipo'] == 'fallo_repetido' for a in alertas_por_ejercicio.get(n, [])
+    )]
+    if fallo_repetido_hoy:
+        nombres_str = ', '.join(fallo_repetido_hoy[:2])
+        mensajes.append({
+            'icono': '🛑',
+            'tipo': 'fallo_repetido',
+            'texto': f'{nombres_str}: fallo muscular sin control en las últimas 2 sesiones — consolida antes de subir peso.',
         })
 
     # Topes con sugerencia de peso
