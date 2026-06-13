@@ -1415,6 +1415,26 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
     </details>
     {% endif %}
 
+    <!-- Revisión de progreso: peso/cintura/rendimiento (Phase 63) -->
+    {% if revision_progreso %}
+    <details class="rb-aprendio-card" style="border-left:3px solid rgba(120,180,255,0.35);">
+      <summary class="rb-collapse-summary" style="margin-bottom:0;">
+        <div class="rb-section-num" style="color:rgba(120,180,255,0.7);">PROG</div>
+        <h3 class="rb-section-title">Revisión de progreso</h3>
+        <div class="rb-section-line"></div>
+        <span class="rb-collapse-hint">{{ revision_progreso.0.texto|truncatewords:7 }}</span>
+      </summary>
+      <div style="margin-top:8px;">
+      {% for item in revision_progreso %}
+      <div class="rb-aprendio-item">
+        <span class="rb-aprendio-icon">{{ item.icono }}</span>
+        <span class="rb-aprendio-text {{ item.color }}">{{ item.texto }}</span>
+      </div>
+      {% endfor %}
+      </div>
+    </details>
+    {% endif %}
+
     {# JOI · el plan consolidado: el FAB ya cubre el indicador "hay una lectura pendiente" #}
 
     <!-- Daily push Hyrox → orientación operativa (Phase 60E) -->
