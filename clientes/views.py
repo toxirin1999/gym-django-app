@@ -1377,6 +1377,18 @@ def mockup_demo(request):
     except Exception:
         context['resumen_semanal_gym'] = []
 
+    # ── Revisión de progreso (peso/cintura/rendimiento) ───────────
+    try:
+        from entrenos.services.revision_progreso_service import get_revision_progreso
+        _revision_key = f'dashboard_revision_progreso_{cliente.id}'
+        _revision = cache.get(_revision_key)
+        if _revision is None:
+            _revision = get_revision_progreso(cliente)
+            cache.set(_revision_key, _revision, 900)
+        context['revision_progreso'] = _revision
+    except Exception:
+        context['revision_progreso'] = []
+
     # ── Alertas del sistema (panel unificado) ─────────────────────
     try:
         from entrenos.services.alertas_sistema_service import get_alertas_sistema
