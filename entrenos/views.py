@@ -6719,9 +6719,13 @@ def dashboard_evolucion(request, cliente_id):
     """
     Dashboard de evolución física con logros, récords, progresión y motivación.
     """
+    from types import SimpleNamespace
+
+    from django.db.models import Avg
+
     from .services.estadisticas_service import EstadisticasService
     from .services.services import EstadisticasService as EstadisticasServiceV2
-    from .models import RecordPersonal, ClienteLogroAutomatico, DesafioSemanal, ProgresoDesafio, SesionEntrenamiento
+    from .models import RecordPersonal, ClienteLogroAutomatico, DesafioSemanal, ProgresoDesafio
 
     cliente = get_object_or_404(Cliente, id=cliente_id)
     rango = request.GET.get('rango', '30d')
@@ -6753,10 +6757,31 @@ def dashboard_evolucion(request, cliente_id):
         superado=False
     ).order_by('-fecha_logrado')[:10]
 
-    # 4. Obtener últimas sesiones (gamificadas)
-    ultimas_sesiones = SesionEntrenamiento.objects.filter(
-        entreno__cliente=cliente
-    ).select_related('entreno', 'entreno__rutina').order_by('-entreno__fecha')[:10]
+    # 4. Obtener últimas sesiones (desde EntrenoRealizado + EjercicioRealizado,
+    # fuente real: SesionEntrenamiento puede ser un snapshot desincronizado)
+    entrenos_recientes = EntrenoRealizado.objects.filter(
+        cliente=cliente
+    ).select_related('rutina', 'sesion_detalle').order_by('-fecha')[:10]
+
+    ultimas_sesiones = []
+    for entreno in entrenos_recientes:
+        numero_ejercicios = entreno.numero_ejercicios or 0
+
+        agg = entreno.ejercicios_realizados.filter(rpe__isnull=False).aggregate(avg=Avg('rpe'))
+        rpe_medio = agg['avg']
+        if rpe_medio is None:
+            sesion_detalle = getattr(entreno, 'sesion_detalle', None)
+            if sesion_detalle and sesion_detalle.rpe_medio is not None:
+                rpe_medio = sesion_detalle.rpe_medio
+
+        ultimas_sesiones.append(SimpleNamespace(
+            entreno=entreno,
+            duracion_minutos=entreno.duracion_minutos or 0,
+            ejercicios_completados=numero_ejercicios,
+            ejercicios_totales=numero_ejercicios,
+            volumen_sesion=entreno.volumen_total_kg or 0,
+            rpe_medio=rpe_medio,
+        ))
 
     # 5. Obtener desafíos activos
     hoy = timezone.now().date()
