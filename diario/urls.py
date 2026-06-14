@@ -94,6 +94,8 @@ urlpatterns = [
     path('habitos/<int:habito_id>/analisis-patrones/', views_habitos.habito_analisis_patrones, name='habito_analisis_patrones'),
     path('habitos/toggle-dia/', views_habitos.habito_toggle_dia, name='habito_toggle_dia'),
     path('habitos/eliminar/<int:habito_id>/', views_habitos.habito_eliminar, name='habito_eliminar'),
+    path('habitos/<int:habito_id>/pausar/', views_habitos.habito_pausar, name='habito_pausar'),
+    path('habitos/<int:habito_id>/cerrar/', views_habitos.habito_cerrar, name='habito_cerrar'),
 
     # ========================================
     # PRESENCIA — Ritual unificado

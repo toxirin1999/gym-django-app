@@ -23,7 +23,7 @@ from .models import (
     EjercicioArete, Gnosis, EntrenamientoSemanal,
     SeguimientoVires, EventoKairos, PlanificacionDiaria, PersonaImportante, Interaccion, RevisionSemanal,
     ReflexionLibre, ReflexionGuiadaTema, Virtud, Insignia,
-    InsigniaUsuario, RachaEscritura
+    InsigniaUsuario, RachaEscritura, Gesto
 )
 
 from .insights_engine import generar_insights_semanales
@@ -51,7 +51,7 @@ from .models import (
     EjercicioArete, Gnosis, EntrenamientoSemanal,
     SeguimientoVires, EventoKairos, PlanificacionDiaria, PersonaImportante, Interaccion, RevisionSemanal,
     ReflexionLibre, ReflexionGuiadaTema, Virtud, Insignia,
-    InsigniaUsuario, RachaEscritura
+    InsigniaUsuario, RachaEscritura, Gesto
 )
 
 from .insights_engine import generar_insights_semanales
@@ -915,49 +915,22 @@ def prosoche_dashboard(request):
     # 2. Obtenemos los datos relacionados de forma separada. Es más claro y evita los problemas del prefetch.
     semanas = ProsocheSemana.objects.filter(prosoche_mes=prosoche_mes).order_by('numero_semana')
     entradas_del_mes = ProsocheDiario.objects.filter(prosoche_mes=prosoche_mes).order_by('-fecha')
-    habitos = ProsocheHabito.objects.filter(prosoche_mes=prosoche_mes)
 
     # 3. Lógica para la semana actual (sin cambios, es correcta)
     numero_semana_actual = (hoy.day - 1) // 7 + 1
     semana_actual = semanas.filter(numero_semana=numero_semana_actual).first()
 
-    # 4. Lógica para preparar los datos de hábitos (¡AQUÍ ESTÁ LA CLAVE!)
-    # Esta es la lógica que funciona. La ejecutamos para cada hábito por separado.
-    dias_mes = list(range(1, calendar.monthrange(año_actual, hoy.month)[1] + 1))
-    habitos_con_dias = []
-    for habito in habitos:
-        # Obtenemos SOLO los días completados PARA ESTE HÁBITO.
-        dias_completados_query = ProsocheHabitoDia.objects.filter(
-            habito=habito,
-            completado=True
-        ).values_list('dia', flat=True)
-
-        # Convertimos a un conjunto para búsquedas rápidas (eficiente).
-        dias_completados_set = set(dias_completados_query)
-
-        dias_para_plantilla = []
-        for dia_num in dias_mes:
-            dias_para_plantilla.append({
-                'dia': dia_num,
-                'completado': dia_num in dias_completados_set
-            })
-
-        porcentaje = round((len(dias_completados_set) / len(dias_mes)) * 100) if dias_mes else 0
-        habitos_con_dias.append({'habito': habito, 'dias': dias_para_plantilla, 'porcentaje': porcentaje})
-
-    # 5. Obtenemos los meses anteriores (sin cambios)
+    # 4. Obtenemos los meses anteriores (sin cambios)
     meses_anteriores = ProsocheMes.objects.filter(
         usuario=request.user
     ).exclude(id=prosoche_mes.id).order_by('-año', '-mes')[:6]
 
-    # 6. Construimos el contexto final
+    # 5. Construimos el contexto final
     context = {
         'prosoche_mes': prosoche_mes,
         'semanas': semanas,
         'semana_actual': semana_actual,
         'entradas_del_mes': entradas_del_mes,
-        'habitos_con_dias': habitos_con_dias,
-        'dias_mes': dias_mes,
         'meses_anteriores': meses_anteriores,
         'mes_actual': mes_actual_str,
         'año_actual': año_actual,
@@ -3876,8 +3849,8 @@ def presencia_cierre(request):
 
                 propuesta_habito = _enriq.get('propuesta_habito')
                 if propuesta_habito and propuesta_habito.get('nombre'):
-                    ya_existe = ProsocheHabito.objects.filter(
-                        prosoche_mes=prosoche_mes,
+                    ya_existe = Gesto.objects.filter(
+                        usuario=request.user,
                         nombre__iexact=propuesta_habito['nombre'],
                     ).exists()
                     if ya_existe:
@@ -3964,34 +3937,25 @@ def promover_persona_interina(request):
 @login_required
 @require_http_methods(["POST"])
 def aceptar_habito_invitacion(request):
-    """AJAX: crea un ProsocheHabito desde la invitación de JOI."""
+    """AJAX: crea un Gesto desde la invitación de JOI (Phase 2.0D)."""
     try:
         data = json.loads(request.body)
         nombre = data.get('nombre', '').strip()[:100]
         descripcion = data.get('descripcion', '').strip()
-        tipo = data.get('tipo', 'positivo')
-        if tipo not in ('positivo', 'negativo'):
-            tipo = 'positivo'
+        tipo_propuesta = data.get('tipo', 'positivo')
+        tipo = 'suelto' if tipo_propuesta == 'negativo' else 'cultivo'
         if not nombre:
             return JsonResponse({'ok': False, 'error': 'Sin nombre'}, status=400)
 
-        hoy = timezone.now().date()
-        mes_nombre = hoy.strftime('%B')
-        año = hoy.year
-        prosoche_mes, _ = ProsocheMes.objects.get_or_create(
-            usuario=request.user, mes=mes_nombre, año=año
-        )
-        habito, creado = ProsocheHabito.objects.get_or_create(
-            prosoche_mes=prosoche_mes,
+        gesto, creado = Gesto.objects.get_or_create(
+            usuario=request.user,
             nombre=nombre,
             defaults={
                 'descripcion': descripcion,
-                'tipo_habito': tipo,
-                'objetivo_dias': 30,
-                'identidad_objetivo': f'Hábito propuesto por JOI el {hoy}',
+                'tipo': tipo,
             },
         )
-        return JsonResponse({'ok': True, 'creado': creado, 'id': habito.id})
+        return JsonResponse({'ok': True, 'creado': creado, 'id': gesto.id})
     except Exception as e:
         return JsonResponse({'ok': False, 'error': str(e)}, status=400)
 

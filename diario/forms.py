@@ -1,7 +1,7 @@
 # diario/forms.py
 
 from django import forms
-from .models import PersonaImportante, Interaccion, ProsocheHabito, TriggerHabito
+from .models import PersonaImportante, Interaccion, ProsocheHabito, TriggerHabito, Gesto
 
 
 class PersonaImportanteForm(forms.ModelForm):
@@ -108,6 +108,66 @@ class ProsocheHabitoForm(forms.ModelForm):
             'objetivo_dias': 'Número de días para establecer/eliminar el hábito (recomendado: 21-90 días)',
             'fecha_objetivo': 'Fecha en la que quieres completar el desafío'
         }
+
+
+class GestoForm(forms.ModelForm):
+    """Formulario para crear/editar Gesto (Phase Hábitos 2.0D)."""
+
+    # El template habito_form.html usa el campo radio 'tipo_habito' con valores
+    # 'positivo'/'negativo'; lo mapeamos a Gesto.tipo ('cultivo'/'suelto').
+    tipo_habito = forms.ChoiceField(
+        choices=[('positivo', 'Gesto que cultivo'), ('negativo', 'Gesto que suelto')],
+        widget=forms.Select(attrs={'class': 'form-select', 'id': 'id_tipo_habito'}),
+        label='Tipo de Gesto',
+    )
+
+    class Meta:
+        model = Gesto
+        fields = ['nombre', 'descripcion', 'periodo_observacion_dias', 'color']
+
+        widgets = {
+            'nombre': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Ej: Leer antes de dormir, Abrir el móvil al levantarme...'
+            }),
+            'descripcion': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': '¿Por qué aparece este gesto en tu día a día?'
+            }),
+            'periodo_observacion_dias': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'min': '1',
+                'max': '365',
+                'value': '30'
+            }),
+            'color': forms.TextInput(attrs={
+                'class': 'form-control',
+                'type': 'color'
+            }),
+        }
+
+        labels = {
+            'nombre': 'Nombre del Gesto',
+            'descripcion': 'Descripción',
+            'periodo_observacion_dias': 'Período de observación (días)',
+            'color': 'Color',
+        }
+
+    _TIPO_HABITO_A_TIPO = {'positivo': 'cultivo', 'negativo': 'suelto'}
+    _TIPO_A_TIPO_HABITO = {'cultivo': 'positivo', 'suelto': 'negativo'}
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance and self.instance.pk:
+            self.fields['tipo_habito'].initial = self._TIPO_A_TIPO_HABITO.get(self.instance.tipo, 'positivo')
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        instance.tipo = self._TIPO_HABITO_A_TIPO.get(self.cleaned_data['tipo_habito'], 'cultivo')
+        if commit:
+            instance.save()
+        return instance
 
 
 class TriggerHabitoForm(forms.ModelForm):

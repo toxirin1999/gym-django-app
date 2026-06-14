@@ -391,162 +391,6 @@
         margin: 0;
     }
 
-    /* === HÁBITOS === */
-    .habitos-container {
-        overflow-x: auto;
-    }
-
-    .habitos-table {
-        width: 100%;
-        border-collapse: separate;
-        border-spacing: 0;
-    }
-
-    .habitos-table th {
-        font-size: 0.7rem;
-        font-weight: 600;
-        color: var(--text-muted);
-        text-transform: uppercase;
-        padding: 0.5rem 0.25rem;
-        text-align: center;
-    }
-
-    .habitos-table th:first-child {
-        text-align: left;
-        padding-left: 0;
-    }
-
-    .habitos-table td {
-        padding: 0.5rem 0.25rem;
-        text-align: center;
-        vertical-align: middle;
-    }
-
-    .habitos-table td:first-child {
-        text-align: left;
-        padding-left: 0;
-    }
-
-    .habito-nombre {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-    }
-
-    .habito-color {
-        width: 10px;
-        height: 10px;
-        border-radius: 50%;
-        flex-shrink: 0;
-    }
-
-    .habito-text {
-        font-size: 0.9rem;
-        font-weight: 500;
-        color: var(--text-primary);
-    }
-
-    .habito-check {
-        width: 24px;
-        height: 24px;
-        border-radius: 6px;
-        border: 2px solid var(--border-color);
-        background: white;
-        cursor: pointer;
-        transition: all 0.2s ease;
-        appearance: none;
-        -webkit-appearance: none;
-    }
-
-    .habito-check:checked {
-        background: var(--accent-green);
-        border-color: var(--accent-green);
-        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'%3E%3Cpath d='M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z'/%3E%3C/svg%3E");
-        background-size: 16px;
-        background-position: center;
-        background-repeat: no-repeat;
-    }
-
-    .habito-porcentaje {
-        padding: 0.25rem 0.75rem;
-        border-radius: 20px;
-        font-size: 0.75rem;
-        font-weight: 600;
-    }
-
-    .habito-porcentaje.high { background: var(--accent-green-light); color: var(--accent-green); }
-    .habito-porcentaje.medium { background: #FFF8E8; color: var(--accent-yellow); }
-    .habito-porcentaje.low { background: #FFE8E8; color: var(--accent-red); }
-
-    .habito-delete {
-        background: none;
-        border: none;
-        color: var(--text-muted);
-        cursor: pointer;
-        padding: 0.25rem;
-        transition: color 0.2s ease;
-    }
-
-    .habito-delete:hover {
-        color: var(--accent-red);
-    }
-
-    /* === FORMULARIO NUEVO HÁBITO === */
-    .nuevo-habito-form {
-        display: none;
-        padding: 1.25rem;
-        background: var(--bg-primary);
-        border-radius: var(--radius-md);
-        margin-bottom: 1.25rem;
-    }
-
-    .nuevo-habito-form.active {
-        display: block;
-    }
-
-    .form-row {
-        display: flex;
-        gap: 1rem;
-        align-items: flex-end;
-    }
-
-    .form-group {
-        flex: 1;
-    }
-
-    .form-group label {
-        display: block;
-        font-size: 0.8rem;
-        font-weight: 600;
-        color: var(--text-secondary);
-        margin-bottom: 0.5rem;
-    }
-
-    .form-input {
-        width: 100%;
-        padding: 0.75rem 1rem;
-        border: 1px solid var(--border-color);
-        border-radius: var(--radius-sm);
-        font-family: inherit;
-        font-size: 0.95rem;
-        transition: all 0.3s ease;
-    }
-
-    .form-input:focus {
-        outline: none;
-        border-color: var(--accent-orange);
-        box-shadow: 0 0 0 3px rgba(244, 148, 89, 0.1);
-    }
-
-    .form-color {
-        width: 48px;
-        height: 48px;
-        padding: 0;
-        border: none;
-        border-radius: var(--radius-sm);
-        cursor: pointer;
-    }
-
     /* === REVISIÓN DEL MES === */
     .revision-grid {
         display: grid;
@@ -883,94 +727,16 @@
                 <div class="card-icon green">
                     <i class="fas fa-check-double"></i>
                 </div>
-                <h3>Hábitos</h3>
-            </div>
-            <div style="display: flex; gap: 0.5rem;">
-                <a href="{% url 'diario:copiar_habitos_mes_anterior' %}" class="btn-freud btn-freud-secondary" style="padding: 0.5rem 0.75rem; font-size: 0.8rem;" title="Copiar del mes anterior">
-                    <i class="fas fa-copy"></i>
-                </a>
-                <button class="btn-freud btn-freud-primary" style="padding: 0.5rem 1rem; font-size: 0.85rem;" onclick="toggleNuevoHabito()">
-                    <i class="fas fa-plus"></i> Nuevo
-                </button>
+                <h3>Gestos</h3>
             </div>
         </div>
-
-        <!-- Formulario nuevo hábito -->
-        <div id="nuevo-habito-form" class="nuevo-habito-form">
-            <form method="post" action="{% url 'diario:prosoche_crear_habito' %}">
-                {% csrf_token %}
-                <input type="hidden" name="prosoche_id" value="{{ prosoche_mes.id }}">
-                <div class="form-row">
-                    <div class="form-group" style="flex: 3;">
-                        <label>Nombre del hábito</label>
-                        <input type="text" class="form-input" name="nombre" placeholder="Ej: Meditar 10 min" required>
-                    </div>
-                    <div class="form-group" style="flex: 0;">
-                        <label>Color</label>
-                        <input type="color" class="form-color" name="color" value="#F49459">
-                    </div>
-                    <div class="form-group" style="flex: 0;">
-                        <button type="submit" class="btn-freud btn-freud-primary" style="height: 48px;">Crear</button>
-                    </div>
-                    <div class="form-group" style="flex: 0;">
-                        <button type="button" class="btn-freud btn-freud-secondary" style="height: 48px;" onclick="toggleNuevoHabito()">Cancelar</button>
-                    </div>
-                </div>
-            </form>
-        </div>
-
-        {% if habitos_con_dias %}
-        <div class="habitos-container">
-            <table class="habitos-table">
-                <thead>
-                    <tr>
-                        <th style="min-width: 120px;">Hábito</th>
-                        {% for dia in dias_mes %}<th>{{ dia }}</th>{% endfor %}
-                        <th>%</th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for habito_data in habitos_con_dias %}
-                    <tr>
-                        <td>
-                            <div class="habito-nombre">
-                                <span class="habito-color" style="background: {{ habito_data.habito.color }};"></span>
-                                <span class="habito-text">{{ habito_data.habito.nombre }}</span>
-                            </div>
-                        </td>
-                        {% for dia_data in habito_data.dias %}
-                        <td>
-                            <input type="checkbox"
-                                   class="habito-check"
-                                   {% if dia_data.completado %}checked{% endif %}
-                                   onchange="toggleHabito({{ habito_data.habito.id }}, {{ dia_data.dia }}, this)">
-                        </td>
-                        {% endfor %}
-                        <td>
-                            <span class="habito-porcentaje {% if habito_data.porcentaje >= 80 %}high{% elif habito_data.porcentaje >= 50 %}medium{% else %}low{% endif %}">
-                                {{ habito_data.porcentaje }}%
-                            </span>
-                        </td>
-                        <td>
-                            <form method="post" action="{% url 'diario:eliminar_habito' habito_data.habito.id %}" onsubmit="return confirm('¿Eliminar este hábito?');" style="display: inline;">
-                                {% csrf_token %}
-                                <button type="submit" class="habito-delete">
-                                    <i class="fas fa-trash-alt"></i>
-                                </button>
-                            </form>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-        {% else %}
         <div class="empty-state">
-            <i class="fas fa-plus-circle"></i>
-            <p>Aún no has definido hábitos para este mes</p>
+            <i class="fas fa-feather-alt"></i>
+            <p>Los hábitos ahora viven como gestos persistentes. Ya no se reinician cada mes.</p>
+            <a href="{% url 'diario:habitos_dashboard' %}" class="btn-freud btn-freud-primary" style="margin-top: 1rem;">
+                Ir a Gestos <i class="fas fa-arrow-right"></i>
+            </a>
         </div>
-        {% endif %}
     </div>
 
     <!-- REVISIÓN DEL MES -->
@@ -1081,10 +847,6 @@
     // FUNCIONES DE INTERACCIÓN
     // ==================================================
 
-    function toggleNuevoHabito() {
-        document.getElementById('nuevo-habito-form').classList.toggle('active');
-    }
-
     function toggleHistorialMeses() {
         document.getElementById('historial-meses').classList.toggle('hidden');
     }
@@ -1155,21 +917,5 @@
         .catch(error => console.error('Error:', error));
     }
 
-    function toggleHabito(habitoId, dia, checkbox) {
-        const data = { habito_id: habitoId, dia: dia };
-        fetch('{% url "diario:prosoche_toggle_habito" %}', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
-            body: JSON.stringify(data)
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                // Actualizar el porcentaje sin recargar
-                location.reload();
-            }
-        })
-        .catch(error => console.error('Error:', error));
-    }
 </script>
 {% endblock %}
