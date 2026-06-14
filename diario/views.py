@@ -23,7 +23,7 @@ from .models import (
     EjercicioArete, Gnosis, EntrenamientoSemanal,
     SeguimientoVires, EventoKairos, PlanificacionDiaria, PersonaImportante, Interaccion, RevisionSemanal,
     ReflexionLibre, ReflexionGuiadaTema, Virtud, Insignia,
-    InsigniaUsuario, RachaEscritura, Gesto
+    InsigniaUsuario, RachaEscritura, Gesto, RegistroGesto
 )
 
 from .insights_engine import generar_insights_semanales
@@ -51,7 +51,7 @@ from .models import (
     EjercicioArete, Gnosis, EntrenamientoSemanal,
     SeguimientoVires, EventoKairos, PlanificacionDiaria, PersonaImportante, Interaccion, RevisionSemanal,
     ReflexionLibre, ReflexionGuiadaTema, Virtud, Insignia,
-    InsigniaUsuario, RachaEscritura, Gesto
+    InsigniaUsuario, RachaEscritura, Gesto, RegistroGesto
 )
 
 from .insights_engine import generar_insights_semanales
@@ -3588,15 +3588,21 @@ def presencia_cierre(request):
         prosoche_mes=prosoche_mes, fecha=hoy
     )
 
-    habitos = ProsocheHabito.objects.filter(prosoche_mes=prosoche_mes)
     dia_num = hoy.day
-    habitos_con_estado = []
-    for h in habitos:
-        dia_obj = ProsocheHabitoDia.objects.filter(habito=h, dia=dia_num).first()
-        habitos_con_estado.append({
-            'habito': h,
-            'completado': dia_obj.completado if dia_obj else False,
-        })
+    gestos_activos = Gesto.objects.filter(usuario=request.user, estado='activo')
+
+    def _construir_habitos_con_estado():
+        cumplidos_hoy = set(
+            RegistroGesto.objects.filter(
+                gesto__in=gestos_activos, fecha=hoy, estado='cumplido'
+            ).values_list('gesto_id', flat=True)
+        )
+        return [
+            {'habito': gesto, 'completado': gesto.id in cumplidos_hoy}
+            for gesto in gestos_activos
+        ]
+
+    habitos_con_estado = _construir_habitos_con_estado()
 
     if request.method == 'POST':
         texto_libre = request.POST.get('reflexion_libre', '').strip()
@@ -3771,11 +3777,18 @@ def presencia_cierre(request):
         except (json.JSONDecodeError, ValueError):
             habitos_completados_ids = []
 
-        for h in habitos:
-            completado = h.id in habitos_completados_ids
-            dia_obj, _ = ProsocheHabitoDia.objects.get_or_create(habito=h, dia=dia_num)
-            dia_obj.completado = completado
-            dia_obj.save()
+        cumplidos_hoy_ids = set(
+            RegistroGesto.objects.filter(
+                gesto__in=gestos_activos, fecha=hoy, estado='cumplido'
+            ).values_list('gesto_id', flat=True)
+        )
+        for gesto in gestos_activos:
+            deseado = gesto.id in habitos_completados_ids
+            actual = gesto.id in cumplidos_hoy_ids
+            if deseado != actual:
+                HabitosService.toggle_dia(gesto, hoy)
+
+        habitos_con_estado = _construir_habitos_con_estado()
 
         # Simbiosis_respuesta guard — save if provided (re-submission after simbiosis block)
         simbiosis_respuesta = request.POST.get('simbiosis_respuesta', '').strip()

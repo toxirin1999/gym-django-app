@@ -312,12 +312,12 @@
         <div class="section-label">Gestos de hoy</div>
         <div class="habitos-grid" id="habitos-grid">
             {% for item in habitos_con_estado %}
-            <div class="habito-chip {% if item.habito.tipo_habito == 'negativo' %}negativo{% endif %} {% if item.completado %}completado{% endif %}"
+            <div class="habito-chip {% if item.habito.tipo == 'suelto' %}negativo{% endif %} {% if item.completado %}completado{% endif %}"
                  data-id="{{ item.habito.id }}"
-                 data-tipo="{{ item.habito.tipo_habito }}">
+                 data-tipo="{{ item.habito.tipo }}">
                 <span class="habito-check">{% if item.completado %}✓{% else %}○{% endif %}</span>
                 {{ item.habito.nombre }}
-                {% if item.habito.tipo_habito == 'negativo' %}
+                {% if item.habito.tipo == 'suelto' %}
                     <span class="habito-tipo-badge badge-negativo">cuidar</span>
                 {% endif %}
             </div>
