@@ -432,3 +432,16 @@ class ObjetivoPesoForm(forms.ModelForm):
                 attrs={'class': 'form-control', 'placeholder': 'Ej: 70.0', 'step': '0.1'}),
             'fecha_fin': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'})
         }
+
+
+class MiCuerpoForm(forms.ModelForm):
+    """Phase 63.1 — entrada única de peso/cintura/grasa desde el dashboard."""
+
+    class Meta:
+        model = Cliente
+        fields = ['peso_corporal', 'cintura', 'grasa_corporal']
+        widgets = {
+            'peso_corporal': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.1', 'placeholder': 'kg'}),
+            'cintura': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.1', 'placeholder': 'cm'}),
+            'grasa_corporal': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.1', 'placeholder': '%'}),
+        }

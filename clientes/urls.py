@@ -38,6 +38,7 @@ urlpatterns = [
          name='configurar_preferencias_helms'),
     path("cliente/<int:cliente_id>/control-peso/", views.control_peso_cliente, name="control_peso_cliente"),
     path("cliente/<int:cliente_id>/registrar-peso/", views.registrar_peso, name="registrar_peso"),
+    path("cliente/<int:cliente_id>/mi-cuerpo/", views.mi_cuerpo, name="mi_cuerpo"),
     path("cliente/<int:cliente_id>/establecer-objetivo-peso/", views.establecer_objetivo_peso,
          name="establecer_objetivo_peso"),
     path('portal/guardar/<int:cliente_id>/', views.guardar_entrenamiento_activo, name='guardar_entrenamiento_activo'),
