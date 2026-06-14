@@ -48,9 +48,10 @@ from rutinas.models import Programa, Rutina
 
 # Local App Imports
 from .forms import (BitacoraDiariaForm, CheckinDiarioForm, ClienteForm,
-                    DatosNutricionalesForm, MedidaForm,
+                    DatosNutricionalesForm, MedidaForm, MiCuerpoForm,
                     ObjetivoClienteForm, ObjetivoPesoForm, PesoDiarioForm,
                     RevisionProgresoForm, SugerenciaForm)
+from .revision_sync_service import crear_revision_si_medidas_cambiaron
 from .models import (BitacoraDiaria, Cliente, EstadoSemanal, Medida,
                      ObjetivoCliente, ObjetivoPeso, PesoDiario, PlanNutricional,
                      RevisionProgreso, SugerenciaAceptada)
@@ -4249,6 +4250,49 @@ def registrar_peso(request, cliente_id):
         else:
             messages.error(request, "Error al registrar el peso. Por favor, revisa los datos.")
     return redirect("clientes:control_peso_cliente", cliente_id=cliente.id)
+
+
+@login_required
+def mi_cuerpo(request, cliente_id):
+    """Phase 63.1 — entrada única de peso/cintura/grasa, enlazada desde el dashboard."""
+    cliente = get_object_or_404(Cliente, id=cliente_id)
+
+    if request.method == "POST":
+        valores_anteriores = {
+            'cintura': cliente.cintura,
+            'peso_corporal': cliente.peso_corporal,
+            'grasa_corporal': cliente.grasa_corporal,
+        }
+        form = MiCuerpoForm(request.POST, instance=cliente)
+        if form.is_valid():
+            cliente_actualizado = form.save()
+            valores_nuevos = {
+                'cintura': cliente_actualizado.cintura,
+                'peso_corporal': cliente_actualizado.peso_corporal,
+                'grasa_corporal': cliente_actualizado.grasa_corporal,
+            }
+            crear_revision_si_medidas_cambiaron(cliente, valores_anteriores, valores_nuevos)
+
+            if valores_nuevos['peso_corporal'] is not None:
+                PesoDiario.objects.update_or_create(
+                    cliente=cliente, fecha=date.today(),
+                    defaults={'peso_kg': valores_nuevos['peso_corporal']},
+                )
+            messages.success(request, "Medidas guardadas.")
+            return redirect("clientes:mi_cuerpo", cliente_id=cliente.id)
+        else:
+            messages.error(request, "Revisa los datos introducidos.")
+    else:
+        form = MiCuerpoForm(instance=cliente)
+
+    ultima_revision = cliente.revisiones.order_by('-fecha').first()
+
+    context = {
+        'form': form,
+        'cliente': cliente,
+        'ultima_revision': ultima_revision,
+    }
+    return render(request, 'clientes/mi_cuerpo.html', context)
 
 
 @login_required

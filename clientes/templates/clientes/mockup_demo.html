@@ -450,6 +450,13 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
     JOI
   </a>
   <div style="display:flex;align-items:center;gap:10px;">
+    <a href="{% url 'clientes:mi_cuerpo' cliente.id %}"
+       style="display:inline-flex;align-items:center;gap:5px;font-family:var(--font-mono);
+              font-size:9px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;
+              color:rgba(120,180,255,.65);border:1px solid rgba(120,180,255,.22);border-radius:2px;
+              padding:4px 9px;text-decoration:none;white-space:nowrap;">
+      <i class="fa-solid fa-ruler"></i> Mi cuerpo
+    </a>
     <a href="{% url 'hyrox:strava_reconciliacion' %}"
        style="display:inline-flex;align-items:center;gap:5px;font-family:var(--font-mono);
               font-size:9px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;
@@ -1431,6 +1438,7 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
         <span class="rb-aprendio-text {{ item.color }}">{{ item.texto }}</span>
       </div>
       {% endfor %}
+      <a href="{% url 'clientes:mi_cuerpo' cliente.id %}" style="display:block;margin-top:8px;font-size:10px;font-weight:700;letter-spacing:0.06em;color:rgba(120,180,255,0.7);text-decoration:none;">Actualizar medidas →</a>
       </div>
     </details>
     {% endif %}

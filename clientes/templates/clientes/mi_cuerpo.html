@@ -1,0 +1,177 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mi cuerpo · {{ cliente.user.get_full_name|default:cliente.user.username }}</title>
+  <link rel="stylesheet" href="{% static 'css/jds.css' %}">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      background: var(--jds-bg);
+      color: var(--jds-text);
+      font-family: var(--jds-font);
+      min-height: 100vh;
+    }
+    .mc-container {
+      max-width: 480px;
+      margin: 0 auto;
+      padding: 24px 16px 48px;
+    }
+    .mc-back {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      letter-spacing: 0.06em;
+      color: var(--jds-text-soft);
+      text-decoration: none;
+      margin-bottom: 20px;
+    }
+    .mc-title {
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      margin-bottom: 4px;
+    }
+    .mc-subtitle {
+      font-size: 13px;
+      color: var(--jds-text-soft);
+      margin-bottom: 24px;
+      line-height: 1.5;
+    }
+    .mc-card {
+      background: var(--jds-surface);
+      border: 1px solid var(--jds-border);
+      border-radius: var(--jds-radius-lg);
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+    .mc-field {
+      margin-bottom: 16px;
+    }
+    .mc-field:last-child {
+      margin-bottom: 0;
+    }
+    .mc-field label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      color: var(--jds-text-muted);
+      margin-bottom: 6px;
+    }
+    .mc-field input {
+      width: 100%;
+      background: var(--jds-bg-soft);
+      border: 1px solid var(--jds-border-strong);
+      border-radius: var(--jds-radius-sm);
+      color: var(--jds-text);
+      font-size: 16px;
+      font-family: var(--jds-font);
+      padding: 10px 12px;
+    }
+    .mc-field input:focus {
+      outline: none;
+      border-color: var(--jds-accent-border);
+    }
+    .mc-hint {
+      font-size: 11px;
+      color: var(--jds-text-faint);
+      margin-top: 16px;
+      line-height: 1.5;
+    }
+    .mc-submit {
+      width: 100%;
+      background: var(--jds-accent-soft);
+      border: 1px solid var(--jds-accent-border);
+      color: var(--jds-accent);
+      font-family: var(--jds-font);
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      border-radius: var(--jds-radius-sm);
+      padding: 12px;
+      cursor: pointer;
+      margin-top: 8px;
+    }
+    .mc-submit:active {
+      transform: translateY(1px);
+    }
+    .mc-messages {
+      margin-bottom: 16px;
+    }
+    .mc-message {
+      font-size: 13px;
+      padding: 10px 14px;
+      border-radius: var(--jds-radius-sm);
+      margin-bottom: 8px;
+    }
+    .mc-message.success {
+      background: var(--jds-good-soft);
+      color: var(--jds-good);
+      border: 1px solid var(--jds-good-soft);
+    }
+    .mc-message.error {
+      background: var(--jds-danger-soft);
+      color: var(--jds-danger);
+      border: 1px solid var(--jds-danger-soft);
+    }
+    .mc-ultima {
+      font-size: 12px;
+      color: var(--jds-text-soft);
+    }
+  </style>
+</head>
+<body>
+<div class="mc-container">
+  <a class="mc-back" href="{% url 'clientes:mockup_demo' %}">← Volver al panel</a>
+
+  <div class="mc-title">Mi cuerpo</div>
+  <div class="mc-subtitle">
+    Peso, cintura y grasa corporal. El peso alimenta tu control de peso diario;
+    cintura y grasa quedan en tu revisión de progreso solo cuando cambian de verdad.
+  </div>
+
+  {% if messages %}
+  <div class="mc-messages">
+    {% for message in messages %}
+    <div class="mc-message {% if message.tags %}{{ message.tags }}{% endif %}">{{ message }}</div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <form method="post">
+    {% csrf_token %}
+    <div class="mc-card">
+      <div class="mc-field">
+        <label for="{{ form.peso_corporal.id_for_label }}">Peso corporal (kg)</label>
+        {{ form.peso_corporal }}
+      </div>
+      <div class="mc-field">
+        <label for="{{ form.cintura.id_for_label }}">Cintura (cm)</label>
+        {{ form.cintura }}
+      </div>
+      <div class="mc-field">
+        <label for="{{ form.grasa_corporal.id_for_label }}">Grasa corporal (%)</label>
+        {{ form.grasa_corporal }}
+      </div>
+    </div>
+
+    {% if ultima_revision %}
+    <div class="mc-ultima">Última revisión de medidas: {{ ultima_revision.fecha|date:"d/m/Y" }}</div>
+    {% else %}
+    <div class="mc-ultima">Todavía no hay ninguna revisión de medidas registrada.</div>
+    {% endif %}
+
+    <button type="submit" class="mc-submit">Guardar</button>
+
+    <div class="mc-hint">
+      La cintura y la grasa corporal no hace falta medirlas a diario — cada 2-4 semanas
+      es suficiente para que el sistema detecte una tendencia real.
+    </div>
+  </form>
+</div>
+</body>
+</html>
