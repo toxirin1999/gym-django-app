@@ -118,6 +118,34 @@
 .text-yellow-400 { color: #facc15; }
 .text-cyan-400 { color: #67e8f9; }
 
+/* Phase 64D: memoria compacta de progreso */
+.memoria-progreso {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.75rem;
+}
+.memoria-progreso .memoria-delta--subida { color: var(--green-glow); }
+.memoria-progreso .memoria-delta--bajada { color: var(--yellow-glow); }
+.memoria-progreso .memoria-delta--igual { color: var(--text-secondary); }
+.memoria-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.15rem 0.5rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+}
+.memoria-chip--tope { color: var(--green-glow); }
+.memoria-chip--estancado { color: var(--yellow-glow); }
+
     /* --- Tarjeta de Briefing (Recomendación) --- */
     .briefing-card {
         padding: 1.5rem;
@@ -482,6 +510,32 @@ body {
     </div>
     <div class="exercise-card-body">
          <input type="hidden" name="{{ ejercicio.form_id }}_nombre" value="{{ ejercicio.nombre }}">
+
+        {% if ejercicio.peso_anterior_kg or ejercicio.sugerencia_tope or ejercicio.estancado %}
+        <div class="memoria-progreso">
+            {% if ejercicio.peso_anterior_kg %}
+            <span>
+                Última vez: {{ ejercicio.peso_anterior_kg|stringformat:'.1f' }} kg × {{ ejercicio.repeticiones_anterior }} reps
+                {% if ejercicio.comparacion_peso %}
+                    {% if ejercicio.comparacion_peso.direccion == 'subida' %}
+                        <span class="memoria-delta--subida">· ▲ +{{ ejercicio.comparacion_peso.delta|stringformat:'.1f' }} kg</span>
+                    {% elif ejercicio.comparacion_peso.direccion == 'bajada' %}
+                        <span class="memoria-delta--bajada">· ▼ {{ ejercicio.comparacion_peso.delta|stringformat:'.1f' }} kg</span>
+                    {% else %}
+                        <span class="memoria-delta--igual">· =</span>
+                    {% endif %}
+                {% endif %}
+            </span>
+            {% endif %}
+            {% if ejercicio.sugerencia_tope %}
+            <span class="memoria-chip memoria-chip--tope">🔝 +1 rep</span>
+            {% endif %}
+            {% if ejercicio.estancado %}
+            <span class="memoria-chip memoria-chip--estancado">⚡ Estancado</span>
+            {% endif %}
+        </div>
+        {% endif %}
+
         <!-- ======================================================= -->
         <!-- SECCIÓN DE DETALLES DE EJECUCIÓN (LA PARTE QUE FALTABA) -->
         <!-- ======================================================= -->
