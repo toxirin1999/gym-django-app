@@ -11,6 +11,22 @@ Cubre:
    mantiene su snapshot 0/0/0/0/None — no se "corrige" a valores falsos.
 4. `DryRunNoEscribeTest`: --dry-run no modifica la BD, solo reporta.
 5. `FiltroClienteIdTest`: --cliente-id limita el alcance a un cliente.
+
+Phase Evolución Data 5A — Informe de impacto:
+6-10. Ver clases `InformeImpacto*` para clasificación, sesiones_perfectas,
+desglose por cliente, top cambios y verificación de no-escritura.
+
+Phase Evolución Data 5A.1 — Auditoría de perfección antes de backfill:
+11. `AuditoriaPerfeccionNoEscribeTest`: --auditoria-perfeccion no modifica BD.
+12. `AuditoriaPerfeccionPatronCeroNTest`: sesión 0/N -> N/N con
+    numero_ejercicios coherente → veredicto "completa".
+13. `AuditoriaPerfeccionVeredictoDudosaTest`: sesión que gana perfección
+    pero numero_ejercicios no coincide con EjercicioRealizado reales →
+    veredicto "dudosa".
+14. `AuditoriaPerfeccionControlTest`: sesión ya perfecta antes y después →
+    aparece en la sección de control.
+15. `AuditoriaPerfeccionResumenTest`: el resumen final cuenta
+    auditadas/completas/dudosas/incompletas correctamente.
 """
 
 from datetime import date
@@ -37,6 +53,64 @@ class BackfillSesionEntrenamientoTestBase(TestCase):
         out = StringIO()
         call_command('backfill_sesion_entrenamiento', *args, stdout=out)
         return out.getvalue()
+
+    def _crear_entreno_gana_perfeccion(self, cliente=None, numero_ejercicios=1, fecha=None):
+        """EntrenoRealizado con 1 EjercicioRealizado (4 series, completado) y
+        snapshot con series_completadas=0 (resto correcto): el backfill lo
+        pasaría de series 0/4 a 4/4, ganando perfección."""
+        cliente = cliente or self.cliente
+        fecha = fecha or date.today()
+        entreno = EntrenoRealizado.objects.create(
+            cliente=cliente, rutina=self.rutina, fecha=fecha,
+            fuente_datos='manual',
+        )
+        EjercicioRealizado.objects.create(
+            entreno=entreno, nombre_ejercicio='Remo',
+            peso_kg=50, series=4, repeticiones=10, rpe=7,
+            completado=True, fuente_datos='manual',
+        )
+        entreno.numero_ejercicios = numero_ejercicios
+        entreno.volumen_total_kg = 200
+        entreno.duracion_minutos = 40
+        entreno.save(update_fields=['numero_ejercicios', 'volumen_total_kg', 'duracion_minutos'])
+
+        sesion = SesionEntrenamiento.objects.get(entreno=entreno)
+        sesion.duracion_minutos = 40
+        sesion.ejercicios_totales = 1
+        sesion.ejercicios_completados = 1
+        sesion.volumen_sesion = 200
+        sesion.rpe_medio = 7.0
+        sesion.series_totales = 4
+        sesion.series_completadas = 0
+        sesion.save(update_fields=[
+            'duracion_minutos', 'ejercicios_totales', 'ejercicios_completados',
+            'volumen_sesion', 'rpe_medio', 'series_totales', 'series_completadas',
+        ])
+        return entreno
+
+    def _crear_entreno_control_perfecto(self, cliente=None, fecha=None):
+        """EntrenoRealizado cuyo snapshot ya es perfecto antes y después
+        (series_completadas == series_totales > 0, sin cambios)."""
+        cliente = cliente or self.cliente
+        fecha = fecha or date.today()
+        entreno = EntrenoRealizado.objects.create(
+            cliente=cliente, rutina=self.rutina, fecha=fecha,
+            fuente_datos='manual',
+        )
+        EjercicioRealizado.objects.create(
+            entreno=entreno, nombre_ejercicio='Press',
+            peso_kg=40, series=4, repeticiones=8, rpe=8,
+            completado=True, fuente_datos='manual',
+        )
+        entreno.numero_ejercicios = 1
+        entreno.volumen_total_kg = 160
+        entreno.duracion_minutos = 35
+        entreno.save(update_fields=['numero_ejercicios', 'volumen_total_kg', 'duracion_minutos'])
+        SesionEntrenamiento.objects.filter(entreno=entreno).update(
+            duracion_minutos=35, ejercicios_completados=1, ejercicios_totales=1,
+            series_completadas=4, series_totales=4, volumen_sesion=160, rpe_medio=8.0,
+        )
+        return entreno
 
 
 class ZombieSnapshotBackfillTest(BackfillSesionEntrenamientoTestBase):
@@ -498,3 +572,75 @@ class InformeImpactoNoEscribeTest(BackfillSesionEntrenamientoTestBase):
         self.assertEqual(sesion.series_totales, 0)
         self.assertIsNone(sesion.rpe_medio)
         self.assertIn('=== Informe de impacto', salida)
+
+
+class AuditoriaPerfeccionNoEscribeTest(BackfillSesionEntrenamientoTestBase):
+    """Test 11: --auditoria-perfeccion no modifica la BD."""
+
+    def test_auditoria_no_modifica_bd(self):
+        entreno = self._crear_entreno_gana_perfeccion()
+
+        salida = self._run_command('--auditoria-perfeccion')
+
+        sesion = SesionEntrenamiento.objects.get(entreno=entreno)
+        self.assertEqual(sesion.series_completadas, 0)
+        self.assertEqual(sesion.series_totales, 4)
+        self.assertIn('=== Auditoría de perfección', salida)
+
+
+class AuditoriaPerfeccionPatronCeroNTest(BackfillSesionEntrenamientoTestBase):
+    """Test 12: sesión 0/N -> N/N con numero_ejercicios coherente → veredicto completa."""
+
+    def test_patron_cero_n_veredicto_completa(self):
+        entreno = self._crear_entreno_gana_perfeccion(numero_ejercicios=1)
+
+        salida = self._run_command('--auditoria-perfeccion')
+
+        self.assertIn('Patrón 0/N -> N/N', salida)
+        self.assertIn(f'entreno_id={entreno.id}', salida)
+        self.assertIn('series: 0/4 -> 4/4', salida)
+        self.assertIn('veredicto: completa', salida)
+
+
+class AuditoriaPerfeccionVeredictoDudosaTest(BackfillSesionEntrenamientoTestBase):
+    """Test 13: gana perfección pero numero_ejercicios no coincide con
+    EjercicioRealizado reales → veredicto dudosa."""
+
+    def test_numero_ejercicios_no_coincide_veredicto_dudosa(self):
+        # numero_ejercicios=2 pero solo hay 1 EjercicioRealizado registrado.
+        entreno = self._crear_entreno_gana_perfeccion(numero_ejercicios=2)
+
+        salida = self._run_command('--auditoria-perfeccion')
+
+        self.assertIn(f'entreno_id={entreno.id}', salida)
+        self.assertIn('numero_ejercicios=2 ejercicios_realizados=1', salida)
+        self.assertIn('veredicto: dudosa', salida)
+
+
+class AuditoriaPerfeccionControlTest(BackfillSesionEntrenamientoTestBase):
+    """Test 14: sesión ya perfecta antes y después aparece como control."""
+
+    def test_sesion_ya_perfecta_aparece_en_control(self):
+        entreno = self._crear_entreno_control_perfecto()
+
+        salida = self._run_command('--auditoria-perfeccion')
+
+        self.assertIn('Control — ya perfectas antes', salida)
+        self.assertIn(f'entreno_id={entreno.id}', salida)
+        self.assertIn('control: ya era perfecta y sigue siéndolo', salida)
+
+
+class AuditoriaPerfeccionResumenTest(BackfillSesionEntrenamientoTestBase):
+    """Test 15: el resumen final cuenta auditadas/completas/dudosas/incompletas."""
+
+    def test_resumen_cuenta_veredictos(self):
+        self._crear_entreno_gana_perfeccion(numero_ejercicios=1)  # completa
+        self._crear_entreno_gana_perfeccion(numero_ejercicios=2)  # dudosa
+        self._crear_entreno_control_perfecto()  # control, completa
+
+        salida = self._run_command('--auditoria-perfeccion')
+
+        self.assertIn('Auditadas: 3', salida)
+        self.assertIn('Completas: 2', salida)
+        self.assertIn('Dudosas: 1', salida)
+        self.assertIn('Incompletas: 0', salida)
