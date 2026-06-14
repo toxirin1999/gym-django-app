@@ -1,7 +1,7 @@
 {% extends 'diario/base_stoic.html' %}
 {% load static %}
 
-{% block title %}Gestos del mes — Diario{% endblock %}
+{% block title %}Gestos — Diario{% endblock %}
 {% block body_class %}diario-dark{% endblock %}
 
 {% block extra_css %}
@@ -38,27 +38,27 @@
     }
 
     .dashboard-container {
-        max-width: 600px;
+        max-width: 640px;
         margin: 0 auto;
-        padding: 1rem;
-        padding-bottom: 100px;
+        padding: 1.25rem 1rem 3rem;
     }
 
     /* Header */
     .dashboard-header {
-        padding: 1.5rem 0.5rem;
-        margin-bottom: 1rem;
+        padding: 0;
+        margin-bottom: 1.1rem;
     }
 
     .page-title {
-        font-size: 1.75rem;
+        font-size: 1.5rem;
         font-weight: 700;
+        letter-spacing: -0.01em;
         color: var(--text-primary);
-        margin-bottom: 0.5rem;
+        margin-bottom: 0.2rem;
     }
 
     .page-subtitle {
-        font-size: 0.95rem;
+        font-size: 0.78rem;
         color: var(--text-secondary);
         font-weight: 500;
     }
@@ -67,8 +67,8 @@
     .habit-card {
         background: var(--bg-card);
         border-radius: var(--radius-lg);
-        padding: 1.5rem;
-        margin-bottom: 1.5rem;
+        padding: 1.1rem 1.25rem;
+        margin-bottom: 0.75rem;
         box-shadow: var(--shadow-soft);
         border: 1px solid var(--border-color);
     }
@@ -97,21 +97,23 @@
 
     /* Buttons */
     .btn-primary-custom {
-        background: linear-gradient(135deg, var(--accent-orange-dark) 0%, var(--accent-orange) 100%);
-        color: white;
-        border: none;
-        padding: 0.75rem 1.5rem;
-        border-radius: var(--radius-md);
-        font-weight: 600;
-        font-size: 0.9rem;
-        box-shadow: 0 4px 15px rgba(167, 139, 250, 0.3);
-        transition: all 0.3s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        background: var(--bg-accent);
+        color: var(--accent-orange);
+        border: 1.5px solid rgba(167,139,250,0.5);
+        padding: 0.7rem 1.5rem;
+        border-radius: 100px;
+        font-weight: 700;
+        font-size: 0.85rem;
+        transition: all 0.15s;
     }
 
     .btn-primary-custom:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(167, 139, 250, 0.4);
-        color: white;
+        background: rgba(167,139,250,0.2);
+        border-color: var(--accent-orange);
+        color: var(--text-primary);
     }
 
     .btn-outline-custom {
@@ -134,28 +136,30 @@
     /* Empty State */
     .empty-state {
         text-align: center;
-        padding: 3rem 1.5rem;
+        padding: 2.5rem 1.25rem;
         background: var(--bg-card);
+        border: 1px solid var(--border-color);
         border-radius: var(--radius-lg);
         box-shadow: var(--shadow-soft);
     }
 
     .empty-icon {
-        font-size: 4rem;
-        margin-bottom: 1rem;
+        font-size: 2rem;
+        margin-bottom: 0.75rem;
         opacity: 0.3;
     }
 
     .empty-title {
-        font-size: 1.25rem;
+        font-size: 1.05rem;
         font-weight: 700;
         color: var(--text-primary);
-        margin-bottom: 0.5rem;
+        margin-bottom: 0.4rem;
     }
 
     .empty-text {
+        font-size: 0.85rem;
         color: var(--text-secondary);
-        margin-bottom: 1.5rem;
+        margin-bottom: 1.25rem;
     }
 
     /* Animations */
@@ -196,16 +200,16 @@
 <div class="dashboard-container">
     <!-- Header -->
     <div class="dashboard-header fade-in">
-        <h1 class="page-title">Gestos del mes</h1>
-        <p class="page-subtitle">Señales que el diario recoge</p>
+        <h1 class="page-title">Gestos</h1>
+        <p class="page-subtitle">Señales pequeñas que merecen ser observadas.</p>
     </div>
 
     <!-- Gestos que cultivo -->
     {% if habitos_positivos %}
     <div class="fade-in delay-1">
-        <h3 style="font-size: 1rem; font-weight: 700; color: var(--text-primary); margin-bottom: 1rem;">
+        <div style="font-size: 0.65rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 0.6rem;">
             Gestos que cultivo
-        </h3>
+        </div>
         {% for item in habitos_positivos %}
         <div class="habit-card positivo">
             <div class="habit-header">
@@ -260,10 +264,10 @@
     <!-- Gestos que suelto -->
     {% if habitos_negativos %}
     <div class="fade-in delay-2">
-        <h3
-            style="font-size: 1rem; font-weight: 700; color: var(--text-primary); margin-bottom: 1rem; margin-top: 2rem;">
+        <div
+            style="font-size: 0.65rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 0.6rem; margin-top: 1.5rem;">
             Gestos que suelto
-        </h3>
+        </div>
         {% for item in habitos_negativos %}
         <div class="habit-card negativo">
             <div class="habit-header">
