@@ -3924,6 +3924,9 @@ def portal_sesion_unificado(request, cliente_id):
             from entrenos.services.descanso_service import get_descanso_sugerido
             from entrenos.services.tempo_service import resolver_tempo_sesion
             from entrenos.services.calentamiento_service import get_aproximaciones_calentamiento
+            from entrenos.services.progreso_service import (
+                calcular_sugerencia_tope, detectar_estancamiento, calcular_comparacion_peso,
+            )
             from entrenos.views import obtener_ultimo_peso_ejercicio
             rutina_ajustada = rutina_planificada.copy()
             for ejercicio in rutina_ajustada['ejercicios']:
@@ -3948,6 +3951,28 @@ def portal_sesion_unificado(request, cliente_id):
 
                 ejercicio['descanso_minutos'] = ejercicio.get('descanso_minutos', 2)
                 ejercicio['peso_recomendado_kg'] = ejercicio.get('peso_kg', 0.0)
+
+                # --- Phase 64D: memoria compacta de progreso ---
+                if datos_anterior:
+                    ejercicio['peso_anterior_kg'] = datos_anterior['peso']
+                    ejercicio['repeticiones_anterior'] = datos_anterior['repeticiones']
+                    ejercicio['fecha_anterior'] = datos_anterior['fecha']
+                else:
+                    ejercicio['peso_anterior_kg'] = None
+                    ejercicio['repeticiones_anterior'] = None
+                    ejercicio['fecha_anterior'] = None
+
+                ejercicio['comparacion_peso'] = calcular_comparacion_peso(
+                    ejercicio['peso_recomendado_kg'], ejercicio['peso_anterior_kg']
+                )
+
+                ejercicio['sugerencia_tope'], ejercicio['reps_sugeridas_tope'] = calcular_sugerencia_tope(
+                    datos_anterior
+                )
+
+                ejercicio['estancado'] = detectar_estancamiento(
+                    cliente, ejercicio.get('nombre', ''), hoy
+                )
 
                 _descanso_info = get_descanso_sugerido(
                     tipo_ejercicio=ejercicio.get('tipo_ejercicio'),

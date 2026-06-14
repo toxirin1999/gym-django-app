@@ -31,6 +31,7 @@ from django.utils.translation import gettext as _
 from .utils.utils import normalizar_nombre_ejercicio, nombres_ejercicio_equivalentes, parsear_ejercicios_de_notas, parse_reps_and_series
 from .services.tempo_service import resolver_tempo_sesion
 from .services.calentamiento_service import get_aproximaciones_calentamiento
+from .services.progreso_service import calcular_sugerencia_tope, detectar_estancamiento
 from types import SimpleNamespace
 import copy
 from types import SimpleNamespace
@@ -3762,10 +3763,10 @@ def vista_entrenamiento_activo(request, cliente_id):
                     peso_ant = 0.0
 
                 # Tope de máquina: mismo peso, una rep más
-                if datos_anterior.get('es_tope_maquina') and peso_ant > 0:
+                sugerencia_tope, reps_sugeridas_tope = calcular_sugerencia_tope(datos_anterior)
+                if sugerencia_tope and peso_ant > 0:
                     ejercicio['peso_inicial_kg'] = peso_ant
-                    reps_ant = datos_anterior.get('repeticiones') or 0
-                    ejercicio['reps_sugeridas_tope'] = int(reps_ant) + 1
+                    ejercicio['reps_sugeridas_tope'] = reps_sugeridas_tope
                     ejercicio['sugerencia_tope'] = True
                 elif peso_ant > 0:
                     ejercicio['peso_inicial_kg'] = peso_ant
@@ -3834,18 +3835,9 @@ def vista_entrenamiento_activo(request, cliente_id):
                         ejercicio['reps_objetivo'] = max(reps_min, t_anterior - 1)
 
             # Detectar estancamiento previo (GymDecisionLog activo)
-            try:
-                from datetime import timedelta as _td
-                _nombre_ej = ejercicio.get('nombre', '')
-                ejercicio['estancado'] = GymDecisionLog.objects.filter(
-                    cliente=cliente,
-                    ejercicio__iexact=_nombre_ej,
-                    accion='cambiar_variante',
-                    fecha_creacion__date__gte=fecha_obj - _td(days=21),
-                    motivo__icontains='Sin progresión',
-                ).exists()
-            except Exception:
-                ejercicio['estancado'] = False
+            ejercicio['estancado'] = detectar_estancamiento(
+                cliente, ejercicio.get('nombre', ''), fecha_obj
+            )
 
             # Calcular aproximaciones basadas en el peso de trabajo
             try:
