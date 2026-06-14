@@ -133,6 +133,25 @@
         color: var(--accent-orange);
     }
 
+    .habit-action-text {
+        background: transparent;
+        border: none;
+        padding: 0.2rem 0.3rem;
+        font-size: 0.78rem;
+        font-weight: 600;
+        color: var(--text-secondary);
+        cursor: pointer;
+        transition: color 0.2s ease;
+    }
+
+    .habit-action-text:hover {
+        color: var(--accent-orange);
+    }
+
+    .habit-action-cerrar:hover {
+        color: var(--accent-red);
+    }
+
     /* Empty State */
     .empty-state {
         text-align: center;
@@ -248,7 +267,13 @@
             </div>
             {% endif %}
 
-            <div style="margin-top: 1rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            {% if item.habito.mejor_racha > 0 %}
+            <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.4rem;">
+                Mejor continuidad: {{ item.habito.mejor_racha }} días
+            </div>
+            {% endif %}
+
+            <div class="habit-actions-primary" style="margin-top: 1rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
                 {% if item.prosoche_habito_legacy_id %}
                 <a href="{% url 'diario:habito_wizard_4leyes' item.prosoche_habito_legacy_id %}" class="btn-outline-custom">
                     <i class="fas fa-magic"></i> Diseñar
@@ -257,17 +282,17 @@
                 <a href="{% url 'diario:habito_editar' item.habito.id %}" class="btn-outline-custom">
                     <i class="fas fa-edit"></i> Editar
                 </a>
+            </div>
+            <div class="habit-actions-secondary" style="margin-top: 0.6rem; display: flex; align-items: center; gap: 0.4rem;">
+                <span style="font-size: 0.7rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-secondary);">Más opciones:</span>
                 <form method="post" action="{% url 'diario:habito_pausar' item.habito.id %}" style="display: inline;">
                     {% csrf_token %}
-                    <button type="submit" class="btn-outline-custom">
-                        <i class="fas fa-pause"></i> Pausar
-                    </button>
+                    <button type="submit" class="habit-action-text">Pausar</button>
                 </form>
+                <span style="color: var(--text-secondary); font-size: 0.78rem;">·</span>
                 <form method="post" action="{% url 'diario:habito_cerrar' item.habito.id %}" style="display: inline;" onsubmit="return confirm('¿Cerrar este gesto? Se conservará el historial.');">
                     {% csrf_token %}
-                    <button type="submit" class="btn-outline-custom">
-                        <i class="fas fa-times"></i> Cerrar
-                    </button>
+                    <button type="submit" class="habit-action-text habit-action-cerrar">Cerrar</button>
                 </form>
             </div>
         </div>
@@ -320,7 +345,13 @@
             </div>
             {% endif %}
 
-            <div style="margin-top: 1rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            {% if item.habito.mejor_racha > 0 %}
+            <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.4rem;">
+                Mejor continuidad: {{ item.habito.mejor_racha }} días
+            </div>
+            {% endif %}
+
+            <div class="habit-actions-primary" style="margin-top: 1rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
                 {% if item.prosoche_habito_legacy_id %}
                 <a href="{% url 'diario:habito_wizard_4leyes' item.prosoche_habito_legacy_id %}" class="btn-outline-custom">
                     <i class="fas fa-magic"></i> Diseñar
@@ -336,17 +367,17 @@
                 <a href="{% url 'diario:habito_editar' item.habito.id %}" class="btn-outline-custom">
                     <i class="fas fa-edit"></i> Editar
                 </a>
+            </div>
+            <div class="habit-actions-secondary" style="margin-top: 0.6rem; display: flex; align-items: center; gap: 0.4rem;">
+                <span style="font-size: 0.7rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-secondary);">Más opciones:</span>
                 <form method="post" action="{% url 'diario:habito_pausar' item.habito.id %}" style="display: inline;">
                     {% csrf_token %}
-                    <button type="submit" class="btn-outline-custom">
-                        <i class="fas fa-pause"></i> Pausar
-                    </button>
+                    <button type="submit" class="habit-action-text">Pausar</button>
                 </form>
+                <span style="color: var(--text-secondary); font-size: 0.78rem;">·</span>
                 <form method="post" action="{% url 'diario:habito_cerrar' item.habito.id %}" style="display: inline;" onsubmit="return confirm('¿Cerrar este gesto? Se conservará el historial.');">
                     {% csrf_token %}
-                    <button type="submit" class="btn-outline-custom">
-                        <i class="fas fa-times"></i> Cerrar
-                    </button>
+                    <button type="submit" class="habit-action-text habit-action-cerrar">Cerrar</button>
                 </form>
             </div>
         </div>
