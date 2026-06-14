@@ -411,6 +411,88 @@ class HyroxLoadManager:
             return {'estado': 'Fatiga alta', 'recomendacion': 'Reduce intensidad. Prioriza sueño y recuperación.'}
         return {'estado': '⚠️ Sobreentrenamiento', 'recomendacion': 'Descanso obligatorio 48-72h antes de retomar.'}
 
+    # ── Recalibración 5K desde evidencia externa (Strava, carreras libres) ──────
+
+    @classmethod
+    def _segundos_desde_str(cls, tiempo_str):
+        """'MM:SS' o 'HH:MM:SS' → segundos. None si no parseable."""
+        try:
+            parts = str(tiempo_str).strip().split(':')
+            if len(parts) == 2:
+                return int(parts[0]) * 60 + int(parts[1])
+            if len(parts) == 3:
+                return int(parts[0]) * 3600 + int(parts[1]) * 60 + int(parts[2])
+        except Exception:
+            return None
+
+    @classmethod
+    def _mmss_desde_segundos(cls, segundos):
+        segundos = int(segundos)
+        return f"{segundos // 60:02d}:{segundos % 60:02d}"
+
+    @classmethod
+    def tiempo_5k_de_metricas(cls, data):
+        """
+        Extrae el tiempo en segundos de un bloque de carrera de ~5 km (4.8-5.5 km).
+        Acepta distancia en 'distancia_km'/'distancia'/'km' y tiempo en
+        'tiempo'/'tiempo_total'/'duracion'/'tiempo_minutos' (MM:SS o minutos),
+        o lo calcula desde ritmo × distancia. Retorna None si no hay datos válidos.
+        """
+        if not data:
+            return None
+
+        dist = None
+        for key in ('distancia_km', 'distancia', 'km'):
+            if key in data:
+                try:
+                    dist = float(data[key])
+                    break
+                except (TypeError, ValueError):
+                    pass
+        if dist is None or not (4.8 <= dist <= 5.5):
+            return None
+
+        for key in ('tiempo', 'tiempo_total', 'duracion', 'tiempo_minutos'):
+            if key in data:
+                val = data[key]
+                secs = cls._segundos_desde_str(val)
+                if secs:
+                    return secs
+                try:
+                    return int(float(val) * 60)
+                except (TypeError, ValueError):
+                    pass
+
+        for key in ('ritmo_min_km', 'ritmo', 'pace'):
+            if key in data:
+                secs = cls._segundos_desde_str(data[key])
+                if secs:
+                    return int(secs * dist)
+
+        return None
+
+    @classmethod
+    def actualizar_5k_si_pr(cls, objetivo, tiempo_seg):
+        """Actualiza tiempo_5k_base si tiempo_seg mejora el actual. Retorna True si actualizó."""
+        if not tiempo_seg or tiempo_seg <= 0:
+            return False
+        actual_seg = cls._segundos_desde_str(objetivo.tiempo_5k_base) if objetivo.tiempo_5k_base else None
+        if actual_seg is None or tiempo_seg < actual_seg:
+            objetivo.tiempo_5k_base = cls._mmss_desde_segundos(tiempo_seg)
+            objetivo.save(update_fields=['tiempo_5k_base'])
+            return True
+        return False
+
+    @classmethod
+    def recalibrar_5k_desde_metricas(cls, objetivo, data_metricas):
+        """
+        Si data_metricas describe una carrera de 4.8-5.5km con tiempo válido y
+        mejora el tiempo_5k_base actual, lo recalibra. Devuelve True si recalibró.
+        Es idempotente: reprocesar la misma evidencia no vuelve a recalibrar.
+        """
+        tiempo_seg = cls.tiempo_5k_de_metricas(data_metricas)
+        return cls.actualizar_5k_si_pr(objetivo, tiempo_seg)
+
 
 # ══════════════════════════════════════════════════════════════════════════════
 

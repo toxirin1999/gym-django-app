@@ -5,7 +5,7 @@ from django.contrib.auth.models import User
 from django.test import TestCase
 
 from entrenos.models import ActividadRealizada
-from hyrox.models import HyroxObjective, HyroxSession
+from hyrox.models import HyroxObjective, HyroxSession, HyroxActivity, StravaActivityRaw
 from hyrox.training_engine import HyroxLoadManager
 
 
@@ -558,3 +558,189 @@ class TestHyroxDecisionSesionProtegida(TestCase):
             lesion_activa=lesion,
         )
         self.assertEqual(d['causa'], 'lesion')
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 9. HyroxLoadManager.recalibrar_5k_desde_metricas — unidad
+# ─────────────────────────────────────────────────────────────────────────────
+
+class Recalibrar5KDesdeMetricasTests(TestCase):
+
+    def setUp(self):
+        self.user = _make_user('tester_recal_5k')
+        self.objetivo = _make_objetivo(self.user)
+        self.objetivo.tiempo_5k_base = '25:00'
+        self.objetivo.save(update_fields=['tiempo_5k_base'])
+
+    def test_recalibra_si_mejora_el_tiempo(self):
+        # 23:00 < 25:00 → debe recalibrar
+        recalibrado = HyroxLoadManager.recalibrar_5k_desde_metricas(
+            self.objetivo, {'distancia_km': 5.0, 'tiempo_minutos': 23}
+        )
+        self.objetivo.refresh_from_db()
+        self.assertTrue(recalibrado)
+        self.assertEqual(self.objetivo.tiempo_5k_base, '23:00')
+
+    def test_no_recalibra_si_es_mas_lento(self):
+        # 27:00 > 25:00 → no debe tocar el baseline
+        recalibrado = HyroxLoadManager.recalibrar_5k_desde_metricas(
+            self.objetivo, {'distancia_km': 5.0, 'tiempo_minutos': 27}
+        )
+        self.objetivo.refresh_from_db()
+        self.assertFalse(recalibrado)
+        self.assertEqual(self.objetivo.tiempo_5k_base, '25:00')
+
+    def test_carrera_fuera_de_rango_corto_no_recalibra(self):
+        recalibrado = HyroxLoadManager.recalibrar_5k_desde_metricas(
+            self.objetivo, {'distancia_km': 3.0, 'tiempo_minutos': 12}
+        )
+        self.objetivo.refresh_from_db()
+        self.assertFalse(recalibrado)
+        self.assertEqual(self.objetivo.tiempo_5k_base, '25:00')
+
+    def test_carrera_fuera_de_rango_largo_no_recalibra(self):
+        recalibrado = HyroxLoadManager.recalibrar_5k_desde_metricas(
+            self.objetivo, {'distancia_km': 7.0, 'tiempo_minutos': 30}
+        )
+        self.objetivo.refresh_from_db()
+        self.assertFalse(recalibrado)
+        self.assertEqual(self.objetivo.tiempo_5k_base, '25:00')
+
+    def test_sin_distancia_no_rompe_y_no_recalibra(self):
+        recalibrado = HyroxLoadManager.recalibrar_5k_desde_metricas(
+            self.objetivo, {'tiempo_minutos': 23}
+        )
+        self.objetivo.refresh_from_db()
+        self.assertFalse(recalibrado)
+        self.assertEqual(self.objetivo.tiempo_5k_base, '25:00')
+
+    def test_sin_duracion_no_rompe_y_no_recalibra(self):
+        recalibrado = HyroxLoadManager.recalibrar_5k_desde_metricas(
+            self.objetivo, {'distancia_km': 5.0}
+        )
+        self.objetivo.refresh_from_db()
+        self.assertFalse(recalibrado)
+        self.assertEqual(self.objetivo.tiempo_5k_base, '25:00')
+
+    def test_metricas_vacias_no_rompe(self):
+        recalibrado = HyroxLoadManager.recalibrar_5k_desde_metricas(self.objetivo, {})
+        self.assertFalse(recalibrado)
+
+    def test_reprocesar_misma_evidencia_no_recalibra_dos_veces(self):
+        data = {'distancia_km': 5.0, 'tiempo_minutos': 23}
+        primero = HyroxLoadManager.recalibrar_5k_desde_metricas(self.objetivo, data)
+        self.objetivo.refresh_from_db()
+        segundo = HyroxLoadManager.recalibrar_5k_desde_metricas(self.objetivo, data)
+        self.objetivo.refresh_from_db()
+        self.assertTrue(primero)
+        self.assertFalse(segundo)
+        self.assertEqual(self.objetivo.tiempo_5k_base, '23:00')
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 10. Phase Strava 1 — Recalibración 5K consistente entre flujos de reconciliación
+# ─────────────────────────────────────────────────────────────────────────────
+
+class StravaProcesarRecalibracion5KTests(TestCase):
+    """
+    Una carrera Strava de ~5km debe recalibrar tiempo_5k_base sin importar
+    el flujo de reconciliación elegido (merge_hyrox, create_hyrox, create_gym).
+    """
+
+    def setUp(self):
+        self.user = User.objects.create_user(username='tester_strava_5k', password='x')
+        self.client.force_login(self.user)
+        self.cliente = self.user.cliente_perfil
+        self.objetivo = HyroxObjective.objects.create(
+            cliente=self.cliente,
+            fecha_evento=datetime.date(2027, 4, 1),
+            tiempo_5k_base='25:00',
+        )
+
+    def _crear_strava_run(self, distancia_metros=5000, duracion_segundos=23 * 60, strava_id=1):
+        return StravaActivityRaw.objects.create(
+            cliente=self.cliente,
+            strava_id=strava_id,
+            fecha_actividad=datetime.date.today(),
+            tipo_strava='Run',
+            nombre_strava='Carrera matutina',
+            duracion_segundos=duracion_segundos,
+            distancia_metros=distancia_metros,
+            raw_json={},
+            estado='pending',
+        )
+
+    def test_create_gym_carrera_5k_recalibra(self):
+        act = self._crear_strava_run(strava_id=101)
+        resp = self.client.post(
+            f'/hyrox/strava/procesar/{act.id}/', {'accion': 'create_gym'}
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.objetivo.refresh_from_db()
+        self.assertEqual(self.objetivo.tiempo_5k_base, '23:00')
+
+    def test_merge_hyrox_carrera_5k_recalibra(self):
+        sesion = HyroxSession.objects.create(
+            objective=self.objetivo,
+            fecha=datetime.date.today(),
+            estado='planificado',
+            titulo='Carrera planificada',
+        )
+        HyroxActivity.objects.create(
+            sesion=sesion, tipo_actividad='carrera',
+            nombre_ejercicio='Carrera Z2', data_metricas={},
+        )
+        act = self._crear_strava_run(strava_id=102)
+        resp = self.client.post(
+            f'/hyrox/strava/procesar/{act.id}/',
+            {'accion': 'merge_hyrox', 'session_id': sesion.id},
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.objetivo.refresh_from_db()
+        self.assertEqual(self.objetivo.tiempo_5k_base, '23:00')
+
+    def test_merge_hyrox_estado_completado_no_duplica_recalibracion(self):
+        """
+        Cuando la sesión ya está 'completado' al fusionar, sesion.save() dispara
+        también detectar_5k_desde_hyrox_session. La recalibración explícita +
+        la del signal deben converger al mismo resultado sin duplicar el efecto
+        (idempotencia: la segunda llamada ve tiempo_5k_base ya actualizado).
+        """
+        sesion = HyroxSession.objects.create(
+            objective=self.objetivo,
+            fecha=datetime.date.today(),
+            estado='completado',
+            titulo='Carrera completada',
+        )
+        HyroxActivity.objects.create(
+            sesion=sesion, tipo_actividad='carrera',
+            nombre_ejercicio='Carrera Z2', data_metricas={},
+        )
+        act = self._crear_strava_run(strava_id=105)
+        resp = self.client.post(
+            f'/hyrox/strava/procesar/{act.id}/',
+            {'accion': 'merge_hyrox', 'session_id': sesion.id},
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn('5K recalibrado a 23:00', resp.json()['msg'])
+        self.objetivo.refresh_from_db()
+        self.assertEqual(self.objetivo.tiempo_5k_base, '23:00')
+
+    def test_create_hyrox_carrera_5k_recalibra(self):
+        act = self._crear_strava_run(strava_id=103)
+        resp = self.client.post(
+            f'/hyrox/strava/procesar/{act.id}/', {'accion': 'create_hyrox'}
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.objetivo.refresh_from_db()
+        self.assertEqual(self.objetivo.tiempo_5k_base, '23:00')
+
+    def test_carrera_fuera_de_rango_no_recalibra(self):
+        # 3 km no es representativo de un 5K
+        act = self._crear_strava_run(distancia_metros=3000, duracion_segundos=12 * 60, strava_id=104)
+        resp = self.client.post(
+            f'/hyrox/strava/procesar/{act.id}/', {'accion': 'create_gym'}
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.objetivo.refresh_from_db()
+        self.assertEqual(self.objetivo.tiempo_5k_base, '25:00')
