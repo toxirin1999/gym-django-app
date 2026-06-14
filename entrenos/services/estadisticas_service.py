@@ -149,6 +149,9 @@ class EstadisticasService:
             'volumen_total_global': volumen_total or 0,
             'duracion_promedio': round(duracion_promedio, 1) if duracion_promedio else 0,
             'rpe_promedio': round(rpe_promedio, 1) if rpe_promedio else 0,
+            # 'sesiones_perfectas'/'porcentaje_perfeccion': completitud
+            # estructural (series_completadas == series_totales), NO calidad
+            # de la sesión. En UI se muestra como "Completitud".
             'sesiones_perfectas': sesiones_perfectas,
             'porcentaje_perfeccion': round((sesiones_perfectas / total_entrenamientos * 100),
                                            1) if total_entrenamientos > 0 else 0

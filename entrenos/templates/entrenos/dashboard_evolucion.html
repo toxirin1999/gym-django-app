@@ -612,10 +612,11 @@ body {
         <div class="rb-bib-stat-val stat-value" data-count="{{ estadisticas_globales.duracion_promedio }}">{{ estadisticas_globales.duracion_promedio }}</div>
       </div>
       <div class="rb-bib-stat">
-        <div class="rb-bib-stat-label">Eficiencia</div>
+        <div class="rb-bib-stat-label">Completitud</div>
         <div class="rb-bib-stat-val accent stat-value" data-count="{{ estadisticas_globales.porcentaje_perfeccion }}">{{ estadisticas_globales.porcentaje_perfeccion }}%</div>
       </div>
     </div>
+    <div class="rb-card-foot"><i class="fas fa-info-circle"></i> Completitud: % de sesiones completas (ejercicios y series previstas registradas). No mide carga, RPE ni ejecución.</div>
     {% if lectura_periodo %}
     <div class="rb-bib-lectura">{{ lectura_periodo }}</div>
     {% endif %}
