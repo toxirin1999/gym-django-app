@@ -3478,6 +3478,7 @@ def strava_procesar(request, actividad_id):
 
     # ── FUSIONAR CON HYROX ───────────────────────────────────────────────────
     if accion == 'merge_hyrox':
+        from .training_engine import HyroxLoadManager
         objetivo = HyroxObjective.objects.filter(cliente=cliente, estado='activo').first()
         if not objetivo:
             return JsonResponse({'ok': False, 'msg': 'No tienes un objetivo Hyrox activo.'}, status=400)
@@ -3496,23 +3497,28 @@ def strava_procesar(request, actividad_id):
         if ov_tiempo == 'strava' or not sesion.tiempo_total_minutos:
             sesion.tiempo_total_minutos = int(duracion_min)
         if not sesion.trimp and sesion.hr_media:
-            from .training_engine import HyroxLoadManager
             sesion.trimp = HyroxLoadManager.calcular_trimp(sesion.tiempo_total_minutos, sesion.hr_media, objetivo)
-        sesion.save()
-        # Actualizar distancia de la actividad de carrera con el dato real de Strava
+        # Actualizar distancia/duración real de la actividad de carrera con los datos
+        # de Strava ANTES de guardar la sesión, para que la recalibración 5K vea la
+        # evidencia actualizada (no el dato planificado).
+        recalibrado_5k = False
         if act.distancia_metros:
             strava_km = round(act.distancia_metros / 1000, 2)
             carrera_act = sesion.activities.filter(tipo_actividad__in=['carrera', 'cardio_sustituto']).first()
             if carrera_act:
                 _m = carrera_act.data_metricas or {}
                 _m['distancia_km'] = strava_km
+                _m['tiempo_minutos'] = round(duracion_min, 1)
                 carrera_act.data_metricas = _m
                 carrera_act.save(update_fields=['data_metricas'])
+                recalibrado_5k = HyroxLoadManager.recalibrar_5k_desde_metricas(objetivo, _m)
+        sesion.save()
         act.estado = 'merged'
         act.hyrox_session = sesion
         act.save()
         rpe_info = f' · RPE {sesion.rpe_global}' if sesion.rpe_global else ' (sin RPE — no computará en ACWR)'
-        return JsonResponse({'ok': True, 'msg': f'Fusionado con sesión Hyrox{rpe_info}.'})
+        pace_info = f' · 5K recalibrado a {objetivo.tiempo_5k_base}' if recalibrado_5k else ''
+        return JsonResponse({'ok': True, 'msg': f'Fusionado con sesión Hyrox{rpe_info}{pace_info}.'})
 
     # ── FUSIONAR CON GYM ─────────────────────────────────────────────────────
     if accion == 'merge_gym':
@@ -3594,21 +3600,26 @@ def strava_procesar(request, actividad_id):
                 hr_media=act.hr_media, hr_maxima=act.hr_maxima,
                 trimp=trimp, rpe_global=rpe,
             )
+            data_metricas = {
+                'distancia_km':   round(act.distancia_metros / 1000, 2) if act.distancia_metros else '',
+                'tiempo_minutos': round(duracion_min, 1),
+                'hr_media': act.hr_media, 'hr_maxima': act.hr_maxima,
+                'fuente': 'strava', 'strava_id': act.strava_id,
+            }
             HyroxActivity.objects.create(
                 sesion=sesion, tipo_actividad=tipo,
                 nombre_ejercicio=act.nombre_strava or act.tipo_strava,
-                data_metricas={
-                    'distancia_km':   round(act.distancia_metros / 1000, 2) if act.distancia_metros else '',
-                    'tiempo_minutos': round(duracion_min, 1),
-                    'hr_media': act.hr_media, 'hr_maxima': act.hr_maxima,
-                    'fuente': 'strava', 'strava_id': act.strava_id,
-                },
+                data_metricas=data_metricas,
             )
         act.estado = 'created'
         act.hyrox_session = sesion
         act.save()
         trimp_info = f' · TRIMP {trimp}' if trimp else (' · RPE {rpe}' if rpe else ' (sin FC ni RPE — ACWR sin carga)')
-        return JsonResponse({'ok': True, 'msg': f'Nueva sesión Hyrox creada desde Strava{trimp_info}.'})
+        pace_info = ''
+        if tipo in ('carrera', 'cardio_sustituto'):
+            if HyroxLoadManager.recalibrar_5k_desde_metricas(objetivo, data_metricas):
+                pace_info = f' · 5K recalibrado a {objetivo.tiempo_5k_base}'
+        return JsonResponse({'ok': True, 'msg': f'Nueva sesión Hyrox creada desde Strava{trimp_info}{pace_info}.'})
 
     # ── CREAR GYM (ActividadRealizada directa) ───────────────────────────────
     if accion == 'create_gym':
