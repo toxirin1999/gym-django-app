@@ -16,7 +16,9 @@ class Command(BaseCommand):
         "real. No modifica sesiones incompletas (es_sesion_incompleta=True), "
         "para las que 0/0/0/0/None es el estado correcto. Con "
         "--informe-impacto, calcula el impacto agregado del backfill sobre "
-        "sesiones_perfectas/porcentaje_perfeccion sin escribir en BD."
+        "sesiones_perfectas/porcentaje_perfeccion sin escribir en BD. Con "
+        "--aplicar, aplica el backfill real y muestra ese mismo informe "
+        "antes/después (--dry-run tiene prioridad si se combina)."
     )
 
     def add_arguments(self, parser):
@@ -44,6 +46,14 @@ class Command(BaseCommand):
                 'ganarían "perfección" (series_completadas==series_totales) '
                 'con el backfill, con veredicto completa/dudosa/incompleta '
                 'por sesión. No escribe en BD (fuerza --dry-run).'
+            ),
+        )
+        parser.add_argument(
+            '--aplicar', action='store_true',
+            help=(
+                'Aplica el backfill real (escribe en BD) y muestra el '
+                'informe de impacto antes/después. Si se combina con '
+                '--dry-run, no escribe en BD (--dry-run tiene prioridad).'
             ),
         )
 
@@ -127,6 +137,7 @@ class Command(BaseCommand):
         cliente_id = options['cliente_id']
         informe_impacto = options['informe_impacto']
         auditoria_perfeccion = options['auditoria_perfeccion']
+        aplicar = options['aplicar']
         if informe_impacto or auditoria_perfeccion:
             dry_run = True
 
@@ -241,13 +252,19 @@ class Command(BaseCommand):
                 setattr(sesion, campo, valor)
             sesion.save(update_fields=list(cambios.keys()))
 
+            if aplicar and cambios:
+                self.stdout.write(
+                    f"  [aplicado] entreno_id={entreno.id} cliente={entreno.cliente_id} "
+                    f"fecha={entreno.fecha}: {cambios}"
+                )
+
         verbo_corregidos = "Se corregirían" if dry_run else "Corregidos"
         self.stdout.write(self.style.SUCCESS(
             f"Revisados: {total}. {verbo_corregidos}: {corregidos}. "
             f"Ya correctos: {ya_correctos}. Omitidos (incompletos): {omitidos}."
         ))
 
-        if informe_impacto:
+        if informe_impacto or aplicar:
             self._informe_impacto(
                 total, corregidos, conteo_tipos, por_cliente,
                 pierden_perfeccion, ganan_perfeccion, cambios_volumen, cambios_rpe,

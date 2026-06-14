@@ -27,6 +27,20 @@ Phase Evolución Data 5A.1 — Auditoría de perfección antes de backfill:
     aparece en la sección de control.
 15. `AuditoriaPerfeccionResumenTest`: el resumen final cuenta
     auditadas/completas/dudosas/incompletas correctamente.
+
+Phase Evolución Data 5B — Backfill completo (--aplicar):
+16. `AplicarBackfillZombiCompletoTest`: --aplicar corrige un snapshot zombi
+    completo y muestra la línea [aplicado] + el informe de impacto.
+17. `AplicarBackfillMixtoTest`: --aplicar corrige un snapshot mixto
+    (duracion ya correcta, resto desincronizado).
+18. `AplicarBackfillSoloSeriesTest`: --aplicar corrige solo
+    series_completadas/series_totales cuando es lo único desincronizado.
+19. `AplicarBackfillIdempotenteTest`: una segunda ejecución de --aplicar
+    no vuelve a corregir nada (Corregidos: 0).
+20. `AplicarConDryRunNoEscribeTest`: --aplicar --dry-run no escribe en BD
+    (--dry-run tiene prioridad) pero muestra el informe de impacto.
+21. `InformeAntesDespuesCoherenteTest`: el porcentaje "despues" del informe
+    tras --aplicar coincide con una consulta real a la BD.
 """
 
 from datetime import date
@@ -644,3 +658,255 @@ class AuditoriaPerfeccionResumenTest(BackfillSesionEntrenamientoTestBase):
         self.assertIn('Completas: 2', salida)
         self.assertIn('Dudosas: 1', salida)
         self.assertIn('Incompletas: 0', salida)
+
+
+class AplicarBackfillZombiCompletoTest(BackfillSesionEntrenamientoTestBase):
+    """Test 16: --aplicar corrige un snapshot zombi completo (caso id=303) y
+    muestra la línea [aplicado] + el informe de impacto."""
+
+    def test_aplicar_corrige_zombi_completo(self):
+        entreno = EntrenoRealizado.objects.create(
+            cliente=self.cliente, rutina=self.rutina, fecha=date.today(),
+            fuente_datos='manual',
+        )
+        EjercicioRealizado.objects.create(
+            entreno=entreno, nombre_ejercicio='Sentadilla',
+            peso_kg=100, series=3, repeticiones=5, rpe=8,
+            completado=True, fuente_datos='manual',
+        )
+        EjercicioRealizado.objects.create(
+            entreno=entreno, nombre_ejercicio='Press militar',
+            peso_kg=40, series=3, repeticiones=8, rpe=6,
+            completado=True, fuente_datos='manual',
+        )
+        entreno.numero_ejercicios = 2
+        entreno.volumen_total_kg = 900
+        entreno.duracion_minutos = 55
+        entreno.save(update_fields=['numero_ejercicios', 'volumen_total_kg', 'duracion_minutos'])
+
+        salida = self._run_command('--aplicar')
+
+        sesion = SesionEntrenamiento.objects.get(entreno=entreno)
+        self.assertEqual(sesion.duracion_minutos, 55)
+        self.assertEqual(sesion.series_completadas, 6)
+        self.assertEqual(sesion.series_totales, 6)
+        self.assertEqual(int(sesion.volumen_sesion), 900)
+        self.assertEqual(sesion.rpe_medio, 7.0)
+        self.assertIn('Corregidos: 1', salida)
+        self.assertIn(f'[aplicado] entreno_id={entreno.id}', salida)
+        self.assertIn('=== Informe de impacto', salida)
+
+
+class AplicarBackfillMixtoTest(BackfillSesionEntrenamientoTestBase):
+    """Test 17: --aplicar corrige un snapshot mixto (duracion ya correcta,
+    resto desincronizado)."""
+
+    def test_aplicar_corrige_mixto(self):
+        entreno = EntrenoRealizado.objects.create(
+            cliente=self.cliente, rutina=self.rutina, fecha=date.today(),
+            fuente_datos='manual',
+        )
+        EjercicioRealizado.objects.create(
+            entreno=entreno, nombre_ejercicio='Curl',
+            peso_kg=20, series=4, repeticiones=12, rpe=8,
+            completado=True, fuente_datos='manual',
+        )
+        entreno.numero_ejercicios = 1
+        entreno.volumen_total_kg = 300
+        entreno.duracion_minutos = 30
+        entreno.save(update_fields=['numero_ejercicios', 'volumen_total_kg', 'duracion_minutos'])
+        sesion = SesionEntrenamiento.objects.get(entreno=entreno)
+        sesion.duracion_minutos = 30  # ya correcto, no debe contar como cambio
+        sesion.save(update_fields=['duracion_minutos'])
+
+        salida = self._run_command('--aplicar')
+
+        sesion.refresh_from_db()
+        self.assertEqual(sesion.duracion_minutos, 30)
+        self.assertEqual(sesion.ejercicios_totales, 1)
+        self.assertEqual(sesion.ejercicios_completados, 1)
+        self.assertEqual(sesion.series_totales, 4)
+        self.assertEqual(sesion.series_completadas, 4)
+        self.assertEqual(int(sesion.volumen_sesion), 300)
+        self.assertEqual(sesion.rpe_medio, 8.0)
+        self.assertIn('Corregidos: 1', salida)
+        self.assertIn('mixtos: 1', salida)
+
+
+class AplicarBackfillSoloSeriesTest(BackfillSesionEntrenamientoTestBase):
+    """Test 18: --aplicar corrige solo series_completadas/series_totales
+    cuando es lo único desincronizado."""
+
+    def test_aplicar_corrige_solo_series(self):
+        entreno = EntrenoRealizado.objects.create(
+            cliente=self.cliente, rutina=self.rutina, fecha=date.today(),
+            fuente_datos='manual',
+        )
+        EjercicioRealizado.objects.create(
+            entreno=entreno, nombre_ejercicio='Remo',
+            peso_kg=50, series=4, repeticiones=10, rpe=7,
+            completado=True, fuente_datos='manual',
+        )
+        entreno.numero_ejercicios = 1
+        entreno.volumen_total_kg = 200
+        entreno.duracion_minutos = 40
+        entreno.save(update_fields=['numero_ejercicios', 'volumen_total_kg', 'duracion_minutos'])
+        sesion = SesionEntrenamiento.objects.get(entreno=entreno)
+        sesion.duracion_minutos = 40
+        sesion.ejercicios_totales = 1
+        sesion.ejercicios_completados = 1
+        sesion.volumen_sesion = 200
+        sesion.rpe_medio = 7.0
+        sesion.series_totales = 0
+        sesion.series_completadas = 0
+        sesion.save(update_fields=[
+            'duracion_minutos', 'ejercicios_totales', 'ejercicios_completados',
+            'volumen_sesion', 'rpe_medio', 'series_totales', 'series_completadas',
+        ])
+
+        salida = self._run_command('--aplicar')
+
+        sesion.refresh_from_db()
+        self.assertEqual(sesion.duracion_minutos, 40)
+        self.assertEqual(sesion.ejercicios_totales, 1)
+        self.assertEqual(sesion.ejercicios_completados, 1)
+        self.assertEqual(int(sesion.volumen_sesion), 200)
+        self.assertEqual(sesion.rpe_medio, 7.0)
+        self.assertEqual(sesion.series_totales, 4)
+        self.assertEqual(sesion.series_completadas, 4)
+        self.assertIn('Corregidos: 1', salida)
+        self.assertIn('solo series: 1', salida)
+
+
+class AplicarBackfillIdempotenteTest(BackfillSesionEntrenamientoTestBase):
+    """Test 19: una segunda ejecución de --aplicar no vuelve a corregir nada."""
+
+    def test_segunda_ejecucion_no_corrige_nada(self):
+        entreno = EntrenoRealizado.objects.create(
+            cliente=self.cliente, rutina=self.rutina, fecha=date.today(),
+            fuente_datos='manual',
+        )
+        EjercicioRealizado.objects.create(
+            entreno=entreno, nombre_ejercicio='Sentadilla',
+            peso_kg=100, series=3, repeticiones=5, rpe=8,
+            completado=True, fuente_datos='manual',
+        )
+        entreno.numero_ejercicios = 1
+        entreno.volumen_total_kg = 300
+        entreno.duracion_minutos = 30
+        entreno.save(update_fields=['numero_ejercicios', 'volumen_total_kg', 'duracion_minutos'])
+
+        primera = self._run_command('--aplicar')
+        self.assertIn('Corregidos: 1', primera)
+
+        sesion = SesionEntrenamiento.objects.get(entreno=entreno)
+        valores_tras_primera = (
+            sesion.duracion_minutos, sesion.ejercicios_totales,
+            sesion.ejercicios_completados, sesion.series_totales,
+            sesion.series_completadas, int(sesion.volumen_sesion), sesion.rpe_medio,
+        )
+
+        segunda = self._run_command('--aplicar')
+        self.assertIn('Corregidos: 0', segunda)
+
+        sesion.refresh_from_db()
+        valores_tras_segunda = (
+            sesion.duracion_minutos, sesion.ejercicios_totales,
+            sesion.ejercicios_completados, sesion.series_totales,
+            sesion.series_completadas, int(sesion.volumen_sesion), sesion.rpe_medio,
+        )
+        self.assertEqual(valores_tras_primera, valores_tras_segunda)
+
+
+class AplicarConDryRunNoEscribeTest(BackfillSesionEntrenamientoTestBase):
+    """Test 20: --aplicar --dry-run no escribe en BD (--dry-run tiene
+    prioridad) pero muestra el informe de impacto."""
+
+    def test_aplicar_con_dry_run_no_escribe(self):
+        entreno = EntrenoRealizado.objects.create(
+            cliente=self.cliente, rutina=self.rutina, fecha=date.today(),
+            fuente_datos='manual',
+        )
+        EjercicioRealizado.objects.create(
+            entreno=entreno, nombre_ejercicio='Sentadilla',
+            peso_kg=100, series=3, repeticiones=5, rpe=8,
+            completado=True, fuente_datos='manual',
+        )
+        entreno.numero_ejercicios = 1
+        entreno.volumen_total_kg = 300
+        entreno.duracion_minutos = 30
+        entreno.save(update_fields=['numero_ejercicios', 'volumen_total_kg', 'duracion_minutos'])
+
+        salida = self._run_command('--aplicar', '--dry-run')
+
+        sesion = SesionEntrenamiento.objects.get(entreno=entreno)
+        self.assertEqual(sesion.duracion_minutos, 0)
+        self.assertEqual(sesion.volumen_sesion, 0)
+        self.assertIsNone(sesion.rpe_medio)
+        self.assertIn('Se corregirían: 1', salida)
+        self.assertIn('=== Informe de impacto', salida)
+        self.assertNotIn('[aplicado]', salida)
+
+
+class InformeAntesDespuesCoherenteTest(BackfillSesionEntrenamientoTestBase):
+    """Test 21: el porcentaje "despues" del informe tras --aplicar coincide
+    con una consulta real a la BD."""
+
+    def test_porcentaje_despues_coincide_con_bd(self):
+        from django.db.models import F
+
+        # Zombi (0==0 antes) con un ejercicio no completado → 3/6 después,
+        # no perfecta.
+        entreno_zombi = EntrenoRealizado.objects.create(
+            cliente=self.cliente, rutina=self.rutina, fecha=date.today(),
+            fuente_datos='manual',
+        )
+        EjercicioRealizado.objects.create(
+            entreno=entreno_zombi, nombre_ejercicio='Sentadilla',
+            peso_kg=100, series=3, repeticiones=5, rpe=8,
+            completado=True, fuente_datos='manual',
+        )
+        EjercicioRealizado.objects.create(
+            entreno=entreno_zombi, nombre_ejercicio='Press militar',
+            peso_kg=40, series=3, repeticiones=8, rpe=6,
+            completado=False, fuente_datos='manual',
+        )
+        entreno_zombi.numero_ejercicios = 2
+        entreno_zombi.volumen_total_kg = 900
+        entreno_zombi.duracion_minutos = 55
+        entreno_zombi.save(update_fields=['numero_ejercicios', 'volumen_total_kg', 'duracion_minutos'])
+
+        # Sesión ya correcta y perfecta (series_completadas == series_totales > 0).
+        entreno_ok = EntrenoRealizado.objects.create(
+            cliente=self.cliente, rutina=self.rutina, fecha=date.today(),
+            fuente_datos='manual',
+        )
+        EjercicioRealizado.objects.create(
+            entreno=entreno_ok, nombre_ejercicio='Remo',
+            peso_kg=50, series=4, repeticiones=10, rpe=7,
+            completado=True, fuente_datos='manual',
+        )
+        entreno_ok.numero_ejercicios = 1
+        entreno_ok.volumen_total_kg = 200
+        entreno_ok.duracion_minutos = 40
+        entreno_ok.save(update_fields=['numero_ejercicios', 'volumen_total_kg', 'duracion_minutos'])
+        SesionEntrenamiento.objects.filter(entreno=entreno_ok).update(
+            duracion_minutos=40, ejercicios_completados=1, ejercicios_totales=1,
+            series_completadas=4, series_totales=4, volumen_sesion=200, rpe_medio=7.0,
+        )
+
+        salida = self._run_command('--aplicar')
+
+        # antes: 2/2 (0==0 y 4==4) = 100.0% | despues: 1/2 (solo entreno_ok) = 50.0%
+        self.assertIn('antes: 2/2 = 100.0%', salida)
+        self.assertIn('despues: 1/2 = 50.0%', salida)
+
+        perfectas_reales = SesionEntrenamiento.objects.filter(
+            entreno__cliente=self.cliente,
+            series_completadas=F('series_totales'),
+        ).count()
+        total_reales = SesionEntrenamiento.objects.filter(
+            entreno__cliente=self.cliente,
+        ).count()
+        self.assertEqual(perfectas_reales, 1)
+        self.assertEqual(total_reales, 2)
