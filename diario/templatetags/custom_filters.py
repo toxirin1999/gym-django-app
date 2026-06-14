@@ -5,6 +5,38 @@ from django import template
 register = template.Library()
 
 
+_MESES_ES = [
+    '', 'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+    'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre',
+]
+_DIAS_SEMANA_ES = [
+    'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo',
+]
+
+
+@register.filter
+def fecha_es(value):
+    """
+    Formatea una fecha como "14 de junio de 2026" en español,
+    sin depender de LANGUAGE_CODE (que en este proyecto está en 'en-us').
+    """
+    if not value:
+        return ''
+    return f"{value.day} de {_MESES_ES[value.month]} de {value.year}"
+
+
+@register.filter
+def fecha_es_dia(value):
+    """
+    Formatea una fecha como "domingo, 14 de junio" en español,
+    sin depender de LANGUAGE_CODE.
+    """
+    if not value:
+        return ''
+    dia_semana = _DIAS_SEMANA_ES[value.weekday()]
+    return f"{dia_semana}, {value.day} de {_MESES_ES[value.month]}"
+
+
 @register.filter(name='split')
 def split(value, key):
     """

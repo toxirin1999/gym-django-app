@@ -1,35 +1,23 @@
 {% extends 'diario/base_stoic.html' %}
 {% load static %}
+{% load custom_filters %}
 
 {% block title %}Cierre del día{% endblock %}
+{% block body_class %}diario-dark{% endblock %}
 
 {% block extra_css %}
 <style>
-:root {
-    --bg: #13111A;
-    --card: #1E1B27;
-    --border: #2E2A3A;
-    --text: #EDE9E3;
-    --muted: #7C7590;
-    --accent: #A78BFA;
-    --accent-light: rgba(167,139,250,0.12);
-    --radius: 16px;
-    --shadow: 0 2px 20px rgba(0,0,0,0.3);
-}
-* { box-sizing: border-box; }
-body { background: var(--bg) !important; font-family: -apple-system, BlinkMacSystemFont, sans-serif !important; color: var(--text); }
-
 .presencia-wrap {
-    max-width: 600px;
+    max-width: 640px;
     margin: 0 auto;
-    padding: 1.5rem 1rem 4rem;
+    padding: 1.25rem 1rem 3rem;
 }
 
 /* ── JOI header ── */
 .joi-header {
     text-align: center;
-    padding: 2rem 1rem 1.5rem;
-    margin-bottom: 1rem;
+    padding: 1.25rem 1rem 1rem;
+    margin-bottom: 0.75rem;
 }
 .joi-hora {
     font-size: 0.7rem;
@@ -54,16 +42,16 @@ body { background: var(--bg) !important; font-family: -apple-system, BlinkMacSys
     background: var(--card);
     border: 1px solid var(--border);
     border-radius: var(--radius);
-    padding: 1.5rem;
+    padding: 1.1rem 1.25rem;
     font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-    font-size: 1.05rem;
-    line-height: 1.75;
+    font-size: 1rem;
+    line-height: 1.7;
     color: var(--text);
     resize: none;
     outline: none;
-    min-height: 220px;
+    min-height: 170px;
     transition: border-color 0.2s;
-    margin-bottom: 1rem;
+    margin-bottom: 0.75rem;
     box-shadow: var(--shadow);
 }
 .diario-textarea:focus {
@@ -75,30 +63,30 @@ body { background: var(--bg) !important; font-family: -apple-system, BlinkMacSys
     font-size: 0.75rem;
     color: var(--muted);
     text-align: center;
-    margin-top: -0.5rem;
-    margin-bottom: 1.5rem;
+    margin-top: -0.35rem;
+    margin-bottom: 1rem;
 }
 
 /* ── Hábitos ── */
 .section-label {
-    font-size: 0.7rem;
+    font-size: 0.65rem;
     font-weight: 700;
     letter-spacing: 0.12em;
     text-transform: uppercase;
     color: var(--muted);
-    margin-bottom: 1rem;
+    margin-bottom: 0.6rem;
 }
 .habitos-grid {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.6rem;
-    margin-bottom: 1.5rem;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
 }
 .habito-chip {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    padding: 0.55rem 1rem;
+    padding: 0.45rem 0.9rem;
     border-radius: 100px;
     border: 1.5px solid var(--border);
     background: var(--card);
@@ -136,21 +124,21 @@ body { background: var(--bg) !important; font-family: -apple-system, BlinkMacSys
     background: var(--card);
     border: 1px solid var(--border);
     border-radius: var(--radius);
-    padding: 1.5rem;
-    margin-bottom: 1rem;
+    padding: 1.1rem 1.25rem;
+    margin-bottom: 0.75rem;
     box-shadow: var(--shadow);
 }
 .friccion-slider {
     width: 100%;
     accent-color: var(--accent);
-    margin: 0.75rem 0 0.5rem;
+    margin: 0.6rem 0 0.4rem;
 }
 .friccion-value {
-    font-size: 1.5rem;
+    font-size: 1.3rem;
     font-weight: 700;
     color: var(--accent);
     text-align: center;
-    margin-bottom: 0.25rem;
+    margin-bottom: 0.2rem;
 }
 .friccion-labels {
     display: flex;
@@ -173,7 +161,7 @@ body { background: var(--bg) !important; font-family: -apple-system, BlinkMacSys
     color: #0F0D17;
     border: none;
     border-radius: var(--radius);
-    padding: 1rem;
+    padding: 0.85rem;
     font-family: -apple-system, BlinkMacSystemFont, sans-serif;
     font-size: 1rem;
     font-weight: 700;
@@ -189,17 +177,17 @@ body { background: var(--bg) !important; font-family: -apple-system, BlinkMacSys
     background: var(--card);
     border: 1px solid var(--border);
     border-radius: var(--radius);
-    padding: 1.25rem;
-    margin-bottom: 1.25rem;
+    padding: 1rem 1.25rem;
+    margin-bottom: 0.75rem;
     box-shadow: var(--shadow);
 }
 .intencion-label {
-    font-size: 0.7rem;
+    font-size: 0.65rem;
     font-weight: 700;
     letter-spacing: 0.12em;
     text-transform: uppercase;
     color: var(--muted);
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.4rem;
 }
 .intencion-text {
     font-size: 0.95rem;
@@ -223,7 +211,7 @@ body { background: var(--bg) !important; font-family: -apple-system, BlinkMacSys
 
     <!-- Respuesta de JOI al cierre -->
     {% if joi_respuesta %}
-    <div style="background:#1E1B27; border:1px solid #2E2A3A; border-radius:16px; padding:1.75rem; margin-bottom:1.5rem; box-shadow:0 2px 20px rgba(0,0,0,0.3);">
+    <div style="background:#1E1B27; border:1px solid #2E2A3A; border-radius:16px; padding:1.25rem; margin-bottom:1rem; box-shadow:0 2px 20px rgba(0,0,0,0.3);">
         <div style="font-size:0.68rem; font-weight:700; letter-spacing:0.14em; text-transform:uppercase; color:#7C7590; margin-bottom:0.9rem;">JOI</div>
         <div style="font-size:1.1rem; font-style:italic; line-height:1.7; color:#EDE9E3;">{{ joi_respuesta }}</div>
 
@@ -289,14 +277,14 @@ body { background: var(--bg) !important; font-family: -apple-system, BlinkMacSys
     </div>
     {% endif %}
 
+    {% comment %}
+    Saludo propio del cierre. Nunca el mensaje de apertura de mañana
+    (sería una incoherencia temporal).
+    {% endcomment %}
     <!-- Header JOI nocturno -->
     <div class="joi-header" {% if joi_respuesta %}style="display:none"{% endif %}>
-        <div class="joi-hora">Cierre del día · {{ hoy }}</div>
-        <div class="joi-greeting">
-            {# Phase Cierre Menor 1: saludo propio del cierre. Nunca el mensaje
-               de apertura de mañana (era una incoherencia temporal). #}
-            El día termina. Qué quedó en pie.
-        </div>
+        <div class="joi-hora">Cierre del día · {{ hoy|fecha_es }}</div>
+        <div class="joi-greeting">El día termina. Qué quedó en pie.</div>
     </div>
 
     <!-- Intención del día (recordatorio) -->
@@ -357,7 +345,7 @@ body { background: var(--bg) !important; font-family: -apple-system, BlinkMacSys
                 <button type="button"
                     class="cuerpo-chip"
                     data-val="{{ val }}"
-                    style="padding:0.45rem 1rem;border-radius:100px;border:1.5px solid var(--border);background:{% if vires.cuerpo_cierre == val %}var(--accent-light){% else %}transparent{% endif %};color:{% if vires.cuerpo_cierre == val %}var(--accent){% else %}var(--muted){% endif %};font-size:0.85rem;cursor:pointer;font-family:-apple-system,BlinkMacSystemFont,sans-serif;transition:all 0.15s;">
+                    style="padding:0.45rem 0.9rem;border-radius:100px;border:1.5px solid var(--border);background:{% if vires.cuerpo_cierre == val %}var(--accent-light){% else %}transparent{% endif %};color:{% if vires.cuerpo_cierre == val %}var(--accent){% else %}var(--muted){% endif %};font-size:0.85rem;cursor:pointer;font-family:-apple-system,BlinkMacSystemFont,sans-serif;transition:all 0.15s;">
                     {{ label }}
                 </button>
                 {% endfor %}
@@ -369,7 +357,7 @@ body { background: var(--bg) !important; font-family: -apple-system, BlinkMacSys
         <input type="hidden" name="simbiosis_checked" id="simbiosis_checked" value="0">
         <input type="hidden" name="simbiosis_respuesta" id="simbiosis_respuesta_input" value="">
 
-        <div id="simbiosis-block" style="display:none; background:#1E1B27; border:1.5px solid #7C3AED; border-radius:16px; padding:1.5rem; margin-bottom:1rem;">
+        <div id="simbiosis-block" style="display:none; background:#1E1B27; border:1.5px solid #7C3AED; border-radius:16px; padding:1.1rem 1.25rem; margin-bottom:0.75rem;">
             <div style="font-size:0.68rem; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:#7C3AED; margin-bottom:0.75rem;">JOI — Antes de cerrar el día</div>
             <div id="simbiosis-pregunta" style="font-size:1rem; font-style:italic; color:#EDE9E3; line-height:1.6; margin-bottom:1rem;"></div>
             <div style="font-size:0.75rem; color:#7C7590; margin-bottom:0.5rem;">Responde antes de cerrar el día:</div>

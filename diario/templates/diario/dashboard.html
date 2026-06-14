@@ -1,67 +1,53 @@
 {% extends 'diario/base_stoic.html' %}
 {% load static %}
+{% load custom_filters %}
 {% block title %}Diario{% endblock %}
+{% block body_class %}diario-dark{% endblock %}
 
 {% block extra_css %}
 <style>
-:root {
-    --bg:     #13111A;
-    --card:   #1E1B27;
-    --border: #2E2A3A;
-    --text:   #EDE9E3;
-    --muted:  #7C7590;
-    --accent: #A78BFA;
-    --accent-light: rgba(167,139,250,0.12);
-    --green:  #34D399;
-    --radius: 16px;
-    --shadow: 0 2px 20px rgba(0,0,0,0.3);
-}
-* { box-sizing: border-box; }
-body { background: var(--bg) !important; font-family: -apple-system, BlinkMacSystemFont, sans-serif !important; color: var(--text); }
-
-.diario-wrap { max-width: 680px; margin: 0 auto; padding: 1.5rem 1rem 4rem; }
+.diario-wrap { max-width: 640px; margin: 0 auto; padding: 1.25rem 1rem 3rem; }
 
 /* Header */
-.diario-header { margin-bottom: 1.5rem; }
-.diario-title { font-size: 1.6rem; font-weight: 700; letter-spacing: -0.01em; color: var(--text); margin-bottom: 0.2rem; }
+.diario-header { margin-bottom: 1.1rem; }
+.diario-title { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.01em; color: var(--text); margin-bottom: 0.2rem; }
 .diario-date { font-size: 0.78rem; color: var(--muted); }
 
 /* ── Section base ── */
 .d-section {
     background: var(--card); border: 1px solid var(--border);
-    border-radius: var(--radius); padding: 1.5rem;
-    margin-bottom: 1rem; box-shadow: var(--shadow);
+    border-radius: var(--radius); padding: 1.1rem 1.25rem;
+    margin-bottom: 0.75rem; box-shadow: var(--shadow);
 }
 .d-section-label {
     font-size: 0.65rem; font-weight: 700; letter-spacing: 0.12em;
-    text-transform: uppercase; color: var(--muted); margin-bottom: 0.85rem;
+    text-transform: uppercase; color: var(--muted); margin-bottom: 0.6rem;
 }
 
 /* ── HOY hero ── */
 .hoy-section {
     background: var(--card);
     border: 1px solid rgba(167,139,250,0.3);
-    border-radius: var(--radius); padding: 1.75rem 1.5rem 1.5rem;
-    margin-bottom: 1rem; box-shadow: 0 2px 24px rgba(167,139,250,0.08);
+    border-radius: var(--radius); padding: 1.4rem 1.25rem 1.25rem;
+    margin-bottom: 0.75rem; box-shadow: 0 2px 24px rgba(167,139,250,0.08);
 }
 .hoy-estado-label {
     font-size: 0.65rem; font-weight: 700; letter-spacing: 0.12em;
-    text-transform: uppercase; color: rgba(167,139,250,0.6); margin-bottom: 0.5rem;
+    text-transform: uppercase; color: rgba(167,139,250,0.6); margin-bottom: 0.4rem;
 }
 .hoy-frase {
-    font-size: 1.1rem; font-weight: 600; color: var(--text);
-    margin-bottom: 1.25rem; line-height: 1.3;
+    font-size: 1.05rem; font-weight: 600; color: var(--text);
+    margin-bottom: 1rem; line-height: 1.3;
 }
-.hoy-dots { display: flex; gap: 1.25rem; margin-bottom: 1.25rem; }
-.hoy-dot-item { display: flex; align-items: center; gap: 0.55rem; }
-.hoy-dot {
-    width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0;
-    border: 1.5px solid rgba(124,117,144,0.4);
+.hoy-status { display: flex; gap: 1.5rem; margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border); }
+.hoy-status-item { display: flex; flex-direction: column; gap: 0.2rem; }
+.hoy-status-label {
+    font-size: 0.6rem; font-weight: 700; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--muted);
 }
-.hoy-dot.hecho { background: var(--accent); border-color: var(--accent); box-shadow: 0 0 7px rgba(167,139,250,0.5); }
-.hoy-dot.joi   { background: var(--green);  border-color: var(--green);  box-shadow: 0 0 7px rgba(52,211,153,0.4); }
-.hoy-dot-label { font-size: 0.75rem; color: var(--muted); }
-.hoy-dot.hecho + .hoy-dot-label { color: var(--text); }
+.hoy-status-value { font-size: 0.82rem; font-weight: 600; color: var(--muted); }
+.hoy-status-value.hecho { color: var(--accent); }
+.hoy-status-value.joi { color: var(--green); }
 
 .hoy-cta { display: flex; gap: 0.5rem; flex-wrap: wrap; }
 .hoy-btn-primary {
@@ -85,10 +71,10 @@ body { background: var(--bg) !important; font-family: -apple-system, BlinkMacSys
 .hoy-btn-secondary:hover { color: var(--text); border-color: var(--muted); }
 
 /* ── ESTA SEMANA chips ── */
-.semana-chips { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1rem; }
+.semana-chips { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 0.75rem; }
 .semana-chip {
-    display: inline-flex; align-items: baseline; gap: 0.35rem;
-    padding: 0.35rem 0.75rem; border-radius: 100px;
+    display: inline-flex; align-items: baseline; gap: 0.3rem;
+    padding: 0.3rem 0.65rem; border-radius: 100px;
     border: 1.5px solid var(--border); background: transparent;
 }
 .semana-chip-num { font-size: 1rem; font-weight: 700; color: var(--text); line-height: 1; }
@@ -108,7 +94,7 @@ body { background: var(--bg) !important; font-family: -apple-system, BlinkMacSys
 /* ── PERSONAS ── */
 .radar-badge {
     display: flex; align-items: center; gap: 0.6rem;
-    font-size: 0.88rem; color: var(--text); margin-bottom: 0.85rem;
+    font-size: 0.85rem; color: var(--text); margin-bottom: 0.6rem;
 }
 .radar-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 6px var(--accent); flex-shrink: 0; }
 .simbiosis-link {
@@ -118,30 +104,16 @@ body { background: var(--bg) !important; font-family: -apple-system, BlinkMacSys
 }
 .simbiosis-link:hover { color: var(--accent); }
 
-/* ── EXPLORAR ── */
-.explorar-primary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; margin-bottom: 0.75rem; }
-.explorar-item {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 0.8rem 1rem; border-radius: 10px;
-    border: 1.5px solid var(--border);
-    font-size: 0.85rem; font-weight: 600;
-    color: var(--text); text-decoration: none;
-    transition: all 0.15s;
-}
-.explorar-item:hover { border-color: var(--accent); color: var(--accent); }
-.explorar-item-arrow { font-size: 0.65rem; color: var(--muted); }
-.explorar-secondary {
-    display: flex; gap: 0; border-top: 1px solid var(--border);
-    padding-top: 0.65rem; flex-wrap: wrap;
-}
-.explorar-item-sm {
-    font-size: 0.75rem; font-weight: 600; color: var(--muted);
-    text-decoration: none; padding: 0.25rem 0.75rem;
+/* ── EXPLORAR — navegación secundaria, no un dashboard más ── */
+.explorar-links { display: flex; flex-wrap: wrap; gap: 0.4rem 0; }
+.explorar-link {
+    font-size: 0.78rem; font-weight: 600; color: var(--muted);
+    text-decoration: none; padding: 0.2rem 0.75rem;
     border-right: 1px solid var(--border);
     transition: color 0.15s;
 }
-.explorar-item-sm:last-child { border-right: none; }
-.explorar-item-sm:hover { color: var(--text); }
+.explorar-link:last-child { border-right: none; }
+.explorar-link:hover { color: var(--accent); }
 </style>
 {% endblock %}
 
@@ -151,7 +123,7 @@ body { background: var(--bg) !important; font-family: -apple-system, BlinkMacSys
     <!-- Header -->
     <div class="diario-header">
         <div class="diario-title">Diario</div>
-        <div class="diario-date">{{ hoy|date:"l, j \d\e F" }}</div>
+        <div class="diario-date">{{ hoy|fecha_es_dia|capfirst }}</div>
     </div>
 
     <!-- 1. HOY — hero -->
@@ -170,19 +142,19 @@ body { background: var(--bg) !important; font-family: -apple-system, BlinkMacSys
             El día está registrado.
             {% endif %}
         </div>
-        <div class="hoy-dots">
-            <div class="hoy-dot-item">
-                <div class="hoy-dot {% if estado_dia.manana_hecha %}hecho{% endif %}"></div>
-                <span class="hoy-dot-label">Mañana</span>
+        <div class="hoy-status">
+            <div class="hoy-status-item">
+                <span class="hoy-status-label">Mañana</span>
+                <span class="hoy-status-value {% if estado_dia.manana_hecha %}hecho{% endif %}">{% if estado_dia.manana_hecha %}Completa{% else %}Pendiente{% endif %}</span>
             </div>
-            <div class="hoy-dot-item">
-                <div class="hoy-dot {% if estado_dia.noche_hecha %}hecho{% endif %}"></div>
-                <span class="hoy-dot-label">Noche</span>
+            <div class="hoy-status-item">
+                <span class="hoy-status-label">Noche</span>
+                <span class="hoy-status-value {% if estado_dia.noche_hecha %}hecho{% endif %}">{% if estado_dia.noche_hecha %}Completa{% else %}Pendiente{% endif %}</span>
             </div>
             {% if estado_dia.tiene_lectura_joi %}
-            <div class="hoy-dot-item">
-                <div class="hoy-dot joi"></div>
-                <span class="hoy-dot-label">JOI</span>
+            <div class="hoy-status-item">
+                <span class="hoy-status-label">JOI</span>
+                <span class="hoy-status-value joi">Lista</span>
             </div>
             {% endif %}
         </div>
@@ -252,25 +224,17 @@ body { background: var(--bg) !important; font-family: -apple-system, BlinkMacSys
     </div>
     {% endif %}
 
-    <!-- 4. EXPLORAR — dos niveles de peso -->
+    <!-- 4. EXPLORAR — navegación secundaria -->
     <div class="d-section">
         <div class="d-section-label">Explorar</div>
-        <div class="explorar-primary">
-            <a href="{% url 'diario:prosoche_dashboard' %}" class="explorar-item">
-                <span>Prosoche</span><span class="explorar-item-arrow">→</span>
-            </a>
-            <a href="{% url 'diario:logos_dashboard' %}" class="explorar-item">
-                <span>Logos</span><span class="explorar-item-arrow">→</span>
-            </a>
-            <a href="{% url 'diario:simbiosis_dashboard' %}" class="explorar-item">
-                <span>Simbiosis</span><span class="explorar-item-arrow">→</span>
-            </a>
-        </div>
-        <div class="explorar-secondary">
-            <a href="{% url 'diario:eudaimonia_dashboard' %}" class="explorar-item-sm">Eudaimonia</a>
-            <a href="{% url 'diario:virtudes_dashboard' %}" class="explorar-item-sm">Virtudes</a>
-            <a href="{% url 'diario:kairos_dashboard' %}" class="explorar-item-sm">Kairos</a>
-            <a href="{% url 'diario:habitos_dashboard' %}" class="explorar-item-sm">Gestos</a>
+        <div class="explorar-links">
+            <a href="{% url 'diario:prosoche_dashboard' %}" class="explorar-link">Prosoche</a>
+            <a href="{% url 'diario:logos_dashboard' %}" class="explorar-link">Logos</a>
+            <a href="{% url 'diario:simbiosis_dashboard' %}" class="explorar-link">Simbiosis</a>
+            <a href="{% url 'diario:eudaimonia_dashboard' %}" class="explorar-link">Eudaimonia</a>
+            <a href="{% url 'diario:virtudes_dashboard' %}" class="explorar-link">Virtudes</a>
+            <a href="{% url 'diario:kairos_dashboard' %}" class="explorar-link">Kairos</a>
+            <a href="{% url 'diario:habitos_dashboard' %}" class="explorar-link">Gestos</a>
         </div>
     </div>
 

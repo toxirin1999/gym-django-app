@@ -2,38 +2,24 @@
 {% load static %}
 
 {% block title %}Apertura del día{% endblock %}
+{% block body_class %}diario-dark{% endblock %}
 
 {% block extra_css %}
 <style>
-:root {
-    --bg: #F7F4EF;
-    --card: #FFFFFF;
-    --border: #E8E3DC;
-    --text: #1C1917;
-    --muted: #78716C;
-    --accent: #C2410C;
-    --accent-light: #FFF7ED;
-    --green: #15803D;
-    --green-light: #F0FDF4;
-    --radius: 16px;
-    --shadow: 0 2px 16px rgba(0,0,0,0.06);
-}
-* { box-sizing: border-box; }
-body { background: var(--bg) !important; font-family: -apple-system, BlinkMacSystemFont, sans-serif !important; }
-
 .presencia-wrap {
-    max-width: 600px;
+    max-width: 640px;
     margin: 0 auto;
-    padding: 1.5rem 1rem 4rem;
+    padding: 1.25rem 1rem 3rem;
 }
 
 /* ── JOI block ── */
 .joi-block {
-    background: var(--text);
-    color: #F5F0EB;
+    background: var(--card);
+    border: 1px solid var(--accent-light);
+    box-shadow: 0 2px 24px rgba(167,139,250,0.08);
     border-radius: var(--radius);
-    padding: 1.75rem;
-    margin-bottom: 1.5rem;
+    padding: 1.25rem;
+    margin-bottom: 1rem;
     position: relative;
     overflow: hidden;
 }
@@ -43,30 +29,30 @@ body { background: var(--bg) !important; font-family: -apple-system, BlinkMacSys
     top: -30px; right: -30px;
     width: 120px; height: 120px;
     border-radius: 50%;
-    background: rgba(255,255,255,0.04);
+    background: rgba(255,255,255,0.03);
 }
 .joi-label {
     font-size: 0.7rem;
     font-weight: 600;
     letter-spacing: 0.12em;
     text-transform: uppercase;
-    color: rgba(245,240,235,0.45);
+    color: var(--muted);
     margin-bottom: 0.5rem;
 }
 .joi-msg {
     font-size: 0.95rem;
-    line-height: 1.65;
-    color: rgba(245,240,235,0.8);
-    margin-bottom: 1.25rem;
+    line-height: 1.6;
+    color: var(--muted);
+    margin-bottom: 1rem;
     font-style: italic;
 }
 .joi-question {
-    font-size: 1.25rem;
+    font-size: 1.15rem;
     font-weight: 600;
     line-height: 1.4;
-    color: #F5F0EB;
-    border-top: 1px solid rgba(255,255,255,0.12);
-    padding-top: 1rem;
+    color: var(--text);
+    border-top: 1px solid var(--border);
+    padding-top: 0.85rem;
 }
 
 /* ── Semáforo badge ── */
@@ -101,66 +87,63 @@ body { background: var(--bg) !important; font-family: -apple-system, BlinkMacSys
     background: var(--card);
     border: 1px solid var(--border);
     border-radius: var(--radius);
-    padding: 1.5rem;
-    margin-bottom: 1rem;
+    padding: 1.1rem 1.25rem;
+    margin-bottom: 0.75rem;
     box-shadow: var(--shadow);
 }
 .section-label {
-    font-size: 0.72rem;
+    font-size: 0.65rem;
     font-weight: 700;
-    letter-spacing: 0.1em;
+    letter-spacing: 0.12em;
     text-transform: uppercase;
     color: var(--muted);
-    margin-bottom: 1rem;
+    margin-bottom: 0.6rem;
 }
 .section-subtitle {
     font-size: 0.78rem;
     color: var(--muted);
-    margin-top: -0.6rem;
-    margin-bottom: 1rem;
+    margin-top: -0.3rem;
+    margin-bottom: 0.75rem;
 }
 
-/* ── Mood selector (4 opciones) ── */
+/* ── Mood selector (4 opciones) — chips horizontales, no tarjetas ── */
 .mood-row {
     display: flex;
     gap: 0.5rem;
-    justify-content: space-between;
 }
 .mood-btn {
     flex: 1;
-    aspect-ratio: 1;
-    border: 2px solid var(--border);
+    border: 1.5px solid var(--border);
     background: transparent;
     border-radius: 12px;
-    font-size: 1.4rem;
+    font-size: 1.05rem;
     cursor: pointer;
     transition: all 0.15s;
     display: flex;
-    flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 0.2rem;
-    padding: 0.5rem;
+    gap: 0.4rem;
+    padding: 0.6rem 0.4rem;
 }
-.mood-btn span.label { font-size: 0.6rem; color: var(--muted); font-weight: 500; }
+.mood-btn span.label { font-size: 0.72rem; color: var(--muted); font-weight: 600; }
 .mood-btn:hover, .mood-btn.selected {
     border-color: var(--accent);
     background: var(--accent-light);
-    transform: scale(1.05);
 }
-.mood-btn.selected { box-shadow: 0 0 0 3px rgba(194,65,12,0.15); }
+.mood-btn.selected span.label { color: var(--accent); }
+.mood-btn.selected { box-shadow: 0 0 0 2px rgba(167,139,250,0.12); }
 
-/* ── Sliders ── */
+/* ── Sliders — bloques finos ── */
 .slider-row {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 1rem;
+    gap: 0.85rem;
 }
 .slider-group label {
-    font-size: 0.8rem;
+    font-size: 0.78rem;
     font-weight: 600;
     color: var(--text);
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.3rem;
     display: block;
 }
 .slider-group input[type=range] {
@@ -168,42 +151,42 @@ body { background: var(--bg) !important; font-family: -apple-system, BlinkMacSys
     accent-color: var(--accent);
 }
 .slider-value {
-    font-size: 1.2rem;
+    font-size: 1rem;
     font-weight: 700;
     color: var(--accent);
     text-align: center;
-    margin-top: 0.25rem;
+    margin-top: 0.2rem;
 }
 
-/* ── Inputs de texto ── */
+/* ── Inputs de texto (unificados con cierre) ── */
 .gratitud-input {
     width: 100%;
     border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 0.7rem 1rem;
+    border-radius: 12px;
+    padding: 0.6rem 0.9rem;
     font-family: -apple-system, BlinkMacSystemFont, sans-serif;
     font-size: 0.95rem;
     color: var(--text);
-    background: #FAFAFA;
+    background: var(--bg);
     transition: border-color 0.15s;
     outline: none;
 }
-.gratitud-input:focus { border-color: var(--accent); background: #fff; }
+.gratitud-input:focus { border-color: var(--accent); background: var(--card); }
 .gratitud-input::placeholder { color: var(--muted); }
 
 .soberania-input {
     width: 100%;
     border: 1.5px solid var(--border);
-    border-radius: 10px;
-    padding: 0.7rem 1rem;
+    border-radius: 12px;
+    padding: 0.6rem 0.9rem;
     font-family: -apple-system, BlinkMacSystemFont, sans-serif;
     font-size: 0.95rem;
     color: var(--text);
-    background: #FAFAFA;
+    background: var(--bg);
     transition: border-color 0.15s;
     outline: none;
 }
-.soberania-input:focus { border-color: var(--accent); background: #fff; }
+.soberania-input:focus { border-color: var(--accent); background: var(--card); }
 .soberania-input::placeholder { color: var(--muted); }
 .soberania-input.error { border-color: #EF4444; }
 
@@ -212,36 +195,37 @@ textarea.intencion {
     width: 100%;
     border: 1px solid var(--border);
     border-radius: 12px;
-    padding: 1rem;
+    padding: 0.85rem;
     font-family: -apple-system, BlinkMacSystemFont, sans-serif;
     font-size: 1rem;
     line-height: 1.6;
     color: var(--text);
-    background: #FAFAFA;
+    background: var(--bg);
     resize: none;
     outline: none;
-    min-height: 90px;
+    min-height: 76px;
     transition: border-color 0.15s;
 }
-textarea.intencion:focus { border-color: var(--accent); background: #fff; }
+textarea.intencion:focus { border-color: var(--accent); background: var(--card); }
+textarea.intencion::placeholder { color: var(--muted); }
 
 /* ── Submit ── */
 .submit-btn {
     width: 100%;
-    background: var(--text);
-    color: #F5F0EB;
+    background: var(--accent);
+    color: var(--jds-bg);
     border: none;
     border-radius: var(--radius);
-    padding: 1rem;
+    padding: 0.85rem;
     font-family: -apple-system, BlinkMacSystemFont, sans-serif;
     font-size: 1rem;
-    font-weight: 600;
+    font-weight: 700;
     cursor: pointer;
     letter-spacing: 0.03em;
-    margin-top: 0.5rem;
-    transition: background 0.15s;
+    margin-top: 0.25rem;
+    transition: opacity 0.15s;
 }
-.submit-btn:hover { background: #374151; }
+.submit-btn:hover { opacity: 0.9; }
 </style>
 {% endblock %}
 
@@ -250,13 +234,13 @@ textarea.intencion:focus { border-color: var(--accent); background: #fff; }
 
     <!-- Radar de Intrusos -->
     {% if radar_personas %}
-    <div style="background:#1C1917; border:1.5px solid #EF4444; border-radius:16px; padding:1.25rem; margin-bottom:1rem;">
+    <div style="background:var(--card); border:1.5px solid #EF4444; border-radius:16px; padding:1rem; margin-bottom:0.75rem;">
         <div style="font-size:0.68rem; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:#EF4444; margin-bottom:0.75rem;">⚠ Radar de JOI</div>
         {% for p in radar_personas %}
         <div style="display:flex; align-items:center; justify-content:space-between; padding:0.6rem 0; border-bottom:1px solid rgba(239,68,68,0.15);">
             <div>
-                <span style="color:#F5F0EB; font-weight:600; font-size:0.9rem;">{{ p.nombre }}</span>
-                <span style="color:#78716C; font-size:0.78rem; margin-left:0.5rem;">mencionada {{ p.veces_mencionada }}× — no está en Simbiosis</span>
+                <span style="color:var(--text); font-weight:600; font-size:0.9rem;">{{ p.nombre }}</span>
+                <span style="color:var(--muted); font-size:0.78rem; margin-left:0.5rem;">mencionada {{ p.veces_mencionada }}× — no está en Simbiosis</span>
             </div>
             <div style="display:flex; gap:0.4rem;">
                 <button onclick="promoverPersona({{ p.id }}, '{{ p.nombre }}')"
@@ -264,13 +248,13 @@ textarea.intencion:focus { border-color: var(--accent); background: #fff; }
                     Subir
                 </button>
                 <button onclick="descartarPersona({{ p.id }})"
-                    style="background:#3F3C37; border:none; border-radius:8px; padding:0.3rem 0.7rem; color:#78716C; font-size:0.75rem; font-family:-apple-system,BlinkMacSystemFont,sans-serif; cursor:pointer;">
+                    style="background:var(--border); border:none; border-radius:8px; padding:0.3rem 0.7rem; color:var(--muted); font-size:0.75rem; font-family:-apple-system,BlinkMacSystemFont,sans-serif; cursor:pointer;">
                     Ignorar
                 </button>
             </div>
         </div>
         {% endfor %}
-        <p style="color:#78716C; font-size:0.75rem; font-style:italic; margin:0.75rem 0 0;">"Subir" la añade a Simbiosis y vincula las interacciones registradas. "Ignorar" la descarta.</p>
+        <p style="color:var(--muted); font-size:0.75rem; font-style:italic; margin:0.75rem 0 0;">"Subir" la añade a Simbiosis y vincula las interacciones registradas. "Ignorar" la descarta.</p>
     </div>
     {% endif %}
 

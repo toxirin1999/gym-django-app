@@ -2,32 +2,33 @@
 {% load static %}
 
 {% block title %}Gestos del mes — Diario{% endblock %}
+{% block body_class %}diario-dark{% endblock %}
 
 {% block extra_css %}
 <style>
     :root {
-        --bg-primary: #F8F5F1;
-        --bg-secondary: #FFFFFF;
-        --bg-card: #FFFFFF;
-        --bg-accent: #FFF9F5;
-        --text-primary: #2D3436;
-        --text-secondary: #636E72;
-        --text-muted: #B2BEC3;
-        --accent-orange: #F49459;
-        --accent-orange-dark: #E67E22;
-        --accent-green: #00B894;
-        --accent-green-light: #E8F8F5;
-        --accent-blue: #74B9FF;
-        --accent-purple: #A29BFE;
-        --accent-red: #FF7675;
-        --accent-yellow: #FDCB6E;
-        --border-color: #E8E4E0;
-        --shadow-soft: 0 2px 20px rgba(0, 0, 0, 0.05);
-        --shadow-medium: 0 4px 30px rgba(0, 0, 0, 0.08);
-        --radius-sm: 12px;
-        --radius-md: 16px;
-        --radius-lg: 24px;
-        --radius-xl: 32px;
+        --bg-primary: var(--jds-bg);
+        --bg-secondary: var(--jds-bg-soft);
+        --bg-card: var(--jds-surface-strong);
+        --bg-accent: var(--jds-joi-soft);
+        --text-primary: var(--jds-text);
+        --text-secondary: var(--jds-text-muted);
+        --text-muted: var(--jds-text-soft);
+        --accent-orange: var(--jds-joi);
+        --accent-orange-dark: #7C3AED;
+        --accent-green: var(--jds-good);
+        --accent-green-light: var(--jds-good-soft);
+        --accent-blue: var(--jds-accent);
+        --accent-purple: var(--jds-joi);
+        --accent-red: var(--jds-danger);
+        --accent-yellow: var(--jds-warning);
+        --border-color: var(--jds-border);
+        --shadow-soft: var(--jds-shadow-soft);
+        --shadow-medium: var(--jds-shadow-soft);
+        --radius-sm: var(--jds-radius-sm);
+        --radius-md: var(--jds-radius-md);
+        --radius-lg: var(--jds-radius-lg);
+        --radius-xl: var(--jds-radius-xl);
     }
 
     body {
@@ -96,20 +97,20 @@
 
     /* Buttons */
     .btn-primary-custom {
-        background: linear-gradient(135deg, var(--accent-orange) 0%, var(--accent-orange-dark) 100%);
+        background: linear-gradient(135deg, var(--accent-orange-dark) 0%, var(--accent-orange) 100%);
         color: white;
         border: none;
         padding: 0.75rem 1.5rem;
         border-radius: var(--radius-md);
         font-weight: 600;
         font-size: 0.9rem;
-        box-shadow: 0 4px 15px rgba(244, 148, 89, 0.3);
+        box-shadow: 0 4px 15px rgba(167, 139, 250, 0.3);
         transition: all 0.3s ease;
     }
 
     .btn-primary-custom:hover {
         transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(244, 148, 89, 0.4);
+        box-shadow: 0 6px 20px rgba(167, 139, 250, 0.4);
         color: white;
     }
 
@@ -227,7 +228,7 @@
                 <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 0.5rem;">
                     {% for dia in item.dias_mes %}
                     <div class="dia-toggle" data-habito-id="{{ item.habito.id }}" data-dia="{{ dia.numero }}"
-                        style="aspect-ratio: 1; border-radius: var(--radius-sm); border: 1px solid var(--border-color); display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease; {% if dia.completado %}background: var(--accent-green); color: white; border-color: var(--accent-green);{% else %}background: white; color: var(--text-secondary);{% endif %}">
+                        style="aspect-ratio: 1; border-radius: var(--radius-sm); border: 1px solid var(--border-color); display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease; {% if dia.completado %}background: var(--accent-green); color: white; border-color: var(--accent-green);{% else %}background: var(--bg-secondary); color: var(--text-secondary);{% endif %}">
                         {{ dia.numero }}
                     </div>
                     {% endfor %}
@@ -285,7 +286,7 @@
                 <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 0.5rem;">
                     {% for dia in item.dias_mes %}
                     <div class="dia-toggle" data-habito-id="{{ item.habito.id }}" data-dia="{{ dia.numero }}"
-                        style="aspect-ratio: 1; border-radius: var(--radius-sm); border: 1px solid var(--border-color); display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease; {% if dia.completado %}background: var(--accent-green); color: white; border-color: var(--accent-green);{% else %}background: white; color: var(--text-secondary);{% endif %}">
+                        style="aspect-ratio: 1; border-radius: var(--radius-sm); border: 1px solid var(--border-color); display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease; {% if dia.completado %}background: var(--accent-green); color: white; border-color: var(--accent-green);{% else %}background: var(--bg-secondary); color: var(--text-secondary);{% endif %}">
                         {{ dia.numero }}
                     </div>
                     {% endfor %}
@@ -313,8 +314,8 @@
     {% if not habitos_positivos and not habitos_negativos %}
     <div class="empty-state fade-in">
         <div class="empty-icon">○</div>
-        <h3 class="empty-title">Aún no hay gestos registrados</h3>
-        <p class="empty-text">Empieza con un gesto del día a día que valga la pena observar</p>
+        <h3 class="empty-title">Aún no hay gestos observados</h3>
+        <p class="empty-text">Empieza con algo pequeño. No para cumplir. Para verlo repetirse.</p>
         <a href="{% url 'diario:habito_crear' %}" class="btn-primary-custom">
             <i class="fas fa-plus me-2"></i>Registrar primer gesto
         </a>
@@ -373,7 +374,7 @@
                             this.style.color = 'white';
                             this.style.borderColor = 'var(--accent-green)';
                         } else {
-                            this.style.background = 'white';
+                            this.style.background = 'var(--bg-secondary)';
                             this.style.color = 'var(--text-secondary)';
                             this.style.borderColor = 'var(--border-color)';
                         }
