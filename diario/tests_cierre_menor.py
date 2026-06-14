@@ -13,6 +13,7 @@ Criterio de cierre:
 
 import inspect
 
+from django.contrib.auth.models import User
 from django.test import TestCase
 
 from diario import views
@@ -34,3 +35,27 @@ class TestCierreNoUsaMensajeMatutino(TestCase):
         with open('diario/templates/diario/presencia_cierre.html', encoding='utf-8') as f:
             tpl = f.read()
         self.assertIn('El día termina. Qué quedó en pie.', tpl)
+
+
+class TestCierreRenderSinTextoTecnico(TestCase):
+    """
+    Phase Diario UI 3B — un {# #} de Django mal cerrado en varias líneas no se
+    interpreta como comentario y se renderiza como texto literal en la UI.
+    Esto comprueba el HTML renderizado, no solo el código fuente del template.
+    """
+
+    def setUp(self):
+        self.user = User.objects.create_user(username='cierre_render', password='x')
+        self.client.force_login(self.user)
+
+    def test_render_no_contiene_restos_tecnicos(self):
+        resp = self.client.get('/diario/presencia/cierre/', SERVER_NAME='127.0.0.1')
+        html = resp.content.decode('utf-8')
+        for forbidden in ('Phase Cierre Menor', '{#', '#}', '{% comment %}', '{% endcomment %}'):
+            self.assertNotIn(forbidden, html,
+                              f"el cierre renderizado contiene texto técnico: '{forbidden}'")
+
+    def test_render_conserva_saludo_propio(self):
+        resp = self.client.get('/diario/presencia/cierre/', SERVER_NAME='127.0.0.1')
+        html = resp.content.decode('utf-8')
+        self.assertIn('El día termina. Qué quedó en pie.', html)

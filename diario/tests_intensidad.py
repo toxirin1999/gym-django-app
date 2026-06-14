@@ -55,7 +55,7 @@ class TestIntensidadApertura(TestCase):
 
 
 class TestBancoPreguntas(TestCase):
-    _PALABRAS_PRESION = ['demostrar', 'deberías', 'suficiente', 'debes', 'tienes que', 'obligatorio']
+    _PALABRAS_PRESION = ['demostrar', 'deberías', 'suficiente', 'debes', 'tienes que', 'obligatorio', 'fallar', 'volver a ser']
 
     def test_preguntas_suaves_no_tienen_lenguaje_de_presion(self):
         for pregunta in _PREGUNTAS_SUAVES:
