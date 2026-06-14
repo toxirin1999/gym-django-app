@@ -1,7 +1,7 @@
 # diario/services/insignias_service.py
 
 from django.utils import timezone
-from ..models import Insignia, InsigniaUsuario, ProsocheHabito
+from ..models import Insignia, InsigniaUsuario
 
 
 class InsigniasService:
@@ -85,17 +85,17 @@ class InsigniasService:
             )
     
     @staticmethod
-    def verificar_insignias_habito(habito, usuario):
+    def verificar_insignias_habito(gesto, usuario):
         """
-        Verifica y otorga insignias basadas en el progreso del hábito
-        Retorna lista de insignias nuevas otorgadas
+        Verifica y otorga insignias basadas en el progreso de un Gesto
+        (Phase 2.0D: antes operaba sobre ProsocheHabito).
+        Retorna lista de insignias nuevas otorgadas.
         """
         insignias_otorgadas = []
-        
-        if habito.tipo_habito == 'positivo':
-            # Verificar insignias de hábitos positivos
-            dias_completados = habito.get_dias_completados()
-            
+        dias_cumplidos = gesto.registros.filter(estado='cumplido').count()
+
+        if gesto.tipo == 'cultivo':
+            # Verificar insignias de gestos que se cultivan
             insignias_a_verificar = [
                 (1, 'habito_positivo_1dia'),
                 (7, 'habito_positivo_7dias'),
@@ -103,20 +103,18 @@ class InsigniasService:
                 (30, 'habito_positivo_30dias'),
                 (66, 'habito_positivo_66dias'),
             ]
-            
+
             for dias_requeridos, codigo_insignia in insignias_a_verificar:
-                if dias_completados >= dias_requeridos:
+                if dias_cumplidos >= dias_requeridos:
                     insignia_otorgada = InsigniasService._otorgar_insignia(
-                        usuario, 
+                        usuario,
                         codigo_insignia
                     )
                     if insignia_otorgada:
                         insignias_otorgadas.append(insignia_otorgada)
-        
-        else:  # habito negativo
-            # Verificar insignias de hábitos a eliminar
-            dias_sin_habito = habito.get_dias_sin_habito()
-            
+
+        else:  # gesto suelto
+            # Verificar insignias de gestos que se sueltan (días cumplidos = días sin el hábito)
             insignias_a_verificar = [
                 (1, 'habito_negativo_1dia'),
                 (3, 'habito_negativo_3dias'),
@@ -125,16 +123,16 @@ class InsigniasService:
                 (30, 'habito_negativo_30dias'),
                 (90, 'habito_negativo_90dias'),
             ]
-            
+
             for dias_requeridos, codigo_insignia in insignias_a_verificar:
-                if dias_sin_habito >= dias_requeridos:
+                if dias_cumplidos >= dias_requeridos:
                     insignia_otorgada = InsigniasService._otorgar_insignia(
                         usuario,
                         codigo_insignia
                     )
                     if insignia_otorgada:
                         insignias_otorgadas.append(insignia_otorgada)
-        
+
         return insignias_otorgadas
     
     @staticmethod

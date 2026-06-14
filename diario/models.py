@@ -276,9 +276,20 @@ class TriggerHabito(models.Model):
         'ProsocheHabito',
         on_delete=models.CASCADE,
         related_name='triggers',
-        help_text="Hábito negativo al que pertenece este trigger"
+        null=True,
+        blank=True,
+        help_text="Hábito negativo legacy al que pertenece este trigger (Phase 2.0D: sustituido por gesto)"
     )
-    
+
+    gesto = models.ForeignKey(
+        'Gesto',
+        on_delete=models.CASCADE,
+        related_name='triggers',
+        null=True,
+        blank=True,
+        help_text="Gesto al que pertenece este trigger (Phase 2.0D)"
+    )
+
     fecha = models.DateField(default=timezone.now)
     hora = models.TimeField(default=timezone.now)
     
@@ -336,7 +347,8 @@ class TriggerHabito(models.Model):
     
     def __str__(self):
         resultado = "Recaída" if self.cediste else "Resistido"
-        return f"{self.habito.nombre} - {self.fecha} ({resultado})"
+        nombre = self.gesto.nombre if self.gesto_id else (self.habito.nombre if self.habito_id else '?')
+        return f"{nombre} - {self.fecha} ({resultado})"
 
 
 

@@ -3,7 +3,7 @@
 from django.utils import timezone
 from datetime import timedelta
 from django.db.models import Avg
-from .models import ProsocheDiario, SeguimientoVires, ProsocheHabito, ProsocheMes
+from .models import ProsocheDiario, SeguimientoVires, Gesto
 from django.urls import reverse
 
 
@@ -76,58 +76,51 @@ def generar_insights_semanales(user):
                 }
             })
 
-    # --- NUEVO: Insight 3: Progreso de Hábitos ---
-    mes_actual = ProsocheMes.objects.filter(
-        usuario=user,
-        mes=hoy.strftime('%B'),
-        año=hoy.year
-    ).first()
-    
-    if mes_actual:
-        habitos_positivos = mes_actual.habitos.filter(tipo_habito='positivo')
-        habitos_negativos = mes_actual.habitos.filter(tipo_habito='negativo')
-        
-        # Insight para hábitos positivos con buen progreso
-        for habito in habitos_positivos:
-            porcentaje = habito.get_porcentaje_exito()
-            if porcentaje >= 80:
-                insights.append({
-                    'titulo': f'¡Excelente Progreso en "{habito.nombre}"!',
-                    'mensaje': f'Llevas un {porcentaje}% de completitud en este hábito. La consistencia es la clave del éxito.',
-                    'tipo': 'success',
-                    'sugerencia_accion': {
-                        'texto': 'Ver Dashboard de Hábitos',
-                        'url': reverse('diario:habitos_dashboard')
-                    }
-                })
-        
-        # Insight para hábitos negativos con buen progreso
-        for habito in habitos_negativos:
-            dias_sin = habito.get_dias_sin_habito()
-            if dias_sin >= 7:
-                insights.append({
-                    'titulo': f'¡{dias_sin} Días sin {habito.nombre}!',
-                    'mensaje': f'Has demostrado gran fortaleza. Cada día sin este hábito es una victoria.',
-                    'tipo': 'success',
-                    'sugerencia_accion': {
-                        'texto': 'Ver Dashboard de Hábitos',
-                        'url': reverse('diario:habitos_dashboard')
-                    }
-                })
-        
-        # Insight para hábitos con bajo progreso
-        for habito in habitos_positivos:
-            porcentaje = habito.get_porcentaje_exito()
-            if porcentaje < 30 and habito.dias_completados.count() > 5:
-                insights.append({
-                    'titulo': f'Refuerza "{habito.nombre}"',
-                    'mensaje': f'Este hábito necesita más atención. Recuerda: el progreso no es lineal, pero la constancia sí importa.',
-                    'tipo': 'warning',
-                    'sugerencia_accion': {
-                        'texto': 'Revisar Hábito',
-                        'url': reverse('diario:habitos_dashboard')
-                    }
-                })
+    # --- Insight 3: Progreso de Gestos (Phase 2.0D: Gesto/RegistroGesto) ---
+    gestos_activos = Gesto.objects.filter(usuario=user, estado='activo')
+    gestos_cultivo = gestos_activos.filter(tipo='cultivo')
+    gestos_suelto = gestos_activos.filter(tipo='suelto')
+
+    # Insight para gestos que se cultivan con buen progreso este mes
+    for gesto in gestos_cultivo:
+        registros_mes = gesto.registros.filter(
+            estado='cumplido', fecha__year=hoy.year, fecha__month=hoy.month
+        ).count()
+        porcentaje = round((registros_mes / gesto.periodo_observacion_dias) * 100) if gesto.periodo_observacion_dias else 0
+        if porcentaje >= 80:
+            insights.append({
+                'titulo': f'¡Excelente Progreso en "{gesto.nombre}"!',
+                'mensaje': f'Llevas un {porcentaje}% de completitud en este gesto este mes. La consistencia es la clave del éxito.',
+                'tipo': 'success',
+                'sugerencia_accion': {
+                    'texto': 'Ver Dashboard de Gestos',
+                    'url': reverse('diario:habitos_dashboard')
+                }
+            })
+        elif porcentaje < 30 and registros_mes > 5:
+            insights.append({
+                'titulo': f'Refuerza "{gesto.nombre}"',
+                'mensaje': f'Este gesto necesita más atención. Recuerda: el progreso no es lineal, pero la constancia sí importa.',
+                'tipo': 'warning',
+                'sugerencia_accion': {
+                    'texto': 'Revisar Gesto',
+                    'url': reverse('diario:habitos_dashboard')
+                }
+            })
+
+    # Insight para gestos que se sueltan con buena racha
+    for gesto in gestos_suelto:
+        racha = gesto.get_racha_actual()
+        if racha >= 7:
+            insights.append({
+                'titulo': f'¡{racha} Días sin {gesto.nombre}!',
+                'mensaje': 'Has demostrado gran fortaleza. Cada día sin este gesto es una victoria.',
+                'tipo': 'success',
+                'sugerencia_accion': {
+                    'texto': 'Ver Dashboard de Gestos',
+                    'url': reverse('diario:habitos_dashboard')
+                }
+            })
 
     # Si no se generó ningún insight específico, añadir uno genérico
     if not insights:
