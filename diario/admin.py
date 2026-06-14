@@ -3,7 +3,8 @@ from .models import (
     ProsocheMes, ProsocheSemana, ProsocheDiario, ProsocheHabito, ProsocheHabitoDia,
     AreaVida, Eudaimonia, TrimestreEudaimonia,
     EjercicioArete, Gnosis, EntrenamientoSemanal,
-    SeguimientoVires, EventoKairos, PlanificacionDiaria
+    SeguimientoVires, EventoKairos, PlanificacionDiaria,
+    Gesto, RegistroGesto
 )
 
 
@@ -219,3 +220,11 @@ class PlanificacionDiariaAdmin(admin.ModelAdmin):
     list_filter = ('completado', 'fecha')  # Corregido
     search_fields = ('usuario__username', 'actividad')
     date_hierarchy = 'fecha'
+
+
+# ========================================
+# GESTOS - ADMINISTRACIÓN (Phase Hábitos 2.0C)
+# ========================================
+
+admin.site.register(Gesto)
+admin.site.register(RegistroGesto)

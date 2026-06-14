@@ -1,3 +1,4 @@
+from datetime import timedelta
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.db import models
@@ -745,6 +746,75 @@ class ProsocheHabitoDia(models.Model):
 
     def __str__(self):
         return f"{self.habito.nombre} - Día {self.dia} ({'✓' if self.completado else '○'})"
+
+
+class Gesto(models.Model):
+    """Hábito/gesto persistente del usuario, independiente de ProsocheMes (Phase Hábitos 2.0C)."""
+    TIPO_CHOICES = [
+        ('cultivo', 'Cultivo'),
+        ('suelto', 'Suelto'),
+    ]
+    ESTADO_CHOICES = [
+        ('activo', 'Activo'),
+        ('pausado', 'Pausado'),
+        ('cerrado', 'Cerrado'),
+    ]
+
+    usuario = models.ForeignKey(User, on_delete=models.CASCADE, related_name='gestos')
+    nombre = models.CharField(max_length=100)
+    tipo = models.CharField(max_length=10, choices=TIPO_CHOICES, default='cultivo')
+    descripcion = models.TextField(blank=True, default='')
+    color = models.CharField(max_length=7, default='#00ffff')
+    estado = models.CharField(max_length=10, choices=ESTADO_CHOICES, default='activo')
+    fecha_inicio = models.DateField(default=timezone.now)
+    fecha_cierre = models.DateField(null=True, blank=True)
+    periodo_observacion_dias = models.PositiveIntegerField(default=30)
+    mejor_racha = models.PositiveIntegerField(default=0)
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('usuario', 'nombre')
+        ordering = ['estado', 'nombre']
+
+    def __str__(self):
+        return f"{self.nombre} ({self.usuario.username})"
+
+    def get_racha_actual(self):
+        """Días consecutivos con estado='cumplido' terminando hoy (o ayer si hoy no tiene registro)."""
+        fechas = set(
+            self.registros.filter(estado='cumplido').values_list('fecha', flat=True)
+        )
+        if not fechas:
+            return 0
+        hoy = timezone.localdate()
+        ancla = hoy if hoy in fechas else hoy - timedelta(days=1)
+        racha = 0
+        cursor = ancla
+        while cursor in fechas:
+            racha += 1
+            cursor -= timedelta(days=1)
+        return racha
+
+
+class RegistroGesto(models.Model):
+    """Registro diario de cumplimiento/fallo de un Gesto (Phase Hábitos 2.0C)."""
+    ESTADO_CHOICES = [
+        ('cumplido', 'Cumplido'),
+        ('fallado', 'Fallado'),
+    ]
+
+    gesto = models.ForeignKey(Gesto, on_delete=models.CASCADE, related_name='registros')
+    fecha = models.DateField()
+    estado = models.CharField(max_length=10, choices=ESTADO_CHOICES, default='cumplido')
+    nota = models.TextField(blank=True, default='')
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('gesto', 'fecha')
+        ordering = ['-fecha']
+
+    def __str__(self):
+        return f"{self.gesto.nombre} — {self.fecha} ({self.estado})"
 
 
 # diario/models.py
