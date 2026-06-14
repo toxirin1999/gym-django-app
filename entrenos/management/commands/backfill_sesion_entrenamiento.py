@@ -37,6 +37,15 @@ class Command(BaseCommand):
                 'No escribe en BD (fuerza --dry-run).'
             ),
         )
+        parser.add_argument(
+            '--auditoria-perfeccion', action='store_true',
+            help=(
+                'Audita una muestra representativa de las sesiones que '
+                'ganarían "perfección" (series_completadas==series_totales) '
+                'con el backfill, con veredicto completa/dudosa/incompleta '
+                'por sesión. No escribe en BD (fuerza --dry-run).'
+            ),
+        )
 
     def _valores_reales(self, entreno, sesion):
         """Valores que debería tener el snapshot según EntrenoRealizado/EjercicioRealizado."""
@@ -44,9 +53,10 @@ class Command(BaseCommand):
         liftin = list(entreno.ejercicios_liftin_detallados.all()) if hasattr(
             entreno, 'ejercicios_liftin_detallados'
         ) else []
+        ejercicios_reales_count = len(ejercicios) + len(liftin)
 
         if ejercicios or liftin:
-            ejercicios_totales = len(ejercicios) + len(liftin)
+            ejercicios_totales = ejercicios_reales_count
             ejercicios_completados = (
                 len([e for e in ejercicios if e.completado])
                 + len([e for e in liftin if e.completado])
@@ -78,6 +88,7 @@ class Command(BaseCommand):
             'series_completadas': series_completadas,
             'volumen_sesion': entreno.volumen_total_kg or 0,
             'rpe_medio': round(rpe_avg, 1) if rpe_avg is not None else None,
+            'ejercicios_reales_count': ejercicios_reales_count,
         }
 
     def _calcular_cambios(self, sesion, reales):
@@ -115,7 +126,8 @@ class Command(BaseCommand):
         dry_run = options['dry_run']
         cliente_id = options['cliente_id']
         informe_impacto = options['informe_impacto']
-        if informe_impacto:
+        auditoria_perfeccion = options['auditoria_perfeccion']
+        if informe_impacto or auditoria_perfeccion:
             dry_run = True
 
         sesiones = SesionEntrenamiento.objects.select_related('entreno').all()
@@ -133,6 +145,7 @@ class Command(BaseCommand):
         ganan_perfeccion = []
         cambios_volumen = []
         cambios_rpe = []
+        registros = []
 
         for sesion in sesiones.iterator():
             total += 1
@@ -162,6 +175,27 @@ class Command(BaseCommand):
 
             datos_cliente['perfectas_antes'] += int(perfecta_antes)
             datos_cliente['perfectas_despues'] += int(perfecta_despues)
+
+            if auditoria_perfeccion:
+                rpe_despues = (
+                    reales['rpe_medio'] if reales['rpe_medio'] is not None
+                    else sesion.rpe_medio
+                )
+                registros.append({
+                    'entreno': entreno,
+                    'numero_ejercicios_entreno': entreno.numero_ejercicios or 0,
+                    'ejercicios_reales_count': reales['ejercicios_reales_count'],
+                    'volumen_real': reales['volumen_sesion'],
+                    'volumen_antes': sesion.volumen_sesion,
+                    'series_antes': (sesion.series_completadas, sesion.series_totales),
+                    'series_despues': (series_completadas_despues, series_totales_despues),
+                    'rpe_antes': sesion.rpe_medio,
+                    'rpe_despues': rpe_despues,
+                    'perfecta_antes': perfecta_antes,
+                    'perfecta_despues': perfecta_despues,
+                    'gana_perfeccion': perfecta_despues and not perfecta_antes,
+                    'pierde_perfeccion': perfecta_antes and not perfecta_despues,
+                })
 
             if not cambios:
                 ya_correctos += 1
@@ -218,6 +252,9 @@ class Command(BaseCommand):
                 total, corregidos, conteo_tipos, por_cliente,
                 pierden_perfeccion, ganan_perfeccion, cambios_volumen, cambios_rpe,
             )
+
+        if auditoria_perfeccion:
+            self._auditoria_perfeccion(registros, cambios_volumen, cambios_rpe)
 
     @staticmethod
     def _pct(numerador, denominador):
@@ -296,4 +333,124 @@ class Command(BaseCommand):
             self.stdout.write(
                 f"  entreno_id={entreno.id} cliente={entreno.cliente_id} "
                 f"fecha={entreno.fecha}: rpe {antes_r} -> {despues_r} (delta={delta_r})"
+            )
+
+    @staticmethod
+    def _veredicto(registro):
+        """parece completa / dudosa / incompleta — Phase Evolución Data 5A.1."""
+        if registro['series_despues'][1] == 0:
+            return 'incompleta'
+        if registro['numero_ejercicios_entreno'] != registro['ejercicios_reales_count']:
+            return 'dudosa'
+        return 'completa'
+
+    @staticmethod
+    def _motivo(registro):
+        ca, ta = registro['series_antes']
+        cd, td = registro['series_despues']
+        if registro['gana_perfeccion']:
+            return f"gana perfección: series_completadas {ca}->{cd} (series_totales {ta}->{td})"
+        if registro['pierde_perfeccion']:
+            return f"pierde perfección: series_completadas {ca}->{cd} (series_totales {ta}->{td})"
+        if registro['perfecta_antes'] and registro['perfecta_despues']:
+            return "control: ya era perfecta y sigue siéndolo"
+        return "sin cambio en perfección"
+
+    def _imprimir_registro(self, registro):
+        entreno = registro['entreno']
+        if entreno.rutina_id:
+            rutina_nombre = entreno.rutina.nombre
+        else:
+            rutina_nombre = entreno.nombre_rutina_liftin or '(sin rutina)'
+
+        ca, ta = registro['series_antes']
+        cd, td = registro['series_despues']
+
+        self.stdout.write(
+            f"  entreno_id={entreno.id} cliente={entreno.cliente_id} "
+            f"fecha={entreno.fecha} rutina={rutina_nombre}"
+        )
+        self.stdout.write(
+            f"    numero_ejercicios={registro['numero_ejercicios_entreno']} "
+            f"ejercicios_realizados={registro['ejercicios_reales_count']} "
+            f"volumen_real={registro['volumen_real']} kg"
+        )
+        self.stdout.write(f"    series: {ca}/{ta} -> {cd}/{td}")
+        self.stdout.write(f"    rpe: {registro['rpe_antes']} -> {registro['rpe_despues']}")
+        self.stdout.write(f"    motivo: {self._motivo(registro)}")
+        self.stdout.write(f"    veredicto: {self._veredicto(registro)}")
+
+    def _auditoria_perfeccion(self, registros, cambios_volumen, cambios_rpe):
+        self.stdout.write('')
+        self.stdout.write('=== Auditoría de perfección — Phase Evolución Data 5A.1 ===')
+
+        gana = [r for r in registros if r['gana_perfeccion']]
+        control = [r for r in registros if r['perfecta_antes'] and r['perfecta_despues']]
+
+        patron_cero = [
+            r for r in gana
+            if r['series_antes'][0] == 0 and r['series_antes'][1] > 0
+        ]
+        patron_cero = sorted(patron_cero, key=lambda r: r['entreno'].fecha)[:10]
+
+        antiguas = sorted(gana, key=lambda r: r['entreno'].fecha)[:5]
+        recientes = sorted(gana, key=lambda r: r['entreno'].fecha, reverse=True)[:5]
+
+        por_cliente_gana = {}
+        for r in gana:
+            por_cliente_gana.setdefault(r['entreno'].cliente_id, []).append(r)
+        cliente_principal = (
+            max(por_cliente_gana, key=lambda cid: len(por_cliente_gana[cid]))
+            if por_cliente_gana else None
+        )
+        otros_clientes = []
+        for cid, regs in por_cliente_gana.items():
+            if cid != cliente_principal:
+                otros_clientes.extend(regs[:5])
+
+        top_volumen = sorted(cambios_volumen, key=lambda x: abs(x[3]), reverse=True)[:5]
+        top_rpe = sorted(cambios_rpe, key=lambda x: abs(x[3]), reverse=True)[:5]
+        ids_volumen = {entreno.id for entreno, *_ in top_volumen}
+        ids_rpe = {entreno.id for entreno, *_ in top_rpe}
+        mayor_volumen = [r for r in registros if r['entreno'].id in ids_volumen]
+        mayor_rpe = [r for r in registros if r['entreno'].id in ids_rpe]
+
+        control_muestra = control[:3]
+
+        secciones = [
+            ('Patrón 0/N -> N/N', patron_cero),
+            ('Más antiguas', antiguas),
+            ('Más recientes', recientes),
+            ('Otros clientes', otros_clientes),
+            ('Mayor cambio de volumen', mayor_volumen),
+            ('Mayor cambio de RPE', mayor_rpe),
+            ('Control — ya perfectas antes', control_muestra),
+        ]
+
+        veredictos = {}
+        for titulo, regs in secciones:
+            self.stdout.write('')
+            self.stdout.write(f'--- {titulo} ({len(regs)}) ---')
+            if not regs:
+                self.stdout.write('  (sin registros)')
+            for r in regs:
+                self._imprimir_registro(r)
+                veredictos[r['entreno'].id] = self._veredicto(r)
+
+        completas = sum(1 for v in veredictos.values() if v == 'completa')
+        dudosas = sum(1 for v in veredictos.values() if v == 'dudosa')
+        incompletas = sum(1 for v in veredictos.values() if v == 'incompleta')
+
+        self.stdout.write('')
+        self.stdout.write('--- Resumen ---')
+        self.stdout.write(f'Auditadas: {len(veredictos)}')
+        self.stdout.write(f'Completas: {completas}')
+        self.stdout.write(f'Dudosas: {dudosas}')
+        self.stdout.write(f'Incompletas: {incompletas}')
+
+        if patron_cero:
+            self.stdout.write(
+                f"Patrón detectado: {len(patron_cero)} sesiones con "
+                f"series_completadas=0 en el snapshot pero series_totales>0 "
+                f"(snapshot creado antes de registrar las series reales)."
             )
