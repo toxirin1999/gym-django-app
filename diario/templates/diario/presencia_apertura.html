@@ -133,31 +133,6 @@
 .mood-btn.selected span.label { color: var(--accent); }
 .mood-btn.selected { box-shadow: 0 0 0 2px rgba(167,139,250,0.12); }
 
-/* ── Sliders — bloques finos ── */
-.slider-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0.85rem;
-}
-.slider-group label {
-    font-size: 0.78rem;
-    font-weight: 600;
-    color: var(--text);
-    margin-bottom: 0.3rem;
-    display: block;
-}
-.slider-group input[type=range] {
-    width: 100%;
-    accent-color: var(--accent);
-}
-.slider-value {
-    font-size: 1rem;
-    font-weight: 700;
-    color: var(--accent);
-    text-align: center;
-    margin-top: 0.2rem;
-}
-
 /* ── Inputs de texto (unificados con cierre) ── */
 .gratitud-input {
     width: 100%;
@@ -272,10 +247,12 @@ textarea.intencion::placeholder { color: var(--muted); }
             <div class="joi-msg">{{ apertura_manana }}</div>
         {% endif %}
 
-        {% if pregunta_identidad %}
-            <div class="joi-question">{{ pregunta_identidad }}</div>
-        {% else %}
-            <div class="joi-question">¿Quién quieres ser hoy con lo que tienes?</div>
+        {% if not apertura_con_pregunta %}
+            {% if pregunta_identidad %}
+                <div class="joi-question">{{ pregunta_identidad }}</div>
+            {% else %}
+                <div class="joi-question">¿Quién quieres ser hoy con lo que tienes?</div>
+            {% endif %}
         {% endif %}
     </div>
 
@@ -289,33 +266,8 @@ textarea.intencion::placeholder { color: var(--muted); }
             <div class="mood-row">
                 <button type="button" class="mood-btn {% if entrada.estado_animo == 1 %}selected{% endif %}" data-val="1">😔<span class="label">Bajo</span></button>
                 <button type="button" class="mood-btn {% if entrada.estado_animo == 2 %}selected{% endif %}" data-val="2">😞<span class="label">Flojo</span></button>
-                <button type="button" class="mood-btn {% if entrada.estado_animo == 4 or not entrada.estado_animo %}selected{% endif %}" data-val="4">🙂<span class="label">Bien</span></button>
+                <button type="button" class="mood-btn {% if entrada.estado_animo == 4 or entrada.estado_animo == 3 or not entrada.estado_animo %}selected{% endif %}" data-val="4">🙂<span class="label">Bien</span></button>
                 <button type="button" class="mood-btn {% if entrada.estado_animo == 5 %}selected{% endif %}" data-val="5">😊<span class="label">Pleno</span></button>
-            </div>
-        </div>
-
-        <!-- Biometría -->
-        <div class="section-card">
-            <div class="section-label">Cuerpo</div>
-            <div class="slider-row">
-                <div class="slider-group">
-                    <label>Energía</label>
-                    <input type="range" name="nivel_energia" id="energia_slider" min="1" max="5" step="1" value="{{ vires.nivel_energia|default:3 }}">
-                    <div style="display:flex;justify-content:space-between;margin-top:2px;">
-                        <span style="font-size:0.65rem;color:var(--muted);">Agotado</span>
-                        <span class="slider-value" id="energia_val" style="font-size:1rem;">{{ vires.nivel_energia|default:3 }}</span>
-                        <span style="font-size:0.65rem;color:var(--muted);">Lleno</span>
-                    </div>
-                </div>
-                <div class="slider-group">
-                    <label>Sueño</label>
-                    <input type="range" name="calidad_sueno" id="sueno_slider" min="1" max="5" step="1" value="{{ vires.calidad_sueno|default:3 }}">
-                    <div style="display:flex;justify-content:space-between;margin-top:2px;">
-                        <span style="font-size:0.65rem;color:var(--muted);">Malo</span>
-                        <span class="slider-value" id="sueno_val" style="font-size:1rem;">{{ vires.calidad_sueno|default:3 }}</span>
-                        <span style="font-size:0.65rem;color:var(--muted);">Perfecto</span>
-                    </div>
-                </div>
             </div>
         </div>
 
@@ -388,16 +340,6 @@ document.querySelectorAll('.mood-btn').forEach(btn => {
         document.getElementById('estado_animo_input').value = btn.dataset.val;
     });
 });
-
-// ── Sliders ──
-const energiaSlider = document.getElementById('energia_slider');
-const energiaVal = document.getElementById('energia_val');
-energiaSlider.addEventListener('input', () => energiaVal.textContent = energiaSlider.value);
-
-const suenoSlider = document.getElementById('sueno_slider');
-const suenoVal = document.getElementById('sueno_val');
-suenoSlider.addEventListener('input', () => suenoVal.textContent = suenoSlider.value);
-
 
 // ── Radar de Intrusos ──
 function promoverPersona(id, nombre) {
