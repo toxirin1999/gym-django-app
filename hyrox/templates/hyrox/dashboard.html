@@ -697,7 +697,6 @@ details[open] > summary i.fa-chevron-down { transform: rotate(180deg); }
   }
 
   /* --- Wrapper divs that carry 40px h-padding (check-in, decision, system reading) --- */
-  #joi-hyrox-banner { padding-left: 16px !important; padding-right: 16px !important; }
   main > div[style*="40px"] {
     padding-left: 16px !important;
     padding-right: 16px !important;
@@ -743,35 +742,6 @@ details[open] > summary i.fa-chevron-down { transform: rotate(180deg); }
   </style>
 </head>
 <body>
-
-{% if joi_mensaje_hyrox %}
-<div id="joi-hyrox-banner" style="background:var(--bg-2);border-bottom:1px solid rgba(100,148,220,0.2);padding:8px 20px;display:flex;align-items:center;gap:10px;">
-  <span style="font-family:var(--font-mono);font-size:9px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;color:var(--accent);flex-shrink:0;">JOI</span>
-  <a href="/joi/habitacion/?mensaje={{ joi_mensaje_hyrox.id }}"
-     style="font-size:12px;font-style:italic;color:var(--fg-dim);text-decoration:none;flex:1;transition:color .2s;"
-     onmouseover="this.style.color='var(--fg)'" onmouseout="this.style.color='var(--fg-dim)'">
-    hay una lectura pendiente →
-  </a>
-  <button onclick="joiHyroxCerrar({{ joi_mensaje_hyrox.id }})"
-          style="background:none;border:none;color:var(--fg-dim);font-size:16px;cursor:pointer;padding:0 4px;line-height:1;transition:color .2s;"
-          onmouseover="this.style.color='var(--fg)'" onmouseout="this.style.color='var(--fg-dim)'">×</button>
-</div>
-<script>
-(function() {
-  var bannerId = {{ joi_mensaje_hyrox.id }};
-  if (sessionStorage.getItem('joi_banner_oculto_' + bannerId)) {
-    var b = document.getElementById('joi-hyrox-banner');
-    if (b) b.style.display = 'none';
-  }
-})();
-
-function joiHyroxCerrar(id) {
-  sessionStorage.setItem('joi_banner_oculto_' + id, '1');
-  const b = document.getElementById('joi-hyrox-banner');
-  if (b) { b.style.transition='opacity .3s'; b.style.opacity='0'; setTimeout(()=>b.remove(),300); }
-}
-</script>
-{% endif %}
 
 <!-- NAV -->
 <header class="rb-nav">
@@ -3222,7 +3192,7 @@ function closeHelp() {
 document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeHelp(); });
 </script>
 
-{% include 'includes/_joi_fab.html' %}
+{% include 'includes/_joi_fab.html' with mensaje_banner=joi_mensaje_hyrox|default:joi_mensaje_pendiente %}
 </body>
 </html>
 
