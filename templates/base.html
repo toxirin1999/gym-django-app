@@ -1251,22 +1251,7 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
   <!-- extra_js se movió al final del body -->
-<!--<div id="joiHolograma" class="fixed top-6 right-6 z-50 w-28 h-28 sm:w-32 sm:h-32 opacity-90 animate-fadein">
-  <img src="{% static 'images/4f.png' %}" alt="Joi"
-    class="rounded-full border-2 border-cyan-400/40 shadow-xl backdrop-blur-sm transition-transform duration-700 hover:scale-105 hover:drop-shadow-cyan animate-glow" />
-  <p id="joiFrase" class="mt-2 text-sm text-cyan-200 italic drop-shadow-md text-center">
-    “Estoy aquí… pero más ligera que nunca.”
-  </p>
-</div>
-<audio id="vozJoi" src="{% static 'audio/hola2.mp3' %}" preload="auto"></audio>-->
 <script>
-document.addEventListener("click", () => {
-  const audio = document.getElementById("vozJoi");
-  if (audio) {
-    audio.volume = 0.85;
-    audio.play();
-  }
-}, { once: true });  // solo la primera vez
  class NotificacionesCodeice {
         constructor() {
             this.container = document.getElementById('notificaciones-container');
@@ -1534,47 +1519,6 @@ if ('serviceWorker' in navigator) {
     });
   }
 </script>
-
-
-
-
-<style>
-#joiCompanion {
-  animation: slideIn 1.2s ease-out forwards;
-  opacity: 0;
-}
-@keyframes slideIn {
-  0% {
-    transform: translateX(-100%);
-    opacity: 0;
-  }
-  100% {
-    transform: translateX(0%);
-    opacity: 1;
-  }
-}
-@keyframes fadein {
-  0% { opacity: 0; transform: scale(0.9); }
-  100% { opacity: 1; transform: scale(1); }
-}
-
-@keyframes glitch {
-  0% { transform: translate(0); opacity: 0.95; }
-  20% { transform: translate(-1px, 1px); }
-  40% { transform: translate(1px, -1px); }
-  60% { transform: translate(-1px, 0); }
-  80% { transform: translate(1px, 1px); }
-  100% { transform: translate(0); opacity: 1; }
-}
-
-.animate-fadein {
-  animation: fadein 1s ease-out forwards;
-}
-
-.animate-glitch {
-  animation: glitch 1.2s infinite alternate ease-in-out;
-}
-</style>
 
   {% block extra_js %}{% endblock %}
 </body>
