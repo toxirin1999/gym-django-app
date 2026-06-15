@@ -8,6 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Archivo+Black&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="{% static 'css/jds.css' %}">
   <style>
 /* ═══════════════════════════════════════════════
    HYROX/OS · DASHBOARD · EDITORIAL DESIGN SYSTEM
@@ -16,34 +17,41 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --bg: #f5f5f3;
-  --bg-2: #ffffff;
-  --bg-3: #ebebe8;
-  --line: #d4d4d1;
-  --line-2: #a3a3a0;
-  --fg: #0a0a0a;
-  --fg-dim: #525252;
-  --fg-mute: #a3a3a3;
-  --accent: #ff6b00;
+  --bg:      var(--jds-bg);
+  --bg-2:    var(--jds-surface);
+  --bg-3:    var(--jds-surface-strong);
+  --line:    var(--jds-border);
+  --line-2:  var(--jds-border-strong);
+  --fg:      var(--jds-text);
+  --fg-dim:  var(--jds-text-muted);
+  --fg-mute: var(--jds-text-soft);
+
+  /* Dialecto de carrera: naranja local, NO viene de JDS */
+  --accent:   #ff6b00;
   --accent-2: #ff3b1f;
-  --warn: #ffb800;
-  --ok: #00a85a;
-  --ink: #ffffff;
-  --danger: #ef4444;
-  --deload: #8B5CF6;
+
+  --warn:    var(--jds-warning);
+  --ok:      var(--jds-good);
+  --danger:  var(--jds-danger);
+  --deload:  var(--jds-joi);   /* violeta JDS reutilizado para deload */
+  --ink:     var(--jds-text);  /* ya no hace falta blanco-sobre-oscuro especial */
+
+  --radius-sm: var(--jds-radius-sm);
+  --radius-md: var(--jds-radius-md);
+  --radius-lg: var(--jds-radius-lg);
 }
 
 /* Legacy var aliases for preserved CSS blocks */
 body {
   --paper: var(--bg-2);
   --paper-2: var(--bg-3);
-  --ink-2: #1a1a1a;
+  --ink-2: var(--jds-text);
   --ink-3: var(--fg-dim);
   --ink-4: var(--fg-mute);
-  --ink-5: #c0c0bc;
+  --ink-5: var(--jds-text-faint);
   --font-disp: 'Archivo Black', 'Space Grotesk', sans-serif;
-  --font-body: 'Space Grotesk', system-ui, sans-serif;
-  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --font-body: var(--jds-font);
+  --font-mono: var(--jds-mono);
   --border: var(--line);
   --card: var(--bg-2);
   --text: var(--fg);
@@ -61,7 +69,7 @@ body {
 /* ── TYPOGRAPHY CLASSES ────────────────────────── */
 .mono { font-family: 'JetBrains Mono', monospace; }
 .display {
-  font-family: 'Archivo Black', 'Space Grotesk', sans-serif;
+  font-family: var(--font-body);
   letter-spacing: -0.04em;
   line-height: 0.85;
   text-transform: uppercase;
@@ -129,7 +137,7 @@ body {
 .rb-section { padding: 22px 40px 4px; }
 .rb-section-head { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
 .rb-section-num { font-family: var(--font-mono); font-size: 10px; font-weight: 700; color: var(--fg-mute); letter-spacing: 0.15em; }
-.rb-section-title { margin: 0; font-family: var(--font-disp); font-size: 15px; letter-spacing: 0.02em; color: var(--fg); text-transform: uppercase; }
+.rb-section-title { margin: 0; font-family: var(--font-body); font-size: 15px; letter-spacing: 0.02em; color: var(--fg); text-transform: uppercase; }
 .rb-section-line { flex: 1; height: 1px; background: var(--line); }
 .rb-section-right { font-family: var(--font-mono); font-size: 10px; font-weight: 700; color: var(--fg-dim); letter-spacing: 0.05em; }
 
@@ -178,7 +186,7 @@ body {
   margin-bottom: 4px;
 }
 .rb-bib-num {
-  font-family: 'Archivo Black', sans-serif;
+  font-family: var(--font-body);
   font-size: clamp(80px, 22vw, 140px); line-height: 0.82;
   letter-spacing: -0.05em; color: var(--accent);
 }
@@ -187,7 +195,7 @@ body {
   letter-spacing: 0.18em; color: var(--fg-mute); text-transform: uppercase; margin-top: 4px;
 }
 .rb-bib-title {
-  font-family: 'Archivo Black', sans-serif; font-size: 20px; line-height: 1.02;
+  font-family: var(--font-body); font-size: 20px; line-height: 1.02;
   color: var(--fg); letter-spacing: -0.01em; text-transform: uppercase; margin-top: 10px;
 }
 .rb-bib-divider {
@@ -210,7 +218,7 @@ body {
 }
 .rb-rd-top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
 .rb-rd-lbl { font-family: var(--font-mono); font-size: 10px; font-weight: 700; letter-spacing: 0.14em; opacity: 0.85; text-transform: uppercase; }
-.rb-rd-num { font-family: 'Archivo Black', sans-serif; font-size: 44px; line-height: 1; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+.rb-rd-num { font-family: var(--font-body); font-size: 44px; line-height: 1; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
 .rb-rd-unit { font-family: var(--font-mono); font-size: 10px; opacity: 0.7; margin-left: 4px; letter-spacing: 0.1em; }
 .rb-rd-bar { height: 4px; background: rgba(0,0,0,0.25); border-radius: 2px; overflow: hidden; }
 .rb-rd-bar-fill { height: 100%; background: #fff; transition: width 1.2s cubic-bezier(.4,0,.2,1); }
@@ -250,21 +258,21 @@ body {
 /* ── WEEKLY FLASH ────────────────────────────── */
 .rb-flash { background: var(--bg-2); border: 1px solid var(--line); border-left: 4px solid var(--accent-2); border-radius: 2px; padding: 14px; margin-top: 14px; }
 .rb-flash-head { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; font-family: var(--font-mono); font-size: 10px; font-weight: 700; letter-spacing: 0.14em; color: var(--accent-2); text-transform: uppercase; }
-.rb-flash-title { font-family: var(--font-disp); font-size: 18px; letter-spacing: -0.01em; color: var(--fg); text-transform: uppercase; margin-bottom: 10px; }
+.rb-flash-title { font-family: var(--font-body); font-size: 18px; letter-spacing: -0.01em; color: var(--fg); text-transform: uppercase; margin-bottom: 10px; }
 .rb-flash-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--line); border: 1px solid var(--line); }
 .rb-flash-stat { background: var(--bg-2); padding: 10px 8px; text-align: left; }
 .rb-flash-stat-lbl { font-family: var(--font-mono); font-size: 9px; font-weight: 700; color: var(--fg-mute); letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 3px; }
-.rb-flash-stat-val { font-family: var(--font-disp); font-size: 22px; letter-spacing: -0.03em; color: var(--fg); line-height: 1; font-variant-numeric: tabular-nums; }
+.rb-flash-stat-val { font-family: var(--font-body); font-size: 22px; letter-spacing: -0.03em; color: var(--fg); line-height: 1; font-variant-numeric: tabular-nums; }
 .rb-flash-stat-unit { font-family: var(--font-mono); font-size: 10px; color: var(--fg-mute); margin-left: 3px; font-weight: 700; }
 
 /* ── MACRO ───────────────────────────────────── */
 .rb-macro { background: var(--bg-2); border: 1px solid var(--line); border-radius: 2px; padding: 14px; }
 .rb-macro-top { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 10px; }
-.rb-macro-pct { font-family: var(--font-disp); font-size: 40px; letter-spacing: -0.03em; color: var(--fg); line-height: 1; font-variant-numeric: tabular-nums; }
+.rb-macro-pct { font-family: var(--font-body); font-size: 40px; letter-spacing: -0.03em; color: var(--fg); line-height: 1; font-variant-numeric: tabular-nums; }
 .rb-macro-pct span { font-size: 18px; color: var(--fg-mute); }
 .rb-macro-fase { text-align: right; }
 .rb-macro-fase-lbl { font-family: var(--font-mono); font-size: 9px; font-weight: 700; letter-spacing: 0.12em; color: var(--fg-mute); text-transform: uppercase; margin-bottom: 2px; }
-.rb-macro-fase-val { font-family: var(--font-disp); font-size: 16px; color: var(--accent); letter-spacing: 0.01em; text-transform: uppercase; line-height: 1; }
+.rb-macro-fase-val { font-family: var(--font-body); font-size: 16px; color: var(--accent); letter-spacing: 0.01em; text-transform: uppercase; line-height: 1; }
 .rb-phases { display: flex; gap: 3px; margin-bottom: 10px; }
 .rb-phase { flex: 1; padding: 6px 4px; text-align: center; font-family: var(--font-mono); font-size: 9px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--fg-mute); background: var(--bg-3); border: 1px solid var(--line); border-radius: 2px; }
 .rb-phase.past { background: transparent; color: var(--fg-dim); border-color: var(--fg-mute); }
@@ -274,7 +282,7 @@ body {
 /* ── RECOVERY ────────────────────────────────── */
 .rb-recovery { background: var(--bg-2); border: 1px solid var(--line); border-left: 4px solid var(--accent); border-radius: 2px; padding: 14px; }
 .rb-rc-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid var(--line); }
-.rb-rc-title { font-family: var(--font-disp); font-size: 15px; color: var(--fg); text-transform: uppercase; letter-spacing: -0.01em; }
+.rb-rc-title { font-family: var(--font-body); font-size: 15px; color: var(--fg); text-transform: uppercase; letter-spacing: -0.01em; }
 .rb-rc-sub { font-family: var(--font-mono); font-size: 9px; font-weight: 700; color: var(--fg-mute); letter-spacing: 0.1em; text-transform: uppercase; margin-top: 2px; }
 .rb-fase-pill { font-family: var(--font-mono); font-size: 9px; font-weight: 700; padding: 3px 10px; border: 1.5px solid; letter-spacing: 0.12em; text-transform: uppercase; border-radius: 2px; }
 .rb-fase-aguda { color: var(--danger); border-color: var(--danger); background: rgba(239,68,68,0.06); }
@@ -286,7 +294,7 @@ body {
 .rb-metrics3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--line); border: 1px solid var(--line); margin-bottom: 12px; }
 .rb-metric3 { background: var(--bg-2); padding: 12px 8px; text-align: center; }
 .rb-metric3-lbl { font-family: var(--font-mono); font-size: 9px; font-weight: 700; letter-spacing: 0.14em; color: var(--fg-mute); text-transform: uppercase; margin-bottom: 4px; }
-.rb-metric3-val { font-family: var(--font-disp); font-size: 28px; line-height: 1; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+.rb-metric3-val { font-family: var(--font-body); font-size: 28px; line-height: 1; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
 .rb-metric3-val span { font-size: 12px; color: var(--fg-mute); }
 
 /* ── 3 STRIPS ────────────────────────────────── */
@@ -299,8 +307,8 @@ body {
 .rb-ring-row { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
 .rb-ring-wrap { position: relative; width: 64px; height: 64px; flex-shrink: 0; }
 .rb-ring-wrap svg { transform: rotate(-90deg); }
-.rb-ring-center { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-family: var(--font-disp); font-size: 20px; color: var(--fg); font-variant-numeric: tabular-nums; }
-.rb-ring-big { font-family: var(--font-disp); font-size: 40px; line-height: 1; letter-spacing: -0.03em; color: var(--fg); font-variant-numeric: tabular-nums; }
+.rb-ring-center { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-family: var(--font-body); font-size: 20px; color: var(--fg); font-variant-numeric: tabular-nums; }
+.rb-ring-big { font-family: var(--font-body); font-size: 40px; line-height: 1; letter-spacing: -0.03em; color: var(--fg); font-variant-numeric: tabular-nums; }
 .rb-ring-big span { font-size: 22px; color: var(--fg-mute); }
 .rb-ring-caption { font-size: 11px; color: var(--fg-mute); margin-top: 3px; font-weight: 500; }
 .rb-brow { margin-bottom: 11px; }
@@ -325,20 +333,20 @@ body {
 
 /* ── STANDARDS ───────────────────────────────── */
 .rb-std-global { background: var(--bg-2); border: 1px solid var(--line); border-radius: 2px; padding: 14px; margin-bottom: 10px; display: flex; align-items: baseline; justify-content: space-between; gap: 14px; }
-.rb-std-global-pct { font-family: var(--font-disp); font-size: 52px; letter-spacing: -0.04em; color: var(--accent); line-height: 1; font-variant-numeric: tabular-nums; }
+.rb-std-global-pct { font-family: var(--font-body); font-size: 52px; letter-spacing: -0.04em; color: var(--accent); line-height: 1; font-variant-numeric: tabular-nums; }
 .rb-std-global-pct span { font-size: 22px; color: var(--fg-mute); }
 .rb-std-global-lbl { font-family: var(--font-mono); font-size: 10px; font-weight: 700; letter-spacing: 0.12em; color: var(--fg-mute); text-transform: uppercase; text-align: right; line-height: 1.5; }
 .rb-std-list { display: flex; flex-direction: column; gap: 6px; }
 .rb-std-row { background: var(--bg-2); border: 1px solid var(--line); border-left: 3px solid var(--line-2); border-radius: 2px; padding: 10px 12px; display: grid; grid-template-columns: 28px 1fr auto; gap: 10px; align-items: center; }
 .rb-std-row.done { border-left-color: var(--ok); }
 .rb-std-row.prog { border-left-color: var(--accent); }
-.rb-std-rank { font-family: var(--font-disp); font-size: 22px; color: var(--fg-mute); line-height: 1; font-variant-numeric: tabular-nums; letter-spacing: -0.03em; }
+.rb-std-rank { font-family: var(--font-body); font-size: 22px; color: var(--fg-mute); line-height: 1; font-variant-numeric: tabular-nums; letter-spacing: -0.03em; }
 .rb-std-row.done .rb-std-rank { color: var(--ok); }
 .rb-std-row.prog .rb-std-rank { color: var(--accent); }
 .rb-std-body { min-width: 0; }
-.rb-std-name { font-family: var(--font-disp); font-size: 13px; color: var(--fg); text-transform: uppercase; letter-spacing: -0.01em; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rb-std-name { font-family: var(--font-body); font-size: 13px; color: var(--fg); text-transform: uppercase; letter-spacing: -0.01em; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .rb-std-meta { font-family: var(--font-mono); font-size: 10px; color: var(--fg-mute); letter-spacing: 0.05em; }
-.rb-std-pct { font-family: var(--font-disp); font-size: 20px; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; color: var(--fg-mute); }
+.rb-std-pct { font-family: var(--font-body); font-size: 20px; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; color: var(--fg-mute); }
 .rb-std-row.done .rb-std-pct { color: var(--ok); }
 .rb-std-row.prog .rb-std-pct { color: var(--accent); }
 .rb-std-pct span { font-size: 10px; color: var(--fg-mute); }
@@ -346,7 +354,7 @@ body {
 
 /* ── PLAN DIAS ───────────────────────────────── */
 .rb-plan-head-bar { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
-.rb-plan-semana { font-family: var(--font-disp); font-size: 14px; color: var(--accent); letter-spacing: 0.1em; text-transform: uppercase; }
+.rb-plan-semana { font-family: var(--font-body); font-size: 14px; color: var(--accent); letter-spacing: 0.1em; text-transform: uppercase; }
 .rb-plan-semana.next { color: var(--fg-mute); }
 .rb-plan-count { font-family: var(--font-mono); font-size: 10px; font-weight: 700; color: var(--fg-mute); letter-spacing: 0.1em; text-transform: uppercase; }
 .rb-dias { display: flex; flex-direction: column; gap: 8px; }
@@ -363,12 +371,12 @@ body {
 .rb-dia.done .rb-dia-bib { border-color: var(--ok); background: rgba(0,168,90,0.08); }
 .rb-dia-dow { font-family: var(--font-mono); font-size: 9px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; line-height: 1; color: var(--fg-mute); }
 .rb-dia.hoy .rb-dia-dow { color: rgba(245,245,243,0.7); }
-.rb-dia-num { font-family: var(--font-disp); font-size: 24px; line-height: 1; letter-spacing: -0.03em; margin-top: 2px; color: var(--fg); }
+.rb-dia-num { font-family: var(--font-body); font-size: 24px; line-height: 1; letter-spacing: -0.03em; margin-top: 2px; color: var(--fg); }
 .rb-dia.hoy .rb-dia-num { color: var(--bg); }
 .rb-dia.done .rb-dia-num { color: var(--ok); }
 .rb-dia-body { min-width: 0; }
 .rb-dia-tipo { display: flex; align-items: center; gap: 6px; font-family: var(--font-mono); font-size: 9px; font-weight: 700; letter-spacing: 0.12em; color: var(--fg-mute); text-transform: uppercase; margin-bottom: 3px; }
-.rb-dia-title { font-family: var(--font-disp); font-size: 13px; color: var(--fg); letter-spacing: -0.01em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 3px; }
+.rb-dia-title { font-family: var(--font-body); font-size: 13px; color: var(--fg); letter-spacing: -0.01em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 3px; }
 .rb-dia-acts { font-family: var(--font-body); font-size: 11px; color: var(--fg-dim); line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .rb-dia-tag { align-self: stretch; display: flex; align-items: center; font-family: var(--font-mono); font-size: 9px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; padding: 6px 10px; border-radius: 2px; white-space: nowrap; }
 .rb-tag-hoy { background: var(--accent); color: #fff; }
@@ -389,12 +397,12 @@ a.rb-dia:hover { background: var(--bg-3); text-decoration: none; }
 .rb-hist-toggle:hover { background: var(--bg-3); }
 .rb-hist-toggle-l { display: flex; align-items: center; gap: 10px; }
 .rb-hist-toggle-l i { color: var(--accent); }
-.rb-hist-toggle-title { font-family: var(--font-disp); font-size: 14px; color: var(--fg); letter-spacing: -0.01em; text-transform: uppercase; }
+.rb-hist-toggle-title { font-family: var(--font-body); font-size: 14px; color: var(--fg); letter-spacing: -0.01em; text-transform: uppercase; }
 .rb-hist-count { font-family: var(--font-mono); font-size: 10px; padding: 2px 8px; border: 1px solid var(--line-2); color: var(--fg-mute); border-radius: 2px; }
 .rb-hist-items { margin-top: 8px; display: flex; flex-direction: column; gap: 6px; }
 .rb-hist-item { background: var(--bg-2); border: 1px solid var(--line); border-radius: 2px; padding: 12px 14px; }
 .rb-hist-item-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; }
-.rb-hist-title { font-family: var(--font-disp); font-size: 14px; color: var(--fg); text-transform: uppercase; letter-spacing: -0.01em; margin-bottom: 3px; }
+.rb-hist-title { font-family: var(--font-body); font-size: 14px; color: var(--fg); text-transform: uppercase; letter-spacing: -0.01em; margin-bottom: 3px; }
 .rb-hist-date { font-family: var(--font-mono); font-size: 9px; font-weight: 700; color: var(--accent); letter-spacing: 0.14em; }
 .rb-chip { font-family: var(--font-mono); font-size: 9px; font-weight: 700; padding: 2px 7px; background: var(--bg-3); border: 1px solid var(--line); color: var(--fg-dim); letter-spacing: 0.08em; border-radius: 2px; text-transform: uppercase; }
 .rb-chips { display: flex; flex-wrap: wrap; gap: 4px; }
@@ -404,13 +412,13 @@ a.rb-dia:hover { background: var(--bg-3); text-decoration: none; }
 .rb-empty { background: var(--bg-2); border: 1px dashed var(--line-2); border-radius: 2px; padding: 40px 20px; text-align: center; margin: 40px; }
 .rb-empty-icon { font-size: 32px; color: var(--accent); opacity: 0.35; margin-bottom: 14px; }
 .rb-empty-eyebrow { font-family: var(--font-mono); font-size: 10px; font-weight: 700; letter-spacing: 0.14em; color: var(--fg-mute); text-transform: uppercase; margin-bottom: 8px; }
-.rb-empty-title { font-family: var(--font-disp); font-size: 22px; color: var(--fg); text-transform: uppercase; letter-spacing: -0.02em; margin-bottom: 8px; }
+.rb-empty-title { font-family: var(--font-body); font-size: 22px; color: var(--fg); text-transform: uppercase; letter-spacing: -0.02em; margin-bottom: 8px; }
 .rb-empty-sub { font-size: 13px; color: var(--fg-dim); line-height: 1.5; margin-bottom: 20px; }
 
 /* ── RUN EVOLUTION ───────────────────────────── */
 .rb-run-kpis { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-bottom: 10px; }
 .rb-run-kpi { background: var(--bg-2); border: 1px solid var(--line); border-radius: 2px; padding: 10px 12px; text-align: center; }
-.rb-run-kpi-val { font-family: var(--font-disp); font-size: 20px; font-weight: 700; color: var(--fg); line-height: 1.1; }
+.rb-run-kpi-val { font-family: var(--font-body); font-size: 20px; font-weight: 700; color: var(--fg); line-height: 1.1; }
 .rb-run-kpi-lbl { font-family: var(--font-mono); font-size: 9px; text-transform: uppercase; color: var(--fg-mute); margin-top: 2px; }
 .rb-run-kpi-trend { font-family: var(--font-mono); font-size: 9px; margin-top: 4px; font-weight: 700; }
 .rb-run-kpi-trend.up { color: var(--ok); }
@@ -440,7 +448,7 @@ a.rb-dia:hover { background: var(--bg-3); text-decoration: none; }
 .rb-split-row { background: var(--bg-2); border: 1px solid var(--line); border-radius: 2px; padding: 14px 12px; }
 .rb-split-row--empty { opacity: .55; }
 .rb-split-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
-.rb-split-name { font-family: var(--font-disp); font-size: 14px; font-weight: 700; }
+.rb-split-name { font-family: var(--font-body); font-size: 14px; font-weight: 700; }
 .rb-split-badge-no { font-family: var(--font-mono); font-size: 9px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--fg-mute); border: 1px solid var(--line); border-radius: 2px; padding: 2px 7px; }
 .rb-split-times { display: flex; gap: 14px; align-items: flex-end; margin-bottom: 10px; }
 .rb-split-val { font-family: var(--font-mono); font-size: 22px; font-weight: 700; line-height: 1; display: flex; flex-direction: column; }
@@ -476,7 +484,7 @@ a.rb-dia:hover { background: var(--bg-3); text-decoration: none; }
 .rb-status-sin_datos { font-family: var(--font-mono); font-size: 9px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--fg-mute); border: 1px solid var(--line); border-radius: 2px; padding: 2px 7px; }
 
 /* ── RACE PREDICTION ─────────────────────────── */
-.rb-pred-card { background: var(--fg); color: #fff; border-radius: 4px; padding: 16px 14px; margin-bottom: 10px; }
+.rb-pred-card { background: var(--bg-3); border: 1px solid var(--accent); color: var(--fg); border-radius: 4px; padding: 16px 14px; margin-bottom: 10px; }
 .rb-pred-eyebrow { font-family: var(--font-mono); font-size: 9px; letter-spacing: .14em; text-transform: uppercase; opacity: .6; margin-bottom: 10px; }
 .rb-pred-times { display: flex; gap: 12px; align-items: flex-end; margin-bottom: 10px; }
 .rb-pred-main { flex: 1; }
@@ -525,13 +533,13 @@ a.rb-dia:hover { background: var(--bg-3); text-decoration: none; }
 .rb-milestone-dot.done { background: var(--ok); border-color: var(--ok); color: #fff; }
 .rb-milestone-dot.esta-semana { background: #f59e0b; border-color: #f59e0b; color: #fff; animation: pulse-dot 1.8s infinite; }
 .rb-milestone-body { flex: 1; padding-top: 4px; }
-.rb-milestone-title { font-family: var(--font-disp); font-size: 13px; color: var(--fg); text-transform: uppercase; line-height: 1.1; }
+.rb-milestone-title { font-family: var(--font-body); font-size: 13px; color: var(--fg); text-transform: uppercase; line-height: 1.1; }
 .rb-milestone-desc { font-family: var(--font-mono); font-size: 9px; color: var(--fg-mute); margin-top: 2px; }
 .rb-milestone-sem { font-family: var(--font-mono); font-size: 9px; color: var(--fg-dim); margin-top: 1px; font-weight: 700; }
 .rb-milestone-fecha { font-family: var(--font-mono); font-size: 9px; color: var(--fg-mute); margin-top: 1px; }
 .rb-milestone-esta-semana { display:inline-block; margin-top:3px; font-size:8px; font-family:var(--font-mono); font-weight:700; color:#fff; background:#f59e0b; border-radius:2px; padding:1px 5px; text-transform:uppercase; letter-spacing:.5px; }
 .rb-milestone-entreno { margin-top:8px; background:var(--bg-3); border:1px solid var(--line-2); border-radius:2px; padding:8px 10px; }
-.rb-milestone-entreno-titulo { font-family:var(--font-disp); font-size:11px; text-transform:uppercase; font-weight:700; margin-bottom:5px; }
+.rb-milestone-entreno-titulo { font-family:var(--font-body); font-size:11px; text-transform:uppercase; font-weight:700; margin-bottom:5px; }
 .rb-milestone-entreno ol { margin:0; padding-left:16px; }
 .rb-milestone-entreno li { font-family:var(--font-mono); font-size:9px; color:var(--fg-dim); margin-bottom:3px; line-height:1.4; }
 
@@ -566,26 +574,13 @@ a.rb-dia:hover { background: var(--bg-3); text-decoration: none; }
 details[open] > summary i.fa-chevron-down { transform: rotate(180deg); }
 
 /* ── SYSTEM READING ──────────────────────────── */
-.rb-system-reading { background: #0a0a0a !important; border: none !important; border-radius: 2px; padding: 16px; }
-.rb-system-reading-kicker { display: flex; align-items: center; gap: 6px; font-family: var(--font-mono); font-size: 9px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: rgba(255,255,255,0.40); margin-bottom: 8px; }
-.rb-system-reading p { font-size: 14px; line-height: 1.65; color: rgba(255,255,255,0.85); margin: 0; }
+.rb-system-reading { background: var(--bg-3); border: 1px solid var(--line); border-radius: 2px; padding: 16px; }
+.rb-system-reading-kicker { display: flex; align-items: center; gap: 6px; font-family: var(--font-mono); font-size: 9px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--fg-mute); margin-bottom: 8px; }
+.rb-system-reading p { font-size: 14px; line-height: 1.65; color: var(--fg-dim); margin: 0; }
 
 /* ── HOY MERGED CARD (semáforo + decisión) ───── */
-/* Piloto dark: variables locales, sin tocar :root global */
+/* La card hereda ya el fondo oscuro global (JDS); solo conserva su estructura */
 .hd-merged {
-  --bg: #0d0d0d;
-  --bg-2: #161616;
-  --bg-3: #202020;
-  --line: #2a2a2a;
-  --line-2: #3d3d3d;
-  --fg: #f5f5f3;
-  --fg-dim: #a8a8a8;
-  --fg-mute: #6e6e6e;
-  --ink: #f5f5f3;
-  --ink-2: #e2e2e2;
-  --ink-3: #a8a8a8;
-  --ink-4: #6e6e6e;
-  --ink-5: #4a4a4a;
   background: var(--bg-2); border: 1px solid var(--line); border-left: 4px solid var(--accent); border-radius: 2px; overflow: hidden;
 }
 .hd-merged .rb-sema { margin: 0; border-radius: 0; border-left: none; border-bottom: 1px solid var(--line); background: transparent; padding: 10px 14px 8px; }
@@ -611,7 +606,7 @@ details[open] > summary i.fa-chevron-down { transform: rotate(180deg); }
 .hd-decision--volver           { border-left-color: #60a5fa; }
 .hd-decision-kicker { display: flex; align-items: center; gap: 6px; font-family: var(--font-mono); font-size: 9px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--fg-mute); margin-bottom: 6px; }
 .hd-decision-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
-.hd-decision-title { font-family: var(--font-disp); font-size: 22px; text-transform: uppercase; letter-spacing: .02em; margin: 0 0 2px; color: var(--fg); }
+.hd-decision-title { font-family: var(--font-body); font-size: 22px; text-transform: uppercase; letter-spacing: .02em; margin: 0 0 2px; color: var(--fg); }
 .hd-decision-sub { font-family: var(--font-mono); font-size: 9px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--fg-mute); margin: 0 0 8px; }
 .hd-decision-msg { font-size: 13px; line-height: 1.5; color: var(--fg-dim); margin: 0 0 12px; }
 .hd-decision-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
@@ -1105,36 +1100,36 @@ function joiHyroxCerrar(id) {
 
   <!-- Modal info Race Command -->
   <div id="modal-race-info" style="display:none;position:fixed;inset:0;z-index:9999;align-items:flex-start;justify-content:center;background:rgba(0,0,0,.75);overflow-y:auto;padding:30px 16px;" onclick="if(event.target===this)this.style.display='none'">
-    <div style="background:#1e2235;border:1px solid #334155;border-radius:12px;padding:24px;max-width:440px;width:100%;" onclick="event.stopPropagation()">
+    <div style="background:var(--bg-3);border:1px solid var(--line);border-radius:12px;padding:24px;max-width:440px;width:100%;" onclick="event.stopPropagation()">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-        <span style="font-family:var(--font-disp);font-size:14px;font-weight:700;color:#e2e8f0;">¿Qué es Race Command?</span>
-        <button onclick="document.getElementById('modal-race-info').style.display='none'" style="background:none;border:none;color:#94a3b8;font-size:22px;cursor:pointer;line-height:1;padding:0 4px;">×</button>
+        <span style="font-family:var(--font-body);font-size:14px;font-weight:700;color:var(--fg);">¿Qué es Race Command?</span>
+        <button onclick="document.getElementById('modal-race-info').style.display='none'" style="background:none;border:none;color:var(--fg-dim);font-size:22px;cursor:pointer;line-height:1;padding:0 4px;">×</button>
       </div>
-      <p style="font-size:11px;color:#94a3b8;line-height:1.6;margin:0 0 16px;">Race Command centraliza todas las señales de tu preparación para decirte, cada día, si entrenar fuerte, moderar o recuperar.</p>
+      <p style="font-size:11px;color:var(--fg-dim);line-height:1.6;margin:0 0 16px;">Race Command centraliza todas las señales de tu preparación para decirte, cada día, si entrenar fuerte, moderar o recuperar.</p>
       <div style="display:flex;flex-direction:column;gap:14px;">
         <div style="border-left:3px solid #1DC8B8;padding-left:10px;">
-          <div style="font-size:12px;font-weight:700;color:#e2e8f0;margin-bottom:3px;">Tiempo estimado hoy</div>
-          <div style="font-size:11px;color:#94a3b8;line-height:1.5;">Proyección de tu tiempo en carrera si compites ahora mismo, basada en tus simulacros, RMs y tiempo en 5K. Necesita al menos una sesión de simulacro para calibrarse.</div>
+          <div style="font-size:12px;font-weight:700;color:var(--fg);margin-bottom:3px;">Tiempo estimado hoy</div>
+          <div style="font-size:11px;color:var(--fg-dim);line-height:1.5;">Proyección de tu tiempo en carrera si compites ahora mismo, basada en tus simulacros, RMs y tiempo en 5K. Necesita al menos una sesión de simulacro para calibrarse.</div>
         </div>
         <div style="border-left:3px solid #1DC8B8;padding-left:10px;">
-          <div style="font-size:12px;font-weight:700;color:#e2e8f0;margin-bottom:3px;">Race Readiness <span style="font-weight:400;color:#64748b;">(0–100)</span></div>
-          <div style="font-size:11px;color:#94a3b8;line-height:1.5;">Mide cuánto has progresado hacia tu objetivo de carrera. <strong style="color:#e2e8f0;">No es fatiga.</strong> Sube con simulacros, sesiones eficientes y progreso en estándares técnicos.</div>
+          <div style="font-size:12px;font-weight:700;color:var(--fg);margin-bottom:3px;">Race Readiness <span style="font-weight:400;color:var(--fg-mute);">(0–100)</span></div>
+          <div style="font-size:11px;color:var(--fg-dim);line-height:1.5;">Mide cuánto has progresado hacia tu objetivo de carrera. <strong style="color:var(--fg);">No es fatiga.</strong> Sube con simulacros, sesiones eficientes y progreso en estándares técnicos.</div>
         </div>
         <div style="border-left:3px solid #F59E0B;padding-left:10px;">
-          <div style="font-size:12px;font-weight:700;color:#e2e8f0;margin-bottom:3px;">TSB · Forma</div>
-          <div style="font-size:11px;color:#94a3b8;line-height:1.5;">Diferencia entre tu forma crónica (42 días) y tu carga aguda (7 días). <strong style="color:#1DC8B8;">Positivo</strong> = estás fresco. <strong style="color:#EF4444;">Muy negativo (&lt;−20)</strong> = acumulas fatiga.</div>
+          <div style="font-size:12px;font-weight:700;color:var(--fg);margin-bottom:3px;">TSB · Forma</div>
+          <div style="font-size:11px;color:var(--fg-dim);line-height:1.5;">Diferencia entre tu forma crónica (42 días) y tu carga aguda (7 días). <strong style="color:#1DC8B8;">Positivo</strong> = estás fresco. <strong style="color:#EF4444;">Muy negativo (&lt;−20)</strong> = acumulas fatiga.</div>
         </div>
         <div style="border-left:3px solid #8B5CF6;padding-left:10px;">
-          <div style="font-size:12px;font-weight:700;color:#e2e8f0;margin-bottom:3px;">ACWR</div>
-          <div style="font-size:11px;color:#94a3b8;line-height:1.5;">Ratio entre lo que has entrenado esta semana vs. tu media de las últimas 4. Zona segura: <strong style="color:#1DC8B8;">0.8–1.3</strong>.</div>
+          <div style="font-size:12px;font-weight:700;color:var(--fg);margin-bottom:3px;">ACWR</div>
+          <div style="font-size:11px;color:var(--fg-dim);line-height:1.5;">Ratio entre lo que has entrenado esta semana vs. tu media de las últimas 4. Zona segura: <strong style="color:#1DC8B8;">0.8–1.3</strong>.</div>
         </div>
         <div style="border-left:3px solid #EF4444;padding-left:10px;">
-          <div style="font-size:12px;font-weight:700;color:#e2e8f0;margin-bottom:3px;">Sesión modificada automáticamente</div>
-          <div style="font-size:11px;color:#94a3b8;line-height:1.5;">Si el TSB cae por debajo de −10 y tienes una sesión planificada, el sistema la sustituye por una más suave.</div>
+          <div style="font-size:12px;font-weight:700;color:var(--fg);margin-bottom:3px;">Sesión modificada automáticamente</div>
+          <div style="font-size:11px;color:var(--fg-dim);line-height:1.5;">Si el TSB cae por debajo de −10 y tienes una sesión planificada, el sistema la sustituye por una más suave.</div>
         </div>
         <div style="border-left:3px solid #475569;padding-left:10px;">
-          <div style="font-size:12px;font-weight:700;color:#e2e8f0;margin-bottom:3px;">Índice de Interferencia (IF)</div>
-          <div style="font-size:11px;color:#94a3b8;line-height:1.5;">Cuánto baja tu ritmo de carrera justo después de cada estación. Se calcula con tus simulacros — necesita 3+ para ser fiable.</div>
+          <div style="font-size:12px;font-weight:700;color:var(--fg);margin-bottom:3px;">Índice de Interferencia (IF)</div>
+          <div style="font-size:11px;color:var(--fg-dim);line-height:1.5;">Cuánto baja tu ritmo de carrera justo después de cada estación. Se calcula con tus simulacros — necesita 3+ para ser fiable.</div>
         </div>
       </div>
     </div>
@@ -1334,12 +1329,12 @@ function joiHyroxCerrar(id) {
       <button onclick="document.getElementById('modal-razones').style.display='flex'" style="background:none;border:1px solid var(--line);border-radius:50%;width:16px;height:16px;cursor:pointer;font-size:10px;color:var(--fg-mute);line-height:1;flex-shrink:0;padding:0;" title="¿Por qué estos números?">?</button>
       {% endif %}
     </div>
-    <div style="font-family:var(--font-disp);font-size:16px;line-height:1.1;text-transform:uppercase;color:{% if race_briefing.impacto.nivel == 'rojo' %}var(--danger){% elif race_briefing.impacto.nivel == 'amarillo' %}var(--warn){% else %}var(--ok){% endif %};margin-bottom:12px;">{{ race_briefing.impacto.headline }}</div>
+    <div style="font-family:var(--font-body);font-size:16px;line-height:1.1;text-transform:uppercase;color:{% if race_briefing.impacto.nivel == 'rojo' %}var(--danger){% elif race_briefing.impacto.nivel == 'amarillo' %}var(--warn){% else %}var(--ok){% endif %};margin-bottom:12px;">{{ race_briefing.impacto.headline }}</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
       {% for escenario in race_briefing.impacto.escenarios %}
       <div style="background:var(--bg-3);border:1px solid var(--line);border-radius:2px;padding:10px;">
         <div class="mono" style="font-size:9px;color:var(--fg-mute);text-transform:uppercase;font-weight:800;">{{ escenario.label }}</div>
-        <div style="font-family:var(--font-disp);font-size:26px;line-height:1;margin:5px 0;color:{% if escenario.tipo == 'riesgo' %}var(--danger){% else %}var(--ok){% endif %};">{{ escenario.delta }}</div>
+        <div style="font-family:var(--font-body);font-size:26px;line-height:1;margin:5px 0;color:{% if escenario.tipo == 'riesgo' %}var(--danger){% else %}var(--ok){% endif %};">{{ escenario.delta }}</div>
         <div style="font-size:10px;color:var(--fg-mute);line-height:1.35;">{{ escenario.texto }}</div>
       </div>
       {% endfor %}
@@ -1439,7 +1434,7 @@ function joiHyroxCerrar(id) {
     <span style="font-size:18px;line-height:1;flex-shrink:0;color:{{ g.color }};">{{ g.icon }}</span>
     <div>
       <div class="mono" style="font-size:9px;font-weight:700;letter-spacing:.12em;color:{{ g.color }};text-transform:uppercase;margin-bottom:3px;">Análisis post-entreno</div>
-      <div style="font-family:var(--font-disp);font-size:15px;font-weight:700;color:#fff;margin-bottom:4px;">{{ g.titulo }}</div>
+      <div style="font-family:var(--font-body);font-size:15px;font-weight:700;color:#fff;margin-bottom:4px;">{{ g.titulo }}</div>
       <p style="font-size:12px;color:rgba(255,255,255,.7);margin:0 0 4px;line-height:1.5;">{{ g.mensaje }}</p>
       <p class="mono" style="font-size:10px;color:rgba(255,255,255,.5);margin:0;">→ {{ g.accion }}</p>
     </div>
@@ -1454,7 +1449,7 @@ function joiHyroxCerrar(id) {
         <span class="mono" style="font-size:9px;font-weight:700;color:{{ d.color }};letter-spacing:.1em;text-transform:uppercase;">{{ sd.display_name }}</span>
         <span class="mono" style="font-size:9px;color:var(--fg-mute);">· {{ d.tipo|upper|cut:"_" }}</span>
       </div>
-      <div style="font-family:var(--font-disp);font-size:13px;font-weight:700;color:var(--fg);margin-bottom:3px;">{{ d.titulo }}</div>
+      <div style="font-family:var(--font-body);font-size:13px;font-weight:700;color:var(--fg);margin-bottom:3px;">{{ d.titulo }}</div>
       <p style="font-size:11px;color:var(--fg-dim);margin:0 0 4px;line-height:1.5;">{{ d.mensaje }}</p>
       <p class="mono" style="font-size:10px;color:var(--fg-mute);margin:0;">→ {{ d.accion }}</p>
     </div>
@@ -1474,7 +1469,7 @@ function joiHyroxCerrar(id) {
     {% else %}
     <span class="mono" style="font-size:9px;font-weight:700;color:var(--ok);letter-spacing:.1em;text-transform:uppercase;background:rgba(0,168,90,0.12);border:1px solid rgba(0,168,90,0.25);padding:3px 8px;border-radius:2px;">Fuga principal</span>
     {% endif %}
-    <span style="font-family:var(--font-disp);font-size:14px;font-weight:700;color:var(--fg);">{{ station_diagnosis.display_name }}</span>
+    <span style="font-family:var(--font-body);font-size:14px;font-weight:700;color:var(--fg);">{{ station_diagnosis.display_name }}</span>
     <button onclick="document.getElementById('modal-station-info').style.display='flex'" style="margin-left:auto;background:none;border:1px solid var(--line);border-radius:50%;width:18px;height:18px;cursor:pointer;font-size:10px;color:var(--fg-mute);line-height:1;flex-shrink:0;padding:0;" title="Cómo funciona este panel">?</button>
   </div>
   {% if station_diagnosis.sin_datos %}
@@ -1563,7 +1558,7 @@ function joiHyroxCerrar(id) {
 <section style="padding:20px 40px;border-bottom:1px solid var(--line);border:2px solid rgba(255,107,0,0.50);background:rgba(255,107,0,0.04);">
   <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
     <span class="mono" style="font-size:10px;font-weight:700;color:var(--accent);background:rgba(255,107,0,0.15);border:1px solid rgba(255,107,0,0.30);padding:3px 8px;border-radius:2px;letter-spacing:.08em;">MODO COMPETICIÓN</span>
-    <span style="font-family:var(--font-disp);font-size:14px;font-weight:700;color:var(--fg);">{{ race_day_briefing.fase_label }}</span>
+    <span style="font-family:var(--font-body);font-size:14px;font-weight:700;color:var(--fg);">{{ race_day_briefing.fase_label }}</span>
   </div>
   <p style="font-size:11px;color:var(--fg-dim);margin:0 0 10px;line-height:1.5;">El plan está <strong>congelado</strong>. No se generan ni ajustan sesiones esta semana. Solo queda ejecutar lo que ya tienes construido.</p>
   <ul style="margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px;">
@@ -1636,7 +1631,7 @@ function joiHyroxCerrar(id) {
       <div class="mono" style="font-size:10px;color:var(--fg-mute);margin-bottom:2px;">SLED OFICIAL / RM SENTADILLA</div>
       <div style="font-size:11px;color:var(--fg-dim);">{{ perfil_atletico.peso_sled_oficial }} kg vs tu RM</div>
     </div>
-    <div style="font-family:var(--font-disp);font-size:22px;font-weight:700;color:{% if perfil_atletico.necesita_fuerza_base %}var(--warn){% else %}var(--ok){% endif %};">{{ perfil_atletico.pct_comp_sled }}%</div>
+    <div style="font-family:var(--font-body);font-size:22px;font-weight:700;color:{% if perfil_atletico.necesita_fuerza_base %}var(--warn){% else %}var(--ok){% endif %};">{{ perfil_atletico.pct_comp_sled }}%</div>
   </div>
   {% if perfil_atletico.necesita_fuerza_base and perfil_atletico.ajuste_plan %}
   <div style="font-size:10px;color:var(--warn);margin-top:5px;padding-left:4px;line-height:1.4;">
@@ -1840,7 +1835,7 @@ function joiHyroxCerrar(id) {
   <div class="rb-macro">
     {% if macro_data.evento_completado %}
     <div style="text-align:center;padding:12px 0 8px;">
-      <div style="font-family:var(--font-disp);font-size:32px;font-weight:800;color:var(--ok);">100<span style="font-size:16px;color:var(--fg-mute);">%</span></div>
+      <div style="font-family:var(--font-body);font-size:32px;font-weight:800;color:var(--ok);">100<span style="font-size:16px;color:var(--fg-mute);">%</span></div>
       <div class="mono" style="font-size:10px;font-weight:700;color:var(--ok);letter-spacing:.12em;text-transform:uppercase;margin-top:4px;">Evento completado</div>
       <div class="mono" style="font-size:9px;color:var(--fg-mute);margin-top:3px;">Hace {{ macro_data.dias_desde_evento }} día{{ macro_data.dias_desde_evento|pluralize:"s" }}</div>
     </div>
@@ -1922,7 +1917,7 @@ function joiHyroxCerrar(id) {
     </div>
     {% else %}
     <div style="background:var(--bg-3);border:1px solid var(--line);border-left:3px solid var(--accent-2);padding:12px 14px;margin-bottom:12px;border-radius:2px">
-      <div style="font-family:var(--font-disp);font-size:14px;color:var(--accent-2);margin-bottom:4px">Reporte pendiente</div>
+      <div style="font-family:var(--font-body);font-size:14px;color:var(--accent-2);margin-bottom:4px">Reporte pendiente</div>
       <div style="font-size:11px;color:var(--fg-dim)">El coach necesita saber cómo te encuentras hoy.</div>
     </div>
     {% endif %}
@@ -2562,7 +2557,7 @@ function joiHyroxCerrar(id) {
     {% if not splits_estaciones or splits_estaciones|length == 0 %}
     <div class="rb-splits-note" style="text-align:center;padding:20px;">
       <i class="fas fa-stopwatch" style="font-size:22px;color:var(--accent);display:block;margin-bottom:8px;"></i>
-      <strong style="font-family:var(--font-disp);font-size:13px;display:block;margin-bottom:4px;">Sin datos de splits aún</strong>
+      <strong style="font-family:var(--font-body);font-size:13px;display:block;margin-bottom:4px;">Sin datos de splits aún</strong>
       Activa el cronómetro en cada estación al registrar un entreno y los splits irán apareciendo aquí.
     </div>
     {% else %}
@@ -2695,7 +2690,7 @@ function joiHyroxCerrar(id) {
       {% for item in interferencia_index %}
       <div style="background:var(--card);border:1px solid {% if item.severidad == 'alta' %}oklch(0.55 0.21 28 / 0.30){% elif item.severidad == 'media' %}oklch(0.72 0.17 70 / 0.30){% else %}oklch(0.55 0.15 145 / 0.30){% endif %};border-radius:8px;padding:10px 12px;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-          <span style="font-family:var(--font-disp);font-size:12px;font-weight:700;color:var(--ink-1);">{{ item.estacion }}</span>
+          <span style="font-family:var(--font-body);font-size:12px;font-weight:700;color:var(--ink-1);">{{ item.estacion }}</span>
           <div style="display:flex;gap:6px;align-items:center;">
             {% if item.trend == 'mejora' %}
             <span style="font-size:9px;color:var(--ok);font-family:var(--font-mono)"><i class="fas fa-arrow-down"></i> mejorando</span>
@@ -2824,7 +2819,7 @@ function joiHyroxCerrar(id) {
                 padding:16px 20px; display:flex; align-items:center; justify-content:space-between; z-index:1;">
       <div style="display:flex; align-items:center; gap:10px;">
         <div style="width:3px; height:20px; background:var(--accent); border-radius:2px;"></div>
-        <span style="font-family:var(--font-disp); font-size:14px; letter-spacing:0.1em; text-transform:uppercase;">
+        <span style="font-family:var(--font-body); font-size:14px; letter-spacing:0.1em; text-transform:uppercase;">
           Cómo funciona tu plan
         </span>
       </div>
@@ -2955,7 +2950,7 @@ function joiHyroxCerrar(id) {
       </div>
 
       <div style="margin-top:20px; padding:14px; background:var(--accent); border-radius:6px; text-align:center;">
-        <div style="font-family:var(--font-disp); font-size:13px; letter-spacing:0.06em; text-transform:uppercase; color:var(--paper); margin-bottom:6px;">
+        <div style="font-family:var(--font-body); font-size:13px; letter-spacing:0.06em; text-transform:uppercase; color:var(--paper); margin-bottom:6px;">
           Para que funcione bien
         </div>
         <div style="font-size:12px; color:rgba(247,243,234,0.85); line-height:1.6;">
@@ -2981,7 +2976,7 @@ function joiHyroxCerrar(id) {
               width:calc(100% - 32px); max-width:420px; padding:28px 24px;">
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
       <span style="font-size:22px">🔄</span>
-      <h3 style="margin:0;font-family:var(--font-disp);font-size:18px">Regenerar plan de entrenamiento</h3>
+      <h3 style="margin:0;font-family:var(--font-body);font-size:18px">Regenerar plan de entrenamiento</h3>
     </div>
     <p style="font-family:var(--font-body);font-size:14px;color:var(--ink-3);line-height:1.5;margin:0 0 8px">
       Esto <strong>borrará todas las sesiones futuras planificadas</strong> y creará un plan nuevo con la distribución correcta de días de descanso.
@@ -3011,7 +3006,7 @@ function joiHyroxCerrar(id) {
     <div id="rb-help-header">
       <div style="display:flex;align-items:center;gap:10px;">
         <div style="width:3px;height:20px;background:var(--accent);border-radius:2px;"></div>
-        <span id="rb-help-title" style="font-family:var(--font-disp);font-size:14px;letter-spacing:0.1em;text-transform:uppercase;"></span>
+        <span id="rb-help-title" style="font-family:var(--font-body);font-size:14px;letter-spacing:0.1em;text-transform:uppercase;"></span>
       </div>
       <button id="rb-help-close" onclick="closeHelp()">✕</button>
     </div>
