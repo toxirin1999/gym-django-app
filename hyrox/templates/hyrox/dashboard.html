@@ -546,11 +546,28 @@ a.rb-dia:hover { background: var(--bg-3); text-decoration: none; }
 .rb-system-reading p { font-size: 14px; line-height: 1.65; color: rgba(255,255,255,0.85); margin: 0; }
 
 /* ── HOY MERGED CARD (semáforo + decisión) ───── */
-.hd-merged { background: var(--bg-2); border: 1px solid var(--line); border-left: 4px solid var(--accent); border-radius: 2px; overflow: hidden; }
+/* Piloto dark: variables locales, sin tocar :root global */
+.hd-merged {
+  --bg: #0d0d0d;
+  --bg-2: #161616;
+  --bg-3: #202020;
+  --line: #2a2a2a;
+  --line-2: #3d3d3d;
+  --fg: #f5f5f3;
+  --fg-dim: #a8a8a8;
+  --fg-mute: #6e6e6e;
+  --ink: #f5f5f3;
+  --ink-2: #e2e2e2;
+  --ink-3: #a8a8a8;
+  --ink-4: #6e6e6e;
+  --ink-5: #4a4a4a;
+  background: var(--bg-2); border: 1px solid var(--line); border-left: 4px solid var(--accent); border-radius: 2px; overflow: hidden;
+}
 .hd-merged .rb-sema { margin: 0; border-radius: 0; border-left: none; border-bottom: 1px solid var(--line); background: transparent; padding: 10px 14px 8px; }
 .hd-merged .rb-sema-msg { margin-bottom: 6px; }
 .hd-merged .rb-sema-rec { margin-bottom: 4px; }
 .hd-merged .hd-decision { border: none; border-radius: 0; background: transparent; }
+.hd-merged .hd-modulacion { background: rgba(255,255,255,.04); }
 .hd-checkin-chip { display: inline-flex; align-items: center; gap: 4px; margin-left: auto; font-family: var(--font-mono); font-size: 9px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; padding: 2px 6px; border: 1px solid var(--line); border-radius: 2px; text-decoration: none; }
 .hd-checkin-chip--ok { color: var(--ok); border-color: rgba(0,168,90,.3); }
 .hd-checkin-chip--pendiente { color: var(--warn); border-color: rgba(255,184,0,.3); }
