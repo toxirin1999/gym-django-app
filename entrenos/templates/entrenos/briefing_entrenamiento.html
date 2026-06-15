@@ -227,6 +227,11 @@
     font-family: var(--fm); font-size: 10px; color: var(--td);
     margin-top: 2px;
   }
+  .plan-tempo { color: var(--tdm); }
+  .plan-warmup {
+    font-family: var(--fm); font-size: 9px; color: var(--tdm);
+    margin-top: 3px;
+  }
   .plan-badges { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 5px; }
   .badge {
     font-family: var(--fm); font-size: 9px; font-weight: 700;
@@ -524,7 +529,13 @@
           {% elif ej.peso_recomendado_kg and ej.peso_recomendado_kg > 0 %} · {{ ej.peso_recomendado_kg }} kg
           {% elif ej.peso_kg and ej.peso_kg > 0 %} · {{ ej.peso_kg }} kg
           {% endif %}
+          {% if ej.tempo %} · <span class="plan-tempo">tempo {{ ej.tempo }}</span>{% endif %}
         </div>
+        {% if ej.aproximaciones %}
+        <div class="plan-warmup">
+          Calentamiento: {{ ej.aproximaciones.peso1|floatformat:"-1" }} kg · {{ ej.aproximaciones.peso2|floatformat:"-1" }} kg · {{ ej.aproximaciones.peso3|floatformat:"-1" }} kg
+        </div>
+        {% endif %}
         {% if ej.alertas %}
         <div class="plan-badges">
           {% for alerta in ej.alertas %}

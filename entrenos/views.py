@@ -8213,9 +8213,16 @@ def briefing_entrenamiento(request, cliente_id):
 
     briefing = get_briefing_gym(cliente, ejercicios_mod, fecha_obj)
 
-    # Inyectar alertas en cada ejercicio para facilitar el template
+    # Inyectar alertas y calentamiento (aproximaciones) en cada ejercicio
     for ej in ejercicios_mod:
         ej['alertas'] = briefing['alertas_por_ejercicio'].get(ej.get('nombre', ''), [])
+        try:
+            peso_trabajo = float(ej.get('peso_recomendado_kg') or ej.get('peso_kg') or 0)
+        except (TypeError, ValueError):
+            peso_trabajo = 0
+        ej['aproximaciones'] = get_aproximaciones_calentamiento(
+            peso_trabajo, ej.get('usa_peso', True)
+        )
 
     # CTA apunta al plan modificado (no al original)
     from django.urls import reverse
