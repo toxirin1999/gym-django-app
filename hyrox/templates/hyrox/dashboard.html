@@ -757,14 +757,18 @@ details[open] > summary i.fa-chevron-down { transform: rotate(180deg); }
           onmouseover="this.style.color='var(--fg)'" onmouseout="this.style.color='var(--fg-dim)'">×</button>
 </div>
 <script>
+(function() {
+  var bannerId = {{ joi_mensaje_hyrox.id }};
+  if (sessionStorage.getItem('joi_banner_oculto_' + bannerId)) {
+    var b = document.getElementById('joi-hyrox-banner');
+    if (b) b.style.display = 'none';
+  }
+})();
+
 function joiHyroxCerrar(id) {
-  fetch('/joi/mensaje/' + id + '/leido/', {
-    method: 'POST',
-    headers: {'X-CSRFToken': document.cookie.match(/csrftoken=([^;]+)/)?.[1] || ''},
-  }).then(() => {
-    const b = document.getElementById('joi-hyrox-banner');
-    if (b) { b.style.transition='opacity .3s'; b.style.opacity='0'; setTimeout(()=>b.remove(),300); }
-  });
+  sessionStorage.setItem('joi_banner_oculto_' + id, '1');
+  const b = document.getElementById('joi-hyrox-banner');
+  if (b) { b.style.transition='opacity .3s'; b.style.opacity='0'; setTimeout(()=>b.remove(),300); }
 }
 </script>
 {% endif %}
