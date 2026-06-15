@@ -216,6 +216,8 @@ body {
 .rb-rd-bar-fill { height: 100%; background: #fff; transition: width 1.2s cubic-bezier(.4,0,.2,1); }
 .rb-rd-trend { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; font-family: var(--font-mono); font-size: 9px; opacity: 0.7; letter-spacing: 0.12em; text-transform: uppercase; }
 .rb-hero-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 12px; }
+.rb-hero-sep { margin-left: auto; }
+@media (max-width: 640px) { .rb-hero-sep { margin-left: 0; } }
 .rb-quote { margin-top: 12px; padding: 8px 10px; background: var(--bg-3); border-left: 2px solid var(--accent); font-size: 12px; line-height: 1.5; color: var(--fg-dim); font-style: italic; }
 
 /* ── MISSION STRIP (Race Bib compacto) ────────── */
@@ -367,7 +369,7 @@ body {
 .rb-dia-body { min-width: 0; }
 .rb-dia-tipo { display: flex; align-items: center; gap: 6px; font-family: var(--font-mono); font-size: 9px; font-weight: 700; letter-spacing: 0.12em; color: var(--fg-mute); text-transform: uppercase; margin-bottom: 3px; }
 .rb-dia-title { font-family: var(--font-disp); font-size: 13px; color: var(--fg); letter-spacing: -0.01em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 3px; }
-.rb-dia-acts { font-family: var(--font-body); font-size: 11px; color: var(--fg-mute); line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.rb-dia-acts { font-family: var(--font-body); font-size: 11px; color: var(--fg-dim); line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .rb-dia-tag { align-self: stretch; display: flex; align-items: center; font-family: var(--font-mono); font-size: 9px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; padding: 6px 10px; border-radius: 2px; white-space: nowrap; }
 .rb-tag-hoy { background: var(--accent); color: #fff; }
 .rb-tag-man { background: var(--bg-3); color: var(--fg-dim); border: 1px solid var(--line-2); }
@@ -403,7 +405,7 @@ a.rb-dia:hover { background: var(--bg-3); text-decoration: none; }
 .rb-empty-icon { font-size: 32px; color: var(--accent); opacity: 0.35; margin-bottom: 14px; }
 .rb-empty-eyebrow { font-family: var(--font-mono); font-size: 10px; font-weight: 700; letter-spacing: 0.14em; color: var(--fg-mute); text-transform: uppercase; margin-bottom: 8px; }
 .rb-empty-title { font-family: var(--font-disp); font-size: 22px; color: var(--fg); text-transform: uppercase; letter-spacing: -0.02em; margin-bottom: 8px; }
-.rb-empty-sub { font-size: 13px; color: var(--fg-mute); line-height: 1.5; margin-bottom: 20px; }
+.rb-empty-sub { font-size: 13px; color: var(--fg-dim); line-height: 1.5; margin-bottom: 20px; }
 
 /* ── RUN EVOLUTION ───────────────────────────── */
 .rb-run-kpis { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-bottom: 10px; }
@@ -551,9 +553,17 @@ a.rb-dia:hover { background: var(--bg-3); text-decoration: none; }
 
 /* ── COLLAPSE (details/summary) ──────────────── */
 .rb-rest-collapsed { margin: 0 0 8px; }
-.rb-rest-summary { padding: 10px 14px; margin: 0 0 8px; font-family: var(--font-mono); font-size: 9px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--fg-mute); background: var(--bg-2); border: 1px solid var(--line); border-radius: 2px; cursor: pointer; list-style: none; display: flex; align-items: center; gap: 6px; }
+.rb-rest-summary { padding: 10px 14px; margin: 0 0 8px; font-family: var(--font-mono); font-size: 9px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--fg-dim); background: var(--bg-2); border: 1px solid var(--line); border-radius: 2px; cursor: pointer; list-style: none; display: flex; align-items: center; gap: 6px; transition: background .15s, color .15s; }
 .rb-rest-summary::-webkit-details-marker { display: none; }
-.rb-rest-summary i { color: var(--fg-mute); }
+.rb-rest-summary i { color: var(--fg-dim); }
+.rb-rest-summary:hover { background: var(--bg-3); color: var(--fg); }
+.rb-rest-summary:hover i { color: var(--fg); }
+
+/* ── "Ver más" toggle (plan semanal) ─────────── */
+.rb-more-toggle { padding: 10px 14px; margin-top: 8px; font-family: var(--font-mono); font-size: 9px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--fg-dim); background: var(--bg-2); border: 1px solid var(--line); border-radius: 2px; cursor: pointer; list-style: none; display: flex; align-items: center; gap: 6px; transition: background .15s, color .15s; }
+.rb-more-toggle::-webkit-details-marker { display: none; }
+.rb-more-toggle:hover { background: var(--bg-3); color: var(--fg); }
+details[open] > summary i.fa-chevron-down { transform: rotate(180deg); }
 
 /* ── SYSTEM READING ──────────────────────────── */
 .rb-system-reading { background: #0a0a0a !important; border: none !important; border-radius: 2px; padding: 16px; }
@@ -934,7 +944,7 @@ function joiHyroxCerrar(id) {
     {% if macro_data %}
     <span>{{ macro_data.fase|upper }} · Semana {{ macro_data.semana_actual }}/{{ macro_data.total_semanas }}</span>
     {% endif %}
-    {% if stats_semana %}
+    {% if stats_semana.total_completadas %}
     <span>Racha {{ stats_semana.total_completadas }}✓</span>
     {% endif %}
     {% if objetivo_activo.fecha_evento %}
@@ -966,12 +976,12 @@ function joiHyroxCerrar(id) {
     {% else %}
     <a href="{% url 'hyrox:registrar_entrenamiento' objective_id=objetivo_activo.id %}" class="rb-btn rb-btn-primary"><i class="fas fa-plus"></i> Registrar Entreno</a>
     {% endif %}
-    <a href="{% url 'hyrox:crear_objetivo' %}" class="rb-btn rb-btn-ghost"><i class="fas fa-pen"></i> Editar</a>
-    <a href="{% url 'hyrox:guia_tecnica' %}" class="rb-btn rb-btn-ghost"><i class="fas fa-book-open"></i> Guía técnica</a>
-    <button type="button" class="rb-btn rb-btn-ghost" onclick="document.getElementById('modal-regen-plan').style.display='flex'">
+    <a href="{% url 'hyrox:crear_objetivo' %}" class="rb-btn rb-btn-sm rb-btn-ghost rb-hero-sep"><i class="fas fa-pen"></i> Editar</a>
+    <a href="{% url 'hyrox:guia_tecnica' %}" class="rb-btn rb-btn-sm rb-btn-ghost"><i class="fas fa-book-open"></i> Guía técnica</a>
+    <button type="button" class="rb-btn rb-btn-sm rb-btn-ghost" onclick="document.getElementById('modal-regen-plan').style.display='flex'">
       <i class="fas fa-sync-alt"></i> Regenerar plan
     </button>
-    <button type="button" class="rb-btn rb-btn-ghost" onclick="document.getElementById('modal-como-funciona').style.display='flex'">
+    <button type="button" class="rb-btn rb-btn-sm rb-btn-ghost" onclick="document.getElementById('modal-como-funciona').style.display='flex'">
       <i class="fas fa-brain"></i> Cómo funciona tu plan
     </button>
   </div>
@@ -1226,7 +1236,7 @@ function joiHyroxCerrar(id) {
     <div style="padding:10px 14px;border-top:1px solid var(--line);">
       {% if race_goal_delta.estado == 'sin_objetivo' %}
       <div class="mono" style="font-size:9px;color:var(--fg-mute);letter-spacing:.1em;text-transform:uppercase;">Objetivo total HYROX</div>
-      <div style="font-size:11px;color:var(--fg-mute);margin-top:3px;">Pendiente de definir · <a href="{% url 'hyrox:crear_objetivo' %}" style="color:var(--accent);">+ Añadir</a></div>
+      <div style="font-size:11px;color:var(--fg-dim);margin-top:3px;">Pendiente de definir · <a href="{% url 'hyrox:crear_objetivo' %}" style="color:var(--accent);">+ Añadir</a></div>
       {% else %}
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">
         <div>
@@ -1469,7 +1479,7 @@ function joiHyroxCerrar(id) {
   </div>
   {% if station_diagnosis.sin_datos %}
   {% if station_diagnosis.description %}
-  <p style="font-size:11px;color:var(--fg-mute);margin:0 0 10px;line-height:1.5;">{{ station_diagnosis.description }}</p>
+  <p style="font-size:11px;color:var(--fg-dim);margin:0 0 10px;line-height:1.5;">{{ station_diagnosis.description }}</p>
   {% endif %}
   <div class="mono" style="font-size:9px;font-weight:700;color:var(--fg-mute);letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px;">Técnica clave</div>
   <ul style="margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:4px;margin-bottom:12px;">
@@ -1555,7 +1565,7 @@ function joiHyroxCerrar(id) {
     <span class="mono" style="font-size:10px;font-weight:700;color:var(--accent);background:rgba(255,107,0,0.15);border:1px solid rgba(255,107,0,0.30);padding:3px 8px;border-radius:2px;letter-spacing:.08em;">MODO COMPETICIÓN</span>
     <span style="font-family:var(--font-disp);font-size:14px;font-weight:700;color:var(--fg);">{{ race_day_briefing.fase_label }}</span>
   </div>
-  <p style="font-size:11px;color:var(--fg-mute);margin:0 0 10px;line-height:1.5;">El plan está <strong>congelado</strong>. No se generan ni ajustan sesiones esta semana. Solo queda ejecutar lo que ya tienes construido.</p>
+  <p style="font-size:11px;color:var(--fg-dim);margin:0 0 10px;line-height:1.5;">El plan está <strong>congelado</strong>. No se generan ni ajustan sesiones esta semana. Solo queda ejecutar lo que ya tienes construido.</p>
   <ul style="margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px;">
     {% for consejo in race_day_briefing.consejos %}
     <li style="display:flex;gap:8px;align-items:flex-start;font-size:11px;color:var(--fg-dim);line-height:1.5;">
@@ -1591,7 +1601,7 @@ function joiHyroxCerrar(id) {
     </div>
   </div>
 
-  <p style="font-size:11px;color:var(--fg-mute);line-height:1.5;margin:0 0 16px;">{{ perfil_atletico.descripcion }}</p>
+  <p style="font-size:11px;color:var(--fg-dim);line-height:1.5;margin:0 0 16px;">{{ perfil_atletico.descripcion }}</p>
 
   {% if perfil_atletico.score_fuerza or perfil_atletico.score_carrera %}
   <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;">
@@ -1913,7 +1923,7 @@ function joiHyroxCerrar(id) {
     {% else %}
     <div style="background:var(--bg-3);border:1px solid var(--line);border-left:3px solid var(--accent-2);padding:12px 14px;margin-bottom:12px;border-radius:2px">
       <div style="font-family:var(--font-disp);font-size:14px;color:var(--accent-2);margin-bottom:4px">Reporte pendiente</div>
-      <div style="font-size:11px;color:var(--fg-mute)">El coach necesita saber cómo te encuentras hoy.</div>
+      <div style="font-size:11px;color:var(--fg-dim)">El coach necesita saber cómo te encuentras hoy.</div>
     </div>
     {% endif %}
     <div style="display:flex;gap:6px;flex-wrap:wrap;padding-top:10px;border-top:1px solid var(--line)">
@@ -1995,7 +2005,7 @@ function joiHyroxCerrar(id) {
         <div class="rb-bar" style="margin-bottom:8px">
           <div class="rb-bar-fill {% if strength_balance.ratio >= 70 %}rb-bf-ok{% elif strength_balance.ratio >= 50 %}rb-bf-gold{% else %}rb-bf-accent{% endif %}" style="width:{{ strength_balance.ratio }}%"></div>
         </div>
-        <p style="font-size:11px;color:var(--fg-mute);line-height:1.5;margin:0">{{ strength_balance.advice }}</p>
+        <p style="font-size:11px;color:var(--fg-dim);line-height:1.5;margin:0">{{ strength_balance.advice }}</p>
       </div>
       {% endif %}
     </div>
@@ -2156,9 +2166,9 @@ function joiHyroxCerrar(id) {
 
     {% with proximas=plan_semanas|slice:"1:" %}
     {% if proximas %}
-    <details style="margin-top:8px;">
-      <summary class="rb-more-toggle" style="list-style:none;cursor:pointer;">
-        <i class="fas fa-chevron-down" style="transition:transform .2s;margin-right:6px;"></i>
+    <details class="rb-rest-collapsed" style="margin-top:8px;">
+      <summary class="rb-more-toggle">
+        <i class="fas fa-chevron-down" style="transition:transform .2s;"></i>
         Ver {{ proximas|length }} semanas más
       </summary>
       <div style="margin-top:16px;">
