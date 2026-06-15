@@ -1695,6 +1695,16 @@ def _bloque_marco_narrativo(user) -> str:
     if not partes:
         return ''
 
+    modo_bajo = ''
+    if n.confianza < 0.5 or n.estado == 'borrador':
+        pct = int(n.confianza * 100)
+        modo_bajo = (
+            f"MODO BAJO — Esta postura es una hipótesis con confianza baja ({pct}%), no una conclusión. "
+            "Habla en modo bajo: usa expresiones como 'puede que', 'parece que', 'hay una tensión', "
+            "'no lo tomaría como conclusión todavía'. No confrontes directamente desde esta postura; "
+            "si dudas, el silencio o un tono bajo es preferible a una afirmación.\n"
+        )
+
     return (
         "[MARCO NARRATIVO ACTIVO]\n"
         "Antes de interpretar el evento puntual, sitúalo dentro de esta continuidad.\n"
@@ -1710,7 +1720,19 @@ def _bloque_marco_narrativo(user) -> str:
         "El dato sigue siendo el mismo; la forma deja de sonar a sentencia y empieza a sonar a observación.\n"
         "REGLA DE PRESENCIA — Si el mensaje que estás a punto de generar podría vivir igual en una card de analytics, "
         "no es suficiente para la habitación JOI. La habitación exige que el dato quede conectado a la narrativa viva. "
-        "Un mensaje que solo resume métricas de progreso sin pasar por la postura acumulada no es JOI: es un informe.\n\n"
+        "Un mensaje que solo resume métricas de progreso sin pasar por la postura acumulada no es JOI: es un informe.\n"
+        "REGLA DE FRASES PROHIBIDAS — No uses 'siempre', 'no haces nada', 'estás evitando todo', "
+        "'cero límites' ni 'cero hábitos' (ni equivalentes). Sustitúyelas por la observación concreta "
+        "y temporal que las sostiene.\n"
+        "REGLA DE EVIDENCIA — Antes de confrontar un patrón de la narrativa, identifica a cuál de estas "
+        "categorías pertenece la evidencia que lo sostiene: (1) un hábito concreto no ejecutado, "
+        "(2) un patrón repetido real (varias sesiones o días), (3) un dato fisiológico o de entrenamiento "
+        "reciente, (4) una señal explícita del diario o cierre del día. Si no encuentras evidencia en "
+        "ninguna de esas categorías, no confrontes: guarda silencio o responde en tono bajo.\n"
+        "REGLA DE NO CONTRADICCIÓN — Si los datos del día son positivos, no los reinterpretes para forzar "
+        "una lectura negativa de la narrativa. La narrativa da contexto; no anula un dato bueno del día.\n"
+        + modo_bajo
+        + "\n"
         + "\n\n".join(partes)
         + "\n\n"
     )

@@ -77,6 +77,18 @@ _VOCABULARIO_ALARMA_READINESS = [
 ]
 
 
+# Phase 59E — Narrativa con bisturí. Frases absolutas que convierten una
+# hipótesis narrativa en sentencia/diagnóstico ("cero hábitos", "no haces
+# nada"...). Red de seguridad de salida; la regla principal vive como
+# instrucción de prompt en _bloque_marco_narrativo().
+_ABSOLUTOS_NARRATIVOS = [
+    r'cero\s+l[ií]mites',
+    r'cero\s+h[aá]bitos',
+    r'no\s+haces\s+nada',
+    r'est[aá]s\s+evitando\s+todo',
+]
+
+
 def _compilar(patrones: list) -> list:
     return [re.compile(p, re.IGNORECASE) for p in patrones]
 
@@ -86,6 +98,7 @@ _RE_ATRIBUCIONES_MENTALES       = _compilar(_ATRIBUCIONES_MENTALES)
 _RE_READINESS_BAJO              = _compilar(_READINESS_BAJO_INCORRECTO)
 _RE_NECESIDAD_CORPORAL          = _compilar(_NECESIDAD_CORPORAL)
 _RE_VOCABULARIO_ALARMA_READINESS = _compilar(_VOCABULARIO_ALARMA_READINESS)
+_RE_ABSOLUTOS_NARRATIVOS         = _compilar(_ABSOLUTOS_NARRATIVOS)
 
 
 def _tiene_ciriilicos(texto: str) -> bool:
@@ -131,6 +144,10 @@ def validar_semantica_joi(texto: str, modulo: str = 'desconocido') -> dict:
     for pat in _RE_VOCABULARIO_ALARMA_READINESS:
         if pat.search(texto):
             violaciones.append(f'vocabulario_alarma_readiness:{pat.pattern}')
+
+    for pat in _RE_ABSOLUTOS_NARRATIVOS:
+        if pat.search(texto):
+            violaciones.append(f'absoluto_narrativo:{pat.pattern}')
 
     if _tiene_ciriilicos(texto):
         violaciones.append('ciriilico_detectado')
