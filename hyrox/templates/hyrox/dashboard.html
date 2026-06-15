@@ -545,6 +545,20 @@ a.rb-dia:hover { background: var(--bg-3); text-decoration: none; }
 .rb-system-reading-kicker { display: flex; align-items: center; gap: 6px; font-family: var(--font-mono); font-size: 9px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: rgba(255,255,255,0.40); margin-bottom: 8px; }
 .rb-system-reading p { font-size: 14px; line-height: 1.65; color: rgba(255,255,255,0.85); margin: 0; }
 
+/* ── HOY MERGED CARD (semáforo + decisión) ───── */
+.hd-merged { background: var(--bg-2); border: 1px solid var(--line); border-left: 4px solid var(--accent); border-radius: 2px; overflow: hidden; }
+.hd-merged .rb-sema { margin: 0; border-radius: 0; border-left: none; border-bottom: 1px solid var(--line); background: transparent; padding: 10px 14px 8px; }
+.hd-merged .rb-sema-msg { margin-bottom: 6px; }
+.hd-merged .rb-sema-rec { margin-bottom: 4px; }
+.hd-merged .hd-decision { border: none; border-radius: 0; background: transparent; }
+.hd-checkin-chip { display: inline-flex; align-items: center; gap: 4px; margin-left: auto; font-family: var(--font-mono); font-size: 9px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; padding: 2px 6px; border: 1px solid var(--line); border-radius: 2px; text-decoration: none; }
+.hd-checkin-chip--ok { color: var(--ok); border-color: rgba(0,168,90,.3); }
+.hd-checkin-chip--pendiente { color: var(--warn); border-color: rgba(255,184,0,.3); }
+.hd-sesion-hoy { background: rgba(255,255,255,.03); border: 1px solid var(--line); border-radius: 2px; padding: 10px 12px; margin: 0 0 12px; }
+.hd-sesion-hoy-lbl { font-family: var(--font-mono); font-size: 9px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--fg-mute); margin-bottom: 4px; }
+.hd-sesion-hoy-title { font-size: 14px; font-weight: 700; color: var(--fg); margin-bottom: 2px; }
+.hd-sesion-hoy-prop { font-size: 11px; color: var(--fg-dim); line-height: 1.4; }
+
 /* ── HYROX DECISION ──────────────────────────── */
 .hd-decision { padding: 16px; background: var(--bg-2); border: 1px solid var(--line); border-left: 4px solid var(--accent); border-radius: 2px; }
 .hd-decision--recuperar        { border-left-color: var(--danger); }
@@ -575,7 +589,8 @@ a.rb-dia:hover { background: var(--bg-3); text-decoration: none; }
 .hd-modulacion-intro { font-size: 11px; line-height: 1.4; color: var(--fg-dim); margin: 0 0 6px; }
 .hd-modulacion-bullet { font-family: var(--font-mono); font-size: 10px; line-height: 1.8; color: var(--fg-dim); }
 .hd-modulacion-cierre { font-family: var(--font-mono); font-size: 9px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--fg-mute); margin: 8px 0 0; }
-.hd-decision-action { display: inline-flex; padding: 5px 10px; border: 1px solid var(--fg); font-family: var(--font-mono); font-size: 9px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--fg); text-decoration: none; }
+.hd-decision-action { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 12px 16px; margin: 4px 0 14px; background: var(--fg); color: var(--bg); font-family: var(--font-mono); font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; text-decoration: none; border-radius: 2px; box-sizing: border-box; }
+.hd-decision-action.is-disabled { opacity: .4; cursor: default; background: var(--line); color: var(--fg-mute); }
 
 /* ── RACE COMMAND ────────────────────────────── */
 .rc-panel{background:var(--bg-2);border:1px solid var(--line);border-radius:4px;overflow:hidden;margin-bottom:12px;}
@@ -611,6 +626,12 @@ a.rb-dia:hover { background: var(--bg-3); text-decoration: none; }
 .rc-blocked-inline{margin-top:6px;margin-bottom:6px;display:flex;flex-wrap:wrap;align-items:center;gap:5px;}
 .rc-blocked-lbl{font-family:var(--font-mono);font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(239,68,68,.6);}
 .rc-blocked-tag{font-family:var(--font-mono);font-size:9px;padding:2px 6px;border:1px solid rgba(239,68,68,.35);color:#ef4444;background:rgba(239,68,68,.06);border-radius:2px;}
+
+/* ── RACE COMMAND COMPACT ────────────────────── */
+.rc-compact{display:grid;grid-template-columns:repeat(5,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:4px;overflow:hidden;margin-bottom:12px;}
+.rc-compact-item{background:var(--bg-2);padding:10px 12px;display:flex;flex-direction:column;gap:4px;min-width:0;}
+.rc-compact-lbl{font-family:var(--font-mono);font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--fg-mute);}
+.rc-compact-val{font-family:var(--font-mono);font-size:15px;font-weight:800;color:var(--fg);line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 
 /* ── RESPONSIVE ──────────────────────────────── */
 @media (min-width: 720px) {
@@ -656,6 +677,7 @@ a.rb-dia:hover { background: var(--bg-3); text-decoration: none; }
   .rb-metrics3 { grid-template-columns: 1fr 1fr !important; }
   .rc-metrics   { grid-template-columns: 1fr 1fr !important; }
   .rb-run-kpis  { grid-template-columns: 1fr 1fr !important; }
+  .rc-compact   { grid-template-columns: 1fr 1fr 1fr !important; }
 
   /* --- Strips: always single column (never 3-col on mobile) --- */
   .rb-strips { display: flex !important; flex-direction: column !important; }
@@ -672,6 +694,7 @@ a.rb-dia:hover { background: var(--bg-3); text-decoration: none; }
   .rb-metrics3,
   .rc-metrics,
   .rb-run-kpis { grid-template-columns: 1fr !important; }
+  .rc-compact { grid-template-columns: 1fr 1fr !important; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -737,29 +760,27 @@ function joiHyroxCerrar(id) {
 
 {% else %}
 
-<!-- CHECK-IN BADGE -->
-<div style="display:flex;justify-content:flex-end;padding:8px 40px 0;">
-  {% if checkin_hoy %}
-  <a href="{% url 'clientes:mockup_demo' %}" style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;letter-spacing:0.06em;color:var(--ok);background:rgba(0,168,90,0.10);border:1px solid rgba(0,168,90,0.25);border-radius:9999px;padding:4px 10px;text-decoration:none;">
-    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-    CHECK-IN · {{ checkin_hoy.fc_reposo }} BPM · {{ checkin_hoy.horas_sueno }}H
-  </a>
-  {% else %}
-  <a href="{% url 'clientes:mockup_demo' %}" style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;letter-spacing:0.06em;color:var(--warn);background:rgba(255,184,0,0.10);border:1px solid rgba(255,184,0,0.25);border-radius:9999px;padding:4px 10px;text-decoration:none;">
-    <i class="fas fa-circle-exclamation" style="margin-right:4px;font-size:10px;"></i> CHECK-IN PENDIENTE
-  </a>
-  {% endif %}
-</div>
+<!-- DECISIÓN SOBERANA (Daily Briefing unificado) -->
+{% if hyrox_decision %}
+<div style="padding:8px 40px 0;margin-bottom:16px;">
+<div class="hd-merged hd-decision--{{ hyrox_decision.estado }}">
 
 {% include "includes/_semaforo_intencion.html" %}
 
-<!-- DECISIÓN SOBERANA -->
-{% if hyrox_decision %}
-<div style="padding:0 40px;margin-bottom:16px;">
 <section class="hd-decision hd-decision--{{ hyrox_decision.estado }}">
   <div class="hd-decision-kicker">
     <span class="hd-decision-dot"></span>
     Estado de hoy
+    {% if checkin_hoy %}
+    <a href="{% url 'clientes:mockup_demo' %}" class="hd-checkin-chip hd-checkin-chip--ok">
+      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      Check-in {{ checkin_hoy.fc_reposo }} BPM
+    </a>
+    {% else %}
+    <a href="{% url 'clientes:mockup_demo' %}" class="hd-checkin-chip hd-checkin-chip--pendiente">
+      <i class="fas fa-circle-exclamation"></i> Check-in pendiente
+    </a>
+    {% endif %}
   </div>
 
   {% if lectura_disponibilidad %}
@@ -779,6 +800,28 @@ function joiHyroxCerrar(id) {
 
   <h2 class="hd-decision-title">{{ hyrox_decision.titulo }}</h2>
   <p class="hd-decision-sub">{{ hyrox_decision.subtitulo }}</p>
+
+  {% for semana in plan_semanas %}
+  {% if semana.semana_idx == 0 %}
+  {% for item in semana.sesiones %}
+  {% if item.es_hoy %}
+  <div class="hd-sesion-hoy">
+    <div class="hd-sesion-hoy-lbl"><i class="fas {{ item.tipo_icon }}"></i> Sesión de hoy · {{ item.tipo_label }}</div>
+    <div class="hd-sesion-hoy-title">
+      {% if item.completada %}
+        {% if item.sesion_completada %}{% for act in item.sesion_completada.activities.all|slice:":1" %}{{ act.nombre_ejercicio }}{% endfor %}{% else %}Completado{% endif %}
+      {% else %}
+        {% for act_str in item.actividades_resumen|slice:":1" %}{{ act_str }}{% endfor %}
+        {% if not item.actividades_resumen %}{{ item.proposito|truncatechars:48 }}{% endif %}
+      {% endif %}
+    </div>
+    {% if item.proposito %}<div class="hd-sesion-hoy-prop">{{ item.proposito|truncatechars:80 }}</div>{% endif %}
+  </div>
+  {% endif %}
+  {% endfor %}
+  {% endif %}
+  {% endfor %}
+
   <p class="hd-decision-msg">{{ hyrox_decision.mensaje }}</p>
   {% if hyrox_decision.explicacion_modulacion %}
   <div class="hd-modulacion">
@@ -788,6 +831,11 @@ function joiHyroxCerrar(id) {
     {% endfor %}
     <p class="hd-modulacion-cierre">{{ hyrox_decision.explicacion_modulacion.cierre }}</p>
   </div>
+  {% endif %}
+  {% if hyrox_decision.puede_ejecutar_plan and objetivo_activo %}
+  <a href="{% url 'hyrox:registrar_entrenamiento' objective_id=objetivo_activo.id %}{% if hyrox_decision.estado == 'sesion_protegida' %}?modo=protegida{% endif %}" class="hd-decision-action"><i class="fas fa-play"></i> Iniciar · {{ hyrox_decision.accion_label }}</a>
+  {% else %}
+  <div class="hd-decision-action is-disabled">{{ hyrox_decision.accion_label }}</div>
   {% endif %}
   {% if hyrox_decision.permitido or hyrox_decision.evitar %}
   <div class="hd-decision-grid">
@@ -809,12 +857,8 @@ function joiHyroxCerrar(id) {
     {% endif %}
   </div>
   {% endif %}
-  {% if hyrox_decision.puede_ejecutar_plan and objetivo_activo %}
-  <a href="{% url 'hyrox:registrar_entrenamiento' objective_id=objetivo_activo.id %}{% if hyrox_decision.estado == 'sesion_protegida' %}?modo=protegida{% endif %}" class="hd-decision-action">{{ hyrox_decision.accion_label }}</a>
-  {% else %}
-  <div class="hd-decision-action" style="opacity:.5;cursor:default;">{{ hyrox_decision.accion_label }}</div>
-  {% endif %}
 </section>
+</div>
 </div>
 {% endif %}
 
@@ -1109,6 +1153,62 @@ function joiHyroxCerrar(id) {
     </div>
   </div>
 
+  <!-- COMPACT SUMMARY (always visible) -->
+  <div class="rc-compact">
+    <div class="rc-compact-item">
+      <div class="rc-compact-lbl">Estimación hoy</div>
+      <div class="rc-compact-val">{% if race_briefing.tiempo_estimado %}{{ race_briefing.tiempo_estimado }}{% else %}—{% endif %}</div>
+    </div>
+    <div class="rc-compact-item">
+      <div class="rc-compact-lbl">Objetivo</div>
+      <div class="rc-compact-val">{% if race_goal_delta.objetivo_str %}{{ race_goal_delta.objetivo_str }}{% elif race_briefing.tiempo_objetivo %}{{ race_briefing.tiempo_objetivo }}{% else %}—{% endif %}</div>
+    </div>
+    <div class="rc-compact-item">
+      <div class="rc-compact-lbl">{% if race_goal_delta.label %}{{ race_goal_delta.label }}{% else %}Margen{% endif %}</div>
+      <div class="rc-compact-val" style="color:{% if race_goal_delta.estado == 'margen' %}#22c55e{% elif race_goal_delta.delta_str %}#ef4444{% else %}var(--fg-mute){% endif %};">{% if race_goal_delta.delta_str %}{{ race_goal_delta.delta_str|cut:"−" }}{% else %}—{% endif %}</div>
+    </div>
+    <div class="rc-compact-item">
+      <div class="rc-compact-lbl">Limitador principal</div>
+      <div class="rc-compact-val" style="font-size:12px;">{% if race_briefing.interferencia_principal %}{{ race_briefing.interferencia_principal.estacion }}{% else %}—{% endif %}</div>
+    </div>
+    <div class="rc-compact-item">
+      <div class="rc-compact-lbl">Estado</div>
+      {% if hyrox_decision and not hyrox_decision.puede_ejecutar_plan %}
+      <div class="rc-compact-val" style="font-size:12px;color:#ef4444;">Sesión protegida</div>
+      {% else %}
+      <div class="rc-compact-val" style="font-size:12px;color:{% if race_briefing.decision.nivel == 'rojo' %}#ef4444{% elif race_briefing.decision.nivel == 'amarillo' %}#f59e0b{% else %}#22c55e{% endif %};">{{ race_briefing.decision.titulo }}</div>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if hyrox_decision and not hyrox_decision.puede_ejecutar_plan %}
+  <div class="rc-panel" style="margin-bottom:12px;">
+    <div class="rc-decision rc-decision-protected">
+      <div class="rc-decision-dot" style="background:#ef4444;box-shadow:0 0 6px #ef444480;"></div>
+      <div class="rc-decision-body">
+        <div class="rc-decision-kicker"><i class="fas fa-shield-heart"></i> Decisión superior activa</div>
+        <div class="rc-decision-title">{{ hyrox_decision.titulo }} — Sesión protegida</div>
+        <div class="rc-decision-msg">{{ hyrox_decision.mensaje }}</div>
+        {% if hyrox_decision.estaciones_bloqueadas %}
+        <div class="rc-blocked-inline">
+          <span class="rc-blocked-lbl">Race Command bloquea hoy:</span>
+          {% for est in hyrox_decision.estaciones_bloqueadas %}
+          <span class="rc-blocked-tag">{{ est }}</span>
+          {% endfor %}
+        </div>
+        {% endif %}
+        <div class="rc-decision-action" style="color:#ef4444;">→ {{ hyrox_decision.accion_label }}</div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <details class="rb-rest-collapsed">
+    <summary class="rb-rest-summary">
+      <i class="fas fa-chart-line"></i> Ver análisis completo
+      <span style="text-transform:none;font-weight:400;color:var(--fg-dim);margin-left:auto;">Readiness {{ race_briefing.readiness|default:"—" }} · TSB {{ race_briefing.tsb|default:"—" }} · ACWR {{ race_briefing.acwr|default:"—" }}</span>
+    </summary>
+
   <div class="rc-panel">
     <div class="rc-time-hero">
       {% if hyrox_decision and not hyrox_decision.puede_ejecutar_plan %}
@@ -1158,7 +1258,7 @@ function joiHyroxCerrar(id) {
         </div>
         <div style="text-align:right;">
           <div class="mono" style="font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:{% if race_goal_delta.estado == 'margen' %}#22c55e{% else %}#ef4444{% endif %};">{{ race_goal_delta.label }}</div>
-          <div style="font-family:var(--font-body);font-size:22px;font-weight:700;color:{% if race_goal_delta.estado == 'margen' %}#22c55e{% else %}#ef4444{% endif %};margin-top:2px;">{{ race_goal_delta.delta_str }}</div>
+          <div style="font-family:var(--font-body);font-size:22px;font-weight:700;color:{% if race_goal_delta.estado == 'margen' %}#22c55e{% else %}#ef4444{% endif %};margin-top:2px;">{{ race_goal_delta.delta_str|cut:"−" }}</div>
         </div>
       </div>
       {% endif %}
@@ -1200,25 +1300,7 @@ function joiHyroxCerrar(id) {
       </div>
     </div>
 
-    {% if hyrox_decision and not hyrox_decision.puede_ejecutar_plan %}
-    <div class="rc-decision rc-decision-protected">
-      <div class="rc-decision-dot" style="background:#ef4444;box-shadow:0 0 6px #ef444480;"></div>
-      <div class="rc-decision-body">
-        <div class="rc-decision-kicker"><i class="fas fa-shield-heart"></i> Decisión superior activa</div>
-        <div class="rc-decision-title">{{ hyrox_decision.titulo }} — Sesión protegida</div>
-        <div class="rc-decision-msg">{{ hyrox_decision.mensaje }}</div>
-        {% if hyrox_decision.estaciones_bloqueadas %}
-        <div class="rc-blocked-inline">
-          <span class="rc-blocked-lbl">Race Command bloquea hoy:</span>
-          {% for est in hyrox_decision.estaciones_bloqueadas %}
-          <span class="rc-blocked-tag">{{ est }}</span>
-          {% endfor %}
-        </div>
-        {% endif %}
-        <div class="rc-decision-action" style="color:#ef4444;">→ {{ hyrox_decision.accion_label }}</div>
-      </div>
-    </div>
-    {% else %}
+    {% if not hyrox_decision or hyrox_decision.puede_ejecutar_plan %}
     <div class="rc-decision">
       <div class="rc-decision-dot" style="background:{% if race_briefing.decision.nivel == 'rojo' %}#ef4444{% elif race_briefing.decision.nivel == 'amarillo' %}#f59e0b{% else %}#22c55e{% endif %};box-shadow:0 0 6px {% if race_briefing.decision.nivel == 'rojo' %}#ef444480{% elif race_briefing.decision.nivel == 'amarillo' %}#f59e0b80{% else %}#22c55e80{% endif %};"></div>
       <div class="rc-decision-body">
@@ -1286,6 +1368,8 @@ function joiHyroxCerrar(id) {
     {% endif %}
   </div>
   {% endif %}
+
+  </details>
 
 </section>
 {% endif %}
@@ -1507,6 +1591,8 @@ function joiHyroxCerrar(id) {
 
 <!-- PERFIL ATLÉTICO -->
 {% if perfil_atletico %}
+<details class="rb-rest-collapsed">
+<summary class="rb-rest-summary"><i class="fas fa-id-badge"></i> Perfil Atlético <span style="text-transform:none;font-weight:400;color:var(--fg-dim);margin-left:auto;">{{ perfil_atletico.label }} · Fuerza {{ perfil_atletico.score_fuerza|default:"—" }}% · Carrera {{ perfil_atletico.score_carrera|default:"—" }}%</span></summary>
 <section style="padding:60px 40px;border-bottom:1px solid var(--line);">
   <div style="border-bottom:1px solid var(--line);padding-bottom:24px;margin-bottom:32px;display:flex;align-items:flex-end;justify-content:space-between;gap:24px;flex-wrap:wrap;">
     <div style="display:flex;align-items:flex-end;gap:24px;">
@@ -1572,10 +1658,13 @@ function joiHyroxCerrar(id) {
   {% endif %}
   {% endif %}
 </section>
+</details>
 {% endif %}
 
 <!-- CURVAS DE PROGRESIÓN -->
 {% if objetivo_activo and curvas_progresion %}
+<details class="rb-rest-collapsed">
+<summary class="rb-rest-summary"><i class="fas fa-chart-line"></i> Velocidad de Progresión <span style="text-transform:none;font-weight:400;color:var(--fg-dim);margin-left:auto;">{% for key, curva in curvas_progresion.items %}{% if not curva.sin_datos %}{{ curva.label }} {% if curva.trend == 'mejora' %}↑{% elif curva.trend == 'empeora' %}↓{% else %}→{% endif %} {% endif %}{% endfor %}</span></summary>
 <section style="padding:60px 40px;border-bottom:1px solid var(--line);">
   <div style="border-bottom:1px solid var(--line);padding-bottom:24px;margin-bottom:32px;display:flex;align-items:flex-end;justify-content:space-between;gap:24px;flex-wrap:wrap;">
     <div style="display:flex;align-items:flex-end;gap:24px;">
@@ -1651,6 +1740,7 @@ function joiHyroxCerrar(id) {
   });
 })();
 </script>
+</details>
 {% endif %}
 
 
@@ -1698,7 +1788,13 @@ function joiHyroxCerrar(id) {
     Tu pace base: <span class="mono" style="color:var(--fg);">{{ race_card.pace_base_str }}/km</span>
   </div>
 
-  <div style="display:flex;flex-direction:column;gap:4px;">
+  <details class="rb-rest-collapsed">
+    <summary class="rb-rest-summary">
+      <i class="fas fa-list-ol"></i> Ver splits y estaciones
+      <span style="text-transform:none;font-weight:400;color:var(--fg-dim);margin-left:auto;">{{ race_card.filas|length }} km · {{ race_card.stations_reales }}/8 estaciones reales</span>
+    </summary>
+
+  <div style="display:flex;flex-direction:column;gap:4px;margin-top:8px;">
     {% for fila in race_card.filas %}
     <div style="display:grid;grid-template-columns:24px 1fr 8px 1fr;gap:0;align-items:stretch;">
       <div style="display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:9px;color:var(--fg-mute);padding-right:4px;">{{ fila.num }}</div>
@@ -1732,11 +1828,14 @@ function joiHyroxCerrar(id) {
     <span style="color:var(--warn);">Naranja</span> = datos tuyos · gris = referencia de categoría ·
     <span style="color:var(--accent);font-family:var(--font-mono);font-size:9px;">⚠ Xkg</span> = entrenado con peso distinto al oficial.
   </div>
+  </details>
 </section>
 {% endif %}
 
 <!-- MACROCICLO -->
 {% if macro_data and not modo_competicion %}
+<details class="rb-rest-collapsed">
+<summary class="rb-rest-summary"><i class="fas fa-route"></i> Macrociclo <span style="text-transform:none;font-weight:400;color:var(--fg-dim);margin-left:auto;">{% if macro_data.evento_completado %}Evento completado{% else %}{{ macro_data.fase }} · Semana {{ macro_data.semana_actual }}/{{ macro_data.total_semanas }} · {{ macro_data.pct_progreso }}%{% endif %}</span></summary>
 <section style="padding:60px 40px;border-bottom:1px solid var(--line);">
   <div style="border-bottom:1px solid var(--line);padding-bottom:24px;margin-bottom:32px;display:flex;align-items:flex-end;justify-content:space-between;gap:24px;flex-wrap:wrap;">
     <div style="display:flex;align-items:flex-end;gap:24px;">
@@ -1780,10 +1879,13 @@ function joiHyroxCerrar(id) {
     {% endif %}
   </div>
 </section>
+</details>
 {% endif %}
 
 <!-- RECOVERY MODE -->
 {% if lesion_activa %}
+<details class="rb-rest-collapsed">
+<summary class="rb-rest-summary"><i class="fas fa-band-aid"></i> Recovery Mode <span style="text-transform:none;font-weight:400;color:var(--fg-dim);margin-left:auto;">{{ lesion_activa.zona_afectada|title }} · {{ lesion_activa.get_fase_display }}{% if ultimo_reporte %} · Dolor {{ ultimo_reporte.dolor_movimiento }}/10{% else %} · Reporte pendiente{% endif %}</span></summary>
 <section style="padding:60px 40px;border-bottom:1px solid var(--line);">
   <div style="border-bottom:1px solid var(--line);padding-bottom:24px;margin-bottom:32px;display:flex;align-items:flex-end;justify-content:space-between;gap:24px;flex-wrap:wrap;">
     <div style="display:flex;align-items:flex-end;gap:24px;">
@@ -1847,9 +1949,12 @@ function joiHyroxCerrar(id) {
     </div>
   </div>
 </section>
+</details>
 {% endif %}
 
 <!-- 3 STRIPS — SEÑALES VITALES -->
+<details class="rb-rest-collapsed">
+<summary class="rb-rest-summary"><i class="fas fa-heartbeat"></i> Señales Vitales <span style="text-transform:none;font-weight:400;color:var(--fg-dim);margin-left:auto;">{{ stats_semana.total_completadas }}/{{ stats_semana.total_planificadas }} sesiones{% if readiness_breakdown %} · Readiness R{{ readiness_breakdown.resistencia }}% P{{ readiness_breakdown.potencia }}% F{{ readiness_breakdown.fuerza }}%{% endif %}</span></summary>
 <section style="padding:60px 40px;border-bottom:1px solid var(--line);">
   <div style="border-bottom:1px solid var(--line);padding-bottom:24px;margin-bottom:32px;display:flex;align-items:flex-end;justify-content:space-between;gap:24px;flex-wrap:wrap;">
     <div style="display:flex;align-items:flex-end;gap:24px;">
@@ -1940,9 +2045,12 @@ function joiHyroxCerrar(id) {
     {% endif %}
   </div>
 </section>
+</details>
 
 <!-- ESTÁNDARES HYROX -->
 {% if competition_progress %}
+<details class="rb-rest-collapsed">
+<summary class="rb-rest-summary"><i class="fas fa-medal"></i> Estándares Hyrox <span style="text-transform:none;font-weight:400;color:var(--fg-dim);margin-left:auto;">{% widthratio competition_progress.progreso_global 1 1 %}% global</span></summary>
 <section style="padding:60px 40px;border-bottom:1px solid var(--line);">
   <div style="border-bottom:1px solid var(--line);padding-bottom:24px;margin-bottom:32px;display:flex;align-items:flex-end;justify-content:space-between;gap:24px;flex-wrap:wrap;">
     <div style="display:flex;align-items:flex-end;gap:24px;">
@@ -1975,6 +2083,7 @@ function joiHyroxCerrar(id) {
     {% endfor %}
   </div>
 </section>
+</details>
 {% endif %}
 
 {% if hyrox_decision and not hyrox_decision.puede_ejecutar_plan %}
