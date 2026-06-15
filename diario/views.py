@@ -3381,12 +3381,6 @@ def presencia_apertura(request):
             entrada.tareas_dia = []
         entrada.save()
 
-        energia = request.POST.get('nivel_energia')
-        sueno = request.POST.get('calidad_sueno')
-        if energia:
-            vires.nivel_energia = int(energia)
-        if sueno:
-            vires.calidad_sueno = int(sueno)
         molestia_zona = request.POST.get('molestia_zona', '').strip()
         molestia_nota = request.POST.get('molestia_nota', '').strip()
         if molestia_zona:
@@ -3406,6 +3400,7 @@ def presencia_apertura(request):
     pregunta_identidad = None
     semaforo = None
     apertura_texto = None
+    apertura_con_pregunta = False
 
     if cliente:
         try:
@@ -3419,6 +3414,25 @@ def presencia_apertura(request):
         except Exception:
             pass
 
+    try:
+        from joi.models import MensajeJOI
+        msg_apertura = (
+            MensajeJOI.objects
+            .filter(user=request.user, trigger='apertura_manana', creado_en__date=hoy)
+            .order_by('-creado_en').first()
+        )
+        if not msg_apertura:
+            from joi.context_processors import _apertura_on_demand
+            msg_apertura = _apertura_on_demand(request.user)
+        if msg_apertura:
+            apertura_texto = msg_apertura.mensaje
+            apertura_con_pregunta = apertura_texto.rstrip().endswith('?')
+    except Exception:
+        pass
+
+    # Pregunta de identidad: solo si JOI no cerró ya su mensaje con una pregunta propia
+    # (regla madre Phase 59: una sola voz, no dos preguntas independientes en el mismo bloque)
+    if cliente and not apertura_con_pregunta:
         try:
             from joi.services import generar_pregunta_identidad
             from diario.services.intensidad_apertura import (
@@ -3430,18 +3444,6 @@ def presencia_apertura(request):
             pregunta_identidad = generar_pregunta_identidad(cliente, intensidad=intensidad)
         except Exception:
             pass
-
-    try:
-        from joi.models import MensajeJOI
-        msg_apertura = (
-            MensajeJOI.objects
-            .filter(user=request.user, trigger='apertura_manana', creado_en__date=hoy)
-            .order_by('-creado_en').first()
-        )
-        if msg_apertura:
-            apertura_texto = msg_apertura.mensaje
-    except Exception:
-        pass
 
     # Radar de Intrusos: personas interinas en estado 'radar'
     from diario.models import PersonaInterina
@@ -3455,6 +3457,7 @@ def presencia_apertura(request):
         'entrada': entrada,
         'vires': vires,
         'pregunta_identidad': pregunta_identidad,
+        'apertura_con_pregunta': apertura_con_pregunta,
         'semaforo': semaforo,
         'apertura_manana': apertura_texto,
         'hoy': hoy,
