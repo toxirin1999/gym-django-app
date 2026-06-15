@@ -711,28 +711,6 @@
   <div style="display:none">{{ form.titulo }}</div>
   <textarea name="notas_raw" id="id_notas_raw" style="display:none"></textarea>
 
-  <!-- ── JOI indicador ─────────────────────────────────────────────────── -->
-  {% if joi_mensaje_hyrox %}
-  <div id="joi-rb-banner" style="flex-shrink:0;background:var(--paper);border-bottom:1px solid var(--line-2);padding:8px 16px;display:flex;align-items:center;gap:10px;">
-    <span style="font-family:var(--font-mono);font-size:9px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--accent);flex-shrink:0;">JOI</span>
-    <a href="/joi/habitacion/?mensaje={{ joi_mensaje_hyrox.id }}"
-       style="font-size:12px;font-style:italic;color:var(--ink-2);text-decoration:none;flex:1;transition:color .2s;"
-       onmouseover="this.style.color='var(--fg)'" onmouseout="this.style.color='var(--ink-2)'">hay una lectura sobre esta sesión →</a>
-    <button type="button" onclick="joiRbCerrar({{ joi_mensaje_hyrox.id }})" style="background:none;border:none;color:var(--ink-3);font-size:16px;cursor:pointer;padding:0 4px;line-height:1;flex-shrink:0;">×</button>
-  </div>
-  <script>
-  function joiRbCerrar(id) {
-    fetch('/joi/mensaje/' + id + '/leido/', {
-      method: 'POST',
-      headers: { 'X-CSRFToken': document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '' },
-    }).then(() => {
-      const b = document.getElementById('joi-rb-banner');
-      if (b) { b.style.transition = 'opacity .3s'; b.style.opacity = '0'; setTimeout(() => b.remove(), 300); }
-    });
-  }
-  </script>
-  {% endif %}
-
   <!-- Progress rail -->
   <div class="rb-rail" id="rb-rail"></div>
 
@@ -1995,6 +1973,6 @@ function sfNext() {
 }
 </script>
 
-{% include 'includes/_joi_fab.html' %}
+{% include 'includes/_joi_fab.html' with mensaje_banner=joi_mensaje_hyrox|default:joi_mensaje_pendiente %}
 </body>
 </html>
