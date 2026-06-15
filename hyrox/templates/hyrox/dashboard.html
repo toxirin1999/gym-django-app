@@ -218,6 +218,21 @@ body {
 .rb-hero-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 12px; }
 .rb-quote { margin-top: 12px; padding: 8px 10px; background: var(--bg-3); border-left: 2px solid var(--accent); font-size: 12px; line-height: 1.5; color: var(--fg-dim); font-style: italic; }
 
+/* ── MISSION STRIP (Race Bib compacto) ────────── */
+.rb-mission-strip {
+  display: flex; flex-wrap: wrap; align-items: baseline; row-gap: 8px;
+  font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.04em;
+  color: var(--fg-dim); text-transform: uppercase;
+  padding: 14px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
+}
+.rb-mission-strip > span:not(:first-child)::before {
+  content: '·'; display: inline-block; margin: 0 10px; color: var(--fg-mute);
+}
+.rb-ms-days { font-family: var(--font-disp); font-size: 18px; font-weight: 700; color: var(--accent); text-transform: none; }
+.rb-mission-strip strong { color: var(--fg); font-weight: 700; }
+.rb-ms-readiness strong { color: var(--accent); }
+.rb-mission-note { margin-top: 8px; font-family: var(--font-mono); font-size: 10px; color: var(--warn); display: flex; flex-wrap: wrap; gap: 4px 12px; }
+
 /* ── ALERTS ──────────────────────────────────── */
 .rb-alert-stack { display: flex; flex-direction: column; gap: 6px; margin-top: 14px; }
 .rb-alert-row { display: flex; gap: 8px; align-items: flex-start; padding: 8px 12px; background: var(--bg-2); border: 1px solid var(--line); border-left: 3px solid; border-radius: 2px; font-size: 12px; line-height: 1.4; color: var(--fg-dim); }
@@ -910,110 +925,55 @@ function joiHyroxCerrar(id) {
     {% endif %}
   </div>
 
-  <!-- Countdown + BIB layout -->
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:start;flex-wrap:wrap;">
+  <!-- Mission strip (compact race bib) -->
+  {% with score=readiness_score_hoy|default:objetivo_activo.get_race_readiness_score %}
+  <div class="rb-mission-strip">
+    {% if objetivo_activo.fecha_evento %}
+    <span class="rb-ms-days"><span id="rb-days">—</span> días</span>
+    {% endif %}
+    {% if macro_data %}
+    <span>{{ macro_data.fase|upper }} · Semana {{ macro_data.semana_actual }}/{{ macro_data.total_semanas }}</span>
+    {% endif %}
+    {% if stats_semana %}
+    <span>Racha {{ stats_semana.total_completadas }}✓</span>
+    {% endif %}
+    {% if objetivo_activo.fecha_evento %}
+    <span>Race day {{ objetivo_activo.fecha_evento|date:"d M Y"|upper }}</span>
+    {% endif %}
+    <span class="rb-ms-readiness">Readiness <strong>{{ score }}</strong>/100</span>
+  </div>
+  {% if readiness_recovery_delta and readiness_recovery_delta < 0 %}
+  <div class="rb-mission-note"><span><i class="fas fa-moon"></i> Sueño/energía {{ readiness_recovery_delta }} pts</span>{% if readiness_gym_nota %}<span><i class="fas fa-dumbbell"></i> {{ readiness_gym_nota }}</span>{% endif %}</div>
+  {% elif readiness_gym_nota %}
+  <div class="rb-mission-note"><span><i class="fas fa-dumbbell"></i> {{ readiness_gym_nota }}</span></div>
+  {% endif %}
+  {% endwith %}
 
-    <!-- Left: countdown -->
-    <div>
-      {% if objetivo_activo.fecha_evento %}
-      <div class="mono" style="font-size:11px;color:var(--fg-mute);letter-spacing:0.18em;text-transform:uppercase;margin-bottom:8px;">Días para la carrera</div>
-      <div class="display" id="rb-days" style="font-size:clamp(80px,14vw,200px);color:var(--accent);line-height:0.85;">—</div>
-      <div class="mono" style="font-size:11px;color:var(--fg-mute);letter-spacing:0.14em;text-transform:uppercase;margin-top:8px;">DÍAS · FINISH LINE</div>
-      {% endif %}
+  <!-- Daily push -->
+  {% if daily_push %}
+  <div class="rb-quote" style="margin-top:16px;">"{{ daily_push }}"</div>
+  {% endif %}
 
-      {% if macro_data %}
-      <div style="margin-top:32px;display:flex;gap:24px;">
-        <div>
-          <div class="rb-bib-stat-label">Semana</div>
-          <div class="rb-bib-stat-val">{{ macro_data.semana_actual }}/{{ macro_data.total_semanas }}</div>
-        </div>
-        <div>
-          <div class="rb-bib-stat-label">Fase</div>
-          <div class="rb-bib-stat-val" style="color:var(--accent);">{{ macro_data.fase|upper }}</div>
-        </div>
-        <div>
-          <div class="rb-bib-stat-label">Racha</div>
-          <div class="rb-bib-stat-val">{% if stats_semana %}{{ stats_semana.total_completadas }}{% else %}0{% endif %}✓</div>
-        </div>
-      </div>
-      {% endif %}
-    </div>
-
-    <!-- Right: readiness ring + actions -->
-    <div>
-      {% with score=readiness_score_hoy|default:objetivo_activo.get_race_readiness_score %}
-      <!-- Readiness -->
-      <div style="background:var(--fg);color:#fff;border-radius:2px;padding:20px;margin-bottom:16px;">
-        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px;">
-          <div>
-            <div class="rb-rd-lbl">Race Readiness</div>
-            <div style="display:flex;align-items:baseline;gap:4px;margin-top:4px;">
-              <span style="font-family:'Archivo Black',sans-serif;font-size:56px;line-height:0.9;letter-spacing:-0.04em;font-variant-numeric:tabular-nums;">{{ score }}</span>
-              <span class="mono" style="font-size:14px;opacity:0.5;">/100</span>
-            </div>
-          </div>
-          <!-- SVG ring -->
-          <div style="position:relative;width:80px;height:80px;flex-shrink:0;">
-            <svg width="80" height="80" viewBox="0 0 80 80" style="transform:rotate(-90deg);">
-              <circle cx="40" cy="40" r="33" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="5"/>
-              <circle cx="40" cy="40" r="33" fill="none" stroke="var(--accent)" stroke-width="5"
-                stroke-linecap="round" stroke-dasharray="207"
-                stroke-dashoffset="{{ score|default:0 }}"/>
-            </svg>
-            <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:#fff;">{{ score }}</div>
-          </div>
-        </div>
-        <div class="rb-rd-bar"><div class="rb-rd-bar-fill" style="width:{{ score }}%;"></div></div>
-        {% if readiness_recovery_delta and readiness_recovery_delta < 0 %}
-        <div style="font-family:var(--font-mono);font-size:9px;color:var(--warn);margin-top:6px;display:flex;flex-direction:column;gap:3px;">
-          <span><i class="fas fa-moon" style="margin-right:3px;"></i>Sueño/energía · {{ readiness_recovery_delta }} pts</span>
-          {% if readiness_gym_nota %}
-          <span><i class="fas fa-dumbbell" style="margin-right:3px;"></i>{{ readiness_gym_nota }}</span>
-          {% endif %}
-        </div>
-        {% elif readiness_gym_nota %}
-        <div style="font-family:var(--font-mono);font-size:9px;color:var(--warn);margin-top:6px;">
-          <i class="fas fa-dumbbell" style="margin-right:3px;"></i>{{ readiness_gym_nota }}
-        </div>
-        {% endif %}
-        {% if readiness_svg_points %}
-        <div class="rb-rd-trend">
-          <span>TENDENCIA</span>
-          <svg viewBox="-2 -2 104 18" style="width:100px;height:16px;overflow:visible;flex-shrink:0">
-            <polyline points="{{ readiness_svg_points }}" fill="none" stroke="rgba(255,255,255,0.55)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-        </div>
-        {% endif %}
-      </div>
-      {% endwith %}
-
-      <!-- Daily push -->
-      {% if daily_push %}
-      <div class="rb-quote">"{{ daily_push }}"</div>
-      {% endif %}
-
-      <!-- Hero actions -->
-      <div class="rb-hero-actions" style="margin-top:16px;">
-        <a href="{% url 'clientes:mockup_demo' %}" class="rb-btn rb-btn-ghost"><i class="fas fa-home"></i> Panel</a>
-        <a href="{% url 'hyrox:strava_reconciliacion' %}" class="rb-btn rb-btn-ghost" style="color:#FC4C02;border-color:#FC4C02;"><i class="fab fa-strava"></i> Strava</a>
-        {% if not lesion_activa %}
-        <a href="{% url 'hyrox:reportar_lesion' %}" class="rb-btn rb-btn-ghost"><i class="fas fa-heartbeat"></i> Lesión</a>
-        {% endif %}
-        {% if hyrox_decision and not hyrox_decision.puede_ejecutar_plan %}
-        <a href="{% url 'hyrox:reportar_lesion' %}" class="rb-btn rb-btn-primary" style="background:var(--danger);border-color:var(--danger);"><i class="fas fa-shield-heart"></i> Registrar Recuperación</a>
-        {% else %}
-        <a href="{% url 'hyrox:registrar_entrenamiento' objective_id=objetivo_activo.id %}" class="rb-btn rb-btn-primary"><i class="fas fa-plus"></i> Registrar Entreno</a>
-        {% endif %}
-        <a href="{% url 'hyrox:crear_objetivo' %}" class="rb-btn rb-btn-ghost"><i class="fas fa-pen"></i> Editar</a>
-        <a href="{% url 'hyrox:guia_tecnica' %}" class="rb-btn rb-btn-ghost"><i class="fas fa-book-open"></i> Guía técnica</a>
-        <button type="button" class="rb-btn rb-btn-ghost" onclick="document.getElementById('modal-regen-plan').style.display='flex'">
-          <i class="fas fa-sync-alt"></i> Regenerar plan
-        </button>
-        <button type="button" class="rb-btn rb-btn-ghost" onclick="document.getElementById('modal-como-funciona').style.display='flex'">
-          <i class="fas fa-brain"></i> Cómo funciona tu plan
-        </button>
-      </div>
-    </div>
+  <!-- Hero actions -->
+  <div class="rb-hero-actions" style="margin-top:16px;">
+    <a href="{% url 'clientes:mockup_demo' %}" class="rb-btn rb-btn-ghost"><i class="fas fa-home"></i> Panel</a>
+    <a href="{% url 'hyrox:strava_reconciliacion' %}" class="rb-btn rb-btn-ghost" style="color:#FC4C02;border-color:#FC4C02;"><i class="fab fa-strava"></i> Strava</a>
+    {% if not lesion_activa %}
+    <a href="{% url 'hyrox:reportar_lesion' %}" class="rb-btn rb-btn-ghost"><i class="fas fa-heartbeat"></i> Lesión</a>
+    {% endif %}
+    {% if hyrox_decision and not hyrox_decision.puede_ejecutar_plan %}
+    <a href="{% url 'hyrox:reportar_lesion' %}" class="rb-btn rb-btn-primary" style="background:var(--danger);border-color:var(--danger);"><i class="fas fa-shield-heart"></i> Registrar Recuperación</a>
+    {% else %}
+    <a href="{% url 'hyrox:registrar_entrenamiento' objective_id=objetivo_activo.id %}" class="rb-btn rb-btn-primary"><i class="fas fa-plus"></i> Registrar Entreno</a>
+    {% endif %}
+    <a href="{% url 'hyrox:crear_objetivo' %}" class="rb-btn rb-btn-ghost"><i class="fas fa-pen"></i> Editar</a>
+    <a href="{% url 'hyrox:guia_tecnica' %}" class="rb-btn rb-btn-ghost"><i class="fas fa-book-open"></i> Guía técnica</a>
+    <button type="button" class="rb-btn rb-btn-ghost" onclick="document.getElementById('modal-regen-plan').style.display='flex'">
+      <i class="fas fa-sync-alt"></i> Regenerar plan
+    </button>
+    <button type="button" class="rb-btn rb-btn-ghost" onclick="document.getElementById('modal-como-funciona').style.display='flex'">
+      <i class="fas fa-brain"></i> Cómo funciona tu plan
+    </button>
   </div>
 
   <!-- Alerts -->
