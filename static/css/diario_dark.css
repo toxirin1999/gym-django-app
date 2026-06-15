@@ -1,0 +1,68 @@
+/* ==========================================================================
+   Diario — capa de unificación con JDS (Phase Diario UI 1)
+
+   El Diario tenía su propia paleta oscura (violeta sobre #13111A) que
+   coincide casi exactamente con --jds-joi de jds.css. Esta hoja remapea
+   los nombres de variable que ya usan dashboard.html / presencia_*.html /
+   habitos_dashboard.html hacia los tokens JDS, para que el Diario se sienta
+   parte del mismo sistema que Gym sin reescribir cada plantilla desde cero.
+
+   Cargar siempre detrás de jds.css.
+   ========================================================================== */
+
+:root {
+    --bg:           var(--jds-bg);
+    --card:         var(--jds-surface-strong);
+    --border:       var(--jds-border);
+    --text:         var(--jds-text);
+    --muted:        var(--jds-text-muted);
+    --accent:       var(--jds-joi);
+    --accent-light: var(--jds-joi-soft);
+    --green:        var(--jds-good);
+    --green-light:  var(--jds-good-soft);
+    --radius:       var(--jds-radius-md);
+    --shadow:       var(--jds-shadow-soft);
+}
+
+body.diario-dark {
+    background: var(--bg) !important;
+    font-family: var(--jds-font) !important;
+    color: var(--text);
+}
+
+/* ── Navbar oscura para páginas del Diario (Opción A) ── */
+body.diario-dark .navbar {
+    background: var(--jds-bg-soft) !important;
+    border-bottom: 1px solid var(--border) !important;
+    box-shadow: none !important;
+}
+body.diario-dark .navbar .navbar-brand,
+body.diario-dark .navbar .nav-link {
+    color: var(--text) !important;
+}
+body.diario-dark .navbar .nav-link.active,
+body.diario-dark .navbar .nav-link:hover,
+body.diario-dark .navbar .nav-link:focus {
+    color: var(--accent) !important;
+}
+body.diario-dark .navbar .dropdown-menu {
+    background: var(--jds-bg-soft);
+    border: 1px solid var(--border);
+}
+body.diario-dark .navbar .dropdown-item {
+    color: var(--text);
+}
+body.diario-dark .navbar .dropdown-item:hover,
+body.diario-dark .navbar .dropdown-item:focus {
+    background: var(--accent-light);
+    color: var(--accent);
+}
+body.diario-dark .navbar .dropdown-divider {
+    border-color: var(--border);
+}
+body.diario-dark .navbar-toggler {
+    border-color: var(--border);
+}
+body.diario-dark .navbar-toggler-icon {
+    filter: invert(1);
+}
