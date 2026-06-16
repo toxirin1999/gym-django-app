@@ -1763,6 +1763,27 @@ def hyrox_dashboard(request):
                 pass
         pass  # curvas_progresion already initialized as dict
 
+    # ── PULSO DEL ORGANISMO ──────────────────────────────────────────
+    # Determinar el estado vital del sistema: PROTEGIENDO, PROGRESANDO, SILENCIOSO
+    pulso = None
+    if objetivo_activo:
+        from .pulso_service import PulsoService
+        historial_reciente = None
+        if resumen_semanal:
+            historial_reciente = {}
+            if isinstance(resumen_semanal, dict):
+                if resumen_semanal.get('nuevos_prs'):
+                    historial_reciente['nuevo_rm'] = True
+                if resumen_semanal.get('peso_subio'):
+                    historial_reciente['peso_subio'] = resumen_semanal.get('peso_subio')
+
+        pulso = PulsoService.determinar_pulso(
+            objetivo=objetivo_activo,
+            readiness_score=current_score,
+            lesion_activa=lesion_activa,
+            historial_reciente=historial_reciente
+        )
+
     context = {
         'competition_progress': competition_progress,
         'macro_data': macro_data,
@@ -1804,6 +1825,7 @@ def hyrox_dashboard(request):
         'checkin_hoy': _checkin_hoy(cliente),
         'station_diagnosis': station_diagnosis,
         'post_session_diagnosis': post_session_diagnosis,
+        'pulso': pulso,
     }
 
     # ── Margen contra objetivo total ─────────────────────────────
