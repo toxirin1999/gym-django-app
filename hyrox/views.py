@@ -2465,6 +2465,174 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
 @login_required
+@require_POST
+def api_guardar_sesion(request, objective_id, session_id):
+    """
+    Endpoint AJAX que guarda una sesión de Hyrox y retorna JSON con datos actualizados.
+    Ejecuta la misma lógica que registrar_entrenamiento() pero devuelve JSON para actualizar
+    el dashboard en vivo sin recargar la página.
+    """
+    try:
+        objetivo = get_object_or_404(HyroxObjective, id=objective_id, cliente=request.user.cliente_perfil)
+        sesion_planificada = get_object_or_404(HyroxSession, id=session_id, objective=objetivo)
+
+        form = HyroxSessionNotesForm(request.POST)
+        if not form.is_valid():
+            return JsonResponse({'success': False, 'error': 'Datos inválidos en el formulario'}, status=400)
+
+        # Actualizar la sesión con datos del formulario
+        for field, value in form.cleaned_data.items():
+            if field != 'sustituir_material' and hasattr(sesion_planificada, field):
+                setattr(sesion_planificada, field, value)
+        sesion_planificada.estado = 'planificado'
+        sesion_planificada.save()
+
+        # Procesar actividades desde el texto (igual que registrar_entrenamiento)
+        if sesion_planificada.notas_raw:
+            sustituir_material = form.cleaned_data.get('sustituir_material', False)
+            parsed_data = HyroxParserService.parse_workout_text(sesion_planificada.notas_raw, sustituir_material=sustituir_material)
+            if parsed_data:
+                HyroxParserService.save_parsed_session(sesion_planificada, parsed_data)
+
+        # Guardar tiempos/reps/kg por actividad
+        acts_ordered = list(sesion_planificada.activities.all().order_by('id'))
+        for i, act in enumerate(acts_ordered, 1):
+            m = dict(act.data_metricas or {})
+            changed = False
+            t_s_raw = request.POST.get(f'act_tiempo_s_{i}')
+            if t_s_raw and t_s_raw.strip():
+                try:
+                    t_s = int(t_s_raw)
+                    if t_s > 0:
+                        m['tiempo_s'] = t_s
+                        changed = True
+                except ValueError:
+                    pass
+
+            reps_raw = request.POST.get(f'act_reps_st_{i}', '').strip()
+            kg_raw = request.POST.get(f'act_kg_st_{i}', '').strip()
+            if reps_raw:
+                try:
+                    m['reps_total'] = int(reps_raw)
+                    changed = True
+                except ValueError:
+                    pass
+            if kg_raw:
+                try:
+                    m['peso_kg'] = float(kg_raw)
+                    changed = True
+                except ValueError:
+                    pass
+            if changed:
+                act.data_metricas = m
+                act.save(update_fields=['data_metricas'])
+
+        # Validación de Bio-Safety (lesión activa)
+        lesion_activa = UserInjury.objects.filter(cliente=request.user.cliente_perfil, activa=True).first()
+        bloqueado_por_bio_safety = False
+
+        actividades = list(sesion_planificada.activities.all())
+        if lesion_activa and lesion_activa.tags_restringidos and actividades:
+            nombres_ejercicios_raw = [a.nombre_ejercicio.lower() for a in actividades]
+            mapping_inverso = {
+                'carrera': 'impacto_vertical', 'run': 'impacto_vertical',
+                'wall ball': 'flexion_rodilla_profunda', 'wall balls': 'flexion_rodilla_profunda',
+                'sled push': 'empuje_pierna',
+            }
+
+            tags_detectados = set()
+            for nombre in nombres_ejercicios_raw:
+                for key, tag in mapping_inverso.items():
+                    if key in nombre:
+                        tags_detectados.add(tag)
+
+            tags_violados = [tag for tag in tags_detectados if tag in lesion_activa.tags_restringidos]
+
+            if tags_violados:
+                bloqueado_por_bio_safety = True
+                sesion_planificada.estado = 'planificado'
+                sesion_planificada.save()
+                return JsonResponse({
+                    'success': False,
+                    'error': f"Lesión activa: no puedes hacer estos ejercicios ({', '.join(tags_violados)})"
+                }, status=403)
+
+        if not bloqueado_por_bio_safety:
+            # Marcar como completado
+            sesion_planificada.estado = 'completado'
+
+            # Guardar cumplimiento ratio
+            acts_for_compl = list(sesion_planificada.activities.all().order_by('id'))
+            compl_scores = []
+            for _i, _act in enumerate(acts_for_compl, 1):
+                _raw = request.POST.get(f'act_done_{_i}', '')
+                try:
+                    _frac = float(_raw)
+                    if 0.0 <= _frac <= 1.0:
+                        compl_scores.append(_frac)
+                except (ValueError, TypeError):
+                    pass
+            if compl_scores:
+                sesion_planificada.cumplimiento_ratio = round(sum(compl_scores) / len(compl_scores), 3)
+
+            sesion_planificada.save()
+
+            # Ejecutar reglas de negocio post-entrenamiento
+            HyroxTrainingEngine.scale_volume_by_energy(sesion_planificada)
+            HyroxTrainingEngine.apply_continuous_adaptation(sesion_planificada)
+
+            from .training_engine import RMAutoUpdater, PaceAutoUpdater, RPECalibrator, DeloadAutoTrigger
+            RMAutoUpdater.update_from_session(sesion_planificada)
+            PaceAutoUpdater.update_from_session(sesion_planificada)
+            RPECalibrator.check_and_notify(sesion_planificada)
+            DeloadAutoTrigger.check_and_apply(sesion_planificada)
+
+        # Recalcular estado del dashboard para retornar datos actualizados
+        hoy = timezone.now().date()
+        from .models import HyroxReadinessLog
+
+        # Invalidar log del día para forzar recalculo
+        HyroxReadinessLog.objects.filter(objective=objetivo, fecha=hoy).delete()
+
+        # Recalcular readiness score
+        current_score = objetivo.get_race_readiness_score()
+        log_hoy = HyroxReadinessLog.objects.create(
+            objective=objetivo,
+            fecha=hoy,
+            score=current_score
+        )
+
+        # Obtener próximas sesiones
+        sesiones_proximas = list(
+            HyroxSession.objects.filter(
+                objective=objetivo,
+                fecha__gte=hoy
+            ).order_by('fecha')[:3]
+        )
+        sesiones_data = [
+            {
+                'fecha': str(s.fecha),
+                'titulo': s.titulo or 'Sesión',
+                'estado': s.estado,
+            }
+            for s in sesiones_proximas
+        ]
+
+        return JsonResponse({
+            'success': True,
+            'sesion_id': sesion_planificada.id,
+            'readiness_score': current_score,
+            'sesiones_proximas': sesiones_data,
+            'messages': [
+                {'level': 'success', 'text': f'✅ Sesión guardada (Readiness: {current_score}%)'}
+            ]
+        })
+
+    except Exception as e:
+        logger.exception("Error en api_guardar_sesion")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+@login_required
 def registrar_entrenamiento_ia(request, session_id):
     """
     Endpoint AJAX para procesar el log en texto plano usando la IA sin recargar la página.

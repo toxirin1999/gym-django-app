@@ -10,6 +10,7 @@ urlpatterns = [
     path('cancelar-objetivo/<int:objective_id>/', views.cancelar_objetivo, name='cancelar_objetivo'),
     path('registrar-entrenamiento/<int:objective_id>/', views.registrar_entrenamiento, name='registrar_entrenamiento'),
     path('registrar-entrenamiento/<int:objective_id>/<int:session_id>/', views.registrar_entrenamiento, name='registrar_entrenamiento_session'),
+    path('api/guardar-sesion/<int:objective_id>/<int:session_id>/', views.api_guardar_sesion, name='api_guardar_sesion'),
     path('regenerar-plan/<int:objective_id>/', views.regenerar_plan, name='regenerar_plan'),
     path('iniciar-hito/<int:objective_id>/<str:tipo_hito>/', views.iniciar_hito, name='iniciar_hito'),
     path('borrar-entrenamiento/<int:session_id>/', views.borrar_entrenamiento, name='borrar_entrenamiento'),
