@@ -2106,8 +2106,8 @@ def registrar_entrenamiento(request, objective_id, session_id=None):
     if request.method == 'POST':
         form = HyroxSessionNotesForm(request.POST)
         if form.is_valid():
+            # Preparar la sesión base antes de delegar al servicio
             if sesion_planificada:
-                # Actualizar la sesión planificada existente (no crear una nueva)
                 for field, value in form.cleaned_data.items():
                     if field != 'sustituir_material' and hasattr(sesion_planificada, field):
                         setattr(sesion_planificada, field, value)
@@ -2119,231 +2119,29 @@ def registrar_entrenamiento(request, objective_id, session_id=None):
             sesion.estado = 'planificado'
             sesion.save()
 
-            # Si el usuario eligió el plan original, restaurar actividades del snapshot
-            usar_plan_original = request.POST.get('usar_plan_original') == '1'
-            if usar_plan_original and '[AUTO-OVERRIDE]' in (sesion.titulo or ''):
-                primera_act = sesion.activities.first()
-                snapshot = []
-                if primera_act and primera_act.data_planificado:
-                    snapshot = primera_act.data_planificado.get('plan_original', [])
-                if snapshot:
-                    from hyrox.models import HyroxActivity
-                    sesion.activities.all().delete()
-                    for item in snapshot:
-                        HyroxActivity.objects.create(
-                            sesion=sesion,
-                            tipo_actividad=item.get('tipo', 'otro'),
-                            nombre_ejercicio=item.get('nombre', ''),
-                            data_metricas=item.get('metricas', {}) or {},
-                        )
-                    sesion.titulo = sesion.titulo.replace('[AUTO-OVERRIDE] ', '')
-                    sesion.save(update_fields=['titulo'])
+            # Componer form_data: campos limpios + campos raw del POST para los motores
+            form_data = dict(form.cleaned_data)
+            form_data.update({
+                k: v for k, v in request.POST.items()
+                if k.startswith(('act_tiempo_s_', 'act_reps_st_', 'act_kg_st_',
+                                 'act_done_', 'act_dist_km_'))
+            })
+            form_data['usar_plan_original'] = request.POST.get('usar_plan_original', '')
+            form_data['station_feedback_json'] = request.POST.get('station_feedback_json', '')
 
-            # Procesamiento de la IA
-            if sesion.notas_raw:
-                sustituir_material = form.cleaned_data.get('sustituir_material', False)
-                parsed_data = HyroxParserService.parse_workout_text(sesion.notas_raw, sustituir_material=sustituir_material)
-                if parsed_data:
-                    resultados_save = HyroxParserService.save_parsed_session(sesion, parsed_data)
-                    actividades = resultados_save.get('activities', []) if isinstance(resultados_save, dict) else []
-                    new_records = resultados_save.get('new_records', []) if isinstance(resultados_save, dict) else []
+            from .services import guardar_sesion_hyrox_service
+            resultado = guardar_sesion_hyrox_service(objetivo, sesion, form_data)
 
-                    # Override distancia_km from direct form fields — más fiable que el parser de texto
-                    _form_dists = {}
-                    for _k, _v in request.POST.items():
-                        if _k.startswith('act_dist_km_'):
-                            try:
-                                _form_dists[int(_k[12:])] = round(float(_v.replace(',', '.')), 2)
-                            except (ValueError, TypeError):
-                                pass
-                    if _form_dists:
-                        for _i, _act in enumerate(sesion.activities.order_by('id'), start=1):
-                            _dist = _form_dists.get(_i)
-                            if _dist and _dist > 0:
-                                _m = _act.data_metricas or {}
-                                _m['distancia_km'] = _dist
-                                _act.data_metricas = _m
-                                _act.save(update_fields=['data_metricas'])
-                    
-                    feedback_str = parsed_data.get('feedback', parsed_data.get('Feedback', ''))
-                    
-                    if actividades:
-                        messages.success(request, f"Sesión guardada. {len(actividades)} bloques registrados.")
-                        
-                        if new_records:
-                            for record in new_records:
-                                messages.success(request, f"🚀 PB Roto: {record['ejercicio']} estimado ahora es {record['new']}kg.")
-
-                        # Phase 5 & 8: Dynamic UI Feedback Flash Generation
-                        if sustituir_material and feedback_str:
-                             messages.info(request, f"🤖 Auto-Ajuste de Equivalencia: {feedback_str}")
-                        elif feedback_str:
-                             messages.info(request, f"🧠 Entrenador IA: {feedback_str}")
-
-                    else:
-                        messages.success(request, "Sesión guardada. No se detectaron ejercicios estructurados en el texto.")
-                else:
-                    messages.warning(request, "No se pudieron extraer ejercicios del texto. Revisa el formato.")
-            else:
-                messages.success(request, "Datos de la sesión guardados sin procesamiento IA.")
-                actividades = sesion.activities.all()
-
-            # Guardar tiempo por ejercicio (wizard timer → data_metricas['tiempo_s'])
-            acts_ordered = list(sesion.activities.all().order_by('id'))
-            for i, act in enumerate(acts_ordered, 1):
-                m = dict(act.data_metricas or {})
-                changed = False
-                t_s_raw = request.POST.get(f'act_tiempo_s_{i}')
-                if t_s_raw and t_s_raw.strip():
-                    t_s = int(t_s_raw)
-                    if t_s > 0:
-                        m['tiempo_s'] = t_s
-                        changed = True
-                reps_raw = request.POST.get(f'act_reps_st_{i}', '').strip()
-                kg_raw = request.POST.get(f'act_kg_st_{i}', '').strip()
-                if reps_raw:
-                    try:
-                        m['reps_total'] = int(reps_raw)
-                        changed = True
-                    except ValueError:
-                        pass
-                if kg_raw:
-                    try:
-                        m['peso_kg'] = float(kg_raw)
-                        changed = True
-                    except ValueError:
-                        pass
-                if changed:
-                    act.data_metricas = m
-                    act.save(update_fields=['data_metricas'])
-
-            # --- CHECK BIO-SAFETY: VALIDACIÓN DE LESIONES ---
-            # UserInjury ya está importado al inicio de la función
-            bloqueado_por_bio_safety = False
-            
-            if lesion_activa and lesion_activa.tags_restringidos and actividades:
-                nombres_ejercicios_raw = [a.nombre_ejercicio.lower() for a in actividades]
-                mapping_inverso = {
-                    'carrera': 'impacto_vertical', 'run': 'impacto_vertical', 'running': 'impacto_vertical',
-                    'prensa': 'estabilidad_gemelo', 'squat': 'estabilidad_gemelo', 'hack squat': 'estabilidad_gemelo', 'sentadilla': 'estabilidad_gemelo',
-                    'wall ball': 'flexion_rodilla_profunda', 'wall balls': 'flexion_rodilla_profunda',
-                    'sled push': 'empuje_pierna', 'empuje trineo': 'empuje_pierna',
-                    'salto': 'flexion_plantar', 'saltos': 'flexion_plantar', 'box jump': 'flexion_plantar', 'broad jumps': 'flexion_plantar',
-                    'burpee': 'empuje_hombro', 'burpees': 'empuje_hombro', 'press': 'empuje_hombro',
-                    'dominada': 'traccion_superior', 'pull-up': 'traccion_superior', 'muscle up': 'traccion_superior',
-                    'flexion': 'empuje_horizontal', 'push up': 'empuje_horizontal', 'push-ups': 'empuje_horizontal',
-                    'peso muerto': 'lumbar_carga', 'deadlift': 'lumbar_carga',
-                    'sandbag lunge': 'rotacion_tronco', 'lunges': 'rotacion_tronco'
-                }
-                
-                tags_detectados = set()
-                for nombre in nombres_ejercicios_raw:
-                    for key, tag in mapping_inverso.items():
-                        if key in nombre:
-                            tags_detectados.add(tag)
-                            
-                tags_violados = [tag for tag in tags_detectados if tag in lesion_activa.tags_restringidos]
-                
-                if tags_violados:
-                    if lesion_activa.fase == 'AGUDA':
-                        msg = f"⚠️ Cuidado David, este movimiento compromete tu recuperación. Has realizado ejercicios incompatibles con tu lesión en fase AGUDA ({', '.join(tags_violados)})."
-                    else:
-                        msg = f"🛑 Check-in bloqueado por seguridad biológica. Has realizado ejercicios incompatibles con tu lesión en fase {lesion_activa.get_fase_display()} ({', '.join(tags_violados)})."
-                    
-                    bloqueado_por_bio_safety = True
-                    sesion.estado = 'planificado' # Revert check-in
-                    sesion.save()
-                    messages.error(request, msg)
-
-            if not bloqueado_por_bio_safety:
-                sesion.estado = 'completado'
-                _corregir_fecha_sesion_completada(sesion)
-
-                # Calculate cumplimiento_ratio from per-activity hidden inputs
-                acts_for_compl = list(sesion.activities.all().order_by('id'))
-                compl_scores = []
-                for _i, _act in enumerate(acts_for_compl, 1):
-                    _raw = request.POST.get(f'act_done_{_i}', '')
-                    try:
-                        _frac = float(_raw)
-                        if 0.0 <= _frac <= 1.0:
-                            compl_scores.append(_frac)
-                    except (ValueError, TypeError):
-                        pass
-                if compl_scores:
-                    sesion.cumplimiento_ratio = round(sum(compl_scores) / len(compl_scores), 3)
-
-                sesion.save()
-
-                # Guardar station feedback del wizard de diagnóstico
-                sf_json = request.POST.get('station_feedback_json', '').strip()
-                if sf_json:
-                    try:
-                        import json as _json
-                        sf_data = _json.loads(sf_json)
-                        if isinstance(sf_data, list) and sf_data:
-                            sesion.station_feedback = sf_data
-                            sesion.save(update_fields=['station_feedback'])
-                    except (ValueError, KeyError):
-                        pass
-
-                # Phase 8 & 9 & 14: Bucle de Feedback Continuo Post-Procesamiento.
-                # 1. Ajuste de volumen inmediato por Energía Pre-Entreno
-                HyroxTrainingEngine.scale_volume_by_energy(sesion)
-
-                # 2. Evaluamos la sesión completada (RPE, Volumen) y ajustamos la(s) siguiente(s)
-                alertas = HyroxTrainingEngine.apply_continuous_adaptation(sesion)
-                if alertas:
-                     for alerta in alertas:
-                          messages.info(request, f"⚡ {alerta}")
-
-                # 3. Actualización automática de RMs — el entrenador aprende
-                from .training_engine import RMAutoUpdater, PaceAutoUpdater
-                mensajes_rm = RMAutoUpdater.update_from_session(sesion)
-                for msg in mensajes_rm:
-                    messages.success(request, f"💪 {msg}")
-
-                # 4. Actualización de ritmo 5K desde carrera libre
-                mensajes_pace = PaceAutoUpdater.update_from_session(sesion)
-                for msg in mensajes_pace:
-                    messages.success(request, f"🏃 {msg}")
-
-                # 5. Calibración de RPE personal — detección de sesgo sistemático
-                from .training_engine import RPECalibrator, DeloadAutoTrigger
-                mensajes_rpe = RPECalibrator.check_and_notify(sesion)
-                for msg in mensajes_rpe:
-                    messages.info(request, f"📊 {msg}")
-
-                # 6. Deload automático por TSB < -25
-                mensajes_deload = DeloadAutoTrigger.check_and_apply(sesion)
-                for msg in mensajes_deload:
-                    messages.warning(request, f"⚡ {msg}")
-
-                # Hito: detectar tipo y lanzar adaptación del plan
-                tipo_hito_sesion = None
-                if sesion.titulo:
-                    for _th in ('test_5k', 'sim_completa', 'sim_peso_oficial'):
-                        if f'[HITO:{_th}]' in sesion.titulo:
-                            tipo_hito_sesion = _th
-                            break
-
-                if tipo_hito_sesion == 'test_5k':
-                    # Actualizar tiempo_5k_base antes de llamar al engine
-                    act_5k = sesion.activities.filter(nombre_ejercicio='Test 5K — Máximo esfuerzo').first()
-                    if act_5k and act_5k.data_metricas:
-                        tiempo_s = act_5k.data_metricas.get('tiempo_s')
-                        if tiempo_s and int(tiempo_s) > 0:
-                            mins = int(tiempo_s) // 60
-                            segs = int(tiempo_s) % 60
-                            nuevo_tiempo = f"{mins}:{segs:02d}"
-                            objetivo.tiempo_5k_base = nuevo_tiempo
-                            objetivo.save(update_fields=['tiempo_5k_base'])
-
-                if tipo_hito_sesion:
-                    from .training_engine import PostMilestoneEngine
-                    mensajes_hito = PostMilestoneEngine.adapt_after_milestone(sesion, tipo_hito_sesion)
-                    for msg in mensajes_hito:
-                        messages.success(request, f"🎯 {msg}")
+            # Convertir mensajes del servicio a Django messages para la UI HTML
+            _level_map = {
+                'success': messages.success,
+                'info': messages.info,
+                'warning': messages.warning,
+                'error': messages.error,
+            }
+            for msg in resultado.get('messages', []):
+                fn = _level_map.get(msg.get('level'), messages.info)
+                fn(request, msg.get('text', ''))
 
             return redirect('hyrox:dashboard')
     else:
@@ -2490,165 +2288,47 @@ from django.views.decorators.csrf import csrf_exempt
 @require_POST
 def api_guardar_sesion(request, objective_id, session_id):
     """
-    Endpoint AJAX que guarda una sesión de Hyrox y retorna JSON con datos actualizados.
-    Ejecuta la misma lógica que registrar_entrenamiento() pero devuelve JSON para actualizar
-    el dashboard en vivo sin recargar la página.
+    Endpoint AJAX: guarda una sesión Hyrox y retorna JSON con consecuencias visibles.
+    Reutiliza guardar_sesion_hyrox_service() + construir_respuesta_sesion_guardada()
+    — la misma lógica que el flujo HTML, sin redirect ni Django messages.
     """
     try:
         objetivo = get_object_or_404(HyroxObjective, id=objective_id, cliente=request.user.cliente_perfil)
-        sesion_planificada = get_object_or_404(HyroxSession, id=session_id, objective=objetivo)
+        sesion = get_object_or_404(HyroxSession, id=session_id, objective=objetivo)
 
         form = HyroxSessionNotesForm(request.POST)
         if not form.is_valid():
             return JsonResponse({'success': False, 'error': 'Datos inválidos en el formulario'}, status=400)
 
-        # Actualizar la sesión con datos del formulario
+        # Preparar la sesión base (estado planificado) antes de delegar al servicio
         for field, value in form.cleaned_data.items():
-            if field != 'sustituir_material' and hasattr(sesion_planificada, field):
-                setattr(sesion_planificada, field, value)
-        sesion_planificada.estado = 'planificado'
-        sesion_planificada.save()
+            if field != 'sustituir_material' and hasattr(sesion, field):
+                setattr(sesion, field, value)
+        sesion.estado = 'planificado'
+        sesion.save()
 
-        # Procesar actividades desde el texto (igual que registrar_entrenamiento)
-        if sesion_planificada.notas_raw:
-            sustituir_material = form.cleaned_data.get('sustituir_material', False)
-            parsed_data = HyroxParserService.parse_workout_text(sesion_planificada.notas_raw, sustituir_material=sustituir_material)
-            if parsed_data:
-                HyroxParserService.save_parsed_session(sesion_planificada, parsed_data)
-
-        # Guardar tiempos/reps/kg por actividad
-        acts_ordered = list(sesion_planificada.activities.all().order_by('id'))
-        for i, act in enumerate(acts_ordered, 1):
-            m = dict(act.data_metricas or {})
-            changed = False
-            t_s_raw = request.POST.get(f'act_tiempo_s_{i}')
-            if t_s_raw and t_s_raw.strip():
-                try:
-                    t_s = int(t_s_raw)
-                    if t_s > 0:
-                        m['tiempo_s'] = t_s
-                        changed = True
-                except ValueError:
-                    pass
-
-            reps_raw = request.POST.get(f'act_reps_st_{i}', '').strip()
-            kg_raw = request.POST.get(f'act_kg_st_{i}', '').strip()
-            if reps_raw:
-                try:
-                    m['reps_total'] = int(reps_raw)
-                    changed = True
-                except ValueError:
-                    pass
-            if kg_raw:
-                try:
-                    m['peso_kg'] = float(kg_raw)
-                    changed = True
-                except ValueError:
-                    pass
-            if changed:
-                act.data_metricas = m
-                act.save(update_fields=['data_metricas'])
-
-        # Validación de Bio-Safety (lesión activa)
-        lesion_activa = UserInjury.objects.filter(cliente=request.user.cliente_perfil, activa=True).first()
-        bloqueado_por_bio_safety = False
-
-        actividades = list(sesion_planificada.activities.all())
-        if lesion_activa and lesion_activa.tags_restringidos and actividades:
-            nombres_ejercicios_raw = [a.nombre_ejercicio.lower() for a in actividades]
-            mapping_inverso = {
-                'carrera': 'impacto_vertical', 'run': 'impacto_vertical',
-                'wall ball': 'flexion_rodilla_profunda', 'wall balls': 'flexion_rodilla_profunda',
-                'sled push': 'empuje_pierna',
-            }
-
-            tags_detectados = set()
-            for nombre in nombres_ejercicios_raw:
-                for key, tag in mapping_inverso.items():
-                    if key in nombre:
-                        tags_detectados.add(tag)
-
-            tags_violados = [tag for tag in tags_detectados if tag in lesion_activa.tags_restringidos]
-
-            if tags_violados:
-                bloqueado_por_bio_safety = True
-                sesion_planificada.estado = 'planificado'
-                sesion_planificada.save()
-                return JsonResponse({
-                    'success': False,
-                    'error': f"Lesión activa: no puedes hacer estos ejercicios ({', '.join(tags_violados)})"
-                }, status=403)
-
-        if not bloqueado_por_bio_safety:
-            # Marcar como completado
-            sesion_planificada.estado = 'completado'
-
-            # Guardar cumplimiento ratio
-            acts_for_compl = list(sesion_planificada.activities.all().order_by('id'))
-            compl_scores = []
-            for _i, _act in enumerate(acts_for_compl, 1):
-                _raw = request.POST.get(f'act_done_{_i}', '')
-                try:
-                    _frac = float(_raw)
-                    if 0.0 <= _frac <= 1.0:
-                        compl_scores.append(_frac)
-                except (ValueError, TypeError):
-                    pass
-            if compl_scores:
-                sesion_planificada.cumplimiento_ratio = round(sum(compl_scores) / len(compl_scores), 3)
-
-            sesion_planificada.save()
-
-            # Ejecutar reglas de negocio post-entrenamiento
-            HyroxTrainingEngine.scale_volume_by_energy(sesion_planificada)
-            HyroxTrainingEngine.apply_continuous_adaptation(sesion_planificada)
-
-            from .training_engine import RMAutoUpdater, PaceAutoUpdater, RPECalibrator, DeloadAutoTrigger
-            RMAutoUpdater.update_from_session(sesion_planificada)
-            PaceAutoUpdater.update_from_session(sesion_planificada)
-            RPECalibrator.check_and_notify(sesion_planificada)
-            DeloadAutoTrigger.check_and_apply(sesion_planificada)
-
-        # Recalcular estado del dashboard para retornar datos actualizados
-        hoy = timezone.now().date()
-        from .models import HyroxReadinessLog
-
-        # Invalidar log del día para forzar recalculo
-        HyroxReadinessLog.objects.filter(objective=objetivo, fecha=hoy).delete()
-
-        # Recalcular readiness score
-        current_score = objetivo.get_race_readiness_score()
-        log_hoy = HyroxReadinessLog.objects.create(
-            objective=objetivo,
-            fecha=hoy,
-            score=current_score
-        )
-
-        # Obtener próximas sesiones
-        sesiones_proximas = list(
-            HyroxSession.objects.filter(
-                objective=objetivo,
-                fecha__gte=hoy
-            ).order_by('fecha')[:3]
-        )
-        sesiones_data = [
-            {
-                'fecha': str(s.fecha),
-                'titulo': s.titulo or 'Sesión',
-                'estado': s.estado,
-            }
-            for s in sesiones_proximas
-        ]
-
-        return JsonResponse({
-            'success': True,
-            'sesion_id': sesion_planificada.id,
-            'readiness_score': current_score,
-            'sesiones_proximas': sesiones_data,
-            'messages': [
-                {'level': 'success', 'text': f'✅ Sesión guardada (Readiness: {current_score}%)'}
-            ]
+        # Componer form_data con campos raw del POST para los motores
+        form_data = dict(form.cleaned_data)
+        form_data.update({
+            k: v for k, v in request.POST.items()
+            if k.startswith(('act_tiempo_s_', 'act_reps_st_', 'act_kg_st_',
+                             'act_done_', 'act_dist_km_'))
         })
+        form_data['usar_plan_original'] = request.POST.get('usar_plan_original', '')
+        form_data['station_feedback_json'] = request.POST.get('station_feedback_json', '')
+
+        from .services import guardar_sesion_hyrox_service, construir_respuesta_sesion_guardada
+        resultado = guardar_sesion_hyrox_service(objetivo, sesion, form_data)
+
+        if not resultado['success']:
+            return JsonResponse({
+                'success': False,
+                'error': resultado.get('error', 'Error al guardar la sesión'),
+                'messages': resultado.get('messages', []),
+            }, status=400)
+
+        payload = construir_respuesta_sesion_guardada(objetivo, sesion, resultado)
+        return JsonResponse(payload)
 
     except Exception as e:
         logger.exception("Error en api_guardar_sesion")

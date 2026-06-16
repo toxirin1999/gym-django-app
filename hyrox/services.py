@@ -3137,3 +3137,509 @@ def construir_lectura_disponibilidad(
         senales.append({'label': 'Carga reciente', 'valor': 'Controlada', 'nivel': 'ok'})
 
     return {'frase': frase, 'senales': senales}
+
+
+def _corregir_fecha_sesion_en_servicio(sesion):
+    """
+    Si la sesión completada tenía fecha futura (planificada para mañana pero ejecutada hoy),
+    actualiza HyroxSession.fecha y el registro en ActividadRealizada (hub).
+    Duplicada aquí para evitar import circular con views.py.
+    """
+    from django.utils.timezone import now as _now
+    from entrenos.models import ActividadRealizada
+    hoy = _now().date()
+    if sesion.fecha <= hoy:
+        return
+    sesion.fecha = hoy
+    try:
+        ActividadRealizada.objects.filter(sesion_hyrox=sesion).update(fecha=hoy)
+    except Exception:
+        pass
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# CAPA 1 — Dominio: guardar_sesion_hyrox_service
+# Encapsula Fases 2–7 del flujo registrar_entrenamiento sin depender de HTTP.
+# Compartido por el flujo HTML y el endpoint AJAX.
+# ─────────────────────────────────────────────────────────────────────────────
+
+def guardar_sesion_hyrox_service(objetivo, sesion, form_data):
+    """
+    Guarda una sesión Hyrox completa y ejecuta todos los motores post-guardado.
+
+    Input:
+      objetivo   — HyroxObjective
+      sesion     — HyroxSession (estado inicial = 'planificado')
+      form_data  — dict con campos limpios del form (notas_raw, sustituir_material,
+                   energia_pre, rpe_global, usar_plan_original, station_feedback_json,
+                   act_tiempo_s_*, act_reps_st_*, act_kg_st_*, act_done_*, act_dist_km_*)
+
+    Output:
+      dict {
+        'success': bool,
+        'error': str | None,
+        'sesion_id': int | None,
+        'readiness_score_antes': int,
+        'eventos': list[str],   # ['rm_updated', 'deload_applied', ...]
+        'warnings': list[str],  # ['motor_X_failed: msg', ...]
+        'messages': list[dict], # [{'level': 'success'|'info'|'warning'|'error', 'text': str}]
+      }
+
+    Side effects controlados — persiste en BD:
+      HyroxSession, HyroxActivity, HyroxReadinessLog, HyroxObjective (RMs/pace),
+      sesiones futuras (motor de adaptación continua).
+    """
+    from django.db import transaction
+    from .models import HyroxActivity, UserInjury
+
+    mensajes = []
+    eventos = []
+    warnings = []
+
+    lesion_activa = UserInjury.objects.filter(
+        cliente=objetivo.cliente, activa=True
+    ).first()
+
+    readiness_score_antes = objetivo.get_race_readiness_score()
+
+    with transaction.atomic():
+        # ── Fase 2: actualizar esqueleto de sesión ──────────────────────────
+        notas_raw = form_data.get('notas_raw', '')
+        sustituir_material = form_data.get('sustituir_material', False)
+
+        campos_directos = [
+            'energia_pre', 'rpe_global', 'hr_avg', 'hr_max',
+            'tiempo_total_minutos', 'notas_texto',
+        ]
+        for campo in campos_directos:
+            if campo in form_data and hasattr(sesion, campo):
+                setattr(sesion, campo, form_data[campo])
+        if notas_raw:
+            sesion.notas_raw = notas_raw
+        sesion.estado = 'planificado'
+        sesion.save()
+
+        # ── Fase 3: restaurar plan original si el usuario lo pide ───────────
+        usar_plan_original = form_data.get('usar_plan_original') == '1'
+        if usar_plan_original and '[AUTO-OVERRIDE]' in (sesion.titulo or ''):
+            primera_act = sesion.activities.first()
+            snapshot = []
+            if primera_act and primera_act.data_planificado:
+                snapshot = primera_act.data_planificado.get('plan_original', [])
+            if snapshot:
+                sesion.activities.all().delete()
+                for item in snapshot:
+                    HyroxActivity.objects.create(
+                        sesion=sesion,
+                        tipo_actividad=item.get('tipo', 'otro'),
+                        nombre_ejercicio=item.get('nombre', ''),
+                        data_metricas=item.get('metricas', {}) or {},
+                    )
+                sesion.titulo = sesion.titulo.replace('[AUTO-OVERRIDE] ', '')
+                sesion.save(update_fields=['titulo'])
+
+        # ── Fase 4: parsing IA ───────────────────────────────────────────────
+        actividades = list(sesion.activities.all())
+        if sesion.notas_raw:
+            parsed_data = HyroxParserService.parse_workout_text(
+                sesion.notas_raw, sustituir_material=sustituir_material
+            )
+            if parsed_data:
+                resultados_save = HyroxParserService.save_parsed_session(sesion, parsed_data)
+                actividades = (
+                    resultados_save.get('activities', [])
+                    if isinstance(resultados_save, dict)
+                    else []
+                )
+                new_records = (
+                    resultados_save.get('new_records', [])
+                    if isinstance(resultados_save, dict)
+                    else []
+                )
+
+                # Override distancia_km desde campos directos del form
+                form_dists = {}
+                for k, v in form_data.items():
+                    if k.startswith('act_dist_km_'):
+                        try:
+                            form_dists[int(k[12:])] = round(float(str(v).replace(',', '.')), 2)
+                        except (ValueError, TypeError):
+                            pass
+                if form_dists:
+                    for i, act in enumerate(sesion.activities.order_by('id'), start=1):
+                        dist = form_dists.get(i)
+                        if dist and dist > 0:
+                            m = act.data_metricas or {}
+                            m['distancia_km'] = dist
+                            act.data_metricas = m
+                            act.save(update_fields=['data_metricas'])
+
+                feedback_str = parsed_data.get('feedback', parsed_data.get('Feedback', ''))
+
+                if actividades:
+                    mensajes.append({
+                        'level': 'success',
+                        'text': f"Sesión guardada. {len(actividades)} bloques registrados.",
+                    })
+                    for record in new_records:
+                        mensajes.append({
+                            'level': 'success',
+                            'text': f"PB Roto: {record['ejercicio']} estimado ahora es {record['new']}kg.",
+                        })
+                    if sustituir_material and feedback_str:
+                        mensajes.append({
+                            'level': 'info',
+                            'text': f"Auto-Ajuste de Equivalencia: {feedback_str}",
+                        })
+                    elif feedback_str:
+                        mensajes.append({
+                            'level': 'info',
+                            'text': f"Entrenador IA: {feedback_str}",
+                        })
+                else:
+                    mensajes.append({
+                        'level': 'success',
+                        'text': "Sesión guardada. No se detectaron ejercicios estructurados en el texto.",
+                    })
+            else:
+                mensajes.append({
+                    'level': 'warning',
+                    'text': "No se pudieron extraer ejercicios del texto. Revisa el formato.",
+                })
+        else:
+            mensajes.append({
+                'level': 'success',
+                'text': "Datos de la sesión guardados sin procesamiento IA.",
+            })
+            actividades = list(sesion.activities.all())
+
+        # ── Fase 5: guardar tiempos/reps/kg del wizard ───────────────────────
+        acts_ordered = list(sesion.activities.all().order_by('id'))
+        for i, act in enumerate(acts_ordered, 1):
+            m = dict(act.data_metricas or {})
+            changed = False
+            t_s_raw = form_data.get(f'act_tiempo_s_{i}')
+            if t_s_raw and str(t_s_raw).strip():
+                try:
+                    t_s = int(t_s_raw)
+                    if t_s > 0:
+                        m['tiempo_s'] = t_s
+                        changed = True
+                except (ValueError, TypeError):
+                    pass
+            reps_raw = str(form_data.get(f'act_reps_st_{i}', '')).strip()
+            kg_raw = str(form_data.get(f'act_kg_st_{i}', '')).strip()
+            if reps_raw:
+                try:
+                    m['reps_total'] = int(reps_raw)
+                    changed = True
+                except ValueError:
+                    pass
+            if kg_raw:
+                try:
+                    m['peso_kg'] = float(kg_raw)
+                    changed = True
+                except ValueError:
+                    pass
+            if changed:
+                act.data_metricas = m
+                act.save(update_fields=['data_metricas'])
+
+        # ── Fase 6: validación bio-safety ────────────────────────────────────
+        # Si la sesión viola tags de lesión activa → revierte a 'planificado' y aborta.
+        # El rollback de transaction.atomic() NO aplica aquí porque no lanzamos excepción;
+        # la sesión queda en 'planificado' (estado seguro) con actividades ya guardadas.
+        bloqueado_por_bio_safety = False
+        if lesion_activa and lesion_activa.tags_restringidos and actividades:
+            mapping_inverso = {
+                'carrera': 'impacto_vertical', 'run': 'impacto_vertical', 'running': 'impacto_vertical',
+                'prensa': 'estabilidad_gemelo', 'squat': 'estabilidad_gemelo',
+                'hack squat': 'estabilidad_gemelo', 'sentadilla': 'estabilidad_gemelo',
+                'wall ball': 'flexion_rodilla_profunda', 'wall balls': 'flexion_rodilla_profunda',
+                'sled push': 'empuje_pierna', 'empuje trineo': 'empuje_pierna',
+                'salto': 'flexion_plantar', 'saltos': 'flexion_plantar',
+                'box jump': 'flexion_plantar', 'broad jumps': 'flexion_plantar',
+                'burpee': 'empuje_hombro', 'burpees': 'empuje_hombro', 'press': 'empuje_hombro',
+                'dominada': 'traccion_superior', 'pull-up': 'traccion_superior',
+                'muscle up': 'traccion_superior',
+                'flexion': 'empuje_horizontal', 'push up': 'empuje_horizontal',
+                'push-ups': 'empuje_horizontal',
+                'peso muerto': 'lumbar_carga', 'deadlift': 'lumbar_carga',
+                'sandbag lunge': 'rotacion_tronco', 'lunges': 'rotacion_tronco',
+            }
+            nombres = [a.nombre_ejercicio.lower() for a in actividades]
+            tags_detectados = set()
+            for nombre in nombres:
+                for key, tag in mapping_inverso.items():
+                    if key in nombre:
+                        tags_detectados.add(tag)
+
+            tags_violados = [t for t in tags_detectados if t in lesion_activa.tags_restringidos]
+            if tags_violados:
+                if lesion_activa.fase == 'AGUDA':
+                    msg = (
+                        f"Cuidado, este movimiento compromete tu recuperación. "
+                        f"Ejercicios incompatibles con lesión en fase AGUDA ({', '.join(tags_violados)})."
+                    )
+                else:
+                    msg = (
+                        f"Check-in bloqueado por seguridad biológica. "
+                        f"Ejercicios incompatibles con lesión en fase "
+                        f"{lesion_activa.get_fase_display()} ({', '.join(tags_violados)})."
+                    )
+                bloqueado_por_bio_safety = True
+                sesion.estado = 'planificado'
+                sesion.save()
+                mensajes.append({'level': 'error', 'text': msg})
+                return {
+                    'success': False,
+                    'error': msg,
+                    'sesion_id': sesion.id,
+                    'readiness_score_antes': readiness_score_antes,
+                    'eventos': eventos,
+                    'warnings': warnings,
+                    'messages': mensajes,
+                }
+
+        # ── Fase 7: completar sesión + ejecutar motores ─────────────────────
+        sesion.estado = 'completado'
+
+        # Corregir fecha si la sesión estaba planificada para el futuro pero se ejecuta hoy
+        _corregir_fecha_sesion_en_servicio(sesion)
+
+        # Cumplimiento ratio desde inputs act_done_*
+        acts_for_compl = list(sesion.activities.all().order_by('id'))
+        compl_scores = []
+        for i, act in enumerate(acts_for_compl, 1):
+            raw = str(form_data.get(f'act_done_{i}', '')).strip()
+            try:
+                frac = float(raw)
+                if 0.0 <= frac <= 1.0:
+                    compl_scores.append(frac)
+            except (ValueError, TypeError):
+                pass
+        if compl_scores:
+            sesion.cumplimiento_ratio = round(sum(compl_scores) / len(compl_scores), 3)
+        sesion.save()
+
+        # Station feedback del wizard
+        sf_json = str(form_data.get('station_feedback_json', '')).strip()
+        if sf_json:
+            try:
+                import json as _json
+                sf_data = _json.loads(sf_json)
+                if isinstance(sf_data, list) and sf_data:
+                    sesion.station_feedback = sf_data
+                    sesion.save(update_fields=['station_feedback'])
+            except (ValueError, KeyError):
+                pass
+
+    # ── Motores post-guardado (fuera del atomic para no revertir la sesión) ──
+    # Clasificación: accesorios → fallo no cancela; críticos → advertencia y continuar.
+    from .training_engine import HyroxTrainingEngine
+
+    # Motor 1 — accesorio: ajuste de volumen por energía pre-entreno
+    try:
+        HyroxTrainingEngine.scale_volume_by_energy(sesion)
+        eventos.append('scale_volume')
+    except Exception as exc:
+        warnings.append(f'motor_scale_volume_failed: {exc}')
+
+    # Motor 2 — crítico (post-guardado): adaptación continua → ajusta sesiones futuras
+    try:
+        alertas = HyroxTrainingEngine.apply_continuous_adaptation(sesion)
+        if alertas:
+            for alerta in alertas:
+                mensajes.append({'level': 'info', 'text': f"Adaptación: {alerta}"})
+        eventos.append('continuous_adaptation')
+    except Exception as exc:
+        warnings.append(f'motor_continuous_adaptation_failed: {exc}')
+
+    # Motor 3 — accesorio: actualización de RMs
+    try:
+        from .training_engine import RMAutoUpdater
+        mensajes_rm = RMAutoUpdater.update_from_session(sesion)
+        for msg in mensajes_rm:
+            mensajes.append({'level': 'success', 'text': f"RM: {msg}"})
+        if mensajes_rm:
+            eventos.append('rm_updated')
+    except Exception as exc:
+        warnings.append(f'motor_rm_failed: {exc}')
+
+    # Motor 4 — accesorio: actualización de ritmo 5K
+    try:
+        from .training_engine import PaceAutoUpdater
+        mensajes_pace = PaceAutoUpdater.update_from_session(sesion)
+        for msg in mensajes_pace:
+            mensajes.append({'level': 'success', 'text': f"Pace: {msg}"})
+        if mensajes_pace:
+            eventos.append('pace_updated')
+    except Exception as exc:
+        warnings.append(f'motor_pace_failed: {exc}')
+
+    # Motor 5 — accesorio: calibración de sesgo RPE
+    try:
+        from .training_engine import RPECalibrator
+        mensajes_rpe = RPECalibrator.check_and_notify(sesion)
+        for msg in mensajes_rpe:
+            mensajes.append({'level': 'info', 'text': f"RPE: {msg}"})
+    except Exception as exc:
+        warnings.append(f'motor_rpe_calibrator_failed: {exc}')
+
+    # Motor 6 — crítico (post-guardado): deload automático por TSB < -25
+    try:
+        from .training_engine import DeloadAutoTrigger
+        mensajes_deload = DeloadAutoTrigger.check_and_apply(sesion)
+        for msg in mensajes_deload:
+            mensajes.append({'level': 'warning', 'text': f"Deload: {msg}"})
+        if mensajes_deload:
+            eventos.append('deload_applied')
+    except Exception as exc:
+        warnings.append(f'motor_deload_failed: {exc}')
+
+    # Hito: test_5k / sim_completa / sim_peso_oficial
+    tipo_hito = None
+    if sesion.titulo:
+        for th in ('test_5k', 'sim_completa', 'sim_peso_oficial'):
+            if f'[HITO:{th}]' in sesion.titulo:
+                tipo_hito = th
+                break
+
+    if tipo_hito == 'test_5k':
+        act_5k = sesion.activities.filter(nombre_ejercicio='Test 5K — Máximo esfuerzo').first()
+        if act_5k and act_5k.data_metricas:
+            tiempo_s = act_5k.data_metricas.get('tiempo_s')
+            if tiempo_s and int(tiempo_s) > 0:
+                mins = int(tiempo_s) // 60
+                segs = int(tiempo_s) % 60
+                objetivo.tiempo_5k_base = f"{mins}:{segs:02d}"
+                objetivo.save(update_fields=['tiempo_5k_base'])
+                eventos.append('tiempo_5k_actualizado')
+
+    if tipo_hito:
+        try:
+            from .training_engine import PostMilestoneEngine
+            mensajes_hito = PostMilestoneEngine.adapt_after_milestone(sesion, tipo_hito)
+            for msg in mensajes_hito:
+                mensajes.append({'level': 'success', 'text': f"Hito: {msg}"})
+            eventos.append(f'milestone_{tipo_hito}')
+        except Exception as exc:
+            warnings.append(f'motor_milestone_failed: {exc}')
+
+    return {
+        'success': True,
+        'error': None,
+        'sesion_id': sesion.id,
+        'readiness_score_antes': readiness_score_antes,
+        'eventos': eventos,
+        'warnings': warnings,
+        'messages': mensajes,
+    }
+
+
+def construir_respuesta_sesion_guardada(objetivo, sesion, resultado_dominio):
+    """
+    Construye el payload JSON/dict para la UI después de guardar una sesión.
+    Recalcula readiness, hyrox_decision y pulso para mostrar consecuencias visibles.
+
+    Input:
+      objetivo          — HyroxObjective
+      sesion            — HyroxSession (estado = 'completado' si success=True)
+      resultado_dominio — dict de guardar_sesion_hyrox_service()
+
+    Output: dict JSON-friendly con todo lo que la UI necesita para actualizarse.
+    """
+    from django.utils import timezone
+    from .models import HyroxReadinessLog
+
+    hoy = timezone.now().date()
+
+    # Invalidar log del día para que el readiness recalcule con datos frescos
+    HyroxReadinessLog.objects.filter(objective=objetivo, fecha=hoy).delete()
+    readiness_score_despues = objetivo.get_race_readiness_score()
+    HyroxReadinessLog.objects.create(
+        objective=objetivo,
+        fecha=hoy,
+        score=readiness_score_despues,
+    )
+
+    # Recalcular breakdown para el cliente
+    try:
+        readiness_breakdown = objetivo.get_readiness_breakdown()
+    except Exception:
+        readiness_breakdown = {}
+
+    # Recalcular hyrox_decision con readiness fresco
+    hyrox_decision = _calcular_hyrox_decision_payload(objetivo, readiness_score_despues)
+
+    # Recalcular pulso
+    pulso = _calcular_pulso_payload(objetivo, readiness_score_despues)
+
+    # Próximas sesiones (máximo 5)
+    from .models import HyroxSession as _HyroxSession
+    sesiones_proximas = list(
+        _HyroxSession.objects.filter(objective=objetivo, fecha__gte=hoy)
+        .order_by('fecha')[:5]
+    )
+    sesiones_data = [
+        {'id': s.id, 'fecha': str(s.fecha), 'titulo': s.titulo or 'Sesión', 'estado': s.estado}
+        for s in sesiones_proximas
+    ]
+
+    return {
+        'success': resultado_dominio['success'],
+        'sesion_id': resultado_dominio.get('sesion_id'),
+        'readiness_score': readiness_score_despues,
+        'readiness_score_antes': resultado_dominio.get('readiness_score_antes'),
+        'readiness_breakdown': readiness_breakdown,
+        'hyrox_decision': hyrox_decision,
+        'pulso': pulso,
+        'sesiones_proximas': sesiones_data,
+        'eventos': resultado_dominio.get('eventos', []),
+        'warnings': resultado_dominio.get('warnings', []),
+        'messages': resultado_dominio.get('messages', []),
+    }
+
+
+def _calcular_hyrox_decision_payload(objetivo, readiness_score):
+    """Helper: devuelve hyrox_decision como dict serializable para JSON."""
+    try:
+        from .models import UserInjury
+        from .views import _crear_hyrox_decision
+        lesion = UserInjury.objects.filter(cliente=objetivo.cliente, activa=True).first()
+        decision = _crear_hyrox_decision(readiness_score, lesion_activa=lesion)
+        return {
+            'estado': decision.get('estado'),
+            'causa': decision.get('causa'),
+            'puede_ejecutar_plan': decision.get('puede_ejecutar_plan', True),
+            'permitido': decision.get('permitido', []),
+            'evitar': decision.get('evitar', []),
+        }
+    except Exception:
+        return {'estado': 'empujar', 'causa': 'normal', 'puede_ejecutar_plan': True,
+                'permitido': [], 'evitar': []}
+
+
+def _calcular_pulso_payload(objetivo, readiness_score):
+    """Helper: devuelve pulso como dict serializable para JSON."""
+    try:
+        from .pulso_service import PulsoService
+        from .models import UserInjury
+        lesion = UserInjury.objects.filter(cliente=objetivo.cliente, activa=True).first()
+        pulso = PulsoService.determinar_pulso(
+            objetivo=objetivo,
+            readiness_score=readiness_score,
+            lesion_activa=lesion,
+        )
+        if pulso is None:
+            return None
+        postura = pulso.get('postura', {})
+        return {
+            'pulso': pulso.get('pulso'),
+            'postura': {
+                'estructura': postura.get('estructura'),
+                'rutas': postura.get('rutas'),
+            } if isinstance(postura, dict) else {},
+        }
+    except Exception:
+        return None
