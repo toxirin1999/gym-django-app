@@ -218,13 +218,20 @@ class HyroxObjective(models.Model):
         alerta_inactividad = ""
         from hyrox.services import HyroxMacrocycleEngine
         inactivo_run, dias_run, tiene_credito_futbol, preguntar_bool = HyroxMacrocycleEngine.detect_running_inactivity(self.cliente.user_id)
-        
+
+        _MESES_ES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+                     'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
+        _fecha_evento_str = (
+            f"el {self.fecha_evento.day} de {_MESES_ES[self.fecha_evento.month - 1]}"
+            if self.fecha_evento else "el día de tu competición"
+        )
+
         if is_preservation:
             alerta_inactividad = f"\n⚕️ MODO PRESERVACIÓN ACTIVO (Lesión {lesion_preservation}): Omitir penalizaciones por días sin carrera. Valora positivamente cualquier cardio sustituto para el Readiness."
         elif preguntar_bool:
             alerta_inactividad = "\n⚠️ ELIMINACIÓN DE CASTIGO: No asumas inactividad directamente. En tu saludo debes preguntar TEXTUALMENTE: 'David, no veo carreras esta semana. ¿Has sumado minutos con el fútbol o necesitamos reajustar el bloque?'"
         elif inactivo_run and not tiene_credito_futbol:
-            alerta_inactividad = f"\n⚠️ ALERTA DE INACTIVIDAD AERÓBICA: Lleva {dias_run} días sin correr ni compensar con fútbol. DEBES dedicar tu mensaje a recordarle estrictamente que el motor aeróbico es crítico para el 19 de Abril."
+            alerta_inactividad = f"\n⚠️ ALERTA DE INACTIVIDAD AERÓBICA: Lleva {dias_run} días sin correr ni compensar con fútbol. DEBES dedicar tu mensaje a recordarle estrictamente que el motor aeróbico es crítico para {_fecha_evento_str}."
         elif inactivo_run and tiene_credito_futbol:
             dias_penalizados = dias_run // 2 # 50% de reducción visual
             alerta_inactividad = f"\n⚠️ ALERTA MITIGADA: Acumula {dias_run} días sin correr, pero gracias al FÚTBOL la penalización se reduce a un equivalente de {dias_penalizados} días. Recuérdale que el fútbol ayuda como mantenimiento, pero no sustituye la especificidad de Hyrox."

@@ -581,12 +581,16 @@ Responde ÚNICAMENTE con un JSON válido:
                     rpe_bajando = rpe_reciente < rpe_inicial - 0.3
 
                     if rpe_bajando and cargas_subiendo:
+                        _MESES_ES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+                                     'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
+                        _fe = (f"el {objetivo.fecha_evento.day} de {_MESES_ES[objetivo.fecha_evento.month - 1]}"
+                               if objetivo.fecha_evento else "tu competición")
                         tendencia_nota = (
                             "\n\n⚠️ INSTRUCCIÓN ESPECIAL (solo si el usuario pregunta por su estado o progreso): "
                             "Di EXACTAMENTE esto (puedes adaptarlo levemente): "
                             f"'{contexto.get('nombre', 'David')}, tu condición física está madurando. "
                             "Estás moviendo pesos de competición con un coste energético menor. "
-                            "Tu base para el 19 de abril es cada vez más sólida.' "
+                            f"Tu base para {_fe} es cada vez más sólida.' "
                             f"(RPE ha bajado de {rpe_inicial:.1f} a {rpe_reciente:.1f} en las últimas sesiones "
                             "mientras las cargas aumentan)"
                         )
@@ -950,8 +954,8 @@ class CompetitionStandardsService:
         },
         'relay': {
             'SkiErg': 1000,
-            'Sled Push': {'kg': 125, 'vol': 50, 'vol_unit': 'm'},
-            'Sled Pull': {'kg': 75, 'vol': 50, 'vol_unit': 'm'},
+            'Sled Push': {'kg': 152, 'vol': 50, 'vol_unit': 'm'},
+            'Sled Pull': {'kg': 103, 'vol': 50, 'vol_unit': 'm'},
             'Burpee Broad Jumps': 80,
             'Rowing': 1000,
             'Farmers Carry': {'kg': 24, 'vol': 200, 'vol_unit': 'm'},
@@ -959,6 +963,16 @@ class CompetitionStandardsService:
             'Wall Balls': {'kg': 6, 'vol': 100, 'vol_unit': 'reps'},
         },
     }
+
+    @classmethod
+    def get_peso_oficial(cls, categoria, estacion_canon):
+        """Peso oficial (kg) de una estación por categoría. Fuente única de verdad.
+        Devuelve None para estaciones sin carga (SkiErg, Rowing, Burpee)."""
+        est = cls.ESTANDARES_OFICIALES.get(categoria) or cls.ESTANDARES_OFICIALES['open_men']
+        spec = est.get(estacion_canon)
+        if isinstance(spec, dict):
+            return spec.get('kg')
+        return None
 
     # Equivalencias de ejercicios con factores ajustados por similitud biomecánica
     # Factor < 1.0 = el gym no replica exactamente la estación → penalización de transferencia
