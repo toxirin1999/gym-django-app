@@ -1542,10 +1542,10 @@ class HyroxRaceSimulator:
 
 class HyroxMacrocycleEngine:
     """
-    Motor central de periodización inteligente hacia HYROX (19 de Abril 2026).
+    Motor central de periodización inteligente hacia HYROX.
     Gestiona las fases del entrenamiento, sobrecarga progresiva y penalizaciones por inactividad.
+    La fecha del evento se lee de cada HyroxObjective.fecha_evento (no hay fecha global).
     """
-    EVENT_DATE = "2026-04-19"
 
     @classmethod
     def get_current_phase(cls, objetivo=None, return_metadata=False):
