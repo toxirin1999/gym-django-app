@@ -969,11 +969,11 @@ def hyrox_dashboard(request):
             'pro_men':    {'Sled Push': 152, 'Sled Pull': 152, 'Farmers Carry': 48, 'Sandbag Lunges': 20, 'Wall Balls': 6},
             'pro_women':  {'Sled Push': 102, 'Sled Pull': 102, 'Farmers Carry': 32, 'Sandbag Lunges': 10, 'Wall Balls': 4},
         }
-        _PESO_OFICIAL_KG = _PESOS_OFICIALES.get(_cat_efectiva, _PESOS_OFICIALES['open_men'])
         REFERENCIA = HyroxRaceSimulator.get_tiempos_categoria(objetivo_activo.categoria)
         _cat_efectiva = objetivo_activo.categoria
         if HyroxRaceSimulator.TIEMPOS_POR_CATEGORIA.get(_cat_efectiva) is None:
             _cat_efectiva = 'open_women' if 'women' in _cat_efectiva else 'open_men'
+        _PESO_OFICIAL_KG = _PESOS_OFICIALES.get(_cat_efectiva, _PESOS_OFICIALES['open_men'])
         _CAT_LABEL = {
             'open_men': 'Open Masc.', 'open_women': 'Open Fem.',
             'pro_men': 'Pro Masc.', 'pro_women': 'Pro Fem.',
