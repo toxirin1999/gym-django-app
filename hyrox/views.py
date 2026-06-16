@@ -772,14 +772,9 @@ def hyrox_dashboard(request):
                 'distancia_km': round(distancia_km, 2)
             }
 
-        # Phase 10: Enfoque Mental y Equilibrio Estratégico
-        mental_focus = None
-        if hoy.weekday() == 0: # Lunes
-            mental_focus = "David, esta semana el entrenamiento es tu ancla de disciplina. No es solo fitness, es el orden que estás construyendo."
-            
         strength_balance = objetivo_activo.get_strength_balance()
         readiness_breakdown = objetivo_activo.get_readiness_breakdown()
-        
+
         pace_prediction = None
         if objetivo_activo.tiempo_5k_base:
             objetivo_carrera = objetivo_activo.objetivo_tiempo_carrera or None
@@ -795,29 +790,10 @@ def hyrox_dashboard(request):
                     f"Añade tu tiempo objetivo en Editar objetivo para ver la proyección de mejora."
                 )
 
-        # Phase 11: Identidad Consciente y Smart Alerts
-        morning_briefing = None
-        # Idealmente sería usando la zona horaria del usuario, asumimos hora del servidor por ahora
-        if timezone.now().hour <= 11:
-            morning_briefing = "Hoy no entrenas para demostrar nada a nadie, entrenas para construir al David que tú quieres ser."
-            
         daily_push = objetivo_activo.get_daily_push()
 
         from .training_engine import WeeklySummaryEngine
         resumen_semanal = WeeklySummaryEngine.get_summary(objetivo_activo)
-
-        smart_alerts = []
-        last_session = objetivo_activo.sessions.filter(estado='completado').order_by('-fecha').first()
-        if last_session:
-            # Alerta Recuperación (fatiga alta ayer o hoy)
-            if last_session.muscle_fatigue_index == 'Alta' and (hoy - last_session.fecha).days <= 1:
-                smart_alerts.append("Buen esfuerzo en la sesión pasada. No olvides hidratarte bien hoy para que tus cuádriceps recuperen para lo próximo.")
-            
-            # Alerta Consistencia (>48h)
-            if (hoy - last_session.fecha).days >= 2:
-                smart_alerts.append("David, cada sesión es un paso hacia tu nueva identidad y tu casa propia. ¿Ajustamos el entreno de hoy para que encaje en tu tarde?")
-        else:
-            smart_alerts.append("Es el momento perfecto para arrancar tu primer bloque. La constancia es la clave.")
 
     competition_progress = None
     macro_data = None
@@ -1800,13 +1776,10 @@ def hyrox_dashboard(request):
         'readiness_score_hoy': current_score if objetivo_activo else None,
         'readiness_recovery_delta': _recovery_delta,
         'readiness_gym_nota': _gym_nota,
-        'mental_focus': mental_focus if objetivo_activo else None,
         'strength_balance': strength_balance if objetivo_activo else None,
         'readiness_breakdown': readiness_breakdown if objetivo_activo else None,
         'pace_prediction': pace_prediction if objetivo_activo else None,
-        'morning_briefing': morning_briefing if objetivo_activo else None,
         'daily_push': daily_push if objetivo_activo else None,
-        'smart_alerts': smart_alerts if objetivo_activo else [],
         'lesion_activa': lesion_activa,
         'evolucion_carrera': evolucion_carrera,
         'splits_estaciones': splits_estaciones,
