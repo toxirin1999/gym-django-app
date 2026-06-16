@@ -322,8 +322,7 @@ class HyroxLoadManager:
         """
         Devuelve lista de (fecha, valor) con la progresión de una métrica clave.
         - carrera: ritmo promedio en seg/km
-        - hyrox_station / fuerza: peso máximo usado
-        Útil para detectar estancamiento real vs. RPE subjetivo.
+        - hyrox_station / fuerza: peso máximo usado (fusiona HyroxActivity + gym EjercicioRealizado)
         """
         desde = timezone.now().date() - timedelta(weeks=semanas)
         actividades = (
@@ -338,9 +337,9 @@ class HyroxLoadManager:
             .values('sesion__fecha', 'data_metricas', 'nombre_ejercicio')
         )
 
-        curva = []
+        curva_by_date = {}
         for a in actividades:
-            if ejercicio_keyword and ejercicio_keyword.lower() not in a['nombre_ejercicio'].lower():
+            if ejercicio_keyword and ejercicio_keyword.lower() not in (a['nombre_ejercicio'] or '').lower():
                 continue
             m = a['data_metricas'] or {}
             valor = None
@@ -366,8 +365,31 @@ class HyroxLoadManager:
                     if pesos:
                         valor = max(pesos)
             if valor is not None:
-                curva.append({'fecha': str(a['sesion__fecha']), 'valor': valor})
-        return curva
+                date_str = str(a['sesion__fecha'])
+                curva_by_date[date_str] = max(curva_by_date.get(date_str, 0), valor)
+
+        # Para ejercicios de fuerza/estación, fusionar datos de entrenos de gym
+        if tipo_actividad in ('hyrox_station', 'fuerza') and ejercicio_keyword:
+            try:
+                from entrenos.models import EjercicioRealizado
+                gym_acts = (
+                    EjercicioRealizado.objects
+                    .filter(
+                        entreno__cliente=objetivo.cliente,
+                        entreno__fecha__gte=desde,
+                        nombre_ejercicio__icontains=ejercicio_keyword,
+                        peso_kg__gt=0,
+                    )
+                    .values('entreno__fecha', 'peso_kg')
+                )
+                for ga in gym_acts:
+                    if ga['peso_kg']:
+                        date_str = str(ga['entreno__fecha'])
+                        curva_by_date[date_str] = max(curva_by_date.get(date_str, 0), float(ga['peso_kg']))
+            except Exception:
+                pass
+
+        return [{'fecha': d, 'valor': v} for d, v in sorted(curva_by_date.items())]
 
     @classmethod
     def get_zona_para_template(cls, template, is_taper=False, is_deload=False):

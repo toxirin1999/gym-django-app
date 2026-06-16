@@ -578,11 +578,14 @@ def hyrox_dashboard(request):
         
         sesiones_completadas = list(HyroxSession.objects.filter(objective=objetivo_activo, estado='completado').order_by('-fecha'))
 
-        # Sesiones futuras deduplicadas por fecha (evita duplicados del auto_adjust)
+        # Sesiones futuras deduplicadas por fecha (evita duplicados del auto_adjust).
+        # Incluye sesiones completadas de hoy para que aparezcan como "done" en el plan.
+        from django.db.models import Q as _Q_plan
         todas_futuras = list(
             HyroxSession.objects.filter(
-                objective=objetivo_activo, estado='planificado', fecha__gte=hoy
-            ).prefetch_related('activities').order_by('fecha')
+                _Q_plan(objective=objetivo_activo, estado='planificado', fecha__gte=hoy) |
+                _Q_plan(objective=objetivo_activo, estado='completado', fecha=hoy)
+            ).prefetch_related('activities').order_by('fecha', 'estado')
         )
         vistas = set()
         todas_futuras_unicas = []
@@ -658,9 +661,14 @@ def hyrox_dashboard(request):
                     actividades_resumen.append(act.nombre_ejercicio)
 
             # Comprobar si hay una sesión completada en la misma fecha
-            completada_hoy = HyroxSession.objects.filter(
-                objective=objetivo_activo, estado='completado', fecha=s.fecha
-            ).first() if s.fecha == hoy else None
+            if s.estado == 'completado':
+                completada_hoy = s
+            elif s.fecha == hoy:
+                completada_hoy = HyroxSession.objects.filter(
+                    objective=objetivo_activo, estado='completado', fecha=s.fecha
+                ).first()
+            else:
+                completada_hoy = None
 
             proposito = PROPOSITO_SESION.get(tipo_principal, 'Sesión de entrenamiento Hyrox')
             titulo_lower = (s.titulo or '').lower()
@@ -952,6 +960,16 @@ def hyrox_dashboard(request):
         # si el entreno se hizo a una distancia diferente.
         # La fórmula asume ritmo constante: t_norm = t_entreno / d_entreno × d_oficial
         _DIST_OFICIAL_M = {'SkiErg': 1000, 'Rowing': 1000}
+        # Estaciones de peso variable: normalizar al peso oficial de carrera por categoría.
+        # Permite comparar sesiones de entrenamiento (80-90 kg) con sesiones a peso carrera (152 kg).
+        # Fórmula: t_norm = t_real × (peso_oficial / peso_real)
+        _PESOS_OFICIALES = {
+            'open_men':   {'Sled Push': 152, 'Sled Pull': 152, 'Farmers Carry': 48, 'Sandbag Lunges': 20, 'Wall Balls': 6},
+            'open_women': {'Sled Push': 102, 'Sled Pull': 102, 'Farmers Carry': 32, 'Sandbag Lunges': 10, 'Wall Balls': 4},
+            'pro_men':    {'Sled Push': 152, 'Sled Pull': 152, 'Farmers Carry': 48, 'Sandbag Lunges': 20, 'Wall Balls': 6},
+            'pro_women':  {'Sled Push': 102, 'Sled Pull': 102, 'Farmers Carry': 32, 'Sandbag Lunges': 10, 'Wall Balls': 4},
+        }
+        _PESO_OFICIAL_KG = _PESOS_OFICIALES.get(_cat_efectiva, _PESOS_OFICIALES['open_men'])
         REFERENCIA = HyroxRaceSimulator.get_tiempos_categoria(objetivo_activo.categoria)
         _cat_efectiva = objetivo_activo.categoria
         if HyroxRaceSimulator.TIEMPOS_POR_CATEGORIA.get(_cat_efectiva) is None:
@@ -1029,6 +1047,12 @@ def hyrox_dashboard(request):
                     # Solo normalizar si la distancia es significativamente distinta
                     if dist_m > 0 and abs(dist_m - dist_oficial) > dist_oficial * 0.1:
                         secs_canon = round(secs * dist_oficial / dist_m)
+                # Normalizar a peso oficial para estaciones de carga variable (Sled, Farmers, etc.)
+                peso_oficial = _PESO_OFICIAL_KG.get(canon)
+                if peso_oficial:
+                    peso_real = float(act.data_metricas.get('peso_kg') or 0)
+                    if peso_real > 0 and abs(peso_real - peso_oficial) > peso_oficial * 0.05:
+                        secs_canon = round(secs_canon * peso_oficial / peso_real)
                 tiempos_acum.setdefault(canon, []).append(secs_canon)
                 tiempos_por_semana.setdefault(canon, {}).setdefault(iso_w, []).append(secs_canon)
                 tiempos_por_mes.setdefault(canon, {}).setdefault(mes_key, []).append(secs_canon)
