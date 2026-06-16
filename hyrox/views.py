@@ -436,9 +436,60 @@ def hyrox_dashboard(request):
     _recovery_delta = 0
     _gym_nota = None
 
+    # Variables del panel 'Estado de hoy' — inicializadas en scope superior para que
+    # estén siempre disponibles (antes solo se definían al crear el log del día, lo que
+    # dejaba el panel vacío en la 2ª+ carga diaria al existir ya un HyroxReadinessLog).
+    _bitacora_fields = {}
+    _hrv_estado = 'sin_dato'
+    _energia_checkin = None
+    _gym_delta = 0
+    _recovery_delta_bita = 0
+
     if objetivo_activo:
         from .models import HyroxReadinessLog
         hoy = timezone.now().date()
+
+        # Lectura de BitacoraDiaria del día — siempre, para alimentar el panel 'Estado de hoy'
+        try:
+            from clientes.models import BitacoraDiaria
+            from datetime import timedelta as _td_bita
+            from hyrox.services import calcular_delta_readiness_checkin as _calc_delta_bita
+            _bita = BitacoraDiaria.objects.filter(
+                cliente=objetivo_activo.cliente,
+                fecha__gte=hoy - _td_bita(days=1),
+            ).order_by('-fecha').first()
+            if _bita:
+                _energia_checkin = _bita.energia_subjetiva
+                _hrv_hoy_b = _bita.hrv_ms
+                _hrv_base_b, _hrv_5_b = None, []
+                if _hrv_hoy_b:
+                    _hist_b = list(
+                        BitacoraDiaria.objects.filter(
+                            cliente=objetivo_activo.cliente,
+                            hrv_ms__isnull=False,
+                            fecha__gte=hoy - _td_bita(days=30),
+                            fecha__lt=hoy,
+                        ).order_by('-fecha').values_list('hrv_ms', flat=True)
+                    )
+                    if len(_hist_b) >= 5:
+                        _hrv_base_b = sum(_hist_b) / len(_hist_b)
+                        _hrv_5_b = list(_hist_b[:5])
+                _recovery_delta_bita, _hrv_estado = _calc_delta_bita(
+                    calidad_sueno=_bita.calidad_sueno,
+                    horas_sueno=float(_bita.horas_sueno or 0),
+                    energia=_bita.energia_subjetiva,
+                    hrv_hoy=_hrv_hoy_b,
+                    hrv_baseline=_hrv_base_b,
+                    hrv_ultimos_5=_hrv_5_b,
+                )
+                _bitacora_fields = {
+                    'calidad_sueno': _bita.calidad_sueno,
+                    'horas_sueno': float(_bita.horas_sueno) if _bita.horas_sueno else None,
+                    'fc_reposo': _bita.fc_reposo,
+                    'hrv_ms': _hrv_hoy_b,
+                }
+        except Exception:
+            pass
 
         # Phase 6: Registrar el score de Race Readiness solo si no existe aún hoy
         # (evita recalcular en cada recarga; se invalida automáticamente al día siguiente)
@@ -448,62 +499,8 @@ def hyrox_dashboard(request):
         else:
             current_score = objetivo_activo.get_race_readiness_score()
 
-            # Cruzar con BitacoraDiaria del día para ajustar por recuperación real
-            _bitacora_fields = {}
-            _recovery_delta = 0
-            _hrv_estado = 'sin_dato'
-            _energia_checkin = None
-            try:
-                from clientes.models import BitacoraDiaria
-                from datetime import timedelta
-                from hyrox.services import calcular_delta_readiness_checkin
-
-                _bitacora = BitacoraDiaria.objects.filter(
-                    cliente=objetivo_activo.cliente,
-                    fecha__gte=hoy - timedelta(days=1),
-                ).order_by('-fecha').first()
-                if _bitacora:
-                    cal = _bitacora.calidad_sueno
-                    hrs = float(_bitacora.horas_sueno or 0)
-                    ene = _bitacora.energia_subjetiva
-                    hrv_hoy = _bitacora.hrv_ms
-                    _energia_checkin = ene
-
-                    _hrv_baseline = None
-                    _hrv_ultimos_5 = []
-                    if hrv_hoy:
-                        _hrv_historial = list(
-                            BitacoraDiaria.objects
-                            .filter(
-                                cliente=objetivo_activo.cliente,
-                                hrv_ms__isnull=False,
-                                fecha__gte=hoy - timedelta(days=30),
-                                fecha__lt=hoy,
-                            )
-                            .order_by('-fecha')
-                            .values_list('hrv_ms', flat=True)
-                        )
-                        if len(_hrv_historial) >= 5:
-                            _hrv_baseline = sum(_hrv_historial) / len(_hrv_historial)
-                            _hrv_ultimos_5 = list(_hrv_historial[:5])
-
-                    _recovery_delta, _hrv_estado = calcular_delta_readiness_checkin(
-                        calidad_sueno=cal,
-                        horas_sueno=hrs,
-                        energia=ene,
-                        hrv_hoy=hrv_hoy,
-                        hrv_baseline=_hrv_baseline,
-                        hrv_ultimos_5=_hrv_ultimos_5,
-                    )
-
-                    _bitacora_fields = {
-                        'calidad_sueno': cal,
-                        'horas_sueno': hrs if hrs > 0 else None,
-                        'fc_reposo': _bitacora.fc_reposo,
-                        'hrv_ms': hrv_hoy,
-                    }
-            except Exception:
-                pass
+            # Recovery delta de la bitácora ya leída arriba
+            _recovery_delta = _recovery_delta_bita
 
             # Cruzar con sesiones de gym (entrenos app) — últimas 48h
             _gym_delta = 0
@@ -960,20 +957,21 @@ def hyrox_dashboard(request):
         # si el entreno se hizo a una distancia diferente.
         # La fórmula asume ritmo constante: t_norm = t_entreno / d_entreno × d_oficial
         _DIST_OFICIAL_M = {'SkiErg': 1000, 'Rowing': 1000}
-        # Estaciones de peso variable: normalizar al peso oficial de carrera por categoría.
-        # Permite comparar sesiones de entrenamiento (80-90 kg) con sesiones a peso carrera (152 kg).
-        # Fórmula: t_norm = t_real × (peso_oficial / peso_real)
-        _PESOS_OFICIALES = {
-            'open_men':   {'Sled Push': 152, 'Sled Pull': 152, 'Farmers Carry': 48, 'Sandbag Lunges': 20, 'Wall Balls': 6},
-            'open_women': {'Sled Push': 102, 'Sled Pull': 102, 'Farmers Carry': 32, 'Sandbag Lunges': 10, 'Wall Balls': 4},
-            'pro_men':    {'Sled Push': 152, 'Sled Pull': 152, 'Farmers Carry': 48, 'Sandbag Lunges': 20, 'Wall Balls': 6},
-            'pro_women':  {'Sled Push': 102, 'Sled Pull': 102, 'Farmers Carry': 32, 'Sandbag Lunges': 10, 'Wall Balls': 4},
+        # Estaciones de empuje/arrastre: el tiempo escala casi linealmente con la carga,
+        # así que normalizamos al peso oficial para comparar entrenos a peso reducido con
+        # sesiones a peso de carrera. Solo Sled (en Farmers/Sandbag/Wall Balls el tiempo
+        # depende de distancia/reps, no del peso → normalizar inflaría artificialmente).
+        # Pesos oficiales: fuente única CompetitionStandardsService.get_peso_oficial.
+        from .services import CompetitionStandardsService as _CSS
+        _cat_real = objetivo_activo.categoria
+        _PESO_OFICIAL_KG = {
+            'Sled Push': _CSS.get_peso_oficial(_cat_real, 'Sled Push'),
+            'Sled Pull': _CSS.get_peso_oficial(_cat_real, 'Sled Pull'),
         }
         REFERENCIA = HyroxRaceSimulator.get_tiempos_categoria(objetivo_activo.categoria)
         _cat_efectiva = objetivo_activo.categoria
         if HyroxRaceSimulator.TIEMPOS_POR_CATEGORIA.get(_cat_efectiva) is None:
             _cat_efectiva = 'open_women' if 'women' in _cat_efectiva else 'open_men'
-        _PESO_OFICIAL_KG = _PESOS_OFICIALES.get(_cat_efectiva, _PESOS_OFICIALES['open_men'])
         _CAT_LABEL = {
             'open_men': 'Open Masc.', 'open_women': 'Open Fem.',
             'pro_men': 'Pro Masc.', 'pro_women': 'Pro Fem.',
@@ -1207,14 +1205,21 @@ def hyrox_dashboard(request):
                 m, sec = divmod(rem, 60)
                 return f"{h}:{m:02d}:{sec:02d}" if h else f"{m}:{sec:02d}"
 
-            mejora_secs = total_est - total_ref_total
+            # Comparar contra el objetivo real del usuario (objetivo_tiempo_total) si existe;
+            # si no, contra la suma de tiempos de referencia. Unifica el "objetivo" en todo
+            # el dashboard a un único número (antes mostraba la referencia élite como objetivo).
+            _objetivo_secs = _parse_tiempo_a_segundos(objetivo_activo.objetivo_tiempo_total)
+            _comparador = _objetivo_secs or total_ref_total
+            _es_objetivo_usuario = bool(_objetivo_secs)
+            mejora_secs = total_est - _comparador
             race_prediction = {
                 'tiene_datos': stations_con_datos > 0,
                 'stations_con_datos': stations_con_datos,
                 'total_stations': len(splits_estaciones),
                 'estimado_str': _fmt_race(total_est),
                 'mejor_str': _fmt_race(total_mejor),
-                'ref_str': _fmt_race(total_ref_total),
+                'ref_str': _fmt_race(_comparador),
+                'ref_es_objetivo': _es_objetivo_usuario,
                 'mejora_str': _fmt_race(abs(mejora_secs)),
                 'por_encima': mejora_secs > 0,
             }
@@ -1562,6 +1567,24 @@ def hyrox_dashboard(request):
             race_card = RaceCardService.generate(objetivo_activo, splits_estaciones, interferencia_index)
         except Exception:
             logger.exception("[HYROX] Error generando race_card")
+
+        # Unificar la estimación: el panel "Análisis de carrera" usa el mismo total que
+        # Race Card (modelo completo con degradación de ritmo entre estaciones) en vez de
+        # su suma propia con ritmo constante, que daba un número distinto y más optimista.
+        if race_card and race_prediction and race_card.get('total_str'):
+            _tot_rc = _parse_tiempo_a_segundos(race_card['total_str'])
+            if _tot_rc:
+                _obj_secs = _parse_tiempo_a_segundos(objetivo_activo.objetivo_tiempo_total)
+                _comp = _obj_secs or _tot_rc
+                _mej = _tot_rc - _comp
+                def _fmt_rc(s):
+                    h, rem = divmod(abs(int(s)), 3600); m, sec = divmod(rem, 60)
+                    return f"{h}:{m:02d}:{sec:02d}" if h else f"{m}:{sec:02d}"
+                race_prediction['estimado_str'] = race_card['total_str']
+                race_prediction['ref_str'] = _fmt_rc(_comp)
+                race_prediction['ref_es_objetivo'] = bool(_obj_secs)
+                race_prediction['mejora_str'] = _fmt_rc(_mej)
+                race_prediction['por_encima'] = _mej > 0
         if race_card and race_card['es_race_week']:
             modo_competicion = True
             dias = race_card['dias_evento']

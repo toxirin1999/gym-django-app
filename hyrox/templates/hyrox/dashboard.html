@@ -1675,7 +1675,7 @@ details[open] > summary i.fa-chevron-down { transform: rotate(180deg); }
 <!-- RACE CARD TÁCTICA -->
 {% if objetivo_activo and race_card %}
 <details class="rb-rest-collapsed">
-<summary class="rb-rest-summary"><i class="fas fa-chess-board"></i> Race Card Táctica {% if race_card.es_race_week %}<span style="color:var(--accent);">· RACE WEEK</span>{% endif %}<span style="text-transform:none;font-weight:400;color:var(--fg-dim);margin-left:auto;">{{ race_card.total_str }} objetivo</span></summary>
+<summary class="rb-rest-summary"><i class="fas fa-chess-board"></i> Race Card Táctica {% if race_card.es_race_week %}<span style="color:var(--accent);">· RACE WEEK</span>{% endif %}<span style="text-transform:none;font-weight:400;color:var(--fg-dim);margin-left:auto;">{{ race_card.total_str }} estimado</span></summary>
 <section style="padding:60px 40px;border-bottom:1px solid var(--line);{% if race_card.es_race_week %}border-top:2px solid var(--accent);{% endif %}">
   <div style="border-bottom:1px solid var(--line);padding-bottom:24px;margin-bottom:32px;display:flex;align-items:flex-end;justify-content:space-between;gap:24px;flex-wrap:wrap;">
     <div style="display:flex;align-items:flex-end;gap:24px;">
@@ -1699,7 +1699,7 @@ details[open] > summary i.fa-chevron-down { transform: rotate(180deg); }
   <div class="rb-race-grid-3" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:20px;">
     <div style="background:var(--bg-2);border:1px solid var(--line);border-radius:2px;padding:12px;text-align:center;">
       <div class="mono" style="font-size:18px;font-weight:700;color:var(--accent);">{{ race_card.total_str }}</div>
-      <div style="font-size:9px;color:var(--fg-mute);margin-top:2px;">Tiempo objetivo</div>
+      <div style="font-size:9px;color:var(--fg-mute);margin-top:2px;">Tiempo estimado</div>
       <div style="font-size:8px;color:var(--fg-mute);margin-top:1px;">Realista en carrera</div>
     </div>
     <div style="background:var(--bg-2);border:1px solid var(--line);border-radius:2px;padding:12px;text-align:center;">
@@ -2438,9 +2438,9 @@ details[open] > summary i.fa-chevron-down { transform: rotate(180deg); }
           <div class="rb-pred-val">{{ race_prediction.estimado_str }}</div>
           <div class="rb-pred-mejora {% if race_prediction.por_encima %}rb-pred-mejora-over{% else %}rb-pred-mejora-under{% endif %}">
             {% if race_prediction.por_encima %}
-            <i class="fas fa-arrow-up"></i> +{{ race_prediction.mejora_str }} sobre referencia
+            <i class="fas fa-arrow-up"></i> +{{ race_prediction.mejora_str }} {% if race_prediction.ref_es_objetivo %}sobre tu objetivo{% else %}sobre referencia{% endif %}
             {% else %}
-            <i class="fas fa-arrow-down"></i> {{ race_prediction.mejora_str }} bajo referencia
+            <i class="fas fa-arrow-down"></i> {{ race_prediction.mejora_str }} {% if race_prediction.ref_es_objetivo %}bajo tu objetivo{% else %}bajo referencia{% endif %}
             {% endif %}
           </div>
         </div>
@@ -2450,7 +2450,7 @@ details[open] > summary i.fa-chevron-down { transform: rotate(180deg); }
             <div class="rb-pred-secondary">{{ race_prediction.mejor_str }}</div>
           </div>
           <div>
-            <div class="rb-pred-lbl">Ref. {{ splits_categoria|default:"Open" }}</div>
+            <div class="rb-pred-lbl">{% if race_prediction.ref_es_objetivo %}Tu objetivo{% else %}Ref. {{ splits_categoria|default:"Open" }}{% endif %}</div>
             <div class="rb-pred-secondary">{{ race_prediction.ref_str }}</div>
           </div>
         </div>
