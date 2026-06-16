@@ -1009,7 +1009,7 @@ details[open] > summary i.fa-chevron-down { transform: rotate(180deg); }
 <!-- PULSO DEL ORGANISMO (Indicador de postura) -->
 {% if pulso %}
 <div style="padding:40px 40px 0;margin-bottom:24px;">
-  <section class="pulso-card pulso-{{ pulso.pulso }} pulso-{{ pulso.postura.estructura }}">
+  <section id="pulso-card" class="pulso-card pulso-{{ pulso.pulso }} pulso-{{ pulso.postura.estructura }}">
 
     {% if pulso.pulso == "protegiendo" %}
     <!-- Postura: PROTEGIENDO (compacta) -->
@@ -1154,11 +1154,13 @@ details[open] > summary i.fa-chevron-down { transform: rotate(180deg); }
     <p class="hd-modulacion-cierre">{{ hyrox_decision.explicacion_modulacion.cierre }}</p>
   </div>
   {% endif %}
+  <div id="hyrox-decision-buttons">
   {% if hyrox_decision.puede_ejecutar_plan and objetivo_activo %}
   <a href="{% url 'hyrox:registrar_entrenamiento' objective_id=objetivo_activo.id %}{% if hyrox_decision.estado == 'sesion_protegida' %}?modo=protegida{% endif %}" class="hd-decision-action"><i class="fas fa-play"></i> Iniciar · {{ hyrox_decision.accion_label }}</a>
   {% else %}
   <div class="hd-decision-action is-disabled">{{ hyrox_decision.accion_label }}</div>
   {% endif %}
+  </div>
   {% if hyrox_decision.permitido or hyrox_decision.evitar %}
   <div class="hd-decision-grid">
     {% if hyrox_decision.permitido %}
@@ -1230,7 +1232,7 @@ details[open] > summary i.fa-chevron-down { transform: rotate(180deg); }
     {% if objetivo_activo.fecha_evento %}
     <span>Race day {{ objetivo_activo.fecha_evento|date:"d M Y"|upper }}</span>
     {% endif %}
-    <span class="rb-ms-readiness">Readiness <strong>{{ score }}</strong>/100</span>
+    <span class="rb-ms-readiness">Readiness <strong data-readiness>{{ score }}</strong>/100</span>
   </div>
   {% if readiness_recovery_delta and readiness_recovery_delta < 0 %}
   <div class="rb-mission-note"><span><i class="fas fa-moon"></i> Sueño/energía {{ readiness_recovery_delta }} pts</span>{% if readiness_gym_nota %}<span><i class="fas fa-dumbbell"></i> {{ readiness_gym_nota }}</span>{% endif %}</div>
@@ -2529,6 +2531,9 @@ details[open] > summary i.fa-chevron-down { transform: rotate(180deg); }
     </div>
     {% endif %}
 
+    <!-- Contenedor para actualización AJAX de sesiones próximas -->
+    <div id="sesiones-proximas-list" style="display:none;margin-top:8px;"></div>
+
   </section>
   {% endif %}
 
@@ -3476,6 +3481,9 @@ function updateDashboardFromSession(data) {
   }
 }
 </script>
+
+<!-- Contenedor de toasts para actualizaciones AJAX desde registrar_entrenamiento -->
+<div id="messages-container" style="position:fixed;top:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px;pointer-events:none;"></div>
 
 {% include 'includes/_joi_fab.html' with mensaje_banner=joi_mensaje_hyrox|default:joi_mensaje_pendiente %}
 </body>

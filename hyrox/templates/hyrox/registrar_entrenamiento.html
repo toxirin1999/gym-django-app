@@ -706,7 +706,12 @@
   <span>Sesión protegida — Reduce volumen e intensidad. La carga reciente supera tu línea habitual.</span>
 </div>
 {% endif %}
-<form method="post" id="rb-form" class="rb-stage">
+<noscript>
+  <div style="background:#b45309;color:#fff;padding:8px 16px;font-family:system-ui,sans-serif;font-size:13px;text-align:center;">
+    Habilita JavaScript para la experiencia completa. El formulario funciona igualmente de forma tradicional.
+  </div>
+</noscript>
+<form method="post" id="formRegistrarEntrenamiento" class="rb-stage">
   {% csrf_token %}
   <div style="display:none">{{ form.titulo }}</div>
   <textarea name="notas_raw" id="id_notas_raw" style="display:none"></textarea>
@@ -1403,8 +1408,8 @@
         </div>
       </div>
       <div class="rb-panel-foot">
-        <button type="button" class="rb-wiz-btn rb-wiz-btn--submit" onclick="rbSubmit()">
-          GUARDAR SESIÓN
+        <button type="button" class="rb-wiz-btn rb-wiz-btn--submit" data-submit-btn onclick="rbSubmit()">
+          <span data-btn-text>GUARDAR SESIÓN</span>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
         </button>
       </div>
@@ -1826,150 +1831,42 @@ function rbConfirmSave() {
   rbBuildNotasRaw();
   sfSerialize();
 
-  // Mostrar spinner mientras se procesa
-  const spinner = document.createElement('div');
-  spinner.id = 'rb-save-spinner';
-  spinner.style.cssText = `
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    z-index: 10000;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba(255,107,0,.9);
-    color: white;
-    padding: 30px 40px;
-    border-radius: 12px;
-    font-family: -apple-system, sans-serif;
-    font-size: 14px;
-    font-weight: 600;
-  `;
-  spinner.innerHTML = '<span style="margin-right: 12px;">💾</span> Guardando sesión...';
-  document.body.appendChild(spinner);
+  var form = document.getElementById('formRegistrarEntrenamiento');
 
-  // Recolectar datos del formulario
-  const formData = new FormData(document.getElementById('rb-form'));
-
-  // Obtener objective_id y session_id de la URL actual
-  const urlMatch = window.location.pathname.match(/\/registrar-entrenamiento\/(\d+)\/(\d+)\//);
-  let objective_id, session_id;
+  // Obtener URL del endpoint
+  var urlMatch = window.location.pathname.match(/\/registrar-entrenamiento\/(\d+)\/(\d+)\//);
+  var objective_id, session_id;
   if (urlMatch) {
     objective_id = urlMatch[1];
-    session_id = urlMatch[2];
+    session_id   = urlMatch[2];
   } else {
-    // Fallback: si solo hay objective_id
-    const urlMatch2 = window.location.pathname.match(/\/registrar-entrenamiento\/(\d+)\//);
+    var urlMatch2 = window.location.pathname.match(/\/registrar-entrenamiento\/(\d+)\//);
     if (urlMatch2) {
       objective_id = urlMatch2[1];
-      // session_id debería estar en el contexto, buscalo en el formulario o en data attribute
-      const sesionEl = document.querySelector('[data-session-id]');
-      session_id = sesionEl?.getAttribute('data-session-id') || '0';
+      var sesionEl = document.querySelector('[data-session-id]');
+      session_id   = sesionEl ? sesionEl.getAttribute('data-session-id') : null;
     }
   }
 
   if (!objective_id || !session_id) {
-    console.error('No se pudo obtener objective_id o session_id');
-    alert('Error: no se pudo obtener los datos de la sesión');
+    if (window.hyroxReactividad) {
+      window.hyroxReactividad.mostrarError('No se pudo identificar la sesión.', form);
+    } else {
+      alert('Error: no se pudo obtener los datos de la sesión');
+    }
     return;
   }
 
-  // Hacer fetch AJAX
-  fetch(`/hyrox/api/guardar-sesion/${objective_id}/${session_id}/`, {
-    method: 'POST',
-    body: formData,
-    headers: {
-      'X-Requested-With': 'XMLHttpRequest',
-    }
-  })
-  .then(response => response.json())
-  .then(data => {
-    // Remover spinner
-    spinner.remove();
+  var apiUrl = '/hyrox/api/guardar-sesion/' + objective_id + '/' + session_id + '/';
 
-    if (data.success) {
-      // Mostrar mensaje de éxito
-      const toast = document.createElement('div');
-      toast.style.cssText = `
-        position: fixed;
-        bottom: 30px;
-        right: 30px;
-        z-index: 10001;
-        background: #0a8854;
-        color: white;
-        padding: 14px 20px;
-        border-radius: 8px;
-        font-family: -apple-system, sans-serif;
-        font-size: 13px;
-        animation: slideUp 0.3s ease;
-      `;
-      toast.textContent = data.messages?.[0]?.text || '✅ Sesión guardada';
-      document.body.appendChild(toast);
+  // Usar el módulo externo si está cargado
+  if (window.hyroxReactividad && window.hyroxReactividad.handleAjaxSaveFromData) {
+    window.hyroxReactividad.handleAjaxSaveFromData(form, apiUrl);
+    return;
+  }
 
-      // Cerrar modal después de 1 segundo
-      setTimeout(() => {
-        document.getElementById('rb-modal')?.style?.display = 'none';
-        toast.remove();
-
-        // Actualizar dashboard si está disponible la función
-        if (window.updateDashboardFromSession && data.readiness_score !== undefined) {
-          updateDashboardFromSession({
-            readiness_score: data.readiness_score,
-            sesiones_proximas: data.sesiones_proximas
-          });
-        } else {
-          // Sino, recargar la página
-          setTimeout(() => { window.location.href = '/hyrox/dashboard/'; }, 500);
-        }
-      }, 500);
-    } else {
-      // Error
-      const errorMsg = data.error || 'Error al guardar';
-      const alertDiv = document.createElement('div');
-      alertDiv.style.cssText = `
-        position: fixed;
-        top: 20px;
-        left: 50%;
-        transform: translateX(-50%);
-        z-index: 10001;
-        background: #dc2626;
-        color: white;
-        padding: 16px 20px;
-        border-radius: 8px;
-        font-family: -apple-system, sans-serif;
-        font-size: 14px;
-        max-width: 400px;
-        box-shadow: 0 4px 6px rgba(0,0,0,.1);
-      `;
-      alertDiv.textContent = '❌ ' + errorMsg;
-      document.body.appendChild(alertDiv);
-
-      setTimeout(() => alertDiv.remove(), 5000);
-    }
-  })
-  .catch(error => {
-    spinner.remove();
-    console.error('Error saving session:', error);
-    const alertDiv = document.createElement('div');
-    alertDiv.style.cssText = `
-      position: fixed;
-      top: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 10001;
-      background: #dc2626;
-      color: white;
-      padding: 16px 20px;
-      border-radius: 8px;
-      font-family: -apple-system, sans-serif;
-      font-size: 14px;
-    `;
-    alertDiv.textContent = '❌ Error de conexión. Recargando...';
-    document.body.appendChild(alertDiv);
-
-    setTimeout(() => { window.location.href = '/hyrox/dashboard/'; }, 2000);
-  });
+  // Fallback inline (sin JS externo): submit POST tradicional
+  if (form) form.submit();
 }
 
 /* ───── BIO-SAFE ───── */
@@ -2116,6 +2013,8 @@ function sfNext() {
   rbNext();
 }
 </script>
+
+<script src="{% static 'js/hyrox_reactividad.js' %}"></script>
 
 {% include 'includes/_joi_fab.html' with mensaje_banner=joi_mensaje_hyrox|default:joi_mensaje_pendiente %}
 </body>
