@@ -912,7 +912,11 @@ class HyroxTrainingEngine:
         current_date = today
 
         for week in range(weeks_to_plan):
-            is_taper  = (weeks_to_plan - week) <= 2
+            # Taper solo si el EVENTO real está dentro de las próximas 2 semanas de esta
+            # semana del plan. Antes usaba (weeks_to_plan - week), lo que metía un taper
+            # prematuro al final de cada bloque de 16 semanas aunque el evento estuviera
+            # a meses vista (reducía la carga indebidamente).
+            is_taper  = (weeks_until_event - week) <= 2
             is_deload = (week % 4 == 3) and not is_taper  # Semana 4ª, 8ª, 12ª
 
             # Protocolo de Arranque en Frío
