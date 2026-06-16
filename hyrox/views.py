@@ -1013,6 +1013,17 @@ def hyrox_dashboard(request):
                 if ar['data_metricas__rpe']:
                     rpes_acum.setdefault(canon, []).append(int(ar['data_metricas__rpe']))
 
+        # Umbrales mínimos de tiempo válido por estación (segundos).
+        # Tiempos por debajo indican timer no activado o reset prematuro — se ignoran.
+        _MIN_SECS = {
+            'SkiErg': 60, 'Rowing': 60,
+            'Sled Push': 25, 'Sled Pull': 25,
+            'Burpee Broad Jumps': 60,
+            'Farmers Carry': 30,
+            'Sandbag Lunges': 60,
+            'Wall Balls': 30,
+        }
+
         for act in acts_timer:
             raw_secs = act.data_metricas.get('tiempo_segundos') or act.data_metricas.get('tiempo_s')
             mins     = act.data_metricas.get('tiempo_minutos')
@@ -1030,6 +1041,10 @@ def hyrox_dashboard(request):
                 v for k, v in NOMBRE_CANON.items() if k in nombre_lower
             ))
             if not canones:
+                continue
+
+            # Filtro de sanidad: ignorar tiempos imposiblemente cortos (timer no activado / reset)
+            if any(secs < _MIN_SECS.get(c, 10) for c in canones):
                 continue
             fecha_s = act.sesion.fecha or timezone.localdate()
             iso_w   = fecha_s.isocalendar()[:2]
