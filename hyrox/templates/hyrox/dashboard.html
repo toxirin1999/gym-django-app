@@ -3139,6 +3139,39 @@ function closeHelp() {
   document.body.style.overflow = '';
 }
 document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeHelp(); });
+
+/* ─────────────────────────────────────────
+   ACTUALIZACIÓN DINÁMICA DEL DASHBOARD
+   ───────────────────────────────────────── */
+function updateDashboardFromSession(data) {
+  // Actualizar readiness score si cambió
+  if (data.readiness_score !== undefined) {
+    const scoreEl = document.querySelector('[data-readiness-score]');
+    if (scoreEl) {
+      scoreEl.textContent = data.readiness_score + '%';
+      scoreEl.setAttribute('data-readiness-score', data.readiness_score);
+      // Cambiar color según el score
+      const color = data.readiness_score >= 70 ? '#0a8854' :
+                    data.readiness_score >= 50 ? '#ff9800' : '#dc2626';
+      if (scoreEl.parentElement) {
+        scoreEl.parentElement.style.color = color;
+      }
+    }
+  }
+
+  // Actualizar próximas sesiones si hay datos
+  if (data.sesiones_proximas && Array.isArray(data.sesiones_proximas)) {
+    const sesionesContainer = document.querySelector('[data-sesiones-container]');
+    if (sesionesContainer) {
+      sesionesContainer.innerHTML = data.sesiones_proximas.map(s => `
+        <div class="rb-sesion-item" style="padding: 12px; background: var(--bg-2); border: 1px solid var(--line); border-radius: 8px; margin-bottom: 8px;">
+          <div style="font-weight: 600; color: var(--fg);">${s.titulo}</div>
+          <div style="font-size: 12px; color: var(--fg-dim); margin-top: 4px;">${s.fecha} • ${s.estado}</div>
+        </div>
+      `).join('');
+    }
+  }
+}
 </script>
 
 {% include 'includes/_joi_fab.html' with mensaje_banner=joi_mensaje_hyrox|default:joi_mensaje_pendiente %}
