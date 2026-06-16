@@ -215,7 +215,10 @@ class HyroxObjective(models.Model):
                 lesion_preservation = inj.zona_afectada
                 break
 
-        alerta_inactividad = ""
+        # alerta_usuario: texto legible para mostrar en el dashboard.
+        # joi_hint: instrucciones internas para el generador JOI (no se muestran al usuario).
+        alerta_usuario = ""
+        joi_hint = ""
         from hyrox.services import HyroxMacrocycleEngine
         inactivo_run, dias_run, tiene_credito_futbol, preguntar_bool = HyroxMacrocycleEngine.detect_running_inactivity(self.cliente.user_id)
 
@@ -227,15 +230,19 @@ class HyroxObjective(models.Model):
         )
 
         if is_preservation:
-            alerta_inactividad = f"\n⚕️ MODO PRESERVACIÓN ACTIVO (Lesión {lesion_preservation}): Omitir penalizaciones por días sin carrera. Valora positivamente cualquier cardio sustituto para el Readiness."
+            alerta_usuario = f"\n⚕️ Modo preservación activo (lesión {lesion_preservation}): no se penaliza la falta de carrera. Cualquier cardio sustituto suma."
+            joi_hint = f"MODO PRESERVACIÓN (Lesión {lesion_preservation}): Omitir penalizaciones por días sin carrera. Valora positivamente cualquier cardio sustituto para el Readiness."
         elif preguntar_bool:
-            alerta_inactividad = "\n⚠️ ELIMINACIÓN DE CASTIGO: No asumas inactividad directamente. En tu saludo debes preguntar TEXTUALMENTE: 'David, no veo carreras esta semana. ¿Has sumado minutos con el fútbol o necesitamos reajustar el bloque?'"
+            alerta_usuario = "\n⚠️ No se ven carreras esta semana. ¿Has compensado con fútbol o conviene reajustar el bloque?"
+            joi_hint = "ELIMINACIÓN DE CASTIGO: No asumas inactividad directamente. En tu saludo pregunta TEXTUALMENTE: 'David, no veo carreras esta semana. ¿Has sumado minutos con el fútbol o necesitamos reajustar el bloque?'"
         elif inactivo_run and not tiene_credito_futbol:
-            alerta_inactividad = f"\n⚠️ ALERTA DE INACTIVIDAD AERÓBICA: Lleva {dias_run} días sin correr ni compensar con fútbol. DEBES dedicar tu mensaje a recordarle estrictamente que el motor aeróbico es crítico para {_fecha_evento_str}."
+            alerta_usuario = f"\n⚠️ Inactividad aeróbica: {dias_run} días sin correr ni compensar con fútbol. El motor aeróbico es crítico para {_fecha_evento_str}."
+            joi_hint = f"ALERTA DE INACTIVIDAD AERÓBICA: Lleva {dias_run} días sin correr ni compensar con fútbol. Dedica tu mensaje a recordarle que el motor aeróbico es crítico para {_fecha_evento_str}."
         elif inactivo_run and tiene_credito_futbol:
-            dias_penalizados = dias_run // 2 # 50% de reducción visual
-            alerta_inactividad = f"\n⚠️ ALERTA MITIGADA: Acumula {dias_run} días sin correr, pero gracias al FÚTBOL la penalización se reduce a un equivalente de {dias_penalizados} días. Recuérdale que el fútbol ayuda como mantenimiento, pero no sustituye la especificidad de Hyrox."
-        
+            dias_penalizados = dias_run // 2  # 50% de reducción visual
+            alerta_usuario = f"\n⚠️ {dias_run} días sin correr, pero el fútbol reduce la penalización a ~{dias_penalizados} días. El fútbol mantiene, no sustituye la especificidad de Hyrox."
+            joi_hint = f"ALERTA MITIGADA: Acumula {dias_run} días sin correr, pero gracias al FÚTBOL la penalización se reduce a ~{dias_penalizados} días. Recuérdale que el fútbol ayuda como mantenimiento, pero no sustituye la especificidad de Hyrox."
+
         insight = ""
         if ratio < 60:
             insight = "Prioridad: Empuje. Tu fuerza de tracción es dominante. Seguimos enfocados en cuádriceps para el Sled Push."
@@ -243,8 +250,12 @@ class HyroxObjective(models.Model):
             insight = "Equilibrio en progreso. Tu transferencia de fuerza a los Wall Balls está mejorando significativamente."
         else:
             insight = "Perfil equilibrado. Ahora el enfoque estratégico cambia a la resistencia bajo fatiga."
-            
-        return {"ratio": round(float(ratio), 1), "advice": insight + alerta_inactividad}
+
+        return {
+            "ratio": round(float(ratio), 1),
+            "advice": insight + alerta_usuario,
+            "joi_hint": (insight + "\n" + joi_hint).strip() if joi_hint else insight,
+        }
 
     def get_readiness_breakdown(self):
         """
