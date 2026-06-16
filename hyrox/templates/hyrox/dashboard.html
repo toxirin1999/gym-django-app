@@ -599,6 +599,233 @@ details[open] > summary i.fa-chevron-down { transform: rotate(180deg); }
 .hd-checkin-chip { display: inline-flex; align-items: center; gap: 4px; margin-left: auto; font-family: var(--font-mono); font-size: 9px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; padding: 2px 6px; border: 1px solid var(--line); border-radius: 2px; text-decoration: none; }
 .hd-checkin-chip--ok { color: var(--ok); border-color: rgba(0,168,90,.3); }
 .hd-checkin-chip--pendiente { color: var(--warn); border-color: rgba(255,184,0,.3); }
+
+.hd-pulso-badge { display: inline-flex; align-items: center; gap: 4px; font-family: var(--font-mono); font-size: 9px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; padding: 2px 6px; border-radius: 2px; margin: 0 8px; }
+.hd-pulso--protegiendo { color: var(--danger); background: rgba(239,68,68,.08); border: 1px solid rgba(239,68,68,.3); }
+.hd-pulso--progresando { color: var(--ok); background: rgba(0,168,90,.08); border: 1px solid rgba(0,168,90,.3); }
+.hd-pulso--silencioso { color: var(--fg-mute); background: rgba(156,163,175,.08); border: 1px solid rgba(156,163,175,.2); }
+
+/* ── PULSO CARD (Postura visual) ────────────────── */
+.pulso-card {
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  background: var(--bg-2);
+}
+
+.pulso-card .pulso-header {
+  padding: 16px;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.pulso-card .pulso-body {
+  padding: 16px;
+}
+
+.pulso-state-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  padding: 4px 8px;
+  border-radius: 2px;
+}
+
+.pulso-state-badge.pulso-protegiendo {
+  color: var(--danger);
+  background: rgba(239,68,68,.12);
+  border: 1px solid rgba(239,68,68,.4);
+}
+
+.pulso-state-badge.pulso-progresando {
+  color: var(--ok);
+  background: rgba(0,168,90,.12);
+  border: 1px solid rgba(0,168,90,.4);
+}
+
+.pulso-state-badge.pulso-silencioso {
+  color: var(--fg-mute);
+  background: rgba(156,163,175,.12);
+  border: 1px solid rgba(156,163,175,.3);
+}
+
+.pulso-motivo {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--fg-dim);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  margin: 0;
+}
+
+.pulso-msg {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--fg-dim);
+  margin: 0 0 12px;
+}
+
+.pulso-cambios {
+  background: rgba(0,168,90,.06);
+  border-left: 3px solid var(--ok);
+  padding: 10px 12px;
+  margin: 0 0 12px;
+  border-radius: 2px;
+}
+
+.pulso-cambios-label {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--ok);
+  margin: 0 0 6px;
+}
+
+.pulso-cambio-item {
+  font-size: 12px;
+  color: var(--fg-dim);
+  margin: 4px 0;
+}
+
+.pulso-routes {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.pulso-route {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 12px;
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  color: var(--fg);
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 600;
+  transition: all 200ms ease;
+}
+
+.pulso-route:hover {
+  background: rgba(255,107,0,.08);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.pulso-route-primary {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+.pulso-route-primary:hover {
+  background: var(--accent-2);
+  border-color: var(--accent-2);
+}
+
+.pulso-route-secondary {
+  background: transparent;
+  color: var(--fg-dim);
+  border-color: var(--line);
+}
+
+.pulso-route-secondary:hover {
+  background: rgba(255,255,255,.04);
+  color: var(--fg);
+  border-color: var(--accent);
+}
+
+.pulso-joi-presencia {
+  font-size: 11px;
+  color: var(--fg-mute);
+  font-style: italic;
+  margin: 8px 0 0;
+  padding-top: 8px;
+  border-top: 1px solid rgba(156,163,175,.2);
+}
+
+/* Postura: COMPACTA (Protegiendo) */
+.pulso-card.pulso-protegiendo {
+  border-left: 4px solid var(--danger);
+}
+
+.pulso-card.pulso-protegiendo .pulso-msg {
+  color: var(--fg);
+  font-weight: 500;
+}
+
+.pulso-card.pulso-compacta {
+  /* Una sola ruta, sin expansión */
+}
+
+.pulso-card.pulso-compacta .pulso-routes {
+  max-width: 240px;
+}
+
+/* Postura: ABIERTA (Progresando) */
+.pulso-card.pulso-progresando {
+  border-left: 4px solid var(--ok);
+  background: linear-gradient(to right, rgba(0,168,90,.04), transparent);
+}
+
+.pulso-card.pulso-abierta {
+  /* Múltiples rutas, más espacio */
+}
+
+.pulso-card.pulso-abierta .pulso-routes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.pulso-card.pulso-abierta .pulso-routes .pulso-route-primary {
+  grid-column: 1 / -1;
+}
+
+.pulso-card.pulso-abierta .pulso-cambios {
+  display: block;
+}
+
+/* Postura: MÍNIMA (Silencioso) */
+.pulso-card.pulso-silencioso {
+  border-left: 4px solid var(--fg-mute);
+  background: transparent;
+  border: 1px solid rgba(156,163,175,.2);
+}
+
+.pulso-card.pulso-minima {
+  padding: 24px 16px;
+  /* Menos elementos, más espacio */
+}
+
+.pulso-card.pulso-minima .pulso-header {
+  border-bottom: none;
+  padding: 0 0 12px;
+}
+
+.pulso-card.pulso-minima .pulso-body {
+  padding: 0;
+}
+
+.pulso-card.pulso-minima .pulso-msg {
+  margin: 0 0 16px;
+}
+
+.pulso-card.pulso-minima .pulso-joi-presencia {
+  display: none;
+}
+
 .hd-sesion-hoy { background: rgba(255,255,255,.03); border: 1px solid var(--line); border-radius: 2px; padding: 10px 12px; margin: 0 0 12px; }
 .hd-sesion-hoy-lbl { font-family: var(--font-mono); font-size: 9px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--fg-mute); margin-bottom: 4px; }
 .hd-sesion-hoy-title { font-size: 14px; font-weight: 700; color: var(--fg); margin-bottom: 2px; }
@@ -779,6 +1006,77 @@ details[open] > summary i.fa-chevron-down { transform: rotate(180deg); }
 
 {% else %}
 
+<!-- PULSO DEL ORGANISMO (Indicador de postura) -->
+{% if pulso %}
+<div style="padding:40px 40px 0;margin-bottom:24px;">
+  <section class="pulso-card pulso-{{ pulso.pulso }} pulso-{{ pulso.postura.estructura }}">
+
+    {% if pulso.pulso == "protegiendo" %}
+    <!-- Postura: PROTEGIENDO (compacta) -->
+    <div class="pulso-header">
+      <div class="pulso-state-badge pulso-protegiendo"><i class="fas fa-shield"></i> Protegiendo</div>
+      <p class="pulso-motivo">{{ pulso.motivo|title }}</p>
+    </div>
+    <div class="pulso-body">
+      <p class="pulso-msg">El sistema se contrae para recuperación dirigida.</p>
+      <div class="pulso-routes">
+        <a href="{% url 'hyrox:registrar_entrenamiento' objective_id=objetivo_activo.id %}?modo=protegida" class="pulso-route pulso-route-primary">
+          <i class="fas fa-heart"></i> Registrar recuperación
+        </a>
+      </div>
+      <p class="pulso-joi-presencia"><em>JOI observa.</em></p>
+    </div>
+
+    {% elif pulso.pulso == "progresando" %}
+    <!-- Postura: PROGRESANDO (abierta) -->
+    <div class="pulso-header">
+      <div class="pulso-state-badge pulso-progresando"><i class="fas fa-arrow-up"></i> Progresando</div>
+      <p class="pulso-motivo">Continuidad detectada</p>
+    </div>
+    <div class="pulso-body">
+      <p class="pulso-msg">El sistema se abre. Hay evidencia de progreso.</p>
+      {% if pulso.cambios %}
+      <div class="pulso-cambios">
+        <p class="pulso-cambios-label">Lo que cambió:</p>
+        {% for cambio in pulso.cambios %}
+        <div class="pulso-cambio-item">✓ {{ cambio }}</div>
+        {% endfor %}
+      </div>
+      {% endif %}
+      <div class="pulso-routes">
+        <a href="{% url 'hyrox:registrar_entrenamiento' objective_id=objetivo_activo.id %}" class="pulso-route pulso-route-primary">
+          <i class="fas fa-play"></i> Entrenar completo
+        </a>
+        <a href="{% url 'clientes:mockup_demo' %}" class="pulso-route pulso-route-secondary">
+          <i class="fas fa-chart-line"></i> Ver continuidad
+        </a>
+        <a href="{% url 'clientes:mockup_demo' %}" class="pulso-route pulso-route-secondary">
+          <i class="fas fa-sliders-h"></i> Explorar métricas
+        </a>
+      </div>
+      <p class="pulso-joi-presencia"><em>JOI tiene lectura pendiente.</em></p>
+    </div>
+
+    {% else %}
+    <!-- Postura: SILENCIOSO (mínima) -->
+    <div class="pulso-header">
+      <div class="pulso-state-badge pulso-silencioso"><i class="fas fa-circle"></i> Silencioso</div>
+      <p class="pulso-motivo">Sin ajuste nuevo</p>
+    </div>
+    <div class="pulso-body">
+      <p class="pulso-msg">Plan abierto. El sistema escucha sin forzar.</p>
+      <div class="pulso-routes">
+        <a href="{% url 'hyrox:registrar_entrenamiento' objective_id=objetivo_activo.id %}" class="pulso-route pulso-route-secondary">
+          <i class="fas fa-play"></i> Continuar plan
+        </a>
+      </div>
+    </div>
+    {% endif %}
+
+  </section>
+</div>
+{% endif %}
+
 <!-- DECISIÓN SOBERANA (Daily Briefing unificado) -->
 {% if hyrox_decision %}
 <div style="padding:8px 40px 0;margin-bottom:16px;">
@@ -790,6 +1088,11 @@ details[open] > summary i.fa-chevron-down { transform: rotate(180deg); }
   <div class="hd-decision-kicker">
     <span class="hd-decision-dot"></span>
     Estado de hoy
+    {% if pulso %}
+    <span class="hd-pulso-badge hd-pulso--{{ pulso.pulso }}">
+      {% if pulso.pulso == "protegiendo" %}<i class="fas fa-shield"></i> Protegiendo{% elif pulso.pulso == "progresando" %}<i class="fas fa-arrow-up"></i> Progresando{% else %}<i class="fas fa-circle"></i> Silencioso{% endif %}
+    </span>
+    {% endif %}
     {% if checkin_hoy %}
     <a href="{% url 'clientes:mockup_demo' %}" class="hd-checkin-chip hd-checkin-chip--ok">
       <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
