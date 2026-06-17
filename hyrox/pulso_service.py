@@ -47,11 +47,11 @@ class PulsoService:
             )
 
         # Regla 1b: Sesión muy reciente con RPE extremo → PROTEGIENDO (sensibilidad a sesiones actuales)
-        from django.utils import timezone
-        from datetime import timedelta
+        from datetime import datetime, time
         ultima_sesion = objetivo.sessions.filter(estado='completado').order_by('-fecha', '-id').first()
         if ultima_sesion:
-            hace = timezone.now() - timezone.datetime.combine(ultima_sesion.fecha, timezone.datetime.min.time())
+            sesion_datetime = timezone.make_aware(datetime.combine(ultima_sesion.fecha, time.min))
+            hace = timezone.now() - sesion_datetime
             es_reciente = hace.days == 0  # Sesión de hoy
             if es_reciente and ultima_sesion.rpe_global and ultima_sesion.rpe_global >= 10:
                 return cls._pulso_protegiendo(
