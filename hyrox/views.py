@@ -2089,10 +2089,22 @@ def registrar_entrenamiento(request, objective_id, session_id=None):
     objetivo = get_object_or_404(HyroxObjective, id=objective_id, cliente=request.user.cliente_perfil)
     hoy = timezone.now().date()
 
+    # Phase 1D: Si modo=protegida&nueva=true, siempre crear sesión nueva (recuperación)
+    crear_sesion_nueva = request.GET.get('nueva') == 'true'
+
     # Si se pasa un session_id explícito, cargamos esa sesión concreta;
     # si no, buscamos la sesión de hoy (comportamiento previo para el botón "Registrar Entreno")
+    # Excepto si crear_sesion_nueva=true (recuperación activa)
     if session_id:
         sesion_planificada = get_object_or_404(HyroxSession, id=session_id, objective=objetivo)
+    elif crear_sesion_nueva:
+        # Crear sesión nueva explícitamente para recuperación activa
+        sesion_planificada = HyroxSession.objects.create(
+            objective=objetivo,
+            fecha=hoy,
+            estado='planificado',
+            titulo='Recuperación Activa'
+        ) if request.method == 'GET' else None
     else:
         sesion_planificada = HyroxSession.objects.filter(
             objective=objetivo,

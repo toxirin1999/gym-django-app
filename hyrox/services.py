@@ -3671,7 +3671,7 @@ def _construir_rutas_pulso(estado, objetivo):
         if estado == 'protegiendo':
             return [
                 {
-                    'href': f'/hyrox/registrar-entrenamiento/{objetivo_id}/?modo=protegida',
+                    'href': f'/hyrox/registrar-entrenamiento/{objetivo_id}/?modo=protegida&nueva=true',
                     'label': 'Registrar recuperación',
                     'icon': 'fa-heart',
                     'class': 'pulso-route-primary'
