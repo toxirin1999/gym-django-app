@@ -26,7 +26,7 @@ La habitación es el único lugar donde una lectura se considera recibida.
 @keyframes joiFabIn{from{transform:translateY(-100%);opacity:0}to{transform:translateY(0);opacity:1}}
 </style>
 
-{% with mensaje_banner=mensaje_banner|default:joi_mensaje_pendiente %}
+{% with mensaje_banner=mensaje_banner|default:"" %}
 <a href="/joi/habitacion/" class="joi-fab" aria-label="La Habitación de JOI">
   <span class="joi-fab-punto {% if mensaje_banner %}activo{% endif %}"></span>
 </a>
