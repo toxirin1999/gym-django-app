@@ -208,46 +208,138 @@
 
   function actualizarPulso(pulsoData) {
     var card = document.getElementById('pulso-card');
-    if (!card) return;
+    if (!card || !pulsoData || !pulsoData.pulso) return;
 
-    var estado = pulsoData.pulso || 'silencioso';
-    var postura = (pulsoData.postura && pulsoData.postura.estructura) || 'minima';
+    var estado = pulsoData.pulso;
+    var estructura = (pulsoData.postura && pulsoData.postura.estructura) || 'minima';
 
-    // Actualizar clases del card
-    card.className = 'pulso-card pulso-' + estado + ' pulso-' + postura;
+    // Reconstruir HTML completo del card según el estado
+    // (Cada estado tiene estructura radicalmente distinta)
+    var html = _renderPulsoHTML(estado, pulsoData);
 
-    // Badge de estado
-    var badge = card.querySelector('.pulso-state-badge');
-    if (badge) {
-      badge.className = 'pulso-state-badge pulso-' + estado;
-      if (estado === 'protegiendo') {
-        badge.innerHTML = '<i class="fas fa-shield"></i> Protegiendo';
-      } else if (estado === 'progresando') {
-        badge.innerHTML = '<i class="fas fa-arrow-up"></i> Progresando';
-      } else {
-        badge.innerHTML = '<i class="fas fa-circle"></i> Silencioso';
-      }
-    }
+    // Inyectar HTML
+    card.innerHTML = html;
 
-    // Mensaje del pulso
-    var msg = card.querySelector('.pulso-msg');
-    if (msg && pulsoData.contexto) {
-      // textContent para evitar XSS — contexto es texto plano del backend
-      msg.textContent = pulsoData.contexto;
-    }
+    // Actualizar clases del contenedor
+    card.className = 'pulso-card pulso-' + estado + ' pulso-' + estructura;
 
-    // Badge inline en la sección de decision
+    // Actualizar badge inline en la sección de decision (si existe)
     var hdBadge = document.querySelector('.hd-pulso-badge');
     if (hdBadge) {
       hdBadge.className = 'hd-pulso-badge hd-pulso--' + estado;
-      if (estado === 'protegiendo') {
-        hdBadge.innerHTML = '<i class="fas fa-shield"></i> Protegiendo';
-      } else if (estado === 'progresando') {
-        hdBadge.innerHTML = '<i class="fas fa-arrow-up"></i> Progresando';
-      } else {
-        hdBadge.innerHTML = '<i class="fas fa-circle"></i> Silencioso';
-      }
+      var badgeIcon = estado === 'protegiendo' ? 'fa-shield' :
+                      estado === 'progresando' ? 'fa-arrow-up' : 'fa-circle';
+      var badgeText = estado.charAt(0).toUpperCase() + estado.slice(1);
+      hdBadge.innerHTML = '<i class="fas ' + badgeIcon + '"></i> ' + badgeText;
     }
+  }
+
+  /**
+   * _renderPulsoHTML — Construye el HTML completo del Pulso card desde JSON
+   * Cada estado tiene estructura visual distinta:
+   * - PROTEGIENDO: compacta, 1 ruta de recuperación
+   * - PROGRESANDO: abierta, múltiples rutas + cambios listados
+   * - SILENCIOSO: mínima, 1 ruta de continuidad
+   */
+  function _renderPulsoHTML(estado, datos) {
+    var html = '';
+
+    if (estado === 'protegiendo') {
+      html = _renderProtegiendo(datos);
+    } else if (estado === 'progresando') {
+      html = _renderProgresando(datos);
+    } else {
+      html = _renderSilencioso(datos);
+    }
+
+    return html;
+  }
+
+  function _renderProtegiendo(datos) {
+    var motivo = datos.motivo || 'Protección';
+    var contexto = datos.contexto || 'El sistema se contrae para recuperación dirigida.';
+    var rutas = datos.rutas || [];
+
+    var html = '<div class="pulso-header">';
+    html += '<div class="pulso-state-badge pulso-protegiendo"><i class="fas fa-shield"></i> Protegiendo</div>';
+    html += '<p class="pulso-motivo">' + _escapeHTML(motivo) + '</p>';
+    html += '</div>';
+    html += '<div class="pulso-body">';
+    html += '<p class="pulso-msg">' + _escapeHTML(contexto) + '</p>';
+    html += '<div class="pulso-routes">';
+    rutas.forEach(function (ruta) {
+      html += '<a href="' + _escapeHTML(ruta.href) + '" class="pulso-route ' + (ruta.class || 'pulso-route-primary') + '">';
+      html += '<i class="fas ' + ruta.icon + '"></i> ' + _escapeHTML(ruta.label);
+      html += '</a>';
+    });
+    html += '</div>';
+    html += '<p class="pulso-joi-presencia"><em>JOI observa.</em></p>';
+    html += '</div>';
+    return html;
+  }
+
+  function _renderProgresando(datos) {
+    var contexto = datos.contexto || 'El sistema se abre. Hay evidencia de progreso.';
+    var cambios = datos.cambios || [];
+    var rutas = datos.rutas || [];
+
+    var html = '<div class="pulso-header">';
+    html += '<div class="pulso-state-badge pulso-progresando"><i class="fas fa-arrow-up"></i> Progresando</div>';
+    html += '<p class="pulso-motivo">Continuidad detectada</p>';
+    html += '</div>';
+    html += '<div class="pulso-body">';
+    html += '<p class="pulso-msg">' + _escapeHTML(contexto) + '</p>';
+
+    if (cambios && cambios.length > 0) {
+      html += '<div class="pulso-cambios">';
+      html += '<p class="pulso-cambios-label">Lo que cambió:</p>';
+      cambios.forEach(function (cambio) {
+        html += '<div class="pulso-cambio-item">✓ ' + _escapeHTML(cambio) + '</div>';
+      });
+      html += '</div>';
+    }
+
+    html += '<div class="pulso-routes">';
+    rutas.forEach(function (ruta) {
+      html += '<a href="' + _escapeHTML(ruta.href) + '" class="pulso-route ' + (ruta.class || 'pulso-route-secondary') + '">';
+      html += '<i class="fas ' + ruta.icon + '"></i> ' + _escapeHTML(ruta.label);
+      html += '</a>';
+    });
+    html += '</div>';
+    html += '<p class="pulso-joi-presencia"><em>JOI tiene lectura pendiente.</em></p>';
+    html += '</div>';
+    return html;
+  }
+
+  function _renderSilencioso(datos) {
+    var contexto = datos.contexto || 'Plan abierto. El sistema escucha sin forzar.';
+    var rutas = datos.rutas || [];
+
+    var html = '<div class="pulso-header">';
+    html += '<div class="pulso-state-badge pulso-silencioso"><i class="fas fa-circle"></i> Silencioso</div>';
+    html += '<p class="pulso-motivo">Sin ajuste nuevo</p>';
+    html += '</div>';
+    html += '<div class="pulso-body">';
+    html += '<p class="pulso-msg">' + _escapeHTML(contexto) + '</p>';
+    html += '<div class="pulso-routes">';
+    rutas.forEach(function (ruta) {
+      html += '<a href="' + _escapeHTML(ruta.href) + '" class="pulso-route ' + (ruta.class || 'pulso-route-secondary') + '">';
+      html += '<i class="fas ' + ruta.icon + '"></i> ' + _escapeHTML(ruta.label);
+      html += '</a>';
+    });
+    html += '</div>';
+    html += '</div>';
+    return html;
+  }
+
+  /**
+   * _escapeHTML — Escapa caracteres peligrosos para prevenir XSS
+   */
+  function _escapeHTML(texto) {
+    if (!texto) return '';
+    var div = document.createElement('div');
+    div.textContent = texto;
+    return div.innerHTML;
   }
 
   function actualizarHyroxDecision(decision) {

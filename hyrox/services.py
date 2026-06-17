@@ -3621,7 +3621,10 @@ def _calcular_hyrox_decision_payload(objetivo, readiness_score):
 
 
 def _calcular_pulso_payload(objetivo, readiness_score):
-    """Helper: devuelve pulso como dict serializable para JSON."""
+    """
+    Helper: devuelve pulso como dict serializable para JSON.
+    Incluye toda la información necesaria para que el frontend renderice HTML completo.
+    """
     try:
         from .pulso_service import PulsoService
         from .models import UserInjury
@@ -3633,13 +3636,76 @@ def _calcular_pulso_payload(objetivo, readiness_score):
         )
         if pulso is None:
             return None
+
         postura = pulso.get('postura', {})
+        estado = pulso.get('pulso')
+
+        # Construir rutas según el estado
+        rutas = _construir_rutas_pulso(estado, objetivo)
+
+        # Extraer información para la UI
         return {
-            'pulso': pulso.get('pulso'),
+            'pulso': estado,
+            'motivo': pulso.get('motivo'),
+            'contexto': pulso.get('contexto'),
+            'cambios': pulso.get('cambios'),  # list para PROGRESANDO
             'postura': {
                 'estructura': postura.get('estructura'),
                 'rutas': postura.get('rutas'),
             } if isinstance(postura, dict) else {},
+            'rutas': rutas,  # información de rutas para renderizar links
         }
     except Exception:
         return None
+
+
+def _construir_rutas_pulso(estado, objetivo):
+    """
+    Devuelve lista de rutas según el estado del Pulso.
+    Cada ruta tiene: {href, label, icon, class}
+    """
+    try:
+        from django.urls import reverse
+        objetivo_id = objetivo.id
+
+        if estado == 'protegiendo':
+            return [
+                {
+                    'href': f'/hyrox/registrar-entrenamiento/{objetivo_id}/?modo=protegida',
+                    'label': 'Registrar recuperación',
+                    'icon': 'fa-heart',
+                    'class': 'pulso-route-primary'
+                }
+            ]
+        elif estado == 'progresando':
+            return [
+                {
+                    'href': f'/hyrox/registrar-entrenamiento/{objetivo_id}/',
+                    'label': 'Entrenar completo',
+                    'icon': 'fa-play',
+                    'class': 'pulso-route-primary'
+                },
+                {
+                    'href': '/clientes/mockup/',
+                    'label': 'Ver continuidad',
+                    'icon': 'fa-chart-line',
+                    'class': 'pulso-route-secondary'
+                },
+                {
+                    'href': '/clientes/mockup/',
+                    'label': 'Explorar métricas',
+                    'icon': 'fa-sliders-h',
+                    'class': 'pulso-route-secondary'
+                }
+            ]
+        else:  # silencioso
+            return [
+                {
+                    'href': f'/hyrox/registrar-entrenamiento/{objetivo_id}/',
+                    'label': 'Continuar plan',
+                    'icon': 'fa-play',
+                    'class': 'pulso-route-secondary'
+                }
+            ]
+    except Exception:
+        return []
