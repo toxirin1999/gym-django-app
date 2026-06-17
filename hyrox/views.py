@@ -2268,7 +2268,21 @@ def registrar_entrenamiento(request, objective_id, session_id=None):
                     self.is_substituted = False
             actividades_planificadas = [_SnapshotAct(item) for item in plan_original_snapshot]
 
-        form = HyroxSessionNotesForm(initial={'titulo': titulo_limpio})
+        # Phase 1D: Detectar modo protegida y precargar con datos de recuperación activa
+        modo_protegida_param = request.GET.get('modo') == 'protegida'
+        initial_data = {'titulo': titulo_limpio}
+
+        if modo_protegida_param:
+            # Precargar datos para sesión de recuperación activa mínima
+            initial_data.update({
+                'titulo': 'Recuperación Activa',
+                'tiempo_total_minutos': 25,
+                'rpe_global': 3,
+                'notas_raw': '• Movilidad general — 8 min\n• Respiración/descarga — 5 min\n• Caminata suave o bici suave — 10–15 min\n• Estiramientos suaves — 5 min',
+                'nivel_energia_pre': 5,
+            })
+
+        form = HyroxSessionNotesForm(initial=initial_data)
 
     from .station_intelligence import HyroxStationIntelligence as _SI_reg
     _sf_stations = [

@@ -701,9 +701,11 @@
 <body>
 
 {% if modo_protegida %}
-<div style="background:oklch(0.72 0.17 70);color:#0F0F0E;padding:7px 16px;font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;display:flex;align-items:center;gap:8px;flex-shrink:0;">
-  <span>⚠</span>
-  <span>Sesión protegida — Reduce volumen e intensidad. La carga reciente supera tu línea habitual.</span>
+<div style="background:oklch(0.72 0.17 70);color:#0F0F0E;padding:12px 16px;font-family:system-ui,sans-serif;font-size:12px;display:flex;align-items:flex-start;gap:12px;flex-shrink:0;">
+  <span style="font-size:18px;flex-shrink:0;margin-top:-2px;">🛡️</span>
+  <div>
+    <strong>Recuperación Activa</strong> — El sistema detectó esfuerzo extremo. Esta sesión está preconfigurada con actividades ligeras (movilidad, estiramientos, caminata suave). Objetivo: cerrar el día sin añadir fatiga.
+  </div>
 </div>
 {% endif %}
 <noscript>
