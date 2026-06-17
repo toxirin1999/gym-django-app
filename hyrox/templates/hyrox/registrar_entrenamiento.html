@@ -711,7 +711,7 @@
     Habilita JavaScript para la experiencia completa. El formulario funciona igualmente de forma tradicional.
   </div>
 </noscript>
-<form method="post" id="formRegistrarEntrenamiento" class="rb-stage">
+<form method="post" id="formRegistrarEntrenamiento" class="rb-stage" data-session-id="{% if sesion_planificada %}{{ sesion_planificada.id }}{% endif %}">
   {% csrf_token %}
   <div style="display:none">{{ form.titulo }}</div>
   <textarea name="notas_raw" id="id_notas_raw" style="display:none"></textarea>
