@@ -2100,6 +2100,15 @@ def registrar_entrenamiento(request, objective_id, session_id=None):
             estado='planificado'
         ).first()
 
+    # Si no hay sesión (libre), crearla para poder pasar session_id al form
+    if not sesion_planificada and request.method == 'GET':
+        sesion_planificada = HyroxSession.objects.create(
+            objective=objetivo,
+            fecha=hoy,
+            estado='planificado',
+            titulo='Sesión Libre'
+        )
+
     from .models import UserInjury
     lesion_activa = UserInjury.objects.filter(cliente=request.user.cliente_perfil, activa=True).first()
 
