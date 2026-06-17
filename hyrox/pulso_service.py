@@ -32,15 +32,19 @@ class PulsoService:
             - contexto: str descriptivo
             - postura: dict con instrucciones visuales
         """
+        import logging
+        _log = logging.getLogger('hyrox.pulso')
 
         # Regla 1: Lesión activa o readiness muy bajo → PROTEGIENDO
         if lesion_activa and lesion_activa.activa:
+            _log.info(f'[Pulso] PROTEGIENDO por lesión_activa (fase={lesion_activa.fase})')
             return cls._pulso_protegiendo(
                 motivo="lesión_activa",
                 readiness_score=readiness_score
             )
 
         if readiness_score < 40:
+            _log.info(f'[Pulso] PROTEGIENDO por readiness_bajo (score={readiness_score})')
             return cls._pulso_protegiendo(
                 motivo="readiness_bajo",
                 readiness_score=readiness_score
@@ -53,7 +57,9 @@ class PulsoService:
             sesion_datetime = timezone.make_aware(datetime.combine(ultima_sesion.fecha, time.min))
             hace = timezone.now() - sesion_datetime
             es_reciente = hace.days == 0  # Sesión de hoy
+            _log.info(f'[Pulso] ultima_sesion: id={ultima_sesion.id} fecha={ultima_sesion.fecha} rpe={ultima_sesion.rpe_global} es_reciente={es_reciente}')
             if es_reciente and ultima_sesion.rpe_global and ultima_sesion.rpe_global >= 10:
+                _log.info(f'[Pulso] PROTEGIENDO por esfuerzo_extremo (RPE={ultima_sesion.rpe_global})')
                 return cls._pulso_protegiendo(
                     motivo="esfuerzo_extremo",
                     readiness_score=readiness_score
@@ -67,11 +73,13 @@ class PulsoService:
                 historial_reciente.get("molestia_resuelta")
             )
             if hay_progreso and readiness_score >= 50:
+                _log.info(f'[Pulso] PROGRESANDO por progreso reciente')
                 return cls._pulso_progresando(
                     historial_reciente=historial_reciente
                 )
 
         # Regla 3: Default → SILENCIOSO (presente sin fuerza)
+        _log.info(f'[Pulso] SILENCIOSO (readiness={readiness_score}, historial_reciente={bool(historial_reciente)})')
         return cls._pulso_silencioso(readiness_score=readiness_score)
 
     @classmethod
