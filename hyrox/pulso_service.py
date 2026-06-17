@@ -46,6 +46,19 @@ class PulsoService:
                 readiness_score=readiness_score
             )
 
+        # Regla 1b: Sesión muy reciente con RPE extremo → PROTEGIENDO (sensibilidad a sesiones actuales)
+        from django.utils import timezone
+        from datetime import timedelta
+        ultima_sesion = objetivo.sessions.filter(estado='completado').order_by('-fecha', '-id').first()
+        if ultima_sesion:
+            hace = timezone.now() - timezone.datetime.combine(ultima_sesion.fecha, timezone.datetime.min.time())
+            es_reciente = hace.days == 0  # Sesión de hoy
+            if es_reciente and ultima_sesion.rpe_global and ultima_sesion.rpe_global >= 10:
+                return cls._pulso_protegiendo(
+                    motivo="esfuerzo_extremo",
+                    readiness_score=readiness_score
+                )
+
         # Regla 2: Progreso reciente → PROGRESANDO
         if historial_reciente:
             hay_progreso = (
