@@ -116,10 +116,14 @@
           updateDashboardFromJSON(payload);
           mostrarMensajes(payload.messages || []);
 
-          // Redirigir al dashboard tras confirmar la actualización
+          // Cerrar modal sin redirigir
+          // El usuario ve los cambios en el dashboard actual
           setTimeout(function () {
-            window.location.href = '/hyrox/dashboard/';
-          }, 1200);
+            limpiarEstadoGuardado();
+            // Cerrar el modal si existe (no redirigir)
+            var modal = document.querySelector('[data-modal-close]');
+            if (modal) modal.click();
+          }, 800);
         }, 500);
       }, 800);
     })
@@ -762,8 +766,10 @@
           mostrarMensajes(payload.messages || []);
 
           setTimeout(function () {
-            window.location.href = '/hyrox/dashboard/';
-          }, 1200);
+            limpiarEstadoGuardado();
+            var modal = document.querySelector('[data-modal-close]');
+            if (modal) modal.click();
+          }, 800);
         }, 500);
       }, 800);
     })
