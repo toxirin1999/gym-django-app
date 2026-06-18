@@ -39,11 +39,37 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
-      padding: max(3rem, env(safe-area-inset-top, 2.4rem)) 2rem max(6rem, env(safe-area-inset-bottom, 4rem));
+      justify-content: space-between;
+      padding: max(2.5rem, env(safe-area-inset-top, 2rem)) 2rem max(2rem, env(safe-area-inset-bottom, 1.5rem));
       position: relative;
       overflow: hidden;
       gap: 0;
+    }
+
+    /* Zonas de layout */
+    .joi-zona-presencia {
+      flex: 0 1 auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .joi-zona-interaccion {
+      flex: 1 0 auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      max-width: 480px;
+      gap: 1.2rem;
+    }
+
+    .joi-zona-navegacion {
+      flex: 0 0 auto;
+      width: 100%;
+      margin-top: 2rem;
     }
 
     .habitacion-wrap::before {
@@ -354,23 +380,25 @@
     /* Estados cambrian tamaño de vigilia, input, visibilidad de narrativa */
 
     .joi-estado-silencio {
-      justify-content: center;
+      justify-content: space-between;
     }
     .joi-estado-silencio .vigilia-contenedor {
-      opacity: 1; margin-bottom: 1.4rem;
+      opacity: 1; margin-bottom: 0.6rem;
     }
     .joi-estado-silencio .vigilia-texto {
       display: block !important;
       opacity: 0.85;
       font-size: 0.95rem;
-      margin-top: 1.2rem;
+      margin-top: 0.4rem;
       visibility: visible !important;
     }
     .joi-estado-silencio .joi-mensaje-wrap {
       display: none;
     }
     .joi-estado-silencio .postura-zona {
-      opacity: 0.5; margin-top: 1.6rem; max-width: 360px;
+      opacity: 0.55;
+      margin-top: 0;
+      max-width: 360px;
     }
     .joi-estado-silencio .narrativa-fondo-detalle {
       display: none;
@@ -380,15 +408,15 @@
     }
 
     .joi-estado-presente {
-      justify-content: flex-start;
-      padding-top: max(2rem, env(safe-area-inset-top, 2rem));
+      justify-content: space-between;
     }
     .joi-estado-presente .vigilia-contenedor {
       display: none;
     }
     .joi-estado-presente .joi-mensaje-wrap {
       display: block;
-      margin-top: 1rem;
+      margin-top: 0;
+      flex: 0 1 auto;
     }
 
     .joi-estado-protegiendo .vigilia-contenedor {
