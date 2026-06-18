@@ -1863,6 +1863,21 @@ def hyrox_dashboard(request):
         estado_entreno=_estado_entreno,
         senales_secundarias=_senales_secundarias,
     )
+    # ── Verificar si ya hay sesión completada hoy (app viva) ──────
+    sesion_completada_hoy = None
+    if objetivo_activo:
+        sesion_completada_hoy = HyroxSession.objects.filter(
+            objective=objetivo_activo,
+            estado='completado',
+            fecha=hoy
+        ).first()
+    context['sesion_completada_hoy'] = sesion_completada_hoy
+
+    # Si hay sesión completada hoy, el botón "Continuar plan" no debería aparecer
+    if sesion_completada_hoy:
+        hyrox_decision['puede_ejecutar_plan'] = False
+        hyrox_decision['accion_label'] = 'Sesión completada'
+
     context['hyrox_decision'] = hyrox_decision
 
     # ── Lectura cualitativa de disponibilidad — panel "Estado de hoy" ─────────
