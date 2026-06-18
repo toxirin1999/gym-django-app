@@ -499,6 +499,35 @@
       border-color: rgba(0, 220, 255, 0.35);
       color: var(--ink);
     }
+
+    /* Motivo/razón de estado */
+    .joi-motivo-detalle {
+      margin-top: 1.2rem;
+      padding: 0.8rem;
+      border: 1px solid rgba(232, 248, 255, 0.1);
+      border-radius: 6px;
+      background: rgba(0, 0, 0, 0.1);
+      font-size: 0.85rem;
+      color: var(--ink-soft);
+      opacity: 0.8;
+    }
+    .joi-motivo-summary {
+      cursor: pointer;
+      font-weight: 300;
+      font-style: italic;
+      padding: 0.2rem;
+      user-select: none;
+      transition: opacity 0.3s;
+    }
+    .joi-motivo-summary:hover {
+      opacity: 1;
+    }
+    .joi-motivo-texto {
+      margin-top: 0.6rem;
+      line-height: 1.4;
+      padding: 0;
+      margin-bottom: 0;
+    }
   </style>
 </head>
 <body>
@@ -592,6 +621,13 @@
       <p class="narrativa-capa narrativa-media">{{ narrativa.capa_media }}</p>
       {% endif %}
     </div>
+  </details>
+  {% endif %}
+
+  {% if joi_texto_motivo %}
+  <details class="joi-motivo-detalle joi-motivo-{{ joi_motivo }}" open="open">
+    <summary class="joi-motivo-summary">Por qué este estado</summary>
+    <p class="joi-motivo-texto">{{ joi_texto_motivo }}</p>
   </details>
   {% endif %}
 
