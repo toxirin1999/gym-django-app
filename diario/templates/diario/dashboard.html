@@ -49,6 +49,17 @@
 .hoy-status-value.hecho { color: var(--accent); }
 .hoy-status-value.joi { color: var(--green); }
 
+/* Estado claro del ciclo */
+.hoy-estado-claro { margin-bottom: 1rem; }
+.hoy-titulo-estado {
+    font-size: 1.1rem; font-weight: 600; color: var(--text);
+    margin: 0 0 0.3rem; line-height: 1.3;
+}
+.hoy-detalle-estado {
+    font-size: 0.85rem; color: var(--muted); margin: 0;
+    line-height: 1.35;
+}
+
 @media (max-width: 480px) {
     .hoy-status { gap: 0.75rem; flex-wrap: wrap; }
 }
@@ -130,50 +141,55 @@
         <div class="diario-date">{{ hoy|fecha_es_dia|capfirst }}</div>
     </div>
 
-    <!-- 1. HOY — hero -->
+    <!-- 1. HOY — Estado claro del ciclo diario -->
     <div class="hoy-section">
         <div class="hoy-estado-label">Hoy</div>
-        <div class="hoy-frase">
+
+        <!-- Estado claro del ciclo -->
+        <div class="hoy-estado-claro">
             {% if estado_dia.estado == 'sin_entrada' %}
-            El día todavía no tiene forma.
+            <h2 class="hoy-titulo-estado">Día sin abrir</h2>
+            <p class="hoy-detalle-estado">Aún no has hecho la apertura de hoy.</p>
             {% elif estado_dia.estado == 'manana_hecha' %}
-            La mañana dejó una señal.
+            <h2 class="hoy-titulo-estado">Día abierto</h2>
+            <p class="hoy-detalle-estado">La apertura está hecha. Falta cerrar el día.</p>
             {% elif estado_dia.estado == 'solo_noche' %}
-            Solo quedó el cierre.
-            {% elif estado_dia.tiene_lectura_joi %}
-            El día está registrado. Hay lectura JOI.
+            <h2 class="hoy-titulo-estado">Cierre registrado</h2>
+            <p class="hoy-detalle-estado">Hoy quedó registrado el cierre, aunque no hubo apertura.</p>
             {% else %}
-            El día está registrado.
+            <h2 class="hoy-titulo-estado">Día completo</h2>
+            <p class="hoy-detalle-estado">Apertura y cierre registrados.</p>
             {% endif %}
         </div>
+
+        <!-- Status bar (mañana/noche/joi) -->
         <div class="hoy-status">
             <div class="hoy-status-item">
                 <span class="hoy-status-label">Mañana</span>
-                <span class="hoy-status-value {% if estado_dia.manana_hecha %}hecho{% endif %}">{% if estado_dia.manana_hecha %}Completa{% else %}Pendiente{% endif %}</span>
+                <span class="hoy-status-value {% if estado_dia.manana_hecha %}hecho{% endif %}">{% if estado_dia.manana_hecha %}✓{% else %}—{% endif %}</span>
             </div>
             <div class="hoy-status-item">
                 <span class="hoy-status-label">Noche</span>
-                <span class="hoy-status-value {% if estado_dia.noche_hecha %}hecho{% endif %}">{% if estado_dia.noche_hecha %}Completa{% else %}Pendiente{% endif %}</span>
+                <span class="hoy-status-value {% if estado_dia.noche_hecha %}hecho{% endif %}">{% if estado_dia.noche_hecha %}✓{% else %}—{% endif %}</span>
             </div>
             {% if estado_dia.tiene_lectura_joi %}
             <div class="hoy-status-item">
                 <span class="hoy-status-label">JOI</span>
-                <span class="hoy-status-value joi">Lista</span>
+                <span class="hoy-status-value joi">✓</span>
             </div>
             {% endif %}
         </div>
+
+        <!-- CTA principal único por estado -->
         <div class="hoy-cta">
             {% if estado_dia.estado == 'sin_entrada' %}
-            <a href="{% url 'diario:presencia_apertura' %}" class="hoy-btn-primary">Abrir el día</a>
+            <a href="{% url 'diario:presencia_apertura' %}" class="hoy-btn-primary">Abrir día</a>
             {% elif estado_dia.estado == 'manana_hecha' %}
-            <a href="{% url 'diario:presencia_cierre' %}" class="hoy-btn-primary">Cerrar el día</a>
-            <a href="{% url 'diario:presencia_apertura' %}" class="hoy-btn-secondary">Ver apertura</a>
+            <a href="{% url 'diario:presencia_cierre' %}" class="hoy-btn-primary">Completar cierre</a>
             {% elif estado_dia.estado == 'solo_noche' %}
             <a href="{% url 'diario:presencia_cierre' %}" class="hoy-btn-primary">Ver cierre</a>
-            {% elif estado_dia.tiene_lectura_joi %}
-            <a href="{% url 'diario:presencia_cierre' %}" class="hoy-btn-primary">Ver lectura JOI</a>
             {% else %}
-            <a href="{% url 'diario:presencia_cierre' %}" class="hoy-btn-primary">Ver cierre</a>
+            <a href="{% url 'diario:presencia_cierre' %}" class="hoy-btn-primary">Ver lectura</a>
             {% endif %}
         </div>
     </div>
