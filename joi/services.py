@@ -3761,18 +3761,20 @@ def determinar_estado_habitacion_joi(usuario):
     Estados posibles:
     - PROTEGIENDO: cuerpo en protección (Pulso PROTEGIENDO, RPE extremo, lesión activa)
     - PRESENTE: hay lectura clara (mensaje JOI hoy + narrativa activa)
+    - OBSERVANDO: hay señal reciente sin lectura formada (diario hoy sin narrativa, sesión reciente sin RPE extremo)
     - SILENCIO: sin señal clara (presencia intencional, no ausencia de datos)
 
     Prioridad absoluta:
     1. PROTEGIENDO (si alguna señal de protección)
     2. PRESENTE (si hay mensaje o narrativa)
-    3. SILENCIO (default)
+    3. OBSERVANDO (si hay movimiento reciente sin lectura)
+    4. SILENCIO (default)
 
     Args:
         usuario: Django User object
 
     Returns:
-        str: 'PROTEGIENDO' | 'PRESENTE' | 'SILENCIO'
+        str: 'PROTEGIENDO' | 'PRESENTE' | 'OBSERVANDO' | 'SILENCIO'
     """
     try:
         from hyrox.models import HyroxObjective, HyroxSession
@@ -3867,6 +3869,27 @@ def determinar_estado_habitacion_joi(usuario):
                 return 'PRESENTE'
         except Exception as e:
             logger.warning(f"[JOI Estado] Narrativa check failed: {e}")
+
+        # ─ PRIORIDAD 3: OBSERVANDO ──────────────────────────────────────────
+        # Hay señal reciente, pero no hay lectura formada
+        # Detecta: diario hoy sin narrativa/mensaje
+
+        try:
+            from clientes.models import BitacoraDiaria
+
+            # Signal 1: Diario hoy sin narrativa activa ni mensaje JOI
+            # (La entrada en diario significa que hay reflexión, pero sin narrativa formada)
+            diario_hoy = BitacoraDiaria.objects.filter(
+                cliente__user=usuario,
+                fecha=today
+            ).exists()
+
+            if diario_hoy:
+                logger.info(f"[JOI Estado] {usuario.username}: OBSERVANDO (Diario hoy)")
+                return 'OBSERVANDO'
+
+        except Exception as e:
+            logger.warning(f"[JOI Estado] Observando check failed: {e}")
 
         # ─ DEFAULT: SILENCIO ────────────────────────────────────────────────
         # Presencia intencional, no ausencia de datos

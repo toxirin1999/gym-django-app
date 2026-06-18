@@ -859,6 +859,8 @@ def habitacion_joi(request):
         texto_vigilia = "Algo ha quedado aquí."
     elif _ausencia:
         texto_vigilia = "La habitación siguió aquí."
+    elif joi_estado == 'OBSERVANDO':
+        texto_vigilia = "Observando aquí."
     else:
         texto_vigilia = "Presente. Observando."
 
