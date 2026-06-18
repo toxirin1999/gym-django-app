@@ -528,6 +528,52 @@
       padding: 0;
       margin-bottom: 0;
     }
+    .joi-feedback-bloque {
+      margin-top: 1rem;
+      padding-top: 0.8rem;
+      border-top: 1px solid rgba(0, 229, 255, 0.1);
+    }
+    .joi-feedback-pregunta {
+      font-size: 0.8rem;
+      color: var(--ink-soft);
+      opacity: 0.7;
+      margin-bottom: 0.6rem;
+      font-weight: 300;
+      margin-top: 0;
+    }
+    .joi-feedback-botones {
+      display: flex;
+      gap: 0.6rem;
+      justify-content: flex-start;
+    }
+    .joi-feedback-btn {
+      background: none;
+      border: 1px solid rgba(0, 229, 255, 0.2);
+      color: var(--ink-soft);
+      padding: 0.4rem 0.8rem;
+      font-size: 0.75rem;
+      cursor: pointer;
+      border-radius: 3px;
+      transition: all 0.2s;
+      font-family: inherit;
+      opacity: 0.7;
+    }
+    .joi-feedback-btn:hover {
+      opacity: 1;
+      border-color: rgba(0, 229, 255, 0.4);
+      background: rgba(0, 229, 255, 0.05);
+    }
+    .joi-feedback-btn:active {
+      transform: scale(0.98);
+    }
+    .joi-feedback-confirmacion {
+      font-size: 0.7rem;
+      color: var(--ink-soft);
+      opacity: 0.6;
+      margin-top: 0.4rem;
+      margin-bottom: 0;
+      text-align: center;
+    }
   </style>
 </head>
 <body>
@@ -628,6 +674,20 @@
   <details class="joi-motivo-detalle joi-motivo-{{ joi_motivo }}">
     <summary class="joi-motivo-summary">Por qué este estado</summary>
     <p class="joi-motivo-texto">{{ joi_texto_motivo }}</p>
+    <div class="joi-feedback-bloque">
+      <p class="joi-feedback-pregunta">¿Este estado te encaja?</p>
+      <div class="joi-feedback-botones">
+        <button class="joi-feedback-btn joi-feedback-si"
+                onclick="registrarFeedbackEstado('encaja', '{{ joi_estado }}', '{{ joi_motivo }}')">
+          Sí
+        </button>
+        <button class="joi-feedback-btn joi-feedback-no"
+                onclick="registrarFeedbackEstado('no_encaja', '{{ joi_estado }}', '{{ joi_motivo }}')">
+          No
+        </button>
+      </div>
+      <p class="joi-feedback-confirmacion" id="joi-feedback-confirmacion"></p>
+    </div>
   </details>
   {% endif %}
 
@@ -725,6 +785,40 @@ async function enviarFeedback(tipo, mensajeId) {
     }
   } catch (_) {
     zona.querySelectorAll('button').forEach(b => b.classList.remove('ya-enviado'));
+  }
+}
+
+async function registrarFeedbackEstado(feedback, estado, motivo) {
+  try {
+    const res = await fetch('/joi/api/feedback-estado/', {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': CSRF,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        estado: estado,
+        motivo: motivo,
+        feedback: feedback
+      })
+    });
+    const data = await res.json();
+    if (data.ok) {
+      const confirmEl = document.getElementById('joi-feedback-confirmacion');
+      if (confirmEl) {
+        confirmEl.textContent = '✓ Registrado.';
+        setTimeout(() => {
+          confirmEl.textContent = '';
+        }, 1500);
+      }
+      // Deshabilitar botones tras enviar
+      document.querySelectorAll('.joi-feedback-btn').forEach(btn => {
+        btn.disabled = true;
+        btn.style.opacity = '0.4';
+      });
+    }
+  } catch (e) {
+    console.error('Error registrando feedback:', e);
   }
 }
 </script>
