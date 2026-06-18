@@ -918,7 +918,15 @@
         </div>
 
         <!-- CTA -->
-        {% if cliente and proximo_entrenamiento and proximo_entrenamiento.ejercicios %}
+        {% if entreno_hoy_realizado and entreno_realizado_obj %}
+            <!-- SESIÓN COMPLETADA HOY -->
+            <div style="display: flex; align-items: center; justify-content: center; width: 100%; max-width: 500px; height: 60px; font-family: 'Cinzel', serif; font-size: 0.95rem; font-weight: 700; letter-spacing: 0.1em; background: rgba(76, 175, 80, 0.15); border: 2px solid rgba(76, 175, 80, 0.4); color: #4CAF50; margin-bottom: 12px; border-radius: 6px;">
+                <i class="fas fa-check-circle"></i> &nbsp; SESIÓN COMPLETADA
+                {% if entreno_realizado_obj.sesion_detalle.rpe_medio >= 8 %}
+                    <span style="margin-left: 12px; padding: 4px 10px; background: rgba(255, 152, 0, 0.2); border: 1px solid rgba(255, 152, 0, 0.4); color: #FFA500; border-radius: 4px; font-size: 0.8rem; letter-spacing: 0.05em;">RPE {{ entreno_realizado_obj.sesion_detalle.rpe_medio|floatformat:1 }} - ALTO</span>
+                {% endif %}
+            </div>
+        {% elif cliente and proximo_entrenamiento and proximo_entrenamiento.ejercicios %}
             <a href="{% url 'entrenos:entrenamiento_activo' cliente.id %}?fecha={{ hoy|date:'Y-m-d' }}&rutina_nombre={{ proximo_entrenamiento.rutina_nombre|urlencode }}&ejercicios={{ proximo_entrenamiento_json|urlencode }}"
                class="blade-btn-primary">
                 <i class="fas fa-play-circle"></i> EJECUTAR PROTOCOLO
