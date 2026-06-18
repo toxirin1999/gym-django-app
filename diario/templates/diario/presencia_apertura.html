@@ -363,5 +363,24 @@ function descartarPersona(id) {
         if (d.ok) location.reload();
     });
 }
+
+// ── Apertura AJAX (app viva) ──
+document.getElementById('apertura-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    fetch(this.action || window.location.href, {
+        method: 'POST',
+        headers: {'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': '{{ csrf_token }}'},
+        body: formData
+    })
+    .then(r => r.json())
+    .then(d => {
+        if (d.success) {
+            // Guardado con éxito → redirigir al dashboard
+            setTimeout(() => window.location.href = "{% url 'diario:dashboard_diario' %}", 500);
+        }
+    })
+    .catch(() => this.submit()); // Fallback: traditional POST
+});
 </script>
 {% endblock %}

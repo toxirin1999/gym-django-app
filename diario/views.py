@@ -3389,6 +3389,17 @@ def presencia_apertura(request):
             vires.molestia_nota = molestia_nota
         vires.save()
 
+        # Si es AJAX, devuelve JSON con el nuevo estado
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            from diario.services.estado_diario import calcular_estado_diario_hoy
+            estado_actual = calcular_estado_diario_hoy(entrada)
+            return JsonResponse({
+                'success': True,
+                'estado': estado_actual['estado'],
+                'titulo': 'Día abierto',
+                'detalle': 'La apertura está hecha. Falta cerrar el día.',
+            })
+
         messages.success(request, 'Día comenzado.')
         return redirect('clientes:mockup_demo')
 
@@ -3873,6 +3884,18 @@ def presencia_cierre(request):
                         propuesta_habito = None
             except Exception:
                 pass
+
+        # Si es AJAX, devuelve JSON con el nuevo estado
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            from diario.services.estado_diario import calcular_estado_diario_hoy
+            estado_actual = calcular_estado_diario_hoy(entrada)
+            return JsonResponse({
+                'success': True,
+                'estado': estado_actual['estado'],
+                'titulo': 'Día completo',
+                'detalle': 'Apertura y cierre registrados.',
+                'joi_respuesta': joi_respuesta,
+            })
 
         context = {
             'entrada': entrada,
