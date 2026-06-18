@@ -2941,7 +2941,35 @@ document.getElementById('btn-confirmar-guardar').addEventListener('click',()=>{
   localStorage.removeItem(_WK_KEY);
   const ov = document.getElementById('saving-overlay');
   if (ov) ov.style.display = 'flex';
-  document.getElementById('workout-form').submit();
+
+  // AJAX handler with fallback
+  const form = document.getElementById('workout-form');
+  const formData = new FormData(form);
+  const clienteId = {{ cliente.id }};
+
+  fetch(form.action, {
+    method: 'POST',
+    headers: {'X-Requested-With': 'XMLHttpRequest'},
+    body: formData
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success && data.refresh_joi) {
+      // Refresh JOI estado in parallel (non-blocking)
+      fetch('/joi/api/pulso-actual/').catch(() => {});
+      // Redirect to post-session summary
+      setTimeout(() => {
+        window.location.href = `/entrenos/cliente/${clienteId}/entreno/${data.entreno_id}/cierre/`;
+      }, 200);
+    } else {
+      // Fallback on unexpected response
+      form.submit();
+    }
+  })
+  .catch(() => {
+    // Network error: fallback to traditional POST
+    form.submit();
+  });
 });
 
 // Aviso al salir sin guardar
