@@ -768,7 +768,18 @@
           setTimeout(function () {
             limpiarEstadoGuardado();
             var modal = document.querySelector('[data-modal-close]');
-            if (modal) modal.click();
+            if (modal) {
+              modal.click();
+              // Fallback redirect if modal close doesn't navigate away
+              setTimeout(function() {
+                if (window.location.pathname.includes('/registrar-entrenamiento/')) {
+                  window.location.href = '/hyrox/dashboard/';
+                }
+              }, 500);
+            } else {
+              // No modal found, redirect directly to dashboard
+              window.location.href = '/hyrox/dashboard/';
+            }
           }, 800);
         }, 500);
       }, 800);
