@@ -33,7 +33,7 @@ class JoiHabitacion2BEstadoTests(TestCase):
     # Test 1: Sin señales → SILENCIO
     def test_sin_senales_devuelve_silencio(self):
         """Sin mensaje, sin narrativa, sin protección → SILENCIO"""
-        estado = determinar_estado_habitacion_joi(self.user)
+        estado, _ = determinar_estado_habitacion_joi(self.user)
         self.assertEqual(estado, 'SILENCIO')
 
     # Test 2: Mensaje JOI hoy → PRESENTE
@@ -44,7 +44,7 @@ class JoiHabitacion2BEstadoTests(TestCase):
             mensaje="Test mensaje",
             creado_en=timezone.now()
         )
-        estado = determinar_estado_habitacion_joi(self.user)
+        estado, _ = determinar_estado_habitacion_joi(self.user)
         self.assertEqual(estado, 'PRESENTE')
 
     # Test 3: Narrativa activa → PRESENTE
@@ -55,7 +55,7 @@ class JoiHabitacion2BEstadoTests(TestCase):
             estado='activa',
             capa_corta='Test corta'
         )
-        estado = determinar_estado_habitacion_joi(self.user)
+        estado, _ = determinar_estado_habitacion_joi(self.user)
         self.assertEqual(estado, 'PRESENTE')
 
     # Test 4: Pulso PROTEGIENDO → PROTEGIENDO
@@ -67,7 +67,7 @@ class JoiHabitacion2BEstadoTests(TestCase):
             fecha_evento=date(2026, 12, 31)
         )
         # Sin condiciones específicas de protección, debería ser SILENCIO
-        estado = determinar_estado_habitacion_joi(self.user)
+        estado, _ = determinar_estado_habitacion_joi(self.user)
         self.assertIn(estado, ['SILENCIO', 'PROTEGIENDO'])
 
     # Test 5: RPE >= 10 hoy → PROTEGIENDO
@@ -85,7 +85,7 @@ class JoiHabitacion2BEstadoTests(TestCase):
             rpe_global=10,
             estado='completado'
         )
-        estado = determinar_estado_habitacion_joi(self.user)
+        estado, _ = determinar_estado_habitacion_joi(self.user)
         self.assertEqual(estado, 'PROTEGIENDO')
 
     # Test 6: Lesión activa → PROTEGIENDO
@@ -101,7 +101,7 @@ class JoiHabitacion2BEstadoTests(TestCase):
             zona_afectada='rodilla',
             fase='AGUDA'
         )
-        estado = determinar_estado_habitacion_joi(self.user)
+        estado, _ = determinar_estado_habitacion_joi(self.user)
         self.assertEqual(estado, 'PROTEGIENDO')
 
     # Test 7: PROTEGIENDO tiene prioridad sobre PRESENTE
@@ -124,14 +124,15 @@ class JoiHabitacion2BEstadoTests(TestCase):
             zona_afectada='tobillo',
             fase='SUB_AGUDA'
         )
-        estado = determinar_estado_habitacion_joi(self.user)
+        estado, _ = determinar_estado_habitacion_joi(self.user)
         self.assertEqual(estado, 'PROTEGIENDO')
 
     # Test 8: Estado desconocido no rompe template
     def test_estado_desconocido_no_rompe(self):
-        """La función siempre devuelve string válido"""
-        estado = determinar_estado_habitacion_joi(self.user)
+        """La función siempre devuelve tuple válido"""
+        estado, motivo = determinar_estado_habitacion_joi(self.user)
         self.assertIsInstance(estado, str)
+        self.assertIsInstance(motivo, str)
         self.assertIn(estado, ['SILENCIO', 'PRESENTE', 'PROTEGIENDO', 'OBSERVANDO'])
 
     # ── TESTS PHASE 2B (OBSERVANDO) ──────────────────────────────────────
@@ -143,7 +144,7 @@ class JoiHabitacion2BEstadoTests(TestCase):
             cliente=self.cliente,
             fecha=timezone.now().date()
         )
-        estado = determinar_estado_habitacion_joi(self.user)
+        estado, _ = determinar_estado_habitacion_joi(self.user)
         self.assertEqual(estado, 'OBSERVANDO')
 
     # Test 10: PROTEGIENDO tiene prioridad sobre OBSERVANDO
@@ -163,7 +164,7 @@ class JoiHabitacion2BEstadoTests(TestCase):
             zona_afectada='muñeca',
             fase='AGUDA'
         )
-        estado = determinar_estado_habitacion_joi(self.user)
+        estado, _ = determinar_estado_habitacion_joi(self.user)
         self.assertEqual(estado, 'PROTEGIENDO')
 
     # Test 11: PRESENTE tiene prioridad sobre OBSERVANDO
@@ -178,5 +179,5 @@ class JoiHabitacion2BEstadoTests(TestCase):
             mensaje="Test mensaje",
             creado_en=timezone.now()
         )
-        estado = determinar_estado_habitacion_joi(self.user)
+        estado, _ = determinar_estado_habitacion_joi(self.user)
         self.assertEqual(estado, 'PRESENTE')
