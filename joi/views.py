@@ -31,6 +31,8 @@ import random
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import get_user_model
 from .models import EstadoEmocional
+from django.http import JsonResponse
+from django.views.decorators.http import require_http_methods
 
 User = get_user_model()
 
@@ -1007,3 +1009,53 @@ def feedback_estado_encaje(request):
     )
 
     return JsonResponse({'ok': True, 'saved': True})
+
+
+@login_required
+@require_http_methods(["GET"])
+def pulso_actual_api(request):
+    """
+    Endpoint AJAX que devuelve el estado actual de JOI (Pulso).
+    Usado por app viva para actualizar JOI sin recargar página.
+
+    Respuesta:
+    {
+        'estado': 'SILENCIO' | 'OBSERVANDO' | 'PRESENTE' | 'PROTEGIENDO',
+        'motivo': 'sin_senales' | 'diario_hoy_sin_lectura' | ...,
+        'texto_motivo': 'descripción legible',
+        'mensaje_activo': bool,
+    }
+    """
+    from joi.services import determinar_estado_habitacion_joi
+    from .models import MensajeJOI
+    from django.utils import timezone
+
+    joi_estado, joi_motivo = determinar_estado_habitacion_joi(request.user)
+
+    # Mapeo de motivos a textos humanos (mismo que en habitacion_joi)
+    motivo_textos = {
+        'sin_senales': "No hay señales nuevas que leer ahora.",
+        'diario_hoy_sin_lectura': "Hay una entrada de diario reciente, pero todavía no hay lectura formada.",
+        'mensaje_joi_hoy': "Hay una lectura activa disponible.",
+        'narrativa_activa': "Hay una narrativa activa que sostiene este estado.",
+        'rpe_extremo': "La última sesión registró un esfuerzo extremo.",
+        'lesion_activa': "Hay una lesión activa que pide bajar el tono.",
+        'pulso_protegiendo': "El sistema está en modo protección.",
+    }
+    joi_texto_motivo = motivo_textos.get(joi_motivo, "")
+
+    # Verificar si hay mensaje activo del día
+    hoy = timezone.now().date()
+    mensaje_hoy = MensajeJOI.objects.filter(
+        user=request.user,
+        creado_en__date=hoy,
+        feedback__isnull=True,
+    ).order_by('-creado_en').first()
+    tiene_mensaje_activo = mensaje_hoy is not None
+
+    return JsonResponse({
+        'estado': joi_estado,
+        'motivo': joi_motivo,
+        'texto_motivo': joi_texto_motivo,
+        'mensaje_activo': tiene_mensaje_activo,
+    })

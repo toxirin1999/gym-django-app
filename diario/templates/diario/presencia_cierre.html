@@ -492,6 +492,13 @@ document.getElementById('cierre-form').addEventListener('submit', function(e) {
     })
     .then(r => r.json())
     .then(d => {
+        if (d.success && d.refresh_joi) {
+            // Refrescar estado JOI en paralelo
+            fetch("{% url 'joi:joi_pulso_actual' %}", {
+                method: 'GET',
+                headers: {'X-Requested-With': 'XMLHttpRequest'},
+            }).catch(err => console.log('JOI refresh no critical:', err));
+        }
         if (d.success) {
             // Guardado con éxito → redirigir al dashboard
             setTimeout(() => window.location.href = "{% url 'diario:dashboard_diario' %}", 500);

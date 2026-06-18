@@ -3398,6 +3398,7 @@ def presencia_apertura(request):
                 'estado': estado_actual['estado'],
                 'titulo': 'Día abierto',
                 'detalle': 'La apertura está hecha. Falta cerrar el día.',
+                'refresh_joi': True,  # Signal frontend to update JOI estado
             })
 
         messages.success(request, 'Día comenzado.')
@@ -3895,6 +3896,7 @@ def presencia_cierre(request):
                 'titulo': 'Día completo',
                 'detalle': 'Apertura y cierre registrados.',
                 'joi_respuesta': joi_respuesta,
+                'refresh_joi': True,  # Signal frontend to update JOI estado
             })
 
         context = {
