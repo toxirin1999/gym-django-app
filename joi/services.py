@@ -1,6 +1,7 @@
 from __future__ import annotations
-from datetime import date, timedelta
+from datetime import date, timedelta, datetime
 from django.conf import settings
+from django.utils import timezone
 import logging
 import random
 
@@ -3746,4 +3747,133 @@ def generar_narrativa_bloque(cliente, fase_cliente) -> "MensajeJOI | None":
     except Exception as e:
         logger.error(f"[JOI bloque] generar_narrativa_bloque falló: {e}", exc_info=True)
         return None
+
+
+# ────────────────────────────────────────────────────────────────────────────
+# HABITACIÓN 2A — ESTADO DE PRESENCIA REACTIVO
+# Determina en qué postura está JOI según señales reales del organismo
+# ────────────────────────────────────────────────────────────────────────────
+
+def determinar_estado_habitacion_joi(usuario):
+    """
+    Determina el estado interno de JOI en la Habitación según señales reales.
+
+    Estados posibles:
+    - PROTEGIENDO: cuerpo en protección (Pulso PROTEGIENDO, RPE extremo, lesión activa)
+    - PRESENTE: hay lectura clara (mensaje JOI hoy + narrativa activa)
+    - SILENCIO: sin señal clara (presencia intencional, no ausencia de datos)
+
+    Prioridad absoluta:
+    1. PROTEGIENDO (si alguna señal de protección)
+    2. PRESENTE (si hay mensaje o narrativa)
+    3. SILENCIO (default)
+
+    Args:
+        usuario: Django User object
+
+    Returns:
+        str: 'PROTEGIENDO' | 'PRESENTE' | 'SILENCIO'
+    """
+    try:
+        from hyrox.models import HyroxObjective, HyroxSession
+        from hyrox.models import UserInjury
+        from joi.models import MensajeJOI, NarrativaActiva
+
+        today = timezone.now().date()
+
+        # ─ PRIORIDAD 1: PROTEGIENDO ─────────────────────────────────────────
+        # Si el cuerpo está en protección, JOI baja el tono
+
+        # Check 1: Pulso Hyrox PROTEGIENDO (calcula readiness + señales)
+        try:
+            from hyrox.pulso_service import PulsoService
+            hyrox_obj = HyroxObjective.objects.get(cliente__user=usuario)
+
+            # Obtener readiness_score y lesión_activa para calcular Pulso
+            readiness_log = hyrox_obj.readiness_logs.order_by('-fecha').first()
+            readiness_score = readiness_log.score if readiness_log else 50
+
+            lesion_activa = UserInjury.objects.filter(
+                cliente=hyrox_obj.cliente,
+                fase__in=['AGUDA', 'SUB_AGUDA']
+            ).first()
+
+            pulso_data = PulsoService.determinar_pulso(
+                objetivo=hyrox_obj,
+                readiness_score=readiness_score,
+                lesion_activa=lesion_activa
+            )
+
+            if pulso_data and pulso_data.get('pulso') == 'protegiendo':
+                logger.info(f"[JOI Estado] {usuario.username}: PROTEGIENDO (Pulso)")
+                return 'PROTEGIENDO'
+        except HyroxObjective.DoesNotExist:
+            pass
+        except Exception as e:
+            logger.warning(f"[JOI Estado] Pulso check failed: {e}")
+
+        # Check 2: RPE extremo hoy (RPE >= 10, conservador como Hyrox)
+        try:
+            ultima_sesion = HyroxSession.objects.filter(
+                objective__cliente__user=usuario,
+                fecha=today,
+                estado='completado'
+            ).order_by('-id').first()
+
+            if ultima_sesion and ultima_sesion.rpe_global and ultima_sesion.rpe_global >= 10:
+                logger.info(f"[JOI Estado] {usuario.username}: PROTEGIENDO (RPE {ultima_sesion.rpe_global})")
+                return 'PROTEGIENDO'
+        except Exception as e:
+            logger.warning(f"[JOI Estado] RPE check failed: {e}")
+
+        # Check 3: Lesión activa (AGUDA/SUB_AGUDA)
+        try:
+            lesion_activa = UserInjury.objects.filter(
+                cliente__user=usuario,
+                fase__in=['AGUDA', 'SUB_AGUDA']
+            ).exists()
+
+            if lesion_activa:
+                logger.info(f"[JOI Estado] {usuario.username}: PROTEGIENDO (Lesión activa)")
+                return 'PROTEGIENDO'
+        except Exception as e:
+            logger.warning(f"[JOI Estado] Injury check failed: {e}")
+
+        # ─ PRIORIDAD 2: PRESENTE ────────────────────────────────────────────
+        # Hay mensaje o narrativa clara
+
+        # Check 1: Mensaje JOI hoy
+        try:
+            msg_hoy = MensajeJOI.objects.filter(
+                user=usuario,
+                creado_en__date=today
+            ).exists()
+
+            if msg_hoy:
+                logger.info(f"[JOI Estado] {usuario.username}: PRESENTE (Mensaje hoy)")
+                return 'PRESENTE'
+        except Exception as e:
+            logger.warning(f"[JOI Estado] Mensaje check failed: {e}")
+
+        # Check 2: Narrativa activa
+        try:
+            narrativa = NarrativaActiva.objects.filter(
+                user=usuario,
+                estado__in=['borrador', 'activa']
+            ).exists()
+
+            if narrativa:
+                logger.info(f"[JOI Estado] {usuario.username}: PRESENTE (Narrativa activa)")
+                return 'PRESENTE'
+        except Exception as e:
+            logger.warning(f"[JOI Estado] Narrativa check failed: {e}")
+
+        # ─ DEFAULT: SILENCIO ────────────────────────────────────────────────
+        # Presencia intencional, no ausencia de datos
+        logger.info(f"[JOI Estado] {usuario.username}: SILENCIO")
+        return 'SILENCIO'
+
+    except Exception as e:
+        logger.error(f"[JOI Estado] determinar_estado_habitacion_joi falló: {e}", exc_info=True)
+        return 'SILENCIO'  # Fallback seguro
 
