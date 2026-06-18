@@ -237,17 +237,22 @@ class PlanificadorHelms:
                     rpe_real_anterior = historial['rpe_real']
                     peso_real_anterior = historial['peso_real']
 
+                    motivo_peso_tipo = 'sin_datos'
                     if peso_real_anterior is not None and rpe_real_anterior is not None:
                         diferencia_rpe = rpe_real_anterior - rpe_objetivo
                         from analytics.planificador_helms.calculo.peso import PROGRESION, REDONDEO
                         if diferencia_rpe <= -2:
                             incremento = PROGRESION['fijo_grande']
+                            motivo_peso_tipo = 'sube'
                         elif diferencia_rpe <= 0:
                             incremento = PROGRESION['fijo_pequeno']
+                            motivo_peso_tipo = 'sube'
                         elif diferencia_rpe <= 2:
                             incremento = 0
+                            motivo_peso_tipo = 'mantiene'
                         else:
                             incremento = -PROGRESION['fijo_pequeno']
+                            motivo_peso_tipo = 'frenado'
                         peso_nuevo = peso_real_anterior + incremento
                         tipo = CalculadorPeso.inferir_tipo_carga(nombre)
                         inc = REDONDEO.get(tipo, REDONDEO['general'])
@@ -258,6 +263,8 @@ class PlanificadorHelms:
 
                     tempo = TEMPOS.get(fase, TEMPOS['hipertrofia'])
                     descanso = self._calcular_descanso_pormenorizado(nombre, rpe_objetivo, tipo_ej)
+
+                    motivo_peso_texto = self._construir_motivo_peso(motivo_peso_tipo, nombre)
 
                     ejercicios_dia.append({
                         'nombre': nombre,
@@ -271,6 +278,10 @@ class PlanificadorHelms:
                         'patron': patron,
                         'tipo_progresion': ej.get('tipo_progresion', 'peso_reps'),
                         'tipo_ejercicio': tipo_ej,
+                        'motivo_peso': {
+                            'tipo': motivo_peso_tipo,
+                            'texto': motivo_peso_texto,
+                        },
                     })
 
                     patron_manager.registrar_uso_patron(patron, idx_dia, grupo)
@@ -354,6 +365,16 @@ class PlanificadorHelms:
 
     def _obtener_rpe_real_anterior(self, nombre_ejercicio: str) -> Optional[float]:
         return self._obtener_historial_ejercicio(nombre_ejercicio)['rpe_real']
+
+    def _construir_motivo_peso(self, motivo_tipo: str, nombre_ejercicio: str) -> str:
+        """Construye el texto explicativo del peso recomendado."""
+        textos = {
+            'sube': f'Sube por: últimas sesiones completadas con margen.',
+            'mantiene': f'Carga mantenida: el plan prioriza margen esta semana.',
+            'frenado': f'Progresión frenada: hay una señal de carga o margen bajo.',
+            'sin_datos': f'Sin historial: el plan calibra desde capacidad actual.',
+        }
+        return textos.get(motivo_tipo, 'Peso determinado por el plan.')
 
     def _calcular_descanso_pormenorizado(self, nombre: str, rpe: int, tipo: str) -> int:
         return get_descanso_sugerido(tipo_ejercicio=tipo, rpe_objetivo=rpe)['minutos']
