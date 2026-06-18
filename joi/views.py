@@ -823,9 +823,14 @@ def habitacion_joi(request):
     from joi.services import determinar_estado_habitacion_joi
     joi_estado = determinar_estado_habitacion_joi(request.user)
 
-    # Visibilidad de mensaje: solo si tiene_mensaje_activo
+    # Visibilidad de mensaje: solo si tiene_mensaje_activo Y joi_estado permite
     tiene_mensaje_activo = mensaje and not mensaje.feedback
-    estado = 'habla' if tiene_mensaje_activo else 'calla'
+    # En SILENCIO, ocultar mensaje incluso si existe (estado 'calla')
+    # En PRESENTE/PROTEGIENDO, mostrar si hay mensaje activo
+    if joi_estado == 'SILENCIO':
+        estado = 'calla'
+    else:
+        estado = 'habla' if tiene_mensaje_activo else 'calla'
 
     # ── Señal de sedimento: algo cambió desde la última visita ───────────────
     from django.core.cache import cache as _cache

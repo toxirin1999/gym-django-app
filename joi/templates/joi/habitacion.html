@@ -39,7 +39,7 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: flex-start;
+      justify-content: center;
       padding: max(3rem, env(safe-area-inset-top, 2.4rem)) 2rem max(6rem, env(safe-area-inset-bottom, 4rem));
       position: relative;
       overflow: hidden;
@@ -353,24 +353,38 @@
     /* ── ESTADO DE PRESENCIA (SILENCIO / PRESENTE / PROTEGIENDO) ── */
     /* Estados cambrian tamaño de vigilia, input, visibilidad de narrativa */
 
+    .joi-estado-silencio {
+      justify-content: center;
+    }
     .joi-estado-silencio .vigilia-contenedor {
-      opacity: 1; margin-bottom: 2.2rem;
+      opacity: 1; margin-bottom: 1.4rem;
+    }
+    .joi-estado-silencio .vigilia-texto {
+      display: block; opacity: 0.85; font-size: 0.95rem;
     }
     .joi-estado-silencio .joi-mensaje-wrap {
       display: none;
     }
     .joi-estado-silencio .postura-zona {
-      opacity: 0.4; margin-top: 1.2rem;
+      opacity: 0.5; margin-top: 1.6rem; max-width: 360px;
     }
     .joi-estado-silencio .narrativa-fondo-detalle {
       display: none;
     }
+    .joi-estado-silencio [style*="lo que deja ahora"] {
+      display: none;
+    }
 
+    .joi-estado-presente {
+      justify-content: flex-start;
+      padding-top: max(2rem, env(safe-area-inset-top, 2rem));
+    }
     .joi-estado-presente .vigilia-contenedor {
       display: none;
     }
     .joi-estado-presente .joi-mensaje-wrap {
       display: block;
+      margin-top: 1rem;
     }
 
     .joi-estado-protegiendo .vigilia-contenedor {
