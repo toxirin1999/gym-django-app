@@ -818,9 +818,12 @@ def habitacion_joi(request):
     except Exception:
         pass
 
-    # ── Estado: habla solo si hay mensaje SIN feedback aún ───────────────────
-    # Después de dar feedback, la habitación entra en vigilia (anillos, silencio)
-    # hasta que JOI tenga algo nuevo que decir.
+    # ── Estado de presencia: SILENCIO / PRESENTE / PROTEGIENDO ──────────────────
+    # Determina la postura de JOI según señales reales del organismo
+    from joi.services import determinar_estado_habitacion_joi
+    joi_estado = determinar_estado_habitacion_joi(request.user)
+
+    # Visibilidad de mensaje: solo si tiene_mensaje_activo
     tiene_mensaje_activo = mensaje and not mensaje.feedback
     estado = 'habla' if tiene_mensaje_activo else 'calla'
 
@@ -867,6 +870,7 @@ def habitacion_joi(request):
     return render(request, 'joi/habitacion.html', {
         'mensaje':          mensaje,
         'estado':           estado,
+        'joi_estado':       joi_estado,
         'regenerado':       regenerado,
         'narrativa':        narrativa,
         'hay_sedimento':    hay_sedimento,
