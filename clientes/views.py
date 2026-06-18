@@ -1491,6 +1491,23 @@ def mockup_demo(request):
         context['joi_narrativa_hoy'] = ''
         context['joi_narrativa_plan'] = ''
 
+    # ── Sistema global hoy (Phase Organismo 2) ────────────────────
+    try:
+        from core.organismo import resolver_estado_sistema_hoy
+        estado_sistema = resolver_estado_sistema_hoy(usuario)
+        context['estado_sistema'] = estado_sistema
+    except Exception as e:
+        logger.exception(f"resolver_estado_sistema_hoy failed: {e}")
+        # Degradación: SILENCIO seguro
+        context['estado_sistema'] = {
+            'estado': 'SILENCIO',
+            'motivo': 'error',
+            'texto': 'Sistema en reposo.',
+            'accion_label': None,
+            'accion_url': None,
+            'modulo_principal': None,
+        }
+
     return render(request, 'clientes/mockup_demo.html', context)
 
 
