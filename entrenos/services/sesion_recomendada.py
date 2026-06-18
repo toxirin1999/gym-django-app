@@ -1091,6 +1091,7 @@ def obtener_sesion_recomendada_hoy(cliente, fecha_hoy=None):
             try:
                 from entrenos.services.progresion_contextual_service import (
                     evaluar_permiso_progresion, aplicar_freno_contextual, aplicar_freno_lesion,
+                    construir_motivo_final,
                 )
                 permiso = evaluar_permiso_progresion(cliente, fecha_hoy)
                 entrenamiento = aplicar_freno_contextual(
@@ -1098,6 +1099,12 @@ def obtener_sesion_recomendada_hoy(cliente, fecha_hoy=None):
                     modo_reducido=getattr(pendiente, 'modo_reducido_origen', False),
                 )
                 entrenamiento = aplicar_freno_lesion(cliente, entrenamiento)  # Phase 28.1
+                # Phase Gym 1.1: adjust motivo_peso to reflect actual decision after frenos
+                if entrenamiento and entrenamiento.get('ejercicios'):
+                    entrenamiento['ejercicios'] = [
+                        construir_motivo_final(ej, cliente)
+                        for ej in entrenamiento['ejercicios']
+                    ]
             except Exception:
                 logger.warning('obtener_sesion_recomendada_hoy: freno contextual falló, sin efecto')
         except Exception:
@@ -1158,10 +1165,17 @@ def obtener_sesion_recomendada_hoy(cliente, fecha_hoy=None):
         try:
             from entrenos.services.progresion_contextual_service import (
                 evaluar_permiso_progresion, aplicar_freno_contextual, aplicar_freno_lesion,
+                construir_motivo_final,
             )
             permiso = evaluar_permiso_progresion(cliente, fecha_hoy)
             entrenamiento_hoy = aplicar_freno_contextual(cliente, entrenamiento_hoy, permiso)
             entrenamiento_hoy = aplicar_freno_lesion(cliente, entrenamiento_hoy)  # Phase 28.1
+            # Phase Gym 1.1: adjust motivo_peso to reflect actual decision after frenos
+            if entrenamiento_hoy and entrenamiento_hoy.get('ejercicios'):
+                entrenamiento_hoy['ejercicios'] = [
+                    construir_motivo_final(ej, cliente)
+                    for ej in entrenamiento_hoy['ejercicios']
+                ]
         except Exception:
             logger.warning('obtener_sesion_recomendada_hoy: freno contextual falló para sesión de hoy')
     except Exception:
