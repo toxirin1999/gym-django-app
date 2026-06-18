@@ -11,4 +11,5 @@ urlpatterns = [
     path('narrativa/', views.narrativa_joi_view, name='joi_narrativa'),
     path('narrativa/dialogo/', views.crear_dialogo_narrativa, name='joi_dialogo_narrativa'),
     path('api/feedback-estado/', views.feedback_estado_encaje, name='joi_feedback_estado_encaje'),
+    path('api/pulso-actual/', views.pulso_actual_api, name='joi_pulso_actual'),
 ]
