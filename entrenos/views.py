@@ -4394,6 +4394,16 @@ def guardar_entrenamiento_activo(request, cliente_id):
             # No bloqueamos el flujo principal si falla algo de gamificación
         # ============================================================================
 
+        # AJAX detection: if X-Requested-With header is present, return JSON instead of redirect
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({
+                'success': True,
+                'entreno_id': entreno.id,
+                'rpe_final': float(rpe_final) if rpe_final is not None else None,
+                'volumen': float(entreno.volumen_total_kg or 0),
+                'refresh_joi': True,
+            })
+
         return redirect('entrenos:post_entreno_resumen', cliente_id=cliente.id, entreno_id=entreno.id)
 
     except Exception as e:
