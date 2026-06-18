@@ -598,6 +598,9 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
       <div class="rb-workout-eyebrow" style="color:var(--ok);">
         {% if entreno_hoy_realizado %}&#10003; COMPLETADO HOY
         {% else %}&#8629; YA REALIZADO{% endif %}
+        {% if entreno_realizado_obj and entreno_realizado_obj.sesion_detalle.rpe_medio >= 8 %}
+        &nbsp;·&nbsp;<span style="font-size:9px;font-weight:700;letter-spacing:0.1em;background:rgba(255,152,0,0.15);color:rgba(255,152,0,0.85);border-radius:5px;padding:2px 6px;">RPE {{ entreno_realizado_obj.sesion_detalle.rpe_medio|floatformat:1 }} - ALTO</span>
+        {% endif %}
         {% if entreno_realizado_obj and entreno_realizado_obj.modo_reducido %}
         &nbsp;·&nbsp;<span style="font-size:9px;font-weight:700;letter-spacing:0.1em;background:rgba(255,200,100,0.12);color:rgba(255,200,100,0.85);border-radius:5px;padding:2px 6px;">ESENCIAL</span>
         {% endif %}
