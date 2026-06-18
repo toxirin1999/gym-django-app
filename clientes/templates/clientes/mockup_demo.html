@@ -381,6 +381,41 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
 .acwr-zone-riesgo_alto { background:rgba(255,107,0,.12);  color:var(--accent); }
 .acwr-zone-baja_carga  { background:rgba(163,163,163,.12); color:var(--fg-mute); }
 
+/* ── ORGANISMO (Sistema hoy) ────────────────── */
+.rb-organismo-card {
+  background: var(--bg-2); border: 1px solid var(--line); border-radius: 2px;
+  padding: 14px 16px; margin-top: 12px;
+}
+.rb-organismo-label {
+  font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--fg-mute); margin-bottom: 8px;
+}
+.rb-organismo-body {
+  display: flex; align-items: center; gap: 12px; margin-bottom: 10px;
+}
+.rb-organismo-estado {
+  font-family: var(--font-mono); font-size: 11px; font-weight: 700;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  min-width: 80px; color: var(--fg-dim);
+}
+.rb-organismo-estado.rb-org-silencio { color: var(--fg-mute); }
+.rb-organismo-estado.rb-org-observando { color: var(--warn); }
+.rb-organismo-estado.rb-org-en_margen { color: var(--ok); }
+.rb-organismo-estado.rb-org-protegiendo { color: var(--danger); }
+.rb-organismo-texto {
+  font-family: var(--font-body); font-size: 12px; color: var(--fg);
+  line-height: 1.4;
+}
+.rb-organismo-btn {
+  display: block; width: 100%; margin-top: 8px; padding: 8px 12px;
+  text-align: center; font-size: 11px;
+}
+@media (max-width: 640px) {
+  .rb-organismo-body { flex-direction: column; align-items: flex-start; }
+  .rb-organismo-estado { min-width: auto; }
+}
+
 /* ── MODAL ───────────────────────────────────── */
 .rb-modal-ov { display: none; position: fixed; inset: 0; z-index: 500;
   background: rgba(10,10,10,0.65); backdrop-filter: blur(4px);
@@ -572,6 +607,25 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
                 font-family:-apple-system,BlinkMacSystemFont,system-ui,sans-serif;font-weight:400;">
       {{ joi_narrativa_hoy }}
     </div>
+  </div>
+  {% endif %}
+
+  <!-- ── SISTEMA HOY (Phase Organismo 2) ──────── -->
+  {% if estado_sistema %}
+  <div class="rb-organismo-card">
+    <div class="rb-organismo-label">Sistema hoy</div>
+    <div class="rb-organismo-body">
+      <span class="rb-organismo-estado rb-org-{{ estado_sistema.estado|lower }}">
+        {{ estado_sistema.estado|title }}
+      </span>
+      <span class="rb-organismo-texto">{{ estado_sistema.texto }}</span>
+    </div>
+    {% if estado_sistema.accion_label %}
+    <a href="{{ estado_sistema.accion_url }}"
+       class="rb-btn rb-btn-ghost rb-organismo-btn">
+      {{ estado_sistema.accion_label }} →
+    </a>
+    {% endif %}
   </div>
   {% endif %}
 
