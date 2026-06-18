@@ -187,6 +187,9 @@ def _aplicar_progresion_ejecutiva(cliente, ejercicios_mod, hoy, cambios):
       en ESTE ejercicio (Phase 62K).
     - mantener / cambiar_variante / deload: no se tocan aquí.
     """
+    import logging
+    logger = logging.getLogger(__name__)
+
     from entrenos.models import GymDecisionLog
     from entrenos.services.progresion_contextual_service import (
         evaluar_permiso_progresion, _es_ejercicio_principal,
@@ -198,7 +201,9 @@ def _aplicar_progresion_ejecutiva(cliente, ejercicios_mod, hoy, cambios):
         .filter(cliente=cliente, accion__in=('subir_peso', 'bajar_peso'), resultado__isnull=True)
         .order_by('-fecha_creacion')
     )
+    logger.debug(f"[progresion_ejecutiva] cliente={cliente.id}: {len(logs_pendientes)} logs subir/bajar")
     if not logs_pendientes:
+        logger.debug(f"[progresion_ejecutiva] cliente={cliente.id}: sin logs pendientes")
         return
 
     permiso = None  # calculado solo si hace falta (subir_peso)
@@ -213,6 +218,10 @@ def _aplicar_progresion_ejecutiva(cliente, ejercicios_mod, hoy, cambios):
             (l for l in logs_pendientes if _match_nombre(nombre_norm, _normalizar(l.ejercicio))),
             None,
         )
+        if log:
+            logger.debug(f"[progresion_ejecutiva] MATCH: '{nombre}' → log accion={log.accion}")
+        else:
+            logger.debug(f"[progresion_ejecutiva] sin match para '{nombre}'")
         if not log:
             continue
 
@@ -291,10 +300,14 @@ def aplicar_plan_dinamico(cliente, ejercicios, hoy=None):
         ejercicios_mod  — lista de dicts (deep copy con modificaciones aplicadas)
         cambios         — lista de dicts describiendo cada cambio para mostrar al usuario
     """
+    import logging
+    logger = logging.getLogger(__name__)
+
     if hoy is None:
         hoy = date.today()
 
     if not ejercicios:
+        logger.debug(f"[plan_dinamico] cliente={cliente.id}: ejercicios vacío")
         return ejercicios, []
 
     hace_21 = hoy - timedelta(days=21)
@@ -302,6 +315,8 @@ def aplicar_plan_dinamico(cliente, ejercicios, hoy=None):
 
     ejercicios_mod = copy.deepcopy(ejercicios)
     cambios = []
+
+    logger.debug(f"[plan_dinamico] cliente={cliente.id}: {len(ejercicios)} ejercicios")
 
     try:
         from entrenos.models import GymDecisionLog
@@ -406,7 +421,8 @@ def aplicar_plan_dinamico(cliente, ejercicios, hoy=None):
                         'razon': f'Molestia recurrente → {razon_alt}.',
                     })
 
-    except Exception:
-        pass
+    except Exception as e:
+        logger.error(f"[plan_dinamico] cliente={cliente.id}: excepción: {e}", exc_info=True)
 
+    logger.debug(f"[plan_dinamico] cliente={cliente.id}: retorna {len(cambios)} cambios")
     return ejercicios_mod, cambios
