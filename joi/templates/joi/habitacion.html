@@ -40,7 +40,7 @@
       flex-direction: column;
       align-items: center;
       justify-content: flex-start;
-      padding: max(4rem, env(safe-area-inset-top, 3rem)) 2rem max(8rem, env(safe-area-inset-bottom, 6rem));
+      padding: max(3rem, env(safe-area-inset-top, 2.4rem)) 2rem max(6rem, env(safe-area-inset-bottom, 4rem));
       position: relative;
       overflow: hidden;
       gap: 0;
@@ -62,7 +62,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      margin-bottom: 2.5rem;
+      margin-bottom: 1.8rem;
     }
 
     .vigilia-anillo-ext {
@@ -213,36 +213,44 @@
       text-align: center; padding: 0.5rem 0;
     }
 
-    /* ── POSTURA (DialogoNarrativa) ── */
+    /* ── POSTURA (DialogoNarrativa) — cerca del mensaje ── */
     .postura-zona {
       width: 100%; max-width: 440px;
-      margin-top: 2.5rem;
-      opacity: 0.65; transition: opacity 0.4s;
+      margin-top: 0.8rem;
+      opacity: 0.55; transition: opacity 0.4s;
     }
     .postura-zona:focus-within { opacity: 1; }
 
     .postura-fragmento {
       font-style: italic; font-weight: 300; font-size: 0.9rem;
-      line-height: 1.7; color: var(--ink-mute);
-      margin-bottom: 0.85rem;
-      padding-left: 0.9rem;
-      border-left: 1px solid var(--line);
+      line-height: 1.6; color: var(--ink-mute);
+      margin-bottom: 0.8rem;
+      padding-left: 0.8rem;
+      border-left: 1px solid rgba(0, 220, 255, 0.10);
+      opacity: 0.75;
     }
 
-    .postura-input-wrap { display:flex; gap:0.4rem; align-items:flex-end; }
+    .postura-input-wrap {
+      display:flex; gap:0.4rem; align-items:flex-end;
+      background: rgba(0, 220, 255, 0.05);
+      border: 1px solid rgba(0, 220, 255, 0.12);
+      border-radius: 8px;
+      padding: 0.6rem 0.8rem;
+      margin-top: 0.8rem;
+    }
 
     .postura-input {
       flex: 1; background: transparent;
-      border: none; border-bottom: 1px solid rgba(0, 220, 255, 0.18);
+      border: none;
       color: var(--ink-soft);
       font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
       font-style: italic; font-weight: 300; font-size: 1rem;
-      padding: 0.35rem 0.1rem; outline: none;
+      padding: 0; outline: none;
       resize: none; min-height: 1.5rem; max-height: 5rem;
-      transition: border-color 0.3s; overflow-y: hidden;
+      transition: color 0.3s; overflow-y: hidden;
     }
     .postura-input::placeholder { color:var(--ink-mute); font-style:italic; }
-    .postura-input:focus { border-bottom-color:rgba(0, 220, 255, 0.30); }
+    .postura-input:focus { color: var(--ink); }
 
     .postura-btn {
       background: transparent; border: none;
@@ -257,12 +265,33 @@
       text-transform: uppercase; color: var(--ink-mute); margin-top: 0.6rem;
     }
 
-    /* ── NARRATIVA FONDO ── */
-    .narrativa-fondo {
+    /* ── NARRATIVA FONDO (colapsable) ── */
+    .narrativa-fondo-detalle {
       width: 100%; max-width: 480px;
-      margin-top: 2.5rem;
-      display: flex; flex-direction: column; gap: 1.1rem;
+      margin-top: 1rem;
       position: relative; z-index: 1;
+    }
+    .narrativa-fondo-detalle summary {
+      font-style: italic; font-weight: 300;
+      font-size: 0.55rem; letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: rgba(0, 220, 255, 0.35);
+      cursor: pointer; padding: 0.6rem 0;
+      transition: color 0.3s;
+      list-style: none;
+    }
+    .narrativa-fondo-detalle summary:hover {
+      color: rgba(0, 220, 255, 0.55);
+    }
+    .narrativa-fondo-detalle[open] summary {
+      color: rgba(0, 220, 255, 0.65);
+      margin-bottom: 1rem;
+    }
+    .narrativa-fondo {
+      display: none; flex-direction: column; gap: 1.1rem;
+    }
+    .narrativa-fondo-detalle[open] .narrativa-fondo {
+      display: flex;
     }
     .narrativa-capa {
       font-style: italic; font-weight: 300;
@@ -271,24 +300,25 @@
       letter-spacing: 0.01em;
     }
     .narrativa-larga {
-      font-size: 0.82rem;
+      font-size: 0.75rem;
       color: var(--ink);
-      opacity: 0.62;
+      opacity: 0.48;
+      margin-top: 0.8rem;
     }
     .narrativa-media {
-      font-size: 0.9rem;
+      font-size: 0.85rem;
       color: var(--ink);
-      opacity: 0.80;
+      opacity: 0.68;
     }
 
-    /* ── LIQUID GLASS — mensaje panel ── */
+    /* ── LIQUID GLASS — mensaje panel (compacto) ── */
     .joi-mensaje-wrap {
       backdrop-filter: blur(16px) saturate(1.4);
       -webkit-backdrop-filter: blur(16px) saturate(1.4);
       background: rgba(6, 7, 14, 0.35);
       border: 1px solid rgba(140, 195, 230, 0.09);
       border-radius: 20px;
-      padding: 2.2rem 1.8rem 1.8rem;
+      padding: 1.8rem 1.6rem 1.6rem;
     }
 
     /* ── REDUCED MOTION ── */
@@ -395,15 +425,17 @@
   {% endif %}
 
   {% if narrativa and narrativa.capa_larga or narrativa and narrativa.capa_media %}
-  <p style="font-size:8px;letter-spacing:0.22em;text-transform:uppercase;color:rgba(255,255,255,0.1);text-align:center;margin-bottom:0.6rem;margin-top:1.8rem;">lo que lleva viendo</p>
-  <div class="narrativa-fondo" aria-label="Lo que JOI lleva viendo">
-    {% if narrativa.capa_larga %}
-    <p class="narrativa-capa narrativa-larga">{{ narrativa.capa_larga }}</p>
-    {% endif %}
-    {% if narrativa.capa_media %}
-    <p class="narrativa-capa narrativa-media">{{ narrativa.capa_media }}</p>
-    {% endif %}
-  </div>
+  <details class="narrativa-fondo-detalle" aria-label="Fondo narrativo de JOI" style="margin-top: 1.6rem;">
+    <summary>Ver fondo narrativo</summary>
+    <div class="narrativa-fondo">
+      {% if narrativa.capa_larga %}
+      <p class="narrativa-capa narrativa-larga">{{ narrativa.capa_larga }}</p>
+      {% endif %}
+      {% if narrativa.capa_media %}
+      <p class="narrativa-capa narrativa-media">{{ narrativa.capa_media }}</p>
+      {% endif %}
+    </div>
+  </details>
   {% endif %}
 
   {% if narrativa and narrativa.capa_corta %}
