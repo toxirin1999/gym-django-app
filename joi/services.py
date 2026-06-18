@@ -3816,17 +3816,31 @@ def determinar_estado_habitacion_joi(usuario):
         except Exception as e:
             logger.warning(f"[JOI Estado] Pulso check failed: {e}")
 
-        # Check 2: RPE extremo hoy (RPE >= 10, conservador como Hyrox)
+        # Check 2: RPE extremo hoy — Hyrox (RPE >= 10) o Gym (RPE >= 8)
         try:
-            ultima_sesion = HyroxSession.objects.filter(
+            # 2a. Check Hyrox RPE (conservador: >= 10)
+            ultima_sesion_hyrox = HyroxSession.objects.filter(
                 objective__cliente__user=usuario,
                 fecha=today,
                 estado='completado'
             ).order_by('-id').first()
 
-            if ultima_sesion and ultima_sesion.rpe_global and ultima_sesion.rpe_global >= 10:
-                logger.info(f"[JOI Estado] {usuario.username}: PROTEGIENDO (RPE {ultima_sesion.rpe_global})")
+            if ultima_sesion_hyrox and ultima_sesion_hyrox.rpe_global and ultima_sesion_hyrox.rpe_global >= 10:
+                logger.info(f"[JOI Estado] {usuario.username}: PROTEGIENDO (RPE Hyrox {ultima_sesion_hyrox.rpe_global})")
                 return ('PROTEGIENDO', 'rpe_extremo')
+
+            # 2b. Check Gym RPE (más sensible: >= 8)
+            from entrenos.models import EntrenoRealizado
+            ultima_sesion_gym = EntrenoRealizado.objects.filter(
+                cliente__user=usuario,
+                fecha=today
+            ).select_related('sesion_detalle').order_by('-id').first()
+
+            if ultima_sesion_gym and ultima_sesion_gym.sesion_detalle:
+                rpe_gym = ultima_sesion_gym.sesion_detalle.rpe_medio
+                if rpe_gym and rpe_gym >= 8:
+                    logger.info(f"[JOI Estado] {usuario.username}: PROTEGIENDO (RPE Gym {rpe_gym})")
+                    return ('PROTEGIENDO', 'rpe_extremo')
         except Exception as e:
             logger.warning(f"[JOI Estado] RPE check failed: {e}")
 
