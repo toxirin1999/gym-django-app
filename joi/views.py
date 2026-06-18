@@ -948,3 +948,62 @@ def crear_dialogo_narrativa(request):
         return JsonResponse({'ok': True})
     except NarrativaActiva.DoesNotExist:
         return JsonResponse({'ok': False, 'motivo': 'sin_narrativa'}, status=404)
+
+
+@login_required
+@require_POST
+def feedback_estado_encaje(request):
+    """
+    Registra si el estado actual de JOI (SILENCIO, OBSERVANDO, PRESENTE, PROTEGIENDO)
+    encaja con la experiencia del usuario.
+
+    POST data:
+    - estado: str (SILENCIO, OBSERVANDO, PRESENTE, PROTEGIENDO)
+    - motivo: str (sin_senales, diario_hoy_sin_lectura, etc.)
+    - feedback: str ('encaja' o 'no_encaja')
+
+    Respuesta:
+    - {'ok': true, 'saved': true} si se guardó
+    - {'ok': false} si validación falla
+    """
+    import json
+    from django.utils import timezone
+    from .models import EstadoFeedback
+
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'ok': False}, status=400)
+
+    estado = data.get('estado', '').strip()
+    motivo = data.get('motivo', '').strip()
+    feedback = data.get('feedback', '').strip()
+
+    # Validación
+    estados_validos = {'SILENCIO', 'OBSERVANDO', 'PRESENTE', 'PROTEGIENDO'}
+    feedback_valido = {'encaja', 'no_encaja'}
+
+    if not estado or estado not in estados_validos:
+        return JsonResponse({'ok': False, 'error': 'estado_invalido'}, status=400)
+    if not motivo:
+        return JsonResponse({'ok': False, 'error': 'motivo_requerido'}, status=400)
+    if not feedback or feedback not in feedback_valido:
+        return JsonResponse({'ok': False, 'error': 'feedback_invalido'}, status=400)
+
+    hoy = timezone.now().date()
+
+    # Upsert: actualizar si existe, crear si no
+    obj, created = EstadoFeedback.objects.update_or_create(
+        usuario=request.user,
+        fecha=hoy,
+        estado=estado,
+        motivo=motivo,
+        defaults={'feedback': feedback}
+    )
+
+    logger.info(
+        f"[JOI Feedback] {request.user.username}: {estado}/{motivo} = {feedback} "
+        f"({'created' if created else 'updated'})"
+    )
+
+    return JsonResponse({'ok': True, 'saved': True})

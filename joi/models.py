@@ -300,3 +300,31 @@ class JoiSintesisLog(models.Model):
     def __str__(self):
         accion = 'actualizado' if self.capas_modificadas else 'sin cambio'
         return f"SintesisLog [{self.tipo}/{accion}] {self.user.username} {self.creado_en.date()}"
+
+
+class EstadoFeedback(models.Model):
+    """Feedback sobre encaje del estado actual de JOI en la Habitación.
+
+    El usuario valida si la postura actual de JOI (SILENCIO, OBSERVANDO, PRESENTE, PROTEGIENDO)
+    corresponde con su experiencia. Solo registra encaje/no-encaje, no modifica lógica.
+    """
+    FEEDBACK_CHOICES = [
+        ('encaja', 'Encaja'),
+        ('no_encaja', 'No encaja'),
+    ]
+
+    usuario = models.ForeignKey(User, on_delete=models.CASCADE, related_name='joi_feedback_estados')
+    fecha = models.DateField()
+    estado = models.CharField(max_length=20)  # SILENCIO, OBSERVANDO, PRESENTE, PROTEGIENDO
+    motivo = models.CharField(max_length=50)  # sin_senales, diario_hoy_sin_lectura, etc.
+    feedback = models.CharField(max_length=20, choices=FEEDBACK_CHOICES)
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = [('usuario', 'fecha', 'estado', 'motivo')]
+        ordering = ['-timestamp']
+        verbose_name = 'Feedback sobre encaje de estado'
+        verbose_name_plural = 'Feedbacks sobre encaje de estados'
+
+    def __str__(self):
+        return f"{self.usuario.username} - {self.estado} ({self.fecha}): {self.feedback}"
