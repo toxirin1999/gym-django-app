@@ -505,6 +505,9 @@
           {{ ej.nombre|default:"Ejercicio" }}
           {% if ej.sustituido %}<span style="font-family:var(--fm);font-size:8px;color:var(--accent);letter-spacing:.08em;margin-left:6px;vertical-align:middle;">↔ CAMBIADO</span>{% endif %}
           {% if ej.deload %}<span style="font-family:var(--fm);font-size:8px;color:var(--accent);letter-spacing:.08em;margin-left:6px;vertical-align:middle;">↓ DELOAD</span>{% endif %}
+          {% if ej.progresion_aplicada and ej.progresion_accion == 'subir_peso' %}<span style="font-family:var(--fm);font-size:8px;color:var(--ok);letter-spacing:.08em;margin-left:6px;vertical-align:middle;">↑ SUBIR</span>{% endif %}
+          {% if ej.progresion_aplicada and ej.progresion_accion == 'bajar_peso' %}<span style="font-family:var(--fm);font-size:8px;color:var(--warn);letter-spacing:.08em;margin-left:6px;vertical-align:middle;">↓ BAJAR</span>{% endif %}
+          {% if ej.progresion_pospuesta %}<span style="font-family:var(--fm);font-size:8px;color:rgba(180,140,255,0.8);letter-spacing:.08em;margin-left:6px;vertical-align:middle;">= MANTENER</span>{% endif %}
           {% if ej.progresion_bloqueada %}
             {% if ej.motivo_bloqueo == 'lesion_activa' %}
               <span style="font-family:var(--fm);font-size:8px;color:rgba(239,68,68,0.85);letter-spacing:.08em;margin-left:6px;vertical-align:middle;">= MANTIENE · LESIÓN</span>
@@ -523,7 +526,15 @@
         <div class="plan-spec">
           {{ ej.series|default:"3" }} series
           {% if ej.repeticiones %} · {{ ej.repeticiones }} reps{% endif %}
-          {% if ej.progresion_bloqueada and ej.peso_kg_propuesto %}
+          {% if ej.progresion_aplicada and ej.progresion_accion == 'subir_peso' and ej.peso_kg_anterior %}
+          <s style="color:var(--tdm);">{{ ej.peso_kg_anterior|floatformat:"-1" }} kg</s> →
+          <span style="color:var(--ok);">{{ ej.peso_kg|floatformat:"-1" }} kg ↑</span>
+          {% elif ej.progresion_aplicada and ej.progresion_accion == 'bajar_peso' and ej.peso_kg_anterior %}
+          <s style="color:var(--tdm);">{{ ej.peso_kg_anterior|floatformat:"-1" }} kg</s> →
+          <span style="color:var(--warn);">{{ ej.peso_kg|floatformat:"-1" }} kg ↓</span>
+          {% elif ej.progresion_pospuesta and ej.progresion_accion == 'subir_peso' and ej.peso_kg_anterior %}
+          <s style="color:var(--tdm);">{{ ej.peso_kg_anterior|floatformat:"-1" }} kg</s> → <span style="color:rgba(180,140,255,0.8);">{{ ej.peso_kg|floatformat:"-1" }} kg</span>
+          {% elif ej.progresion_bloqueada and ej.peso_kg_propuesto %}
           <s style="color:var(--tdm);">{{ ej.peso_kg_propuesto|floatformat:"-1" }} kg</s> →
           <span style="color:{% if ej.motivo_bloqueo == 'lesion_activa' %}rgba(239,68,68,0.85){% elif ej.motivo_bloqueo == 'lesion_retorno' %}rgba(245,158,11,0.85){% elif ej.motivo_bloqueo == 'retorno_pausa' %}rgba(96,165,250,0.90){% else %}rgba(180,140,255,0.8){% endif %};">{{ ej.peso_kg|floatformat:"-1" }} kg</span>
           {% elif ej.peso_recomendado_kg and ej.peso_recomendado_kg > 0 %} · {{ ej.peso_recomendado_kg }} kg
@@ -531,6 +542,11 @@
           {% endif %}
           {% if ej.tempo %} · <span class="plan-tempo">tempo {{ ej.tempo }}</span>{% endif %}
         </div>
+        {% if ej.progresion_motivo %}
+        <div style="font-family:var(--fm);font-size:9px;color:var(--accent);margin-top:4px;margin-bottom:4px;">
+          {{ ej.progresion_motivo }}
+        </div>
+        {% endif %}
         {% if ej.aproximaciones %}
         <div class="plan-warmup">
           Calentamiento: {{ ej.aproximaciones.peso1|floatformat:"-1" }} kg · {{ ej.aproximaciones.peso2|floatformat:"-1" }} kg · {{ ej.aproximaciones.peso3|floatformat:"-1" }} kg
