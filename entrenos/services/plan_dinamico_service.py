@@ -230,7 +230,9 @@ def _aplicar_progresion_ejecutiva(cliente, ejercicios_mod, hoy, cambios):
             continue
 
         if log.accion == 'bajar_peso':
+            peso_anterior = ej.get('peso_kg')
             ej['peso_kg'] = peso_sugerido
+            ej['peso_kg_anterior'] = peso_anterior  # para mostrar tachado
             ej['progresion_aplicada'] = True
             ej['progresion_accion'] = 'bajar_peso'
             ej['progresion_motivo'] = log.motivo
@@ -262,6 +264,8 @@ def _aplicar_progresion_ejecutiva(cliente, ejercicios_mod, hoy, cambios):
         if bloquea:
             motivo_texto = permiso_local['mensaje'] if bloquea_local else permiso['mensaje']
 
+            peso_anterior = ej.get('peso_kg')
+            ej['peso_kg_anterior'] = peso_anterior  # para mostrar tachado en pospuesta
             ej['progresion_pospuesta'] = True
             ej['progresion_accion'] = 'subir_peso'
             ej['progresion_motivo'] = motivo_texto
@@ -277,7 +281,9 @@ def _aplicar_progresion_ejecutiva(cliente, ejercicios_mod, hoy, cambios):
             })
             _persistir_estado_aplicacion(log, 'pospuesta', motivo_texto)
         else:
+            peso_anterior = ej.get('peso_kg')
             ej['peso_kg'] = peso_sugerido
+            ej['peso_kg_anterior'] = peso_anterior  # para mostrar tachado
             ej['progresion_aplicada'] = True
             ej['progresion_accion'] = 'subir_peso'
             ej['progresion_motivo'] = log.motivo
