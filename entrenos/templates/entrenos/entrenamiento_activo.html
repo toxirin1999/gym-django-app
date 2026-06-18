@@ -137,6 +137,7 @@ input{background:transparent!important;border:none!important;outline:none!import
 /* "kg": normal, muted, text-xs */
 .peso-kg{font-size:13px;font-weight:400;color:var(--td);align-self:flex-end;padding-bottom:10px;margin-left:4px;}
 .peso-lado{font-size:11px;font-weight:400;color:var(--td);text-align:center;margin-top:6px;min-height:16px;}
+.peso-motivo{font-size:12px;font-weight:400;color:var(--td);text-align:center;margin-top:8px;opacity:0.85;line-height:1.4;}
 
 /* SLIDERS — cada sección es una card vertical */
 .sliders-zona{padding:0 16px 8px;display:flex;flex-direction:column;gap:10px;}
@@ -1310,6 +1311,9 @@ input{background:transparent!important;border:none!important;outline:none!import
         <div class="orm-display" id="orm-{{ ejercicio.form_id }}-{{ sn }}"></div>
         <div class="pr-badge" id="pr-badge-{{ ejercicio.form_id }}-{{ sn }}"
              data-pr="{{ ejercicio.pr_peso|default:0 }}">🏆 NUEVO PR</div>
+        {% if ejercicio.motivo_peso.texto %}
+        <div class="peso-motivo">{{ ejercicio.motivo_peso.texto }}</div>
+        {% endif %}
       </div>
       {% else %}
       {# Input oculto con valor 0 para que la view no falle al leer el campo #}
