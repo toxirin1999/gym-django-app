@@ -3761,7 +3761,7 @@ def determinar_estado_habitacion_joi(usuario):
     Estados posibles:
     - PROTEGIENDO: cuerpo en protección (Pulso PROTEGIENDO, RPE extremo, lesión activa)
     - PRESENTE: hay lectura clara (mensaje JOI hoy + narrativa activa)
-    - OBSERVANDO: hay señal reciente sin lectura formada (diario hoy sin narrativa, sesión reciente sin RPE extremo)
+    - OBSERVANDO: hay señal reciente sin lectura formada (diario hoy sin narrativa)
     - SILENCIO: sin señal clara (presencia intencional, no ausencia de datos)
 
     Prioridad absoluta:
@@ -3774,7 +3774,9 @@ def determinar_estado_habitacion_joi(usuario):
         usuario: Django User object
 
     Returns:
-        str: 'PROTEGIENDO' | 'PRESENTE' | 'OBSERVANDO' | 'SILENCIO'
+        tuple: (estado, motivo)
+        - estado: 'PROTEGIENDO' | 'PRESENTE' | 'OBSERVANDO' | 'SILENCIO'
+        - motivo: 'pulso_protegiendo' | 'rpe_extremo' | 'lesion_activa' | 'mensaje_joi_hoy' | 'narrativa_activa' | 'diario_hoy_sin_lectura' | 'sin_senales'
     """
     try:
         from hyrox.models import HyroxObjective, HyroxSession
@@ -3808,7 +3810,7 @@ def determinar_estado_habitacion_joi(usuario):
 
             if pulso_data and pulso_data.get('pulso') == 'protegiendo':
                 logger.info(f"[JOI Estado] {usuario.username}: PROTEGIENDO (Pulso)")
-                return 'PROTEGIENDO'
+                return ('PROTEGIENDO', 'pulso_protegiendo')
         except HyroxObjective.DoesNotExist:
             pass
         except Exception as e:
@@ -3824,7 +3826,7 @@ def determinar_estado_habitacion_joi(usuario):
 
             if ultima_sesion and ultima_sesion.rpe_global and ultima_sesion.rpe_global >= 10:
                 logger.info(f"[JOI Estado] {usuario.username}: PROTEGIENDO (RPE {ultima_sesion.rpe_global})")
-                return 'PROTEGIENDO'
+                return ('PROTEGIENDO', 'rpe_extremo')
         except Exception as e:
             logger.warning(f"[JOI Estado] RPE check failed: {e}")
 
@@ -3837,7 +3839,7 @@ def determinar_estado_habitacion_joi(usuario):
 
             if lesion_activa:
                 logger.info(f"[JOI Estado] {usuario.username}: PROTEGIENDO (Lesión activa)")
-                return 'PROTEGIENDO'
+                return ('PROTEGIENDO', 'lesion_activa')
         except Exception as e:
             logger.warning(f"[JOI Estado] Injury check failed: {e}")
 
@@ -3853,7 +3855,7 @@ def determinar_estado_habitacion_joi(usuario):
 
             if msg_hoy:
                 logger.info(f"[JOI Estado] {usuario.username}: PRESENTE (Mensaje hoy)")
-                return 'PRESENTE'
+                return ('PRESENTE', 'mensaje_joi_hoy')
         except Exception as e:
             logger.warning(f"[JOI Estado] Mensaje check failed: {e}")
 
@@ -3866,7 +3868,7 @@ def determinar_estado_habitacion_joi(usuario):
 
             if narrativa:
                 logger.info(f"[JOI Estado] {usuario.username}: PRESENTE (Narrativa activa)")
-                return 'PRESENTE'
+                return ('PRESENTE', 'narrativa_activa')
         except Exception as e:
             logger.warning(f"[JOI Estado] Narrativa check failed: {e}")
 
@@ -3886,7 +3888,7 @@ def determinar_estado_habitacion_joi(usuario):
 
             if diario_hoy:
                 logger.info(f"[JOI Estado] {usuario.username}: OBSERVANDO (Diario hoy)")
-                return 'OBSERVANDO'
+                return ('OBSERVANDO', 'diario_hoy_sin_lectura')
 
         except Exception as e:
             logger.warning(f"[JOI Estado] Observando check failed: {e}")
@@ -3894,9 +3896,9 @@ def determinar_estado_habitacion_joi(usuario):
         # ─ DEFAULT: SILENCIO ────────────────────────────────────────────────
         # Presencia intencional, no ausencia de datos
         logger.info(f"[JOI Estado] {usuario.username}: SILENCIO")
-        return 'SILENCIO'
+        return ('SILENCIO', 'sin_senales')
 
     except Exception as e:
         logger.error(f"[JOI Estado] determinar_estado_habitacion_joi falló: {e}", exc_info=True)
-        return 'SILENCIO'  # Fallback seguro
+        return ('SILENCIO', 'sin_senales')  # Fallback seguro
 
