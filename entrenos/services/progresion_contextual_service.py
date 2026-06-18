@@ -347,6 +347,73 @@ _MENSAJES_FRENO_LOCAL = {
 }
 
 
+# ── Phase Gym 1.1 — Coherencia motivo ↔ decisión final ─────────────────────────
+
+def construir_motivo_final(ejercicio_dict, cliente):
+    """
+    Phase Gym 1.1 — Final motivo_peso layer for coherence after frenos.
+
+    ARQUITECTURA:
+    El motivo_peso inicial (en core.py) se basa en intención (RPE comparison).
+    Luego aplicamos frenos (contextual, lesión, etc) que MODIFICAN el peso real.
+    Esta función ajusta el motivo_peso para que refleje LA DECISIÓN FINAL,
+    no la intención previa.
+
+    PRINCIPIO MADRE:
+    El motivo mostrado al usuario debe explicar exactamente por qué ESE peso,
+    después de todos los frenos. Si hay freno, el motivo debe nombrarlo.
+
+    PRIORIDAD DE FRENOS (si hay múltiples):
+    1. Lesión activa/retorno (mayor protección)
+    2. Freno contextual (carga, margen, modo)
+    3. Intención original (RPE-based)
+
+    Args:
+        ejercicio_dict: dict con 'motivo_peso' y 'progresion_bloqueada'
+        cliente: Cliente object (for context, future use)
+
+    Returns:
+        Actualizado ejercicio_dict con motivo_peso final coherente
+    """
+    if not ejercicio_dict or not ejercicio_dict.get('motivo_peso'):
+        return ejercicio_dict
+
+    ej = dict(ejercicio_dict)
+    bloqueado = ej.get('progresion_bloqueada', False)
+
+    # Si no hay bloqueo, el motivo original es correcto
+    if not bloqueado:
+        return ej
+
+    # Si hay bloqueo, determinar el nuevo motivo basado en la causa
+    motivo_bloqueo = ej.get('motivo_bloqueo')
+    motivo_bloqueo_lesion = ej.get('motivo_bloqueo_lesion', False)
+
+    # PRIORIDAD 1: Lesión activa o en retorno
+    if motivo_bloqueo_lesion and motivo_bloqueo in ('lesion_activa', 'lesion_retorno'):
+        nuevo_tipo = 'mantiene'
+        nuevo_texto = (
+            "Progresión frenada: hay una señal de protección activa."
+            if motivo_bloqueo == 'lesion_activa'
+            else "Carga mantenida por recuperación articular gradual."
+        )
+    # PRIORIDAD 2: Freno contextual
+    elif motivo_bloqueo and motivo_bloqueo not in ('lesion_activa', 'lesion_retorno'):
+        nuevo_tipo = 'mantiene'
+        nuevo_texto = "Carga mantenida: el plan prioriza margen esta semana."
+    # Fallback (shouldn't happen if bloqueado=True)
+    else:
+        return ej
+
+    # Actualizar motivo_peso con el tipo y texto final
+    ej['motivo_peso'] = {
+        'tipo': nuevo_tipo,
+        'texto': nuevo_texto,
+    }
+
+    return ej
+
+
 def evaluar_permiso_local_ejercicio(cliente, nombre_ejercicio, hoy=None):
     """
     Phase 62K — Freno local por ejercicio para subir_peso.
