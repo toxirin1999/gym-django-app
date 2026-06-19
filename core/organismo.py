@@ -355,8 +355,17 @@ def _estado_silencio():
 
 def _estado_dict(estado, motivo, texto, accion_label, accion_url, modulo):
     """Construye dict estandarizado de estado."""
+    # Etiqueta humanizada del estado (para renderización correcta en template)
+    estado_labels = {
+        'SILENCIO': 'Silencio',
+        'OBSERVANDO': 'Observando',
+        'EN_MARGEN': 'En Margen',
+        'PROTEGIENDO': 'Protegiendo',
+    }
+
     return {
         'estado': estado,
+        'estado_label': estado_labels.get(estado, estado),
         'motivo': motivo,
         'texto': texto,
         'accion_label': accion_label,
