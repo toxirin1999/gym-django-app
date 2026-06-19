@@ -220,7 +220,13 @@ def _check_en_margen(usuario):
     try:
         # Check 1: ¿Hay sesión viable hoy?
         from entrenos.services.sesion_recomendada import obtener_sesion_recomendada_hoy
-        decision = obtener_sesion_recomendada_hoy(usuario)
+
+        # Guard: usuario debe tener cliente_profil
+        cliente = getattr(usuario, 'cliente_profil', None)
+        if not cliente:
+            return None
+
+        decision = obtener_sesion_recomendada_hoy(cliente)
 
         # Si estado es 'descanso' o no hay entrenamiento: no es EN_MARGEN
         if not decision or decision.get('estado') != 'entrenar':
