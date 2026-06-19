@@ -307,12 +307,22 @@ def _check_en_margen(usuario):
             motivo = 'gym_sesion_viable'
             texto = 'Hay margen para seguir el plan.'
 
+        # Construir URL con parámetros
+        rutina_nombre = entrenamiento.get('rutina_nombre') or entrenamiento.get('nombre_rutina') or ''
+        if rutina_nombre:
+            accion_url = '/entrenos/cliente/{}/entrenamiento-activo/?rutina_nombre={}'.format(
+                cliente.id,
+                rutina_nombre.replace(' ', '+')
+            )
+        else:
+            accion_url = '/entrenos/cliente/{}/entrenamiento-activo/'.format(cliente.id)
+
         return _estado_dict(
             'EN_MARGEN',
             motivo,
             texto,
             'Empezar entrenamiento',
-            '/entrenos/cliente/{}/entrenamiento-activo/'.format(cliente.id),
+            accion_url,
             'gym'
         )
 
