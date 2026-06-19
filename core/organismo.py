@@ -224,15 +224,19 @@ def _check_en_margen(usuario):
         # Guard: usuario debe tener cliente_perfil
         cliente = getattr(usuario, 'cliente_perfil', None)
         if not cliente:
+            print(f"[DEBUG Check 1] No cliente_perfil")
             return None
 
         decision = obtener_sesion_recomendada_hoy(cliente)
+        print(f"[DEBUG Check 1] decision: {decision.get('estado') if decision else None}")
 
         # Si estado es 'descanso' o no hay entrenamiento: no es EN_MARGEN
         # Estados viables: 'entrenar' normal o 'version_reducida' (margen con prudencia)
         estados_viables = {'entrenar', 'version_reducida'}
         if not decision or decision.get('estado') not in estados_viables:
+            print(f"[DEBUG Check 1b] Estado no viable: {decision.get('estado') if decision else None}")
             return None
+        print(f"[DEBUG Check 1b] Estado viable: {decision.get('estado')}")
 
         estado_gym = decision.get('estado')
 
@@ -312,12 +316,15 @@ def _check_en_margen(usuario):
             motivo,
             texto,
             'Empezar entrenamiento',
-            '/entrenos/cliente/{}/entrenamiento-activo/'.format(usuario.cliente_profil.id),
+            '/entrenos/cliente/{}/entrenamiento-activo/'.format(cliente.id),
             'gym'
         )
 
 
     except Exception as e:
+        import traceback
+        print(f"\n[DEBUG] _check_en_margen exception: {e}")
+        print(traceback.format_exc())
         logger.debug(f"_check_en_margen: {e}")
         return None
 
