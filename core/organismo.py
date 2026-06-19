@@ -229,8 +229,12 @@ def _check_en_margen(usuario):
         decision = obtener_sesion_recomendada_hoy(cliente)
 
         # Si estado es 'descanso' o no hay entrenamiento: no es EN_MARGEN
-        if not decision or decision.get('estado') != 'entrenar':
+        # Estados viables: 'entrenar' normal o 'version_reducida' (margen con prudencia)
+        estados_viables = {'entrenar', 'version_reducida'}
+        if not decision or decision.get('estado') not in estados_viables:
             return None
+
+        estado_gym = decision.get('estado')
 
         entrenamiento = decision.get('entrenamiento')
         if not entrenamiento or not entrenamiento.get('ejercicios'):
@@ -295,14 +299,23 @@ def _check_en_margen(usuario):
             pass
 
         # ✅ Todas las condiciones se cumplen: EN_MARGEN
+        # Matizar texto según estado de sesión
+        if estado_gym == 'version_reducida':
+            motivo = 'gym_version_reducida'
+            texto = 'Hay margen, con carga ajustada.'
+        else:  # 'entrenar' normal
+            motivo = 'gym_sesion_viable'
+            texto = 'Hay margen para seguir el plan.'
+
         return _estado_dict(
             'EN_MARGEN',
-            'sesion_viable',
-            'Hay margen para seguir el plan.',
+            motivo,
+            texto,
             'Empezar entrenamiento',
-            '/entrenos/cliente/{}/entrenamiento-activo/'.format(usuario.cliente_perfil.id),
+            '/entrenos/cliente/{}/entrenamiento-activo/'.format(usuario.cliente_profil.id),
             'gym'
         )
+
 
     except Exception as e:
         logger.debug(f"_check_en_margen: {e}")
