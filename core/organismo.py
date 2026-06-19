@@ -221,8 +221,8 @@ def _check_en_margen(usuario):
         # Check 1: ¿Hay sesión viable hoy?
         from entrenos.services.sesion_recomendada import obtener_sesion_recomendada_hoy
 
-        # Guard: usuario debe tener cliente_profil
-        cliente = getattr(usuario, 'cliente_profil', None)
+        # Guard: usuario debe tener cliente_perfil
+        cliente = getattr(usuario, 'cliente_perfil', None)
         if not cliente:
             return None
 
