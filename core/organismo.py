@@ -298,6 +298,21 @@ def _check_en_margen(usuario):
         except Exception:
             pass
 
+        # Check 7: ¿Sesión principal del día ya fue completada?
+        # Si existe EntrenoRealizado hoy, la acción principal ya se consumió.
+        # Retorna None para que resolver pase a OBSERVANDO/SILENCIO.
+        try:
+            from entrenos.models import EntrenoRealizado
+            if EntrenoRealizado.objects.filter(
+                cliente=cliente,
+                fecha=date.today()
+            ).exists():
+                # Sesión principal ya completada hoy → no hay EN_MARGEN activo
+                logger.debug(f"Check 7: EntrenoRealizado hoy encontrado para {cliente.id} → retornando None")
+                return None
+        except Exception as e:
+            logger.debug(f"Check 7 exception: {e}")
+
         # ✅ Todas las condiciones se cumplen: EN_MARGEN
         # Matizar texto según estado de sesión
         if estado_gym == 'version_reducida':
@@ -310,7 +325,6 @@ def _check_en_margen(usuario):
             modo_reducido = 0
 
         # Construir URL con parámetros para briefing
-        from datetime import date
         from urllib.parse import urlencode, quote
         import json as json_module
 
