@@ -1501,6 +1501,7 @@ def mockup_demo(request):
         # Degradación: SILENCIO seguro
         context['estado_sistema'] = {
             'estado': 'SILENCIO',
+            'estado_label': 'Silencio',
             'motivo': 'error',
             'texto': 'Sistema en reposo.',
             'accion_label': None,
