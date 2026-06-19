@@ -8208,6 +8208,13 @@ def briefing_entrenamiento(request, cliente_id):
     fecha_str = request.GET.get('fecha')
     fecha_obj = _dt.strptime(fecha_str, '%Y-%m-%d').date() if fecha_str else timezone.now().date()
 
+    # Phase Organismo 3: obtener estado del sistema para continuidad de postura
+    try:
+        from core.organismo import resolver_estado_sistema_hoy
+        estado_sistema = resolver_estado_sistema_hoy(request.user)
+    except Exception:
+        estado_sistema = None
+
     rutina_nombre = request.GET.get('rutina_nombre', '')
     ejercicios_json = request.GET.get('ejercicios', '[]')
     try:
@@ -8281,6 +8288,7 @@ def briefing_entrenamiento(request, cliente_id):
         'url_sesion': url_sesion,
         'pausa_pregunta': pausa_pregunta,
         'motivo_choices': motivo_choices,
+        'estado_sistema': estado_sistema,
     })
 
 
