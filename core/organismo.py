@@ -282,23 +282,7 @@ def _check_en_margen(usuario):
         except Exception:
             pass
 
-        # Check 6: ¿Diario ciclo normal?
-        try:
-            from diario.models import BitacoraDiaria
-            diario = BitacoraDiaria.objects.filter(
-                cliente__user=usuario,
-                fecha=date.today()
-            ).first()
-            if diario and diario.estado in ['sin_entrada']:
-                # Sin entrada = no hay pendiente, está OK para EN_MARGEN
-                pass
-            elif diario and diario.estado in ['manana_hecha']:
-                # Cierre pendiente = OBSERVANDO, no EN_MARGEN
-                return None
-        except Exception:
-            pass
-
-        # Check 7: ¿Sesión principal del día ya fue completada?
+        # Check 6: ¿Sesión principal del día ya fue completada?
         # Si existe EntrenoRealizado hoy, la acción principal ya se consumió.
         # Retorna None para que resolver pase a OBSERVANDO/SILENCIO.
         try:
