@@ -1,6 +1,8 @@
 from django.urls import path
 from . import views
 
+app_name = 'joi'
+
 urlpatterns = [
     path('mensaje/<int:mensaje_id>/leido/', views.marcar_mensaje_leido, name='joi_marcar_leido'),
     path('habitacion/', views.habitacion_joi, name='joi_habitacion'),

@@ -26,7 +26,7 @@ urlpatterns = [
     path('rutinas/', include('rutinas.urls')),
     path('entrenos/', include('entrenos.urls')),
     path('logros/', include('logros.urls')),  # <-- ÚNICA INCLUSIÓN
-    path('joi/', include('joi.urls')),
+    path('joi/', include('joi.urls', namespace='joi')),
     path('estoico/', include('estoico.urls')),
     path('analytics/', include('analytics.urls')),
     # path('nutricion/', include('nutricion_app_django.urls')),  # Oculto: nutrición no se usa (junio 2026)
