@@ -352,9 +352,10 @@ def _check_observando(usuario):
 
     Señales de OBSERVANDO:
     1. JOI Habitación está OBSERVANDO (principal)
+    2. Diario: apertura hecha sin cierre (manana_hecha)
     """
     try:
-        # ¿JOI Habitación está OBSERVANDO?
+        # Check 1: ¿JOI Habitación está OBSERVANDO?
         from joi.services import determinar_estado_habitacion_joi
         estado, motivo = determinar_estado_habitacion_joi(usuario)
         if estado == 'OBSERVANDO':
@@ -367,7 +368,32 @@ def _check_observando(usuario):
                 'joi'
             )
     except Exception as e:
-        logger.debug(f"_check_observando: {e}")
+        logger.debug(f"_check_observando (JOI): {e}")
+
+    # Check 2: ¿Diario: apertura hecha, cierre pendiente?
+    try:
+        from diario.models import ProsocheDiario
+        from diario.services.estado_diario import calcular_estado_diario_hoy
+
+        prosoche_hoy = ProsocheDiario.objects.filter(
+            prosoche_mes__usuario=usuario,
+            fecha=date.today()
+        ).first()
+
+        if prosoche_hoy:
+            estado_diario = calcular_estado_diario_hoy(prosoche_hoy)
+            # Si la apertura está hecha pero no hay cierre, es OBSERVANDO
+            if estado_diario.get('estado') == 'manana_hecha':
+                return _estado_dict(
+                    'OBSERVANDO',
+                    'diario_manana_hecha',
+                    'Día abierto. Falta cierre.',
+                    'Completar cierre',
+                    '/diario/',
+                    'diario'
+                )
+    except Exception as e:
+        logger.debug(f"_check_observando (Diario): {e}")
 
     return None
 
