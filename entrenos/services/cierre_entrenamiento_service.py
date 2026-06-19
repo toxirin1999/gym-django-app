@@ -106,6 +106,10 @@ def _resumen_sesion(entreno, ejercicios):
     titulo = entreno.rutina.nombre if entreno.rutina_id else ''
     n_series_calculado = sum(ej.series for ej in ejercicios)
     sesion = getattr(entreno, 'sesion_detalle', None)
+
+    # Si fue versión esencial/reducida, añadir label discreta
+    sesion_tipo = '· Sesión ajustada' if entreno.modo_reducido else None
+
     if sesion:
         return {
             'titulo': titulo,
@@ -117,6 +121,7 @@ def _resumen_sesion(entreno, ejercicios):
             'rpe_medio': sesion.rpe_medio,
             'duracion_minutos': sesion.duracion_minutos or entreno.duracion_minutos,
             'volumen_kg': float(sesion.volumen_sesion or entreno.volumen_total_kg or 0),
+            'sesion_tipo': sesion_tipo,
         }
     return {
         'titulo': titulo,
@@ -125,6 +130,7 @@ def _resumen_sesion(entreno, ejercicios):
         'rpe_medio': None,
         'duracion_minutos': entreno.duracion_minutos,
         'volumen_kg': float(entreno.volumen_total_kg or 0),
+        'sesion_tipo': sesion_tipo,
     }
 
 
@@ -150,6 +156,16 @@ def _cambios_relevantes(cliente, entreno, ejercicios):
             continue
 
         diff = round((ej.peso_kg or 0) - (anterior.peso_kg or 0), 2)
+
+        # Detectar cambio de variante: 0↔carga (cambio de unidad, no regresión real)
+        es_cambio_variante = (ej.peso_kg == 0 and anterior.peso_kg > 0) or (ej.peso_kg > 0 and anterior.peso_kg == 0)
+        if es_cambio_variante:
+            continue  # No mostrar cambios de variante como cambios de carga
+
+        # Ocultar cambios irrelevantes: < 0.25 kg
+        if abs(diff) < 0.25:
+            continue
+
         if diff == 0:
             cambios.append({'nombre': ej.nombre_ejercicio, 'tipo': 'mantenida', 'detalle': 'carga mantenida'})
         elif diff > 0:
@@ -215,11 +231,11 @@ def construir_contexto_cierre(cliente, entreno):
     if proxima_vez is None:
         proxima_vez = _proxima_vez_decisiones(cliente, ejercicios)
 
+    # Mostrar todos los PRs reales sin eliminar duplicados (ej: peso máximo + volumen total del mismo ejercicio)
     prs = list(
         entreno.records_establecidos
         .filter(superado=False)
         .values_list('ejercicio_nombre', flat=True)
-        .distinct()
     )
 
     joi_mensaje = _joi_mensaje_cierre(cliente, entreno)
