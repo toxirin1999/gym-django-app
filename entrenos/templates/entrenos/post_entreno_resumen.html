@@ -199,7 +199,7 @@
       <div class="bib-info">
         <div class="bib-title">{{ resumen.titulo|default:"Sesión" }}</div>
         <div class="bib-sub">
-          {{ resumen.n_series }} serie{{ resumen.n_series|pluralize }}{% if resumen.duracion_minutos %} · {{ resumen.duracion_minutos }} min{% endif %}{% if resumen.rpe_medio %} · RPE {{ resumen.rpe_medio }}{% endif %}{% if resumen.volumen_kg %} · {{ resumen.volumen_kg|floatformat:0 }} kg{% endif %}
+          {{ resumen.n_series }} serie{{ resumen.n_series|pluralize }}{% if resumen.duracion_minutos %} · {{ resumen.duracion_minutos }} min{% endif %}{% if resumen.rpe_medio %} · RPE {{ resumen.rpe_medio }}{% endif %}{% if resumen.volumen_kg %} · {{ resumen.volumen_kg|floatformat:0 }} kg{% endif %}{% if resumen.sesion_tipo %} {{ resumen.sesion_tipo }}{% endif %}
         </div>
       </div>
     </div>
