@@ -4320,7 +4320,12 @@ def guardar_entrenamiento_activo(request, cliente_id):
                 sesion_gam.save()
 
                 if records_nuevos:
-                    messages.success(request, f"🏆 ¡HAS LOGRADO {len(records_nuevos)} NUEVOS RÉCORDS PERSONALES!")
+                    num_prs = len(records_nuevos)
+                    if num_prs == 1:
+                        msg = "🏆 ¡HAS LOGRADO 1 NUEVO RÉCORD PERSONAL!"
+                    else:
+                        msg = f"🏆 ¡HAS LOGRADO {num_prs} NUEVOS RÉCORDS PERSONALES!"
+                    messages.success(request, msg)
 
                 # JOI post-entreno: se genera aquí para tener rpe_final disponible.
                 # El signal no lo genera porque los ejercicios aún no existen en ese momento.
