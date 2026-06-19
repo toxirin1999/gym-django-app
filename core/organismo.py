@@ -303,19 +303,31 @@ def _check_en_margen(usuario):
         if estado_gym == 'version_reducida':
             motivo = 'gym_version_reducida'
             texto = 'Hay margen, con carga ajustada.'
+            modo_reducido = 1
         else:  # 'entrenar' normal
             motivo = 'gym_sesion_viable'
             texto = 'Hay margen para seguir el plan.'
+            modo_reducido = 0
 
-        # Construir URL con parámetros
+        # Construir URL con parámetros para briefing
+        from datetime import date
+        from urllib.parse import urlencode, quote
+        import json as json_module
+
         rutina_nombre = entrenamiento.get('rutina_nombre') or entrenamiento.get('nombre_rutina') or ''
-        if rutina_nombre:
-            accion_url = '/entrenos/cliente/{}/entrenamiento-activo/?rutina_nombre={}'.format(
-                cliente.id,
-                rutina_nombre.replace(' ', '+')
-            )
-        else:
-            accion_url = '/entrenos/cliente/{}/entrenamiento-activo/'.format(cliente.id)
+        ejercicios = entrenamiento.get('ejercicios', [])
+
+        params = {
+            'fecha': date.today().strftime('%Y-%m-%d'),
+            'rutina_nombre': rutina_nombre,
+            'ejercicios': json_module.dumps(ejercicios),
+            'modo_reducido': modo_reducido,
+        }
+
+        accion_url = '/entrenos/cliente/{}/briefing/?{}'.format(
+            cliente.id,
+            urlencode(params)
+        )
 
         return _estado_dict(
             'EN_MARGEN',
