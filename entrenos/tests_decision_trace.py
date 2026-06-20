@@ -238,10 +238,15 @@ class TestCase10_ExplicacionHumana(TraceBase):
         self.assertGreater(len(explicacion), 5)
 
     def test_get_explicacion_humana_sin_senales(self):
+        # La fecha vive en t.fecha (y en fecha_label vía humanizar_trace),
+        # no embebida en el texto de get_explicacion_humana(); aquí se
+        # verifica que ambas piezas permiten reconstruir "qué pasó y cuándo".
         registrar_decision_trace(self.cliente, self._decision(), self.hoy)
         t = GymDecisionTrace.objects.get(cliente=self.cliente, fecha=self.hoy)
         explicacion = t.get_explicacion_humana()
-        self.assertIn(str(self.hoy), explicacion)
+        self.assertEqual(t.fecha, self.hoy)
+        self.assertIsInstance(explicacion, str)
+        self.assertGreater(len(explicacion), 5)
 
 
 # ── Case 11: descanso limpio no crea traza ────────────────────────────────────

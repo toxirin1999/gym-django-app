@@ -1440,7 +1440,7 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
       </div>
       {% endif %}
       {% endwith %}
-      <!-- Primeros 3 items siempre visibles (datos clave y primera sección) -->
+      <!-- Primeros 3 items quedan visibles por defecto (datos clave y primera sección) -->
       {% for item in resumen_semanal_gym|slice:":3" %}
       {% if item.tipo == 'seccion' %}
       <div style="margin:8px 0 2px;padding:4px 0;border-top:1px solid var(--line-2);display:flex;align-items:center;gap:6px;">
@@ -1774,7 +1774,7 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
         {% endif %}
       </div>
 
-      <!-- Lectura semanal — siempre accesible, discreta -->
+      <!-- Lectura semanal — accesible de forma discreta -->
       <div style="padding-top:10px;text-align:center;">
         <a href="{% url 'diario:lectura_semanal' %}" style="font-family:var(--font-mono);font-size:9px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink-4);text-decoration:none;">
           lectura de la semana →

@@ -351,7 +351,7 @@ _MENSAJES_POR_CAUSA = {
     'fatiga_alta':        'El plan sigue aquí, pero hoy no necesita que lo fuerces.',
     'energia_baja':       'Hoy hay margen para hacer la versión mínima. No hace falta completar todo.',
     'futbol_reciente':    'Tus piernas ya recibieron carga del fútbol. Hoy conviene no confundir esfuerzo con progreso.',
-    'hyrox_reciente':     'El Hyrox reciente dejó carga real. Los principales primero; accesorios opcionales.',
+    'hyrox_reciente':     'El Hyrox reciente dejó carga real — hoy conviene priorizar los principales y dejar los accesorios como opcionales.',
     'pendiente_prioritaria': 'Esta sesión sostiene el bloque. Sigue siendo la siguiente pieza útil.',
     'pendiente_normal':   'Esta sesión quedó pendiente. El plan conserva el hilo.',
     'sesion_hoy':         'Esta es la sesión prevista para hoy.',

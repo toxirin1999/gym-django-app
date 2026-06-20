@@ -105,7 +105,7 @@ def generar_sugerencia_hipotesis(cliente, fecha_ref=None) -> 'SugerenciaPlan | N
     if get_sugerencia_hipotesis_activa(cliente):
         return None
 
-    hipotesis = detectar_hipotesis_abiertas(cliente)
+    hipotesis = detectar_hipotesis_abiertas(cliente, fecha_ref=fecha_ref)
     mejor = _hipotesis_mas_relevante(hipotesis)
     if not mejor:
         return None
@@ -224,7 +224,7 @@ def evaluar_fin_experimento_hipotesis(cliente, fecha_ref=None) -> dict | None:
     }
 
 
-def detectar_hipotesis_abiertas(cliente, ventana_dias=_VENTANA_DIAS, min_ocurrencias=_MIN_OCURRENCIAS) -> list[dict]:
+def detectar_hipotesis_abiertas(cliente, ventana_dias=_VENTANA_DIAS, min_ocurrencias=_MIN_OCURRENCIAS, fecha_ref=None) -> list[dict]:
     """
     Phase 36 — Detects repeated senal_no_captada patterns for a client.
 
@@ -243,7 +243,7 @@ def detectar_hipotesis_abiertas(cliente, ventana_dias=_VENTANA_DIAS, min_ocurren
         from django.utils import timezone
         from entrenos.models import GymDecisionTraceEvaluation, GymDecisionTrace
 
-        hoy = timezone.localdate()
+        hoy = fecha_ref or timezone.localdate()
         desde = hoy - _td(days=ventana_dias)
 
         # Fetch all senal_no_captada evaluations in the window

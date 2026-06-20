@@ -181,16 +181,16 @@ def _extraer_preferencias(decision: dict) -> list[str]:
     return list(ctx.get('preferencias_activas', []))
 
 
-def _extraer_intervenciones(cliente) -> list[str]:
+def _extraer_intervenciones(cliente, fecha=None) -> list[str]:
     try:
         from entrenos.models import IntervencionPlan
         from django.utils import timezone
-        hoy = timezone.localdate()
+        fecha = fecha or timezone.localdate()
         return list(
             IntervencionPlan.objects.filter(
                 cliente=cliente,
                 estado=IntervencionPlan.ESTADO_ACTIVA,
-                fecha_fin__gte=hoy,
+                fecha_fin__gte=fecha,
             ).values_list('tipo', flat=True)
         )
     except Exception:
@@ -247,7 +247,7 @@ def registrar_decision_trace(cliente, decision: dict, fecha=None) -> None:
             'capas_suprimidas':     _extraer_capas_suprimidas(decision, explicacion),
             'explicacion_senales':  explicacion.get('senales_activas', []),
             'preferencias_activas': _extraer_preferencias(decision),
-            'intervenciones_activas': _extraer_intervenciones(cliente),
+            'intervenciones_activas': _extraer_intervenciones(cliente, fecha),
             'lesion_contexto':      _extraer_lesion_contexto(decision),
         }
 

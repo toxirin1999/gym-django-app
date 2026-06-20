@@ -16,11 +16,12 @@ Checklist (10):
 10. Centro muestra sección si hay hipótesis, la oculta si no hay.
 """
 
-from datetime import date, timedelta
+from datetime import timedelta
 
 from django.contrib.auth.models import User
 from django.test import TestCase, Client
 from django.urls import reverse
+from django.utils import timezone
 
 from clientes.models import Cliente
 from entrenos.models import GymDecisionTrace, GymDecisionTraceEvaluation
@@ -36,7 +37,7 @@ class HipotesisBase(TestCase):
         self.cliente, _ = Cliente.objects.get_or_create(
             user=self.user, defaults={'nombre': 'TestHip36', 'dias_disponibles': 4},
         )
-        self.hoy = date(2026, 5, 21)
+        self.hoy = timezone.localdate()
 
     def _trace_eval(self, estado='posponer', resultado='senal_no_captada', dias_atras=3):
         trace = GymDecisionTrace.objects.create(
@@ -61,7 +62,7 @@ class HipotesisBase(TestCase):
 
 class TestCase1_SinEvaluaciones(HipotesisBase):
     def test_sin_evaluaciones_devuelve_vacio(self):
-        resultado = detectar_hipotesis_abiertas(self.cliente)
+        resultado = detectar_hipotesis_abiertas(self.cliente, fecha_ref=self.hoy)
         self.assertEqual(resultado, [])
 
 
@@ -69,7 +70,7 @@ class TestCase2_MenosDeMinimo(HipotesisBase):
     def test_menos_de_min_ocurrencias_devuelve_vacio(self):
         for i in range(2):  # only 2, needs 3
             self._trace_eval(estado='posponer', dias_atras=i+1)
-        resultado = detectar_hipotesis_abiertas(self.cliente, min_ocurrencias=3)
+        resultado = detectar_hipotesis_abiertas(self.cliente, min_ocurrencias=3, fecha_ref=self.hoy)
         self.assertEqual(resultado, [])
 
 
@@ -79,7 +80,7 @@ class TestCase3_GeneraHipotesis(HipotesisBase):
     def test_tres_senal_no_captada_mismo_estado_genera_hipotesis(self):
         for i in range(3):
             self._trace_eval(estado='posponer', dias_atras=i+2)
-        resultado = detectar_hipotesis_abiertas(self.cliente, min_ocurrencias=3)
+        resultado = detectar_hipotesis_abiertas(self.cliente, min_ocurrencias=3, fecha_ref=self.hoy)
         self.assertEqual(len(resultado), 1)
         self.assertEqual(resultado[0]['estado'], 'posponer')
         self.assertEqual(resultado[0]['ocurrencias'], 3)
@@ -93,7 +94,7 @@ class TestCase4_EstadosSeparados(HipotesisBase):
             self._trace_eval(estado='posponer', dias_atras=i+2)
         for i in range(3):
             self._trace_eval(estado='entrenar', dias_atras=i+10)
-        resultado = detectar_hipotesis_abiertas(self.cliente, min_ocurrencias=3)
+        resultado = detectar_hipotesis_abiertas(self.cliente, min_ocurrencias=3, fecha_ref=self.hoy)
         estados = {h['estado'] for h in resultado}
         self.assertIn('posponer', estados)
         self.assertIn('entrenar', estados)
@@ -106,7 +107,7 @@ class TestCase5_TonoTentativo(HipotesisBase):
     def test_texto_usa_tono_tentativo(self):
         for i in range(3):
             self._trace_eval(estado='posponer', dias_atras=i+2)
-        resultado = detectar_hipotesis_abiertas(self.cliente, min_ocurrencias=3)
+        resultado = detectar_hipotesis_abiertas(self.cliente, min_ocurrencias=3, fecha_ref=self.hoy)
         texto = resultado[0]['texto'].lower()
         usa_tentativo = any(k in texto for k in PALABRAS_TENTATIVAS)
         self.assertTrue(usa_tentativo, msg=f"Texto no usa tono tentativo: {texto[:150]}")
@@ -116,7 +117,7 @@ class TestCase6_SinProhibidas(HipotesisBase):
     def test_texto_sin_palabras_prohibidas(self):
         for i in range(3):
             self._trace_eval(estado='entrenar', dias_atras=i+2)
-        resultado = detectar_hipotesis_abiertas(self.cliente, min_ocurrencias=3)
+        resultado = detectar_hipotesis_abiertas(self.cliente, min_ocurrencias=3, fecha_ref=self.hoy)
         texto = resultado[0]['texto'].lower()
         for palabra in PALABRAS_PROHIBIDAS:
             self.assertNotIn(palabra, texto, msg=f"Texto usa '{palabra}'")
@@ -128,14 +129,14 @@ class TestCase7_SoloSenalNoCaptada(HipotesisBase):
     def test_otros_resultados_no_cuentan(self):
         for i in range(3):
             self._trace_eval(estado='posponer', resultado='libero_margen', dias_atras=i+2)
-        resultado = detectar_hipotesis_abiertas(self.cliente, min_ocurrencias=3)
+        resultado = detectar_hipotesis_abiertas(self.cliente, min_ocurrencias=3, fecha_ref=self.hoy)
         self.assertEqual(resultado, [])
 
     def test_mezcla_resultados_solo_suma_senal_no_captada(self):
         for i in range(2):
             self._trace_eval(estado='posponer', resultado='senal_no_captada', dias_atras=i+2)
         self._trace_eval(estado='posponer', resultado='libero_margen', dias_atras=5)
-        resultado = detectar_hipotesis_abiertas(self.cliente, min_ocurrencias=3)
+        resultado = detectar_hipotesis_abiertas(self.cliente, min_ocurrencias=3, fecha_ref=self.hoy)
         self.assertEqual(resultado, [])  # only 2 senal_no_captada, needs 3
 
 
@@ -145,7 +146,7 @@ class TestCase8_VentanaTemporal(HipotesisBase):
     def test_fuera_de_ventana_no_cuenta(self):
         for i in range(3):
             self._trace_eval(estado='posponer', dias_atras=40 + i)  # 40+ days ago
-        resultado = detectar_hipotesis_abiertas(self.cliente, ventana_dias=30, min_ocurrencias=3)
+        resultado = detectar_hipotesis_abiertas(self.cliente, ventana_dias=30, min_ocurrencias=3, fecha_ref=self.hoy)
         self.assertEqual(resultado, [])
 
 
