@@ -65,11 +65,26 @@ def agrupar_decisiones_carga(decisiones: list) -> list[dict]:
         accion, label, count, ejercicios (nombres formateados, sin
         repetir), motivo_principal (del log más reciente del grupo),
         items (logs originales).
+
+    Un mismo ejercicio puede tener varios logs en la ventana de 30 días
+    (p.ej. subir_peso el día 10 y mantener el día 15). Solo el log más
+    reciente de cada ejercicio decide su grupo — si no, el ejercicio
+    aparecería repetido en dos grupos distintos a la vez.
     """
+    decision_mas_reciente_por_ejercicio: dict[str, object] = {}
+    orden_ejercicios: list[str] = []
+
+    for log in decisiones:
+        nombre = log.ejercicio.title()
+        if nombre not in decision_mas_reciente_por_ejercicio:
+            decision_mas_reciente_por_ejercicio[nombre] = log
+            orden_ejercicios.append(nombre)
+
     grupos: dict[str, dict] = {}
     orden: list[str] = []
 
-    for log in decisiones:
+    for nombre in orden_ejercicios:
+        log = decision_mas_reciente_por_ejercicio[nombre]
         accion = log.accion
         if accion not in grupos:
             grupos[accion] = {
@@ -84,9 +99,7 @@ def agrupar_decisiones_carga(decisiones: list) -> list[dict]:
         grupo = grupos[accion]
         grupo['count'] += 1
         grupo['items'].append(log)
-        nombre = log.ejercicio.title()
-        if nombre not in grupo['ejercicios']:
-            grupo['ejercicios'].append(nombre)
+        grupo['ejercicios'].append(nombre)
 
     # Phase 62I — cuántas de las decisiones del grupo quedaron pospuestas
     # por el freno contextual la última vez que se calculó el plan.
