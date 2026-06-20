@@ -156,6 +156,30 @@ class TestAgruparDecisionesCarga(SimpleTestCase):
     def test_lista_vacia_devuelve_lista_vacia(self):
         self.assertEqual(agrupar_decisiones_carga([]), [])
 
+    def test_mismo_ejercicio_con_dos_acciones_solo_cuenta_en_la_mas_reciente(self):
+        logs = [
+            _log('sentadilla hack', 'mantener', 'Parámetros estables.', datetime(2026, 5, 28, 10, 0)),
+            _log('sentadilla hack', 'subir_peso', 'Completado con éxito.', datetime(2026, 5, 20, 10, 0)),
+        ]
+
+        grupos = agrupar_decisiones_carga(logs)
+
+        mantener = next(g for g in grupos if g['accion'] == 'mantener')
+        subir = next((g for g in grupos if g['accion'] == 'subir_peso'), None)
+        self.assertIn('Sentadilla Hack', mantener['ejercicios'])
+        self.assertIsNone(subir)
+
+    def test_count_coincide_con_numero_de_ejercicios_unicos(self):
+        logs = [
+            _log('press banca', 'subir_peso', 'motivo', datetime(2026, 5, 28, 10, 0)),
+            _log('press banca', 'subir_peso', 'motivo repetido', datetime(2026, 5, 22, 10, 0)),
+        ]
+
+        grupos = agrupar_decisiones_carga(logs)
+
+        self.assertEqual(grupos[0]['count'], 1)
+        self.assertEqual(grupos[0]['ejercicios'], ['Press Banca'])
+
 
 class TestConstruirEstadoPlan(SimpleTestCase):
 
