@@ -318,6 +318,34 @@ class TestCase10_VistaActivaUsaProgresion(ProgresionEjecutivaBase):
         ejercicios_planificados = response.context['ejercicios_planificados']
         self.assertEqual(ejercicios_planificados[0]['peso_inicial_kg'], 85.0)
 
+    def test_motivo_peso_sube_sin_progresion_aplicada_usa_recomendado_no_carry_forward(self):
+        """Bug real: el generador de plan decide motivo_peso.tipo='sube' sin
+        pasar por aplicar_plan_dinamico (progresion_aplicada nunca se marca).
+        El input debe arrancar en el peso recomendado, no repetir 190kg de
+        la última sesión."""
+        rutina = Rutina.objects.create(nombre='Rutina Test PE62H')
+        entreno_anterior = EntrenoRealizado.objects.create(
+            cliente=self.cliente, rutina=rutina, fecha=date(2026, 6, 4),
+        )
+        EjercicioRealizado.objects.create(
+            entreno=entreno_anterior, nombre_ejercicio='Hip Thrust con Barra',
+            peso_kg=190.0, series=3, repeticiones=3, completado=True,
+        )
+
+        ejercicio = self._ejercicio(nombre='Hip Thrust con Barra', peso_kg=192.5)
+        ejercicio['peso_recomendado_kg'] = 192.5
+        ejercicio['motivo_peso'] = {
+            'tipo': 'sube',
+            'texto': 'Sube por: últimas sesiones completadas con margen.',
+        }
+
+        response = self._get([ejercicio])
+        self.assertEqual(response.status_code, 200)
+
+        ej = response.context['ejercicios_planificados'][0]
+        self.assertEqual(ej['peso_anterior_kg'], 190.0)
+        self.assertEqual(ej['peso_inicial_kg'], 192.5)
+
 
 # ══════════════════════════════════════════════════════════════════════════
 # Phase 62K — Freno local por ejercicio para subir_peso

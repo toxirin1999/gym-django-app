@@ -3816,6 +3816,16 @@ def vista_entrenamiento_activo(request, cliente_id):
             # plan manda sobre el carry-forward de la sesión anterior ---
             if ejercicio.get('progresion_aplicada'):
                 ejercicio['peso_inicial_kg'] = float(ejercicio.get('peso_recomendado_kg', 0) or 0)
+            elif not ejercicio.get('sugerencia_tope'):
+                # El generador de plan también puede decidir sube/baja sin
+                # pasar por aplicar_plan_dinamico (progresion_aplicada). Si
+                # motivo_peso ya dice "sube"/"baja", el input debe arrancar
+                # en el peso recomendado, no repetir el de la última sesión.
+                _motivo_tipo_peso = (ejercicio.get('motivo_peso') or {}).get('tipo')
+                if _motivo_tipo_peso in ('sube', 'baja'):
+                    _peso_rec_motivo = float(ejercicio.get('peso_recomendado_kg', 0) or 0)
+                    if _peso_rec_motivo > 0:
+                        ejercicio['peso_inicial_kg'] = _peso_rec_motivo
 
             # --- PROGRESIÓN PARA EJERCICIOS DE TIEMPO ---
             # Si hay dato anterior: propone anterior+1s (éxito) o anterior-1s (no completado).
