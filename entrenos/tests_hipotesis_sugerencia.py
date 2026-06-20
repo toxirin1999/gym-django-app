@@ -22,11 +22,12 @@ Checklist (15):
 15. Aceptar sugerencia desde Centro devuelve redirect correcto.
 """
 
-from datetime import date, timedelta
+from datetime import timedelta
 
 from django.contrib.auth.models import User
 from django.test import TestCase, Client
 from django.urls import reverse
+from django.utils import timezone
 
 from clientes.models import Cliente
 from entrenos.models import (
@@ -48,7 +49,7 @@ class HipotesisSugerenciaBase(TestCase):
         self.cliente, _ = Cliente.objects.get_or_create(
             user=self.user, defaults={'nombre': 'TestH37', 'dias_disponibles': 4},
         )
-        self.hoy = date(2026, 5, 21)
+        self.hoy = timezone.localdate()
 
     def _trace_eval(self, estado='posponer', resultado='senal_no_captada', dias_atras=3):
         trace = GymDecisionTrace.objects.create(

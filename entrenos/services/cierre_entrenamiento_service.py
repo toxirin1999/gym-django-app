@@ -162,8 +162,9 @@ def _cambios_relevantes(cliente, entreno, ejercicios):
         if es_cambio_variante:
             continue  # No mostrar cambios de variante como cambios de carga
 
-        # Ocultar cambios irrelevantes: < 0.25 kg
-        if abs(diff) < 0.25:
+        # Ocultar cambios irrelevantes (pero no la carga exactamente igual,
+        # que abajo se etiqueta explícitamente como 'mantenida')
+        if diff != 0 and abs(diff) < 0.25:
             continue
 
         if diff == 0:
