@@ -87,11 +87,12 @@ class ProgresionEjecutivaBase(TestCase):
         }
 
     def _log_pendiente(self, accion, ejercicio='Press Banca',
-                        peso_anterior=80.0, valor_cambio=5.0, motivo='Motivo de test.'):
+                        peso_anterior=80.0, valor_cambio=5.0, motivo='Motivo de test.',
+                        reps_anteriores=None):
         return GymDecisionLog.objects.create(
             cliente=self.cliente, ejercicio=ejercicio, accion=accion,
             peso_anterior=peso_anterior, valor_cambio=valor_cambio,
-            motivo=motivo, resultado=None,
+            reps_anteriores=reps_anteriores, motivo=motivo, resultado=None,
         )
 
 
@@ -757,6 +758,58 @@ class TestCase16_HistorialLimpioSubirPesoSeAplica(ProgresionEjecutivaBase):
         log.refresh_from_db()
         self.assertEqual(log.estado_aplicacion, 'aplicada')
         self.assertIsNone(log.motivo_postergacion)
+
+
+# ── Case 17: subir_reps (progresion_reps) — peso corporal/core ──────────────
+
+class TestCase17_SubirRepsAplica(ProgresionEjecutivaBase):
+    def test_subir_reps_pendiente_aplica_reps_sugeridas(self):
+        log = self._log_pendiente(
+            'subir_reps', ejercicio='Elevaciones De Piernas Colgado',
+            peso_anterior=0, valor_cambio=1, reps_anteriores=10,
+            motivo='Completado con éxito en 2 sesiones consecutivas con RPE controlado.',
+        )
+        ejercicios = [self._ejercicio(
+            nombre='Elevaciones De Piernas Colgado', peso_kg=0, grupo_muscular='core',
+        )]
+        ejercicios[0]['repeticiones'] = '8-12'
+
+        with patch(_PERMISO_PATH, return_value=PERMISO_PERMITIDO), \
+                patch(_DELOAD_PATH, return_value=False):
+            ejercicios_mod, cambios = aplicar_plan_dinamico(self.cliente, ejercicios, self.hoy)
+
+        ej = ejercicios_mod[0]
+        self.assertTrue(ej.get('progresion_aplicada'))
+        self.assertEqual(ej['progresion_accion'], 'subir_reps')
+        self.assertEqual(ej['reps_objetivo'], 11)
+        self.assertEqual(ej['repeticiones'], '11-12')
+        self.assertTrue(any(c['tipo'] == 'progresion_aplicada' and c['accion'] == 'subir_reps' for c in cambios))
+
+        log.refresh_from_db()
+        self.assertEqual(log.estado_aplicacion, 'aplicada')
+
+    def test_subir_reps_pospuesto_por_freno_semanal(self):
+        log = self._log_pendiente(
+            'subir_reps', ejercicio='Elevaciones De Piernas Colgado',
+            peso_anterior=0, valor_cambio=1, reps_anteriores=10,
+            motivo='Completado con éxito en 2 sesiones consecutivas con RPE controlado.',
+        )
+        ejercicios = [self._ejercicio(
+            nombre='Elevaciones De Piernas Colgado', peso_kg=0, grupo_muscular='core',
+        )]
+        ejercicios[0]['repeticiones'] = '8-12'
+
+        with patch(_PERMISO_PATH, return_value=PERMISO_MANTENER_CARGA), \
+                patch(_DELOAD_PATH, return_value=False):
+            ejercicios_mod, cambios = aplicar_plan_dinamico(self.cliente, ejercicios, self.hoy)
+
+        ej = ejercicios_mod[0]
+        self.assertTrue(ej.get('progresion_pospuesta'))
+        self.assertEqual(ej['repeticiones'], '8-12')  # no se toca si se pospone
+        self.assertTrue(any(c['tipo'] == 'progresion_pospuesta' and c['accion'] == 'subir_reps' for c in cambios))
+
+        log.refresh_from_db()
+        self.assertEqual(log.estado_aplicacion, 'pospuesta')
 
 
 # ── Contrato visual: progresión no se atribuye a JOI ─────────────────────────

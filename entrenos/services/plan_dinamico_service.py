@@ -153,6 +153,20 @@ def _ejercicios_recientes(cliente, dias=21):
         return set()
 
 
+def _bump_rango_reps(rango, nuevo_min: int) -> str:
+    """Sube el mínimo de un rango 'X-Y' (o número simple) a nuevo_min,
+    conservando el máximo (o subiéndolo también si el mínimo ya lo supera)."""
+    partes = str(rango).split('-')
+    try:
+        actual_max = int(partes[-1].strip())
+    except (ValueError, IndexError):
+        return str(nuevo_min)
+    nuevo_max = max(actual_max, nuevo_min)
+    if nuevo_min == nuevo_max:
+        return str(nuevo_min)
+    return f"{nuevo_min}-{nuevo_max}"
+
+
 def _persistir_estado_aplicacion(log, nuevo_estado, nuevo_motivo):
     """
     Phase 62I — persiste si esta progresión se aplicó o se pospuso la última
@@ -198,7 +212,7 @@ def _aplicar_progresion_ejecutiva(cliente, ejercicios_mod, hoy, cambios):
 
     logs_pendientes = list(
         GymDecisionLog.objects
-        .filter(cliente=cliente, accion__in=('subir_peso', 'bajar_peso'), resultado__isnull=True)
+        .filter(cliente=cliente, accion__in=('subir_peso', 'bajar_peso', 'subir_reps'), resultado__isnull=True)
         .order_by('-fecha_creacion')
     )
     logger.debug(f"[progresion_ejecutiva] cliente={cliente.id}: {len(logs_pendientes)} logs subir/bajar")
@@ -223,6 +237,55 @@ def _aplicar_progresion_ejecutiva(cliente, ejercicios_mod, hoy, cambios):
         else:
             logger.debug(f"[progresion_ejecutiva] sin match para '{nombre}'")
         if not log:
+            continue
+
+        if log.accion == 'subir_reps':
+            reps_sugeridas = log.reps_sugeridas
+            if reps_sugeridas is None:
+                continue
+
+            if permiso is None:
+                permiso = evaluar_permiso_progresion(cliente, hoy)
+
+            bloquea_semanal = (
+                permiso['aplica_a_principales']
+                or (permiso['aplica_a_accesorios'] and not _es_ejercicio_principal(ej))
+            )
+            permiso_local = evaluar_permiso_local_ejercicio(cliente, nombre, hoy)
+            bloquea_local = not permiso_local['puede_subir']
+            bloquea = bloquea_semanal or bloquea_local
+
+            if bloquea:
+                motivo_texto = permiso_local['mensaje'] if bloquea_local else permiso['mensaje']
+                ej['progresion_pospuesta'] = True
+                ej['progresion_accion'] = 'subir_reps'
+                ej['progresion_motivo'] = motivo_texto
+                if bloquea_local:
+                    ej['progresion_motivo_local'] = permiso_local['motivo']
+                cambios.append({
+                    'tipo': 'progresion_pospuesta',
+                    'ejercicio_original': nombre,
+                    'ejercicio_nuevo': None,
+                    'accion': 'subir_reps',
+                    'reps_sugeridas': reps_sugeridas,
+                    'razon': motivo_texto,
+                })
+                _persistir_estado_aplicacion(log, 'pospuesta', motivo_texto)
+            else:
+                ej['repeticiones'] = _bump_rango_reps(ej.get('repeticiones', reps_sugeridas), reps_sugeridas)
+                ej['reps_objetivo'] = reps_sugeridas
+                ej['progresion_aplicada'] = True
+                ej['progresion_accion'] = 'subir_reps'
+                ej['progresion_motivo'] = log.motivo
+                cambios.append({
+                    'tipo': 'progresion_aplicada',
+                    'ejercicio_original': nombre,
+                    'ejercicio_nuevo': None,
+                    'accion': 'subir_reps',
+                    'reps_sugeridas': reps_sugeridas,
+                    'razon': log.motivo,
+                })
+                _persistir_estado_aplicacion(log, 'aplicada', None)
             continue
 
         peso_sugerido = log.peso_sugerido

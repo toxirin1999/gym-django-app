@@ -75,8 +75,12 @@ def generar_decisiones_para_entreno(entreno):
         fallo = ej.fallo_muscular
         es_tope = ej.es_tope_maquina
 
+        from rutinas.models import EjercicioBase
+        ej_base = EjercicioBase.objects.filter(nombre__iexact=nombre).first()
+        tipo_progresion = ej_base.tipo_progresion if ej_base else 'peso_reps'
+
         accion, valor_cambio, motivo = _decidir_accion(
-            ej, historial, perfil, rpe, fallo, es_tope
+            ej, historial, perfil, rpe, fallo, es_tope, tipo_progresion
         )
 
         GymDecisionLog.objects.create(
@@ -92,7 +96,7 @@ def generar_decisiones_para_entreno(entreno):
         )
 
 
-def _decidir_accion(ej, historial, perfil, rpe, fallo, es_tope):
+def _decidir_accion(ej, historial, perfil, rpe, fallo, es_tope, tipo_progresion='peso_reps'):
     """Devuelve (accion, valor_cambio, motivo) para un ejercicio dado."""
 
     # 1. Fallo muscular — distinguir intencional (RIR=0) de exceso de carga
@@ -148,12 +152,20 @@ def _decidir_accion(ej, historial, perfil, rpe, fallo, es_tope):
             'Sesión intensa — consolidar antes de progresar',
         )
 
-    # 4. RPE controlado + 2 sesiones exitosas → subir peso
+    # 4. RPE controlado + 2 sesiones exitosas → subir peso (o reps, si el
+    #    ejercicio progresa por repeticiones — peso corporal/core, sin carga
+    #    externa real que subir)
     if rpe is not None and rpe <= 7.5 and len(historial) >= 1:
         prev = historial[0]
         prev_rpe = prev.rpe if prev.rpe is not None else 8
         prev_fallo = prev.fallo_muscular
         if prev_rpe <= 8 and not prev_fallo:
+            if tipo_progresion == 'progresion_reps':
+                return (
+                    'subir_reps',
+                    1,
+                    'Completado con éxito en 2 sesiones consecutivas con RPE controlado',
+                )
             return (
                 'subir_peso',
                 perfil.incremento_peso_pct,

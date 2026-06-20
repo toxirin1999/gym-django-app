@@ -1240,6 +1240,14 @@ class GymDecisionLog(models.Model):
         # Redondear al múltiplo de 2.5 kg más cercano (disco estándar)
         return round(round(raw / 2.5) * 2.5, 1)
 
+    @property
+    def reps_sugeridas(self):
+        """Repeticiones sugeridas para la próxima sesión, o None si no aplica."""
+        if self.accion != 'subir_reps' or self.reps_anteriores is None:
+            return None
+        incremento = int(self.valor_cambio) if self.valor_cambio else 1
+        return self.reps_anteriores + incremento
+
 
 class GymAdaptationProfile(models.Model):
     cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE, related_name='gym_adaptation_profiles')
