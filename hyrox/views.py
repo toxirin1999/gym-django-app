@@ -165,7 +165,7 @@ _HYROX_STATION_RISK_TAGS = {
     'Sled Push':          {'triple_extension_explosiva', 'flexion_rodilla_profunda'},
     'Sled Pull':          {'triple_extension_explosiva', 'flexion_rodilla_profunda'},
     'Burpee Broad Jumps': {'impacto_vertical', 'triple_extension_explosiva'},
-    'Sandbag Lunges':     {'triple_extension_explosiva', 'flexion_rodilla_profunda', 'impacto_vertical'},
+    'Sandbag Lunges':     {'triple_extension_explosiva', 'flexion_rodilla_profunda', 'impacto_vertical', 'lumbar_carga'},
     'Wall Balls':         {'impacto_vertical', 'triple_extension_explosiva', 'flexion_rodilla_profunda'},
     'Rowing':             {'flexion_rodilla_profunda'},
     'Running (1 km)':     {'impacto_vertical'},
@@ -2403,10 +2403,11 @@ def registrar_entrenamiento_ia(request, session_id):
         
         if parsed_data:
             # Vaciamos actividades viejas si existieran para evitar duplicados en reprocesos
+            # (save_parsed_session vuelve a borrar internamente; se deja por idempotencia)
             sesion.activities.all().delete()
-            
-            # 2. Creamos las actividades y se guarda el feedback (eso lo hace el parser / create_activities)
-            HyroxParserService.create_activities_from_parsed_data(sesion, parsed_data)
+
+            # 2. Creamos las actividades y se guarda el feedback (eso lo hace el parser)
+            HyroxParserService.save_parsed_session(sesion, parsed_data)
             
             # --- CHECK BIO-SAFETY: VALIDACIÓN DE LESIONES ---
             from .models import UserInjury
@@ -2542,9 +2543,11 @@ def editar_sesion_hyrox(request, session_id):
         if not acts_qs and session.notas_raw:
             from .services import HyroxParserService
             try:
-                HyroxParserService.save_parsed_session(session)
-                acts_qs = list(session.activities.all())
-                _log.warning(f'[EDIT session={session.id}] re-parseado notas_raw, ahora {len(acts_qs)} actividades')
+                parsed_data = HyroxParserService.parse_workout_text(session.notas_raw)
+                if parsed_data:
+                    HyroxParserService.save_parsed_session(session, parsed_data)
+                    acts_qs = list(session.activities.all())
+                    _log.warning(f'[EDIT session={session.id}] re-parseado notas_raw, ahora {len(acts_qs)} actividades')
             except Exception as e:
                 _log.error(f'[EDIT session={session.id}] ERROR re-parseando: {e}')
 
@@ -2647,7 +2650,9 @@ def editar_sesion_hyrox(request, session_id):
     if session.activities.count() == 0 and session.notas_raw:
         from .services import HyroxParserService
         try:
-            HyroxParserService.save_parsed_session(session)
+            parsed_data = HyroxParserService.parse_workout_text(session.notas_raw)
+            if parsed_data:
+                HyroxParserService.save_parsed_session(session, parsed_data)
         except Exception:
             pass
 
