@@ -15,6 +15,105 @@ def calcular_rm_estimado(peso: float, reps: int) -> float:
     return round(peso * (1 + reps / 30.0), 1)
 
 
+# RPE a partir del cual una serie se considera fallo técnico / fatiga extrema,
+# no una marca de fuerza fiable. Mismo umbral que entrenos.services.decision_log_service
+# para "fallo extremo" — consistencia de vocabulario entre módulos.
+_RPE_FALLO_TECNICO = 9.5
+
+
+def sync_hyrox_activity_rm_to_canonico(activity) -> bool:
+    """
+    Cierra el loop Hyrox → RM canónico: cuando una HyroxActivity de fuerza
+    documenta una marca real de Sentadilla/Peso Muerto/Hack Squat, actualiza
+    el mismo RM canónico que usa Gym (HyroxObjective.rm_sentadilla /
+    rm_peso_muerto) reutilizando sync_rm_to_hyrox — el mismo pipeline que
+    entrenos.signals.sincronizar_rm_con_hyrox y sync_gym_impact_to_hyrox,
+    NO un sistema de RM paralelo dentro de Hyrox.
+
+    Guardas (todas deben cumplirse):
+    - el ejercicio mapea a un campo de RM (campo_rm_para_ejercicio)
+    - datos completos: al menos una serie con peso y reps, y RPE presente
+    - RPE no es señal de fallo técnico/fatiga extrema (< _RPE_FALLO_TECNICO)
+    - la sesión no es de recuperación/deload ([DELOAD] o 'Recuperación Activa' en título)
+    - sin lesión activa con tags incompatibles con ese ejercicio
+    - el Brzycki de la mejor serie supera estrictamente el RM ya almacenado
+      (sync_rm_to_hyrox ya aplica "solo si mayor", pero lo comprobamos antes
+      para no marcar como procesada una actividad que no mejoró nada)
+    - idempotente: una actividad ya procesada no se reprocesa
+
+    Devuelve True si actualizó el RM canónico.
+    """
+    from entrenos.services.hyrox_bridge import campo_rm_para_ejercicio, sync_rm_to_hyrox
+    from .training_engine import _TAGS_SUSTITUCION_FUERZA_PRINCIPAL
+
+    if activity.tipo_actividad != 'fuerza':
+        return False
+
+    data = activity.data_metricas or {}
+    if data.get('_rm_sync_procesado'):
+        return False  # idempotencia: ya se evaluó esta actividad
+
+    campo = campo_rm_para_ejercicio(activity.nombre_ejercicio)
+    if not campo:
+        return False
+
+    sesion = activity.sesion
+    titulo = (sesion.titulo or '')
+    if '[DELOAD]' in titulo or 'Recuperación Activa' in titulo:
+        return False
+
+    rpe = data.get('rpe')
+    if rpe is None:
+        rpe = sesion.rpe_global
+    if rpe is None:
+        return False
+    if float(rpe) >= _RPE_FALLO_TECNICO:
+        return False
+
+    series = data.get('series') or []
+    rm_estimado_max = 0.0
+    for serie in series:
+        try:
+            peso = float(serie.get('peso', serie.get('peso_kg', 0)) or 0)
+            reps = int(serie.get('reps', 0) or 0)
+        except (TypeError, ValueError):
+            continue
+        if peso <= 0 or reps <= 0:
+            continue
+        rm_estimado_max = max(rm_estimado_max, calcular_rm_estimado(peso, reps))
+
+    if rm_estimado_max <= 0:
+        return False
+
+    objetivo = sesion.objective
+    from .models import UserInjury
+    lesion_incompatible = UserInjury.objects.filter(
+        cliente=objetivo.cliente, activa=True,
+    ).filter(
+        fase__in=('AGUDA', 'SUB_AGUDA'),
+    )
+    for lesion in lesion_incompatible:
+        if any(tag in _TAGS_SUSTITUCION_FUERZA_PRINCIPAL for tag in (lesion.tags_restringidos or [])):
+            return False
+
+    rm_actual = float(getattr(objetivo, campo, None) or 0)
+    if rm_estimado_max <= rm_actual:
+        # Marcamos como procesada igualmente: no fue una mejora real, pero ya
+        # se evaluó esta actividad y no debe reabrirse en cada reproceso.
+        data['_rm_sync_procesado'] = True
+        activity.data_metricas = data
+        activity.save(update_fields=['data_metricas'])
+        return False
+
+    actualizado = sync_rm_to_hyrox(objetivo, campo, rm_estimado_max)
+
+    data['_rm_sync_procesado'] = True
+    activity.data_metricas = data
+    activity.save(update_fields=['data_metricas'])
+
+    return actualizado
+
+
 class HyroxParserService:
 
     # Palabras clave para clasificar el tipo de actividad
@@ -443,37 +542,19 @@ class HyroxParserService:
                         pass
 
             # --- Sincronización Automática de PBs ---
-            if tipo == 'fuerza' and (objetivo and isinstance(series_data, list)):
-                rm_estimado_max = 0
-                for serie in series_data:
-                    try:
-                        peso = float(serie.get("peso", 0))
-                        reps = int(serie.get("reps", 0))
-                        if peso > 0 and reps > 0:
-                            rm_serie = calcular_rm_estimado(peso, reps)
-                            if rm_serie > rm_estimado_max:
-                                rm_estimado_max = round(rm_serie, 1)
-                    except (ValueError, TypeError):
-                        pass
-                
-                if rm_estimado_max > 0:
-                    nombre_lower = nombre.lower()
-                    
-                    # Chequear Sentadilla
-                    if "sentadilla" in nombre_lower or "squat" in nombre_lower:
-                        rm_actual = float(objetivo.rm_sentadilla or 0)
-                        if rm_estimado_max > rm_actual:
-                            objetivo.rm_sentadilla = rm_estimado_max
-                            objetivo.save()
-                            new_records.append({"ejercicio": "Sentadilla", "old": rm_actual, "new": rm_estimado_max})
-                            
-                    # Chequear Peso Muerto
-                    elif "peso muerto" in nombre_lower or "deadlift" in nombre_lower:
-                        rm_actual = float(objetivo.rm_peso_muerto or 0)
-                        if rm_estimado_max > rm_actual:
-                            objetivo.rm_peso_muerto = rm_estimado_max
-                            objetivo.save()
-                            new_records.append({"ejercicio": "Peso Muerto", "old": rm_actual, "new": rm_estimado_max})
+            # Delega en sync_hyrox_activity_rm_to_canonico: mismo pipeline que
+            # Gym (entrenos.services.hyrox_bridge.sync_rm_to_hyrox), con guardas
+            # de lesión/deload/RPE/idempotencia. No es un sistema de RM paralelo.
+            if tipo == 'fuerza' and objetivo:
+                from entrenos.services.hyrox_bridge import campo_rm_para_ejercicio
+                campo = campo_rm_para_ejercicio(nombre)
+                if campo:
+                    rm_antes = float(getattr(objetivo, campo, None) or 0)
+                    if sync_hyrox_activity_rm_to_canonico(activity):
+                        objetivo.refresh_from_db()
+                        rm_despues = float(getattr(objetivo, campo, None) or 0)
+                        etiqueta = "Sentadilla" if campo == "rm_sentadilla" else "Peso Muerto"
+                        new_records.append({"ejercicio": etiqueta, "old": rm_antes, "new": rm_despues})
             
         # ── Guardar cumplimiento en la sesión ──────────────────────────────
         session.parsed_by_ia = True
@@ -905,7 +986,7 @@ class CompetitionStandardsService:
         'pro_men': {
             'SkiErg': 1000,
             'Sled Push': {'kg': 152, 'vol': 50, 'vol_unit': 'm'},
-            'Sled Pull': {'kg': 153, 'vol': 50, 'vol_unit': 'm'},
+            'Sled Pull': {'kg': 103, 'vol': 50, 'vol_unit': 'm'},
             'Burpee Broad Jumps': 80,
             'Rowing': 1000,
             'Farmers Carry': {'kg': 32, 'vol': 200, 'vol_unit': 'm'},
@@ -915,7 +996,7 @@ class CompetitionStandardsService:
         'pro_women': {
             'SkiErg': 1000,
             'Sled Push': {'kg': 102, 'vol': 50, 'vol_unit': 'm'},
-            'Sled Pull': {'kg': 103, 'vol': 50, 'vol_unit': 'm'},
+            'Sled Pull': {'kg': 78, 'vol': 50, 'vol_unit': 'm'},
             'Burpee Broad Jumps': 80,
             'Rowing': 1000,
             'Farmers Carry': {'kg': 24, 'vol': 200, 'vol_unit': 'm'},
