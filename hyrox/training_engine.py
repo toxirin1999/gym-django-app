@@ -563,28 +563,27 @@ class HyroxTrainingEngine:
         TSB -15-0  → carga acumulada: prudencia
         TSB < -20  → fatiga excesiva: reducir carga
         """
+        # Base por calendario: taper/deload fijan una base conservadora, pero
+        # la modulación por fatiga real (RPE/TSB) se aplica SIEMPRE encima,
+        # con un techo propio de cada caso — nunca quedan ciegos a la fatiga.
         if is_taper:
-            return 0.50
-        if is_deload:
-            return 0.60
-
-        taper_corto = weeks_to_plan <= 1
-        if taper_corto:
-            # Taper corto: no reintroducir carga agresiva vía calendario, pero
-            # la fatiga real (TSB/RPE) sigue siendo una señal válida — un atleta
-            # muy fatigado en la última semana no debe recibir el mismo % que
-            # uno fresco solo porque "ya casi se acaba el plan".
-            base_pct = 0.70
-            techo_pct = 0.75  # límite superior conservador propio del taper
+            base_pct = 0.50
+            techo_pct = 0.58   # el taper no debe volverse agresivo aunque el TSB sea muy favorable
+            piso_fatiga = 0.40  # pero si hay fatiga severa, puede bajar más que el taper "normal"
+        elif is_deload:
+            base_pct = 0.60
+            techo_pct = 0.65
+            piso_fatiga = 0.50
         else:
             progreso = week / max(weeks_to_plan - 1, 1)
             base_pct = round(0.65 + (progreso * 0.20), 3)
             techo_pct = 0.85
+            piso_fatiga = 0.60
 
-        # Ajuste por RPE acumulado (señal subjetiva)
+        # Ajuste por RPE acumulado (señal subjetiva) — aplica siempre
         if rpe_acumulado is not None:
             if rpe_acumulado > 8.5:
-                base_pct = max(round(base_pct - 0.05, 3), 0.60 if taper_corto else 0.65)
+                base_pct = max(round(base_pct - 0.05, 3), piso_fatiga)
             elif rpe_acumulado < 6.0:
                 base_pct = min(round(base_pct + 0.05, 3), techo_pct)
 
@@ -595,19 +594,20 @@ class HyroxTrainingEngine:
         elif sleep_penalty > 0:
             tsb_eff = -sleep_penalty  # sin historial TRIMP, el sueño ya indica fatiga
 
-        # Ajuste por TSB efectivo (prioridad sobre RPE)
+        # Ajuste por TSB efectivo (prioridad sobre RPE) — aplica siempre, también
+        # en taper/deload: la fatiga real puede bajar el % por debajo del piso
+        # "normal" de cada caso, pero el techo conservador nunca se supera.
         if tsb_eff is not None:
-            piso_fatiga = 0.55 if taper_corto else 0.60
             if tsb_eff < -25:
-                base_pct = max(round(base_pct - 0.12, 3), piso_fatiga)
+                base_pct = max(round(base_pct - 0.12, 3), piso_fatiga - 0.10)
             elif tsb_eff < -15:
-                base_pct = max(round(base_pct - 0.07, 3), piso_fatiga + 0.03)
+                base_pct = max(round(base_pct - 0.07, 3), piso_fatiga - 0.05)
             elif tsb_eff < -5:
-                base_pct = max(round(base_pct - 0.03, 3), piso_fatiga + 0.05)
+                base_pct = max(round(base_pct - 0.03, 3), piso_fatiga)
             elif tsb_eff > 10:
                 base_pct = min(round(base_pct + 0.05, 3), techo_pct)
 
-        return base_pct
+        return min(max(base_pct, 0.0), techo_pct)
 
     @staticmethod
     def _calcular_ritmos_carrera(tiempo_5k_str):
@@ -1940,7 +1940,7 @@ class HyroxTrainingEngine:
                     'distancia_m': 80,
                     'peso_kg': pesos['sandbag'],
                     'coach_tip': f"Peso hoy: {pesos['sandbag']} kg → oficial: {pesos['oficiales']['sandbag']} kg",
-                    'tags': ['impacto_vertical', 'flexion_rodilla_profunda', 'estabilidad_tobillo'],
+                    'tags': ['impacto_vertical', 'flexion_rodilla_profunda', 'estabilidad_tobillo', 'lumbar_carga'],
                 },
                 {
                     'nombre': 'Farmers Carry',
