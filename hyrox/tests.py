@@ -744,3 +744,463 @@ class StravaProcesarRecalibracion5KTests(TestCase):
         self.assertEqual(resp.status_code, 200)
         self.objetivo.refresh_from_db()
         self.assertEqual(self.objetivo.tiempo_5k_base, '25:00')
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Item 1 — Estándares oficiales Sled Push/Pull: fuente única de verdad
+# ─────────────────────────────────────────────────────────────────────────────
+
+class EstandaresSledPushPullTests(TestCase):
+    """
+    Bug: CompetitionStandardsService.ESTANDARES_OFICIALES['pro_men'] tenía
+    Sled Pull (153) > Sled Push (152), anómalo frente a todas las demás
+    categorías donde Pull < Push. Además training_engine.PESOS_OFICIALES
+    y services.ESTANDARES_OFICIALES eran dos fuentes de verdad independientes.
+    """
+
+    def test_pull_menor_que_push_en_todas_las_categorias(self):
+        from hyrox.services import CompetitionStandardsService as CSS
+        for categoria in CSS.ESTANDARES_OFICIALES:
+            with self.subTest(categoria=categoria):
+                push = CSS.get_peso_oficial(categoria, 'Sled Push')
+                pull = CSS.get_peso_oficial(categoria, 'Sled Pull')
+                self.assertLess(pull, push)
+
+    def test_pro_men_sled_pull_es_103(self):
+        from hyrox.services import CompetitionStandardsService as CSS
+        self.assertEqual(CSS.get_peso_oficial('pro_men', 'Sled Pull'), 103)
+
+    def test_services_y_training_engine_coinciden_en_todas_las_categorias(self):
+        from hyrox.services import CompetitionStandardsService as CSS
+        from hyrox.training_engine import HyroxTrainingEngine as Engine
+
+        mapa_estaciones = {
+            'sled_push': 'Sled Push',
+            'sled_pull': 'Sled Pull',
+            'farmers': 'Farmers Carry',
+            'sandbag': 'Sandbag Lunges',
+            'wall_ball': 'Wall Balls',
+        }
+        for categoria, pesos in Engine.PESOS_OFICIALES.items():
+            for clave_engine, estacion_canon in mapa_estaciones.items():
+                with self.subTest(categoria=categoria, estacion=estacion_canon):
+                    valor_engine = pesos[clave_engine]
+                    valor_services = CSS.get_peso_oficial(categoria, estacion_canon)
+                    self.assertEqual(valor_engine, valor_services)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Item 2 — TSB/RPE ignorados en taper de la última semana (weeks_to_plan <= 1)
+# ─────────────────────────────────────────────────────────────────────────────
+
+class PorcentajeRmTaperCortoTests(TestCase):
+    """
+    Bug: con weeks_to_plan <= 1, _calcular_porcentaje_rm devolvía 0.70 fijo,
+    sin pasar por la modulación de TSB. Un atleta con TSB muy negativo en la
+    última semana del plan recibía la misma carga que uno fresco.
+    """
+
+    def test_tsb_favorable_no_baja_de_070(self):
+        from hyrox.training_engine import HyroxTrainingEngine as Engine
+        pct = Engine._calcular_porcentaje_rm(
+            week=0, weeks_to_plan=1, is_deload=False, is_taper=False, tsb=15,
+        )
+        self.assertGreaterEqual(pct, 0.70)
+
+    def test_tsb_neutro_es_070(self):
+        from hyrox.training_engine import HyroxTrainingEngine as Engine
+        pct = Engine._calcular_porcentaje_rm(
+            week=0, weeks_to_plan=1, is_deload=False, is_taper=False, tsb=0,
+        )
+        self.assertEqual(pct, 0.70)
+
+    def test_tsb_muy_negativo_baja_de_070(self):
+        from hyrox.training_engine import HyroxTrainingEngine as Engine
+        pct = Engine._calcular_porcentaje_rm(
+            week=0, weeks_to_plan=1, is_deload=False, is_taper=False, tsb=-30,
+        )
+        self.assertLess(pct, 0.70)
+
+    def test_los_tres_casos_difieren_de_forma_sensata(self):
+        from hyrox.training_engine import HyroxTrainingEngine as Engine
+        pct_favorable = Engine._calcular_porcentaje_rm(
+            week=0, weeks_to_plan=1, is_deload=False, is_taper=False, tsb=15,
+        )
+        pct_neutro = Engine._calcular_porcentaje_rm(
+            week=0, weeks_to_plan=1, is_deload=False, is_taper=False, tsb=0,
+        )
+        pct_negativo = Engine._calcular_porcentaje_rm(
+            week=0, weeks_to_plan=1, is_deload=False, is_taper=False, tsb=-30,
+        )
+        self.assertGreater(pct_favorable, pct_neutro)
+        self.assertGreater(pct_neutro, pct_negativo)
+
+    def test_taper_real_is_taper_sigue_devolviendo_050(self):
+        # is_taper explícito (no weeks_to_plan<=1) no se toca en este fix.
+        from hyrox.training_engine import HyroxTrainingEngine as Engine
+        pct = Engine._calcular_porcentaje_rm(
+            week=0, weeks_to_plan=1, is_deload=False, is_taper=True, tsb=-30,
+        )
+        self.assertEqual(pct, 0.50)
+
+    def test_deload_sigue_devolviendo_060(self):
+        from hyrox.training_engine import HyroxTrainingEngine as Engine
+        pct = Engine._calcular_porcentaje_rm(
+            week=0, weeks_to_plan=1, is_deload=True, is_taper=False, tsb=-30,
+        )
+        self.assertEqual(pct, 0.60)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Item 3 — Lesión lumbar: cobertura real en prescripción de fuerza
+# ─────────────────────────────────────────────────────────────────────────────
+
+class LesionLumbarPrescripcionFuerzaTests(TestCase):
+    """
+    Bug: el bloque de sustitución bio-segura del ejercicio principal de fuerza
+    (Sentadilla/Peso Muerto → Press Militar) solo reaccionaba a tags de pierna.
+    'lumbar_carga' (usado en Farmers Carry) no disparaba ninguna sustitución,
+    pese a que Sentadilla y Peso Muerto cargan axialmente la zona lumbar.
+    """
+
+    def setUp(self):
+        user, _ = User.objects.get_or_create(username='tester_lumbar_fuerza')
+        self.cliente = user.cliente_perfil
+        self.objetivo = HyroxObjective.objects.create(
+            cliente=self.cliente,
+            fecha_evento=datetime.date.today() + datetime.timedelta(days=60),
+            categoria='open_men',
+            rm_sentadilla=100.0,
+            rm_peso_muerto=120.0,
+        )
+
+    def _actividades_fuerza_futuras(self):
+        return HyroxActivity.objects.filter(
+            sesion__objective=self.objetivo,
+            sesion__estado='planificado',
+            tipo_actividad='fuerza',
+        )
+
+    def test_lumbar_carga_sustituye_ejercicio_principal_de_fuerza(self):
+        from hyrox.models import UserInjury
+
+        UserInjury.objects.create(
+            cliente=self.cliente,
+            zona_afectada='Lumbar',
+            fase='AGUDA',
+            activa=True,
+            tags_restringidos=['lumbar_carga'],
+        )
+
+        actividades = self._actividades_fuerza_futuras()
+        self.assertTrue(actividades.exists(), "Debe haberse generado al menos una sesión de fuerza")
+        for act in actividades:
+            with self.subTest(actividad=act.id, nombre=act.nombre_ejercicio):
+                nombre = act.nombre_ejercicio.lower()
+                self.assertNotIn('sentadilla', nombre)
+                self.assertNotIn('peso muerto', nombre)
+
+    def test_sin_lumbar_carga_no_sustituye(self):
+        """Control: sin esa lesión, el ejercicio principal sigue siendo Sentadilla/PM."""
+        from hyrox.training_engine import HyroxTrainingEngine
+
+        HyroxTrainingEngine.generate_training_plan(self.objetivo)
+
+        actividades = self._actividades_fuerza_futuras()
+        nombres = [a.nombre_ejercicio.lower() for a in actividades]
+        self.assertTrue(
+            any('sentadilla' in n or 'peso muerto' in n for n in nombres),
+            "Sin lesión, el plan debe incluir Sentadilla o Peso Muerto",
+        )
+
+    def test_tags_equivalentes_de_espalda_baja_tambien_sustituyen(self):
+        """
+        Vocabulario real usado en entrenos/views.py ZONA_TAGS_MAP['lumbar']:
+        flexion_lumbar, carga_axial, bisagra_cadera_cargada.
+        """
+        from hyrox.models import UserInjury
+
+        UserInjury.objects.create(
+            cliente=self.cliente,
+            zona_afectada='Lumbar',
+            fase='AGUDA',
+            activa=True,
+            tags_restringidos=['flexion_lumbar'],
+        )
+
+        actividades = self._actividades_fuerza_futuras()
+        self.assertTrue(actividades.exists())
+        for act in actividades:
+            nombre = act.nombre_ejercicio.lower()
+            self.assertNotIn('sentadilla', nombre)
+            self.assertNotIn('peso muerto', nombre)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Item 4 — Loop Hyrox → RM/PR canónico (Hack Squat/Sentadilla/Peso Muerto)
+# ─────────────────────────────────────────────────────────────────────────────
+
+class SyncHyroxActivityRmTests(TestCase):
+    """
+    Antes: save_parsed_session escribía objetivo.rm_sentadilla / rm_peso_muerto
+    directamente (sistema de RM paralelo dentro de Hyrox), sin pasar por
+    sync_rm_to_hyrox ni respetar lesión/deload/RPE/idempotencia.
+
+    Ahora: sync_hyrox_activity_rm_to_canonico(activity) reutiliza el mismo
+    pipeline que Gym (entrenos.services.hyrox_bridge.sync_rm_to_hyrox).
+    """
+
+    def setUp(self):
+        user, _ = User.objects.get_or_create(username='tester_hyrox_rm_loop')
+        self.cliente = user.cliente_perfil
+        self.objetivo = HyroxObjective.objects.create(
+            cliente=self.cliente,
+            fecha_evento=datetime.date.today() + datetime.timedelta(days=60),
+            categoria='open_men',
+            rm_sentadilla=100.0,
+            rm_peso_muerto=120.0,
+        )
+
+    def _sesion(self, **kwargs):
+        defaults = dict(
+            objective=self.objetivo,
+            fecha=datetime.date.today(),
+            estado='completado',
+            titulo='Sesión Hyrox',
+        )
+        defaults.update(kwargs)
+        return HyroxSession.objects.create(**defaults)
+
+    def _actividad_fuerza(self, sesion, nombre='Sentadilla Trasera', peso=110.0, reps=3, rpe=8):
+        return HyroxActivity.objects.create(
+            sesion=sesion,
+            tipo_actividad='fuerza',
+            nombre_ejercicio=nombre,
+            data_metricas={
+                'series': [{'reps': reps, 'peso': peso}],
+                'rpe': rpe,
+            },
+        )
+
+    def test_marca_valida_actualiza_rm_canonico(self):
+        from hyrox.services import sync_hyrox_activity_rm_to_canonico
+
+        sesion = self._sesion()
+        # 110kg x 3 reps (Brzycki) = 110 * (1 + 3/30) = 121.0 > rm_sentadilla actual (100)
+        actividad = self._actividad_fuerza(sesion, peso=110.0, reps=3, rpe=8)
+
+        resultado = sync_hyrox_activity_rm_to_canonico(actividad)
+
+        self.assertTrue(resultado)
+        self.objetivo.refresh_from_db()
+        self.assertEqual(float(self.objetivo.rm_sentadilla), 121.0)
+
+    def test_marca_insuficiente_no_actualiza(self):
+        from hyrox.services import sync_hyrox_activity_rm_to_canonico
+
+        sesion = self._sesion()
+        # 80kg x 2 reps → Brzycki = 80 * (1+2/30) = 85.3, muy por debajo del RM actual (100)
+        actividad = self._actividad_fuerza(sesion, peso=80.0, reps=2, rpe=7)
+
+        resultado = sync_hyrox_activity_rm_to_canonico(actividad)
+
+        self.assertFalse(resultado)
+        self.objetivo.refresh_from_db()
+        self.assertEqual(float(self.objetivo.rm_sentadilla), 100.0)
+
+    def test_lesion_activa_incompatible_bloquea(self):
+        from hyrox.models import UserInjury
+        from hyrox.services import sync_hyrox_activity_rm_to_canonico
+
+        UserInjury.objects.create(
+            cliente=self.cliente,
+            zona_afectada='Lumbar',
+            fase='AGUDA',
+            activa=True,
+            tags_restringidos=['lumbar_carga'],
+        )
+        sesion = self._sesion()
+        actividad = self._actividad_fuerza(sesion, peso=110.0, reps=3, rpe=8)
+
+        resultado = sync_hyrox_activity_rm_to_canonico(actividad)
+
+        self.assertFalse(resultado)
+        self.objetivo.refresh_from_db()
+        self.assertEqual(float(self.objetivo.rm_sentadilla), 100.0)
+
+    def test_sesion_recuperacion_bloquea(self):
+        from hyrox.services import sync_hyrox_activity_rm_to_canonico
+
+        sesion = self._sesion(titulo='[DELOAD] Semana de Descarga')
+        actividad = self._actividad_fuerza(sesion, peso=110.0, reps=3, rpe=8)
+
+        resultado = sync_hyrox_activity_rm_to_canonico(actividad)
+
+        self.assertFalse(resultado)
+        self.objetivo.refresh_from_db()
+        self.assertEqual(float(self.objetivo.rm_sentadilla), 100.0)
+
+    def test_rpe_extremo_de_fallo_tecnico_bloquea(self):
+        from hyrox.services import sync_hyrox_activity_rm_to_canonico
+
+        sesion = self._sesion()
+        actividad = self._actividad_fuerza(sesion, peso=110.0, reps=3, rpe=9.5)
+
+        resultado = sync_hyrox_activity_rm_to_canonico(actividad)
+
+        self.assertFalse(resultado)
+        self.objetivo.refresh_from_db()
+        self.assertEqual(float(self.objetivo.rm_sentadilla), 100.0)
+
+    def test_datos_incompletos_bloquea(self):
+        from hyrox.services import sync_hyrox_activity_rm_to_canonico
+
+        sesion = self._sesion()
+        actividad = HyroxActivity.objects.create(
+            sesion=sesion,
+            tipo_actividad='fuerza',
+            nombre_ejercicio='Sentadilla Trasera',
+            data_metricas={'series': [{'reps': 3, 'peso': 110.0}]},  # sin rpe
+        )
+
+        resultado = sync_hyrox_activity_rm_to_canonico(actividad)
+
+        self.assertFalse(resultado)
+        self.objetivo.refresh_from_db()
+        self.assertEqual(float(self.objetivo.rm_sentadilla), 100.0)
+
+    def test_reprocesar_misma_actividad_es_idempotente(self):
+        from hyrox.services import sync_hyrox_activity_rm_to_canonico
+
+        sesion = self._sesion()
+        actividad = self._actividad_fuerza(sesion, peso=110.0, reps=3, rpe=8)
+
+        primer_resultado = sync_hyrox_activity_rm_to_canonico(actividad)
+        self.assertTrue(primer_resultado)
+        self.objetivo.refresh_from_db()
+        self.assertEqual(float(self.objetivo.rm_sentadilla), 121.0)
+
+        segundo_resultado = sync_hyrox_activity_rm_to_canonico(actividad)
+        self.assertFalse(segundo_resultado)
+        self.objetivo.refresh_from_db()
+        self.assertEqual(float(self.objetivo.rm_sentadilla), 121.0)
+
+    def test_ejercicio_irrelevante_no_actualiza_nada(self):
+        from hyrox.services import sync_hyrox_activity_rm_to_canonico
+
+        sesion = self._sesion()
+        actividad = self._actividad_fuerza(sesion, nombre='Press Banca', peso=80.0, reps=3, rpe=8)
+
+        resultado = sync_hyrox_activity_rm_to_canonico(actividad)
+        self.assertFalse(resultado)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Item 5 — Auditoría: cobertura de las 8 estaciones oficiales en el macrociclo
+# ─────────────────────────────────────────────────────────────────────────────
+
+class CoberturaEstacionesMacrocicloTests(TestCase):
+    """
+    Auditoría, no asunción: genera un macrociclo completo (16 semanas, el
+    máximo que planifica generate_training_plan) y verifica si las 8
+    estaciones oficiales reciben estímulo planificado en el plan regular
+    (hyrox_stations + simulacion), no solo reactivamente tras milestone.
+    """
+
+    ESTACIONES_OFICIALES = {
+        'Sled Push', 'Sled Pull', 'Burpee', 'Rowing',
+        'Farmers Carry', 'Sandbag Lunges', 'Wall Balls', 'SkiErg',
+    }
+
+    def setUp(self):
+        user, _ = User.objects.get_or_create(username='tester_cobertura_estaciones')
+        self.cliente = user.cliente_perfil
+        self.objetivo = HyroxObjective.objects.create(
+            cliente=self.cliente,
+            # >16 semanas hasta el evento para forzar el macrociclo completo de 16 semanas
+            fecha_evento=datetime.date.today() + datetime.timedelta(weeks=20),
+            categoria='open_men',
+            rm_sentadilla=100.0,
+            rm_peso_muerto=120.0,
+        )
+
+    def _nombres_planificados(self):
+        from hyrox.training_engine import HyroxTrainingEngine
+        HyroxTrainingEngine.generate_training_plan(self.objetivo)
+        acts = HyroxActivity.objects.filter(
+            sesion__objective=self.objetivo,
+            tipo_actividad__in=('hyrox_station', 'cardio_sustituto', 'carrera', 'ergometro', 'skierg', 'remo'),
+        ).select_related('sesion')
+        return list(acts)
+
+    def test_cobertura_de_las_8_estaciones_en_plan_regular(self):
+        actividades = self._nombres_planificados()
+        nombres = {a.nombre_ejercicio for a in actividades}
+
+        cubiertas = set()
+        for estacion in self.ESTACIONES_OFICIALES:
+            if any(estacion.lower() in n.lower() for n in nombres):
+                cubiertas.add(estacion)
+
+        faltantes = self.ESTACIONES_OFICIALES - cubiertas
+        # No se fuerza ningún assert ciego: se documenta el resultado real.
+        if faltantes:
+            self.fail(
+                f"Estaciones sin estímulo planificado en el macrociclo regular: {faltantes}. "
+                f"Nombres encontrados: {sorted(nombres)}"
+            )
+
+    def test_burpee_broad_jumps_escala_distancia_por_semana(self):
+        """
+        Hallazgo a verificar: Burpee Broad Jumps usa distancia_m=80 fija en
+        hyrox_stations, sin _pesos_progresivos como Sled Push/Sandbag.
+        """
+        from hyrox.training_engine import HyroxTrainingEngine
+
+        HyroxTrainingEngine.generate_training_plan(self.objetivo)
+        acts = HyroxActivity.objects.filter(
+            sesion__objective=self.objetivo,
+            tipo_actividad='hyrox_station',
+            nombre_ejercicio__icontains='Burpee',
+        ).order_by('sesion__fecha')
+
+        distancias = {a.data_metricas.get('distancia_m') for a in acts if a.data_metricas}
+        if len(distancias) <= 1:
+            self.fail(
+                f"Burpee Broad Jumps no escala entre semanas: distancias encontradas = {distancias}. "
+                "Confirma el hallazgo de la auditoría — falta progresión semanal."
+            )
+
+    def test_sled_pull_rowing_skierg_aparecen_en_plan_regular_no_solo_post_milestone(self):
+        """
+        Hallazgo a verificar: el usuario sospechaba que Sled Pull/Rowing/SkiErg
+        solo aparecen reactivamente tras PostMilestoneEngine. Comprobamos si ya
+        aparecen en el template 'simulacion', que se genera cada semana como
+        parte del plan regular (no por reacción a un hito).
+        """
+        from hyrox.training_engine import HyroxTrainingEngine
+
+        HyroxTrainingEngine.generate_training_plan(self.objetivo)
+
+        sesiones_simulacion = HyroxSession.objects.filter(
+            objective=self.objetivo,
+            titulo__icontains='Simulación',
+        )
+        self.assertTrue(
+            sesiones_simulacion.exists(),
+            "El plan regular debería generar sesiones de simulación semanales",
+        )
+
+        acts_simulacion = HyroxActivity.objects.filter(sesion__in=sesiones_simulacion)
+        nombres = {a.nombre_ejercicio for a in acts_simulacion}
+
+        tiene_sled_pull = any('sled pull' in n.lower() for n in nombres)
+        tiene_cardio_engine = any(
+            ('remo' in n.lower() or 'skierg' in n.lower() or 'carrera' in n.lower())
+            for n in nombres
+        )
+        self.assertTrue(tiene_sled_pull, f"Sled Pull no aparece en simulación. Nombres: {sorted(nombres)}")
+        self.assertTrue(
+            tiene_cardio_engine,
+            f"Ni Rowing/SkiErg ni Carrera aparecen en simulación. Nombres: {sorted(nombres)}",
+        )

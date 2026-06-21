@@ -525,6 +525,19 @@ _VOLUMEN_POR_NIVEL = {
     'avanzado':     {'series': 5, 'reps_factor': 1.10},
 }
 
+# Tags biomecánicos que justifican sustituir el ejercicio principal de fuerza
+# (Sentadilla/Peso Muerto) por un movimiento de tren superior sin carga axial
+# de pierna ni lumbar. Cubre tanto restricción dura como reducción de carga
+# en fase RETORNO — antes eran dos sets idénticos duplicados en el código.
+# 'lumbar_carga' es el tag propio de Hyrox (ya usado en Farmers Carry);
+# flexion_lumbar/carga_axial/bisagra_cadera_cargada son el vocabulario
+# equivalente real usado en entrenos/views.py ZONA_TAGS_MAP['lumbar'].
+_TAGS_SUSTITUCION_FUERZA_PRINCIPAL = {
+    'impacto_vertical', 'flexion_rodilla_profunda', 'empuje_pierna',
+    'flexion_plantar', 'carga_distal_pierna', 'estabilidad_gemelo',
+    'lumbar_carga', 'flexion_lumbar', 'carga_axial', 'bisagra_cadera_cargada',
+}
+
 
 class HyroxTrainingEngine:
     """
@@ -554,18 +567,26 @@ class HyroxTrainingEngine:
             return 0.50
         if is_deload:
             return 0.60
-        if weeks_to_plan <= 1:
-            return 0.70
 
-        progreso = week / max(weeks_to_plan - 1, 1)
-        base_pct = round(0.65 + (progreso * 0.20), 3)
+        taper_corto = weeks_to_plan <= 1
+        if taper_corto:
+            # Taper corto: no reintroducir carga agresiva vía calendario, pero
+            # la fatiga real (TSB/RPE) sigue siendo una señal válida — un atleta
+            # muy fatigado en la última semana no debe recibir el mismo % que
+            # uno fresco solo porque "ya casi se acaba el plan".
+            base_pct = 0.70
+            techo_pct = 0.75  # límite superior conservador propio del taper
+        else:
+            progreso = week / max(weeks_to_plan - 1, 1)
+            base_pct = round(0.65 + (progreso * 0.20), 3)
+            techo_pct = 0.85
 
         # Ajuste por RPE acumulado (señal subjetiva)
         if rpe_acumulado is not None:
             if rpe_acumulado > 8.5:
-                base_pct = max(round(base_pct - 0.05, 3), 0.65)
+                base_pct = max(round(base_pct - 0.05, 3), 0.60 if taper_corto else 0.65)
             elif rpe_acumulado < 6.0:
-                base_pct = min(round(base_pct + 0.05, 3), 0.85)
+                base_pct = min(round(base_pct + 0.05, 3), techo_pct)
 
         # TSB efectivo: combinamos forma objetiva + penalización por sueño deficiente
         tsb_eff = None
@@ -576,14 +597,15 @@ class HyroxTrainingEngine:
 
         # Ajuste por TSB efectivo (prioridad sobre RPE)
         if tsb_eff is not None:
+            piso_fatiga = 0.55 if taper_corto else 0.60
             if tsb_eff < -25:
-                base_pct = max(round(base_pct - 0.12, 3), 0.60)
+                base_pct = max(round(base_pct - 0.12, 3), piso_fatiga)
             elif tsb_eff < -15:
-                base_pct = max(round(base_pct - 0.07, 3), 0.63)
+                base_pct = max(round(base_pct - 0.07, 3), piso_fatiga + 0.03)
             elif tsb_eff < -5:
-                base_pct = max(round(base_pct - 0.03, 3), 0.65)
+                base_pct = max(round(base_pct - 0.03, 3), piso_fatiga + 0.05)
             elif tsb_eff > 10:
-                base_pct = min(round(base_pct + 0.05, 3), 0.90)
+                base_pct = min(round(base_pct + 0.05, 3), techo_pct)
 
         return base_pct
 
@@ -612,17 +634,34 @@ class HyroxTrainingEngine:
         except Exception:
             return None
 
-    # Pesos oficiales de competición por categoría (kg)
-    PESOS_OFICIALES = {
-        'open_men':     {'sled_push': 152, 'sled_pull': 103, 'farmers': 24, 'sandbag': 20, 'wall_ball': 6},
-        'open_women':   {'sled_push': 102, 'sled_pull':  78, 'farmers': 16, 'sandbag': 10, 'wall_ball': 4},
-        'pro_men':      {'sled_push': 152, 'sled_pull': 103, 'farmers': 32, 'sandbag': 20, 'wall_ball': 6},
-        'pro_women':    {'sled_push': 102, 'sled_pull':  78, 'farmers': 20, 'sandbag': 10, 'wall_ball': 4},
-        'doubles_men':  {'sled_push': 152, 'sled_pull': 103, 'farmers': 24, 'sandbag': 20, 'wall_ball': 6},
-        'doubles_women':{'sled_push': 102, 'sled_pull':  78, 'farmers': 16, 'sandbag': 10, 'wall_ball': 4},
-        'doubles_mixed':{'sled_push': 102, 'sled_pull':  78, 'farmers': 20, 'sandbag': 15, 'wall_ball': 5},
-        'relay':        {'sled_push': 152, 'sled_pull': 103, 'farmers': 24, 'sandbag': 20, 'wall_ball': 6},
-    }
+    @staticmethod
+    def _construir_pesos_oficiales():
+        """
+        Deriva los pesos de trabajo (kg) por categoría a partir de
+        CompetitionStandardsService.ESTANDARES_OFICIALES — fuente única de
+        verdad compartida con hyrox/services.py. Evita que las dos tablas
+        se desincronicen (bug histórico: pro_men Sled Pull > Sled Push).
+        """
+        from .services import CompetitionStandardsService as _CSS
+
+        mapa = {
+            'sled_push': 'Sled Push',
+            'sled_pull': 'Sled Pull',
+            'farmers':   'Farmers Carry',
+            'sandbag':   'Sandbag Lunges',
+            'wall_ball': 'Wall Balls',
+        }
+        return {
+            categoria: {
+                clave: _CSS.get_peso_oficial(categoria, estacion_canon)
+                for clave, estacion_canon in mapa.items()
+            }
+            for categoria in _CSS.ESTANDARES_OFICIALES
+        }
+
+    # Pesos oficiales de competición por categoría (kg).
+    # Derivado de CompetitionStandardsService — ver _construir_pesos_oficiales.
+    PESOS_OFICIALES = _construir_pesos_oficiales.__func__()
 
     @classmethod
     def _pesos_progresivos(cls, categoria, week, weeks_to_plan, is_deload, is_taper,
@@ -1708,18 +1747,12 @@ class HyroxTrainingEngine:
             peso_trabajo = peso_base * porcentaje_rm
 
             # Ajuste RETORNO: lesión en fase de reincorporación → -15% de carga
-            _retorno_pierna = {'impacto_vertical', 'flexion_rodilla_profunda', 'empuje_pierna',
-                               'flexion_plantar', 'carga_distal_pierna', 'estabilidad_gemelo'}
-            if retorno_tags and any(tag in retorno_tags for tag in _retorno_pierna):
+            if retorno_tags and any(tag in retorno_tags for tag in _TAGS_SUSTITUCION_FUERZA_PRINCIPAL):
                 peso_trabajo *= 0.85
                 notas_ej += ' | ⚕️ Fase RETORNO: carga reducida al 85% como precaución biomecánica.'
 
-            # Sustitución Bio-Segura por lesión de tren inferior
-            restricciones_pierna = {
-                'impacto_vertical', 'flexion_rodilla_profunda', 'empuje_pierna',
-                'flexion_plantar', 'carga_distal_pierna', 'estabilidad_gemelo'
-            }
-            if restricted_tags and any(tag in restricted_tags for tag in restricciones_pierna):
+            # Sustitución Bio-Segura por lesión de tren inferior o lumbar
+            if restricted_tags and any(tag in restricted_tags for tag in _TAGS_SUSTITUCION_FUERZA_PRINCIPAL):
                 ejercicio = 'Press Militar Sentado / Remo con Mancuerna (Tren Superior)'
                 # Buscar RM de press militar específicamente antes de otros movimientos
                 one_rm = getattr(objective.cliente, 'one_rm_data', {}) or {}
@@ -1864,6 +1897,16 @@ class HyroxTrainingEngine:
             if is_deload or is_taper:
                 wb_reps = max(6, round(wb_reps * 0.60))
 
+            # Burpee Broad Jumps: distancia progresiva (de parcial a 80m oficial).
+            # Sin peso externo que escalar — el volumen (distancia) es la única
+            # dimensión progresable, igual patrón que Wall Balls con reps.
+            bbj_dist_max = 80
+            bbj_dist_min = {'principiante': 30, 'intermedio': 40, 'avanzado': 50}.get(nivel, 40)
+            progreso_bbj = week / max(weeks_to_plan - 1, 1)
+            bbj_distancia = max(bbj_dist_min, round(bbj_dist_min + progreso_bbj * (bbj_dist_max - bbj_dist_min)))
+            if is_deload or is_taper:
+                bbj_distancia = max(20, round(bbj_distancia * 0.60))
+
             nota_progresion = (
                 f"Peso de trabajo: {round(pesos['factor']*100)}% del oficial "
                 f"({pesos['oficiales']['sled_push']} kg sled / "
@@ -1888,7 +1931,8 @@ class HyroxTrainingEngine:
                 },
                 {
                     'nombre': 'Burpees Broad Jump',
-                    'distancia_m': 80,
+                    'distancia_m': bbj_distancia,
+                    'coach_tip': f"Distancia hoy: {bbj_distancia} m → oficial: {bbj_dist_max} m",
                     'tags': ['impacto_vertical', 'flexion_rodilla_profunda', 'triple_extension_explosiva'],
                 },
                 {
@@ -1907,15 +1951,35 @@ class HyroxTrainingEngine:
                 },
             ]
 
+            # SkiErg / Rowing: estímulo regular en el día de estaciones específicas,
+            # no solo como sustitución de carrera por lesión. Se alterna por semana
+            # para cubrir ambos ergómetros sin duplicar volumen el mismo día.
+            # Distancia progresiva hacia el estándar oficial (1000 m).
+            ergo_dist_min = {'principiante': 400, 'intermedio': 500, 'avanzado': 600}.get(nivel, 500)
+            progreso_ergo = week / max(weeks_to_plan - 1, 1)
+            ergo_distancia = max(ergo_dist_min, round(ergo_dist_min + progreso_ergo * (1000 - ergo_dist_min)))
+            if is_deload or is_taper:
+                ergo_distancia = max(300, round(ergo_distancia * 0.60))
+            ergo_nombre = 'SkiErg' if week % 2 == 0 else 'Rowing'
+            ergo_tipo   = 'skierg' if ergo_nombre == 'SkiErg' else 'remo'
+            estaciones.append({
+                'nombre': ergo_nombre,
+                'tipo': ergo_tipo,
+                'distancia_m': ergo_distancia,
+                'coach_tip': f"Distancia hoy: {ergo_distancia} m → oficial: 1000 m",
+                'tags': [],
+            })
+
             for est in estaciones:
                 if restricted_tags and any(tag in restricted_tags for tag in est.get('tags', [])):
                     logger.info(f"Bio-Safe: Saltando {est['nombre']} por restricciones biomecánicas.")
                     continue
                 nombre_est = est.pop('nombre')
                 tags_est   = est.pop('tags', None)
+                tipo_est   = est.pop('tipo', 'hyrox_station')
                 HyroxActivity.objects.create(
                     sesion=sesion,
-                    tipo_actividad='hyrox_station',
+                    tipo_actividad=tipo_est,
                     nombre_ejercicio=nombre_est,
                     data_metricas={"planificado": True, **est}
                 )
