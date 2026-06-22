@@ -4068,6 +4068,7 @@ def guardar_entrenamiento_activo(request, cliente_id):
 
             nombre_normalizado = ejercicio_nombre.lower()
             mejor_rm_ejercicio = 0
+            mejor_serie_rm = None  # Phase Gym Peso 2.1: peso/reps/rpe_real de la serie que generó mejor_rm_ejercicio
             volumen_ejercicio = Decimal('0.0')  # Inicializamos el volumen por ejercicio
 
             series_data_para_guardar = []
@@ -4104,6 +4105,7 @@ def guardar_entrenamiento_activo(request, cliente_id):
                             rm_serie_actual = estimar_1rm_con_rpe(peso, reps, rpe_a_usar)
                             if rm_serie_actual > mejor_rm_ejercicio:
                                 mejor_rm_ejercicio = rm_serie_actual
+                                mejor_serie_rm = {'peso': peso, 'reps': reps, 'rpe_real': rpe_real}
                         series_data_para_guardar.append(
                             {'peso': peso, 'reps': reps, 'rpe_real': rpe_real, 'tipo_progresion': tipo_progresion, 'tecnica': tecnica})
                         if rpe_real is not None:
@@ -4113,8 +4115,8 @@ def guardar_entrenamiento_activo(request, cliente_id):
                     continue
 
             if series_data_para_guardar:
-                if mejor_rm_ejercicio > 0:
-                    nuevos_rms_sesion[nombre_normalizado] = round(mejor_rm_ejercicio, 2)
+                if mejor_rm_ejercicio > 0 and mejor_serie_rm:
+                    nuevos_rms_sesion[nombre_normalizado] = mejor_serie_rm
 
                 # Guardar el EjercicioRealizado (agregado)
                 pesos_validos = [s['peso'] for s in series_data_para_guardar if s['peso'] > 0]
@@ -4207,15 +4209,35 @@ def guardar_entrenamiento_activo(request, cliente_id):
         # =======================================================
 
         # --- PASO 4: Actualizar el perfil del cliente con los nuevos 1RM ---
+        # Phase Gym Peso 2.1 — gating prudente: en descarga (misma señal que
+        # usa vista_entrenamiento_activo para el peso de trabajo) no se
+        # actualiza one_rm_data nunca, y fuera de descarga se aplica un
+        # suavizado/tope, nunca el e1RM observado directo. Ver
+        # analytics/gating_rm.py.
         if nuevos_rms_sesion:
+            from entrenos.services.briefing_service import necesita_deload_gym as _necesita_deload_gym_guardado
+            from analytics.gating_rm import decidir_actualizacion_rm
+
+            _es_descarga_guardado = (
+                'descarga' in (rutina_nombre or '').lower()
+                or _necesita_deload_gym_guardado(cliente, fecha)
+            )
+
             if not cliente.one_rm_data:
                 cliente.one_rm_data = {}
             rms_mejorados = {}
-            for ejercicio, nuevo_rm in nuevos_rms_sesion.items():
+            for ejercicio, datos_serie in nuevos_rms_sesion.items():
                 actual = cliente.one_rm_data.get(ejercicio, 0) or 0
-                if nuevo_rm > actual:
-                    cliente.one_rm_data[ejercicio] = nuevo_rm
-                    rms_mejorados[ejercicio] = nuevo_rm
+                decision = decidir_actualizacion_rm(
+                    rm_actual=actual,
+                    peso=datos_serie['peso'],
+                    reps=datos_serie['reps'],
+                    rpe_real=datos_serie['rpe_real'],
+                    es_descarga=_es_descarga_guardado,
+                )
+                if decision['actualiza']:
+                    cliente.one_rm_data[ejercicio] = decision['rm_resultante']
+                    rms_mejorados[ejercicio] = decision['rm_resultante']
             if rms_mejorados:
                 cliente.save(update_fields=['one_rm_data'])
                 _sincronizar_rms_hyrox(cliente, rms_mejorados)
