@@ -15,6 +15,7 @@ from .models.perfil_cliente import PerfilCliente
 from .database.ejercicios import EJERCICIOS_DATABASE
 from .periodizacion.generador import GeneradorPeriodizacion
 from .calculo.peso import CalculadorPeso
+from .calculo.compatibilidad_fase import resolver_peso_objetivo
 from .calculo.fatiga import GestorFatiga
 from .ejercicios.selector import SelectorEjercicios
 from .ejercicios.patrones import PatronManager
@@ -236,9 +237,29 @@ class PlanificadorHelms:
                     historial = self._obtener_historial_ejercicio(nombre)
                     rpe_real_anterior = historial['rpe_real']
                     peso_real_anterior = historial['peso_real']
+                    reps_real_anterior = historial['reps_real']
+
+                    es_descarga_hoy = (fase == 'descarga')
+
+                    # Phase Gym Peso 2 — decisión dependiente de fase/bucket.
+                    # Si el rango de reps de la última sesión real es de un
+                    # bucket distinto al de hoy (o si hoy es descarga), el
+                    # incremento fijo no tiene sentido: recalcular desde e1RM.
+                    decision_fase = resolver_peso_objetivo(
+                        peso_anterior=peso_real_anterior,
+                        reps_anteriores=reps_real_anterior,
+                        rpe_anterior=rpe_real_anterior,
+                        rep_range_hoy=rep_range_ej,
+                        rpe_objetivo_hoy=rpe_objetivo,
+                        es_descarga_hoy=es_descarga_hoy,
+                        redondear_fn=lambda p: CalculadorPeso.redondear_peso(p, nombre),
+                    )
 
                     motivo_peso_tipo = 'sin_datos'
-                    if peso_real_anterior is not None and rpe_real_anterior is not None:
+                    if decision_fase['aplica']:
+                        peso = decision_fase['peso']
+                        motivo_peso_tipo = decision_fase['motivo_tipo']
+                    elif peso_real_anterior is not None and rpe_real_anterior is not None:
                         diferencia_rpe = rpe_real_anterior - rpe_objetivo
                         from analytics.planificador_helms.calculo.peso import PROGRESION, REDONDEO
                         if diferencia_rpe <= -2:
@@ -309,7 +330,7 @@ class PlanificadorHelms:
                 EjercicioRealizado.objects.filter(
                     entreno__cliente_id=self.perfil.id
                 ).order_by('-entreno__fecha', '-id').values(
-                    'nombre_ejercicio', 'peso_kg', 'rpe'
+                    'nombre_ejercicio', 'peso_kg', 'rpe', 'repeticiones'
                 )
             )
         except Exception as e:
@@ -321,7 +342,7 @@ class PlanificadorHelms:
         Devuelve el peso y RPE de la última sesión del ejercicio.
         Usa la caché en memoria si está disponible (cargada por _precargar_historial_ejercicios).
         """
-        resultado = {'peso_real': None, 'rpe_real': None}
+        resultado = {'peso_real': None, 'rpe_real': None, 'reps_real': None}
         try:
             nombre_lower = nombre_ejercicio.lower()
 
@@ -336,6 +357,8 @@ class PlanificadorHelms:
                         resultado['peso_real'] = float(match['peso_kg'])
                     if match['rpe'] is not None:
                         resultado['rpe_real'] = float(match['rpe'])
+                    if match.get('repeticiones') is not None:
+                        resultado['reps_real'] = int(match['repeticiones'])
                 return resultado
 
             # Fallback: consultas individuales si la precarga no se ejecutó
@@ -347,6 +370,8 @@ class PlanificadorHelms:
 
             if ej and ej.peso_kg:
                 resultado['peso_real'] = float(ej.peso_kg)
+            if ej and ej.repeticiones is not None:
+                resultado['reps_real'] = int(ej.repeticiones)
 
             if ej:
                 series = SerieRealizada.objects.filter(
@@ -373,6 +398,8 @@ class PlanificadorHelms:
             'mantiene': f'Carga mantenida: el plan prioriza margen esta semana.',
             'frenado': f'Progresión frenada: hay una señal de carga o margen bajo.',
             'sin_datos': f'Sin historial: el plan calibra desde capacidad actual.',
+            'recalculado_fase': 'Recalculado: el rango de hoy cambia de fase — se recalibra desde tu capacidad estimada.',
+            'recalculado_descarga': 'Descarga: peso reducido a propósito para esta fase de recuperación activa.',
         }
         return textos.get(motivo_tipo, 'Peso determinado por el plan.')
 

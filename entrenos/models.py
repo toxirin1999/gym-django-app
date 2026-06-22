@@ -1248,6 +1248,34 @@ class GymDecisionLog(models.Model):
         incremento = int(self.valor_cambio) if self.valor_cambio else 1
         return self.reps_anteriores + incremento
 
+    def peso_sugerido_para_fase(self, rep_range_hoy, rpe_objetivo_hoy, es_descarga_hoy=False):
+        """
+        Phase Gym Peso 2 — versión de `peso_sugerido` que conoce el rango de
+        reps y RPE objetivo de HOY. Si el bucket de fase de la última sesión
+        real (reps_anteriores) es incompatible con el de hoy, o si hoy es
+        descarga, recalcula desde e1RM en vez de aplicar el incremento
+        porcentual fijo de `valor_cambio`.
+
+        Si no aplica el recálculo (bucket compatible, no descarga), cae al
+        comportamiento legacy de `peso_sugerido`.
+        """
+        from analytics.planificador_helms.calculo.compatibilidad_fase import resolver_peso_objetivo
+
+        if self.accion not in ('subir_peso', 'bajar_peso', 'deload'):
+            return self.peso_sugerido, None
+
+        decision = resolver_peso_objetivo(
+            peso_anterior=self.peso_anterior,
+            reps_anteriores=self.reps_anteriores,
+            rpe_anterior=self.rpe_anterior,
+            rep_range_hoy=rep_range_hoy,
+            rpe_objetivo_hoy=rpe_objetivo_hoy,
+            es_descarga_hoy=es_descarga_hoy,
+        )
+        if decision['aplica']:
+            return decision['peso'], decision['motivo_tipo']
+        return self.peso_sugerido, None
+
 
 class GymAdaptationProfile(models.Model):
     cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE, related_name='gym_adaptation_profiles')
