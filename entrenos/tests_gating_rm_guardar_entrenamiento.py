@@ -54,6 +54,10 @@ class TestGatingRMGuardarEntrenamiento(TestCase):
             'ej1_molestia_reportada': 'false',
         }
 
+    def _refrescar_rm_de(self, nombre):
+        self.cliente.refresh_from_db()
+        return self.cliente.one_rm_data.get(nombre)
+
     def _refrescar_rm(self):
         self.cliente.refresh_from_db()
         return self.cliente.one_rm_data.get('sentadilla')
@@ -118,6 +122,34 @@ class TestGatingRMGuardarEntrenamiento(TestCase):
         self.assertEqual(resp.status_code, 302)
         rm_despues = self._refrescar_rm()
         self.assertEqual(rm_despues, 92.5, f"RM no debía subir sin RPE real, quedó en {rm_despues}")
+
+    def test_7_descarga_dos_ejercicios_uno_sin_historial_no_se_contaminan(self):
+        """Bug real: sesión con DOS ejercicios a la vez en descarga, uno con RM
+        previo (Sentadilla, 92.5) y otro sin historial (Press Banca, primera vez).
+        Sentadilla debe mantenerse intacta; Press Banca debe guardar su RM
+        inicial en vez de quedarse en None para siempre."""
+        data = self._base_post('Descarga Test')
+        data['ej2_nombre'] = 'Press Banca'
+        data['ej2_tipo_progresion'] = 'peso_reps'
+        data['ej2_es_principal'] = ''
+        data['ej2_es_tope_maquina'] = 'false'
+        data['ej2_molestia_reportada'] = 'false'
+        for i in range(1, 4):
+            data[f'ej1_peso_{i}'] = '72.5'
+            data[f'ej1_reps_{i}'] = '10'
+            data[f'ej1_rpe_{i}'] = '6'
+            data[f'ej2_peso_{i}'] = '40'
+            data[f'ej2_reps_{i}'] = '8'
+            data[f'ej2_rpe_{i}'] = '7'
+        resp = self.client.post(self.url, data)
+        self.assertEqual(resp.status_code, 302)
+
+        rm_sentadilla = self._refrescar_rm_de('sentadilla')
+        self.assertEqual(rm_sentadilla, 92.5, f"RM con historial no debía cambiar en descarga, quedó en {rm_sentadilla}")
+
+        rm_press_banca = self._refrescar_rm_de('press banca')
+        self.assertIsNotNone(rm_press_banca, "RM inicial de ejercicio sin historial no debía quedarse en None")
+        self.assertGreater(rm_press_banca, 0, "RM inicial de ejercicio sin historial no debía quedarse en 0")
 
     def test_6_no_regresion_peso_de_trabajo_no_se_toca(self):
         """Esta fase no debe tocar resolver_peso_objetivo (Phase Gym Peso 2)."""

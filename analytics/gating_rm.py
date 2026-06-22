@@ -37,12 +37,28 @@ def decidir_actualizacion_rm(*, rm_actual, peso, reps, rpe_real, es_descarga):
           'rm_actualizado'                 — (reservado, no usado en v1: todo
                                                lo que sube pasa por suavizado)
           'rm_actualizado_suavizado'       — sube, topado a rm_actual * FACTOR
-          'rm_no_actualizado_descarga'     — fase descarga, nunca sube
+          'rm_inicial_sin_historial'       — sin RM previo: guarda la primera
+                                               estimación como referencia,
+                                               aunque la sesión sea descarga
+          'rm_no_actualizado_descarga'     — con historial previo y fase
+                                               descarga, nunca sube
           'rm_no_actualizado_rpe_incompatible' — (reservado para futuras
                                                reglas de RPE vs objetivo)
           'rm_sin_rpe_confianza_baja'      — sin RPE real, confianza baja
     """
     rm_actual = float(rm_actual or 0)
+
+    # Phase Gym Peso 2.1 follow-up: si no hay RM previo, el ejercicio necesita
+    # una referencia inicial aunque la sesión sea de descarga; si no, se queda
+    # en None para siempre porque nunca pasa por una sesión no-descarga.
+    # Este check va ANTES del de es_descarga (mismo patrón que TSB/Hyrox).
+    if rm_actual <= 0:
+        if rpe_real is None:
+            return {'actualiza': False, 'rm_resultante': rm_actual, 'motivo': 'rm_sin_rpe_confianza_baja'}
+        e1rm_observado = estimar_1rm_con_rpe(float(peso), int(reps), float(rpe_real))
+        if not e1rm_observado or e1rm_observado <= rm_actual:
+            return {'actualiza': False, 'rm_resultante': rm_actual, 'motivo': 'rm_sin_rpe_confianza_baja'}
+        return {'actualiza': True, 'rm_resultante': round(e1rm_observado, 2), 'motivo': 'rm_inicial_sin_historial'}
 
     if es_descarga:
         return {'actualiza': False, 'rm_resultante': rm_actual, 'motivo': 'rm_no_actualizado_descarga'}
@@ -52,12 +68,7 @@ def decidir_actualizacion_rm(*, rm_actual, peso, reps, rpe_real, es_descarga):
 
     e1rm_observado = estimar_1rm_con_rpe(float(peso), int(reps), float(rpe_real))
     if not e1rm_observado or e1rm_observado <= rm_actual:
-        return {'actualiza': False, 'rm_resultante': rm_actual, 'motivo': 'rm_no_actualizado_rpe_incompatible' if rm_actual else 'rm_sin_rpe_confianza_baja'}
-
-    if rm_actual <= 0:
-        # Primera carga registrada para este ejercicio: no hay base sobre la
-        # que aplicar un tope relativo, se acepta el e1RM observado.
-        return {'actualiza': True, 'rm_resultante': round(e1rm_observado, 2), 'motivo': 'rm_actualizado_suavizado'}
+        return {'actualiza': False, 'rm_resultante': rm_actual, 'motivo': 'rm_no_actualizado_rpe_incompatible'}
 
     tope = rm_actual * FACTOR_SUAVIZADO_RM
     rm_resultante = round(min(e1rm_observado, tope), 2)

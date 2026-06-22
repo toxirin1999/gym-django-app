@@ -98,3 +98,38 @@ class TestDecidirActualizacionRM(SimpleTestCase):
         )
         self.assertTrue(r['actualiza'])
         self.assertGreater(r['rm_resultante'], 0)
+        self.assertEqual(r['motivo'], 'rm_inicial_sin_historial')
+
+    def test_sin_historial_y_descarga_guarda_rm_inicial(self):
+        """Bug Phase Gym Peso 2.1 follow-up: ejercicio nuevo en sesión de descarga
+        debe guardar su primer RM, no quedarse en None/0 para siempre.
+        El check 'sin historial' debe ganar al check 'es_descarga'."""
+        r = decidir_actualizacion_rm(
+            rm_actual=0, peso=60.0, reps=8, rpe_real=8.0,
+            es_descarga=True,
+        )
+        self.assertTrue(r['actualiza'])
+        self.assertGreater(r['rm_resultante'], 0)
+        self.assertEqual(r['motivo'], 'rm_inicial_sin_historial')
+
+    def test_sin_historial_y_descarga_sin_rpe_no_guarda_nada(self):
+        """Primera carga sin RPE real: sigue exigiendo RPE, incluso siendo la
+        primera vez. No se acepta un dato incompleto solo por ser la primera serie."""
+        r = decidir_actualizacion_rm(
+            rm_actual=0, peso=60.0, reps=8, rpe_real=None,
+            es_descarga=True,
+        )
+        self.assertFalse(r['actualiza'])
+        self.assertEqual(r['motivo'], 'rm_sin_rpe_confianza_baja')
+        self.assertEqual(r['rm_resultante'], 0)
+
+    def test_con_historial_y_descarga_mantiene_rm_sin_cambios(self):
+        """No-regresión: con historial previo, descarga sigue ganando siempre,
+        aunque el e1RM observado sea mayor que el actual."""
+        r = decidir_actualizacion_rm(
+            rm_actual=92.5, peso=120.0, reps=10, rpe_real=9.0,
+            es_descarga=True,
+        )
+        self.assertFalse(r['actualiza'])
+        self.assertEqual(r['motivo'], 'rm_no_actualizado_descarga')
+        self.assertEqual(r['rm_resultante'], 92.5)
