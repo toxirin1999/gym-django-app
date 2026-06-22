@@ -183,7 +183,7 @@ def _persistir_estado_aplicacion(log, nuevo_estado, nuevo_motivo):
         log.save(update_fields=['estado_aplicacion', 'motivo_postergacion', 'fecha_aplicacion'])
 
 
-def _aplicar_progresion_ejecutiva(cliente, ejercicios_mod, hoy, cambios):
+def _aplicar_progresion_ejecutiva(cliente, ejercicios_mod, hoy, cambios, es_descarga_hoy=False):
     """
     Phase 62H — Progresión ejecutiva.
 
@@ -200,6 +200,11 @@ def _aplicar_progresion_ejecutiva(cliente, ejercicios_mod, hoy, cambios):
       fallo repetido no controlado, técnica comprometida o molestia reciente
       en ESTE ejercicio (Phase 62K).
     - mantener / cambiar_variante / deload: no se tocan aquí.
+
+    Phase Gym Peso 2: el peso_sugerido del log puede pisar el cálculo
+    dependiente de fase si se usa ciego (sin el rango de reps de HOY). Por
+    eso aquí se llama a log.peso_sugerido_para_fase(...) con el rep_range y
+    rpe_objetivo del ejercicio de hoy, en vez de la property legacy.
     """
     import logging
     logger = logging.getLogger(__name__)
@@ -288,9 +293,23 @@ def _aplicar_progresion_ejecutiva(cliente, ejercicios_mod, hoy, cambios):
                 _persistir_estado_aplicacion(log, 'aplicada', None)
             continue
 
-        peso_sugerido = log.peso_sugerido
+        rep_range_hoy = ej.get('repeticiones', '8-12')
+        rpe_objetivo_hoy = ej.get('rpe_objetivo', 8)
+        peso_sugerido, motivo_tipo_fase = log.peso_sugerido_para_fase(
+            rep_range_hoy, rpe_objetivo_hoy, es_descarga_hoy=es_descarga_hoy,
+        )
         if peso_sugerido is None:
             continue
+
+        if motivo_tipo_fase:
+            ej['motivo_peso'] = {
+                'tipo': motivo_tipo_fase,
+                'texto': (
+                    'Descarga: peso reducido a propósito para esta fase de recuperación activa.'
+                    if motivo_tipo_fase == 'recalculado_descarga'
+                    else 'Recalculado: el rango de hoy cambia de fase — se recalibra desde tu capacidad estimada.'
+                ),
+            }
 
         if log.accion == 'bajar_peso':
             peso_anterior = ej.get('peso_kg')
@@ -393,11 +412,12 @@ def aplicar_plan_dinamico(cliente, ejercicios, hoy=None):
 
         recientes = _ejercicios_recientes(cliente)
 
-        # ── Progresión ejecutiva (Phase 62H) ────────────────────────────────────
-        _aplicar_progresion_ejecutiva(cliente, ejercicios_mod, hoy, cambios)
-
-        # ── Deload activo ─────────────────────────────────────────────────────
+        # ── Deload activo (calculado antes para informar la progresión ejecutiva) ──
         deload = necesita_deload_gym(cliente, hoy)
+
+        # ── Progresión ejecutiva (Phase 62H + Phase Gym Peso 2) ─────────────────
+        _aplicar_progresion_ejecutiva(cliente, ejercicios_mod, hoy, cambios, es_descarga_hoy=deload)
+
         if deload:
             for ej in ejercicios_mod:
                 series_orig = ej.get('series', 3)

@@ -181,6 +181,7 @@ def obtener_ultimo_peso_ejercicio(cliente_id, nombre_ejercicio, fecha_actual):
                 'volumen': volumen,
                 'es_tope_maquina': getattr(ej, 'es_tope_maquina', False),
                 'tempo': ej.tempo,
+                'rpe': ej.rpe,
             }
 
     # --- OPCIÓN 2: Buscar en EjercicioLiftinDetallado ---
@@ -3537,6 +3538,10 @@ def vista_entrenamiento_activo(request, cliente_id):
                 key=lambda e: 0 if e.get('tipo_ejercicio') == 'compuesto_principal' else 1
             )
 
+        # Phase Gym Peso 2 — calculado una vez para todo el bucle (no por ejercicio).
+        from entrenos.services.briefing_service import necesita_deload_gym as _necesita_deload_gym_hoy
+        _es_descarga_sesion = _necesita_deload_gym_hoy(cliente, fecha_obj)
+
         # --- INICIO DE LA MODIFICACIÓN CLAVE ---
         for i, ejercicio in enumerate(ejercicios_planificados):
             ejercicio['form_id'] = f'ejercicio_{i}'
@@ -3812,11 +3817,44 @@ def vista_entrenamiento_activo(request, cliente_id):
                 ejercicio['pr_reps'] = 0
                 ejercicio['peso_inicial_kg'] = float(ejercicio.get('peso_recomendado_kg', 0) or 0)
 
+            # --- Phase Gym Peso 2: carga dependiente de fase. El carry-forward
+            # (peso_inicial_kg = peso de la última sesión real) solo tiene
+            # sentido si el rango de reps de hoy pertenece al mismo bucket de
+            # fase que el de la última sesión. Si cambia de bucket (p.ej.
+            # potencia 3 reps → descarga 10 reps) o si hoy es descarga, hay
+            # que recalcular desde e1RM — el tope de máquina sigue ganando
+            # porque es un freno físico explícito, no una preferencia de fase.
+            if datos_anterior and not ejercicio.get('sugerencia_tope'):
+                from analytics.planificador_helms.calculo.compatibilidad_fase import resolver_peso_objetivo
+                _es_descarga_hoy = (
+                    'descarga' in (rutina_nombre or '').lower()
+                    or _es_descarga_sesion
+                )
+                _decision_fase = resolver_peso_objetivo(
+                    peso_anterior=datos_anterior.get('peso'),
+                    reps_anteriores=datos_anterior.get('repeticiones'),
+                    rpe_anterior=datos_anterior.get('rpe'),
+                    rep_range_hoy=ejercicio.get('repeticiones', '8-12'),
+                    rpe_objetivo_hoy=ejercicio.get('rpe_objetivo', 8),
+                    es_descarga_hoy=_es_descarga_hoy,
+                )
+                if _decision_fase['aplica']:
+                    ejercicio['peso_inicial_kg'] = _decision_fase['peso']
+                    _texto_fase = (
+                        'Descarga: peso reducido a propósito para esta fase de recuperación activa.'
+                        if _decision_fase['motivo_tipo'] == 'recalculado_descarga'
+                        else 'Recalculado: el rango de hoy cambia de fase — se recalibra desde tu capacidad estimada.'
+                    )
+                    ejercicio['motivo_peso'] = {
+                        'tipo': _decision_fase['motivo_tipo'],
+                        'texto': _texto_fase,
+                    }
+
             # --- Phase 62H: progresión ejecutiva — el peso sugerido por el
             # plan manda sobre el carry-forward de la sesión anterior ---
             if ejercicio.get('progresion_aplicada'):
                 ejercicio['peso_inicial_kg'] = float(ejercicio.get('peso_recomendado_kg', 0) or 0)
-            elif not ejercicio.get('sugerencia_tope'):
+            elif not ejercicio.get('sugerencia_tope') and not ejercicio.get('motivo_peso', {}).get('tipo', '').startswith('recalculado'):
                 # El generador de plan también puede decidir sube/baja sin
                 # pasar por aplicar_plan_dinamico (progresion_aplicada). Si
                 # motivo_peso ya dice "sube"/"baja", el input debe arrancar
