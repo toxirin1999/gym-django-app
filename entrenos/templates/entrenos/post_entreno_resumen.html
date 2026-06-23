@@ -199,7 +199,7 @@
       <div class="bib-info">
         <div class="bib-title">{{ resumen.titulo|default:"Sesión" }}</div>
         <div class="bib-sub">
-          {{ resumen.n_series }} serie{{ resumen.n_series|pluralize }}{% if resumen.duracion_minutos %} · {{ resumen.duracion_minutos }} min{% endif %}{% if resumen.rpe_medio %} · RPE {{ resumen.rpe_medio }}{% endif %}{% if resumen.volumen_kg %} · {{ resumen.volumen_kg|floatformat:0 }} kg{% endif %}{% if resumen.sesion_tipo %} {{ resumen.sesion_tipo }}{% endif %}
+          {{ resumen.n_series }} serie{{ resumen.n_series|pluralize }}{% if resumen.duracion_minutos %} · {{ resumen.duracion_minutos }} min{% endif %}{% if resumen.rpe_medio %} · RPE {{ resumen.rpe_medio|floatformat:1 }}{% endif %}{% if resumen.volumen_kg %} · {{ resumen.volumen_kg|floatformat:0 }} kg{% endif %}{% if resumen.sesion_tipo %} {{ resumen.sesion_tipo }}{% endif %}
         </div>
       </div>
     </div>
@@ -209,8 +209,8 @@
   <!-- RÉCORDS -->
   <div class="sec-hdr"><span class="sec-tag">Récords</span><div class="sec-line"></div></div>
   <div class="card">
-    {% for nombre in prs %}
-    <div class="pr-row">🏆 Nuevo récord · {{ nombre }}</div>
+    {% for pr in prs %}
+    <div class="pr-row">🏆 Nuevo récord de {{ pr.get_tipo_record_display|lower }} · {{ pr.ejercicio_nombre }}</div>
     {% endfor %}
   </div>
   {% endif %}

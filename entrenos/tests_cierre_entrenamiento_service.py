@@ -343,8 +343,9 @@ class TestPRs(CierreEntrenamientoBase):
                    return_value=_permiso('progresion_permitida')):
             ctx = construir_contexto_cierre(self.cliente, entreno)
 
-        self.assertIn('Press banca', ctx['prs'])
-        self.assertNotIn('Sentadilla', ctx['prs'])
+        nombres = [pr.ejercicio_nombre for pr in ctx['prs']]
+        self.assertIn('Press banca', nombres)
+        self.assertNotIn('Sentadilla', nombres)
 
     def test_sin_records_devuelve_lista_vacia(self):
         entreno = self._crear_entreno(date(2026, 6, 1))

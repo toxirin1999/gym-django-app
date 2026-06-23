@@ -130,6 +130,73 @@ class TestPostEntrenoResumenView(PostEntrenoResumenViewBase):
         self.assertContains(resp, 'Récords')
         self.assertContains(resp, 'Nuevo récord')
 
+    def test_record_doble_mismo_ejercicio_muestra_tipos_distinguibles(self):
+        """
+        Un ejercicio puede batir peso_maximo Y volumen_total a la vez (caso real,
+        no duplicado). El HTML debe mostrar dos líneas con el tipo de récord
+        distinto en el texto, no el mismo texto repetido idéntico dos veces.
+        """
+        RecordPersonal.objects.create(
+            cliente=self.cliente, entreno=self.entreno, ejercicio_nombre='Press banca',
+            tipo_record='peso_maximo', valor=62.5, superado=False,
+        )
+        RecordPersonal.objects.create(
+            cliente=self.cliente, entreno=self.entreno, ejercicio_nombre='Press banca',
+            tipo_record='volumen_total', valor=2000.0, superado=False,
+        )
+        with patch('entrenos.services.cierre_entrenamiento_service.evaluar_permiso_progresion',
+                   return_value=_permiso('progresion_permitida')):
+            resp = self.client.get(self._url())
+
+        self.assertContains(resp, 'Nuevo récord de peso máximo · Press banca')
+        self.assertContains(resp, 'Nuevo récord de volumen total · Press banca')
+        self.assertEqual(resp.content.decode().count('Nuevo récord'), 2)
+
+    def test_rpe_medio_se_redondea_a_un_decimal(self):
+        """
+        rpe_medio con muchos decimales (promedio de RPEs como 5,6,7,7) no debe
+        mostrarse con la cadena flotante completa.
+        """
+        from entrenos.models import SesionEntrenamiento
+        SesionEntrenamiento.objects.filter(entreno=self.entreno).update(
+            rpe_medio=6.181818181818182,
+        )
+        with patch('entrenos.services.cierre_entrenamiento_service.evaluar_permiso_progresion',
+                   return_value=_permiso('progresion_permitida')):
+            resp = self.client.get(self._url())
+
+        contenido = resp.content.decode()
+        self.assertIn('RPE 6.2', contenido)
+        self.assertNotIn('6.181818181818182', contenido)
+
+    def test_record_unico_solo_peso_sigue_mostrandose_correctamente(self):
+        """No regresión: una sesión con un solo récord (solo peso) sigue OK."""
+        RecordPersonal.objects.create(
+            cliente=self.cliente, entreno=self.entreno, ejercicio_nombre='Press banca',
+            tipo_record='peso_maximo', valor=62.5, superado=False,
+        )
+        with patch('entrenos.services.cierre_entrenamiento_service.evaluar_permiso_progresion',
+                   return_value=_permiso('progresion_permitida')):
+            resp = self.client.get(self._url())
+
+        contenido = resp.content.decode()
+        self.assertEqual(contenido.count('Nuevo récord'), 1)
+        self.assertIn('Nuevo récord de peso máximo · Press banca', contenido)
+
+    def test_record_unico_solo_volumen_sigue_mostrandose_correctamente(self):
+        """No regresión: una sesión con un solo récord (solo volumen) sigue OK."""
+        RecordPersonal.objects.create(
+            cliente=self.cliente, entreno=self.entreno, ejercicio_nombre='Press banca',
+            tipo_record='volumen_total', valor=2000.0, superado=False,
+        )
+        with patch('entrenos.services.cierre_entrenamiento_service.evaluar_permiso_progresion',
+                   return_value=_permiso('progresion_permitida')):
+            resp = self.client.get(self._url())
+
+        contenido = resp.content.decode()
+        self.assertEqual(contenido.count('Nuevo récord'), 1)
+        self.assertIn('Nuevo récord de volumen total · Press banca', contenido)
+
     def test_entreno_de_otro_cliente_404(self):
         otro_user = User.objects.create_user(username='otro_cliente_62f', password='x')
         otro_cliente, _ = Cliente.objects.get_or_create(

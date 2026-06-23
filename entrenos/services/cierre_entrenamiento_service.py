@@ -212,7 +212,7 @@ def construir_contexto_cierre(cliente, entreno):
         cambios_relevantes: list[{nombre, tipo, detalle}]
         lectura_plan: str | None
         proxima_vez: str | None
-        prs: list[str]
+        prs: list[RecordPersonal]
         joi_mensaje: str | None
     """
     ejercicios = list(
@@ -232,11 +232,12 @@ def construir_contexto_cierre(cliente, entreno):
     if proxima_vez is None:
         proxima_vez = _proxima_vez_decisiones(cliente, ejercicios)
 
-    # Mostrar todos los PRs reales sin eliminar duplicados (ej: peso máximo + volumen total del mismo ejercicio)
+    # Mostrar todos los PRs reales sin eliminar duplicados (ej: peso máximo + volumen total del mismo ejercicio).
+    # Se devuelven los objetos RecordPersonal (no solo el nombre) para poder distinguir
+    # el tipo de récord en la plantilla cuando un mismo ejercicio bate dos récords a la vez.
     prs = list(
         entreno.records_establecidos
         .filter(superado=False)
-        .values_list('ejercicio_nombre', flat=True)
     )
 
     joi_mensaje = _joi_mensaje_cierre(cliente, entreno)
