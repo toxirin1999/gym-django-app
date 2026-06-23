@@ -3513,7 +3513,7 @@ def vista_entrenamiento_activo(request, cliente_id):
 
         fecha_para_template = fecha_obj.strftime('%Y-%m-%d')
 
-        rutina_nombre = request.GET.get('rutina_nombre')
+        rutina_nombre = request.GET.get('rutina_nombre') or ''
         sesion_programada_id = request.GET.get('sesion_programada_id', '').strip()
         modo_reducido = request.GET.get('modo_reducido') == '1'
         ejercicios_planificados_json = request.GET.get('ejercicios', '[]')
