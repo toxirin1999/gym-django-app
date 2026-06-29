@@ -63,11 +63,20 @@ def get_lectura_joi_para_mostrar(cliente, fecha_ref=None) -> dict | None:
         if not texto_raw:
             return None
 
+        # Rule 2: already shown today (same hash) → silence
+        cache_key = f'joi_lectura_{cliente.id}'
+        texto_hash = _hash_texto(texto_raw)
+        if cache.get(cache_key) == texto_hash:
+            return None
+
         # Rule 3: validate output
         validacion = validar_salida_presencia_joi(texto_raw, estado)
         texto_seguro = validacion['texto_seguro']
         if not texto_seguro:
             return None
+
+        # Mark as shown in cache
+        cache.set(cache_key, texto_hash, _CACHE_TTL)
 
         # Build brief text (first sentence for panel)
         import re

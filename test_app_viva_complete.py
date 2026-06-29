@@ -47,7 +47,7 @@ class TestAppVivaHyrox(TestCase):
         # 1. Dashboard antes: sin sesión completada
         response = self.client.get('/hyrox/dashboard/')
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'sesion_completada_hoy')  # Verificar que el template tiene esta variable
+        self.assertIn('sesion_completada_hoy', response.context)  # Variable existe en contexto
 
         # 2. Crear sesión completada hoy
         sesion = HyroxSession.objects.create(
@@ -227,7 +227,7 @@ class TestAppVivaJOIReactivity(TestCase):
 
     def test_joi_detects_diario_without_narrative(self):
         """JOI detecta diario completado sin narrativa → OBSERVANDO"""
-        from diario.models import BitacoraDiaria
+        from clientes.models import BitacoraDiaria
 
         # 1. Crear entrada sin narrativa formada
         BitacoraDiaria.objects.create(
@@ -253,32 +253,27 @@ class TestAppVivaJOIReactivity(TestCase):
             fecha_evento=self.hoy + timedelta(days=30),
         )
 
-        # Pulso PROTEGIENDO siempre → JOI va a PROTEGIENDO
-        objetivo.pulso_estado = 'PROTEGIENDO'
-        objetivo.save()
+        # Readiness bajo (<40) → PulsoService retorna PROTEGIENDO → JOI va a PROTEGIENDO
+        HyroxReadinessLog.objects.create(objective=objetivo, score=30)
 
         estado, motivo = determinar_estado_habitacion_joi(self.user)
         self.assertEqual(estado, 'PROTEGIENDO')
         self.assertEqual(motivo, 'pulso_protegiendo')
 
     def test_joi_detects_active_lesion(self):
-        """JOI detecta lesión activa → PROTEGIENDO"""
-        objetivo = HyroxObjective.objects.create(
-            cliente=self.cliente,
-            categoria='open_men',
-            estado='activo',
-            fecha_evento=self.hoy + timedelta(days=30),
-        )
+        """JOI detecta lesión activa → PROTEGIENDO (sin objetivo Hyrox, Check 3 directo)"""
+        # Sin HyroxObjective → Check 1 (Pulso) se salta → Check 3 (lesión directa) dispara
 
         # 1. Crear lesión AGUDA
         lesion = UserInjury.objects.create(
-            usuario=self.user,
+            cliente=self.cliente,
             zona_afectada='rodilla',
             fase='AGUDA',
+            activa=True,
             tags_restringidos=[],
         )
 
-        # 2. JOI debería ir a PROTEGIENDO
+        # 2. JOI debería ir a PROTEGIENDO con motivo lesion_activa
         estado, motivo = determinar_estado_habitacion_joi(self.user)
         self.assertEqual(estado, 'PROTEGIENDO')
         self.assertEqual(motivo, 'lesion_activa')

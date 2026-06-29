@@ -33,7 +33,7 @@ class JoiHabitacion2AEstadoTests(TestCase):
     # Test 1: Sin señales → SILENCIO
     def test_sin_senales_devuelve_silencio(self):
         """Sin mensaje, sin narrativa, sin protección → SILENCIO"""
-        estado = determinar_estado_habitacion_joi(self.user)
+        estado, _ = determinar_estado_habitacion_joi(self.user)
         self.assertEqual(estado, 'SILENCIO')
 
     # Test 2: Mensaje JOI hoy → PRESENTE
@@ -44,7 +44,7 @@ class JoiHabitacion2AEstadoTests(TestCase):
             mensaje="Test mensaje",
             creado_en=timezone.now()
         )
-        estado = determinar_estado_habitacion_joi(self.user)
+        estado, _ = determinar_estado_habitacion_joi(self.user)
         self.assertEqual(estado, 'PRESENTE')
 
     # Test 3: Narrativa activa → PRESENTE
@@ -55,7 +55,7 @@ class JoiHabitacion2AEstadoTests(TestCase):
             estado='activa',
             capa_corta='Test corta'
         )
-        estado = determinar_estado_habitacion_joi(self.user)
+        estado, _ = determinar_estado_habitacion_joi(self.user)
         self.assertEqual(estado, 'PRESENTE')
 
     # Test 4: Pulso PROTEGIENDO → PROTEGIENDO
@@ -70,7 +70,7 @@ class JoiHabitacion2AEstadoTests(TestCase):
         # (En producción, sería readiness bajo + TSB bajo + RPE extremo, etc.)
         # Para simplificar test, verificar que se intenta leer el Pulso sin errores
 
-        estado = determinar_estado_habitacion_joi(self.user)
+        estado, _ = determinar_estado_habitacion_joi(self.user)
         # Sin condiciones específicas de protección, debería ser SILENCIO
         self.assertIn(estado, ['SILENCIO', 'PROTEGIENDO'])
 
@@ -89,7 +89,7 @@ class JoiHabitacion2AEstadoTests(TestCase):
             rpe_global=10,
             estado='completado'
         )
-        estado = determinar_estado_habitacion_joi(self.user)
+        estado, _ = determinar_estado_habitacion_joi(self.user)
         self.assertEqual(estado, 'PROTEGIENDO')
 
     # Test 6: Lesión activa → PROTEGIENDO
@@ -105,7 +105,7 @@ class JoiHabitacion2AEstadoTests(TestCase):
             zona_afectada='rodilla',
             fase='AGUDA'
         )
-        estado = determinar_estado_habitacion_joi(self.user)
+        estado, _ = determinar_estado_habitacion_joi(self.user)
         self.assertEqual(estado, 'PROTEGIENDO')
 
     # Test 7: PROTEGIENDO tiene prioridad sobre PRESENTE
@@ -128,12 +128,14 @@ class JoiHabitacion2AEstadoTests(TestCase):
             zona_afectada='tobillo',
             fase='SUB_AGUDA'
         )
-        estado = determinar_estado_habitacion_joi(self.user)
+        estado, _ = determinar_estado_habitacion_joi(self.user)
         self.assertEqual(estado, 'PROTEGIENDO')
 
     # Test 8: Estado desconocido no rompe template
     def test_estado_desconocido_no_rompe(self):
-        """La función siempre devuelve string válido (nunca None/Exception)"""
-        estado = determinar_estado_habitacion_joi(self.user)
+        """La función siempre devuelve tuple (estado, motivo) válido (nunca None/Exception)"""
+        resultado = determinar_estado_habitacion_joi(self.user)
+        self.assertIsInstance(resultado, tuple)
+        estado, motivo = resultado
         self.assertIsInstance(estado, str)
         self.assertIn(estado, ['SILENCIO', 'PRESENTE', 'PROTEGIENDO'])

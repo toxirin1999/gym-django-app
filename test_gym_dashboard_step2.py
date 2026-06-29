@@ -44,10 +44,10 @@ class TestGymDashboardSessionDetection(TestCase):
         sesion.save()
 
         # Dashboard now shows session completed
-        response = self.client.get('/mi-panel/blade-runner/')
+        response = self.client.get('/clientes/mi-panel/blade-runner/')
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'SESIÓN COMPLETADA')
-        self.assertContains(response, '✓')
+        self.assertContains(response, 'fa-check-circle')
 
     def test_dashboard_shows_high_rpe_badge(self):
         """Dashboard shows RPE badge when RPE >= 8"""
@@ -70,7 +70,7 @@ class TestGymDashboardSessionDetection(TestCase):
         sesion.rpe_medio = 8.5
         sesion.save()
 
-        response = self.client.get('/mi-panel/blade-runner/')
+        response = self.client.get('/clientes/mi-panel/blade-runner/')
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'SESIÓN COMPLETADA')
         self.assertContains(response, 'RPE')
@@ -97,7 +97,7 @@ class TestGymDashboardSessionDetection(TestCase):
         sesion.rpe_medio = 7.0
         sesion.save()
 
-        response = self.client.get('/mi-panel/blade-runner/')
+        response = self.client.get('/clientes/mi-panel/blade-runner/')
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'SESIÓN COMPLETADA')
         # Should NOT contain "ALTO" badge (RPE < 8)

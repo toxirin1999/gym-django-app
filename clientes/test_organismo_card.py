@@ -10,6 +10,7 @@ Valida que:
 6. Error handling graceful (degradación a SILENCIO)
 """
 
+from unittest.mock import patch
 from django.test import TestCase, Client
 from django.contrib.auth.models import User
 from django.urls import reverse
@@ -45,7 +46,9 @@ class TestOrganismoCardView(TestCase):
 
     def test_card_renderiza_estado_silencio(self):
         """Template renderiza SILENCIO correctamente sin botón."""
-        response = self.client.get(reverse('clientes:mockup_demo'))
+        _descanso = {'tipo': 'descanso', 'estado': 'descanso', 'entrenamiento': None, 'sesion_programada': None, 'mensaje': 'Descanso.', 'causa_principal': None, 'modo_reducido': False, 'distribucion_aviso': None}
+        with patch('entrenos.services.sesion_recomendada.obtener_sesion_recomendada_hoy', return_value=_descanso):
+            response = self.client.get(reverse('clientes:mockup_demo'))
 
         # Sin lesión activa → SILENCIO
         self.assertEqual(response.context['estado_sistema']['estado'], 'SILENCIO')
@@ -82,8 +85,10 @@ class TestOrganismoCardView(TestCase):
 
     def test_card_renderiza_accion_si_existe(self):
         """Si accion_label es None, no renderizar botón. Si existe, renderizar."""
-        # Caso 1: Sin lesión → SILENCIO sin acción
-        response1 = self.client.get(reverse('clientes:mockup_demo'))
+        # Caso 1: Sin lesión ni sesión activa (simulada como descanso) → SILENCIO sin acción
+        _descanso = {'tipo': 'descanso', 'estado': 'descanso', 'entrenamiento': None, 'sesion_programada': None, 'mensaje': 'Descanso.', 'causa_principal': None, 'modo_reducido': False, 'distribucion_aviso': None}
+        with patch('entrenos.services.sesion_recomendada.obtener_sesion_recomendada_hoy', return_value=_descanso):
+            response1 = self.client.get(reverse('clientes:mockup_demo'))
         estado1 = response1.context['estado_sistema']
         self.assertIsNone(estado1['accion_label'])
 
@@ -209,7 +214,7 @@ class TestOrganismoCardTemplate(TestCase):
 
         # El estado en HTML debe ser title case (filtro |title)
         self.assertTrue(
-            any(word in content for word in ['Silencio', 'Observando', 'En_margen', 'Protegiendo']),
+            any(word in content for word in ['Silencio', 'Observando', 'En Margen', 'Protegiendo']),
             "Estado no se renderiza en Title Case"
         )
 
@@ -264,9 +269,11 @@ class TestOrganismoCardTemplate(TestCase):
         """Fix 2.2: Si usuario no tiene cliente_profil, degradar gracefully sin excepción."""
         from core.organismo import resolver_estado_sistema_hoy
 
-        # Crear usuario sin cliente_profil (simular caso edge)
+        # Crear usuario, eliminar el Cliente auto-creado por la señal y refrescar
+        # para limpiar el caché de relaciones de Django
         orphan_user = User.objects.create_user('orphan_user', password='x')
-        # No crear Cliente asociado
+        Cliente.objects.filter(user=orphan_user).delete()
+        orphan_user = User.objects.get(pk=orphan_user.pk)
 
         # Llamada no debe explotar
         estado = resolver_estado_sistema_hoy(orphan_user)

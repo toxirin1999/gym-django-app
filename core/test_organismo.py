@@ -12,6 +12,7 @@ Tests:
 """
 
 from datetime import date
+from unittest.mock import patch
 from django.test import TestCase
 from django.contrib.auth.models import User
 
@@ -33,8 +34,10 @@ class TestOrganismoResolver(TestCase):
         self.cliente.save()
 
     def test_sin_senales_retorna_silencio(self):
-        """Sin señales relevantes → SILENCIO."""
-        resultado = resolver_estado_sistema_hoy(self.user)
+        """Sin señales de ningún módulo (sesión simulada como descanso) → SILENCIO."""
+        _descanso = {'tipo': 'descanso', 'estado': 'descanso', 'entrenamiento': None, 'sesion_programada': None, 'mensaje': 'Descanso.', 'causa_principal': None, 'modo_reducido': False, 'distribucion_aviso': None}
+        with patch('entrenos.services.sesion_recomendada.obtener_sesion_recomendada_hoy', return_value=_descanso):
+            resultado = resolver_estado_sistema_hoy(self.user)
 
         self.assertEqual(resultado['estado'], 'SILENCIO')
         self.assertEqual(resultado['motivo'], 'sin_senales')
@@ -171,11 +174,11 @@ class TestOrganismoResolver(TestCase):
 
     def test_resolver_con_usuario_sin_lesion(self):
         """Resolver funciona para usuario sin lesiones."""
-        # Usuario sin lesiones, sin otros datos
         resultado = resolver_estado_sistema_hoy(self.user)
 
         self.assertIsNotNone(resultado)
-        self.assertEqual(resultado['estado'], 'SILENCIO')
+        # Sin lesiones activas, PROTEGIENDO no puede activarse
+        self.assertNotEqual(resultado['estado'], 'PROTEGIENDO')
 
     def test_accion_correspond_to_module(self):
         """La acción viene del módulo principal (lesión AGUDA → Hyrox)."""

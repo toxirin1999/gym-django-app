@@ -52,7 +52,7 @@ class PulsoService:
 
         # Regla 1b: Sesión muy reciente con RPE extremo → PROTEGIENDO (sensibilidad a sesiones actuales)
         from datetime import datetime, time
-        ultima_sesion = objetivo.sessions.filter(estado='completado').order_by('-fecha', '-id').first()
+        ultima_sesion = objetivo.sessions.filter(estado='completado').order_by('-fecha', '-id').first() if objetivo else None
         if ultima_sesion:
             sesion_datetime = timezone.make_aware(datetime.combine(ultima_sesion.fecha, time.min))
             hace = timezone.now() - sesion_datetime
