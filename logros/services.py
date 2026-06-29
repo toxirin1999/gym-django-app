@@ -188,7 +188,7 @@ class CodiceService:
             datetime.combine(entreno.fecha, datetime.min.time())
         )
         # Actualizar fecha del último entrenamiento
-        perfil.fecha_ultimo_entreno = entreno.fecha
+        perfil.fecha_ultimo_entreno = aware_datetime
 
         logger.info(
             f"Estadísticas actualizadas: +{puntos_base} puntos, {perfil.entrenos_totales} entrenamientos totales")
@@ -321,12 +321,26 @@ class CodiceService:
             'racha_dias_meta_3': cls._calc_racha_actual,  # <-- Y esta para el otro warning
         }
 
+        # Dispatch genérico por prefijo para pruebas con meta numérica
+        _prefijos = {
+            'entrenos_completados_meta_': cls._calc_total_entrenos,
+            'racha_dias_meta_': cls._calc_racha_actual,
+            'volumen_total_meta_': cls._calc_volumen_total_kg,
+            'rm_banca_meta_': cls._calc_rm_press_banca,
+            'rm_sentadilla_meta_': cls._calc_rm_sentadilla,
+            'rm_peso_muerto_meta_': cls._calc_rm_peso_muerto,
+        }
+
         clave = prueba.clave_calculo
         if clave in calculadores:
             return calculadores[clave](perfil, entreno, prueba)
-        else:
-            logger.warning(f"No se encontró calculador para la clave: {clave}")
-            return 0
+
+        for prefijo, fn in _prefijos.items():
+            if clave.startswith(prefijo):
+                return fn(perfil, entreno, prueba)
+
+        logger.debug(f"Sin calculador para clave épica: {clave}")
+        return 0
 
     # --------------------------------------------------------------------------
     # FUNCIONES DE CÁLCULO ESPECÍFICAS PARA CADA TIPO DE PRUEBA
@@ -424,14 +438,14 @@ class CodiceService:
                 entreno__cliente=cliente,
                 ejercicio__nombre__icontains=nombre_ejercicio,
                 peso_kg__gt=0,
-                repeticiones_realizadas__gt=0
-            ).order_by('-peso_kg', '-repeticiones_realizadas').first()
+                repeticiones__gt=0
+            ).order_by('-peso_kg', '-repeticiones').first()
 
             if not serie_maxima:
                 return 0
 
             peso = serie_maxima.peso_kg
-            reps = serie_maxima.repeticiones_realizadas
+            reps = serie_maxima.repeticiones
 
             # Fórmula de Brzycki: 1RM = peso / (1.0278 - 0.0278 * reps)
             if reps == 1:

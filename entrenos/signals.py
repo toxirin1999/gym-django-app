@@ -317,12 +317,10 @@ def joi_mensaje_pr(sender, instance, created, raw=False, **kwargs):
         from django.core.cache import cache as _cache
         import datetime as _dt
         _fecha = getattr(instance, 'fecha', None) or _dt.date.today()
-        _lock = (
-            f'joi_pr_lock_{instance.cliente_id}'
-            f'_{instance.ejercicio_nombre}'
-            f'_{_fecha}'
-            f'_{instance.valor}'
-        )
+        import re as _re
+        _nombre_safe = _re.sub(r'[^a-zA-Z0-9]', '_', instance.ejercicio_nombre)
+        _valor_safe = str(instance.valor).replace('.', '_')
+        _lock = f'joi_pr_lock_{instance.cliente_id}_{_nombre_safe}_{_fecha}_{_valor_safe}'
         if _cache.get(_lock):
             return
         _cache.set(_lock, True, 86400)  # 24h — un PR concreto solo genera 1 mensaje al día

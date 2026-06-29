@@ -130,7 +130,8 @@ class LogrosService:
                     return sesion.hora_inicio.hour < 7
                 elif hora_tipo == 'noche' and sesion.hora_inicio:
                     return sesion.hora_inicio.hour >= 21
-            
+                return False
+
             elif condicion_tipo == 'rpe_controlado':
                 rpe_min = condicion_valor.get('min', 6)
                 rpe_max = condicion_valor.get('max', 8)
