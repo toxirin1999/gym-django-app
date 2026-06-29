@@ -163,8 +163,10 @@ class TestCase7_PanelConJoiSemanal(PresenciaBase):
             c.login(username='tester_pres45', password='x')
             response = c.get(reverse('clientes:mockup_demo'))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'JOI · esta semana')
-        self.assertContains(response, 'Esta semana el margen apareció.')
+        # Phase 45 UI consolidated into NarrativaActiva ('JOI · esta fase');
+        # verify the context variable is populated when service returns data.
+        self.assertIsNotNone(response.context.get('joi_semanal'))
+        self.assertTrue(response.context['joi_semanal']['debe_mostrar'])
 
 
 # ── Case 8: Centro muestra lectura completa ───────────────────────────────────
