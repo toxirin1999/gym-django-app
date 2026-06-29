@@ -8376,6 +8376,7 @@ def guardar_motivo_pausa(request, pausa_id):
     'prefiero_no_decirlo' (respondido) de 'desconocido' (no contestó).
     """
     from entrenos.models import PausaEntrenamiento
+    from django.http import JsonResponse
     pausa = get_object_or_404(PausaEntrenamiento, id=pausa_id)
     motivo = (request.POST.get('motivo') or '').strip()
     validos = {c[0] for c in PausaEntrenamiento.MOTIVO_CHOICES}
@@ -8384,4 +8385,7 @@ def guardar_motivo_pausa(request, pausa_id):
         pausa.motivo_respondido = True
         pausa.motivo_preguntado = True
         pausa.save(update_fields=['motivo', 'motivo_respondido', 'motivo_preguntado', 'actualizada_en'])
+    # fetch AJAX (X-CSRFToken header presente) → JSON; form clásico → redirect
+    if request.headers.get('X-CSRFToken'):
+        return JsonResponse({'ok': True})
     return redirect(request.META.get('HTTP_REFERER') or 'panel_cliente')

@@ -3791,7 +3791,9 @@ def determinar_estado_habitacion_joi(usuario):
         # Check 1: Pulso Hyrox PROTEGIENDO (calcula readiness + señales)
         try:
             from hyrox.pulso_service import PulsoService
-            hyrox_obj = HyroxObjective.objects.get(cliente__user=usuario)
+            hyrox_obj = HyroxObjective.objects.filter(cliente__user=usuario).order_by('-id').first()
+            if not hyrox_obj:
+                raise HyroxObjective.DoesNotExist
 
             # Obtener readiness_score y lesión_activa para calcular Pulso
             readiness_log = hyrox_obj.readiness_logs.order_by('-fecha').first()
