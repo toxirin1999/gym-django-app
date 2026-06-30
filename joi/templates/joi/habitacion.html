@@ -649,7 +649,7 @@
     <!-- CTA Protegiendo: solo visible en estado PROTEGIENDO -->
     {% if joi_estado == 'PROTEGIENDO' %}
     <div class="joi-cta-protegiendo">
-      <a href="/hyrox/registrar/?modo=protegida">Registrar recuperación</a>
+      <a href="{% url 'hyrox:dashboard' %}">Ver estado del sistema</a>
     </div>
     {% endif %}
 
