@@ -1854,6 +1854,9 @@ const cards=Array.from(document.querySelectorAll('.cyber-ejercicio-card'));
     Object.entries(data.seriesCompletadas).forEach(([fid,series])=>{
       if(!STATE.seriesCompletadas[fid])return;
       STATE.seriesCompletadas[fid]=series;
+      // totalSets debe declararse ANTES del series.forEach para evitar TDZ (ReferenceError)
+      const card=document.getElementById('card-'+fid);
+      const totalSets=parseInt(card?.dataset.totalSets||'0');
       // Re-renderizar log visual
       series.forEach((s,idx)=>{
         const log=document.getElementById('log-'+fid);
@@ -1875,8 +1878,6 @@ const cards=Array.from(document.querySelectorAll('.cyber-ejercicio-card'));
         if(reg)reg.style.display='none';
       });
       // Mostrar siguiente serie o completado
-      const card=document.getElementById('card-'+fid);
-      const totalSets=parseInt(card?.dataset.totalSets||'0');
       const snSig=series.length+1;
       if(snSig<=totalSets){
         const nextPanel=document.getElementById('reg-'+fid+'-'+snSig);
