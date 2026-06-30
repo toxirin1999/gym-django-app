@@ -2463,7 +2463,8 @@ function iniciarDescanso(fid,totalSeg,snActual,totalSeries){
   if(STATE.timers[fid])clearInterval(STATE.timers[fid].interval);
   const segAjustado=Math.max(5,totalSeg);
   const endTs=Date.now()+segAjustado*1000;  // timestamp absoluto de fin
-  STATE.timers[fid]={seg:segAjustado,total:segAjustado,endTs:endTs,interval:null,snActual:snActual,totalSeries:totalSeries};
+  const timerStartedAt=Date.now();
+  STATE.timers[fid]={seg:segAjustado,total:segAjustado,endTs:endTs,interval:null,snActual:snActual,totalSeries:totalSeries,startedAt:timerStartedAt};
   // Actualizar label "DE X:XX" con el tiempo ajustado
   const deEl=document.getElementById('pd-de-'+fid);
   if(deEl){const m=Math.floor(segAjustado/60),s=segAjustado%60;deEl.textContent='DE '+m+':'+String(s).padStart(2,'0');}
@@ -2478,7 +2479,8 @@ function iniciarDescanso(fid,totalSeg,snActual,totalSeries){
       STATE.timers[fid].interval=null;
       playRestEndAlert();
       if(navigator.vibrate)navigator.vibrate([100,50,100]);
-      setTimeout(()=>saltarDescanso(fid),800);
+      // Guard: si se guardó otra serie antes del delay, el timer ya cambió → no saltar
+      setTimeout(()=>{if(STATE.timers[fid]&&STATE.timers[fid].startedAt===timerStartedAt)saltarDescanso(fid);},800);
     }
   },1000);
 }
@@ -2541,7 +2543,8 @@ function saltarDescanso(fid){
       +'<div style="font-family:var(--fm);font-size:11px;color:var(--td);margin-top:4px;">'+snActual+' series · '+calcVolumenEj(fid)+' kg</div>'
       +'<div style="font-family:var(--fm);font-size:10px;color:var(--tdm);margin-top:2px;font-style:italic;">'+frase.s+'</div>';
     if(card)card.appendChild(div);
-    if(STATE.ejActual+1<cards.length)setTimeout(()=>navEjercicio(1),2000);
+    const ejIdxAtCompletion=STATE.ejActual;
+    if(ejIdxAtCompletion+1<cards.length)setTimeout(()=>{if(STATE.ejActual===ejIdxAtCompletion)navEjercicio(1);},2000);
   }else{
     // Mostrar panel de la siguiente serie
     const nextPanel=document.getElementById('reg-'+fid+'-'+snSiguiente);
@@ -2644,7 +2647,9 @@ document.addEventListener('visibilitychange',()=>{
       clearInterval(t.interval);
       t.interval=null;
       playRestEndAlert();
-      setTimeout(()=>saltarDescanso(fid),800);
+      const snap=t.startedAt;
+      // Guard: si se guardó otra serie antes del delay, el timer ya cambió → no saltar
+      setTimeout(()=>{if(STATE.timers[fid]&&STATE.timers[fid].startedAt===snap)saltarDescanso(fid);},800);
     }
   });
 });
