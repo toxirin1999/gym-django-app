@@ -3796,7 +3796,10 @@ def determinar_estado_habitacion_joi(usuario):
                 raise HyroxObjective.DoesNotExist
 
             # Obtener readiness_score y lesión_activa para calcular Pulso
-            readiness_log = hyrox_obj.readiness_logs.order_by('-fecha').first()
+            # Solo usar logs de los últimos 7 días — logs más antiguos están obsoletos
+            from datetime import timedelta
+            cutoff = today - timedelta(days=7)
+            readiness_log = hyrox_obj.readiness_logs.filter(fecha__gte=cutoff).order_by('-fecha').first()
             readiness_score = readiness_log.score if readiness_log else 50
 
             lesion_activa = UserInjury.objects.filter(

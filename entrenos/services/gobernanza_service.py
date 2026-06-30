@@ -87,11 +87,11 @@ def _veces_ignorada(cliente, patron: str) -> int:
         return 0
 
 
-def _tiene_experimento_reciente_atenuado(cliente, patron: str, dias: int) -> bool:
+def _tiene_experimento_reciente_atenuado(cliente, patron: str, dias: int, fecha_ref=None) -> bool:
     """True if there was a vigilar_senal experiment that ended as 'atenuada' in the last N days."""
     try:
         from entrenos.models import IntervencionPlan
-        hoy = timezone.localdate()
+        hoy = fecha_ref or timezone.localdate()
         return IntervencionPlan.objects.filter(
             cliente=cliente,
             tipo=IntervencionPlan.TIPO_VIGILAR_SENAL,
@@ -137,7 +137,7 @@ def auditar_hipotesis(cliente, hipotesis: list[dict], fecha_ref=None) -> list[di
 
         # Rule 3/4: cooldown after recent experiment
         if not motivo_supresion:
-            if _tiene_experimento_reciente_atenuado(cliente, patron, _COOLDOWN_ATENUADA):
+            if _tiene_experimento_reciente_atenuado(cliente, patron, _COOLDOWN_ATENUADA, fecha_ref):
                 motivo_supresion = 'cooldown_atenuada'
 
         # Rule 5: too many ignores → auto-pause
