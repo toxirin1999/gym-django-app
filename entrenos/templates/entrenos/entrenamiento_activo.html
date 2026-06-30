@@ -2529,7 +2529,11 @@ function saltarDescanso(fid){
   if(snSiguiente>totalSeries){
     // Ejercicio terminado
     const card=document.getElementById('card-'+fid);
+    // Guard: evitar badge duplicado si saltarDescanso se llama dos veces
+    // (race entre setInterval y visibilitychange al volver de background)
+    if(card&&card.querySelector('[data-ej-done]'))return;
     const div=document.createElement('div');
+    div.setAttribute('data-ej-done','1');
     div.style.cssText='padding:20px 16px;text-align:center;border-top:1px solid var(--bd);';
     const frase=elegirFrase((STATE.seriesCompletadas[fid]||[]).reduce((a,s)=>a+(s.rpe||8),0)/Math.max(1,(STATE.seriesCompletadas[fid]||[]).length));
     div.innerHTML='<div style="font-size:2rem;color:var(--ok);">'+frase.e+'</div>'
