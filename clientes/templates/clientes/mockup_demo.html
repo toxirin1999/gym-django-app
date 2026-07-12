@@ -531,6 +531,64 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
     {% endif %}
   </div>
 
+  <!-- ── DISPONIBILIDAD DE RECURSOS — una comida = un toque. Funciona cualquier día, con o sin entreno. ── -->
+  <div id="disp-widget-home" style="border:1px solid var(--line);border-radius:4px;padding:12px 14px;margin:10px 0;">
+    <div id="disp-home-lista" style="font-family:var(--font-mono);font-size:10px;color:var(--tdm);margin-bottom:{% if disp_hoy %}8px{% else %}0{% endif %};">
+      {% for r in disp_hoy %}<span class="disp-home-item">{{ r.timestamp|date:"H:i" }} {{ r.get_nivel_display }}</span>{% if not forloop.last %} · {% endif %}{% endfor %}
+    </div>
+    <div style="font-size:12px;color:var(--td);margin-bottom:8px;">
+      Registra tu última comida — puedes tocar esto tantas veces al día como comas.
+    </div>
+    <div id="disp-home-botones" style="display:flex;gap:8px;">
+      <button type="button" class="disp-home-btn" data-nivel="A"
+        style="flex:1;padding:8px 4px;font-family:var(--font-mono);font-size:10px;font-weight:700;
+               letter-spacing:.04em;text-transform:uppercase;border:1px solid var(--line);
+               border-radius:3px;background:transparent;color:var(--ink);cursor:pointer;">
+        Completa<br><span style="font-weight:400;text-transform:none;opacity:.6;font-size:9px;">proteína + verdura/fruta + hidratos</span>
+      </button>
+      <button type="button" class="disp-home-btn" data-nivel="B"
+        style="flex:1;padding:8px 4px;font-family:var(--font-mono);font-size:10px;font-weight:700;
+               letter-spacing:.04em;text-transform:uppercase;border:1px solid var(--line);
+               border-radius:3px;background:transparent;color:var(--ink);cursor:pointer;">
+        Suficiente<br><span style="font-weight:400;text-transform:none;opacity:.6;font-size:9px;">proteína + hidratos, sin más</span>
+      </button>
+      <button type="button" class="disp-home-btn" data-nivel="C"
+        style="flex:1;padding:8px 4px;font-family:var(--font-mono);font-size:10px;font-weight:700;
+               letter-spacing:.04em;text-transform:uppercase;border:1px solid var(--line);
+               border-radius:3px;background:transparent;color:var(--ink);cursor:pointer;">
+        Recurso<br><span style="font-weight:400;text-transform:none;opacity:.6;font-size:9px;">Huel, batido, algo rápido</span>
+      </button>
+    </div>
+  </div>
+  <script>
+  (function () {
+    var widget = document.getElementById('disp-widget-home');
+    if (!widget) return;
+    var NIVEL_LABEL = { A: 'Completa', B: 'Suficiente', C: 'Recurso' };
+    widget.querySelectorAll('.disp-home-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var body = new URLSearchParams({ nivel: btn.dataset.nivel, origen: 'panel' });
+        fetch("{% url 'disponibilidad:registrar' cliente_id=cliente.id %}", {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRFToken': '{{ csrf_token }}' },
+          body: body,
+        }).then(function () {
+          var lista = document.getElementById('disp-home-lista');
+          var hora = new Date().toTimeString().slice(0, 5);
+          var item = document.createElement('span');
+          item.className = 'disp-home-item';
+          item.textContent = hora + ' ' + NIVEL_LABEL[btn.dataset.nivel];
+          if (lista.querySelector('.disp-home-item')) {
+            lista.appendChild(document.createTextNode(' · '));
+          }
+          lista.appendChild(item);
+          lista.style.marginBottom = '8px';
+        });
+      });
+    });
+  })();
+  </script>
+
   {% include "includes/_semaforo_intencion.html" %}
 
   <!-- ── BIB HERO ─────────────────────────────── -->

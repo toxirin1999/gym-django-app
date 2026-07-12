@@ -31,6 +31,7 @@ urlpatterns = [
     path('analytics/', include('analytics.urls')),
     # path('nutricion/', include('nutricion_app_django.urls')),  # Oculto: nutrición no se usa (junio 2026)
     path('hyrox/', include('hyrox.urls')), # <-- Módulo Hyrox
+    path('disponibilidad/', include('disponibilidad.urls', namespace='disponibilidad')),
 
     # --- APIs ---
     path('api/liftin/', include('entrenos.urls_api')),

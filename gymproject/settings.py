@@ -58,6 +58,7 @@ INSTALLED_APPS = [
     'diario',
     "estiramientos",
     'hyrox',
+    'disponibilidad',
 ]
 # Configuración de Celery (para notificaciones)
 CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL', 'redis://localhost:6379/0')
