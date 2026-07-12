@@ -251,7 +251,44 @@
   </div>
   {% endif %}
 
+  <!-- DISPONIBILIDAD DE RECURSOS — Escena 3 de EXPERIENCIAS_ORGANISMO.md -->
+  <div class="sec-hdr"><span class="sec-tag">Reposición</span><div class="sec-line"></div></div>
+  <div class="card" id="disp-card">
+    <p id="disp-pregunta" style="margin-bottom:4px;">¿Has comido algo desde que acabaste?</p>
+    <p style="font-size:11px;color:var(--tdm);margin-bottom:12px;">No hace falta que sea ya — responde con lo último que hayas comido, aunque fuera antes de entrenar.</p>
+    <div id="disp-botones" style="display:flex; gap:8px;">
+      <button type="button" class="btn-analisis" data-nivel="A" style="flex:1;flex-direction:column;height:auto;padding:8px 4px;gap:2px;">Completa<br><span style="opacity:.6;font-size:9px;text-transform:none;">proteína + verdura/fruta + hidratos</span></button>
+      <button type="button" class="btn-analisis" data-nivel="B" style="flex:1;flex-direction:column;height:auto;padding:8px 4px;gap:2px;">Suficiente<br><span style="opacity:.6;font-size:9px;text-transform:none;">proteína + hidratos, sin más</span></button>
+      <button type="button" class="btn-analisis" data-nivel="C" style="flex:1;flex-direction:column;height:auto;padding:8px 4px;gap:2px;">Recurso<br><span style="opacity:.6;font-size:9px;text-transform:none;">Huel, batido, algo rápido</span></button>
+    </div>
+    <p id="disp-gracias" style="display:none;">Registrado.</p>
+  </div>
+
 </div>
+
+<script>
+(function () {
+  var card = document.getElementById('disp-card');
+  if (!card) return;
+  card.querySelectorAll('#disp-botones button').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var body = new URLSearchParams({ nivel: btn.dataset.nivel, origen: 'post_entreno' });
+      fetch("{% url 'disponibilidad:registrar' cliente_id=cliente.id %}", {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'X-CSRFToken': '{{ csrf_token }}',
+        },
+        body: body,
+      }).then(function () {
+        document.getElementById('disp-pregunta').style.display = 'none';
+        document.getElementById('disp-botones').style.display = 'none';
+        document.getElementById('disp-gracias').style.display = 'block';
+      });
+    });
+  });
+})();
+</script>
 
 <!-- CTA -->
 <div class="cta-wrap">

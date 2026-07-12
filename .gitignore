@@ -47,3 +47,6 @@ dist/
 Thumbs.db
 gymproject/secrets_pa.py
 gymproject/settings_local.py
+
+# Cuadernos de laboratorio de pilotos — datos personales, no documentación del proyecto
+PILOTO_NUTRICION_0_BITACORA.md

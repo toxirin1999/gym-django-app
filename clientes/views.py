@@ -1311,6 +1311,11 @@ def mockup_demo(request):
     context['checkin_hoy'] = checkin_hoy
     context['checkin_pendiente'] = checkin_hoy is None
 
+    from disponibilidad.models import RegistroDisponibilidad
+    context['disp_hoy'] = list(
+        RegistroDisponibilidad.objects.filter(cliente=cliente, timestamp__date=_hoy).order_by('timestamp')
+    )
+
     # Bienestar widget — prosoche y vires del día
     try:
         context['prosoche_hoy'] = ProsocheDiario.objects.filter(
