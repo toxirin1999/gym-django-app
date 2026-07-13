@@ -1189,6 +1189,10 @@ def _get_dashboard_context_data(request, cliente):
         'preferencia_aplicada': _decision_entreno.get('preferencia_aplicada'),
         'lesion_aviso': _decision_entreno.get('lesion_aviso'),
         'explicacion_decision': _ctx_explicacion_decision(_decision_entreno, _senal_diario),
+        # Fase C (autoridad Organismo, jul-2026): dict crudo, uso interno de
+        # mockup_demo() para pasarlo a resolver_estado_sistema_hoy(decision_gym=...)
+        # y evitar que Organismo recalcule la misma query. No usar en templates.
+        '_decision_gym_raw': _decision_entreno,
         'bloque_esencial_resumen': bloque_esencial_resumen,
         'analisis_semanal': _ctx_analisis_semanal(cliente, hoy),
         'calendario_plan': _ctx_calendario_plan(cliente, hoy),
@@ -1312,9 +1316,11 @@ def mockup_demo(request):
     context['checkin_pendiente'] = checkin_hoy is None
 
     from disponibilidad.models import RegistroDisponibilidad
+    from disponibilidad.services import calcular_energia_disponible
     context['disp_hoy'] = list(
         RegistroDisponibilidad.objects.filter(cliente=cliente, timestamp__date=_hoy).order_by('timestamp')
     )
+    context['energia_disponible'] = calcular_energia_disponible(cliente)
 
     # Bienestar widget — prosoche y vires del día
     try:
@@ -1497,9 +1503,15 @@ def mockup_demo(request):
         context['joi_narrativa_plan'] = ''
 
     # ── Sistema global hoy (Phase Organismo 2) ────────────────────
+    # Fase C (autoridad Organismo, jul-2026): se reutiliza la decisión de sesión
+    # ya calculada por _get_dashboard_context_data (context['_decision_gym_raw'])
+    # para que Organismo no repita la misma query a obtener_sesion_recomendada_hoy
+    # — elimina la desincronización estructural entre estado_entreno y estado_sistema.
     try:
         from core.organismo import resolver_estado_sistema_hoy
-        estado_sistema = resolver_estado_sistema_hoy(usuario)
+        estado_sistema = resolver_estado_sistema_hoy(
+            usuario, decision_gym=context.get('_decision_gym_raw')
+        )
         context['estado_sistema'] = estado_sistema
     except Exception as e:
         logger.exception(f"resolver_estado_sistema_hoy failed: {e}")
@@ -1512,6 +1524,7 @@ def mockup_demo(request):
             'accion_label': None,
             'accion_url': None,
             'modulo_principal': None,
+            'modulo_operativo': False,
         }
 
     return render(request, 'clientes/mockup_demo.html', context)

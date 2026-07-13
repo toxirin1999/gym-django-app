@@ -531,6 +531,12 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
     {% endif %}
   </div>
 
+  {% if energia_disponible.score is not None %}
+  <div style="display:flex;justify-content:space-between;align-items:center;font-family:var(--font-mono);font-size:10px;color:var(--tdm);padding:6px 2px 0;letter-spacing:.04em;text-transform:uppercase;">
+    <span>Energía disponible</span>
+    <span style="font-size:13px;font-weight:700;color:var(--ink);">{{ energia_disponible.score }}</span>
+  </div>
+  {% endif %}
   <!-- ── DISPONIBILIDAD DE RECURSOS — una comida = un toque. Funciona cualquier día, con o sin entreno. ── -->
   <div id="disp-widget-home" style="border:1px solid var(--line);border-radius:4px;padding:12px 14px;margin:10px 0;">
     <div id="disp-home-lista" style="font-family:var(--font-mono);font-size:10px;color:var(--tdm);margin-bottom:{% if disp_hoy %}8px{% else %}0{% endif %};">
@@ -907,7 +913,7 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
     {% endif %}
 
     <!-- CTA: Ejecutar -->
-    {# ── Estado del sistema: movido tras EMPEZAR ENTRENO (Phase 62) ── #}
+    {# ── Señales: movido tras EMPEZAR ENTRENO (Phase 62) ── #}
 
     {% if entreno_hoy_realizado or entreno_semana_realizado %}
     <a href="{% url 'entrenos:vista_plan_anual' cliente.id %}" class="rb-cta" style="background:rgba(var(--accent-rgb),0.08);border:1.5px solid var(--accent);color:var(--accent);">
@@ -1006,12 +1012,12 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
     </a>
     {% endif %}
 
-    <!-- ══ ESTADO DEL SISTEMA (tras EMPEZAR ENTRENO — Phase 62) ══ -->
+    <!-- ══ SEÑALES (tras EMPEZAR ENTRENO — Phase 62 / Fase A autoridad Organismo) ══ -->
     {% if alertas_sistema %}
     <div style="margin-top:6px;margin-bottom:12px;background:var(--paper);border:1px solid var(--line-2);border-radius:14px;overflow:hidden;">
       <div style="display:flex;align-items:center;gap:8px;padding:10px 14px 8px;border-bottom:1px solid var(--line);">
         <span style="font-size:14px;">🧠</span>
-        <span style="font-family:var(--font-mono);font-size:9px;font-weight:700;color:var(--ink-3);letter-spacing:.12em;text-transform:uppercase;">Estado del sistema · hoy</span>
+        <span style="font-family:var(--font-mono);font-size:9px;font-weight:700;color:var(--ink-3);letter-spacing:.12em;text-transform:uppercase;">Señales · hoy</span>
       </div>
       {% for alerta in alertas_sistema|slice:":3" %}
       <div style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;{% if not forloop.last %}border-bottom:1px solid var(--line);{% endif %}">
