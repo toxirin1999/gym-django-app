@@ -1,4 +1,4 @@
-# PLAN — Marcador de Energía Disponible
+# PLAN — Marcador de Recursos Disponibles
 
 **Status**: dirección aprobada, Fase 1 sin empezar
 **Relación con lo existente**: `DISPONIBILIDAD_RECURSOS.md` sigue siendo la filosofía (sin tocar). `PHASE_NUTRICION_0_CONTRATO.md` sigue congelado y describe el modelo de datos (sin tocar). Este documento es la extensión hacia decisión/consejo que antes dejamos aparcada — ahora se activa por decisión directa de David, no porque el piloto haya terminado.
@@ -10,7 +10,7 @@ Un marcador que responde, en cualquier momento, "¿tiene hoy el organismo energ�
 
 ## Fase 1 — Score determinista (ahora)
 
-- Función pura en `disponibilidad/services.py`: `calcular_energia_disponible(cliente) -> dict`.
+- Función pura en `disponibilidad/services.py`: `calcular_recursos_disponibles(cliente) -> dict`.
 - Inputs, solo de `RegistroDisponibilidad` (nada nuevo que registrar):
   - horas desde la última observación;
   - niveles de las últimas observaciones (últimas 24h);

@@ -1316,11 +1316,11 @@ def mockup_demo(request):
     context['checkin_pendiente'] = checkin_hoy is None
 
     from disponibilidad.models import RegistroDisponibilidad
-    from disponibilidad.services import calcular_energia_disponible
+    from disponibilidad.services import calcular_recursos_disponibles
     context['disp_hoy'] = list(
         RegistroDisponibilidad.objects.filter(cliente=cliente, timestamp__date=_hoy).order_by('timestamp')
     )
-    context['energia_disponible'] = calcular_energia_disponible(cliente)
+    context['recursos_disponibles'] = calcular_recursos_disponibles(cliente)
 
     # Bienestar widget — prosoche y vires del día
     try:
