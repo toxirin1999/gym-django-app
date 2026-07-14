@@ -32,9 +32,19 @@ from django.utils import timezone
 logger = logging.getLogger(__name__)
 
 
-def resolver_estado_sistema_hoy(usuario):
+def resolver_estado_sistema_hoy(usuario, decision_gym=None):
     """
     Determina el estado global del sistema para el usuario HOY.
+
+    ARGS:
+        usuario: User de Django.
+        decision_gym: dict opcional, salida ya calculada de
+            entrenos.services.sesion_recomendada.obtener_sesion_recomendada_hoy(cliente).
+            Fase C (autoridad Organismo, jul-2026): si el caller ya la calculó
+            (p. ej. clientes/views.py, que la necesita para más contexto),
+            pasarla aquí evita una segunda query idéntica dentro de
+            _check_en_margen y garantiza que ambos leen el mismo dato.
+            Si se omite, se calcula internamente como antes.
 
     RETORNA:
     {
@@ -44,6 +54,7 @@ def resolver_estado_sistema_hoy(usuario):
         "accion_label": str (ej: "Registrar recuperación"),
         "accion_url": str (ej: "/hyrox/..."),
         "modulo_principal": str (ej: "hyrox" | "gym" | "diario"),
+        "modulo_operativo": bool (True si modulo_principal in gym/hyrox),
     }
 
     PRIORIDAD DE CÁLCULO:
@@ -59,7 +70,7 @@ def resolver_estado_sistema_hoy(usuario):
             return protegiendo
 
         # 2. EN_MARGEN — acción viable ahora
-        en_margen = _check_en_margen(usuario)
+        en_margen = _check_en_margen(usuario, decision_gym=decision_gym)
         if en_margen:
             return en_margen
 
@@ -203,7 +214,7 @@ def _check_protegiendo(usuario):
 # 2. EN_MARGEN — Acción viable AHORA
 # ────────────────────────────────────────────────────────────────────
 
-def _check_en_margen(usuario):
+def _check_en_margen(usuario, decision_gym=None):
     """
     Retorna dict EN_MARGEN si hay acción viable ahora, None si no.
 
@@ -216,17 +227,23 @@ def _check_en_margen(usuario):
     6. Diario ciclo está normal (no pendiente)
 
     EN_MARGEN = acción viable real, no solo ausencia de problemas.
+
+    decision_gym: dict opcional ya calculado por el caller
+        (obtener_sesion_recomendada_hoy). Si se pasa, se reutiliza en vez
+        de recalcular — ver resolver_estado_sistema_hoy (Fase C).
     """
     try:
-        # Check 1: ¿Hay sesión viable hoy?
-        from entrenos.services.sesion_recomendada import obtener_sesion_recomendada_hoy
-
         # Guard: usuario debe tener cliente_perfil
         cliente = getattr(usuario, 'cliente_perfil', None)
         if not cliente:
             return None
 
-        decision = obtener_sesion_recomendada_hoy(cliente)
+        # Check 1: ¿Hay sesión viable hoy?
+        if decision_gym is not None:
+            decision = decision_gym
+        else:
+            from entrenos.services.sesion_recomendada import obtener_sesion_recomendada_hoy
+            decision = obtener_sesion_recomendada_hoy(cliente)
 
         # Si estado es 'descanso' o no hay entrenamiento: no es EN_MARGEN
         # Estados viables: 'entrenar' normal o 'version_reducida' (margen con prudencia)
@@ -436,4 +453,8 @@ def _estado_dict(estado, motivo, texto, accion_label, accion_url, modulo):
         'accion_label': accion_label,
         'accion_url': accion_url,
         'modulo_principal': modulo,
+        # Fase B (autoridad Organismo, jul-2026): indica si el "porqué" operativo
+        # del Semáforo (Gym+Hyrox) es pertinente hoy. Falso con dominante
+        # diario/joi/None, donde recomendacion_gym/hyrox del Semáforo sería ruido.
+        'modulo_operativo': modulo in ('gym', 'hyrox'),
     }

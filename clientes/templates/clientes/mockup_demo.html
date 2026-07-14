@@ -411,6 +411,10 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
   display: block; width: 100%; margin-top: 8px; padding: 8px 12px;
   text-align: center; font-size: 11px;
 }
+.rb-organismo-porque {
+  margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line);
+}
+.rb-organismo-porque .rb-sema { margin-bottom: 0; }
 @media (max-width: 640px) {
   .rb-organismo-body { flex-direction: column; align-items: flex-start; }
   .rb-organismo-estado { min-width: auto; }
@@ -531,10 +535,10 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
     {% endif %}
   </div>
 
-  {% if energia_disponible.score is not None %}
+  {% if recursos_disponibles.score is not None %}
   <div style="display:flex;justify-content:space-between;align-items:center;font-family:var(--font-mono);font-size:10px;color:var(--tdm);padding:6px 2px 0;letter-spacing:.04em;text-transform:uppercase;">
-    <span>Energía disponible</span>
-    <span style="font-size:13px;font-weight:700;color:var(--ink);">{{ energia_disponible.score }}</span>
+    <span>Recursos disponibles</span>
+    <span style="font-size:13px;font-weight:700;color:var(--ink);">{{ recursos_disponibles.banda }}</span>
   </div>
   {% endif %}
   <!-- ── DISPONIBILIDAD DE RECURSOS — una comida = un toque. Funciona cualquier día, con o sin entreno. ── -->
@@ -595,8 +599,6 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
   })();
   </script>
 
-  {% include "includes/_semaforo_intencion.html" %}
-
   <!-- ── BIB HERO ─────────────────────────────── -->
   <div class="rb-bib">
     <div class="rb-bib-meta">
@@ -605,13 +607,16 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
     </div>
     <div class="rb-bib-name">{{ cliente.user.get_full_name|default:cliente.user.username }}</div>
 
-    {# Título de la sesión vive en la card de sesión — no duplicar aquí. Solo fase. #}
+    {% comment %}
+    Título de la sesión vive en la card de sesión — no duplicar aquí. Solo fase.
+    Fase E (autoridad Organismo, jul-2026): se quitó el rótulo de estado
+    (RECUPERAR/VERSIÓN ESENCIAL/POSPONER) que duplicaba estado_sistema.estado_label
+    de la card "Sistema hoy". estado_entreno sigue gobernando el routing de
+    CTA/forms más abajo — solo se limpió este subtítulo.
+    {% endcomment %}
     {% if proximo_entrenamiento %}
     <div class="rb-bib-sub" style="margin-top:6px;">
-      {% if estado_entreno == 'recuperar' %}RECUPERAR
-      {% elif estado_entreno == 'version_reducida' %}VERSIÓN ESENCIAL
-      {% elif estado_entreno == 'posponer' %}POSPONER
-      {% else %}{{ proximo_entrenamiento.objetivo|upper|default:"BASE" }}{% endif %}
+      {{ proximo_entrenamiento.objetivo|upper|default:"BASE" }}
       · {{ proximo_entrenamiento.semana_nombre|default:"Semana" }} · Día {{ proximo_entrenamiento.dia|default:"1" }}
     </div>
     {% else %}
@@ -689,6 +694,16 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
        class="rb-btn rb-btn-ghost rb-organismo-btn">
       {{ estado_sistema.accion_label }} →
     </a>
+    {% endif %}
+    {% comment %}
+    Fase D (autoridad Organismo, jul-2026): el Semáforo es el "porqué"
+    operativo, subordinado aquí. Solo relevante si el módulo dominante
+    de hoy es gym/hyrox — con diario/joi sería ruido.
+    {% endcomment %}
+    {% if estado_sistema.modulo_operativo %}
+    <div class="rb-organismo-porque">
+      {% include "includes/_semaforo_intencion.html" %}
+    </div>
     {% endif %}
   </div>
   {% endif %}
