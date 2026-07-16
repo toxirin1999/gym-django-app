@@ -601,7 +601,7 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
         widget.querySelectorAll('.disp-cuando-btn').forEach(function (b) {
           b.classList.toggle('is-active', b === btn);
           b.style.background = (b === btn) ? 'var(--ink)' : 'transparent';
-          b.style.color = (b === btn) ? 'var(--paper)' : 'var(--td)';
+          b.style.color = (b === btn) ? 'var(--bg)' : 'var(--td)';
         });
       });
     });
@@ -634,7 +634,7 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
             var esAhora = b.dataset.horas === '0';
             b.classList.toggle('is-active', esAhora);
             b.style.background = esAhora ? 'var(--ink)' : 'transparent';
-            b.style.color = esAhora ? 'var(--paper)' : 'var(--td)';
+            b.style.color = esAhora ? 'var(--bg)' : 'var(--td)';
           });
         });
       });
