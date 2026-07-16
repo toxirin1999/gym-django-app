@@ -544,10 +544,28 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
   <!-- ── DISPONIBILIDAD DE RECURSOS — una comida = un toque. Funciona cualquier día, con o sin entreno. ── -->
   <div id="disp-widget-home" style="border:1px solid var(--line);border-radius:4px;padding:12px 14px;margin:10px 0;">
     <div id="disp-home-lista" style="font-family:var(--font-mono);font-size:10px;color:var(--tdm);margin-bottom:{% if disp_hoy %}8px{% else %}0{% endif %};">
-      {% for r in disp_hoy %}<span class="disp-home-item">{{ r.timestamp|date:"H:i" }} {{ r.get_nivel_display }}</span>{% if not forloop.last %} · {% endif %}{% endfor %}
+      {% for r in disp_hoy %}<span class="disp-home-item">{{ r.momento_efectivo|date:"H:i" }} {{ r.get_nivel_display }}</span>{% if not forloop.last %} · {% endif %}{% endfor %}
     </div>
     <div style="font-size:12px;color:var(--td);margin-bottom:8px;">
       Registra tu última comida — puedes tocar esto tantas veces al día como comas.
+    </div>
+    <div id="disp-home-cuando" style="display:flex;gap:6px;margin-bottom:8px;">
+      <button type="button" class="disp-cuando-btn is-active" data-horas="0"
+        style="padding:4px 9px;font-family:var(--font-mono);font-size:9px;font-weight:700;
+               letter-spacing:.04em;text-transform:uppercase;border:1px solid var(--line);
+               border-radius:9999px;background:transparent;color:var(--ink);cursor:pointer;">Ahora</button>
+      <button type="button" class="disp-cuando-btn" data-horas="1"
+        style="padding:4px 9px;font-family:var(--font-mono);font-size:9px;font-weight:700;
+               letter-spacing:.04em;text-transform:uppercase;border:1px solid var(--line);
+               border-radius:9999px;background:transparent;color:var(--td);cursor:pointer;">Hace 1h</button>
+      <button type="button" class="disp-cuando-btn" data-horas="2"
+        style="padding:4px 9px;font-family:var(--font-mono);font-size:9px;font-weight:700;
+               letter-spacing:.04em;text-transform:uppercase;border:1px solid var(--line);
+               border-radius:9999px;background:transparent;color:var(--td);cursor:pointer;">Hace 2h</button>
+      <button type="button" class="disp-cuando-btn" data-horas="4"
+        style="padding:4px 9px;font-family:var(--font-mono);font-size:9px;font-weight:700;
+               letter-spacing:.04em;text-transform:uppercase;border:1px solid var(--line);
+               border-radius:9999px;background:transparent;color:var(--td);cursor:pointer;">Hace 4h</button>
     </div>
     <div id="disp-home-botones" style="display:flex;gap:8px;">
       <button type="button" class="disp-home-btn" data-nivel="A"
@@ -575,16 +593,32 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
     var widget = document.getElementById('disp-widget-home');
     if (!widget) return;
     var NIVEL_LABEL = { A: 'Completa', B: 'Suficiente', C: 'Recurso' };
+    var horasSeleccionadas = 0;
+
+    widget.querySelectorAll('.disp-cuando-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        horasSeleccionadas = parseFloat(btn.dataset.horas) || 0;
+        widget.querySelectorAll('.disp-cuando-btn').forEach(function (b) {
+          b.classList.toggle('is-active', b === btn);
+          b.style.background = (b === btn) ? 'var(--ink)' : 'transparent';
+          b.style.color = (b === btn) ? 'var(--paper)' : 'var(--td)';
+        });
+      });
+    });
+
     widget.querySelectorAll('.disp-home-btn').forEach(function (btn) {
       btn.addEventListener('click', function () {
-        var body = new URLSearchParams({ nivel: btn.dataset.nivel, origen: 'panel' });
+        var params = { nivel: btn.dataset.nivel, origen: 'panel' };
+        if (horasSeleccionadas > 0) params.hace_horas = horasSeleccionadas;
+        var body = new URLSearchParams(params);
+        var momento = new Date(Date.now() - horasSeleccionadas * 3600000);
         fetch("{% url 'disponibilidad:registrar' cliente_id=cliente.id %}", {
           method: 'POST',
           headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRFToken': '{{ csrf_token }}' },
           body: body,
         }).then(function () {
           var lista = document.getElementById('disp-home-lista');
-          var hora = new Date().toTimeString().slice(0, 5);
+          var hora = momento.toTimeString().slice(0, 5);
           var item = document.createElement('span');
           item.className = 'disp-home-item';
           item.textContent = hora + ' ' + NIVEL_LABEL[btn.dataset.nivel];
@@ -593,6 +627,15 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
           }
           lista.appendChild(item);
           lista.style.marginBottom = '8px';
+
+          // vuelve a "Ahora" tras registrar — cada toque parte de la hora actual salvo que se ajuste explícitamente
+          horasSeleccionadas = 0;
+          widget.querySelectorAll('.disp-cuando-btn').forEach(function (b) {
+            var esAhora = b.dataset.horas === '0';
+            b.classList.toggle('is-active', esAhora);
+            b.style.background = esAhora ? 'var(--ink)' : 'transparent';
+            b.style.color = esAhora ? 'var(--paper)' : 'var(--td)';
+          });
         });
       });
     });
