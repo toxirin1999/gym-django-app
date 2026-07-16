@@ -7,11 +7,18 @@ from .models import RegistroDisponibilidad
 # ── Constantes calibrables ─────────────────────────────────────────────────────
 BASELINE = 55.0  # score neutro de partida — banda "Suficiente" baja
 
-DELTA_NIVEL = {
-    'A': 35.0,   # Completa — RegistroDisponibilidad.NIVEL_COMPLETA
-    'B': 15.0,   # Suficiente — RegistroDisponibilidad.NIVEL_SUFICIENTE
-    'C': 5.0,    # Recurso — deliberadamente bajo: autoridad mínima, pendiente de refinar
+# Techo por nivel: cada evento se aproxima asintóticamente a su techo, con
+# retornos decrecientes — evita que repetir "Suficiente" sature a 100 sin
+# ninguna ingesta "Completa" reciente (visto con datos reales en producción).
+TECHO_NIVEL = {
+    'A': 100.0,  # Completa — única capaz de consolidar la banda Alta
+    'B': 70.0,   # Suficiente
+    'C': 45.0,   # Recurso — deliberadamente bajo: autoridad mínima, pendiente de refinar
 }
+
+FACTOR_APROXIMACION = 0.5  # cada evento recorre la mitad de la distancia a su techo
+
+DEDUP_VENTANA_MINUTOS = 5  # ingestas del mismo cliente más cerca que esto se tratan como corrección (prevalece la última)
 
 DELTA_ENTRENO = -20.0
 
@@ -44,14 +51,43 @@ def _aplicar_erosion(score, desde, hasta):
     return max(0.0, score - horas_erosionables * tasa)
 
 
+def _aplicar_ingesta(score, nivel):
+    """Aproxima score hacia el techo del nivel, con retornos decrecientes.
+
+    Si score ya está en o por encima del techo de ese nivel, el evento no lo
+    mueve — evita saturación por repetir el mismo nivel sin variar.
+    """
+    techo = TECHO_NIVEL.get(nivel)
+    if techo is None or score >= techo:
+        return score
+    return score + (techo - score) * FACTOR_APROXIMACION
+
+
+def _deduplicar_ingestas(ingestas_qs):
+    """Colapsa ingestas del mismo cliente a <5 min entre sí: prevalece la última (corrección), no se suman ambas."""
+    ingestas = list(ingestas_qs)
+    resultado = []
+    for r in ingestas:
+        if resultado and (r.timestamp - resultado[-1].timestamp) < timedelta(minutes=DEDUP_VENTANA_MINUTOS):
+            resultado[-1] = r
+        else:
+            resultado.append(r)
+    return resultado
+
+
 def _timestamp_entreno(entreno):
-    """Construye un datetime aware a partir de fecha + hora_inicio/hora_fin del EntrenoRealizado."""
+    """Construye un datetime aware a partir de fecha + hora_inicio/hora_fin del EntrenoRealizado.
+
+    Sin hora registrada, se posiciona al final del día (23:59) en vez de
+    inventar mediodía — no fabrica una cronología falsa frente a las
+    ingestas del mismo día.
+    """
     if entreno.hora_inicio:
         t = entreno.hora_inicio
     elif entreno.hora_fin:
         t = entreno.hora_fin
     else:
-        t = time(12, 0)
+        t = time(23, 59)
     naive = datetime.combine(entreno.fecha, t)
     return timezone.make_aware(naive, timezone.get_current_timezone())
 
@@ -74,6 +110,7 @@ def calcular_recursos_disponibles(cliente):
         cliente=cliente,
         timestamp__gte=ventana_inicio,
     ).order_by('timestamp')
+    ingestas = _deduplicar_ingestas(ingestas_qs)
 
     # ── Eventos de entreno (excluye sesiones incompletas) ─────────────────────
     entrenos_qs = EntrenoRealizado.objects.filter(
@@ -86,7 +123,7 @@ def calcular_recursos_disponibles(cliente):
 
     # Construimos listas de eventos: cada elemento es (timestamp, tipo, payload)
     eventos = []
-    for r in ingestas_qs:
+    for r in ingestas:
         eventos.append((r.timestamp, 'ingesta', r.nivel))
     for e in entrenos_qs:
         ts = _timestamp_entreno(e)
@@ -119,7 +156,7 @@ def calcular_recursos_disponibles(cliente):
         score = _aplicar_erosion(score, cursor, ts)
 
         if tipo == 'ingesta':
-            score = min(100.0, max(0.0, score + DELTA_NIVEL.get(payload, 0.0)))
+            score = min(100.0, max(0.0, _aplicar_ingesta(score, payload)))
         elif tipo == 'entreno':
             score = min(100.0, max(0.0, score + DELTA_ENTRENO))
 
