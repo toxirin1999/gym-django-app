@@ -1315,10 +1315,14 @@ def mockup_demo(request):
     context['checkin_hoy'] = checkin_hoy
     context['checkin_pendiente'] = checkin_hoy is None
 
+    from django.db.models import DateTimeField
+    from django.db.models.functions import Coalesce
     from disponibilidad.models import RegistroDisponibilidad
     from disponibilidad.services import calcular_recursos_disponibles
     context['disp_hoy'] = list(
-        RegistroDisponibilidad.objects.filter(cliente=cliente, timestamp__date=_hoy).order_by('timestamp')
+        RegistroDisponibilidad.objects.filter(cliente=cliente).annotate(
+            _momento_efectivo=Coalesce('momento_ingesta', 'timestamp', output_field=DateTimeField()),
+        ).filter(_momento_efectivo__date=_hoy).order_by('_momento_efectivo')
     )
     context['recursos_disponibles'] = calcular_recursos_disponibles(cliente)
 

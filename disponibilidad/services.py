@@ -1,5 +1,7 @@
 from datetime import datetime, timedelta, time
 
+from django.db.models import DateTimeField
+from django.db.models.functions import Coalesce
 from django.utils import timezone
 
 from .models import RegistroDisponibilidad
@@ -63,12 +65,17 @@ def _aplicar_ingesta(score, nivel):
     return score + (techo - score) * FACTOR_APROXIMACION
 
 
-def _deduplicar_ingestas(ingestas_qs):
-    """Colapsa ingestas del mismo cliente a <5 min entre sí: prevalece la última (corrección), no se suman ambas."""
-    ingestas = list(ingestas_qs)
+def _deduplicar_ingestas(ingestas):
+    """Colapsa ingestas del mismo cliente a <5 min de *momento_efectivo* entre sí: prevalece la última (corrección), no se suman ambas.
+
+    Se ordena explícitamente por momento_efectivo (no por el orden de llegada del
+    queryset) porque dos registros pueden compartir timestamp de guardado pero
+    corresponder a momentos reales distintos.
+    """
+    ingestas = sorted(ingestas, key=lambda r: (r.momento_efectivo, r.pk))
     resultado = []
     for r in ingestas:
-        if resultado and (r.timestamp - resultado[-1].timestamp) < timedelta(minutes=DEDUP_VENTANA_MINUTOS):
+        if resultado and (r.momento_efectivo - resultado[-1].momento_efectivo) < timedelta(minutes=DEDUP_VENTANA_MINUTOS):
             resultado[-1] = r
         else:
             resultado.append(r)
@@ -106,10 +113,11 @@ def calcular_recursos_disponibles(cliente):
     ventana_inicio = ahora - timedelta(hours=VENTANA_LOOKBACK_HORAS)
 
     # ── Eventos de ingesta ────────────────────────────────────────────────────
-    ingestas_qs = RegistroDisponibilidad.objects.filter(
-        cliente=cliente,
-        timestamp__gte=ventana_inicio,
-    ).order_by('timestamp')
+    # momento_efectivo (Coalesce) en vez de timestamp: filtra/ordena por cuándo
+    # ocurrió realmente la ingesta, no por cuándo se guardó el registro.
+    ingestas_qs = RegistroDisponibilidad.objects.filter(cliente=cliente).annotate(
+        _momento_efectivo=Coalesce('momento_ingesta', 'timestamp', output_field=DateTimeField()),
+    ).filter(_momento_efectivo__gte=ventana_inicio).order_by('_momento_efectivo')
     ingestas = _deduplicar_ingestas(ingestas_qs)
 
     # ── Eventos de entreno (excluye sesiones incompletas) ─────────────────────
@@ -124,7 +132,7 @@ def calcular_recursos_disponibles(cliente):
     # Construimos listas de eventos: cada elemento es (timestamp, tipo, payload)
     eventos = []
     for r in ingestas:
-        eventos.append((r.timestamp, 'ingesta', r.nivel))
+        eventos.append((r.momento_efectivo, 'ingesta', r.nivel))
     for e in entrenos_qs:
         ts = _timestamp_entreno(e)
         if ts >= ventana_inicio:
@@ -139,13 +147,13 @@ def calcular_recursos_disponibles(cliente):
     # ── Sin eventos dentro de la ventana → rescatar el más reciente fuera ─────
     if not eventos:
         ultimo = (
-            RegistroDisponibilidad.objects.filter(cliente=cliente)
-            .order_by('-timestamp')
-            .first()
+            RegistroDisponibilidad.objects.filter(cliente=cliente).annotate(
+                _momento_efectivo=Coalesce('momento_ingesta', 'timestamp', output_field=DateTimeField()),
+            ).order_by('-_momento_efectivo').first()
         )
-        # Tratar como si hubiera pasado 1 h antes de su timestamp (cursor = ts - 1h)
-        eventos = [(ultimo.timestamp, 'ingesta', ultimo.nivel)]
-        cursor = ultimo.timestamp - timedelta(hours=1)
+        # Tratar como si hubiera pasado 1 h antes de su momento_efectivo (cursor = ts - 1h)
+        eventos = [(ultimo.momento_efectivo, 'ingesta', ultimo.nivel)]
+        cursor = ultimo.momento_efectivo - timedelta(hours=1)
     else:
         cursor = ventana_inicio
 

@@ -17,12 +17,18 @@ class RegistroDisponibilidad(models.Model):
     ]
 
     cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE, related_name='registros_disponibilidad')
-    timestamp = models.DateTimeField(default=timezone.now)
+    timestamp = models.DateTimeField(default=timezone.now)  # cuándo se guardó el registro — auditoría, no usar para el replay
+    momento_ingesta = models.DateTimeField(null=True, blank=True)  # cuándo ocurrió realmente la ingesta; None = coincide con timestamp (registrado "ahora")
     nivel = models.CharField(max_length=1, choices=NIVEL_CHOICES)
     origen = models.CharField(max_length=30, blank=True)
 
     class Meta:
         ordering = ['-timestamp']
 
+    @property
+    def momento_efectivo(self):
+        """Hora a usar para ordenar/erosionar en el replay: la real si se indicó, si no la de registro."""
+        return self.momento_ingesta or self.timestamp
+
     def __str__(self):
-        return f"{self.cliente} · {self.get_nivel_display()} · {self.timestamp:%Y-%m-%d %H:%M}"
+        return f"{self.cliente} · {self.get_nivel_display()} · {self.momento_efectivo:%Y-%m-%d %H:%M}"
