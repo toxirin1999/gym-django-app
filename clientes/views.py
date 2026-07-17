@@ -914,7 +914,7 @@ def _get_dashboard_context_data(request, cliente):
     _peso_cached = cache.get(_peso_cache_key)
     if _peso_cached is None:
         _peso_cached = analizar_tendencia_peso(cliente)
-        cache.set(_peso_cache_key, _peso_cached, 900)
+        cache.set(_peso_cache_key, _peso_cached, 3600)
     peso_actual, datos_peso, cambios_peso = _peso_cached
     sug_carga = consejo_carga(cliente)
 
@@ -1012,19 +1012,20 @@ def _get_dashboard_context_data(request, cliente):
         prediccion = predecir_riesgo_abandono(historial_adherencia)
         reporte_adherencia = calcular_reporte_adherencia_cliente(cliente)
         _stats_cached = (estadisticas_plan, historial_adherencia, prediccion, reporte_adherencia)
-        cache.set(_stats_cache_key, _stats_cached, 900)
+        cache.set(_stats_cache_key, _stats_cached, 3600)
     estadisticas_plan, historial_adherencia, prediccion, reporte_adherencia = _stats_cached
     notificaciones = generar_notificaciones_contextuales(cliente, entrenos)
 
     (estoico_disponible, contenido_hoy, reflexion_hoy, reflexion_pendiente,
      total_reflexiones, racha_reflexion, logros_estoicos, dias_reflexion) = _ctx_estoico(request, hoy)
 
+    # Cache-only: analizar_acwr_unificado recorre todo el historial (EWMA sin
+    # límite inferior) y puede tardar >10s en frío — bloqueaba el request
+    # principal y provocaba 502 en conexiones móviles con timeout corto. El
+    # cálculo real ahora solo ocurre en widget_acwr (HTMX, hx-trigger="revealed"
+    # en mockup_demo.html), que rellena el mismo cache key para la próxima carga.
     _acwr_cache_key = f'dashboard_acwr_unificado_{cliente.id}'
     analis_acwr = cache.get(_acwr_cache_key)
-    if analis_acwr is None:
-        from entrenos.services.services import EstadisticasService as _ES
-        analis_acwr = _ES.analizar_acwr_unificado(cliente)
-        cache.set(_acwr_cache_key, analis_acwr, 900)  # 15 min
 
     # Sesiones realizadas con anticipación (fecha planificada > hoy, pero ya hechas)
     from entrenos.models import ActividadRealizada as _AR
@@ -1089,7 +1090,7 @@ def _get_dashboard_context_data(request, cliente):
                 fecha_inicio=fecha_inicio_radar,
                 fecha_fin=fecha_fin_radar
             )
-            cache.set(_radar_cache_key, stats_principales, 900)  # 15 min
+            cache.set(_radar_cache_key, stats_principales, 3600)  # 1h
         
         # Mapeamos a lo que el template blade_runner.html espera
         metricas_radar = {
@@ -1388,7 +1389,7 @@ def mockup_demo(request):
         _resumen = cache.get(_resumen_key)
         if _resumen is None:
             _resumen = get_resumen_semanal_gym(cliente)
-            cache.set(_resumen_key, _resumen, 900)
+            cache.set(_resumen_key, _resumen, 3600)
         context['resumen_semanal_gym'] = _resumen
     except Exception:
         context['resumen_semanal_gym'] = []
@@ -1400,7 +1401,7 @@ def mockup_demo(request):
         _revision = cache.get(_revision_key)
         if _revision is None:
             _revision = get_revision_progreso(cliente)
-            cache.set(_revision_key, _revision, 900)
+            cache.set(_revision_key, _revision, 3600)
         context['revision_progreso'] = _revision
     except Exception:
         context['revision_progreso'] = []
@@ -1650,7 +1651,7 @@ def widget_acwr(request, cliente_id):
     if analis_acwr is None:
         from entrenos.services.services import EstadisticasService as _ES
         analis_acwr = _ES.analizar_acwr_unificado(cliente)
-        cache.set(_acwr_cache_key, analis_acwr, 900)
+        cache.set(_acwr_cache_key, analis_acwr, 3600)
 
     if analis_acwr and 'acwr' not in analis_acwr:
         analis_acwr['acwr'] = analis_acwr.get('acwr_actual', 0.0)
