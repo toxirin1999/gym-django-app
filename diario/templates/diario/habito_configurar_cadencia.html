@@ -1,0 +1,182 @@
+{% extends 'diario/base_stoic.html' %}
+{% load static %}
+
+{% block title %}Cadencia de "{{ gesto.nombre }}" — Diario{% endblock %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --bg-primary: #F8F5F1;
+        --bg-card: #FFFFFF;
+        --text-primary: #2D3436;
+        --text-secondary: #636E72;
+        --accent-orange: #F49459;
+        --accent-orange-dark: #E67E22;
+        --accent-warning: #D97706;
+        --accent-warning-bg: #FEF3C7;
+        --border-color: #E8E4E0;
+        --shadow-soft: 0 2px 20px rgba(0, 0, 0, 0.05);
+        --radius-md: 16px;
+        --radius-lg: 24px;
+    }
+
+    body {
+        font-family: -apple-system, BlinkMacSystemFont, sans-serif !important;
+        background: var(--bg-primary) !important;
+    }
+
+    .form-container {
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 1rem;
+        padding-bottom: 100px;
+    }
+
+    .form-card {
+        background: var(--bg-card);
+        border-radius: var(--radius-lg);
+        padding: 2rem;
+        box-shadow: var(--shadow-soft);
+        border: 1px solid var(--border-color);
+    }
+
+    .form-header { margin-bottom: 1.5rem; }
+    .form-title { font-size: 1.4rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.25rem; }
+    .form-subtitle { color: var(--text-secondary); font-size: 0.9rem; }
+
+    .form-group { margin-bottom: 1.5rem; }
+    .form-label { display: block; font-weight: 600; color: var(--text-primary); margin-bottom: 0.5rem; font-size: 0.9rem; }
+
+    .cadencia-opcion {
+        display: block;
+        padding: 0.9rem 1rem;
+        border: 2px solid var(--border-color);
+        border-radius: var(--radius-md);
+        margin-bottom: 0.6rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    .cadencia-opcion:hover { border-color: var(--accent-orange); }
+    .cadencia-opcion.selected { border-color: var(--accent-orange); background: rgba(244, 148, 89, 0.05); }
+    .cadencia-opcion input { margin-right: 0.5rem; }
+
+    .form-control {
+        width: 100%;
+        padding: 0.7rem 1rem;
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-md);
+        font-size: 0.95rem;
+        background: white;
+    }
+
+    .dias-semana-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.5rem;
+    }
+    .dia-checkbox { display: flex; align-items: center; gap: 0.4rem; font-size: 0.9rem; }
+
+    .campo-condicional { display: none; margin-top: 0.75rem; }
+    .campo-condicional.visible { display: block; }
+
+    .form-errors { color: #B91C1C; font-size: 0.82rem; margin-top: 0.35rem; }
+
+    .advertencia-reinicio {
+        background: var(--accent-warning-bg);
+        border: 1px solid var(--accent-warning);
+        border-radius: var(--radius-md);
+        padding: 1rem;
+        margin-bottom: 1.5rem;
+        color: #7C2D12;
+        font-size: 0.9rem;
+    }
+
+    .btn-submit {
+        background: linear-gradient(135deg, var(--accent-orange) 0%, var(--accent-orange-dark) 100%);
+        color: white; border: none; padding: 0.875rem 2rem; border-radius: var(--radius-md);
+        font-weight: 600; font-size: 0.95rem; width: 100%; cursor: pointer;
+    }
+    .btn-cancel {
+        background: transparent; color: var(--text-secondary); border: 1px solid var(--border-color);
+        padding: 0.875rem 2rem; border-radius: var(--radius-md); font-weight: 600; font-size: 0.95rem;
+        width: 100%; cursor: pointer; margin-top: 0.75rem; display: block; text-align: center; text-decoration: none;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <div class="form-card">
+        <div class="form-header">
+            <h1 class="form-title">Cadencia de "{{ gesto.nombre }}"</h1>
+            <p class="form-subtitle">¿Con qué frecuencia esperas que aparezca este gesto?</p>
+        </div>
+
+        {% if requiere_confirmacion %}
+        <div class="advertencia-reinicio">
+            Cambiar la frecuencia reiniciará el análisis de cumplimiento desde hoy. Los registros anteriores se conservarán, pero solo como historial observacional.
+        </div>
+        {% endif %}
+
+        <form method="post">
+            {% csrf_token %}
+            {% if requiere_confirmacion %}<input type="hidden" name="confirmado" value="1">{% endif %}
+
+            <div class="form-group">
+                {% for radio in form.tipo_cadencia %}
+                <label class="cadencia-opcion {% if radio.data.selected %}selected{% endif %}" data-valor="{{ radio.data.value }}">
+                    {{ radio.tag }} {{ radio.choice_label }}
+                </label>
+                {% endfor %}
+                {% if form.tipo_cadencia.errors %}
+                <div class="form-errors">{{ form.tipo_cadencia.errors|join:" " }}</div>
+                {% endif %}
+            </div>
+
+            <div class="form-group campo-condicional" id="campo-semanal">
+                <label class="form-label" for="{{ form.frecuencia_semanal_objetivo.id_for_label }}">Veces por semana</label>
+                {{ form.frecuencia_semanal_objetivo }}
+                {% if form.frecuencia_semanal_objetivo.errors %}
+                <div class="form-errors">{{ form.frecuencia_semanal_objetivo.errors|join:" " }}</div>
+                {% endif %}
+            </div>
+
+            <div class="form-group campo-condicional" id="campo-dias-concretos">
+                <label class="form-label">Días concretos</label>
+                <div class="dias-semana-grid">
+                    {% for checkbox in form.dias_semana_objetivo %}
+                    <label class="dia-checkbox">{{ checkbox.tag }} {{ checkbox.choice_label }}</label>
+                    {% endfor %}
+                </div>
+                {% if form.dias_semana_objetivo.errors %}
+                <div class="form-errors">{{ form.dias_semana_objetivo.errors|join:" " }}</div>
+                {% endif %}
+            </div>
+
+            <button type="submit" class="btn-submit">
+                {% if requiere_confirmacion %}Confirmar cambio{% else %}Guardar cadencia{% endif %}
+            </button>
+            <a href="{% url 'diario:habitos_dashboard' %}" class="btn-cancel">Cancelar</a>
+        </form>
+    </div>
+</div>
+
+<script>
+    function actualizarCamposCondicionales() {
+        const seleccionado = document.querySelector('input[name="tipo_cadencia"]:checked');
+        const valor = seleccionado ? seleccionado.value : null;
+
+        document.getElementById('campo-semanal').classList.toggle('visible', valor === 'semanal');
+        document.getElementById('campo-dias-concretos').classList.toggle('visible', valor === 'dias_concretos');
+
+        document.querySelectorAll('.cadencia-opcion').forEach(opcion => {
+            opcion.classList.toggle('selected', opcion.dataset.valor === valor);
+        });
+    }
+
+    document.querySelectorAll('input[name="tipo_cadencia"]').forEach(input => {
+        input.addEventListener('change', actualizarCamposCondicionales);
+    });
+    actualizarCamposCondicionales();
+</script>
+{% endblock %}

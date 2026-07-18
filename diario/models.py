@@ -5,6 +5,7 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
 from django.core.validators import MinValueValidator, MaxValueValidator
+from django.core.exceptions import ValidationError
 
 
 # ========================================
@@ -532,6 +533,15 @@ class ProsocheDiario(models.Model):
         help_text="Timestamp de generación de la respuesta de cierre"
     )
 
+    # Fase 2 del CONTRATO_ANALIZADOR_GESTOS.md — se escribe únicamente desde
+    # persistir_nucleo_cierre() (diario/services/cierre_service.py), nunca
+    # por la mera apertura de la página de cierre. Migración conservadora:
+    # las filas históricas quedan con null, no se infiere retroactivamente.
+    cierre_confirmado_en = models.DateTimeField(
+        null=True, blank=True,
+        help_text="Momento en que el núcleo del cierre diario quedó persistido con éxito"
+    )
+
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     fecha_actualizacion = models.DateTimeField(auto_now=True)
 
@@ -560,6 +570,11 @@ class ProsocheDiario(models.Model):
             if item.strip():
                 items.append(item)
         return items
+
+    @property
+    def esta_cerrado(self):
+        """True si el núcleo del cierre diario ya quedó persistido (Fase 2)."""
+        return self.cierre_confirmado_en is not None
 
     def get_porcentaje_completado(self):
         """Calcular porcentaje de campos completados"""
@@ -772,17 +787,49 @@ class Gesto(models.Model):
         ('cerrado', 'Cerrado'),
     ]
 
+    # Fase 3 del CONTRATO_ANALIZADOR_GESTOS.md — cadencia esperada.
+    # Aplica en la práctica solo a tipo='cultivo'; para 'suelto' el valor
+    # por defecto (libre, sin frecuencia ni días) es siempre válido y no
+    # se usa — ese dominio sigue analizándose vía TriggerHabito.
+    CADENCIA_LIBRE = 'libre'
+    CADENCIA_DIARIA = 'diaria'
+    CADENCIA_SEMANAL = 'semanal'
+    CADENCIA_DIAS_CONCRETOS = 'dias_concretos'
+    TIPO_CADENCIA_CHOICES = [
+        (CADENCIA_LIBRE, 'Sin objetivo fijo'),
+        (CADENCIA_DIARIA, 'Todos los días'),
+        (CADENCIA_SEMANAL, 'Veces por semana'),
+        (CADENCIA_DIAS_CONCRETOS, 'Días concretos'),
+    ]
+
+    # Vocabulario fijo, no dependiente de locale (§4 del contrato — mismo
+    # riesgo que ProsocheMes.mes = hoy.strftime('%B'), evitado aquí a
+    # propósito). Índice = date.weekday() (0 = lunes ... 6 = domingo).
+    DIAS_SEMANA_VALIDOS = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo']
+
     usuario = models.ForeignKey(User, on_delete=models.CASCADE, related_name='gestos')
     nombre = models.CharField(max_length=100)
     tipo = models.CharField(max_length=10, choices=TIPO_CHOICES, default='cultivo')
     descripcion = models.TextField(blank=True, default='')
     color = models.CharField(max_length=7, default='#00ffff')
     estado = models.CharField(max_length=10, choices=ESTADO_CHOICES, default='activo')
-    fecha_inicio = models.DateField(default=timezone.now)
+    # Fase 4.1 del CONTRATO_ANALIZADOR_GESTOS.md — antes default=timezone.now,
+    # que produce un datetime en memoria hasta que Django lo normaliza al
+    # persistir/recargar. timezone.localdate ya es un date desde el instante
+    # de instanciación, con o sin recarga.
+    fecha_inicio = models.DateField(default=timezone.localdate)
     fecha_cierre = models.DateField(null=True, blank=True)
     periodo_observacion_dias = models.PositiveIntegerField(default=30)
     mejor_racha = models.PositiveIntegerField(default=0)
     fecha_creacion = models.DateTimeField(auto_now_add=True)
+
+    tipo_cadencia = models.CharField(max_length=20, choices=TIPO_CADENCIA_CHOICES, default=CADENCIA_LIBRE)
+    frecuencia_semanal_objetivo = models.PositiveSmallIntegerField(null=True, blank=True)
+    dias_semana_objetivo = models.JSONField(default=list, blank=True)
+    # Migración: null para todo Gesto histórico (queda en tipo_cadencia='libre'
+    # sin fecha de vigencia hasta que se configure explícitamente). No se
+    # infiere una intención que nunca fue registrada.
+    cadencia_configurada_en = models.DateField(null=True, blank=True)
 
     class Meta:
         unique_together = ('usuario', 'nombre')
@@ -790,6 +837,76 @@ class Gesto(models.Model):
 
     def __str__(self):
         return f"{self.nombre} ({self.usuario.username})"
+
+    def clean(self):
+        super().clean()
+        self._validar_invariantes_cadencia()
+
+    def _validar_invariantes_cadencia(self):
+        """Invariantes de configuración por tipo_cadencia (§2.2 del contrato)."""
+        errores = {}
+
+        if self.tipo_cadencia in (self.CADENCIA_LIBRE, self.CADENCIA_DIARIA):
+            if self.frecuencia_semanal_objetivo is not None:
+                errores['frecuencia_semanal_objetivo'] = (
+                    f"Debe ser null para tipo_cadencia='{self.tipo_cadencia}'."
+                )
+            if self.dias_semana_objetivo:
+                errores['dias_semana_objetivo'] = (
+                    f"Debe estar vacío para tipo_cadencia='{self.tipo_cadencia}'."
+                )
+
+        elif self.tipo_cadencia == self.CADENCIA_SEMANAL:
+            if self.frecuencia_semanal_objetivo is None or not (1 <= self.frecuencia_semanal_objetivo <= 7):
+                errores['frecuencia_semanal_objetivo'] = (
+                    "Debe ser un entero entre 1 y 7 para tipo_cadencia='semanal'."
+                )
+            if self.dias_semana_objetivo:
+                errores['dias_semana_objetivo'] = "Debe estar vacío para tipo_cadencia='semanal'."
+
+        elif self.tipo_cadencia == self.CADENCIA_DIAS_CONCRETOS:
+            if self.frecuencia_semanal_objetivo is not None:
+                errores['frecuencia_semanal_objetivo'] = (
+                    "Debe ser null para tipo_cadencia='dias_concretos'."
+                )
+            dias = self.dias_semana_objetivo or []
+            if not dias:
+                errores['dias_semana_objetivo'] = (
+                    "No puede estar vacío para tipo_cadencia='dias_concretos'."
+                )
+            elif len(set(dias)) != len(dias):
+                errores['dias_semana_objetivo'] = "No puede contener días duplicados."
+            elif not set(dias) <= set(self.DIAS_SEMANA_VALIDOS):
+                errores['dias_semana_objetivo'] = (
+                    f"Solo se admiten estos valores: {', '.join(self.DIAS_SEMANA_VALIDOS)}."
+                )
+
+        if errores:
+            raise ValidationError(errores)
+
+    def save(self, *args, **kwargs):
+        # Caso 1 del §2.2: Gesto nuevo creado ya con una cadencia elegida
+        # (no 'libre') → cadencia_configurada_en = fecha_inicio, sin
+        # esperar a una reconfiguración explícita posterior.
+        if self._state.adding and self.tipo_cadencia != self.CADENCIA_LIBRE and self.cadencia_configurada_en is None:
+            self.cadencia_configurada_en = self.fecha_inicio
+        super().save(*args, **kwargs)
+
+    def configurar_cadencia(self, tipo_cadencia, frecuencia_semanal_objetivo=None, dias_semana_objetivo=None):
+        """
+        Configura o cambia la cadencia explícitamente. Cubre los casos 3
+        y 4 del §2.2: tanto la primera configuración de un Gesto
+        histórico como un cambio posterior fijan/reinician
+        cadencia_configurada_en a hoy — las métricas de cumplimiento
+        (fuera de alcance de esta fase) solo podrán mirar hacia atrás
+        desde esa fecha, nunca antes.
+        """
+        self.tipo_cadencia = tipo_cadencia
+        self.frecuencia_semanal_objetivo = frecuencia_semanal_objetivo
+        self.dias_semana_objetivo = list(dias_semana_objetivo or [])
+        self._validar_invariantes_cadencia()
+        self.cadencia_configurada_en = timezone.localdate()
+        self.save()
 
     def get_racha_actual(self):
         """Días consecutivos con estado='cumplido' terminando hoy (o ayer si hoy no tiene registro)."""
@@ -806,6 +923,35 @@ class Gesto(models.Model):
             racha += 1
             cursor -= timedelta(days=1)
         return racha
+
+
+class PausaGesto(models.Model):
+    """
+    Intervalo de pausa de un Gesto (Fase 3 del CONTRATO_ANALIZADOR_GESTOS.md).
+
+    Semiabierto [fecha_inicio, fecha_fin): fecha_fin=None significa pausa
+    abierta (en curso). El día fecha_fin ya cuenta como activo de nuevo.
+    Se gestiona desde HabitosService.pausar_gesto()/reactivar_gesto() —
+    no se crea ni se cierra manualmente fuera de ahí.
+    """
+    gesto = models.ForeignKey(Gesto, on_delete=models.CASCADE, related_name='pausas')
+    fecha_inicio = models.DateField()
+    fecha_fin = models.DateField(null=True, blank=True)
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-fecha_inicio']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['gesto'],
+                condition=models.Q(fecha_fin__isnull=True),
+                name='pausagesto_una_abierta_por_gesto',
+            ),
+        ]
+
+    def __str__(self):
+        fin = self.fecha_fin.isoformat() if self.fecha_fin else 'abierta'
+        return f"{self.gesto.nombre}: {self.fecha_inicio.isoformat()} → {fin}"
 
 
 class RegistroGesto(models.Model):

@@ -230,17 +230,55 @@
             Gestos que cultivo
         </div>
         {% for item in habitos_positivos %}
-        <div class="habit-card positivo">
+        <div class="habit-card positivo{% if item.habito.estado == 'pausado' %} pausado{% endif %}">
             <div class="habit-header">
                 <div>
-                    <div class="habit-name">{{ item.habito.nombre }}</div>
+                    <div class="habit-name">
+                        {{ item.habito.nombre }}
+                        {% if item.habito.estado == 'pausado' %}
+                        <span style="font-size: 0.65rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-secondary); background: var(--bg-secondary); border-radius: var(--radius-sm); padding: 0.15rem 0.5rem; margin-left: 0.4rem;">Pausado</span>
+                        {% endif %}
+                    </div>
                     {% if item.habito.descripcion %}
                     <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.25rem;">
                         {{ item.habito.descripcion }}
                     </div>
                     {% endif %}
+                    <div style="font-size: 0.72rem; color: var(--text-secondary); margin-top: 0.3rem;">
+                        Cadencia: {{ item.cadencia_label }}
+                    </div>
                 </div>
             </div>
+
+            <!-- Lectura principal del analizador (Fase 5C) -->
+            {% if item.lectura_cultivo %}
+            <div class="lectura-cultivo lectura-{{ item.lectura_cultivo.tipo_lectura }}"
+                style="margin-top: 0.6rem; padding: 0.6rem 0.8rem; border-radius: var(--radius-md); font-size: 0.82rem; border: 1px solid var(--border-color); {% if item.lectura_cultivo.estado == 'insuficiente' %}color: var(--text-secondary); font-style: italic;{% endif %}">
+                <span style="font-size: 0.62rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-secondary); display: block; margin-bottom: 0.2rem;">
+                    {{ item.lectura_cultivo.etiqueta }}
+                </span>
+                {{ item.lectura_cultivo.texto }}
+
+                {% if item.lectura_cultivo.nota_secundaria %}
+                <div style="margin-top: 0.4rem; padding-top: 0.4rem; border-top: 1px solid var(--border-color); font-size: 0.75rem;">
+                    <span style="font-size: 0.6rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-secondary); display: block; margin-bottom: 0.15rem;">
+                        {{ item.lectura_cultivo.nota_secundaria.etiqueta }}
+                    </span>
+                    {{ item.lectura_cultivo.nota_secundaria.texto }}
+                </div>
+                {% endif %}
+
+                {% if item.lectura_cultivo.trazabilidad %}
+                <details style="margin-top: 0.4rem; font-size: 0.7rem; color: var(--text-secondary);">
+                    <summary style="cursor: pointer;">Trazabilidad</summary>
+                    <div style="margin-top: 0.25rem;">
+                        Periodo: {{ item.lectura_cultivo.trazabilidad.periodo_desde }} – {{ item.lectura_cultivo.trazabilidad.periodo_hasta }}.
+                        {{ item.lectura_cultivo.trazabilidad.total_dias_excluidos }} día{{ item.lectura_cultivo.trazabilidad.total_dias_excluidos|pluralize }} excluido{{ item.lectura_cultivo.trazabilidad.total_dias_excluidos|pluralize }} del cómputo (pausado o no observado).
+                    </div>
+                </details>
+                {% endif %}
+            </div>
+            {% endif %}
 
             <!-- Grid de Días del Mes -->
             <div style="margin-top: 0.5rem;">
@@ -250,10 +288,16 @@
                 </div>
                 <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 0.5rem;">
                     {% for dia in item.dias_mes %}
+                    {% if item.habito.estado == 'activo' %}
                     <div class="dia-toggle" data-habito-id="{{ item.habito.id }}" data-dia="{{ dia.numero }}"
                         style="aspect-ratio: 1; border-radius: var(--radius-sm); border: 1px solid var(--border-color); display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease; {% if dia.completado %}background: var(--accent-green); color: white; border-color: var(--accent-green);{% else %}background: var(--bg-secondary); color: var(--text-secondary);{% endif %}">
                         {{ dia.numero }}
                     </div>
+                    {% else %}
+                    <div style="aspect-ratio: 1; border-radius: var(--radius-sm); border: 1px solid var(--border-color); display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 600; opacity: 0.45; {% if dia.completado %}background: var(--accent-green); color: white; border-color: var(--accent-green);{% else %}background: var(--bg-secondary); color: var(--text-secondary);{% endif %}">
+                        {{ dia.numero }}
+                    </div>
+                    {% endif %}
                     {% endfor %}
                 </div>
             </div>
@@ -267,9 +311,9 @@
             </div>
             {% endif %}
 
-            {% if item.habito.mejor_racha > 0 %}
+            {% if item.mejor_racha_visible > 0 %}
             <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.4rem;">
-                Mejor continuidad: {{ item.habito.mejor_racha }} días
+                Mejor continuidad: {{ item.mejor_racha_visible }} días
             </div>
             {% endif %}
 
@@ -279,22 +323,47 @@
                     <i class="fas fa-magic"></i> Diseñar
                 </a>
                 {% endif %}
+                <a href="{% url 'diario:habito_configurar_cadencia' item.habito.id %}" class="btn-outline-custom">
+                    <i class="fas fa-calendar"></i> Cadencia
+                </a>
                 <a href="{% url 'diario:habito_editar' item.habito.id %}" class="btn-outline-custom">
                     <i class="fas fa-edit"></i> Editar
                 </a>
             </div>
             <div class="habit-actions-secondary" style="margin-top: 0.6rem; display: flex; align-items: center; gap: 0.4rem;">
                 <span style="font-size: 0.7rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-secondary);">Más opciones:</span>
+                {% if item.habito.estado == 'pausado' %}
+                <form method="post" action="{% url 'diario:habito_reactivar' item.habito.id %}" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="habit-action-text">Reactivar</button>
+                </form>
+                {% else %}
                 <form method="post" action="{% url 'diario:habito_pausar' item.habito.id %}" style="display: inline;">
                     {% csrf_token %}
                     <button type="submit" class="habit-action-text">Pausar</button>
                 </form>
+                {% endif %}
                 <span style="color: var(--text-secondary); font-size: 0.78rem;">·</span>
                 <form method="post" action="{% url 'diario:habito_cerrar' item.habito.id %}" style="display: inline;" onsubmit="return confirm('¿Cerrar este gesto? Se conservará el historial.');">
                     {% csrf_token %}
                     <button type="submit" class="habit-action-text habit-action-cerrar">Cerrar</button>
                 </form>
             </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Gestos cultivo cerrados -->
+    {% if habitos_cerrados_cultivo %}
+    <div class="fade-in delay-1" style="margin-top: 1.5rem;">
+        <div style="font-size: 0.65rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 0.6rem;">
+            Cerrados
+        </div>
+        {% for cerrado in habitos_cerrados_cultivo %}
+        <div style="padding: 0.65rem 0.9rem; border: 1px solid var(--border-color); border-radius: var(--radius-md); margin-bottom: 0.4rem; display: flex; justify-content: space-between; align-items: center; opacity: 0.7;">
+            <span style="font-size: 0.85rem;">{{ cerrado.nombre }}</span>
+            <span style="font-size: 0.72rem; color: var(--text-secondary);">Cerrado el {{ cerrado.fecha_cierre }}</span>
         </div>
         {% endfor %}
     </div>

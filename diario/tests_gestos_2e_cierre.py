@@ -7,10 +7,10 @@ correcto sobre Gesto/RegistroGesto, mismo patrón ya usado en
 habito_toggle_dia / HabitosService.toggle_dia.
 """
 import json
-from datetime import date
 
 from django.contrib.auth.models import User
 from django.test import TestCase
+from django.utils import timezone
 
 from .models import Gesto, RegistroGesto
 
@@ -50,7 +50,7 @@ class PresenciaCierrePostMarcarTestCase(TestCase):
         self.gesto = Gesto.objects.create(
             usuario=self.user, nombre='Meditar', tipo='cultivo', estado='activo'
         )
-        self.hoy = date.today()
+        self.hoy = timezone.localdate()
 
     def test_post_marca_gesto_crea_registro_cumplido(self):
         self.client.post(
@@ -77,7 +77,7 @@ class PresenciaCierrePostDesmarcarTestCase(TestCase):
         self.gesto = Gesto.objects.create(
             usuario=self.user, nombre='Meditar', tipo='cultivo', estado='activo'
         )
-        self.hoy = date.today()
+        self.hoy = timezone.localdate()
         RegistroGesto.objects.create(gesto=self.gesto, fecha=self.hoy, estado='cumplido')
 
     def test_post_desmarca_gesto_borra_registro(self):
@@ -106,7 +106,7 @@ class PresenciaCierrePostSinCambioTestCase(TestCase):
         self.gesto_pendiente = Gesto.objects.create(
             usuario=self.user, nombre='Leer', tipo='cultivo', estado='activo'
         )
-        self.hoy = date.today()
+        self.hoy = timezone.localdate()
         RegistroGesto.objects.create(
             gesto=self.gesto_cumplido, fecha=self.hoy, estado='cumplido'
         )

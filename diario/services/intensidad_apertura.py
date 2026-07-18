@@ -53,7 +53,7 @@ def construir_contexto_intensidad(cliente, vires, semaforo) -> dict:
     modo_joi = (semaforo or {}).get('estado', 'sostener')
 
     # ── Patrón reciente: últimas 3 semanas con energía ≥ 3 y sin molestia ──
-    fecha_limite = timezone.now().date() - timezone.timedelta(days=7)
+    fecha_limite = timezone.localdate() - timezone.timedelta(days=7)
     vires_recientes = list(
         SeguimientoVires.objects
         .filter(usuario=cliente.user, fecha__gte=fecha_limite)

@@ -16,7 +16,7 @@ def agregar_semana(usuario, dias=7):
     Devuelve un dict con señales brutas de los últimos `dias` días.
     No interpreta. No concluye. Solo cuenta y nombra.
     """
-    hoy = timezone.now().date()
+    hoy = timezone.localdate()
     inicio = hoy - timedelta(days=dias - 1)
 
     entradas = list(

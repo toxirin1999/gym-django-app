@@ -4,11 +4,10 @@ Phase Hábitos 2.0D.1 — Neutralizar entrada legacy de hábitos en Prosoche.
 Cubre: la tarjeta "Hábitos" de prosoche_dashboard ya no expone UI legacy
 (crear/registrar/borrar ProsocheHabito) y apunta a /diario/habitos/ (Gestos).
 """
-from datetime import date
-
 from django.contrib.auth.models import User
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
 
 from diario.models import Gesto, RegistroGesto
 
@@ -64,7 +63,7 @@ class FlujoGestosSigueOperandoTestCase(TestCase):
         gesto = Gesto.objects.get(usuario=self.usuario, nombre='Leer 10 min')
         self.assertEqual(gesto.tipo, 'cultivo')
 
-        hoy = date.today()
+        hoy = timezone.localdate()
         response = self.client.post(
             reverse('diario:habito_toggle_dia'),
             data='{"habito_id": %d, "dia": %d}' % (gesto.id, hoy.day),
