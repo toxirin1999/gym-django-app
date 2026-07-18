@@ -564,6 +564,10 @@ Cualquier situación del tipo:
 
 ### Anotaciones
 
-*(vacío — se rellena durante el uso real, no antes)*
+**2026-07-18 — Despliegue a producción, hallazgo confirmado (no post-implementación de uso, sino del propio despliegue)**: `PausaGesto.Meta.constraints` usa `UniqueConstraint(condition=Q(fecha_fin__isnull=True))`, que solo `sqlmigrate` había mostrado como "descartada en silencio" contra MySQL (§13 mencionaba el riesgo sin confirmarlo). Al aplicar `migrate` en producción (MySQL, PythonAnywhere), Django lo confirmó explícitamente: `models.W036: MySQL does not support unique constraints with conditions. A constraint won't be created.` — no es un error, la migración se aplicó limpia, pero la tabla `diario_pausagesto` en producción **no tiene** la restricción a nivel de base de datos que sí existe en SQLite (dev/tests).
+
+Decisión tomada en el momento (opción elegida conscientemente, no por defecto): seguir adelante. El único punto de escritura de `PausaGesto` es `HabitosService.pausar_gesto()`, que ya comprueba antes de crear si hay una pausa abierta — la protección de aplicación cubre el único camino real que existe hoy. El hueco solo importaría si algo creara una `PausaGesto` saltándose el servicio (admin, shell).
+
+Pendiente real, no urgente: o bien (a) quitar la restricción condicional del modelo para que el contrato deje de afirmar una garantía que en producción no existe — y ajustar el test `test_pausa_abierta_duplicada_viola_restriccion_de_base_de_datos` (`tests_fase3_cadencia_pausas.py`) para que dependa del entorno, o (b) implementar el equivalente compatible con MySQL (p. ej. una columna generada que sea `NULL` salvo cuando `fecha_fin IS NULL`, con un índice único sobre ella — MySQL sí permite múltiples `NULL` en una columna única). Ninguna de las dos se ha hecho todavía.
 
 De esta lista saldrá, si acaso, una fase de ajuste de UX/calibración — con motivo real, no anticipado. Hasta entonces, el contrato queda como está.
