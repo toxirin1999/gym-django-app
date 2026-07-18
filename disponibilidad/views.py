@@ -1,5 +1,6 @@
 from datetime import timedelta
 
+from django.core.cache import cache
 from django.http import HttpResponseBadRequest, JsonResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -35,4 +36,5 @@ def registrar(request, cliente_id):
     RegistroDisponibilidad.objects.create(
         cliente=cliente, nivel=nivel, origen=origen, momento_ingesta=momento_ingesta,
     )
+    cache.delete(f'recursos_disponibles_{cliente.id}')
     return JsonResponse({'ok': True})

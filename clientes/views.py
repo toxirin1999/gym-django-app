@@ -698,6 +698,38 @@ def _ctx_bio(cliente):
         return {'score': 1.0, 'volume_modifier': 1.0, 'max_rpe': 10, 'is_in_transition': False}, {}
 
 
+_CTX_CACHE_MISSING = object.__new__(object)
+
+
+def _cache_ctx(ttl=300):
+    """
+    Cachea una función _ctx_*(cliente[, fecha_ref]) por sus argumentos.
+
+    Estas funciones alimentan sugerencias/intervenciones (distribución
+    semanal, candidata a preferencia, evaluación de intervención...) que
+    deben poder reaccionar poco después de completar una sesión — por eso el
+    TTL por defecto es 300s (mismo criterio ya usado en este archivo para
+    _senal_key/_sug_key), no los 3600s de los bloques puramente informativos
+    (peso, stats, radar, ACWR). Antes ninguna de estas 15 funciones tenía
+    caché: cada una repetía su propia query en cada carga del dashboard.
+    """
+    import functools
+
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(*args):
+            partes = [str(getattr(a, 'id', a)) for a in args]
+            key = f'ctx_{func.__name__}_' + '_'.join(partes)
+            valor = cache.get(key, _CTX_CACHE_MISSING)
+            if valor is _CTX_CACHE_MISSING:
+                valor = func(*args)
+                cache.set(key, valor, ttl)
+            return valor
+        return wrapper
+    return decorator
+
+
+@_cache_ctx()
 def _ctx_lesiones_activas(cliente):
     try:
         from hyrox.models import UserInjury
@@ -706,6 +738,7 @@ def _ctx_lesiones_activas(cliente):
         return []
 
 
+@_cache_ctx()
 def _ctx_joi_semanal(cliente):
     try:
         from joi.lectura_joi_presencia import get_lectura_joi_para_mostrar
@@ -738,6 +771,7 @@ def _ctx_explicacion_decision(decision, senal_diario=None):
         return None
 
 
+@_cache_ctx()
 def _ctx_candidata_preferencia(cliente, fecha_ref):
     try:
         from entrenos.services.preferencias_service import detectar_candidata_preferencia
@@ -746,6 +780,7 @@ def _ctx_candidata_preferencia(cliente, fecha_ref):
         return None
 
 
+@_cache_ctx()
 def _ctx_preferencias_activas(cliente):
     try:
         from entrenos.services.preferencias_service import get_preferencias_activas
@@ -754,6 +789,7 @@ def _ctx_preferencias_activas(cliente):
         return []
 
 
+@_cache_ctx()
 def _ctx_continuidad_distribucion(cliente, fecha_ref):
     try:
         from entrenos.services.sugerencias_service import generar_recomendacion_continuidad_distribucion
@@ -762,6 +798,7 @@ def _ctx_continuidad_distribucion(cliente, fecha_ref):
         return None
 
 
+@_cache_ctx()
 def _ctx_evaluacion_distribucion(cliente, fecha_ref):
     try:
         from entrenos.services.sugerencias_service import evaluar_prueba_distribucion
@@ -770,6 +807,7 @@ def _ctx_evaluacion_distribucion(cliente, fecha_ref):
         return None
 
 
+@_cache_ctx()
 def _ctx_intervencion_distribucion(cliente, fecha_ref):
     """Returns active distribution IntervencionPlan if one exists, for Phase 18B display."""
     try:
@@ -791,6 +829,7 @@ def _ctx_intervencion_distribucion(cliente, fecha_ref):
         return None
 
 
+@_cache_ctx()
 def _ctx_sugerencia_distribucion(cliente, fecha_ref):
     try:
         from entrenos.services.analisis_semanal_service import get_sugerencia_distribucion_activa
@@ -799,6 +838,7 @@ def _ctx_sugerencia_distribucion(cliente, fecha_ref):
         return None
 
 
+@_cache_ctx()
 def _ctx_distribucion_semanal(cliente, fecha_ref):
     try:
         from entrenos.services.analisis_semanal_service import analizar_distribucion_semanal
@@ -807,6 +847,7 @@ def _ctx_distribucion_semanal(cliente, fecha_ref):
         return []
 
 
+@_cache_ctx()
 def _ctx_calendario_plan(cliente, fecha_ref):
     try:
         from entrenos.services.calendario_plan_service import generar_calendario_plan
@@ -815,6 +856,7 @@ def _ctx_calendario_plan(cliente, fecha_ref):
         return []
 
 
+@_cache_ctx()
 def _ctx_analisis_semanal(cliente, fecha_ref):
     try:
         from entrenos.services.analisis_semanal_service import analizar_semana_entrenamiento
@@ -823,6 +865,7 @@ def _ctx_analisis_semanal(cliente, fecha_ref):
         return None
 
 
+@_cache_ctx()
 def _ctx_patron_multisemanal(cliente, fecha_ref):
     try:
         from entrenos.services.analisis_semanal_service import detectar_patron_multisemanal
@@ -831,6 +874,7 @@ def _ctx_patron_multisemanal(cliente, fecha_ref):
         return None
 
 
+@_cache_ctx()
 def _ctx_recomendacion_continuidad(cliente, fecha_ref):
     try:
         from entrenos.services.sugerencias_service import generar_recomendacion_continuidad
@@ -839,6 +883,7 @@ def _ctx_recomendacion_continuidad(cliente, fecha_ref):
         return None
 
 
+@_cache_ctx()
 def _ctx_evaluacion_intervencion(cliente, fecha_ref):
     try:
         from entrenos.services.sugerencias_service import evaluar_intervencion_semana
@@ -847,6 +892,7 @@ def _ctx_evaluacion_intervencion(cliente, fecha_ref):
         return None
 
 
+@_cache_ctx()
 def _ctx_sugerencia_activa(cliente, fecha_ref):
     try:
         from entrenos.services.sugerencias_service import get_sugerencia_activa
@@ -882,16 +928,23 @@ def _get_dashboard_context_data(request, cliente):
         for detalle in entreno.detalles_ejercicio.all()
     )
 
-    # Carga total acumulada (todos los entrenos, para el stat del dashboard)
-    _carga_agg = EjercicioRealizado.objects.filter(
-        entreno__cliente=cliente
-    ).aggregate(
-        total=Sum(ExpressionWrapper(
-            F('peso_kg') * F('repeticiones') * F('series'),
-            output_field=FloatField()
-        ))
-    )
-    carga_total_acumulada = round(_carga_agg['total'] or 0)
+    # Carga total acumulada (todos los entrenos, para el stat del dashboard).
+    # Aggregate sobre TODO el histórico de EjercicioRealizado — crece sin
+    # límite con el uso. Invalidado en entrenos/signals.py junto al resto de
+    # caches de dashboard al guardar un entreno nuevo.
+    _carga_total_key = f'dashboard_carga_total_{cliente.id}'
+    carga_total_acumulada = cache.get(_carga_total_key)
+    if carga_total_acumulada is None:
+        _carga_agg = EjercicioRealizado.objects.filter(
+            entreno__cliente=cliente
+        ).aggregate(
+            total=Sum(ExpressionWrapper(
+                F('peso_kg') * F('repeticiones') * F('series'),
+                output_field=FloatField()
+            ))
+        )
+        carga_total_acumulada = round(_carga_agg['total'] or 0)
+        cache.set(_carga_total_key, carga_total_acumulada, 3600)
 
     emociones_lista = [
         ("😊", "feliz"), ("😐", "neutro"),
@@ -1646,12 +1699,10 @@ def widget_acwr(request, cliente_id):
     cliente = get_object_or_404(Cliente, id=cliente_id, user=request.user)
     hoy = timezone.now().date()
 
-    _acwr_cache_key = f'dashboard_acwr_unificado_{cliente.id}'
-    analis_acwr = cache.get(_acwr_cache_key)
-    if analis_acwr is None:
-        from entrenos.services.services import EstadisticasService as _ES
-        analis_acwr = _ES.analizar_acwr_unificado(cliente)
-        cache.set(_acwr_cache_key, analis_acwr, 3600)
+    # analizar_acwr_unificado cachea internamente (misma clave que el resto
+    # de call sites) — no hace falta duplicar el cache.get/set aquí.
+    from entrenos.services.services import EstadisticasService as _ES
+    analis_acwr = _ES.analizar_acwr_unificado(cliente)
 
     if analis_acwr and 'acwr' not in analis_acwr:
         analis_acwr['acwr'] = analis_acwr.get('acwr_actual', 0.0)
@@ -2889,12 +2940,9 @@ def detalle_cliente(request, cliente_id):
     acwr_zona = None
     try:
         from entrenos.services.services import EstadisticasService as _ES
-        from django.core.cache import cache
-        _key = f'detalle_acwr_{cliente.id}'
-        _acwr = cache.get(_key)
-        if _acwr is None:
-            _acwr = _ES.analizar_acwr_unificado(cliente)
-            cache.set(_key, _acwr, 900)
+        # analizar_acwr_unificado cachea internamente (misma clave que el
+        # resto de call sites) — evita un segundo cache key desincronizado.
+        _acwr = _ES.analizar_acwr_unificado(cliente)
         if _acwr:
             acwr_valor = round(float(_acwr.get('acwr_actual', _acwr.get('acwr', 0)) or 0), 2)
             if acwr_valor < 0.8:

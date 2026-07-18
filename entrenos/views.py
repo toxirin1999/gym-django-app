@@ -4379,8 +4379,9 @@ def guardar_entrenamiento_activo(request, cliente_id):
                                 _act.carga_ua = round(_rpe * _dur, 1)
                                 _update_fields.append('carga_ua')
                             _act.save(update_fields=_update_fields)
-                    # Invalidar caché ACWR inmediatamente tras guardar
+                    # Invalidar caché ACWR y carga total inmediatamente tras guardar
                     _cache.delete(f'dashboard_acwr_unificado_{cliente.id}')
+                    _cache.delete(f'dashboard_carga_total_{cliente.id}')
                 except Exception as _e:
                     logger.warning("Error actualizando ActividadRealizada tras sesion: %s", _e)
 

@@ -522,3 +522,23 @@ def generar_poda_mensual(self):
             pass
 
     return {'generados': generados, 'fecha': str(hoy)}
+
+
+@shared_task(bind=True, max_retries=2)
+def generar_lectura_plan_async(self, cliente_id):
+    """
+    Genera el mensaje JOI de lectura del plan para un cliente concreto.
+
+    Disparado de forma asíncrona (.delay) desde joi.services.generar_lectura_plan
+    cuando el último mensaje tiene más de 8h — nunca se genera de forma síncrona
+    dentro de un request de dashboard (una llamada a Haiku ahí bloqueaba la
+    carga, especialmente notorio en la primera apertura del día).
+    """
+    from clientes.models import Cliente
+    from joi.services import generar_mensaje_joi
+
+    try:
+        cliente = Cliente.objects.get(id=cliente_id)
+        generar_mensaje_joi(cliente, 'lectura_plan')
+    except Exception:
+        pass
