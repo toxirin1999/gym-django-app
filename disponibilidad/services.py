@@ -99,7 +99,26 @@ def _timestamp_entreno(entreno):
     return timezone.make_aware(naive, timezone.get_current_timezone())
 
 
+RECURSOS_DISPONIBLES_CACHE_TTL = 300  # 5 min — techo de frescura; se invalida antes en disponibilidad/views.py::registrar
+
+
 def calcular_recursos_disponibles(cliente):
+    """
+    Cachea el resultado (ver _calcular_recursos_disponibles_calc para el
+    cálculo real). Se invalida explícitamente al registrar una ingesta nueva
+    (disponibilidad/views.py::registrar) — el TTL de 5 min es solo un techo
+    de seguridad, no la vía normal de frescura.
+    """
+    from django.core.cache import cache
+    cache_key = f'recursos_disponibles_{cliente.id}'
+    resultado = cache.get(cache_key)
+    if resultado is None:
+        resultado = _calcular_recursos_disponibles_calc(cliente)
+        cache.set(cache_key, resultado, RECURSOS_DISPONIBLES_CACHE_TTL)
+    return resultado
+
+
+def _calcular_recursos_disponibles_calc(cliente):
     """
     Replay secuencial con memoria — cada ingesta/entreno modifica un score acumulado.
 

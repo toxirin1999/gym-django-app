@@ -432,12 +432,35 @@ class EstadisticasService:
         """
         ACWR Multi-Modalidad usando EWMA (mismo algoritmo que HyroxLoadManager).
 
-        Fuente: ActividadRealizada.carga_ua (sRPE = RPE × duración).
-        EWMA: ATL con constante 7d, CTL con constante 42d.
-        ACWR = ATL / CTL.
-
-        Fallback al método legacy si el hub está vacío.
+        Recorre todo el historial de actividad sin límite inferior (el EWMA
+        necesita esa profundidad para que CTL converja) — el cálculo puede
+        tardar varios segundos en frío. Se cachea aquí, en la única fuente de
+        verdad, en vez de en cada call site: hay al menos 5 llamadores
+        distintos (dashboard, Semáforo, contexto de JOI, vista de detalle,
+        widget lazy) y antes cada uno recomputaba por su cuenta sin caché o
+        con caches independientes desincronizados. Solo se cachea el caso por
+        defecto (periodo_dias=90, el usado por todo lo anterior); llamadas con
+        un periodo distinto (p. ej. rangos custom de analytics) se calculan
+        siempre en fresco. La clave 'dashboard_acwr_unificado_{id}' es la
+        misma que ya invalidan las señales existentes en entrenos/signals.py,
+        entrenos/services/hyrox_bridge.py y entrenos/views.py al guardar
+        actividad nueva — no cambiar sin actualizar esos 4 sitios también.
         """
+        from django.core.cache import cache
+
+        if periodo_dias != 90:
+            return EstadisticasService._analizar_acwr_unificado_calc(cliente, periodo_dias)
+
+        cache_key = f'dashboard_acwr_unificado_{cliente.id}'
+        resultado = cache.get(cache_key)
+        if resultado is None:
+            resultado = EstadisticasService._analizar_acwr_unificado_calc(cliente, periodo_dias)
+            cache.set(cache_key, resultado, 3600)
+        return resultado
+
+    @staticmethod
+    def _analizar_acwr_unificado_calc(cliente, periodo_dias=90):
+        """Cálculo real del ACWR unificado — sin caché. Ver analizar_acwr_unificado."""
         from entrenos.models import ActividadRealizada
         import math
 

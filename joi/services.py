@@ -1552,20 +1552,53 @@ def generar_mensaje_joi(cliente, trigger: str, datos_extra: dict | None = None) 
         return None
 
 
+def _broker_alcanzable(timeout=0.3) -> bool:
+    """
+    Prueba acotada de si el broker de Celery responde antes de encolar una
+    tarea desde un request. Sin este check, .delay()/.apply_async() con Redis
+    caído reintentan varias veces con backoff propio (~6-19s observados en
+    pruebas) — bloquean el request igual que la llamada síncrona que se
+    quería evitar. Un connection-refused local es casi instantáneo; el
+    timeout de 0.3s solo cubre el caso de un host que no responde nada.
+    """
+    import socket
+    from urllib.parse import urlparse
+    from django.conf import settings
+
+    try:
+        parsed = urlparse(settings.CELERY_BROKER_URL)
+        with socket.create_connection((parsed.hostname, parsed.port or 6379), timeout=timeout):
+            return True
+    except OSError:
+        return False
+
+
 def generar_lectura_plan(cliente) -> "MensajeJOI | None":
+    """
+    Nunca genera de forma síncrona (evita una llamada a Haiku bloqueando un
+    request de dashboard). Si el último mensaje tiene más de 8h, dispara la
+    regeneración en background y devuelve mientras tanto el último conocido
+    (aunque esté desactualizado) — preferible a silencio, ver CLAUDE.md
+    "JOI siempre está presente al abrir la app".
+    """
     from joi.models import MensajeJOI
     from django.utils import timezone
 
-    reciente = MensajeJOI.objects.filter(
-        user=cliente.user,
-        trigger='lectura_plan',
-        creado_en__gte=timezone.now() - timedelta(hours=8),
+    ultimo = MensajeJOI.objects.filter(
+        user=cliente.user, trigger='lectura_plan',
     ).order_by('-creado_en').first()
 
-    if reciente:
-        return reciente
+    if ultimo and ultimo.creado_en >= timezone.now() - timedelta(hours=8):
+        return ultimo
 
-    return generar_mensaje_joi(cliente, 'lectura_plan')
+    try:
+        if _broker_alcanzable():
+            from joi.tasks import generar_lectura_plan_async
+            generar_lectura_plan_async.apply_async(args=[cliente.id], retry=False)
+    except Exception:
+        pass
+
+    return ultimo
 
 
 # ── Manual de David ──────────────────────────────────────────────────────────

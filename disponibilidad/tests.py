@@ -1,6 +1,7 @@
 from datetime import timedelta
 
 from django.contrib.auth.models import User
+from django.core.cache import cache
 from django.test import TestCase, Client
 from django.urls import reverse
 from django.utils import timezone
@@ -81,6 +82,7 @@ class CalcularRecursosDisponiblesTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user('disp_calculo', password='x')
         self.cliente = Cliente.objects.get(user=self.user)
+        cache.clear()  # calcular_recursos_disponibles cachea por cliente.id — evita fugas entre tests
 
     def test_sin_registros_devuelve_sin_datos(self):
         resultado = calcular_recursos_disponibles(self.cliente)
@@ -109,12 +111,22 @@ class CalcularRecursosDisponiblesTests(TestCase):
         con_separacion = calcular_recursos_disponibles(self.cliente)['score']
 
         # Mismo par de eventos pero sin separación real (momento_ingesta = guardado en ambos)
+        cache.clear()  # el borrado/recreado es directo por ORM, no pasa por la vista que invalida el caché
         self.cliente.registros_disponibilidad.all().delete()
         RegistroDisponibilidad.objects.create(cliente=self.cliente, nivel='B', timestamp=guardado, momento_ingesta=guardado)
         RegistroDisponibilidad.objects.create(cliente=self.cliente, nivel='B', timestamp=guardado, momento_ingesta=guardado)
         sin_separacion = calcular_recursos_disponibles(self.cliente)['score']
 
         self.assertNotEqual(con_separacion, sin_separacion, msg='8h de separación real deben erosionar el score de forma distinta a registrarlas juntas.')
+
+    def test_segunda_llamada_se_sirve_desde_cache(self):
+        RegistroDisponibilidad.objects.create(cliente=self.cliente, nivel='B')
+        primero = calcular_recursos_disponibles(self.cliente)
+        # Cambio directo por ORM que normalmente cambiaría el resultado —
+        # si la segunda llamada sigue devolviendo lo mismo, viene de caché.
+        RegistroDisponibilidad.objects.create(cliente=self.cliente, nivel='A')
+        segundo = calcular_recursos_disponibles(self.cliente)
+        self.assertEqual(primero, segundo)
 
 
 class RegistrarViewTests(TestCase):
@@ -124,6 +136,7 @@ class RegistrarViewTests(TestCase):
         self.cliente = Cliente.objects.get(user=self.user)
         self.client = Client()
         self.client.login(username='disp_view', password='x')
+        cache.clear()
 
     def test_registrar_sin_hace_horas_deja_momento_ingesta_null(self):
         self.client.post(reverse('disponibilidad:registrar', kwargs={'cliente_id': self.cliente.id}), {'nivel': 'B'})
@@ -147,3 +160,10 @@ class RegistrarViewTests(TestCase):
             {'nivel': 'C', 'hace_horas': '48'},
         )
         self.assertEqual(response.status_code, 400)
+
+    def test_registrar_invalida_el_cache_de_recursos_disponibles(self):
+        from .services import calcular_recursos_disponibles
+        primero = calcular_recursos_disponibles(self.cliente)  # cachea 'sin_datos'
+        self.client.post(reverse('disponibilidad:registrar', kwargs={'cliente_id': self.cliente.id}), {'nivel': 'A'})
+        segundo = calcular_recursos_disponibles(self.cliente)
+        self.assertNotEqual(primero, segundo, msg='Tras registrar, el caché debe invalidarse y reflejar el nuevo registro.')
