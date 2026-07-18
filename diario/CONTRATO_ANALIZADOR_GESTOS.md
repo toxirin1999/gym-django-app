@@ -570,4 +570,28 @@ Decisión tomada en el momento (opción elegida conscientemente, no por defecto)
 
 Pendiente real, no urgente: o bien (a) quitar la restricción condicional del modelo para que el contrato deje de afirmar una garantía que en producción no existe — y ajustar el test `test_pausa_abierta_duplicada_viola_restriccion_de_base_de_datos` (`tests_fase3_cadencia_pausas.py`) para que dependa del entorno, o (b) implementar el equivalente compatible con MySQL (p. ej. una columna generada que sea `NULL` salvo cuando `fecha_fin IS NULL`, con un índice único sobre ella — MySQL sí permite múltiples `NULL` en una columna única). Ninguna de las dos se ha hecho todavía.
 
+**2026-07-18 — Primera fricción real de uso, el mismo día del despliegue**: David revisó su inventario real de `Gesto` `cultivo` (6 hábitos, con historial desde octubre de 2025) y preguntó si el analizador estaba usando *todos* los datos, incluidos los meses anteriores. Comprobado contra su base real: no — `M1` sobre la ventana completa de 9 meses devolvía 0 pese a existir 23 `RegistroGesto` reales, porque los 43 `ProsocheDiario` históricos tienen `cierre_confirmado_en=null` (migración conservadora de la Fase 1, nunca se infirió retroactivamente). Esto reabrió el contrato de verdad, no como hipótesis — ver §20.
+
 De esta lista saldrá, si acaso, una fase de ajuste de UX/calibración — con motivo real, no anticipado. Hasta entonces, el contrato queda como está.
+
+---
+
+## 20. Enmienda — recuperación histórica de "día observado" (2026-07-18)
+
+**Motivo**: la Fase 1 decidió, correctamente en su momento, no inferir retroactivamente `cierre_confirmado_en` para `ProsocheDiario` histórico, porque esa fila podía crearse solo con abrir la página de cierre — no era prueba de una acción real. Consecuencia no anticipada: con esa regla, **todo el historial de hábitos anterior al despliegue (9 meses reales, en el caso de David) queda invisible para el analizador**, aunque los `RegistroGesto` existan de verdad. Verificado contra datos reales antes de decidir nada (no se asumió el problema, se comprobó): `Gesto` "Alimedución", 23 `RegistroGesto` cumplido reales desde octubre de 2025, `M1` sobre la ventana completa devolvía `0`.
+
+**Decisión**: no todas las señales de "día observado" tienen que venir de `cierre_confirmado_en`. Se amplía la derivación en `construir_ledger_diario()` (`_dias_observados_derivados()`, `diario/services/analizador_gestos.py`) para incluir evidencia indirecta, siempre que cumpla la misma exigencia que ya regía `cierre_confirmado_en`: **debe ser imposible que exista sin una acción explícita del usuario** — nunca por abrir una página.
+
+Señales aceptadas, en orden de prioridad (cualquiera basta):
+1. `ProsocheDiario.cierre_confirmado_en` no nulo (Fase 1, sin cambios).
+2. Un `RegistroGesto(estado='cumplido')` de **cualquier** gesto del mismo usuario ese día — no puede existir sin una acción POST/AJAX explícita, y si se marcó un hábito, el resto de la rejilla de ese cierre estaba delante del usuario esa noche. Cruza entre gestos: si se marcó "Meditar" pero no "Leer" el mismo día, ese día pasa a ser observado también para "Leer" (con veredicto `previsto_no_cumplido`, si aplica — un dato real, no una suposición).
+3. `ProsocheDiario.reflexiones_dia` no vacío — solo se escribe desde `presencia_cierre` o `prosoche_entrada_rapida`, ambas vistas POST-only.
+4. `ProsocheDiario.respuesta_joi_cierre_generada_en` no nulo — solo ocurre dentro del POST de `presencia_cierre`.
+
+**Lo que esta enmienda no hace**: no toca la regla original para `cierre_confirmado_en` en sí (sigue sin inferirse), no inventa una fecha de confirmación donde no hay ninguna de las cuatro señales, y no sube la confianza artificialmente — con datos dispersos en una ventana larga, `M2`/`confianza` siguen devolviendo `insuficiente` aunque `M1` ya recupere el conteo real. Verificado explícitamente: recuperar el numerador (apariciones reales) no equivale a inventar el denominador (cobertura de toda la ventana) — son cosas distintas y la enmienda solo resuelve la primera.
+
+**Verificación contra los 6 hábitos reales de David** (ventana completa desde `fecha_inicio` hasta hoy): `M1` recuperado coincide exactamente con los `RegistroGesto` reales en los seis casos (23/23, 25/25, 16/16, 50/50, 9/9, 4/4). Confianza sigue en `insuficiente` en todos — correcto, no un fallo: solo hay certeza de los días con evidencia directa, no de toda la ventana.
+
+**Tests**: `diario/tests_recuperacion_historica.py`, 7 tests — cada señal por separado, que la recuperación cruza entre gestos del mismo usuario (no de otros usuarios), que un `ProsocheDiario` sin ninguna señal sigue sin bastar (control negativo, el principio original no se debilitó), y una reproducción en miniatura del caso real que motivó la enmienda.
+
+**Validación ejecutada**: suite completa de `diario`, **242/242 tests, `OK`** (235 previos + 7 nuevos), sin regresiones. Pendiente: desplegar este cambio a producción (commit + push + reload — no requiere migración, es lógica pura de lectura).

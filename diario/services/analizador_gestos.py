@@ -131,6 +131,56 @@ def _fuera_de_vida(fecha, gesto):
     return False
 
 
+def _dias_observados_derivados(usuario, fecha_desde, fecha_hasta):
+    """
+    Días 'observados' de un usuario en un rango — §5.1 del contrato,
+    enmienda de recuperación histórica (2026-07-18).
+
+    Prioriza cierre_confirmado_en (fiable desde su despliegue, Fase 1).
+    Para fechas anteriores (donde ese campo es siempre null por
+    migración conservadora), usa evidencia de que hubo una acción
+    explícita del usuario ese día — nunca la mera existencia de
+    ProsocheDiario, que puede crearse solo con abrir la página:
+
+    - un RegistroGesto(cumplido) de *cualquiera* de sus gestos ese día
+      (no puede existir sin una acción POST/AJAX explícita — si marcó
+      un hábito, la rejilla entera de ese cierre estaba delante suyo),
+    - reflexiones_dia no vacío (solo se escribe en presencia_cierre o
+      prosoche_entrada_rapida, ambas POST-only), o
+    - respuesta_joi_cierre_generada_en no nulo (solo ocurre dentro del
+      POST de presencia_cierre).
+
+    Cada señal exige una acción explícita, nunca una carga pasiva de
+    página — la misma disciplina que ya regía cierre_confirmado_en,
+    aplicada con evidencia indirecta en vez de esperar a que existiera
+    el campo.
+    """
+    confirmados = set(
+        ProsocheDiario.objects.filter(
+            prosoche_mes__usuario=usuario,
+            fecha__range=(fecha_desde, fecha_hasta),
+            cierre_confirmado_en__isnull=False,
+        ).values_list('fecha', flat=True)
+    )
+    con_registro = set(
+        RegistroGesto.objects.filter(
+            gesto__usuario=usuario, fecha__range=(fecha_desde, fecha_hasta), estado='cumplido',
+        ).values_list('fecha', flat=True)
+    )
+    con_reflexion = set(
+        ProsocheDiario.objects.filter(
+            prosoche_mes__usuario=usuario, fecha__range=(fecha_desde, fecha_hasta),
+        ).exclude(reflexiones_dia='').values_list('fecha', flat=True)
+    )
+    con_respuesta_joi = set(
+        ProsocheDiario.objects.filter(
+            prosoche_mes__usuario=usuario, fecha__range=(fecha_desde, fecha_hasta),
+            respuesta_joi_cierre_generada_en__isnull=False,
+        ).values_list('fecha', flat=True)
+    )
+    return confirmados | con_registro | con_reflexion | con_respuesta_joi
+
+
 def construir_ledger_diario(gesto, fecha_desde, fecha_hasta):
     """
     Devuelve una lista de dicts {'fecha', 'estado', 'cumplido'} para cada
@@ -138,20 +188,13 @@ def construir_ledger_diario(gesto, fecha_desde, fecha_hasta):
     la taxonomía canónica del §5.1. No calcula ninguna métrica.
 
     Precedencia: fuera_de_vida > pausado > no_observado > observado
-    (refinado por cadencia). Los cierres anteriores a la introducción de
-    cierre_confirmado_en quedan no_observado aunque exista ProsocheDiario
-    histórico — se deriva solo del filtro cierre_confirmado_en__isnull=False,
-    sin necesidad de tratamiento especial.
+    (refinado por cadencia). Ver _dias_observados_derivados() para cómo
+    se deriva "observado" — incluye recuperación histórica conservadora,
+    no solo cierre_confirmado_en.
     """
     intervalos_pausa = _intervalos_pausa(gesto)
 
-    dias_observados = set(
-        ProsocheDiario.objects.filter(
-            prosoche_mes__usuario=gesto.usuario,
-            fecha__range=(fecha_desde, fecha_hasta),
-            cierre_confirmado_en__isnull=False,
-        ).values_list('fecha', flat=True)
-    )
+    dias_observados = _dias_observados_derivados(gesto.usuario, fecha_desde, fecha_hasta)
     dias_cumplidos = set(
         RegistroGesto.objects.filter(
             gesto=gesto, fecha__range=(fecha_desde, fecha_hasta), estado='cumplido',
