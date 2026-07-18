@@ -67,7 +67,7 @@ def obtener_senal_corporal_diario(usuario, n_dias=5, fecha_ref=None):
 
     Returns dict con hay_senal=True|False.
     """
-    hoy = fecha_ref or timezone.now().date()
+    hoy = fecha_ref or timezone.localdate()
     inicio = hoy - timedelta(days=n_dias - 1)
     vires = list(
         SeguimientoVires.objects
@@ -188,7 +188,7 @@ def calcular_tendencia_senal(usuario, n_semanas=4, n_dias_senal=5):
 
     No modifica cargas ni progresión.
     """
-    hoy = timezone.now().date()
+    hoy = timezone.localdate()
     inicio = hoy - timedelta(days=n_semanas * 7 - 1)
     inicio_vires = inicio - timedelta(days=n_dias_senal - 1)
 

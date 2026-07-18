@@ -64,7 +64,7 @@ def dashboard_diario(request):
     from diario.services.lectura_semanal import agregar_semana
     from diario.models import PersonaInterina
 
-    hoy = timezone.now().date()
+    hoy = timezone.localdate()
     entrada_hoy = ProsocheDiario.objects.filter(
         prosoche_mes__usuario=request.user,
         fecha=hoy
@@ -96,7 +96,7 @@ def guardar_estado_animo(request):
         estado_animo = request.POST.get('estado_animo')
 
         if estado_animo:
-            hoy = timezone.now().date()
+            hoy = timezone.localdate()
             mes_nombre = hoy.strftime('%B')
             año = hoy.year
 
@@ -131,7 +131,7 @@ def prosoche_entrada_form(request, entrada_id=None):
         prosoche_mes = entrada_existente.prosoche_mes
         fecha = entrada_existente.fecha
     else:
-        fecha = timezone.now().date()
+        fecha = timezone.localdate()
         mes_nombre = fecha.strftime('%B')
         año = fecha.year
         prosoche_mes, _ = ProsocheMes.objects.get_or_create(
@@ -626,7 +626,7 @@ def gnosis_crear(request):
 @login_required
 def vires_dashboard(request):
     """Dashboard de la sección Vires."""
-    fecha_hoy = timezone.now().date()
+    fecha_hoy = timezone.localdate()
     seguimiento_hoy = SeguimientoVires.objects.filter(
         usuario=request.user,
         fecha=fecha_hoy
@@ -660,7 +660,7 @@ def vires_seguimiento_crear(request):
     """Crear o actualizar seguimiento diario de Vires."""
     if request.method == 'POST':
         data = request.POST
-        fecha_str = data.get('fecha', timezone.now().date())
+        fecha_str = data.get('fecha', timezone.localdate())
         # Convertir a objeto date si es una cadena
         fecha = datetime.strptime(fecha_str, '%Y-%m-%d').date() if isinstance(fecha_str, str) else fecha_str
 
@@ -697,7 +697,7 @@ def vires_seguimiento_crear(request):
         return redirect('diario:vires_dashboard')
 
     # Lógica para el método GET
-    fecha_hoy = timezone.now().date()
+    fecha_hoy = timezone.localdate()
     seguimiento_existente = SeguimientoVires.objects.filter(usuario=request.user, fecha=fecha_hoy).first()
 
     context = {
@@ -714,7 +714,7 @@ def vires_seguimiento_crear(request):
 @login_required
 def kairos_dashboard(request):
     """Dashboard de la sección Kairos - Calendario."""
-    fecha_actual = timezone.now().date()
+    fecha_actual = timezone.localdate()
     mes_actual = request.GET.get('mes', fecha_actual.month)
     año_actual = request.GET.get('año', fecha_actual.year)
 
@@ -901,7 +901,7 @@ def prosoche_crear_habito(request):
 @login_required
 def prosoche_dashboard(request):
     """Dashboard principal de Prosoche (VERSIÓN FUNCIONAL RESTAURADA)"""
-    hoy = timezone.now()
+    hoy = timezone.localdate()
     mes_actual_str = hoy.strftime('%B')
     año_actual = hoy.year
 
@@ -1423,7 +1423,7 @@ def prosoche_revision_semanal(request):
     Vista para la revisión semanal guiada (VERSIÓN CORREGIDA Y UNIFICADA).
     """
     # --- LÓGICA GET (Preparación de datos para mostrar) ---
-    hoy = timezone.now().date()
+    hoy = timezone.localdate()
 
     # 1. Definir rangos de semana (pasada y actual)
     inicio_semana_pasada = hoy - timedelta(days=hoy.weekday() + 7)
@@ -1537,7 +1537,7 @@ def analiticas_personales(request):
     Página de visualización de datos históricos y tendencias.
     """
     periodo_dias = int(request.GET.get('periodo', 30))
-    fecha_fin = timezone.now().date()
+    fecha_fin = timezone.localdate()
     fecha_inicio = fecha_fin - timedelta(days=periodo_dias - 1)
 
     entradas = ProsocheDiario.objects.filter(
@@ -1763,7 +1763,7 @@ def logos_dashboard(request):
     Dashboard principal del módulo Logos.
     Muestra reflexiones recientes, reflexión del día, y estadísticas.
     """
-    hoy = timezone.now().date()
+    hoy = timezone.localdate()
 
     # Reflexiones recientes del usuario
     reflexiones_recientes = ReflexionLibre.objects.filter(
@@ -1827,7 +1827,7 @@ def logos_escritura_libre(request):
         # Crear la reflexión
         reflexion = ReflexionLibre.objects.create(
             usuario=request.user,
-            titulo=titulo if titulo else f"Reflexión del {timezone.now().strftime('%d/%m/%Y')}",
+            titulo=titulo if titulo else f"Reflexión del {timezone.localdate().strftime('%d/%m/%Y')}",
             contenido=contenido,
             etiquetas=etiquetas,
             tipo='espontanea',
@@ -1836,7 +1836,7 @@ def logos_escritura_libre(request):
 
         # Actualizar racha de escritura
         racha, _ = RachaEscritura.objects.get_or_create(usuario=request.user)
-        racha_crecio = racha.actualizar_racha(timezone.now().date())
+        racha_crecio = racha.actualizar_racha(timezone.localdate())
 
         # Otorgar puntos de Sabiduría
         virtud_sabiduria = Virtud.objects.get(usuario=request.user, tipo='sabiduria')
@@ -1982,7 +1982,7 @@ def logos_reflexion_guiada(request, slug):
 
         # Actualizar racha de escritura
         racha, _ = RachaEscritura.objects.get_or_create(usuario=request.user)
-        racha_crecio = racha.actualizar_racha(timezone.now().date())
+        racha_crecio = racha.actualizar_racha(timezone.localdate())
 
         # Otorgar puntos de virtudes
         virtud_sabiduria, created_sabiduria = Virtud.objects.get_or_create(
@@ -2434,7 +2434,7 @@ def analisis_habitos_mes_actual(request):
     """
     Vista completa con análisis detallado de hábitos del mes actual.
     """
-    hoy = timezone.now().date()
+    hoy = timezone.localdate()
     mes_nombre = hoy.strftime('%B')
     año = hoy.year
 
@@ -2638,7 +2638,7 @@ def obtener_analisis_habitos_compacto(usuario):
     Función auxiliar para obtener datos compactos de hábitos
     para mostrar en el dashboard principal.
     """
-    hoy = timezone.now().date()
+    hoy = timezone.localdate()
     mes_nombre = hoy.strftime('%B')
     año = hoy.year
 
@@ -2721,7 +2721,7 @@ def analisis_habitos_anual(request, año=None):
     Muestra estadísticas agregadas de todos los meses del año.
     """
     if año is None:
-        año = timezone.now().year
+        año = timezone.localdate().year
 
     # Obtener todos los meses del año
     meses_prosoche = ProsocheMes.objects.filter(
@@ -2830,7 +2830,7 @@ def analisis_habitos_anual(request, año=None):
     ).count()
 
     # Calcular días transcurridos del año
-    hoy = timezone.now().date()
+    hoy = timezone.localdate()
     if hoy.year == año:
         dias_transcurridos_año = hoy.timetuple().tm_yday
     else:
@@ -3076,7 +3076,7 @@ def copiar_habitos_mes_anterior(request):
     Copia los hábitos del mes anterior que NO existan en el mes actual.
     Compara por nombre para evitar duplicados.
     """
-    hoy = timezone.now().date()
+    hoy = timezone.localdate()
     mes_actual_nombre = calendar.month_name[hoy.month]
     año_actual = hoy.year
 
@@ -3214,7 +3214,7 @@ def copiar_habitos_desde_mes(request, mes, año):
 
     Ejemplo de URL: /prosoche/copiar-habitos/October/2024/
     """
-    hoy = timezone.now().date()
+    hoy = timezone.localdate()
     mes_actual_nombre = calendar.month_name[hoy.month]
     año_actual = hoy.year
 
@@ -3356,7 +3356,7 @@ def prosoche_entrada_rapida(request):
 @login_required
 def presencia_apertura(request):
     """Ritual de apertura: JOI pregunta + intención + gratitud + tareas + biometría."""
-    hoy = timezone.now().date()
+    hoy = timezone.localdate()
     mes_nombre = hoy.strftime('%B')
     año = hoy.year
 
@@ -3499,7 +3499,7 @@ def check_simbiosis_api(request):
         if not personas_detectadas:
             return JsonResponse({'bloqueo': False})
 
-        hoy = timezone.now().date()
+        hoy = timezone.localdate()
         for persona_nombre in personas_detectadas:
             dias_con_mencion = 0
             for delta in range(1, 3):
@@ -3528,9 +3528,9 @@ def check_simbiosis_api(request):
 def _generar_pregunta_simbiosis(persona_nombre, request):
     try:
         from joi.services import _llamar_haiku
-        from datetime import date as _date, timedelta as _td
+        from datetime import timedelta as _td
 
-        hace_30 = _date.today() - _td(days=30)
+        hace_30 = timezone.localdate() - _td(days=30)
 
         # Cierres recientes donde aparece esta persona
         entradas = (
@@ -3592,7 +3592,7 @@ def _generar_pregunta_simbiosis(persona_nombre, request):
 @login_required
 def presencia_cierre(request):
     """Ritual de cierre: texto libre + hábitos del día. JOI parsea el texto."""
-    hoy = timezone.now().date()
+    hoy = timezone.localdate()
     mes_nombre = hoy.strftime('%B')
     año = hoy.year
 
@@ -3621,27 +3621,30 @@ def presencia_cierre(request):
 
     if request.method == 'POST':
         texto_libre = request.POST.get('reflexion_libre', '').strip()
-
-        # Límites de hoy → nivel_estres; cuerpo al cierre → cuerpo_cierre
         friccion_raw = request.POST.get('friccion_no')
         cuerpo_raw = request.POST.get('cuerpo_cierre', '').strip()
-        if friccion_raw or cuerpo_raw:
-            try:
-                vires, _ = SeguimientoVires.objects.get_or_create(usuario=request.user, fecha=hoy)
-                if friccion_raw:
-                    vires.nivel_estres = int(friccion_raw)
-                if cuerpo_raw:
-                    vires.cuerpo_cierre = cuerpo_raw
-                vires.save()
-            except (ValueError, TypeError):
-                pass
+        habitos_ids_raw = request.POST.get('habitos_completados', '[]')
+
+        # Fase 2 del CONTRATO_ANALIZADOR_GESTOS.md — núcleo transaccional:
+        # reflexión + SeguimientoVires + sincronización de RegistroGesto +
+        # marcador de cierre confirmado, todo o nada. El enriquecimiento
+        # JOI/Gemini de abajo queda fuera a propósito (best-effort).
+        from diario.services.cierre_service import persistir_nucleo_cierre
+        persistir_nucleo_cierre(
+            usuario=request.user,
+            fecha=hoy,
+            entrada=entrada,
+            texto_libre=texto_libre,
+            friccion_raw=friccion_raw,
+            cuerpo_raw=cuerpo_raw,
+            habitos_completados_raw=habitos_ids_raw,
+            gestos_activos=gestos_activos,
+        )
+        habitos_con_estado = _construir_habitos_con_estado()
 
         personas_detectadas = []
 
         if texto_libre:
-            entrada.reflexiones_dia = texto_libre
-            entrada.save()
-
             reflexion_obj = None
             try:
                 from joi.services import parsear_cierre_diario, enriquecer_cierre
@@ -3785,25 +3788,6 @@ def presencia_cierre(request):
                         tipo='espontanea',
                         etiquetas='cierre_dia',
                     )
-
-        habitos_ids_raw = request.POST.get('habitos_completados', '[]')
-        try:
-            habitos_completados_ids = json.loads(habitos_ids_raw)
-        except (json.JSONDecodeError, ValueError):
-            habitos_completados_ids = []
-
-        cumplidos_hoy_ids = set(
-            RegistroGesto.objects.filter(
-                gesto__in=gestos_activos, fecha=hoy, estado='cumplido'
-            ).values_list('gesto_id', flat=True)
-        )
-        for gesto in gestos_activos:
-            deseado = gesto.id in habitos_completados_ids
-            actual = gesto.id in cumplidos_hoy_ids
-            if deseado != actual:
-                HabitosService.toggle_dia(gesto, hoy)
-
-        habitos_con_estado = _construir_habitos_con_estado()
 
         # Simbiosis_respuesta guard — save if provided (re-submission after simbiosis block)
         simbiosis_respuesta = request.POST.get('simbiosis_respuesta', '').strip()

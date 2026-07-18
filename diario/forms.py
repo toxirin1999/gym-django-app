@@ -1,6 +1,7 @@
 # diario/forms.py
 
 from django import forms
+from django.core.exceptions import ValidationError
 from .models import PersonaImportante, Interaccion, ProsocheHabito, TriggerHabito, Gesto
 
 
@@ -168,6 +169,52 @@ class GestoForm(forms.ModelForm):
         if commit:
             instance.save()
         return instance
+
+
+class CadenciaGestoForm(forms.Form):
+    """
+    Configura la cadencia de un Gesto tipo='cultivo' (Fase 5B del
+    CONTRATO_ANALIZADOR_GESTOS.md). No es un ModelForm porque las
+    invariantes válidas dependen de qué campos aplican a cada
+    tipo_cadencia — se reutiliza literalmente
+    Gesto._validar_invariantes_cadencia() en clean() en vez de
+    duplicar las reglas aquí, para que formulario y modelo nunca
+    puedan divergir.
+    """
+    tipo_cadencia = forms.ChoiceField(
+        choices=Gesto.TIPO_CADENCIA_CHOICES,
+        widget=forms.RadioSelect(attrs={'id': 'id_tipo_cadencia'}),
+        label='Cadencia',
+    )
+    frecuencia_semanal_objetivo = forms.IntegerField(
+        required=False,
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'min': '1', 'max': '7'}),
+        label='Veces por semana',
+    )
+    dias_semana_objetivo = forms.MultipleChoiceField(
+        required=False,
+        choices=[(dia, dia.capitalize()) for dia in Gesto.DIAS_SEMANA_VALIDOS],
+        widget=forms.CheckboxSelectMultiple,
+        label='Días concretos',
+    )
+
+    def clean(self):
+        cleaned = super().clean()
+        if self.errors:
+            return cleaned
+
+        temporal = Gesto(
+            tipo_cadencia=cleaned.get('tipo_cadencia'),
+            frecuencia_semanal_objetivo=cleaned.get('frecuencia_semanal_objetivo'),
+            dias_semana_objetivo=cleaned.get('dias_semana_objetivo') or [],
+        )
+        try:
+            temporal._validar_invariantes_cadencia()
+        except ValidationError as error:
+            for campo, mensajes in error.message_dict.items():
+                for mensaje in mensajes:
+                    self.add_error(campo if campo in self.fields else None, mensaje)
+        return cleaned
 
 
 class TriggerHabitoForm(forms.ModelForm):

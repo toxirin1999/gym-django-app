@@ -10,7 +10,8 @@ import calendar
 import json
 
 from .models import Gesto, ProsocheHabito
-from .forms import GestoForm, TriggerHabitoForm
+from .forms import CadenciaGestoForm, GestoForm, TriggerHabitoForm
+from .insights_engine import lectura_principal_cultivo
 from .services import HabitosService, InsigniasService
 
 # ========================================
@@ -36,6 +37,24 @@ def _legacy_prosoche_habito_id(usuario, nombre):
     return None
 
 
+def _cadencia_label(gesto):
+    """Etiqueta estructural de la cadencia configurada — solo describe
+    la configuración, no interpreta nada (Fase 5B; el lenguaje analítico
+    conservador es competencia de la Fase 5C)."""
+    if gesto.tipo_cadencia == Gesto.CADENCIA_DIARIA:
+        return 'Diaria'
+    if gesto.tipo_cadencia == Gesto.CADENCIA_SEMANAL:
+        if gesto.frecuencia_semanal_objetivo:
+            return f'{gesto.frecuencia_semanal_objetivo}x por semana'
+        return 'Semanal'
+    if gesto.tipo_cadencia == Gesto.CADENCIA_DIAS_CONCRETOS:
+        dias = gesto.dias_semana_objetivo or []
+        if dias:
+            return 'Días concretos: ' + ', '.join(dia.capitalize() for dia in dias)
+        return 'Días concretos'
+    return 'Libre'
+
+
 @login_required
 def habitos_dashboard(request):
     """
@@ -52,14 +71,27 @@ def habitos_dashboard(request):
 
     for gesto in gestos_por_tipo['cultivo'] + gestos_por_tipo['suelto']:
         dias_mes = HabitosService.proyeccion_mensual(gesto, hoy.year, hoy.month)
-        racha = gesto.get_racha_actual()
         insights = HabitosService.generar_insights_basicos(gesto)
+
+        # Fase 5A: la racha (actual y mejor) solo es una lectura honesta
+        # para tipo_cadencia='diaria'. suelto no tiene cadencia y queda
+        # fuera de esta política — su racha ya era correcta.
+        racha_aplicable = gesto.tipo == 'suelto' or gesto.tipo_cadencia == Gesto.CADENCIA_DIARIA
+        racha = gesto.get_racha_actual() if racha_aplicable else 0
+        mejor_racha_visible = gesto.mejor_racha if racha_aplicable else 0
+
+        # Fase 5C: lectura principal del analizador — una sola por
+        # hábito, solo para cultivo. suelto sigue con TriggerHabito.
+        lectura_cultivo = lectura_principal_cultivo(gesto, hoy) if gesto.tipo == 'cultivo' else None
 
         item = {
             'habito': gesto,
             'dias_mes': dias_mes,
             'progreso': {'racha': racha},
+            'mejor_racha_visible': mejor_racha_visible,
             'insights': insights,
+            'cadencia_label': _cadencia_label(gesto),
+            'lectura_cultivo': lectura_cultivo,
             'prosoche_habito_legacy_id': _legacy_prosoche_habito_id(request.user, gesto.nombre),
         }
 
@@ -74,6 +106,7 @@ def habitos_dashboard(request):
         'habitos_negativos': habitos_negativos,
         'total_positivos': len(habitos_positivos),
         'total_negativos': len(habitos_negativos),
+        'habitos_cerrados_cultivo': HabitosService.obtener_gestos_cerrados_cultivo(request.user),
     }
 
     return render(request, 'diario/habitos_dashboard.html', context)
@@ -128,6 +161,69 @@ def habito_editar(request, habito_id):
 
 
 @login_required
+def habito_configurar_cadencia(request, habito_id):
+    """
+    Configura o cambia la cadencia de un Gesto tipo='cultivo' (Fase 5B).
+
+    La advertencia de reinicio del análisis solo se muestra cuando ya
+    existía una cadencia configurada (cadencia_configurada_en no nulo) Y
+    los valores enviados son distintos de los actuales — nunca en la
+    primera configuración de un hábito histórico, tal como exige el
+    contrato. Es un flujo de dos pasos: si hace falta advertencia, se
+    vuelve a renderizar el mismo formulario con los valores ya
+    introducidos y un aviso; solo se persiste al reenviar con
+    confirmado=1.
+    """
+    gesto = get_object_or_404(Gesto, id=habito_id, usuario=request.user, tipo='cultivo')
+
+    if request.method == 'POST':
+        form = CadenciaGestoForm(request.POST)
+        if form.is_valid():
+            nuevo_tipo = form.cleaned_data['tipo_cadencia']
+            nueva_frecuencia = form.cleaned_data.get('frecuencia_semanal_objetivo')
+            nuevos_dias = form.cleaned_data.get('dias_semana_objetivo') or []
+
+            hay_cambio = (
+                nuevo_tipo != gesto.tipo_cadencia
+                or nueva_frecuencia != gesto.frecuencia_semanal_objetivo
+                or set(nuevos_dias) != set(gesto.dias_semana_objetivo or [])
+            )
+            sin_cadencia_previa = gesto.cadencia_configurada_en is None
+            requiere_advertencia = hay_cambio and not sin_cadencia_previa
+            confirmado = request.POST.get('confirmado') == '1'
+
+            if requiere_advertencia and not confirmado:
+                context = {
+                    'gesto': gesto,
+                    'form': form,
+                    'requiere_confirmacion': True,
+                }
+                return render(request, 'diario/habito_configurar_cadencia.html', context)
+
+            # configurar_cadencia() siempre reinicia cadencia_configurada_en
+            # a hoy (Fase 3) — solo se llama si hay algo que de verdad
+            # configurar o cambiar. Reenviar el formulario sin ningún
+            # cambio real no debe desplazar el ancla del análisis.
+            if sin_cadencia_previa or hay_cambio:
+                gesto.configurar_cadencia(nuevo_tipo, nueva_frecuencia, nuevos_dias)
+                messages.success(request, f'Cadencia de "{gesto.nombre}" configurada.')
+            return redirect('diario:habitos_dashboard')
+    else:
+        form = CadenciaGestoForm(initial={
+            'tipo_cadencia': gesto.tipo_cadencia,
+            'frecuencia_semanal_objetivo': gesto.frecuencia_semanal_objetivo,
+            'dias_semana_objetivo': gesto.dias_semana_objetivo or [],
+        })
+
+    context = {
+        'gesto': gesto,
+        'form': form,
+        'requiere_confirmacion': False,
+    }
+    return render(request, 'diario/habito_configurar_cadencia.html', context)
+
+
+@login_required
 @require_http_methods(["POST"])
 def habito_toggle_dia(request):
     """Vista AJAX para marcar/desmarcar un día del mes actual como cumplido."""
@@ -136,7 +232,10 @@ def habito_toggle_dia(request):
         habito_id = data.get('habito_id')
         dia = data.get('dia')
 
-        gesto = get_object_or_404(Gesto, id=habito_id, usuario=request.user)
+        # Fase 3: un Gesto pausado o cerrado no admite registros manuales
+        # desde el dashboard — evita filas de RegistroGesto en fechas que
+        # la taxonomía del analizador clasificaría como pausado/fuera_de_vida.
+        gesto = get_object_or_404(Gesto, id=habito_id, usuario=request.user, estado='activo')
 
         hoy = timezone.localdate()
         dia_num = int(dia)
@@ -230,21 +329,38 @@ def habito_eliminar(request, habito_id):
 @login_required
 @require_http_methods(["POST"])
 def habito_pausar(request, habito_id):
-    """Pausa un Gesto (Phase 2.0D). Conserva todo el historial de registros."""
+    """Pausa un Gesto (Phase 2.0D). Conserva todo el historial de registros.
+    Fase 3: además abre una PausaGesto (ver HabitosService.pausar_gesto)."""
     gesto = get_object_or_404(Gesto, id=habito_id, usuario=request.user)
-    gesto.estado = 'pausado'
-    gesto.save(update_fields=['estado'])
+    HabitosService.pausar_gesto(gesto)
     messages.success(request, f'Gesto "{gesto.nombre}" pausado.')
     return redirect('diario:habitos_dashboard')
 
 
 @login_required
 @require_http_methods(["POST"])
+def habito_reactivar(request, habito_id):
+    """Reactiva un Gesto pausado (Fase 3). Cierra la PausaGesto abierta
+    y vuelve a estado='activo'. No existe transición inversa para
+    hábitos 'cerrado' — cerrar es definitivo."""
+    gesto = get_object_or_404(Gesto, id=habito_id, usuario=request.user, estado='pausado')
+    HabitosService.reactivar_gesto(gesto)
+    messages.success(request, f'Gesto "{gesto.nombre}" reactivado.')
+    return redirect('diario:habitos_dashboard')
+
+
+@login_required
+@require_http_methods(["POST"])
 def habito_cerrar(request, habito_id):
-    """Cierra un Gesto (Phase 2.0D). Conserva todo el historial de registros."""
+    """Cierra un Gesto (Phase 2.0D). Conserva todo el historial de registros.
+    Fase 3: si había una pausa abierta, se cierra en el mismo movimiento
+    (misma regla de colapso que reactivar) para no dejar un intervalo
+    huérfano tras el cierre definitivo."""
     gesto = get_object_or_404(Gesto, id=habito_id, usuario=request.user)
+    fecha_cierre = timezone.localdate()
+    HabitosService._cerrar_pausa_abierta(gesto, fecha_cierre)
     gesto.estado = 'cerrado'
-    gesto.fecha_cierre = timezone.localdate()
+    gesto.fecha_cierre = fecha_cierre
     gesto.save(update_fields=['estado', 'fecha_cierre'])
     messages.success(request, f'Gesto "{gesto.nombre}" cerrado.')
     return redirect('diario:habitos_dashboard')

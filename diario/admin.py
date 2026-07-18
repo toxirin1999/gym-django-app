@@ -4,7 +4,7 @@ from .models import (
     AreaVida, Eudaimonia, TrimestreEudaimonia,
     EjercicioArete, Gnosis, EntrenamientoSemanal,
     SeguimientoVires, EventoKairos, PlanificacionDiaria,
-    Gesto, RegistroGesto
+    Gesto, RegistroGesto, PausaGesto
 )
 
 
@@ -228,3 +228,4 @@ class PlanificacionDiariaAdmin(admin.ModelAdmin):
 
 admin.site.register(Gesto)
 admin.site.register(RegistroGesto)
+admin.site.register(PausaGesto)
