@@ -1,4 +1,5 @@
-from datetime import timedelta
+from datetime import timedelta, time as dt_time
+from types import SimpleNamespace
 
 from django.contrib.auth.models import User
 from django.core.cache import cache
@@ -12,9 +13,34 @@ from .models import RegistroDisponibilidad
 from .services import (
     _aplicar_ingesta,
     _deduplicar_ingestas,
+    _timestamp_entreno,
     calcular_recursos_disponibles,
     TECHO_NIVEL,
 )
+
+
+class TimestampEntrenoTests(TestCase):
+    """Un entreno de HOY sin hora no puede situarse en el futuro respecto a 'ahora'."""
+
+    def test_entreno_de_hoy_sin_hora_no_cae_en_el_futuro(self):
+        hoy = timezone.now().date()
+        entreno = SimpleNamespace(fecha=hoy, hora_inicio=None, hora_fin=None)
+        ts = _timestamp_entreno(entreno)
+        self.assertLessEqual(ts, timezone.now(), msg='23:59 de hoy puede ser futuro respecto al momento del cálculo.')
+
+    def test_entreno_de_ayer_sin_hora_se_situa_al_final_del_dia(self):
+        ayer = timezone.now().date() - timedelta(days=1)
+        entreno = SimpleNamespace(fecha=ayer, hora_inicio=None, hora_fin=None)
+        ts = _timestamp_entreno(entreno)
+        self.assertEqual(ts.time(), dt_time(23, 59), msg='Para un día ya cerrado, 23:59 no puede ser futuro — debe mantenerse.')
+
+    def test_entreno_con_hora_inicio_la_respeta(self):
+        # Fecha de ayer para que el test no dependa de a qué hora del día se ejecuta
+        # (una hora_inicio de "hoy" podría caer en el futuro si se corre de madrugada).
+        ayer = timezone.now().date() - timedelta(days=1)
+        entreno = SimpleNamespace(fecha=ayer, hora_inicio=dt_time(7, 0), hora_fin=None)
+        ts = _timestamp_entreno(entreno)
+        self.assertEqual(ts.time(), dt_time(7, 0))
 
 
 class MomentoEfectivoTests(TestCase):
