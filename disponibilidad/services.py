@@ -87,7 +87,12 @@ def _timestamp_entreno(entreno):
 
     Sin hora registrada, se posiciona al final del día (23:59) en vez de
     inventar mediodía — no fabrica una cronología falsa frente a las
-    ingestas del mismo día.
+    ingestas del mismo día. Para un entreno de HOY sin hora, 23:59 puede
+    caer en el futuro respecto al momento en que se calcula el replay (p.ej.
+    consultado a las 11:00) — el replay lo trataría como ya ocurrido pero
+    calcularía una erosión fantasma por un hueco que aún no ha transcurrido.
+    Se acota a "ahora" como tope: nunca se sitúa un evento después del
+    instante en que se está calculando.
     """
     if entreno.hora_inicio:
         t = entreno.hora_inicio
@@ -96,7 +101,8 @@ def _timestamp_entreno(entreno):
     else:
         t = time(23, 59)
     naive = datetime.combine(entreno.fecha, t)
-    return timezone.make_aware(naive, timezone.get_current_timezone())
+    ts = timezone.make_aware(naive, timezone.get_current_timezone())
+    return min(ts, timezone.now())
 
 
 RECURSOS_DISPONIBLES_CACHE_TTL = 300  # 5 min — techo de frescura; se invalida antes en disponibilidad/views.py::registrar
