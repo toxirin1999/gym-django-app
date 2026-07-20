@@ -204,20 +204,21 @@ class TestCaracterizacionDavid(TestCase):
     # Frecuencias esperadas calculadas con:
     #   nivel='avanzado', objetivo='general', factor=1.09
     #   cap_sesion_para_grupo(grupo), dias_disponibles=5
-    # Verificado el 2026-07-19 ejecutando calcular_volumen_optimo contra el
-    # entorno de test real (ver log de derivación en el ticket X.5).
+    # Verificado el 2026-07-20 tras anclar objetivo='general' al MEV (volumen
+    # moderado, decisión explícita del usuario). Con volumen más bajo, ningún
+    # grupo pide ya freq=3 — el máximo deseado es freq=2.
     FREQ_ESPERADA = {
         'pecho':       2,
-        'espalda':     3,
-        'hombros':     3,
+        'espalda':     2,
+        'hombros':     2,
         'biceps':      2,
         'triceps':     2,
-        'cuadriceps':  3,
-        'isquios':     2,
+        'cuadriceps':  2,
+        'isquios':     1,
         'gluteos':     2,
         'gemelos':     2,
-        'core':        2,
-        'trapecios':   2,
+        'core':        1,
+        'trapecios':   1,
         'antebrazos':  1,
     }
 
@@ -251,12 +252,16 @@ class TestCaracterizacionDavid(TestCase):
                     ),
                 )
 
-    def test_grupos_de_alta_demanda_quieren_freq_3(self):
-        # espalda, hombros y cuadriceps superan 2×cap → freq=3
+    def test_ningun_grupo_pide_ya_freq_3(self):
+        """
+        Con objetivo='general' anclado al MEV (2026-07-20, volumen moderado),
+        ningún grupo supera 2×cap — antes (volumen alto) espalda/hombros/
+        cuadriceps pedían freq=3, ahora el máximo deseado es freq=2.
+        """
         for grupo in ['espalda', 'hombros', 'cuadriceps']:
             with self.subTest(grupo=grupo):
                 vol = calcular_volumen_optimo(grupo, self._nivel, self._objetivo, self._factor)
-                self.assertEqual(calcular_frecuencia(grupo, vol, self._dias), 3)
+                self.assertEqual(calcular_frecuencia(grupo, vol, self._dias), 2)
 
     def test_antebrazos_conserva_freq_1(self):
         # Único grupo cuyo volumen cabe en una sola sesión con el cap de pequeños

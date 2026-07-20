@@ -81,13 +81,13 @@ class TestX1BicepsDosEjercicios(TestCase):
             f"Ejercicios: {[e['nombre'] for e in self.biceps_ejs]}"
         )
 
-    def test_biceps_dieciseis_series(self):
+    def test_biceps_doce_series(self):
         """
-        2 ejercicios, cada uno acotado por GestorFatiga (pequeños≤8/ejercicio)
-        tras la corrección de X.4 = 16 series semanales de bíceps para david.
+        Con objetivo='general' anclado al MEV (2026-07-20, volumen moderado),
+        bíceps queda en freq=2, 12 series semanales para david.
         """
         total = sum(e['series'] for e in self.biceps_ejs)
-        self.assertEqual(total, 16, f"Total series bíceps: {total}, esperado: 16")
+        self.assertEqual(total, 12, f"Total series bíceps: {total}, esperado: 12")
 
     def test_biceps_ejercicios_distintos(self):
         """
@@ -213,14 +213,13 @@ class TestX2GluteoHipThrustMismoDia(TestCase):
             f"Hip Thrust no encontrado. Ejercicios de glúteos: {nombres}"
         )
 
-    def test_gluteos_dieciocho_series(self):
+    def test_gluteos_doce_series(self):
         """
-        Post fix presupuesto real del asignador + reducción vol_fin
-        (2026-07-20): glúteos queda en freq=1 con sus 2 ejercicios completos,
-        18 series totales.
+        Con objetivo='general' anclado al MEV (2026-07-20, volumen moderado),
+        glúteos queda en freq=2, 12 series semanales para david.
         """
         total = sum(e['series'] for e in self.gluteos_ejs)
-        self.assertEqual(total, 18, f"Total series glúteos: {total}, esperado: 18")
+        self.assertEqual(total, 12, f"Total series glúteos: {total}, esperado: 12")
 
     def test_hip_thrust_es_primer_ejercicio_gluteos(self):
         """Hip Thrust (compuesto_principal) debe ser el primer ejercicio de glúteos."""

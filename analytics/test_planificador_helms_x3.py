@@ -367,13 +367,20 @@ class TestX3ObjetivoGeneralNoRegresion(TestCase):
     La migración de david a 'hipertrofia' es X.8 — no tocar aquí.
     """
 
-    def test_general_igual_a_fuerza_hipertrofia(self):
+    def test_general_es_mas_moderado_que_fuerza_hipertrofia(self):
+        """
+        Cambio de diseño (2026-07-20): 'general' dejó de caer en el
+        multiplicador neutro 1.0x (igual que fuerza_hipertrofia) y pasó a
+        anclarse cerca del MEV (0.65x) — filosofía de volumen moderado
+        ("entrenar para la vida", no maximizar hipertrofia), a petición
+        explícita del usuario. Ya no deben coincidir.
+        """
         vol_general = calcular_volumen_optimo('pecho', 'avanzado', 'general', 1.0)
         vol_fh = calcular_volumen_optimo('pecho', 'avanzado', 'fuerza_hipertrofia', 1.0)
-        self.assertEqual(
+        self.assertLess(
             vol_general, vol_fh,
-            f"'general' ({vol_general}) debe dar el mismo resultado que "
-            f"'fuerza_hipertrofia' ({vol_fh}) — ambos usan multiplicador 1.0",
+            f"'general' ({vol_general}) debería ser menor que 'fuerza_hipertrofia' "
+            f"({vol_fh}) tras anclar 'general' al MEV",
         )
 
     def test_general_no_igual_a_hipertrofia(self):
@@ -386,11 +393,11 @@ class TestX3ObjetivoGeneralNoRegresion(TestCase):
 
     def test_david_avanzado_general_volumen_esperado_pecho(self):
         """
-        pecho avanzado general (×1.0, factor=1.0): round(18×1.0×1.0)=18,
-        max(mev=11, min(18, mrv=22))=18.
+        pecho avanzado general (×0.65, factor=1.0): round(18×0.65×1.0)=12,
+        max(mev=11, min(12, mrv=22))=12 — anclado cerca del MEV (2026-07-20).
         """
         vol = calcular_volumen_optimo('pecho', 'avanzado', 'general', 1.0)
-        self.assertEqual(vol, 18, f"pecho avanzado general: esperado 18, obtenido {vol}")
+        self.assertEqual(vol, 12, f"pecho avanzado general: esperado 12, obtenido {vol}")
 
     def test_series_finales_david_post_x7(self):
         """
@@ -399,9 +406,9 @@ class TestX3ObjetivoGeneralNoRegresion(TestCase):
         sigue siendo el techo real por sesión, pero ahora la diferenciación viene
         tanto del volumen_optimo (X.3) como de la frecuencia asignada (X.7).
 
-        Post fix presupuesto real del asignador + reducción vol_fin bloques
-        hipertrofia (2026-07-20): solo espalda/hombros/biceps/trapecios
-        alcanzan freq=2; el resto queda en freq=1 con el volumen reducido.
+        Post objetivo='general' anclado a MEV (2026-07-20, volumen moderado):
+        biceps/cuadriceps/espalda/gemelos/gluteos/hombros/triceps alcanzan
+        freq=2; core/isquios/pecho/trapecios/antebrazos quedan en freq=1.
         """
         _, planner = _build_planner(PERFIL_DAVID)
         semana = _semana_bloque0(planner)
@@ -413,18 +420,18 @@ class TestX3ObjetivoGeneralNoRegresion(TestCase):
                 grupos_series[g] = grupos_series.get(g, 0) + ej['series']
 
         esperado = {
-            'pecho':      20,
-            'espalda':    24,
-            'cuadriceps': 20,
-            'gluteos':    18,
-            'isquios':    16,
-            'hombros':    20,
-            'biceps':     16,
-            'triceps':    14,
-            'gemelos':    14,
-            'core':       12,
-            'trapecios':  12,
-            'antebrazos':  8,
+            'pecho':      14,
+            'espalda':    16,
+            'cuadriceps': 16,
+            'gluteos':    12,
+            'isquios':    12,
+            'hombros':    12,
+            'biceps':     12,
+            'triceps':    12,
+            'gemelos':    12,
+            'core':        8,
+            'trapecios':   8,
+            'antebrazos':  6,
         }
         for grupo, total_esperado in esperado.items():
             self.assertEqual(

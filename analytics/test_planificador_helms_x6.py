@@ -321,15 +321,16 @@ class TestPerfilDavid(TestCase):
 
     def test_grupos_alta_demanda_frecuencia_2_o_mas(self):
         """
-        espalda, hombros, biceps, trapecios desean freq alta (X.5). Con el
-        presupuesto real del asignador (fix 2026-07-20), estos 4 son los que
-        logran freq≥2 en 5 días con 12 grupos compitiendo por presupuesto.
+        Con objetivo='general' anclado al MEV (2026-07-20, volumen moderado),
+        biceps/cuadriceps/espalda/gemelos/gluteos/hombros/triceps logran
+        freq=2 en 5 días — con más margen libre por día que antes al bajar
+        el volumen general, más grupos alcanzan 2x en vez de solo unos pocos.
         """
         freq = self.resultado.frecuencia_efectiva
-        for nombre in ['espalda', 'hombros', 'biceps', 'trapecios']:
+        for nombre in ['espalda', 'hombros', 'biceps', 'cuadriceps', 'gemelos', 'gluteos', 'triceps']:
             self.assertGreaterEqual(
                 freq.get(nombre, 0), 2,
-                msg=f'{nombre} debería tener freq≥2 con volumen avanzado',
+                msg=f'{nombre} debería tener freq≥2 con volumen moderado',
             )
 
     def test_antebrazos_con_freq_1_al_menos(self):

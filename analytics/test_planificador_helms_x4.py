@@ -110,26 +110,26 @@ class TestX4TopeDinamicoHipertrofia(TestCase):
             "Pecho avanzado+hipertrofia debe superar 8 series tras X.4"
         )
 
-    def test_pecho_exactamente_20_series(self):
-        self.assertEqual(self._resumen['pecho']['series'], 20)
+    def test_pecho_exactamente_catorce_series(self):
+        self.assertEqual(self._resumen['pecho']['series'], 14)
 
     def test_grupos_grandes_diferenciados_por_volumen_real(self):
         """
-        Para david (avanzado, general, 5d), los grupos grandes YA NO dan
-        todos el mismo número — cada uno refleja su volumen_optimo real × freq
-        asignada (X.7), acotado por GestorFatiga (grandes≤10/ejercicio).
+        Para david (avanzado, general anclado a MEV, 5d), los grupos grandes
+        siguen sin dar todos el mismo número — cada uno refleja su
+        volumen_optimo real × freq asignada, acotado por GestorFatiga.
 
-        Post fix presupuesto real del asignador + reducción vol_fin
-        (2026-07-20): solo espalda mantiene freq=2 entre los grandes;
-        cuadriceps/gluteos/isquios/pecho quedan en freq=1 con el volumen
-        reducido y el presupuesto real del día ya respetado.
+        Post objetivo='general' anclado a MEV (2026-07-20, volumen moderado):
+        espalda y cuadriceps alcanzan freq=2; pecho/gluteos/isquios varían
+        según su propio volumen_optimo (gluteos también sube a freq=2, isquios
+        se queda en freq=1).
         """
         esperado = {
-            'pecho':       20,
-            'espalda':     24,
-            'cuadriceps':  20,
-            'gluteos':     18,
-            'isquios':     16,
+            'pecho':       14,
+            'espalda':     16,
+            'cuadriceps':  16,
+            'gluteos':     12,
+            'isquios':     12,
         }
         for grupo, series_esperadas in esperado.items():
             with self.subTest(grupo=grupo):
@@ -141,18 +141,18 @@ class TestX4TopeDinamicoHipertrofia(TestCase):
     def test_grupos_pequenos_diferenciados_por_volumen_real(self):
         """
         Los grupos pequeños varían según su volumen_optimo × freq asignada.
-        Post fix presupuesto real + reducción vol_fin (2026-07-20): biceps,
-        hombros y trapecios mantienen freq=2; core/gemelos/triceps/antebrazos
-        quedan en freq=1 con el volumen reducido.
+        Post objetivo='general' anclado a MEV (2026-07-20): biceps, hombros,
+        gemelos y triceps alcanzan freq=2; core/trapecios/antebrazos quedan
+        en freq=1 con el volumen moderado.
         """
         esperado = {
-            'biceps':     16,
-            'triceps':    14,
-            'hombros':    20,
-            'gemelos':    14,
-            'core':       12,
-            'trapecios':  12,
-            'antebrazos':  8,
+            'biceps':     12,
+            'triceps':    12,
+            'hombros':    12,
+            'gemelos':    12,
+            'core':        8,
+            'trapecios':   8,
+            'antebrazos':  6,
         }
         for grupo, series_esperadas in esperado.items():
             with self.subTest(grupo=grupo):
