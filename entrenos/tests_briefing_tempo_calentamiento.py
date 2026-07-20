@@ -30,25 +30,37 @@ Checklist:
 """
 
 import json
+from datetime import date
 
 from django.contrib.auth.models import User
+from django.core.cache import cache
 from django.test import TestCase, Client
 from django.urls import reverse
 
 from clientes.models import Cliente
 from entrenos.services.calentamiento_service import get_aproximaciones_calentamiento
 
+_FECHA = date.today().strftime('%Y-%m-%d')
+
 
 class BriefingTempoCalentamientoBase(TestCase):
     def setUp(self):
+        cache.clear()
         self.user = User.objects.create_user('tester_briefing_tempo', password='x')
         self.cliente = Cliente.objects.get(user=self.user)
         self.client = Client()
         self.client.force_login(self.user)
 
+    def tearDown(self):
+        cache.clear()
+
     def _get(self, ejercicios):
+        # El nuevo mecanismo (fix 414) lee ejercicios del cache de transporte,
+        # no de la query string. Poblamos la clave determinista aquí.
+        _key = f"transporte_ejercicios_dia_{self.cliente.id}_{_FECHA}"
+        cache.set(_key, ejercicios, 900)
         url = reverse('entrenos:briefing_entrenamiento', args=[self.cliente.id])
-        return self.client.get(url, {'ejercicios': json.dumps(ejercicios)})
+        return self.client.get(url, {'fecha': _FECHA, 'rutina_nombre': 'Día 1 - Fuerza'})
 
 
 class TestTempoVisible(BriefingTempoCalentamientoBase):

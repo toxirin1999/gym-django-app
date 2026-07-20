@@ -13,6 +13,7 @@ Valida que:
 
 from django.test import TestCase, Client
 from django.contrib.auth.models import User
+from django.core.cache import cache
 from django.urls import reverse
 from clientes.models import Cliente
 from hyrox.models import UserInjury
@@ -141,14 +142,18 @@ class TestOrganismoBriefing(TestCase):
                 'peso_kg': 65.0,
             }
         ]
+        fecha_str = date.today().strftime('%Y-%m-%d')
+        # El fix 414 usa cache de transporte; poblar la clave determinista.
+        _key = f"transporte_ejercicios_dia_{self.cliente.id}_{fecha_str}"
+        cache.set(_key, ejercicios_orig, 900)
+
         url = reverse('entrenos:briefing_entrenamiento', args=[self.cliente.id])
         params = {
-            'fecha': date.today().strftime('%Y-%m-%d'),
+            'fecha': fecha_str,
             'rutina_nombre': 'Día 5 - Test',
-            'ejercicios': json.dumps(ejercicios_orig),
             'modo_reducido': '1',
         }
-        response = self.client.get(f"{url}?{'&'.join(f'{k}={v}' for k, v in params.items())}")
+        response = self.client.get(url, params)
 
         # Los ejercicios en contexto deben ser los mismos (posiblemente modificados por plan dinámico, pero mismo count)
         self.assertIn('ejercicios', response.context)
