@@ -45,13 +45,31 @@ class GeneradorPeriodizacion:
           Potencia Peaking (última descarga al final) = 4 + 1 = 5 ← pero no sumamos doble
           ─────────────────────────────────────────────────────
           Total: 43 semanas contenido + 9 descargas = 52 semanas exactas
+
+        AJUSTE (2026-07-20): vol_inicio/vol_fin de los 4 bloques de hipertrofia
+        reducidos ~15% (Acumulación 1.0-1.2→0.9-1.05, Intensificación
+        1.1-1.25→0.95-1.05, Especialización 1.15-1.3→1.0-1.1, Metabólica
+        1.0-1.15→0.9-1.0). Motivo: `volumen_multiplicador` se aplica de forma
+        PLANA a los 12 grupos musculares simultáneamente (no hay mecanismo de
+        "grupos rezagados" real pese a lo que dice la descripción de
+        Especialización), así que con los valores originales cada semana
+        pedía a la vez un volumen cercano al MRV en los 12 grupos — sesiones
+        reales de 42-52 series (90-120+ min), verificado en producción.
+        Reducir el techo de volumen se priorizó sobre subir CAPACIDAD_SERIES_DIA
+        porque la evidencia sobre fatiga intra-sesión indica que forzar más
+        volumen en sesiones ya largas tiene retornos decrecientes por serie,
+        mientras que un volumen algo menor pero sostenible con calidad todas
+        las semanas es preferible. Pendiente real (no resuelto aquí): construir
+        un mecanismo de priorización de grupos rezagados para que
+        "Especialización" signifique subir volumen en 2-4 grupos concretos,
+        no en los 12 a la vez.
         """
         return [
             {
                 'fase': 'hipertrofia',
                 'nombre': 'Hipertrofia — Acumulación',
                 'semanas': 7,  # +1 vs v1
-                'vol_inicio': 1.0, 'vol_fin': 1.2,
+                'vol_inicio': 0.9, 'vol_fin': 1.05,
                 'rpe_inicio': 6, 'rpe_fin': 8,
                 'reps': '10-12',
                 'tempo': '2-0-X-0', 'descanso': 90,
@@ -71,7 +89,7 @@ class GeneradorPeriodizacion:
                 'fase': 'hipertrofia',
                 'nombre': 'Hipertrofia — Intensificación',
                 'semanas': 7,  # +1 vs v1
-                'vol_inicio': 1.1, 'vol_fin': 1.25,
+                'vol_inicio': 0.95, 'vol_fin': 1.05,
                 'rpe_inicio': 7, 'rpe_fin': 9,
                 'reps': '8-10',
                 'tempo': '2-0-X-0', 'descanso': 75,
@@ -91,7 +109,7 @@ class GeneradorPeriodizacion:
                 'fase': 'hipertrofia_especifica',
                 'nombre': 'Hipertrofia — Especialización',
                 'semanas': 7,  # +1 vs v1
-                'vol_inicio': 1.15, 'vol_fin': 1.3,
+                'vol_inicio': 1.0, 'vol_fin': 1.1,
                 'rpe_inicio': 7, 'rpe_fin': 8,
                 'reps': '8-12',
                 'tempo': '3-0-X-0', 'descanso': 90,
@@ -111,7 +129,7 @@ class GeneradorPeriodizacion:
                 'fase': 'hipertrofia_metabolica',
                 'nombre': 'Hipertrofia — Metabólica',
                 'semanas': 5,
-                'vol_inicio': 1.0, 'vol_fin': 1.15,
+                'vol_inicio': 0.9, 'vol_fin': 1.0,
                 'rpe_inicio': 7, 'rpe_fin': 8,
                 'reps': '12-15',
                 'tempo': '2-0-2-0', 'descanso': 60,

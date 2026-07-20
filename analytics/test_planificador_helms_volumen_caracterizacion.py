@@ -117,55 +117,48 @@ class TestCaracterizacionDavid(TestCase):
         'dias_disponibles': 5,
     }
 
-    # Estructura completa capturada 2026-07-20 (post-X.7).
-    # El motor asigna por volumen, no por Body Part Split fijo.
-    # bloque0.volumen_multiplicador=1.2 (no 1.0) — determina vol_efectivo.
+    # Estructura completa capturada 2026-07-20 (post-X.7 + fix presupuesto real
+    # del asignador + reducción de vol_fin en bloques de hipertrofia, ver
+    # generador.py). bloque0 ("Hipertrofia — Acumulación") volumen_multiplicador
+    # bajó de 1.2 a 1.05.
     ESTRUCTURA_ESPERADA = {
         'dia_1': [
-            ('Crunch en Polea (Cable Crunch)',             'core',        4),
-            ('Pallof Press',                               'core',        4),
-            ('Sentadilla Hack',                            'cuadriceps',  7),
-            ('Prensa de Piernas',                          'cuadriceps',  7),
-            ('Elevación de Gemelos de Pie (Máquina)',      'gemelos',     4),
-            ('Elevación de Gemelos Sentado (Máquina)',     'gemelos',     4),
-            ('Hip Thrust con Barra',                       'gluteos',     6),
-            ('Abducción de Cadera en Máquina',             'gluteos',     6),
+            ('Crunch en Polea (Cable Crunch)',             'core',        6),
+            ('Pallof Press',                               'core',        6),
+            ('Sentadilla Hack',                            'cuadriceps', 10),
+            ('Prensa de Piernas',                          'cuadriceps', 10),
         ],
         'dia_2': [
-            ('Aguante en Barra (Dead Hang)',                'antebrazos',  5),
-            ('Farmer Walk (Paseo del Granjero)',            'antebrazos',  5),
+            ('Aguante en Barra (Dead Hang)',                'antebrazos',  4),
+            ('Farmer Walk (Paseo del Granjero)',            'antebrazos',  4),
             ('Curl con Barra Z',                           'biceps',      4),
             ('Curl Araña',                                 'biceps',      4),
-            ('Jalón al Pecho',                             'espalda',     7),
-            ('Remo pecho apoyado',                         'espalda',     7),
+            ('Jalón al Pecho',                             'espalda',     6),
+            ('Remo pecho apoyado',                         'espalda',     6),
             ('Machine Shoulder Press',                     'hombros',     5),
             ('Press Arnold',                               'hombros',     5),
         ],
         'dia_3': [
-            ('Crunch en Polea (Cable Crunch)',             'core',        4),
-            ('Pallof Press',                               'core',        4),
-            ('Hip Thrust con Barra',                       'gluteos',     6),
-            ('Abducción de Cadera en Máquina',             'gluteos',     6),
-            ('Peso Muerto Rumano',                         'isquios',     9),
-            ('Curl Femoral Tumbado',                       'isquios',     9),
+            ('Hip Thrust con Barra',                       'gluteos',     9),
+            ('Abducción de Cadera en Máquina',             'gluteos',     9),
+            ('Peso Muerto Rumano',                         'isquios',     8),
+            ('Curl Femoral Tumbado',                       'isquios',     8),
             ('Encogimientos con Barra',                    'trapecios',   3),
             ('Farmer Walk (Paseo del Granjero)',            'trapecios',   3),
         ],
         'dia_4': [
-            ('Sentadilla Hack',                            'cuadriceps',  7),
-            ('Prensa de Piernas',                          'cuadriceps',  7),
-            ('Elevación de Gemelos de Pie (Máquina)',      'gemelos',     4),
-            ('Elevación de Gemelos Sentado (Máquina)',     'gemelos',     4),
+            ('Elevación de Gemelos de Pie (Máquina)',      'gemelos',     7),
+            ('Elevación de Gemelos Sentado (Máquina)',     'gemelos',     7),
             ('Convergent Machine Press',                   'pecho',      10),
             ('Press Cerrado en Banca',                     'pecho',      10),
-            ('Press Francés con Barra Z',                  'triceps',     8),
-            ('Extensiones de Tríceps con Polea Alta',      'triceps',     8),
+            ('Press Francés con Barra Z',                  'triceps',     7),
+            ('Extensiones de Tríceps con Polea Alta',      'triceps',     7),
         ],
         'dia_5': [
             ('Curl con Barra Z',                           'biceps',      4),
             ('Curl Araña',                                 'biceps',      4),
-            ('Jalón al Pecho',                             'espalda',     7),
-            ('Remo pecho apoyado',                         'espalda',     7),
+            ('Jalón al Pecho',                             'espalda',     6),
+            ('Remo pecho apoyado',                         'espalda',     6),
             ('Machine Shoulder Press',                     'hombros',     5),
             ('Press Arnold',                               'hombros',     5),
             ('Encogimientos con Barra',                    'trapecios',   3),
@@ -173,20 +166,21 @@ class TestCaracterizacionDavid(TestCase):
         ],
     }
 
-    # Post-X.7: 8/12 grupos en freq=2. pecho/tríceps/isquios/antebrazos en freq=1.
+    # Post fix presupuesto real + reducción vol_fin: 4/12 grupos en freq=2
+    # (biceps, espalda, hombros, trapecios); resto freq=1.
     RESUMEN_ESPERADO = {
-        'antebrazos': {'freq': 1, 'series': 10},
+        'antebrazos': {'freq': 1, 'series':  8},
         'biceps':     {'freq': 2, 'series': 16},
-        'core':       {'freq': 2, 'series': 16},
-        'cuadriceps': {'freq': 2, 'series': 28},
-        'espalda':    {'freq': 2, 'series': 28},
-        'gemelos':    {'freq': 2, 'series': 16},
-        'gluteos':    {'freq': 2, 'series': 24},
+        'core':       {'freq': 1, 'series': 12},
+        'cuadriceps': {'freq': 1, 'series': 20},
+        'espalda':    {'freq': 2, 'series': 24},
+        'gemelos':    {'freq': 1, 'series': 14},
+        'gluteos':    {'freq': 1, 'series': 18},
         'hombros':    {'freq': 2, 'series': 20},
-        'isquios':    {'freq': 1, 'series': 18},
+        'isquios':    {'freq': 1, 'series': 16},
         'pecho':      {'freq': 1, 'series': 20},
         'trapecios':  {'freq': 2, 'series': 12},
-        'triceps':    {'freq': 1, 'series': 16},
+        'triceps':    {'freq': 1, 'series': 14},
     }
 
     def setUp(self):
@@ -208,16 +202,19 @@ class TestCaracterizacionDavid(TestCase):
         self.assertEqual(resumen['biceps']['freq'], 2)
         self.assertEqual(resumen['biceps']['series'], 16)
 
-    def test_gluteos_freq2_post_x7(self):
-        """Post-X.7: glúteos en freq=2, 24 series (vol_efectivo mayor con vol_mult=1.2)."""
+    def test_gluteos_freq1_post_fix_presupuesto(self):
+        """
+        Tras el fix del presupuesto real del asignador + la reducción de
+        vol_fin, glúteos queda en freq=1 (18 series) — ya no tiene margen
+        para un 2º toque dentro del presupuesto real de la semana.
+        """
         resumen = _resumen(self._semana)
-        self.assertEqual(resumen['gluteos']['freq'],   2)
-        self.assertEqual(resumen['gluteos']['series'], 24)
+        self.assertEqual(resumen['gluteos']['freq'],   1)
+        self.assertEqual(resumen['gluteos']['series'], 18)
 
     def test_grupos_con_freq2_post_x7(self):
-        """Post-X.7: 8 grupos alcanzan freq=2 gracias al motor de asignación."""
-        grupos_freq2 = {'espalda', 'hombros', 'cuadriceps', 'biceps',
-                        'gluteos', 'gemelos', 'core', 'trapecios'}
+        """Post fix presupuesto real: 4 grupos alcanzan freq=2."""
+        grupos_freq2 = {'espalda', 'hombros', 'biceps', 'trapecios'}
         resumen = _resumen(self._semana)
         for grupo in grupos_freq2:
             with self.subTest(grupo=grupo):
@@ -317,21 +314,19 @@ class TestCaracterizacionIntermedio4d(TestCase):
         'dias_disponibles': 4,
     }
 
-    # Post-X.7 + fix presupuesto bisagra por variante: motor activo. Core y
-    # gemelos suben a freq=2. Cuadriceps queda en freq=1 (degradado). Isquios
-    # en freq=1 con sus 2 ejercicios completos (antes del fix del presupuesto
-    # de bisagra por variante, glúteos agotaba el cupo compartido y dejaba a
-    # isquios solo con Curl Femoral, 8 series).
+    # Post fix presupuesto real del asignador + reducción vol_fin (2026-07-20).
+    # Ningún grupo alcanza freq=2 en este perfil con el presupuesto real y el
+    # volumen reducido — 4 días es justo para cubrir los 12 grupos a freq=1.
     RESUMEN_ESPERADO = {
         'antebrazos': {'freq': 1, 'series':  6},
         'biceps':     {'freq': 1, 'series': 12},
-        'core':       {'freq': 2, 'series': 12},
+        'core':       {'freq': 1, 'series': 12},
         'cuadriceps': {'freq': 1, 'series': 20},
         'espalda':    {'freq': 1, 'series': 20},
-        'gemelos':    {'freq': 2, 'series': 12},
-        'gluteos':    {'freq': 2, 'series': 20},
-        'hombros':    {'freq': 2, 'series': 16},
-        'isquios':    {'freq': 1, 'series': 16},
+        'gemelos':    {'freq': 1, 'series': 12},
+        'gluteos':    {'freq': 1, 'series': 16},
+        'hombros':    {'freq': 1, 'series': 16},
+        'isquios':    {'freq': 1, 'series': 14},
         'pecho':      {'freq': 1, 'series': 20},
         'trapecios':  {'freq': 1, 'series': 10},
         'triceps':    {'freq': 1, 'series': 12},
@@ -344,17 +339,12 @@ class TestCaracterizacionIntermedio4d(TestCase):
     def test_resumen(self):
         self.assertEqual(_resumen(self._semana), self.RESUMEN_ESPERADO)
 
-    def test_gluteos_freq2_post_x7(self):
-        """Post-X.7: glúteos en freq=2, 20 series totales con motor activo."""
+    def test_ningun_grupo_pierde_ejercicios(self):
+        """Todos los grupos siguen recibiendo un volumen razonable (>0)."""
         resumen = _resumen(self._semana)
-        self.assertEqual(resumen['gluteos']['freq'],   2)
-        self.assertEqual(resumen['gluteos']['series'], 20)
-
-    def test_hombros_freq2_post_x7(self):
-        """Post-X.7: hombros en freq=2, 16 series (motor lo asigna dos veces)."""
-        resumen = _resumen(self._semana)
-        self.assertEqual(resumen['hombros']['freq'],   2)
-        self.assertEqual(resumen['hombros']['series'], 16)
+        for grupo, stats in resumen.items():
+            with self.subTest(grupo=grupo):
+                self.assertGreater(stats['series'], 0)
 
 
 # ---------------------------------------------------------------------------
@@ -375,20 +365,20 @@ class TestCaracterizacionAvanzado6d(TestCase):
         'dias_disponibles': 6,
     }
 
-    # Post-X.7: motor activo. biceps=3/18 (vol_efectivo=18 con vol_mult=1.2,
-    # ceil(18/8)=3), antebrazos=2/12 (vol_efectivo=9, ceil(9/8)=2),
-    # triceps=1/16 (degradado desde freq=2 deseada por presupuesto).
+    # Post fix presupuesto real del asignador + reducción vol_fin (2026-07-20).
+    # Solo biceps/core/trapecios alcanzan freq=2 — el resto queda en freq=1
+    # con el presupuesto real y el volumen reducido.
     RESUMEN_ESPERADO = {
-        'antebrazos': {'freq': 2, 'series': 12},
-        'biceps':     {'freq': 3, 'series': 18},
+        'antebrazos': {'freq': 1, 'series': 10},
+        'biceps':     {'freq': 2, 'series': 16},
         'core':       {'freq': 2, 'series': 16},
-        'cuadriceps': {'freq': 2, 'series': 28},
-        'espalda':    {'freq': 2, 'series': 28},
-        'gemelos':    {'freq': 2, 'series': 20},
-        'gluteos':    {'freq': 2, 'series': 24},
-        'hombros':    {'freq': 2, 'series': 20},
-        'isquios':    {'freq': 2, 'series': 20},
-        'pecho':      {'freq': 2, 'series': 24},
+        'cuadriceps': {'freq': 1, 'series': 20},
+        'espalda':    {'freq': 1, 'series': 20},
+        'gemelos':    {'freq': 1, 'series': 16},
+        'gluteos':    {'freq': 1, 'series': 20},
+        'hombros':    {'freq': 1, 'series': 16},
+        'isquios':    {'freq': 1, 'series': 20},
+        'pecho':      {'freq': 1, 'series': 20},
         'trapecios':  {'freq': 2, 'series': 12},
         'triceps':    {'freq': 1, 'series': 16},
     }
@@ -400,19 +390,11 @@ class TestCaracterizacionAvanzado6d(TestCase):
     def test_resumen(self):
         self.assertEqual(_resumen(self._semana), self.RESUMEN_ESPERADO)
 
-    def test_grupos_grandes_freq_2(self):
-        """Post-X.7: grupos grandes (pecho, espalda, cuadriceps, isquios) en freq=2."""
+    def test_grupos_pequenos_freq_2(self):
+        """Post fix presupuesto real: biceps/core/trapecios en freq=2 en 6 días."""
         resumen = _resumen(self._semana)
-        for grupo in ('pecho', 'espalda', 'cuadriceps', 'isquios'):
+        for grupo in ('biceps', 'core', 'trapecios'):
             self.assertEqual(resumen[grupo]['freq'], 2, f"{grupo} debería ser freq=2 en 6 días")
-
-    def test_biceps_freq3_post_x7(self):
-        """
-        Post-X.7: bíceps sube a freq=3 en avanzado/6d.
-        vol_efectivo = int(min(15 × 1.2, 18)) = 18; ceil(18/8) = 3.
-        """
-        resumen = _resumen(self._semana)
-        self.assertEqual(resumen['biceps']['freq'], 3)
 
     def test_techo_20_series_por_grupo_por_dia(self):
         """
@@ -453,7 +435,7 @@ class TestCaracterizacionAvanzado3d(TestCase):
     RESUMEN_ESPERADO = {
         'antebrazos': {'freq': 1, 'series': 10},
         'biceps':     {'freq': 1, 'series': 16},
-        'core':       {'freq': 1, 'series': 16},
+        'core':       {'freq': 1, 'series': 14},
         'cuadriceps': {'freq': 1, 'series': 20},
         'espalda':    {'freq': 1, 'series': 20},
         'gemelos':    {'freq': 1, 'series': 16},
@@ -509,18 +491,17 @@ class TestCaracterizacionNovato6d(TestCase):
         'dias_disponibles': 6,
     }
 
-    # Post-X.7: motor activo. core=2/12 (nuevo), triceps=1/10 (degradado),
-    # trapecios=1/6 (degradado).
+    # Post fix presupuesto real + reducción vol_fin (2026-07-20).
     RESUMEN_ESPERADO = {
         'antebrazos': {'freq': 1, 'series':  6},
-        'biceps':     {'freq': 2, 'series': 12},
-        'core':       {'freq': 2, 'series': 12},
+        'biceps':     {'freq': 1, 'series': 10},
+        'core':       {'freq': 1, 'series': 10},
         'cuadriceps': {'freq': 2, 'series': 16},
         'espalda':    {'freq': 2, 'series': 16},
-        'gemelos':    {'freq': 2, 'series': 12},
-        'gluteos':    {'freq': 2, 'series': 12},
+        'gemelos':    {'freq': 1, 'series': 10},
+        'gluteos':    {'freq': 1, 'series': 12},
         'hombros':    {'freq': 2, 'series': 12},
-        'isquios':    {'freq': 2, 'series': 12},
+        'isquios':    {'freq': 1, 'series': 12},
         'pecho':      {'freq': 2, 'series': 16},
         'trapecios':  {'freq': 1, 'series':  6},
         'triceps':    {'freq': 1, 'series': 10},
@@ -565,21 +546,19 @@ class TestCaracterizacionIntermedio5d(TestCase):
         'dias_disponibles': 5,
     }
 
-    # Post-X.7: espalda=2/24, core=2/12, cuadriceps=2/20, biceps=2/12,
-    # gemelos=2/12, gluteos=2/20, hombros=2/16, trapecios=2/12.
-    # pecho/triceps/isquios/antebrazos en freq=1.
+    # Post fix presupuesto real + reducción vol_fin (2026-07-20).
     RESUMEN_ESPERADO = {
         'antebrazos': {'freq': 1, 'series':  6},
         'biceps':     {'freq': 2, 'series': 12},
         'core':       {'freq': 2, 'series': 12},
-        'cuadriceps': {'freq': 2, 'series': 20},
+        'cuadriceps': {'freq': 1, 'series': 20},
         'espalda':    {'freq': 2, 'series': 24},
         'gemelos':    {'freq': 2, 'series': 12},
-        'gluteos':    {'freq': 2, 'series': 20},
+        'gluteos':    {'freq': 1, 'series': 16},
         'hombros':    {'freq': 2, 'series': 16},
-        'isquios':    {'freq': 1, 'series': 16},
+        'isquios':    {'freq': 1, 'series': 14},
         'pecho':      {'freq': 1, 'series': 20},
-        'trapecios':  {'freq': 2, 'series': 12},
+        'trapecios':  {'freq': 1, 'series': 10},
         'triceps':    {'freq': 1, 'series': 12},
     }
 
@@ -678,15 +657,20 @@ class TestX7MotorConectado(TestCase):
         self.assertEqual(resumen['biceps']['freq'], 2,
                          "Si freq=1, el motor no está activo (DISTRIBUCION_DIAS fallback)")
 
-    def test_motor_activo_core_aparece_multiples_dias(self):
+    def test_motor_activo_suma_frecuencias_mayor_que_estatico(self):
         """
-        DISTRIBUCION_DIAS[5] ponía core solo en dia_5 (una vez). Con el motor,
-        core aparece en freq=2 para david. Confirma motor activo.
+        Con DISTRIBUCION_DIAS[5] (Body Part Split), la suma de frecuencias de
+        los 12 grupos es siempre 12 (freq=1 cada uno). Con el motor activo,
+        al menos un grupo alcanza freq=2, así que la suma total debe ser >12.
+        Confirma que el motor está conectado y no el fallback estático.
         """
         semana = self._semana_david()
         resumen = _resumen(semana)
-        self.assertEqual(resumen['core']['freq'], 2,
-                         "core debería estar en 2 días con motor activo")
+        suma_frecuencias = sum(v['freq'] for v in resumen.values())
+        self.assertGreater(
+            suma_frecuencias, 12,
+            "Suma de frecuencias = 12 indicaría DISTRIBUCION_DIAS (fallback), no el motor"
+        )
 
     def test_fallback_asignacion_imposible(self):
         """

@@ -213,14 +213,14 @@ class TestX2GluteoHipThrustMismoDia(TestCase):
             f"Hip Thrust no encontrado. Ejercicios de glúteos: {nombres}"
         )
 
-    def test_gluteos_veinte_cuatro_series(self):
+    def test_gluteos_dieciocho_series(self):
         """
-        Post-X.7: glúteos en freq=2 (dia_1 y dia_3). Cada día 2 ejercicios
-        acotados por GestorFatiga (grandes≤10/ejercicio). Con vol_dia=12/día
-        y 2 ejercicios: ceil(12/2)=6 series/ejercicio. Total = 6×2×2 = 24.
+        Post fix presupuesto real del asignador + reducción vol_fin
+        (2026-07-20): glúteos queda en freq=1 con sus 2 ejercicios completos,
+        18 series totales.
         """
         total = sum(e['series'] for e in self.gluteos_ejs)
-        self.assertEqual(total, 24, f"Total series glúteos: {total}, esperado: 24 (freq=2)")
+        self.assertEqual(total, 18, f"Total series glúteos: {total}, esperado: 18")
 
     def test_hip_thrust_es_primer_ejercicio_gluteos(self):
         """Hip Thrust (compuesto_principal) debe ser el primer ejercicio de glúteos."""
