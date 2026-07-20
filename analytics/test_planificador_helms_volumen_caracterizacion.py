@@ -117,70 +117,75 @@ class TestCaracterizacionDavid(TestCase):
         'dias_disponibles': 5,
     }
 
-    # Estructura completa capturada 2026-07-20 (post-X.7 + fix presupuesto real
-    # del asignador + reducción de vol_fin en bloques de hipertrofia, ver
-    # generador.py). bloque0 ("Hipertrofia — Acumulación") volumen_multiplicador
-    # bajó de 1.2 a 1.05.
+    # Estructura completa capturada 2026-07-20 tras anclar objetivo='general'
+    # al MEV (filosofía de volumen moderado, "entrenar para la vida" —
+    # decisión explícita del usuario, ver volumen/calculadora.py:_MULT_OBJETIVO).
     ESTRUCTURA_ESPERADA = {
         'dia_1': [
-            ('Crunch en Polea (Cable Crunch)',             'core',        6),
-            ('Pallof Press',                               'core',        6),
-            ('Sentadilla Hack',                            'cuadriceps', 10),
-            ('Prensa de Piernas',                          'cuadriceps', 10),
+            ('Sentadilla Hack',                            'cuadriceps',  4),
+            ('Prensa de Piernas',                          'cuadriceps',  4),
+            ('Elevación de Gemelos de Pie (Máquina)',      'gemelos',     3),
+            ('Elevación de Gemelos Sentado (Máquina)',     'gemelos',     3),
+            ('Hip Thrust con Barra',                       'gluteos',     3),
+            ('Abducción de Cadera en Máquina',             'gluteos',     3),
+            ('Press Francés con Barra Z',                  'triceps',     3),
+            ('Extensiones de Tríceps con Polea Alta',      'triceps',     3),
         ],
         'dia_2': [
-            ('Aguante en Barra (Dead Hang)',                'antebrazos',  4),
-            ('Farmer Walk (Paseo del Granjero)',            'antebrazos',  4),
-            ('Curl con Barra Z',                           'biceps',      4),
-            ('Curl Araña',                                 'biceps',      4),
-            ('Jalón al Pecho',                             'espalda',     6),
-            ('Remo pecho apoyado',                         'espalda',     6),
-            ('Machine Shoulder Press',                     'hombros',     5),
-            ('Press Arnold',                               'hombros',     5),
+            ('Aguante en Barra (Dead Hang)',                'antebrazos',  3),
+            ('Farmer Walk (Paseo del Granjero)',            'antebrazos',  3),
+            ('Curl con Barra Z',                           'biceps',      3),
+            ('Curl Araña',                                 'biceps',      3),
+            ('Jalón al Pecho',                             'espalda',     4),
+            ('Remo pecho apoyado',                         'espalda',     4),
+            ('Machine Shoulder Press',                     'hombros',     3),
+            ('Press Arnold',                               'hombros',     3),
         ],
         'dia_3': [
-            ('Hip Thrust con Barra',                       'gluteos',     9),
-            ('Abducción de Cadera en Máquina',             'gluteos',     9),
-            ('Peso Muerto Rumano',                         'isquios',     8),
-            ('Curl Femoral Tumbado',                       'isquios',     8),
-            ('Encogimientos con Barra',                    'trapecios',   3),
-            ('Farmer Walk (Paseo del Granjero)',            'trapecios',   3),
+            ('Crunch en Polea (Cable Crunch)',             'core',        4),
+            ('Pallof Press',                               'core',        4),
+            ('Hip Thrust con Barra',                       'gluteos',     3),
+            ('Abducción de Cadera en Máquina',             'gluteos',     3),
+            ('Peso Muerto Rumano',                         'isquios',     6),
+            ('Curl Femoral Tumbado',                       'isquios',     6),
         ],
         'dia_4': [
-            ('Elevación de Gemelos de Pie (Máquina)',      'gemelos',     7),
-            ('Elevación de Gemelos Sentado (Máquina)',     'gemelos',     7),
-            ('Convergent Machine Press',                   'pecho',      10),
-            ('Press Cerrado en Banca',                     'pecho',      10),
-            ('Press Francés con Barra Z',                  'triceps',     7),
-            ('Extensiones de Tríceps con Polea Alta',      'triceps',     7),
+            ('Sentadilla Hack',                            'cuadriceps',  4),
+            ('Prensa de Piernas',                          'cuadriceps',  4),
+            ('Elevación de Gemelos de Pie (Máquina)',      'gemelos',     3),
+            ('Elevación de Gemelos Sentado (Máquina)',     'gemelos',     3),
+            ('Convergent Machine Press',                   'pecho',       7),
+            ('Press Cerrado en Banca',                     'pecho',       7),
+            ('Press Francés con Barra Z',                  'triceps',     3),
+            ('Extensiones de Tríceps con Polea Alta',      'triceps',     3),
         ],
         'dia_5': [
-            ('Curl con Barra Z',                           'biceps',      4),
-            ('Curl Araña',                                 'biceps',      4),
-            ('Jalón al Pecho',                             'espalda',     6),
-            ('Remo pecho apoyado',                         'espalda',     6),
-            ('Machine Shoulder Press',                     'hombros',     5),
-            ('Press Arnold',                               'hombros',     5),
-            ('Encogimientos con Barra',                    'trapecios',   3),
-            ('Farmer Walk (Paseo del Granjero)',            'trapecios',   3),
+            ('Curl con Barra Z',                           'biceps',      3),
+            ('Curl Araña',                                 'biceps',      3),
+            ('Jalón al Pecho',                             'espalda',     4),
+            ('Remo pecho apoyado',                         'espalda',     4),
+            ('Machine Shoulder Press',                     'hombros',     3),
+            ('Press Arnold',                               'hombros',     3),
+            ('Encogimientos con Barra',                    'trapecios',   4),
+            ('Farmer Walk (Paseo del Granjero)',            'trapecios',   4),
         ],
     }
 
-    # Post fix presupuesto real + reducción vol_fin: 4/12 grupos en freq=2
-    # (biceps, espalda, hombros, trapecios); resto freq=1.
+    # Objetivo 'general' anclado al MEV (2026-07-20): volumen moderado en
+    # todos los grupos, ninguno prioriza sobre otro.
     RESUMEN_ESPERADO = {
-        'antebrazos': {'freq': 1, 'series':  8},
-        'biceps':     {'freq': 2, 'series': 16},
-        'core':       {'freq': 1, 'series': 12},
-        'cuadriceps': {'freq': 1, 'series': 20},
-        'espalda':    {'freq': 2, 'series': 24},
-        'gemelos':    {'freq': 1, 'series': 14},
-        'gluteos':    {'freq': 1, 'series': 18},
-        'hombros':    {'freq': 2, 'series': 20},
-        'isquios':    {'freq': 1, 'series': 16},
-        'pecho':      {'freq': 1, 'series': 20},
-        'trapecios':  {'freq': 2, 'series': 12},
-        'triceps':    {'freq': 1, 'series': 14},
+        'antebrazos': {'freq': 1, 'series':  6},
+        'biceps':     {'freq': 2, 'series': 12},
+        'core':       {'freq': 1, 'series':  8},
+        'cuadriceps': {'freq': 2, 'series': 16},
+        'espalda':    {'freq': 2, 'series': 16},
+        'gemelos':    {'freq': 2, 'series': 12},
+        'gluteos':    {'freq': 2, 'series': 12},
+        'hombros':    {'freq': 2, 'series': 12},
+        'isquios':    {'freq': 1, 'series': 12},
+        'pecho':      {'freq': 1, 'series': 14},
+        'trapecios':  {'freq': 1, 'series':  8},
+        'triceps':    {'freq': 2, 'series': 12},
     }
 
     def setUp(self):
@@ -197,24 +202,24 @@ class TestCaracterizacionDavid(TestCase):
         self.assertEqual(set(self._semana.keys()), {'dia_1', 'dia_2', 'dia_3', 'dia_4', 'dia_5'})
 
     def test_biceps_freq2_post_x7(self):
-        """Post-X.7: bíceps sube a freq=2 — el motor lo asigna dos veces."""
+        """Post objetivo='general' anclado a MEV: bíceps en freq=2, 12 series."""
         resumen = _resumen(self._semana)
         self.assertEqual(resumen['biceps']['freq'], 2)
-        self.assertEqual(resumen['biceps']['series'], 16)
+        self.assertEqual(resumen['biceps']['series'], 12)
 
-    def test_gluteos_freq1_post_fix_presupuesto(self):
+    def test_gluteos_freq2_volumen_moderado(self):
         """
-        Tras el fix del presupuesto real del asignador + la reducción de
-        vol_fin, glúteos queda en freq=1 (18 series) — ya no tiene margen
-        para un 2º toque dentro del presupuesto real de la semana.
+        Con volumen moderado (objetivo='general' anclado a MEV), glúteos
+        cabe en freq=2 con 12 series totales — mucho más bajo que cuando
+        el volumen apuntaba al rango alto.
         """
         resumen = _resumen(self._semana)
-        self.assertEqual(resumen['gluteos']['freq'],   1)
-        self.assertEqual(resumen['gluteos']['series'], 18)
+        self.assertEqual(resumen['gluteos']['freq'],   2)
+        self.assertEqual(resumen['gluteos']['series'], 12)
 
     def test_grupos_con_freq2_post_x7(self):
-        """Post fix presupuesto real: 4 grupos alcanzan freq=2."""
-        grupos_freq2 = {'espalda', 'hombros', 'biceps', 'trapecios'}
+        """Con volumen moderado, 7 grupos alcanzan freq=2 (más espacio libre por día)."""
+        grupos_freq2 = {'biceps', 'cuadriceps', 'espalda', 'gemelos', 'gluteos', 'hombros', 'triceps'}
         resumen = _resumen(self._semana)
         for grupo in grupos_freq2:
             with self.subTest(grupo=grupo):

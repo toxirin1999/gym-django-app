@@ -84,6 +84,12 @@ _MULT_OBJETIVO: Dict[str, float] = {
     'fuerza': 0.85,
     'potencia': 0.70,
     'resistencia': 1.25,
+    # 'general' = filosofía de volumen moderado ("entrenar para la vida",
+    # no maximizar cada gramo de músculo) — ancla el resultado justo por
+    # encima del MEV de cada grupo (mínimo científico efectivo) en vez de
+    # caer en el neutro 1.0x, que empujaba el volumen igual que fuerza_hipertrofia.
+    # 0.65 da un margen pequeño sobre el ratio MEV=0.60*vol_base.
+    'general': 0.65,
 }
 
 

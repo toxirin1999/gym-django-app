@@ -68,9 +68,14 @@ class TestIsquiosNoAhogadoPorPresupuestoBisagra(TestCase):
         )
 
     def test_isquios_no_capado_a_la_mitad(self):
+        """
+        Con objetivo='general' anclado al MEV (2026-07-20, volumen moderado),
+        el techo de referencia baja de 15 a 10 — sigue siendo muy superior a
+        los 4-5 series que daría el bug real (solo 1 ejercicio, Curl Femoral).
+        """
         total = sum(e['series'] for e in self._isquios_ejs)
         self.assertGreater(
-            total, 15,
+            total, 10,
             f"Isquios: {total} series — sigue ahogado por el presupuesto compartido "
             f"de bisagra (antes del fix: 9)."
         )
