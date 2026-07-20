@@ -10,7 +10,9 @@ import math
 
 logger = logging.getLogger(__name__)
 
-from .config import DISTRIBUCION_DIAS, VOLUMENES_BASE, TEMPOS, REP_RANGE_AJUSTE_PEQUENOS, GRUPOS_GRANDES
+from .config import DISTRIBUCION_DIAS, TEMPOS, REP_RANGE_AJUSTE_PEQUENOS, GRUPOS_GRANDES, TOPE_SERIES_POR_EJERCICIO, VOLUMENES_BASE
+from .distribucion.asignador import GrupoParaAsignar, asignar_semana, AsignacionImposibleError
+from .volumen.calculadora import calcular_volumen_optimo, CalculadoraVolumen
 from .models.perfil_cliente import PerfilCliente
 from .database.ejercicios import EJERCICIOS_DATABASE
 from .periodizacion.generador import GeneradorPeriodizacion
@@ -181,8 +183,8 @@ class PlanificadorHelms:
         rep_range = bloque.get('rep_range', '8-12')
 
         nivel = self.perfil.calcular_nivel_experiencia()
-        volumen_semanal_base = VOLUMENES_BASE.get(nivel, VOLUMENES_BASE['principiante'])
-        distribucion_volumen = DISTRIBUCION_DIAS.get(self.dias_disponibles, DISTRIBUCION_DIAS[4])
+        objetivo = self.perfil.objetivo_principal
+        factor_recuperacion = self.perfil.calcular_factor_recuperacion()
         # Bug 8 fix: pasar objeto cliente para que BioContext filtre ejercicios con lesiones activas
         if not hasattr(self, '_cliente_obj'):
             try:
@@ -197,6 +199,58 @@ class PlanificadorHelms:
         patron_manager = PatronManager(fase)
         semana_planificada = {}
 
+        # X.4: leer max_ej_por_grupo desde SelectorEjercicios como fuente única
+        # (en lugar del [:2] literal que vivía en paralelo al valor de selector.py).
+        reglas_fase = SelectorEjercicios.obtener_reglas_por_fase(fase)
+        n_ejercicios_grupo = reglas_fase['max_ej_por_grupo']
+        tope_por_ejercicio = TOPE_SERIES_POR_EJERCICIO.get(fase, 4)
+
+        # X.7: construir GrupoParaAsignar para cada grupo activo y llamar al motor.
+        # El volumen efectivo (vol_base × vol_mult, acotado a MRV) determina la
+        # frecuencia deseada. Si el motor lanza AsignacionImposibleError,
+        # DISTRIBUCION_DIAS es el fallback — se loggea para detectar perfiles que
+        # saturan el motor en producción.
+        grupos_para_asignar = {}
+        for grupo in VOLUMENES_BASE.get(nivel, VOLUMENES_BASE['avanzado']):
+            vol_base_grupo = calcular_volumen_optimo(grupo, nivel, objetivo, factor_recuperacion)
+            if vol_base_grupo <= 0:
+                continue
+            candidatos_grupo = ejercicios_bloque.get(grupo, [])
+            if not candidatos_grupo:
+                continue
+            mrv_g = CalculadoraVolumen.calcular_volumen_maximo_adaptativo(grupo, nivel)
+            vol_efectivo = int(min(vol_base_grupo * vol_mult, mrv_g))
+            if vol_efectivo <= 0:
+                continue
+            primer_ej = candidatos_grupo[0]
+            patron_dom = primer_ej.get('patron') or patron_manager.obtener_patron_ejercicio(primer_ej['nombre'])
+            variante = (
+                PatronManager.clasificar_variante_bisagra(primer_ej['nombre'])
+                if patron_dom == 'bisagra'
+                else None
+            )
+            grupos_para_asignar[grupo] = GrupoParaAsignar(
+                nombre=grupo,
+                volumen_objetivo=vol_efectivo,
+                mev=CalculadoraVolumen.calcular_volumen_mantenimiento(grupo, nivel),
+                es_grande=grupo in GRUPOS_GRANDES,
+                patron_dominante=patron_dom,
+                variante_peso=variante,
+            )
+
+        try:
+            resultado = asignar_semana(grupos_para_asignar, self.dias_disponibles)
+            distribucion_volumen = resultado.asignacion
+            frecuencia_map: dict | None = resultado.frecuencia_efectiva
+        except AsignacionImposibleError as exc:
+            logger.warning(
+                "Motor de asignación falló (perfil id=%s, dias=%d): %s — "
+                "usando DISTRIBUCION_DIAS como fallback.",
+                self.perfil.id, self.dias_disponibles, exc,
+            )
+            distribucion_volumen = DISTRIBUCION_DIAS.get(self.dias_disponibles, DISTRIBUCION_DIAS[4])
+            frecuencia_map = None
+
         orden_dias = sorted(distribucion_volumen.keys())
         for idx_dia, dia_key in enumerate(orden_dias):
             gestor_fatiga = GestorFatiga(fase)
@@ -204,20 +258,29 @@ class PlanificadorHelms:
 
             grupos_del_dia = distribucion_volumen[dia_key]
             for grupo in grupos_del_dia:
-                vol_base_grupo = volumen_semanal_base.get(grupo, 0)
-                frecuencia = sum(1 for d in distribucion_volumen.values() if grupo in d)
-                vol_dia = math.ceil((vol_base_grupo / frecuencia) * vol_mult) if frecuencia > 0 else 0
+                volumen_objetivo_grupo = calcular_volumen_optimo(grupo, nivel, objetivo, factor_recuperacion)
+                frecuencia = (
+                    frecuencia_map.get(grupo, 1)
+                    if frecuencia_map is not None
+                    else sum(1 for d in distribucion_volumen.values() if grupo in d)
+                )
+                mrv_grupo = CalculadoraVolumen.calcular_volumen_maximo_adaptativo(grupo, nivel)
+                vol_ajustado_bloque = volumen_objetivo_grupo * vol_mult
+                # En descarga (vol_mult < 1.0), el resultado puede caer bajo MEV intencionalmente
+                # — no reintroducir el suelo de MEV: el objetivo de la descarga es disipar fatiga,
+                # no mantener el estímulo mínimo de adaptación.
+                vol_dia = math.ceil(min(vol_ajustado_bloque, mrv_grupo) / frecuencia) if frecuencia > 0 else 0
                 if vol_dia <= 0: continue
 
                 candidatos = ejercicios_bloque.get(grupo, [])
                 if not candidatos: continue
 
-                for ej in candidatos[:2]:
+                for ej in candidatos[:n_ejercicios_grupo]:
                     nombre = ej['nombre']
                     patron = ej['patron'] or patron_manager.obtener_patron_ejercicio(nombre)
                     tipo_ej = self._determinar_tipo_ejercicio_completo(grupo, nombre)
 
-                    if patron == 'bisagra' and not patron_manager.puede_usar_bisagra(idx_dia):
+                    if patron == 'bisagra' and not patron_manager.puede_usar_bisagra(idx_dia, nombre):
                         continue
 
                     # Ajustar rep_range según tamaño del músculo (evidencia: pequeños → reps más altas)
@@ -227,7 +290,7 @@ class PlanificadorHelms:
                     )
 
                     es_pesado = (int((rep_range_ej or '8-12').split('-')[0]) <= 6 or rpe_objetivo >= 9)
-                    series_objetivo = max(2, min(4, math.ceil(vol_dia / len(candidatos[:2]))))
+                    series_objetivo = max(2, min(tope_por_ejercicio, math.ceil(vol_dia / len(candidatos[:n_ejercicios_grupo]))))
                     series_ajustadas = gestor_fatiga.ajustar_series_por_limite(
                         nombre, patron, tipo_ej, series_objetivo, es_pesado, grupo=grupo
                     )
@@ -305,7 +368,7 @@ class PlanificadorHelms:
                         },
                     })
 
-                    patron_manager.registrar_uso_patron(patron, idx_dia, grupo)
+                    patron_manager.registrar_uso_patron(patron, idx_dia, grupo, nombre)
                     gestor_fatiga.registrar_fatiga(patron, series_ajustadas, es_pesado)
 
             if ejercicios_dia:
