@@ -5373,7 +5373,7 @@
                     ${exerciseRowsHtml}
                 </div>
 
-                <a href="{% url 'entrenos:briefing_entrenamiento' cliente.id %}?fecha=${fecha}&rutina_nombre=${encodeURIComponent(nombreRutina)}&ejercicios=${encodeURIComponent(JSON.stringify(ejercicios))}"
+                <a href="{% url 'entrenos:briefing_entrenamiento' cliente.id %}?fecha=${fecha}&rutina_nombre=${encodeURIComponent(nombreRutina)}"
                    class="action-button">
                     <i class="fas fa-play"></i>
                     Empezar Entrenamiento
@@ -5974,7 +5974,6 @@
             const params = new URLSearchParams({
                 fecha: fechaSeleccionada,
                 rutina_nombre: entrenamiento.nombre_rutina || '',
-                ejercicios: JSON.stringify(entrenamiento.ejercicios || [])
             });
             if (btnEmpezar) btnEmpezar.href = `${urlModal}?${params.toString()}`;
 

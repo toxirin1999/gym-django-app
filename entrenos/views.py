@@ -1,3 +1,4 @@
+import secrets
 from datetime import date, timedelta
 from django.core.cache import cache
 from django.views.decorators.http import require_POST, require_GET
@@ -3516,8 +3517,25 @@ def vista_entrenamiento_activo(request, cliente_id):
         rutina_nombre = request.GET.get('rutina_nombre') or ''
         sesion_programada_id = request.GET.get('sesion_programada_id', '').strip()
         modo_reducido = request.GET.get('modo_reducido') == '1'
-        ejercicios_planificados_json = request.GET.get('ejercicios', '[]')
-        ejercicios_planificados = json.loads(ejercicios_planificados_json)
+
+        # Salto 2: recuperar ejercicios del cache de transporte (fix 414 URI Too Large).
+        # El briefing los guardó con un token corto en vez de serializar el JSON en la URL.
+        # Fallback 1 (expiró TTL >15 min o link directo): reconstruir determinista desde fecha.
+        # Fallback 2 (tests / llamadas programáticas): leer 'ejercicios' de GET si se proveyó —
+        #   el test client de Django no genera URIs reales, así que no sufre el 414.
+        _token = request.GET.get('ejercicios_token', '')
+        ejercicios_planificados = None
+        if _token:
+            ejercicios_planificados = cache.get(f"transporte_ejercicios_mod_{_token}")
+        if ejercicios_planificados is None:
+            _ejercicios_get = request.GET.get('ejercicios', '')
+            if _ejercicios_get:
+                try:
+                    ejercicios_planificados = json.loads(_ejercicios_get)
+                except Exception:
+                    ejercicios_planificados = None
+        if ejercicios_planificados is None:
+            ejercicios_planificados = _calcular_ejercicios_dia(cliente_id, fecha_obj)
 
         # --- BIO-BRIDGE: VALIDACIÓN EN TIEMPO REAL Y AJUSTE DE CARGA ---
         from core.bio_context import BioContextProvider
@@ -5321,6 +5339,129 @@ def ajax_obtener_entrenamiento_dia(request, cliente_id):
         return JsonResponse({'error': str(e)}, status=500)
 
 
+def _calcular_ejercicios_dia(cliente_id, fecha_obj):
+    """
+    Recalcula ejercicios del día aplicando sustituciones bio y normalización.
+    Equivalente determinista del procesamiento en ajax_obtener_entrenamientos_mes
+    para una fecha concreta. Usado como fallback cuando el cache de transporte
+    ha expirado (TTL 900s) o el usuario llegó por enlace directo sin pasar antes
+    por el calendario.
+    """
+    from clientes.models import Cliente as _Cliente
+    from analytics.planificador_helms_completo import PlanificadorHelms, crear_perfil_desde_cliente
+    from analytics.sistema_educacion_helms import agregar_educacion_a_plan
+    from .serializador_plan import serializar_plan_para_sesion
+    from core.bio_context import BioContextProvider
+    from analytics.planificador_helms.ejercicios.selector import SelectorEjercicios
+    from analytics.planificador_helms.database.ejercicios import EJERCICIOS_DATABASE
+    from datetime import datetime as _datetime_inner, date as _date_inner
+
+    año = fecha_obj.year
+    _cache_key = f'plan_anual_{cliente_id}_{año}'
+    plan = cache.get(_cache_key)
+
+    if not plan:
+        try:
+            cliente_obj = _Cliente.objects.get(id=cliente_id)
+            perfil = crear_perfil_desde_cliente(cliente_obj)
+            perfil.maximos_actuales = cliente_obj.one_rm_data or {}
+            perfil.año_planificacion = año
+            planificador = PlanificadorHelms(perfil)
+            plan_original = planificador.generar_plan_anual()
+            plan = agregar_educacion_a_plan(plan_original)
+            if 'metadata' not in plan:
+                plan['metadata'] = {}
+            plan['metadata']['año_generacion'] = año
+            plan = serializar_plan_para_sesion(plan)
+            cache.set(_cache_key, plan, 1800)
+        except Exception:
+            logger.exception("_calcular_ejercicios_dia: error generando plan para cliente %s", cliente_id)
+            return []
+
+    entrenos_del_plan = plan.get('entrenos_por_fecha', {})
+    entrenamiento = None
+    for fecha_key, ent in entrenos_del_plan.items():
+        try:
+            if isinstance(fecha_key, _date_inner) and not isinstance(fecha_key, _datetime_inner):
+                k_obj = fecha_key
+            elif isinstance(fecha_key, _datetime_inner):
+                k_obj = fecha_key.date()
+            else:
+                k_obj = _datetime_inner.fromisoformat(str(fecha_key)).date()
+            if k_obj == fecha_obj:
+                entrenamiento = ent
+                break
+        except (ValueError, TypeError, AttributeError):
+            continue
+
+    if not isinstance(entrenamiento, dict):
+        return []
+
+    ejercicios = list(entrenamiento.get('ejercicios') or [])
+
+    try:
+        cliente_obj = _Cliente.objects.get(id=cliente_id)
+        bio_data = BioContextProvider.get_current_restrictions(cliente_obj)
+        restricted_tags = bio_data.get('tags', set())
+
+        if restricted_tags and isinstance(ejercicios, list):
+            fase_nombre_temp = 'hipertrofia'
+            try:
+                fase_nombre_temp = entrenamiento['nombre_rutina'].split(' - ')[1].lower().strip()
+            except (IndexError, AttributeError, KeyError):
+                pass
+
+            safe_replacements_cache = {}
+            for ej in ejercicios:
+                grupo = ej.get('grupo_muscular', '')
+                nombre = ej.get('nombre', '').lower()
+                ej_tags = set()
+                if grupo in EJERCICIOS_DATABASE:
+                    for cat in ['compuesto_principal', 'compuesto_secundario', 'aislamiento']:
+                        for e in EJERCICIOS_DATABASE[grupo].get(cat, []):
+                            if isinstance(e, dict) and e.get('nombre', '').lower() == nombre:
+                                ej_tags = set(e.get('risk_tags', []))
+                                break
+                        if ej_tags:
+                            break
+                if ej_tags.intersection(restricted_tags):
+                    if grupo not in safe_replacements_cache:
+                        safe_groups = SelectorEjercicios.seleccionar_ejercicios_para_bloque(
+                            numero_bloque=1,
+                            fase=fase_nombre_temp,
+                            cliente=cliente_obj
+                        )
+                        safe_replacements_cache[grupo] = safe_groups.get(grupo, [])
+                    safe_opts = safe_replacements_cache[grupo]
+                    if safe_opts:
+                        substitute = safe_opts[0]
+                        ej['nombre'] = substitute.get('nombre', ej['nombre'])
+                        ej['es_adaptado'] = True
+                        ej['explicacion_ejercicio'] = "🛡️ Adaptado por precaución biomecánica."
+    except Exception:
+        pass
+
+    def _norm(ej, idx):
+        out = dict(ej or {})
+        nombre = (out.get('nombre') or '').strip().lower()
+        out.setdefault('peso_recomendado_kg', out.get('peso_kg'))
+        out.setdefault('reps_objetivo', out.get('repeticiones'))
+        out.setdefault('form_id', f'ej_{idx}')
+        out.setdefault('rpe', out.get('rpe_objetivo'))
+        es_mancuerna = any(k in nombre for k in ['mancuerna', 'mancuernas', 'db '])
+        if es_mancuerna:
+            out.setdefault('peso_formato', 'por_mancuerna')
+            if 'peso_por_mancuerna_kg' not in out:
+                peso_total = out.get('peso_kg')
+                if isinstance(peso_total, (int, float)):
+                    out['peso_por_mancuerna_kg'] = round(peso_total / 2.0, 1)
+        else:
+            out.setdefault('peso_formato', 'total')
+        return out
+
+    return [_norm(ej, i) for i, ej in enumerate(ejercicios)]
+
+
 def ajax_obtener_entrenamientos_mes(request, cliente_id):
     """
     Vista AJAX que devuelve TODOS los entrenamientos de un mes.
@@ -5444,6 +5585,12 @@ def ajax_obtener_entrenamientos_mes(request, cliente_id):
                         entrenamiento['fase_css'] = f"fase-{fase_base}"
                     except (IndexError, AttributeError, KeyError):
                         entrenamiento['fase_css'] = "fase-default"
+
+                    # Cachear ejercicios procesados para transporte sin URL (fix 414).
+                    # La clave determinista permite que briefing_entrenamiento los
+                    # recupere sin serializar el JSON en la query string.
+                    _tk = f"transporte_ejercicios_dia_{cliente_id}_{fecha_obj.isoformat()}"
+                    cache.set(_tk, entrenamiento.get("ejercicios", []), 900)
 
                     # Almacenar usando la fecha en formato YYYY-MM-DD estricto
                     entrenamientos_mes[fecha_obj.isoformat()] = entrenamiento
@@ -8292,11 +8439,14 @@ def briefing_entrenamiento(request, cliente_id):
         estado_sistema = None
 
     rutina_nombre = request.GET.get('rutina_nombre', '')
-    ejercicios_json = request.GET.get('ejercicios', '[]')
-    try:
-        ejercicios = json.loads(ejercicios_json)
-    except Exception:
-        ejercicios = []
+
+    # Salto 1 → 2: leer ejercicios del cache de transporte (fix 414 URI Too Large).
+    # El calendario los guardó con clave determinista al procesar el mes AJAX.
+    # Fallback: _calcular_ejercicios_dia los reconstruye sin request si el TTL expiró.
+    _cache_key_dia = f"transporte_ejercicios_dia_{cliente_id}_{fecha_obj.isoformat()}"
+    ejercicios = cache.get(_cache_key_dia)
+    if ejercicios is None:
+        ejercicios = _calcular_ejercicios_dia(cliente_id, fecha_obj)
 
     from entrenos.services.briefing_service import get_briefing_gym
     from entrenos.services.plan_dinamico_service import aplicar_plan_dinamico
@@ -8317,14 +8467,17 @@ def briefing_entrenamiento(request, cliente_id):
             peso_trabajo, ej.get('usa_peso', True)
         )
 
-    # CTA apunta al plan modificado (no al original)
+    # Salto 2: guardar ejercicios modificados en cache con token corto (fix 414).
+    # El token reemplaza al JSON serializado en la query string hacia entrenamiento_activo.
+    _token = secrets.token_urlsafe(9)
+    cache.set(f"transporte_ejercicios_mod_{_token}", ejercicios_mod, 900)
+
     from django.urls import reverse
     import urllib.parse
-    ejercicios_mod_json = json.dumps(ejercicios_mod)
     params_dict = {
         'fecha': fecha_str or fecha_obj.strftime('%Y-%m-%d'),
         'rutina_nombre': rutina_nombre,
-        'ejercicios': ejercicios_mod_json,
+        'ejercicios_token': _token,
     }
     sesion_programada_id = request.GET.get('sesion_programada_id', '').strip()
     if sesion_programada_id:
