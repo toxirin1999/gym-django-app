@@ -243,10 +243,14 @@ EJERCICIOS_DATABASE = {
     # BÍCEPS
     # =========================
     'biceps': {
-        'compuesto_principal': [],
-        'compuesto_secundario': [
+        # Curl con Barra Z promueve a principal: permite carga más alta que
+        # cualquier curl con mancuerna y tiene buena estabilidad para progresar.
+        # Helms/Israetel lo consideran el movimiento base de flexión de codo.
+        'compuesto_principal': [
             {'nombre': 'Curl con Barra Z', 'tipo_progresion': 'peso_reps', 'patron': 'flexion_codo',
              'estabilidad': 'media', 'perfil': 'media', 'posicion': 'pie', 'cadena': 'abierta'},
+        ],
+        'compuesto_secundario': [
             {'nombre': 'Curl Araña', 'tipo_progresion': 'peso_reps', 'patron': 'flexion_codo', 'estabilidad': 'alta',
              'perfil': 'acortado', 'posicion': 'tumbado', 'cadena': 'abierta'},
             {'nombre': 'Curl Inclinado con Mancuernas', 'tipo_progresion': 'peso_reps', 'patron': 'flexion_codo',

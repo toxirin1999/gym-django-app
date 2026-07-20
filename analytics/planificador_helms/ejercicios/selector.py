@@ -222,6 +222,16 @@ class SelectorEjercicios:
                             'injury_zone': injury_zona,
                         }
 
+                # ── Fallback para grupos sin compuesto_principal catalogado ───
+                # Si pool_principal está vacío por diseño (no por lesión), promover
+                # el mejor secundario a ej1 para que el grupo pueda recibir 2 ejercicios.
+                # Esto es distinto a la sustitución bio-segura: aquí NO hay principal bloqueado,
+                # simplemente no existe ningún compuesto_principal para este grupo.
+                if not ej1 and not pool_principal:
+                    ej1 = pick_rotado(pool_secundario_safe, numero_bloque - 1)
+                    if not ej1:
+                        ej1 = pick_rotado(pool_aislamiento_safe, numero_bloque - 1)
+
                 # ── PROTOCOLO DE PIVOTAJE (Hot-Pivot Engine) ──
                 # Si no hay NADA seguro en ninguna categoría de este grupo muscular (bloqueo total)
                 if not ej1 and not pool_principal_safe and not pool_secundario_safe and not pool_aislamiento_safe and pool_principal:
@@ -297,6 +307,15 @@ class SelectorEjercicios:
                         }
                 else:
                     opciones2 = pool_secundario_safe + pool_aislamiento_safe
+                    # Excluir ej1 de opciones2 cuando ej1 vino de secundario/aislamiento
+                    # (caso de grupo sin compuesto_principal), para garantizar 2 ejercicios distintos.
+                    # Para grupos CON principal, ej1 nunca está en opciones2, filtro sin efecto.
+                    if ej1 is not None:
+                        ej1_nombre = extraer_nombre_ejercicio(ej1)
+                        opciones2 = [
+                            e for e in opciones2
+                            if extraer_nombre_ejercicio(e) != ej1_nombre
+                        ]
                     ej2 = pick_rotado(opciones2, numero_bloque - 1)
                     
                 if ej2 and (not ej1 or extraer_nombre_ejercicio(ej2) != extraer_nombre_ejercicio(ej1)):

@@ -32,7 +32,10 @@ class PatronManager:
     def __init__(self, fase: str = 'hipertrofia'):
         self.fase = fase.lower()
         self.estado_semana: Dict[str, Dict] = {
-            'bisagra': {'dias_usados': 0, 'ultimo_indice_dia': None},
+            'bisagra': {
+                'dias_usados_pesada': 0, 'dias_usados_ligera': 0,
+                'ultimo_indice_dia': None, 'ultima_variante': 'ligera',
+            },
             'empuje_vertical': {'dias_usados': 0, 'ultimo_indice_dia': None},
             'empuje_horizontal': {'dias_usados': 0, 'ultimo_indice_dia': None},
             'traccion_vertical': {'dias_usados': 0, 'ultimo_indice_dia': None},
@@ -105,36 +108,77 @@ class PatronManager:
 
         return ''
 
-    def puede_usar_bisagra(self, dia_index: int) -> bool:
+    def puede_usar_bisagra(self, dia_index: int, nombre_ejercicio: str = '') -> bool:
         """
         Verifica si se puede usar un patrón de bisagra en el día actual.
 
-        Reglas:
-          - No bisagra en días consecutivos (recuperación del SNC y lumbar).
-          - No superar el máximo de días de bisagra para esta fase.
+        Reglas (versión corregida X.2 + fix presupuesto por variante):
+          - Mismo día (diff=0): SIEMPRE permitido. Dos bisagras en la misma sesión
+            (ej. RDL isquios + Hip Thrust glúteos) es diseño de entrenamiento legítimo.
+            La restricción original (<=1) bloqueaba erróneamente este caso.
+          - Días adyacentes (diff=1): solo bloqueado si CUALQUIERA de las dos variantes
+            involucradas es 'pesada' (PM convencional/sumo — fatiga SNC/lumbar alta).
+            Dos variantes ligeras (RDL, Hip Thrust) en días consecutivos tienen
+            demanda sistémica baja y se permiten.
+          - Más de 1 día de distancia: siempre permitido.
+          - Presupuesto semanal (MAX_DIAS_BISAGRA): solo se aplica a variantes
+            'pesada'. Es un límite de fatiga SNC/lumbar real, y esa fatiga es la
+            que justifica capar cuántas veces por semana se puede hacer peso
+            muerto convencional/sumo. Las variantes 'ligera' NO cargan ese riesgo
+            sistémico, así que no deben competir por un presupuesto semanal
+            compartido con otro grupo distinto (isquios vs glúteos) — antes de
+            que la frecuencia fuera dinámica (X.6/X.7) esto nunca se notaba
+            porque cada grupo bisagra aparecía como máximo 1x/semana; con
+            frecuencia dinámica, un grupo con freq=2 podía agotar él solo el
+            presupuesto y dejar sin cupo al otro grupo bisagra, aunque su
+            ejercicio fuera igual de ligero y seguro.
         """
         info = self.estado_semana['bisagra']
+        variante_actual = (
+            self.clasificar_variante_bisagra(nombre_ejercicio)
+            if nombre_ejercicio else 'ligera'
+        )
 
-        # No en el mismo día ni en días adyacentes
-        if (
-                info['ultimo_indice_dia'] is not None
-                and abs(dia_index - info['ultimo_indice_dia']) <= 1
-        ):
-            return False
+        if info['ultimo_indice_dia'] is not None:
+            diff = abs(dia_index - info['ultimo_indice_dia'])
+            if diff == 1:
+                # Días adyacentes: bloquear solo si alguna variante es pesada
+                ultima_variante = info.get('ultima_variante', 'ligera')
+                if ultima_variante == 'pesada' or variante_actual == 'pesada':
+                    return False
+            # diff == 0: mismo día → siempre permitido (no aplicar restricción)
+            # diff > 1: no adyacente → siempre permitido
+
+        if variante_actual != 'pesada':
+            # Ligera: sin tope semanal, solo sujeta a la restricción de arriba.
+            return True
 
         max_bisagra = MAX_DIAS_BISAGRA.get(self.fase, MAX_DIAS_BISAGRA['hipertrofia'])
-        return info['dias_usados'] < max_bisagra
+        return info['dias_usados_pesada'] < max_bisagra
 
     def registrar_uso_patron(
             self,
             patron: str,
             dia_index: int,
             grupo: Optional[str] = None,
+            nombre_ejercicio: str = '',
     ) -> None:
         """Registra el uso de un patrón en un día específico."""
         if patron in self.estado_semana:
-            self.estado_semana[patron]['dias_usados'] += 1
             self.estado_semana[patron]['ultimo_indice_dia'] = dia_index
+            if patron == 'bisagra':
+                variante = (
+                    self.clasificar_variante_bisagra(nombre_ejercicio)
+                    if nombre_ejercicio else 'ligera'
+                )
+                # Guardar variante para que puede_usar_bisagra sepa si la última fue pesada
+                self.estado_semana['bisagra']['ultima_variante'] = variante
+                if variante == 'pesada':
+                    self.estado_semana['bisagra']['dias_usados_pesada'] += 1
+                else:
+                    self.estado_semana['bisagra']['dias_usados_ligera'] += 1
+            else:
+                self.estado_semana[patron]['dias_usados'] += 1
 
         if grupo:
             if grupo not in self.patrones_usados_por_grupo:

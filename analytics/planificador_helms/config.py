@@ -155,7 +155,25 @@ TOPES_SERIES = {
     'aislamiento': (2, 3)
 }
 
-LIMITE_DURO_SERIES = 4  # Nunca más de 4 series por ejercicio en hipertrofia
+LIMITE_DURO_SERIES = 4  # Código muerto — no se usa. El tope real es TOPE_SERIES_POR_EJERCICIO.
+
+# ============================================================
+# TOPE DE SERIES POR EJERCICIO SEGÚN FASE
+# ============================================================
+# Defensa en profundidad — un límite que casi nunca se activa.
+# El techo real lo pone GestorFatiga (LIMITES_SERIES_SESION: grandes≤10,
+# pequeños≤8). Para que GestorFatiga diferencie correctamente entre grupos
+# grandes y pequeños, este tope debe quedar en o por encima del máximo de
+# LIMITES_SERIES_SESION para grandes (10). Potencia y descarga son excepciones:
+# ahí el volumen intencionalmente bajo sí necesita un tope restrictivo.
+TOPE_SERIES_POR_EJERCICIO = {
+    'hipertrofia':            10,
+    'hipertrofia_especifica': 10,
+    'hipertrofia_metabolica':  8,
+    'fuerza':                  8,
+    'potencia':                5,
+    'descarga':                4,
+}
 
 # ============================================================
 # LÍMITES DE SERIES POR SESIÓN
@@ -172,6 +190,39 @@ LIMITES_SERIES_SESION = {
 }
 
 GRUPOS_GRANDES = {'pecho', 'espalda', 'cuadriceps', 'isquios', 'gluteos'}
+
+# ============================================================
+# CAPACIDAD DE SERIES POR SESIÓN (presupuesto del asignador)
+# ============================================================
+# Máximo de series de trabajo que una sesión puede acumular sumando
+# cap_sesion_para_grupo de los grupos asignados a ese día.
+# Con 12 grupos y 5 días, 24 es insuficiente para lograr freq>1 en ningún
+# grupo (5×24=120; min first-touches=106; quedan 14 series de slack que no
+# alcanzan ni 2 grupos con cap=8). 36 da 5×36=180; slack=74 para 2ºs toques.
+# Ajustable: subir para sesiones más largas, bajar para menos tiempo disponible.
+CAPACIDAD_SERIES_DIA = 36
+
+# ============================================================
+# UMBRAL DE FUSIÓN DE SESIONES CORTAS
+# ============================================================
+# Si un día tiene menos de este número de series, el asignador
+# intenta moverlo al día adyacente con más hueco.
+UMBRAL_FUSION_SESION = 10
+
+# ============================================================
+# GRUPOS SINÉRGICOS — derivado de DISTRIBUCION_DIAS[5]
+# ============================================================
+# Preferencia BLANDA del asignador: un grupo prefiere estar en el
+# mismo día que sus sinérgicos. No es una restricción dura.
+# Estructura: lista de frozensets. Un grupo puede pertenecer solo
+# a un conjunto (aislado de la tabla 5 días del split actual).
+GRUPOS_SINERGICOS = [
+    frozenset(['pecho', 'triceps']),
+    frozenset(['espalda', 'biceps', 'antebrazos']),
+    frozenset(['cuadriceps', 'gemelos']),
+    frozenset(['hombros', 'trapecios']),
+    frozenset(['isquios', 'gluteos', 'core']),
+]
 
 # ============================================================
 # AJUSTE DE REPETICIONES PARA MÚSCULOS PEQUEÑOS
