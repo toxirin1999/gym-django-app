@@ -50,6 +50,32 @@ class PlanificadorHelms:
         bloque_actual = next((b for b in periodizacion if semana_num_total in b.get('semanas', [])), None)
         if not bloque_actual:
             return None
+        # Índice calculado ANTES de copiar/modificar bloque_actual más abajo —
+        # tras el fix de progresión, bloque_actual deja de ser == al objeto
+        # original de la lista, así que periodizacion.index(bloque_actual)
+        # ya no lo encontraría (o encontraría el índice equivocado).
+        numero_bloque = periodizacion.index(bloque_actual) + 1
+
+        # Fix: usar el volumen_multiplicador PROGRESIVO de esta semana concreta
+        # dentro del bloque (semanas_detalle), no el vol_fin fijo del bloque
+        # entero. Sin esto, la primera semana de un bloque de 7 recibía el
+        # mismo volumen que la última — la progresión de carga no existía en
+        # este camino (generar_plan_anual sí lo hacía bien, este no).
+        semanas_del_bloque_actual = bloque_actual.get('semanas', [])
+        idx_semana_en_bloque = (
+            semanas_del_bloque_actual.index(semana_num_total)
+            if semana_num_total in semanas_del_bloque_actual else 0
+        )
+        semanas_detalle_actual = bloque_actual.get('semanas_detalle', [])
+        bloque_actual = bloque_actual.copy()
+        if idx_semana_en_bloque < len(semanas_detalle_actual):
+            detalle_semana = semanas_detalle_actual[idx_semana_en_bloque]
+            bloque_actual['volumen_multiplicador'] = detalle_semana.get(
+                'vol_mult', bloque_actual.get('volumen_multiplicador', 1.0)
+            )
+            bloque_actual['intensidad_rpe'] = (
+                detalle_semana.get('rpe', bloque_actual.get('intensidad_rpe', (7,))[0]),
+            )
 
         dias_entreno_keys = [f'dia_{i + 1}' for i in range(self.dias_disponibles)]
         if self.dias_disponibles == 3:
@@ -66,7 +92,6 @@ class PlanificadorHelms:
 
         idx_en_offset = dias_entreno_indices.index(dia_semana_num)
         clave_dia = dias_entreno_keys[idx_en_offset]
-        numero_bloque = periodizacion.index(bloque_actual) + 1
         semana_completa = self._generar_semana_especifica(bloque_actual, numero_bloque)
         ejercicios_del_dia = semana_completa.get(clave_dia)
 

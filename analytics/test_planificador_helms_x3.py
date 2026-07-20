@@ -399,14 +399,9 @@ class TestX3ObjetivoGeneralNoRegresion(TestCase):
         sigue siendo el techo real por sesión, pero ahora la diferenciación viene
         tanto del volumen_optimo (X.3) como de la frecuencia asignada (X.7).
 
-        Cambios respecto a post-X.4 (freq=1 para todos):
-          - espalda 20→28 (freq=2), cuadriceps 20→28 (freq=2)
-          - gluteos 20→24 (freq=2), hombros 16→20 (freq=2)
-          - core 14→16 (freq=2), gemelos 16→16 (freq=2, misma cantidad total)
-          - isquios 18→18 (freq=1, 2 ejercicios completos — fix del presupuesto
-            semanal de bisagra por variante; antes de ese fix caía a 9 porque
-            glúteos agotaba el cupo compartido y bloqueaba el Peso Muerto Rumano)
-          - trapecios 12→12 (freq=2, misma cantidad total)
+        Post fix presupuesto real del asignador + reducción vol_fin bloques
+        hipertrofia (2026-07-20): solo espalda/hombros/biceps/trapecios
+        alcanzan freq=2; el resto queda en freq=1 con el volumen reducido.
         """
         _, planner = _build_planner(PERFIL_DAVID)
         semana = _semana_bloque0(planner)
@@ -419,17 +414,17 @@ class TestX3ObjetivoGeneralNoRegresion(TestCase):
 
         esperado = {
             'pecho':      20,
-            'espalda':    28,
-            'cuadriceps': 28,
-            'gluteos':    24,
-            'isquios':    18,
+            'espalda':    24,
+            'cuadriceps': 20,
+            'gluteos':    18,
+            'isquios':    16,
             'hombros':    20,
             'biceps':     16,
-            'triceps':    16,
-            'gemelos':    16,
-            'core':       16,
+            'triceps':    14,
+            'gemelos':    14,
+            'core':       12,
             'trapecios':  12,
-            'antebrazos': 10,
+            'antebrazos':  8,
         }
         for grupo, total_esperado in esperado.items():
             self.assertEqual(
