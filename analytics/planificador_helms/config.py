@@ -260,6 +260,7 @@ GRUPOS_PEQUENOS = {
 REP_RANGE_TOQUE = {
     1: {},  # identidad — no se aplica ningún remapeo en toque 1
     2: {
+        '4-6':   '6-8',
         '6-8':   '8-10',
         '8-10':  '10-12',
         '8-12':  '12-15',
@@ -268,6 +269,7 @@ REP_RANGE_TOQUE = {
         '15-20': '15-20',  # techo idempotente
     },
     3: {
+        '4-6':   '8-10',
         '6-8':   '10-12',
         '8-10':  '12-15',
         '8-12':  '15-20',
