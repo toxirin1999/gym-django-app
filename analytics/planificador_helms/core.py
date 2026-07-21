@@ -21,6 +21,7 @@ from .calculo.compatibilidad_fase import resolver_peso_objetivo
 from .calculo.fatiga import GestorFatiga
 from .ejercicios.selector import SelectorEjercicios
 from .ejercicios.patrones import PatronManager
+from .ejercicios.variacion import derivar_rep_rpe_toque, construir_variantes_por_toque
 from .utils.helpers import normalizar_nombre, extraer_nombre_ejercicio, extraer_patron_ejercicio
 from entrenos.services.descanso_service import get_descanso_sugerido
 
@@ -276,6 +277,27 @@ class PlanificadorHelms:
             distribucion_volumen = DISTRIBUCION_DIAS.get(self.dias_disponibles, DISTRIBUCION_DIAS[4])
             frecuencia_map = None
 
+        # X.14: construir variantes por toque para grupos con frecuencia≥2.
+        # Solo se activa cuando el motor resolvió frecuencia_map con éxito.
+        # Si frecuencia_map es None (fallback DISTRIBUCION_DIAS tras AsignacionImposibleError),
+        # todos los toques usan toque=1 — sin variación intra-semanal.
+        plan_variantes: dict = {}
+        if frecuencia_map is not None:
+            for grupo, freq_grupo in frecuencia_map.items():
+                if freq_grupo < 2:
+                    continue
+                candidatos_grupo_completos = ejercicios_bloque.get(grupo, [])
+                if not candidatos_grupo_completos:
+                    continue
+                ejercicios_toque1 = candidatos_grupo_completos[:n_ejercicios_grupo]
+                pool_seguro = SelectorEjercicios.construir_pool_seguro_por_grupo(
+                    grupo, fase, cliente=cliente_obj
+                )
+                plan_variantes[grupo] = construir_variantes_por_toque(
+                    grupo, freq_grupo, grupo in GRUPOS_GRANDES, pool_seguro, ejercicios_toque1
+                )
+
+        toque_por_grupo: dict = {}
         orden_dias = sorted(distribucion_volumen.keys())
         for idx_dia, dia_key in enumerate(orden_dias):
             gestor_fatiga = GestorFatiga(fase)
@@ -297,8 +319,15 @@ class PlanificadorHelms:
                 vol_dia = math.ceil(min(vol_ajustado_bloque, mrv_grupo) / frecuencia) if frecuencia > 0 else 0
                 if vol_dia <= 0: continue
 
-                candidatos = ejercicios_bloque.get(grupo, [])
-                if not candidatos: continue
+                candidatos_todos = ejercicios_bloque.get(grupo, [])
+                if not candidatos_todos:
+                    continue
+
+                toque = toque_por_grupo.get(grupo, 0) + 1
+                toque_por_grupo[grupo] = toque
+
+                variantes_grupo = plan_variantes.get(grupo, {})
+                candidatos = variantes_grupo.get(toque, candidatos_todos[:n_ejercicios_grupo])
 
                 for ej in candidatos[:n_ejercicios_grupo]:
                     nombre = ej['nombre']
@@ -314,7 +343,11 @@ class PlanificadorHelms:
                         else REP_RANGE_AJUSTE_PEQUENOS.get(rep_range, rep_range)
                     )
 
-                    es_pesado = (int((rep_range_ej or '8-12').split('-')[0]) <= 6 or rpe_objetivo >= 9)
+                    # X.14: contraste por toque (toque 1 = identidad; toque ≥2 = reps más altas, RPE −1).
+                    # Se aplica DESPUÉS del ajuste por tamaño de músculo para componer sin contradicción.
+                    rep_range_ej, rpe_objetivo_toque = derivar_rep_rpe_toque(rep_range_ej, rpe_objetivo, toque)
+
+                    es_pesado = (int((rep_range_ej or '8-12').split('-')[0]) <= 6 or rpe_objetivo_toque >= 9)
                     series_objetivo = max(2, min(tope_por_ejercicio, math.ceil(vol_dia / len(candidatos[:n_ejercicios_grupo]))))
                     series_ajustadas = gestor_fatiga.ajustar_series_por_limite(
                         nombre, patron, tipo_ej, series_objetivo, es_pesado, grupo=grupo
@@ -338,7 +371,7 @@ class PlanificadorHelms:
                         reps_anteriores=reps_real_anterior,
                         rpe_anterior=rpe_real_anterior,
                         rep_range_hoy=rep_range_ej,
-                        rpe_objetivo_hoy=rpe_objetivo,
+                        rpe_objetivo_hoy=rpe_objetivo_toque,
                         es_descarga_hoy=es_descarga_hoy,
                         redondear_fn=lambda p: CalculadorPeso.redondear_peso(p, nombre),
                     )
@@ -381,7 +414,7 @@ class PlanificadorHelms:
                         'series': series_ajustadas,
                         'repeticiones': rep_range_ej,
                         'peso_kg': peso,
-                        'rpe_objetivo': rpe_objetivo,
+                        'rpe_objetivo': rpe_objetivo_toque,
                         'tempo': tempo,
                         'descanso_minutos': descanso,
                         'patron': patron,

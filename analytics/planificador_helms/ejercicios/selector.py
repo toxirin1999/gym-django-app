@@ -55,6 +55,83 @@ def _pivotar_a_universal_safe(restricted_tags: Set[str], original_group: str) ->
 class SelectorEjercicios:
     """Clase encargada de seleccionar ejercicios óptimos para un bloque de entrenamiento."""
 
+    @classmethod
+    def construir_pool_seguro_por_grupo(
+        cls,
+        grupo: str,
+        fase: str,
+        cliente=None,
+    ) -> Dict[str, List[Dict[str, Any]]]:
+        """
+        Devuelve el pool completo bio-seguro para un grupo muscular, por categoría.
+        Diseñado para ser consumido por construir_variantes_por_toque (variacion.py)
+        al construir candidatos de toques 2 y 3.
+
+        Diferencias deliberadas respecto a seleccionar_ejercicios_para_bloque:
+        - No trunca a max_ej_por_grupo — devuelve el pool completo de cada categoría.
+        - No implementa la lógica especial de espalda (vertical/horizontal).
+        - No aplica pivotaje universal (fallback cuando el grupo queda bloqueado total).
+        Sí aplica: filtro bio-seguro, ordenación por estabilidad en hipertrofia,
+        y reglas de fase (evitar_contiene / permitir_variantes).
+        """
+        reglas = cls.obtener_reglas_por_fase(fase)
+        es_hipertrofia = "hipertrofia" in fase.lower()
+
+        restricted_tags: Set[str] = set()
+        if cliente is not None:
+            try:
+                from core.bio_context import BioContextProvider
+                bio = BioContextProvider.get_current_restrictions(cliente)
+                restricted_tags = bio.get('tags', set())
+            except Exception as e:
+                logger.warning("BioContext no disponible: %s", e)
+
+        def ponderar_estabilidad(ej: Any) -> int:
+            if not isinstance(ej, dict):
+                return 0
+            est = ej.get('estabilidad', 'media')
+            if es_hipertrofia:
+                return {'alta': 10, 'media': 5, 'baja': 0}.get(est, 5)
+            return 0
+
+        def _aplicar_reglas_fase(pool: List[Any]) -> List[Any]:
+            resultado = []
+            for ej in pool:
+                nombre = extraer_nombre_ejercicio(ej).lower()
+                if any(bad in nombre for bad in reglas["evitar_contiene"]):
+                    if any(ok in nombre for ok in reglas["permitir_variantes"]):
+                        resultado.append(ej)
+                else:
+                    resultado.append(ej)
+            return resultado
+
+        tipos = EJERCICIOS_DATABASE.get(grupo, {})
+        pool_principal = _aplicar_reglas_fase(
+            _filtrar_pool_seguro(list(tipos.get('compuesto_principal', [])), restricted_tags)
+        )
+        pool_secundario = _aplicar_reglas_fase(
+            _filtrar_pool_seguro(list(tipos.get('compuesto_secundario', [])), restricted_tags)
+        )
+        pool_aislamiento = _aplicar_reglas_fase(
+            _filtrar_pool_seguro(list(tipos.get('aislamiento', [])), restricted_tags)
+        )
+        pool_variantes = _aplicar_reglas_fase(
+            _filtrar_pool_seguro(list(tipos.get('variantes_compartidas', [])), restricted_tags)
+        )
+
+        if es_hipertrofia:
+            pool_principal = sorted(pool_principal, key=ponderar_estabilidad, reverse=True)
+            pool_secundario = sorted(pool_secundario, key=ponderar_estabilidad, reverse=True)
+            pool_aislamiento = sorted(pool_aislamiento, key=ponderar_estabilidad, reverse=True)
+            pool_variantes = sorted(pool_variantes, key=ponderar_estabilidad, reverse=True)
+
+        return {
+            'compuesto_principal': pool_principal,
+            'compuesto_secundario': pool_secundario,
+            'aislamiento': pool_aislamiento,
+            'variantes_compartidas': pool_variantes,
+        }
+
     @staticmethod
     def obtener_reglas_por_fase(fase: str) -> Dict[str, Any]:
         """Define reglas de selección según la fase."""

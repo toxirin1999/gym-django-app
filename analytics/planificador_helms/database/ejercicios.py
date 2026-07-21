@@ -236,7 +236,16 @@ EJERCICIOS_DATABASE = {
              'perfil': 'acortado', 'posicion': 'sentado', 'cadena': 'abierta',
              'risk_tags': []},
         ],
-        'aislamiento': []
+        'aislamiento': [],
+        # Ejercicios de otros grupos que también activan glúteo de forma primaria
+        # y pueden ofrecerse como variante de estiramiento (toque 2/3).
+        # NUNCA iterar en funciones de mapeo canónico — solo el selector de variaciones (X.12).
+        'variantes_compartidas': [
+            {'nombre': 'Sentadilla Búlgara', 'tipo_progresion': 'peso_reps', 'patron': 'rodilla',
+             'estabilidad': 'baja', 'perfil': 'estirado', 'posicion': 'pie', 'cadena': 'cerrada',
+             'risk_tags': ['flexion_rodilla_profunda', 'estabilidad_tobillo', 'impacto_vertical'],
+             'grupo_canonico': 'cuadriceps'},
+        ],
     },
 
     # =========================
@@ -340,21 +349,21 @@ EJERCICIOS_DATABASE = {
     'core': {
         'compuesto_principal': [
             {'nombre': 'Elevaciones de Piernas Colgado', 'tipo_progresion': 'progresion_reps', 'patron': 'core',
-             'estabilidad': 'baja', 'posicion': 'pie', 'cadena': 'abierta'},
+             'estabilidad': 'baja', 'perfil': 'acortado', 'posicion': 'pie', 'cadena': 'abierta'},
             {'nombre': 'Crunch en Polea (Cable Crunch)', 'tipo_progresion': 'peso_reps', 'patron': 'core',
-             'estabilidad': 'media', 'posicion': 'pie', 'cadena': 'abierta'},
+             'estabilidad': 'media', 'perfil': 'acortado', 'posicion': 'pie', 'cadena': 'abierta'},
         ],
         'compuesto_secundario': [
             {'nombre': 'Plancha (Plank)', 'tipo_progresion': 'progresion_tiempo', 'patron': 'core',
-             'estabilidad': 'baja', 'universal_safe': True, 'posicion': 'tumbado', 'cadena': 'cerrada'},
+             'estabilidad': 'baja', 'perfil': 'media', 'universal_safe': True, 'posicion': 'tumbado', 'cadena': 'cerrada'},
             {'nombre': 'Pallof Press', 'tipo_progresion': 'peso_reps', 'patron': 'core', 'estabilidad': 'media',
-             'posicion': 'pie', 'cadena': 'abierta'},
+             'perfil': 'media', 'posicion': 'pie', 'cadena': 'abierta'},
         ],
         'aislamiento': [
             {'nombre': 'Dead Bug', 'tipo_progresion': 'progresion_variante', 'patron': 'core', 'estabilidad': 'baja',
-             'universal_safe': True, 'posicion': 'tumbado', 'cadena': 'abierta'},
+             'perfil': 'media', 'universal_safe': True, 'posicion': 'tumbado', 'cadena': 'abierta'},
             {'nombre': 'Ab Wheel (Rueda Abdominal)', 'tipo_progresion': 'progresion_reps', 'patron': 'core',
-             'estabilidad': 'baja', 'posicion': 'tumbado', 'cadena': 'cerrada'},
+             'estabilidad': 'baja', 'perfil': 'estirado', 'posicion': 'tumbado', 'cadena': 'cerrada'},
         ]
     },
 
@@ -364,19 +373,19 @@ EJERCICIOS_DATABASE = {
     'trapecios': {
         'compuesto_principal': [
             {'nombre': 'Encogimientos con Barra', 'tipo_progresion': 'peso_reps', 'patron': 'trapecio',
-             'estabilidad': 'media', 'posicion': 'pie', 'cadena': 'abierta'},
+             'estabilidad': 'media', 'perfil': 'acortado', 'posicion': 'pie', 'cadena': 'abierta'},
             {'nombre': 'Encogimientos con Mancuernas', 'tipo_progresion': 'peso_reps', 'patron': 'trapecio',
-             'estabilidad': 'baja', 'posicion': 'pie', 'cadena': 'abierta'},
+             'estabilidad': 'baja', 'perfil': 'acortado', 'posicion': 'pie', 'cadena': 'abierta'},
         ],
         'compuesto_secundario': [
             {'nombre': 'Farmer Walk (Paseo del Granjero)', 'tipo_progresion': 'progresion_distancia',
-             'patron': 'agarre', 'estabilidad': 'baja', 'posicion': 'pie', 'cadena': 'cerrada'},
+             'patron': 'agarre', 'estabilidad': 'baja', 'perfil': 'media', 'posicion': 'pie', 'cadena': 'cerrada'},
         ],
         'aislamiento': [
             {'nombre': 'Face Pull', 'tipo_progresion': 'peso_reps', 'patron': 'traccion_horizontal',
-             'estabilidad': 'media', 'posicion': 'pie', 'cadena': 'abierta'},
+             'estabilidad': 'media', 'perfil': 'acortado', 'posicion': 'pie', 'cadena': 'abierta'},
             {'nombre': 'Remo al Mentón con Polea (Upright Row)', 'tipo_progresion': 'peso_reps', 'patron': 'trapecio',
-             'estabilidad': 'media', 'posicion': 'pie', 'cadena': 'abierta'},
+             'estabilidad': 'media', 'perfil': 'acortado', 'posicion': 'pie', 'cadena': 'abierta'},
         ]
     },
 
@@ -387,17 +396,17 @@ EJERCICIOS_DATABASE = {
         'compuesto_principal': [],
         'compuesto_secundario': [
             {'nombre': 'Farmer Walk (Paseo del Granjero)', 'tipo_progresion': 'progresion_distancia',
-             'patron': 'agarre', 'estabilidad': 'baja', 'posicion': 'pie', 'cadena': 'cerrada'},
+             'patron': 'agarre', 'estabilidad': 'baja', 'perfil': 'media', 'posicion': 'pie', 'cadena': 'cerrada'},
             {'nombre': 'Aguante en Barra (Dead Hang)', 'tipo_progresion': 'progresion_tiempo', 'patron': 'agarre',
-             'estabilidad': 'media', 'posicion': 'pie', 'cadena': 'cerrada'},
+             'estabilidad': 'media', 'perfil': 'estirado', 'posicion': 'pie', 'cadena': 'cerrada'},
         ],
         'aislamiento': [
             {'nombre': 'Curl de Muñeca (Wrist Curl)', 'tipo_progresion': 'peso_reps', 'patron': 'antebrazo',
-             'estabilidad': 'media', 'posicion': 'sentado', 'cadena': 'abierta'},
+             'estabilidad': 'media', 'perfil': 'media', 'posicion': 'sentado', 'cadena': 'abierta'},
             {'nombre': 'Curl Inverso con Barra', 'tipo_progresion': 'peso_reps', 'patron': 'antebrazo',
-             'estabilidad': 'media', 'posicion': 'pie', 'cadena': 'abierta'},
+             'estabilidad': 'media', 'perfil': 'media', 'posicion': 'pie', 'cadena': 'abierta'},
             {'nombre': 'Extensión de Muñeca (Reverse Wrist Curl)', 'tipo_progresion': 'peso_reps',
-             'patron': 'antebrazo', 'estabilidad': 'media', 'posicion': 'sentado', 'cadena': 'abierta'},
+             'patron': 'antebrazo', 'estabilidad': 'media', 'perfil': 'media', 'posicion': 'sentado', 'cadena': 'abierta'},
         ]
     },
     # =========================
@@ -429,6 +438,16 @@ EJERCICIOS_DATABASE = {
 
 
 # ============================================================
+# CATEGORÍAS CANÓNICAS — whitelist explícita
+# Toda función de mapeo itera SOLO estas claves. Categorías auxiliares
+# como 'variantes_compartidas' quedan excluidas por defecto: si en el
+# futuro se añade otra categoría especial, no entrará en el mapeo
+# histórico/estadístico hasta que alguien la añada explícitamente aquí.
+# ============================================================
+CATEGORIAS_CANONICAS = ('compuesto_principal', 'compuesto_secundario', 'aislamiento')
+
+
+# ============================================================
 # FUNCIONES DE UTILIDAD
 # ============================================================
 
@@ -452,8 +471,8 @@ def obtener_grupo_muscular(nombre_ejercicio: str) -> str:
     nombre_normalizado = nombre_ejercicio.strip().lower()
 
     for grupo_muscular, categorias in EJERCICIOS_DATABASE.items():
-        for categoria, ejercicios in categorias.items():
-            for ejercicio in ejercicios:
+        for categoria in CATEGORIAS_CANONICAS:
+            for ejercicio in categorias.get(categoria, []):
                 ej_nombre = ejercicio.get('nombre', '').strip().lower() if isinstance(ejercicio, dict) else str(
                     ejercicio).strip().lower()
                 if ej_nombre == nombre_normalizado:
@@ -479,9 +498,10 @@ def obtener_todos_ejercicios_por_grupo(grupo_muscular: str) -> List[Dict[str, st
     if grupo_muscular not in EJERCICIOS_DATABASE:
         return []
 
+    categorias = EJERCICIOS_DATABASE[grupo_muscular]
     todos_los_ejercicios = []
-    for categoria, ejercicios in EJERCICIOS_DATABASE[grupo_muscular].items():
-        todos_los_ejercicios.extend(ejercicios)
+    for categoria in CATEGORIAS_CANONICAS:
+        todos_los_ejercicios.extend(categorias.get(categoria, []))
 
     return todos_los_ejercicios
 
@@ -501,8 +521,8 @@ def crear_mapeo_inverso() -> Dict[str, str]:
     """
     mapeo = {}
     for grupo_muscular, categorias in EJERCICIOS_DATABASE.items():
-        for categoria, ejercicios in categorias.items():
-            for ejercicio in ejercicios:
+        for categoria in CATEGORIAS_CANONICAS:
+            for ejercicio in categorias.get(categoria, []):
                 nombre = ejercicio.get('nombre', '').strip().lower() if isinstance(ejercicio, dict) else str(
                     ejercicio).strip().lower()
                 if nombre:

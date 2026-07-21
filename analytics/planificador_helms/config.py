@@ -247,6 +247,63 @@ GRUPOS_PEQUENOS = {
 }
 
 # ============================================================
+# ESCALERA DE REP_RANGE POR TOQUE INTRA-SEMANAL
+# Toque 1 = identidad (dict vacío, sin remapeo).
+# Toque 2 = un peldaño más ligero (más reps) sobre el rango base.
+# Toque 3 = un peldaño más sobre toque 2, con techo idempotente en '15-20'.
+# Claves: unión de salidas de REP_RANGE_AJUSTE_PEQUENOS + rangos directos
+# de bloques grandes ('8-10', '10-12') — cubre todos los valores posibles
+# que pueden llegar a derivar_rep_rpe_toque tanto de grupos pequeños
+# (post-AJUSTE_PEQUENOS) como grandes (directo del bloque).
+# Clave ausente = fallback seguro: el llamador devuelve el base sin cambio.
+# ============================================================
+REP_RANGE_TOQUE = {
+    1: {},  # identidad — no se aplica ningún remapeo en toque 1
+    2: {
+        '6-8':   '8-10',
+        '8-10':  '10-12',
+        '8-12':  '12-15',
+        '10-12': '12-15',
+        '12-15': '15-20',
+        '15-20': '15-20',  # techo idempotente
+    },
+    3: {
+        '6-8':   '10-12',
+        '8-10':  '12-15',
+        '8-12':  '15-20',
+        '10-12': '15-20',
+        '12-15': '15-20',
+        '15-20': '15-20',
+    },
+}
+
+# ============================================================
+# ROL DE CADA TOQUE INTRA-SEMANAL
+# Define qué perfil biomecánico priorizar y en qué orden recorrer
+# las categorías al construir candidatos para el toque.
+# Toque 1: sin preferencia de perfil; prioriza compuestos principales
+#          (comportamiento idéntico al sistema actual — invariante duro).
+# Toque 2: perfil estirado (posición de máximo estiramiento bajo carga);
+#          prioriza secundarios/aislamiento para no repetir el compuesto.
+# Toque 3: perfil acortado (bombeo/contracción máxima);
+#          prioriza aislamiento para máxima especificidad metabólica.
+# ============================================================
+ROL_TOQUE = {
+    1: {
+        'perfil_preferido': None,
+        'orden_categoria': ('compuesto_principal', 'compuesto_secundario', 'aislamiento'),
+    },
+    2: {
+        'perfil_preferido': 'estirado',
+        'orden_categoria': ('variantes_compartidas', 'compuesto_secundario', 'aislamiento', 'compuesto_principal'),
+    },
+    3: {
+        'perfil_preferido': 'acortado',
+        'orden_categoria': ('aislamiento', 'compuesto_secundario', 'compuesto_principal'),
+    },
+}
+
+# ============================================================
 # KEYWORDS DE EJERCICIOS
 # ============================================================
 KEYWORDS_MANCUERNA = ['mancuerna', 'mancuernas', 'db ']

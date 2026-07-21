@@ -69,15 +69,15 @@ class TestX1BicepsDosEjercicios(TestCase):
 
     def test_biceps_tiene_dos_ejercicios(self):
         """
-        Debe haber 2 ejercicios DISTINTOS de bíceps en la semana.
-        Post-X.7: bíceps aparece en 2 días (freq=2), con los mismos 2
-        ejercicios rotados — total 4 entradas pero solo 2 ejercicios únicos.
-        El invariante de X.1 es que haya 2 ejercicios distintos, no 2 entradas.
+        Debe haber al menos 2 ejercicios DISTINTOS de bíceps en la semana.
+        Post-X.14: bíceps en freq=2, con ejercicios DIFERENTES por toque
+        (toque-1: Curl con Barra Z + Curl Araña; toque-2: Bayesian Curl + Curl Inclinado)
+        → 4 ejercicios únicos. El invariante mínimo es ≥2 distintos.
         """
         nombres_unicos = {e['nombre'] for e in self.biceps_ejs}
-        self.assertEqual(
+        self.assertGreaterEqual(
             len(nombres_unicos), 2,
-            f"Bíceps tiene {len(nombres_unicos)} ejercicio(s) únicos; se esperaban 2. "
+            f"Bíceps tiene menos de 2 ejercicios únicos; got {len(nombres_unicos)}. "
             f"Ejercicios: {[e['nombre'] for e in self.biceps_ejs]}"
         )
 
@@ -91,12 +91,12 @@ class TestX1BicepsDosEjercicios(TestCase):
 
     def test_biceps_ejercicios_distintos(self):
         """
-        Los 2 ejercicios únicos no pueden ser el mismo.
-        Post-X.7: con freq=2, los mismos 2 ejercicios se repiten cada día.
-        El invariante sigue siendo: 2 ejercicios distintos.
+        Post-X.14: toque-1 y toque-2 de bíceps usan ejercicios DISTINTOS entre sí.
+        El conjunto de ejercicios únicos es ahora ≥2 (idealmente 4, uno por toque y día).
         """
         nombres_unicos = {e['nombre'] for e in self.biceps_ejs}
-        self.assertEqual(len(nombres_unicos), 2, f"Ejercicios únicos: {nombres_unicos}")
+        self.assertGreater(len(nombres_unicos), 1,
+                           f"Todos los ejercicios de bíceps son el mismo: {nombres_unicos}")
 
     def test_curl_con_barra_z_en_compuesto_principal(self):
         """Fix parte 2: Curl con Barra Z debe estar en compuesto_principal de bíceps."""
@@ -194,14 +194,15 @@ class TestX2GluteoHipThrustMismoDia(TestCase):
 
     def test_gluteos_tiene_dos_ejercicios(self):
         """
-        Glúteos debe tener 2 ejercicios DISTINTOS: Hip Thrust + variante.
-        Post-X.7: glúteos en freq=2 (dia_1 y dia_3) — los mismos 2 ejercicios
-        se repiten. El invariante de X.2 es 2 ejercicios únicos, no 2 entradas.
+        Glúteos debe tener al menos 2 ejercicios DISTINTOS en la semana.
+        Post-X.14: glúteos en freq=2 — toque-1 (Hip Thrust + Abducción),
+        toque-2 (Sentadilla Búlgara + Patada de Glúteo) → 4 ejercicios únicos.
+        El invariante mínimo es ≥2 distintos.
         """
         nombres_unicos = {e['nombre'] for e in self.gluteos_ejs}
-        self.assertEqual(
+        self.assertGreaterEqual(
             len(nombres_unicos), 2,
-            f"Glúteos tiene {len(nombres_unicos)} ejercicio(s) únicos: "
+            f"Glúteos tiene menos de 2 ejercicios únicos: "
             f"{[e['nombre'] for e in self.gluteos_ejs]}"
         )
 
