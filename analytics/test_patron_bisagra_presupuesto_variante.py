@@ -80,12 +80,15 @@ class TestIsquiosNoAhogadoPorPresupuestoBisagra(TestCase):
             f"de bisagra (antes del fix: 9)."
         )
 
-    def test_gluteos_conserva_hip_thrust_en_todas_sus_sesiones(self):
+    def test_gluteos_conserva_hip_thrust_en_toque_1(self):
         """
-        Independiente de cuántas sesiones tenga glúteos (su frecuencia depende
-        del presupuesto real del asignador, no de este fix), Hip Thrust debe
-        aparecer en TODAS ellas — el fix de presupuesto por variante no debe
-        volver a bloquearlo.
+        Hip Thrust debe aparecer en el toque-1 de glúteos (primera sesión semanal).
+        El fix de presupuesto por variante no debe bloquearlo en toque-1.
+
+        Post-X.14: toque-2 de glúteos usa variantes_compartidas (Sentadilla Búlgara)
+        y aislamiento (Patada de Glúteo), por lo que Hip Thrust ya no aparece en
+        TODAS las sesiones — eso es comportamiento correcto y esperado. Solo verificamos
+        que toque-1 lo conserva (compuesto_principal, primer en el pool).
         """
         freq_gluteos = sum(
             1 for ejercicios in self._semana.values()
@@ -98,10 +101,10 @@ class TestIsquiosNoAhogadoPorPresupuestoBisagra(TestCase):
             for ej in ejs
             if ej['grupo_muscular'] == 'gluteos' and ej['nombre'] == 'Hip Thrust con Barra'
         ]
-        self.assertEqual(
-            len(gluteos_hip_thrust), freq_gluteos,
-            f"Hip Thrust debería aparecer en las {freq_gluteos} sesiones de glúteos, "
-            f"apareció en {len(gluteos_hip_thrust)}."
+        self.assertGreaterEqual(
+            len(gluteos_hip_thrust), 1,
+            f"Hip Thrust debería aparecer en al menos 1 sesión de glúteos (toque-1), "
+            f"apareció en {len(gluteos_hip_thrust)} de {freq_gluteos} sesiones."
         )
 
 

@@ -4,7 +4,7 @@ Tests de caracterización del comportamiento de PlanificadorHelms.
 
 Capturan la línea base exacta para que cualquier cambio en
 analytics/planificador_helms/ rompa estos tests inmediatamente.
-Valores actualizados el 2026-07-20 tras X.7 (motor de asignación conectado).
+Valores actualizados el 2026-07-21 tras X.14 (variación intra-semanal conectada).
 
   - X.0 a X.4: red de seguridad, fixes bíceps/bisagra, CalculadoraVolumen,
     topes dinámicos (ver historial de commits anteriores).
@@ -142,30 +142,34 @@ class TestCaracterizacionDavid(TestCase):
             ('Press Arnold',                               'hombros',     3),
         ],
         'dia_3': [
+            # core, isquios = toque-1 (freq=1, sin cambio)
             ('Crunch en Polea (Cable Crunch)',             'core',        4),
             ('Pallof Press',                               'core',        4),
-            ('Hip Thrust con Barra',                       'gluteos',     3),
-            ('Abducción de Cadera en Máquina',             'gluteos',     3),
+            # gluteos = toque-2 (X.14): variantes_compartidas + aislamiento (perfil estirado)
+            ('Sentadilla Búlgara',                         'gluteos',     3),
+            ('Patada de Glúteo en Polea',                  'gluteos',     3),
             ('Peso Muerto Rumano',                         'isquios',     6),
             ('Curl Femoral Tumbado',                       'isquios',     6),
         ],
         'dia_4': [
-            ('Sentadilla Hack',                            'cuadriceps',  4),
-            ('Prensa de Piernas',                          'cuadriceps',  4),
-            ('Elevación de Gemelos de Pie (Máquina)',      'gemelos',     3),
-            ('Elevación de Gemelos Sentado (Máquina)',     'gemelos',     3),
+            # cuadriceps, gemelos, triceps = toque-2 (X.14); pecho = toque-1 (freq=1)
+            ('Zancadas con Mancuernas',                    'cuadriceps',  4),
+            ('Sissy Squat',                                'cuadriceps',  4),
+            ('Elevación de Gemelos en Multipower',         'gemelos',     3),
+            ('Elevación de Gemelos Unilateral (Mancuerna)', 'gemelos',    3),
             ('Convergent Machine Press',                   'pecho',       7),
             ('Press Cerrado en Banca',                     'pecho',       7),
-            ('Press Francés con Barra Z',                  'triceps',     3),
-            ('Extensiones de Tríceps con Polea Alta',      'triceps',     3),
+            ('Extensiones sobre la Cabeza con Mancuerna',  'triceps',     3),
+            ('Fondos en Paralelas (con lastre)',            'triceps',     3),
         ],
         'dia_5': [
-            ('Curl con Barra Z',                           'biceps',      3),
-            ('Curl Araña',                                 'biceps',      3),
-            ('Jalón al Pecho',                             'espalda',     4),
-            ('Remo pecho apoyado',                         'espalda',     4),
-            ('Machine Shoulder Press',                     'hombros',     3),
-            ('Press Arnold',                               'hombros',     3),
+            # biceps, espalda, hombros = toque-2 (X.14); trapecios = toque-1 (freq=1)
+            ('Bayesian Curl',                              'biceps',      3),
+            ('Curl Inclinado con Mancuernas',              'biceps',      3),
+            ('Remo con Mancuerna a una mano',              'espalda',     4),
+            ('Jalon brazos rectos',                        'espalda',     4),
+            ('Elevaciones Laterales en Polea',             'hombros',     3),
+            ('Y-Raises',                                   'hombros',     3),
             ('Encogimientos con Barra',                    'trapecios',   4),
             ('Farmer Walk (Paseo del Granjero)',            'trapecios',   4),
         ],
@@ -277,12 +281,53 @@ class TestCaracterizacionNovato3d(TestCase):
         'triceps':    {'freq': 1, 'series': 10},
     }
 
+    # Golden master X.13 — captura exacta del comportamiento ANTES de X.14.
+    # Todos los grupos en freq=1 (3 días limita frecuencia), por lo que
+    # no habrá variación de toque cuando X.14 se conecte — este perfil
+    # sirve como control: verifica que X.14 no toca los grupos freq=1.
+    ESTRUCTURA_ESPERADA = {
+        'dia_1': [
+            ('Sentadilla Hack',                            'cuadriceps', 8),
+            ('Prensa de Piernas',                          'cuadriceps', 8),
+            ('Elevación de Gemelos de Pie (Máquina)',      'gemelos',    5),
+            ('Elevación de Gemelos Sentado (Máquina)',     'gemelos',    5),
+            ('Convergent Machine Press',                   'pecho',      7),
+            ('Press Cerrado en Banca',                     'pecho',      7),
+            ('Encogimientos con Barra',                    'trapecios',  3),
+            ('Farmer Walk (Paseo del Granjero)',            'trapecios',  3),
+        ],
+        'dia_2': [
+            ('Aguante en Barra (Dead Hang)',                'antebrazos', 3),
+            ('Farmer Walk (Paseo del Granjero)',            'antebrazos', 3),
+            ('Curl con Barra Z',                           'biceps',     5),
+            ('Curl Araña',                                 'biceps',     5),
+            ('Jalón al Pecho',                             'espalda',    8),
+            ('Remo pecho apoyado',                         'espalda',    8),
+            ('Machine Shoulder Press',                     'hombros',    6),
+            ('Press Arnold',                               'hombros',    6),
+        ],
+        'dia_3': [
+            ('Crunch en Polea (Cable Crunch)',              'core',       5),
+            ('Pallof Press',                               'core',       5),
+            ('Hip Thrust con Barra',                       'gluteos',    6),
+            ('Abducción de Cadera en Máquina',             'gluteos',    6),
+            ('Peso Muerto Rumano',                         'isquios',    6),
+            ('Curl Femoral Tumbado',                       'isquios',    6),
+            ('Press Francés con Barra Z',                  'triceps',    5),
+            ('Extensiones de Tríceps con Polea Alta',      'triceps',    5),
+        ],
+    }
+
     def setUp(self):
         _, self._planner = _build_planner(self.PERFIL)
         self._semana = _semana_bloque0(self._planner)
 
     def test_resumen(self):
         self.assertEqual(_resumen(self._semana), self.RESUMEN_ESPERADO)
+
+    def test_estructura_dia_completa(self):
+        """Golden master X.13: nombres exactos por día para novato 3d."""
+        self.assertEqual(_estructura_dia(self._semana), self.ESTRUCTURA_ESPERADA)
 
     def test_dias_presentes(self):
         self.assertEqual(len(self._semana), 3)
@@ -388,12 +433,66 @@ class TestCaracterizacionAvanzado6d(TestCase):
         'triceps':    {'freq': 1, 'series': 16},
     }
 
+    # Golden master X.13 — captura exacta del comportamiento ANTES de X.14.
+    # Grupos con freq=2 en avanzado 6d: biceps, core, trapecios.
+    # X.14 solo variará sus toques 2 — los grupos freq=1 quedan byte-idénticos.
+    ESTRUCTURA_ESPERADA = {
+        'dia_1': [
+            ('Elevación de Gemelos de Pie (Máquina)',      'gemelos',    8),
+            ('Elevación de Gemelos Sentado (Máquina)',     'gemelos',    8),
+            ('Machine Shoulder Press',                     'hombros',    8),
+            ('Press Arnold',                               'hombros',    8),
+        ],
+        'dia_2': [
+            ('Aguante en Barra (Dead Hang)',                'antebrazos', 5),
+            ('Farmer Walk (Paseo del Granjero)',            'antebrazos', 5),
+            ('Curl con Barra Z',                           'biceps',     4),
+            ('Curl Araña',                                 'biceps',     4),
+            ('Convergent Machine Press',                   'pecho',     10),
+            ('Press Cerrado en Banca',                     'pecho',     10),
+        ],
+        'dia_3': [
+            ('Crunch en Polea (Cable Crunch)',              'core',       4),
+            ('Pallof Press',                               'core',       4),
+            ('Peso Muerto Rumano',                         'isquios',   10),
+            ('Curl Femoral Tumbado',                       'isquios',   10),
+            ('Encogimientos con Barra',                    'trapecios',  3),
+            ('Farmer Walk (Paseo del Granjero)',            'trapecios',  3),
+        ],
+        'dia_4': [
+            ('Jalón al Pecho',                             'espalda',   10),
+            ('Remo pecho apoyado',                         'espalda',   10),
+            ('Press Francés con Barra Z',                  'triceps',    8),
+            ('Extensiones de Tríceps con Polea Alta',      'triceps',    8),
+        ],
+        'dia_5': [
+            # cuadriceps = toque-1 (freq=1); trapecios = toque-2 (X.14)
+            ('Sentadilla Hack',                            'cuadriceps', 10),
+            ('Prensa de Piernas',                          'cuadriceps', 10),
+            ('Face Pull',                                  'trapecios',  3),
+            ('Remo al Mentón con Polea (Upright Row)',     'trapecios',  3),
+        ],
+        'dia_6': [
+            # biceps, core = toque-2 (X.14); gluteos = toque-1 (freq=1)
+            ('Bayesian Curl',                              'biceps',     4),
+            ('Curl Inclinado con Mancuernas',              'biceps',     4),
+            ('Ab Wheel (Rueda Abdominal)',                  'core',       4),
+            ('Plancha (Plank)',                             'core',       4),
+            ('Hip Thrust con Barra',                       'gluteos',   10),
+            ('Abducción de Cadera en Máquina',             'gluteos',   10),
+        ],
+    }
+
     def setUp(self):
         _, self._planner = _build_planner(self.PERFIL)
         self._semana = _semana_bloque0(self._planner)
 
     def test_resumen(self):
         self.assertEqual(_resumen(self._semana), self.RESUMEN_ESPERADO)
+
+    def test_estructura_dia_completa(self):
+        """Golden master X.13: nombres exactos por día para avanzado 6d."""
+        self.assertEqual(_estructura_dia(self._semana), self.ESTRUCTURA_ESPERADA)
 
     def test_grupos_pequenos_freq_2(self):
         """Post fix presupuesto real: biceps/core/trapecios en freq=2 en 6 días."""
