@@ -17,7 +17,7 @@ from .models.perfil_cliente import PerfilCliente
 from .database.ejercicios import EJERCICIOS_DATABASE
 from .periodizacion.generador import GeneradorPeriodizacion
 from .calculo.peso import CalculadorPeso
-from .calculo.compatibilidad_fase import resolver_peso_objetivo
+from .calculo.compatibilidad_fase import resolver_peso_objetivo, resolver_ancla_historica, _bucket_desde_reps
 from .calculo.fatiga import GestorFatiga
 from .ejercicios.selector import SelectorEjercicios
 from .ejercicios.patrones import PatronManager
@@ -451,7 +451,7 @@ class PlanificadorHelms:
                 EjercicioRealizado.objects.filter(
                     entreno__cliente_id=self.perfil.id
                 ).order_by('-entreno__fecha', '-id').values(
-                    'nombre_ejercicio', 'peso_kg', 'rpe', 'repeticiones'
+                    'nombre_ejercicio', 'peso_kg', 'rpe', 'repeticiones', 'entreno__fecha'
                 )
             )
         except Exception as e:
@@ -468,18 +468,51 @@ class PlanificadorHelms:
             nombre_lower = nombre_ejercicio.lower()
 
             if hasattr(self, '_historial_ejercicios_raw'):
-                match = next(
-                    (e for e in self._historial_ejercicios_raw
-                     if nombre_lower in (e['nombre_ejercicio'] or '').lower()),
-                    None
-                )
-                if match:
-                    if match['peso_kg']:
-                        resultado['peso_real'] = float(match['peso_kg'])
-                    if match['rpe'] is not None:
-                        resultado['rpe_real'] = float(match['rpe'])
-                    if match.get('repeticiones') is not None:
-                        resultado['reps_real'] = int(match['repeticiones'])
+                matches = [
+                    e for e in self._historial_ejercicios_raw
+                    if nombre_lower in (e['nombre_ejercicio'] or '').lower()
+                ]
+                if not matches:
+                    return resultado
+
+                ref = matches[0]
+                if ref['peso_kg']:
+                    resultado['peso_real'] = float(ref['peso_kg'])
+                if ref['rpe'] is not None:
+                    resultado['rpe_real'] = float(ref['rpe'])
+                if ref.get('repeticiones') is not None:
+                    resultado['reps_real'] = int(ref['repeticiones'])
+
+                # Sin reps no se puede determinar bucket → fallback a cruda
+                if ref.get('repeticiones') is None:
+                    return resultado
+
+                bucket_ref = _bucket_desde_reps(int(ref['repeticiones']))
+                sesiones = [
+                    {
+                        'peso': float(m['peso_kg']),
+                        'reps': int(m['repeticiones']),
+                        'rpe': float(m['rpe']),
+                        'fecha': m['entreno__fecha'],
+                    }
+                    for m in matches
+                    if (
+                        m.get('repeticiones') is not None
+                        and m['peso_kg']
+                        and m['rpe'] is not None
+                        and _bucket_desde_reps(int(m['repeticiones'])) == bucket_ref
+                    )
+                ]
+
+                if not sesiones:
+                    # Referencia sin datos completos y sin otras sesiones compatibles
+                    return resultado
+
+                ancla = resolver_ancla_historica(sesiones)
+                if ancla:
+                    resultado['peso_real'] = ancla['peso']
+                    resultado['reps_real'] = ancla['reps']
+                    resultado['rpe_real'] = ancla['rpe']
                 return resultado
 
             # Fallback: consultas individuales si la precarga no se ejecutó
