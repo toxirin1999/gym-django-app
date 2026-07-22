@@ -248,6 +248,84 @@ def obtener_ultimo_peso_ejercicio(cliente_id, nombre_ejercicio, fecha_actual):
     return None  # No se encontró un registro anterior válido
 
 
+def obtener_ancla_ejercicio(cliente_id, nombre_ejercicio, fecha_actual, referencia):
+    """
+    Phase Gym Peso 2.2 X.3 — Ancla de e1RM suavizada para resolver_peso_objetivo.
+
+    Pondera hasta 3 sesiones de EjercicioRealizado del mismo bucket de fase que
+    la referencia (ventana 42 días, pesos 0.5/0.3/0.2 renormalizados) y devuelve
+    un dict con la misma forma que referencia pero con 'peso', 'repeticiones' y
+    'rpe' reemplazados por los del ancla suavizada.
+
+    Alcance deliberadamente limitado: solo EjercicioRealizado. Si referencia viene
+    de Liftin/notas y no hay historial propio en EjercicioRealizado del mismo bucket,
+    devuelve referencia tal cual — nunca peor que el comportamiento pre-X.3.
+
+    Separación cálculo/display: el caller (vista_entrenamiento_activo) sigue usando
+    datos_anterior para todo el display (peso_anterior_kg, fecha_anterior, etc.);
+    esta función solo alimenta la llamada a resolver_peso_objetivo.
+    """
+    from analytics.planificador_helms.calculo.compatibilidad_fase import (
+        _bucket_desde_reps,
+        resolver_ancla_historica,
+    )
+    from .models import EjercicioRealizado as _ER
+
+    if referencia is None:
+        return referencia
+
+    reps_ref = referencia.get('repeticiones')
+    if not reps_ref:
+        return referencia
+
+    bucket_ref = _bucket_desde_reps(int(reps_ref))
+
+    nombre_primera_palabra = (
+        nombre_ejercicio.strip().split()[0]
+        if nombre_ejercicio.strip()
+        else nombre_ejercicio
+    )
+    # Limite 20: suficiente para la ventana de 42 días sin cargar todo el historial.
+    candidatos = (
+        _ER.objects
+        .filter(
+            entreno__cliente_id=cliente_id,
+            entreno__fecha__lte=fecha_actual,
+            nombre_ejercicio__icontains=nombre_primera_palabra,
+        )
+        .select_related('entreno')
+        .order_by('-entreno__fecha')[:20]
+    )
+
+    sesiones = []
+    for ej in candidatos:
+        if not nombres_ejercicio_equivalentes(ej.nombre_ejercicio, nombre_ejercicio):
+            continue
+        if ej.peso_kg is None or ej.repeticiones is None or ej.rpe is None:
+            continue
+        if _bucket_desde_reps(int(ej.repeticiones)) != bucket_ref:
+            continue
+        sesiones.append({
+            'peso': float(ej.peso_kg),
+            'reps': int(ej.repeticiones),
+            'rpe': float(ej.rpe),
+            'fecha': ej.entreno.fecha,
+        })
+
+    if not sesiones:
+        return referencia
+
+    ancla = resolver_ancla_historica(sesiones)
+    if not ancla:
+        return referencia
+
+    resultado = dict(referencia)
+    resultado['peso'] = ancla['peso']
+    resultado['repeticiones'] = ancla['reps']
+    resultado['rpe'] = ancla['rpe']
+    return resultado
+
+
 # -----------------------------------------------------
 
 # Archivo: entrenos/views.py - VISTAS PARA LIFTIN
@@ -3848,10 +3926,16 @@ def vista_entrenamiento_activo(request, cliente_id):
                     'descarga' in (rutina_nombre or '').lower()
                     or _es_descarga_sesion
                 )
+                # Phase Gym Peso 2.2 X.3 — suavizar ancla antes de pasar a resolver_peso_objetivo.
+                # datos_anterior sigue siendo el referente de display (peso_anterior_kg,
+                # fecha_anterior, etc.); _ancla solo alimenta el cálculo de peso.
+                _ancla = obtener_ancla_ejercicio(
+                    cliente.id, ejercicio.get('nombre', ''), fecha_obj, datos_anterior
+                )
                 _decision_fase = resolver_peso_objetivo(
-                    peso_anterior=datos_anterior.get('peso'),
-                    reps_anteriores=datos_anterior.get('repeticiones'),
-                    rpe_anterior=datos_anterior.get('rpe'),
+                    peso_anterior=_ancla.get('peso'),
+                    reps_anteriores=_ancla.get('repeticiones'),
+                    rpe_anterior=_ancla.get('rpe'),
                     rep_range_hoy=ejercicio.get('repeticiones', '8-12'),
                     rpe_objetivo_hoy=ejercicio.get('rpe_objetivo', 8),
                     es_descarga_hoy=_es_descarga_hoy,
