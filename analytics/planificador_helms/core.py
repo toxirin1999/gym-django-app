@@ -300,10 +300,10 @@ class PlanificadorHelms:
         toque_por_grupo: dict = {}
         orden_dias = sorted(distribucion_volumen.keys())
         for idx_dia, dia_key in enumerate(orden_dias):
-            gestor_fatiga = GestorFatiga(fase)
+            grupos_del_dia = distribucion_volumen[dia_key]
+            gestor_fatiga = GestorFatiga(fase, grupos_dia=grupos_del_dia)
             ejercicios_dia = []
 
-            grupos_del_dia = distribucion_volumen[dia_key]
             for grupo in grupos_del_dia:
                 volumen_objetivo_grupo = calcular_volumen_optimo(grupo, nivel, objetivo, factor_recuperacion)
                 frecuencia = (
@@ -427,7 +427,7 @@ class PlanificadorHelms:
                     })
 
                     patron_manager.registrar_uso_patron(patron, idx_dia, grupo, nombre)
-                    gestor_fatiga.registrar_fatiga(patron, series_ajustadas, es_pesado)
+                    gestor_fatiga.registrar_fatiga(patron, series_ajustadas, es_pesado, grupo=grupo)
 
             if ejercicios_dia:
                 semana_planificada[dia_key] = ejercicios_dia

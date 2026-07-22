@@ -18,29 +18,75 @@ CAMBIOS v2:
 - [LIMPIEZA] obtener_limites_sesion convertido a método de instancia para
   consistencia con el resto de la clase (se mantiene también como staticmethod
   para no romper callers existentes).
+
+CAMBIOS v3 (fix bug grupos-desapareciendo-con-rpe9):
+- [BUG FIX] El presupuesto de series_pesadas_max era un contador GLOBAL por
+  sesión, compartido entre todos los grupos del día. Con rpe≥9 (todos los
+  ejercicios son "pesados"), los primeros grupos procesados agotaban el
+  presupuesto y los siguientes recibían 0 series (desaparecían del plan).
+- [NUEVO PARAM] __init__ acepta `grupos_dia: Optional[List[str]]` (None por
+  defecto para retrocompatibilidad total). Cuando se pasa la lista, el
+  presupuesto se reparte a partes iguales entre los grupos (división entera +
+  resto asignado a los primeros grupos de la lista, determinista sin random).
+- [RETROCOMPAT DURA] Sin `grupos_dia`, el comportamiento es IDÉNTICO al
+  v2 — un único contador global, todos los callers existentes sin cambios.
+- [SCOPE LIMITADO] Solo `series_pesadas_max` cambia de modelo (global →
+  per-grupo). `bisagra_pesada_max` y `rodilla_pesada_max` siguen siendo
+  presupuestos globales por patrón de movimiento (fatiga SNC/lumbar real,
+  rara vez compartidos entre más de 1-2 grupos en el mismo día, y no son
+  la causa del bug reportado).
 """
 
-from typing import Dict
+from typing import Dict, List, Optional
 from ..config import LIMITES_FATIGA, GRUPOS_GRANDES, LIMITES_SERIES_SESION
 
-# Patrones que cuentan como "rodilla" para el presupuesto de fatiga
 _PATRONES_RODILLA = {'rodilla'}
-
-# Patrones que cuentan como "bisagra" para el presupuesto de fatiga
 _PATRONES_BISAGRA = {'bisagra'}
+# Clave interna para modo retrocompatible (sin grupos_dia)
+_CLAVE_GLOBAL = '_global_'
 
 
 class GestorFatiga:
     """Controla la fatiga acumulada durante una sesión."""
 
-    def __init__(self, fase: str):
+    def __init__(self, fase: str, grupos_dia: Optional[List[str]] = None):
         self.fase = fase.lower()
         self.limites = LIMITES_FATIGA.get(self.fase, LIMITES_FATIGA['hipertrofia'])
+        # bisagra/rodilla: presupuestos globales por patrón de movimiento (sin cambios v3)
         self.fatiga_actual: Dict[str, int] = {
-            'series_pesadas': 0,
             'bisagra_pesada': 0,
             'rodilla_pesada': 0,
         }
+        presupuesto = self.limites['series_pesadas_max']
+        self._modo_global = grupos_dia is None
+
+        if self._modo_global:
+            # Retrocompatibilidad: presupuesto único global, clave interna fija.
+            # GestorFatiga(fase) sin más argumentos = comportamiento v2 exacto.
+            self.cupo_pesadas_por_grupo: Dict[str, int] = {_CLAVE_GLOBAL: presupuesto}
+            self.fatiga_por_grupo: Dict[str, int] = {_CLAVE_GLOBAL: 0}
+        else:
+            # Reparto igual + suelo mínimo: división entera + resto a los primeros
+            # grupos de la lista (determinista, sin random — invariante duro del motor).
+            # Si len(grupos_dia) > presupuesto, los últimos grupos reciben 0 —
+            # límite físico real del presupuesto, no corregible sin subir series_pesadas_max.
+            n = len(grupos_dia)
+            cuota_base = presupuesto // n if n > 0 else presupuesto
+            resto = presupuesto % n if n > 0 else 0
+            self.cupo_pesadas_por_grupo = {
+                g: cuota_base + (1 if i < resto else 0)
+                for i, g in enumerate(grupos_dia)
+            }
+            self.fatiga_por_grupo = {g: 0 for g in grupos_dia}
+
+    def _clave_pesadas(self, grupo: str) -> Optional[str]:
+        """Devuelve la clave de seguimiento para el presupuesto de series pesadas.
+        Retorna None si el grupo no tiene cupo asignado (defensivo — no debería
+        ocurrir en producción, pero evita KeyError ante datos inesperados)."""
+        if self._modo_global:
+            return _CLAVE_GLOBAL
+        # Grupo no estaba en grupos_dia → cupo=0, no se registra (defensivo)
+        return grupo if grupo in self.cupo_pesadas_por_grupo else None
 
     def ajustar_series_por_limite(
             self,
@@ -55,74 +101,75 @@ class GestorFatiga:
         Ajusta el número de series si supera los límites de fatiga permitidos.
 
         Lógica de prioridad (Helms):
-          1. Presupuesto global de series pesadas por sesión.
-          2. Presupuesto específico de bisagra pesada.
-          3. Presupuesto específico de rodilla pesada.
+          1. Presupuesto de series pesadas por grupo (v3) o global (modo retrocompat).
+          2. Presupuesto específico de bisagra pesada (siempre global).
+          3. Presupuesto específico de rodilla pesada (siempre global).
 
         Para ejercicios no pesados solo se aplica el límite de sesión
         por grupo muscular (LIMITES_SERIES_SESION), que evita exceso de
         aislamiento en fases de volumen moderado.
-
-        CORRECCIÓN: La versión anterior comparaba patron con "sentadilla"
-        y "cuadriceps" que nunca son valores de 'patron'. Solo 'rodilla'
-        es el patrón correcto para cuádriceps en la DB de ejercicios.
         """
         series_ajustadas = int(series)
 
         if not es_pesado:
-            # Bug 9 fix: aplicar límite de sesión por grupo también para series ligeras
             if grupo:
                 limites = self.obtener_limites_sesion(grupo)
                 series_ajustadas = min(series_ajustadas, limites['max'])
             return series_ajustadas
 
-        # 1) Presupuesto global de series pesadas
-        margen_global = self.limites['series_pesadas_max'] - self.fatiga_actual['series_pesadas']
-        if margen_global <= 0:
+        # 1) Presupuesto de series pesadas (per-grupo en modo nuevo, global en retrocompat)
+        clave = self._clave_pesadas(grupo)
+        if clave is None:
+            return 0  # grupo desconocido sin cupo asignado (defensivo)
+
+        cupo = self.cupo_pesadas_por_grupo[clave]
+        consumido = self.fatiga_por_grupo.get(clave, 0)
+        margen = cupo - consumido
+        if margen <= 0:
             return 0
 
-        if self.fatiga_actual['series_pesadas'] + series_ajustadas > self.limites['series_pesadas_max']:
-            # Recorte: auxiliares/aislamientos primero, luego compuestos principales
+        if consumido + series_ajustadas > cupo:
             if tipo_ejercicio in ('aislamiento', 'compuesto_secundario'):
-                series_ajustadas = max(0, margen_global)
+                series_ajustadas = max(0, margen)
             else:
-                series_ajustadas = max(1, margen_global)
+                series_ajustadas = max(1, margen)
 
-        # 2) Presupuesto de bisagra pesada
+        # 2) Presupuesto de bisagra pesada (siempre global — fatiga SNC/lumbar)
         if patron in _PATRONES_BISAGRA:
             margen_bisagra = (
-                    self.limites['bisagra_pesada_max'] - self.fatiga_actual['bisagra_pesada']
+                self.limites['bisagra_pesada_max'] - self.fatiga_actual['bisagra_pesada']
             )
             if series_ajustadas > margen_bisagra:
                 series_ajustadas = max(0, margen_bisagra)
 
-        # 3) Presupuesto de rodilla pesada
-        #    CORRECCIÓN: solo 'rodilla', eliminados "sentadilla" y "cuadriceps"
+        # 3) Presupuesto de rodilla pesada (siempre global)
         if patron in _PATRONES_RODILLA:
             margen_rodilla = (
-                    self.limites['rodilla_pesada_max'] - self.fatiga_actual['rodilla_pesada']
+                self.limites['rodilla_pesada_max'] - self.fatiga_actual['rodilla_pesada']
             )
             if series_ajustadas > margen_rodilla:
                 series_ajustadas = max(0, margen_rodilla)
 
         return series_ajustadas
 
-    def registrar_fatiga(self, patron: str, series: int, es_pesado: bool) -> None:
+    def registrar_fatiga(self, patron: str, series: int, es_pesado: bool, grupo: str = '') -> None:
         """
         Registra la fatiga acumulada tras añadir un ejercicio.
 
-        CORRECCIÓN: Eliminados "sentadilla" y "cuadriceps" de la comparación
-        de patron. Solo 'rodilla' es el patrón real en la DB de ejercicios.
+        `grupo` se usa para actualizar el contador per-grupo de series pesadas.
+        En modo retrocompat (sin grupos_dia), el valor de `grupo` se ignora
+        y se usa el contador global interno.
         """
         if not es_pesado:
             return
 
         series = int(series)
-        self.fatiga_actual['series_pesadas'] += series
+        clave = self._clave_pesadas(grupo)
+        if clave is not None:
+            self.fatiga_por_grupo[clave] = self.fatiga_por_grupo.get(clave, 0) + series
 
         if patron in _PATRONES_BISAGRA:
             self.fatiga_actual['bisagra_pesada'] += series
-
         if patron in _PATRONES_RODILLA:
             self.fatiga_actual['rodilla_pesada'] += series
 
