@@ -271,31 +271,40 @@ class TestX4GestorFatigaSigueCortando(TestCase):
 
     def test_cuadriceps_maximo_dia_es_rodilla_pesada_max_con_rpe9(self):
         """
-        DESACTIVADO (2026-07-20) — hallazgo real, no arreglado todavía:
-        con rpe=9 (ocurre de verdad en la última semana del bloque
-        "Hipertrofia — Intensificación", rpe_fin=9), TODOS los ejercicios se
-        clasifican como 'pesado'. Con el motor de asignación (X.6/X.7)
-        varios grupos comparten día — el presupuesto de series_pesadas_max
-        de GestorFatiga es GLOBAL POR DÍA, compartido entre todos los grupos
-        de esa sesión, no por grupo. Se agota con los primeros grupos
-        procesados y deja a los siguientes en 0 series (grupo entero
-        desaparece de la semana, no solo recortado).
+        BUG ARREGLADO (2026-07-22, reparto per-grupo de series_pesadas_max):
+        con rpe=9 todos los ejercicios son 'pesado'. Antes del fix, el
+        presupuesto de series_pesadas_max era GLOBAL por sesión — los primeros
+        grupos procesados lo agotaban y cuadriceps (y hasta 5 grupos más)
+        desaparecía por completo de la semana.
 
-        Verificado: cuadriceps (y otros 5 grupos de los 12) desaparece por
-        completo, incluso con el vol_mult normal del bloque (1.05), solo con
-        rpe=9. No es un problema del vol_mult extremo del test, es un gap
-        real en la interacción GestorFatiga↔asignador multi-grupo-por-día.
-
-        No afecta la semana actual de david (rpe más bajo), pero SÍ afectará
-        la última semana de "Intensificación" en producción. Pendiente para
-        una fase futura: repartir el presupuesto de series_pesadas_max entre
-        los grupos del día en vez de agotarlo por orden de procesamiento, o
-        excluir grupos "pesados" adicionales del mismo día si el presupuesto
-        no alcanza para todos.
+        Después del fix: el presupuesto se reparte a partes iguales entre los
+        grupos del día al instanciar GestorFatiga(fase, grupos_dia=...). Cada
+        grupo tiene su propio cupo — el consumo de pecho no agota el cupo de
+        cuadriceps. Ningún grupo grande desaparece del plan con rpe=9.
         """
-        self.skipTest(
-            "Bug real pendiente: GestorFatiga puede zerar grupos enteros con "
-            "rpe=9 y varios grupos por día — ver docstring del test."
+        planner = _build_planner(self.PERFIL)
+        bloque = self._generar_bloque_rpe9_vol_alto()
+        semana = planner._generar_semana_especifica(bloque, 1)
+
+        grupos_en_semana = set()
+        for ejercicios in semana.values():
+            for ej in ejercicios:
+                grupos_en_semana.add(ej['grupo_muscular'])
+
+        self.assertIn(
+            'cuadriceps', grupos_en_semana,
+            "Cuadriceps desapareció de la semana con rpe=9 — "
+            "el fix de reparto per-grupo no está funcionando."
+        )
+        # Ningún grupo grande debe desaparecer entero por el presupuesto global agotado
+        grupos_grandes_ausentes = [
+            g for g in ('pecho', 'espalda', 'cuadriceps', 'isquios', 'gluteos')
+            if g not in grupos_en_semana
+        ]
+        self.assertEqual(
+            grupos_grandes_ausentes, [],
+            f"Grupos grandes ausentes con rpe=9: {grupos_grandes_ausentes}. "
+            "Con el fix, ninguno debe desaparecer por presupuesto global agotado."
         )
 
 
