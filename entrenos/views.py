@@ -8579,7 +8579,7 @@ def briefing_entrenamiento(request, cliente_id):
     try:
         from core.continuidad import registrar_o_actualizar_pausa, get_pausa_abierta
         from entrenos.models import PausaEntrenamiento
-        registrar_o_actualizar_pausa(cliente, fecha_ref=fecha_obj)
+        registrar_o_actualizar_pausa(cliente)
         _pausa = get_pausa_abierta(cliente)
         if _pausa and not _pausa.motivo_preguntado:
             pausa_pregunta = _pausa
