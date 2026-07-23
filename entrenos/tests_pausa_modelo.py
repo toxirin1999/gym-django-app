@@ -92,3 +92,115 @@ class TestMotivoEnLectura(PausaBase):
         self.assertEqual(lectura['motivo'], 'desconocido')
         self.assertFalse(lectura['motivo_respondido'])
         self.assertEqual(lectura['tipo'], 'pausa_no_declarada')
+
+
+# ── Phase Continuidad — Bug: fecha calendario pasada a registrar_o_actualizar_pausa ──
+#
+# Bug confirmado en prod: la vista del briefing pasaba fecha_ref=fecha_obj
+# (el día del calendario que el usuario visualizaba) en vez de dejar que la
+# función usase timezone.now().date(). Navegar a un día pasado y luego a uno
+# más antiguo producía fecha_fin < fecha_inicio en PausaEntrenamiento.
+#
+# Fix: registrar_o_actualizar_pausa(cliente) sin fecha_ref — la función
+# resuelve "hoy" internamente con timezone.now().date().
+
+
+class TestSinFechaRefNuncaCorrompe(TestCase):
+    """registrar_o_actualizar_pausa() sin fecha_ref no produce fechas corruptas.
+
+    Confirma que el contrato de la función — cuando se llama como ahora hace la
+    vista tras el fix — no genera fecha_fin < fecha_inicio sin importar cuántas
+    veces se llame consecutivamente.
+    """
+
+    def setUp(self):
+        self.user = User.objects.create_user('tester_noref', password='x')
+        self.cliente = Cliente.objects.get(user=self.user)
+        # Último gym hace más de un año → nivel recalibracion siempre desde hoy real
+        ActividadRealizada.objects.create(
+            cliente=self.cliente, tipo='gym', fecha=date(2025, 1, 1),
+        )
+
+    def test_dos_llamadas_consecutivas_sin_fecha_ref_no_corrompen(self):
+        """Dos llamadas sin fecha_ref mantienen la pausa abierta y sin fecha_fin."""
+        registrar_o_actualizar_pausa(self.cliente)
+        registrar_o_actualizar_pausa(self.cliente)
+
+        self.assertEqual(PausaEntrenamiento.objects.count(), 1)
+        p = PausaEntrenamiento.objects.first()
+        self.assertIsNone(p.fecha_fin,
+                          "la pausa no debe cerrarse si hoy el usuario sigue sin gym")
+
+    def test_sin_fecha_ref_fechas_siempre_coherentes(self):
+        """Nunca hay registro con fecha_fin < fecha_inicio."""
+        registrar_o_actualizar_pausa(self.cliente)
+        registrar_o_actualizar_pausa(self.cliente)
+
+        for p in PausaEntrenamiento.objects.all():
+            if p.fecha_fin is not None:
+                self.assertGreaterEqual(
+                    p.fecha_fin, p.fecha_inicio,
+                    f"fecha_fin ({p.fecha_fin}) < fecha_inicio ({p.fecha_inicio})",
+                )
+
+
+class TestBriefingNoPasaFechaCalendarioAPausa(TestCase):
+    """Regresión del bug de producción: la vista del briefing nunca pasa la
+    fecha del calendario (?fecha=) a registrar_o_actualizar_pausa.
+
+    Escenario del bug: navegar primero a un día reciente (que crea la pausa
+    con fecha_inicio calculada a partir de ese día) y luego a la misma fecha
+    del último gym (donde dias_sin_gym=0 → cierra la pausa) producía
+    fecha_fin < fecha_inicio en la BD.
+    """
+
+    def setUp(self):
+        from django.core.cache import cache
+        cache.clear()
+        self.user = User.objects.create_user('tester_briefing_pausa', password='x')
+        self.cliente = Cliente.objects.get(user=self.user)
+        # Último gym hace más de un año → desde hoy real siempre recalibracion
+        ActividadRealizada.objects.create(
+            cliente=self.cliente, tipo='gym', fecha=date(2025, 1, 1),
+        )
+        from django.test import Client as DjangoClient
+        self.c = DjangoClient()
+        self.c.login(username='tester_briefing_pausa', password='x')
+
+    def tearDown(self):
+        from django.core.cache import cache
+        cache.clear()
+
+    def _hit_briefing(self, fecha_str):
+        from django.urls import reverse
+        from django.core.cache import cache
+        # Precargar cache de transporte vacío para evitar que el helper lance 500
+        _key = f"transporte_ejercicios_dia_{self.cliente.id}_{fecha_str}"
+        cache.set(_key, [], 900)
+        url = reverse('entrenos:briefing_entrenamiento', args=[self.cliente.id])
+        return self.c.get(url, {'fecha': fecha_str, 'rutina_nombre': 'Test'})
+
+    def test_no_genera_fecha_fin_menor_que_fecha_inicio(self):
+        """Dos peticiones al briefing con fechas de calendario no cronológicas
+        no deben dejar ningún PausaEntrenamiento con fecha_fin < fecha_inicio.
+
+        Con el bug: la primera llamada con fecha reciente creaba la pausa con
+        fecha_inicio = last_gym + 1 day. La segunda con la fecha exacta del
+        último gym hacía dias_sin_gym=0 → cerraba con fecha_fin=last_gym <
+        fecha_inicio. Tras el fix la función usa timezone.now() internamente
+        y ambas llamadas ven el mismo "hoy" real → la pausa no se cierra.
+        """
+        # Navegar primero a un día reciente donde el usuario tiene la pausa activa
+        r1 = self._hit_briefing('2026-06-20')
+        self.assertIn(r1.status_code, (200, 302))
+
+        # Navegar a la fecha del propio último gym (el caso que disparaba el bug)
+        r2 = self._hit_briefing('2025-01-01')
+        self.assertIn(r2.status_code, (200, 302))
+
+        for p in PausaEntrenamiento.objects.filter(cliente=self.cliente):
+            if p.fecha_fin is not None:
+                self.assertGreaterEqual(
+                    p.fecha_fin, p.fecha_inicio,
+                    f"BUG: fecha_fin ({p.fecha_fin}) < fecha_inicio ({p.fecha_inicio})",
+                )
