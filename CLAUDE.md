@@ -685,12 +685,12 @@ Framework: Django `TestCase` (unittest-based). No pytest configuration present.
 
 ## Security Notes
 
-> These are known issues in the current codebase. Fix before any public production deployment.
+> Última verificación: 24-jul-2026. `settings.py` ya usa variables de entorno correctamente — este apartado documentaba un estado antiguo del código, ya resuelto.
 
-1. **`DEBUG=True` in `settings.py`** — must be `False` in production.
-2. **`ALLOWED_HOSTS=['*']`** — restrict to actual domain in production.
-3. **Hardcoded secrets in `settings.py`**: `SECRET_KEY`, MySQL password, Gemini API key — move to environment variables.
-4. **`settings_local.py`** is not in `.gitignore` — verify it never contains production credentials.
+1. **`DEBUG`** — `settings.py` lee `os.environ.get('DEBUG', 'False') == 'True'` (default seguro). Verificar en PythonAnywhere qué valor real tiene la variable de entorno — no visible desde el repo.
+2. **`ALLOWED_HOSTS`** — ya restringido por defecto a `['toxirin.pythonanywhere.com', 'localhost', '127.0.0.1']`, configurable vía variable de entorno. Ya no es `['*']`.
+3. **Secretos en `settings.py`**: `SECRET_KEY`, password MySQL, Gemini/Anthropic API keys — todos vía `os.environ.get(...)`, con `gymproject/secrets_pa.py` (gitignored) como override opcional en producción. Nada hardcodeado.
+4. **`settings_local.py`** — SÍ está en `.gitignore` (confirmado). El único hallazgo real (23-jul-2026): tenía una API key de Anthropic hardcodeada en texto plano — nunca llegó a git (archivo gitignored), mismo se movió a `.env` por higiene.
 
 ---
 
