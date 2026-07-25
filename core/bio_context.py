@@ -84,6 +84,25 @@ class BioContextProvider:
             'has_restrictions': bool(tags),
         }
 
+    @staticmethod
+    def get_current_restrictions_cached(cliente) -> Dict[str, Any]:
+        """
+        Igual que ``get_current_restrictions`` pero reutiliza la caché de 10 min
+        que ya escribe ``core.bio_context_processor.bio_context`` (key
+        ``bio_ctx_{cliente.id}``, contiene ``bio_banner``). Si hay hit, evita
+        repetir la query a ``UserInjury`` que el context processor ya hizo (o
+        hará) para la misma request/ventana. Si no hay hit, cae al cálculo
+        directo — la vista que llame a este método no necesita escribir en
+        caché, el context processor la rellenará al renderizar el template.
+        """
+        from django.core.cache import cache
+
+        cached = cache.get(f'bio_ctx_{cliente.id}')
+        if cached and 'bio_banner' in cached:
+            return cached['bio_banner']
+
+        return BioContextProvider.get_current_restrictions(cliente)
+
     # ──────────────────────────────────────────────────────────
     #  2) BIO SIGNALS (checkin matutino)
     # ──────────────────────────────────────────────────────────

@@ -1655,7 +1655,9 @@ def hyrox_dashboard(request):
         from analytics.planificador_helms.database.ejercicios import EJERCICIOS_DATABASE
         from core.bio_context import BioContextProvider
 
-        bio_data = BioContextProvider.get_current_restrictions(cliente)
+        # Reutiliza la caché de 10 min del context processor global (bio_ctx_{cliente.id})
+        # en vez de repetir la query a UserInjury en cada carga del dashboard.
+        bio_data = BioContextProvider.get_current_restrictions_cached(cliente)
         restricted_tags = bio_data.get('tags', set())
 
         if restricted_tags:
