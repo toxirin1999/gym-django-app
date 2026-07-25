@@ -248,17 +248,6 @@ input{background:transparent!important;border:none!important;outline:none!import
 .d1{width:14px;height:18px;background:#888;}
 .pd-calc-txt{font-size:12px;color:var(--td);text-align:center;}
 .pd-calc-txt strong{color:#fff;}
-/* 5 — Controles −30s / +30s */
-.pd-controles{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;}
-.pd-ctrl-btn{
-  height:52px;border-radius:16px;border:none;
-  background:var(--surf2);
-  font-size:14px;font-weight:600;color:var(--td);
-  cursor:pointer;letter-spacing:0.05em;
-  transition:transform .1s;
-}
-.pd-ctrl-btn.mas{color:var(--green);}
-.pd-ctrl-btn:active{transform:scale(0.97);}
 /* Técnica */
 .pd-tecnica-wrap{
   margin-bottom:16px;
@@ -762,7 +751,6 @@ input{background:transparent!important;border:none!important;outline:none!import
   .pd-ring-wrap { width: min(220px, 60vw); height: min(220px, 60vw); }
 
   /* Controles descanso */
-  .pd-ctrl-btn { height: 52px; }
   .btn-saltar { height: 52px; }
 
   /* Botón guardar */
@@ -1504,12 +1492,6 @@ input{background:transparent!important;border:none!important;outline:none!import
       <div class="pd-calc-txt" id="calc-txt-{{ ejercicio.form_id }}"></div>
     </div>
     {% endif %}
-
-    <!-- 5 — −30s / +30s -->
-    <div class="pd-controles">
-      <button type="button" class="pd-ctrl-btn" onclick="ajustarTimer('{{ ejercicio.form_id }}',-30)">−30S</button>
-      <button type="button" class="pd-ctrl-btn mas" onclick="ajustarTimer('{{ ejercicio.form_id }}',30)">+30S</button>
-    </div>
 
     <!-- 6 — Saltar descanso -->
     <button type="button" class="btn-saltar" id="btn-saltar-{{ ejercicio.form_id }}"
@@ -2508,15 +2490,6 @@ function actualizarTimerUI(fid){
   }
   if(saltarEl)saltarEl.textContent='SALTAR DESCANSO ('+display+')';
   if(ring)ring.style.strokeDashoffset=(628.32*(1-t.seg/t.total)).toFixed(2);
-}
-
-function ajustarTimer(fid,delta){
-  if(!STATE.timers[fid])return;
-  const nuevo=Math.max(0,Math.min(600,STATE.timers[fid].seg+delta));
-  STATE.timers[fid].seg=nuevo;
-  STATE.timers[fid].endTs=Date.now()+nuevo*1000; // sincronizar timestamp para que el tick no revierta
-  STATE.timers[fid].total=Math.max(STATE.timers[fid].total,nuevo);
-  actualizarTimerUI(fid);
 }
 
 function saltarDescanso(fid){
