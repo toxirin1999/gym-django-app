@@ -50,3 +50,11 @@ gymproject/settings_local.py
 
 # Cuadernos de laboratorio de pilotos — datos personales, no documentación del proyecto
 PILOTO_NUTRICION_0_BITACORA.md
+
+# Volcados de producción — PII y hashes reales, NUNCA subir al repo
+datadump.json
+datadump.jsoncls
+datos_produccion.json
+datos_produccion_fixed.json
+datadump*.json
+datos_produccion*.json
