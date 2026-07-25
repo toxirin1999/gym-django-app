@@ -34,7 +34,8 @@ urlpatterns = [
     path('disponibilidad/', include('disponibilidad.urls', namespace='disponibilidad')),
 
     # --- APIs ---
-    path('api/liftin/', include('entrenos.urls_api')),
+    # path('api/liftin/', include('entrenos.urls_api')),  # Desactivada (25-jul-2026): sin auth real
+    # (Bearer token nunca validado) y cero uso real (0 registros fuente_datos='liftin' en BD).
 ]
 
 # --- Configuración para Servir Archivos Estáticos y de Medios en Desarrollo ---
