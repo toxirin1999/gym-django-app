@@ -1658,12 +1658,10 @@ def limpiar_cache_modulos_ia(cliente_id):
 
 
 # ==================== ALIAS PARA COMPATIBILIDAD ====================
-
-@login_required
-def deteccion_patrones_view(request, cliente_id):
-    """Alias para deteccion_patrones_automatica (compatibilidad)"""
-    return deteccion_patrones_automatica(request, cliente_id)
-
+# NOTA (25-jul-2026): deteccion_patrones_view (definida aquí y otra vez más abajo)
+# se eliminó por ser código muerto verificado — no hay ninguna URL en
+# analytics/urls.py que la referencie, ni ningún import/llamada directa en el
+# resto del repo.
 
 @login_required
 def optimizacion_entrenamientos(request, cliente_id):
@@ -2208,12 +2206,6 @@ class DeteccionPatronesIA:
         }
 
 
-@login_required
-def deteccion_patrones_view(request, cliente_id):
-    """Alias para deteccion_patrones_automatica (compatibilidad)"""
-    return deteccion_patrones_automatica(request, cliente_id)
-
-
 # ============================================================================
 # AÑADIR ESTE BLOQUE COMPLETO AL FINAL DE TU ARCHIVO `analytics/views_ia.py`
 # ============================================================================
@@ -2298,108 +2290,10 @@ from .ia_analizador_programas import AnalizadorProgramaIA
 # ... (el resto de tus importaciones y vistas existentes) ...
 
 
-# ============================================================================
-# === VISTA PARA ANÁLISIS DE PROGRAMAS ASIGNADOS ===
-# ============================================================================
-
-@login_required
-def vista_optimizacion_programa(request, cliente_id):
-    """
-    Analiza el PROGRAMA ASIGNADO a un cliente y lo muestra en el
-    template de optimización.
-    """
-    # =================================================================
-    # ### AÑADE ESTA LÍNEA AL PRINCIPIO DE TODO ###
-    print("✅✅✅ ¡ÉXITO! La URL está llamando a 'vista_optimizacion_programa views_ia' correctamente. ✅✅✅")
-    # =================================================================
-
-    cliente = get_object_or_404(Cliente, id=cliente_id)
-
-    try:
-        # Buscamos el programa a través del modelo de Asignación.
-        asignacion = Asignacion.objects.get(cliente=cliente)
-        programa_asignado = asignacion.programa
-    except Asignacion.DoesNotExist:
-        # Manejo de error si el cliente no tiene un programa.
-        return render(request, 'error.html',
-                      {'message': 'Este cliente no tiene un programa de entrenamiento asignado.'})
-
-    # Obtenemos el objetivo del selector del template o usamos el del cliente como fallback.
-    # Asumimos que tu modelo Cliente tiene un campo `objetivo_principal`.
-    objetivo_actual = request.GET.get('objetivo', cliente.objetivo_principal)
-    if objetivo_actual not in ['hipertrofia', 'fuerza', 'resistencia']:
-        objetivo_actual = cliente.objetivo_principal
-
-    # Creamos la instancia del analizador con el programa y el objetivo.
-    analizador = AnalizadorProgramaIA(programa_asignado, objetivo_actual)
-
-    # Con un solo método, obtenemos todo el contexto que el template necesita.
-    contexto_ia = analizador.analizar_y_generar_contexto()
-
-    # Preparamos el contexto final para el template.
-    context = {
-        'cliente': cliente,
-        'objetivo_actual': objetivo_actual,
-        **contexto_ia  # Desempaquetamos el diccionario de la IA aquí.
-    }
-    print(contexto_ia)
-    # Renderizamos el template que ya conoces.
-    return render(request, 'analytics/optimizacion_entrenamientos.html', context)
-
-
-# analytics/views_ia.py
-
-# --- Asegúrate de que estas importaciones están al principio del archivo ---
-import json
-from django.shortcuts import render, get_object_or_404, redirect
-from django.contrib import messages
-from clientes.models import Cliente
-from rutinas.models import Programa, Rutina, RutinaEjercicio, Asignacion
-from .ia_analizador_programas import AnalizadorProgramaIA
-
-
-# -------------------------------------------------------------------------
-
-
-@login_required
-def vista_optimizacion_programa(request, cliente_id):
-    """
-    Analiza el PROGRAMA ASIGNADO a un cliente y lo muestra en el
-    template de optimización.
-    """
-    print("✅✅✅ ¡ÉXITO! La URL está llamando a 'vista_optimizacion_programa' correctamente. ✅✅✅")
-    cliente = get_object_or_404(Cliente, id=cliente_id)
-
-    try:
-        asignacion = Asignacion.objects.get(cliente=cliente)
-        programa_asignado = asignacion.programa
-    except Asignacion.DoesNotExist:
-        return render(request, 'error.html',
-                      {'message': 'Este cliente no tiene un programa de entrenamiento asignado.'})
-
-    objetivo_actual = request.GET.get('objetivo', cliente.objetivo_principal)
-    if objetivo_actual not in ['hipertrofia', 'fuerza', 'resistencia', 'general']:
-        objetivo_actual = cliente.objetivo_principal
-
-    analizador = AnalizadorProgramaIA(programa_asignado, objetivo_actual)
-
-    contexto_ia = analizador.analizar_y_generar_contexto()
-
-    # =================================================================
-    # ### CORRECCIÓN FINAL ###
-    # Añadimos 'programa_modificado' al contexto para que el template
-    # pueda acceder a él y rellenar el campo oculto del formulario.
-    # =================================================================
-    context = {
-        'cliente': cliente,
-        'objetivo_actual': objetivo_actual,
-        'programa_modificado': analizador.programa_modificado,  # <-- ¡ESTA ES LA LÍNEA CLAVE!
-        **contexto_ia
-    }
-    # =================================================================
-
-    return render(request, 'analytics/optimizacion_entrenamientos.html', context)
-
+# NOTA (25-jul-2026): había 3 definiciones de vista_optimizacion_programa en este
+# archivo; solo la última (ver más abajo) es la que analytics/urls.py enruta
+# realmente ('optimizar-programa/'). Las 2 anteriores eran código muerto verificado
+# (Python solo conserva el último binding del nombre en el módulo) — eliminadas.
 
 # analytics/views_ia.py
 

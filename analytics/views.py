@@ -4,7 +4,11 @@ from django.shortcuts import render, get_object_or_404
 import json
 from decimal import Decimal
 from analytics.planificador_helms_completo import PlanificadorHelms, PerfilCliente
-from .calculators import CalculadoraEjerciciosTabla
+# NOTA (25-jul-2026): antes se importaba CalculadoraEjerciciosTabla desde .calculators
+# aquí, pero la clase local definida más abajo en este mismo archivo la sombreaba
+# siempre (Python resuelve al último binding en el namespace del módulo) — el import
+# nunca tuvo efecto real. Import muerto eliminado; la clase realmente usada es la
+# definida en este archivo.
 from .analisis_progresion import AnalisisProgresionAvanzado
 from .analisis_intensidad import AnalisisIntensidadAvanzado
 from django.shortcuts import render, get_object_or_404
@@ -3514,128 +3518,11 @@ from rutinas.models import Asignacion, Programa  # ... y otros modelos que neces
 from django.utils.html import escape
 
 
-def vista_optimizacion_programa(request, cliente_id):
-    """
-    Analiza el PROGRAMA ASIGNADO a un cliente y lo muestra en el
-    template de optimización.
-    """
-    print("✅✅✅ ¡ÉXITO! La URL está llamando a 'vista_optimizacion_programa' correctamente. ✅✅✅")
-    cliente = get_object_or_404(Cliente, id=cliente_id)
-
-    # =================================================================
-    # ### CORRECCIÓN CLAVE ###
-    # Nos aseguramos de que 'programa_asignado' se define correctamente
-    # antes de ser usada.
-    # =================================================================
-    try:
-        # Buscamos la asignación para este cliente
-        asignacion = Asignacion.objects.get(cliente=cliente)
-        # Obtenemos el programa a través de la asignación
-        programa_asignado = asignacion.programa
-        print(f"✅ Asignación encontrada. Analizando programa: '{programa_asignado.nombre}'")
-
-    except Asignacion.DoesNotExist:
-        # Si no hay asignación, mostramos un error claro y terminamos.
-        print("❌ No se encontró asignación para este cliente.")
-        return render(request, 'error.html',
-                      {'message': 'Este cliente no tiene un programa de entrenamiento asignado.'})
-
-    # A partir de aquí, la variable 'programa_asignado' SIEMPRE existe.
-    objetivo_actual = request.GET.get('objetivo', cliente.objetivo_principal)
-    if objetivo_actual not in ['hipertrofia', 'fuerza', 'resistencia', 'general']:
-        objetivo_actual = cliente.objetivo_principal
-
-    # Usamos la variable que hemos definido
-    analizador = AnalizadorProgramaIA(programa_asignado, objetivo_actual)
-    contexto_ia = analizador.analizar_y_generar_contexto()
-    # Convertimos el diccionario a una cadena JSON aquí mismo
-    programa_modificado_json_string = json.dumps(analizador.programa_modificado)
-    json_string = json.dumps(analizador.programa_modificado)
-    programa_original_dict = analizador._clonar_programa_a_diccionario(programa_asignado)
-    programa_original_json_string = json.dumps(programa_original_dict)
-    # 2. Escapamos las comillas dobles de la cadena para que sea segura
-    #    dentro de un atributo value="..." del HTML.
-    json_string_escaped = escape(json_string)
-    context = {
-        'cliente': cliente,
-        'objetivo_actual': objetivo_actual,
-        'programa_modificado_json': programa_modificado_json_string,
-        'programa_modificado': analizador.programa_modificado,
-        'programa_modificado_json_escaped': json_string_escaped,
-        'programa_original_json_escaped': escape(programa_original_json_string),
-        **contexto_ia
-    }
-
-    return render(request, 'analytics/optimizacion_entrenamientos.html', context)
-
-
-from django.utils.safestring import mark_safe
-from .vendor.diff_match_patch import diff_match_patch  # Necesitaremos esto
-
-# ... (tus otras vistas) ...
-# analytics/views_ia.py
-
-# ... (tus otras importaciones) ...
-from django.utils.html import escape  # <-- Asegúrate de que esta importación existe
-
-
-# ... (tus otras vistas) ...
-
-def vista_optimizacion_programa(request, cliente_id):
-    """
-    Analiza el PROGRAMA ASIGNADO a un cliente y lo muestra en el
-    template de optimización.
-    """
-    cliente = get_object_or_404(Cliente, id=cliente_id)
-
-    try:
-        asignacion = Asignacion.objects.get(cliente=cliente)
-        programa_asignado = asignacion.programa
-    except Asignacion.DoesNotExist:
-        return render(request, 'error.html',
-                      {'message': 'Este cliente no tiene un programa de entrenamiento asignado.'})
-
-    objetivo_actual = request.GET.get('objetivo', cliente.objetivo_principal)
-    if objetivo_actual not in ['hipertrofia', 'fuerza', 'resistencia', 'general']:
-        objetivo_actual = cliente.objetivo_principal
-
-    analizador = AnalizadorProgramaIA(programa_asignado, objetivo_actual)
-    contexto_ia = analizador.analizar_y_generar_contexto()
-
-    # =================================================================
-    # ### CORRECCIÓN FINAL Y DEFINITIVA ###
-    # Aquí preparamos los datos JSON que el formulario necesita para
-    # enviarlos a la siguiente vista (la de comparación).
-    # =================================================================
-
-    # 1. Clonamos el programa original a un diccionario
-    programa_original_dict = analizador._clonar_programa_a_diccionario(programa_asignado)
-
-    # 2. Convertimos ambos diccionarios (original y modificado) a cadenas JSON
-    programa_original_json_string = json.dumps(programa_original_dict)
-    programa_modificado_json_string = json.dumps(analizador.programa_modificado)
-
-    # 3. Construimos el contexto final, añadiendo las versiones "escapadas"
-    #    de los JSON para que sean seguras en el HTML.
-    context = {
-        'cliente': cliente,
-        'objetivo_actual': objetivo_actual,
-
-        # Datos para el formulario
-        'programa_original_json_escaped': escape(programa_original_json_string),
-        'programa_modificado_json_escaped': escape(programa_modificado_json_string),
-
-        # Desempaquetamos el resto de datos de la IA (rutina_optimizada, etc.)
-        **contexto_ia
-    }
-    # =================================================================
-
-    return render(request, 'analytics/optimizacion_entrenamientos.html', context)
-
-
-# analytics/views.py
-
-# ... (otros imports) ...
+# NOTA (25-jul-2026): esta sección tenía 2 definiciones de vista_optimizacion_programa
+# que nunca se ejecutaban — analytics/urls.py enruta 'optimizar-programa/' a
+# views_ia.vista_optimizacion_programa (la última definición dentro de ese archivo),
+# no a esta. Eliminadas por ser código muerto verificado (sin URL ni import que las
+# referenciara). Ver analytics/views_ia.py para la implementación real.
 
 def vista_resumen_anual(request, cliente_id):
     """
