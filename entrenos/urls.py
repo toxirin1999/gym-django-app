@@ -106,7 +106,10 @@ urlpatterns = [
     path('ajax/entrenamientos-mes/<int:cliente_id>/',
          views.ajax_obtener_entrenamientos_mes,
          name='ajax_entrenamientos_mes'),
-    path('api/ejercicios/registrar/', views.api_registrar_ejercicio, name='api_registrar_ejercicio'),
+    # path('api/ejercicios/registrar/', views.api_registrar_ejercicio, name='api_registrar_ejercicio'),
+    # Desactivada (25-jul-2026): csrf_exempt sin auth real, 0 registros creados nunca (DetalleEjercicioRealizado
+    # count=0) y bug de campo inexistente ('notas_generales') que la haría fallar si se usara. Ver
+    # api_apple_health (línea ~8350) para el patrón correcto (Cliente.api_token) si se reactiva en el futuro.
     path('api/estadisticas/', views.api_obtener_estadisticas, name='api_estadisticas'),
     path('api/usuario/perfil/', views.api_obtener_perfil, name='api_perfil'),
     path('api/bio-correlation/<int:cliente_id>/', views.api_bio_correlation, name='api_bio_correlation'),
