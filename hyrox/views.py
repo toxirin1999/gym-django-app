@@ -3285,11 +3285,13 @@ def strava_webhook(request):
                             raw_json         = raw,
                         )
                 except StravaToken.DoesNotExist:
-                    pass  # Activity for an unregistered athlete — ignore
+                    logger.warning("strava_webhook: evento para athlete_id no registrado: %s", ath_id)
                 except Exception:
-                    pass  # Never let webhook fail with non-200
+                    logger.exception("strava_webhook: fallo procesando activity %s (athlete_id=%s)", act_id, ath_id)
         except Exception:
-            pass
+            logger.exception("strava_webhook: payload POST inválido o error temprano")
+        # Nunca dejar que el webhook falle con non-200 (Strava reintentaría indefinidamente);
+        # los fallos quedan logueados arriba para no perder visibilidad.
         return HttpResponse(status=200)
 
     return HttpResponse(status=405)
