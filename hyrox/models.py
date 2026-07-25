@@ -66,20 +66,88 @@ class HyroxObjective(models.Model):
     def __str__(self):
         return f"{self.cliente.nombre} - {self.get_categoria_display()} ({self.fecha_evento})"
 
+    # ── Memoización a nivel de instancia (evita recalcular/reconsultar dentro
+    #    de la misma request cuando varios métodos necesitan lo mismo) ──────────
+    def _perf_cache_dict(self):
+        cache = self.__dict__.get('_perf_cache')
+        if cache is None:
+            cache = {}
+            self.__dict__['_perf_cache'] = cache
+        return cache
+
+    def invalidate_performance_cache(self):
+        """
+        Limpia la caché de cómputo pesado de la instancia.
+        Llamar tras mutar datos que afecten al readiness (sesiones, lesiones,
+        RMs, tiempo 5K...) cuando se vaya a recalcular sobre la MISMA instancia
+        dentro de la misma request (p.ej. patrón "score antes / score después").
+        """
+        self.__dict__.pop('_perf_cache', None)
+
+    def _running_inactivity_info(self):
+        cache = self._perf_cache_dict()
+        if 'running_inactivity' not in cache:
+            from hyrox.services import HyroxMacrocycleEngine
+            cache['running_inactivity'] = HyroxMacrocycleEngine.detect_running_inactivity(self.cliente.user_id)
+        return cache['running_inactivity']
+
+    def _gym_external_load(self, dias):
+        cache = self._perf_cache_dict()
+        key = f'gym_external_load_{dias}'
+        if key not in cache:
+            from hyrox.training_engine import HyroxTrainingEngine
+            cache[key] = HyroxTrainingEngine._get_gym_external_load(self.cliente, dias=dias)
+        return cache[key]
+
+    def _lesiones_activas(self):
+        """Lista memoizada de UserInjury activas del cliente (misma query que antes,
+        sin order_by explícito, para preservar el orden natural de la BD)."""
+        cache = self._perf_cache_dict()
+        if 'lesiones_activas' not in cache:
+            from hyrox.models import UserInjury
+            cache['lesiones_activas'] = list(UserInjury.objects.filter(cliente=self.cliente, activa=True))
+        return cache['lesiones_activas']
+
+    def _lesion_activa_primera(self):
+        """Equivalente memoizado de UserInjury.objects.filter(cliente=self.cliente, activa=True).first().
+        Django ordena implícitamente por pk cuando no hay order_by, así que replicamos ese criterio."""
+        lesiones = self._lesiones_activas()
+        if not lesiones:
+            return None
+        return min(lesiones, key=lambda inj: inj.pk)
+
+    def _standards_progress(self):
+        """Memoiza CompetitionStandardsService.get_user_standards_progress(), que itera
+        cada estación oficial con 1-2 queries propias — costoso si se llama más de una
+        vez por request (get_race_readiness_score() + vistas que piden el progreso completo)."""
+        cache = self._perf_cache_dict()
+        if 'standards_progress' not in cache:
+            from hyrox.services import CompetitionStandardsService
+            cache['standards_progress'] = CompetitionStandardsService.get_user_standards_progress(self.cliente.user_id)
+        return cache['standards_progress']
+
     def get_race_readiness_score(self):
         """
         Race Readiness ponderado con tres factores:
           40% Capacidad Técnica  : progreso en estándares oficiales (peso/distancia)
           30% Eficiencia de Esfuerzo: sesiones donde se logra trabajo con RPE < 8
           30% Resistencia Específica: simulacros (fuerza + carrera en la misma sesión)
-        """
-        from hyrox.services import CompetitionStandardsService
 
+        Memoizado a nivel de instancia: si ya se calculó en esta misma request/uso,
+        devuelve el valor cacheado. Usar invalidate_performance_cache() si se necesita
+        recalcular tras una mutación sobre la misma instancia (ver construir_respuesta_sesion_guardada).
+        """
+        cache = self._perf_cache_dict()
+        if 'race_readiness_score' in cache:
+            return cache['race_readiness_score']
+        score = self._compute_race_readiness_score()
+        cache['race_readiness_score'] = score
+        return score
+
+    def _compute_race_readiness_score(self):
         # ── Factor 1: Capacidad Técnica (40%) ──────────────────────────────
         try:
-            progress = CompetitionStandardsService.get_user_standards_progress(
-                self.cliente.user_id
-            )
+            progress = self._standards_progress()
             progresos = progress.get('progreso', [])
             if progresos:
                 pct_tecnica = sum(p['porcentaje'] for p in progresos) / len(progresos)
@@ -133,7 +201,8 @@ class HyroxObjective(models.Model):
             return 0.0
 
         # Llamada única fuera del bucle para evitar 3 queries repetidas por sesión
-        inact, dias_run, tiene_credito_futbol, preguntar_bool = HyroxMacrocycleEngine.detect_running_inactivity(self.cliente.user_id)
+        # (memoizada a nivel de instancia: get_strength_balance() reutiliza este mismo resultado)
+        inact, dias_run, tiene_credito_futbol, preguntar_bool = self._running_inactivity_info()
         hoy_date = datetime.date.today()
 
         for s in sesiones_completadas:
@@ -168,8 +237,7 @@ class HyroxObjective(models.Model):
 
         # ── Penalización por carga acumulada del gym (últimos 7 días) ──────
         try:
-            from hyrox.training_engine import HyroxTrainingEngine
-            gym_load = HyroxTrainingEngine._get_gym_external_load(self.cliente, dias=7)
+            gym_load = self._gym_external_load(7)
             if gym_load['fatiga_gym'] == 'Alta':
                 penalizacion = 10
                 # Piernas fatigadas impactan más (carrera + wall balls + sled)
@@ -204,8 +272,7 @@ class HyroxObjective(models.Model):
         ratio = (sq / dl) * 100
         
         # Check Modo Preservación
-        from hyrox.models import UserInjury
-        lesiones_activas = UserInjury.objects.filter(cliente=self.cliente, activa=True)
+        lesiones_activas = self._lesiones_activas()
         is_preservation = False
         lesion_preservation = ""
         for inj in lesiones_activas:
@@ -219,8 +286,7 @@ class HyroxObjective(models.Model):
         # joi_hint: instrucciones internas para el generador JOI (no se muestran al usuario).
         alerta_usuario = ""
         joi_hint = ""
-        from hyrox.services import HyroxMacrocycleEngine
-        inactivo_run, dias_run, tiene_credito_futbol, preguntar_bool = HyroxMacrocycleEngine.detect_running_inactivity(self.cliente.user_id)
+        inactivo_run, dias_run, tiene_credito_futbol, preguntar_bool = self._running_inactivity_info()
 
         _MESES_ES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
                      'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
@@ -292,8 +358,7 @@ class HyroxObjective(models.Model):
         from django.utils import timezone
 
         # Lesión activa — prioridad máxima
-        from hyrox.models import UserInjury
-        lesion = UserInjury.objects.filter(cliente=self.cliente, activa=True).first()
+        lesion = self._lesion_activa_primera()
         if lesion:
             if lesion.fase == 'AGUDA':
                 return "Escudo Bio-Safe activo. Tu sesión ha sido blindada para proteger tu recuperación. Prioridad total a la zona lesionada."
@@ -302,8 +367,7 @@ class HyroxObjective(models.Model):
 
         # Fatiga de gym — cruce directo gym → Hyrox
         try:
-            from hyrox.training_engine import HyroxTrainingEngine
-            gym_load = HyroxTrainingEngine._get_gym_external_load(self.cliente, dias=3)
+            gym_load = self._gym_external_load(3)
             if gym_load['fatiga_gym'] == 'Alta':
                 if gym_load.get('fatiga_piernas'):
                     return (

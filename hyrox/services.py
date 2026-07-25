@@ -3635,8 +3635,12 @@ def construir_respuesta_sesion_guardada(objetivo, sesion, resultado_dominio):
 
     hoy = timezone.now().date()
 
-    # Invalidar log del día para que el readiness recalcule con datos frescos
+    # Invalidar log del día para que el readiness recalcule con datos frescos.
+    # objetivo es la MISMA instancia que ya calculó readiness_score_antes en
+    # guardar_sesion_hyrox_service() (memoizado por instancia) — hay que limpiar
+    # su caché de rendimiento para forzar el recálculo tras la mutación de la sesión.
     HyroxReadinessLog.objects.filter(objective=objetivo, fecha=hoy).delete()
+    objetivo.invalidate_performance_cache()
     readiness_score_despues = objetivo.get_race_readiness_score()
     HyroxReadinessLog.objects.create(
         objective=objetivo,

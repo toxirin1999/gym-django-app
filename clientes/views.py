@@ -4,7 +4,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
 from django.db import IntegrityError
-from django.db.models import Avg, Count, ExpressionWrapper, F, FloatField, Max, Q, Sum
+from django.db.models import Avg, Count, ExpressionWrapper, F, FloatField, Max, Prefetch, Q, Sum
 from django.db.models.functions import Coalesce
 from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -2269,25 +2269,33 @@ def dashboard(request):
     # ================================================================
 
     cliente = request.user.cliente_perfil
-    clientes = Cliente.objects.all()
+    clientes = Cliente.objects.all().prefetch_related(
+        Prefetch('revisiones', queryset=RevisionProgreso.objects.order_by('-fecha'))
+    )
     total_clientes = clientes.count()
-    total_revisiones = sum(cliente.revisiones.count() for cliente in clientes)
-    entrenos_hoy_lista = []
-    entrenos_semana_lista = []
-    entrenos_mes_lista = []
-    entrenos_anio_lista = []
-    entrenos_todos_lista = []
 
     # Promedios
     promedio_peso = 0
     promedio_grasa = 0
     total_mediciones = 0
+    total_revisiones = 0
+
+    from collections import defaultdict
+    alertas_raw = defaultdict(list)
 
     for cliente_item in clientes:
-        ultima = cliente_item.revisiones.order_by('-fecha').first()
+        revisiones_cliente = list(cliente_item.revisiones.all())
+        total_revisiones += len(revisiones_cliente)
+
+        ultima = revisiones_cliente[0] if revisiones_cliente else None
         if ultima:
             print(f"{cliente_item.nombre} ({ultima.fecha}) → {ultima.check_alerts()}")
-        for rev in cliente_item.revisiones.all():
+            alertas = ultima.check_alerts()
+            if alertas:
+                for alerta in alertas:
+                    alertas_raw[alerta].append((cliente_item, ultima.fecha))
+
+        for rev in revisiones_cliente:
             if rev.peso_corporal:
                 promedio_peso += rev.peso_corporal
             if rev.grasa_corporal:
@@ -2297,6 +2305,12 @@ def dashboard(request):
     if total_mediciones > 0:
         promedio_peso /= total_mediciones
         promedio_grasa /= total_mediciones
+
+    entrenos_hoy_lista = []
+    entrenos_semana_lista = []
+    entrenos_mes_lista = []
+    entrenos_anio_lista = []
+    entrenos_todos_lista = []
 
     # Datos de entrenos
     from datetime import date, timedelta
@@ -2320,18 +2334,6 @@ def dashboard(request):
     promedio_semanal = round(entrenos_total / semanas, 1) if semanas else 0
     promedio_mensual = round(entrenos_total / meses, 1) if meses else 0
     promedio_anual = round(entrenos_total / anios, 1) if anios else 0
-
-    # Agrupación de alertas
-    from collections import defaultdict
-    alertas_raw = defaultdict(list)
-
-    for cliente_item in clientes:
-        ultima = cliente_item.revisiones.order_by('-fecha').first()
-        if ultima:
-            alertas = ultima.check_alerts()
-            if alertas:
-                for alerta in alertas:
-                    alertas_raw[alerta].append((cliente_item, ultima.fecha))
 
     alertas_por_tipo = dict(alertas_raw)
 
@@ -2377,19 +2379,19 @@ def dashboard(request):
     ).count()
 
     # Calcular racha de entrenamiento del cliente
+    fechas_con_entreno = set(
+        EntrenoRealizado.objects.filter(
+            cliente=cliente,
+            fecha__gte=hoy - timedelta(days=400),
+            fecha__lte=hoy
+        ).values_list('fecha', flat=True).distinct()
+    )
+
     racha_actual = 0
     fecha_actual = hoy
-    while True:
-        entreno = EntrenoRealizado.objects.filter(
-            cliente=cliente,
-            fecha=fecha_actual
-        ).first()
-
-        if entreno:
-            racha_actual += 1
-            fecha_actual -= timedelta(days=1)
-        else:
-            break
+    while fecha_actual in fechas_con_entreno:
+        racha_actual += 1
+        fecha_actual -= timedelta(days=1)
 
         if racha_actual > 365:  # Límite de seguridad
             break
@@ -2479,19 +2481,19 @@ def dashboard(request):
         print(f"📊 Total reflexiones del usuario: {total_reflexiones}")
 
         # Calcular racha de reflexión del usuario
+        fechas_con_reflexion = set(
+            ReflexionDiaria.objects.filter(
+                usuario=request.user,
+                fecha__gte=hoy - timedelta(days=400),
+                fecha__lte=hoy
+            ).values_list('fecha', flat=True).distinct()
+        )
+
         racha_reflexion = 0
         fecha_actual = hoy
-        while True:
-            reflexion = ReflexionDiaria.objects.filter(
-                usuario=request.user,
-                fecha=fecha_actual
-            ).first()
-
-            if reflexion:
-                racha_reflexion += 1
-                fecha_actual -= timedelta(days=1)
-            else:
-                break
+        while fecha_actual in fechas_con_reflexion:
+            racha_reflexion += 1
+            fecha_actual -= timedelta(days=1)
 
             if racha_reflexion > 365:  # Límite de seguridad
                 break

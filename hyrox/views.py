@@ -573,7 +573,11 @@ def hyrox_dashboard(request):
         # Auto-ajuste de calendario (reprogramar sesiones perdidas críticas)
         HyroxTrainingEngine.auto_adjust(objetivo_activo)
         
-        sesiones_completadas = list(HyroxSession.objects.filter(objective=objetivo_activo, estado='completado').order_by('-fecha'))
+        sesiones_completadas = list(
+            HyroxSession.objects.filter(objective=objetivo_activo, estado='completado')
+            .prefetch_related('activities')
+            .order_by('-fecha')
+        )
 
         # Sesiones futuras deduplicadas por fecha (evita duplicados del auto_adjust).
         # Incluye sesiones completadas de hoy para que aparezcan como "done" en el plan.
@@ -1634,11 +1638,14 @@ def hyrox_dashboard(request):
             sesion_override = None
 
     if objetivo_activo:
-        from .services import CompetitionStandardsService, HyroxMacrocycleEngine
-        from .models import UserInjury, DailyRecoveryEntry
-        competition_progress = CompetitionStandardsService.get_user_standards_progress(request.user.id)
+        from .services import HyroxMacrocycleEngine
+        from .models import DailyRecoveryEntry
+        # Reutiliza la caché de instancia de objetivo_activo (evita repetir el barrido
+        # por las 8 estaciones oficiales, que ya se calculó dentro de get_race_readiness_score)
+        competition_progress = objetivo_activo._standards_progress()
         macro_data = HyroxMacrocycleEngine.get_current_phase(objetivo_activo, return_metadata=True)
-        lesion_activa = UserInjury.objects.filter(cliente=cliente, activa=True).first()
+        # Reutiliza la caché de instancia de objetivo_activo (misma query que get_strength_balance/get_daily_push)
+        lesion_activa = objetivo_activo._lesion_activa_primera()
         
         sustituciones_activas = []
         sustituciones_dict = {} # <-- Añadimos un diccionario para pasarlo al template de forma fácil
