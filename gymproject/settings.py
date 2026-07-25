@@ -35,6 +35,20 @@ ALLOWED_HOSTS = [h.strip() for h in _allowed_hosts_env.split(',') if h.strip()] 
     '127.0.0.1',
 ]
 
+# Endurecimiento HTTPS/cookies — desactivado en local (DEBUG=True vía settings_local.py)
+# para no romper `runserver` en HTTP. PythonAnywhere termina SSL en su proxy y reenvía
+# X-Forwarded-Proto, de ahí SECURE_PROXY_SSL_HEADER.
+SECURE_SSL_REDIRECT = not DEBUG
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+SESSION_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_SECURE = not DEBUG
+# HSTS arranca conservador (1 día) para no arriesgar un lockout de navegador si algo
+# falla con el certificado; subir a 31536000 (1 año) + includeSubDomains/preload una
+# vez confirmado que funciona bien en producción durante unos días.
+SECURE_HSTS_SECONDS = 86400 if not DEBUG else 0
+SECURE_HSTS_INCLUDE_SUBDOMAINS = False
+SECURE_HSTS_PRELOAD = False
+
 # Application definition
 
 INSTALLED_APPS = [
