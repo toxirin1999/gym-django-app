@@ -10,6 +10,7 @@ from django.shortcuts import render, get_object_or_404
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
+from django.contrib.auth.decorators import login_required
 from django.core.cache import cache
 from django.db.models import Count, Avg, Max, Min, Sum
 from datetime import datetime, timedelta
@@ -737,6 +738,7 @@ def crear_cliente_fallback(cliente_id, nombre="Usuario"):
 
 # ==================== VISTAS PRINCIPALES ====================
 
+@login_required
 def dashboard_ia_principal(request, cliente_id):
     """Dashboard principal de IA con todos los sistemas integrados"""
     try:
@@ -878,6 +880,7 @@ def dashboard_ia_principal(request, cliente_id):
 
 # ==================== VISTAS ADICIONALES ====================
 
+@login_required
 def predicciones_avanzadas(request, cliente_id):
     """Vista para predicciones avanzadas - FUNCIONAL + EVALUACIÓN DE RIESGO + OPTIMIZACIONES"""
     try:
@@ -1017,6 +1020,7 @@ def predicciones_avanzadas(request, cliente_id):
         })
 
 
+@login_required
 def recomendaciones_inteligentes(request, cliente_id):
     """Vista para recomendaciones inteligentes - CORREGIDA"""
     try:
@@ -1062,6 +1066,7 @@ def recomendaciones_inteligentes(request, cliente_id):
         })
 
 
+@login_required
 def deteccion_patrones_automatica(request, cliente_id):
     """Vista para detección de patrones - CORREGIDA"""
     try:
@@ -1164,6 +1169,7 @@ def deteccion_patrones_automatica(request, cliente_id):
         })
 
 
+@login_required
 def vista_deteccion_patrones(request, cliente_id):
     try:
         cliente = get_object_or_404(Cliente, id=cliente_id)
@@ -1200,6 +1206,7 @@ def vista_deteccion_patrones(request, cliente_id):
         })
 
 
+@login_required
 def vista_estancamientos(request, cliente_id):
     try:
         cliente = get_object_or_404(Cliente, id=cliente_id)
@@ -1226,6 +1233,7 @@ def vista_estancamientos(request, cliente_id):
         })
 
 
+@login_required
 def vista_anomalias(request, cliente_id):
     try:
         cliente = get_object_or_404(Cliente, id=cliente_id)
@@ -1286,6 +1294,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+@login_required
 def vista_optimizacion_entrenamientos(request, cliente_id):
     """
     Vista para optimización de entrenamientos - AHORA CON SELECCIÓN DE EJERCICIOS DINÁMICA
@@ -1465,6 +1474,7 @@ def vista_optimizacion_entrenamientos(request, cliente_id):
 
 # ==================== API ENDPOINTS ====================
 
+@login_required
 @csrf_exempt
 @require_http_methods(["GET"])
 def api_dashboard_refresh(request, cliente_id):
@@ -1486,6 +1496,7 @@ def api_dashboard_refresh(request, cliente_id):
         })
 
 
+@login_required
 @csrf_exempt
 @require_http_methods(["POST"])
 def api_prediccion_tiempo_real(request, cliente_id):
@@ -1518,6 +1529,7 @@ def api_prediccion_tiempo_real(request, cliente_id):
         })
 
 
+@login_required
 @csrf_exempt
 @require_http_methods(["GET"])
 def api_recomendacion_tiempo_real(request, cliente_id):
@@ -1544,6 +1556,7 @@ def api_recomendacion_tiempo_real(request, cliente_id):
         })
 
 
+@login_required
 @csrf_exempt
 @require_http_methods(["GET"])
 def api_deteccion_patrones_tiempo_real(request, cliente_id):
@@ -1572,6 +1585,7 @@ def api_deteccion_patrones_tiempo_real(request, cliente_id):
         })
 
 
+@login_required
 @csrf_exempt
 @require_http_methods(["GET"])
 def api_optimizacion_tiempo_real(request, cliente_id):
@@ -1645,11 +1659,13 @@ def limpiar_cache_modulos_ia(cliente_id):
 
 # ==================== ALIAS PARA COMPATIBILIDAD ====================
 
+@login_required
 def deteccion_patrones_view(request, cliente_id):
     """Alias para deteccion_patrones_automatica (compatibilidad)"""
     return deteccion_patrones_automatica(request, cliente_id)
 
 
+@login_required
 def optimizacion_entrenamientos(request, cliente_id):
     """Alias para vista_optimizacion_entrenamientos (compatibilidad)"""
     return vista_optimizacion_entrenamientos(request, cliente_id)
@@ -2192,6 +2208,7 @@ class DeteccionPatronesIA:
         }
 
 
+@login_required
 def deteccion_patrones_view(request, cliente_id):
     """Alias para deteccion_patrones_automatica (compatibilidad)"""
     return deteccion_patrones_automatica(request, cliente_id)
@@ -2215,6 +2232,7 @@ import logging
 # ...
 
 # --- VISTA NUEVA Y DEFINITIVA PARA EL DASHBOARD DE INTENSIDAD ---
+@login_required
 def vista_intensidad_avanzado(request, cliente_id):
     """
     Esta es la función que se conectará a tu URL y renderizará el template.
@@ -2284,6 +2302,7 @@ from .ia_analizador_programas import AnalizadorProgramaIA
 # === VISTA PARA ANÁLISIS DE PROGRAMAS ASIGNADOS ===
 # ============================================================================
 
+@login_required
 def vista_optimizacion_programa(request, cliente_id):
     """
     Analiza el PROGRAMA ASIGNADO a un cliente y lo muestra en el
@@ -2342,6 +2361,7 @@ from .ia_analizador_programas import AnalizadorProgramaIA
 # -------------------------------------------------------------------------
 
 
+@login_required
 def vista_optimizacion_programa(request, cliente_id):
     """
     Analiza el PROGRAMA ASIGNADO a un cliente y lo muestra en el
@@ -2427,6 +2447,7 @@ from .vendor.diff_match_patch import diff_match_patch  # Asumiendo que tienes es
 
 # ... (tus otras importaciones) ...
 
+@login_required
 def vista_comparacion_programa(request, cliente_id):
     """
     Muestra una comparación lado a lado y AHORA TAMBIÉN un resumen
@@ -2501,6 +2522,7 @@ def vista_comparacion_programa(request, cliente_id):
     return render(request, 'analytics/comparacion_programa.html', context)
 
 
+@login_required
 def vista_optimizacion_programa(request, cliente_id):
     """
     Analiza el PROGRAMA ASIGNADO a un cliente y lo muestra en el
@@ -2553,6 +2575,7 @@ def vista_optimizacion_programa(request, cliente_id):
     return render(request, 'analytics/optimizacion_entrenamientos.html', context)
 
 
+@login_required
 @transaction.atomic
 def guardar_programa_optimizado(request, cliente_id):
     if request.method != 'POST':
