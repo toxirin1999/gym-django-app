@@ -6837,6 +6837,7 @@ def api_registrar_ejercicio(request):
         }, status=500)
 
 
+@login_required
 @require_http_methods(["GET"])
 def api_obtener_estadisticas(request):
     """
@@ -6945,6 +6946,7 @@ def api_obtener_estadisticas(request):
         }, status=500)
 
 
+@login_required
 @require_http_methods(["GET"])
 def api_obtener_perfil(request):
     """
@@ -7000,6 +7002,7 @@ def api_obtener_perfil(request):
 # PHASE 62F — CIERRE DE ENTRENAMIENTO (post-entreno)
 # ============================================================================
 
+@login_required
 def post_entreno_resumen(request, cliente_id, entreno_id):
     """
     Pantalla de cierre tras guardar una sesión: qué se hizo, cómo lo leyó
@@ -7025,6 +7028,7 @@ def post_entreno_resumen(request, cliente_id, entreno_id):
 # NUEVO DASHBOARD DE EVOLUCIÓN FÍSICA
 # ============================================================================
 
+@login_required
 def dashboard_evolucion(request, cliente_id):
     """
     Dashboard de evolución física con logros, récords, progresión y motivación.
@@ -7687,6 +7691,7 @@ def api_bio_correlation(request, cliente_id):
 from django.views.decorators.http import require_POST
 
 
+@login_required
 @require_POST
 def api_save_hot_swap(request, cliente_id):
     """
@@ -7751,6 +7756,7 @@ def api_save_hot_swap(request, cliente_id):
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
 
 
+@login_required
 @require_POST
 def api_alternativas_maquina(request, cliente_id):
     """
@@ -7869,6 +7875,7 @@ SEVERIDAD_GRAVEDAD = {
 }
 
 
+@login_required
 @require_POST
 def api_reportar_molestia(request, cliente_id):
     """
@@ -8164,6 +8171,7 @@ def timeline_atleta(request, cliente_id):
 # FASE 2 — REGISTRO DE ACTIVIDAD LIBRE + AUTOCOMPLETE DE EJERCICIOS
 # ============================================================================
 
+@login_required
 @require_GET
 def api_buscar_ejercicios(request, cliente_id):
     """
@@ -8209,6 +8217,7 @@ def api_buscar_ejercicios(request, cliente_id):
     return JsonResponse({'resultados': resultados})
 
 
+@login_required
 def registrar_actividad_libre(request, cliente_id):
     """
     Formulario para registrar cualquier actividad física libre
@@ -8505,6 +8514,7 @@ def api_apple_health(request):
     }, status=200 if accion == 'enriched' else 201)
 
 
+@login_required
 def briefing_entrenamiento(request, cliente_id):
     """Pantalla de briefing pre-sesión de gym — muestra plan, alertas y voz del entrenador."""
     cliente = get_object_or_404(Cliente, id=cliente_id)

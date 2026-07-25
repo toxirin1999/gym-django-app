@@ -36,6 +36,7 @@ class PostEntrenoResumenViewBase(TestCase):
         self.cliente, _ = Cliente.objects.get_or_create(
             user=self.user, defaults={'nombre': 'TestCierre62FView', 'dias_disponibles': 4},
         )
+        self.client.force_login(self.user)
         self.rutina = Rutina.objects.create(nombre='Push Day')
 
         anterior = EntrenoRealizado.objects.create(
