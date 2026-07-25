@@ -80,7 +80,7 @@ CELERY_RESULT_BACKEND = os.environ.get('CELERY_RESULT_BACKEND', 'redis://localho
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
-CELERY_TIMEZONE = 'America/Mexico_City'
+CELERY_TIMEZONE = 'Europe/Madrid'  # Alineado con TIME_ZONE — antes desalineado (America/Mexico_City)
 
 from celery.schedules import crontab
 CELERY_BEAT_SCHEDULE = {
@@ -218,7 +218,6 @@ STATICFILES_DIRS = [
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-LOGIN_REDIRECT_URL = '/'
 LOGIN_REDIRECT_URL = '/redirigir/'  # Ruta intermedia para decidir a dónde ir
 
 LOGIN_URL = '/login/'
@@ -248,30 +247,12 @@ CACHES = {
         }
     }
 }
-# En settings.py
-LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'handlers': {
-        'file_ia': {
-            'level': 'INFO',
-            'class': 'logging.FileHandler',
-            'filename': 'logs/ia.log',
-        },
-    },
-    'loggers': {
-        'analytics.ia': {
-            'handlers': ['file_ia'],
-            'level': 'INFO',
-            'propagate': True,
-        },
-    },
-}
-
 LOGS_DIR = os.path.join(BASE_DIR, 'logs')
 os.makedirs(LOGS_DIR, exist_ok=True)
 
-# Configuración de logging
+# Configuración de logging (fusionado — antes había dos LOGGING = {...} y el segundo
+# pisaba al primero por completo, dejando el logger 'analytics.ia' sin ningún handler
+# real desde entonces).
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -296,6 +277,11 @@ LOGGING = {
             'class': 'logging.StreamHandler',
             'formatter': 'simple'
         },
+        'file_ia': {
+            'level': 'INFO',
+            'class': 'logging.FileHandler',
+            'filename': os.path.join(LOGS_DIR, 'ia.log'),
+        },
         'gamificacion_file': {
             'level': 'INFO',
             'class': 'logging.FileHandler',
@@ -317,6 +303,11 @@ LOGGING = {
         },
     },
     'loggers': {
+        'analytics.ia': {
+            'handlers': ['file_ia'],
+            'level': 'INFO',
+            'propagate': True,
+        },
         'gamificacion': {
             'handlers': ['gamificacion_file', 'gamificacion_console'],
             'level': 'INFO',
