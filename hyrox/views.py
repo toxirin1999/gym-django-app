@@ -2852,6 +2852,7 @@ class CoachInteractionView(View):
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
 
+@method_decorator(login_required, name='dispatch')
 class GetGreetingView(View):
     """
     Endpoint de carga inicial para el chatbot del dashboard.
