@@ -286,6 +286,11 @@
         </div>
       </div>
     </div>
+    <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--line);font-size:10px;color:var(--ink-3);line-height:1.5;">
+      <strong style="color:var(--ink-3);">Preferencia</strong> = algo que el plan recordó de ti y aplica solo.
+      <strong style="color:var(--ink-3);">Ajuste</strong> = un cambio temporal con fecha de caducidad.
+      <strong style="color:var(--ink-3);">Hipótesis</strong> = un patrón que el plan está observando, aún sin confirmar.
+    </div>
   </div>
 
   {# ── Esta semana ── #}
@@ -457,7 +462,7 @@
       </div>
       {% if lectura_semanal_joi.estado %}
       <div style="margin-top:6px;font-size:9px;color:var(--ink-3);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:0.08em;">
-        Presencia:
+        Cómo aparece JOI esta semana:
         {% if lectura_semanal_joi.estado == 'serena' %}calma y continuidad
         {% elif lectura_semanal_joi.estado == 'observadora' %}observando sin concluir
         {% elif lectura_semanal_joi.estado == 'acompañante' %}presente, sin urgencia
