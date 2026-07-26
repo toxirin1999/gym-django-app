@@ -3654,11 +3654,44 @@ def construir_respuesta_sesion_guardada(objetivo, sesion, resultado_dominio):
     except Exception:
         readiness_breakdown = {}
 
-    # Recalcular hyrox_decision con readiness fresco
-    hyrox_decision = _calcular_hyrox_decision_payload(objetivo, readiness_score_despues)
+    # Contexto adicional que el dashboard SÍ usa para la decisión soberana
+    # (hyrox/views.py, hyrox_dashboard) pero que antes no se pasaba aquí — el
+    # docstring de esta función afirmaba "misma lógica que el flujo HTML" sin
+    # serlo: podía decir "ejecuta con margen" justo al guardar y "recupera por
+    # fatiga" al recargar el dashboard, mismo día y mismo dato.
+    try:
+        from .training_engine import WeeklySummaryEngine
+        resumen_semanal = WeeklySummaryEngine.get_summary(objetivo)
+    except Exception:
+        resumen_semanal = None
 
-    # Recalcular pulso
-    pulso = _calcular_pulso_payload(objetivo, readiness_score_despues)
+    es_descanso_plan = False
+    estado_entreno = None
+    try:
+        from entrenos.services.sesion_recomendada import obtener_sesion_recomendada_hoy
+        decision_gym = obtener_sesion_recomendada_hoy(objetivo.cliente, hoy)
+        estado_entreno = (decision_gym or {}).get('estado', 'entrenar')
+        es_descanso_plan = estado_entreno == 'descanso'
+    except Exception:
+        pass
+
+    try:
+        from .views import _leer_senales_secundarias
+        senales_secundarias = _leer_senales_secundarias(objetivo.cliente)
+    except Exception:
+        senales_secundarias = None
+
+    # Recalcular hyrox_decision con readiness fresco y el mismo contexto que el dashboard
+    hyrox_decision = _calcular_hyrox_decision_payload(
+        objetivo, readiness_score_despues,
+        resumen_semanal=resumen_semanal,
+        es_descanso_plan=es_descanso_plan,
+        estado_entreno=estado_entreno,
+        senales_secundarias=senales_secundarias,
+    )
+
+    # Recalcular pulso (mismo historial_reciente derivado del resumen semanal que usa el dashboard)
+    pulso = _calcular_pulso_payload(objetivo, readiness_score_despues, resumen_semanal=resumen_semanal)
 
     # Próximas sesiones (máximo 5)
     from .models import HyroxSession as _HyroxSession
@@ -3686,13 +3719,27 @@ def construir_respuesta_sesion_guardada(objetivo, sesion, resultado_dominio):
     }
 
 
-def _calcular_hyrox_decision_payload(objetivo, readiness_score):
-    """Helper: devuelve hyrox_decision como dict serializable para JSON."""
+def _calcular_hyrox_decision_payload(objetivo, readiness_score, resumen_semanal=None,
+                                      es_descanso_plan=False, estado_entreno=None,
+                                      senales_secundarias=None):
+    """Helper: devuelve hyrox_decision como dict serializable para JSON.
+
+    Acepta el mismo contexto opcional que usa hyrox_dashboard (resumen_semanal,
+    es_descanso_plan, estado_entreno, senales_secundarias) para que la decisión
+    soberana sea consistente entre "justo tras guardar sesión" y "al recargar
+    el dashboard" — antes solo recibía readiness_score/lesion_activa.
+    """
     try:
-        from .models import UserInjury
         from .views import _crear_hyrox_decision
-        lesion = UserInjury.objects.filter(cliente=objetivo.cliente, activa=True).first()
-        decision = _crear_hyrox_decision(readiness_score, lesion_activa=lesion)
+        lesion = objetivo._lesion_activa_primera()
+        decision = _crear_hyrox_decision(
+            readiness_score,
+            resumen_semanal=resumen_semanal,
+            lesion_activa=lesion,
+            es_descanso_plan=es_descanso_plan,
+            estado_entreno=estado_entreno,
+            senales_secundarias=senales_secundarias,
+        )
         return {
             'estado': decision.get('estado'),
             'causa': decision.get('causa'),
@@ -3705,19 +3752,32 @@ def _calcular_hyrox_decision_payload(objetivo, readiness_score):
                 'permitido': [], 'evitar': []}
 
 
-def _calcular_pulso_payload(objetivo, readiness_score):
+def _calcular_pulso_payload(objetivo, readiness_score, resumen_semanal=None):
     """
     Helper: devuelve pulso como dict serializable para JSON.
     Incluye toda la información necesaria para que el frontend renderice HTML completo.
+
+    Acepta resumen_semanal (opcional) para derivar historial_reciente igual que
+    hyrox_dashboard — antes se llamaba sin él y el pulso post-guardado podía no
+    reflejar un PR/subida de peso recién detectado en el resumen de la semana.
     """
     try:
         from .pulso_service import PulsoService
-        from .models import UserInjury
-        lesion = UserInjury.objects.filter(cliente=objetivo.cliente, activa=True).first()
+        lesion = objetivo._lesion_activa_primera()
+
+        historial_reciente = None
+        if resumen_semanal and isinstance(resumen_semanal, dict):
+            historial_reciente = {}
+            if resumen_semanal.get('nuevos_prs'):
+                historial_reciente['nuevo_rm'] = True
+            if resumen_semanal.get('peso_subio'):
+                historial_reciente['peso_subio'] = resumen_semanal.get('peso_subio')
+
         pulso = PulsoService.determinar_pulso(
             objetivo=objetivo,
             readiness_score=readiness_score,
             lesion_activa=lesion,
+            historial_reciente=historial_reciente,
         )
         if pulso is None:
             return None
