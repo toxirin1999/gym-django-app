@@ -5202,11 +5202,6 @@ def obtener_o_generar_plan(request, cliente_id):
     # -------------------------
 
     from django.core.cache import cache
-    if cache.get(f"bio_needs_regen_{cliente_id}"):
-        logger.info("Regenerando plan anual: lesiones cambiaron (bio_needs_regen).")
-        request.session.pop(f'plan_anual_{cliente_id}', None)
-        request.session.pop(f'plan_anual_v2_{cliente_id}', None)
-        cache.delete(f"bio_needs_regen_{cliente_id}")
 
     # Obtener el año solicitado (si no se especifica, se asume el año actual)
     try:
@@ -5214,8 +5209,22 @@ def obtener_o_generar_plan(request, cliente_id):
     except (TypeError, ValueError):
         año_solicitado = date.today().year
 
-    # 1. Intentar obtener del caché Django (compartido entre views y AJAX)
     _cache_key = f'plan_anual_{cliente_id}_{año_solicitado}'
+
+    if cache.get(f"bio_needs_regen_{cliente_id}"):
+        logger.info("Regenerando plan anual: lesiones cambiaron (bio_needs_regen).")
+        # NOTA (26-jul-2026): tras quitar el fallback a sesión (ver nota más abajo),
+        # este bloque solo limpiaba request.session[...] — claves que ya no se leen
+        # en ningún sitio — dejando el flag como no-op real: la caché de Django
+        # (_cache_key, la que de verdad se sirve) nunca se borraba, así que un
+        # cambio de lesión tardaba hasta 30 min (TTL) en reflejarse en el plan en
+        # vez de regenerar al instante como pretendía el flag.
+        request.session.pop(f'plan_anual_{cliente_id}', None)
+        request.session.pop(f'plan_anual_v2_{cliente_id}', None)
+        cache.delete(_cache_key)
+        cache.delete(f"bio_needs_regen_{cliente_id}")
+
+    # 1. Intentar obtener del caché Django (compartido entre views y AJAX)
     plan = cache.get(_cache_key)
     if plan:
         return plan

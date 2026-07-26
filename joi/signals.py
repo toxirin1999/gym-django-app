@@ -20,7 +20,10 @@ def invalidar_joi_por_sesion_alta_rpe(sender, instance, created, **kwargs):
         rpe = instance.sesion_detalle.rpe_medio if instance.sesion_detalle else None
         if rpe and rpe >= 8:
             # Invalida cache de JOI estado para este usuario
-            cache_key = f'joi_estado_{instance.cliente.user.id}'
+            # (clave real usada por joi/context_processors.py — antes decía
+            # 'joi_estado_...', una clave que nadie lee, así que esto nunca
+            # invalidaba nada de verdad)
+            cache_key = f'joi_ctx_{instance.cliente.user.id}'
             _cache.delete(cache_key)
     except Exception:
         pass
@@ -35,8 +38,13 @@ def invalidar_joi_por_lesion(sender, instance, created, **kwargs):
     """
     try:
         if instance.fase in ['AGUDA', 'SUB_AGUDA']:
-            # Invalida cache de JOI estado para este usuario
-            cache_key = f'joi_estado_{instance.usuario.id}'
+            # Invalida cache de JOI estado para este usuario.
+            # Antes: instance.usuario (UserInjury no tiene ese campo, solo
+            # `cliente` — lanzaba AttributeError capturado por el except de
+            # abajo, así que esta señal nunca llegó a invalidar nada desde
+            # que existe). Y la clave 'joi_estado_...' tampoco la lee nadie
+            # — ver joi/context_processors.py, la real es 'joi_ctx_...'.
+            cache_key = f'joi_ctx_{instance.cliente.user.id}'
             _cache.delete(cache_key)
     except Exception:
         pass
