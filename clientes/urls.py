@@ -7,7 +7,6 @@ from .views import registrar_bitacora
 from clientes import views as clientes_views
 from .views import historial_cliente, redirigir_usuario, panel_cliente, checkin_matutino
 from django.contrib.auth.decorators import login_required
-from joi import views as joi_views
 
 # =================================================================
 # ### AÑADE ESTA LÍNEA ###
@@ -79,7 +78,10 @@ urlpatterns = [
     path('historial/<int:cliente_id>/', historial_cliente, name='historial_cliente'),
 
     # Joi
-    path('inicio-joi/', joi_views.inicio_view, name='joi_inicio'),
+    # path('inicio-joi/', joi_views.inicio_view, name='joi_inicio'),
+    # Desactivada (26-jul-2026): sin @login_required y renderiza 'inicio.html',
+    # plantilla que no existe en el proyecto — 500 garantizado. No la referencia
+    # ningún template/JS. Reliquia de la arquitectura JOI anterior a MensajeJOI.
 
     # Emoción y objetivos
     path('registrar_emocion/', views.registrar_emocion, name='registrar_emocion'),
