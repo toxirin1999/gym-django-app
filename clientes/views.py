@@ -3216,6 +3216,7 @@ def agregar_cliente(request):
 from django.contrib.auth.models import User
 
 
+@login_required
 def editar_cliente(request, cliente_id):
     cliente = get_object_or_404(Cliente, id=cliente_id)
 
@@ -3249,6 +3250,7 @@ def editar_cliente(request, cliente_id):
 
 
 # Vista eliminar cliente
+@login_required
 def eliminar_cliente(request, cliente_id):
     cliente = get_object_or_404(Cliente, id=cliente_id)
     if request.method == 'POST':
