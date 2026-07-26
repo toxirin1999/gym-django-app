@@ -2136,7 +2136,20 @@ document.addEventListener('DOMContentLoaded', function () {
   <div class="rb-modal-box" style="max-height:90vh;overflow-y:auto;">
     <div class="rb-modal-handle"></div>
     <div class="rb-modal-title" style="margin-bottom:4px;">Check-in Matutino</div>
-    <div class="rb-modal-sub" style="margin-bottom:20px;">¿Cómo has amanecido hoy?</div>
+    <div class="rb-modal-sub" style="margin-bottom:{% if joi_mensaje_pendiente %}12px{% else %}20px{% endif %};">¿Cómo has amanecido hoy?</div>
+
+    {% if joi_mensaje_pendiente %}
+    <a href="/joi/habitacion/" style="display:block;margin-bottom:18px;padding:8px 12px;
+       border-left:1px solid var(--jds-joi-border);text-decoration:none;">
+      <div style="font-family:var(--font-mono);font-size:7px;font-weight:700;
+                  letter-spacing:0.14em;text-transform:uppercase;
+                  color:var(--jds-joi);opacity:0.7;margin-bottom:4px;">JOI</div>
+      <div style="font-size:11px;color:var(--joi-text);line-height:1.55;font-style:italic;
+                  font-family:-apple-system,BlinkMacSystemFont,system-ui,sans-serif;font-weight:400;">
+        {{ joi_mensaje_pendiente.mensaje|truncatewords:24 }}
+      </div>
+    </a>
+    {% endif %}
 
     <form id="rbCheckinForm">
       {% csrf_token %}
@@ -2215,15 +2228,16 @@ document.addEventListener('DOMContentLoaded', function () {
 <script>
 // Energy buttons
 (function(){
-  var labels = ['😴 1','😪 2','😔 3','😐 4','🙂 5','😊 6','💪 7','🔥 8','⚡ 9','🚀 10'];
+  var labels = ['😴 Agotado','😔 Bajo','🙂 Normal','🔥 Cargado','🚀 Máximo'];
+  var vals = [2, 4, 6, 8, 10];
   var cont = document.getElementById('ciEnergiaButtons');
   if (!cont) return;
   labels.forEach(function(lbl, i){
     var btn = document.createElement('button');
     btn.type = 'button';
     btn.textContent = lbl;
-    btn.dataset.val = i + 1;
-    btn.style.cssText = 'padding:7px 10px;border:1.5px solid var(--line-2);border-radius:4px;'+
+    btn.dataset.val = vals[i];
+    btn.style.cssText = 'flex:1;min-width:60px;padding:9px 4px;border:1.5px solid var(--line-2);border-radius:4px;'+
       'background:var(--paper);color:var(--ink);font-family:var(--font-mono);font-size:11px;'+
       'font-weight:700;cursor:pointer;transition:all .12s;';
     btn.onclick = function(){
