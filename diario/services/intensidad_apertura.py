@@ -53,7 +53,12 @@ def construir_contexto_intensidad(cliente, vires, semaforo) -> dict:
     modo_joi = (semaforo or {}).get('estado', 'sostener')
 
     # ── Patrón reciente: últimas 3 semanas con energía ≥ 3 y sin molestia ──
-    fecha_limite = timezone.localdate() - timezone.timedelta(days=7)
+    # Antes decía days=7 (una semana) pese a que el comentario ya decía "3
+    # semanas" — con una ventana más corta, "patrón reciente" era más difícil
+    # de detectar (menos oportunidades de encontrar 2 entradas si el diario se
+    # rellena de forma irregular), lo que hacía caer más fácil a la pregunta
+    # 'afilada' con menos evidencia real de la que el diseño pretendía.
+    fecha_limite = timezone.localdate() - timezone.timedelta(days=21)
     vires_recientes = list(
         SeguimientoVires.objects
         .filter(usuario=cliente.user, fecha__gte=fecha_limite)
