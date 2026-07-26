@@ -479,10 +479,22 @@ def checkin_matutino(request):
     except Exception:
         pass
 
+    # Bio-readiness recién calculado con este check-in: la caché de 10 min
+    # (bio_ctx_{cliente.id}) serviría el valor pre-checkin si no se invalida aquí.
+    from django.core.cache import cache as _cache
+    from core.bio_context import BioContextProvider
+    _cache.delete(f'bio_ctx_{cliente.id}')
+    try:
+        _readiness = BioContextProvider.get_readiness_score(cliente)
+    except Exception:
+        _readiness = {'score': None, 'volume_modifier': None}
+
     from django.urls import reverse as _rev
     redirect_url = _rev('hyrox:dashboard') if True else _rev('clientes:panel_cliente')
     return JsonResponse({'ok': True, 'fc_reposo': fc_reposo, 'horas_sueno': horas_sueno,
                          'calidad_sueno': calidad, 'energia_subjetiva': energia,
+                         'readiness_score': _readiness.get('score'),
+                         'volume_modifier': _readiness.get('volume_modifier'),
                          'redirect': redirect_url})
 
 

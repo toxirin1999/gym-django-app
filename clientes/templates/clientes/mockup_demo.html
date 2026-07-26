@@ -2136,7 +2136,10 @@ document.addEventListener('DOMContentLoaded', function () {
   <div class="rb-modal-box" style="max-height:90vh;overflow-y:auto;">
     <div class="rb-modal-handle"></div>
     <div class="rb-modal-title" style="margin-bottom:4px;">Check-in Matutino</div>
-    <div class="rb-modal-sub" style="margin-bottom:{% if joi_mensaje_pendiente %}12px{% else %}20px{% endif %};">¿Cómo has amanecido hoy?</div>
+    <div class="rb-modal-sub" style="margin-bottom:6px;">¿Cómo has amanecido hoy?</div>
+    <div style="font-size:11px;color:var(--ink-3);margin-bottom:{% if joi_mensaje_pendiente %}12px{% else %}20px{% endif %};line-height:1.4;">
+      Esto ajusta tu entreno de hoy: energía y sueño alimentan el volumen de la sesión.
+    </div>
 
     {% if joi_mensaje_pendiente %}
     <a href="/joi/habitacion/" style="display:block;margin-bottom:18px;padding:8px 12px;
@@ -2168,7 +2171,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
       <!-- VFC -->
       <div class="rb-modal-section">
-        <div class="rb-modal-section-title">💜 VFC — Variabilidad FC <span style="font-size:10px;font-weight:400;color:var(--ink-3);">(Garmin / Apple Watch)</span></div>
+        <div class="rb-modal-section-title">💜 VFC — Variabilidad FC <span style="font-size:10px;font-weight:400;color:var(--ink-3);">(Garmin / Apple Watch · opcional)</span></div>
         <div style="display:flex;align-items:center;gap:10px;margin-top:8px;">
           <input type="number" name="hrv_ms" id="ciHRV" min="1" max="300" placeholder="Ej. 62"
             style="flex:1;padding:10px 12px;border:1.5px solid var(--line-2);border-radius:4px;
@@ -2192,7 +2195,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
       <!-- Calidad sueño -->
       <div class="rb-modal-section">
-        <div class="rb-modal-section-title">🌙 Calidad del Sueño</div>
+        <div class="rb-modal-section-title">🌙 Calidad del Sueño <span style="font-size:10px;font-weight:400;color:var(--ink-3);">(opcional)</span></div>
         <input type="hidden" name="calidad_sueno" id="ciCalidad" value="50">
         <div style="margin-top:10px;">
           <input type="range" min="0" max="100" value="50" id="ciCalidadRange"
@@ -2222,6 +2225,11 @@ document.addEventListener('DOMContentLoaded', function () {
         REGISTRAR CHECK-IN
       </button>
     </form>
+
+    <div id="ciResultado" style="display:none;text-align:center;padding:20px 4px;">
+      <div style="font-size:28px;margin-bottom:8px;">✓</div>
+      <div id="ciResultadoTexto" style="font-family:var(--font-mono);font-size:13px;font-weight:700;color:var(--ink);letter-spacing:0.02em;"></div>
+    </div>
   </div>
 </div>
 
@@ -2245,7 +2253,7 @@ document.addEventListener('DOMContentLoaded', function () {
         b.style.background = 'var(--paper)'; b.style.color = 'var(--ink)';
         b.style.borderColor = 'var(--line-2)';
       });
-      btn.style.background = 'var(--ink)'; btn.style.color = 'var(--paper)';
+      btn.style.background = 'var(--ink)'; btn.style.color = 'var(--bg)';
       btn.style.borderColor = 'var(--ink)';
       document.getElementById('ciEnergia').value = btn.dataset.val;
     };
@@ -2277,7 +2285,6 @@ function rbSubmitCheckin() {
   .then(function(r){ return r.json(); })
   .then(function(d){
     if (d.ok) {
-      document.getElementById('rbCheckinModal').classList.remove('open');
       // Update badge to green without reload
       var badge = document.querySelector('[data-checkin-badge]');
       if (badge) {
@@ -2285,9 +2292,35 @@ function rbSubmitCheckin() {
         badge.style.background = 'rgba(34,197,94,.1)';
         badge.style.border = '1px solid rgba(34,197,94,.3)';
         badge.innerHTML = '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> CHECK-IN ✓';
-      } else {
-        location.reload();
       }
+
+      // Mostrar la consecuencia real (no un toast genérico) antes de cerrar
+      var vm = d.volume_modifier;
+      var score = d.readiness_score;
+      var texto;
+      if (vm === null || vm === undefined || score === null || score === undefined) {
+        texto = 'Check-in registrado';
+      } else {
+        var pct = Math.round(score * 100);
+        var volLabel;
+        if (vm >= 1) volLabel = 'sesión completa';
+        else if (vm >= 0.85) volLabel = 'volumen ajustado a 85%';
+        else if (vm >= 0.70) volLabel = 'volumen ajustado a 70%';
+        else volLabel = 'volumen reducido a 50%';
+        texto = 'Preparación hoy: ' + pct + '% · ' + volLabel;
+      }
+
+      document.getElementById('rbCheckinForm').style.display = 'none';
+      document.getElementById('ciResultadoTexto').textContent = texto;
+      document.getElementById('ciResultado').style.display = 'block';
+
+      setTimeout(function(){
+        document.getElementById('rbCheckinModal').classList.remove('open');
+        // Reset para la próxima apertura (mañana siguiente)
+        document.getElementById('rbCheckinForm').style.display = '';
+        document.getElementById('ciResultado').style.display = 'none';
+        if (!badge) location.reload();
+      }, 1800);
     } else {
       errEl.textContent = d.error || 'Error al guardar. Intenta de nuevo.';
       errEl.style.display = 'block';
