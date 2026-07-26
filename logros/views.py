@@ -616,6 +616,16 @@ class RankingService:
             }
         )
 
+        # Desactivar cualquier otra temporada — antes nunca se desactivaban las
+        # anteriores al crear una nueva, dejando varias filas con activa=True
+        # simultáneamente. Funcionaba por casualidad porque el código que lee
+        # "la" temporada activa usa Meta.ordering + .first(), pero es una mina
+        # para cualquier código futuro que asuma filter(activa=True) == 1 fila.
+        if not temporada.activa:
+            temporada.activa = True
+            temporada.save(update_fields=['activa'])
+        Temporada.objects.exclude(id=temporada.id).filter(activa=True).update(activa=False)
+
         return temporada
 
     @staticmethod

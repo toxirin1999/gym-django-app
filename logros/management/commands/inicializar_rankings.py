@@ -82,6 +82,15 @@ class Command(BaseCommand):
         else:
             self.stdout.write(f"    ✔️ Temporada '{temporada.nombre}' ya existía.")
 
+        # Desactivar cualquier otra temporada (ver misma corrección en
+        # logros/views.py RankingService.crear_temporada_actual)
+        if not temporada.activa:
+            temporada.activa = True
+            temporada.save(update_fields=['activa'])
+        n_desactivadas = Temporada.objects.exclude(id=temporada.id).filter(activa=True).update(activa=False)
+        if n_desactivadas:
+            self.stdout.write(f"    🔧 {n_desactivadas} temporada(s) anterior(es) desactivada(s).")
+
         self.stdout.write(self.style.SUCCESS("    👍 Temporada lista."))
 
     def crear_titulos_especiales(self):
