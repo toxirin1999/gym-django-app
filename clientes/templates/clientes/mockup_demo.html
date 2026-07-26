@@ -2364,7 +2364,7 @@ function mostrarDetalleDia(el, fecha, nombre, estado, fechaReal, esEsencial, car
       <div style="font-size:11px;color:var(--td);opacity:0.75;">Tienes series registradas que no se guardaron.</div>
     </div>
     <a id="entreno-recovery-link" href="#" style="font-family:var(--font-mono);font-size:9px;font-weight:700;letter-spacing:0.1em;color:rgba(255,160,40,0.9);border:1px solid rgba(255,160,40,0.4);border-radius:4px;padding:5px 10px;text-decoration:none;white-space:nowrap;">RETOMAR →</a>
-    <button onclick="this.closest('#entreno-recovery-banner').style.display='none'" style="background:none;border:none;color:var(--td);opacity:0.4;font-size:16px;cursor:pointer;padding:0 4px;flex-shrink:0;">×</button>
+    <button id="entreno-recovery-close" style="background:none;border:none;color:var(--td);opacity:0.4;font-size:16px;cursor:pointer;padding:0 4px;flex-shrink:0;">×</button>
   </div>
 </div>
 <script>
@@ -2372,6 +2372,7 @@ function mostrarDetalleDia(el, fecha, nombre, estado, fechaReal, esEsencial, car
   const clienteId = {{ cliente.id }};
   const prefix = 'entreno_activo_' + clienteId + '_';
   let pendiente = null;
+  let pendienteKey = null;
   for (let i = 0; i < localStorage.length; i++) {
     const k = localStorage.key(i);
     if (k && k.startsWith(prefix)) {
@@ -2380,7 +2381,7 @@ function mostrarDetalleDia(el, fecha, nombre, estado, fechaReal, esEsencial, car
         const haySeries = data && data.seriesCompletadas &&
           Object.values(data.seriesCompletadas).some(s => s && s.length > 0);
         const reciente = data && data.ts && (Date.now() - data.ts) < 86400000;
-        if (haySeries && reciente) { pendiente = data; break; }
+        if (haySeries && reciente) { pendiente = data; pendienteKey = k; break; }
       } catch(e) {}
     }
   }
@@ -2389,6 +2390,15 @@ function mostrarDetalleDia(el, fecha, nombre, estado, fechaReal, esEsencial, car
     const link = document.getElementById('entreno-recovery-link');
     if (pendiente.url) link.href = pendiente.url;
     banner.style.display = 'block';
+
+    // Antes solo ocultaba el banner (display:none) sin borrar el checkpoint de
+    // localStorage — reaparecía en cada carga porque la condición de arriba
+    // volvía a encontrar el mismo checkpoint. Ahora "×" borra el checkpoint,
+    // que es un descarte real y explícito del entreno de prueba/incompleto.
+    document.getElementById('entreno-recovery-close').onclick = function(){
+      banner.style.display = 'none';
+      try { localStorage.removeItem(pendienteKey); } catch(e) {}
+    };
   }
 })();
 </script>
