@@ -1989,6 +1989,7 @@ def generar_retos_semanales(cliente):
         MiniReto.objects.create(cliente=cliente, semana_inicio=lunes, descripcion=texto)
 
 
+@login_required
 def historial_cliente(request, cliente_id):
     cliente = get_object_or_404(Cliente, id=cliente_id)
     historial = EntrenoRealizado.objects.filter(cliente=cliente).prefetch_related(
@@ -2052,6 +2053,7 @@ def historial_cliente(request, cliente_id):
     })
 
 
+@login_required
 def eliminar_revision(request, revision_id):
     revision = get_object_or_404(RevisionProgreso, id=revision_id)
     cliente_id = revision.cliente.id
@@ -2059,6 +2061,7 @@ def eliminar_revision(request, revision_id):
     return redirect('lista_revisiones', cliente_id=cliente_id)
 
 
+@login_required
 def eliminar_objetivo(request, pk):
     objetivo = get_object_or_404(ObjetivoCliente, pk=pk)
     cliente_id = objetivo.cliente.id
@@ -2067,6 +2070,7 @@ def eliminar_objetivo(request, pk):
     return redirect('detalle_cliente', cliente_id=cliente_id)
 
 
+@login_required
 def editar_objetivo(request, pk):
     objetivo = get_object_or_404(ObjetivoCliente, pk=pk)
     cliente = objetivo.cliente
@@ -2087,6 +2091,7 @@ def editar_objetivo(request, pk):
     })
 
 
+@login_required
 def definir_objetivo(request, cliente_id):
     cliente = get_object_or_404(Cliente, id=cliente_id)
 
@@ -2191,6 +2196,7 @@ def lista_revisiones(request, cliente_id):
     return render(request, 'clientes/lista_revisiones.html', context)
 
 
+@login_required
 def agregar_revision(request, cliente_id):
     cliente = get_object_or_404(Cliente, id=cliente_id)
     if request.method == 'POST':
@@ -2761,6 +2767,7 @@ from decimal import Decimal, ROUND_HALF_UP
 
 # ... etc.
 
+@login_required
 def detalle_cliente(request, cliente_id):
     # --- 1. OBTENCIÓN DE DATOS PRINCIPALES ---
     cliente = get_object_or_404(Cliente, pk=cliente_id)
@@ -3186,6 +3193,7 @@ from .forms import ClienteForm
 from .models import Cliente
 
 
+@login_required
 def agregar_cliente(request):
     if request.method == 'POST':
         form = ClienteForm(request.POST, request.FILES)
@@ -3470,6 +3478,7 @@ def lista_clientes(request):
     })
 
 
+@login_required
 def asignar_programa_a_cliente(request, programa_id):
     if request.method == 'POST':
         cliente_id = request.POST.get('cliente_id')
@@ -3480,6 +3489,7 @@ def asignar_programa_a_cliente(request, programa_id):
         return redirect('clientes:detalle_programa', programa_id=programa_id)
 
 
+@login_required
 def actualizar_recordatorio_peso(request, cliente_id):
     cliente = get_object_or_404(Cliente, id=cliente_id)
     fecha = request.POST.get("proximo_registro_peso")
