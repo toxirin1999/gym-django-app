@@ -1113,14 +1113,31 @@ class TestPhase56_1_VentanaFutbol(SesionProgramadaBase):
             msg='Fútbol hace 3 días no debe contaminar la señal de actividad reciente.')
 
     def test_futbol_reciente_da_version_reducida_no_posponer(self):
-        """Fútbol reciente → version_reducida, nunca posponer."""
+        """Fútbol reciente + sesión de pierna → version_reducida, nunca posponer."""
         self._crear_actividad_futbol(self.hoy - timedelta(days=1))
         ctx = self._obtener_contexto()
-        d = _aplicar_contexto(self._base(), ctx, self.hoy)
+        base = self._base()
+        base['entrenamiento'] = {
+            'ejercicios': [{'nombre': 'Sentadilla', 'grupo_muscular': 'pierna'}],
+            'rutina_nombre': 'Test',
+        }
+        d = _aplicar_contexto(base, ctx, self.hoy)
         self.assertEqual(d['estado'], 'version_reducida',
-            msg='Fútbol reciente debe dar versión reducida, no posponer.')
+            msg='Fútbol reciente + sesión de pierna debe dar versión reducida, no posponer.')
         self.assertNotEqual(d['estado'], 'posponer')
         self.assertEqual(d['causa_principal'], 'futbol_reciente')
+
+    def test_futbol_reciente_no_afecta_sesion_tren_superior(self):
+        """Fútbol reciente + sesión de tren superior → NO debe activar version_reducida.
+        El fútbol fatiga piernas; no debe rebajar una sesión que no las entrena
+        (mismo principio que el fix Phase 28 ya aplicado a lesiones)."""
+        self._crear_actividad_futbol(self.hoy - timedelta(days=1))
+        ctx = self._obtener_contexto()
+        self.assertTrue(ctx['futbol_reciente'])
+        d = _aplicar_contexto(self._base(), ctx, self.hoy)  # _base() = entrenamiento sin ejercicios de pierna
+        self.assertNotEqual(d['causa_principal'], 'futbol_reciente',
+            msg='Fútbol reciente no debe rebajar una sesión sin ejercicios de pierna.')
+        self.assertNotEqual(d['estado'], 'version_reducida')
 
     def test_futbol_antiguo_no_activa_version_reducida(self):
         """Fútbol hace 3 días → no debe afectar el estado de la sesión."""

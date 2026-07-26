@@ -472,11 +472,12 @@ def _aplicar_contexto(decision_base, contexto, fecha_hoy):
         return decision
 
     # Determine causa and estado from context (priority order)
+    entrenamiento = decision_base.get('entrenamiento') or {}
+
     if contexto['lesion_activa']:
         # Phase 28 fix: only block if the session actually conflicts with the injury.
         # An AGUDA knee injury should NOT block a pure upper-body session.
         # _detectar_riesgo_lesion checks risk_tags intersection per exercise.
-        entrenamiento = decision_base.get('entrenamiento') or {}
         lesion_conflicto = False
         try:
             cliente = contexto.get('_cliente')  # passed by caller when available
@@ -500,10 +501,14 @@ def _aplicar_contexto(decision_base, contexto, fecha_hoy):
     elif contexto['energia_baja']:
         causa = 'energia_baja'
         estado = 'version_reducida'
-    elif contexto['futbol_reciente']:
+    elif contexto['futbol_reciente'] and _es_sesion_pierna(entrenamiento):
+        # Mismo principio que el fix Phase 28 de arriba: el fútbol fatiga piernas,
+        # no debe rebajar una sesión de tren superior. Antes se aplicaba sin
+        # comprobar el grupo muscular de hoy — _es_sesion_pierna ya existía y se
+        # usaba correctamente en _aplicar_preferencia_activa, pero no aquí.
         causa = 'futbol_reciente'
         estado = 'version_reducida'
-    elif contexto.get('hyrox_reciente'):
+    elif contexto.get('hyrox_reciente') and _es_sesion_pierna(entrenamiento):
         causa = 'hyrox_reciente'
         estado = 'version_reducida'
     elif decision['tipo'] == 'pendiente':
