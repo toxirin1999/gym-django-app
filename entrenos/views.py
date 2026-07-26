@@ -5220,18 +5220,17 @@ def obtener_o_generar_plan(request, cliente_id):
     if plan:
         return plan
 
-    # 2. Fallback: intentar obtener de la sesión
-    plan = request.session.get(f'plan_anual_v2_{cliente_id}')
-
-    # Si el plan existe en sesión, verificar si el año del plan coincide
-    if plan:
-        año_del_plan = plan.get('metadata', {}).get('año_generacion', date.today().year)
-        if año_del_plan != año_solicitado:
-            logger.info("Plan anual obsoleto (año plan: %s, solicitado: %s). Regenerando.", año_del_plan, año_solicitado)
-            plan = None
-        else:
-            cache.set(_cache_key, plan, 1800)  # promover sesión al caché
-            return plan
+    # NOTA (26-jul-2026): antes había un fallback #2 que leía el plan de
+    # request.session[f'plan_anual_v2_{cliente_id}'] cuando la caché de Django
+    # expiraba. La sesión de navegador puede durar semanas y Django nunca la
+    # invalida al actualizar el algoritmo del planificador — así que un cliente
+    # con sesión antigua seguía viendo el plan calculado con la versión VIEJA
+    # del algoritmo (con sus bugs ya corregidos en el código actual), y encima
+    # ese plan obsoleto se "promovía" de vuelta a la caché de Django, perpetuando
+    # el problema otros 30 min. _calcular_ejercicios_dia (usada por
+    # entrenamiento_activo) nunca tuvo este fallback y por eso no sufría el bug.
+    # Eliminado: ahora, igual que esa función, solo confía en la caché de Django
+    # (30 min) y regenera fresco en cache-miss — sin depender de sesiones viejas.
 
     # Si no existe, generarlo
     try:
