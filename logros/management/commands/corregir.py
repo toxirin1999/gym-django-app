@@ -1,16 +1,14 @@
-# Ruta: logros/management/commands/corregir_logros.py
+# Ruta: logros/management/commands/corregir.py
 
 from django.core.management.base import BaseCommand
 from django.db import transaction
 from django.utils import timezone
-from logros.models import PerfilGamificacion, LogroUsuario, Nivel, Logro, HistorialPuntos
-from clientes.models import Cliente
+from logros.models import PerfilGamificacion, PruebaUsuario, PruebaLegendaria, HistorialPuntos
 from entrenos.models import EntrenoRealizado
-import traceback
 
 
 class Command(BaseCommand):
-    help = 'Analiza y desbloquea automáticamente los logros que un usuario debería tener completados.'
+    help = 'Analiza y desbloquea automáticamente las pruebas legendarias que un usuario debería tener completadas.'
 
     def add_arguments(self, parser):
         # Añadimos un argumento para especificar el ID del cliente a corregir.
@@ -38,90 +36,83 @@ class Command(BaseCommand):
         total_entrenamientos = EntrenoRealizado.objects.filter(cliente=cliente).count()
         self.stdout.write(f"🏋️ Entrenamientos totales: {total_entrenamientos}")
 
-        # 3. Obtener todos los logros disponibles y los ya completados
-        todos_logros = Logro.objects.all().order_by('puntos_recompensa')
-        logros_completados_ids = set(
-            LogroUsuario.objects.filter(perfil=perfil, completado=True).values_list('logro_id', flat=True))
+        # 3. Obtener todas las pruebas legendarias disponibles y las ya completadas
+        todas_pruebas = PruebaLegendaria.objects.all().order_by('puntos_recompensa')
+        pruebas_completadas_ids = set(
+            PruebaUsuario.objects.filter(perfil=perfil, completada=True).values_list('prueba_id', flat=True))
 
-        self.stdout.write(f"🏆 Logros disponibles: {todos_logros.count()}")
-        self.stdout.write(f"✅ Logros ya completados: {len(logros_completados_ids)}")
+        self.stdout.write(f"🏆 Pruebas disponibles: {todas_pruebas.count()}")
+        self.stdout.write(f"✅ Pruebas ya completadas: {len(pruebas_completadas_ids)}")
 
-        # 4. Analizar qué logros deberían estar desbloqueados
-        logros_a_desbloquear = []
+        # 4. Analizar qué pruebas deberían estar desbloqueadas
+        pruebas_a_desbloquear = []
         puntos_a_sumar = 0
 
-        for logro in todos_logros:
-            if logro.id in logros_completados_ids:
+        for prueba in todas_pruebas:
+            if prueba.id in pruebas_completadas_ids:
                 continue
 
-            if self.evaluar_logro(logro, total_entrenamientos):
-                logros_a_desbloquear.append(logro)
-                puntos_a_sumar += logro.puntos_recompensa
+            if self.evaluar_prueba(prueba, total_entrenamientos):
+                pruebas_a_desbloquear.append(prueba)
+                puntos_a_sumar += prueba.puntos_recompensa
 
-        if not logros_a_desbloquear:
+        if not pruebas_a_desbloquear:
             self.stdout.write(
                 self.style.SUCCESS("\n✅ ¡El perfil del usuario ya está actualizado! No se necesitan correcciones."))
             return
 
-        self.stdout.write(self.style.WARNING(f"\n🎯 LOGROS A DESBLOQUEAR: {len(logros_a_desbloquear)}"))
+        self.stdout.write(self.style.WARNING(f"\n🎯 PRUEBAS A DESBLOQUEAR: {len(pruebas_a_desbloquear)}"))
         self.stdout.write(f"💎 Puntos adicionales: {puntos_a_sumar}")
         self.stdout.write(f"💰 Puntos totales después: {perfil.puntos_totales + puntos_a_sumar}")
 
-        self.stdout.write(self.style.HTTP_INFO(f"\n📋 DETALLE DE LOGROS A DESBLOQUEAR:"))
-        for logro in logros_a_desbloquear:
-            self.stdout.write(f"  ✅ {logro.nombre} (+{logro.puntos_recompensa} pts)")
+        self.stdout.write(self.style.HTTP_INFO("\n📋 DETALLE DE PRUEBAS A DESBLOQUEAR:"))
+        for prueba in pruebas_a_desbloquear:
+            self.stdout.write(f"  ✅ {prueba.nombre} (+{prueba.puntos_recompensa} pts)")
 
         # 5. Aplicar correcciones con una transacción atómica
         with transaction.atomic():
-            for logro in logros_a_desbloquear:
-                # Obtenemos o creamos la instancia de LogroUsuario
-                logro_usuario, created = LogroUsuario.objects.get_or_create(
+            for prueba in pruebas_a_desbloquear:
+                # Obtenemos o creamos la instancia de PruebaUsuario
+                prueba_usuario, created = PruebaUsuario.objects.get_or_create(
                     perfil=perfil,
-                    logro=logro,
+                    prueba=prueba,
                     defaults={'progreso_actual': 0}  # Valor inicial
                 )
 
                 # Actualizamos la instancia
-                logro_usuario.completado = True
-                logro_usuario.progreso_actual = logro.meta_valor
-                logro_usuario.fecha_desbloqueo = timezone.now()
-                logro_usuario.save()
+                prueba_usuario.completada = True
+                prueba_usuario.progreso_actual = prueba.meta_valor
+                prueba_usuario.fecha_completada = timezone.now()
+                prueba_usuario.save()
 
                 # Agregar entrada al historial de puntos
                 HistorialPuntos.objects.create(
                     perfil=perfil,
-                    logro=logro,
-                    puntos=logro.puntos_recompensa,
-                    descripcion=f"Logro desbloqueado: {logro.nombre}"
+                    prueba_legendaria=prueba,
+                    puntos=prueba.puntos_recompensa,
+                    descripcion=f"Prueba legendaria desbloqueada: {prueba.nombre}"
                 )
-                self.stdout.write(f"  - Desbloqueado: {logro.nombre}")
+                self.stdout.write(f"  - Desbloqueado: {prueba.nombre}")
 
-            # 6. Actualizar perfil de gamificación
+            # 6. Actualizar perfil de gamificación (puntos + nivel/arquetipo)
             puntos_actuales = perfil.puntos_totales
             perfil.puntos_totales += puntos_a_sumar
+            perfil.save(update_fields=['puntos_totales'])
 
-            # Actualizar nivel
-            nuevo_nivel_num = self.calcular_nivel(perfil.puntos_totales)
-            puntos_para_nivel = (nuevo_nivel_num - 1) * 1000  # Calculamos los puntos necesarios
-
-            nivel_obj, _ = Nivel.objects.get_or_create(
-                numero=nuevo_nivel_num,
-                defaults={
-                    'nombre': f'Nivel {nuevo_nivel_num}',
-                    'puntos_requeridos': puntos_para_nivel  # <-- ¡Añadido!
-                }
-            )
-            perfil.nivel_actual = nivel_obj
-
-            perfil.save()
+            # El nivel (Arquetipo) es contenido narrativo pre-sembrado (nombre_personaje,
+            # filosofía) — no se auto-crea uno nuevo aquí. actualizar_nivel() ya
+            # implementa la lógica correcta: busca el Arquetipo con mayor
+            # puntos_requeridos <= puntos_totales.
+            perfil.actualizar_nivel()
 
             self.stdout.write(self.style.SUCCESS("\n🎉 ¡CORRECCIÓN COMPLETADA EXITOSAMENTE!"))
-            self.stdout.write(f"✅ Logros desbloqueados: {len(logros_a_desbloquear)}")
+            self.stdout.write(f"✅ Pruebas desbloqueadas: {len(pruebas_a_desbloquear)}")
             self.stdout.write(f"💰 Puntos actualizados: {puntos_actuales} → {perfil.puntos_totales}")
-            self.stdout.write(f"📈 Nivel actualizado a: {perfil.nivel_actual.nombre}")
+            nombre_nivel = perfil.nivel_actual.titulo_arquetipo if perfil.nivel_actual else '(sin arquetipo asignado)'
+            self.stdout.write(f"📈 Nivel actualizado a: {nombre_nivel}")
 
-    def evaluar_logro(self, logro, total_entrenamientos):
-        nombre_lower = logro.nombre.lower()
+    def evaluar_prueba(self, prueba, total_entrenamientos):
+        nombre_lower = prueba.nombre.lower()
 
         # Lógica de evaluación (simplificada para el ejemplo)
         if "liftin" in nombre_lower:
@@ -129,15 +120,8 @@ class Command(BaseCommand):
             if "intermedio" in nombre_lower and total_entrenamientos >= 10: return True
             if "avanzado" in nombre_lower and total_entrenamientos >= 20: return True
 
-        if "hito" in nombre_lower or "entrenamientos" in logro.descripcion.lower():
-            if total_entrenamientos >= logro.meta_valor: return True
+        if "hito" in nombre_lower or "entrenamientos" in prueba.descripcion.lower():
+            if total_entrenamientos >= prueba.meta_valor: return True
 
         # Añade aquí más reglas de evaluación según necesites
         return False
-
-    def calcular_nivel(self, puntos_totales):
-        if puntos_totales < 1000:
-            return 1
-        else:
-            # Asumiendo que los niveles se crean dinámicamente
-            return (puntos_totales // 1000) + 1

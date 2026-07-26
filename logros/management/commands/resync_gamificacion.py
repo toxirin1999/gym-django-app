@@ -1,10 +1,8 @@
-# en gamificacion/management/commands/resync_gamificacion.py
+# logros/management/commands/resync_gamificacion.py
 
 from django.core.management.base import BaseCommand
-# Opción 1: Si el modelo está en la app 'logros'
-from logros.models import GamificationProfile, LogroUsuario  # Ajusta la importación a tu modelo
-
-from entrenos.models import EntrenoRealizado  # Ajusta la importación a tu modelo
+from logros.models import PerfilGamificacion
+from entrenos.models import EntrenoRealizado
 
 
 class Command(BaseCommand):
@@ -13,24 +11,24 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         self.stdout.write(self.style.SUCCESS('--- Iniciando resincronización de perfiles de gamificación ---'))
 
-        perfiles = GamificationProfile.objects.all()
+        perfiles = PerfilGamificacion.objects.select_related('cliente').all()
 
         for perfil in perfiles:
             # Contamos los entrenamientos reales desde la base de datos
             entrenos_reales = EntrenoRealizado.objects.filter(cliente=perfil.cliente).count()
 
             # Comparamos con el valor guardado en el perfil
-            if perfil.total_entrenamientos != entrenos_reales:
+            if perfil.entrenos_totales != entrenos_reales:
                 self.stdout.write(
                     self.style.WARNING(
                         f'Inconsistencia encontrada para {perfil.cliente.nombre} (ID: {perfil.id}): '
-                        f'Perfil dice {perfil.total_entrenamientos}, pero en realidad son {entrenos_reales}.'
+                        f'Perfil dice {perfil.entrenos_totales}, pero en realidad son {entrenos_reales}.'
                     )
                 )
 
                 # Actualizamos el contador en el perfil
-                perfil.total_entrenamientos = entrenos_reales
-                perfil.save(update_fields=['total_entrenamientos'])
+                perfil.entrenos_totales = entrenos_reales
+                perfil.save(update_fields=['entrenos_totales'])
 
                 self.stdout.write(self.style.SUCCESS(f'  -> Perfil de {perfil.cliente.nombre} corregido.'))
             else:
