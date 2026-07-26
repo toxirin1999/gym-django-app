@@ -286,10 +286,19 @@
         </div>
       </div>
     </div>
-    <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--line);font-size:10px;color:var(--ink-3);line-height:1.5;">
-      <strong style="color:var(--ink-3);">Preferencia</strong> = algo que el plan recordó de ti y aplica solo.
-      <strong style="color:var(--ink-3);">Ajuste</strong> = un cambio temporal con fecha de caducidad.
-      <strong style="color:var(--ink-3);">Hipótesis</strong> = un patrón que el plan está observando, aún sin confirmar.
+    <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--line);font-size:10px;color:var(--ink-3);line-height:1.6;">
+      <div style="margin-bottom:6px;">
+        <strong style="color:var(--ink-3);">Preferencia</strong> = algo que el plan recordó de ti y aplica solo.
+        <span style="opacity:0.65;font-style:italic;">Ej.: "prefieres piernas el fin de semana".</span>
+      </div>
+      <div style="margin-bottom:6px;">
+        <strong style="color:var(--ink-3);">Ajuste</strong> = un cambio temporal con fecha de caducidad.
+        <span style="opacity:0.65;font-style:italic;">Ej.: "menos volumen de pierna 2 semanas tras una sobrecarga".</span>
+      </div>
+      <div>
+        <strong style="color:var(--ink-3);">Hipótesis</strong> = un patrón que el plan está observando, aún sin confirmar.
+        <span style="opacity:0.65;font-style:italic;">Ej.: "el RPE sube cuando entrenas antes de las 8am".</span>
+      </div>
     </div>
   </div>
 
@@ -422,6 +431,9 @@
           Fechas: {% for f in h.fechas %}{{ f|date:"j N" }}{% if not forloop.last %}, {% endif %}{% endfor %}
         </div>
         {% endif %}
+        <div class="dc-card-note">
+          Todavía no es una preferencia ni un ajuste. El plan solo la vigila hasta tener evidencia suficiente.
+        </div>
       </div>
       {% endfor %}
 
