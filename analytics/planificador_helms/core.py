@@ -299,9 +299,32 @@ class PlanificadorHelms:
 
         toque_por_grupo: dict = {}
         orden_dias = sorted(distribucion_volumen.keys())
+        es_descarga_bloque = (fase == 'descarga')
         for idx_dia, dia_key in enumerate(orden_dias):
             grupos_del_dia = distribucion_volumen[dia_key]
-            gestor_fatiga = GestorFatiga(fase, grupos_dia=grupos_del_dia)
+
+            # Suelo mínimo por grupo: MEV (series/semana) ÷ frecuencia semanal del grupo
+            # = mínimo defendible por toque. Evita que GestorFatiga deje un grupo
+            # programado en 0 series cuando hay más grupos ese día que presupuesto de
+            # series pesadas — el presupuesto pasa a ser un objetivo blando que cede
+            # ante el mínimo fisiológico real de cada grupo (ver Helms/RP: MEV/MV son
+            # landmarks semanales, no una cifra arbitraria por sesión).
+            # En descarga NO se aplica: caer bajo MEV ahí es intencional (ver nota
+            # más abajo, "vol_ajustado_bloque"), reintroducir el suelo lo contradiría.
+            pisos_minimos_dia = {}
+            if not es_descarga_bloque:
+                for grupo in grupos_del_dia:
+                    frecuencia_grupo = (
+                        frecuencia_map.get(grupo, 1)
+                        if frecuencia_map is not None
+                        else sum(1 for d in distribucion_volumen.values() if grupo in d)
+                    )
+                    mev_grupo = CalculadoraVolumen.calcular_volumen_mantenimiento(grupo, nivel)
+                    pisos_minimos_dia[grupo] = (
+                        max(1, math.ceil(mev_grupo / frecuencia_grupo)) if frecuencia_grupo > 0 else mev_grupo
+                    )
+
+            gestor_fatiga = GestorFatiga(fase, grupos_dia=grupos_del_dia, pisos_minimos=pisos_minimos_dia)
             ejercicios_dia = []
 
             for grupo in grupos_del_dia:

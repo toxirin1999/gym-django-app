@@ -265,3 +265,65 @@ class TestGestorFatigaBisagraRodillaGlobal(TestCase):
         )
         self.assertEqual(series, 0,
             "Modo retrocompat: rodilla_pesada_max sigue acotando igual que en v2")
+
+
+# ---------------------------------------------------------------------------
+# 4. pisos_minimos — suelo fisiológico (MEV ÷ frecuencia) cuando hay más
+#    grupos programados que presupuesto de series pesadas.
+# ---------------------------------------------------------------------------
+
+class TestGestorFatigaPisosMinimos(TestCase):
+    """
+    Sin pisos_minimos: comportamiento IDÉNTICO al límite físico (grupos de más
+    reciben 0 — ver test_limite_fisico_mas_grupos_que_presupuesto_determinista).
+    Con pisos_minimos: ningún grupo con suelo asignado queda en 0, aunque el
+    total supere el presupuesto original del día.
+    """
+
+    def test_sin_pisos_minimos_comportamiento_identico_al_limite_fisico(self):
+        """pisos_minimos=None (o no pasado) → mismo resultado que antes del fix."""
+        grupos = [
+            'cuadriceps', 'isquios', 'gluteos', 'pecho', 'espalda',
+            'hombros', 'biceps', 'triceps', 'gemelos', 'core', 'trapecios', 'antebrazos'
+        ]
+        gf = GestorFatiga('hipertrofia', grupos_dia=grupos)
+        for g in grupos[:10]:
+            self.assertEqual(gf.cupo_pesadas_por_grupo[g], 1)
+        for g in grupos[10:]:
+            self.assertEqual(gf.cupo_pesadas_por_grupo[g], 0)
+
+    def test_piso_minimo_evita_que_un_grupo_quede_en_0(self):
+        """12 grupos, presupuesto=10, 2 últimos con piso 4 → ya no reciben 0."""
+        grupos = [
+            'cuadriceps', 'isquios', 'gluteos', 'pecho', 'espalda',
+            'hombros', 'biceps', 'triceps', 'gemelos', 'core', 'trapecios', 'antebrazos'
+        ]
+        pisos = {'trapecios': 4, 'antebrazos': 4}
+        gf = GestorFatiga('hipertrofia', grupos_dia=grupos, pisos_minimos=pisos)
+        self.assertEqual(gf.cupo_pesadas_por_grupo['trapecios'], 4)
+        self.assertEqual(gf.cupo_pesadas_por_grupo['antebrazos'], 4)
+        # El total ahora SUPERA el presupuesto original (10) — objetivo blando, no pared.
+        self.assertGreater(sum(gf.cupo_pesadas_por_grupo.values()), 10)
+
+    def test_piso_minimo_no_reduce_grupos_que_ya_tenian_mas(self):
+        """Un piso menor que la cuota ya asignada no debe REDUCIR el cupo de nadie."""
+        grupos = ['pecho', 'triceps', 'hombros']
+        pisos = {'pecho': 1}  # cuota base ya sería 3-4, mayor que el piso
+        gf = GestorFatiga('hipertrofia', grupos_dia=grupos, pisos_minimos=pisos)
+        gf_sin_piso = GestorFatiga('hipertrofia', grupos_dia=grupos)
+        self.assertEqual(
+            gf.cupo_pesadas_por_grupo['pecho'],
+            gf_sin_piso.cupo_pesadas_por_grupo['pecho'],
+            "Un piso menor que la cuota ya asignada no debe reducir el cupo",
+        )
+
+    def test_piso_minimo_no_aplica_a_grupos_sin_piso_definido(self):
+        """Solo los grupos presentes en pisos_minimos reciben suelo; el resto
+        sigue el reparto normal (comportamiento parcial, sin sorpresas)."""
+        grupos = ['cuadriceps', 'isquios', 'gluteos', 'pecho', 'espalda',
+                  'hombros', 'biceps', 'triceps', 'gemelos', 'core', 'trapecios', 'antebrazos']
+        pisos = {'trapecios': 4}  # solo trapecios tiene piso; antebrazos no
+        gf = GestorFatiga('hipertrofia', grupos_dia=grupos, pisos_minimos=pisos)
+        self.assertEqual(gf.cupo_pesadas_por_grupo['trapecios'], 4)
+        self.assertEqual(gf.cupo_pesadas_por_grupo['antebrazos'], 0,
+            "Sin piso definido para este grupo, se mantiene el límite físico original")

@@ -49,7 +49,8 @@ _CLAVE_GLOBAL = '_global_'
 class GestorFatiga:
     """Controla la fatiga acumulada durante una sesión."""
 
-    def __init__(self, fase: str, grupos_dia: Optional[List[str]] = None):
+    def __init__(self, fase: str, grupos_dia: Optional[List[str]] = None,
+                 pisos_minimos: Optional[Dict[str, int]] = None):
         self.fase = fase.lower()
         self.limites = LIMITES_FATIGA.get(self.fase, LIMITES_FATIGA['hipertrofia'])
         # bisagra/rodilla: presupuestos globales por patrón de movimiento (sin cambios v3)
@@ -68,13 +69,17 @@ class GestorFatiga:
         else:
             # Reparto igual + suelo mínimo: división entera + resto a los primeros
             # grupos de la lista (determinista, sin random — invariante duro del motor).
-            # Si len(grupos_dia) > presupuesto, los últimos grupos reciben 0 —
-            # límite físico real del presupuesto, no corregible sin subir series_pesadas_max.
+            # Si len(grupos_dia) > presupuesto, los últimos grupos recibirían 0 con
+            # solo la división entera — por eso `pisos_minimos` (si se pasa) garantiza
+            # que cada grupo reciba al menos su mínimo fisiológico (MEV ÷ frecuencia
+            # semanal, ver core.py), aunque eso implique superar el presupuesto total
+            # del día: el presupuesto pasa a ser un objetivo blando, no una pared física.
             n = len(grupos_dia)
             cuota_base = presupuesto // n if n > 0 else presupuesto
             resto = presupuesto % n if n > 0 else 0
+            pisos_minimos = pisos_minimos or {}
             self.cupo_pesadas_por_grupo = {
-                g: cuota_base + (1 if i < resto else 0)
+                g: max(cuota_base + (1 if i < resto else 0), pisos_minimos.get(g, 0))
                 for i, g in enumerate(grupos_dia)
             }
             self.fatiga_por_grupo = {g: 0 for g in grupos_dia}
