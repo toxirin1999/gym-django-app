@@ -1119,7 +1119,7 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
                 <button onclick="guardarRegistroLesion({{ lesion.id }})"
                         style="font-family:var(--font-mono);font-size:9px;font-weight:700;
                                letter-spacing:.1em;text-transform:uppercase;padding:5px 12px;
-                               background:var(--ink);color:var(--paper);border:none;cursor:pointer;">
+                               background:var(--ink);color:var(--bg);border:none;cursor:pointer;">
                   GUARDAR HOY
                 </button>
                 <div id="lesion-msg" style="font-size:10px;color:var(--ok);display:none;"></div>
@@ -1950,7 +1950,7 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
   <details class="rb-plan-detalle" style="margin-top:6px;">
     <summary>Más</summary>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:8px;">
-      <a href="{% url 'entrenos:registrar_actividad_libre' cliente.id %}" class="rb-bottom-btn" style="flex-direction:row;gap:6px;padding:10px 12px;background:var(--accent);border-color:var(--accent);color:var(--paper);">
+      <a href="{% url 'entrenos:registrar_actividad_libre' cliente.id %}" class="rb-bottom-btn" style="flex-direction:row;gap:6px;padding:10px 12px;background:var(--accent);border-color:var(--accent);color:var(--bg);">
         <i class="fas fa-plus"></i> Añadir
       </a>
       <a href="{% url 'diario:dashboard_diario' %}" class="rb-bottom-btn" style="flex-direction:row;gap:6px;padding:10px 12px;">
@@ -2216,7 +2216,7 @@ document.addEventListener('DOMContentLoaded', function () {
       <div id="ciError" style="display:none;color:var(--danger);font-size:12px;margin-bottom:10px;font-family:var(--font-mono);"></div>
 
       <button type="button" onclick="rbSubmitCheckin()"
-        style="width:100%;padding:13px;background:var(--ink);color:var(--paper);
+        style="width:100%;padding:13px;background:var(--ink);color:var(--bg);
                border:none;border-radius:4px;font-family:var(--font-mono);font-size:12px;
                font-weight:700;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;">
         REGISTRAR CHECK-IN
