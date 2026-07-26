@@ -49,8 +49,12 @@ def _apertura_on_demand(user):
             return None
         return generar_mensaje_joi(cliente, 'apertura_manana')
     except Exception:
-        # Si falla, liberar el lock para que lo reintente en 10 min
-        cache.delete(lock_key)
+        # Antes: cache.delete(lock_key) — liberaba el lock al instante pese a que
+        # el comentario decía "reintentar en 10 min". Si Anthropic está caído de
+        # forma sostenida, esto hacía que CADA request de CADA página de la app
+        # (joi_context es un context processor global) reintentara la llamada
+        # síncrona a Haiku. Ahora se deja el lock puesto — expira solo con su
+        # propio TTL de 600s, que es el cooldown real que el comentario pretendía.
         return None
 
 

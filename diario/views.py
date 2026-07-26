@@ -3309,6 +3309,7 @@ from django.utils.timezone import localdate
 from .models import ProsocheDiario, ProsocheMes
 
 
+@login_required
 def prosoche_entrada_rapida(request):
     fecha = localdate()
 

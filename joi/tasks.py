@@ -266,6 +266,14 @@ def verificar_ausencia_hyrox(self):
 
     for objetivo in HyroxObjective.objects.filter(estado='activo').select_related('cliente__user'):
         cliente = objetivo.cliente
+
+        # Un objetivo recién creado no ha tenido ni la oportunidad de acumular
+        # 7 días de "ausencia" — antes, sin ultima_sesion (None), el chequeo de
+        # abajo no se ejecutaba y se generaba igualmente un mensaje de "llevas
+        # 7 días sin entrenar" el día después de crear el objetivo.
+        if objetivo.fecha_creacion.date() > umbral_ausencia:
+            continue
+
         ultima_sesion = HyroxSession.objects.filter(
             objective=objetivo, estado='completado'
         ).order_by('-fecha').first()
