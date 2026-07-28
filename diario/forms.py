@@ -58,59 +58,6 @@ class InteraccionForm(forms.ModelForm):
             self.fields['personas'].queryset = PersonaImportante.objects.filter(usuario=usuario)
 
 
-class ProsocheHabitoForm(forms.ModelForm):
-    """Formulario para crear/editar hábitos con soporte para hábitos positivos y negativos"""
-    
-    class Meta:
-        model = ProsocheHabito
-        fields = ['nombre', 'descripcion', 'tipo_habito', 'objetivo_dias', 'fecha_objetivo', 'color']
-        
-        widgets = {
-            'nombre': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Ej: Hacer ejercicio, Fumar, Leer...'
-            }),
-            'descripcion': forms.Textarea(attrs={
-                'class': 'form-control',
-                'rows': 3,
-                'placeholder': '¿Por qué es importante este hábito para ti?'
-            }),
-            'tipo_habito': forms.Select(attrs={
-                'class': 'form-select',
-                'id': 'id_tipo_habito'
-            }),
-            'objetivo_dias': forms.NumberInput(attrs={
-                'class': 'form-control',
-                'min': '1',
-                'max': '365',
-                'value': '30'
-            }),
-            'fecha_objetivo': forms.DateInput(attrs={
-                'class': 'form-control',
-                'type': 'date'
-            }),
-            'color': forms.TextInput(attrs={
-                'class': 'form-control',
-                'type': 'color'
-            })
-        }
-        
-        labels = {
-            'nombre': 'Nombre del Hábito',
-            'descripcion': 'Descripción',
-            'tipo_habito': 'Tipo de Hábito',
-            'objetivo_dias': 'Días Objetivo',
-            'fecha_objetivo': 'Fecha Objetivo (Opcional)',
-            'color': 'Color'
-        }
-        
-        help_texts = {
-            'tipo_habito': '¿Es un hábito que quieres formar o eliminar?',
-            'objetivo_dias': 'Número de días para establecer/eliminar el hábito (recomendado: 21-90 días)',
-            'fecha_objetivo': 'Fecha en la que quieres completar el desafío'
-        }
-
-
 class GestoForm(forms.ModelForm):
     """Formulario para crear/editar Gesto (Phase Hábitos 2.0D)."""
 

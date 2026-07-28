@@ -17,22 +17,6 @@ class ProsocheDashboardSinUiLegacyTestCase(TestCase):
         self.usuario = User.objects.create_user(username='david', password='x')
         self.client.force_login(self.usuario)
 
-    def test_no_contiene_copiar_habitos_mes_anterior(self):
-        response = self.client.get(reverse('diario:prosoche_dashboard'))
-        url_copiar = reverse('diario:copiar_habitos_mes_anterior')
-        self.assertNotContains(response, url_copiar)
-        self.assertNotContains(response, 'Copiar del mes anterior')
-
-    def test_no_contiene_form_crear_habito_legacy(self):
-        response = self.client.get(reverse('diario:prosoche_dashboard'))
-        url_crear = reverse('diario:prosoche_crear_habito')
-        self.assertNotContains(response, url_crear)
-
-    def test_no_contiene_eliminar_habito_legacy(self):
-        response = self.client.get(reverse('diario:prosoche_dashboard'))
-        url_eliminar = reverse('diario:eliminar_habito', args=[1])
-        self.assertNotContains(response, url_eliminar)
-
     def test_contiene_enlace_a_habitos_dashboard(self):
         response = self.client.get(reverse('diario:prosoche_dashboard'))
         url_gestos = reverse('diario:habitos_dashboard')

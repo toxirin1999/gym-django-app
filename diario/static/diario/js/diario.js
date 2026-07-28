@@ -907,21 +907,6 @@ class DiarioSicParvisMagna {
     // MÉTODOS PÚBLICOS PARA USO EN TEMPLATES
     // ========================================
 
-    toggleHabito(habitoId, completado) {
-        return this.makeRequest('/diario/prosoche/habito/toggle/', {
-            method: 'POST',
-            body: JSON.stringify({
-                habito_id: habitoId,
-                completado: completado
-            })
-        }).then(data => {
-            if (data.success) {
-                this.showNotification('Hábito actualizado correctamente', 'success');
-            }
-            return data;
-        });
-    }
-
     updateEudaimonia(areaId, data) {
         return this.makeRequest('/diario/eudaimonia/actualizar/', {
             method: 'POST',

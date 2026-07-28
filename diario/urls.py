@@ -17,8 +17,6 @@ urlpatterns = [
     path('oraculo/', views.oraculo_insights, name='oraculo_insights'),
     path('prosoche/entrada/rapida/', views.prosoche_entrada_rapida, name='prosoche_entrada_rapida'),
 
-    path('prosoche/habito/crear/', views.prosoche_crear_habito, name='prosoche_crear_habito'),
-    path('prosoche/habito/toggle/', views.prosoche_toggle_habito, name='prosoche_toggle_habito'),
     path('prosoche/revision/', views.prosoche_revision_mes, name='prosoche_revision_mes'),
     path('prosoche/mes/<str:mes>/<int:año>/', views.prosoche_mes_anterior, name='prosoche_mes_anterior'),
 
@@ -79,9 +77,6 @@ urlpatterns = [
     path('analisis-habitos/anual/', views.analisis_habitos_anual, name='analisis_habitos_anual'),
     path('analisis-habitos/anual/<int:año>/', views.analisis_habitos_anual, name='analisis_habitos_anual_año'),
     path('analisis-habitos/historico/', views.analisis_habitos_historico, name='analisis_habitos_historico'),
-    path('prosoche/copiar-habitos-mes-anterior/', views.copiar_habitos_mes_anterior,
-         name='copiar_habitos_mes_anterior'),
-    path('prosoche/eliminar-habito/<int:habito_id>/', views.eliminar_habito, name='eliminar_habito'),
 
     # ========================================
     # HÁBITOS - Dashboard Unificado (Fase 1)
@@ -93,7 +88,6 @@ urlpatterns = [
     path('habitos/<int:habito_id>/registrar-trigger/', views_habitos.habito_registrar_trigger, name='habito_registrar_trigger'),
     path('habitos/<int:habito_id>/analisis-patrones/', views_habitos.habito_analisis_patrones, name='habito_analisis_patrones'),
     path('habitos/toggle-dia/', views_habitos.habito_toggle_dia, name='habito_toggle_dia'),
-    path('habitos/eliminar/<int:habito_id>/', views_habitos.habito_eliminar, name='habito_eliminar'),
     path('habitos/<int:habito_id>/cadencia/', views_habitos.habito_configurar_cadencia, name='habito_configurar_cadencia'),
     path('habitos/<int:habito_id>/pausar/', views_habitos.habito_pausar, name='habito_pausar'),
     path('habitos/<int:habito_id>/reactivar/', views_habitos.habito_reactivar, name='habito_reactivar'),

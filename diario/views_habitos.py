@@ -307,27 +307,6 @@ def habito_wizard_4leyes(request, habito_id):
 
 @login_required
 @require_http_methods(["POST"])
-def habito_eliminar(request, habito_id):
-    """Vista para eliminar un hábito legacy (ProsocheHabito).
-
-    No usada por el dashboard de Gestos (que usa pausar/cerrar), se conserva
-    para no romper enlaces legacy existentes.
-    """
-    habito = get_object_or_404(
-        ProsocheHabito,
-        id=habito_id,
-        prosoche_mes__usuario=request.user
-    )
-
-    nombre_habito = habito.nombre
-    habito.delete()
-
-    messages.success(request, f'Hábito "{nombre_habito}" eliminado correctamente.')
-    return redirect('diario:habitos_dashboard')
-
-
-@login_required
-@require_http_methods(["POST"])
 def habito_pausar(request, habito_id):
     """Pausa un Gesto (Phase 2.0D). Conserva todo el historial de registros.
     Fase 3: además abre una PausaGesto (ver HabitosService.pausar_gesto)."""
