@@ -572,6 +572,13 @@ Pendiente real, no urgente: o bien (a) quitar la restricción condicional del mo
 
 **2026-07-18 — Primera fricción real de uso, el mismo día del despliegue**: David revisó su inventario real de `Gesto` `cultivo` (6 hábitos, con historial desde octubre de 2025) y preguntó si el analizador estaba usando *todos* los datos, incluidos los meses anteriores. Comprobado contra su base real: no — `M1` sobre la ventana completa de 9 meses devolvía 0 pese a existir 23 `RegistroGesto` reales, porque los 43 `ProsocheDiario` históricos tienen `cierre_confirmado_en=null` (migración conservadora de la Fase 1, nunca se infirió retroactivamente). Esto reabrió el contrato de verdad, no como hipótesis — ver §20.
 
+**2026-07-19 — Estudio de mercado (Atoms, Loop Habit Tracker, Habitica, Streaks, Way of Life, Daylio, Mostly/SevenGrid)**: revisado para detectar huecos frente a apps de referencia, no para copiar funcionalidades. Confirma decisiones ya tomadas (rechazar racha binaria, separar gamificación de lectura honesta, cadencias flexibles). Tres ideas quedan aparcadas como candidatas, ninguna implementada, ninguna urgente según el propio David tras revisarlas:
+- **Registro por cantidad** (no solo binario) — relevante para "Leer 10 páginas", que hoy solo puede ser cumplido/no.
+- **Día de excepción explícito** ("skip", distinto de fallo y de pausa) — para ausencias puntuales sin abrir un intervalo de `PausaGesto` completo.
+- **Exportar datos crudos (CSV)** — coherente con la filosofía de trazabilidad, bajo coste.
+
+No se abre ninguna de las tres sin un motivo real que surja del uso, tal como exige esta sección.
+
 De esta lista saldrá, si acaso, una fase de ajuste de UX/calibración — con motivo real, no anticipado. Hasta entonces, el contrato queda como está.
 
 ---
