@@ -58,3 +58,8 @@ datos_produccion.json
 datos_produccion_fixed.json
 datadump*.json
 datos_produccion*.json
+
+# Configuración local de herramientas de IA (Codex CLI, ruflo/claude-flow) — no es parte de la app
+AGENTS.md
+.codex/
+.agents/
