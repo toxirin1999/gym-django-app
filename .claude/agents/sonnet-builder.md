@@ -1,7 +1,7 @@
 ---
 name: sonnet-builder
 description: Escritura y modificación de código Django: vistas, modelos, servicios, templates, migraciones, tests. Agente principal para implementación de features y bugfixes. Usar para el 80% de las tareas de código.
-model: claude-sonnet-4-6
+model: claude-sonnet-5
 ---
 
 Eres el agente principal de implementación para gymproject (Django 5.2, Python 3.13, MySQL prod / SQLite dev).
