@@ -1231,14 +1231,26 @@ class GymDecisionLog(models.Model):
         """Peso concreto recomendado para la próxima sesión (kg), o None si no aplica."""
         if not self.peso_anterior or not self.valor_cambio:
             return None
+        peso_anterior = float(self.peso_anterior)
         if self.accion == 'subir_peso':
-            raw = float(self.peso_anterior) * (1 + float(self.valor_cambio) / 100)
+            raw = peso_anterior * (1 + float(self.valor_cambio) / 100)
         elif self.accion in ('bajar_peso', 'deload'):
-            raw = float(self.peso_anterior) * (1 - float(self.valor_cambio) / 100)
+            raw = peso_anterior * (1 - float(self.valor_cambio) / 100)
         else:
             return None
         # Redondear al múltiplo de 2.5 kg más cercano (disco estándar)
-        return round(round(raw / 2.5) * 2.5, 1)
+        candidato = round(round(raw / 2.5) * 2.5, 1)
+        # Con pesos bajos, un incremento/reducción porcentual pequeño puede
+        # redondear de vuelta al mismo valor (p.ej. 20kg +5% = 21kg -> 20kg).
+        # Eso convierte una decisión activa en un no-op silencioso — más
+        # grave aún en bajar_peso/deload, que es una intervención de
+        # seguridad. Forzar el siguiente múltiplo de 2.5kg en la dirección
+        # esperada garantiza que la decisión siempre se traduzca en cambio.
+        if self.accion == 'subir_peso' and candidato <= peso_anterior:
+            return round(peso_anterior + 2.5, 1)
+        if self.accion in ('bajar_peso', 'deload') and candidato >= peso_anterior:
+            return round(peso_anterior - 2.5, 1)
+        return candidato
 
     @property
     def reps_sugeridas(self):
