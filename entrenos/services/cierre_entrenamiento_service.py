@@ -57,6 +57,7 @@ _PROXIMA_VEZ_ACCION = {
     'mantener': 'el plan mantiene la carga en {ejercicios}',
     'subir_peso': 'el plan propondrá subir peso en {ejercicios}',
     'subir_reps': 'el plan propondrá subir repeticiones en {ejercicios}',
+    'subir_reps_distancia': 'el plan propondrá subir la distancia en {ejercicios}',
     'bajar_peso': 'el plan reducirá la carga en {ejercicios}',
     'deload': 'el plan aplicará una descarga en {ejercicios}',
     'cambiar_variante': 'el plan propondrá cambiar de variante en {ejercicios}',
@@ -70,6 +71,9 @@ def _proxima_vez_decisiones(cliente, ejercicios):
     por actualizar_decision_log al guardar el entreno. Solo se usa cuando no
     hay freno de plan activo (ver construir_contexto_cierre).
     """
+    from django.db.models.functions import Lower
+    from rutinas.models import EjercicioBase
+
     nombres = [ej.nombre_ejercicio.strip().lower() for ej in ejercicios if ej.nombre_ejercicio.strip()]
     if not nombres:
         return None
@@ -84,12 +88,24 @@ def _proxima_vez_decisiones(cliente, ejercicios):
     for log in logs:
         ultimo_por_ejercicio.setdefault(log.ejercicio, log)
 
+    # tipo_progresion por ejercicio (una sola query) — sólo para distinguir
+    # 'subir_reps' de distancia vs repeticiones reales.
+    tipos_progresion = dict(
+        EjercicioBase.objects
+        .annotate(nombre_lower=Lower('nombre'))
+        .filter(nombre_lower__in=nombres)
+        .values_list('nombre_lower', 'tipo_progresion')
+    )
+
     grupos = {}
     for log in ultimo_por_ejercicio.values():
-        plantilla = _PROXIMA_VEZ_ACCION.get(log.accion)
+        accion = log.accion
+        if accion == 'subir_reps' and tipos_progresion.get(log.ejercicio) == 'progresion_distancia':
+            accion = 'subir_reps_distancia'
+        plantilla = _PROXIMA_VEZ_ACCION.get(accion)
         if not plantilla:
             continue
-        grupos.setdefault(log.accion, []).append(log.ejercicio.title())
+        grupos.setdefault(accion, []).append(log.ejercicio.title())
 
     if not grupos:
         return None

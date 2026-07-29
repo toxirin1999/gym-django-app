@@ -323,6 +323,38 @@ class TestProximaVezDecisiones(CierreEntrenamientoBase):
         self.assertIn('pausa', ctx['lectura_plan'].lower())
         self.assertNotIn('propondrá subir', ctx['proxima_vez'].lower())
 
+    def test_subir_reps_distancia_y_subir_reps_normal_no_se_mezclan(self):
+        """
+        Un ejercicio progresion_distancia (Farmer Walk) y uno progresion_reps
+        (Elevaciones) con accion='subir_reps' pendiente a la vez no deben
+        compartir la misma frase — cada uno con su propio wording.
+        """
+        from rutinas.models import EjercicioBase
+        EjercicioBase.objects.get_or_create(
+            nombre='Farmer Walk',
+            defaults={'grupo_muscular': 'full_body', 'tipo_progresion': 'progresion_distancia'},
+        )
+        EjercicioBase.objects.get_or_create(
+            nombre='Elevaciones de piernas colgado',
+            defaults={'grupo_muscular': 'core', 'tipo_progresion': 'progresion_reps'},
+        )
+
+        entreno = self._crear_entreno(date(2026, 6, 1))
+        self._crear_ejercicio(entreno, nombre_ejercicio='Farmer Walk', orden=0)
+        self._crear_ejercicio(entreno, nombre_ejercicio='Elevaciones de piernas colgado', orden=1)
+        self._crear_log('farmer walk', 'subir_reps')
+        self._crear_log('elevaciones de piernas colgado', 'subir_reps')
+
+        with patch('entrenos.services.cierre_entrenamiento_service.evaluar_permiso_progresion',
+                   return_value=_permiso('progresion_permitida')):
+            ctx = construir_contexto_cierre(self.cliente, entreno)
+
+        proxima = ctx['proxima_vez'].lower()
+        self.assertIn('distancia', proxima)
+        self.assertIn('repeticiones', proxima)
+        self.assertIn('farmer walk', proxima)
+        self.assertIn('elevaciones', proxima)
+
 
 # ── Caso 5: PRs ────────────────────────────────────────────────────────────────
 

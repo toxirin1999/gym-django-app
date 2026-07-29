@@ -129,8 +129,14 @@ def _decidir_accion(ej, historial, perfil, rpe, fallo, es_tope, tipo_progresion=
             'RPE extremo (≥9.5) detectado — reducir carga',
         )
 
-    # 2. Tope de máquina → subir reps
+    # 2. Tope de máquina → subir reps (o distancia, si el ejercicio progresa así)
     if es_tope:
+        if tipo_progresion == 'progresion_distancia':
+            return (
+                'subir_reps',
+                5,
+                'Tope de peso alcanzado — progresión por distancia (+5 m)',
+            )
         return (
             'subir_reps',
             None,
@@ -210,11 +216,15 @@ def evaluar_decisiones_para_entreno(entreno):
         if not log:
             continue
 
-        _evaluar_log(log, ej)
+        from rutinas.models import EjercicioBase
+        ej_base = EjercicioBase.objects.filter(nombre__iexact=nombre).first()
+        tipo_progresion = ej_base.tipo_progresion if ej_base else 'peso_reps'
+
+        _evaluar_log(log, ej, tipo_progresion)
         _actualizar_perfil(cliente, nombre)
 
 
-def _evaluar_log(log, nueva_sesion):
+def _evaluar_log(log, nueva_sesion, tipo_progresion='peso_reps'):
     """Actualiza resultado y notas del log según la nueva sesión."""
     rpe_nuevo = nueva_sesion.rpe
     fallo_nuevo = nueva_sesion.fallo_muscular
@@ -236,7 +246,10 @@ def _evaluar_log(log, nueva_sesion):
             notas = 'Subida realizada pero RPE elevado'
     elif log.accion == 'subir_reps' and reps_nuevas > reps_anteriores:
         resultado = 'validada'
-        notas = 'Incremento de repeticiones confirmado'
+        if tipo_progresion == 'progresion_distancia':
+            notas = 'Incremento de distancia confirmado'
+        else:
+            notas = 'Incremento de repeticiones confirmado'
     elif log.accion in ('bajar_peso', 'deload') and peso_nuevo <= peso_anterior:
         if rpe_nuevo is not None and rpe_nuevo <= 8:
             resultado = 'validada'

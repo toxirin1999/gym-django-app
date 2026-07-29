@@ -228,6 +228,17 @@ def get_resumen_semanal_gym(cliente):
 
     # Progresiones al final como sección "Próxima semana"
     if progresiones:
+        from django.db.models.functions import Lower
+        from rutinas.models import EjercicioBase
+
+        nombres_progresion = [dec.ejercicio.strip().lower() for dec in progresiones]
+        tipos_progresion = dict(
+            EjercicioBase.objects
+            .annotate(nombre_lower=Lower('nombre'))
+            .filter(nombre_lower__in=nombres_progresion)
+            .values_list('nombre_lower', 'tipo_progresion')
+        )
+
         items.append({
             'tipo': 'seccion',
             'icono': '📋',
@@ -236,7 +247,13 @@ def get_resumen_semanal_gym(cliente):
         })
         for dec in progresiones[:5]:
             icono, color = _ACCION_ICONO.get(dec.accion, ('⬆️', 'ok'))
-            if dec.peso_anterior and dec.reps_anteriores:
+            es_distancia = (
+                dec.accion == 'subir_reps'
+                and tipos_progresion.get(dec.ejercicio.strip().lower()) == 'progresion_distancia'
+            )
+            if dec.peso_anterior and dec.reps_anteriores and es_distancia:
+                detalle = f'{dec.peso_anterior} kg × {dec.reps_anteriores} m'
+            elif dec.peso_anterior and dec.reps_anteriores:
                 detalle = f'{dec.peso_anterior} kg × {dec.reps_anteriores} reps'
             elif dec.peso_anterior:
                 detalle = f'desde {dec.peso_anterior} kg'
