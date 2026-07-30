@@ -247,3 +247,18 @@ class TestEscenario11_BibSesiones(PanelUXBase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.context['entrenos_count'], 2,
                          "entrenos_count debe reflejar las sesiones reales, no mostrar 0")
+
+
+class TestPanelSinDisponibilidadNutricional(PanelUXBase):
+    def test_mockup_no_renderiza_panel_ni_carga_contexto_exclusivo(self):
+        from django.urls import reverse
+
+        self.client.force_login(self.user)
+        response = self.client.get(reverse('clientes:mockup_demo'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, 'Recursos disponibles')
+        self.assertNotContains(response, 'disp-widget-home')
+        self.assertNotContains(response, 'disponibilidad:registrar')
+        self.assertNotIn('disp_hoy', response.context)
+        self.assertNotIn('recursos_disponibles', response.context)

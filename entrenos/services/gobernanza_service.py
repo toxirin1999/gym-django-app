@@ -34,17 +34,23 @@ _COOLDOWN_IGNORADA_DIAS   = 21   # days to pause after too many ignores
 _DIAS_SIN_EXPERIMENTO_MAX = 60   # hypothesis too old without experiment → silence
 
 
-def _ultima_ocurrencia_senal(cliente, estado_decision: str, ventana_dias=60) -> 'date | None':
+def _ultima_ocurrencia_senal(
+    cliente,
+    estado_decision: str,
+    ventana_dias=60,
+    fecha_ref=None,
+) -> 'date | None':
     """Returns the most recent senal_no_captada date for this decision state."""
     try:
         from entrenos.models import GymDecisionTraceEvaluation
-        hoy = timezone.localdate()
+        fecha_ref = fecha_ref or timezone.localdate()
         ev = (
             GymDecisionTraceEvaluation.objects.filter(
                 trace__cliente=cliente,
                 trace__decision_estado=estado_decision,
                 resultado='senal_no_captada',
-                trace__fecha__gte=hoy - timedelta(days=ventana_dias),
+                trace__fecha__gte=fecha_ref - timedelta(days=ventana_dias),
+                trace__fecha__lte=fecha_ref,
             )
             .order_by('-trace__fecha')
             .values_list('trace__fecha', flat=True)
@@ -55,15 +61,17 @@ def _ultima_ocurrencia_senal(cliente, estado_decision: str, ventana_dias=60) -> 
         return None
 
 
-def _primera_ocurrencia_senal(cliente, estado_decision: str) -> 'date | None':
+def _primera_ocurrencia_senal(cliente, estado_decision: str, fecha_ref=None) -> 'date | None':
     """Returns the oldest senal_no_captada date for this decision state."""
     try:
         from entrenos.models import GymDecisionTraceEvaluation
+        fecha_ref = fecha_ref or timezone.localdate()
         ev = (
             GymDecisionTraceEvaluation.objects.filter(
                 trace__cliente=cliente,
                 trace__decision_estado=estado_decision,
                 resultado='senal_no_captada',
+                trace__fecha__lte=fecha_ref,
             )
             .order_by('trace__fecha')
             .values_list('trace__fecha', flat=True)
@@ -125,13 +133,13 @@ def auditar_hipotesis(cliente, hipotesis: list[dict], fecha_ref=None) -> list[di
         motivo_supresion = None
 
         # Rule 2: no recent occurrences in 30 days → stale
-        ultima = _ultima_ocurrencia_senal(cliente, estado)
+        ultima = _ultima_ocurrencia_senal(cliente, estado, fecha_ref=fecha_ref)
         if ultima is None or (fecha_ref - ultima).days > _DIAS_SIN_OCURRENCIA:
             motivo_supresion = 'sin_ocurrencias_recientes'
 
         # Rule 6: first occurrence too long ago without experiment
         if not motivo_supresion:
-            primera = _primera_ocurrencia_senal(cliente, estado)
+            primera = _primera_ocurrencia_senal(cliente, estado, fecha_ref=fecha_ref)
             if primera and (fecha_ref - primera).days > _DIAS_SIN_EXPERIMENTO_MAX:
                 motivo_supresion = 'demasiado_antigua_sin_experimento'
 
