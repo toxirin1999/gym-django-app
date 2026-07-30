@@ -385,5 +385,5 @@ PATRONES_OBJETIVO = {
     'hombros': {'empuje_vertical'},
     'cuadriceps': {'rodilla'},
     'isquios': {'bisagra'},
-    'gluteos': {'bisagra'}
+    'gluteos': {'bisagra', 'pleometrico'}
 }

@@ -235,8 +235,17 @@ EJERCICIOS_DATABASE = {
              'estabilidad': 'alta',
              'perfil': 'acortado', 'posicion': 'sentado', 'cadena': 'abierta',
              'risk_tags': []},
+            {'nombre': 'Kettlebell Swing (Balanceo con Pesa Rusa)', 'tipo_progresion': 'peso_reps',
+             'patron': 'pleometrico', 'estabilidad': 'baja',
+             'perfil': 'acortado', 'posicion': 'pie', 'cadena': 'cerrada',
+             'risk_tags': ['bisagra_cadera', 'triple_extension_explosiva']},
         ],
-        'aislamiento': [],
+        'aislamiento': [
+            {'nombre': 'Salto al Cajón (Box Jump)', 'tipo_progresion': 'progresion_reps',
+             'patron': 'pleometrico', 'estabilidad': 'baja',
+             'perfil': 'acortado', 'posicion': 'pie', 'cadena': 'cerrada',
+             'risk_tags': ['impacto_vertical', 'flexion_rodilla_profunda', 'triple_extension_explosiva']},
+        ],
         # Ejercicios de otros grupos que también activan glúteo de forma primaria
         # y pueden ofrecerse como variante de estiramiento (toque 2/3).
         # NUNCA iterar en funciones de mapeo canónico — solo el selector de variaciones (X.12).
