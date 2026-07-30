@@ -117,9 +117,23 @@ _NARRATIVA_MODO_NORMAL = (
     'El plan opera en modo normal. No hay preferencias, ajustes ni hipótesis '
     'activas — las decisiones de hoy se basan solo en lo que pasó esta semana.'
 )
+_NARRATIVA_CONTINUIDAD_DESCONOCIDA = (
+    'La lectura de continuidad no está disponible ahora. El plan conserva las '
+    'señales conocidas sin afirmar que la continuidad sea normal.'
+)
+_NARRATIVA_PAUSA = (
+    'Hay una pausa significativa en la continuidad. El plan la trata como '
+    'contexto activo antes de decidir el siguiente paso.'
+)
+_CONTINUIDAD_NO_INFORMADA = object()
 
 
-def construir_estado_plan(preferencias_activas, intervenciones_activas, hipotesis_abiertas) -> dict:
+def construir_estado_plan(
+    preferencias_activas,
+    intervenciones_activas,
+    hipotesis_abiertas,
+    continuidad=_CONTINUIDAD_NO_INFORMADA,
+) -> dict:
     """
     Construye la narrativa del hero del Centro de decisiones a partir de las
     señales activas (preferencias aprendidas, intervenciones, hipótesis).
@@ -141,8 +155,35 @@ def construir_estado_plan(preferencias_activas, intervenciones_activas, hipotesi
         if texto:
             senales.append(texto)
 
+    continuidad_desconocida = continuidad is None
+    if continuidad_desconocida:
+        estado_continuidad = 'desconocida'
+    elif (
+        continuidad is not _CONTINUIDAD_NO_INFORMADA
+        and continuidad.get('hay_pausa_significativa')
+    ):
+        estado_continuidad = 'pausa_confirmada'
+    else:
+        estado_continuidad = 'sin_pausa_confirmada'
+
+    if continuidad_desconocida and not senales:
+        return {
+            'narrativa': _NARRATIVA_CONTINUIDAD_DESCONOCIDA,
+            'hay_senales_activas': False,
+            'estado_continuidad': estado_continuidad,
+        }
+    elif (
+        continuidad is not _CONTINUIDAD_NO_INFORMADA
+        and continuidad.get('hay_pausa_significativa')
+    ):
+        senales.insert(0, _NARRATIVA_PAUSA)
+
     if not senales:
-        return {'narrativa': _NARRATIVA_MODO_NORMAL, 'hay_senales_activas': False}
+        return {
+            'narrativa': _NARRATIVA_MODO_NORMAL,
+            'hay_senales_activas': False,
+            'estado_continuidad': estado_continuidad,
+        }
 
     if len(senales) == 1:
         cuerpo = senales[0]
@@ -151,5 +192,11 @@ def construir_estado_plan(preferencias_activas, intervenciones_activas, hipotesi
 
     plural = 'señal activa' if len(senales) == 1 else 'señales activas'
     narrativa = f'El plan está usando {len(senales)} {plural}: {cuerpo}.'
+    if continuidad_desconocida:
+        narrativa = f'{narrativa} {_NARRATIVA_CONTINUIDAD_DESCONOCIDA}'
 
-    return {'narrativa': narrativa, 'hay_senales_activas': True}
+    return {
+        'narrativa': narrativa,
+        'hay_senales_activas': True,
+        'estado_continuidad': estado_continuidad,
+    }

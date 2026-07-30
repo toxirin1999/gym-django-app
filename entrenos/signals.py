@@ -378,6 +378,22 @@ from entrenos.models import GymDecisionLog as _GymDecisionLog
 # 'subir_peso'/'subir_reps' se omiten — son progresión normal, no intervención.
 _ACCIONES_JOI = {'cambiar_variante', 'bajar_peso', 'deload', 'mantener'}
 
+
+@receiver(post_save, sender='entrenos.GymDecisionTraceEvaluation')
+def producir_hipotesis_desde_evaluacion(sender, instance, created, raw=False, **kwargs):
+    """Una evaluación nueva alimenta la sugerencia; leer el Centro nunca lo hace."""
+    if raw or not created:
+        return
+    try:
+        from django.db import transaction
+        from entrenos.services.hipotesis_service import producir_sugerencia_hipotesis
+        cliente = instance.trace.cliente
+        transaction.on_commit(
+            lambda: producir_sugerencia_hipotesis(cliente),
+        )
+    except Exception:
+        logger.exception('No se pudo producir sugerencia desde evaluación %s', instance.pk)
+
 @receiver(post_save, sender=_GymDecisionLog)
 def joi_decision_plan(sender, instance, created, **kwargs):
     """

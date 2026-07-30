@@ -201,6 +201,8 @@ class TestCase10_IntervencionNoModificaCargas(HipotesisSugerenciaBase):
 class TestCase11_CentroMuestraExperimento(HipotesisSugerenciaBase):
     def test_centro_muestra_propuesta_experimento(self):
         self._crear_3_senal()
+        from entrenos.services.hipotesis_service import producir_sugerencia_hipotesis
+        producir_sugerencia_hipotesis(self.cliente, self.hoy)
         c = Client()
         c.login(username='tester_h37', password='x')
         response = c.get(reverse('clientes:plan_decisiones'))

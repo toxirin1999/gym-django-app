@@ -5072,7 +5072,8 @@ def ignorar_hipotesis_view(request, sugerencia_id):
     )
     sugerencia.estado = SugerenciaPlan.ESTADO_IGNORADA
     sugerencia.cooldown_hasta = timezone.localdate() + timedelta(days=7)
-    sugerencia.save(update_fields=['estado', 'cooldown_hasta'])
+    sugerencia.fecha_respuesta = timezone.now()
+    sugerencia.save(update_fields=['estado', 'cooldown_hasta', 'fecha_respuesta'])
     messages.info(request, "La sugerencia descansará 7 días.")
     return redirect('clientes:plan_decisiones')
 
@@ -5110,6 +5111,7 @@ def plan_decisiones_view(request):
         IntervencionPlan.objects.filter(
             cliente=cliente,
             estado=IntervencionPlan.ESTADO_ACTIVA,
+            fecha_inicio__lte=hoy,
             fecha_fin__gte=hoy,
         ).order_by('-creada_en')
     )
@@ -5153,14 +5155,18 @@ def plan_decisiones_view(request):
 
     # 5. Decisiones de carga recientes (todas: mantener, subir, bajar, deload)
     # Phase 62G.3 — subir_peso es ejecutivo desde 62H, debe ser transparente.
-    _ACCIONES_TODAS = {'cambiar_variante', 'bajar_peso', 'deload', 'mantener', 'subir_peso'}
-    decisiones_carga = list(
+    _ACCIONES_TODAS = {
+        'cambiar_variante', 'bajar_peso', 'deload', 'mantener',
+        'subir_peso', 'subir_reps',
+    }
+    decisiones_carga_resumen = list(
         GymDecisionLog.objects.filter(
             cliente=cliente,
             accion__in=_ACCIONES_TODAS,
             fecha_creacion__date__gte=hace_30,
-        ).order_by('-fecha_creacion')[:15]
+        ).order_by('-fecha_creacion')
     )
+    decisiones_carga = decisiones_carga_resumen[:15]
 
     # 6. Sesiones en modo esencial recientes
     sesiones_esenciales = list(
@@ -5209,29 +5215,32 @@ def plan_decisiones_view(request):
     # Phase 37 — Sugerencia experimental activa (solo una a la vez)
     sugerencia_hipotesis = None
     try:
-        from entrenos.services.hipotesis_service import (
-            get_sugerencia_hipotesis_activa, generar_sugerencia_hipotesis,
-        )
+        from entrenos.services.hipotesis_service import get_sugerencia_hipotesis_activa
         sugerencia_hipotesis = get_sugerencia_hipotesis_activa(cliente)
-        if not sugerencia_hipotesis and hipotesis_abiertas:
-            sugerencia_hipotesis = generar_sugerencia_hipotesis(cliente, hoy)
     except Exception:
         pass
 
     # Phase Continuidad 1.4: lectura de continuidad para el Centro (read-only).
+    continuidad_evaluada = None
     continuidad = None
     try:
         from core.continuidad import evaluar_continuidad_entrenamiento
-        _c = evaluar_continuidad_entrenamiento(cliente)
-        if _c.get('hay_pausa_significativa'):
-            continuidad = _c
+        continuidad_evaluada = evaluar_continuidad_entrenamiento(cliente)
+        if continuidad_evaluada.get('hay_pausa_significativa'):
+            continuidad = continuidad_evaluada
     except Exception:
+        continuidad_evaluada = None
         continuidad = None
 
     # Phase 62G.2 — agrupadores y narrativa del hero para el Centro 2.0
-    estado_plan = construir_estado_plan(preferencias_activas, intervenciones_activas, hipotesis_abiertas)
+    estado_plan = construir_estado_plan(
+        preferencias_activas,
+        intervenciones_activas,
+        hipotesis_abiertas,
+        continuidad=continuidad_evaluada,
+    )
     traces_agrupados = agrupar_traces_recientes(traces_recientes)
-    decisiones_agrupadas = agrupar_decisiones_carga(decisiones_carga)
+    decisiones_agrupadas = agrupar_decisiones_carga(decisiones_carga_resumen)
 
     return render(request, 'clientes/plan_decisiones.html', {
         'cliente': cliente,

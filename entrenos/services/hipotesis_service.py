@@ -97,11 +97,12 @@ def generar_sugerencia_hipotesis(cliente, fecha_ref=None) -> 'SugerenciaPlan | N
         cliente=cliente,
         tipo=IntervencionPlan.TIPO_VIGILAR_SENAL,
         estado=IntervencionPlan.ESTADO_ACTIVA,
+        fecha_inicio__lte=fecha_ref,
         fecha_fin__gte=fecha_ref,
     ).exists():
         return None
 
-    # Guard: no pending hypothesis suggestion
+    # Idempotencia: el productor puede recibir varias evaluaciones seguidas.
     if get_sugerencia_hipotesis_activa(cliente):
         return None
 
@@ -138,29 +139,40 @@ def generar_sugerencia_hipotesis(cliente, fecha_ref=None) -> 'SugerenciaPlan | N
     )
 
 
+def producir_sugerencia_hipotesis(cliente, fecha_ref=None) -> 'SugerenciaPlan | None':
+    """Productor explícito e idempotente disparado al persistir una evaluación."""
+    existente = get_sugerencia_hipotesis_activa(cliente)
+    if existente:
+        return existente
+    return generar_sugerencia_hipotesis(cliente, fecha_ref=fecha_ref)
+
+
 def aceptar_sugerencia_hipotesis(sugerencia, fecha_ref=None) -> 'IntervencionPlan':
     """
     Phase 37 — Converts an accepted hypothesis suggestion into a 14-day experiment.
     Creates IntervencionPlan(tipo='vigilar_senal'). Does NOT change loads.
     """
     from entrenos.models import IntervencionPlan, SugerenciaPlan
+    from django.db import transaction
     from django.utils import timezone
 
     fecha_ref = fecha_ref or timezone.localdate()
     fecha_fin = fecha_ref + _td(days=_DURACION_EXPERIMENTO)
 
-    sugerencia.estado = SugerenciaPlan.ESTADO_ACEPTADA
-    sugerencia.save(update_fields=['estado'])
+    with transaction.atomic():
+        sugerencia.estado = SugerenciaPlan.ESTADO_ACEPTADA
+        sugerencia.fecha_respuesta = timezone.now()
+        sugerencia.save(update_fields=['estado', 'fecha_respuesta'])
 
-    return IntervencionPlan.objects.create(
-        cliente=sugerencia.cliente,
-        sugerencia=sugerencia,
-        tipo=IntervencionPlan.TIPO_VIGILAR_SENAL,
-        origen_patron=sugerencia.patron,
-        fecha_inicio=fecha_ref,
-        fecha_fin=fecha_fin,
-        estado=IntervencionPlan.ESTADO_ACTIVA,
-    )
+        return IntervencionPlan.objects.create(
+            cliente=sugerencia.cliente,
+            sugerencia=sugerencia,
+            tipo=IntervencionPlan.TIPO_VIGILAR_SENAL,
+            origen_patron=sugerencia.patron,
+            fecha_inicio=fecha_ref,
+            fecha_fin=fecha_fin,
+            estado=IntervencionPlan.ESTADO_ACTIVA,
+        )
 
 
 def evaluar_fin_experimento_hipotesis(cliente, fecha_ref=None) -> dict | None:
