@@ -191,7 +191,9 @@ def construir_estado_plan(
         cuerpo = '; '.join(senales[:-1]) + ' y ' + senales[-1]
 
     plural = 'señal activa' if len(senales) == 1 else 'señales activas'
-    narrativa = f'El plan está usando {len(senales)} {plural}: {cuerpo}.'
+    cuerpo = cuerpo.rstrip()
+    cierre = '' if cuerpo.endswith(('.', '!', '?')) else '.'
+    narrativa = f'El plan está usando {len(senales)} {plural}: {cuerpo}{cierre}'
     if continuidad_desconocida:
         narrativa = f'{narrativa} {_NARRATIVA_CONTINUIDAD_DESCONOCIDA}'
 

@@ -4,683 +4,1401 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Por qué el plan propone esto · Gym</title>
+  <meta name="theme-color" content="#080b10">
+  <title>Centro de decisiones · Gym</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg:     #0d0f14;
-      --paper:  #13161e;
-      --ink:    #e8e6e0;
-      --ink-3:  #6b6860;
-      --line:   rgba(255,255,255,0.06);
-      --line-2: rgba(255,255,255,0.10);
-      --teal:   rgba(20,184,166,0.9);
-      --teal-b: rgba(20,184,166,0.28);
-      --teal-bg:rgba(20,184,166,0.07);
-      --amber:  rgba(245,158,11,0.9);
-      --amber-b:rgba(245,158,11,0.28);
-      --amber-bg:rgba(245,158,11,0.06);
-      --font-mono: 'JetBrains Mono', monospace;
+      color-scheme: dark;
+      --bg: #080b10;
+      --surface: #111720;
+      --surface-raised: #17202b;
+      --surface-soft: #0d131b;
+      --ink: #f5f3ed;
+      --ink-muted: #b8b5ad;
+      --ink-faint: #8f918f;
+      --line: #2c3541;
+      --line-strong: #465363;
+      --teal: #55dfcf;
+      --teal-soft: rgba(85, 223, 207, 0.10);
+      --amber: #f6bd60;
+      --amber-soft: rgba(246, 189, 96, 0.10);
+      --blue: #8bb9f3;
+      --blue-soft: rgba(139, 185, 243, 0.10);
+      --red: #ff9a98;
+      --red-soft: rgba(255, 115, 112, 0.09);
+      --violet: #c1a8ff;
+      --violet-soft: rgba(193, 168, 255, 0.10);
+      --font-display: "Barlow Condensed", sans-serif;
+      --font-body: "Barlow", sans-serif;
+      --font-mono: "JetBrains Mono", monospace;
+      --radius: 16px;
+      --shadow: 0 18px 60px rgba(0, 0, 0, 0.24);
     }
-    * { box-sizing:border-box; margin:0; padding:0; }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
     body {
+      margin: 0;
+      max-width: 100%;
+      min-height: 100%;
+      overflow-x: clip;
       background: var(--bg);
+    }
+
+    body {
       color: var(--ink);
-      font-family: 'Archivo', sans-serif;
-      min-height: 100vh;
-      padding: 0 0 5rem;
+      font-family: var(--font-body);
+      font-size: 16px;
+      line-height: 1.6;
+      padding-bottom: 7rem;
+      background:
+        linear-gradient(90deg, rgba(85, 223, 207, 0.025) 1px, transparent 1px),
+        linear-gradient(rgba(85, 223, 207, 0.018) 1px, transparent 1px),
+        radial-gradient(circle at 12% -10%, rgba(85, 223, 207, 0.11), transparent 32rem),
+        var(--bg);
+      background-size: 56px 56px, 56px 56px, auto, auto;
     }
 
-    /* ── topbar ── */
+    button,
+    summary,
+    a {
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    button,
+    a {
+      font: inherit;
+    }
+
+    a:focus-visible,
+    button:focus-visible,
+    .dc-accordion summary:focus-visible {
+      outline: 3px solid var(--teal);
+      outline-offset: 3px;
+    }
+
     .dc-top {
-      display:flex; align-items:center; gap:12px;
-      padding:14px 16px 12px;
-      border-bottom:1px solid var(--line);
-      background:var(--paper);
-      position:sticky; top:0; z-index:10;
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      display: grid;
+      grid-template-columns: minmax(44px, 1fr) auto minmax(44px, 1fr);
+      align-items: center;
+      gap: 12px;
+      min-height: 64px;
+      padding: 8px clamp(12px, 3vw, 28px);
+      border-bottom: 1px solid var(--line);
+      background: rgba(8, 11, 16, 0.92);
+      backdrop-filter: blur(18px);
     }
+
     .dc-back {
-      font-size:13px; font-weight:700; color:var(--ink-3);
-      text-decoration:none; display:flex; align-items:center; gap:4px;
-    }
-    .dc-back:hover { color:var(--ink); }
-    .dc-top-title {
-      flex:1; text-align:center;
-      font-family:var(--font-mono); font-size:10px;
-      font-weight:700; letter-spacing:0.12em; text-transform:uppercase;
-      color:var(--ink-3);
-    }
-    .dc-top-right { width:60px; }
-
-    /* ── declaración de propósito ── */
-    .dc-purpose {
-      max-width:520px; margin:0 auto;
-      padding:12px 16px 0;
-      font-size:11px; color:var(--ink-3); line-height:1.5;
+      display: inline-flex;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 8px;
+      width: fit-content;
+      min-height: 44px;
+      color: var(--ink-muted);
+      font-size: 14px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: color 180ms ease;
     }
 
-    /* ── container ── */
-    .dc-wrap { max-width:520px; margin:0 auto; padding:14px 16px 20px; }
+    .dc-back:hover {
+      color: var(--ink);
+    }
 
-    /* ── hero: el plan, ahora mismo ── */
+    .dc-back svg {
+      width: 18px;
+      height: 18px;
+      flex: 0 0 auto;
+    }
+
+    .dc-kicker {
+      margin: 0;
+      color: var(--ink-faint);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-align: center;
+      text-transform: uppercase;
+    }
+
+    .dc-top-spacer {
+      min-width: 44px;
+    }
+
+    .dc-wrap {
+      width: 100%;
+      max-width: 1040px;
+      margin: 0 auto;
+      padding: clamp(22px, 4vw, 52px) clamp(16px, 4vw, 40px);
+    }
+
     .dc-hero {
-      border-radius:14px;
-      border:1px solid var(--line-2);
-      padding:16px;
-      margin-bottom:24px;
-      background:var(--paper);
-    }
-    .dc-hero-label {
-      font-family:var(--font-mono); font-size:8px; font-weight:700;
-      letter-spacing:0.14em; text-transform:uppercase; color:var(--ink-3);
-      margin-bottom:10px;
-    }
-    .dc-hero-narrativa {
-      font-size:14px; line-height:1.5; color:var(--ink);
-      margin-bottom:14px;
-    }
-    .dc-hero-row {
-      display:flex; gap:10px;
-    }
-    .dc-hero-stat {
-      flex:1; padding:10px 12px; border-radius:10px;
-      text-align:center;
-    }
-    .dc-hero-stat.perm {
-      background:var(--teal-bg); border:1px solid var(--teal-b);
-    }
-    .dc-hero-stat.temp {
-      background:var(--amber-bg); border:1px solid var(--amber-b);
-    }
-    .dc-hero-stat.none {
-      background:rgba(255,255,255,0.03); border:1px solid var(--line);
-    }
-    .dc-hero-n {
-      font-size:22px; font-weight:800; line-height:1;
-      margin-bottom:3px;
-    }
-    .dc-hero-n.perm { color:var(--teal); }
-    .dc-hero-n.temp { color:var(--amber); }
-    .dc-hero-n.none { color:var(--ink-3); }
-    .dc-hero-lbl {
-      font-size:10px; color:var(--ink-3); line-height:1.3;
+      position: relative;
+      min-width: 0;
+      margin-bottom: clamp(36px, 6vw, 64px);
+      padding: clamp(22px, 5vw, 48px);
+      overflow: hidden;
+      border: 1px solid var(--line-strong);
+      border-radius: 22px;
+      background:
+        linear-gradient(115deg, rgba(85, 223, 207, 0.09), transparent 42%),
+        var(--surface);
+      box-shadow: var(--shadow);
     }
 
-    /* ── section ── */
-    .dc-section { margin-bottom:20px; }
+    .dc-hero::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      right: clamp(24px, 7vw, 72px);
+      width: 1px;
+      height: 100%;
+      background: linear-gradient(transparent, rgba(85, 223, 207, 0.4), transparent);
+      pointer-events: none;
+    }
+
+    .dc-hero-head {
+      position: relative;
+      z-index: 1;
+      max-width: 720px;
+    }
+
+    .dc-eyebrow {
+      margin: 0 0 8px;
+      color: var(--teal);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.13em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      max-width: 760px;
+      margin: 0;
+      font-family: var(--font-display);
+      font-size: clamp(40px, 8vw, 70px);
+      font-weight: 800;
+      letter-spacing: -0.025em;
+      line-height: 0.96;
+      text-wrap: balance;
+    }
+
+    .dc-purpose {
+      max-width: 650px;
+      margin: 18px 0 0;
+      color: var(--ink-muted);
+      font-size: clamp(16px, 2vw, 18px);
+      line-height: 1.65;
+    }
+
+    .dc-state {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      gap: 8px;
+      max-width: 760px;
+      margin-top: clamp(24px, 4vw, 38px);
+      padding: 18px 20px;
+      border-left: 3px solid var(--teal);
+      background: rgba(0, 0, 0, 0.18);
+    }
+
+    .dc-state-label,
+    .dc-cause-label {
+      color: var(--ink-faint);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    .dc-state-value {
+      margin: 0;
+      color: var(--ink);
+      font-size: clamp(17px, 2vw, 20px);
+      font-weight: 500;
+      line-height: 1.55;
+      overflow-wrap: anywhere;
+    }
+
+    .dc-cause-label {
+      margin-top: 8px;
+      color: var(--teal);
+    }
+
+    .dc-stats {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .dc-stat {
+      min-width: 0;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      background: rgba(0, 0, 0, 0.18);
+    }
+
+    .dc-stat-value {
+      display: block;
+      color: var(--ink);
+      font-family: var(--font-display);
+      font-size: clamp(30px, 5vw, 44px);
+      font-weight: 700;
+      line-height: 1;
+    }
+
+    .dc-stat.is-learned .dc-stat-value {
+      color: var(--teal);
+    }
+
+    .dc-stat.is-temporary .dc-stat-value {
+      color: var(--amber);
+    }
+
+    .dc-stat-label {
+      display: block;
+      margin-top: 6px;
+      color: var(--ink-muted);
+      font-size: 13px;
+      line-height: 1.35;
+      overflow-wrap: anywhere;
+    }
+
+    .dc-legend {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+      margin: 16px 0 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .dc-legend li {
+      min-width: 0;
+      color: var(--ink-muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .dc-legend strong {
+      display: block;
+      margin-bottom: 2px;
+      color: var(--ink);
+      font-weight: 700;
+    }
+
+    .dc-section {
+      min-width: 0;
+      margin-bottom: clamp(40px, 7vw, 70px);
+      scroll-margin-top: 84px;
+    }
+
     .dc-section-head {
-      display:flex; align-items:center; gap:8px; margin-bottom:10px;
+      display: grid;
+      grid-template-columns: auto 1fr;
+      align-items: end;
+      gap: 18px;
+      margin-bottom: 20px;
     }
-    .dc-section-dot {
-      width:6px; height:6px; border-radius:50%; flex-shrink:0;
-    }
-    .dc-section-dot.perm  { background:var(--teal); }
-    .dc-section-dot.temp  { background:var(--amber); }
-    .dc-section-dot.obs   { background:rgba(255,255,255,0.2); }
-    .dc-section-title {
-      font-size:11px; font-weight:700; letter-spacing:0.04em;
-      text-transform:uppercase; color:var(--ink); flex-shrink:0;
-    }
-    .dc-line { flex:1; height:1px; background:var(--line); }
 
-    /* ── card ── */
-    .dc-card {
-      background:var(--paper);
-      border:1px solid var(--line);
-      border-radius:12px;
-      padding:13px 15px;
-      margin-bottom:8px;
+    .dc-section-number {
+      color: var(--teal);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      letter-spacing: 0.08em;
     }
-    .dc-card.perm { border-left:2px solid var(--teal-b); }
-    .dc-card.temp { border-left:2px solid var(--amber-b); }
-    .dc-card.obs  { border-left:2px solid var(--line-2); }
+
+    .dc-section-title {
+      margin: 0;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--line-strong);
+      font-family: var(--font-display);
+      font-size: clamp(28px, 5vw, 42px);
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      line-height: 1;
+    }
+
+    .dc-subsection {
+      min-width: 0;
+      margin-top: 26px;
+    }
+
+    .dc-subsection:first-of-type {
+      margin-top: 0;
+    }
+
+    .dc-subtitle {
+      margin: 0 0 12px;
+      color: var(--ink);
+      font-size: 18px;
+      font-weight: 700;
+      line-height: 1.3;
+    }
+
+    .dc-subtitle-meta {
+      margin: -6px 0 14px;
+      color: var(--ink-muted);
+      font-size: 14px;
+    }
+
+    .dc-card-grid {
+      display: grid;
+      gap: 12px;
+    }
+
+    .dc-card,
+    .dc-group,
+    .dc-empty,
+    .dc-week,
+    .dc-joi-reading {
+      min-width: 0;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--surface);
+    }
+
+    .dc-card,
+    .dc-group,
+    .dc-week,
+    .dc-joi-reading {
+      padding: 18px 20px;
+    }
+
+    .dc-card.is-learned {
+      border-left: 3px solid var(--teal);
+    }
+
+    .dc-card.is-temporary,
+    .dc-card.is-hypothesis,
+    .dc-card.is-experiment {
+      border-left: 3px solid var(--amber);
+    }
+
+    .dc-card.is-continuity,
+    .dc-group.is-protected {
+      border-left: 3px solid var(--blue);
+      background: var(--blue-soft);
+    }
+
+    .dc-card.is-experiment {
+      background: var(--amber-soft);
+    }
 
     .dc-pill {
-      display:inline-flex; align-items:center; gap:4px;
-      padding:2px 8px; border-radius:99px;
-      font-size:9px; font-weight:700; letter-spacing:0.08em;
-      margin-bottom:6px;
-    }
-    .dc-pill.perm {
-      background:var(--teal-bg); border:1px solid var(--teal-b);
-      color:var(--teal);
-    }
-    .dc-pill.temp {
-      background:var(--amber-bg); border:1px solid var(--amber-b);
-      color:var(--amber);
-    }
-    .dc-pill-dot {
-      width:4px; height:4px; border-radius:50%; background:currentColor;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      width: fit-content;
+      margin-bottom: 9px;
+      padding: 4px 9px;
+      border: 1px solid currentColor;
+      border-radius: 999px;
+      color: var(--ink-muted);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      line-height: 1.25;
     }
 
-    .dc-card-text { font-size:13px; color:var(--ink); line-height:1.5; }
-    .dc-card-meta { font-size:10px; color:var(--ink-3); margin-top:5px; }
+    .dc-pill::before {
+      content: "";
+      width: 6px;
+      height: 6px;
+      flex: 0 0 auto;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    .dc-pill.is-learned {
+      color: var(--teal);
+    }
+
+    .dc-pill.is-temporary,
+    .dc-pill.is-hypothesis {
+      color: var(--amber);
+    }
+
+    .dc-card-text,
+    .dc-group-detail,
+    .dc-week-reading,
+    .dc-joi-text {
+      margin: 0;
+      color: var(--ink);
+      font-size: 16px;
+      line-height: 1.6;
+      overflow-wrap: anywhere;
+    }
+
+    .dc-card-meta,
+    .dc-meta {
+      margin: 8px 0 0;
+      color: var(--ink-muted);
+      font-size: 13px;
+      line-height: 1.5;
+      overflow-wrap: anywhere;
+    }
+
     .dc-card-note {
-      font-size:10px; color:var(--ink-3); margin-top:6px;
-      padding-top:6px; border-top:1px solid var(--line);
-      font-style:italic;
+      margin: 12px 0 0;
+      padding-top: 11px;
+      border-top: 1px solid var(--line);
+      color: var(--ink-muted);
+      font-size: 13px;
+      font-style: italic;
+      line-height: 1.5;
     }
 
-    .dc-btn-revoke {
-      margin-top:9px;
-      display:inline-block;
-      padding:5px 11px; border-radius:7px;
-      background:rgba(239,68,68,0.07); border:1px solid rgba(239,68,68,0.20);
-      color:rgba(239,68,68,0.70); font-size:10px; font-weight:600;
-      cursor:pointer;
+    .dc-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 16px;
     }
 
-    /* ── empty state ── */
+    .dc-actions form {
+      flex: 1 1 180px;
+      min-width: 0;
+    }
+
+    .dc-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      min-height: 44px;
+      padding: 9px 16px;
+      border: 1px solid var(--line-strong);
+      border-radius: 10px;
+      background: var(--surface-raised);
+      color: var(--ink);
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 700;
+      transition: border-color 180ms ease, background-color 180ms ease, color 180ms ease;
+    }
+
+    .dc-button:hover {
+      border-color: var(--teal);
+    }
+
+    .dc-button.is-primary {
+      border-color: rgba(246, 189, 96, 0.5);
+      background: rgba(246, 189, 96, 0.14);
+      color: #ffe0a5;
+    }
+
+    .dc-button.is-quiet {
+      color: var(--ink-muted);
+    }
+
+    .dc-button.is-danger {
+      width: auto;
+      margin-top: 14px;
+      border-color: rgba(255, 154, 152, 0.35);
+      background: var(--red-soft);
+      color: var(--red);
+    }
+
     .dc-empty {
-      padding:14px 16px; border-radius:10px;
-      border:1px dashed var(--line);
-      font-size:11px; color:var(--ink-3); font-style:italic;
-      line-height:1.5;
+      padding: 20px;
+      border-style: dashed;
+      color: var(--ink-muted);
+      font-size: 15px;
+      line-height: 1.55;
     }
 
-    /* ── grouped item (decisiones / traces agrupados) ── */
-    .dc-group {
-      background:var(--paper);
-      border:1px solid var(--line);
-      border-radius:12px;
-      padding:13px 15px;
-      margin-bottom:8px;
+    .dc-group-head,
+    .dc-week-metrics,
+    .dc-load-head,
+    .dc-trace-head,
+    .dc-detail-row {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 14px;
+      min-width: 0;
     }
-    .dc-group-head {
-      display:flex; align-items:center; justify-content:space-between;
-      margin-bottom:5px; gap:8px;
-    }
+
     .dc-group-title {
-      font-size:13px; font-weight:700; color:var(--ink);
-    }
-    .dc-group-count {
-      font-size:9px; padding:2px 8px; border-radius:99px;
-      font-weight:700; letter-spacing:0.04em; flex-shrink:0;
-      white-space:nowrap;
-    }
-    .dc-group-count.mantener  { background:rgba(245,158,11,0.12); color:rgba(245,158,11,0.8); }
-    .dc-group-count.subir     { background:rgba(34,197,94,0.10); color:rgba(34,197,94,0.8); }
-    .dc-group-count.bajar     { background:rgba(239,68,68,0.10); color:rgba(239,68,68,0.7); }
-    .dc-group-count.variante  { background:rgba(139,92,246,0.10); color:rgba(139,92,246,0.7); }
-    .dc-group-count.deload    { background:rgba(139,92,246,0.10); color:rgba(139,92,246,0.7); }
-    .dc-group-count.neutro    { background:rgba(255,255,255,0.06); color:var(--ink-3); }
-    .dc-group-detail {
-      font-size:11px; color:var(--ink-3); line-height:1.5;
-    }
-    .dc-group-meta {
-      font-size:9px; color:var(--ink-3); margin-top:6px;
-      font-family:var(--font-mono); opacity:0.8;
+      min-width: 0;
+      margin: 0;
+      color: var(--ink);
+      font-size: 17px;
+      font-weight: 700;
+      line-height: 1.35;
+      overflow-wrap: anywhere;
     }
 
-    /* ── accordion (detalle completo) ── */
+    .dc-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex: 0 0 auto;
+      min-height: 28px;
+      padding: 3px 9px;
+      border-radius: 999px;
+      background: var(--surface-raised);
+      color: var(--ink-muted);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 600;
+      line-height: 1.2;
+      white-space: nowrap;
+    }
+
+    .dc-badge.is-up {
+      background: var(--teal-soft);
+      color: var(--teal);
+    }
+
+    .dc-badge.is-hold,
+    .dc-badge.is-postponed {
+      background: var(--amber-soft);
+      color: var(--amber);
+    }
+
+    .dc-badge.is-down {
+      background: var(--red-soft);
+      color: var(--red);
+    }
+
+    .dc-badge.is-variant,
+    .dc-badge.is-deload {
+      background: var(--violet-soft);
+      color: var(--violet);
+    }
+
+    .dc-group-detail {
+      margin-top: 8px;
+      color: var(--ink-muted);
+    }
+
+    .dc-group-meta {
+      margin: 9px 0 0;
+      color: var(--ink-faint);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .dc-evidence-grid {
+      display: grid;
+      gap: 16px;
+    }
+
+    .dc-week-metrics {
+      flex-wrap: wrap;
+    }
+
+    .dc-week-metric {
+      min-width: 110px;
+    }
+
+    .dc-week-number {
+      display: block;
+      color: var(--teal);
+      font-family: var(--font-display);
+      font-size: 34px;
+      font-weight: 700;
+      line-height: 1;
+    }
+
+    .dc-week-label {
+      color: var(--ink-muted);
+      font-size: 13px;
+    }
+
+    .dc-week-status {
+      min-height: 30px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: var(--surface-raised);
+      color: var(--ink-muted);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 600;
+      line-height: 1.8;
+    }
+
+    .dc-week-status.is-high {
+      background: var(--red-soft);
+      color: var(--red);
+    }
+
+    .dc-week-status.is-careful {
+      background: var(--amber-soft);
+      color: var(--amber);
+    }
+
+    .dc-week-status.is-solid {
+      background: var(--teal-soft);
+      color: var(--teal);
+    }
+
+    .dc-week-reading {
+      margin-top: 14px;
+      color: var(--ink-muted);
+      font-style: italic;
+    }
+
+    .dc-joi-reading {
+      border-left: 3px solid var(--violet);
+      background: var(--violet-soft);
+    }
+
+    .dc-joi-state {
+      margin: 10px 0 0;
+      color: var(--ink-muted);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .dc-load-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .dc-load-badges {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 6px;
+    }
+
     .dc-accordion {
-      margin-bottom:8px;
+      margin-bottom: 10px;
     }
+
     .dc-accordion summary {
-      list-style:none; cursor:pointer;
-      display:flex; align-items:center; justify-content:space-between;
-      padding:11px 14px; border-radius:10px;
-      background:var(--paper); border:1px solid var(--line);
-      color:var(--ink-3); font-size:11px; font-weight:600;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      min-height: 52px;
+      padding: 12px 16px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--surface);
+      color: var(--ink);
+      cursor: pointer;
+      font-size: 15px;
+      font-weight: 700;
+      list-style: none;
+      transition: border-color 180ms ease, background-color 180ms ease;
     }
-    .dc-accordion summary::-webkit-details-marker { display:none; }
-    .dc-accordion summary:hover { border-color:var(--line-2); color:var(--ink); }
+
+    .dc-accordion summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .dc-accordion summary:hover {
+      border-color: var(--line-strong);
+      background: var(--surface-raised);
+    }
+
+    .dc-chevron {
+      width: 18px;
+      height: 18px;
+      flex: 0 0 auto;
+      color: var(--teal);
+      transition: transform 180ms ease;
+    }
+
+    .dc-accordion[open] .dc-chevron {
+      transform: rotate(180deg);
+    }
+
     .dc-accordion[open] summary {
-      border-radius:10px 10px 0 0; border-bottom:1px solid var(--line);
-      color:var(--ink);
+      border-radius: 12px 12px 0 0;
     }
-    .dc-accordion summary .arrow { transition:transform .2s; font-size:10px; }
-    .dc-accordion[open] summary .arrow { transform:rotate(180deg); }
+
     .dc-accordion-body {
-      padding:12px 14px; border:1px solid var(--line); border-top:none;
-      border-radius:0 0 10px 10px; background:rgba(255,255,255,0.012);
+      display: grid;
+      gap: 10px;
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-top: 0;
+      border-radius: 0 0 12px 12px;
+      background: var(--surface-soft);
     }
-    .dc-accordion-body .dc-card,
-    .dc-accordion-body .dc-group { margin-bottom:8px; }
-    .dc-accordion-body .dc-card:last-child,
-    .dc-accordion-body .dc-group:last-child { margin-bottom:0; }
+
+    .dc-technical-card {
+      min-width: 0;
+      padding: 15px;
+      border: 1px solid var(--line);
+      border-radius: 11px;
+      background: var(--surface);
+    }
+
+    .dc-technical-text {
+      margin: 8px 0 0;
+      color: var(--ink);
+      font-size: 15px;
+      line-height: 1.55;
+      overflow-wrap: anywhere;
+    }
+
+    .dc-evaluation {
+      margin-top: 10px;
+      padding: 10px 12px;
+      border-left: 2px solid var(--line-strong);
+      background: rgba(255, 255, 255, 0.025);
+    }
+
+    .dc-evaluation-label {
+      color: var(--ink-muted);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .dc-evaluation-label.is-margin {
+      color: var(--teal);
+    }
+
+    .dc-evaluation-label.is-hypothesis {
+      color: var(--amber);
+    }
+
+    .dc-evaluation-summary {
+      margin: 4px 0 0;
+      color: var(--ink-muted);
+      font-size: 13px;
+      font-style: italic;
+      line-height: 1.5;
+    }
+
+    .dc-detail-row {
+      align-items: center;
+    }
+
+    .dc-detail-name {
+      margin: 0;
+      color: var(--ink);
+      font-size: 15px;
+      font-weight: 700;
+    }
+
+    .dc-detail-side {
+      flex: 0 0 auto;
+      text-align: right;
+    }
+
+    .dc-date {
+      display: block;
+      margin-top: 5px;
+      color: var(--ink-faint);
+      font-family: var(--font-mono);
+      font-size: 12px;
+    }
+
+    .dc-visually-hidden {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    @media (max-width: 640px) {
+      .dc-top {
+        grid-template-columns: auto 1fr;
+      }
+
+      .dc-kicker {
+        text-align: right;
+      }
+
+      .dc-top-spacer {
+        display: none;
+      }
+
+      .dc-wrap {
+        padding-right: 14px;
+        padding-left: 14px;
+      }
+
+      .dc-hero {
+        padding: 22px 18px;
+        border-radius: 17px;
+      }
+
+      .dc-hero::after {
+        display: none;
+      }
+
+      .dc-stats {
+        gap: 7px;
+      }
+
+      .dc-stat {
+        padding: 13px 9px;
+      }
+
+      .dc-legend {
+        grid-template-columns: 1fr;
+        gap: 8px;
+      }
+
+      .dc-section-head {
+        gap: 12px;
+      }
+
+      .dc-card,
+      .dc-group,
+      .dc-week,
+      .dc-joi-reading {
+        padding: 16px;
+      }
+
+      .dc-group-head,
+      .dc-load-head,
+      .dc-detail-row {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .dc-load-badges {
+        justify-content: flex-start;
+      }
+
+      .dc-detail-side {
+        text-align: left;
+      }
+    }
+
+    @media (min-width: 900px) {
+      .dc-evidence-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .dc-evidence-grid .dc-subsection.is-wide {
+        grid-column: 1 / -1;
+      }
+
+      .dc-card-grid.is-active,
+      .dc-load-list {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        scroll-behavior: auto !important;
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
   </style>
 </head>
 <body>
+  <header class="dc-top">
+    <a href="{% url 'clientes:mockup_demo' %}" class="dc-back">
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+      </svg>
+      <span>Volver</span>
+    </a>
+    <p class="dc-kicker">Auditoría del plan</p>
+    <span class="dc-top-spacer" aria-hidden="true"></span>
+  </header>
 
-<div class="dc-top">
-  <a href="{% url 'clientes:mockup_demo' %}" class="dc-back">← Volver</a>
-  <div class="dc-top-title">Por qué propone esto</div>
-  <div class="dc-top-right"></div>
-</div>
+  <main class="dc-wrap">
+    <section class="dc-hero" aria-labelledby="titulo-centro">
+      <div class="dc-hero-head">
+        <p class="dc-eyebrow">Estado actual</p>
+        <h1 id="titulo-centro">Centro de decisiones</h1>
+        <p class="dc-purpose">
+          Qué está usando el plan, qué decidió recientemente y en qué evidencia se apoya.
+        </p>
+      </div>
 
-<div class="dc-purpose">
-  Aquí puedes ver qué señales sigue teniendo en cuenta el plan antes de proponerte entrenar, mantener, reducir o descansar.
-</div>
+      <div class="dc-state" aria-label="Lectura actual del plan">
+        <span class="dc-state-label">El plan, ahora mismo</span>
+        <p class="dc-state-value">{{ estado_plan.narrativa }}</p>
+        <span class="dc-cause-label">Causa y evidencia</span>
+        <span class="dc-meta">Señales confirmadas, ajustes temporales e hipótesis en observación.</span>
+      </div>
 
-<div class="dc-wrap">
-
-  {# ── HERO: el plan, ahora mismo ── #}
-  <div class="dc-hero">
-    <div class="dc-hero-label">El plan, ahora mismo</div>
-    <div class="dc-hero-narrativa">{{ estado_plan.narrativa }}</div>
-    <div class="dc-hero-row">
-      <div class="dc-hero-stat {% if preferencias_activas %}perm{% else %}none{% endif %}">
-        <div class="dc-hero-n {% if preferencias_activas %}perm{% else %}none{% endif %}">
-          {{ preferencias_activas|length }}
-        </div>
-        <div class="dc-hero-lbl">
-          {% if preferencias_activas|length == 1 %}preferencia aprendida{% else %}preferencias aprendidas{% endif %}
-        </div>
-      </div>
-      <div class="dc-hero-stat {% if intervenciones_activas %}temp{% else %}none{% endif %}">
-        <div class="dc-hero-n {% if intervenciones_activas %}temp{% else %}none{% endif %}">
-          {{ intervenciones_activas|length }}
-        </div>
-        <div class="dc-hero-lbl">
-          {% if intervenciones_activas|length == 1 %}ajuste activo{% else %}ajustes activos{% endif %}
-        </div>
-      </div>
-      <div class="dc-hero-stat {% if hipotesis_abiertas %}temp{% else %}none{% endif %}">
-        <div class="dc-hero-n {% if hipotesis_abiertas %}temp{% else %}none{% endif %}">
-          {{ hipotesis_abiertas|length }}
-        </div>
-        <div class="dc-hero-lbl">
-          {% if hipotesis_abiertas|length == 1 %}hipótesis abierta{% else %}hipótesis abiertas{% endif %}
-        </div>
-      </div>
-    </div>
-    <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--line);font-size:10px;color:var(--ink-3);line-height:1.6;">
-      <div style="margin-bottom:6px;">
-        <strong style="color:var(--ink-3);">Preferencia</strong> = algo que el plan recordó de ti y aplica solo.
-        <span style="opacity:0.65;font-style:italic;">Ej.: "prefieres piernas el fin de semana".</span>
-      </div>
-      <div style="margin-bottom:6px;">
-        <strong style="color:var(--ink-3);">Ajuste</strong> = un cambio temporal con fecha de caducidad.
-        <span style="opacity:0.65;font-style:italic;">Ej.: "menos volumen de pierna 2 semanas tras una sobrecarga".</span>
-      </div>
-      <div>
-        <strong style="color:var(--ink-3);">Hipótesis</strong> = un patrón que el plan está observando, aún sin confirmar.
-        <span style="opacity:0.65;font-style:italic;">Ej.: "el RPE sube cuando entrenas antes de las 8am".</span>
-      </div>
-    </div>
-  </div>
-
-  {# ── Esta semana ── #}
-  {% if analisis_semanal and analisis_semanal.hay_datos %}
-  <div class="dc-section">
-    <div class="dc-section-head">
-      <div class="dc-section-dot obs"></div>
-      <div class="dc-section-title">Esta semana</div>
-      <div class="dc-line"></div>
-    </div>
-    <div style="display:flex;gap:12px;margin-bottom:8px;flex-wrap:wrap;">
-      {% if analisis_semanal.sesiones_completadas %}
-      <div style="font-size:11px;color:var(--ink-3);">
-        <span style="font-size:18px;font-weight:700;color:var(--teal);">{{ analisis_semanal.sesiones_completadas }}</span>
-        sesión{{ analisis_semanal.sesiones_completadas|pluralize:"es" }}
-      </div>
-      {% endif %}
-      {% if analisis_semanal.sesiones_pospuestas %}
-      <div style="font-size:11px;color:var(--ink-3);">
-        <span style="font-size:18px;font-weight:700;color:rgba(245,158,11,0.7);">{{ analisis_semanal.sesiones_pospuestas }}</span>
-        pospuesta{{ analisis_semanal.sesiones_pospuestas|pluralize:"s" }}
-      </div>
-      {% endif %}
-      <div style="font-size:11px;color:var(--ink-3);margin-left:auto;">
-        <span style="padding:2px 8px;border-radius:99px;font-size:9px;font-weight:700;
-          background:{% if analisis_semanal.carga_alta_objetiva %}rgba(239,68,68,0.10){% elif analisis_semanal.prudencia_semanal %}rgba(245,158,11,0.10){% elif analisis_semanal.estado_semana == 'solida' %}rgba(34,197,94,0.12){% else %}rgba(255,255,255,0.06){% endif %};
-          color:{% if analisis_semanal.carga_alta_objetiva %}rgba(239,68,68,0.7){% elif analisis_semanal.prudencia_semanal %}rgba(245,158,11,0.8){% elif analisis_semanal.estado_semana == 'solida' %}rgba(34,197,94,0.8){% else %}var(--ink-3){% endif %};">
-          {% if analisis_semanal.carga_alta_objetiva %}CARGA ALTA{% elif analisis_semanal.prudencia_semanal %}MARGEN PROTEGIDO{% elif analisis_semanal.estado_semana == 'solida' %}SÓLIDA{% elif analisis_semanal.estado_semana == 'margen_extra' %}MARGEN EXTRA{% elif analisis_semanal.estado_semana == 'parcial' %}PARCIAL{% elif analisis_semanal.estado_semana %}EN CURSO{% else %}—{% endif %}
-        </span>
-      </div>
-    </div>
-    {% if analisis_semanal.lectura_textual %}
-    <div style="font-size:12px;color:var(--ink-3);font-style:italic;line-height:1.5;">
-      {{ analisis_semanal.lectura_textual }}
-    </div>
-    {% endif %}
-  </div>
-  {% endif %}
-
-  {# ── Propuesta de experimento (accionable) ── #}
-  {% if sugerencia_hipotesis %}
-  <div class="dc-section">
-    <div class="dc-section-head">
-      <div class="dc-section-dot temp"></div>
-      <div class="dc-section-title" style="color:rgba(245,158,11,0.80);">Propuesta de experimento</div>
-      <div class="dc-line"></div>
-    </div>
-    <div class="dc-card" style="border-left:2px solid rgba(245,158,11,0.50);background:rgba(245,158,11,0.05);">
-      <div style="font-size:12px;color:var(--ink);line-height:1.6;margin-bottom:10px;white-space:pre-line;">{{ sugerencia_hipotesis.texto }}</div>
-      <div style="display:flex;gap:8px;">
-        <form method="post" action="{% url 'clientes:aceptar_hipotesis' sugerencia_hipotesis.id %}" style="flex:1;">
-          {% csrf_token %}
-          <button type="submit" style="width:100%;padding:8px;border-radius:9px;background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.40);color:rgba(245,158,11,0.90);font-size:11px;font-weight:600;cursor:pointer;">
-            Probar 2 semanas
-          </button>
-        </form>
-        <form method="post" action="{% url 'clientes:ignorar_hipotesis' sugerencia_hipotesis.id %}" style="flex:1;">
-          {% csrf_token %}
-          <button type="submit" style="width:100%;padding:8px;border-radius:9px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.10);color:var(--ink-3);font-size:11px;cursor:pointer;opacity:0.60;">
-            No por ahora
-          </button>
-        </form>
-      </div>
-    </div>
-  </div>
-  {% endif %}
-
-  {# ── Activo ahora: preferencias / ajustes / hipótesis / continuidad, unificado ── #}
-  <div class="dc-section">
-    <div class="dc-section-head">
-      <div class="dc-section-dot perm"></div>
-      <div class="dc-section-title" style="color:var(--teal);">Activo ahora</div>
-      <div class="dc-line"></div>
-    </div>
-
-    {% if not preferencias_activas and not intervenciones_activas and not hipotesis_abiertas and not continuidad %}
-    <div class="dc-empty">
-      Sin adaptaciones persistentes activas — sin preferencias aprendidas, ajustes temporales ni hipótesis abiertas.
-    </div>
-    {% else %}
-
-      {% for pref in preferencias_activas %}
-      <div class="dc-card perm">
-        <span class="dc-pill perm">
-          <span class="dc-pill-dot"></span>
-          permanente · revocable
-        </span>
-        <div class="dc-card-text">{{ pref.descripcion }}</div>
-        <div class="dc-card-meta">
-          Basado en {{ pref.evidencia_count }} prueba{{ pref.evidencia_count|pluralize:"s" }} favorables.
-          {% if pref.ultima_confirmacion %}Confirmado el {{ pref.ultima_confirmacion|date:"j N" }}.{% endif %}
-        </div>
-        <div class="dc-card-note">
-          No es una regla. El plan lo usará cuando el contexto lo permita.
-        </div>
-        <form method="post" action="{% url 'clientes:revocar_preferencia' pref.id %}" style="display:inline;">
-          {% csrf_token %}
-          <button type="submit" class="dc-btn-revoke">Dejar de aplicar</button>
-        </form>
-      </div>
-      {% endfor %}
-
-      {% for iv in intervenciones_activas %}
-      <div class="dc-card temp">
-        <span class="dc-pill temp">
-          <span class="dc-pill-dot"></span>
-          temporal · hasta el {{ iv.fecha_fin|date:"j N" }}
-        </span>
-        <div class="dc-card-text">{{ iv.get_tipo_display }}</div>
-        {% if iv.origen_patron %}
-        <div class="dc-card-meta">Origen: {{ iv.origen_patron }}.</div>
-        {% endif %}
-        <div class="dc-card-note">
-          Expira automáticamente. No necesitas hacer nada para cancelarlo.
-        </div>
-      </div>
-      {% endfor %}
-
-      {% for h in hipotesis_abiertas %}
-      <div class="dc-card obs" style="border-left:2px solid rgba(245,158,11,0.25);">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">
-          <span style="font-family:var(--font-mono);font-size:8px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:rgba(245,158,11,0.65);">
-            Hipótesis · {{ h.ocurrencias }} veces
+      <div class="dc-stats" aria-label="Contadores de señales activas">
+        <div class="dc-stat is-learned">
+          <span class="dc-stat-value">{{ preferencias_activas|length }}</span>
+          <span class="dc-stat-label">
+            {% if preferencias_activas|length == 1 %}preferencia aprendida{% else %}preferencias aprendidas{% endif %}
           </span>
         </div>
-        <div style="font-size:12px;color:var(--ink);line-height:1.5;">{{ h.texto }}</div>
-        {% if h.fechas %}
-        <div style="margin-top:5px;font-size:9px;color:var(--ink-3);">
-          Fechas: {% for f in h.fechas %}{{ f|date:"j N" }}{% if not forloop.last %}, {% endif %}{% endfor %}
-        </div>
-        {% endif %}
-        <div class="dc-card-note">
-          Todavía no es una preferencia ni un ajuste. El plan solo la vigila hasta tener evidencia suficiente.
-        </div>
-      </div>
-      {% endfor %}
-
-      {% if continuidad %}
-      <div class="dc-card" style="border-left:2px solid rgba(96,165,250,0.45);background:rgba(96,165,250,0.05);">
-        <div style="font-size:12px;color:var(--ink-3);line-height:1.5;">
-          Pausa <strong>{{ continuidad.nivel }}</strong> · {{ continuidad.dias_sin_gym }} días sin gym.
-          El plan frena la subida de cargas y prioriza un retorno con margen, sin compensar de golpe.
-        </div>
-        <div style="font-size:11px;color:var(--ink-3);margin-top:6px;">
-          Motivo:
-          {% if continuidad.motivo == 'enfermedad' %}enfermedad
-          {% elif continuidad.motivo == 'molestia_lesion' %}molestia / lesión
-          {% elif continuidad.motivo == 'vacaciones_viaje' %}vacaciones / viaje
-          {% elif continuidad.motivo == 'trabajo_no_pude' %}trabajo / no pude
-          {% elif continuidad.motivo == 'descanso_decidido' %}descanso decidido
-          {% elif continuidad.motivo == 'otro' %}otro
-          {% elif continuidad.motivo == 'prefiero_no_decirlo' %}<em>prefiere no decirlo</em>
-          {% else %}<em>no declarado</em>{% endif %}
-        </div>
-      </div>
-      {% endif %}
-
-    {% endif %}
-  </div>
-
-  {# ── Lectura de la semana (JOI) ── #}
-  {% if lectura_semanal_joi and lectura_semanal_joi.texto %}
-  <div class="dc-section">
-    <div class="dc-section-head">
-      <div class="dc-section-dot obs" style="background:rgba(139,92,246,0.5);"></div>
-      <div class="dc-section-title" style="color:rgba(139,92,246,0.75);">Lectura de la semana</div>
-      <div class="dc-line"></div>
-    </div>
-    <div class="dc-card obs" style="border-left:2px solid rgba(139,92,246,0.25);font-style:italic;">
-      <div style="font-size:12px;color:var(--ink);line-height:1.6;">
-        {{ lectura_semanal_joi.texto }}
-      </div>
-      {% if lectura_semanal_joi.estado %}
-      <div style="margin-top:6px;font-size:9px;color:var(--ink-3);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:0.08em;">
-        Cómo aparece JOI esta semana:
-        {% if lectura_semanal_joi.estado == 'serena' %}calma y continuidad
-        {% elif lectura_semanal_joi.estado == 'observadora' %}observando sin concluir
-        {% elif lectura_semanal_joi.estado == 'acompañante' %}presente, sin urgencia
-        {% else %}lectura mínima
-        {% endif %}
-      </div>
-      {% endif %}
-    </div>
-  </div>
-  {% endif %}
-
-  {# ── Qué decidió últimamente (agrupado, Phase 62G.2) ── #}
-  <div class="dc-section">
-    <div class="dc-section-head">
-      <div class="dc-section-dot obs"></div>
-      <div class="dc-section-title">Qué decidió últimamente</div>
-      <div class="dc-line"></div>
-    </div>
-
-    {% for g in traces_agrupados %}
-    <div class="dc-group" {% if g.lesion_label %}style="border-left:2px solid rgba(96,165,250,0.45);background:rgba(96,165,250,0.05);"{% endif %}>
-      <div class="dc-group-head">
-        <div class="dc-group-title">{{ g.decision_label }} · {{ g.count }} {% if g.count == 1 %}vez{% else %}veces{% endif %}</div>
-        <span class="dc-group-count neutro">
-          {% if g.lesion_label %}lesión{% else %}{{ g.count }} sesi{{ g.count|pluralize:"ón,ones" }}{% endif %}
-        </span>
-      </div>
-      <div class="dc-group-detail">{{ g.explicacion }}</div>
-      <div class="dc-group-meta">
-        {% if g.count > 1 %}Última vez: {{ g.fecha_label }}{% else %}{{ g.fecha_label|capfirst }}{% endif %}
-      </div>
-    </div>
-    {% empty %}
-    <div class="dc-empty">Sin decisiones recientes registradas.</div>
-    {% endfor %}
-  </div>
-
-  {# ── Carga por ejercicio (agrupado, Phase 62G.2) ── #}
-  <div class="dc-section">
-    <div class="dc-section-head">
-      <div class="dc-section-dot obs"></div>
-      <div class="dc-section-title">Carga por ejercicio</div>
-      <div class="dc-line"></div>
-    </div>
-    <div style="font-size:10px;color:var(--ink-3);margin-bottom:10px;font-style:italic;">
-      Qué decidió el plan para cada ejercicio en los últimos 30 días.
-    </div>
-
-    {% for g in decisiones_agrupadas %}
-    <div class="dc-group">
-      <div class="dc-group-head">
-        <div class="dc-group-title">{{ g.label }}</div>
-        <div style="display:flex;align-items:center;gap:6px;">
-          {% if g.pospuestas_count %}
-          <span class="dc-pill temp" style="margin-bottom:0;">
-            <span class="dc-pill-dot"></span>{{ g.pospuestas_count }} pospuesta{{ g.pospuestas_count|pluralize }}
+        <div class="dc-stat is-temporary">
+          <span class="dc-stat-value">{{ intervenciones_activas|length }}</span>
+          <span class="dc-stat-label">
+            {% if intervenciones_activas|length == 1 %}ajuste activo{% else %}ajustes activos{% endif %}
           </span>
-          {% endif %}
-          <span class="dc-group-count
-            {% if g.accion == 'mantener' %}mantener
-            {% elif g.accion == 'bajar_peso' %}bajar
-            {% elif g.accion == 'cambiar_variante' %}variante
-            {% elif g.accion == 'deload' %}deload
-            {% elif g.accion == 'subir_peso' or g.accion == 'subir_reps' %}subir
-            {% else %}neutro{% endif %}">
-            {{ g.count }} ejercicio{{ g.count|pluralize }}
+        </div>
+        <div class="dc-stat is-temporary">
+          <span class="dc-stat-value">{{ hipotesis_abiertas|length }}</span>
+          <span class="dc-stat-label">
+            {% if hipotesis_abiertas|length == 1 %}hipótesis abierta{% else %}hipótesis abiertas{% endif %}
           </span>
         </div>
       </div>
-      <div class="dc-group-detail">{{ g.ejercicios|join:", " }}</div>
-      {% if g.motivo_principal %}
-      <div class="dc-group-meta">{{ g.motivo_principal }}</div>
+
+      <ul class="dc-legend" aria-label="Cómo interpretar las señales">
+        <li>
+          <strong>Preferencia</strong>
+          Algo que el plan recordó y aplica cuando el contexto lo permite.
+        </li>
+        <li>
+          <strong>Ajuste</strong>
+          Un cambio temporal con una fecha de finalización.
+        </li>
+        <li>
+          <strong>Hipótesis</strong>
+          Un patrón en observación que todavía no se da por confirmado.
+        </li>
+      </ul>
+    </section>
+
+    <section class="dc-section" id="activo-ahora" aria-labelledby="titulo-activo">
+      <header class="dc-section-head">
+        <span class="dc-section-number" aria-hidden="true">01</span>
+        <h2 class="dc-section-title" id="titulo-activo">Activo ahora</h2>
+      </header>
+
+      {% if sugerencia_hipotesis %}
+      <article class="dc-card is-experiment">
+        <span class="dc-pill is-hypothesis">Propuesta de experimento</span>
+        <p class="dc-card-text">{{ sugerencia_hipotesis.texto }}</p>
+        <div class="dc-actions">
+          <form method="post" action="{% url 'clientes:aceptar_hipotesis' sugerencia_hipotesis.id %}">
+            {% csrf_token %}
+            <button class="dc-button is-primary" type="submit">Probar 2 semanas</button>
+          </form>
+          <form method="post" action="{% url 'clientes:ignorar_hipotesis' sugerencia_hipotesis.id %}">
+            {% csrf_token %}
+            <button class="dc-button is-quiet" type="submit">No por ahora</button>
+          </form>
+        </div>
+      </article>
       {% endif %}
-    </div>
-    {% empty %}
-    <div class="dc-empty">Sin decisiones de carga registradas en los últimos 30 días.</div>
-    {% endfor %}
-  </div>
 
-  {# ── Detalle completo: acordeones técnicos (Phase 62G.2) ── #}
-  <div class="dc-section">
-    <div class="dc-section-head">
-      <div class="dc-section-dot obs"></div>
-      <div class="dc-section-title">Detalle completo</div>
-      <div class="dc-line"></div>
-    </div>
+      {% if not preferencias_activas and not intervenciones_activas and not hipotesis_abiertas and not continuidad %}
+      <div class="dc-empty">
+        El sistema no tiene señales activas confirmadas para mostrar ahora.
+        Sin adaptaciones persistentes activas en esta base de datos no significa ausencia
+        de actividad fuera de este entorno; el plan seguirá usando la evidencia disponible
+        cuando tome la siguiente decisión.
+      </div>
+      {% else %}
+      <div class="dc-card-grid is-active">
+        {% for pref in preferencias_activas %}
+        <article class="dc-card is-learned">
+          <span class="dc-pill is-learned">permanente · revocable</span>
+          <p class="dc-card-text">{{ pref.descripcion }}</p>
+          <p class="dc-card-meta">
+            Basado en {{ pref.evidencia_count }} prueba{{ pref.evidencia_count|pluralize:"s" }} favorables.
+            {% if pref.ultima_confirmacion %}Confirmado el {{ pref.ultima_confirmacion|date:"j N" }}.{% endif %}
+          </p>
+          <p class="dc-card-note">
+            No es una regla. El plan lo usará cuando el contexto lo permita.
+          </p>
+          <form method="post" action="{% url 'clientes:revocar_preferencia' pref.id %}">
+            {% csrf_token %}
+            <button class="dc-button is-danger" type="submit">Dejar de aplicar</button>
+          </form>
+        </article>
+        {% endfor %}
 
-    {% if traces_recientes %}
-    <details class="dc-accordion">
-      <summary>
-        <span>Ver historial completo ({{ traces_recientes|length }} sesi{{ traces_recientes|length|pluralize:"ón,ones" }})</span>
-        <span class="arrow">▾</span>
-      </summary>
-      <div class="dc-accordion-body">
-        {% for t in traces_recientes %}
-        <div class="dc-card obs">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
-            <div style="font-family:var(--font-mono);font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink-3);">
-              {{ t.fecha_label }}
+        {% for iv in intervenciones_activas %}
+        <article class="dc-card is-temporary">
+          <span class="dc-pill is-temporary">temporal · hasta el {{ iv.fecha_fin|date:"j N" }}</span>
+          <p class="dc-card-text">{{ iv.get_tipo_display }}</p>
+          {% if iv.origen_patron %}
+          <p class="dc-card-meta">Origen: {{ iv.origen_patron }}.</p>
+          {% endif %}
+          <p class="dc-card-note">
+            Expira automáticamente. No necesitas hacer nada para cancelarlo.
+          </p>
+        </article>
+        {% endfor %}
+
+        {% for h in hipotesis_abiertas %}
+        <article class="dc-card is-hypothesis">
+          <span class="dc-pill is-hypothesis">Hipótesis · {{ h.ocurrencias }} veces</span>
+          <p class="dc-card-text">{{ h.texto }}</p>
+          {% if h.fechas %}
+          <p class="dc-card-meta">
+            Fechas: {% for f in h.fechas %}{{ f|date:"j N" }}{% if not forloop.last %}, {% endif %}{% endfor %}
+          </p>
+          {% endif %}
+          <p class="dc-card-note">
+            Todavía no es una preferencia ni un ajuste. El plan la vigila hasta tener evidencia suficiente.
+          </p>
+        </article>
+        {% endfor %}
+
+        {% if continuidad %}
+        <article class="dc-card is-continuity">
+          <span class="dc-pill">Continuidad protegida</span>
+          <p class="dc-card-text">
+            Pausa <strong>{{ continuidad.nivel }}</strong> · {{ continuidad.dias_sin_gym }} días sin gym.
+            El plan frena la subida de cargas y prioriza un retorno con margen, sin compensar de golpe.
+          </p>
+          <p class="dc-card-meta">
+            Motivo:
+            {% if continuidad.motivo == 'enfermedad' %}enfermedad
+            {% elif continuidad.motivo == 'molestia_lesion' %}molestia / lesión
+            {% elif continuidad.motivo == 'vacaciones_viaje' %}vacaciones / viaje
+            {% elif continuidad.motivo == 'trabajo_no_pude' %}trabajo / no pude
+            {% elif continuidad.motivo == 'descanso_decidido' %}descanso decidido
+            {% elif continuidad.motivo == 'otro' %}otro
+            {% elif continuidad.motivo == 'prefiero_no_decirlo' %}<em>prefiere no decirlo</em>
+            {% else %}<em>no declarado</em>{% endif %}
+          </p>
+        </article>
+        {% endif %}
+      </div>
+      {% endif %}
+    </section>
+
+    <section class="dc-section" id="decisiones-recientes" aria-labelledby="titulo-decisiones">
+      <header class="dc-section-head">
+        <span class="dc-section-number" aria-hidden="true">02</span>
+        <h2 class="dc-section-title" id="titulo-decisiones">Decisiones recientes</h2>
+      </header>
+
+      <div class="dc-subsection">
+        <h3 class="dc-subtitle">Qué decidió últimamente</h3>
+        <div class="dc-card-grid">
+          {% for g in traces_agrupados %}
+          <article class="dc-group{% if g.lesion_label %} is-protected{% endif %}">
+            <div class="dc-group-head">
+              <h4 class="dc-group-title">
+                {{ g.decision_label }} · {{ g.count }} {% if g.count == 1 %}vez{% else %}veces{% endif %}
+              </h4>
+              <span class="dc-badge">
+                {% if g.lesion_label %}lesión{% else %}{{ g.count }} sesi{{ g.count|pluralize:"ón,ones" }}{% endif %}
+              </span>
             </div>
-            {% if t.decision_label %}
-            <span style="font-size:9px;padding:2px 8px;border-radius:99px;background:rgba(255,255,255,0.06);color:var(--ink-3);">
-              {{ t.decision_label }}
-            </span>
+            <p class="dc-group-detail">{{ g.explicacion }}</p>
+            <p class="dc-group-meta">
+              {% if g.count > 1 %}Última vez: {{ g.fecha_label }}{% else %}{{ g.fecha_label|capfirst }}{% endif %}
+            </p>
+          </article>
+          {% empty %}
+          <div class="dc-empty">No hay decisiones recientes registradas para este periodo.</div>
+          {% endfor %}
+        </div>
+      </div>
+    </section>
+
+    <section class="dc-section" id="evidencia-tecnica" aria-labelledby="titulo-evidencia">
+      <header class="dc-section-head">
+        <span class="dc-section-number" aria-hidden="true">03</span>
+        <h2 class="dc-section-title" id="titulo-evidencia">Evidencia técnica</h2>
+      </header>
+
+      {% if analisis_semanal and analisis_semanal.hay_datos or lectura_semanal_joi and lectura_semanal_joi.texto or decisiones_agrupadas or traces_recientes or decisiones_carga or sesiones_esenciales %}
+      <div class="dc-evidence-grid">
+        {% if analisis_semanal and analisis_semanal.hay_datos %}
+        <div class="dc-subsection">
+          <h3 class="dc-subtitle">Esta semana</h3>
+          <article class="dc-week">
+            <div class="dc-week-metrics">
+              {% if analisis_semanal.sesiones_completadas %}
+              <div class="dc-week-metric">
+                <span class="dc-week-number">{{ analisis_semanal.sesiones_completadas }}</span>
+                <span class="dc-week-label">sesión{{ analisis_semanal.sesiones_completadas|pluralize:"es" }}</span>
+              </div>
+              {% endif %}
+              {% if analisis_semanal.sesiones_pospuestas %}
+              <div class="dc-week-metric">
+                <span class="dc-week-number">{{ analisis_semanal.sesiones_pospuestas }}</span>
+                <span class="dc-week-label">pospuesta{{ analisis_semanal.sesiones_pospuestas|pluralize:"s" }}</span>
+              </div>
+              {% endif %}
+              <span class="dc-week-status
+                {% if analisis_semanal.carga_alta_objetiva %} is-high
+                {% elif analisis_semanal.prudencia_semanal %} is-careful
+                {% elif analisis_semanal.estado_semana == 'solida' %} is-solid{% endif %}">
+                {% if analisis_semanal.carga_alta_objetiva %}CARGA ALTA
+                {% elif analisis_semanal.prudencia_semanal %}MARGEN PROTEGIDO
+                {% elif analisis_semanal.estado_semana == 'solida' %}SÓLIDA
+                {% elif analisis_semanal.estado_semana == 'margen_extra' %}MARGEN EXTRA
+                {% elif analisis_semanal.estado_semana == 'parcial' %}PARCIAL
+                {% elif analisis_semanal.estado_semana %}EN CURSO
+                {% else %}SIN CLASIFICAR{% endif %}
+              </span>
+            </div>
+            {% if analisis_semanal.lectura_textual %}
+            <p class="dc-week-reading">{{ analisis_semanal.lectura_textual }}</p>
             {% endif %}
-          </div>
+          </article>
+        </div>
+        {% endif %}
 
-          <div style="font-size:12px;color:var(--ink);line-height:1.55;margin-bottom:{% if t.tiene_detalles or t.evaluacion_label %}8px{% else %}0{% endif %};">
-            {{ t.explicacion }}
-          </div>
-
-          {% if t.evaluacion_label %}
-          <div style="margin-bottom:6px;padding:6px 9px;background:rgba(255,255,255,0.03);border-left:2px solid rgba(255,255,255,0.12);border-radius:0 7px 7px 0;">
-            <div style="font-size:9px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;
-                        color:{% if 'margen' in t.evaluacion_label %}rgba(34,197,94,0.6){% elif 'hipótesis' in t.evaluacion_label %}rgba(245,158,11,0.6){% else %}rgba(148,163,184,0.5){% endif %};
-                        margin-bottom:3px;">
-              {{ t.evaluacion_label }}
-            </div>
-            {% if t.evaluacion_resumen %}
-            <div style="font-size:10px;color:var(--ink-3);line-height:1.45;font-style:italic;">
-              {{ t.evaluacion_resumen }}
-            </div>
+        {% if lectura_semanal_joi and lectura_semanal_joi.texto %}
+        <div class="dc-subsection">
+          <h3 class="dc-subtitle">Lectura de la semana</h3>
+          <article class="dc-joi-reading">
+            <p class="dc-joi-text">{{ lectura_semanal_joi.texto }}</p>
+            {% if lectura_semanal_joi.estado %}
+            <p class="dc-joi-state">
+              JOI:
+              {% if lectura_semanal_joi.estado == 'serena' %}calma y continuidad
+              {% elif lectura_semanal_joi.estado == 'observadora' %}observando sin concluir
+              {% elif lectura_semanal_joi.estado == 'acompañante' %}presente, sin urgencia
+              {% else %}lectura mínima{% endif %}
+            </p>
             {% endif %}
+          </article>
+        </div>
+        {% endif %}
+
+        {% if decisiones_agrupadas %}
+        <div class="dc-subsection is-wide">
+          <h3 class="dc-subtitle">Carga por ejercicio</h3>
+          <p class="dc-subtitle-meta">Qué decidió el plan para cada ejercicio en los últimos 30 días.</p>
+          <div class="dc-load-list">
+            {% for g in decisiones_agrupadas %}
+            <article class="dc-group">
+              <div class="dc-load-head">
+                <h4 class="dc-group-title">{{ g.label }}</h4>
+                <div class="dc-load-badges">
+                  {% if g.pospuestas_count %}
+                  <span class="dc-badge is-postponed">
+                    {{ g.pospuestas_count }} pospuesta{{ g.pospuestas_count|pluralize }}
+                  </span>
+                  {% endif %}
+                  <span class="dc-badge
+                    {% if g.accion == 'mantener' %} is-hold
+                    {% elif g.accion == 'bajar_peso' %} is-down
+                    {% elif g.accion == 'cambiar_variante' %} is-variant
+                    {% elif g.accion == 'deload' %} is-deload
+                    {% elif g.accion == 'subir_peso' or g.accion == 'subir_reps' %} is-up{% endif %}">
+                    {{ g.count }} ejercicio{{ g.count|pluralize }}
+                  </span>
+                </div>
+              </div>
+              <p class="dc-group-detail">{{ g.ejercicios|join:", " }}</p>
+              {% if g.motivo_principal %}
+              <p class="dc-group-meta">{{ g.motivo_principal }}</p>
+              {% endif %}
+            </article>
+            {% endfor %}
           </div>
+        </div>
+        {% endif %}
+
+        {% if traces_recientes or decisiones_carga or sesiones_esenciales %}
+        <div class="dc-subsection is-wide">
+          <h3 class="dc-subtitle">Detalle completo</h3>
+
+          {% if traces_recientes %}
+          <details class="dc-accordion">
+            <summary>
+              <span>Ver historial completo ({{ traces_recientes|length }} sesi{{ traces_recientes|length|pluralize:"ón,ones" }})</span>
+              <svg class="dc-chevron" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+              </svg>
+            </summary>
+            <div class="dc-accordion-body">
+              {% for t in traces_recientes %}
+              <article class="dc-technical-card">
+                <div class="dc-trace-head">
+                  <span class="dc-group-meta">{{ t.fecha_label }}</span>
+                  {% if t.decision_label %}
+                  <span class="dc-badge">{{ t.decision_label }}</span>
+                  {% endif %}
+                </div>
+                <p class="dc-technical-text">{{ t.explicacion }}</p>
+
+                {% if t.evaluacion_label %}
+                <div class="dc-evaluation">
+                  <div class="dc-evaluation-label
+                    {% if 'margen' in t.evaluacion_label %} is-margin
+                    {% elif 'hipótesis' in t.evaluacion_label %} is-hypothesis{% endif %}">
+                    {{ t.evaluacion_label }}
+                  </div>
+                  {% if t.evaluacion_resumen %}
+                  <p class="dc-evaluation-summary">{{ t.evaluacion_resumen }}</p>
+                  {% endif %}
+                </div>
+                {% endif %}
+
+                {% if t.capas_usadas %}
+                <p class="dc-card-meta">Influyó: {{ t.capas_usadas|join:", " }}.</p>
+                {% endif %}
+                {% if t.supresion_razon %}
+                <p class="dc-card-note">{{ t.supresion_razon }}</p>
+                {% endif %}
+                {% if t.lesion_label %}
+                <p class="dc-card-meta">Lesión: {{ t.lesion_label }}.</p>
+                {% endif %}
+              </article>
+              {% endfor %}
+            </div>
+          </details>
           {% endif %}
 
-          {% if t.capas_usadas %}
-          <div style="font-size:10px;color:var(--ink-3);margin-bottom:4px;">
-            Influyó: {{ t.capas_usadas|join:", " }}.
-          </div>
+          {% if decisiones_carga %}
+          <details class="dc-accordion">
+            <summary>
+              <span>Ver decisiones por ejercicio ({{ decisiones_carga|length }})</span>
+              <svg class="dc-chevron" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+              </svg>
+            </summary>
+            <div class="dc-accordion-body">
+              {% for d in decisiones_carga %}
+              <article class="dc-technical-card dc-detail-row">
+                <div>
+                  <p class="dc-detail-name">{{ d.ejercicio }}</p>
+                  {% if d.motivo %}
+                  <p class="dc-card-meta">{{ d.motivo }}</p>
+                  {% endif %}
+                  {% if d.accion == 'subir_peso' and d.estado_aplicacion == 'pospuesta' and d.motivo_postergacion %}
+                  <p class="dc-card-note">{{ d.motivo_postergacion }}</p>
+                  {% endif %}
+                </div>
+                <div class="dc-detail-side">
+                  <span class="dc-badge
+                    {% if d.accion == 'subir_peso' and d.estado_aplicacion == 'pospuesta' %} is-postponed
+                    {% elif d.accion == 'mantener' %} is-hold
+                    {% elif d.accion == 'bajar_peso' %} is-down
+                    {% elif d.accion == 'deload' %} is-deload
+                    {% elif d.accion == 'subir_peso' %} is-up{% endif %}">
+                    {% if d.accion == 'subir_peso' %}
+                      {% if d.estado_aplicacion == 'pospuesta' %}Subida pospuesta{% else %}Progresión sugerida{% endif %}
+                    {% else %}
+                      {{ d.get_accion_display }}
+                    {% endif %}
+                  </span>
+                  <span class="dc-date">{{ d.fecha_creacion|date:"d M" }}</span>
+                </div>
+              </article>
+              {% endfor %}
+            </div>
+          </details>
           {% endif %}
 
-          {% if t.supresion_razon %}
-          <div style="font-size:10px;color:var(--ink-3);font-style:italic;opacity:0.75;">
-            {{ t.supresion_razon }}
-          </div>
-          {% endif %}
-
-          {% if t.lesion_label %}
-          <div style="margin-top:4px;font-size:10px;color:rgba(245,158,11,0.7);">
-            Lesión: {{ t.lesion_label }}.
-          </div>
+          {% if sesiones_esenciales %}
+          <details class="dc-accordion">
+            <summary>
+              <span>Ver sesiones esenciales ({{ sesiones_esenciales|length }})</span>
+              <svg class="dc-chevron" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+              </svg>
+            </summary>
+            <div class="dc-accordion-body">
+              {% for s in sesiones_esenciales %}
+              <article class="dc-technical-card">
+                <p class="dc-technical-text">
+                  {{ s.fecha|date:"j M" }} · {{ s.rutina.nombre|default:"Sesión" }} — accesorios opcionales
+                </p>
+              </article>
+              {% endfor %}
+            </div>
+          </details>
           {% endif %}
         </div>
-        {% endfor %}
+        {% endif %}
       </div>
-    </details>
-    {% endif %}
-
-    {% if decisiones_carga %}
-    <details class="dc-accordion">
-      <summary>
-        <span>Ver decisiones por ejercicio ({{ decisiones_carga|length }})</span>
-        <span class="arrow">▾</span>
-      </summary>
-      <div class="dc-accordion-body">
-        {% for d in decisiones_carga %}
-        <div class="dc-card obs" style="display:flex;align-items:center;justify-content:space-between;">
-          <div>
-            <div style="font-size:12px;color:var(--ink);font-weight:600;">{{ d.ejercicio }}</div>
-            {% if d.motivo %}
-            <div style="font-size:10px;color:var(--ink-3);margin-top:2px;font-style:italic;">{{ d.motivo }}</div>
-            {% endif %}
-            {% if d.accion == 'subir_peso' and d.estado_aplicacion == 'pospuesta' and d.motivo_postergacion %}
-            <div style="font-size:10px;color:rgba(245,158,11,0.8);margin-top:2px;font-style:italic;">{{ d.motivo_postergacion }}</div>
-            {% endif %}
-          </div>
-          <div style="text-align:right;flex-shrink:0;margin-left:12px;">
-            <span style="font-size:9px;padding:2px 8px;border-radius:99px;
-              background:{% if d.accion == 'subir_peso' and d.estado_aplicacion == 'pospuesta' %}rgba(245,158,11,0.12){% elif d.accion == 'mantener' %}rgba(245,158,11,0.12){% elif d.accion == 'bajar_peso' %}rgba(239,68,68,0.10){% elif d.accion == 'deload' %}rgba(139,92,246,0.10){% elif d.accion == 'subir_peso' %}rgba(34,197,94,0.10){% else %}rgba(255,255,255,0.06){% endif %};
-              color:{% if d.accion == 'subir_peso' and d.estado_aplicacion == 'pospuesta' %}rgba(245,158,11,0.8){% elif d.accion == 'mantener' %}rgba(245,158,11,0.8){% elif d.accion == 'bajar_peso' %}rgba(239,68,68,0.7){% elif d.accion == 'deload' %}rgba(139,92,246,0.7){% elif d.accion == 'subir_peso' %}rgba(34,197,94,0.8){% else %}var(--ink-3){% endif %};">
-              {% if d.accion == 'subir_peso' %}{% if d.estado_aplicacion == 'pospuesta' %}Subida pospuesta{% else %}Progresión sugerida{% endif %}{% else %}{{ d.get_accion_display }}{% endif %}
-            </span>
-            <div style="font-size:9px;color:var(--ink-3);margin-top:4px;font-family:var(--font-mono);">{{ d.fecha_creacion|date:"d M" }}</div>
-          </div>
-        </div>
-        {% endfor %}
+      {% else %}
+      <div class="dc-empty">
+        No hay evidencia técnica disponible para mostrar ahora. Este estado no permite concluir nada sobre tu actividad.
       </div>
-    </details>
-    {% endif %}
+      {% endif %}
+    </section>
+  </main>
 
-    {% if sesiones_esenciales %}
-    <details class="dc-accordion">
-      <summary>
-        <span>Ver sesiones esenciales ({{ sesiones_esenciales|length }})</span>
-        <span class="arrow">▾</span>
-      </summary>
-      <div class="dc-accordion-body">
-        {% for s in sesiones_esenciales %}
-        <div class="dc-card obs">
-          <div style="font-size:12px;color:var(--ink);">
-            {{ s.fecha|date:"j M" }} · {{ s.rutina.nombre|default:"Sesión" }} — accesorios opcionales
-          </div>
-        </div>
-        {% endfor %}
-      </div>
-    </details>
-    {% endif %}
+  {% include 'includes/_joi_fab.html' %}
+  <style id="dc-joi-guardrails">
+    .joi-fab {
+      top: auto !important;
+      right: 16px;
+      bottom: max(16px, env(safe-area-inset-bottom, 16px));
+      left: auto !important;
+      width: 44px;
+      height: 44px;
+    }
 
-    {% if not traces_recientes and not decisiones_carga and not sesiones_esenciales %}
-    <div class="dc-empty">Sin historial técnico todavía.</div>
-    {% endif %}
-  </div>
+    body {
+      padding-bottom: calc(7rem + env(safe-area-inset-bottom, 0px));
+    }
 
-</div>
+    #joi-fab-banner a,
+    #joi-fab-banner button {
+      display: inline-flex;
+      align-items: center;
+      min-height: 44px;
+    }
 
-{% include 'includes/_joi_fab.html' %}
+    #joi-fab-banner button {
+      justify-content: center;
+      min-width: 44px;
+    }
+
+    @media (max-width: 640px) {
+      .joi-fab {
+        position: static !important;
+        inset: auto !important;
+        transform: none !important;
+        margin: 16px auto max(16px, env(safe-area-inset-bottom, 16px));
+      }
+
+      body {
+        padding-bottom: 0;
+      }
+    }
+
+    @media (min-width: 900px) {
+      .joi-fab {
+        right: 24px;
+        bottom: max(24px, env(safe-area-inset-bottom, 24px));
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .joi-fab,
+      .joi-fab-punto,
+      #joi-fab-banner {
+        animation: none !important;
+        transition: none !important;
+      }
+    }
+  </style>
 </body>
 </html>
