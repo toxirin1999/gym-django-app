@@ -4889,7 +4889,7 @@ def aceptar_sugerencia_view(request, sugerencia_id):
     from entrenos.services.sugerencias_service import aceptar_sugerencia
 
     sugerencia = get_object_or_404(
-        SugerenciaPlan,
+        SugerenciaPlan.objects.exclude(patron__startswith='hipotesis_senal_'),
         id=sugerencia_id,
         cliente__user=request.user,
         estado=SugerenciaPlan.ESTADO_PENDIENTE,
@@ -4907,7 +4907,7 @@ def ignorar_sugerencia_view(request, sugerencia_id):
     from entrenos.services.sugerencias_service import ignorar_sugerencia
 
     sugerencia = get_object_or_404(
-        SugerenciaPlan,
+        SugerenciaPlan.objects.exclude(patron__startswith='hipotesis_senal_'),
         id=sugerencia_id,
         cliente__user=request.user,
         estado=SugerenciaPlan.ESTADO_PENDIENTE,
@@ -5053,6 +5053,7 @@ def aceptar_hipotesis_view(request, sugerencia_id):
     cliente = get_object_or_404(Cliente, user=request.user)
     sugerencia = get_object_or_404(
         SugerenciaPlan, id=sugerencia_id, cliente=cliente,
+        patron__startswith='hipotesis_senal_',
         estado=SugerenciaPlan.ESTADO_PENDIENTE,
     )
     aceptar_sugerencia_hipotesis(sugerencia, fecha_ref=timezone.localdate())
@@ -5065,15 +5066,14 @@ def aceptar_hipotesis_view(request, sugerencia_id):
 def ignorar_hipotesis_view(request, sugerencia_id):
     """Phase 37 — User dismisses hypothesis suggestion ('No por ahora')."""
     from entrenos.models import SugerenciaPlan
+    from entrenos.services.hipotesis_service import ignorar_sugerencia_hipotesis
     cliente = get_object_or_404(Cliente, user=request.user)
     sugerencia = get_object_or_404(
         SugerenciaPlan, id=sugerencia_id, cliente=cliente,
+        patron__startswith='hipotesis_senal_',
         estado=SugerenciaPlan.ESTADO_PENDIENTE,
     )
-    sugerencia.estado = SugerenciaPlan.ESTADO_IGNORADA
-    sugerencia.cooldown_hasta = timezone.localdate() + timedelta(days=7)
-    sugerencia.fecha_respuesta = timezone.now()
-    sugerencia.save(update_fields=['estado', 'cooldown_hasta', 'fecha_respuesta'])
+    ignorar_sugerencia_hipotesis(sugerencia, fecha_ref=timezone.localdate())
     messages.info(request, "La sugerencia descansará 7 días.")
     return redirect('clientes:plan_decisiones')
 
@@ -5098,6 +5098,11 @@ def plan_decisiones_view(request):
     hoy = timezone.localdate()
     hace_60 = hoy - timedelta(days=60)
     hace_30 = hoy - timedelta(days=30)
+
+    # Una sola propuesta ordinaria, elegida con una consulta pura. Las
+    # hipótesis usan su flujo separado y nunca compiten por este espacio.
+    from entrenos.services.sugerencias_service import consultar_sugerencia_activa
+    sugerencia_prioritaria = consultar_sugerencia_activa(cliente, fecha_ref=hoy)
 
     # 1. Preferencias activas
     preferencias_activas = list(
@@ -5255,6 +5260,7 @@ def plan_decisiones_view(request):
         'traces_recientes':    traces_recientes,
         'hipotesis_abiertas':  hipotesis_abiertas,
         'sugerencia_hipotesis': sugerencia_hipotesis,
+        'sugerencia_prioritaria': sugerencia_prioritaria,
         'lectura_semanal_joi': lectura_semanal_joi,
         'continuidad': continuidad,
         'estado_plan': estado_plan,

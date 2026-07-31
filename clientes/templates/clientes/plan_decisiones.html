@@ -997,6 +997,29 @@
         <h2 class="dc-section-title" id="titulo-activo">Activo ahora</h2>
       </header>
 
+      {% if sugerencia_prioritaria %}
+      <article class="dc-card is-temporary" aria-labelledby="sugerencia-prioritaria-titulo">
+        <span class="dc-pill is-temporary">Requiere tu decisión</span>
+        <h3 id="sugerencia-prioritaria-titulo" class="dc-card-text">
+          {{ sugerencia_prioritaria.texto }}
+        </h3>
+        <p class="dc-card-meta">
+          Señal detectada ·
+          Detectado el {{ sugerencia_prioritaria.fecha_generada|date:"j N Y" }}
+        </p>
+        <div class="dc-actions" aria-label="Responder a esta propuesta">
+          <form method="post" action="{% url 'clientes:aceptar_sugerencia' sugerencia_prioritaria.id %}">
+            {% csrf_token %}
+            <button class="dc-button is-primary" type="submit">Probar este ajuste</button>
+          </form>
+          <form method="post" action="{% url 'clientes:ignorar_sugerencia' sugerencia_prioritaria.id %}">
+            {% csrf_token %}
+            <button class="dc-button is-quiet" type="submit">No por ahora</button>
+          </form>
+        </div>
+      </article>
+      {% endif %}
+
       {% if sugerencia_hipotesis %}
       <article class="dc-card is-experiment">
         <span class="dc-pill is-hypothesis">Propuesta de experimento</span>
@@ -1014,7 +1037,7 @@
       </article>
       {% endif %}
 
-      {% if not preferencias_activas and not intervenciones_activas and not hipotesis_abiertas and not continuidad %}
+      {% if not sugerencia_prioritaria and not sugerencia_hipotesis and not preferencias_activas and not intervenciones_activas and not hipotesis_abiertas and not continuidad %}
       <div class="dc-empty">
         El sistema no tiene señales activas confirmadas para mostrar ahora.
         Sin adaptaciones persistentes activas en esta base de datos no significa ausencia

@@ -152,14 +152,26 @@ def aceptar_sugerencia_hipotesis(sugerencia, fecha_ref=None) -> 'IntervencionPla
     Phase 37 — Converts an accepted hypothesis suggestion into a 14-day experiment.
     Creates IntervencionPlan(tipo='vigilar_senal'). Does NOT change loads.
     """
+    from clientes.models import Cliente
     from entrenos.models import IntervencionPlan, SugerenciaPlan
     from django.db import transaction
     from django.utils import timezone
 
-    fecha_ref = fecha_ref or timezone.localdate()
-    fecha_fin = fecha_ref + _td(days=_DURACION_EXPERIMENTO)
-
     with transaction.atomic():
+        # El lock del cliente da un orden estable y serializa dos respuestas
+        # simultáneas incluso en motores donde el lock de una fila es limitado.
+        Cliente.objects.select_for_update().get(pk=sugerencia.cliente_id)
+        sugerencia = SugerenciaPlan.objects.select_for_update().get(pk=sugerencia.pk)
+        if not sugerencia.patron.startswith(_PATRON_PREFIX):
+            raise ValueError('La sugerencia no pertenece al flujo de hipótesis.')
+        if sugerencia.estado != SugerenciaPlan.ESTADO_PENDIENTE:
+            existente = IntervencionPlan.objects.filter(sugerencia=sugerencia).first()
+            if existente is not None:
+                return existente
+            raise ValueError('La hipótesis ya no está pendiente.')
+
+        fecha_ref = fecha_ref or timezone.localdate()
+        fecha_fin = fecha_ref + _td(days=_DURACION_EXPERIMENTO)
         sugerencia.estado = SugerenciaPlan.ESTADO_ACEPTADA
         sugerencia.fecha_respuesta = timezone.now()
         sugerencia.save(update_fields=['estado', 'fecha_respuesta'])
@@ -173,6 +185,29 @@ def aceptar_sugerencia_hipotesis(sugerencia, fecha_ref=None) -> 'IntervencionPla
             fecha_fin=fecha_fin,
             estado=IntervencionPlan.ESTADO_ACTIVA,
         )
+
+
+def ignorar_sugerencia_hipotesis(sugerencia, fecha_ref=None):
+    """Ignora una hipótesis pendiente durante siete días, sin aceptar ordinarias."""
+    from clientes.models import Cliente
+    from entrenos.models import SugerenciaPlan
+    from django.db import transaction
+    from django.utils import timezone
+
+    fecha_ref = fecha_ref or timezone.localdate()
+    with transaction.atomic():
+        Cliente.objects.select_for_update().get(pk=sugerencia.cliente_id)
+        sugerencia = SugerenciaPlan.objects.select_for_update().get(pk=sugerencia.pk)
+        if not sugerencia.patron.startswith(_PATRON_PREFIX):
+            raise ValueError('La sugerencia no pertenece al flujo de hipótesis.')
+        if sugerencia.estado != SugerenciaPlan.ESTADO_PENDIENTE:
+            return sugerencia
+
+        sugerencia.estado = SugerenciaPlan.ESTADO_IGNORADA
+        sugerencia.cooldown_hasta = fecha_ref + _td(days=7)
+        sugerencia.fecha_respuesta = timezone.now()
+        sugerencia.save(update_fields=['estado', 'cooldown_hasta', 'fecha_respuesta'])
+        return sugerencia
 
 
 def evaluar_fin_experimento_hipotesis(cliente, fecha_ref=None) -> dict | None:

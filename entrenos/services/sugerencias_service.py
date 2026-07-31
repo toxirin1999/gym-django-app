@@ -18,6 +18,12 @@ from entrenos.models import IntervencionPlan, SugerenciaPlan
 
 logger = logging.getLogger(__name__)
 
+_PATRON_HIPOTESIS_PREFIX = 'hipotesis_senal_'
+
+
+def _es_sugerencia_hipotesis(sugerencia):
+    return sugerencia.patron.startswith(_PATRON_HIPOTESIS_PREFIX)
+
 
 def consultar_sugerencia_activa(cliente, fecha_ref=None):
     """Lectura pura para requests GET: no genera ni reactiva sugerencias."""
@@ -27,6 +33,7 @@ def consultar_sugerencia_activa(cliente, fecha_ref=None):
             cliente=cliente,
             estado=SugerenciaPlan.ESTADO_PENDIENTE,
         )
+        .exclude(patron__startswith=_PATRON_HIPOTESIS_PREFIX)
         .filter(cooldown_hasta__isnull=True)
         .order_by('-fecha_generada', '-pk')
         .first()
@@ -96,11 +103,18 @@ def get_sugerencia_activa(cliente, fecha_ref=None):
         return None
 
 
+@transaction.atomic
 def ignorar_sugerencia(sugerencia):
     """
     User chose "Ignorar por ahora".
     The suggestion won't reappear for COOLDOWN_DIAS days.
     """
+    sugerencia = SugerenciaPlan.objects.select_for_update().get(pk=sugerencia.pk)
+    if _es_sugerencia_hipotesis(sugerencia):
+        raise ValueError('Una hipótesis debe responderse desde su flujo específico.')
+    if sugerencia.estado != SugerenciaPlan.ESTADO_PENDIENTE:
+        return sugerencia
+
     sugerencia.estado = SugerenciaPlan.ESTADO_IGNORADA
     sugerencia.cooldown_hasta = timezone.localdate() + timedelta(days=SugerenciaPlan.COOLDOWN_DIAS)
     sugerencia.fecha_respuesta = timezone.now()
@@ -152,6 +166,8 @@ def aceptar_sugerencia(sugerencia, fecha_ref=None):
     # concurrentes y asegura rollback conjunto con la intervención.
     Cliente.objects.select_for_update().get(pk=sugerencia.cliente_id)
     sugerencia = SugerenciaPlan.objects.select_for_update().get(pk=sugerencia.pk)
+    if _es_sugerencia_hipotesis(sugerencia):
+        raise ValueError('Una hipótesis debe responderse desde su flujo específico.')
     if sugerencia.estado != SugerenciaPlan.ESTADO_PENDIENTE:
         return sugerencia
 
