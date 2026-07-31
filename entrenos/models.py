@@ -1434,6 +1434,7 @@ class SugerenciaPlan(models.Model):
     cooldown_hasta = models.DateField(null=True, blank=True, db_index=True)
     fecha_generada = models.DateTimeField(auto_now_add=True)
     fecha_respuesta = models.DateTimeField(null=True, blank=True)
+    contrato_snapshot = models.JSONField(null=True, blank=True)
 
     class Meta:
         ordering = ['-fecha_generada']
@@ -1454,7 +1455,7 @@ class IntervencionPlan(models.Model):
     - Active while estado='activa' and fecha_inicio <= today <= fecha_fin.
     - evaluar_permiso_progresion reads this FIRST, overriding pattern detection.
     - Does NOT modify the annual plan or PlanificadorHelms.
-    - Expires automatically at end of the current week (Sunday).
+    - Its end date is defined by the accepted suggestion contract.
     - Safe types only: 'no_subir_cargas' and 'reducir_accesorios'.
     """
     TIPO_NO_SUBIR   = 'no_subir_cargas'

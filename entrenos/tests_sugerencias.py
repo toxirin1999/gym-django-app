@@ -11,7 +11,8 @@ from django.utils import timezone
 from clientes.models import Cliente
 from entrenos.models import SugerenciaPlan
 from entrenos.services.sugerencias_service import (
-    get_sugerencia_activa, ignorar_sugerencia, aceptar_sugerencia,
+    get_sugerencia_activa, ignorar_sugerencia,
+    aceptar_sugerencia,
 )
 
 _MOCK_DATOS = {'patron': 'carga_alta_sostenida', 'texto': 'No subir cargas esta semana.'}
@@ -70,7 +71,7 @@ class TestGetSugerenciaActiva(SugerenciasBase):
             result = get_sugerencia_activa(self.cliente, self.hoy)
         self.assertIsNone(result)
 
-    def test_ignorada_con_cooldown_expirado_se_resetea(self):
+    def test_ignorada_con_cooldown_expirado_crea_nuevo_episodio(self):
         sp = SugerenciaPlan.objects.create(
             cliente=self.cliente, patron='carga_alta_sostenida',
             texto='No subir.', estado=SugerenciaPlan.ESTADO_IGNORADA,
@@ -80,7 +81,8 @@ class TestGetSugerenciaActiva(SugerenciasBase):
             result = get_sugerencia_activa(self.cliente, self.hoy)
         self.assertIsNotNone(result)
         sp.refresh_from_db()
-        self.assertEqual(sp.estado, SugerenciaPlan.ESTADO_PENDIENTE)
+        self.assertEqual(sp.estado, SugerenciaPlan.ESTADO_IGNORADA)
+        self.assertNotEqual(result.pk, sp.pk)
 
     def test_aceptada_devuelve_none(self):
         SugerenciaPlan.objects.create(

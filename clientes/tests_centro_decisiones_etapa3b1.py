@@ -114,7 +114,7 @@ class TestAceptacionHipotesisIdempotente(CentroDecisionesEtapa3B1Base):
 
 
 class TestSugerenciaOrdinariaPrioritaria(CentroDecisionesEtapa3B1Base):
-    def test_centro_expone_solo_la_ordinaria_mas_reciente_separada_de_hipotesis(self):
+    def test_centro_oculta_ordinarias_legacy_y_mantiene_hipotesis_separada(self):
         antigua = self.sugerencia('distribucion_dias_reales_menores', 'Propuesta antigua.')
         reciente = self.sugerencia('esenciales_frecuentes', 'Revisar volumen real.')
         hipotesis = self.sugerencia('hipotesis_senal_entrenar', 'Observar una señal.')
@@ -127,20 +127,11 @@ class TestSugerenciaOrdinariaPrioritaria(CentroDecisionesEtapa3B1Base):
 
         response = self.client.get(reverse('clientes:plan_decisiones'))
 
-        self.assertEqual(response.context['sugerencia_prioritaria'].pk, reciente.pk)
+        self.assertIsNone(response.context['sugerencia_prioritaria'])
         self.assertEqual(response.context['sugerencia_hipotesis'].pk, hipotesis.pk)
-        self.assertContains(response, 'Revisar volumen real.')
-        self.assertContains(response, 'Señal detectada')
+        self.assertNotContains(response, 'Revisar volumen real.')
         self.assertNotContains(response, 'esenciales_frecuentes')
         self.assertNotContains(response, 'Propuesta antigua.')
-        self.assertContains(
-            response,
-            reverse('clientes:aceptar_sugerencia', args=[reciente.pk]),
-        )
-        self.assertContains(
-            response,
-            reverse('clientes:ignorar_sugerencia', args=[reciente.pk]),
-        )
 
     def test_get_no_reactiva_ni_genera_sugerencias(self):
         ignorada = self.sugerencia('esenciales_frecuentes')

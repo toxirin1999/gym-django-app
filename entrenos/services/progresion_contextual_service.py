@@ -30,7 +30,6 @@ logger = logging.getLogger(__name__)
 _PATRON_A_ACCION = {
     'carga_alta_sostenida':     'mantener_carga',
     'bloque_parcial_repetido':  'mantener_carga',
-    'esenciales_frecuentes':    'mantener_carga',
     'margen_bajo_repetido':     'reducir_accesorios',  # only accessories; principals can progress
     'alta_continuidad':         'progresion_permitida',
 }

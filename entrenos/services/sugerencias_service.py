@@ -27,17 +27,26 @@ def _es_sugerencia_hipotesis(sugerencia):
 
 def consultar_sugerencia_activa(cliente, fecha_ref=None):
     """Lectura pura para requests GET: no genera ni reactiva sugerencias."""
+    from entrenos.services.contrato_sugerencia_service import (
+        PATRON_V1, revalidar_sugerencia, validar_contrato_snapshot,
+    )
     fecha_ref = fecha_ref or timezone.localdate()
-    return (
+    candidatas = (
         SugerenciaPlan.objects.filter(
             cliente=cliente,
             estado=SugerenciaPlan.ESTADO_PENDIENTE,
+            patron=PATRON_V1,
+            contrato_snapshot__isnull=False,
         )
-        .exclude(patron__startswith=_PATRON_HIPOTESIS_PREFIX)
         .filter(cooldown_hasta__isnull=True)
         .order_by('-fecha_generada', '-pk')
-        .first()
     )
+    for sugerencia in candidatas:
+        if validar_contrato_snapshot(sugerencia.contrato_snapshot) and revalidar_sugerencia(
+            sugerencia, fecha_ref=fecha_ref,
+        ):
+            return sugerencia
+    return None
 
 
 def get_sugerencia_activa(cliente, fecha_ref=None):
@@ -79,24 +88,35 @@ def get_sugerencia_activa(cliente, fecha_ref=None):
         if existente.estado == SugerenciaPlan.ESTADO_IGNORADA:
             if existente.cooldown_hasta and existente.cooldown_hasta > fecha_ref:
                 return None  # still in cooldown
-            # Cooldown expired — reset to pendiente for re-display
-            existente.estado = SugerenciaPlan.ESTADO_PENDIENTE
-            existente.cooldown_hasta = None
-            existente.save(update_fields=['estado', 'cooldown_hasta'])
-            return existente
+            # Cooldown expired: a new detection is a new auditable episode.
+            existente = None
 
-        if existente.estado in (SugerenciaPlan.ESTADO_ACEPTADA, SugerenciaPlan.ESTADO_APLICADA):
+        if existente and existente.estado in (SugerenciaPlan.ESTADO_ACEPTADA, SugerenciaPlan.ESTADO_APLICADA):
             return None  # already acted on this week
 
-        return existente  # estado == pendiente
+        if existente:
+            if patron == 'esenciales_frecuentes' and not existente.contrato_snapshot:
+                from entrenos.services.contrato_sugerencia_service import construir_contrato_sugerencia
+                contrato = construir_contrato_sugerencia(cliente, patron, fecha_ref)
+                if contrato['vigente']:
+                    existente.contrato_snapshot = contrato
+                    existente.save(update_fields=['contrato_snapshot'])
+            return existente  # estado == pendiente
 
     # No record exists — create one
     try:
+        contrato = None
+        if patron == 'esenciales_frecuentes':
+            from entrenos.services.contrato_sugerencia_service import construir_contrato_sugerencia
+            contrato = construir_contrato_sugerencia(cliente, patron, fecha_ref)
+            if not contrato['vigente']:
+                return None
         return SugerenciaPlan.objects.create(
             cliente=cliente,
             patron=patron,
             texto=texto,
             estado=SugerenciaPlan.ESTADO_PENDIENTE,
+            contrato_snapshot=contrato,
         )
     except Exception:
         logger.exception('get_sugerencia_activa: error creating SugerenciaPlan')
@@ -145,13 +165,21 @@ _DISTRIBUCION_PATRONES = {
 }
 
 
+class SugerenciaNoVigente(ValueError):
+    pass
+
+
 def _fin_de_semana(fecha):
     """Returns the Sunday (end of week) for the given date."""
     return fecha + timedelta(days=(6 - fecha.weekday()))
 
 
-@transaction.atomic
 def aceptar_sugerencia(sugerencia, fecha_ref=None):
+    return _aceptar_sugerencia(sugerencia, fecha_ref=fecha_ref)
+
+
+@transaction.atomic
+def _aceptar_sugerencia(sugerencia, fecha_ref=None):
     """
     Phase 10C/18A — User chose to apply the suggestion.
     - Carga suggestions: IntervencionPlan until end of current week.
@@ -172,10 +200,21 @@ def aceptar_sugerencia(sugerencia, fecha_ref=None):
         return sugerencia
 
     fecha_ref = fecha_ref or timezone.localdate()
-    tipo = _PATRON_A_INTERVENCION.get(sugerencia.patron, IntervencionPlan.TIPO_MANTENER)
+    tipo = _PATRON_A_INTERVENCION.get(sugerencia.patron)
+    if tipo is None:
+        raise ValueError(f'No existe una intervención definida para {sugerencia.patron!r}.')
+
+    if sugerencia.patron == 'esenciales_frecuentes':
+        from entrenos.services.contrato_sugerencia_service import revalidar_sugerencia
+        contrato_actual = revalidar_sugerencia(sugerencia, fecha_ref=fecha_ref)
+        if not contrato_actual:
+            raise SugerenciaNoVigente('La evidencia ya no sostiene esta propuesta.')
+        tipo = contrato_actual['cambio']['tipo_intervencion']
 
     # Distribution interventions last 2 weeks; carga ones expire on Sunday
-    if tipo in _DISTRIBUCION_PATRONES:
+    if sugerencia.patron == 'esenciales_frecuentes':
+        fecha_fin = fecha_ref + timedelta(days=6)
+    elif tipo in _DISTRIBUCION_PATRONES:
         fecha_fin = fecha_ref + timedelta(days=14)
     else:
         fecha_fin = _fin_de_semana(fecha_ref)

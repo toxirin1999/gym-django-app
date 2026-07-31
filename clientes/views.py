@@ -4886,7 +4886,7 @@ def posponer_sesion_view(request, sesion_id):
 def aceptar_sugerencia_view(request, sugerencia_id):
     """User accepted the suggestion: 'Aplicar esta semana'. Records intent, does NOT auto-modify plan."""
     from entrenos.models import SugerenciaPlan
-    from entrenos.services.sugerencias_service import aceptar_sugerencia
+    from entrenos.services.sugerencias_service import aceptar_sugerencia, SugerenciaNoVigente
 
     sugerencia = get_object_or_404(
         SugerenciaPlan.objects.exclude(patron__startswith='hipotesis_senal_'),
@@ -4894,9 +4894,13 @@ def aceptar_sugerencia_view(request, sugerencia_id):
         cliente__user=request.user,
         estado=SugerenciaPlan.ESTADO_PENDIENTE,
     )
-    aceptar_sugerencia(sugerencia)
-    messages.info(request, "Tendremos en cuenta la sugerencia esta semana.")
-    return redirect('clientes:panel_cliente')
+    try:
+        aceptar_sugerencia(sugerencia)
+    except SugerenciaNoVigente:
+        messages.info(request, "La señal ha cambiado. No aplicamos ningún ajuste.")
+        return redirect('clientes:plan_decisiones')
+    messages.info(request, "Mantendremos las cargas durante 7 días.")
+    return redirect('clientes:plan_decisiones')
 
 
 @login_required

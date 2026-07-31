@@ -1001,8 +1001,28 @@
       <article class="dc-card is-temporary" aria-labelledby="sugerencia-prioritaria-titulo">
         <span class="dc-pill is-temporary">Requiere tu decisión</span>
         <h3 id="sugerencia-prioritaria-titulo" class="dc-card-text">
-          {{ sugerencia_prioritaria.texto }}
+          Las versiones esenciales se están repitiendo
         </h3>
+        <p class="dc-card-text">
+          En {{ sugerencia_prioritaria.contrato_snapshot.evidencia.semanas_que_cumplen }} de las últimas {{ sugerencia_prioritaria.contrato_snapshot.evidencia.ventana_semanas }} semanas, al menos la mitad
+          de tus sesiones completadas fueron versiones esenciales.
+        </p>
+        <ul class="dc-card-meta" aria-label="Evidencia semanal de la propuesta">
+          {% for semana in sugerencia_prioritaria.contrato_snapshot.evidencia.semanas_observadas %}
+          <li>{{ semana.rango }} · {{ semana.completadas }} completadas · {{ semana.esenciales }} esenciales ({{ semana.porcentaje_esenciales }}%)</li>
+          {% endfor %}
+        </ul>
+        <p class="dc-card-meta">
+          Esto puede indicar que las nuevas subidas de carga no están encontrando margen en tu semana real.
+          {{ sugerencia_prioritaria.contrato_snapshot.limites.texto }}
+        </p>
+        <p class="dc-card-text">
+          <strong>Qué cambia:</strong> durante 7 días no subiremos ningún ejercicio por encima del último peso que realizaste. Si el plan propone una bajada, la respetaremos.
+        </p>
+        <p class="dc-card-meta">
+          <strong>Qué no cambia:</strong> No cambiaremos ejercicios, series, repeticiones ni días de entrenamiento.
+          Al terminar compararemos cuántas sesiones completas y esenciales realizaste.
+        </p>
         <p class="dc-card-meta">
           Señal detectada ·
           Detectado el {{ sugerencia_prioritaria.fecha_generada|date:"j N Y" }}
@@ -1010,7 +1030,7 @@
         <div class="dc-actions" aria-label="Responder a esta propuesta">
           <form method="post" action="{% url 'clientes:aceptar_sugerencia' sugerencia_prioritaria.id %}">
             {% csrf_token %}
-            <button class="dc-button is-primary" type="submit">Probar este ajuste</button>
+            <button class="dc-button is-primary" type="submit">Mantener cargas 7 días</button>
           </form>
           <form method="post" action="{% url 'clientes:ignorar_sugerencia' sugerencia_prioritaria.id %}">
             {% csrf_token %}
