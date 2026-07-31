@@ -66,24 +66,25 @@ def detectar_hallazgos(cliente_id=None, limit=100, fecha_ref=None):
     sugerencias = SugerenciaPlan.objects.all().order_by('pk')
     if cliente_id:
         sugerencias = sugerencias.filter(cliente_id=cliente_id)
-    pendientes_por_cliente = Counter(
+    pendientes_por_cliente_patron = Counter(
         sugerencias.filter(estado=SugerenciaPlan.ESTADO_PENDIENTE)
-        .values_list('cliente_id', flat=True)
+        .values_list('cliente_id', 'patron')
     )
     for sugerencia in sugerencias.select_related('cliente').iterator():
         if (sugerencia.estado == SugerenciaPlan.ESTADO_PENDIENTE
-                and sugerencia.fecha_respuesta):
-            hallazgos.append(_hallazgo(
-                'sugerencia_pendiente_con_fecha_respuesta', sugerencia,
-                {'estado': sugerencia.estado,
-                 'fecha_respuesta': sugerencia.fecha_respuesta},
-            ))
-        if (sugerencia.estado == SugerenciaPlan.ESTADO_PENDIENTE
-                and pendientes_por_cliente[sugerencia.cliente_id] > 1):
+                and pendientes_por_cliente_patron[
+                    (sugerencia.cliente_id, sugerencia.patron)
+                ] > 1):
+            cantidad = pendientes_por_cliente_patron[
+                (sugerencia.cliente_id, sugerencia.patron)
+            ]
             hallazgos.append(_hallazgo(
                 'sugerencias_pendientes_multiples', sugerencia,
-                {'pendientes_cliente': pendientes_por_cliente[sugerencia.cliente_id]},
-                evidence={'cliente_id': sugerencia.cliente_id},
+                {'pendientes_cliente_patron': cantidad},
+                evidence={
+                    'cliente_id': sugerencia.cliente_id,
+                    'patron': sugerencia.patron,
+                },
                 confidence='medium',
             ))
         if (sugerencia.estado == SugerenciaPlan.ESTADO_ACEPTADA

@@ -191,6 +191,48 @@ class EvaluarTracesCommandTests(Gobernanza3ABase):
 
 
 class ReconciliarGobernanzaCommandTests(Gobernanza3ABase):
+    def test_sugerencia_pendiente_reactivada_con_fecha_respuesta_es_admisible(self):
+        sugerencia = self.crear_sugerencia()
+        SugerenciaPlan.objects.filter(pk=sugerencia.pk).update(
+            fecha_respuesta=timezone.now(),
+        )
+
+        hallazgos = detectar_hallazgos(cliente_id=self.cliente.pk)
+
+        self.assertFalse(any(
+            h["code"] == "sugerencia_pendiente_con_fecha_respuesta"
+            and h["pk"] == sugerencia.pk
+            for h in hallazgos
+        ))
+
+    def test_sugerencias_pendientes_de_patrones_distintos_son_admisibles(self):
+        primera = self.crear_sugerencia()
+        segunda = self.crear_sugerencia()
+        SugerenciaPlan.objects.filter(pk=segunda.pk).update(
+            patron="distribucion_dia_pospone_frecuente",
+        )
+
+        hallazgos = detectar_hallazgos(cliente_id=self.cliente.pk)
+
+        duplicadas = {
+            h["pk"] for h in hallazgos
+            if h["code"] == "sugerencias_pendientes_multiples"
+        }
+        self.assertNotIn(primera.pk, duplicadas)
+        self.assertNotIn(segunda.pk, duplicadas)
+
+    def test_sugerencias_pendientes_del_mismo_patron_son_duplicadas(self):
+        primera = self.crear_sugerencia()
+        segunda = self.crear_sugerencia()
+
+        hallazgos = detectar_hallazgos(cliente_id=self.cliente.pk)
+
+        duplicadas = {
+            h["pk"] for h in hallazgos
+            if h["code"] == "sugerencias_pendientes_multiples"
+        }
+        self.assertEqual(duplicadas, {primera.pk, segunda.pk})
+
     def test_decision_pospuesta_con_fecha_aplicacion_es_coherente(self):
         decision = self.crear_decision(
             estado_aplicacion="pospuesta",
