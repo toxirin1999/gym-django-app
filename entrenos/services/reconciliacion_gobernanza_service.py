@@ -48,14 +48,17 @@ def detectar_hallazgos(cliente_id=None, limit=100, fecha_ref=None):
                 evidence={'regla': 'resultado y fecha_evaluacion deben coexistir'},
             ))
         if (
-            (log.estado_aplicacion == 'aplicada') != bool(log.fecha_aplicacion)
-            and not (log.estado_aplicacion == 'pendiente' and log.fecha_aplicacion)
+            log.estado_aplicacion in {'aplicada', 'pospuesta'}
+            and not log.fecha_aplicacion
         ):
             hallazgos.append(_hallazgo(
                 'decision_estado_fecha_incoherente', log,
                 {'estado_aplicacion': log.estado_aplicacion,
                  'fecha_aplicacion': log.fecha_aplicacion},
-                evidence={'legacy_pendiente_no_se_promueve': True},
+                evidence={
+                    'regla': 'aplicada y pospuesta requieren fecha_aplicacion',
+                    'legacy_pendiente_no_se_promueve': True,
+                },
             ))
         if limitado():
             return hallazgos[:limit]

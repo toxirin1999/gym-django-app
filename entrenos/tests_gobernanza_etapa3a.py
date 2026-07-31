@@ -15,6 +15,7 @@ from django.utils import timezone
 
 from clientes.models import Cliente
 from entrenos.models import (
+    GymDecisionLog,
     GymDecisionTrace,
     GymDecisionTraceEvaluation,
     IntervencionPlan,
@@ -54,6 +55,16 @@ class Gobernanza3ABase(TestCase):
             patron="carga_alta_sostenida",
             texto="Mantener cargas esta semana.",
             estado=estado,
+        )
+
+    def crear_decision(self, *, estado_aplicacion, fecha_aplicacion):
+        return GymDecisionLog.objects.create(
+            cliente=self.cliente,
+            ejercicio="Sentadilla",
+            accion="mantener",
+            motivo="Decisión de prueba para gobernanza.",
+            estado_aplicacion=estado_aplicacion,
+            fecha_aplicacion=fecha_aplicacion,
         )
 
     def crear_intervencion(
@@ -180,6 +191,52 @@ class EvaluarTracesCommandTests(Gobernanza3ABase):
 
 
 class ReconciliarGobernanzaCommandTests(Gobernanza3ABase):
+    def test_decision_pospuesta_con_fecha_aplicacion_es_coherente(self):
+        decision = self.crear_decision(
+            estado_aplicacion="pospuesta",
+            fecha_aplicacion=timezone.now(),
+        )
+
+        hallazgos = detectar_hallazgos(cliente_id=self.cliente.pk)
+
+        self.assertFalse(any(
+            h["code"] == "decision_estado_fecha_incoherente"
+            and h["pk"] == decision.pk
+            for h in hallazgos
+        ))
+
+    def test_decision_pospuesta_sin_fecha_aplicacion_es_incoherente(self):
+        decision = self.crear_decision(
+            estado_aplicacion="pospuesta",
+            fecha_aplicacion=None,
+        )
+
+        hallazgos = detectar_hallazgos(cliente_id=self.cliente.pk)
+
+        self.assertTrue(any(
+            h["code"] == "decision_estado_fecha_incoherente"
+            and h["pk"] == decision.pk
+            for h in hallazgos
+        ))
+
+    def test_decision_aplicada_requiere_fecha_aplicacion(self):
+        coherente = self.crear_decision(
+            estado_aplicacion="aplicada",
+            fecha_aplicacion=timezone.now(),
+        )
+        incoherente = self.crear_decision(
+            estado_aplicacion="aplicada",
+            fecha_aplicacion=None,
+        )
+
+        ids_incoherentes = {
+            h["pk"] for h in detectar_hallazgos(cliente_id=self.cliente.pk)
+            if h["code"] == "decision_estado_fecha_incoherente"
+        }
+
+        self.assertNotIn(coherente.pk, ids_incoherentes)
+        self.assertIn(incoherente.pk, ids_incoherentes)
+
     def test_evaluacion_stale_solo_si_trace_cambio_despues(self):
         trace = self.crear_trace(dias=40)
         evaluacion = GymDecisionTraceEvaluation.objects.create(
