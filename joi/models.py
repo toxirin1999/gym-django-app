@@ -91,6 +91,7 @@ class MensajeJOI(models.Model):
         ('poda_manual',                 'Poda mensual del Manual de David'),
         ('dialogo_respondido',          'Respuesta a diálogo de narrativa'),
         ('lectura_plan',                'Lectura del plan — estado de las rutinas'),
+        ('resultado_intervencion',      'Resultado de un ajuste temporal'),
     ]
 
     FEEDBACK_CHOICES = [

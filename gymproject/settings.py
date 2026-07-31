@@ -84,6 +84,10 @@ CELERY_TIMEZONE = 'Europe/Madrid'  # Alineado con TIME_ZONE — antes desalinead
 
 from celery.schedules import crontab
 CELERY_BEAT_SCHEDULE = {
+    'evaluar-intervenciones-esenciales': {
+        'task': 'entrenos.tasks.evaluar_intervenciones_esenciales_diarias',
+        'schedule': crontab(hour=6, minute=45),
+    },
     'joi-apertura-manana': {
         'task': 'joi.tasks.generar_apertura_manana',
         'schedule': crontab(hour=7, minute=30),

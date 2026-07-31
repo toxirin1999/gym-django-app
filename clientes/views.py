@@ -4921,6 +4921,22 @@ def ignorar_sugerencia_view(request, sugerencia_id):
     return redirect('clientes:panel_cliente')
 
 
+@login_required
+@require_POST
+def cancelar_intervencion_esenciales_view(request, intervencion_id):
+    """Cancela únicamente el ajuste contractual vigente del propietario."""
+    from entrenos.models import IntervencionPlan
+    from entrenos.services.ciclo_intervencion_esenciales_service import cancelar_intervencion
+    cliente = get_object_or_404(Cliente, user=request.user)
+    get_object_or_404(
+        IntervencionPlan, pk=intervencion_id, cliente=cliente,
+        origen_patron='esenciales_frecuentes', sugerencia__patron='esenciales_frecuentes',
+    )
+    cancelar_intervencion(intervencion_id, cliente.pk)
+    messages.info(request, 'El ajuste queda cancelado. Conservamos sus fechas y su historial.')
+    return redirect('clientes:plan_decisiones')
+
+
 # ── Phase 13 — Intervention continuation ─────────────────────────────────────
 
 @login_required
@@ -5175,6 +5191,14 @@ def plan_decisiones_view(request):
             fecha_creacion__date__gte=hace_30,
         ).order_by('-fecha_creacion')
     )
+    resultados_contractuales = list(
+        IntervencionPlan.objects.filter(
+            cliente=cliente,
+            origen_patron='esenciales_frecuentes',
+            estado=IntervencionPlan.ESTADO_EXPIRADA,
+            sugerencia__contrato_snapshot__evaluacion__resultado__isnull=False,
+        ).select_related('sugerencia').order_by('-fecha_fin')[:3]
+    )
     decisiones_carga = decisiones_carga_resumen[:15]
 
     # 6. Sesiones en modo esencial recientes
@@ -5256,6 +5280,7 @@ def plan_decisiones_view(request):
         'hoy': hoy,
         'preferencias_activas': preferencias_activas,
         'intervenciones_activas': intervenciones_activas,
+        'resultados_contractuales': resultados_contractuales,
         'pruebas_recientes': pruebas_recientes,
         'patron_multisemanal': patron_multisemanal,
         'analisis_semanal': analisis_semanal,

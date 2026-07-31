@@ -3,6 +3,60 @@ import datetime
 
 
 @shared_task(bind=True, max_retries=2)
+def generar_resultado_intervencion_joi(self, intervencion_id):
+    """Publica una vez la lectura JOI; la llamada al modelo ocurre fuera del lock."""
+    from django.db import transaction
+    from django.utils import timezone
+    from datetime import timedelta
+    from entrenos.models import IntervencionPlan
+    from joi.services import generar_mensaje_joi
+
+    with transaction.atomic():
+        iv = IntervencionPlan.objects.select_for_update().select_related('sugerencia', 'cliente__user').get(pk=intervencion_id)
+        snap = dict(iv.sugerencia.contrato_snapshot or {})
+        evaluacion = dict(snap.get('evaluacion') or {})
+        if not evaluacion.get('resultado'):
+            return {'omitido': 'sin_evaluacion'}
+        joi = dict(evaluacion.get('joi') or {})
+        if joi.get('mensaje_id'):
+            return {'mensaje_id': joi['mensaje_id'], 'duplicado': True}
+        if joi.get('estado') == 'generando':
+            started_at = joi.get('started_at')
+            try:
+                inicio = timezone.datetime.fromisoformat(started_at)
+                if timezone.is_naive(inicio):
+                    inicio = timezone.make_aware(inicio)
+            except (TypeError, ValueError):
+                inicio = None
+            if inicio and timezone.now() - inicio < timedelta(minutes=15):
+                return {'omitido': 'en_progreso'}
+        joi.update({'estado': 'generando', 'started_at': timezone.now().isoformat()})
+        evaluacion['joi'] = joi; snap['evaluacion'] = evaluacion
+        iv.sugerencia.contrato_snapshot = snap
+        iv.sugerencia.save(update_fields=['contrato_snapshot'])
+
+    datos = {k: evaluacion.get(k) for k in (
+        'resultado', 'sesiones_completadas', 'sesiones_esenciales',
+        'porcentaje_esenciales', 'ventana',
+    )}
+    mensaje = generar_mensaje_joi(iv.cliente, 'resultado_intervencion', datos)
+
+    with transaction.atomic():
+        sugerencia = type(iv.sugerencia).objects.select_for_update().get(pk=iv.sugerencia_id)
+        snap = dict(sugerencia.contrato_snapshot or {})
+        evaluacion = dict(snap.get('evaluacion') or {})
+        joi = dict(evaluacion.get('joi') or {})
+        if mensaje:
+            joi.update({'estado': 'publicado', 'mensaje_id': mensaje.pk, 'started_at': None})
+        else:
+            joi.update({'estado': 'pendiente', 'started_at': None})
+        evaluacion['joi'] = joi; snap['evaluacion'] = evaluacion
+        sugerencia.contrato_snapshot = snap
+        sugerencia.save(update_fields=['contrato_snapshot'])
+    return {'mensaje_id': mensaje.pk if mensaje else None}
+
+
+@shared_task(bind=True, max_retries=2)
 def generar_apertura_manana(self):
     """
     Genera un mensaje JOI de apertura matutina para cada usuario activo.

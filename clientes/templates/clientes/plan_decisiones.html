@@ -1059,10 +1059,12 @@
 
       {% if not sugerencia_prioritaria and not sugerencia_hipotesis and not preferencias_activas and not intervenciones_activas and not hipotesis_abiertas and not continuidad %}
       <div class="dc-empty">
-        El sistema no tiene señales activas confirmadas para mostrar ahora.
-        Sin adaptaciones persistentes activas en esta base de datos no significa ausencia
-        de actividad fuera de este entorno; el plan seguirá usando la evidencia disponible
-        cuando tome la siguiente decisión.
+        <strong>El plan no necesita ninguna decisión tuya ahora.</strong>
+        Seguirá observando cómo encajan tus sesiones y te propondrá un cambio cuando exista evidencia suficiente.
+        <span class="dc-card-meta">
+          El sistema no tiene señales activas confirmadas para mostrar ahora.
+          Sin adaptaciones persistentes activas, el plan continúa observando la evidencia disponible.
+        </span>
       </div>
       {% else %}
       <div class="dc-card-grid is-active">
@@ -1092,8 +1094,18 @@
           <p class="dc-card-meta">Origen: {{ iv.origen_patron }}.</p>
           {% endif %}
           <p class="dc-card-note">
-            Expira automáticamente. No necesitas hacer nada para cancelarlo.
+            {% if iv.origen_patron == 'esenciales_frecuentes' %}
+            Termina automáticamente en la fecha indicada, o puedes cancelarlo ahora.
+            {% else %}
+            Expira automáticamente al terminar su ventana.
+            {% endif %}
           </p>
+          {% if iv.origen_patron == 'esenciales_frecuentes' %}
+          <form method="post" action="{% url 'clientes:cancelar_intervencion_esenciales' iv.id %}">
+            {% csrf_token %}
+            <button class="dc-button is-danger" type="submit">Cancelar ajuste</button>
+          </form>
+          {% endif %}
         </article>
         {% endfor %}
 
@@ -1135,6 +1147,30 @@
       </div>
       {% endif %}
     </section>
+
+    {% if resultados_contractuales %}
+    <section class="dc-section" aria-labelledby="titulo-resultados-ajustes">
+      <header class="dc-section-head">
+        <span class="dc-section-number" aria-hidden="true">↳</span>
+        <h2 class="dc-section-title" id="titulo-resultados-ajustes">Qué aprendió el plan</h2>
+      </header>
+      <div class="dc-card-grid">
+      {% for iv in resultados_contractuales %}
+        <article class="dc-card">
+          <span class="dc-pill">Resultado del ajuste</span>
+          {% with ev=iv.sugerencia.contrato_snapshot.evaluacion %}
+          <p class="dc-card-text">
+            {% if ev.resultado == 'senal_reducida' %}La señal apareció con menos frecuencia.
+            {% elif ev.resultado == 'persistente' %}La señal siguió presente durante la prueba.
+            {% else %}No hubo sesiones suficientes para valorar el ajuste.{% endif %}
+          </p>
+          <p class="dc-card-meta">{{ ev.sesiones_esenciales }} esenciales de {{ ev.sesiones_completadas }} sesiones. Esta comparación no demuestra que el ajuste fuera la causa.</p>
+          {% endwith %}
+        </article>
+      {% endfor %}
+      </div>
+    </section>
+    {% endif %}
 
     <section class="dc-section" id="decisiones-recientes" aria-labelledby="titulo-decisiones">
       <header class="dc-section-head">

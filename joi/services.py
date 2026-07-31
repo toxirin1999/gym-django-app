@@ -1397,6 +1397,28 @@ _PROMPT_BUILDERS = {
 }
 
 
+def _prompt_resultado_intervencion(ctx: dict, datos_extra: dict) -> str:
+    resultado = datos_extra.get('resultado')
+    completas = int(datos_extra.get('sesiones_completadas') or 0)
+    esenciales = int(datos_extra.get('sesiones_esenciales') or 0)
+    lectura = {
+        'senal_reducida': 'la señal apareció con menos frecuencia',
+        'persistente': 'la señal siguió presente',
+        'datos_insuficientes': 'no hubo sesiones suficientes para valorar el ajuste',
+    }.get(resultado, 'el resultado aún no es concluyente')
+    return (
+        "RESULTADO DE UN AJUSTE TEMPORAL:\n"
+        f"- Ventana cerrada: {completas} sesiones, {esenciales} esenciales.\n"
+        f"- Lectura descriptiva: {lectura}.\n"
+        "Habla en 2 o 3 frases. Nombra lo aprendido sin atribuir causalidad: "
+        "no digas que el ajuste causó, logró, funcionó o provocó el resultado. "
+        "No prescribas un cambio nuevo; el plan solo acaba de observar esta comparación."
+    )
+
+
+_PROMPT_BUILDERS['resultado_intervencion'] = _prompt_resultado_intervencion
+
+
 def _bloque_memoria(ctx: dict) -> str:
     """
     Convierte historial_joi en un bloque de texto que se antepone a cada prompt.
@@ -1521,14 +1543,27 @@ def generar_mensaje_joi(cliente, trigger: str, datos_extra: dict | None = None) 
         datos_extra = {**datos_extra, '_ctx_temporal': ctx_temporal}
         continuidad_ctx = build_continuidad_context(cliente)
         bloque_cont = _bloque_continuidad(continuidad_ctx)
-        bloques = [
-            _bloque_marco_narrativo(cliente.user),
-            _bloque_memoria(ctx),
-            _bloque_manual(cliente.user),
-            _bloque_temporal(ctx_temporal),
-            bloque_cont,
-            builder(ctx, datos_extra),
-        ]
+        if trigger == 'resultado_intervencion':
+            # Contrato Phase 3B.3: postura longitudinal, después ManualDavid,
+            # y solo al final el acontecimiento puntual. No se incluye el
+            # marco narrativo compuesto para no duplicar NarrativaActiva.
+            bloques = [
+                _bloque_narrativa(cliente.user),
+                _bloque_manual(cliente.user, incluir_narrativa=False),
+                _bloque_memoria(ctx),
+                _bloque_temporal(ctx_temporal),
+                bloque_cont,
+                builder(ctx, datos_extra),
+            ]
+        else:
+            bloques = [
+                _bloque_marco_narrativo(cliente.user),
+                _bloque_memoria(ctx),
+                _bloque_manual(cliente.user),
+                _bloque_temporal(ctx_temporal),
+                bloque_cont,
+                builder(ctx, datos_extra),
+            ]
         prompt = "\n\n".join(b for b in bloques if b)
         texto = _llamar_haiku(prompt, max_tokens=400)
         # Validar contrato semántico (log de violaciones, no bloquea)
@@ -1603,7 +1638,7 @@ def generar_lectura_plan(cliente) -> "MensajeJOI | None":
 
 # ── Manual de David ──────────────────────────────────────────────────────────
 
-def _bloque_manual(user) -> str:
+def _bloque_manual(user, incluir_narrativa=True) -> str:
     """
     Formatea las entradas activas del Manual de David para incluir en prompts.
     Separa por tipo para que JOI calibre el peso de cada entrada:
@@ -1621,8 +1656,7 @@ def _bloque_manual(user) -> str:
         .values('entrada', 'tipo', 'confianza', 'estado', 'hipotesis_contraria')
     )
     if not entradas:
-        narrativa_bloque = _bloque_narrativa(user)
-        return narrativa_bloque
+        return _bloque_narrativa(user) if incluir_narrativa else ''
 
     TIPOS_ESTABLES  = {'dato_usuario', 'preferencia', 'limite'}
     TIPOS_REVISABLE = {'patron', 'hipotesis', 'contradiccion'}
@@ -1655,7 +1689,7 @@ def _bloque_manual(user) -> str:
     lineas.append('')
     bloque = '\n'.join(lineas) + '\n'
 
-    narrativa_bloque = _bloque_narrativa(user)
+    narrativa_bloque = _bloque_narrativa(user) if incluir_narrativa else ''
     return bloque + narrativa_bloque
 
 
@@ -3953,4 +3987,3 @@ def determinar_estado_habitacion_joi(usuario):
     except Exception as e:
         logger.error(f"[JOI Estado] determinar_estado_habitacion_joi falló: {e}", exc_info=True)
         return ('SILENCIO', 'sin_senales')  # Fallback seguro
-

@@ -258,7 +258,10 @@ def evaluar_intervencion_semana(cliente, fecha_ref=None):
             estado__in=[IntervencionPlan.ESTADO_ACTIVA, IntervencionPlan.ESTADO_EXPIRADA],
             fecha_inicio__lte=semana_pasada + timedelta(days=6),
             fecha_fin__gte=semana_pasada,
-        ).exclude(tipo=IntervencionPlan.TIPO_MANTENER)
+        ).exclude(tipo=IntervencionPlan.TIPO_MANTENER).exclude(
+            origen_patron='esenciales_frecuentes',
+            sugerencia__contrato_snapshot__isnull=False,
+        )
 
         if not intervenciones.exists():
             return None

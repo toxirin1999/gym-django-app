@@ -4572,6 +4572,11 @@ def guardar_entrenamiento_activo(request, cliente_id):
             # No bloqueamos el flujo principal si falla algo de gamificación
         # ============================================================================
 
+        # El productor contractual se registra únicamente cuando la sesión ya
+        # está completa. Nunca vive en post_save ni en un GET.
+        from entrenos.services.ciclo_intervencion_esenciales_service import programar_produccion_tras_finalizacion
+        programar_produccion_tras_finalizacion(entreno)
+
         # AJAX detection: if X-Requested-With header is present, return JSON instead of redirect
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return JsonResponse({
