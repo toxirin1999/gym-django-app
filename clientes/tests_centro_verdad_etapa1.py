@@ -13,6 +13,7 @@ from entrenos.models import (
     GymDecisionTrace,
     GymDecisionTraceEvaluation,
     IntervencionPlan,
+    PreferenciaPlanAprendida,
     SugerenciaPlan,
 )
 from entrenos.services.hipotesis_service import (
@@ -81,6 +82,7 @@ class TestGetCentroEsPuro(CentroVerdadBase):
             'sugerencias': SugerenciaPlan.objects.count(),
             'intervenciones': IntervencionPlan.objects.count(),
             'evaluaciones': GymDecisionTraceEvaluation.objects.count(),
+            'preferencias': PreferenciaPlanAprendida.objects.count(),
         }
         with patch(
             'entrenos.services.hipotesis_service.generar_sugerencia_hipotesis',
@@ -99,6 +101,7 @@ class TestGetCentroEsPuro(CentroVerdadBase):
             'sugerencias': SugerenciaPlan.objects.count(),
             'intervenciones': IntervencionPlan.objects.count(),
             'evaluaciones': GymDecisionTraceEvaluation.objects.count(),
+            'preferencias': PreferenciaPlanAprendida.objects.count(),
         })
 
 

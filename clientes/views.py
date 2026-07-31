@@ -907,8 +907,8 @@ def _ctx_evaluacion_intervencion(cliente, fecha_ref):
 @_cache_ctx()
 def _ctx_sugerencia_activa(cliente, fecha_ref):
     try:
-        from entrenos.services.sugerencias_service import get_sugerencia_activa
-        return get_sugerencia_activa(cliente, fecha_ref=fecha_ref)
+        from entrenos.services.sugerencias_service import consultar_sugerencia_activa
+        return consultar_sugerencia_activa(cliente, fecha_ref=fecha_ref)
     except Exception:
         return None
 

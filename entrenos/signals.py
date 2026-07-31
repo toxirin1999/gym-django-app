@@ -394,6 +394,35 @@ def producir_hipotesis_desde_evaluacion(sender, instance, created, raw=False, **
     except Exception:
         logger.exception('No se pudo producir sugerencia desde evaluación %s', instance.pk)
 
+
+@receiver(post_save, sender='entrenos.GymDecisionTrace')
+def evaluar_backlog_al_guardar_trace(sender, instance, raw=False, **kwargs):
+    """El guardado de hoy desbloquea, tras commit, traces anteriores maduros."""
+    if raw:
+        return
+    from django.db import transaction
+
+    cliente_id = instance.cliente_id
+    trace_id = instance.pk
+
+    def _evaluar():
+        try:
+            from clientes.models import Cliente
+            from entrenos.services.evaluacion_trace_service import evaluar_traces_pendientes
+
+            cliente = Cliente.objects.get(pk=cliente_id)
+            evaluar_traces_pendientes(
+                cliente,
+                max_batch=10,
+                exclude_trace_id=trace_id,
+            )
+        except Exception:
+            logger.exception(
+                'No se pudo evaluar backlog al guardar trace %s', trace_id,
+            )
+
+    transaction.on_commit(_evaluar)
+
 @receiver(post_save, sender=_GymDecisionLog)
 def joi_decision_plan(sender, instance, created, **kwargs):
     """

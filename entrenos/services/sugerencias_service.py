@@ -11,11 +11,26 @@ CONTRACT:
 import logging
 from datetime import timedelta
 
+from django.db import transaction
 from django.utils import timezone
 
 from entrenos.models import IntervencionPlan, SugerenciaPlan
 
 logger = logging.getLogger(__name__)
+
+
+def consultar_sugerencia_activa(cliente, fecha_ref=None):
+    """Lectura pura para requests GET: no genera ni reactiva sugerencias."""
+    fecha_ref = fecha_ref or timezone.localdate()
+    return (
+        SugerenciaPlan.objects.filter(
+            cliente=cliente,
+            estado=SugerenciaPlan.ESTADO_PENDIENTE,
+        )
+        .filter(cooldown_hasta__isnull=True)
+        .order_by('-fecha_generada', '-pk')
+        .first()
+    )
 
 
 def get_sugerencia_activa(cliente, fecha_ref=None):
@@ -121,6 +136,7 @@ def _fin_de_semana(fecha):
     return fecha + timedelta(days=(6 - fecha.weekday()))
 
 
+@transaction.atomic
 def aceptar_sugerencia(sugerencia, fecha_ref=None):
     """
     Phase 10C/18A — User chose to apply the suggestion.
@@ -129,7 +145,15 @@ def aceptar_sugerencia(sugerencia, fecha_ref=None):
     The freno contextual reads carga interventions; distribution interventions
     are shown as visible probes but don't auto-restructure the plan.
     """
+    from clientes.models import Cliente
     from entrenos.models import IntervencionPlan
+
+    # Orden estable de locks: cliente → sugerencia. Evita dobles aceptaciones
+    # concurrentes y asegura rollback conjunto con la intervención.
+    Cliente.objects.select_for_update().get(pk=sugerencia.cliente_id)
+    sugerencia = SugerenciaPlan.objects.select_for_update().get(pk=sugerencia.pk)
+    if sugerencia.estado != SugerenciaPlan.ESTADO_PENDIENTE:
+        return sugerencia
 
     fecha_ref = fecha_ref or timezone.localdate()
     tipo = _PATRON_A_INTERVENCION.get(sugerencia.patron, IntervencionPlan.TIPO_MANTENER)

@@ -174,38 +174,53 @@ def evaluar_trace_decision(trace, fecha_ref=None) -> 'GymDecisionTraceEvaluation
         return None
 
 
-def evaluar_traces_pendientes(cliente, fecha_ref=None, max_batch: int = 10) -> int:
+def traces_evaluables_qs(cliente=None, fecha_ref=None, exclude_trace_id=None):
+    """Query base compartida por el signal y el command (sin escrituras)."""
+    from django.utils import timezone
+    from entrenos.models import GymDecisionTrace
+
+    fecha_ref = fecha_ref or timezone.localdate()
+    limite = fecha_ref - timedelta(days=_MIN_DIAS_ESPERA)
+    qs = GymDecisionTrace.objects.filter(
+        fecha__lte=limite,
+        evaluacion__isnull=True,
+    )
+    if cliente is not None:
+        qs = qs.filter(cliente=cliente)
+    if exclude_trace_id is not None:
+        qs = qs.exclude(pk=exclude_trace_id)
+    return qs.order_by('fecha', 'pk')
+
+
+def evaluar_traces_pendientes(
+    cliente,
+    fecha_ref=None,
+    max_batch: int = 10,
+    exclude_trace_id=None,
+) -> int:
     """
     Phase 34 — Evaluates all non-evaluated traces old enough for the client.
     Returns count of new evaluations created.
     """
+    from django.db import transaction
     from django.utils import timezone
-    from entrenos.models import GymDecisionTrace, GymDecisionTraceEvaluation
 
     try:
         fecha_ref = fecha_ref or timezone.localdate()
-        limite = fecha_ref - timedelta(days=_MIN_DIAS_ESPERA)
-
-        ya_evaluados = set(
-            GymDecisionTraceEvaluation.objects.filter(
-                trace__cliente=cliente,
-            ).values_list('trace_id', flat=True)
-        )
-
-        pendientes = (
-            GymDecisionTrace.objects.filter(
-                cliente=cliente,
-                fecha__lte=limite,
-            ).exclude(id__in=ya_evaluados)
-            .order_by('-fecha')[:max_batch]
-        )
-
-        count = 0
-        for trace in pendientes:
-            ev = evaluar_trace_decision(trace, fecha_ref=fecha_ref)
-            if ev:
-                count += 1
-        return count
+        with transaction.atomic():
+            pendientes = list(
+                traces_evaluables_qs(
+                    cliente=cliente,
+                    fecha_ref=fecha_ref,
+                    exclude_trace_id=exclude_trace_id,
+                ).select_for_update()[:max(0, max_batch)]
+            )
+            count = 0
+            for trace in pendientes:
+                ev = evaluar_trace_decision(trace, fecha_ref=fecha_ref)
+                if ev:
+                    count += 1
+            return count
 
     except Exception as e:
         logger.warning('evaluar_traces_pendientes falló: %s', e)
