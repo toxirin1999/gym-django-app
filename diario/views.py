@@ -61,7 +61,7 @@ from .insights_engine import generar_insights_semanales
 def dashboard_diario(request):
     """Phase Diario 2.1 — Portada viva del Diario."""
     from diario.services.estado_diario import calcular_estado_diario_hoy
-    from diario.services.lectura_semanal import agregar_semana
+    from diario.services.lectura_semanal import agregar_semana, buscar_revision_semanal, periodo_semana_completa
     from diario.models import PersonaInterina
 
     hoy = timezone.localdate()
@@ -71,7 +71,9 @@ def dashboard_diario(request):
     ).first()
 
     estado_dia = calcular_estado_diario_hoy(entrada_hoy)
-    datos_semana = agregar_semana(request.user)
+    inicio_semana, fin_semana, clave_semana = periodo_semana_completa()
+    datos_semana = agregar_semana(request.user, inicio=inicio_semana, fin=fin_semana)
+    revision_semanal = buscar_revision_semanal(request.user, clave_semana)
     n_radar = PersonaInterina.objects.filter(
         usuario=request.user, estado__in=['sombra', 'radar']
     ).count()
@@ -81,6 +83,7 @@ def dashboard_diario(request):
         'entrada_hoy': entrada_hoy,
         'estado_dia': estado_dia,
         'datos_semana': datos_semana,
+        'revision_semanal': revision_semanal,
         'n_radar': n_radar,
     }
     return render(request, 'diario/dashboard.html', context)
@@ -1611,17 +1614,27 @@ def interaccion_crear_editar(request, interaccion_id=None):
 
 @login_required
 def lectura_semanal(request):
-    """Phase Diario 2.0 — Lectura semanal prudente."""
-    from diario.services.lectura_semanal import agregar_semana, generar_lectura_joi
-    from diario.services.senales_entrenamiento import calcular_tendencia_senal
-    datos = agregar_semana(request.user)
-    lectura_encuadre, lectura_señales = generar_lectura_joi(datos)
-    tendencia_corporal = calcular_tendencia_senal(request.user)
+    """Revisión de la última semana completa; GET lee y POST genera con PRG."""
+    from diario.services.lectura_semanal import (
+        agregar_semana,
+        buscar_revision_semanal,
+        generar_revision_semanal,
+        periodo_semana_completa,
+    )
+    inicio, fin, clave = periodo_semana_completa()
+    if request.method == 'POST':
+        mensaje = generar_revision_semanal(request.user.cliente_perfil, inicio=inicio, fin=fin)
+        if mensaje:
+            messages.success(request, 'La revisión semanal de JOI está lista.')
+        else:
+            messages.error(request, 'No se pudo generar la revisión semanal. Puedes reintentarlo.')
+        return redirect('diario:lectura_semanal')
+
+    datos = agregar_semana(request.user, inicio=inicio, fin=fin)
+    revision = buscar_revision_semanal(request.user, clave)
     return render(request, 'diario/lectura_semanal.html', {
         'datos': datos,
-        'lectura_encuadre': lectura_encuadre,
-        'lectura_señales': lectura_señales,
-        'tendencia_corporal': tendencia_corporal,
+        'revision': revision,
     })
 
 

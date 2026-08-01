@@ -20,7 +20,7 @@ _ACCION_ICONO = {
 }
 
 
-def get_resumen_semanal_gym(cliente):
+def get_resumen_semanal_gym(cliente, inicio=None, fin=None):
     """
     Genera el resumen "qué aprendió el plan" de la semana anterior (lun–dom).
     Devuelve una lista de items con tipo, icono y texto, o [] si no hay datos.
@@ -30,9 +30,14 @@ def get_resumen_semanal_gym(cliente):
         RecordPersonal,
     )
 
-    hoy = date.today()
-    lunes = hoy - timedelta(days=hoy.weekday() + 7)
-    domingo = lunes + timedelta(days=6)
+    if inicio is None and fin is None:
+        hoy = date.today()
+        lunes = hoy - timedelta(days=hoy.weekday() + 7)
+        domingo = lunes + timedelta(days=6)
+    elif inicio is not None and fin is not None:
+        lunes, domingo = inicio, fin
+    else:
+        raise ValueError('inicio y fin deben proporcionarse juntos')
 
     entrenos = EntrenoRealizado.objects.filter(
         cliente=cliente, fecha__range=(lunes, domingo)

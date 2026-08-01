@@ -1,5 +1,10 @@
 from celery import shared_task
 import datetime
+import logging
+from django.utils import timezone
+
+
+logger = logging.getLogger(__name__)
 
 
 @shared_task(bind=True, max_retries=2)
@@ -130,172 +135,27 @@ def verificar_cuenta_regresiva_hyrox(self):
 
 @shared_task(bind=True, max_retries=2)
 def generar_resumen_semanal_joi(self):
-    """
-    Cada lunes genera un mensaje JOI de resumen de la semana anterior
-    usando get_resumen_semanal_gym. Solo genera si no hay ya uno del día.
-    """
-    import datetime
+    """Genera el lunes la revisión canónica de la semana anterior."""
     from clientes.models import Cliente
-    from joi.models import MensajeJOI
-    from joi.services import generar_mensaje_joi
-    from entrenos.services.resumen_semanal_service import get_resumen_semanal_gym
-    from django.db.models import Avg
+    from diario.services.lectura_semanal import buscar_revision_semanal, generar_revision_semanal
 
-    hoy = datetime.date.today()
+    hoy = timezone.localdate()
     if hoy.weekday() != 0:  # Solo lunes
         return {'omitido': 'no es lunes', 'fecha': str(hoy)}
 
+    inicio = hoy - datetime.timedelta(days=7)
+    fin = hoy - datetime.timedelta(days=1)
     generados = 0
     for cliente in Cliente.objects.select_related('user').all():
         try:
-            ya_tiene = MensajeJOI.objects.filter(
-                user=cliente.user,
-                trigger='resumen_semanal',
-                creado_en__date=hoy,
-            ).exists()
-            if ya_tiene:
+            clave = f'{inicio.isoformat()}_{fin.isoformat()}'
+            if buscar_revision_semanal(cliente.user, clave):
                 continue
-
-            items = get_resumen_semanal_gym(cliente)
-            if not items:
-                continue
-
-            # Extraer datos estructurados de los items
-            sesiones = next((i['texto'] for i in items if i['tipo'] == 'sesiones'), '')
-            num_sesiones = 0
-            volumen_kg = 0
-            if sesiones:
-                import re
-                m = re.search(r'(\d+) sesion', sesiones)
-                if m:
-                    num_sesiones = int(m.group(1))
-                m2 = re.search(r'([\d,]+) kg', sesiones)
-                if m2:
-                    volumen_kg = float(m2.group(1).replace(',', ''))
-
-            prs = [i['texto'].replace('Nuevo PR en ', '').split(' —')[0]
-                   for i in items if i['tipo'] == 'record']
-
-            rpe_item = next((i for i in items if i['tipo'] == 'rpe'), None)
-            rpe_medio = None
-            if rpe_item:
-                m = re.search(r'RPE medio ([\d.]+)', rpe_item['texto'])
-                if m:
-                    rpe_medio = float(m.group(1))
-
-            tecnica_ok = any(
-                i['tipo'] == 'tecnica' and 'limpia' in i['texto']
-                for i in items
-            )
-
-            molestias = []
-            mol_item = next((i for i in items if i['tipo'] == 'molestia'), None)
-            if mol_item:
-                m = re.search(r'en (.+?) —', mol_item['texto'])
-                if m:
-                    molestias = [z.strip() for z in m.group(1).split(',')]
-
-            energia_media = None
-            en_item = next((i for i in items if i['tipo'] == 'energia'), None)
-            if en_item:
-                m = re.search(r'media: ([\d.]+)', en_item['texto'])
-                if m:
-                    energia_media = float(m.group(1))
-
-            decisiones = [
-                {'ejercicio': i.get('texto', '').split(':')[0],
-                 'accion': i.get('accion', '')}
-                for i in items if i['tipo'] in ('decision', 'progresion')
-            ][:3]
-
-            hyrox_sesiones = 0
-            try:
-                from hyrox.models import HyroxObjective, HyroxSession
-                objetivo = HyroxObjective.objects.filter(
-                    cliente=cliente, estado='activo'
-                ).first()
-                if objetivo:
-                    lunes = hoy - datetime.timedelta(days=7)
-                    hyrox_sesiones = HyroxSession.objects.filter(
-                        objective=objetivo,
-                        estado='completado',
-                        fecha__range=(lunes, hoy - datetime.timedelta(days=1)),
-                    ).count()
-            except Exception:
-                pass
-
-            # ── Datos del diario Presencia (semana anterior) ─────────────
-            diario_semana = {}
-            try:
-                from diario.models import ProsocheDiario, ProsocheMes, SeguimientoVires, ReflexionLibre
-                lunes_sem = hoy - datetime.timedelta(days=7)
-                domingo_sem = hoy - datetime.timedelta(days=1)
-
-                # Entradas del cierre esta semana
-                meses = ProsocheMes.objects.filter(usuario=cliente.user)
-                entradas = ProsocheDiario.objects.filter(
-                    prosoche_mes__in=meses,
-                    fecha__range=(lunes_sem, domingo_sem),
-                ).exclude(reflexiones_dia='').order_by('fecha')
-
-                if entradas.exists():
-                    # Fricción del No media
-                    vires = SeguimientoVires.objects.filter(
-                        usuario=cliente.user,
-                        fecha__range=(lunes_sem, domingo_sem),
-                        nivel_estres__isnull=False,
-                    )
-                    friccion_media = None
-                    if vires.exists():
-                        total = sum(v.nivel_estres for v in vires if v.nivel_estres)
-                        friccion_media = round(total / vires.count(), 1)
-
-                    # Actos de Soberanía completados
-                    actos = []
-                    for e in entradas:
-                        for t in (e.tareas_dia or []):
-                            if isinstance(t, dict) and t.get('es_soberania') and t.get('texto'):
-                                actos.append(t['texto'])
-
-                    # Micro-verdades de la semana (ManualDavid origen patron_detectado esta semana)
-                    from joi.models import ManualDavid
-                    micro_verdades = list(
-                        ManualDavid.objects.filter(
-                            user=cliente.user,
-                            origen='patron_detectado',
-                            creado_en__date__range=(lunes_sem, domingo_sem),
-                        ).values_list('entrada', flat=True)[:3]
-                    )
-
-                    # Estado de ánimo medio
-                    estados = [e.estado_animo for e in entradas if e.estado_animo]
-                    estado_animo_medio = round(sum(estados) / len(estados), 1) if estados else None
-
-                    diario_semana = {
-                        'dias_con_cierre':    entradas.count(),
-                        'friccion_media':     friccion_media,
-                        'actos_soberania':    actos[:3],
-                        'micro_verdades':     micro_verdades,
-                        'estado_animo_medio': estado_animo_medio,
-                    }
-            except Exception:
-                pass
-
-            generar_mensaje_joi(cliente, 'resumen_semanal', {
-                'sesiones':      num_sesiones,
-                'volumen_kg':    volumen_kg,
-                'prs':           prs,
-                'rpe_medio':     rpe_medio,
-                'decisiones':    decisiones,
-                'tecnica_ok':    tecnica_ok,
-                'molestias':     molestias,
-                'energia_media': energia_media,
-                'hyrox_sesiones': hyrox_sesiones,
-                'diario_semana': diario_semana,
-            })
-            generados += 1
+            mensaje = generar_revision_semanal(cliente, inicio=inicio, fin=fin)
+            if mensaje is not None:
+                generados += 1
         except Exception:
-            pass
+            logger.exception('Falló la tarea de revisión semanal para user=%s', cliente.user_id)
 
     return {'generados': generados, 'fecha': str(hoy)}
 

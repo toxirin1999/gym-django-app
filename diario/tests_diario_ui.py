@@ -8,6 +8,7 @@ y el CTA correcto sin crear nuevos modelos.
 from django.test import TestCase, Client
 from django.contrib.auth.models import User
 from django.utils import timezone
+from django.urls import reverse
 from datetime import date
 
 from diario.models import ProsocheDiario, ProsocheMes
@@ -140,6 +141,67 @@ class DiarioUIEstadoCicloTests(TestCase):
         # Validar estructura existe
         self.assertContains(response, 'hoy-titulo-estado')
         self.assertContains(response, 'hoy-detalle-estado')
+
+    def test_hoy_expone_un_solo_cta_soberano_y_contextual(self):
+        """El ritual principal no compite consigo mismo y apunta al paso real."""
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse('diario:dashboard_diario'))
+        self.assertContains(response, 'data-primary-ritual-action', count=1)
+        self.assertContains(response, reverse('diario:presencia_apertura'))
+
+        ProsocheDiario.objects.create(
+            prosoche_mes=self.mes,
+            fecha=self.hoy,
+            persona_quiero_ser='test',
+        )
+        response = self.client.get(reverse('diario:dashboard_diario'))
+        self.assertContains(response, 'data-primary-ritual-action', count=1)
+        self.assertContains(response, reverse('diario:presencia_cierre'))
+
+    def test_portada_integra_lectura_y_personas_como_senales(self):
+        """Semana y Simbiosis pertenecen a una lectura conjunta, incluso vacía."""
+        self.client.force_login(self.user)
+        response = self.client.get(reverse('diario:dashboard_diario'))
+
+        self.assertContains(response, 'id="emergiendo"', count=1)
+        self.assertContains(response, 'Lo que está emergiendo')
+        self.assertContains(response, 'Revisión semanal')
+        self.assertContains(response, 'Simbiosis')
+        self.assertContains(response, 'Gestos')
+        self.assertContains(response, 'Logos')
+        self.assertContains(response, reverse('diario:lectura_semanal'))
+        self.assertContains(response, reverse('diario:simbiosis_dashboard'))
+
+    def test_portada_prioriza_memorias_activas_y_deja_prosoche_secundario(self):
+        """La portada no promociona módulos inactivos; el dropdown los conserva."""
+        self.client.force_login(self.user)
+        response = self.client.get(reverse('diario:dashboard_diario'))
+
+        self.assertContains(response, 'Otras prácticas')
+        for url_name in ('prosoche_dashboard', 'logos_dashboard', 'simbiosis_dashboard', 'habitos_dashboard'):
+            self.assertContains(response, reverse(f'diario:{url_name}'))
+        portada = response.content.decode().split('<div class="diario-wrap">', 1)[1]
+        for nombre in ('Eudaimonia', 'Virtudes', 'Kairos'):
+            self.assertNotIn(nombre, portada)
+        self.assertContains(response, 'Explorar')
+
+    def test_navegacion_reconoce_diario_hoy_y_es_accesible(self):
+        self.client.force_login(self.user)
+        response = self.client.get(reverse('diario:dashboard_diario'))
+
+        self.assertContains(response, 'aria-label="Navegación principal del Diario"')
+        self.assertContains(response, 'aria-current="page"')
+        self.assertContains(response, 'aria-controls="diarioNav"')
+        self.assertContains(response, 'Diario')
+        self.assertContains(response, 'Hoy')
+
+    def test_dashboard_respeta_reduced_motion_y_tiene_foco_visible(self):
+        self.client.force_login(self.user)
+        response = self.client.get(reverse('diario:dashboard_diario'))
+
+        self.assertContains(response, '@media (prefers-reduced-motion: reduce)')
+        self.assertContains(response, ':focus-visible')
 
 
 class DiarioEstadoFuncionTests(TestCase):

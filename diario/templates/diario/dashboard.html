@@ -1,262 +1,130 @@
 {% extends 'diario/base_stoic.html' %}
-{% load static %}
 {% load custom_filters %}
-{% block title %}Diario{% endblock %}
-{% block body_class %}diario-dark{% endblock %}
+{% block title %}Hoy{% endblock %}
+{% block body_class %}diario-dark diario-home{% endblock %}
 
 {% block extra_css %}
 <style>
-.diario-wrap { max-width: 640px; margin: 0 auto; padding: 1.25rem 1rem 3rem; }
-
-/* Header */
-.diario-header { margin-bottom: 1.1rem; }
-.diario-title { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.01em; color: var(--text); margin-bottom: 0.2rem; }
-.diario-date { font-size: 0.78rem; color: var(--muted); }
-
-/* ── Section base ── */
-.d-section {
-    background: var(--card); border: 1px solid var(--border);
-    border-radius: var(--radius); padding: 1.1rem 1.25rem;
-    margin-bottom: 0.75rem; box-shadow: var(--shadow);
-}
-.d-section-label {
-    font-size: 0.65rem; font-weight: 700; letter-spacing: 0.12em;
-    text-transform: uppercase; color: var(--muted); margin-bottom: 0.6rem;
-}
-
-/* ── HOY hero ── */
-.hoy-section {
-    background: var(--card);
-    border: 1px solid rgba(167,139,250,0.3);
-    border-radius: var(--radius); padding: 1.4rem 1.25rem 1.25rem;
-    margin-bottom: 0.75rem; box-shadow: 0 2px 24px rgba(167,139,250,0.08);
-}
-.hoy-estado-label {
-    font-size: 0.65rem; font-weight: 700; letter-spacing: 0.12em;
-    text-transform: uppercase; color: rgba(167,139,250,0.6); margin-bottom: 0.4rem;
-}
-.hoy-frase {
-    font-size: 1.05rem; font-weight: 600; color: var(--text);
-    margin-bottom: 1rem; line-height: 1.3;
-}
-.hoy-status { display: flex; gap: 1.5rem; margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border); }
-.hoy-status-item { display: flex; flex-direction: column; gap: 0.2rem; }
-.hoy-status-label {
-    font-size: 0.6rem; font-weight: 700; letter-spacing: 0.1em;
-    text-transform: uppercase; color: var(--muted);
-}
-.hoy-status-value { font-size: 0.82rem; font-weight: 600; color: var(--muted); }
-.hoy-status-value.hecho { color: var(--accent); }
-.hoy-status-value.joi { color: var(--green); }
-
-/* Estado claro del ciclo */
-.hoy-estado-claro { margin-bottom: 1rem; }
-.hoy-titulo-estado {
-    font-size: 1.1rem; font-weight: 600; color: var(--text);
-    margin: 0 0 0.3rem; line-height: 1.3;
-}
-.hoy-detalle-estado {
-    font-size: 0.85rem; color: var(--muted); margin: 0;
-    line-height: 1.35;
-}
-
-@media (max-width: 480px) {
-    .hoy-status { gap: 0.75rem; flex-wrap: wrap; }
-}
-
-.hoy-cta { display: flex; gap: 0.5rem; flex-wrap: wrap; }
-.hoy-btn-primary {
-    display: inline-flex; align-items: center; gap: 0.5rem;
-    padding: 0.7rem 1.5rem; border-radius: 100px;
-    background: var(--accent-light); border: 1.5px solid rgba(167,139,250,0.5);
-    font-size: 0.85rem; font-weight: 700;
-    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-    color: var(--accent); text-decoration: none;
-    transition: all 0.15s;
-}
-.hoy-btn-primary:hover { background: rgba(167,139,250,0.2); border-color: var(--accent); color: var(--text); }
-.hoy-btn-secondary {
-    display: inline-flex; align-items: center;
-    padding: 0.7rem 1rem; border-radius: 100px;
-    border: 1.5px solid var(--border); font-size: 0.8rem; font-weight: 600;
-    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-    color: var(--muted); text-decoration: none; background: transparent;
-    transition: all 0.15s;
-}
-.hoy-btn-secondary:hover { color: var(--text); border-color: var(--muted); }
-
-/* ── ESTA SEMANA chips ── */
-.semana-chips { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 0.75rem; }
-.semana-chip {
-    display: inline-flex; align-items: baseline; gap: 0.3rem;
-    padding: 0.3rem 0.65rem; border-radius: 100px;
-    border: 1.5px solid var(--border); background: transparent;
-}
-.semana-chip-num { font-size: 1rem; font-weight: 700; color: var(--text); line-height: 1; }
-.semana-chip-label { font-size: 0.65rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
-.semana-chip.warn { border-color: rgba(251,191,36,0.3); }
-.semana-chip.warn .semana-chip-num { color: #FBBF24; }
-.semana-chip.cuerpo { border-color: rgba(167,139,250,0.2); }
-.semana-chip.cuerpo .semana-chip-num { font-size: 0.8rem; color: var(--accent); }
-
-.semana-link {
-    display: inline-flex; align-items: center; gap: 0.35rem;
-    font-size: 0.7rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
-    color: var(--muted); text-decoration: none;
-}
-.semana-link:hover { color: var(--accent); }
-
-/* ── PERSONAS ── */
-.radar-badge {
-    display: flex; align-items: center; gap: 0.6rem;
-    font-size: 0.85rem; color: var(--text); margin-bottom: 0.6rem;
-}
-.radar-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 6px var(--accent); flex-shrink: 0; }
-.simbiosis-link {
-    display: inline-flex; align-items: center; gap: 0.35rem;
-    font-size: 0.7rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
-    color: var(--muted); text-decoration: none;
-}
-.simbiosis-link:hover { color: var(--accent); }
-
-/* ── EXPLORAR — navegación secundaria, no un dashboard más ── */
-.explorar-links { display: flex; flex-wrap: wrap; gap: 0.4rem 0; }
-.explorar-link {
-    font-size: 0.78rem; font-weight: 600; color: var(--muted);
-    text-decoration: none; padding: 0.2rem 0.75rem;
-    border-right: 1px solid var(--border);
-    transition: color 0.15s;
-}
-.explorar-link:last-child { border-right: none; }
-.explorar-link:hover { color: var(--accent); }
+    .diario-home { --ink: #f0eadf; --ash: #918a81; --gold: #c4a365; --line: rgba(235,226,208,.12); --panel: rgba(24,21,28,.82); background: #0d0c10 !important; }
+    .diario-home::before { content: ''; position: fixed; inset: 0; pointer-events: none; opacity: .3; background: radial-gradient(circle at 74% 12%, rgba(123,91,54,.16), transparent 31%), linear-gradient(90deg, transparent 49.9%, rgba(255,255,255,.018) 50%, transparent 50.1%); }
+    .diario-wrap { position: relative; width: min(100% - 2rem, 980px); margin: 0 auto; padding: clamp(2.4rem, 7vw, 5.5rem) 0 5rem; }
+    .diario-header { display: grid; grid-template-columns: 1fr auto; align-items: end; gap: 1rem; margin-bottom: clamp(2rem, 5vw, 3.8rem); }
+    .diario-kicker, .section-index { color: var(--gold); font: 700 .62rem/1.4 Manrope, sans-serif; letter-spacing: .2em; text-transform: uppercase; }
+    .diario-title { margin: .65rem 0 0; color: var(--ink); font: 500 clamp(2.5rem, 7vw, 5.2rem)/.92 'Crimson Pro', Georgia, serif; letter-spacing: -.035em; }
+    .diario-date { padding-bottom: .35rem; color: var(--ash); font: 500 .72rem/1.5 Manrope, sans-serif; letter-spacing: .08em; text-transform: uppercase; }
+    .hoy-section { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: clamp(1.5rem, 5vw, 4rem); align-items: end; padding: clamp(1.5rem, 5vw, 3rem); margin-bottom: 4rem; overflow: hidden; background: linear-gradient(145deg, rgba(33,29,36,.94), rgba(18,16,21,.96)); border: 1px solid rgba(196,163,101,.27); border-radius: 2px; box-shadow: 0 35px 90px rgba(0,0,0,.24); }
+    .hoy-section::after { content: attr(data-day); position: absolute; right: -.02em; top: -.2em; color: rgba(196,163,101,.035); font: 500 clamp(9rem, 27vw, 18rem)/1 'Crimson Pro', serif; pointer-events: none; }
+    .hoy-copy, .hoy-cta { position: relative; z-index: 1; }
+    .hoy-estado-label { margin-bottom: 1.25rem; color: var(--gold); font: 700 .62rem/1 Manrope, sans-serif; letter-spacing: .2em; text-transform: uppercase; }
+    .hoy-titulo-estado { margin: 0 0 .55rem; color: var(--ink); font: 500 clamp(2rem, 5vw, 3.65rem)/1 'Crimson Pro', Georgia, serif; }
+    .hoy-detalle-estado { max-width: 35rem; margin: 0; color: #aaa299; font: 400 .92rem/1.7 Manrope, sans-serif; }
+    .hoy-status { display: flex; gap: 1.6rem; margin-top: 2rem; }
+    .hoy-status-item { display: flex; align-items: center; gap: .5rem; color: #7f786f; font: 600 .64rem/1 Manrope, sans-serif; letter-spacing: .1em; text-transform: uppercase; }
+    .hoy-status-value { width: 8px; height: 8px; overflow: hidden; border: 1px solid #5f5952; border-radius: 50%; color: transparent; }
+    .hoy-status-value.hecho, .hoy-status-value.joi { background: var(--gold); border-color: var(--gold); box-shadow: 0 0 0 3px rgba(196,163,101,.1); }
+    .hoy-btn-primary { display: inline-flex; align-items: center; justify-content: center; min-width: 155px; padding: .9rem 1.35rem; color: #17130e; background: #d5b979; border: 1px solid #d5b979; border-radius: 1px; font: 700 .68rem/1 Manrope, sans-serif; letter-spacing: .12em; text-decoration: none; text-transform: uppercase; transition: transform .2s ease, background .2s ease; }
+    .hoy-btn-primary::after { content: '→'; margin-left: 1rem; font-size: 1rem; }
+    .hoy-btn-primary:hover { color: #17130e; background: #e3c989; transform: translateY(-2px); }
+    .hoy-btn-primary:focus-visible, .signal-link:focus-visible, .tool-link:focus-visible { outline: 2px solid #e4ca8b; outline-offset: 4px; }
+    .section-heading { margin: .55rem 0 0; color: var(--ink); font: 500 clamp(1.7rem, 4vw, 2.65rem)/1.05 'Crimson Pro', Georgia, serif; }
+    .emerging { margin-bottom: 4rem; }
+    .signals-grid { display: grid; grid-template-columns: 1.35fr repeat(3, .72fr); border-top: 1px solid var(--line); margin-top: 1.5rem; }
+    .signal { min-width: 0; padding: 1.7rem 1.7rem 1.6rem 0; }
+    .signal + .signal { padding-left: 1.7rem; border-left: 1px solid var(--line); }
+    .signal-label { margin: 0 0 .9rem; color: #d7cec1; font: 600 .8rem/1.2 Manrope, sans-serif; }
+    .signal-empty, .radar-badge { margin: 0 0 1rem; color: var(--ash); font: 400 .84rem/1.65 Manrope, sans-serif; }
+    .semana-chips { display: flex; flex-wrap: wrap; gap: .55rem 1.2rem; margin-bottom: 1.2rem; }
+    .semana-chip { display: inline-flex; align-items: baseline; gap: .3rem; }
+    .semana-chip-num { color: var(--ink); font: 500 1.35rem/1 'Crimson Pro', serif; }
+    .semana-chip-label { color: var(--ash); font: 600 .57rem/1 Manrope, sans-serif; letter-spacing: .1em; text-transform: uppercase; }
+    .radar-dot { display: inline-block; width: 6px; height: 6px; margin-right: .5rem; background: var(--gold); border-radius: 50%; }
+    .signal-link { display: inline-flex; color: var(--gold); font: 700 .61rem/1 Manrope, sans-serif; letter-spacing: .12em; text-decoration: none; text-transform: uppercase; }
+    .signal-link:hover { color: #ecd393; }
+    .tools-head { display: flex; justify-content: space-between; align-items: end; gap: 2rem; }
+    .tools-note { max-width: 25rem; margin: 0; color: #787169; font: 400 .76rem/1.6 Manrope, sans-serif; }
+    .tools-grid { display: grid; grid-template-columns: 1fr; gap: 0; margin-top: 1.5rem; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+    .tool-group { padding: 1.5rem 1.6rem 1.7rem 0; }
+    .tool-group + .tool-group { padding-left: 1.6rem; border-left: 1px solid var(--line); }
+    .tool-group h3 { margin: 0 0 .35rem; color: #d8cfc2; font: 500 1.15rem/1.2 'Crimson Pro', serif; }
+    .tool-group p { min-height: 2.6rem; margin: 0 0 1rem; color: #777068; font: 400 .7rem/1.5 Manrope, sans-serif; }
+    .tool-links { display: flex; flex-direction: column; align-items: flex-start; gap: .55rem; }
+    .tool-link { color: #a9a198; font: 600 .72rem/1.4 Manrope, sans-serif; text-decoration: none; }
+    .tool-link:hover { color: var(--gold); }
+    @media (max-width: 720px) {
+        .diario-header, .hoy-section { grid-template-columns: 1fr; }
+        .diario-date { padding: 0; }
+        .hoy-cta { justify-self: stretch; }
+        .hoy-btn-primary { width: 100%; }
+        .signals-grid, .tools-grid { grid-template-columns: 1fr; }
+        .signal + .signal, .tool-group + .tool-group { padding-left: 0; border-left: 0; border-top: 1px solid var(--line); }
+        .tool-group { padding: 1.25rem 0; }
+        .tools-head { display: block; }
+        .tools-note { margin-top: .8rem; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+        .hoy-btn-primary { transition: none; }
+        .hoy-btn-primary:hover { transform: none; }
+    }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="diario-wrap">
-
-    <!-- Header -->
-    <div class="diario-header">
-        <div class="diario-title">Diario</div>
+    <header class="diario-header">
+        <div><div class="diario-kicker">Práctica diaria</div><h1 class="diario-title">Hoy</h1></div>
         <div class="diario-date">{{ hoy|fecha_es_dia|capfirst }}</div>
-    </div>
+    </header>
 
-    <!-- 1. HOY — Estado claro del ciclo diario -->
-    <div class="hoy-section">
-        <div class="hoy-estado-label">Hoy</div>
-
-        <!-- Estado claro del ciclo -->
-        <div class="hoy-estado-claro">
-            {% if estado_dia.estado == 'sin_entrada' %}
-            <h2 class="hoy-titulo-estado">Día sin abrir</h2>
-            <p class="hoy-detalle-estado">Aún no has hecho la apertura de hoy.</p>
-            {% elif estado_dia.estado == 'manana_hecha' %}
-            <h2 class="hoy-titulo-estado">Día abierto</h2>
-            <p class="hoy-detalle-estado">La apertura está hecha. Falta cerrar el día.</p>
-            {% elif estado_dia.estado == 'solo_noche' %}
-            <h2 class="hoy-titulo-estado">Cierre registrado</h2>
-            <p class="hoy-detalle-estado">Hoy quedó registrado el cierre, aunque no hubo apertura.</p>
-            {% else %}
-            <h2 class="hoy-titulo-estado">Día completo</h2>
-            <p class="hoy-detalle-estado">Apertura y cierre registrados.</p>
-            {% endif %}
+    <section class="hoy-section" aria-labelledby="estado-hoy" data-day="{{ hoy|date:'d' }}">
+        <div class="hoy-copy">
+            <div class="hoy-estado-label">El ritual de hoy</div>
+            <div class="hoy-estado-claro">
+                {% if estado_dia.estado == 'sin_entrada' %}<h2 id="estado-hoy" class="hoy-titulo-estado">Día sin abrir</h2><p class="hoy-detalle-estado">Aún no has hecho la apertura de hoy.</p>
+                {% elif estado_dia.estado == 'manana_hecha' %}<h2 id="estado-hoy" class="hoy-titulo-estado">Día abierto</h2><p class="hoy-detalle-estado">La apertura está hecha. Falta cerrar el día.</p>
+                {% elif estado_dia.estado == 'solo_noche' %}<h2 id="estado-hoy" class="hoy-titulo-estado">Cierre registrado</h2><p class="hoy-detalle-estado">Hoy quedó registrado el cierre, aunque no hubo apertura.</p>
+                {% else %}<h2 id="estado-hoy" class="hoy-titulo-estado">Día completo</h2><p class="hoy-detalle-estado">Apertura y cierre registrados.</p>{% endif %}
+            </div>
+            <div class="hoy-status" aria-label="Progreso del ritual">
+                <div class="hoy-status-item"><span class="hoy-status-value {% if estado_dia.manana_hecha %}hecho{% endif %}">{% if estado_dia.manana_hecha %}✓{% else %}—{% endif %}</span><span>Mañana</span></div>
+                <div class="hoy-status-item"><span class="hoy-status-value {% if estado_dia.noche_hecha %}hecho{% endif %}">{% if estado_dia.noche_hecha %}✓{% else %}—{% endif %}</span><span>Noche</span></div>
+                {% if estado_dia.tiene_lectura_joi %}<div class="hoy-status-item"><span class="hoy-status-value joi">✓</span><span>Lectura</span></div>{% endif %}
+            </div>
         </div>
-
-        <!-- Status bar (mañana/noche/joi) -->
-        <div class="hoy-status">
-            <div class="hoy-status-item">
-                <span class="hoy-status-label">Mañana</span>
-                <span class="hoy-status-value {% if estado_dia.manana_hecha %}hecho{% endif %}">{% if estado_dia.manana_hecha %}✓{% else %}—{% endif %}</span>
-            </div>
-            <div class="hoy-status-item">
-                <span class="hoy-status-label">Noche</span>
-                <span class="hoy-status-value {% if estado_dia.noche_hecha %}hecho{% endif %}">{% if estado_dia.noche_hecha %}✓{% else %}—{% endif %}</span>
-            </div>
-            {% if estado_dia.tiene_lectura_joi %}
-            <div class="hoy-status-item">
-                <span class="hoy-status-label">JOI</span>
-                <span class="hoy-status-value joi">✓</span>
-            </div>
-            {% endif %}
-        </div>
-
-        <!-- CTA principal único por estado -->
         <div class="hoy-cta">
-            {% if estado_dia.estado == 'sin_entrada' %}
-            <a href="{% url 'diario:presencia_apertura' %}" class="hoy-btn-primary">Abrir día</a>
-            {% elif estado_dia.estado == 'manana_hecha' %}
-            <a href="{% url 'diario:presencia_cierre' %}" class="hoy-btn-primary">Completar cierre</a>
-            {% elif estado_dia.estado == 'solo_noche' %}
-            <a href="{% url 'diario:presencia_cierre' %}" class="hoy-btn-primary">Ver cierre</a>
-            {% else %}
-            <a href="{% url 'diario:presencia_cierre' %}" class="hoy-btn-primary">Ver lectura</a>
-            {% endif %}
+            {% if estado_dia.estado == 'sin_entrada' %}<a data-primary-ritual-action href="{% url 'diario:presencia_apertura' %}" class="hoy-btn-primary">Abrir día</a>
+            {% elif estado_dia.estado == 'manana_hecha' %}<a data-primary-ritual-action href="{% url 'diario:presencia_cierre' %}" class="hoy-btn-primary">Completar cierre</a>
+            {% elif estado_dia.estado == 'solo_noche' %}<a data-primary-ritual-action href="{% url 'diario:presencia_cierre' %}" class="hoy-btn-primary">Ver cierre</a>
+            {% else %}<a data-primary-ritual-action href="{% url 'diario:presencia_cierre' %}" class="hoy-btn-primary">Ver lectura</a>{% endif %}
         </div>
-    </div>
+    </section>
 
-    <!-- 2. ESTA SEMANA — chips -->
-    <div class="d-section">
-        <div class="d-section-label">Esta semana</div>
-        {% if datos_semana.hay_datos %}
-        <div class="semana-chips">
-            <div class="semana-chip">
-                <span class="semana-chip-num">{{ datos_semana.n_aperturas }}</span>
-                <span class="semana-chip-label">aperturas</span>
-            </div>
-            <div class="semana-chip">
-                <span class="semana-chip-num">{{ datos_semana.n_cierres }}</span>
-                <span class="semana-chip-label">cierres</span>
-            </div>
-            {% if datos_semana.energia_baja_dias %}
-            <div class="semana-chip warn">
-                <span class="semana-chip-num">{{ datos_semana.energia_baja_dias }}</span>
-                <span class="semana-chip-label">energía baja</span>
-            </div>
-            {% endif %}
-            {% if datos_semana.cuerpo_frecuente %}
-            <div class="semana-chip cuerpo">
-                <span class="semana-chip-num">{{ datos_semana.cuerpo_frecuente|capfirst }}</span>
-                <span class="semana-chip-label">cuerpo</span>
-            </div>
-            {% endif %}
-            {% if datos_semana.personas_repetidas %}
-            <div class="semana-chip">
-                <span class="semana-chip-num">{{ datos_semana.personas_repetidas|length }}</span>
-                <span class="semana-chip-label">nombre{% if datos_semana.personas_repetidas|length != 1 %}s{% endif %}</span>
-            </div>
-            {% endif %}
+    <section id="emergiendo" class="emerging" aria-labelledby="emergiendo-title">
+        <div class="section-index">02 · Señales</div><h2 id="emergiendo-title" class="section-heading">Lo que está emergiendo</h2>
+        <div class="signals-grid">
+            <article class="signal">
+                <h3 class="signal-label">Revisión semanal</h3>
+                {% if revision_semanal %}<p class="signal-empty">{{ revision_semanal.mensaje|truncatechars:150 }}</p>
+                {% elif datos_semana.hay_senales %}<div class="semana-chips">
+                    <span class="semana-chip"><span class="semana-chip-num">{{ datos_semana.n_aperturas }}</span><span class="semana-chip-label">aperturas</span></span>
+                    <span class="semana-chip"><span class="semana-chip-num">{{ datos_semana.n_cierres }}</span><span class="semana-chip-label">cierres</span></span>
+                </div>{% else %}<p class="signal-empty">La última semana cerrada todavía no dejó señales suficientes para una revisión.</p>{% endif %}
+                <a href="{% url 'diario:lectura_semanal' %}" class="signal-link">Abrir revisión&nbsp; →</a>
+            </article>
+            <article class="signal">
+                <h3 class="signal-label">Simbiosis</h3>
+                {% if n_radar %}<p class="radar-badge"><span class="radar-dot" aria-hidden="true"></span>{{ n_radar }} nombre{% if n_radar != 1 %}s{% endif %} repitiéndose en tus cierres.</p>{% else %}<p class="signal-empty">Sin nombres repitiéndose en tus cierres por ahora.</p>{% endif %}
+                <a href="{% url 'diario:simbiosis_dashboard' %}" class="signal-link">Abrir Simbiosis&nbsp; →</a>
+            </article>
+            <article class="signal"><h3 class="signal-label">Gestos</h3><p class="signal-empty">Hábitos y gestos que el Diario está siguiendo.</p><a href="{% url 'diario:habitos_dashboard' %}" class="signal-link">Abrir Gestos&nbsp; →</a></article>
+            <article class="signal"><h3 class="signal-label">Logos</h3><p class="signal-empty">Reflexiones extensas y lenguaje para comprender lo vivido.</p><a href="{% url 'diario:logos_dashboard' %}" class="signal-link">Abrir Logos&nbsp; →</a></article>
         </div>
-        {% else %}
-        <p style="font-size:0.85rem;color:var(--muted);font-style:italic;margin-bottom:0.85rem;">Sin datos esta semana todavía.</p>
-        {% endif %}
-        <a href="{% url 'diario:lectura_semanal' %}" class="semana-link">Ver lectura completa →</a>
-    </div>
+    </section>
 
-    <!-- 3. PERSONAS (solo si hay radar activo) -->
-    {% if n_radar %}
-    <div class="d-section" style="border-color: rgba(167,139,250,0.2);">
-        <div class="d-section-label">Personas</div>
-        <div class="radar-badge">
-            <div class="radar-dot"></div>
-            <span>{{ n_radar }} nombre{% if n_radar != 1 %}s{% endif %} repitiéndose en tus cierres</span>
+    <section class="tools" aria-labelledby="tools-title">
+        <div class="tools-head"><div><div class="section-index">03 · Secundario</div><h2 id="tools-title" class="section-heading">Otras prácticas</h2></div><p class="tools-note">Prosoche queda disponible como archivo y planificación. El ritual diario sigue siendo el centro.</p></div>
+        <div class="tools-grid">
+            <div class="tool-group"><h3>Prosoche</h3><p>Consultar la planificación y el registro mensual.</p><div class="tool-links"><a class="tool-link" href="{% url 'diario:prosoche_dashboard' %}">Abrir Prosoche</a></div></div>
         </div>
-        <a href="{% url 'diario:simbiosis_dashboard' %}" class="simbiosis-link">Ver Simbiosis →</a>
-    </div>
-    {% endif %}
-
-    <!-- 4. EXPLORAR — navegación secundaria -->
-    <div class="d-section">
-        <div class="d-section-label">Explorar</div>
-        <div class="explorar-links">
-            <a href="{% url 'diario:prosoche_dashboard' %}" class="explorar-link">Prosoche</a>
-            <a href="{% url 'diario:logos_dashboard' %}" class="explorar-link">Logos</a>
-            <a href="{% url 'diario:simbiosis_dashboard' %}" class="explorar-link">Simbiosis</a>
-            <a href="{% url 'diario:eudaimonia_dashboard' %}" class="explorar-link">Eudaimonia</a>
-            <a href="{% url 'diario:virtudes_dashboard' %}" class="explorar-link">Virtudes</a>
-            <a href="{% url 'diario:kairos_dashboard' %}" class="explorar-link">Kairos</a>
-            <a href="{% url 'diario:habitos_dashboard' %}" class="explorar-link">Gestos</a>
-        </div>
-    </div>
-
+    </section>
 </div>
 {% endblock %}

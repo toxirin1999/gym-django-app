@@ -4,188 +4,106 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Diario Estoico{% endblock %}</title>
-
-    <!-- Bootstrap CSS (Necesario para la estructura) -->
+    <title>{% block title %}Diario{% endblock %} · Sic Parvis Magna</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-
-    <!-- Font Awesome (Para los iconos ) -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
-    <!-- Google Fonts para el estilo Estoico (Inter y Crimson Text ) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Crimson+Text:ital,wght@0,400;0,600;1,400&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-
-    <!-- TU HOJA DE ESTILOS ESTOICA -->
+    <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,500;0,600;1,400&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'css/stoic_styles.css' %}">
-
-    <!-- JDS (JOI Design System) + capa de unificación oscura del Diario -->
     <link rel="stylesheet" href="{% static 'css/jds.css' %}">
     <link rel="stylesheet" href="{% static 'css/diario_dark.css' %}">
-
-    {# Bloque para añadir CSS extra desde las plantillas hijas si es necesario #}
+    <style>
+        .diario-nav {
+            background: rgba(12, 11, 16, .88) !important;
+            border-bottom: 1px solid rgba(235, 226, 208, .1) !important;
+            backdrop-filter: blur(18px);
+        }
+        .diario-nav__inner { max-width: 1120px; margin: 0 auto; min-height: 68px; }
+        .diario-brand { display: inline-flex; align-items: center; gap: .75rem; text-decoration: none; }
+        .diario-brand__mark {
+            width: 30px; height: 30px; display: grid; place-items: center;
+            border: 1px solid rgba(196, 163, 101, .55); border-radius: 50%;
+            color: #c4a365; font-family: 'Crimson Pro', Georgia, serif; font-size: 1rem;
+        }
+        .diario-brand__name { display: block; color: #f3eee4; font: 600 1rem/1 'Crimson Pro', Georgia, serif; letter-spacing: .08em; }
+        .diario-brand__motto { display: block; margin-top: .2rem; color: #8e887e; font: 600 .56rem/1 Manrope, sans-serif; letter-spacing: .17em; text-transform: uppercase; }
+        .diario-nav .nav-link { color: #aaa399 !important; font: 600 .72rem/1 Manrope, sans-serif; letter-spacing: .08em; text-transform: uppercase; }
+        .diario-nav .nav-link:hover, .diario-nav .nav-link:focus-visible, .diario-nav .nav-link.active { color: #e2c98f !important; }
+        .diario-nav .nav-link.active::after { content: ''; display: block; width: 18px; height: 1px; margin: .45rem auto 0; background: #c4a365; }
+        .diario-nav .dropdown-menu { background: #141219; border: 1px solid rgba(235, 226, 208, .12); border-radius: 4px; padding: .45rem; box-shadow: 0 18px 48px rgba(0,0,0,.38); }
+        .diario-nav .dropdown-item { color: #bbb4aa; border-radius: 2px; font-size: .82rem; padding: .58rem .75rem; }
+        .diario-nav .dropdown-item:hover, .diario-nav .dropdown-item:focus { color: #f3eee4; background: rgba(196, 163, 101, .1); }
+        .diario-nav .dropdown-header { color: #716b63; font-size: .58rem; letter-spacing: .15em; text-transform: uppercase; }
+        .diario-nav .navbar-toggler { border-color: rgba(235, 226, 208, .18); }
+        .diario-nav .navbar-toggler:focus-visible { outline: 2px solid #d2b777; outline-offset: 3px; box-shadow: none; }
+        .diario-main { min-height: calc(100vh - 68px); }
+        .skip-link { position: fixed; left: 1rem; top: -5rem; z-index: 2000; padding: .7rem 1rem; color: #111; background: #e2c98f; }
+        .skip-link:focus { top: 1rem; }
+        @media (max-width: 991.98px) {
+            .diario-nav__inner { padding-block: .65rem; }
+            .diario-nav .navbar-collapse { padding-top: .8rem; }
+            .diario-nav .nav-link { padding-block: .7rem; }
+            .diario-nav .nav-link.active::after { margin: .3rem 0 0; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+        }
+    </style>
     {% block extra_css %}{% endblock %}
 </head>
 <body class="{% block body_class %}{% endblock %}">
-    <!-- Navegación -->
-    <nav class="navbar navbar-expand-lg navbar-light bg-light border-bottom sticky-top">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="{% url 'diario:dashboard_diario' %}">
-                <i class="fas fa-book-open me-2"></i> Sic Parvis Magna
+    <a class="skip-link" href="#contenido-diario">Saltar al contenido</a>
+    <nav class="navbar navbar-expand-lg sticky-top diario-nav" aria-label="Navegación principal del Diario">
+        <div class="container-fluid diario-nav__inner">
+            <a class="navbar-brand diario-brand" href="{% url 'diario:dashboard_diario' %}" aria-label="Diario, Sic Parvis Magna">
+                <span class="diario-brand__mark" aria-hidden="true">D</span>
+                <span><span class="diario-brand__name">Diario</span><span class="diario-brand__motto">Sic Parvis Magna</span></span>
             </a>
-
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#diarioNav" aria-controls="diarioNav" aria-expanded="false" aria-label="Abrir navegación">
                 <span class="navbar-toggler-icon"></span>
             </button>
-
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav me-auto">
-  <!-- HOY -->
-  <li class="nav-item">
-    <a class="nav-link {% if request.resolver_match.url_name == 'dashboard_diario' %}active{% endif %}"
-       href="{% url 'diario:dashboard_diario' %}">
-      <i class="fas fa-home me-1"></i> Hoy
-    </a>
-  </li>
-
-  <!-- PRESENCIA -->
-  <li class="nav-item dropdown">
-    <a class="nav-link dropdown-toggle {% if 'presencia' in request.path %}active{% endif %}"
-       href="#" role="button" data-bs-toggle="dropdown">
-      <i class="fas fa-sun me-1"></i> Presencia
-    </a>
-    <ul class="dropdown-menu">
-      <li>
-        <a class="dropdown-item" href="{% url 'diario:presencia_apertura' %}">
-          <i class="fas fa-sunrise me-2"></i> Apertura
-        </a>
-      </li>
-      <li>
-        <a class="dropdown-item" href="{% url 'diario:presencia_cierre' %}">
-          <i class="fas fa-moon me-2"></i> Cierre
-        </a>
-      </li>
-    </ul>
-  </li>
-
-  <!-- DIARIO (Prosoche + Logos dentro) -->
-  <li class="nav-item dropdown">
-    <a class="nav-link dropdown-toggle {% if 'prosoche' in request.path or 'logos' in request.path %}active{% endif %}"
-       href="#" role="button" data-bs-toggle="dropdown">
-      <i class="fas fa-feather-alt me-1"></i> Diario
-    </a>
-    <ul class="dropdown-menu">
-      <li>
-        <a class="dropdown-item" href="{% url 'diario:prosoche_dashboard' %}">
-          <i class="fas fa-journal-whills me-2"></i> Entrada (Prosoche)
-        </a>
-      </li>
-      <li>
-        <a class="dropdown-item" href="{% url 'diario:logos_dashboard' %}">
-          <i class="fas fa-scroll me-2"></i> Reflexión (Logos)
-        </a>
-      </li>
-    </ul>
-  </li>
-
-  <!-- MÁS -->
-  <li class="nav-item dropdown">
-    <a class="nav-link dropdown-toggle {% if 'kairos' in request.path or 'simbiosis' in request.path %}active{% endif %}"
-       href="#" role="button" data-bs-toggle="dropdown">
-      <i class="fas fa-layer-group me-1"></i> Más
-    </a>
-    <ul class="dropdown-menu">
-      <li>
-        <a class="dropdown-item" href="{% url 'diario:kairos_dashboard' %}">
-          <i class="fas fa-calendar-alt me-2"></i> Kairos
-        </a>
-      </li>
-      <li>
-        <a class="dropdown-item" href="{% url 'diario:simbiosis_dashboard' %}">
-          <i class="fas fa-users me-2"></i> Simbiosis
-        </a>
-      </li>
-    </ul>
-  </li>
-</ul>
-
-                
-                <ul class="navbar-nav">
+            <div class="collapse navbar-collapse" id="diarioNav">
+                <ul class="navbar-nav ms-auto align-items-lg-center gap-lg-2">
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.resolver_match.url_name == 'dashboard_diario' %}active{% endif %}" href="{% url 'diario:dashboard_diario' %}"{% if request.resolver_match.url_name == 'dashboard_diario' %} aria-current="page"{% endif %}>Hoy</a>
+                    </li>
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                            <i class="fas fa-user-circle me-1"></i> {{ user.username }}
-                        </a>
-                        <ul class="dropdown-menu dropdown-menu-end">
-                            <li><a class="dropdown-item" href="/">
-                                    <i class="fas fa-dumbbell me-2"></i>Volver a Gym
-                                </a></li>
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">Memorias</a>
+                        <ul class="dropdown-menu dropdown-menu-lg-end">
+                            <li><span class="dropdown-header">Activas</span></li>
+                            <li><a class="dropdown-item" href="{% url 'diario:habitos_dashboard' %}">Gestos</a></li>
+                            <li><a class="dropdown-item" href="{% url 'diario:simbiosis_dashboard' %}">Simbiosis</a></li>
+                            <li><a class="dropdown-item" href="{% url 'diario:logos_dashboard' %}">Logos</a></li>
+                            <li><a class="dropdown-item" href="{% url 'diario:lectura_semanal' %}">Revisión semanal</a></li>
                             <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="{% url 'logout' %}"><i class="fas fa-sign-out-alt me-2"></i> Cerrar Sesión</a></li>
+                            <li><span class="dropdown-header">Explorar</span></li>
+                            <li><a class="dropdown-item" href="{% url 'diario:prosoche_dashboard' %}">Prosoche</a></li>
+                            <li><a class="dropdown-item" href="{% url 'diario:eudaimonia_dashboard' %}">Eudaimonia</a></li>
+                            <li><a class="dropdown-item" href="{% url 'diario:virtudes_dashboard' %}">Virtudes</a></li>
+                            <li><a class="dropdown-item" href="{% url 'diario:kairos_dashboard' %}">Kairos</a></li>
+                        </ul>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Menú de {{ user.username }}"><i class="far fa-user" aria-hidden="true"></i></a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="/">Volver a Gym</a></li>
+                            <li><a class="dropdown-item" href="{% url 'logout' %}">Cerrar sesión</a></li>
                         </ul>
                     </li>
                 </ul>
             </div>
         </div>
     </nav>
-
-    <!-- Contenido Principal -->
-    <main class="container-fluid my-4">
+    <main id="contenido-diario" class="diario-main">
         {% if messages %}
-            {% for message in messages %}
-                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-                    {{ message }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                </div>
-            {% endfor %}
+        <div class="container pt-3" aria-live="polite">
+            {% for message in messages %}<div class="alert alert-{{ message.tags }}" role="status">{{ message }}</div>{% endfor %}
+        </div>
         {% endif %}
-
         {% block content %}{% endblock %}
     </main>
-
-    <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    
-    <!-- JavaScript personalizado -->
-    <script>
-        // Efectos de animación al cargar
-        document.addEventListener('DOMContentLoaded', function() {
-            // Animar elementos al aparecer
-            const animateElements = document.querySelectorAll('.cyber-card, .cyber-stat');
-            animateElements.forEach((el, index) => {
-                el.style.animationDelay = `${index * 0.1}s`;
-                el.classList.add('animate-fade-in');
-            });
-
-            // Efecto de escritura en títulos
-            const titles = document.querySelectorAll('.cyber-card-title');
-            titles.forEach(title => {
-                title.addEventListener('mouseenter', function() {
-                    this.classList.add('animate-glow');
-                });
-                title.addEventListener('mouseleave', function() {
-                    this.classList.remove('animate-glow');
-                });
-            });
-        });
-
-        // Función para mostrar notificaciones cyberpunk
-        function showCyberNotification(message, type = 'info') {
-            const notification = document.createElement('div');
-            notification.className = `alert alert-${type} position-fixed top-0 end-0 m-3 animate-fade-in`;
-            notification.style.zIndex = '9999';
-            notification.innerHTML = `
-                ${message}
-                <button type="button" class="btn-close" onclick="this.parentElement.remove()"></button>
-            `;
-            document.body.appendChild(notification);
-            
-            setTimeout(() => {
-                notification.remove();
-            }, 5000);
-        }
-    </script>
-
     {% block extra_js %}{% endblock %}
 </body>
 </html>

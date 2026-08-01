@@ -953,6 +953,31 @@ def _prompt_hyrox_readiness_alto(ctx: dict, datos_extra: dict) -> str:
 
 
 def _prompt_resumen_semanal(ctx: dict, datos_extra: dict) -> str:
+    periodo = datos_extra.get('periodo') or {}
+    presencia = datos_extra.get('presencia')
+    if presencia is not None:
+        gestos = datos_extra.get('gestos') or {}
+        simbiosis = datos_extra.get('simbiosis') or {}
+        logos = datos_extra.get('logos') or {}
+        gym = datos_extra.get('gym') or {}
+        evidencia = {
+            'periodo': periodo,
+            'presencia': presencia,
+            'gestos': gestos,
+            'simbiosis': simbiosis,
+            'logos': logos,
+            'gym': gym,
+        }
+        return (
+            "JOI revisa una semana completa ya cerrada. Esta es evidencia registrada, no una "
+            "explicación causal ni una descripción de identidad:\n"
+            f"{evidencia}\n\n"
+            "Genera 2-3 frases que sinteticen qué dejó la semana y qué parece merecer atención. "
+            "Distingue observación de hipótesis; no inventes conexiones entre mente, relaciones, "
+            "hábitos y entrenamiento. Si una fuente está vacía, no la rellenes ni la conviertas en "
+            "fracaso. No enumeres todos los datos y no des una orden."
+        )
+
     sesiones       = datos_extra.get('sesiones', 0)
     volumen_kg     = datos_extra.get('volumen_kg', 0)
     prs            = datos_extra.get('prs', [])
