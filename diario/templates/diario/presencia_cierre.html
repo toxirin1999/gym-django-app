@@ -195,6 +195,50 @@
     color: rgba(237,233,227,0.75);
     line-height: 1.6;
 }
+.cierre-proyecciones {
+    margin-top: 1.25rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid rgba(226, 201, 143, 0.22);
+}
+.cierre-proyecciones__titulo {
+    margin: 0 0 0.85rem;
+    color: #d2b777;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+}
+.cierre-proyecciones__lista {
+    display: grid;
+    gap: 0.65rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+.cierre-proyeccion {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.8rem 0;
+    border-bottom: 1px solid rgba(237, 233, 227, 0.08);
+}
+.cierre-proyeccion:last-child { border-bottom: 0; }
+.cierre-proyeccion__texto { color: rgba(237,233,227,0.82); line-height: 1.45; }
+.cierre-proyeccion__enlace {
+    flex: 0 0 auto;
+    color: #e2c98f;
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-decoration: none;
+    border-bottom: 1px solid rgba(226, 201, 143, 0.45);
+    padding: 0.2rem 0;
+}
+.cierre-proyeccion__enlace:hover,
+.cierre-proyeccion__enlace:focus-visible { color: #f3eee4; border-color: currentColor; }
+@media (max-width: 480px) {
+    .cierre-proyeccion { align-items: flex-start; flex-direction: column; gap: 0.4rem; }
+}
 </style>
 {% endblock %}
 
@@ -215,26 +259,42 @@
             El cierre está a salvo, pero el análisis no está disponible ahora; puedes reintentarlo volviendo a guardar esta versión.
         </div>
         {% else %}
-        <div style="margin-top:1.25rem; padding-top:1.25rem; border-top:1px solid rgba(167,139,250,0.2);">
-            <h2 style="font-size:0.82rem; letter-spacing:0.1em; text-transform:uppercase; color:#A78BFA; margin:0 0 0.8rem;">Lo que guardó el Diario</h2>
+        <div class="cierre-proyecciones">
+            <h2 class="cierre-proyecciones__titulo">Lo que guardó el Diario</h2>
+            <ul class="cierre-proyecciones__lista">
             {% if gestos_guardados %}
-            <p style="color:rgba(237,233,227,0.78); margin:0.45rem 0;">
-                {{ gestos_guardados|length }} gesto{% if gestos_guardados|length != 1 %}s{% endif %} marcado{% if gestos_guardados|length != 1 %}s{% endif %}:
-                {% for gesto in gestos_guardados %}{{ gesto.nombre }}{% if not forloop.last %}, {% endif %}{% endfor %}.
-            </p>
+            <li class="cierre-proyeccion">
+                <span class="cierre-proyeccion__texto">
+                    {{ gestos_guardados|length }} gesto{% if gestos_guardados|length != 1 %}s{% endif %} incorporado{% if gestos_guardados|length != 1 %}s{% endif %}:
+                    {% for gesto in gestos_guardados %}{{ gesto.nombre }}{% if not forloop.last %}, {% endif %}{% endfor %}.
+                </span>
+                <a class="cierre-proyeccion__enlace" href="{% url 'diario:habitos_dashboard' %}">Ver Gestos</a>
+            </li>
             {% endif %}
-            {% if reflexion_guardada %}
-            <p style="color:rgba(237,233,227,0.78); margin:0.45rem 0;">Tu reflexión quedó guardada para futuras revisiones.</p>
+            {% if reflexiones_guardadas %}
+            <li class="cierre-proyeccion">
+                <span class="cierre-proyeccion__texto">
+                    {{ reflexiones_guardadas|length }} reflexión{% if reflexiones_guardadas|length != 1 %}es{% endif %} incorporada{% if reflexiones_guardadas|length != 1 %}s{% endif %} a Logos.
+                </span>
+                {% if reflexiones_guardadas|length == 1 %}
+                {% with reflexion=reflexiones_guardadas.0 %}<a class="cierre-proyeccion__enlace" href="{% url 'diario:logos_ver_reflexion' reflexion.id %}">Leer reflexión</a>{% endwith %}
+                {% else %}
+                <a class="cierre-proyeccion__enlace" href="{% url 'diario:logos_lista_reflexiones' %}">Abrir Logos</a>
+                {% endif %}
+            </li>
             {% endif %}
-            {% if personas_detectadas %}
-            <p style="color:rgba(237,233,227,0.78); margin:0.45rem 0;">
-                Relaciones detectadas:
-                {% for persona in personas_detectadas %}{{ persona }}{% if not forloop.last %}, {% endif %}{% endfor %}.
-            </p>
+            {% if relaciones_incorporadas %}
+            <li class="cierre-proyeccion">
+                <span class="cierre-proyeccion__texto">
+                    {% if relaciones_incorporadas == 1 %}1 registro relacional incorporado{% else %}{{ relaciones_incorporadas }} registros relacionales incorporados{% endif %} a Simbiosis.
+                </span>
+                <a class="cierre-proyeccion__enlace" href="{% url 'diario:simbiosis_dashboard' %}">Abrir Simbiosis</a>
+            </li>
             {% endif %}
-            {% if not gestos_guardados and not reflexion_guardada and not personas_detectadas %}
-            <p style="color:rgba(237,233,227,0.65); margin:0;">No hubo elementos adicionales que incorporar a tus memorias.</p>
+            {% if not gestos_guardados and not reflexiones_guardadas and not relaciones_incorporadas %}
+            <li style="color:rgba(237,233,227,0.65);">No hubo elementos adicionales que incorporar a tus memorias.</li>
             {% endif %}
+            </ul>
         </div>
         {% endif %}
 

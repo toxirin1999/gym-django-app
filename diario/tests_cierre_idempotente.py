@@ -12,9 +12,12 @@ from diario.forms import CierreDiarioForm
 from diario.models import (
     CierreNocturnoOperacion,
     Gesto,
+    Interaccion,
+    InteraccionSombra,
     ProsocheDiario,
     ProsocheMes,
     PersonaInterina,
+    PersonaImportante,
     ReflexionLibre,
     RegistroGesto,
     SeguimientoVires,
@@ -350,12 +353,98 @@ class PresenciaCierreViewTests(TestCase):
         self.assertIn('Lo que guardó el Diario', html)
         self.assertIn('1 gesto', html)
         self.assertIn('Leer', html)
-        self.assertIn('Tu reflexión quedó guardada', html)
-        self.assertIn('Ana', html)
-        self.assertIn('Luis', html)
+        self.assertIn('1 reflexión incorporada a Logos', html)
+        self.assertNotIn('Ana', html)
+        self.assertNotIn('Luis', html)
         self.assertIn('id="editar-cierre"', html)
         self.assertIn('editar=1', html)
         self.assertNotIn('JOI — Lo que guardó el Diario', html)
+
+    def test_deteccion_sin_proyeccion_no_afirma_relacion_ni_ofrece_simbiosis(self):
+        op = self.operacion(resultado={
+            'respuesta_joi': '', 'reflexiones': [], 'interacciones': [], 'sombras': [],
+            'simbiosis': {'personas': ['Nombre solo parseado']},
+        })
+
+        html = self.client.get(f'{self.url}?cierre_operacion={op.idempotency_key}').content.decode()
+
+        self.assertNotIn('Nombre solo parseado', html)
+        self.assertNotIn('Relaciones incorporadas', html)
+        self.assertNotIn('Abrir Simbiosis', html)
+
+    def test_ledger_real_muestra_conteo_relacional_y_cta_simbiosis(self):
+        persona = PersonaImportante.objects.create(usuario=self.user, nombre='Ana')
+        interaccion = Interaccion.objects.create(
+            usuario=self.user, titulo='Conversación', descripcion='Hablamos con calma',
+        )
+        interaccion.personas.add(persona)
+        interina = PersonaInterina.objects.create(usuario=self.user, nombre='Luis')
+        sombra = InteraccionSombra.objects.create(
+            persona_interina=interina, descripcion='Mención real',
+        )
+        op = self.operacion(resultado={
+            'schema_version': 2,
+            'ledger': {
+                'reflexiones': [], 'interacciones': [{'id': interaccion.pk}],
+                'sombras': [{'id': sombra.pk, 'persona_interina_id': interina.pk}],
+                'personas_interinas': [{'id': interina.pk}],
+            },
+            'simbiosis': {'personas': ['Ana', 'Luis', 'Nombre no materializado']},
+        })
+
+        html = self.client.get(f'{self.url}?cierre_operacion={op.idempotency_key}').content.decode()
+
+        self.assertIn('2 registros relacionales incorporados', html)
+        self.assertIn(f'href="{reverse("diario:simbiosis_dashboard")}"', html)
+        self.assertNotIn('Nombre no materializado', html)
+
+    def test_ids_ajenos_o_inexistentes_del_resultado_se_ignoran(self):
+        ajeno = User.objects.create_user('proyecciones-ajenas')
+        reflexion_ajena = ReflexionLibre.objects.create(
+            usuario=ajeno, contenido='No pertenece al cierre', tipo='espontanea',
+        )
+        interaccion_ajena = Interaccion.objects.create(
+            usuario=ajeno, titulo='Ajena', descripcion='No visible',
+        )
+        op = self.operacion(resultado={
+            'schema_version': 2,
+            'ledger': {
+                'reflexiones': [{'id': reflexion_ajena.pk}, {'id': 999999}],
+                'interacciones': [{'id': interaccion_ajena.pk}, {'id': 999999}],
+                'sombras': [{'id': 999999, 'persona_interina_id': 999999}],
+                'personas_interinas': [{'id': 999999}],
+            },
+            'simbiosis': {'personas': ['Inventada']},
+        })
+
+        html = self.client.get(f'{self.url}?cierre_operacion={op.idempotency_key}').content.decode()
+
+        self.assertNotIn('Inventada', html)
+        self.assertNotIn('Abrir Simbiosis', html)
+        self.assertNotIn(reverse('diario:logos_ver_reflexion', args=[reflexion_ajena.pk]), html)
+
+    def test_reflexion_real_enlaza_a_su_url_exacta(self):
+        reflexion = ReflexionLibre.objects.create(
+            usuario=self.user, contenido='Reflexión materializada', tipo='espontanea',
+        )
+        op = self.operacion(resultado={
+            'schema_version': 2,
+            'ledger': {'reflexiones': [{'id': reflexion.pk}]},
+        })
+
+        html = self.client.get(f'{self.url}?cierre_operacion={op.idempotency_key}').content.decode()
+
+        self.assertIn(
+            f'href="{reverse("diario:logos_ver_reflexion", args=[reflexion.pk])}"', html,
+        )
+
+    def test_gestos_guardados_reales_enlazan_al_panel(self):
+        op = self.operacion(resultado={})
+
+        html = self.client.get(f'{self.url}?cierre_operacion={op.idempotency_key}').content.decode()
+
+        self.assertIn('1 gesto incorporado', html)
+        self.assertIn(f'href="{reverse("diario:habitos_dashboard")}"', html)
 
     def test_resultado_sin_voz_joi_usa_confirmacion_neutral(self):
         op = self.operacion(resultado={
@@ -388,7 +477,7 @@ class PresenciaCierreViewTests(TestCase):
         ).operacion
         html = self.client.get(f'{self.url}?cierre_operacion={replay.idempotency_key}').content.decode()
         self.assertIn('Lectura canónica', html)
-        self.assertIn('Marta', html)
+        self.assertNotIn('Marta', html)
 
     def test_get_sin_uuid_resuelve_la_operacion_completada_de_la_version_activa(self):
         obsoleta = self.operacion(resultado={
@@ -426,8 +515,8 @@ class PresenciaCierreViewTests(TestCase):
 
         self.assertIn('Lectura durable activa', html)
         self.assertIn('Preparar mochila', html)
-        self.assertIn('Ana', html)
-        self.assertIn('Tu reflexión quedó guardada', html)
+        self.assertNotIn('Ana', html)
+        self.assertNotIn('reflexión incorporada a Logos', html)
         self.assertNotIn('Lectura obsoleta', html)
 
     def test_get_sin_uuid_no_reutiliza_lectura_obsoleta_si_la_version_activa_fallo(self):

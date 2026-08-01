@@ -3392,7 +3392,7 @@ def presencia_cierre(request):
     """Cierre versionado: GET puro, POST validado e idempotente."""
     import uuid
     from diario.forms import CierreDiarioForm
-    from diario.models import CierreNocturnoOperacion
+    from diario.models import CierreNocturnoOperacion, InteraccionSombra, PersonaInterina
     from diario.services import cierre_service
     from diario.services.estado_diario import calcular_estado_diario_hoy
 
@@ -3557,11 +3557,51 @@ def presencia_cierre(request):
         operacion_presentacion.enrichment_payload
         if operacion_presentacion else {}
     ) or {}
-    gesto_ids_guardados = payload_resultado.get('habitos_completados') or []
+    def _ids_proyectados(items):
+        ids = []
+        for item in items or []:
+            valor = item.get('id') if isinstance(item, dict) else item
+            if isinstance(valor, int) and not isinstance(valor, bool):
+                ids.append(valor)
+        return ids
+
+    # DTO de presentación basado exclusivamente en filas materializadas. El
+    # parseo semántico explica la intención, pero nunca prueba persistencia.
+    gesto_ids_solicitados = _ids_proyectados(payload_resultado.get('habitos_completados'))
+    gesto_ids_guardados = RegistroGesto.objects.filter(
+        gesto__usuario=request.user, gesto_id__in=gesto_ids_solicitados,
+        fecha=hoy, estado='cumplido',
+    ).values_list('gesto_id', flat=True)
     gestos_guardados = list(Gesto.objects.filter(
         usuario=request.user, pk__in=gesto_ids_guardados,
     ).order_by('nombre'))
-    personas_detectadas = (resultado.get('simbiosis') or {}).get('personas') or []
+
+    ledger = resultado.get('ledger') if resultado.get('schema_version') == 2 else None
+    fuente_reflexiones = (ledger or {}).get('reflexiones', []) if ledger is not None else resultado.get('reflexiones', [])
+    fuente_interacciones = (ledger or {}).get('interacciones', []) if ledger is not None else resultado.get('interacciones', [])
+    fuente_sombras = (ledger or {}).get('sombras', []) if ledger is not None else resultado.get('sombras', [])
+    reflexiones_guardadas = list(ReflexionLibre.objects.filter(
+        usuario=request.user, pk__in=_ids_proyectados(fuente_reflexiones),
+    ).order_by('pk'))
+    interacciones_guardadas = list(Interaccion.objects.filter(
+        usuario=request.user, pk__in=_ids_proyectados(fuente_interacciones),
+    ).order_by('pk'))
+    sombra_ids = _ids_proyectados(fuente_sombras)
+    if ledger is not None:
+        interinas_validas = set(PersonaInterina.objects.filter(
+            usuario=request.user,
+            pk__in=_ids_proyectados(ledger.get('personas_interinas', [])),
+        ).values_list('pk', flat=True))
+        sombra_ids = [
+            item.get('id') for item in fuente_sombras
+            if isinstance(item, dict)
+            and item.get('persona_interina_id') in interinas_validas
+        ]
+    sombras_guardadas = list(InteraccionSombra.objects.filter(
+        persona_interina__usuario=request.user,
+        pk__in=sombra_ids,
+    ).select_related('persona_interina').order_by('pk'))
+    relaciones_incorporadas = len(interacciones_guardadas) + len(sombras_guardadas)
     propuesta_habito = resultado.get('propuesta_habito')
     if not isinstance(propuesta_habito, dict) or not str(propuesta_habito.get('nombre') or '').strip():
         propuesta_habito = None
@@ -3594,8 +3634,8 @@ def presencia_cierre(request):
             if propuesta_habito and operacion_presentacion else ''
         ),
         'gestos_guardados': gestos_guardados,
-        'personas_detectadas': personas_detectadas,
-        'reflexion_guardada': bool(resultado.get('reflexiones')),
+        'reflexiones_guardadas': reflexiones_guardadas,
+        'relaciones_incorporadas': relaciones_incorporadas,
         'enriquecimiento_fallido': enriquecimiento_fallido,
         'version_cierre': entrada_presentacion.cierre_version,
         'guardado': bool(operacion) or cierre_confirmado,
