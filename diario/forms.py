@@ -20,6 +20,7 @@ class CierreDiarioForm(forms.Form):
     habitos_completados = forms.JSONField(required=False, initial=list)
     simbiosis_respuesta = forms.CharField(required=False, max_length=5000, strip=True)
     simbiosis_pregunta = forms.CharField(required=False, max_length=5000, strip=True)
+    analisis_cierre_token = forms.CharField(required=False, max_length=24576, strip=True)
     idempotency_key = forms.UUIDField(required=True)
     expected_version = forms.IntegerField(required=True, min_value=0)
 

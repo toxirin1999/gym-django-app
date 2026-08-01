@@ -231,7 +231,7 @@ class PresenciaCierreViewTests(TestCase):
         self.gesto = Gesto.objects.create(usuario=self.user, nombre='Leer', estado='activo')
 
     def data(self, **overrides):
-        return {
+        datos = {
             'reflexion_libre': 'Cierre real',
             'friccion_no': '3',
             'cuerpo_cierre': '',
@@ -241,6 +241,18 @@ class PresenciaCierreViewTests(TestCase):
             'expected_version': '0',
             **overrides,
         }
+        if 'analisis_cierre_token' not in datos:
+            from diario.services.analisis_cierre_service import crear_artefacto, firmar_artefacto
+            analisis = {
+                'estado': 'ok_sin_senales',
+                'parseo': {'personas': [], 'impulsos': [], 'etiquetas': []},
+                'enriquecido': {'interacciones': [], 'micro_verdad': None},
+            }
+            datos['analisis_cierre_token'] = firmar_artefacto(crear_artefacto(
+                usuario=self.user, fecha=timezone.localdate(),
+                texto=datos['reflexion_libre'], analisis=analisis,
+            ))
+        return datos
 
     def operacion(self, *, resultado=None, estado='completed', token=None):
         token = token or uuid.uuid4()

@@ -3276,15 +3276,20 @@ def check_simbiosis_api(request):
     try:
         data = json.loads(request.body)
         texto = data.get('texto', '').strip()
-        if not texto:
-            return JsonResponse({'bloqueo': False})
-
-        from joi.services import parsear_cierre_diario
-        resultado = parsear_cierre_diario(texto)
-        personas_detectadas = resultado.get('personas', [])
-
-        if not personas_detectadas:
-            return JsonResponse({'bloqueo': False})
+        from diario.services.analisis_cierre_service import (
+            AnalisisNoDisponible, analizar_texto, crear_artefacto, firmar_artefacto,
+        )
+        try:
+            analisis = analizar_texto(texto)
+        except AnalisisNoDisponible:
+            analisis = {
+                'estado': 'no_disponible',
+                'parseo': {'personas': [], 'impulsos': [], 'etiquetas': [], 'estado_animo': 3},
+                'enriquecido': {},
+            }
+        personas_detectadas = analisis['parseo'].get('personas', [])
+        persona_bloqueo = ''
+        pregunta = ''
 
         hoy = timezone.localdate()
         for persona_nombre in personas_detectadas:
@@ -3300,13 +3305,18 @@ def check_simbiosis_api(request):
                     dias_con_mencion += 1
             if dias_con_mencion >= 2:
                 pregunta = _generar_pregunta_simbiosis(persona_nombre, request)
-                return JsonResponse({
-                    'bloqueo': True,
-                    'persona': persona_nombre,
-                    'pregunta': pregunta,
-                })
-
-        return JsonResponse({'bloqueo': False})
+                persona_bloqueo = persona_nombre
+                break
+        artefacto = crear_artefacto(
+            usuario=request.user, fecha=hoy, texto=texto, analisis=analisis,
+            persona=persona_bloqueo, pregunta=pregunta,
+        )
+        token = firmar_artefacto(artefacto)
+        return JsonResponse({
+            'bloqueo': bool(persona_bloqueo), 'persona': persona_bloqueo,
+            'pregunta': pregunta, 'analisis_cierre_token': token,
+            'estado_analisis': analisis['estado'],
+        })
     except Exception as e:
         logger.warning(f"[check_simbiosis_api] {e}")
         return JsonResponse({'bloqueo': False})
@@ -3408,11 +3418,61 @@ def presencia_cierre(request):
             messages.error(request, 'Revisa los campos del cierre.')
             return redirect('diario:presencia_cierre')
         datos = form.cleaned_data
+        from diario.services.analisis_cierre_service import (
+            AnalisisNoDisponible, AnalisisTokenInvalido, analizar_texto,
+            crear_artefacto, verificar_artefacto,
+        )
+        texto_cierre = datos['reflexion_libre']
         payload = {campo: datos[campo] for campo in (
             'reflexion_libre', 'friccion_no', 'cuerpo_cierre',
             'estado_animo_noche', 'habitos_completados', 'simbiosis_respuesta',
             'simbiosis_pregunta',
         )}
+        # Replay/noop reutilizan el análisis canónico sin volver a interpretar.
+        artefacto = None
+        existente = None
+        if entrada:
+            existente = CierreNocturnoOperacion.objects.filter(
+                entrada=entrada, idempotency_key=datos['idempotency_key'],
+            ).first()
+            if existente and existente.estado != 'failed':
+                artefacto = (existente.enrichment_payload or {}).get('analisis_cierre')
+        if artefacto is None:
+            try:
+                artefacto = verificar_artefacto(
+                    datos.get('analisis_cierre_token'), usuario=request.user,
+                    fecha=hoy, texto=texto_cierre,
+                )
+            except AnalisisTokenInvalido:
+                try:
+                    analisis = analizar_texto(texto_cierre)
+                except AnalisisNoDisponible:
+                    analisis = {
+                        'estado': 'no_disponible',
+                        'parseo': {'personas': [], 'impulsos': [], 'etiquetas': [], 'estado_animo': 3},
+                        'enriquecido': {},
+                    }
+                artefacto = crear_artefacto(
+                    usuario=request.user, fecha=hoy, texto=texto_cierre, analisis=analisis,
+                )
+        # Pregunta/persona nunca se aceptan desde JSON plano del cliente.
+        payload['simbiosis_pregunta'] = artefacto.get('pregunta_simbiosis', '')
+        payload['analisis_cierre'] = artefacto
+        if entrada and cierre_service._hash_payload(payload)[1] == entrada.cierre_payload_hash:
+            canonica = CierreNocturnoOperacion.objects.filter(
+                entrada=entrada, result_version=entrada.cierre_version,
+            ).first()
+            if canonica and canonica.estado == 'failed':
+                # Un token fresco repara el análisis de la versión activa; un
+                # noop posterior apuntará a esta operación canónica.
+                enriquecimiento = dict(canonica.enrichment_payload or {})
+                enriquecimiento['analisis_cierre'] = artefacto
+                canonica.enrichment_payload = enriquecimiento
+                canonica.estado = 'pending'
+                canonica.error = ''
+                canonica.save(update_fields=[
+                    'enrichment_payload', 'estado', 'error', 'updated_at',
+                ])
         try:
             comando = cierre_service.ejecutar_cierre_nocturno(
                 usuario=request.user, fecha=hoy, payload=payload,

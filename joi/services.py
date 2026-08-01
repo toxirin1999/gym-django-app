@@ -3426,7 +3426,7 @@ def generar_pregunta_identidad(cliente, intensidad: str = 'media') -> str:
         return "¿Quién quieres ser hoy con lo que tienes?"
 
 
-def parsear_cierre_diario(texto: str) -> dict:
+def parsear_cierre_diario(texto: str, *, strict=False) -> dict:
     """
     Parsea el texto libre del cierre nocturno.
     Extrae: estado_animo (1-5), impulsos detectados, personas mencionadas, etiquetas.
@@ -3466,6 +3466,8 @@ def parsear_cierre_diario(texto: str) -> dict:
         return _json.loads(raw)
     except Exception as e:
         logger.error(f"[JOI] parsear_cierre_diario falló: {e}")
+        if strict:
+            raise
         return {'estado_animo': 3, 'impulsos': [], 'personas': [], 'etiquetas': []}
 
 
@@ -3522,7 +3524,7 @@ def generar_respuesta_cierre(texto: str, datos_parseo: dict, cliente) -> str:
         return ""
 
 
-def enriquecer_cierre(texto: str, personas_detectadas: list) -> dict:
+def enriquecer_cierre(texto: str, personas_detectadas: list, *, strict=False) -> dict:
     """
     Una sola llamada a Claude que enriquece el cierre con cuatro cosas:
     1. Título corto para Logos (≤5 palabras) + categoría estoica
@@ -3582,6 +3584,8 @@ def enriquecer_cierre(texto: str, personas_detectadas: list) -> dict:
         return _json.loads(raw)
     except Exception as e:
         logger.error(f"[JOI] enriquecer_cierre falló: {e}")
+        if strict:
+            raise
         return {'titulo_logos': None, 'categoria_estoica': None, 'micro_verdad': None, 'interacciones': [], 'propuesta_habito': None}
 
 

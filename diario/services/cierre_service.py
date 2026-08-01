@@ -39,6 +39,8 @@ def _hash_payload(payload):
         'simbiosis_pregunta': payload.get('simbiosis_pregunta', '').strip(),
     }
     serializado = json.dumps(normalizado, sort_keys=True, separators=(',', ':'), ensure_ascii=False)
+    if isinstance(payload.get('analisis_cierre'), dict):
+        normalizado['analisis_cierre'] = payload['analisis_cierre']
     return normalizado, hashlib.sha256(serializado.encode()).hexdigest()
 
 
@@ -247,10 +249,16 @@ def ejecutar_enriquecimiento_cierre(operacion_id):
 
     texto = payload.get('reflexion_libre', '')
     try:
-        from joi.services import parsear_cierre_diario, enriquecer_cierre, generar_respuesta_cierre
-        parseo = parsear_cierre_diario(texto) if texto else {}
+        from joi.services import generar_respuesta_cierre
+        analisis = payload.get('analisis_cierre')
+        if analisis is None:  # compatibilidad con operaciones antiguas
+            from .analisis_cierre_service import analizar_texto
+            analisis = analizar_texto(texto)
+        if analisis.get('estado') == 'no_disponible':
+            raise RuntimeError('Análisis de cierre no disponible; se puede reintentar.')
+        parseo = analisis.get('parseo') or {}
         personas = parseo.get('personas') or []
-        enriquecido = enriquecer_cierre(texto, personas) if texto else {}
+        enriquecido = analisis.get('enriquecido') or {}
         datos_joi = {
             **parseo, 'estado_animo': payload['estado_animo_noche'],
             'friccion_no': payload['friccion_no'],
@@ -317,9 +325,12 @@ def ejecutar_enriquecimiento_cierre(operacion_id):
                 'after': _snapshot(manual, _MANUAL_SNAPSHOT_FIELDS),
             })
         tipos = {choice[0] for choice in Interaccion.TIPO_INTERACCION_CHOICES}
+        personas_permitidas = {
+            (persona or '').strip().casefold() for persona in personas if (persona or '').strip()
+        }
         for item in enriquecido.get('interacciones') or []:
             nombre = (item.get('persona') or '').strip()
-            if not nombre:
+            if not nombre or nombre.casefold() not in personas_permitidas:
                 continue
             tipo = item.get('tipo') if item.get('tipo') in tipos else 'neutra'
             persona = PersonaImportante.objects.filter(usuario=usuario, nombre__iexact=nombre).first()

@@ -398,6 +398,7 @@
         <!-- Bloqueo de simbiosis — aparece inline ANTES de guardar -->
         <input type="hidden" name="simbiosis_respuesta" id="simbiosis_respuesta_input" value="">
         <input type="hidden" name="simbiosis_pregunta" id="simbiosis_pregunta_input" value="">
+        <input type="hidden" name="analisis_cierre_token" id="analisis_cierre_token_input" value="">
 
         <div id="simbiosis-block" style="display:none; background:#1E1B27; border:1.5px solid #7C3AED; border-radius:16px; padding:1.1rem 1.25rem; margin-bottom:0.75rem;">
             <div style="font-size:0.68rem; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:#7C3AED; margin-bottom:0.75rem;">JOI — Antes de cerrar el día</div>
@@ -465,6 +466,7 @@ formCierre.addEventListener('submit', async (event) => {
                 method: 'POST', headers: {'X-CSRFToken': '{{ csrf_token }}', 'Content-Type': 'application/json'},
                 body: JSON.stringify({texto}),
             }).then(r => r.json());
+            document.getElementById('analisis_cierre_token_input').value = precheck.analisis_cierre_token || '';
             if (precheck.bloqueo) {
                 document.getElementById('simbiosis-pregunta').textContent = precheck.pregunta;
                 document.getElementById('simbiosis_pregunta_input').value = precheck.pregunta;
