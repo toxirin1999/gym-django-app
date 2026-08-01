@@ -3273,20 +3273,41 @@ def check_simbiosis_api(request):
     antes de que el formulario se guarde. Si hay bloqueo, el formulario no se envía
     hasta que el usuario responda la pregunta.
     """
+    from diario.services.analisis_cierre_service import (
+        AnalisisNoDisponible, analizar_texto, crear_artefacto, firmar_artefacto,
+    )
     try:
         data = json.loads(request.body)
-        texto = data.get('texto', '').strip()
-        from diario.services.analisis_cierre_service import (
-            AnalisisNoDisponible, analizar_texto, crear_artefacto, firmar_artefacto,
+        if not isinstance(data, dict):
+            raise ValueError('El JSON debe ser un objeto.')
+    except (json.JSONDecodeError, UnicodeDecodeError, ValueError, TypeError):
+        return JsonResponse({'code': 'invalid_json', 'bloqueo': False}, status=400)
+
+    texto = data.get('texto', '')
+    if not isinstance(texto, str):
+        return JsonResponse({'code': 'invalid_json', 'bloqueo': False}, status=400)
+    texto = texto.strip()
+
+    def respuesta_no_disponible():
+        analisis = {
+            'estado': 'no_disponible',
+            'parseo': {'personas': [], 'impulsos': [], 'etiquetas': [], 'estado_animo': 3},
+            'enriquecido': {},
+        }
+        artefacto = crear_artefacto(
+            usuario=request.user, fecha=timezone.localdate(), texto=texto, analisis=analisis,
         )
+        return JsonResponse({
+            'bloqueo': False, 'persona': '', 'pregunta': '',
+            'analisis_cierre_token': firmar_artefacto(artefacto),
+            'estado_analisis': 'no_disponible',
+        })
+
+    try:
         try:
             analisis = analizar_texto(texto)
         except AnalisisNoDisponible:
-            analisis = {
-                'estado': 'no_disponible',
-                'parseo': {'personas': [], 'impulsos': [], 'etiquetas': [], 'estado_animo': 3},
-                'enriquecido': {},
-            }
+            return respuesta_no_disponible()
         personas_detectadas = analisis['parseo'].get('personas', [])
         persona_bloqueo = ''
         pregunta = ''
@@ -3319,7 +3340,122 @@ def check_simbiosis_api(request):
         })
     except Exception as e:
         logger.warning(f"[check_simbiosis_api] {e}")
-        return JsonResponse({'bloqueo': False})
+        return respuesta_no_disponible()
+
+
+@login_required
+@require_http_methods(["POST"])
+def reintentar_analisis_cierre(request):
+    """Repara el análisis fallido de la versión activa sin reescribir el cierre."""
+    import uuid
+
+    from django.db import transaction
+    from diario.models import CierreNocturnoOperacion
+    from diario.services import cierre_service
+    from diario.services.analisis_cierre_service import (
+        AnalisisNoDisponible, analizar_texto, crear_artefacto,
+    )
+
+    try:
+        data = json.loads(request.body)
+        if not isinstance(data, dict) or set(data) != {'operacion', 'version'}:
+            raise ValueError
+        operacion_key = uuid.UUID(str(data['operacion']))
+        if not isinstance(data['version'], int) or isinstance(data['version'], bool):
+            raise ValueError
+        version = data['version']
+        if version < 1:
+            raise ValueError
+    except (json.JSONDecodeError, UnicodeDecodeError, ValueError, TypeError, KeyError):
+        return JsonResponse({'success': False, 'code': 'invalid_request'}, status=400)
+
+    operacion = CierreNocturnoOperacion.objects.select_related(
+        'entrada__prosoche_mes__usuario'
+    ).filter(
+        idempotency_key=operacion_key,
+        entrada__prosoche_mes__usuario=request.user,
+        entrada__fecha=timezone.localdate(),
+    ).first()
+    if operacion is None:
+        return JsonResponse({'success': False, 'code': 'not_found'}, status=404)
+
+    result_url = (
+        f"{reverse('diario:presencia_cierre')}"
+        f"?cierre_operacion={operacion.idempotency_key}"
+    )
+    if (
+        operacion.estado == 'completed'
+        and (operacion.resultado or {}).get('retry_analisis_completed')
+    ):
+        return JsonResponse({'success': True, 'result_url': result_url, 'replay': True})
+
+    entrada = operacion.entrada
+    if (
+        operacion.estado != 'failed'
+        or operacion.result_version != version
+        or entrada.cierre_version != version
+        or operacion.payload_hash != entrada.cierre_payload_hash
+    ):
+        return JsonResponse({'success': False, 'code': 'not_retryable'}, status=409)
+
+    payload = dict(operacion.enrichment_payload or {})
+    texto = payload.get('reflexion_libre', '')
+    if not isinstance(texto, str):
+        return JsonResponse({'success': False, 'code': 'invalid_server_payload'}, status=409)
+    try:
+        analisis = analizar_texto(texto)
+    except AnalisisNoDisponible:
+        return JsonResponse({
+            'success': False,
+            'code': 'analysis_unavailable',
+            'retryable': True,
+            'message': 'El análisis sigue sin estar disponible. Tu cierre continúa guardado.',
+        }, status=503)
+
+    artefacto = crear_artefacto(
+        usuario=request.user, fecha=entrada.fecha, texto=texto, analisis=analisis,
+    )
+    with transaction.atomic():
+        bloqueada = CierreNocturnoOperacion.objects.select_for_update().select_related(
+            'entrada'
+        ).get(pk=operacion.pk)
+        if (
+            bloqueada.estado != 'failed'
+            or bloqueada.result_version != version
+            or bloqueada.entrada.cierre_version != version
+            or bloqueada.payload_hash != bloqueada.entrada.cierre_payload_hash
+        ):
+            return JsonResponse({'success': False, 'code': 'not_retryable'}, status=409)
+        nuevo_payload = dict(bloqueada.enrichment_payload or {})
+        nuevo_payload['analisis_cierre'] = artefacto
+        bloqueada.enrichment_payload = nuevo_payload
+        bloqueada.estado = 'pending'
+        bloqueada.error = ''
+        bloqueada.save(update_fields=['enrichment_payload', 'estado', 'error', 'updated_at'])
+
+    try:
+        resultado = cierre_service.ejecutar_enriquecimiento_cierre(operacion.pk) or {}
+    except Exception as exc:
+        logger.exception('Falló el reintento explícito del análisis del cierre')
+        return JsonResponse({
+            'success': False, 'code': 'enrichment_failed', 'retryable': True,
+            'message': 'No se pudo completar el análisis. Tu cierre continúa guardado.',
+        }, status=503)
+
+    estado_final = CierreNocturnoOperacion.objects.filter(
+        pk=operacion.pk,
+    ).values_list('estado', flat=True).first()
+    if estado_final != 'completed':
+        return JsonResponse({
+            'success': False,
+            'code': 'superseded_during_retry',
+        }, status=409)
+
+    resultado = {**resultado, 'retry_analisis_completed': True}
+    CierreNocturnoOperacion.objects.filter(pk=operacion.pk, estado='completed').update(
+        resultado=resultado
+    )
+    return JsonResponse({'success': True, 'result_url': result_url})
 
 
 def _generar_pregunta_simbiosis(persona_nombre, request):
@@ -3637,6 +3773,10 @@ def presencia_cierre(request):
         'reflexiones_guardadas': reflexiones_guardadas,
         'relaciones_incorporadas': relaciones_incorporadas,
         'enriquecimiento_fallido': enriquecimiento_fallido,
+        'operacion_reintento': (
+            str(operacion_presentacion.idempotency_key)
+            if enriquecimiento_fallido else ''
+        ),
         'version_cierre': entrada_presentacion.cierre_version,
         'guardado': bool(operacion) or cierre_confirmado,
         'mostrar_form': request.GET.get('editar') == '1' or not cierre_confirmado,

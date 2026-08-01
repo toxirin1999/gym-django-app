@@ -99,6 +99,11 @@ urlpatterns = [
     path('presencia/apertura/', views.presencia_apertura, name='presencia_apertura'),
     path('presencia/cierre/', views.presencia_cierre, name='presencia_cierre'),
     path('presencia/check-simbiosis/', views.check_simbiosis_api, name='check_simbiosis_api'),
+    path(
+        'presencia/cierre/reintentar-analisis/',
+        views.reintentar_analisis_cierre,
+        name='reintentar_analisis_cierre',
+    ),
     path('presencia/habito-invitacion/', views.aceptar_habito_invitacion, name='aceptar_habito_invitacion'),
     path('presencia/panico/', views.panico_impulso_api, name='panico_impulso_api'),
     path('presencia/promover-interina/', views.promover_persona_interina, name='promover_persona_interina'),

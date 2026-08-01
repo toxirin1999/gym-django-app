@@ -363,6 +363,46 @@
             Volver al Diario
         </a>
         <a id="editar-cierre" href="{% url 'diario:presencia_cierre' %}?editar=1&amp;version={{ version_cierre }}" style="display:block; margin-top:0.75rem; color:#7C7590; text-align:center;">Editar cierre</a>
+        {% if enriquecimiento_fallido %}
+        <button id="reintentar-analisis" type="button" style="display:block; width:100%; margin-top:0.75rem; border:1px solid #7C3AED; border-radius:12px; padding:0.8rem; color:#C4B5FD; background:#2E2A3A; font-weight:600;">
+            Reintentar análisis
+        </button>
+        <p id="reintento-analisis-mensaje" role="status" style="display:none; margin-top:0.65rem; color:#FCA5A5; text-align:center;"></p>
+        <script>
+        document.getElementById('reintentar-analisis').addEventListener('click', async () => {
+            const boton = document.getElementById('reintentar-analisis');
+            const mensaje = document.getElementById('reintento-analisis-mensaje');
+            boton.disabled = true;
+            mensaje.style.display = 'none';
+            try {
+                const respuesta = await fetch("{% url 'diario:reintentar_analisis_cierre' %}", {
+                    method: 'POST',
+                    headers: {'X-CSRFToken': '{{ csrf_token }}', 'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        operacion: "{{ operacion_reintento|escapejs }}",
+                        version: {{ version_cierre }},
+                    }),
+                });
+                const data = await respuesta.json();
+                if (respuesta.ok) {
+                    window.location.assign(data.result_url);
+                    return;
+                }
+                if (respuesta.status === 503) {
+                    mensaje.textContent = data.message || 'El análisis sigue sin estar disponible. Tu cierre está guardado.';
+                    mensaje.style.display = 'block';
+                    boton.disabled = false;
+                    return;
+                }
+                throw new Error(data.code || 'retry_failed');
+            } catch (error) {
+                mensaje.textContent = 'No se pudo reintentar ahora. Tu cierre está guardado.';
+                mensaje.style.display = 'block';
+                boton.disabled = false;
+            }
+        });
+        </script>
+        {% endif %}
     </section>
     {% endif %}
 
