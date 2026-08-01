@@ -15,7 +15,8 @@ from django.utils import timezone
 from django.apps import apps
 
 from diario.models import (
-    Gesto, RegistroGesto, ProsocheMes, ProsocheHabito, TriggerHabito, Insignia,
+    CierreNocturnoOperacion, Gesto, RegistroGesto, ProsocheDiario,
+    ProsocheMes, ProsocheHabito, TriggerHabito, Insignia,
 )
 from diario.services import HabitosService, InsigniasService
 
@@ -179,12 +180,30 @@ class AceptarHabitoInvitacionTestCase(TestCase):
 
     def test_crea_gesto_no_prosochehabito(self):
         import json
+        import uuid
 
         count_prosoche_antes = ProsocheHabito.objects.count()
+        hoy = timezone.localdate()
+        mes = ProsocheMes.objects.create(
+            usuario=self.usuario, mes=hoy.strftime('%B'), año=hoy.year,
+        )
+        entrada = ProsocheDiario.objects.create(
+            prosoche_mes=mes, fecha=hoy, cierre_version=1,
+            cierre_confirmado_en=timezone.now(),
+        )
+        propuesta = {
+            'nombre': 'Estirar', 'descripcion': 'Por la mañana',
+            'tipo': 'positivo',
+        }
+        operacion = CierreNocturnoOperacion.objects.create(
+            entrada=entrada, idempotency_key=uuid.uuid4(), expected_version=0,
+            result_version=1, payload_hash='f' * 64, estado='completed',
+            resultado={'propuesta_habito': propuesta},
+        )
 
         response = self.client.post(
             reverse('diario:aceptar_habito_invitacion'),
-            data=json.dumps({'nombre': 'Estirar', 'descripcion': 'Por la mañana', 'tipo': 'positivo'}),
+            data=json.dumps({**propuesta, 'operacion': str(operacion.idempotency_key)}),
             content_type='application/json',
         )
 

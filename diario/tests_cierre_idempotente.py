@@ -390,6 +390,66 @@ class PresenciaCierreViewTests(TestCase):
         self.assertIn('Lectura canónica', html)
         self.assertIn('Marta', html)
 
+    def test_get_sin_uuid_resuelve_la_operacion_completada_de_la_version_activa(self):
+        obsoleta = self.operacion(resultado={
+            'respuesta_joi': 'Lectura obsoleta', 'reflexiones': [],
+            'simbiosis': {'personas': ['Marta']},
+        })
+        entrada = obsoleta.entrada
+        entrada.cierre_version = 2
+        entrada.save(update_fields=['cierre_version'])
+        activa = CierreNocturnoOperacion.objects.create(
+            entrada=entrada, idempotency_key=uuid.uuid4(), expected_version=1,
+            result_version=2, payload_hash='b' * 64, estado='completed',
+            enrichment_payload={
+                **obsoleta.enrichment_payload,
+                'habitos_completados': [self.gesto.pk],
+            },
+            resultado={
+                'respuesta_joi': 'Lectura durable activa',
+                'reflexiones': [123],
+                'propuesta_habito': {
+                    'nombre': 'Preparar mochila',
+                    'descripcion': 'Antes de dormir',
+                    'tipo': 'positivo',
+                },
+                'simbiosis': {'personas': ['Ana']},
+            },
+        )
+        CierreNocturnoOperacion.objects.create(
+            entrada=entrada, idempotency_key=uuid.uuid4(), expected_version=2,
+            result_version=None, payload_hash='b' * 64, estado='noop',
+            resultado={'canonical_operation_id': activa.pk},
+        )
+
+        html = self.client.get(self.url).content.decode()
+
+        self.assertIn('Lectura durable activa', html)
+        self.assertIn('Preparar mochila', html)
+        self.assertIn('Ana', html)
+        self.assertIn('Tu reflexión quedó guardada', html)
+        self.assertNotIn('Lectura obsoleta', html)
+
+    def test_get_sin_uuid_no_reutiliza_lectura_obsoleta_si_la_version_activa_fallo(self):
+        obsoleta = self.operacion(resultado={
+            'respuesta_joi': 'No debe reaparecer',
+            'simbiosis': {'personas': ['Marta']},
+        })
+        entrada = obsoleta.entrada
+        entrada.cierre_version = 2
+        entrada.respuesta_joi_cierre = 'No debe reaparecer'
+        entrada.save(update_fields=['cierre_version', 'respuesta_joi_cierre'])
+        CierreNocturnoOperacion.objects.create(
+            entrada=entrada, idempotency_key=uuid.uuid4(), expected_version=1,
+            result_version=2, payload_hash='c' * 64, estado='failed',
+            enrichment_payload=obsoleta.enrichment_payload, resultado={},
+        )
+
+        html = self.client.get(self.url).content.decode()
+
+        self.assertNotIn('No debe reaparecer', html)
+        self.assertIn('análisis no está disponible', html)
+
     def test_propuesta_valida_es_accionable_y_aceptacion_no_duplica(self):
         propuesta = {'nombre': 'Preparar mañana', 'descripcion': 'Dejar ropa lista', 'tipo': 'positivo'}
         op = self.operacion(resultado={
@@ -401,13 +461,73 @@ class PresenciaCierreViewTests(TestCase):
         self.assertIn('id="habito-invitacion"', html)
         self.assertIn(reverse('diario:aceptar_habito_invitacion'), html)
         self.assertIn('X-CSRFToken', html)
-        body = json.dumps(propuesta)
+        self.assertIn('operacion:', html)
+        self.assertIn(str(op.idempotency_key).replace('-', '\\u002D'), html)
+        body = json.dumps({**propuesta, 'operacion': str(op.idempotency_key)})
         endpoint = reverse('diario:aceptar_habito_invitacion')
         primero = self.client.post(endpoint, body, content_type='application/json').json()
         segundo = self.client.post(endpoint, body, content_type='application/json').json()
         self.assertTrue(primero['creado'])
         self.assertFalse(segundo['creado'])
         self.assertEqual(Gesto.objects.filter(usuario=self.user, nombre='Preparar mañana').count(), 1)
+
+    def test_aceptar_habito_rechaza_payload_manipulado_y_operacion_ajena(self):
+        propuesta = {'nombre': 'Preparar mañana', 'descripcion': 'Dejar ropa lista', 'tipo': 'positivo'}
+        op = self.operacion(resultado={'propuesta_habito': propuesta})
+        endpoint = reverse('diario:aceptar_habito_invitacion')
+
+        manipulado = self.client.post(endpoint, json.dumps({
+            **propuesta, 'nombre': 'Hábito inyectado',
+            'operacion': str(op.idempotency_key),
+        }), content_type='application/json')
+
+        ajeno = User.objects.create_user('cierre-ajeno')
+        mes = ProsocheMes.objects.create(
+            usuario=ajeno, mes=timezone.localdate().strftime('%B'),
+            año=timezone.localdate().year,
+        )
+        entrada_ajena = ProsocheDiario.objects.create(
+            prosoche_mes=mes, fecha=timezone.localdate(), cierre_version=1,
+            cierre_confirmado_en=timezone.now(),
+        )
+        op_ajena = CierreNocturnoOperacion.objects.create(
+            entrada=entrada_ajena, idempotency_key=uuid.uuid4(),
+            expected_version=0, result_version=1, payload_hash='d' * 64,
+            estado='completed', resultado={'propuesta_habito': propuesta},
+        )
+        respuesta_ajena = self.client.post(endpoint, json.dumps({
+            **propuesta, 'operacion': str(op_ajena.idempotency_key),
+        }), content_type='application/json')
+
+        self.assertEqual(manipulado.status_code, 400)
+        self.assertEqual(respuesta_ajena.status_code, 400)
+        self.assertFalse(Gesto.objects.filter(usuario=self.user).exclude(pk=self.gesto.pk).exists())
+
+    def test_aceptar_habito_rechaza_operacion_obsoleta_fallida_o_noop(self):
+        propuesta = {'nombre': 'Preparar mañana', 'descripcion': 'Dejar ropa lista', 'tipo': 'positivo'}
+        obsoleta = self.operacion(resultado={'propuesta_habito': propuesta})
+        entrada = obsoleta.entrada
+        entrada.cierre_version = 2
+        entrada.save(update_fields=['cierre_version'])
+        fallida = CierreNocturnoOperacion.objects.create(
+            entrada=entrada, idempotency_key=uuid.uuid4(), expected_version=1,
+            result_version=2, payload_hash='e' * 64, estado='failed',
+            resultado={'propuesta_habito': propuesta},
+        )
+        noop = CierreNocturnoOperacion.objects.create(
+            entrada=entrada, idempotency_key=uuid.uuid4(), expected_version=2,
+            result_version=None, payload_hash='e' * 64, estado='noop',
+            resultado={'canonical_operation_id': fallida.pk},
+        )
+        endpoint = reverse('diario:aceptar_habito_invitacion')
+
+        for operacion in (obsoleta, fallida, noop):
+            response = self.client.post(endpoint, json.dumps({
+                **propuesta, 'operacion': str(operacion.idempotency_key),
+            }), content_type='application/json')
+            self.assertEqual(response.status_code, 400)
+
+        self.assertFalse(Gesto.objects.filter(usuario=self.user).exclude(pk=self.gesto.pk).exists())
 
     def test_sin_propuesta_no_renderiza_card_vacia(self):
         op = self.operacion(resultado={'respuesta_joi': '', 'simbiosis': {'personas': []}})

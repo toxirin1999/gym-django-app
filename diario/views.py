@@ -3538,6 +3538,14 @@ def presencia_cierre(request):
             ).first()
         except (ValueError, TypeError):
             operacion = None
+    elif entrada and entrada.cierre_confirmado_en and entrada.cierre_version:
+        # La lectura del cierre es durable: la versión activa es la autoridad,
+        # no el UUID efímero conservado por el navegador. result_version excluye
+        # por contrato los noop y evita rescatar resultados de versiones viejas.
+        operacion = CierreNocturnoOperacion.objects.filter(
+            entrada=entrada,
+            result_version=entrada.cierre_version,
+        ).first()
     operacion_presentacion = cierre_service.operacion_canonica(operacion) if operacion else None
     resultado = (operacion_presentacion.resultado or {}) if operacion_presentacion else {}
     # Los noop antiguos pueden llevar una copia canónica embebida. Se conserva
@@ -3575,10 +3583,16 @@ def presencia_cierre(request):
     return render(request, 'diario/presencia_cierre.html', {
         'entrada': entrada_presentacion, 'vires': vires_presentacion, 'form': form,
         'habitos_con_estado': habitos_con_estado, 'hoy': hoy, 'dia_num': hoy.day,
-        'joi_respuesta': resultado.get('respuesta_joi') or (
-            entrada_presentacion.respuesta_joi_cierre if entrada else None
+        'joi_respuesta': (
+            resultado.get('respuesta_joi')
+            if operacion_presentacion
+            else (entrada_presentacion.respuesta_joi_cierre if entrada else None)
         ),
         'propuesta_habito': propuesta_habito,
+        'operacion_habito': (
+            str(operacion_presentacion.idempotency_key)
+            if propuesta_habito and operacion_presentacion else ''
+        ),
         'gestos_guardados': gestos_guardados,
         'personas_detectadas': personas_detectadas,
         'reflexion_guardada': bool(resultado.get('reflexiones')),
@@ -3637,15 +3651,42 @@ def promover_persona_interina(request):
 @login_required
 @require_http_methods(["POST"])
 def aceptar_habito_invitacion(request):
-    """AJAX: crea un Gesto desde la invitación de JOI (Phase 2.0D)."""
+    """Crea un Gesto solo desde la propuesta durable del cierre activo."""
     try:
+        from diario.models import CierreNocturnoOperacion
+
         data = json.loads(request.body)
         nombre = data.get('nombre', '').strip()[:100]
         descripcion = data.get('descripcion', '').strip()
-        tipo_propuesta = data.get('tipo', 'positivo')
+        tipo_propuesta = data.get('tipo', '').strip()
+        operacion_key = data.get('operacion', '')
+        hoy = timezone.localdate()
+        try:
+            operacion = CierreNocturnoOperacion.objects.select_related(
+                'entrada__prosoche_mes'
+            ).get(
+                idempotency_key=operacion_key,
+                entrada__prosoche_mes__usuario=request.user,
+                entrada__fecha=hoy,
+                estado='completed',
+            )
+        except (CierreNocturnoOperacion.DoesNotExist, ValueError, TypeError):
+            return JsonResponse({'ok': False, 'error': 'Invitación no válida'}, status=400)
+
+        if operacion.result_version != operacion.entrada.cierre_version:
+            return JsonResponse({'ok': False, 'error': 'Invitación obsoleta'}, status=400)
+        propuesta = (operacion.resultado or {}).get('propuesta_habito')
+        if not isinstance(propuesta, dict):
+            return JsonResponse({'ok': False, 'error': 'Invitación no válida'}, status=400)
+        propuesta_persistida = (
+            str(propuesta.get('nombre') or '').strip()[:100],
+            str(propuesta.get('descripcion') or '').strip(),
+            str(propuesta.get('tipo') or '').strip(),
+        )
+        if (nombre, descripcion, tipo_propuesta) != propuesta_persistida or not nombre:
+            return JsonResponse({'ok': False, 'error': 'La invitación fue modificada'}, status=400)
+
         tipo = 'suelto' if tipo_propuesta == 'negativo' else 'cultivo'
-        if not nombre:
-            return JsonResponse({'ok': False, 'error': 'Sin nombre'}, status=400)
 
         gesto, creado = Gesto.objects.get_or_create(
             usuario=request.user,

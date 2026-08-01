@@ -275,6 +275,7 @@
                 method: 'POST',
                 headers: {'X-CSRFToken': '{{ csrf_token }}', 'Content-Type': 'application/json'},
                 body: JSON.stringify({
+                    operacion: "{{ operacion_habito|escapejs }}",
                     nombre: "{{ propuesta_habito.nombre|escapejs }}",
                     descripcion: "{{ propuesta_habito.descripcion|escapejs }}",
                     tipo: "{{ propuesta_habito.tipo }}"
