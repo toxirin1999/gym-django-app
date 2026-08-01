@@ -26,7 +26,6 @@ NOTA: El resolver es defensivo; degrada gracefully si algún módulo no está di
 """
 
 import logging
-from datetime import date
 from django.utils import timezone
 
 logger = logging.getLogger(__name__)
@@ -131,7 +130,7 @@ def _check_protegiendo(usuario):
         from entrenos.models import EntrenoRealizado
         sesion = EntrenoRealizado.objects.filter(
             cliente__user=usuario,
-            fecha=date.today()
+            fecha=timezone.localdate()
         ).order_by('-id').first()
         if sesion and sesion.sesion_detalle and sesion.sesion_detalle.get('rpe_medio', 0) >= 9:
             motivo = 'rpe_extremo'
@@ -174,7 +173,7 @@ def _check_protegiendo(usuario):
         from hyrox.models import RecoveryTestLog
         recovery_pending = RecoveryTestLog.objects.filter(
             cliente__user=usuario,
-            fecha=date.today(),
+            fecha=timezone.localdate(),
             es_apto=False
         ).exists()
         if recovery_pending:
@@ -288,31 +287,42 @@ def _check_en_margen(usuario, decision_gym=None):
             pass
 
         # Check 5: ¿RPE extremo?
-        try:
-            from entrenos.models import EntrenoRealizado
-            sesion = EntrenoRealizado.objects.filter(
-                cliente__user=usuario,
-                fecha=date.today()
-            ).order_by('-id').first()
-            if sesion and sesion.sesion_detalle and sesion.sesion_detalle.get('rpe_medio', 0) >= 9:
-                return None
-        except Exception:
-            pass
+        # Sin try/except local: si esta query falla, debe propagar al except
+        # general de _check_en_margen (más abajo) y degradar a None/SILENCIO
+        # en vez de asumir "sin RPE extremo" y seguir hacia EN_MARGEN (fail-open).
+        # sesion_detalle es el related_name inverso de SesionEntrenamiento
+        # (OneToOne), no un JSONField: se lee por atributo, no por .get().
+        from entrenos.models import EntrenoRealizado
+        sesion = EntrenoRealizado.objects.filter(
+            cliente__user=usuario,
+            fecha=timezone.localdate()
+        ).order_by('-id').first()
+        sesion_detalle = getattr(sesion, 'sesion_detalle', None) if sesion else None
+        if sesion_detalle and (sesion_detalle.rpe_medio or 0) >= 9:
+            return None
 
         # Check 6: ¿Sesión principal del día ya fue completada?
         # Si existe EntrenoRealizado hoy, la acción principal ya se consumió.
         # Retorna None para que resolver pase a OBSERVANDO/SILENCIO.
-        try:
-            from entrenos.models import EntrenoRealizado
-            if EntrenoRealizado.objects.filter(
-                cliente=cliente,
-                fecha=date.today()
-            ).exists():
-                # Sesión principal ya completada hoy → no hay EN_MARGEN activo
-                logger.debug(f"Check 7: EntrenoRealizado hoy encontrado para {cliente.id} → retornando None")
-                return None
-        except Exception as e:
-            logger.debug(f"Check 7 exception: {e}")
+        # Misma razón que Check 5: sin try/except local, fail-safe hacia el
+        # except general de la función en vez de fail-open hacia EN_MARGEN.
+        if EntrenoRealizado.objects.filter(
+            cliente=cliente,
+            fecha=timezone.localdate()
+        ).exists():
+            logger.debug(f"Check 6: EntrenoRealizado hoy encontrado para {cliente.id} → retornando None")
+            return None
+
+        # Check 6b: registro rápido de gym sin pasar por EntrenoRealizado
+        # (entrenos/views.py::registrar_actividad_libre permite tipo='gym' directo
+        # sobre ActividadRealizada). Misma razón: sesión ya completada hoy.
+        from entrenos.models import ActividadRealizada
+        if ActividadRealizada.objects.filter(
+            cliente=cliente,
+            tipo='gym',
+            fecha=timezone.localdate()
+        ).exists():
+            return None
 
         # ✅ Todas las condiciones se cumplen: EN_MARGEN
         # Matizar texto según estado de sesión
@@ -333,7 +343,7 @@ def _check_en_margen(usuario, decision_gym=None):
         ejercicios = entrenamiento.get('ejercicios', [])
 
         params = {
-            'fecha': date.today().strftime('%Y-%m-%d'),
+            'fecha': timezone.localdate().strftime('%Y-%m-%d'),
             'rutina_nombre': rutina_nombre,
             'ejercicios': json_module.dumps(ejercicios),
             'modo_reducido': modo_reducido,
@@ -355,7 +365,7 @@ def _check_en_margen(usuario, decision_gym=None):
 
 
     except Exception as e:
-        logger.debug(f"_check_en_margen: {e}")
+        logger.exception(f"_check_en_margen: {e}")
         return None
 
 
@@ -394,7 +404,7 @@ def _check_observando(usuario):
 
         prosoche_hoy = ProsocheDiario.objects.filter(
             prosoche_mes__usuario=usuario,
-            fecha=date.today()
+            fecha=timezone.localdate()
         ).first()
 
         if prosoche_hoy:
