@@ -3460,6 +3460,10 @@ def presencia_cierre(request):
             'version': comando.entrada.cierre_version,
             'operacion': str(comando.operacion.idempotency_key),
             'refresh_joi': bool(resultado_enriquecimiento.get('respuesta_joi')),
+            'result_url': (
+                f"{reverse('diario:presencia_cierre')}"
+                f"?cierre_operacion={comando.operacion.idempotency_key}"
+            ),
         }
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return JsonResponse(respuesta)
@@ -3474,7 +3478,28 @@ def presencia_cierre(request):
             ).first()
         except (ValueError, TypeError):
             operacion = None
-    resultado = operacion.resultado if operacion else {}
+    operacion_presentacion = cierre_service.operacion_canonica(operacion) if operacion else None
+    resultado = (operacion_presentacion.resultado or {}) if operacion_presentacion else {}
+    # Los noop antiguos pueden llevar una copia canónica embebida. Se conserva
+    # como fallback para que el GET sea estable aunque la operación original ya
+    # no esté disponible en una importación histórica.
+    if operacion and not resultado:
+        resultado = (operacion.resultado or {}).get('canonical_result') or {}
+    payload_resultado = (
+        operacion_presentacion.enrichment_payload
+        if operacion_presentacion else {}
+    ) or {}
+    gesto_ids_guardados = payload_resultado.get('habitos_completados') or []
+    gestos_guardados = list(Gesto.objects.filter(
+        usuario=request.user, pk__in=gesto_ids_guardados,
+    ).order_by('nombre'))
+    personas_detectadas = (resultado.get('simbiosis') or {}).get('personas') or []
+    propuesta_habito = resultado.get('propuesta_habito')
+    if not isinstance(propuesta_habito, dict) or not str(propuesta_habito.get('nombre') or '').strip():
+        propuesta_habito = None
+    enriquecimiento_fallido = bool(
+        operacion_presentacion and operacion_presentacion.estado == 'failed'
+    )
     entrada_presentacion = entrada or ProsocheDiario(fecha=hoy)
     vires_presentacion = vires or SeguimientoVires(usuario=request.user, fecha=hoy)
     cierre_confirmado = bool(entrada and entrada.cierre_confirmado_en)
@@ -3493,8 +3518,13 @@ def presencia_cierre(request):
         'joi_respuesta': resultado.get('respuesta_joi') or (
             entrada_presentacion.respuesta_joi_cierre if entrada else None
         ),
-        'propuesta_habito': resultado.get('propuesta_habito'),
-        'guardado': bool(operacion),
+        'propuesta_habito': propuesta_habito,
+        'gestos_guardados': gestos_guardados,
+        'personas_detectadas': personas_detectadas,
+        'reflexion_guardada': bool(resultado.get('reflexiones')),
+        'enriquecimiento_fallido': enriquecimiento_fallido,
+        'version_cierre': entrada_presentacion.cierre_version,
+        'guardado': bool(operacion) or cierre_confirmado,
         'mostrar_form': request.GET.get('editar') == '1' or not cierre_confirmado,
     })
 

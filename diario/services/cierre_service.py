@@ -1,5 +1,7 @@
 import hashlib
 import json
+import re
+import unicodedata
 from dataclasses import dataclass
 
 from django.db import transaction
@@ -114,6 +116,22 @@ def operacion_canonica(operacion):
     return operacion
 
 
+def _texto_comparable(texto):
+    """Normaliza diferencias triviales para no aprender dos veces lo mismo."""
+    texto = unicodedata.normalize('NFKC', texto or '').casefold()
+    return ' '.join(re.findall(r'\w+', texto, flags=re.UNICODE))
+
+
+def _manual_activo_equivalente(usuario, texto):
+    objetivo = _texto_comparable(texto)
+    if not objetivo:
+        return False
+    return any(
+        _texto_comparable(entrada) == objetivo
+        for entrada in usuario.manual_david.filter(activa=True).values_list('entrada', flat=True)
+    )
+
+
 def ejecutar_enriquecimiento_cierre(operacion_id):
     """IA fuera de locks; la proyección final se materializa una sola vez."""
     with transaction.atomic():
@@ -166,6 +184,9 @@ def ejecutar_enriquecimiento_cierre(operacion_id):
 
         ids = {'reflexiones': [], 'manual': [], 'interacciones': [], 'sombras': []}
         etiquetas = ['cierre_dia', *(parseo.get('etiquetas') or [])]
+        categoria_estoica = (enriquecido.get('categoria_estoica') or '').strip()
+        if categoria_estoica and categoria_estoica not in etiquetas:
+            etiquetas.append(categoria_estoica)
         if texto:
             reflexion = ReflexionLibre.objects.create(
                 usuario=usuario, contenido=texto, tipo='espontanea',
@@ -183,7 +204,7 @@ def ejecutar_enriquecimiento_cierre(operacion_id):
 
         from joi.models import ManualDavid
         micro = (enriquecido.get('micro_verdad') or '').strip()
-        if len(micro) > 5:
+        if len(micro) > 5 and not _manual_activo_equivalente(usuario, micro):
             manual = ManualDavid.objects.create(user=usuario, entrada=micro, origen='patron_detectado')
             ids['manual'].append(manual.pk)
         tipos = {choice[0] for choice in Interaccion.TIPO_INTERACCION_CHOICES}
@@ -202,18 +223,45 @@ def ejecutar_enriquecimiento_cierre(operacion_id):
                 interaccion.personas.add(persona)
                 ids['interacciones'].append(interaccion.pk)
             else:
-                interina, creada = PersonaInterina.objects.get_or_create(
-                    usuario=usuario, nombre=nombre,
-                )
+                interina = PersonaInterina.objects.select_for_update().filter(
+                    usuario=usuario, nombre__iexact=nombre,
+                ).first()
+                creada = interina is None
+                if creada:
+                    interina = PersonaInterina.objects.create(usuario=usuario, nombre=nombre)
                 if not creada:
                     interina.veces_mencionada += 1
-                    interina.save(update_fields=['veces_mencionada', 'ultima_deteccion'])
+                    if interina.estado == 'descartada':
+                        interina.menciones_desde_descarte += 1
+                    interina.save(update_fields=[
+                        'veces_mencionada', 'menciones_desde_descarte', 'ultima_deteccion',
+                    ])
                 sombra = InteraccionSombra.objects.create(
                     persona_interina=interina, descripcion=item.get('descripcion') or '',
                     mi_sentir=item.get('mi_sentir') or '', aprendizaje=item.get('aprendizaje') or '',
                     tipo_interaccion=tipo, friccion_no=payload['friccion_no'],
                 )
                 ids['sombras'].append(sombra.pk)
+                if creada:
+                    nota = (
+                        f"Entidad nueva detectada: '{nombre}'. "
+                        'Pendiente de validación si se repite.'
+                    )
+                    if not _manual_activo_equivalente(usuario, nota):
+                        manual = ManualDavid.objects.create(
+                            user=usuario, entrada=nota, origen='patron_detectado',
+                        )
+                        ids['manual'].append(manual.pk)
+                if (
+                    interina.estado == 'descartada'
+                    and interina.menciones_desde_descarte >= 2
+                ):
+                    interina.estado = 'sombra'
+                    interina.menciones_desde_descarte = 0
+                    interina.save(update_fields=['estado', 'menciones_desde_descarte'])
+                elif interina.estado == 'sombra' and interina.veces_mencionada >= 2:
+                    interina.estado = 'radar'
+                    interina.save(update_fields=['estado'])
 
         resultado = {
             **ids, 'respuesta_joi': respuesta or '',

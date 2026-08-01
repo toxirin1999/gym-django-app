@@ -13,11 +13,16 @@ from diario.models import (
     Gesto,
     ProsocheDiario,
     ProsocheMes,
+    PersonaInterina,
     ReflexionLibre,
     RegistroGesto,
     SeguimientoVires,
 )
-from diario.services.cierre_service import ConflictoVersionCierre, ejecutar_cierre_nocturno
+from diario.services.cierre_service import (
+    ConflictoVersionCierre,
+    ejecutar_cierre_nocturno,
+    ejecutar_enriquecimiento_cierre,
+)
 
 
 class CierreDiarioFormTests(TestCase):
@@ -115,6 +120,108 @@ class CierreNocturnoCommandTests(TestCase):
         self.assertFalse(RegistroGesto.objects.filter(gesto=self.gesto, fecha=self.hoy).exists())
 
 
+class ProyeccionesCierreSimbiosisTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user('cierre-proyecciones')
+        self.hoy = timezone.localdate()
+
+    def _operacion(self, texto, expected=0):
+        resultado = ejecutar_cierre_nocturno(
+            usuario=self.user,
+            fecha=self.hoy,
+            payload={
+                'reflexion_libre': texto,
+                'friccion_no': 3,
+                'cuerpo_cierre': '',
+                'estado_animo_noche': 4,
+                'habitos_completados': [],
+                'simbiosis_respuesta': '',
+            },
+            idempotency_key=uuid.uuid4(),
+            expected_version=expected,
+        )
+        return resultado.operacion
+
+    def _enriquecer(self, operacion, *, nombre='Ana', micro='Necesito poner límites claros.'):
+        enriquecido = {
+            'titulo_logos': 'Un límite sereno',
+            'categoria_estoica': 'templanza',
+            'micro_verdad': micro,
+            'interacciones': [{
+                'persona': nombre,
+                'tipo': 'neutra',
+                'descripcion': 'Conversamos.',
+            }] if nombre else [],
+        }
+        with (
+            patch('joi.services.parsear_cierre_diario', return_value={
+                'personas': [nombre] if nombre else [], 'etiquetas': ['limites'],
+            }),
+            patch('joi.services.enriquecer_cierre', return_value=enriquecido),
+            patch('joi.services.generar_respuesta_cierre', return_value='Lectura'),
+        ):
+            return ejecutar_enriquecimiento_cierre(operacion.pk)
+
+    def test_persona_interina_case_insensitive_incrementa_y_nota_inicial_es_unica(self):
+        from joi.models import ManualDavid
+
+        primera = self._operacion('Primera mención')
+        self._enriquecer(primera, nombre='Ana', micro='')
+        segunda = self._operacion('Segunda mención', expected=1)
+        self._enriquecer(segunda, nombre='ana', micro='')
+
+        self.assertEqual(PersonaInterina.objects.count(), 1)
+        interina = PersonaInterina.objects.get()
+        self.assertEqual(interina.nombre, 'Ana')
+        self.assertEqual(interina.veces_mencionada, 2)
+        self.assertEqual(interina.estado, 'radar')
+        self.assertEqual(
+            ManualDavid.objects.filter(
+                user=self.user, entrada__icontains="Entidad nueva detectada: 'Ana'",
+            ).count(),
+            1,
+        )
+
+    def test_descartada_reaparece_tras_dos_nuevas_sin_saltar_a_radar(self):
+        interina = PersonaInterina.objects.create(
+            usuario=self.user, nombre='Marta', estado='descartada',
+            veces_mencionada=8, menciones_desde_descarte=0,
+        )
+        primera = self._operacion('Marta una vez')
+        self._enriquecer(primera, nombre='marta', micro='')
+        interina.refresh_from_db()
+        self.assertEqual(interina.estado, 'descartada')
+        self.assertEqual(interina.menciones_desde_descarte, 1)
+
+        segunda = self._operacion('Marta otra vez', expected=1)
+        self._enriquecer(segunda, nombre='MARTA', micro='')
+        interina.refresh_from_db()
+        self.assertEqual(interina.estado, 'sombra')
+        self.assertEqual(interina.menciones_desde_descarte, 0)
+        self.assertEqual(interina.veces_mencionada, 10)
+
+    def test_microverdad_activa_obvia_y_replay_no_crean_duplicados(self):
+        from joi.models import ManualDavid
+
+        ManualDavid.objects.create(
+            user=self.user, entrada='Necesito poner límites claros.',
+            origen='patron_detectado', activa=True,
+        )
+        operacion = self._operacion('Aprendí algo')
+        self._enriquecer(operacion, nombre='', micro='necesito poner límites claros.')
+        self._enriquecer(operacion, nombre='', micro='necesito poner límites claros.')
+
+        self.assertEqual(ManualDavid.objects.filter(user=self.user, activa=True).count(), 1)
+        self.assertEqual(ReflexionLibre.objects.count(), 1)
+
+    def test_categoria_estoica_se_conserva_en_etiquetas_de_reflexion(self):
+        operacion = self._operacion('Hoy elegí templanza')
+        self._enriquecer(operacion, nombre='', micro='')
+
+        etiquetas = ReflexionLibre.objects.get().etiquetas.split(',')
+        self.assertIn('templanza', etiquetas)
+
+
 class PresenciaCierreViewTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user('cierre-view', password='x')
@@ -133,6 +240,28 @@ class PresenciaCierreViewTests(TestCase):
             'expected_version': '0',
             **overrides,
         }
+
+    def operacion(self, *, resultado=None, estado='completed', token=None):
+        token = token or uuid.uuid4()
+        comando = ejecutar_cierre_nocturno(
+            usuario=self.user,
+            fecha=timezone.localdate(),
+            payload={
+                'reflexion_libre': 'Cierre real',
+                'friccion_no': 3,
+                'cuerpo_cierre': '',
+                'estado_animo_noche': 4,
+                'habitos_completados': [self.gesto.pk],
+                'simbiosis_respuesta': '',
+                'simbiosis_pregunta': '',
+            },
+            idempotency_key=token,
+            expected_version=0,
+        )
+        comando.operacion.estado = estado
+        comando.operacion.resultado = resultado or {}
+        comando.operacion.save(update_fields=['estado', 'resultado', 'updated_at'])
+        return comando.operacion
 
     def test_get_es_puro(self):
         response = self.client.get(self.url)
@@ -177,6 +306,101 @@ class PresenciaCierreViewTests(TestCase):
         self.assertIn('idempotency_key', html)
         self.assertIn('expected_version', html)
 
+    @patch('diario.services.cierre_service.ejecutar_enriquecimiento_cierre', return_value={})
+    def test_ajax_devuelve_url_estable_y_js_navega_sin_panel_efimero(self, _enriquecer):
+        response = self.client.post(self.url, self.data(), HTTP_X_REQUESTED_WITH='XMLHttpRequest')
+        token = response.json()['operacion']
+        self.assertEqual(
+            response.json()['result_url'],
+            f'{self.url}?cierre_operacion={token}',
+        )
+        html = self.client.get(self.url).content.decode()
+        self.assertIn('window.location.assign(data.result_url)', html)
+        self.assertNotIn('setTimeout', html)
+        self.assertNotIn('cierre-respuesta-visible', html)
+        self.assertNotIn("window.location.href = \"{% url 'diario:dashboard_diario' %}\"", html)
+
+    def test_resultado_persistente_explica_lo_guardado_sin_convertirlo_en_voz_joi(self):
+        reflexion = ReflexionLibre.objects.create(
+            usuario=self.user, contenido='Cierre real', tipo='espontanea'
+        )
+        op = self.operacion(resultado={
+            'respuesta_joi': 'Veo que hoy protegiste un límite.',
+            'reflexiones': [reflexion.pk],
+            'manual': [91],
+            'interacciones': [81],
+            'sombras': [71],
+            'simbiosis': {'personas': ['Ana', 'Luis']},
+        })
+        html = self.client.get(f'{self.url}?cierre_operacion={op.idempotency_key}').content.decode()
+        self.assertIn('Veo que hoy protegiste un límite.', html)
+        self.assertIn('Lo que guardó el Diario', html)
+        self.assertIn('1 gesto', html)
+        self.assertIn('Leer', html)
+        self.assertIn('Tu reflexión quedó guardada', html)
+        self.assertIn('Ana', html)
+        self.assertIn('Luis', html)
+        self.assertIn('id="editar-cierre"', html)
+        self.assertIn('editar=1', html)
+        self.assertNotIn('JOI — Lo que guardó el Diario', html)
+
+    def test_resultado_sin_voz_joi_usa_confirmacion_neutral(self):
+        op = self.operacion(resultado={
+            'respuesta_joi': '', 'reflexiones': [], 'manual': [],
+            'interacciones': [], 'sombras': [], 'simbiosis': {'personas': []},
+        })
+        html = self.client.get(f'{self.url}?cierre_operacion={op.idempotency_key}').content.decode()
+        self.assertIn('Cierre guardado.', html)
+        self.assertNotIn('Invitación de JOI', html)
+
+    def test_fallo_enriquecimiento_no_afirma_aprendizajes(self):
+        op = self.operacion(estado='failed', resultado={})
+        html = self.client.get(f'{self.url}?cierre_operacion={op.idempotency_key}').content.decode()
+        self.assertIn('Cierre guardado.', html)
+        self.assertIn('análisis no está disponible', html)
+        self.assertIn('puedes reintentarlo', html)
+        self.assertNotIn('Relaciones detectadas', html)
+        self.assertNotIn('Tu reflexión quedó guardada', html)
+
+    def test_noop_resuelve_resultado_canonico_en_get(self):
+        canonical = self.operacion(resultado={
+            'respuesta_joi': 'Lectura canónica', 'reflexiones': [],
+            'manual': [], 'interacciones': [], 'sombras': [],
+            'simbiosis': {'personas': ['Marta']},
+        })
+        replay = ejecutar_cierre_nocturno(
+            usuario=self.user, fecha=timezone.localdate(),
+            payload=canonical.enrichment_payload,
+            idempotency_key=uuid.uuid4(), expected_version=1,
+        ).operacion
+        html = self.client.get(f'{self.url}?cierre_operacion={replay.idempotency_key}').content.decode()
+        self.assertIn('Lectura canónica', html)
+        self.assertIn('Marta', html)
+
+    def test_propuesta_valida_es_accionable_y_aceptacion_no_duplica(self):
+        propuesta = {'nombre': 'Preparar mañana', 'descripcion': 'Dejar ropa lista', 'tipo': 'positivo'}
+        op = self.operacion(resultado={
+            'respuesta_joi': '', 'propuesta_habito': propuesta,
+            'reflexiones': [], 'manual': [], 'interacciones': [], 'sombras': [],
+            'simbiosis': {'personas': []},
+        })
+        html = self.client.get(f'{self.url}?cierre_operacion={op.idempotency_key}').content.decode()
+        self.assertIn('id="habito-invitacion"', html)
+        self.assertIn(reverse('diario:aceptar_habito_invitacion'), html)
+        self.assertIn('X-CSRFToken', html)
+        body = json.dumps(propuesta)
+        endpoint = reverse('diario:aceptar_habito_invitacion')
+        primero = self.client.post(endpoint, body, content_type='application/json').json()
+        segundo = self.client.post(endpoint, body, content_type='application/json').json()
+        self.assertTrue(primero['creado'])
+        self.assertFalse(segundo['creado'])
+        self.assertEqual(Gesto.objects.filter(usuario=self.user, nombre='Preparar mañana').count(), 1)
+
+    def test_sin_propuesta_no_renderiza_card_vacia(self):
+        op = self.operacion(resultado={'respuesta_joi': '', 'simbiosis': {'personas': []}})
+        html = self.client.get(f'{self.url}?cierre_operacion={op.idempotency_key}').content.decode()
+        self.assertNotIn('id="habito-invitacion"', html)
+
     def test_lectura_ofrece_edicion_explicita_y_editar_precarga_version(self):
         mes = ProsocheMes.objects.create(usuario=self.user, mes=timezone.localdate().strftime('%B'), año=timezone.localdate().year)
         entrada = ProsocheDiario.objects.create(
@@ -190,6 +414,7 @@ class PresenciaCierreViewTests(TestCase):
         self.assertIn('id="cierre-form" style="display:none"', lectura)
         edicion = self.client.get(f'{self.url}?editar=1').content.decode()
         self.assertNotIn('id="cierre-form" style="display:none"', edicion)
+        self.assertNotIn('id="cierre-guardado-titulo"', edicion)
         self.assertIn('value="3"', edicion)
         self.assertIn('<option value="5" selected>Pleno</option>', edicion)
 

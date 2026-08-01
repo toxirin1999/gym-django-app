@@ -201,23 +201,46 @@
 {% block content %}
 <div class="presencia-wrap">
 
-    <!-- Estado guardado sin respuesta de JOI -->
-    {% if guardado and not joi_respuesta %}
-    <div style="text-align:center; padding:2.5rem 1rem; color:rgba(200,195,215,0.6);">
-        <div style="font-size:0.65rem; letter-spacing:0.22em; text-transform:uppercase; margin-bottom:0.6rem;">el cierre quedó registrado.</div>
-        <a href="{% url 'clientes:mockup_demo' %}" style="font-size:0.7rem; letter-spacing:0.15em; text-transform:uppercase; color:rgba(167,139,250,0.7); text-decoration:none;">← volver</a>
-    </div>
-    {% endif %}
+    {% if guardado and not mostrar_form %}
+    <section aria-labelledby="cierre-guardado-titulo" style="background:#1E1B27; border:1px solid #2E2A3A; border-radius:16px; padding:1.25rem; margin-bottom:1rem; box-shadow:0 2px 20px rgba(0,0,0,0.3);">
+        <h1 id="cierre-guardado-titulo" style="font-size:1.2rem; color:#EDE9E3; margin:0 0 1rem;">Cierre guardado.</h1>
 
-    <!-- Respuesta de JOI al cierre -->
-    {% if joi_respuesta %}
-    <div style="background:#1E1B27; border:1px solid #2E2A3A; border-radius:16px; padding:1.25rem; margin-bottom:1rem; box-shadow:0 2px 20px rgba(0,0,0,0.3);">
+        {% if joi_respuesta %}
         <div style="font-size:0.68rem; font-weight:700; letter-spacing:0.14em; text-transform:uppercase; color:#7C7590; margin-bottom:0.9rem;">JOI</div>
         <div style="font-size:1.1rem; font-style:italic; line-height:1.7; color:#EDE9E3;">{{ joi_respuesta }}</div>
+        {% endif %}
+
+        {% if enriquecimiento_fallido %}
+        <div role="status" style="margin-top:1rem; color:rgba(237,233,227,0.72); line-height:1.6;">
+            El cierre está a salvo, pero el análisis no está disponible ahora; puedes reintentarlo volviendo a guardar esta versión.
+        </div>
+        {% else %}
+        <div style="margin-top:1.25rem; padding-top:1.25rem; border-top:1px solid rgba(167,139,250,0.2);">
+            <h2 style="font-size:0.82rem; letter-spacing:0.1em; text-transform:uppercase; color:#A78BFA; margin:0 0 0.8rem;">Lo que guardó el Diario</h2>
+            {% if gestos_guardados %}
+            <p style="color:rgba(237,233,227,0.78); margin:0.45rem 0;">
+                {{ gestos_guardados|length }} gesto{% if gestos_guardados|length != 1 %}s{% endif %} marcado{% if gestos_guardados|length != 1 %}s{% endif %}:
+                {% for gesto in gestos_guardados %}{{ gesto.nombre }}{% if not forloop.last %}, {% endif %}{% endfor %}.
+            </p>
+            {% endif %}
+            {% if reflexion_guardada %}
+            <p style="color:rgba(237,233,227,0.78); margin:0.45rem 0;">Tu reflexión quedó guardada para futuras revisiones.</p>
+            {% endif %}
+            {% if personas_detectadas %}
+            <p style="color:rgba(237,233,227,0.78); margin:0.45rem 0;">
+                Relaciones detectadas:
+                {% for persona in personas_detectadas %}{{ persona }}{% if not forloop.last %}, {% endif %}{% endfor %}.
+            </p>
+            {% endif %}
+            {% if not gestos_guardados and not reflexion_guardada and not personas_detectadas %}
+            <p style="color:rgba(237,233,227,0.65); margin:0;">No hubo elementos adicionales que incorporar a tus memorias.</p>
+            {% endif %}
+        </div>
+        {% endif %}
 
         {% if propuesta_habito %}
         <div id="habito-invitacion" style="margin-top:1.25rem; padding-top:1.25rem; border-top:1px solid rgba(167,139,250,0.2);">
-            <div style="font-size:0.68rem; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:#7C7590; margin-bottom:0.6rem;">Invitación de JOI</div>
+            <div style="font-size:0.68rem; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:#7C7590; margin-bottom:0.6rem;">Invitación del Diario</div>
             <button id="btn-habito" onclick="aceptarHabito()" style="
                 width:100%;
                 background: linear-gradient(135deg, #7C3AED, #A78BFA);
@@ -234,6 +257,7 @@
                 </div>
             </button>
             <div id="habito-ok" style="display:none; text-align:center; color:#A78BFA; font-size:0.85rem; padding:0.5rem; font-style:italic;">El gesto quedó registrado.</div>
+            <div id="habito-error" role="alert" style="display:none; text-align:center; color:#FCA5A5; font-size:0.85rem; padding:0.5rem;">No pudimos añadirlo. Puedes intentarlo de nuevo.</div>
         </div>
 
         <style>
@@ -261,21 +285,24 @@
                 if (d.ok) {
                     document.getElementById('btn-habito').style.display = 'none';
                     document.getElementById('habito-ok').style.display = 'block';
+                } else {
+                    throw new Error(d.error || 'No se pudo guardar');
                 }
             })
             .catch(() => {
                 document.getElementById('btn-habito').disabled = false;
                 document.getElementById('btn-habito').style.opacity = '1';
+                document.getElementById('habito-error').style.display = 'block';
             });
         }
         </script>
         {% endif %}
 
-        <a href="{% url 'clientes:mockup_demo' %}" style="display:block; margin-top:1.5rem; background:#2E2A3A; border:none; border-radius:12px; padding:0.85rem; color:#A78BFA; font-family:-apple-system,BlinkMacSystemFont,sans-serif; font-size:0.9rem; font-weight:600; text-align:center; text-decoration:none; transition:background 0.15s;">
-            Continuar →
+        <a href="{% url 'diario:dashboard_diario' %}" style="display:block; margin-top:1.5rem; background:#2E2A3A; border:none; border-radius:12px; padding:0.85rem; color:#A78BFA; font-family:-apple-system,BlinkMacSystemFont,sans-serif; font-size:0.9rem; font-weight:600; text-align:center; text-decoration:none; transition:background 0.15s;">
+            Volver al Diario
         </a>
-        <a id="editar-cierre" href="{% url 'diario:presencia_cierre' %}?editar=1" style="display:block; margin-top:0.75rem; color:#7C7590; text-align:center;">Editar cierre</a>
-    </div>
+        <a id="editar-cierre" href="{% url 'diario:presencia_cierre' %}?editar=1&amp;version={{ version_cierre }}" style="display:block; margin-top:0.75rem; color:#7C7590; text-align:center;">Editar cierre</a>
+    </section>
     {% endif %}
 
     {% comment %}
@@ -423,13 +450,7 @@ async function enviarCierre() {
     });
     const data = await respuesta.json();
     if (!respuesta.ok) throw data;
-    const lectura = data.joi_respuesta || data.confirmacion;
-    const panel = document.createElement('div');
-    panel.id = 'cierre-respuesta-visible';
-    panel.className = 'intencion-card';
-    panel.textContent = lectura;
-    formCierre.replaceWith(panel);
-    setTimeout(() => { window.location.href = "{% url 'diario:dashboard_diario' %}"; }, 1800);
+    window.location.assign(data.result_url);
 }
 
 formCierre.addEventListener('submit', async (event) => {
